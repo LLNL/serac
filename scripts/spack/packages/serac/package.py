@@ -383,9 +383,6 @@ class Serac(CachedCMakePackage, CudaPackage):
                 entries.append(cmake_cache_path('%s_EXECUTABLE' % dep.upper(),
                                                 pjoin(dep_bin_dir, dep)))
 
-        enable_asan = spec.satisfies("+asan")
-        entries.append(cmake_cache_option("ENABLE_ASAN", enable_asan))
-
         return entries
 
 
@@ -406,5 +403,8 @@ class Serac(CachedCMakePackage, CudaPackage):
 
         options.append(self.define_from_variant(
             'BUILD_SHARED_LIBS', 'shared'))
+
+        options.append(self.define_from_variant(
+            'ENABLE_ASAN', 'asan'))
 
         return options
