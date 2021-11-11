@@ -270,6 +270,9 @@ public:
   template <typename SourceType>
   void setSource(SourceType source_function)
   {
+    static_assert(Thermal::has_thermal_source<SourceType>::value,
+                  "Thermal functional sources must have a public (x, t, u, du_dx) operator for thermal source evaluation.");
+
     K_functional_.AddDomainIntegral(
         Dimension<dim>{},
         [source_function, this](auto x, auto temperature) {
