@@ -77,6 +77,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("cmake@3.8:")
 
     depends_on("ascent@0.7.1serac~vtkh~fortran~shared~openmp")
+    depends_on("lua")
 
     # Devtool dependencies these need to match serac_devtools/package.py
     depends_on('cppcheck', when="+devtools")
@@ -90,7 +91,7 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     # Libraries that support +debug
     mfem_variants = "~shared+metis+superlu-dist+lapack+mpi"
-    debug_deps = ["mfem@4.3.0{0}".format(mfem_variants),
+    debug_deps = ["mfem@4.3.0serac{0}".format(mfem_variants),
                   "hypre@2.18.2~shared~superlu-dist+mpi"]
 
     depends_on("petsc~shared", when="+petsc")
@@ -110,13 +111,13 @@ class Serac(CachedCMakePackage, CudaPackage):
     # Axom enables RAJA/Umpire by default
     depends_on("axom~raja", when="~raja")
     depends_on("axom~umpire", when="~umpire")
-    depends_on("camp@0.1.0serac", when="+raja")
-    depends_on("raja@0.13.1serac~openmp~shared", when="+raja")
-    depends_on("umpire@5.0.1~shared", when="+umpire")
+    depends_on("camp", when="+raja")
+    depends_on("raja~openmp~shared", when="+raja")
+    depends_on("umpire~shared", when="+umpire")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
     # "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
-    axom_spec = "axom@0.5.0serac~openmp~fortran~examples+mfem~shared+cpp14+lua"
+    axom_spec = "axom@0.6.0serac~openmp~fortran~examples+mfem~shared+cpp14+lua"
     cmake_debug_deps = [axom_spec,
                         "metis@5.1.0~shared",
                         "parmetis@4.0.3~shared"]
@@ -125,7 +126,7 @@ class Serac(CachedCMakePackage, CudaPackage):
         depends_on("{0} build_type=Debug".format(dep), when="+debug")
 
     # Libraries that do not have a debug variant
-    depends_on("conduit@0.7.2~shared~python")
+    depends_on("conduit@0.7.2serac~shared~python~test")
     depends_on("caliper@master~shared+mpi~adiak~papi", when="+caliper")
     depends_on("superlu-dist@6.1.1~shared")
 
@@ -251,14 +252,20 @@ class Serac(CachedCMakePackage, CudaPackage):
             # Fix for working around CMake adding implicit link directories
             # returned by the BlueOS compilers to link executables with
             # non-system default stdlib
-            _gcc_prefix = "/usr/tce/packages/gcc/gcc-4.9.3/lib64"
-            if os.path.exists(_gcc_prefix):
-                _gcc_prefix2 = pjoin(
-                    _gcc_prefix,
-                    "gcc/powerpc64le-unknown-linux-gnu/4.9.3")
-                _link_dirs = "{0};{1}".format(_gcc_prefix, _gcc_prefix2)
+            _roots = ["/usr/tce/packages/gcc/gcc-4.9.3",
+                      "/usr/tce/packages/gcc/gcc-4.9.3/gnu"]
+            _subdirs = ["lib64",
+                        "lib64/gcc/powerpc64le-unknown-linux-gnu/4.9.3"]
+            _existing_paths = []
+            for root in _roots:
+                for subdir in _subdirs:
+                    _curr_path = pjoin(root, subdir)
+                    if os.path.exists(_curr_path):
+                        _existing_paths.append(_curr_path)
+            if _existing_paths:
                 entries.append(cmake_cache_string(
-                    "BLT_CMAKE_IMPLICIT_LINK_DIRECTORIES_EXCLUDE", _link_dirs))
+                    "BLT_CMAKE_IMPLICIT_LINK_DIRECTORIES_EXCLUDE",
+                    ";".join(_existing_paths)))
 
         return entries
 
@@ -296,7 +303,7 @@ class Serac(CachedCMakePackage, CudaPackage):
             entries.append(cmake_cache_path("TPL_ROOT", tpl_root))
 
         # required tpls
-        for dep in ('ascent', 'axom', 'conduit', 'mfem', 'hdf5',
+        for dep in ('ascent', 'axom', 'conduit', 'lua', 'mfem', 'hdf5',
                     'hypre', 'metis', 'parmetis'):
             dep_dir = get_spec_path(spec, dep, path_replacements)
             entries.append(cmake_cache_path('%s_DIR' % dep.upper(),
@@ -311,7 +318,7 @@ class Serac(CachedCMakePackage, CudaPackage):
         entries.append(cmake_cache_path('SUPERLUDIST_DIR', dep_dir))
 
         # optional tpls
-        for dep in ('petsc', 'caliper', 'raja', 'umpire'):
+        for dep in ('caliper', 'petsc', 'raja', 'sundials', 'umpire'):
             if spec.satisfies('^{0}'.format(dep)):
                 dep_dir = get_spec_path(spec, dep, path_replacements)
                 entries.append(cmake_cache_path('%s_DIR' % dep.upper(),

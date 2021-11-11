@@ -3,11 +3,11 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-from spack import *
-
 import os
 import socket
 from os.path import join as pjoin
+
+from spack import *
 
 
 def get_spec_path(spec, package_name, path_replacements={}, use_bin=False):
@@ -38,7 +38,7 @@ class Axom(CachedCMakePackage, CudaPackage):
     git      = "https://github.com/LLNL/axom.git"
 
     # SERAC EDIT START
-    version('0.5.0serac', commit='664f2b3d6467c729ec40bebccb60d395eb8c0ca5', submodules="True")
+    version('0.6.0serac', commit='3999cf27a5437b032f9d3e23ca4476c04d139a2e', submodules="True")
     # SERAC EDIT END
 
     version('main', branch='main', submodules=True)
@@ -99,12 +99,14 @@ class Axom(CachedCMakePackage, CudaPackage):
     depends_on("conduit~hdf5", when="~hdf5")
 
     # HDF5 needs to be the same as Conduit's
-    depends_on("hdf5@1.8.19:1.8.999~cxx~shared~fortran", when="+hdf5")
+    # FIXME: remove these hardcoded variants when we move to the new concretizer
+    # DO NOT PUSH UP TO SPACK PROPER
+    depends_on("hdf5@1.8.19:1.8.999~shared~cxx~fortran", when="+hdf5")
 
     depends_on("lua", when="+lua")
 
     depends_on("scr", when="+scr")
-    depends_on("kvtree@master", when="+scr")
+    depends_on("kvtree@main", when="+scr")
     depends_on("dtcmp", when="+scr")
 
     depends_on("raja~openmp", when="+raja~openmp")
@@ -317,15 +319,20 @@ class Axom(CachedCMakePackage, CudaPackage):
                 # Fix for working around CMake adding implicit link directories
                 # returned by the BlueOS compilers to link executables with
                 # non-system default stdlib
-                _gcc_prefix = "/usr/tce/packages/gcc/gcc-4.9.3/lib64"
-                if os.path.exists(_gcc_prefix):
-                    _gcc_prefix2 = pjoin(
-                        _gcc_prefix,
-                        "gcc/powerpc64le-unknown-linux-gnu/4.9.3")
-                    _link_dirs = "{0};{1}".format(_gcc_prefix, _gcc_prefix2)
+                _roots = ["/usr/tce/packages/gcc/gcc-4.9.3",
+                          "/usr/tce/packages/gcc/gcc-4.9.3/gnu"]
+                _subdirs = ["lib64",
+                            "lib64/gcc/powerpc64le-unknown-linux-gnu/4.9.3"]
+                _existing_paths = []
+                for root in _roots:
+                    for subdir in _subdirs:
+                        _curr_path = pjoin(root, subdir)
+                        if os.path.exists(_curr_path):
+                            _existing_paths.append(_curr_path)
+                if _existing_paths:
                     entries.append(cmake_cache_string(
                         "BLT_CMAKE_IMPLICIT_LINK_DIRECTORIES_EXCLUDE",
-                        _link_dirs))
+                        ";".join(_existing_paths)))
 
         return entries
 
