@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrehttps://github.com/LLNL/axom/issues/713nce https://github.com/LLNL/axom/issues/713Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -29,7 +29,7 @@
 #cmakedefine SERAC_USE_AXOM
 #cmakedefine SERAC_USE_CONDUIT
 #cmakedefine SERAC_USE_FMT
-#cmakedefine SERAC_USE_HDF5s
+#cmakedefine SERAC_USE_HDF5
 #cmakedefine SERAC_USE_MFEM
 #cmakedefine SERAC_USE_MPI
 #cmakedefine SERAC_USE_TRIBOL
