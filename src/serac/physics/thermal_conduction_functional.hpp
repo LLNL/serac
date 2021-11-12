@@ -163,7 +163,7 @@ public:
    * @brief Set essential temperature boundary conditions (strongly enforced)
    *
    * @param[in] temp_bdr The boundary attributes on which to enforce a temperature
-   * @param[in] temp_bdr_coef The prescribed boundary temperature function
+   * @param[in] temp The prescribed boundary temperature function
    */
   void setTemperatureBCs(const std::set<int>& temp_bdr, std::function<double(const mfem::Vector& x, double t)> temp)
   {
