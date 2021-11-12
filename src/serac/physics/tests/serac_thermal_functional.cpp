@@ -151,12 +151,11 @@ void functional_test_dynamic(double expected_temp_norm)
   // Finalize the data structures
   thermal_solver.completeSetup();
 
-  thermal_solver.outputState();
-
   // Perform the time stepping
   double dt = 0.25;
 
   for (int i = 0; i < 4; ++i) {
+    thermal_solver.outputState();
     thermal_solver.advanceTimestep(dt);
   }
 
