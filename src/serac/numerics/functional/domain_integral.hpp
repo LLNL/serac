@@ -109,7 +109,8 @@ public:
     if constexpr (exec == ExecutionSpace::GPU) {
       // note: this lambda function captures ptr by-value to extend its lifetime
       //                   vvv
-      evaluation_ = [this, ptr, qf_derivatives, num_elements, qf, &data](const mfem::Vector& U, mfem::Vector& R) {
+      evaluation_ = [this, ptr, qf_derivatives, num_elements, qf, &data, &J, &X](const mfem::Vector& U,
+                                                                                 mfem::Vector&       R) {
         // TODO: Refactor execution configuration. Blocksize of 128 chosen as a good starting point. Has not been
         // optimized
         serac::detail::GPULaunchConfiguration exec_config{.blocksize = 128};
@@ -117,18 +118,18 @@ public:
         domain_integral::evaluation_kernel_cuda<
             geometry, test_space, trial_space, Q,
             serac::detail::ThreadParallelizationStrategy::THREAD_PER_QUADRATURE_POINT>(
-            exec_config, U, R, qf_derivatives, J_, X_, num_elements, qf, data);
+            exec_config, U, R, qf_derivatives, J, X, num_elements, qf, data);
       };
 
-      action_of_gradient_ = [this, qf_derivatives, num_elements](const mfem::Vector& dU, mfem::Vector& dR) {
+      action_of_gradient_ = [this, qf_derivatives, num_elements, &J](const mfem::Vector& dU, mfem::Vector& dR) {
         // TODO: Refactor execution configuration. Blocksize of 128 chosen as a good starting point. Has not been
         // optimized
         serac::detail::GPULaunchConfiguration exec_config{.blocksize = 128};
 
         domain_integral::action_of_gradient_kernel<
             geometry, test_space, trial_space, Q,
-            serac::detail::ThreadParallelizationStrategy::THREAD_PER_QUADRATURE_POINT>(
-            exec_config, dU, dR, qf_derivatives, J_, num_elements);
+            serac::detail::ThreadParallelizationStrategy::THREAD_PER_QUADRATURE_POINT>(exec_config, dU, dR,
+                                                                                       qf_derivatives, J, num_elements);
       };
     }
 #endif
