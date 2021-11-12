@@ -20,44 +20,71 @@ namespace serac::Thermal {
 /// Linear isotropic thermal conduction material model
 struct LinearIsotropicConductor {
   /// Density
-  double rho;
+  double density_;
 
   /// Specific heat capacity
-  double cp;
+  double specific_heat_capacity_;
 
   /// Constant isotropic thermal conductivity
-  double kappa;
+  double conductivity_;
 
   /**
-   * @brief Function defining the thermal flux
+   * @brief Function defining the thermal flux (constitutive response)
    *
    * @tparam T1 type of the temperature (e.g. tensor or dual type)
    * @tparam T2 type of the temperature gradient (e.g. tensor or dual type)
-   * @param du_dx Gradient of the temperature
+   * @param temperature_gradient Gradient of the temperature (du_dx)
    * @return The thermal flux of the material model
    */
   template <typename T1, typename T2>
-  SERAC_HOST_DEVICE T2 operator()(T1& /* u */, T2& du_dx) const
+  SERAC_HOST_DEVICE T2 operator()(T1& /* temperature */, T2& temperature_gradient) const
   {
-    return kappa * du_dx;
+    return -1.0 * conductivity_ * temperature_gradient;
+  }
+
+  /**
+   * @brief The density (mass per volume) of the material model
+   *
+   * @tparam T1 type of the position variable
+   * @return The density
+   */
+  template <typename T1>
+  SERAC_HOST_DEVICE double density(T1& /* x */) const
+  {
+    return density_;
+  }
+
+  /**
+   * @brief The specific heat capacity (heat capacity per unit mass) of the material model
+   *
+   * @tparam T1 Type of the position variable
+   * @tparam T2 Type of the temperature variable
+   */
+  template <typename T1, typename T2>
+  SERAC_HOST_DEVICE double specificHeatCapacity(T1& /* x */, T2& /* temperature */) const
+  {
+    return specific_heat_capacity_;
   }
 };
 
-// Use SFINAE to add static assertions checking if the given solid material type is acceptable
+// Use SFINAE to add static assertions checking if the given thermal material type is acceptable
 template <typename T, typename = void>
-struct has_rho : std::false_type {
+struct has_density : std::false_type {
 };
 
 template <typename T>
-struct has_rho<T, std::void_t<decltype(std::declval<T&>().rho)>> : std::true_type {
+struct has_density<T, std::void_t<decltype(std::declval<T&>().density(std::declval<tensor<double, 3>&>()))>>
+    : std::true_type {
 };
 
 template <typename T, typename = void>
-struct has_cp : std::false_type {
+struct has_specific_heat_capacity : std::false_type {
 };
 
 template <typename T>
-struct has_cp<T, std::void_t<decltype(std::declval<T&>().cp)>> : std::true_type {
+struct has_specific_heat_capacity<T, std::void_t<decltype(std::declval<T&>().specificHeatCapacity(
+                                         std::declval<tensor<double, 3>&>(), std::declval<tensor<double, 1>&>()))>>
+    : std::true_type {
 };
 
 template <typename T, typename = void>
@@ -73,7 +100,7 @@ struct has_thermal_flux<T, std::void_t<decltype(std::declval<T&>()(std::declval<
 /// Constant thermal source model
 struct ConstantSource {
   /// The constant source
-  double source;
+  double source_;
 
   /**
    * @brief Evaluation function for the constant thermal source model
@@ -84,13 +111,13 @@ struct ConstantSource {
    * @return The thermal source value
    */
   template <typename T1, typename T2, typename T3>
-  SERAC_HOST_DEVICE T2 operator()(T1& /* x */, double /* t */, T2& u, T3& /* du_dx */) const
+  SERAC_HOST_DEVICE double operator()(T1& /* x */, double /* t */, T2& /* u */, T3& /* du_dx */) const
   {
-    return source + u * 0.0;
+    return source_;
   }
 };
 
-// Use SFINAE to add static assertions checking if the given solid material type is acceptable
+// Use SFINAE to add static assertions checking if the given thermal source type is acceptable
 template <typename T, typename = void>
 struct has_thermal_source : std::false_type {
 };
@@ -105,7 +132,7 @@ struct has_thermal_source<T, std::void_t<decltype(std::declval<T&>()(
 /// Constant thermal flux boundary model
 struct FluxBoundary {
   /// The constant flux applied to the boundary
-  double flux;
+  double flux_;
 
   /**
    * @brief Evaluation function for the thermal flux on a boundary
@@ -116,13 +143,13 @@ struct FluxBoundary {
    * @return The flux applied to the boundary
    */
   template <typename T1, typename T2, typename T3>
-  SERAC_HOST_DEVICE T3 operator()(T1& /* x */, T2& /* n */, T3& u) const
+  SERAC_HOST_DEVICE double operator()(T1& /* x */, T2& /* n */, T3& /* u */) const
   {
-    return flux + u * 0.0;
+    return flux_;
   }
 };
 
-// Use SFINAE to add static assertions checking if the given solid material type is acceptable
+// Use SFINAE to add static assertions checking if the given thermal flux boundary type is acceptable
 template <typename T, typename = void>
 struct has_thermal_flux_boundary : std::false_type {
 };

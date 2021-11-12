@@ -208,19 +208,20 @@ public:
   template <typename MaterialType>
   void setMaterial(MaterialType material)
   {
-    static_assert(Thermal::has_rho<MaterialType>::value,
+    static_assert(Thermal::has_density<MaterialType>::value,
                   "Thermal functional materials must have a public double member rho for density.");
-    static_assert(Thermal::has_cp<MaterialType>::value,
+    static_assert(Thermal::has_specific_heat_capacity<MaterialType>::value,
                   "Thermal functional materials must have a public double member cp for specific heat capacity.");
     static_assert(Thermal::has_thermal_flux<MaterialType>::value,
                   "Thermal functional materials must have a public (u, du_dx) operator for thermal flux evaluation.");
 
+    // TODO: fuse with source
     K_functional_.AddDomainIntegral(
         Dimension<dim>{},
         [material](auto, auto temperature) {
           // Get the value and the gradient from the input tuple
           auto [u, du_dx] = temperature;
-          auto flux       = material(u, du_dx);
+          auto flux       = -1.0 * material(u, du_dx);
 
           auto source = u * 0.0;
 
@@ -231,10 +232,10 @@ public:
 
     M_functional_.AddDomainIntegral(
         Dimension<dim>{},
-        [material](auto, auto temperature) {
+        [material](auto x, auto temperature) {
           auto [u, du_dx] = temperature;
 
-          auto source = material.cp * material.rho;
+          auto source = material.specificHeatCapacity(x, u) * material.density(x);
 
           auto flux = 0.0 * du_dx;
 
@@ -282,7 +283,7 @@ public:
 
           auto flux = du_dx * 0.0;
 
-          auto source = source_function(x, time_, u, du_dx);
+          auto source = -1.0 * source_function(x, time_, u, du_dx);
 
           // Return the source and the flux as a tuple
           return serac::tuple{source, flux};
@@ -360,7 +361,7 @@ public:
       residual_ = mfem_ext::StdFunctionOperator(
           temperature_.space().TrueVSize(),
           [this](const mfem::Vector& du_dt, mfem::Vector& r) {
-            mfem::Vector K_arg;
+            mfem::Vector K_arg(u_.Size());
             add(1.0, u_, dt_, du_dt, K_arg);
 
             add(M_functional_(du_dt), K_functional_(K_arg), r);
@@ -370,7 +371,7 @@ public:
           [this](const mfem::Vector& du_dt) -> mfem::Operator& {
             // Only reassemble the stiffness if it is a new timestep
             if (dt_ != previous_dt_) {
-              mfem::Vector K_arg;
+              mfem::Vector K_arg(u_.Size());
               add(1.0, u_, dt_, du_dt, K_arg);
 
               M_functional_(u_);
