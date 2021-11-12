@@ -209,13 +209,12 @@ public:
   void setMaterial(MaterialType material)
   {
     static_assert(Thermal::has_density<MaterialType>::value,
-                  "Thermal functional materials must have a public double member rho for density.");
+                  "Thermal functional materials must have a public density(x) method.");
     static_assert(Thermal::has_specific_heat_capacity<MaterialType>::value,
-                  "Thermal functional materials must have a public double member cp for specific heat capacity.");
+                  "Thermal functional materials must have a public specificHeatCapacity(x, temperature) method.");
     static_assert(Thermal::has_thermal_flux<MaterialType>::value,
                   "Thermal functional materials must have a public (u, du_dx) operator for thermal flux evaluation.");
 
-    // TODO: fuse with source
     K_functional_.AddDomainIntegral(
         Dimension<dim>{},
         [material](auto, auto temperature) {

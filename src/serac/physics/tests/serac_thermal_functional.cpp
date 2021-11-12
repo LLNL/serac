@@ -153,7 +153,7 @@ void functional_test_dynamic(double expected_temp_norm)
 
   thermal_solver.outputState();
 
-  // Perform the quasi-static solve
+  // Perform the time stepping
   double dt = 0.25;
 
   for (int i = 0; i < 4; ++i) {
