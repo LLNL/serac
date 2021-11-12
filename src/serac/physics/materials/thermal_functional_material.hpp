@@ -67,6 +67,61 @@ struct LinearIsotropicConductor {
   }
 };
 
+/**
+ * @brief Linear anisotropic thermal material model
+ *
+ * @tparam dim Spatial dimension
+ */
+template <int dim>
+struct LinearConductor {
+  /// Density
+  double density_;
+
+  /// Specific heat capacity
+  double specific_heat_capacity_;
+
+  /// Constant isotropic thermal conductivity
+  tensor<double, dim, dim> conductivity_;
+
+  /**
+   * @brief Function defining the thermal flux (constitutive response)
+   *
+   * @tparam T1 type of the temperature (e.g. tensor or dual type)
+   * @tparam T2 type of the temperature gradient (e.g. tensor or dual type)
+   * @param temperature_gradient Gradient of the temperature (du_dx)
+   * @return The thermal flux of the material model
+   */
+  template <typename T1, typename T2>
+  SERAC_HOST_DEVICE auto operator()(T1& /* temperature */, T2& temperature_gradient) const
+  {
+    return -1.0 * conductivity_ * temperature_gradient;
+  }
+
+  /**
+   * @brief The density (mass per volume) of the material model
+   *
+   * @tparam T1 type of the position variable
+   * @return The density
+   */
+  template <typename T1>
+  SERAC_HOST_DEVICE double density(T1& /* x */) const
+  {
+    return density_;
+  }
+
+  /**
+   * @brief The specific heat capacity (heat capacity per unit mass) of the material model
+   *
+   * @tparam T1 Type of the position variable
+   * @tparam T2 Type of the temperature variable
+   */
+  template <typename T1, typename T2>
+  SERAC_HOST_DEVICE double specificHeatCapacity(T1& /* x */, T2& /* temperature */) const
+  {
+    return specific_heat_capacity_;
+  }
+};
+
 // Use SFINAE to add static assertions checking if the given thermal material type is acceptable
 template <typename T, typename = void>
 struct has_density : std::false_type {
@@ -87,13 +142,14 @@ struct has_specific_heat_capacity<T, std::void_t<decltype(std::declval<T&>().spe
     : std::true_type {
 };
 
-template <typename T, typename = void>
+template <typename T, int dim, typename = void>
 struct has_thermal_flux : std::false_type {
 };
 
-template <typename T>
-struct has_thermal_flux<T, std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, 1>&>(),
-                                                                   std::declval<tensor<double, 3>&>()))>>
+template <typename T, int dim>
+struct has_thermal_flux<
+    T, dim,
+    std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, 1>&>(), std::declval<tensor<double, dim>&>()))>>
     : std::true_type {
 };
 
@@ -118,14 +174,15 @@ struct ConstantSource {
 };
 
 // Use SFINAE to add static assertions checking if the given thermal source type is acceptable
-template <typename T, typename = void>
+template <typename T, int dim, typename = void>
 struct has_thermal_source : std::false_type {
 };
 
-template <typename T>
-struct has_thermal_source<T, std::void_t<decltype(std::declval<T&>()(
-                                 std::declval<tensor<double, 3>&>(), std::declval<double>(),
-                                 std::declval<tensor<double, 1>&>(), std::declval<tensor<double, 3>&>()))>>
+template <typename T, int dim>
+struct has_thermal_source<
+    T, dim,
+    std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, dim>&>(), std::declval<double>(),
+                                            std::declval<tensor<double, 1>&>(), std::declval<tensor<double, dim>&>()))>>
     : std::true_type {
 };
 
@@ -150,14 +207,15 @@ struct FluxBoundary {
 };
 
 // Use SFINAE to add static assertions checking if the given thermal flux boundary type is acceptable
-template <typename T, typename = void>
+template <typename T, int dim, typename = void>
 struct has_thermal_flux_boundary : std::false_type {
 };
 
-template <typename T>
+template <typename T, int dim>
 struct has_thermal_flux_boundary<
-    T, std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, 3>&>(), std::declval<tensor<double, 3>&>(),
-                                               std::declval<tensor<double, 1>&>()))>> : std::true_type {
+    T, dim,
+    std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, dim>&>(), std::declval<tensor<double, dim>&>(),
+                                            std::declval<tensor<double, 1>&>()))>> : std::true_type {
 };
 
 }  // namespace serac::Thermal

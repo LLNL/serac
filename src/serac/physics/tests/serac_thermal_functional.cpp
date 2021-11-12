@@ -53,9 +53,18 @@ void functional_test_static(double expected_temp_norm)
   ThermalConductionFunctional<p, dim> thermal_solver(ThermalConductionFunctional<p, dim>::defaultQuasistaticOptions(),
                                                      "thermal_functional");
 
-  // Define an isotropic conductor material model
-  Thermal::LinearIsotropicConductor mat{.density_ = 1.0, .specific_heat_capacity_ = 1.0, .conductivity_ = 1.0};
+  tensor<double, dim, dim> cond;
 
+  // Define an anisotropic conductor material model
+  if constexpr (dim == 2) {
+    cond = {{{5.0, 0.01}, {0.01, 1.0}}};
+  }
+
+  if constexpr (dim == 3) {
+    cond = {{{1.5, 0.01, 0.0}, {0.01, 1.0, 0.0}, {0.0, 0.0, 1.0}}};
+  }
+
+  Thermal::LinearConductor<dim> mat{.density_ = 1.0, .specific_heat_capacity_ = 1.0, .conductivity_ = cond};
   thermal_solver.setMaterial(mat);
 
   // Define the function for the initial temperature and boundary condition
@@ -166,11 +175,11 @@ void functional_test_dynamic(double expected_temp_norm)
   EXPECT_NEAR(expected_temp_norm, norm(thermal_solver.temperature()), 1.0e-6);
 }
 
-TEST(thermal_functional, 2D_linear_static) { functional_test_static<1, 2>(2.49895852); }
-TEST(thermal_functional, 2D_quad_static) { functional_test_static<2, 2>(2.50561258); }
+TEST(thermal_functional, 2D_linear_static) { functional_test_static<1, 2>(2.2909240); }
+TEST(thermal_functional, 2D_quad_static) { functional_test_static<2, 2>(2.29424403); }
 
-TEST(thermal_functional, 3D_linear_static) { functional_test_static<1, 3>(68.6364213); }
-TEST(thermal_functional, 3D_quad_static) { functional_test_static<2, 3>(68.6906107); }
+TEST(thermal_functional, 3D_linear_static) { functional_test_static<1, 3>(46.6285642); }
+TEST(thermal_functional, 3D_quad_static) { functional_test_static<2, 3>(46.6648538); }
 
 TEST(thermal_functional, 2D_linear_dynamic) { functional_test_dynamic<1, 2>(2.01677891); }
 TEST(thermal_functional, 2D_quad_dynamic) { functional_test_dynamic<2, 2>(2.02882007); }
