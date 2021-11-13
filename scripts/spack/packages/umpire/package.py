@@ -21,6 +21,10 @@ class Umpire(CachedCMakePackage, CudaPackage, ROCmPackage):
 
     maintainers = ['davidbeckingsale']
 
+    # SERAC EDIT START
+    version('6.0.0serac', commit='25104eb7329c05dcb6e29057f1f9b6b5f6362054', submodules="True")
+    # SERAC EDIT END
+
     version('develop', branch='develop', submodules=True)
     version('main', branch='main', submodules=True)
     version('6.0.0', tag='v6.0.0', submodules=True)
@@ -195,6 +199,7 @@ class Umpire(CachedCMakePackage, CudaPackage, ROCmPackage):
         entries.append(cmake_cache_option(
             "ENABLE_BENCHMARKS", 'tests=benchmarks' in spec))
         entries.append(cmake_cache_option("ENABLE_EXAMPLES", '+examples' in spec))
+        entries.append(cmake_cache_option("ENABLE_DOCS", False))
         entries.append(cmake_cache_option("BUILD_SHARED_LIBS", '+shared' in spec))
         entries.append(cmake_cache_option("ENABLE_TESTS", 'tests=none' not in spec))
 

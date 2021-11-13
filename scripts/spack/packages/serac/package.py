@@ -51,7 +51,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     variant('asan', default=False,
             description='Enable Address Sanitizer flags')
 
-    varmsg = "Build development tools (such as Sphinx, AStyle, etc...)"
+    varmsg = "Build development tools (such as Sphinx, CppCheck, ClangFormat, etc...)"
     variant("devtools", default=False, description=varmsg)
 
     variant('caliper', default=False, 
@@ -112,8 +112,8 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("axom~raja", when="~raja")
     depends_on("axom~umpire", when="~umpire")
     depends_on("camp", when="+raja")
-    depends_on("raja~openmp~shared", when="+raja")
-    depends_on("umpire~shared", when="+umpire")
+    depends_on("raja~openmp~shared~examples~exercises", when="+raja")
+    depends_on("umpire@6.0.0serac~shared~examples", when="+umpire")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
     # "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
