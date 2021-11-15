@@ -123,22 +123,23 @@ struct LinearConductor {
 };
 
 // Use SFINAE to add static assertions checking if the given thermal material type is acceptable
-template <typename T, typename = void>
+template <typename T, int dim, typename = void>
 struct has_density : std::false_type {
 };
 
-template <typename T>
-struct has_density<T, std::void_t<decltype(std::declval<T&>().density(std::declval<tensor<double, 3>&>()))>>
+template <typename T, int dim>
+struct has_density<T, dim, std::void_t<decltype(std::declval<T&>().density(std::declval<tensor<double, dim>&>()))>>
     : std::true_type {
 };
 
-template <typename T, typename = void>
+template <typename T, int dim, typename = void>
 struct has_specific_heat_capacity : std::false_type {
 };
 
-template <typename T>
-struct has_specific_heat_capacity<T, std::void_t<decltype(std::declval<T&>().specificHeatCapacity(
-                                         std::declval<tensor<double, 3>&>(), std::declval<tensor<double, 1>&>()))>>
+template <typename T, int dim>
+struct has_specific_heat_capacity<T, dim,
+                                  std::void_t<decltype(std::declval<T&>().specificHeatCapacity(
+                                      std::declval<tensor<double, dim>&>(), std::declval<tensor<double, 1>&>()))>>
     : std::true_type {
 };
 

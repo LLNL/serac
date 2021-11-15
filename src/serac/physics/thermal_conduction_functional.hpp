@@ -208,9 +208,9 @@ public:
   template <typename MaterialType>
   void setMaterial(MaterialType material)
   {
-    static_assert(Thermal::has_density<MaterialType>::value,
+    static_assert(Thermal::has_density<MaterialType, dim>::value,
                   "Thermal functional materials must have a public density(x) method.");
-    static_assert(Thermal::has_specific_heat_capacity<MaterialType>::value,
+    static_assert(Thermal::has_specific_heat_capacity<MaterialType, dim>::value,
                   "Thermal functional materials must have a public specificHeatCapacity(x, temperature) method.");
     static_assert(Thermal::has_thermal_flux<MaterialType, dim>::value,
                   "Thermal functional materials must have a public (u, du_dx) operator for thermal flux evaluation.");
