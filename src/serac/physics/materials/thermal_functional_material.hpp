@@ -20,13 +20,13 @@ namespace serac::Thermal {
 /// Linear isotropic thermal conduction material model
 struct LinearIsotropicConductor {
   /// Density
-  double density_;
+  double density_ = -1.0;
 
   /// Specific heat capacity
-  double specific_heat_capacity_;
+  double specific_heat_capacity_ = -1.0;
 
   /// Constant isotropic thermal conductivity
-  double conductivity_;
+  double conductivity_ = -1.0;
 
   /**
    * @brief Function defining the thermal flux (constitutive response)
@@ -39,6 +39,9 @@ struct LinearIsotropicConductor {
   template <typename T1, typename T2>
   SERAC_HOST_DEVICE T2 operator()(T1& /* temperature */, T2& temperature_gradient) const
   {
+    SLIC_ASSERT_MSG(conductivity_ > 0.0,
+                    "Conductivity must be positive in the linear isotropic conductor material model.");
+
     return -1.0 * conductivity_ * temperature_gradient;
   }
 
@@ -51,6 +54,8 @@ struct LinearIsotropicConductor {
   template <typename T1>
   SERAC_HOST_DEVICE double density(T1& /* x */) const
   {
+    SLIC_ASSERT_MSG(density_ > 0.0, "Density must be positive in the linear isotropic conductor material model.");
+
     return density_;
   }
 
@@ -63,6 +68,9 @@ struct LinearIsotropicConductor {
   template <typename T1, typename T2>
   SERAC_HOST_DEVICE double specificHeatCapacity(T1& /* x */, T2& /* temperature */) const
   {
+    SLIC_ASSERT_MSG(specific_heat_capacity_ > 0.0,
+                    "Specific heat capacity must be positive in the linear isotropic conductor material model.");
+
     return specific_heat_capacity_;
   }
 };
@@ -75,13 +83,13 @@ struct LinearIsotropicConductor {
 template <int dim>
 struct LinearConductor {
   /// Density
-  double density_;
+  double density_ = -1.0;
 
   /// Specific heat capacity
-  double specific_heat_capacity_;
+  double specific_heat_capacity_ = -1.0;
 
   /// Constant isotropic thermal conductivity
-  tensor<double, dim, dim> conductivity_;
+  tensor<double, dim, dim> conductivity_ = {-1.0};
 
   /**
    * @brief Function defining the thermal flux (constitutive response)
@@ -94,6 +102,10 @@ struct LinearConductor {
   template <typename T1, typename T2>
   SERAC_HOST_DEVICE auto operator()(T1& /* temperature */, T2& temperature_gradient) const
   {
+    for (int i = 0; i < dim; ++i) {
+      SLIC_ASSERT_MSG(conductivity_(i, i) > 0.0,
+                      "Conductivity tensor must be positive definite in linear conductor material model.");
+    }
     return -1.0 * conductivity_ * temperature_gradient;
   }
 
@@ -106,6 +118,8 @@ struct LinearConductor {
   template <typename T1>
   SERAC_HOST_DEVICE double density(T1& /* x */) const
   {
+    SLIC_ASSERT_MSG(density_ > 0.0, "Density must be positive in the linear conductor material model.");
+
     return density_;
   }
 
@@ -118,6 +132,9 @@ struct LinearConductor {
   template <typename T1, typename T2>
   SERAC_HOST_DEVICE double specificHeatCapacity(T1& /* x */, T2& /* temperature */) const
   {
+    SLIC_ASSERT_MSG(specific_heat_capacity_ > 0.0,
+                    "Specific heat capacity must be positive in the linear conductor material model.");
+
     return specific_heat_capacity_;
   }
 };
