@@ -131,7 +131,7 @@ public:
              nonlin_solver_, bcs_)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
-                       fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
+                       axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
 
     state_.push_back(temperature_);
 
