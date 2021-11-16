@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 #pragma once
 
+#include "serac/infrastructure/accelerator.hpp"
 #include "serac/numerics/quadrature_data.hpp"
 #include "serac/numerics/functional/integral_utilities.hpp"
 
@@ -39,7 +40,7 @@ namespace domain_integral {
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
           typename qpt_data_type = void>
-void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, CPUView<derivatives_type, 2> qf_derivatives,
+void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, CPUArrayView<derivatives_type, 2> qf_derivatives,
                        const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda&& qf,
                        QuadratureData<qpt_data_type>& data = dummy_qdata)
 {
@@ -130,8 +131,9 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, CPUView<derivativ
  * @param[in] num_elements The number of elements in the mesh
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
-void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, CPUView<derivatives_type, 2> qf_derivatives,
-                               const mfem::Vector& J_, int num_elements)
+void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
+                               CPUArrayView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J_,
+                               int num_elements)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
@@ -206,7 +208,7 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, CPUView
  * @param[in] num_elements The number of elements in the mesh
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
-void element_gradient_kernel(ArrayView<double, 3, ExecutionSpace::CPU> dk, CPUView<derivatives_type, 2> qf_derivatives,
+void element_gradient_kernel(CPUArrayView<double, 3> dk, CPUArrayView<derivatives_type, 2> qf_derivatives,
                              const mfem::Vector& J_, int num_elements)
 {
   using test_element               = finite_element<g, test>;

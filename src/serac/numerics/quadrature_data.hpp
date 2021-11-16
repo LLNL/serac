@@ -14,25 +14,13 @@
 
 #include "mfem.hpp"
 
-#include "serac/serac_config.hpp"
+#include "axom/core.hpp"
 
-#include "serac/numerics/functional/array.hpp"
+#include "serac/serac_config.hpp"
 
 #include "serac/infrastructure/accelerator.hpp"
 
 #include "serac/infrastructure/variant.hpp"
-
-/**
- * @brief Helper template for a GPU-compatible array type (when applicable)
- * This will be eventually replaced with axom::Array
- */
-template <typename T>
-// #ifdef SERAC_USE_CUDA // FIXME: This is what we want
-#ifdef __CUDACC__
-using DeviceArray = serac::ManagedArray<T>;
-#else
-using DeviceArray = std::vector<T>;
-#endif
 
 namespace serac {
 
@@ -249,11 +237,11 @@ private:
   /**
    * @brief The actual data
    */
-  DeviceArray<T> data_;
+  axom::Array<T, 1, axom::MemorySpace::Unified> data_;
   /**
    * @brief A copy of the element_offsets member from mfem::QuadratureSpace
    */
-  DeviceArray<int> offsets_;
+  axom::Array<int, 1, axom::MemorySpace::Unified> offsets_;
   /**
    * @brief The stride of the array
    */

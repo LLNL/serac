@@ -52,6 +52,8 @@
 
 #include <memory>
 
+#include "axom/core.hpp"
+
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/profiling.hpp"
 
@@ -66,14 +68,65 @@ namespace serac {
 enum class ExecutionSpace
 {
   CPU,
-  GPU,
-  Dynamic  // Corresponds to execution that can "legally" happen on either the host or device
+  GPU
 };
 
 /**
  * @brief The default execution space for serac builds
  */
 constexpr ExecutionSpace default_execution_space = ExecutionSpace::CPU;
+
+namespace detail {
+
+template <ExecutionSpace space>
+struct execution_to_memory;
+
+#ifdef SERAC_USE_UMPIRE
+template <>
+struct execution_to_memory<ExecutionSpace::CPU> {
+  static constexpr axom::MemorySpace value = axom::MemorySpace::Host;
+};
+
+template <>
+struct execution_to_memory<ExecutionSpace::GPU> {
+  static constexpr axom::MemorySpace value = axom::MemorySpace::Device;
+};
+#else
+template <>
+struct execution_to_memory<ExecutionSpace::CPU> {
+  static constexpr axom::MemorySpace value = axom::MemorySpace::Dynamic;
+};
+#endif
+
+template <ExecutionSpace space>
+inline constexpr axom::MemorySpace execution_to_memory_v = execution_to_memory<space>::value;
+
+/// @brief set the contents of an array to zero, byte-wise
+template <typename T, int dim>
+void zero_out(axom::Array<T, dim, execution_to_memory_v<ExecutionSpace::CPU>>& arr)
+{
+  std::memset(arr.data(), 0, arr.size() * sizeof(T));
+}
+/// @overload
+template <typename T, int dim>
+void zero_out(axom::Array<T, dim, execution_to_memory_v<ExecutionSpace::GPU>>& arr)
+{
+  cudaMemset(arr.data(), 0, arr.size() * sizeof(T));
+}
+
+}  // namespace detail
+
+template <typename T, int dim = 1>
+using CPUArray = axom::Array<T, dim, detail::execution_to_memory_v<ExecutionSpace::CPU>>;
+
+template <typename T, int dim = 1>
+using GPUArray = axom::Array<T, dim, detail::execution_to_memory_v<ExecutionSpace::GPU>>;
+
+template <typename T, int dim = 1>
+using CPUArrayView = axom::ArrayView<T, dim, detail::execution_to_memory_v<ExecutionSpace::CPU>>;
+
+template <typename T, int dim = 1>
+using GPUArrayView = axom::ArrayView<T, dim, detail::execution_to_memory_v<ExecutionSpace::GPU>>;
 
 /**
  * @brief Namespace for methods involving accelerator-enabled builds
