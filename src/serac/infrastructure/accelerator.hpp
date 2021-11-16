@@ -137,7 +137,7 @@ inline std::tuple<std::size_t, std::size_t> getCUDAMemInfo()
 std::string getCUDAMemInfoString()
 {
   auto [free_memory, total_memory] = getCUDAMemInfo();
-  return fmt::format("Free memory: {} Total_memory: {}", free_memory, total_memory);
+  return axom::fmt::format("Free memory: {} Total_memory: {}", free_memory, total_memory);
 }
 
 #endif

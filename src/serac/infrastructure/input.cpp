@@ -63,7 +63,7 @@ std::string findMeshFilePath(const std::string& mesh_path, const std::string& in
   std::cout << "possible_path: " << possible_path << std::endl;
 
   // Failed to find mesh file
-  std::string msg = fmt::format("Input file: Given mesh file does not exist: {0}", mesh_path);
+  std::string msg = axom::fmt::format("Input file: Given mesh file does not exist: {0}", mesh_path);
   SLIC_ERROR_ROOT(msg);
   return "";
 }
@@ -283,7 +283,7 @@ serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOp
     auto func = base["vector_function"]
                     .get<std::function<axom::inlet::FunctionType::Vector(axom::inlet::FunctionType::Vector, double)>>();
     result.vector_function = [func(std::move(func))](const mfem::Vector& input, double t, mfem::Vector& output) {
-      auto ret = func({input.GetData(), input.Size()}, t);
+      auto ret = func(axom::inlet::FunctionType::Vector{input.GetData(), input.Size()}, t);
       // Copy from the primal vector into the MFEM vector
       std::copy(ret.vec.data(), ret.vec.data() + input.Size(), output.GetData());
     };
@@ -293,7 +293,7 @@ serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOp
   if (base.contains("scalar_function")) {
     auto func = base["scalar_function"].get<std::function<double(axom::inlet::FunctionType::Vector, double)>>();
     result.scalar_function = [func(std::move(func))](const mfem::Vector& input, double t) {
-      return func({input.GetData(), input.Size()}, t);
+      return func(axom::inlet::FunctionType::Vector{input.GetData(), input.Size()}, t);
     };
     coefficient_definitions++;
   }

@@ -438,7 +438,8 @@ FiniteElementDual& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace* s
   // Add a scalar linear form integrator using the shear sensitivity coefficient against the given shear modulus finite
   // element space
   if (!shear_sensitivity_form_ || shear_space) {
-    SLIC_ERROR_IF(!shear_space, fmt::format("Finite element space is required for first shear sensitivity call."));
+    SLIC_ERROR_IF(!shear_space,
+                  axom::fmt::format("Finite element space is required for first shear sensitivity call."));
     shear_sensitivity_      = std::make_unique<FiniteElementDual>(mesh_, *shear_space);
     shear_sensitivity_form_ = shear_sensitivity_->createOnSpace<mfem::ParLinearForm>();
 
@@ -472,7 +473,7 @@ FiniteElementDual& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace* bu
   // Add a scalar linear form integrator using the shear sensitivity coefficient against the given bulk modulus finite
   // element space
   if (!bulk_sensitivity_form_ || bulk_space) {
-    SLIC_ERROR_IF(!bulk_space, fmt::format("Finite element space is required for first bulk sensitivity call."));
+    SLIC_ERROR_IF(!bulk_space, axom::fmt::format("Finite element space is required for first bulk sensitivity call."));
     bulk_sensitivity_      = std::make_unique<FiniteElementDual>(mesh_, *bulk_space);
     bulk_sensitivity_form_ = bulk_sensitivity_->createOnSpace<mfem::ParLinearForm>();
 

@@ -46,9 +46,9 @@ class Mfem(Package):
     version('develop', branch='master')
 
     # SERAC EDIT BEGIN
-    version('4.3.0',
-            sha256='3a495602121b986049286ea0b23512279cdbdfb43c15c42a1511b521051fbe38',
-            url='https://bit.ly/mfem-4-3', extension='tar.gz')
+    # Note: we have a `serac-dev` branch on mfem's github that we track pending changes.
+    #  Make sure this sha coincides with the git submodule
+    version('4.3.0serac', commit='da400dd0c53b2deaeeb0d0b134e921d45c00f0d0', submodules="True")
     # SERAC EDIT END
 
     version('4.2.0',
@@ -277,8 +277,6 @@ class Mfem(Package):
     # upstream.
     patch('mfem-4.0.0-makefile-syntax-fix.patch', when='@4.0.0')
 
-    # Fix issue with mesh constructor
-    patch('mfem-4.3_mesh_op.patch', when='@4.3.0')
     phases = ['configure', 'build', 'install']
 
     def setup_build_environment(self, env):
