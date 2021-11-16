@@ -14,6 +14,10 @@ if(ENABLE_ASAN)
     endif()
 endif()
 
+option(SERAC_ENABLE_CODEVELOP
+       "Enable Serac's codevelop build (MFEM and Axom included as CMake subdirectories"
+       OFF)
+
 option(SERAC_ENABLE_LUMBERJACK "Enable Axom's Lumberjack component" ON)
 
 # Only enable Serac's code checks by default if it is the top-level project

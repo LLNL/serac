@@ -119,7 +119,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     #------------------------------------------------------------------------------
     # MFEM
     #------------------------------------------------------------------------------
-    if(MFEM_DIR)
+    if(NOT SERAC_ENABLE_CODEVELOP)
         message(STATUS "Using installed MFEM")
         include(${CMAKE_CURRENT_LIST_DIR}/FindMFEM.cmake)
     else()
@@ -202,7 +202,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     #------------------------------------------------------------------------------
     # Axom
     #------------------------------------------------------------------------------
-    if(AXOM_DIR)
+    if(NOT SERAC_ENABLE_CODEVELOP)
         message(STATUS "Using installed Axom")
         serac_assert_is_directory(VARIABLE_NAME AXOM_DIR)
 

@@ -149,7 +149,7 @@ list(APPEND BLT_C_FILE_EXTS ".cuh")
 if (SERAC_ENABLE_CODE_CHECKS)
     serac_add_code_checks(PREFIX   serac
                           INCLUDES /src/ /tests/
-                          EXCLUDES cmake/blt uberenv_libs)
+                          EXCLUDES /axom/ cmake/blt /mfem/ uberenv_libs)
 endif()
 
 #------------------------------------------------------------------------------
@@ -169,7 +169,7 @@ install(TARGETS              serac
         DESTINATION          lib
         )
 
-if (NOT AXOM_DIR)
+if (SERAC_ENABLE_CODEVELOP)
     # Add Axom's targets to our export set
     # TODO: we should ask Axom for this list in the future
     set(axom_exported_targets axom cli11 fmt hdf5 lua sol sparsehash)
