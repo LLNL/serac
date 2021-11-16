@@ -14,7 +14,7 @@
 #pragma once
 
 #include "axom/slic.hpp"
-#include "fmt/fmt.hpp"
+#include "axom/fmt.hpp"
 #include "mpi.h"
 
 // Logger functionality
