@@ -7,3 +7,6 @@
 [submodule "axom"]
 	path = axom
 	url = https://github.com/LLNL/axom.git
+[submodule "mfem"]
+	path = mfem
+	url = https://github.com/mfem/mfem.git
