@@ -113,7 +113,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("axom~umpire", when="~umpire")
     depends_on("camp", when="+raja")
     depends_on("raja~openmp~shared~examples~exercises", when="+raja")
-    depends_on("umpire@6.0.0serac~shared~examples", when="+umpire")
+    depends_on("umpire@6.0.0serac~shared~examples~device_alloc", when="+umpire")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
     # "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"

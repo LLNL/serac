@@ -22,7 +22,7 @@ class Umpire(CachedCMakePackage, CudaPackage, ROCmPackage):
     maintainers = ['davidbeckingsale']
 
     # SERAC EDIT START
-    version('6.0.0serac', commit='25104eb7329c05dcb6e29057f1f9b6b5f6362054', submodules="True")
+    version('6.0.0serac', commit='5f474c7501daf365d6015a2141821d83bd799ffa', submodules="True")
     # SERAC EDIT END
 
     version('develop', branch='develop', submodules=True)
@@ -58,6 +58,9 @@ class Umpire(CachedCMakePackage, CudaPackage, ROCmPackage):
     patch('camp_target_umpire_3.0.0.patch', when='@3.0.0')
     patch('cmake_version_check.patch', when='@4.1')
     patch('missing_header_for_numeric_limits.patch', when='@4.1:5.0.1')
+    # SERAC EDIT BEGIN
+    patch('cmake_devicealloc_option_6.0.0serac.patch', when='@6.0.0serac')
+    # SERAC EDIT END
 
     # export targets when building pre-6.0.0 release with BLT 0.4.0+
     patch('https://github.com/LLNL/Umpire/commit/5773ce9af88952c8d23f9bcdcb2e503ceda40763.patch',
@@ -74,6 +77,9 @@ class Umpire(CachedCMakePackage, CudaPackage, ROCmPackage):
     variant('examples', default=True, description='Build Umpire Examples')
     variant('tests', default='none', values=('none', 'basic', 'benchmarks'),
             multi=False, description='Tests to run')
+    # SERAC EDIT BEGIN
+    variant('device_alloc', default=True, description='Build Umpire Device Allocator')
+    # SERAC EDIT END
 
     depends_on('cmake@3.8:', type='build')
     depends_on('cmake@3.9:', when='+cuda', type='build')
@@ -202,6 +208,10 @@ class Umpire(CachedCMakePackage, CudaPackage, ROCmPackage):
         entries.append(cmake_cache_option("ENABLE_DOCS", False))
         entries.append(cmake_cache_option("BUILD_SHARED_LIBS", '+shared' in spec))
         entries.append(cmake_cache_option("ENABLE_TESTS", 'tests=none' not in spec))
+
+        # SERAC EDIT BEGIN
+        entries.append(cmake_cache_option("UMPIRE_ENABLE_DEVICE_ALLOCATOR", '+device_alloc' in spec))
+        # SERAC EDIT END
 
         return entries
 
