@@ -10,7 +10,6 @@ blt_list_append( TO functional_depends ELEMENTS caliper IF SERAC_USE_CALIPER )
 
 # Add the library first
 set(functional_headers
-    array.hpp
     boundary_integral.hpp
     boundary_integral_kernels.hpp
     dof_numbering.hpp
