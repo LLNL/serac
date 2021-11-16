@@ -49,7 +49,10 @@ public:
 
   /**
    * @brief A configuration variant for the various solves
-   * Either quasistatic, or time-dependent with timestep and M options
+   * For quasistatic solves, leave the dyn_options parameter null. T_lin_options and T_nonlin_options
+   * define the solver parameters for the nonlinear residual and linear stiffness solves. For
+   * dynamic problems, dyn_options defines the timestepping scheme while T_lin_options and T_nonlin_options
+   * define the nonlinear residual and linear stiffness solve options as before.
    */
   struct SolverOptions {
     /// The linear solver options

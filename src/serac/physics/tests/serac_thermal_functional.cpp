@@ -11,9 +11,9 @@
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
+#include "serac/serac_config.hpp"
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/state/state_manager.hpp"
-#include "serac/serac_config.hpp"
 
 namespace serac {
 
@@ -32,19 +32,11 @@ void functional_test_static(double expected_temp_norm)
   static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for thermal functional test");
 
   // Construct the appropriate dimension mesh and give it to the data store
-  if constexpr (dim == 2) {
-    std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
-    auto mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
+  std::string filename =
+      (dim == 2) ? SERAC_REPO_DIR "/data/meshes/star.mesh" : SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
 
-    serac::StateManager::setMesh(std::move(mesh2D));
-  }
-
-  if constexpr (dim == 3) {
-    std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
-    auto mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
-
-    serac::StateManager::setMesh(std::move(mesh3D));
-  }
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
+  serac::StateManager::setMesh(std::move(mesh));
 
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
@@ -111,19 +103,11 @@ void functional_test_dynamic(double expected_temp_norm)
   static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for thermal functional test");
 
   // Construct the appropriate dimension mesh and give it to the data store
-  if constexpr (dim == 2) {
-    std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
-    auto mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
+  std::string filename =
+      (dim == 2) ? SERAC_REPO_DIR "/data/meshes/star.mesh" : SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
 
-    serac::StateManager::setMesh(std::move(mesh2D));
-  }
-
-  if constexpr (dim == 3) {
-    std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
-    auto mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
-
-    serac::StateManager::setMesh(std::move(mesh3D));
-  }
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
+  serac::StateManager::setMesh(std::move(mesh));
 
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
