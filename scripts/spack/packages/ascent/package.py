@@ -44,8 +44,8 @@ class Ascent(Package, CudaPackage):
             submodules=True)
 
     # SERAC EDIT START
-    # 0.7.1 + https://github.com/Alpine-DAV/ascent/pull/747
-    version('0.7.1serac', commit='358b578be84408f99345156455f1b66dc8ccaac8', submodules="True")
+    # 0.7.1 + fixes til 11/10/2021
+    version('0.7.1serac', commit='379757181e2e63f6767f6fcec9a2ba731b0018f5', submodules="True")
     # SERAC EDIT END
 
     version('0.7.1',

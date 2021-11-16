@@ -63,11 +63,13 @@ set(TPL_ROOT "/home/serac/serac_tpls/clang-10.0.0" CACHE PATH "")
 
 set(ASCENT_DIR "${TPL_ROOT}/ascent-0.7.1serac" CACHE PATH "")
 
-set(AXOM_DIR "${TPL_ROOT}/axom-0.5.0serac" CACHE PATH "")
+set(AXOM_DIR "${TPL_ROOT}/axom-0.6.0serac" CACHE PATH "")
 
-set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.7.2" CACHE PATH "")
+set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.7.2serac" CACHE PATH "")
 
-set(MFEM_DIR "${TPL_ROOT}/mfem-4.3.0" CACHE PATH "")
+set(LUA_DIR "${TPL_ROOT}/lua-5.3.5" CACHE PATH "")
+
+set(MFEM_DIR "${TPL_ROOT}/mfem-4.3.0serac" CACHE PATH "")
 
 set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.21" CACHE PATH "")
 
@@ -81,11 +83,13 @@ set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4" CACHE PATH "")
 
 set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1" CACHE PATH "")
 
-# PETSC not built
-
 # CALIPER not built
 
+# PETSC not built
+
 # RAJA not built
+
+set(SUNDIALS_DIR "${TPL_ROOT}/sundials-5.6.1" CACHE PATH "")
 
 # UMPIRE not built
 
@@ -102,3 +106,5 @@ set(ENABLE_CLANGFORMAT OFF CACHE BOOL "")
 set(ENABLE_CLANGTIDY OFF CACHE BOOL "")
 
 set(ENABLE_DOCS OFF CACHE BOOL "")
+
+
