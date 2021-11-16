@@ -6,7 +6,7 @@
 
 #include "serac/infrastructure/cli.hpp"
 
-#include "CLI11/CLI11.hpp"
+#include "axom/CLI11.hpp"
 
 #include "serac/infrastructure/input.hpp"
 #include "serac/infrastructure/logger.hpp"
@@ -19,12 +19,12 @@ namespace serac::cli {
 std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv[], std::string app_description)
 {
   // specify all input arguments
-  CLI::App    app{app_description};
-  std::string input_file_path;
-  app.add_option("-i, --input-file", input_file_path, "Input file to use")->required()->check(CLI::ExistingFile);
+  axom::CLI::App app{app_description};
+  std::string    input_file_path;
+  app.add_option("-i, --input-file", input_file_path, "Input file to use")->required()->check(axom::CLI::ExistingFile);
   int  restart_cycle;
   auto restart_opt =
-      app.add_option("-c, --restart-cycle", restart_cycle, "Cycle to restart from")->check(CLI::PositiveNumber);
+      app.add_option("-c, --restart-cycle", restart_cycle, "Cycle to restart from")->check(axom::CLI::PositiveNumber);
   bool create_input_file_docs{false};
   app.add_flag("-d, --create-input-file-docs", create_input_file_docs,
                "Writes Sphinx documentation for input file, then exits");
@@ -36,14 +36,14 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
   // Parse the arguments and check if they are good
   try {
     app.parse(argc, argv);
-  } catch (const CLI::ParseError& e) {
+  } catch (const axom::CLI::ParseError& e) {
     serac::logger::flush();
     if (e.get_name() == "CallForHelp") {
       auto msg = app.help();
       SLIC_INFO_ROOT(msg);
       serac::exitGracefully();
     } else {
-      auto err_msg = CLI::FailureMessage::simple(&app, e);
+      auto err_msg = axom::CLI::FailureMessage::simple(&app, e);
       SLIC_ERROR_ROOT(err_msg);
     }
   }
@@ -83,7 +83,7 @@ std::string cliValueToString(int value) { return std::to_string(value); }
 void printGiven(std::unordered_map<std::string, std::string>& cli_opts)
 {
   // Add header
-  std::string optsMsg = fmt::format("\n{:*^80}\n", "Command Line Options");
+  std::string optsMsg = axom::fmt::format("\n{:*^80}\n", "Command Line Options");
 
   // Create options map
   // clang-format off
@@ -99,12 +99,12 @@ void printGiven(std::unordered_map<std::string, std::string>& cli_opts)
   for (auto output_pair : opts_output_map) {
     auto search = cli_opts.find(output_pair.first);
     if (search != cli_opts.end()) {
-      optsMsg += fmt::format("{0}: {1}\n", output_pair.second, detail::cliValueToString(search->second));
+      optsMsg += axom::fmt::format("{0}: {1}\n", output_pair.second, detail::cliValueToString(search->second));
     }
   }
 
   // Add footer
-  optsMsg += fmt::format("{:*^80}\n", "*");
+  optsMsg += axom::fmt::format("{:*^80}\n", "*");
 
   SLIC_INFO_ROOT(optsMsg);
   serac::logger::flush();

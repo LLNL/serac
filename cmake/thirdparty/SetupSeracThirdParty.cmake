@@ -219,7 +219,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         # sol.hpp
         find_path(
             _sol_found sol.hpp
-            PATHS ${AXOM_DIR}/include/sol
+            PATHS ${AXOM_DIR}/include/axom
             NO_DEFAULT_PATH
             NO_CMAKE_ENVIRONMENT_PATH
             NO_CMAKE_PATH
@@ -227,7 +227,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             NO_CMAKE_SYSTEM_PATH
         )
         if (NOT _sol_found)
-            message(FATAL_ERROR "Given AXOM_DIR did not contain a required header: sol/sol.hpp"
+            message(FATAL_ERROR "Given AXOM_DIR did not contain a required header: axom/sol.hpp"
                                 "\nTry building Axom with '-DBLT_CXX_STD=c++14' or higher\n ")
         endif()
 
@@ -262,7 +262,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endif()
     else()
         # Otherwise we use the submodule
-        message(STATUS "Using axom submodule")
+        message(STATUS "Using Axom submodule")
         if(NOT LUA_DIR)
             message(FATAL_ERROR "LUA_DIR is required to use the Axom submodule"
                                 "\nTry running CMake with '-DLUA_DIR=path/to/lua/install'\n ")

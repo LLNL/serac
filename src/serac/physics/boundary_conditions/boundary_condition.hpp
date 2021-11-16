@@ -170,36 +170,32 @@ public:
    * @brief Projects the boundary condition over boundary DOFs of a grid function
    * @param[inout] gf The grid function representing the field to project over
    * @param[in] time The time for the coefficient, used for time-varying coefficients
-   * @param[in] should_be_scalar Whether the boundary condition coefficient should be a scalar coef
    */
-  void projectBdr(mfem::ParGridFunction& gf, const double time, const bool should_be_scalar = true) const;
+  void projectBdr(mfem::ParGridFunction& gf, const double time) const;
 
   /**
    * @brief Projects the boundary condition over boundary DOFs of a field
    * @param[inout] state The field to project over
    * @param[in] time The time for the coefficient, used for time-varying coefficients
-   * @param[in] should_be_scalar Whether the boundary condition coefficient should be a scalar coef
    */
-  void projectBdr(FiniteElementState& state, const double time, const bool should_be_scalar = true) const;
+  void projectBdr(FiniteElementState& state, const double time) const;
 
   /**
    * @brief Projects the boundary condition over boundary DOFs
    * @param[in] time The time for the coefficient, used for time-varying coefficients
-   * @param[in] should_be_scalar Whether the boundary condition coefficient should be a scalar coef
    * @pre A corresponding field (FiniteElementState) has been associated
    * with the calling object via BoundaryCondition::setTrueDofs(FiniteElementState&)
    */
-  void projectBdr(const double time, const bool should_be_scalar = true) const;
+  void projectBdr(const double time) const;
 
   /**
    * @brief Projects the boundary condition over boundary to a DoF vector
    * @param[in] dof_values The discrete dof values to project
    * @param[in] time The time for the coefficient, used for time-varying coefficients
-   * @param[in] should_be_scalar Whether the boundary condition coefficient should be a scalar coef
    * @pre A corresponding field (FiniteElementState) has been associated
    * with the calling object via BoundaryCondition::setTrueDofs(FiniteElementState&)
    */
-  void projectBdrToDofs(mfem::Vector& dof_values, const double time, const bool should_be_scalar = true) const;
+  void projectBdrToDofs(mfem::Vector& dof_values, const double time) const;
 
   /**
    * @brief Eliminates the rows and columns corresponding to the BC's true DOFS
@@ -226,11 +222,10 @@ public:
    * @param[out] rhs The RHS vector for the system
    * @param[inout] state The state from which the solution DOF values are extracted and used to eliminate
    * @param[in] time Simulation time, used for time-varying boundary coefficients
-   * @param[in] should_be_scalar Whether the boundary coefficient should be a scalar coefficient
    * @pre BoundaryCondition::eliminateFrom has been called
    */
   void apply(mfem::HypreParMatrix& k_mat_post_elim, mfem::Vector& rhs, FiniteElementState& state,
-             const double time = 0.0, const bool should_be_scalar = true) const;
+             const double time = 0.0) const;
 
   /**
    * @brief Sets the underlying coefficient's time

@@ -98,7 +98,7 @@ TEST(solid_solver, adjoint)
   auto&  adjoint_state_1 = solid_solver.solveAdjoint(assembled_adjoint_load);
   double adjoint_norm_1  = norm(adjoint_state_1);
 
-  SLIC_INFO_ROOT(fmt::format("Adjoint norm (homogeneous BCs): {}", adjoint_norm_1));
+  SLIC_INFO_ROOT(axom::fmt::format("Adjoint norm (homogeneous BCs): {}", adjoint_norm_1));
 
   // Create an L2 space for the shear modulus discretization
   mfem::L2_FECollection       l2_fe_coll(0, dim);
@@ -109,7 +109,7 @@ TEST(solid_solver, adjoint)
 
   double shear_norm = mfem::ParNormlp(shear_sensitivity.trueVec(), 2, MPI_COMM_WORLD);
 
-  SLIC_INFO_ROOT(fmt::format("Shear sensitivity vector norm: {}", shear_norm));
+  SLIC_INFO_ROOT(axom::fmt::format("Shear sensitivity vector norm: {}", shear_norm));
 
   EXPECT_NEAR(shear_norm, 0.000211078850122, 1.0e-8);
 
@@ -117,7 +117,7 @@ TEST(solid_solver, adjoint)
 
   double bulk_norm = mfem::ParNormlp(bulk_sensitivity.trueVec(), 2, MPI_COMM_WORLD);
 
-  SLIC_INFO_ROOT(fmt::format("Bulk sensitivity vector norm: {}", bulk_norm));
+  SLIC_INFO_ROOT(axom::fmt::format("Bulk sensitivity vector norm: {}", bulk_norm));
 
   EXPECT_NEAR(bulk_norm, 6.026196496111377e-06, 3.0e-9);
 
@@ -142,7 +142,7 @@ TEST(solid_solver, adjoint)
   auto&  adjoint_state_2 = solid_solver.solveAdjoint(assembled_adjoint_load, &adjoint_essential);
   double adjoint_norm_2  = norm(adjoint_state_2);
 
-  SLIC_INFO_ROOT(fmt::format("Adjoint norm (non-homogeneous BCs): {}", adjoint_norm_2));
+  SLIC_INFO_ROOT(axom::fmt::format("Adjoint norm (non-homogeneous BCs): {}", adjoint_norm_2));
 
   // Check that the adjoint solve is a known value
   EXPECT_NEAR(adjoint_norm_2, 739.98432, 0.05);

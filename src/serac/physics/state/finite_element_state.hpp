@@ -59,6 +59,27 @@ public:
   using FiniteElementVector::FiniteElementVector;
 
   /**
+   * @brief Set the internal grid function using the true DOF values
+   *
+   * This distributes true vector dofs to the finite element (local) dofs  by multiplying the true dofs
+   * by the prolongation operator.
+   *
+   * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
+   *
+   */
+  void distributeSharedDofs() { detail::retrieve(gf_).SetFromTrueDofs(true_vec_); }
+
+  /**
+   * @brief Initialize the true vector from the grid function values
+   *
+   * This initializes the true vector dofs by multiplying the finite element dofs
+   * by the restriction operator.
+   *
+   * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
+   */
+  void initializeTrueVec() { detail::retrieve(gf_).GetTrueDofs(true_vec_); }
+
+  /**
    * Returns a non-owning reference to the internal grid function
    */
   mfem::ParGridFunction& gridFunc() { return detail::retrieve(gf_); }

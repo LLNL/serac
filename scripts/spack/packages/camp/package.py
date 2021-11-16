@@ -13,27 +13,31 @@ class Camp(CMakePackage, CudaPackage, ROCmPackage):
     """
 
     homepage = "https://github.com/LLNL/camp"
-    # SERAC EDIT START - waiting on camp PR #67
-    git      = "https://github.com/white238/camp.git"
-    # SERAC EDIT END
+    git      = "https://github.com/LLNL/camp.git"
     url      = "https://github.com/LLNL/camp/archive/v0.1.0.tar.gz"
 
-    # SERAC EDIT START
-    version('0.1.0serac', commit='891a2a66d7c66f0d97dfc10701a2c9b96e5f2a96', submodules="True")
-    # SERAC EDIT END
+    maintainers = ['trws']
 
-    version('master', branch='master', submodules='True')
+    version('main', branch='main', submodules='True')
+    version('0.3.0', sha256='129431a049ca5825443038ad5a37a86ba6d09b2618d5fe65d35f83136575afdb')
+    version('0.2.2', sha256='194d38b57e50e3494482a7f94940b27f37a2bee8291f2574d64db342b981d819')
     version('0.1.0', sha256='fd4f0f2a60b82a12a1d9f943f8893dc6fe770db493f8fae5ef6f7d0c439bebcc')
 
     # TODO: figure out gtest dependency and then set this default True.
     variant('tests', default=False, description='Build tests')
 
-    depends_on('cub', when='+cuda')
+    # SERAC EDIT BEGIN: CUDA 11+ comes with CUB
+    depends_on('cub', when='+cuda ^cuda@:10.99')
+    # SERAC EDIT END
+
+    depends_on('blt')
 
     def cmake_args(self):
         spec = self.spec
 
         options = []
+
+        options.append("-DBLT_SOURCE_DIR={0}".format(spec['blt'].prefix))
 
         if '+cuda' in spec:
             options.extend([
