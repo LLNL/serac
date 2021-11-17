@@ -25,12 +25,11 @@ std::unordered_map<std::string, axom::sidre::MFEMSidreDataCollection> StateManag
 bool                                                                  StateManager::is_restart_      = false;
 std::string                                                           StateManager::collection_name_ = "";
 std::vector<std::unique_ptr<SyncableData>>                            StateManager::syncable_data_;
-axom::sidre::DataStore*                                               StateManager::ds_         = nullptr;
-std::string                                                           StateManager::output_dir_ = "";
-std::optional<int>                                                    StateManager::cycle_to_load_;
+axom::sidre::DataStore*                                               StateManager::ds_                = nullptr;
+std::string                                                           StateManager::output_dir_        = "";
 const std::string                                                     StateManager::primary_mesh_name_ = "primary";
 
-void StateManager::newDataCollection(const std::string& name)
+void StateManager::newDataCollection(const std::string& name, const std::optional<int> cycle_to_load)
 {
   SLIC_ERROR_ROOT_IF(!ds_, "Cannot construct a DataCollection without a DataStore");
   std::string coll_name    = name + "_datacoll";
@@ -47,9 +46,9 @@ void StateManager::newDataCollection(const std::string& name)
 
   datacoll.SetPrefixPath(output_dir_);
 
-  if (is_restart_) {
+  if (cycle_to_load) {
     // NOTE: Load invalidates previous Sidre pointers
-    datacoll.Load(*cycle_to_load_);
+    datacoll.Load(*cycle_to_load);
     datacoll.SetGroupPointers(ds_->getRoot()->getGroup(coll_name + "_global/blueprint_index/" + coll_name),
                               ds_->getRoot()->getGroup(coll_name));
     SLIC_ERROR_ROOT_IF(datacoll.GetBPGroup()->getNumGroups() == 0,
@@ -69,8 +68,7 @@ void StateManager::newDataCollection(const std::string& name)
   }
 }
 
-void StateManager::initialize(axom::sidre::DataStore& ds, const std::string&, const std::string output_directory,
-                              const std::optional<int> cycle_to_load)
+void StateManager::initialize(axom::sidre::DataStore& ds, const std::string& output_directory)
 {
   // If the global object has already been initialized, clear it out
   if (ds_) {
@@ -82,21 +80,6 @@ void StateManager::initialize(axom::sidre::DataStore& ds, const std::string&, co
     SLIC_ERROR_ROOT(
         "DataCollection output directory cannot be empty - this will result in problems if executables are run in "
         "parallel");
-  }
-  // else {
-  //   datacoll_->SetPrefixPath(output_directory);
-  // }
-  cycle_to_load_ = cycle_to_load;
-
-  if (cycle_to_load) {
-    is_restart_ = true;
-    // FIXME FIXME THIS IS VERY WRONG
-    // Each datacollection corresponds to its own set of files right now
-    // but we need to keep track of what datacollections were created
-    // or should we try to stuff them all into one save file?
-    // this will break if a) someone makes a non-primary datacollection
-    // or if someone doesn't make a primary datacollection
-    newDataCollection(primary_mesh_name_);
   }
 }
 

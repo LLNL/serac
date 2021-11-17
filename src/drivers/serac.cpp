@@ -125,8 +125,7 @@ int main(int argc, char* argv[])
   axom::sidre::DataStore datastore;
 
   // Intialize MFEMSidreDataCollection
-  // If restart_cycle is non-empty, then this is a restart run and the data will be loaded here
-  serac::StateManager::initialize(datastore, "serac", output_directory, restart_cycle);
+  serac::StateManager::initialize(datastore, output_directory);
 
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);
@@ -153,6 +152,9 @@ int main(int argc, char* argv[])
     }
     auto mesh = serac::mesh::buildParallelMesh(mesh_options);
     serac::StateManager::setMesh(std::move(mesh));
+  } else {
+    // If restart_cycle is non-empty, then this is a restart run and the data will be loaded here
+    serac::StateManager::load(*restart_cycle);
   }
 
   // Create the physics object

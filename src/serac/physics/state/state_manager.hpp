@@ -34,14 +34,9 @@ public:
   /**
    * @brief Initializes the StateManager with a sidre DataStore (into which state will be written/read)
    * @param[in] ds The DataStore to use
-   * @param[in] collection_name_prefix The prefix for the name of the Sidre DataCollection to be created
-   * FIXME: Remove collection_name_prefix - No longer needed since we associate a mesh/datacoll with a string elsewhere
    * @param[in] output_directory The directory to output files to - cannot be empty
-   * @param[in] cycle_to_load The cycle to load - required for restarts
-   * FIXME: Would we want to have different meshes at different cycles? Maybe need a method @p restart(name,cycle)
    */
-  static void initialize(axom::sidre::DataStore& ds, const std::string output_directory,
-                         const std::optional<int> cycle_to_load = {});
+  static void initialize(axom::sidre::DataStore& ds, const std::string& output_directory);
 
   /**
    * @brief Factory method for creating a new FEState object, signature is identical to FEState constructor
@@ -96,6 +91,16 @@ public:
   static void save(const double t, const int cycle, const std::string& tag = primary_mesh_name_);
 
   /**
+   * @brief Loads an existing DataCollection
+   */
+  static void load(const int cycle_to_load, const std::string& tag = primary_mesh_name_)
+  {
+    // FIXME: Assumes that if one DataCollection is going to be reloaded all DataCollections will be
+    is_restart_ = true;
+    newDataCollection(tag, cycle_to_load);
+  }
+
+  /**
    * @brief Resets the underlying global datacollection object
    */
   static void reset()
@@ -124,8 +129,9 @@ public:
 private:
   /**
    * @brief Creates a new datacollection based on a registered mesh
+   * @param[in] cycle_to_load What cycle to load the DataCollection from
    */
-  static void newDataCollection(const std::string& name);
+  static void newDataCollection(const std::string& name, const std::optional<int> cycle_to_load = {});
 
   /**
    * @brief The datacollection instances
@@ -150,8 +156,6 @@ private:
   static axom::sidre::DataStore* ds_;
   /// @brief Output directory to which all datacollections are saved
   static std::string output_dir_;
-  /// @brief Cycle to load - for restarts - FIXME can this be different between datacollections?
-  static std::optional<int> cycle_to_load_;
   /// @brief Default name for the mesh - mostly for backwards compatibility
   const static std::string primary_mesh_name_;
 };

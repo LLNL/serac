@@ -298,7 +298,7 @@ TYPED_TEST(QuadratureDataGPUStateManagerTest, basic_integrals_state_manager)
   // then save it
   {
     axom::sidre::DataStore datastore;
-    serac::StateManager::initialize(datastore, "serac", "qdata_gpu_restart");
+    serac::StateManager::initialize(datastore, "qdata_gpu_restart");
     // We need to use "this->" explicitly because we are in a derived class template
     serac::StateManager::setMesh(std::move(this->default_mesh));
     // Can't use auto& here because we're in a template context
@@ -322,7 +322,8 @@ TYPED_TEST(QuadratureDataGPUStateManagerTest, basic_integrals_state_manager)
   // Then reload the state to make sure it was synced correctly, and update it again before saving
   {
     axom::sidre::DataStore datastore;
-    serac::StateManager::initialize(datastore, "serac", "qdata_gpu_restart", cycle);
+    serac::StateManager::initialize(datastore, "qdata_gpu_restart");
+    serac::StateManager::load(cycle);
     // Since the original mesh is dead, use the mesh recovered from the save file to build a new Functional
     this->resetWithNewMesh(serac::StateManager::mesh());
     serac::QuadratureData<typename TestFixture::value_type>& qdata =
@@ -351,7 +352,8 @@ TYPED_TEST(QuadratureDataGPUStateManagerTest, basic_integrals_state_manager)
   // is read in from a restart
   {
     axom::sidre::DataStore datastore;
-    serac::StateManager::initialize(datastore, "serac", "qdata_gpu_restart", cycle + 1);
+    serac::StateManager::initialize(datastore, "qdata_gpu_restart");
+    serac::StateManager::load(cycle + 1);
     // Since the original mesh is dead, use the mesh recovered from the save file to build a new Functional
     this->resetWithNewMesh(serac::StateManager::mesh());
     serac::QuadratureData<typename TestFixture::value_type>& qdata =
@@ -378,7 +380,8 @@ TYPED_TEST(QuadratureDataGPUStateManagerTest, basic_integrals_state_manager)
   // included the distance of the quadrature point from the origin (which is unique)
   {
     axom::sidre::DataStore datastore;
-    serac::StateManager::initialize(datastore, "serac", "qdata_gpu_restart", cycle + 2);
+    serac::StateManager::initialize(datastore, "qdata_gpu_restart");
+    serac::StateManager::load(cycle + 2);
     serac::QuadratureData<typename TestFixture::value_type>& qdata =
         serac::StateManager::newQuadratureData<typename TestFixture::value_type>("test_data", this->p);
     // Make sure the changes from the distance-specified increment were propagated through and in the correct order

@@ -24,7 +24,7 @@ TEST(dynamic_solver, dyn_solve)
 
   // Create DataStore
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "serac", "dynamic_solve");
+  serac::StateManager::initialize(datastore, "dynamic_solve");
 
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";

@@ -25,7 +25,7 @@ TEST(solid_solver, reuse_mesh)
   MPI_Barrier(MPI_COMM_WORLD);
 
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "serac", "solid_reuse_mesh");
+  serac::StateManager::initialize(datastore, "solid_reuse_mesh");
 
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";
