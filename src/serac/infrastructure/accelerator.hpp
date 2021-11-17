@@ -111,14 +111,14 @@ inline constexpr axom::MemorySpace execution_to_memory_v = execution_to_memory<s
 template <typename T, int dim, axom::MemorySpace space>
 void zero_out(axom::Array<T, dim, space>& arr)
 {
-  std::memset(arr.data(), 0, arr.size() * sizeof(T));
+  std::memset(arr.data(), 0, static_cast<std::size_t>(arr.size()) * sizeof(T));
 }
 #ifdef __CUDACC__
 /// @overload
 template <typename T, int dim>
 void zero_out(axom::Array<T, dim, execution_to_memory_v<ExecutionSpace::GPU>>& arr)
 {
-  cudaMemset(arr.data(), 0, arr.size() * sizeof(T));
+  cudaMemset(arr.data(), 0, static_cast<std::size_t>(arr.size()) * sizeof(T));
 }
 #endif
 
