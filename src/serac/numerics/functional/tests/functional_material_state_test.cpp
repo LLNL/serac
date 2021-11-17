@@ -97,8 +97,6 @@ TEST_F(QuadratureDataTest, basic_integrals)
 TEST_F(QuadratureDataTest, basic_integrals_default)
 {
   QuadratureData<StateWithDefault> qdata(*mesh, p);
-  // FIXME: Remove once support for default initialization merged into Axom
-  qdata = StateWithDefault{};
   residual->AddDomainIntegral(
       Dimension<dim>{},
       [&](auto /* x */, auto u, auto& state) {
@@ -120,8 +118,6 @@ TEST_F(QuadratureDataTest, basic_integrals_default)
 TEST_F(QuadratureDataTest, basic_integrals_multi_fields)
 {
   QuadratureData<StateWithMultiFields> qdata(*mesh, p);
-  // FIXME: Remove once support for default initialization merged into Axom
-  qdata = StateWithMultiFields{};
   residual->AddDomainIntegral(
       Dimension<dim>{},
       [&](auto /* x */, auto u, auto& state) {

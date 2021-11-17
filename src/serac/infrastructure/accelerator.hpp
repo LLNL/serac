@@ -80,30 +80,35 @@ constexpr ExecutionSpace default_execution_space = ExecutionSpace::CPU;
 namespace detail {
 
 /**
- * @brief Type trait for translating between serac::ExecutionSpace and axom::MemorySpace
+ * @brief Trait for "translating" between serac::ExecutionSpace and axom::MemorySpace
  */
 template <ExecutionSpace space>
 struct execution_to_memory {
+  /// @brief The corresponding axom::MemorySpace
   static constexpr axom::MemorySpace value = axom::MemorySpace::Dynamic;
 };
 
 #ifdef SERAC_USE_UMPIRE
+/// @overload
 template <>
 struct execution_to_memory<ExecutionSpace::CPU> {
   static constexpr axom::MemorySpace value = axom::MemorySpace::Host;
 };
 
+/// @overload
 template <>
 struct execution_to_memory<ExecutionSpace::GPU> {
   static constexpr axom::MemorySpace value = axom::MemorySpace::Device;
 };
 
+/// @overload
 template <>
 struct execution_to_memory<ExecutionSpace::Dynamic> {
   static constexpr axom::MemorySpace value = axom::MemorySpace::Unified;
 };
 #endif
 
+/// @brief Helper template for @p execution_to_memory trait
 template <ExecutionSpace space>
 inline constexpr axom::MemorySpace execution_to_memory_v = execution_to_memory<space>::value;
 
@@ -124,20 +129,34 @@ void zero_out(axom::Array<T, dim, execution_to_memory_v<ExecutionSpace::GPU>>& a
 
 }  // namespace detail
 
-template <typename T, int dim = 1>
-using CPUArray = axom::Array<T, dim, detail::execution_to_memory_v<ExecutionSpace::CPU>>;
+/// @brief Alias for an Array corresponding to a particular ExecutionSpace
+template <typename T, int dim, ExecutionSpace space>
+using ExecArray = axom::Array<T, dim, detail::execution_to_memory_v<space>>;
 
+/// @brief Alias for an array on the CPU
 template <typename T, int dim = 1>
-using GPUArray = axom::Array<T, dim, detail::execution_to_memory_v<ExecutionSpace::GPU>>;
+using CPUArray = ExecArray<T, dim, ExecutionSpace::CPU>;
 
+/// @brief Alias for an array on the GPU
 template <typename T, int dim = 1>
-using UnifiedArray = axom::Array<T, dim, detail::execution_to_memory_v<ExecutionSpace::Dynamic>>;
+using GPUArray = ExecArray<T, dim, ExecutionSpace::GPU>;
 
+// FIXME: For consistency this should be DynamicArray, but that seems a little confusing
+/// @brief Alias for an array in unified memory
 template <typename T, int dim = 1>
-using CPUArrayView = axom::ArrayView<T, dim, detail::execution_to_memory_v<ExecutionSpace::CPU>>;
+using UnifiedArray = ExecArray<T, dim, ExecutionSpace::Dynamic>;
 
+/// @brief Alias for an ArrayView corresponding to a particular ExecutionSpace
+template <typename T, int dim, ExecutionSpace space>
+using ExecArrayView = axom::ArrayView<T, dim, detail::execution_to_memory_v<space>>;
+
+/// @brief Alias for an array view on the CPU
 template <typename T, int dim = 1>
-using GPUArrayView = axom::ArrayView<T, dim, detail::execution_to_memory_v<ExecutionSpace::GPU>>;
+using CPUArrayView = ExecArrayView<T, dim, ExecutionSpace::CPU>;
+
+/// @brief Alias for an array view on the CPU
+template <typename T, int dim = 1>
+using GPUArrayView = ExecArrayView<T, dim, ExecutionSpace::GPU>;
 
 /**
  * @brief Namespace for methods involving accelerator-enabled builds

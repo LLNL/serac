@@ -118,8 +118,8 @@ bool compatibleWithFaceRestriction(const mfem::ParFiniteElementSpace& fes)
  *               getting dofs/ids for boundary elements in 2D,3D w/ L2 spaces
  */
 template <typename T, ExecutionSpace exec>
-axom::Array<T, 3, detail::execution_to_memory_v<exec>> allocateMemoryForBdrElementGradients(
-    const mfem::ParFiniteElementSpace& trial_fes, const mfem::ParFiniteElementSpace& test_fes)
+ExecArray<T, 3, exec> allocateMemoryForBdrElementGradients(const mfem::ParFiniteElementSpace& trial_fes,
+                                                           const mfem::ParFiniteElementSpace& test_fes)
 {
   if (compatibleWithFaceRestriction(test_fes) && compatibleWithFaceRestriction(trial_fes)) {
     auto* test_BE  = test_fes.GetBE(0);
@@ -134,8 +134,7 @@ axom::Array<T, 3, detail::execution_to_memory_v<exec>> allocateMemoryForBdrEleme
 
 /// @overload
 template <typename T, ExecutionSpace exec>
-axom::Array<T, 2, detail::execution_to_memory_v<exec>> allocateMemoryForBdrElementGradients(
-    const mfem::ParFiniteElementSpace& fes)
+ExecArray<T, 2, exec> allocateMemoryForBdrElementGradients(const mfem::ParFiniteElementSpace& fes)
 {
   if (compatibleWithFaceRestriction(fes)) {
     auto* BE = fes.GetBE(0);
