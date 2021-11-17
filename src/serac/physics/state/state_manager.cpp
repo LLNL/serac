@@ -66,6 +66,11 @@ void StateManager::initialize(axom::sidre::DataStore& ds, const std::string& col
 
     datacoll_->UpdateStateFromDS();
     datacoll_->UpdateMeshAndFieldsFromDS();
+
+    // Functional needs the nodal grid function and neighbor data in the mesh
+    mesh().EnsureNodes();
+    mesh().ExchangeFaceNbrData();
+
   } else {
     datacoll_->SetCycle(0);   // Iteration counter
     datacoll_->SetTime(0.0);  // Simulation time
@@ -81,7 +86,7 @@ FiniteElementState StateManager::newState(FiniteElementVector::Options&& options
     return {mesh(), *field, name};
   } else {
     SLIC_ERROR_ROOT_IF(datacoll_->HasField(name),
-                       fmt::format("Serac's datacollection was already given a field named '{0}'", name));
+                       axom::fmt::format("Serac's datacollection was already given a field named '{0}'", name));
     options.managed_by_sidre = true;
     FiniteElementState state(mesh(), std::move(options));
     datacoll_->RegisterField(name, &(state.gridFunc()));
@@ -100,7 +105,7 @@ FiniteElementDual StateManager::newDual(FiniteElementVector::Options&& options)
     return {mesh(), *field, name};
   } else {
     SLIC_ERROR_ROOT_IF(datacoll_->HasField(name),
-                       fmt::format("Serac's datacollection was already given a field named '{0}'", name));
+                       axom::fmt::format("Serac's datacollection was already given a field named '{0}'", name));
     options.managed_by_sidre = true;
     FiniteElementDual dual(mesh(), std::move(options));
 
@@ -123,7 +128,7 @@ void StateManager::save(const double t, const int cycle)
 
   std::string file_path =
       axom::utilities::filesystem::joinPath(datacoll_->GetPrefixPath(), datacoll_->GetCollectionName());
-  SLIC_INFO_ROOT(fmt::format("Saving data collection at time: {} to path: {}", t, file_path));
+  SLIC_INFO_ROOT(axom::fmt::format("Saving data collection at time: {} to path: {}", t, file_path));
 
   for (const auto& data : syncable_data_) {
     data->sync();
@@ -133,10 +138,14 @@ void StateManager::save(const double t, const int cycle)
   datacoll_->Save();
 }
 
-void StateManager::setMesh(std::unique_ptr<mfem::ParMesh> mesh)
+void StateManager::setMesh(std::unique_ptr<mfem::ParMesh> pmesh)
 {
-  datacoll_->SetMesh(mesh.release());
+  datacoll_->SetMesh(pmesh.release());
   datacoll_->SetOwnData(true);
+
+  // Functional needs the nodal grid function and neighbor data in the mesh
+  StateManager::mesh().EnsureNodes();
+  StateManager::mesh().ExchangeFaceNbrData();
 }
 
 mfem::ParMesh& StateManager::mesh()

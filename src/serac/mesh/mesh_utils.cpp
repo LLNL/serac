@@ -9,7 +9,7 @@
 #include <fstream>
 
 #include "axom/core.hpp"
-#include "fmt/fmt.hpp"
+#include "axom/fmt.hpp"
 
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
@@ -19,13 +19,13 @@ namespace serac {
 mfem::Mesh buildMeshFromFile(const std::string& mesh_file)
 {
   // Open the mesh
-  std::string msg = fmt::format("Opening mesh file: {0}", mesh_file);
+  std::string msg = axom::fmt::format("Opening mesh file: {0}", mesh_file);
   SLIC_INFO_ROOT(msg);
 
   // Ensure correctness
   serac::logger::flush();
   if (!axom::utilities::filesystem::pathExists(mesh_file)) {
-    msg = fmt::format("Given mesh file does not exist: {0}", mesh_file);
+    msg = axom::fmt::format("Given mesh file does not exist: {0}", mesh_file);
     SLIC_ERROR_ROOT(msg);
   }
 
@@ -35,7 +35,7 @@ mfem::Mesh buildMeshFromFile(const std::string& mesh_file)
 
   if (!imesh) {
     serac::logger::flush();
-    std::string err_msg = fmt::format("Can not open mesh file: {0}", mesh_file);
+    std::string err_msg = axom::fmt::format("Can not open mesh file: {0}", mesh_file);
     SLIC_ERROR_ROOT(err_msg);
   }
 
@@ -137,9 +137,6 @@ mfem::Mesh buildBallMesh(int approx_number_of_elements)
   }
 
   squish(mesh);
-
-  // Reorient the tet mesh for use with high order Hcurl elements
-  mesh.ReorientTetMesh();
 
   return mesh;
 }
@@ -481,7 +478,7 @@ serac::mesh::InputOptions FromInlet<serac::mesh::InputOptions>::operator()(const
 
   // If it reaches here, we haven't found a supported type
   serac::logger::flush();
-  std::string err_msg = fmt::format("Specified type not supported: {0}", mesh_type);
+  std::string err_msg = axom::fmt::format("Specified type not supported: {0}", mesh_type);
   SLIC_ERROR_ROOT(err_msg);
   return {};
 }

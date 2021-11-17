@@ -10,7 +10,11 @@ blt_list_append( TO functional_depends ELEMENTS caliper IF SERAC_USE_CALIPER )
 
 # Add the library first
 set(functional_headers
+    array.hpp
     boundary_integral.hpp
+    boundary_integral_kernels.hpp
+    dof_numbering.hpp
+    domain_integral_kernels.hpp
     domain_integral.hpp
     dual.hpp
     finite_element.hpp
@@ -20,6 +24,7 @@ set(functional_headers
     quadrature.hpp
     tensor.hpp
     tuple_arithmetic.hpp
+    tuple.hpp
     )
 
 set(functional_detail_headers
@@ -33,6 +38,7 @@ set(functional_detail_headers
     detail/segment_Hcurl.inl
     detail/segment_L2.inl
     detail/metaprogramming.hpp
+    detail/qoi.inl
     )
 
 blt_list_append(TO functional_headers ELEMENTS domain_integral_kernels.cuh IF ENABLE_CUDA)

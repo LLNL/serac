@@ -94,6 +94,18 @@ public:
   FiniteElementVector(mfem::ParMesh& mesh, mfem::ParFiniteElementSpace& space, const std::string& name = "");
 
   /**
+   * @brief Delete the default copy constructor
+   */
+  FiniteElementVector(const FiniteElementVector&) = delete;
+
+  /**
+   * @brief Move construct a new Finite Element Vector object
+   *
+   * @param[in] input_vector The input vector used for construction
+   */
+  FiniteElementVector(FiniteElementVector&& input_vector);
+
+  /**
    * @brief Returns the MPI communicator for the state
    * @return The underlying MPI communicator
    */
@@ -133,17 +145,6 @@ public:
   std::string name() const { return name_; }
 
   /**
-   * @brief Set the internal grid function using the true DOF values
-   */
-  void distributeSharedDofs() { detail::retrieve(gf_).SetFromTrueDofs(true_vec_); }
-
-  /**
-   * @brief Initialize the true DOF vector by extracting true DOFs from the internal
-   * grid function/local into the internal true DOF vector
-   */
-  void initializeTrueVec() { detail::retrieve(gf_).GetTrueDofs(true_vec_); }
-
-  /**
    * @brief Set a finite element state to a constant value
    *
    * @param value The constant to set the finite element state to
@@ -152,6 +153,16 @@ public:
    * that if a different value is given on different processors, a shared DOF will be set to the owning processor value.
    */
   FiniteElementVector& operator=(const double value);
+
+  /**
+   * @brief Distribute dofs the internal grid function (local dofs) using the true DOF values
+   */
+  virtual void distributeSharedDofs() = 0;
+
+  /**
+   * @brief Initialize the true DOF vector using the internal grid function
+   */
+  virtual void initializeTrueVec() = 0;
 
   /**
    * @brief Utility function for creating a tensor, e.g. mfem::HypreParVector,
@@ -166,6 +177,11 @@ public:
                   "Tensor must be constructible with a ptr to ParFESpace");
     return std::make_unique<Tensor>(&detail::retrieve(space_));
   }
+
+  /**
+   * @brief Destroy the Finite Element Vector object
+   */
+  virtual ~FiniteElementVector() {}
 
 protected:
   /**

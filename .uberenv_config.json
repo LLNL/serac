@@ -5,7 +5,7 @@
 "package_source_dir" : "../..",
 "force_commandline_prefix" : false,
 "spack_url": "https://github.com/spack/spack",
-"spack_commit": "6394604d0adb57d04b715a6d293ef4b18c9c26ef",
+"spack_commit": "d19105f76165857ca5f25ddb7e63a45a31b2ee92",
 "spack_configs_path": "scripts/spack/configs",
 "spack_packages_path": "scripts/spack/packages",
 "spack_activate" : {},

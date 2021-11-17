@@ -83,8 +83,10 @@ int main(int argc, char* argv[])
 
   mfem::Device device("cuda");
 
-  int p, dim;
-  some_parametrized_test(p = 1, dim = 2);
-  some_parametrized_test(p = 2, dim = 2);
-  some_parametrized_test(p = 3, dim = 2);
+  int dim = 2;
+  for (int p = 1; p <= 3; ++p) {
+    some_parametrized_test(p, dim);
+  }
+
+  return 0;
 }

@@ -14,6 +14,10 @@ if(ENABLE_ASAN)
     endif()
 endif()
 
+option(SERAC_ENABLE_CODEVELOP
+       "Enable Serac's codevelop build (MFEM and Axom included as CMake subdirectories"
+       OFF)
+
 option(SERAC_ENABLE_LUMBERJACK "Enable Axom's Lumberjack component" ON)
 
 # Only enable Serac's code checks by default if it is the top-level project
@@ -33,10 +37,3 @@ if(GLVIS_EXECUTABLE)
                       COMMAND ${CMAKE_COMMAND} 
                       -E create_symlink ${GLVIS_EXECUTABLE} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/glvis)
 endif()
-
-
-#------------------------------------------------------------------------------
-# Global includes (restrict these as much as possible)
-#------------------------------------------------------------------------------
-include_directories(${CMAKE_BINARY_DIR}/include)
-include_directories(${PROJECT_SOURCE_DIR})

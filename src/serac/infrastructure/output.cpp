@@ -46,7 +46,7 @@ void outputSummary(const axom::sidre::DataStore& datastore, const std::string& d
                      "Output file format ('hdf5') is not supported for Serac summary files.");
   std::string file_format_string = detail::file_format_string(file_format);
 
-  const std::string file_name = fmt::format("{0}_summary.{1}", data_collection_name, file_format_string);
+  const std::string file_name = axom::fmt::format("{0}_summary.{1}", data_collection_name, file_format_string);
   const std::string path      = axom::utilities::filesystem::joinPath(output_directory, file_name);
   datastore.getRoot()->getGroup("serac_summary")->save(path, file_format_string);
 }
@@ -68,18 +68,18 @@ void outputFields(const axom::sidre::DataStore& datastore, const std::string& da
   conduit::Node extracts;
   // "relay" is the Ascents Extract type for saving data
   extracts["e1/type"]            = "relay";
-  const std::string file_name    = fmt::format("{}_fields.{}", data_collection_name, file_format_string);
+  const std::string file_name    = axom::fmt::format("{}_fields.{}", data_collection_name, file_format_string);
   const std::string path         = axom::utilities::filesystem::joinPath(output_directory, file_name);
   extracts["e1/params/path"]     = path;
   extracts["e1/params/protocol"] = file_format_string;
 
-  SLIC_INFO_ROOT(fmt::format("Outputting field data at time: {} to path: {}", time, path));
+  SLIC_INFO_ROOT(axom::fmt::format("Outputting field data at time: {} to path: {}", time, path));
 
   // Get domain Sidre group
   const axom::sidre::Group* sidre_root = datastore.getRoot();
   SLIC_ERROR_ROOT_IF(
       !sidre_root->hasGroup(data_collection_name),
-      fmt::format("Expected a Sidre Data Collection root at '{0}' but it was not found", data_collection_name));
+      axom::fmt::format("Expected a Sidre Data Collection root at '{0}' but it was not found", data_collection_name));
   const axom::sidre::Group* domain_grp = sidre_root->getGroup(data_collection_name);
 
   // Add field names to extract field lists
