@@ -104,8 +104,7 @@ public:
                                                                                          num_elements);
     };
 
-    element_gradient_ = [this, qf_derivatives,
-                         num_elements](axom::ArrayView<double, 3, detail::execution_to_memory_v<exec>> K_b) {
+    element_gradient_ = [this, qf_derivatives, num_elements](ExecArrayView<double, 3, exec> K_b) {
       boundary_integral::element_gradient_kernel<geometry, test_space, trial_space, Q>(K_b, qf_derivatives, J_,
                                                                                        num_elements);
     };
@@ -135,10 +134,7 @@ public:
    * @param[inout] K_b The reshaped vector as a mfem::DeviceTensor of size (test_dim * test_dof, trial_dim * trial_dof,
    * nelems)
    */
-  void ComputeElementGradients(axom::ArrayView<double, 3, detail::execution_to_memory_v<exec>> K_b) const
-  {
-    element_gradient_(K_b);
-  }
+  void ComputeElementGradients(ExecArrayView<double, 3, exec> K_b) const { element_gradient_(K_b); }
 
 private:
   /**
@@ -172,7 +168,7 @@ private:
    * @brief Type-erased handle to kernel that computes each element's gradients
    * @see gradient_matrix_kernel
    */
-  std::function<void(axom::ArrayView<double, 3, detail::execution_to_memory_v<exec>>)> element_gradient_;
+  std::function<void(ExecArrayView<double, 3, exec>)> element_gradient_;
 };
 
 }  // namespace serac

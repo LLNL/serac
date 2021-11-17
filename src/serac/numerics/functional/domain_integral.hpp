@@ -77,9 +77,9 @@ public:
     // that of the DomainIntegral that allocated it.
     auto ptr = accelerator::make_shared_array<derivative_type, exec>(num_quadrature_points);
 
-    size_t n1 = static_cast<size_t>(num_elements);
-    size_t n2 = static_cast<size_t>(quadrature_points_per_element);
-    axom::ArrayView<derivative_type, 2, detail::execution_to_memory_v<exec>> qf_derivatives{ptr.get(), n1, n2};
+    size_t                                  n1 = static_cast<size_t>(num_elements);
+    size_t                                  n2 = static_cast<size_t>(quadrature_points_per_element);
+    ExecArrayView<derivative_type, 2, exec> qf_derivatives{ptr.get(), n1, n2};
 
     // this is where we actually specialize the finite element kernel templates with
     // our specific requirements (element type, test/trial spaces, quadrature rule, q-function, etc).
@@ -189,7 +189,7 @@ private:
    * @brief Type-erased handle to gradient matrix assembly kernel
    * @see gradient_matrix_kernel
    */
-  std::function<void(axom::ArrayView<double, 3, detail::execution_to_memory_v<exec>>)> element_gradient_;
+  std::function<void(ExecArrayView<double, 3, exec>)> element_gradient_;
 };
 
 }  // namespace serac

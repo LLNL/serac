@@ -107,8 +107,7 @@ public:
       auto ndof_per_test_element  = static_cast<size_t>(1);
       auto ndof_per_trial_element = static_cast<size_t>(trial_space_->GetFE(0)->GetDof() * trial_space_->GetVDim());
       // FIXME: Array op= is currently horribly broken for multidimensional arrays, remove when fixed
-      axom::Array<double, 3, detail::execution_to_memory_v<exec>> tmp(num_elements, ndof_per_test_element,
-                                                                      ndof_per_trial_element);
+      ExecArray<double, 3, exec> tmp(num_elements, ndof_per_test_element, ndof_per_trial_element);
       element_gradients_                                                          = std::move(tmp);
       static_cast<axom::ArrayBase<double, 3, decltype(tmp)>&>(element_gradients_) = tmp;
     }
@@ -118,8 +117,7 @@ public:
       auto ndof_per_test_bdr_element  = static_cast<size_t>(1);
       auto ndof_per_trial_bdr_element = static_cast<size_t>(trial_space_->GetBE(0)->GetDof() * trial_space_->GetVDim());
       // FIXME: Array op= is currently horribly broken for multidimensional arrays, remove when fixed
-      axom::Array<double, 3, detail::execution_to_memory_v<exec>> tmp(num_bdr_elements, ndof_per_test_bdr_element,
-                                                                      ndof_per_trial_bdr_element);
+      ExecArray<double, 3, exec> tmp(num_bdr_elements, ndof_per_test_bdr_element, ndof_per_trial_bdr_element);
       bdr_element_gradients_                                                          = std::move(tmp);
       static_cast<axom::ArrayBase<double, 3, decltype(tmp)>&>(bdr_element_gradients_) = tmp;
     }
@@ -543,10 +541,10 @@ private:
   mutable Gradient grad_;
 
   /// @brief array that stores each element's gradient of the residual w.r.t. trial values
-  axom::Array<double, 3, detail::execution_to_memory_v<exec>> element_gradients_;
+  ExecArray<double, 3, exec> element_gradients_;
 
   /// @brief array that stores each boundary element's gradient of the residual w.r.t. trial values
-  axom::Array<double, 3, detail::execution_to_memory_v<exec>> bdr_element_gradients_;
+  ExecArray<double, 3, exec> bdr_element_gradients_;
 
   template <typename T>
   friend typename Functional<T>::Gradient& grad(Functional<T>&);

@@ -329,10 +329,8 @@ QuadratureData<T>::QuadratureData(mfem::Mesh& mesh, const int p, const bool allo
   // FIXME: Can we avoid storing a copy of the offsets array in the general case?
   std::memcpy(offsets_.data(), detail::quadSpaceOffsets(detail::retrieve(qspace_)),
               static_cast<std::size_t>(mesh.GetNE() + 1) * sizeof(int));
-#ifdef __CUDACC__
-  // Unlike std::vector, ManagedArray does not appear to default-construct the elements
+  // FIXME: Remove/refactor once axom::Array default-initializes its data (PR pending)
   std::fill_n(data_.data(), data_.size(), T{});
-#endif
 }
 
 template <typename T>
