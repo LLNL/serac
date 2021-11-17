@@ -369,9 +369,9 @@ private:
           domain.ComputeElementGradients(K_elem);
         }
 
-        for (size_t e = 0; e < K_elem.shape()[0]; e++) {
-          for (size_t i = 0; i < K_elem.shape()[1]; i++) {
-            for (size_t j = 0; j < K_elem.shape()[2]; j++) {
+        for (axom::IndexType e = 0; e < K_elem.shape()[0]; e++) {
+          for (axom::IndexType i = 0; i < K_elem.shape()[1]; i++) {
+            for (axom::IndexType j = 0; j < K_elem.shape()[2]; j++) {
               auto [index, sign] = LUT(e, i, j);
               values[index] += sign * K_elem(e, i, j);
             }
@@ -390,9 +390,9 @@ private:
           boundary.ComputeElementGradients(K_belem);
         }
 
-        for (size_t e = 0; e < K_belem.shape()[0]; e++) {
-          for (size_t i = 0; i < K_belem.shape()[1]; i++) {
-            for (size_t j = 0; j < K_belem.shape()[2]; j++) {
+        for (axom::IndexType e = 0; e < K_belem.shape()[0]; e++) {
+          for (axom::IndexType i = 0; i < K_belem.shape()[1]; i++) {
+            for (axom::IndexType j = 0; j < K_belem.shape()[2]; j++) {
               auto [index, sign] = LUT(e, i, j);
               values[index] += sign * K_belem(e, i, j);
             }

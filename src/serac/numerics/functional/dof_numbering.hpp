@@ -186,8 +186,8 @@ struct DofNumbering {
       elem_restriction->Mult(iota, dof_ids);
       const double* dof_ids_h = dof_ids.HostRead();
 
-      for (size_t e = 0; e < element_dofs_.shape()[0]; e++) {
-        for (size_t i = 0; i < element_dofs_.shape()[1]; i++) {
+      for (axom::IndexType e = 0; e < element_dofs_.shape()[0]; e++) {
+        for (axom::IndexType i = 0; i < element_dofs_.shape()[1]; i++) {
           int mfem_id         = static_cast<int>(dof_ids_h[&element_dofs_(e, i) - element_dofs_.data()]);
           element_dofs_(e, i) = decodeSignedIndex(mfem_id);
         }
@@ -207,8 +207,8 @@ struct DofNumbering {
       face_restriction->Mult(iota, dof_ids);
       const double* dof_ids_h = dof_ids.HostRead();
 
-      for (size_t e = 0; e < bdr_element_dofs_.shape()[0]; e++) {
-        for (size_t i = 0; i < bdr_element_dofs_.shape()[1]; i++) {
+      for (axom::IndexType e = 0; e < bdr_element_dofs_.shape()[0]; e++) {
+        for (axom::IndexType i = 0; i < bdr_element_dofs_.shape()[1]; i++) {
           int mfem_id             = static_cast<int>(dof_ids_h[&bdr_element_dofs_(e, i) - bdr_element_dofs_.data()]);
           bdr_element_dofs_(e, i) = decodeSignedIndex(mfem_id);
         }

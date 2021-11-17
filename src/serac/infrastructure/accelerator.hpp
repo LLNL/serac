@@ -68,7 +68,8 @@ namespace serac {
 enum class ExecutionSpace
 {
   CPU,
-  GPU
+  GPU,
+  Dynamic  // Corresponds to execution that can "legally" happen on either the host or device
 };
 
 /**
@@ -78,8 +79,13 @@ constexpr ExecutionSpace default_execution_space = ExecutionSpace::CPU;
 
 namespace detail {
 
+/**
+ * @brief Type trait for translating between serac::ExecutionSpace and axom::MemorySpace
+ */
 template <ExecutionSpace space>
-struct execution_to_memory;
+struct execution_to_memory {
+  static constexpr axom::MemorySpace value = axom::MemorySpace::Dynamic;
+};
 
 #ifdef SERAC_USE_UMPIRE
 template <>
@@ -91,10 +97,10 @@ template <>
 struct execution_to_memory<ExecutionSpace::GPU> {
   static constexpr axom::MemorySpace value = axom::MemorySpace::Device;
 };
-#else
+
 template <>
-struct execution_to_memory<ExecutionSpace::CPU> {
-  static constexpr axom::MemorySpace value = axom::MemorySpace::Dynamic;
+struct execution_to_memory<ExecutionSpace::Dynamic> {
+  static constexpr axom::MemorySpace value = axom::MemorySpace::Unified;
 };
 #endif
 
@@ -102,17 +108,19 @@ template <ExecutionSpace space>
 inline constexpr axom::MemorySpace execution_to_memory_v = execution_to_memory<space>::value;
 
 /// @brief set the contents of an array to zero, byte-wise
-template <typename T, int dim>
-void zero_out(axom::Array<T, dim, execution_to_memory_v<ExecutionSpace::CPU>>& arr)
+template <typename T, int dim, axom::MemorySpace space>
+void zero_out(axom::Array<T, dim, space>& arr)
 {
   std::memset(arr.data(), 0, arr.size() * sizeof(T));
 }
+#ifdef __CUDACC__
 /// @overload
 template <typename T, int dim>
 void zero_out(axom::Array<T, dim, execution_to_memory_v<ExecutionSpace::GPU>>& arr)
 {
   cudaMemset(arr.data(), 0, arr.size() * sizeof(T));
 }
+#endif
 
 }  // namespace detail
 
@@ -121,6 +129,9 @@ using CPUArray = axom::Array<T, dim, detail::execution_to_memory_v<ExecutionSpac
 
 template <typename T, int dim = 1>
 using GPUArray = axom::Array<T, dim, detail::execution_to_memory_v<ExecutionSpace::GPU>>;
+
+template <typename T, int dim = 1>
+using UnifiedArray = axom::Array<T, dim, detail::execution_to_memory_v<ExecutionSpace::Dynamic>>;
 
 template <typename T, int dim = 1>
 using CPUArrayView = axom::ArrayView<T, dim, detail::execution_to_memory_v<ExecutionSpace::CPU>>;
