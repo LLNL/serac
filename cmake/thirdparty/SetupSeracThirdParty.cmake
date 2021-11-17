@@ -175,7 +175,12 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         #### MFEM Configuration Options
 
         # Prefix the "check" targets
-        set(MFEM_CUSTOM_TARGET_PREFIX "mfem_" CACHE STRING "" FORCE)
+        set(MFEM_CUSTOM_TARGET_PREFIX "mfem_" CACHE STRING "")
+
+        # Tweaks needed after Spack converted to the HDF5 CMake build system
+        set(HDF5_TARGET_NAMES "hdf5::hdf5-static;hdf5::hdf5-shared" CACHE STRING "")
+        set(HDF5_IMPORT_CONFIG "RELWITHDEBINFO" CACHE STRING "")
+        set(HDF5_C_LIBRARY_hdf5_hl "hdf5::hdf5_hl-static" CACHE STRING "")
 
         # Disable tests + examples
         set(MFEM_ENABLE_TESTING  OFF CACHE BOOL "")
