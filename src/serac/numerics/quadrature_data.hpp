@@ -237,11 +237,11 @@ private:
   /**
    * @brief The actual data
    */
-  axom::Array<T, 1, axom::MemorySpace::Unified> data_;
+  UnifiedArray<T> data_;
   /**
    * @brief A copy of the element_offsets member from mfem::QuadratureSpace
    */
-  axom::Array<int, 1, axom::MemorySpace::Unified> offsets_;
+  UnifiedArray<int> offsets_;
   /**
    * @brief The stride of the array
    */
