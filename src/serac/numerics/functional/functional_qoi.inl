@@ -106,16 +106,22 @@ public:
       auto num_elements           = static_cast<size_t>(trial_space_->GetNE());
       auto ndof_per_test_element  = static_cast<size_t>(1);
       auto ndof_per_trial_element = static_cast<size_t>(trial_space_->GetFE(0)->GetDof() * trial_space_->GetVDim());
-      element_gradients_          = axom::Array<double, 3, detail::execution_to_memory_v<exec>>(
-          num_elements, ndof_per_test_element, ndof_per_trial_element);
+      // FIXME: Array op= is currently horribly broken for multidimensional arrays, remove when fixed
+      axom::Array<double, 3, detail::execution_to_memory_v<exec>> tmp(num_elements, ndof_per_test_element,
+                                                                      ndof_per_trial_element);
+      element_gradients_                                                          = std::move(tmp);
+      static_cast<axom::ArrayBase<double, 3, decltype(tmp)>&>(element_gradients_) = tmp;
     }
 
     {
       auto num_bdr_elements           = static_cast<size_t>(trial_space_->GetNFbyType(mfem::FaceType::Boundary));
       auto ndof_per_test_bdr_element  = static_cast<size_t>(1);
       auto ndof_per_trial_bdr_element = static_cast<size_t>(trial_space_->GetBE(0)->GetDof() * trial_space_->GetVDim());
-      bdr_element_gradients_          = axom::Array<double, 3, detail::execution_to_memory_v<exec>>(
-          num_bdr_elements, ndof_per_test_bdr_element, ndof_per_trial_bdr_element);
+      // FIXME: Array op= is currently horribly broken for multidimensional arrays, remove when fixed
+      axom::Array<double, 3, detail::execution_to_memory_v<exec>> tmp(num_bdr_elements, ndof_per_test_bdr_element,
+                                                                      ndof_per_trial_bdr_element);
+      bdr_element_gradients_                                                          = std::move(tmp);
+      static_cast<axom::ArrayBase<double, 3, decltype(tmp)>&>(bdr_element_gradients_) = tmp;
     }
   }
 
@@ -310,8 +316,8 @@ private:
           domain.ComputeElementGradients(K_elem);
         }
 
-        for (size_t e = 0; e < K_elem.shape()[0]; e++) {
-          for (size_t j = 0; j < K_elem.shape()[2]; j++) {
+        for (axom::IndexType e = 0; e < K_elem.shape()[0]; e++) {
+          for (axom::IndexType j = 0; j < K_elem.shape()[2]; j++) {
             auto [index, sign] = LUT(e, j);
             gradient_L_[index] += sign * K_elem(e, 0, j);
           }
@@ -327,8 +333,8 @@ private:
           boundary.ComputeElementGradients(K_belem);
         }
 
-        for (size_t e = 0; e < K_belem.shape()[0]; e++) {
-          for (size_t j = 0; j < K_belem.shape()[2]; j++) {
+        for (axom::IndexType e = 0; e < K_belem.shape()[0]; e++) {
+          for (axom::IndexType j = 0; j < K_belem.shape()[2]; j++) {
             auto [index, sign] = LUT(e, j);
             gradient_L_[index] += sign * K_belem(e, 0, j);
           }
