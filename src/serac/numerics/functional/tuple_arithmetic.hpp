@@ -160,16 +160,85 @@ SERAC_HOST_DEVICE auto chain_rule_tuple_matvec(serac::tuple<T...> df_dx, serac::
  * @param[in] args The set of values
  * The gradients for each value will be set to 1 (or its tensor equivalent)
  */
-template <typename... T>
-constexpr auto make_dual(T... args)
+//template <typename... T>
+//constexpr auto make_dual(T ... args)
+//{
+//  return detail::make_dual_helper(serac::tuple{args...}, std::make_integer_sequence<int, int(sizeof...(T))>{});
+//}
+
+///// @overload
+//template <typename... T>
+//constexpr auto make_dual(serac::tuple<T...> args)
+//{
+//  return detail::make_dual_helper(args, std::make_integer_sequence<int, int(sizeof...(T))>{});
+//}
+
+template <int i, typename S, typename T>
+struct one_hot_helper;
+
+template <int i, int... I, typename T>
+struct one_hot_helper<i, std::integer_sequence<int, I...>, T> {
+  using type = serac::tuple<std::conditional_t<i == I, T, zero>...>;
+};
+
+template <int i, int n, typename T>
+struct one_hot : public one_hot_helper<i, std::make_integer_sequence<int, n>, T> {
+};
+
+/**
+ * @brief a tuple type with n entries, all of which are of type `serac::zero`,
+ * except for the i^{th} entry, which is of type T
+ *
+ *  e.g. one_hot_t< 2, 4, T > == tuple<zero, zero, T, zero>
+ */
+template <int i, int n, typename T>
+using one_hot_t = typename one_hot<i, n, T>::type;
+
+template <int i, int N>
+constexpr auto make_dual_helper(double arg)
 {
-  return detail::make_dual_helper(serac::tuple{args...}, std::make_integer_sequence<int, int(sizeof...(T))>{});
+  using gradient_t = one_hot_t<i, N, double>;
+  dual<gradient_t> arg_dual{};
+  arg_dual.value                   = arg;
+  serac::get<i>(arg_dual.gradient) = 1.0;
+  return arg_dual;
 }
-/// @overload
-template <typename... T>
-constexpr auto make_dual(serac::tuple<T...> args)
+
+template <int i, int N, typename T, int... n>
+constexpr auto make_dual_helper(const tensor<T, n...>& arg)
 {
-  return detail::make_dual_helper(args, std::make_integer_sequence<int, int(sizeof...(T))>{});
+  using gradient_t = one_hot_t<i, N, tensor<T, n...> >;
+  tensor<dual<gradient_t>, n...> arg_dual{};
+  for_constexpr<n...>([&](auto... j) {
+    arg_dual(j...).value                         = arg(j...);
+    serac::get<i>(arg_dual(j...).gradient)(j...) = 1.0;
+  });
+  return arg_dual;
+}
+
+template <typename T00, typename T01>
+constexpr auto make_dual(const tuple < tuple<T00, T01> > & args)
+{
+  return tuple{make_dual_helper<0, 2>(get<0>(get<0>(args))), make_dual_helper<1, 2>(get<1>(get<0>(args)))};
+}
+
+template <typename T00, typename T01, typename T10, typename T11>
+constexpr auto make_dual(const tuple < tuple<T00, T01>, serac::tuple<T10, T11> > & args)
+{
+  return serac::tuple{
+    serac::tuple{make_dual_helper<0, 4>(serac::get<0>(get<0>(args))), make_dual_helper<1, 4>(serac::get<1>(get<0>(args)))},
+    serac::tuple{make_dual_helper<2, 4>(serac::get<0>(get<1>(args))), make_dual_helper<3, 4>(serac::get<1>(get<1>(args)))}
+  };
+}
+
+template <typename T00, typename T01, typename T10, typename T11, typename T20, typename T21>
+constexpr auto make_dual(const tuple< tuple<T00, T01>, tuple<T10, T11>, tuple<T20, T21> > & args)
+{
+  return serac::tuple{
+    serac::tuple{make_dual_helper<0, 6>(serac::get<0>(get<0>(args))), make_dual_helper<1, 6>(serac::get<1>(get<0>(args)))},
+    serac::tuple{make_dual_helper<2, 6>(serac::get<0>(get<1>(args))), make_dual_helper<3, 6>(serac::get<1>(get<1>(args)))},
+    serac::tuple{make_dual_helper<4, 6>(serac::get<0>(get<2>(args))), make_dual_helper<5, 6>(serac::get<1>(get<2>(args)))}
+  };
 }
 
 /**

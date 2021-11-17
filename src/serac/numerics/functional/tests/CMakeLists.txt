@@ -15,6 +15,7 @@ blt_add_executable(NAME        tensor_unit_tests
 # Then add the examples/tests
 set(functional_tests_serial
     ad_proto.cpp
+    get_qf_derivative_type.cpp
     hcurl_unit_tests.cpp
     test_tensor_ad.cpp
     array_test.cpp
@@ -26,6 +27,7 @@ serac_add_tests( SOURCES ${functional_tests_serial}
 # Then add the examples/tests
 set(functional_tests_mpi
     functional_basic.cpp
+    functional_multiphysics.cpp
     functional_qoi.cpp
     functional_nonlinear.cpp
     functional_boundary_test.cpp

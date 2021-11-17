@@ -141,6 +141,54 @@ SERAC_HOST_DEVICE void Add(const mfem::DeviceTensor<3, double>& r_global, tensor
   }
 }
 
+enum class IntegralType { Boundary, Domain };
+
+template < typename space, IntegralType type, typename dimension >
+struct QFunctionArgument;
+
+// define Hcurl qfunction argument types
+template <int p, int dim >
+struct QFunctionArgument< H1< p, 1 >, IntegralType::Domain, Dimension<dim> >{
+  using type = tuple< double, tensor <double, dim> >; 
+};
+template <int p, int c, int dim >
+struct QFunctionArgument< H1< p, c >, IntegralType::Domain, Dimension<dim> >{
+  using type = tuple< tensor<double, c>, tensor <double, c, dim> >; 
+};
+
+template <int p, int dim >
+struct QFunctionArgument< H1< p, 1 >, IntegralType::Boundary, Dimension<dim> >{
+  using type = double; 
+};
+template <int p, int c, int dim >
+struct QFunctionArgument< H1< p, c >, IntegralType::Boundary, Dimension<dim> >{
+  using type = tensor<double, c>; 
+};
+
+
+// define Hcurl qfunction argument types
+template <int p >
+struct QFunctionArgument< Hcurl< p >, IntegralType::Domain, Dimension<2> >{
+  using type = tuple< tensor< double, 2 >, double >;
+};
+
+template <int p >
+struct QFunctionArgument< Hcurl< p >, IntegralType::Domain, Dimension<3> >{
+  using type = tuple< tensor< double, 3 >, tensor< double, 3> >;
+};
+
+template <int p >
+struct QFunctionArgument< Hcurl< p >, IntegralType::Boundary, Dimension<2> >{
+  using type = tensor< double, 2 >;
+};
+
+template <int p >
+struct QFunctionArgument< Hcurl< p >, IntegralType::Boundary, Dimension<3> >{
+  using type = tensor< double, 3 >;
+};
+
+
+
 /**
  * @brief a class that provides the lambda argument types for a given integral
  * @tparam trial_space the trial space associated with the integral
@@ -300,6 +348,22 @@ SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, args_type&& dual
 {
   return qf(x_q, dual_arg);
 }
+
+/// @overload
+template <typename lambda, typename coords_type, typename T, int ... i >
+SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, T && dual_args, std::nullptr_t, std::integer_sequence< int, i ... >)
+{
+  return qf(x_q, serac::get<i>(dual_args) ...);
+}
+
+/// @overload
+template <typename lambda, typename coords_type, typename ... T>
+SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, serac::tuple< T ... > && dual_args, std::nullptr_t)
+{
+  return apply_qf_helper(qf, x_q, dual_args, nullptr, std::make_integer_sequence< int, int(sizeof ... (T)) >{});
+}
+
+
 
 }  // namespace detail
 
