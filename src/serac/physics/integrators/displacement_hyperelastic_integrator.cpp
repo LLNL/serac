@@ -8,7 +8,6 @@
 
 #include "serac/infrastructure/profiling.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
-#include "serac/numerics/array_4D.hpp"
 #include "serac/physics/materials/solid_utils.hpp"
 
 namespace serac::mfem_ext {
@@ -164,7 +163,7 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(
   du_dX_.SetSize(dim);
   sigma_.SetSize(dim);
   stiffness_matrix.SetSize(dof * dim);
-  C_.SetSize(dim, dim, dim, dim);
+  C_.resize(dim, dim, dim, dim);
 
   // Reshape the input state as a matrix
   input_state_matrix_.UseExternalData(state_vector.GetData(), dof, dim);
