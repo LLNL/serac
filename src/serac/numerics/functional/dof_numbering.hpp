@@ -263,11 +263,12 @@ struct GradientAssemblyLookupTables {
     // which element and which dof are associated with that particular nonzero entry
     bool on_boundary = false;
     for (uint32_t e = 0; e < num_elements; e++) {
-      for (uint32_t i = 0; i < test_dofs.element_dofs_.shape()[1]; i++) {
+      for (axom::IndexType i = 0; i < test_dofs.element_dofs_.shape()[1]; i++) {
         auto test_dof = test_dofs.element_dofs_(e, i);
-        for (uint32_t j = 0; j < trial_dofs.element_dofs_.shape()[1]; j++) {
+        for (axom::IndexType j = 0; j < trial_dofs.element_dofs_.shape()[1]; j++) {
           auto trial_dof = trial_dofs.element_dofs_(e, j);
-          infos.push_back(ElemInfo{test_dof, trial_dof, i, j, e, test_dof.sign_ * trial_dof.sign_, on_boundary});
+          infos.push_back(ElemInfo{test_dof, trial_dof, static_cast<uint32_t>(i), static_cast<uint32_t>(j), e,
+                                   test_dof.sign_ * trial_dof.sign_, on_boundary});
         }
       }
     }
@@ -277,11 +278,12 @@ struct GradientAssemblyLookupTables {
     // an empty 2D array, so these loops will not do anything
     on_boundary = true;
     for (uint32_t e = 0; e < num_bdr_elements; e++) {
-      for (uint32_t i = 0; i < test_dofs.bdr_element_dofs_.shape()[1]; i++) {
+      for (axom::IndexType i = 0; i < test_dofs.bdr_element_dofs_.shape()[1]; i++) {
         auto test_dof = test_dofs.bdr_element_dofs_(e, i);
-        for (uint32_t j = 0; j < trial_dofs.bdr_element_dofs_.shape()[1]; j++) {
+        for (axom::IndexType j = 0; j < trial_dofs.bdr_element_dofs_.shape()[1]; j++) {
           auto trial_dof = trial_dofs.bdr_element_dofs_(e, j);
-          infos.push_back(ElemInfo{test_dof, trial_dof, i, j, e, test_dof.sign_ * trial_dof.sign_, on_boundary});
+          infos.push_back(ElemInfo{test_dof, trial_dof, static_cast<uint32_t>(i), static_cast<uint32_t>(j), e,
+                                   test_dof.sign_ * trial_dof.sign_, on_boundary});
         }
       }
     }
