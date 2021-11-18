@@ -27,15 +27,25 @@ std::string                                                           StateManag
 std::vector<std::unique_ptr<SyncableData>>                            StateManager::syncable_data_;
 axom::sidre::DataStore*                                               StateManager::ds_                = nullptr;
 std::string                                                           StateManager::output_dir_        = "";
-const std::string                                                     StateManager::primary_mesh_name_ = "primary";
+const std::string                                                     StateManager::default_mesh_name_ = "primary";
 
 void StateManager::newDataCollection(const std::string& name, const std::optional<int> cycle_to_load)
 {
   SLIC_ERROR_ROOT_IF(!ds_, "Cannot construct a DataCollection without a DataStore");
-  std::string coll_name    = name + "_datacoll";
-  auto        global_grp   = ds_->getRoot()->createGroup(coll_name + "_global");
-  auto        bp_index_grp = global_grp->createGroup("blueprint_index/" + coll_name);
-  auto        domain_grp   = ds_->getRoot()->createGroup(coll_name);
+  std::string coll_name = name + "_datacoll";
+
+  // FIXME ASAP
+  // The MPI path in MFEMSidreDataCollection (aka SPIO) saves/loads the whole datastore
+  // so the whole datastore is loaded after the first field is
+  // unfortunately this means we have to wipe any additional fields out before trying again
+  if (is_restart_ && !datacolls_.empty()) {
+    ds_->getRoot()->destroyGroup(coll_name + "_global");
+    ds_->getRoot()->destroyGroup(coll_name);
+  }
+
+  auto global_grp   = ds_->getRoot()->createGroup(coll_name + "_global");
+  auto bp_index_grp = global_grp->createGroup("blueprint_index/" + coll_name);
+  auto domain_grp   = ds_->getRoot()->createGroup(coll_name);
 
   // Needs to be configured to own the mesh data so all mesh data is saved to datastore/output file
   constexpr bool owns_mesh_data = true;
@@ -61,6 +71,11 @@ void StateManager::newDataCollection(const std::string& name, const std::optiona
     // Functional needs the nodal grid function and neighbor data in the mesh
     mesh().EnsureNodes();
     mesh().ExchangeFaceNbrData();
+
+    std::ofstream of(name + "_load_" + std::to_string(*cycle_to_load));
+    ds_->print(of);
+    std::ofstream of2(name + "_load_specific_" + std::to_string(*cycle_to_load));
+    ds_->getRoot()->getGroup(coll_name)->print(of2);
 
   } else {
     datacoll.SetCycle(0);   // Iteration counter
@@ -143,9 +158,13 @@ void StateManager::save(const double t, const int cycle, const std::string& tag)
   datacoll.SetTime(t);
   datacoll.SetCycle(cycle);
   datacoll.Save();
+  std::ofstream of(tag + "_save_" + std::to_string(cycle));
+  ds_->print(of);
+  std::ofstream of2(tag + "_save_specific_" + std::to_string(cycle));
+  ds_->getRoot()->getGroup(tag + "_datacoll")->print(of2);
 }
 
-void StateManager::setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const std::string& tag)
+mfem::ParMesh* StateManager::setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const std::string& tag)
 {
   newDataCollection(tag);
   auto& datacoll = datacolls_.at(tag);
@@ -156,6 +175,7 @@ void StateManager::setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const std::stri
   auto& new_pmesh = mesh(tag);
   new_pmesh.EnsureNodes();
   new_pmesh.ExchangeFaceNbrData();
+  return &new_pmesh;
 }
 
 mfem::ParMesh& StateManager::mesh(const std::string& tag)
@@ -163,6 +183,21 @@ mfem::ParMesh& StateManager::mesh(const std::string& tag)
   auto mesh = datacolls_.at(tag).GetMesh();
   SLIC_ERROR_ROOT_IF(!mesh, "The datacollection does not contain a mesh object");
   return static_cast<mfem::ParMesh&>(*mesh);
+}
+
+std::string StateManager::collectionID(mfem::ParMesh* pmesh)
+{
+  if (!pmesh) {
+    return default_mesh_name_;
+  } else {
+    for (auto& [name, datacoll] : datacolls_) {
+      if (datacoll.GetMesh() == pmesh) {
+        return name;
+      }
+    }
+    SLIC_ERROR_ROOT("The mesh has not been registered with StateManager");
+    return {};
+  }
 }
 
 }  // namespace serac

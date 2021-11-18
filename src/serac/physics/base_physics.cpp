@@ -20,8 +20,9 @@
 
 namespace serac {
 
-BasePhysics::BasePhysics()
-    : mesh_(StateManager::mesh()),
+BasePhysics::BasePhysics(mfem::ParMesh* pmesh)
+    : sidre_datacoll_id_(StateManager::collectionID(pmesh)),
+      mesh_(StateManager::mesh(sidre_datacoll_id_)),
       comm_(mesh_.GetComm()),
       output_type_(serac::OutputType::VisIt),
       time_(0.0),
@@ -33,7 +34,7 @@ BasePhysics::BasePhysics()
   root_name_                     = "serac";
 }
 
-BasePhysics::BasePhysics(int n, int p) : BasePhysics()
+BasePhysics::BasePhysics(int n, int p, mfem::ParMesh* pmesh) : BasePhysics(pmesh)
 {
   order_ = p;
   gf_initialized_.assign(static_cast<std::size_t>(n), false);
@@ -118,7 +119,7 @@ void BasePhysics::outputState() const
     case serac::OutputType::SidreVisIt: {
       // Implemented through a helper method as the full interface of the MFEMSidreDataCollection
       // is restricted from global access
-      StateManager::save(time_, cycle_);
+      StateManager::save(time_, cycle_, sidre_datacoll_id_);
       break;
     }
 

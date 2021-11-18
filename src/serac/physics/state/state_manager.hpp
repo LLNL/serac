@@ -41,31 +41,34 @@ public:
   /**
    * @brief Factory method for creating a new FEState object, signature is identical to FEState constructor
    * @param[in] options Configuration options for the FEState, if a new state is created
+   * @param[in] tag A string that uniquely identifies the mesh on which the field is to be defined
    * @see FiniteElementState::FiniteElementState
    * @note If this is a restart then the options (except for the name) will be ignored
    */
   static FiniteElementState newState(FiniteElementVector::Options&& options = {},
-                                     const std::string&             tag     = primary_mesh_name_);
+                                     const std::string&             tag     = default_mesh_name_);
 
   /**
    * @brief Factory method for creating a new FEDual object, signature is identical to FEDual constructor
    * @param[in] options Configuration options for the FEDual, if a new state is created
+   * @param[in] tag A string that uniquely identifies the mesh on which the dual is to be defined
    * @see FiniteElementDual::FiniteElementDual
    * @note If this is a restart then the options (except for the name) will be ignored
    */
   static FiniteElementDual newDual(FiniteElementVector::Options&& options = {},
-                                   const std::string&             tag     = primary_mesh_name_);
+                                   const std::string&             tag     = default_mesh_name_);
 
   /**
    * @brief Factory method for creating a new QuadratureData object
    * @tparam T The type of the per-qpt data
    * @param[in] name The name of the quadrature data field
    * @param[in] p The order of the quadrature rule
+   * @param[in] tag A string that uniquely identifies the mesh on which the quadrature data is to be defined
    * @see QuadratureData::QuadratureData
    */
   template <typename T>
   static QuadratureData<T>& newQuadratureData(const std::string& name, const int p,
-                                              const std::string& tag = primary_mesh_name_)
+                                              const std::string& tag = default_mesh_name_)
   {
     auto& datacoll = datacolls_.at(tag);
     if (is_restart_) {
@@ -87,13 +90,16 @@ public:
    * @brief Updates the Conduit Blueprint state in the datastore and saves to a file
    * @param[in] t The current sim time
    * @param[in] cycle The current iteration number of the simulation
+   * @param[in] tag A string that uniquely identifies the mesh (and accompanying fields) to save
    */
-  static void save(const double t, const int cycle, const std::string& tag = primary_mesh_name_);
+  static void save(const double t, const int cycle, const std::string& tag = default_mesh_name_);
 
   /**
    * @brief Loads an existing DataCollection
+   * @param[in] cycle_to_load What cycle to load the DataCollection from
+   * @param[in] tag The tag associated with the DataCollection when it was saved
    */
-  static void load(const int cycle_to_load, const std::string& tag = primary_mesh_name_)
+  static void load(const int cycle_to_load, const std::string& tag = default_mesh_name_)
   {
     // FIXME: Assumes that if one DataCollection is going to be reloaded all DataCollections will be
     is_restart_ = true;
@@ -113,23 +119,36 @@ public:
 
   /**
    * @brief Gives ownership of mesh to StateManager
+   * @param[in] tag A string that uniquely identifies the mesh
+   * @return A pointer to the stored mesh whose ownership was just passed to StateManager
    */
-  static void setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const std::string& tag = primary_mesh_name_);
+  static mfem::ParMesh* setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const std::string& tag = default_mesh_name_);
 
   /**
    * @brief Returns a non-owning reference to mesh held by StateManager
+   * @param[in] tag A string that uniquely identifies the mesh
+   * @pre A mesh identified by @a tag must be registered - either via @p load() or @p setMesh()
    */
-  static mfem::ParMesh& mesh(const std::string& tag = primary_mesh_name_);
+  static mfem::ParMesh& mesh(const std::string& tag = default_mesh_name_);
 
   /**
    * @brief Returns the Sidre DataCollection name
    */
-  static const std::string collectionName() { return collection_name_; }
+  static std::string collectionName() { return collection_name_; }
+
+  /**
+   * @brief Returns the datacollection ID for a given mesh
+   * @param[in] pmesh Pointer to a mesh (non-owning)
+   * @return The collection ID corresponding to the DataCollection that owns the mesh
+   * pointed to by @a pmesh.  If @a pmesh is @p nullptr then the default collection ID is returned.
+   */
+  static std::string collectionID(mfem::ParMesh* pmesh);
 
 private:
   /**
    * @brief Creates a new datacollection based on a registered mesh
-   * @param[in] cycle_to_load What cycle to load the DataCollection from
+   * @param[in] name The name of the new datacollection
+   * @param[in] cycle_to_load What cycle to load the DataCollection from, if applicable
    */
   static void newDataCollection(const std::string& name, const std::optional<int> cycle_to_load = {});
 
@@ -157,7 +176,7 @@ private:
   /// @brief Output directory to which all datacollections are saved
   static std::string output_dir_;
   /// @brief Default name for the mesh - mostly for backwards compatibility
-  const static std::string primary_mesh_name_;
+  const static std::string default_mesh_name_;
 };
 
 }  // namespace serac

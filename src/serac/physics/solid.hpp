@@ -201,7 +201,8 @@ public:
    * @param[in] name An optional name for the physics module instance
    */
   Solid(int order, const SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
-        FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "");
+        FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "",
+        mfem::ParMesh* pmesh = nullptr);
 
   /**
    * @brief Construct a new Nonlinear Solid Solver object

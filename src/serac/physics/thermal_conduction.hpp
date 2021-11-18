@@ -206,8 +206,11 @@ public:
    * @param[in] order The order of the thermal field discretization
    * @param[in] options The system solver parameters
    * @param[in] name An optional name for the physics module instance
+   * @param[in] pmesh An optional mesh reference, must be provided to configure the module
+   * when a mesh other than the primary mesh is used
    */
-  ThermalConduction(int order, const SolverOptions& options, const std::string& name = "");
+  ThermalConduction(int order, const SolverOptions& options, const std::string& name = "",
+                    mfem::ParMesh* pmesh = nullptr);
 
   /**
    * @brief Construct a new Thermal Solver object
