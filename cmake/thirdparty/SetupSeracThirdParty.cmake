@@ -72,103 +72,18 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
                  APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
                  "${_dirs}")
 
-
     #------------------------------------------------------------------------------
-    # Axom
+    # PETSC
     #------------------------------------------------------------------------------
-    if(NOT AXOM_DIR)
-        MESSAGE(FATAL_ERROR "Could not find Axom. Axom requires explicit AXOM_DIR.")
-    endif()
-
-    serac_assert_is_directory(VARIABLE_NAME AXOM_DIR)
-
-    find_package(axom REQUIRED
-                      NO_DEFAULT_PATH 
-                      PATHS ${AXOM_DIR}/lib/cmake)
-
-    #
-    # Check for optional Axom headers that are required for Serac
-    #
-
-    # sol.hpp
-    find_path(
-        _sol_found sol.hpp
-        PATHS ${AXOM_DIR}/include/axom
-        NO_DEFAULT_PATH
-        NO_CMAKE_ENVIRONMENT_PATH
-        NO_CMAKE_PATH
-        NO_SYSTEM_ENVIRONMENT_PATH
-        NO_CMAKE_SYSTEM_PATH
-    )
-    if (NOT _sol_found)
-        message(FATAL_ERROR "Given AXOM_DIR did not contain a required header: axom/sol.hpp"
-                            "\nTry building Axom with '-DBLT_CXX_STD=c++14' or higher\n ")
-    endif()
-
-    # LuaReader.hpp
-    find_path(
-        _luareader_found LuaReader.hpp
-        PATHS ${AXOM_DIR}/include/axom/inlet
-        NO_DEFAULT_PATH
-        NO_CMAKE_ENVIRONMENT_PATH
-        NO_CMAKE_PATH
-        NO_SYSTEM_ENVIRONMENT_PATH
-        NO_CMAKE_SYSTEM_PATH
-    )
-    if (NOT _luareader_found)
-        message(FATAL_ERROR "Given AXOM_DIR did not contain a required header: axom/inlet/LuaReader.hpp"
-                            "\nTry building Axom with '-DLUA_DIR=path/to/lua/install'\n ")
-    endif()
-
-    # MFEMSidreDataCollection.hpp
-    find_path(
-        _mfemdatacollection_found MFEMSidreDataCollection.hpp
-        PATHS ${AXOM_DIR}/include/axom/sidre/core
-        NO_DEFAULT_PATH
-        NO_CMAKE_ENVIRONMENT_PATH
-        NO_CMAKE_PATH
-        NO_SYSTEM_ENVIRONMENT_PATH
-        NO_CMAKE_SYSTEM_PATH
-    )
-    if (NOT _mfemdatacollection_found)
-        message(FATAL_ERROR "Given AXOM_DIR did not contain a required header: axom/sidre/core/MFEMSidreDataCollection.hpp"
-                            "\nTry building Axom with '-DAXOM_ENABLE_MFEM_SIDRE_DATACOLLECTION=ON'\n ")
-    endif()
-
-
-    #------------------------------------------------------------------------------
-    # MFEM
-    #------------------------------------------------------------------------------
-    include(${CMAKE_CURRENT_LIST_DIR}/FindMFEM.cmake)
-
-
-    #------------------------------------------------------------------------------
-    # Tribol
-    #------------------------------------------------------------------------------
-    if(TRIBOL_DIR)
-        serac_assert_is_directory(VARIABLE_NAME TRIBOL_DIR)
-
-        find_package(tribol REQUIRED
-                            NO_DEFAULT_PATH 
-                            PATHS ${TRIBOL_DIR}/lib/cmake)
-
-        if(TARGET tribol)
-            message(STATUS "Tribol CMake exported library loaded: tribol")
-        else()
-            message(FATAL_ERROR "Could not load Tribol CMake exported library: tribol")
-        endif()
-
-        # Set include dir to system
-        set(TRIBOL_INCLUDE_DIR ${TRIBOL_DIR}/include)
-        set_property(TARGET tribol
-                     APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
-                     ${TRIBOL_INCLUDE_DIR})
+    if(PETSC_DIR)
+        serac_assert_is_directory(VARIABLE_NAME PETSC_DIR)
+        include(${CMAKE_CURRENT_LIST_DIR}/FindPETSc.cmake)
+        message(STATUS "PETSc support is ON")
+        set(PETSC_FOUND TRUE)
     else()
-        set(TRIBOL_FOUND OFF)
+        message(STATUS "PETSc support is OFF")
+        set(PETSC_FOUND FALSE)
     endif()
-    
-    message(STATUS "Tribol support is " ${TRIBOL_FOUND})
-
 
     #------------------------------------------------------------------------------
     # Caliper
@@ -200,6 +115,216 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         message(STATUS "Caliper support is OFF")
         set(CALIPER_FOUND FALSE)
     endif()
+
+    #------------------------------------------------------------------------------
+    # MFEM
+    #------------------------------------------------------------------------------
+    if(NOT SERAC_ENABLE_CODEVELOP)
+        message(STATUS "Using installed MFEM")
+        include(${CMAKE_CURRENT_LIST_DIR}/FindMFEM.cmake)
+    else()
+        message(STATUS "Using MFEM submodule")
+
+        #### Store Data that MFEM clears
+        set(tpls_to_save ASCENT AXOM CALIPER CONDUIT HDF5
+                         HYPRE LUA METIS NETCDF PETSC RAJA UMPIRE)
+        foreach(_tpl ${tpls_to_save})
+            set(${_tpl}_DIR_SAVE "${${_tpl}_DIR}")
+        endforeach()
+
+        #### MFEM "Use" Options
+
+        # Assumes that we have AMGX if we have CUDA
+        set(MFEM_USE_AMGX ${ENABLE_CUDA} CACHE BOOL "")
+        set(MFEM_USE_CALIPER ${CALIPER_FOUND} CACHE BOOL "")
+        # We don't use MFEM's Conduit/Axom support
+        set(MFEM_USE_CONDUIT OFF CACHE BOOL "")
+        set(MFEM_USE_CUDA ${ENABLE_CUDA} CACHE BOOL "")
+        set(MFEM_USE_LAPACK ON CACHE BOOL "")
+        # mfem+mpi requires metis
+        set(MFEM_USE_METIS ${ENABLE_MPI} CACHE BOOL "")
+        set(MFEM_USE_METIS_5 ${ENABLE_MPI} CACHE BOOL "")
+        set(MFEM_USE_MPI ${ENABLE_MPI} CACHE BOOL "")
+        if(NETCDF_DIR)
+            serac_assert_is_directory(VARIABLE_NAME NETCDF_DIR)
+            set(MFEM_USE_NETCDF ON CACHE BOOL "")
+        endif()
+        # mfem+mpi also needs parmetis
+        if(ENABLE_MPI)
+            serac_assert_is_directory(VARIABLE_NAME PARMETIS_DIR)
+            # Slightly different naming convention
+            set(ParMETIS_DIR ${PARMETIS_DIR} CACHE PATH "")
+        endif()
+        set(MFEM_USE_PETSC ${PETSC_FOUND} CACHE BOOL "")
+        #TODO: RAJA?
+        if(SUNDIALS_DIR)
+            serac_assert_is_directory(VARIABLE_NAME SUNDIALS_DIR)
+            set(MFEM_USE_SUNDIALS ON CACHE BOOL "")
+        else()
+            set(MFEM_USE_SUNDIALS OFF CACHE BOOL "")
+        endif()
+        if(SUPERLUDIST_DIR)
+            serac_assert_is_directory(VARIABLE_NAME SUPERLUDIST_DIR)
+            # MFEM uses a slightly different naming convention
+            set(SuperLUDist_DIR ${SUPERLUDIST_DIR} CACHE PATH "")
+            set(MFEM_USE_SUPERLU ${ENABLE_MPI} CACHE BOOL "")
+        endif()
+        #TODO: Umpire?
+        set(MFEM_USE_ZLIB ON CACHE BOOL "")
+
+        #### MFEM Configuration Options
+
+        # Prefix the "check" targets
+        set(MFEM_CUSTOM_TARGET_PREFIX "mfem_" CACHE STRING "")
+
+        # Tweaks needed after Spack converted to the HDF5 CMake build system
+        set(HDF5_TARGET_NAMES "hdf5::hdf5-static;hdf5::hdf5-shared" CACHE STRING "")
+        set(HDF5_IMPORT_CONFIG "RELWITHDEBINFO" CACHE STRING "")
+        set(HDF5_C_LIBRARY_hdf5_hl "hdf5::hdf5_hl-static" CACHE STRING "")
+
+        # Disable tests + examples
+        set(MFEM_ENABLE_TESTING  OFF CACHE BOOL "")
+        set(MFEM_ENABLE_EXAMPLES OFF CACHE BOOL "")
+        set(MFEM_ENABLE_MINIAPPS OFF CACHE BOOL "")
+
+        add_subdirectory(${PROJECT_SOURCE_DIR}/mfem  ${CMAKE_BINARY_DIR}/mfem)
+ 
+        set(MFEM_FOUND TRUE CACHE BOOL "" FORCE)
+
+        # Patch the mfem target with the correct include directories
+        get_target_property(_mfem_includes mfem INCLUDE_DIRECTORIES)
+        target_include_directories(mfem SYSTEM INTERFACE $<BUILD_INTERFACE:${_mfem_includes}>)
+        target_include_directories(mfem SYSTEM INTERFACE $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/mfem>)
+        
+        #### Restore previously stored data
+        foreach(_tpl ${tpls_to_save})
+            set(${_tpl}_DIR "${${_tpl}_DIR_SAVE}" CACHE PATH "" FORCE)
+        endforeach()
+
+        set(MFEM_BUILT_WITH_CMAKE TRUE)
+    endif()
+
+    #------------------------------------------------------------------------------
+    # Axom
+    #------------------------------------------------------------------------------
+    if(NOT SERAC_ENABLE_CODEVELOP)
+        message(STATUS "Using installed Axom")
+        serac_assert_is_directory(VARIABLE_NAME AXOM_DIR)
+
+        find_package(axom REQUIRED
+                        NO_DEFAULT_PATH 
+                        PATHS ${AXOM_DIR}/lib/cmake)
+
+        message(STATUS "Axom support is ON")
+
+        #
+        # Check for optional Axom headers that are required for Serac
+        #
+
+        # sol.hpp
+        find_path(
+            _sol_found sol.hpp
+            PATHS ${AXOM_DIR}/include/axom
+            NO_DEFAULT_PATH
+            NO_CMAKE_ENVIRONMENT_PATH
+            NO_CMAKE_PATH
+            NO_SYSTEM_ENVIRONMENT_PATH
+            NO_CMAKE_SYSTEM_PATH
+        )
+        if (NOT _sol_found)
+            message(FATAL_ERROR "Given AXOM_DIR did not contain a required header: axom/sol.hpp"
+                                "\nTry building Axom with '-DBLT_CXX_STD=c++14' or higher\n ")
+        endif()
+
+        # LuaReader.hpp
+        find_path(
+            _luareader_found LuaReader.hpp
+            PATHS ${AXOM_DIR}/include/axom/inlet
+            NO_DEFAULT_PATH
+            NO_CMAKE_ENVIRONMENT_PATH
+            NO_CMAKE_PATH
+            NO_SYSTEM_ENVIRONMENT_PATH
+            NO_CMAKE_SYSTEM_PATH
+        )
+        if (NOT _luareader_found)
+            message(FATAL_ERROR "Given AXOM_DIR did not contain a required header: axom/inlet/LuaReader.hpp"
+                                "\nTry building Axom with '-DLUA_DIR=path/to/lua/install'\n ")
+        endif()
+
+        # MFEMSidreDataCollection.hpp
+        find_path(
+            _mfemdatacollection_found MFEMSidreDataCollection.hpp
+            PATHS ${AXOM_DIR}/include/axom/sidre/core
+            NO_DEFAULT_PATH
+            NO_CMAKE_ENVIRONMENT_PATH
+            NO_CMAKE_PATH
+            NO_SYSTEM_ENVIRONMENT_PATH
+            NO_CMAKE_SYSTEM_PATH
+        )
+        if (NOT _mfemdatacollection_found)
+            message(FATAL_ERROR "Given AXOM_DIR did not contain a required header: axom/sidre/core/MFEMSidreDataCollection.hpp"
+                                "\nTry building Axom with '-DAXOM_ENABLE_MFEM_SIDRE_DATACOLLECTION=ON'\n ")
+        endif()
+    else()
+        # Otherwise we use the submodule
+        message(STATUS "Using Axom submodule")
+        if(NOT LUA_DIR)
+            message(FATAL_ERROR "LUA_DIR is required to use the Axom submodule"
+                                "\nTry running CMake with '-DLUA_DIR=path/to/lua/install'\n ")
+        endif()
+        set(AXOM_ENABLE_MFEM_SIDRE_DATACOLLECTION ON CACHE BOOL "")
+        set(AXOM_ENABLE_EXAMPLES OFF CACHE BOOL "")
+        set(AXOM_ENABLE_TESTS    OFF CACHE BOOL "")
+        set(AXOM_ENABLE_DOCS     OFF CACHE BOOL "")
+        set(AXOM_USE_CALIPER ${CALIPER_FOUND} CACHE BOOL "")
+
+        # Used for the doxygen target
+        set(AXOM_CUSTOM_TARGET_PREFIX "axom_" CACHE STRING "" FORCE)
+        if(ENABLE_CUDA)
+            # This appears to be unconditionally needed for Axom, why isn't it part of the build system?
+            set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda")
+        endif()
+        add_subdirectory(${PROJECT_SOURCE_DIR}/axom/src ${CMAKE_BINARY_DIR}/axom)
+        set(AXOM_FOUND TRUE CACHE BOOL "" FORCE)
+
+        # Mark the axom includes as "system" and filter unallowed directories
+        get_target_property(_dirs axom INTERFACE_INCLUDE_DIRECTORIES)
+        list(REMOVE_ITEM _dirs ${PROJECT_SOURCE_DIR})
+        set_property(TARGET axom 
+                     PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+                     "${_dirs}")
+        set_property(TARGET axom 
+                     APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+                     "${_dirs}")
+
+    endif()
+
+    #------------------------------------------------------------------------------
+    # Tribol
+    #------------------------------------------------------------------------------
+    if(TRIBOL_DIR)
+        serac_assert_is_directory(VARIABLE_NAME TRIBOL_DIR)
+
+        find_package(tribol REQUIRED
+                            NO_DEFAULT_PATH 
+                            PATHS ${TRIBOL_DIR}/lib/cmake)
+
+        if(TARGET tribol)
+            message(STATUS "Tribol CMake exported library loaded: tribol")
+        else()
+            message(FATAL_ERROR "Could not load Tribol CMake exported library: tribol")
+        endif()
+
+        # Set include dir to system
+        set(TRIBOL_INCLUDE_DIR ${TRIBOL_DIR}/include)
+        set_property(TARGET tribol
+                     APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+                     ${TRIBOL_INCLUDE_DIR})
+    else()
+        set(TRIBOL_FOUND OFF)
+    endif()
+    
+    message(STATUS "Tribol support is " ${TRIBOL_FOUND})
 
     #------------------------------------------------------------------------------
     # Umpire
