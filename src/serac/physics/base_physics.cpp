@@ -188,7 +188,7 @@ void BasePhysics::initializeSummary(axom::sidre::DataStore& datastore, double t_
 
   // t: array of each time step value
   axom::sidre::View*         t_array_view = curves_group->createView("t");
-  axom::sidre::Array<double> ts(t_array_view, array_size);
+  axom::sidre::Array<double> ts(t_array_view, 0, array_size);
 
   for (FiniteElementState& state : state_) {
     // Group for each Finite Element State
@@ -197,7 +197,7 @@ void BasePhysics::initializeSummary(axom::sidre::DataStore& datastore, double t_
     for (std::string state_name : {"l1norms", "l2norms", "linfnorms", "avgs", "mins", "maxs"}) {
       // array for each curve data
       axom::sidre::View*         curr_array_view = state_group->createView(state_name);
-      axom::sidre::Array<double> array(curr_array_view, array_size);
+      axom::sidre::Array<double> array(curr_array_view, 0, array_size);
     }
   }
 }
