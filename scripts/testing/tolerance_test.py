@@ -1,78 +1,203 @@
-import json
-import argparse # for command line arguments
-import math # for comparing values within tolerance
+#!/bin/sh
+"exec" "python3" "-u" "-B" "$0" "$@"
+##############################################################################
+# Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+# other Serac Project Developers. See the top-level COPYRIGHT file for details.
+#
+# SPDX-License-Identifier: (BSD-3-Clause)
+##############################################################################
 
- # l2norms last number in last temp listed changed from 9 to 8 (in small_change)
- # mins first number in second temp listed changed from 1 to 100 (big_change)
- 
- # load name of each field from file & populate them in a list 
-def get_field_names(d):    
+import argparse
+import json
+import math
+import os
+import sys
+
+def ensure_file(path):
+    if not os.path.exists(path):
+        print("ERROR: Given file does not exist: {0}".format(path))
+        sys.exit(1)
+    if not os.path.isfile(path):
+        print("ERROR: Given file is not a file: {0}".format(path))
+        sys.exit(1)
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Compare JSON files")
+
+    parser.add_argument("--baseline", type=str, required=True,
+                        help="Path to baseline curve results file")
+    parser.add_argument("--test", type=str, required=True,
+                        help="Path to test curve results file")
+    parser.add_argument("--tolerance", type=float, required=True,
+                        help="Allowed tolerance amount for individual values")
+
+    args = parser.parse_args()
+
+    # Ensure correctness of given options
+    ensure_file(args.baseline)
+    ensure_file(args.test)
+
+    return args
+
+
+ # filter field names from a list of all possible names
+def get_field_names(possible_fields):
     field_names = []
-    non_field_names = ["t", "sidre_group_name"] # names that should not be included
-    for key in d.keys(): # looking @ keys
+    # known non-field names that should be ignored
+    non_field_names = ["t", "sidre_group_name"]
+    for key in possible_fields.keys():
         if key in non_field_names:
-            continue  
-        field_names.append(key) # add  names to list
+            continue
+        field_names.append(key)
     return field_names
 
-# argparse command line arguments
-parser = argparse.ArgumentParser(description="Compare JSON files")
-parser.add_argument("-j","--json_output", type= str, required= True, help= "Name of JSON File") 
-parser.add_argument("-r","--reference_output", type= str, required= True, help= "Name of 2nd JSON File")
-parser.add_argument("-t","--tolerance", type= float, required= True, help= "tolerance amount")
+# Return list of items in l1 that are missing from l2
+def list_missing(l1, l2):
+    missing = [x for x in l1 if x not in l2]
+    return missing
 
-parser.add_argument("-g", "--good_file",action= "store_true", help="Put JSON File")
-parser.add_argument("-e","--testing_file",action= "store_true", help="File you want to test")
+# Ensure list of field names are equal and error out with useful message
+def ensure_field_names(baseline_field_names, test_field_names):
+    error_found = False
 
-args = parser.parse_args()
+    if len(baseline_field_names) == 0:
+        print("ERROR: Baseline file had no field names")
+        error_found = True
+    if len(test_field_names) == 0:
+        print("ERROR: Test file had no field names")
+        error_found = True
 
-if args.good_file == False: # NOTE: for some reason it isn't passing as true?
-    with open(args.json_output) as testing_file: # open & load testing data JSON file
-        testing_data = json.load(testing_file)
-    if args.testing_file == False:
-        with open(args.reference_output) as good_file: # open & load good data JSON file 
-            good_data = json.load(good_file)
-   # print(sorted(testing_data.items()) == sorted(good_data.items())) # just for testing, change with tolerance
+    if error_found:
+        sys.exit(1)
 
-    good_field_names = get_field_names(good_data) # set variable equal to all field names for good data
-    testing_field_names = get_field_names(testing_data) # set variable equal to all field names for testing data
- 
-    # Checker for if the number of field names/keys in testing file is not equal to number field names/keys in good file
-  #  if sorted(good_field_names) != sorted(testing_field_names):
-    #if len(good_field_names) != len(testing_field_names):
-    if len(good_field_names) > len(testing_field_names):
-            print("ERROR: testing file doesn't have enough field names")
-            exit()
-    elif len(good_field_names) < len(testing_field_names):
-            print("ERROR: testing field has too many field names:")
-            exit()
-    elif len(good_field_names) != len(testing_field_names):
-            print("ERROR: testing file does not have the same number of field names as the good file.")
-            exit()
+    if len(baseline_field_names) > len(test_field_names):
+        print("ERROR: Test file is missing field names that are in the baseline file")
+        missing = list_missing(test_field_names, baseline_field_names)
+        print("       Missing field names: {0}".format(",".join(missing)))
+        error_found = True
+    elif len(baseline_field_names) < len(test_field_names):
+        print("ERROR: Test file has extra field names not in baseline file")
+        missing = list_missing(baseline_field_names, test_field_names)
+        print("       Extra field names: {0}".format(",".join(missing)))
+        error_found = True
 
-        
-      
-    for field_name in good_field_names:   # for each individual field name 
-        for data_name in good_data[field_name].keys(): # for dictionaries inside dictionary fields
-            good_values = good_data[field_name][data_name] # set good data names from good data
-            testing_values = testing_data[field_name][data_name] # set testing data names from testing data
-            if len(good_values) != len(testing_values): # if the number of values/indices in each list from the testing file does not match good file, error out
-            # NOTE: I wanted to put this closer to the beginning so it could error out earlier but I wasn't able to figure it out (yet)
-                print("ERROR: testing file does not have the same values of files as the good file")  
-                exit()
-                    
-        # ALTERNATIVE SOLUTION    
-        #    for good_value, testing_value in zip(good_values, testing_values): # iterate over both at once
-                #print(good_value, "->", testing_value)
-        #        if good_value != testing_value:
-        #            print("ERROR: testing file does not have the same number of files as the good file")
-        #        if math.isclose(good_value, testing_value, abs_tol = args.tolerance) == False:
-        #            print(testing_value, "is not correct")
-            
-            for value in range(len(good_values)): # iterates through values within the good_values list
-                #print(good_values[i], "->", testing_values[i])  # one integer, index on both lists, i.e. testing_values[0] goes with good_values[0]
-                if math.isclose(good_values[value], testing_values[value], abs_tol = args.tolerance) == False:
-                    print(testing_values[value], "in", field_name, data_name, "is not correct") # print which value from what dictionary field and data name is incorrect from the testing data
-                    
-           
-           
+    if error_found:
+        sys.exit(1)
+
+
+# Ensure that field data types and lengths are same in both files
+def ensure_field_data(field_names, baseline_data, test_data):
+    error_count = 0
+    zero_found = False
+
+    # Check data types match
+    for field_name in field_names:
+        baseline_data_types = baseline_data[field_name].keys()
+        test_data_types = test_data[field_name].keys()
+
+        # Check data type names are correct
+        if len(baseline_data_types) == 0:
+            print("ERROR: Baseline file had no data types under field name: {0}".format(field_name))
+            error_count += 1
+            zero_found = True
+        if len(test_data_types) == 0:
+            print("ERROR: Test file had no data types under field name: {0}".format(field_name))
+            error_count += 1
+            zero_found = True
+
+        if not zero_found:
+            if len(baseline_data_types) > len(test_data_types):
+                print("ERROR: Test file is missing data types under field name: {0}".format(field_name))
+                missing = list_missing(baseline_data_types, test_data_types)
+                print("       Missing data types: {0}".format(",".join(missing)))
+                error_count += 1
+            elif len(baseline_data_types) < len(test_data_types):
+                print("ERROR: Test field has extra data types under field name: {0}".format(field_name))
+                missing = list_missing(test_data_types, baseline_data_types)
+                print("       Extra data types: {0}".format(",".join(missing)))
+                error_count += 1
+        zero_found = False
+
+    if error_count > 0:
+        sys.exit(1)
+
+    # Check lengths of all data type value lists
+    for field_name in field_names:
+        for data_type in baseline_data[field_name].keys():
+            baseline_values = baseline_data[field_name][data_type]
+            test_values = test_data[field_name][data_type]
+
+            if len(test_values) == 0:
+                print("ERROR: Baseline file had no data under: {0}/{1}".format(field_name, data_type))
+                error_count += 1
+                zero_found = True
+            if len(test_values) == 0:
+                print("ERROR: Test file had no data under: {0}/{1}".format(field_name, data_type))
+                error_count += 1
+                zero_found = True
+
+            if not zero_found:
+                if len(baseline_values) > len(test_values):
+                    print("ERROR: Test file has less entries than the baseline file under: {0}/{1}".format(field_name, data_type))
+                    error_count += 1
+                elif len(baseline_values) < len(test_values):
+                    print("ERROR: Test field has more entries than the baseline file under: {0}/{1}".format(field_name, data_type))
+                    error_count += 1
+
+    if error_count > 0:
+        sys.exit(1)
+
+
+# Ensure that field data values are within tolerance
+def ensure_field_data_values(field_names, baseline_data, test_data, tolerance):
+    error_found = False
+
+    # Check lengths of all data type lists
+    for field_name in field_names:
+        for data_type in baseline_data[field_name].keys():
+            baseline_values = baseline_data[field_name][data_type]
+            test_values = test_data[field_name][data_type]
+
+            for i in range(len(baseline_values)):
+                baseline_value = baseline_values[i]
+                test_value = test_values[i]
+                if not math.isclose(baseline_value, test_value, abs_tol=tolerance):
+                    name = "{0}/{1}/{2}".format(field_name, data_type, i)
+                    print("ERROR: Test value out of tolerance: {0}: baseline value={1}, test value={2}".format(name, baseline_value, test_value))
+
+    if error_found:
+        print(" Given tolerance: {0}".format(tolerance))
+        sys.exit(1)
+
+
+def main():
+    args = parse_args()
+
+    # Load both files
+    with open(args.baseline) as baseline_file:
+        baseline_json = json.load(baseline_file)
+    with open(args.test) as test_file:
+        test_json = json.load(test_file)
+
+    # Start at "curves"
+    if not "curves" in baseline_json:
+        print("ERROR: Baseline file did not have a 'curves' section")
+    baseline_curves = baseline_json["curves"]
+    if not "curves" in test_json:
+        print("ERROR: Test file did not have a 'curves' section")
+    test_curves = test_json["curves"]
+
+    # Get both sets of field names
+    baseline_field_names = get_field_names(baseline_curves)
+    test_field_names = get_field_names(test_curves)
+     
+    ensure_field_names(baseline_field_names, test_field_names)
+    ensure_field_data(baseline_field_names, baseline_curves, test_curves)
+    ensure_field_data_values(baseline_field_names, baseline_curves, test_curves, args.tolerance)
+
+    print("Success: Test file passed")
+
+if __name__ == "__main__":
+    main()
+    sys.exit(0)
