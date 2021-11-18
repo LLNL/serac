@@ -106,6 +106,9 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("netcdf-c@4.7.4~shared", when="+netcdf")
 
     # Needs to be first due to a bug with the Spack concretizer
+    # Note: Certain combinations of CMake and Conduit do not like +mpi
+    #  and cause FindHDF5.cmake to fail and only return mpi information
+    #  (includes, libs, etc) instead of hdf5 info
     depends_on("hdf5@1.8.21+hl~mpi~shared")
 
     # Axom enables RAJA/Umpire by default
