@@ -141,21 +141,7 @@ SERAC_HOST_DEVICE void Add(const mfem::DeviceTensor<3, double>& r_global, tensor
   }
 }
 
-enum class IntegralType { Boundary, Domain };
-
-template < typename space, IntegralType type, typename dimension >
-struct QFunctionArgument;
-
-// define Hcurl qfunction argument types
-template <int p, int dim >
-struct QFunctionArgument< H1< p, 1 >, IntegralType::Domain, Dimension<dim> >{
-  using type = tuple< double, tensor <double, dim> >; 
-};
-template <int p, int c, int dim >
-struct QFunctionArgument< H1< p, c >, IntegralType::Domain, Dimension<dim> >{
-  using type = tuple< tensor<double, c>, tensor <double, c, dim> >; 
-};
-
+#if 0
 template <int p, int dim >
 struct QFunctionArgument< H1< p, 1 >, IntegralType::Boundary, Dimension<dim> >{
   using type = double; 
@@ -166,17 +152,6 @@ struct QFunctionArgument< H1< p, c >, IntegralType::Boundary, Dimension<dim> >{
 };
 
 
-// define Hcurl qfunction argument types
-template <int p >
-struct QFunctionArgument< Hcurl< p >, IntegralType::Domain, Dimension<2> >{
-  using type = tuple< tensor< double, 2 >, double >;
-};
-
-template <int p >
-struct QFunctionArgument< Hcurl< p >, IntegralType::Domain, Dimension<3> >{
-  using type = tuple< tensor< double, 3 >, tensor< double, 3> >;
-};
-
 template <int p >
 struct QFunctionArgument< Hcurl< p >, IntegralType::Boundary, Dimension<2> >{
   using type = tensor< double, 2 >;
@@ -186,7 +161,7 @@ template <int p >
 struct QFunctionArgument< Hcurl< p >, IntegralType::Boundary, Dimension<3> >{
   using type = tensor< double, 3 >;
 };
-
+#endif
 
 
 /**
@@ -472,6 +447,17 @@ SERAC_HOST_DEVICE auto Preprocess(T u, const tensor<double, dim>& xi, const tens
     }
     return serac::tuple{value, curl};
   }
+}
+
+template <Geometry geom, typename ... trials, typename tuple_type, int dim, int ... i >
+SERAC_HOST_DEVICE auto PreprocessHelper(const tuple_type & u, const tensor<double, dim>& xi, const tensor<double, dim, dim>& J, std::integer_sequence< int, i ... >) {
+  return tuple { Preprocess< finite_element< geom, trials > >(get<i>(u), xi, J) ...  };
+}
+
+template <Geometry geom, typename ... trials, typename tuple_type, int dim>
+SERAC_HOST_DEVICE auto Preprocess(const tuple_type & u, const tensor<double, dim>& xi, const tensor<double, dim, dim>& J)
+{
+  return PreprocessHelper<geom, trials ... >(u, xi, J, std::make_integer_sequence< int, int(sizeof ... (trials)) >{});
 }
 
 /**

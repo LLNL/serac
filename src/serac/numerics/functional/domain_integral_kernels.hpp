@@ -13,6 +13,36 @@ namespace serac {
 
 namespace domain_integral {
 
+template < typename space, typename dimension >
+struct QFunctionArgument;
+
+// define what arguments DomainIntegral will pass to 
+// qfunctions, depending on the dimension and trial space
+template <int p, int dim >
+struct QFunctionArgument< H1< p, 1 >, Dimension<dim> >{
+  using type = tuple< double, tensor <double, dim> >; 
+};
+template <int p, int c, int dim >
+struct QFunctionArgument< H1< p, c >, Dimension<dim> >{
+  using type = tuple< tensor<double, c>, tensor <double, c, dim> >; 
+};
+
+template <int p >
+struct QFunctionArgument< Hcurl< p >, Dimension<2> >{
+  using type = tuple< tensor< double, 2 >, double >;
+};
+
+template <int p >
+struct QFunctionArgument< Hcurl< p >, Dimension<3> >{
+  using type = tuple< tensor< double, 3 >, tensor< double, 3> >;
+};
+
+template < int dim, typename ... trials, typename lambda >
+auto get_derivative_type(lambda qf) {
+  using qf_arguments = serac::tuple < typename QFunctionArgument< trials, Dimension<dim> >::type ... >;
+  return get_gradient(detail::apply_qf(qf, tensor<double, dim>{}, make_dual(qf_arguments{}), nullptr));
+};
+
 /**
  * @brief The base kernel template used to create different finite element calculation routines
  *
@@ -38,18 +68,16 @@ namespace domain_integral {
  * @param[in] qf The actual quadrature function, see @p lambda
  * @param[inout] data The data for each quadrature point
  */
-template <Geometry g, typename test, typename trial, int Q, typename T, typename derivatives_type, typename lambda,
+template <int Q, Geometry g, typename test, typename ... trials, typename T, typename derivatives_type, typename lambda,
           typename qpt_data_type = void>
 void evaluation_kernel(T u, mfem::Vector& R, CPUView<derivatives_type, 2> qf_derivatives,
                        const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda&& qf,
                        QuadratureData<qpt_data_type>& data = dummy_qdata)
 {
   using test_element               = finite_element<g, test>;
-  using trial_element              = finite_element<g, trial>;
   using element_residual_type      = typename test_element::residual_type;
   static constexpr int  dim        = dimension_of(g);
   static constexpr int  test_ndof  = test_element::ndof;
-  //static constexpr int  trial_ndof = trial_element::ndof;
   static constexpr auto rule       = GaussQuadratureRule<g, Q>();
 
   // mfem provides this information in 1D arrays, so we reshape it
@@ -80,7 +108,7 @@ void evaluation_kernel(T u, mfem::Vector& R, CPUView<derivatives_type, 2> qf_der
       double dx  = det(J_q) * dxi;
 
       // evaluate the value/derivatives needed for the q-function at this quadrature point
-      auto arg = Preprocess<trial_element>(get<0>(u_elem), xi, J_q);
+      auto arg = Preprocess<g, trials...>(u_elem, xi, J_q);
 
       // evaluate the user-specified constitutive model
       //
@@ -129,12 +157,11 @@ void evaluation_kernel(T u, mfem::Vector& R, CPUView<derivatives_type, 2> qf_der
  * @see mfem::GeometricFactors
  * @param[in] num_elements The number of elements in the mesh
  */
-template <Geometry g, typename test, typename trial, int Q, typename T, typename derivatives_type>
+template <int Q, Geometry g, typename test, typename ... trials, typename T, typename derivatives_type>
 void action_of_gradient_kernel(T du, mfem::Vector& dR, CPUView<derivatives_type, 2> qf_derivatives,
                                const mfem::Vector& J_, int num_elements)
 {
   using test_element               = finite_element<g, test>;
-  using trial_element              = finite_element<g, trial>;
   using element_residual_type      = typename test_element::residual_type;
   static constexpr int  dim        = dimension_of(g);
   static constexpr int  test_ndof  = test_element::ndof;
@@ -164,7 +191,7 @@ void action_of_gradient_kernel(T du, mfem::Vector& dR, CPUView<derivatives_type,
       double dx  = det(J_q) * dxi;
 
       // evaluate the (change in) value/derivatives at this quadrature point
-      auto darg = Preprocess<trial_element>(get<0>(du_elem), xi, J_q);
+      auto darg = Preprocess<g, trials...>(du_elem, xi, J_q);
 
       // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
       auto dq_darg = qf_derivatives(static_cast<size_t>(e), static_cast<size_t>(q));

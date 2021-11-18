@@ -24,7 +24,6 @@
 #endif
 
 namespace serac {
-
 template <typename spaces, ExecutionSpace exec>
 class DomainIntegral;
 
@@ -63,16 +62,6 @@ public:
 
     uint32_t num_quadrature_points = quadrature_points_per_element * uint32_t(num_elements);
 
-    // these lines of code figure out the argument types that will be passed
-    // into the quadrature function in the finite element kernel.
-    //
-    // we use them to observe the output type and allocate memory to store
-    // the derivative information at each quadrature point
-    using x_t             = tensor<double, dim>;
-    using u_du_t          = typename detail::lambda_argument<trials..., dim, dim>::type;
-    using qf_result_type  = typename detail::qf_result<lambda_type, x_t, u_du_t, qpt_data_type>::type;
-    using derivative_type = decltype(get_gradient(std::declval<qf_result_type>()));
-
     using EVector_t = EVectorView < exec, finite_element< geometry, trials > ... >;
 
     // allocate memory for the derivatives of the q-function at each quadrature point
@@ -80,6 +69,7 @@ public:
     // Note: ptr's lifetime is managed in an unusual way! It is captured by-value in one of the
     // lambda functions below to augment the reference count, and extend its lifetime to match
     // that of the DomainIntegral that allocated it.
+    using derivative_type = decltype(domain_integral::get_derivative_type< dim, trials ... >(qf));
     auto ptr = accelerator::make_shared_array<derivative_type, exec>(num_quadrature_points);
 
     size_t                              n1 = static_cast<size_t>(num_elements);
@@ -98,14 +88,14 @@ public:
         std::array< const double *, num_trial_spaces > ptrs;
         for (uint32_t i = 0; i < num_trial_spaces; i++) { ptrs[i] = U[i].Read(); }
         EVector_t u(ptrs, size_t(num_elements));
-        domain_integral::evaluation_kernel<geometry, test, trials..., Q>(u, R, qf_derivatives, J_, X_, num_elements, qf, data);
+        domain_integral::evaluation_kernel<Q, geometry, test, trials...>(u, R, qf_derivatives, J_, X_, num_elements, qf, data);
       };
 
       action_of_gradient_ = [this, qf_derivatives, num_elements](const std::array< mfem::Vector, num_trial_spaces > & dU, mfem::Vector& dR) {
         std::array< const double *, num_trial_spaces > ptrs;
         for (uint32_t i = 0; i < num_trial_spaces; i++) { ptrs[i] = dU[i].Read(); }
         EVector_t du(ptrs, size_t(num_elements));
-        domain_integral::action_of_gradient_kernel<geometry, test, trials..., Q>(du, dR, qf_derivatives, J_,
+        domain_integral::action_of_gradient_kernel<Q, geometry, test, trials...>(du, dR, qf_derivatives, J_,
                                                                                          num_elements);
       };
 
