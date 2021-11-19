@@ -13,6 +13,14 @@ import math
 import os
 import sys
 
+
+# This script compares two Serac summary files against each other.
+# The 'baseline' file is treated as a truth against the possibly wrong
+# 'test' file. It attempts to fail with the most error messages it can at a given
+# correctness level (field names > sample names > sample values).
+# Summary files were the same within the given tolerance if the
+# script exists successfully and not otherwise.
+
 def ensure_file(path):
     if not os.path.exists(path):
         print("ERROR: Given file does not exist: {0}".format(path))
@@ -23,7 +31,7 @@ def ensure_file(path):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Compare JSON files")
+    parser = argparse.ArgumentParser(description="Compare two Serac summary files")
 
     parser.add_argument("--baseline", type=str, required=True,
                         help="Path to baseline summary file")
