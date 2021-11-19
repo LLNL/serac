@@ -43,6 +43,12 @@ auto get_derivative_type(lambda qf) {
   return get_gradient(detail::apply_qf(qf, tensor<double, dim>{}, make_dual(qf_arguments{}), nullptr));
 };
 
+template < int i, int dim, typename ... trials, typename lambda >
+auto get_derivative_type(lambda qf) {
+  using qf_arguments = serac::tuple < typename QFunctionArgument< trials, serac::Dimension<dim> >::type ... >;
+  return get_gradient(detail::apply_qf(qf, tensor<double, dim>{}, make_dual_wrt<i>(qf_arguments{}), nullptr));
+};
+
 /**
  * @brief The base kernel template used to create different finite element calculation routines
  *
@@ -98,9 +104,6 @@ void evaluation_kernel(T u, mfem::Vector& R, CPUView<derivatives_type, 2> qf_der
     // for each quadrature point in the element
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
 
-      // At the moment, the GPU versions of the kernels don't support quadrature data.
-      // That will be addressed in an upcoming PR.
-      // We check if quadrature data is empty and execute on the GPU, otherwise we must execute on the CPU.
       auto   xi  = rule.points[q];
       auto   dxi = rule.weights[q];
       auto   x_q = make_tensor<dim>([&](int i) { return X(q, i, e); });  // Physical coords of qpt

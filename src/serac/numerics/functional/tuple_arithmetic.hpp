@@ -216,6 +216,34 @@ constexpr auto make_dual_helper(const tensor<T, n...>& arg)
   return arg_dual;
 }
 
+template < bool dualify, typename T >
+auto promote_to_dual_when(const T & x) {
+  if constexpr (dualify) {
+    return make_dual(x);
+  } else {
+    return x;
+  }
+}
+
+template < int n, typename ... T, int ... i >
+constexpr auto make_dual_helper(const serac::tuple< T ... > & args, std::integer_sequence< int, i ... >) {
+  return serac::tuple {
+    promote_to_dual_when< i == n >(serac::get<i>(args)) ... 
+  }; 
+}
+
+template < int n, typename ... T >
+constexpr auto make_dual_wrt(const serac::tuple< T ... > & args) {
+  return make_dual_helper< n >(args, std::make_integer_sequence< int, int(sizeof ... (T)) >{});
+}
+
+
+template <typename T00, typename T01>
+constexpr auto make_dual(const tuple < T00, T01 > & args)
+{
+  return tuple{make_dual_helper<0, 2>(get<0>(args)), make_dual_helper<1, 2>(get<1>(args))};
+}
+
 template <typename T00, typename T01>
 constexpr auto make_dual(const tuple < tuple<T00, T01> > & args)
 {
