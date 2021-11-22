@@ -23,12 +23,7 @@ blt_add_library(
     NAME        serac_coefficients
     SOURCES     ${coefficients_sources}
     HEADERS     ${coefficients_headers}
-    DEPENDS_ON  axom mfem mpi
-    )
-
-target_include_directories(serac_coefficients PUBLIC 
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../..>
-    $<INSTALL_INTERFACE:include>
+    DEPENDS_ON  serac_numerics serac_state serac_physics_materials
     )
 
 install(FILES ${coefficients_headers} DESTINATION include/serac/physics/coefficients )
