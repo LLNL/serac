@@ -26,19 +26,20 @@
 
 namespace serac {
 
+template <typename spaces, ExecutionSpace exec>
+class BoundaryIntegral;
+
 /**
  * @brief Describes a single boundary integral term in a weak forumulation of a partial differential equation
  * @tparam spaces A @p std::function -like set of template parameters that describe the test and trial
  * function spaces, i.e., @p test(trial)
  * @tparam exec whether or not the calculation and memory will be on the CPU or GPU
  */
-template <typename spaces, ExecutionSpace exec>
-class BoundaryIntegral {
+template <typename test, typename ... trials, ExecutionSpace exec>
+class BoundaryIntegral< test(trials ...), exec >{
 public:
-  using test_space  = test_space_t<spaces>;   ///< the test function space
-  using trial_space = trial_space_t<spaces>;  ///< the trial function space
 
-  static constexpr int num_trial_spaces = num_trial_spaces_v<spaces>;
+  static constexpr int num_trial_spaces = sizeof ... (trials);
 
   /**
    * @brief Constructs an @p BoundaryIntegral from a user-provided quadrature function
@@ -53,11 +54,14 @@ public:
    * @note The @p Dimension parameters are used to assist in the deduction of the dim template parameter
    */
   template <int dim, typename lambda_type, typename qpt_data_type = void>
-  BoundaryIntegral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, const mfem::Vector& normals,
-                   Dimension<dim>, lambda_type&& qf)
+  //BoundaryIntegral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, const mfem::Vector& normals,
+  //                 Dimension<dim>, lambda_type&& qf)
+  BoundaryIntegral(int, const mfem::Vector& J, const mfem::Vector& X, const mfem::Vector& normals, Dimension<dim>, lambda_type&&)
       : J_(J), X_(X), normals_(normals)
 
   {
+     
+  #if 0
     SLIC_ERROR_ROOT_IF(exec == ExecutionSpace::GPU, "BoundaryIntegral doesn't currently support GPU kernels yet");
 
     constexpr auto geometry                      = supported_geometries[dim];
@@ -97,19 +101,21 @@ public:
     // this lambda function captures ptr by-value to extend its lifetime
     //                   vvv
     evaluation_ = [this, ptr, qf_derivatives, num_elements, qf](const std::array< mfem::Vector, num_trial_spaces > & U, mfem::Vector& R) {
-      boundary_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U[0], R, qf_derivatives, J_, X_, normals_,
+      boundary_integral::evaluation_kernel<geometry, test, trials ..., Q>(U[0], R, qf_derivatives, J_, X_, normals_,
                                                                                  num_elements, qf);
     };
 
     action_of_gradient_ = [this, qf_derivatives, num_elements](const std::array< mfem::Vector, num_trial_spaces > & dU, mfem::Vector& dR) {
-      boundary_integral::action_of_gradient_kernel<geometry, test_space, trial_space, Q>(dU[0], dR, qf_derivatives, J_,
+      boundary_integral::action_of_gradient_kernel<geometry, test, trials ... , Q>(dU[0], dR, qf_derivatives, J_,
                                                                                          num_elements);
     };
 
     element_gradient_ = [this, qf_derivatives, num_elements](ArrayView<double, 3, exec> K_b) {
-      boundary_integral::element_gradient_kernel<geometry, test_space, trial_space, Q>(K_b, qf_derivatives, J_,
+      boundary_integral::element_gradient_kernel<geometry, test, trials ..., Q>(K_b, qf_derivatives, J_,
                                                                                        num_elements);
     };
+  #endif
+
   }
 
   /**

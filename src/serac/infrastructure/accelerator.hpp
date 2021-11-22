@@ -148,11 +148,34 @@ std::string getCUDAMemInfoString()
  * @tparam exec the memory space where the data lives
  * @param n how many entries to allocate in the array
  */
-template <typename T, ExecutionSpace exec>
+template <ExecutionSpace exec, typename T>
 std::shared_ptr<T[]> make_shared_array(std::size_t n)
 {
   if constexpr (exec == ExecutionSpace::CPU) {
     return std::shared_ptr<T[]>(new T[n]);
+  }
+
+#if defined(__CUDACC__)
+  if constexpr (exec == ExecutionSpace::GPU) {
+    T* data;
+    cudaMalloc(&data, sizeof(T) * n);
+    auto deleter = [](T* ptr) { cudaFree(ptr); };
+    return std::shared_ptr<T[]>(data, deleter);
+  }
+#endif
+}
+
+/**
+ * @brief create shared_ptr to an array of `n` values of type `T`, either on the host or device
+ * @tparam T the type of the value to be stored in the array
+ * @tparam exec the memory space where the data lives
+ * @param n how many entries to allocate in the array
+ */
+template <ExecutionSpace exec, typename ... T>
+auto make_shared_arrays(std::size_t n)
+{
+  if constexpr (exec == ExecutionSpace::CPU) {
+    return std::tuple{ std::shared_ptr<T[]>(new T[n])...};
   }
 
 #if defined(__CUDACC__)

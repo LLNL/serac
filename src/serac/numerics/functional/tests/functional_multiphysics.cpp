@@ -93,9 +93,9 @@ TEST(basic, nonlinear_thermal_test_3D)
   Functional<test_space(trial_space, trial_space)> residual(&fespace, {&fespace, &fespace});
 
   residual.AddVolumeIntegral(
-      [=](auto x, auto U, auto dU_dt) {
-        auto [u, du_dx] = U;
-        auto [du_dt, unused] = dU_dt;
+      [=](auto x, auto temperature, auto dtemperature_dt) {
+        auto [u, du_dx] = temperature;
+        auto [du_dt, unused] = dtemperature_dt;
         auto source = rho * cp * du_dt - (100 * x[0] * x[1]);
         auto flux   = kappa * du_dx;
         return serac::tuple{source, flux};

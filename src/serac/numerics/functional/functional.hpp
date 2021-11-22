@@ -250,7 +250,100 @@ public:
    */
   void Mult(const mfem::Vector& input_T, mfem::Vector& output_T) const override
   {
-    Evaluation<Operation::Mult>(input_T, output_T);
+    // get the values for each local processor
+    for (uint32_t i = 0; i < num_trial_spaces; i++) {
+      P_trial_[i]->Mult(input_T, input_L_[i]); // VARIADICTODO
+    }
+
+    output_L_ = 0.0;
+    if (domain_integrals_.size() > 0) {
+      // get the values for each element on the local processor
+      for (uint32_t i = 0; i < num_trial_spaces; i++) {
+        G_trial_[i]->Mult(input_L_[i], input_E_[i]);
+      }
+
+      // compute residual contributions at the element level and sum them
+      output_E_ = 0.0;
+      for (auto& integral : domain_integrals_) {
+        integral.Mult(input_E_, output_E_);
+      }
+
+      // scatter-add to compute residuals on the local processor
+      G_test_->MultTranspose(output_E_, output_L_);
+    }
+
+    if (bdr_integrals_.size() > 0) {
+      for (uint32_t i = 0; i < num_trial_spaces; i++) {
+        G_trial_boundary_[i]->Mult(input_L_[i], input_E_boundary_[i]);
+      }
+
+      output_E_boundary_ = 0.0;
+      for (auto& integral : bdr_integrals_) {
+        integral.Mult(input_E_boundary_, output_E_boundary_);
+      }
+
+      output_L_boundary_ = 0.0;
+
+      // scatter-add to compute residuals on the local processor
+      G_test_boundary_->MultTranspose(output_E_boundary_, output_L_boundary_);
+
+      output_L_ += output_L_boundary_;
+    }
+
+    // scatter-add to compute global residuals
+    P_test_->MultTranspose(output_L_, output_T);
+
+    output_T.HostReadWrite();
+    for (int i = 0; i < ess_tdof_list_.Size(); i++) {
+      output_T(ess_tdof_list_[i]) = 0.0;
+    }
+  }
+
+  void ActionOfGradient(const mfem::Vector& input_T, mfem::Vector& output_T, int which) const 
+  {
+    P_trial_[which]->Mult(input_T, input_L_[which]);
+
+    output_L_ = 0.0;
+    if (domain_integrals_.size() > 0) {
+
+      // get the values for each element on the local processor
+      G_trial_[which]->Mult(input_L_[which], input_E_[which]);
+
+      // compute residual contributions at the element level and sum them
+      output_E_ = 0.0;
+      for (auto& integral : domain_integrals_) {
+        integral.GradientMult(input_E_[which], output_E_, which);
+      }
+
+      // scatter-add to compute residuals on the local processor
+      G_test_->MultTranspose(output_E_, output_L_);
+    }
+
+    if (bdr_integrals_.size() > 0) {
+      for (uint32_t i = 0; i < num_trial_spaces; i++) {
+        G_trial_boundary_[i]->Mult(input_L_[i], input_E_boundary_[i]);
+      }
+
+      output_E_boundary_ = 0.0;
+      for (auto& integral : bdr_integrals_) {
+        integral.GradientMult(input_E_boundary_, output_E_boundary_);
+      }
+
+      output_L_boundary_ = 0.0;
+
+      // scatter-add to compute residuals on the local processor
+      G_test_boundary_->MultTranspose(output_E_boundary_, output_L_boundary_);
+
+      output_L_ += output_L_boundary_;
+    }
+
+    // scatter-add to compute global residuals
+    P_test_->MultTranspose(output_L_, output_T);
+
+    output_T.HostReadWrite();
+    for (int i = 0; i < ess_tdof_list_.Size(); i++) {
+      output_T(ess_tdof_list_[i]) = input_T(ess_tdof_list_[i]);
+    }
   }
 
   /**
@@ -273,7 +366,7 @@ public:
    */
   mfem::Vector& operator()(const mfem::Vector& input_T) const
   {
-    Evaluation<Operation::Mult>(input_T, my_output_T_);
+    Mult(input_T, my_output_T_);
     return my_output_T_;
   }
 
@@ -283,9 +376,9 @@ public:
    * @param[out] output_T The output vector
    * @see DomainIntegral::GradientMult, BoundaryIntegral::GradientMult
    */
-  virtual void GradientMult(const mfem::Vector& input_T, mfem::Vector& output_T) const
+  virtual void GradientMult(const mfem::Vector& , mfem::Vector& ) const
   {
-    Evaluation<Operation::GradientMult>(input_T, output_T);
+    // Evaluation<Operation::GradientMult>(input_T, output_T);
   }
 
   /**
@@ -336,7 +429,9 @@ private:
      * @param[in] dx a small perturbation in the trial space
      * @param[in] df the resulting small perturbation in the residuals
      */
-    virtual void Mult(const mfem::Vector& dx, mfem::Vector& df) const override { form_.GradientMult(dx, df); }
+    virtual void Mult(const mfem::Vector& dx, mfem::Vector& df) const override { 
+      form_.ActionOfGradient(dx, df, which_argument);
+    }
 
     /**
      * @brief syntactic sugar:  df_dx.Mult(dx, df)  <=>  mfem::Vector df = df_dx(dx);
@@ -455,83 +550,6 @@ private:
     /// @brief shallow copy of the trial space from the associated Functional
     mfem::ParFiniteElementSpace* trial_space_;
   };
-
-  /**
-   * @brief Helper method for evaluation/gradient evaluation
-   * @tparam op Whether to obtain values or gradients
-   * @param[in] input_T The input vector
-   * @param[out] output_T The output vector
-   */
-  template <Operation op = Operation::Mult>
-  void Evaluation(const mfem::Vector& input_T, mfem::Vector& output_T) const
-  {
-
-    // get the values for each local processor
-    for (uint32_t i = 0; i < num_trial_spaces; i++) {
-      P_trial_[i]->Mult(input_T, input_L_[i]); // VARIADICTODO
-    }
-
-    output_L_ = 0.0;
-    if (domain_integrals_.size() > 0) {
-      // get the values for each element on the local processor
-      for (uint32_t i = 0; i < num_trial_spaces; i++) {
-        G_trial_[i]->Mult(input_L_[i], input_E_[i]);
-      }
-
-      // compute residual contributions at the element level and sum them
-      output_E_ = 0.0;
-      for (auto& integral : domain_integrals_) {
-        if constexpr (op == Operation::Mult) {
-          integral.Mult(input_E_, output_E_);
-        }
-
-        if constexpr (op == Operation::GradientMult) {
-          integral.GradientMult(input_E_, output_E_);
-        }
-      }
-
-      // scatter-add to compute residuals on the local processor
-      G_test_->MultTranspose(output_E_, output_L_);
-    }
-
-    if (bdr_integrals_.size() > 0) {
-      for (uint32_t i = 0; i < num_trial_spaces; i++) {
-        G_trial_boundary_[i]->Mult(input_L_[i], input_E_boundary_[i]);
-      }
-
-      output_E_boundary_ = 0.0;
-      for (auto& integral : bdr_integrals_) {
-        if constexpr (op == Operation::Mult) {
-          integral.Mult(input_E_boundary_, output_E_boundary_);
-        }
-
-        if constexpr (op == Operation::GradientMult) {
-          integral.GradientMult(input_E_boundary_, output_E_boundary_);
-        }
-      }
-
-      output_L_boundary_ = 0.0;
-
-      // scatter-add to compute residuals on the local processor
-      G_test_boundary_->MultTranspose(output_E_boundary_, output_L_boundary_);
-
-      output_L_ += output_L_boundary_;
-    }
-
-    // scatter-add to compute global residuals
-    P_test_->MultTranspose(output_L_, output_T);
-
-    output_T.HostReadWrite();
-    for (int i = 0; i < ess_tdof_list_.Size(); i++) {
-      if constexpr (op == Operation::Mult) {
-        output_T(ess_tdof_list_[i]) = 0.0;
-      }
-
-      if constexpr (op == Operation::GradientMult) {
-        output_T(ess_tdof_list_[i]) = input_T(ess_tdof_list_[i]);
-      }
-    }
-  }
 
   /**
    * @brief The input set of local DOF values (i.e., on the current rank)

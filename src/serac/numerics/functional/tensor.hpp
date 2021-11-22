@@ -1615,6 +1615,14 @@ SERAC_HOST_DEVICE auto get_value(const tensor<dual<T>, n...>& arg)
 SERAC_HOST_DEVICE auto get_gradient(double /* arg */) { return zero{}; }
 
 /**
+ * @brief get the gradient of type `tensor` (note: since its stored type is not a dual
+ * number, the derivative term is identically zero)
+ * @return The sentinel, @see zero
+ */
+template < int ... n >
+SERAC_HOST_DEVICE auto get_gradient(const tensor < double, n ... > & /* arg */) { return zero{}; }
+
+/**
  * @brief Retrieves a gradient tensor from a tensor of dual numbers
  * @param[in] arg The tensor of dual numbers
  */

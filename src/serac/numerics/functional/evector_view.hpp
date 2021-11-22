@@ -36,7 +36,7 @@ struct EVectorView {
     });
   }
 
-  void UpdatePointers(std::array<double *, n> pointers) {
+  void UpdatePointers(std::array<const double *, n> pointers) {
     for_constexpr< n >([&](auto i){
       serac::get<i>(data).ptr = pointers[i];
     });

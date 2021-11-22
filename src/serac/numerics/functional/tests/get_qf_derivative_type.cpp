@@ -26,6 +26,6 @@ int main() {
 
   [[maybe_unused]] auto value = serac::domain_integral::get_derivative_type< 2, dim, space_0, space_1, space_2 >(qf);
 
-  int x = value;
+  //int x = value;
 
 }

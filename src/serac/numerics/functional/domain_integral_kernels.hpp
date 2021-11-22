@@ -74,7 +74,7 @@ auto get_derivative_type(lambda qf) {
  * @param[in] qf The actual quadrature function, see @p lambda
  * @param[inout] data The data for each quadrature point
  */
-template <int Q, Geometry g, typename test, typename ... trials, typename T, typename derivatives_type, typename lambda,
+template <int which, int Q, Geometry g, typename test, typename ... trials, typename T, typename derivatives_type, typename lambda,
           typename qpt_data_type = void>
 void evaluation_kernel(T u, mfem::Vector& R, CPUView<derivatives_type, 2> qf_derivatives,
                        const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda&& qf,
@@ -117,7 +117,7 @@ void evaluation_kernel(T u, mfem::Vector& R, CPUView<derivatives_type, 2> qf_der
       //
       // note: make_dual(arg) promotes those arguments to dual number types
       // so that qf_output will contain values and derivatives
-      auto qf_output = detail::apply_qf(qf, x_q, make_dual(arg), data(int(e), q));
+      auto qf_output = detail::apply_qf(qf, x_q, make_dual_wrt<which>(arg), data(int(e), q));
 
       // integrate qf_output against test space shape functions / gradients
       // to get element residual contributions
@@ -134,6 +134,54 @@ void evaluation_kernel(T u, mfem::Vector& R, CPUView<derivatives_type, 2> qf_der
     detail::Add(r, r_elem, int(e));
   }
 }
+
+template < int i, int Q, Geometry g, typename test, typename ... trials >
+struct KernelConfig{};
+
+template <typename T, typename derivatives_type, typename lambda, typename qpt_data_type>
+struct EvaluationKernel;
+
+template <int wrt, int Q, Geometry geom, typename test, typename ... trials, typename derivatives_type, typename lambda, typename qpt_data_type>
+struct EvaluationKernel< KernelConfig< wrt, Q, geom, test, trials ... >, derivatives_type, lambda, qpt_data_type > {
+
+  static constexpr auto exec = ExecutionSpace::CPU;
+
+  static constexpr int num_trial_spaces = int(sizeof ... (trials));
+
+  using EVector_t = EVectorView < exec, finite_element< geom, trials > ... >;
+
+  EvaluationKernel(KernelConfig< wrt, Q, geom, test, trials ... >, std::shared_ptr<derivatives_type[]> ptr, const mfem::Vector & J, const mfem::Vector & X, int num_elements, int num_quadrature_points_per_element, lambda qf, QuadratureData<qpt_data_type>& data) : 
+    qf_derivatives_ptr_(ptr),
+    qf_derivatives_(ptr.get(), num_elements, num_quadrature_points_per_element),
+    J_(J),
+    X_(X),
+    num_elements_(num_elements),
+    qf_(qf), 
+    data_(data) {}
+
+  void operator() (const std::array< mfem::Vector, num_trial_spaces > & U, mfem::Vector& R) {
+    std::array< const double *, num_trial_spaces > ptrs;
+    for (uint32_t j = 0; j < num_trial_spaces; j++) { ptrs[j] = U[j].Read(); }
+    EVector_t u(ptrs, size_t(num_elements_));
+
+    domain_integral::evaluation_kernel<wrt, Q, geom, test, trials...>(u, R, qf_derivatives_, J_, X_, num_elements_, qf_, data_);
+  }
+
+  std::shared_ptr<derivatives_type[]> qf_derivatives_ptr_;
+  ArrayView<derivatives_type, 2, exec> qf_derivatives_;
+  const mfem::Vector & J_; 
+  const mfem::Vector & X_; 
+  int num_elements_; 
+  lambda qf_; 
+  QuadratureData<qpt_data_type>& data_;
+
+// tuple<zero, tuple<zero, tensor<double, 3, 3> > > := tuple<tuple<zero, zero, double, zero>, tuple<zero, tensor<double, 3, 3>, zero, zero> >’
+
+};
+
+template <int wrt, int Q, Geometry geom, typename test, typename ... trials, typename derivatives_type, typename lambda, typename qpt_data_type>
+EvaluationKernel(KernelConfig< wrt, Q, geom, test, trials ... >, std::shared_ptr<derivatives_type[]>, const mfem::Vector &, const mfem::Vector &, int, int, lambda, QuadratureData<qpt_data_type>&) ->  
+EvaluationKernel< KernelConfig< wrt, Q, geom, test, trials ... >, derivatives_type, lambda, qpt_data_type >;
 
 /**
  * @brief The base kernel template used to create create custom directional derivative
