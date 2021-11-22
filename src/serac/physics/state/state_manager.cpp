@@ -20,7 +20,7 @@ QuadratureData<void> dummy_qdata;
  */
 QuadratureDataView<void> dummy_qdata_view;
 
-// Initialize StateManager's static members - both of these will be fully initialized in StateManager::initialize
+// Initialize StateManager's static members - these will be fully initialized in StateManager::initialize
 std::unordered_map<std::string, axom::sidre::MFEMSidreDataCollection> StateManager::datacolls_;
 bool                                                                  StateManager::is_restart_      = false;
 std::string                                                           StateManager::collection_name_ = "";
@@ -60,8 +60,8 @@ void StateManager::newDataCollection(const std::string& name, const std::optiona
     datacoll.UpdateMeshAndFieldsFromDS();
 
     // Functional needs the nodal grid function and neighbor data in the mesh
-    mesh().EnsureNodes();
-    mesh().ExchangeFaceNbrData();
+    mesh(name).EnsureNodes();
+    mesh(name).ExchangeFaceNbrData();
 
   } else {
     datacoll.SetCycle(0);   // Iteration counter
@@ -91,12 +91,12 @@ FiniteElementState StateManager::newState(FiniteElementVector::Options&& options
   const std::string name     = options.name;
   if (is_restart_) {
     auto field = datacoll.GetParField(name);
-    return {mesh(), *field, name};
+    return {mesh(tag), *field, name};
   } else {
     SLIC_ERROR_ROOT_IF(datacoll.HasField(name),
                        axom::fmt::format("Serac's datacollection was already given a field named '{0}'", name));
     options.managed_by_sidre = true;
-    FiniteElementState state(mesh(), std::move(options));
+    FiniteElementState state(mesh(tag), std::move(options));
     datacoll.RegisterField(name, &(state.gridFunc()));
     // Now that it's been allocated, we can set it to zero
     state.gridFunc() = 0.0;
@@ -111,12 +111,12 @@ FiniteElementDual StateManager::newDual(FiniteElementVector::Options&& options, 
   const std::string name     = options.name;
   if (is_restart_) {
     auto field = datacoll.GetParField(name);
-    return {mesh(), *field, name};
+    return {mesh(tag), *field, name};
   } else {
     SLIC_ERROR_ROOT_IF(datacoll.HasField(name),
                        axom::fmt::format("Serac's datacollection was already given a field named '{0}'", name));
     options.managed_by_sidre = true;
-    FiniteElementDual dual(mesh(), std::move(options));
+    FiniteElementDual dual(mesh(tag), std::move(options));
 
     // Create a grid function view of the local vector for plotting
     // Note: this is a static cast because we know this vector under the hood is a grid function
