@@ -275,8 +275,8 @@ struct state_manager_varying_qfunction {
     mutated_data[idx++] = state;
     return u;
   }
-  axom::Array<typename wrapper_t::value_type, 1, axom::MemorySpace::Unified>& mutated_data;
-  int                                                                         idx = 0;
+  UnifiedArray<typename wrapper_t::value_type>& mutated_data;
+  int                                           idx = 0;
 };
 
 TYPED_TEST(QuadratureDataGPUStateManagerTest, basic_integrals_state_manager)
@@ -345,7 +345,7 @@ TYPED_TEST(QuadratureDataGPUStateManagerTest, basic_integrals_state_manager)
   }
 
   // Ordered quadrature point data that is unique (mutated with the point's distance from the origin)
-  axom::Array<typename TestFixture::value_type, 1, axom::MemorySpace::Unified> origin_mutated_data;
+  UnifiedArray<typename TestFixture::value_type> origin_mutated_data;
 
   // Reload the state again to make sure the same synchronization still happens when the data
   // is read in from a restart
