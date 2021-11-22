@@ -144,6 +144,9 @@ public:
    */
   static std::string collectionID(mfem::ParMesh* pmesh);
 
+  /// @brief Returns true if data was loaded into a DataCollection
+  static bool isRestart() { return is_restart_; }
+
 private:
   /**
    * @brief Creates a new datacollection based on a registered mesh

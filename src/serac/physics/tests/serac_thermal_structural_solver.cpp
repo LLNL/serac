@@ -155,17 +155,6 @@ TEST(dynamic_solver, dyn_solve_restart)
     y(1) = x(0) * 0.01;
   });
 
-  auto velo =
-      std::make_shared<mfem::VectorFunctionCoefficient>(dim, [](const mfem::Vector&, mfem::Vector& v) { v = 0.0; });
-
-  auto temp = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector& x) {
-    double t = 2.0;
-    if (x(0) < 1.0) {
-      t = 5.0;
-    }
-    return t;
-  });
-
   // set the traction boundary
   std::set<int> trac_bdr = {2};
 
@@ -220,6 +209,17 @@ TEST(dynamic_solver, dyn_solve_restart)
 
     // Open the mesh
     std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";
+
+    auto velo =
+        std::make_shared<mfem::VectorFunctionCoefficient>(dim, [](const mfem::Vector&, mfem::Vector& v) { v = 0.0; });
+
+    auto temp = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector& x) {
+      double t = 2.0;
+      if (x(0) < 1.0) {
+        t = 5.0;
+      }
+      return t;
+    });
 
     // The meshes are identical but they're treated as primary and secondary
     auto pmesh_primary = mesh::refineAndDistribute(buildMeshFromFile(mesh_file), 1, 0);
@@ -335,9 +335,6 @@ TEST(dynamic_solver, dyn_solve_restart)
     ts_solver_primary.setSolidMaterialParameters(std::make_unique<mfem::ConstantCoefficient>(0.25),
                                                  std::make_unique<mfem::ConstantCoefficient>(5.0));
     ts_solver_primary.setConductivity(std::make_unique<mfem::ConstantCoefficient>(0.5));
-    ts_solver_primary.setDisplacement(*deform);
-    ts_solver_primary.setVelocity(*velo);
-    ts_solver_primary.setTemperature(*temp);
     ts_solver_primary.setCouplingScheme(serac::CouplingScheme::OperatorSplit);
 
     auto temp_gf_coef_primary = ts_solver_primary.temperature().gridFuncCoef();
@@ -360,9 +357,6 @@ TEST(dynamic_solver, dyn_solve_restart)
     ts_solver_secondary.setSolidMaterialParameters(std::make_unique<mfem::ConstantCoefficient>(0.25),
                                                    std::make_unique<mfem::ConstantCoefficient>(5.0));
     ts_solver_secondary.setConductivity(std::make_unique<mfem::ConstantCoefficient>(0.5));
-    ts_solver_secondary.setDisplacement(*deform);
-    ts_solver_secondary.setVelocity(*velo);
-    ts_solver_secondary.setTemperature(*temp);
     ts_solver_secondary.setCouplingScheme(serac::CouplingScheme::OperatorSplit);
 
     auto temp_gf_coef_secondary = ts_solver_secondary.temperature().gridFuncCoef();

@@ -37,7 +37,8 @@ BasePhysics::BasePhysics(mfem::ParMesh* pmesh)
 BasePhysics::BasePhysics(int n, int p, mfem::ParMesh* pmesh) : BasePhysics(pmesh)
 {
   order_ = p;
-  gf_initialized_.assign(static_cast<std::size_t>(n), false);
+  // If this is a restart run, things have already been initialized
+  gf_initialized_.assign(static_cast<std::size_t>(n), StateManager::isRestart());
 }
 
 void BasePhysics::setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component)
