@@ -72,10 +72,31 @@ def list_missing(l1, l2):
     missing = [x for x in l1 if x not in l2]
     return missing
 
+# Output the missing/extra fields in the test list and return True on same
+def output_missing(baseline_list, test_list, type, field_name=""):
+    baseline_missing = list_missing(test_list, baseline_list)
+    test_missing = list_missing(baseline_list, test_list)
+
+    if (len(baseline_missing) > 0) or (len(test_missing) > 0):
+        if not field_name:
+            print("ERROR: Test and baseline files have mismatching {0}.".format(type))
+        else:
+            print("ERROR: Test and baseline files have mismatching {0} in field '{1}'.".format(type, field_name))
+
+        if len(test_missing) > 0:
+            print("       Missing {0} in test file: {1}".format(type, ", ".join(test_missing)))
+        if len(baseline_missing) > 0:
+            print("       Extra {0} in test file: {1}".format(type, ", ".join(baseline_missing)))
+        return False
+
+    return True
+
+
 # Ensure list of field names are equal and error out with useful message
 def ensure_field_names(baseline_field_names, test_field_names):
     error_found = False
 
+    # Check if either file have no fields
     if len(baseline_field_names) == 0:
         print("ERROR: Baseline file had no field names")
         error_found = True
@@ -86,15 +107,8 @@ def ensure_field_names(baseline_field_names, test_field_names):
     if error_found:
         sys.exit(1)
 
-    if len(baseline_field_names) > len(test_field_names):
-        print("ERROR: Test file is missing field names that are in the baseline file")
-        missing = list_missing(baseline_field_names, test_field_names)
-        print("       Missing field names: {0}".format(", ".join(missing)))
-        error_found = True
-    elif len(baseline_field_names) < len(test_field_names):
-        print("ERROR: Test file has extra field names not in baseline file")
-        missing = list_missing(test_field_names, baseline_field_names)
-        print("       Extra field names: {0}".format(", ".join(missing)))
+    # If fields are present, check for extra/missing fields in test file
+    if not output_missing(baseline_field_names, test_field_names, "fields"):
         error_found = True
 
     if error_found:
@@ -102,47 +116,44 @@ def ensure_field_names(baseline_field_names, test_field_names):
 
 
 # Ensure that field sample names and number of values are same in both files
+#
+# Pre: field names match
 def ensure_field_samples(field_names, baseline_curves, test_curves):
     error_count = 0
     zero_found = False
 
-    # Check data types match
+    # Check sample names match
     for field_name in field_names:
         baseline_sample_names = baseline_curves[field_name].keys()
         test_sample_names = test_curves[field_name].keys()
 
-        # Check sample names are correct
+        # Check if either file has no samples under each field
         if len(baseline_sample_names) == 0:
-            print("ERROR: Baseline file had no data types under field name '{0}'".format(field_name))
+            print("ERROR: Baseline file had no samples under field '{0}'".format(field_name))
             error_count += 1
             zero_found = True
         if len(test_sample_names) == 0:
-            print("ERROR: Test file had no data types under field name '{0}'".format(field_name))
+            print("ERROR: Test file had no samples under field '{0}'".format(field_name))
             error_count += 1
             zero_found = True
 
+        # if samples are present, check for extra/missing samples in test file
         if not zero_found:
-            if len(baseline_sample_names) > len(test_sample_names):
-                print("ERROR: Test file is missing sample names under field name '{0}'".format(field_name))
-                missing = list_missing(baseline_sample_names, test_sample_names)
-                print("       Missing sample names: {0}".format(", ".join(missing)))
+            if not output_missing(baseline_sample_names, test_sample_names, "samples", field_name):
                 error_count += 1
-            elif len(baseline_sample_names) < len(test_sample_names):
-                print("ERROR: Test field has extra sample names under field name '{0}'".format(field_name))
-                missing = list_missing(test_sample_names, baseline_sample_names)
-                print("       Extra sample names: {0}".format(", ".join(missing)))
-                error_count += 1
+
         zero_found = False
 
     if error_count > 0:
         sys.exit(1)
 
-    # Check lengths of all data type value lists
+    # Check lengths of all sample values lists
     for field_name in field_names:
         for sample_name in baseline_curves[field_name].keys():
             baseline_values = baseline_curves[field_name][sample_name]
             test_values = test_curves[field_name][sample_name]
 
+            # Check if either file has no sample values under each sample
             if len(test_values) == 0:
                 print("ERROR: Baseline file had no sample values under '{0}/{1}'".format(field_name, sample_name))
                 error_count += 1
@@ -152,6 +163,7 @@ def ensure_field_samples(field_names, baseline_curves, test_curves):
                 error_count += 1
                 zero_found = True
 
+            # if both have some sample values, make sure they have the same amount
             if not zero_found:
                 if len(baseline_values) > len(test_values):
                     print("ERROR: Test file has less entries ({0} vs {1}) than the baseline file under '{2}/{3}'"
@@ -167,10 +179,12 @@ def ensure_field_samples(field_names, baseline_curves, test_curves):
 
 
 # Ensure that field sample values are within tolerance
+#
+# Pre: field and sample names and lengths are match
 def ensure_field_sample_values(field_names, baseline_curves, test_curves, tolerance):
     error_found = False
 
-    # Check lengths of all data type lists
+    # Check if values are within given tolerance
     for field_name in field_names:
         for sample_name in baseline_curves[field_name].keys():
             baseline_values = baseline_curves[field_name][sample_name]
