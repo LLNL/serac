@@ -17,7 +17,7 @@ import sys
 # This script compares two Serac summary files against each other.
 # The 'baseline' file is treated as a truth against the possibly wrong
 # 'test' file. It attempts to fail with the most error messages it can at a given
-# correctness level (field names > sample names > sample values).
+# correctness level (field names > stat names > stat values).
 # Summary files were the same within the given tolerance if the
 # script exists successfully and not otherwise.
 
@@ -115,31 +115,31 @@ def ensure_field_names(baseline_field_names, test_field_names):
         sys.exit(1)
 
 
-# Ensure that field sample names and number of values are same in both files
+# Ensure that field stat names and number of values are same in both files
 #
 # Pre: field names match
-def ensure_field_samples(field_names, baseline_curves, test_curves):
+def ensure_field_stats(field_names, baseline_curves, test_curves):
     error_count = 0
     zero_found = False
 
-    # Check sample names match
+    # Check stat names match
     for field_name in field_names:
-        baseline_sample_names = baseline_curves[field_name].keys()
-        test_sample_names = test_curves[field_name].keys()
+        baseline_stat_names = baseline_curves[field_name].keys()
+        test_stat_names = test_curves[field_name].keys()
 
-        # Check if either file has no samples under each field
-        if len(baseline_sample_names) == 0:
-            print("ERROR: Baseline file had no samples under field '{0}'".format(field_name))
+        # Check if either file has no stats under each field
+        if len(baseline_stat_names) == 0:
+            print("ERROR: Baseline file had no stats under field '{0}'".format(field_name))
             error_count += 1
             zero_found = True
-        if len(test_sample_names) == 0:
-            print("ERROR: Test file had no samples under field '{0}'".format(field_name))
+        if len(test_stat_names) == 0:
+            print("ERROR: Test file had no stats under field '{0}'".format(field_name))
             error_count += 1
             zero_found = True
 
-        # if samples are present, check for extra/missing samples in test file
+        # if stats are present, check for extra/missing stats in test file
         if not zero_found:
-            if not output_missing(baseline_sample_names, test_sample_names, "samples", field_name):
+            if not output_missing(baseline_stat_names, test_stat_names, "stats", field_name):
                 error_count += 1
 
         zero_found = False
@@ -147,54 +147,54 @@ def ensure_field_samples(field_names, baseline_curves, test_curves):
     if error_count > 0:
         sys.exit(1)
 
-    # Check lengths of all sample values lists
+    # Check lengths of all stat values lists
     for field_name in field_names:
-        for sample_name in baseline_curves[field_name].keys():
-            baseline_values = baseline_curves[field_name][sample_name]
-            test_values = test_curves[field_name][sample_name]
+        for stat_name in baseline_curves[field_name].keys():
+            baseline_values = baseline_curves[field_name][stat_name]
+            test_values = test_curves[field_name][stat_name]
 
-            # Check if either file has no sample values under each sample
+            # Check if either file has no stat values under each stat
             if len(test_values) == 0:
-                print("ERROR: Baseline file had no sample values under '{0}/{1}'".format(field_name, sample_name))
+                print("ERROR: Baseline file had no stat values under '{0}/{1}'".format(field_name, stat_name))
                 error_count += 1
                 zero_found = True
             if len(test_values) == 0:
-                print("ERROR: Test file had no sample values under '{0}/{1}'".format(field_name, sample_name))
+                print("ERROR: Test file had no stat values under '{0}/{1}'".format(field_name, stat_name))
                 error_count += 1
                 zero_found = True
 
-            # if both have some sample values, make sure they have the same amount
+            # if both have some stat values, make sure they have the same amount
             if not zero_found:
                 if len(baseline_values) > len(test_values):
                     print("ERROR: Test file has less entries ({0} vs {1}) than the baseline file under '{2}/{3}'"
-                           .format(len(test_values), len(baseline_values), field_name, sample_name))
+                           .format(len(test_values), len(baseline_values), field_name, stat_name))
                     error_count += 1
                 elif len(baseline_values) < len(test_values):
                     print("ERROR: Test file has more entries ({0} vs {1}) than the baseline file under '{2}/{3}'"
-                          .format(len(test_values), len(baseline_values), field_name, sample_name))
+                          .format(len(test_values), len(baseline_values), field_name, stat_name))
                     error_count += 1
 
     if error_count > 0:
         sys.exit(1)
 
 
-# Ensure that field sample values are within tolerance
+# Ensure that field stat values are within tolerance
 #
-# Pre: field and sample names and lengths are match
-def ensure_field_sample_values(field_names, baseline_curves, test_curves, tolerance):
+# Pre: field and stat names and lengths are match
+def ensure_field_stat_values(field_names, baseline_curves, test_curves, tolerance):
     error_found = False
 
     # Check if values are within given tolerance
     for field_name in field_names:
-        for sample_name in baseline_curves[field_name].keys():
-            baseline_values = baseline_curves[field_name][sample_name]
-            test_values = test_curves[field_name][sample_name]
+        for stat_name in baseline_curves[field_name].keys():
+            baseline_values = baseline_curves[field_name][stat_name]
+            test_values = test_curves[field_name][stat_name]
 
             for i in range(len(baseline_values)):
                 baseline_value = baseline_values[i]
                 test_value = test_values[i]
                 if not math.isclose(baseline_value, test_value, abs_tol=tolerance):
-                    name = "{0}/{1}[{2}]".format(field_name, sample_name, i)
+                    name = "{0}/{1}[{2}]".format(field_name, stat_name, i)
                     print("ERROR: Test value '{0}' out of tolerance: baseline value={1}, test value={2}"
                           .format(name, baseline_value, test_value))
                     error_found = True
@@ -225,8 +225,8 @@ def main():
     test_field_names = get_field_names(test_curves)
      
     ensure_field_names(baseline_field_names, test_field_names)
-    ensure_field_samples(baseline_field_names, baseline_curves, test_curves)
-    ensure_field_sample_values(baseline_field_names, baseline_curves, test_curves, args.tolerance)
+    ensure_field_stats(baseline_field_names, baseline_curves, test_curves)
+    ensure_field_stat_values(baseline_field_names, baseline_curves, test_curves, args.tolerance)
 
     print("Success: Test file passed")
 
