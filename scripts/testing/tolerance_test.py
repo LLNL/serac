@@ -56,21 +56,56 @@ def parse_args():
     return args
 
 
+# Ensure that time steps exist and the same in both files
+def ensure_timesteps(baseline_curves, test_curves):
+    timestep_name = 't'
+    error_found = False
+    # Check if both files have t
+    if not timestep_name in baseline_curves.keys():
+        print("ERROR: Could not find timesteps, {0}, in baseline file".format(timestep_name))
+        error_found = True
+    if not timestep_name in test_curves.keys():
+        print("ERROR: Could not find timesteps, '{0}', in test file".format(timestep_name))
+        error_found = True
+
+    if error_found:
+        sys.exit(1)
+
+    baseline_timesteps = baseline_curves[timestep_name]
+    test_timesteps = test_curves[timestep_name]
+
+    if len(baseline_timesteps) != len(test_timesteps):
+        print("ERROR: Number of test time steps, {0}, does not match baseline, {1}"
+              .format(len(test_timesteps), len(baseline_timesteps)))
+        sys.exit(1)
+
+    for i in range(len(baseline_timesteps)):
+        if baseline_timesteps[i] != test_timesteps[i]:
+            print("ERROR: Test file time step {0} did not match baseline: {1} vs {2}"
+                  .format(i, baseline_timesteps[i], test_timesteps[i]))
+            error_found = True
+
+    if error_found:
+        sys.exit(1)
+
+
  # filter field names from a list of all possible names
 def get_field_names(possible_fields):
     field_names = []
     # known non-field names that should be ignored
-    non_field_names = ["t", "sidre_group_name"]
+    non_field_names = ["t"]
     for key in possible_fields.keys():
         if key in non_field_names:
             continue
         field_names.append(key)
     return field_names
 
+
 # Return list of items in l1 that are missing from l2
 def list_missing(l1, l2):
     missing = [x for x in l1 if x not in l2]
     return missing
+
 
 # Output the missing/extra fields in the test list and return True on same
 def output_missing(baseline_list, test_list, type, field_name=""):
@@ -219,6 +254,8 @@ def main():
     if not "curves" in test_json:
         print("ERROR: Test file did not have a 'curves' section")
     test_curves = test_json["curves"]
+
+    ensure_timesteps(baseline_curves, test_curves)
 
     # Get both sets of field names
     baseline_field_names = get_field_names(baseline_curves)
