@@ -10,7 +10,7 @@ StateManager
 ============
 
 StateManager is a global interface for (as the name suggests) managing state - 
-specfically, the following core components of a simulation:
+specifically, the following core components of a simulation:
 
   1. Meshes - instances of ``mfem::ParMesh``
   #. Fields - instances of ``serac::FiniteElementState``
@@ -109,3 +109,17 @@ requested name and use that instead of constructing a new field via the process 
 
 QuadratureData
 --------------
+
+Serac's ``QuadratureData`` template is an abstraction over ``mfem::QuadratureFunction``, the type used to store per-quadrature-point
+data.  We implement this functionality in terms of ``mfem::QuadratureFunction`` so that we can store this data in ``MFEMSidreDataCollection``,
+which implements ``mfem::DataCollection::RegisterQField`` (which accepts a ``QuadratureFunction`` ).
+
+Because ``QuadratureFunction`` only allows for floating-point data (as either scalars or vectors), ``QuadratureData<T>`` allows
+for the storage of arbitrary (user-defined) types via a double-buffer approach.  That is, data is stored in a buffer of type ``T[]``
+for easy access within the ``serac::Functional`` ecosystem (which natively supports ``QuadratureData`` instances) and then copied
+(via a bit_cast) to the ``double[]`` buffer encapsulated by an ``mfem::QuadratureFunction`` when we wish to save state to disk.  In the case of a
+restart the process works in reverse - data is ``bit_cast`` 'ed from the ``double[]`` buffer to the ``T[]`` buffer.
+
+To allow synchronization to occur only when necessary, the ``StateManager`` registers a reference to each ``QuadratureData`` in a
+type-erased (via virtual functions) callback list.  This further layer of abstraction - called ``SyncableData`` - allows 
+quadrature point data of varying types to be uniformly synchronized to the corresponding ``mfem::QuadratureFunction`` instances.
