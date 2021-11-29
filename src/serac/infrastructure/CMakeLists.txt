@@ -41,8 +41,17 @@ blt_add_library(
     DEPENDS_ON  ${infrastructure_depends}
     )
 
+if (SERAC_ENABLE_CODEVELOP)
+    # This really shouldn't be needed but it keeps getting dropped from axom.
+    # It certainly shouldn't go here either.
+    target_include_directories(serac_infrastructure SYSTEM PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../../axom/src>
+        )
+endif()
+
 target_include_directories(serac_infrastructure PUBLIC 
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../..>
+    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:include>
     )
 

@@ -81,9 +81,9 @@ public:
     // we implement GPU boundary kernels
     auto ptr = accelerator::make_shared_array<derivative_type, ExecutionSpace::CPU>(num_quadrature_points);
 
-    size_t                      n1 = static_cast<size_t>(num_elements);
-    size_t                      n2 = static_cast<size_t>(quadrature_points_per_element);
-    CPUView<derivative_type, 2> qf_derivatives{ptr.get(), n1, n2};
+    size_t                           n1 = static_cast<size_t>(num_elements);
+    size_t                           n2 = static_cast<size_t>(quadrature_points_per_element);
+    CPUArrayView<derivative_type, 2> qf_derivatives{ptr.get(), n1, n2};
 
     // this is where we actually specialize the finite element kernel templates with
     // our specific requirements (element type, test/trial spaces, quadrature rule, q-function, etc).
@@ -102,7 +102,7 @@ public:
                                                                                          num_elements);
     };
 
-    element_gradient_ = [qf_derivatives, num_elements, &J](ArrayView<double, 3, exec> K_b) {
+    element_gradient_ = [qf_derivatives, num_elements, &J](ExecArrayView<double, 3, exec> K_b) {
       boundary_integral::element_gradient_kernel<geometry, test_space, trial_space, Q>(K_b, qf_derivatives, J,
                                                                                        num_elements);
     };
@@ -132,7 +132,7 @@ public:
    * @param[inout] K_b The reshaped vector as a mfem::DeviceTensor of size (test_dim * test_dof, trial_dim * trial_dof,
    * nelems)
    */
-  void ComputeElementGradients(ArrayView<double, 3, exec> K_b) const { element_gradient_(K_b); }
+  void ComputeElementGradients(ExecArrayView<double, 3, exec> K_b) const { element_gradient_(K_b); }
 
 private:
   /**
@@ -151,7 +151,7 @@ private:
    * @brief Type-erased handle to kernel that computes each element's gradients
    * @see gradient_matrix_kernel
    */
-  std::function<void(ArrayView<double, 3, exec>)> element_gradient_;
+  std::function<void(ExecArrayView<double, 3, exec>)> element_gradient_;
 };
 
 }  // namespace serac

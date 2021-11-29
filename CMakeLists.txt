@@ -23,9 +23,12 @@ if (NOT MPI_C_COMPILER OR NOT MPI_CXX_COMPILER)
     message(FATAL_ERROR 
             "Serac requires MPI.  It is required to provide the MPI C/C++ "
             "compiler wrappers via the CMake variables, "
-            "MPI_C_COMPILER and MPI_CXX_COMPILER."
-            )
+            "MPI_C_COMPILER and MPI_CXX_COMPILER.")
 endif()
+
+# Save off "raw" flags before they are modified by serac/BLT
+set(RAW_CMAKE_C_FLAGS   ${CMAKE_C_FLAGS}   CACHE STRING "")
+set(RAW_CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} CACHE STRING "")
 
 #------------------------------------------------------------------------------
 # Setup BLT
@@ -100,7 +103,18 @@ include(${BLT_SOURCE_DIR}/SetupBLT.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/SeracMacros.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/SeracBasics.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/SeracCompilerFlags.cmake)
+
+# Restore raw compiler flags so subprojects don't end up using Serac's flags
+set(SERAC_CMAKE_C_FLAGS   ${CMAKE_C_FLAGS})
+set(SERAC_CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+set(CMAKE_C_FLAGS         ${RAW_CMAKE_C_FLAGS} CACHE STRING "" FORCE)
+set(CMAKE_CXX_FLAGS       ${RAW_CMAKE_CXX_FLAGS} CACHE STRING "" FORCE)
+
 include(${PROJECT_SOURCE_DIR}/cmake/thirdparty/SetupSeracThirdParty.cmake)
+
+set(CMAKE_C_FLAGS   ${SERAC_CMAKE_C_FLAGS})
+set(CMAKE_CXX_FLAGS ${SERAC_CMAKE_CXX_FLAGS})
+
 include(${PROJECT_SOURCE_DIR}/cmake/SeracConfigHeader.cmake)
 
 #------------------------------------------------------------------------------
@@ -135,7 +149,7 @@ list(APPEND BLT_C_FILE_EXTS ".cuh")
 if (SERAC_ENABLE_CODE_CHECKS)
     serac_add_code_checks(PREFIX   serac
                           INCLUDES /src/ /tests/
-                          EXCLUDES cmake/blt uberenv_libs)
+                          EXCLUDES /axom/ cmake/blt /mfem/ uberenv_libs)
 endif()
 
 #------------------------------------------------------------------------------
@@ -154,6 +168,16 @@ install(TARGETS              serac
         EXPORT               serac-targets
         DESTINATION          lib
         )
+
+if (SERAC_ENABLE_CODEVELOP)
+    # Add Axom's targets to our export set
+    # TODO: we should ask Axom for this list in the future
+    set(axom_exported_targets axom cli11 fmt hdf5 lua sol sparsehash)
+    install(TARGETS              ${axom_exported_targets}
+            EXPORT               serac-targets
+            DESTINATION          lib
+            )
+endif()
 
 install(EXPORT serac-targets 
         NAMESPACE serac::
