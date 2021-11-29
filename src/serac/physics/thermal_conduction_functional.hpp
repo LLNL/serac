@@ -38,7 +38,7 @@ namespace serac {
 template <int order, int dim>
 class ThermalConductionFunctional : public BasePhysics {
 public:
-  /// A timestep method and config for the M solver
+  /// A timestep and boundary condition enforcement method for a dynamic solver
   struct TimesteppingOptions {
     /// The timestepping method to be applied
     TimestepMethod timestepper;
@@ -49,7 +49,7 @@ public:
 
   /**
    * @brief A configuration variant for the various solves
-   * For quasistatic solves, leave the @a dyn_options parameter null. @a T_lin_options and @a T_nonlin_options
+   * For quasistatic solves, leave the @a dyn_options parameter null. @a T_nonlin_options and @a T_lin_options
    * define the solver parameters for the nonlinear residual and linear stiffness solves. For
    * dynamic problems, @a dyn_options defines the timestepping scheme while @a T_lin_options and @a T_nonlin_options
    * define the nonlinear residual and linear stiffness solve options as before.
@@ -117,7 +117,7 @@ public:
   /**
    * @brief Construct a new Thermal Functional Solver object
    *
-   * @param[in] options The system solver parameters
+   * @param[in] options The system linear and nonlinear solver and timestepping parameters
    * @param[in] name An optional name for the physics module instance
    */
   ThermalConductionFunctional(const SolverOptions& options, const std::string& name = "")
@@ -204,9 +204,9 @@ public:
    * @tparam MaterialType The thermal material type
    * @param material A material containing density, specific heat, and thermal flux evaluation information
    *
-   * @pre MaterialType must have a double member cp defining the specific heat
-   * @pre MaterialType must have a double member rho defining the density
-   * @pre MaterialType must have the operator (u, du_dx) defined as the thermal flux
+   * @pre MaterialType must have a method specificHeatCapacity() defining the specific heat
+   * @pre MaterialType must have a method density() defining the density
+   * @pre MaterialType must have the operator (temperature, d temperature_dx) defined as the thermal flux
    */
   template <typename MaterialType>
   void setMaterial(MaterialType material)
@@ -268,7 +268,7 @@ public:
    * @tparam SourceType The type of the source function
    * @param source_function A source function for a prescribed thermal load
    *
-   * @pre SourceType must have the operator (x, time, u, du_dx) defined as the thermal load
+   * @pre SourceType must have the operator (x, time, temperature, d temperature_dx) defined as the thermal source
    */
   template <typename SourceType>
   void setSource(SourceType source_function)
@@ -299,7 +299,7 @@ public:
    * @tparam FluxType The type of the flux function
    * @param flux_function A function describing the thermal flux applied to a boundary
    *
-   * @pre FluxType must have the operator (x, normal, temperature) to return the flux value
+   * @pre FluxType must have the operator (x, normal, temperature) to return the thermal flux value
    */
   template <typename FluxType>
   void setFluxBCs(FluxType flux_function)
@@ -325,8 +325,7 @@ public:
   /**
    * @brief Complete the initialization and allocation of the data structures.
    *
-   * This must be called before StaticSolve() or AdvanceTimestep(). If allow_dynamic
-   * = false, do not allocate the mass matrix or dynamic operator
+   * This must be called before AdvanceTimestep().
    */
   void completeSetup() override
   {
