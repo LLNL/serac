@@ -117,7 +117,7 @@ void functional_test_dynamic(double expected_temp_norm)
                                                      "thermal_functional");
 
   // Define an isotropic conductor material model
-  Thermal::LinearIsotropicConductor mat{.density_ = 1.0, .specific_heat_capacity_ = 1.0, .conductivity_ = 1.0};
+  Thermal::LinearIsotropicConductor mat(1.0, 1.0, 1.0);
 
   thermal_solver.setMaterial(mat);
 
