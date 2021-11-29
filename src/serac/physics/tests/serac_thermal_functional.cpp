@@ -56,7 +56,7 @@ void functional_test_static(double expected_temp_norm)
     cond = {{{1.5, 0.01, 0.0}, {0.01, 1.0, 0.0}, {0.0, 0.0, 1.0}}};
   }
 
-  Thermal::LinearConductor<dim> mat{.density_ = 1.0, .specific_heat_capacity_ = 1.0, .conductivity_ = cond};
+  Thermal::LinearConductor<dim> mat(1.0, 1.0, cond);
   thermal_solver.setMaterial(mat);
 
   // Define the function for the initial temperature and boundary condition

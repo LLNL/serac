@@ -18,15 +18,26 @@
 namespace serac::Thermal {
 
 /// Linear isotropic thermal conduction material model
-struct LinearIsotropicConductor {
-  /// Density
-  double density_ = -1.0;
+class LinearIsotropicConductor {
+public:
+  /**
+   * @brief Construct a new Linear Isotropic Conductor object
+   *
+   * @param density Density of the material (mass/volume)
+   * @param specific_heat_capacity Specific heat capacity of the material (energy / (mass * temp))
+   * @param conductivity Thermal conductivity of the material (power / (length * temp))
+   */
+  LinearIsotropicConductor(double density = 1.0, double specific_heat_capacity = 1.0, double conductivity = 1.0)
+      : density_(density), specific_heat_capacity_(specific_heat_capacity), conductivity_(conductivity)
+  {
+    SLIC_ERROR_ROOT_IF(conductivity_ > 0.0,
+                       "Conductivity must be positive in the linear isotropic conductor material model.");
 
-  /// Specific heat capacity
-  double specific_heat_capacity_ = -1.0;
+    SLIC_ERROR_ROOT_IF(density_ > 0.0, "Density must be positive in the linear isotropic conductor material model.");
 
-  /// Constant isotropic thermal conductivity
-  double conductivity_ = -1.0;
+    SLIC_ERROR_ROOT_IF(specific_heat_capacity_ > 0.0,
+                       "Specific heat capacity must be positive in the linear isotropic conductor material model.");
+  }
 
   /**
    * @brief Function defining the thermal flux (constitutive response)
@@ -39,9 +50,6 @@ struct LinearIsotropicConductor {
   template <typename T1, typename T2>
   SERAC_HOST_DEVICE T2 operator()(T1& /* temperature */, T2& temperature_gradient) const
   {
-    SLIC_ASSERT_MSG(conductivity_ > 0.0,
-                    "Conductivity must be positive in the linear isotropic conductor material model.");
-
     return -1.0 * conductivity_ * temperature_gradient;
   }
 
@@ -54,8 +62,6 @@ struct LinearIsotropicConductor {
   template <typename T1>
   SERAC_HOST_DEVICE double density(T1& /* x */) const
   {
-    SLIC_ASSERT_MSG(density_ > 0.0, "Density must be positive in the linear isotropic conductor material model.");
-
     return density_;
   }
 
@@ -68,11 +74,18 @@ struct LinearIsotropicConductor {
   template <typename T1, typename T2>
   SERAC_HOST_DEVICE double specificHeatCapacity(T1& /* x */, T2& /* temperature */) const
   {
-    SLIC_ASSERT_MSG(specific_heat_capacity_ > 0.0,
-                    "Specific heat capacity must be positive in the linear isotropic conductor material model.");
-
     return specific_heat_capacity_;
   }
+
+private:
+  /// Density
+  double density_ = 1.0;
+
+  /// Specific heat capacity
+  double specific_heat_capacity_ = 1.0;
+
+  /// Constant isotropic thermal conductivity
+  double conductivity_ = 1.0;
 };
 
 /**
@@ -81,15 +94,46 @@ struct LinearIsotropicConductor {
  * @tparam dim Spatial dimension
  */
 template <int dim>
-struct LinearConductor {
-  /// Density
-  double density_ = -1.0;
+class LinearConductor {
+public:
+  /**
+   * @brief Construct a new Linear Isotropic Conductor object
+   *
+   * @param density Density of the material (mass/volume)
+   * @param specific_heat_capacity Specific heat capacity of the material (energy / (mass * temp))
+   * @param conductivity Thermal conductivity of the material (power / (length * temp))
+   */
+  LinearConductor(double density = 1.0, double specific_heat_capacity = 1.0,
+                  tensor<double, dim, dim> conductivity = {{{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}}})
+      : density_(density), specific_heat_capacity_(specific_heat_capacity), conductivity_(conductivity)
+  {
+    SLIC_ERROR_ROOT_IF(density_ > 0.0, "Density must be positive in the linear conductor material model.");
 
-  /// Specific heat capacity
-  double specific_heat_capacity_ = -1.0;
+    SLIC_ERROR_ROOT_IF(specific_heat_capacity_ > 0.0,
+                       "Specific heat capacity must be positive in the linear conductor material model.");
 
-  /// Constant isotropic thermal conductivity
-  tensor<double, dim, dim> conductivity_ = {-1.0};
+    // Check that the conductivity tensor is symmetric
+    for (int i = 0; i < dim; ++i) {
+      for (int j = i + 1; j < dim; ++j) {
+        SLIC_ERROR_ROOT_IF(std::abs(conductivity_(i, j) - conductivity_(j, i)) < 1.0e-7,
+                           "Conductivity tensor must be symmetric for the linear conductor material model.");
+      }
+    }
+
+    // Check for positive definite conductivity using Sylvester's criterion
+    // The upper left corner sub-matrices must have a positive determinant
+    SLIC_ERROR_ROOT_IF(conductivity_(0, 0) > 0.0,
+                       "Conductivity tensor must be positive definite for the linear conductor material model.");
+
+    SLIC_ERROR_ROOT_IF(det(conductivity_) > 0.0,
+                       "Conductivity tensor must be positive definite for the linear conductor material model.");
+
+    if (dim == 3) {
+      auto subtensor_2D = make_tensor<2, 2>([this](int i, int j) { return conductivity_(i, j); });
+      SLIC_ERROR_ROOT_IF(det(subtensor_2D) > 0.0,
+                         "Conductivity tensor must be positive definite for the linear conductor material model.");
+    }
+  }
 
   /**
    * @brief Function defining the thermal flux (constitutive response)
@@ -102,10 +146,6 @@ struct LinearConductor {
   template <typename T1, typename T2>
   SERAC_HOST_DEVICE auto operator()(T1& /* temperature */, T2& temperature_gradient) const
   {
-    for (int i = 0; i < dim; ++i) {
-      SLIC_ASSERT_MSG(conductivity_(i, i) > 0.0,
-                      "Conductivity tensor must be positive definite in linear conductor material model.");
-    }
     return -1.0 * conductivity_ * temperature_gradient;
   }
 
@@ -118,8 +158,6 @@ struct LinearConductor {
   template <typename T1>
   SERAC_HOST_DEVICE double density(T1& /* x */) const
   {
-    SLIC_ASSERT_MSG(density_ > 0.0, "Density must be positive in the linear conductor material model.");
-
     return density_;
   }
 
@@ -132,11 +170,18 @@ struct LinearConductor {
   template <typename T1, typename T2>
   SERAC_HOST_DEVICE double specificHeatCapacity(T1& /* x */, T2& /* temperature */) const
   {
-    SLIC_ASSERT_MSG(specific_heat_capacity_ > 0.0,
-                    "Specific heat capacity must be positive in the linear conductor material model.");
-
     return specific_heat_capacity_;
   }
+
+private:
+  /// Density
+  double density_ = 1.0;
+
+  /// Specific heat capacity
+  double specific_heat_capacity_ = 1.0;
+
+  /// Constant thermal conductivity
+  tensor<double, dim, dim> conductivity_ = {{{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}}};
 };
 
 // Use SFINAE to add static assertions checking if the given thermal material type is acceptable
