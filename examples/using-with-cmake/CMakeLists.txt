@@ -18,7 +18,7 @@ endif()
 add_library(cuda_runtime INTERFACE)
 # END FIXME
 
-# Create fake empty target, this stops CMake from adding -lmpi to the link line
+# BEGIN FIXME: Create fake empty target, this stops CMake from adding -lmpi to the link line
 add_library(mpi INTERFACE)
 # END FIXME
 
