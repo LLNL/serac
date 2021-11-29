@@ -119,6 +119,7 @@ public:
 
   /**
    * @brief Gives ownership of mesh to StateManager
+   * @param[in] pmesh The mesh to register
    * @param[in] tag A string that uniquely identifies the mesh
    * @return A pointer to the stored mesh whose ownership was just passed to StateManager
    */
