@@ -137,11 +137,17 @@ public:
       auto num_elements           = static_cast<size_t>(test_space_->GetNE());
       auto ndof_per_test_element  = static_cast<size_t>(test_space_->GetFE(0)->GetDof() * test_space_->GetVDim());
       auto ndof_per_trial_element = static_cast<size_t>(trial_space_->GetFE(0)->GetDof() * trial_space_->GetVDim());
-      element_gradients_          = Array<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
+      // FIXME: Array op= is currently horribly broken for multidimensional arrays, remove when fixed
+      ExecArray<double, 3, exec> tmp(num_elements, ndof_per_test_element, ndof_per_trial_element);
+      element_gradients_                                                          = std::move(tmp);
+      static_cast<axom::ArrayBase<double, 3, decltype(tmp)>&>(element_gradients_) = tmp;
     }
 
     {
-      bdr_element_gradients_ = allocateMemoryForBdrElementGradients<double, exec>(*test_space_, *trial_space_);
+      // FIXME: Array op= is currently horribly broken for multidimensional arrays, remove when fixed
+      auto tmp               = allocateMemoryForBdrElementGradients<double, exec>(*test_space_, *trial_space_);
+      bdr_element_gradients_ = std::move(tmp);
+      static_cast<axom::ArrayBase<double, 3, decltype(tmp)>&>(bdr_element_gradients_) = tmp;
     }
   }
 
@@ -363,14 +369,14 @@ private:
         auto& K_elem = form_.element_gradients_;
         auto& LUT    = lookup_tables.element_nonzero_LUT;
 
-        zero_out(K_elem);
+        detail::zero_out(K_elem);
         for (auto& domain : form_.domain_integrals_) {
-          domain.ComputeElementGradients(view(K_elem));
+          domain.ComputeElementGradients(K_elem);
         }
 
-        for (size_t e = 0; e < K_elem.size(0); e++) {
-          for (size_t i = 0; i < K_elem.size(1); i++) {
-            for (size_t j = 0; j < K_elem.size(2); j++) {
+        for (axom::IndexType e = 0; e < K_elem.shape()[0]; e++) {
+          for (axom::IndexType i = 0; i < K_elem.shape()[1]; i++) {
+            for (axom::IndexType j = 0; j < K_elem.shape()[2]; j++) {
               auto [index, sign] = LUT(e, i, j);
               values[index] += sign * K_elem(e, i, j);
             }
@@ -384,14 +390,14 @@ private:
         auto& K_belem = form_.bdr_element_gradients_;
         auto& LUT     = lookup_tables.bdr_element_nonzero_LUT;
 
-        zero_out(K_belem);
+        detail::zero_out(K_belem);
         for (auto& boundary : form_.bdr_integrals_) {
-          boundary.ComputeElementGradients(view(K_belem));
+          boundary.ComputeElementGradients(K_belem);
         }
 
-        for (size_t e = 0; e < K_belem.size(0); e++) {
-          for (size_t i = 0; i < K_belem.size(1); i++) {
-            for (size_t j = 0; j < K_belem.size(2); j++) {
+        for (axom::IndexType e = 0; e < K_belem.shape()[0]; e++) {
+          for (axom::IndexType i = 0; i < K_belem.shape()[1]; i++) {
+            for (axom::IndexType j = 0; j < K_belem.shape()[2]; j++) {
               auto [index, sign] = LUT(e, i, j);
               values[index] += sign * K_belem(e, i, j);
             }
@@ -616,10 +622,10 @@ private:
   mutable Gradient grad_;
 
   /// @brief 3D array that stores each element's gradient of the residual w.r.t. trial values
-  Array<double, 3, exec> element_gradients_;
+  ExecArray<double, 3, exec> element_gradients_;
 
   /// @brief 3D array that stores each boundary element's gradient of the residual w.r.t. trial values
-  Array<double, 3, exec> bdr_element_gradients_;
+  ExecArray<double, 3, exec> bdr_element_gradients_;
 
   template <typename T>
   friend typename Functional<T>::Gradient& grad(Functional<T>&);

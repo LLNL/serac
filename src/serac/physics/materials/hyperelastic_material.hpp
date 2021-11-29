@@ -13,8 +13,9 @@
 #pragma once
 
 #include "mfem.hpp"
+#include "axom/core.hpp"
 
-#include "serac/numerics/array_4D.hpp"
+#include "serac/infrastructure/logger.hpp"
 
 namespace serac {
 
@@ -67,7 +68,7 @@ public:
    * @param[out] C Tangent moduli 4D Array in spatial form (C^e_ijkl=(d tau_ij)/(d F_km) * F_lm = J * sigma_ij delta_kl
    + J * (d sigma_ij)/(d F_km) F_lm )
    */
-  virtual void evalTangentStiffness(const mfem::DenseMatrix& du_dX, serac::mfem_ext::Array4D<double>& C) const = 0;
+  virtual void evalTangentStiffness(const mfem::DenseMatrix& du_dX, axom::Array<double, 4>& C) const = 0;
 
 protected:
   /**
@@ -119,7 +120,7 @@ public:
    * @param[in] du_dX The displacement gradient
    * @param[out] C Tangent moduli 4D Array
    */
-  virtual void evalTangentStiffness(const mfem::DenseMatrix& du_dX, serac::mfem_ext::Array4D<double>& C) const;
+  virtual void evalTangentStiffness(const mfem::DenseMatrix& du_dX, axom::Array<double, 4>& C) const;
 
   /**
    * @brief Destroy the Hyperelastic Material object
@@ -220,7 +221,7 @@ public:
    * @param[in] du_dX the displacement gradient
    * @param[out] C Tangent moduli 4D Array
    */
-  virtual void evalTangentStiffness(const mfem::DenseMatrix& du_dX, serac::mfem_ext::Array4D<double>& C) const;
+  virtual void evalTangentStiffness(const mfem::DenseMatrix& du_dX, axom::Array<double, 4>& C) const;
 
   /**
    * @brief Destroy the Hyperelastic Material object

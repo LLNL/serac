@@ -14,25 +14,13 @@
 
 #include "mfem.hpp"
 
-#include "serac/serac_config.hpp"
+#include "axom/core.hpp"
 
-#include "serac/numerics/functional/array.hpp"
+#include "serac/serac_config.hpp"
 
 #include "serac/infrastructure/accelerator.hpp"
 
 #include "serac/infrastructure/variant.hpp"
-
-/**
- * @brief Helper template for a GPU-compatible array type (when applicable)
- * This will be eventually replaced with axom::Array
- */
-template <typename T>
-// #ifdef SERAC_USE_CUDA // FIXME: This is what we want
-#ifdef __CUDACC__
-using DeviceArray = serac::ManagedArray<T>;
-#else
-using DeviceArray = std::vector<T>;
-#endif
 
 namespace serac {
 
@@ -249,11 +237,11 @@ private:
   /**
    * @brief The actual data
    */
-  DeviceArray<T> data_;
+  UnifiedArray<T> data_;
   /**
    * @brief A copy of the element_offsets member from mfem::QuadratureSpace
    */
-  DeviceArray<int> offsets_;
+  UnifiedArray<int> offsets_;
   /**
    * @brief The stride of the array
    */
@@ -341,10 +329,8 @@ QuadratureData<T>::QuadratureData(mfem::Mesh& mesh, const int p, const bool allo
   // FIXME: Can we avoid storing a copy of the offsets array in the general case?
   std::memcpy(offsets_.data(), detail::quadSpaceOffsets(detail::retrieve(qspace_)),
               static_cast<std::size_t>(mesh.GetNE() + 1) * sizeof(int));
-#ifdef __CUDACC__
-  // Unlike std::vector, ManagedArray does not appear to default-construct the elements
+  // FIXME: Remove/refactor once axom::Array default-initializes its data (PR pending)
   std::fill_n(data_.data(), data_.size(), T{});
-#endif
 }
 
 template <typename T>

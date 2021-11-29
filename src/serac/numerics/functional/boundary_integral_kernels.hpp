@@ -91,7 +91,7 @@ auto Postprocess(const T& f, [[maybe_unused]] const coord_type& xi)
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
           typename qpt_data_type = void>
-void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, CPUView<derivatives_type, 2> qf_derivatives,
+void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, CPUArrayView<derivatives_type, 2> qf_derivatives,
                        const mfem::Vector& J_, const mfem::Vector& X_, const mfem::Vector& N_, int num_elements,
                        lambda qf)
 
@@ -181,8 +181,9 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, CPUView<derivativ
  * @param[in] num_elements The number of elements in the mesh
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
-void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, CPUView<derivatives_type, 2> qf_derivatives,
-                               const mfem::Vector& J_, int num_elements)
+void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
+                               CPUArrayView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J_,
+                               int num_elements)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
@@ -258,8 +259,8 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, CPUView
  * @param[in] num_elements The number of elements in the mesh
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
-void element_gradient_kernel(CPUView<double, 3> dk, CPUView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J_,
-                             int num_elements)
+void element_gradient_kernel(CPUArrayView<double, 3> dk, CPUArrayView<derivatives_type, 2> qf_derivatives,
+                             const mfem::Vector& J_, int num_elements)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
