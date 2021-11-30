@@ -112,27 +112,8 @@ public:
     SLIC_ERROR_ROOT_IF(specific_heat_capacity_ < 0.0,
                        "Specific heat capacity must be positive in the linear conductor material model.");
 
-    // Check that the conductivity tensor is symmetric
-    for (int i = 0; i < dim; ++i) {
-      for (int j = i + 1; j < dim; ++j) {
-        SLIC_ERROR_ROOT_IF(std::abs(conductivity_(i, j) - conductivity_(j, i)) > 1.0e-7,
-                           "Conductivity tensor must be symmetric for the linear conductor material model.");
-      }
-    }
-
-    // Check for positive definite conductivity using Sylvester's criterion
-    // The upper left corner sub-matrices must have a positive determinant
-    SLIC_ERROR_ROOT_IF(conductivity_(0, 0) < 0.0,
-                       "Conductivity tensor must be positive definite for the linear conductor material model.");
-
-    SLIC_ERROR_ROOT_IF(det(conductivity_) < 0.0,
-                       "Conductivity tensor must be positive definite for the linear conductor material model.");
-
-    if (dim == 3) {
-      auto subtensor_2D = make_tensor<2, 2>([this](int i, int j) { return conductivity_(i, j); });
-      SLIC_ERROR_ROOT_IF(det(subtensor_2D) < 0.0,
-                         "Conductivity tensor must be positive definite for the linear conductor material model.");
-    }
+    SLIC_ERROR_ROOT_IF(!is_symmetric_and_positive_definite(conductivity_),
+                       "Conductivity tensor must be symmetric and positive definite.");
   }
 
   /**
