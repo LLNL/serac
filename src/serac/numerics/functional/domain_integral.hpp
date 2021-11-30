@@ -36,6 +36,7 @@ template <typename test, typename ... trials, ExecutionSpace exec>
 class DomainIntegral<test(trials...), exec> {
 public:
 
+  static constexpr tuple<trials...> trial_spaces{};
   static constexpr int num_trial_spaces = sizeof ... (trials);
 
   /**
@@ -56,6 +57,9 @@ public:
                  QuadratureData<qpt_data_type>& data = dummy_qdata)
       : J_(J), X_(X)
   {
+
+    using namespace domain_integral;
+
     constexpr auto geometry                      = supported_geometries[dim];
     constexpr auto Q                             = std::max({test::order, trials::order ... })  + 1;
     constexpr auto quadrature_points_per_element = (dim == 2) ? Q * Q : Q * Q * Q;
@@ -68,22 +72,25 @@ public:
     // std::function's type erasure lets us wrap those specific details inside a function with known signature
     if constexpr (exec == ExecutionSpace::CPU) {
 
-      for_constexpr < num_trial_spaces >([this, num_elements, num_quadrature_points, &J, &X, &qf, &data](auto i){
+      KernelConfig< Q, geometry, test, trials ... > eval_config;
 
-        using derivative_type = decltype(domain_integral::get_derivative_type< i, dim, trials ... >(qf));
+      evaluation_ = EvaluationKernel{eval_config, J, X, num_elements, qf, data};
 
-        domain_integral::KernelConfig< Q, geometry, test, trials ... > config;
-        domain_integral::DerivativeWRT<i> which_derivative;
+      for_constexpr < num_trial_spaces >([this, num_elements, num_quadrature_points, &J, &X, &qf, &data, eval_config](auto i){
+
+        [[maybe_unused]] KernelConfig< Q, geometry, test, trials ... > grad_config;
 
         // allocate memory for the derivatives of the q-function at each quadrature point
         //
         // Note: ptrs' lifetime is managed in an unusual way! It is captured by-value in one of the
         // functors below to augment the reference count, and extend its lifetime to match
         // that of the DomainIntegral that allocated it.
+        using derivative_type = decltype(get_derivative_type< i, dim, trials ... >(qf));
         auto ptr = accelerator::make_shared_array<exec, derivative_type>(num_quadrature_points);
 
-        evaluation_[i] = domain_integral::EvaluationKernel{which_derivative, config, ptr, J, X, num_elements, quadrature_points_per_element, qf, data};
-        
+        evaluation_with_AD_[i] = EvaluationKernel{DerivativeWRT<i>{}, eval_config, ptr, J, X, num_elements, quadrature_points_per_element, qf, data};
+
+
  #if 0
         // note: this lambda function captures ptr by-value to extend its lifetime
         //                   vvv
@@ -146,8 +153,10 @@ public:
    * @see evaluation_kernel
    */
   void Mult(const std::array< mfem::Vector, num_trial_spaces > & input_E, mfem::Vector& output_E, int which = 0) const { 
-    if (which >= 0) {
-      evaluation_[which](input_E, output_E); 
+    if (which == -1) {
+      evaluation_(input_E, output_E);
+    } else {
+      evaluation_with_AD_[which](input_E, output_E); 
     }
   }
 
@@ -185,7 +194,15 @@ private:
    * @brief Type-erased handle to evaluation kernel
    * @see evaluation_kernel
    */
-  std::function<void(const std::array < mfem::Vector, num_trial_spaces > &, mfem::Vector &)> evaluation_[num_trial_spaces];
+  std::function<void(const std::array < mfem::Vector, num_trial_spaces > &, mfem::Vector &)> evaluation_;
+
+  /**
+   * @brief Type-erased handle to evaluation kernel
+   * @see evaluation_kernel
+   */
+  std::function<void(const std::array < mfem::Vector, num_trial_spaces > &, mfem::Vector &)> evaluation_with_AD_[num_trial_spaces];
+
+
 
   /**
    * @brief Type-erased handle to gradient kernel

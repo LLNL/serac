@@ -302,43 +302,41 @@ SERAC_HOST_DEVICE constexpr derivatives_type& AccessDerivatives(derivatives_type
   }
 }
 
-/**
- * @brief Actually calls the q-function
- * This is an indirection layer to provide a transparent call site usage regardless of whether
- * quadrature point (state) information is required
- * @param[in] qf The quadrature function functor object
- * @param[in] x_q The physical coordinates of the quadrature point
- * @param[in] dual_arg The values and derivatives at the quadrature point, as a dual
- * @param[inout] qpt_data The state information at the quadrature point
- */
-template <typename lambda, typename coords_type, typename args_type, typename qpt_data_type>
-SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, args_type&& dual_arg, qpt_data_type&& qpt_data)
-{
-  return qf(x_q, dual_arg, qpt_data);
-}
-
-/// @overload
-template <typename lambda, typename coords_type, typename args_type>
-SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, args_type&& dual_arg, std::nullptr_t)
-{
-  return qf(x_q, dual_arg);
-}
+///**
+// * @brief Actually calls the q-function
+// * This is an indirection layer to provide a transparent call site usage regardless of whether
+// * quadrature point (state) information is required
+// * @param[in] qf The quadrature function functor object
+// * @param[in] x_q The physical coordinates of the quadrature point
+// * @param[in] dual_arg The values and derivatives at the quadrature point, as a dual
+// * @param[inout] qpt_data The state information at the quadrature point
+// */
+//template <typename lambda, typename coords_type, typename args_type, typename qpt_data_type>
+//SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, args_type&& dual_arg, qpt_data_type&& qpt_data)
+//{
+//  return qf(x_q, dual_arg, qpt_data);
+//}
+//
+///// @overload
+//template <typename lambda, typename coords_type, typename args_type>
+//SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, args_type&& dual_arg, std::nullptr_t)
+//{
+//  return qf(x_q, dual_arg);
+//}
 
 /// @overload
 template <typename lambda, typename coords_type, typename T, int ... i >
-SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, T && dual_args, std::nullptr_t, std::integer_sequence< int, i ... >)
+SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, const T & arg_tuple, std::nullptr_t, std::integer_sequence< int, i ... >)
 {
-  return qf(x_q, serac::get<i>(dual_args) ...);
+  return qf(x_q, serac::get<i>(arg_tuple) ...);
 }
 
 /// @overload
 template <typename lambda, typename coords_type, typename ... T>
-SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, serac::tuple< T ... > && dual_args, std::nullptr_t)
+SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, const serac::tuple< T ... > & arg_tuple, std::nullptr_t)
 {
-  return apply_qf_helper(qf, x_q, dual_args, nullptr, std::make_integer_sequence< int, int(sizeof ... (T)) >{});
+  return apply_qf_helper(qf, x_q, arg_tuple, nullptr, std::make_integer_sequence< int, int(sizeof ... (T)) >{});
 }
-
-
 
 }  // namespace detail
 
