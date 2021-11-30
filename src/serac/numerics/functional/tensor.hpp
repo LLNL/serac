@@ -1320,13 +1320,31 @@ bool is_symmetric(tensor<double, n, n> A, double tolerance = 1.0e-8)
  */
 bool is_symmetric_and_positive_definite(tensor<double, 2, 2> A)
 {
-  return is_symmetric(A) && A(0, 0) > 0.0 && det(A) > 0.0;
+  if (!is_symmetric(A)) {
+    return false;
+  }
+  if (A(0, 0) < 0.0) {
+    return false;
+  }
+  if (det(A) < 0.0) {
+    return false;
+  }
+  return true;
 }
 /// @overload
 bool is_symmetric_and_positive_definite(tensor<double, 3, 3> A)
 {
+  if (!is_symmetric(A)) {
+    return false;
+  }
+  if (det(A) < 0.0) {
+    return false;
+  }
   auto subtensor = make_tensor<2, 2>([A](int i, int j) { return A(i, j); });
-  return is_symmetric_and_positive_definite(subtensor) && is_symmetric(A) && det(A) > 0.0;
+  if (!is_symmetric_and_positive_definite(subtensor)) {
+    return false;
+  }
+  return true;
 }
 
 /**
