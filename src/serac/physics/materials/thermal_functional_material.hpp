@@ -48,7 +48,7 @@ public:
    * @return The thermal flux of the material model
    */
   template <typename T1, typename T2>
-  SERAC_HOST_DEVICE T2 operator()(T1& /* temperature */, T2& temperature_gradient) const
+  SERAC_HOST_DEVICE T2 operator()(const T1& /* temperature */, const T2& temperature_gradient) const
   {
     return -1.0 * conductivity_ * temperature_gradient;
   }
@@ -60,7 +60,7 @@ public:
    * @return The density
    */
   template <int dim>
-  SERAC_HOST_DEVICE double density(tensor<double, dim>& /* x */) const
+  SERAC_HOST_DEVICE double density(const tensor<double, dim>& /* x */) const
   {
     return density_;
   }
@@ -72,7 +72,7 @@ public:
    * @tparam T Type of the temperature variable
    */
   template <typename T, int dim>
-  SERAC_HOST_DEVICE double specificHeatCapacity(tensor<double, dim>& /* x */, T& /* temperature */) const
+  SERAC_HOST_DEVICE double specificHeatCapacity(const tensor<double, dim>& /* x */, const T& /* temperature */) const
   {
     return specific_heat_capacity_;
   }
@@ -125,7 +125,7 @@ public:
    * @return The thermal flux of the material model
    */
   template <typename T1, typename T2>
-  SERAC_HOST_DEVICE auto operator()(T1& /* temperature */, T2& temperature_gradient) const
+  SERAC_HOST_DEVICE auto operator()(const T1& /* temperature */, const T2& temperature_gradient) const
   {
     return -1.0 * conductivity_ * temperature_gradient;
   }
@@ -135,7 +135,7 @@ public:
    *
    * @return The density
    */
-  SERAC_HOST_DEVICE double density(tensor<double, dim>& /* x */) const { return density_; }
+  SERAC_HOST_DEVICE double density(const tensor<double, dim>& /* x */) const { return density_; }
 
   /**
    * @brief The specific heat capacity (heat capacity per unit mass) of the material model
@@ -143,7 +143,7 @@ public:
    * @tparam T Type of the temperature variable
    */
   template <typename T>
-  SERAC_HOST_DEVICE double specificHeatCapacity(tensor<double, dim>& /* x */, T& /* temperature */) const
+  SERAC_HOST_DEVICE double specificHeatCapacity(const tensor<double, dim>& /* x */, const T& /* temperature */) const
   {
     return specific_heat_capacity_;
   }
@@ -156,7 +156,7 @@ private:
   double specific_heat_capacity_ = 1.0;
 
   /// Constant thermal conductivity
-  tensor<double, dim, dim> conductivity_ = {{{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}}};
+  tensor<double, dim, dim> conductivity_ = Identity<dim>();
 };
 
 // Use SFINAE to add static assertions checking if the given thermal material type is acceptable
@@ -205,7 +205,8 @@ struct ConstantSource {
    * @return The thermal source value
    */
   template <typename T1, typename T2, int dim>
-  SERAC_HOST_DEVICE double operator()(tensor<double, dim>& /* x */, double /* t */, T1& /* u */, T2& /* du_dx */) const
+  SERAC_HOST_DEVICE double operator()(const tensor<double, dim>& /* x */, const double /* t */, const T1& /* u */,
+                                      const T2& /* du_dx */) const
   {
     return source_;
   }
@@ -238,7 +239,7 @@ struct FluxBoundary {
    * @return The flux applied to the boundary
    */
   template <typename T1, typename T2, int dim>
-  SERAC_HOST_DEVICE double operator()(tensor<double, dim>& /* x */, T1& /* n */, T2& /* u */) const
+  SERAC_HOST_DEVICE double operator()(const tensor<double, dim>& /* x */, const T1& /* n */, const T2& /* u */) const
   {
     return flux_;
   }
