@@ -79,13 +79,13 @@ public:
 
 private:
   /// Density
-  double density_ = 1.0;
+  double density_;
 
   /// Specific heat capacity
-  double specific_heat_capacity_ = 1.0;
+  double specific_heat_capacity_;
 
   /// Constant isotropic thermal conductivity
-  double conductivity_ = 1.0;
+  double conductivity_;
 };
 
 /**
@@ -150,13 +150,13 @@ public:
 
 private:
   /// Density
-  double density_ = 1.0;
+  double density_;
 
   /// Specific heat capacity
-  double specific_heat_capacity_ = 1.0;
+  double specific_heat_capacity_;
 
   /// Constant thermal conductivity
-  tensor<double, dim, dim> conductivity_ = Identity<dim>();
+  tensor<double, dim, dim> conductivity_;
 };
 
 // Use SFINAE to add static assertions checking if the given thermal material type is acceptable
@@ -194,7 +194,7 @@ struct has_thermal_flux<
 /// Constant thermal source model
 struct ConstantSource {
   /// The constant source
-  double source_;
+  double source_ = 0.0;
 
   /**
    * @brief Evaluation function for the constant thermal source model
@@ -228,7 +228,7 @@ struct has_thermal_source<
 /// Constant thermal flux boundary model
 struct FluxBoundary {
   /// The constant flux applied to the boundary
-  double flux_;
+  double flux_ = 0.0;
 
   /**
    * @brief Evaluation function for the thermal flux on a boundary
