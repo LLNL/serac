@@ -104,7 +104,7 @@ public:
    * @param conductivity Thermal conductivity of the material (power / (length * temp))
    */
   LinearConductor(double density = 1.0, double specific_heat_capacity = 1.0,
-                  tensor<double, dim, dim> conductivity = {{{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}}})
+                  tensor<double, dim, dim> conductivity = Identity<dim>())
       : density_(density), specific_heat_capacity_(specific_heat_capacity), conductivity_(conductivity)
   {
     SLIC_ERROR_ROOT_IF(density_ < 0.0, "Density must be positive in the linear conductor material model.");
