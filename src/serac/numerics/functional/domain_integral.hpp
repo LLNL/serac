@@ -72,7 +72,8 @@ public:
 
         using derivative_type = decltype(domain_integral::get_derivative_type< i, dim, trials ... >(qf));
 
-        domain_integral::KernelConfig< i, Q, geometry, test, trials ... > config;
+        domain_integral::KernelConfig< Q, geometry, test, trials ... > config;
+        domain_integral::DerivativeWRT<i> which_derivative;
 
         // allocate memory for the derivatives of the q-function at each quadrature point
         //
@@ -81,7 +82,7 @@ public:
         // that of the DomainIntegral that allocated it.
         auto ptr = accelerator::make_shared_array<exec, derivative_type>(num_quadrature_points);
 
-        evaluation_[i] = domain_integral::EvaluationKernel{config, ptr, J, X, num_elements, quadrature_points_per_element, qf, data};
+        evaluation_[i] = domain_integral::EvaluationKernel{which_derivative, config, ptr, J, X, num_elements, quadrature_points_per_element, qf, data};
         
  #if 0
         // note: this lambda function captures ptr by-value to extend its lifetime
@@ -145,7 +146,9 @@ public:
    * @see evaluation_kernel
    */
   void Mult(const std::array< mfem::Vector, num_trial_spaces > & input_E, mfem::Vector& output_E, int which = 0) const { 
-    evaluation_[which](input_E, output_E); 
+    if (which >= 0) {
+      evaluation_[which](input_E, output_E); 
+    }
   }
 
   /**

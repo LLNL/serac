@@ -79,7 +79,9 @@ TEST(basic, nonlinear_thermal_test_3D)
   mfem::ParFiniteElementSpace fespace(mesh3D.get(), &fec);
 
   mfem::Vector U(fespace.TrueVSize());
+  mfem::Vector dU_dt(fespace.TrueVSize());
   U.Randomize();
+  dU_dt.Randomize();
 
   // Define the types for the test and trial spaces using the function arguments
   using test_space  = H1<p>;
@@ -101,6 +103,8 @@ TEST(basic, nonlinear_thermal_test_3D)
         return serac::tuple{source, flux};
       },
       *mesh3D);
+
+  mfem::Vector r = residual(U, dU_dt);
 
   //residual.AddSurfaceIntegral([=](auto x, auto /*n*/, auto u, auto /*dudt*/) { return x[0] + x[1] - cos(u); }, *mesh3D);
 
