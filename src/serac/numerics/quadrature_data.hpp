@@ -125,7 +125,7 @@ private:
 /**
  * @brief Stores instances of user-defined type for each quadrature point in a mesh
  * @tparam T The type of the per-qpt data
- * @pre T must be default-constructible (TODO: Do we want to allow non-default constructible types?)
+ * @pre T must be default-constructible
  * @pre T must be trivially copyable (due to the use of memcpy for type punning)
  */
 template <typename T>
@@ -267,7 +267,7 @@ extern QuadratureData<void> dummy_qdata;
 /**
  * @brief Stores instances of user-defined type for each quadrature point in a mesh
  * @tparam T The type of the per-qpt data
- * @pre T must be default-constructible (TODO: Do we want to allow non-default constructible types?)
+ * @pre T must be default-constructible
  * @pre T must be trivially copyable (due to the use of memcpy for type punning)
  */
 template <typename T>

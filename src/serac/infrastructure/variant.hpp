@@ -81,7 +81,7 @@ struct variant_storage {
 
   /**
    * @brief Resets the union by destroying the active member
-   * FIXME: The index is technically invalid here after this function is called
+   * @note The index is technically invalid here after this function is called
    */
   constexpr void clear()
   {
