@@ -1290,6 +1290,64 @@ constexpr auto det(const tensor<T, 3, 3>& A)
 }
 
 /**
+ * @brief Return whether a square rank 2 tensor is symmetric
+ *
+ * @tparam n The height of the tensor
+ * @param A The square rank 2 tensor
+ * @param tolerance The tolerance to check for symmetry
+ * @return Whether the square rank 2 tensor (matrix) is symmetric
+ */
+template <int n>
+bool is_symmetric(tensor<double, n, n> A, double tolerance = 1.0e-8)
+{
+  for (int i = 0; i < n; ++i) {
+    for (int j = i + 1; j < n; ++j) {
+      if (std::abs(A(i, j) - A(j, i)) > tolerance) {
+        return false;
+      };
+    }
+  }
+  return true;
+}
+
+/**
+ * @brief Return whether a matrix is symmetric and positive definite
+ * This check uses Sylvester's criterion, checking that each upper left subtensor has a
+ * determinant greater than zero.
+ *
+ * @param A The matrix to test for positive definiteness
+ * @return Whether the matrix is positive definite
+ */
+bool is_symmetric_and_positive_definite(tensor<double, 2, 2> A)
+{
+  if (!is_symmetric(A)) {
+    return false;
+  }
+  if (A(0, 0) < 0.0) {
+    return false;
+  }
+  if (det(A) < 0.0) {
+    return false;
+  }
+  return true;
+}
+/// @overload
+bool is_symmetric_and_positive_definite(tensor<double, 3, 3> A)
+{
+  if (!is_symmetric(A)) {
+    return false;
+  }
+  if (det(A) < 0.0) {
+    return false;
+  }
+  auto subtensor = make_tensor<2, 2>([A](int i, int j) { return A(i, j); });
+  if (!is_symmetric_and_positive_definite(subtensor)) {
+    return false;
+  }
+  return true;
+}
+
+/**
  * @brief Solves Ax = b for x using Gaussian elimination with partial pivoting
  * @param[in] A The coefficient matrix A
  * @param[in] b The righthand side vector b

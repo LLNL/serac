@@ -53,8 +53,6 @@ public:
   template <int dim, typename lambda_type, typename qpt_data_type = void>
   BoundaryIntegral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, const mfem::Vector& normals,
                    Dimension<dim>, lambda_type&& qf)
-      : J_(J), X_(X), normals_(normals)
-
   {
     SLIC_ERROR_ROOT_IF(exec == ExecutionSpace::GPU, "BoundaryIntegral doesn't currently support GPU kernels yet");
 
@@ -93,19 +91,19 @@ public:
     // std::function's type erasure lets us wrap those specific details inside a function with known signature
     //
     // this lambda function captures ptr by-value to extend its lifetime
-    //                   vvv
-    evaluation_ = [this, ptr, qf_derivatives, num_elements, qf](const mfem::Vector& U, mfem::Vector& R) {
-      boundary_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U, R, qf_derivatives, J_, X_, normals_,
+    //             vvv
+    evaluation_ = [ptr, qf_derivatives, num_elements, qf, &J, &X, &normals](const mfem::Vector& U, mfem::Vector& R) {
+      boundary_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U, R, qf_derivatives, J, X, normals,
                                                                                  num_elements, qf);
     };
 
-    action_of_gradient_ = [this, qf_derivatives, num_elements](const mfem::Vector& dU, mfem::Vector& dR) {
-      boundary_integral::action_of_gradient_kernel<geometry, test_space, trial_space, Q>(dU, dR, qf_derivatives, J_,
+    action_of_gradient_ = [qf_derivatives, num_elements, &J](const mfem::Vector& dU, mfem::Vector& dR) {
+      boundary_integral::action_of_gradient_kernel<geometry, test_space, trial_space, Q>(dU, dR, qf_derivatives, J,
                                                                                          num_elements);
     };
 
-    element_gradient_ = [this, qf_derivatives, num_elements](ExecArrayView<double, 3, exec> K_b) {
-      boundary_integral::element_gradient_kernel<geometry, test_space, trial_space, Q>(K_b, qf_derivatives, J_,
+    element_gradient_ = [qf_derivatives, num_elements, &J](ExecArrayView<double, 3, exec> K_b) {
+      boundary_integral::element_gradient_kernel<geometry, test_space, trial_space, Q>(K_b, qf_derivatives, J,
                                                                                        num_elements);
     };
   }
@@ -137,21 +135,6 @@ public:
   void ComputeElementGradients(ExecArrayView<double, 3, exec> K_b) const { element_gradient_(K_b); }
 
 private:
-  /**
-   * @brief Jacobians of the element transformations at all quadrature points
-   */
-  const mfem::Vector J_;
-
-  /**
-   * @brief Mapped (physical) coordinates of all quadrature points
-   */
-  const mfem::Vector X_;
-
-  /**
-   * @brief physical coordinates of surface unit normals at all quadrature points
-   */
-  const mfem::Vector normals_;
-
   /**
    * @brief Type-erased handle to evaluation kernel
    * @see evaluation_kernel

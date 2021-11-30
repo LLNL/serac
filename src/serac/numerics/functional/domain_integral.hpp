@@ -52,7 +52,6 @@ public:
   template <int dim, typename lambda_type, typename qpt_data_type = void>
   DomainIntegral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<dim>, lambda_type&& qf,
                  QuadratureData<qpt_data_type>& data = dummy_qdata)
-      : J_(J), X_(X)
   {
     constexpr auto geometry                      = supported_geometries[dim];
     constexpr auto Q                             = std::max(test_space::order, trial_space::order) + 1;
@@ -87,19 +86,19 @@ public:
     // std::function's type erasure lets us wrap those specific details inside a function with known signature
     if constexpr (exec == ExecutionSpace::CPU) {
       // note: this lambda function captures ptr by-value to extend its lifetime
-      //                   vvv
-      evaluation_ = [this, ptr, qf_derivatives, num_elements, qf, &data](const mfem::Vector& U, mfem::Vector& R) {
-        domain_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U, R, qf_derivatives, J_, X_,
+      //             vvv
+      evaluation_ = [ptr, qf_derivatives, num_elements, qf, &data, &J, &X](const mfem::Vector& U, mfem::Vector& R) {
+        domain_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U, R, qf_derivatives, J, X,
                                                                                  num_elements, qf, data);
       };
 
-      action_of_gradient_ = [this, qf_derivatives, num_elements](const mfem::Vector& dU, mfem::Vector& dR) {
-        domain_integral::action_of_gradient_kernel<geometry, test_space, trial_space, Q>(dU, dR, qf_derivatives, J_,
+      action_of_gradient_ = [qf_derivatives, num_elements, &J](const mfem::Vector& dU, mfem::Vector& dR) {
+        domain_integral::action_of_gradient_kernel<geometry, test_space, trial_space, Q>(dU, dR, qf_derivatives, J,
                                                                                          num_elements);
       };
 
-      element_gradient_ = [this, qf_derivatives, num_elements](CPUArrayView<double, 3> K_e) {
-        domain_integral::element_gradient_kernel<geometry, test_space, trial_space, Q>(K_e, qf_derivatives, J_,
+      element_gradient_ = [qf_derivatives, num_elements, &J](CPUArrayView<double, 3> K_e) {
+        domain_integral::element_gradient_kernel<geometry, test_space, trial_space, Q>(K_e, qf_derivatives, J,
                                                                                        num_elements);
       };
     }
@@ -110,7 +109,8 @@ public:
     if constexpr (exec == ExecutionSpace::GPU) {
       // note: this lambda function captures ptr by-value to extend its lifetime
       //                   vvv
-      evaluation_ = [this, ptr, qf_derivatives, num_elements, qf, &data](const mfem::Vector& U, mfem::Vector& R) {
+      evaluation_ = [this, ptr, qf_derivatives, num_elements, qf, &data, &J, &X](const mfem::Vector& U,
+                                                                                 mfem::Vector&       R) {
         // TODO: Refactor execution configuration. Blocksize of 128 chosen as a good starting point. Has not been
         // optimized
         serac::detail::GPULaunchConfiguration exec_config{.blocksize = 128};
@@ -118,18 +118,18 @@ public:
         domain_integral::evaluation_kernel_cuda<
             geometry, test_space, trial_space, Q,
             serac::detail::ThreadParallelizationStrategy::THREAD_PER_QUADRATURE_POINT>(
-            exec_config, U, R, qf_derivatives, J_, X_, num_elements, qf, data);
+            exec_config, U, R, qf_derivatives, J, X, num_elements, qf, data);
       };
 
-      action_of_gradient_ = [this, qf_derivatives, num_elements](const mfem::Vector& dU, mfem::Vector& dR) {
+      action_of_gradient_ = [this, qf_derivatives, num_elements, &J](const mfem::Vector& dU, mfem::Vector& dR) {
         // TODO: Refactor execution configuration. Blocksize of 128 chosen as a good starting point. Has not been
         // optimized
         serac::detail::GPULaunchConfiguration exec_config{.blocksize = 128};
 
         domain_integral::action_of_gradient_kernel<
             geometry, test_space, trial_space, Q,
-            serac::detail::ThreadParallelizationStrategy::THREAD_PER_QUADRATURE_POINT>(
-            exec_config, dU, dR, qf_derivatives, J_, num_elements);
+            serac::detail::ThreadParallelizationStrategy::THREAD_PER_QUADRATURE_POINT>(exec_config, dU, dR,
+                                                                                       qf_derivatives, J, num_elements);
       };
     }
 #endif
@@ -163,16 +163,6 @@ public:
   void ComputeElementGradients(CPUArrayView<double, 3> K_e) const { element_gradient_(K_e); }
 
 private:
-  /**
-   * @brief Jacobians of the element transformations at all quadrature points
-   */
-  const mfem::Vector J_;
-
-  /**
-   * @brief Mapped (physical) coordinates of all quadrature points
-   */
-  const mfem::Vector X_;
-
   /**
    * @brief Type-erased handle to evaluation kernel
    * @see evaluation_kernel

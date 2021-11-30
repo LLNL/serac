@@ -14,6 +14,7 @@ set(materials_headers
     hyperelastic_material.hpp
     thermal_expansion_material.hpp
     solid_utils.hpp
+    thermal_functional_material.hpp
     )
 
 set(materials_depends
