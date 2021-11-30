@@ -252,7 +252,7 @@ serac::OutputType FromInlet<serac::OutputType>::operator()(const axom::inlet::Co
   }();
 
   // FIXME: This is a hack because we're converting from a primitive
-  // Remove this when FromInlet takes a Proxy
+  // This can be removed if the signature of FromInlet is changed to take a Proxy instead of a Container
   std::string output_type = base["output_type"];
   axom::utilities::string::toLower(output_type);
   return output_names.at(output_type);

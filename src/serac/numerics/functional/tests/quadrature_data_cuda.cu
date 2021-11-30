@@ -43,7 +43,7 @@ TEST(QuadratureDataCUDA, basic_fill_and_copy)
   constexpr int  elements_per_block = 16;
   const int      num_elements       = mesh->GetNE();
 
-  // FIXME: This assumes a homogeneous mesh
+  // Note: This assumes a homogeneous mesh
   const int geom                  = mesh->GetElementBaseGeometry(0);
   const int num_quadrature_points = mfem::IntRules.Get(geom, p).GetNPoints();
 

@@ -262,8 +262,6 @@ public:
 };
 
 // A dummy global so that lvalue references can be bound to something of type QData<void>
-// FIXME: There's probably a cleaner way to do this, it's technically a non-const global
-// but it's not really mutable because no operations are defined for it
 extern QuadratureData<void> dummy_qdata;
 
 /**
@@ -306,8 +304,6 @@ public:
 };
 
 // A dummy global so that lvalue references can be bound to something of type QData<void>
-// FIXME: There's probably a cleaner way to do this, it's technically a non-const global
-// but it's not really mutable because no operations are defined for it
 extern QuadratureDataView<void> dummy_qdata_view;
 
 // Hijacks the "vdim" parameter (number of doubles per qpt) to allocate the correct amount of storage
@@ -326,11 +322,10 @@ QuadratureData<T>::QuadratureData(mfem::Mesh& mesh, const int p, const bool allo
   // also https://chromium.googlesource.com/chromium/src/base/+/refs/heads/master/bit_cast.h
   static_assert(std::is_default_constructible_v<T>, "Must be able to default-construct the stored type");
   static_assert(std::is_trivially_copyable_v<T>, "Uses memcpy - requires trivial copies");
-  // FIXME: Can we avoid storing a copy of the offsets array in the general case?
+  // We cannot avoid storing a copy of the offsets array in the general case,
+  // but if we know the number of qpts per element at compile time we don't need to store offsets
   std::memcpy(offsets_.data(), detail::quadSpaceOffsets(detail::retrieve(qspace_)),
               static_cast<std::size_t>(mesh.GetNE() + 1) * sizeof(int));
-  // FIXME: Remove/refactor once axom::Array default-initializes its data (PR pending)
-  std::fill_n(data_.data(), data_.size(), T{});
 }
 
 template <typename T>

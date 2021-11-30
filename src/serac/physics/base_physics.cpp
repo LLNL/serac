@@ -178,8 +178,8 @@ void BasePhysics::initializeSummary(axom::sidre::DataStore& datastore, double t_
   axom::sidre::Group* summary_group = sidre_root->createGroup(summary_group_name);
 
   // Write run info
-  summary_group->createViewString("user_name", serac::getUserName());
-  summary_group->createViewString("host_name", serac::getHostName());
+  summary_group->createViewString("user_name", axom::utilities::getUserName());
+  summary_group->createViewString("host_name", axom::utilities::getHostName());
   summary_group->createViewScalar("mpi_rank_count", count);
 
   // Write curves info
