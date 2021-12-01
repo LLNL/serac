@@ -24,7 +24,7 @@ BasePhysics::BasePhysics(mfem::ParMesh* pmesh)
     : sidre_datacoll_id_(StateManager::collectionID(pmesh)),
       mesh_(StateManager::mesh(sidre_datacoll_id_)),
       comm_(mesh_.GetComm()),
-      output_type_(serac::OutputType::VisIt),
+      output_type_(serac::OutputType::SidreVisIt),
       time_(0.0),
       cycle_(0),
       bcs_(mesh_)

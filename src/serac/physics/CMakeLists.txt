@@ -25,6 +25,7 @@ set(physics_headers
     base_physics.hpp
     solid.hpp
     thermal_conduction.hpp
+    thermal_conduction_functional.hpp
     thermal_solid.hpp
     )
 
