@@ -5,7 +5,7 @@ output_type = "ParaView"
 -- Mesh information
 -- _mesh_start
 main_mesh = {
-    type = "generate",
+    type = "box",
     elements = {x = 10, y = 10}
 }
 -- _mesh_end
