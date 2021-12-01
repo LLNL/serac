@@ -12,10 +12,6 @@ Below is the documentation for Serac input files, generated automatically by `Ax
 .. |uncheck|    unicode:: U+2610 .. UNCHECKED BOX
 .. |check|      unicode:: U+2611 .. CHECKED BOX
 
-==================
-Input file Options
-==================
-
 ----------
 input_file
 ----------
