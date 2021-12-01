@@ -92,7 +92,6 @@ TEST(meshgen, lua_input)
   EXPECT_FALSE(inlet.verify());
   SLIC_INFO("End expected warning about invalid value.");
 
-
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
