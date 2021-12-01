@@ -142,6 +142,8 @@ public:
    * @param[in] pmesh Pointer to a mesh (non-owning)
    * @return The collection ID corresponding to the DataCollection that owns the mesh
    * pointed to by @a pmesh.  If @a pmesh is @p nullptr then the default collection ID is returned.
+   * @note A raw pointer comparison is used to identify the datacollection, i.e.,
+   * @a pmesh must either been returned by either the setMesh() or mesh() method
    */
   static std::string collectionID(mfem::ParMesh* pmesh);
 
