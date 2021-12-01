@@ -27,7 +27,7 @@ void functional_test_static(double expected_temp_norm)
 
   // Create DataStore
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "serac", "thermal_functional_static_solve");
+  serac::StateManager::initialize(datastore, "thermal_functional_static_solve");
 
   static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for thermal functional test");
 
@@ -98,7 +98,7 @@ void functional_test_dynamic(double expected_temp_norm)
 
   // Create DataStore
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "serac", "thermal_functional_dynamic_solve");
+  serac::StateManager::initialize(datastore, "thermal_functional_dynamic_solve");
 
   static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for thermal functional test");
 
