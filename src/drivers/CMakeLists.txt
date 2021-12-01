@@ -29,6 +29,10 @@ if (ENABLE_TESTS)
                  COMMAND       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/serac -o default_no_solid -i ${input_files_dir}/tests/thermal_conduction/static_solve.lua
                  NUM_MPI_TASKS 1 )
 
+    blt_add_test(NAME          serac_driver_simple_conduction_example
+                 COMMAND       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/serac -o simple_conduction_example -i ${PROJECT_SOURCE_DIR}/examples/simple_conduction/conduction.lua
+                 NUM_MPI_TASKS 1 )
+
     blt_add_test(NAME          serac_driver_help
                  COMMAND       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/serac --help 
                  NUM_MPI_TASKS 1 )
