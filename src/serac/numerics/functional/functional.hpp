@@ -24,28 +24,31 @@
 #include "serac/numerics/functional/dof_numbering.hpp"
 
 namespace serac {
-  
+
 // this type exists as a way to signal to `serac::Functional` that the function
-// serac::Functional::operator()` should differentiate w.r.t. a specific argument  
+// serac::Functional::operator()` should differentiate w.r.t. a specific argument
 //
 // TODO: better name
 struct dual_vector {
-  mfem::Vector & ref;
-  operator mfem::Vector &() { return ref; }
-  operator const mfem::Vector &() const { return ref; }
+  mfem::Vector& ref;
+                operator mfem::Vector &() { return ref; }
+                operator const mfem::Vector &() const { return ref; }
 };
 
-template < typename ... T >
-constexpr int index_of_dual_vector() {
-  constexpr int n = int(sizeof ... (T));
-  bool is_a_dual_vector[] = {std::is_same_v< T, dual_vector > ... }; 
+template <typename... T>
+constexpr int index_of_dual_vector()
+{
+  constexpr int n                  = int(sizeof...(T));
+  bool          is_a_dual_vector[] = {std::is_same_v<T, dual_vector>...};
   for (int i = 0; i < n; i++) {
-    if (is_a_dual_vector[i]) { return i; }
+    if (is_a_dual_vector[i]) {
+      return i;
+    }
   }
   return -1;
 }
 
-//dual_vector differentiate_wrt(const mfem::Vector & v) { return dual_vector{v}; }
+// dual_vector differentiate_wrt(const mfem::Vector & v) { return dual_vector{v}; }
 
 template <size_t num_trial_spaces>
 int GetTrueVSize(std::array<mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
@@ -265,13 +268,12 @@ public:
     AddBoundaryIntegral(Dimension<2>{}, integrand, domain);
   }
 
-  void ActionOfGradient(const mfem::Vector& input_T, mfem::Vector& output_T, size_t which) const 
+  void ActionOfGradient(const mfem::Vector& input_T, mfem::Vector& output_T, size_t which) const
   {
     P_trial_[which]->Mult(input_T, input_L_[which]);
 
     output_L_ = 0.0;
     if (domain_integrals_.size() > 0) {
-
       // get the values for each element on the local processor
       G_trial_[which]->Mult(input_L_[which], input_E_[which]);
 
@@ -312,23 +314,24 @@ public:
     }
   }
 
-
   /**
    * @brief this function lets the user evaluate the serac::Functional with the given trial space values
-   * 
+   *
    * note: it accepts exactly `num_trial_spaces` arguments of type mfem::Vector. Additionally, one of those
    * arguments may be a dual_vector, to indicate that Functional::operator() should not only evaluate the
    * element calculations, but also differentiate them w.r.t. the specified dual_vector argument
-   */ 
-  template < typename ... T >
-  auto operator()(const T & ... args) {
-
+   */
+  template <typename... T>
+  auto operator()(const T&... args)
+  {
     constexpr int num_dual_arguments = (std::is_same_v<T, dual_vector> + ...);
-    static_assert(num_dual_arguments <= 1, "Error: Functional::operator() can only differentiate w.r.t. 1 argument a time");
-    static_assert(sizeof ... (T) == num_trial_spaces, "Error: Functional::operator() must take exactly as many arguments as trial spaces");
+    static_assert(num_dual_arguments <= 1,
+                  "Error: Functional::operator() can only differentiate w.r.t. 1 argument a time");
+    static_assert(sizeof...(T) == num_trial_spaces,
+                  "Error: Functional::operator() must take exactly as many arguments as trial spaces");
 
-    [[maybe_unused]] constexpr int wrt = index_of_dual_vector< T ... >();
-    std::array< std::reference_wrapper< const mfem::Vector >, num_trial_spaces > input_T{args ...};
+    [[maybe_unused]] constexpr int                                           wrt = index_of_dual_vector<T...>();
+    std::array<std::reference_wrapper<const mfem::Vector>, num_trial_spaces> input_T{args...};
 
     // get the values for each local processor
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
@@ -396,10 +399,9 @@ public:
   }
 
 private:
-
   /**
-   * @brief mfem::Operator representing the gradient matrix that 
-   * can compute the action of the gradient (with operator()), 
+   * @brief mfem::Operator representing the gradient matrix that
+   * can compute the action of the gradient (with operator()),
    * or assemble the sparse matrix representation through implicit conversion to mfem::HypreParMatrix *
    */
   class Gradient : public mfem::Operator {
@@ -423,7 +425,8 @@ private:
      * @param[in] dx a small perturbation in the trial space
      * @param[in] df the resulting small perturbation in the residuals
      */
-    virtual void Mult(const mfem::Vector& dx, mfem::Vector& df) const override { 
+    virtual void Mult(const mfem::Vector& dx, mfem::Vector& df) const override
+    {
       form_.ActionOfGradient(dx, df, which_argument);
     }
 
@@ -496,9 +499,10 @@ private:
         }
       }
 
-      auto J_local = mfem::SparseMatrix(lookup_tables.row_ptr.data(), lookup_tables.col_ind.data(), values,
-                                        form_.output_L_.Size(), form_.input_L_[which_argument].Size(), sparse_matrix_frees_graph_ptrs,
-                                        sparse_matrix_frees_values_ptr, col_ind_is_sorted);
+      auto J_local =
+          mfem::SparseMatrix(lookup_tables.row_ptr.data(), lookup_tables.col_ind.data(), values, form_.output_L_.Size(),
+                             form_.input_L_[which_argument].Size(), sparse_matrix_frees_graph_ptrs,
+                             sparse_matrix_frees_values_ptr, col_ind_is_sorted);
 
       auto* R = form_.test_space_->Dof_TrueDof_Matrix();
 
@@ -558,7 +562,7 @@ private:
   /**
    * @brief The input set of per-element DOF values
    */
-  mutable std::array < mfem::Vector, num_trial_spaces > input_E_;
+  mutable std::array<mfem::Vector, num_trial_spaces> input_E_;
 
   /**
    * @brief The output set of per-element DOF values
@@ -568,7 +572,7 @@ private:
   /**
    * @brief The input set of per-boundaryelement DOF values
    */
-  mutable std::array < mfem::Vector, num_trial_spaces > input_E_boundary_;
+  mutable std::array<mfem::Vector, num_trial_spaces> input_E_boundary_;
 
   /**
    * @brief The output set of per-boundary-element DOF values
@@ -658,7 +662,7 @@ private:
   /**
    * @brief The gradient object used to implement @p GetGradient
    */
-  mutable std::vector < Gradient > grad_;
+  mutable std::vector<Gradient> grad_;
 
   /// @brief 3D array that stores each element's gradient of the residual w.r.t. trial values
   Array<double, 3, exec> element_gradients_[num_trial_spaces];

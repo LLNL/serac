@@ -188,13 +188,14 @@ int main()
     J2_gradient_time += stopwatch.elapsed();
 
     stopwatch.start();
-    auto stress_and_C = material.calculate_stress_AD(serac::get<1>(make_dual(tensor<double,3>{}, grad_u)), backup);
+    auto stress_and_C = material.calculate_stress_AD(serac::get<1>(make_dual(tensor<double, 3>{}, grad_u)), backup);
     stopwatch.stop();
     J2_AD_time += stopwatch.elapsed();
 
-    bool error_too_big =
-        (norm(stress - get_value(stress_and_C)) > 1.0e-12) || (norm(C - serac::get<1>(get_gradient(stress_and_C))) > 1.0e-12) ||
-        (norm(state.beta - backup.beta) > 1.0e-12) || (fabs(state.pl_strain - backup.pl_strain) > 1.0e-12);
+    bool error_too_big = (norm(stress - get_value(stress_and_C)) > 1.0e-12) ||
+                         (norm(C - serac::get<1>(get_gradient(stress_and_C))) > 1.0e-12) ||
+                         (norm(state.beta - backup.beta) > 1.0e-12) ||
+                         (fabs(state.pl_strain - backup.pl_strain) > 1.0e-12);
 
     if (error_too_big) {
       SLIC_ERROR("Significant difference between expected and actual results. Exiting...");

@@ -61,13 +61,12 @@ int main()
     }
   }
 
-
   {
-    using element_type = serac::finite_element< serac::Geometry::Quadrilateral, serac::H1<2, 4> >;
+    using element_type = serac::finite_element<serac::Geometry::Quadrilateral, serac::H1<2, 4> >;
 
-    serac::EVectorView < serac::ExecutionSpace::CPU, element_type > foo({nullptr}, 5);
+    serac::EVectorView<serac::ExecutionSpace::CPU, element_type> foo({nullptr}, 5);
 
-    mfem::DeviceTensor< 3, double > bar{nullptr, 9, 4, 5};
+    mfem::DeviceTensor<3, double> bar{nullptr, 9, 4, 5};
 
     std::cout << &serac::get<0>(foo.data)(0, 0, 1) - &serac::get<0>(foo.data)(0, 0, 0) << std::endl;
     std::cout << &serac::get<0>(foo.data)(0, 1, 0) - &serac::get<0>(foo.data)(0, 0, 0) << std::endl;
@@ -79,11 +78,11 @@ int main()
   }
 
   {
-    using element_type = serac::finite_element< serac::Geometry::Quadrilateral, serac::H1<2> >;
+    using element_type = serac::finite_element<serac::Geometry::Quadrilateral, serac::H1<2> >;
 
-    serac::EVectorView < serac::ExecutionSpace::CPU, element_type > foo({nullptr}, 5);
+    serac::EVectorView<serac::ExecutionSpace::CPU, element_type> foo({nullptr}, 5);
 
-    mfem::DeviceTensor< 2, double > bar{nullptr, 9, 5};
+    mfem::DeviceTensor<2, double> bar{nullptr, 9, 5};
 
     std::cout << &serac::get<0>(foo.data)(0, 1) - &serac::get<0>(foo.data)(0, 0) << std::endl;
     std::cout << &serac::get<0>(foo.data)(1, 0) - &serac::get<0>(foo.data)(0, 0) << std::endl;
@@ -93,5 +92,4 @@ int main()
   }
 
   //[[maybe_unused]] auto tmp = foo[53];
-
 }

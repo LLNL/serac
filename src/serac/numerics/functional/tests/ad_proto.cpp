@@ -122,15 +122,9 @@ int main()
 {
   [[maybe_unused]] auto x = make_tensor<3>(random_real);
 
-  serac::tuple temperature{
-    random_real(), 
-    make_tensor<3>(random_real)
-  };
-  
-  serac::tuple displacement{
-    make_tensor<3>(random_real), 
-    make_tensor<3, 3>(random_real)
-  };
+  serac::tuple temperature{random_real(), make_tensor<3>(random_real)};
+
+  serac::tuple displacement{make_tensor<3>(random_real), make_tensor<3, 3>(random_real)};
 
   auto f = [](auto temp, auto disp) {
     auto [phi, grad_phi] = temp;
@@ -169,5 +163,4 @@ int main()
   // double z = grad;
 
   std::cout << source << ", " << flux << std::endl;
-
 }

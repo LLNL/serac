@@ -87,8 +87,8 @@ TEST(basic, nonlinear_thermal_test_3D)
   using test_space  = H1<p>;
   using trial_space = H1<p>;
 
-  double cp = 1.0;
-  double rho = 1.0;
+  double cp    = 1.0;
+  double rho   = 1.0;
   double kappa = 1.0;
 
   // Construct the new functional object using the known test and trial spaces
@@ -96,19 +96,20 @@ TEST(basic, nonlinear_thermal_test_3D)
 
   residual.AddVolumeIntegral(
       [=](auto x, auto temperature, auto dtemperature_dt) {
-        auto [u, du_dx] = temperature;
+        auto [u, du_dx]      = temperature;
         auto [du_dt, unused] = dtemperature_dt;
-        auto source = rho * cp * du_dt - (100 * x[0] * x[1]);
-        auto flux   = kappa * du_dx;
+        auto source          = rho * cp * du_dt - (100 * x[0] * x[1]);
+        auto flux            = kappa * du_dx;
         return serac::tuple{source, flux};
       },
       *mesh3D);
 
   mfem::Vector r = residual(U, dU_dt);
 
-  //residual.AddSurfaceIntegral([=](auto x, auto /*n*/, auto u, auto /*dudt*/) { return x[0] + x[1] - cos(u); }, *mesh3D);
+  // residual.AddSurfaceIntegral([=](auto x, auto /*n*/, auto u, auto /*dudt*/) { return x[0] + x[1] - cos(u); },
+  // *mesh3D);
 
-  //check_gradient(residual, U);
+  // check_gradient(residual, U);
 }
 
 int main(int argc, char* argv[])

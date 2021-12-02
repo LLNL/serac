@@ -35,11 +35,10 @@ class BoundaryIntegral;
  * function spaces, i.e., @p test(trial)
  * @tparam exec whether or not the calculation and memory will be on the CPU or GPU
  */
-template <typename test, typename ... trials, ExecutionSpace exec>
-class BoundaryIntegral< test(trials ...), exec >{
+template <typename test, typename... trials, ExecutionSpace exec>
+class BoundaryIntegral<test(trials...), exec> {
 public:
-
-  static constexpr int num_trial_spaces = sizeof ... (trials);
+  static constexpr int num_trial_spaces = sizeof...(trials);
 
   /**
    * @brief Constructs an @p BoundaryIntegral from a user-provided quadrature function
@@ -54,14 +53,14 @@ public:
    * @note The @p Dimension parameters are used to assist in the deduction of the dim template parameter
    */
   template <int dim, typename lambda_type, typename qpt_data_type = void>
-  //BoundaryIntegral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, const mfem::Vector& normals,
+  // BoundaryIntegral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, const mfem::Vector& normals,
   //                 Dimension<dim>, lambda_type&& qf)
-  BoundaryIntegral(int, const mfem::Vector& J, const mfem::Vector& X, const mfem::Vector& normals, Dimension<dim>, lambda_type&&)
+  BoundaryIntegral(int, const mfem::Vector& J, const mfem::Vector& X, const mfem::Vector& normals, Dimension<dim>,
+                   lambda_type&&)
       : J_(J), X_(X), normals_(normals)
 
   {
-     
-  #if 0
+#if 0
     SLIC_ERROR_ROOT_IF(exec == ExecutionSpace::GPU, "BoundaryIntegral doesn't currently support GPU kernels yet");
 
     constexpr auto geometry                      = supported_geometries[dim];
@@ -114,8 +113,7 @@ public:
       boundary_integral::element_gradient_kernel<geometry, test, trials ..., Q>(K_b, qf_derivatives, J_,
                                                                                        num_elements);
     };
-  #endif
-
+#endif
   }
 
   /**
@@ -124,7 +122,10 @@ public:
    * @param[out] output_E The output of the evalution; per-element DOF residuals
    * @see evaluation_kernel
    */
-  void Mult(const std::array< mfem::Vector, num_trial_spaces > & input_E, mfem::Vector& output_E) const { evaluation_(input_E, output_E); }
+  void Mult(const std::array<mfem::Vector, num_trial_spaces>& input_E, mfem::Vector& output_E) const
+  {
+    evaluation_(input_E, output_E);
+  }
 
   /**
    * @brief Applies the integral, i.e., @a output_E = gradient( @a input_E )
@@ -132,7 +133,7 @@ public:
    * @param[out] output_E The output of the evalution; per-element DOF residuals
    * @see action_of_gradient_kernel
    */
-  void GradientMult(const std::array< mfem::Vector, num_trial_spaces > & input_E, mfem::Vector& output_E) const
+  void GradientMult(const std::array<mfem::Vector, num_trial_spaces>& input_E, mfem::Vector& output_E) const
   {
     action_of_gradient_(input_E, output_E);
   }
@@ -164,13 +165,13 @@ private:
    * @brief Type-erased handle to evaluation kernel
    * @see evaluation_kernel
    */
-  std::function<void(const std::array< mfem::Vector, num_trial_spaces > &, mfem::Vector&)> evaluation_;
+  std::function<void(const std::array<mfem::Vector, num_trial_spaces>&, mfem::Vector&)> evaluation_;
 
   /**
    * @brief Type-erased handle to kernel that evaluates the action of the gradient
    * @see action_of_gradient_kernel
    */
-  std::function<void(const std::array< mfem::Vector, num_trial_spaces > &, mfem::Vector&)> action_of_gradient_;
+  std::function<void(const std::array<mfem::Vector, num_trial_spaces>&, mfem::Vector&)> action_of_gradient_;
 
   /**
    * @brief Type-erased handle to kernel that computes each element's gradients

@@ -160,15 +160,15 @@ SERAC_HOST_DEVICE auto chain_rule_tuple_matvec(serac::tuple<T...> df_dx, serac::
  * @param[in] args The set of values
  * The gradients for each value will be set to 1 (or its tensor equivalent)
  */
-//template <typename... T>
-//constexpr auto make_dual(T ... args)
+// template <typename... T>
+// constexpr auto make_dual(T ... args)
 //{
 //  return detail::make_dual_helper(serac::tuple{args...}, std::make_integer_sequence<int, int(sizeof...(T))>{});
 //}
 
 ///// @overload
-//template <typename... T>
-//constexpr auto make_dual(serac::tuple<T...> args)
+// template <typename... T>
+// constexpr auto make_dual(serac::tuple<T...> args)
 //{
 //  return detail::make_dual_helper(args, std::make_integer_sequence<int, int(sizeof...(T))>{});
 //}
@@ -216,8 +216,9 @@ constexpr auto make_dual_helper(const tensor<T, n...>& arg)
   return arg_dual;
 }
 
-template < bool dualify, typename T >
-auto promote_to_dual_when(const T & x) {
+template <bool dualify, typename T>
+auto promote_to_dual_when(const T& x)
+{
   if constexpr (dualify) {
     return make_dual(x);
   } else {
@@ -225,48 +226,48 @@ auto promote_to_dual_when(const T & x) {
   }
 }
 
-template < int n, typename ... T, int ... i >
-constexpr auto make_dual_helper(const serac::tuple< T ... > & args, std::integer_sequence< int, i ... >) {
-  return serac::tuple {
-    promote_to_dual_when< i == n >(serac::get<i>(args)) ... 
-  }; 
+template <int n, typename... T, int... i>
+constexpr auto make_dual_helper(const serac::tuple<T...>& args, std::integer_sequence<int, i...>)
+{
+  return serac::tuple{promote_to_dual_when<i == n>(serac::get<i>(args))...};
 }
 
-template < int n, typename ... T >
-constexpr auto make_dual_wrt(const serac::tuple< T ... > & args) {
-  return make_dual_helper< n >(args, std::make_integer_sequence< int, int(sizeof ... (T)) >{});
+template <int n, typename... T>
+constexpr auto make_dual_wrt(const serac::tuple<T...>& args)
+{
+  return make_dual_helper<n>(args, std::make_integer_sequence<int, int(sizeof...(T))>{});
 }
-
 
 template <typename T00, typename T01>
-constexpr auto make_dual(const tuple < T00, T01 > & args)
+constexpr auto make_dual(const tuple<T00, T01>& args)
 {
   return tuple{make_dual_helper<0, 2>(get<0>(args)), make_dual_helper<1, 2>(get<1>(args))};
 }
 
 template <typename T00, typename T01>
-constexpr auto make_dual(const tuple < tuple<T00, T01> > & args)
+constexpr auto make_dual(const tuple<tuple<T00, T01> >& args)
 {
   return tuple{make_dual_helper<0, 2>(get<0>(get<0>(args))), make_dual_helper<1, 2>(get<1>(get<0>(args)))};
 }
 
 template <typename T00, typename T01, typename T10, typename T11>
-constexpr auto make_dual(const tuple < tuple<T00, T01>, serac::tuple<T10, T11> > & args)
+constexpr auto make_dual(const tuple<tuple<T00, T01>, serac::tuple<T10, T11> >& args)
 {
-  return serac::tuple{
-    serac::tuple{make_dual_helper<0, 4>(serac::get<0>(get<0>(args))), make_dual_helper<1, 4>(serac::get<1>(get<0>(args)))},
-    serac::tuple{make_dual_helper<2, 4>(serac::get<0>(get<1>(args))), make_dual_helper<3, 4>(serac::get<1>(get<1>(args)))}
-  };
+  return serac::tuple{serac::tuple{make_dual_helper<0, 4>(serac::get<0>(get<0>(args))),
+                                   make_dual_helper<1, 4>(serac::get<1>(get<0>(args)))},
+                      serac::tuple{make_dual_helper<2, 4>(serac::get<0>(get<1>(args))),
+                                   make_dual_helper<3, 4>(serac::get<1>(get<1>(args)))}};
 }
 
 template <typename T00, typename T01, typename T10, typename T11, typename T20, typename T21>
-constexpr auto make_dual(const tuple< tuple<T00, T01>, tuple<T10, T11>, tuple<T20, T21> > & args)
+constexpr auto make_dual(const tuple<tuple<T00, T01>, tuple<T10, T11>, tuple<T20, T21> >& args)
 {
-  return serac::tuple{
-    serac::tuple{make_dual_helper<0, 6>(serac::get<0>(get<0>(args))), make_dual_helper<1, 6>(serac::get<1>(get<0>(args)))},
-    serac::tuple{make_dual_helper<2, 6>(serac::get<0>(get<1>(args))), make_dual_helper<3, 6>(serac::get<1>(get<1>(args)))},
-    serac::tuple{make_dual_helper<4, 6>(serac::get<0>(get<2>(args))), make_dual_helper<5, 6>(serac::get<1>(get<2>(args)))}
-  };
+  return serac::tuple{serac::tuple{make_dual_helper<0, 6>(serac::get<0>(get<0>(args))),
+                                   make_dual_helper<1, 6>(serac::get<1>(get<0>(args)))},
+                      serac::tuple{make_dual_helper<2, 6>(serac::get<0>(get<1>(args))),
+                                   make_dual_helper<3, 6>(serac::get<1>(get<1>(args)))},
+                      serac::tuple{make_dual_helper<4, 6>(serac::get<0>(get<2>(args))),
+                                   make_dual_helper<5, 6>(serac::get<1>(get<2>(args)))}};
 }
 
 /**

@@ -32,12 +32,11 @@ class DomainIntegral;
  * @tparam spaces A @p std::function -like set of template parameters that describe the test and trial
  * function spaces, i.e., @p test(trial)
  */
-template <typename test, typename ... trials, ExecutionSpace exec>
+template <typename test, typename... trials, ExecutionSpace exec>
 class DomainIntegral<test(trials...), exec> {
 public:
-
   static constexpr tuple<trials...> trial_spaces{};
-  static constexpr int num_trial_spaces = sizeof ... (trials);
+  static constexpr int              num_trial_spaces = sizeof...(trials);
 
   /**
    * @brief Constructs a @p DomainIntegral from a user-provided quadrature function
@@ -57,11 +56,10 @@ public:
                  QuadratureData<qpt_data_type>& data = dummy_qdata)
       : J_(J), X_(X)
   {
-
     using namespace domain_integral;
 
     constexpr auto geometry                      = supported_geometries[dim];
-    constexpr auto Q                             = std::max({test::order, trials::order ... })  + 1;
+    constexpr auto Q                             = std::max({test::order, trials::order...}) + 1;
     constexpr auto quadrature_points_per_element = (dim == 2) ? Q * Q : Q * Q * Q;
 
     uint32_t num_quadrature_points = quadrature_points_per_element * uint32_t(num_elements);
@@ -71,29 +69,29 @@ public:
     //
     // std::function's type erasure lets us wrap those specific details inside a function with known signature
     if constexpr (exec == ExecutionSpace::CPU) {
-
-      KernelConfig< Q, geometry, test, trials ... > eval_config;
+      KernelConfig<Q, geometry, test, trials...> eval_config;
 
       evaluation_ = EvaluationKernel{eval_config, J, X, num_elements, qf, data};
 
-      for_constexpr < num_trial_spaces >([this, num_elements, num_quadrature_points, &J, &X, &qf, &data, eval_config](auto i){
+      for_constexpr<num_trial_spaces>(
+          [this, num_elements, num_quadrature_points, &J, &X, &qf, &data, eval_config](auto i) {
+            // allocate memory for the derivatives of the q-function at each quadrature point
+            //
+            // Note: ptrs' lifetime is managed in an unusual way! It is captured by-value in one of the
+            // functors below to augment the reference count, and extend its lifetime to match
+            // that of the DomainIntegral that allocated it.
+            using derivative_type = decltype(get_derivative_type<i, dim, trials...>(qf));
+            auto ptr              = accelerator::make_shared_array<exec, derivative_type>(num_quadrature_points);
 
-        // allocate memory for the derivatives of the q-function at each quadrature point
-        //
-        // Note: ptrs' lifetime is managed in an unusual way! It is captured by-value in one of the
-        // functors below to augment the reference count, and extend its lifetime to match
-        // that of the DomainIntegral that allocated it.
-        using derivative_type = decltype(get_derivative_type< i, dim, trials ... >(qf));
-        auto ptr = accelerator::make_shared_array<exec, derivative_type>(num_quadrature_points);
+            evaluation_with_AD_[i] = EvaluationKernel{
+                DerivativeWRT<i>{}, eval_config, ptr, J, X, num_elements, quadrature_points_per_element, qf, data};
 
-        evaluation_with_AD_[i] = EvaluationKernel{DerivativeWRT<i>{}, eval_config, ptr, J, X, num_elements, quadrature_points_per_element, qf, data};
+            KernelConfig<Q, geometry, test, decltype(get<i>(trial_spaces))> grad_config;
 
-        KernelConfig< Q, geometry, test, decltype(get<i>(trial_spaces)) > grad_config;
+            action_of_gradient_[i] =
+                ActionOfGradientKernel{grad_config, ptr, J, num_elements, quadrature_points_per_element};
 
-        action_of_gradient_[i] = ActionOfGradientKernel{grad_config, ptr, J, num_elements, quadrature_points_per_element};
-
-
- #if 0
+#if 0
         // note: this lambda function captures ptr by-value to extend its lifetime
         //                   vvv
         evaluation_ = [this, ptr, qf_derivatives, num_elements, qf, &data](const std::array< mfem::Vector, num_trial_spaces > & U, mfem::Vector& R) {
@@ -112,10 +110,8 @@ public:
                                                                                          num_elements);
         };
 #endif
-
-      });
-
-   }
+          });
+    }
 
     // TEMPORARY: Add temporary guard so ExecutionSpace::GPU cannot be used when there is no GPU.
     // The proposed future solution is to template the calls on policy (evaluation_kernel<policy>)
@@ -154,11 +150,12 @@ public:
    * @param[out] output_E The output of the evalution; per-element DOF residuals
    * @see evaluation_kernel
    */
-  void Mult(const std::array< mfem::Vector, num_trial_spaces > & input_E, mfem::Vector& output_E, int which = 0) const { 
+  void Mult(const std::array<mfem::Vector, num_trial_spaces>& input_E, mfem::Vector& output_E, int which = 0) const
+  {
     if (which == -1) {
       evaluation_(input_E, output_E);
     } else {
-      evaluation_with_AD_[which](input_E, output_E); 
+      evaluation_with_AD_[which](input_E, output_E);
     }
   }
 
@@ -168,7 +165,7 @@ public:
    * @param[out] output_E The output of the evalution; per-element DOF residuals
    * @see gradient_kernel
    */
-  void GradientMult(const mfem::Vector & input_E, mfem::Vector& output_E, size_t which = 0) const
+  void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E, size_t which = 0) const
   {
     action_of_gradient_[which](input_E, output_E);
   }
@@ -196,13 +193,14 @@ private:
    * @brief Type-erased handle to evaluation kernel
    * @see evaluation_kernel
    */
-  std::function<void(const std::array < mfem::Vector, num_trial_spaces > &, mfem::Vector &)> evaluation_;
+  std::function<void(const std::array<mfem::Vector, num_trial_spaces>&, mfem::Vector&)> evaluation_;
 
   /**
    * @brief Type-erased handle to evaluation kernel
    * @see evaluation_kernel
    */
-  std::function<void(const std::array < mfem::Vector, num_trial_spaces > &, mfem::Vector &)> evaluation_with_AD_[num_trial_spaces];
+  std::function<void(const std::array<mfem::Vector, num_trial_spaces>&, mfem::Vector&)>
+      evaluation_with_AD_[num_trial_spaces];
 
   /**
    * @brief Type-erased handle to gradient kernel

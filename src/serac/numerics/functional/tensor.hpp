@@ -366,16 +366,10 @@ SERAC_HOST_DEVICE constexpr auto operator/(zero, T /*other*/)
 }
 
 /** @brief `zero` plus `zero` is `zero */
-SERAC_HOST_DEVICE constexpr auto operator+=(zero, zero)
-{
-  return zero{};
-}
+SERAC_HOST_DEVICE constexpr auto operator+=(zero, zero) { return zero{}; }
 
 /** @brief `zero` minus `zero` is `zero */
-SERAC_HOST_DEVICE constexpr auto operator-=(zero, zero)
-{
-  return zero{};
-}
+SERAC_HOST_DEVICE constexpr auto operator-=(zero, zero) { return zero{}; }
 
 /** @brief let `zero` be accessed like a tuple */
 template <int i>
@@ -386,11 +380,17 @@ zero& get(zero& x)
 
 /** @brief the dot product of anything with `zero` is `zero` */
 template <typename T>
-zero dot(const T &, zero) { return zero{}; }
+zero dot(const T&, zero)
+{
+  return zero{};
+}
 
 /** @brief the dot product of anything with `zero` is `zero` */
 template <typename T>
-zero dot(zero, const T &) { return zero{}; }
+zero dot(zero, const T&)
+{
+  return zero{};
+}
 
 /**
  * @brief Removes 1s from tensor dimensions
@@ -1627,8 +1627,11 @@ SERAC_HOST_DEVICE auto get_gradient(double /* arg */) { return zero{}; }
  * number, the derivative term is identically zero)
  * @return The sentinel, @see zero
  */
-template < int ... n >
-SERAC_HOST_DEVICE auto get_gradient(const tensor < double, n ... > & /* arg */) { return zero{}; }
+template <int... n>
+SERAC_HOST_DEVICE auto get_gradient(const tensor<double, n...>& /* arg */)
+{
+  return zero{};
+}
 
 /**
  * @brief Retrieves a gradient tensor from a tensor of dual numbers

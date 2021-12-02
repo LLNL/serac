@@ -171,11 +171,11 @@ std::shared_ptr<T[]> make_shared_array(std::size_t n)
  * @tparam exec the memory space where the data lives
  * @param n how many entries to allocate in the array
  */
-template <ExecutionSpace exec, typename ... T>
+template <ExecutionSpace exec, typename... T>
 auto make_shared_arrays(std::size_t n)
 {
   if constexpr (exec == ExecutionSpace::CPU) {
-    return std::tuple{ std::shared_ptr<T[]>(new T[n])...};
+    return std::tuple{std::shared_ptr<T[]>(new T[n])...};
   }
 
 #if defined(__CUDACC__)

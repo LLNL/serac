@@ -58,9 +58,8 @@ struct QoIElementRestriction : public mfem::Operator {
 /**
  * @brief a partial template specialization of Functional with test == double, implying "quantity of interest"
  */
-template <ExecutionSpace exec, typename ... trials >
-class Functional<double(trials ...), exec> : public mfem::Operator {
-
+template <ExecutionSpace exec, typename... trials>
+class Functional<double(trials...), exec> : public mfem::Operator {
   using test = QOI;
   static constexpr tuple<trials...> trial_spaces{};
   static constexpr uint32_t         num_trial_spaces = sizeof...(trials);
@@ -77,7 +76,6 @@ public:
         G_test_(new QoIElementRestriction(trial_fes[0]->GetParMesh()->GetNE())),
         grad_(*this)
   {
-
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
       P_trial_[i] = trial_space_[i]->GetProlongationMatrix();
       G_trial_[i] = trial_space_[i]->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC);
@@ -95,7 +93,7 @@ public:
     }
 
     G_test_boundary_ = new QoIElementRestriction(trial_fes[0]->GetParMesh()->GetNBE());
-                                                       
+
     output_E_boundary_.SetSize(G_test_boundary_->Height(), mfem::Device::GetMemoryType());
 
     output_E_.SetSize(G_test_->Height(), mfem::Device::GetMemoryType());
@@ -109,22 +107,22 @@ public:
     dummy_.SetSize(Width(), mfem::Device::GetMemoryType());
 
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
-
       {
-        auto num_elements           = static_cast<size_t>(trial_space_[i]->GetNE());
-        auto ndof_per_test_element  = static_cast<size_t>(1);
-        auto ndof_per_trial_element = static_cast<size_t>(trial_space_[i]->GetFE(0)->GetDof() * trial_space_[i]->GetVDim());
-        element_gradients_[i]       = Array<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
+        auto num_elements          = static_cast<size_t>(trial_space_[i]->GetNE());
+        auto ndof_per_test_element = static_cast<size_t>(1);
+        auto ndof_per_trial_element =
+            static_cast<size_t>(trial_space_[i]->GetFE(0)->GetDof() * trial_space_[i]->GetVDim());
+        element_gradients_[i] = Array<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
       }
 
       {
-        auto num_bdr_elements           = static_cast<size_t>(trial_space_[i]->GetNFbyType(mfem::FaceType::Boundary));
-        auto ndof_per_test_bdr_element  = static_cast<size_t>(1);
-        auto ndof_per_trial_bdr_element = static_cast<size_t>(trial_space_[i]->GetBE(0)->GetDof() * trial_space_[i]->GetVDim());
+        auto num_bdr_elements          = static_cast<size_t>(trial_space_[i]->GetNFbyType(mfem::FaceType::Boundary));
+        auto ndof_per_test_bdr_element = static_cast<size_t>(1);
+        auto ndof_per_trial_bdr_element =
+            static_cast<size_t>(trial_space_[i]->GetBE(0)->GetDof() * trial_space_[i]->GetVDim());
         bdr_element_gradients_[i] =
             Array<double, 3, exec>(num_bdr_elements, ndof_per_test_bdr_element, ndof_per_trial_bdr_element);
       }
-
     }
 
     G_test_boundary_ = new QoIElementRestriction(trial_fes[0]->GetParMesh()->GetNBE());
@@ -133,7 +131,6 @@ public:
     output_L_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
     my_output_T_.SetSize(Height(), mfem::Device::GetMemoryType());
     dummy_.SetSize(Width(), mfem::Device::GetMemoryType());
-
   }
 
   /// @brief destructor: deallocate the mfem::Operators that we're responsible for
@@ -371,7 +368,6 @@ private:
     mfem::Vector gradient_L_;
 
     std::unique_ptr<mfem::HypreParVector> gradient_T_;
-
   };
 
   /**
@@ -385,7 +381,7 @@ private:
   {
     // get the values for each local processor
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
-      P_trial_[i]->Mult(input_T, input_L_[i]); // VARIADICTODO
+      P_trial_[i]->Mult(input_T, input_L_[i]);  // VARIADICTODO
     }
 
     output_L_ = 0.0;
@@ -463,7 +459,7 @@ private:
   /**
    * @brief The input set of per-element DOF values
    */
-  mutable std::array < mfem::Vector, num_trial_spaces > input_E_;
+  mutable std::array<mfem::Vector, num_trial_spaces> input_E_;
 
   /**
    * @brief The output set of per-element DOF values
@@ -473,7 +469,7 @@ private:
   /**
    * @brief The input set of per-boundary-element DOF values
    */
-  mutable std::array < mfem::Vector, num_trial_spaces > input_E_boundary_;
+  mutable std::array<mfem::Vector, num_trial_spaces> input_E_boundary_;
 
   /**
    * @brief The output set of per-boundary-element DOF values
@@ -559,10 +555,10 @@ private:
   mutable Gradient grad_;
 
   /// @brief array that stores each element's gradient of the residual w.r.t. trial values
-  std::array< Array<double, 3, exec>, num_trial_spaces > element_gradients_;
+  std::array<Array<double, 3, exec>, num_trial_spaces> element_gradients_;
 
   /// @brief array that stores each boundary element's gradient of the residual w.r.t. trial values
-  std::array< Array<double, 3, exec>, num_trial_spaces > bdr_element_gradients_;
+  std::array<Array<double, 3, exec>, num_trial_spaces> bdr_element_gradients_;
 
   template <typename T>
   friend typename Functional<T>::Gradient& grad(Functional<T>&);
