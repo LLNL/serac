@@ -42,7 +42,7 @@ public:
    * @param[in] n Number of state variables
    * @param[in] p Order of the solver
    * @param[in] pmesh An optional mesh reference, must be provided to configure the module
-   * when a mesh other than the primary mesh is used
+   * when a mesh other than the default mesh is used
    */
   BasePhysics(int n, int p, mfem::ParMesh* pmesh = nullptr);
 
