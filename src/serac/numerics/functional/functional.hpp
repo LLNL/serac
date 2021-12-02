@@ -48,6 +48,8 @@ constexpr int index_of_dual_vector()
   return -1;
 }
 
+
+
 // dual_vector differentiate_wrt(const mfem::Vector & v) { return dual_vector{v}; }
 
 template <size_t num_trial_spaces>
@@ -106,8 +108,20 @@ class Functional;
  */
 template <typename test, typename... trials, ExecutionSpace exec>
 class Functional<test(trials...), exec> {
+
   static constexpr tuple<trials...> trial_spaces{};
   static constexpr uint32_t         num_trial_spaces = sizeof...(trials);
+
+  class Gradient;
+
+  template <typename ... T>
+  struct operator_paren_return {
+    using type = typename std::conditional< 
+      (std::is_same_v<T, dual_vector> + ... ) == 1, // if the there is a dual number in the pack
+      serac::tuple< mfem::Vector &, Gradient & >,   // then we return the value and the derivative
+      mfem::Vector &                                // otherwise, we just return the value
+    >::type;
+  };
 
 public:
   /**
@@ -322,7 +336,7 @@ public:
    * element calculations, but also differentiate them w.r.t. the specified dual_vector argument
    */
   template <typename... T>
-  auto operator()(const T&... args)
+  typename operator_paren_return<T ... >::type operator()(const T&... args)
   {
     constexpr int num_dual_arguments = (std::is_same_v<T, dual_vector> + ...);
     static_assert(num_dual_arguments <= 1,
@@ -381,7 +395,19 @@ public:
       output_T_(ess_tdof_list_[i]) = 0.0;
     }
 
-    return output_T_;
+    // if the user has indicated they'd like to evaluate and differentiate w.r.t. 
+    // a specific argument, then we return both the value and gradient w.r.t. that argument
+    // 
+    // e.g. auto [value, gradient_wrt_arg1] = my_functional(arg0, differentiate_wrt(arg1));
+    if constexpr (num_dual_arguments == 1) {
+      return {output_T_, grad_[wrt]}; 
+
+    // if the user passes only `mfem::Vector`s then we assume they only want the output value
+    // 
+    // e.g. mfem::Vector value = my_functional(arg0, arg1);
+    } else {
+      return output_T_; 
+    }
   }
 
   /**
