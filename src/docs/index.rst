@@ -15,8 +15,8 @@ Smith code and heavily leverages the `MFEM finite element library <https://mfem.
    This project is under heavy development and is currently a pre-alpha release. Functionality and interfaces may change rapidly
    as development progresses.
 
-  *  :ref:`Quickstart/Build Instructions <quickstart-label>`
-  *  `Source Documentation <doxygen/html/index.html>`_
+*  :ref:`Quickstart/Build Instructions <quickstart-label>`
+*  `Source Documentation <doxygen/html/index.html>`_
 
 
 ======================================================
