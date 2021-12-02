@@ -384,6 +384,14 @@ zero& get(zero& x)
   return x;
 }
 
+/** @brief the dot product of anything with `zero` is `zero` */
+template <typename T>
+zero dot(const T &, zero) { return zero{}; }
+
+/** @brief the dot product of anything with `zero` is `zero` */
+template <typename T>
+zero dot(zero, const T &) { return zero{}; }
+
 /**
  * @brief Removes 1s from tensor dimensions
  * For example, a tensor<T, 1, 10> is equivalent to a tensor<T, 10>

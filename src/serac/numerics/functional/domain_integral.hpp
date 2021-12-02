@@ -78,8 +78,6 @@ public:
 
       for_constexpr < num_trial_spaces >([this, num_elements, num_quadrature_points, &J, &X, &qf, &data, eval_config](auto i){
 
-        [[maybe_unused]] KernelConfig< Q, geometry, test, trials ... > grad_config;
-
         // allocate memory for the derivatives of the q-function at each quadrature point
         //
         // Note: ptrs' lifetime is managed in an unusual way! It is captured by-value in one of the
@@ -89,6 +87,10 @@ public:
         auto ptr = accelerator::make_shared_array<exec, derivative_type>(num_quadrature_points);
 
         evaluation_with_AD_[i] = EvaluationKernel{DerivativeWRT<i>{}, eval_config, ptr, J, X, num_elements, quadrature_points_per_element, qf, data};
+
+        KernelConfig< Q, geometry, test, decltype(get<i>(trial_spaces)) > grad_config;
+
+        action_of_gradient_[i] = ActionOfGradientKernel{grad_config, ptr, J, num_elements, quadrature_points_per_element};
 
 
  #if 0
@@ -201,8 +203,6 @@ private:
    * @see evaluation_kernel
    */
   std::function<void(const std::array < mfem::Vector, num_trial_spaces > &, mfem::Vector &)> evaluation_with_AD_[num_trial_spaces];
-
-
 
   /**
    * @brief Type-erased handle to gradient kernel

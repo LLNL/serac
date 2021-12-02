@@ -333,6 +333,82 @@ template <int i, int Q, Geometry geom, typename test, typename ... trials, typen
 EvaluationKernel(DerivativeWRT<i>, KernelConfig< Q, geom, test, trials ... >, std::shared_ptr<derivatives_type[]>, const mfem::Vector &, const mfem::Vector &, int, int, lambda, QuadratureData<qpt_data_type>&) ->  
 EvaluationKernel< DerivativeWRT<i>, KernelConfig< Q, geom, test, trials ... >, derivatives_type, lambda, qpt_data_type >;
 
+template <typename config_type, typename derivatives_type>
+struct ActionOfGradientKernel;
+
+template <int Q, Geometry geom, typename test, typename trial, typename derivatives_type>
+struct ActionOfGradientKernel< KernelConfig< Q, geom, test, trial >, derivatives_type> {
+
+  static constexpr auto exec = ExecutionSpace::CPU;
+
+  using EVector_t = EVectorView < exec, finite_element< geom, trial > >;
+
+  ActionOfGradientKernel(KernelConfig< Q, geom, test, trial >, std::shared_ptr<derivatives_type[]> ptr, const mfem::Vector & J, int num_elements, int num_quadrature_points_per_element) : 
+    qf_derivatives_(ptr.get(), num_elements, num_quadrature_points_per_element), J_(J), num_elements_(num_elements) {}
+
+  void operator() (const mfem::Vector & dU, mfem::Vector& dR) {
+    EVector_t du({dU}, size_t(num_elements_));
+
+    using test_element               = finite_element<geom, test>;
+    using element_residual_type      = typename test_element::residual_type;
+    static constexpr int  dim        = dimension_of(geom);
+    static constexpr int  test_ndof  = test_element::ndof;
+    static constexpr auto rule       = GaussQuadratureRule<geom, Q>();
+
+    // mfem provides this information in 1D arrays, so we reshape it
+    // into strided multidimensional arrays before using
+    auto J  = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements_);
+    auto dr = detail::Reshape<test>(dR.ReadWrite(), test_ndof, num_elements_);
+
+    // for each element in the domain
+    for (uint32_t e = 0; e < uint32_t(num_elements_); e++) {
+
+      // get the (change in) values for this particular element
+      auto du_elem = du[e];
+
+      // this is where we will accumulate the (change in) element residual tensor
+      element_residual_type dr_elem{};
+
+      // for each quadrature point in the element
+      for (int q = 0; q < static_cast<int>(rule.size()); q++) {
+        // get the position of this quadrature point in the parent and physical space,
+        // and calculate the measure of that point in physical space.
+        auto   xi  = rule.points[q];
+        auto   dxi = rule.weights[q];
+        auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
+        double dx  = det(J_q) * dxi;
+
+        // evaluate the (change in) value/derivatives at this quadrature point
+        auto darg = Preprocess<geom, trial>(du_elem, xi, J_q);
+
+        // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
+        auto dq_darg = qf_derivatives_(static_cast<size_t>(e), static_cast<size_t>(q));
+
+        // use the chain rule to compute the first-order change in the q-function output
+        auto dq = chain_rule(dq_darg, darg);
+
+        // integrate dq against test space shape functions / gradients
+        // to get the (change in) element residual contributions
+        dr_elem += Postprocess<test_element>(dq, xi, J_q) * dx;
+      }
+
+      // once we've finished the element integration loop, write our element residuals
+      // out to memory, to be later assembled into global residuals by mfem
+      detail::Add(dr, dr_elem, static_cast<int>(e));
+    }
+
+  }
+
+  ArrayView<derivatives_type, 2, exec> qf_derivatives_;
+  const mfem::Vector & J_; 
+  int num_elements_; 
+
+};
+
+template <int Q, Geometry geom, typename test, typename trial, typename derivatives_type>
+ActionOfGradientKernel(KernelConfig< Q, geom, test, trial >, std::shared_ptr<derivatives_type[]>, const mfem::Vector &, int, int) -> 
+ActionOfGradientKernel< KernelConfig< Q, geom, test, trial >, derivatives_type>;
+
 /**
  * @brief The base kernel template used to create create custom directional derivative
  * kernels associated with finite element calculations
