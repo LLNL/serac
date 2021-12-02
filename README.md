@@ -9,8 +9,9 @@ Status](https://dev.azure.com/llnl-serac/serac/_apis/build/status/LLNL.serac?bra
 Serac is a 3D implicit nonlinear thermal-structural simulation code. Its primary purpose is to investigate multiphysics 
 abstraction strategies and implicit finite element-based algorithm development for emerging computing architectures. 
 It also serves as a proxy-app for LLNL's Smith code and heavily leverages the [MFEM finite element library](https://mfem.org/).
-This project is under heavy development and is currently a pre-alpha release. Functionality and interfaces may change rapidly
-as development progresses.
+
+> This project is under heavy development and is currently a pre-alpha release. Functionality and interfaces may change rapidly
+> as development progresses.
 
 Documentation
 ------
