@@ -141,7 +141,6 @@ using CPUArray = ExecArray<T, dim, ExecutionSpace::CPU>;
 template <typename T, int dim = 1>
 using GPUArray = ExecArray<T, dim, ExecutionSpace::GPU>;
 
-// FIXME: For consistency this should be DynamicArray, but that seems a little confusing
 /// @brief Alias for an array in unified memory
 template <typename T, int dim = 1>
 using UnifiedArray = ExecArray<T, dim, ExecutionSpace::Dynamic>;

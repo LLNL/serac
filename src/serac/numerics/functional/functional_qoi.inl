@@ -106,20 +106,15 @@ public:
       auto num_elements           = static_cast<size_t>(trial_space_->GetNE());
       auto ndof_per_test_element  = static_cast<size_t>(1);
       auto ndof_per_trial_element = static_cast<size_t>(trial_space_->GetFE(0)->GetDof() * trial_space_->GetVDim());
-      // FIXME: Array op= is currently horribly broken for multidimensional arrays, remove when fixed
-      ExecArray<double, 3, exec> tmp(num_elements, ndof_per_test_element, ndof_per_trial_element);
-      element_gradients_                                                          = std::move(tmp);
-      static_cast<axom::ArrayBase<double, 3, decltype(tmp)>&>(element_gradients_) = tmp;
+      element_gradients_ = ExecArray<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
     }
 
     {
       auto num_bdr_elements           = static_cast<size_t>(trial_space_->GetNFbyType(mfem::FaceType::Boundary));
       auto ndof_per_test_bdr_element  = static_cast<size_t>(1);
       auto ndof_per_trial_bdr_element = static_cast<size_t>(trial_space_->GetBE(0)->GetDof() * trial_space_->GetVDim());
-      // FIXME: Array op= is currently horribly broken for multidimensional arrays, remove when fixed
-      ExecArray<double, 3, exec> tmp(num_bdr_elements, ndof_per_test_bdr_element, ndof_per_trial_bdr_element);
-      bdr_element_gradients_                                                          = std::move(tmp);
-      static_cast<axom::ArrayBase<double, 3, decltype(tmp)>&>(bdr_element_gradients_) = tmp;
+      bdr_element_gradients_ =
+          ExecArray<double, 3, exec>(num_bdr_elements, ndof_per_test_bdr_element, ndof_per_trial_bdr_element);
     }
   }
 
