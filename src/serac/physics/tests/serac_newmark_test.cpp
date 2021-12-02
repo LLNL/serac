@@ -55,7 +55,6 @@ protected:
 
     // Physics
     auto& solid_solver_table = inlet.addStruct("solid", "Finite deformation solid mechanics module");
-    // FIXME: Remove once Inlet's "contains" logic improvements are merged
     serac::Solid::InputOptions::defineInputFileSchema(solid_solver_table);
     // get gravity parameter for this problem
     inlet.addDouble("g", "the gravity acceleration");

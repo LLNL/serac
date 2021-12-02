@@ -35,23 +35,21 @@ namespace detail {
  * @brief Trait for checking if a type is a @p serac::tuple
  */
 template <typename T>
-struct is_tuple {
-  // FIXME: Should we use std::false_type/std::true_type
-  static constexpr bool value = false;
+struct is_tuple : std::false_type {
 };
+
 /// @overload
 template <typename... T>
-struct is_tuple<serac::tuple<T...> > {
-  static constexpr bool value = true;
+struct is_tuple<serac::tuple<T...> > : std::true_type {
 };
 
 /**
  * @brief Trait for checking if a type if a @p serac::tuple containing only @p serac::tuple
  */
 template <typename T>
-struct is_tuple_of_tuples {
-  static constexpr bool value = false;
+struct is_tuple_of_tuples : std::false_type {
 };
+
 /// @overload
 template <typename... T>
 struct is_tuple_of_tuples<serac::tuple<T...> > {

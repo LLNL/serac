@@ -29,7 +29,7 @@ namespace serac::mfem_ext {
  */
 class EquationSolver : public mfem::Solver {
 public:
-  // TODO: Eliminate this once a dependency injection approach is used for the solvers
+  // Allow for the creation of an "empty" EquationSolver to be later overwritten with a "real" constructor
   EquationSolver() = default;
   /**
    * Constructs a new solver wrapper
