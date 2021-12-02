@@ -247,7 +247,7 @@ struct EvaluationKernel< DerivativeWRT<I>, KernelConfig< Q, geom, test, trials .
 
   EvaluationKernel(DerivativeWRT<I>, KernelConfig< Q, geom, test, trials ... >, std::shared_ptr<derivatives_type[]> ptr, const mfem::Vector & J, const mfem::Vector & X, int num_elements, int num_quadrature_points_per_element, lambda qf, QuadratureData<qpt_data_type>& data) : 
     qf_derivatives_ptr_(ptr),
-    qf_derivatives_(ptr.get(), num_elements, num_quadrature_points_per_element),
+    qf_derivatives_(ptr.get(), size_t(num_elements), size_t(num_quadrature_points_per_element)),
     J_(J),
     X_(X),
     num_elements_(num_elements),
@@ -344,7 +344,7 @@ struct ActionOfGradientKernel< KernelConfig< Q, geom, test, trial >, derivatives
   using EVector_t = EVectorView < exec, finite_element< geom, trial > >;
 
   ActionOfGradientKernel(KernelConfig< Q, geom, test, trial >, std::shared_ptr<derivatives_type[]> ptr, const mfem::Vector & J, int num_elements, int num_quadrature_points_per_element) : 
-    qf_derivatives_(ptr.get(), num_elements, num_quadrature_points_per_element), J_(J), num_elements_(num_elements) {}
+    qf_derivatives_(ptr.get(), size_t(num_elements), size_t(num_quadrature_points_per_element)), J_(J), num_elements_(num_elements) {}
 
   void operator() (const mfem::Vector & dU, mfem::Vector& dR) {
     EVector_t du({dU}, size_t(num_elements_));

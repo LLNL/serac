@@ -265,7 +265,7 @@ public:
     AddBoundaryIntegral(Dimension<2>{}, integrand, domain);
   }
 
-  void ActionOfGradient(const mfem::Vector& input_T, mfem::Vector& output_T, int which) const 
+  void ActionOfGradient(const mfem::Vector& input_T, mfem::Vector& output_T, size_t which) const 
   {
     P_trial_[which]->Mult(input_T, input_L_[which]);
 

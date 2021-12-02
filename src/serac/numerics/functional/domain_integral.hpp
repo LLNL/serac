@@ -168,7 +168,7 @@ public:
    * @param[out] output_E The output of the evalution; per-element DOF residuals
    * @see gradient_kernel
    */
-  void GradientMult(const mfem::Vector & input_E, mfem::Vector& output_E, int which = 0) const
+  void GradientMult(const mfem::Vector & input_E, mfem::Vector& output_E, size_t which = 0) const
   {
     action_of_gradient_[which](input_E, output_E);
   }
