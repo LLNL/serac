@@ -38,7 +38,7 @@ class Axom(CachedCMakePackage, CudaPackage):
     git      = "https://github.com/LLNL/axom.git"
 
     # SERAC EDIT START
-    version('0.6.0serac', commit='c2b8dee53a15392bb09cbfaa919afa1525f7c7d5', submodules="True")
+    version('0.6.0serac', commit='65d8e67bcf629bbfacb837ba6202d26f3d960364', submodules="True")
     # SERAC EDIT END
 
     version('main', branch='main', submodules=True)

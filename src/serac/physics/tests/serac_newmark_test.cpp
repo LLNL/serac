@@ -55,7 +55,6 @@ protected:
 
     // Physics
     auto& solid_solver_table = inlet.addStruct("solid", "Finite deformation solid mechanics module");
-    // FIXME: Remove once Inlet's "contains" logic improvements are merged
     serac::Solid::InputOptions::defineInputFileSchema(solid_solver_table);
     // get gravity parameter for this problem
     inlet.addDouble("g", "the gravity acceleration");
@@ -119,7 +118,7 @@ TEST_F(NewmarkBetaTest, SimpleLua)
   // Create DataStore
   axom::sidre::DataStore datastore;
   // Intialize MFEMSidreDataCollection
-  serac::StateManager::initialize(datastore, "serac", "newmark_beta_simple");
+  serac::StateManager::initialize(datastore, "newmark_beta_simple");
 
   // Initialize Inlet and read input file
   std::string input_file = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/dyn_newmark_solve.lua";
@@ -188,7 +187,7 @@ TEST_F(NewmarkBetaTest, EquilbriumLua)
   // Create DataStore
   axom::sidre::DataStore datastore;
   // Intialize MFEMSidreDataCollection
-  serac::StateManager::initialize(datastore, "serac", "newmark_beta_equilibrium");
+  serac::StateManager::initialize(datastore, "newmark_beta_equilibrium");
 
   // Initialize Inlet and read input file
   std::string input_file = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/dyn_newmark_solve_bending.lua";
@@ -230,7 +229,7 @@ TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
   // Create DataStore
   axom::sidre::DataStore datastore;
   // Intialize MFEMSidreDataCollection
-  serac::StateManager::initialize(datastore, "serac", "newmark_beta_first_order_equilibrium");
+  serac::StateManager::initialize(datastore, "newmark_beta_first_order_equilibrium");
 
   // Initialize Inlet and read input file
   std::string input_file =

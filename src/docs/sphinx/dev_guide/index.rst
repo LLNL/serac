@@ -22,6 +22,7 @@ Developer Guide
    tensor_dual
    functional
    mfem_dev
+   state_manager
 
 Developing a New Physics Module
 -------------------------------

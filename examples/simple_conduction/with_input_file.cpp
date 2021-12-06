@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
 
   // _inlet_init_start
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "serac", "with_input_file_example");
+  serac::StateManager::initialize(datastore, "with_input_file_example");
   auto inlet = serac::input::initialize(datastore, input_file);
   // _inlet_init_end
 

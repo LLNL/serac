@@ -66,9 +66,11 @@ public:
    * @param[in] therm_options The equation solver options for the conduction physics
    * @param[in] solid_options The equation solver options for the solid physics
    * @param[in] name A name for the physics module
+   * @param[in] pmesh An optional mesh reference, must be provided to configure the module
+   * when a mesh other than the primary mesh is used
    */
   ThermalSolid(int order, const ThermalConduction::SolverOptions& therm_options,
-               const Solid::SolverOptions& solid_options, const std::string& name = "");
+               const Solid::SolverOptions& solid_options, const std::string& name = "", mfem::ParMesh* pmesh = nullptr);
 
   /**
    * @brief Construct a new Thermal Solid object from input file options

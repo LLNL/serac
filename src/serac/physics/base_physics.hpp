@@ -31,16 +31,20 @@ class BasePhysics {
 public:
   /**
    * @brief Empty constructor
+   * @param[in] pmesh An optional mesh reference, must be provided to configure the module
+   * when a mesh other than the primary mesh is used
    */
-  BasePhysics();
+  BasePhysics(mfem::ParMesh* pmesh = nullptr);
 
   /**
    * @brief Constructor that creates n entries in state_ of order p
    *
    * @param[in] n Number of state variables
    * @param[in] p Order of the solver
+   * @param[in] pmesh An optional mesh reference, must be provided to configure the module
+   * when a mesh other than the default mesh is used
    */
-  BasePhysics(int n, int p);
+  BasePhysics(int n, int p, mfem::ParMesh* pmesh = nullptr);
 
   /**
    * @brief Construct a new Base Physics object (copy constructor)
@@ -145,6 +149,9 @@ public:
   const mfem::ParMesh& mesh() const { return mesh_; }
 
 protected:
+  /// @brief ID of the corresponding MFEMSidreDataCollection
+  std::string sidre_datacoll_id_ = {};
+
   /**
    * @brief The primary mesh
    */

@@ -38,7 +38,7 @@ TEST(solid_solver, qs_component_solve)
 
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);
-  serac::StateManager::initialize(datastore, "serac", "with_input_file_example");
+  serac::StateManager::initialize(datastore, "with_input_file_example");
 
   test_utils::defineTestSchema<Solid>(inlet);
 

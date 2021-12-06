@@ -20,8 +20,9 @@
 
 namespace serac {
 
-BasePhysics::BasePhysics()
-    : mesh_(StateManager::mesh()),
+BasePhysics::BasePhysics(mfem::ParMesh* pmesh)
+    : sidre_datacoll_id_(StateManager::collectionID(pmesh)),
+      mesh_(StateManager::mesh(sidre_datacoll_id_)),
       comm_(mesh_.GetComm()),
       output_type_(serac::OutputType::SidreVisIt),
       time_(0.0),
@@ -33,10 +34,11 @@ BasePhysics::BasePhysics()
   root_name_                     = "serac";
 }
 
-BasePhysics::BasePhysics(int n, int p) : BasePhysics()
+BasePhysics::BasePhysics(int n, int p, mfem::ParMesh* pmesh) : BasePhysics(pmesh)
 {
   order_ = p;
-  gf_initialized_.assign(static_cast<std::size_t>(n), false);
+  // If this is a restart run, things have already been initialized
+  gf_initialized_.assign(static_cast<std::size_t>(n), StateManager::isRestart());
 }
 
 void BasePhysics::setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component)
@@ -118,7 +120,7 @@ void BasePhysics::outputState() const
     case serac::OutputType::SidreVisIt: {
       // Implemented through a helper method as the full interface of the MFEMSidreDataCollection
       // is restricted from global access
-      StateManager::save(time_, cycle_);
+      StateManager::save(time_, cycle_, sidre_datacoll_id_);
       break;
     }
 
@@ -176,8 +178,8 @@ void BasePhysics::initializeSummary(axom::sidre::DataStore& datastore, double t_
   axom::sidre::Group* summary_group = sidre_root->createGroup(summary_group_name);
 
   // Write run info
-  summary_group->createViewString("user_name", serac::getUserName());
-  summary_group->createViewString("host_name", serac::getHostName());
+  summary_group->createViewString("user_name", axom::utilities::getUserName());
+  summary_group->createViewString("host_name", axom::utilities::getHostName());
   summary_group->createViewScalar("mpi_rank_count", count);
 
   // Write curves info

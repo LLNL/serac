@@ -125,8 +125,7 @@ int main(int argc, char* argv[])
   axom::sidre::DataStore datastore;
 
   // Intialize MFEMSidreDataCollection
-  // If restart_cycle is non-empty, then this is a restart run and the data will be loaded here
-  serac::StateManager::initialize(datastore, "serac", output_directory, restart_cycle);
+  serac::StateManager::initialize(datastore, output_directory);
 
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);
@@ -153,6 +152,9 @@ int main(int argc, char* argv[])
     }
     auto mesh = serac::mesh::buildParallelMesh(mesh_options);
     serac::StateManager::setMesh(std::move(mesh));
+  } else {
+    // If restart_cycle is non-empty, then this is a restart run and the data will be loaded here
+    serac::StateManager::load(*restart_cycle);
   }
 
   // Create the physics object
@@ -164,14 +166,13 @@ int main(int argc, char* argv[])
   std::optional<serac::ThermalSolid::InputOptions>      thermal_solid_solver_options;
 
   // If the blocks exist, read the appropriate input file options
-  // FIXME: This will get patched in inlet so we can do inlet.isUserProvided("solid") etc
-  if (inlet.getGlobalContainer().getChildContainers().at("solid")->isUserProvided()) {
+  if (inlet.isUserProvided("solid")) {
     solid_solver_options = inlet["solid"].get<serac::Solid::InputOptions>();
   }
-  if (inlet.getGlobalContainer().getChildContainers().at("thermal_conduction")->isUserProvided()) {
+  if (inlet.isUserProvided("thermal_conduction")) {
     thermal_solver_options = inlet["thermal_conduction"].get<serac::ThermalConduction::InputOptions>();
   }
-  if (inlet.getGlobalContainer().getChildContainers().at("thermal_solid")->isUserProvided()) {
+  if (inlet.isUserProvided("thermal_solid")) {
     thermal_solid_solver_options = inlet["thermal_solid"].get<serac::ThermalSolid::InputOptions>();
   }
 
