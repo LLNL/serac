@@ -27,7 +27,7 @@ std::string                                                           StateManag
 std::vector<std::unique_ptr<SyncableData>>                            StateManager::syncable_data_;
 axom::sidre::DataStore*                                               StateManager::ds_                = nullptr;
 std::string                                                           StateManager::output_dir_        = "";
-const std::string                                                     StateManager::default_mesh_name_ = "primary";
+const std::string                                                     StateManager::default_mesh_name_ = "default";
 
 void StateManager::newDataCollection(const std::string& name, const std::optional<int> cycle_to_load)
 {
