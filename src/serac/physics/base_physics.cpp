@@ -212,9 +212,8 @@ void BasePhysics::saveSummary(axom::sidre::DataStore& datastore, const double t)
   if (rank == 0) {
     axom::sidre::Group* sidre_root        = datastore.getRoot();
     const std::string   curves_group_name = "serac_summary/curves";
-    SLIC_ERROR_ROOT_IF(
-        !sidre_root->hasGroup(curves_group_name),
-        axom::fmt::format("Sidre Group '{0}' did not exist when saveCurves was called", curves_group_name));
+    SLIC_ERROR_IF(!sidre_root->hasGroup(curves_group_name),
+                  axom::fmt::format("Sidre Group '{0}' did not exist when saveCurves was called", curves_group_name));
     curves_group = sidre_root->getGroup(curves_group_name);
   }
 
