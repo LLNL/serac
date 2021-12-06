@@ -206,28 +206,31 @@ void BasePhysics::initializeSummary(axom::sidre::DataStore& datastore, double t_
 
 void BasePhysics::saveSummary(axom::sidre::DataStore& datastore, const double t) const
 {
-  double l1norm_value, l2norm_value, linfnorm_value, avg_value, max_value, min_value;
+  auto [_, rank] = getMPIInfo();
 
-  auto [_, rank]                      = getMPIInfo();
-  const std::string curves_group_name = "serac_summary/curves";
+  // Find curves sidre group
+  axom::sidre::Group* curves_group = nullptr;
+  // Only save on root node
+  if (rank == 0) {
+    axom::sidre::Group* sidre_root        = datastore.getRoot();
+    const std::string   curves_group_name = "serac_summary/curves";
+    SLIC_ERROR_IF(!sidre_root->hasGroup(curves_group_name),
+                  axom::fmt::format("Sidre Group '{0}' did not exist when saveCurves was called", curves_group_name));
+    curves_group = sidre_root->getGroup(curves_group_name);
+  }
 
-  axom::sidre::Group* sidre_root = datastore.getRoot();
-
-  SLIC_ERROR_ROOT_IF(
-      !sidre_root->hasGroup(curves_group_name),
-      axom::fmt::format("Sidre Group '{0}' did not exist when saveCurves was called", curves_group_name));
-
-  axom::sidre::Group* curves_group = sidre_root->getGroup(curves_group_name);
-
-  // Don't save curves on anything other than root node
+  // Save time step
+  // Only save on root node
   if (rank == 0) {
     axom::sidre::Array<double> ts(curves_group->getView("t"));
     ts.push_back(t);
   }
 
   // For each Finite Element State (Field)
+  double l1norm_value, l2norm_value, linfnorm_value, avg_value, max_value, min_value;
   for (FiniteElementState& state : state_) {
     // Calculate current stat value
+    // Note: These are collective operations.
     l1norm_value   = norm(state, 1);
     l2norm_value   = norm(state, 2);
     linfnorm_value = norm(state, mfem::infinity());
@@ -235,7 +238,7 @@ void BasePhysics::saveSummary(axom::sidre::DataStore& datastore, const double t)
     max_value      = max(state);
     min_value      = min(state);
 
-    // Don't save curves on anything other than root node
+    // Only save on root node
     if (rank == 0) {
       // Group for this Finite Element State (Field)
       axom::sidre::Group* state_group = curves_group->getGroup(state.name());
