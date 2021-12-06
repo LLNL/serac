@@ -84,19 +84,19 @@ void StateManager::initialize(axom::sidre::DataStore& ds, const std::string& out
   }
 }
 
-FiniteElementState StateManager::newState(FiniteElementVector::Options&& options, const std::string& tag)
+FiniteElementState StateManager::newState(FiniteElementVector::Options&& options, const std::string& mesh_tag)
 {
   SLIC_ERROR_ROOT_IF(!ds_, "Serac's datacollection was not initialized - call StateManager::initialize first");
-  auto&             datacoll = datacolls_.at(tag);
+  auto&             datacoll = datacolls_.at(mesh_tag);
   const std::string name     = options.name;
   if (is_restart_) {
     auto field = datacoll.GetParField(name);
-    return {mesh(tag), *field, name};
+    return {mesh(mesh_tag), *field, name};
   } else {
     SLIC_ERROR_ROOT_IF(datacoll.HasField(name),
                        axom::fmt::format("Serac's datacollection was already given a field named '{0}'", name));
     options.managed_by_sidre = true;
-    FiniteElementState state(mesh(tag), std::move(options));
+    FiniteElementState state(mesh(mesh_tag), std::move(options));
     datacoll.RegisterField(name, &(state.gridFunc()));
     // Now that it's been allocated, we can set it to zero
     state.gridFunc() = 0.0;
@@ -104,19 +104,19 @@ FiniteElementState StateManager::newState(FiniteElementVector::Options&& options
   }
 }
 
-FiniteElementDual StateManager::newDual(FiniteElementVector::Options&& options, const std::string& tag)
+FiniteElementDual StateManager::newDual(FiniteElementVector::Options&& options, const std::string& mesh_tag)
 {
   SLIC_ERROR_ROOT_IF(!ds_, "Serac's datacollection was not initialized - call StateManager::initialize first");
-  auto&             datacoll = datacolls_.at(tag);
+  auto&             datacoll = datacolls_.at(mesh_tag);
   const std::string name     = options.name;
   if (is_restart_) {
     auto field = datacoll.GetParField(name);
-    return {mesh(tag), *field, name};
+    return {mesh(mesh_tag), *field, name};
   } else {
     SLIC_ERROR_ROOT_IF(datacoll.HasField(name),
                        axom::fmt::format("Serac's datacollection was already given a field named '{0}'", name));
     options.managed_by_sidre = true;
-    FiniteElementDual dual(mesh(tag), std::move(options));
+    FiniteElementDual dual(mesh(mesh_tag), std::move(options));
 
     // Create a grid function view of the local vector for plotting
     // Note: this is a static cast because we know this vector under the hood is a grid function
@@ -131,10 +131,10 @@ FiniteElementDual StateManager::newDual(FiniteElementVector::Options&& options, 
   }
 }
 
-void StateManager::save(const double t, const int cycle, const std::string& tag)
+void StateManager::save(const double t, const int cycle, const std::string& mesh_tag)
 {
   SLIC_ERROR_ROOT_IF(!ds_, "Serac's datacollection was not initialized - call StateManager::initialize first");
-  auto&       datacoll  = datacolls_.at(tag);
+  auto&       datacoll  = datacolls_.at(mesh_tag);
   std::string file_path = axom::utilities::filesystem::joinPath(datacoll.GetPrefixPath(), datacoll.GetCollectionName());
   SLIC_INFO_ROOT(axom::fmt::format("Saving data collection at time: {} to path: {}", t, file_path));
 
@@ -146,23 +146,23 @@ void StateManager::save(const double t, const int cycle, const std::string& tag)
   datacoll.Save();
 }
 
-mfem::ParMesh* StateManager::setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const std::string& tag)
+mfem::ParMesh* StateManager::setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const std::string& mesh_tag)
 {
-  newDataCollection(tag);
-  auto& datacoll = datacolls_.at(tag);
+  newDataCollection(mesh_tag);
+  auto& datacoll = datacolls_.at(mesh_tag);
   datacoll.SetMesh(pmesh.release());
   datacoll.SetOwnData(true);
 
   // Functional needs the nodal grid function and neighbor data in the mesh
-  auto& new_pmesh = mesh(tag);
+  auto& new_pmesh = mesh(mesh_tag);
   new_pmesh.EnsureNodes();
   new_pmesh.ExchangeFaceNbrData();
   return &new_pmesh;
 }
 
-mfem::ParMesh& StateManager::mesh(const std::string& tag)
+mfem::ParMesh& StateManager::mesh(const std::string& mesh_tag)
 {
-  auto mesh = datacolls_.at(tag).GetMesh();
+  auto mesh = datacolls_.at(mesh_tag).GetMesh();
   SLIC_ERROR_ROOT_IF(!mesh, "The datacollection does not contain a mesh object");
   return static_cast<mfem::ParMesh&>(*mesh);
 }

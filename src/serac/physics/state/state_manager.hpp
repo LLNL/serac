@@ -41,36 +41,36 @@ public:
   /**
    * @brief Factory method for creating a new FEState object, signature is identical to FEState constructor
    * @param[in] options Configuration options for the FEState, if a new state is created
-   * @param[in] tag A string that uniquely identifies the mesh on which the field is to be defined
+   * @param[in] mesh_tag A string that uniquely identifies the mesh on which the field is to be defined
    * @see FiniteElementState::FiniteElementState
    * @note If this is a restart then the options (except for the name) will be ignored
    */
-  static FiniteElementState newState(FiniteElementVector::Options&& options = {},
-                                     const std::string&             tag     = default_mesh_name_);
+  static FiniteElementState newState(FiniteElementVector::Options&& options  = {},
+                                     const std::string&             mesh_tag = default_mesh_name_);
 
   /**
    * @brief Factory method for creating a new FEDual object, signature is identical to FEDual constructor
    * @param[in] options Configuration options for the FEDual, if a new state is created
-   * @param[in] tag A string that uniquely identifies the mesh on which the dual is to be defined
+   * @param[in] mesh_tag A string that uniquely identifies the mesh on which the dual is to be defined
    * @see FiniteElementDual::FiniteElementDual
    * @note If this is a restart then the options (except for the name) will be ignored
    */
-  static FiniteElementDual newDual(FiniteElementVector::Options&& options = {},
-                                   const std::string&             tag     = default_mesh_name_);
+  static FiniteElementDual newDual(FiniteElementVector::Options&& options  = {},
+                                   const std::string&             mesh_tag = default_mesh_name_);
 
   /**
    * @brief Factory method for creating a new QuadratureData object
    * @tparam T The type of the per-qpt data
    * @param[in] name The name of the quadrature data field
    * @param[in] p The order of the quadrature rule
-   * @param[in] tag A string that uniquely identifies the mesh on which the quadrature data is to be defined
+   * @param[in] mesh_tag A string that uniquely identifies the mesh on which the quadrature data is to be defined
    * @see QuadratureData::QuadratureData
    */
   template <typename T>
   static QuadratureData<T>& newQuadratureData(const std::string& name, const int p,
-                                              const std::string& tag = default_mesh_name_)
+                                              const std::string& mesh_tag = default_mesh_name_)
   {
-    auto& datacoll = datacolls_.at(tag);
+    auto& datacoll = datacolls_.at(mesh_tag);
     if (is_restart_) {
       auto field = datacoll.GetQField(name);
       syncable_data_.push_back(std::make_unique<QuadratureData<T>>(*field));
@@ -78,7 +78,7 @@ public:
     } else {
       SLIC_ERROR_ROOT_IF(datacoll.HasQField(name),
                          axom::fmt::format("Serac's datacollection was already given a qfield named '{0}'", name));
-      syncable_data_.push_back(std::make_unique<QuadratureData<T>>(mesh(tag), p, false));
+      syncable_data_.push_back(std::make_unique<QuadratureData<T>>(mesh(mesh_tag), p, false));
       // The static_cast is safe here because we "know" what we just inserted into the vector
       auto& qdata = static_cast<QuadratureData<T>&>(*syncable_data_.back());
       datacoll.RegisterQField(name, &(qdata.QFunc()));
@@ -90,20 +90,20 @@ public:
    * @brief Updates the Conduit Blueprint state in the datastore and saves to a file
    * @param[in] t The current sim time
    * @param[in] cycle The current iteration number of the simulation
-   * @param[in] tag A string that uniquely identifies the mesh (and accompanying fields) to save
+   * @param[in] mesh_tag A string that uniquely identifies the mesh (and accompanying fields) to save
    */
-  static void save(const double t, const int cycle, const std::string& tag = default_mesh_name_);
+  static void save(const double t, const int cycle, const std::string& mesh_tag = default_mesh_name_);
 
   /**
    * @brief Loads an existing DataCollection
    * @param[in] cycle_to_load What cycle to load the DataCollection from
-   * @param[in] tag The tag associated with the DataCollection when it was saved
+   * @param[in] mesh_tag The mesh_tag associated with the DataCollection when it was saved
    */
-  static void load(const int cycle_to_load, const std::string& tag = default_mesh_name_)
+  static void load(const int cycle_to_load, const std::string& mesh_tag = default_mesh_name_)
   {
     // FIXME: Assumes that if one DataCollection is going to be reloaded all DataCollections will be
     is_restart_ = true;
-    newDataCollection(tag, cycle_to_load);
+    newDataCollection(mesh_tag, cycle_to_load);
   }
 
   /**
@@ -120,17 +120,17 @@ public:
   /**
    * @brief Gives ownership of mesh to StateManager
    * @param[in] pmesh The mesh to register
-   * @param[in] tag A string that uniquely identifies the mesh
+   * @param[in] mesh_tag A string that uniquely identifies the mesh
    * @return A pointer to the stored mesh whose ownership was just passed to StateManager
    */
-  static mfem::ParMesh* setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const std::string& tag = default_mesh_name_);
+  static mfem::ParMesh* setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const std::string& mesh_tag = default_mesh_name_);
 
   /**
    * @brief Returns a non-owning reference to mesh held by StateManager
-   * @param[in] tag A string that uniquely identifies the mesh
-   * @pre A mesh identified by @a tag must be registered - either via @p load() or @p setMesh()
+   * @param[in] mesh_tag A string that uniquely identifies the mesh
+   * @pre A mesh identified by @a mesh_tag must be registered - either via @p load() or @p setMesh()
    */
-  static mfem::ParMesh& mesh(const std::string& tag = default_mesh_name_);
+  static mfem::ParMesh& mesh(const std::string& mesh_tag = default_mesh_name_);
 
   /**
    * @brief Returns the Sidre DataCollection name
