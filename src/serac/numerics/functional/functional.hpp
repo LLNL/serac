@@ -30,10 +30,16 @@ namespace serac {
 //
 // TODO: better name
 struct dual_vector {
-  mfem::Vector& ref;
-                operator mfem::Vector &() { return ref; }
-                operator const mfem::Vector &() const { return ref; }
+  const mfem::Vector& ref;
+                      operator const mfem::Vector &() const { return ref; }
 };
+
+// this function is intended to only be used in combination with
+// serac::Functional::operator()`, as a way for the user to express that
+// it should both evaluate and differentiate w.r.t. a specific argument (only 1 argument at a time)
+//
+
+dual_vector differentiate_wrt(const mfem::Vector& v) { return dual_vector{v}; }
 
 template <typename... T>
 constexpr int index_of_dual_vector()
@@ -47,10 +53,6 @@ constexpr int index_of_dual_vector()
   }
   return -1;
 }
-
-
-
-// dual_vector differentiate_wrt(const mfem::Vector & v) { return dual_vector{v}; }
 
 template <size_t num_trial_spaces>
 int GetTrueVSize(std::array<mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
@@ -108,19 +110,18 @@ class Functional;
  */
 template <typename test, typename... trials, ExecutionSpace exec>
 class Functional<test(trials...), exec> {
-
   static constexpr tuple<trials...> trial_spaces{};
   static constexpr uint32_t         num_trial_spaces = sizeof...(trials);
 
   class Gradient;
 
-  template <typename ... T>
+  template <typename... T>
   struct operator_paren_return {
-    using type = typename std::conditional< 
-      (std::is_same_v<T, dual_vector> + ... ) == 1, // if the there is a dual number in the pack
-      serac::tuple< mfem::Vector &, Gradient & >,   // then we return the value and the derivative
-      mfem::Vector &                                // otherwise, we just return the value
-    >::type;
+    using type = typename std::conditional<
+        (std::is_same_v<T, dual_vector> + ...) == 1,  // if the there is a dual number in the pack
+        serac::tuple<mfem::Vector&, Gradient&>,       // then we return the value and the derivative
+        mfem::Vector&                                 // otherwise, we just return the value
+        >::type;
   };
 
 public:
@@ -336,7 +337,7 @@ public:
    * element calculations, but also differentiate them w.r.t. the specified dual_vector argument
    */
   template <typename... T>
-  typename operator_paren_return<T ... >::type operator()(const T&... args)
+  typename operator_paren_return<T...>::type operator()(const T&... args)
   {
     constexpr int num_dual_arguments = (std::is_same_v<T, dual_vector> + ...);
     static_assert(num_dual_arguments <= 1,
@@ -395,18 +396,22 @@ public:
       output_T_(ess_tdof_list_[i]) = 0.0;
     }
 
-    // if the user has indicated they'd like to evaluate and differentiate w.r.t. 
-    // a specific argument, then we return both the value and gradient w.r.t. that argument
-    // 
-    // e.g. auto [value, gradient_wrt_arg1] = my_functional(arg0, differentiate_wrt(arg1));
     if constexpr (num_dual_arguments == 1) {
-      return {output_T_, grad_[wrt]}; 
+      // if the user has indicated they'd like to evaluate and differentiate w.r.t.
+      // a specific argument, then we return both the value and gradient w.r.t. that argument
+      //
+      // mfem::Vector arg0 = ...;
+      // mfem::Vector arg1 = ...;
+      // e.g. auto [value, gradient_wrt_arg1] = my_functional(arg0, differentiate_wrt(arg1));
+      return {output_T_, grad_[wrt]};
 
-    // if the user passes only `mfem::Vector`s then we assume they only want the output value
-    // 
-    // e.g. mfem::Vector value = my_functional(arg0, arg1);
     } else {
-      return output_T_; 
+      // if the user passes only `mfem::Vector`s then we assume they only want the output value
+      //
+      // mfem::Vector arg0 = ...;
+      // mfem::Vector arg1 = ...;
+      // e.g. mfem::Vector value = my_functional(arg0, arg1);
+      return output_T_;
     }
   }
 
@@ -442,7 +447,8 @@ private:
           lookup_tables(*(f.test_space_), *(f.trial_space_[which])),
           which_argument(which),
           test_space_(f.test_space_),
-          trial_space_(f.trial_space_[which])
+          trial_space_(f.trial_space_[which]),
+          df_(f.test_space_->GetTrueVSize())
     {
     }
 
@@ -459,11 +465,10 @@ private:
     /**
      * @brief syntactic sugar:  df_dx.Mult(dx, df)  <=>  mfem::Vector df = df_dx(dx);
      */
-    mfem::Vector operator()(const mfem::Vector& x) const
+    mfem::Vector& operator()(const mfem::Vector& dx)
     {
-      mfem::Vector y(form_.Height());
-      form_.GradientMult(x, y);
-      return y;
+      form_.ActionOfGradient(dx, df_, which_argument);
+      return df_;
     }
 
     /**
@@ -491,7 +496,7 @@ private:
 
         zero_out(K_elem);
         for (auto& domain : form_.domain_integrals_) {
-          domain.ComputeElementGradients(view(K_elem));
+          domain.ComputeElementGradients(view(K_elem), which_argument);
         }
 
         for (size_t e = 0; e < K_elem.size(0); e++) {
@@ -573,6 +578,9 @@ private:
 
     /// @brief shallow copy of the trial space from the associated Functional
     mfem::ParFiniteElementSpace* trial_space_;
+
+    /// @brief storage for computing the action-of-gradient output
+    mfem::Vector df_;
   };
 
   /**

@@ -15,6 +15,7 @@ blt_add_executable(NAME        tensor_unit_tests
 # Then add the examples/tests
 set(functional_tests_serial
     ad_proto.cpp
+    mfem_basic.cpp
     get_qf_derivative_type.cpp
     hcurl_unit_tests.cpp
     test_tensor_ad.cpp

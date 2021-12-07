@@ -52,7 +52,7 @@ public:
    * and @a dim template parameters
    */
   template <int dim, typename lambda_type, typename qpt_data_type = void>
-  DomainIntegral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<dim>, lambda_type&& qf,
+  DomainIntegral(size_t num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<dim>, lambda_type&& qf,
                  QuadratureData<qpt_data_type>& data = dummy_qdata)
       : J_(J), X_(X)
   {
@@ -61,8 +61,6 @@ public:
     constexpr auto geometry                      = supported_geometries[dim];
     constexpr auto Q                             = std::max({test::order, trials::order...}) + 1;
     constexpr auto quadrature_points_per_element = (dim == 2) ? Q * Q : Q * Q * Q;
-
-    uint32_t num_quadrature_points = quadrature_points_per_element * uint32_t(num_elements);
 
     // this is where we actually specialize the finite element kernel templates with
     // our specific requirements (element type, test/trial spaces, quadrature rule, q-function, etc).
@@ -73,44 +71,33 @@ public:
 
       evaluation_ = EvaluationKernel{eval_config, J, X, num_elements, qf, data};
 
-      for_constexpr<num_trial_spaces>(
-          [this, num_elements, num_quadrature_points, &J, &X, &qf, &data, eval_config](auto i) {
-            // allocate memory for the derivatives of the q-function at each quadrature point
-            //
-            // Note: ptrs' lifetime is managed in an unusual way! It is captured by-value in one of the
-            // functors below to augment the reference count, and extend its lifetime to match
-            // that of the DomainIntegral that allocated it.
-            using derivative_type = decltype(get_derivative_type<i, dim, trials...>(qf));
-            auto ptr              = accelerator::make_shared_array<exec, derivative_type>(num_quadrature_points);
+      for_constexpr<num_trial_spaces>([this, num_elements, quadrature_points_per_element, &J, &X, &qf, &data,
+                                       eval_config](auto i) {
+        // allocate memory for the derivatives of the q-function at each quadrature point
+        //
+        // Note: ptrs' lifetime is managed in an unusual way! It is captured by-value in the
+        // action_of_gradient functor below to augment the reference count, and extend its lifetime to match
+        // that of the DomainIntegral that allocated it.
+        using which_trial_space = decltype(get<i>(trial_spaces));
+        using derivative_type   = decltype(get_derivative_type<i, dim, trials...>(qf));
+        auto ptr = accelerator::make_shared_array<exec, derivative_type>(num_elements * quadrature_points_per_element);
+        ArrayView<derivative_type, 2, exec> qf_derivatives(ptr.get(), num_elements, quadrature_points_per_element);
 
-            evaluation_with_AD_[i] = EvaluationKernel{
-                DerivativeWRT<i>{}, eval_config, ptr, J, X, num_elements, quadrature_points_per_element, qf, data};
+        evaluation_with_AD_[i] =
+            EvaluationKernel{DerivativeWRT<i>{}, eval_config, qf_derivatives, J, X, num_elements, qf, data};
 
-            KernelConfig<Q, geometry, test, decltype(get<i>(trial_spaces))> grad_config;
-
-            action_of_gradient_[i] =
-                ActionOfGradientKernel{grad_config, ptr, J, num_elements, quadrature_points_per_element};
-
-#if 0
         // note: this lambda function captures ptr by-value to extend its lifetime
-        //                   vvv
-        evaluation_ = [this, ptr, qf_derivatives, num_elements, qf, &data](const std::array< mfem::Vector, num_trial_spaces > & U, mfem::Vector& R) {
-          std::array< const double *, num_trial_spaces > ptrs;
-          for (uint32_t i = 0; i < num_trial_spaces; i++) { ptrs[i] = U[i].Read(); }
-          EVector_t u(ptrs, size_t(num_elements));
-          domain_integral::evaluation_kernel<Q, geometry, test, trials...>(u, R, qf_derivatives, J_, X_, num_elements, qf, data);
+        //                        vvv
+        action_of_gradient_[i] = [ptr, qf_derivatives, num_elements, J](const mfem::Vector& dU, mfem::Vector& dR) {
+          domain_integral::action_of_gradient_kernel<geometry, test, which_trial_space, Q>(dU, dR, qf_derivatives, J,
+                                                                                           num_elements);
         };
 
-        action_of_gradient_ = [this, qf_derivatives, num_elements](const mfem::Vector & dU, mfem::Vector& dR) {
-          domain_integral::action_of_gradient_kernel<Q, geometry, test, trial>(du, dR, qf_derivatives, J_, num_elements);
-        };
-
-        element_gradient_ = [this, qf_derivatives, num_elements](CPUView<double, 3> K_e) {
-          domain_integral::element_gradient_kernel<geometry, test, trials..., Q>(K_e, qf_derivatives, J_,
+        element_gradient_[i] = [qf_derivatives, num_elements, J](CPUView<double, 3> K_e) {
+          domain_integral::element_gradient_kernel<geometry, test, which_trial_space, Q>(K_e, qf_derivatives, J,
                                                                                          num_elements);
         };
-#endif
-          });
+      });
     }
 
     // TEMPORARY: Add temporary guard so ExecutionSpace::GPU cannot be used when there is no GPU.
@@ -176,7 +163,7 @@ public:
    * @param[inout] K_e The reshaped vector as a mfem::DeviceTensor of size (test_dim * test_dof, trial_dim * trial_dof,
    * elem)
    */
-  void ComputeElementGradients(ArrayView<double, 3, ExecutionSpace::CPU> K_e) const { element_gradient_(K_e); }
+  void ComputeElementGradients(ArrayView<double, 3, ExecutionSpace::CPU> K_e, uint32_t which) const { element_gradient_[which](K_e); }
 
 private:
   /**

@@ -24,20 +24,16 @@ using namespace serac;
 using namespace serac::profiling;
 
 template <typename T>
-void check_gradient(Functional<T>& f, mfem::Vector& U)
+void check_gradient(Functional<T>& f, mfem::Vector& U, mfem::Vector& dU_dt)
 {
-  int seed = 42;
+  int    seed    = 42;
+  double epsilon = 1.0e-8;
 
   mfem::Vector dU(U.Size());
   dU.Randomize(seed);
 
-  double epsilon = 1.0e-8;
-
-  // grad(f) evaluates the gradient of f at the last evaluation,
-  // so we evaluate f(U) before calling grad(f)
-  f(U);
-
-  auto& dfdU = grad(f);
+  mfem::Vector ddU_dt(U.Size());
+  ddU_dt.Randomize(seed + 1);
 
   auto U_plus = U;
   U_plus.Add(epsilon, dU);
@@ -45,22 +41,57 @@ void check_gradient(Functional<T>& f, mfem::Vector& U)
   auto U_minus = U;
   U_minus.Add(-epsilon, dU);
 
-  mfem::Vector df1 = f(U_plus);
-  df1 -= f(U_minus);
-  df1 /= (2 * epsilon);
+  {
+    mfem::Vector df1 = f(U_plus, dU_dt);
+    df1 -= f(U_minus, dU_dt);
+    df1 /= (2 * epsilon);
 
-  mfem::HypreParMatrix* dfdU_matrix = dfdU;
+    auto [value, dfdU] = f(differentiate_wrt(U), dU_dt);
+    mfem::Vector df2   = dfdU(dU);
 
-  mfem::Vector df2 = (*dfdU_matrix) * dU;
-  mfem::Vector df3 = dfdU(dU);
+    mfem::HypreParMatrix* dfdU_matrix = dfdU;
 
-  double relative_error1 = df1.DistanceTo(df2) / df1.Norml2();
-  double relative_error2 = df1.DistanceTo(df3) / df1.Norml2();
+    mfem::Vector df3 = (*dfdU_matrix) * dU;
 
-  EXPECT_NEAR(0., relative_error1, 5.e-6);
-  EXPECT_NEAR(0., relative_error2, 5.e-6);
+    double relative_error1 = df1.DistanceTo(df2) / df1.Norml2();
+    double relative_error2 = df1.DistanceTo(df3) / df1.Norml2();
 
-  delete dfdU_matrix;
+    EXPECT_NEAR(0., relative_error1, 5.e-6);
+    EXPECT_NEAR(0., relative_error2, 5.e-6);
+
+    std::cout << relative_error1 << " " << relative_error2 << std::endl;
+
+    delete dfdU_matrix; 
+  }
+
+  auto dU_dt_plus = U;
+  dU_dt_plus.Add(epsilon, ddU_dt);
+
+  auto dU_dt_minus = U;
+  dU_dt_minus.Add(-epsilon, ddU_dt);
+
+  {
+    mfem::Vector df1 = f(U, dU_dt_plus);
+    df1 -= f(U, dU_dt_minus);
+    df1 /= (2 * epsilon);
+
+    auto [value, df_ddU_dt] = f(U, differentiate_wrt(dU_dt));
+    mfem::Vector df2        = df_ddU_dt(ddU_dt);
+
+    mfem::HypreParMatrix* df_ddU_dt_matrix = df_ddU_dt;
+
+    mfem::Vector df3 = (*df_ddU_dt_matrix) * ddU_dt;
+
+    double relative_error1 = df1.DistanceTo(df2) / df1.Norml2();
+    double relative_error2 = df1.DistanceTo(df3) / df1.Norml2();
+
+    EXPECT_NEAR(0., relative_error1, 5.e-5);
+    EXPECT_NEAR(0., relative_error2, 5.e-5);
+
+    std::cout << relative_error1 << " " << relative_error2 << std::endl;
+
+    delete df_ddU_dt_matrix;
+  }
 }
 
 TEST(basic, nonlinear_thermal_test_3D)
@@ -68,7 +99,7 @@ TEST(basic, nonlinear_thermal_test_3D)
   int serial_refinement   = 0;
   int parallel_refinement = 0;
 
-  constexpr auto p   = 2;
+  constexpr auto p   = 3;
   constexpr auto dim = 3;
 
   std::string meshfile = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
@@ -98,7 +129,7 @@ TEST(basic, nonlinear_thermal_test_3D)
       [=](auto x, auto temperature, auto dtemperature_dt) {
         auto [u, du_dx]      = temperature;
         auto [du_dt, unused] = dtemperature_dt;
-        auto source          = rho * cp * du_dt - (100 * x[0] * x[1]);
+        auto source          = rho * cp * du_dt * du_dt - (100 * x[0] * x[1]);
         auto flux            = kappa * du_dx;
         return serac::tuple{source, flux};
       },
@@ -106,12 +137,10 @@ TEST(basic, nonlinear_thermal_test_3D)
 
   mfem::Vector r = residual(U, dU_dt);
 
-  std::cout << r.Norml2() << std::endl;
-
   // residual.AddSurfaceIntegral([=](auto x, auto /*n*/, auto u, auto /*dudt*/) { return x[0] + x[1] - cos(u); },
   // *mesh3D);
 
-  // check_gradient(residual, U);
+  check_gradient(residual, U, dU_dt);
 }
 
 int main(int argc, char* argv[])
