@@ -521,14 +521,19 @@ const FiniteElementState& Solid::solveAdjoint(FiniteElementDual& adjoint_load,
   auto& J   = dynamic_cast<mfem::HypreParMatrix&>(H_->GetGradient(displacement_.trueVec()));
   auto  J_T = std::unique_ptr<mfem::HypreParMatrix>(J.Transpose());
 
+  // By default, use a homogeneous essential boundary condition
+  mfem::HypreParVector adjoint_essential(adjoint_load.trueVec());
+  adjoint_essential = 0.0;
+
+  // If we have a non-homogeneous essential boundary condition, extract it from the given state
   if (dual_with_essential_boundary) {
     dual_with_essential_boundary->initializeTrueVec();
-    for (const auto& bc : bcs_.essentials()) {
-      bc.eliminateFromMatrix(*J_T);
-      bc.eliminateToRHS(*J_T, dual_with_essential_boundary->trueVec(), adjoint_load_vector);
-    }
-  } else {
-    bcs_.eliminateAllEssentialDofsFromMatrix(*J_T);
+    adjoint_essential = dual_with_essential_boundary->trueVec();
+  }
+
+  for (const auto& bc : bcs_.essentials()) {
+    bc.eliminateFromMatrix(*J_T);
+    bc.eliminateToRHS(*J_T, adjoint_essential, adjoint_load_vector);
   }
 
   lin_solver.SetOperator(*J_T);
