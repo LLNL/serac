@@ -3,9 +3,9 @@
 .. ##
 .. ## SPDX-License-Identifier: (BSD-3-Clause)
 
-======================
+===========================
 MFEM/Axom Development Build
-======================
+===========================
 
 Co-Developing with Axom and MFEM
 --------------------------------
