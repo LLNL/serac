@@ -216,6 +216,12 @@ constexpr auto make_dual_helper(const tensor<T, n...>& arg)
   return arg_dual;
 }
 
+template <typename T00, typename T01>
+constexpr auto make_dual(const tuple<T00, T01>& args)
+{
+  return tuple{make_dual_helper<0, 2>(get<0>(args)), make_dual_helper<1, 2>(get<1>(args))};
+}
+
 template <bool dualify, typename T>
 auto promote_to_dual_when(const T& x)
 {
@@ -229,7 +235,23 @@ auto promote_to_dual_when(const T& x)
 template <int n, typename... T, int... i>
 constexpr auto make_dual_helper(const serac::tuple<T...>& args, std::integer_sequence<int, i...>)
 {
-  return serac::tuple{promote_to_dual_when<i == n>(serac::get<i>(args))...};
+  // Sam: it took me longer than I'd like to admit to find this issue, so here's an explanation
+  // 
+  // note: we use serac::make_tuple(...) instead of serac::tuple{...} here because if
+  // the first argument passed in is of type `serac::tuple < serac::tuple < T ... > >`
+  // then doing something like
+  // 
+  // serac::tuple{serac::get<i>(args)...};
+  // 
+  // will be expand to something like 
+  // 
+  // serac::tuple{serac::tuple< T ... >{}};
+  // 
+  // which invokes the copy ctor, returning a `serac::tuple< T ... >`
+  // instead of `serac::tuple< serac::tuple < T ... > >`
+  //
+  // but serac::make_tuple(serac::get<i>(args)...) will never accidentally trigger the copy ctor
+  return serac::make_tuple(promote_to_dual_when<i == n>(serac::get<i>(args))...);
 }
 
 template <int n, typename... T>
@@ -238,6 +260,7 @@ constexpr auto make_dual_wrt(const serac::tuple<T...>& args)
   return make_dual_helper<n>(args, std::make_integer_sequence<int, int(sizeof...(T))>{});
 }
 
+#if 0
 template <typename T00, typename T01>
 constexpr auto make_dual(const tuple<T00, T01>& args)
 {
@@ -269,6 +292,7 @@ constexpr auto make_dual(const tuple<tuple<T00, T01>, tuple<T10, T11>, tuple<T20
                       serac::tuple{make_dual_helper<4, 6>(serac::get<0>(get<2>(args))),
                                    make_dual_helper<5, 6>(serac::get<1>(get<2>(args)))}};
 }
+#endif
 
 /**
  * @brief Retrieves the value components of a set of (possibly dual) numbers

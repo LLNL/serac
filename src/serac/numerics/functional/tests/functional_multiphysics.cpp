@@ -61,7 +61,7 @@ void check_gradient(Functional<T>& f, mfem::Vector& U, mfem::Vector& dU_dt)
 
     std::cout << relative_error1 << " " << relative_error2 << std::endl;
 
-    delete dfdU_matrix; 
+    delete dfdU_matrix;
   }
 
   auto dU_dt_plus = U;

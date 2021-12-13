@@ -328,6 +328,7 @@ template <typename lambda, typename coords_type, typename T, int... i>
 SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, const T& arg_tuple, std::nullptr_t,
                                        std::integer_sequence<int, i...>)
 {
+
   return qf(x_q, serac::get<i>(arg_tuple)...);
 }
 
@@ -451,7 +452,7 @@ template <Geometry geom, typename... trials, typename tuple_type, int dim, int..
 SERAC_HOST_DEVICE auto PreprocessHelper(const tuple_type& u, const tensor<double, dim>& xi,
                                         const tensor<double, dim, dim>& J, std::integer_sequence<int, i...>)
 {
-  return tuple{Preprocess<finite_element<geom, trials>>(get<i>(u), xi, J)...};
+  return serac::make_tuple(Preprocess< finite_element<geom, trials> >(get<i>(u), xi, J)...);
 }
 
 template <Geometry geom, typename... trials, typename tuple_type, int dim>

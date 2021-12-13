@@ -704,20 +704,7 @@ private:
   /// @brief 3D array that stores each boundary element's gradient of the residual w.r.t. trial values
   Array<double, 3, exec> bdr_element_gradients_[num_trial_spaces];
 
-  template <typename T>
-  friend typename Functional<T>::Gradient& grad(Functional<T>&);
 };
-
-/**
- * @brief free function for accessing the gradient member of a Functional object
- *   intended to mimic the mathematical notation
- * @param[in] f the Functional whose gradient is returned
- */
-template <typename T>
-typename Functional<T>::Gradient& grad(Functional<T>& f)
-{
-  return f.grad_;
-}
 
 }  // namespace serac
 

@@ -172,6 +172,11 @@ struct tuple<T0, T1, T2, T3, T4, T5, T6, T7> {
 template <typename... T>
 tuple(T...) -> tuple<T...>;
 
+template <typename... T>
+tuple < T ... > make_tuple(const T & ... args) {
+  return tuple< T ... >{args ... };
+}
+
 template <class... Types>
 struct tuple_size {
 };
