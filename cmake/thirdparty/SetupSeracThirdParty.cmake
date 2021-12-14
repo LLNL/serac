@@ -276,6 +276,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(AXOM_ENABLE_EXAMPLES OFF CACHE BOOL "")
         set(AXOM_ENABLE_TESTS    OFF CACHE BOOL "")
         set(AXOM_ENABLE_DOCS     OFF CACHE BOOL "")
+        set(AXOM_ENABLE_TOOLS    OFF CACHE BOOL "")
         set(AXOM_USE_CALIPER ${CALIPER_FOUND} CACHE BOOL "")
 
         # Used for the doxygen target
