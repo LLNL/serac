@@ -14,6 +14,7 @@ Developer Guide
    style_guide
    docker_env
    modern_cpp
+   testing
    logging
    expr_templates
    profiling
