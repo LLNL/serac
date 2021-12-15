@@ -22,7 +22,7 @@ Developer Guide
    new_docker_image
    tensor_dual
    functional
-   mfem_dev
+   codevelop
    state_manager
 
 Developing a New Physics Module
