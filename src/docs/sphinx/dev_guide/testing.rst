@@ -32,11 +32,11 @@ Requirements:
 * ``ATS_DIR`` defined in the host-config (Added automatically on LC host-configs) or on 
   command line via ``-DATS_DIR=/path/to/ats/base/dir``.
 
-#. **Build the code**
+#. **Build the code.**
    Build code with the normal steps. More info in the :ref:`quickstart-label`.
    This generates a script in the build directory called ``ats.sh``.
 
-#. **Run integration tests**
+#. **Run integration tests.**
    Run the corresponding command for the system you are on::
 
      # blueos
@@ -48,7 +48,7 @@ Requirements:
      # personal machine
      $ ./ats.sh
 
-#. **View results**
+#. **View results.**
    TBD...
 
 
