@@ -24,13 +24,13 @@ Integration Tests
 -----------------
 
 .. note::
-  This is very much in development and is not fully featured. Only the rzgenie clang@10.0.0 host-config
-  has ATS_DIR defined currently. You could use this on any by adding ``-DATS_DIR=/path/to/ats/base/dir``.
+  This is very much in development and is not fully featured.
 
 Requirements:
 
 * Installed ATS
-* `ATS_DIR` defined in the host-config (Added automatically on LC)
+* ``ATS_DIR`` defined in the host-config (Added automatically on LC host-configs) or on 
+  command line via ``-DATS_DIR=/path/to/ats/base/dir``.
 
 #. **Build the code**
    Build code with the normal steps. More info in the :ref:`quickstart-label`.
@@ -50,3 +50,13 @@ Requirements:
 
 #. **View results**
    TBD...
+
+
+Install ATS
+-----------
+
+ATS can be installed via the normal devtools install process. More info on :ref:`devtools-label`.
+This method is useful because it builds all development tools in one process.
+
+If you want to install ATS by itself, ATS provides multiple methods to install in
+their `Getting Started section <https://github.com/LLNL/ATS#getting-started>`_.

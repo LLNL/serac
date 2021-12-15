@@ -44,6 +44,8 @@ cmake-based `BLT HPC build system <https://github.com/LLNL/blt>`_.
   will not necessarily be the last error on the screen.
 
 
+.. _devtools-label:
+
 Building Serac's Developer Tools
 --------------------------------
 
