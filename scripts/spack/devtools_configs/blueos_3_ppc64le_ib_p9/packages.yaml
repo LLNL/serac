@@ -20,123 +20,110 @@ packages:
       blas: [netlib-lapack]
       lapack: [netlib-lapack]
       mpi: [spectrum-mpi]
+
+  # LLNL blueos CUDA
   cuda:
+    externals:
+      - spec: cuda@11.2.0
+        prefix: /usr/tce/packages/cuda/cuda-11.2.0
     buildable: false
+
   mpi:
     buildable: false
 
-  # blas is a bit more complicated because its a virtual package so fake it with
-  # the following per spack docs
   netlib-lapack:
-    buildable: false
     externals:
-    - spec: netlib-lapack@3.6.1
-      prefix: /usr
+      # This is the one that has the trailing underscores in name mangling, needed for MFEM compat
+      - spec: netlib-lapack@3.9.0
+        prefix: /usr/tcetmp/packages/lapack/lapack-3.9.0-gcc-7.3.1/lib/
+    buildable: false
 
   # System level packages to not build
   autoconf:
-    buildable: false
+    buildable: false 
     externals:
-    - spec: autoconf
-      prefix: /usr
+      - spec: autoconf@2.69
+        prefix: /usr
   automake:
-    buildable: false
+    buildable: false 
     externals:
-    - spec: automake
-      prefix: /usr
+      - spec: automake@1.13.4
+        prefix: /usr
   binutils:
     buildable: false
     externals:
-    - spec: binutils
+    - spec: binutils@2.27
       prefix: /usr
   bzip2:
     buildable: false
     externals:
-    - spec: bzip2
+    - spec: bzip2@1.0.6
       prefix: /usr
   diffutils:
     buildable: false
     externals:
-    - spec: diffutils
+    - spec: diffutils@3.3
       prefix: /usr
   epoxy:
     buildable: false
     externals:
-    - spec: epoxy
+    - spec: epoxy@0.0.0
       prefix: /usr
   findutils:
     buildable: false
     externals:
-    - spec: findutils
+    - spec: findutils@4.5.11
       prefix: /usr
   gettext:
-    buildable: false
+    buildable: false 
     externals:
-    - spec: gettext
-      prefix: /usr
+      - spec: gettext@0.19.8.1
+        prefix: /usr
   ghostscript:
     buildable: false
     externals:
-    - spec: ghostscript
+    - spec: ghostscript@9.25
       prefix: /usr
   groff:
     buildable: false
     externals:
-    - spec: groff
+    - spec: groff@1.22.2
       prefix: /usr
   libtool:
     buildable: false
     externals:
-    - spec: libtool
+    - spec: libtool@2.4.2
       prefix: /usr
   m4:
     buildable: false
     externals:
-    - spec: m4
+    - spec: m4@1.4.16
       prefix: /usr
   perl:
     buildable: false
     externals:
-    - spec: perl
+    - spec: perl@5.16.3
       prefix: /usr
   pkg-config:
     buildable: false
     externals:
-    - spec: pkg-config
+    - spec: pkg-config@0.27.1
       prefix: /usr
   readline:
     buildable: false
     externals:
-    - spec: readline
+    - spec: readline@6.2
       prefix: /usr
   tar:
-    buildable: false
     externals:
-    - spec: tar
-      prefix: /usr
+      - spec: tar@1.26
+        prefix: /usr
+    buildable: false
 
   # Lock in versions of Devtools
   cmake:
-    version: [3.14.5]
-    buildable: false
     externals:
-    - spec: cmake
-      prefix: /usr/tce/packages/cmake/cmake-3.14.5
-  llvm:
-    version: [10.0.0]
+    - spec: cmake@3.18.0
+      prefix: /usr/tce/packages/cmake/cmake-3.18.0
     buildable: false
-    externals:
-    - spec: llvm+clang
-      prefix: /usr/tce/packages/clang/clang-10.0.0
-  python:
-    version: [3.8.2]
-    buildable: false
-    externals:
-    - spec: python@3.8.2
-      prefix: /usr/tce/packages/python/python-3.8.2/
-  py-sphinx:
-    version: [2.2.0]
-    buildable: false
-    externals:
-    - spec: py-sphinx@2.2.0
-      prefix: /usr/tce/packages/python/python-3.8.2/
+

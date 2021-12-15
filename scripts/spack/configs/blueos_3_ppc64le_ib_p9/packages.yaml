@@ -41,16 +41,6 @@ packages:
     variants: ~dbm
   py-numpy:
     variants: ~blas~lapack
-  perl:
-    buildable: false
-    externals:
-    - spec: perl@5.16.3
-      prefix: /usr
-  pkg-config:
-    buildable: false
-    externals:
-    - spec: pkg-config@0.27.1
-      prefix: /usr
 
   # LLNL blueos CUDA
   cuda:
@@ -67,47 +57,93 @@ packages:
       - spec: spectrum-mpi@release%clang@10.0.1
         prefix: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-10.0.1-gcc-8.3.1
 
-  # System level packages to not build
-  autoconf:
-    externals:
-      - spec: autoconf@2.69
-        prefix: /usr
-    buildable: false 
-  automake:
-    externals:
-      - spec: automake@1.13.4
-        prefix: /usr
-    buildable: false
-  bzip2:
-    externals:
-      - spec: bzip2@1.0.6
-        prefix: /usr
-    buildable: false
-  gettext:
-    externals:
-      - spec: gettext@0.19.8.1
-        prefix: /usr
-    buildable: false
-  libtool:
-    externals:
-      - spec: libtool@2.4.2
-        prefix: /usr
-    buildable: false
-  m4:
-    externals:
-      - spec: m4@1.4.16
-        prefix: /usr
-    buildable: false
-  tar:
-    externals:
-      - spec: tar@1.26
-        prefix: /usr
-    buildable: false
   netlib-lapack:
     externals:
       # This is the one that has the trailing underscores in name mangling, needed for MFEM compat
       - spec: netlib-lapack@3.9.0
         prefix: /usr/tcetmp/packages/lapack/lapack-3.9.0-gcc-7.3.1/lib/
+    buildable: false
+
+  # System level packages to not build
+  autoconf:
+    buildable: false 
+    externals:
+      - spec: autoconf@2.69
+        prefix: /usr
+  automake:
+    buildable: false 
+    externals:
+      - spec: automake@1.13.4
+        prefix: /usr
+  binutils:
+    buildable: false
+    externals:
+    - spec: binutils@2.27
+      prefix: /usr
+  bzip2:
+    buildable: false
+    externals:
+    - spec: bzip2@1.0.6
+      prefix: /usr
+  diffutils:
+    buildable: false
+    externals:
+    - spec: diffutils@3.3
+      prefix: /usr
+  epoxy:
+    buildable: false
+    externals:
+    - spec: epoxy@0.0.0
+      prefix: /usr
+  findutils:
+    buildable: false
+    externals:
+    - spec: findutils@4.5.11
+      prefix: /usr
+  gettext:
+    buildable: false 
+    externals:
+      - spec: gettext@0.19.8.1
+        prefix: /usr
+  ghostscript:
+    buildable: false
+    externals:
+    - spec: ghostscript@9.25
+      prefix: /usr
+  groff:
+    buildable: false
+    externals:
+    - spec: groff@1.22.2
+      prefix: /usr
+  libtool:
+    buildable: false
+    externals:
+    - spec: libtool@2.4.2
+      prefix: /usr
+  m4:
+    buildable: false
+    externals:
+    - spec: m4@1.4.16
+      prefix: /usr
+  perl:
+    buildable: false
+    externals:
+    - spec: perl@5.16.3
+      prefix: /usr
+  pkg-config:
+    buildable: false
+    externals:
+    - spec: pkg-config@0.27.1
+      prefix: /usr
+  readline:
+    buildable: false
+    externals:
+    - spec: readline@6.2
+      prefix: /usr
+  tar:
+    externals:
+      - spec: tar@1.26
+        prefix: /usr
     buildable: false
 
   # Lock in versions of Devtools
