@@ -14,7 +14,10 @@ class PyAts(PythonPackage):
     homepage = "https://github.com/LLNL/ATS"
     git      = "https://github.com/LLNL/ATS.git"
 
+    maintainers = ['white238']
+
     version('main', branch='main')
+    version('7.0.10', tag='7.0.10')
     version('7.0.5.9', tag='7.0.5.9')
     version('7.0.5.8', tag='7.0.5.8')
     version('7.0.5.7', tag='7.0.5.7')
