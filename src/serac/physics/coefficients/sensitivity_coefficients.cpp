@@ -20,7 +20,6 @@ ShearSensitivityCoefficient::ShearSensitivityCoefficient(FiniteElementState&    
   dp_dX_.SetSize(dim_);
   adjoint_strain_.SetSize(dim_);
   d_sigma_d_shear_.SetSize(dim_);
-  F_.SetSize(dim_);
 }
 
 double ShearSensitivityCoefficient::Eval(mfem::ElementTransformation& T, const mfem::IntegrationPoint& ip)
@@ -29,10 +28,6 @@ double ShearSensitivityCoefficient::Eval(mfem::ElementTransformation& T, const m
 
   // Compute the displacement and deformation gradient
   displacement_.gridFunc().GetVectorGradient(T, du_dX_);
-
-  solid_util::calcDeformationGradient(du_dX_, F_);
-
-  double det_J = F_.Det();
 
   // Compute the adjoint gradient and strain
   adjoint_displacement_.gridFunc().GetVectorGradient(T, dp_dX_);
@@ -43,15 +38,12 @@ double ShearSensitivityCoefficient::Eval(mfem::ElementTransformation& T, const m
   // gradient
   material_.EvalShearSensitivity(du_dX_, d_sigma_d_shear_);
 
-  // Scale the derivative matrix by the geometric deformation weight
-  d_sigma_d_shear_ *= det_J;
-
   double scalar_sum = 0.0;
 
   // Compute the inner product of the stress sensitivity and the adjoint strain
   for (int i = 0; i < dim_; ++i) {
     for (int j = 0; j < dim_; ++j) {
-      scalar_sum += d_sigma_d_shear_(i, j) * adjoint_strain_(i, j);
+      scalar_sum -= d_sigma_d_shear_(i, j) * adjoint_strain_(i, j);
     }
   }
 
@@ -69,7 +61,6 @@ BulkSensitivityCoefficient::BulkSensitivityCoefficient(FiniteElementState&    di
   dp_dX_.SetSize(dim_);
   adjoint_strain_.SetSize(dim_);
   d_sigma_d_bulk_.SetSize(dim_);
-  F_.SetSize(dim_);
 }
 
 double BulkSensitivityCoefficient::Eval(mfem::ElementTransformation& T, const mfem::IntegrationPoint& ip)
@@ -78,10 +69,6 @@ double BulkSensitivityCoefficient::Eval(mfem::ElementTransformation& T, const mf
 
   // Compute the displacement and deformation gradient
   displacement_.gridFunc().GetVectorGradient(T, du_dX_);
-
-  solid_util::calcDeformationGradient(du_dX_, F_);
-
-  double det_J = F_.Det();
 
   // Compute the adjoint gradient and strain
   adjoint_displacement_.gridFunc().GetVectorGradient(T, dp_dX_);
@@ -92,15 +79,12 @@ double BulkSensitivityCoefficient::Eval(mfem::ElementTransformation& T, const mf
   // gradient
   material_.EvalBulkSensitivity(du_dX_, d_sigma_d_bulk_);
 
-  // Scale the derivative matrix by the geometric deformation weight
-  d_sigma_d_bulk_ *= det_J;
-
   double scalar_sum = 0.0;
 
   // Compute the inner product of the stress sensitivity and the adjoint strain
   for (int i = 0; i < dim_; ++i) {
     for (int j = 0; j < dim_; ++j) {
-      scalar_sum += d_sigma_d_bulk_(i, j) * adjoint_strain_(i, j);
+      scalar_sum -= d_sigma_d_bulk_(i, j) * adjoint_strain_(i, j);
     }
   }
 
