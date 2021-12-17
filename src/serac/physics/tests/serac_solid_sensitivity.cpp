@@ -10,7 +10,7 @@
 TEST(SeracFEState, finiteDiff)
 {
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "does_not_matter");
+  serac::StateManager::initialize(datastore, "solid_sensitivity");
 
   // Build a mesh
   ::mfem::Mesh cuboid = ::mfem::Mesh::MakeCartesian2D(3, 3, ::mfem::Element::Type::QUADRILATERAL, true, 0.1, 0.1);
@@ -97,7 +97,7 @@ TEST(SeracFEState, finiteDiff)
   // Perform finite difference on each bulk modulus value
   // to check if computed qoi sensitivity is consistent
   // with finite difference on the displacement
-  double eps = 1.0E-6;
+  double eps = 1.0E-7;
   for (int ix = 0; ix < bulkModulus.Size(); ++ix) {
     // Perturb bulk sensitivity
     bulkModulus[ix] = bulkModulusValue + eps;
@@ -122,9 +122,9 @@ TEST(SeracFEState, finiteDiff)
     double dqoi_dbulk = adjointLoad(du_dbulk);
 
     // See if these are similar
-    std::cout << "dqoi_dbulk " << dqoi_dbulk << std::endl;
-    std::cout << "bulkModulusSensitivity " << bulkModulusSensitivity.localVec()(ix) << std::endl;
-    EXPECT_NEAR(dqoi_dbulk, bulkModulusSensitivity.localVec()(ix), 1.0e-4);
+    SLIC_INFO(axom::fmt::format("dqoi_dbulk: {}", dqoi_dbulk));
+    SLIC_INFO(axom::fmt::format("bulkModulusSensitivity: {}", bulkModulusSensitivity.localVec()(ix)));
+    EXPECT_NEAR((bulkModulusSensitivity.localVec()(ix) - dqoi_dbulk) / dqoi_dbulk, 0.0, 1.0e-3);
   }
 
   bulkModulus = bulkModulusValue;
@@ -153,17 +153,28 @@ TEST(SeracFEState, finiteDiff)
     double dqoi_dshear = adjointLoad(du_dbulk);
 
     // See if these are similar
-    std::cout << "dqoi_dshear " << dqoi_dshear << std::endl;
-    std::cout << "shearModulusSensitivity " << shearModulusSensitivity.localVec()(ix) << std::endl;
-    EXPECT_NEAR(dqoi_dshear, shearModulusSensitivity.localVec()(ix), 1.0e-4);
+    SLIC_INFO(axom::fmt::format("dqoi_dshear: {}", dqoi_dshear));
+    SLIC_INFO(axom::fmt::format("shearModulusSensitivity: {}", shearModulusSensitivity.localVec()(ix)));
+    EXPECT_NEAR((shearModulusSensitivity.localVec()(ix) - dqoi_dshear) / dqoi_dshear, 0.0, 1.0e-3);
   }
 }
 
-int main(int argc, char** argv)
+//------------------------------------------------------------------------------
+#include "axom/slic/core/SimpleLogger.hpp"
+
+int main(int argc, char* argv[])
 {
-  MPI_Init(&argc, &argv);
+  int result = 0;
+
   ::testing::InitGoogleTest(&argc, argv);
-  const auto result = RUN_ALL_TESTS();
+
+  MPI_Init(&argc, &argv);
+
+  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when exiting main scope
+
+  result = RUN_ALL_TESTS();
+
   MPI_Finalize();
+
   return result;
 }
