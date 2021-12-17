@@ -95,12 +95,6 @@ private:
   mutable mfem::DenseMatrix adjoint_strain_;
 
   /**
-   * @brief The deformation gradient (dx/dX)
-   *
-   */
-  mutable mfem::DenseMatrix F_;
-
-  /**
    * @brief Volumetric dimension of the problem
    *
    */
@@ -180,12 +174,6 @@ private:
    *
    */
   mfem::DenseMatrix adjoint_strain_;
-
-  /**
-   * @brief The deformation gradient (dx/dX)
-   *
-   */
-  mfem::DenseMatrix F_;
 
   /**
    * @brief Volumetric dimension of the problem

@@ -14,6 +14,14 @@ blt_add_library(
     DEPENDS_ON  serac_physics serac_state gtest
     )
 
+set(serial_solver_tests
+    serac_solid_sensitivity.cpp
+    )
+
+serac_add_tests( SOURCES ${serial_solver_tests}
+    DEPENDS_ON ${test_dependencies}
+    NUM_MPI_TASKS 1)
+
 set(solver_tests
     serac_solid.cpp
     serac_solid_reuse_mesh.cpp

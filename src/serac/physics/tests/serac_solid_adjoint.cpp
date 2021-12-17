@@ -111,7 +111,7 @@ TEST(solid_solver, adjoint)
 
   SLIC_INFO_ROOT(axom::fmt::format("Shear sensitivity vector norm: {}", shear_norm));
 
-  EXPECT_NEAR(shear_norm, 0.0002113560243154, 1.0e-8);
+  EXPECT_NEAR(shear_norm, 0.005673835517459125, 1.0e-8);
 
   auto& bulk_sensitivity = solid_solver.bulkModulusSensitivity(&l2_fe_space);
 
@@ -119,7 +119,7 @@ TEST(solid_solver, adjoint)
 
   SLIC_INFO_ROOT(axom::fmt::format("Bulk sensitivity vector norm: {}", bulk_norm));
 
-  EXPECT_NEAR(bulk_norm, 6.026196496111377e-06, 3.0e-9);
+  EXPECT_NEAR(bulk_norm, 0.00010973046519995416, 3.0e-9);
 
   // Do a forward solve again to make sure the adjoint solve didn't break the solver
   solid_solver.setDisplacement(*deform);

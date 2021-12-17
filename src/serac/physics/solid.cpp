@@ -434,6 +434,9 @@ FiniteElementDual& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace* s
 {
   checkSensitivityMode();
 
+  // Set the mesh nodes to the reference configuration
+  mesh_.NewNodes(*reference_nodes_);
+
   if (!shear_sensitivity_coef_) {
     LinearElasticMaterial* linear_mat = dynamic_cast<LinearElasticMaterial*>(material_.get());
 
@@ -449,7 +452,7 @@ FiniteElementDual& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace* s
     shear_sensitivity_      = std::make_unique<FiniteElementDual>(mesh_, *shear_space);
     shear_sensitivity_form_ = shear_sensitivity_->createOnSpace<mfem::ParLinearForm>();
 
-    shear_sensitivity_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*shear_sensitivity_coef_));
+    shear_sensitivity_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*shear_sensitivity_coef_, 2, 2));
   }
 
   // Assemble the linear form at the current state and adjoint values
@@ -462,12 +465,18 @@ FiniteElementDual& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace* s
   // Distribute the shared dofs in the dual state
   shear_sensitivity_->distributeSharedDofs();
 
+  // Set the mesh nodes back to the reference configuration
+  mesh_.NewNodes(*deformed_nodes_);
+
   return *shear_sensitivity_;
 }
 
 FiniteElementDual& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace* bulk_space)
 {
   checkSensitivityMode();
+
+  // Set the mesh nodes to the reference configuration
+  mesh_.NewNodes(*reference_nodes_);
 
   if (!bulk_sensitivity_coef_) {
     LinearElasticMaterial* linear_mat = dynamic_cast<LinearElasticMaterial*>(material_.get());
@@ -483,7 +492,7 @@ FiniteElementDual& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace* bu
     bulk_sensitivity_      = std::make_unique<FiniteElementDual>(mesh_, *bulk_space);
     bulk_sensitivity_form_ = bulk_sensitivity_->createOnSpace<mfem::ParLinearForm>();
 
-    bulk_sensitivity_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*bulk_sensitivity_coef_));
+    bulk_sensitivity_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*bulk_sensitivity_coef_, 2, 2));
   }
 
   // Assemble the linear form at the current state and adjoint values
@@ -495,6 +504,9 @@ FiniteElementDual& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace* bu
 
   // Distribute the shared dofs in the dual state
   bulk_sensitivity_->distributeSharedDofs();
+
+  // Set the mesh nodes back to the reference configuration
+  mesh_.NewNodes(*deformed_nodes_);
 
   return *bulk_sensitivity_;
 }
