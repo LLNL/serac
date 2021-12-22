@@ -133,11 +133,6 @@ public:
   static mfem::ParMesh& mesh(const std::string& mesh_tag = default_mesh_name_);
 
   /**
-   * @brief Returns the Sidre DataCollection name
-   */
-  static std::string collectionName() { return collection_name_; }
-
-  /**
    * @brief Returns the datacollection ID for a given mesh
    * @param[in] pmesh Pointer to a mesh (non-owning)
    * @return The collection ID corresponding to the DataCollection that owns the mesh

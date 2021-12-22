@@ -22,8 +22,7 @@ QuadratureDataView<void> dummy_qdata_view;
 
 // Initialize StateManager's static members - these will be fully initialized in StateManager::initialize
 std::unordered_map<std::string, axom::sidre::MFEMSidreDataCollection> StateManager::datacolls_;
-bool                                                                  StateManager::is_restart_      = false;
-std::string                                                           StateManager::collection_name_ = "";
+bool                                                                  StateManager::is_restart_ = false;
 std::vector<std::unique_ptr<SyncableData>>                            StateManager::syncable_data_;
 axom::sidre::DataStore*                                               StateManager::ds_                = nullptr;
 std::string                                                           StateManager::output_dir_        = "";
