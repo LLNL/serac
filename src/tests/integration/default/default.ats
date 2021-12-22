@@ -1,7 +1,16 @@
-test(executable=serac_path, 
-     clas="-i {0}/default.lua".format(serac_input_files_dir),
-     label='default',
-     np=1,
-     sandbox=False)
+##############################################################################
+# Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+# other Serac Project Developers. See the top-level COPYRIGHT file for details.
+#
+# SPDX-License-Identifier: (BSD-3-Clause)
+##############################################################################
 
-# TODO: Add our own check here
+tolerance_test(name="default_serial",
+     input_file="{0}/default.lua".format(serac_input_files_dir),
+     np=1,
+     tolerance=0.00001)
+
+tolerance_test(name="default_parallel",
+     input_file="{0}/default.lua".format(serac_input_files_dir),
+     np=2,
+     tolerance=0.00001)
