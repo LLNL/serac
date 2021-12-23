@@ -31,7 +31,8 @@ namespace serac {
 // TODO: better name
 struct dual_vector {
   const mfem::Vector& ref;
-                      operator const mfem::Vector &() const { return ref; }
+
+  operator const mfem::Vector &() const { return ref; }
 };
 
 // this function is intended to only be used in combination with
@@ -121,7 +122,7 @@ class Functional<test(trials...), exec> {
         (std::is_same_v<T, dual_vector> + ...) == 1,  // if the there is a dual number in the pack
         serac::tuple<mfem::Vector&, Gradient&>,       // then we return the value and the derivative
         mfem::Vector&                                 // otherwise, we just return the value
-        >::type;
+    >::type;
   };
 
 public:
@@ -685,7 +686,7 @@ private:
   std::vector<DomainIntegral<test(trials...), exec>> domain_integrals_;
 
   /**
-   * @brief The set of boundary integral (spatial_dim > geometric_dim)
+   * @brief The set of boundary integral (spatial_dim == geometric_dim + 1)
    */
   std::vector<BoundaryIntegral<test(trials...), exec>> bdr_integrals_;
 

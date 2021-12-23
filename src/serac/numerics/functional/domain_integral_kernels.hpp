@@ -110,41 +110,6 @@ void evaluation_kernel(T u, mfem::Vector& R, CPUView<derivatives_type, 2> qf_der
   }
 }
 
-/**
- * @brief The base kernel template used to create different finite element calculation routines
- *
- * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
- * @tparam test The type of the test function space
- * @tparam trial The type of the trial function space
- * @tparam Q Quadrature parameter describing how many points per dimension
- * @tparam derivatives_type Type representing the derivative of the q-function (see below) w.r.t. its input arguments
- * @tparam lambda The actual quadrature-function (either lambda function or functor object) to
- * be evaluated at each quadrature point.
- * @see https://libceed.readthedocs.io/en/latest/libCEEDapi/#theoretical-framework for additional
- * information on the idea behind a quadrature function and its inputs/outputs
- * @tparam qpt_data_type The type of the data to store for each quadrature point
- *
- * @param[in] U The full set of per-element DOF values (primary input)
- * @param[inout] R The full set of per-element residuals (primary output)
- * @param[out] derivatives_ptr The address at which derivatives of @a lambda with
- * respect to its arguments will be stored
- * @param[in] J_ The Jacobians of the element transformations at all quadrature points
- * @param[in] X_ The actual (not reference) coordinates of all quadrature points
- * @see mfem::GeometricFactors
- * @param[in] num_elements The number of elements in the mesh
- * @param[in] qf The actual quadrature function, see @p lambda
- * @param[inout] data The data for each quadrature point
- */
-#if 0
-template <int which, int Q, Geometry g, typename test, typename ... trials, typename T, typename derivatives_type, typename lambda,
-          typename qpt_data_type = void>
-void evaluation_kernel_with_AD(T u, mfem::Vector& R, CPUView<derivatives_type, 2> qf_derivatives,
-                       const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda&& qf,
-                       QuadratureData<qpt_data_type>& data = dummy_qdata)
-{
-}
-#endif
-
 template <int i>
 struct DerivativeWRT {
 };
