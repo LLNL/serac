@@ -76,7 +76,6 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("mpi")
     depends_on("cmake@3.8:")
 
-    depends_on("ascent@0.7.1serac~vtkh~fortran~shared~openmp")
     depends_on("lua")
 
     # Devtool dependencies these need to match serac_devtools/package.py
@@ -307,7 +306,7 @@ class Serac(CachedCMakePackage, CudaPackage):
 
         # required tpls
         # Note: lua is included in the case that axom is built via submodule
-        for dep in ('ascent', 'axom', 'conduit', 'lua', 'mfem', 'hdf5',
+        for dep in ('axom', 'conduit', 'lua', 'mfem', 'hdf5',
                     'hypre', 'metis', 'parmetis'):
             dep_dir = get_spec_path(spec, dep, path_replacements)
             entries.append(cmake_cache_path('%s_DIR' % dep.upper(),

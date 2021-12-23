@@ -28,8 +28,6 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
   bool create_input_file_docs{false};
   app.add_flag("-d, --create-input-file-docs", create_input_file_docs,
                "Writes Sphinx documentation for input file, then exits");
-  bool output_fields{false};
-  app.add_flag("--output-fields", output_fields, "Writes field data to file system");
   std::string output_directory;
   app.add_option("-o, --output-directory", output_directory, "Directory to put outputted files");
 
@@ -57,9 +55,6 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
   }
   if (create_input_file_docs) {
     cli_opts.insert({"create-input-file-docs", {}});
-  }
-  if (output_fields) {
-    cli_opts.insert({"output-fields", {}});
   }
   if (output_directory == "") {
     // if given by user use that otherwise use input file's basename minus extension
@@ -91,7 +86,6 @@ void printGiven(std::unordered_map<std::string, std::string>& cli_opts)
     {"create-input-file-docs", "Create Input File Docs"},
     {"input-file", "Input File"},
     {"output-directory", "Output Directory"},
-    {"output-fields", "Output Fields"},
     {"restart-cycle", "Restart Cycle"}};
   // clang-format on
 

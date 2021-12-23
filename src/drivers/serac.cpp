@@ -19,7 +19,7 @@
 
 #include "axom/core.hpp"
 #include "mfem.hpp"
-#include "serac/physics/coefficients/loading_functions.hpp"
+
 #include "serac/infrastructure/cli.hpp"
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/input.hpp"
@@ -102,7 +102,6 @@ int main(int argc, char* argv[])
   // * Inlet docs + input file value file
   // * StateManager state files
   // * Summary file
-  // * Field data files
   std::string output_directory = "";
   search                       = cli_opts.find("output-directory");
   if (search != cli_opts.end()) {
@@ -118,8 +117,6 @@ int main(int argc, char* argv[])
 
   // Check for the doc creation command line argument
   bool create_input_file_docs = cli_opts.find("create-input-file-docs") != cli_opts.end();
-  // Check for the output fields command line argument
-  bool output_fields = cli_opts.find("output-fields") != cli_opts.end();
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -232,10 +229,8 @@ int main(int argc, char* argv[])
     last_step = (t >= t_final - 1e-8 * dt);
   }
 
+  // Output summary file (basic run info and curve data)
   serac::output::outputSummary(datastore, serac::StateManager::collectionName(), output_directory);
-  if (output_fields) {
-    serac::output::outputFields(datastore, serac::StateManager::collectionName(), output_directory, t);
-  }
 
   serac::exitGracefully();
 }

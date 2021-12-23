@@ -25,7 +25,6 @@
 
 
 // Compiler defines for TPLs
-#cmakedefine SERAC_USE_ASCENT
 #cmakedefine SERAC_USE_AXOM
 #cmakedefine SERAC_USE_CONDUIT
 #cmakedefine SERAC_USE_FMT
