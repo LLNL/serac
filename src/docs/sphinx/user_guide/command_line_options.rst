@@ -37,7 +37,3 @@ Below is the documentation for Serac's command line options:
      - -o
      - Path
      - Directory to put outputted files
-   * - --output-fields
-     - 
-     - N/A
-     - Writes field data to file system

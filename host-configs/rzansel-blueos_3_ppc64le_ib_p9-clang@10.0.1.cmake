@@ -81,8 +81,6 @@ set(BLT_CMAKE_IMPLICIT_LINK_DIRECTORIES_EXCLUDE "/usr/tce/packages/gcc/gcc-4.9.3
 
 set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2021_11_16_06_59_41/clang-10.0.1" CACHE PATH "")
 
-set(ASCENT_DIR "${TPL_ROOT}/ascent-0.7.1serac" CACHE PATH "")
-
 set(AXOM_DIR "${TPL_ROOT}/axom-0.6.0serac" CACHE PATH "")
 
 set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.7.2serac" CACHE PATH "")
