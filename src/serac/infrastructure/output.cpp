@@ -30,8 +30,8 @@ std::string file_format_string(const FileFormat file_format)
 }
 }  // namespace detail
 
-void outputSummary(const axom::sidre::DataStore& datastore, const std::string& data_collection_name,
-                   const std::string& output_directory, const FileFormat file_format)
+void outputSummary(const axom::sidre::DataStore& datastore, const std::string& output_directory,
+                   const FileFormat file_format)
 {
   auto [_, rank] = getMPIInfo();
   if (rank != 0) {
@@ -40,7 +40,7 @@ void outputSummary(const axom::sidre::DataStore& datastore, const std::string& d
 
   std::string file_format_string = detail::file_format_string(file_format);
 
-  const std::string file_name = axom::fmt::format("{0}_summary.{1}", data_collection_name, file_format_string);
+  const std::string file_name = axom::fmt::format("summary.{0}", file_format_string);
   const std::string path      = axom::utilities::filesystem::joinPath(output_directory, file_name);
   datastore.getRoot()->getGroup("serac_summary")->save(path, file_format_string);
 }

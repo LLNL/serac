@@ -230,7 +230,7 @@ int main(int argc, char* argv[])
   }
 
   // Output summary file (basic run info and curve data)
-  serac::output::outputSummary(datastore, serac::StateManager::collectionName(), output_directory);
+  serac::output::outputSummary(datastore, output_directory);
 
   serac::exitGracefully();
 }
