@@ -236,17 +236,17 @@ template <int n, typename... T, int... i>
 constexpr auto make_dual_helper(const serac::tuple<T...>& args, std::integer_sequence<int, i...>)
 {
   // Sam: it took me longer than I'd like to admit to find this issue, so here's an explanation
-  // 
+  //
   // note: we use serac::make_tuple(...) instead of serac::tuple{...} here because if
   // the first argument passed in is of type `serac::tuple < serac::tuple < T ... > >`
   // then doing something like
-  // 
+  //
   // serac::tuple{serac::get<i>(args)...};
-  // 
-  // will be expand to something like 
-  // 
+  //
+  // will be expand to something like
+  //
   // serac::tuple{serac::tuple< T ... >{}};
-  // 
+  //
   // which invokes the copy ctor, returning a `serac::tuple< T ... >`
   // instead of `serac::tuple< serac::tuple < T ... > >`
   //

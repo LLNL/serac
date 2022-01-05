@@ -173,8 +173,9 @@ template <typename... T>
 tuple(T...) -> tuple<T...>;
 
 template <typename... T>
-tuple < T ... > make_tuple(const T & ... args) {
-  return tuple< T ... >{args ... };
+tuple<T...> make_tuple(const T&... args)
+{
+  return tuple<T...>{args...};
 }
 
 template <class... Types>

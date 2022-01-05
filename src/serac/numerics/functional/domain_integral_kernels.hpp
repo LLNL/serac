@@ -37,15 +37,15 @@ struct QFunctionArgument<Hcurl<p>, Dimension<3> > {
   using type = tuple<tensor<double, 3>, tensor<double, 3> >;
 };
 
-//template <int dim, typename... trials, typename lambda>
-//auto get_derivative_type(lambda qf)
+// template <int dim, typename... trials, typename lambda>
+// auto get_derivative_type(lambda qf)
 //{
 //  using qf_arguments = serac::tuple<typename QFunctionArgument<trials, Dimension<dim> >::type...>;
 //  return get_gradient(detail::apply_qf(qf, tensor<double, dim>{}, make_dual(qf_arguments{}), nullptr));
 //};
 
 template <int i, int dim, typename... trials, typename lambda, typename qpt_data_type>
-auto get_derivative_type(lambda qf, qpt_data_type && qpt_data)
+auto get_derivative_type(lambda qf, qpt_data_type&& qpt_data)
 {
   using qf_arguments = serac::tuple<typename QFunctionArgument<trials, serac::Dimension<dim> >::type...>;
   return get_gradient(detail::apply_qf(qf, tensor<double, dim>{}, make_dual_wrt<i>(qf_arguments{}), qpt_data));

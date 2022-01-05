@@ -122,7 +122,7 @@ class Functional<test(trials...), exec> {
         (std::is_same_v<T, dual_vector> + ...) == 1,  // if the there is a dual number in the pack
         serac::tuple<mfem::Vector&, Gradient&>,       // then we return the value and the derivative
         mfem::Vector&                                 // otherwise, we just return the value
-    >::type;
+        >::type;
   };
 
 public:
@@ -704,7 +704,6 @@ private:
 
   /// @brief 3D array that stores each boundary element's gradient of the residual w.r.t. trial values
   Array<double, 3, exec> bdr_element_gradients_[num_trial_spaces];
-
 };
 
 }  // namespace serac

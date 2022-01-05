@@ -310,7 +310,8 @@ SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, const T& 
 
 /// @overload
 template <typename lambda, typename coords_type, typename T, int... i>
-SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, const T& arg_tuple, std::integer_sequence<int, i...>)
+SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, const T& arg_tuple,
+                                       std::integer_sequence<int, i...>)
 {
   return qf(x_q, serac::get<i>(arg_tuple)...);
 }
@@ -324,8 +325,9 @@ SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, const T& 
 // * @param[in] dual_arg The values and derivatives at the quadrature point, as a dual
 // * @param[inout] qpt_data The state information at the quadrature point
 // */
-template <typename lambda, typename coords_type, typename ... T, typename qpt_data_type>
-SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, const serac::tuple<T...>& arg_tuple, qpt_data_type&& qpt_data)
+template <typename lambda, typename coords_type, typename... T, typename qpt_data_type>
+SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, const serac::tuple<T...>& arg_tuple,
+                                qpt_data_type&& qpt_data)
 {
   return apply_qf_helper(qf, x_q, arg_tuple, qpt_data, std::make_integer_sequence<int, int(sizeof...(T))>{});
 }
@@ -450,7 +452,7 @@ template <Geometry geom, typename... trials, typename tuple_type, int dim, int..
 SERAC_HOST_DEVICE auto PreprocessHelper(const tuple_type& u, const tensor<double, dim>& xi,
                                         const tensor<double, dim, dim>& J, std::integer_sequence<int, i...>)
 {
-  return serac::make_tuple(Preprocess< finite_element<geom, trials> >(get<i>(u), xi, J)...);
+  return serac::make_tuple(Preprocess<finite_element<geom, trials>>(get<i>(u), xi, J)...);
 }
 
 template <Geometry geom, typename... trials, typename tuple_type, int dim>
