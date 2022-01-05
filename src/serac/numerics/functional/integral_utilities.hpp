@@ -301,6 +301,20 @@ SERAC_HOST_DEVICE constexpr derivatives_type& AccessDerivatives(derivatives_type
   }
 }
 
+template <typename lambda, typename coords_type, typename T, typename qpt_data_type, int... i>
+SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, const T& arg_tuple, qpt_data_type&& qpt_data,
+                                       std::integer_sequence<int, i...>)
+{
+  return qf(x_q, serac::get<i>(arg_tuple)..., qpt_data);
+}
+
+/// @overload
+template <typename lambda, typename coords_type, typename T, int... i>
+SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, const T& arg_tuple, std::integer_sequence<int, i...>)
+{
+  return qf(x_q, serac::get<i>(arg_tuple)...);
+}
+
 ///**
 // * @brief Actually calls the q-function
 // * This is an indirection layer to provide a transparent call site usage regardless of whether
@@ -310,33 +324,17 @@ SERAC_HOST_DEVICE constexpr derivatives_type& AccessDerivatives(derivatives_type
 // * @param[in] dual_arg The values and derivatives at the quadrature point, as a dual
 // * @param[inout] qpt_data The state information at the quadrature point
 // */
-// template <typename lambda, typename coords_type, typename args_type, typename qpt_data_type>
-// SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, args_type&& dual_arg, qpt_data_type&& qpt_data)
-//{
-//  return qf(x_q, dual_arg, qpt_data);
-//}
-//
-///// @overload
-// template <typename lambda, typename coords_type, typename args_type>
-// SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, args_type&& dual_arg, std::nullptr_t)
-//{
-//  return qf(x_q, dual_arg);
-//}
-
-/// @overload
-template <typename lambda, typename coords_type, typename T, int... i>
-SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, const T& arg_tuple, std::nullptr_t,
-                                       std::integer_sequence<int, i...>)
+template <typename lambda, typename coords_type, typename ... T, typename qpt_data_type>
+SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, const serac::tuple<T...>& arg_tuple, qpt_data_type&& qpt_data)
 {
-
-  return qf(x_q, serac::get<i>(arg_tuple)...);
+  return apply_qf_helper(qf, x_q, arg_tuple, qpt_data, std::make_integer_sequence<int, int(sizeof...(T))>{});
 }
 
 /// @overload
 template <typename lambda, typename coords_type, typename... T>
 SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, const serac::tuple<T...>& arg_tuple, std::nullptr_t)
 {
-  return apply_qf_helper(qf, x_q, arg_tuple, nullptr, std::make_integer_sequence<int, int(sizeof...(T))>{});
+  return apply_qf_helper(qf, x_q, arg_tuple, std::make_integer_sequence<int, int(sizeof...(T))>{});
 }
 
 }  // namespace detail
