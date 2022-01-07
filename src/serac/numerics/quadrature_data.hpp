@@ -140,7 +140,7 @@ public:
   QuadratureData(mfem::Mesh& mesh, const int p, const bool alloc = true);
 
 // Turn off null dereference warnings for GCC
-// TODO add errors if the MFEM types return null pointers
+// TODO Fix the underlying possible nullptr dereference warning with the `MaybeOwnedPointer` type.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnull-dereference"
 
