@@ -4,14 +4,6 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause) 
 
-if (ATS_DIR)
-    add_subdirectory(integration)
-endif()
-
-#------------------------------------------------------------------------------
-# Smoke Tests
-#------------------------------------------------------------------------------
-
 #
 # Language tests
 #

@@ -9,4 +9,3 @@
 /src/docs/_build
 /*.cmake
 .vscode/
-/tests/integration/*/output/
