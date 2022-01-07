@@ -28,6 +28,9 @@ endif()
 # TPL regression and smoke tests
 #
 
+serac_add_tests( SOURCES       axom_smoketest.cpp
+                 DEPENDS_ON    axom)
+
 set(mfem_tests
     mfem_ex9p_blockilu.cpp)
 
