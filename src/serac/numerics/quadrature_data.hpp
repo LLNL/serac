@@ -139,6 +139,11 @@ public:
    */
   QuadratureData(mfem::Mesh& mesh, const int p, const bool alloc = true);
 
+// Turn off null dereference errors for GCC
+// TODO add errors if the MFEM types return null pointers
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnull-dereference"
+
   /**
    * @brief Constructs from an existing quadrature function
    * @param[in] qfunc The QuadratureFunction with existing quadrature
@@ -164,6 +169,8 @@ public:
       j++;
     }
   }
+
+#pragma GCC diagnostic pop
 
   // When a QuadratureData instance is managed by StateManager, we don't
   // ever want to copy from or move from that instance.  This is sort of
