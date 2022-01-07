@@ -10,3 +10,7 @@ add_subdirectory(drivers)
 if (ENABLE_DOCS)
     add_subdirectory(docs)
 endif()
+
+if(ENABLE_TESTS)
+    add_subdirectory(tests)
+endif()
