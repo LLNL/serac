@@ -64,6 +64,20 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     endif()
 
     #------------------------------------------------------------------------------
+    # Adiak
+    #------------------------------------------------------------------------------
+    if(ADIAK_DIR)
+        serac_assert_is_directory(VARIABLE_NAME ADIAK_DIR)
+
+        find_package(adiak REQUIRED NO_DEFAULT_PATH PATHS ${ADIAK_DIR})
+        message(STATUS "Adiak support is ON")
+        set(ADIAK_FOUND TRUE)
+    else()
+        message(STATUS "Adiak support is OFF")
+        set(ADIAK_FOUND FALSE)
+    endif()
+
+    #------------------------------------------------------------------------------
     # Caliper
     #------------------------------------------------------------------------------
     if(CALIPER_DIR)
