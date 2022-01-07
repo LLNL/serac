@@ -118,14 +118,14 @@ set(CMAKE_CXX_FLAGS ${SERAC_CMAKE_CXX_FLAGS})
 include(${PROJECT_SOURCE_DIR}/cmake/SeracConfigHeader.cmake)
 
 #------------------------------------------------------------------------------
-# Build src
+# Add subdirectories
 #------------------------------------------------------------------------------
 
 add_subdirectory(src)
 
-#------------------------------------------------------------------------------
-# Configure examples
-#------------------------------------------------------------------------------
+if(ENABLE_TESTS)
+    add_subdirectory(tests)
+endif()
 
 add_subdirectory(examples)
 
