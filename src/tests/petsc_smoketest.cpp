@@ -342,7 +342,7 @@ TEST(petsc_smoketest, petsc_ex50)
 }
 
 //------------------------------------------------------------------------------
-#include "axom/slic/core/UnitTestLogger.hpp"
+#include "axom/slic.hpp"
 using axom::slic::UnitTestLogger;
 
 int main(int argc, char* argv[])
@@ -353,7 +353,7 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  UnitTestLogger logger;  // create & initialize test logger, finalized when exiting main scope
+  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when exiting main scope
 
   result = RUN_ALL_TESTS();
 
