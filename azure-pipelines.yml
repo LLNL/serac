@@ -13,16 +13,30 @@ jobs:
 - job: Build_and_Test
   strategy:
     matrix:
-      linux_gcc9:
+      linux_gcc9_debug:
           VM_ImageName: 'ubuntu-20.04'
           Compiler_ImageName: $(GCC_9_ImageName)
           TEST_TARGET: 'linux_gcc9'
           HOST_CONFIG: 'docker-linux-ubuntu20.04-ivybridge-gcc@9.3.0.cmake'
-      linux_clang10:
+          BUILD_TYPE: 'Debug'
+      linux_gcc9_release:
+          VM_ImageName: 'ubuntu-20.04'
+          Compiler_ImageName: $(GCC_9_ImageName)
+          TEST_TARGET: 'linux_gcc9'
+          HOST_CONFIG: 'docker-linux-ubuntu20.04-ivybridge-gcc@9.3.0.cmake'
+          BUILD_TYPE: 'Release'
+      linux_clang10_debug:
           VM_ImageName: 'ubuntu-20.04'
           Compiler_ImageName: $(Clang_10_ImageName)
           TEST_TARGET: 'linux_clang10'
           HOST_CONFIG: 'docker-linux-ubuntu20.04-ivybridge-clang@10.0.0.cmake'
+          BUILD_TYPE: 'Debug'
+      linux_clang10_release:
+          VM_ImageName: 'ubuntu-20.04'
+          Compiler_ImageName: $(Clang_10_ImageName)
+          TEST_TARGET: 'linux_clang10'
+          HOST_CONFIG: 'docker-linux-ubuntu20.04-ivybridge-clang@10.0.0.cmake'
+          BUILD_TYPE: 'Release'
 
   pool:
     vmImage: $(VM_ImageName)
@@ -33,7 +47,7 @@ jobs:
     submodules: recursive
   - script:  |
       echo " -e $TEST_TARGET -e HOST_CONFIG $(Compiler_ImageName) ./scripts/llnl/build_src.py -v --host-config $HOST_CONFIG"
-      docker run --rm -v `pwd`:/home/serac/serac -e TEST_TARGET -e HOST_CONFIG $(Compiler_ImageName) ./serac/scripts/llnl/build_src.py -v --host-config $HOST_CONFIG
+      docker run --rm -v `pwd`:/home/serac/serac -e TEST_TARGET -e HOST_CONFIG $(Compiler_ImageName) ./serac/scripts/llnl/build_src.py -v --host-config $HOST_CONFIG --extra-cmake-options CMAKE_BUILD_TYPE=$BUILD_TYPE
 
     displayName: '$(TEST_TARGET) Build & Test'
   - task: PublishTestResults@2
