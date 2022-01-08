@@ -14,6 +14,10 @@ if(ENABLE_TESTS)
     add_subdirectory(tests)
 endif()
 
+if(SERAC_ENABLE_BENCHMARKS)
+    add_subdirectory(benchmarks)
+endif()
+
 set(physics_sources
     base_physics.cpp
     solid.cpp
