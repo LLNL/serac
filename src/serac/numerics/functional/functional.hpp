@@ -294,6 +294,7 @@ public:
       G_trial_[which]->Mult(input_L_[which], input_E_[which]);
 
       // compute residual contributions at the element level and sum them
+
       output_E_ = 0.0;
       for (auto& integral : domain_integrals_) {
         integral.GradientMult(input_E_[which], output_E_, which);
