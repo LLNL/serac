@@ -53,9 +53,6 @@ struct hcurl_qfunction {
 template <int p, int dim>
 void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 {
-  std::string postfix = concat("_H1<", p, ">");
-  serac::profiling::initializeCaliper();
-
   // Create standard MFEM bilinear and linear forms on H1
   auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
@@ -71,14 +68,10 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   A.AddDomainIntegrator(new mfem::DiffusionIntegrator(b_coef));
 
   // Assemble the bilinear form into a matrix
-  {
-    SERAC_PROFILE_SCOPE(concat("mfem_localAssemble", postfix));
-    A.Assemble(0);
-  }
+  A.Assemble(0);
 
   A.Finalize();
-  std::unique_ptr<mfem::HypreParMatrix> J_mfem(
-      SERAC_PROFILE_EXPR(concat("mfem_parallelAssemble", postfix), A.ParallelAssemble()));
+  std::unique_ptr<mfem::HypreParMatrix> J_mfem(A.ParallelAssemble());
 
   // Create a linear form for the load term using the standard MFEM method
   mfem::ParLinearForm       f(&fespace);
@@ -134,9 +127,9 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   EXPECT_NEAR(0.0, mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-14);
 
   // Compute the gradient using functional
-  mfem::Operator& grad2 = SERAC_PROFILE_EXPR(concat("functional_GetGradient", postfix), residual.GetGradient(U));
+  auto grad2 = serac::get<1>(residual(differentiate_wrt(U)));
 
-  auto J_func = std::unique_ptr<mfem::HypreParMatrix>(grad(residual));
+  auto J_func = std::unique_ptr<mfem::HypreParMatrix>(grad2);
 
   // Compute the gradient action using standard MFEM and functional
   mfem::Vector g1 = SERAC_PROFILE_EXPR_LOOP(concat("mfem_ApplyGradient", postfix), (*J_mfem) * U, nsamples);
@@ -238,10 +231,9 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   }
   EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-14);
 
-  mfem::Operator& grad_operator =
-      SERAC_PROFILE_EXPR(concat("functional_GetGradient", postfix), residual.GetGradient(U));
+  auto grad_operator = serac::get<1>(residual(differentiate_wrt(U)));
 
-  auto J_func = std::unique_ptr<mfem::HypreParMatrix>(grad(residual));
+  auto J_func = std::unique_ptr<mfem::HypreParMatrix>(grad_operator);
 
   mfem::Vector g1 = SERAC_PROFILE_EXPR(concat("mfem_ApplyGradient", postfix), (*J_mfem) * U);
   mfem::Vector g2 = SERAC_PROFILE_EXPR(concat("functional_ApplyGradient", postfix), grad_operator * U);
@@ -331,10 +323,9 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
   }
   EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-13);
 
-  mfem::Operator& grad_operator =
-      SERAC_PROFILE_EXPR(concat("functional_GetGradient", postfix), residual.GetGradient(U));
+  auto grad_operator = serac::get<1>(residual(differentiate_wrt(U)));
 
-  auto J_func = std::unique_ptr<mfem::HypreParMatrix>(grad(residual));
+  auto J_func = std::unique_ptr<mfem::HypreParMatrix>(grad_operator);
 
   mfem::Vector g1 = SERAC_PROFILE_EXPR(concat("mfem_ApplyGradient", postfix), (*J_mfem) * U);
   mfem::Vector g2 = SERAC_PROFILE_EXPR(concat("functional_ApplyGradient", postfix), grad_operator * U);

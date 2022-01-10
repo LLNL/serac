@@ -163,7 +163,7 @@ public:
    * @param[inout] K_e The reshaped vector as a mfem::DeviceTensor of size (test_dim * test_dof, trial_dim * trial_dof,
    * elem)
    */
-  void ComputeElementGradients(ArrayView<double, 3, ExecutionSpace::CPU> K_e, uint32_t which) const
+  void ComputeElementGradients(ArrayView<double, 3, ExecutionSpace::CPU> K_e, size_t which = 0) const
   {
     element_gradient_[which](K_e);
   }
