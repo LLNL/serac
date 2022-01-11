@@ -84,6 +84,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("llvm+clang@10.0.0", when="+devtools")
     depends_on('python', when="+devtools")
     depends_on('py-sphinx', when="+devtools")
+    depends_on('py-ats', when="+devtools")
 
     depends_on("sundials~shared+hypre+monitoring~examples-c~examples-f77~examples-install",
                when="+sundials")
