@@ -33,6 +33,18 @@ auto Preprocess(const T& u, const coord_type& xi)
   //}
 }
 
+template <Geometry geom, typename... trials, typename tuple_type, int dim, int... i>
+auto PreprocessHelper(const tuple_type& u, const tensor<double, dim>& xi, std::integer_sequence<int, i...>)
+{
+  return serac::make_tuple(Preprocess<finite_element<geom, trials>>(get<i>(u), xi)...);
+}
+
+template <Geometry geom, typename... trials, typename tuple_type, int dim>
+auto Preprocess(const tuple_type& u, const tensor<double, dim>& xi)
+{
+  return PreprocessHelper<geom, trials...>(u, xi, std::make_integer_sequence<int, int(sizeof...(trials))>{});
+}
+
 /**
  * @overload
  * @note This specialization of detail::Postprocess is called when doing integrals
@@ -72,11 +84,11 @@ struct QFunctionArgument<H1<p, c>, Dimension<dim> > {
   using type = tensor<double, c>;
 };
 
-template <int i, int dim, typename... trials, typename lambda, typename qpt_data_type>
-auto get_derivative_type(lambda qf, qpt_data_type&& qpt_data)
+template <int i, int dim, typename... trials, typename lambda>
+auto get_derivative_type(lambda qf)
 {
   using qf_arguments = serac::tuple<typename QFunctionArgument<trials, serac::Dimension<dim> >::type...>;
-  return get_gradient(detail::apply_qf(qf, tensor<double, dim>{}, make_dual_wrt<i>(qf_arguments{}), qpt_data));
+  return get_gradient(detail::apply_qf(qf, tensor<double, dim>{}, tensor<double, dim>{}, make_dual_wrt<i>(qf_arguments{})));
 };
 
 template <int i>
@@ -87,20 +99,20 @@ template <int Q, Geometry g, typename test, typename... trials>
 struct KernelConfig {
 };
 
-template <typename S, typename T, typename derivatives_type, typename lambda, typename qpt_data_type>
+template <typename S, typename T, typename derivatives_type, typename lambda>
 struct EvaluationKernel;
 
-template <int Q, Geometry geom, typename test, typename... trials, typename lambda, typename qpt_data_type>
-struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lambda, qpt_data_type> {
-  static constexpr auto exec = ExecutionSpace::CPU;
+template <int Q, Geometry geom, typename test, typename... trials, typename lambda>
+struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lambda> {
 
+  static constexpr auto exec = ExecutionSpace::CPU;
   static constexpr int num_trial_spaces = int(sizeof...(trials));
 
   using EVector_t = EVectorView<exec, finite_element<geom, trials>...>;
 
-  EvaluationKernel(KernelConfig<Q, geom, test, trials...>, const mfem::Vector& J, const mfem::Vector& X,
-                   size_t num_elements, lambda qf, QuadratureData<qpt_data_type>& data)
-      : J_(J), X_(X), num_elements_(num_elements), qf_(qf), data_(data)
+  EvaluationKernel(KernelConfig<Q, geom, test, trials...>, const mfem::Vector& J, const mfem::Vector& X, const mfem::Vector& N,
+                   size_t num_elements, lambda qf)
+      : J_(J), X_(X), N_(N), num_elements_(num_elements), qf_(qf)
   {
   }
 
@@ -161,32 +173,29 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
 
       // once we've finished the element integration loop, write our element residuals
       // out to memory, to be later assembled into global residuals by mfem
-      detail::Add(r, r_elem, e);
+      detail::Add(r, r_elem, int(e));
     }
   }
 
   const mfem::Vector&            J_;
-  const mfem::Vector&            N_;
   const mfem::Vector&            X_;
+  const mfem::Vector&            N_;
   size_t                         num_elements_;
   lambda                         qf_;
-  QuadratureData<qpt_data_type>& data_;
 };
 
-template <int I, int Q, Geometry geom, typename test, typename... trials, typename derivatives_type, typename lambda,
-          typename qpt_data_type>
-struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>, derivatives_type, lambda,
-                        qpt_data_type> {
-  static constexpr auto exec = ExecutionSpace::CPU;
+template <int I, int Q, Geometry geom, typename test, typename... trials, typename derivatives_type, typename lambda>
+struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>, derivatives_type, lambda> {
 
+  static constexpr auto exec = ExecutionSpace::CPU;
   static constexpr int num_trial_spaces = int(sizeof...(trials));
 
   using EVector_t = EVectorView<exec, finite_element<geom, trials>...>;
 
   EvaluationKernel(DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>,
-                   CPUView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J, const mfem::Vector& X,
-                   size_t num_elements, lambda qf, QuadratureData<qpt_data_type>& data)
-      : qf_derivatives_(qf_derivatives), J_(J), X_(X), num_elements_(num_elements), qf_(qf), data_(data)
+                   CPUView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J, const mfem::Vector& X, const mfem::Vector& N,
+                   size_t num_elements, lambda qf)
+      : qf_derivatives_(qf_derivatives), J_(J), X_(X), N_(N), num_elements_(num_elements), qf_(qf)
   {
   }
 
@@ -207,11 +216,13 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
     // mfem provides this information in 1D arrays, so we reshape it
     // into strided multidimensional arrays before using
     auto X = mfem::Reshape(X_.Read(), rule.size(), dim, num_elements_);
+    auto N = mfem::Reshape(N_.Read(), rule.size(), dim, num_elements_);
     auto J = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements_);
     auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, int(num_elements_));  // TODO: integer conversions
 
     // for each element in the domain
     for (uint32_t e = 0; e < num_elements_; e++) {
+
       // get the DOF values for this particular element
       auto u_elem = u[e];
 
@@ -220,24 +231,26 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
 
       // for each quadrature point in the element
       for (int q = 0; q < static_cast<int>(rule.size()); q++) {
+        // get the position of this quadrature point in the parent and physical space,
+        // and calculate the measure of that point in physical space.
         auto   xi  = rule.points[q];
         auto   dxi = rule.weights[q];
-        auto   x_q = make_tensor<dim>([&](int i) { return X(q, i, e); });  // Physical coords of qpt
-        auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
-        double dx  = det(J_q) * dxi;
+        auto   x_q = make_tensor<dim + 1>([&](int i) { return X(q, i, e); });  // Physical coords of qpt
+        auto   n_q = make_tensor<dim + 1>([&](int i) { return N(q, i, e); });  // Physical coords of unit normal
+        double dx  = J(q, e) * dxi;
 
         // evaluate the value/derivatives needed for the q-function at this quadrature point
-        auto arg = Preprocess<geom, trials...>(u_elem, xi, J_q);
+        auto arg = Preprocess<geom, trials...>(u_elem, xi);
 
         // evaluate the user-specified constitutive model
         //
         // note: make_dual(arg) promotes those arguments to dual number types
         // so that qf_output will contain values and derivatives
-        auto qf_output = detail::apply_qf(qf_, x_q, make_dual_wrt<I>(arg), data_(int(e), q));
+        auto qf_output = qf(x_q, n_q, make_dual(arg));
 
         // integrate qf_output against test space shape functions / gradients
         // to get element residual contributions
-        r_elem += Postprocess<test_element>(get_value(qf_output), xi, J_q) * dx;
+        r_elem += Postprocess<test_element>(get_value(qf_output), xi) * dx;
 
         // here, we store the derivative of the q-function w.r.t. its input arguments
         //
@@ -248,28 +261,26 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
       // once we've finished the element integration loop, write our element residuals
       // out to memory, to be later assembled into global residuals by mfem
       detail::Add(r, r_elem, int(e));
+
     }
   }
 
   ArrayView<derivatives_type, 2, exec> qf_derivatives_;
   const mfem::Vector&                  J_;
   const mfem::Vector&                  X_;
+  const mfem::Vector&                  N_;
   size_t                               num_elements_;
   lambda                               qf_;
-  QuadratureData<qpt_data_type>&       data_;
 };
 
-template <int Q, Geometry geom, typename test, typename... trials, typename lambda, typename qpt_data_type>
-EvaluationKernel(KernelConfig<Q, geom, test, trials...>, const mfem::Vector&, const mfem::Vector&, int, lambda,
-                 QuadratureData<qpt_data_type>&)
-    -> EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lambda, qpt_data_type>;
+template <int Q, Geometry geom, typename test, typename... trials, typename lambda>
+EvaluationKernel(KernelConfig<Q, geom, test, trials...>, const mfem::Vector&, const mfem::Vector&, const mfem::Vector&, int, lambda)
+    -> EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lambda>;
 
-template <int i, int Q, Geometry geom, typename test, typename... trials, typename derivatives_type, typename lambda,
-          typename qpt_data_type>
+template <int i, int Q, Geometry geom, typename test, typename... trials, typename derivatives_type, typename lambda>
 EvaluationKernel(DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, CPUView<derivatives_type, 2>,
-                 const mfem::Vector&, const mfem::Vector&, int, lambda, QuadratureData<qpt_data_type>&)
-    -> EvaluationKernel<DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, derivatives_type, lambda,
-                        qpt_data_type>;
+                 const mfem::Vector&, const mfem::Vector&, const mfem::Vector&, int, lambda)
+    -> EvaluationKernel<DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, derivatives_type, lambda>;
 
 
 

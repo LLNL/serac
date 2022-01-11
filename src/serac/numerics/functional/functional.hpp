@@ -311,7 +311,7 @@ public:
 
       output_E_boundary_ = 0.0;
       for (auto& integral : bdr_integrals_) {
-        integral.GradientMult(input_E_boundary_, output_E_boundary_);
+        integral.GradientMult(input_E_boundary_[which], output_E_boundary_, which);
       }
 
       output_L_boundary_ = 0.0;

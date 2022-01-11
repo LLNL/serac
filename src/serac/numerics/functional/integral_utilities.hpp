@@ -316,6 +316,14 @@ SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, const T& 
   return qf(x_q, serac::get<i>(arg_tuple)...);
 }
 
+/// @overload
+template <typename lambda, typename coords_type, typename T, int... i>
+SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, coords_type && n_q, const T& arg_tuple,
+                                       std::integer_sequence<int, i...>)
+{
+  return qf(x_q, n_q, serac::get<i>(arg_tuple)...);
+}
+
 ///**
 // * @brief Actually calls the q-function
 // * This is an indirection layer to provide a transparent call site usage regardless of whether
@@ -337,6 +345,14 @@ template <typename lambda, typename coords_type, typename... T>
 SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, const serac::tuple<T...>& arg_tuple, std::nullptr_t)
 {
   return apply_qf_helper(qf, x_q, arg_tuple, std::make_integer_sequence<int, int(sizeof...(T))>{});
+}
+
+
+// for boundary integrals: includes normal vector and does not support qpt_data
+template <typename lambda, typename coords_type, typename... T>
+SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, coords_type&& n_q, const serac::tuple<T...>& arg_tuple)
+{
+  return apply_qf_helper(qf, x_q, n_q, arg_tuple, std::make_integer_sequence<int, int(sizeof...(T))>{});
 }
 
 }  // namespace detail
