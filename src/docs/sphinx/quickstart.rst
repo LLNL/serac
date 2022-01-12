@@ -241,7 +241,7 @@ install cmake, MPICH, openblas, OpenGL, and the various developer tools using th
 
    $ sudo apt-get update
    $ sudo apt-get upgrade
-   $ sudo apt-get install cmake libopenblas-dev libopenblas-base mpich mesa-common-dev libglu1-mesa-dev freeglut3-dev cppcheck doxygen libreadline-dev python3-sphinx python3-pip clang-format-10
+   $ sudo apt-get install cmake libopenblas-dev libopenblas-base mpich mesa-common-dev libglu1-mesa-dev freeglut3-dev cppcheck doxygen libreadline-dev python3-sphinx python3-pip clang-format-10 m4
    $ sudo ln -s /usr/lib/x86_64-linux-gnu/* /usr/lib
 
 **Ubuntu 18.04**
