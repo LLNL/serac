@@ -363,6 +363,10 @@ class Serac(CachedCMakePackage, CudaPackage):
             clang_tidy_path = spec['llvm'].prefix.bin.join('clang-tidy')
             entries.append(cmake_cache_path("CLANGTIDY_EXECUTABLE",
                                             clang_tidy_path))
+
+            ats_dir = spec['py-ats'].prefix
+            entries.append(cmake_cache_path("ATS_DIR",
+                                             ats_dir))
         else:
             entries.append("# Code checks disabled due to disabled devtools\n")
             entries.append(cmake_cache_option("SERAC_ENABLE_CODE_CHECKS", False))
