@@ -260,40 +260,6 @@ constexpr auto make_dual_wrt(const serac::tuple<T...>& args)
   return make_dual_helper<n>(args, std::make_integer_sequence<int, int(sizeof...(T))>{});
 }
 
-#if 0
-template <typename T00, typename T01>
-constexpr auto make_dual(const tuple<T00, T01>& args)
-{
-  return tuple{make_dual_helper<0, 2>(get<0>(args)), make_dual_helper<1, 2>(get<1>(args))};
-}
-
-template <typename T00, typename T01>
-constexpr auto make_dual(const tuple<tuple<T00, T01> >& args)
-{
-  return tuple{make_dual_helper<0, 2>(get<0>(get<0>(args))), make_dual_helper<1, 2>(get<1>(get<0>(args)))};
-}
-
-template <typename T00, typename T01, typename T10, typename T11>
-constexpr auto make_dual(const tuple<tuple<T00, T01>, serac::tuple<T10, T11> >& args)
-{
-  return serac::tuple{serac::tuple{make_dual_helper<0, 4>(serac::get<0>(get<0>(args))),
-                                   make_dual_helper<1, 4>(serac::get<1>(get<0>(args)))},
-                      serac::tuple{make_dual_helper<2, 4>(serac::get<0>(get<1>(args))),
-                                   make_dual_helper<3, 4>(serac::get<1>(get<1>(args)))}};
-}
-
-template <typename T00, typename T01, typename T10, typename T11, typename T20, typename T21>
-constexpr auto make_dual(const tuple<tuple<T00, T01>, tuple<T10, T11>, tuple<T20, T21> >& args)
-{
-  return serac::tuple{serac::tuple{make_dual_helper<0, 6>(serac::get<0>(get<0>(args))),
-                                   make_dual_helper<1, 6>(serac::get<1>(get<0>(args)))},
-                      serac::tuple{make_dual_helper<2, 6>(serac::get<0>(get<1>(args))),
-                                   make_dual_helper<3, 6>(serac::get<1>(get<1>(args)))},
-                      serac::tuple{make_dual_helper<4, 6>(serac::get<0>(get<2>(args))),
-                                   make_dual_helper<5, 6>(serac::get<1>(get<2>(args)))}};
-}
-#endif
-
 /**
  * @brief Retrieves the value components of a set of (possibly dual) numbers
  * @param[in] tuple_of_values The tuple of numbers to retrieve values from

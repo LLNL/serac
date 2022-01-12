@@ -127,7 +127,7 @@ struct tensor<T, 1> {
   SERAC_HOST_DEVICE constexpr auto& operator[](int) { return value; };
   SERAC_HOST_DEVICE constexpr auto  operator[](int) const { return value; };
 
-  SERAC_HOST_DEVICE constexpr operator T() { return value; }
+  SERAC_HOST_DEVICE constexpr operator T() const { return value; }
   SERAC_HOST_DEVICE constexpr tensor() : value() {}
   SERAC_HOST_DEVICE constexpr tensor(T v) : value(v) {}
   T value;
@@ -154,7 +154,7 @@ struct tensor<T, 1, 1> {
   SERAC_HOST_DEVICE constexpr auto& operator[](int) { return value; };
   SERAC_HOST_DEVICE constexpr auto  operator[](int) const { return value; };
 
-  operator tensor<T, 1>() { return value; }
+  operator tensor<T, 1>() const { return value; }
   tensor() : value() {}
   tensor(T v) : value(v) {}
   tensor(tensor<T, 1> v) : value(v) {}
@@ -1735,6 +1735,21 @@ SERAC_HOST_DEVICE auto chain_rule(const tensor<double, m, n, p...>& df_dx, const
     }
   }
   return total;
+}
+
+template < int ... new_shape, typename T, int ... old_shape >
+constexpr auto reshape(const tensor < T, old_shape ... > A) {
+  static_assert((new_shape * ... ) == (old_shape * ...), "tensors can only be reshaped to dimension that have the same number of total entries");
+
+  int n = (old_shape * ...);
+  tensor < T, new_shape ... > A_reshaped;
+
+  const T * old_ptr = reinterpret_cast<const T *>(&A);
+  T * new_ptr = reinterpret_cast<T *>(&A_reshaped);
+  for (int i = 0; i < n; i++) {
+    new_ptr[i] = old_ptr[i]; 
+  }
+  return A_reshaped;
 }
 
 /**

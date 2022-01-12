@@ -63,7 +63,7 @@ public:
 
     constexpr auto geometry                      = supported_geometries[dim];
     constexpr auto Q                             = std::max({test::order, trials::order...}) + 1;
-    constexpr auto quadrature_points_per_element = (dim == 2) ? Q * Q : Q * Q * Q;
+    constexpr auto quadrature_points_per_element = detail::pow(Q, dim);
 
     // this is where we actually specialize the finite element kernel templates with
     // our specific requirements (element type, test/trial spaces, quadrature rule, q-function, etc).
@@ -91,13 +91,11 @@ public:
         // note: this lambda function captures ptr by-value to extend its lifetime
         //                        vvv
         action_of_gradient_[i] = [ptr, qf_derivatives, num_elements, J](const mfem::Vector& dU, mfem::Vector& dR) {
-          domain_integral::action_of_gradient_kernel<geometry, test, which_trial_space, Q>(dU, dR, qf_derivatives, J,
-                                                                                           num_elements);
+          action_of_gradient_kernel<geometry, test, which_trial_space, Q>(dU, dR, qf_derivatives, J, num_elements);
         };
 
         element_gradient_[i] = [qf_derivatives, num_elements, J](CPUView<double, 3> K_e) {
-          domain_integral::element_gradient_kernel<geometry, test, which_trial_space, Q>(K_e, qf_derivatives, J,
-                                                                                         num_elements);
+          element_gradient_kernel<geometry, test, which_trial_space, Q>(K_e, qf_derivatives, J, num_elements);
         };
       });
     }
