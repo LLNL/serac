@@ -123,11 +123,14 @@ include(${PROJECT_SOURCE_DIR}/cmake/SeracConfigHeader.cmake)
 
 add_subdirectory(src)
 
-if(ENABLE_TESTS)
-    add_subdirectory(tests)
-endif()
-
 add_subdirectory(examples)
+
+#------------------------------------------------------------------------------
+# Generate helper script for running ATS
+#------------------------------------------------------------------------------
+configure_file(
+    ${PROJECT_SOURCE_DIR}/scripts/testing/ats.sh.in
+    ${CMAKE_BINARY_DIR}/ats.sh)
 
 #------------------------------------------------------------------------------
 # Add Code Checks
