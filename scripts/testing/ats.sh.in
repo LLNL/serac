@@ -25,7 +25,7 @@ fi
 
 export ATS_BIN_DIR=@ATS_DIR@/bin
 
-if [ ! -f "$ATS_BIN_DIR" ]; then
+if [ ! -d "$ATS_BIN_DIR" ]; then
     echo "ERROR: Given ATS_DIR does not have a 'bin' directory: @ATS_DIR@"
     exit 1
 fi
