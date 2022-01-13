@@ -75,6 +75,7 @@ public:
       evaluation_ = EvaluationKernel{eval_config, J, X, N, num_elements, qf};
 
       for_constexpr<num_trial_spaces>([this, num_elements, quadrature_points_per_element, &J, &X, &N, &qf, eval_config](auto i) {
+
         // allocate memory for the derivatives of the q-function at each quadrature point
         //
         // Note: ptrs' lifetime is managed in an unusual way! It is captured by-value in the
@@ -100,60 +101,6 @@ public:
       });
     }
 
-#if 0
-    SLIC_ERROR_ROOT_IF(exec == ExecutionSpace::GPU, "BoundaryIntegral doesn't currently support GPU kernels yet");
-
-    constexpr auto geometry                      = supported_geometries[dim];
-    constexpr auto Q                             = std::max(test_space::order, trial_space::order) + 1;
-    constexpr auto quadrature_points_per_element = detail::pow(Q, dim);
-
-    uint32_t num_quadrature_points = quadrature_points_per_element * uint32_t(num_elements);
-
-    // these lines of code figure out the argument types that will be passed
-    // into the quadrature function in the finite element kernel.
-    //
-    // we use them to observe the output type and allocate memory to store
-    // the derivative information at each quadrature point
-    using x_t             = tensor<double, dim + 1>;
-    using u_du_t          = typename detail::lambda_argument<trial_space, dim, dim + 1>::type;
-    using derivative_type = decltype(get_gradient(qf(x_t{}, x_t{}, make_dual(u_du_t{}))));
-
-    // allocate memory for the derivatives of the q-function at each quadrature point
-    //
-    // Note: ptr's lifetime is managed in an unusual way! It is captured by-value in one of the
-    // lambda functions below to augment the reference count, and extend its lifetime to match
-    // that of the BoundaryIntegral that allocated it.
-
-    // TODO: change this allocation to use exec, rather than ExecutionSpace::CPU, once
-    // we implement GPU boundary kernels
-    auto ptr = accelerator::make_shared_array<derivative_type, ExecutionSpace::CPU>(num_quadrature_points);
-
-    size_t                      n1 = static_cast<size_t>(num_elements);
-    size_t                      n2 = static_cast<size_t>(quadrature_points_per_element);
-    CPUView<derivative_type, 2> qf_derivatives{ptr.get(), n1, n2};
-
-    // this is where we actually specialize the finite element kernel templates with
-    // our specific requirements (element type, test/trial spaces, quadrature rule, q-function, etc).
-    //
-    // std::function's type erasure lets us wrap those specific details inside a function with known signature
-    //
-    // this lambda function captures ptr by-value to extend its lifetime
-    //                   vvv
-    evaluation_ = [this, ptr, qf_derivatives, num_elements, qf](const std::array< mfem::Vector, num_trial_spaces > & U, mfem::Vector& R) {
-      boundary_integral::evaluation_kernel<geometry, test, trials ..., Q>(U[0], R, qf_derivatives, J_, X_, normals_,
-                                                                                 num_elements, qf);
-    };
-
-    action_of_gradient_ = [this, qf_derivatives, num_elements](const std::array< mfem::Vector, num_trial_spaces > & dU, mfem::Vector& dR) {
-      boundary_integral::action_of_gradient_kernel<geometry, test, trials ... , Q>(dU[0], dR, qf_derivatives, J_,
-                                                                                         num_elements);
-    };
-
-    element_gradient_ = [this, qf_derivatives, num_elements](ArrayView<double, 3, exec> K_b) {
-      boundary_integral::element_gradient_kernel<geometry, test, trials ..., Q>(K_b, qf_derivatives, J_,
-                                                                                       num_elements);
-    };
-#endif
   }
 
   /**

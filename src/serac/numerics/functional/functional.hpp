@@ -305,9 +305,7 @@ public:
     }
 
     if (bdr_integrals_.size() > 0) {
-      for (uint32_t i = 0; i < num_trial_spaces; i++) {
-        G_trial_boundary_[i]->Mult(input_L_[i], input_E_boundary_[i]);
-      }
+      G_trial_boundary_[which]->Mult(input_L_[which], input_E_boundary_[which]);
 
       output_E_boundary_ = 0.0;
       for (auto& integral : bdr_integrals_) {
@@ -379,7 +377,7 @@ public:
 
       output_E_boundary_ = 0.0;
       for (auto& integral : bdr_integrals_) {
-        integral.Mult(input_E_boundary_, output_E_boundary_);
+        integral.Mult(input_E_boundary_, output_E_boundary_, wrt);
       }
 
       output_L_boundary_ = 0.0;

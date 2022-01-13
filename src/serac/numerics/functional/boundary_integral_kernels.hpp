@@ -132,8 +132,8 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
 
     // mfem provides this information in 1D arrays, so we reshape it
     // into strided multidimensional arrays before using
-    auto X = mfem::Reshape(X_.Read(), rule.size(), dim, num_elements_);
-    auto N = mfem::Reshape(N_.Read(), rule.size(), dim, num_elements_);
+    auto X = mfem::Reshape(X_.Read(), rule.size(), dim+1, num_elements_);
+    auto N = mfem::Reshape(N_.Read(), rule.size(), dim+1, num_elements_);
     auto J = mfem::Reshape(J_.Read(), rule.size(), num_elements_);
     auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, int(num_elements_));  // TODO: integer conversions
 
@@ -212,8 +212,8 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
 
     // mfem provides this information in 1D arrays, so we reshape it
     // into strided multidimensional arrays before using
-    auto X = mfem::Reshape(X_.Read(), rule.size(), dim, num_elements_);
-    auto N = mfem::Reshape(N_.Read(), rule.size(), dim, num_elements_);
+    auto X = mfem::Reshape(X_.Read(), rule.size(), dim+1, num_elements_);
+    auto N = mfem::Reshape(N_.Read(), rule.size(), dim+1, num_elements_);
     auto J = mfem::Reshape(J_.Read(), rule.size(), num_elements_);
     auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, int(num_elements_));  // TODO: integer conversions
 
