@@ -1,6 +1,6 @@
 #!/bin/bash
 ##############################################################################
-# Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -14,37 +14,24 @@
 # BlueOS: lalloc 2 ./ats.sh
 # WSL: ./ats.sh
 
-# Variables used inside of the base test.ats
+# Variables used inside of the base test.ats and this script
 export ATS_SERAC_BIN_DIR=@SERAC_BIN_DIR@/bin
 export ATS_SERAC_REPO_DIR=@SERAC_REPO_DIR@
+export ATS_EXECUTABLE=@ATS_EXECUTABLE@
 
-if [ ! -d "@ATS_DIR@" ]; then
-    echo "ERROR: Given ATS_DIR does not exist: @ATS_DIR@"
+if [ ! -f "$ATS_EXECUTABLE" ]; then
+    echo "ERROR: Given ATS_EXECUTABLE does not exist: " $ATS_EXECUTABLE
     exit 1
 fi
 
-export ATS_BIN_DIR=@ATS_DIR@/bin
-
-if [ ! -d "$ATS_BIN_DIR" ]; then
-    echo "ERROR: Given ATS_DIR does not have a 'bin' directory: @ATS_DIR@"
-    exit 1
-fi
-
-# Add Serac's and ATS's bin directory to path
-export PATH=$ATS_BIN_DIR:$ATS_SERAC_BIN_DIR:$PATH
-
-ATS_EXE=`which ats`
+# Add Serac's bin directory to path
+export PATH=$ATS_SERAC_BIN_DIR:$PATH
 
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~"
-echo "ATS:      " $ATS_EXE
+echo "ATS:      " $ATS_EXECUTABLE
 echo "BIN DIR:  " $ATS_SERAC_BIN_DIR
 echo "REPO DIR: " $ATS_SERAC_REPO_DIR
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~"
-
-if [ ! -f "$ATS_EXE" ]; then
-    echo "ERROR: ATS executable cannot be found in given ATS_DIR or on system path: @ATS_DIR@"
-    exit 1
-fi
 
 # Clean-up old run's logs
 rm -rf $SYS_TYPE.*
@@ -54,4 +41,4 @@ rm -rf $SYS_TYPE.*
 #rm -rf $ATS_SERAC_REPO_DIR/tests/integration/*/output
 
 # Run ATS
-ats $ATS_SERAC_REPO_DIR/tests/integration/test.ats
+$ATS_EXECUTABLE $ATS_SERAC_REPO_DIR/tests/integration/test.ats

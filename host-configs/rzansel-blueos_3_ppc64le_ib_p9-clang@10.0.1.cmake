@@ -119,7 +119,7 @@ set(UMPIRE_DIR "${TPL_ROOT}/umpire-6.0.0serac" CACHE PATH "")
 
 set(DEVTOOLS_ROOT "/usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/2022_01_10_19_18_00/gcc-8.3.1" CACHE PATH "")
 
-set(ATS_DIR "${DEVTOOLS_ROOT}/py-ats-7.0.10" CACHE PATH "")
+set(ATS_EXECUTABLE "${DEVTOOLS_ROOT}/py-ats-7.0.10/bin/ats" CACHE PATH "")
 
 set(CLANGFORMAT_EXECUTABLE "/usr/tce/packages/clang/clang-10.0.0/bin/clang-format" CACHE PATH "")
 

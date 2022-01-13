@@ -99,7 +99,7 @@ set(SUNDIALS_DIR "${TPL_ROOT}/sundials-5.6.1" CACHE PATH "")
 
 set(DEVTOOLS_ROOT "/usr/WS2/smithdev/devtools/toss_3_x86_64_ib/2022_01_10_21_08_02/gcc-8.1.0" CACHE PATH "")
 
-set(ATS_DIR "${DEVTOOLS_ROOT}/py-ats-7.0.10" CACHE PATH "")
+set(ATS_EXECUTABLE "${DEVTOOLS_ROOT}/py-ats-7.0.10/bin/ats" CACHE PATH "")
 
 set(CLANGFORMAT_EXECUTABLE "/usr/tce/packages/clang/clang-10.0.0/bin/clang-format" CACHE PATH "")
 

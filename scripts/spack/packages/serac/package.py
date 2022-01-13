@@ -355,9 +355,10 @@ class Serac(CachedCMakePackage, CudaPackage):
                 "# Root directory for generated developer tools\n")
             entries.append(cmake_cache_path("DEVTOOLS_ROOT", devtools_root))
 
-            ats_dir = spec['py-ats'].prefix
-            entries.append(cmake_cache_path("ATS_DIR",
-                                             ats_dir))
+            ats_bin_dir = get_spec_path(spec, 'py-ats', path_replacements,
+                                        use_bin=True)
+            entries.append(cmake_cache_path("ATS_EXECUTABLE",
+                                            pjoin(ats_bin_dir, "ats")))
 
             # Only turn on clang tools support if devtools is on
             clang_fmt_path = spec['llvm'].prefix.bin.join('clang-format')

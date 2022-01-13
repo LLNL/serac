@@ -17,7 +17,7 @@ an input file against blessed answers.
 Unit Tests
 ----------
 
-Unit Tests can be ran via the build target ``test``.
+Unit Tests can be ran via the build target ``test`` after building the code.
 
 
 Integration Tests
@@ -29,8 +29,9 @@ Integration Tests
 Requirements:
 
 * Installed ATS
-* ``ATS_DIR`` defined in the host-config (Added automatically on LC host-configs) or on 
-  command line via ``-DATS_DIR=/path/to/ats/base/dir``.
+* ``ATS_EXECUTABLE`` defined in the host-config (added automatically to
+  Spack generated host-configs) or on 
+  command line via ``-DATS_EXECUTABLE=/path/to/ats``.
 
 #. **Build the code.**
    Build code with the normal steps. More info in the :ref:`quickstart-label`.
@@ -55,8 +56,9 @@ Requirements:
 Install ATS
 -----------
 
-ATS can be installed via the normal devtools install process. More info on :ref:`devtools-label`.
-This method is useful because it builds all development tools in one process.
+ATS can be installed via the normal devtools install process.
+More info on :ref:`devtools-label`. This method is useful because it
+builds all development tools in one process.
 
 If you want to install ATS by itself, ATS provides multiple methods to install in
 their `Getting Started section <https://github.com/LLNL/ATS#getting-started>`_.
