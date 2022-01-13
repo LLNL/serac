@@ -318,7 +318,7 @@ SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, const T& 
 
 /// @overload
 template <typename lambda, typename coords_type, typename T, int... i>
-SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, coords_type && n_q, const T& arg_tuple,
+SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, coords_type&& n_q, const T& arg_tuple,
                                        std::integer_sequence<int, i...>)
 {
   return qf(x_q, n_q, serac::get<i>(arg_tuple)...);
@@ -346,7 +346,6 @@ SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, const serac::tup
 {
   return apply_qf_helper(qf, x_q, arg_tuple, std::make_integer_sequence<int, int(sizeof...(T))>{});
 }
-
 
 // for boundary integrals: includes normal vector and does not support qpt_data
 template <typename lambda, typename coords_type, typename... T>

@@ -76,19 +76,20 @@ struct QFunctionArgument;
 // define what arguments DomainIntegral will pass to
 // qfunctions, depending on the dimension and trial space
 template <int p, int dim>
-struct QFunctionArgument<H1<p, 1>, Dimension<dim> > {
+struct QFunctionArgument<H1<p, 1>, Dimension<dim>> {
   using type = double;
 };
 template <int p, int c, int dim>
-struct QFunctionArgument<H1<p, c>, Dimension<dim> > {
+struct QFunctionArgument<H1<p, c>, Dimension<dim>> {
   using type = tensor<double, c>;
 };
 
 template <int i, int dim, typename... trials, typename lambda>
 auto get_derivative_type(lambda qf)
 {
-  using qf_arguments = serac::tuple<typename QFunctionArgument<trials, serac::Dimension<dim> >::type...>;
-  return get_gradient(detail::apply_qf(qf, tensor<double, dim+1>{}, tensor<double, dim+1>{}, make_dual_wrt<i>(qf_arguments{})));
+  using qf_arguments = serac::tuple<typename QFunctionArgument<trials, serac::Dimension<dim>>::type...>;
+  return get_gradient(
+      detail::apply_qf(qf, tensor<double, dim + 1>{}, tensor<double, dim + 1>{}, make_dual_wrt<i>(qf_arguments{})));
 };
 
 template <int i>
@@ -104,14 +105,13 @@ struct EvaluationKernel;
 
 template <int Q, Geometry geom, typename test, typename... trials, typename lambda>
 struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lambda> {
-
-  static constexpr auto exec = ExecutionSpace::CPU;
-  static constexpr int num_trial_spaces = int(sizeof...(trials));
+  static constexpr auto exec             = ExecutionSpace::CPU;
+  static constexpr int  num_trial_spaces = int(sizeof...(trials));
 
   using EVector_t = EVectorView<exec, finite_element<geom, trials>...>;
 
-  EvaluationKernel(KernelConfig<Q, geom, test, trials...>, const mfem::Vector& J, const mfem::Vector& X, const mfem::Vector& N,
-                   size_t num_elements, lambda qf)
+  EvaluationKernel(KernelConfig<Q, geom, test, trials...>, const mfem::Vector& J, const mfem::Vector& X,
+                   const mfem::Vector& N, size_t num_elements, lambda qf)
       : J_(J), X_(X), N_(N), num_elements_(num_elements), qf_(qf)
   {
   }
@@ -132,14 +132,13 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
 
     // mfem provides this information in 1D arrays, so we reshape it
     // into strided multidimensional arrays before using
-    auto X = mfem::Reshape(X_.Read(), rule.size(), dim+1, num_elements_);
-    auto N = mfem::Reshape(N_.Read(), rule.size(), dim+1, num_elements_);
+    auto X = mfem::Reshape(X_.Read(), rule.size(), dim + 1, num_elements_);
+    auto N = mfem::Reshape(N_.Read(), rule.size(), dim + 1, num_elements_);
     auto J = mfem::Reshape(J_.Read(), rule.size(), num_elements_);
     auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, int(num_elements_));  // TODO: integer conversions
 
     // for each element in the domain
     for (uint32_t e = 0; e < num_elements_; e++) {
-
       // get the DOF values for this particular element
       auto u_elem = u[e];
 
@@ -165,7 +164,6 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
         // integrate qf_output against test space shape functions / gradients
         // to get element residual contributions
         r_elem += Postprocess<test_element>(qf_output, xi) * dx;
-
       }
 
       // once we've finished the element integration loop, write our element residuals
@@ -174,24 +172,23 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
     }
   }
 
-  const mfem::Vector&            J_;
-  const mfem::Vector&            X_;
-  const mfem::Vector&            N_;
-  size_t                         num_elements_;
-  lambda                         qf_;
+  const mfem::Vector& J_;
+  const mfem::Vector& X_;
+  const mfem::Vector& N_;
+  size_t              num_elements_;
+  lambda              qf_;
 };
 
 template <int I, int Q, Geometry geom, typename test, typename... trials, typename derivatives_type, typename lambda>
 struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>, derivatives_type, lambda> {
-
-  static constexpr auto exec = ExecutionSpace::CPU;
-  static constexpr int num_trial_spaces = int(sizeof...(trials));
+  static constexpr auto exec             = ExecutionSpace::CPU;
+  static constexpr int  num_trial_spaces = int(sizeof...(trials));
 
   using EVector_t = EVectorView<exec, finite_element<geom, trials>...>;
 
   EvaluationKernel(DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>,
-                   CPUView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J, const mfem::Vector& X, const mfem::Vector& N,
-                   size_t num_elements, lambda qf)
+                   CPUView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J, const mfem::Vector& X,
+                   const mfem::Vector& N, size_t num_elements, lambda qf)
       : qf_derivatives_(qf_derivatives), J_(J), X_(X), N_(N), num_elements_(num_elements), qf_(qf)
   {
   }
@@ -212,14 +209,13 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
 
     // mfem provides this information in 1D arrays, so we reshape it
     // into strided multidimensional arrays before using
-    auto X = mfem::Reshape(X_.Read(), rule.size(), dim+1, num_elements_);
-    auto N = mfem::Reshape(N_.Read(), rule.size(), dim+1, num_elements_);
+    auto X = mfem::Reshape(X_.Read(), rule.size(), dim + 1, num_elements_);
+    auto N = mfem::Reshape(N_.Read(), rule.size(), dim + 1, num_elements_);
     auto J = mfem::Reshape(J_.Read(), rule.size(), num_elements_);
     auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, int(num_elements_));  // TODO: integer conversions
 
     // for each element in the domain
     for (uint32_t e = 0; e < num_elements_; e++) {
-
       // get the DOF values for this particular element
       auto u_elem = u[e];
 
@@ -258,7 +254,6 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
       // once we've finished the element integration loop, write our element residuals
       // out to memory, to be later assembled into global residuals by mfem
       detail::Add(r, r_elem, int(e));
-
     }
   }
 
@@ -271,15 +266,13 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
 };
 
 template <int Q, Geometry geom, typename test, typename... trials, typename lambda>
-EvaluationKernel(KernelConfig<Q, geom, test, trials...>, const mfem::Vector&, const mfem::Vector&, const mfem::Vector&, int, lambda)
-    -> EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lambda>;
+EvaluationKernel(KernelConfig<Q, geom, test, trials...>, const mfem::Vector&, const mfem::Vector&, const mfem::Vector&,
+                 int, lambda) -> EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lambda>;
 
 template <int i, int Q, Geometry geom, typename test, typename... trials, typename derivatives_type, typename lambda>
 EvaluationKernel(DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, CPUView<derivatives_type, 2>,
                  const mfem::Vector&, const mfem::Vector&, const mfem::Vector&, int, lambda)
     -> EvaluationKernel<DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, derivatives_type, lambda>;
-
-
 
 /**
  * @brief The base kernel template used to create different finite element calculation routines

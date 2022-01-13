@@ -38,7 +38,6 @@ class BoundaryIntegral;
 template <typename test, typename... trials, ExecutionSpace exec>
 class BoundaryIntegral<test(trials...), exec> {
 public:
-
   static constexpr tuple<trials...> trial_spaces{};
   static constexpr int              num_trial_spaces = sizeof...(trials);
 
@@ -55,7 +54,8 @@ public:
    * @note The @p Dimension parameters are used to assist in the deduction of the dim template parameter
    */
   template <int dim, typename lambda_type, typename qpt_data_type = void>
-  BoundaryIntegral(size_t num_elements, const mfem::Vector& J, const mfem::Vector& X, const mfem::Vector& N, Dimension<dim>, lambda_type&& qf)
+  BoundaryIntegral(size_t num_elements, const mfem::Vector& J, const mfem::Vector& X, const mfem::Vector& N,
+                   Dimension<dim>, lambda_type&& qf)
       : J_(J), X_(X), normals_(N)
 
   {
@@ -74,8 +74,8 @@ public:
 
       evaluation_ = EvaluationKernel{eval_config, J, X, N, num_elements, qf};
 
-      for_constexpr<num_trial_spaces>([this, num_elements, quadrature_points_per_element, &J, &X, &N, &qf, eval_config](auto i) {
-
+      for_constexpr<num_trial_spaces>([this, num_elements, quadrature_points_per_element, &J, &X, &N, &qf,
+                                       eval_config](auto i) {
         // allocate memory for the derivatives of the q-function at each quadrature point
         //
         // Note: ptrs' lifetime is managed in an unusual way! It is captured by-value in the
@@ -100,7 +100,6 @@ public:
         };
       });
     }
-
   }
 
   /**
@@ -152,7 +151,6 @@ private:
    */
   const mfem::Vector normals_;
 
-
   /**
    * @brief Type-erased handle to evaluation kernel
    * @see evaluation_kernel
@@ -177,7 +175,6 @@ private:
    * @see gradient_matrix_kernel
    */
   std::function<void(ArrayView<double, 3, exec>)> element_gradient_[num_trial_spaces];
-
 };
 
 }  // namespace serac

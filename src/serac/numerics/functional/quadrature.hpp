@@ -48,7 +48,7 @@ constexpr auto GaussQuadratureRule()
   auto w = GaussLegendreWeights<Q>();
 
   if constexpr (g == Geometry::Segment) {
-    return QuadratureRule<Q, 1>{w, make_tensor<Q,1>([&x](int i, int /*j*/){ return x[i]; })};
+    return QuadratureRule<Q, 1>{w, make_tensor<Q, 1>([&x](int i, int /*j*/) { return x[i]; })};
   }
 
   if constexpr (g == Geometry::Quadrilateral) {

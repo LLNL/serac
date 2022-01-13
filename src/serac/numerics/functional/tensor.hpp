@@ -1737,17 +1737,19 @@ SERAC_HOST_DEVICE auto chain_rule(const tensor<double, m, n, p...>& df_dx, const
   return total;
 }
 
-template < int ... new_shape, typename T, int ... old_shape >
-constexpr auto reshape(const tensor < T, old_shape ... > A) {
-  static_assert((new_shape * ... ) == (old_shape * ...), "tensors can only be reshaped to dimension that have the same number of total entries");
+template <int... new_shape, typename T, int... old_shape>
+constexpr auto reshape(const tensor<T, old_shape...> A)
+{
+  static_assert((new_shape * ...) == (old_shape * ...),
+                "tensors can only be reshaped to dimension that have the same number of total entries");
 
-  int n = (old_shape * ...);
-  tensor < T, new_shape ... > A_reshaped;
+  int                     n = (old_shape * ...);
+  tensor<T, new_shape...> A_reshaped;
 
-  const T * old_ptr = reinterpret_cast<const T *>(&A);
-  T * new_ptr = reinterpret_cast<T *>(&A_reshaped);
+  const T* old_ptr = reinterpret_cast<const T*>(&A);
+  T*       new_ptr = reinterpret_cast<T*>(&A_reshaped);
   for (int i = 0; i < n; i++) {
-    new_ptr[i] = old_ptr[i]; 
+    new_ptr[i] = old_ptr[i];
   }
   return A_reshaped;
 }
