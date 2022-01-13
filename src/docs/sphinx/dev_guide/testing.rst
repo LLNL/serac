@@ -53,8 +53,8 @@ Requirements:
    TBD...
 
 
-Install ATS
------------
+Installing ATS
+--------------
 
 ATS can be installed via the normal devtools install process.
 More info on :ref:`devtools-label`. This method is useful because it
@@ -62,3 +62,18 @@ builds all development tools in one process.
 
 If you want to install ATS by itself, ATS provides multiple methods to install in
 their `Getting Started section <https://github.com/LLNL/ATS#getting-started>`_.
+
+
+ATS Test Helper Functions
+-------------------------
+
+We provide the following test helper functions to make defining integration tests
+easier in ``tests/test.ats``.
+
+* ``tolerance_test``
+
+   .. literalinclude:: ../../../../tests/integration/test.ats
+      :start-after: _serac_tolerance_test_start
+      :end-before: _serac_tolerance_test_end
+      :language: python
+      :dedent: 4
