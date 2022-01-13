@@ -18,14 +18,16 @@
 export ATS_SERAC_BIN_DIR=@SERAC_BIN_DIR@/bin
 export ATS_SERAC_REPO_DIR=@SERAC_REPO_DIR@
 
-if [ ! -d "$ATS_DIR" ]; then
-    echo "Given ATS_DIR does not exist: $ATS_DIR"
+if [ ! -d "@ATS_DIR@" ]; then
+    echo "ERROR: Given ATS_DIR does not exist: @ATS_DIR@"
+    exit 1
 fi
 
 export ATS_BIN_DIR=@ATS_DIR@/bin
 
 if [ ! -f "$ATS_BIN_DIR" ]; then
-    echo "Given ATS_DIR does not have a 'bin' directory:: $ATS_DIR"
+    echo "ERROR: Given ATS_DIR does not have a 'bin' directory: @ATS_DIR@"
+    exit 1
 fi
 
 # Add Serac's and ATS's bin directory to path
@@ -40,7 +42,8 @@ echo "REPO DIR: " $ATS_SERAC_REPO_DIR
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
 if [ ! -f "$ATS_EXE" ]; then
-    echo "ATS cannot be found in given ATS_DIR or on system: $ATS_DIR"
+    echo "ERROR: ATS executable cannot be found in given ATS_DIR or on system path: @ATS_DIR@"
+    exit 1
 fi
 
 # Clean-up old run's logs
