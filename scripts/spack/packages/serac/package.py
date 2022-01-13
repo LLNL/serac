@@ -355,6 +355,10 @@ class Serac(CachedCMakePackage, CudaPackage):
                 "# Root directory for generated developer tools\n")
             entries.append(cmake_cache_path("DEVTOOLS_ROOT", devtools_root))
 
+            ats_dir = spec['py-ats'].prefix
+            entries.append(cmake_cache_path("ATS_DIR",
+                                             ats_dir))
+
             # Only turn on clang tools support if devtools is on
             clang_fmt_path = spec['llvm'].prefix.bin.join('clang-format')
             entries.append(cmake_cache_path(
@@ -363,10 +367,6 @@ class Serac(CachedCMakePackage, CudaPackage):
             clang_tidy_path = spec['llvm'].prefix.bin.join('clang-tidy')
             entries.append(cmake_cache_path("CLANGTIDY_EXECUTABLE",
                                             clang_tidy_path))
-
-            ats_dir = spec['py-ats'].prefix
-            entries.append(cmake_cache_path("ATS_DIR",
-                                             ats_dir))
         else:
             entries.append("# Code checks disabled due to disabled devtools\n")
             entries.append(cmake_cache_option("SERAC_ENABLE_CODE_CHECKS", False))
