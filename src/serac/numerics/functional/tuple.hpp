@@ -373,6 +373,31 @@ SERAC_HOST_DEVICE constexpr auto operator-(const tuple<S...>& x, const tuple<T..
 }
 
 /**
+ * @brief A helper function for the - operator of tuples
+ *
+ * @tparam T the types stored in the tuple y
+ * @tparam i The integer sequence to i
+ * @param x tuple of values
+ * @return the returned tuple difference
+ */
+template <typename... T, int... i>
+SERAC_HOST_DEVICE constexpr auto unary_minus_helper(const tuple<T...>& x, std::integer_sequence<int, i...>)
+{
+  return tuple{-get<i>(x)...};
+}
+
+/**
+ * @tparam T the types stored in the tuple y
+ * @param x a tuple of values
+ * @brief return a tuple of values defined by applying the unary minus operator to each element of x
+ */
+template <typename... T>
+SERAC_HOST_DEVICE constexpr auto operator-(const tuple<T...>& x)
+{
+  return unary_minus_helper(x, std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>());
+}
+
+/**
  * @brief A helper function for the / operator of tuples
  *
  * @tparam S the types stored in the tuple x
