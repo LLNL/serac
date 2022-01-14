@@ -56,36 +56,45 @@ bool operator==(const mfem::SparseMatrix& A, const mfem::SparseMatrix& B)
 
 bool operator!=(const mfem::SparseMatrix& A, const mfem::SparseMatrix& B) { return !(A == B); }
 
+
 template <typename T>
-void check_gradient(Functional<T>& f, mfem::GridFunction& U)
+void check_gradient(Functional<T>& f, mfem::Vector& U)
 {
-  int                seed = 42;
-  mfem::GridFunction dU   = U;
+  int seed = 42;
+
+  mfem::Vector dU(U.Size());
   dU.Randomize(seed);
 
-  double epsilon = 1.0e-6;
+  double epsilon = 1.0e-8;
 
-  // grad(f) evaluates the gradient of f at the last evaluation,
-  // so we evaluate f(U) before calling grad(f)
-  f(U);
-
-  auto         dfdU = grad(f);
-  mfem::Vector df3  = dfdU(dU);
-
-  mfem::Vector df2 = mfem::SparseMatrix(dfdU) * dU;
-
-  mfem::GridFunction U_plus = U;
+  auto U_plus = U;
   U_plus.Add(epsilon, dU);
-  mfem::Vector f_plus = f(U_plus);
 
-  mfem::GridFunction U_minus = U;
+  auto U_minus = U;
   U_minus.Add(-epsilon, dU);
-  mfem::Vector f_minus = f(U_minus);
 
-  mfem::Vector df1 = (f_plus - f_minus) / (2 * epsilon);
+  mfem::Vector df1 = f(U_plus);
+  df1 -= f(U_minus);
+  df1 /= (2 * epsilon);
 
-  std::cout << mfem::Vector(df1 - df2).Norml2() / df1.Norml2() << std::endl;
-  std::cout << mfem::Vector(df1 - df3).Norml2() / df1.Norml2() << std::endl;
+  auto [value, dfdU] = f(differentiate_wrt(U));
+  mfem::Vector df2   = dfdU(dU);
+
+  //mfem::HypreParMatrix* dfdU_matrix = dfdU;
+  //mfem::Vector df3 = (*dfdU_matrix) * dU;
+
+  double relative_error1 = df1.DistanceTo(df2) / df1.Norml2();
+  //double relative_error2 = df1.DistanceTo(df3) / df1.Norml2();
+
+  std::cout << df1.Norml2() << " " << df2.Norml2() << std::endl;
+
+  EXPECT_NEAR(0., relative_error1, 5.e-6);
+  //EXPECT_NEAR(0., relative_error2, 5.e-6);
+
+  //std::cout << relative_error1 << " " << relative_error2 << std::endl;
+  std::cout << relative_error1 << std::endl;
+
+  //delete dfdU_matrix;
 }
 
 template <int p, int dim>
@@ -160,7 +169,7 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
     // gradient2.PrintMM(outfile);
     // outfile.close();
 
-    // check_gradient(residual, U);
+    check_gradient(residual, U);
   }
 
   EXPECT_NEAR(0.0, mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-12);

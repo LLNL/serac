@@ -7,6 +7,7 @@
 
 #include "serac/numerics/quadrature_data.hpp"
 #include "serac/numerics/functional/integral_utilities.hpp"
+#include "serac/numerics/functional/evector_view.hpp"
 
 namespace serac {
 
@@ -76,12 +77,12 @@ struct QFunctionArgument;
 // define what arguments DomainIntegral will pass to
 // qfunctions, depending on the dimension and trial space
 template <int p, int dim>
-struct QFunctionArgument<H1<p, 1>, Dimension<dim>> {
-  using type = double;
+struct QFunctionArgument<H1<p, 1>, Dimension<dim> > {
+  using type = serac::tuple<double, serac::zero>;
 };
 template <int p, int c, int dim>
-struct QFunctionArgument<H1<p, c>, Dimension<dim>> {
-  using type = tensor<double, c>;
+struct QFunctionArgument<H1<p, c>, Dimension<dim> > {
+  using type = serac::tuple<tensor<double, c>, serac::zero>;
 };
 
 template <int i, int dim, typename... trials, typename lambda>
@@ -436,7 +437,11 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, CPUView
       auto dq_darg = qf_derivatives(static_cast<size_t>(e), static_cast<size_t>(q));
 
       // use the chain rule to compute the first-order change in the q-function output
-      auto dq = dq_darg * darg;
+      //
+      // TODO: these serac::get<0>(...) expressions are related to the fact that
+      // boundary q-functions can't currently support passing derivative information
+      // to the user, so those entries are temporarily just `serac::zero`s
+      auto dq = serac::get<0>(dq_darg) * serac::get<0>(darg);
 
       // integrate dq against test space shape functions / gradients
       // to get the (change in) element residual contributions
@@ -515,7 +520,7 @@ void element_gradient_kernel(CPUView<double, 3> dk, CPUView<derivatives_type, 2>
 
         for (int i = 0; i < test_ndof; i++) {
           for (int j = 0; j < trial_ndof; j++) {
-            K_elem[i][j] += M[i] * dq_darg * N[j] * dx;
+            K_elem[i][j] += M[i] * serac::get<0>(dq_darg) * N[j] * dx;
           }
         }
       }

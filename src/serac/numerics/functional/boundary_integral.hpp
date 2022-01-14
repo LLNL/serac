@@ -106,6 +106,8 @@ public:
    * @brief Applies the integral, i.e., @a output_E = evaluate( @a input_E )
    * @param[in] input_E The input to the evaluation; per-element DOF values
    * @param[out] output_E The output of the evalution; per-element DOF residuals
+   * @param[in] which the index of the argument being differentiated, 
+   *    which == -1 corresponds to direct evaluation without any differentiation
    * @see evaluation_kernel
    */
   void Mult(const std::array<mfem::Vector, num_trial_spaces>& input_E, mfem::Vector& output_E, int which = 0) const
@@ -121,6 +123,7 @@ public:
    * @brief Applies the integral, i.e., @a output_E = gradient( @a input_E )
    * @param[in] input_E The input to the evaluation; per-element DOF values
    * @param[out] output_E The output of the evalution; per-element DOF residuals
+   * @param[in] which the index of the argument being differentiated
    * @see action_of_gradient_kernel
    */
   void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E, size_t which = 0) const
@@ -132,8 +135,12 @@ public:
    * @brief Computes the derivative of each element's residual with respect to the element values
    * @param[inout] K_b The reshaped vector as a mfem::DeviceTensor of size (test_dim * test_dof, trial_dim * trial_dof,
    * nelems)
+   * @param[in] which the index of the argument being differentiated
    */
-  void ComputeElementGradients(ArrayView<double, 3, exec> K_b) const { element_gradient_(K_b); }
+  void ComputeElementGradients(ArrayView<double, 3, ExecutionSpace::CPU> K_b, size_t which = 0) const
+  {
+    element_gradient_[which](K_b);
+  }
 
 private:
   /**
