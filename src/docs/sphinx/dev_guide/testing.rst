@@ -75,5 +75,4 @@ easier in ``tests/test.ats``.
    .. literalinclude:: ../../../../tests/integration/test.ats
       :start-after: _serac_tolerance_test_start
       :end-before: _serac_tolerance_test_end
-      :language: python
       :dedent: 4
