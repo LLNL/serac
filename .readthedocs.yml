@@ -19,4 +19,8 @@ python:
     - requirements: src/docs/requirements.txt
 
 submodules:
-  include: all
+  exclude:
+  - cmake/blt
+  - scripts/uberenv
+  - axom
+  - mfem
