@@ -119,10 +119,12 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
       mesh);
 
   residual.AddBoundaryIntegral(
-      Dimension<dim - 1>{}, [=](auto x, auto /*n*/, auto temperature) { 
-        auto u = get<0>(temperature); 
-        return x[0] + x[1] - cos(u); 
-      }, mesh);
+      Dimension<dim - 1>{},
+      [=](auto x, auto /*n*/, auto temperature) {
+        auto u = get<0>(temperature);
+        return x[0] + x[1] - cos(u);
+      },
+      mesh);
 
   check_gradient(residual, U);
 
@@ -163,10 +165,12 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
       mesh);
 
   residual.AddBoundaryIntegral(
-      Dimension<dim - 1>{}, [=](auto x, auto n, auto displacement) { 
-        auto u = get<0>(displacement); 
-        return (x[0] + x[1] - cos(u[0])) * n; 
-      }, mesh);
+      Dimension<dim - 1>{},
+      [=](auto x, auto n, auto displacement) {
+        auto u = get<0>(displacement);
+        return (x[0] + x[1] - cos(u[0])) * n;
+      },
+      mesh);
 
   check_gradient(residual, U);
 
