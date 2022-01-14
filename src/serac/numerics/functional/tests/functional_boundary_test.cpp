@@ -56,7 +56,6 @@ bool operator==(const mfem::SparseMatrix& A, const mfem::SparseMatrix& B)
 
 bool operator!=(const mfem::SparseMatrix& A, const mfem::SparseMatrix& B) { return !(A == B); }
 
-
 template <typename T>
 void check_gradient(Functional<T>& f, mfem::Vector& U)
 {
@@ -80,21 +79,21 @@ void check_gradient(Functional<T>& f, mfem::Vector& U)
   auto [value, dfdU] = f(differentiate_wrt(U));
   mfem::Vector df2   = dfdU(dU);
 
-  //mfem::HypreParMatrix* dfdU_matrix = dfdU;
-  //mfem::Vector df3 = (*dfdU_matrix) * dU;
+  // mfem::HypreParMatrix* dfdU_matrix = dfdU;
+  // mfem::Vector df3 = (*dfdU_matrix) * dU;
 
   double relative_error1 = df1.DistanceTo(df2) / df1.Norml2();
-  //double relative_error2 = df1.DistanceTo(df3) / df1.Norml2();
+  // double relative_error2 = df1.DistanceTo(df3) / df1.Norml2();
 
   std::cout << df1.Norml2() << " " << df2.Norml2() << std::endl;
 
   EXPECT_NEAR(0., relative_error1, 5.e-6);
-  //EXPECT_NEAR(0., relative_error2, 5.e-6);
+  // EXPECT_NEAR(0., relative_error2, 5.e-6);
 
-  //std::cout << relative_error1 << " " << relative_error2 << std::endl;
+  // std::cout << relative_error1 << " " << relative_error2 << std::endl;
   std::cout << relative_error1 << std::endl;
 
-  //delete dfdU_matrix;
+  // delete dfdU_matrix;
 }
 
 template <int p, int dim>

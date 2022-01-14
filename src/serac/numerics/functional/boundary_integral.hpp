@@ -106,7 +106,7 @@ public:
    * @brief Applies the integral, i.e., @a output_E = evaluate( @a input_E )
    * @param[in] input_E The input to the evaluation; per-element DOF values
    * @param[out] output_E The output of the evalution; per-element DOF residuals
-   * @param[in] which the index of the argument being differentiated, 
+   * @param[in] which the index of the argument being differentiated,
    *    which == -1 corresponds to direct evaluation without any differentiation
    * @see evaluation_kernel
    */

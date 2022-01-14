@@ -77,11 +77,11 @@ struct QFunctionArgument;
 // define what arguments DomainIntegral will pass to
 // qfunctions, depending on the dimension and trial space
 template <int p, int dim>
-struct QFunctionArgument<H1<p, 1>, Dimension<dim> > {
+struct QFunctionArgument<H1<p, 1>, Dimension<dim>> {
   using type = serac::tuple<double, serac::zero>;
 };
 template <int p, int c, int dim>
-struct QFunctionArgument<H1<p, c>, Dimension<dim> > {
+struct QFunctionArgument<H1<p, c>, Dimension<dim>> {
   using type = serac::tuple<tensor<double, c>, serac::zero>;
 };
 
