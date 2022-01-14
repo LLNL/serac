@@ -20,9 +20,6 @@
 #include "serac/infrastructure/profiling.hpp"
 #include <gtest/gtest.h>
 
-// TODO reenable boundary integrals
-#define ENABLE_BOUNDARY_INTEGRALS false
-
 using namespace serac;
 using namespace serac::profiling;
 
@@ -121,10 +118,11 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
       },
       mesh);
 
-#if ENABLE_BOUNDARY_INTEGRALS
   residual.AddBoundaryIntegral(
-      Dimension<dim - 1>{}, [=](auto x, auto /*n*/, auto u) { return x[0] + x[1] - cos(u); }, mesh);
-#endif
+      Dimension<dim - 1>{}, [=](auto x, auto /*n*/, auto temperature) { 
+        auto u = get<0>(temperature); 
+        return x[0] + x[1] - cos(u); 
+      }, mesh);
 
   check_gradient(residual, U);
 
@@ -164,10 +162,11 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
       },
       mesh);
 
-#if ENABLE_BOUNDARY_INTEGRALS
   residual.AddBoundaryIntegral(
-      Dimension<dim - 1>{}, [=](auto x, auto n, auto u) { return (x[0] + x[1] - cos(u[0])) * n; }, mesh);
-#endif
+      Dimension<dim - 1>{}, [=](auto x, auto n, auto displacement) { 
+        auto u = get<0>(displacement); 
+        return (x[0] + x[1] - cos(u[0])) * n; 
+      }, mesh);
 
   check_gradient(residual, U);
 
