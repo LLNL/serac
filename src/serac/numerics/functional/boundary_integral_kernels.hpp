@@ -512,7 +512,7 @@ void element_gradient_kernel(CPUView<double, 3> dk, CPUView<derivatives_type, 2>
       if constexpr (std::is_same<test, QOI>::value) {
         auto N = trial_element::shape_functions(xi_q);
         for (int j = 0; j < trial_ndof; j++) {
-          K_elem[0][j] += dq_darg * N[j] * dx;
+          K_elem[0][j] += serac::get<0>(dq_darg) * N[j] * dx;
         }
       } else {
         auto M = test_element::shape_functions(xi_q);

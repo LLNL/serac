@@ -339,7 +339,7 @@ private:
 
         zero_out(K_belem);
         for (auto& boundary : form_.bdr_integrals_) {
-          boundary.ComputeElementGradients(view(K_belem));
+          boundary.ComputeElementGradients(view(K_belem), which_argument);
         }
 
         for (size_t e = 0; e < K_belem.size(0); e++) {

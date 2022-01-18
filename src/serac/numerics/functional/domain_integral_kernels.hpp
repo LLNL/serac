@@ -27,6 +27,15 @@ struct QFunctionArgument<H1<p, c>, Dimension<dim> > {
   using type = tuple<tensor<double, c>, tensor<double, c, dim> >;
 };
 
+template <int p, int dim>
+struct QFunctionArgument<L2<p, 1>, Dimension<dim> > {
+  using type = tuple<double, tensor<double, dim> >;
+};
+template <int p, int c, int dim>
+struct QFunctionArgument<L2<p, c>, Dimension<dim> > {
+  using type = tuple<tensor<double, c>, tensor<double, c, dim> >;
+};
+
 template <int p>
 struct QFunctionArgument<Hcurl<p>, Dimension<2> > {
   using type = tuple<tensor<double, 2>, double>;

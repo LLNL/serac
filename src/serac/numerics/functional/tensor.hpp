@@ -1637,11 +1637,11 @@ SERAC_HOST_DEVICE auto get_gradient(const tensor<double, n...>& /* arg */)
  * @brief Retrieves a gradient tensor from a tensor of dual numbers
  * @param[in] arg The tensor of dual numbers
  */
-template <typename T, int... n>
+template <int... n>
 SERAC_HOST_DEVICE auto get_gradient(const tensor<dual<double>, n...>& arg)
 {
   tensor<double, n...> g{};
-  for_constexpr<n...>([&](auto... i) { g[{i...}] = arg[{i...}].gradient; });
+  for_constexpr<n...>([&](auto... i) { g(i...) = arg(i...).gradient; });
   return g;
 }
 
