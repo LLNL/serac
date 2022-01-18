@@ -144,10 +144,10 @@ TEST(ChainRuleTests, scalar_output_with_matrix_input)
   EXPECT_NEAR(((f(x + epsilon * dx) - f(x)) / epsilon) - chain_rule(dfdx, dx), 0.0, 1.e-6);
 }
 
-TEST(ChainRuleTests, tuple_output_with_tuple_input)
+TEST(ChainRuleTests, tensor_output_with_tuple_input)
 {
   constexpr auto f = [](auto p, auto v, auto L) {
-    return serac::tuple{rho * outer(v, v) + 2.0 * mu * sym(L) - p * I, v + dot(v, L)};
+    return rho * outer(v, v) + 2.0 * mu * sym(L) - p * I;
   };
 
   [[maybe_unused]] constexpr double p = 3.14;
@@ -158,30 +158,17 @@ TEST(ChainRuleTests, tuple_output_with_tuple_input)
   constexpr tensor               dv = {{2.0, 1.0, 4.0}};
   constexpr tensor<double, 3, 3> dL = {{{3.0, 1.0, 2.0}, {2.0, 7.0, 3.0}, {4.0, 4.0, 3.0}}};
 
-  auto output = serac::apply(f, make_dual(p, v, L));
+  auto dfdp = get_gradient(f(make_dual(p), v, L)); 
+  auto dfdv = get_gradient(f(p, make_dual(v), L)); 
+  auto dfdL = get_gradient(f(p, v, make_dual(L))); 
 
-  auto value = get_value(output);
-  auto grad  = get_gradient(output);
-
-  auto df_fd = (f(p + epsilon * dp, v + epsilon * dv, L + epsilon * dL) -
+  auto df0 = (f(p + epsilon * dp, v + epsilon * dv, L + epsilon * dL) -
                 f(p - epsilon * dp, v - epsilon * dv, L - epsilon * dL)) /
                (2 * epsilon);
 
-  auto df0 = (serac::get<0>(serac::get<0>(grad)) * dp) + dot(serac::get<1>(serac::get<0>(grad)), dv) +
-             ddot(serac::get<2>(serac::get<0>(grad)), dL);
+  auto df1 = dfdp * dp + dfdv * dv + ddot(dfdL, dL);
 
-  auto df1 = (serac::get<0>(serac::get<1>(grad)) * dp) + dot(serac::get<1>(serac::get<1>(grad)), dv) +
-             ddot(serac::get<2>(serac::get<1>(grad)), dL);
-
-  auto df_ad = chain_rule(grad, serac::tuple{dp, dv, dL});
-
-  EXPECT_NEAR(norm(serac::get<0>(f(p, v, L)) - serac::get<0>(value)), 0.0, 1.e-13);
-  EXPECT_NEAR(norm(serac::get<1>(f(p, v, L)) - serac::get<1>(value)), 0.0, 1.e-13);
-
-  EXPECT_NEAR(norm(serac::get<0>(df_ad) - df0), 0.0, 1.e-8);
-  EXPECT_NEAR(norm(serac::get<1>(df_ad) - df1), 0.0, 1.e-8);
-  EXPECT_NEAR(norm(serac::get<0>(df_ad) - serac::get<0>(df_fd)), 0.0, 1.e-8);
-  EXPECT_NEAR(norm(serac::get<1>(df_ad) - serac::get<1>(df_fd)), 0.0, 1.e-8);
+  EXPECT_NEAR(norm(df1 - df0), 0.0, 1.e-8);
 }
 
 int main(int argc, char* argv[])
