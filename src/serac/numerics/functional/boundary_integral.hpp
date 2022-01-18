@@ -110,7 +110,7 @@ public:
    *    which == -1 corresponds to direct evaluation without any differentiation
    * @see evaluation_kernel
    */
-  void Mult(const std::array<mfem::Vector, num_trial_spaces>& input_E, mfem::Vector& output_E, int which = 0) const
+  void Mult(const std::array<mfem::Vector, num_trial_spaces>& input_E, mfem::Vector& output_E, int which) const
   {
     if (which == -1) {
       evaluation_(input_E, output_E);
@@ -126,7 +126,7 @@ public:
    * @param[in] which the index of the argument being differentiated
    * @see action_of_gradient_kernel
    */
-  void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E, size_t which = 0) const
+  void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E, size_t which) const
   {
     action_of_gradient_[which](input_E, output_E);
   }
@@ -137,7 +137,7 @@ public:
    * nelems)
    * @param[in] which the index of the argument being differentiated
    */
-  void ComputeElementGradients(ArrayView<double, 3, ExecutionSpace::CPU> K_b, size_t which = 0) const
+  void ComputeElementGradients(ArrayView<double, 3, ExecutionSpace::CPU> K_b, size_t which) const
   {
     element_gradient_[which](K_b);
   }
