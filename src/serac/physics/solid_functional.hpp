@@ -55,6 +55,12 @@ enum class PreviousSolve
   None     /**< No solves have been completed */
 };
 
+enum class GeometricNonlinearities
+{
+  On, /**< Include geometric nonlinearities */
+  Off /**< Do not include geometric nonlinearities */
+};
+
 /**
  * @brief The nonlinear solid solver class
  *
@@ -95,28 +101,25 @@ public:
     std::optional<TimesteppingOptions> dyn_options = std::nullopt;
   };
 
-  constexpr int NUM_FIELDS = 3;
-
-  SolidFunctional(const SolverOptions& options, GeometricNonlinearities geom_nonlin, FinalMeshOption keep_deformation,
-                  const std::string& name)
-      : BasePhysics(NUM_FIELDS, order),
+  SolidFunctional(const SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
+                  FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "")
+      : BasePhysics(2, order),
         velocity_(StateManager::newState(FiniteElementState::Options{
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "velocity")})),
         displacement_(StateManager::newState(FiniteElementState::Options{
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "displacement")})),
-        adjoint_displacement_(StateManager::newState(FiniteElementState::Options{
-            .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "adjoint_displacement")})),
-        geom_nonlin_(geom_nonlin),
-        keep_deformation_(keep_deformation),
+        M_functional_(&displacement_.space(), &displacement_.space()),
+        K_functional_(&displacement_.space(), &displacement_.space()),
         ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
-              nonlin_solver_, bcs_)
+              nonlin_solver_, bcs_),
+        geom_nonlin_(geom_nonlin),
+        keep_deformation_(keep_deformation)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
 
     state_.push_back(velocity_);
     state_.push_back(displacement_);
-    state_.push_back(adjoint_displacement_);
 
     // Initialize the mesh node pointers
     reference_nodes_ = displacement_.createOnSpace<mfem::ParGridFunction>();
@@ -126,9 +129,8 @@ public:
     reference_nodes_->GetTrueDofs(x_);
     deformed_nodes_ = std::make_unique<mfem::ParGridFunction>(*reference_nodes_);
 
-    displacement_.trueVec()         = 0.0;
-    velocity_.trueVec()             = 0.0;
-    adjoint_displacement_.trueVec() = 0.0;
+    displacement_.trueVec() = 0.0;
+    velocity_.trueVec()     = 0.0;
 
     const auto& lin_options = options.H_lin_options;
     // If the user wants the AMG preconditioner with a linear solver, set the pfes
@@ -188,7 +190,7 @@ public:
                           std::function<void(const mfem::Vector& x, mfem::Vector& disp)> disp)
   {
     // Project the coefficient onto the grid function
-    disp_bdr_coef_ = std::make_shared<mfem::VectorFunctionCoefficient>(disp);
+    disp_bdr_coef_ = std::make_shared<mfem::VectorFunctionCoefficient>(dim, disp);
 
     bcs_.addEssential(disp_bdr, disp_bdr_coef_, displacement_);
   }
@@ -202,6 +204,9 @@ public:
     bcs_.addEssential(disp_bdr, component_disp_bdr_coef_, displacement_, component);
   }
 
+  // Solve the Quasi-static Newton system
+  void quasiStaticSolve() { nonlin_solver_.Mult(zero_, displacement_.trueVec()); }
+
   /**
    * @brief Advance the timestep
    *
@@ -209,18 +214,33 @@ public:
    */
   void advanceTimestep(double& dt) override
   {
-    temperature_.initializeTrueVec();
+    // Initialize the true vector
+    velocity_.initializeTrueVec();
+    displacement_.initializeTrueVec();
+
+    // Set the mesh nodes to the reference configuration
+    mesh_.NewNodes(*reference_nodes_);
+
+    bcs_.setTime(time_);
 
     if (is_quasistatic_) {
-      nonlin_solver_.Mult(zero_, temperature_.trueVec());
+      quasiStaticSolve();
+      // Update the time for housekeeping purposes
+      time_ += dt;
     } else {
-      SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
-
-      // Step the time integrator
-      ode_.Step(temperature_.trueVec(), time_, dt);
+      ode2_.Step(displacement_.trueVec(), velocity_.trueVec(), time_, dt);
     }
 
-    temperature_.distributeSharedDofs();
+    // Distribute the shared DOFs
+    velocity_.distributeSharedDofs();
+    displacement_.distributeSharedDofs();
+
+    // Update the mesh with the new deformed nodes
+    deformed_nodes_->Set(1.0, displacement_.gridFunc());
+    deformed_nodes_->Add(1.0, *reference_nodes_);
+
+    mesh_.NewNodes(*deformed_nodes_);
+
     cycle_ += 1;
   }
 
@@ -237,19 +257,15 @@ public:
   template <typename MaterialType>
   void setMaterial(MaterialType material)
   {
-    static_assert(Thermal::has_density<MaterialType, dim>::value,
-                  "Thermal functional materials must have a public density(x) method.");
-    static_assert(Thermal::has_specific_heat_capacity<MaterialType, dim>::value,
-                  "Thermal functional materials must have a public specificHeatCapacity(x, temperature) method.");
-    static_assert(Thermal::has_thermal_flux<MaterialType, dim>::value,
-                  "Thermal functional materials must have a public (u, du_dx) operator for thermal flux evaluation.");
-
     K_functional_.AddDomainIntegral(
         Dimension<dim>{},
-        [material](auto, auto temperature) {
+        [I = I_, geom_nonlin = geom_nonlin_, material](auto, auto displacement) {
           // Get the value and the gradient from the input tuple
-          auto [u, du_dx] = temperature;
-          auto flux       = -1.0 * material(u, du_dx);
+          auto [u, du_dX]    = displacement;
+          double geom_factor = (geom_nonlin == GeometricNonlinearities::On ? 1.0 : 0.0);
+
+          auto deformation_grad = du_dX + I;
+          auto flux             = -1.0 * material(du_dX) * (1.0 + geom_factor * (det(deformation_grad) - 1.0));
 
           auto source = u * 0.0;
 
@@ -260,14 +276,16 @@ public:
 
     M_functional_.AddDomainIntegral(
         Dimension<dim>{},
-        [material](auto x, auto temperature) {
-          auto [u, du_dx] = temperature;
+        [I = I_, geom_nonlin = geom_nonlin_, material](auto x, auto displacement) {
+          auto [u, du_dX] = displacement;
 
-          auto source = material.specificHeatCapacity(x, u) * material.density(x);
+          auto flux = 0.0 * du_dX;
 
-          auto flux = 0.0 * du_dx;
+          double geom_factor = (geom_nonlin == GeometricNonlinearities::On ? 1.0 : 0.0);
 
-          // Return the source and the flux as a tuple
+          auto deformation_grad = du_dX + I;
+          auto source           = material.density(x) * u * (1.0 + geom_factor * (det(deformation_grad) - 1.0));
+
           return serac::tuple{source, flux};
         },
         mesh_);
@@ -278,13 +296,19 @@ public:
    *
    * @param temp The function describing the temperature field
    */
-  void setTemperature(std::function<double(const mfem::Vector& x, double t)> temp)
+  void setDisplacement(std::function<void(const mfem::Vector& x, mfem::Vector& disp)> disp)
   {
     // Project the coefficient onto the grid function
-    mfem::FunctionCoefficient temp_coef(temp);
+    mfem::VectorFunctionCoefficient disp_coef(dim, disp);
+    displacement_.project(disp_coef);
+    gf_initialized_[1] = true;
+  }
 
-    temp_coef.SetTime(time_);
-    temperature_.project(temp_coef);
+  void setVelocity(std::function<void(const mfem::Vector& x, mfem::Vector& vel)> vel)
+  {
+    // Project the coefficient onto the grid function
+    mfem::VectorFunctionCoefficient vel_coef(dim, vel);
+    velocity_.project(vel_coef);
     gf_initialized_[0] = true;
   }
 
@@ -296,24 +320,22 @@ public:
    *
    * @pre SourceType must have the operator (x, time, temperature, d temperature_dx) defined as the thermal source
    */
-  template <typename SourceType>
-  void setSource(SourceType source_function)
+  template <typename BodyForceType>
+  void addBodyForce(BodyForceType body_force_function)
   {
-    static_assert(
-        Thermal::has_thermal_source<SourceType, dim>::value,
-        "Thermal functional sources must have a public (x, t, u, du_dx) operator for thermal source evaluation.");
-
     K_functional_.AddDomainIntegral(
         Dimension<dim>{},
-        [source_function, this](auto x, auto temperature) {
+        [I = I_, body_force_function, this](auto x, auto displacement) {
           // Get the value and the gradient from the input tuple
-          auto [u, du_dx] = temperature;
+          auto [u, du_dX] = displacement;
 
-          auto flux = du_dx * 0.0;
+          auto flux = du_dX * 0.0;
 
-          auto source = -1.0 * source_function(x, time_, u, du_dx);
+          double geom_factor = (geom_nonlin_ == GeometricNonlinearities::On ? 1.0 : 0.0);
 
-          // Return the source and the flux as a tuple
+          auto deformation_grad = du_dX + I;
+          auto source =
+              -1.0 * body_force_function(x, time_, u, du_dX) * (1.0 + geom_factor * (det(deformation_grad) - 1.0));
           return serac::tuple{source, flux};
         },
         mesh_);
@@ -327,15 +349,27 @@ public:
    *
    * @pre FluxType must have the operator (x, normal, temperature) to return the thermal flux value
    */
-  template <typename FluxType>
-  void setFluxBCs(FluxType flux_function)
+
+  template <typename TractionType>
+  void setFluxBCs(TractionType traction_function, bool compute_on_reference)
   {
-    static_assert(Thermal::has_thermal_flux_boundary<FluxType, dim>::value,
-                  "Thermal flux boundary condition types must have a public (x, n, u) operator for thermal boundary "
-                  "flux evaluation.");
+    // TODO fix this when we can get gradients from boundary integrals
+    SLIC_ERROR_IF(!compute_on_reference, "SolidFunctional cannot compute traction BCs in deformed configuration");
 
     K_functional_.AddBoundaryIntegral(
-        Dimension<dim - 1>{}, [flux_function](auto x, auto n, auto u) { return flux_function(x, n, u); }, mesh_);
+        Dimension<dim - 1>{}, [traction_function](auto x, auto n, auto u) { return -1.0 * traction_function(x, n, u); },
+        mesh_);
+  }
+
+  template <typename PressureType>
+  void setPressureBCs(PressureType pressure_function, bool compute_on_reference)
+  {
+    // TODO fix this when we can get gradients from boundary integrals
+    SLIC_ERROR_IF(!compute_on_reference, "SolidFunctional cannot compute pressure BCs in deformed configuration");
+
+    K_functional_.AddBoundaryIntegral(
+        Dimension<dim - 1>{}, [pressure_function](auto x, auto n, auto u) { return pressure_function(x, u) * n; },
+        mesh_);
   }
 
   /**
@@ -343,10 +377,55 @@ public:
    *
    * @return A reference to the current temperature finite element state
    */
-  const serac::FiniteElementState& temperature() const { return temperature_; };
+  const serac::FiniteElementState& displacement() const { return displacement_; };
 
   /// @overload
-  serac::FiniteElementState& temperature() { return temperature_; };
+  serac::FiniteElementState& displacement() { return displacement_; };
+
+  /**
+   * @brief Get the temperature state
+   *
+   * @return A reference to the current temperature finite element state
+   */
+  const serac::FiniteElementState& velocity() const { return velocity_; };
+
+  /// @overload
+  serac::FiniteElementState& velocity() { return velocity_; };
+
+  void resetToReferenceConfiguration()
+  {
+    displacement_.gridFunc() = 0.0;
+    velocity_.gridFunc()     = 0.0;
+
+    velocity_.initializeTrueVec();
+    displacement_.initializeTrueVec();
+
+    mesh_.NewNodes(*reference_nodes_);
+  }
+
+  std::unique_ptr<mfem_ext::StdFunctionOperator> buildQuasistaticOperator()
+  {
+    // the quasistatic case is entirely described by the residual,
+    // there is no ordinary differential equation
+    auto residual = std::make_unique<mfem_ext::StdFunctionOperator>(
+        displacement_.space().TrueVSize(),
+
+        // residual function
+        [this](const mfem::Vector& u, mfem::Vector& r) {
+          r = K_functional_(u);
+          r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
+        },
+
+        // gradient of residual function
+        [this](const mfem::Vector& u) -> mfem::Operator& {
+          K_functional_(u);
+          J_.reset(grad(K_functional_));
+          bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+          return *J_;
+        });
+
+    return residual;
+  }
 
   /**
    * @brief Complete the initialization and allocation of the data structures.
@@ -356,89 +435,71 @@ public:
   void completeSetup() override
   {
     // Build the dof array lookup tables
-    temperature_.space().BuildDofToArrays();
+    displacement_.space().BuildDofToArrays();
 
     // Project the essential boundary coefficients
     for (auto& bc : bcs_.essentials()) {
-      bc.projectBdr(temperature_, time_);
-      K_functional_.SetEssentialBC(bc.markers());
+      bc.projectBdr(displacement_, time_);
     }
 
     // Initialize the true vector
-    temperature_.initializeTrueVec();
+    displacement_.initializeTrueVec();
 
     if (is_quasistatic_) {
-      residual_ = mfem_ext::StdFunctionOperator(
-          temperature_.space().TrueVSize(),
-
-          [this](const mfem::Vector& u, mfem::Vector& r) {
-            r = K_functional_(u);
-            r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
-          },
-
-          [this](const mfem::Vector& u) -> mfem::Operator& {
-            K_functional_(u);
-            J_.reset(grad(K_functional_));
-            bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
-            return *J_;
-          });
-
+      residual_ = buildQuasistaticOperator();
     } else {
-      // If dynamic, assemble the mass matrix
-      residual_ = mfem_ext::StdFunctionOperator(
-          temperature_.space().TrueVSize(),
-          [this](const mfem::Vector& du_dt, mfem::Vector& r) {
-            mfem::Vector K_arg(u_.Size());
-            add(1.0, u_, dt_, du_dt, K_arg);
+      // the dynamic case is described by a residual function and a second order
+      // ordinary differential equation. Here, we define the residual function in
+      // terms of an acceleration.
+      residual_ = std::make_unique<mfem_ext::StdFunctionOperator>(
+          displacement_.space().TrueVSize(),
 
-            add(M_functional_(du_dt), K_functional_(K_arg), r);
+          [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) {
+            mfem::Vector K_arg(u_.Size());
+            add(1.0, u_, c0_, d2u_dt2, K_arg);
+
+            add(M_functional_(d2u_dt2), K_functional_(K_arg), r);
+
             r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
           },
 
-          [this](const mfem::Vector& du_dt) -> mfem::Operator& {
-            // Only reassemble the stiffness if it is a new timestep
-            if (dt_ != previous_dt_) {
-              mfem::Vector K_arg(u_.Size());
-              add(1.0, u_, dt_, du_dt, K_arg);
+          [this](const mfem::Vector& d2u_dt2) -> mfem::Operator& {
+            // J = M + c0 * H(u_predicted)
+            mfem::Vector K_arg(u_.Size());
+            add(1.0, u_, c0_, d2u_dt2, K_arg);
 
-              M_functional_(u_);
-              std::unique_ptr<mfem::HypreParMatrix> m_mat(grad(M_functional_));
+            M_functional_(u_);
+            std::unique_ptr<mfem::HypreParMatrix> m_mat(grad(M_functional_));
 
-              K_functional_(K_arg);
-              std::unique_ptr<mfem::HypreParMatrix> k_mat(grad(K_functional_));
+            K_functional_(K_arg);
+            std::unique_ptr<mfem::HypreParMatrix> k_mat(grad(K_functional_));
 
-              J_.reset(mfem::Add(1.0, *m_mat, dt_, *k_mat));
-              bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
-            }
+            J_.reset(mfem::Add(1.0, *m_mat, c0_, *k_mat));
+            bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+
             return *J_;
           });
     }
-  }
 
-  /// Destroy the Thermal Solver object
-  virtual ~ThermalConductionFunctional() = default;
+    nonlin_solver_.SetOperator(*residual_);
+  }
 
 protected:
   /// The compile-time finite element trial space for thermal conduction (H1 of order p)
-  using trial = H1<order>;
+  using trial = H1<order, dim>;
 
   /// The compile-time finite element test space for thermal conduction (H1 of order p)
-  using test = H1<order>;
+  using test = H1<order, dim>;
 
   /// The temperature finite element state
-  serac::FiniteElementState temperature_;
+  FiniteElementState velocity_;
+  FiniteElementState displacement_;
 
   /// Mass functional object \f$\mathbf{M} = \int_\Omega c_p \, \rho \, \phi_i \phi_j\, dx \f$
   Functional<test(trial)> M_functional_;
 
   /// Stiffness functional object \f$\mathbf{K} = \int_\Omega \theta \cdot \nabla \phi_i  + f \phi_i \, dx \f$
   Functional<test(trial)> K_functional_;
-
-  /// Assembled mass matrix
-  std::unique_ptr<mfem::HypreParMatrix> M_;
-
-  /// Coefficient containing the essential boundary values
-  std::shared_ptr<mfem::Coefficient> temp_bdr_coef_;
 
   /**
    * @brief mfem::Operator that describes the weight residual
@@ -451,7 +512,7 @@ protected:
    * how to solve for the time derivative of temperature, given
    * the current temperature and source terms
    */
-  mfem_ext::FirstOrderODE ode_;
+  mfem_ext::SecondOrderODE ode2_;
 
   /// the specific methods and tolerances specified to solve the nonlinear residual equations
   mfem_ext::EquationSolver nonlin_solver_;
@@ -459,20 +520,66 @@ protected:
   /// Assembled sparse matrix for the Jacobian
   std::unique_ptr<mfem::HypreParMatrix> J_;
 
-  /// The current timestep
-  double dt_;
+  /**
+   * @brief alias for the reference mesh coordinates
+   *
+   *   this is used to correct for the fact that mfem's hyperelastic
+   *   material model is based on the nodal positions rather than nodal displacements
+   */
+  mfem::Vector x_;
 
-  /// The previous timestep
-  double previous_dt_;
+  /**
+   * @brief used to communicate the ODE solver's predicted displacement to the residual operator
+   */
+  mfem::Vector u_;
+
+  /**
+   * @brief used to communicate the ODE solver's predicted velocity to the residual operator
+   */
+  mfem::Vector du_dt_;
+
+  /**
+   * @brief the previous acceleration, used as a starting guess for newton's method
+   */
+  mfem::Vector previous_;
+
+  /**
+   * @brief Current time step
+   */
+  double c0_;
+
+  /**
+   * @brief Previous time step
+   */
+  double c1_;
+
+  GeometricNonlinearities geom_nonlin_;
+  /**
+   * @brief Pointer to the reference mesh data
+   */
+  std::unique_ptr<mfem::ParGridFunction> reference_nodes_;
+
+  /**
+   * @brief Flag to indicate the final mesh node state post-destruction
+   */
+  FinalMeshOption keep_deformation_;
+
+  /**
+   * @brief Pointer to the deformed mesh data
+   */
+  std::unique_ptr<mfem::ParGridFunction> deformed_nodes_;
+
+  /// Coefficient containing the essential boundary values
+  std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef_;
+
+  /// Coefficient containing the essential boundary values
+  std::shared_ptr<mfem::Coefficient> component_disp_bdr_coef_;
 
   /// An auxilliary zero vector
   mfem::Vector zero_;
 
-  /// Predicted temperature true dofs
-  mfem::Vector u_;
-
-  /// Previous value of du_dt used to prime the pump for the nonlinear solver
-  mfem::Vector previous_;
+  /// Auxilliary identity rank 2 tensor
+  const tensor<double, dim, dim> I_ = Identity<dim>();
 };
 
 }  // namespace serac
