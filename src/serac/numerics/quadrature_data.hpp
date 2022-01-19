@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -139,6 +139,11 @@ public:
    */
   QuadratureData(mfem::Mesh& mesh, const int p, const bool alloc = true);
 
+// Turn off null dereference warnings for GCC
+// TODO Fix the underlying possible nullptr dereference warning with the `MaybeOwnedPointer` type.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnull-dereference"
+
   /**
    * @brief Constructs from an existing quadrature function
    * @param[in] qfunc The QuadratureFunction with existing quadrature
@@ -164,6 +169,8 @@ public:
       j++;
     }
   }
+
+#pragma GCC diagnostic pop
 
   // When a QuadratureData instance is managed by StateManager, we don't
   // ever want to copy from or move from that instance.  This is sort of

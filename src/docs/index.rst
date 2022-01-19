@@ -1,4 +1,4 @@
-.. ## Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+.. ## Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 .. ## other Serac Project Developers. See the top-level COPYRIGHT file for details.
 .. ##
 .. ## SPDX-License-Identifier: (BSD-3-Clause)
@@ -25,7 +25,7 @@ Copyright and License Information
 
 Please see the `LICENSE <https://github.com/LLNL/serac/blob/develop/LICENSE>`_ file in the repository.
 
-Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC.
+Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC.
 Produced at the Lawrence Livermore National Laboratory.
 
 LLNL-CODE-805541

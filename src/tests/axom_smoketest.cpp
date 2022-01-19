@@ -3,6 +3,12 @@
 // details.
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
-#pragma once
 
-// TODO: implement boundary integral kernels for CUDA device
+#include "axom/core.hpp"
+
+int main()
+{
+  axom::about();
+
+  return 0;
+}

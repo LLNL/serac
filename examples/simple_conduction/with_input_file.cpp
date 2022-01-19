@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -55,7 +55,7 @@ int main(int argc, char* argv[])
   serac::ThermalConduction conduction(conduction_opts);
   // _create_module_end
   // _output_type_start
-  conduction.initializeOutput(inlet.getGlobalContainer().get<serac::OutputType>(), "simple_conduction_with_input_file");
+  conduction.initializeOutput(inlet.getGlobalContainer().get<serac::OutputType>(), "simple_conduction_with_input_file_output");
   // _output_type_end
   // Complete the solver setup
   conduction.completeSetup();
