@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -28,7 +28,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     endif()
 
     #------------------------------------------------------------------------------
-    # Conduit (required by Axom and Ascent)
+    # Conduit (required by Axom)
     #------------------------------------------------------------------------------
     if(NOT CONDUIT_DIR)
         MESSAGE(FATAL_ERROR "Could not find Conduit. Conduit requires explicit CONDUIT_DIR.")
@@ -49,28 +49,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
                  APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
                  "${_dirs}")
 
-
-    #------------------------------------------------------------------------------
-    # Ascent
-    #------------------------------------------------------------------------------
-    if(NOT ASCENT_DIR)
-        MESSAGE(FATAL_ERROR "Could not find Ascent. Ascent requires explicit ASCENT_DIR.")
-    endif()
-
-    set(_ascent_config "${ASCENT_DIR}/lib/cmake/ascent/AscentConfig.cmake")
-    if(NOT EXISTS ${_ascent_config})
-        MESSAGE(FATAL_ERROR "Could not find Ascent CMake include file ${_ascent_config}")
-    endif()
-
-    find_package(Ascent REQUIRED
-                 NO_DEFAULT_PATH
-                 PATHS ${ASCENT_DIR}/lib/cmake)
-
-    # Manually set includes as system includes
-    get_target_property(_dirs ascent::ascent_mpi INTERFACE_INCLUDE_DIRECTORIES)
-    set_property(TARGET ascent::ascent_mpi
-                 APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
-                 "${_dirs}")
 
     #------------------------------------------------------------------------------
     # PETSC
@@ -126,7 +104,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         message(STATUS "Using MFEM submodule")
 
         #### Store Data that MFEM clears
-        set(tpls_to_save ASCENT AXOM CALIPER CONDUIT HDF5
+        set(tpls_to_save AXOM CALIPER CONDUIT HDF5
                          HYPRE LUA METIS NETCDF PETSC RAJA UMPIRE)
         foreach(_tpl ${tpls_to_save})
             set(${_tpl}_DIR_SAVE "${${_tpl}_DIR}")
@@ -276,6 +254,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(AXOM_ENABLE_EXAMPLES OFF CACHE BOOL "")
         set(AXOM_ENABLE_TESTS    OFF CACHE BOOL "")
         set(AXOM_ENABLE_DOCS     OFF CACHE BOOL "")
+        set(AXOM_ENABLE_TOOLS    OFF CACHE BOOL "")
         set(AXOM_USE_CALIPER ${CALIPER_FOUND} CACHE BOOL "")
 
         # Used for the doxygen target
@@ -391,7 +370,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     # to work around CMake error
     #---------------------------------------------------------------------------
     set(_imported_targets
-        ascent::ascent_mpi
         axom
         conduit
         conduit::conduit_mpi

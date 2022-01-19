@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -12,6 +12,10 @@
 set(CMAKE_C_COMPILER              "@CMAKE_C_COMPILER@"       CACHE PATH "")
 set(CMAKE_CXX_COMPILER            "@CMAKE_CXX_COMPILER@"     CACHE PATH "")
 set(CMAKE_CXX_STANDARD            "@CMAKE_CXX_STANDARD@"     CACHE STRING "")
+set(CMAKE_Fortran_COMPILER        "@CMAKE_Fortran_COMPILER@" CACHE PATH "")
+set(MPI_C_COMPILER                "@MPI_C_COMPILER@"         CACHE PATH "")
+set(MPI_CXX_COMPILER              "@MPI_CXX_COMPILER@"       CACHE PATH "")
+set(MPI_Fortran_COMPILER          "@MPI_Fortran_COMPILER@"   CACHE PATH "")
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE                       CACHE BOOL "")
 
 set(CMAKE_C_FLAGS            "@CMAKE_C_FLAGS@"          CACHE STRING "")

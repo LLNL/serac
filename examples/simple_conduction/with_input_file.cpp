@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
 
   // _inlet_init_start
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "serac", "with_input_file_example");
+  serac::StateManager::initialize(datastore, "with_input_file_example");
   auto inlet = serac::input::initialize(datastore, input_file);
   // _inlet_init_end
 

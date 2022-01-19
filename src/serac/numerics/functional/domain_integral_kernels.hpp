@@ -1,10 +1,11 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 #pragma once
 
+#include "serac/infrastructure/accelerator.hpp"
 #include "serac/numerics/quadrature_data.hpp"
 #include "serac/numerics/functional/integral_utilities.hpp"
 #include "serac/numerics/functional/evector_view.hpp"

@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -19,7 +19,7 @@
 
 #include "axom/core.hpp"
 #include "mfem.hpp"
-#include "serac/physics/coefficients/loading_functions.hpp"
+
 #include "serac/infrastructure/cli.hpp"
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/input.hpp"
@@ -102,7 +102,6 @@ int main(int argc, char* argv[])
   // * Inlet docs + input file value file
   // * StateManager state files
   // * Summary file
-  // * Field data files
   std::string output_directory = "";
   search                       = cli_opts.find("output-directory");
   if (search != cli_opts.end()) {
@@ -118,15 +117,12 @@ int main(int argc, char* argv[])
 
   // Check for the doc creation command line argument
   bool create_input_file_docs = cli_opts.find("create-input-file-docs") != cli_opts.end();
-  // Check for the output fields command line argument
-  bool output_fields = cli_opts.find("output-fields") != cli_opts.end();
 
   // Create DataStore
   axom::sidre::DataStore datastore;
 
   // Intialize MFEMSidreDataCollection
-  // If restart_cycle is non-empty, then this is a restart run and the data will be loaded here
-  serac::StateManager::initialize(datastore, "serac", output_directory, restart_cycle);
+  serac::StateManager::initialize(datastore, output_directory);
 
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);
@@ -153,6 +149,9 @@ int main(int argc, char* argv[])
     }
     auto mesh = serac::mesh::buildParallelMesh(mesh_options);
     serac::StateManager::setMesh(std::move(mesh));
+  } else {
+    // If restart_cycle is non-empty, then this is a restart run and the data will be loaded here
+    serac::StateManager::load(*restart_cycle);
   }
 
   // Create the physics object
@@ -164,14 +163,13 @@ int main(int argc, char* argv[])
   std::optional<serac::ThermalSolid::InputOptions>      thermal_solid_solver_options;
 
   // If the blocks exist, read the appropriate input file options
-  // FIXME: This will get patched in inlet so we can do inlet.isUserProvided("solid") etc
-  if (inlet.getGlobalContainer().getChildContainers().at("solid")->isUserProvided()) {
+  if (inlet.isUserProvided("solid")) {
     solid_solver_options = inlet["solid"].get<serac::Solid::InputOptions>();
   }
-  if (inlet.getGlobalContainer().getChildContainers().at("thermal_conduction")->isUserProvided()) {
+  if (inlet.isUserProvided("thermal_conduction")) {
     thermal_solver_options = inlet["thermal_conduction"].get<serac::ThermalConduction::InputOptions>();
   }
-  if (inlet.getGlobalContainer().getChildContainers().at("thermal_solid")->isUserProvided()) {
+  if (inlet.isUserProvided("thermal_solid")) {
     thermal_solid_solver_options = inlet["thermal_solid"].get<serac::ThermalSolid::InputOptions>();
   }
 
@@ -231,10 +229,8 @@ int main(int argc, char* argv[])
     last_step = (t >= t_final - 1e-8 * dt);
   }
 
-  serac::output::outputSummary(datastore, serac::StateManager::collectionName(), output_directory);
-  if (output_fields) {
-    serac::output::outputFields(datastore, serac::StateManager::collectionName(), output_directory, t);
-  }
+  // Output summary file (basic run info and curve data)
+  serac::output::outputSummary(datastore, output_directory);
 
   serac::exitGracefully();
 }

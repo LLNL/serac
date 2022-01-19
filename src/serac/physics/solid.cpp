@@ -23,14 +23,20 @@ namespace serac {
 constexpr int NUM_FIELDS = 3;
 
 Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities geom_nonlin,
-             FinalMeshOption keep_deformation, const std::string& name)
-    : BasePhysics(NUM_FIELDS, order),
-      velocity_(StateManager::newState(FiniteElementState::Options{
-          .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "velocity")})),
-      displacement_(StateManager::newState(FiniteElementState::Options{
-          .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "displacement")})),
-      adjoint_displacement_(StateManager::newState(FiniteElementState::Options{
-          .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "adjoint_displacement")})),
+             FinalMeshOption keep_deformation, const std::string& name, mfem::ParMesh* pmesh)
+    : BasePhysics(NUM_FIELDS, order, pmesh),
+      velocity_(StateManager::newState(
+          FiniteElementState::Options{
+              .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "velocity")},
+          sidre_datacoll_id_)),
+      displacement_(StateManager::newState(
+          FiniteElementState::Options{
+              .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "displacement")},
+          sidre_datacoll_id_)),
+      adjoint_displacement_(StateManager::newState(
+          FiniteElementState::Options{
+              .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "adjoint_displacement")},
+          sidre_datacoll_id_)),
       geom_nonlin_(geom_nonlin),
       keep_deformation_(keep_deformation),
       ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
@@ -428,6 +434,9 @@ FiniteElementDual& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace* s
 {
   checkSensitivityMode();
 
+  // Set the mesh nodes to the reference configuration
+  mesh_.NewNodes(*reference_nodes_);
+
   if (!shear_sensitivity_coef_) {
     LinearElasticMaterial* linear_mat = dynamic_cast<LinearElasticMaterial*>(material_.get());
 
@@ -443,7 +452,7 @@ FiniteElementDual& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace* s
     shear_sensitivity_      = std::make_unique<FiniteElementDual>(mesh_, *shear_space);
     shear_sensitivity_form_ = shear_sensitivity_->createOnSpace<mfem::ParLinearForm>();
 
-    shear_sensitivity_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*shear_sensitivity_coef_));
+    shear_sensitivity_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*shear_sensitivity_coef_, 2, 2));
   }
 
   // Assemble the linear form at the current state and adjoint values
@@ -456,12 +465,18 @@ FiniteElementDual& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace* s
   // Distribute the shared dofs in the dual state
   shear_sensitivity_->distributeSharedDofs();
 
+  // Set the mesh nodes back to the reference configuration
+  mesh_.NewNodes(*deformed_nodes_);
+
   return *shear_sensitivity_;
 }
 
 FiniteElementDual& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace* bulk_space)
 {
   checkSensitivityMode();
+
+  // Set the mesh nodes to the reference configuration
+  mesh_.NewNodes(*reference_nodes_);
 
   if (!bulk_sensitivity_coef_) {
     LinearElasticMaterial* linear_mat = dynamic_cast<LinearElasticMaterial*>(material_.get());
@@ -477,7 +492,7 @@ FiniteElementDual& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace* bu
     bulk_sensitivity_      = std::make_unique<FiniteElementDual>(mesh_, *bulk_space);
     bulk_sensitivity_form_ = bulk_sensitivity_->createOnSpace<mfem::ParLinearForm>();
 
-    bulk_sensitivity_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*bulk_sensitivity_coef_));
+    bulk_sensitivity_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*bulk_sensitivity_coef_, 2, 2));
   }
 
   // Assemble the linear form at the current state and adjoint values
@@ -489,6 +504,9 @@ FiniteElementDual& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace* bu
 
   // Distribute the shared dofs in the dual state
   bulk_sensitivity_->distributeSharedDofs();
+
+  // Set the mesh nodes back to the reference configuration
+  mesh_.NewNodes(*deformed_nodes_);
 
   return *bulk_sensitivity_;
 }
@@ -515,14 +533,19 @@ const FiniteElementState& Solid::solveAdjoint(FiniteElementDual& adjoint_load,
   auto& J   = dynamic_cast<mfem::HypreParMatrix&>(H_->GetGradient(displacement_.trueVec()));
   auto  J_T = std::unique_ptr<mfem::HypreParMatrix>(J.Transpose());
 
+  // By default, use a homogeneous essential boundary condition
+  mfem::HypreParVector adjoint_essential(adjoint_load.trueVec());
+  adjoint_essential = 0.0;
+
+  // If we have a non-homogeneous essential boundary condition, extract it from the given state
   if (dual_with_essential_boundary) {
     dual_with_essential_boundary->initializeTrueVec();
-    for (const auto& bc : bcs_.essentials()) {
-      bc.eliminateFromMatrix(*J_T);
-      bc.eliminateToRHS(*J_T, dual_with_essential_boundary->trueVec(), adjoint_load_vector);
-    }
-  } else {
-    bcs_.eliminateAllEssentialDofsFromMatrix(*J_T);
+    adjoint_essential = dual_with_essential_boundary->trueVec();
+  }
+
+  for (const auto& bc : bcs_.essentials()) {
+    bc.eliminateFromMatrix(*J_T);
+    bc.eliminateToRHS(*J_T, adjoint_essential, adjoint_load_vector);
   }
 
   lin_solver.SetOperator(*J_T);

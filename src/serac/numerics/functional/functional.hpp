@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -212,7 +212,10 @@ public:
     const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
 
     constexpr auto flags = mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS;
-    auto           geom  = domain.GetGeometricFactors(ir, flags);
+
+    // NOTE: we are relying on MFEM to keep these geometric factors accurate. We store
+    // the necessary data as references in the integral data structure.
+    auto geom = domain.GetGeometricFactors(ir, flags);
     domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<dim>{}, integrand, data);
   }
 
@@ -242,7 +245,10 @@ public:
     constexpr auto flags = mfem::FaceGeometricFactors::COORDINATES | mfem::FaceGeometricFactors::DETERMINANTS |
                            mfem::FaceGeometricFactors::NORMALS;
 
-    // despite what their documentation says, mfem doesn't actually support the JACOBIANS flag.
+    // NOTE: we are relying on MFEM to keep these geometric factors accurate. We store
+    // the necessary data as references in the integral data structure.
+
+    // Despite what their documentation says, mfem doesn't actually support the JACOBIANS flag.
     // this is currently a dealbreaker, as we need this information to do any calculations
     auto geom = domain.GetFaceGeometricFactors(ir, flags, mfem::FaceType::Boundary);
 
@@ -494,14 +500,14 @@ private:
         auto& K_elem = form_.element_gradients_[which_argument];
         auto& LUT    = lookup_tables.element_nonzero_LUT;
 
-        zero_out(K_elem);
+        detail::zero_out(K_elem);
         for (auto& domain : form_.domain_integrals_) {
           domain.ComputeElementGradients(view(K_elem), which_argument);
         }
 
-        for (size_t e = 0; e < K_elem.size(0); e++) {
-          for (size_t i = 0; i < K_elem.size(1); i++) {
-            for (size_t j = 0; j < K_elem.size(2); j++) {
+        for (axom::IndexType e = 0; e < K_elem.shape()[0]; e++) {
+          for (axom::IndexType i = 0; i < K_elem.shape()[1]; i++) {
+            for (axom::IndexType j = 0; j < K_elem.shape()[2]; j++) {
               auto [index, sign] = LUT(e, i, j);
               values[index] += sign * K_elem(e, i, j);
             }
@@ -515,14 +521,14 @@ private:
         auto& K_belem = form_.bdr_element_gradients_[which_argument];
         auto& LUT     = lookup_tables.bdr_element_nonzero_LUT;
 
-        zero_out(K_belem);
+        detail::zero_out(K_belem);
         for (auto& boundary : form_.bdr_integrals_) {
           boundary.ComputeElementGradients(view(K_belem), which_argument);
         }
 
-        for (size_t e = 0; e < K_belem.size(0); e++) {
-          for (size_t i = 0; i < K_belem.size(1); i++) {
-            for (size_t j = 0; j < K_belem.size(2); j++) {
+        for (axom::IndexType e = 0; e < K_belem.shape()[0]; e++) {
+          for (axom::IndexType i = 0; i < K_belem.shape()[1]; i++) {
+            for (axom::IndexType j = 0; j < K_belem.shape()[2]; j++) {
               auto [index, sign] = LUT(e, i, j);
               values[index] += sign * K_belem(e, i, j);
             }

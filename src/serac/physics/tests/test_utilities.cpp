@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -202,10 +202,9 @@ void runModuleTest(const std::string& input_file, const std::string& test_name, 
   // process will wipe out the datastore
   std::string output_directory = test_name;
   axom::utilities::filesystem::makeDirsForPath(output_directory);
+  serac::StateManager::initialize(datastore, output_directory);
   if (restart_cycle) {
-    serac::StateManager::initialize(datastore, "serac", output_directory, *restart_cycle);
-  } else {
-    serac::StateManager::initialize(datastore, "serac", output_directory);
+    serac::StateManager::load(*restart_cycle);
   }
 
   // Initialize Inlet and read input file

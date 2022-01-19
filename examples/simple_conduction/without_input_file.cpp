@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
 {
   /*auto [num_procs, rank] = */serac::initialize(argc, argv);
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "serac", "without_input_file_example");
+  serac::StateManager::initialize(datastore, "without_input_file_example");
   // _main_init_end
   // _create_mesh_start
   auto mesh = serac::mesh::refineAndDistribute(serac::buildRectangleMesh(10, 10));

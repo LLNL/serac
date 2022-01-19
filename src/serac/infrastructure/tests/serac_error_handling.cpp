@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -119,7 +119,7 @@ TEST(serac_error_handling, invalid_output_type)
 {
   // Create DataStore
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "serac", "invalid_output_type");
+  serac::StateManager::initialize(datastore, "invalid_output_type");
   serac::StateManager::setMesh(mesh::refineAndDistribute(buildDiskMesh(1000)));
   ThermalConduction physics(1, ThermalConduction::defaultQuasistaticOptions());
   // Try a definitely wrong number to ensure that an invalid output type is detected

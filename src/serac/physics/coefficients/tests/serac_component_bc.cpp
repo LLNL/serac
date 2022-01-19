@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -38,7 +38,7 @@ TEST(solid_solver, qs_component_solve)
 
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);
-  serac::StateManager::initialize(datastore, "serac", "with_input_file_example");
+  serac::StateManager::initialize(datastore, "with_input_file_example");
 
   test_utils::defineTestSchema<Solid>(inlet);
 

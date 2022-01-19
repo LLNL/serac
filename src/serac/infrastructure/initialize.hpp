@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -26,24 +26,6 @@ namespace serac {
  * @pre The logger must be initialized (to display error messages)
  */
 std::pair<int, int> getMPIInfo(MPI_Comm comm = MPI_COMM_WORLD);
-
-/**
- * @brief Returns the name of the machine
- *
- * @todo Remove when moved to Axom
- *
- * @return The name of the current machine, empty string on failure
- */
-std::string getHostName();
-
-/**
- * @brief Returns the name of the current user
- *
- * @todo Remove when moved to Axom
- *
- * @return The name of the current user, empty string on failure
- */
-std::string getUserName();
 
 /**
  * @brief Initializes MPI, signal handling, and logging

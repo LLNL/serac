@@ -2,7 +2,7 @@
 
 #include "mfem.hpp"
 
-#include "serac/numerics/functional/array.hpp"
+#include "serac/infrastructure/accelerator.hpp"
 
 namespace serac {
 
@@ -118,30 +118,30 @@ bool compatibleWithFaceRestriction(const mfem::ParFiniteElementSpace& fes)
  *               getting dofs/ids for boundary elements in 2D,3D w/ L2 spaces
  */
 template <typename T, ExecutionSpace exec>
-serac::Array<T, 3, exec> allocateMemoryForBdrElementGradients(const mfem::ParFiniteElementSpace& trial_fes,
-                                                              const mfem::ParFiniteElementSpace& test_fes)
+ExecArray<T, 3, exec> allocateMemoryForBdrElementGradients(const mfem::ParFiniteElementSpace& trial_fes,
+                                                           const mfem::ParFiniteElementSpace& test_fes)
 {
   if (compatibleWithFaceRestriction(test_fes) && compatibleWithFaceRestriction(trial_fes)) {
     auto* test_BE  = test_fes.GetBE(0);
     auto* trial_BE = trial_fes.GetBE(0);
-    return serac::Array<T, 3, exec>(static_cast<size_t>(trial_fes.GetNFbyType(mfem::FaceType::Boundary)),
-                                    static_cast<size_t>(test_BE->GetDof() * test_fes.GetVDim()),
-                                    static_cast<size_t>(trial_BE->GetDof() * trial_fes.GetVDim()));
+    return {static_cast<size_t>(trial_fes.GetNFbyType(mfem::FaceType::Boundary)),
+            static_cast<size_t>(test_BE->GetDof() * test_fes.GetVDim()),
+            static_cast<size_t>(trial_BE->GetDof() * trial_fes.GetVDim())};
   } else {
-    return serac::Array<T, 3, exec>(0, 0, 0);
+    return {0, 0, 0};
   }
 }
 
 /// @overload
 template <typename T, ExecutionSpace exec>
-serac::Array<T, 2, exec> allocateMemoryForBdrElementGradients(const mfem::ParFiniteElementSpace& fes)
+ExecArray<T, 2, exec> allocateMemoryForBdrElementGradients(const mfem::ParFiniteElementSpace& fes)
 {
   if (compatibleWithFaceRestriction(fes)) {
     auto* BE = fes.GetBE(0);
-    return serac::Array<T, 2, exec>(static_cast<size_t>(fes.GetNFbyType(mfem::FaceType::Boundary)),
-                                    static_cast<size_t>(BE->GetDof() * fes.GetVDim()));
+    return {static_cast<size_t>(fes.GetNFbyType(mfem::FaceType::Boundary)),
+            static_cast<size_t>(BE->GetDof() * fes.GetVDim())};
   } else {
-    return serac::Array<T, 2, exec>(0, 0);
+    return {0, 0};
   }
 }
 
@@ -185,9 +185,9 @@ struct DofNumbering {
       elem_restriction->Mult(iota, dof_ids);
       const double* dof_ids_h = dof_ids.HostRead();
 
-      for (size_t e = 0; e < element_dofs_.size(0); e++) {
-        for (size_t i = 0; i < element_dofs_.size(1); i++) {
-          int mfem_id         = static_cast<int>(dof_ids_h[element_dofs_.index(e, i)]);
+      for (axom::IndexType e = 0; e < element_dofs_.shape()[0]; e++) {
+        for (axom::IndexType i = 0; i < element_dofs_.shape()[1]; i++) {
+          int mfem_id         = static_cast<int>(dof_ids_h[&element_dofs_(e, i) - element_dofs_.data()]);
           element_dofs_(e, i) = decodeSignedIndex(mfem_id);
         }
       }
@@ -206,9 +206,9 @@ struct DofNumbering {
       face_restriction->Mult(iota, dof_ids);
       const double* dof_ids_h = dof_ids.HostRead();
 
-      for (size_t e = 0; e < bdr_element_dofs_.size(0); e++) {
-        for (size_t i = 0; i < bdr_element_dofs_.size(1); i++) {
-          int mfem_id             = static_cast<int>(dof_ids_h[bdr_element_dofs_.index(e, i)]);
+      for (axom::IndexType e = 0; e < bdr_element_dofs_.shape()[0]; e++) {
+        for (axom::IndexType i = 0; i < bdr_element_dofs_.shape()[1]; i++) {
+          int mfem_id             = static_cast<int>(dof_ids_h[&bdr_element_dofs_(e, i) - bdr_element_dofs_.data()]);
           bdr_element_dofs_(e, i) = decodeSignedIndex(mfem_id);
         }
       }
@@ -216,10 +216,10 @@ struct DofNumbering {
   }
 
   /// @brief element_dofs_(e, i) stores the `i`th dof of element `e`.
-  serac::CPUArray<SignedIndex, 2> element_dofs_;
+  CPUArray<SignedIndex, 2> element_dofs_;
 
   /// @brief bdr_element_dofs_(b, i) stores the `i`th dof of boundary element `b`.
-  serac::CPUArray<SignedIndex, 2> bdr_element_dofs_;
+  CPUArray<SignedIndex, 2> bdr_element_dofs_;
 };
 
 /**
@@ -262,11 +262,12 @@ struct GradientAssemblyLookupTables {
     // which element and which dof are associated with that particular nonzero entry
     bool on_boundary = false;
     for (uint32_t e = 0; e < num_elements; e++) {
-      for (uint32_t i = 0; i < test_dofs.element_dofs_.size(1); i++) {
+      for (axom::IndexType i = 0; i < test_dofs.element_dofs_.shape()[1]; i++) {
         auto test_dof = test_dofs.element_dofs_(e, i);
-        for (uint32_t j = 0; j < trial_dofs.element_dofs_.size(1); j++) {
+        for (axom::IndexType j = 0; j < trial_dofs.element_dofs_.shape()[1]; j++) {
           auto trial_dof = trial_dofs.element_dofs_(e, j);
-          infos.push_back(ElemInfo{test_dof, trial_dof, i, j, e, test_dof.sign_ * trial_dof.sign_, on_boundary});
+          infos.push_back(ElemInfo{test_dof, trial_dof, static_cast<uint32_t>(i), static_cast<uint32_t>(j), e,
+                                   test_dof.sign_ * trial_dof.sign_, on_boundary});
         }
       }
     }
@@ -276,11 +277,12 @@ struct GradientAssemblyLookupTables {
     // an empty 2D array, so these loops will not do anything
     on_boundary = true;
     for (uint32_t e = 0; e < num_bdr_elements; e++) {
-      for (uint32_t i = 0; i < test_dofs.bdr_element_dofs_.size(1); i++) {
+      for (axom::IndexType i = 0; i < test_dofs.bdr_element_dofs_.shape()[1]; i++) {
         auto test_dof = test_dofs.bdr_element_dofs_(e, i);
-        for (uint32_t j = 0; j < trial_dofs.bdr_element_dofs_.size(1); j++) {
+        for (axom::IndexType j = 0; j < trial_dofs.bdr_element_dofs_.shape()[1]; j++) {
           auto trial_dof = trial_dofs.bdr_element_dofs_(e, j);
-          infos.push_back(ElemInfo{test_dof, trial_dof, i, j, e, test_dof.sign_ * trial_dof.sign_, on_boundary});
+          infos.push_back(ElemInfo{test_dof, trial_dof, static_cast<uint32_t>(i), static_cast<uint32_t>(j), e,
+                                   test_dof.sign_ * trial_dof.sign_, on_boundary});
         }
       }
     }

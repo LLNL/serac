@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -308,7 +308,7 @@ EvaluationKernel(DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, CPUVi
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
           typename qpt_data_type = void>
-void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, CPUView<derivatives_type, 2> qf_derivatives,
+void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, CPUArrayView<derivatives_type, 2> qf_derivatives,
                        const mfem::Vector& J_, const mfem::Vector& X_, const mfem::Vector& N_, int num_elements,
                        lambda qf)
 

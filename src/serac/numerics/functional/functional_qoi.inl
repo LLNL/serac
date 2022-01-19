@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -320,13 +320,13 @@ private:
         auto& K_elem = form_.element_gradients_[which_argument];
         auto& LUT    = lookup_tables.element_dofs_;
 
-        zero_out(K_elem);
+        detail::zero_out(K_elem);
         for (auto& domain : form_.domain_integrals_) {
-          domain.ComputeElementGradients(view(K_elem));
+          domain.ComputeElementGradients(K_elem);
         }
 
-        for (size_t e = 0; e < K_elem.size(0); e++) {
-          for (size_t j = 0; j < K_elem.size(2); j++) {
+        for (axom::IndexType e = 0; e < K_elem.shape()[0]; e++) {
+          for (axom::IndexType j = 0; j < K_elem.shape()[2]; j++) {
             auto [index, sign] = LUT(e, j);
             gradient_L_[index] += sign * K_elem(e, 0, j);
           }
@@ -337,13 +337,13 @@ private:
         auto& K_belem = form_.bdr_element_gradients_[which_argument];
         auto& LUT     = lookup_tables.bdr_element_dofs_;
 
-        zero_out(K_belem);
+        detail::zero_out(K_belem);
         for (auto& boundary : form_.bdr_integrals_) {
           boundary.ComputeElementGradients(view(K_belem), which_argument);
         }
 
-        for (size_t e = 0; e < K_belem.size(0); e++) {
-          for (size_t j = 0; j < K_belem.size(2); j++) {
+        for (axom::IndexType e = 0; e < K_belem.shape()[0]; e++) {
+          for (axom::IndexType j = 0; j < K_belem.shape()[2]; j++) {
             auto [index, sign] = LUT(e, j);
             gradient_L_[index] += sign * K_belem(e, 0, j);
           }

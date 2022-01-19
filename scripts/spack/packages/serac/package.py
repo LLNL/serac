@@ -76,7 +76,6 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("mpi")
     depends_on("cmake@3.8:")
 
-    depends_on("ascent@0.7.1serac~vtkh~fortran~shared~openmp")
     depends_on("lua")
 
     # Devtool dependencies these need to match serac_devtools/package.py
@@ -106,7 +105,10 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("netcdf-c@4.7.4~shared", when="+netcdf")
 
     # Needs to be first due to a bug with the Spack concretizer
-    depends_on("hdf5+hl@1.8.21~shared")
+    # Note: Certain combinations of CMake and Conduit do not like +mpi
+    #  and cause FindHDF5.cmake to fail and only return mpi information
+    #  (includes, libs, etc) instead of hdf5 info
+    depends_on("hdf5@1.8.21+hl~mpi~shared")
 
     # Axom enables RAJA/Umpire by default
     depends_on("axom~raja", when="~raja")
@@ -304,7 +306,7 @@ class Serac(CachedCMakePackage, CudaPackage):
 
         # required tpls
         # Note: lua is included in the case that axom is built via submodule
-        for dep in ('ascent', 'axom', 'conduit', 'lua', 'mfem', 'hdf5',
+        for dep in ('axom', 'conduit', 'lua', 'mfem', 'hdf5',
                     'hypre', 'metis', 'parmetis'):
             dep_dir = get_spec_path(spec, dep, path_replacements)
             entries.append(cmake_cache_path('%s_DIR' % dep.upper(),

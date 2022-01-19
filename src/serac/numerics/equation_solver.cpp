@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -60,7 +60,7 @@ std::unique_ptr<mfem::AmgXSolver> configureAMGX(const MPI_Comm comm, const AMGXP
     options_node["solver/print_solve_stats"] = 1;
   }
 
-  // FIXME: magic_enum?
+  // TODO: Use magic_enum here when we can switch to GCC 9+
   // This is an immediately-invoked lambda so that the map
   // can be const without needed to initialize all the values
   // in the constructor

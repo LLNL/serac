@@ -1,10 +1,11 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/physics/integrators/wrapper_integrator.hpp"
+#include "serac/infrastructure/logger.hpp"
 
 namespace serac::mfem_ext {
 
@@ -26,10 +27,14 @@ void LinearToNonlinearFormIntegrator::AssembleElementGrad(const mfem::FiniteElem
                                                           mfem::ElementTransformation& Tr, const mfem::Vector&,
                                                           mfem::DenseMatrix&           elmat)
 {
-  const mfem::FiniteElement& trial_el = *(trial_fes_.FEColl()->FiniteElementForGeometry(Tr.GetGeometryType()));
+  mfem::FiniteElement const* trial_el = trial_fes_.FEColl()->FiniteElementForGeometry(Tr.GetGeometryType());
 
-  elmat.SetSize(trial_el.GetDof() * trial_el.GetDim(), el.GetDof() * el.GetDim());
-  elmat = 0.;
+  if (trial_el) {
+    elmat.SetSize(trial_el->GetDof() * trial_el->GetDim(), el.GetDof() * el.GetDim());
+    elmat = 0.;
+  } else {
+    SLIC_ERROR("Returned trial element is null.");
+  }
 }
 
 BilinearToNonlinearFormIntegrator::BilinearToNonlinearFormIntegrator(std::shared_ptr<mfem::BilinearFormIntegrator> A)

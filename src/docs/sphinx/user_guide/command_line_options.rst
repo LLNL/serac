@@ -1,4 +1,4 @@
-.. ## Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+.. ## Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 .. ## other Serac Project Developers. See the top-level COPYRIGHT file for details.
 .. ##
 .. ## SPDX-License-Identifier: (BSD-3-Clause)
@@ -37,7 +37,3 @@ Below is the documentation for Serac's command line options:
      - -o
      - Path
      - Directory to put outputted files
-   * - --output-fields
-     - 
-     - N/A
-     - Writes field data to file system

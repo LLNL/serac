@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -20,10 +20,11 @@
 
 namespace serac {
 
-BasePhysics::BasePhysics()
-    : mesh_(StateManager::mesh()),
+BasePhysics::BasePhysics(mfem::ParMesh* pmesh)
+    : sidre_datacoll_id_(StateManager::collectionID(pmesh)),
+      mesh_(StateManager::mesh(sidre_datacoll_id_)),
       comm_(mesh_.GetComm()),
-      output_type_(serac::OutputType::VisIt),
+      output_type_(serac::OutputType::SidreVisIt),
       time_(0.0),
       cycle_(0),
       bcs_(mesh_)
@@ -33,10 +34,11 @@ BasePhysics::BasePhysics()
   root_name_                     = "serac";
 }
 
-BasePhysics::BasePhysics(int n, int p) : BasePhysics()
+BasePhysics::BasePhysics(int n, int p, mfem::ParMesh* pmesh) : BasePhysics(pmesh)
 {
   order_ = p;
-  gf_initialized_.assign(static_cast<std::size_t>(n), false);
+  // If this is a restart run, things have already been initialized
+  gf_initialized_.assign(static_cast<std::size_t>(n), StateManager::isRestart());
 }
 
 void BasePhysics::setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component)
@@ -118,7 +120,7 @@ void BasePhysics::outputState() const
     case serac::OutputType::SidreVisIt: {
       // Implemented through a helper method as the full interface of the MFEMSidreDataCollection
       // is restricted from global access
-      StateManager::save(time_, cycle_);
+      StateManager::save(time_, cycle_, sidre_datacoll_id_);
       break;
     }
 
@@ -176,8 +178,8 @@ void BasePhysics::initializeSummary(axom::sidre::DataStore& datastore, double t_
   axom::sidre::Group* summary_group = sidre_root->createGroup(summary_group_name);
 
   // Write run info
-  summary_group->createViewString("user_name", serac::getUserName());
-  summary_group->createViewString("host_name", serac::getHostName());
+  summary_group->createViewString("user_name", axom::utilities::getUserName());
+  summary_group->createViewString("host_name", axom::utilities::getHostName());
   summary_group->createViewScalar("mpi_rank_count", count);
 
   // Write curves info
@@ -188,42 +190,47 @@ void BasePhysics::initializeSummary(axom::sidre::DataStore& datastore, double t_
 
   // t: array of each time step value
   axom::sidre::View*         t_array_view = curves_group->createView("t");
-  axom::sidre::Array<double> ts(t_array_view, array_size);
+  axom::sidre::Array<double> ts(t_array_view, 0, array_size);
 
   for (FiniteElementState& state : state_) {
-    // Group for each Finite Element State
+    // Group for this Finite Element State (Field)
     axom::sidre::Group* state_group = curves_group->createGroup(state.name());
 
-    for (std::string state_name : {"l1norms", "l2norms", "linfnorms", "avgs", "mins", "maxs"}) {
-      // array for each curve data
-      axom::sidre::View*         curr_array_view = state_group->createView(state_name);
-      axom::sidre::Array<double> array(curr_array_view, array_size);
+    // Create an array for each stat type to hold a value at each time step
+    for (std::string stat_name : {"l1norms", "l2norms", "linfnorms", "avgs", "mins", "maxs"}) {
+      axom::sidre::View*         curr_array_view = state_group->createView(stat_name);
+      axom::sidre::Array<double> array(curr_array_view, 0, array_size);
     }
   }
 }
 
 void BasePhysics::saveSummary(axom::sidre::DataStore& datastore, const double t) const
 {
-  double l1norm_value, l2norm_value, linfnorm_value, avg_value, max_value, min_value;
+  auto [_, rank] = getMPIInfo();
 
-  auto [_, rank]                      = getMPIInfo();
-  const std::string curves_group_name = "serac_summary/curves";
+  // Find curves sidre group
+  axom::sidre::Group* curves_group = nullptr;
+  // Only save on root node
+  if (rank == 0) {
+    axom::sidre::Group* sidre_root        = datastore.getRoot();
+    const std::string   curves_group_name = "serac_summary/curves";
+    SLIC_ERROR_IF(!sidre_root->hasGroup(curves_group_name),
+                  axom::fmt::format("Sidre Group '{0}' did not exist when saveCurves was called", curves_group_name));
+    curves_group = sidre_root->getGroup(curves_group_name);
+  }
 
-  axom::sidre::Group* sidre_root = datastore.getRoot();
-
-  SLIC_ERROR_ROOT_IF(
-      !sidre_root->hasGroup(curves_group_name),
-      axom::fmt::format("Sidre Group '{0}' did not exist when saveCurves was called", curves_group_name));
-
-  axom::sidre::Group* curves_group = sidre_root->getGroup(curves_group_name);
-
-  // Don't save curves on anything other than root node
+  // Save time step
+  // Only save on root node
   if (rank == 0) {
     axom::sidre::Array<double> ts(curves_group->getView("t"));
     ts.push_back(t);
   }
 
+  // For each Finite Element State (Field)
+  double l1norm_value, l2norm_value, linfnorm_value, avg_value, max_value, min_value;
   for (FiniteElementState& state : state_) {
+    // Calculate current stat value
+    // Note: These are collective operations.
     l1norm_value   = norm(state, 1);
     l2norm_value   = norm(state, 2);
     linfnorm_value = norm(state, mfem::infinity());
@@ -231,11 +238,12 @@ void BasePhysics::saveSummary(axom::sidre::DataStore& datastore, const double t)
     max_value      = max(state);
     min_value      = min(state);
 
-    // Don't save curves on anything other than root node
+    // Only save on root node
     if (rank == 0) {
-      // Group for each Finite Element State
+      // Group for this Finite Element State (Field)
       axom::sidre::Group* state_group = curves_group->getGroup(state.name());
 
+      // Save all current stat values in their respective sidre arrays
       axom::sidre::View*         l1norms_view = state_group->getView("l1norms");
       axom::sidre::Array<double> l1norms(l1norms_view);
       l1norms.push_back(l1norm_value);

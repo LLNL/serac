@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -29,7 +29,7 @@ TEST(serac_dtor, test1)
 
   // Create DataStore
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "serac", "serac_dtor");
+  serac::StateManager::initialize(datastore, "serac_dtor");
 
   auto pmesh = mesh::refineAndDistribute(buildMeshFromFile(mesh_file), 1, 0);
   serac::StateManager::setMesh(std::move(pmesh));

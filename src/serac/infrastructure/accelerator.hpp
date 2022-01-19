@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -52,6 +52,8 @@
 
 #include <memory>
 
+#include "axom/core.hpp"
+
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/profiling.hpp"
 
@@ -74,6 +76,86 @@ enum class ExecutionSpace
  * @brief The default execution space for serac builds
  */
 constexpr ExecutionSpace default_execution_space = ExecutionSpace::CPU;
+
+namespace detail {
+
+/**
+ * @brief Trait for "translating" between serac::ExecutionSpace and axom::MemorySpace
+ */
+template <ExecutionSpace space>
+struct execution_to_memory {
+  /// @brief The corresponding axom::MemorySpace
+  static constexpr axom::MemorySpace value = axom::MemorySpace::Dynamic;
+};
+
+#ifdef SERAC_USE_UMPIRE
+/// @overload
+template <>
+struct execution_to_memory<ExecutionSpace::CPU> {
+  static constexpr axom::MemorySpace value = axom::MemorySpace::Host;
+};
+
+/// @overload
+template <>
+struct execution_to_memory<ExecutionSpace::GPU> {
+  static constexpr axom::MemorySpace value = axom::MemorySpace::Device;
+};
+
+/// @overload
+template <>
+struct execution_to_memory<ExecutionSpace::Dynamic> {
+  static constexpr axom::MemorySpace value = axom::MemorySpace::Unified;
+};
+#endif
+
+/// @brief Helper template for @p execution_to_memory trait
+template <ExecutionSpace space>
+inline constexpr axom::MemorySpace execution_to_memory_v = execution_to_memory<space>::value;
+
+/// @brief set the contents of an array to zero, byte-wise
+template <typename T, int dim, axom::MemorySpace space>
+void zero_out(axom::Array<T, dim, space>& arr)
+{
+  std::memset(arr.data(), 0, static_cast<std::size_t>(arr.size()) * sizeof(T));
+}
+#ifdef __CUDACC__
+/// @overload
+template <typename T, int dim>
+void zero_out(axom::Array<T, dim, execution_to_memory_v<ExecutionSpace::GPU>>& arr)
+{
+  cudaMemset(arr.data(), 0, static_cast<std::size_t>(arr.size()) * sizeof(T));
+}
+#endif
+
+}  // namespace detail
+
+/// @brief Alias for an Array corresponding to a particular ExecutionSpace
+template <typename T, int dim, ExecutionSpace space>
+using ExecArray = axom::Array<T, dim, detail::execution_to_memory_v<space>>;
+
+/// @brief Alias for an array on the CPU
+template <typename T, int dim = 1>
+using CPUArray = ExecArray<T, dim, ExecutionSpace::CPU>;
+
+/// @brief Alias for an array on the GPU
+template <typename T, int dim = 1>
+using GPUArray = ExecArray<T, dim, ExecutionSpace::GPU>;
+
+/// @brief Alias for an array in unified memory
+template <typename T, int dim = 1>
+using UnifiedArray = ExecArray<T, dim, ExecutionSpace::Dynamic>;
+
+/// @brief Alias for an ArrayView corresponding to a particular ExecutionSpace
+template <typename T, int dim, ExecutionSpace space>
+using ExecArrayView = axom::ArrayView<T, dim, detail::execution_to_memory_v<space>>;
+
+/// @brief Alias for an array view on the CPU
+template <typename T, int dim = 1>
+using CPUArrayView = ExecArrayView<T, dim, ExecutionSpace::CPU>;
+
+/// @brief Alias for an array view on the CPU
+template <typename T, int dim = 1>
+using GPUArrayView = ExecArrayView<T, dim, ExecutionSpace::GPU>;
 
 /**
  * @brief Namespace for methods involving accelerator-enabled builds

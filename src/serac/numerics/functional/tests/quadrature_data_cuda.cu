@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -43,7 +43,7 @@ TEST(QuadratureDataCUDA, basic_fill_and_copy)
   constexpr int  elements_per_block = 16;
   const int      num_elements       = mesh->GetNE();
 
-  // FIXME: This assumes a homogeneous mesh
+  // Note: This assumes a homogeneous mesh
   const int geom                  = mesh->GetElementBaseGeometry(0);
   const int num_quadrature_points = mfem::IntRules.Get(geom, p).GetNPoints();
 
@@ -275,8 +275,8 @@ struct state_manager_varying_qfunction {
     mutated_data[idx++] = state;
     return u;
   }
-  DeviceArray<typename wrapper_t::value_type>& mutated_data;
-  int                                          idx = 0;
+  UnifiedArray<typename wrapper_t::value_type>& mutated_data;
+  int                                           idx = 0;
 };
 
 TYPED_TEST(QuadratureDataGPUStateManagerTest, basic_integrals_state_manager)
@@ -298,7 +298,7 @@ TYPED_TEST(QuadratureDataGPUStateManagerTest, basic_integrals_state_manager)
   // then save it
   {
     axom::sidre::DataStore datastore;
-    serac::StateManager::initialize(datastore, "serac", "qdata_gpu_restart");
+    serac::StateManager::initialize(datastore, "qdata_gpu_restart");
     // We need to use "this->" explicitly because we are in a derived class template
     serac::StateManager::setMesh(std::move(this->default_mesh));
     // Can't use auto& here because we're in a template context
@@ -322,7 +322,8 @@ TYPED_TEST(QuadratureDataGPUStateManagerTest, basic_integrals_state_manager)
   // Then reload the state to make sure it was synced correctly, and update it again before saving
   {
     axom::sidre::DataStore datastore;
-    serac::StateManager::initialize(datastore, "serac", "qdata_gpu_restart", cycle);
+    serac::StateManager::initialize(datastore, "qdata_gpu_restart");
+    serac::StateManager::load(cycle);
     // Since the original mesh is dead, use the mesh recovered from the save file to build a new Functional
     this->resetWithNewMesh(serac::StateManager::mesh());
     serac::QuadratureData<typename TestFixture::value_type>& qdata =
@@ -345,13 +346,14 @@ TYPED_TEST(QuadratureDataGPUStateManagerTest, basic_integrals_state_manager)
   }
 
   // Ordered quadrature point data that is unique (mutated with the point's distance from the origin)
-  DeviceArray<typename TestFixture::value_type> origin_mutated_data;
+  UnifiedArray<typename TestFixture::value_type> origin_mutated_data;
 
   // Reload the state again to make sure the same synchronization still happens when the data
   // is read in from a restart
   {
     axom::sidre::DataStore datastore;
-    serac::StateManager::initialize(datastore, "serac", "qdata_gpu_restart", cycle + 1);
+    serac::StateManager::initialize(datastore, "qdata_gpu_restart");
+    serac::StateManager::load(cycle + 1);
     // Since the original mesh is dead, use the mesh recovered from the save file to build a new Functional
     this->resetWithNewMesh(serac::StateManager::mesh());
     serac::QuadratureData<typename TestFixture::value_type>& qdata =
@@ -378,7 +380,8 @@ TYPED_TEST(QuadratureDataGPUStateManagerTest, basic_integrals_state_manager)
   // included the distance of the quadrature point from the origin (which is unique)
   {
     axom::sidre::DataStore datastore;
-    serac::StateManager::initialize(datastore, "serac", "qdata_gpu_restart", cycle + 2);
+    serac::StateManager::initialize(datastore, "qdata_gpu_restart");
+    serac::StateManager::load(cycle + 2);
     serac::QuadratureData<typename TestFixture::value_type>& qdata =
         serac::StateManager::newQuadratureData<typename TestFixture::value_type>("test_data", this->p);
     // Make sure the changes from the distance-specified increment were propagated through and in the correct order

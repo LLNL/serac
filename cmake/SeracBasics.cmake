@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -15,7 +15,7 @@ if(ENABLE_ASAN)
 endif()
 
 option(SERAC_ENABLE_CODEVELOP
-       "Enable Serac's codevelop build (MFEM and Axom included as CMake subdirectories"
+       "Enable Serac's codevelop build (MFEM and Axom included as CMake subdirectories)"
        OFF)
 
 option(SERAC_ENABLE_LUMBERJACK "Enable Axom's Lumberjack component" ON)

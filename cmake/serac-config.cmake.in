@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
@@ -27,7 +27,6 @@ if(NOT SERAC_FOUND)
   #----------------------------------------------------------------------------
 
   # SERAC external TPLs
-  set(SERAC_USE_ASCENT         "@SERAC_USE_ASCENT@")
   set(SERAC_USE_AXOM           "@SERAC_USE_AXOM@")
   set(SERAC_USE_CONDUIT        "@SERAC_USE_CONDUIT@")
   set(SERAC_USE_FMT            "@SERAC_USE_FMT@")
@@ -45,7 +44,7 @@ if(NOT SERAC_FOUND)
   set(SERAC_ENABLE_CUDA "@ENABLE_CUDA@")
 
   #----------------------------------------------------------------------------
-  # Bring in required  dependencies for this serac configuration
+  # Bring in required dependencies for this Serac configuration
   #----------------------------------------------------------------------------
   include(CMakeFindDependencyMacro)
 
@@ -76,17 +75,8 @@ if(NOT SERAC_FOUND)
     endif()
   endif()
 
-  # Ascent
-  if(SERAC_USE_ASCENT)
-    set(SERAC_ASCENT_DIR "@ASCENT_DIR@")
-    if(NOT ASCENT_DIR) 
-      set(ASCENT_DIR ${SERAC_ASCENT_DIR}) 
-    endif()
-    find_dependency(Ascent REQUIRED NO_DEFAULT_PATH PATHS "${ASCENT_DIR}/lib/cmake")
-  endif()
-
   # Axom
-  # also covers fmt
+  # also covers fmt/cli11
   if(SERAC_USE_AXOM)
     set(SERAC_AXOM_DIR "@AXOM_DIR@")
     # Axom was installed along with serac

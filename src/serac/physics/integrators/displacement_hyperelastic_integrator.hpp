@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -16,6 +16,7 @@
 #include "serac/physics/materials/thermal_expansion_material.hpp"
 
 #include "mfem.hpp"
+#include "axom/core.hpp"
 
 namespace serac {
 
@@ -149,7 +150,7 @@ private:
    * @brief the spatial tangent moduli
    *
    */
-  serac::mfem_ext::Array4D<double> C_;
+  axom::Array<double, 4> C_;
 
   /**
    * @brief the Cauchy stress

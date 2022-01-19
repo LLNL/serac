@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -14,25 +14,13 @@
 
 #include "mfem.hpp"
 
-#include "serac/serac_config.hpp"
+#include "axom/core.hpp"
 
-#include "serac/numerics/functional/array.hpp"
+#include "serac/serac_config.hpp"
 
 #include "serac/infrastructure/accelerator.hpp"
 
 #include "serac/infrastructure/variant.hpp"
-
-/**
- * @brief Helper template for a GPU-compatible array type (when applicable)
- * This will be eventually replaced with axom::Array
- */
-template <typename T>
-// #ifdef SERAC_USE_CUDA // FIXME: This is what we want
-#ifdef __CUDACC__
-using DeviceArray = serac::ManagedArray<T>;
-#else
-using DeviceArray = std::vector<T>;
-#endif
 
 namespace serac {
 
@@ -137,7 +125,7 @@ private:
 /**
  * @brief Stores instances of user-defined type for each quadrature point in a mesh
  * @tparam T The type of the per-qpt data
- * @pre T must be default-constructible (TODO: Do we want to allow non-default constructible types?)
+ * @pre T must be default-constructible
  * @pre T must be trivially copyable (due to the use of memcpy for type punning)
  */
 template <typename T>
@@ -150,6 +138,11 @@ public:
    * @param[in] alloc Flag to allocate the underlying data
    */
   QuadratureData(mfem::Mesh& mesh, const int p, const bool alloc = true);
+
+// Turn off null dereference warnings for GCC
+// TODO Fix the underlying possible nullptr dereference warning with the `MaybeOwnedPointer` type.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnull-dereference"
 
   /**
    * @brief Constructs from an existing quadrature function
@@ -176,6 +169,8 @@ public:
       j++;
     }
   }
+
+#pragma GCC diagnostic pop
 
   // When a QuadratureData instance is managed by StateManager, we don't
   // ever want to copy from or move from that instance.  This is sort of
@@ -249,11 +244,11 @@ private:
   /**
    * @brief The actual data
    */
-  DeviceArray<T> data_;
+  UnifiedArray<T> data_;
   /**
    * @brief A copy of the element_offsets member from mfem::QuadratureSpace
    */
-  DeviceArray<int> offsets_;
+  UnifiedArray<int> offsets_;
   /**
    * @brief The stride of the array
    */
@@ -274,14 +269,12 @@ public:
 };
 
 // A dummy global so that lvalue references can be bound to something of type QData<void>
-// FIXME: There's probably a cleaner way to do this, it's technically a non-const global
-// but it's not really mutable because no operations are defined for it
 extern QuadratureData<void> dummy_qdata;
 
 /**
  * @brief Stores instances of user-defined type for each quadrature point in a mesh
  * @tparam T The type of the per-qpt data
- * @pre T must be default-constructible (TODO: Do we want to allow non-default constructible types?)
+ * @pre T must be default-constructible
  * @pre T must be trivially copyable (due to the use of memcpy for type punning)
  */
 template <typename T>
@@ -318,8 +311,6 @@ public:
 };
 
 // A dummy global so that lvalue references can be bound to something of type QData<void>
-// FIXME: There's probably a cleaner way to do this, it's technically a non-const global
-// but it's not really mutable because no operations are defined for it
 extern QuadratureDataView<void> dummy_qdata_view;
 
 // Hijacks the "vdim" parameter (number of doubles per qpt) to allocate the correct amount of storage
@@ -338,13 +329,10 @@ QuadratureData<T>::QuadratureData(mfem::Mesh& mesh, const int p, const bool allo
   // also https://chromium.googlesource.com/chromium/src/base/+/refs/heads/master/bit_cast.h
   static_assert(std::is_default_constructible_v<T>, "Must be able to default-construct the stored type");
   static_assert(std::is_trivially_copyable_v<T>, "Uses memcpy - requires trivial copies");
-  // FIXME: Can we avoid storing a copy of the offsets array in the general case?
+  // We cannot avoid storing a copy of the offsets array in the general case,
+  // but if we know the number of qpts per element at compile time we don't need to store offsets
   std::memcpy(offsets_.data(), detail::quadSpaceOffsets(detail::retrieve(qspace_)),
               static_cast<std::size_t>(mesh.GetNE() + 1) * sizeof(int));
-#ifdef __CUDACC__
-  // Unlike std::vector, ManagedArray does not appear to default-construct the elements
-  std::fill_n(data_.data(), data_.size(), T{});
-#endif
 }
 
 template <typename T>

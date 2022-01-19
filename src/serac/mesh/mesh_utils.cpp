@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -362,25 +362,26 @@ void InputOptions::defineInputFileSchema(axom::inlet::Container& container)
   container.addInt("ser_ref_levels", "Number of times to refine the mesh uniformly in serial.").defaultValue(0);
   container.addInt("par_ref_levels", "Number of times to refine the mesh uniformly in parallel.").defaultValue(0);
 
-  container.addString("type", "Type of mesh").required();
+  // Types of meshes we support
+  container.addString("type", "Type of mesh").required().validValues({"ball", "box", "disk", "file"});
 
-  // mesh path
+  // `file` type mesh options
   container.addString("mesh", "Path to Mesh file");
 
-  // box mesh generation options
+  // `box` type mesh generation options
   auto& elements = container.addStruct("elements");
-  // JW: Can these be specified as requierd if elements is defined?
+  // TODO: Can these be specified as required if elements is defined?
   elements.addInt("x", "x-dimension");
   elements.addInt("y", "y-dimension");
   elements.addInt("z", "z-dimension");
 
   auto& size = container.addStruct("size");
-  // JW: Can these be specified as requierd if elements is defined?
+  // TODO: Can these be specified as required if elements is defined?
   size.addDouble("x", "Size in the x-dimension");
   size.addDouble("y", "Size in the y-dimension");
   size.addDouble("z", "Size in the z-dimension");
 
-  // n-ball mesh generation options
+  // `ball` and `disk` mesh generation options
   container.addInt("approx_elements", "Approximate number of elements in an n-ball mesh");
 }
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -64,12 +64,12 @@ void NeoHookeanMaterial::evalStress(const mfem::DenseMatrix& du_dX, mfem::DenseM
   }
 }
 
-void NeoHookeanMaterial::evalTangentStiffness(const mfem::DenseMatrix& du_dX, mfem_ext::Array4D<double>& C) const
+void NeoHookeanMaterial::evalTangentStiffness(const mfem::DenseMatrix& du_dX, axom::Array<double, 4>& C) const
 {
   serac::solid_util::calcDeformationGradient(du_dX, F_);
   int dim = F_.Width();
   B_.SetSize(dim);
-  C.SetSize(dim, dim, dim, dim);
+  C.resize(dim, dim, dim, dim);
 
   mfem::MultABt(F_, F_, B_);
 
@@ -81,7 +81,7 @@ void NeoHookeanMaterial::evalTangentStiffness(const mfem::DenseMatrix& du_dX, mf
   double a = mu_ * std::pow(det_J, -2.0 / dim);
   double b = bulk_ * (2.0 * det_J - 1.0) * det_J + a * (2.0 / (dim * dim)) * (F_ * F_);
 
-  C = 0.0;
+  C.fill(0.0);
 
   for (int i = 0; i < dim; ++i) {
     for (int j = 0; j < dim; ++j) {
@@ -160,13 +160,13 @@ void LinearElasticMaterial::evalStress(const mfem::DenseMatrix& du_dX, mfem::Den
   }
 }
 
-void LinearElasticMaterial::evalTangentStiffness(const mfem::DenseMatrix& du_dX, mfem_ext::Array4D<double>& C) const
+void LinearElasticMaterial::evalTangentStiffness(const mfem::DenseMatrix& du_dX, axom::Array<double, 4>& C) const
 {
   int dim = du_dX.Width();
 
   EvalCoeffs();
 
-  C = 0.0;
+  C.fill(0.0);
 
   double lambda = bulk_ - (2.0 / dim) * mu_;
 

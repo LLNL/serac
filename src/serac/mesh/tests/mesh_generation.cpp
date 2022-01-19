@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -49,9 +49,6 @@ TEST(meshgen, lua_input)
   auto& mesh_rect_table = inlet.addStruct("main_mesh_rect", "A rectangular mesh");
   serac::mesh::InputOptions::defineInputFileSchema(mesh_rect_table);
 
-  auto& mesh_fail_table = inlet.addStruct("main_mesh_fail", "An invalid mesh description");
-  serac::mesh::InputOptions::defineInputFileSchema(mesh_fail_table);
-
   // Verify input file
   if (!inlet.verify()) {
     SLIC_ERROR("Input file failed to verify.");
@@ -88,10 +85,12 @@ TEST(meshgen, lua_input)
     EXPECT_EQ(mesh->GetNE(), rect_options->elements[0] * rect_options->elements[1]);
   }
 
-  // temporary scope to build a rectangular mesh
-  {
-    EXPECT_THROW(auto mesh_options = inlet["main_mesh_fail"].get<serac::mesh::InputOptions>(), SlicErrorException);
-  }
+  // Check that we fail on an invalid mesh description
+  auto& mesh_fail_table = inlet.addStruct("main_mesh_fail", "An invalid mesh description");
+  serac::mesh::InputOptions::defineInputFileSchema(mesh_fail_table);
+  SLIC_INFO("Begin expected warning about invalid value.");
+  EXPECT_FALSE(inlet.verify());
+  SLIC_INFO("End expected warning about invalid value.");
 
   MPI_Barrier(MPI_COMM_WORLD);
 }

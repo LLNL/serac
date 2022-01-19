@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -14,6 +14,14 @@ blt_add_library(
     DEPENDS_ON  serac_physics serac_state gtest
     )
 
+set(serial_solver_tests
+    serac_solid_sensitivity.cpp
+    )
+
+serac_add_tests( SOURCES ${serial_solver_tests}
+    DEPENDS_ON ${test_dependencies}
+    NUM_MPI_TASKS 1)
+
 set(solver_tests
     serac_solid.cpp
     serac_solid_reuse_mesh.cpp
@@ -22,6 +30,7 @@ set(solver_tests
     serac_thermal_structural_solver.cpp
     serac_thermal_solid_solver.cpp
     serac_thermal_expansion.cpp
+    serac_thermal_functional.cpp
     )
 
 serac_add_tests( SOURCES ${solver_tests}

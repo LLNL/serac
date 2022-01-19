@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -14,6 +14,7 @@ set(materials_headers
     hyperelastic_material.hpp
     thermal_expansion_material.hpp
     solid_utils.hpp
+    thermal_functional_material.hpp
     )
 
 set(materials_depends

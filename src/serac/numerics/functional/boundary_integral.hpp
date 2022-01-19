@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -55,10 +55,7 @@ public:
    */
   template <int dim, typename lambda_type, typename qpt_data_type = void>
   BoundaryIntegral(size_t num_elements, const mfem::Vector& J, const mfem::Vector& X, const mfem::Vector& N,
-                   Dimension<dim>, lambda_type&& qf)
-      : J_(J), X_(X), normals_(N)
-
-  {
+                   Dimension<dim>, lambda_type&& qf) {
     using namespace boundary_integral;
 
     constexpr auto geometry                      = supported_geometries[dim];
@@ -143,21 +140,6 @@ public:
   }
 
 private:
-  /**
-   * @brief Jacobians of the element transformations at all quadrature points
-   */
-  const mfem::Vector J_;
-
-  /**
-   * @brief Mapped (physical) coordinates of all quadrature points
-   */
-  const mfem::Vector X_;
-
-  /**
-   * @brief physical coordinates of surface unit normals at all quadrature points
-   */
-  const mfem::Vector normals_;
-
   /**
    * @brief Type-erased handle to evaluation kernel
    * @see evaluation_kernel

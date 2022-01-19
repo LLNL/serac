@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -25,7 +25,7 @@ TEST(solid_solver, adjoint)
   MPI_Barrier(MPI_COMM_WORLD);
 
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "serac", "solid_adjoint");
+  serac::StateManager::initialize(datastore, "solid_adjoint");
 
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";
@@ -111,7 +111,7 @@ TEST(solid_solver, adjoint)
 
   SLIC_INFO_ROOT(axom::fmt::format("Shear sensitivity vector norm: {}", shear_norm));
 
-  EXPECT_NEAR(shear_norm, 0.000211078850122, 1.0e-8);
+  EXPECT_NEAR(shear_norm, 0.005673835517459125, 1.0e-8);
 
   auto& bulk_sensitivity = solid_solver.bulkModulusSensitivity(&l2_fe_space);
 
@@ -119,7 +119,7 @@ TEST(solid_solver, adjoint)
 
   SLIC_INFO_ROOT(axom::fmt::format("Bulk sensitivity vector norm: {}", bulk_norm));
 
-  EXPECT_NEAR(bulk_norm, 6.026196496111377e-06, 3.0e-9);
+  EXPECT_NEAR(bulk_norm, 0.00010973046519995416, 3.0e-9);
 
   // Do a forward solve again to make sure the adjoint solve didn't break the solver
   solid_solver.setDisplacement(*deform);

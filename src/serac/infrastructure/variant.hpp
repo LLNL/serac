@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -81,7 +81,7 @@ struct variant_storage {
 
   /**
    * @brief Resets the union by destroying the active member
-   * FIXME: The index is technically invalid here after this function is called
+   * @note The index is technically invalid here after this function is called
    */
   constexpr void clear()
   {
@@ -150,7 +150,6 @@ struct variant_storage<T0, T1,
  */
 template <typename T, typename T0, typename T1>
 struct is_variant_assignable {
-  // FIXME: Is having just the is_assignable good enough?
   /**
    * @brief If T can be assigned to the variant type
    */
@@ -159,9 +158,6 @@ struct is_variant_assignable {
 };
 
 }  // namespace detail
-
-// FIXME: Should we just #include <variant> for std::variant_alternative?? Probably don't want to pull in the full
-// header
 
 /**
  * @brief Obtains the type at index @p I of a variant<T0, T1>
@@ -276,14 +272,13 @@ struct variant {
   template <typename T, typename SFINAE = std::enable_if_t<detail::is_variant_assignable<T, T0, T1>::value>>
   constexpr variant& operator=(T&& t)
   {
-    // FIXME: Things that are convertible to T0 etc
-    if constexpr (std::is_same_v<std::decay_t<T>, T0>) {
+    if constexpr (std::is_same_v<std::decay_t<T>, T0> || std::is_assignable_v<T0, T>) {
       if (storage_.index_ != 0) {
         storage_.clear();
       }
       storage_.t0_    = std::forward<T>(t);
       storage_.index_ = 0;
-    } else if constexpr (std::is_same_v<std::decay_t<T>, T1>) {
+    } else if constexpr (std::is_same_v<std::decay_t<T>, T1> || std::is_assignable_v<T1, T>) {
       if (storage_.index_ != 1) {
         storage_.clear();
       }

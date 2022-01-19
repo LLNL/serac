@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -17,7 +17,7 @@
 
 #include "mfem.hpp"
 
-#include "serac/numerics/functional/array.hpp"
+#include "serac/infrastructure/accelerator.hpp"
 #include "serac/numerics/functional/domain_integral_kernels.hpp"
 #if defined(__CUDACC__)
 #include "serac/numerics/functional/domain_integral_kernels.cuh"
@@ -54,7 +54,6 @@ public:
   template <int dim, typename lambda_type, typename qpt_data_type = void>
   DomainIntegral(size_t num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<dim>, lambda_type&& qf,
                  QuadratureData<qpt_data_type>& data = dummy_qdata)
-      : J_(J), X_(X)
   {
     using namespace domain_integral;
 
@@ -106,7 +105,8 @@ public:
     if constexpr (exec == ExecutionSpace::GPU) {
       // note: this lambda function captures ptr by-value to extend its lifetime
       //                   vvv
-      evaluation_ = [this, ptr, qf_derivatives, num_elements, qf, &data](const mfem::Vector& U, mfem::Vector& R) {
+      evaluation_ = [this, ptr, qf_derivatives, num_elements, qf, &data, &J, &X](const mfem::Vector& U,
+                                                                                 mfem::Vector&       R) {
         // TODO: Refactor execution configuration. Blocksize of 128 chosen as a good starting point. Has not been
         // optimized
         serac::detail::GPULaunchConfiguration exec_config{.blocksize = 128};
@@ -114,18 +114,18 @@ public:
         domain_integral::evaluation_kernel_cuda<
             geometry, test_space, trial_space, Q,
             serac::detail::ThreadParallelizationStrategy::THREAD_PER_QUADRATURE_POINT>(
-            exec_config, U, R, qf_derivatives, J_, X_, num_elements, qf, data);
+            exec_config, U, R, qf_derivatives, J, X, num_elements, qf, data);
       };
 
-      action_of_gradient_ = [this, qf_derivatives, num_elements](const mfem::Vector& dU, mfem::Vector& dR) {
+      action_of_gradient_ = [this, qf_derivatives, num_elements, &J](const mfem::Vector& dU, mfem::Vector& dR) {
         // TODO: Refactor execution configuration. Blocksize of 128 chosen as a good starting point. Has not been
         // optimized
         serac::detail::GPULaunchConfiguration exec_config{.blocksize = 128};
 
         domain_integral::action_of_gradient_kernel<
             geometry, test_space, trial_space, Q,
-            serac::detail::ThreadParallelizationStrategy::THREAD_PER_QUADRATURE_POINT>(
-            exec_config, dU, dR, qf_derivatives, J_, num_elements);
+            serac::detail::ThreadParallelizationStrategy::THREAD_PER_QUADRATURE_POINT>(exec_config, dU, dR,
+                                                                                       qf_derivatives, J, num_elements);
       };
     }
 #endif
@@ -163,22 +163,12 @@ public:
    * @param[inout] K_e The reshaped vector as a mfem::DeviceTensor of size (test_dim * test_dof, trial_dim * trial_dof,
    * elem)
    */
-  void ComputeElementGradients(ArrayView<double, 3, ExecutionSpace::CPU> K_e, size_t which = 0) const
+  void ComputeElementGradients(ArrayView<double, 3, ExecutionSpace::CPU> K_e, size_t which) const
   {
     element_gradient_[which](K_e);
   }
 
 private:
-  /**
-   * @brief Jacobians of the element transformations at all quadrature points
-   */
-  const mfem::Vector J_;
-
-  /**
-   * @brief Mapped (physical) coordinates of all quadrature points
-   */
-  const mfem::Vector X_;
-
   /**
    * @brief Type-erased handle to evaluation kernel
    * @see evaluation_kernel
