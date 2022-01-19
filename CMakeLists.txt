@@ -162,6 +162,12 @@ install(TARGETS              serac
         )
 
 if (SERAC_ENABLE_CODEVELOP)
+    # This really shouldn't be needed but it keeps getting dropped from axom.
+    # It certainly shouldn't go here either.
+    target_include_directories(axom SYSTEM PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/axom/src>
+    )
+
     # Add Axom's targets to our export set
     # TODO: we should ask Axom for this list in the future
     set(axom_exported_targets axom cli11 fmt hdf5 lua sol sparsehash)
