@@ -61,7 +61,7 @@ int main(int argc, char* argv[])
   // _bc_end
 
   // _output_type_start
-  conduction.initializeOutput(serac::OutputType::ParaView, "simple_conduction_without_input_file");
+  conduction.initializeOutput(serac::OutputType::ParaView, "simple_conduction_without_input_file_output");
   // _output_type_end
 
   // _run_sim_start
