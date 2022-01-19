@@ -1,0 +1,44 @@
+#!/bin/bash
+##############################################################################
+# Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+# other Serac Project Developers. See the top-level LICENSE file for
+# details.
+#
+# SPDX-License-Identifier: (BSD-3-Clause)
+##############################################################################
+
+########################
+## Test Invocations
+#
+# TOSS3: salloc -N2 ./ats.sh
+# BlueOS: lalloc 2 ./ats.sh
+# WSL: ./ats.sh
+
+# Variables used inside of the base test.ats and this script
+export ATS_SERAC_BIN_DIR=@SERAC_BIN_DIR@/bin
+export ATS_SERAC_REPO_DIR=@SERAC_REPO_DIR@
+export ATS_EXECUTABLE=@ATS_EXECUTABLE@
+
+if [ ! -f "$ATS_EXECUTABLE" ]; then
+    echo "ERROR: Given ATS_EXECUTABLE does not exist: " $ATS_EXECUTABLE
+    exit 1
+fi
+
+# Add Serac's bin directory to path
+export PATH=$ATS_SERAC_BIN_DIR:$PATH
+
+echo "~~~~~~~~~~~~~~~~~~~~~~~~~~"
+echo "ATS:      " $ATS_EXECUTABLE
+echo "BIN DIR:  " $ATS_SERAC_BIN_DIR
+echo "REPO DIR: " $ATS_SERAC_REPO_DIR
+echo "~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+# Clean-up old run's logs
+rm -rf $SYS_TYPE.*
+
+# Clean-up last run's output 
+# TODO: add a script to clean up output
+#rm -rf $ATS_SERAC_REPO_DIR/tests/integration/*/output
+
+# Run ATS
+$ATS_EXECUTABLE $ATS_SERAC_REPO_DIR/tests/integration/test.ats

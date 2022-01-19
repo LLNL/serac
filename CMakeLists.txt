@@ -118,16 +118,19 @@ set(CMAKE_CXX_FLAGS ${SERAC_CMAKE_CXX_FLAGS})
 include(${PROJECT_SOURCE_DIR}/cmake/SeracConfigHeader.cmake)
 
 #------------------------------------------------------------------------------
-# Build src
+# Add subdirectories
 #------------------------------------------------------------------------------
 
 add_subdirectory(src)
 
-#------------------------------------------------------------------------------
-# Configure examples
-#------------------------------------------------------------------------------
-
 add_subdirectory(examples)
+
+#------------------------------------------------------------------------------
+# Generate helper script for running ATS
+#------------------------------------------------------------------------------
+configure_file(
+    ${PROJECT_SOURCE_DIR}/scripts/testing/ats.sh.in
+    ${CMAKE_BINARY_DIR}/ats.sh)
 
 #------------------------------------------------------------------------------
 # Add Code Checks

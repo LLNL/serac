@@ -10,3 +10,6 @@
 [submodule "mfem"]
 	path = mfem
 	url = https://github.com/mfem/mfem.git
+[submodule "tests"]
+	path = tests
+	url = https://github.com/LLNL/serac_tests.git

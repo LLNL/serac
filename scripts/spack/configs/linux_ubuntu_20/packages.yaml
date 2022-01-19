@@ -81,7 +81,11 @@ packages:
     externals:
     - spec: cuda@11.2.0
       prefix: /usr/local/cuda-11.2
-
+  m4:
+    buildable: false
+    externals:
+    - spec: m4@1.4.16
+      prefix: /usr
 
   # Lock in versions of Devtools
   cmake:
