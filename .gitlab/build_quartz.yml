@@ -7,9 +7,6 @@
   rules:
     - if: '$CI_COMMIT_BRANCH =~ /_qnone/ || $ON_QUARTZ == "OFF"' #run except if ...
       when: never
-    - if: '$CI_JOB_NAME =~ /quartz_release/'
-      when: always
-    - when: on_success
 
 
 ####
@@ -27,7 +24,7 @@
     BUILD_DIRECTORY: "_serac_build_and_test_*/build-*"
     ALLOC_COMMAND: "salloc -p pdebug -A ${ALLOC_BANK} -N 2 -t 20"
   extends: [.integration_tests_script, .on_quartz, .src_workflow]
-  needs: [.src_build_on_quartz]
+  needs: []
 
 .full_build_on_quartz:
   stage: build
@@ -43,11 +40,14 @@
 ####
 # Build jobs
 
-# Only run integration tests on one spec
 quartz-clang_10_0_0-src:
   variables:
     COMPILER: "clang@10.0.0"
     HOST_CONFIG: "quartz-toss_3_x86_64_ib-${COMPILER}.cmake"
+  extends: .src_build_on_quartz
+
+# Only run integration tests on one spec
+quartz-clang_10_0_0-integration:
   extends: .integration_tests_on_quartz
 
 quartz-gcc_8_3_1-src:
