@@ -11,9 +11,8 @@ variables:
   ALLOC_BANK: eng
 
 stages:
-  - allocate
   - build
-  - release
+  - test
 
 # Whether and how to update uberenv
 .run_update_uberenv: &run_update_uberenv |
@@ -28,17 +27,14 @@ stages:
     - if: '$FULL_BUILD == "ON"'
 
 ####
-# Template
+# Templates
 .src_build_script:
   script:
-    # Use pre-existing allocation if any
-    - JOBID=$(if [[ "$SYS_TYPE" == "toss_3_x86_64_ib" ]]; then squeue -h --name=${PROJECT_ALLOC_NAME} --format=%A; fi)
-    - ASSIGN_ID=$(if [[ -n "${JOBID}" ]]; then echo "--jobid=${JOBID}"; fi)
-    # BUILD + TEST
-    - echo -e "section_start:$(date +%s):src_build_and_test\r\e[0K
-      Source Build and Test ${CI_PROJECT_NAME}"
+    # Build src and run unit tests
+    - echo -e "section_start:$(date +%s):src_build_and_unit_test\r\e[0K
+      Source Build and Unit Tests ${CI_PROJECT_NAME}"
     - ${ALLOC_COMMAND} python3 scripts/llnl/build_src.py -v --host-config ${HOST_CONFIG} ${EXTRA_BUILD_OPTIONS}
-    - echo -e "section_end:$(date +%s):src_build_and_test\r\e[0K"
+    - echo -e "section_end:$(date +%s):src_build_and_unit_test\r\e[0K"
   artifacts:
     paths:
       - _serac_build_and_test_*/output.log*.txt
@@ -46,13 +42,29 @@ stages:
     reports:
       junit: _serac_build_and_test_*/build-*/junit.xml
 
+.integration_tests_script:
+  script:
+    # Run integration tests
+    - echo -e "section_start:$(date +%s):src_integration_test\r\e[0K
+      Source Run Integration Tests ${CI_PROJECT_NAME}"
+    - cd ${BUILD_DIRECTORY}
+    - ${ALLOC_COMMAND} ./ats.sh
+    - echo -e "section_end:$(date +%s):src_integration_test\r\e[0K"
+  artifacts:
+    paths:
+      - _serac_build_and_test_*/build-*/*.*.logs/*.log
+      - _serac_build_and_test_*/build-*/*.*.logs/*.err
+    reports:
+      junit: _serac_build_and_test_*/build-*/*.*.logs/atsr.xml
+
 .full_build_script:
   script:
     - *run_update_uberenv
-    - echo -e "section_start:$(date +%s):full_build_and_test\r\e[0K
-      Full Build and Test ${CI_PROJECT_NAME}"
+    # Build TPLs, src, and run unit tests
+    - echo -e "section_start:$(date +%s):full_build_and_unit_test\r\e[0K
+      Full Build and Unit Test ${CI_PROJECT_NAME}"
     - ${ALLOC_COMMAND} python3 scripts/llnl/build_tpls.py -v ${SPEC} --directory=${FULL_BUILD_ROOT} --short-path
-    - echo -e "section_end:$(date +%s):full_build_and_test\r\e[0K"
+    - echo -e "section_end:$(date +%s):full_build_and_unit_test\r\e[0K"
   artifacts:
     paths:
       - ${FULL_BUILD_ROOT}/${SYS_TYPE}/*/_serac_build_and_test_*/output.log*.txt
@@ -60,8 +72,7 @@ stages:
     reports:
       junit: ${FULL_BUILD_ROOT}/${SYS_TYPE}/*/_serac_build_and_test_*/build-*/junit.xml
 
-# This is where jobs are included
+# This is where jobs are included for each machine
 include:
   - local: .gitlab/build_quartz.yml
   - local: .gitlab/build_lassen.yml
-
