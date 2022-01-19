@@ -38,7 +38,7 @@ quartz-clang_10_0_0-src:
     DO_INTEGRATION_TESTS: "yes"
     ALLOC_NODES: "2"
     ALLOC_TIME: "30"
-  extends: [.src_build_on_quartz, .integration_tests_on_quartz]
+  extends: .src_build_on_quartz
 
 quartz-gcc_8_3_1-src:
   variables:
