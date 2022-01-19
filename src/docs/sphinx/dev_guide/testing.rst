@@ -40,17 +40,24 @@ Requirements:
 #. **Run integration tests.**
    Run the corresponding command for the system you are on::
 
-     # blueos
+     # BlueOS
      $ lalloc 2 ./ats.sh
      
-     # toss3
+     # Toss3
      $ salloc -N2 ./ats.sh
      
-     # personal machine
+     # Personal Machine (currently runs subset of tests)
      $ ./ats.sh
 
 #. **View results.**
-   TBD...
+   ATS gives a running summary and the final results.  ATS also outputs the following
+   helpful files in the platform and timestamp specific created log directory:
+
+   * ``ats.log`` - All output of ATS
+   * ``atss.log`` - Short summary of the run
+   * ``atsr.xml`` - JUnit test summary
+
+   ATS also outputs both a ``.log`` and ``.log.err`` for each test and checker that is run.
 
 
 Installing ATS
