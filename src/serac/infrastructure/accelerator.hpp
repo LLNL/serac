@@ -157,6 +157,12 @@ using CPUArrayView = ExecArrayView<T, dim, ExecutionSpace::CPU>;
 template <typename T, int dim = 1>
 using GPUArrayView = ExecArrayView<T, dim, ExecutionSpace::GPU>;
 
+/// @brief convenience function for creating a view of an axom::Array type
+template <typename T, int dim, axom::MemorySpace space>
+auto view(axom::Array< T, dim, space > & arr) {
+  return axom::ArrayView<T, dim, space>(arr);
+}
+
 /**
  * @brief Namespace for methods involving accelerator-enabled builds
  */

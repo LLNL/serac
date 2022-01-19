@@ -81,7 +81,7 @@ public:
         using which_trial_space = decltype(get<i>(trial_spaces));
         using derivative_type   = decltype(get_derivative_type<i, dim, trials...>(qf));
         auto ptr = accelerator::make_shared_array<exec, derivative_type>(num_elements * quadrature_points_per_element);
-        ArrayView<derivative_type, 2, exec> qf_derivatives(ptr.get(), num_elements, quadrature_points_per_element);
+        ExecArrayView<derivative_type, 2, exec> qf_derivatives(ptr.get(), num_elements, quadrature_points_per_element);
 
         evaluation_with_AD_[i] =
             EvaluationKernel{DerivativeWRT<i>{}, eval_config, qf_derivatives, J, X, N, num_elements, qf};
@@ -92,7 +92,7 @@ public:
           action_of_gradient_kernel<geometry, test, which_trial_space, Q>(dU, dR, qf_derivatives, J, num_elements);
         };
 
-        element_gradient_[i] = [qf_derivatives, num_elements, J](CPUView<double, 3> K_e) {
+        element_gradient_[i] = [qf_derivatives, num_elements, J](CPUArrayView<double, 3> K_e) {
           element_gradient_kernel<geometry, test, which_trial_space, Q>(K_e, qf_derivatives, J, num_elements);
         };
       });
@@ -134,7 +134,7 @@ public:
    * nelems)
    * @param[in] which the index of the argument being differentiated
    */
-  void ComputeElementGradients(ArrayView<double, 3, ExecutionSpace::CPU> K_b, size_t which) const
+  void ComputeElementGradients(ExecArrayView<double, 3, ExecutionSpace::CPU> K_b, size_t which) const
   {
     element_gradient_[which](K_b);
   }
@@ -163,7 +163,7 @@ private:
    * @brief Type-erased handle to gradient matrix assembly kernel
    * @see gradient_matrix_kernel
    */
-  std::function<void(ArrayView<double, 3, exec>)> element_gradient_[num_trial_spaces];
+  std::function<void(ExecArrayView<double, 3, exec>)> element_gradient_[num_trial_spaces];
 };
 
 }  // namespace serac

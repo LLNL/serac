@@ -4,7 +4,6 @@
 #include <array>
 #include <type_traits>
 
-#include "serac/numerics/functional/array.hpp"
 #include "serac/numerics/functional/boundary_integral_kernels.hpp"
 #include "serac/numerics/functional/tuple_arithmetic.hpp"
 

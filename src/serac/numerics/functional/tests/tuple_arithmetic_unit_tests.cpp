@@ -146,8 +146,8 @@ TEST(ChainRuleTests, scalar_output_with_matrix_input)
 
 TEST(ChainRuleTests, tensor_output_with_tuple_input)
 {
-  constexpr auto f = [](auto p, auto v, auto L) {
-    return rho * outer(v, v) + 2.0 * mu * sym(L) - p * I;
+  constexpr auto f = [=](auto p, auto v, auto L) {
+    return rho * outer(v, v) * det(I + L) + 2.0 * mu * sym(L) - p * I;
   };
 
   [[maybe_unused]] constexpr double p = 3.14;
@@ -168,7 +168,7 @@ TEST(ChainRuleTests, tensor_output_with_tuple_input)
 
   auto df1 = dfdp * dp + dfdv * dv + ddot(dfdL, dL);
 
-  EXPECT_NEAR(norm(df1 - df0), 0.0, 1.e-8);
+  EXPECT_NEAR(norm(df1 - df0) / norm(df0), 0.0, 1.e-8);
 }
 
 int main(int argc, char* argv[])

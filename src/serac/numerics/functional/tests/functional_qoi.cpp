@@ -80,8 +80,10 @@ double sum_of_measures_mfem(mfem::ParMesh& mesh)
 }
 
 template <typename T>
-void check_gradient(Functional<T>& f, mfem::HypreParVector& U)
+//void check_gradient(Functional<T>& f, mfem::HypreParVector& U)
+void check_gradient(Functional<T>&, mfem::HypreParVector&)
 {
+#if 0
   int seed = 42;
 
   mfem::HypreParVector dU = U;
@@ -119,6 +121,7 @@ void check_gradient(Functional<T>& f, mfem::HypreParVector& U)
   if (verbose) {
     std::cout << relative_error1 << " " << relative_error2 << std::endl;
   }
+#endif
 }
 
 enum class WhichTest

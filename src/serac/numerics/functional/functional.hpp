@@ -180,7 +180,7 @@ public:
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
       auto ndof_per_trial_element =
           static_cast<size_t>(trial_space_[i]->GetFE(0)->GetDof() * trial_space_[i]->GetVDim());
-      element_gradients_[i]     = Array<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
+      element_gradients_[i]     = ExecArray<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
       bdr_element_gradients_[i] = allocateMemoryForBdrElementGradients<double, exec>(*test_space_, *trial_space_[i]);
     }
   }
@@ -427,11 +427,9 @@ public:
    *
    * @note This gets more interesting when having more than one trial space
    */
-  template <int which = 0>
-  void SetEssentialBC(const mfem::Array<int>& ess_attr)
+  void SetEssentialBC(const mfem::Array<int>& ess_attr, size_t which)
   {
-    static_assert(std::is_same_v<test, serac::get<which>(trial_spaces)>,
-                  "can't specify essential bc on incompatible spaces");
+    // TODO check that it actually makes sense to apply bcs to this trial space
     trial_space_[which]->GetEssentialTrueDofs(ess_attr, ess_tdof_list_);
   }
 
@@ -685,30 +683,24 @@ private:
    */
   const mfem::Operator* G_trial_boundary_[num_trial_spaces];
 
-  /**
-   * @brief The set of domain integrals (spatial_dim == geometric_dim)
-   */
+  /// @brief The set of domain integrals (spatial_dim == geometric_dim)
   std::vector<DomainIntegral<test(trials...), exec>> domain_integrals_;
 
-  /**
-   * @brief The set of boundary integral (spatial_dim == geometric_dim + 1)
-   */
+  /// @brief The set of boundary integral (spatial_dim == geometric_dim + 1)
   std::vector<BoundaryIntegral<test(trials...), exec>> bdr_integrals_;
 
   // simplex elements are currently not supported;
   static constexpr mfem::Element::Type supported_types[4] = {mfem::Element::POINT, mfem::Element::SEGMENT,
                                                              mfem::Element::QUADRILATERAL, mfem::Element::HEXAHEDRON};
 
-  /**
-   * @brief The gradient object used to implement @p GetGradient
-   */
+  /// @brief The objects representing the gradients w.r.t. each input argument of the Functional
   mutable std::vector<Gradient> grad_;
 
   /// @brief 3D array that stores each element's gradient of the residual w.r.t. trial values
-  Array<double, 3, exec> element_gradients_[num_trial_spaces];
+  ExecArray<double, 3, exec> element_gradients_[num_trial_spaces];
 
   /// @brief 3D array that stores each boundary element's gradient of the residual w.r.t. trial values
-  Array<double, 3, exec> bdr_element_gradients_[num_trial_spaces];
+  ExecArray<double, 3, exec> bdr_element_gradients_[num_trial_spaces];
 };
 
 }  // namespace serac

@@ -112,7 +112,7 @@ public:
         auto ndof_per_test_element = static_cast<size_t>(1);
         auto ndof_per_trial_element =
             static_cast<size_t>(trial_space_[i]->GetFE(0)->GetDof() * trial_space_[i]->GetVDim());
-        element_gradients_[i] = Array<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
+        element_gradients_[i] = ExecArray<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
       }
 
       {
@@ -121,7 +121,7 @@ public:
         auto ndof_per_trial_bdr_element =
             static_cast<size_t>(trial_space_[i]->GetBE(0)->GetDof() * trial_space_[i]->GetVDim());
         bdr_element_gradients_[i] =
-            Array<double, 3, exec>(num_bdr_elements, ndof_per_test_bdr_element, ndof_per_trial_bdr_element);
+            ExecArray<double, 3, exec>(num_bdr_elements, ndof_per_test_bdr_element, ndof_per_trial_bdr_element);
       }
     }
 
@@ -258,10 +258,15 @@ public:
    * @brief Alias for @p Mult that uses a return value instead of an output parameter
    * @param[in] input_T The input vector
    */
-  double operator()(const mfem::Vector& input_T) const
+  //double operator()(const mfem::Vector& input_T) const
+  double operator()(const mfem::Vector&) const
   {
+    #if 0
     Evaluation<Operation::Mult>(input_T, my_output_T_);
     return my_output_T_[0];
+    #else
+    return 0.0;
+    #endif
   }
 
   /**
@@ -322,7 +327,7 @@ private:
 
         detail::zero_out(K_elem);
         for (auto& domain : form_.domain_integrals_) {
-          domain.ComputeElementGradients(K_elem);
+          domain.ComputeElementGradients(view(K_elem), which_argument);
         }
 
         for (axom::IndexType e = 0; e < K_elem.shape()[0]; e++) {
@@ -377,8 +382,10 @@ private:
    * @param[out] output_T The output vector
    */
   template <Operation op = Operation::Mult>
-  void Evaluation(const mfem::Vector& input_T, mfem::Vector& output_T) const
+  //void Evaluation(const mfem::Vector& input_T, mfem::Vector& output_T) const
+  void Evaluation(const mfem::Vector&, mfem::Vector&) const
   {
+  #if 0
     // get the values for each local processor
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
       P_trial_[i]->Mult(input_T, input_L_[i]);  // VARIADICTODO
@@ -444,6 +451,9 @@ private:
         output_T(ess_tdof_list_[i]) = input_T(ess_tdof_list_[i]);
       }
     }
+  #else
+
+  #endif
   }
 
   /**
@@ -555,10 +565,10 @@ private:
   mutable Gradient grad_;
 
   /// @brief array that stores each element's gradient of the residual w.r.t. trial values
-  std::array<Array<double, 3, exec>, num_trial_spaces> element_gradients_;
+  std::array<ExecArray<double, 3, exec>, num_trial_spaces> element_gradients_;
 
   /// @brief array that stores each boundary element's gradient of the residual w.r.t. trial values
-  std::array<Array<double, 3, exec>, num_trial_spaces> bdr_element_gradients_;
+  std::array<ExecArray<double, 3, exec>, num_trial_spaces> bdr_element_gradients_;
 
   template <typename T>
   friend typename Functional<T>::Gradient& grad(Functional<T>&);

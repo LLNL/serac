@@ -1,6 +1,6 @@
 #pragma once
 
-#include "serac/numerics/functional/array.hpp"
+#include "serac/infrastructure/accelerator.hpp"
 #include "serac/numerics/functional/tuple.hpp"
 #include "serac/numerics/functional/finite_element.hpp"
 
@@ -10,9 +10,9 @@ template <serac::ExecutionSpace exec, typename element_type>
 auto ArrayViewForElement(const double* ptr, size_t num_elements, element_type)
 {
   if constexpr (element_type::components == 1) {
-    return ArrayView<const double, 2, exec>(ptr, num_elements, element_type::ndof);
+    return ExecArrayView<const double, 2, exec>(ptr, num_elements, element_type::ndof);
   } else {
-    return ArrayView<const double, 3, exec>(ptr, num_elements, element_type::components, element_type::ndof);
+    return ExecArrayView<const double, 3, exec>(ptr, num_elements, element_type::components, element_type::ndof);
   }
 }
 
@@ -65,7 +65,7 @@ struct EVectorView {
    * 2 when spaces == 1  (num_elements, dofs_per_element)
    * 3 when spaces  > 1  (num_elements, dofs_per_element, num_components)
    */
-  serac::tuple<serac::ArrayView<const double, 2 + (element_types::components > 1), exec>...> data;
+  serac::tuple<serac::ExecArrayView<const double, 2 + (element_types::components > 1), exec>...> data;
 };
 
 }  // namespace serac
