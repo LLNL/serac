@@ -10,10 +10,6 @@ variables:
   FULL_BUILD_ROOT: ${CI_BUILDS_DIR}/serac/${CI_JOB_NAME}
   ALLOC_BANK: eng
 
-stages:
-  - build
-  - test
-
 # Whether and how to update uberenv
 .run_update_uberenv: &run_update_uberenv |
   [[ -n "${UPDATE_UBERENV}" ]] && ./scripts/gitlab/update-uberenv.sh "${UPDATE_UBERENV}"
@@ -30,32 +26,22 @@ stages:
 # Templates
 .src_build_script:
   script:
-    # Build src and run unit tests
+    # Build source, run unit tests, and test install examples. Conditionally run
+    # integration tests
     - echo -e "section_start:$(date +%s):src_build_and_unit_test\r\e[0K
       Source Build and Unit Tests ${CI_PROJECT_NAME}"
-    - ${ALLOC_COMMAND} python3 scripts/llnl/build_src.py -v --host-config ${HOST_CONFIG} ${EXTRA_BUILD_OPTIONS}
+    - ${ALLOC_COMMAND} scripts/gitlab/build_and_test.sh
     - echo -e "section_end:$(date +%s):src_build_and_unit_test\r\e[0K"
   artifacts:
     paths:
       - _serac_build_and_test_*/output.log*.txt
       - _serac_build_and_test_*/build-*/output.log*.txt
-    reports:
-      junit: _serac_build_and_test_*/build-*/junit.xml
-
-.integration_tests_script:
-  script:
-    # Run integration tests
-    - echo -e "section_start:$(date +%s):src_integration_test\r\e[0K
-      Source Run Integration Tests ${CI_PROJECT_NAME}"
-    - cd ${BUILD_DIRECTORY}
-    - ${ALLOC_COMMAND} ./ats.sh
-    - echo -e "section_end:$(date +%s):src_integration_test\r\e[0K"
-  artifacts:
-    paths:
       - _serac_build_and_test_*/build-*/*.*.logs/*.log
       - _serac_build_and_test_*/build-*/*.*.logs/*.err
     reports:
-      junit: _serac_build_and_test_*/build-*/*.*.logs/atsr.xml
+      junit:
+      - _serac_build_and_test_*/build-*/junit.xml
+      - _serac_build_and_test_*/build-*/*.*.logs/atsr.xml
 
 .full_build_script:
   script:
