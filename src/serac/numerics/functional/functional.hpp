@@ -173,8 +173,6 @@ public:
 
     output_T_.SetSize(test_fes->GetTrueVSize(), mfem::Device::GetMemoryType());
 
-    dummy_.SetSize(GetTrueVSize(trial_fes), mfem::Device::GetMemoryType());
-
     auto num_elements          = static_cast<size_t>(test_space_->GetNE());
     auto ndof_per_test_element = static_cast<size_t>(test_space_->GetFE(0)->GetDof() * test_space_->GetVDim());
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
@@ -587,64 +585,37 @@ private:
     mfem::Vector df_;
   };
 
-  /**
-   * @brief The input set of local DOF values (i.e., on the current rank)
-   */
+  /// @brief The input set of local DOF values (i.e., on the current rank)
   mutable mfem::Vector input_L_[num_trial_spaces];
 
-  /**
-   * @brief The output set of local DOF values (i.e., on the current rank)
-   */
+  /// @brief The output set of local DOF values (i.e., on the current rank)
   mutable mfem::Vector output_L_;
 
-  /**
-   * @brief The input set of per-element DOF values
-   */
+  /// @brief The input set of per-element DOF values
   mutable std::array<mfem::Vector, num_trial_spaces> input_E_;
 
-  /**
-   * @brief The output set of per-element DOF values
-   */
+  /// @brief The output set of per-element DOF values
   mutable mfem::Vector output_E_;
 
-  /**
-   * @brief The input set of per-boundaryelement DOF values
-   */
+  /// @brief The input set of per-boundaryelement DOF values
   mutable std::array<mfem::Vector, num_trial_spaces> input_E_boundary_;
 
-  /**
-   * @brief The output set of per-boundary-element DOF values
-   */
+  /// @brief The output set of per-boundary-element DOF values
   mutable mfem::Vector output_E_boundary_;
 
-  /**
-   * @brief The output set of local DOF values (i.e., on the current rank) from boundary elements
-   */
+  /// @brief The output set of local DOF values (i.e., on the current rank) from boundary elements
   mutable mfem::Vector output_L_boundary_;
 
-  /**
-   * @brief The set of true DOF values, a reference to this member is returned by @p operator()
-   */
+  /// @brief The set of true DOF values, a reference to this member is returned by @p operator()
   mutable mfem::Vector output_T_;
 
-  /**
-   * @brief A working vector for @p GetGradient
-   */
-  mutable mfem::Vector dummy_;
-
-  /**
-   * @brief Manages DOFs for the test space
-   */
+  /// @brief Manages DOFs for the test space
   mfem::ParFiniteElementSpace* test_space_;
 
-  /**
-   * @brief Manages DOFs for the trial space
-   */
+  /// @brief Manages DOFs for the trial space
   std::array<mfem::ParFiniteElementSpace*, num_trial_spaces> trial_space_;
 
-  /**
-   * @brief The set of true DOF indices to which an essential BC should be applied
-   */
+  /// @brief The set of true DOF indices to which an essential BC should be applied
   mfem::Array<int> ess_tdof_list_;
 
   /**

@@ -58,11 +58,22 @@ struct QoIElementRestriction : public mfem::Operator {
 /**
  * @brief a partial template specialization of Functional with test == double, implying "quantity of interest"
  */
-template <ExecutionSpace exec, typename... trials>
-class Functional<double(trials...), exec> : public mfem::Operator {
+template <typename... trials, ExecutionSpace exec>
+class Functional<double(trials...), exec> {
   using test = QOI;
   static constexpr tuple<trials...> trial_spaces{};
   static constexpr uint32_t         num_trial_spaces = sizeof...(trials);
+
+  class Gradient;
+
+  template <typename... T>
+  struct operator_paren_return {
+    using type = typename std::conditional<
+      (std::is_same_v<T, dual_vector> + ...) == 1,  // if the there is a dual number in the pack
+      serac::tuple<double, Gradient&>,              // then we return the value and the derivative
+      double                                        // otherwise, we just return the value
+    >::type;
+  };
 
 public:
   /**
@@ -70,12 +81,8 @@ public:
    * @param[in] trial_fes The trial space
    */
   Functional(std::array<mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
-      : Operator(1 /* the output of a QoI is a scalar */, GetTrueVSize(trial_fes)),
-        trial_space_(trial_fes),
-        P_test_(new QoIProlongation(trial_fes[0]->GetParMesh()->GetComm())),
-        G_test_(new QoIElementRestriction(trial_fes[0]->GetParMesh()->GetNE())),
-        grad_(*this)
-  {
+      : trial_space_(trial_fes) {
+
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
       P_trial_[i] = trial_space_[i]->GetProlongationMatrix();
       G_trial_[i] = trial_space_[i]->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC);
@@ -90,21 +97,22 @@ public:
 
       input_L_[i].SetSize(P_trial_[i]->Height(), mfem::Device::GetMemoryType());
       input_E_[i].SetSize(G_trial_[i]->Height(), mfem::Device::GetMemoryType());
+
+      // create the gradient operators for each trial space
+      grad_.emplace_back(*this, i);
     }
 
+    P_test_= new QoIProlongation(trial_fes[0]->GetParMesh()->GetComm());
+    G_test_ = new QoIElementRestriction(trial_fes[0]->GetParMesh()->GetNE());
     G_test_boundary_ = new QoIElementRestriction(trial_fes[0]->GetParMesh()->GetNBE());
 
+    output_E_.SetSize(G_test_->Height(), mfem::Device::GetMemoryType());
     output_E_boundary_.SetSize(G_test_boundary_->Height(), mfem::Device::GetMemoryType());
 
-    output_E_.SetSize(G_test_->Height(), mfem::Device::GetMemoryType());
-
+    output_L_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
     output_L_boundary_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
 
-    output_L_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
-
-    my_output_T_.SetSize(Height(), mfem::Device::GetMemoryType());
-
-    dummy_.SetSize(Width(), mfem::Device::GetMemoryType());
+    output_T_.SetSize(1, mfem::Device::GetMemoryType());
 
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
       {
@@ -125,12 +133,6 @@ public:
       }
     }
 
-    G_test_boundary_ = new QoIElementRestriction(trial_fes[0]->GetParMesh()->GetNBE());
-
-    output_E_.SetSize(G_test_->Height(), mfem::Device::GetMemoryType());
-    output_L_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
-    my_output_T_.SetSize(Height(), mfem::Device::GetMemoryType());
-    dummy_.SetSize(Width(), mfem::Device::GetMemoryType());
   }
 
   /// @brief destructor: deallocate the mfem::Operators that we're responsible for
@@ -243,41 +245,78 @@ public:
     AddBoundaryIntegral(Dimension<2>{}, integrand, domain);
   }
 
-  /**
-   * @param[in] input_T The input vector
-   * @param[out] output_T The output vector
-   *
-   * @brief Implements mfem::Operator::Mult
-   */
-  void Mult(const mfem::Vector& input_T, mfem::Vector& output_T) const
+  template <typename... T>
+  typename operator_paren_return<T...>::type operator()(const T&... args)
   {
-    Evaluation<Operation::Mult>(input_T, output_T);
-  }
+    constexpr int num_dual_arguments = (std::is_same_v<T, dual_vector> + ...);
+    static_assert(num_dual_arguments <= 1,
+                  "Error: Functional::operator() can only differentiate w.r.t. 1 argument a time");
+    static_assert(sizeof...(T) == num_trial_spaces,
+                  "Error: Functional::operator() must take exactly as many arguments as trial spaces");
 
-  /**
-   * @brief Alias for @p Mult that uses a return value instead of an output parameter
-   * @param[in] input_T The input vector
-   */
-  //double operator()(const mfem::Vector& input_T) const
-  double operator()(const mfem::Vector&) const
-  {
-    #if 0
-    Evaluation<Operation::Mult>(input_T, my_output_T_);
-    return my_output_T_[0];
-    #else
-    return 0.0;
-    #endif
-  }
+    [[maybe_unused]] constexpr int                                           wrt = index_of_dual_vector<T...>();
+    std::array<std::reference_wrapper<const mfem::Vector>, num_trial_spaces> input_T{args...};
 
-  /**
-   * @brief Obtains the gradients for all the constituent integrals
-   * @param[in] input_T The input vector
-   * @param[out] output_T The output vector
-   * @see DomainIntegral::GradientMult, BoundaryIntegral::GradientMult
-   */
-  void GradientMult(const mfem::Vector& input_T, mfem::Vector& output_T) const
-  {
-    Evaluation<Operation::GradientMult>(input_T, output_T);
+    // get the values for each local processor
+    for (uint32_t i = 0; i < num_trial_spaces; i++) {
+      P_trial_[i]->Mult(input_T[i].get(), input_L_[i]);
+    }
+
+    output_L_ = 0.0;
+    if (domain_integrals_.size() > 0) {
+      // get the values for each element on the local processor
+      for (uint32_t i = 0; i < num_trial_spaces; i++) {
+        G_trial_[i]->Mult(input_L_[i], input_E_[i]);
+      }
+
+      // compute residual contributions at the element level and sum them
+      output_E_ = 0.0;
+      for (auto& integral : domain_integrals_) {
+        integral.Mult(input_E_, output_E_, wrt);
+      }
+
+      // scatter-add to compute residuals on the local processor
+      G_test_->MultTranspose(output_E_, output_L_);
+    }
+
+    if (bdr_integrals_.size() > 0) {
+      for (uint32_t i = 0; i < num_trial_spaces; i++) {
+        G_trial_boundary_[i]->Mult(input_L_[i], input_E_boundary_[i]);
+      }
+
+      output_E_boundary_ = 0.0;
+      for (auto& integral : bdr_integrals_) {
+        integral.Mult(input_E_boundary_, output_E_boundary_, wrt);
+      }
+
+      output_L_boundary_ = 0.0;
+
+      // scatter-add to compute residuals on the local processor
+      G_test_boundary_->MultTranspose(output_E_boundary_, output_L_boundary_);
+
+      output_L_ += output_L_boundary_;
+    }
+
+    // scatter-add to compute global residuals
+    P_test_->MultTranspose(output_L_, output_T_);
+
+    if constexpr (num_dual_arguments == 1) {
+      // if the user has indicated they'd like to evaluate and differentiate w.r.t.
+      // a specific argument, then we return both the value and gradient w.r.t. that argument
+      //
+      // mfem::Vector arg0 = ...;
+      // mfem::Vector arg1 = ...;
+      // e.g. auto [value, gradient_wrt_arg1] = my_functional(arg0, differentiate_wrt(arg1));
+      return {output_T_[0], grad_[wrt]};
+
+    } else {
+      // if the user passes only `mfem::Vector`s then we assume they only want the output value
+      //
+      // mfem::Vector arg0 = ...;
+      // mfem::Vector arg1 = ...;
+      // e.g. mfem::Vector value = my_functional(arg0, arg1);
+      return output_T_[0];
+    }
   }
 
 private:
@@ -456,59 +495,34 @@ private:
   #endif
   }
 
-  /**
-   * @brief The input set of local DOF values (i.e., on the current rank)
-   */
+  /// @brief The input set of local DOF values (i.e., on the current rank)
   mutable mfem::Vector input_L_[num_trial_spaces];
 
-  /**
-   * @brief The output set of local DOF values (i.e., on the current rank)
-   */
+  /// @brief The output set of local DOF values (i.e., on the current rank)
   mutable mfem::Vector output_L_;
 
-  /**
-   * @brief The input set of per-element DOF values
-   */
+  /// @brief The input set of per-element DOF values
   mutable std::array<mfem::Vector, num_trial_spaces> input_E_;
 
-  /**
-   * @brief The output set of per-element DOF values
-   */
+  /// @brief The output set of per-element DOF values
   mutable mfem::Vector output_E_;
 
-  /**
-   * @brief The input set of per-boundary-element DOF values
-   */
+  /// @brief The input set of per-boundary-element DOF values
   mutable std::array<mfem::Vector, num_trial_spaces> input_E_boundary_;
 
-  /**
-   * @brief The output set of per-boundary-element DOF values
-   */
+  /// @brief The output set of per-boundary-element DOF values
   mutable mfem::Vector output_E_boundary_;
 
-  /**
-   * @brief The output set of local DOF values (i.e., on the current rank) from boundary elements
-   */
+  /// @brief The output set of local DOF values (i.e., on the current rank) from boundary elements
   mutable mfem::Vector output_L_boundary_;
 
-  /**
-   * @brief The set of true DOF values, used as a scratchpad for @p operator()
-   */
-  mutable mfem::Vector my_output_T_;
+  /// @brief The set of true DOF values, used as a scratchpad for @p operator()
+  mutable mfem::Vector output_T_;
 
-  /**
-   * @brief A working vector for @p GetGradient
-   */
-  mutable mfem::Vector dummy_;
-
-  /**
-   * @brief Manages DOFs for the trial space
-   */
+  /// @brief Manages DOFs for the trial space
   std::array<mfem::ParFiniteElementSpace*, num_trial_spaces> trial_space_;
 
-  /**
-   * @brief The set of true DOF indices to which an essential BC should be applied
-   */
+  /// @brief The set of true DOF indices to which an essential BC should be applied
   mfem::Array<int> ess_tdof_list_;
 
   /**
@@ -561,8 +575,8 @@ private:
   static constexpr mfem::Element::Type supported_types[4] = {mfem::Element::POINT, mfem::Element::SEGMENT,
                                                              mfem::Element::QUADRILATERAL, mfem::Element::HEXAHEDRON};
 
-  /// @brief The gradient object used to implement @p GetGradient
-  mutable Gradient grad_;
+  /// @brief The objects representing the gradients w.r.t. each input argument of the Functional
+  mutable std::vector<Gradient> grad_;
 
   /// @brief array that stores each element's gradient of the residual w.r.t. trial values
   std::array<ExecArray<double, 3, exec>, num_trial_spaces> element_gradients_;
