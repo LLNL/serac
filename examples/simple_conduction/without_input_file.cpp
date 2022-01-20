@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -61,7 +61,7 @@ int main(int argc, char* argv[])
   // _bc_end
 
   // _output_type_start
-  conduction.initializeOutput(serac::OutputType::ParaView, "simple_conduction_without_input_file");
+  conduction.initializeOutput(serac::OutputType::ParaView, "simple_conduction_without_input_file_output");
   // _output_type_end
 
   // _run_sim_start

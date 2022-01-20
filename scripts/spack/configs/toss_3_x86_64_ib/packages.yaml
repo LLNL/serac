@@ -50,15 +50,45 @@ packages:
     externals:
     - spec: automake@1.13.4
       prefix: /usr
+  binutils:
+    buildable: false
+    externals:
+    - spec: binutils@2.27
+      prefix: /usr
   bzip2:
     buildable: false
     externals:
     - spec: bzip2@1.0.6
       prefix: /usr
+  diffutils:
+    buildable: false
+    externals:
+    - spec: diffutils@3.3
+      prefix: /usr
+  epoxy:
+    buildable: false
+    externals:
+    - spec: epoxy@1.5.2
+      prefix: /usr
+  findutils:
+    buildable: false
+    externals:
+    - spec: findutils@4.5.11
+      prefix: /usr
   gettext:
     buildable: false
     externals:
     - spec: gettext@0.19.8.1
+      prefix: /usr
+  ghostscript:
+    buildable: false
+    externals:
+    - spec: ghostscript@9.25
+      prefix: /usr
+  groff:
+    buildable: false
+    externals:
+    - spec: groff@1.22.2
       prefix: /usr
   graphviz:
     buildable: false
@@ -90,15 +120,15 @@ packages:
     externals:
     - spec: pkg-config@0.27.1
       prefix: /usr
-  tar:
-    buildable: false
-    externals:
-    - spec: tar@1.26
-      prefix: /usr
   readline:
     buildable: false
     externals:
     - spec: readline@6.2
+      prefix: /usr
+  tar:
+    buildable: false
+    externals:
+    - spec: tar@1.26
       prefix: /usr
   unzip:
     buildable: false

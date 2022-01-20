@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -118,16 +118,19 @@ set(CMAKE_CXX_FLAGS ${SERAC_CMAKE_CXX_FLAGS})
 include(${PROJECT_SOURCE_DIR}/cmake/SeracConfigHeader.cmake)
 
 #------------------------------------------------------------------------------
-# Build src
+# Add subdirectories
 #------------------------------------------------------------------------------
 
 add_subdirectory(src)
 
-#------------------------------------------------------------------------------
-# Configure examples
-#------------------------------------------------------------------------------
-
 add_subdirectory(examples)
+
+#------------------------------------------------------------------------------
+# Generate helper script for running ATS
+#------------------------------------------------------------------------------
+configure_file(
+    ${PROJECT_SOURCE_DIR}/scripts/testing/ats.sh.in
+    ${CMAKE_BINARY_DIR}/ats.sh)
 
 #------------------------------------------------------------------------------
 # Add Code Checks
@@ -162,6 +165,12 @@ install(TARGETS              serac
         )
 
 if (SERAC_ENABLE_CODEVELOP)
+    # This really shouldn't be needed but it keeps getting dropped from axom.
+    # It certainly shouldn't go here either.
+    target_include_directories(axom SYSTEM PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/axom/src>
+    )
+
     # Add Axom's targets to our export set
     # TODO: we should ask Axom for this list in the future
     set(axom_exported_targets axom cli11 fmt hdf5 lua sol sparsehash)

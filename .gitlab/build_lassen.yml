@@ -2,6 +2,7 @@
 # This is the share configuration of jobs for lassen
 .on_lassen:
   variables:
+    ALLOC_COMMAND: lalloc ${ALLOC_NODES} -W ${ALLOC_TIME} -q pdebug -G ${ALLOC_BANK}
   tags:
     - shell
     - lassen
@@ -29,16 +30,10 @@
 ####
 # Template
 .src_build_on_lassen:
-  stage: build
-  variables:
-    ALLOC_COMMAND: lalloc 1 -W 10 -q pdebug -G ${ALLOC_BANK}
   extends: [.src_build_script, .on_lassen, .src_workflow]
   needs: []
 
 .full_build_on_lassen:
-  stage: build
-  variables:
-    ALLOC_COMMAND: lalloc 1 -W 55 -q pdebug -G ${ALLOC_BANK}
   extends: [.full_build_script, .on_lassen, .full_workflow]
   needs: []
 
@@ -48,6 +43,8 @@ lassen-clang_10_0_1-src:
   variables:
     COMPILER: "clang@10.0.1"
     HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-${COMPILER}.cmake"
+    ALLOC_NODES: "1"
+    ALLOC_TIME: "10"
   extends: [.src_build_on_lassen, .with_cuda]
 
 # Note: to reduce duplication SPEC is not defined here, if we move to more than one
@@ -56,4 +53,6 @@ lassen-clang_10_0_1-full:
   variables:
     COMPILER: "clang@10.0.1"
     HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-${COMPILER}.cmake"
+    ALLOC_NODES: "1"
+    ALLOC_TIME: "55"
   extends: [.full_build_on_lassen, .with_cuda]
