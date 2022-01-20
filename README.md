@@ -63,8 +63,16 @@ follows.  See the license included with each package for full details.
 
 [//]: # (Note: The spaces at the end of each line below add line breaks)
 
+PackageName: Axom  
+PackageHomePage: https://github.com/LLNL/axom  
+PackageLicenseDeclared: BSD-3-Clause  
+
 PackageName: BLT  
 PackageHomePage: https://github.com/LLNL/blt  
+PackageLicenseDeclared: BSD-3-Clause  
+
+PackageName: MFEM  
+PackageHomePage: https://github.com/mfem/mfem  
 PackageLicenseDeclared: BSD-3-Clause  
 
 PackageName: uberenv  
