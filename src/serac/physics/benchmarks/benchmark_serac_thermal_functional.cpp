@@ -178,9 +178,9 @@ int main(int argc, char* argv[])
   adiak::systime();
 
   // Run code
-  SERAC_MARK_START("Everything");
+  SERAC_MARK_START("Thermal Functional");
   serac::functional_test_static<1, 2>(2.2909240);
-  SERAC_MARK_END("Everything");
+  SERAC_MARK_END("Thermal Functional");
 
   // Finalize Adiak
   adiak::fini();
