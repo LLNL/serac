@@ -43,7 +43,7 @@ jobs:
           TEST_TARGET: 'linux_clang10'
           HOST_CONFIG: 'docker-linux-ubuntu20.04-ivybridge-clang@10.0.0.cmake'
           BUILD_TYPE: 'Debug'
-          CMAKE_OPTS: '-DENABLE_CODEVELOP=ON'
+          CMAKE_OPTS: '-DSERAC_ENABLE_CODEVELOP=ON'
 
   pool:
     vmImage: $(VM_ImageName)
