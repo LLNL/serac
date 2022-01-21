@@ -30,6 +30,12 @@ endif()
 set(RAW_CMAKE_C_FLAGS   ${CMAKE_C_FLAGS}   CACHE STRING "")
 set(RAW_CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} CACHE STRING "")
 
+message(STATUS "Serac Codevelop Build: ${SERAC_ENABLE_CODEVELOP}")
+if (SERAC_ENABLE_CODEVELOP)
+  unset(AXOM_DIR)
+  unset(MFEM_DIR)
+endif()
+
 #------------------------------------------------------------------------------
 # Setup BLT
 #------------------------------------------------------------------------------
