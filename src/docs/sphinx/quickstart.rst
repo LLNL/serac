@@ -202,10 +202,10 @@ LC group. Contact `Jamie Bramwell <bramwell1@llnl.gov>`_ for access.
 Some build options frequently used by Serac include:
 
 * ``CMAKE_BUILD_TYPE``: Specifies the build type, see the `CMake docs <https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html>`_
-* ``ENABLE_CODEVELOP``: Enables local development build of MFEM/Axom, see :ref:`codevelop-label`, defaults to ``OFF``
 * ``ENABLE_BENCHMARKS``: Enables Google Benchmark performance tests, defaults to ``OFF``
 * ``ENABLE_WARNINGS_AS_ERRORS``: Turns compiler warnings into errors, defaults to ``ON``
 * ``ENABLE_ASAN``: Enables the Address Sanitizer for memory safety inspections, defaults to ``OFF``
+* ``SERAC_ENABLE_CODEVELOP``: Enables local development build of MFEM/Axom, see :ref:`codevelop-label`, defaults to ``OFF``
 
 Once the build has been configured, Serac can be built with the following commands:
 
