@@ -13,8 +13,7 @@ class Sundials(CMakePackage):
     Solvers)"""
 
     homepage = "https://computing.llnl.gov/projects/sundials"
-    urls = ["https://computing.llnl.gov/projects/sundials/download/sundials-2.7.0.tar.gz",
-            "https://github.com/LLNL/sundials/releases/download/v2.7.0/sundials-2.7.0.tar.gz"]
+    url = "https://github.com/LLNL/sundials/releases/download/v2.7.0/sundials-2.7.0.tar.gz"
     git = "https://github.com/llnl/sundials.git"
     maintainers = ['cswoodward', 'gardner48', 'balos1']
 

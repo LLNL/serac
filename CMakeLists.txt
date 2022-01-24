@@ -30,6 +30,8 @@ endif()
 set(RAW_CMAKE_C_FLAGS   ${CMAKE_C_FLAGS}   CACHE STRING "")
 set(RAW_CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} CACHE STRING "")
 
+message(STATUS "Serac Codevelop Build: ${SERAC_ENABLE_CODEVELOP}")
+
 #------------------------------------------------------------------------------
 # Setup BLT
 #------------------------------------------------------------------------------
@@ -118,16 +120,19 @@ set(CMAKE_CXX_FLAGS ${SERAC_CMAKE_CXX_FLAGS})
 include(${PROJECT_SOURCE_DIR}/cmake/SeracConfigHeader.cmake)
 
 #------------------------------------------------------------------------------
-# Build src
+# Add subdirectories
 #------------------------------------------------------------------------------
 
 add_subdirectory(src)
 
-#------------------------------------------------------------------------------
-# Configure examples
-#------------------------------------------------------------------------------
-
 add_subdirectory(examples)
+
+#------------------------------------------------------------------------------
+# Generate helper script for running ATS
+#------------------------------------------------------------------------------
+configure_file(
+    ${PROJECT_SOURCE_DIR}/scripts/testing/ats.sh.in
+    ${CMAKE_BINARY_DIR}/ats.sh)
 
 #------------------------------------------------------------------------------
 # Add Code Checks

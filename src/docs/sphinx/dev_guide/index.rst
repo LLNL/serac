@@ -14,6 +14,7 @@ Developer Guide
    style_guide
    docker_env
    modern_cpp
+   testing
    logging
    expr_templates
    profiling
@@ -21,7 +22,7 @@ Developer Guide
    new_docker_image
    tensor_dual
    functional
-   mfem_dev
+   codevelop
    state_manager
 
 Developing a New Physics Module

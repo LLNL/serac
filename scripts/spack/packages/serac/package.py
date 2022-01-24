@@ -84,6 +84,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("llvm+clang@10.0.0", when="+devtools")
     depends_on('python', when="+devtools")
     depends_on('py-sphinx', when="+devtools")
+    depends_on('py-ats', when="+devtools")
 
     depends_on("sundials~shared+hypre+monitoring~examples-c~examples-f77~examples-install",
                when="+sundials")
@@ -353,6 +354,11 @@ class Serac(CachedCMakePackage, CudaPackage):
             entries.append(
                 "# Root directory for generated developer tools\n")
             entries.append(cmake_cache_path("DEVTOOLS_ROOT", devtools_root))
+
+            ats_bin_dir = get_spec_path(spec, 'py-ats', path_replacements,
+                                        use_bin=True)
+            entries.append(cmake_cache_path("ATS_EXECUTABLE",
+                                            pjoin(ats_bin_dir, "ats")))
 
             # Only turn on clang tools support if devtools is on
             clang_fmt_path = spec['llvm'].prefix.bin.join('clang-format')
