@@ -234,14 +234,14 @@ void qoi_test(mfem::ParMesh& mesh, H1<p1> trial1, H1<p2> trial2, Dimension<dim>)
   mfem::ParGridFunction U2_gf(&fespace2);
   U2_gf.ProjectCoefficient(y);
 
-  mfem::HypreParVector* tmp;
+  std::unique_ptr<mfem::HypreParVector> tmp;
 
-  tmp = fespace1.NewTrueDofVector();
-  mfem::HypreParVector  U1 = *tmp;
+  tmp.reset(fespace1.NewTrueDofVector());
+  mfem::HypreParVector U1 = *tmp;
   U1_gf.GetTrueDofs(U1);
 
-  tmp = fespace2.NewTrueDofVector();
-  mfem::HypreParVector  U2 = *tmp;
+  tmp.reset(fespace2.NewTrueDofVector());
+  mfem::HypreParVector U2 = *tmp;
   U2_gf.GetTrueDofs(U2);
 
   // Define the types for the test and trial spaces using the function arguments
@@ -281,8 +281,6 @@ void qoi_test(mfem::ParMesh& mesh, H1<p1> trial1, H1<p2> trial2, Dimension<dim>)
   EXPECT_NEAR(0.0, relative_error, 3.0e-2);
 
   //check_gradient(f, U);
-
-  delete tmp;
 }
 
 // clang-format off
