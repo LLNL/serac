@@ -64,10 +64,10 @@ void check_gradient(Functional<T>& f, mfem::Vector& U, mfem::Vector& dU_dt)
     delete dfdU_matrix;
   }
 
-  auto dU_dt_plus = U;
+  auto dU_dt_plus = dU_dt;
   dU_dt_plus.Add(epsilon, ddU_dt);
 
-  auto dU_dt_minus = U;
+  auto dU_dt_minus = dU_dt;
   dU_dt_minus.Add(-epsilon, ddU_dt);
 
   {
