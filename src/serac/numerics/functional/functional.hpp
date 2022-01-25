@@ -399,10 +399,6 @@ private:
                                         form_.output_L_.Size(), form_.input_L_.Size(), sparse_matrix_frees_graph_ptrs,
                                         sparse_matrix_frees_values_ptr, col_ind_is_sorted);
 
-      for (auto dof : form_.ess_tdof_list_) {
-        J_local.EliminateRow(dof, DIAG_ONE);
-      }
-
       auto* R = form_.test_space_->Dof_TrueDof_Matrix();
 
       auto* A = new mfem::HypreParMatrix(form_.test_space_->GetComm(), form_.test_space_->GlobalVSize(),
@@ -412,6 +408,8 @@ private:
       auto* P = form_.trial_space_->Dof_TrueDof_Matrix();
 
       auto* RAP = mfem::RAP(R, A, P);
+
+      RAP->EliminateRowsCols(form_.ess_tdof_list_);
 
       delete A;
 

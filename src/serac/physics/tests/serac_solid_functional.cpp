@@ -35,7 +35,7 @@ void functional_solid_test_static()
 
   // Construct the appropriate dimension mesh and give it to the data store
   std::string filename =
-      (dim == 2) ? SERAC_REPO_DIR "/data/meshes/beam-quad.mesh" : SERAC_REPO_DIR "/data/meshes/onehex.mesh";
+      (dim == 2) ? SERAC_REPO_DIR "/data/meshes/beam-quad.mesh" : SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
@@ -98,10 +98,10 @@ void functional_solid_test_static()
 }
 
 TEST(solid_functional, 2D_linear_static) { functional_solid_test_static<1, 2>(); }
-// TEST(solid_functional, 2D_quad_static) { functional_solid_test_static<2, 2>(); }
+TEST(solid_functional, 2D_quad_static) { functional_solid_test_static<2, 2>(); }
 
-// TEST(solid_functional, 3D_linear_static) { functional_solid_test_static<1, 3>(); }
-// TEST(solid_functional, 3D_quad_static) { functional_solid_test_static<2, 3>(); }
+TEST(solid_functional, 3D_linear_static) { functional_solid_test_static<1, 3>(); }
+TEST(solid_functional, 3D_quad_static) { functional_solid_test_static<2, 3>(); }
 
 }  // namespace serac
 

@@ -336,6 +336,7 @@ public:
     for (auto& bc : bcs_.essentials()) {
       bc.projectBdr(temperature_, time_);
       K_functional_.SetEssentialBC(bc.markers());
+      M_functional_.SetEssentialBC(bc.markers());
     }
 
     // Initialize the true vector
@@ -345,15 +346,11 @@ public:
       residual_ = mfem_ext::StdFunctionOperator(
           temperature_.space().TrueVSize(),
 
-          [this](const mfem::Vector& u, mfem::Vector& r) {
-            r = K_functional_(u);
-            r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
-          },
+          [this](const mfem::Vector& u, mfem::Vector& r) { r = K_functional_(u); },
 
           [this](const mfem::Vector& u) -> mfem::Operator& {
             K_functional_(u);
             J_.reset(grad(K_functional_));
-            bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             return *J_;
           });
 
@@ -366,7 +363,6 @@ public:
             add(1.0, u_, dt_, du_dt, K_arg);
 
             add(M_functional_(du_dt), K_functional_(K_arg), r);
-            r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
           },
 
           [this](const mfem::Vector& du_dt) -> mfem::Operator& {
@@ -382,7 +378,6 @@ public:
               std::unique_ptr<mfem::HypreParMatrix> k_mat(grad(K_functional_));
 
               J_.reset(mfem::Add(1.0, *m_mat, dt_, *k_mat));
-              bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             }
             return *J_;
           });
