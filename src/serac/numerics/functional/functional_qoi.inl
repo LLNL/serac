@@ -245,6 +245,50 @@ public:
     AddBoundaryIntegral(Dimension<2>{}, integrand, domain);
   }
 
+  double ActionOfGradient(const mfem::Vector& input_T, size_t which) const
+  {
+    P_trial_[which]->Mult(input_T, input_L_[which]);
+
+    output_L_ = 0.0;
+    if (domain_integrals_.size() > 0) {
+      // get the values for each element on the local processor
+      G_trial_[which]->Mult(input_L_[which], input_E_[which]);
+
+      // compute residual contributions at the element level and sum them
+
+      output_E_ = 0.0;
+      for (auto& integral : domain_integrals_) {
+        integral.GradientMult(input_E_[which], output_E_, which);
+      }
+
+      // scatter-add to compute residuals on the local processor
+      G_test_->MultTranspose(output_E_, output_L_);
+    }
+
+    if (bdr_integrals_.size() > 0) {
+      G_trial_boundary_[which]->Mult(input_L_[which], input_E_boundary_[which]);
+
+      output_E_boundary_ = 0.0;
+      for (auto& integral : bdr_integrals_) {
+        integral.GradientMult(input_E_boundary_[which], output_E_boundary_, which);
+      }
+
+      output_L_boundary_ = 0.0;
+
+      // scatter-add to compute residuals on the local processor
+      G_test_boundary_->MultTranspose(output_E_boundary_, output_L_boundary_);
+
+      output_L_ += output_L_boundary_;
+    }
+
+    // scatter-add to compute global residuals
+    P_test_->MultTranspose(output_L_, output_T_);
+
+    return output_T_[0];
+
+  }
+
+
   template <typename... T>
   typename operator_paren_return<T...>::type operator()(const T&... args)
   {
@@ -254,7 +298,7 @@ public:
     static_assert(sizeof...(T) == num_trial_spaces,
                   "Error: Functional::operator() must take exactly as many arguments as trial spaces");
 
-    [[maybe_unused]] constexpr int                                           wrt = index_of_dual_vector<T...>();
+    constexpr int                                           wrt = index_of_dual_vector<T...>();
     std::array<std::reference_wrapper<const mfem::Vector>, num_trial_spaces> input_T{args...};
 
     // get the values for each local processor
@@ -349,11 +393,8 @@ private:
 
     void Mult(const mfem::Vector& x, mfem::Vector& y) const { form_.GradientMult(x, y); }
 
-    double operator()(const mfem::Vector& x) const
-    {
-      mfem::Vector y(1);
-      form_.GradientMult(x, y);
-      return y[0];
+    double operator()(const mfem::Vector& x) const {
+      return form_.ActionOfGradient(x, which_argument);
     }
 
     operator mfem::HypreParVector &()
@@ -583,9 +624,6 @@ private:
 
   /// @brief array that stores each boundary element's gradient of the residual w.r.t. trial values
   std::array<ExecArray<double, 3, exec>, num_trial_spaces> bdr_element_gradients_;
-
-  template <typename T>
-  friend typename Functional<T>::Gradient& grad(Functional<T>&);
 };
 
 }  // namespace serac
