@@ -186,24 +186,7 @@ public:
     temperature_.initializeTrueVec();
 
     if (is_quasistatic_) {
-      //nonlin_solver_.Mult(zero_, temperature_.trueVec());
-  // Set up the linear and nonlinear solvers
-      mfem::CGSolver lin_solver(MPI_COMM_WORLD);
-      lin_solver.SetPrintLevel(0);
-      lin_solver.SetAbsTol(1.0e-12);
-      lin_solver.SetMaxIter(10);
-
-      mfem::NewtonSolver nonlin_solver(MPI_COMM_WORLD);
-      //nonlin_solver.SetOperator(residual);
-      nonlin_solver.SetOperator(residual_);
-      nonlin_solver.SetSolver(lin_solver);
-      nonlin_solver.SetPrintLevel(1);
-      nonlin_solver.SetAbsTol(1.0e-12);
-      nonlin_solver.SetMaxIter(10);
-
-      // Drive the residual determined by functional to zero
-      nonlin_solver.Mult(zero_, temperature_.trueVec());
-
+      nonlin_solver_.Mult(zero_, temperature_.trueVec());
     } else {
       SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
 
@@ -302,7 +285,7 @@ public:
 
           auto flux = du_dx * 0.0;
 
-          auto source = -1.0 * source_function(x, time_, u, du_dx) + u * u * -1.0;
+          auto source = -1.0 * source_function(x, time_, u, du_dx);
 
           // Return the source and the flux as a tuple
           return serac::tuple{source, flux};
@@ -362,34 +345,15 @@ public:
       residual_ = mfem_ext::StdFunctionOperator(
           temperature_.space().TrueVSize(),
 
-          [this](const mfem::Vector& u, mfem::Vector& r) { r = K_functional_(u); },
+          [this](const mfem::Vector& u, mfem::Vector& r) {
+            r = K_functional_(u);
+            r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
+          },
 
           [this](const mfem::Vector& u) -> mfem::Operator& {
             K_functional_(u);
-            J_.reset(grad(K_functional_).GetMatrix(u));
-
-            mfem::Vector input(4);
-            mfem::Vector output(4);
-
-            input = 0.0;
-
-            //bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
-
-            axom::fmt::print("matrix assembly:\n");
-            for (int i = 0; i < 4; ++i) {
-              input(i) = 1.0;
-              J_->Mult(input, output);
-              output.Print();
-              input = 0.0;
-            }
-
-            axom::fmt::print("no assembly:\n");
-            for (int i = 0; i < 4; ++i) {
-              input(i) = 1.0;
-              grad(K_functional_).Mult(input, output);
-              output.Print();
-              input = 0.0;
-            }
+            J_.reset(grad(K_functional_));
+            bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             return *J_;
           });
 

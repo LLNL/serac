@@ -333,88 +333,6 @@ private:
       return y;
     }
 
-    mfem::HypreParMatrix* GetMatrix(const mfem::Vector& x) 
-    { 
-      form_(x);
-      // the CSR graph (sparsity pattern) is reusable, so we cache
-      // that and ask mfem to not free that memory in ~SparseMatrix()
-      constexpr bool sparse_matrix_frees_graph_ptrs = false;
-
-      // the CSR values are NOT reusable, so we pass ownership of
-      // them to the mfem::SparseMatrix, to be freed in ~SparseMatrix()
-      constexpr bool sparse_matrix_frees_values_ptr = true;
-
-      constexpr bool col_ind_is_sorted = true;
-
-      double* values = new double[lookup_tables.nnz]{};
-
-      // each element uses the lookup tables to add its contributions
-      // to their appropriate locations in the global sparse matrix
-      if (form_.domain_integrals_.size() > 0) {
-        auto& K_elem = form_.element_gradients_;
-        auto& LUT    = lookup_tables.element_nonzero_LUT;
-
-        detail::zero_out(K_elem);
-        for (auto& domain : form_.domain_integrals_) {
-          domain.ComputeElementGradients(K_elem);
-        }
-
-        for (axom::IndexType e = 0; e < K_elem.shape()[0]; e++) {
-          for (axom::IndexType i = 0; i < K_elem.shape()[1]; i++) {
-            for (axom::IndexType j = 0; j < K_elem.shape()[2]; j++) {
-              auto [index, sign] = LUT(e, i, j);
-              values[index] += sign * K_elem(e, i, j);
-            }
-          }
-        }
-      }
-
-      // each boundary element uses the lookup tables to add its contributions
-      // to their appropriate locations in the global sparse matrix
-      if (form_.bdr_integrals_.size() > 0) {
-        auto& K_belem = form_.bdr_element_gradients_;
-        auto& LUT     = lookup_tables.bdr_element_nonzero_LUT;
-
-        detail::zero_out(K_belem);
-        for (auto& boundary : form_.bdr_integrals_) {
-          boundary.ComputeElementGradients(K_belem);
-        }
-
-        for (axom::IndexType e = 0; e < K_belem.shape()[0]; e++) {
-          for (axom::IndexType i = 0; i < K_belem.shape()[1]; i++) {
-            for (axom::IndexType j = 0; j < K_belem.shape()[2]; j++) {
-              auto [index, sign] = LUT(e, i, j);
-              values[index] += sign * K_belem(e, i, j);
-            }
-          }
-        }
-      }
-
-      auto J_local = mfem::SparseMatrix(lookup_tables.row_ptr.data(), lookup_tables.col_ind.data(), values,
-                                        form_.output_L_.Size(), form_.input_L_.Size(), sparse_matrix_frees_graph_ptrs,
-                                        sparse_matrix_frees_values_ptr, col_ind_is_sorted);
-
-      for (auto dof : form_.ess_tdof_list_) {
-        J_local.EliminateRow(dof, DIAG_ONE);
-      }
-
-      J_local.Print();
-
-      auto* R = form_.test_space_->Dof_TrueDof_Matrix();
-
-      auto* A = new mfem::HypreParMatrix(form_.test_space_->GetComm(), form_.test_space_->GlobalVSize(),
-                                         form_.trial_space_->GlobalVSize(), form_.test_space_->GetDofOffsets(),
-                                         form_.trial_space_->GetDofOffsets(), &J_local);
-
-      auto* P = form_.trial_space_->Dof_TrueDof_Matrix();
-
-      auto* RAP = mfem::RAP(R, A, P);
-
-      delete A;
-
-      return RAP;
-    }
-
     /**
      * @brief implicit conversion to mfem::HypreParMatrix type
      */
@@ -474,9 +392,16 @@ private:
         }
       }
 
-      auto J_local = mfem::SparseMatrix(lookup_tables.row_ptr.data(), lookup_tables.col_ind.data(), values,
+      // Copy the column indices to an auxilliary array as MFEM can mutate these during HypreParMatrix construction
+      col_ind_copy_ = lookup_tables.col_ind;
+
+      auto J_local = mfem::SparseMatrix(lookup_tables.row_ptr.data(), col_ind_copy_.data(), values,
                                         form_.output_L_.Size(), form_.input_L_.Size(), sparse_matrix_frees_graph_ptrs,
                                         sparse_matrix_frees_values_ptr, col_ind_is_sorted);
+
+      for (auto dof : form_.ess_tdof_list_) {
+        J_local.EliminateRow(dof, DIAG_ONE);
+      }
 
       auto* R = form_.test_space_->Dof_TrueDof_Matrix();
 
@@ -503,6 +428,8 @@ private:
      *   sparse matrix
      */
     GradientAssemblyLookupTables lookup_tables;
+
+    std::vector<int> col_ind_copy_;
   };
 
   /**
