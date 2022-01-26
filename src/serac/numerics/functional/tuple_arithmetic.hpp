@@ -153,24 +153,6 @@ SERAC_HOST_DEVICE auto chain_rule_tuple_matvec(serac::tuple<T...> df_dx, serac::
 }  // namespace detail
 /// @endcond
 
-/**
- * @brief Constructs a tuple of dual numbers from a parameter pack of values
- * @param[in] args The set of values
- * The gradients for each value will be set to 1 (or its tensor equivalent)
- */
-// template <typename... T>
-// constexpr auto make_dual(T ... args)
-//{
-//  return detail::make_dual_helper(serac::tuple{args...}, std::make_integer_sequence<int, int(sizeof...(T))>{});
-//}
-
-///// @overload
-// template <typename... T>
-// constexpr auto make_dual(serac::tuple<T...> args)
-//{
-//  return detail::make_dual_helper(args, std::make_integer_sequence<int, int(sizeof...(T))>{});
-//}
-
 template <int i, typename S, typename T>
 struct one_hot_helper;
 
