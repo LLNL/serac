@@ -140,30 +140,20 @@ public:
   }
 
 private:
-  /**
-   * @brief Type-erased handle to evaluation kernel
-   * @see evaluation_kernel
-   */
+
+  /// @brief kernel for integrating the q-function over the domain
   std::function<void(const std::array<mfem::Vector, num_trial_spaces>&, mfem::Vector&)> evaluation_;
 
-  /**
-   * @brief Type-erased handle to evaluation kernel
-   * @see evaluation_kernel
-   */
+  /// @brief kernels for integrating the q-function over the domain, and caching some data about its derivatives
   std::function<void(const std::array<mfem::Vector, num_trial_spaces>&, mfem::Vector&)>
       evaluation_with_AD_[num_trial_spaces];
 
-  /**
-   * @brief Type-erased handle to gradient kernel
-   * @see gradient_kernel
-   */
+  /// @brief kernels for computing directional derivatives, using the most recently cached q-function derivatives
   std::function<void(const mfem::Vector&, mfem::Vector&)> action_of_gradient_[num_trial_spaces];
 
-  /**
-   * @brief Type-erased handle to gradient matrix assembly kernel
-   * @see gradient_matrix_kernel
-   */
+  /// @brief kernels for computing consistent "element stiffness" matrices 
   std::function<void(ExecArrayView<double, 3, exec>)> element_gradient_[num_trial_spaces];
+
 };
 
 }  // namespace serac
