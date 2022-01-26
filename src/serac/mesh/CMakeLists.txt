@@ -11,6 +11,7 @@ endif()
 set(mesh_headers
     mesh_utils.hpp
     mesh_utils_base.hpp
+    surface_mesh_partitioner.hpp
     )
 
 set(mesh_sources
