@@ -148,6 +148,7 @@ packages:
 
   # Lock in versions of Devtools
   cmake:
+    version: [3.18.0]
     externals:
     - spec: cmake@3.18.0
       prefix: /usr/tce/packages/cmake/cmake-3.18.0
@@ -156,13 +157,13 @@ packages:
     version: [2.1]
     externals:
       - spec: cppcheck@2.1
-        prefix: /usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/cppcheck-2.1
+        prefix: /usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/cppcheck-2.1
     buildable: false
   doxygen:
-    version: [1.8.17]
+    version: [1.9.3]
     externals:
-      - spec: doxygen@1.8.17
-        prefix: /usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/doxygen-1.8.17
+      - spec: doxygen@1.9.3
+        prefix: /usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/doxygen-1.9.3
     buildable: false
   llvm:
     version: [10.0.0]
@@ -170,15 +171,21 @@ packages:
     externals:
     - spec: llvm+clang@10.0.0
       prefix: /usr/tce/packages/clang/clang-10.0.0
+  py-ats:
+    version: [7.0.10]
+    externals:
+      - spec: py-ats@7.0.10
+        prefix: /usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/py-ats-7.0.10
+    buildable: false
+  py-sphinx:
+    version: [4.3.1]
+    externals:
+      - spec: py-sphinx@4.3.1
+        prefix: /usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/py-sphinx-4.3.1
+    buildable: false
   python:
     version: [3.8.2]
     externals:
       - spec: python@3.8.2
-        prefix: /usr/tce/packages/python/python-3.8.2/
-    buildable: false
-  py-sphinx:
-    version: [2.2.0]
-    externals:
-      - spec: py-sphinx@2.2.0
         prefix: /usr/tce/packages/python/python-3.8.2/
     buildable: false
