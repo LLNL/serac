@@ -54,8 +54,8 @@ class Serac(CachedCMakePackage, CudaPackage):
     varmsg = "Build development tools (such as Sphinx, CppCheck, ClangFormat, etc...)"
     variant("devtools", default=False, description=varmsg)
 
-    variant('caliper', default=False, 
-            description='Build with hooks for Caliper performance analysis')
+    variant('profiling', default=False,
+            description='Build with hooks for performance analysis')
     variant('glvis', default=False,
             description='Build the glvis visualization executable')
     variant('petsc', default=False,
@@ -130,7 +130,8 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     # Libraries that do not have a debug variant
     depends_on("conduit@0.7.2serac~shared~python~test")
-    depends_on("caliper@master~shared+mpi~adiak~papi", when="+caliper")
+    depends_on("adiak@0.2.1~shared+mpi", when="+profiling")
+    depends_on("caliper@master~shared+mpi+adiak~papi", when="+profiling")
     depends_on("superlu-dist@6.1.1~shared")
 
     # Libraries that we do not build debug
@@ -322,7 +323,7 @@ class Serac(CachedCMakePackage, CudaPackage):
         entries.append(cmake_cache_path('SUPERLUDIST_DIR', dep_dir))
 
         # optional tpls
-        for dep in ('caliper', 'petsc', 'raja', 'sundials', 'umpire'):
+        for dep in ('adiak', 'caliper', 'petsc', 'raja', 'sundials', 'umpire'):
             if spec.satisfies('^{0}'.format(dep)):
                 dep_dir = get_spec_path(spec, dep, path_replacements)
                 entries.append(cmake_cache_path('%s_DIR' % dep.upper(),
