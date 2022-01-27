@@ -50,6 +50,16 @@ struct dual_vector {
  */
 dual_vector differentiate_wrt(const mfem::Vector& v) { return dual_vector{v}; }
 
+/**
+ * @tparam T a list of types, containing at most 1 `dual_vector`
+ * 
+ * @brief given a list of types, this function returns the index that corresponds to the type `dual_vector`.
+ * 
+ * e.g.
+ * @code{.cpp}
+ * static_assert(index_of_dual_vector < foo, bar, dual_vector, baz, qux >() == 2);
+ * @endcode 
+ */
 template <typename... T>
 constexpr int index_of_dual_vector()
 {
@@ -59,7 +69,6 @@ constexpr int index_of_dual_vector()
     if (is_a_dual_vector[i]) {
       return i;
     }
-  }
   return -1;
 }
 
