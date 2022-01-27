@@ -20,7 +20,7 @@
 namespace serac {
 
 template <int p, int dim>
-void functional_solid_test_static()
+void functional_solid_test_static(double expected_disp_norm)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -93,15 +93,103 @@ void functional_solid_test_static()
   // Output the sidre-based plot files
   solid_solver.outputState();
 
-  // Check the final temperature norm
-  // EXPECT_NEAR(expected_temp_norm, norm(solid_solver.temperature()), 1.0e-6);
+  // Check the final displacement norm
+  EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
 }
 
-TEST(solid_functional, 2D_linear_static) { functional_solid_test_static<1, 2>(); }
-TEST(solid_functional, 2D_quad_static) { functional_solid_test_static<2, 2>(); }
+template <int p, int dim>
+void functional_solid_test_dynamic(double expected_disp_norm)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
 
-TEST(solid_functional, 3D_linear_static) { functional_solid_test_static<1, 3>(); }
-TEST(solid_functional, 3D_quad_static) { functional_solid_test_static<2, 3>(); }
+  int serial_refinement   = 0;
+  int parallel_refinement = 0;
+
+  // Create DataStore
+  axom::sidre::DataStore datastore;
+  serac::StateManager::initialize(datastore, "solid_functional_dynamic_solve");
+
+  static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for solid functional test");
+
+  // Construct the appropriate dimension mesh and give it to the data store
+  std::string filename =
+      (dim == 2) ? SERAC_REPO_DIR "/data/meshes/beam-quad.mesh" : SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
+  serac::StateManager::setMesh(std::move(mesh));
+
+  // Define a boundary attribute set
+  std::set<int> ess_bdr = {1};
+
+  // define the solver configurations
+  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
+                                                         .abs_tol     = 1.0e-10,
+                                                         .print_level = 0,
+                                                         .max_iter    = 500,
+                                                         .lin_solver  = LinearSolver::GMRES,
+                                                         .prec        = HypreBoomerAMGPrec{}};
+
+  const NonlinearSolverOptions default_nonlinear_options = {
+      .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
+
+  const typename SolidFunctional<p, dim>::TimesteppingOptions default_timestep = {
+      TimestepMethod::AverageAcceleration, DirichletEnforcementMethod::RateControl};
+
+  const typename SolidFunctional<p, dim>::SolverOptions default_dynamic = {default_linear_options,
+                                                                           default_nonlinear_options, default_timestep};
+
+  // Construct a functional-based thermal conduction solver
+  SolidFunctional<p, dim> solid_solver(default_dynamic, GeometricNonlinearities::Off, FinalMeshOption::Reference,
+                                       "solid_functional_dynamic");
+
+  Solid::LinearIsotropicElasticity<dim> mat(1.0, 1.0, 1.0);
+  solid_solver.setMaterial(mat);
+
+  // Define the function for the initial temperature and boundary condition
+  auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
+
+  // Set the initial temperature and boundary condition
+  solid_solver.setDisplacementBCs(ess_bdr, bc);
+  solid_solver.setDisplacement(bc);
+
+  tensor<double, dim> constant_force;
+
+  constant_force[0] = 0.0;
+  constant_force[1] = 5.0e-1;
+
+  if (dim == 3) {
+    constant_force[2] = 0.0;
+  }
+
+  Solid::ConstantBodyForce<dim> force{constant_force};
+  solid_solver.addBodyForce(force);
+
+  // Finalize the data structures
+  solid_solver.completeSetup();
+
+  // Perform the quasi-static solve
+  double dt = 0.5;
+
+  for (int i = 0; i < 3; ++i) {
+    solid_solver.advanceTimestep(dt);
+    solid_solver.outputState();
+  }
+
+  // Check the final displacement norm
+  EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
+}
+
+TEST(solid_functional, 2D_linear_static) { functional_solid_test_static<1, 2>(1.5537848); }
+TEST(solid_functional, 2D_quad_static) { functional_solid_test_static<2, 2>(2.422088701); }
+
+TEST(solid_functional, 3D_linear_static) { functional_solid_test_static<1, 3>(1.40439269); }
+TEST(solid_functional, 3D_quad_static) { functional_solid_test_static<2, 3>(2.1121238); }
+
+TEST(solid_functional, 2D_linear_dynamic) { functional_solid_test_dynamic<1, 2>(1.525641434); }
+TEST(solid_functional, 2D_quad_dynamic) { functional_solid_test_dynamic<2, 2>(1.5325754040); }
+
+TEST(solid_functional, 3D_linear_dynamic) { functional_solid_test_dynamic<1, 3>(1.52490653); }
+TEST(solid_functional, 3D_quad_dynamic) { functional_solid_test_dynamic<2, 3>(1.53140614); }
 
 }  // namespace serac
 

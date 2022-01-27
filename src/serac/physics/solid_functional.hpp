@@ -259,14 +259,13 @@ public:
   {
     K_functional_.AddDomainIntegral(
         Dimension<dim>{},
-        [I = I_, geom_nonlin = geom_nonlin_, material](auto, auto displacement) {
+        [this, material](auto, auto displacement) {
           // Get the value and the gradient from the input tuple
-          auto [u, du_dX] = displacement;
-          // double geom_factor = (geom_nonlin == GeometricNonlinearities::On ? 1.0 : 0.0);
+          auto [u, du_dX]    = displacement;
+          double geom_factor = (geom_nonlin_ == GeometricNonlinearities::On ? 1.0 : 0.0);
 
-          // auto deformation_grad = du_dX + I;
-          // auto flux             = material(du_dX) * det(deformation_grad);
-          auto flux = material(du_dX);
+          auto deformation_grad = du_dX + I_;
+          auto flux             = material(du_dX) * (1.0 + geom_factor * (det(deformation_grad) - 1.0));
 
           auto source = u * 0.0;
 
@@ -277,14 +276,14 @@ public:
 
     M_functional_.AddDomainIntegral(
         Dimension<dim>{},
-        [I = I_, geom_nonlin = geom_nonlin_, material](auto x, auto displacement) {
+        [this, material](auto x, auto displacement) {
           auto [u, du_dX] = displacement;
 
           auto flux = 0.0 * du_dX;
 
-          double geom_factor = (geom_nonlin == GeometricNonlinearities::On ? 1.0 : 0.0);
+          double geom_factor = (geom_nonlin_ == GeometricNonlinearities::On ? 1.0 : 0.0);
 
-          auto deformation_grad = du_dX + I;
+          auto deformation_grad = du_dX + I_;
           auto source           = material.density(x) * u * (1.0 + geom_factor * (det(deformation_grad) - 1.0));
 
           return serac::tuple{source, flux};
@@ -326,19 +325,17 @@ public:
   {
     K_functional_.AddDomainIntegral(
         Dimension<dim>{},
-        [I = I_, body_force_function, this](auto, auto displacement) {
+        [body_force_function, this](auto x, auto displacement) {
           // Get the value and the gradient from the input tuple
           auto [u, du_dX] = displacement;
 
           auto flux = du_dX * 0.0;
 
-          // double geom_factor = (geom_nonlin_ == GeometricNonlinearities::On ? 1.0 : 0.0);
+          double geom_factor = (geom_nonlin_ == GeometricNonlinearities::On ? 1.0 : 0.0);
 
-          // auto deformation_grad = du_dX + I;
-          tensor<double, dim> source_vec = {{0.0, 1.0}};
+          auto deformation_grad = du_dX + I_;
 
-          auto source = source_vec + 0.0 * u;
-          source[1]   = source[1] - 0.5 * u[1];
+          auto source = body_force_function(x, time_, u, du_dX) * (1.0 + geom_factor * (det(deformation_grad) - 1.0));
           return serac::tuple{source, flux};
         },
         mesh_);
@@ -354,7 +351,7 @@ public:
    */
 
   template <typename TractionType>
-  void setFluxBCs(TractionType traction_function, bool compute_on_reference)
+  void setTractionBCs(TractionType traction_function, bool compute_on_reference)
   {
     // TODO fix this when we can get gradients from boundary integrals
     SLIC_ERROR_IF(!compute_on_reference, "SolidFunctional cannot compute traction BCs in deformed configuration");
