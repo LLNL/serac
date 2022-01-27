@@ -35,11 +35,19 @@ struct dual_vector {
   operator const mfem::Vector &() const { return ref; }
 };
 
-// this function is intended to only be used in combination with
-// serac::Functional::operator()`, as a way for the user to express that
-// it should both evaluate and differentiate w.r.t. a specific argument (only 1 argument at a time)
-//
-
+/**
+ * @brief this function is intended to only be used in combination with
+ *   `serac::Functional::operator()`, as a way for the user to express that
+ *   it should both evaluate and differentiate w.r.t. a specific argument (only 1 argument at a time)
+ * 
+ * For example:
+ * @code{.cpp}
+ *     mfem::Vector arg0 = ...;
+ *     mfem::Vector arg1 = ...;
+ *     mfem::Vector just_the_value = my_functional(arg0, arg1); 
+ *     auto [value, gradient_wrt_arg1] = my_functional(arg0, differentiate_wrt(arg1));
+ * @endcode
+ */
 dual_vector differentiate_wrt(const mfem::Vector& v) { return dual_vector{v}; }
 
 template <typename... T>
@@ -53,16 +61,6 @@ constexpr int index_of_dual_vector()
     }
   }
   return -1;
-}
-
-template <size_t num_trial_spaces>
-int GetTrueVSize(std::array<mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
-{
-  int total = 0;
-  for (size_t i = 0; i < num_trial_spaces; i++) {
-    total += trial_fes[i]->GetTrueVSize();
-  }
-  return total;
 }
 
 /// @cond

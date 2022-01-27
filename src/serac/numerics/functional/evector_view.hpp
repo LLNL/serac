@@ -6,6 +6,14 @@
 
 namespace serac {
 
+/**
+ * @brief a helper function for attaching the appropriate "shape" to the 1D containers 
+ *   mfem uses to pass data around. This way, the type itself encodes the dimensions so that
+ *   the developer doens't have to reinterpret cast at the point of use
+ *  
+ * @tparam exec for specifying whether or not the underlying data is on the CPU or GPU
+ * @tparam element_type the finite element types whose data is stored in this container
+ */
 template <serac::ExecutionSpace exec, typename element_type>
 auto ArrayViewForElement(const double* ptr, size_t num_elements, element_type)
 {
@@ -16,15 +24,27 @@ auto ArrayViewForElement(const double* ptr, size_t num_elements, element_type)
   }
 }
 
+/**
+ * @brief a class for accessing E-vectors used by finite element kernels
+ *  
+ * @tparam exec for specifying whether or not the underlying data is on the CPU or GPU
+ * @tparam element_types the finite element types whose data is stored in this container
+ */
 template <serac::ExecutionSpace exec, typename... element_types>
 struct EVectorView {
   static constexpr int n = sizeof...(element_types);
 
   using element_types_tuple = serac::tuple<element_types...>;
 
-  using T =
-      serac::tuple<typename std::conditional<element_types::components == 1, tensor<double, element_types::ndof>,
-                                             tensor<double, element_types::components, element_types::ndof> >::type...>;
+  // clang-format off
+  using T = serac::tuple<
+    typename std::conditional<
+      element_types::components == 1, 
+      tensor<double, element_types::ndof>,
+      tensor<double, element_types::components, element_types::ndof> 
+    >::type...
+  >;
+  // clang-format on
 
   EVectorView(std::array<const double*, n> pointers, size_t num_elements)
   {
