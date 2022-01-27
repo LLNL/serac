@@ -7,8 +7,7 @@
 #include <mfem.hpp>
 #include <memory>
 
-/*
-TEST(SeracFEState, finiteDiff)
+TEST(serac_solid_sensitivity, finite_diff)
 {
   axom::sidre::DataStore datastore;
   serac::StateManager::initialize(datastore, "solid_sensitivity");
@@ -159,68 +158,83 @@ TEST(SeracFEState, finiteDiff)
     EXPECT_NEAR((shearModulusSensitivity.localVec()(ix) - dqoi_dshear) / dqoi_dshear, 0.0, 1.0e-3);
   }
 }
-*/
 
-TEST(SeracMeshFixtureJun, boundaryConditionException) {
-    axom::sidre::DataStore datastore;
-    serac::StateManager::initialize(datastore, "does_not_matter");
-    ::mfem::Mesh cuboid = ::mfem::Mesh::MakeCartesian3D(2, 2, 2, ::mfem::Element::Type::HEXAHEDRON, 4.0, 2.0, 10);
-    auto mesh = std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, cuboid);
-    serac::StateManager::setMesh(std::move(mesh));
-    serac::IterativeSolverOptions const default_linear_options = {.rel_tol     = 1.0e-12,
-                                                                  .abs_tol     = 1.0e-12,
-                                                                  .print_level = 0,
-                                                                  .max_iter    = 500,
-                                                                  .lin_solver  = serac::LinearSolver::GMRES,
-                                                                  .prec        = serac::HypreBoomerAMGPrec{}
-                                                                 };
-    serac::NonlinearSolverOptions const default_nonlinear_options =
-    {
-        .rel_tol = 1.0e-4, .abs_tol = 1.0e-6, .max_iter = 3, .print_level = 1
-    };
-    serac::Solid::SolverOptions const solverOptions = {default_linear_options, default_nonlinear_options};
-    int order = 1;
-    serac::Solid solid(order,
-                       solverOptions,
-                       serac::GeometricNonlinearities::Off,
-                       serac::FinalMeshOption::Reference, "hi");
-    std::set<int> fixedBCs{1};
-    mfem::Vector zeroDisplacement(serac::StateManager::mesh().SpaceDimension());
-    zeroDisplacement = 0.0;
-    solid.setDisplacementBCs(fixedBCs, std::make_unique<mfem::VectorConstantCoefficient>(zeroDisplacement));
-    std::set<int> tractionBCs{2};
-    bool computeOnReference = true;
-    mfem::Vector appliedTraction(3);
-    appliedTraction[0] = 1.0;
-    appliedTraction[1] = 1.0;
-    appliedTraction[2] = 1.0;
-    solid.setTractionBCs(tractionBCs,
-                         std::make_unique<mfem::VectorConstantCoefficient>(appliedTraction),
-                         computeOnReference);
-    bool materialNonlinearity = false;
+TEST(serac_solid_sensitivity, multiple_design_spaces)
+{
+  // Initialize the datastore
+  axom::sidre::DataStore datastore;
+  serac::StateManager::initialize(datastore, "solid_sensitivity");
 
-    mfem::H1_FECollection h1fec(1, serac::StateManager::mesh().Dimension());
-    mfem::ParFiniteElementSpace h1fespace_scalar(&serac::StateManager::mesh(), &h1fec, 1, mfem::Ordering::byVDIM);
-    mfem::ParFiniteElementSpace h1fespace_vector(&serac::StateManager::mesh(), &h1fec, serac::StateManager::mesh().SpaceDimension(), mfem::Ordering::byVDIM);
-    mfem::L2_FECollection l2fec(0, serac::StateManager::mesh().Dimension());
-    mfem::ParFiniteElementSpace l2fespace_scalar(&serac::StateManager::mesh(), &l2fec, 1, mfem::Ordering::byVDIM);
-    std::vector<std::reference_wrapper<mfem::ParFiniteElementSpace>> materialSpaces {h1fespace_scalar, l2fespace_scalar};
-    for (mfem::ParFiniteElementSpace & materialSpace : materialSpaces) {
-        mfem::ParGridFunction shearModulus(&materialSpace);
-        shearModulus = 1.1;
-        mfem::ParGridFunction bulkModulus(&materialSpace);
-        bulkModulus = 1.2;
-        solid.setMaterialParameters(std::make_unique<mfem::GridFunctionCoefficient>(&shearModulus),
-                                    std::make_unique<mfem::GridFunctionCoefficient>(&bulkModulus),
-                                    materialNonlinearity);
-        solid.completeSetup();
-        double timestep = 1.0;
-        solid.advanceTimestep(timestep);
-        serac::FiniteElementDual adjointLoad(serac::StateManager::mesh(), h1fespace_vector, "adjoint_load");
-        adjointLoad = 1.1;
-        solid.solveAdjoint(adjointLoad);
-        solid.shearModulusSensitivity(shearModulus.ParFESpace());
-    }
+  // Create a mesh and pass it to the datastore
+  ::mfem::Mesh cuboid = ::mfem::Mesh::MakeCartesian3D(2, 2, 2, ::mfem::Element::Type::HEXAHEDRON, 4.0, 2.0, 10);
+  auto         mesh   = std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, cuboid);
+  serac::StateManager::setMesh(std::move(mesh));
+
+  // Setup setup the solid module
+  serac::IterativeSolverOptions const default_linear_options    = {.rel_tol     = 1.0e-12,
+                                                                .abs_tol     = 1.0e-12,
+                                                                .print_level = 0,
+                                                                .max_iter    = 500,
+                                                                .lin_solver  = serac::LinearSolver::GMRES,
+                                                                .prec        = serac::HypreBoomerAMGPrec{}};
+  serac::NonlinearSolverOptions const default_nonlinear_options = {
+      .rel_tol = 1.0e-4, .abs_tol = 1.0e-6, .max_iter = 3, .print_level = 1};
+  serac::Solid::SolverOptions const solverOptions = {default_linear_options, default_nonlinear_options};
+  int                               order         = 1;
+  serac::Solid solid(order, solverOptions, serac::GeometricNonlinearities::Off, serac::FinalMeshOption::Reference);
+
+  // Set the fixed Dirichlet BCs
+  std::set<int> fixedBCs{1};
+  mfem::Vector  zeroDisplacement(serac::StateManager::mesh().SpaceDimension());
+  zeroDisplacement = 0.0;
+  solid.setDisplacementBCs(fixedBCs, std::make_unique<mfem::VectorConstantCoefficient>(zeroDisplacement));
+
+  // Set a fixed traction BC
+  std::set<int> tractionBCs{2};
+  bool          computeOnReference = true;
+  mfem::Vector  appliedTraction(3);
+  appliedTraction[0] = 1.0;
+  appliedTraction[1] = 1.0;
+  appliedTraction[2] = 1.0;
+  solid.setTractionBCs(tractionBCs, std::make_unique<mfem::VectorConstantCoefficient>(appliedTraction),
+                       computeOnReference);
+
+  // Use a linear elastic material
+  bool materialNonlinearity = false;
+
+  // Create various FE spaces for the parameter and adjoint fields
+  mfem::H1_FECollection       h1fec(1, serac::StateManager::mesh().Dimension());
+  mfem::ParFiniteElementSpace h1fespace_scalar(&serac::StateManager::mesh(), &h1fec, 1, mfem::Ordering::byVDIM);
+  mfem::ParFiniteElementSpace h1fespace_vector(&serac::StateManager::mesh(), &h1fec,
+                                               serac::StateManager::mesh().SpaceDimension(), mfem::Ordering::byVDIM);
+  mfem::L2_FECollection       l2fec(0, serac::StateManager::mesh().Dimension());
+  mfem::ParFiniteElementSpace l2fespace_scalar(&serac::StateManager::mesh(), &l2fec, 1, mfem::Ordering::byVDIM);
+  std::vector<std::reference_wrapper<mfem::ParFiniteElementSpace>> materialSpaces{h1fespace_scalar, l2fespace_scalar};
+
+  // Compute the sensitivities for both H1 and L2 fields
+  for (mfem::ParFiniteElementSpace& materialSpace : materialSpaces) {
+    // Create grid function representations of the shear and bulk modulus on the current parameter FE space
+    mfem::ParGridFunction shearModulus(&materialSpace);
+    shearModulus = 1.1;
+    mfem::ParGridFunction bulkModulus(&materialSpace);
+    bulkModulus = 1.2;
+
+    // Set the material parameters in the solid solver
+    solid.setMaterialParameters(std::make_unique<mfem::GridFunctionCoefficient>(&shearModulus),
+                                std::make_unique<mfem::GridFunctionCoefficient>(&bulkModulus), materialNonlinearity);
+
+    // Run the solid solver
+    solid.completeSetup();
+    double timestep = 1.0;
+    solid.advanceTimestep(timestep);
+
+    // Create a dummy adjoint load and compute the sensitivities
+    serac::FiniteElementDual adjointLoad(serac::StateManager::mesh(), h1fespace_vector, "adjoint_load");
+    adjointLoad = 1.1;
+    solid.solveAdjoint(adjointLoad);
+    solid.shearModulusSensitivity(shearModulus.ParFESpace());
+    solid.shearModulusSensitivity(bulkModulus.ParFESpace());
+  }
 }
 
 //------------------------------------------------------------------------------

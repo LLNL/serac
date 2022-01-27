@@ -437,12 +437,10 @@ FiniteElementDual& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace* s
   // Set the mesh nodes to the reference configuration
   mesh_.NewNodes(*reference_nodes_);
 
-  if (!shear_sensitivity_coef_) {
-    LinearElasticMaterial* linear_mat = dynamic_cast<LinearElasticMaterial*>(material_.get());
+  LinearElasticMaterial* linear_mat = dynamic_cast<LinearElasticMaterial*>(material_.get());
 
-    shear_sensitivity_coef_ =
-        std::make_unique<mfem_ext::ShearSensitivityCoefficient>(displacement_, adjoint_displacement_, *linear_mat);
-  }
+  shear_sensitivity_coef_ =
+      std::make_unique<mfem_ext::ShearSensitivityCoefficient>(displacement_, adjoint_displacement_, *linear_mat);
 
   // Add a scalar linear form integrator using the shear sensitivity coefficient against the given shear modulus finite
   // element space
@@ -478,12 +476,10 @@ FiniteElementDual& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace* bu
   // Set the mesh nodes to the reference configuration
   mesh_.NewNodes(*reference_nodes_);
 
-  if (!bulk_sensitivity_coef_) {
-    LinearElasticMaterial* linear_mat = dynamic_cast<LinearElasticMaterial*>(material_.get());
+  LinearElasticMaterial* linear_mat = dynamic_cast<LinearElasticMaterial*>(material_.get());
 
-    bulk_sensitivity_coef_ =
-        std::make_unique<mfem_ext::BulkSensitivityCoefficient>(displacement_, adjoint_displacement_, *linear_mat);
-  }
+  bulk_sensitivity_coef_ =
+      std::make_unique<mfem_ext::BulkSensitivityCoefficient>(displacement_, adjoint_displacement_, *linear_mat);
 
   // Add a scalar linear form integrator using the shear sensitivity coefficient against the given bulk modulus finite
   // element space
