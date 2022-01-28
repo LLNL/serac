@@ -35,8 +35,8 @@ class DomainIntegral;
 template <typename test, typename... trials, ExecutionSpace exec>
 class DomainIntegral<test(trials...), exec> {
 public:
-  static constexpr tuple<trials...> trial_spaces{};
-  static constexpr int              num_trial_spaces = sizeof...(trials);
+  static constexpr tuple<trials...> trial_spaces{}; ///< a tuple of the different trial spaces
+  static constexpr int              num_trial_spaces = sizeof...(trials); ///< how many trial spaces were specified
 
   /**
    * @brief Constructs a @p DomainIntegral from a user-provided quadrature function
@@ -135,14 +135,16 @@ public:
    * @brief Applies the integral, i.e., @a output_E = evaluate( @a input_E )
    * @param[in] input_E The input to the evaluation; per-element DOF values
    * @param[out] output_E The output of the evalution; per-element DOF residuals
-   * @see evaluation_kernel
+   * @param[in] which_trial_space specifies which trial space to compute derivatives with respect to (if any)
+   * 
+   * @note which_trial_space == -1 implies that this function will call the evaluation kernel that performs no differentiation
    */
-  void Mult(const std::array<mfem::Vector, num_trial_spaces>& input_E, mfem::Vector& output_E, int which = 0) const
+  void Mult(const std::array<mfem::Vector, num_trial_spaces>& input_E, mfem::Vector& output_E, int which_trial_space) const
   {
-    if (which == -1) {
+    if (which_trial_space == -1) {
       evaluation_(input_E, output_E);
     } else {
-      evaluation_with_AD_[which](input_E, output_E);
+      evaluation_with_AD_[which_trial_space](input_E, output_E);
     }
   }
 
@@ -150,11 +152,11 @@ public:
    * @brief Applies the integral, i.e., @a output_E = gradient( @a input_E )
    * @param[in] input_E The input to the evaluation; per-element DOF values
    * @param[out] output_E The output of the evalution; per-element DOF residuals
-   * @see gradient_kernel
+   * @param[in] which_trial_space specifies which trial space input_E correpsonds to
    */
-  void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E, size_t which = 0) const
+  void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E, size_t which_trial_space) const
   {
-    action_of_gradient_[which](input_E, output_E);
+    action_of_gradient_[which_trial_space](input_E, output_E);
   }
 
   /**
@@ -162,36 +164,26 @@ public:
    * multidimensional array
    * @param[inout] K_e The reshaped vector as a mfem::DeviceTensor of size (test_dim * test_dof, trial_dim * trial_dof,
    * elem)
+   * @param[in] which_trial_space specifies which trial space K_e correpsonds to
    */
-  void ComputeElementGradients(ExecArrayView<double, 3, ExecutionSpace::CPU> K_e, size_t which) const
+  void ComputeElementGradients(ExecArrayView<double, 3, ExecutionSpace::CPU> K_e, size_t which_trial_space) const
   {
-    element_gradient_[which](K_e);
+    element_gradient_[which_trial_space](K_e);
   }
 
 private:
-  /**
-   * @brief Type-erased handle to evaluation kernel
-   * @see evaluation_kernel
-   */
+
+  /// @brief Type-erased handle to evaluation kernel
   std::function<void(const std::array<mfem::Vector, num_trial_spaces>&, mfem::Vector&)> evaluation_;
 
-  /**
-   * @brief Type-erased handle to evaluation kernel
-   * @see evaluation_kernel
-   */
+  /// @brief Type-erased handle to evaluation+differentiation kernels
   std::function<void(const std::array<mfem::Vector, num_trial_spaces>&, mfem::Vector&)>
       evaluation_with_AD_[num_trial_spaces];
 
-  /**
-   * @brief Type-erased handle to gradient kernel
-   * @see gradient_kernel
-   */
+  /// @brief Type-erased handle to action of gradient kernels
   std::function<void(const mfem::Vector&, mfem::Vector&)> action_of_gradient_[num_trial_spaces];
 
-  /**
-   * @brief Type-erased handle to gradient matrix assembly kernel
-   * @see gradient_matrix_kernel
-   */
+  /// @brief Type-erased handle to gradient matrix assembly kernels
   std::function<void(ExecArrayView<double, 3, exec>)> element_gradient_[num_trial_spaces];
 };
 

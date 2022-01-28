@@ -166,12 +166,16 @@ struct tuple<T0, T1, T2, T3, T4, T5, T6, T7> {
 
 /**
  * @brief Class template argument deduction rule for tuples
- *
  * @tparam T The variadic template parameter for tuple types
  */
 template <typename... T>
 tuple(T...) -> tuple<T...>;
 
+/**
+ * @brief helper function for combining a list of values into a tuple
+ * @tparam T types of the values to be tuple-d
+ * @param args the actual values to be put into a tuple
+ */
 template <typename... T>
 tuple<T...> make_tuple(const T&... args)
 {

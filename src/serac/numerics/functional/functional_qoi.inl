@@ -245,6 +245,16 @@ public:
     AddBoundaryIntegral(Dimension<2>{}, integrand, domain);
   }
 
+  /**
+   * @brief this function computes the directional derivative of the quantity of interest functional
+   * 
+   * @param input_T a T-vector to apply the action of gradient to
+   * @param which describes which trial space input_T corresponds to
+   *
+   * note: it accepts exactly `num_trial_spaces` arguments of type mfem::Vector. Additionally, one of those
+   * arguments may be a dual_vector, to indicate that Functional::operator() should not only evaluate the
+   * element calculations, but also differentiate them w.r.t. the specified dual_vector argument
+   */
   double ActionOfGradient(const mfem::Vector& input_T, size_t which) const
   {
     P_trial_[which]->Mult(input_T, input_L_[which]);
@@ -288,7 +298,15 @@ public:
 
   }
 
-
+  /**
+   * @brief this function lets the user evaluate the serac::Functional with the given trial space values
+   *
+   * @param args the input T-vectors
+   * 
+   * note: it accepts exactly `num_trial_spaces` arguments of type mfem::Vector. Additionally, one of those
+   * arguments may be a dual_vector, to indicate that Functional::operator() should not only evaluate the
+   * element calculations, but also differentiate them w.r.t. the specified dual_vector argument
+   */
   template <typename... T>
   typename operator_paren_return<T...>::type operator()(const T&... args)
   {

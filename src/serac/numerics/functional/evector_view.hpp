@@ -1,3 +1,9 @@
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// other Serac Project Developers. See the top-level LICENSE file for
+// details.
+//
+// SPDX-License-Identifier: (BSD-3-Clause)
+
 #pragma once
 
 #include "serac/infrastructure/accelerator.hpp"
@@ -32,20 +38,27 @@ auto ArrayViewForElement(const double* ptr, size_t num_elements, element_type)
  */
 template <serac::ExecutionSpace exec, typename... element_types>
 struct EVectorView {
-  static constexpr int n = sizeof...(element_types);
+  static constexpr int n = sizeof...(element_types);  ///< how many element types were provided
 
-  using element_types_tuple = serac::tuple<element_types...>;
+  using element_types_tuple = serac::tuple<element_types...>; ///< a list of the provided element types
 
   // clang-format off
+  /// @brief the return type of the `operator[]` for this class
   using T = serac::tuple<
     typename std::conditional<
       element_types::components == 1, 
       tensor<double, element_types::ndof>,
       tensor<double, element_types::components, element_types::ndof> 
     >::type...
-  >;
+  >; 
   // clang-format on
 
+  /**
+   * @brief Constructor for wrapping the raw pointers from mfem into multidimensional array views with the appropriate dimensions
+   * 
+   * @param pointers the list of raw pointers to E-vector data provided by mfem
+   * @param num_elements the number of elements
+   */
   EVectorView(std::array<const double*, n> pointers, size_t num_elements)
   {
     for_constexpr<n>([&](auto i) {
@@ -53,11 +66,10 @@ struct EVectorView {
     });
   }
 
-  void UpdatePointers(std::array<const double*, n> pointers)
-  {
-    for_constexpr<n>([&](auto i) { serac::get<i>(data).ptr = pointers[i]; });
-  }
-
+  /**
+   * @brief for returning the values associated with a given element
+   * @param e which element to retrieve data for
+   */
   T operator[](size_t e)
   {
     T values{};

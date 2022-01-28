@@ -151,7 +151,6 @@ SERAC_HOST_DEVICE auto chain_rule_tuple_matvec(serac::tuple<T...> df_dx, serac::
 }
 
 }  // namespace detail
-/// @endcond
 
 template <int i, typename S, typename T>
 struct one_hot_helper;
@@ -164,6 +163,7 @@ struct one_hot_helper<i, std::integer_sequence<int, I...>, T> {
 template <int i, int n, typename T>
 struct one_hot : public one_hot_helper<i, std::make_integer_sequence<int, n>, T> {
 };
+/// @endcond
 
 /**
  * @brief a tuple type with n entries, all of which are of type `serac::zero`,
@@ -174,6 +174,13 @@ struct one_hot : public one_hot_helper<i, std::make_integer_sequence<int, n>, T>
 template <int i, int n, typename T>
 using one_hot_t = typename one_hot<i, n, T>::type;
 
+/**
+ * @tparam i the index where the non-`serac::zero` derivative term appears
+ * @tparam N how many entries in the gradient type
+ * 
+ * @brief promote a double value to dual number with a one_hot_t< i, N, double > gradient type
+ * @param arg the value to be promoted 
+ */
 template <int i, int N>
 constexpr auto make_dual_helper(double arg)
 {
@@ -184,6 +191,13 @@ constexpr auto make_dual_helper(double arg)
   return arg_dual;
 }
 
+/**
+ * @tparam i the index where the non-`serac::zero` derivative term appears
+ * @tparam N how many entries in the gradient type
+ * 
+ * @brief promote a tensor value to dual number with a one_hot_t< i, N, tensor > gradient type
+ * @param arg the value to be promoted 
+ */
 template <int i, int N, typename T, int... n>
 constexpr auto make_dual_helper(const tensor<T, n...>& arg)
 {
@@ -196,12 +210,36 @@ constexpr auto make_dual_helper(const tensor<T, n...>& arg)
   return arg_dual;
 }
 
-template <typename T00, typename T01>
-constexpr auto make_dual(const tuple<T00, T01>& args)
+/**
+ * @tparam T0 the first type of the tuple argument 
+ * @tparam T1 the first type of the tuple argument 
+ * 
+ * @brief Promote a tuple of values to their corresponding dual types
+ * @param args the values to be promoted
+ * 
+ * example:
+ * @code{.cpp}
+ * serac::tuple < double, tensor< double, 3 > > f{}; 
+ * 
+ * serac::tuple <
+ *   dual < serac::tuple < double, zero > >
+ *   tensor < dual < serac::tuple < zero, tensor< double, 3 > >, 3 >
+ * > dual_of_f = make_dual(f);
+ * @endcode 
+ */
+template <typename T0, typename T1>
+constexpr auto make_dual(const tuple<T0, T1>& args)
 {
   return tuple{make_dual_helper<0, 2>(get<0>(args)), make_dual_helper<1, 2>(get<1>(args))};
 }
 
+/**
+ * @tparam dualify specify whether or not the value should be made into its dual type
+ * @tparam T the type of the value passed in
+ * 
+ * @brief a function that optionally (decided at compile time) converts a value to its dual type 
+ * @param x the values to be promoted
+ */
 template <bool dualify, typename T>
 auto promote_to_dual_when(const T& x)
 {
@@ -212,6 +250,7 @@ auto promote_to_dual_when(const T& x)
   }
 }
 
+/// @brief layer of indirection required to implement `make_dual_wrt`
 template <int n, typename... T, int... i>
 constexpr auto make_dual_helper(const serac::tuple<T...>& args, std::integer_sequence<int, i...>)
 {
@@ -234,6 +273,13 @@ constexpr auto make_dual_helper(const serac::tuple<T...>& args, std::integer_seq
   return serac::make_tuple(promote_to_dual_when<i == n>(serac::get<i>(args))...);
 }
 
+/**
+ * @tparam n the index of the tuple argument to be made into a dual number
+ * @tparam T the types of the values in the tuple
+ * 
+ * @brief take a tuple of values, and promote the `n`th one to a one-hot dual number of the appropriate type
+ * @param args the values to be promoted
+ */
 template <int n, typename... T>
 constexpr auto make_dual_wrt(const serac::tuple<T...>& args)
 {

@@ -38,8 +38,8 @@ class BoundaryIntegral;
 template <typename test, typename... trials, ExecutionSpace exec>
 class BoundaryIntegral<test(trials...), exec> {
 public:
-  static constexpr tuple<trials...> trial_spaces{};
-  static constexpr int              num_trial_spaces = sizeof...(trials);
+  static constexpr tuple<trials...> trial_spaces{}; ///< a tuple of the different trial spaces
+  static constexpr int              num_trial_spaces = sizeof...(trials); ///< how many trial spaces were specified
 
   /**
    * @brief Constructs an @p BoundaryIntegral from a user-provided quadrature function
@@ -48,7 +48,7 @@ public:
    * @param[in] num_elements The number of elements in the mesh
    * @param[in] J The Jacobians of the element transformations at all quadrature points
    * @param[in] X The actual (not reference) coordinates of all quadrature points
-   * @param[in] normals The unit normals of all quadrature points
+   * @param[in] N The unit normals of all quadrature points
    * @see mfem::GeometricFactors
    * @param[in] qf The user-provided quadrature function
    * @note The @p Dimension parameters are used to assist in the deduction of the dim template parameter
@@ -105,7 +105,6 @@ public:
    * @param[out] output_E The output of the evalution; per-element DOF residuals
    * @param[in] which the index of the argument being differentiated,
    *    which == -1 corresponds to direct evaluation without any differentiation
-   * @see evaluation_kernel
    */
   void Mult(const std::array<mfem::Vector, num_trial_spaces>& input_E, mfem::Vector& output_E, int which) const
   {
