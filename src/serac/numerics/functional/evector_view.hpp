@@ -13,10 +13,10 @@
 namespace serac {
 
 /**
- * @brief a helper function for attaching the appropriate "shape" to the 1D containers 
+ * @brief a helper function for attaching the appropriate "shape" to the 1D containers
  *   mfem uses to pass data around. This way, the type itself encodes the dimensions so that
  *   the developer doens't have to reinterpret cast at the point of use
- *  
+ *
  * @tparam exec for specifying whether or not the underlying data is on the CPU or GPU
  * @tparam element_type the finite element types whose data is stored in this container
  */
@@ -32,7 +32,7 @@ auto ArrayViewForElement(const double* ptr, size_t num_elements, element_type)
 
 /**
  * @brief a class for accessing E-vectors used by finite element kernels
- *  
+ *
  * @tparam exec for specifying whether or not the underlying data is on the CPU or GPU
  * @tparam element_types the finite element types whose data is stored in this container
  */
@@ -40,7 +40,7 @@ template <serac::ExecutionSpace exec, typename... element_types>
 struct EVectorView {
   static constexpr int n = sizeof...(element_types);  ///< how many element types were provided
 
-  using element_types_tuple = serac::tuple<element_types...>; ///< a list of the provided element types
+  using element_types_tuple = serac::tuple<element_types...>;  ///< a list of the provided element types
 
   // clang-format off
   /// @brief the return type of the `operator[]` for this class
@@ -50,12 +50,13 @@ struct EVectorView {
       tensor<double, element_types::ndof>,
       tensor<double, element_types::components, element_types::ndof> 
     >::type...
-  >; 
+  >;
   // clang-format on
 
   /**
-   * @brief Constructor for wrapping the raw pointers from mfem into multidimensional array views with the appropriate dimensions
-   * 
+   * @brief Constructor for wrapping the raw pointers from mfem into multidimensional array views with the appropriate
+   * dimensions
+   *
    * @param pointers the list of raw pointers to E-vector data provided by mfem
    * @param num_elements the number of elements
    */

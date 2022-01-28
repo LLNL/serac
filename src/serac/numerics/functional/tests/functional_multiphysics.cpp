@@ -136,12 +136,12 @@ TEST(basic, nonlinear_thermal_test_3D)
       *mesh3D);
 
   residual.AddSurfaceIntegral(
-    [=](auto x, auto /*n*/, auto temperature, auto dtemperature_dt) { 
-      auto [u, _0] = temperature;
-      auto [du_dt, _1] = dtemperature_dt;
-      return x[0] + x[1] - cos(u) * du_dt;
-    },
-    *mesh3D);
+      [=](auto x, auto /*n*/, auto temperature, auto dtemperature_dt) {
+        auto [u, _0]     = temperature;
+        auto [du_dt, _1] = dtemperature_dt;
+        return x[0] + x[1] - cos(u) * du_dt;
+      },
+      *mesh3D);
 
   mfem::Vector r = residual(U, dU_dt);
 

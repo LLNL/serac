@@ -348,7 +348,7 @@ SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, const serac::tup
   return apply_qf_helper(qf, x_q, arg_tuple, std::make_integer_sequence<int, int(sizeof...(T))>{});
 }
 
-/** 
+/**
  * @overload
  * @note: boundary integrals pass the unit normal vector as second argument and do not support qpt_data
  */
@@ -468,7 +468,7 @@ SERAC_HOST_DEVICE auto Preprocess(T u, const tensor<double, dim>& xi, const tens
 }
 
 /**
- * @brief 
+ * @brief
  *
  * @tparam element_type The type of the element (used to determine the family)
  * @tparam T the type of the element values to be interpolated and differentiated

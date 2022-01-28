@@ -177,9 +177,9 @@ using one_hot_t = typename one_hot<i, n, T>::type;
 /**
  * @tparam i the index where the non-`serac::zero` derivative term appears
  * @tparam N how many entries in the gradient type
- * 
+ *
  * @brief promote a double value to dual number with a one_hot_t< i, N, double > gradient type
- * @param arg the value to be promoted 
+ * @param arg the value to be promoted
  */
 template <int i, int N>
 constexpr auto make_dual_helper(double arg)
@@ -194,9 +194,9 @@ constexpr auto make_dual_helper(double arg)
 /**
  * @tparam i the index where the non-`serac::zero` derivative term appears
  * @tparam N how many entries in the gradient type
- * 
+ *
  * @brief promote a tensor value to dual number with a one_hot_t< i, N, tensor > gradient type
- * @param arg the value to be promoted 
+ * @param arg the value to be promoted
  */
 template <int i, int N, typename T, int... n>
 constexpr auto make_dual_helper(const tensor<T, n...>& arg)
@@ -211,21 +211,21 @@ constexpr auto make_dual_helper(const tensor<T, n...>& arg)
 }
 
 /**
- * @tparam T0 the first type of the tuple argument 
- * @tparam T1 the first type of the tuple argument 
- * 
+ * @tparam T0 the first type of the tuple argument
+ * @tparam T1 the first type of the tuple argument
+ *
  * @brief Promote a tuple of values to their corresponding dual types
  * @param args the values to be promoted
- * 
+ *
  * example:
  * @code{.cpp}
- * serac::tuple < double, tensor< double, 3 > > f{}; 
- * 
+ * serac::tuple < double, tensor< double, 3 > > f{};
+ *
  * serac::tuple <
  *   dual < serac::tuple < double, zero > >
  *   tensor < dual < serac::tuple < zero, tensor< double, 3 > >, 3 >
  * > dual_of_f = make_dual(f);
- * @endcode 
+ * @endcode
  */
 template <typename T0, typename T1>
 constexpr auto make_dual(const tuple<T0, T1>& args)
@@ -236,8 +236,8 @@ constexpr auto make_dual(const tuple<T0, T1>& args)
 /**
  * @tparam dualify specify whether or not the value should be made into its dual type
  * @tparam T the type of the value passed in
- * 
- * @brief a function that optionally (decided at compile time) converts a value to its dual type 
+ *
+ * @brief a function that optionally (decided at compile time) converts a value to its dual type
  * @param x the values to be promoted
  */
 template <bool dualify, typename T>
@@ -276,7 +276,7 @@ constexpr auto make_dual_helper(const serac::tuple<T...>& args, std::integer_seq
 /**
  * @tparam n the index of the tuple argument to be made into a dual number
  * @tparam T the types of the values in the tuple
- * 
+ *
  * @brief take a tuple of values, and promote the `n`th one to a one-hot dual number of the appropriate type
  * @param args the values to be promoted
  */

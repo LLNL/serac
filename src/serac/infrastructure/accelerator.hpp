@@ -159,7 +159,8 @@ using GPUArrayView = ExecArrayView<T, dim, ExecutionSpace::GPU>;
 
 /// @brief convenience function for creating a view of an axom::Array type
 template <typename T, int dim, axom::MemorySpace space>
-auto view(axom::Array< T, dim, space > & arr) {
+auto view(axom::Array<T, dim, space>& arr)
+{
   return axom::ArrayView<T, dim, space>(arr);
 }
 

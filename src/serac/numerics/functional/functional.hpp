@@ -39,12 +39,12 @@ struct dual_vector {
  * @brief this function is intended to only be used in combination with
  *   `serac::Functional::operator()`, as a way for the user to express that
  *   it should both evaluate and differentiate w.r.t. a specific argument (only 1 argument at a time)
- * 
+ *
  * For example:
  * @code{.cpp}
  *     mfem::Vector arg0 = ...;
  *     mfem::Vector arg1 = ...;
- *     mfem::Vector just_the_value = my_functional(arg0, arg1); 
+ *     mfem::Vector just_the_value = my_functional(arg0, arg1);
  *     auto [value, gradient_wrt_arg1] = my_functional(arg0, differentiate_wrt(arg1));
  * @endcode
  */
@@ -52,13 +52,13 @@ dual_vector differentiate_wrt(const mfem::Vector& v) { return dual_vector{v}; }
 
 /**
  * @tparam T a list of types, containing at most 1 `dual_vector`
- * 
+ *
  * @brief given a list of types, this function returns the index that corresponds to the type `dual_vector`.
- * 
+ *
  * e.g.
  * @code{.cpp}
  * static_assert(index_of_dual_vector < foo, bar, dual_vector, baz, qux >() == 2);
- * @endcode 
+ * @endcode
  */
 template <typename... T>
 constexpr int index_of_dual_vector()
@@ -69,6 +69,7 @@ constexpr int index_of_dual_vector()
     if (is_a_dual_vector[i]) {
       return i;
     }
+  }
   return -1;
 }
 
@@ -185,7 +186,7 @@ public:
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
       auto ndof_per_trial_element =
           static_cast<size_t>(trial_space_[i]->GetFE(0)->GetDof() * trial_space_[i]->GetVDim());
-      element_gradients_[i]     = ExecArray<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
+      element_gradients_[i] = ExecArray<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
       bdr_element_gradients_[i] = allocateMemoryForBdrElementGradients<double, exec>(*test_space_, *trial_space_[i]);
     }
   }

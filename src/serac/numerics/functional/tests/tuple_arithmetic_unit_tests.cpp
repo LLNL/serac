@@ -146,9 +146,7 @@ TEST(ChainRuleTests, scalar_output_with_matrix_input)
 
 TEST(ChainRuleTests, tensor_output_with_tuple_input)
 {
-  constexpr auto f = [=](auto p, auto v, auto L) {
-    return rho * outer(v, v) * det(I + L) + 2.0 * mu * sym(L) - p * I;
-  };
+  constexpr auto f = [=](auto p, auto v, auto L) { return rho * outer(v, v) * det(I + L) + 2.0 * mu * sym(L) - p * I; };
 
   [[maybe_unused]] constexpr double p = 3.14;
   [[maybe_unused]] constexpr tensor v = {{1.0, 2.0, 3.0}};
@@ -158,13 +156,13 @@ TEST(ChainRuleTests, tensor_output_with_tuple_input)
   constexpr tensor               dv = {{2.0, 1.0, 4.0}};
   constexpr tensor<double, 3, 3> dL = {{{3.0, 1.0, 2.0}, {2.0, 7.0, 3.0}, {4.0, 4.0, 3.0}}};
 
-  auto dfdp = get_gradient(f(make_dual(p), v, L)); 
-  auto dfdv = get_gradient(f(p, make_dual(v), L)); 
-  auto dfdL = get_gradient(f(p, v, make_dual(L))); 
+  auto dfdp = get_gradient(f(make_dual(p), v, L));
+  auto dfdv = get_gradient(f(p, make_dual(v), L));
+  auto dfdL = get_gradient(f(p, v, make_dual(L)));
 
   auto df0 = (f(p + epsilon * dp, v + epsilon * dv, L + epsilon * dL) -
-                f(p - epsilon * dp, v - epsilon * dv, L - epsilon * dL)) /
-               (2 * epsilon);
+              f(p - epsilon * dp, v - epsilon * dv, L - epsilon * dL)) /
+             (2 * epsilon);
 
   auto df1 = dfdp * dp + dfdv * dv + ddot(dfdL, dL);
 

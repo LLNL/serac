@@ -375,10 +375,10 @@ public:
               mfem::Vector K_arg(u_.Size());
               add(1.0, u_, dt_, du_dt, K_arg);
 
-              auto M = serac::get<1>(M_functional_(differentiate_wrt(u_)));
+              auto                                  M = serac::get<1>(M_functional_(differentiate_wrt(u_)));
               std::unique_ptr<mfem::HypreParMatrix> m_mat(M);
 
-              auto K = serac::get<1>(K_functional_(differentiate_wrt(K_arg)));
+              auto                                  K = serac::get<1>(K_functional_(differentiate_wrt(K_arg)));
               std::unique_ptr<mfem::HypreParMatrix> k_mat(K);
 
               J_.reset(mfem::Add(1.0, *m_mat, dt_, *k_mat));

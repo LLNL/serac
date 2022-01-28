@@ -29,8 +29,8 @@ std::unique_ptr<mfem::ParMesh> mesh3D;
 template <int p, int dim>
 void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
 {
-  [[maybe_unused]] static constexpr double a       = 1.7;
-  [[maybe_unused]] static constexpr double b       = 0.0;
+  [[maybe_unused]] static constexpr double a = 1.7;
+  [[maybe_unused]] static constexpr double b = 0.0;
 
   // Create standard MFEM bilinear and linear forms on H1
   auto                        fec = mfem::L2_FECollection(p, dim, mfem::BasisType::GaussLobatto);

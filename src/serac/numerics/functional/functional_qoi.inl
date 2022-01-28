@@ -68,11 +68,12 @@ class Functional<double(trials...), exec> {
 
   template <typename... T>
   struct operator_paren_return {
-    using type = typename std::conditional<
-      (std::is_same_v<T, dual_vector> + ...) == 1,  // if the there is a dual number in the pack
-      serac::tuple<double, Gradient&>,              // then we return the value and the derivative
-      double                                        // otherwise, we just return the value
-    >::type;
+    using type =
+        typename std::conditional<(std::is_same_v<T, dual_vector> + ...) ==
+                                      1,                            // if the there is a dual number in the pack
+                                  serac::tuple<double, Gradient&>,  // then we return the value and the derivative
+                                  double                            // otherwise, we just return the value
+                                  >::type;
   };
 
 public:
@@ -80,9 +81,8 @@ public:
    * @brief Constructs using a @p mfem::ParFiniteElementSpace object corresponding to the trial space
    * @param[in] trial_fes The trial space
    */
-  Functional(std::array<mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
-      : trial_space_(trial_fes) {
-
+  Functional(std::array<mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes) : trial_space_(trial_fes)
+  {
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
       P_trial_[i] = trial_space_[i]->GetProlongationMatrix();
       G_trial_[i] = trial_space_[i]->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC);
@@ -102,8 +102,8 @@ public:
       grad_.emplace_back(*this, i);
     }
 
-    P_test_= new QoIProlongation(trial_fes[0]->GetParMesh()->GetComm());
-    G_test_ = new QoIElementRestriction(trial_fes[0]->GetParMesh()->GetNE());
+    P_test_          = new QoIProlongation(trial_fes[0]->GetParMesh()->GetComm());
+    G_test_          = new QoIElementRestriction(trial_fes[0]->GetParMesh()->GetNE());
     G_test_boundary_ = new QoIElementRestriction(trial_fes[0]->GetParMesh()->GetNBE());
 
     output_E_.SetSize(G_test_->Height(), mfem::Device::GetMemoryType());
@@ -132,7 +132,6 @@ public:
             ExecArray<double, 3, exec>(num_bdr_elements, ndof_per_test_bdr_element, ndof_per_trial_bdr_element);
       }
     }
-
   }
 
   /// @brief destructor: deallocate the mfem::Operators that we're responsible for
@@ -247,7 +246,7 @@ public:
 
   /**
    * @brief this function computes the directional derivative of the quantity of interest functional
-   * 
+   *
    * @param input_T a T-vector to apply the action of gradient to
    * @param which describes which trial space input_T corresponds to
    *
@@ -295,14 +294,13 @@ public:
     P_test_->MultTranspose(output_L_, output_T_);
 
     return output_T_[0];
-
   }
 
   /**
    * @brief this function lets the user evaluate the serac::Functional with the given trial space values
    *
    * @param args the input T-vectors
-   * 
+   *
    * note: it accepts exactly `num_trial_spaces` arguments of type mfem::Vector. Additionally, one of those
    * arguments may be a dual_vector, to indicate that Functional::operator() should not only evaluate the
    * element calculations, but also differentiate them w.r.t. the specified dual_vector argument
@@ -316,7 +314,7 @@ public:
     static_assert(sizeof...(T) == num_trial_spaces,
                   "Error: Functional::operator() must take exactly as many arguments as trial spaces");
 
-    constexpr int                                           wrt = index_of_dual_vector<T...>();
+    constexpr int                                                            wrt = index_of_dual_vector<T...>();
     std::array<std::reference_wrapper<const mfem::Vector>, num_trial_spaces> input_T{args...};
 
     // get the values for each local processor
@@ -411,9 +409,7 @@ private:
 
     void Mult(const mfem::Vector& x, mfem::Vector& y) const { form_.GradientMult(x, y); }
 
-    double operator()(const mfem::Vector& x) const {
-      return form_.ActionOfGradient(x, which_argument);
-    }
+    double operator()(const mfem::Vector& x) const { return form_.ActionOfGradient(x, which_argument); }
 
     operator mfem::HypreParVector &()
     {

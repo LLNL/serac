@@ -74,8 +74,9 @@ auto Postprocess(const T& f, [[maybe_unused]] const coord_type& xi)
 /**
  *  @tparam space the user-specified trial space
  *  @tparam dimension describes whether the problem is 1D, 2D, or 3D
- * 
- *  @brief a struct used to encode what type of arguments will be passed to a domain integral q-function, for the given trial space
+ *
+ *  @brief a struct used to encode what type of arguments will be passed to a domain integral q-function, for the given
+ * trial space
  */
 template <typename space, typename dimension>
 struct QFunctionArgument;
@@ -83,13 +84,13 @@ struct QFunctionArgument;
 /// @overload
 template <int p, int dim>
 struct QFunctionArgument<H1<p, 1>, Dimension<dim>> {
-  using type = serac::tuple<double, serac::zero>; ///< what will be passed to the q-function
+  using type = serac::tuple<double, serac::zero>;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p, int c, int dim>
 struct QFunctionArgument<H1<p, c>, Dimension<dim>> {
-  using type = serac::tuple<tensor<double, c>, serac::zero>; ///< what will be passed to the q-function
+  using type = serac::tuple<tensor<double, c>, serac::zero>;  ///< what will be passed to the q-function
 };
 
 template <int i, int dim, typename... trials, typename lambda>
@@ -101,7 +102,8 @@ auto get_derivative_type(lambda qf)
 };
 
 template <int i>
-struct DerivativeWRT {};
+struct DerivativeWRT {
+};
 
 template <int Q, Geometry g, typename test, typename... trials>
 struct KernelConfig {
@@ -114,7 +116,7 @@ struct KernelConfig {
  * @tparam T the "function signature" of the form `test(trial0, trial1, ...)`
  * @tparam derivatives_type the type of the derivative of the q-function
  * @tparam lambda the type of the q-function
- * 
+ *
  * @brief Functor type providing a callback for the evaluation of the user-specified q-function over the domain
  */
 template <typename S, typename T, typename derivatives_type, typename lambda>
@@ -126,14 +128,15 @@ struct EvaluationKernel;
  */
 template <int Q, Geometry geom, typename test, typename... trials, typename lambda>
 struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lambda> {
-  static constexpr auto exec             = ExecutionSpace::CPU; ///< this specialization is CPU-specific
-  static constexpr int  num_trial_spaces = int(sizeof...(trials)); ///< how many trial spaces are provided
+  static constexpr auto exec             = ExecutionSpace::CPU;     ///< this specialization is CPU-specific
+  static constexpr int  num_trial_spaces = int(sizeof...(trials));  ///< how many trial spaces are provided
 
-  using EVector_t = EVectorView<exec, finite_element<geom, trials>...>; ///< the type of container used to access element values
+  using EVector_t =
+      EVectorView<exec, finite_element<geom, trials>...>;  ///< the type of container used to access element values
 
   /**
    * @brief initialize the functor by providing the necessary quadrature point data
-   * 
+   *
    * @param J values of sqrt(det(J^T * J)) at each quadrature point
    * @param X Spatial positions of each quadrature point
    * @param N Unit surface normals at each quadrature point
@@ -148,7 +151,7 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
 
   /**
    * @brief integrate the q-function over the specified domain, at the specified trial space values
-   * 
+   *
    * @param U input E-vectors
    * @param R output E-vector
    */
@@ -208,27 +211,28 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
     }
   }
 
-  const mfem::Vector&            J_; ///< values of sqrt(det(J^T * J)) at each quadrature point
-  const mfem::Vector&            X_; ///< Spatial positions of each quadrature point
-  const mfem::Vector&            N_; ///< Unit surface normals at each quadrature point
-  size_t                         num_elements_; ///< how many elements in the domain
-  lambda                         qf_; ///< q-function
+  const mfem::Vector& J_;             ///< values of sqrt(det(J^T * J)) at each quadrature point
+  const mfem::Vector& X_;             ///< Spatial positions of each quadrature point
+  const mfem::Vector& N_;             ///< Unit surface normals at each quadrature point
+  size_t              num_elements_;  ///< how many elements in the domain
+  lambda              qf_;            ///< q-function
 };
 
 /**
  * @overload
- * @note evaluation kernel that also calculates derivative w.r.t. `I`th trial space 
+ * @note evaluation kernel that also calculates derivative w.r.t. `I`th trial space
  */
 template <int I, int Q, Geometry geom, typename test, typename... trials, typename derivatives_type, typename lambda>
 struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>, derivatives_type, lambda> {
-  static constexpr auto exec             = ExecutionSpace::CPU; ///< this specialization is CPU-specific
-  static constexpr int  num_trial_spaces = int(sizeof...(trials)); ///< how many trial spaces are provided
+  static constexpr auto exec             = ExecutionSpace::CPU;     ///< this specialization is CPU-specific
+  static constexpr int  num_trial_spaces = int(sizeof...(trials));  ///< how many trial spaces are provided
 
-  using EVector_t = EVectorView<exec, finite_element<geom, trials>...>; ///< the type of container used to access element values
+  using EVector_t =
+      EVectorView<exec, finite_element<geom, trials>...>;  ///< the type of container used to access element values
 
   /**
    * @brief initialize the functor by providing the necessary quadrature point data
-   * 
+   *
    * @param qf_derivatives a container for the derivatives of the q-function w.r.t. trial space I
    * @param J values of sqrt(det(J^T * J)) at each quadrature point
    * @param X Spatial positions of each quadrature point
@@ -245,7 +249,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
 
   /**
    * @brief integrate the q-function over the specified domain, at the specified trial space values
-   * 
+   *
    * @param U input E-vectors
    * @param R output E-vector
    */
@@ -313,12 +317,12 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
     }
   }
 
-  ExecArrayView<derivatives_type, 2, exec> qf_derivatives_; ///< derivatives of the q-function w.r.t. trial space `I`
-  const mfem::Vector&            J_; ///< values of sqrt(det(J^T * J)) at each quadrature point
-  const mfem::Vector&            X_; ///< Spatial positions of each quadrature point
-  const mfem::Vector&            N_; ///< Unit surface normals at each quadrature point
-  size_t                         num_elements_; ///< how many elements in the domain
-  lambda                         qf_; ///< q-function
+  ExecArrayView<derivatives_type, 2, exec> qf_derivatives_;  ///< derivatives of the q-function w.r.t. trial space `I`
+  const mfem::Vector&                      J_;               ///< values of sqrt(det(J^T * J)) at each quadrature point
+  const mfem::Vector&                      X_;               ///< Spatial positions of each quadrature point
+  const mfem::Vector&                      N_;               ///< Unit surface normals at each quadrature point
+  size_t                                   num_elements_;    ///< how many elements in the domain
+  lambda                                   qf_;              ///< q-function
 };
 
 template <int Q, Geometry geom, typename test, typename... trials, typename lambda>
@@ -356,8 +360,9 @@ EvaluationKernel(DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, CPUAr
  * @param[in] num_elements The number of elements in the mesh
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
-void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, CPUArrayView<derivatives_type, 2> qf_derivatives,
-                               const mfem::Vector& J_, size_t num_elements)
+void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
+                               CPUArrayView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J_,
+                               size_t num_elements)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
@@ -437,8 +442,8 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, CPUArra
  * @param[in] num_elements The number of elements in the mesh
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
-void element_gradient_kernel(CPUArrayView<double, 3> dk, CPUArrayView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J_,
-                             size_t num_elements)
+void element_gradient_kernel(CPUArrayView<double, 3> dk, CPUArrayView<derivatives_type, 2> qf_derivatives,
+                             const mfem::Vector& J_, size_t num_elements)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;

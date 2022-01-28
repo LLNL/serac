@@ -80,7 +80,7 @@ void check_gradient(Functional<T>& f, mfem::Vector& U)
   mfem::Vector df2   = dfdU(dU);
 
   mfem::HypreParMatrix* dfdU_matrix = dfdU;
-  mfem::Vector df3 = (*dfdU_matrix) * dU;
+  mfem::Vector          df3         = (*dfdU_matrix) * dU;
 
   double relative_error1 = df1.DistanceTo(df2) / df1.Norml2();
   double relative_error2 = df1.DistanceTo(df3) / df1.Norml2();
@@ -155,7 +155,6 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
   }
 
   EXPECT_NEAR(0.0, mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-12);
-
 }
 
 template <int p, int dim>

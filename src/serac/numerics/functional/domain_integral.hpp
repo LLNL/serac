@@ -35,8 +35,8 @@ class DomainIntegral;
 template <typename test, typename... trials, ExecutionSpace exec>
 class DomainIntegral<test(trials...), exec> {
 public:
-  static constexpr tuple<trials...> trial_spaces{}; ///< a tuple of the different trial spaces
-  static constexpr int              num_trial_spaces = sizeof...(trials); ///< how many trial spaces were specified
+  static constexpr tuple<trials...> trial_spaces{};                        ///< a tuple of the different trial spaces
+  static constexpr int              num_trial_spaces = sizeof...(trials);  ///< how many trial spaces were specified
 
   /**
    * @brief Constructs a @p DomainIntegral from a user-provided quadrature function
@@ -136,10 +136,12 @@ public:
    * @param[in] input_E The input to the evaluation; per-element DOF values
    * @param[out] output_E The output of the evalution; per-element DOF residuals
    * @param[in] which_trial_space specifies which trial space to compute derivatives with respect to (if any)
-   * 
-   * @note which_trial_space == -1 implies that this function will call the evaluation kernel that performs no differentiation
+   *
+   * @note which_trial_space == -1 implies that this function will call the evaluation kernel that performs no
+   * differentiation
    */
-  void Mult(const std::array<mfem::Vector, num_trial_spaces>& input_E, mfem::Vector& output_E, int which_trial_space) const
+  void Mult(const std::array<mfem::Vector, num_trial_spaces>& input_E, mfem::Vector& output_E,
+            int which_trial_space) const
   {
     if (which_trial_space == -1) {
       evaluation_(input_E, output_E);
@@ -172,7 +174,6 @@ public:
   }
 
 private:
-
   /// @brief Type-erased handle to evaluation kernel
   std::function<void(const std::array<mfem::Vector, num_trial_spaces>&, mfem::Vector&)> evaluation_;
 

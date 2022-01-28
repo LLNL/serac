@@ -38,8 +38,8 @@ class BoundaryIntegral;
 template <typename test, typename... trials, ExecutionSpace exec>
 class BoundaryIntegral<test(trials...), exec> {
 public:
-  static constexpr tuple<trials...> trial_spaces{}; ///< a tuple of the different trial spaces
-  static constexpr int              num_trial_spaces = sizeof...(trials); ///< how many trial spaces were specified
+  static constexpr tuple<trials...> trial_spaces{};                        ///< a tuple of the different trial spaces
+  static constexpr int              num_trial_spaces = sizeof...(trials);  ///< how many trial spaces were specified
 
   /**
    * @brief Constructs an @p BoundaryIntegral from a user-provided quadrature function
@@ -55,7 +55,8 @@ public:
    */
   template <int dim, typename lambda_type, typename qpt_data_type = void>
   BoundaryIntegral(size_t num_elements, const mfem::Vector& J, const mfem::Vector& X, const mfem::Vector& N,
-                   Dimension<dim>, lambda_type&& qf) {
+                   Dimension<dim>, lambda_type&& qf)
+  {
     using namespace boundary_integral;
 
     constexpr auto geometry                      = supported_geometries[dim];
@@ -139,7 +140,6 @@ public:
   }
 
 private:
-
   /// @brief kernel for integrating the q-function over the domain
   std::function<void(const std::array<mfem::Vector, num_trial_spaces>&, mfem::Vector&)> evaluation_;
 
@@ -150,9 +150,8 @@ private:
   /// @brief kernels for computing directional derivatives, using the most recently cached q-function derivatives
   std::function<void(const mfem::Vector&, mfem::Vector&)> action_of_gradient_[num_trial_spaces];
 
-  /// @brief kernels for computing consistent "element stiffness" matrices 
+  /// @brief kernels for computing consistent "element stiffness" matrices
   std::function<void(ExecArrayView<double, 3, exec>)> element_gradient_[num_trial_spaces];
-
 };
 
 }  // namespace serac
