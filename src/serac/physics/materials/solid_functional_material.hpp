@@ -122,6 +122,28 @@ struct ConstantTraction {
 };
 
 /// Constant thermal source model
+template <int dim>
+struct TractionFunction {
+  /// The constant source
+  std::function<tensor<double, dim>(const tensor<double, dim>&, const tensor<double, dim>&, const double t)>
+      traction_func_;
+
+  /**
+   * @brief Evaluation function for the constant thermal source model
+   *
+   * @tparam T1 type of the temperature
+   * @tparam T2 type of the temperature gradient
+   * @tparam dim The dimension of the problem
+   * @return The thermal source value
+   */
+  SERAC_HOST_DEVICE tensor<double, dim> operator()(const tensor<double, dim>& x, const tensor<double, dim>& n,
+                                                   const double t) const
+  {
+    return traction_func_(x, n, t);
+  }
+};
+
+/// Constant thermal source model
 struct ConstantPressure {
   /// The constant source
   double pressure_;
@@ -134,11 +156,30 @@ struct ConstantPressure {
    * @tparam dim The dimension of the problem
    * @return The thermal source value
    */
-  template <typename T1, typename T2, int dim>
-  SERAC_HOST_DEVICE double operator()(const tensor<double, dim>& /* x */, const double /* t */, const T1& /* u */,
-                                      const T2& /* du_dX */) const
+  template <int dim>
+  SERAC_HOST_DEVICE double operator()(const tensor<double, dim>& /* x */, const double /* t */) const
   {
     return pressure_;
+  }
+};
+
+/// Constant thermal source model
+template <int dim>
+struct PressureFunction {
+  /// The constant source
+  std::function<double(const tensor<double, dim>&, const double)> pressure_func_;
+
+  /**
+   * @brief Evaluation function for the constant thermal source model
+   *
+   * @tparam T1 type of the temperature
+   * @tparam T2 type of the temperature gradient
+   * @tparam dim The dimension of the problem
+   * @return The thermal source value
+   */
+  SERAC_HOST_DEVICE double operator()(const tensor<double, dim>& x, const double t) const
+  {
+    return pressure_func_(x, t);
   }
 };
 

@@ -351,25 +351,26 @@ public:
    */
 
   template <typename TractionType>
-  void setTractionBCs(TractionType traction_function, bool compute_on_reference)
+  void setTractionBCs(TractionType traction_function, bool compute_on_reference = true)
   {
     // TODO fix this when we can get gradients from boundary integrals
     SLIC_ERROR_IF(!compute_on_reference, "SolidFunctional cannot compute traction BCs in deformed configuration");
 
     K_functional_.AddBoundaryIntegral(
-        Dimension<dim - 1>{}, [traction_function](auto x, auto n, auto u) { return -1.0 * traction_function(x, n, u); },
+        Dimension<dim - 1>{},
+        [this, traction_function](auto x, auto n, auto u) { return -1.0 * traction_function(x, n, time_) + 0.0 * u; },
         mesh_);
   }
 
   template <typename PressureType>
-  void setPressureBCs(PressureType pressure_function, bool compute_on_reference)
+  void setPressureBCs(PressureType pressure_function, bool compute_on_reference = true)
   {
     // TODO fix this when we can get gradients from boundary integrals
     SLIC_ERROR_IF(!compute_on_reference, "SolidFunctional cannot compute pressure BCs in deformed configuration");
 
     K_functional_.AddBoundaryIntegral(
-        Dimension<dim - 1>{}, [pressure_function](auto x, auto n, auto u) { return pressure_function(x, u) * n; },
-        mesh_);
+        Dimension<dim - 1>{},
+        [this, pressure_function](auto x, auto n, auto u) { return pressure_function(x, time_) * n + 0.0 * u; }, mesh_);
   }
 
   /**
