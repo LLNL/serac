@@ -96,7 +96,7 @@ void check_gradient(Functional<T>& f, mfem::HypreParVector& U)
 
   // TODO: fix this weird copy ctor behavior in mfem::HypreParVector
   auto U_plus = U;
-  U_plus      = U;  // it hurts me to write this
+  U_plus      = U;
   U_plus.Add(epsilon, dU);
 
   auto U_minus = U;
@@ -132,7 +132,7 @@ void check_gradient(Functional<T>& f, mfem::HypreParVector& U, mfem::HypreParVec
 
   // TODO: fix this weird copy ctor behavior in mfem::HypreParVector
   auto U_plus = U;
-  U_plus      = U;  // it hurts me to write this
+  U_plus      = U;
   U_plus.Add(epsilon, dU);
 
   auto U_minus = U;
