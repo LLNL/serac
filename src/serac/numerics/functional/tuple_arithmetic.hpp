@@ -174,13 +174,7 @@ struct one_hot : public one_hot_helper<i, std::make_integer_sequence<int, n>, T>
 template <int i, int n, typename T>
 using one_hot_t = typename one_hot<i, n, T>::type;
 
-/**
- * @tparam i the index where the non-`serac::zero` derivative term appears
- * @tparam N how many entries in the gradient type
- *
- * @brief promote a double value to dual number with a one_hot_t< i, N, double > gradient type
- * @param arg the value to be promoted
- */
+/// @overload
 template <int i, int N>
 constexpr auto make_dual_helper(zero)
 {

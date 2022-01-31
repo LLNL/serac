@@ -30,8 +30,10 @@ namespace serac {
  * serac::Functional::operator()` should differentiate w.r.t. a specific argument
  */
 struct differentiate_wrt_this {
-  const mfem::Vector& ref;
-                      operator const mfem::Vector &() const { return ref; }
+  const mfem::Vector& ref;  ///< the actual data wrapped by this type
+
+  /// @brief implicitly convert back to `mfem::Vector` to extract the actual data
+  operator const mfem::Vector &() const { return ref; }
 };
 
 /**
@@ -297,6 +299,17 @@ public:
     AddBoundaryIntegral(Dimension<2>{}, integrand, domain);
   }
 
+  /**
+   * @brief this function computes the directional derivative of `serac::Functional::operator()`
+   *
+   * @param input_T the T-vector to apply the action of gradient to
+   * @param output_T the T-vector where the resulting values are stored
+   * @param which describes which trial space input_T corresponds to
+   *
+   * @note: it accepts exactly `num_trial_spaces` arguments of type mfem::Vector. Additionally, one of those
+   * arguments may be a dual_vector, to indicate that Functional::operator() should not only evaluate the
+   * element calculations, but also differentiate them w.r.t. the specified dual_vector argument
+   */
   void ActionOfGradient(const mfem::Vector& input_T, mfem::Vector& output_T, size_t which) const
   {
     P_trial_[which]->Mult(input_T, input_L_[which]);
@@ -348,6 +361,10 @@ public:
    * note: it accepts exactly `num_trial_spaces` arguments of type mfem::Vector. Additionally, one of those
    * arguments may be a dual_vector, to indicate that Functional::operator() should not only evaluate the
    * element calculations, but also differentiate them w.r.t. the specified dual_vector argument
+   *
+   * @tparam T the types of the arguments passed in
+   * @param args the trial space dofs used to carry out the calculation,
+   *  at most one of which may be of the type `differentiate_wrt_this(mfem::Vector)`
    */
   template <typename... T>
   typename operator_paren_return<T...>::type operator()(const T&... args)
@@ -431,8 +448,11 @@ public:
   /**
    * @brief Applies an essential boundary condition to the attributes specified by @a ess_attr
    * @param[in] ess_attr The mesh attributes to apply the BC to
+   * @param[in] which which trial space the specified attributes apply to
    *
    * @note This gets more interesting when having more than one trial space
+   *
+   * TODO: remove this interface completely
    */
   void SetEssentialBC(const mfem::Array<int>& ess_attr, size_t which)
   {

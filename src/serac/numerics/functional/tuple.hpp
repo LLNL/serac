@@ -647,7 +647,7 @@ struct tuple_element<I, tuple<Head, Tail...>> : tuple_element<I - 1, tuple<Tail.
 /// @overload
 template <class Head, class... Tail>
 struct tuple_element<0, tuple<Head, Tail...>> {
-  using type = Head;
+  using type = Head;  ///< the type at the specified index
 };
 
 }  // namespace serac
