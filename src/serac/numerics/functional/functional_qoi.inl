@@ -403,15 +403,17 @@ private:
         : form_(f),
           lookup_tables(*(f.trial_space_[which])),
           which_argument(which),
-          gradient_L_(f.trial_space_[which]->GetVSize()) {}
+          gradient_L_(f.trial_space_[which]->GetVSize())
+    {
+    }
 
     void Mult(const mfem::Vector& x, mfem::Vector& y) const { form_.GradientMult(x, y); }
 
     double operator()(const mfem::Vector& x) const { return form_.ActionOfGradient(x, which_argument); }
 
-    std::unique_ptr< mfem::HypreParVector > assemble()
+    std::unique_ptr<mfem::HypreParVector> assemble()
     {
-      std::unique_ptr< mfem::HypreParVector > gradient_T(form_.trial_space_[which_argument]->NewTrueDofVector());
+      std::unique_ptr<mfem::HypreParVector> gradient_T(form_.trial_space_[which_argument]->NewTrueDofVector());
 
       gradient_L_ = 0.0;
 
@@ -454,7 +456,7 @@ private:
       return gradient_T;
     }
 
-    friend auto assemble(Gradient & g) { return g.assemble(); }
+    friend auto assemble(Gradient& g) { return g.assemble(); }
 
   private:
     /**

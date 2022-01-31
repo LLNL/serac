@@ -31,7 +31,7 @@ namespace serac {
  */
 struct differentiate_wrt_this {
   const mfem::Vector& ref;
-  operator const mfem::Vector &() const { return ref; }
+                      operator const mfem::Vector &() const { return ref; }
 };
 
 /**
@@ -62,7 +62,7 @@ auto differentiate_wrt(const mfem::Vector& v) { return differentiate_wrt_this{v}
 template <typename... T>
 constexpr int index_of_differentiation()
 {
-  constexpr int n                  = int(sizeof...(T));
+  constexpr int n          = int(sizeof...(T));
   bool          matching[] = {std::is_same_v<T, differentiate_wrt_this>...};
   for (int i = 0; i < n; i++) {
     if (matching[i]) {
@@ -538,15 +538,15 @@ private:
       }
 
       auto J_local =
-          mfem::SparseMatrix(lookup_tables.row_ptr.data(), lookup_tables.col_ind.data(), values,
-                             form_.output_L_.Size(), form_.input_L_[which_argument].Size(),
-                             sparse_matrix_frees_graph_ptrs, sparse_matrix_frees_values_ptr, col_ind_is_sorted);
+          mfem::SparseMatrix(lookup_tables.row_ptr.data(), lookup_tables.col_ind.data(), values, form_.output_L_.Size(),
+                             form_.input_L_[which_argument].Size(), sparse_matrix_frees_graph_ptrs,
+                             sparse_matrix_frees_values_ptr, col_ind_is_sorted);
 
       auto* R = form_.test_space_->Dof_TrueDof_Matrix();
 
-      auto* A = new mfem::HypreParMatrix(test_space_->GetComm(), test_space_->GlobalVSize(),
-                                         trial_space_->GlobalVSize(), test_space_->GetDofOffsets(),
-                                         trial_space_->GetDofOffsets(), &J_local);
+      auto* A =
+          new mfem::HypreParMatrix(test_space_->GetComm(), test_space_->GlobalVSize(), trial_space_->GlobalVSize(),
+                                   test_space_->GetDofOffsets(), trial_space_->GetDofOffsets(), &J_local);
 
       auto* P = trial_space_->Dof_TrueDof_Matrix();
 
@@ -557,7 +557,7 @@ private:
       return K;
     };
 
-    friend auto assemble(Gradient & g) { return g.assemble(); }
+    friend auto assemble(Gradient& g) { return g.assemble(); }
 
   private:
     /// @brief The "parent" @p Functional to calculate gradients with

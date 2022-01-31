@@ -92,7 +92,7 @@ void check_gradient(Functional<T>& f, mfem::HypreParVector& U)
 
   auto [unused, dfdU] = f(differentiate_wrt(U));
 
-  std::unique_ptr< mfem::HypreParVector > dfdU_vec = assemble(dfdU);
+  std::unique_ptr<mfem::HypreParVector> dfdU_vec = assemble(dfdU);
 
   // TODO: fix this weird copy ctor behavior in mfem::HypreParVector
   auto U_plus = U;
@@ -145,7 +145,7 @@ void check_gradient(Functional<T>& f, mfem::HypreParVector& U, mfem::HypreParVec
     auto [value, dfdU] = f(differentiate_wrt(U), dU_dt);
     double df2         = dfdU(dU);
 
-    std::unique_ptr< mfem::HypreParVector > dfdU_vector = assemble(dfdU);
+    std::unique_ptr<mfem::HypreParVector> dfdU_vector = assemble(dfdU);
 
     double df3 = mfem::InnerProduct(*dfdU_vector, dU);
 
@@ -170,7 +170,7 @@ void check_gradient(Functional<T>& f, mfem::HypreParVector& U, mfem::HypreParVec
     auto [value, df_ddU_dt] = f(U, differentiate_wrt(dU_dt));
     double df2              = df_ddU_dt(ddU_dt);
 
-    std::unique_ptr< mfem::HypreParVector > df_ddU_dt_vector = assemble(df_ddU_dt);
+    std::unique_ptr<mfem::HypreParVector> df_ddU_dt_vector = assemble(df_ddU_dt);
 
     double df3 = mfem::InnerProduct(*df_ddU_dt_vector, ddU_dt);
 
