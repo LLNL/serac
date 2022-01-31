@@ -352,7 +352,7 @@ public:
 
           [this](const mfem::Vector& u) -> mfem::Operator& {
             auto [r, drdu] = K_functional_(differentiate_wrt(u));
-            J_.reset(drdu);
+            J_ = assemble(drdu);
             bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             return *J_;
           });
@@ -376,10 +376,10 @@ public:
               add(1.0, u_, dt_, du_dt, K_arg);
 
               auto                                  M = serac::get<1>(M_functional_(differentiate_wrt(u_)));
-              std::unique_ptr<mfem::HypreParMatrix> m_mat(M);
+              std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
               auto                                  K = serac::get<1>(K_functional_(differentiate_wrt(K_arg)));
-              std::unique_ptr<mfem::HypreParMatrix> k_mat(K);
+              std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
               J_.reset(mfem::Add(1.0, *m_mat, dt_, *k_mat));
               bcs_.eliminateAllEssentialDofsFromMatrix(*J_);

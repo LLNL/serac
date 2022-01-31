@@ -46,7 +46,7 @@ void check_gradient(Functional<T>& f, mfem::Vector& U)
   auto [value, dfdU] = f(differentiate_wrt(U));
   mfem::Vector df2   = dfdU(dU);
 
-  mfem::HypreParMatrix* dfdU_matrix = dfdU;
+  std::unique_ptr< mfem::HypreParMatrix > dfdU_matrix = assemble(dfdU);
 
   mfem::Vector df3 = (*dfdU_matrix) * dU;
 
@@ -57,8 +57,6 @@ void check_gradient(Functional<T>& f, mfem::Vector& U)
   EXPECT_NEAR(0., relative_error2, 5.e-6);
 
   std::cout << relative_error1 << " " << relative_error2 << std::endl;
-
-  delete dfdU_matrix;
 }
 
 TEST(basic, nonlinear_thermal_test_3D)

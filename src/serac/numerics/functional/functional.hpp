@@ -472,20 +472,18 @@ private:
       form_.ActionOfGradient(dx, df, which_argument);
     }
 
-    /**
-     * @brief syntactic sugar:  df_dx.Mult(dx, df)  <=>  mfem::Vector df = df_dx(dx);
-     */
+    /// @brief syntactic sugar:  df_dx.Mult(dx, df)  <=>  mfem::Vector df = df_dx(dx);
     mfem::Vector& operator()(const mfem::Vector& dx)
     {
       form_.ActionOfGradient(dx, df_, which_argument);
       return df_;
     }
 
-    /**
-     * @brief implicit conversion to mfem::HypreParMatrix type
-     */
-    operator mfem::HypreParMatrix *()
-    {
+    /// @brief assemble element matrices and form an mfem::HypreParMatrix
+    friend std::unique_ptr< mfem::HypreParMatrix > assemble(Gradient & grad) {
+
+      auto & form = grad.form_;
+
       // the CSR graph (sparsity pattern) is reusable, so we cache
       // that and ask mfem to not free that memory in ~SparseMatrix()
       constexpr bool sparse_matrix_frees_graph_ptrs = false;
@@ -496,17 +494,17 @@ private:
 
       constexpr bool col_ind_is_sorted = true;
 
-      double* values = new double[lookup_tables.nnz]{};
+      double* values = new double[grad.lookup_tables.nnz]{};
 
       // each element uses the lookup tables to add its contributions
       // to their appropriate locations in the global sparse matrix
-      if (form_.domain_integrals_.size() > 0) {
-        auto& K_elem = form_.element_gradients_[which_argument];
-        auto& LUT    = lookup_tables.element_nonzero_LUT;
+      if (form.domain_integrals_.size() > 0) {
+        auto& K_elem = form.element_gradients_[grad.which_argument];
+        auto& LUT    = grad.lookup_tables.element_nonzero_LUT;
 
         detail::zero_out(K_elem);
-        for (auto& domain : form_.domain_integrals_) {
-          domain.ComputeElementGradients(view(K_elem), which_argument);
+        for (auto& domain : form.domain_integrals_) {
+          domain.ComputeElementGradients(view(K_elem), grad.which_argument);
         }
 
         for (axom::IndexType e = 0; e < K_elem.shape()[0]; e++) {
@@ -521,13 +519,13 @@ private:
 
       // each boundary element uses the lookup tables to add its contributions
       // to their appropriate locations in the global sparse matrix
-      if (form_.bdr_integrals_.size() > 0) {
-        auto& K_belem = form_.bdr_element_gradients_[which_argument];
-        auto& LUT     = lookup_tables.bdr_element_nonzero_LUT;
+      if (form.bdr_integrals_.size() > 0) {
+        auto& K_belem = form.bdr_element_gradients_[grad.which_argument];
+        auto& LUT     = grad.lookup_tables.bdr_element_nonzero_LUT;
 
         detail::zero_out(K_belem);
-        for (auto& boundary : form_.bdr_integrals_) {
-          boundary.ComputeElementGradients(view(K_belem), which_argument);
+        for (auto& boundary : form.bdr_integrals_) {
+          boundary.ComputeElementGradients(view(K_belem), grad.which_argument);
         }
 
         for (axom::IndexType e = 0; e < K_belem.shape()[0]; e++) {
@@ -541,26 +539,27 @@ private:
       }
 
       auto J_local =
-          mfem::SparseMatrix(lookup_tables.row_ptr.data(), lookup_tables.col_ind.data(), values, form_.output_L_.Size(),
-                             form_.input_L_[which_argument].Size(), sparse_matrix_frees_graph_ptrs,
+          mfem::SparseMatrix(grad.lookup_tables.row_ptr.data(), grad.lookup_tables.col_ind.data(), values, form.output_L_.Size(),
+                             form.input_L_[grad.which_argument].Size(), sparse_matrix_frees_graph_ptrs,
                              sparse_matrix_frees_values_ptr, col_ind_is_sorted);
 
-      auto* R = form_.test_space_->Dof_TrueDof_Matrix();
+      auto* R = form.test_space_->Dof_TrueDof_Matrix();
 
       auto* A =
-          new mfem::HypreParMatrix(test_space_->GetComm(), test_space_->GlobalVSize(), trial_space_->GlobalVSize(),
-                                   test_space_->GetDofOffsets(), trial_space_->GetDofOffsets(), &J_local);
+          new mfem::HypreParMatrix(grad.test_space_->GetComm(), grad.test_space_->GlobalVSize(), grad.trial_space_->GlobalVSize(),
+                                   grad.test_space_->GetDofOffsets(), grad.trial_space_->GetDofOffsets(), &J_local);
 
-      auto* P = trial_space_->Dof_TrueDof_Matrix();
+      auto* P = grad.trial_space_->Dof_TrueDof_Matrix();
 
-      auto* RAP = mfem::RAP(R, A, P);
+      std::unique_ptr < mfem::HypreParMatrix > K(mfem::RAP(R, A, P));
 
       delete A;
 
-      return RAP;
-    }
+      return K;
+    };
 
   private:
+
     /// @brief The "parent" @p Functional to calculate gradients with
     Functional<test(trials...), exec>& form_;
 

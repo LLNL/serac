@@ -124,13 +124,13 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   EXPECT_NEAR(0.0, mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-14);
 
   // Compute the gradient using functional
-  auto grad2 = serac::get<1>(residual(differentiate_wrt(U)));
+  auto [r, drdU] = residual(differentiate_wrt(U));
 
-  auto J_func = std::unique_ptr<mfem::HypreParMatrix>(grad2);
+  std::unique_ptr< mfem::HypreParMatrix > J_func = assemble(drdU);
 
   // Compute the gradient action using standard MFEM and functional
   mfem::Vector g1 = (*J_mfem) * U;
-  mfem::Vector g2 = grad2 * U;
+  mfem::Vector g2 = drdU * U;
   mfem::Vector g3 = (*J_func) * U;
 
   if (verbose) {
@@ -217,12 +217,12 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   }
   EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-14);
 
-  auto grad_operator = serac::get<1>(residual(differentiate_wrt(U)));
+  auto [r, drdU] = residual(differentiate_wrt(U));
 
-  auto J_func = std::unique_ptr<mfem::HypreParMatrix>(grad_operator);
+  std::unique_ptr< mfem::HypreParMatrix > J_func = assemble(drdU);
 
   mfem::Vector g1 = (*J_mfem) * U;
-  mfem::Vector g2 = grad_operator * U;
+  mfem::Vector g2 = drdU * U;
   mfem::Vector g3 = (*J_func) * U;
 
   if (verbose) {
@@ -296,12 +296,12 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
   }
   EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-13);
 
-  auto grad_operator = serac::get<1>(residual(differentiate_wrt(U)));
+  auto [r, drdU] = residual(differentiate_wrt(U));
 
-  auto J_func = std::unique_ptr<mfem::HypreParMatrix>(grad_operator);
+  std::unique_ptr< mfem::HypreParMatrix > J_func = assemble(drdU);
 
   mfem::Vector g1 = (*J_mfem) * U;
-  mfem::Vector g2 = grad_operator * U;
+  mfem::Vector g2 = drdU * U;
   mfem::Vector g3 = (*J_func) * U;
 
   if (verbose) {

@@ -222,7 +222,7 @@ auto cos(dual<gradient_type> a)
   return dual<gradient_type>{cos(a.value), -a.gradient * sin(a.value)};
 }
 
-/** @brief implementation of cosine for dual numbers */
+/** @brief implementation of sine for dual numbers */
 template <typename gradient_type>
 auto sin(dual<gradient_type> a)
 {
