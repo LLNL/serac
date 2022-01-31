@@ -166,7 +166,7 @@ TEST(ChainRuleTests, tensor_output_with_tuple_input)
 
   auto df1 = dfdp * dp + dfdv * dv + ddot(dfdL, dL);
 
-  EXPECT_NEAR(norm(df1 - df0) / norm(df0), 0.0, 1.e-8);
+  EXPECT_NEAR(norm(df1 - df0) / norm(df0), 0.0, 2.0e-8);
 }
 
 int main(int argc, char* argv[])
