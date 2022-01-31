@@ -628,9 +628,9 @@ SERAC_HOST_DEVICE auto apply(lambda f, const tuple<T...>& args)
 
 /**
  * @brief a struct used to determine the type at index I of a tuple
- * 
- * @note see: https://en.cppreference.com/w/cpp/utility/tuple/tuple_element 
- * 
+ *
+ * @note see: https://en.cppreference.com/w/cpp/utility/tuple/tuple_element
+ *
  * @tparam I the index of the desired type
  * @tparam T a tuple of different types
  */
