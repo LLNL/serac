@@ -261,15 +261,17 @@ public:
         Dimension<dim>{},
         [this, material](auto, auto displacement) {
           // Get the value and the gradient from the input tuple
-          auto [u, du_dX]    = displacement;
-          double geom_factor = (geom_nonlin_ == GeometricNonlinearities::On ? 1.0 : 0.0);
-
-          auto deformation_grad = du_dX + I_;
-          auto flux             = material(du_dX) * (1.0 + geom_factor * (det(deformation_grad) - 1.0));
+          auto [u, du_dX] = displacement;
 
           auto source = u * 0.0;
 
-          // Return the source and the flux as a tuple
+          auto flux = material(du_dX);
+
+          if (geom_nonlin_ == GeometricNonlinearities::On) {
+            auto deformation_grad = du_dX + I_;
+            flux                  = flux * inv(transpose(deformation_grad));
+          }
+
           return serac::tuple{source, flux};
         },
         mesh_);

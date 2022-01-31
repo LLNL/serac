@@ -1515,7 +1515,7 @@ auto inv(tensor<dual<gradient_type>, n, n> A)
     gradient_type gradient{};
     for (int k = 0; k < n; k++) {
       for (int l = 0; l < n; l++) {
-        gradient -= invA[i][k] * A[k][l].gradient * invA[l][j];
+        gradient = gradient - invA[i][k] * A[k][l].gradient * invA[l][j];
       }
     }
     return dual<gradient_type>{value, gradient};

@@ -77,6 +77,69 @@ private:
   double shear_modulus_;
 };
 
+/// Linear isotropic thermal conduction material model
+template <int dim>
+class NeoHookean {
+public:
+  /**
+   * @brief Construct a new Linear Isotropic Conductor object
+   *
+   * @param density Density of the material (mass/volume)
+   * @param specific_heat_capacity Specific heat capacity of the material (energy / (mass * temp))
+   * @param conductivity Thermal conductivity of the material (power / (length * temp))
+   */
+  NeoHookean(double density = 1.0, double shear_modulus = 1.0, double bulk_modulus = 1.0)
+      : density_(density), bulk_modulus_(bulk_modulus), shear_modulus_(shear_modulus)
+  {
+    SLIC_ERROR_ROOT_IF(shear_modulus_ < 0.0, "Conductivity must be positive in the neo-Hookean material model.");
+
+    SLIC_ERROR_ROOT_IF(density_ < 0.0, "Density must be positive in the neo-Hookean material model.");
+
+    SLIC_ERROR_ROOT_IF(bulk_modulus_ < 0.0,
+                       "Specific heat capacity must be positive in the neo-Hookeanmaterial model.");
+  }
+
+  /**
+   * @brief Function defining the thermal flux (constitutive response)
+   *
+   * @tparam T1 type of the temperature (e.g. tensor or dual type)
+   * @tparam T2 type of the temperature gradient (e.g. tensor or dual type)
+   * @param temperature_gradient Gradient of the temperature (du_dx)
+   * @return The thermal flux of the material model
+   */
+  template <typename T>
+  SERAC_HOST_DEVICE T operator()(const T& du_dX) const
+  {
+    auto I         = Identity<dim>();
+    //auto lambda    = bulk_modulus_ - (2.0 / dim) * shear_modulus_;
+    //auto B_minus_I = du_dX * transpose(du_dX) + transpose(du_dX) + du_dX;
+
+    //auto J = det(du_dX + I);
+
+    //auto stress = lambda * log(J) * (1.0 / det(J)) * I + shear_modulus_ * B_minus_I;
+    auto stress = log(du_dX[0][0]) * I;
+    return stress;
+  }
+
+  /**
+   * @brief The density (mass per volume) of the material model
+   *
+   * @tparam dim The dimension of the problem
+   * @return The density
+   */
+  SERAC_HOST_DEVICE double density(const tensor<double, dim>& /* x */) const { return density_; }
+
+private:
+  /// Density
+  double density_;
+
+  /// Specific heat capacity
+  double bulk_modulus_;
+
+  /// Constant isotropic thermal conductivity
+  double shear_modulus_;
+};
+
 /// Constant thermal source model
 template <int dim>
 struct ConstantBodyForce {
