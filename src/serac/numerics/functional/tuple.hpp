@@ -626,15 +626,25 @@ SERAC_HOST_DEVICE auto apply(lambda f, const tuple<T...>& args)
   return apply_helper(f, std::move(args), std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>());
 }
 
+/**
+ * @brief a struct used to determine the type at index I of a tuple
+ * 
+ * @note see: https://en.cppreference.com/w/cpp/utility/tuple/tuple_element 
+ * 
+ * @tparam I the index of the desired type
+ * @tparam T a tuple of different types
+ */
 template <size_t I, class T>
 struct tuple_element;
 
 // recursive case
+/// @overload
 template <size_t I, class Head, class... Tail>
 struct tuple_element<I, tuple<Head, Tail...>> : tuple_element<I - 1, tuple<Tail...>> {
 };
 
 // base case
+/// @overload
 template <class Head, class... Tail>
 struct tuple_element<0, tuple<Head, Tail...>> {
   using type = Head;
