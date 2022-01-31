@@ -32,7 +32,7 @@ set(infrastructure_sources
     )
 
 set(infrastructure_depends axom fmt mpi cli11 mfem)
-blt_list_append( TO infrastructure_depends ELEMENTS caliper IF ${SERAC_USE_CALIPER} )
+blt_list_append( TO infrastructure_depends ELEMENTS caliper adiak IF ${SERAC_ENABLE_PROFILING} )
 
 blt_add_library(
     NAME        serac_infrastructure

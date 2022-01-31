@@ -5,8 +5,7 @@
 # SPDX-License-Identifier: (BSD-3-Clause) 
 
 set(benchmark_dependencies serac_physics)
-blt_list_append(TO benchmark_dependencies ELEMENTS adiak IF ${SERAC_USE_ADIAK})
-blt_list_append(TO benchmark_dependencies ELEMENTS caliper IF ${SERAC_USE_CALIPER})
+blt_list_append(TO benchmark_dependencies ELEMENTS caliper adiak IF ${SERAC_ENABLE_PROFILING})
 blt_list_append(TO benchmark_dependencies ELEMENTS mpi IF ${ENABLE_MPI})
 
 blt_add_executable(NAME benchmark_serac_thermal_functional
