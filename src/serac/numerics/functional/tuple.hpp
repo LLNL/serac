@@ -231,7 +231,7 @@ SERAC_HOST_DEVICE constexpr auto& get(tuple<T...>& values)
  * @brief return a copy of the ith tuple entry
  */
 template <int i, typename... T>
-SERAC_HOST_DEVICE constexpr auto get(const tuple<T...>& values)
+SERAC_HOST_DEVICE constexpr const auto & get(const tuple<T...>& values)
 {
   static_assert(i < sizeof...(T), "");
   if constexpr (i == 0) {
@@ -625,5 +625,20 @@ SERAC_HOST_DEVICE auto apply(lambda f, const tuple<T...>& args)
 {
   return apply_helper(f, std::move(args), std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>());
 }
+
+template< size_t I, class T >
+struct tuple_element;
+
+// recursive case
+template< size_t I, class Head, class... Tail >
+struct tuple_element<I, tuple<Head, Tail...>>
+    : tuple_element<I-1, tuple<Tail...>> { };
+ 
+// base case
+template< class Head, class... Tail >
+struct tuple_element<0, tuple<Head, Tail...>> {
+   using type = Head;
+};
+
 
 }  // namespace serac
