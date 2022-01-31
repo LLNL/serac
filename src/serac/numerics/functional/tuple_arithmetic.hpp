@@ -182,7 +182,10 @@ using one_hot_t = typename one_hot<i, n, T>::type;
  * @param arg the value to be promoted
  */
 template <int i, int N>
-constexpr auto make_dual_helper(zero) { return zero{}; }
+constexpr auto make_dual_helper(zero)
+{
+  return zero{};
+}
 
 /**
  * @tparam i the index where the non-`serac::zero` derivative term appears

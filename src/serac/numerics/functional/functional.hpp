@@ -480,9 +480,9 @@ private:
     }
 
     /// @brief assemble element matrices and form an mfem::HypreParMatrix
-    friend std::unique_ptr< mfem::HypreParMatrix > assemble(Gradient & grad) {
-
-      auto & form = grad.form_;
+    friend std::unique_ptr<mfem::HypreParMatrix> assemble(Gradient& grad)
+    {
+      auto& form = grad.form_;
 
       // the CSR graph (sparsity pattern) is reusable, so we cache
       // that and ask mfem to not free that memory in ~SparseMatrix()
@@ -539,19 +539,19 @@ private:
       }
 
       auto J_local =
-          mfem::SparseMatrix(grad.lookup_tables.row_ptr.data(), grad.lookup_tables.col_ind.data(), values, form.output_L_.Size(),
-                             form.input_L_[grad.which_argument].Size(), sparse_matrix_frees_graph_ptrs,
-                             sparse_matrix_frees_values_ptr, col_ind_is_sorted);
+          mfem::SparseMatrix(grad.lookup_tables.row_ptr.data(), grad.lookup_tables.col_ind.data(), values,
+                             form.output_L_.Size(), form.input_L_[grad.which_argument].Size(),
+                             sparse_matrix_frees_graph_ptrs, sparse_matrix_frees_values_ptr, col_ind_is_sorted);
 
       auto* R = form.test_space_->Dof_TrueDof_Matrix();
 
-      auto* A =
-          new mfem::HypreParMatrix(grad.test_space_->GetComm(), grad.test_space_->GlobalVSize(), grad.trial_space_->GlobalVSize(),
-                                   grad.test_space_->GetDofOffsets(), grad.trial_space_->GetDofOffsets(), &J_local);
+      auto* A = new mfem::HypreParMatrix(grad.test_space_->GetComm(), grad.test_space_->GlobalVSize(),
+                                         grad.trial_space_->GlobalVSize(), grad.test_space_->GetDofOffsets(),
+                                         grad.trial_space_->GetDofOffsets(), &J_local);
 
       auto* P = grad.trial_space_->Dof_TrueDof_Matrix();
 
-      std::unique_ptr < mfem::HypreParMatrix > K(mfem::RAP(R, A, P));
+      std::unique_ptr<mfem::HypreParMatrix> K(mfem::RAP(R, A, P));
 
       delete A;
 
@@ -559,7 +559,6 @@ private:
     };
 
   private:
-
     /// @brief The "parent" @p Functional to calculate gradients with
     Functional<test(trials...), exec>& form_;
 

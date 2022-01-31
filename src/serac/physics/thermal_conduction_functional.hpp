@@ -352,7 +352,7 @@ public:
 
           [this](const mfem::Vector& u) -> mfem::Operator& {
             auto [r, drdu] = K_functional_(differentiate_wrt(u));
-            J_ = assemble(drdu);
+            J_             = assemble(drdu);
             bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             return *J_;
           });

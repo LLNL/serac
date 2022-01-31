@@ -66,7 +66,7 @@ void check_gradient(Functional<T>& f, mfem::Vector& U)
   auto [value, dfdU] = f(differentiate_wrt(U));
   mfem::Vector df2   = dfdU(dU);
 
-  std::unique_ptr< mfem::HypreParMatrix > dfdU_matrix = assemble(dfdU);
+  std::unique_ptr<mfem::HypreParMatrix> dfdU_matrix = assemble(dfdU);
 
   mfem::Vector df3 = (*dfdU_matrix) * dU;
 

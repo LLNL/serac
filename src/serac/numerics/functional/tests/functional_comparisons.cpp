@@ -126,7 +126,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   // Compute the gradient using functional
   auto [r, drdU] = residual(differentiate_wrt(U));
 
-  std::unique_ptr< mfem::HypreParMatrix > J_func = assemble(drdU);
+  std::unique_ptr<mfem::HypreParMatrix> J_func = assemble(drdU);
 
   // Compute the gradient action using standard MFEM and functional
   mfem::Vector g1 = (*J_mfem) * U;
@@ -219,7 +219,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 
   auto [r, drdU] = residual(differentiate_wrt(U));
 
-  std::unique_ptr< mfem::HypreParMatrix > J_func = assemble(drdU);
+  std::unique_ptr<mfem::HypreParMatrix> J_func = assemble(drdU);
 
   mfem::Vector g1 = (*J_mfem) * U;
   mfem::Vector g2 = drdU * U;
@@ -298,7 +298,7 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
 
   auto [r, drdU] = residual(differentiate_wrt(U));
 
-  std::unique_ptr< mfem::HypreParMatrix > J_func = assemble(drdU);
+  std::unique_ptr<mfem::HypreParMatrix> J_func = assemble(drdU);
 
   mfem::Vector g1 = (*J_mfem) * U;
   mfem::Vector g2 = drdU * U;

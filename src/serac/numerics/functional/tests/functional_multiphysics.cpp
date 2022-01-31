@@ -49,7 +49,7 @@ void check_gradient(Functional<T>& f, mfem::Vector& U, mfem::Vector& dU_dt)
     auto [value, dfdU] = f(differentiate_wrt(U), dU_dt);
     mfem::Vector df2   = dfdU(dU);
 
-    std::unique_ptr< mfem::HypreParMatrix > dfdU_matrix = assemble(dfdU);
+    std::unique_ptr<mfem::HypreParMatrix> dfdU_matrix = assemble(dfdU);
 
     mfem::Vector df3 = (*dfdU_matrix) * dU;
 
@@ -76,7 +76,7 @@ void check_gradient(Functional<T>& f, mfem::Vector& U, mfem::Vector& dU_dt)
     auto [value, df_ddU_dt] = f(U, differentiate_wrt(dU_dt));
     mfem::Vector df2        = df_ddU_dt(ddU_dt);
 
-    std::unique_ptr< mfem::HypreParMatrix > df_ddU_dt_matrix = assemble(df_ddU_dt);
+    std::unique_ptr<mfem::HypreParMatrix> df_ddU_dt_matrix = assemble(df_ddU_dt);
 
     mfem::Vector df3 = (*df_ddU_dt_matrix) * ddU_dt;
 
