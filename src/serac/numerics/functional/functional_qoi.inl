@@ -66,15 +66,16 @@ class Functional<double(trials...), exec> {
 
   class Gradient;
 
+  // clang-format off
   template <typename... T>
   struct operator_paren_return {
-    using type =
-        typename std::conditional<(std::is_same_v<T, dual_vector> + ...) ==
-                                      1,                            // if the there is a dual number in the pack
-                                  serac::tuple<double, Gradient&>,  // then we return the value and the derivative
-                                  double                            // otherwise, we just return the value
-                                  >::type;
+    using type = typename std::conditional<
+        (std::is_same_v<T, differentiate_wrt_this> + ...) == 1, // if the there is a dual number in the pack
+        serac::tuple<double, Gradient&>,                        // then we return the value and the derivative
+        double                                                  // otherwise, we just return the value
+        >::type;
   };
+  // clang-format on
 
 public:
   /**
@@ -308,13 +309,13 @@ public:
   template <typename... T>
   typename operator_paren_return<T...>::type operator()(const T&... args)
   {
-    constexpr int num_dual_arguments = (std::is_same_v<T, dual_vector> + ...);
-    static_assert(num_dual_arguments <= 1,
+    constexpr int num_differentiated_arguments = (std::is_same_v<T, differentiate_wrt_this> + ...);
+    static_assert(num_differentiated_arguments <= 1,
                   "Error: Functional::operator() can only differentiate w.r.t. 1 argument a time");
     static_assert(sizeof...(T) == num_trial_spaces,
                   "Error: Functional::operator() must take exactly as many arguments as trial spaces");
 
-    constexpr int                                                            wrt = index_of_dual_vector<T...>();
+    [[maybe_unused]] constexpr int                                           wrt = index_of_differentiation<T...>();
     std::array<std::reference_wrapper<const mfem::Vector>, num_trial_spaces> input_T{args...};
 
     // get the values for each local processor
@@ -360,7 +361,7 @@ public:
     // scatter-add to compute global residuals
     P_test_->MultTranspose(output_L_, output_T_);
 
-    if constexpr (num_dual_arguments == 1) {
+    if constexpr (num_differentiated_arguments == 1) {
       // if the user has indicated they'd like to evaluate and differentiate w.r.t.
       // a specific argument, then we return both the value and gradient w.r.t. that argument
       //
@@ -402,17 +403,16 @@ private:
         : form_(f),
           lookup_tables(*(f.trial_space_[which])),
           which_argument(which),
-          gradient_L_(f.trial_space_[which]->GetVSize()),
-          gradient_T_(f.trial_space_[which]->NewTrueDofVector())
-    {
-    }
+          gradient_L_(f.trial_space_[which]->GetVSize()) {}
 
     void Mult(const mfem::Vector& x, mfem::Vector& y) const { form_.GradientMult(x, y); }
 
     double operator()(const mfem::Vector& x) const { return form_.ActionOfGradient(x, which_argument); }
 
-    operator mfem::HypreParVector &()
+    std::unique_ptr< mfem::HypreParVector > assemble()
     {
+      std::unique_ptr< mfem::HypreParVector > gradient_T(form_.trial_space_[which_argument]->NewTrueDofVector());
+
       gradient_L_ = 0.0;
 
       if (form_.domain_integrals_.size() > 0) {
@@ -449,10 +449,12 @@ private:
         }
       }
 
-      form_.P_trial_[which_argument]->MultTranspose(gradient_L_, *gradient_T_);
+      form_.P_trial_[which_argument]->MultTranspose(gradient_L_, *gradient_T);
 
-      return *gradient_T_;
+      return gradient_T;
     }
+
+    friend auto assemble(Gradient & g) { return g.assemble(); }
 
   private:
     /**
@@ -465,8 +467,6 @@ private:
     uint32_t which_argument;
 
     mfem::Vector gradient_L_;
-
-    std::unique_ptr<mfem::HypreParVector> gradient_T_;
   };
 
   /// @brief The input set of local DOF values (i.e., on the current rank)

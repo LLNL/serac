@@ -92,7 +92,7 @@ void check_gradient(Functional<T>& f, mfem::HypreParVector& U)
 
   auto [unused, dfdU] = f(differentiate_wrt(U));
 
-  mfem::HypreParVector& dfdU_vec = dfdU;
+  std::unique_ptr< mfem::HypreParVector > dfdU_vec = assemble(dfdU);
 
   // TODO: fix this weird copy ctor behavior in mfem::HypreParVector
   auto U_plus = U;
@@ -104,7 +104,7 @@ void check_gradient(Functional<T>& f, mfem::HypreParVector& U)
   U_minus.Add(-epsilon, dU);
 
   double df1 = (f(U_plus) - f(U_minus)) / (2 * epsilon);
-  double df2 = InnerProduct(dfdU_vec, dU);
+  double df2 = InnerProduct(*dfdU_vec, dU);
   double df3 = dfdU(dU);
 
   double relative_error1 = (df1 - df2) / df1;
@@ -145,9 +145,9 @@ void check_gradient(Functional<T>& f, mfem::HypreParVector& U, mfem::HypreParVec
     auto [value, dfdU] = f(differentiate_wrt(U), dU_dt);
     double df2         = dfdU(dU);
 
-    mfem::HypreParVector& dfdU_vector = dfdU;
+    std::unique_ptr< mfem::HypreParVector > dfdU_vector = assemble(dfdU);
 
-    double df3 = mfem::InnerProduct(dfdU_vector, dU);
+    double df3 = mfem::InnerProduct(*dfdU_vector, dU);
 
     double relative_error1 = fabs(df1 - df2) / fabs(df1);
     double relative_error2 = fabs(df1 - df3) / fabs(df1);
@@ -170,9 +170,9 @@ void check_gradient(Functional<T>& f, mfem::HypreParVector& U, mfem::HypreParVec
     auto [value, df_ddU_dt] = f(U, differentiate_wrt(dU_dt));
     double df2              = df_ddU_dt(ddU_dt);
 
-    mfem::HypreParVector& df_ddU_dt_vector = df_ddU_dt;
+    std::unique_ptr< mfem::HypreParVector > df_ddU_dt_vector = assemble(df_ddU_dt);
 
-    double df3 = mfem::InnerProduct(df_ddU_dt_vector, ddU_dt);
+    double df3 = mfem::InnerProduct(*df_ddU_dt_vector, ddU_dt);
 
     double relative_error1 = fabs(df1 - df2) / fabs(df1);
     double relative_error2 = fabs(df1 - df3) / fabs(df1);
@@ -180,7 +180,7 @@ void check_gradient(Functional<T>& f, mfem::HypreParVector& U, mfem::HypreParVec
 
     // note: these first two relative tolerances are really coarse,
     // since it seems the finite-difference approximation of the derivative
-    // of this function is not very accurate
+    // of this function is not very accurate (?)
     //
     // the action-of-gradient and gradient vector versions seem to agree to
     // machine precision

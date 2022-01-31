@@ -25,13 +25,12 @@
 
 namespace serac {
 
-// this type exists as a way to signal to `serac::Functional` that the function
-// serac::Functional::operator()` should differentiate w.r.t. a specific argument
-//
-// TODO: better name
-struct dual_vector {
+/**
+ * @brief this type exists solely as a way to signal to `serac::Functional` that the function
+ * serac::Functional::operator()` should differentiate w.r.t. a specific argument
+ */
+struct differentiate_wrt_this {
   const mfem::Vector& ref;
-
   operator const mfem::Vector &() const { return ref; }
 };
 
@@ -48,25 +47,25 @@ struct dual_vector {
  *     auto [value, gradient_wrt_arg1] = my_functional(arg0, differentiate_wrt(arg1));
  * @endcode
  */
-dual_vector differentiate_wrt(const mfem::Vector& v) { return dual_vector{v}; }
+auto differentiate_wrt(const mfem::Vector& v) { return differentiate_wrt_this{v}; }
 
 /**
- * @tparam T a list of types, containing at most 1 `dual_vector`
+ * @tparam T a list of types, containing at most 1 `differentiate_wrt_this`
  *
  * @brief given a list of types, this function returns the index that corresponds to the type `dual_vector`.
  *
  * e.g.
  * @code{.cpp}
- * static_assert(index_of_dual_vector < foo, bar, dual_vector, baz, qux >() == 2);
+ * static_assert(index_of_dual_vector < foo, bar, differentiate_wrt_this, baz, qux >() == 2);
  * @endcode
  */
 template <typename... T>
-constexpr int index_of_dual_vector()
+constexpr int index_of_differentiation()
 {
   constexpr int n                  = int(sizeof...(T));
-  bool          is_a_dual_vector[] = {std::is_same_v<T, dual_vector>...};
+  bool          matching[] = {std::is_same_v<T, differentiate_wrt_this>...};
   for (int i = 0; i < n; i++) {
-    if (is_a_dual_vector[i]) {
+    if (matching[i]) {
       return i;
     }
   }
@@ -124,14 +123,16 @@ class Functional<test(trials...), exec> {
 
   class Gradient;
 
+  // clang-format off
   template <typename... T>
   struct operator_paren_return {
     using type = typename std::conditional<
-        (std::is_same_v<T, dual_vector> + ...) == 1,  // if the there is a dual number in the pack
-        serac::tuple<mfem::Vector&, Gradient&>,       // then we return the value and the derivative
-        mfem::Vector&                                 // otherwise, we just return the value
+        (std::is_same_v<T, differentiate_wrt_this> + ...) == 1, // if the there is a dual number in the pack
+        serac::tuple<mfem::Vector&, Gradient&>,                 // then we return the value and the derivative
+        mfem::Vector&                                           // otherwise, we just return the value
         >::type;
   };
+  // clang-format on
 
 public:
   /**
@@ -351,13 +352,13 @@ public:
   template <typename... T>
   typename operator_paren_return<T...>::type operator()(const T&... args)
   {
-    constexpr int num_dual_arguments = (std::is_same_v<T, dual_vector> + ...);
-    static_assert(num_dual_arguments <= 1,
+    constexpr int num_differentiated_arguments = (std::is_same_v<T, differentiate_wrt_this> + ...);
+    static_assert(num_differentiated_arguments <= 1,
                   "Error: Functional::operator() can only differentiate w.r.t. 1 argument a time");
     static_assert(sizeof...(T) == num_trial_spaces,
                   "Error: Functional::operator() must take exactly as many arguments as trial spaces");
 
-    [[maybe_unused]] constexpr int                                           wrt = index_of_dual_vector<T...>();
+    [[maybe_unused]] constexpr int                                           wrt = index_of_differentiation<T...>();
     std::array<std::reference_wrapper<const mfem::Vector>, num_trial_spaces> input_T{args...};
 
     // get the values for each local processor
@@ -408,7 +409,7 @@ public:
       output_T_(ess_tdof_list_[i]) = 0.0;
     }
 
-    if constexpr (num_dual_arguments == 1) {
+    if constexpr (num_differentiated_arguments == 1) {
       // if the user has indicated they'd like to evaluate and differentiate w.r.t.
       // a specific argument, then we return both the value and gradient w.r.t. that argument
       //
@@ -480,10 +481,8 @@ private:
     }
 
     /// @brief assemble element matrices and form an mfem::HypreParMatrix
-    friend std::unique_ptr<mfem::HypreParMatrix> assemble(Gradient& grad)
+    std::unique_ptr<mfem::HypreParMatrix> assemble()
     {
-      auto& form = grad.form_;
-
       // the CSR graph (sparsity pattern) is reusable, so we cache
       // that and ask mfem to not free that memory in ~SparseMatrix()
       constexpr bool sparse_matrix_frees_graph_ptrs = false;
@@ -494,17 +493,17 @@ private:
 
       constexpr bool col_ind_is_sorted = true;
 
-      double* values = new double[grad.lookup_tables.nnz]{};
+      double* values = new double[lookup_tables.nnz]{};
 
       // each element uses the lookup tables to add its contributions
       // to their appropriate locations in the global sparse matrix
-      if (form.domain_integrals_.size() > 0) {
-        auto& K_elem = form.element_gradients_[grad.which_argument];
-        auto& LUT    = grad.lookup_tables.element_nonzero_LUT;
+      if (form_.domain_integrals_.size() > 0) {
+        auto& K_elem = form_.element_gradients_[which_argument];
+        auto& LUT    = lookup_tables.element_nonzero_LUT;
 
         detail::zero_out(K_elem);
-        for (auto& domain : form.domain_integrals_) {
-          domain.ComputeElementGradients(view(K_elem), grad.which_argument);
+        for (auto& domain : form_.domain_integrals_) {
+          domain.ComputeElementGradients(view(K_elem), which_argument);
         }
 
         for (axom::IndexType e = 0; e < K_elem.shape()[0]; e++) {
@@ -519,13 +518,13 @@ private:
 
       // each boundary element uses the lookup tables to add its contributions
       // to their appropriate locations in the global sparse matrix
-      if (form.bdr_integrals_.size() > 0) {
-        auto& K_belem = form.bdr_element_gradients_[grad.which_argument];
-        auto& LUT     = grad.lookup_tables.bdr_element_nonzero_LUT;
+      if (form_.bdr_integrals_.size() > 0) {
+        auto& K_belem = form_.bdr_element_gradients_[which_argument];
+        auto& LUT     = lookup_tables.bdr_element_nonzero_LUT;
 
         detail::zero_out(K_belem);
-        for (auto& boundary : form.bdr_integrals_) {
-          boundary.ComputeElementGradients(view(K_belem), grad.which_argument);
+        for (auto& boundary : form_.bdr_integrals_) {
+          boundary.ComputeElementGradients(view(K_belem), which_argument);
         }
 
         for (axom::IndexType e = 0; e < K_belem.shape()[0]; e++) {
@@ -539,17 +538,17 @@ private:
       }
 
       auto J_local =
-          mfem::SparseMatrix(grad.lookup_tables.row_ptr.data(), grad.lookup_tables.col_ind.data(), values,
-                             form.output_L_.Size(), form.input_L_[grad.which_argument].Size(),
+          mfem::SparseMatrix(lookup_tables.row_ptr.data(), lookup_tables.col_ind.data(), values,
+                             form_.output_L_.Size(), form_.input_L_[which_argument].Size(),
                              sparse_matrix_frees_graph_ptrs, sparse_matrix_frees_values_ptr, col_ind_is_sorted);
 
-      auto* R = form.test_space_->Dof_TrueDof_Matrix();
+      auto* R = form_.test_space_->Dof_TrueDof_Matrix();
 
-      auto* A = new mfem::HypreParMatrix(grad.test_space_->GetComm(), grad.test_space_->GlobalVSize(),
-                                         grad.trial_space_->GlobalVSize(), grad.test_space_->GetDofOffsets(),
-                                         grad.trial_space_->GetDofOffsets(), &J_local);
+      auto* A = new mfem::HypreParMatrix(test_space_->GetComm(), test_space_->GlobalVSize(),
+                                         trial_space_->GlobalVSize(), test_space_->GetDofOffsets(),
+                                         trial_space_->GetDofOffsets(), &J_local);
 
-      auto* P = grad.trial_space_->Dof_TrueDof_Matrix();
+      auto* P = trial_space_->Dof_TrueDof_Matrix();
 
       std::unique_ptr<mfem::HypreParMatrix> K(mfem::RAP(R, A, P));
 
@@ -557,6 +556,8 @@ private:
 
       return K;
     };
+
+    friend auto assemble(Gradient & g) { return g.assemble(); }
 
   private:
     /// @brief The "parent" @p Functional to calculate gradients with
