@@ -58,8 +58,6 @@ class Axom(CachedCMakePackage, CudaPackage):
     # -----------------------------------------------------------------------
     variant('shared',   default=True,
             description='Enable build of shared libraries')
-    variant('debug',    default=False,
-            description='Build debug instead of optimized version')
 
     variant('examples', default=True, description='Build examples')
     variant('tools',    default=True, description='Build tools')

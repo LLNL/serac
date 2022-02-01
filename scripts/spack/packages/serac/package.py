@@ -50,6 +50,8 @@ class Serac(CachedCMakePackage, CudaPackage):
             description='Enable build of shared libraries')
     variant('asan', default=False,
             description='Enable Address Sanitizer flags')
+    variant('openmp', default=True,
+            description='Enable OpenMP support')
 
     varmsg = "Build development tools (such as Sphinx, CppCheck, ClangFormat, etc...)"
     variant("devtools", default=False, description=varmsg)
@@ -86,7 +88,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on('py-sphinx', when="+devtools")
     depends_on('py-ats', when="+devtools")
 
-    depends_on("sundials~shared+hypre+monitoring~examples-c~examples-f77~examples-install",
+    depends_on("sundials~shared+hypre+monitoring~examples~examples-install",
                when="+sundials")
 
     # Libraries that support +debug
@@ -103,6 +105,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("mfem+netcdf", when="+netcdf")
     depends_on("mfem+petsc", when="+petsc")
     depends_on("mfem+sundials", when="+sundials")
+    depends_on("mfem+amgx", when="+cuda")
     depends_on("netcdf-c@4.7.4~shared", when="+netcdf")
 
     # Needs to be first due to a bug with the Spack concretizer
@@ -111,22 +114,28 @@ class Serac(CachedCMakePackage, CudaPackage):
     #  (includes, libs, etc) instead of hdf5 info
     depends_on("hdf5@1.8.21+hl~mpi~shared")
 
-    # Axom enables RAJA/Umpire by default
-    depends_on("axom~raja", when="~raja")
-    depends_on("axom~umpire", when="~umpire")
+    depends_on("raja~shared~examples~exercises", when="+raja")
+    depends_on("raja~openmp", when="+raja~openmp")
+    depends_on("raja+openmp", when="+raja+openmp")
     depends_on("camp", when="+raja")
-    depends_on("raja~openmp~shared~examples~exercises", when="+raja")
+
     depends_on("umpire@6.0.0serac~shared~examples~device_alloc", when="+umpire")
+    depends_on("umpire~openmp", when="+umpire~openmp")
+    depends_on("umpire+openmp", when="+umpire+openmp")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
-    # "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
-    axom_spec = "axom@0.6.0serac~openmp~fortran~examples+mfem~shared+cpp14+lua"
+    axom_spec = "axom@0.6.0serac~fortran~examples+mfem~shared+cpp14+lua"
     cmake_debug_deps = [axom_spec,
                         "metis@5.1.0~shared",
                         "parmetis@4.0.3~shared"]
     for dep in cmake_debug_deps:
         depends_on("{0}".format(dep))
         depends_on("{0} build_type=Debug".format(dep), when="+debug")
+
+    depends_on("axom~raja", when="~raja")
+    depends_on("axom~umpire", when="~umpire")
+    depends_on("axom~openmp", when="~openmp")
+    depends_on("axom+openmp", when="+openmp")
 
     # Libraries that do not have a debug variant
     depends_on("conduit@0.7.2serac~shared~python~test")
@@ -139,31 +148,9 @@ class Serac(CachedCMakePackage, CudaPackage):
     conflicts('%intel', msg="Intel has a bug with c++17 support as of May 2020")
 
     # ASan is only supported by GCC and (some) LLVM-derived
-    # compilers. There's no convenient spec syntax for negating sets
-    # of compilers -- in this case, the conflicts arise with compilers
-    # that aren't gcc, clang, or apple-clang.
-    #
-    # The preferred approach taken by upstream Spack as of upstream
-    # commit 24c01d5 is to raise an exception within a package stage
-    # (e.g., xios does so in its install stage, pfunit does so in its
-    # setup_build_environment stage, wrf does so in its configure
-    # stage, elemental does so in its cmake_args stage).
-    #
-    # The trouble with this approach in isolation is that the
-    # concretizer can't detect those conflicts, so the exception is
-    # raised after building all of a package's dependents. Some of the
-    # more likely conflicts are listed here to enable
-    # concretization-time conflict detection; the list of compilers in
-    # the loop is every compiler listed in the spack.compilers package
-    # (https://spack.readthedocs.io/en/latest/spack.compilers.html)
-    # except gcc, clang, and apple-clang, to err on the conservative side.
+    # compilers.
     asan_compiler_blacklist = {'aocc', 'arm', 'cce', 'fj', 'intel', 'nag',
-                          'nvhpc', 'oneapi', 'pgi', 'xl', 'xl_r'}
-
-    # Whitelist of compilers known to support Address Sanitizer;
-    # used in conjunction with blacklist of compilers suspected
-    # not to support AddressSanitizer in this package's conflict
-    # directives.
+                               'nvhpc', 'oneapi', 'pgi', 'xl', 'xl_r'}
     asan_compiler_whitelist = {'gcc', 'clang', 'apple-clang'}
 
     # ASan compiler blacklist and whitelist should be disjoint.
@@ -180,23 +167,14 @@ class Serac(CachedCMakePackage, CudaPackage):
     conflicts('cuda_arch=none', when='+cuda',
               msg='CUDA architecture is required')
     depends_on("amgx@2.1.x", when="+cuda")
-    cuda_deps = ["mfem", "axom"]
+    cuda_deps = ["axom", "caliper", "mfem", "raja", "sundials", "umpire"]
     for dep in cuda_deps:
         depends_on("{0}+cuda".format(dep), when="+cuda")
+        for sm_ in CudaPackage.cuda_arch_values:
+            depends_on('{0} cuda_arch=sm_{1}'.format(dep, sm_),
+                    when='cuda_arch={0}'.format(sm_))
     depends_on("caliper+cuda", when="+caliper+cuda")
 
-    for sm_ in CudaPackage.cuda_arch_values:
-        depends_on('mfem+amgx cuda_arch=sm_{0}'.format(sm_),
-                when='cuda_arch={0}'.format(sm_))
-        depends_on('axom cuda_arch={0}'.format(sm_),
-                when='cuda_arch={0}'.format(sm_))
-        depends_on('raja cuda_arch={0}'.format(sm_),
-                when='cuda_arch={0}'.format(sm_))
-        # Caliper may not currently use its cuda_arch
-        # but probably good practice to set it
-        depends_on('caliper cuda_arch={0}'.format(sm_),
-                when='+caliper cuda_arch={0}'.format(sm_))
-        
 
     def _get_sys_type(self, spec):
         sys_type = spec.architecture
