@@ -358,6 +358,22 @@ SERAC_HOST_DEVICE constexpr auto operator*(T /*other*/, zero)
   return zero{};
 }
 
+/** @brief the quotient of `zero` with something else is always `zero` */
+template <typename T>
+SERAC_HOST_DEVICE constexpr auto operator/(zero, T /*other*/)
+{
+  static_assert(!is_zero<T>::value, "Zero divided by zero is undefined.");
+  return zero{};
+}
+
+/** @brief the quotient of something else with `zero` is undefined */
+template <typename T>
+SERAC_HOST_DEVICE constexpr auto operator/(T /*other*/, zero)
+{
+  SLIC_ASSERT("Division by zero is undefined.");
+  return zero{};
+}
+
 /** @brief let `zero` be accessed like a tuple */
 template <int i>
 zero& get(zero& x)

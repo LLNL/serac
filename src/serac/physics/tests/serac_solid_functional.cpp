@@ -275,11 +275,11 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
   EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
 }
 
-TEST(solid_functional, 2D_linear_static) { functional_solid_test_static<1, 2>(1.558806334); }
-TEST(solid_functional, 2D_quad_static) { functional_solid_test_static<2, 2>(2.43087824526); }
+TEST(solid_functional, 2D_linear_static) { functional_solid_test_static<1, 2>(1.511052595); }
+TEST(solid_functional, 2D_quad_static) { functional_solid_test_static<2, 2>(2.18604855); }
 
-TEST(solid_functional, 3D_linear_static) { functional_solid_test_static<1, 3>(1.4071483412); }
-TEST(solid_functional, 3D_quad_static) { functional_solid_test_static<2, 3>(2.121032116); }
+TEST(solid_functional, 3D_linear_static) { functional_solid_test_static<1, 3>(1.370856102); }
+TEST(solid_functional, 3D_quad_static) { functional_solid_test_static<2, 3>(1.949511693); }
 
 TEST(solid_functional, 2D_linear_dynamic) { functional_solid_test_dynamic<1, 2>(1.525641434); }
 TEST(solid_functional, 2D_quad_dynamic) { functional_solid_test_dynamic<2, 2>(1.5325754040); }

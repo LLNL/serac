@@ -111,13 +111,12 @@ public:
   SERAC_HOST_DEVICE T operator()(const T& du_dX) const
   {
     auto I         = Identity<dim>();
-    //auto lambda    = bulk_modulus_ - (2.0 / dim) * shear_modulus_;
-    //auto B_minus_I = du_dX * transpose(du_dX) + transpose(du_dX) + du_dX;
+    auto lambda    = bulk_modulus_ - (2.0 / dim) * shear_modulus_;
+    auto B_minus_I = du_dX * transpose(du_dX) + transpose(du_dX) + du_dX;
 
-    //auto J = det(du_dX + I);
+    auto J = det(du_dX + I);
 
-    //auto stress = lambda * log(J) * (1.0 / det(J)) * I + shear_modulus_ * B_minus_I;
-    auto stress = log(du_dX[0][0]) * I;
+    auto stress = lambda * log(J) * (1.0 / J) * I + shear_modulus_ * B_minus_I;
     return stress;
   }
 

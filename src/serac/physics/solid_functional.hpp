@@ -263,7 +263,7 @@ public:
           // Get the value and the gradient from the input tuple
           auto [u, du_dX] = displacement;
 
-          auto source = u * 0.0;
+          auto source = zero{};
 
           auto flux = material(du_dX);
 
