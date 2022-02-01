@@ -48,7 +48,7 @@ class Mfem(Package):
     # SERAC EDIT BEGIN
     # Note: we have a `serac-dev` branch on mfem's github that we track pending changes.
     #  Make sure this sha coincides with the git submodule
-    version('4.3.0serac', commit='da400dd0c53b2deaeeb0d0b134e921d45c00f0d0', submodules="True")
+    version('4.3.0serac', commit='e55e90e8d0e331bba3fbe20a98a9f9b12453700b', submodules="True")
     # SERAC EDIT END
 
     version('4.2.0',

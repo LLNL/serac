@@ -104,7 +104,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         message(STATUS "Using MFEM submodule")
 
         #### Store Data that MFEM clears
-        set(tpls_to_save AXOM CALIPER CONDUIT HDF5
+        set(tpls_to_save AMGX AXOM CALIPER CONDUIT HDF5
                          HYPRE LUA METIS NETCDF PETSC RAJA UMPIRE)
         foreach(_tpl ${tpls_to_save})
             set(${_tpl}_DIR_SAVE "${${_tpl}_DIR}")
@@ -133,8 +133,9 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             # Slightly different naming convention
             set(ParMETIS_DIR ${PARMETIS_DIR} CACHE PATH "")
         endif()
+        set(MFEM_USE_OPENMP ${ENABLE_OPENMP} CACHE BOOL "")
         set(MFEM_USE_PETSC ${PETSC_FOUND} CACHE BOOL "")
-        #TODO: RAJA?
+        set(MFEM_USE_RAJA ${RAJA_FOUND} CACHE BOOL "")
         if(SUNDIALS_DIR)
             serac_assert_is_directory(VARIABLE_NAME SUNDIALS_DIR)
             set(MFEM_USE_SUNDIALS ON CACHE BOOL "")
@@ -147,7 +148,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             set(SuperLUDist_DIR ${SUPERLUDIST_DIR} CACHE PATH "")
             set(MFEM_USE_SUPERLU ${ENABLE_MPI} CACHE BOOL "")
         endif()
-        #TODO: Umpire?
+        set(MFEM_USE_UMPIRE ${UMPIRE_FOUND} CACHE BOOL "")
         set(MFEM_USE_ZLIB ON CACHE BOOL "")
 
         #### MFEM Configuration Options

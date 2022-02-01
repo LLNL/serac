@@ -67,9 +67,9 @@ class Serac(CachedCMakePackage, CudaPackage):
            description='Enable Cubit/Genesis reader')
     variant('sundials', default=True,
             description='Build MFEM TPL with SUNDIALS nonlinear/ODE solver support')
-    variant('umpire',   default=False,
+    variant('umpire',   default=True,
             description="Build with portable memory access support")
-    variant('raja',     default=False,
+    variant('raja',     default=True,
             description="Build with portable kernel execution support")
 
     # -----------------------------------------------------------------------
@@ -125,7 +125,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("umpire+openmp", when="+umpire+openmp")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
-    axom_spec = "axom@0.6.0serac~fortran~examples+mfem~shared+cpp14+lua"
+    axom_spec = "axom@0.6.1serac~fortran~examples+mfem~shared+cpp14+lua"
     cmake_debug_deps = [axom_spec,
                         "metis@5.1.0~shared",
                         "parmetis@4.0.3~shared"]
@@ -207,6 +207,9 @@ class Serac(CachedCMakePackage, CudaPackage):
         spec = self.spec
         entries = super(Serac, self).initconfig_hardware_entries()
 
+        entries.append(cmake_cache_option("ENABLE_OPENMP",
+                                          spec.satisfies('+openmp')))
+
         if spec.satisfies('^cuda'):
             entries.append(cmake_cache_option("ENABLE_CUDA", True))
 
@@ -230,10 +233,6 @@ class Serac(CachedCMakePackage, CudaPackage):
                     "# nvcc does not like gtest's 'pthreads' flag\n")
                 entries.append(
                     cmake_cache_option("gtest_disable_pthreads", True))
-
-        entries.append("#------------------{0}".format("-" * 30))
-        entries.append("# Hardware Specifics")
-        entries.append("#------------------{0}\n".format("-" * 30))
 
         if spec.satisfies('target=ppc64le:'):
             # Fix for working around CMake adding implicit link directories
