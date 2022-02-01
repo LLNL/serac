@@ -173,12 +173,12 @@ class Serac(CachedCMakePackage, CudaPackage):
     for dep in cuda_deps:
         depends_on("{0}+cuda".format(dep), when="+cuda")
         for sm_ in CudaPackage.cuda_arch_values:
-            depends_on('{0} cuda_arch=sm_{1}'.format(dep, sm_),
+            depends_on('{0} cuda_arch={1}'.format(dep, sm_),
                     when='cuda_arch={0}'.format(sm_))
 
     depends_on("caliper+cuda", when="+profiling+cuda")
     for sm_ in CudaPackage.cuda_arch_values:
-        depends_on('caliper cuda_arch=sm_{1}'.format(dep, sm_),
+        depends_on('caliper cuda_arch={0}'.format(sm_),
                 when='+profiling cuda_arch={0}'.format(sm_))
 
 
