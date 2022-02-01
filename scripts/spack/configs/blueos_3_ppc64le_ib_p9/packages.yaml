@@ -90,6 +90,11 @@ packages:
     externals:
     - spec: diffutils@3.3
       prefix: /usr
+  elfutils:
+    buildable: false
+    externals:
+    - spec: elfutils@0.176
+      prefix: /usr
   epoxy:
     buildable: false
     externals:
