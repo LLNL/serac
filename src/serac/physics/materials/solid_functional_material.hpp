@@ -19,7 +19,7 @@ namespace serac::solid_util {
 
 /**
  * @brief Linear isotropic elasticity material model
- * 
+ *
  * @tparam dim Spatial dimension of the mesh
  */
 template <int dim>
@@ -27,7 +27,7 @@ class LinearIsotropicElasticity {
 public:
   /**
    * @brief Construct a new Linear Isotropic Elasticity object
-   * 
+   *
    * @param density Density of the material
    * @param shear_modulus Shear modulus of the material
    * @param bulk_modulus Bulk modulus of the material
@@ -82,7 +82,7 @@ private:
 
 /**
  * @brief Neo-Hookean material model
- * 
+ *
  * @tparam dim The spatial dimension of the mesh
  */
 template <int dim>
@@ -90,7 +90,7 @@ class NeoHookean {
 public:
   /**
    * @brief Construct a new Neo-Hookean object
-   * 
+   *
    * @param density Density of the material
    * @param shear_modulus Shear modulus of the material
    * @param bulk_modulus Bulk modulus of the material
@@ -179,7 +179,8 @@ struct ConstantTraction {
    *
    * @return The traction value
    */
-  SERAC_HOST_DEVICE tensor<double, dim> operator()(const tensor<double, dim>& /* x */, const tensor<double, dim>& /* n */, const double /* t */) const
+  SERAC_HOST_DEVICE tensor<double, dim> operator()(const tensor<double, dim>& /* x */,
+                                                   const tensor<double, dim>& /* n */, const double /* t */) const
   {
     return traction_;
   }
@@ -194,7 +195,7 @@ struct TractionFunction {
 
   /**
    * @brief Evaluation for the function-based traction model
-   * 
+   *
    * @param x The spatial coordinate
    * @param n The normal vector
    * @param t The current time
@@ -214,7 +215,7 @@ struct ConstantPressure {
 
   /**
    * @brief Evaluation of the constant pressure model
-   * 
+   *
    * @tparam dim Spatial dimension
    */
   template <int dim>
@@ -232,7 +233,7 @@ struct PressureFunction {
 
   /**
    * @brief Evaluation for the function-based pressure model
-   * 
+   *
    * @param x The spatial coordinate
    * @param t The current time
    * @return The pressure to apply

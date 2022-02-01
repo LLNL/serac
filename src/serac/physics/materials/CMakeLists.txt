@@ -16,6 +16,7 @@ set(materials_headers
     solid_utils.hpp
     thermal_functional_material.hpp
     solid_functional_material.hpp
+    functional_material_utils.hpp
     )
 
 set(materials_depends

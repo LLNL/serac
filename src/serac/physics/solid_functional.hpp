@@ -20,6 +20,7 @@
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/solid.hpp"
+#include "serac/physics/materials/functional_material_utils.hpp"
 
 namespace serac {
 
@@ -27,9 +28,9 @@ namespace serac {
  * @brief The nonlinear solid solver class
  *
  * The nonlinear total Lagrangian quasi-static and dynamic
- * hyperelastic solver object. This uses @Functional to compute the tangent 
+ * hyperelastic solver object. This uses @Functional to compute the tangent
  * stiffness matrices.
- * 
+ *
  * @tparam order The order of the discretization of the displacement and velocity fields
  * @tparam dim The spatial dimension of the mesh
  */
@@ -68,7 +69,7 @@ public:
 
   /**
    * @brief Construct a new Solid Functional object
-   * 
+   *
    * @param options The options for the linear, nonlinear, and ODE solves
    * @param geom_nonlin Flag to include geometric nonlinearities
    * @param keep_deformation Flag to keep the deformation in the underlying mesh post-destruction
@@ -238,6 +239,11 @@ public:
   template <typename MaterialType>
   void setMaterial(MaterialType material)
   {
+    static_assert(has_density<MaterialType, dim>::value,
+                  "Solid functional materials must have a public density(x) method.");
+    static_assert(has_stress<MaterialType, dim>::value,
+                  "Solid functional materials must have a public (du_dx) operator for Kirchoff stress evaluation.");
+
     K_functional_.AddDomainIntegral(
         Dimension<dim>{},
         [this, material](auto, auto displacement) {
@@ -311,6 +317,9 @@ public:
   template <typename BodyForceType>
   void addBodyForce(BodyForceType body_force_function)
   {
+    static_assert(has_body_force<BodyForceType, dim>::value,
+                  "Body forces must have a public (x, t, u, du_dx) operator for force evaluation.");
+
     K_functional_.AddDomainIntegral(
         Dimension<dim>{},
         [body_force_function, this](auto x, auto displacement) {
@@ -341,6 +350,9 @@ public:
   template <typename TractionType>
   void setTractionBCs(TractionType traction_function, bool compute_on_reference = true)
   {
+    static_assert(has_traction_boundary<TractionType, dim>::value,
+                  "Traction must have a public (x, n, t) operator for traction evaluation.");
+
     // TODO fix this when we can get gradients from boundary integrals
     SLIC_ERROR_IF(!compute_on_reference, "SolidFunctional cannot compute traction BCs in deformed configuration");
 
@@ -352,16 +364,19 @@ public:
 
   /**
    * @brief Set the pressure boundary condition
-   * 
+   *
    * @tparam PressureType The type of the pressure load
    * @param pressure_function A function describing the pressure applied to a boundary
    * @param compute_on_reference Flag to compute the pressure in the reference configuration
-   * 
+   *
    * @pre PressureType must have the operator (x, time) to return the thermal flux value
    */
   template <typename PressureType>
   void setPressureBCs(PressureType pressure_function, bool compute_on_reference = true)
   {
+    static_assert(has_pressure_boundary<PressureType, dim>::value,
+                  "Pressure must have a public (x, t) operator for pressure evaluation.");
+
     // TODO fix this when we can get gradients from boundary integrals
     SLIC_ERROR_IF(!compute_on_reference, "SolidFunctional cannot compute pressure BCs in deformed configuration");
 
@@ -497,10 +512,10 @@ protected:
   /// The displacement finite element state
   FiniteElementState displacement_;
 
-  /// Mass functional object 
+  /// Mass functional object
   Functional<test(trial)> M_functional_;
 
-  /// Stiffness functional object 
+  /// Stiffness functional object
   Functional<test(trial)> K_functional_;
 
   /**
@@ -522,7 +537,7 @@ protected:
   /// Assembled sparse matrix for the Jacobian
   std::unique_ptr<mfem::HypreParMatrix> J_;
 
-  /// @brief used to communicate the ODE solver's predicted displacement to the residual operator  
+  /// @brief used to communicate the ODE solver's predicted displacement to the residual operator
   mfem::Vector u_;
 
   /// @brief used to communicate the ODE solver's predicted velocity to the residual operator

@@ -19,7 +19,7 @@
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/physics/state/state_manager.hpp"
-#include "serac/physics/materials/thermal_functional_material.hpp"
+#include "serac/physics/materials/functional_material_utils.hpp"
 
 namespace serac {
 
@@ -211,11 +211,11 @@ public:
   template <typename MaterialType>
   void setMaterial(MaterialType material)
   {
-    static_assert(Thermal::has_density<MaterialType, dim>::value,
+    static_assert(has_density<MaterialType, dim>::value,
                   "Thermal functional materials must have a public density(x) method.");
-    static_assert(Thermal::has_specific_heat_capacity<MaterialType, dim>::value,
+    static_assert(has_specific_heat_capacity<MaterialType, dim>::value,
                   "Thermal functional materials must have a public specificHeatCapacity(x, temperature) method.");
-    static_assert(Thermal::has_thermal_flux<MaterialType, dim>::value,
+    static_assert(has_thermal_flux<MaterialType, dim>::value,
                   "Thermal functional materials must have a public (u, du_dx) operator for thermal flux evaluation.");
 
     K_functional_.AddDomainIntegral(
@@ -274,7 +274,7 @@ public:
   void setSource(SourceType source_function)
   {
     static_assert(
-        Thermal::has_thermal_source<SourceType, dim>::value,
+        has_thermal_source<SourceType, dim>::value,
         "Thermal functional sources must have a public (x, t, u, du_dx) operator for thermal source evaluation.");
 
     K_functional_.AddDomainIntegral(
@@ -304,7 +304,7 @@ public:
   template <typename FluxType>
   void setFluxBCs(FluxType flux_function)
   {
-    static_assert(Thermal::has_thermal_flux_boundary<FluxType, dim>::value,
+    static_assert(has_thermal_flux_boundary<FluxType, dim>::value,
                   "Thermal flux boundary condition types must have a public (x, n, u) operator for thermal boundary "
                   "flux evaluation.");
 
