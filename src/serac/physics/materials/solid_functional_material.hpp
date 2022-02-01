@@ -5,48 +5,51 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file thermal_functional_material.hpp
+ * @file solid_functional_material.hpp
  *
- * @brief The material and load types for the thermal functional physics module
+ * @brief The material and load types for the solid functional physics module
  */
 
 #pragma once
 
 #include "serac/numerics/functional/functional.hpp"
 
-/// ThermalConductionFunctional helper structs
-namespace serac::Solid {
+/// SolidFunctional helper data types
+namespace serac::solid_util {
 
-/// Linear isotropic thermal conduction material model
+/**
+ * @brief Linear isotropic elasticity material model
+ * 
+ * @tparam dim Spatial dimension of the mesh
+ */
 template <int dim>
 class LinearIsotropicElasticity {
 public:
   /**
-   * @brief Construct a new Linear Isotropic Conductor object
-   *
-   * @param density Density of the material (mass/volume)
-   * @param specific_heat_capacity Specific heat capacity of the material (energy / (mass * temp))
-   * @param conductivity Thermal conductivity of the material (power / (length * temp))
+   * @brief Construct a new Linear Isotropic Elasticity object
+   * 
+   * @param density Density of the material
+   * @param shear_modulus Shear modulus of the material
+   * @param bulk_modulus Bulk modulus of the material
    */
   LinearIsotropicElasticity(double density = 1.0, double shear_modulus = 1.0, double bulk_modulus = 1.0)
       : density_(density), bulk_modulus_(bulk_modulus), shear_modulus_(shear_modulus)
   {
     SLIC_ERROR_ROOT_IF(shear_modulus_ < 0.0,
-                       "Conductivity must be positive in the linear isotropic conductor material model.");
+                       "Shear modulus must be positive in the linear isotropic elasticity material model.");
 
-    SLIC_ERROR_ROOT_IF(density_ < 0.0, "Density must be positive in the linear isotropic conductor material model.");
+    SLIC_ERROR_ROOT_IF(density_ < 0.0, "Density must be positive in the linear isotropic elasticity material model.");
 
     SLIC_ERROR_ROOT_IF(bulk_modulus_ < 0.0,
-                       "Specific heat capacity must be positive in the linear isotropic conductor material model.");
+                       "Bulk modulus must be positive in the linear isotropic elasticity material model.");
   }
 
   /**
-   * @brief Function defining the thermal flux (constitutive response)
+   * @brief Function defining the Kirchoff stress (constitutive response)
    *
-   * @tparam T1 type of the temperature (e.g. tensor or dual type)
-   * @tparam T2 type of the temperature gradient (e.g. tensor or dual type)
-   * @param temperature_gradient Gradient of the temperature (du_dx)
-   * @return The thermal flux of the material model
+   * @tparam T type of the Kirchoff stress (i.e. second order tensor)
+   * @param du_dX displacement gradient with respect to the reference configuration (du_dX)
+   * @return The Kirchoff stress (det(deformation gradient) * Cauchy stress) for the constitutive model
    */
   template <typename T>
   SERAC_HOST_DEVICE T operator()(const T& du_dX) const
@@ -70,42 +73,46 @@ private:
   /// Density
   double density_;
 
-  /// Specific heat capacity
+  /// Bulk modulus
   double bulk_modulus_;
 
-  /// Constant isotropic thermal conductivity
+  /// Shear modulus
   double shear_modulus_;
 };
 
-/// Linear isotropic thermal conduction material model
+/**
+ * @brief Neo-Hookean material model
+ * 
+ * @tparam dim The spatial dimension of the mesh
+ */
 template <int dim>
 class NeoHookean {
 public:
   /**
-   * @brief Construct a new Linear Isotropic Conductor object
-   *
-   * @param density Density of the material (mass/volume)
-   * @param specific_heat_capacity Specific heat capacity of the material (energy / (mass * temp))
-   * @param conductivity Thermal conductivity of the material (power / (length * temp))
+   * @brief Construct a new Neo-Hookean object
+   * 
+   * @param density Density of the material
+   * @param shear_modulus Shear modulus of the material
+   * @param bulk_modulus Bulk modulus of the material
    */
   NeoHookean(double density = 1.0, double shear_modulus = 1.0, double bulk_modulus = 1.0)
       : density_(density), bulk_modulus_(bulk_modulus), shear_modulus_(shear_modulus)
   {
-    SLIC_ERROR_ROOT_IF(shear_modulus_ < 0.0, "Conductivity must be positive in the neo-Hookean material model.");
+    SLIC_ERROR_ROOT_IF(shear_modulus_ < 0.0,
+                       "Shear modulus must be positive in the linear isotropic elasticity material model.");
 
-    SLIC_ERROR_ROOT_IF(density_ < 0.0, "Density must be positive in the neo-Hookean material model.");
+    SLIC_ERROR_ROOT_IF(density_ < 0.0, "Density must be positive in the linear isotropic elasticity material model.");
 
     SLIC_ERROR_ROOT_IF(bulk_modulus_ < 0.0,
-                       "Specific heat capacity must be positive in the neo-Hookeanmaterial model.");
+                       "Bulk modulus must be positive in the linear isotropic elasticity material model.");
   }
 
   /**
-   * @brief Function defining the thermal flux (constitutive response)
+   * @brief Function defining the Kirchoff stress (constitutive response)
    *
-   * @tparam T1 type of the temperature (e.g. tensor or dual type)
-   * @tparam T2 type of the temperature gradient (e.g. tensor or dual type)
-   * @param temperature_gradient Gradient of the temperature (du_dx)
-   * @return The thermal flux of the material model
+   * @tparam T type of the Kirchoff stress (i.e. second order tensor)
+   * @param du_dX displacement gradient with respect to the reference configuration (du_dX)
+   * @return The Kirchoff stress (det(deformation gradient) * Cauchy stress) for the constitutive model
    */
   template <typename T>
   SERAC_HOST_DEVICE T operator()(const T& du_dX) const
@@ -132,26 +139,26 @@ private:
   /// Density
   double density_;
 
-  /// Specific heat capacity
+  /// Bulk modulus in the stress free configuration
   double bulk_modulus_;
 
-  /// Constant isotropic thermal conductivity
+  /// Shear modulus in the stress free configuration
   double shear_modulus_;
 };
 
-/// Constant thermal source model
+/// Constant body force model
 template <int dim>
 struct ConstantBodyForce {
-  /// The constant source
+  /// The constant body force
   tensor<double, dim> force_;
 
   /**
-   * @brief Evaluation function for the constant thermal source model
+   * @brief Evaluation function for the constant body force model
    *
-   * @tparam T1 type of the temperature
-   * @tparam T2 type of the temperature gradient
+   * @tparam T1 type of the displacement
+   * @tparam T2 type of the displacement gradient
    * @tparam dim The dimension of the problem
-   * @return The thermal source value
+   * @return The body force value
    */
   template <typename T1, typename T2>
   SERAC_HOST_DEVICE tensor<double, dim> operator()(const tensor<double, dim>& /* x */, const double /* t */,
@@ -161,42 +168,37 @@ struct ConstantBodyForce {
   }
 };
 
-/// Constant thermal source model
+/// Constant traction boundary condition model
 template <int dim>
 struct ConstantTraction {
-  /// The constant source
+  /// The constant traction
   tensor<double, dim> traction_;
 
   /**
-   * @brief Evaluation function for the constant thermal source model
+   * @brief Evaluation function for the constant traction model
    *
-   * @tparam T1 type of the temperature
-   * @tparam T2 type of the temperature gradient
-   * @tparam dim The dimension of the problem
-   * @return The thermal source value
+   * @return The traction value
    */
-  template <typename T1, typename T2>
-  SERAC_HOST_DEVICE tensor<double, dim> operator()(const tensor<double, dim>& /* x */, const double /* t */,
-                                                   const T1& /* u */, const T2& /* du_dX */) const
+  SERAC_HOST_DEVICE tensor<double, dim> operator()(const tensor<double, dim>& /* x */, const tensor<double, dim>& /* n */, const double /* t */) const
   {
     return traction_;
   }
 };
 
-/// Constant thermal source model
+/// Function-based traction boundary condition model
 template <int dim>
 struct TractionFunction {
-  /// The constant source
+  /// The traction function
   std::function<tensor<double, dim>(const tensor<double, dim>&, const tensor<double, dim>&, const double t)>
       traction_func_;
 
   /**
-   * @brief Evaluation function for the constant thermal source model
-   *
-   * @tparam T1 type of the temperature
-   * @tparam T2 type of the temperature gradient
-   * @tparam dim The dimension of the problem
-   * @return The thermal source value
+   * @brief Evaluation for the function-based traction model
+   * 
+   * @param x The spatial coordinate
+   * @param n The normal vector
+   * @param t The current time
+   * @return The traction to apply
    */
   SERAC_HOST_DEVICE tensor<double, dim> operator()(const tensor<double, dim>& x, const tensor<double, dim>& n,
                                                    const double t) const
@@ -205,18 +207,15 @@ struct TractionFunction {
   }
 };
 
-/// Constant thermal source model
+/// Constant pressure model
 struct ConstantPressure {
-  /// The constant source
+  /// The constant pressure
   double pressure_;
 
   /**
-   * @brief Evaluation function for the constant thermal source model
-   *
-   * @tparam T1 type of the temperature
-   * @tparam T2 type of the temperature gradient
-   * @tparam dim The dimension of the problem
-   * @return The thermal source value
+   * @brief Evaluation of the constant pressure model
+   * 
+   * @tparam dim Spatial dimension
    */
   template <int dim>
   SERAC_HOST_DEVICE double operator()(const tensor<double, dim>& /* x */, const double /* t */) const
@@ -225,19 +224,18 @@ struct ConstantPressure {
   }
 };
 
-/// Constant thermal source model
+/// Function-based pressure boundary condition
 template <int dim>
 struct PressureFunction {
-  /// The constant source
+  /// The pressure function
   std::function<double(const tensor<double, dim>&, const double)> pressure_func_;
 
   /**
-   * @brief Evaluation function for the constant thermal source model
-   *
-   * @tparam T1 type of the temperature
-   * @tparam T2 type of the temperature gradient
-   * @tparam dim The dimension of the problem
-   * @return The thermal source value
+   * @brief Evaluation for the function-based pressure model
+   * 
+   * @param x The spatial coordinate
+   * @param t The current time
+   * @return The pressure to apply
    */
   SERAC_HOST_DEVICE double operator()(const tensor<double, dim>& x, const double t) const
   {
@@ -245,4 +243,4 @@ struct PressureFunction {
   }
 };
 
-}  // namespace serac::Solid
+}  // namespace serac::solid_util

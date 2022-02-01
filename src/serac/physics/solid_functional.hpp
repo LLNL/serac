@@ -5,9 +5,9 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file thermal_conduction.hpp
+ * @file solid_functional.hpp
  *
- * @brief An object containing the solver for a thermal conduction PDE
+ * @brief An object containing the solver for total Lagrangian finite deformation solid mechanics
  */
 
 #pragma once
@@ -19,54 +19,19 @@
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/physics/state/state_manager.hpp"
+#include "serac/physics/solid.hpp"
 
 namespace serac {
 
 /**
- * @brief Enum describing the generic solid boundary conditions
- *
- */
-enum class SolidBoundaryCondition
-{
-  ReferencePressure, /**< Pressure applied in the reference configuration */
-  ReferenceTraction, /**< Traction applied in the reference configuration */
-  DeformedPressure,  /**< Pressure applied in the deformed (current) configuration */
-  DeformedTraction   /**< Traction applied in the deformed (current) configuration */
-};
-
-/**
- * @brief Enum to save the deformation after the Solid module is destructed
- *
- */
-enum class FinalMeshOption
-{
-  Deformed, /**< Keep the mesh in the deformed state post-destruction */
-  Reference /**< Revert the mesh to the reference state post-destruction */
-};
-
-/**
- * @brief Enum to denote the previous solve completed in the Solid module
- *
- */
-enum class PreviousSolve
-{
-  Forward, /**< Previous solve was a forward analysis */
-  Adjoint, /**< Previous solve was an adjoint analysis */
-  None     /**< No solves have been completed */
-};
-
-enum class GeometricNonlinearities
-{
-  On, /**< Include geometric nonlinearities */
-  Off /**< Do not include geometric nonlinearities */
-};
-
-/**
  * @brief The nonlinear solid solver class
  *
- * The nonlinear hyperelastic quasi-static and dynamic
- * hyperelastic solver object. It is derived from MFEM
- * example 10p.
+ * The nonlinear total Lagrangian quasi-static and dynamic
+ * hyperelastic solver object. This uses @Functional to compute the tangent 
+ * stiffness matrices.
+ * 
+ * @tparam order The order of the discretization of the displacement and velocity fields
+ * @tparam dim The spatial dimension of the mesh
  */
 template <int order, int dim>
 class SolidFunctional : public BasePhysics {
@@ -101,6 +66,14 @@ public:
     std::optional<TimesteppingOptions> dyn_options = std::nullopt;
   };
 
+  /**
+   * @brief Construct a new Solid Functional object
+   * 
+   * @param options The options for the linear, nonlinear, and ODE solves
+   * @param geom_nonlin Flag to include geometric nonlinearities
+   * @param keep_deformation Flag to keep the deformation in the underlying mesh post-destruction
+   * @param name An optional name for the physics module instance
+   */
   SolidFunctional(const SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
                   FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "")
       : BasePhysics(2, order),
@@ -126,7 +99,6 @@ public:
     mesh_.EnsureNodes();
     mesh_.GetNodes(*reference_nodes_);
 
-    reference_nodes_->GetTrueDofs(x_);
     deformed_nodes_ = std::make_unique<mfem::ParGridFunction>(*reference_nodes_);
 
     displacement_.trueVec() = 0.0;
@@ -159,6 +131,7 @@ public:
     zero_ = 0.0;
   }
 
+  /// @brief Destroy the Solid Functional object
   ~SolidFunctional()
   {
     // Update the mesh with the new deformed nodes if requested
@@ -181,10 +154,10 @@ public:
   }
 
   /**
-   * @brief Set essential temperature boundary conditions (strongly enforced)
+   * @brief Set essential displacement boundary conditions (strongly enforced)
    *
-   * @param[in] temp_bdr The boundary attributes on which to enforce a temperature
-   * @param[in] temp The prescribed boundary temperature function
+   * @param[in] disp_bdr The boundary attributes on which to enforce a displacement
+   * @param[in] disp The prescribed boundary displacement function
    */
   void setDisplacementBCs(const std::set<int>&                                           disp_bdr,
                           std::function<void(const mfem::Vector& x, mfem::Vector& disp)> disp)
@@ -195,6 +168,13 @@ public:
     bcs_.addEssential(disp_bdr, disp_bdr_coef_, displacement_);
   }
 
+  /**
+   * @brief Set the displacement essential boundary conditions on a single component
+   *
+   * @param[in] disp_bdr The set of boundary attributes to set the displacement on
+   * @param[in] disp_bdr_coef The vector coefficient containing the set displacement values
+   * @param[in] component The component to set the displacment on
+   */
   void setDisplacementBCs(const std::set<int>& disp_bdr, std::function<double(const mfem::Vector& x)> disp,
                           int component)
   {
@@ -204,13 +184,15 @@ public:
     bcs_.addEssential(disp_bdr, component_disp_bdr_coef_, displacement_, component);
   }
 
-  // Solve the Quasi-static Newton system
+  /// @brief Solve the Quasi-static Newton system
   void quasiStaticSolve() { nonlin_solver_.Mult(zero_, displacement_.trueVec()); }
 
   /**
    * @brief Advance the timestep
    *
-   * @param[inout] dt The timestep to advance. For adaptive time integration methods, the actual timestep is returned.
+   * @param[inout] dt The timestep to attempt. This will return the actual timestep for adaptive timestepping
+   * schemes
+   * @pre SolidFunctional::completeSetup() must be called prior to this call
    */
   void advanceTimestep(double& dt) override
   {
@@ -245,14 +227,13 @@ public:
   }
 
   /**
-   * @brief Set the thermal flux and mass properties for the physics module
+   * @brief Set the material stress response and mass properties for the physics module
    *
-   * @tparam MaterialType The thermal material type
-   * @param material A material containing density, specific heat, and thermal flux evaluation information
+   * @tparam MaterialType The solid material type
+   * @param material A material containing density and stress evaluation information
    *
-   * @pre MaterialType must have a method specificHeatCapacity() defining the specific heat
    * @pre MaterialType must have a method density() defining the density
-   * @pre MaterialType must have the operator (temperature, d temperature_dx) defined as the thermal flux
+   * @pre MaterialType must have the operator (du_dX) defined as the Kirchoff stress
    */
   template <typename MaterialType>
   void setMaterial(MaterialType material)
@@ -294,9 +275,9 @@ public:
   }
 
   /**
-   * @brief Set the underlying finite element state to a prescribed temperature
+   * @brief Set the underlying finite element state to a prescribed displacement
    *
-   * @param temp The function describing the temperature field
+   * @param disp The function describing the displacement field
    */
   void setDisplacement(std::function<void(const mfem::Vector& x, mfem::Vector& disp)> disp)
   {
@@ -306,6 +287,11 @@ public:
     gf_initialized_[1] = true;
   }
 
+  /**
+   * @brief Set the underlying finite element state to a prescribed velocity
+   *
+   * @param disp The function describing the velocity field
+   */
   void setVelocity(std::function<void(const mfem::Vector& x, mfem::Vector& vel)> vel)
   {
     // Project the coefficient onto the grid function
@@ -315,12 +301,12 @@ public:
   }
 
   /**
-   * @brief Set the thermal source function
+   * @brief Set the body forcefunction
    *
-   * @tparam SourceType The type of the source function
-   * @param source_function A source function for a prescribed thermal load
+   * @tparam BodyForceType The type of the body force load
+   * @param body_force_function A source function for a prescribed body load
    *
-   * @pre SourceType must have the operator (x, time, temperature, d temperature_dx) defined as the thermal source
+   * @pre BodyForceType must have the operator (x, time, displacement, d displacement_dx) defined as the body force
    */
   template <typename BodyForceType>
   void addBodyForce(BodyForceType body_force_function)
@@ -344,14 +330,14 @@ public:
   }
 
   /**
-   * @brief Set the thermal flux boundary condition
+   * @brief Set the traction boundary condition
    *
-   * @tparam FluxType The type of the flux function
-   * @param flux_function A function describing the thermal flux applied to a boundary
+   * @tparam TractionType The type of the traction load
+   * @param traction_function A function describing the traction applied to a boundary
+   * @param compute_on_reference Flag to compute the traction in the reference configuration
    *
-   * @pre FluxType must have the operator (x, normal, temperature) to return the thermal flux value
+   * @pre TractionType must have the operator (x, normal, time) to return the thermal flux value
    */
-
   template <typename TractionType>
   void setTractionBCs(TractionType traction_function, bool compute_on_reference = true)
   {
@@ -364,6 +350,15 @@ public:
         mesh_);
   }
 
+  /**
+   * @brief Set the pressure boundary condition
+   * 
+   * @tparam PressureType The type of the pressure load
+   * @param pressure_function A function describing the pressure applied to a boundary
+   * @param compute_on_reference Flag to compute the pressure in the reference configuration
+   * 
+   * @pre PressureType must have the operator (x, time) to return the thermal flux value
+   */
   template <typename PressureType>
   void setPressureBCs(PressureType pressure_function, bool compute_on_reference = true)
   {
@@ -376,9 +371,9 @@ public:
   }
 
   /**
-   * @brief Get the temperature state
+   * @brief Get the displacement state
    *
-   * @return A reference to the current temperature finite element state
+   * @return A reference to the current displacement finite element state
    */
   const serac::FiniteElementState& displacement() const { return displacement_; };
 
@@ -386,15 +381,16 @@ public:
   serac::FiniteElementState& displacement() { return displacement_; };
 
   /**
-   * @brief Get the temperature state
+   * @brief Get the velocity state
    *
-   * @return A reference to the current temperature finite element state
+   * @return A reference to the current velocity finite element state
    */
   const serac::FiniteElementState& velocity() const { return velocity_; };
 
   /// @overload
   serac::FiniteElementState& velocity() { return velocity_; };
 
+  /// @brief Reset the mesh, displacement, and velocity to the reference (stress-free) configuration
   void resetToReferenceConfiguration()
   {
     displacement_.gridFunc() = 0.0;
@@ -406,6 +402,7 @@ public:
     mesh_.NewNodes(*reference_nodes_);
   }
 
+  /// @brief Build the quasi-static operator corresponding to the total Lagrangian formulation
   std::unique_ptr<mfem_ext::StdFunctionOperator> buildQuasistaticOperator()
   {
     // the quasistatic case is entirely described by the residual,
@@ -433,7 +430,7 @@ public:
   /**
    * @brief Complete the initialization and allocation of the data structures.
    *
-   * This must be called before AdvanceTimestep().
+   * @note This must be called before AdvanceTimestep().
    */
   void completeSetup() override
   {
@@ -488,32 +485,34 @@ public:
   }
 
 protected:
-  /// The compile-time finite element trial space for thermal conduction (H1 of order p)
+  /// The compile-time finite element trial space for displacement and velocity (H1 of order p)
   using trial = H1<order, dim>;
 
-  /// The compile-time finite element test space for thermal conduction (H1 of order p)
+  /// The compile-time finite element test space for displacement and velocity (H1 of order p)
   using test = H1<order, dim>;
 
-  /// The temperature finite element state
+  /// The velocity finite element state
   FiniteElementState velocity_;
+
+  /// The displacement finite element state
   FiniteElementState displacement_;
 
-  /// Mass functional object \f$\mathbf{M} = \int_\Omega c_p \, \rho \, \phi_i \phi_j\, dx \f$
+  /// Mass functional object 
   Functional<test(trial)> M_functional_;
 
-  /// Stiffness functional object \f$\mathbf{K} = \int_\Omega \theta \cdot \nabla \phi_i  + f \phi_i \, dx \f$
+  /// Stiffness functional object 
   Functional<test(trial)> K_functional_;
 
   /**
-   * @brief mfem::Operator that describes the weight residual
-   * and its gradient with respect to temperature
+   * @brief mfem::Operator that describes the nonlinear residual
+   * and its gradient with respect to displacement
    */
   std::unique_ptr<mfem_ext::StdFunctionOperator> residual_;
 
   /**
    * @brief the ordinary differential equation that describes
-   * how to solve for the time derivative of temperature, given
-   * the current temperature and source terms
+   * how to solve for the second time derivative of displacement, given
+   * the current displacement, velocity, and source terms
    */
   mfem_ext::SecondOrderODE ode2_;
 
@@ -523,65 +522,43 @@ protected:
   /// Assembled sparse matrix for the Jacobian
   std::unique_ptr<mfem::HypreParMatrix> J_;
 
-  /**
-   * @brief alias for the reference mesh coordinates
-   *
-   *   this is used to correct for the fact that mfem's hyperelastic
-   *   material model is based on the nodal positions rather than nodal displacements
-   */
-  mfem::Vector x_;
-
-  /**
-   * @brief used to communicate the ODE solver's predicted displacement to the residual operator
-   */
+  /// @brief used to communicate the ODE solver's predicted displacement to the residual operator  
   mfem::Vector u_;
 
-  /**
-   * @brief used to communicate the ODE solver's predicted velocity to the residual operator
-   */
+  /// @brief used to communicate the ODE solver's predicted velocity to the residual operator
   mfem::Vector du_dt_;
 
-  /**
-   * @brief the previous acceleration, used as a starting guess for newton's method
-   */
+  /// @brief the previous acceleration, used as a starting guess for newton's method
   mfem::Vector previous_;
 
-  /**
-   * @brief Current time step
-   */
+  /// @brief Current time step
   double c0_;
 
-  /**
-   * @brief Previous time step
-   */
+  /// @brief Previous time step
   double c1_;
 
+  /// @brief A flag denoting whether to compute geometric nonlinearities in the residual
   GeometricNonlinearities geom_nonlin_;
-  /**
-   * @brief Pointer to the reference mesh data
-   */
+
+  /// @brief Pointer to the reference mesh data
   std::unique_ptr<mfem::ParGridFunction> reference_nodes_;
 
-  /**
-   * @brief Flag to indicate the final mesh node state post-destruction
-   */
+  /// @brief Flag to indicate the final mesh node state post-destruction
   FinalMeshOption keep_deformation_;
 
-  /**
-   * @brief Pointer to the deformed mesh data
-   */
+  /// @brief Pointer to the deformed mesh data
   std::unique_ptr<mfem::ParGridFunction> deformed_nodes_;
 
-  /// Coefficient containing the essential boundary values
+  /// @brief Coefficient containing the essential boundary values
   std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef_;
 
-  /// Coefficient containing the essential boundary values
+  /// @brief Coefficient containing the essential boundary values
   std::shared_ptr<mfem::Coefficient> component_disp_bdr_coef_;
 
-  /// An auxilliary zero vector
+  /// @brief An auxilliary zero vector
   mfem::Vector zero_;
 
-  /// Auxilliary identity rank 2 tensor
+  /// @brief Auxilliary identity rank 2 tensor
   const tensor<double, dim, dim> I_ = Identity<dim>();
 };
 

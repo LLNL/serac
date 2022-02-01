@@ -61,7 +61,7 @@ void functional_solid_test_static(double expected_disp_norm)
   SolidFunctional<p, dim> solid_solver(default_static, GeometricNonlinearities::On, FinalMeshOption::Reference,
                                        "solid_functional");
 
-  Solid::NeoHookean<dim> mat(1.0, 1.0, 1.0);
+  solid_util::NeoHookean<dim> mat(1.0, 1.0, 1.0);
   solid_solver.setMaterial(mat);
 
   // Define the function for the initial temperature and boundary condition
@@ -80,7 +80,7 @@ void functional_solid_test_static(double expected_disp_norm)
     constant_force[2] = 0.0;
   }
 
-  Solid::ConstantBodyForce<dim> force{constant_force};
+  solid_util::ConstantBodyForce<dim> force{constant_force};
   solid_solver.addBodyForce(force);
 
   // Finalize the data structures
@@ -142,7 +142,7 @@ void functional_solid_test_dynamic(double expected_disp_norm)
   SolidFunctional<p, dim> solid_solver(default_dynamic, GeometricNonlinearities::Off, FinalMeshOption::Reference,
                                        "solid_functional_dynamic");
 
-  Solid::LinearIsotropicElasticity<dim> mat(1.0, 1.0, 1.0);
+  solid_util::LinearIsotropicElasticity<dim> mat(1.0, 1.0, 1.0);
   solid_solver.setMaterial(mat);
 
   // Define the function for the initial temperature and boundary condition
@@ -161,7 +161,7 @@ void functional_solid_test_dynamic(double expected_disp_norm)
     constant_force[2] = 0.0;
   }
 
-  Solid::ConstantBodyForce<dim> force{constant_force};
+  solid_util::ConstantBodyForce<dim> force{constant_force};
   solid_solver.addBodyForce(force);
 
   // Finalize the data structures
@@ -227,7 +227,7 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
   SolidFunctional<p, dim> solid_solver(default_static, GeometricNonlinearities::Off, FinalMeshOption::Reference,
                                        "solid_functional");
 
-  Solid::LinearIsotropicElasticity<dim> mat(1.0, 1.0, 1.0);
+  solid_util::LinearIsotropicElasticity<dim> mat(1.0, 1.0, 1.0);
   solid_solver.setMaterial(mat);
 
   // Define the function for the initial temperature and boundary condition
@@ -238,7 +238,7 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
   solid_solver.setDisplacement(bc);
 
   if (test_mode == TestType::Pressure) {
-    Solid::PressureFunction<dim> pressure{[](const tensor<double, dim>& x, const double) {
+    solid_util::PressureFunction<dim> pressure{[](const tensor<double, dim>& x, const double) {
       if (x[0] > 7.5) {
         return 1.0e-2;
       }
@@ -246,7 +246,7 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
     }};
     solid_solver.setPressureBCs(pressure);
   } else {
-    Solid::TractionFunction<dim> traction_function{
+    solid_util::TractionFunction<dim> traction_function{
         [](const tensor<double, dim>& x, const tensor<double, dim>&, const double) {
           tensor<double, dim> traction;
           for (int i = 0; i < dim; ++i) {
