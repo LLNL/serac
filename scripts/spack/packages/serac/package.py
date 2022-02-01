@@ -131,7 +131,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     # Libraries that do not have a debug variant
     depends_on("conduit@0.7.2serac~shared~python~test")
     depends_on("adiak@0.2.1~shared+mpi", when="+profiling")
-    depends_on("caliper@master~shared+mpi+adiak~papi", when="+profiling")
+    depends_on("caliper@2.7.0~shared+mpi+adiak~papi", when="+profiling")
     depends_on("superlu-dist@6.1.1~shared")
 
     # Libraries that we do not build debug
