@@ -120,6 +120,11 @@ packages:
     externals:
     - spec: libtool@2.4.2
       prefix: /usr
+  libunwind:
+    buildable: false
+    externals:
+    - spec: libunwind@8.0.1
+      prefix: /usr
   m4:
     buildable: false
     externals:

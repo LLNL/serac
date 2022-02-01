@@ -56,8 +56,9 @@ class Serac(CachedCMakePackage, CudaPackage):
     varmsg = "Build development tools (such as Sphinx, CppCheck, ClangFormat, etc...)"
     variant("devtools", default=False, description=varmsg)
 
-    variant('caliper', default=False, 
-            description='Build with hooks for Caliper performance analysis')
+    variant('profiling', default=False, 
+            description='Build with hooks for Adiak/Caliper performance analysis')
+
     variant('glvis', default=False,
             description='Build the glvis visualization executable')
     variant('petsc', default=False,
@@ -139,7 +140,8 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     # Libraries that do not have a debug variant
     depends_on("conduit@0.7.2serac~shared~python~test")
-    depends_on("caliper@master~shared+mpi~adiak~papi", when="+caliper")
+    depends_on("adiak@0.2.1~shared+mpi", when="+profiling")
+    depends_on("caliper@master~shared+mpi+adiak~papi", when="+profiling")
     depends_on("superlu-dist@6.1.1~shared")
 
     # Libraries that we do not build debug
@@ -167,13 +169,17 @@ class Serac(CachedCMakePackage, CudaPackage):
     conflicts('cuda_arch=none', when='+cuda',
               msg='CUDA architecture is required')
     depends_on("amgx@2.1.x", when="+cuda")
-    cuda_deps = ["axom", "caliper", "mfem", "raja", "sundials", "umpire"]
+    cuda_deps = ["axom", "mfem", "raja", "sundials", "umpire"]
     for dep in cuda_deps:
         depends_on("{0}+cuda".format(dep), when="+cuda")
         for sm_ in CudaPackage.cuda_arch_values:
             depends_on('{0} cuda_arch=sm_{1}'.format(dep, sm_),
                     when='cuda_arch={0}'.format(sm_))
-    depends_on("caliper+cuda", when="+caliper+cuda")
+
+    depends_on("caliper+cuda", when="+profiling+cuda")
+    for sm_ in CudaPackage.cuda_arch_values:
+        depends_on('caliper cuda_arch=sm_{1}'.format(dep, sm_),
+                when='+profiling cuda_arch={0}'.format(sm_))
 
 
     def _get_sys_type(self, spec):
@@ -300,7 +306,7 @@ class Serac(CachedCMakePackage, CudaPackage):
         entries.append(cmake_cache_path('SUPERLUDIST_DIR', dep_dir))
 
         # optional tpls
-        for dep in ('caliper', 'petsc', 'raja', 'sundials', 'umpire'):
+        for dep in ('adiak', 'amgx', 'caliper', 'petsc', 'raja', 'sundials', 'umpire'):
             if spec.satisfies('^{0}'.format(dep)):
                 dep_dir = get_spec_path(spec, dep, path_replacements)
                 entries.append(cmake_cache_path('%s_DIR' % dep.upper(),
