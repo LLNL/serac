@@ -307,8 +307,11 @@ class Mfem(Package, CudaPackage, ROCmPackage):
     patch('mfem-4.2-umpire.patch', when='@4.2.0+umpire')
     patch('mfem-4.2-slepc.patch', when='@4.2.0+slepc')
     patch('mfem-4.2-petsc-3.15.0.patch', when='@4.2.0+petsc ^petsc@3.15.0:')
-    patch('mfem-4.3-hypre-2.23.0.patch', when='@4.3.0')
-    patch('mfem-4.3-cusparse-11.4.patch', when='@4.3.0+cuda')
+    # SERAC EDIT BEGIN
+    # Our version of mfem has these patches already
+    #patch('mfem-4.3-hypre-2.23.0.patch', when='@4.3.0')
+    #patch('mfem-4.3-cusparse-11.4.patch', when='@4.3.0+cuda')
+    # SERAC EDIT END
 
     # Patch to fix MFEM makefile syntax error. See
     # https://github.com/mfem/mfem/issues/1042 for the bug report and
