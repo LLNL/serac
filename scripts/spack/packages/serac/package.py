@@ -89,7 +89,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on('py-sphinx', when="+devtools")
     depends_on('py-ats', when="+devtools")
 
-    depends_on("sundials~shared+hypre+monitoring~examples~examples-install",
+    depends_on("sundials@5.7.0~shared+hypre+monitoring~examples~examples-install",
                when="+sundials")
 
     # Libraries that support +debug
