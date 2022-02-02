@@ -353,7 +353,9 @@ class Mfem(Package, CudaPackage, ROCmPackage):
         xlinker = '-Wl,'
         if '+cuda' in spec:
             xcompiler = '-Xcompiler='
-            xlinker = '-Xlinker='
+            # SERAC EDIT BEGIN - Xlinker fix 1/3 - better way? upstream?
+            xlinker = '-Xlinker '
+            # SERAC EDIT END
         cuda_arch = None if '~cuda' in spec else spec.variants['cuda_arch'].value
 
         # We need to add rpaths explicitly to allow proper export of link flags
@@ -364,17 +366,21 @@ class Mfem(Package, CudaPackage, ROCmPackage):
         # above -- this is done to avoid issues like this:
         # https://github.com/mfem/mfem/issues/1088.
         def ld_flags_from_library_list(libs_list):
-            flags = ['%s-rpath,%s' % (xlinker, dir)
+            # SERAC EDIT BEGIN - Xlinker fix 2/3
+            flags = ['%s-rpath %s%s' % (xlinker, xlinker, dir)
                      for dir in libs_list.directories
                      if not is_sys_lib_path(dir)]
+            # SERAC EDIT END
             flags += ['-L%s' % dir for dir in libs_list.directories
                       if not is_sys_lib_path(dir)]
             flags += [libs_list.link_flags]
             return ' '.join(flags)
 
         def ld_flags_from_dirs(pkg_dirs_list, pkg_libs_list):
-            flags = ['%s-rpath,%s' % (xlinker, dir) for dir in pkg_dirs_list
+            # SERAC EDIT BEGIN - Xlinker fix 3/3
+            flags = ['%s-rpath %s%s' % (xlinker, xlinker, dir) for dir in pkg_dirs_list
                      if not is_sys_lib_path(dir)]
+            # SERAC EDIT END
             flags += ['-L%s' % dir for dir in pkg_dirs_list
                       if not is_sys_lib_path(dir)]
             flags += ['-l%s' % lib for lib in pkg_libs_list]
