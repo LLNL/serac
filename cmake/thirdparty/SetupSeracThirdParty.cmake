@@ -66,6 +66,8 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     #------------------------------------------------------------------------------
     # Caliper
     #------------------------------------------------------------------------------
+    # TODO: temporarily turned off until PR # 626
+    set(CALIPER_DIR "" CACHE STRING "" FORCE)
     if(CALIPER_DIR)
         serac_assert_is_directory(VARIABLE_NAME CALIPER_DIR)
 
