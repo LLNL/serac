@@ -28,7 +28,7 @@ namespace serac {
  * @brief The nonlinear solid solver class
  *
  * The nonlinear total Lagrangian quasi-static and dynamic
- * hyperelastic solver object. This uses @Functional to compute the tangent
+ * hyperelastic solver object. This uses Functional to compute the tangent
  * stiffness matrices.
  *
  * @tparam order The order of the discretization of the displacement and velocity fields
@@ -173,7 +173,7 @@ public:
    * @brief Set the displacement essential boundary conditions on a single component
    *
    * @param[in] disp_bdr The set of boundary attributes to set the displacement on
-   * @param[in] disp_bdr_coef The vector coefficient containing the set displacement values
+   * @param[in] disp The vector function containing the set displacement values
    * @param[in] component The component to set the displacment on
    */
   void setDisplacementBCs(const std::set<int>& disp_bdr, std::function<double(const mfem::Vector& x)> disp,
@@ -296,7 +296,7 @@ public:
   /**
    * @brief Set the underlying finite element state to a prescribed velocity
    *
-   * @param disp The function describing the velocity field
+   * @param vel The function describing the velocity field
    */
   void setVelocity(std::function<void(const mfem::Vector& x, mfem::Vector& vel)> vel)
   {
