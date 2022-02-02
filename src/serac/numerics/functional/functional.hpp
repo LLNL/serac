@@ -33,7 +33,7 @@ struct differentiate_wrt_this {
   const mfem::Vector& ref;  ///< the actual data wrapped by this type
 
   /// @brief implicitly convert back to `mfem::Vector` to extract the actual data
-  operator const mfem::Vector &() const { return ref; }
+  operator std::reference_wrapper<const mfem::Vector>() const { return ref; }
 };
 
 /**
