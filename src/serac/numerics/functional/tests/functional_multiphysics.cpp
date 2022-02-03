@@ -21,7 +21,6 @@
 #include "serac/numerics/functional/tensor.hpp"
 
 using namespace serac;
-using namespace serac::profiling;
 
 template <typename T>
 void check_gradient(Functional<T>& f, mfem::Vector& U, mfem::Vector& dU_dt)
@@ -58,8 +57,6 @@ void check_gradient(Functional<T>& f, mfem::Vector& U, mfem::Vector& dU_dt)
 
     EXPECT_NEAR(0., relative_error1, 5.e-6);
     EXPECT_NEAR(0., relative_error2, 5.e-6);
-
-    std::cout << relative_error1 << " " << relative_error2 << std::endl;
   }
 
   auto dU_dt_plus = dU_dt;
@@ -85,8 +82,6 @@ void check_gradient(Functional<T>& f, mfem::Vector& U, mfem::Vector& dU_dt)
 
     EXPECT_NEAR(0., relative_error1, 5.e-5);
     EXPECT_NEAR(0., relative_error2, 5.e-5);
-
-    std::cout << relative_error1 << " " << relative_error2 << std::endl;
   }
 }
 
