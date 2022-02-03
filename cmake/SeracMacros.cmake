@@ -163,6 +163,11 @@ macro(serac_add_tests)
                            DEPENDS_ON  ${arg_DEPENDS_ON}
                            FOLDER      serac/tests )
 
+        if (TARGET serac_precompiled_headers) 
+            set_property(TARGET ${test_name} PROPERTY POSITION_INDEPENDENT_CODE 0)
+            target_precompile_headers(${test_name} REUSE_FROM serac_precompiled_headers) 
+        endif()
+
         blt_add_test(NAME          ${test_name}
                      COMMAND       ${test_name}
                      NUM_MPI_TASKS ${arg_NUM_MPI_TASKS} )

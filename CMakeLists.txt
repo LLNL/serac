@@ -102,6 +102,14 @@ include(${BLT_SOURCE_DIR}/SetupBLT.cmake)
 # Setup Macros and dependencies
 #------------------------------------------------------------------------------
 
+blt_add_library(
+    NAME        serac_precompiled_headers
+    SOURCES     ${PROJECT_SOURCE_DIR}/src/serac/infrastructure/pch.cpp
+    DEPENDS_ON  mfem axom gtest
+)
+set_property(TARGET serac_precompiled_headers PROPERTY POSITION_INDEPENDENT_CODE 0)
+target_precompile_headers(serac_precompiled_headers PUBLIC ${PROJECT_SOURCE_DIR}/src/serac/infrastructure/pch.hpp)
+
 include(${PROJECT_SOURCE_DIR}/cmake/SeracMacros.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/SeracBasics.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/SeracCompilerFlags.cmake)
