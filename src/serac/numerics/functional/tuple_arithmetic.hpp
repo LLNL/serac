@@ -176,7 +176,7 @@ using one_hot_t = typename one_hot<i, n, T>::type;
 
 /// @overload
 template <int i, int N>
-constexpr auto make_dual_helper(zero)
+SERAC_HOST_DEVICE constexpr auto make_dual_helper(zero)
 {
   return zero{};
 }
@@ -189,7 +189,7 @@ constexpr auto make_dual_helper(zero)
  * @param arg the value to be promoted
  */
 template <int i, int N>
-constexpr auto make_dual_helper(double arg)
+SERAC_HOST_DEVICE constexpr auto make_dual_helper(double arg)
 {
   using gradient_t = one_hot_t<i, N, double>;
   dual<gradient_t> arg_dual{};
@@ -206,7 +206,7 @@ constexpr auto make_dual_helper(double arg)
  * @param arg the value to be promoted
  */
 template <int i, int N, typename T, int... n>
-constexpr auto make_dual_helper(const tensor<T, n...>& arg)
+SERAC_HOST_DEVICE constexpr auto make_dual_helper(const tensor<T, n...>& arg)
 {
   using gradient_t = one_hot_t<i, N, tensor<T, n...> >;
   tensor<dual<gradient_t>, n...> arg_dual{};
@@ -235,7 +235,7 @@ constexpr auto make_dual_helper(const tensor<T, n...>& arg)
  * @endcode
  */
 template <typename T0, typename T1>
-constexpr auto make_dual(const tuple<T0, T1>& args)
+SERAC_HOST_DEVICE constexpr auto make_dual(const tuple<T0, T1>& args)
 {
   return tuple{make_dual_helper<0, 2>(get<0>(args)), make_dual_helper<1, 2>(get<1>(args))};
 }
@@ -248,18 +248,19 @@ constexpr auto make_dual(const tuple<T0, T1>& args)
  * @param x the values to be promoted
  */
 template <bool dualify, typename T>
-auto promote_to_dual_when(const T& x)
+SERAC_HOST_DEVICE auto promote_to_dual_when(const T& x)
 {
   if constexpr (dualify) {
     return make_dual(x);
-  } else {
+  }
+  if constexpr (!dualify) {
     return x;
   }
 }
 
 /// @brief layer of indirection required to implement `make_dual_wrt`
 template <int n, typename... T, int... i>
-constexpr auto make_dual_helper(const serac::tuple<T...>& args, std::integer_sequence<int, i...>)
+SERAC_HOST_DEVICE constexpr auto make_dual_helper(const serac::tuple<T...>& args, std::integer_sequence<int, i...>)
 {
   // Sam: it took me longer than I'd like to admit to find this issue, so here's an explanation
   //

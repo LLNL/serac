@@ -177,7 +177,7 @@ tuple(T...) -> tuple<T...>;
  * @param args the actual values to be put into a tuple
  */
 template <typename... T>
-tuple<T...> make_tuple(const T&... args)
+SERAC_HOST_DEVICE tuple<T...> make_tuple(const T&... args)
 {
   return tuple<T...>{args...};
 }
