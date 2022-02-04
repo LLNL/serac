@@ -25,7 +25,7 @@ auto ArrayViewForElement(const double* ptr, size_t num_elements, element_type)
 {
   if constexpr (element_type::components == 1) {
     return ExecArrayView<const double, 2, exec>(ptr, num_elements, element_type::ndof);
-  } 
+  }
 
   // using else { ... } emits a warning with some versions of nvcc, so we just
   // have two mutually exclusive if constexpr expressions instead
