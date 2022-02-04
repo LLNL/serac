@@ -137,6 +137,8 @@ using ExecArray = axom::Array<T, dim, detail::execution_to_memory_v<space>>;
 template <typename T, int dim = 1>
 using CPUArray = ExecArray<T, dim, ExecutionSpace::CPU>;
 
+#ifdef SERAC_USE_CUDA
+
 /// @brief Alias for an array on the GPU
 template <typename T, int dim = 1>
 using GPUArray = ExecArray<T, dim, ExecutionSpace::GPU>;
@@ -144,6 +146,19 @@ using GPUArray = ExecArray<T, dim, ExecutionSpace::GPU>;
 /// @brief Alias for an array in unified memory
 template <typename T, int dim = 1>
 using UnifiedArray = ExecArray<T, dim, ExecutionSpace::Dynamic>;
+
+#else
+// If not a CUDA build then force all arrays to be CPU
+
+/// @brief Alias for an array on the GPU
+template <typename T, int dim = 1>
+using GPUArray = ExecArray<T, dim, ExecutionSpace::CPU>;
+
+/// @brief Alias for an array in unified memory
+template <typename T, int dim = 1>
+using UnifiedArray = ExecArray<T, dim, ExecutionSpace::CPU>;
+
+#endif
 
 /// @brief Alias for an ArrayView corresponding to a particular ExecutionSpace
 template <typename T, int dim, ExecutionSpace space>
@@ -153,9 +168,11 @@ using ExecArrayView = axom::ArrayView<T, dim, detail::execution_to_memory_v<spac
 template <typename T, int dim = 1>
 using CPUArrayView = ExecArrayView<T, dim, ExecutionSpace::CPU>;
 
-/// @brief Alias for an array view on the CPU
+#ifdef SERAC_USE_CUDA
+/// @brief Alias for an array view on the GPU
 template <typename T, int dim = 1>
 using GPUArrayView = ExecArrayView<T, dim, ExecutionSpace::GPU>;
+#endif
 
 /// @brief convenience function for creating a view of an axom::Array type
 template <typename T, int dim, axom::MemorySpace space>
