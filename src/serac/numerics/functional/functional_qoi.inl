@@ -378,9 +378,7 @@ public:
       // mfem::Vector arg1 = ...;
       // e.g. auto [value, gradient_wrt_arg1] = my_functional(arg0, differentiate_wrt(arg1));
       return {output_T_[0], grad_[wrt]};
-
-    } 
-
+    }
   }
 
 private:

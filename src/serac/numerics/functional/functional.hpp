@@ -434,7 +434,6 @@ public:
       // mfem::Vector arg1 = ...;
       // e.g. auto [value, gradient_wrt_arg1] = my_functional(arg0, differentiate_wrt(arg1));
       return {output_T_, grad_[wrt]};
-
     }
     if constexpr (num_differentiated_arguments == 0) {
       // if the user passes only `mfem::Vector`s then we assume they only want the output value

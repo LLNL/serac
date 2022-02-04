@@ -280,7 +280,7 @@ std::shared_ptr<T[]> make_shared_array(std::size_t n)
 template <ExecutionSpace exec, typename... T>
 auto make_shared_arrays(std::size_t n)
 {
-  return std::tuple{make_shared_array< exec, T >(n) ...};
+  return std::tuple{make_shared_array<exec, T>(n)...};
 }
 
 }  // namespace accelerator

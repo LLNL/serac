@@ -58,8 +58,8 @@ public:
     using namespace domain_integral;
 
     [[maybe_unused]] constexpr auto geometry                      = supported_geometries[dim];
-    constexpr auto Q                             = std::max({test::order, trials::order...}) + 1;
-    constexpr auto quadrature_points_per_element = (dim == 2) ? Q * Q : Q * Q * Q;
+    constexpr auto                  Q                             = std::max({test::order, trials::order...}) + 1;
+    constexpr auto                  quadrature_points_per_element = (dim == 2) ? Q * Q : Q * Q * Q;
 
     // this is where we actually specialize the finite element kernel templates with
     // our specific requirements (element type, test/trial spaces, quadrature rule, q-function, etc).
