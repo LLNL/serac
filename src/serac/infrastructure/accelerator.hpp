@@ -263,18 +263,7 @@ std::shared_ptr<T[]> make_shared_array(std::size_t n)
 template <ExecutionSpace exec, typename... T>
 auto make_shared_arrays(std::size_t n)
 {
-  if constexpr (exec == ExecutionSpace::CPU) {
-    return std::tuple{std::shared_ptr<T[]>(new T[n])...};
-  }
-
-#if defined(__CUDACC__)
-  if constexpr (exec == ExecutionSpace::GPU) {
-    T* data;
-    cudaMalloc(&data, sizeof(T) * n);
-    auto deleter = [](T* ptr) { cudaFree(ptr); };
-    return std::shared_ptr<T[]>(data, deleter);
-  }
-#endif
+  return std::tuple{make_shared_array< exec, T >(n) ...};
 }
 
 }  // namespace accelerator

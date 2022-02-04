@@ -57,7 +57,7 @@ public:
   {
     using namespace domain_integral;
 
-    constexpr auto geometry                      = supported_geometries[dim];
+    [[maybe_unused]] constexpr auto geometry                      = supported_geometries[dim];
     constexpr auto Q                             = std::max({test::order, trials::order...}) + 1;
     constexpr auto quadrature_points_per_element = (dim == 2) ? Q * Q : Q * Q * Q;
 
@@ -99,6 +99,7 @@ public:
       });
     }
 
+#if 0
     // TEMPORARY: Add temporary guard so ExecutionSpace::GPU cannot be used when there is no GPU.
     // The proposed future solution is to template the calls on policy (evaluation_kernel<policy>)
 #if defined(__CUDACC__)
@@ -128,6 +129,8 @@ public:
                                                                                        qf_derivatives, J, num_elements);
       };
     }
+#endif
+
 #endif
   }
 
