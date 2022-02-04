@@ -361,6 +361,15 @@ public:
     // scatter-add to compute global residuals
     P_test_->MultTranspose(output_L_, output_T_);
 
+    if constexpr (num_differentiated_arguments == 0) {
+      // if the user passes only `mfem::Vector`s then we assume they only want the output value
+      //
+      // mfem::Vector arg0 = ...;
+      // mfem::Vector arg1 = ...;
+      // e.g. mfem::Vector value = my_functional(arg0, arg1);
+      return output_T_[0];
+    }
+
     if constexpr (num_differentiated_arguments == 1) {
       // if the user has indicated they'd like to evaluate and differentiate w.r.t.
       // a specific argument, then we return both the value and gradient w.r.t. that argument
@@ -369,14 +378,6 @@ public:
       // mfem::Vector arg1 = ...;
       // e.g. auto [value, gradient_wrt_arg1] = my_functional(arg0, differentiate_wrt(arg1));
       return {output_T_[0], grad_[wrt]};
-
-    } else {
-      // if the user passes only `mfem::Vector`s then we assume they only want the output value
-      //
-      // mfem::Vector arg0 = ...;
-      // mfem::Vector arg1 = ...;
-      // e.g. mfem::Vector value = my_functional(arg0, arg1);
-      return output_T_[0];
     }
   }
 

@@ -373,21 +373,21 @@ SERAC_HOST_DEVICE constexpr auto operator-=(zero, zero) { return zero{}; }
 
 /** @brief let `zero` be accessed like a tuple */
 template <int i>
-zero& get(zero& x)
+SERAC_HOST_DEVICE zero& get(zero& x)
 {
   return x;
 }
 
 /** @brief the dot product of anything with `zero` is `zero` */
 template <typename T>
-zero dot(const T&, zero)
+SERAC_HOST_DEVICE zero dot(const T&, zero)
 {
   return zero{};
 }
 
 /** @brief the dot product of anything with `zero` is `zero` */
 template <typename T>
-zero dot(zero, const T&)
+SERAC_HOST_DEVICE zero dot(zero, const T&)
 {
   return zero{};
 }
