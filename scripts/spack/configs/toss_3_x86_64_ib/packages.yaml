@@ -65,6 +65,11 @@ packages:
     externals:
     - spec: diffutils@3.3
       prefix: /usr
+  elfutils:
+    buildable: false
+    externals:
+    - spec: elfutils@0.176
+      prefix: /usr
   epoxy:
     buildable: false
     externals:
@@ -99,6 +104,11 @@ packages:
     buildable: false
     externals:
     - spec: libtool@2.4.2
+      prefix: /usr
+  libunwind:
+    buildable: false
+    externals:
+    - spec: libunwind@8.0.1
       prefix: /usr
   libx11:
     buildable: false

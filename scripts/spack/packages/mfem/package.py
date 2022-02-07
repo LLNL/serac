@@ -1,23 +1,27 @@
-# Copyright 2013-2020 Lawrence Livermore National Security, LLC and other
+# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
 # Spack Project Developers. See the top-level COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-from spack import *
 import os
 import shutil
+import sys
+
+from spack import *
 
 
-class Mfem(Package):
+class Mfem(Package, CudaPackage, ROCmPackage):
     """Free, lightweight, scalable C++ library for finite element methods."""
 
-    tags = ['FEM', 'finite elements', 'high-order', 'AMR', 'HPC']
+    tags = ['fem', 'finite-elements', 'high-order', 'amr', 'hpc', 'radiuss', 'e4s']
 
     homepage = 'http://www.mfem.org'
     git      = 'https://github.com/mfem/mfem.git'
 
     maintainers = ['v-dobrev', 'tzanio', 'acfisher',
                    'goxberry', 'markcmiller86']
+
+    test_requires_compiler = True
 
     # Recommended mfem builds to test when updating this file: see the shell
     # script 'test_builds.sh' in the same directory as this file.
@@ -32,7 +36,7 @@ class Mfem(Package):
     # 1. Verify that no checksums on old versions have changed.
     #
     # 2. Verify that the shortened URL for the new version is listed at:
-    #    http://mfem.org/download/
+    #    https://mfem.org/download/
     #
     # 3. Use http://getlinkinfo.com or similar to verify that the
     #    underling download link for the latest version comes has the
@@ -48,8 +52,12 @@ class Mfem(Package):
     # SERAC EDIT BEGIN
     # Note: we have a `serac-dev` branch on mfem's github that we track pending changes.
     #  Make sure this sha coincides with the git submodule
-    version('4.3.0serac', commit='da400dd0c53b2deaeeb0d0b134e921d45c00f0d0', submodules="True")
+    version('4.3.0serac', commit='e55e90e8d0e331bba3fbe20a98a9f9b12453700b', submodules="True")
     # SERAC EDIT END
+
+    version('4.3.0',
+            sha256='3a495602121b986049286ea0b23512279cdbdfb43c15c42a1511b521051fbe38',
+            url='https://bit.ly/mfem-4-3', extension='tar.gz')
 
     version('4.2.0',
             '4352a225b55948d2e73a5ee88cece0e88bdbe7ba6726a23d68b2736d3221a86d',
@@ -103,11 +111,8 @@ class Mfem(Package):
             description='Enable METIS support')
     variant('openmp', default=False,
             description='Enable OpenMP parallelism')
-    variant('cuda', default=False, description='Enable CUDA support')
-    # SERAC EDIT BEGIN - need to explicitly enumerate values
-    variant('cuda_arch', default='sm_60',
-            description='CUDA architecture to compile for', values=['sm_' + val for val in CudaPackage.cuda_arch_values])
-    # SERAC EDIT END
+    # Note: '+cuda' and 'cuda_arch' variants are added by the CudaPackage
+    # Note: '+rocm' and 'amdgpu_target' variants are added by the ROCmPackage
     variant('occa', default=False, description='Enable OCCA backend')
     variant('raja', default=False, description='Enable RAJA backend')
     variant('libceed', default=False, description='Enable libCEED backend')
@@ -126,6 +131,8 @@ class Mfem(Package):
             description='Enable serial, sparse direct solvers')
     variant('petsc', default=False,
             description='Enable PETSc solvers, preconditioners, etc.')
+    variant('slepc', default=False,
+            description='Enable SLEPc integration')
     variant('sundials', default=False,
             description='Enable Sundials time integrators')
     variant('pumi', default=False,
@@ -148,6 +155,7 @@ class Mfem(Package):
             description='Enable secure sockets using GnuTLS')
     variant('libunwind', default=False,
             description='Enable backtrace on error support using Libunwind')
+    # TODO: SIMD, Ginkgo, ADIOS2, HiOp, MKL CPardiso, Axom/Sidre
     variant('timer', default='auto',
             values=('auto', 'std', 'posix', 'mac', 'mpi'),
             description='Timing functions to use in mfem::StopWatch')
@@ -158,71 +166,80 @@ class Mfem(Package):
 
     conflicts('+shared', when='@:3.3.2')
     conflicts('~static~shared')
-    conflicts('~threadsafe', when='+openmp')
+    conflicts('~threadsafe', when='@:3+openmp')
 
-    conflicts('+cuda', when='@:3.99.99')
+    conflicts('+cuda', when='@:3')
+    conflicts('+rocm', when='@:4.1')
+    conflicts('+cuda+rocm')
     conflicts('+netcdf', when='@:3.1')
     conflicts('+superlu-dist', when='@:3.1')
     # STRUMPACK support was added in mfem v3.3.2, however, here we allow only
-    # strumpack v3 support which is available starting with mfem v4.0:
-    conflicts('+strumpack', when='@:3.99.99')
+    # strumpack v3+ support for which is available starting with mfem v4.0:
+    conflicts('+strumpack', when='@:3')
     conflicts('+gnutls', when='@:3.1')
     conflicts('+zlib', when='@:3.2')
     conflicts('+mpfr', when='@:3.2')
     conflicts('+petsc', when='@:3.2')
+    conflicts('+slepc', when='@:4.1')
     conflicts('+sundials', when='@:3.2')
     conflicts('+pumi', when='@:3.3.2')
-    conflicts('+gslib', when='@:4.0.99')
+    conflicts('+gslib', when='@:4.0')
     conflicts('timer=mac', when='@:3.3.0')
     conflicts('timer=mpi', when='@:3.3.0')
     conflicts('~metis+mpi', when='@:3.3.0')
     conflicts('+metis~mpi', when='@:3.3.0')
     conflicts('+conduit', when='@:3.3.2')
-    conflicts('+occa', when='mfem@:3.99.99')
-    conflicts('+raja', when='mfem@:3.99.99')
-    conflicts('+libceed', when='mfem@:4.0.99')
-    conflicts('+umpire', when='mfem@:4.0.99')
-    conflicts('+amgx', when='mfem@:4.1.99')
+    conflicts('+occa', when='mfem@:3')
+    conflicts('+raja', when='mfem@:3')
+    conflicts('+libceed', when='mfem@:4.0')
+    conflicts('+umpire', when='mfem@:4.0')
+    conflicts('+amgx', when='mfem@:4.1')
     conflicts('+amgx', when='~cuda')
+    conflicts('+mpi~cuda ^hypre+cuda')
 
     conflicts('+superlu-dist', when='~mpi')
     conflicts('+strumpack', when='~mpi')
     conflicts('+petsc', when='~mpi')
+    conflicts('+slepc', when='~petsc')
     conflicts('+pumi', when='~mpi')
     conflicts('timer=mpi', when='~mpi')
 
     depends_on('mpi', when='+mpi')
-    depends_on('hypre@2.10.0:2.13.99', when='@:3.3.99+mpi')
-    depends_on('hypre', when='@3.4:+mpi')
+    depends_on('hypre@2.10.0:2.13', when='@:3.3+mpi')
+    depends_on('hypre@:2.20.0', when='@3.4:4.2+mpi')
+    depends_on('hypre@:2.23.0', when='@4.3.0+mpi')
+    depends_on('hypre', when='+mpi')
 
     depends_on('metis', when='+metis')
     depends_on('blas', when='+lapack')
     depends_on('lapack@3.0:', when='+lapack')
 
-    depends_on('cuda', when='+cuda')
-
     depends_on('sundials@2.7.0', when='@:3.3.0+sundials~mpi')
     depends_on('sundials@2.7.0+mpi+hypre', when='@:3.3.0+sundials+mpi')
     depends_on('sundials@2.7.0:', when='@3.3.2:+sundials~mpi')
     depends_on('sundials@2.7.0:+mpi+hypre', when='@3.3.2:+sundials+mpi')
-    # SERAC EDIT BEGIN
-    depends_on('sundials@2.7.0:+cuda', when='+sundials+cuda')
-    # SERAC EDIT END
     depends_on('sundials@5.0.0:', when='@4.0.1-xsdk:+sundials~mpi')
     depends_on('sundials@5.0.0:+mpi+hypre', when='@4.0.1-xsdk:+sundials+mpi')
-    depends_on('sundials@5.4.0:+cuda', when='@4.2.0:+sundials+cuda')
-    depends_on('pumi@2.2.3', when='@4.2.0:+pumi')
+    for sm_ in CudaPackage.cuda_arch_values:
+        depends_on('sundials@5.4.0:+cuda cuda_arch={0}'.format(sm_),
+                   when='@4.2.0:+sundials+cuda cuda_arch={0}'.format(sm_))
+    depends_on('pumi@2.2.3:', when='@4.2.0:+pumi')
     depends_on('pumi', when='+pumi~shared')
     depends_on('pumi+shared', when='+pumi+shared')
     depends_on('gslib@1.0.5:+mpi', when='+gslib+mpi')
     depends_on('gslib@1.0.5:~mpi~mpiio', when='+gslib~mpi')
     depends_on('suite-sparse', when='+suite-sparse')
     depends_on('superlu-dist', when='+superlu-dist')
-    depends_on('strumpack@3.0.0:', when='+strumpack')
+    depends_on('strumpack@3.0.0:', when='+strumpack~shared')
+    depends_on('strumpack@3.0.0:+shared', when='+strumpack+shared')
+    for sm_ in CudaPackage.cuda_arch_values:
+        depends_on('strumpack+cuda cuda_arch={0}'.format(sm_),
+                   when='+strumpack+cuda cuda_arch={0}'.format(sm_))
     # The PETSc tests in MFEM will fail if PETSc is not configured with
     # SuiteSparse and MUMPS. On the other hand, if we require the variants
     # '+suite-sparse+mumps' of PETSc, the xsdk package concretization fails.
     depends_on('petsc@3.8:+mpi+double+hypre', when='+petsc')
+    depends_on('slepc@3.8.0:', when='+slepc')
     # Recommended when building outside of xsdk:
     # depends_on('petsc@3.8:+mpi+double+hypre+suite-sparse+mumps',
     #            when='+petsc')
@@ -238,45 +255,69 @@ class Mfem(Package):
     # superlu-dist@6.1.1. See https://github.com/mfem/mfem/issues/983.
     # This issue was resolved in v4.1.
     conflicts('+superlu-dist',
-              when='mfem@:4.0.99 ^hypre@2.16.0: ^superlu-dist@6:')
+              when='mfem@:4.0 ^hypre@2.16.0: ^superlu-dist@6:')
     # The STRUMPACK v3 interface in MFEM seems to be broken as of MFEM v4.1
     # when using hypre version >= 2.16.0.
     # This issue is resolved in v4.2.
-    conflicts('+strumpack', when='mfem@4.0.0:4.1.99 ^hypre@2.16.0:')
+    conflicts('+strumpack', when='mfem@4.0.0:4.1 ^hypre@2.16.0:')
+    conflicts('+strumpack ^strumpack+cuda', when='~cuda')
 
-    depends_on('occa@1.0.8:', when='@:4.1.99+occa')
+    depends_on('occa@1.0.8:', when='@:4.1+occa')
     depends_on('occa@1.1.0:', when='@4.2.0:+occa')
     depends_on('occa+cuda', when='+occa+cuda')
+    # TODO: propagate '+rocm' variant to occa when it is supported
 
     depends_on('raja@0.10.0:', when='@4.0.1:+raja')
     depends_on('raja@0.7.0:0.9.0', when='@4.0.0+raja')
-    depends_on('raja+cuda', when='+raja+cuda')
+    for sm_ in CudaPackage.cuda_arch_values:
+        depends_on('raja+cuda cuda_arch={0}'.format(sm_),
+                   when='+raja+cuda cuda_arch={0}'.format(sm_))
+    for gfx in ROCmPackage.amdgpu_targets:
+        depends_on('raja+rocm amdgpu_target={0}'.format(gfx),
+                   when='+raja+rocm amdgpu_target={0}'.format(gfx))
 
-    depends_on('libceed@0.6:', when='@:4.1.99+libceed')
+    depends_on('libceed@0.6:', when='@:4.1+libceed')
     depends_on('libceed@0.7:', when='@4.2.0:+libceed')
-    depends_on('libceed+cuda', when='+libceed+cuda')
+    for sm_ in CudaPackage.cuda_arch_values:
+        depends_on('libceed+cuda cuda_arch={0}'.format(sm_),
+                   when='+libceed+cuda cuda_arch={0}'.format(sm_))
+    for gfx in ROCmPackage.amdgpu_targets:
+        depends_on('libceed+rocm amdgpu_target={0}'.format(gfx),
+                   when='+libceed+rocm amdgpu_target={0}'.format(gfx))
 
     depends_on('umpire@2.0.0:', when='+umpire')
-    depends_on('umpire+cuda', when='+umpire+cuda')
-
-    depends_on('amgx', when='+amgx')
-    # MPI is enabled by default
-    depends_on('amgx~mpi', when='+amgx~mpi')
     for sm_ in CudaPackage.cuda_arch_values:
-        depends_on('amgx cuda_arch={0}'.format(sm_),
-                   when='+amgx cuda_arch=sm_{0}'.format(sm_))
+        depends_on('umpire+cuda cuda_arch={0}'.format(sm_),
+                   when='+umpire+cuda cuda_arch={0}'.format(sm_))
+    for gfx in ROCmPackage.amdgpu_targets:
+        depends_on('umpire+rocm amdgpu_target={0}'.format(gfx),
+                   when='+umpire+rocm amdgpu_target={0}'.format(gfx))
+
+    # AmgX: propagate the cuda_arch and mpi settings:
+    for sm_ in CudaPackage.cuda_arch_values:
+        depends_on('amgx+mpi cuda_arch={0}'.format(sm_),
+                   when='+amgx+mpi cuda_arch={0}'.format(sm_))
+        depends_on('amgx~mpi cuda_arch={0}'.format(sm_),
+                   when='+amgx~mpi cuda_arch={0}'.format(sm_))
 
     patch('mfem_ppc_build.patch', when='@3.2:3.3.0 arch=ppc64le')
     patch('mfem-3.4.patch', when='@3.4.0')
     patch('mfem-3.3-3.4-petsc-3.9.patch',
           when='@3.3.0:3.4.0 +petsc ^petsc@3.9.0:')
+    patch('mfem-4.2-umpire.patch', when='@4.2.0+umpire')
+    patch('mfem-4.2-slepc.patch', when='@4.2.0+slepc')
+    patch('mfem-4.2-petsc-3.15.0.patch', when='@4.2.0+petsc ^petsc@3.15.0:')
+    # SERAC EDIT BEGIN
+    # Our version of mfem has these patches already
+    #patch('mfem-4.3-hypre-2.23.0.patch', when='@4.3.0')
+    #patch('mfem-4.3-cusparse-11.4.patch', when='@4.3.0+cuda')
+    # SERAC EDIT END
 
     # Patch to fix MFEM makefile syntax error. See
     # https://github.com/mfem/mfem/issues/1042 for the bug report and
     # https://github.com/mfem/mfem/pull/1043 for the bugfix contributed
     # upstream.
     patch('mfem-4.0.0-makefile-syntax-fix.patch', when='@4.0.0')
-
     phases = ['configure', 'build', 'install']
 
     def setup_build_environment(self, env):
@@ -312,10 +353,10 @@ class Mfem(Package):
         xlinker = '-Wl,'
         if '+cuda' in spec:
             xcompiler = '-Xcompiler='
-            # SERAC EDIT BEGIN - equals sign not portable
+            # SERAC EDIT BEGIN - Xlinker fix 1/3 - better way? upstream?
             xlinker = '-Xlinker '
             # SERAC EDIT END
-        cuda_arch = spec.variants['cuda_arch'].value
+        cuda_arch = None if '~cuda' in spec else spec.variants['cuda_arch'].value
 
         # We need to add rpaths explicitly to allow proper export of link flags
         # from within MFEM.
@@ -325,7 +366,7 @@ class Mfem(Package):
         # above -- this is done to avoid issues like this:
         # https://github.com/mfem/mfem/issues/1088.
         def ld_flags_from_library_list(libs_list):
-            # SERAC EDIT BEGIN - Xlinker allows only one arg
+            # SERAC EDIT BEGIN - Xlinker fix 2/3
             flags = ['%s-rpath %s%s' % (xlinker, xlinker, dir)
                      for dir in libs_list.directories
                      if not is_sys_lib_path(dir)]
@@ -336,7 +377,7 @@ class Mfem(Package):
             return ' '.join(flags)
 
         def ld_flags_from_dirs(pkg_dirs_list, pkg_libs_list):
-            # SERAC EDIT BEGIN
+            # SERAC EDIT BEGIN - Xlinker fix 3/3
             flags = ['%s-rpath %s%s' % (xlinker, xlinker, dir) for dir in pkg_dirs_list
                      if not is_sys_lib_path(dir)]
             # SERAC EDIT END
@@ -353,6 +394,21 @@ class Mfem(Package):
                     if lib:
                         return lib
             return LibraryList([])
+
+        # Determine how to run MPI tests, e.g. when using '--test=root', when
+        # Spack is run inside a batch system job.
+        mfem_mpiexec    = 'mpirun'
+        mfem_mpiexec_np = '-np'
+        if 'SLURM_JOBID' in os.environ:
+            mfem_mpiexec    = 'srun'
+            mfem_mpiexec_np = '-n'
+        elif 'LSB_JOBID' in os.environ:
+            if 'LLNL_COMPUTE_NODES' in os.environ:
+                mfem_mpiexec    = 'lrun'
+                mfem_mpiexec_np = '-n'
+            else:
+                mfem_mpiexec    = 'jsrun'
+                mfem_mpiexec_np = '-p'
 
         metis5_str = 'NO'
         if ('+metis' in spec) and spec['metis'].satisfies('@5:'):
@@ -380,6 +436,7 @@ class Mfem(Package):
             'MFEM_USE_SUITESPARSE=%s' % yes_no('+suite-sparse'),
             'MFEM_USE_SUNDIALS=%s' % yes_no('+sundials'),
             'MFEM_USE_PETSC=%s' % yes_no('+petsc'),
+            'MFEM_USE_SLEPC=%s' % yes_no('+slepc'),
             'MFEM_USE_PUMI=%s' % yes_no('+pumi'),
             'MFEM_USE_GSLIB=%s' % yes_no('+gslib'),
             'MFEM_USE_NETCDF=%s' % yes_no('+netcdf'),
@@ -388,11 +445,14 @@ class Mfem(Package):
             'MFEM_USE_OPENMP=%s' % yes_no('+openmp'),
             'MFEM_USE_CONDUIT=%s' % yes_no('+conduit'),
             'MFEM_USE_CUDA=%s' % yes_no('+cuda'),
+            'MFEM_USE_HIP=%s' % yes_no('+rocm'),
             'MFEM_USE_OCCA=%s' % yes_no('+occa'),
             'MFEM_USE_RAJA=%s' % yes_no('+raja'),
             'MFEM_USE_AMGX=%s' % yes_no('+amgx'),
             'MFEM_USE_CEED=%s' % yes_no('+libceed'),
-            'MFEM_USE_UMPIRE=%s' % yes_no('+umpire')]
+            'MFEM_USE_UMPIRE=%s' % yes_no('+umpire'),
+            'MFEM_MPIEXEC=%s' % mfem_mpiexec,
+            'MFEM_MPIEXEC_NP=%s' % mfem_mpiexec_np]
 
         cxxflags = spec.compiler_flags['cxxflags']
 
@@ -415,7 +475,7 @@ class Mfem(Package):
             cxxflags = [(xcompiler + flag) for flag in cxxflags]
             if '+cuda' in spec:
                 cxxflags += [
-                    '-x=cu --expt-extended-lambda -arch=%s' % cuda_arch,
+                    '-x=cu --expt-extended-lambda -arch=sm_%s' % cuda_arch,
                     '-ccbin %s' % (spec['mpi'].mpicxx if '+mpi' in spec
                                    else env['CXX'])]
             if self.spec.satisfies('@4.0.0:'):
@@ -429,8 +489,8 @@ class Mfem(Package):
             options += ['STATIC=NO']
         if '+shared' in spec:
             options += [
-                'SHARED=YES', 'PICFLAG=%s' % self.compiler.cxx_pic_flag
-            ]
+                'SHARED=YES',
+                'PICFLAG=%s' % (xcompiler + self.compiler.cxx_pic_flag)]
 
         if '+mpi' in spec:
             options += ['MPICXX=%s' % spec['mpi'].mpicxx]
@@ -474,24 +534,51 @@ class Mfem(Package):
             # fortran library and also the MPI fortran library:
             if '~shared' in strumpack:
                 if os.path.basename(env['FC']) == 'gfortran':
-                    sp_lib += ['-lgfortran']
-                if '^mpich' in strumpack:
+                    gfortran = Executable(env['FC'])
+                    libext = 'dylib' if sys.platform == 'darwin' else 'so'
+                    libfile = os.path.abspath(gfortran(
+                        '-print-file-name=libgfortran.%s' % libext,
+                        output=str).strip())
+                    gfortran_lib = LibraryList(libfile)
+                    sp_lib += [ld_flags_from_library_list(gfortran_lib)]
+                if ('^mpich' in strumpack) or ('^mvapich2' in strumpack):
                     sp_lib += ['-lmpifort']
                 elif '^openmpi' in strumpack:
                     sp_lib += ['-lmpi_mpifh']
+                elif '^spectrum-mpi' in strumpack:
+                    sp_lib += ['-lmpi_ibm_mpifh']
             if '+openmp' in strumpack:
-                sp_opt += [self.compiler.openmp_flag]
-            if '^scalapack' in strumpack:
+                # The '+openmp' in the spec means strumpack will TRY to find
+                # OpenMP; if not found, we should not add any flags -- how do
+                # we figure out if strumpack found OpenMP?
+                if not self.spec.satisfies('%apple-clang'):
+                    sp_opt += [xcompiler + self.compiler.openmp_flag]
+            if '^parmetis' in strumpack:
+                parmetis = strumpack['parmetis']
+                sp_opt += [parmetis.headers.cpp_flags]
+                sp_lib += [ld_flags_from_library_list(parmetis.libs)]
+            if '^netlib-scalapack' in strumpack:
                 scalapack = strumpack['scalapack']
                 sp_opt += ['-I%s' % scalapack.prefix.include]
                 sp_lib += [ld_flags_from_dirs([scalapack.prefix.lib],
                                               ['scalapack'])]
+            elif '^scalapack' in strumpack:
+                scalapack = strumpack['scalapack']
+                sp_opt += [scalapack.headers.cpp_flags]
+                sp_lib += [ld_flags_from_library_list(scalapack.libs)]
             if '+butterflypack' in strumpack:
                 bp = strumpack['butterflypack']
                 sp_opt += ['-I%s' % bp.prefix.include]
                 sp_lib += [ld_flags_from_dirs([bp.prefix.lib],
                                               ['dbutterflypack',
                                                'zbutterflypack'])]
+            if '+zfp' in strumpack:
+                zfp = strumpack['zfp']
+                sp_opt += ['-I%s' % zfp.prefix.include]
+                sp_lib += [ld_flags_from_dirs([zfp.prefix.lib], ['zfp'])]
+            if '+cuda' in strumpack:
+                # assuming also ('+cuda' in spec)
+                sp_lib += ['-lcusolver', '-lcublas']
             options += [
                 'STRUMPACK_OPT=%s' % ' '.join(sp_opt),
                 'STRUMPACK_LIB=%s' % ' '.join(sp_lib)]
@@ -518,6 +605,12 @@ class Mfem(Package):
                     'PETSC_LIB=%s' % ld_flags_from_library_list(petsc.libs)]
             else:
                 options += ['PETSC_DIR=%s' % petsc.prefix]
+
+        if '+slepc' in spec:
+            slepc = spec['slepc']
+            options += [
+                'SLEPC_OPT=%s' % slepc.headers.cpp_flags,
+                'SLEPC_LIB=%s' % ld_flags_from_library_list(slepc.libs)]
 
         if '+pumi' in spec:
             pumi_libs = ['pumi', 'crv', 'ma', 'mds', 'apf', 'pcu', 'gmi',
@@ -578,12 +671,19 @@ class Mfem(Package):
                 'LIBUNWIND_LIB=%s' % ld_flags_from_library_list(libs)]
 
         if '+openmp' in spec:
-            options += ['OPENMP_OPT=%s' % self.compiler.openmp_flag]
+            options += [
+                'OPENMP_OPT=%s' % (xcompiler + self.compiler.openmp_flag)]
 
         if '+cuda' in spec:
             options += [
                 'CUDA_CXX=%s' % join_path(spec['cuda'].prefix, 'bin', 'nvcc'),
-                'CUDA_ARCH=%s' % cuda_arch]
+                'CUDA_ARCH=sm_%s' % cuda_arch]
+
+        if '+rocm' in spec:
+            amdgpu_target = ','.join(spec.variants['amdgpu_target'].value)
+            options += [
+                'HIP_CXX=%s' % spec['hip'].hipcc,
+                'HIP_ARCH=%s' % amdgpu_target]
 
         if '+occa' in spec:
             options += ['OCCA_OPT=-I%s' % spec['occa'].prefix.include,
@@ -714,14 +814,63 @@ class Mfem(Package):
         if install_em:
             install_tree('data', join_path(prefix_share, 'data'))
 
-    # The files referenced in this patch method do not exist in stable
-    # versions earlier than 4.1.
-    @when('@4.1:')
+    examples_src_dir = 'examples'
+    examples_data_dir = 'data'
+
+    @run_after('install')
+    def cache_test_sources(self):
+        """Copy the example source files after the package is installed to an
+        install test subdirectory for use during `spack test run`."""
+        self.cache_extra_test_sources([self.examples_src_dir,
+                                       self.examples_data_dir])
+
+    def test(self):
+        test_dir = join_path(
+            self.test_suite.current_test_cache_dir,
+            self.examples_src_dir
+        )
+
+        # MFEM has many examples to serve as a suitable smoke check. ex10
+        # was chosen arbitrarily among the examples that work both with
+        # MPI and without it
+        test_exe = 'ex10p' if ('+mpi' in self.spec) else 'ex10'
+        self.run_test(
+            'make',
+            [
+                'CONFIG_MK={0}/share/mfem/config.mk'.format(self.prefix),
+                test_exe,
+                'parallel=False'
+            ],
+            purpose='test: building {0}'.format(test_exe),
+            skip_missing=False,
+            work_dir=test_dir,
+        )
+
+        self.run_test(
+            './{0}'.format(test_exe),
+            [
+                '--mesh',
+                '../{0}/beam-quad.mesh'.format(self.examples_data_dir)
+            ],
+            [],
+            installed=False,
+            purpose='test: running {0}'.format(test_exe),
+            skip_missing=False,
+            work_dir=test_dir,
+        )
+
+    # this patch is only needed for mfem 4.1, where a few
+    # released files include byte order marks
+    @when('@4.1.0')
     def patch(self):
         # Remove the byte order mark since it messes with some compilers
-        filter_file(u'\uFEFF', '', 'fem/gslib.hpp')
-        filter_file(u'\uFEFF', '', 'fem/gslib.cpp')
-        filter_file(u'\uFEFF', '', 'linalg/hiop.hpp')
+        files_with_bom = [
+            'fem/gslib.hpp', 'fem/gslib.cpp', 'linalg/hiop.hpp',
+            'miniapps/gslib/field-diff.cpp', 'miniapps/gslib/findpts.cpp',
+            'miniapps/gslib/pfindpts.cpp']
+        bom = '\xef\xbb\xbf' if sys.version_info < (3,) else u'\ufeff'
+        for f in files_with_bom:
+            filter_file(bom, '', f)
 
     @property
     def suitesparse_components(self):
@@ -734,16 +883,15 @@ class Mfem(Package):
     @property
     def sundials_components(self):
         """Return the SUNDIALS components needed by MFEM."""
+        spec = self.spec
         sun_comps = 'arkode,cvodes,nvecserial,kinsol'
-        if '+mpi' in self.spec:
-            if self.spec.satisfies('@4.2:'):
+        if '+mpi' in spec:
+            if spec.satisfies('@4.2:'):
                 sun_comps += ',nvecparallel,nvecmpiplusx'
             else:
                 sun_comps += ',nvecparhyp,nvecparallel'
-        # SERAC EDIT BEGIN
-        if '+cuda' in self.spec:
+        if '+cuda' in spec and '+cuda' in spec['sundials']:
             sun_comps += ',nveccuda'
-        # SERAC EDIT END
         return sun_comps
 
     @property
