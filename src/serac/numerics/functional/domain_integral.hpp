@@ -99,7 +99,7 @@ public:
       });
     }
 
-// some of the GPU functionality is temporarily disabled to 
+// some of the GPU functionality is temporarily disabled to
 // help incrementally roll-out the variadic implementation of Functional
 // TODO: re-enable GPU kernels in a follow-up PR
 #if 0
