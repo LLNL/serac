@@ -56,6 +56,9 @@ if(ENABLE_CUDA)
 
     set(functional_tests_cuda 
         tensor_unit_tests_cuda.cu 
+#        some of the GPU functionality is temporarily disabled to 
+#        help incrementally roll-out the variadic implementation of Functional
+#        TODO: re-enable GPU kernels in a follow-up PR
 #        functional_comparisons_cuda.cu
 #        quadrature_data_cuda.cu
        )
