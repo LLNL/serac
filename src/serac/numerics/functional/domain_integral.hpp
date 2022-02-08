@@ -99,6 +99,9 @@ public:
       });
     }
 
+// some of the GPU functionality is temporarily disabled to 
+// help incrementally roll-out the variadic implementation of Functional
+// TODO: re-enable GPU kernels in a follow-up PR
 #if 0
     // TEMPORARY: Add temporary guard so ExecutionSpace::GPU cannot be used when there is no GPU.
     // The proposed future solution is to template the calls on policy (evaluation_kernel<policy>)
