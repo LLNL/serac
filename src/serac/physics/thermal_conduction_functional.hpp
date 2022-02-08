@@ -127,8 +127,8 @@ public:
                                                                .vector_dim = 1,
                                                                .ordering   = mfem::Ordering::byNODES,
                                                                .name       = detail::addPrefix(name, "temperature")})),
-        M_functional_(&temperature_.space(), &temperature_.space()),
-        K_functional_(&temperature_.space(), &temperature_.space()),
+        M_functional_(&temperature_.space(), {&temperature_.space()}),
+        K_functional_(&temperature_.space(), {&temperature_.space()}),
         residual_(temperature_.space().TrueVSize()),
         ode_(temperature_.space().TrueVSize(), {.u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
              nonlin_solver_, bcs_)
@@ -335,7 +335,7 @@ public:
     // Project the essential boundary coefficients
     for (auto& bc : bcs_.essentials()) {
       bc.projectBdr(temperature_, time_);
-      K_functional_.SetEssentialBC(bc.markers());
+      K_functional_.SetEssentialBC(bc.markers(), 0);
     }
 
     // Initialize the true vector
@@ -351,8 +351,8 @@ public:
           },
 
           [this](const mfem::Vector& u) -> mfem::Operator& {
-            K_functional_(u);
-            J_.reset(grad(K_functional_));
+            auto [r, drdu] = K_functional_(differentiate_wrt(u));
+            J_             = assemble(drdu);
             bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             return *J_;
           });
@@ -375,11 +375,11 @@ public:
               mfem::Vector K_arg(u_.Size());
               add(1.0, u_, dt_, du_dt, K_arg);
 
-              M_functional_(u_);
-              std::unique_ptr<mfem::HypreParMatrix> m_mat(grad(M_functional_));
+              auto                                  M = serac::get<1>(M_functional_(differentiate_wrt(u_)));
+              std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
-              K_functional_(K_arg);
-              std::unique_ptr<mfem::HypreParMatrix> k_mat(grad(K_functional_));
+              auto                                  K = serac::get<1>(K_functional_(differentiate_wrt(K_arg)));
+              std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
               J_.reset(mfem::Add(1.0, *m_mat, dt_, *k_mat));
               bcs_.eliminateAllEssentialDofsFromMatrix(*J_);

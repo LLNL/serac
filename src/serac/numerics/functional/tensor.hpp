@@ -127,7 +127,7 @@ struct tensor<T, 1> {
   SERAC_HOST_DEVICE constexpr auto& operator[](int) { return value; };
   SERAC_HOST_DEVICE constexpr auto  operator[](int) const { return value; };
 
-  SERAC_HOST_DEVICE constexpr operator T() { return value; }
+  SERAC_HOST_DEVICE constexpr operator T() const { return value; }
   SERAC_HOST_DEVICE constexpr tensor() : value() {}
   SERAC_HOST_DEVICE constexpr tensor(T v) : value(v) {}
   T value;
@@ -154,7 +154,7 @@ struct tensor<T, 1, 1> {
   SERAC_HOST_DEVICE constexpr auto& operator[](int) { return value; };
   SERAC_HOST_DEVICE constexpr auto  operator[](int) const { return value; };
 
-  operator tensor<T, 1>() { return value; }
+  operator tensor<T, 1>() const { return value; }
   tensor() : value() {}
   tensor(T v) : value(v) {}
   tensor(tensor<T, 1> v) : value(v) {}
@@ -358,11 +358,38 @@ SERAC_HOST_DEVICE constexpr auto operator*(T /*other*/, zero)
   return zero{};
 }
 
+/** @brief `zero` divided by something is `zero` */
+template <typename T>
+SERAC_HOST_DEVICE constexpr auto operator/(zero, T /*other*/)
+{
+  return zero{};
+}
+
+/** @brief `zero` plus `zero` is `zero */
+SERAC_HOST_DEVICE constexpr auto operator+=(zero, zero) { return zero{}; }
+
+/** @brief `zero` minus `zero` is `zero */
+SERAC_HOST_DEVICE constexpr auto operator-=(zero, zero) { return zero{}; }
+
 /** @brief let `zero` be accessed like a tuple */
 template <int i>
-zero& get(zero& x)
+SERAC_HOST_DEVICE zero& get(zero& x)
 {
   return x;
+}
+
+/** @brief the dot product of anything with `zero` is `zero` */
+template <typename T>
+SERAC_HOST_DEVICE zero dot(const T&, zero)
+{
+  return zero{};
+}
+
+/** @brief the dot product of anything with `zero` is `zero` */
+template <typename T>
+SERAC_HOST_DEVICE zero dot(zero, const T&)
+{
+  return zero{};
 }
 
 /**
@@ -1654,14 +1681,25 @@ SERAC_HOST_DEVICE auto get_value(const tensor<dual<T>, n...>& arg)
 SERAC_HOST_DEVICE auto get_gradient(double /* arg */) { return zero{}; }
 
 /**
+ * @brief get the gradient of type `tensor` (note: since its stored type is not a dual
+ * number, the derivative term is identically zero)
+ * @return The sentinel, @see zero
+ */
+template <int... n>
+SERAC_HOST_DEVICE auto get_gradient(const tensor<double, n...>& /* arg */)
+{
+  return zero{};
+}
+
+/**
  * @brief Retrieves a gradient tensor from a tensor of dual numbers
  * @param[in] arg The tensor of dual numbers
  */
-template <typename T, int... n>
+template <int... n>
 SERAC_HOST_DEVICE auto get_gradient(const tensor<dual<double>, n...>& arg)
 {
   tensor<double, n...> g{};
-  for_constexpr<n...>([&](auto... i) { g[{i...}] = arg[{i...}].gradient; });
+  for_constexpr<n...>([&](auto... i) { g(i...) = arg(i...).gradient; });
   return g;
 }
 
@@ -1755,46 +1793,6 @@ SERAC_HOST_DEVICE auto chain_rule(const tensor<double, m, n, p...>& df_dx, const
     }
   }
   return total;
-}
-
-/**
- * @brief Recast the shape of a tensor <m,n>
- */
-template <int m, int n, typename T>
-auto convert_to_tensor_with_shape(const tensor<T, m, n>& A)
-{
-  return A;
-}
-
-/**
- * @brief Recast a double as a tensor
- */
-template <int m, int n, typename T>
-auto convert_to_tensor_with_shape(T value)
-{
-  tensor<T, m, n> A;
-  A[0][0] = value;
-  return A;
-}
-
-/**
- * @brief Recast the shape of a tensor<m, n, o>
- */
-template <int m, int n, int o, typename T>
-auto convert_to_tensor_with_shape(const tensor<T, m, n, o>& A)
-{
-  return A;
-}
-
-/**
- * @brief Recast a double as a tensor
- */
-template <int m, int n, int o, typename T>
-auto convert_to_tensor_with_shape(T value)
-{
-  tensor<T, m, n, o> A;
-  A[0][0][0] = value;
-  return A;
 }
 
 }  // namespace serac

@@ -169,19 +169,18 @@ template <typename T, int dim = 1>
 using CPUArrayView = ExecArrayView<T, dim, ExecutionSpace::CPU>;
 
 #ifdef SERAC_USE_CUDA
-
 /// @brief Alias for an array view on the GPU
 template <typename T, int dim = 1>
 using GPUArrayView = ExecArrayView<T, dim, ExecutionSpace::GPU>;
-
-#else
-// If not a CUDA build then force all arrays to be CPU
-
-/// @brief Alias for an array view on the GPU
-template <typename T, int dim = 1>
-using GPUArrayView = ExecArrayView<T, dim, ExecutionSpace::CPU>;
-
 #endif
+
+/// @brief convenience function for creating a view of an axom::Array type
+template <typename T, int dim, axom::MemorySpace space>
+auto view(axom::Array<T, dim, space>& arr)
+{
+  return axom::ArrayView<T, dim, space>(arr);
+}
+
 /**
  * @brief Namespace for methods involving accelerator-enabled builds
  */
@@ -255,7 +254,7 @@ std::string getCUDAMemInfoString()
  * @tparam exec the memory space where the data lives
  * @param n how many entries to allocate in the array
  */
-template <typename T, ExecutionSpace exec>
+template <ExecutionSpace exec, typename T>
 std::shared_ptr<T[]> make_shared_array(std::size_t n)
 {
   if constexpr (exec == ExecutionSpace::CPU) {
@@ -270,6 +269,18 @@ std::shared_ptr<T[]> make_shared_array(std::size_t n)
     return std::shared_ptr<T[]>(data, deleter);
   }
 #endif
+}
+
+/**
+ * @brief create shared_ptr to an array of `n` values of type `T`, either on the host or device
+ * @tparam T the type of the value to be stored in the array
+ * @tparam exec the memory space where the data lives
+ * @param n how many entries to allocate in the array
+ */
+template <ExecutionSpace exec, typename... T>
+auto make_shared_arrays(std::size_t n)
+{
+  return std::tuple{make_shared_array<exec, T>(n)...};
 }
 
 }  // namespace accelerator

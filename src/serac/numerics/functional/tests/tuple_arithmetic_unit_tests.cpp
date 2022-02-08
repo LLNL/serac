@@ -27,7 +27,7 @@ static constexpr double mu  = 2.0;
 
 static constexpr double epsilon = 1.0e-6;
 
-TEST(TupleTests, structured_binding)
+TEST(TupleArithmeticUnitTests, structured_binding)
 {
   serac::tuple x{0, 1.0, 2.0f};
   auto [a, b, c] = x;
@@ -36,7 +36,7 @@ TEST(TupleTests, structured_binding)
   EXPECT_NEAR(c, 2.0f, 1.0e-10);
 }
 
-TEST(TupleTests, add)
+TEST(TupleArithmeticUnitTests, add)
 {
   serac::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
                  make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
@@ -46,7 +46,7 @@ TEST(TupleTests, add)
   EXPECT_NEAR(norm(serac::get<2>(b)), 2.977782431376876, 1.0e-10);
 }
 
-TEST(TupleTests, subtract)
+TEST(TupleArithmeticUnitTests, subtract)
 {
   serac::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
                  make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
@@ -56,7 +56,7 @@ TEST(TupleTests, subtract)
   EXPECT_NEAR(norm(serac::get<2>(b)), 0.0, 1.0e-10);
 }
 
-TEST(TupleTests, multiply)
+TEST(TupleArithmeticUnitTests, multiply)
 {
   serac::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
                  make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
@@ -66,7 +66,7 @@ TEST(TupleTests, multiply)
   EXPECT_NEAR(norm(serac::get<2>(b)), 2.977782431376876, 1.0e-10);
 }
 
-TEST(TupleTests, divide)
+TEST(TupleArithmeticUnitTests, divide)
 {
   serac::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
                  make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
@@ -76,7 +76,7 @@ TEST(TupleTests, divide)
   EXPECT_NEAR(norm(serac::get<2>(b)), 2.977782431376876, 1.0e-10);
 }
 
-TEST(ChainRuleTests, scalar_output_with_scalar_input)
+TEST(TupleArithmeticUnitTests, scalar_output_with_scalar_input)
 {
   auto f = [](auto x) { return x * x + 4.0; };
 
@@ -92,7 +92,7 @@ TEST(ChainRuleTests, scalar_output_with_scalar_input)
   EXPECT_NEAR((f(x + epsilon * dx) - f(x)) / epsilon, chain_rule(dfdx, dx), 1.e-6);
 }
 
-TEST(ChainRuleTests, vector_output_with_vector_input)
+TEST(TupleArithmeticUnitTests, vector_output_with_vector_input)
 {
   auto f = [](auto x) {
     auto tmp = norm(x) * x;
@@ -112,7 +112,7 @@ TEST(ChainRuleTests, vector_output_with_vector_input)
   EXPECT_NEAR(norm(((f(x + epsilon * dx) - f(x)) / epsilon) - chain_rule(dfdx, dx)), 0.0, 1.e-6);
 }
 
-TEST(ChainRuleTests, matrix_output_with_matrix_input)
+TEST(TupleArithmeticUnitTests, matrix_output_with_matrix_input)
 {
   auto f = [](auto x) { return inv(x + I) - x; };
 
@@ -128,7 +128,7 @@ TEST(ChainRuleTests, matrix_output_with_matrix_input)
   EXPECT_NEAR(norm(((f(x + epsilon * dx) - f(x - epsilon * dx)) / (2 * epsilon)) - chain_rule(dfdx, dx)), 0.0, 1.e-8);
 }
 
-TEST(ChainRuleTests, scalar_output_with_matrix_input)
+TEST(TupleArithmeticUnitTests, scalar_output_with_matrix_input)
 {
   auto f = [](auto x) { return tr(x) * det(x); };
 
@@ -144,11 +144,9 @@ TEST(ChainRuleTests, scalar_output_with_matrix_input)
   EXPECT_NEAR(((f(x + epsilon * dx) - f(x)) / epsilon) - chain_rule(dfdx, dx), 0.0, 1.e-6);
 }
 
-TEST(ChainRuleTests, tuple_output_with_tuple_input)
+TEST(TupleArithmeticUnitTests, tensor_output_with_tuple_input)
 {
-  constexpr auto f = [](auto p, auto v, auto L) {
-    return serac::tuple{rho * outer(v, v) + 2.0 * mu * sym(L) - p * I, v + dot(v, L)};
-  };
+  constexpr auto f = [=](auto p, auto v, auto L) { return rho * outer(v, v) * det(I + L) + 2.0 * mu * sym(L) - p * I; };
 
   [[maybe_unused]] constexpr double p = 3.14;
   [[maybe_unused]] constexpr tensor v = {{1.0, 2.0, 3.0}};
@@ -158,30 +156,17 @@ TEST(ChainRuleTests, tuple_output_with_tuple_input)
   constexpr tensor               dv = {{2.0, 1.0, 4.0}};
   constexpr tensor<double, 3, 3> dL = {{{3.0, 1.0, 2.0}, {2.0, 7.0, 3.0}, {4.0, 4.0, 3.0}}};
 
-  auto output = serac::apply(f, make_dual(p, v, L));
+  auto dfdp = get_gradient(f(make_dual(p), v, L));
+  auto dfdv = get_gradient(f(p, make_dual(v), L));
+  auto dfdL = get_gradient(f(p, v, make_dual(L)));
 
-  auto value = get_value(output);
-  auto grad  = get_gradient(output);
+  auto df0 = (f(p + epsilon * dp, v + epsilon * dv, L + epsilon * dL) -
+              f(p - epsilon * dp, v - epsilon * dv, L - epsilon * dL)) /
+             (2 * epsilon);
 
-  auto df_fd = (f(p + epsilon * dp, v + epsilon * dv, L + epsilon * dL) -
-                f(p - epsilon * dp, v - epsilon * dv, L - epsilon * dL)) /
-               (2 * epsilon);
+  auto df1 = dfdp * dp + dfdv * dv + ddot(dfdL, dL);
 
-  auto df0 = (serac::get<0>(serac::get<0>(grad)) * dp) + dot(serac::get<1>(serac::get<0>(grad)), dv) +
-             ddot(serac::get<2>(serac::get<0>(grad)), dL);
-
-  auto df1 = (serac::get<0>(serac::get<1>(grad)) * dp) + dot(serac::get<1>(serac::get<1>(grad)), dv) +
-             ddot(serac::get<2>(serac::get<1>(grad)), dL);
-
-  auto df_ad = chain_rule(grad, serac::tuple{dp, dv, dL});
-
-  EXPECT_NEAR(norm(serac::get<0>(f(p, v, L)) - serac::get<0>(value)), 0.0, 1.e-13);
-  EXPECT_NEAR(norm(serac::get<1>(f(p, v, L)) - serac::get<1>(value)), 0.0, 1.e-13);
-
-  EXPECT_NEAR(norm(serac::get<0>(df_ad) - df0), 0.0, 1.e-8);
-  EXPECT_NEAR(norm(serac::get<1>(df_ad) - df1), 0.0, 1.e-8);
-  EXPECT_NEAR(norm(serac::get<0>(df_ad) - serac::get<0>(df_fd)), 0.0, 1.e-8);
-  EXPECT_NEAR(norm(serac::get<1>(df_ad) - serac::get<1>(df_fd)), 0.0, 1.e-8);
+  EXPECT_NEAR(norm(df1 - df0) / norm(df0), 0.0, 2.0e-8);
 }
 
 int main(int argc, char* argv[])
