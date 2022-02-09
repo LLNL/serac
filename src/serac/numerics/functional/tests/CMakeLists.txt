@@ -14,6 +14,7 @@ blt_add_executable(NAME        tensor_unit_tests
 
 # Then add the examples/tests
 set(functional_tests_serial
+    get_qf_derivative_type.cpp
     hcurl_unit_tests.cpp
     test_tensor_ad.cpp
     tuple_arithmetic_unit_tests.cpp)
@@ -24,6 +25,7 @@ serac_add_tests( SOURCES ${functional_tests_serial}
 # Then add the examples/tests
 set(functional_tests_mpi
     functional_basic.cpp
+    functional_multiphysics.cpp
     functional_qoi.cpp
     functional_nonlinear.cpp
     functional_boundary_test.cpp
@@ -54,8 +56,11 @@ if(ENABLE_CUDA)
 
     set(functional_tests_cuda 
         tensor_unit_tests_cuda.cu 
-        functional_comparisons_cuda.cu
-        quadrature_data_cuda.cu
+#        some of the GPU functionality is temporarily disabled to 
+#        help incrementally roll-out the variadic implementation of Functional
+#        TODO: re-enable GPU kernels in a follow-up PR
+#        functional_comparisons_cuda.cu
+#        quadrature_data_cuda.cu
        )
 
     serac_add_tests( SOURCES ${functional_tests_cuda}

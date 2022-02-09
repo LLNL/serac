@@ -141,6 +141,28 @@ SERAC_HOST_DEVICE void Add(const mfem::DeviceTensor<3, double>& r_global, tensor
   }
 }
 
+#if 0
+template <int p, int dim >
+struct QFunctionArgument< H1< p, 1 >, IntegralType::Boundary, Dimension<dim> >{
+  using type = double; 
+};
+template <int p, int c, int dim >
+struct QFunctionArgument< H1< p, c >, IntegralType::Boundary, Dimension<dim> >{
+  using type = tensor<double, c>; 
+};
+
+
+template <int p >
+struct QFunctionArgument< Hcurl< p >, IntegralType::Boundary, Dimension<2> >{
+  using type = tensor< double, 2 >;
+};
+
+template <int p >
+struct QFunctionArgument< Hcurl< p >, IntegralType::Boundary, Dimension<3> >{
+  using type = tensor< double, 3 >;
+};
+#endif
+
 /**
  * @brief a class that provides the lambda argument types for a given integral
  * @tparam trial_space the trial space associated with the integral
@@ -279,26 +301,61 @@ SERAC_HOST_DEVICE constexpr derivatives_type& AccessDerivatives(derivatives_type
   }
 }
 
+/// @brief layer of indirection needed to unpack the entries of the argument tuple
+template <typename lambda, typename coords_type, typename T, typename qpt_data_type, int... i>
+SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, const T& arg_tuple, qpt_data_type&& qpt_data,
+                                       std::integer_sequence<int, i...>)
+{
+  return qf(x_q, serac::get<i>(arg_tuple)..., qpt_data);
+}
+
+/// @overload
+template <typename lambda, typename coords_type, typename T, int... i>
+SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, const T& arg_tuple,
+                                       std::integer_sequence<int, i...>)
+{
+  return qf(x_q, serac::get<i>(arg_tuple)...);
+}
+
+/// @overload
+template <typename lambda, typename coords_type, typename T, int... i>
+SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, coords_type&& n_q, const T& arg_tuple,
+                                       std::integer_sequence<int, i...>)
+{
+  return qf(x_q, n_q, serac::get<i>(arg_tuple)...);
+}
+
 /**
  * @brief Actually calls the q-function
  * This is an indirection layer to provide a transparent call site usage regardless of whether
  * quadrature point (state) information is required
  * @param[in] qf The quadrature function functor object
  * @param[in] x_q The physical coordinates of the quadrature point
- * @param[in] dual_arg The values and derivatives at the quadrature point, as a dual
+ * @param[in] arg_tuple The values and derivatives at the quadrature point, as a dual
  * @param[inout] qpt_data The state information at the quadrature point
  */
-template <typename lambda, typename coords_type, typename args_type, typename qpt_data_type>
-SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, args_type&& dual_arg, qpt_data_type&& qpt_data)
+template <typename lambda, typename coords_type, typename... T, typename qpt_data_type>
+SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, const serac::tuple<T...>& arg_tuple,
+                                qpt_data_type&& qpt_data)
 {
-  return qf(x_q, dual_arg, qpt_data);
+  return apply_qf_helper(qf, x_q, arg_tuple, qpt_data, std::make_integer_sequence<int, int(sizeof...(T))>{});
 }
 
 /// @overload
-template <typename lambda, typename coords_type, typename args_type>
-SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, args_type&& dual_arg, std::nullptr_t)
+template <typename lambda, typename coords_type, typename... T>
+SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, const serac::tuple<T...>& arg_tuple, std::nullptr_t)
 {
-  return qf(x_q, dual_arg);
+  return apply_qf_helper(qf, x_q, arg_tuple, std::make_integer_sequence<int, int(sizeof...(T))>{});
+}
+
+/**
+ * @overload
+ * @note: boundary integrals pass the unit normal vector as second argument and do not support qpt_data
+ */
+template <typename lambda, typename coords_type, typename... T>
+SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, coords_type&& n_q, const serac::tuple<T...>& arg_tuple)
+{
+  return apply_qf_helper(qf, x_q, n_q, arg_tuple, std::make_integer_sequence<int, int(sizeof...(T))>{});
 }
 
 }  // namespace detail
@@ -408,6 +465,34 @@ SERAC_HOST_DEVICE auto Preprocess(T u, const tensor<double, dim>& xi, const tens
     }
     return serac::tuple{value, curl};
   }
+}
+
+/**
+ * @brief
+ *
+ * @tparam element_type The type of the element (used to determine the family)
+ * @tparam T the type of the element values to be interpolated and differentiated
+ * @tparam dim the geometric dimension of the element
+ *
+ * @param[in] u The DOF values for each element
+ * @param[in] xi The position of the quadrature point in reference space
+ * @param[in] J The Jacobian of the element transformation at the quadrature point
+ */
+template <Geometry geom, typename... trials, typename tuple_type, int dim, int... i>
+SERAC_HOST_DEVICE auto PreprocessHelper(const tuple_type& u, const tensor<double, dim>& xi,
+                                        const tensor<double, dim, dim>& J, std::integer_sequence<int, i...>)
+{
+  return serac::make_tuple(Preprocess<finite_element<geom, trials>>(get<i>(u), xi, J)...);
+}
+
+/**
+ * @overload
+ * @note multi-trial space overload of Preprocess
+ */
+template <Geometry geom, typename... trials, typename tuple_type, int dim>
+SERAC_HOST_DEVICE auto Preprocess(const tuple_type& u, const tensor<double, dim>& xi, const tensor<double, dim, dim>& J)
+{
+  return PreprocessHelper<geom, trials...>(u, xi, J, std::make_integer_sequence<int, int(sizeof...(trials))>{});
 }
 
 /**
