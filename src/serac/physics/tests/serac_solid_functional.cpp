@@ -278,8 +278,8 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
 TEST(solid_functional, 2D_linear_static) { functional_solid_test_static<1, 2>(1.511052595); }
 TEST(solid_functional, 2D_quad_static) { functional_solid_test_static<2, 2>(2.18604855); }
 
-TEST(solid_functional, 3D_linear_static) { functional_solid_test_static<1, 3>(1.370856102); }
-TEST(solid_functional, 3D_quad_static) { functional_solid_test_static<2, 3>(1.949511693); }
+TEST(solid_functional, 3D_linear_static) { functional_solid_test_static<1, 3>(1.37084852); }
+TEST(solid_functional, 3D_quad_static) { functional_solid_test_static<2, 3>(1.949532747); }
 
 TEST(solid_functional, 2D_linear_dynamic) { functional_solid_test_dynamic<1, 2>(1.525641434); }
 TEST(solid_functional, 2D_quad_dynamic) { functional_solid_test_dynamic<2, 2>(1.5325754040); }

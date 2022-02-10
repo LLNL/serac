@@ -575,7 +575,7 @@ private:
 
       std::unique_ptr<mfem::HypreParMatrix> K(mfem::RAP(R, A, P));
 
-      RAP->EliminateRowsCols(form_.ess_tdof_list_);
+      K->EliminateRowsCols(form_.ess_tdof_list_);
 
       delete A;
 
@@ -600,7 +600,7 @@ private:
      * @note These are mutated by MFEM during HypreParMatrix construction
      */
     std::vector<int> col_ind_copy_;
-    
+
     /**
      * @brief this member variable tells us which argument the associated Functional this gradient
      *  corresponds to:

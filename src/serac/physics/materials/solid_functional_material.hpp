@@ -123,7 +123,11 @@ public:
 
     auto J = det(du_dX + I);
 
-    auto stress = lambda * log(J) * (1.0 / J) * I + shear_modulus_ * B_minus_I;
+    // TODO this resolve to the correct std implementation of log when J resolves to a pure double. It can
+    // be removed by either putting the dual implementation of the global namespace or implementing a pure
+    // double version there. More investigation into argument-dependent lookup is needed.
+    using std::log;
+    auto stress = lambda * log(J) * I + shear_modulus_ * B_minus_I;
     return stress;
   }
 

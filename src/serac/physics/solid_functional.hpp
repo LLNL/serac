@@ -82,8 +82,8 @@ public:
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "velocity")})),
         displacement_(StateManager::newState(FiniteElementState::Options{
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "displacement")})),
-        M_functional_(&displacement_.space(), &displacement_.space()),
-        K_functional_(&displacement_.space(), &displacement_.space()),
+        M_functional_(&displacement_.space(), {&displacement_.space()}),
+        K_functional_(&displacement_.space(), {&displacement_.space()}),
         ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
               nonlin_solver_, bcs_),
         geom_nonlin_(geom_nonlin),
@@ -358,8 +358,7 @@ public:
 
     K_functional_.AddBoundaryIntegral(
         Dimension<dim - 1>{},
-        [this, traction_function](auto x, auto n, auto u) { return -1.0 * traction_function(x, n, time_) + 0.0 * u; },
-        mesh_);
+        [this, traction_function](auto x, auto n, auto) { return -1.0 * traction_function(x, n, time_); }, mesh_);
   }
 
   /**
@@ -382,7 +381,7 @@ public:
 
     K_functional_.AddBoundaryIntegral(
         Dimension<dim - 1>{},
-        [this, pressure_function](auto x, auto n, auto u) { return pressure_function(x, time_) * n + 0.0 * u; }, mesh_);
+        [this, pressure_function](auto x, auto n, auto) { return pressure_function(x, time_) * n; }, mesh_);
   }
 
   /**
@@ -433,8 +432,8 @@ public:
 
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
-          K_functional_(u);
-          J_.reset(grad(K_functional_));
+          auto [r, drdu] = K_functional_(differentiate_wrt(u));
+          J_             = assemble(drdu);
           bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
           return *J_;
         });
@@ -483,11 +482,11 @@ public:
             mfem::Vector K_arg(u_.Size());
             add(1.0, u_, c0_, d2u_dt2, K_arg);
 
-            M_functional_(u_);
-            std::unique_ptr<mfem::HypreParMatrix> m_mat(grad(M_functional_));
+            auto                                  M = serac::get<1>(M_functional_(differentiate_wrt(u_)));
+            std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
-            K_functional_(K_arg);
-            std::unique_ptr<mfem::HypreParMatrix> k_mat(grad(K_functional_));
+            auto                                  K = serac::get<1>(K_functional_(differentiate_wrt(K_arg)));
+            std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             J_.reset(mfem::Add(1.0, *m_mat, c0_, *k_mat));
             bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
