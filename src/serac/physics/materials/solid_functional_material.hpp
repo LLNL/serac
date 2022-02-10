@@ -42,6 +42,14 @@ public:
 
     SLIC_ERROR_ROOT_IF(bulk_modulus_ < 0.0,
                        "Bulk modulus must be positive in the linear isotropic elasticity material model.");
+                       
+    double K = bulk_modulus;
+    double G = shear_modulus;
+    double poisson_ratio = (3 * K - 2 * G) / (6 * K + 2 * G));
+  
+    SLIC_ERROR_ROOT_IF(poisson_ratio < 0.0,
+                       "Poisson ratio must be positive in the linear isotropic elasticity material model.");
+                       
   }
 
   /**
