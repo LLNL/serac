@@ -61,7 +61,7 @@ void functional_solid_test_static(double expected_disp_norm)
   SolidFunctional<p, dim> solid_solver(default_static, GeometricNonlinearities::On, FinalMeshOption::Reference,
                                        "solid_functional");
 
-  solid_util::NeoHookean<dim> mat(1.0, 1.0, 1.0);
+  solid_util::NeoHookeanSolid<dim> mat(1.0, 1.0, 1.0);
   solid_solver.setMaterial(mat);
 
   // Define the function for the initial temperature and boundary condition
@@ -142,7 +142,7 @@ void functional_solid_test_dynamic(double expected_disp_norm)
   SolidFunctional<p, dim> solid_solver(default_dynamic, GeometricNonlinearities::Off, FinalMeshOption::Reference,
                                        "solid_functional_dynamic");
 
-  solid_util::LinearIsotropicElasticity<dim> mat(1.0, 1.0, 1.0);
+  solid_util::LinearIsotropicSolid<dim> mat(1.0, 1.0, 1.0);
   solid_solver.setMaterial(mat);
 
   // Define the function for the initial temperature and boundary condition
@@ -227,7 +227,7 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
   SolidFunctional<p, dim> solid_solver(default_static, GeometricNonlinearities::Off, FinalMeshOption::Reference,
                                        "solid_functional");
 
-  solid_util::LinearIsotropicElasticity<dim> mat(1.0, 1.0, 1.0);
+  solid_util::LinearIsotropicSolid<dim> mat(1.0, 1.0, 1.0);
   solid_solver.setMaterial(mat);
 
   // Define the function for the initial temperature and boundary condition
