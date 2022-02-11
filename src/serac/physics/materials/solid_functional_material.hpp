@@ -42,14 +42,13 @@ public:
 
     SLIC_ERROR_ROOT_IF(bulk_modulus_ < 0.0,
                        "Bulk modulus must be positive in the linear isotropic elasticity material model.");
-                       
-    double K = bulk_modulus;
-    double G = shear_modulus;
+
+    double K             = bulk_modulus;
+    double G             = shear_modulus;
     double poisson_ratio = (3 * K - 2 * G) / (6 * K + 2 * G);
-  
+
     SLIC_ERROR_ROOT_IF(poisson_ratio < 0.0,
                        "Poisson ratio must be positive in the linear isotropic elasticity material model.");
-                       
   }
 
   /**
@@ -106,20 +105,17 @@ public:
   NeoHookeanSolid(double density = 1.0, double shear_modulus = 1.0, double bulk_modulus = 1.0)
       : density_(density), bulk_modulus_(bulk_modulus), shear_modulus_(shear_modulus)
   {
-    SLIC_ERROR_ROOT_IF(shear_modulus_ < 0.0,
-                       "Shear modulus must be positive in the neo-Hookean material model.");
+    SLIC_ERROR_ROOT_IF(shear_modulus_ < 0.0, "Shear modulus must be positive in the neo-Hookean material model.");
 
     SLIC_ERROR_ROOT_IF(density_ < 0.0, "Density must be positive in the neo-Hookean material model.");
 
-    SLIC_ERROR_ROOT_IF(bulk_modulus_ < 0.0,
-                       "Bulk modulus must be positive in the neo-Hookean material model.");
-                       
-    double K = bulk_modulus;
-    double G = shear_modulus;
+    SLIC_ERROR_ROOT_IF(bulk_modulus_ < 0.0, "Bulk modulus must be positive in the neo-Hookean material model.");
+
+    double K             = bulk_modulus;
+    double G             = shear_modulus;
     double poisson_ratio = (3 * K - 2 * G) / (6 * K + 2 * G);
-  
-    SLIC_ERROR_ROOT_IF(poisson_ratio < 0.0,
-                       "Poisson ratio must be positive in the neo-Hookean material model.");
+
+    SLIC_ERROR_ROOT_IF(poisson_ratio < 0.0, "Poisson ratio must be positive in the neo-Hookean material model.");
   }
 
   /**

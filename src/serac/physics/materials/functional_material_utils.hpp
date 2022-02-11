@@ -5,9 +5,9 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file thermal_functional_material.hpp
+ * @file functional_material_utils.hpp
  *
- * @brief The material and load types for the thermal functional physics module
+ * @brief Utilities for compile-time checking of types for user-defined loads and materials
  */
 
 #pragma once
