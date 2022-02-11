@@ -197,6 +197,8 @@ public:
    */
   void advanceTimestep(double& dt) override
   {
+    SLIC_ERROR_ROOT_IF(!residual_, "completeSetup() must be called prior to advanceTimestep(dt) in SolidFunctional.");
+
     // Initialize the true vector
     velocity_.initializeTrueVec();
     displacement_.initializeTrueVec();
