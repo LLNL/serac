@@ -365,7 +365,7 @@ struct always_false : std::false_type {};
 /// @brief Get a human-readable compiler error when you try to divide by zero 
 template < typename T >
 void operator/(T, zero) { 
-    static_assert(always_false<T>{}, "error: can't divide by zero!");
+    static_assert(always_false<T>{}, "Error: Can't divide by zero!");
 }
 
 /** @brief `zero` divided by something is `zero` */
