@@ -26,17 +26,13 @@ namespace serac {
  */
 template <int n, int dim>
 struct QuadratureRule {
-  /**
-   * @brief The scalar weights of each point
-   */
+  /// @brief The scalar weights of each point
   tensor<double, n> weights;
-  /**
-   * @brief The coordinates in reference space for each quadrature point
-   */
-  reduced_tensor<double, n, dim> points;
-  /**
-   * @brief Returns the number of points in the rule
-   */
+
+  /// @brief The coordinates in reference space for each quadrature point
+  tensor<double, n, dim> points;
+
+  /// @brief Returns the number of points in the rule
   constexpr size_t size() const { return n; }
 };
 
@@ -52,7 +48,7 @@ constexpr auto GaussQuadratureRule()
   auto w = GaussLegendreWeights<Q>();
 
   if constexpr (g == Geometry::Segment) {
-    return QuadratureRule<Q, 1>{w, x};
+    return QuadratureRule<Q, 1>{w, make_tensor<Q, 1>([&x](int i, int /*j*/) { return x[i]; })};
   }
 
   if constexpr (g == Geometry::Quadrilateral) {

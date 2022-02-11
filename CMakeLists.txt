@@ -176,6 +176,8 @@ if (SERAC_ENABLE_CODEVELOP)
     # Add Axom's targets to our export set
     # TODO: we should ask Axom for this list in the future
     set(axom_exported_targets axom cli11 fmt hdf5 lua sol sparsehash)
+    blt_list_append(TO axom_exported_targets ELEMENTS openmp IF ENABLE_OPENMP)
+    
     install(TARGETS              ${axom_exported_targets}
             EXPORT               serac-targets
             DESTINATION          lib
