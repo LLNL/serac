@@ -557,8 +557,11 @@ private:
         }
       }
 
+      // Copy the column indices to an auxilliary array as MFEM can mutate these during HypreParMatrix construction
+      col_ind_copy_ = lookup_tables.col_ind;
+
       auto J_local =
-          mfem::SparseMatrix(lookup_tables.row_ptr.data(), lookup_tables.col_ind.data(), values, form_.output_L_.Size(),
+          mfem::SparseMatrix(lookup_tables.row_ptr.data(), col_ind_copy_.data(), values, form_.output_L_.Size(),
                              form_.input_L_[which_argument].Size(), sparse_matrix_frees_graph_ptrs,
                              sparse_matrix_frees_values_ptr, col_ind_is_sorted);
 
@@ -571,6 +574,8 @@ private:
       auto* P = trial_space_->Dof_TrueDof_Matrix();
 
       std::unique_ptr<mfem::HypreParMatrix> K(mfem::RAP(R, A, P));
+
+      K->EliminateRowsCols(form_.ess_tdof_list_);
 
       delete A;
 
@@ -589,6 +594,12 @@ private:
      *   sparse matrix
      */
     GradientAssemblyLookupTables lookup_tables;
+
+    /**
+     * @brief Copy of the column indices for sparse matrix assembly
+     * @note These are mutated by MFEM during HypreParMatrix construction
+     */
+    std::vector<int> col_ind_copy_;
 
     /**
      * @brief this member variable tells us which argument the associated Functional this gradient

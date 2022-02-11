@@ -358,6 +358,18 @@ SERAC_HOST_DEVICE constexpr auto operator*(T /*other*/, zero)
   return zero{};
 }
 
+/// @brief A false type trait to enable compile-time checking
+template <typename T>
+struct always_false : std::false_type {
+};
+
+/// @brief Get a human-readable compiler error when you try to divide by zero
+template <typename T>
+void operator/(T, zero)
+{
+  static_assert(always_false<T>{}, "Error: Can't divide by zero!");
+}
+
 /** @brief `zero` divided by something is `zero` */
 template <typename T>
 SERAC_HOST_DEVICE constexpr auto operator/(zero, T /*other*/)
@@ -1542,7 +1554,7 @@ auto inv(tensor<dual<gradient_type>, n, n> A)
     gradient_type gradient{};
     for (int k = 0; k < n; k++) {
       for (int l = 0; l < n; l++) {
-        gradient -= invA[i][k] * A[k][l].gradient * invA[l][j];
+        gradient = gradient - invA[i][k] * A[k][l].gradient * invA[l][j];
       }
     }
     return dual<gradient_type>{value, gradient};
