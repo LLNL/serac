@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/physics/thermal_conduction_functional.hpp"
+#include "serac/physics/materials/thermal_functional_material.hpp"
 
 #include <fstream>
 
