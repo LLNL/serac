@@ -260,7 +260,8 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
         }};
     solid_solver.setTractionBCs(traction_function);
   } else {
-    EXPECT_TRUE(false, "Not Implemented yet");
+    // Default to fail if non-implemented TestType is not implemented
+    EXPECT_TRUE(false);
   }
 
   // Finalize the data structures
