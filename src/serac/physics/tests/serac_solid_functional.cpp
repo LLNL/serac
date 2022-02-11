@@ -245,7 +245,7 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
       return 0.0;
     }};
     solid_solver.setPressureBCs(pressure);
-  } else {
+  } else if (test_mode == TestType::Traction) {
     solid_util::TractionFunction<dim> traction_function{
         [](const tensor<double, dim>& x, const tensor<double, dim>&, const double) {
           tensor<double, dim> traction;
@@ -259,6 +259,8 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
           return traction;
         }};
     solid_solver.setTractionBCs(traction_function);
+  } else {
+    EXPECT_TRUE(false, "Not Implemented yet");
   }
 
   // Finalize the data structures
