@@ -144,7 +144,7 @@ message(STATUS "Serac Code Checks: ${SERAC_ENABLE_CODE_CHECKS}")
 # CUDA
 list(APPEND BLT_C_FILE_EXTS ".cuh")
 # Configured C++ files
-list(APPEND BLT_C_FILE_EXTS ".cpp.in")
+list(APPEND BLT_C_FILE_EXTS ".cpp.in" ".hpp.in")
 
 if (SERAC_ENABLE_CODE_CHECKS)
     serac_add_code_checks(PREFIX   serac
