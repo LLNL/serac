@@ -7,6 +7,7 @@
 #include "serac/infrastructure/cli.hpp"
 
 #include "axom/CLI11.hpp"
+#include "axom/core.hpp"
 
 #include "serac/infrastructure/input.hpp"
 #include "serac/infrastructure/logger.hpp"
@@ -21,7 +22,7 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
   // specify all input arguments
   axom::CLI::App app{app_description};
   std::string    input_file_path;
-  app.add_option("-i, --input-file", input_file_path, "Input file to use")->required()->check(axom::CLI::ExistingFile);
+  app.add_option("-i, --input-file", input_file_path, "Input file to use")->check(axom::CLI::ExistingFile);
   int  restart_cycle;
   auto restart_opt =
       app.add_option("-c, --restart-cycle", restart_cycle, "Cycle to restart from")->check(axom::CLI::PositiveNumber);
@@ -30,6 +31,8 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
                "Writes Sphinx documentation for input file, then exits");
   std::string output_directory;
   app.add_option("-o, --output-directory", output_directory, "Directory to put outputted files");
+  bool version{false};
+  app.add_flag("-v, --version", version, "Print version and providence information, then exits");
 
   // Parse the arguments and check if they are good
   try {
@@ -48,19 +51,28 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
 
   // Store found values and set defaults if not set above
   std::unordered_map<std::string, std::string> cli_opts;
-  cli_opts.insert({std::string("input-file"), input_file_path});
-  // If a restart cycle was specified
-  if (restart_opt->count() > 0) {
-    cli_opts["restart-cycle"] = std::to_string(restart_cycle);
+  if (version) {
+    // If version is on the command line ignore all others and do not require anything
+    cli_opts.insert({"version", {}});
+  } else {
+    if (input_file_path.empty()) {
+      SLIC_ERROR_ROOT("No input file given. Use '--help' for command line options.");
+    }
+
+    cli_opts.insert({std::string("input-file"), input_file_path});
+    // If a restart cycle was specified
+    if (restart_opt->count() > 0) {
+      cli_opts["restart-cycle"] = std::to_string(restart_cycle);
+    }
+    if (create_input_file_docs) {
+      cli_opts.insert({"create-input-file-docs", {}});
+    }
+    if (output_directory == "") {
+      // if given by user use that otherwise use input file's basename minus extension
+      output_directory = serac::input::getInputFileName(input_file_path);
+    }
+    cli_opts.insert({"output-directory", output_directory});
   }
-  if (create_input_file_docs) {
-    cli_opts.insert({"create-input-file-docs", {}});
-  }
-  if (output_directory == "") {
-    // if given by user use that otherwise use input file's basename minus extension
-    output_directory = serac::input::getInputFileName(input_file_path);
-  }
-  cli_opts.insert({"output-directory", output_directory});
 
   return cli_opts;
 }
@@ -86,7 +98,8 @@ void printGiven(std::unordered_map<std::string, std::string>& cli_opts)
     {"create-input-file-docs", "Create Input File Docs"},
     {"input-file", "Input File"},
     {"output-directory", "Output Directory"},
-    {"restart-cycle", "Restart Cycle"}};
+    {"restart-cycle", "Restart Cycle"},
+    {"version", "Print version"}};
   // clang-format on
 
   // Add options to string

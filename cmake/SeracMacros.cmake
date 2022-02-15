@@ -95,6 +95,7 @@ macro(serac_add_code_checks)
 
 endmacro(serac_add_code_checks)
 
+
 #------------------------------------------------------------------------------
 # Asserts that the given VARIABLE_NAME's value is a directory and exists.
 # Fails with a helpful message when it doesn't.
@@ -131,6 +132,7 @@ macro(serac_convert_to_native_escaped_file_path path output)
     file(TO_NATIVE_PATH ${path} ${output})
     string(REPLACE "\\" "\\\\"  ${output} "${${output}}")
 endmacro(serac_convert_to_native_escaped_file_path)
+
 
 ##------------------------------------------------------------------------------
 ## serac_add_tests( SOURCES       [source1 [source2 ...]]
@@ -169,3 +171,19 @@ macro(serac_add_tests)
     endforeach()
 
 endmacro(serac_add_tests)
+
+
+##------------------------------------------------------------------------------
+## serac_configure_file
+##
+## This macro is a thin wrapper over the builtin configure_file command.
+## It has the same arguments/options as configure_file but introduces an
+## intermediate file that is only copied to the target file if the target differs
+## from the intermediate.
+##------------------------------------------------------------------------------
+macro(serac_configure_file _source _target)
+    set(_tmp_target ${_target}.tmp)
+    configure_file(${_source} ${_tmp_target} ${ARGN})
+    execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different ${_tmp_target} ${_target})
+    execute_process(COMMAND ${CMAKE_COMMAND} -E remove ${_tmp_target})
+endmacro(serac_configure_file)
