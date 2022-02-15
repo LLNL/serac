@@ -12,14 +12,15 @@ endif()
 # Hide these changes in the source file so we do not force
 # a full rebuild.
 serac_configure_file(
-  about.cpp.in
-  ${PROJECT_BINARY_DIR}/src/serac/infrastructure/about.cpp
+  git_sha.hpp.in
+  ${PROJECT_BINARY_DIR}/include/serac/infrastructure/git_sha.hpp
  )
 
 set(infrastructure_headers
     about.hpp
     accelerator.hpp
     cli.hpp
+    ${PROJECT_BINARY_DIR}/include/serac/infrastructure/git_sha.hpp
     initialize.hpp
     input.hpp
     logger.hpp
@@ -30,7 +31,7 @@ set(infrastructure_headers
     )
 
 set(infrastructure_sources
-    ${PROJECT_BINARY_DIR}/src/serac/infrastructure/about.cpp
+    about.cpp
     accelerator.cpp
     cli.cpp
     initialize.cpp

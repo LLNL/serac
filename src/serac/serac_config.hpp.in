@@ -42,4 +42,4 @@
 #cmakedefine SERAC_USE_RAJA
 #cmakedefine SERAC_USE_UMPIRE
 
-#endif /* SERAC_CONFIG_CPP */
+#endif /* SERAC_CONFIG_HPP */
