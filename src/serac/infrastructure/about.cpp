@@ -197,7 +197,7 @@ std::string gitSHA()
   // when the sha changes it doesn't force a full rebuild
   // of Serac. Do not add it to the config header.
   // Note: This will not update unless you re-run CMake between commits.
-  return "SERAC_GIT_SHA";
+  return SERAC_GIT_SHA;
 }
 
 std::string version(bool add_SHA)
