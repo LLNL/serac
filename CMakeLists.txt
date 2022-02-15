@@ -141,6 +141,8 @@ configure_file(
 message(STATUS "Serac Code Checks: ${SERAC_ENABLE_CODE_CHECKS}")
 
 # Add extra file extensions for code styling
+# Note: Add them also to serac_add_code_checks in cmake/SeracMacros.cmake
+
 # CUDA
 list(APPEND BLT_C_FILE_EXTS ".cuh")
 # Configured C++ files

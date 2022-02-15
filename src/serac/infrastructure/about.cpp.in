@@ -50,9 +50,8 @@ namespace serac {
 std::string about()
 {
   using namespace axom::fmt;
-  constexpr std::string_view on = "ON";
+  constexpr std::string_view on  = "ON";
   constexpr std::string_view off = "OFF";
-  std::string on_or_off;
 
   std::string about = "\n";
 
@@ -112,8 +111,8 @@ std::string about()
   // HDF5
 #ifdef SERAC_USE_HDF5
   unsigned int h5_maj, h5_min, h5_rel;
-  std::string h5_version;
-  if(H5get_libversion(&h5_maj, &h5_min, &h5_rel) < 0){
+  std::string  h5_version;
+  if (H5get_libversion(&h5_maj, &h5_min, &h5_rel) < 0) {
     SLIC_ERROR("Failed to retrieve HDF5 version.");
   } else {
     h5_version = format("{0}.{1}.{2}", h5_maj, h5_min, h5_rel);
@@ -126,7 +125,7 @@ std::string about()
   // Lua
 #ifdef SERAC_USE_LUA
   std::string lua_version{LUA_RELEASE};
-  if (axom::utilities::string::startsWith(lua_version, "Lua ")){
+  if (axom::utilities::string::startsWith(lua_version, "Lua ")) {
     lua_version.erase(0, 4);
   }
   about += format("Lua Version:     {0}\n", lua_version);
@@ -136,18 +135,18 @@ std::string about()
 
   // MFEM
   const char* mfem_version = mfem::GetVersionStr();
-  if(mfem_version == nullptr){
+  if (mfem_version == nullptr) {
     SLIC_ERROR("Failed to retrieve MFEM version.");
   }
   const char* mfem_sha = mfem::GetGitStr();
-  if(mfem_sha == nullptr){
+  if (mfem_sha == nullptr) {
     SLIC_ERROR("Failed to retrieve MFEM Git SHA.");
   }
   std::string mfem_full_version = std::string(mfem_version);
-  if (axom::utilities::string::startsWith(mfem_full_version, "MFEM ")){
+  if (axom::utilities::string::startsWith(mfem_full_version, "MFEM ")) {
     mfem_full_version.erase(0, 5);
   }
-  if(mfem_sha[0] != '\0'){
+  if (mfem_sha[0] != '\0') {
     mfem_full_version += format(" (Git SHA: {0})", mfem_sha);
   }
   about += format("MFEM Version:    {0}\n", mfem_full_version);
@@ -161,8 +160,8 @@ std::string about()
 
   // Tribol
 #ifdef SERAC_USE_TRIBOL
-// TODO: This can be un-hardcoded when Tribol MR!59 gets merged and we update to it
-//  about += format("Tribol Version:    {0}\n", TRIBOL_VERSION_FULL);
+  // TODO: This can be un-hardcoded when Tribol MR!59 gets merged and we update to it
+  //  about += format("Tribol Version:    {0}\n", TRIBOL_VERSION_FULL);
   about += "Tribol Version:    0.1.0\n";
 #else
   disabled_libs.push_back("Tribol");
@@ -170,7 +169,8 @@ std::string about()
 
   // Umpire
 #ifdef SERAC_USE_UMPIRE
-  about += format("Umpire Version:  {0}.{1}.{2}\n", umpire::get_major_version(), umpire::get_minor_version(), umpire::get_patch_version());
+  about += format("Umpire Version:  {0}.{1}.{2}\n", umpire::get_major_version(), umpire::get_minor_version(),
+                  umpire::get_patch_version());
 #else
   disabled_libs.push_back("Umpire");
 #endif
@@ -178,11 +178,10 @@ std::string about()
   about += "\n";
 
   about += "Disabled Libraries:\n";
-  if(disabled_libs.size() == 0){
+  if (disabled_libs.size() == 0) {
     about += "None\n";
-  }
-  else {
-    for(auto& lib : disabled_libs) {
+  } else {
+    for (auto& lib : disabled_libs) {
       about += lib + "\n";
     }
   }
@@ -201,11 +200,12 @@ std::string gitSHA()
 
 std::string version(bool add_SHA)
 {
-  std::string version = axom::fmt::format("v{0}.{1}.{2}", SERAC_VERSION_MAJOR, SERAC_VERSION_MINOR, SERAC_VERSION_PATCH);
+  std::string version =
+      axom::fmt::format("v{0}.{1}.{2}", SERAC_VERSION_MAJOR, SERAC_VERSION_MINOR, SERAC_VERSION_PATCH);
 
   std::string sha = gitSHA();
-  if (add_SHA && !sha.empty()){
-    version += "-" + sha;      
+  if (add_SHA && !sha.empty()) {
+    version += "-" + sha;
   }
 
   return version;

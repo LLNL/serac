@@ -32,7 +32,8 @@ macro(serac_add_code_checks)
          "${options}" "${singleValueArgs}" "${multiValueArgs}" ${ARGN})
 
     set(_all_sources)
-    file(GLOB_RECURSE _all_sources "*.cpp" "*.hpp" "*.inl" "*.cuh" "*.cu")
+    # Note: any extensions added here should also be added to BLT's lists in CMakeLists.txt
+    file(GLOB_RECURSE _all_sources "*.cpp" "*.hpp" "*.inl" "*.cuh" "*.cu" "*.cpp.in" "*.hpp.in")
 
     # Check for includes/excludes
     if (NOT DEFINED arg_INCLUDES)
