@@ -8,8 +8,6 @@
 
 #include "serac/serac_config.hpp"
 
-#include "serac/infrastructure/git_sha.hpp"
-
 #include "axom/config.hpp"
 #include "axom/core.hpp"
 #include "axom/fmt.hpp"
@@ -45,6 +43,7 @@
 //#include "tribol/config.hpp"
 #endif
 
+#include "serac/infrastructure/git_sha.hpp"
 #include "serac/infrastructure/logger.hpp"
 
 namespace serac {
@@ -191,14 +190,7 @@ std::string about()
   return about;
 }
 
-std::string gitSHA()
-{
-  // Note: This is generated at configure time so that
-  // when the sha changes it doesn't force a full rebuild
-  // of Serac. Do not add it to the config header.
-  // Note: This will not update unless you re-run CMake between commits.
-  return SERAC_GIT_SHA;
-}
+std::string gitSHA() { return SERAC_GIT_SHA; }
 
 std::string version(bool add_SHA)
 {

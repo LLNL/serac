@@ -4,8 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#ifndef SERAC_GIT_SHA_HPP
-#define SERAC_GIT_SHA_HPP
+#pragma once
 
 /*NOTE: Do not include this file in anywhere other than about.cpp.
  * This variable changes often and will force a full rebuild on all dependent files
@@ -16,5 +15,3 @@
 // clang-format off
 #define SERAC_GIT_SHA "@SERAC_GIT_SHA@"
 // clang-format on
-
-#endif /* SERAC_GIT_SHA_HPP */

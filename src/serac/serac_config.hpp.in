@@ -4,8 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#ifndef SERAC_CONFIG_HPP
-#define SERAC_CONFIG_HPP
+#pragma once
 
 // Serac Version Information
 // clang-format off
@@ -41,5 +40,3 @@
 #cmakedefine SERAC_USE_CALIPER
 #cmakedefine SERAC_USE_RAJA
 #cmakedefine SERAC_USE_UMPIRE
-
-#endif /* SERAC_CONFIG_HPP */
