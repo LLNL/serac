@@ -7,7 +7,6 @@
 #include "serac/infrastructure/cli.hpp"
 
 #include "axom/CLI11.hpp"
-#include "axom/core.hpp"
 
 #include "serac/infrastructure/input.hpp"
 #include "serac/infrastructure/logger.hpp"
