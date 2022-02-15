@@ -27,7 +27,7 @@ std::string about();
 /**
  * @brief Returns a string for the Git SHA when the driver was built
  *
- * Note: This will not update unless you re-run CMake between commits.
+ * Note: This will not update unless you reconfigure CMake after a commit.
  *
  * @return string value of the Git SHA if built in a Git repo, empty if not
  */
