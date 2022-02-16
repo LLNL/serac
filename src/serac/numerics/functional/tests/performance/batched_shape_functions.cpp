@@ -10,7 +10,7 @@
 namespace serac {
 
 template < Geometry geom, typename test, typename trial, int Q, typename lambda >
-void reference_kernel(mfem::Vector U_, mfem::Vector R_, mfem::Vector J_, size_t num_elements_, lambda qf_) {
+void reference_kernel(const mfem::Vector & U_, mfem::Vector & R_, const mfem::Vector & J_, size_t num_elements_, lambda qf_) {
 
   using trial_element              = finite_element<geom, trial>;
   using test_element               = finite_element<geom, test>;
@@ -45,6 +45,10 @@ void reference_kernel(mfem::Vector U_, mfem::Vector R_, mfem::Vector J_, size_t 
       // evaluate the value/derivatives needed for the q-function at this quadrature point
       auto arg = domain_integral::Preprocess<trial_element>(u_elem, xi, J_q);
 
+      //std::cout << xi << std::endl;
+      //std::cout << J_q << std::endl;
+      //std::cout << serac::get<0>(arg) << " " << serac::get<1>(arg) << std::endl;
+
       // integrate qf_output against test space shape functions / gradients
       // to get element residual contributions
       r_elem += domain_integral::Postprocess<test_element>(qf_(arg), xi, J_q) * dx;
@@ -78,13 +82,19 @@ template < typename S, typename T >
 struct value_and_gradient { S value; T gradient; };
 
 template < typename trial_space, Geometry geom, int q >
-auto BatchPreprocess(const mfem::DeviceTensor< 4, const double > & u_e, GaussLegendreRule<geom, q>, int e) {
+auto BatchPreprocess(const mfem::DeviceTensor< 4, const double > & u_e, GaussLegendreRule<geom, q> rule, int e) {
   static constexpr int n = trial_space::order + 1;
 
   if constexpr (geom == Geometry::Hexahedron) {
 
-    tensor< double, n, q > BT{};
-    tensor< double, n, q > GT{};
+    tensor< double, q, n > B{};
+    tensor< double, q, n > G{};
+    for (int i = 0; i < q; i++) {
+      B[i] = GaussLobattoInterpolation<n>(rule.points_1D[i]);
+      G[i] = GaussLobattoInterpolationDerivative<n>(rule.points_1D[i]);
+    }
+    auto BT = transpose(B);
+    auto GT = transpose(G);
 
     tensor< value_and_gradient< double, tensor< double, 3 > >, q, q, q> u_q{};
 
@@ -114,10 +124,10 @@ auto BatchPreprocess(const mfem::DeviceTensor< 4, const double > & u_e, GaussLeg
         const double differentiate_in_Z = GT(iz, qz);
         for (int qy = 0; qy < q; ++qy) {
           for (int qx = 0; qx < q; ++qx) {
-            u_q[qz][qy][qx].value       += interpolated_in_XY[qx][qy].value       * interpolate_in_Z;
-            u_q[qz][qy][qx].gradient[0] += interpolated_in_XY[qx][qy].gradient[0] * interpolate_in_Z;
-            u_q[qz][qy][qx].gradient[1] += interpolated_in_XY[qx][qy].gradient[1] * interpolate_in_Z;
-            u_q[qz][qy][qx].gradient[2] += interpolated_in_XY[qx][qy].value       * differentiate_in_Z;
+            u_q[qz][qy][qx].value       += interpolated_in_XY[qy][qx].value       * interpolate_in_Z;
+            u_q[qz][qy][qx].gradient[0] += interpolated_in_XY[qy][qx].gradient[0] * interpolate_in_Z;
+            u_q[qz][qy][qx].gradient[1] += interpolated_in_XY[qy][qx].gradient[1] * interpolate_in_Z;
+            u_q[qz][qy][qx].gradient[2] += interpolated_in_XY[qy][qx].value       * differentiate_in_Z;
           }
         }
       }
@@ -131,7 +141,7 @@ auto BatchPreprocess(const mfem::DeviceTensor< 4, const double > & u_e, GaussLeg
 }
 
 template < typename lambda, typename T, int ... n, Geometry geom, int q >
-auto BatchApply(lambda qf, tensor< T, n ... > qf_inputs, GaussLegendreRule<geom, q> rule, mfem::DeviceTensor< 4, const double > J_q, int e) {
+auto BatchApply(lambda qf, tensor< T, n ... > qf_inputs, GaussLegendreRule<geom, q> rule, mfem::DeviceTensor< 6, const double > J_q, int e) {
 
   if constexpr (geom == Geometry::Hexahedron) {
 
@@ -148,15 +158,22 @@ auto BatchApply(lambda qf, tensor< T, n ... > qf_inputs, GaussLegendreRule<geom,
 
           auto qf_input = qf_inputs[qz][qy][qx];
           
-          auto J = make_tensor<dim, dim>([&](int i, int j) { return J_q(q_id++, i, j, e); });
+          auto J = make_tensor<dim, dim>([&](int i, int j) { return J_q(qx, qy, qz, i, j, e); });
           auto invJ = inv(J);
           auto dv = det(J) * rule.weight(qx, qy, qz);
 
           qf_input.gradient = dot(qf_input.gradient, invJ);
 
+          //tensor< double, 3 > xi {rule.points_1D[qx], rule.points_1D[qy], rule.points_1D[qz]};
+          //std::cout << xi << std::endl;
+          //std::cout << J << std::endl;
+          //std::cout << qf_input.value << " " << qf_input.gradient << std::endl;
+
           qf_outputs[qz][qy][qx] = qf(qf_input) * dv;
 
           serac::get<1>(qf_outputs[qz][qy][qx]) = dot(invJ, serac::get<1>(qf_outputs[qz][qy][qx]));
+
+          q_id++;
 
         }
       }
@@ -169,7 +186,7 @@ auto BatchApply(lambda qf, tensor< T, n ... > qf_inputs, GaussLegendreRule<geom,
 }
 
 template < typename trial_space, typename T, Geometry geom, int q >
-auto BatchPostprocess(const tensor < T, q, q, q > qf_outputs, GaussLegendreRule<geom, q>) {
+auto BatchPostprocess(const tensor < T, q, q, q > qf_outputs, GaussLegendreRule<geom, q> rule) {
 
   if constexpr (geom == Geometry::Hexahedron) {
 
@@ -177,6 +194,10 @@ auto BatchPostprocess(const tensor < T, q, q, q > qf_outputs, GaussLegendreRule<
 
     tensor< double, q, n > B{};
     tensor< double, q, n > G{};
+    for (int i = 0; i < q; i++) {
+      B[i] = GaussLobattoInterpolation<n>(rule.points_1D[i]);
+      G[i] = GaussLobattoInterpolationDerivative<n>(rule.points_1D[i]);
+    }
 
     tensor< double, n, n, n > element_residual{};
 
@@ -241,7 +262,7 @@ SERAC_HOST_DEVICE void Add(const mfem::DeviceTensor<4, double>& r_global, tensor
 }
 
 template < Geometry geom, typename test, typename trial, int Q, typename lambda >
-void batched_kernel(mfem::Vector U_, mfem::Vector R_, mfem::Vector J_, size_t num_elements_, lambda qf_) {
+void batched_kernel(const mfem::Vector & U_, mfem::Vector & R_, const mfem::Vector & J_, size_t num_elements_, lambda qf_) {
 
   using trial_element              = finite_element<geom, trial>;
   using test_element               = finite_element<geom, test>;
@@ -252,7 +273,7 @@ void batched_kernel(mfem::Vector U_, mfem::Vector R_, mfem::Vector J_, size_t nu
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
-  auto J = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements_);
+  auto J = mfem::Reshape(J_.Read(), Q, Q, Q, dim, dim, num_elements_);
   auto r = mfem::Reshape(R_.ReadWrite(), test_n, test_n, test_n, int(num_elements_));
   auto u = mfem::Reshape(U_.Read(), trial_n, trial_n, trial_n, int(num_elements_));
 
@@ -290,8 +311,7 @@ int main() {
   mfem::Vector J1D(num_elements * dim * dim * q * q * q);
 
   auto U = mfem::Reshape(U1D.ReadWrite(), n, n, n, num_elements);
-  auto R = mfem::Reshape(R1D.ReadWrite(), n, n, n, num_elements);
-  auto J = mfem::Reshape(J1D.ReadWrite(), dim, dim, q, q, q, num_elements);
+  auto J = mfem::Reshape(J1D.ReadWrite(), q * q * q, dim, dim, num_elements);
 
   for (int e = 0; e < num_elements; e++) {
 
@@ -299,21 +319,14 @@ int main() {
       for (int iy = 0; iy < n; iy++) {
         for (int iz = 0; iz < n; iz++) {
           U(iz, iy, ix, e) = 0.1 * distribution(generator);
-          R(iz, iy, ix, e) = 0.0;
         }
       }
     }
 
-    for (int qx = 0; qx < q; qx++) {
-      for (int qy = 0; qy < q; qy++) {
-        for (int qz = 0; qz < q; qz++) {
-        
-          for (int r = 0; r < dim; r++) {
-            for (int c = 0; c < dim; c++) {
-              J(r, c, qx, qy, qz, e) = (r == c) + 0.1 * distribution(generator);
-            }
-          }
-
+    for (int i = 0; i < q * q * q; i++) {
+      for (int r = 0; r < dim; r++) {
+        for (int c = 0; c < dim; c++) {
+          J(i, r, c, e) = (r == c) + 0.1 * distribution(generator);
         }
       }
     }
@@ -335,10 +348,20 @@ int main() {
     return serac::tuple{source, flux};
   };
 
+  R1D = 0.0;
   serac::reference_kernel<Geometry::Hexahedron, test, trial, q>(U1D, R1D, J1D, num_elements, mass_plus_diffusion);
   auto answer_reference = R1D;
 
+  std::cout << std::endl;
+
+  R1D = 0.0;
   serac::batched_kernel<Geometry::Hexahedron, test, trial, q>(U1D, R1D, J1D, num_elements, mass_plus_diffusion);
   auto answer_batched = R1D;
+
+  mfem::Vector error = answer_reference;
+  error -= answer_batched;
+
+  double relative_error = error.Norml2() / answer_reference.Norml2();
+  std::cout << relative_error << std::endl;
 
 }
