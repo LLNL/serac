@@ -40,6 +40,7 @@ serac_add_tests( SOURCES ${functional_tests_mpi}
 
 # not sure how we want to handle performance-related tests
 set(functional_performance_tests
+    performance/batched_shape_functions.cpp
     performance/J2_material_with_AD.cpp
     performance/diffusion_performance_test.cpp)
  

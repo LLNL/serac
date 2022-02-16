@@ -23,6 +23,7 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
   static constexpr int  components = c;
   static constexpr int  dim        = 3;
   static constexpr int  ndof       = (p + 1) * (p + 1) * (p + 1);
+  static constexpr int  order      = p;
 
   using residual_type =
       typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components> >::type;

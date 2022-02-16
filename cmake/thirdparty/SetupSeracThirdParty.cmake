@@ -246,7 +246,9 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             message(FATAL_ERROR "Given AXOM_DIR did not contain a required header: axom/sidre/core/MFEMSidreDataCollection.hpp"
                                 "\nTry building Axom with '-DAXOM_ENABLE_MFEM_SIDRE_DATACOLLECTION=ON'\n ")
         endif()
+
     else()
+
         # Otherwise we use the submodule
         message(STATUS "Using Axom submodule")
         if(NOT LUA_DIR)
@@ -259,6 +261,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(AXOM_ENABLE_DOCS     OFF CACHE BOOL "")
         set(AXOM_ENABLE_TOOLS    OFF CACHE BOOL "")
         set(AXOM_USE_CALIPER ${CALIPER_FOUND} CACHE BOOL "")
+        set(CUDA_SEPARABLE_COMPILATION ON CACHE BOOL "")
 
         # Used for the doxygen target
         set(AXOM_CUSTOM_TARGET_PREFIX "axom_" CACHE STRING "" FORCE)
@@ -338,35 +341,39 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     #------------------------------------------------------------------------------
     # Remove exported OpenMP flags because they are not language agnostic
     #------------------------------------------------------------------------------
-    set(_props)
-    if( ${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.13.0" )
-        list(APPEND _props INTERFACE_LINK_OPTIONS)
-    endif()
-    list(APPEND _props INTERFACE_COMPILE_OPTIONS)
+    if (NOT SERAC_ENABLE_CODEVELOP)
 
-    # This flag is empty due to us not enabling fortran but we need to strip it
-    # so it doesn't propagate in our project
-    if("${OpenMP_Fortran_FLAGS}" STREQUAL "")
-        set(OpenMP_Fortran_FLAGS "$<$<NOT:$<COMPILE_LANGUAGE:Fortran>>:-fopenmp=libomp>;$<$<COMPILE_LANGUAGE:Fortran>:-fopenmp>")
-    endif()
-
-    foreach(_target axom)
-        if(TARGET ${_target})
-            message(STATUS "Removing OpenMP Flags from target[${_target}]")
-
-            foreach(_prop ${_props})
-                get_target_property(_flags ${_target} ${_prop})
-                if ( _flags )
-                    string( REPLACE "${OpenMP_CXX_FLAGS}" ""
-                            correct_flags "${_flags}" )
-                    string( REPLACE "${OpenMP_Fortran_FLAGS}" ""
-                            correct_flags "${correct_flags}" )
-
-                    set_target_properties( ${_target} PROPERTIES ${_prop} "${correct_flags}" )
-                endif()
-            endforeach()
+        set(_props)
+        if( ${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.13.0" )
+            list(APPEND _props INTERFACE_LINK_OPTIONS)
         endif()
-    endforeach()
+        list(APPEND _props INTERFACE_COMPILE_OPTIONS)
+
+        # This flag is empty due to us not enabling fortran but we need to strip it
+        # so it doesn't propagate in our project
+        if("${OpenMP_Fortran_FLAGS}" STREQUAL "")
+            set(OpenMP_Fortran_FLAGS "$<$<NOT:$<COMPILE_LANGUAGE:Fortran>>:-fopenmp=libomp>;$<$<COMPILE_LANGUAGE:Fortran>:-fopenmp>")
+        endif()
+
+        foreach(_target axom)
+            if(TARGET ${_target})
+                message(STATUS "Removing OpenMP Flags from target[${_target}]")
+
+                foreach(_prop ${_props})
+                    get_target_property(_flags ${_target} ${_prop})
+                    if ( _flags )
+                        string( REPLACE "${OpenMP_CXX_FLAGS}" ""
+                                correct_flags "${_flags}" )
+                        string( REPLACE "${OpenMP_Fortran_FLAGS}" ""
+                                correct_flags "${correct_flags}" )
+
+                        set_target_properties( ${_target} PROPERTIES ${_prop} "${correct_flags}" )
+                    endif()
+                endforeach()
+            endif()
+        endforeach()
+
+    endif()
 
     #---------------------------------------------------------------------------
     # Remove non-existant INTERFACE_INCLUDE_DIRECTORIES from imported targets
