@@ -1,5 +1,7 @@
 #include "mfem.hpp"
 
+#include "axom/core/utilities/Timer.hpp"
+
 #include "serac/infrastructure/accelerator.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/quadrature.hpp"
@@ -294,17 +296,32 @@ void batched_kernel(const mfem::Vector & U_, mfem::Vector & R_, const mfem::Vect
 
 }
 
+namespace compiler {
+  static void please_do_not_optimize_away([[maybe_unused]] void* p) { asm volatile("" : : "g"(p) : "memory"); }
+}
+
+template <typename lambda>
+auto time(lambda&& f)
+{
+  axom::utilities::Timer stopwatch;
+  stopwatch.start();
+  f();
+  stopwatch.stop();
+  return stopwatch.elapsed();
+}
+
 int main() {
 
-  constexpr int p = 1;
+  constexpr int p = 3;
   constexpr int n = p + 1;
-  constexpr int q = 2;
+  constexpr int q = 4;
   constexpr int dim = 3;
+  int num_runs = 10;
+  int num_elements = 10000;
 
   std::default_random_engine generator;
   std::uniform_real_distribution<double> distribution(-1.0, 1.0);
 
-  int num_elements = 10000;
 
   mfem::Vector U1D(num_elements * n * n * n);
   mfem::Vector R1D(num_elements * n * n * n);
@@ -348,14 +365,28 @@ int main() {
     return serac::tuple{source, flux};
   };
 
-  R1D = 0.0;
-  serac::reference_kernel<Geometry::Hexahedron, test, trial, q>(U1D, R1D, J1D, num_elements, mass_plus_diffusion);
+  {
+    R1D = 0.0;
+    double runtime = time([&]() {
+      for (int i = 0; i < num_runs; i++) {
+        serac::reference_kernel<Geometry::Hexahedron, test, trial, q>(U1D, R1D, J1D, num_elements, mass_plus_diffusion);
+        compiler::please_do_not_optimize_away(&R1D);
+      }
+    }) / n;
+    std::cout << "average reference kernel time: " << runtime / num_runs << std::endl;
+  }
   auto answer_reference = R1D;
 
-  std::cout << std::endl;
-
-  R1D = 0.0;
-  serac::batched_kernel<Geometry::Hexahedron, test, trial, q>(U1D, R1D, J1D, num_elements, mass_plus_diffusion);
+  {
+    R1D = 0.0;
+    double runtime = time([&]() {
+      for (int i = 0; i < num_runs; i++) {
+        serac::batched_kernel<Geometry::Hexahedron, test, trial, q>(U1D, R1D, J1D, num_elements, mass_plus_diffusion);
+        compiler::please_do_not_optimize_away(&R1D);
+      }
+    }) / n;
+    std::cout << "average batched kernel time: " << runtime / num_runs << std::endl;
+  }
   auto answer_batched = R1D;
 
   mfem::Vector error = answer_reference;
