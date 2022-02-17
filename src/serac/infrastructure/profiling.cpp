@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/infrastructure/profiling.hpp"
+
 #include "serac/infrastructure/logger.hpp"
 
 #ifdef SERAC_USE_CALIPER
@@ -21,7 +22,7 @@ std::optional<cali::ConfigManager> mgr;
 
 void initialize(std::string options, MPI_Comm comm)
 {
-#ifdef SERAC_ENABLE_PROFILING
+#ifdef SERAC_USE_ADIAK
   // Initialize Adiak
   adiak::init(&comm);
 
@@ -33,7 +34,12 @@ void initialize(std::string options, MPI_Comm comm)
   adiak::walltime();
   adiak::cputime();
   adiak::systime();
+#else
+  // Silence warning
+  static_cast<void>(comm);
+#endif
 
+#ifdef SERAC_USE_CALIPER
   // Initialize Caliper
   mgr = cali::ConfigManager();
   auto check_result = mgr->check(options.c_str());
@@ -48,15 +54,14 @@ void initialize(std::string options, MPI_Comm comm)
   mgr->add("event-trace,runtime-report,spot");
   mgr->start();
 #else
-  // Silence warnings
+  // Silence warning
   static_cast<void>(options);
-  static_cast<void>(comm);
 #endif
 }
 
 void finalize()
 {
-#ifdef SERAC_ENABLE_PROFILING
+#ifdef SERAC_USE_CALIPER
   // Finalize Caliper
   if (mgr) {
     mgr->stop();
@@ -64,7 +69,9 @@ void finalize()
   }
 
   mgr.reset();
+#endif
 
+#ifdef SERAC_USE_ADIAK
   // Finalize Adiak
   adiak::fini();
 #endif
