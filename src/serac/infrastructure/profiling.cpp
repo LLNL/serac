@@ -5,7 +5,6 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/infrastructure/profiling.hpp"
-
 #include "serac/infrastructure/logger.hpp"
 
 #ifdef SERAC_USE_CALIPER
@@ -19,6 +18,57 @@ namespace {
 std::optional<cali::ConfigManager> mgr;
 }  // namespace
 #endif
+
+void initialize(std::string options, MPI_Comm comm)
+{
+#ifdef SERAC_ENABLE_PROFILING
+  // Initialize Adiak
+  adiak::init(&comm);
+
+  adiak::launchdate();
+  adiak::executable();
+  adiak::cmdline();
+  adiak::clustername();
+  adiak::jobsize();
+  adiak::walltime();
+  adiak::cputime();
+  adiak::systime();
+
+  // Initialize Caliper
+  mgr = cali::ConfigManager();
+  auto check_result = mgr->check(options.c_str());
+
+  if (check_result.empty()) {
+    mgr->add(options.c_str());
+  } else {
+    SLIC_WARNING_ROOT("Caliper options invalid, ignoring: " << check_result);
+  }
+
+  // Defaults, should probably always be enabled
+  mgr->add("event-trace,runtime-report,spot");
+  mgr->start();
+#else
+  // Silence warnings
+  static_cast<void>(options);
+  static_cast<void>(comm);
+#endif
+}
+
+void finalize()
+{
+#ifdef SERAC_ENABLE_PROFILING
+  // Finalize Caliper
+  if (mgr) {
+    mgr->stop();
+    mgr->flush();
+  }
+
+  mgr.reset();
+
+  // Finalize Adiak
+  adiak::fini();
+#endif
+}
 
 void initializeCaliper(const std::string& options)
 {

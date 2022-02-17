@@ -22,6 +22,8 @@
 #include "caliper/cali.h"
 #endif
 
+#include "mpi.h"
+
 /**
  * @def SERAC_MARK_FUNCTION
  * Marks a function for Caliper profiling
@@ -142,6 +144,10 @@ inline const char* make_cstr(const std::string& str) { return str.c_str(); }
 
 /// profiling namespace
 namespace serac::profiling {
+
+void initialize(std::string options = "", MPI_Comm = MPI_COMM_WORLD);
+
+void finalize();
 
 /**
  * @brief Initializes performance monitoring using the Caliper library
