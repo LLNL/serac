@@ -84,6 +84,45 @@ struct GaussLegendreRule< Geometry::Hexahedron, Q > {
 
 template < typename S, typename T >
 struct value_and_gradient { S value; T gradient; };
+struct f64x4 {
+  union {
+    value_and_gradient< double, tensor< double, 3 > > data;
+    __m256d simd_data;
+  };
+};
+
+
+
+f64x4 to_f64x4(double value) { 
+  f64x4 converted;
+  converted.simd_data = _mm256_set1_pd(value);
+  return converted;
+}
+
+f64x4 operator+(const f64x4 & x, const f64x4 & y) {
+  f64x4 sum;
+  sum.simd_data = _mm256_add_pd(x.simd_data, y.simd_data);
+  return sum;
+}
+
+f64x4 operator*(const f64x4 & x, const f64x4 & y) {
+  f64x4 product;
+  product.simd_data = _mm256_mul_pd(x.simd_data, y.simd_data);
+  return product;
+}
+
+void fma(f64x4 & z, const f64x4 & x, const f64x4 & y) {
+  z.simd_data = _mm256_fmadd_pd(x.simd_data, y.simd_data, z.simd_data);
+}
+
+// adapted from https://github.com/pcordes/vectorclass/blob/77522287e64da5e887d69659e144d2caa5d3a4f1/vectorf256.h#L900-L907
+double dot(const f64x4 & x, const f64x4 & y) {
+  auto product = x * y;
+  __m128d t1 = _mm_add_pd(_mm256_castpd256_pd128(product.simd_data), _mm256_extractf128_pd(product.simd_data,1));
+  __m128d t2 = _mm_unpackhi_pd(t1, t1);
+  __m128d t3 = _mm_add_sd(t2, t1);
+  return _mm_cvtsd_f64(t3);
+}
 
 template < typename trial_space, Geometry geom, int q >
 auto BatchPreprocess(const mfem::DeviceTensor< 4, const double > & u_e, GaussLegendreRule<geom, q> rule, int e) {
@@ -210,6 +249,63 @@ auto BatchPreprocessConstexpr(const mfem::DeviceTensor< 4, const double > & u_e,
 
 }
 
+template < typename trial_space, Geometry geom, int q >
+auto BatchPreprocessSIMD(const mfem::DeviceTensor< 4, const double > & u_e, GaussLegendreRule<geom, q> rule, int e) {
+  static constexpr int n = trial_space::order + 1;
+
+  if constexpr (geom == Geometry::Hexahedron) {
+
+    tensor< f64x4, n, q > LUT_X{};
+    tensor< f64x4, n, q > LUT_Y{};
+    tensor< f64x4, n, q > LUT_Z{};
+    for (int i = 0; i < q; i++) {
+      auto B = GaussLobattoInterpolation<n>(rule.points_1D[i]);
+      auto G = GaussLobattoInterpolationDerivative<n>(rule.points_1D[i]);
+
+      for (int j = 0; j < n; j++) {
+        LUT_X[j][i] = {B[j], {G[j], B[j], B[j]}};
+        LUT_Y[j][i] = {B[j], {B[j], G[j], B[j]}};
+        LUT_Z[j][i] = {B[j], {B[j], B[j], G[j]}};
+      }
+    }
+
+    tensor< f64x4, q, q, q> u_q{};
+
+    for (int iz = 0; iz < n; ++iz) {
+      tensor< f64x4, q, q> interpolated_in_XY{};
+      for (int iy = 0; iy < n; ++iy) {
+        tensor< f64x4, q> interpolated_in_X{};
+        for (int ix = 0; ix < n; ++ix) {
+          const auto s = to_f64x4(u_e(ix, iy, iz, e));
+          for (int qx = 0; qx < q; ++qx) {
+            fma(interpolated_in_X[qx], s, LUT_X(ix, qx));
+          }
+        }
+        for (int qy = 0; qy < q; ++qy) {
+          const auto w = LUT_Y(iy, qy);
+          for (int qx = 0; qx < q; ++qx) {
+            fma(interpolated_in_XY[qy][qx], interpolated_in_X[qx], w);
+          }
+        }
+      }
+      for (int qz = 0; qz < q; ++qz) {
+        const auto w = LUT_Z(iz, qz);
+        for (int qy = 0; qy < q; ++qy) {
+          for (int qx = 0; qx < q; ++qx) {
+            fma(u_q[qz][qy][qx], interpolated_in_XY[qy][qx], w);
+          }
+        }
+      }
+
+    }
+
+    return u_q;
+
+  }
+
+}
+
+
 template < typename lambda, typename T, int ... n, Geometry geom, int q >
 auto BatchApply(lambda qf, tensor< T, n ... > qf_inputs, GaussLegendreRule<geom, q> rule, mfem::DeviceTensor< 6, const double > J_q, int e) {
 
@@ -227,6 +323,51 @@ auto BatchApply(lambda qf, tensor< T, n ... > qf_inputs, GaussLegendreRule<geom,
         for (int qx = 0; qx < q; ++qx) {
 
           auto qf_input = qf_inputs[qz][qy][qx];
+          
+          auto J = make_tensor<dim, dim>([&](int i, int j) { return J_q(qx, qy, qz, i, j, e); });
+          auto invJ = inv(J);
+          auto dv = det(J) * rule.weight(qx, qy, qz);
+
+          qf_input.gradient = dot(qf_input.gradient, invJ);
+
+          //tensor< double, 3 > xi {rule.points_1D[qx], rule.points_1D[qy], rule.points_1D[qz]};
+          //std::cout << xi << std::endl;
+          //std::cout << J << std::endl;
+          //std::cout << qf_input.value << " " << qf_input.gradient << std::endl;
+
+          qf_outputs[qz][qy][qx] = qf(qf_input) * dv;
+
+          serac::get<1>(qf_outputs[qz][qy][qx]) = dot(invJ, serac::get<1>(qf_outputs[qz][qy][qx]));
+
+          q_id++;
+
+        }
+      }
+    }
+
+    return qf_outputs;
+
+  }
+
+}
+
+template < typename lambda, typename T, int ... n, Geometry geom, int q >
+auto BatchApplySIMD(lambda qf, tensor< T, n ... > qf_inputs, GaussLegendreRule<geom, q> rule, mfem::DeviceTensor< 6, const double > J_q, int e) {
+
+  if constexpr (geom == Geometry::Hexahedron) {
+
+    constexpr int dim = 3;
+
+    using output_type = decltype(qf(qf_inputs[0][0][0].data));
+
+    tensor< output_type, q, q, q > qf_outputs;
+
+    int q_id = 0;
+    for (int qz = 0; qz < q; ++qz) {
+      for (int qy = 0; qy < q; ++qy) {
+        for (int qx = 0; qx < q; ++qx) {
+
+          auto qf_input = qf_inputs[qz][qy][qx].data;
           
           auto J = make_tensor<dim, dim>([&](int i, int j) { return J_q(qx, qy, qz, i, j, e); });
           auto invJ = inv(J);
@@ -315,36 +456,7 @@ auto BatchPostprocess(const tensor < T, q, q, q > qf_outputs, GaussLegendreRule<
 
 }
 
-struct f64x4 {
-  union {
-    value_and_gradient< double, tensor< double, 3 > > data;
-    __m256d simd_data;
-  };
-};
 
-f64x4 operator+(const f64x4 & x, const f64x4 & y) {
-  f64x4 sum;
-  sum.simd_data = _mm256_add_pd(x.simd_data, y.simd_data);
-  return sum;
-}
-
-f64x4 operator*(const f64x4 & x, const f64x4 & y) {
-  f64x4 product;
-  product.simd_data = _mm256_mul_pd(x.simd_data, y.simd_data);
-  return product;
-}
-
-void fma(f64x4 & z, const f64x4 & x, const f64x4 & y) {
-  z.simd_data = _mm256_fmadd_pd(x.simd_data, y.simd_data, z.simd_data);
-}
-
-double dot(const f64x4 & x, const f64x4 & y) {
-  auto product = x * y;
-  __m128d t1 = _mm_add_pd(_mm256_castpd256_pd128(product.simd_data), _mm256_extractf128_pd(product.simd_data,1));
-  __m128d t2 = _mm_unpackhi_pd(t1, t1);    // the non-AVX version should use something else to avoid wasting a movaps
-  __m128d t3 = _mm_add_sd(t2, t1);
-  return _mm_cvtsd_f64(t3);
-}
 
 template < typename trial_space, typename T, Geometry geom, int q >
 auto BatchPostprocessSIMD(const tensor < T, q, q, q > qf_outputs, GaussLegendreRule<geom, q> rule) {
@@ -570,9 +682,9 @@ void batched_kernel_with_SIMD(const mfem::Vector & U_, mfem::Vector & R_, const 
   // for each element in the domain
   for (uint32_t e = 0; e < num_elements_; e++) {
 
-    auto args = BatchPreprocessConstexpr<trial>(u, rule, e);
+    auto args = BatchPreprocessSIMD<trial>(u, rule, e);
 
-    auto qf_outputs = BatchApply(qf_, args, rule, J, e);
+    auto qf_outputs = BatchApplySIMD(qf_, args, rule, J, e);
 
     auto r_elem = BatchPostprocessSIMD<test>(qf_outputs, rule);
 
@@ -602,10 +714,10 @@ int main() {
 
   constexpr int p = 3;
   constexpr int n = p + 1;
-  constexpr int q = 4;
+  constexpr int q = n;
   constexpr int dim = 3;
   int num_runs = 10;
-  int num_elements = 10000;
+  int num_elements = 100000;
 
   std::default_random_engine generator;
   std::uniform_real_distribution<double> distribution(-1.0, 1.0);
