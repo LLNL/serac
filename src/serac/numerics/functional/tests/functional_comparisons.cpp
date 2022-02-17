@@ -154,7 +154,6 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
 template <int p, int dim>
 void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dimension<dim>)
 {
-  std::string postfix = concat("_H1<", p, ">");
   auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec, dim);
 
@@ -167,7 +166,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   mfem::ConstantCoefficient mu_coef(b);
   A.AddDomainIntegrator(new mfem::ElasticityIntegrator(lambda_coef, mu_coef));
   {
-    SERAC_PROFILE_SCOPE(concat("mfem_localAssemble", postfix));
+    SERAC_PROFILE_SCOPE("mfem_localAssemble");
     A.Assemble(0);
   }
   A.Finalize();
