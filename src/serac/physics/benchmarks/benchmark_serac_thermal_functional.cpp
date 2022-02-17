@@ -10,7 +10,6 @@
 
 #include "mpi.h"
 
-#include "adiak.hpp"
 #include "axom/slic/core/SimpleLogger.hpp"
 #include "mfem.hpp"
 
@@ -163,27 +162,16 @@ int main(int argc, char* argv[])
 
   axom::slic::SimpleLogger logger;
 
-  // Initialize Adiak
-  MPI_Comm comm = MPI_COMM_WORLD;
-  adiak::init(&comm);
+  // Initialize profiling
+  serac::profiling::initialize();
 
-  // Initialize Adiak metadata
-  adiak::launchdate();
-  adiak::executable();
-  adiak::cmdline();
-  adiak::clustername();
-  adiak::jobsize();
-  adiak::walltime();
-  adiak::cputime();
-  adiak::systime();
-
-  // Run code
+  // Profile code
   SERAC_MARK_BEGIN("Thermal Functional");
   serac::functional_test_static<1, 2>(2.2909240);
   SERAC_MARK_END("Thermal Functional");
 
-  // Finalize Adiak
-  adiak::fini();
+  // Finalize profiling
+  serac::profiling::finalize();
 
   MPI_Finalize();
 
