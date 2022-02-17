@@ -20,6 +20,7 @@
 #include "axom/core.hpp"
 #include "mfem.hpp"
 
+#include "serac/infrastructure/about.hpp"
 #include "serac/infrastructure/cli.hpp"
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/input.hpp"
@@ -87,6 +88,15 @@ int main(int argc, char* argv[])
   // Handle Command line
   std::unordered_map<std::string, std::string> cli_opts =
       serac::cli::defineAndParse(argc, argv, "Serac: a high order nonlinear thermomechanical simulation code");
+
+  // Optionally, print about info and quit
+  // TODO: add option for just version and a longer for about?
+  bool print_version = cli_opts.find("version") != cli_opts.end();
+  if (print_version) {
+    SLIC_INFO(serac::about());
+    serac::exitGracefully();
+  }
+
   serac::cli::printGiven(cli_opts);
 
   // Read input file
@@ -115,9 +125,6 @@ int main(int argc, char* argv[])
     restart_cycle = std::stoi(cycle->second);
   }
 
-  // Check for the doc creation command line argument
-  bool create_input_file_docs = cli_opts.find("create-input-file-docs") != cli_opts.end();
-
   // Create DataStore
   axom::sidre::DataStore datastore;
 
@@ -129,6 +136,7 @@ int main(int argc, char* argv[])
   serac::defineInputFileSchema(inlet);
 
   // Optionally, create input file documentation and quit
+  bool create_input_file_docs = cli_opts.find("create-input-file-docs") != cli_opts.end();
   if (create_input_file_docs) {
     std::string input_docs_path = axom::utilities::filesystem::joinPath(output_directory, "serac_input.rst");
     inlet.write(axom::inlet::SphinxWriter(input_docs_path));
