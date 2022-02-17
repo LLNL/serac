@@ -9,6 +9,8 @@
 #include "serac/numerics/functional/tuple_arithmetic.hpp"
 #include "serac/numerics/functional/integral_utilities.hpp"
 
+#include "immintrin.h"
+
 namespace serac {
 
 template < Geometry geom, typename test, typename trial, int Q, typename lambda >
@@ -313,6 +315,95 @@ auto BatchPostprocess(const tensor < T, q, q, q > qf_outputs, GaussLegendreRule<
 
 }
 
+struct f64x4 {
+  union {
+    value_and_gradient< double, tensor< double, 3 > > data;
+    __m256d simd_data;
+  };
+};
+
+f64x4 operator+(const f64x4 & x, const f64x4 & y) {
+  f64x4 sum;
+  sum.simd_data = _mm256_add_pd(x.simd_data, y.simd_data);
+  return sum;
+}
+
+f64x4 operator*(const f64x4 & x, const f64x4 & y) {
+  f64x4 product;
+  product.simd_data = _mm256_mul_pd(x.simd_data, y.simd_data);
+  return product;
+}
+
+void fma(f64x4 & z, const f64x4 & x, const f64x4 & y) {
+  z.simd_data = _mm256_fmadd_pd(x.simd_data, y.simd_data, z.simd_data);
+}
+
+double dot(const f64x4 & x, const f64x4 & y) {
+  auto product = x * y;
+  __m128d t1 = _mm_add_pd(_mm256_castpd256_pd128(product.simd_data), _mm256_extractf128_pd(product.simd_data,1));
+  __m128d t2 = _mm_unpackhi_pd(t1, t1);    // the non-AVX version should use something else to avoid wasting a movaps
+  __m128d t3 = _mm_add_sd(t2, t1);
+  return _mm_cvtsd_f64(t3);
+}
+
+template < typename trial_space, typename T, Geometry geom, int q >
+auto BatchPostprocessSIMD(const tensor < T, q, q, q > qf_outputs, GaussLegendreRule<geom, q> rule) {
+
+  if constexpr (geom == Geometry::Hexahedron) {
+
+    static constexpr int n = trial_space::order + 1;
+
+    tensor< f64x4, q, n > LUT_X{};
+    tensor< f64x4, q, n > LUT_Y{};
+    tensor< f64x4, q, n > LUT_Z{};
+    for (int i = 0; i < q; i++) {
+      auto B = GaussLobattoInterpolation<n>(rule.points_1D[i]);
+      auto G = GaussLobattoInterpolationDerivative<n>(rule.points_1D[i]);
+
+      for (int j = 0; j < n; j++) {
+        LUT_X[i][j] = {B[j], {G[j], B[j], B[j]}};
+        LUT_Y[i][j] = {B[j], {B[j], G[j], B[j]}};
+        LUT_Z[i][j] = {B[j], {B[j], B[j], G[j]}};
+      }
+    }
+
+    tensor< double, n, n, n > element_residual{};
+
+    for (int qz = 0; qz < q; ++qz) {
+      tensor < f64x4, n, n > gradXY{};
+      for (int qy = 0; qy < q; ++qy) {
+        tensor < f64x4, n > gradX{};
+        for (int qx = 0; qx < q; ++qx) {
+          const T qf_output = qf_outputs[qz][qy][qx];
+          for (int dx = 0; dx < n; ++dx) {
+            auto w = LUT_X(qx, dx);
+            f64x4 output = f64x4{serac::get<0>(qf_output), serac::get<1>(qf_output)[0], serac::get<1>(qf_output)[1], serac::get<1>(qf_output)[2]};
+            fma(gradX[dx], output, w);
+          }
+        }
+        for (int dy = 0; dy < n; ++dy) {
+          auto w = LUT_Y(qy, dy);
+          for (int dx = 0; dx < n; ++dx) {
+            fma(gradXY[dy][dx], gradX[dx], w);
+          }
+        }
+      }
+      for (int dz = 0; dz < n; ++dz) {
+        auto w = LUT_Z(qz, dz);
+        for (int dy = 0; dy < n; ++dy) {
+          for (int dx = 0; dx < n; ++dx) {
+            element_residual[dx][dy][dz] += dot(gradXY[dy][dx], w);
+          }
+        }
+      }
+    }
+
+    return element_residual;
+
+  }
+
+}
+
 template < typename trial_space, typename T, Geometry geom, int q >
 auto BatchPostprocessConstexpr(const tensor < T, q, q, q > qf_outputs, GaussLegendreRule<geom, q> rule) {
 
@@ -460,6 +551,37 @@ void batched_kernel_with_constexpr(const mfem::Vector & U_, mfem::Vector & R_, c
 
 }
 
+template < Geometry geom, typename test, typename trial, int Q, typename lambda >
+void batched_kernel_with_SIMD(const mfem::Vector & U_, mfem::Vector & R_, const mfem::Vector & J_, size_t num_elements_, lambda qf_) {
+
+  using trial_element              = finite_element<geom, trial>;
+  using test_element               = finite_element<geom, test>;
+  static constexpr int  dim        = dimension_of(geom);
+  static constexpr int  test_n     = test_element::order + 1;
+  static constexpr int  trial_n    = trial_element::order + 1;
+  static constexpr auto rule       = GaussLegendreRule<geom, Q>();
+
+  // mfem provides this information in 1D arrays, so we reshape it
+  // into strided multidimensional arrays before using
+  auto J = mfem::Reshape(J_.Read(), Q, Q, Q, dim, dim, num_elements_);
+  auto r = mfem::Reshape(R_.ReadWrite(), test_n, test_n, test_n, int(num_elements_));
+  auto u = mfem::Reshape(U_.Read(), trial_n, trial_n, trial_n, int(num_elements_));
+
+  // for each element in the domain
+  for (uint32_t e = 0; e < num_elements_; e++) {
+
+    auto args = BatchPreprocessConstexpr<trial>(u, rule, e);
+
+    auto qf_outputs = BatchApply(qf_, args, rule, J, e);
+
+    auto r_elem = BatchPostprocessSIMD<test>(qf_outputs, rule);
+
+    detail::Add(r, r_elem, int(e));
+
+  }
+
+}
+
 }
 
 namespace compiler {
@@ -554,6 +676,10 @@ int main() {
     std::cout << "average batched kernel time: " << runtime / num_runs << std::endl;
   }
   auto answer_batched = R1D;
+  mfem::Vector error = answer_reference;
+  error -= answer_batched;
+  double relative_error = error.Norml2() / answer_reference.Norml2();
+  std::cout << "error: " << relative_error << std::endl;
 
   {
     R1D = 0.0;
@@ -563,19 +689,31 @@ int main() {
         compiler::please_do_not_optimize_away(&R1D);
       }
     }) / n;
-    std::cout << "average batched kernel time: " << runtime / num_runs << std::endl;
+    std::cout << "average batched (constexpr) kernel time: " << runtime / num_runs << std::endl;
   }
   auto answer_batched_constexpr = R1D;
-
-  mfem::Vector error = answer_reference;
-  error -= answer_batched;
-  double relative_error = error.Norml2() / answer_reference.Norml2();
-  std::cout << relative_error << std::endl;
-
   error = answer_reference;
   error -= answer_batched_constexpr;
   relative_error = error.Norml2() / answer_reference.Norml2();
-  std::cout << relative_error << std::endl;
+  std::cout << "error: " << relative_error << std::endl;
+
+
+  {
+    R1D = 0.0;
+    double runtime = time([&]() {
+      for (int i = 0; i < num_runs; i++) {
+        serac::batched_kernel_with_SIMD<Geometry::Hexahedron, test, trial, q>(U1D, R1D, J1D, num_elements, mass_plus_diffusion);
+        compiler::please_do_not_optimize_away(&R1D);
+      }
+    }) / n;
+    std::cout << "average batched (simd) kernel time: " << runtime / num_runs << std::endl;
+  }
+  auto answer_batched_simd = R1D;
+  error = answer_reference;
+  error -= answer_batched_simd;
+  relative_error = error.Norml2() / answer_reference.Norml2();
+  std::cout << "error: " << relative_error << std::endl;
+
 
 
 }
