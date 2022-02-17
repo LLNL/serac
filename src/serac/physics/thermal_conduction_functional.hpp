@@ -36,7 +36,7 @@ namespace serac {
  *  temperature degree of freedom vector, and \f$\mathbf{f}\f$ is a thermal load vector.
  */
 
-template <int order, int dim, typename... parameter_type>
+template <int order, int dim, typename... parameter_space>
 class ThermalConductionFunctional : public BasePhysics {
 public:
   /// A timestep and boundary condition enforcement method for a dynamic solver
@@ -121,21 +121,34 @@ public:
    * @param[in] options The system linear and nonlinear solver and timestepping parameters
    * @param[in] name An optional name for the physics module instance
    */
-  ThermalConductionFunctional(const SolverOptions& options, const std::string& name = "")
+  ThermalConductionFunctional(
+      const SolverOptions& options, const std::string& name = "",
+      std::array<std::pair<std::string, mfem::ParFiniteElementSpace*>, sizeof...(parameter_space)> parameter_info = {})
       : BasePhysics(1, order),
         temperature_(
             StateManager::newState(FiniteElementState::Options{.order      = order,
                                                                .vector_dim = 1,
                                                                .ordering   = mfem::Ordering::byNODES,
                                                                .name       = detail::addPrefix(name, "temperature")})),
-        M_functional_(&temperature_.space(), {&temperature_.space()}),
-        K_functional_(&temperature_.space(), {&temperature_.space()}),
+        parameter_info_(parameter_info),
         residual_(temperature_.space().TrueVSize()),
         ode_(temperature_.space().TrueVSize(), {.u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
              nonlin_solver_, bcs_)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
+
+    // Create a pack of the primal field and parameter finite element spaces
+    std::array<mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + 1> trial_spaces;
+    trial_spaces[0] = &temperature_.space();
+
+    for (long unsigned int i = 0; i < sizeof...(parameter_space) + 1; ++i) {
+      trial_spaces[i + 1] = parameter_info_[i].second;
+    }
+
+    M_functional_ = std::make_unique<Functional<test(trial, parameter_space...)>>(&temperature_.space(), trial_spaces);
+
+    K_functional_ = std::make_unique<Functional<test(trial, parameter_space...)>>(&temperature_.space(), trial_spaces);
 
     state_.push_back(temperature_);
 
@@ -149,12 +162,6 @@ public:
       is_quasistatic_ = false;
     } else {
       is_quasistatic_ = true;
-    }
-
-    if constexpr (sizeof...(parameter_type) == 1) {
-      extra_func_ = std::make_unique<Functional<test(trial, parameter_type...)>>(&temperature_.space(), std::array{&temperature_.space(), &temperature_.space()});
-    } else {
-      extra_func_ = std::make_unique<Functional<test(trial, parameter_type...)>>(&temperature_.space(), std::array{&temperature_.space()});      
     }
 
     dt_          = 0.0;
@@ -225,7 +232,7 @@ public:
     static_assert(has_thermal_flux<MaterialType, dim>::value,
                   "Thermal functional materials must have a public (u, du_dx) operator for thermal flux evaluation.");
 
-    K_functional_.AddDomainIntegral(
+    K_functional_->AddDomainIntegral(
         Dimension<dim>{},
         [material](auto, auto temperature) {
           // Get the value and the gradient from the input tuple
@@ -239,7 +246,7 @@ public:
         },
         mesh_);
 
-    M_functional_.AddDomainIntegral(
+    M_functional_->AddDomainIntegral(
         Dimension<dim>{},
         [material](auto x, auto temperature) {
           auto [u, du_dx] = temperature;
@@ -284,7 +291,7 @@ public:
         has_thermal_source<SourceType, dim>::value,
         "Thermal functional sources must have a public (x, t, u, du_dx) operator for thermal source evaluation.");
 
-    K_functional_.AddDomainIntegral(
+    K_functional_->AddDomainIntegral(
         Dimension<dim>{},
         [source_function, this](auto x, auto temperature) {
           // Get the value and the gradient from the input tuple
@@ -315,7 +322,7 @@ public:
                   "Thermal flux boundary condition types must have a public (x, n, u) operator for thermal boundary "
                   "flux evaluation.");
 
-    K_functional_.AddBoundaryIntegral(
+    K_functional_->AddBoundaryIntegral(
         Dimension<dim - 1>{}, [flux_function](auto x, auto n, auto u) { return flux_function(x, n, u); }, mesh_);
   }
 
@@ -342,8 +349,8 @@ public:
     // Project the essential boundary coefficients
     for (auto& bc : bcs_.essentials()) {
       bc.projectBdr(temperature_, time_);
-      K_functional_.SetEssentialBC(bc.markers(), 0);
-      M_functional_.SetEssentialBC(bc.markers(), 0);
+      K_functional_->SetEssentialBC(bc.markers(), 0);
+      M_functional_->SetEssentialBC(bc.markers(), 0);
     }
 
     // Initialize the true vector
@@ -353,10 +360,10 @@ public:
       residual_ = mfem_ext::StdFunctionOperator(
           temperature_.space().TrueVSize(),
 
-          [this](const mfem::Vector& u, mfem::Vector& r) { r = K_functional_(u); },
+          [this](const mfem::Vector& u, mfem::Vector& r) { r = (*K_functional_)(u); },
 
           [this](const mfem::Vector& u) -> mfem::Operator& {
-            auto [r, drdu] = K_functional_(differentiate_wrt(u));
+            auto [r, drdu] = (*K_functional_)(differentiate_wrt(u));
             J_             = assemble(drdu);
             return *J_;
           });
@@ -369,7 +376,7 @@ public:
             mfem::Vector K_arg(u_.Size());
             add(1.0, u_, dt_, du_dt, K_arg);
 
-            add(M_functional_(du_dt), K_functional_(K_arg), r);
+            add((*M_functional_)(du_dt), (*K_functional_)(K_arg), r);
           },
 
           [this](const mfem::Vector& du_dt) -> mfem::Operator& {
@@ -378,10 +385,10 @@ public:
               mfem::Vector K_arg(u_.Size());
               add(1.0, u_, dt_, du_dt, K_arg);
 
-              auto                                  M = serac::get<1>(M_functional_(differentiate_wrt(u_)));
+              auto                                  M = serac::get<1>((*M_functional_)(differentiate_wrt(u_)));
               std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
-              auto                                  K = serac::get<1>(K_functional_(differentiate_wrt(K_arg)));
+              auto                                  K = serac::get<1>((*K_functional_)(differentiate_wrt(K_arg)));
               std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
               J_.reset(mfem::Add(1.0, *m_mat, dt_, *k_mat));
@@ -405,12 +412,12 @@ protected:
   serac::FiniteElementState temperature_;
 
   /// Mass functional object \f$\mathbf{M} = \int_\Omega c_p \, \rho \, \phi_i \phi_j\, dx \f$
-  Functional<test(trial)> M_functional_;
+  std::unique_ptr<Functional<test(trial, parameter_space...)>> M_functional_;
 
   /// Stiffness functional object \f$\mathbf{K} = \int_\Omega \theta \cdot \nabla \phi_i  + f \phi_i \, dx \f$
-  Functional<test(trial)> K_functional_;
+  std::unique_ptr<Functional<test(trial, parameter_space...)>> K_functional_;
 
-  std::unique_ptr<Functional<test(trial, parameter_type...)>> extra_func_;
+  std::array<std::pair<std::string, mfem::ParFiniteElementSpace*>, sizeof...(parameter_space)> parameter_info_;
 
   /// Assembled mass matrix
   std::unique_ptr<mfem::HypreParMatrix> M_;
