@@ -31,8 +31,15 @@ set(infrastructure_sources
     terminator.cpp
     )
 
-set(infrastructure_depends axom fmt mpi cli11 mfem)
+message(WARNING "SERAC_ENABLE_PROFILING: ${SERAC_ENABLE_PROFILING}")
+blt_print_target_properties(TARGET adiak)
+blt_print_target_properties(TARGET caliper)
+
+set(infrastructure_depends axom fmt cli11 mfem)
 blt_list_append( TO infrastructure_depends ELEMENTS caliper adiak IF ${SERAC_ENABLE_PROFILING} )
+# mpi must come after adiak
+list(APPEND infrastructure_depends mpi)
+
 
 blt_add_library(
     NAME        serac_infrastructure

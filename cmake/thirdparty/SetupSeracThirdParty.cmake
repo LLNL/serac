@@ -72,6 +72,11 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         find_package(adiak REQUIRED NO_DEFAULT_PATH PATHS ${ADIAK_DIR})
         message(STATUS "Adiak support is ON")
         set(ADIAK_FOUND TRUE)
+
+        # Set the include directories as Adiak does not completely
+        # configure the "adiak" target
+        set_target_properties(adiak PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES ${adiak_INCLUDE_DIRS})
     else()
         message(STATUS "Adiak support is OFF")
         set(ADIAK_FOUND FALSE)
@@ -80,8 +85,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     #------------------------------------------------------------------------------
     # Caliper
     #------------------------------------------------------------------------------
-    # TODO: temporarily turned off until PR # 626
-    set(CALIPER_DIR "" CACHE STRING "" FORCE)
     if(CALIPER_DIR)
         serac_assert_is_directory(VARIABLE_NAME CALIPER_DIR)
 
