@@ -39,7 +39,7 @@
  */
 
 /**
- * @def SERAC_MARK_LOOP_START(id, name)
+ * @def SERAC_MARK_LOOP_BEGIN(id, name)
  * Marks the beginning of a loop block for Caliper profiling
  */
 
@@ -54,7 +54,7 @@
  */
 
 /**
- * @def SERAC_MARK_START(id)
+ * @def SERAC_MARK_BEGIN(id)
  * Marks the start of a region Caliper profiling
  */
 
@@ -87,10 +87,10 @@
 #ifdef SERAC_USE_CALIPER
 
 #define SERAC_MARK_FUNCTION CALI_CXX_MARK_FUNCTION
-#define SERAC_MARK_LOOP_START(id, name) CALI_CXX_MARK_LOOP_BEGIN(id, name)
+#define SERAC_MARK_LOOP_BEGIN(id, name) CALI_CXX_MARK_LOOP_BEGIN(id, name)
 #define SERAC_MARK_LOOP_ITER(id, i) CALI_CXX_MARK_LOOP_ITERATION(id, i)
 #define SERAC_MARK_LOOP_END(id) CALI_CXX_MARK_LOOP_END(id)
-#define SERAC_MARK_START(name) serac::profiling::detail::startCaliperRegion(name)
+#define SERAC_MARK_BEGIN(name) serac::profiling::detail::startCaliperRegion(name)
 #define SERAC_MARK_END(name) serac::profiling::detail::endCaliperRegion(name)
 
 #define SERAC_CONCAT_(a, b) a##b
@@ -139,10 +139,10 @@ inline const char* make_cstr(const std::string& str) { return str.c_str(); }
 
 // Define all these as nothing so annotated code will still compile
 #define SERAC_MARK_FUNCTION
-#define SERAC_MARK_LOOP_START(id, name)
+#define SERAC_MARK_LOOP_BEGIN(id, name)
 #define SERAC_MARK_LOOP_ITER(id, i)
 #define SERAC_MARK_LOOP_END(id)
-#define SERAC_MARK_START(name)
+#define SERAC_MARK_BEGIN(name)
 #define SERAC_MARK_END(name)
 #define SERAC_PROFILE_SCOPE(name)
 #define SERAC_PROFILE_EXPR(name, expr) expr

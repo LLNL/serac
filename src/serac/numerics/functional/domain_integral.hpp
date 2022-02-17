@@ -55,7 +55,7 @@ public:
   DomainIntegral(size_t num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<dim>, lambda_type&& qf,
                  QuadratureData<qpt_data_type>& data = dummy_qdata)
   {
-    SERAC_MARK_START("Domain Integral Set Up");
+    SERAC_MARK_BEGIN("Domain Integral Set Up");
     using namespace domain_integral;
 
     [[maybe_unused]] constexpr auto geometry                      = supported_geometries[dim];
@@ -152,11 +152,11 @@ public:
             int which_trial_space) const
   {
     if (which_trial_space == -1) {
-      SERAC_MARK_START("Domain Integral Evaluation");
+      SERAC_MARK_BEGIN("Domain Integral Evaluation");
       evaluation_(input_E, output_E);
       SERAC_MARK_END("Domain Integral Evaluation");
     } else {
-      SERAC_MARK_START("Domain Integral Evaluation with AD");
+      SERAC_MARK_BEGIN("Domain Integral Evaluation with AD");
       evaluation_with_AD_[which_trial_space](input_E, output_E);
       SERAC_MARK_END("Domain Integral Evaluation with AD");
     }
@@ -170,7 +170,7 @@ public:
    */
   void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E, size_t which_trial_space) const
   {
-    SERAC_MARK_START("Domain Integral Action of Gradient");
+    SERAC_MARK_BEGIN("Domain Integral Action of Gradient");
     action_of_gradient_[which_trial_space](input_E, output_E);
     SERAC_MARK_END("Domain Integral Action of Gradient");
   }
@@ -184,7 +184,7 @@ public:
    */
   void ComputeElementGradients(ExecArrayView<double, 3, ExecutionSpace::CPU> K_e, size_t which_trial_space) const
   {
-    SERAC_MARK_START("Domain Integral Element Gradient");
+    SERAC_MARK_BEGIN("Domain Integral Element Gradient");
     element_gradient_[which_trial_space](K_e);
     SERAC_MARK_END("Domain Integral Element Gradient");
   }
