@@ -55,6 +55,7 @@ public:
   DomainIntegral(size_t num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<dim>, lambda_type&& qf,
                  QuadratureData<qpt_data_type>& data = dummy_qdata)
   {
+    SERAC_MARK_START("Domain Integral Set Up");
     using namespace domain_integral;
 
     [[maybe_unused]] constexpr auto geometry                      = supported_geometries[dim];
@@ -107,12 +108,8 @@ public:
     // The proposed future solution is to template the calls on policy (evaluation_kernel<policy>)
 #if defined(__CUDACC__)
     if constexpr (exec == ExecutionSpace::GPU) {
-      SERAC_MARK_START("GPU Set Up");
-
       // note: this lambda function captures ptr by-value to extend its lifetime
       //                   vvv
-      SERAC_MARK_START("Evaluation Set Up");
-
       evaluation_ = [this, ptr, qf_derivatives, num_elements, qf, &data, &J, &X](const mfem::Vector& U,
                                                                                  mfem::Vector&       R) {
         // TODO: Refactor execution configuration. Blocksize of 128 chosen as a good starting point. Has not been
@@ -125,10 +122,6 @@ public:
             exec_config, U, R, qf_derivatives, J, X, num_elements, qf, data);
       };
 
-      SERAC_MARK_END("Evaluation Set Up");
-
-      SERAC_MARK_START("Action of Gradient Set Up");
-
       action_of_gradient_ = [this, qf_derivatives, num_elements, &J](const mfem::Vector& dU, mfem::Vector& dR) {
         // TODO: Refactor execution configuration. Blocksize of 128 chosen as a good starting point. Has not been
         // optimized
@@ -139,14 +132,11 @@ public:
             serac::detail::ThreadParallelizationStrategy::THREAD_PER_QUADRATURE_POINT>(exec_config, dU, dR,
                                                                                        qf_derivatives, J, num_elements);
       };
-
-      SERAC_MARK_END("Action of Gradient Set Up");
-
-      SERAC_MARK_END("GPU Set Up");
     }
 #endif
 
 #endif
+    SERAC_MARK_END("Domain Integral Set Up");
   }
 
   /**
@@ -162,9 +152,13 @@ public:
             int which_trial_space) const
   {
     if (which_trial_space == -1) {
+      SERAC_MARK_START("Domain Integral Evaluation");
       evaluation_(input_E, output_E);
+      SERAC_MARK_END("Domain Integral Evaluation");
     } else {
+      SERAC_MARK_START("Domain Integral Evaluation with AD");
       evaluation_with_AD_[which_trial_space](input_E, output_E);
+      SERAC_MARK_END("Domain Integral Evaluation with AD");
     }
   }
 
@@ -176,7 +170,9 @@ public:
    */
   void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E, size_t which_trial_space) const
   {
+    SERAC_MARK_START("Domain Integral Action of Gradient");
     action_of_gradient_[which_trial_space](input_E, output_E);
+    SERAC_MARK_END("Domain Integral Action of Gradient");
   }
 
   /**
@@ -188,7 +184,9 @@ public:
    */
   void ComputeElementGradients(ExecArrayView<double, 3, ExecutionSpace::CPU> K_e, size_t which_trial_space) const
   {
+    SERAC_MARK_START("Domain Integral Element Gradient");
     element_gradient_[which_trial_space](K_e);
+    SERAC_MARK_END("Domain Integral Element Gradient");
   }
 
 private:
