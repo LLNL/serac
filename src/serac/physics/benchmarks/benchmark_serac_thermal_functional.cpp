@@ -1,16 +1,14 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/physics/thermal_conduction_functional.hpp"
+#include "serac/physics/materials/thermal_functional_material.hpp"
 
 #include <fstream>
 
-#include "mpi.h"
-
-#include "axom/slic/core/SimpleLogger.hpp"
 #include "mfem.hpp"
 
 #include "serac/serac_config.hpp"
@@ -21,8 +19,10 @@
 namespace serac {
 
 template <int p, int dim>
-void functional_test_static(double /* expected_temp_norm */)
+void functional_test_static()
 {
+  MPI_Barrier(MPI_COMM_WORLD);
+
   int serial_refinement   = 1;
   int parallel_refinement = 0;
 
@@ -87,8 +87,10 @@ void functional_test_static(double /* expected_temp_norm */)
 }
 
 template <int p, int dim>
-void functional_test_dynamic(double /* expected_temp_norm */)
+void functional_test_dynamic()
 {
+  MPI_Barrier(MPI_COMM_WORLD);
+
   int serial_refinement   = 1;
   int parallel_refinement = 0;
 
@@ -155,6 +157,7 @@ void functional_test_dynamic(double /* expected_temp_norm */)
 }  // namespace serac
 
 //------------------------------------------------------------------------------
+#include "axom/slic/core/SimpleLogger.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -167,8 +170,38 @@ int main(int argc, char* argv[])
 
   // Profile code
   SERAC_MARK_BEGIN("Thermal Functional");
-  serac::functional_test_static<1, 2>(2.2909240);
-  SERAC_MARK_END("Thermal Functional");
+
+  SERAC_MARK_BEGIN("2D Linear Static");
+  serac::functional_test_static<1, 2>();
+  SERAC_MARK_END("2D Linear Static");
+
+  SERAC_MARK_BEGIN("2D Quadratic Static");
+  serac::functional_test_static<2, 2>();
+  SERAC_MARK_END("2D Quadratic Static");
+
+  SERAC_MARK_BEGIN("3D Linear Static");
+  serac::functional_test_static<1, 3>();
+  SERAC_MARK_END("3D Linear Static");
+
+  SERAC_MARK_BEGIN("3D Quadratic Static");
+  serac::functional_test_static<2, 3>();
+  SERAC_MARK_END("3D Quadratic Static");
+
+  SERAC_MARK_BEGIN("2D Linear Dynamic");
+  serac::functional_test_dynamic<1, 2>();
+  SERAC_MARK_END("2D Linear Dynamic");
+
+  SERAC_MARK_BEGIN("2D Quadratic Dynamic");
+  serac::functional_test_dynamic<2, 2>();
+  SERAC_MARK_END("2D Quadratic Dynamic");
+
+  SERAC_MARK_BEGIN("3D Linear Dynamic");
+  serac::functional_test_dynamic<1, 3>();
+  SERAC_MARK_END("3D Linear Dynamic");
+
+  SERAC_MARK_BEGIN("3D Quadratic Dynamic");
+  serac::functional_test_dynamic<2, 3>();
+  SERAC_MARK_END("3D Quadratic Dynamic");
 
   // Finalize profiling
   serac::profiling::finalize();
