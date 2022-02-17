@@ -17,12 +17,21 @@
 
 #include "serac/serac_config.hpp"
 
+#ifdef SERAC_USE_ADIAK
+#include "adiak.hpp"
+#endif
+
 #ifdef SERAC_USE_CALIPER
 #include "caliper/cali-manager.h"
 #include "caliper/cali.h"
 #endif
 
 #include "mpi.h"
+
+/**
+ * @def SERAC_SET_METADATA(name, data)
+ * Sets metadata in adiak/caliper. Calls adiak::value
+ */
 
 /**
  * @def SERAC_MARK_FUNCTION
@@ -55,11 +64,6 @@
  */
 
 /**
- * @def SERAC_SET_METADATA(name, data)
- * Sets metadata in caliper file. Calls serac::profiling::detail::setCaliperMetadata
- */
-
-/**
  * @def SERAC_PROFILE_SCOPE(name)
  * Uses cali::ScopeAnnotation to profile a particular scope
  */
@@ -74,6 +78,12 @@
  * Profiles an expression several times. Returns the last evaluation
  */
 
+#ifdef SERAC_USE_ADIAK
+#define SERAC_SET_METADATA(name, data) adiak::value(name, data)
+#else
+#define SERAC_SET_METADATA(name, data)
+#endif
+
 #ifdef SERAC_USE_CALIPER
 
 #define SERAC_MARK_FUNCTION CALI_CXX_MARK_FUNCTION
@@ -82,7 +92,6 @@
 #define SERAC_MARK_LOOP_END(id) CALI_CXX_MARK_LOOP_END(id)
 #define SERAC_MARK_START(name) serac::profiling::detail::startCaliperRegion(name)
 #define SERAC_MARK_END(name) serac::profiling::detail::endCaliperRegion(name)
-#define SERAC_SET_METADATA(name, data) serac::profiling::detail::setCaliperMetadata(name, data)
 
 #define SERAC_CONCAT_(a, b) a##b
 #define SERAC_CONCAT(a, b) SERAC_CONCAT_(a, b)
@@ -135,7 +144,6 @@ inline const char* make_cstr(const std::string& str) { return str.c_str(); }
 #define SERAC_MARK_LOOP_END(id)
 #define SERAC_MARK_START(name)
 #define SERAC_MARK_END(name)
-#define SERAC_SET_METADATA(name, data)
 #define SERAC_PROFILE_SCOPE(name)
 #define SERAC_PROFILE_EXPR(name, expr) expr
 #define SERAC_PROFILE_EXPR_LOOP(name, expr, ntest) expr
@@ -160,28 +168,6 @@ void finalize();
 
 /// detail namespace
 namespace detail {
-/**
- * @brief Caliper metadata methods cali_set_global_<double|int|string|uint>_byname()
- *
- * @param[in] name The tag to associate the following metadata with
- * @param[in] data The metadata to store in the caliper file
- */
-void setCaliperMetadata(const std::string& name, const std::string& data);
-
-/*!
-  @overload
-*/
-void setCaliperMetadata(const std::string& name, int data);
-
-/*!
-  @overload
-*/
-void setCaliperMetadata(const std::string& name, double data);
-
-/*!
-  @overload
-*/
-void setCaliperMetadata(const std::string& name, unsigned int data);
 
 /**
  * @brief Caliper method for marking the start of a profiling region
