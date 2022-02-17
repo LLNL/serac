@@ -43,7 +43,7 @@ void functional_test_static(double expected_temp_norm)
   std::set<int> ess_bdr = {1};
 
   // Construct a functional-based thermal conduction solver
-  ThermalConductionFunctional<p, dim> thermal_solver(ThermalConductionFunctional<p, dim>::defaultQuasistaticOptions(),
+  ThermalConductionFunctional<p, dim, H1<p>> thermal_solver(ThermalConductionFunctional<p, dim, H1<p>>::defaultQuasistaticOptions(),
                                                      "thermal_functional");
 
   tensor<double, dim, dim> cond;

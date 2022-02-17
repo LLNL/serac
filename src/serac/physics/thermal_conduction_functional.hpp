@@ -35,7 +35,8 @@ namespace serac {
  *  where \f$\mathbf{M}\f$ is a mass matrix, \f$\mathbf{K}\f$ is a stiffness matrix, \f$\mathbf{u}\f$ is the
  *  temperature degree of freedom vector, and \f$\mathbf{f}\f$ is a thermal load vector.
  */
-template <int order, int dim>
+
+template <int order, int dim, typename... parameter_type>
 class ThermalConductionFunctional : public BasePhysics {
 public:
   /// A timestep and boundary condition enforcement method for a dynamic solver
@@ -148,6 +149,12 @@ public:
       is_quasistatic_ = false;
     } else {
       is_quasistatic_ = true;
+    }
+
+    if constexpr (sizeof...(parameter_type) == 1) {
+      extra_func_ = std::make_unique<Functional<test(trial, parameter_type...)>>(&temperature_.space(), std::array{&temperature_.space(), &temperature_.space()});
+    } else {
+      extra_func_ = std::make_unique<Functional<test(trial, parameter_type...)>>(&temperature_.space(), std::array{&temperature_.space()});      
     }
 
     dt_          = 0.0;
@@ -402,6 +409,8 @@ protected:
 
   /// Stiffness functional object \f$\mathbf{K} = \int_\Omega \theta \cdot \nabla \phi_i  + f \phi_i \, dx \f$
   Functional<test(trial)> K_functional_;
+
+  std::unique_ptr<Functional<test(trial, parameter_type...)>> extra_func_;
 
   /// Assembled mass matrix
   std::unique_ptr<mfem::HypreParMatrix> M_;
