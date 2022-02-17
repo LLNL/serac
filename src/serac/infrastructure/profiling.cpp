@@ -20,7 +20,7 @@ std::optional<cali::ConfigManager> mgr;
 }  // namespace
 #endif
 
-void initialize(std::string options, MPI_Comm comm)
+void initialize(MPI_Comm comm, std::string options)
 {
 #ifdef SERAC_USE_ADIAK
   // Initialize Adiak
@@ -61,6 +61,11 @@ void initialize(std::string options, MPI_Comm comm)
 
 void finalize()
 {
+#ifdef SERAC_USE_ADIAK
+  // Finalize Adiak
+  adiak::fini();
+#endif
+
 #ifdef SERAC_USE_CALIPER
   // Finalize Caliper
   if (mgr) {
@@ -68,41 +73,6 @@ void finalize()
     mgr->flush();
   }
 
-  mgr.reset();
-#endif
-
-#ifdef SERAC_USE_ADIAK
-  // Finalize Adiak
-  adiak::fini();
-#endif
-}
-
-void initializeCaliper(const std::string& options)
-{
-#ifdef SERAC_USE_CALIPER
-  mgr               = cali::ConfigManager();
-  auto check_result = mgr->check(options.c_str());
-  if (check_result.empty()) {
-    mgr->add(options.c_str());
-  } else {
-    SLIC_WARNING_ROOT("Caliper options invalid, ignoring: " << check_result);
-  }
-  // Defaults, should probably always be enabled
-  mgr->add("event-trace, runtime-report");
-  mgr->start();
-#else
-  // Silence warning
-  static_cast<void>(options);
-#endif
-}
-
-void terminateCaliper()
-{
-#ifdef SERAC_USE_CALIPER
-  if (mgr) {
-    mgr->stop();
-    mgr->flush();
-  }
   mgr.reset();
 #endif
 }

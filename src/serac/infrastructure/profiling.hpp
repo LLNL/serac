@@ -145,21 +145,18 @@ inline const char* make_cstr(const std::string& str) { return str.c_str(); }
 /// profiling namespace
 namespace serac::profiling {
 
-void initialize(std::string options = "", MPI_Comm = MPI_COMM_WORLD);
-
-void finalize();
-
 /**
- * @brief Initializes performance monitoring using the Caliper library
+ * @brief Initializes performance monitoring using the Caliper and Adiak libraries
+ * @param comm The MPI communicator (used by Adiak), optional
  * @param options The Caliper ConfigManager config string, optional
  * @see https://software.llnl.gov/Caliper/ConfigManagerAPI.html#configmanager-configuration-string-syntax
  */
-void initializeCaliper(const std::string& options = "");
+void initialize(MPI_Comm comm = MPI_COMM_WORLD, std::string options = "");
 
 /**
  * @brief Concludes performance monitoring and writes collected data to a file
  */
-void terminateCaliper();
+void finalize();
 
 /// detail namespace
 namespace detail {
