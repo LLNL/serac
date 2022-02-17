@@ -31,13 +31,6 @@ endif()
 serac_add_tests( SOURCES       axom_smoketest.cpp
                  DEPENDS_ON    axom)
 
-set(mfem_tests
-    mfem_ex9p_blockilu.cpp)
-
-serac_add_tests( SOURCES       ${mfem_tests}
-                 DEPENDS_ON    gtest serac_numerics
-                 NUM_MPI_TASKS 2)
-
 if(SERAC_USE_PETSC)
     serac_add_tests( SOURCES       petsc_smoketest.cpp
                      DEPENDS_ON    PETSc gtest

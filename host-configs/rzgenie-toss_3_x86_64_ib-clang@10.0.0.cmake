@@ -11,11 +11,11 @@
 #------------------------------------------------------------------------------
 if(DEFINED ENV{SPACK_CC})
 
-  set(CMAKE_C_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2022_01_04_19_43_23/spack/lib/spack/env/clang/clang" CACHE PATH "")
+  set(CMAKE_C_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2022_02_01_20_40_17/spack/lib/spack/env/clang/clang" CACHE PATH "")
 
-  set(CMAKE_CXX_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2022_01_04_19_43_23/spack/lib/spack/env/clang/clang++" CACHE PATH "")
+  set(CMAKE_CXX_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2022_02_01_20_40_17/spack/lib/spack/env/clang/clang++" CACHE PATH "")
 
-  set(CMAKE_Fortran_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2022_01_04_19_43_23/spack/lib/spack/env/clang/gfortran" CACHE PATH "")
+  set(CMAKE_Fortran_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2022_02_01_20_40_17/spack/lib/spack/env/clang/gfortran" CACHE PATH "")
 
 else()
 
@@ -51,17 +51,15 @@ set(ENABLE_MPI ON CACHE BOOL "")
 # Hardware
 #------------------------------------------------------------------------------
 
-#------------------------------------------------
-# Hardware Specifics
-#------------------------------------------------
+set(ENABLE_OPENMP ON CACHE BOOL "")
 
 #------------------------------------------------------------------------------
 # TPLs
 #------------------------------------------------------------------------------
 
-set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2022_01_04_19_43_23/clang-10.0.0" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2022_02_01_20_40_17/clang-10.0.0" CACHE PATH "")
 
-set(AXOM_DIR "${TPL_ROOT}/axom-0.6.0serac" CACHE PATH "")
+set(AXOM_DIR "${TPL_ROOT}/axom-0.6.1serac" CACHE PATH "")
 
 set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.7.2serac" CACHE PATH "")
 
@@ -81,15 +79,19 @@ set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4" CACHE PATH "")
 
 set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1" CACHE PATH "")
 
-# CALIPER not built
+set(ADIAK_DIR "${TPL_ROOT}/adiak-0.2.1" CACHE PATH "")
+
+# AMGX not built
+
+set(CALIPER_DIR "${TPL_ROOT}/caliper-master" CACHE PATH "")
 
 # PETSC not built
 
-# RAJA not built
+set(RAJA_DIR "${TPL_ROOT}/raja-0.14.0" CACHE PATH "")
 
-set(SUNDIALS_DIR "${TPL_ROOT}/sundials-5.6.1" CACHE PATH "")
+set(SUNDIALS_DIR "${TPL_ROOT}/sundials-5.7.0" CACHE PATH "")
 
-# UMPIRE not built
+set(UMPIRE_DIR "${TPL_ROOT}/umpire-6.0.0serac" CACHE PATH "")
 
 #------------------------------------------------------------------------------
 # Devtools

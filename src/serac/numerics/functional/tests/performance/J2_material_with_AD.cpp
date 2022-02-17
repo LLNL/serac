@@ -11,14 +11,14 @@
 #include "axom/core/utilities/Timer.hpp"
 
 #include "serac/numerics/functional/tensor.hpp"
+#include "serac/numerics/functional/tuple.hpp"
+#include "serac/numerics/functional/tuple_arithmetic.hpp"
 
 using namespace serac;
 
 static constexpr auto I = Identity<3>();
 
-/**
- * @brief a 3D constitutive model for a J2 material with linear isotropic and kinematic hardening.
- */
+/// @brief a 3D constitutive model for a J2 material with linear isotropic and kinematic hardening.
 struct J2 {
   double E;        ///< Young's modulus
   double nu;       ///< Poisson's ratio
@@ -26,8 +26,7 @@ struct J2 {
   double Hk;       ///< kinematic hardening constant
   double sigma_y;  ///< yield stress
 
-  /** @brief variables describing the stress state, yield surface, and some information about the most recent stress
-   * increment */
+  /// @brief variables required to characterize the hysteresis response
   struct State {
     tensor<double, 3, 3> beta;           ///< back-stress tensor
     tensor<double, 3, 3> el_strain;      ///< elastic strain

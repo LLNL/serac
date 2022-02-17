@@ -19,7 +19,7 @@
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/physics/state/state_manager.hpp"
-#include "serac/physics/materials/thermal_functional_material.hpp"
+#include "serac/physics/materials/functional_material_utils.hpp"
 
 namespace serac {
 
@@ -127,8 +127,8 @@ public:
                                                                .vector_dim = 1,
                                                                .ordering   = mfem::Ordering::byNODES,
                                                                .name       = detail::addPrefix(name, "temperature")})),
-        M_functional_(&temperature_.space(), &temperature_.space()),
-        K_functional_(&temperature_.space(), &temperature_.space()),
+        M_functional_(&temperature_.space(), {&temperature_.space()}),
+        K_functional_(&temperature_.space(), {&temperature_.space()}),
         residual_(temperature_.space().TrueVSize()),
         ode_(temperature_.space().TrueVSize(), {.u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
              nonlin_solver_, bcs_)
@@ -211,11 +211,11 @@ public:
   template <typename MaterialType>
   void setMaterial(MaterialType material)
   {
-    static_assert(Thermal::has_density<MaterialType, dim>::value,
+    static_assert(has_density<MaterialType, dim>::value,
                   "Thermal functional materials must have a public density(x) method.");
-    static_assert(Thermal::has_specific_heat_capacity<MaterialType, dim>::value,
+    static_assert(has_specific_heat_capacity<MaterialType, dim>::value,
                   "Thermal functional materials must have a public specificHeatCapacity(x, temperature) method.");
-    static_assert(Thermal::has_thermal_flux<MaterialType, dim>::value,
+    static_assert(has_thermal_flux<MaterialType, dim>::value,
                   "Thermal functional materials must have a public (u, du_dx) operator for thermal flux evaluation.");
 
     K_functional_.AddDomainIntegral(
@@ -274,7 +274,7 @@ public:
   void setSource(SourceType source_function)
   {
     static_assert(
-        Thermal::has_thermal_source<SourceType, dim>::value,
+        has_thermal_source<SourceType, dim>::value,
         "Thermal functional sources must have a public (x, t, u, du_dx) operator for thermal source evaluation.");
 
     K_functional_.AddDomainIntegral(
@@ -304,7 +304,7 @@ public:
   template <typename FluxType>
   void setFluxBCs(FluxType flux_function)
   {
-    static_assert(Thermal::has_thermal_flux_boundary<FluxType, dim>::value,
+    static_assert(has_thermal_flux_boundary<FluxType, dim>::value,
                   "Thermal flux boundary condition types must have a public (x, n, u) operator for thermal boundary "
                   "flux evaluation.");
 
@@ -335,7 +335,8 @@ public:
     // Project the essential boundary coefficients
     for (auto& bc : bcs_.essentials()) {
       bc.projectBdr(temperature_, time_);
-      K_functional_.SetEssentialBC(bc.markers());
+      K_functional_.SetEssentialBC(bc.markers(), 0);
+      M_functional_.SetEssentialBC(bc.markers(), 0);
     }
 
     // Initialize the true vector
@@ -345,15 +346,11 @@ public:
       residual_ = mfem_ext::StdFunctionOperator(
           temperature_.space().TrueVSize(),
 
-          [this](const mfem::Vector& u, mfem::Vector& r) {
-            r = K_functional_(u);
-            r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
-          },
+          [this](const mfem::Vector& u, mfem::Vector& r) { r = K_functional_(u); },
 
           [this](const mfem::Vector& u) -> mfem::Operator& {
-            K_functional_(u);
-            J_.reset(grad(K_functional_));
-            bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+            auto [r, drdu] = K_functional_(differentiate_wrt(u));
+            J_             = assemble(drdu);
             return *J_;
           });
 
@@ -366,7 +363,6 @@ public:
             add(1.0, u_, dt_, du_dt, K_arg);
 
             add(M_functional_(du_dt), K_functional_(K_arg), r);
-            r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
           },
 
           [this](const mfem::Vector& du_dt) -> mfem::Operator& {
@@ -375,14 +371,13 @@ public:
               mfem::Vector K_arg(u_.Size());
               add(1.0, u_, dt_, du_dt, K_arg);
 
-              M_functional_(u_);
-              std::unique_ptr<mfem::HypreParMatrix> m_mat(grad(M_functional_));
+              auto                                  M = serac::get<1>(M_functional_(differentiate_wrt(u_)));
+              std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
-              K_functional_(K_arg);
-              std::unique_ptr<mfem::HypreParMatrix> k_mat(grad(K_functional_));
+              auto                                  K = serac::get<1>(K_functional_(differentiate_wrt(K_arg)));
+              std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
               J_.reset(mfem::Add(1.0, *m_mat, dt_, *k_mat));
-              bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             }
             return *J_;
           });

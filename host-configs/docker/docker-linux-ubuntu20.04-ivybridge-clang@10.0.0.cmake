@@ -51,9 +51,7 @@ set(ENABLE_MPI ON CACHE BOOL "")
 # Hardware
 #------------------------------------------------------------------------------
 
-#------------------------------------------------
-# Hardware Specifics
-#------------------------------------------------
+set(ENABLE_OPENMP ON CACHE BOOL "")
 
 #------------------------------------------------------------------------------
 # TPLs
@@ -61,7 +59,7 @@ set(ENABLE_MPI ON CACHE BOOL "")
 
 set(TPL_ROOT "/home/serac/serac_tpls/clang-10.0.0" CACHE PATH "")
 
-set(AXOM_DIR "${TPL_ROOT}/axom-0.6.0serac" CACHE PATH "")
+set(AXOM_DIR "${TPL_ROOT}/axom-0.6.1serac" CACHE PATH "")
 
 set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.7.2serac" CACHE PATH "")
 
@@ -81,15 +79,19 @@ set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4" CACHE PATH "")
 
 set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1" CACHE PATH "")
 
+# ADIAK not built
+
+# AMGX not built
+
 # CALIPER not built
 
 # PETSC not built
 
-# RAJA not built
+set(RAJA_DIR "${TPL_ROOT}/raja-0.14.0" CACHE PATH "")
 
-set(SUNDIALS_DIR "${TPL_ROOT}/sundials-5.6.1" CACHE PATH "")
+set(SUNDIALS_DIR "${TPL_ROOT}/sundials-5.7.0" CACHE PATH "")
 
-# UMPIRE not built
+set(UMPIRE_DIR "${TPL_ROOT}/umpire-6.0.0serac" CACHE PATH "")
 
 #------------------------------------------------------------------------------
 # Devtools
@@ -104,3 +106,5 @@ set(ENABLE_CLANGFORMAT OFF CACHE BOOL "")
 set(ENABLE_CLANGTIDY OFF CACHE BOOL "")
 
 set(ENABLE_DOCS OFF CACHE BOOL "")
+
+

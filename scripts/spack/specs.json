@@ -14,8 +14,8 @@
     "__comment__":"##############################################################################",
 
     "toss_3_x86_64_ib":
-    [ "clang@10.0.0+devtools",
-      "gcc@8.3.1+devtools" ],
+    [ "clang@10.0.0+devtools+profiling",
+      "gcc@8.3.1+devtools+profiling" ],
 
     "blueos_3_ppc64le_ib_p9":
     [ "clang@10.0.1+devtools+cuda+raja+umpire+profiling cuda_arch=70" ],

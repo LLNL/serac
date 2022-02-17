@@ -53,12 +53,6 @@ void check_gradient(Functional<T>& f, mfem::Vector& U)
 
   double epsilon = 1.0e-8;
 
-  // grad(f) evaluates the gradient of f at the last evaluation,
-  // so we evaluate f(U) before calling grad(f)
-  f(U);
-
-  auto& dfdU = grad(f);
-
   auto U_plus = U;
   U_plus.Add(epsilon, dU);
 
@@ -69,18 +63,20 @@ void check_gradient(Functional<T>& f, mfem::Vector& U)
   df1 -= f(U_minus);
   df1 /= (2 * epsilon);
 
-  mfem::HypreParMatrix* dfdU_matrix = dfdU;
+  auto [value, dfdU] = f(differentiate_wrt(U));
+  mfem::Vector df2   = dfdU(dU);
 
-  mfem::Vector df2 = (*dfdU_matrix) * dU;
-  mfem::Vector df3 = dfdU(dU);
+  std::unique_ptr<mfem::HypreParMatrix> dfdU_matrix = assemble(dfdU);
+
+  mfem::Vector df3 = (*dfdU_matrix) * dU;
 
   double relative_error1 = df1.DistanceTo(df2) / df1.Norml2();
   double relative_error2 = df1.DistanceTo(df3) / df1.Norml2();
 
-  EXPECT_NEAR(0., relative_error1, 2.e-6);
-  EXPECT_NEAR(0., relative_error2, 2.e-6);
+  EXPECT_NEAR(0., relative_error1, 5.e-6);
+  EXPECT_NEAR(0., relative_error2, 5.e-6);
 
-  delete dfdU_matrix;
+  std::cout << relative_error1 << " " << relative_error2 << std::endl;
 }
 
 // this test sets up a toy "thermal" problem where the residual includes contributions
@@ -107,7 +103,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   using trial_space = decltype(trial);
 
   // Construct the new functional object using the known test and trial spaces
-  Functional<test_space(trial_space)> residual(&fespace, &fespace);
+  Functional<test_space(trial_space)> residual(&fespace, {&fespace});
 
   // Add the total domain residual term to the functional
   residual.AddDomainIntegral(
@@ -121,7 +117,12 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
       mesh);
 
   residual.AddBoundaryIntegral(
-      Dimension<dim - 1>{}, [=](auto x, auto /*n*/, auto u) { return x[0] + x[1] - cos(u); }, mesh);
+      Dimension<dim - 1>{},
+      [=](auto x, auto /*n*/, auto temperature) {
+        auto u = get<0>(temperature);
+        return x[0] + x[1] - cos(u);
+      },
+      mesh);
 
   check_gradient(residual, U);
 
@@ -147,7 +148,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   using trial_space = decltype(trial);
 
   // Construct the new functional object using the known test and trial spaces
-  Functional<test_space(trial_space)> residual(&fespace, &fespace);
+  Functional<test_space(trial_space)> residual(&fespace, {&fespace});
 
   // Add the total domain residual term to the functional
   residual.AddDomainIntegral(
@@ -162,7 +163,12 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
       mesh);
 
   residual.AddBoundaryIntegral(
-      Dimension<dim - 1>{}, [=](auto x, auto n, auto u) { return (x[0] + x[1] - cos(u[0])) * n; }, mesh);
+      Dimension<dim - 1>{},
+      [=](auto x, auto n, auto displacement) {
+        auto u = get<0>(displacement);
+        return (x[0] + x[1] - cos(u[0])) * n;
+      },
+      mesh);
 
   check_gradient(residual, U);
 

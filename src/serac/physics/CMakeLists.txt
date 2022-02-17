@@ -28,6 +28,7 @@ set(physics_sources
 set(physics_headers
     base_physics.hpp
     solid.hpp
+    solid_functional.hpp
     thermal_conduction.hpp
     thermal_conduction_functional.hpp
     thermal_solid.hpp
