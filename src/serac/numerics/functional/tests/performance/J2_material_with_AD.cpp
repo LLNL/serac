@@ -146,15 +146,21 @@ auto displacement_gradient(double t)
               }};
 }
 
+auto directional_derivative(tensor< double, 3, 3 > A)
+{
+  return make_tensor<3,3>([&](int i, int j){ return dual< double >{A[i][j], 1.0 * (i == 1) * (j == 1)}; });
+}
+
 int main()
 {
   // create & initialize test logger, finalized when exiting scope
   axom::slic::SimpleLogger logger;
 
   axom::utilities::Timer stopwatch;
-  double                 J2_evaluation_time = 0.0;
-  double                 J2_gradient_time   = 0.0;
-  double                 J2_AD_time         = 0.0;
+  double                 J2_evaluation_time             = 0.0;
+  double                 J2_gradient_time               = 0.0;
+  double                 J2_directional_derivative_time = 0.0;
+  double                 J2_AD_time                     = 0.0;
 
   double t  = 0.0;
   double dt = 0.0001;
@@ -172,7 +178,8 @@ int main()
   while (t < 1.0) {
     auto grad_u = displacement_gradient(t);
 
-    auto backup = state;
+    auto backup1 = state;
+    auto backup2 = state;
 
     stopwatch.start();
     tensor<double, 3, 3> stress = material.calculate_stress(grad_u, state);
@@ -185,13 +192,18 @@ int main()
     J2_gradient_time += stopwatch.elapsed();
 
     stopwatch.start();
-    auto stress_and_C = material.calculate_stress_AD(make_dual(grad_u), backup);
+    [[maybe_unused]] auto stress_and_Cij = material.calculate_stress_AD(directional_derivative(grad_u), backup1);
+    stopwatch.stop();
+    J2_directional_derivative_time += stopwatch.elapsed();
+
+    stopwatch.start();
+    auto stress_and_C = material.calculate_stress_AD(make_dual(grad_u), backup2);
     stopwatch.stop();
     J2_AD_time += stopwatch.elapsed();
 
     bool error_too_big =
         (norm(stress - get_value(stress_and_C)) > 1.0e-12) || (norm(C - get_gradient(stress_and_C)) > 1.0e-12) ||
-        (norm(state.beta - backup.beta) > 1.0e-12) || (fabs(state.pl_strain - backup.pl_strain) > 1.0e-12);
+        (norm(state.beta - backup1.beta) > 1.0e-12) || (fabs(state.pl_strain - backup1.pl_strain) > 1.0e-12);
 
     if (error_too_big) {
       SLIC_ERROR("Significant difference between expected and actual results. Exiting...");
@@ -203,16 +215,18 @@ int main()
 
   std::cout << "total J2 evaluation time (no AD): " << J2_evaluation_time << std::endl;
   std::cout << "total J2 gradient time (no AD): " << J2_gradient_time << std::endl;
+  std::cout << "total J2 directional derivative time (AD): " << J2_directional_derivative_time << std::endl;
   std::cout << "total J2 evaluation+gradient time (AD): " << J2_AD_time << std::endl;
   std::cout << "(AD time) / (manual gradient time): " << J2_AD_time / (J2_evaluation_time + J2_gradient_time)
             << std::endl;
 }
 
-// timings on my local machine:
+// timings on my local machine (with -march=skylake-512 and -ffast-math):
 //
-// total J2 evaluation time (no AD):       0.0196884
-// total J2 gradient time (no AD):         0.0439456
-// total J2 evaluation+gradient time (AD): 0.256943
-// (AD time) / (manual gradient time):     4.03782
+// total J2 evaluation time (no AD): 0.000574131
+// total J2 gradient time (no AD): 0.000763792
+// total J2 directional derivative time (AD): 0.00135496
+// total J2 evaluation+gradient time (AD): 0.00908836
+// (AD time) / (manual gradient time): 6.79289
 //
 // so, manually implementing derivatives is faster (as expected)
