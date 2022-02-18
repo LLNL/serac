@@ -11,6 +11,279 @@
 
 #include "immintrin.h"
 
+namespace mfem {
+
+#ifdef MFEM_USE_HIP
+const int MAX_D1D = 11;
+const int MAX_Q1D = 11;
+#else
+constexpr int MAX_D1D = 14;
+constexpr int MAX_Q1D = 14;
+#endif
+
+
+template <int T_D1D = 0, int T_Q1D = 0>
+static void PAMassApply3D(const int NE, const Array<double> &b_,
+                          const Array<double> &bt_, const Vector &d_,
+                          const Vector &x_, Vector &y_, const int d1d = 0,
+                          const int q1d = 0) {
+  const int D1D = T_D1D ? T_D1D : d1d;
+  const int Q1D = T_Q1D ? T_Q1D : q1d;
+  static_assert(D1D <= MAX_D1D);
+  static_assert(Q1D <= MAX_Q1D);
+  auto B = Reshape(b_.Read(), Q1D, D1D);
+  auto Bt = Reshape(bt_.Read(), D1D, Q1D);
+  auto D = Reshape(d_.Read(), Q1D, Q1D, Q1D, NE);
+  auto X = Reshape(x_.Read(), D1D, D1D, D1D, NE);
+  auto Y = Reshape(y_.ReadWrite(), D1D, D1D, D1D, NE);
+  for (int e = 0; e < NE; e++) {
+    constexpr int max_D1D = T_D1D ? T_D1D : MAX_D1D;
+    constexpr int max_Q1D = T_Q1D ? T_Q1D : MAX_Q1D;
+    double sol_xyz[max_Q1D][max_Q1D][max_Q1D];
+    for (int qz = 0; qz < Q1D; ++qz) {
+      for (int qy = 0; qy < Q1D; ++qy) {
+        for (int qx = 0; qx < Q1D; ++qx) {
+          sol_xyz[qz][qy][qx] = 0.0;
+        }
+      }
+    }
+    for (int dz = 0; dz < D1D; ++dz) {
+      double sol_xy[max_Q1D][max_Q1D];
+      for (int qy = 0; qy < Q1D; ++qy) {
+        for (int qx = 0; qx < Q1D; ++qx) {
+          sol_xy[qy][qx] = 0.0;
+        }
+      }
+      for (int dy = 0; dy < D1D; ++dy) {
+        double sol_x[max_Q1D];
+        for (int qx = 0; qx < Q1D; ++qx) {
+          sol_x[qx] = 0;
+        }
+        for (int dx = 0; dx < D1D; ++dx) {
+          const double s = X(dx, dy, dz, e);
+          for (int qx = 0; qx < Q1D; ++qx) {
+            sol_x[qx] += B(qx, dx) * s;
+          }
+        }
+        for (int qy = 0; qy < Q1D; ++qy) {
+          const double wy = B(qy, dy);
+          for (int qx = 0; qx < Q1D; ++qx) {
+            sol_xy[qy][qx] += wy * sol_x[qx];
+          }
+        }
+      }
+      for (int qz = 0; qz < Q1D; ++qz) {
+        const double wz = B(qz, dz);
+        for (int qy = 0; qy < Q1D; ++qy) {
+          for (int qx = 0; qx < Q1D; ++qx) {
+            sol_xyz[qz][qy][qx] += wz * sol_xy[qy][qx];
+          }
+        }
+      }
+    }
+    for (int qz = 0; qz < Q1D; ++qz) {
+      for (int qy = 0; qy < Q1D; ++qy) {
+        for (int qx = 0; qx < Q1D; ++qx) {
+          sol_xyz[qz][qy][qx] *= D(qx, qy, qz, e);
+        }
+      }
+    }
+    for (int qz = 0; qz < Q1D; ++qz) {
+      double sol_xy[max_D1D][max_D1D];
+      for (int dy = 0; dy < D1D; ++dy) {
+        for (int dx = 0; dx < D1D; ++dx) {
+          sol_xy[dy][dx] = 0;
+        }
+      }
+      for (int qy = 0; qy < Q1D; ++qy) {
+        double sol_x[max_D1D];
+        for (int dx = 0; dx < D1D; ++dx) {
+          sol_x[dx] = 0;
+        }
+        for (int qx = 0; qx < Q1D; ++qx) {
+          const double s = sol_xyz[qz][qy][qx];
+          for (int dx = 0; dx < D1D; ++dx) {
+            sol_x[dx] += Bt(dx, qx) * s;
+          }
+        }
+        for (int dy = 0; dy < D1D; ++dy) {
+          const double wy = Bt(dy, qy);
+          for (int dx = 0; dx < D1D; ++dx) {
+            sol_xy[dy][dx] += wy * sol_x[dx];
+          }
+        }
+      }
+      for (int dz = 0; dz < D1D; ++dz) {
+        const double wz = Bt(dz, qz);
+        for (int dy = 0; dy < D1D; ++dy) {
+          for (int dx = 0; dx < D1D; ++dx) {
+            Y(dx, dy, dz, e) += wz * sol_xy[dy][dx];
+          }
+        }
+      }
+    }
+  }
+}
+
+template <int T_D1D = 0, int T_Q1D = 0>
+static void PADiffusionApply3D(const int NE, const bool symmetric,
+                               const Array<double> &b, const Array<double> &g,
+                               const Array<double> &bt, const Array<double> &gt,
+                               const Vector &d_, const Vector &x_, Vector &y_,
+                               int d1d = 0, int q1d = 0) {
+  const int D1D = T_D1D ? T_D1D : d1d;
+  const int Q1D = T_Q1D ? T_Q1D : q1d;
+  static_assert(D1D <= MAX_D1D);
+  static_assert(Q1D <= MAX_Q1D);
+  auto B = Reshape(b.Read(), Q1D, D1D);
+  auto G = Reshape(g.Read(), Q1D, D1D);
+  auto Bt = Reshape(bt.Read(), D1D, Q1D);
+  auto Gt = Reshape(gt.Read(), D1D, Q1D);
+  auto D = Reshape(d_.Read(), Q1D * Q1D * Q1D, symmetric ? 6 : 9, NE);
+  auto X = Reshape(x_.Read(), D1D, D1D, D1D, NE);
+  auto Y = Reshape(y_.ReadWrite(), D1D, D1D, D1D, NE);
+  for (int e = 0; e < NE; e++) {
+    constexpr int max_D1D = T_D1D ? T_D1D : MAX_D1D;
+    constexpr int max_Q1D = T_Q1D ? T_Q1D : MAX_Q1D;
+    double grad[max_Q1D][max_Q1D][max_Q1D][3];
+    for (int qz = 0; qz < Q1D; ++qz) {
+      for (int qy = 0; qy < Q1D; ++qy) {
+        for (int qx = 0; qx < Q1D; ++qx) {
+          grad[qz][qy][qx][0] = 0.0;
+          grad[qz][qy][qx][1] = 0.0;
+          grad[qz][qy][qx][2] = 0.0;
+        }
+      }
+    }
+
+    for (int dz = 0; dz < D1D; ++dz) {
+      double gradXY[max_Q1D][max_Q1D][3];
+      for (int qy = 0; qy < Q1D; ++qy) {
+        for (int qx = 0; qx < Q1D; ++qx) {
+          gradXY[qy][qx][0] = 0.0;
+          gradXY[qy][qx][1] = 0.0;
+          gradXY[qy][qx][2] = 0.0;
+        }
+      }
+      for (int dy = 0; dy < D1D; ++dy) {
+        double gradX[max_Q1D][2];
+        for (int qx = 0; qx < Q1D; ++qx) {
+          gradX[qx][0] = 0.0;
+          gradX[qx][1] = 0.0;
+        }
+        for (int dx = 0; dx < D1D; ++dx) {
+          const double s = X(dx, dy, dz, e);
+
+          for (int qx = 0; qx < Q1D; ++qx) {
+            gradX[qx][0] += s * B(qx, dx);
+            gradX[qx][1] += s * G(qx, dx);
+          }
+        }
+        for (int qy = 0; qy < Q1D; ++qy) {
+          const double wy = B(qy, dy);
+          const double wDy = G(qy, dy);
+          for (int qx = 0; qx < Q1D; ++qx) {
+            const double wx = gradX[qx][0];
+            const double wDx = gradX[qx][1];
+            gradXY[qy][qx][0] += wDx * wy;
+            gradXY[qy][qx][1] += wx * wDy;
+            gradXY[qy][qx][2] += wx * wy;
+          }
+        }
+      }
+      for (int qz = 0; qz < Q1D; ++qz) {
+        const double wz = B(qz, dz);
+        const double wDz = G(qz, dz);
+        for (int qy = 0; qy < Q1D; ++qy) {
+          for (int qx = 0; qx < Q1D; ++qx) {
+            grad[qz][qy][qx][0] += gradXY[qy][qx][0] * wz;
+            grad[qz][qy][qx][1] += gradXY[qy][qx][1] * wz;
+            grad[qz][qy][qx][2] += gradXY[qy][qx][2] * wDz;
+          }
+        }
+      }
+    }
+
+    // Calculate Dxyz, xDyz, xyDz in plane
+    for (int qz = 0; qz < Q1D; ++qz) {
+      for (int qy = 0; qy < Q1D; ++qy) {
+        for (int qx = 0; qx < Q1D; ++qx) {
+          const int q = qx + (qy + qz * Q1D) * Q1D;
+
+          const double O11 = D(q, 0, e);
+          const double O12 = D(q, 1, e);
+          const double O13 = D(q, 2, e);
+          const double O21 = symmetric ? O12 : D(q, 3, e);
+          const double O22 = symmetric ? D(q, 3, e) : D(q, 4, e);
+          const double O23 = symmetric ? D(q, 4, e) : D(q, 5, e);
+          const double O31 = symmetric ? O13 : D(q, 6, e);
+          const double O32 = symmetric ? O23 : D(q, 7, e);
+          const double O33 = symmetric ? D(q, 5, e) : D(q, 8, e);
+          const double gradX = grad[qz][qy][qx][0];
+          const double gradY = grad[qz][qy][qx][1];
+          const double gradZ = grad[qz][qy][qx][2];
+          grad[qz][qy][qx][0] = (O11 * gradX) + (O12 * gradY) + (O13 * gradZ);
+          grad[qz][qy][qx][1] = (O21 * gradX) + (O22 * gradY) + (O23 * gradZ);
+          grad[qz][qy][qx][2] = (O31 * gradX) + (O32 * gradY) + (O33 * gradZ);
+        }
+      }
+    }
+
+    for (int qz = 0; qz < Q1D; ++qz) {
+      double gradXY[max_D1D][max_D1D][3];
+      for (int dy = 0; dy < D1D; ++dy) {
+        for (int dx = 0; dx < D1D; ++dx) {
+          gradXY[dy][dx][0] = 0;
+          gradXY[dy][dx][1] = 0;
+          gradXY[dy][dx][2] = 0;
+        }
+      }
+      for (int qy = 0; qy < Q1D; ++qy) {
+        double gradX[max_D1D][3];
+        for (int dx = 0; dx < D1D; ++dx) {
+          gradX[dx][0] = 0;
+          gradX[dx][1] = 0;
+          gradX[dx][2] = 0;
+        }
+        for (int qx = 0; qx < Q1D; ++qx) {
+          const double gX = grad[qz][qy][qx][0];
+          const double gY = grad[qz][qy][qx][1];
+          const double gZ = grad[qz][qy][qx][2];
+          for (int dx = 0; dx < D1D; ++dx) {
+            const double wx = Bt(dx, qx);
+            const double wDx = Gt(dx, qx);
+            gradX[dx][0] += gX * wDx;
+            gradX[dx][1] += gY * wx;
+            gradX[dx][2] += gZ * wx;
+          }
+        }
+        for (int dy = 0; dy < D1D; ++dy) {
+          const double wy = Bt(dy, qy);
+          const double wDy = Gt(dy, qy);
+          for (int dx = 0; dx < D1D; ++dx) {
+            gradXY[dy][dx][0] += gradX[dx][0] * wy;
+            gradXY[dy][dx][1] += gradX[dx][1] * wDy;
+            gradXY[dy][dx][2] += gradX[dx][2] * wy;
+          }
+        }
+      }
+      for (int dz = 0; dz < D1D; ++dz) {
+        const double wz = Bt(dz, qz);
+        const double wDz = Gt(dz, qz);
+        for (int dy = 0; dy < D1D; ++dy) {
+          for (int dx = 0; dx < D1D; ++dx) {
+            Y(dx, dy, dz, e) +=
+                ((gradXY[dy][dx][0] * wz) + (gradXY[dy][dx][1] * wz) +
+                 (gradXY[dy][dx][2] * wDz));
+          }
+        }
+      }
+    }
+  }
+}
+
+}
+
 namespace serac {
 
 template < Geometry geom, typename test, typename trial, int Q, typename lambda >
@@ -48,10 +321,6 @@ void reference_kernel(const mfem::Vector & U_, mfem::Vector & R_, const mfem::Ve
 
       // evaluate the value/derivatives needed for the q-function at this quadrature point
       auto arg = domain_integral::Preprocess<trial_element>(u_elem, xi, J_q);
-
-      //std::cout << xi << std::endl;
-      //std::cout << J_q << std::endl;
-      //std::cout << serac::get<0>(arg) << " " << serac::get<1>(arg) << std::endl;
 
       // integrate qf_output against test space shape functions / gradients
       // to get element residual contributions
@@ -91,11 +360,10 @@ struct f64x4 {
   };
 };
 
-
-
+// set all values of a f64x4 equal to `value`
 f64x4 to_f64x4(double value) { 
   f64x4 converted;
-  converted.simd_data = _mm256_set1_pd(value);
+  converted.simd_data = _mm256_set1_pd(value); 
   return converted;
 }
 
@@ -330,11 +598,6 @@ auto BatchApply(lambda qf, tensor< T, n ... > qf_inputs, GaussLegendreRule<geom,
 
           qf_input.gradient = dot(qf_input.gradient, invJ);
 
-          //tensor< double, 3 > xi {rule.points_1D[qx], rule.points_1D[qy], rule.points_1D[qz]};
-          //std::cout << xi << std::endl;
-          //std::cout << J << std::endl;
-          //std::cout << qf_input.value << " " << qf_input.gradient << std::endl;
-
           qf_outputs[qz][qy][qx] = qf(qf_input) * dv;
 
           serac::get<1>(qf_outputs[qz][qy][qx]) = dot(invJ, serac::get<1>(qf_outputs[qz][qy][qx]));
@@ -374,11 +637,6 @@ auto BatchApplySIMD(lambda qf, tensor< T, n ... > qf_inputs, GaussLegendreRule<g
           auto dv = det(J) * rule.weight(qx, qy, qz);
 
           qf_input.gradient = dot(qf_input.gradient, invJ);
-
-          //tensor< double, 3 > xi {rule.points_1D[qx], rule.points_1D[qy], rule.points_1D[qz]};
-          //std::cout << xi << std::endl;
-          //std::cout << J << std::endl;
-          //std::cout << qf_input.value << " " << qf_input.gradient << std::endl;
 
           qf_outputs[qz][qy][qx] = qf(qf_input) * dv;
 
@@ -712,23 +970,34 @@ auto time(lambda&& f)
 
 int main() {
 
+  using serac::H1;
+  using serac::Geometry;
+
   constexpr int p = 3;
   constexpr int n = p + 1;
   constexpr int q = n;
   constexpr int dim = 3;
   int num_runs = 10;
-  int num_elements = 100000;
+  int num_elements = 10000;
+
+  double rho = 1.0;
+  double k = 1.0;
 
   std::default_random_engine generator;
   std::uniform_real_distribution<double> distribution(-1.0, 1.0);
 
-
   mfem::Vector U1D(num_elements * n * n * n);
   mfem::Vector R1D(num_elements * n * n * n);
   mfem::Vector J1D(num_elements * dim * dim * q * q * q);
+  mfem::Vector rho_dv_1D(num_elements * q * q * q);
+  mfem::Vector k_invJT_invJ_dv_1D(num_elements * dim * dim * q * q * q);
 
   auto U = mfem::Reshape(U1D.ReadWrite(), n, n, n, num_elements);
   auto J = mfem::Reshape(J1D.ReadWrite(), q * q * q, dim, dim, num_elements);
+  auto rho_dv = mfem::Reshape(rho_dv_1D.ReadWrite(), q * q * q, num_elements);
+  auto k_invJT_invJ_dv = mfem::Reshape(k_invJT_invJ_dv_1D.ReadWrite(), q * q * q, dim, dim, num_elements);
+
+  serac::GaussLegendreRule<Geometry::Hexahedron, q> rule;
 
   for (int e = 0; e < num_elements; e++) {
 
@@ -741,23 +1010,37 @@ int main() {
     }
 
     for (int i = 0; i < q * q * q; i++) {
+
+      serac::tensor< double, dim, dim > J_q{};
+
       for (int r = 0; r < dim; r++) {
         for (int c = 0; c < dim; c++) {
-          J(i, r, c, e) = (r == c) + 0.1 * distribution(generator);
+          J(i, r, c, e) = J_q[r][c] = (r == c) + 0.1 * distribution(generator);
         }
       }
+
+      int qx = i % q;
+      int qy = (i % (q * q)) / q;
+      int qz = i / (q * q);
+
+      double qweight = rule.weight(qx, qy, qz);
+      auto invJT_invJ = dot(transpose(inv(J_q)), inv(J_q));
+      double dv = det(J_q) * qweight;
+
+      rho_dv(i, e) = rho * dv; 
+      for (int r = 0; r < dim; r++) {
+        for (int c = 0; c < dim; c++) {
+          k_invJT_invJ_dv(i, r, c, e) = k * invJT_invJ[r][c] * dv;
+        }
+      }
+
     }
 
   }
 
-  using serac::H1;
-  using serac::Geometry;
-
   using test = H1<p>;
   using trial = H1<p>;
 
-  double rho = 1.0;
-  double k = 1.0;
   auto mass_plus_diffusion = [=](auto input){ 
     auto [u, du_dx] = input;
     auto source = rho * u;
@@ -826,6 +1109,51 @@ int main() {
   relative_error = error.Norml2() / answer_reference.Norml2();
   std::cout << "error: " << relative_error << std::endl;
 
+  {
+    R1D = 0.0;
+    bool symmetric = false;
+    mfem::Array<double> b_(n * q);
+    mfem::Array<double> bt_(n * q);
+    mfem::Array<double> g_(n * q);
+    mfem::Array<double> gt_(n * q);
+    auto B = mfem::Reshape(b_.ReadWrite(), q, n);
+    auto Bt = mfem::Reshape(bt_.ReadWrite(), n, q);
 
+    auto G = mfem::Reshape(g_.ReadWrite(), q, n);
+    auto Gt = mfem::Reshape(gt_.ReadWrite(), n, q);
+
+    for (int i = 0; i < q; i++) {
+      auto value = serac::GaussLobattoInterpolation<n>(rule.points_1D[i]);
+      auto derivative = serac::GaussLobattoInterpolationDerivative<n>(rule.points_1D[i]);
+
+      for (int j = 0; j < n; j++) {
+        Bt(j, i) = B(i, j) = value[j];
+        Gt(j, i) = G(i, j) = derivative[j];
+      }
+    }
+
+    double mass_runtime = time([&]() {
+      for (int i = 0; i < num_runs; i++) {
+        mfem::PAMassApply3D<n,q>(num_elements, b_, bt_, rho_dv_1D, U1D, R1D);
+        compiler::please_do_not_optimize_away(&R1D);
+      }
+    }) / n;
+    std::cout << "average mfem mass kernel time: " << mass_runtime / num_runs << std::endl;
+
+    double diffusion_runtime = time([&]() {
+      for (int i = 0; i < num_runs; i++) {
+        mfem::PADiffusionApply3D<n,q>(num_elements, symmetric = false, b_, g_, bt_, gt_, k_invJT_invJ_dv_1D, U1D, R1D);
+        compiler::please_do_not_optimize_away(&R1D);
+      }
+    }) / n;
+    std::cout << "average mfem diffusion kernel time: " << diffusion_runtime / num_runs << std::endl;
+
+    std::cout << "average mfem combined kernel time: " << (mass_runtime + diffusion_runtime) / num_runs << std::endl;
+  }
+  auto answer_mfem = R1D;
+  error = answer_reference;
+  error -= answer_mfem;
+  relative_error = error.Norml2() / answer_reference.Norml2();
+  std::cout << "error: " << relative_error << std::endl;
 
 }
