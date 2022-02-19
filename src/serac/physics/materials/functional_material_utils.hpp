@@ -26,6 +26,14 @@ struct has_density<T, dim, std::void_t<decltype(std::declval<T&>().density(std::
     : std::true_type {
 };
 
+template <typename T, typename = void>
+struct is_parameterized : std::false_type {
+};
+
+template <typename T>
+struct is_parameterized<T, std::void_t<decltype(std::declval<T&>().numParameters())>> : std::true_type {
+};
+
 template <typename T, int dim, typename = void>
 struct has_specific_heat_capacity : std::false_type {
 };

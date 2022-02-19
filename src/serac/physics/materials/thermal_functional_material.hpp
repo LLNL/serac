@@ -88,6 +88,81 @@ private:
   double conductivity_;
 };
 
+/// Linear isotropic thermal conduction material model
+class ParameterizedLinearIsotropicConductor {
+public:
+  /**
+   * @brief Construct a new Linear Isotropic Conductor object
+   *
+   * @param density Density of the material (mass/volume)
+   * @param specific_heat_capacity Specific heat capacity of the material (energy / (mass * temp))
+   * @param conductivity Thermal conductivity of the material (power / (length * temp))
+   */
+  ParameterizedLinearIsotropicConductor(double density = 1.0, double specific_heat_capacity = 1.0,
+                                        double conductivity = 1.0)
+      : density_(density), specific_heat_capacity_(specific_heat_capacity), conductivity_(conductivity)
+  {
+    SLIC_ERROR_ROOT_IF(conductivity_ < 0.0,
+                       "Conductivity must be positive in the linear isotropic conductor material model.");
+
+    SLIC_ERROR_ROOT_IF(density_ < 0.0, "Density must be positive in the linear isotropic conductor material model.");
+
+    SLIC_ERROR_ROOT_IF(specific_heat_capacity_ < 0.0,
+                       "Specific heat capacity must be positive in the linear isotropic conductor material model.");
+  }
+
+  /**
+   * @brief Function defining the thermal flux (constitutive response)
+   *
+   * @tparam T1 type of the temperature (e.g. tensor or dual type)
+   * @tparam T2 type of the temperature gradient (e.g. tensor or dual type)
+   * @param temperature_gradient Gradient of the temperature (du_dx)
+   * @return The thermal flux of the material model
+   */
+  template <typename T1, typename T2, typename T3>
+  SERAC_HOST_DEVICE T2 operator()(const T1& /* temperature */, const T2& temperature_gradient,
+                                  const T3& parameter) const
+  {
+    return -1.0 * conductivity_ * temperature_gradient + 0.0 * parameter;
+  }
+
+  /**
+   * @brief The density (mass per volume) of the material model
+   *
+   * @tparam dim The dimension of the problem
+   * @return The density
+   */
+  template <int dim>
+  SERAC_HOST_DEVICE double density(const tensor<double, dim>& /* x */) const
+  {
+    return density_;
+  }
+
+  /**
+   * @brief The specific heat capacity (heat capacity per unit mass) of the material model
+   *
+   * @tparam dim The dimension of the problem
+   * @tparam T Type of the temperature variable
+   */
+  template <typename T, int dim>
+  SERAC_HOST_DEVICE double specificHeatCapacity(const tensor<double, dim>& /* x */, const T& /* temperature */) const
+  {
+    return specific_heat_capacity_;
+  }
+
+  constexpr int numParameters() { return 1; }
+
+private:
+  /// Density
+  double density_;
+
+  /// Specific heat capacity
+  double specific_heat_capacity_;
+
+  /// Constant isotropic thermal conductivity
+  double conductivity_;
+};
+
 /**
  * @brief Linear anisotropic thermal material model
  *
@@ -159,38 +234,6 @@ private:
   tensor<double, dim, dim> conductivity_;
 };
 
-// Use SFINAE to add static assertions checking if the given thermal material type is acceptable
-template <typename T, int dim, typename = void>
-struct has_density : std::false_type {
-};
-
-template <typename T, int dim>
-struct has_density<T, dim, std::void_t<decltype(std::declval<T&>().density(std::declval<tensor<double, dim>&>()))>>
-    : std::true_type {
-};
-
-template <typename T, int dim, typename = void>
-struct has_specific_heat_capacity : std::false_type {
-};
-
-template <typename T, int dim>
-struct has_specific_heat_capacity<T, dim,
-                                  std::void_t<decltype(std::declval<T&>().specificHeatCapacity(
-                                      std::declval<tensor<double, dim>&>(), std::declval<tensor<double, 1>&>()))>>
-    : std::true_type {
-};
-
-template <typename T, int dim, typename = void>
-struct has_thermal_flux : std::false_type {
-};
-
-template <typename T, int dim>
-struct has_thermal_flux<
-    T, dim,
-    std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, 1>&>(), std::declval<tensor<double, dim>&>()))>>
-    : std::true_type {
-};
-
 /// Constant thermal source model
 struct ConstantSource {
   /// The constant source
@@ -212,19 +255,6 @@ struct ConstantSource {
   }
 };
 
-// Use SFINAE to add static assertions checking if the given thermal source type is acceptable
-template <typename T, int dim, typename = void>
-struct has_thermal_source : std::false_type {
-};
-
-template <typename T, int dim>
-struct has_thermal_source<
-    T, dim,
-    std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, dim>&>(), std::declval<double>(),
-                                            std::declval<tensor<double, 1>&>(), std::declval<tensor<double, dim>&>()))>>
-    : std::true_type {
-};
-
 /// Constant thermal flux boundary model
 struct FluxBoundary {
   /// The constant flux applied to the boundary
@@ -243,18 +273,6 @@ struct FluxBoundary {
   {
     return flux_;
   }
-};
-
-// Use SFINAE to add static assertions checking if the given thermal flux boundary type is acceptable
-template <typename T, int dim, typename = void>
-struct has_thermal_flux_boundary : std::false_type {
-};
-
-template <typename T, int dim>
-struct has_thermal_flux_boundary<
-    T, dim,
-    std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, dim>&>(), std::declval<tensor<double, dim>&>(),
-                                            std::declval<tensor<double, 1>&>()))>> : std::true_type {
 };
 
 }  // namespace serac::Thermal

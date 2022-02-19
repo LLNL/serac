@@ -121,16 +121,15 @@ public:
    * @param[in] options The system linear and nonlinear solver and timestepping parameters
    * @param[in] name An optional name for the physics module instance
    */
-  ThermalConductionFunctional(
-      const SolverOptions& options, const std::string& name = "",
-      std::array<std::pair<std::string, mfem::ParFiniteElementSpace*>, sizeof...(parameter_space)> parameter_info = {})
+  ThermalConductionFunctional(const SolverOptions& options, const std::string& name = {},
+                              std::array<FiniteElementState*, sizeof...(parameter_space)> parameter_states = {})
       : BasePhysics(1, order),
         temperature_(
             StateManager::newState(FiniteElementState::Options{.order      = order,
                                                                .vector_dim = 1,
                                                                .ordering   = mfem::Ordering::byNODES,
                                                                .name       = detail::addPrefix(name, "temperature")})),
-        parameter_info_(parameter_info),
+        parameter_states_(parameter_states),
         residual_(temperature_.space().TrueVSize()),
         ode_(temperature_.space().TrueVSize(), {.u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
              nonlin_solver_, bcs_)
@@ -143,7 +142,7 @@ public:
     trial_spaces[0] = &temperature_.space();
 
     for (long unsigned int i = 0; i < sizeof...(parameter_space) + 1; ++i) {
-      trial_spaces[i + 1] = parameter_info_[i].second;
+      trial_spaces[i + 1] = &(parameter_states_[i]->space());
     }
 
     M_functional_ = std::make_unique<Functional<test(trial, parameter_space...)>>(&temperature_.space(), trial_spaces);
@@ -234,12 +233,23 @@ public:
 
     K_functional_->AddDomainIntegral(
         Dimension<dim>{},
-        [material](auto, auto temperature) {
+        [material](auto, auto temperature, auto... params) {
           // Get the value and the gradient from the input tuple
           auto [u, du_dx] = temperature;
-          auto flux       = -1.0 * material(u, du_dx);
 
-          auto source = u * 0.0;
+          using FluxType = decltype(du_dx);
+          FluxType flux;
+
+          auto source = serac::zero{};
+
+          if constexpr (is_parameterized<MaterialType>::value) {
+            static_assert(material.numParams() == sizeof...(params),
+                          "Number of parameters in thermal conduction does not equal the number of parameters in the "
+                          "thermal material.");
+            flux = -1.0 * material(u, du_dx, serac::get<0>(params)...);
+          } else {
+            flux = -1.0 * material(u, du_dx);
+          }
 
           // Return the source and the flux as a tuple
           return serac::tuple{source, flux};
@@ -248,12 +258,23 @@ public:
 
     M_functional_->AddDomainIntegral(
         Dimension<dim>{},
-        [material](auto x, auto temperature) {
-          auto [u, du_dx] = temperature;
+        [material](auto x, auto temperature, auto... params) {
+          auto [u, du_dx]  = temperature;
+          using SourceType = decltype(u);
 
-          auto source = material.specificHeatCapacity(x, u) * material.density(x);
+          SourceType source;
 
-          auto flux = 0.0 * du_dx;
+          if constexpr (is_parameterized<MaterialType>::value) {
+            static_assert(material.numParams() == sizeof...(params),
+                          "Number of parameters in thermal conduction does not equal the number of parameters in the "
+                          "thermal material.");
+            source = material.specificHeatCapacity(x, u, serac::get<0>(params)...) *
+                         material.density(x, serac::get<0>(params)...) +
+                     0.0 * u;
+          } else {
+            source = material.specificHeatCapacity(x, u) * material.density(x) + 0.0 * u;
+          }
+          auto flux = du_dx * 0.0;
 
           // Return the source and the flux as a tuple
           return serac::tuple{source, flux};
@@ -417,7 +438,7 @@ protected:
   /// Stiffness functional object \f$\mathbf{K} = \int_\Omega \theta \cdot \nabla \phi_i  + f \phi_i \, dx \f$
   std::unique_ptr<Functional<test(trial, parameter_space...)>> K_functional_;
 
-  std::array<std::pair<std::string, mfem::ParFiniteElementSpace*>, sizeof...(parameter_space)> parameter_info_;
+  std::array<FiniteElementState*, sizeof...(parameter_space)> parameter_states_;
 
   /// Assembled mass matrix
   std::unique_ptr<mfem::HypreParMatrix> M_;
@@ -458,6 +479,6 @@ protected:
 
   /// Previous value of du_dt used to prime the pump for the nonlinear solver
   mfem::Vector previous_;
-};
+};  // namespace serac
 
 }  // namespace serac
