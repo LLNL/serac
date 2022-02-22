@@ -394,6 +394,7 @@ f64x4 operator*(const f64x4 & x, const f64x4 & y) {
   return product;
 }
 
+// SIMD version of fused multiply-add: z := z + x * y
 void fma(f64x4 & z, const f64x4 & x, const f64x4 & y) {
   z.simd_data = _mm256_fmadd_pd(x.simd_data, y.simd_data, z.simd_data);
 }
@@ -765,8 +766,6 @@ auto BatchPostprocess(const tensor < T, q, q, q > qf_outputs, GaussLegendreRule<
 
 }
 
-
-
 template < typename trial_space, typename T, Geometry geom, int q >
 auto BatchPostprocessSIMD(const tensor < T, q, q, q > qf_outputs, GaussLegendreRule<geom, q> rule) {
 
@@ -888,6 +887,59 @@ auto BatchPostprocessConstexpr(const tensor < T, q, q, q > qf_outputs, GaussLege
     }
 
     return element_residual;
+
+  }
+
+}
+
+template < typename trial_space, typename T, Geometry geom, int q >
+auto BatchPostprocessDirectOutput(const tensor < T, q, q, q > qf_outputs, GaussLegendreRule<geom, q> rule, mfem::DeviceTensor< 4, double > & r_e, int e) {
+
+  if constexpr (geom == Geometry::Hexahedron) {
+
+    static constexpr int n = trial_space::order + 1;
+
+    tensor< f64x4, q, n > LUT_X{};
+    tensor< f64x4, q, n > LUT_Y{};
+    tensor< f64x4, q, n > LUT_Z{};
+    for (int i = 0; i < q; i++) {
+      auto B = GaussLobattoInterpolation<n>(rule.points_1D[i]);
+      auto G = GaussLobattoInterpolationDerivative<n>(rule.points_1D[i]);
+
+      for (int j = 0; j < n; j++) {
+        LUT_X[i][j] = {B[j], {G[j], B[j], B[j]}};
+        LUT_Y[i][j] = {B[j], {B[j], G[j], B[j]}};
+        LUT_Z[i][j] = {B[j], {B[j], B[j], G[j]}};
+      }
+    }
+
+    for (int qz = 0; qz < q; ++qz) {
+      tensor < f64x4, n, n > gradXY{};
+      for (int qy = 0; qy < q; ++qy) {
+        tensor < f64x4, n > gradX{};
+        for (int qx = 0; qx < q; ++qx) {
+          const f64x4 output = to_f64x4(qf_outputs[qz][qy][qx]);
+          for (int dx = 0; dx < n; ++dx) {
+            auto w = LUT_X(qx, dx);
+            fma(gradX[dx], output, w);
+          }
+        }
+        for (int dy = 0; dy < n; ++dy) {
+          auto w = LUT_Y(qy, dy);
+          for (int dx = 0; dx < n; ++dx) {
+            fma(gradXY[dy][dx], gradX[dx], w);
+          }
+        }
+      }
+      for (int dz = 0; dz < n; ++dz) {
+        auto w = LUT_Z(qz, dz);
+        for (int dy = 0; dy < n; ++dy) {
+          for (int dx = 0; dx < n; ++dx) {
+            r_e(dx, dy, dz, e) += dot(gradXY[dy][dx], w);
+          }
+        }
+      }
+    }
 
   }
 
@@ -1029,6 +1081,35 @@ void batched_kernel_with_SIMD_inout(const mfem::Vector & U_, mfem::Vector & R_, 
     auto r_elem = BatchPostprocessSIMD<test>(args, rule);
 
     detail::Add(r, r_elem, int(e));
+
+  }
+
+}
+
+template < Geometry geom, typename test, typename trial, int Q, typename lambda >
+void batched_kernel_with_SIMD_directout(const mfem::Vector & U_, mfem::Vector & R_, const mfem::Vector & J_, size_t num_elements_, lambda qf_) {
+
+  using trial_element              = finite_element<geom, trial>;
+  using test_element               = finite_element<geom, test>;
+  static constexpr int  dim        = dimension_of(geom);
+  static constexpr int  test_n     = test_element::order + 1;
+  static constexpr int  trial_n    = trial_element::order + 1;
+  static constexpr auto rule       = GaussLegendreRule<geom, Q>();
+
+  // mfem provides this information in 1D arrays, so we reshape it
+  // into strided multidimensional arrays before using
+  auto J = mfem::Reshape(J_.Read(), Q, Q, Q, dim, dim, num_elements_);
+  auto r = mfem::Reshape(R_.ReadWrite(), test_n, test_n, test_n, int(num_elements_));
+  auto u = mfem::Reshape(U_.Read(), trial_n, trial_n, trial_n, int(num_elements_));
+
+  // for each element in the domain
+  for (uint32_t e = 0; e < num_elements_; e++) {
+
+    auto args = BatchPreprocessSIMD<trial>(u, rule, e);
+
+    auto qf_outputs = BatchApplySIMD(qf_, args, rule, J, e);
+
+    BatchPostprocessDirectOutput<test>(qf_outputs, rule, r, e);
 
   }
 
@@ -1206,6 +1287,22 @@ int main() {
   auto answer_batched_simd_inout = R1D;
   error = answer_reference;
   error -= answer_batched_simd_inout;
+  relative_error = error.Norml2() / answer_reference.Norml2();
+  std::cout << "error: " << relative_error << std::endl;
+
+  {
+    R1D = 0.0;
+    double runtime = time([&]() {
+      for (int i = 0; i < num_runs; i++) {
+        serac::batched_kernel_with_SIMD_directout<Geometry::Hexahedron, test, trial, q>(U1D, R1D, J1D, num_elements, mass_plus_diffusion);
+        compiler::please_do_not_optimize_away(&R1D);
+      }
+    }) / n;
+    std::cout << "average batched (simd, directout) kernel time: " << runtime / num_runs << std::endl;
+  }
+  auto answer_batched_simd_directout = R1D;
+  error = answer_reference;
+  error -= answer_batched_simd_directout;
   relative_error = error.Norml2() / answer_reference.Norml2();
   std::cout << "error: " << relative_error << std::endl;
 
