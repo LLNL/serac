@@ -775,7 +775,7 @@ constexpr auto& operator-=(tensor<T, n...>& A, zero)
  * @note this overload implements the special case where both arguments are scalars
  */
 template <typename S, typename T>
-constexpr auto outer(S A, T B)
+SERAC_HOST_DEVICE constexpr auto outer(S A, T B)
 {
   static_assert(std::is_arithmetic_v<S> && std::is_arithmetic_v<T>,
                 "outer product types must be tensor or arithmetic_type");
@@ -787,7 +787,7 @@ constexpr auto outer(S A, T B)
  * @note this overload implements the case where the left argument is a scalar, and the right argument is a tensor
  */
 template <typename S, typename T, int n>
-constexpr auto outer(S A, tensor<T, n> B)
+SERAC_HOST_DEVICE constexpr auto outer(S A, tensor<T, n> B)
 {
   static_assert(std::is_arithmetic_v<S>, "outer product types must be tensor or arithmetic_type");
   tensor<decltype(S{} * T{}), n> AB{};
@@ -802,7 +802,7 @@ constexpr auto outer(S A, tensor<T, n> B)
  * @note this overload implements the case where the left argument is a tensor, and the right argument is a scalar
  */
 template <typename S, typename T, int m>
-constexpr auto outer(const tensor<S, m>& A, T B)
+SERAC_HOST_DEVICE constexpr auto outer(const tensor<S, m>& A, T B)
 {
   static_assert(std::is_arithmetic_v<T>, "outer product types must be tensor or arithmetic_type");
   tensor<decltype(S{} * T{}), m> AB{};
@@ -817,7 +817,7 @@ constexpr auto outer(const tensor<S, m>& A, T B)
  * @note this overload implements the case where the left argument is `zero`, and the right argument is a tensor
  */
 template <typename T, int n>
-constexpr auto outer(zero, const tensor<T, n>&)
+SERAC_HOST_DEVICE constexpr auto outer(zero, const tensor<T, n>&)
 {
   return zero{};
 }
@@ -827,7 +827,7 @@ constexpr auto outer(zero, const tensor<T, n>&)
  * @note this overload implements the case where the left argument is a tensor, and the right argument is `zero`
  */
 template <typename T, int n>
-constexpr auto outer(const tensor<T, n>&, zero)
+SERAC_HOST_DEVICE constexpr auto outer(const tensor<T, n>&, zero)
 {
   return zero{};
 }
@@ -837,7 +837,7 @@ constexpr auto outer(const tensor<T, n>&, zero)
  * @note this overload implements the case where the left argument is a tensor, and the right argument is `zero`
  */
 template <typename S, typename T, int m, int n>
-constexpr auto outer(S A, const tensor<T, m, n>& B)
+SERAC_HOST_DEVICE constexpr auto outer(S A, const tensor<T, m, n>& B)
 {
   static_assert(std::is_arithmetic_v<S>, "outer product types must be tensor or arithmetic_type");
   tensor<decltype(S{} * T{}), m, n> AB{};
@@ -854,7 +854,7 @@ constexpr auto outer(S A, const tensor<T, m, n>& B)
  * @note this overload implements the case where both arguments are vectors
  */
 template <typename S, typename T, int m, int n>
-constexpr auto outer(const tensor<S, m>& A, const tensor<T, n>& B)
+SERAC_HOST_DEVICE constexpr auto outer(const tensor<S, m>& A, const tensor<T, n>& B)
 {
   tensor<decltype(S{} * T{}), m, n> AB{};
   for (int i = 0; i < m; i++) {
@@ -871,7 +871,7 @@ constexpr auto outer(const tensor<S, m>& A, const tensor<T, n>& B)
  * scalar
  */
 template <typename S, typename T, int m, int n>
-constexpr auto outer(const tensor<S, m, n>& A, T B)
+SERAC_HOST_DEVICE constexpr auto outer(const tensor<S, m, n>& A, T B)
 {
   static_assert(std::is_arithmetic_v<T>, "outer product types must be tensor or arithmetic_type");
   tensor<decltype(S{} * T{}), m, n> AB{};
@@ -889,7 +889,7 @@ constexpr auto outer(const tensor<S, m, n>& A, T B)
  * first order tensor
  */
 template <typename S, typename T, int m, int n, int p>
-constexpr auto outer(const tensor<S, m, n>& A, const tensor<T, p>& B)
+SERAC_HOST_DEVICE constexpr auto outer(const tensor<S, m, n>& A, const tensor<T, p>& B)
 {
   tensor<decltype(S{} * T{}), m, n, p> AB{};
   for (int i = 0; i < m; i++) {
@@ -908,7 +908,7 @@ constexpr auto outer(const tensor<S, m, n>& A, const tensor<T, p>& B)
  * 2nd order tensor
  */
 template <typename S, typename T, int m, int n, int p>
-constexpr auto outer(const tensor<S, m>& A, const tensor<T, n, p>& B)
+SERAC_HOST_DEVICE constexpr auto outer(const tensor<S, m>& A, const tensor<T, n, p>& B)
 {
   tensor<decltype(S{} * T{}), m, n, p> AB{};
   for (int i = 0; i < m; i++) {
@@ -926,7 +926,7 @@ constexpr auto outer(const tensor<S, m>& A, const tensor<T, n, p>& B)
  * @note this overload implements the case where both arguments are second order tensors
  */
 template <typename S, typename T, int m, int n, int p, int q>
-constexpr auto outer(const tensor<S, m, n>& A, const tensor<T, p, q>& B)
+SERAC_HOST_DEVICE constexpr auto outer(const tensor<S, m, n>& A, const tensor<T, p, q>& B)
 {
   tensor<decltype(S{} * T{}), m, n, p, q> AB{};
   for (int i = 0; i < m; i++) {
@@ -971,7 +971,7 @@ constexpr auto inner(const tensor<S, m, n>& A, const tensor<T, m, n>& B)
  * @param[in] B The righthand tensor
  */
 template <typename S, typename T, int m, int n, int p>
-constexpr auto dot(const tensor<S, m, n>& A, const tensor<T, n, p>& B)
+SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m, n>& A, const tensor<T, n, p>& B)
 {
   tensor<decltype(S{} * T{}), m, p> AB{};
   for (int i = 0; i < m; i++) {
@@ -989,7 +989,7 @@ constexpr auto dot(const tensor<S, m, n>& A, const tensor<T, n, p>& B)
  * @note vector . matrix
  */
 template <typename S, typename T, int m, int n>
-constexpr auto dot(const tensor<S, m>& A, const tensor<T, m, n>& B)
+SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m>& A, const tensor<T, m, n>& B)
 {
   tensor<decltype(S{} * T{}), n> AB{};
   for (int i = 0; i < n; i++) {
@@ -1005,7 +1005,7 @@ constexpr auto dot(const tensor<S, m>& A, const tensor<T, m, n>& B)
  * @note matrix . vector
  */
 template <typename S, typename T, int m, int n>
-constexpr auto dot(const tensor<S, m, n>& A, const tensor<T, n>& B)
+SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m, n>& A, const tensor<T, n>& B)
 {
   tensor<decltype(S{} * T{}), m> AB{};
   for (int i = 0; i < m; i++) {
@@ -1021,7 +1021,7 @@ constexpr auto dot(const tensor<S, m, n>& A, const tensor<T, n>& B)
  * @note 3rd-order-tensor . vector
  */
 template <typename S, typename T, int m, int n, int p>
-constexpr auto dot(const tensor<S, m, n, p>& A, const tensor<T, p>& B)
+SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m, n, p>& A, const tensor<T, p>& B)
 {
   tensor<decltype(S{} * T{}), m, n> AB{};
   for (int i = 0; i < m; i++) {
@@ -1046,7 +1046,7 @@ constexpr auto dot(const tensor<S, m, n, p>& A, const tensor<T, p>& B)
  * @return The computed dot product
  */
 template <typename S, typename T, int m, int... n>
-constexpr auto dot(const tensor<S, m>& A, const tensor<T, m, n...>& B)
+SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m>& A, const tensor<T, m, n...>& B)
 {
   // this dot product function includes the vector * vector implementation and
   // the vector * tensor one, since clang emits an error about ambiguous
@@ -1078,7 +1078,7 @@ constexpr auto dot(const tensor<S, m>& A, const tensor<T, m, n...>& B)
  * @note vector . matrix . vector
  */
 template <typename S, typename T, typename U, int m, int n>
-constexpr auto dot(const tensor<S, m>& u, const tensor<T, m, n>& A, const tensor<U, n>& v)
+SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m>& u, const tensor<T, m, n>& A, const tensor<U, n>& v)
 {
   decltype(S{} * T{} * U{}) uAv{};
   for (int i = 0; i < m; i++) {
@@ -1101,7 +1101,7 @@ constexpr auto dot(const tensor<S, m>& u, const tensor<T, m, n>& A, const tensor
  * @param[in] B The righthand tensor
  */
 template <typename S, typename T, int m, int n, int p, int q>
-constexpr auto ddot(const tensor<S, m, n, p, q>& A, const tensor<T, p, q>& B)
+SERAC_HOST_DEVICE constexpr auto ddot(const tensor<S, m, n, p, q>& A, const tensor<T, p, q>& B)
 {
   tensor<decltype(S{} * T{}), m, n> AB{};
   for (int i = 0; i < m; i++) {
@@ -1154,7 +1154,7 @@ constexpr auto ddot(const tensor<S, m, n>& A, const tensor<T, m, n>& B)
  * @brief this is a shorthand for dot(A, B)
  */
 template <typename S, typename T, int... m, int... n>
-constexpr auto operator*(const tensor<S, m...>& A, const tensor<T, n...>& B)
+SERAC_HOST_DEVICE constexpr auto operator*(const tensor<S, m...>& A, const tensor<T, n...>& B)
 {
   return dot(A, B);
 }
@@ -1304,13 +1304,13 @@ constexpr auto transpose(const tensor<T, m, n>& A)
  * @param[in] A The matrix to obtain the determinant of
  */
 template <typename T>
-constexpr auto det(const tensor<T, 2, 2>& A)
+SERAC_HOST_DEVICE constexpr auto det(const tensor<T, 2, 2>& A)
 {
   return A[0][0] * A[1][1] - A[0][1] * A[1][0];
 }
 /// @overload
 template <typename T>
-constexpr auto det(const tensor<T, 3, 3>& A)
+SERAC_HOST_DEVICE constexpr auto det(const tensor<T, 3, 3>& A)
 {
   return A[0][0] * A[1][1] * A[2][2] + A[0][1] * A[1][2] * A[2][0] + A[0][2] * A[1][0] * A[2][1] -
          A[0][0] * A[1][2] * A[2][1] - A[0][1] * A[1][0] * A[2][2] - A[0][2] * A[1][1] * A[2][0];
@@ -1325,7 +1325,7 @@ constexpr auto det(const tensor<T, 3, 3>& A)
  * @return Whether the square rank 2 tensor (matrix) is symmetric
  */
 template <int n>
-bool is_symmetric(tensor<double, n, n> A, double tolerance = 1.0e-8)
+SERAC_HOST_DEVICE bool is_symmetric(tensor<double, n, n> A, double tolerance = 1.0e-8)
 {
   for (int i = 0; i < n; ++i) {
     for (int j = i + 1; j < n; ++j) {
@@ -1345,7 +1345,7 @@ bool is_symmetric(tensor<double, n, n> A, double tolerance = 1.0e-8)
  * @param A The matrix to test for positive definiteness
  * @return Whether the matrix is positive definite
  */
-bool is_symmetric_and_positive_definite(tensor<double, 2, 2> A)
+SERAC_HOST_DEVICE bool is_symmetric_and_positive_definite(tensor<double, 2, 2> A)
 {
   if (!is_symmetric(A)) {
     return false;
@@ -1359,7 +1359,7 @@ bool is_symmetric_and_positive_definite(tensor<double, 2, 2> A)
   return true;
 }
 /// @overload
-bool is_symmetric_and_positive_definite(tensor<double, 3, 3> A)
+SERAC_HOST_DEVICE bool is_symmetric_and_positive_definite(tensor<double, 3, 3> A)
 {
   if (!is_symmetric(A)) {
     return false;
@@ -1432,7 +1432,7 @@ constexpr tensor<T, n> linear_solve(tensor<T, n, n> A, const tensor<T, n> b)
  * @param[in] A The matrix to invert
  * @note Uses a shortcut for inverting a 2-by-2 matrix
  */
-constexpr tensor<double, 2, 2> inv(const tensor<double, 2, 2>& A)
+SERAC_HOST_DEVICE constexpr tensor<double, 2, 2> inv(const tensor<double, 2, 2>& A)
 {
   double inv_detA(1.0 / det(A));
 
@@ -1450,7 +1450,7 @@ constexpr tensor<double, 2, 2> inv(const tensor<double, 2, 2>& A)
  * @overload
  * @note Uses a shortcut for inverting a 3-by-3 matrix
  */
-constexpr tensor<double, 3, 3> inv(const tensor<double, 3, 3>& A)
+SERAC_HOST_DEVICE constexpr tensor<double, 3, 3> inv(const tensor<double, 3, 3>& A)
 {
   double inv_detA(1.0 / det(A));
 
@@ -1474,7 +1474,7 @@ constexpr tensor<double, 3, 3> inv(const tensor<double, 3, 3>& A)
  * with partial pivoting
  */
 template <typename T, int n>
-constexpr tensor<T, n, n> inv(const tensor<T, n, n>& A)
+SERAC_HOST_DEVICE constexpr tensor<T, n, n> inv(const tensor<T, n, n>& A)
 {
   constexpr auto abs  = [](double x) { return (x < 0) ? -x : x; };
   constexpr auto swap = [](auto& x, auto& y) {
@@ -1534,7 +1534,7 @@ constexpr tensor<T, n, n> inv(const tensor<T, n, n>& A)
  * TODO: compare performance of this hardcoded implementation to just using inv() directly
  */
 template <typename gradient_type, int n>
-auto inv(tensor<dual<gradient_type>, n, n> A)
+SERAC_HOST_DEVICE auto inv(tensor<dual<gradient_type>, n, n> A)
 {
   auto invA = inv(get_value(A));
   return make_tensor<n, n>([&](int i, int j) {

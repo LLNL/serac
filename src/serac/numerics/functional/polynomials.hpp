@@ -209,7 +209,7 @@ tensor<T, n> Bernstein(T s)
  * @param[in] x where to evaluate the polynomials
  */
 template <int n, typename T>
-constexpr tensor<T, n> GaussLobattoInterpolation(T x)
+SERAC_HOST_DEVICE constexpr tensor<T, n> GaussLobattoInterpolation(T x)
 {
   if constexpr (n == 2) {
     return {1.0 - x, x};
@@ -232,7 +232,7 @@ constexpr tensor<T, n> GaussLobattoInterpolation(T x)
  * @param[in] x where to evaluate the polynomials
  */
 template <int n, typename T>
-constexpr tensor<T, n> GaussLobattoInterpolationDerivative([[maybe_unused]] T x)
+SERAC_HOST_DEVICE constexpr tensor<T, n> GaussLobattoInterpolationDerivative([[maybe_unused]] T x)
 {
   if constexpr (n == 2) {
     return {-1, 1};
