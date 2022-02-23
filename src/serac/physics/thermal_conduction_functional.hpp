@@ -314,13 +314,25 @@ public:
 
     K_functional_->AddDomainIntegral(
         Dimension<dim>{},
-        [source_function, this](auto x, auto temperature) {
+        [source_function, this](auto x, auto temperature, auto... params) {
           // Get the value and the gradient from the input tuple
           auto [u, du_dx] = temperature;
 
           auto flux = du_dx * 0.0;
 
-          auto source = -1.0 * source_function(x, time_, u, du_dx);
+          using SourceDataType = decltype(u);
+          SourceDataType source;
+
+          if constexpr (is_parameterized<SourceType>::value) {
+            static_assert(source_function.numParams() == sizeof...(params),
+                          "Number of parameters in thermal conduction does not equal the number of parameters in the "
+                          "thermal source.");
+
+            // TODO still need the u * 0.0 term to get rid of compiler errors.
+            source = -1.0 * source_function(x, time_, u, du_dx, serac::get<0>(params)...) + u * 0.0;
+          } else {
+            source = -1.0 * source_function(x, time_, u, du_dx) + u * 0.0;
+          }
 
           // Return the source and the flux as a tuple
           return serac::tuple{source, flux};
@@ -344,7 +356,19 @@ public:
                   "flux evaluation.");
 
     K_functional_->AddBoundaryIntegral(
-        Dimension<dim - 1>{}, [flux_function](auto x, auto n, auto u) { return flux_function(x, n, u); }, mesh_);
+        Dimension<dim - 1>{},
+        [flux_function](auto x, auto n, auto u, auto... params) {
+          if constexpr (is_parameterized<FluxType>::value) {
+            static_assert(flux_function.numParams() == sizeof...(params),
+                          "Number of parameters in thermal conduction does not equal the number of parameters in the "
+                          "thermal flux boundary.");
+
+            return flux_function(x, n, u, params...);
+          } else {
+            return flux_function(x, n, u);
+          }
+        },
+        mesh_);
   }
 
   /**
