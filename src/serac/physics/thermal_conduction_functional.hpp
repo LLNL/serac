@@ -141,7 +141,7 @@ public:
     std::array<mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + 1> trial_spaces;
     trial_spaces[0] = &temperature_.space();
 
-    for (long unsigned int i = 0; i < sizeof...(parameter_space) + 1; ++i) {
+    for (long unsigned int i = 0; i < sizeof...(parameter_space); ++i) {
       trial_spaces[i + 1] = &(parameter_states_[i]->space());
     }
 
