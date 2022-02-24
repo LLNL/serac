@@ -20,7 +20,7 @@ std::optional<cali::ConfigManager> mgr;
 }  // namespace
 #endif
 
-void initialize(MPI_Comm comm, std::string options)
+void initialize([[maybe_unused]] MPI_Comm comm, [[maybe_unused]] std::string options)
 {
 #ifdef SERAC_USE_ADIAK
   // Initialize Adiak
@@ -34,9 +34,6 @@ void initialize(MPI_Comm comm, std::string options)
   adiak::walltime();
   adiak::cputime();
   adiak::systime();
-#else
-  // Silence warning
-  static_cast<void>(comm);
 #endif
 
 #ifdef SERAC_USE_CALIPER
@@ -53,9 +50,6 @@ void initialize(MPI_Comm comm, std::string options)
   // Defaults, should probably always be enabled
   mgr->add("event-trace,runtime-report,spot");
   mgr->start();
-#else
-  // Silence warning
-  static_cast<void>(options);
 #endif
 }
 
