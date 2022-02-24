@@ -123,12 +123,17 @@ public:
    */
   ThermalConductionFunctional(const SolverOptions& options, const std::string& name = {},
                               std::array<FiniteElementState*, sizeof...(parameter_space)> parameter_states = {})
-      : BasePhysics(1, order),
+      : BasePhysics(2, order),
         temperature_(
             StateManager::newState(FiniteElementState::Options{.order      = order,
                                                                .vector_dim = 1,
                                                                .ordering   = mfem::Ordering::byNODES,
                                                                .name       = detail::addPrefix(name, "temperature")})),
+        adjoint_temperature_(StateManager::newState(
+            FiniteElementState::Options{.order      = order,
+                                        .vector_dim = 1,
+                                        .ordering   = mfem::Ordering::byNODES,
+                                        .name       = detail::addPrefix(name, "adjoint_temperature")})),
         parameter_states_(parameter_states),
         residual_(temperature_.space().TrueVSize()),
         ode_(temperature_.space().TrueVSize(), {.u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
@@ -141,8 +146,12 @@ public:
     std::array<mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + 1> trial_spaces;
     trial_spaces[0] = &temperature_.space();
 
+    functional_call_args_.emplace_back(temperature_.trueVec());
+
     for (long unsigned int i = 0; i < sizeof...(parameter_space); ++i) {
-      trial_spaces[i + 1] = &(parameter_states_[i]->space());
+      trial_spaces[i + 1]         = &(parameter_states_[i]->space());
+      parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, parameter_states_[i]->space());
+      functional_call_args_.emplace_back(parameter_states_[i]->trueVec());
     }
 
     M_functional_ = std::make_unique<Functional<test(trial, parameter_space...)>>(&temperature_.space(), trial_spaces);
@@ -382,6 +391,16 @@ public:
   serac::FiniteElementState& temperature() { return temperature_; };
 
   /**
+   * @brief Get the adjoint temperature state
+   *
+   * @return A reference to the current adjoint temperature finite element state
+   */
+  const serac::FiniteElementState& adjointTemperature() const { return adjoint_temperature_; };
+
+  /// @overload
+  serac::FiniteElementState& adjointTemperature() { return adjoint_temperature_; };
+
+  /**
    * @brief Complete the initialization and allocation of the data structures.
    *
    * This must be called before AdvanceTimestep().
@@ -405,10 +424,16 @@ public:
       residual_ = mfem_ext::StdFunctionOperator(
           temperature_.space().TrueVSize(),
 
-          [this](const mfem::Vector& u, mfem::Vector& r) { r = (*K_functional_)(u); },
+          [this](const mfem::Vector& u, mfem::Vector& r) {
+            functional_call_args_[0] = u;
+
+            r = K_functional_->evaluate_index(functional_call_args_);
+          },
 
           [this](const mfem::Vector& u) -> mfem::Operator& {
-            auto [r, drdu] = (*K_functional_)(differentiate_wrt(u));
+            functional_call_args_[0] = u;
+
+            auto [r, drdu] = K_functional_->evaluate_index(functional_call_args_, Index<0>{});
             J_             = assemble(drdu);
             return *J_;
           });
@@ -421,7 +446,17 @@ public:
             mfem::Vector K_arg(u_.Size());
             add(1.0, u_, dt_, du_dt, K_arg);
 
-            add((*M_functional_)(du_dt), (*K_functional_)(K_arg), r);
+            functional_call_args_[0] = u_;
+
+            auto M_residual = M_functional_->evaluate_index(functional_call_args_);
+
+            functional_call_args_[0] = K_arg;
+
+            auto K_residual = K_functional_->evaluate_index(functional_call_args_);
+
+            functional_call_args_[0] = u_;
+
+            add(M_residual, K_residual, r);
           },
 
           [this](const mfem::Vector& du_dt) -> mfem::Operator& {
@@ -430,10 +465,17 @@ public:
               mfem::Vector K_arg(u_.Size());
               add(1.0, u_, dt_, du_dt, K_arg);
 
-              auto                                  M = serac::get<1>((*M_functional_)(differentiate_wrt(u_)));
+              functional_call_args_[0] = u_;
+
+              auto M = serac::get<1>(M_functional_->evaluate_index(functional_call_args_, Index<0>{}));
               std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
-              auto                                  K = serac::get<1>((*K_functional_)(differentiate_wrt(K_arg)));
+              functional_call_args_[0] = K_arg;
+
+              auto K = serac::get<1>(K_functional_->evaluate_index(functional_call_args_, Index<0>{}));
+
+              functional_call_args_[0] = u_;
+
               std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
               J_.reset(mfem::Add(1.0, *m_mat, dt_, *k_mat));
@@ -441,6 +483,77 @@ public:
             return *J_;
           });
     }
+  }
+
+  /**
+   * @brief Solve the adjoint problem
+   * @pre It is expected that the forward analysis is complete and the current temperature state is valid
+   * @note If the essential boundary state is not specified, homogeneous essential boundary conditions are applied
+   *
+   * @param[in] adjoint_load The dual state that contains the right hand side of the adjoint system
+   * @param[in] dual_with_essential_boundary A optional finite element dual containing the non-homogenous essential
+   * boundary condition data for the adjoint problem
+   * @return The computed adjoint finite element state
+   */
+  virtual const serac::FiniteElementState& solveAdjoint(FiniteElementDual& adjoint_load,
+                                                        FiniteElementDual* dual_with_essential_boundary = nullptr)
+  {
+    adjoint_load.initializeTrueVec();
+
+    // note: The assignment operator must be called after the copy constructor because
+    // the copy constructor only sets the partitioning, it does not copy the actual vector
+    // values
+    mfem::HypreParVector adjoint_load_vector(adjoint_load.trueVec());
+    adjoint_load_vector = adjoint_load.trueVec();
+
+    auto& lin_solver = nonlin_solver_.LinearSolver();
+
+    // By default, use a homogeneous essential boundary condition
+    mfem::HypreParVector adjoint_essential(adjoint_load.trueVec());
+    adjoint_essential = 0.0;
+
+    functional_call_args_[0] = temperature_.trueVec();
+
+    auto [r, drdu] = K_functional_->evaluate_index(functional_call_args_, Index<0>{});
+    auto jacobian  = assemble(drdu);
+    auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
+
+    // If we have a non-homogeneous essential boundary condition, extract it from the given state
+    if (dual_with_essential_boundary) {
+      dual_with_essential_boundary->initializeTrueVec();
+      adjoint_essential = dual_with_essential_boundary->trueVec();
+    }
+
+    for (const auto& bc : bcs_.essentials()) {
+      bc.eliminateFromMatrix(*J_T);
+      bc.eliminateToRHS(*J_T, adjoint_essential, adjoint_load_vector);
+    }
+
+    lin_solver.SetOperator(*J_T);
+    lin_solver.Mult(adjoint_load_vector, adjoint_temperature_.trueVec());
+
+    adjoint_temperature_.distributeSharedDofs();
+
+    // Reset the equation solver to use the full nonlinear residual operator
+    nonlin_solver_.SetOperator(residual_);
+
+    return adjoint_temperature_;
+  }
+
+  template <int parameter_field>
+  FiniteElementDual& computeSensitivity()
+  {
+    functional_call_args_[0] = adjoint_temperature_.trueVec();
+
+    auto [r, drdparam] = K_functional_->evaluate_index(functional_call_args_, Index<parameter_field>{});
+
+    functional_call_args_[0] = temperature_.trueVec();
+
+    parameter_sensitivities_[parameter_field]->trueVec() = drdparam(parameter_states_[parameter_field].trueVec());
+
+    parameter_sensitivities_[parameter_field]->distributeSharedDofs();
+
+    return *parameter_sensitivities_[parameter_field];
   }
 
   /// Destroy the Thermal Solver object
@@ -456,6 +569,9 @@ protected:
   /// The temperature finite element state
   serac::FiniteElementState temperature_;
 
+  /// The adjoint temperature finite element state
+  serac::FiniteElementState adjoint_temperature_;
+
   /// Mass functional object \f$\mathbf{M} = \int_\Omega c_p \, \rho \, \phi_i \phi_j\, dx \f$
   std::unique_ptr<Functional<test(trial, parameter_space...)>> M_functional_;
 
@@ -463,6 +579,10 @@ protected:
   std::unique_ptr<Functional<test(trial, parameter_space...)>> K_functional_;
 
   std::array<FiniteElementState*, sizeof...(parameter_space)> parameter_states_;
+
+  std::array<std::unique_ptr<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;
+
+  std::vector<std::reference_wrapper<const mfem::Vector>> functional_call_args_;
 
   /// Assembled mass matrix
   std::unique_ptr<mfem::HypreParMatrix> M_;

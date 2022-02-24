@@ -74,6 +74,17 @@ constexpr int index_of_differentiation()
   return -1;
 }
 
+/**
+ * @brief Compile-time alias for index of differentiation
+ */
+template <int ind>
+struct Index {
+  /**
+   * @brief Returns the index
+   */
+  constexpr operator int() { return ind; }
+};
+
 /// @cond
 template <typename T, ExecutionSpace exec = serac::default_execution_space>
 class Functional;
@@ -134,6 +145,16 @@ class Functional<test(trials...), exec> {
         mfem::Vector&                                           // otherwise, we just return the value
         >::type;
   };
+
+  template <int indx>
+  struct operator_paren_return_index {
+    using type = typename std::conditional<
+        indx >= 0,                                              // if the derivative index is valid
+        serac::tuple<mfem::Vector&, Gradient&>,                 // then we return the value and the derivative
+        mfem::Vector&                                           // otherwise, we just return the value
+        >::type;
+  };
+
   // clang-format on
 
 public:
@@ -375,12 +396,24 @@ public:
     static_assert(sizeof...(T) == num_trial_spaces,
                   "Error: Functional::operator() must take exactly as many arguments as trial spaces");
 
-    [[maybe_unused]] constexpr int                                           wrt = index_of_differentiation<T...>();
-    std::array<std::reference_wrapper<const mfem::Vector>, num_trial_spaces> input_T{args...};
+    [[maybe_unused]] constexpr int                          wrt = index_of_differentiation<T...>();
+    std::vector<std::reference_wrapper<const mfem::Vector>> input_T{args...};
 
+    return this->evaluate_index(input_T, Index<wrt>{});
+  }
+
+  mfem::Vector& evaluate_index(std::vector<std::reference_wrapper<const mfem::Vector>> input_T)
+  {
+    return this->evaluate_index(input_T, Index<-1>{});
+  }
+
+  template <int wrt>
+  typename operator_paren_return_index<wrt>::type evaluate_index(
+      std::vector<std::reference_wrapper<const mfem::Vector>> input_T, Index<wrt>)
+  {
     // get the values for each local processor
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
-      P_trial_[i]->Mult(input_T[i].get(), input_L_[i]);
+      P_trial_[i]->Mult(input_T[i], input_L_[i]);
     }
 
     output_L_ = 0.0;
@@ -426,7 +459,7 @@ public:
       output_T_(ess_tdof_list_[i]) = 0.0;
     }
 
-    if constexpr (num_differentiated_arguments == 1) {
+    if constexpr (wrt >= 0) {
       // if the user has indicated they'd like to evaluate and differentiate w.r.t.
       // a specific argument, then we return both the value and gradient w.r.t. that argument
       //
@@ -435,7 +468,7 @@ public:
       // e.g. auto [value, gradient_wrt_arg1] = my_functional(arg0, differentiate_wrt(arg1));
       return {output_T_, grad_[wrt]};
     }
-    if constexpr (num_differentiated_arguments == 0) {
+    if constexpr (wrt == -1) {
       // if the user passes only `mfem::Vector`s then we assume they only want the output value
       //
       // mfem::Vector arg0 = ...;
