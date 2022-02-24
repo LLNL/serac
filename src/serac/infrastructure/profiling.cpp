@@ -48,7 +48,7 @@ void initialize([[maybe_unused]] MPI_Comm comm, [[maybe_unused]] std::string opt
   }
 
   // Defaults, should probably always be enabled
-  mgr->add("event-trace,runtime-report,spot");
+  mgr->add("runtime-report,spot");
   mgr->start();
 #endif
 }
