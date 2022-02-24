@@ -242,55 +242,71 @@ public:
                   "Thermal functional materials must have a public (u, du_dx) operator for thermal flux evaluation.");
     */
 
-    K_functional_->AddDomainIntegral(
-        Dimension<dim>{},
-        [material](auto, auto temperature, auto... params) {
-          // Get the value and the gradient from the input tuple
-          auto [u, du_dx] = temperature;
+    if constexpr (is_parameterized<MaterialType>::value) {
+      static_assert(material.numParameters() == sizeof...(parameter_space),
+                    "Number of parameters in thermal conduction does not equal the number of parameters in the "
+                    "thermal material.");
 
-          using FluxType = decltype(du_dx);
-          FluxType flux;
+      K_functional_->AddDomainIntegral(
+          Dimension<dim>{},
+          [material](auto, auto temperature, auto... params) {
+            // Get the value and the gradient from the input tuple
+            auto [u, du_dx] = temperature;
+            auto source     = serac::zero{};
+            ;
+            auto flux = -1.0 * material(u, du_dx, serac::get<0>(params)...);
 
-          auto source = 0.0 * u;
+            // Return the source and the flux as a tuple
+            return serac::tuple{source, flux};
+          },
+          mesh_);
+    } else {
+      K_functional_->AddDomainIntegral(
+          Dimension<dim>{},
+          [material](auto, auto temperature, auto... params) {
+            // Get the value and the gradient from the input tuple
+            auto [u, du_dx] = temperature;
+            auto source     = serac::zero{};
+            auto flux       = -1.0 * material(u, du_dx);
 
-          if constexpr (is_parameterized<MaterialType>::value) {
-            static_assert(material.numParameters() == sizeof...(params),
-                          "Number of parameters in thermal conduction does not equal the number of parameters in the "
-                          "thermal material.");
-            flux = -1.0 * material(u, du_dx, serac::get<0>(params)...);
-          } else {
-            flux = -1.0 * material(u, du_dx);
-          }
+            // Return the source and the flux as a tuple
+            return serac::tuple{source, flux};
+          },
+          mesh_);
+    }
 
-          // Return the source and the flux as a tuple
-          return serac::tuple{source, flux};
-        },
-        mesh_);
+    if constexpr (is_parameterized<MaterialType>::value) {
+      static_assert(material.numParameters() == sizeof...(parameter_space),
+                    "Number of parameters in thermal conduction does not equal the number of parameters in the "
+                    "thermal material.");
 
-    M_functional_->AddDomainIntegral(
-        Dimension<dim>{},
-        [material](auto x, auto temperature, auto... params) {
-          auto [u, du_dx]  = temperature;
-          using SourceType = decltype(u);
+      M_functional_->AddDomainIntegral(
+          Dimension<dim>{},
+          [material](auto x, auto temperature, auto... params) {
+            auto [u, du_dx] = temperature;
+            auto flux       = serac::zero{};
 
-          SourceType source;
+            auto source = material.specificHeatCapacity(x, u, serac::get<0>(params)...) *
+                          material.density(x, serac::get<0>(params)...);
 
-          if constexpr (is_parameterized<MaterialType>::value) {
-            static_assert(material.numParameters() == sizeof...(params),
-                          "Number of parameters in thermal conduction does not equal the number of parameters in the "
-                          "thermal material.");
-            source = material.specificHeatCapacity(x, u, serac::get<0>(params)...) *
-                         material.density(x, serac::get<0>(params)...) +
-                     0.0 * u;
-          } else {
-            source = material.specificHeatCapacity(x, u) * material.density(x) + 0.0 * u;
-          }
-          auto flux = du_dx * 0.0;
+            // Return the source and the flux as a tuple
+            return serac::tuple{source, flux};
+          },
+          mesh_);
+    } else {
+      M_functional_->AddDomainIntegral(
+          Dimension<dim>{},
+          [material](auto x, auto temperature, auto... /* params */) {
+            auto [u, du_dx] = temperature;
+            auto flux       = serac::zero{};
 
-          // Return the source and the flux as a tuple
-          return serac::tuple{source, flux};
-        },
-        mesh_);
+            auto source = material.specificHeatCapacity(x, u) * material.density(x);
+
+            // Return the source and the flux as a tuple
+            return serac::tuple{source, flux};
+          },
+          mesh_);
+    }
   }
 
   /**
@@ -319,36 +335,47 @@ public:
   template <typename SourceType>
   void setSource(SourceType source_function)
   {
+    /*
     static_assert(
         has_thermal_source<SourceType, dim>::value,
         "Thermal functional sources must have a public (x, t, u, du_dx) operator for thermal source evaluation.");
+    */
 
-    K_functional_->AddDomainIntegral(
-        Dimension<dim>{},
-        [source_function, this](auto x, auto temperature, auto... params) {
-          // Get the value and the gradient from the input tuple
-          auto [u, du_dx] = temperature;
+    if constexpr (is_parameterized<SourceType>::value) {
+      static_assert(source_function.numParameters() == sizeof...(parameter_space),
+                    "Number of parameters in thermal conduction does not equal the number of parameters in the "
+                    "thermal source.");
 
-          auto flux = du_dx * 0.0;
+      K_functional_->AddDomainIntegral(
+          Dimension<dim>{},
+          [source_function, this](auto x, auto temperature, auto... params) {
+            // Get the value and the gradient from the input tuple
+            auto [u, du_dx] = temperature;
 
-          using SourceDataType = decltype(u);
-          SourceDataType source;
+            auto flux = serac::zero{};
 
-          if constexpr (is_parameterized<SourceType>::value) {
-            static_assert(source_function.numParameters() == sizeof...(params),
-                          "Number of parameters in thermal conduction does not equal the number of parameters in the "
-                          "thermal source.");
+            auto source = -1.0 * source_function(x, time_, u, du_dx, serac::get<0>(params)...);
 
-            // TODO still need the u * 0.0 term to get rid of compiler errors.
-            source = -1.0 * source_function(x, time_, u, du_dx, serac::get<0>(params)...) + u * 0.0;
-          } else {
-            source = -1.0 * source_function(x, time_, u, du_dx) + u * 0.0;
-          }
+            // Return the source and the flux as a tuple
+            return serac::tuple{source, flux};
+          },
+          mesh_);
+    } else {
+      K_functional_->AddDomainIntegral(
+          Dimension<dim>{},
+          [source_function, this](auto x, auto temperature, auto... /* params */) {
+            // Get the value and the gradient from the input tuple
+            auto [u, du_dx] = temperature;
 
-          // Return the source and the flux as a tuple
-          return serac::tuple{source, flux};
-        },
-        mesh_);
+            auto flux = serac::zero{};
+
+            auto source = -1.0 * source_function(x, time_, u, du_dx);
+
+            // Return the source and the flux as a tuple
+            return serac::tuple{source, flux};
+          },
+          mesh_);
+    }
   }
 
   /**
@@ -362,24 +389,25 @@ public:
   template <typename FluxType>
   void setFluxBCs(FluxType flux_function)
   {
+    /*
     static_assert(has_thermal_flux_boundary<FluxType, dim>::value,
                   "Thermal flux boundary condition types must have a public (x, n, u) operator for thermal boundary "
                   "flux evaluation.");
+    */
 
-    K_functional_->AddBoundaryIntegral(
-        Dimension<dim - 1>{},
-        [flux_function](auto x, auto n, auto u, auto... params) {
-          if constexpr (is_parameterized<FluxType>::value) {
-            static_assert(flux_function.numParameters() == sizeof...(params),
-                          "Number of parameters in thermal conduction does not equal the number of parameters in the "
-                          "thermal flux boundary.");
+    if constexpr (is_parameterized<FluxType>::value) {
+      static_assert(flux_function.numParameters() == sizeof...(parameter_space),
+                    "Number of parameters in thermal conduction does not equal the number of parameters in the "
+                    "thermal flux boundary.");
 
-            return flux_function(x, n, u, params...);
-          } else {
-            return flux_function(x, n, u);
-          }
-        },
-        mesh_);
+      K_functional_->AddBoundaryIntegral(
+          Dimension<dim - 1>{},
+          [flux_function](auto x, auto n, auto u, auto... params) { return flux_function(x, n, u, params...); }, mesh_);
+    } else {
+      K_functional_->AddBoundaryIntegral(
+          Dimension<dim - 1>{},
+          [flux_function](auto x, auto n, auto u, auto... /* params */) { return flux_function(x, n, u); }, mesh_);
+    }
   }
 
   /**

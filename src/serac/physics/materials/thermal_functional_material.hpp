@@ -122,7 +122,7 @@ public:
   template <typename T1, typename T2, typename T3>
   SERAC_HOST_DEVICE T2 operator()(const T1& /* temperature */, const T2& temperature_gradient, const T3&) const
   {
-    return -1.0 * conductivity_ * temperature_gradient;
+    return -1.0 * temperature_gradient;
   }
 
   constexpr int numParams() const { return 1; }
@@ -134,9 +134,9 @@ public:
    * @return The density
    */
   template <int dim, typename T1>
-  SERAC_HOST_DEVICE double density(const tensor<double, dim>& /* x */, const T1&) const
+  SERAC_HOST_DEVICE T1 density(const tensor<double, dim>& /* x */, const T1& parameter) const
   {
-    return density_;
+    return density_ + 0.0 * parameter;
   }
 
   /**
