@@ -390,6 +390,13 @@ SERAC_HOST_DEVICE zero& get(zero& x)
   return x;
 }
 
+/** @brief let `zero` be accessed like a tuple */
+template <int i>
+SERAC_HOST_DEVICE const zero& get(const zero& x)
+{
+  return x;
+}
+
 /** @brief the dot product of anything with `zero` is `zero` */
 template <typename T>
 SERAC_HOST_DEVICE zero dot(const T&, zero)

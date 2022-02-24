@@ -201,8 +201,8 @@ TEST(thermal_functional, parameterized_material)
   constexpr int parameter_index = 0;
 
   // Construct a functional-based thermal conduction solver
-  ThermalConductionFunctional<p, dim, L2<0>> thermal_solver(
-      ThermalConductionFunctional<p, dim, L2<0>>::defaultQuasistaticOptions(), "thermal_functional",
+  ThermalConductionFunctional<p, dim, H1<1>> thermal_solver(
+      ThermalConductionFunctional<p, dim, H1<1>>::defaultQuasistaticOptions(), "thermal_functional",
       {&parameterized_state});
 
   Thermal::ParameterizedLinearIsotropicConductor mat(1.0, 1.0, 1.0);

@@ -120,10 +120,9 @@ public:
    * @return The thermal flux of the material model
    */
   template <typename T1, typename T2, typename T3>
-  SERAC_HOST_DEVICE T2 operator()(const T1& /* temperature */, const T2& temperature_gradient,
-                                  const T3& parameter) const
+  SERAC_HOST_DEVICE T2 operator()(const T1& /* temperature */, const T2& temperature_gradient, const T3&) const
   {
-    return -1.0 * conductivity_ * temperature_gradient + 0.0 * parameter;
+    return -1.0 * conductivity_ * temperature_gradient;
   }
 
   constexpr int numParams() const { return 1; }
@@ -134,8 +133,8 @@ public:
    * @tparam dim The dimension of the problem
    * @return The density
    */
-  template <int dim, typename T>
-  SERAC_HOST_DEVICE double density(const tensor<double, dim>& /* x */, const T& parameter) const
+  template <int dim, typename T1>
+  SERAC_HOST_DEVICE double density(const tensor<double, dim>& /* x */, const T1&) const
   {
     return density_;
   }
@@ -148,9 +147,9 @@ public:
    */
   template <typename T1, typename T2, int dim>
   SERAC_HOST_DEVICE double specificHeatCapacity(const tensor<double, dim>& /* x */, const T1& /* temperature */,
-                                                const T2& parameter) const
+                                                const T2&) const
   {
-    return specific_heat_capacity_ + 0.0 * parameter;
+    return specific_heat_capacity_;
   }
 
   static constexpr int numParameters() { return 1; }

@@ -251,7 +251,7 @@ public:
           using FluxType = decltype(du_dx);
           FluxType flux;
 
-          auto source = serac::zero{};
+          auto source = 0.0 * u;
 
           if constexpr (is_parameterized<MaterialType>::value) {
             static_assert(material.numParameters() == sizeof...(params),
