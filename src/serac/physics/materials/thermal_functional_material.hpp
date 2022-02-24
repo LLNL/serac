@@ -126,14 +126,16 @@ public:
     return -1.0 * conductivity_ * temperature_gradient + 0.0 * parameter;
   }
 
+  constexpr int numParams() const { return 1; }
+
   /**
    * @brief The density (mass per volume) of the material model
    *
    * @tparam dim The dimension of the problem
    * @return The density
    */
-  template <int dim>
-  SERAC_HOST_DEVICE double density(const tensor<double, dim>& /* x */) const
+  template <int dim, typename T>
+  SERAC_HOST_DEVICE double density(const tensor<double, dim>& /* x */, const T& parameter) const
   {
     return density_;
   }
@@ -144,13 +146,14 @@ public:
    * @tparam dim The dimension of the problem
    * @tparam T Type of the temperature variable
    */
-  template <typename T, int dim>
-  SERAC_HOST_DEVICE double specificHeatCapacity(const tensor<double, dim>& /* x */, const T& /* temperature */) const
+  template <typename T1, typename T2, int dim>
+  SERAC_HOST_DEVICE double specificHeatCapacity(const tensor<double, dim>& /* x */, const T1& /* temperature */,
+                                                const T2& parameter) const
   {
-    return specific_heat_capacity_;
+    return specific_heat_capacity_ + 0.0 * parameter;
   }
 
-  constexpr int numParameters() { return 1; }
+  static constexpr int numParameters() { return 1; }
 
 private:
   /// Density

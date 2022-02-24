@@ -233,12 +233,14 @@ public:
   template <typename MaterialType>
   void setMaterial(MaterialType material)
   {
+    /*
     static_assert(has_density<MaterialType, dim>::value,
                   "Thermal functional materials must have a public density(x) method.");
     static_assert(has_specific_heat_capacity<MaterialType, dim>::value,
                   "Thermal functional materials must have a public specificHeatCapacity(x, temperature) method.");
     static_assert(has_thermal_flux<MaterialType, dim>::value,
                   "Thermal functional materials must have a public (u, du_dx) operator for thermal flux evaluation.");
+    */
 
     K_functional_->AddDomainIntegral(
         Dimension<dim>{},
@@ -252,7 +254,7 @@ public:
           auto source = serac::zero{};
 
           if constexpr (is_parameterized<MaterialType>::value) {
-            static_assert(material.numParams() == sizeof...(params),
+            static_assert(material.numParameters() == sizeof...(params),
                           "Number of parameters in thermal conduction does not equal the number of parameters in the "
                           "thermal material.");
             flux = -1.0 * material(u, du_dx, serac::get<0>(params)...);
@@ -274,7 +276,7 @@ public:
           SourceType source;
 
           if constexpr (is_parameterized<MaterialType>::value) {
-            static_assert(material.numParams() == sizeof...(params),
+            static_assert(material.numParameters() == sizeof...(params),
                           "Number of parameters in thermal conduction does not equal the number of parameters in the "
                           "thermal material.");
             source = material.specificHeatCapacity(x, u, serac::get<0>(params)...) *
@@ -333,7 +335,7 @@ public:
           SourceDataType source;
 
           if constexpr (is_parameterized<SourceType>::value) {
-            static_assert(source_function.numParams() == sizeof...(params),
+            static_assert(source_function.numParameters() == sizeof...(params),
                           "Number of parameters in thermal conduction does not equal the number of parameters in the "
                           "thermal source.");
 
@@ -368,7 +370,7 @@ public:
         Dimension<dim - 1>{},
         [flux_function](auto x, auto n, auto u, auto... params) {
           if constexpr (is_parameterized<FluxType>::value) {
-            static_assert(flux_function.numParams() == sizeof...(params),
+            static_assert(flux_function.numParameters() == sizeof...(params),
                           "Number of parameters in thermal conduction does not equal the number of parameters in the "
                           "thermal flux boundary.");
 
@@ -549,7 +551,9 @@ public:
 
     functional_call_args_[0] = temperature_.trueVec();
 
-    parameter_sensitivities_[parameter_field]->trueVec() = drdparam(parameter_states_[parameter_field].trueVec());
+    mfem::Vector& sensitivity_vector = parameter_sensitivities_[parameter_field]->trueVec();
+
+    sensitivity_vector = drdparam(parameter_states_[parameter_field]->trueVec());
 
     parameter_sensitivities_[parameter_field]->distributeSharedDofs();
 
@@ -623,6 +627,6 @@ protected:
 
   /// Previous value of du_dt used to prime the pump for the nonlinear solver
   mfem::Vector previous_;
-};  // namespace serac
+};
 
 }  // namespace serac

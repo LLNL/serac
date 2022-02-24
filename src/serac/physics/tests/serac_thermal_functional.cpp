@@ -172,6 +172,77 @@ TEST(thermal_functional, 2D_quad_dynamic) { functional_test_dynamic<2, 2>(2.0288
 TEST(thermal_functional, 3D_linear_dynamic) { functional_test_dynamic<1, 3>(2.82842712); }
 TEST(thermal_functional, 3D_quad_dynamic) { functional_test_dynamic<2, 3>(2.828427124); }
 
+TEST(thermal_functional, parameterized_material)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  int serial_refinement   = 1;
+  int parallel_refinement = 0;
+
+  // Create DataStore
+  axom::sidre::DataStore datastore;
+  serac::StateManager::initialize(datastore, "thermal_functional_parameterized_sensitivities");
+
+  // Construct the appropriate dimension mesh and give it to the data store
+  std::string filename = SERAC_REPO_DIR "/data/meshes/star.mesh";
+
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
+  serac::StateManager::setMesh(std::move(mesh));
+
+  constexpr int p   = 1;
+  constexpr int dim = 2;
+
+  // Define a boundary attribute set
+  std::set<int> ess_bdr = {1};
+
+  FiniteElementState parameterized_state(StateManager::newState(FiniteElementState::Options{
+      .order = 0, .coll = std::make_unique<mfem::L2_FECollection>(0, dim), .name = "parameterized_field"}));
+
+  constexpr int parameter_index = 0;
+
+  // Construct a functional-based thermal conduction solver
+  ThermalConductionFunctional<p, dim, L2<0>> thermal_solver(
+      ThermalConductionFunctional<p, dim, L2<0>>::defaultQuasistaticOptions(), "thermal_functional",
+      {&parameterized_state});
+
+  Thermal::ParameterizedLinearIsotropicConductor mat(1.0, 1.0, 1.0);
+  thermal_solver.setMaterial(mat);
+
+  // Define the function for the initial temperature and boundary condition
+  auto one = [](const mfem::Vector&, double) -> double { return 1.0; };
+
+  // Set the initial temperature and boundary condition
+  thermal_solver.setTemperatureBCs(ess_bdr, one);
+  thermal_solver.setTemperature(one);
+
+  // Define a constant source term
+  Thermal::ConstantSource source{1.0};
+  thermal_solver.setSource(source);
+
+  // Set the flux term to zero for testing code paths
+  Thermal::FluxBoundary flux_bc{0.0};
+  thermal_solver.setFluxBCs(flux_bc);
+
+  // Finalize the data structures
+  thermal_solver.completeSetup();
+
+  // Perform the quasi-static solve
+  double dt = 1.0;
+  thermal_solver.advanceTimestep(dt);
+
+  // Output the sidre-based plot files
+  thermal_solver.outputState();
+
+  FiniteElementDual adjoint_load(StateManager::newDual(FiniteElementState::Options{
+      .order = 0, .coll = std::make_unique<mfem::L2_FECollection>(0, dim), .name = "adjoint_load"}));
+
+  adjoint_load.trueVec() = 1.0;
+
+  thermal_solver.solveAdjoint(adjoint_load);
+
+  [[maybe_unused]] auto& sensitivity = thermal_solver.computeSensitivity<parameter_index>();
+}
+
 }  // namespace serac
 
 //------------------------------------------------------------------------------
