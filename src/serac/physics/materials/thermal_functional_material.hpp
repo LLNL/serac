@@ -92,7 +92,7 @@ private:
 class ParameterizedLinearIsotropicConductor {
 public:
   /**
-   * @brief Construct a new Linear Isotropic Conductor object
+   * @brief Construct a new Parameterized Linear Isotropic Conductor object
    *
    * @param density Density of the material (mass/volume)
    * @param specific_heat_capacity Specific heat capacity of the material (energy / (mass * temp))
@@ -112,6 +112,13 @@ public:
   }
 
   /**
+   * @brief Return the number of parameters in the model
+   *
+   * @return Number of parameters in the model
+   */
+  constexpr int numParams() const { return 1; }
+
+  /**
    * @brief Function defining the thermal flux (constitutive response)
    *
    * @tparam T1 type of the temperature (e.g. tensor or dual type)
@@ -124,8 +131,6 @@ public:
   {
     return -1.0 * temperature_gradient;
   }
-
-  constexpr int numParams() const { return 1; }
 
   /**
    * @brief The density (mass per volume) of the material model

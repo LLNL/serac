@@ -207,6 +207,7 @@ TEST(thermal_functional, parameterized_material)
       ThermalConductionFunctional<p, dim, H1<1>>::defaultQuasistaticOptions(), "thermal_functional",
       {&parameterized_state});
 
+  // Construct a potentially user-defined parameterized material and send it to the thermal module
   Thermal::ParameterizedLinearIsotropicConductor mat(1.0, 1.0, 1.0);
   thermal_solver.setMaterial(mat);
 
@@ -240,13 +241,16 @@ TEST(thermal_functional, parameterized_material)
   // Output the sidre-based plot files
   thermal_solver.outputState();
 
+  // Construct a dummy adjoint load (this would come from a QOI downstream)
   FiniteElementDual adjoint_load(
       StateManager::newDual(FiniteElementState::Options{.order = 1, .name = "adjoint_load"}));
 
   adjoint_load.trueVec() = 1.0;
 
+  // Solve the adjoint problem
   thermal_solver.solveAdjoint(adjoint_load);
 
+  // Compute the sensitivity given the adjoint solution
   auto& sensitivity = thermal_solver.computeSensitivity<parameter_index>();
 
   EXPECT_NEAR(6.3245553203, mfem::ParNormlp(sensitivity.trueVec(), 2, MPI_COMM_WORLD), 1.0e-6);

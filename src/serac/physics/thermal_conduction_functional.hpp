@@ -575,7 +575,7 @@ public:
   {
     functional_call_args_[0] = temperature_.trueVec();
 
-    auto [r, drdparam] = (*K_functional_)(functional_call_args_, Index<parameter_field>{});
+    auto [r, drdparam] = (*K_functional_)(functional_call_args_, Index<parameter_field + 1>{});
 
     auto drdparam_mat = assemble(drdparam);
 
