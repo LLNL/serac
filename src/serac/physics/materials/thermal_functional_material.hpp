@@ -136,7 +136,7 @@ public:
   template <int dim, typename T1>
   SERAC_HOST_DEVICE T1 density(const tensor<double, dim>& /* x */, const T1& parameter) const
   {
-    return density_ + 0.0 * parameter;
+    return density_ + 0.01 * parameter;
   }
 
   /**

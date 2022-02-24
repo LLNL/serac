@@ -573,15 +573,13 @@ public:
   template <int parameter_field>
   FiniteElementDual& computeSensitivity()
   {
-    functional_call_args_[0] = adjoint_temperature_.trueVec();
+    functional_call_args_[0] = temperature_.trueVec();
 
     auto [r, drdparam] = (*K_functional_)(functional_call_args_, Index<parameter_field>{});
 
-    functional_call_args_[0] = temperature_.trueVec();
+    auto drdparam_mat = assemble(drdparam);
 
-    mfem::Vector& sensitivity_vector = parameter_sensitivities_[parameter_field]->trueVec();
-
-    sensitivity_vector = drdparam(parameter_states_[parameter_field]->trueVec());
+    drdparam_mat->MultTranspose(adjoint_temperature_.trueVec(), parameter_sensitivities_[parameter_field]->trueVec());
 
     parameter_sensitivities_[parameter_field]->distributeSharedDofs();
 

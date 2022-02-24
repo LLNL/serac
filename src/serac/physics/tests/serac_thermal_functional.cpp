@@ -195,8 +195,10 @@ TEST(thermal_functional, parameterized_material)
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
-  FiniteElementState parameterized_state(StateManager::newState(FiniteElementState::Options{
-      .order = 0, .coll = std::make_unique<mfem::L2_FECollection>(0, dim), .name = "parameterized_field"}));
+  FiniteElementState parameterized_state(
+      StateManager::newState(FiniteElementState::Options{.order = 1, .name = "parameterized_field"}));
+
+  parameterized_state = 1.0;
 
   constexpr int parameter_index = 0;
 
@@ -209,11 +211,16 @@ TEST(thermal_functional, parameterized_material)
   thermal_solver.setMaterial(mat);
 
   // Define the function for the initial temperature and boundary condition
-  auto one = [](const mfem::Vector&, double) -> double { return 1.0; };
+  auto bdr_temp = [](const mfem::Vector& x, double) -> double {
+    if (x[0] < 0.5 || x[1] < 0.5) {
+      return 1.0;
+    }
+    return 0.0;
+  };
 
   // Set the initial temperature and boundary condition
-  thermal_solver.setTemperatureBCs(ess_bdr, one);
-  thermal_solver.setTemperature(one);
+  thermal_solver.setTemperatureBCs(ess_bdr, bdr_temp);
+  thermal_solver.setTemperature(bdr_temp);
 
   // Define a constant source term
   Thermal::ConstantSource source{1.0};
@@ -233,14 +240,16 @@ TEST(thermal_functional, parameterized_material)
   // Output the sidre-based plot files
   thermal_solver.outputState();
 
-  FiniteElementDual adjoint_load(StateManager::newDual(FiniteElementState::Options{
-      .order = 0, .coll = std::make_unique<mfem::L2_FECollection>(0, dim), .name = "adjoint_load"}));
+  FiniteElementDual adjoint_load(
+      StateManager::newDual(FiniteElementState::Options{.order = 1, .name = "adjoint_load"}));
 
   adjoint_load.trueVec() = 1.0;
 
   thermal_solver.solveAdjoint(adjoint_load);
 
-  [[maybe_unused]] auto& sensitivity = thermal_solver.computeSensitivity<parameter_index>();
+  auto& sensitivity = thermal_solver.computeSensitivity<parameter_index>();
+
+  EXPECT_NEAR(6.3245553203, mfem::ParNormlp(sensitivity.trueVec(), 2, MPI_COMM_WORLD), 1.0e-6);
 }
 
 }  // namespace serac
