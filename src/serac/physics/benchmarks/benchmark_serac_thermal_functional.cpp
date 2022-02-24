@@ -168,6 +168,9 @@ int main(int argc, char* argv[])
   // Initialize profiling
   serac::profiling::initialize();
 
+  // Add metadata
+  SERAC_SET_METADATA("test", "thermal_functional");
+
   // Profile code
   SERAC_MARK_BEGIN("Thermal Functional");
 
