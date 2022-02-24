@@ -399,16 +399,16 @@ public:
     [[maybe_unused]] constexpr int                          wrt = index_of_differentiation<T...>();
     std::vector<std::reference_wrapper<const mfem::Vector>> input_T{args...};
 
-    return this->evaluate_index(input_T, Index<wrt>{});
+    return (*this)(input_T, Index<wrt>{});
   }
 
-  mfem::Vector& evaluate_index(std::vector<std::reference_wrapper<const mfem::Vector>> input_T)
+  mfem::Vector& operator()(std::vector<std::reference_wrapper<const mfem::Vector>> input_T)
   {
-    return this->evaluate_index(input_T, Index<-1>{});
+    return (*this)(input_T, Index<-1>{});
   }
 
   template <int wrt>
-  typename operator_paren_return_index<wrt>::type evaluate_index(
+  typename operator_paren_return_index<wrt>::type operator()(
       std::vector<std::reference_wrapper<const mfem::Vector>> input_T, Index<wrt>)
   {
     // get the values for each local processor

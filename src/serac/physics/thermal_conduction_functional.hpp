@@ -427,13 +427,13 @@ public:
           [this](const mfem::Vector& u, mfem::Vector& r) {
             functional_call_args_[0] = u;
 
-            r = K_functional_->evaluate_index(functional_call_args_);
+            r = (*K_functional_)(functional_call_args_);
           },
 
           [this](const mfem::Vector& u) -> mfem::Operator& {
             functional_call_args_[0] = u;
 
-            auto [r, drdu] = K_functional_->evaluate_index(functional_call_args_, Index<0>{});
+            auto [r, drdu] = (*K_functional_)(functional_call_args_, Index<0>{});
             J_             = assemble(drdu);
             return *J_;
           });
@@ -448,11 +448,11 @@ public:
 
             functional_call_args_[0] = u_;
 
-            auto M_residual = M_functional_->evaluate_index(functional_call_args_);
+            auto M_residual = (*M_functional_)(functional_call_args_);
 
             functional_call_args_[0] = K_arg;
 
-            auto K_residual = K_functional_->evaluate_index(functional_call_args_);
+            auto K_residual = (*K_functional_)(functional_call_args_);
 
             functional_call_args_[0] = u_;
 
@@ -467,12 +467,12 @@ public:
 
               functional_call_args_[0] = u_;
 
-              auto M = serac::get<1>(M_functional_->evaluate_index(functional_call_args_, Index<0>{}));
+              auto M = serac::get<1>((*M_functional_)(functional_call_args_, Index<0>{}));
               std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
               functional_call_args_[0] = K_arg;
 
-              auto K = serac::get<1>(K_functional_->evaluate_index(functional_call_args_, Index<0>{}));
+              auto K = serac::get<1>((*K_functional_)(functional_call_args_, Index<0>{}));
 
               functional_call_args_[0] = u_;
 
@@ -514,7 +514,7 @@ public:
 
     functional_call_args_[0] = temperature_.trueVec();
 
-    auto [r, drdu] = K_functional_->evaluate_index(functional_call_args_, Index<0>{});
+    auto [r, drdu] = (*K_functional_)(functional_call_args_, Index<0>{});
     auto jacobian  = assemble(drdu);
     auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -545,7 +545,7 @@ public:
   {
     functional_call_args_[0] = adjoint_temperature_.trueVec();
 
-    auto [r, drdparam] = K_functional_->evaluate_index(functional_call_args_, Index<parameter_field>{});
+    auto [r, drdparam] = (*K_functional_)(functional_call_args_, Index<parameter_field>{});
 
     functional_call_args_[0] = temperature_.trueVec();
 
