@@ -248,6 +248,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             message(FATAL_ERROR "Given AXOM_DIR did not contain a required header: axom/inlet/LuaReader.hpp"
                                 "\nTry building Axom with '-DLUA_DIR=path/to/lua/install'\n ")
         endif()
+        set(LUA_FOUND TRUE CACHE BOOL "")
 
         # MFEMSidreDataCollection.hpp
         find_path(

@@ -8,9 +8,19 @@ if(ENABLE_TESTS)
     add_subdirectory(tests)
 endif()
 
+# This file contains metadata that often changes (ie. git sha).
+# Hide these changes in the source file so we do not force
+# a full rebuild.
+serac_configure_file(
+  git_sha.hpp.in
+  ${PROJECT_BINARY_DIR}/include/serac/infrastructure/git_sha.hpp
+ )
+
 set(infrastructure_headers
+    about.hpp
     accelerator.hpp
     cli.hpp
+    ${PROJECT_BINARY_DIR}/include/serac/infrastructure/git_sha.hpp
     initialize.hpp
     input.hpp
     logger.hpp
@@ -21,6 +31,7 @@ set(infrastructure_headers
     )
 
 set(infrastructure_sources
+    about.cpp
     accelerator.cpp
     cli.cpp
     initialize.cpp
