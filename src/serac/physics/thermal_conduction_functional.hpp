@@ -121,8 +121,9 @@ public:
    * @param[in] options The system linear and nonlinear solver and timestepping parameters
    * @param[in] name An optional name for the physics module instance
    */
-  ThermalConductionFunctional(const SolverOptions& options, const std::string& name = {},
-                              std::array<FiniteElementState*, sizeof...(parameter_space)> parameter_states = {})
+  ThermalConductionFunctional(
+      const SolverOptions& options, const std::string& name = {},
+      std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states = {})
       : BasePhysics(2, order),
         temperature_(
             StateManager::newState(FiniteElementState::Options{.order      = order,
@@ -149,9 +150,9 @@ public:
     functional_call_args_.emplace_back(temperature_.trueVec());
 
     for (long unsigned int i = 0; i < sizeof...(parameter_space); ++i) {
-      trial_spaces[i + 1]         = &(parameter_states_[i]->space());
-      parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, parameter_states_[i]->space());
-      functional_call_args_.emplace_back(parameter_states_[i]->trueVec());
+      trial_spaces[i + 1]         = &(parameter_states_[i].get().space());
+      parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, parameter_states_[i].get().space());
+      functional_call_args_.emplace_back(parameter_states_[i].get().trueVec());
     }
 
     M_functional_ = std::make_unique<Functional<test(trial, parameter_space...)>>(&temperature_.space(), trial_spaces);
@@ -607,7 +608,7 @@ protected:
   /// Stiffness functional object \f$\mathbf{K} = \int_\Omega \theta \cdot \nabla \phi_i  + f \phi_i \, dx \f$
   std::unique_ptr<Functional<test(trial, parameter_space...)>> K_functional_;
 
-  std::array<FiniteElementState*, sizeof...(parameter_space)> parameter_states_;
+  std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states_;
 
   std::array<std::unique_ptr<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;
 

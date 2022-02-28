@@ -206,7 +206,7 @@ TEST(thermal_functional, parameterized_material)
   // We should extend this to single scalar trial spaces (global vector space?)
   ThermalConductionFunctional<p, dim, H1<1>> thermal_solver(
       ThermalConductionFunctional<p, dim, H1<1>>::defaultQuasistaticOptions(), "thermal_functional",
-      {&parameterized_state});
+      {parameterized_state});
 
   // Construct a potentially user-defined parameterized material and send it to the thermal module
   Thermal::ParameterizedLinearIsotropicConductor mat(1.0, 1.0, 1.0);
