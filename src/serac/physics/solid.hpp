@@ -385,8 +385,6 @@ public:
    *
    * @note Before this call, a forward and adjoint solve (with the appropriate QoI-based adjoint load) must be
    * completed. If this does not occur, the returned linear form will be incorrect.
-   *
-   * @note T
    */
   virtual FiniteElementDual& shearModulusSensitivity(mfem::ParFiniteElementSpace* shear_space = nullptr);
 

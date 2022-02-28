@@ -116,7 +116,9 @@ public:
    *
    * @tparam T1 type of the temperature (e.g. tensor or dual type)
    * @tparam T2 type of the temperature gradient (e.g. tensor or dual type)
+   * @tparam T3 type of the parameter field (e.g. tensor or dual type)
    * @param temperature_gradient Gradient of the temperature (du_dx)
+   * @param parameter The user-defined parameter used to calculate the thermal conductivity
    * @return The thermal flux of the material model
    */
   template <typename T1, typename T2, typename T3>
@@ -151,6 +153,11 @@ public:
     return specific_heat_capacity_;
   }
 
+  /**
+   * @brief The number of parameters associated with this material model
+   *
+   * @return The number of material model parameters
+   */
   static constexpr int numParameters() { return 1; }
 
 private:

@@ -402,11 +402,30 @@ public:
     return (*this)(input_T, Index<wrt>{});
   }
 
-  mfem::Vector& operator()(std::vector<std::reference_wrapper<const mfem::Vector>> input_T)
+  /**
+   * @brief this function lets the user evaluate the serac::Functional with the given trial space values
+   *
+   * note: it accepts a vector of mfem::Vectors that must be of length `num_trial_spaces`. This interface
+   * assumes no derivative information is needed.
+   *
+   * @param trial_inputs an array of trial space dofs used to carry out the calculation.
+   */
+  mfem::Vector& operator()(std::vector<std::reference_wrapper<const mfem::Vector>> trial_inputs)
   {
-    return (*this)(input_T, Index<-1>{});
+    SLIC_ERROR_IF(trial_inputs.size() != num_trial_spaces,
+                  "The input vector of trial spaces is not equal to the number of trial spaces defined in the "
+                  "Functional constructor");
+    return (*this)(trial_inputs, Index<-1>{});
   }
 
+  /**
+   * @brief this function lets the user evaluate the serac::Functional with the given trial space values
+   *
+   * note: it accepts a vector of mfem::Vectors that must be of length `num_trial_spaces`.
+   *
+   * @tparam wrt The index of the input trial vector to additional compute derivatives with respect to
+   * @param trial_inputs an array of trial space dofs used to carry out the calculation.
+   */
   template <int wrt>
   typename operator_paren_return_index<wrt>::type operator()(
       std::vector<std::reference_wrapper<const mfem::Vector>> input_T, Index<wrt>)

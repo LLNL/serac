@@ -120,6 +120,8 @@ public:
    *
    * @param[in] options The system linear and nonlinear solver and timestepping parameters
    * @param[in] name An optional name for the physics module instance
+   * @param[in] parameter_states The optional array of finite element states represetnting user-defined parameters to be
+   * used by an underlying material model or load
    */
   ThermalConductionFunctional(
       const SolverOptions& options, const std::string& name = {},
@@ -534,7 +536,7 @@ public:
     // values
 
     mfem::HypreParVector adjoint_load_vector(adjoint_load.trueVec());
-    adjoint_load_vector = adjoint_load.trueVec();
+    // adjoint_load_vector = adjoint_load.trueVec();
 
     auto& lin_solver = nonlin_solver_.LinearSolver();
 
@@ -570,6 +572,15 @@ public:
     return adjoint_temperature_;
   }
 
+  /**
+   * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
+   * problem with respect to the parameter field
+   *
+   * @tparam parameter_field The index of the parameter to take a derivative with respect to
+   * @return The sensitivity with respect to the parameter
+   *
+   * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
+   */
   template <int parameter_field>
   FiniteElementDual& computeSensitivity()
   {
@@ -608,10 +619,13 @@ protected:
   /// Stiffness functional object \f$\mathbf{K} = \int_\Omega \theta \cdot \nabla \phi_i  + f \phi_i \, dx \f$
   std::unique_ptr<Functional<test(trial, parameter_space...)>> K_functional_;
 
+  /// The finite element states representing user-defined parameter fields
   std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states_;
 
+  /// The sensitivities (dual vectors) with repect to each of the input parameter fields
   std::array<std::unique_ptr<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;
 
+  /// The set of input trial space vectors (temperature + parameters) used to call the underlying functional
   std::vector<std::reference_wrapper<const mfem::Vector>> functional_call_args_;
 
   /// Assembled mass matrix
