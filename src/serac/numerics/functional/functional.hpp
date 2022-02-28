@@ -408,14 +408,14 @@ public:
    * note: it accepts a vector of mfem::Vectors that must be of length `num_trial_spaces`. This interface
    * assumes no derivative information is needed.
    *
-   * @param trial_inputs an array of trial space dofs used to carry out the calculation.
+   * @param input_T an array of trial space dofs used to carry out the calculation.
    */
-  mfem::Vector& operator()(std::vector<std::reference_wrapper<const mfem::Vector>> trial_inputs)
+  mfem::Vector& operator()(std::vector<std::reference_wrapper<const mfem::Vector>> input_T)
   {
-    SLIC_ERROR_IF(trial_inputs.size() != num_trial_spaces,
+    SLIC_ERROR_IF(input_T.size() != num_trial_spaces,
                   "The input vector of trial spaces is not equal to the number of trial spaces defined in the "
                   "Functional constructor");
-    return (*this)(trial_inputs, Index<-1>{});
+    return (*this)(input_T, Index<-1>{});
   }
 
   /**
@@ -424,7 +424,7 @@ public:
    * note: it accepts a vector of mfem::Vectors that must be of length `num_trial_spaces`.
    *
    * @tparam wrt The index of the input trial vector to additional compute derivatives with respect to
-   * @param trial_inputs an array of trial space dofs used to carry out the calculation.
+   * @param input_T an array of trial space dofs used to carry out the calculation.
    */
   template <int wrt>
   typename operator_paren_return_index<wrt>::type operator()(
