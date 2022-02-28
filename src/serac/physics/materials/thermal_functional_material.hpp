@@ -112,13 +112,6 @@ public:
   }
 
   /**
-   * @brief Return the number of parameters in the model
-   *
-   * @return Number of parameters in the model
-   */
-  constexpr int numParams() const { return 1; }
-
-  /**
    * @brief Function defining the thermal flux (constitutive response)
    *
    * @tparam T1 type of the temperature (e.g. tensor or dual type)
@@ -127,9 +120,10 @@ public:
    * @return The thermal flux of the material model
    */
   template <typename T1, typename T2, typename T3>
-  SERAC_HOST_DEVICE T2 operator()(const T1& /* temperature */, const T2& temperature_gradient, const T3&) const
+  SERAC_HOST_DEVICE auto operator()(const T1& /* temperature */, const T2& temperature_gradient,
+                                    const T3& parameter) const
   {
-    return -1.0 * temperature_gradient;
+    return -1.0 * (conductivity_ + 0.01 * parameter) * temperature_gradient;
   }
 
   /**
@@ -141,7 +135,7 @@ public:
   template <int dim, typename T1>
   SERAC_HOST_DEVICE T1 density(const tensor<double, dim>& /* x */, const T1& parameter) const
   {
-    return density_ + 0.01 * parameter;
+    return density_ + 0.0 * parameter;
   }
 
   /**

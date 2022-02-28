@@ -253,7 +253,7 @@ public:
             // Get the value and the gradient from the input tuple
             auto [u, du_dx] = temperature;
             auto source     = serac::zero{};
-            ;
+
             auto flux = -1.0 * material(u, du_dx, serac::get<0>(params)...);
 
             // Return the source and the flux as a tuple
@@ -528,11 +528,10 @@ public:
   virtual const serac::FiniteElementState& solveAdjoint(FiniteElementDual& adjoint_load,
                                                         FiniteElementDual* dual_with_essential_boundary = nullptr)
   {
-    adjoint_load.initializeTrueVec();
-
     // note: The assignment operator must be called after the copy constructor because
     // the copy constructor only sets the partitioning, it does not copy the actual vector
     // values
+
     mfem::HypreParVector adjoint_load_vector(adjoint_load.trueVec());
     adjoint_load_vector = adjoint_load.trueVec();
 
