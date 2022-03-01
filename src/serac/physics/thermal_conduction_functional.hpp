@@ -266,7 +266,7 @@ public:
     } else {
       K_functional_->AddDomainIntegral(
           Dimension<dim>{},
-          [material](auto, auto temperature, auto... params) {
+          [material](auto, auto temperature, auto...) {
             // Get the value and the gradient from the input tuple
             auto [u, du_dx] = temperature;
             auto source     = serac::zero{};
