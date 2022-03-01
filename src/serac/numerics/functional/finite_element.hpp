@@ -45,7 +45,7 @@ struct Dimension {
  * @brief Returns the dimension of an element geometry
  * @param[in] g The @p Geometry to retrieve the dimension of
  */
-constexpr int dimension_of(Geometry g)
+SERAC_HOST_DEVICE constexpr int dimension_of(Geometry g)
 {
   if (g == Geometry::Segment) {
     return 1;

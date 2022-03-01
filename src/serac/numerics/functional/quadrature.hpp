@@ -33,7 +33,7 @@ struct QuadratureRule {
   tensor<double, n, dim> points;
 
   /// @brief Returns the number of points in the rule
-  constexpr size_t size() const { return n; }
+  SERAC_HOST_DEVICE constexpr size_t size() const { return n; }
 };
 
 /**
@@ -42,7 +42,7 @@ struct QuadratureRule {
  * @tparam Q the number of quadrature points per dimension
  */
 template <Geometry g, int Q>
-constexpr auto GaussQuadratureRule()
+SERAC_HOST_DEVICE constexpr auto GaussQuadratureRule()
 {
   auto x = GaussLegendreNodes<Q>();
   auto w = GaussLegendreWeights<Q>();

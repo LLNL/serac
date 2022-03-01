@@ -643,7 +643,7 @@ SERAC_HOST_DEVICE constexpr auto operator*(const tensor<T, n...>& A, S scale)
  */
 template <typename S, typename T, int... n,
           typename = std::enable_if_t<std::is_arithmetic_v<S> || is_dual_number<S>::value>>
-constexpr auto operator/(S scale, const tensor<T, n...>& A)
+SERAC_HOST_DEVICE constexpr auto operator/(S scale, const tensor<T, n...>& A)
 {
   tensor<decltype(S{} * T{}), n...> C{};
   for (int i = 0; i < tensor<T, n...>::first_dim; i++) {
@@ -662,7 +662,7 @@ constexpr auto operator/(S scale, const tensor<T, n...>& A)
  */
 template <typename S, typename T, int... n,
           typename = std::enable_if_t<std::is_arithmetic_v<S> || is_dual_number<S>::value>>
-constexpr auto operator/(const tensor<T, n...>& A, S scale)
+SERAC_HOST_DEVICE constexpr auto operator/(const tensor<T, n...>& A, S scale)
 {
   tensor<decltype(T{} * S{}), n...> C{};
   for (int i = 0; i < tensor<T, n...>::first_dim; i++) {
@@ -680,7 +680,7 @@ constexpr auto operator/(const tensor<T, n...>& A, S scale)
  * @param[in] B The righthand tensor
  */
 template <typename S, typename T, int... n>
-constexpr auto& operator+=(tensor<S, n...>& A, const tensor<T, n...>& B)
+SERAC_HOST_DEVICE constexpr auto& operator+=(tensor<S, n...>& A, const tensor<T, n...>& B)
 {
   for (int i = 0; i < tensor<S, n...>::first_dim; i++) {
     A[i] += B[i];
@@ -695,7 +695,7 @@ constexpr auto& operator+=(tensor<S, n...>& A, const tensor<T, n...>& B)
  * @param[in] B The righthand tensor
  */
 template <typename T>
-constexpr auto& operator+=(tensor<T>& A, const T& B)
+SERAC_HOST_DEVICE constexpr auto& operator+=(tensor<T>& A, const T& B)
 {
   return A.value += B;
 }
@@ -707,7 +707,7 @@ constexpr auto& operator+=(tensor<T>& A, const T& B)
  * @param[in] B The righthand tensor
  */
 template <typename T>
-constexpr auto& operator+=(tensor<T, 1>& A, const T& B)
+SERAC_HOST_DEVICE constexpr auto& operator+=(tensor<T, 1>& A, const T& B)
 {
   return A.value += B;
 }
@@ -719,7 +719,7 @@ constexpr auto& operator+=(tensor<T, 1>& A, const T& B)
  * @param[in] B The righthand tensor
  */
 template <typename T>
-constexpr auto& operator+=(tensor<T, 1, 1>& A, const T& B)
+SERAC_HOST_DEVICE constexpr auto& operator+=(tensor<T, 1, 1>& A, const T& B)
 {
   return A.value += B;
 }
@@ -731,7 +731,7 @@ constexpr auto& operator+=(tensor<T, 1, 1>& A, const T& B)
  * @param[in] A The lefthand tensor
  */
 template <typename T, int... n>
-constexpr auto& operator+=(tensor<T, n...>& A, zero)
+SERAC_HOST_DEVICE constexpr auto& operator+=(tensor<T, n...>& A, zero)
 {
   return A;
 }
@@ -745,7 +745,7 @@ constexpr auto& operator+=(tensor<T, n...>& A, zero)
  * @param[in] B The righthand tensor
  */
 template <typename S, typename T, int... n>
-constexpr auto& operator-=(tensor<S, n...>& A, const tensor<T, n...>& B)
+SERAC_HOST_DEVICE constexpr auto& operator-=(tensor<S, n...>& A, const tensor<T, n...>& B)
 {
   for (int i = 0; i < tensor<S, n...>::first_dim; i++) {
     A[i] -= B[i];
@@ -760,7 +760,7 @@ constexpr auto& operator-=(tensor<S, n...>& A, const tensor<T, n...>& B)
  * @param[in] A The lefthand tensor
  */
 template <typename T, int... n>
-constexpr auto& operator-=(tensor<T, n...>& A, zero)
+SERAC_HOST_DEVICE constexpr auto& operator-=(tensor<T, n...>& A, zero)
 {
   return A;
 }
@@ -951,7 +951,7 @@ SERAC_HOST_DEVICE constexpr auto outer(const tensor<S, m, n>& A, const tensor<T,
  * @param[in] B The righthand tensor
  */
 template <typename S, typename T, int m, int n>
-constexpr auto inner(const tensor<S, m, n>& A, const tensor<T, m, n>& B)
+SERAC_HOST_DEVICE constexpr auto inner(const tensor<S, m, n>& A, const tensor<T, m, n>& B)
 {
   decltype(S{} * T{}) sum{};
   for (int i = 0; i < m; i++) {
@@ -1121,7 +1121,7 @@ SERAC_HOST_DEVICE constexpr auto ddot(const tensor<S, m, n, p, q>& A, const tens
  * @note 3rd-order-tensor : 2nd-order-tensor
  */
 template <typename S, typename T, int m, int n, int p>
-constexpr auto ddot(const tensor<S, m, n, p>& A, const tensor<T, n, p>& B)
+SERAC_HOST_DEVICE constexpr auto ddot(const tensor<S, m, n, p>& A, const tensor<T, n, p>& B)
 {
   tensor<decltype(S{} * T{}), m> AB{};
   for (int i = 0; i < m; i++) {
@@ -1164,7 +1164,7 @@ SERAC_HOST_DEVICE constexpr auto operator*(const tensor<S, m...>& A, const tenso
  * @param[in] A The tensor to obtain the squared norm from
  */
 template <typename T, int m>
-constexpr auto sqnorm(const tensor<T, m>& A)
+SERAC_HOST_DEVICE constexpr auto sqnorm(const tensor<T, m>& A)
 {
   T total{};
   for (int i = 0; i < m; i++) {
@@ -1175,7 +1175,7 @@ constexpr auto sqnorm(const tensor<T, m>& A)
 
 /// @overload
 template <typename T, int m, int n>
-constexpr auto sqnorm(const tensor<T, m, n>& A)
+SERAC_HOST_DEVICE constexpr auto sqnorm(const tensor<T, m, n>& A)
 {
   T total{};
   for (int i = 0; i < m; i++) {
@@ -1188,7 +1188,7 @@ constexpr auto sqnorm(const tensor<T, m, n>& A)
 
 /// @overload
 template <typename T, int... n>
-constexpr auto sqnorm(const tensor<T, n...>& A)
+SERAC_HOST_DEVICE constexpr auto sqnorm(const tensor<T, n...>& A)
 {
   T total{};
   for_constexpr<n...>([&](auto... i) { total += A(i...) * A(i...); });
@@ -1200,7 +1200,7 @@ constexpr auto sqnorm(const tensor<T, n...>& A)
  * @param[in] A The tensor to obtain the norm from
  */
 template <typename T, int... n>
-auto norm(const tensor<T, n...>& A)
+SERAC_HOST_DEVICE auto norm(const tensor<T, n...>& A)
 {
   using std::sqrt;
   return sqrt(sqnorm(A));
@@ -1212,7 +1212,7 @@ auto norm(const tensor<T, n...>& A)
  * @param[in] A The tensor to normalize
  */
 template <typename T, int... n>
-auto normalize(const tensor<T, n...>& A)
+SERAC_HOST_DEVICE auto normalize(const tensor<T, n...>& A)
 {
   return A / norm(A);
 }
@@ -1223,7 +1223,7 @@ auto normalize(const tensor<T, n...>& A)
  * @return The sum of the elements on the main diagonal
  */
 template <typename T, int n>
-constexpr auto tr(const tensor<T, n, n>& A)
+SERAC_HOST_DEVICE constexpr auto tr(const tensor<T, n, n>& A)
 {
   T trA{};
   for (int i = 0; i < n; i++) {
@@ -1238,7 +1238,7 @@ constexpr auto tr(const tensor<T, n, n>& A)
  * @return (1/2) * (A + A^T)
  */
 template <typename T, int n>
-constexpr auto sym(const tensor<T, n, n>& A)
+SERAC_HOST_DEVICE constexpr auto sym(const tensor<T, n, n>& A)
 {
   tensor<T, n, n> symA{};
   for (int i = 0; i < n; i++) {
@@ -1257,7 +1257,7 @@ constexpr auto sym(const tensor<T, n, n>& A)
  * from each element on the main diagonal
  */
 template <typename T, int n>
-constexpr auto dev(const tensor<T, n, n>& A)
+SERAC_HOST_DEVICE constexpr auto dev(const tensor<T, n, n>& A)
 {
   auto devA = A;
   auto trA  = tr(A);
@@ -1288,7 +1288,7 @@ SERAC_HOST_DEVICE constexpr tensor<double, dim, dim> Identity()
  * @param[in] A The matrix to obtain the transpose of
  */
 template <typename T, int m, int n>
-constexpr auto transpose(const tensor<T, m, n>& A)
+SERAC_HOST_DEVICE constexpr auto transpose(const tensor<T, m, n>& A)
 {
   tensor<T, n, m> AT{};
   for (int i = 0; i < n; i++) {
@@ -1381,7 +1381,7 @@ SERAC_HOST_DEVICE bool is_symmetric_and_positive_definite(tensor<double, 3, 3> A
  * @note @a A and @a b are by-value as they are mutated as part of the elimination
  */
 template <typename T, int n>
-constexpr tensor<T, n> linear_solve(tensor<T, n, n> A, const tensor<T, n> b)
+SERAC_HOST_DEVICE constexpr tensor<T, n> linear_solve(tensor<T, n, n> A, const tensor<T, n> b)
 {
   constexpr auto abs  = [](double x) { return (x < 0) ? -x : x; };
   constexpr auto swap = [](auto& x, auto& y) {

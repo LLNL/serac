@@ -65,5 +65,4 @@ if(ENABLE_CUDA)
                        DEPENDS_ON  gtest serac_functional ${functional_depends} cuda
                        FOLDER      serac/tests )
 
-
 endif()

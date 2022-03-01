@@ -42,7 +42,7 @@ constexpr tensor<T, n> GaussLobattoNodes(T a = T(0), T b = T(1)) {
  */
 // clang-format off
 template <int n, typename T = double >
-constexpr tensor<T, n> GaussLegendreNodes() {
+SERAC_HOST_DEVICE constexpr tensor<T, n> GaussLegendreNodes() {
   if constexpr (n == 1) return {0.50000000000000000};
   if constexpr (n == 2) return {0.2113248654051871, 0.7886751345948129};
   if constexpr (n == 3) return {0.1127016653792583, 0.500000000000000, 0.887298334620742};
@@ -64,7 +64,7 @@ constexpr tensor<T, n> GaussLegendreNodes() {
  * 2]]] <> ";"], {n, 1, 8}]
  */
 template <int n, typename T = double>
-constexpr tensor<T, n> GaussLegendreWeights()
+SERAC_HOST_DEVICE constexpr tensor<T, n> GaussLegendreWeights()
 {
   if constexpr (n == 1) return {1.000000000000000};
   if constexpr (n == 2) return {0.500000000000000, 0.500000000000000};
