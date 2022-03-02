@@ -72,7 +72,7 @@ void functional_test_static(double expected_temp_norm)
   thermal_solver.setSource(source);
 
   // Set the flux term to zero for testing code paths
-  Thermal::FluxBoundary flux_bc{0.0};
+  Thermal::ConstantFlux flux_bc{0.0};
   thermal_solver.setFluxBCs(flux_bc);
 
   // Finalize the data structures
@@ -139,7 +139,7 @@ void functional_test_dynamic(double expected_temp_norm)
   thermal_solver.setSource(source);
 
   // Set the flux term to zero for testing code paths
-  Thermal::FluxBoundary flux_bc{0.0};
+  Thermal::ConstantFlux flux_bc{0.0};
   thermal_solver.setFluxBCs(flux_bc);
 
   // Finalize the data structures
@@ -234,7 +234,7 @@ TEST(thermal_functional, parameterized_material)
   thermal_solver.setSource(source);
 
   // Set the flux term to zero for testing code paths
-  Thermal::FluxBoundary flux_bc{0.0};
+  Thermal::ConstantFlux flux_bc{0.0};
   thermal_solver.setFluxBCs(flux_bc);
 
   // Finalize the data structures

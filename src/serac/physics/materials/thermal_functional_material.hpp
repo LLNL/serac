@@ -18,14 +18,14 @@
 namespace serac::Thermal {
 
 template <typename T1, typename T2, typename T3>
-struct ThermalResponse {
+struct MaterialResponse {
   T1 density;
   T2 specific_heat_capacity;
   T3 heat_flux;
 };
 
 template <typename T1, typename T2, typename T3>
-ThermalResponse(T1, T2, T3) -> ThermalResponse<T1, T2, T3>;
+MaterialResponse(T1, T2, T3) -> MaterialResponse<T1, T2, T3>;
 
 /// Linear isotropic thermal conduction material model
 class LinearIsotropicConductor {
@@ -52,9 +52,9 @@ public:
   template <typename T1, typename T2, typename T3>
   SERAC_HOST_DEVICE auto operator()(const T1&, const T2&, const T3& temperature_gradient) const
   {
-    return ThermalResponse{.density                = density_,
-                           .specific_heat_capacity = specific_heat_capacity_,
-                           .heat_flux              = -conductivity_ * temperature_gradient};
+    return MaterialResponse{.density                = density_,
+                            .specific_heat_capacity = specific_heat_capacity_,
+                            .heat_flux              = -conductivity_ * temperature_gradient};
   }
 
 private:
@@ -83,9 +83,9 @@ public:
   SERAC_HOST_DEVICE auto operator()(const T1&, const T2&, const T3& temperature_gradient, const T4& parameter_1,
                                     const T5& parameter_2) const
   {
-    return ThermalResponse{.density                = density_ + 0.01 * parameter_1,
-                           .specific_heat_capacity = specific_heat_capacity_,
-                           .heat_flux              = -1.0 * (conductivity_ + parameter_2) * temperature_gradient};
+    return MaterialResponse{.density                = density_ + 0.01 * parameter_1,
+                            .specific_heat_capacity = specific_heat_capacity_,
+                            .heat_flux              = -1.0 * (conductivity_ + parameter_2) * temperature_gradient};
   }
 
   static constexpr int numParameters() { return 2; }
@@ -127,9 +127,9 @@ public:
   template <typename T1, typename T2, typename T3>
   SERAC_HOST_DEVICE auto operator()(const T1&, const T2&, const T3& temperature_gradient) const
   {
-    return ThermalResponse{.density                = density_,
-                           .specific_heat_capacity = specific_heat_capacity_,
-                           .heat_flux              = -1.0 * (conductivity_)*temperature_gradient};
+    return MaterialResponse{.density                = density_,
+                            .specific_heat_capacity = specific_heat_capacity_,
+                            .heat_flux              = -1.0 * (conductivity_)*temperature_gradient};
   }
 
 private:
@@ -142,6 +142,14 @@ private:
   /// Constant thermal conductivity
   tensor<double, dim, dim> conductivity_;
 };
+
+template <typename T>
+struct HeatSource {
+  T source;
+};
+
+template <typename T>
+HeatSource(T) -> HeatSource<T>;
 
 /// Constant thermal source model
 struct ConstantSource {
@@ -156,16 +164,24 @@ struct ConstantSource {
    * @tparam dim The dimension of the problem
    * @return The thermal source value
    */
-  template <typename T1, typename T2, int dim>
-  SERAC_HOST_DEVICE double operator()(const tensor<double, dim>& /* x */, const double /* t */, const T1& /* u */,
-                                      const T2& /* du_dx */) const
+  template <typename T1, typename T2, typename T3>
+  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const double /* t */, const T2& /* u */,
+                                    const T3& /* du_dx */) const
   {
-    return source_;
+    return HeatSource{.source = source_};
   }
 };
 
-/// Constant thermal flux boundary model
+template <typename T>
 struct FluxBoundary {
+  T flux;
+};
+
+template <typename T>
+FluxBoundary(T) -> FluxBoundary<T>;
+
+/// Constant thermal flux boundary model
+struct ConstantFlux {
   /// The constant flux applied to the boundary
   double flux_ = 0.0;
 
@@ -177,10 +193,10 @@ struct FluxBoundary {
    * @tparam dim The dimension of the problem
    * @return The flux applied to the boundary
    */
-  template <typename T1, typename T2, int dim>
-  SERAC_HOST_DEVICE double operator()(const tensor<double, dim>& /* x */, const T1& /* n */, const T2& /* u */) const
+  template <typename T1, typename T2, typename T3>
+  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* n */, const T3& /* u */) const
   {
-    return flux_;
+    return FluxBoundary{.flux = flux_};
   }
 };
 

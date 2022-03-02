@@ -331,12 +331,6 @@ public:
   template <typename SourceType>
   void setSource(SourceType source_function)
   {
-    /*
-    static_assert(
-        has_thermal_source<SourceType, dim>::value,
-        "Thermal functional sources must have a public (x, t, u, du_dx) operator for thermal source evaluation.");
-    */
-
     if constexpr (is_parameterized<SourceType>::value) {
       static_assert(source_function.numParameters() == sizeof...(parameter_space),
                     "Number of parameters in thermal conduction does not equal the number of parameters in the "
@@ -350,10 +344,10 @@ public:
 
             auto flux = serac::zero{};
 
-            auto source = -1.0 * source_function(x, time_, u, du_dx, serac::get<0>(params)...);
+            auto source = source_function(x, time_, u, du_dx, serac::get<0>(params)...);
 
             // Return the source and the flux as a tuple
-            return serac::tuple{source, flux};
+            return serac::tuple{source.source, flux};
           },
           mesh_);
     } else {
@@ -365,10 +359,10 @@ public:
 
             auto flux = serac::zero{};
 
-            auto source = -1.0 * source_function(x, time_, u, du_dx);
+            auto source = source_function(x, time_, u, du_dx);
 
             // Return the source and the flux as a tuple
-            return serac::tuple{source, flux};
+            return serac::tuple{source.source, flux};
           },
           mesh_);
     }
@@ -398,11 +392,19 @@ public:
 
       K_functional_->AddBoundaryIntegral(
           Dimension<dim - 1>{},
-          [flux_function](auto x, auto n, auto u, auto... params) { return flux_function(x, n, u, params...); }, mesh_);
+          [flux_function](auto x, auto n, auto u, auto... params) {
+            auto flux = flux_function(x, n, u, params...);
+            return flux.flux;
+          },
+          mesh_);
     } else {
       K_functional_->AddBoundaryIntegral(
           Dimension<dim - 1>{},
-          [flux_function](auto x, auto n, auto u, auto... /* params */) { return flux_function(x, n, u); }, mesh_);
+          [flux_function](auto x, auto n, auto u, auto... /* params */) {
+            auto flux = flux_function(x, n, u);
+            return flux.flux;
+          },
+          mesh_);
     }
   }
 
