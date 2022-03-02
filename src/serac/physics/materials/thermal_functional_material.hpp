@@ -17,6 +17,16 @@
 /// ThermalConductionFunctional helper structs
 namespace serac::Thermal {
 
+template <typename T1, typename T2, typename T3>
+struct ThermalResponse {
+  T1 density;
+  T2 specific_heat_capacity;
+  T3 heat_flux;
+};
+
+template <typename T1, typename T2, typename T3>
+ThermalResponse(T1, T2, T3) -> ThermalResponse<T1, T2, T3>;
+
 /// Linear isotropic thermal conduction material model
 class LinearIsotropicConductor {
 public:
@@ -39,42 +49,12 @@ public:
                        "Specific heat capacity must be positive in the linear isotropic conductor material model.");
   }
 
-  /**
-   * @brief Function defining the thermal flux (constitutive response)
-   *
-   * @tparam T1 type of the temperature (e.g. tensor or dual type)
-   * @tparam T2 type of the temperature gradient (e.g. tensor or dual type)
-   * @param temperature_gradient Gradient of the temperature (du_dx)
-   * @return The thermal flux of the material model
-   */
-  template <typename T1, typename T2>
-  SERAC_HOST_DEVICE T2 operator()(const T1& /* temperature */, const T2& temperature_gradient) const
+  template <typename T1, typename T2, typename T3>
+  SERAC_HOST_DEVICE auto operator()(const T1&, const T2&, const T3& temperature_gradient) const
   {
-    return -1.0 * conductivity_ * temperature_gradient;
-  }
-
-  /**
-   * @brief The density (mass per volume) of the material model
-   *
-   * @tparam dim The dimension of the problem
-   * @return The density
-   */
-  template <int dim>
-  SERAC_HOST_DEVICE double density(const tensor<double, dim>& /* x */) const
-  {
-    return density_;
-  }
-
-  /**
-   * @brief The specific heat capacity (heat capacity per unit mass) of the material model
-   *
-   * @tparam dim The dimension of the problem
-   * @tparam T Type of the temperature variable
-   */
-  template <typename T, int dim>
-  SERAC_HOST_DEVICE double specificHeatCapacity(const tensor<double, dim>& /* x */, const T& /* temperature */) const
-  {
-    return specific_heat_capacity_;
+    return ThermalResponse{.density                = density_,
+                           .specific_heat_capacity = specific_heat_capacity_,
+                           .heat_flux              = -conductivity_ * temperature_gradient};
   }
 
 private:
@@ -88,86 +68,31 @@ private:
   double conductivity_;
 };
 
-/// Linear isotropic thermal conduction material model
 class ParameterizedLinearIsotropicConductor {
 public:
-  /**
-   * @brief Construct a new Parameterized Linear Isotropic Conductor object
-   *
-   * @param density Density of the material (mass/volume)
-   * @param specific_heat_capacity Specific heat capacity of the material (energy / (mass * temp))
-   * @param conductivity Thermal conductivity of the material (power / (length * temp))
-   */
   ParameterizedLinearIsotropicConductor(double density = 1.0, double specific_heat_capacity = 1.0,
                                         double conductivity = 1.0)
       : density_(density), specific_heat_capacity_(specific_heat_capacity), conductivity_(conductivity)
   {
-    SLIC_ERROR_ROOT_IF(conductivity_ < 0.0,
-                       "Conductivity must be positive in the linear isotropic conductor material model.");
-
-    SLIC_ERROR_ROOT_IF(density_ < 0.0, "Density must be positive in the linear isotropic conductor material model.");
-
-    SLIC_ERROR_ROOT_IF(specific_heat_capacity_ < 0.0,
-                       "Specific heat capacity must be positive in the linear isotropic conductor material model.");
+    assert(conductivity > 0.0);
+    assert(density > 0.0);
+    assert(specific_heat_capacity > 0.0);
   }
 
-  /**
-   * @brief Function defining the thermal flux (constitutive response)
-   *
-   * @tparam T1 type of the temperature (e.g. tensor or dual type)
-   * @tparam T2 type of the temperature gradient (e.g. tensor or dual type)
-   * @tparam T3 type of the parameter field (e.g. tensor or dual type)
-   * @param temperature_gradient Gradient of the temperature (du_dx)
-   * @param parameter The user-defined parameter used to calculate the thermal conductivity
-   * @return The thermal flux of the material model
-   */
-  template <typename T1, typename T2, typename T3>
-  SERAC_HOST_DEVICE auto operator()(const T1& /* temperature */, const T2& temperature_gradient,
-                                    const T3& parameter) const
+  template <typename T1, typename T2, typename T3, typename T4, typename T5>
+  SERAC_HOST_DEVICE auto operator()(const T1&, const T2&, const T3& temperature_gradient, const T4& parameter_1,
+                                    const T5& parameter_2) const
   {
-    return -1.0 * (conductivity_ + 0.01 * parameter) * temperature_gradient;
+    return ThermalResponse{.density                = density_ + 0.01 * parameter_1,
+                           .specific_heat_capacity = specific_heat_capacity_,
+                           .heat_flux              = -1.0 * (conductivity_ + parameter_2) * temperature_gradient};
   }
 
-  /**
-   * @brief The density (mass per volume) of the material model
-   *
-   * @tparam dim The dimension of the problem
-   * @return The density
-   */
-  template <int dim, typename T1>
-  SERAC_HOST_DEVICE auto density(const tensor<double, dim>& /* x */, const T1& parameter) const
-  {
-    return density_ + 0.0 * parameter;
-  }
-
-  /**
-   * @brief The specific heat capacity (heat capacity per unit mass) of the material model
-   *
-   * @tparam dim The dimension of the problem
-   * @tparam T Type of the temperature variable
-   */
-  template <typename T1, typename T2, int dim>
-  SERAC_HOST_DEVICE double specificHeatCapacity(const tensor<double, dim>& /* x */, const T1& /* temperature */,
-                                                const T2&) const
-  {
-    return specific_heat_capacity_;
-  }
-
-  /**
-   * @brief The number of parameters associated with this material model
-   *
-   * @return The number of material model parameters
-   */
-  static constexpr int numParameters() { return 1; }
+  static constexpr int numParameters() { return 2; }
 
 private:
-  /// Density
   double density_;
-
-  /// Specific heat capacity
   double specific_heat_capacity_;
-
-  /// Constant isotropic thermal conductivity
   double conductivity_;
 };
 
@@ -199,36 +124,12 @@ public:
                        "Conductivity tensor must be symmetric and positive definite.");
   }
 
-  /**
-   * @brief Function defining the thermal flux (constitutive response)
-   *
-   * @tparam T1 type of the temperature (e.g. tensor or dual type)
-   * @tparam T2 type of the temperature gradient (e.g. tensor or dual type)
-   * @param temperature_gradient Gradient of the temperature (du_dx)
-   * @return The thermal flux of the material model
-   */
-  template <typename T1, typename T2>
-  SERAC_HOST_DEVICE auto operator()(const T1& /* temperature */, const T2& temperature_gradient) const
+  template <typename T1, typename T2, typename T3>
+  SERAC_HOST_DEVICE auto operator()(const T1&, const T2&, const T3& temperature_gradient) const
   {
-    return -1.0 * conductivity_ * temperature_gradient;
-  }
-
-  /**
-   * @brief The density (mass per volume) of the material model
-   *
-   * @return The density
-   */
-  SERAC_HOST_DEVICE double density(const tensor<double, dim>& /* x */) const { return density_; }
-
-  /**
-   * @brief The specific heat capacity (heat capacity per unit mass) of the material model
-   *
-   * @tparam T Type of the temperature variable
-   */
-  template <typename T>
-  SERAC_HOST_DEVICE double specificHeatCapacity(const tensor<double, dim>& /* x */, const T& /* temperature */) const
-  {
-    return specific_heat_capacity_;
+    return ThermalResponse{.density                = density_,
+                           .specific_heat_capacity = specific_heat_capacity_,
+                           .heat_flux              = -1.0 * (conductivity_)*temperature_gradient};
   }
 
 private:

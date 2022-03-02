@@ -195,18 +195,23 @@ TEST(thermal_functional, parameterized_material)
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
-  FiniteElementState parameterized_state(
-      StateManager::newState(FiniteElementState::Options{.order = 1, .name = "parameterized_field"}));
+  FiniteElementState parameterized_state_1(
+      StateManager::newState(FiniteElementState::Options{.order = 1, .name = "parameterized_field_1"}));
 
-  parameterized_state = 1.0;
+  parameterized_state_1 = 1.0;
+
+  FiniteElementState parameterized_state_2(
+      StateManager::newState(FiniteElementState::Options{.order = 1, .name = "parameterized_field_2"}));
+
+  parameterized_state_2 = 1.0;
 
   constexpr int parameter_index = 0;
 
   // Construct a functional-based thermal conduction solver
   // We should extend this to single scalar trial spaces (global vector space?)
-  ThermalConductionFunctional<p, dim, H1<1>> thermal_solver(
-      ThermalConductionFunctional<p, dim, H1<1>>::defaultQuasistaticOptions(), "thermal_functional",
-      {parameterized_state});
+  ThermalConductionFunctional<p, dim, H1<1>, H1<1>> thermal_solver(
+      ThermalConductionFunctional<p, dim, H1<1>, H1<1>>::defaultQuasistaticOptions(), "thermal_functional",
+      {parameterized_state_1, parameterized_state_2});
 
   // Construct a potentially user-defined parameterized material and send it to the thermal module
   Thermal::ParameterizedLinearIsotropicConductor mat(1.0, 1.0, 1.0);

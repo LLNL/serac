@@ -241,7 +241,7 @@ public:
   template <typename MaterialType>
   void setMaterial(MaterialType material)
   {
-    static_assert(has_density<MaterialType, dim>::value,
+    static_assert(has_density<MaterialType, dim, 0>::value,
                   "Solid functional materials must have a public density(x) method.");
     static_assert(has_stress<MaterialType, dim>::value,
                   "Solid functional materials must have a public (du_dx) operator for Kirchoff stress evaluation.");

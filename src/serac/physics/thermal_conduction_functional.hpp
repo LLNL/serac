@@ -236,15 +236,6 @@ public:
   template <typename MaterialType>
   void setMaterial(MaterialType material)
   {
-    /*
-    static_assert(has_density<MaterialType, dim>::value,
-                  "Thermal functional materials must have a public density(x) method.");
-    static_assert(has_specific_heat_capacity<MaterialType, dim>::value,
-                  "Thermal functional materials must have a public specificHeatCapacity(x, temperature) method.");
-    static_assert(has_thermal_flux<MaterialType, dim>::value,
-                  "Thermal functional materials must have a public (u, du_dx) operator for thermal flux evaluation.");
-    */
-
     if constexpr (is_parameterized<MaterialType>::value) {
       static_assert(material.numParameters() == sizeof...(parameter_space),
                     "Number of parameters in thermal conduction does not equal the number of parameters in the "
@@ -252,28 +243,28 @@ public:
 
       K_functional_->AddDomainIntegral(
           Dimension<dim>{},
-          [material](auto, auto temperature, auto... params) {
+          [material](auto x, auto temperature, auto... params) {
             // Get the value and the gradient from the input tuple
             auto [u, du_dx] = temperature;
             auto source     = serac::zero{};
 
-            auto flux = -1.0 * material(u, du_dx, serac::get<0>(params)...);
+            auto response = material(x, u, du_dx, serac::get<0>(params)...);
 
             // Return the source and the flux as a tuple
-            return serac::tuple{source, flux};
+            return serac::tuple{source, response.heat_flux};
           },
           mesh_);
     } else {
       K_functional_->AddDomainIntegral(
           Dimension<dim>{},
-          [material](auto, auto temperature, auto... params) {
+          [material](auto x, auto temperature, auto... params) {
             // Get the value and the gradient from the input tuple
             auto [u, du_dx] = temperature;
             auto source     = serac::zero{};
-            auto flux       = -1.0 * material(u, du_dx);
+            auto response   = material(x, u, du_dx);
 
             // Return the source and the flux as a tuple
-            return serac::tuple{source, flux};
+            return serac::tuple{source, response.heat_flux};
           },
           mesh_);
     }
@@ -289,8 +280,9 @@ public:
             auto [u, du_dx] = temperature;
             auto flux       = serac::zero{};
 
-            auto source = material.specificHeatCapacity(x, u, serac::get<0>(params)...) *
-                          material.density(x, serac::get<0>(params)...);
+            auto response = material(x, u, du_dx, serac::get<0>(params)...);
+
+            auto source = response.specific_heat_capacity * response.density;
 
             // Return the source and the flux as a tuple
             return serac::tuple{source, flux};
@@ -303,7 +295,8 @@ public:
             auto [u, du_dx] = temperature;
             auto flux       = serac::zero{};
 
-            auto source = material.specificHeatCapacity(x, u) * material.density(x);
+            auto response = material(x, u, du_dx);
+            auto source   = response.specific_heat_capacity * response.density;
 
             // Return the source and the flux as a tuple
             return serac::tuple{source, flux};
@@ -393,7 +386,7 @@ public:
   void setFluxBCs(FluxType flux_function)
   {
     /*
-    static_assert(has_thermal_flux_boundary<FluxType, dim>::value,
+    static_assert(has_heat_flux_boundary<FluxType, dim>::value,
                   "Thermal flux boundary condition types must have a public (x, n, u) operator for thermal boundary "
                   "flux evaluation.");
     */

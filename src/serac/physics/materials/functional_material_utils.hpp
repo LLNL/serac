@@ -17,13 +17,29 @@
 namespace serac {
 
 // Use SFINAE to add static assertions checking if the given thermal material type is acceptable
-template <typename T, int dim, typename = void>
+template <typename T, int dim, int params, typename = void>
 struct has_density : std::false_type {
 };
 
 template <typename T, int dim>
-struct has_density<T, dim, std::void_t<decltype(std::declval<T&>().density(std::declval<tensor<double, dim>&>()))>>
+struct has_density<T, dim, 0, std::void_t<decltype(std::declval<T&>().density(std::declval<tensor<double, dim>&>()))>>
     : std::true_type {
+};
+template <typename T, int dim>
+struct has_density<T, dim, 1,
+                   std::void_t<decltype(std::declval<T&>().density(std::declval<tensor<double, dim>&>(), double{}))>>
+    : std::true_type {
+};
+template <typename T, int dim>
+struct has_density<
+    T, dim, 2,
+    std::void_t<decltype(std::declval<T&>().density(std::declval<tensor<double, dim>&>(), double{}, double{}))>>
+    : std::true_type {
+};
+template <typename T, int dim>
+struct has_density<T, dim, 3,
+                   std::void_t<decltype(std::declval<T&>().density(std::declval<tensor<double, dim>&>(), double{},
+                                                                   double{}, double{}))>> : std::true_type {
 };
 
 template <typename T, typename = void>
@@ -34,28 +50,68 @@ template <typename T>
 struct is_parameterized<T, std::void_t<decltype(std::declval<T&>().numParameters())>> : std::true_type {
 };
 
-template <typename T, int dim, typename = void>
+template <typename T, int dim, int params, typename = void>
 struct has_specific_heat_capacity : std::false_type {
 };
 
 template <typename T, int dim>
-struct has_specific_heat_capacity<T, dim,
+struct has_specific_heat_capacity<T, dim, 0,
                                   std::void_t<decltype(std::declval<T&>().specificHeatCapacity(
                                       std::declval<tensor<double, dim>&>(), std::declval<tensor<double, 1>&>()))>>
     : std::true_type {
 };
 
-template <typename T, int dim, typename = void>
+template <typename T, int dim>
+struct has_specific_heat_capacity<
+    T, dim, 1,
+    std::void_t<decltype(std::declval<T&>().specificHeatCapacity(
+        std::declval<tensor<double, dim>&>(), std::declval<tensor<double, 1>&>(), double{}))>> : std::true_type {
+};
+
+template <typename T, int dim>
+struct has_specific_heat_capacity<
+    T, dim, 2,
+    std::void_t<decltype(std::declval<T&>().specificHeatCapacity(
+        std::declval<tensor<double, dim>&>(), std::declval<tensor<double, 1>&>(), double{}, double{}))>>
+    : std::true_type {
+};
+
+template <typename T, int dim>
+struct has_specific_heat_capacity<
+    T, dim, 3,
+    std::void_t<decltype(std::declval<T&>().specificHeatCapacity(
+        std::declval<tensor<double, dim>&>(), std::declval<tensor<double, 1>&>(), double{}, double{}, double{}))>>
+    : std::true_type {
+};
+
+template <typename T, int dim, int params, typename = void>
 struct has_thermal_flux : std::false_type {
 };
 
 template <typename T, int dim>
 struct has_thermal_flux<
-    T, dim,
+    T, dim, 0,
     std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, 1>&>(), std::declval<tensor<double, dim>&>()))>>
     : std::true_type {
 };
-
+template <typename T, int dim>
+struct has_thermal_flux<T, dim, 1,
+                        std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, 1>&>(),
+                                                                std::declval<tensor<double, dim>&>(), double{}))>>
+    : std::true_type {
+};
+template <typename T, int dim>
+struct has_thermal_flux<
+    T, dim, 2,
+    std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, 1>&>(), std::declval<tensor<double, dim>&>(),
+                                            double{}, double{}))>> : std::true_type {
+};
+template <typename T, int dim>
+struct has_thermal_flux<
+    T, dim, 3,
+    std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, 1>&>(), std::declval<tensor<double, dim>&>(),
+                                            double{}, double{}, double{}))>> : std::true_type {
+};
 template <typename T, int dim, typename = void>
 struct has_stress : std::false_type {
 };
@@ -66,16 +122,38 @@ struct has_stress<T, dim, std::void_t<decltype(std::declval<T&>()(std::declval<t
 };
 
 // Use SFINAE to add static assertions checking if the given thermal source type is acceptable
-template <typename T, int dim, typename = void>
+template <typename T, int dim, int params, typename = void>
 struct has_thermal_source : std::false_type {
 };
 
 template <typename T, int dim>
 struct has_thermal_source<
-    T, dim,
+    T, dim, 0,
     std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, dim>&>(), std::declval<double>(),
                                             std::declval<tensor<double, 1>&>(), std::declval<tensor<double, dim>&>()))>>
     : std::true_type {
+};
+
+template <typename T, int dim>
+struct has_thermal_source<T, dim, 1,
+                          std::void_t<decltype(std::declval<T&>()(
+                              std::declval<tensor<double, dim>&>(), std::declval<double>(),
+                              std::declval<tensor<double, 1>&>(), std::declval<tensor<double, dim>&>(), double{}))>>
+    : std::true_type {
+};
+template <typename T, int dim>
+struct has_thermal_source<
+    T, dim, 2,
+    std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, dim>&>(), std::declval<double>(),
+                                            std::declval<tensor<double, 1>&>(), std::declval<tensor<double, dim>&>(),
+                                            double{}, double{}))>> : std::true_type {
+};
+template <typename T, int dim>
+struct has_thermal_source<
+    T, dim, 3,
+    std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, dim>&>(), std::declval<double>(),
+                                            std::declval<tensor<double, 1>&>(), std::declval<tensor<double, dim>&>(),
+                                            double{}, double{}, double{}))>> : std::true_type {
 };
 
 // Use SFINAE to add static assertions checking if the given thermal source type is acceptable
@@ -92,15 +170,35 @@ struct has_body_force<T, dim,
 };
 
 // Use SFINAE to add static assertions checking if the given thermal flux boundary type is acceptable
-template <typename T, int dim, typename = void>
+template <typename T, int dim, int params, typename = void>
 struct has_thermal_flux_boundary : std::false_type {
 };
 
 template <typename T, int dim>
 struct has_thermal_flux_boundary<
-    T, dim,
+    T, dim, 0,
     std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, dim>&>(), std::declval<tensor<double, dim>&>(),
                                             std::declval<tensor<double, 1>&>()))>> : std::true_type {
+};
+template <typename T, int dim>
+struct has_thermal_flux_boundary<
+    T, dim, 1,
+    std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, dim>&>(), std::declval<tensor<double, dim>&>(),
+                                            std::declval<tensor<double, 1>&>(), double{}))>> : std::true_type {
+};
+template <typename T, int dim>
+struct has_thermal_flux_boundary<
+    T, dim, 2,
+    std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, dim>&>(), std::declval<tensor<double, dim>&>(),
+                                            std::declval<tensor<double, 1>&>(), double{}, double{}))>>
+    : std::true_type {
+};
+template <typename T, int dim>
+struct has_thermal_flux_boundary<
+    T, dim, 3,
+    std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, dim>&>(), std::declval<tensor<double, dim>&>(),
+                                            std::declval<tensor<double, 1>&>(), double{}, double{}, double{}))>>
+    : std::true_type {
 };
 
 // Use SFINAE to add static assertions checking if the given thermal flux boundary type is acceptable
