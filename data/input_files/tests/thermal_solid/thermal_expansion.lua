@@ -2,9 +2,9 @@
 t_final = 1.0
 dt      = 1.0
 
-expected_u_l2norm = 0.1301349
-expected_v_l2norm = 0.0
-expected_t_l2norm = 2.3424281
+expected_displacement_l2norm = 0.1301349
+expected_velocity_l2norm = 0.0
+expected_temperature_l2norm = 2.3424281
 epsilon = 0.0001
 
 output_type = "SidreVisIt"
