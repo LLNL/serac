@@ -143,14 +143,6 @@ private:
   tensor<double, dim, dim> conductivity_;
 };
 
-template <typename T>
-struct HeatSource {
-  T source;
-};
-
-template <typename T>
-HeatSource(T) -> HeatSource<T>;
-
 /// Constant thermal source model
 struct ConstantSource {
   /// The constant source
@@ -159,8 +151,9 @@ struct ConstantSource {
   /**
    * @brief Evaluation function for the constant thermal source model
    *
-   * @tparam T1 type of the temperature
-   * @tparam T2 type of the temperature gradient
+   * @tparam T1 type of the position vector
+   * @tparam T2 type of the temperature 
+   * @tparam T3 type of the temperature gradient
    * @tparam dim The dimension of the problem
    * @return The thermal source value
    */
@@ -168,17 +161,9 @@ struct ConstantSource {
   SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const double /* t */, const T2& /* u */,
                                     const T3& /* du_dx */) const
   {
-    return HeatSource{.source = source_};
+    return source_;
   }
 };
-
-template <typename T>
-struct FluxBoundary {
-  T flux;
-};
-
-template <typename T>
-FluxBoundary(T) -> FluxBoundary<T>;
 
 /// Constant thermal flux boundary model
 struct ConstantFlux {
@@ -188,15 +173,16 @@ struct ConstantFlux {
   /**
    * @brief Evaluation function for the thermal flux on a boundary
    *
-   * @tparam T1 Type of the normal vector
-   * @tparam T2 Type of the temperature
+   * @tparam T1 Type of the position vector
+   * @tparam T2 Type of the normal vector
+   * @tparam T3 Type of the temperature on the boundary
    * @tparam dim The dimension of the problem
    * @return The flux applied to the boundary
    */
   template <typename T1, typename T2, typename T3>
   SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* n */, const T3& /* u */) const
   {
-    return FluxBoundary{.flux = flux_};
+    return flux_;
   }
 };
 

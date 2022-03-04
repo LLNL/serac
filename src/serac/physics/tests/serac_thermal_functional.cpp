@@ -172,6 +172,8 @@ TEST(thermal_functional, 2D_quad_dynamic) { functional_test_dynamic<2, 2>(2.0288
 TEST(thermal_functional, 3D_linear_dynamic) { functional_test_dynamic<1, 3>(2.82842712); }
 TEST(thermal_functional, 3D_quad_dynamic) { functional_test_dynamic<2, 3>(2.828427124); }
 
+#if 0
+
 TEST(thermal_functional, parameterized_material)
 {
   MPI_Barrier(MPI_COMM_WORLD);
@@ -262,6 +264,8 @@ TEST(thermal_functional, parameterized_material)
 
   EXPECT_NEAR(0.013659489, mfem::ParNormlp(sensitivity.trueVec(), 2, MPI_COMM_WORLD), 1.0e-6);
 }
+#endif
+
 
 }  // namespace serac
 

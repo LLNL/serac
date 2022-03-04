@@ -52,7 +52,7 @@ std::string about()
 {
   using namespace axom::fmt;
   constexpr std::string_view on  = "ON";
-  constexpr std::string_view off = "OFF";
+  [[maybe_unused]] constexpr std::string_view off = "OFF";
 
   std::string about = "\n";
 

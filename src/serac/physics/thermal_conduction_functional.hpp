@@ -250,8 +250,7 @@ public:
 
             auto response = material(x, u, du_dx, serac::get<0>(params)...);
 
-            // Return the source and the flux as a tuple
-            return serac::tuple{source, response.heat_flux};
+            return serac::tuple{source, -response.heat_flux};
           },
           mesh_);
     } else {
@@ -264,7 +263,7 @@ public:
             auto response   = material(x, u, du_dx);
 
             // Return the source and the flux as a tuple
-            return serac::tuple{source, response.heat_flux};
+            return serac::tuple{source, -response.heat_flux};
           },
           mesh_);
     }
@@ -347,7 +346,7 @@ public:
             auto source = source_function(x, time_, u, du_dx, serac::get<0>(params)...);
 
             // Return the source and the flux as a tuple
-            return serac::tuple{source.source, flux};
+            return serac::tuple{source, flux};
           },
           mesh_);
     } else {
@@ -362,7 +361,7 @@ public:
             auto source = source_function(x, time_, u, du_dx);
 
             // Return the source and the flux as a tuple
-            return serac::tuple{source.source, flux};
+            return serac::tuple{source, flux};
           },
           mesh_);
     }
@@ -393,16 +392,14 @@ public:
       K_functional_->AddBoundaryIntegral(
           Dimension<dim - 1>{},
           [flux_function](auto x, auto n, auto u, auto... params) {
-            auto flux = flux_function(x, n, u, params...);
-            return flux.flux;
+            return flux_function(x, n, u, params...);
           },
           mesh_);
     } else {
       K_functional_->AddBoundaryIntegral(
           Dimension<dim - 1>{},
           [flux_function](auto x, auto n, auto u, auto... /* params */) {
-            auto flux = flux_function(x, n, u);
-            return flux.flux;
+            return flux_function(x, n, u);
           },
           mesh_);
     }
@@ -463,6 +460,7 @@ public:
 
             auto [r, drdu] = (*K_functional_)(functional_call_args_, Index<0>{});
             J_             = assemble(drdu);
+            J_->Print("J.mat");
             return *J_;
           });
 
@@ -497,6 +495,7 @@ public:
 
               auto M = serac::get<1>((*M_functional_)(functional_call_args_, Index<0>{}));
               std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
+              m_mat->Print("M.mat");
 
               functional_call_args_[0] = K_arg;
 
@@ -505,8 +504,11 @@ public:
               functional_call_args_[0] = u_;
 
               std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
+              k_mat->Print("K.mat");
 
               J_.reset(mfem::Add(1.0, *m_mat, dt_, *k_mat));
+
+              J_->Print("J.mat");
             }
             return *J_;
           });
