@@ -1,5 +1,5 @@
 -- Comparison information
-expected_t_l2norm = 1.99716
+expected_temperature_l2norm = 1.99716
 epsilon = 0.00001
 
 -- Simulation time parameters
