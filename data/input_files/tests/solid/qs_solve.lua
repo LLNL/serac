@@ -1,5 +1,5 @@
 -- Comparison information
-expected_u_l2norm = 0.015934784
+expected_displacement_l2norm = 0.015934784
 epsilon = 0.001
 
 -- Simulation time parameters
