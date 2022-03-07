@@ -6,6 +6,7 @@
 
 #include "serac/physics/thermal_conduction_functional.hpp"
 #include "serac/physics/materials/thermal_functional_material.hpp"
+#include "serac/physics/materials/parameterized_thermal_functional_material.hpp"
 
 #include <fstream>
 
@@ -118,25 +119,21 @@ void functional_test_dynamic(double expected_temp_norm)
                                                      "thermal_functional");
 
   // Define an isotropic conductor material model
-  Thermal::LinearIsotropicConductor mat(1.0, 1.0, 1.0);
+  Thermal::LinearIsotropicConductor mat(0.5, 0.5, 0.5);
 
   thermal_solver.setMaterial(mat);
 
   // Define the function for the initial temperature and boundary condition
   auto initial_temp = [](const mfem::Vector& x, double) -> double {
-    if (x[0] < 0.5 || x[1] < 0.5) {
-      return 1.0;
+    if (std::sqrt(x[0] * x[0] + x[1] * x[1]) < 0.5) {
+      return 2.0;
     }
-    return 0.0;
+    return 1.0;
   };
 
   // Set the initial temperature and boundary condition
   thermal_solver.setTemperatureBCs(ess_bdr, initial_temp);
   thermal_solver.setTemperature(initial_temp);
-
-  // Define a constant source term
-  Thermal::ConstantSource source{1.0};
-  thermal_solver.setSource(source);
 
   // Set the flux term to zero for testing code paths
   Thermal::ConstantFlux flux_bc{0.0};
@@ -146,9 +143,9 @@ void functional_test_dynamic(double expected_temp_norm)
   thermal_solver.completeSetup();
 
   // Perform the time stepping
-  double dt = 0.25;
+  double dt = 1.0;
 
-  for (int i = 0; i < 4; ++i) {
+  for (int i = 0; i < 5; ++i) {
     thermal_solver.outputState();
     thermal_solver.advanceTimestep(dt);
   }
@@ -162,17 +159,13 @@ void functional_test_dynamic(double expected_temp_norm)
 
 TEST(thermal_functional, 2D_linear_static) { functional_test_static<1, 2>(2.2909240); }
 TEST(thermal_functional, 2D_quad_static) { functional_test_static<2, 2>(2.29424403); }
-
 TEST(thermal_functional, 3D_linear_static) { functional_test_static<1, 3>(46.6285642); }
 TEST(thermal_functional, 3D_quad_static) { functional_test_static<2, 3>(46.6648538); }
 
-TEST(thermal_functional, 2D_linear_dynamic) { functional_test_dynamic<1, 2>(2.01677891); }
-TEST(thermal_functional, 2D_quad_dynamic) { functional_test_dynamic<2, 2>(2.02882007); }
-
-TEST(thermal_functional, 3D_linear_dynamic) { functional_test_dynamic<1, 3>(2.82842712); }
-TEST(thermal_functional, 3D_quad_dynamic) { functional_test_dynamic<2, 3>(2.828427124); }
-
-#if 0
+TEST(thermal_functional, 2D_linear_dynamic) { functional_test_dynamic<1, 2>(2.18066491); }
+TEST(thermal_functional, 2D_quad_dynamic) { functional_test_dynamic<2, 2>(2.1806651); }
+TEST(thermal_functional, 3D_linear_dynamic) { functional_test_dynamic<1, 3>(3.1447306); }
+TEST(thermal_functional, 3D_quad_dynamic) { functional_test_dynamic<2, 3>(3.36129252); }
 
 TEST(thermal_functional, parameterized_material)
 {
@@ -197,23 +190,18 @@ TEST(thermal_functional, parameterized_material)
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
-  FiniteElementState parameterized_state_1(
-      StateManager::newState(FiniteElementState::Options{.order = 1, .name = "parameterized_field_1"}));
+  FiniteElementState parameterized_state(
+      StateManager::newState(FiniteElementState::Options{.order = 1, .name = "parameterized_field"}));
 
-  parameterized_state_1 = 1.0;
-
-  FiniteElementState parameterized_state_2(
-      StateManager::newState(FiniteElementState::Options{.order = 1, .name = "parameterized_field_2"}));
-
-  parameterized_state_2 = 1.0;
+  parameterized_state = 1.0;
 
   constexpr int parameter_index = 0;
 
   // Construct a functional-based thermal conduction solver
   // We should extend this to single scalar trial spaces (global vector space?)
-  ThermalConductionFunctional<p, dim, H1<1>, H1<1>> thermal_solver(
-      ThermalConductionFunctional<p, dim, H1<1>, H1<1>>::defaultQuasistaticOptions(), "thermal_functional",
-      {parameterized_state_1, parameterized_state_2});
+  ThermalConductionFunctional<p, dim, H1<1>> thermal_solver(
+      ThermalConductionFunctional<p, dim, H1<1>>::defaultQuasistaticOptions(), "thermal_functional",
+      {parameterized_state});
 
   // Construct a potentially user-defined parameterized material and send it to the thermal module
   Thermal::ParameterizedLinearIsotropicConductor mat(1.0, 1.0, 1.0);
@@ -262,10 +250,8 @@ TEST(thermal_functional, parameterized_material)
   // TODO Should we own this? Should LiDO?
   auto& sensitivity = thermal_solver.computeSensitivity<parameter_index>();
 
-  EXPECT_NEAR(0.013659489, mfem::ParNormlp(sensitivity.trueVec(), 2, MPI_COMM_WORLD), 1.0e-6);
+  EXPECT_NEAR(0.5086485, mfem::ParNormlp(sensitivity.trueVec(), 2, MPI_COMM_WORLD), 1.0e-6);
 }
-#endif
-
 
 }  // namespace serac
 

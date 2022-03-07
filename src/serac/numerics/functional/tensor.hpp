@@ -1595,9 +1595,10 @@ auto& operator<<(std::ostream& out, const tensor<T, n...>& A)
  * @param[in] out the std::ostream to write to (e.g. std::cout or std::ofstream)
  * @param[in] A The tensor to write out
  */
-auto& operator<<(std::ostream& out, serac::zero) { 
-  out << "zero"; 
-  return out; 
+auto& operator<<(std::ostream& out, serac::zero)
+{
+  out << "zero";
+  return out;
 }
 
 /**

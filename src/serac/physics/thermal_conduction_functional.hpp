@@ -20,6 +20,7 @@
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/materials/functional_material_utils.hpp"
+#include "serac/numerics/expr_template_ops.hpp"
 
 namespace serac {
 
@@ -250,7 +251,7 @@ public:
 
             auto response = material(x, u, du_dx, serac::get<0>(params)...);
 
-            return serac::tuple{source, -response.heat_flux};
+            return serac::tuple{source, -1.0 * response.heat_flux};
           },
           mesh_);
     } else {
@@ -263,7 +264,7 @@ public:
             auto response   = material(x, u, du_dx);
 
             // Return the source and the flux as a tuple
-            return serac::tuple{source, -response.heat_flux};
+            return serac::tuple{source, -1.0 * response.heat_flux};
           },
           mesh_);
     }
@@ -275,13 +276,16 @@ public:
 
       M_functional_->AddDomainIntegral(
           Dimension<dim>{},
-          [material](auto x, auto temperature, auto... params) {
-            auto [u, du_dx] = temperature;
+          [material](auto x, auto d_temperature_dt, auto... params) {
+            auto [u, du_dx] = d_temperature_dt;
             auto flux       = serac::zero{};
 
-            auto response = material(x, u, du_dx, serac::get<0>(params)...);
+            auto temp      = u * 0.0;
+            auto temp_grad = du_dx * 0.0;
 
-            auto source = response.specific_heat_capacity * response.density;
+            auto response = material(x, temp, temp_grad, serac::get<0>(params)...);
+
+            auto source = response.specific_heat_capacity * response.density * u;
 
             // Return the source and the flux as a tuple
             return serac::tuple{source, flux};
@@ -290,12 +294,15 @@ public:
     } else {
       M_functional_->AddDomainIntegral(
           Dimension<dim>{},
-          [material](auto x, auto temperature, auto... /* params */) {
-            auto [u, du_dx] = temperature;
+          [material](auto x, auto d_temperature_dt, auto... /* params */) {
+            auto [u, du_dx] = d_temperature_dt;
             auto flux       = serac::zero{};
 
-            auto response = material(x, u, du_dx);
-            auto source   = response.specific_heat_capacity * response.density;
+            auto temp      = u * 0.0;
+            auto temp_grad = du_dx * 0.0;
+
+            auto response = material(x, temp, temp_grad);
+            auto source   = response.specific_heat_capacity * response.density * u;
 
             // Return the source and the flux as a tuple
             return serac::tuple{source, flux};
@@ -343,7 +350,7 @@ public:
 
             auto flux = serac::zero{};
 
-            auto source = source_function(x, time_, u, du_dx, serac::get<0>(params)...);
+            auto source = -1.0 * source_function(x, time_, u, du_dx, serac::get<0>(params)...);
 
             // Return the source and the flux as a tuple
             return serac::tuple{source, flux};
@@ -358,7 +365,7 @@ public:
 
             auto flux = serac::zero{};
 
-            auto source = source_function(x, time_, u, du_dx);
+            auto source = -1.0 * source_function(x, time_, u, du_dx);
 
             // Return the source and the flux as a tuple
             return serac::tuple{source, flux};
@@ -391,17 +398,11 @@ public:
 
       K_functional_->AddBoundaryIntegral(
           Dimension<dim - 1>{},
-          [flux_function](auto x, auto n, auto u, auto... params) {
-            return flux_function(x, n, u, params...);
-          },
-          mesh_);
+          [flux_function](auto x, auto n, auto u, auto... params) { return flux_function(x, n, u, params...); }, mesh_);
     } else {
       K_functional_->AddBoundaryIntegral(
           Dimension<dim - 1>{},
-          [flux_function](auto x, auto n, auto u, auto... /* params */) {
-            return flux_function(x, n, u);
-          },
-          mesh_);
+          [flux_function](auto x, auto n, auto u, auto... /* params */) { return flux_function(x, n, u); }, mesh_);
     }
   }
 
@@ -460,7 +461,7 @@ public:
 
             auto [r, drdu] = (*K_functional_)(functional_call_args_, Index<0>{});
             J_             = assemble(drdu);
-            J_->Print("J.mat");
+
             return *J_;
           });
 
@@ -469,13 +470,14 @@ public:
       residual_ = mfem_ext::StdFunctionOperator(
           temperature_.space().TrueVSize(),
           [this](const mfem::Vector& du_dt, mfem::Vector& r) {
-            mfem::Vector K_arg(u_.Size());
-            add(1.0, u_, dt_, du_dt, K_arg);
-
-            functional_call_args_[0] = u_;
+            functional_call_args_[0] = du_dt;
 
             auto M_residual = (*M_functional_)(functional_call_args_);
 
+            // TODO we should use the new variadic capability to directly pass temperature and d_temp_dt directly to
+            // these kernels to avoid ugly hacks like this.
+            mfem::Vector K_arg(u_.Size());
+            add(1.0, u_, dt_, du_dt, K_arg);
             functional_call_args_[0] = K_arg;
 
             auto K_residual = (*K_functional_)(functional_call_args_);
@@ -487,29 +489,22 @@ public:
 
           [this](const mfem::Vector& du_dt) -> mfem::Operator& {
             // Only reassemble the stiffness if it is a new timestep
-            if (dt_ != previous_dt_) {
-              mfem::Vector K_arg(u_.Size());
-              add(1.0, u_, dt_, du_dt, K_arg);
+            functional_call_args_[0] = du_dt;
 
-              functional_call_args_[0] = u_;
+            auto M = serac::get<1>((*M_functional_)(functional_call_args_, Index<0>{}));
+            std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
-              auto M = serac::get<1>((*M_functional_)(functional_call_args_, Index<0>{}));
-              std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
-              m_mat->Print("M.mat");
+            mfem::Vector K_arg(u_.Size());
+            add(1.0, u_, dt_, du_dt, K_arg);
+            functional_call_args_[0] = K_arg;
 
-              functional_call_args_[0] = K_arg;
+            auto K = serac::get<1>((*K_functional_)(functional_call_args_, Index<0>{}));
 
-              auto K = serac::get<1>((*K_functional_)(functional_call_args_, Index<0>{}));
+            functional_call_args_[0] = u_;
 
-              functional_call_args_[0] = u_;
+            std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
-              std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
-              k_mat->Print("K.mat");
-
-              J_.reset(mfem::Add(1.0, *m_mat, dt_, *k_mat));
-
-              J_->Print("J.mat");
-            }
+            J_.reset(mfem::Add(1.0, *m_mat, dt_, *k_mat));
             return *J_;
           });
     }

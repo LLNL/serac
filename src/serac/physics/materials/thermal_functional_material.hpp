@@ -50,11 +50,11 @@ public:
   }
 
   template <typename T1, typename T2, typename T3>
-  SERAC_HOST_DEVICE auto operator()(const T1&, const T2&, const T3& temperature_gradient) const
+  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* u */, const T3& du_dx) const
   {
     return MaterialResponse{.density                = density_,
                             .specific_heat_capacity = specific_heat_capacity_,
-                            .heat_flux              = -conductivity_ * temperature_gradient};
+                            .heat_flux              = -1.0 * conductivity_ * du_dx};
   }
 
 private:
@@ -65,34 +65,6 @@ private:
   double specific_heat_capacity_;
 
   /// Constant isotropic thermal conductivity
-  double conductivity_;
-};
-
-class ParameterizedLinearIsotropicConductor {
-public:
-  ParameterizedLinearIsotropicConductor(double density = 1.0, double specific_heat_capacity = 1.0,
-                                        double conductivity = 1.0)
-      : density_(density), specific_heat_capacity_(specific_heat_capacity), conductivity_(conductivity)
-  {
-    assert(conductivity > 0.0);
-    assert(density > 0.0);
-    assert(specific_heat_capacity > 0.0);
-  }
-
-  template <typename T1, typename T2, typename T3, typename T4, typename T5>
-  SERAC_HOST_DEVICE auto operator()(const T1&, const T2&, const T3& temperature_gradient, const T4& parameter_1,
-                                    const T5& parameter_2) const
-  {
-    return MaterialResponse{.density                = density_ + 0.01 * parameter_1,
-                            .specific_heat_capacity = specific_heat_capacity_,
-                            .heat_flux              = -1.0 * (conductivity_ + parameter_2) * temperature_gradient};
-  }
-
-  static constexpr int numParameters() { return 2; }
-
-private:
-  double density_;
-  double specific_heat_capacity_;
   double conductivity_;
 };
 
@@ -125,11 +97,11 @@ public:
   }
 
   template <typename T1, typename T2, typename T3>
-  SERAC_HOST_DEVICE auto operator()(const T1&, const T2&, const T3& temperature_gradient) const
+  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* u */, const T3& du_dx) const
   {
     return MaterialResponse{.density                = density_,
                             .specific_heat_capacity = specific_heat_capacity_,
-                            .heat_flux              = -1.0 * (conductivity_)*temperature_gradient};
+                            .heat_flux              = -1.0 * conductivity_ * du_dx};
   }
 
 private:
@@ -152,7 +124,7 @@ struct ConstantSource {
    * @brief Evaluation function for the constant thermal source model
    *
    * @tparam T1 type of the position vector
-   * @tparam T2 type of the temperature 
+   * @tparam T2 type of the temperature
    * @tparam T3 type of the temperature gradient
    * @tparam dim The dimension of the problem
    * @return The thermal source value

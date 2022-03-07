@@ -171,12 +171,12 @@ TEST(TupleArithmeticUnitTests, tensor_output_with_tuple_input)
 
 TEST(TupleArithmeticUnitTests, ostream_output)
 {
-  constexpr auto f = [=](auto inputs) { 
+  constexpr auto f = [=](auto inputs) {
     auto [x, y] = inputs;
-    return serac::tuple { exp(x), sin(dot(y, y) + x) };
+    return serac::tuple{exp(x), sin(dot(y, y) + x)};
   };
-    
-  serac::tuple inputs { 1.0, serac::tensor< double, 3 >{1.0, 3.0, 2.0} };  
+
+  serac::tuple inputs{1.0, serac::tensor<double, 3>{1.0, 3.0, 2.0}};
 
   auto outputs = f(make_dual(inputs));
 
