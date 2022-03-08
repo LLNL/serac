@@ -36,17 +36,30 @@ struct is_parameterized<T, std::void_t<decltype(std::declval<T&>().numParameters
 
 /**
  * @brief Wrapper to treat an unparameterized material as a parameterized one
- * 
+ *
  * @tparam UnparameterizedMaterialType The unparameterized material
  */
 template <typename UnparameterizedMaterialType>
 struct TriviallyParameterizedMaterial {
+  /**
+   * @brief Material response wrapper for an unparameterized material in a parameterized context
+   *
+   * @tparam T1 Spatial position type
+   * @tparam T2 Temperature type
+   * @tparam T3 Temperature gradient type
+   * @tparam S Unused parameter pack type
+   * @param x Spatial position
+   * @param u Temperature
+   * @param du_dx Temperature gradient
+   * @return Material response of the unparameterized material
+   */
   template <typename T1, typename T2, typename T3, typename... S>
   SERAC_HOST_DEVICE auto operator()(const T1& x, const T2& u, const T3& du_dx, S...) const
   {
     return mat(x, u, du_dx);
   }
 
+  /// Underlying unparameterized material
   UnparameterizedMaterialType mat;
 };
 
@@ -63,14 +76,33 @@ auto parameterize_material(T& material)
   }
 }
 
+/**
+ * @brief Wrapper to treat an unparameterized source as a parameterized one
+ *
+ * @tparam UnparameterizedSourceType The unparameterized source
+ */
 template <typename UnparameterizedSourceType>
 struct TriviallyParameterizedSource {
+  /**
+   * @brief Wrapper for an unparameterized source in a parameterized context
+   *
+   * @tparam T1 Spatial position type
+   * @tparam T2 Temperature type
+   * @tparam T3 Temperature gradient type
+   * @tparam S Unused parameter pack type
+   * @param x Spatial position
+   * @param t Time
+   * @param u Temperature
+   * @param du_dx Temperature gradient
+   * @return Volumetric source for the unparameterized source
+   */
   template <typename T1, typename T2, typename T3, typename... S>
   SERAC_HOST_DEVICE auto operator()(const T1& x, double t, const T2& u, const T3& du_dx, S...) const
   {
     return source(x, t, u, du_dx);
   }
 
+  /// Underlying unparameterized source
   UnparameterizedSourceType source;
 };
 
@@ -87,14 +119,33 @@ auto parameterize_source(T& source)
   }
 }
 
+/**
+ * @brief Wrapper for unparameterized boundary flux types to be used in a parameterized setting
+ *
+ * @tparam UnparameterizedFluxType The unparameterized boundary flux type
+ */
 template <typename UnparameterizedFluxType>
 struct TriviallyParameterizedFlux {
+  /**
+   * @brief The wrapper for an unparameterized boundary flux object to be called using the parameterized
+   * call signature
+   *
+   * @tparam T1 Spatial position type
+   * @tparam T2 Normal vector type
+   * @tparam T3 Temperature type
+   * @tparam S Unused parameter pack type
+   * @param x Spatial position
+   * @param n Normal vector
+   * @param u Temperature
+   * @return Computed boundary flux to be applied
+   */
   template <typename T1, typename T2, typename T3, typename... S>
   SERAC_HOST_DEVICE auto operator()(const T1& x, const T2& n, const T3& u, S...) const
   {
     return flux(x, n, u);
   }
 
+  /// Underlying unparameterized flux
   UnparameterizedFluxType flux;
 };
 

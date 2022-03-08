@@ -1593,7 +1593,6 @@ auto& operator<<(std::ostream& out, const tensor<T, n...>& A)
  * initialization.
  *
  * @param[in] out the std::ostream to write to (e.g. std::cout or std::ofstream)
- * @param[in] A The tensor to write out
  */
 auto& operator<<(std::ostream& out, serac::zero)
 {

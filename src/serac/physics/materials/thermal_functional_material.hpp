@@ -17,10 +17,22 @@
 /// ThermalConductionFunctional helper structs
 namespace serac::Thermal {
 
+/**
+ * @brief Response data type for thermal conduction simulations
+ *
+ * @tparam T1 Density type
+ * @tparam T2 Specific heat capacity type
+ * @tparam T3 Thermal flux type
+ */
 template <typename T1, typename T2, typename T3>
 struct MaterialResponse {
+  /// Density of the material (mass/volume)
   T1 density;
+
+  /// Specific heat capacity of the material (energy / (mass * temp))
   T2 specific_heat_capacity;
+
+  /// Heat flux of the material (power/area)
   T3 heat_flux;
 };
 
@@ -49,6 +61,16 @@ public:
                        "Specific heat capacity must be positive in the linear isotropic conductor material model.");
   }
 
+  /**
+   * @brief Material response call for a linear isotropic material
+   *
+   * @tparam T1 Spatial position type
+   * @tparam T2 Temperature type
+   * @tparam T3 Temperature gradient type
+   * @param[in] du_dx Temperature gradient
+   * @return The calculated material response (density, specific heat capacity, thermal flux) for a linear
+   * isotropic material
+   */
   template <typename T1, typename T2, typename T3>
   SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* u */, const T3& du_dx) const
   {
@@ -98,6 +120,16 @@ public:
                        "Conductivity tensor must be symmetric and positive definite.");
   }
 
+  /**
+   * @brief Material response call for a linear anisotropic material
+   *
+   * @tparam T1 Spatial position type
+   * @tparam T2 Temperature type
+   * @tparam T3 Temperature gradient type
+   * @param[in] du_dx Temperature gradient
+   * @return The calculated material response (density, specific heat capacity, thermal flux) for a linear
+   * anisotropic material
+   */
   template <typename T1, typename T2, typename T3>
   SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* u */, const T3& du_dx) const
   {
