@@ -20,13 +20,12 @@ namespace serac::Thermal {
 /// Linear isotropic conductor with a parameterized conductivity
 class ParameterizedLinearIsotropicConductor {
 public:
-
   /**
    * @brief Construct a new Parameterized Linear Isotropic Conductor object
-   * 
+   *
    * @param density Density of the material (mass/volume)
    * @param specific_heat_capacity Specific heat capacity of the material (energy / (mass * temp))
-   * @param conductivity_offset Thermal conductivity offset of the material (power / (length * temp)). This is 
+   * @param conductivity_offset Thermal conductivity offset of the material (power / (length * temp)). This is
    * added to the parameter value to get the total conductivity.
    */
   ParameterizedLinearIsotropicConductor(double density = 1.0, double specific_heat_capacity = 1.0,
@@ -44,17 +43,19 @@ public:
 
   /**
    * @brief Thermal material response operator
-   * 
+   *
    * @tparam T1 Spatial position type
    * @tparam T2 Temperature type
    * @tparam T3 Temperature gradient type
    * @tparam T4 Parameter type
    * @param temperature_gradient The spatial gradient of the temperature (d temperature dx)
-   * @param parameter The user-defined parameter used to compute the conductivity (total conductivity = conductivity offset + parameter)
+   * @param parameter The user-defined parameter used to compute the conductivity (total conductivity = conductivity
+   * offset + parameter)
    * @return The density, specific heat capacity, and heat flux of the material.
    */
   template <typename T1, typename T2, typename T3, typename T4>
-  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* temperature */, const T3& temperature_gradient, const T4& parameter) const
+  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* temperature */, const T3& temperature_gradient,
+                                    const T4& parameter) const
   {
     return MaterialResponse{.density                = density_,
                             .specific_heat_capacity = specific_heat_capacity_,
@@ -63,7 +64,7 @@ public:
 
   /**
    * @brief The number of parameters in the model
-   * 
+   *
    * @return The number of parameters in the model
    */
   static constexpr int numParameters() { return 1; }
@@ -103,7 +104,7 @@ struct ParameterizedSource {
 
   /**
    * @brief The number of parameters in the model
-   * 
+   *
    * @return The number of parameters in the model
    */
   static constexpr int numParameters() { return 1; }
@@ -132,7 +133,7 @@ struct ParameterizedFlux {
 
   /**
    * @brief The number of parameters in the model
-   * 
+   *
    * @return The number of parameters in the model
    */
   static constexpr int numParameters() { return 1; }

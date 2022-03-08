@@ -34,6 +34,78 @@ template <typename T>
 struct is_parameterized<T, std::void_t<decltype(std::declval<T&>().numParameters())>> : std::true_type {
 };
 
+template <typename unparameterized_material_type>
+struct trivially_parameterized_material {
+  template <typename T1, typename T2, typename T3, typename... S>
+  SERAC_HOST_DEVICE auto operator()(const T1& x, const T2& u, const T3& du_dx, S...) const
+  {
+    return mat(x, u, du_dx);
+  }
+
+  unparameterized_material_type mat;
+};
+
+template <typename T>
+trivially_parameterized_material(T) -> trivially_parameterized_material<T>;
+
+template <typename T>
+auto parameterize_material(T& material)
+{
+  if constexpr (is_parameterized<T>::value) {
+    return material;
+  } else {
+    return trivially_parameterized_material{material};
+  }
+}
+
+template <typename unparameterized_source_type>
+struct trivially_parameterized_source {
+  template <typename T1, typename T2, typename T3, typename... S>
+  SERAC_HOST_DEVICE auto operator()(const T1& x, double t, const T2& u, const T3& du_dx, S...) const
+  {
+    return source(x, t, u, du_dx);
+  }
+
+  unparameterized_source_type source;
+};
+
+template <typename T>
+trivially_parameterized_source(T) -> trivially_parameterized_source<T>;
+
+template <typename T>
+auto parameterize_source(T& source)
+{
+  if constexpr (is_parameterized<T>::value) {
+    return source;
+  } else {
+    return trivially_parameterized_source{source};
+  }
+}
+
+template <typename unparameterized_flux_type>
+struct trivially_parameterized_flux {
+  template <typename T1, typename T2, typename T3, typename... S>
+  SERAC_HOST_DEVICE auto operator()(const T1& x, const T2& n, const T3& u, S...) const
+  {
+    return flux(x, n, u);
+  }
+
+  unparameterized_flux_type flux;
+};
+
+template <typename T>
+trivially_parameterized_flux(T) -> trivially_parameterized_flux<T>;
+
+template <typename T>
+auto parameterize_flux(T& flux)
+{
+  if constexpr (is_parameterized<T>::value) {
+    return flux;
+  } else {
+    return trivially_parameterized_flux{flux};
+  }
+}
+
 template <typename T, int dim, typename = void>
 struct has_stress : std::false_type {
 };
