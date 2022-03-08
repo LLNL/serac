@@ -52,9 +52,11 @@ public:
   template <typename T1, typename T2, typename T3>
   SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* u */, const T3& du_dx) const
   {
-    return MaterialResponse{.density                = density_,
-                            .specific_heat_capacity = specific_heat_capacity_,
-                            .heat_flux              = -1.0 * conductivity_ * du_dx};
+    using FluxType = decltype(conductivity_ * du_dx);
+
+    return MaterialResponse<double, double, FluxType>{.density                = density_,
+                                                      .specific_heat_capacity = specific_heat_capacity_,
+                                                      .heat_flux              = -1.0 * conductivity_ * du_dx};
   }
 
 private:
@@ -99,9 +101,11 @@ public:
   template <typename T1, typename T2, typename T3>
   SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* u */, const T3& du_dx) const
   {
-    return MaterialResponse{.density                = density_,
-                            .specific_heat_capacity = specific_heat_capacity_,
-                            .heat_flux              = -1.0 * conductivity_ * du_dx};
+    using FluxType = decltype(conductivity_ * du_dx);
+
+    return MaterialResponse<double, double, FluxType>{.density                = density_,
+                                                      .specific_heat_capacity = specific_heat_capacity_,
+                                                      .heat_flux              = -1.0 * conductivity_ * du_dx};
   }
 
 private:
