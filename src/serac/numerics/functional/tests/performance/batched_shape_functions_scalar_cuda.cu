@@ -4,12 +4,12 @@
 #include "axom/core/utilities/Timer.hpp"
 
 #include "serac/infrastructure/accelerator.hpp"
+
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/quadrature.hpp"
 #include "serac/numerics/functional/finite_element.hpp"
 #include "serac/numerics/functional/tuple_arithmetic.hpp"
 #include "serac/numerics/functional/integral_utilities.hpp"
-
 namespace mfem {
 
 template<int T_D1D = 0, int T_Q1D = 0>
@@ -399,14 +399,12 @@ void reference_kernel(const mfem::Vector & U_, mfem::Vector & R_, const mfem::Ve
 }
 
 template <Geometry g, typename test, typename trial, int Q, typename lambda>
-//__global__ void reference_cuda_kernel(mfem::DeviceTensor< 2, const double > u, 
-//                                      mfem::DeviceTensor< 2, double > r, 
-//                                      mfem::DeviceTensor< 4, const double > J, 
-//                                      size_t num_elements, 
-//                                      lambda qf) {
-// __global__ void reference_cuda_kernel(size_t num_elements, lambda qf) {
-__global__ void reference_cuda_kernel(mfem::DeviceTensor< 4, double > J, size_t num_elements, lambda qf) {
-#if 0
+__global__ void reference_cuda_kernel(mfem::DeviceTensor< 2, const double > u, 
+                                      mfem::DeviceTensor< 2, double > r, 
+                                      mfem::DeviceTensor< 4, const double > J, 
+                                      size_t num_elements, 
+                                      lambda qf) {
+
   using test_element          = finite_element<g, test>;
   using trial_element         = finite_element<g, trial>;
   using element_residual_type = typename test_element::residual_type;
@@ -438,7 +436,7 @@ __global__ void reference_cuda_kernel(mfem::DeviceTensor< 4, double > J, size_t 
     detail::Add(r, r_elem, e);
 
   }
-#endif
+
 }
 
 template < typename S, typename T >
@@ -958,13 +956,12 @@ int main() {
 
     mfem::DeviceTensor<2, const double > u_d = mfem::Reshape(U1D.Read(), n * n * n, num_elements);
     mfem::DeviceTensor<2, double > r_d = mfem::Reshape(R1D.ReadWrite(), n * n * n, num_elements);
-    mfem::DeviceTensor<4, double > J_d = mfem::Reshape(J1D.ReadWrite(), q * q * q, dim, dim, num_elements);
+    mfem::DeviceTensor<4, const double > J_d = mfem::Reshape(J1D.Read(), q * q * q, dim, dim, num_elements);
     int blocksize = 128;
-    int gridsize = (num_elements + blocksize - 1) / blocksize;
+    int gridsize = (num_elements * q * q * q + blocksize - 1) / blocksize;
     double runtime = time([&]() {
       for (int i = 0; i < num_runs; i++) {
-        //serac::reference_cuda_kernel<Geometry::Hexahedron, test, trial, q><<<gridsize, blocksize>>>(u_d, r_d, J_d, num_elements, qfunc);
-        serac::reference_cuda_kernel<Geometry::Hexahedron, test, trial, q><<<gridsize, blocksize>>>(J_d, num_elements, qfunc);
+        serac::reference_cuda_kernel<Geometry::Hexahedron, test, trial, q><<<gridsize, blocksize>>>(u_d, r_d, J_d, num_elements, qfunc);
         compiler::please_do_not_optimize_away(&R1D);
       }
       cudaDeviceSynchronize();

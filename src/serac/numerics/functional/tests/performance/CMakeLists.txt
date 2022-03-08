@@ -33,4 +33,6 @@ if(ENABLE_CUDA)
                            FOLDER      serac/tests )
     endforeach()
 
+    target_compile_options(batched_shape_functions_scalar_cuda PRIVATE --extended-lambda)
+
 endif()
