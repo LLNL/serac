@@ -34,19 +34,24 @@ template <typename T>
 struct is_parameterized<T, std::void_t<decltype(std::declval<T&>().numParameters())>> : std::true_type {
 };
 
-template <typename unparameterized_material_type>
-struct trivially_parameterized_material {
+/**
+ * @brief Wrapper to treat an unparameterized material as a parameterized one
+ * 
+ * @tparam UnparameterizedMaterialType The unparameterized material
+ */
+template <typename UnparameterizedMaterialType>
+struct TriviallyParameterizedMaterial {
   template <typename T1, typename T2, typename T3, typename... S>
   SERAC_HOST_DEVICE auto operator()(const T1& x, const T2& u, const T3& du_dx, S...) const
   {
     return mat(x, u, du_dx);
   }
 
-  unparameterized_material_type mat;
+  UnparameterizedMaterialType mat;
 };
 
 template <typename T>
-trivially_parameterized_material(T) -> trivially_parameterized_material<T>;
+TriviallyParameterizedMaterial(T) -> TriviallyParameterizedMaterial<T>;
 
 template <typename T>
 auto parameterize_material(T& material)
@@ -54,23 +59,23 @@ auto parameterize_material(T& material)
   if constexpr (is_parameterized<T>::value) {
     return material;
   } else {
-    return trivially_parameterized_material{material};
+    return TriviallyParameterizedMaterial{material};
   }
 }
 
-template <typename unparameterized_source_type>
-struct trivially_parameterized_source {
+template <typename UnparameterizedSourceType>
+struct TriviallyParameterizedSource {
   template <typename T1, typename T2, typename T3, typename... S>
   SERAC_HOST_DEVICE auto operator()(const T1& x, double t, const T2& u, const T3& du_dx, S...) const
   {
     return source(x, t, u, du_dx);
   }
 
-  unparameterized_source_type source;
+  UnparameterizedSourceType source;
 };
 
 template <typename T>
-trivially_parameterized_source(T) -> trivially_parameterized_source<T>;
+TriviallyParameterizedSource(T) -> TriviallyParameterizedSource<T>;
 
 template <typename T>
 auto parameterize_source(T& source)
@@ -78,23 +83,23 @@ auto parameterize_source(T& source)
   if constexpr (is_parameterized<T>::value) {
     return source;
   } else {
-    return trivially_parameterized_source{source};
+    return TriviallyParameterizedSource{source};
   }
 }
 
-template <typename unparameterized_flux_type>
-struct trivially_parameterized_flux {
+template <typename UnparameterizedFluxType>
+struct TriviallyParameterizedFlux {
   template <typename T1, typename T2, typename T3, typename... S>
   SERAC_HOST_DEVICE auto operator()(const T1& x, const T2& n, const T3& u, S...) const
   {
     return flux(x, n, u);
   }
 
-  unparameterized_flux_type flux;
+  UnparameterizedFluxType flux;
 };
 
 template <typename T>
-trivially_parameterized_flux(T) -> trivially_parameterized_flux<T>;
+TriviallyParameterizedFlux(T) -> TriviallyParameterizedFlux<T>;
 
 template <typename T>
 auto parameterize_flux(T& flux)
@@ -102,7 +107,7 @@ auto parameterize_flux(T& flux)
   if constexpr (is_parameterized<T>::value) {
     return flux;
   } else {
-    return trivially_parameterized_flux{flux};
+    return TriviallyParameterizedFlux{flux};
   }
 }
 
