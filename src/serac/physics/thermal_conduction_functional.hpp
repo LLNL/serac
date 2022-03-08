@@ -243,7 +243,7 @@ public:
                     "thermal material.");
     }
 
-    auto parameterized_material = parameterize_material(material);
+    auto parameterized_material = parameterizeMaterial(material);
 
     K_functional_->AddDomainIntegral(
         Dimension<dim>{},
@@ -309,7 +309,7 @@ public:
                     "thermal source.");
     }
 
-    auto parameterized_source = parameterize_source(source_function);
+    auto parameterized_source = parameterizeSource(source_function);
 
     K_functional_->AddDomainIntegral(
         Dimension<dim>{},
@@ -344,7 +344,7 @@ public:
                     "thermal flux boundary.");
     }
 
-    auto parameterized_flux = parameterize_flux(flux_function);
+    auto parameterized_flux = parameterizeFlux(flux_function);
 
     K_functional_->AddBoundaryIntegral(
         Dimension<dim - 1>{},

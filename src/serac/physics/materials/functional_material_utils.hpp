@@ -79,7 +79,7 @@ TriviallyParameterizedMaterial(T) -> TriviallyParameterizedMaterial<T>;
  * @return The parameterized material
  */
 template <typename T>
-auto parameterize_material(T& material)
+auto parameterizeMaterial(T& material)
 {
   if constexpr (is_parameterized<T>::value) {
     return material;
@@ -134,7 +134,7 @@ TriviallyParameterizedSource(T) -> TriviallyParameterizedSource<T>;
  * @return The parameterized source
  */
 template <typename T>
-auto parameterize_source(T& source)
+auto parameterizeSource(T& source)
 {
   if constexpr (is_parameterized<T>::value) {
     return source;
@@ -189,7 +189,7 @@ TriviallyParameterizedFlux(T) -> TriviallyParameterizedFlux<T>;
  * @return The parameterized flux
  */
 template <typename T>
-auto parameterize_flux(T& flux)
+auto parameterizeFlux(T& flux)
 {
   if constexpr (is_parameterized<T>::value) {
     return flux;
