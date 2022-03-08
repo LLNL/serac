@@ -198,7 +198,6 @@ TEST(thermal_functional, parameterized_material)
   constexpr int parameter_index = 0;
 
   // Construct a functional-based thermal conduction solver
-  // We should extend this to single scalar trial spaces (global vector space?)
   ThermalConductionFunctional<p, dim, H1<1>> thermal_solver(
       ThermalConductionFunctional<p, dim, H1<1>>::defaultQuasistaticOptions(), "thermal_functional",
       {parameterized_state});
@@ -247,7 +246,6 @@ TEST(thermal_functional, parameterized_material)
   thermal_solver.solveAdjoint(adjoint_load);
 
   // Compute the sensitivity given the adjoint solution
-  // TODO Should we own this? Should LiDO?
   auto& sensitivity = thermal_solver.computeSensitivity<parameter_index>();
 
   EXPECT_NEAR(0.5086485, mfem::ParNormlp(sensitivity.trueVec(), 2, MPI_COMM_WORLD), 1.0e-6);
