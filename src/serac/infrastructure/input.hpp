@@ -14,6 +14,7 @@
 
 #include <string>
 #include <variant>
+#include <optional>
 
 #include "mfem.hpp"
 #include "axom/inlet.hpp"
