@@ -36,6 +36,13 @@ struct MaterialResponse {
   T3 heat_flux;
 };
 
+/**
+ * @brief Template deduction guide for the material response
+ *
+ * @tparam T1 Density type
+ * @tparam T2 Specific heat capacity type
+ * @tparam T3 Heat flux type
+ */
 template <typename T1, typename T2, typename T3>
 MaterialResponse(T1, T2, T3) -> MaterialResponse<T1, T2, T3>;
 

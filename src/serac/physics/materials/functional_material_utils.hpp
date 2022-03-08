@@ -63,9 +63,21 @@ struct TriviallyParameterizedMaterial {
   UnparameterizedMaterialType mat;
 };
 
+/**
+ * @brief Template deduction guide for the trivially parameterized material
+ *
+ * @tparam T The unparameterized material type
+ */
 template <typename T>
 TriviallyParameterizedMaterial(T) -> TriviallyParameterizedMaterial<T>;
 
+/**
+ * @brief Convert an unparameterized material to one which accepts parameter values in the paren operator
+ *
+ * @tparam T The unparameterized material type
+ * @param material The unparameterized material
+ * @return The parameterized material
+ */
 template <typename T>
 auto parameterize_material(T& material)
 {
@@ -106,9 +118,21 @@ struct TriviallyParameterizedSource {
   UnparameterizedSourceType source;
 };
 
+/**
+ * @brief Template deduction guide for the trivially parameterized source
+ *
+ * @tparam T The unparameterized source type
+ */
 template <typename T>
 TriviallyParameterizedSource(T) -> TriviallyParameterizedSource<T>;
 
+/**
+ * @brief Convert an unparameterized source to one which accepts parameter values in the paren operator
+ *
+ * @tparam T The unparameterized source type
+ * @param source The unparameterized source
+ * @return The parameterized source
+ */
 template <typename T>
 auto parameterize_source(T& source)
 {
@@ -149,9 +173,21 @@ struct TriviallyParameterizedFlux {
   UnparameterizedFluxType flux;
 };
 
+/**
+ * @brief Template deduction guide for the trivially parameterized flux
+ *
+ * @tparam T The unparameterized flux type
+ */
 template <typename T>
 TriviallyParameterizedFlux(T) -> TriviallyParameterizedFlux<T>;
 
+/**
+ * @brief Convert an unparameterized flux to one which accepts parameter values in the paren operator
+ *
+ * @tparam T The unparameterized flux type
+ * @param material The unparameterized flux
+ * @return The parameterized flux
+ */
 template <typename T>
 auto parameterize_flux(T& flux)
 {
