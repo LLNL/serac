@@ -8,12 +8,24 @@
 variables:
   Clang_10_ImageName: 'seracllnl/tpls:clang-10_02-02-22_17h-50m'
   GCC_9_ImageName: 'seracllnl/tpls:gcc-9_02-02-22_17h-50m'
+  GCC_11_ImageName: 'seracllnl/tpls:gcc-9_02-02-22_17h-50m' # meemee TODO add image name?
 
 jobs:
 - job: Build_and_Test
   strategy:
     matrix:
-      # TODO add gcc11 here
+      linux_gcc11_debug:
+          VM_ImageName: 'ubuntu-20.04'
+          Compiler_ImageName: $(GCC_9_ImageName)
+          TEST_TARGET: 'linux_gcc11'
+          HOST_CONFIG: 'docker-linux-ubuntu20.04-ivybridge-gcc@11.1.0.cmake' # meemee TODO ?
+          BUILD_TYPE: 'Debug'
+      linux_gcc11_release:
+          VM_ImageName: 'ubuntu-20.04'
+          Compiler_ImageName: $(GCC_9_ImageName)
+          TEST_TARGET: 'linux_gcc11'
+          HOST_CONFIG: 'docker-linux-ubuntu20.04-ivybridge-gcc@11.1.0.cmake' # meemee TODO ?
+          BUILD_TYPE: 'Release'
       linux_gcc9_debug:
           VM_ImageName: 'ubuntu-20.04'
           Compiler_ImageName: $(GCC_9_ImageName)
