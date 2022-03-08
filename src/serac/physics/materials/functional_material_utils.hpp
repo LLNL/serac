@@ -185,7 +185,7 @@ TriviallyParameterizedFlux(T) -> TriviallyParameterizedFlux<T>;
  * @brief Convert an unparameterized flux to one which accepts parameter values in the paren operator
  *
  * @tparam T The unparameterized flux type
- * @param material The unparameterized flux
+ * @param flux The unparameterized flux
  * @return The parameterized flux
  */
 template <typename T>
