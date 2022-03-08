@@ -4,7 +4,7 @@ ARG branch=develop
 
 SHELL ["/bin/bash", "-c"]
 RUN sudo apt-get update -y
-RUN sudo apt-get install doxygen gfortran graphviz libopenblas-dev mpich python3-sphinx ssh texlive-full -fy
+RUN sudo apt-get install doxygen gfortran graphviz libopenblas-dev libomp-dev mpich python3-sphinx ssh texlive-full -fy
 
 RUN sudo useradd -m -s /bin/bash -G sudo serac
 
@@ -14,9 +14,9 @@ USER serac
 RUN git clone --recursive --branch $branch --single-branch --depth 1 https://github.com/LLNL/serac.git serac_repo
 
 # Build/install TPLs via spack and then remove the temporary build directory on success
-RUN cd serac_repo && python3 ./scripts/uberenv/uberenv.py --spack-config-dir=./scripts/spack/configs/docker/ubuntu16/ \
+RUN cd serac_repo && python3 ./scripts/uberenv/uberenv.py --spack-config-dir=./scripts/spack/configs/docker/ubuntu20/ \
                                                           --project-json=.uberenv_config.json \
-                                                          --spec=%gcc@11.1.0.0 --prefix=/home/serac/serac_tpls -k \
+                                                          --spec=%gcc@11.1.0 --prefix=/home/serac/serac_tpls -k \
                   && rm -rf /home/serac/serac_tpls/builds
 
 RUN mkdir -p /home/serac/export_hostconfig
