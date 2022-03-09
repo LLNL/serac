@@ -848,10 +848,10 @@ int main() {
 
   constexpr int p = 3;
   constexpr int n = p + 1;
-  constexpr int q = n + 1;
+  constexpr int q = n;
   constexpr int dim = 3;
   int num_runs = 10;
-  int num_elements = 1000;
+  int num_elements = 10000;
 
   double rho = 1.0;
   double k = 1.0;
@@ -926,31 +926,14 @@ int main() {
     R1D = 0.0;
     double runtime = time([&]() {
       for (int i = 0; i < num_runs; i++) {
-        serac::reference_kernel<Geometry::Hexahedron, test, trial, q>(U1D, R1D, J1D, num_elements, qfunc);
-        compiler::please_do_not_optimize_away(&R1D);
-      }
-    }) / n;
-    std::cout << "average reference kernel time: " << runtime / num_runs << std::endl;
-  }
-  auto answer_reference = R1D;
-
-  {
-    R1D = 0.0;
-    double runtime = time([&]() {
-      for (int i = 0; i < num_runs; i++) {
         serac::batched_kernel<Geometry::Hexahedron, test, trial, q>(U1D, R1D, J1D, num_elements, qfunc);
         compiler::please_do_not_optimize_away(&R1D);
       }
     }) / n;
     std::cout << "average batched kernel time: " << runtime / num_runs << std::endl;
   }
-  auto answer_batched = R1D;
-  mfem::Vector error = answer_reference;
-  error -= answer_batched;
-  double relative_error = error.Norml2() / answer_reference.Norml2();
-  std::cout << "error: " << relative_error << std::endl;
+  auto answer_reference = R1D;
 
-#if 1
   {
     R1D = 0.0;
 
@@ -969,11 +952,10 @@ int main() {
     std::cout << "average reference (cuda) kernel time: " << runtime / num_runs << std::endl;
   }
   auto answer_reference_cuda = R1D;
-  error = answer_reference;
+  auto error = answer_reference;
   error -= answer_reference_cuda;
-  relative_error = error.Norml2() / answer_reference.Norml2();
+  auto relative_error = error.Norml2() / answer_reference.Norml2();
   std::cout << "error: " << relative_error << std::endl;
-#endif
 
   {
     R1D = 0.0;
@@ -1003,6 +985,7 @@ int main() {
         mfem::PAMassApply3D<n,q>(num_elements, b_, bt_, rho_dv_1D, U1D, R1D);
         compiler::please_do_not_optimize_away(&R1D);
       }
+      cudaDeviceSynchronize();
     }) / n;
     std::cout << "average mfem mass kernel time: " << mass_runtime / num_runs << std::endl;
 
@@ -1011,6 +994,7 @@ int main() {
         mfem::PADiffusionApply3D<n,q>(num_elements, symmetric = false, b_, g_, bt_, gt_, k_invJ_invJT_dv_1D, U1D, R1D);
         compiler::please_do_not_optimize_away(&R1D);
       }
+      cudaDeviceSynchronize();
     }) / n;
     std::cout << "average mfem diffusion kernel time: " << diffusion_runtime / num_runs << std::endl;
 

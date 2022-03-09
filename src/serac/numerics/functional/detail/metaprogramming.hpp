@@ -31,9 +31,21 @@ constexpr auto get(std::integer_sequence<int, n...>)
 /// @cond
 namespace detail {
 
+/**
+ * @brief unfortunately std::integral_constant doesn't have __host__ __device__ annotations
+ * and we're not using --expt-relaxed-constexpr, so we need to implement something similar
+ * to use it in a device context
+ * 
+ * @tparam i the value represented by this struct
+ */
+template < int i >
+struct integral_constant{
+  SERAC_HOST_DEVICE constexpr operator int(){ return i; } 
+};
+
 SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 template <typename lambda, int... i>
-SERAC_HOST_DEVICE constexpr void for_constexpr(lambda&& f, std::integral_constant<int, i>... args)
+SERAC_HOST_DEVICE constexpr void for_constexpr(lambda&& f, integral_constant<i>... args)
 {
   f(args...);
 }
@@ -42,7 +54,7 @@ SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 template <int... n, typename lambda, typename... arg_types>
 SERAC_HOST_DEVICE constexpr void for_constexpr(lambda&& f, std::integer_sequence<int, n...>, arg_types... args)
 {
-  (detail::for_constexpr(f, args..., std::integral_constant<int, n>{}), ...);
+  (detail::for_constexpr(f, args..., integral_constant<n>{}), ...);
 }
 
 }  // namespace detail

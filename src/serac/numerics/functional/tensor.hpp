@@ -14,7 +14,8 @@
 
 #include "serac/infrastructure/accelerator.hpp"
 
-#include "dual.hpp"
+
+#include "serac/numerics/functional/dual.hpp"
 
 #include "detail/metaprogramming.hpp"
 
@@ -1250,6 +1251,23 @@ SERAC_HOST_DEVICE constexpr auto sym(const tensor<T, n, n>& A)
 }
 
 /**
+ * @brief Returns the antisymmetric part of a square matrix
+ * @param[in] A The matrix to obtain the antisymmetric part of
+ * @return (1/2) * (A - A^T)
+ */
+template <typename T, int n>
+SERAC_HOST_DEVICE constexpr auto antisym(const tensor<T, n, n>& A)
+{
+  tensor<T, n, n> antisymA{};
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      antisymA[i][j] = 0.5 * (A[i][j] - A[j][i]);
+    }
+  }
+  return antisymA;
+}
+
+/**
  * @brief Calculates the deviator of a matrix (rank-2 tensor)
  * @param[in] A The matrix to calculate the deviator of
  * In the context of stress tensors, the deviator is obtained by
@@ -1272,7 +1290,7 @@ SERAC_HOST_DEVICE constexpr auto dev(const tensor<T, n, n>& A)
  * @return I_dim
  */
 template <int dim>
-SERAC_HOST_DEVICE constexpr tensor<double, dim, dim> Identity()
+SERAC_HOST_DEVICE constexpr tensor<double, dim, dim> DenseIdentity()
 {
   tensor<double, dim, dim> I{};
   for (int i = 0; i < dim; i++) {
@@ -1483,7 +1501,7 @@ SERAC_HOST_DEVICE constexpr tensor<T, n, n> inv(const tensor<T, n, n>& A)
     y        = tmp;
   };
 
-  tensor<double, n, n> B = Identity<n>();
+  tensor<double, n, n> B = DenseIdentity<n>();
 
   for (int i = 0; i < n; i++) {
     // Search for maximum in this column
@@ -1796,3 +1814,5 @@ SERAC_HOST_DEVICE auto chain_rule(const tensor<double, m, n, p...>& df_dx, const
 }
 
 }  // namespace serac
+
+#include "serac/numerics/functional/isotropic_tensor.hpp"
