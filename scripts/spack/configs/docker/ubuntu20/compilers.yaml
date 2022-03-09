@@ -54,8 +54,8 @@ compilers:
       modules: []
       operating_system: ubuntu20.04
       paths:
-        cc: /usr/bin/gcc-9
-        cxx: /usr/bin/g++-9
+        cc: /usr/bin/gcc-11
+        cxx: /usr/bin/g++-11
         f77: /usr/bin/gfortran
         fc: /usr/bin/gfortran
       spec: gcc@11.1.0
