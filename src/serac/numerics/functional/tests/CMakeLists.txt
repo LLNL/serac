@@ -40,8 +40,13 @@ serac_add_tests( SOURCES ${functional_tests_mpi}
 
 # not sure how we want to handle performance-related tests
 set(functional_performance_tests
-    performance/J2_material_with_AD.cpp
-    performance/diffusion_performance_test.cpp)
+    performance/J2_material_with_AD.cpp)
+
+# only add diffision test for all compilers except for gcc-11 to prevent compiler-related bug
+if(NOT (C_COMPILER_FAMILY_IS_GNU AND "${CMAKE_CXX_COMPILER_VERSION}" VERSION_GREATER 11.0.0))
+    list(APPEND function_performance_tests
+         performance/diffusion_performance_test.cpp)
+endif()
  
 foreach(filename ${functional_performance_tests})
     get_filename_component(test_name ${filename} NAME_WE)
