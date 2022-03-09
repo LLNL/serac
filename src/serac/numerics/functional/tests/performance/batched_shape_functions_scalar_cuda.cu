@@ -345,100 +345,458 @@ static void PADiffusionApply3D(const int NE,
    });
 }
 
+template<int T_D1D = 0, int T_Q1D = 0>
+static void SmemPAMassApply3D(const int NE,
+                              const Array<double> &b_,
+                              const Array<double> &bt_,
+                              const Vector &d_,
+                              const Vector &x_,
+                              Vector &y_,
+                              const int d1d = 0,
+                              const int q1d = 0)
+{
+   MFEM_CONTRACT_VAR(bt_);
+   const int D1D = T_D1D ? T_D1D : d1d;
+   const int Q1D = T_Q1D ? T_Q1D : q1d;
+   constexpr int M1Q = T_Q1D ? T_Q1D : MAX_Q1D;
+   constexpr int M1D = T_D1D ? T_D1D : MAX_D1D;
+   MFEM_VERIFY(D1D <= M1D, "");
+   MFEM_VERIFY(Q1D <= M1Q, "");
+   auto b = Reshape(b_.Read(), Q1D, D1D);
+   auto d = Reshape(d_.Read(), Q1D, Q1D, Q1D, NE);
+   auto x = Reshape(x_.Read(), D1D, D1D, D1D, NE);
+   auto y = Reshape(y_.ReadWrite(), D1D, D1D, D1D, NE);
+   MFEM_FORALL_3D(e, NE, Q1D, Q1D, 1,
+   {
+      const int D1D = T_D1D ? T_D1D : d1d;
+      const int Q1D = T_Q1D ? T_Q1D : q1d;
+      constexpr int MQ1 = T_Q1D ? T_Q1D : MAX_Q1D;
+      constexpr int MD1 = T_D1D ? T_D1D : MAX_D1D;
+      constexpr int MDQ = (MQ1 > MD1) ? MQ1 : MD1;
+      MFEM_SHARED double sDQ[MQ1*MD1];
+      double (*B)[MD1] = (double (*)[MD1]) sDQ;
+      double (*Bt)[MQ1] = (double (*)[MQ1]) sDQ;
+      MFEM_SHARED double sm0[MDQ*MDQ*MDQ];
+      MFEM_SHARED double sm1[MDQ*MDQ*MDQ];
+      double (*X)[MD1][MD1]   = (double (*)[MD1][MD1]) sm0;
+      double (*DDQ)[MD1][MQ1] = (double (*)[MD1][MQ1]) sm1;
+      double (*DQQ)[MQ1][MQ1] = (double (*)[MQ1][MQ1]) sm0;
+      double (*QQQ)[MQ1][MQ1] = (double (*)[MQ1][MQ1]) sm1;
+      double (*QQD)[MQ1][MD1] = (double (*)[MQ1][MD1]) sm0;
+      double (*QDD)[MD1][MD1] = (double (*)[MD1][MD1]) sm1;
+      MFEM_FOREACH_THREAD(dy,y,D1D)
+      {
+         MFEM_FOREACH_THREAD(dx,x,D1D)
+         {
+            MFEM_UNROLL(MD1)
+            for (int dz = 0; dz < D1D; ++dz)
+            {
+               X[dz][dy][dx] = x(dx,dy,dz,e);
+            }
+         }
+         MFEM_FOREACH_THREAD(dx,x,Q1D)
+         {
+            B[dx][dy] = b(dx,dy);
+         }
+      }
+      MFEM_SYNC_THREAD;
+      MFEM_FOREACH_THREAD(dy,y,D1D)
+      {
+         MFEM_FOREACH_THREAD(qx,x,Q1D)
+         {
+            double u[D1D];
+            MFEM_UNROLL(MD1)
+            for (int dz = 0; dz < D1D; dz++)
+            {
+               u[dz] = 0;
+            }
+            MFEM_UNROLL(MD1)
+            for (int dx = 0; dx < D1D; ++dx)
+            {
+               MFEM_UNROLL(MD1)
+               for (int dz = 0; dz < D1D; ++dz)
+               {
+                  u[dz] += X[dz][dy][dx] * B[qx][dx];
+               }
+            }
+            MFEM_UNROLL(MD1)
+            for (int dz = 0; dz < D1D; ++dz)
+            {
+               DDQ[dz][dy][qx] = u[dz];
+            }
+         }
+      }
+      MFEM_SYNC_THREAD;
+      MFEM_FOREACH_THREAD(qy,y,Q1D)
+      {
+         MFEM_FOREACH_THREAD(qx,x,Q1D)
+         {
+            double u[D1D];
+            MFEM_UNROLL(MD1)
+            for (int dz = 0; dz < D1D; dz++)
+            {
+               u[dz] = 0;
+            }
+            MFEM_UNROLL(MD1)
+            for (int dy = 0; dy < D1D; ++dy)
+            {
+               MFEM_UNROLL(MD1)
+               for (int dz = 0; dz < D1D; dz++)
+               {
+                  u[dz] += DDQ[dz][dy][qx] * B[qy][dy];
+               }
+            }
+            MFEM_UNROLL(MD1)
+            for (int dz = 0; dz < D1D; dz++)
+            {
+               DQQ[dz][qy][qx] = u[dz];
+            }
+         }
+      }
+      MFEM_SYNC_THREAD;
+      MFEM_FOREACH_THREAD(qy,y,Q1D)
+      {
+         MFEM_FOREACH_THREAD(qx,x,Q1D)
+         {
+            double u[Q1D];
+            MFEM_UNROLL(MQ1)
+            for (int qz = 0; qz < Q1D; qz++)
+            {
+               u[qz] = 0;
+            }
+            MFEM_UNROLL(MD1)
+            for (int dz = 0; dz < D1D; ++dz)
+            {
+               MFEM_UNROLL(MQ1)
+               for (int qz = 0; qz < Q1D; qz++)
+               {
+                  u[qz] += DQQ[dz][qy][qx] * B[qz][dz];
+               }
+            }
+            MFEM_UNROLL(MQ1)
+            for (int qz = 0; qz < Q1D; qz++)
+            {
+               QQQ[qz][qy][qx] = u[qz] * d(qx,qy,qz,e);
+            }
+         }
+      }
+      MFEM_SYNC_THREAD;
+      MFEM_FOREACH_THREAD(d,y,D1D)
+      {
+         MFEM_FOREACH_THREAD(q,x,Q1D)
+         {
+            Bt[d][q] = b(q,d);
+         }
+      }
+      MFEM_SYNC_THREAD;
+      MFEM_FOREACH_THREAD(qy,y,Q1D)
+      {
+         MFEM_FOREACH_THREAD(dx,x,D1D)
+         {
+            double u[Q1D];
+            MFEM_UNROLL(MQ1)
+            for (int qz = 0; qz < Q1D; ++qz)
+            {
+               u[qz] = 0;
+            }
+            MFEM_UNROLL(MQ1)
+            for (int qx = 0; qx < Q1D; ++qx)
+            {
+               MFEM_UNROLL(MQ1)
+               for (int qz = 0; qz < Q1D; ++qz)
+               {
+                  u[qz] += QQQ[qz][qy][qx] * Bt[dx][qx];
+               }
+            }
+            MFEM_UNROLL(MQ1)
+            for (int qz = 0; qz < Q1D; ++qz)
+            {
+               QQD[qz][qy][dx] = u[qz];
+            }
+         }
+      }
+      MFEM_SYNC_THREAD;
+      MFEM_FOREACH_THREAD(dy,y,D1D)
+      {
+         MFEM_FOREACH_THREAD(dx,x,D1D)
+         {
+            double u[Q1D];
+            MFEM_UNROLL(MQ1)
+            for (int qz = 0; qz < Q1D; ++qz)
+            {
+               u[qz] = 0;
+            }
+            MFEM_UNROLL(MQ1)
+            for (int qy = 0; qy < Q1D; ++qy)
+            {
+               MFEM_UNROLL(MQ1)
+               for (int qz = 0; qz < Q1D; ++qz)
+               {
+                  u[qz] += QQD[qz][qy][dx] * Bt[dy][qy];
+               }
+            }
+            MFEM_UNROLL(MQ1)
+            for (int qz = 0; qz < Q1D; ++qz)
+            {
+               QDD[qz][dy][dx] = u[qz];
+            }
+         }
+      }
+      MFEM_SYNC_THREAD;
+      MFEM_FOREACH_THREAD(dy,y,D1D)
+      {
+         MFEM_FOREACH_THREAD(dx,x,D1D)
+         {
+            double u[D1D];
+            MFEM_UNROLL(MD1)
+            for (int dz = 0; dz < D1D; ++dz)
+            {
+               u[dz] = 0;
+            }
+            MFEM_UNROLL(MQ1)
+            for (int qz = 0; qz < Q1D; ++qz)
+            {
+               MFEM_UNROLL(MD1)
+               for (int dz = 0; dz < D1D; ++dz)
+               {
+                  u[dz] += QDD[qz][dy][dx] * Bt[dz][qz];
+               }
+            }
+            MFEM_UNROLL(MD1)
+            for (int dz = 0; dz < D1D; ++dz)
+            {
+               y(dx,dy,dz,e) += u[dz];
+            }
+         }
+      }
+   });
+}
+
+template<int T_D1D = 0, int T_Q1D = 0>
+static void SmemPADiffusionApply3D(const int NE,
+                                   const bool symmetric,
+                                   const Array<double> &b_,
+                                   const Array<double> &g_,
+                                   const Vector &d_,
+                                   const Vector &x_,
+                                   Vector &y_,
+                                   const int d1d = 0,
+                                   const int q1d = 0)
+{
+   const int D1D = T_D1D ? T_D1D : d1d;
+   const int Q1D = T_Q1D ? T_Q1D : q1d;
+   constexpr int M1Q = T_Q1D ? T_Q1D : MAX_Q1D;
+   constexpr int M1D = T_D1D ? T_D1D : MAX_D1D;
+   MFEM_VERIFY(D1D <= M1D, "");
+   MFEM_VERIFY(Q1D <= M1Q, "");
+   auto b = Reshape(b_.Read(), Q1D, D1D);
+   auto g = Reshape(g_.Read(), Q1D, D1D);
+   auto d = Reshape(d_.Read(), Q1D, Q1D, Q1D, symmetric ? 6 : 9, NE);
+   auto x = Reshape(x_.Read(), D1D, D1D, D1D, NE);
+   auto y = Reshape(y_.ReadWrite(), D1D, D1D, D1D, NE);
+   MFEM_FORALL_3D(e, NE, Q1D, Q1D, Q1D,
+   {
+      const int D1D = T_D1D ? T_D1D : d1d;
+      const int Q1D = T_Q1D ? T_Q1D : q1d;
+      constexpr int MQ1 = T_Q1D ? T_Q1D : MAX_Q1D;
+      constexpr int MD1 = T_D1D ? T_D1D : MAX_D1D;
+      constexpr int MDQ = (MQ1 > MD1) ? MQ1 : MD1;
+      MFEM_SHARED double sBG[2][MQ1*MD1];
+      double (*B)[MD1] = (double (*)[MD1]) (sBG+0);
+      double (*G)[MD1] = (double (*)[MD1]) (sBG+1);
+      double (*Bt)[MQ1] = (double (*)[MQ1]) (sBG+0);
+      double (*Gt)[MQ1] = (double (*)[MQ1]) (sBG+1);
+      MFEM_SHARED double sm0[3][MDQ*MDQ*MDQ];
+      MFEM_SHARED double sm1[3][MDQ*MDQ*MDQ];
+      double (*X)[MD1][MD1]    = (double (*)[MD1][MD1]) (sm0+2);
+      double (*DDQ0)[MD1][MQ1] = (double (*)[MD1][MQ1]) (sm0+0);
+      double (*DDQ1)[MD1][MQ1] = (double (*)[MD1][MQ1]) (sm0+1);
+      double (*DQQ0)[MQ1][MQ1] = (double (*)[MQ1][MQ1]) (sm1+0);
+      double (*DQQ1)[MQ1][MQ1] = (double (*)[MQ1][MQ1]) (sm1+1);
+      double (*DQQ2)[MQ1][MQ1] = (double (*)[MQ1][MQ1]) (sm1+2);
+      double (*QQQ0)[MQ1][MQ1] = (double (*)[MQ1][MQ1]) (sm0+0);
+      double (*QQQ1)[MQ1][MQ1] = (double (*)[MQ1][MQ1]) (sm0+1);
+      double (*QQQ2)[MQ1][MQ1] = (double (*)[MQ1][MQ1]) (sm0+2);
+      double (*QQD0)[MQ1][MD1] = (double (*)[MQ1][MD1]) (sm1+0);
+      double (*QQD1)[MQ1][MD1] = (double (*)[MQ1][MD1]) (sm1+1);
+      double (*QQD2)[MQ1][MD1] = (double (*)[MQ1][MD1]) (sm1+2);
+      double (*QDD0)[MD1][MD1] = (double (*)[MD1][MD1]) (sm0+0);
+      double (*QDD1)[MD1][MD1] = (double (*)[MD1][MD1]) (sm0+1);
+      double (*QDD2)[MD1][MD1] = (double (*)[MD1][MD1]) (sm0+2);
+      MFEM_FOREACH_THREAD(dz,z,D1D)
+      {
+         MFEM_FOREACH_THREAD(dy,y,D1D)
+         {
+            MFEM_FOREACH_THREAD(dx,x,D1D)
+            {
+               X[dz][dy][dx] = x(dx,dy,dz,e);
+            }
+         }
+      }
+      if (MFEM_THREAD_ID(z) == 0)
+      {
+         MFEM_FOREACH_THREAD(dy,y,D1D)
+         {
+            MFEM_FOREACH_THREAD(qx,x,Q1D)
+            {
+               B[qx][dy] = b(qx,dy);
+               G[qx][dy] = g(qx,dy);
+            }
+         }
+      }
+      MFEM_SYNC_THREAD;
+      MFEM_FOREACH_THREAD(dz,z,D1D)
+      {
+         MFEM_FOREACH_THREAD(dy,y,D1D)
+         {
+            MFEM_FOREACH_THREAD(qx,x,Q1D)
+            {
+               double u = 0.0, v = 0.0;
+               MFEM_UNROLL(MD1)
+               for (int dx = 0; dx < D1D; ++dx)
+               {
+                  const double coords = X[dz][dy][dx];
+                  u += coords * B[qx][dx];
+                  v += coords * G[qx][dx];
+               }
+               DDQ0[dz][dy][qx] = u;
+               DDQ1[dz][dy][qx] = v;
+            }
+         }
+      }
+      MFEM_SYNC_THREAD;
+      MFEM_FOREACH_THREAD(dz,z,D1D)
+      {
+         MFEM_FOREACH_THREAD(qy,y,Q1D)
+         {
+            MFEM_FOREACH_THREAD(qx,x,Q1D)
+            {
+               double u = 0.0, v = 0.0, w = 0.0;
+               MFEM_UNROLL(MD1)
+               for (int dy = 0; dy < D1D; ++dy)
+               {
+                  u += DDQ1[dz][dy][qx] * B[qy][dy];
+                  v += DDQ0[dz][dy][qx] * G[qy][dy];
+                  w += DDQ0[dz][dy][qx] * B[qy][dy];
+               }
+               DQQ0[dz][qy][qx] = u;
+               DQQ1[dz][qy][qx] = v;
+               DQQ2[dz][qy][qx] = w;
+            }
+         }
+      }
+      MFEM_SYNC_THREAD;
+      MFEM_FOREACH_THREAD(qz,z,Q1D)
+      {
+         MFEM_FOREACH_THREAD(qy,y,Q1D)
+         {
+            MFEM_FOREACH_THREAD(qx,x,Q1D)
+            {
+               double u = 0.0, v = 0.0, w = 0.0;
+               MFEM_UNROLL(MD1)
+               for (int dz = 0; dz < D1D; ++dz)
+               {
+                  u += DQQ0[dz][qy][qx] * B[qz][dz];
+                  v += DQQ1[dz][qy][qx] * B[qz][dz];
+                  w += DQQ2[dz][qy][qx] * G[qz][dz];
+               }
+               const double O11 = d(qx,qy,qz,0,e);
+               const double O12 = d(qx,qy,qz,1,e);
+               const double O13 = d(qx,qy,qz,2,e);
+               const double O21 = symmetric ? O12 : d(qx,qy,qz,3,e);
+               const double O22 = symmetric ? d(qx,qy,qz,3,e) : d(qx,qy,qz,4,e);
+               const double O23 = symmetric ? d(qx,qy,qz,4,e) : d(qx,qy,qz,5,e);
+               const double O31 = symmetric ? O13 : d(qx,qy,qz,6,e);
+               const double O32 = symmetric ? O23 : d(qx,qy,qz,7,e);
+               const double O33 = symmetric ? d(qx,qy,qz,5,e) : d(qx,qy,qz,8,e);
+               const double gX = u;
+               const double gY = v;
+               const double gZ = w;
+               QQQ0[qz][qy][qx] = (O11*gX) + (O12*gY) + (O13*gZ);
+               QQQ1[qz][qy][qx] = (O21*gX) + (O22*gY) + (O23*gZ);
+               QQQ2[qz][qy][qx] = (O31*gX) + (O32*gY) + (O33*gZ);
+            }
+         }
+      }
+      MFEM_SYNC_THREAD;
+      if (MFEM_THREAD_ID(z) == 0)
+      {
+         MFEM_FOREACH_THREAD(dy,y,D1D)
+         {
+            MFEM_FOREACH_THREAD(qx,x,Q1D)
+            {
+               Bt[dy][qx] = b(qx,dy);
+               Gt[dy][qx] = g(qx,dy);
+            }
+         }
+      }
+      MFEM_SYNC_THREAD;
+      MFEM_FOREACH_THREAD(qz,z,Q1D)
+      {
+         MFEM_FOREACH_THREAD(qy,y,Q1D)
+         {
+            MFEM_FOREACH_THREAD(dx,x,D1D)
+            {
+               double u = 0.0, v = 0.0, w = 0.0;
+               MFEM_UNROLL(MQ1)
+               for (int qx = 0; qx < Q1D; ++qx)
+               {
+                  u += QQQ0[qz][qy][qx] * Gt[dx][qx];
+                  v += QQQ1[qz][qy][qx] * Bt[dx][qx];
+                  w += QQQ2[qz][qy][qx] * Bt[dx][qx];
+               }
+               QQD0[qz][qy][dx] = u;
+               QQD1[qz][qy][dx] = v;
+               QQD2[qz][qy][dx] = w;
+            }
+         }
+      }
+      MFEM_SYNC_THREAD;
+      MFEM_FOREACH_THREAD(qz,z,Q1D)
+      {
+         MFEM_FOREACH_THREAD(dy,y,D1D)
+         {
+            MFEM_FOREACH_THREAD(dx,x,D1D)
+            {
+               double u = 0.0, v = 0.0, w = 0.0;
+               MFEM_UNROLL(Q1D)
+               for (int qy = 0; qy < Q1D; ++qy)
+               {
+                  u += QQD0[qz][qy][dx] * Bt[dy][qy];
+                  v += QQD1[qz][qy][dx] * Gt[dy][qy];
+                  w += QQD2[qz][qy][dx] * Bt[dy][qy];
+               }
+               QDD0[qz][dy][dx] = u;
+               QDD1[qz][dy][dx] = v;
+               QDD2[qz][dy][dx] = w;
+            }
+         }
+      }
+      MFEM_SYNC_THREAD;
+      MFEM_FOREACH_THREAD(dz,z,D1D)
+      {
+         MFEM_FOREACH_THREAD(dy,y,D1D)
+         {
+            MFEM_FOREACH_THREAD(dx,x,D1D)
+            {
+               double u = 0.0, v = 0.0, w = 0.0;
+               MFEM_UNROLL(MQ1)
+               for (int qz = 0; qz < Q1D; ++qz)
+               {
+                  u += QDD0[qz][dy][dx] * Bt[dz][qz];
+                  v += QDD1[qz][dy][dx] * Bt[dz][qz];
+                  w += QDD2[qz][dy][dx] * Gt[dz][qz];
+               }
+               y(dx,dy,dz,e) += (u + v + w);
+            }
+         }
+      }
+   });
+}
+
 }
 
 namespace serac {
-
-template < Geometry geom, typename test, typename trial, int Q, typename lambda >
-void reference_kernel(const mfem::Vector & U_, mfem::Vector & R_, const mfem::Vector & J_, size_t num_elements, lambda qf) {
-
-  using trial_element              = finite_element<geom, trial>;
-  using test_element               = finite_element<geom, test>;
-  using element_residual_type      = typename test_element::residual_type;
-  static constexpr int  dim        = dimension_of(geom);
-  static constexpr int  test_ndof  = test_element::ndof;
-  static constexpr int  trial_ndof = trial_element::ndof;
-  static constexpr auto rule       = GaussQuadratureRule<geom, Q>();
-
-  // mfem provides this information in 1D arrays, so we reshape it
-  // into strided multidimensional arrays before using
-  auto J = mfem::Reshape(J_.HostRead(), rule.size(), dim, dim, num_elements);
-  auto r = detail::Reshape<test>(R_.HostReadWrite(), test_ndof, int(num_elements));
-  auto u = detail::Reshape<test>(U_.HostRead(), trial_ndof, int(num_elements));
-
-  // for each element in the domain
-  for (uint32_t e = 0; e < num_elements; e++) {
-
-    // get the DOF values for this particular element
-    auto u_elem = detail::Load<trial_element>(u, e);
-
-    // this is where we will accumulate the element residual tensor
-    element_residual_type r_elem{};
-
-    // for each quadrature point in the element
-    for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-      auto   xi  = rule.points[q];
-      auto   dxi = rule.weights[q];
-      auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
-      double dx  = det(J_q) * dxi;
-
-      // evaluate the value/derivatives needed for the q-function at this quadrature point
-      auto arg = domain_integral::Preprocess<trial_element>(u_elem, xi, J_q);
-
-      // integrate qf_output against test space shape functions / gradients
-      // to get element residual contributions
-      r_elem += domain_integral::Postprocess<test_element>(qf(arg), xi, J_q) * dx;
-
-    }
-
-    // once we've finished the element integration loop, write our element residuals
-    // out to memory, to be later assembled into global residuals by mfem
-    detail::Add(r, r_elem, int(e));
-  }
-
-}
-
-template <Geometry g, typename test, typename trial, int Q, typename lambda>
-__global__ void reference_cuda_kernel(mfem::DeviceTensor< 2, const double > u, 
-                                      mfem::DeviceTensor< 2, double > r, 
-                                      mfem::DeviceTensor< 4, const double > J, 
-                                      size_t num_elements, 
-                                      lambda qf) {
-
-  using test_element          = finite_element<g, test>;
-  using trial_element         = finite_element<g, trial>;
-  using element_residual_type = typename test_element::residual_type;
-  static constexpr auto rule  = GaussQuadratureRule<g, Q>();
-  static constexpr int  dim   = dimension_of(g);
-
-  const int grid_stride = blockDim.x * gridDim.x;
-
-  for (int qe = blockIdx.x * blockDim.x + threadIdx.x; qe < num_elements * rule.size(); qe += grid_stride) {
-
-    int e = qe / rule.size();
-    int q = qe % rule.size();
-
-    auto u_elem = detail::Load<trial_element>(u, e);
-
-    element_residual_type r_elem{};
-
-    auto   xi  = rule.points[q];
-    auto   dxi = rule.weights[q];
-    auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
-    double dx  = det(J_q) * dxi;
-
-    auto arg = domain_integral::Preprocess<trial_element>(u_elem, xi, J_q);
-
-    auto qf_output = qf(arg);
-
-    r_elem += domain_integral::Postprocess<test_element>(qf_output, xi, J_q) * dx;
-
-    detail::Add(r, r_elem, e);
-
-  }
-
-}
-
 template < typename S, typename T >
 struct value_and_gradient { S value; T gradient; };
 
@@ -557,82 +915,6 @@ auto BatchApply(lambda qf, tensor< T, n ... > qf_inputs, GaussLegendreRule<geom,
 
 }
 
-template < typename lambda, typename T, int ... n, Geometry geom, int q >
-auto BatchApplySIMD(lambda qf, tensor< T, n ... > qf_inputs, GaussLegendreRule<geom, q> rule, mfem::DeviceTensor< 6, const double > J_q, int e) {
-
-  if constexpr (geom == Geometry::Hexahedron) {
-
-    constexpr int dim = 3;
-
-    using output_type = decltype(qf(qf_inputs[0][0][0].data));
-
-    tensor< output_type, q, q, q > qf_outputs;
-
-    int q_id = 0;
-    for (int qz = 0; qz < q; ++qz) {
-      for (int qy = 0; qy < q; ++qy) {
-        for (int qx = 0; qx < q; ++qx) {
-
-          auto qf_input = qf_inputs[qz][qy][qx].data;
-          
-          auto J = make_tensor<dim, dim>([&](int i, int j) { return J_q(qx, qy, qz, i, j, e); });
-          auto invJ = inv(J);
-          auto dv = det(J) * rule.weight(qx, qy, qz);
-
-          qf_input.gradient = dot(qf_input.gradient, invJ);
-
-          qf_outputs[qz][qy][qx] = qf(qf_input) * dv;
-
-          serac::get<1>(qf_outputs[qz][qy][qx]) = dot(invJ, serac::get<1>(qf_outputs[qz][qy][qx]));
-
-          q_id++;
-
-        }
-      }
-    }
-
-    return qf_outputs;
-
-  }
-
-}
-
-template < typename lambda, typename T, int ... n, Geometry geom, int q >
-void BatchApplySIMDinout(lambda qf, tensor< T, n ... > & qf_inouts, GaussLegendreRule<geom, q> rule, mfem::DeviceTensor< 6, const double > J_q, int e) {
-
-  if constexpr (geom == Geometry::Hexahedron) {
-
-    constexpr int dim = 3;
-
-    int q_id = 0;
-    for (int qz = 0; qz < q; ++qz) {
-      for (int qy = 0; qy < q; ++qy) {
-        for (int qx = 0; qx < q; ++qx) {
-
-          auto qf_inout = qf_inouts[qz][qy][qx].data;
-          
-          auto J = make_tensor<dim, dim>([&](int i, int j) { return J_q(qx, qy, qz, i, j, e); });
-          auto invJ = inv(J);
-          auto dv = det(J) * rule.weight(qx, qy, qz);
-
-          qf_inout.gradient = dot(qf_inout.gradient, invJ);
-
-          qf_inout = to_value_and_gradient(qf(qf_inout) * dv);
-
-          qf_inout.gradient = dot(invJ, qf_inout.gradient);
-
-          qf_inouts[qz][qy][qx].data = qf_inout;
-
-          q_id++;
-
-        }
-      }
-    }
-
-  }
-
-}
-
 template < typename trial_space, typename T, Geometry geom, int q >
 auto BatchPostprocess(const tensor < T, q, q, q > qf_outputs, GaussLegendreRule<geom, q> rule) {
 
@@ -646,75 +928,6 @@ auto BatchPostprocess(const tensor < T, q, q, q > qf_outputs, GaussLegendreRule<
       B[i] = GaussLobattoInterpolation<n>(rule.points_1D[i]);
       G[i] = GaussLobattoInterpolationDerivative<n>(rule.points_1D[i]);
     }
-
-    tensor< double, n, n, n > element_residual{};
-
-    for (int qz = 0; qz < q; ++qz) {
-      tensor < value_and_gradient< double, tensor< double, 3 > >, n, n > gradXY{};
-      for (int qy = 0; qy < q; ++qy) {
-        tensor < value_and_gradient< double, tensor< double, 3 > >, n > gradX{};
-        for (int qx = 0; qx < q; ++qx) {
-          const T qf_output = qf_outputs[qz][qy][qx];
-          for (int dx = 0; dx < n; ++dx) {
-            const double wx = B(qx, dx);
-            const double wDx = G(qx, dx);
-            gradX[dx].value       += serac::get<0>(qf_output) * wx;
-            gradX[dx].gradient[0] += serac::get<1>(qf_output)[0] * wDx;
-            gradX[dx].gradient[1] += serac::get<1>(qf_output)[1] * wx;
-            gradX[dx].gradient[2] += serac::get<1>(qf_output)[2] * wx;
-          }
-        }
-        for (int dy = 0; dy < n; ++dy) {
-          const double wy = B(qy, dy);
-          const double wDy = G(qy, dy);
-          for (int dx = 0; dx < n; ++dx) {
-            gradXY[dy][dx].value       += gradX[dx].value       * wy;
-            gradXY[dy][dx].gradient[0] += gradX[dx].gradient[0] * wy;
-            gradXY[dy][dx].gradient[1] += gradX[dx].gradient[1] * wDy;
-            gradXY[dy][dx].gradient[2] += gradX[dx].gradient[2] * wy;
-          }
-        }
-      }
-      for (int dz = 0; dz < n; ++dz) {
-        const double wz = B(qz, dz);
-        const double wDz = G(qz, dz);
-        for (int dy = 0; dy < n; ++dy) {
-          for (int dx = 0; dx < n; ++dx) {
-            auto tmp = gradXY[dy][dx];
-            element_residual[dx][dy][dz] += (tmp.value + tmp.gradient[0] + tmp.gradient[1]) * wz + tmp.gradient[2] * wDz;
-          }
-        }
-      }
-    }
-
-    return element_residual;
-
-  }
-
-}
-
-template < typename trial_space, typename T, Geometry geom, int q >
-auto BatchPostprocessConstexpr(const tensor < T, q, q, q > qf_outputs, GaussLegendreRule<geom, q> rule) {
-
-  if constexpr (geom == Geometry::Hexahedron) {
-
-    static constexpr int n = trial_space::order + 1;
-
-    static constexpr auto B = [&](){
-      tensor< double, q, n > B_{};
-      for (int i = 0; i < q; i++) {
-        B_[i] = GaussLobattoInterpolation<n>(rule.points_1D[i]);
-      }
-      return B_;
-    }();
-
-    static constexpr auto G = [&](){
-      tensor< double, q, n > G_{};
-      for (int i = 0; i < q; i++) {
-        G_[i] = GaussLobattoInterpolationDerivative<n>(rule.points_1D[i]);
-      }
-      return G_;
-    }();
 
     tensor< double, n, n, n > element_residual{};
 
@@ -809,12 +1022,239 @@ void batched_kernel(const mfem::Vector & U_, mfem::Vector & R_, const mfem::Vect
 
 }
 
+template <Geometry g, typename test, typename trial, int Q, typename lambda>
+__global__ void reference_cuda_kernel(mfem::DeviceTensor< 2, const double > u, 
+                                      mfem::DeviceTensor< 2, double > r, 
+                                      mfem::DeviceTensor< 4, const double > J, 
+                                      size_t num_elements, 
+                                      lambda qf) {
+
+  using test_element          = finite_element<g, test>;
+  using trial_element         = finite_element<g, trial>;
+  using element_residual_type = typename test_element::residual_type;
+  static constexpr auto rule  = GaussQuadratureRule<g, Q>();
+  static constexpr int  dim   = dimension_of(g);
+
+  const int grid_stride = blockDim.x * gridDim.x;
+
+  for (int qe = blockIdx.x * blockDim.x + threadIdx.x; qe < num_elements * rule.size(); qe += grid_stride) {
+
+    int e = qe / rule.size();
+    int q = qe % rule.size();
+
+    auto u_elem = detail::Load<trial_element>(u, e);
+
+    element_residual_type r_elem{};
+
+    auto   xi  = rule.points[q];
+    auto   dxi = rule.weights[q];
+    auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
+    double dx  = det(J_q) * dxi;
+
+    auto arg = domain_integral::Preprocess<trial_element>(u_elem, xi, J_q);
+
+    auto qf_output = qf(arg);
+
+    r_elem += domain_integral::Postprocess<test_element>(qf_output, xi, J_q) * dx;
+
+    detail::Add(r, r_elem, e);
+
+  }
+
+}
+
+#if 0
+template < typename trial_space, Geometry geom, int q >
+auto BatchPreprocessCUDA(const mfem::DeviceTensor< 4, const double > & u_e, GaussLegendreRule<geom, q> rule, int e) {
+  static constexpr int n = trial_space::order + 1;
+
+  if constexpr (geom == Geometry::Hexahedron) {
+
+    tensor< double, q, n > B{};
+    tensor< double, q, n > G{};
+    for (int i = 0; i < q; i++) {
+      B[i] = GaussLobattoInterpolation<n>(rule.points_1D[i]);
+      G[i] = GaussLobattoInterpolationDerivative<n>(rule.points_1D[i]);
+    }
+    auto BT = transpose(B);
+    auto GT = transpose(G);
+
+    value_and_gradient < double, tensor< double, 3 > > u_q{};
+
+    for (int iz = 0; iz < n; ++iz) {
+      __shared__ tensor< value_and_gradient< double, tensor< double, 2 > >, q, q> interpolated_in_XY{};
+      for (int iy = 0; iy < n; ++iy) {
+        tensor< value_and_gradient< double, double >, q> interpolated_in_X{};
+        for (int ix = 0; ix < n; ++ix) {
+          const double s = u_e(ix, iy, iz, e);
+          for (int qx = 0; qx < q; ++qx) {
+            interpolated_in_X[qx].value += s * BT(ix, qx);
+            interpolated_in_X[qx].gradient += s * GT(ix, qx);
+          }
+        }
+        for (int qy = 0; qy < q; ++qy) {
+          const double interpolate_in_Y = BT(iy, qy);
+          const double differentiate_in_Y = GT(iy, qy);
+          for (int qx = 0; qx < q; ++qx) {
+            interpolated_in_XY[qy][qx].value       += interpolated_in_X[qx].value    * interpolate_in_Y;
+            interpolated_in_XY[qy][qx].gradient[0] += interpolated_in_X[qx].gradient * interpolate_in_Y;
+            interpolated_in_XY[qy][qx].gradient[1] += interpolated_in_X[qx].value    * differentiate_in_Y;
+          }
+        }
+      }
+      for (int qz = 0; qz < q; ++qz) {
+        const double interpolate_in_Z = BT(iz, qz);
+        const double differentiate_in_Z = GT(iz, qz);
+        for (int qy = 0; qy < q; ++qy) {
+          for (int qx = 0; qx < q; ++qx) {
+            u_q[qz][qy][qx].value       += interpolated_in_XY[qy][qx].value       * interpolate_in_Z;
+            u_q[qz][qy][qx].gradient[0] += interpolated_in_XY[qy][qx].gradient[0] * interpolate_in_Z;
+            u_q[qz][qy][qx].gradient[1] += interpolated_in_XY[qy][qx].gradient[1] * interpolate_in_Z;
+            u_q[qz][qy][qx].gradient[2] += interpolated_in_XY[qy][qx].value       * differentiate_in_Z;
+          }
+        }
+      }
+
+    }
+
+    return u_q;
+
+  }
+
+}
+
+template < typename lambda, typename T, int ... n, Geometry geom, int q >
+auto BatchApplyCUDA(lambda qf, T qf_inputs, GaussLegendreRule<geom, q> rule, mfem::DeviceTensor< 6, const double > J_q, int e) {
+
+  if constexpr (geom == Geometry::Hexahedron) {
+
+    constexpr int dim = 3;
+
+    using output_type = decltype(qf(qf_inputs[0][0][0]));
+
+    tensor< output_type, q, q, q > qf_outputs;
+
+    int q_id = 0;
+    for (int qz = 0; qz < q; ++qz) {
+      for (int qy = 0; qy < q; ++qy) {
+        for (int qx = 0; qx < q; ++qx) {
+
+          auto qf_input = qf_inputs[qz][qy][qx];
+          
+          auto J = make_tensor<dim, dim>([&](int i, int j) { return J_q(qx, qy, qz, i, j, e); });
+          auto invJ = inv(J);
+          auto dv = det(J) * rule.weight(qx, qy, qz);
+
+          qf_input.gradient = dot(qf_input.gradient, invJ);
+
+          qf_outputs[qz][qy][qx] = qf(qf_input) * dv;
+
+          serac::get<1>(qf_outputs[qz][qy][qx]) = dot(invJ, serac::get<1>(qf_outputs[qz][qy][qx]));
+
+          q_id++;
+
+        }
+      }
+    }
+
+    return qf_outputs;
+
+  }
+
+}
+
+template < typename trial_space, typename T, Geometry geom, int q, int p >
+auto BatchPostprocessCUDA(const tensor < T, q, q, q > & qf_outputs, GaussLegendreRule<geom, q> rule, tensor< T, p, p, p > & r_elem) {
+
+  if constexpr (geom == Geometry::Hexahedron) {
+
+    static constexpr int n = trial_space::order + 1;
+
+    tensor< double, q, n > B{};
+    tensor< double, q, n > G{};
+    for (int i = 0; i < q; i++) {
+      B[i] = GaussLobattoInterpolation<n>(rule.points_1D[i]);
+      G[i] = GaussLobattoInterpolationDerivative<n>(rule.points_1D[i]);
+    }
+
+    tensor< double, n, n, n > element_residual{};
+
+    for (int qz = 0; qz < q; ++qz) {
+      tensor < value_and_gradient< double, tensor< double, 3 > >, n, n > gradXY{};
+      for (int qy = 0; qy < q; ++qy) {
+        tensor < value_and_gradient< double, tensor< double, 3 > >, n > gradX{};
+        for (int qx = 0; qx < q; ++qx) {
+          const T qf_output = qf_outputs[qz][qy][qx];
+          for (int dx = 0; dx < n; ++dx) {
+            const double wx = B(qx, dx);
+            const double wDx = G(qx, dx);
+            gradX[dx].value       += serac::get<0>(qf_output) * wx;
+            gradX[dx].gradient[0] += serac::get<1>(qf_output)[0] * wDx;
+            gradX[dx].gradient[1] += serac::get<1>(qf_output)[1] * wx;
+            gradX[dx].gradient[2] += serac::get<1>(qf_output)[2] * wx;
+          }
+        }
+        for (int dy = 0; dy < n; ++dy) {
+          const double wy = B(qy, dy);
+          const double wDy = G(qy, dy);
+          for (int dx = 0; dx < n; ++dx) {
+            gradXY[dy][dx].value       += gradX[dx].value       * wy;
+            gradXY[dy][dx].gradient[0] += gradX[dx].gradient[0] * wy;
+            gradXY[dy][dx].gradient[1] += gradX[dx].gradient[1] * wDy;
+            gradXY[dy][dx].gradient[2] += gradX[dx].gradient[2] * wy;
+          }
+        }
+      }
+      for (int dz = 0; dz < n; ++dz) {
+        const double wz = B(qz, dz);
+        const double wDz = G(qz, dz);
+        for (int dy = 0; dy < n; ++dy) {
+          for (int dx = 0; dx < n; ++dx) {
+            auto tmp = gradXY[dy][dx];
+            element_residual[dx][dy][dz] += (tmp.value + tmp.gradient[0] + tmp.gradient[1]) * wz + tmp.gradient[2] * wDz;
+          }
+        }
+      }
+    }
+
+    return element_residual;
+
+  }
+
+template <Geometry g, typename test, typename trial, int Q, typename lambda>
+__global__ void batched_cuda_kernel(mfem::DeviceTensor< 2, const double > u, 
+                                      mfem::DeviceTensor< 2, double > r, 
+                                      mfem::DeviceTensor< 4, const double > J, 
+                                      size_t num_elements, 
+                                      lambda qf) {
+
+  using test_element          = finite_element<g, test>;
+  using trial_element         = finite_element<g, trial>;
+  using element_residual_type = typename test_element::residual_type;
+  static constexpr auto rule  = GaussQuadratureRule<g, Q>();
+  static constexpr int  dim   = dimension_of(g);
+
+  // for each element in the domain
+  for (uint32_t e = 0; e < num_elements_; e++) {
+
+    auto args = BatchPreprocessCUDA<trial>(u, rule, e);
+
+    auto qf_outputs = BatchApplyCUDA(qf_, args, rule, J, e);
+
+    BatchPostprocessCUDA<test>(qf_outputs, rule, r_elem);
+
+    detail::Add(r, r_elem, int(e));
+
+  }
+
+}
+#endif
+
 } // namespace serac
 
 namespace compiler {
   static void please_do_not_optimize_away([[maybe_unused]] void* p) { asm volatile("" : : "g"(p) : "memory"); }
 }
-
 
 struct MassAndDiffusionQFunction {
   template < typename T >
@@ -999,11 +1439,38 @@ int main() {
     std::cout << "average mfem diffusion kernel time: " << diffusion_runtime / num_runs << std::endl;
 
     std::cout << "average mfem combined kernel time: " << (mass_runtime + diffusion_runtime) / num_runs << std::endl;
+    auto answer_mfem = R1D;
+    auto error = answer_reference;
+    error -= answer_mfem;
+    auto relative_error = error.Norml2() / answer_reference.Norml2();
+    std::cout << "error: " << relative_error << std::endl;
+
+    R1D = 0.0;
+    mass_runtime = time([&]() {
+      for (int i = 0; i < num_runs; i++) {
+        mfem::SmemPAMassApply3D<n,q>(num_elements, b_, bt_, rho_dv_1D, U1D, R1D);
+        compiler::please_do_not_optimize_away(&R1D);
+      }
+      cudaDeviceSynchronize();
+    }) / n;
+    std::cout << "average mfem mass kernel (Smem) time: " << mass_runtime / num_runs << std::endl;
+
+    diffusion_runtime = time([&]() {
+      for (int i = 0; i < num_runs; i++) {
+        mfem::SmemPADiffusionApply3D<n,q>(num_elements, symmetric = false, b_, g_, k_invJ_invJT_dv_1D, U1D, R1D);
+        compiler::please_do_not_optimize_away(&R1D);
+      }
+      cudaDeviceSynchronize();
+    }) / n;
+    std::cout << "average mfem diffusion kernel (Smem) time: " << diffusion_runtime / num_runs << std::endl;
+
+    std::cout << "average mfem combined kernel (Smem) time: " << (mass_runtime + diffusion_runtime) / num_runs << std::endl;
+    answer_mfem = R1D;
+    error = answer_reference;
+    error -= answer_mfem;
+    relative_error = error.Norml2() / answer_reference.Norml2();
+    std::cout << "error: " << relative_error << std::endl;
+
   }
-  auto answer_mfem = R1D;
-  error = answer_reference;
-  error -= answer_mfem;
-  relative_error = error.Norml2() / answer_reference.Norml2();
-  std::cout << "error: " << relative_error << std::endl;
 
 }
