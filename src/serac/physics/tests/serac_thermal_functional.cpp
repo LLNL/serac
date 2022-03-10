@@ -44,8 +44,7 @@ void functional_test_static(double expected_temp_norm)
   std::set<int> ess_bdr = {1};
 
   // Construct a functional-based thermal conduction solver
-  ThermalConductionFunctional<p, dim> thermal_solver(ThermalConductionFunctional<p, dim>::defaultQuasistaticOptions(),
-                                                     "thermal_functional");
+  ThermalConductionFunctional<p, dim> thermal_solver(Thermal::defaultQuasistaticOptions(), "thermal_functional");
 
   tensor<double, dim, dim> cond;
 
@@ -115,8 +114,7 @@ void functional_test_dynamic(double expected_temp_norm)
   std::set<int> ess_bdr = {1};
 
   // Construct a functional-based thermal conduction solver
-  ThermalConductionFunctional<p, dim> thermal_solver(ThermalConductionFunctional<p, dim>::defaultDynamicOptions(),
-                                                     "thermal_functional");
+  ThermalConductionFunctional<p, dim> thermal_solver(Thermal::defaultDynamicOptions(), "thermal_functional");
 
   // Define an isotropic conductor material model
   Thermal::LinearIsotropicConductor mat(0.5, 0.5, 0.5);
@@ -206,9 +204,8 @@ TEST(thermal_functional, parameterized_material)
   // Note that we now include an extra template parameter indicating the finite element space for the parameterized
   // field, in this case the thermal conductivity. We also pass an array of finite element states for each of the
   // requested parameterized fields.
-  ThermalConductionFunctional<p, dim, H1<1>> thermal_solver(
-      ThermalConductionFunctional<p, dim, H1<1>>::defaultQuasistaticOptions(), "thermal_functional",
-      {user_defined_conductivity});
+  ThermalConductionFunctional<p, dim, H1<1>> thermal_solver(Thermal::defaultQuasistaticOptions(), "thermal_functional",
+                                                            {user_defined_conductivity});
 
   // Construct a potentially user-defined parameterized material and send it to the thermal module
   Thermal::ParameterizedLinearIsotropicConductor mat;

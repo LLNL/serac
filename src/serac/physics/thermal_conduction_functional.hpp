@@ -24,6 +24,85 @@
 
 namespace serac {
 
+namespace Thermal {
+
+/// A timestep and boundary condition enforcement method for a dynamic solver
+struct TimesteppingOptions {
+  /// The timestepping method to be applied
+  serac::TimestepMethod timestepper;
+
+  /// The essential boundary enforcement method to use
+  serac::DirichletEnforcementMethod enforcement_method;
+};
+
+/**
+ * @brief A configuration variant for the various solves
+ * For quasistatic solves, leave the @a dyn_options parameter null. @a T_nonlin_options and @a T_lin_options
+ * define the solver parameters for the nonlinear residual and linear stiffness solves. For
+ * dynamic problems, @a dyn_options defines the timestepping scheme while @a T_lin_options and @a T_nonlin_options
+ * define the nonlinear residual and linear stiffness solve options as before.
+ */
+struct SolverOptions {
+  /// The linear solver options
+  LinearSolverOptions T_lin_options;
+
+  /// The nonlinear solver options
+  NonlinearSolverOptions T_nonlin_options;
+
+  /**
+   * @brief The optional ODE solver parameters
+   * @note If this is not defined, a quasi-static solve is performed
+   */
+  std::optional<TimesteppingOptions> dyn_options = std::nullopt;
+};
+
+/**
+ * @brief Reasonable defaults for most thermal linear solver options
+ *
+ * @return The default thermal linear options
+ */
+static IterativeSolverOptions defaultLinearOptions()
+{
+  return {.rel_tol     = 1.0e-6,
+          .abs_tol     = 1.0e-12,
+          .print_level = 0,
+          .max_iter    = 200,
+          .lin_solver  = LinearSolver::CG,
+          .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
+}
+
+/**
+ * @brief Reasonable defaults for most thermal nonlinear solver options
+ *
+ * @return The default thermal nonlinear options
+ */
+static NonlinearSolverOptions defaultNonlinearOptions()
+{
+  return {.rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
+}
+
+/**
+ * @brief Reasonable defaults for quasi-static thermal conduction simulations
+ *
+ * @return The default quasi-static solver options
+ */
+static SolverOptions defaultQuasistaticOptions()
+{
+  return {defaultLinearOptions(), defaultNonlinearOptions(), std::nullopt};
+}
+
+/**
+ * @brief Reasonable defaults for dynamic thermal conduction simulations
+ *
+ * @return The default dynamic solver options
+ */
+static SolverOptions defaultDynamicOptions()
+{
+  return {defaultLinearOptions(), defaultNonlinearOptions(),
+          TimesteppingOptions{TimestepMethod::BackwardEuler, DirichletEnforcementMethod::RateControl}};
+}
+}  // namespace Thermal
+
 /**
  * @brief An object containing the solver for a thermal conduction PDE
  *
@@ -40,82 +119,6 @@ namespace serac {
 template <int order, int dim, typename... parameter_space>
 class ThermalConductionFunctional : public BasePhysics {
 public:
-  /// A timestep and boundary condition enforcement method for a dynamic solver
-  struct TimesteppingOptions {
-    /// The timestepping method to be applied
-    TimestepMethod timestepper;
-
-    /// The essential boundary enforcement method to use
-    DirichletEnforcementMethod enforcement_method;
-  };
-
-  /**
-   * @brief A configuration variant for the various solves
-   * For quasistatic solves, leave the @a dyn_options parameter null. @a T_nonlin_options and @a T_lin_options
-   * define the solver parameters for the nonlinear residual and linear stiffness solves. For
-   * dynamic problems, @a dyn_options defines the timestepping scheme while @a T_lin_options and @a T_nonlin_options
-   * define the nonlinear residual and linear stiffness solve options as before.
-   */
-  struct SolverOptions {
-    /// The linear solver options
-    LinearSolverOptions T_lin_options;
-
-    /// The nonlinear solver options
-    NonlinearSolverOptions T_nonlin_options;
-
-    /**
-     * @brief The optional ODE solver parameters
-     * @note If this is not defined, a quasi-static solve is performed
-     */
-    std::optional<TimesteppingOptions> dyn_options = std::nullopt;
-  };
-
-  /**
-   * @brief Reasonable defaults for most thermal linear solver options
-   *
-   * @return The default thermal linear options
-   */
-  static IterativeSolverOptions defaultLinearOptions()
-  {
-    return {.rel_tol     = 1.0e-6,
-            .abs_tol     = 1.0e-12,
-            .print_level = 0,
-            .max_iter    = 200,
-            .lin_solver  = LinearSolver::CG,
-            .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
-  }
-
-  /**
-   * @brief Reasonable defaults for most thermal nonlinear solver options
-   *
-   * @return The default thermal nonlinear options
-   */
-  static NonlinearSolverOptions defaultNonlinearOptions()
-  {
-    return {.rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
-  }
-
-  /**
-   * @brief Reasonable defaults for quasi-static thermal conduction simulations
-   *
-   * @return The default quasi-static solver options
-   */
-  static SolverOptions defaultQuasistaticOptions()
-  {
-    return {defaultLinearOptions(), defaultNonlinearOptions(), std::nullopt};
-  }
-
-  /**
-   * @brief Reasonable defaults for dynamic thermal conduction simulations
-   *
-   * @return The default dynamic solver options
-   */
-  static SolverOptions defaultDynamicOptions()
-  {
-    return {defaultLinearOptions(), defaultNonlinearOptions(),
-            TimesteppingOptions{TimestepMethod::BackwardEuler, DirichletEnforcementMethod::RateControl}};
-  }
-
   /**
    * @brief Construct a new Thermal Functional Solver object
    *
@@ -125,7 +128,7 @@ public:
    * used by an underlying material model or load
    */
   ThermalConductionFunctional(
-      const SolverOptions& options, const std::string& name = {},
+      const Thermal::SolverOptions& options, const std::string& name = {},
       std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states = {})
       : BasePhysics(2, order),
         temperature_(
@@ -152,7 +155,7 @@ public:
 
     functional_call_args_.emplace_back(temperature_.trueVec());
 
-    for (long unsigned int i = 0; i < sizeof...(parameter_space); ++i) {
+    for (size_t i = 0; i < sizeof...(parameter_space); ++i) {
       trial_spaces[i + 1]         = &(parameter_states_[i].get().space());
       parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, parameter_states_[i].get().space());
       functional_call_args_.emplace_back(parameter_states_[i].get().trueVec());

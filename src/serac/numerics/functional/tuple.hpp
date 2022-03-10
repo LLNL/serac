@@ -578,7 +578,7 @@ SERAC_HOST_DEVICE constexpr auto operator*(const tuple<T...>& x, const double a)
  * @param A the tuple of values
  * @brief helper used to implement printing a tuple of values
  */
-template <typename... T, size_t... i>
+template <typename... T, std::size_t... i>
 auto& print_helper(std::ostream& out, const serac::tuple<T...>& A, std::integer_sequence<size_t, i...>)
 {
   out << "tuple{";

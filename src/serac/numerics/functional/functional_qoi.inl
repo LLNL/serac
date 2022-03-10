@@ -255,7 +255,7 @@ public:
    * arguments may be a dual_vector, to indicate that Functional::operator() should not only evaluate the
    * element calculations, but also differentiate them w.r.t. the specified dual_vector argument
    */
-  double ActionOfGradient(const mfem::Vector& input_T, size_t which) const
+  double ActionOfGradient(const mfem::Vector& input_T, std::size_t which) const
   {
     P_trial_[which]->Mult(input_T, input_L_[which]);
 

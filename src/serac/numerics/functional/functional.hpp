@@ -331,7 +331,7 @@ public:
    * arguments may be a dual_vector, to indicate that Functional::operator() should not only evaluate the
    * element calculations, but also differentiate them w.r.t. the specified dual_vector argument
    */
-  void ActionOfGradient(const mfem::Vector& input_T, mfem::Vector& output_T, size_t which) const
+  void ActionOfGradient(const mfem::Vector& input_T, mfem::Vector& output_T, std::size_t which) const
   {
     P_trial_[which]->Mult(input_T, input_L_[which]);
 
@@ -506,7 +506,7 @@ public:
    *
    * TODO: remove this interface completely
    */
-  void SetEssentialBC(const mfem::Array<int>& ess_attr, size_t which)
+  void SetEssentialBC(const mfem::Array<int>& ess_attr, std::size_t which)
   {
     // TODO check that it actually makes sense to apply bcs to this trial space
     trial_space_[which]->GetEssentialTrueDofs(ess_attr, ess_tdof_list_);
