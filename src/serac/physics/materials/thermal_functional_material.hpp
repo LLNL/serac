@@ -74,18 +74,19 @@ public:
    * @tparam T1 Spatial position type
    * @tparam T2 Temperature type
    * @tparam T3 Temperature gradient type
-   * @param[in] du_dx Temperature gradient
+   * @param[in] temperature_gradient Temperature gradient
    * @return The calculated material response (density, specific heat capacity, thermal flux) for a linear
    * isotropic material
    */
   template <typename T1, typename T2, typename T3>
-  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* u */, const T3& du_dx) const
+  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* temperature */,
+                                    const T3& temperature_gradient) const
   {
-    using FluxType = decltype(conductivity_ * du_dx);
+    using FluxType = decltype(conductivity_ * temperature_gradient);
 
     return MaterialResponse<double, double, FluxType>{.density                = density_,
                                                       .specific_heat_capacity = specific_heat_capacity_,
-                                                      .heat_flux              = -1.0 * conductivity_ * du_dx};
+                                                      .heat_flux = -1.0 * conductivity_ * temperature_gradient};
   }
 
 private:
@@ -133,18 +134,19 @@ public:
    * @tparam T1 Spatial position type
    * @tparam T2 Temperature type
    * @tparam T3 Temperature gradient type
-   * @param[in] du_dx Temperature gradient
+   * @param[in] temperature_gradient Temperature gradient
    * @return The calculated material response (density, specific heat capacity, thermal flux) for a linear
    * anisotropic material
    */
   template <typename T1, typename T2, typename T3>
-  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* u */, const T3& du_dx) const
+  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* temperature */,
+                                    const T3& temperature_gradient) const
   {
-    using FluxType = decltype(conductivity_ * du_dx);
+    using FluxType = decltype(conductivity_ * temperature_gradient);
 
     return MaterialResponse<double, double, FluxType>{.density                = density_,
                                                       .specific_heat_capacity = specific_heat_capacity_,
-                                                      .heat_flux              = -1.0 * conductivity_ * du_dx};
+                                                      .heat_flux = -1.0 * conductivity_ * temperature_gradient};
   }
 
 private:
@@ -173,8 +175,8 @@ struct ConstantSource {
    * @return The thermal source value
    */
   template <typename T1, typename T2, typename T3>
-  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const double /* t */, const T2& /* u */,
-                                    const T3& /* du_dx */) const
+  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const double /* time */, const T2& /* temperature */,
+                                    const T3& /* temperature_gradient */) const
   {
     return source_;
   }
@@ -195,7 +197,7 @@ struct ConstantFlux {
    * @return The flux applied to the boundary
    */
   template <typename T1, typename T2, typename T3>
-  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* n */, const T3& /* u */) const
+  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* normal */, const T3& /* temperature */) const
   {
     return flux_;
   }

@@ -190,20 +190,28 @@ TEST(thermal_functional, parameterized_material)
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
-  FiniteElementState parameterized_state(
-      StateManager::newState(FiniteElementState::Options{.order = 1, .name = "parameterized_field"}));
+  // Construct and initialized the user-defined conductivity to be used as a differentiable parameter in
+  // the thermal conduction physics module.
+  FiniteElementState user_defined_conductivity(
+      StateManager::newState(FiniteElementState::Options{.order = 1, .name = "parameterized_conductivity"}));
 
-  parameterized_state = 1.0;
+  user_defined_conductivity = 1.0;
 
-  constexpr int parameter_index = 0;
+  // We must know the index of the parameter finite element state in our parameter pack to take sensitivities.
+  // As we only have one parameter in this example, the index is zero.
+  constexpr int conductivity_parameter_index = 0;
 
   // Construct a functional-based thermal conduction solver
+  //
+  // Note that we now include an extra template parameter indicating the finite element space for the parameterized
+  // field, in this case the thermal conductivity. We also pass an array of finite element states for each of the
+  // requested parameterized fields.
   ThermalConductionFunctional<p, dim, H1<1>> thermal_solver(
       ThermalConductionFunctional<p, dim, H1<1>>::defaultQuasistaticOptions(), "thermal_functional",
-      {parameterized_state});
+      {user_defined_conductivity});
 
   // Construct a potentially user-defined parameterized material and send it to the thermal module
-  Thermal::ParameterizedLinearIsotropicConductor mat(1.0, 1.0, 1.0);
+  Thermal::ParameterizedLinearIsotropicConductor mat;
   thermal_solver.setMaterial(mat);
 
   // Define the function for the initial temperature and boundary condition
@@ -236,7 +244,8 @@ TEST(thermal_functional, parameterized_material)
   // Output the sidre-based plot files
   thermal_solver.outputState();
 
-  // Construct a dummy adjoint load (this would come from a QOI downstream)
+  // Construct a dummy adjoint load (this would come from a QOI downstream).
+  // This adjoint load is equivalent to a discrete L1 norm on the temperature.
   FiniteElementDual adjoint_load(
       StateManager::newDual(FiniteElementState::Options{.order = 1, .name = "adjoint_load"}));
 
@@ -245,8 +254,8 @@ TEST(thermal_functional, parameterized_material)
   // Solve the adjoint problem
   thermal_solver.solveAdjoint(adjoint_load);
 
-  // Compute the sensitivity given the adjoint solution
-  auto& sensitivity = thermal_solver.computeSensitivity<parameter_index>();
+  // Compute the sensitivity (d QOI/d residual * d residual/d parameter) given the current adjoint solution
+  auto& sensitivity = thermal_solver.computeSensitivity<conductivity_parameter_index>();
 
   EXPECT_NEAR(0.5086485, mfem::ParNormlp(sensitivity.trueVec(), 2, MPI_COMM_WORLD), 1.0e-6);
 }

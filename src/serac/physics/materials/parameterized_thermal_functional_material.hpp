@@ -29,7 +29,7 @@ public:
    * added to the parameter value to get the total conductivity.
    */
   ParameterizedLinearIsotropicConductor(double density = 1.0, double specific_heat_capacity = 1.0,
-                                        double conductivity_offset = 1.0)
+                                        double conductivity_offset = 0.0)
       : density_(density), specific_heat_capacity_(specific_heat_capacity), conductivity_offset_(conductivity_offset)
   {
     SLIC_ERROR_ROOT_IF(conductivity_offset_ < 0.0,
@@ -99,8 +99,8 @@ struct ParameterizedSource {
    * @return The thermal source value
    */
   template <typename T1, typename T2, typename T3, typename T4>
-  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const double /* t */, const T2& /* u */, const T3& /* du_dx */,
-                                    const T4& parameter) const
+  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const double /* time */, const T2& /* temperature */,
+                                    const T3& /* temperature_gradient */, const T4& parameter) const
   {
     return source_offset_ + parameter;
   }
@@ -129,7 +129,8 @@ struct ParameterizedFlux {
    * @return The flux applied to the boundary
    */
   template <typename T1, typename T2, typename T3, typename T4>
-  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* n */, const T3& /* u */, const T4& parameter) const
+  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* normal */, const T3& /* temperature */,
+                                    const T4& parameter) const
   {
     return flux_offset_ + parameter;
   }

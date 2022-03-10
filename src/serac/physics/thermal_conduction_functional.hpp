@@ -469,12 +469,7 @@ public:
   virtual const serac::FiniteElementState& solveAdjoint(FiniteElementDual& adjoint_load,
                                                         FiniteElementDual* dual_with_essential_boundary = nullptr)
   {
-    // note: The assignment operator must be called after the copy constructor because
-    // the copy constructor only sets the partitioning, it does not copy the actual vector
-    // values
-
     mfem::HypreParVector adjoint_load_vector(adjoint_load.trueVec());
-    // adjoint_load_vector = adjoint_load.trueVec();
 
     auto& lin_solver = nonlin_solver_.LinearSolver();
 
