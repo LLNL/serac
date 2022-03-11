@@ -3,7 +3,7 @@
 using namespace serac;
 
 template <typename trial_space, Geometry geom, int q>
-__global__ void kernel(mfem::DeviceTensor<4, double> r_e)
+__global__ void postprocess_kernel(mfem::DeviceTensor<4, double> r_e)
 {
   static constexpr auto rule = GaussLegendreRule<geom, q>();
   tuple                 qf_output{1.0, tensor<double, 3>{threadIdx.x * 2.0, threadIdx.y * 3.0, threadIdx.z * 5.0}};
@@ -35,7 +35,7 @@ int main()
     mfem::DeviceTensor<4, double> r_d = mfem::Reshape(R1D.ReadWrite(), n, n, n, num_elements);
     dim3                          blocksize{q, q, q};
     int                           gridsize = num_elements;
-    kernel<test, Geometry::Hexahedron, q><<<gridsize, blocksize>>>(r_d);
+    postprocess_kernel<test, Geometry::Hexahedron, q><<<gridsize, blocksize>>>(r_d);
     cudaDeviceSynchronize();
 
     mfem::DeviceTensor<4, const double> r_h = mfem::Reshape(R1D.HostRead(), n, n, n, num_elements);
@@ -94,7 +94,7 @@ int main()
     mfem::DeviceTensor<4, double> r_d = mfem::Reshape(R1D.ReadWrite(), n, n, n, num_elements);
     dim3                          blocksize{q, q, q};
     int                           gridsize = num_elements;
-    kernel<test, Geometry::Hexahedron, q><<<gridsize, blocksize>>>(r_d);
+    postprocess_kernel<test, Geometry::Hexahedron, q><<<gridsize, blocksize>>>(r_d);
     cudaDeviceSynchronize();
 
     mfem::DeviceTensor<4, const double> r_h = mfem::Reshape(R1D.HostRead(), n, n, n, num_elements);
@@ -145,7 +145,7 @@ int main()
     mfem::DeviceTensor<4, double> r_d = mfem::Reshape(R1D.ReadWrite(), n, n, n, num_elements);
     dim3                          blocksize{q, q, q};
     int                           gridsize = num_elements;
-    kernel<test, Geometry::Hexahedron, q><<<gridsize, blocksize>>>(r_d);
+    postprocess_kernel<test, Geometry::Hexahedron, q><<<gridsize, blocksize>>>(r_d);
     cudaDeviceSynchronize();
 
     mfem::DeviceTensor<4, const double> r_h = mfem::Reshape(R1D.HostRead(), n, n, n, num_elements);
