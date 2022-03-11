@@ -19,9 +19,14 @@ foreach(filename ${functional_performance_tests})
                        FOLDER      serac/tests )
 endforeach()
 
+set_source_files_properties(batched_shape_functions_scalar.cpp PROPERTIES LANGUAGE CXX)
+target_compile_options(batched_shape_functions_scalar PUBLIC "-march=skylake-avx512")
+
+
 if(ENABLE_CUDA)
 
     set(functional_performance_tests_cuda 
+        sum_factorization_tests.cu # todo: delete this!
         batched_shape_functions_scalar_cuda.cu)
 
     foreach(filename ${functional_performance_tests_cuda})
