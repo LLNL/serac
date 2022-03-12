@@ -83,6 +83,7 @@ __device__ auto BatchPreprocessCUDA(const mfem::DeviceTensor< 4, const double > 
         }
       }
     }
+    __syncthreads();
 
     // A1(i, j, w) := B(w, k) * f(i, j, k)
     for (int i = threadIdx.x; i < n; i += blockDim.x) {

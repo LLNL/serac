@@ -991,12 +991,7 @@ __device__ auto BatchApplyCUDA(lambda qf, T qf_input, GaussLegendreRule<geom, q>
 
     qf_input.gradient = dot(qf_input.gradient, invJ);
 
-    //dot(u, dot(element_type::shape_function_gradients(xi), inv(J)))};
-
     auto qf_output = qf(qf_input) * dv;
-
-    //auto dW_dx = dot(element_type::shape_function_gradients(xi), inv(J));
-    //return outer(W, serac::get<0>(f)) + dot(dW_dx, serac::get<1>(f));
 
     serac::get<1>(qf_output) = dot(invJ, serac::get<1>(qf_output));
 
@@ -1080,7 +1075,7 @@ int main() {
   using test = H1<p>;
   using trial = H1<p>;
 
-  std::default_random_engine generator;
+  std::default_random_engine generator{0};
   std::uniform_real_distribution<double> distribution(-1.0, 1.0);
 
   mfem::Vector U1D(num_elements * n * n * n);
