@@ -3,6 +3,18 @@
 using namespace serac;
 
 template <typename trial_space, Geometry geom, int q>
+__global__ void preprocess_kernel(mfem::DeviceTensor<4, const double> input, mfem::DeviceTensor<5, double> output)
+{
+  static constexpr auto rule = GaussLegendreRule<geom, q>();
+  auto qf_input = BatchPreprocessCUDA<trial_space>(input, rule, 0);
+
+  output(threadIdx.x, threadIdx.y, threadIdx.z, 0, 0) = qf_input.value;
+  output(threadIdx.x, threadIdx.y, threadIdx.z, 1, 0) = qf_input.gradient[0];
+  output(threadIdx.x, threadIdx.y, threadIdx.z, 2, 0) = qf_input.gradient[1];
+  output(threadIdx.x, threadIdx.y, threadIdx.z, 3, 0) = qf_input.gradient[2];
+}
+
+template <typename trial_space, Geometry geom, int q>
 __global__ void postprocess_kernel(mfem::DeviceTensor<4, double> r_e)
 {
   static constexpr auto rule = GaussLegendreRule<geom, q>();
@@ -15,15 +27,116 @@ int main()
   using serac::Geometry;
   using serac::H1;
 
-
   mfem::Device device("cuda");
 
   constexpr int num_elements = 1;
 
   {
-    constexpr int p            = 3;
-    constexpr int n            = p + 1;
-    constexpr int q            = 2;
+    constexpr int p = 3;
+    constexpr int n = p + 1;
+    constexpr int q = 3;
+
+    using test  = H1<p>;
+
+    mfem::Vector U1D(num_elements * n * n * n);
+    mfem::Vector R1D(num_elements * 4 * q * q * q);
+    U1D.UseDevice(true);
+    R1D.UseDevice(true);
+
+
+    R1D.UseDevice(true);
+
+    auto U = mfem::Reshape(U1D.HostReadWrite(), n, n, n, num_elements);
+
+    for (int ix = 0; ix < n; ix++) {
+      for (int iy = 0; iy < n; iy++) {
+        for (int iz = 0; iz < n; iz++) {
+          U(ix, iy, iz, 0) = 2 * ix - 3.0 * iy + sin(iz);
+        }
+      }
+    }
+
+    R1D = 0.0;
+
+    mfem::DeviceTensor<4, const double> u_d = mfem::Reshape(U1D.Read(), n, n, n, num_elements);
+    mfem::DeviceTensor<5, double> r_d = mfem::Reshape(R1D.ReadWrite(), q, q, q, 4, num_elements);
+
+    dim3                          blocksize{q, q, q};
+    int                           gridsize = num_elements;
+    preprocess_kernel<test, Geometry::Hexahedron, q><<<gridsize, blocksize>>>(u_d, r_d);
+    cudaDeviceSynchronize();
+
+    mfem::DeviceTensor<5, const double> r_h = mfem::Reshape(R1D.HostRead(), q, q, q, 4, num_elements);
+
+    // clang-format off
+    double answers[q][q][q][4]{
+      {
+        {
+          {-0.06976517422279016,7.527864045000420,-11.29179606750063,3.247646211241188},
+          {0.5905504600868352,7.527864045000422,-11.29179606750063,0.1543006667646776},
+          {0.04362979171617654,7.527864045000420,-11.29179606750063,-2.986495249049149}
+        }, {
+          {-3.111645785692786,7.527864045000416,-6.135254915624209,3.247646211241187},
+          {-2.451330151383162,7.527864045000420,-6.135254915624211,0.1543006667646788},
+          {-2.998250819753819,7.527864045000419,-6.135254915624211,-2.986495249049150}
+        }, {
+          {-6.153526397162780,7.527864045000409,-11.29179606750063,3.247646211241181},
+          {-5.493210762853155,7.527864045000412,-11.29179606750063,0.1543006667646789},
+          {-6.040131431223813,7.527864045000410,-11.29179606750063,-2.986495249049152}
+        }
+      }, { 
+        {
+          {1.958155233423875,4.090169943749476,-11.29179606750063,3.247646211241189},
+          {2.618470867733500,4.090169943749474,-11.29179606750063,0.1543006667646782},
+          {2.071550199362840,4.090169943749473,-11.29179606750063,-2.986495249049149}
+        }, {
+          {-1.083725378046122,4.090169943749474,-6.135254915624211,3.247646211241187},
+          {-0.4234097437364975,4.090169943749475,-6.135254915624213,0.1543006667646782},
+          {-0.9703304121071556,4.090169943749474,-6.135254915624212,-2.986495249049151}
+        }, {
+          {-4.125605989516117,4.090169943749475,-11.29179606750063,3.247646211241185},
+          {-3.465290355206493,4.090169943749473,-11.29179606750063,0.1543006667646784},
+          {-4.012211023577151,4.090169943749473,-11.29179606750063,-2.986495249049152}
+        }
+      }, {
+        {
+          {3.986075641070537,7.527864045000417,-11.29179606750063,3.247646211241192},
+          {4.646391275380163,7.527864045000422,-11.29179606750063,0.1543006667646779},
+          {4.099470607009503,7.527864045000422,-11.29179606750063,-2.986495249049149}
+        }, {
+          {0.9441950296005416,7.527864045000419,-6.135254915624211,3.247646211241188},
+          {1.604510663910167,7.527864045000424,-6.135254915624213,0.1543006667646776},
+          {1.057589995539508,7.527864045000420,-6.135254915624209,-2.986495249049149}
+        }, {
+          {-2.097685581869453,7.527864045000414,-11.29179606750063,3.247646211241186},
+          {-1.437369947559828,7.527864045000416,-11.29179606750063,0.1543006667646778},
+          {-1.984290615930487,7.527864045000415,-11.29179606750062,-2.986495249049149}
+        }
+      }
+    };
+    // clang-format on
+
+    for (int i = 0; i < q; i++) {
+      for (int j = 0; j < q; j++) {
+        for (int k = 0; k < q; k++) {
+          for (int c = 0; c < 4; c++) {
+
+            auto relative_error = abs(r_h(i,j,k,c,0) - answers[i][j][k][c]) / abs(answers[i][j][k][c]);
+            if (relative_error > 5.0e-14) {
+              std::cout << "error: " << r_h(i,j,k,c,0) << " " << answers[i][j][k][c] << ", " << relative_error << std::endl;
+            }
+          }
+        }
+      }
+    }
+
+  }
+
+
+  {
+    constexpr int p = 3;
+    constexpr int n = p + 1;
+    constexpr int q = 2;
 
     using test  = H1<p>;
 
@@ -80,9 +193,9 @@ int main()
   }
 
   {
-    constexpr int p            = 2;
-    constexpr int n            = p + 1;
-    constexpr int q            = 4;
+    constexpr int p = 2;
+    constexpr int n = p + 1;
+    constexpr int q = 4;
 
     using test  = H1<p>;
 
@@ -131,9 +244,9 @@ int main()
   }
 
   {
-    constexpr int p            = 2;
-    constexpr int n            = p + 1;
-    constexpr int q            = 3;
+    constexpr int p = 2;
+    constexpr int n = p + 1;
+    constexpr int q = 3;
 
     using test  = H1<p>;
 
