@@ -251,10 +251,10 @@ TEST(thermal_functional, parameterized_material)
   // Solve the adjoint problem
   thermal_solver.solveAdjoint(adjoint_load);
 
-  // Compute the sensitivity (d QOI/d residual * d residual/d parameter) given the current adjoint solution
+  // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
   auto& sensitivity = thermal_solver.computeSensitivity<conductivity_parameter_index>();
 
-  EXPECT_NEAR(0.5086485, mfem::ParNormlp(sensitivity.trueVec(), 2, MPI_COMM_WORLD), 1.0e-6);
+  EXPECT_NEAR(1.6540980, mfem::ParNormlp(sensitivity.trueVec(), 2, MPI_COMM_WORLD), 1.0e-6);
 }
 
 }  // namespace serac

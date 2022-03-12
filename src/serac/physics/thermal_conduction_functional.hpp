@@ -61,7 +61,7 @@ struct SolverOptions {
  *
  * @return The default thermal linear options
  */
-static IterativeSolverOptions defaultLinearOptions()
+IterativeSolverOptions defaultLinearOptions()
 {
   return {.rel_tol     = 1.0e-6,
           .abs_tol     = 1.0e-12,
@@ -76,7 +76,7 @@ static IterativeSolverOptions defaultLinearOptions()
  *
  * @return The default thermal nonlinear options
  */
-static NonlinearSolverOptions defaultNonlinearOptions()
+NonlinearSolverOptions defaultNonlinearOptions()
 {
   return {.rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
 }
@@ -86,21 +86,19 @@ static NonlinearSolverOptions defaultNonlinearOptions()
  *
  * @return The default quasi-static solver options
  */
-static SolverOptions defaultQuasistaticOptions()
-{
-  return {defaultLinearOptions(), defaultNonlinearOptions(), std::nullopt};
-}
+SolverOptions defaultQuasistaticOptions() { return {defaultLinearOptions(), defaultNonlinearOptions(), std::nullopt}; }
 
 /**
  * @brief Reasonable defaults for dynamic thermal conduction simulations
  *
  * @return The default dynamic solver options
  */
-static SolverOptions defaultDynamicOptions()
+SolverOptions defaultDynamicOptions()
 {
   return {defaultLinearOptions(), defaultNonlinearOptions(),
-          TimesteppingOptions{TimestepMethod::BackwardEuler, DirichletEnforcementMethod::RateControl}};
+          Thermal::TimesteppingOptions{TimestepMethod::BackwardEuler, DirichletEnforcementMethod::RateControl}};
 }
+
 }  // namespace Thermal
 
 /**
@@ -388,8 +386,6 @@ public:
     // Project the essential boundary coefficients
     for (auto& bc : bcs_.essentials()) {
       bc.projectBdr(temperature_, time_);
-      K_functional_->SetEssentialBC(bc.markers(), 0);
-      M_functional_->SetEssentialBC(bc.markers(), 0);
     }
 
     // Initialize the true vector
@@ -403,6 +399,7 @@ public:
             functional_call_args_[0] = u;
 
             r = (*K_functional_)(functional_call_args_);
+            r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
           },
 
           [this](const mfem::Vector& u) -> mfem::Operator& {
@@ -410,7 +407,7 @@ public:
 
             auto [r, drdu] = (*K_functional_)(functional_call_args_, Index<0>{});
             J_             = assemble(drdu);
-
+            bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             return *J_;
           });
 
@@ -434,6 +431,7 @@ public:
             functional_call_args_[0] = u_;
 
             add(M_residual, K_residual, r);
+            r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
           },
 
           [this](const mfem::Vector& du_dt) -> mfem::Operator& {
@@ -454,6 +452,7 @@ public:
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             J_.reset(mfem::Add(1.0, *m_mat, dt_, *k_mat));
+            bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             return *J_;
           });
     }
@@ -464,7 +463,8 @@ public:
    * @pre It is expected that the forward analysis is complete and the current temperature state is valid
    * @note If the essential boundary state is not specified, homogeneous essential boundary conditions are applied
    *
-   * @param[in] adjoint_load The dual state that contains the right hand side of the adjoint system
+   * @param[in] adjoint_load The dual state that contains the right hand side of the adjoint system (d quantity of
+   * interest/d temperature)
    * @param[in] dual_with_essential_boundary A optional finite element dual containing the non-homogenous essential
    * boundary condition data for the adjoint problem
    * @return The computed adjoint finite element state
@@ -473,6 +473,9 @@ public:
                                                         FiniteElementDual* dual_with_essential_boundary = nullptr)
   {
     mfem::HypreParVector adjoint_load_vector(adjoint_load.trueVec());
+
+    // Add the sign correction to move the term to the RHS
+    adjoint_load_vector *= -1.0;
 
     auto& lin_solver = nonlin_solver_.LinearSolver();
 

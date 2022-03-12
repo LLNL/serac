@@ -369,11 +369,6 @@ public:
 
     // scatter-add to compute global residuals
     P_test_->MultTranspose(output_L_, output_T);
-
-    output_T.HostReadWrite();
-    for (int i = 0; i < ess_tdof_list_.Size(); i++) {
-      output_T(ess_tdof_list_[i]) = input_T(ess_tdof_list_[i]);
-    }
   }
 
   /**
@@ -473,11 +468,6 @@ public:
     // scatter-add to compute global residuals
     P_test_->MultTranspose(output_L_, output_T_);
 
-    output_T_.HostReadWrite();
-    for (int i = 0; i < ess_tdof_list_.Size(); i++) {
-      output_T_(ess_tdof_list_[i]) = 0.0;
-    }
-
     if constexpr (wrt >= 0) {
       // if the user has indicated they'd like to evaluate and differentiate w.r.t.
       // a specific argument, then we return both the value and gradient w.r.t. that argument
@@ -495,21 +485,6 @@ public:
       // e.g. mfem::Vector value = my_functional(arg0, arg1);
       return output_T_;
     }
-  }
-
-  /**
-   * @brief Applies an essential boundary condition to the attributes specified by @a ess_attr
-   * @param[in] ess_attr The mesh attributes to apply the BC to
-   * @param[in] which which trial space the specified attributes apply to
-   *
-   * @note This gets more interesting when having more than one trial space
-   *
-   * TODO: remove this interface completely
-   */
-  void SetEssentialBC(const mfem::Array<int>& ess_attr, std::size_t which)
-  {
-    // TODO check that it actually makes sense to apply bcs to this trial space
-    trial_space_[which]->GetEssentialTrueDofs(ess_attr, ess_tdof_list_);
   }
 
 private:
@@ -627,8 +602,6 @@ private:
 
       std::unique_ptr<mfem::HypreParMatrix> K(mfem::RAP(R, A, P));
 
-      K->EliminateRowsCols(form_.ess_tdof_list_);
-
       delete A;
 
       return K;
@@ -704,9 +677,6 @@ private:
 
   /// @brief Manages DOFs for the trial space
   std::array<mfem::ParFiniteElementSpace*, num_trial_spaces> trial_space_;
-
-  /// @brief The set of true DOF indices to which an essential BC should be applied
-  mfem::Array<int> ess_tdof_list_;
 
   /**
    * @brief Operator that converts true (global) DOF values to local (current rank) DOF values

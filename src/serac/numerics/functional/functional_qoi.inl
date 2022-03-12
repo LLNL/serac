@@ -499,9 +499,6 @@ private:
   /// @brief Manages DOFs for the trial space
   std::array<mfem::ParFiniteElementSpace*, num_trial_spaces> trial_space_;
 
-  /// @brief The set of true DOF indices to which an essential BC should be applied
-  mfem::Array<int> ess_tdof_list_;
-
   /**
    * @brief Operator that converts true (global) DOF values to local (current rank) DOF values
    * for the test space
