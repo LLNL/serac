@@ -21,11 +21,14 @@ struct GaussLegendreRule<Geometry::Hexahedron, Q> {
   static constexpr auto points_1D  = GaussLegendreNodes<Q>();
   static constexpr auto weights_1D = GaussLegendreWeights<Q>();
 
-  static constexpr double weight(int qx, int qy, int qz) { return weights_1D[qx] * weights_1D[qy] * weights_1D[qz]; }
+  __host__ __device__ static constexpr double weight(int qx, int qy, int qz) { 
+    auto weights = GaussLegendreWeights<Q>();
+    return weights[qx] * weights[qy] * weights[qz]; 
+  }
 
   __host__ __device__ static constexpr double point(int i) { return GaussLegendreNodes<Q>()(i); }
 
-  static constexpr int size() { return Q * Q * Q; }
+  __host__ __device__ static constexpr int size() { return Q * Q * Q; }
 };
 
 __host__ __device__ void print(double value) { printf("%f", value); }

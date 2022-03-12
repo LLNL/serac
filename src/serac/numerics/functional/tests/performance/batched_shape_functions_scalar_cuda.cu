@@ -10,6 +10,8 @@
 #include "serac/numerics/functional/finite_element.hpp"
 #include "serac/numerics/functional/tuple_arithmetic.hpp"
 #include "serac/numerics/functional/integral_utilities.hpp"
+
+#include "sum_factorization.hpp"
 namespace mfem {
 
 template <int T_D1D = 0, int T_Q1D = 0>
@@ -726,24 +728,6 @@ static void SmemPADiffusionApply3D(const int NE,
 }
 
 namespace serac {
-template < typename S, typename T >
-struct value_and_gradient { S value; T gradient; };
-
-template < Geometry g, int Q >
-struct GaussLegendreRule;
-
-template < int Q >
-struct GaussLegendreRule< Geometry::Hexahedron, Q > {
-  static constexpr auto points_1D = GaussLegendreNodes<Q>();
-  static constexpr auto weights_1D = GaussLegendreWeights<Q>();
-
-  static constexpr double weight(int qx, int qy, int qz) { 
-    return weights_1D[qx] * weights_1D[qy] * weights_1D[qz];
-  }
-
-  static constexpr int size() { return Q * Q * Q; }
-
-};
 
 template < typename trial_space, Geometry geom, int q >
 auto BatchPreprocess(const mfem::DeviceTensor< 4, const double > & u_e, GaussLegendreRule<geom, q> rule, int e) {
@@ -993,7 +977,7 @@ __global__ void reference_cuda_kernel(mfem::DeviceTensor< 2, const double > u,
 }
 
 template < typename lambda, typename T, int ... n, Geometry geom, int q >
-auto BatchApplyCUDA(lambda qf, T qf_input, GaussLegendreRule<geom, q> rule, mfem::DeviceTensor< 6, const double > J_q, int e) {
+__device__ auto BatchApplyCUDA(lambda qf, T qf_input, GaussLegendreRule<geom, q> rule, mfem::DeviceTensor< 6, const double > J_q, int e) {
 
   if constexpr (geom == Geometry::Hexahedron) {
 
@@ -1007,7 +991,12 @@ auto BatchApplyCUDA(lambda qf, T qf_input, GaussLegendreRule<geom, q> rule, mfem
 
     qf_input.gradient = dot(qf_input.gradient, invJ);
 
+    //dot(u, dot(element_type::shape_function_gradients(xi), inv(J)))};
+
     auto qf_output = qf(qf_input) * dv;
+
+    //auto dW_dx = dot(element_type::shape_function_gradients(xi), inv(J));
+    //return outer(W, serac::get<0>(f)) + dot(dW_dx, serac::get<1>(f));
 
     serac::get<1>(qf_output) = dot(invJ, serac::get<1>(qf_output));
 
@@ -1018,17 +1007,16 @@ auto BatchApplyCUDA(lambda qf, T qf_input, GaussLegendreRule<geom, q> rule, mfem
 }
 
 template <Geometry g, typename test, typename trial, int Q, typename lambda>
-__global__ void batched_cuda_kernel(mfem::DeviceTensor< 2, const double > u, 
-                                      mfem::DeviceTensor< 2, double > r, 
-                                      mfem::DeviceTensor< 4, const double > J, 
-                                      size_t num_elements, 
-                                      lambda qf) {
+__global__ void batched_cuda_kernel(mfem::DeviceTensor< 4, const double > u, 
+                                    mfem::DeviceTensor< 4, double > r, 
+                                    mfem::DeviceTensor< 6, const double > J, 
+                                    size_t num_elements, 
+                                    lambda qf) {
 
   using test_element          = finite_element<g, test>;
   using trial_element         = finite_element<g, trial>;
   using element_residual_type = typename test_element::residual_type;
-  static constexpr auto rule  = GaussQuadratureRule<g, Q>();
-  static constexpr int  dim   = dimension_of(g);
+  static constexpr auto rule  = GaussLegendreRule<g, Q>();
 
   // for each element in the domain
   uint32_t e = blockIdx.x;
@@ -1186,6 +1174,29 @@ int main() {
   auto error = answer_reference;
   error -= answer_reference_cuda;
   auto relative_error = error.Norml2() / answer_reference.Norml2();
+  std::cout << "error: " << relative_error << std::endl;
+
+  {
+    R1D = 0.0;
+
+    mfem::DeviceTensor<4, const double > u_d = mfem::Reshape(U1D.Read(), n, n, n, num_elements);
+    mfem::DeviceTensor<4, double > r_d = mfem::Reshape(R1D.ReadWrite(), n, n, n, num_elements);
+    mfem::DeviceTensor<6, const double > J_d = mfem::Reshape(J1D.Read(), q, q, q, dim, dim, num_elements);
+    dim3 blocksize{q, q, q};
+    int gridsize = num_elements;
+    double runtime = time([&]() {
+      for (int i = 0; i < num_runs; i++) {
+        serac::batched_cuda_kernel<Geometry::Hexahedron, test, trial, q><<<gridsize, blocksize>>>(u_d, r_d, J_d, num_elements, qfunc);
+        compiler::please_do_not_optimize_away(&R1D);
+      }
+      cudaDeviceSynchronize();
+    }) / n;
+    std::cout << "average batched (cuda) kernel time: " << runtime / num_runs << std::endl;
+  }
+  answer_reference_cuda = R1D;
+  error = answer_reference;
+  error -= answer_reference_cuda;
+  relative_error = error.Norml2() / answer_reference.Norml2();
   std::cout << "error: " << relative_error << std::endl;
 
   {

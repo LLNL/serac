@@ -5,8 +5,8 @@ using namespace serac;
 template <typename trial_space, Geometry geom, int q>
 __global__ void preprocess_kernel(mfem::DeviceTensor<4, const double> input, mfem::DeviceTensor<5, double> output)
 {
-  static constexpr auto rule = GaussLegendreRule<geom, q>();
-  auto qf_input = BatchPreprocessCUDA<trial_space>(input, rule, 0);
+  static constexpr auto rule     = GaussLegendreRule<geom, q>();
+  auto                  qf_input = BatchPreprocessCUDA<trial_space>(input, rule, 0);
 
   output(threadIdx.x, threadIdx.y, threadIdx.z, 0, 0) = qf_input.value;
   output(threadIdx.x, threadIdx.y, threadIdx.z, 1, 0) = qf_input.gradient[0];
@@ -34,15 +34,14 @@ int main()
   {
     constexpr int p = 3;
     constexpr int n = p + 1;
-    constexpr int q = 3;
+    constexpr int q = 4;
 
-    using test  = H1<p>;
+    using test = H1<p>;
 
     mfem::Vector U1D(num_elements * n * n * n);
     mfem::Vector R1D(num_elements * 4 * q * q * q);
     U1D.UseDevice(true);
     R1D.UseDevice(true);
-
 
     R1D.UseDevice(true);
 
@@ -59,10 +58,153 @@ int main()
     R1D = 0.0;
 
     mfem::DeviceTensor<4, const double> u_d = mfem::Reshape(U1D.Read(), n, n, n, num_elements);
-    mfem::DeviceTensor<5, double> r_d = mfem::Reshape(R1D.ReadWrite(), q, q, q, 4, num_elements);
+    mfem::DeviceTensor<5, double>       r_d = mfem::Reshape(R1D.ReadWrite(), q, q, q, 4, num_elements);
 
-    dim3                          blocksize{q, q, q};
-    int                           gridsize = num_elements;
+    dim3 blocksize{q, q, q};
+    int  gridsize = num_elements;
+    preprocess_kernel<test, Geometry::Hexahedron, q><<<gridsize, blocksize>>>(u_d, r_d);
+    cudaDeviceSynchronize();
+
+    mfem::DeviceTensor<5, const double> r_h = mfem::Reshape(R1D.HostRead(), q, q, q, 4, num_elements);
+
+    // clang-format off
+    double answers[q][q][q][4]{
+    {
+      {
+        {-0.04622219477163936, 8.338906306602619, -12.50835945990393, 3.590294810165319},
+        {0.6197790204557677, 8.338906306602617, -12.50835945990392, 1.517854984151259},
+        {0.6717203562044647, 8.338906306602620, -12.50835945990393, -1.218394736107182},
+        {0.07823479958972807, 8.338906306602617, -12.50835945990393, -3.340338635918283}
+      }, {
+        {-2.503329140426160, 8.338906306602615, -7.128637731167952, 3.590294810165319},
+        {-1.837327925198753, 8.338906306602613, -7.128637731167952, 1.517854984151259},
+        {-1.785386589450056, 8.338906306602613, -7.128637731167951, -1.218394736107183},
+        {-2.378872146064792, 8.338906306602611, -7.128637731167951, -3.340338635918279}
+      }, {
+        {-4.701776618068474, 8.338906306602619, -7.128637731167953, 3.590294810165318},
+        {-4.035775402841066, 8.338906306602613, -7.128637731167954, 1.517854984151260},
+        {-3.983834067092370, 8.338906306602619, -7.128637731167955, -1.218394736107186},
+        {-4.577319623707106, 8.338906306602620, -7.128637731167952, -3.340338635918277}
+      }, {
+        {-7.158883563722995, 8.338906306602620, -12.50835945990392, 3.590294810165315},
+        {-6.492882348495587, 8.338906306602620, -12.50835945990392, 1.517854984151257},
+        {-6.440941012746892, 8.338906306602617, -12.50835945990393, -1.218394736107184},
+        {-7.034426569361627, 8.338906306602622, -12.50835945990393, -3.340338635918276}
+      }
+    }, {
+      {
+        {1.591849102331375, 4.752425154111968, -12.50835945990393, 3.590294810165321},
+        {2.257850317558781, 4.752425154111966, -12.50835945990393, 1.517854984151259},
+        {2.309791653307478, 4.752425154111968, -12.50835945990393, -1.218394736107181},
+        {1.716306096692742, 4.752425154111967, -12.50835945990393, -3.340338635918283}
+      }, {
+        {-0.8652578433231461, 4.752425154111968, -7.128637731167951, 3.590294810165317},
+        {-0.1992566280957394, 4.752425154111966, -7.128637731167949, 1.517854984151258},
+        {-0.1473152923470425, 4.752425154111968, -7.128637731167952, -1.218394736107182},
+        {-0.7408008489617789, 4.752425154111967, -7.128637731167951, -3.340338635918281}
+      }, {
+        {-3.063705320965459, 4.752425154111967, -7.128637731167951, 3.590294810165317},
+        {-2.397704105738053, 4.752425154111966, -7.128637731167951, 1.517854984151258},
+        {-2.345762769989355, 4.752425154111966, -7.128637731167951, -1.218394736107184},
+        {-2.939248326604091, 4.752425154111965, -7.128637731167949, -3.340338635918280}
+      }, {
+        {-5.520812266619981, 4.752425154111966, -12.50835945990392, 3.590294810165321},
+        {-4.854811051392573, 4.752425154111966, -12.50835945990392, 1.517854984151261},
+        {-4.802869715643876, 4.752425154111967, -12.50835945990392, -1.218394736107183},
+        {-5.396355272258612, 4.752425154111966, -12.50835945990392, -3.340338635918281}
+      }
+    }, {
+      {
+        {3.057480754092917, 4.752425154111970, -12.50835945990393, 3.590294810165323},
+        {3.723481969320323, 4.752425154111969, -12.50835945990393, 1.517854984151259},
+        {3.775423305069022, 4.752425154111971, -12.50835945990393, -1.218394736107181},
+        {3.181937748454284, 4.752425154111970, -12.50835945990393, -3.340338635918283}
+      }, {
+        {0.6003738084383958, 4.752425154111968, -7.128637731167951, 3.590294810165320},
+        {1.266375023665802, 4.752425154111968, -7.128637731167952, 1.517854984151259},
+        {1.318316359414500, 4.752425154111968, -7.128637731167952, -1.218394736107182},
+        {0.7248308027997628, 4.752425154111967, -7.128637731167951, -3.340338635918283}
+      }, {
+        {-1.598073669203918, 4.752425154111967, -7.128637731167952, 3.590294810165318},
+        {-0.9320724539765108, 4.752425154111966, -7.128637731167951, 1.517854984151259},
+        {-0.8801311182278135, 4.752425154111967, -7.128637731167951, -1.218394736107183},
+        {-1.473616674842550, 4.752425154111966, -7.128637731167951, -3.340338635918283}
+      }, {
+        {-4.055180614858439, 4.752425154111966, -12.50835945990393, 3.590294810165316},
+        {-3.389179399631032, 4.752425154111963, -12.50835945990392, 1.517854984151260},
+        {-3.337238063882335, 4.752425154111966, -12.50835945990393, -1.218394736107184},
+        {-3.930723620497071, 4.752425154111965, -12.50835945990393, -3.340338635918279}
+      }
+    }, {
+      {
+        {4.695552051195931, 8.338906306602619, -12.50835945990393, 3.590294810165322},
+        {5.361553266423337, 8.338906306602620, -12.50835945990392, 1.517854984151259},
+        {5.413494602172036, 8.338906306602613, -12.50835945990392, -1.218394736107180},
+        {4.820009045557298, 8.338906306602613, -12.50835945990393, -3.340338635918285}
+      }, {
+        {2.238445105541410, 8.338906306602613, -7.128637731167951, 3.590294810165319},
+        {2.904446320768816, 8.338906306602610, -7.128637731167951, 1.517854984151259},
+        {2.956387656517514, 8.338906306602613, -7.128637731167951, -1.218394736107181},
+        {2.362902099902776, 8.338906306602615, -7.128637731167951, -3.340338635918283}
+      }, {
+        {0.03999762789909700, 8.338906306602617, -7.128637731167951, 3.590294810165320},
+        {0.7059988431265038, 8.338906306602619, -7.128637731167950, 1.517854984151259},
+        {0.7579401788752009, 8.338906306602619, -7.128637731167951, -1.218394736107181},
+        {0.1644546222604643, 8.338906306602615, -7.128637731167951, -3.340338635918283}
+      }, {
+        {-2.417109317755424, 8.338906306602617, -12.50835945990392, 3.590294810165317},
+        {-1.751108102528017, 8.338906306602615, -12.50835945990392, 1.517854984151258},
+        {-1.699166766779320, 8.338906306602622, -12.50835945990393, -1.218394736107183},
+        {-2.292652323394057, 8.338906306602624, -12.50835945990392, -3.340338635918281}
+      }
+    }
+  };
+  // clang-format on
+
+    for (int i = 0; i < q; i++) {
+      for (int j = 0; j < q; j++) {
+        for (int k = 0; k < q; k++) {
+          for (int c = 0; c < 4; c++) {
+            auto relative_error = abs(r_h(i, j, k, c, 0) - answers[i][j][k][c]) / abs(answers[i][j][k][c]);
+            if (relative_error > 5.0e-14) {
+              std::cout << "error: " << r_h(i, j, k, c, 0) << " " << answers[i][j][k][c] << ", " << relative_error
+                        << std::endl;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  {
+    constexpr int p = 3;
+    constexpr int n = p + 1;
+    constexpr int q = 3;
+
+    using test = H1<p>;
+
+    mfem::Vector U1D(num_elements * n * n * n);
+    mfem::Vector R1D(num_elements * 4 * q * q * q);
+    U1D.UseDevice(true);
+    R1D.UseDevice(true);
+
+    auto U = mfem::Reshape(U1D.HostReadWrite(), n, n, n, num_elements);
+
+    for (int ix = 0; ix < n; ix++) {
+      for (int iy = 0; iy < n; iy++) {
+        for (int iz = 0; iz < n; iz++) {
+          U(ix, iy, iz, 0) = 2 * ix - 3.0 * iy + sin(iz);
+        }
+      }
+    }
+
+    R1D = 0.0;
+
+    mfem::DeviceTensor<4, const double> u_d = mfem::Reshape(U1D.Read(), n, n, n, num_elements);
+    mfem::DeviceTensor<5, double>       r_d = mfem::Reshape(R1D.ReadWrite(), q, q, q, 4, num_elements);
+
+    dim3 blocksize{q, q, q};
+    int  gridsize = num_elements;
     preprocess_kernel<test, Geometry::Hexahedron, q><<<gridsize, blocksize>>>(u_d, r_d);
     cudaDeviceSynchronize();
 
@@ -120,25 +262,23 @@ int main()
       for (int j = 0; j < q; j++) {
         for (int k = 0; k < q; k++) {
           for (int c = 0; c < 4; c++) {
-
-            auto relative_error = abs(r_h(i,j,k,c,0) - answers[i][j][k][c]) / abs(answers[i][j][k][c]);
+            auto relative_error = abs(r_h(i, j, k, c, 0) - answers[i][j][k][c]) / abs(answers[i][j][k][c]);
             if (relative_error > 5.0e-14) {
-              std::cout << "error: " << r_h(i,j,k,c,0) << " " << answers[i][j][k][c] << ", " << relative_error << std::endl;
+              std::cout << "error: " << r_h(i, j, k, c, 0) << " " << answers[i][j][k][c] << ", " << relative_error
+                        << std::endl;
             }
           }
         }
       }
     }
-
   }
-
 
   {
     constexpr int p = 3;
     constexpr int n = p + 1;
     constexpr int q = 2;
 
-    using test  = H1<p>;
+    using test = H1<p>;
 
     mfem::Vector R1D(num_elements * n * n * n);
     R1D.UseDevice(true);
@@ -146,8 +286,9 @@ int main()
     R1D = 0.0;
 
     mfem::DeviceTensor<4, double> r_d = mfem::Reshape(R1D.ReadWrite(), n, n, n, num_elements);
-    dim3                          blocksize{q, q, q};
-    int                           gridsize = num_elements;
+
+    dim3 blocksize{q, q, q};
+    int  gridsize = num_elements;
     postprocess_kernel<test, Geometry::Hexahedron, q><<<gridsize, blocksize>>>(r_d);
     cudaDeviceSynchronize();
 
@@ -182,14 +323,13 @@ int main()
     for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++) {
         for (int k = 0; k < n; k++) {
-          auto relative_error = abs(r_h(i,j,k,0) - answers[i][j][k]) / abs(answers[i][j][k]);
+          auto relative_error = abs(r_h(i, j, k, 0) - answers[i][j][k]) / abs(answers[i][j][k]);
           if (relative_error > 5.0e-14) {
-            std::cout << "error: " << r_h(i,j,k,0) << " " << answers[i][j][k] << ", " << relative_error << std::endl;
+            std::cout << "error: " << r_h(i, j, k, 0) << " " << answers[i][j][k] << ", " << relative_error << std::endl;
           }
         }
       }
     }
-
   }
 
   {
@@ -197,7 +337,7 @@ int main()
     constexpr int n = p + 1;
     constexpr int q = 4;
 
-    using test  = H1<p>;
+    using test = H1<p>;
 
     mfem::Vector R1D(num_elements * n * n * n);
     R1D.UseDevice(true);
@@ -205,8 +345,9 @@ int main()
     R1D = 0.0;
 
     mfem::DeviceTensor<4, double> r_d = mfem::Reshape(R1D.ReadWrite(), n, n, n, num_elements);
-    dim3                          blocksize{q, q, q};
-    int                           gridsize = num_elements;
+
+    dim3 blocksize{q, q, q};
+    int  gridsize = num_elements;
     postprocess_kernel<test, Geometry::Hexahedron, q><<<gridsize, blocksize>>>(r_d);
     cudaDeviceSynchronize();
 
@@ -233,14 +374,13 @@ int main()
     for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++) {
         for (int k = 0; k < n; k++) {
-          auto relative_error = abs(r_h(i,j,k,0) - answers[i][j][k]) / abs(answers[i][j][k]);
+          auto relative_error = abs(r_h(i, j, k, 0) - answers[i][j][k]) / abs(answers[i][j][k]);
           if (relative_error > 5.0e-14) {
-            std::cout << "error: " << r_h(i,j,k,0) << " " << answers[i][j][k] << ", " << relative_error << std::endl;
+            std::cout << "error: " << r_h(i, j, k, 0) << " " << answers[i][j][k] << ", " << relative_error << std::endl;
           }
         }
       }
     }
-
   }
 
   {
@@ -248,7 +388,7 @@ int main()
     constexpr int n = p + 1;
     constexpr int q = 3;
 
-    using test  = H1<p>;
+    using test = H1<p>;
 
     mfem::Vector R1D(num_elements * n * n * n);
     R1D.UseDevice(true);
@@ -284,15 +424,12 @@ int main()
     for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++) {
         for (int k = 0; k < n; k++) {
-          auto relative_error = abs(r_h(i,j,k,0) - answers[i][j][k]) / abs(answers[i][j][k]);
+          auto relative_error = abs(r_h(i, j, k, 0) - answers[i][j][k]) / abs(answers[i][j][k]);
           if (relative_error > 5.0e-14) {
-            std::cout << "error: " << r_h(i,j,k,0) << " " << answers[i][j][k] << ", " << relative_error << std::endl;
+            std::cout << "error: " << r_h(i, j, k, 0) << " " << answers[i][j][k] << ", " << relative_error << std::endl;
           }
         }
       }
     }
-
   }
-
-
 }
