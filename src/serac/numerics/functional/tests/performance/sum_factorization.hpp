@@ -86,7 +86,6 @@ __device__ auto BatchPreprocessCUDA(const mfem::DeviceTensor< 4, const double > 
       for (int j = threadIdx.y; j < n; j += blockDim.y) {
         for (int k = threadIdx.z; k < n; k += blockDim.z) {
           auto f_ijk = element_values(i, j, k, e);
-          printf("%d, %d, %d: %f\n", i, j, k, f_ijk);
           for (int w = 0; w < q; w++) {
             atomicAdd(&A1(0, i, j, w), B(w, k) * f_ijk);
             atomicAdd(&A1(1, i, j, w), G(w, k) * f_ijk);
@@ -95,10 +94,6 @@ __device__ auto BatchPreprocessCUDA(const mfem::DeviceTensor< 4, const double > 
       }
     }
     __syncthreads();
-    if (threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
-      print(A1);
-      printf("\n");
-    }
 
     __shared__ tensor<double, 3, n, q, q> A2;
 
