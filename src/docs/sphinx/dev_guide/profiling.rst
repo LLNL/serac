@@ -26,7 +26,7 @@ that make it easy to instrument and assess the performance of simulation code.
 Introduction to SPOT
 --------------------
 
-`SPOT https://software.llnl.gov/news/2021/01/07/spot-new/`_ is a framework developed at
+`SPOT <https://software.llnl.gov/news/2021/01/07/spot-new>`_ is a framework developed at
 LLNL for vizualizing performance data.  SPOT is an external tool and does not need to be
 linked into Serac.
 
