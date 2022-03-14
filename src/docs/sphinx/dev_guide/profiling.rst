@@ -34,7 +34,8 @@ Build Instructions
 ------------------
 
 To use Adiak and Caliper with Serac, install the ``profiling`` variant of ``serac``
-with Spack, i.e., ``serac+profiling``.
+with Spack, i.e., ``serac+profiling``. Note that these libraries are pre-built as
+part of the installed set of libraries on LC.
 
 Instrumenting Code
 ------------------
@@ -58,7 +59,7 @@ integrals, floating points, and strings. Note that this macro is a no-op if the
 
 .. code-block:: c++
 		
-   SERAC_SET_METADATA("dimensions", 3);
+   SERAC_SET_METADATA("dimensions", 2);
    SERAC_SET_METADATA("mesh", "../data/star.mesh");
 
 To add profile regions and ensure that Caliper is only used when it has been enabled
