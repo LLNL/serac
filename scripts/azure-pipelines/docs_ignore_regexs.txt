@@ -3,4 +3,4 @@ Error: \/undefined in getenv
 Package newunicodechar Warning: Redefining Unicode character on input line
 
 # serac::profiling::initialize has doxygen comments, but CI thinks it does not (works fine on rzgenie, so probably the version of doxygen in the container used for CI has a bug)
-Generating docs for compound serac::mfem_ext::detail::has_brackets.*profiling\.cpp:\d*: warning: Member initialize(\[\[maybe_unused\]\] MPI_Comm comm, \[\[maybe_unused\]\] std::string options) (function) of namespace serac::profiling is not documented\.
+Generating docs for compound serac::mfem_ext::detail::has_brackets.*profiling\.cpp:\d+: warning: Member initialize\(\[\[maybe_unused\]\] MPI_Comm comm, \[\[maybe_unused\]\] std::string options\) \(function\) of namespace serac::profiling is not documented\.
