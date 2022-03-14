@@ -11,16 +11,16 @@ Introduction to Adiak
 ---------------------
 
 `Adiak <https://github.com/LLNL/Adiak>`_ is a library developed at LLNL for collecting
-metadata that can be used to compare multiple runs across programs.  The full documentation
-can be found `here <https://github.com/LLNL/Adiak/blob/master/docs/Adiak%20API.docx>`_,
-but Serac provides some wrapper functions to initialize and finalize Adiak metadata collection.
+metadata that can be used to compare multiple runs across programs.  For more information,
+read `Adiak's documentation <https://github.com/LLNL/Adiak/blob/master/docs/Adiak%20API.docx>`_. Note that Serac provides some wrapper functions to initialize and finalize Adiak
+metadata collection.
 
 Introduction to Caliper
 -----------------------
 
 `Caliper <https://github.com/LLNL/Caliper>`_ is a framework developed at LLNL for
-measuring the performance of programs.  The full documentation is available
-`here <https://software.llnl.gov/Caliper/>`_, but Serac provides convenient macros
+measuring the performance of programs.  To find out more, read `Caliper's documentation 
+<https://software.llnl.gov/Caliper/>`_. Serac also provides convenient macros
 that make it easy to instrument and assess the performance of simulation code.
 
 Introduction to SPOT
