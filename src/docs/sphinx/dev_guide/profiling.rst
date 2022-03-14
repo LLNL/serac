@@ -20,7 +20,7 @@ Introduction to Caliper
 
 `Caliper <https://github.com/LLNL/Caliper>`_ is a framework developed at LLNL for
 measuring the performance of programs.  To find out more, read `Caliper's documentation 
-<https://software.llnl.gov/Caliper/>`_. Serac also provides convenient macros
+<https://software.llnl.gov/Caliper>`_. Serac also provides convenient macros
 that make it easy to instrument and assess the performance of simulation code.
 
 Introduction to SPOT
