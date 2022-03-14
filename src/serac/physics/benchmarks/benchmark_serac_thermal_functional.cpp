@@ -16,8 +16,6 @@
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/state/state_manager.hpp"
 
-namespace serac {
-
 template <int p, int dim>
 void functional_test_static()
 {
@@ -154,8 +152,6 @@ void functional_test_dynamic()
   thermal_solver.outputState();
 }
 
-}  // namespace serac
-
 //------------------------------------------------------------------------------
 #include "axom/slic/core/SimpleLogger.hpp"
 
@@ -175,35 +171,35 @@ int main(int argc, char* argv[])
   SERAC_MARK_BEGIN("Thermal Functional");
 
   SERAC_MARK_BEGIN("2D Linear Static");
-  serac::functional_test_static<1, 2>();
+  functional_test_static<1, 2>();
   SERAC_MARK_END("2D Linear Static");
 
   SERAC_MARK_BEGIN("2D Quadratic Static");
-  serac::functional_test_static<2, 2>();
+  functional_test_static<2, 2>();
   SERAC_MARK_END("2D Quadratic Static");
 
   SERAC_MARK_BEGIN("3D Linear Static");
-  serac::functional_test_static<1, 3>();
+  functional_test_static<1, 3>();
   SERAC_MARK_END("3D Linear Static");
 
   SERAC_MARK_BEGIN("3D Quadratic Static");
-  serac::functional_test_static<2, 3>();
+  functional_test_static<2, 3>();
   SERAC_MARK_END("3D Quadratic Static");
 
   SERAC_MARK_BEGIN("2D Linear Dynamic");
-  serac::functional_test_dynamic<1, 2>();
+  functional_test_dynamic<1, 2>();
   SERAC_MARK_END("2D Linear Dynamic");
 
   SERAC_MARK_BEGIN("2D Quadratic Dynamic");
-  serac::functional_test_dynamic<2, 2>();
+  functional_test_dynamic<2, 2>();
   SERAC_MARK_END("2D Quadratic Dynamic");
 
   SERAC_MARK_BEGIN("3D Linear Dynamic");
-  serac::functional_test_dynamic<1, 3>();
+  functional_test_dynamic<1, 3>();
   SERAC_MARK_END("3D Linear Dynamic");
 
   SERAC_MARK_BEGIN("3D Quadratic Dynamic");
-  serac::functional_test_dynamic<2, 3>();
+  functional_test_dynamic<2, 3>();
   SERAC_MARK_END("3D Quadratic Dynamic");
 
   // Finalize profiling
