@@ -1,6 +1,45 @@
 #include "sum_factorization.hpp"
+#include "sum_factorization_external_cache.hpp"
 
 using namespace serac;
+using std::sin, std::abs;
+
+template <typename trial_space, Geometry geom, int q>
+__global__ void preprocess_kernel_with_cache(mfem::DeviceTensor<4, const double> input, mfem::DeviceTensor<5, double> output)
+{
+  static constexpr int n = trial_space::order + 1;
+  static constexpr auto rule = GaussLegendreRule<geom, q>();
+
+  __shared__ tensor < double, n, n, n > X;
+  __shared__ tensor < double, 3, n, n, q > A1;
+  __shared__ tensor < double, 3, n, q, q > A2;
+
+  __shared__ tensor< double, q, n > B;
+  __shared__ tensor< double, q, n > G;
+
+  if (threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
+    for (int i = 0; i < q; i++) {
+      B[i] = GaussLobattoInterpolation<n>(rule.point(i));
+      G[i] = GaussLobattoInterpolationDerivative<n>(rule.point(i));
+    }
+  }
+
+  for (int dz = threadIdx.z; dz < n; dz += blockDim.z) {
+    for (int dy = threadIdx.y; dy < n; dy += blockDim.y) {
+      for (int dx = threadIdx.x; dx < n; dx += blockDim.x) {
+        X(dz, dy, dx) = input(dx, dy, dz, 0);
+      }
+    }
+  }
+  __syncthreads();
+
+  auto qf_input = BatchPreprocessCUDA<trial_space>(X, rule, B, G, A1, A2);
+  
+  output(threadIdx.x, threadIdx.y, threadIdx.z, 0, 0) = qf_input.value;
+  output(threadIdx.x, threadIdx.y, threadIdx.z, 1, 0) = qf_input.gradient[0];
+  output(threadIdx.x, threadIdx.y, threadIdx.z, 2, 0) = qf_input.gradient[1];
+  output(threadIdx.x, threadIdx.y, threadIdx.z, 3, 0) = qf_input.gradient[2];
+}
 
 template <typename trial_space, Geometry geom, int q>
 __global__ void preprocess_kernel(mfem::DeviceTensor<4, const double> input, mfem::DeviceTensor<5, double> output)
@@ -20,6 +59,41 @@ __global__ void postprocess_kernel(mfem::DeviceTensor<4, double> r_e)
   static constexpr auto rule = GaussLegendreRule<geom, q>();
   tuple                 qf_output{1.0, tensor<double, 3>{threadIdx.x * 2.0, threadIdx.y * 3.0, threadIdx.z * 5.0}};
   BatchPostprocessCUDA<trial_space>(qf_output, rule, r_e, 0);
+}
+
+template <typename trial_space, Geometry geom, int q>
+__global__ void postprocess_kernel_with_cache(mfem::DeviceTensor<4, double> r_e)
+{
+  static constexpr int n = trial_space::order + 1;
+  static constexpr auto rule = GaussLegendreRule<geom, q>();
+
+  __shared__ tensor < double, 4, q, q, q > f;
+  __shared__ tensor < double, 4, q, q, n > A1;
+  __shared__ tensor < double, 4, q, n, n > A2;
+
+  __shared__ tensor< double, q, n > B;
+  __shared__ tensor< double, q, n > G;
+
+  if (threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
+    for (int i = 0; i < q; i++) {
+      B[i] = GaussLobattoInterpolation<n>(rule.point(i));
+      G[i] = GaussLobattoInterpolationDerivative<n>(rule.point(i));
+    }
+  }
+
+  for (int dz = threadIdx.z; dz < n; dz += blockDim.z) {
+    for (int dy = threadIdx.y; dy < n; dy += blockDim.y) {
+      for (int dx = threadIdx.x; dx < n; dx += blockDim.x) {
+        f(0, dz, dy, dx) = 1.0;
+        f(1, dz, dy, dx) = threadIdx.x * 2.0;
+        f(2, dz, dy, dx) = threadIdx.y * 3.0;
+        f(3, dz, dy, dx) = threadIdx.z * 5.0;
+      }
+    }
+  }
+  __syncthreads();
+
+  BatchPostprocessCUDA<trial_space>(f, rule, r_e, 0, B, G, A1, A2);
 }
 
 int main()
@@ -50,7 +124,7 @@ int main()
     for (int ix = 0; ix < n; ix++) {
       for (int iy = 0; iy < n; iy++) {
         for (int iz = 0; iz < n; iz++) {
-          U(ix, iy, iz, 0) = 2 * ix - 3.0 * iy + sin(iz);
+          U(ix, iy, iz, 0) = 2 * ix - 3.0 * iy + std::sin(iz);
         }
       }
     }
@@ -62,7 +136,8 @@ int main()
 
     dim3 blocksize{q, q, q};
     int  gridsize = num_elements;
-    preprocess_kernel<test, Geometry::Hexahedron, q><<<gridsize, blocksize>>>(u_d, r_d);
+    //preprocess_kernel<test, Geometry::Hexahedron, q><<<gridsize, blocksize>>>(u_d, r_d);
+    preprocess_kernel_with_cache<test, Geometry::Hexahedron, q><<<gridsize, blocksize>>>(u_d, r_d);
     cudaDeviceSynchronize();
 
     mfem::DeviceTensor<5, const double> r_h = mfem::Reshape(R1D.HostRead(), q, q, q, 4, num_elements);
@@ -289,7 +364,8 @@ int main()
 
     dim3 blocksize{q, q, q};
     int  gridsize = num_elements;
-    postprocess_kernel<test, Geometry::Hexahedron, q><<<gridsize, blocksize>>>(r_d);
+    //postprocess_kernel<test, Geometry::Hexahedron, q><<<gridsize, blocksize>>>(r_d);
+    postprocess_kernel_with_cache<test, Geometry::Hexahedron, q><<<gridsize, blocksize>>>(r_d);
     cudaDeviceSynchronize();
 
     mfem::DeviceTensor<4, const double> r_h = mfem::Reshape(R1D.HostRead(), n, n, n, num_elements);

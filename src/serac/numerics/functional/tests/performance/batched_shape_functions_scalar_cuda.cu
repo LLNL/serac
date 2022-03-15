@@ -1016,10 +1016,13 @@ __global__ void batched_cuda_kernel(mfem::DeviceTensor< 4, const double > u,
   // for each element in the domain
   uint32_t e = blockIdx.x;
 
+  // interpolate each quadrature point's value
   auto qf_input = BatchPreprocessCUDA<trial>(u, rule, e);
 
+  // evalute the q-function
   auto qf_output = BatchApplyCUDA(qf, qf_input, rule, J, e);
 
+  // integrate the material response against the test-space basis functions
   BatchPostprocessCUDA<test>(qf_output, rule, r, e);
 
 }
@@ -1062,10 +1065,10 @@ int main() {
 
   constexpr int p = 3;
   constexpr int n = p + 1;
-  constexpr int q = n;
+  constexpr int q = 4;
   constexpr int dim = 3;
   int num_runs = 10;
-  int num_elements = 10000;
+  int num_elements = 100000;
 
   double rho = 1.0;
   double k = 1.0;
