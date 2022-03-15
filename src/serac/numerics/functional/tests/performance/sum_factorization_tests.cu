@@ -418,7 +418,8 @@ int main()
 
     dim3 blocksize{q, q, q};
     int  gridsize = num_elements;
-    postprocess_kernel<test, Geometry::Hexahedron, q><<<gridsize, blocksize>>>(r_d);
+    //postprocess_kernel<test, Geometry::Hexahedron, q><<<gridsize, blocksize>>>(r_d);
+    postprocess_kernel_with_cache<test, Geometry::Hexahedron, q><<<gridsize, blocksize>>>(r_d);
     cudaDeviceSynchronize();
 
     mfem::DeviceTensor<4, const double> r_h = mfem::Reshape(R1D.HostRead(), n, n, n, num_elements);
@@ -468,7 +469,8 @@ int main()
     mfem::DeviceTensor<4, double> r_d = mfem::Reshape(R1D.ReadWrite(), n, n, n, num_elements);
     dim3                          blocksize{q, q, q};
     int                           gridsize = num_elements;
-    postprocess_kernel<test, Geometry::Hexahedron, q><<<gridsize, blocksize>>>(r_d);
+    //postprocess_kernel<test, Geometry::Hexahedron, q><<<gridsize, blocksize>>>(r_d);
+    postprocess_kernel_with_cache<test, Geometry::Hexahedron, q><<<gridsize, blocksize>>>(r_d);
     cudaDeviceSynchronize();
 
     mfem::DeviceTensor<4, const double> r_h = mfem::Reshape(R1D.HostRead(), n, n, n, num_elements);
