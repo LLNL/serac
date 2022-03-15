@@ -81,16 +81,10 @@ __global__ void postprocess_kernel_with_cache(mfem::DeviceTensor<4, double> r_e)
     }
   }
 
-  for (int dz = threadIdx.z; dz < n; dz += blockDim.z) {
-    for (int dy = threadIdx.y; dy < n; dy += blockDim.y) {
-      for (int dx = threadIdx.x; dx < n; dx += blockDim.x) {
-        f(0, dz, dy, dx) = 1.0;
-        f(1, dz, dy, dx) = threadIdx.x * 2.0;
-        f(2, dz, dy, dx) = threadIdx.y * 3.0;
-        f(3, dz, dy, dx) = threadIdx.z * 5.0;
-      }
-    }
-  }
+  f(0, threadIdx.z, threadIdx.y, threadIdx.x) = 1.0;
+  f(1, threadIdx.z, threadIdx.y, threadIdx.x) = threadIdx.x * 2.0;
+  f(2, threadIdx.z, threadIdx.y, threadIdx.x) = threadIdx.y * 3.0;
+  f(3, threadIdx.z, threadIdx.y, threadIdx.x) = threadIdx.z * 5.0;
   __syncthreads();
 
   BatchPostprocessCUDA<trial_space>(f, rule, r_e, 0, B, G, A1, A2);

@@ -65,15 +65,15 @@ __device__ void BatchPostprocessCUDA(const tensor<double, 4, q, q, q> & f, Gauss
 
   if constexpr (geom == Geometry::Hexahedron) {
 
-    for (int qz = threadIdx.x; qz < q; qz += blockDim.z) {
+    for (int qz = threadIdx.z; qz < q; qz += blockDim.z) {
       for (int qy = threadIdx.y; qy < q; qy += blockDim.y) {
-        for (int dx = threadIdx.z; dx < n; dx += blockDim.x) {
+        for (int dx = threadIdx.x; dx < n; dx += blockDim.x) {
           double sum[4]{};
-          for (int qx = 0; qx < n; qx++) {
+          for (int qx = 0; qx < q; qx++) {
             sum[0] += B(qx, dx) * f(0, qz, qy, qx);
-            sum[1] += B(qx, dx) * f(1, qz, qy, qx);
+            sum[1] += G(qx, dx) * f(1, qz, qy, qx);
             sum[2] += B(qx, dx) * f(2, qz, qy, qx);
-            sum[3] += G(qx, dx) * f(3, qz, qy, qx);
+            sum[3] += B(qx, dx) * f(3, qz, qy, qx);
           }
           A1(0, qz, qy, dx) = sum[0];
           A1(1, qz, qy, dx) = sum[1];
@@ -84,14 +84,14 @@ __device__ void BatchPostprocessCUDA(const tensor<double, 4, q, q, q> & f, Gauss
     }
     __syncthreads();
 
-    for (int qz = threadIdx.x; qz < q; qz += blockDim.z) {
+    for (int qz = threadIdx.z; qz < q; qz += blockDim.z) {
       for (int dy = threadIdx.y; dy < n; dy += blockDim.y) {
-        for (int dx = threadIdx.z; dx < n; dx += blockDim.x) {
+        for (int dx = threadIdx.x; dx < n; dx += blockDim.x) {
           double sum[4]{};
           for (int qy = 0; qy < q; qy++) {
             sum[0] += B(qy, dy) * A1(0, qz, qy, dx);
-            sum[1] += G(qy, dy) * A1(1, qz, qy, dx);
-            sum[2] += B(qy, dy) * A1(2, qz, qy, dx);
+            sum[1] += B(qy, dy) * A1(1, qz, qy, dx);
+            sum[2] += G(qy, dy) * A1(2, qz, qy, dx);
             sum[3] += B(qy, dy) * A1(3, qz, qy, dx);
           }
           A2(0, qz, dy, dx) = sum[0];
@@ -103,9 +103,9 @@ __device__ void BatchPostprocessCUDA(const tensor<double, 4, q, q, q> & f, Gauss
     }
     __syncthreads();
 
-    for (int dz = threadIdx.x; dz < n; dz += blockDim.z) {
+    for (int dz = threadIdx.z; dz < n; dz += blockDim.z) {
       for (int dy = threadIdx.y; dy < n; dy += blockDim.y) {
-        for (int dx = threadIdx.z; dx < n; dx += blockDim.x) {
+        for (int dx = threadIdx.x; dx < n; dx += blockDim.x) {
           double sum[4]{};
           for (int qz = 0; qz < q; qz++) {
             sum[0] += B(qz, dz) * A2(0, qz, dy, dx);
