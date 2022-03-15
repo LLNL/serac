@@ -86,7 +86,7 @@ std::string getInputFileName(const std::string& file_path)
   std::string basename = path.baseName();
   std::string name;
 
-  size_t index = basename.find_last_of(".");
+  std::size_t index = basename.find_last_of(".");
   if (index != std::string::npos) {
     name = basename.substr(0, index);
   } else {
