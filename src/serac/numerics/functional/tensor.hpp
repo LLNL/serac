@@ -96,7 +96,7 @@ struct tensor<T> {
   }
 
   template <typename... S>
-  SERAC_HOST_DEVICE constexpr auto operator()(S...) const
+  SERAC_HOST_DEVICE constexpr auto& operator()(S...) const
   {
     return value;
   }
@@ -120,13 +120,13 @@ struct tensor<T, 1> {
   }
 
   template <typename S>
-  SERAC_HOST_DEVICE constexpr auto operator()(S) const
+  SERAC_HOST_DEVICE constexpr auto& operator()(S) const
   {
     return value;
   }
 
   SERAC_HOST_DEVICE constexpr auto& operator[](int) { return value; };
-  SERAC_HOST_DEVICE constexpr auto  operator[](int) const { return value; };
+  SERAC_HOST_DEVICE constexpr auto& operator[](int) const { return value; };
 
   SERAC_HOST_DEVICE constexpr operator T() const { return value; }
   SERAC_HOST_DEVICE constexpr tensor() : value() {}
@@ -153,7 +153,7 @@ struct tensor<T, 1, 1> {
   }
 
   SERAC_HOST_DEVICE constexpr auto& operator[](int) { return value; };
-  SERAC_HOST_DEVICE constexpr auto  operator[](int) const { return value; };
+  SERAC_HOST_DEVICE constexpr auto& operator[](int) const { return value; };
 
   operator tensor<T, 1>() const { return value; }
   tensor() : value() {}
@@ -182,7 +182,7 @@ struct tensor<T, n> {
   }
 
   SERAC_HOST_DEVICE constexpr auto& operator[](int i) { return value[i]; };
-  SERAC_HOST_DEVICE constexpr auto  operator[](int i) const { return value[i]; };
+  SERAC_HOST_DEVICE constexpr auto& operator[](int i) const { return value[i]; };
   T                                 value[n];
 };
 /// @endcond
@@ -232,7 +232,7 @@ struct tensor<T, first, rest...> {
    */
   SERAC_HOST_DEVICE constexpr auto& operator[](int i) { return value[i]; };
   /// @overload
-  SERAC_HOST_DEVICE constexpr auto operator[](int i) const { return value[i]; };
+  SERAC_HOST_DEVICE constexpr auto& operator[](int i) const { return value[i]; };
 
   /**
    * @brief The actual tensor data
