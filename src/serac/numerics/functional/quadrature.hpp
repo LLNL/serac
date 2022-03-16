@@ -33,7 +33,7 @@ struct QuadratureRule {
   tensor<double, n, dim> points;
 
   /// @brief Returns the number of points in the rule
-  constexpr size_t size() const { return n; }
+  constexpr std::size_t size() const { return n; }
 };
 
 /**

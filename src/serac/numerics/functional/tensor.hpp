@@ -390,6 +390,13 @@ SERAC_HOST_DEVICE zero& get(zero& x)
   return x;
 }
 
+/** @brief let `zero` be accessed like a tuple */
+template <int i>
+SERAC_HOST_DEVICE const zero& get(const zero& x)
+{
+  return x;
+}
+
 /** @brief the dot product of anything with `zero` is `zero` */
 template <typename T>
 SERAC_HOST_DEVICE zero dot(const T&, zero)
@@ -1572,11 +1579,24 @@ auto inv(tensor<dual<gradient_type>, n, n> A)
 template <typename T, int... n>
 auto& operator<<(std::ostream& out, const tensor<T, n...>& A)
 {
-  out << '{' << A[0];
+  out << "tensor{" << A[0];
   for (int i = 1; i < tensor<T, n...>::first_dim; i++) {
     out << ", " << A[i];
   }
   out << '}';
+  return out;
+}
+
+/**
+ * @brief recursively serialize the entries in a tensor to an ostream.
+ * Output format uses braces and comma separators to mimic C syntax for multidimensional array
+ * initialization.
+ *
+ * @param[in] out the std::ostream to write to (e.g. std::cout or std::ofstream)
+ */
+auto& operator<<(std::ostream& out, serac::zero)
+{
+  out << "zero";
   return out;
 }
 

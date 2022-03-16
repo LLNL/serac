@@ -169,6 +169,22 @@ TEST(TupleArithmeticUnitTests, tensor_output_with_tuple_input)
   EXPECT_NEAR(norm(df1 - df0) / norm(df0), 0.0, 2.0e-8);
 }
 
+TEST(TupleArithmeticUnitTests, ostream_output)
+{
+  constexpr auto f = [=](auto inputs) {
+    auto [x, y] = inputs;
+    return serac::tuple{exp(x), sin(dot(y, y) + x)};
+  };
+
+  serac::tuple inputs{1.0, serac::tensor<double, 3>{1.0, 3.0, 2.0}};
+
+  auto outputs = f(make_dual(inputs));
+
+  std::cout << get_gradient(outputs) << std::endl;
+  // prints:
+  // tuple{tuple{2.71828, zero}, tuple{-0.759688, tensor{-1.51938, -4.55813, -3.03875}}}
+}
+
 int main(int argc, char* argv[])
 {
   ::testing::InitGoogleTest(&argc, argv);
