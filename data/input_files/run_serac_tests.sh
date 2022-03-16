@@ -3,8 +3,9 @@
 # to the tests integration directory
 # notes:
 #  - this is meant to run in ./serac_repo/data/input_files
-#  - <SERAC_EXE> can be found in a build directory under "bin"
+#  - SERAC_EXE can be found in a build directory under "bin"
 #  - you can run without sbatch with IS_PARALLEL=0
+#  - KEEP_OUTPUTFILE for debugging
 
 #SBATCH -J run_serac_tests
 #SBATCH -t 5:00:00
@@ -12,14 +13,15 @@
 #SBATCH -N 1
 #SBATCH -n 2
 
-if [ $# -ne 2 ]
+if [ $# -ne 3 ]
     then
-    echo "args: <SERAC_EXE> <IS_PARALLEL>"
+    echo "args: <SERAC_EXE> <IS_PARALLEL> <KEEP_OUTPUTFILE>"
     exit 1
 fi
 
 SERAC_EXE=$1
 IS_PARALLEL=$2
+KEEP_OUTPUTFILE=$3
 
 # set dir vars
 INPUT_DIR=$(pwd)
@@ -93,6 +95,11 @@ do
     echo "Done"
     echo "======================="
     cd ${INPUT_DIR}
-
 done
+
+# No need for output file anymore
+if [ ${KEEP_OUTPUT_FILE} -eq 0 ]
+    then
+    rm -r ${OUTPUT_DIR}
+fi
 
