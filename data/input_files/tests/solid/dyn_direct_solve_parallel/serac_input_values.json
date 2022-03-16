@@ -1,0 +1,2111 @@
+
+{
+  "t_final": 
+  {
+    "InletType": "Field",
+    "description": "Final time for simulation.",
+    "value": 6.0,
+    "retrieval_status": 0,
+    "defaultValue": 1.0
+  },
+  "dt": 
+  {
+    "InletType": "Field",
+    "description": "Time step.",
+    "value": 1.0,
+    "retrieval_status": 0,
+    "defaultValue": 0.25
+  },
+  "output_type": 
+  {
+    "InletType": "Field",
+    "description": "Desired output format",
+    "value": "VisIt",
+    "retrieval_status": 0,
+    "defaultValue": "VisIt",
+    "validStringValues": 
+    [
+      "GLVis",
+      "ParaView",
+      "VisIt",
+      "SidreVisIt"
+    ]
+  },
+  "main_mesh": 
+  {
+    "InletType": "Container",
+    "description": "The main mesh for the problem",
+    "ser_ref_levels": 
+    {
+      "InletType": "Field",
+      "description": "Number of times to refine the mesh uniformly in serial.",
+      "value": 1,
+      "retrieval_status": 0,
+      "defaultValue": 0
+    },
+    "par_ref_levels": 
+    {
+      "InletType": "Field",
+      "description": "Number of times to refine the mesh uniformly in parallel.",
+      "value": 0,
+      "retrieval_status": 0,
+      "defaultValue": 0
+    },
+    "type": 
+    {
+      "InletType": "Field",
+      "description": "Type of mesh",
+      "value": "file",
+      "retrieval_status": 0,
+      "required": 1,
+      "validStringValues": 
+      [
+        "ball",
+        "box",
+        "disk",
+        "file"
+      ]
+    },
+    "mesh": 
+    {
+      "InletType": "Field",
+      "description": "Path to Mesh file",
+      "value": "../../../meshes/beam-hex.mesh",
+      "retrieval_status": 0
+    },
+    "elements": 
+    {
+      "InletType": "Container",
+      "x": 
+      {
+        "InletType": "Field",
+        "description": "x-dimension",
+        "retrieval_status": 1
+      },
+      "y": 
+      {
+        "InletType": "Field",
+        "description": "y-dimension",
+        "retrieval_status": 1
+      },
+      "z": 
+      {
+        "InletType": "Field",
+        "description": "z-dimension",
+        "retrieval_status": 1
+      }
+    },
+    "size": 
+    {
+      "InletType": "Container",
+      "x": 
+      {
+        "InletType": "Field",
+        "description": "Size in the x-dimension",
+        "retrieval_status": 1
+      },
+      "y": 
+      {
+        "InletType": "Field",
+        "description": "Size in the y-dimension",
+        "retrieval_status": 1
+      },
+      "z": 
+      {
+        "InletType": "Field",
+        "description": "Size in the z-dimension",
+        "retrieval_status": 1
+      }
+    },
+    "approx_elements": 
+    {
+      "InletType": "Field",
+      "description": "Approximate number of elements in an n-ball mesh",
+      "retrieval_status": 1
+    }
+  },
+  "solid": 
+  {
+    "InletType": "Container",
+    "description": "Finite deformation solid mechanics module",
+    "order": 
+    {
+      "InletType": "Field",
+      "description": "Order degree of the finite elements.",
+      "value": 1,
+      "retrieval_status": 0,
+      "defaultValue": 1,
+      "range": [1, 8]
+    },
+    "mu": 
+    {
+      "InletType": "Field",
+      "description": "Shear modulus in the Neo-Hookean hyperelastic model.",
+      "value": 0.25,
+      "retrieval_status": 0,
+      "defaultValue": 0.25
+    },
+    "K": 
+    {
+      "InletType": "Field",
+      "description": "Bulk modulus in the Neo-Hookean hyperelastic model.",
+      "value": 5.0,
+      "retrieval_status": 0,
+      "defaultValue": 5.0
+    },
+    "geometric_nonlin": 
+    {
+      "InletType": "Field",
+      "description": "Flag to include geometric nonlinearities in the residual calculation.",
+      "retrieval_status": 1,
+      "defaultValue": 1,
+      "value": 1
+    },
+    "material_nonlin": 
+    {
+      "InletType": "Field",
+      "description": "Flag to include material nonlinearities (linear elastic vs. neo-Hookean material model).",
+      "retrieval_status": 1,
+      "defaultValue": 1,
+      "value": 1
+    },
+    "viscosity": 
+    {
+      "InletType": "Field",
+      "description": "Viscosity constant",
+      "value": 0.0,
+      "retrieval_status": 0,
+      "defaultValue": 0.0
+    },
+    "density": 
+    {
+      "InletType": "Field",
+      "description": "Initial mass density",
+      "retrieval_status": 1,
+      "defaultValue": 1.0,
+      "value": 1.0
+    },
+    "equation_solver": 
+    {
+      "InletType": "Container",
+      "description": "Linear and Nonlinear stiffness Solver Parameters.",
+      "linear": 
+      {
+        "InletType": "Container",
+        "description": "Linear Equation Solver Parameters",
+        "required": 1,
+        "type": 
+        {
+          "InletType": "Field",
+          "description": "The type of solver parameters to use (iterative|direct)",
+          "value": "direct",
+          "retrieval_status": 0,
+          "required": 1,
+          "validStringValues": 
+          [
+            "iterative",
+            "direct"
+          ]
+        },
+        "iterative_options": 
+        {
+          "InletType": "Container",
+          "description": "Iterative solver parameters",
+          "rel_tol": 
+          {
+            "InletType": "Field",
+            "description": "Relative tolerance for the linear solve.",
+            "retrieval_status": 1,
+            "defaultValue": 1e-06,
+            "value": 1e-06
+          },
+          "abs_tol": 
+          {
+            "InletType": "Field",
+            "description": "Absolute tolerance for the linear solve.",
+            "retrieval_status": 1,
+            "defaultValue": 1e-08,
+            "value": 1e-08
+          },
+          "max_iter": 
+          {
+            "InletType": "Field",
+            "description": "Maximum iterations for the linear solve.",
+            "retrieval_status": 1,
+            "defaultValue": 5000,
+            "value": 5000
+          },
+          "print_level": 
+          {
+            "InletType": "Field",
+            "description": "Linear print level.",
+            "retrieval_status": 1,
+            "defaultValue": 0,
+            "value": 0
+          },
+          "solver_type": 
+          {
+            "InletType": "Field",
+            "description": "Solver type (gmres|minres|cg).",
+            "retrieval_status": 1,
+            "defaultValue": "gmres",
+            "value": "gmres"
+          },
+          "prec_type": 
+          {
+            "InletType": "Field",
+            "description": "Preconditioner type (JacobiSmoother|L1JacobiSmoother|AMG|BlockILU).",
+            "retrieval_status": 1,
+            "defaultValue": "JacobiSmoother",
+            "value": "JacobiSmoother"
+          }
+        },
+        "direct_options": 
+        {
+          "InletType": "Container",
+          "description": "Direct solver parameters",
+          "print_level": 
+          {
+            "InletType": "Field",
+            "description": "Linear print level.",
+            "value": 0,
+            "retrieval_status": 0,
+            "defaultValue": 0
+          }
+        }
+      },
+      "nonlinear": 
+      {
+        "InletType": "Container",
+        "description": "Newton Equation Solver Parameters",
+        "required": 0,
+        "rel_tol": 
+        {
+          "InletType": "Field",
+          "description": "Relative tolerance for the Newton solve.",
+          "value": 0.0001,
+          "retrieval_status": 0,
+          "defaultValue": 0.01
+        },
+        "abs_tol": 
+        {
+          "InletType": "Field",
+          "description": "Absolute tolerance for the Newton solve.",
+          "value": 1e-08,
+          "retrieval_status": 0,
+          "defaultValue": 0.0001
+        },
+        "max_iter": 
+        {
+          "InletType": "Field",
+          "description": "Maximum iterations for the Newton solve.",
+          "value": 500,
+          "retrieval_status": 0,
+          "defaultValue": 500
+        },
+        "print_level": 
+        {
+          "InletType": "Field",
+          "description": "Nonlinear print level.",
+          "value": 1,
+          "retrieval_status": 0,
+          "defaultValue": 0
+        },
+        "solver_type": 
+        {
+          "InletType": "Field",
+          "description": "Solver type (MFEMNewton|KINFullStep|KINLineSearch)",
+          "retrieval_status": 1,
+          "defaultValue": "MFEMNewton",
+          "value": "MFEMNewton"
+        }
+      }
+    },
+    "dynamics": 
+    {
+      "InletType": "Container",
+      "description": "Parameters for mass matrix inversion",
+      "timestepper": 
+      {
+        "InletType": "Field",
+        "description": "Timestepper (ODE) method to use",
+        "value": "AverageAcceleration",
+        "retrieval_status": 0
+      },
+      "enforcement_method": 
+      {
+        "InletType": "Field",
+        "description": "Time-varying constraint enforcement method to use",
+        "value": "RateControl",
+        "retrieval_status": 0
+      }
+    },
+    "boundary_conds": 
+    {
+      "InletType": "Container",
+      "_inlet_collection": 
+      {
+        "InletType": "Container",
+        "retrieval_status": 0,
+        "_inlet_struct_collection": 1,
+        "_inlet_collection_indices": 
+        [
+          "solid/boundary_conds/displacement"
+        ],
+        "displacement": 
+        {
+          "InletType": "Container",
+          "description": "Container of boundary conditions",
+          "attrs": 
+          {
+            "InletType": "Container",
+            "_inlet_collection": 
+            {
+              "InletType": "Container",
+              "retrieval_status": 0,
+              "1": 
+              {
+                "InletType": "Field",
+                "value": 1
+              },
+              "_inlet_collection_indices": 
+              [
+                "solid/boundary_conds/displacement/attrs/1"
+              ]
+            }
+          },
+          "vector_function": 
+          {
+            "InletType": "Field",
+            "description": "The function to use for an mfem::VectorFunctionCoefficient",
+            "return_type": 0,
+            "function_arguments": [0, 1]
+          },
+          "scalar_function": 
+          {
+            "InletType": "Field",
+            "description": "The function to use for an mfem::FunctionCoefficient",
+            "return_type": 1,
+            "function_arguments": [0, 1]
+          },
+          "component": 
+          {
+            "InletType": "Field",
+            "description": "The vector component to which the scalar coefficient should be applied",
+            "retrieval_status": 1
+          },
+          "constant": 
+          {
+            "InletType": "Field",
+            "description": "The constant scalar value to use as the coefficient",
+            "retrieval_status": 1
+          },
+          "vector_constant": 
+          {
+            "InletType": "Container",
+            "description": "The constant vector to use as the coefficient",
+            "x": 
+            {
+              "InletType": "Field",
+              "description": "x-component of vector",
+              "value": 0.0,
+              "retrieval_status": 0
+            },
+            "y": 
+            {
+              "InletType": "Field",
+              "description": "y-component of vector",
+              "value": 0.0,
+              "retrieval_status": 0
+            },
+            "z": 
+            {
+              "InletType": "Field",
+              "description": "z-component of vector",
+              "value": 0.0,
+              "retrieval_status": 0
+            }
+          },
+          "piecewise_constant": 
+          {
+            "InletType": "Container",
+            "_inlet_collection": 
+            {
+              "InletType": "Container",
+              "retrieval_status": 1
+            }
+          },
+          "vector_piecewise_constant": 
+          {
+            "InletType": "Container",
+            "_inlet_collection": 
+            {
+              "InletType": "Container",
+              "retrieval_status": 1,
+              "_inlet_struct_collection": 1
+            }
+          }
+        },
+        "vector_constant": 
+        {
+          "InletType": "Container",
+          "description": "The constant vector to use as the coefficient"
+        },
+        "vector_piecewise_constant": 
+        {
+          "InletType": "Container",
+          "_inlet_collection": 
+          {
+            "InletType": "Container",
+            "_inlet_struct_collection": 1
+          }
+        }
+      }
+    },
+    "initial_displacement": 
+    {
+      "InletType": "Container",
+      "description": "Coefficient for initial condition",
+      "vector_function": 
+      {
+        "InletType": "Field",
+        "description": "The function to use for an mfem::VectorFunctionCoefficient",
+        "return_type": 0,
+        "function_arguments": [0, 1]
+      },
+      "scalar_function": 
+      {
+        "InletType": "Field",
+        "description": "The function to use for an mfem::FunctionCoefficient",
+        "return_type": 1,
+        "function_arguments": [0, 1]
+      },
+      "component": 
+      {
+        "InletType": "Field",
+        "description": "The vector component to which the scalar coefficient should be applied",
+        "retrieval_status": 1
+      },
+      "constant": 
+      {
+        "InletType": "Field",
+        "description": "The constant scalar value to use as the coefficient",
+        "retrieval_status": 1
+      },
+      "vector_constant": 
+      {
+        "InletType": "Container",
+        "description": "The constant vector to use as the coefficient",
+        "x": 
+        {
+          "InletType": "Field",
+          "description": "x-component of vector",
+          "value": 0.0,
+          "retrieval_status": 0
+        },
+        "y": 
+        {
+          "InletType": "Field",
+          "description": "y-component of vector",
+          "value": 0.0,
+          "retrieval_status": 0
+        },
+        "z": 
+        {
+          "InletType": "Field",
+          "description": "z-component of vector",
+          "value": 0.0,
+          "retrieval_status": 0
+        }
+      },
+      "piecewise_constant": 
+      {
+        "InletType": "Container",
+        "_inlet_collection": 
+        {
+          "InletType": "Container",
+          "retrieval_status": 1
+        }
+      },
+      "vector_piecewise_constant": 
+      {
+        "InletType": "Container",
+        "_inlet_collection": 
+        {
+          "InletType": "Container",
+          "retrieval_status": 1,
+          "_inlet_struct_collection": 1
+        }
+      }
+    },
+    "initial_velocity": 
+    {
+      "InletType": "Container",
+      "description": "Coefficient for initial condition",
+      "vector_function": 
+      {
+        "InletType": "Field",
+        "description": "The function to use for an mfem::VectorFunctionCoefficient",
+        "return_type": 0,
+        "function_arguments": [0, 1]
+      },
+      "scalar_function": 
+      {
+        "InletType": "Field",
+        "description": "The function to use for an mfem::FunctionCoefficient",
+        "return_type": 1,
+        "function_arguments": [0, 1]
+      },
+      "component": 
+      {
+        "InletType": "Field",
+        "description": "The vector component to which the scalar coefficient should be applied",
+        "retrieval_status": 1
+      },
+      "constant": 
+      {
+        "InletType": "Field",
+        "description": "The constant scalar value to use as the coefficient",
+        "retrieval_status": 1
+      },
+      "vector_constant": 
+      {
+        "InletType": "Container",
+        "description": "The constant vector to use as the coefficient",
+        "x": 
+        {
+          "InletType": "Field",
+          "description": "x-component of vector",
+          "retrieval_status": 1
+        },
+        "y": 
+        {
+          "InletType": "Field",
+          "description": "y-component of vector",
+          "retrieval_status": 1
+        },
+        "z": 
+        {
+          "InletType": "Field",
+          "description": "z-component of vector",
+          "retrieval_status": 1
+        }
+      },
+      "piecewise_constant": 
+      {
+        "InletType": "Container",
+        "_inlet_collection": 
+        {
+          "InletType": "Container",
+          "retrieval_status": 1
+        }
+      },
+      "vector_piecewise_constant": 
+      {
+        "InletType": "Container",
+        "_inlet_collection": 
+        {
+          "InletType": "Container",
+          "retrieval_status": 1,
+          "_inlet_struct_collection": 1
+        }
+      }
+    }
+  },
+  "thermal_conduction": 
+  {
+    "InletType": "Container",
+    "description": "Thermal conduction module",
+    "order": 
+    {
+      "InletType": "Field",
+      "description": "Order degree of the finite elements.",
+      "retrieval_status": 1,
+      "defaultValue": 1,
+      "value": 1,
+      "range": [1, 8]
+    },
+    "kappa": 
+    {
+      "InletType": "Field",
+      "description": "Thermal conductivity",
+      "retrieval_status": 1,
+      "defaultValue": 0.5,
+      "value": 0.5
+    },
+    "rho": 
+    {
+      "InletType": "Field",
+      "description": "Density",
+      "retrieval_status": 1,
+      "defaultValue": 1.0,
+      "value": 1.0
+    },
+    "cp": 
+    {
+      "InletType": "Field",
+      "description": "Specific heat capacity",
+      "retrieval_status": 1,
+      "defaultValue": 1.0,
+      "value": 1.0
+    },
+    "source": 
+    {
+      "InletType": "Container",
+      "description": "Scalar source term (RHS of the thermal conduction PDE)",
+      "vector_function": 
+      {
+        "InletType": "Field",
+        "description": "The function to use for an mfem::VectorFunctionCoefficient",
+        "return_type": 0,
+        "function_arguments": [0, 1]
+      },
+      "scalar_function": 
+      {
+        "InletType": "Field",
+        "description": "The function to use for an mfem::FunctionCoefficient",
+        "return_type": 1,
+        "function_arguments": [0, 1]
+      },
+      "component": 
+      {
+        "InletType": "Field",
+        "description": "The vector component to which the scalar coefficient should be applied",
+        "retrieval_status": 1
+      },
+      "constant": 
+      {
+        "InletType": "Field",
+        "description": "The constant scalar value to use as the coefficient",
+        "retrieval_status": 1
+      },
+      "vector_constant": 
+      {
+        "InletType": "Container",
+        "description": "The constant vector to use as the coefficient",
+        "x": 
+        {
+          "InletType": "Field",
+          "description": "x-component of vector",
+          "retrieval_status": 1
+        },
+        "y": 
+        {
+          "InletType": "Field",
+          "description": "y-component of vector",
+          "retrieval_status": 1
+        },
+        "z": 
+        {
+          "InletType": "Field",
+          "description": "z-component of vector",
+          "retrieval_status": 1
+        }
+      },
+      "piecewise_constant": 
+      {
+        "InletType": "Container",
+        "_inlet_collection": 
+        {
+          "InletType": "Container",
+          "retrieval_status": 1
+        }
+      },
+      "vector_piecewise_constant": 
+      {
+        "InletType": "Container",
+        "_inlet_collection": 
+        {
+          "InletType": "Container",
+          "retrieval_status": 1,
+          "_inlet_struct_collection": 1
+        }
+      }
+    },
+    "nonlinear_reaction": 
+    {
+      "InletType": "Container",
+      "description": "Nonlinear reaction term parameters",
+      "reaction_function": 
+      {
+        "InletType": "Field",
+        "description": "Nonlinear reaction function q = q(temperature)",
+        "return_type": 1,
+        "function_arguments": 1
+      },
+      "d_reaction_function": 
+      {
+        "InletType": "Field",
+        "description": "Derivative of the nonlinear reaction function dq = dq / dTemperature",
+        "return_type": 1,
+        "function_arguments": 1
+      },
+      "scale": 
+      {
+        "InletType": "Container",
+        "description": "Spatially varying scale factor for the reaction",
+        "vector_function": 
+        {
+          "InletType": "Field",
+          "description": "The function to use for an mfem::VectorFunctionCoefficient",
+          "return_type": 0,
+          "function_arguments": [0, 1]
+        },
+        "scalar_function": 
+        {
+          "InletType": "Field",
+          "description": "The function to use for an mfem::FunctionCoefficient",
+          "return_type": 1,
+          "function_arguments": [0, 1]
+        },
+        "component": 
+        {
+          "InletType": "Field",
+          "description": "The vector component to which the scalar coefficient should be applied",
+          "retrieval_status": 1
+        },
+        "constant": 
+        {
+          "InletType": "Field",
+          "description": "The constant scalar value to use as the coefficient",
+          "retrieval_status": 1
+        },
+        "vector_constant": 
+        {
+          "InletType": "Container",
+          "description": "The constant vector to use as the coefficient",
+          "x": 
+          {
+            "InletType": "Field",
+            "description": "x-component of vector",
+            "retrieval_status": 1
+          },
+          "y": 
+          {
+            "InletType": "Field",
+            "description": "y-component of vector",
+            "retrieval_status": 1
+          },
+          "z": 
+          {
+            "InletType": "Field",
+            "description": "z-component of vector",
+            "retrieval_status": 1
+          }
+        },
+        "piecewise_constant": 
+        {
+          "InletType": "Container",
+          "_inlet_collection": 
+          {
+            "InletType": "Container",
+            "retrieval_status": 1
+          }
+        },
+        "vector_piecewise_constant": 
+        {
+          "InletType": "Container",
+          "_inlet_collection": 
+          {
+            "InletType": "Container",
+            "retrieval_status": 1,
+            "_inlet_struct_collection": 1
+          }
+        }
+      }
+    },
+    "equation_solver": 
+    {
+      "InletType": "Container",
+      "description": "Linear and Nonlinear stiffness Solver Parameters.",
+      "linear": 
+      {
+        "InletType": "Container",
+        "description": "Linear Equation Solver Parameters",
+        "required": 1,
+        "type": 
+        {
+          "InletType": "Field",
+          "description": "The type of solver parameters to use (iterative|direct)",
+          "retrieval_status": 1,
+          "required": 1,
+          "validStringValues": 
+          [
+            "iterative",
+            "direct"
+          ]
+        },
+        "iterative_options": 
+        {
+          "InletType": "Container",
+          "description": "Iterative solver parameters",
+          "rel_tol": 
+          {
+            "InletType": "Field",
+            "description": "Relative tolerance for the linear solve.",
+            "retrieval_status": 1,
+            "defaultValue": 1e-06,
+            "value": 1e-06
+          },
+          "abs_tol": 
+          {
+            "InletType": "Field",
+            "description": "Absolute tolerance for the linear solve.",
+            "retrieval_status": 1,
+            "defaultValue": 1e-08,
+            "value": 1e-08
+          },
+          "max_iter": 
+          {
+            "InletType": "Field",
+            "description": "Maximum iterations for the linear solve.",
+            "retrieval_status": 1,
+            "defaultValue": 5000,
+            "value": 5000
+          },
+          "print_level": 
+          {
+            "InletType": "Field",
+            "description": "Linear print level.",
+            "retrieval_status": 1,
+            "defaultValue": 0,
+            "value": 0
+          },
+          "solver_type": 
+          {
+            "InletType": "Field",
+            "description": "Solver type (gmres|minres|cg).",
+            "retrieval_status": 1,
+            "defaultValue": "gmres",
+            "value": "gmres"
+          },
+          "prec_type": 
+          {
+            "InletType": "Field",
+            "description": "Preconditioner type (JacobiSmoother|L1JacobiSmoother|AMG|BlockILU).",
+            "retrieval_status": 1,
+            "defaultValue": "JacobiSmoother",
+            "value": "JacobiSmoother"
+          }
+        },
+        "direct_options": 
+        {
+          "InletType": "Container",
+          "description": "Direct solver parameters",
+          "print_level": 
+          {
+            "InletType": "Field",
+            "description": "Linear print level.",
+            "retrieval_status": 1,
+            "defaultValue": 0,
+            "value": 0
+          }
+        }
+      },
+      "nonlinear": 
+      {
+        "InletType": "Container",
+        "description": "Newton Equation Solver Parameters",
+        "required": 0,
+        "rel_tol": 
+        {
+          "InletType": "Field",
+          "description": "Relative tolerance for the Newton solve.",
+          "retrieval_status": 1,
+          "defaultValue": 0.01,
+          "value": 0.01
+        },
+        "abs_tol": 
+        {
+          "InletType": "Field",
+          "description": "Absolute tolerance for the Newton solve.",
+          "retrieval_status": 1,
+          "defaultValue": 0.0001,
+          "value": 0.0001
+        },
+        "max_iter": 
+        {
+          "InletType": "Field",
+          "description": "Maximum iterations for the Newton solve.",
+          "retrieval_status": 1,
+          "defaultValue": 500,
+          "value": 500
+        },
+        "print_level": 
+        {
+          "InletType": "Field",
+          "description": "Nonlinear print level.",
+          "retrieval_status": 1,
+          "defaultValue": 0,
+          "value": 0
+        },
+        "solver_type": 
+        {
+          "InletType": "Field",
+          "description": "Solver type (MFEMNewton|KINFullStep|KINLineSearch)",
+          "retrieval_status": 1,
+          "defaultValue": "MFEMNewton",
+          "value": "MFEMNewton"
+        }
+      }
+    },
+    "dynamics": 
+    {
+      "InletType": "Container",
+      "description": "Parameters for mass matrix inversion",
+      "timestepper": 
+      {
+        "InletType": "Field",
+        "description": "Timestepper (ODE) method to use",
+        "retrieval_status": 1
+      },
+      "enforcement_method": 
+      {
+        "InletType": "Field",
+        "description": "Time-varying constraint enforcement method to use",
+        "retrieval_status": 1
+      }
+    },
+    "boundary_conds": 
+    {
+      "InletType": "Container",
+      "_inlet_collection": 
+      {
+        "InletType": "Container",
+        "retrieval_status": 1,
+        "_inlet_struct_collection": 1,
+        "vector_constant": 
+        {
+          "InletType": "Container",
+          "description": "The constant vector to use as the coefficient",
+          "x": 
+          {
+            "InletType": "Field",
+            "description": "x-component of vector",
+            "retrieval_status": 1
+          },
+          "y": 
+          {
+            "InletType": "Field",
+            "description": "y-component of vector",
+            "retrieval_status": 1
+          },
+          "z": 
+          {
+            "InletType": "Field",
+            "description": "z-component of vector",
+            "retrieval_status": 1
+          }
+        },
+        "vector_piecewise_constant": 
+        {
+          "InletType": "Container",
+          "_inlet_collection": 
+          {
+            "InletType": "Container",
+            "_inlet_struct_collection": 1
+          }
+        }
+      }
+    },
+    "initial_temperature": 
+    {
+      "InletType": "Container",
+      "description": "Coefficient for initial condition",
+      "vector_function": 
+      {
+        "InletType": "Field",
+        "description": "The function to use for an mfem::VectorFunctionCoefficient",
+        "return_type": 0,
+        "function_arguments": [0, 1]
+      },
+      "scalar_function": 
+      {
+        "InletType": "Field",
+        "description": "The function to use for an mfem::FunctionCoefficient",
+        "return_type": 1,
+        "function_arguments": [0, 1]
+      },
+      "component": 
+      {
+        "InletType": "Field",
+        "description": "The vector component to which the scalar coefficient should be applied",
+        "retrieval_status": 1
+      },
+      "constant": 
+      {
+        "InletType": "Field",
+        "description": "The constant scalar value to use as the coefficient",
+        "retrieval_status": 1
+      },
+      "vector_constant": 
+      {
+        "InletType": "Container",
+        "description": "The constant vector to use as the coefficient",
+        "x": 
+        {
+          "InletType": "Field",
+          "description": "x-component of vector",
+          "retrieval_status": 1
+        },
+        "y": 
+        {
+          "InletType": "Field",
+          "description": "y-component of vector",
+          "retrieval_status": 1
+        },
+        "z": 
+        {
+          "InletType": "Field",
+          "description": "z-component of vector",
+          "retrieval_status": 1
+        }
+      },
+      "piecewise_constant": 
+      {
+        "InletType": "Container",
+        "_inlet_collection": 
+        {
+          "InletType": "Container",
+          "retrieval_status": 1
+        }
+      },
+      "vector_piecewise_constant": 
+      {
+        "InletType": "Container",
+        "_inlet_collection": 
+        {
+          "InletType": "Container",
+          "retrieval_status": 1,
+          "_inlet_struct_collection": 1
+        }
+      }
+    }
+  },
+  "thermal_solid": 
+  {
+    "InletType": "Container",
+    "description": "Thermal solid module",
+    "solid": 
+    {
+      "InletType": "Container",
+      "description": "Finite deformation solid mechanics module",
+      "required": 1,
+      "order": 
+      {
+        "InletType": "Field",
+        "description": "Order degree of the finite elements.",
+        "retrieval_status": 1,
+        "defaultValue": 1,
+        "value": 1,
+        "range": [1, 8]
+      },
+      "mu": 
+      {
+        "InletType": "Field",
+        "description": "Shear modulus in the Neo-Hookean hyperelastic model.",
+        "retrieval_status": 1,
+        "defaultValue": 0.25,
+        "value": 0.25
+      },
+      "K": 
+      {
+        "InletType": "Field",
+        "description": "Bulk modulus in the Neo-Hookean hyperelastic model.",
+        "retrieval_status": 1,
+        "defaultValue": 5.0,
+        "value": 5.0
+      },
+      "geometric_nonlin": 
+      {
+        "InletType": "Field",
+        "description": "Flag to include geometric nonlinearities in the residual calculation.",
+        "retrieval_status": 1,
+        "defaultValue": 1,
+        "value": 1
+      },
+      "material_nonlin": 
+      {
+        "InletType": "Field",
+        "description": "Flag to include material nonlinearities (linear elastic vs. neo-Hookean material model).",
+        "retrieval_status": 1,
+        "defaultValue": 1,
+        "value": 1
+      },
+      "viscosity": 
+      {
+        "InletType": "Field",
+        "description": "Viscosity constant",
+        "retrieval_status": 1,
+        "defaultValue": 0.0,
+        "value": 0.0
+      },
+      "density": 
+      {
+        "InletType": "Field",
+        "description": "Initial mass density",
+        "retrieval_status": 1,
+        "defaultValue": 1.0,
+        "value": 1.0
+      },
+      "equation_solver": 
+      {
+        "InletType": "Container",
+        "description": "Linear and Nonlinear stiffness Solver Parameters.",
+        "linear": 
+        {
+          "InletType": "Container",
+          "description": "Linear Equation Solver Parameters",
+          "required": 1,
+          "type": 
+          {
+            "InletType": "Field",
+            "description": "The type of solver parameters to use (iterative|direct)",
+            "retrieval_status": 1,
+            "required": 1,
+            "validStringValues": 
+            [
+              "iterative",
+              "direct"
+            ]
+          },
+          "iterative_options": 
+          {
+            "InletType": "Container",
+            "description": "Iterative solver parameters",
+            "rel_tol": 
+            {
+              "InletType": "Field",
+              "description": "Relative tolerance for the linear solve.",
+              "retrieval_status": 1,
+              "defaultValue": 1e-06,
+              "value": 1e-06
+            },
+            "abs_tol": 
+            {
+              "InletType": "Field",
+              "description": "Absolute tolerance for the linear solve.",
+              "retrieval_status": 1,
+              "defaultValue": 1e-08,
+              "value": 1e-08
+            },
+            "max_iter": 
+            {
+              "InletType": "Field",
+              "description": "Maximum iterations for the linear solve.",
+              "retrieval_status": 1,
+              "defaultValue": 5000,
+              "value": 5000
+            },
+            "print_level": 
+            {
+              "InletType": "Field",
+              "description": "Linear print level.",
+              "retrieval_status": 1,
+              "defaultValue": 0,
+              "value": 0
+            },
+            "solver_type": 
+            {
+              "InletType": "Field",
+              "description": "Solver type (gmres|minres|cg).",
+              "retrieval_status": 1,
+              "defaultValue": "gmres",
+              "value": "gmres"
+            },
+            "prec_type": 
+            {
+              "InletType": "Field",
+              "description": "Preconditioner type (JacobiSmoother|L1JacobiSmoother|AMG|BlockILU).",
+              "retrieval_status": 1,
+              "defaultValue": "JacobiSmoother",
+              "value": "JacobiSmoother"
+            }
+          },
+          "direct_options": 
+          {
+            "InletType": "Container",
+            "description": "Direct solver parameters",
+            "print_level": 
+            {
+              "InletType": "Field",
+              "description": "Linear print level.",
+              "retrieval_status": 1,
+              "defaultValue": 0,
+              "value": 0
+            }
+          }
+        },
+        "nonlinear": 
+        {
+          "InletType": "Container",
+          "description": "Newton Equation Solver Parameters",
+          "required": 0,
+          "rel_tol": 
+          {
+            "InletType": "Field",
+            "description": "Relative tolerance for the Newton solve.",
+            "retrieval_status": 1,
+            "defaultValue": 0.01,
+            "value": 0.01
+          },
+          "abs_tol": 
+          {
+            "InletType": "Field",
+            "description": "Absolute tolerance for the Newton solve.",
+            "retrieval_status": 1,
+            "defaultValue": 0.0001,
+            "value": 0.0001
+          },
+          "max_iter": 
+          {
+            "InletType": "Field",
+            "description": "Maximum iterations for the Newton solve.",
+            "retrieval_status": 1,
+            "defaultValue": 500,
+            "value": 500
+          },
+          "print_level": 
+          {
+            "InletType": "Field",
+            "description": "Nonlinear print level.",
+            "retrieval_status": 1,
+            "defaultValue": 0,
+            "value": 0
+          },
+          "solver_type": 
+          {
+            "InletType": "Field",
+            "description": "Solver type (MFEMNewton|KINFullStep|KINLineSearch)",
+            "retrieval_status": 1,
+            "defaultValue": "MFEMNewton",
+            "value": "MFEMNewton"
+          }
+        }
+      },
+      "dynamics": 
+      {
+        "InletType": "Container",
+        "description": "Parameters for mass matrix inversion",
+        "timestepper": 
+        {
+          "InletType": "Field",
+          "description": "Timestepper (ODE) method to use",
+          "retrieval_status": 1
+        },
+        "enforcement_method": 
+        {
+          "InletType": "Field",
+          "description": "Time-varying constraint enforcement method to use",
+          "retrieval_status": 1
+        }
+      },
+      "boundary_conds": 
+      {
+        "InletType": "Container",
+        "_inlet_collection": 
+        {
+          "InletType": "Container",
+          "retrieval_status": 1,
+          "_inlet_struct_collection": 1,
+          "vector_constant": 
+          {
+            "InletType": "Container",
+            "description": "The constant vector to use as the coefficient",
+            "x": 
+            {
+              "InletType": "Field",
+              "description": "x-component of vector",
+              "retrieval_status": 1
+            },
+            "y": 
+            {
+              "InletType": "Field",
+              "description": "y-component of vector",
+              "retrieval_status": 1
+            },
+            "z": 
+            {
+              "InletType": "Field",
+              "description": "z-component of vector",
+              "retrieval_status": 1
+            }
+          },
+          "vector_piecewise_constant": 
+          {
+            "InletType": "Container",
+            "_inlet_collection": 
+            {
+              "InletType": "Container",
+              "_inlet_struct_collection": 1
+            }
+          }
+        }
+      },
+      "initial_displacement": 
+      {
+        "InletType": "Container",
+        "description": "Coefficient for initial condition",
+        "vector_function": 
+        {
+          "InletType": "Field",
+          "description": "The function to use for an mfem::VectorFunctionCoefficient",
+          "return_type": 0,
+          "function_arguments": [0, 1]
+        },
+        "scalar_function": 
+        {
+          "InletType": "Field",
+          "description": "The function to use for an mfem::FunctionCoefficient",
+          "return_type": 1,
+          "function_arguments": [0, 1]
+        },
+        "component": 
+        {
+          "InletType": "Field",
+          "description": "The vector component to which the scalar coefficient should be applied",
+          "retrieval_status": 1
+        },
+        "constant": 
+        {
+          "InletType": "Field",
+          "description": "The constant scalar value to use as the coefficient",
+          "retrieval_status": 1
+        },
+        "vector_constant": 
+        {
+          "InletType": "Container",
+          "description": "The constant vector to use as the coefficient",
+          "x": 
+          {
+            "InletType": "Field",
+            "description": "x-component of vector",
+            "retrieval_status": 1
+          },
+          "y": 
+          {
+            "InletType": "Field",
+            "description": "y-component of vector",
+            "retrieval_status": 1
+          },
+          "z": 
+          {
+            "InletType": "Field",
+            "description": "z-component of vector",
+            "retrieval_status": 1
+          }
+        },
+        "piecewise_constant": 
+        {
+          "InletType": "Container",
+          "_inlet_collection": 
+          {
+            "InletType": "Container",
+            "retrieval_status": 1
+          }
+        },
+        "vector_piecewise_constant": 
+        {
+          "InletType": "Container",
+          "_inlet_collection": 
+          {
+            "InletType": "Container",
+            "retrieval_status": 1,
+            "_inlet_struct_collection": 1
+          }
+        }
+      },
+      "initial_velocity": 
+      {
+        "InletType": "Container",
+        "description": "Coefficient for initial condition",
+        "vector_function": 
+        {
+          "InletType": "Field",
+          "description": "The function to use for an mfem::VectorFunctionCoefficient",
+          "return_type": 0,
+          "function_arguments": [0, 1]
+        },
+        "scalar_function": 
+        {
+          "InletType": "Field",
+          "description": "The function to use for an mfem::FunctionCoefficient",
+          "return_type": 1,
+          "function_arguments": [0, 1]
+        },
+        "component": 
+        {
+          "InletType": "Field",
+          "description": "The vector component to which the scalar coefficient should be applied",
+          "retrieval_status": 1
+        },
+        "constant": 
+        {
+          "InletType": "Field",
+          "description": "The constant scalar value to use as the coefficient",
+          "retrieval_status": 1
+        },
+        "vector_constant": 
+        {
+          "InletType": "Container",
+          "description": "The constant vector to use as the coefficient",
+          "x": 
+          {
+            "InletType": "Field",
+            "description": "x-component of vector",
+            "retrieval_status": 1
+          },
+          "y": 
+          {
+            "InletType": "Field",
+            "description": "y-component of vector",
+            "retrieval_status": 1
+          },
+          "z": 
+          {
+            "InletType": "Field",
+            "description": "z-component of vector",
+            "retrieval_status": 1
+          }
+        },
+        "piecewise_constant": 
+        {
+          "InletType": "Container",
+          "_inlet_collection": 
+          {
+            "InletType": "Container",
+            "retrieval_status": 1
+          }
+        },
+        "vector_piecewise_constant": 
+        {
+          "InletType": "Container",
+          "_inlet_collection": 
+          {
+            "InletType": "Container",
+            "retrieval_status": 1,
+            "_inlet_struct_collection": 1
+          }
+        }
+      }
+    },
+    "thermal_conduction": 
+    {
+      "InletType": "Container",
+      "description": "Thermal conduction module",
+      "required": 1,
+      "order": 
+      {
+        "InletType": "Field",
+        "description": "Order degree of the finite elements.",
+        "retrieval_status": 1,
+        "defaultValue": 1,
+        "value": 1,
+        "range": [1, 8]
+      },
+      "kappa": 
+      {
+        "InletType": "Field",
+        "description": "Thermal conductivity",
+        "retrieval_status": 1,
+        "defaultValue": 0.5,
+        "value": 0.5
+      },
+      "rho": 
+      {
+        "InletType": "Field",
+        "description": "Density",
+        "retrieval_status": 1,
+        "defaultValue": 1.0,
+        "value": 1.0
+      },
+      "cp": 
+      {
+        "InletType": "Field",
+        "description": "Specific heat capacity",
+        "retrieval_status": 1,
+        "defaultValue": 1.0,
+        "value": 1.0
+      },
+      "source": 
+      {
+        "InletType": "Container",
+        "description": "Scalar source term (RHS of the thermal conduction PDE)",
+        "vector_function": 
+        {
+          "InletType": "Field",
+          "description": "The function to use for an mfem::VectorFunctionCoefficient",
+          "return_type": 0,
+          "function_arguments": [0, 1]
+        },
+        "scalar_function": 
+        {
+          "InletType": "Field",
+          "description": "The function to use for an mfem::FunctionCoefficient",
+          "return_type": 1,
+          "function_arguments": [0, 1]
+        },
+        "component": 
+        {
+          "InletType": "Field",
+          "description": "The vector component to which the scalar coefficient should be applied",
+          "retrieval_status": 1
+        },
+        "constant": 
+        {
+          "InletType": "Field",
+          "description": "The constant scalar value to use as the coefficient",
+          "retrieval_status": 1
+        },
+        "vector_constant": 
+        {
+          "InletType": "Container",
+          "description": "The constant vector to use as the coefficient",
+          "x": 
+          {
+            "InletType": "Field",
+            "description": "x-component of vector",
+            "retrieval_status": 1
+          },
+          "y": 
+          {
+            "InletType": "Field",
+            "description": "y-component of vector",
+            "retrieval_status": 1
+          },
+          "z": 
+          {
+            "InletType": "Field",
+            "description": "z-component of vector",
+            "retrieval_status": 1
+          }
+        },
+        "piecewise_constant": 
+        {
+          "InletType": "Container",
+          "_inlet_collection": 
+          {
+            "InletType": "Container",
+            "retrieval_status": 1
+          }
+        },
+        "vector_piecewise_constant": 
+        {
+          "InletType": "Container",
+          "_inlet_collection": 
+          {
+            "InletType": "Container",
+            "retrieval_status": 1,
+            "_inlet_struct_collection": 1
+          }
+        }
+      },
+      "nonlinear_reaction": 
+      {
+        "InletType": "Container",
+        "description": "Nonlinear reaction term parameters",
+        "reaction_function": 
+        {
+          "InletType": "Field",
+          "description": "Nonlinear reaction function q = q(temperature)",
+          "return_type": 1,
+          "function_arguments": 1
+        },
+        "d_reaction_function": 
+        {
+          "InletType": "Field",
+          "description": "Derivative of the nonlinear reaction function dq = dq / dTemperature",
+          "return_type": 1,
+          "function_arguments": 1
+        },
+        "scale": 
+        {
+          "InletType": "Container",
+          "description": "Spatially varying scale factor for the reaction",
+          "vector_function": 
+          {
+            "InletType": "Field",
+            "description": "The function to use for an mfem::VectorFunctionCoefficient",
+            "return_type": 0,
+            "function_arguments": [0, 1]
+          },
+          "scalar_function": 
+          {
+            "InletType": "Field",
+            "description": "The function to use for an mfem::FunctionCoefficient",
+            "return_type": 1,
+            "function_arguments": [0, 1]
+          },
+          "component": 
+          {
+            "InletType": "Field",
+            "description": "The vector component to which the scalar coefficient should be applied",
+            "retrieval_status": 1
+          },
+          "constant": 
+          {
+            "InletType": "Field",
+            "description": "The constant scalar value to use as the coefficient",
+            "retrieval_status": 1
+          },
+          "vector_constant": 
+          {
+            "InletType": "Container",
+            "description": "The constant vector to use as the coefficient",
+            "x": 
+            {
+              "InletType": "Field",
+              "description": "x-component of vector",
+              "retrieval_status": 1
+            },
+            "y": 
+            {
+              "InletType": "Field",
+              "description": "y-component of vector",
+              "retrieval_status": 1
+            },
+            "z": 
+            {
+              "InletType": "Field",
+              "description": "z-component of vector",
+              "retrieval_status": 1
+            }
+          },
+          "piecewise_constant": 
+          {
+            "InletType": "Container",
+            "_inlet_collection": 
+            {
+              "InletType": "Container",
+              "retrieval_status": 1
+            }
+          },
+          "vector_piecewise_constant": 
+          {
+            "InletType": "Container",
+            "_inlet_collection": 
+            {
+              "InletType": "Container",
+              "retrieval_status": 1,
+              "_inlet_struct_collection": 1
+            }
+          }
+        }
+      },
+      "equation_solver": 
+      {
+        "InletType": "Container",
+        "description": "Linear and Nonlinear stiffness Solver Parameters.",
+        "linear": 
+        {
+          "InletType": "Container",
+          "description": "Linear Equation Solver Parameters",
+          "required": 1,
+          "type": 
+          {
+            "InletType": "Field",
+            "description": "The type of solver parameters to use (iterative|direct)",
+            "retrieval_status": 1,
+            "required": 1,
+            "validStringValues": 
+            [
+              "iterative",
+              "direct"
+            ]
+          },
+          "iterative_options": 
+          {
+            "InletType": "Container",
+            "description": "Iterative solver parameters",
+            "rel_tol": 
+            {
+              "InletType": "Field",
+              "description": "Relative tolerance for the linear solve.",
+              "retrieval_status": 1,
+              "defaultValue": 1e-06,
+              "value": 1e-06
+            },
+            "abs_tol": 
+            {
+              "InletType": "Field",
+              "description": "Absolute tolerance for the linear solve.",
+              "retrieval_status": 1,
+              "defaultValue": 1e-08,
+              "value": 1e-08
+            },
+            "max_iter": 
+            {
+              "InletType": "Field",
+              "description": "Maximum iterations for the linear solve.",
+              "retrieval_status": 1,
+              "defaultValue": 5000,
+              "value": 5000
+            },
+            "print_level": 
+            {
+              "InletType": "Field",
+              "description": "Linear print level.",
+              "retrieval_status": 1,
+              "defaultValue": 0,
+              "value": 0
+            },
+            "solver_type": 
+            {
+              "InletType": "Field",
+              "description": "Solver type (gmres|minres|cg).",
+              "retrieval_status": 1,
+              "defaultValue": "gmres",
+              "value": "gmres"
+            },
+            "prec_type": 
+            {
+              "InletType": "Field",
+              "description": "Preconditioner type (JacobiSmoother|L1JacobiSmoother|AMG|BlockILU).",
+              "retrieval_status": 1,
+              "defaultValue": "JacobiSmoother",
+              "value": "JacobiSmoother"
+            }
+          },
+          "direct_options": 
+          {
+            "InletType": "Container",
+            "description": "Direct solver parameters",
+            "print_level": 
+            {
+              "InletType": "Field",
+              "description": "Linear print level.",
+              "retrieval_status": 1,
+              "defaultValue": 0,
+              "value": 0
+            }
+          }
+        },
+        "nonlinear": 
+        {
+          "InletType": "Container",
+          "description": "Newton Equation Solver Parameters",
+          "required": 0,
+          "rel_tol": 
+          {
+            "InletType": "Field",
+            "description": "Relative tolerance for the Newton solve.",
+            "retrieval_status": 1,
+            "defaultValue": 0.01,
+            "value": 0.01
+          },
+          "abs_tol": 
+          {
+            "InletType": "Field",
+            "description": "Absolute tolerance for the Newton solve.",
+            "retrieval_status": 1,
+            "defaultValue": 0.0001,
+            "value": 0.0001
+          },
+          "max_iter": 
+          {
+            "InletType": "Field",
+            "description": "Maximum iterations for the Newton solve.",
+            "retrieval_status": 1,
+            "defaultValue": 500,
+            "value": 500
+          },
+          "print_level": 
+          {
+            "InletType": "Field",
+            "description": "Nonlinear print level.",
+            "retrieval_status": 1,
+            "defaultValue": 0,
+            "value": 0
+          },
+          "solver_type": 
+          {
+            "InletType": "Field",
+            "description": "Solver type (MFEMNewton|KINFullStep|KINLineSearch)",
+            "retrieval_status": 1,
+            "defaultValue": "MFEMNewton",
+            "value": "MFEMNewton"
+          }
+        }
+      },
+      "dynamics": 
+      {
+        "InletType": "Container",
+        "description": "Parameters for mass matrix inversion",
+        "timestepper": 
+        {
+          "InletType": "Field",
+          "description": "Timestepper (ODE) method to use",
+          "retrieval_status": 1
+        },
+        "enforcement_method": 
+        {
+          "InletType": "Field",
+          "description": "Time-varying constraint enforcement method to use",
+          "retrieval_status": 1
+        }
+      },
+      "boundary_conds": 
+      {
+        "InletType": "Container",
+        "_inlet_collection": 
+        {
+          "InletType": "Container",
+          "retrieval_status": 1,
+          "_inlet_struct_collection": 1,
+          "vector_constant": 
+          {
+            "InletType": "Container",
+            "description": "The constant vector to use as the coefficient",
+            "x": 
+            {
+              "InletType": "Field",
+              "description": "x-component of vector",
+              "retrieval_status": 1
+            },
+            "y": 
+            {
+              "InletType": "Field",
+              "description": "y-component of vector",
+              "retrieval_status": 1
+            },
+            "z": 
+            {
+              "InletType": "Field",
+              "description": "z-component of vector",
+              "retrieval_status": 1
+            }
+          },
+          "vector_piecewise_constant": 
+          {
+            "InletType": "Container",
+            "_inlet_collection": 
+            {
+              "InletType": "Container",
+              "_inlet_struct_collection": 1
+            }
+          }
+        }
+      },
+      "initial_temperature": 
+      {
+        "InletType": "Container",
+        "description": "Coefficient for initial condition",
+        "vector_function": 
+        {
+          "InletType": "Field",
+          "description": "The function to use for an mfem::VectorFunctionCoefficient",
+          "return_type": 0,
+          "function_arguments": [0, 1]
+        },
+        "scalar_function": 
+        {
+          "InletType": "Field",
+          "description": "The function to use for an mfem::FunctionCoefficient",
+          "return_type": 1,
+          "function_arguments": [0, 1]
+        },
+        "component": 
+        {
+          "InletType": "Field",
+          "description": "The vector component to which the scalar coefficient should be applied",
+          "retrieval_status": 1
+        },
+        "constant": 
+        {
+          "InletType": "Field",
+          "description": "The constant scalar value to use as the coefficient",
+          "retrieval_status": 1
+        },
+        "vector_constant": 
+        {
+          "InletType": "Container",
+          "description": "The constant vector to use as the coefficient",
+          "x": 
+          {
+            "InletType": "Field",
+            "description": "x-component of vector",
+            "retrieval_status": 1
+          },
+          "y": 
+          {
+            "InletType": "Field",
+            "description": "y-component of vector",
+            "retrieval_status": 1
+          },
+          "z": 
+          {
+            "InletType": "Field",
+            "description": "z-component of vector",
+            "retrieval_status": 1
+          }
+        },
+        "piecewise_constant": 
+        {
+          "InletType": "Container",
+          "_inlet_collection": 
+          {
+            "InletType": "Container",
+            "retrieval_status": 1
+          }
+        },
+        "vector_piecewise_constant": 
+        {
+          "InletType": "Container",
+          "_inlet_collection": 
+          {
+            "InletType": "Container",
+            "retrieval_status": 1,
+            "_inlet_struct_collection": 1
+          }
+        }
+      }
+    },
+    "reference_temperature": 
+    {
+      "InletType": "Container",
+      "description": "Coefficient for the reference temperature for isotropic thermal expansion",
+      "vector_function": 
+      {
+        "InletType": "Field",
+        "description": "The function to use for an mfem::VectorFunctionCoefficient",
+        "return_type": 0,
+        "function_arguments": [0, 1]
+      },
+      "scalar_function": 
+      {
+        "InletType": "Field",
+        "description": "The function to use for an mfem::FunctionCoefficient",
+        "return_type": 1,
+        "function_arguments": [0, 1]
+      },
+      "component": 
+      {
+        "InletType": "Field",
+        "description": "The vector component to which the scalar coefficient should be applied",
+        "retrieval_status": 1
+      },
+      "constant": 
+      {
+        "InletType": "Field",
+        "description": "The constant scalar value to use as the coefficient",
+        "retrieval_status": 1
+      },
+      "vector_constant": 
+      {
+        "InletType": "Container",
+        "description": "The constant vector to use as the coefficient",
+        "x": 
+        {
+          "InletType": "Field",
+          "description": "x-component of vector",
+          "retrieval_status": 1
+        },
+        "y": 
+        {
+          "InletType": "Field",
+          "description": "y-component of vector",
+          "retrieval_status": 1
+        },
+        "z": 
+        {
+          "InletType": "Field",
+          "description": "z-component of vector",
+          "retrieval_status": 1
+        }
+      },
+      "piecewise_constant": 
+      {
+        "InletType": "Container",
+        "_inlet_collection": 
+        {
+          "InletType": "Container",
+          "retrieval_status": 1
+        }
+      },
+      "vector_piecewise_constant": 
+      {
+        "InletType": "Container",
+        "_inlet_collection": 
+        {
+          "InletType": "Container",
+          "retrieval_status": 1,
+          "_inlet_struct_collection": 1
+        }
+      }
+    },
+    "coef_thermal_expansion": 
+    {
+      "InletType": "Container",
+      "description": "Coefficient of thermal expansion for isotropic thermal expansion",
+      "vector_function": 
+      {
+        "InletType": "Field",
+        "description": "The function to use for an mfem::VectorFunctionCoefficient",
+        "return_type": 0,
+        "function_arguments": [0, 1]
+      },
+      "scalar_function": 
+      {
+        "InletType": "Field",
+        "description": "The function to use for an mfem::FunctionCoefficient",
+        "return_type": 1,
+        "function_arguments": [0, 1]
+      },
+      "component": 
+      {
+        "InletType": "Field",
+        "description": "The vector component to which the scalar coefficient should be applied",
+        "retrieval_status": 1
+      },
+      "constant": 
+      {
+        "InletType": "Field",
+        "description": "The constant scalar value to use as the coefficient",
+        "retrieval_status": 1
+      },
+      "vector_constant": 
+      {
+        "InletType": "Container",
+        "description": "The constant vector to use as the coefficient",
+        "x": 
+        {
+          "InletType": "Field",
+          "description": "x-component of vector",
+          "retrieval_status": 1
+        },
+        "y": 
+        {
+          "InletType": "Field",
+          "description": "y-component of vector",
+          "retrieval_status": 1
+        },
+        "z": 
+        {
+          "InletType": "Field",
+          "description": "z-component of vector",
+          "retrieval_status": 1
+        }
+      },
+      "piecewise_constant": 
+      {
+        "InletType": "Container",
+        "_inlet_collection": 
+        {
+          "InletType": "Container",
+          "retrieval_status": 1
+        }
+      },
+      "vector_piecewise_constant": 
+      {
+        "InletType": "Container",
+        "_inlet_collection": 
+        {
+          "InletType": "Container",
+          "retrieval_status": 1,
+          "_inlet_struct_collection": 1
+        }
+      }
+    }
+  },
+  "sidre_group_name": "input_file"
+}
