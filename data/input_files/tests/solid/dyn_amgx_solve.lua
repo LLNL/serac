@@ -1,3 +1,9 @@
+-- meemee Failing: error message:
+--[[
+ERROR (/usr/WS2/meemee/serac/repo/src/serac/numerics/equation_solver.cpp:147)]
+AMGX was not enabled when MFEM was built
+--]]                 
+
 -- Comparison information
 expected_displacement_l2norm = 1.4225
 expected_velocity_l2norm = 0.2252

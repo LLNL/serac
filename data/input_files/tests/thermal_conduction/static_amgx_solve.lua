@@ -1,3 +1,9 @@
+-- meemee Failing: error message:
+--[[
+ERROR (/usr/WS2/meemee/serac/repo/src/serac/numerics/equation_solver.cpp:147)]
+AMGX was not enabled when MFEM was built
+--]]                 
+    
 -- Comparison information
 expected_temperature_l2norm = 2.02263
 epsilon = 0.00001
