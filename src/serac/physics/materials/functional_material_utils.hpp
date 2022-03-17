@@ -26,27 +26,177 @@ struct has_density<T, dim, std::void_t<decltype(std::declval<T&>().density(std::
     : std::true_type {
 };
 
-template <typename T, int dim, typename = void>
-struct has_specific_heat_capacity : std::false_type {
+template <typename T, typename = void>
+struct is_parameterized : std::false_type {
 };
 
-template <typename T, int dim>
-struct has_specific_heat_capacity<T, dim,
-                                  std::void_t<decltype(std::declval<T&>().specificHeatCapacity(
-                                      std::declval<tensor<double, dim>&>(), std::declval<tensor<double, 1>&>()))>>
-    : std::true_type {
+template <typename T>
+struct is_parameterized<T, std::void_t<decltype(std::declval<T&>().numParameters())>> : std::true_type {
 };
 
-template <typename T, int dim, typename = void>
-struct has_thermal_flux : std::false_type {
+/**
+ * @brief Wrapper to treat an unparameterized material as a parameterized one
+ *
+ * @tparam UnparameterizedMaterialType The unparameterized material
+ */
+template <typename UnparameterizedMaterialType>
+struct TriviallyParameterizedMaterial {
+  /**
+   * @brief Material response wrapper for an unparameterized material in a parameterized context
+   *
+   * @tparam T1 Spatial position type
+   * @tparam T2 Temperature type
+   * @tparam T3 Temperature gradient type
+   * @tparam S Unused parameter pack type
+   * @param x Spatial position
+   * @param u Temperature
+   * @param du_dx Temperature gradient
+   * @return Material response of the unparameterized material
+   */
+  template <typename T1, typename T2, typename T3, typename... S>
+  SERAC_HOST_DEVICE auto operator()(const T1& x, const T2& u, const T3& du_dx, S...) const
+  {
+    return mat(x, u, du_dx);
+  }
+
+  /// Underlying unparameterized material
+  UnparameterizedMaterialType mat;
 };
 
-template <typename T, int dim>
-struct has_thermal_flux<
-    T, dim,
-    std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, 1>&>(), std::declval<tensor<double, dim>&>()))>>
-    : std::true_type {
+/**
+ * @brief Template deduction guide for the trivially parameterized material
+ *
+ * @tparam T The unparameterized material type
+ */
+template <typename T>
+TriviallyParameterizedMaterial(T) -> TriviallyParameterizedMaterial<T>;
+
+/**
+ * @brief Convert an unparameterized material to one which accepts parameter values in the paren operator
+ *
+ * @tparam T The unparameterized material type
+ * @param material The unparameterized material
+ * @return The parameterized material
+ */
+template <typename T>
+auto parameterizeMaterial(T& material)
+{
+  if constexpr (is_parameterized<T>::value) {
+    return material;
+  } else {
+    return TriviallyParameterizedMaterial{material};
+  }
+}
+
+/**
+ * @brief Wrapper to treat an unparameterized source as a parameterized one
+ *
+ * @tparam UnparameterizedSourceType The unparameterized source
+ */
+template <typename UnparameterizedSourceType>
+struct TriviallyParameterizedSource {
+  /**
+   * @brief Wrapper for an unparameterized source in a parameterized context
+   *
+   * @tparam T1 Spatial position type
+   * @tparam T2 Temperature type
+   * @tparam T3 Temperature gradient type
+   * @tparam S Unused parameter pack type
+   * @param x Spatial position
+   * @param t Time
+   * @param u Temperature
+   * @param du_dx Temperature gradient
+   * @return Volumetric source for the unparameterized source
+   */
+  template <typename T1, typename T2, typename T3, typename... S>
+  SERAC_HOST_DEVICE auto operator()(const T1& x, double t, const T2& u, const T3& du_dx, S...) const
+  {
+    return source(x, t, u, du_dx);
+  }
+
+  /// Underlying unparameterized source
+  UnparameterizedSourceType source;
 };
+
+/**
+ * @brief Template deduction guide for the trivially parameterized source
+ *
+ * @tparam T The unparameterized source type
+ */
+template <typename T>
+TriviallyParameterizedSource(T) -> TriviallyParameterizedSource<T>;
+
+/**
+ * @brief Convert an unparameterized source to one which accepts parameter values in the paren operator
+ *
+ * @tparam T The unparameterized source type
+ * @param source The unparameterized source
+ * @return The parameterized source
+ */
+template <typename T>
+auto parameterizeSource(T& source)
+{
+  if constexpr (is_parameterized<T>::value) {
+    return source;
+  } else {
+    return TriviallyParameterizedSource{source};
+  }
+}
+
+/**
+ * @brief Wrapper for unparameterized boundary flux types to be used in a parameterized setting
+ *
+ * @tparam UnparameterizedFluxType The unparameterized boundary flux type
+ */
+template <typename UnparameterizedFluxType>
+struct TriviallyParameterizedFlux {
+  /**
+   * @brief The wrapper for an unparameterized boundary flux object to be called using the parameterized
+   * call signature
+   *
+   * @tparam T1 Spatial position type
+   * @tparam T2 Normal vector type
+   * @tparam T3 Temperature type
+   * @tparam S Unused parameter pack type
+   * @param x Spatial position
+   * @param n Normal vector
+   * @param u Temperature
+   * @return Computed boundary flux to be applied
+   */
+  template <typename T1, typename T2, typename T3, typename... S>
+  SERAC_HOST_DEVICE auto operator()(const T1& x, const T2& n, const T3& u, S...) const
+  {
+    return flux(x, n, u);
+  }
+
+  /// Underlying unparameterized flux
+  UnparameterizedFluxType flux;
+};
+
+/**
+ * @brief Template deduction guide for the trivially parameterized flux
+ *
+ * @tparam T The unparameterized flux type
+ */
+template <typename T>
+TriviallyParameterizedFlux(T) -> TriviallyParameterizedFlux<T>;
+
+/**
+ * @brief Convert an unparameterized flux to one which accepts parameter values in the paren operator
+ *
+ * @tparam T The unparameterized flux type
+ * @param flux The unparameterized flux
+ * @return The parameterized flux
+ */
+template <typename T>
+auto parameterizeFlux(T& flux)
+{
+  if constexpr (is_parameterized<T>::value) {
+    return flux;
+  } else {
+    return TriviallyParameterizedFlux{flux};
+  }
+}
 
 template <typename T, int dim, typename = void>
 struct has_stress : std::false_type {
@@ -54,19 +204,6 @@ struct has_stress : std::false_type {
 
 template <typename T, int dim>
 struct has_stress<T, dim, std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, dim, dim>&>()))>>
-    : std::true_type {
-};
-
-// Use SFINAE to add static assertions checking if the given thermal source type is acceptable
-template <typename T, int dim, typename = void>
-struct has_thermal_source : std::false_type {
-};
-
-template <typename T, int dim>
-struct has_thermal_source<
-    T, dim,
-    std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, dim>&>(), std::declval<double>(),
-                                            std::declval<tensor<double, 1>&>(), std::declval<tensor<double, dim>&>()))>>
     : std::true_type {
 };
 
@@ -81,18 +218,6 @@ struct has_body_force<T, dim,
                           std::declval<tensor<double, dim>&>(), std::declval<double>(),
                           std::declval<tensor<double, dim>&>(), std::declval<tensor<double, dim, dim>&>()))>>
     : std::true_type {
-};
-
-// Use SFINAE to add static assertions checking if the given thermal flux boundary type is acceptable
-template <typename T, int dim, typename = void>
-struct has_thermal_flux_boundary : std::false_type {
-};
-
-template <typename T, int dim>
-struct has_thermal_flux_boundary<
-    T, dim,
-    std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, dim>&>(), std::declval<tensor<double, dim>&>(),
-                                            std::declval<tensor<double, 1>&>()))>> : std::true_type {
 };
 
 // Use SFINAE to add static assertions checking if the given thermal flux boundary type is acceptable

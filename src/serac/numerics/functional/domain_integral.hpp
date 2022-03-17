@@ -168,7 +168,7 @@ public:
    * @param[out] output_E The output of the evalution; per-element DOF residuals
    * @param[in] which_trial_space specifies which trial space input_E correpsonds to
    */
-  void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E, size_t which_trial_space) const
+  void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E, std::size_t which_trial_space) const
   {
     SERAC_MARK_BEGIN("Domain Integral Action of Gradient");
     action_of_gradient_[which_trial_space](input_E, output_E);
@@ -182,7 +182,7 @@ public:
    * elem)
    * @param[in] which_trial_space specifies which trial space K_e correpsonds to
    */
-  void ComputeElementGradients(ExecArrayView<double, 3, ExecutionSpace::CPU> K_e, size_t which_trial_space) const
+  void ComputeElementGradients(ExecArrayView<double, 3, ExecutionSpace::CPU> K_e, std::size_t which_trial_space) const
   {
     SERAC_MARK_BEGIN("Domain Integral Element Gradient");
     element_gradient_[which_trial_space](K_e);
