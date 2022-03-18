@@ -1078,8 +1078,8 @@ __global__ void batched_cuda_kernel_with_cache(mfem::DeviceTensor< 4, const doub
   __shared__ tensor < double, 3, n, q, q > A2;
 
   __shared__ tensor < double, 4, q, q, q > qf_output;
-  __shared__ tensor < double, 4, q, q, n > A3;
-  __shared__ tensor < double, 4, q, n, n > A4;
+  __shared__ tensor < double, 3, q, q, n > A3;
+  __shared__ tensor < double, 2, q, n, n > A4;
 
   // for each element in the domain
   uint32_t e = blockIdx.x;
@@ -1101,6 +1101,107 @@ __global__ void batched_cuda_kernel_with_cache(mfem::DeviceTensor< 4, const doub
 
   // integrate the material response against the test-space basis functions
   BatchPostprocessCUDA<test>(qf_output, rule, r, e, B, G, A3, A4);
+
+}
+
+template <Geometry g, typename test, typename trial, int q, typename lambda>
+__global__ void batched_cuda_kernel_with_union_cache(mfem::DeviceTensor< 4, const double > u, 
+                                                     mfem::DeviceTensor< 4, double > r, 
+                                                     mfem::DeviceTensor< 6, const double > J, 
+                                                     size_t num_elements, 
+                                                     lambda qf) {
+
+  static constexpr int n = trial::order + 1;
+  static constexpr auto rule  = GaussLegendreRule<g, q>();
+
+  __shared__ tensor< double, q, n > B;
+  __shared__ tensor< double, q, n > G;
+
+  if (threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
+    for (int i = 0; i < q; i++) {
+      B[i] = GaussLobattoInterpolation<n>(rule.point(i));
+      G[i] = GaussLobattoInterpolationDerivative<n>(rule.point(i));
+    }
+  }
+
+  __shared__ union {
+    tensor < double, n, n, n > u_elem;
+    tensor < double, 3, n, q, q > A2;
+    tensor < double, 2, q, n, n > A4;
+  } cache1;
+
+  __shared__ union {
+    tensor < double, 3, n, n, q > A1;
+    tensor < double, 4, q, q, q > qf_output;
+    tensor < double, 3, q, q, n > A3;
+  } cache2;
+
+  // for each element in the domain
+  uint32_t e = blockIdx.x;
+
+  for (int dz = threadIdx.z; dz < n; dz += blockDim.z) {
+    for (int dy = threadIdx.y; dy < n; dy += blockDim.y) {
+      for (int dx = threadIdx.x; dx < n; dx += blockDim.x) {
+        cache1.u_elem(dz, dy, dx) = u(dx, dy, dz, e);
+      }
+    }
+  }
+  __syncthreads(); 
+
+  // interpolate each quadrature point's value
+  auto qf_input = BatchPreprocessCUDA<trial>(cache1.u_elem, rule, B, G, cache2.A1, cache1.A2);
+
+  // evalute the q-function
+  BatchApplyCUDA_with_cache(qf, qf_input, rule, J, e, cache2.qf_output);
+
+  // integrate the material response against the test-space basis functions
+  BatchPostprocessCUDA<test>(cache2.qf_output, rule, r, e, B, G, cache2.A3, cache1.A4);
+
+}
+
+template <Geometry g, typename test, typename trial, int q, int n, typename lambda>
+__global__ void batched_cuda_kernel_with_union_cache_const_memory(mfem::DeviceTensor< 4, const double > u, 
+                                                     mfem::DeviceTensor< 4, double > r, 
+                                                     mfem::DeviceTensor< 6, const double > J, 
+                                                     const tensor< double, q, n > B,
+                                                     const tensor< double, q, n > G,
+                                                     size_t num_elements, 
+                                                     lambda qf) {
+
+  static constexpr auto rule  = GaussLegendreRule<g, q>();
+
+  __shared__ union {
+    tensor < double, n, n, n > u_elem;
+    tensor < double, 3, n, q, q > A2;
+    tensor < double, 2, q, n, n > A4;
+  } cache1;
+
+  __shared__ union {
+    tensor < double, 3, n, n, q > A1;
+    tensor < double, 4, q, q, q > qf_output;
+    tensor < double, 3, q, q, n > A3;
+  } cache2;
+
+  // for each element in the domain
+  uint32_t e = blockIdx.x;
+
+  for (int dz = threadIdx.z; dz < n; dz += blockDim.z) {
+    for (int dy = threadIdx.y; dy < n; dy += blockDim.y) {
+      for (int dx = threadIdx.x; dx < n; dx += blockDim.x) {
+        cache1.u_elem(dz, dy, dx) = u(dx, dy, dz, e);
+      }
+    }
+  }
+  __syncthreads(); 
+
+  // interpolate each quadrature point's value
+  auto qf_input = BatchPreprocessCUDA<trial>(cache1.u_elem, rule, B, G, cache2.A1, cache1.A2);
+
+  // evalute the q-function
+  BatchApplyCUDA_with_cache(qf, qf_input, rule, J, e, cache2.qf_output);
+
+  // integrate the material response against the test-space basis functions
+  BatchPostprocessCUDA<test>(cache2.qf_output, rule, r, e, B, G, cache2.A3, cache1.A4);
 
 }
 
@@ -1142,7 +1243,7 @@ int main() {
 
   constexpr int p = 3;
   constexpr int n = p + 1;
-  constexpr int q = 4;
+  constexpr int q = n;
   constexpr int dim = 3;
   int num_runs = 10;
   int num_elements = 100000;
@@ -1290,6 +1391,61 @@ int main() {
       cudaDeviceSynchronize();
     }) / n;
     std::cout << "average batched (cuda, w/ cache) kernel time: " << runtime / num_runs << std::endl;
+  }
+  answer_reference_cuda = R1D;
+  error = answer_reference;
+  error -= answer_reference_cuda;
+  relative_error = error.Norml2() / answer_reference.Norml2();
+  std::cout << "error: " << relative_error << std::endl;
+
+  {
+    R1D = 0.0;
+
+    mfem::DeviceTensor<4, const double > u_d = mfem::Reshape(U1D.Read(), n, n, n, num_elements);
+    mfem::DeviceTensor<4, double > r_d = mfem::Reshape(R1D.ReadWrite(), n, n, n, num_elements);
+    mfem::DeviceTensor<6, const double > J_d = mfem::Reshape(J1D.Read(), q, q, q, dim, dim, num_elements);
+    dim3 blocksize{q, q, q};
+    int gridsize = num_elements;
+    double runtime = time([&]() {
+      for (int i = 0; i < num_runs; i++) {
+        serac::batched_cuda_kernel_with_union_cache<Geometry::Hexahedron, test, trial, q><<<gridsize, blocksize>>>(u_d, r_d, J_d, num_elements, qfunc);
+        compiler::please_do_not_optimize_away(&R1D);
+      }
+      cudaDeviceSynchronize();
+    }) / n;
+    std::cout << "average batched (cuda, w/ union cache) kernel time: " << runtime / num_runs << std::endl;
+  }
+  answer_reference_cuda = R1D;
+  error = answer_reference;
+  error -= answer_reference_cuda;
+  relative_error = error.Norml2() / answer_reference.Norml2();
+  std::cout << "error: " << relative_error << std::endl;
+
+
+  {
+    R1D = 0.0;
+
+    serac::tensor< double, q, n > B;
+    serac::tensor< double, q, n > G;
+
+    for (int i = 0; i < q; i++) {
+      B[i] = serac::GaussLobattoInterpolation<n>(rule.point(i));
+      G[i] = serac::GaussLobattoInterpolationDerivative<n>(rule.point(i));
+    }
+
+    mfem::DeviceTensor<4, const double > u_d = mfem::Reshape(U1D.Read(), n, n, n, num_elements);
+    mfem::DeviceTensor<4, double > r_d = mfem::Reshape(R1D.ReadWrite(), n, n, n, num_elements);
+    mfem::DeviceTensor<6, const double > J_d = mfem::Reshape(J1D.Read(), q, q, q, dim, dim, num_elements);
+    dim3 blocksize{q, q, q};
+    int gridsize = num_elements;
+    double runtime = time([&]() {
+      for (int i = 0; i < num_runs; i++) {
+        serac::batched_cuda_kernel_with_union_cache_const_memory<Geometry::Hexahedron, test, trial, q><<<gridsize, blocksize>>>(u_d, r_d, J_d, B, G, num_elements, qfunc);
+        compiler::please_do_not_optimize_away(&R1D);
+      }
+      cudaDeviceSynchronize();
+    }) / n;
+    std::cout << "average batched (cuda, w/ union cacheu, B/G in __constant__ memory) kernel time: " << runtime / num_runs << std::endl;
   }
   answer_reference_cuda = R1D;
   error = answer_reference;
