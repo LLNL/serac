@@ -29,6 +29,7 @@ if(NOT SERAC_FOUND)
   set(SERAC_ENABLE_CODEVELOP   @SERAC_ENABLE_CODEVELOP@)
   set(SERAC_ENABLE_CUDA        @ENABLE_CUDA@)
 
+  set(SERAC_USE_ADIAK          @SERAC_USE_ADIAK@)
   set(SERAC_USE_AXOM           @SERAC_USE_AXOM@)
   set(SERAC_USE_CALIPER        @SERAC_USE_CALIPER@)
   set(SERAC_USE_CHAI           @SERAC_USE_CHAI@)
@@ -41,6 +42,7 @@ if(NOT SERAC_FOUND)
   set(SERAC_USE_TRIBOL         @SERAC_USE_TRIBOL@)
   set(SERAC_USE_UMPIRE         @SERAC_USE_UMPIRE@)
 
+  set(SERAC_ADIAK_DIR          "@ADIAK_DIR@")
   set(SERAC_AXOM_DIR           "@AXOM_DIR@")
   set(SERAC_CALIPER_DIR        "@CALIPER_DIR@")
   set(SERAC_CHAI_DIR           "@CHAI_DIR@")
@@ -104,6 +106,11 @@ if(NOT SERAC_FOUND)
   # Tribol
   if(SERAC_USE_TRIBOL)
     find_dependency(tribol REQUIRED NO_DEFAULT_PATH PATHS "${TRIBOL_DIR}/lib/cmake")
+  endif()
+
+  # Adiak
+  if(SERAC_USE_ADIAK)
+    find_dependency(adiak REQUIRED NO_DEFAULT_PATH PATHS "${ADIAK_DIR}")
   endif()
 
   # Caliper

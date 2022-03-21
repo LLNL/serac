@@ -166,7 +166,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   mfem::ConstantCoefficient mu_coef(b);
   A.AddDomainIntegrator(new mfem::ElasticityIntegrator(lambda_coef, mu_coef));
   {
-    SERAC_PROFILE_SCOPE(concat("mfem_localAssemble", postfix));
+    SERAC_PROFILE_SCOPE("mfem_localAssemble");
     A.Assemble(0);
   }
   A.Finalize();

@@ -88,7 +88,7 @@ template <int p, int dim>
 void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 {
   std::string postfix = concat("_H1<", p, ">");
-  serac::profiling::initializeCaliper();
+  serac::profiling::initialize();
 
   // Create standard MFEM bilinear and linear forms on H1
   auto                        fec = mfem::H1_FECollection(p, dim);
@@ -126,14 +126,14 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
 
   check_gradient(residual, U);
 
-  serac::profiling::terminateCaliper();
+  serac::profiling::finalize();
 }
 
 template <int p, int dim>
 void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dimension<dim>)
 {
   std::string postfix = concat("_H1<", p, ",", dim, ">");
-  serac::profiling::initializeCaliper();
+  serac::profiling::initialize();
 
   // Create standard MFEM bilinear and linear forms on H1
   auto                        fec = mfem::H1_FECollection(p, dim);
@@ -172,7 +172,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 
   check_gradient(residual, U);
 
-  serac::profiling::terminateCaliper();
+  serac::profiling::finalize();
 }
 
 TEST(thermal, 2D_linear) { functional_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
