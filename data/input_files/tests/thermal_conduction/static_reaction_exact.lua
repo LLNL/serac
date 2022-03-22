@@ -1,17 +1,3 @@
--- meemee Failing: error message:
---[[
-ERROR (/usr/WS2/meemee/serac/repo/src/serac/infrastructure/input.cpp:332)]
-Coefficient definition does not contain known type.
-
-Frame 1: axom::slic::logErrorMessage(std::string const&, std::string const&, int)
-Frame 2: FromInlet<serac::input::CoefficientInputOptions>::operator()(axom::inlet::Container const&)
-Frame 4: FromInlet<serac::input::BoundaryConditionInputOptions>::operator()(axom::inlet::Container const&)
-Frame 6: std::unordered_map<std::string, serac::input::BoundaryConditionInputOptions, std::hash<std::string>, std::equal_to<std::string>, std::allocator<std::pair<std::string const, serac::input::BoundaryConditionInputOptions> > > axom::inlet::Container::getCollection<std::string, serac::input::BoundaryConditionInputOptions>() const
-Frame 9: FromInlet<serac::ThermalConduction::InputOptions>::operator()(axom::inlet::Container const&)
-Frame 14: ../../build-quartz-toss_3_x86_64_ib-clang@10.0.0-debug/bin/serac() [0x769189]
---]]                 
--- also note: this is the only test that times out.
-
 -- Comparison information
 exact_function = function (v)
   return v.x^2 * v.y

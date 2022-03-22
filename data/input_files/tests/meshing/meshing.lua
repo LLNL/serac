@@ -1,5 +1,3 @@
--- meemee TODO add to unit tests instead of input file
-
 main_mesh_from_file = {
     type = "file",
     -- mesh file
