@@ -14,23 +14,59 @@
 # BlueOS: lalloc 2 ./ats.sh
 # WSL: ./ats.sh
 
+Help()
+{
+    echo "Test Invocations"
+    echo "=========================="
+    echo "TOSS3: salloc -N2 ./ats.sh"
+    echo "BlueOS: lalloc 2 ./ats.sh"
+    echo "WSL: ./ats.sh"
+    echo "Options:"
+    echo "  --rebaseline = re-makes all baselines"
+    echo "  --help = displays this message"
+}
+
+
 # Variables used inside of the base test.ats and this script
 export ATS_SERAC_BIN_DIR=@SERAC_BIN_DIR@/bin
 export ATS_SERAC_REPO_DIR=@SERAC_REPO_DIR@
 export ATS_EXECUTABLE=@ATS_EXECUTABLE@
+export ATS_SERAC_REBASELINE=0
 
 if [ ! -f "$ATS_EXECUTABLE" ]; then
     echo "ERROR: Given ATS_EXECUTABLE does not exist: " $ATS_EXECUTABLE
     exit 1
 fi
 
+while getopts ":-:" option; do
+    case $option in  
+        -)  # long options
+            case $OPTARG in
+                help)
+                    Help
+                    exit;;
+                rebaseline)
+                    ATS_SERAC_REBASELINE=1;;
+                *)  # invalid
+                    echo "Invalid"
+                    Help
+                    exit;;
+            esac;;
+        \?) # invalid
+            echo "Invalid option"
+            Help
+            exit;;
+    esac
+done
+
 # Add Serac's bin directory to path
 export PATH=$ATS_SERAC_BIN_DIR:$PATH
 
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~"
-echo "ATS:      " $ATS_EXECUTABLE
-echo "BIN DIR:  " $ATS_SERAC_BIN_DIR
-echo "REPO DIR: " $ATS_SERAC_REPO_DIR
+echo "ATS:         " $ATS_EXECUTABLE
+echo "BIN DIR:     " $ATS_SERAC_BIN_DIR
+echo "REPO DIR:    " $ATS_SERAC_REPO_DIR
+echo "REBASELINE?: " $ATS_SERAC_REBASELINE
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
 # Clean-up old run's logs

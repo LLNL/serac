@@ -21,6 +21,9 @@ import sys
 # Summary files were the same within the given tolerance if the
 # script exists successfully and not otherwise.
 
+def is_list(v):
+    return type(v) is list
+
 def ensure_file(path):
     if not os.path.exists(path):
         print("ERROR: Given file does not exist: {0}".format(path))
@@ -73,6 +76,12 @@ def ensure_timesteps(baseline_curves, test_curves):
 
     baseline_timesteps = baseline_curves[timestep_name]
     test_timesteps = test_curves[timestep_name]
+    
+    # case if curve is a single value
+    if not is_list(baseline_curves[timestep_name]):
+        baseline_timesteps = [baseline_curves[timestep_name]]
+    if not is_list(test_curves[timestep_name]):
+        test_timesteps = [test_curves[timestep_name]]
 
     if len(baseline_timesteps) != len(test_timesteps):
         print("ERROR: Number of test time steps, {0}, does not match baseline, {1}"
