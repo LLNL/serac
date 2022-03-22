@@ -81,7 +81,6 @@ def ensure_timesteps(baseline_curves, test_curves):
 
     baseline_timesteps = as_list(baseline_curves[timestep_name])
     test_timesteps = as_list(test_curves[timestep_name])
-    
     if len(baseline_timesteps) != len(test_timesteps):
         print("ERROR: Number of test time steps, {0}, does not match baseline, {1}"
               .format(len(test_timesteps), len(baseline_timesteps)))
@@ -262,7 +261,6 @@ def main():
     if not "curves" in test_json:
         print("ERROR: Test file did not have a 'curves' section")
     test_curves = test_json["curves"]
-    
     ensure_timesteps(baseline_curves, test_curves)
 
     # Get both sets of field names
