@@ -22,6 +22,7 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
   static constexpr auto family     = Family::H1;
   static constexpr int  components = c;
   static constexpr int  dim        = 3;
+  static constexpr int  n          = (p + 1);
   static constexpr int  ndof       = (p + 1) * (p + 1) * (p + 1);
   static constexpr int  order      = p;
 
@@ -74,5 +75,143 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
     return dN;
     // clang-format on
   }
+
+  template < int q >
+  static __device__ auto interpolate(const tensor<double, c, n, n, n>& X, const TensorProductQuadratureRule<q> & rule, 
+                              tensor<double, 2, n, n, q>& A1, tensor<double, 3, n, q, q>& A2) {
+
+    __shared__ tensor< double, q, n > B;
+    __shared__ tensor< double, q, n > G;
+    if (threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
+      for (int i = threadIdx.x; i < q; i += blockDim.x) {
+        B[i] = GaussLobattoInterpolation<n>(rule.points1D[i]);
+        G[i] = GaussLobattoInterpolationDerivative<n>(rule.points1D[i]);
+      }
+    }
+    __syncthreads();
+
+    tuple < tensor<double, c>, tensor<double, c, 3> > qf_input{};
+
+    for (int i = 0; i < c; i++) {
+
+      for (int dz = threadIdx.z; dz < n; dz += blockDim.z) {
+        for (int dy = threadIdx.y; dy < n; dy += blockDim.y) {
+          for (int qx = threadIdx.x; qx < q; qx += blockDim.x) {
+            double sum[2]{};
+            for (int dx = 0; dx < n; dx++) {
+              sum[0] += B(qx, dx) * X(i, dz, dy, dx);
+              sum[1] += G(qx, dx) * X(i, dz, dy, dx);
+            }
+            A1(0, dz, dy, qx) = sum[0];
+            A1(1, dz, dy, qx) = sum[1];
+          }
+        }
+      }
+      __syncthreads();
+
+      for (int dz = threadIdx.z; dz < n; dz += blockDim.z) {
+        for (int qy = threadIdx.y; qy < q; qy += blockDim.y) {
+          for (int qx = threadIdx.x; qx < q; qx += blockDim.x) {
+            double sum[3]{};
+            for (int dy = 0; dy < n; dy++) {
+              sum[0] += B(qy, dy) * A1(0, dz, dy, qx);
+              sum[1] += B(qy, dy) * A1(1, dz, dy, qx);
+              sum[2] += G(qy, dy) * A1(0, dz, dy, qx);
+            }
+            A2(0, dz, qy, qx) = sum[0];
+            A2(1, dz, qy, qx) = sum[1];
+            A2(2, dz, qy, qx) = sum[2];
+          }
+        }
+      }
+      __syncthreads();
+
+      for (int qz = threadIdx.z; qz < q; qz += blockDim.z) {
+        for (int qy = threadIdx.y; qy < q; qy += blockDim.y) {
+          for (int qx = threadIdx.x; qx < q; qx += blockDim.x) {
+            for (int dz = 0; dz <n; dz++) {
+              serac::get<0>(qf_input)[i]    += B(qz, dz) * A2(0, dz, qy, qx);
+              serac::get<1>(qf_input)[i][0] += B(qz, dz) * A2(1, dz, qy, qx);
+              serac::get<1>(qf_input)[i][1] += B(qz, dz) * A2(2, dz, qy, qx);
+              serac::get<1>(qf_input)[i][2] += G(qz, dz) * A2(0, dz, qy, qx);
+            }
+          }
+        }
+      }
+
+    }
+
+    return qf_input;
+  }
+
+  template <int q>
+  static __device__ void extrapolate(const tensor<double, c, q, q, q> & source, const tensor<double, 3, c, q, q, q> & flux,
+                                     const TensorProductQuadratureRule<q> & rule, 
+                                     mfem::DeviceTensor<5, double> r_e, int e,
+                                     tensor<double, 3, q, q, n>& A1, tensor<double, 2, q, n, n>& A2) {
+                                      
+    __shared__ tensor< double, q, n > B;
+    __shared__ tensor< double, q, n > G;
+    if (threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
+      for (int i = threadIdx.x; i < q; i += blockDim.x) {
+        B[i] = GaussLobattoInterpolation<n>(rule.points1D[i]);
+        G[i] = GaussLobattoInterpolationDerivative<n>(rule.points1D[i]);
+      }
+    }
+    __syncthreads();
+
+    for (int i = 0; i < c; i++) {
+
+      for (int qz = threadIdx.z; qz < q; qz += blockDim.z) {
+        for (int qy = threadIdx.y; qy < q; qy += blockDim.y) {
+          for (int dx = threadIdx.x; dx < n; dx += blockDim.x) {
+            double sum[3]{};
+            for (int qx = 0; qx < q; qx++) {
+              sum[0] += B(qx, dx) * source(i, qz, qy, qx);
+              sum[0] += G(qx, dx) * flux(0, i, qz, qy, qx);
+              sum[1] += B(qx, dx) * flux(1, i, qz, qy, qx);
+              sum[2] += B(qx, dx) * flux(2, i, qz, qy, qx);
+            }
+            A1(0, qz, qy, dx) = sum[0];
+            A1(1, qz, qy, dx) = sum[1];
+            A1(2, qz, qy, dx) = sum[2];
+          }
+        }
+      }
+      __syncthreads();
+
+      for (int qz = threadIdx.z; qz < q; qz += blockDim.z) {
+        for (int dy = threadIdx.y; dy < n; dy += blockDim.y) {
+          for (int dx = threadIdx.x; dx < n; dx += blockDim.x) {
+            double sum[2]{};
+            for (int qy = 0; qy < q; qy++) {
+              sum[0] += B(qy, dy) * A1(0, qz, qy, dx);
+              sum[0] += G(qy, dy) * A1(1, qz, qy, dx);
+              sum[1] += B(qy, dy) * A1(2, qz, qy, dx);
+            }
+            A2(0, qz, dy, dx) = sum[0];
+            A2(1, qz, dy, dx) = sum[1];
+          }
+        }
+      }
+      __syncthreads();
+
+      for (int dz = threadIdx.z; dz < n; dz += blockDim.z) {
+        for (int dy = threadIdx.y; dy < n; dy += blockDim.y) {
+          for (int dx = threadIdx.x; dx < n; dx += blockDim.x) {
+            double sum = 0.0;
+            for (int qz = 0; qz < q; qz++) {
+              sum += B(qz, dz) * A2(0, qz, dy, dx);
+              sum += G(qz, dz) * A2(1, qz, dy, dx);
+            }
+            r_e(dx,dy,dz,i,e) += sum;
+          }
+        }
+      }
+
+    }
+
+  }
+
 };
 /// @endcond

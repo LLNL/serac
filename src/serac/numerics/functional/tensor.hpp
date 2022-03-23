@@ -24,27 +24,33 @@ namespace serac {
 /// @cond
 namespace detail {
 template <typename T, typename i0_t>
-SERAC_HOST_DEVICE constexpr auto get(const T& values, i0_t i0)
+SERAC_HOST_DEVICE constexpr const auto& get(const T& values, i0_t i0)
 {
   return values[i0];
 }
 
 template <typename T, typename i0_t, typename i1_t>
-SERAC_HOST_DEVICE constexpr auto get(const T& values, i0_t i0, i1_t i1)
+SERAC_HOST_DEVICE constexpr const auto& get(const T& values, i0_t i0, i1_t i1)
 {
   return values[i0][i1];
 }
 
 template <typename T, typename i0_t, typename i1_t, typename i2_t>
-SERAC_HOST_DEVICE constexpr auto get(const T& values, i0_t i0, i1_t i1, i2_t i2)
+SERAC_HOST_DEVICE constexpr const auto& get(const T& values, i0_t i0, i1_t i1, i2_t i2)
 {
   return values[i0][i1][i2];
 }
 
 template <typename T, typename i0_t, typename i1_t, typename i2_t, typename i3_t>
-SERAC_HOST_DEVICE constexpr auto get(const T& values, i0_t i0, i1_t i1, i2_t i2, i3_t i3)
+SERAC_HOST_DEVICE constexpr const auto& get(const T& values, i0_t i0, i1_t i1, i2_t i2, i3_t i3)
 {
   return values[i0][i1][i2][i3];
+}
+
+template <typename T, typename i0_t, typename i1_t, typename i2_t, typename i3_t, typename i4_t>
+SERAC_HOST_DEVICE constexpr const auto& get(const T& values, i0_t i0, i1_t i1, i2_t i2, i3_t i3, i4_t i4)
+{
+  return values[i0][i1][i2][i3][i4];
 }
 
 template <typename T, typename i0_t>
@@ -69,6 +75,12 @@ template <typename T, typename i0_t, typename i1_t, typename i2_t, typename i3_t
 SERAC_HOST_DEVICE constexpr auto& get(T& values, i0_t i0, i1_t i1, i2_t i2, i3_t i3)
 {
   return values[i0][i1][i2][i3];
+}
+
+template <typename T, typename i0_t, typename i1_t, typename i2_t, typename i3_t, typename i4_t>
+SERAC_HOST_DEVICE constexpr auto& get(T& values, i0_t i0, i1_t i1, i2_t i2, i3_t i3, i4_t i4)
+{
+  return values[i0][i1][i2][i3][i4];
 }
 
 template <int n>
@@ -147,7 +159,7 @@ struct tensor<T, 1, 1> {
   }
 
   template <typename S>
-  SERAC_HOST_DEVICE constexpr auto operator()(S, S) const
+  SERAC_HOST_DEVICE constexpr auto& operator()(S, S) const
   {
     return value;
   }
@@ -176,7 +188,7 @@ struct tensor<T, n> {
   }
 
   template <typename S>
-  SERAC_HOST_DEVICE constexpr auto operator()(S i) const
+  SERAC_HOST_DEVICE constexpr auto& operator()(S i) const
   {
     return detail::get(value, i);
   }
@@ -221,7 +233,7 @@ struct tensor<T, first, rest...> {
   };
   /// @overload
   template <typename... S>
-  SERAC_HOST_DEVICE constexpr auto operator()(S... i) const
+  SERAC_HOST_DEVICE constexpr const auto& operator()(S... i) const
   {
     return detail::get(value, i...);
   };
@@ -1584,6 +1596,28 @@ auto& operator<<(std::ostream& out, const tensor<T, n...>& A)
   }
   out << '}';
   return out;
+}
+
+/**
+ * @brief print a doulbe using `printf`, so that it is suitable for use inside cuda kernels. (used in final recursion of printf(tensor<...>))
+ * @param[in] value The value to write out
+ */
+__host__ __device__ void print(double value) { printf("%f", value); }
+
+/**
+ * @brief print a tensor using `printf`, so that it is suitable for use inside cuda kernels.
+ * @param[in] A The tensor to write out
+ */
+template <int m, int... n>
+__host__ __device__ void print(const tensor<double, m, n...>& A)
+{
+  printf("{");
+  print(A[0]);
+  for (int i = 1; i < m; i++) {
+    printf(",");
+    print(A[i]);
+  }
+  printf("}");
 }
 
 /**

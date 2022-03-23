@@ -1,4 +1,5 @@
 #include "mfem.hpp"
+#include "mfem/general/forall.hpp"
 
 #include "serac/infrastructure/accelerator.hpp"
 
@@ -31,19 +32,6 @@ struct GaussLegendreRule<Geometry::Hexahedron, Q> {
   __host__ __device__ static constexpr int size() { return Q * Q * Q; }
 };
 
-__host__ __device__ void print(double value) { printf("%f", value); }
-
-template <int m, int... n>
-__host__ __device__ void print(const tensor<double, m, n...>& A)
-{
-  printf("{");
-  print(A[0]);
-  for (int i = 1; i < m; i++) {
-    printf(",");
-    print(A[i]);
-  }
-  printf("}");
-}
 
 template < typename trial_space, Geometry geom, int q >
 __device__ auto BatchPreprocessCUDA(const mfem::DeviceTensor< 4, const double > & element_values, GaussLegendreRule<geom, q> rule, int e) {

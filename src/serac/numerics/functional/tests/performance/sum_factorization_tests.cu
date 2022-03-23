@@ -1,8 +1,41 @@
+#include "mfem.hpp"
+#include "mfem/linalg/dtensor.hpp"
+
 #include "sum_factorization.hpp"
-#include "sum_factorization_external_cache_tmp.hpp"
+#include "sum_factorization_external_cache.hpp"
 
 using namespace serac;
 using std::sin, std::abs;
+
+template <typename trial_space, Geometry geom, int q>
+__global__ void preprocess_kernel_element_library(mfem::DeviceTensor<4, const double> input,
+                                                  mfem::DeviceTensor<5, double>       output)
+{
+  using element_type = finite_element< geom, trial_space >;
+
+  static constexpr int  n    = trial_space::order + 1;
+  static constexpr auto rule = MakeGaussLegendreRule<geom, q>();
+
+  __shared__ tensor<double, 1, n, n, n> X;
+  __shared__ tensor<double, 2, n, n, q> A1;
+  __shared__ tensor<double, 3, n, q, q> A2;
+
+  for (int dz = threadIdx.z; dz < n; dz += blockDim.z) {
+    for (int dy = threadIdx.y; dy < n; dy += blockDim.y) {
+      for (int dx = threadIdx.x; dx < n; dx += blockDim.x) {
+        X(0, dz, dy, dx) = input(dx, dy, dz, 0);
+      }
+    }
+  }
+  __syncthreads();
+
+  auto qf_input = element_type::interpolate(X, rule, A1, A2);
+
+  output(threadIdx.x, threadIdx.y, threadIdx.z, 0, 0) = serac::get<0>(qf_input)[0];
+  output(threadIdx.x, threadIdx.y, threadIdx.z, 1, 0) = serac::get<1>(qf_input)[0][0];
+  output(threadIdx.x, threadIdx.y, threadIdx.z, 2, 0) = serac::get<1>(qf_input)[0][1];
+  output(threadIdx.x, threadIdx.y, threadIdx.z, 3, 0) = serac::get<1>(qf_input)[0][2];
+}
 
 template <typename trial_space, Geometry geom, int q>
 __global__ void preprocess_kernel_with_cache(mfem::DeviceTensor<4, const double> input,
@@ -69,8 +102,8 @@ __global__ void postprocess_kernel_with_cache(mfem::DeviceTensor<4, double> r_e)
   static constexpr auto rule = GaussLegendreRule<geom, q>();
 
   __shared__ tensor<double, 4, q, q, q> f;
-  __shared__ tensor<double, 4, q, q, n> A1;
-  __shared__ tensor<double, 4, q, n, n> A2;
+  __shared__ tensor<double, 3, q, q, n> A1;
+  __shared__ tensor<double, 2, q, n, n> A2;
 
   __shared__ tensor<double, q, n> B;
   __shared__ tensor<double, q, n> G;
@@ -89,6 +122,27 @@ __global__ void postprocess_kernel_with_cache(mfem::DeviceTensor<4, double> r_e)
   __syncthreads();
 
   BatchPostprocessCUDA<trial_space>(f, rule, r_e, 0, B, G, A1, A2);
+}
+
+template <typename trial_space, Geometry geom, int q>
+__global__ void postprocess_kernel_element_library(mfem::DeviceTensor<5, double> r_e)
+{
+  using element_type = finite_element< geom, trial_space >;
+  static constexpr int  n    = trial_space::order + 1;
+  static constexpr auto rule = MakeGaussLegendreRule<geom, q>();
+
+  __shared__ tensor<double, 1, q, q, q> source;
+  __shared__ tensor<double, 3, 1, q, q, q> flux;
+  __shared__ tensor<double, 3, q, q, n> A1;
+  __shared__ tensor<double, 2, q, n, n> A2;
+
+  source(0, threadIdx.z, threadIdx.y, threadIdx.x) = 1.0;
+  flux(0, 0, threadIdx.z, threadIdx.y, threadIdx.x) = threadIdx.x * 2.0;
+  flux(1, 0, threadIdx.z, threadIdx.y, threadIdx.x) = threadIdx.y * 3.0;
+  flux(2, 0, threadIdx.z, threadIdx.y, threadIdx.x) = threadIdx.z * 5.0;
+  __syncthreads();
+
+  element_type::extrapolate(source, flux, rule, r_e, 0, A1, A2);
 }
 
 int main()
@@ -365,6 +419,104 @@ int main()
     }
   }
 
+
+  if (true) {
+    constexpr int p = 3;
+    constexpr int n = p + 1;
+    constexpr int q = 3;
+
+    using test = H1<p>;
+
+    mfem::Vector U1D(num_elements * n * n * n);
+    mfem::Vector R1D(num_elements * 4 * q * q * q);
+    U1D.UseDevice(true);
+    R1D.UseDevice(true);
+
+    auto U = mfem::Reshape(U1D.HostReadWrite(), n, n, n, num_elements);
+
+    for (int ix = 0; ix < n; ix++) {
+      for (int iy = 0; iy < n; iy++) {
+        for (int iz = 0; iz < n; iz++) {
+          U(ix, iy, iz, 0) = 2 * ix - 3.0 * iy + sin(iz);
+        }
+      }
+    }
+
+    R1D = 0.0;
+
+    mfem::DeviceTensor<4, const double> u_d = mfem::Reshape(U1D.Read(), n, n, n, num_elements);
+    mfem::DeviceTensor<5, double>       r_d = mfem::Reshape(R1D.ReadWrite(), q, q, q, 4, num_elements);
+
+    dim3 blocksize{q, q, q};
+    int  gridsize = num_elements;
+    preprocess_kernel_element_library<test, Geometry::Hexahedron, q><<<gridsize, blocksize>>>(u_d, r_d);
+    cudaDeviceSynchronize();
+
+    mfem::DeviceTensor<5, const double> r_h = mfem::Reshape(R1D.HostRead(), q, q, q, 4, num_elements);
+
+    // clang-format off
+    double answers[q][q][q][4]{
+      {
+        {
+          {-0.06976517422279016,7.527864045000420,-11.29179606750063,3.247646211241188},
+          {0.5905504600868352,7.527864045000422,-11.29179606750063,0.1543006667646776},
+          {0.04362979171617654,7.527864045000420,-11.29179606750063,-2.986495249049149}
+        }, {
+          {-3.111645785692786,7.527864045000416,-6.135254915624209,3.247646211241187},
+          {-2.451330151383162,7.527864045000420,-6.135254915624211,0.1543006667646788},
+          {-2.998250819753819,7.527864045000419,-6.135254915624211,-2.986495249049150}
+        }, {
+          {-6.153526397162780,7.527864045000409,-11.29179606750063,3.247646211241181},
+          {-5.493210762853155,7.527864045000412,-11.29179606750063,0.1543006667646789},
+          {-6.040131431223813,7.527864045000410,-11.29179606750063,-2.986495249049152}
+        }
+      }, { 
+        {
+          {1.958155233423875,4.090169943749476,-11.29179606750063,3.247646211241189},
+          {2.618470867733500,4.090169943749474,-11.29179606750063,0.1543006667646782},
+          {2.071550199362840,4.090169943749473,-11.29179606750063,-2.986495249049149}
+        }, {
+          {-1.083725378046122,4.090169943749474,-6.135254915624211,3.247646211241187},
+          {-0.4234097437364975,4.090169943749475,-6.135254915624213,0.1543006667646782},
+          {-0.9703304121071556,4.090169943749474,-6.135254915624212,-2.986495249049151}
+        }, {
+          {-4.125605989516117,4.090169943749475,-11.29179606750063,3.247646211241185},
+          {-3.465290355206493,4.090169943749473,-11.29179606750063,0.1543006667646784},
+          {-4.012211023577151,4.090169943749473,-11.29179606750063,-2.986495249049152}
+        }
+      }, {
+        {
+          {3.986075641070537,7.527864045000417,-11.29179606750063,3.247646211241192},
+          {4.646391275380163,7.527864045000422,-11.29179606750063,0.1543006667646779},
+          {4.099470607009503,7.527864045000422,-11.29179606750063,-2.986495249049149}
+        }, {
+          {0.9441950296005416,7.527864045000419,-6.135254915624211,3.247646211241188},
+          {1.604510663910167,7.527864045000424,-6.135254915624213,0.1543006667646776},
+          {1.057589995539508,7.527864045000420,-6.135254915624209,-2.986495249049149}
+        }, {
+          {-2.097685581869453,7.527864045000414,-11.29179606750063,3.247646211241186},
+          {-1.437369947559828,7.527864045000416,-11.29179606750063,0.1543006667646778},
+          {-1.984290615930487,7.527864045000415,-11.29179606750062,-2.986495249049149}
+        }
+      }
+    };
+    // clang-format on
+
+    for (int i = 0; i < q; i++) {
+      for (int j = 0; j < q; j++) {
+        for (int k = 0; k < q; k++) {
+          for (int c = 0; c < 4; c++) {
+            auto relative_error = abs(r_h(i, j, k, c, 0) - answers[i][j][k][c]) / abs(answers[i][j][k][c]);
+            if (relative_error > 5.0e-14) {
+              std::cout << "error: " << r_h(i, j, k, c, 0) << " " << answers[i][j][k][c] << ", " << relative_error
+                        << std::endl;
+            }
+          }
+        }
+      }
+    }
+  }
+
   {
     constexpr int p = 3;
     constexpr int n = p + 1;
@@ -534,6 +686,29 @@ int main()
 
       mfem::DeviceTensor<4, double> r_d = mfem::Reshape(R1D.ReadWrite(), n, n, n, num_elements);
       postprocess_kernel_with_cache<test, Geometry::Hexahedron, q><<<gridsize, blocksize>>>(r_d);
+      cudaDeviceSynchronize();
+
+      mfem::DeviceTensor<4, const double> r_h = mfem::Reshape(R1D.HostRead(), n, n, n, num_elements);
+
+      for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+          for (int k = 0; k < n; k++) {
+            auto relative_error = abs(r_h(i, j, k, 0) - answers[i][j][k]) / abs(answers[i][j][k]);
+            if (relative_error > 5.0e-14) {
+              std::cout << "error: " << r_h(i, j, k, 0) << " " << answers[i][j][k] << ", " << relative_error
+                        << std::endl;
+            }
+          }
+        }
+      }
+    }
+
+    {
+      mfem::Vector R1D(num_elements * n * n * n);
+      R1D = 0.0;
+
+      mfem::DeviceTensor<5, double> r_d = mfem::Reshape(R1D.ReadWrite(), n, n, n, 1, num_elements);
+      postprocess_kernel_element_library<test, Geometry::Hexahedron, q><<<gridsize, blocksize>>>(r_d);
       cudaDeviceSynchronize();
 
       mfem::DeviceTensor<4, const double> r_h = mfem::Reshape(R1D.HostRead(), n, n, n, num_elements);

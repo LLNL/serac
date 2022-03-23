@@ -78,4 +78,12 @@ SERAC_HOST_DEVICE constexpr auto GaussQuadratureRule()
   }
 }
 
+template <Geometry g, int Q>
+SERAC_HOST_DEVICE constexpr auto MakeGaussLegendreRule()
+{
+  if constexpr (g == Geometry::Segment || g == Geometry::Quadrilateral || g == Geometry::Hexahedron) {
+    return TensorProductQuadratureRule<Q>{GaussLegendreWeights<Q>(), GaussLegendreNodes<Q>()};
+  }
+}
+
 }  // namespace serac

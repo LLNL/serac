@@ -1139,6 +1139,7 @@ __global__ void batched_cuda_kernel_with_union_cache(mfem::DeviceTensor< 4, cons
   // for each element in the domain
   uint32_t e = blockIdx.x;
 
+  // load the values for that element
   for (int dz = threadIdx.z; dz < n; dz += blockDim.z) {
     for (int dy = threadIdx.y; dy < n; dy += blockDim.y) {
       for (int dx = threadIdx.x; dx < n; dx += blockDim.x) {
@@ -1202,6 +1203,86 @@ __global__ void batched_cuda_kernel_with_union_cache_const_memory(mfem::DeviceTe
 
   // integrate the material response against the test-space basis functions
   BatchPostprocessCUDA<test>(cache2.qf_output, rule, r, e, B, G, cache2.A3, cache1.A4);
+
+}
+
+template < typename lambda, typename T, int q >
+__device__ auto batch_apply_qf(lambda qf, T qf_input, TensorProductQuadratureRule<q> rule, mfem::DeviceTensor< 6, const double > J_q, int e, tensor< double, 1, q, q, q > & cache_source, tensor< double, 3, 1, q, q, q > & cache_flux) {
+
+  constexpr int dim = 3;
+
+  auto J = make_tensor<dim, dim>([&](int i, int j) { return J_q(threadIdx.x, threadIdx.y, threadIdx.z, i, j, e); });
+
+  auto invJ = inv(J);
+
+  auto dv = det(J) * rule.weight(threadIdx.x, threadIdx.y, threadIdx.z);
+
+  serac::get<1>(qf_input) = dot(serac::get<1>(qf_input), invJ);
+
+  auto [source, flux] = qf(qf_input) * dv;
+
+  flux = dot(flux, transpose(invJ));
+
+  //  serac::get<1>(qf_output) = dot(invJ, serac::get<1>(qf_output));
+
+  cache_source(0, threadIdx.z, threadIdx.y, threadIdx.x) = source;
+
+  cache_flux(0, 0, threadIdx.z, threadIdx.y, threadIdx.x) = flux[0][0];
+  cache_flux(1, 0, threadIdx.z, threadIdx.y, threadIdx.x) = flux[0][1];
+  cache_flux(2, 0, threadIdx.z, threadIdx.y, threadIdx.x) = flux[0][2];
+
+}
+
+template <Geometry g, typename test, typename trial, int q, typename lambda>
+__global__ void batched_cuda_kernel(mfem::DeviceTensor< 5, const double > u, 
+                                    mfem::DeviceTensor< 5, double > r, 
+                                    mfem::DeviceTensor< 6, const double > J, 
+                                    TensorProductQuadratureRule<q> rule,
+                                    size_t num_elements, 
+                                    lambda qf) {
+
+  static constexpr int n = trial::order + 1;
+  using test_element = finite_element<g, test>;
+  using trial_element = finite_element<g, trial>;
+
+  __shared__ union {
+    tensor < double, trial::components, n, n, n > u_elem;
+    tensor < double, 3, n, q, q > A2;
+    tensor < double, 2, q, n, n > A4;
+  } cache1;
+
+  __shared__ union {
+    tensor < double, 2, n, n, q > A1;
+    struct {
+      tensor < double, 1, q, q, q > source;
+      tensor < double, 3, 1, q, q, q > flux;
+    };
+    tensor < double, 3, q, q, n > A3;
+  } cache2;
+
+
+  // for each element in the domain
+  uint32_t e = blockIdx.x;
+
+  for (int i = 0; i < trial::components; i++) {
+    for (int dz = threadIdx.z; dz < n; dz += blockDim.z) {
+      for (int dy = threadIdx.y; dy < n; dy += blockDim.y) {
+        for (int dx = threadIdx.x; dx < n; dx += blockDim.x) {
+          cache1.u_elem(i, dz, dy, dx) = u(dx, dy, dz, i, e);
+        }
+      }
+    }
+  }
+  __syncthreads(); 
+
+  // interpolate each quadrature point's value
+  auto qf_input = trial_element::interpolate(cache1.u_elem, rule, cache2.A1, cache1.A2);
+
+  // evalute the q-function at each quadrature point
+  batch_apply_qf(qf, qf_input, rule, J, e, cache2.source, cache2.flux);
+
+  // integrate the material response against the test-space basis functions
+  test_element::extrapolate(cache2.source, cache2.flux, rule, r, e, cache2.A3, cache1.A4);
 
 }
 
@@ -1446,6 +1527,30 @@ int main() {
       cudaDeviceSynchronize();
     }) / n;
     std::cout << "average batched (cuda, w/ union cacheu, B/G in __constant__ memory) kernel time: " << runtime / num_runs << std::endl;
+  }
+  answer_reference_cuda = R1D;
+  error = answer_reference;
+  error -= answer_reference_cuda;
+  relative_error = error.Norml2() / answer_reference.Norml2();
+  std::cout << "error: " << relative_error << std::endl;
+
+  {
+    R1D = 0.0;
+
+    mfem::DeviceTensor<5, const double > u_d = mfem::Reshape(U1D.Read(), n, n, n, 1, num_elements);
+    mfem::DeviceTensor<5, double > r_d = mfem::Reshape(R1D.ReadWrite(), n, n, n, 1, num_elements);
+    mfem::DeviceTensor<6, const double > J_d = mfem::Reshape(J1D.Read(), q, q, q, dim, dim, num_elements);
+    auto rule = serac::MakeGaussLegendreRule<Geometry::Hexahedron, q>();
+    dim3 blocksize{q, q, q};
+    int gridsize = num_elements;
+    double runtime = time([&]() {
+      for (int i = 0; i < num_runs; i++) {
+        serac::batched_cuda_kernel<Geometry::Hexahedron, test, trial, q><<<gridsize, blocksize>>>(u_d, r_d, J_d, rule, num_elements, qfunc);
+        compiler::please_do_not_optimize_away(&R1D);
+      }
+      cudaDeviceSynchronize();
+    }) / n;
+    std::cout << "average batched (cuda, using element library) kernel time: " << runtime / num_runs << std::endl;
   }
   answer_reference_cuda = R1D;
   error = answer_reference;
