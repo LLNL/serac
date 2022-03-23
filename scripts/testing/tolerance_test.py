@@ -268,7 +268,7 @@ def main():
     # Get both sets of field names
     baseline_field_names = get_field_names(baseline_curves)
     test_field_names = get_field_names(test_curves)
-     
+
     ensure_field_names(baseline_field_names, test_field_names)
     ensure_field_stats(baseline_field_names, baseline_curves, test_curves)
     ensure_field_stat_values(baseline_field_names, baseline_curves, test_curves, args.tolerance)
