@@ -22,7 +22,7 @@ Help()
     echo "BlueOS: lalloc 2 ./ats.sh"
     echo "WSL: ./ats.sh"
     echo "Options:"
-    echo "  --rebaseline = re-makes all baselines"
+    echo "  --rebaseline = copies last generated baselines over existing"
     echo "  --help = displays this message"
 }
 
@@ -33,13 +33,23 @@ export ATS_SERAC_REPO_DIR=@SERAC_REPO_DIR@
 export ATS_EXECUTABLE=@ATS_EXECUTABLE@
 export ATS_SERAC_REBASELINE=0
 
+if [ ! -d "$ATS_SERAC_REPO_DIR" ]; then
+    echo "ERROR: Given ATS_SERAC_REPO_DIR does not exist: " $ATS_SERAC_REPO_DIR
+    exit 1
+fi
+
+if [ ! -d "$ATS_SERAC_BIN_DIR" ]; then
+    echo "ERROR: Given ATS_SERAC_BIN_DIR does not exist: " $ATS_SERAC_BIN_DIR
+    exit 1
+fi
+
 if [ ! -f "$ATS_EXECUTABLE" ]; then
     echo "ERROR: Given ATS_EXECUTABLE does not exist: " $ATS_EXECUTABLE
     exit 1
 fi
 
 while getopts ":-:" option; do
-    case $option in  
+    case $option in
         -)  # long options
             case $OPTARG in
                 help)
@@ -72,8 +82,8 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~"
 # Clean-up old run's logs
 rm -rf $SYS_TYPE.*
 
-# Clean-up last run's output 
-# TODO: add a script to clean up output
+# Clean-up last run's output
+# TODO: add a mode to clean up output
 #rm -rf $ATS_SERAC_REPO_DIR/tests/integration/*/*/_output
 
 # Run ATS
