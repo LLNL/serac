@@ -3,7 +3,7 @@ namespace serac {
 template <typename trial_space, int n, Geometry geom, int q>
 __device__ auto BatchPreprocessCUDA(const tensor<double, n, n, n>& X, GaussLegendreRule<geom, q> rule,
                                     const tensor<double, q, n>& B, const tensor<double, q, n>& G,
-                                    tensor<double, 3, n, n, q>& A1, tensor<double, 3, n, n, q>& A2)
+                                    tensor<double, 3, n, n, q>& A1, tensor<double, 3, n, q, q>& A2)
 {
 
   if constexpr (geom == Geometry::Hexahedron) {
