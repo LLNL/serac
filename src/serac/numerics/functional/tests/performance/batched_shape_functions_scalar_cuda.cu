@@ -1,3 +1,6 @@
+#include <string>
+#include <iostream>
+
 #include "mfem_PA_kernels.hpp"
 #include "mfem_PA_kernels_smem.hpp"
 
@@ -618,7 +621,7 @@ void initialize_globals() {
 
   constexpr int n = 4;
   constexpr int q = 4;
-  constexpr int num_elements = 100000;
+  constexpr int num_elements = 128 << 10;
 
   U1D.SetSize(num_elements * n * n * n);
   R1D.SetSize(num_elements * n * n * n);
@@ -659,6 +662,12 @@ void initialize_globals() {
 
 }
 
+template < typename ... T >
+void print(T ... args) {
+  (..., (std::cout << " " << args));
+  std::cout << std::endl;
+}
+
 template < int q, int n >
 void run_test_suite(int num_elements) {
 
@@ -674,13 +683,19 @@ void run_test_suite(int num_elements) {
   R1D.UseDevice(true);
 
   // run the CPU kernel once to generate the accepted answers
-  R1D = 0.0;
-  serac::batched_kernel<serac::Geometry::Hexahedron, test, trial, q>(U1D, R1D, J1D, num_elements, qfunc);
+  {
+    R1D = 0.0;
+    double runtime = time([&]() {
+      for (int i = 0; i < num_runs; i++) {
+        serac::batched_kernel<serac::Geometry::Hexahedron, test, trial, q>(U1D, R1D, J1D, num_elements, qfunc);
+        compiler::please_do_not_optimize_away(&R1D);
+      }
+      cudaDeviceSynchronize();
+    }) / num_runs;
+    double relative_error = 0.0;
+    print("reference_cpu", n, q, num_elements, runtime, relative_error);
+  }
   auto answer_reference = R1D;
-
-  // each kernel adds their results to R1D, 
-  // so we multiply by num_runs here rather than run this slow test that many times
-  answer_reference *= num_runs; 
 
   {
     R1D = 0.0;
@@ -696,14 +711,13 @@ void run_test_suite(int num_elements) {
         compiler::please_do_not_optimize_away(&R1D);
       }
       cudaDeviceSynchronize();
-    }) / n;
-    std::cout << "average reference (cuda) kernel time: " << runtime / num_runs << std::endl;
+    }) / num_runs;
+    auto error = R1D;
+    error -= answer_reference;
+    auto relative_error = error.Norml2() / answer_reference.Norml2();
+    print("reference_gpu", n, q, num_elements, runtime, relative_error);
   }
-  auto answer_reference_cuda = R1D;
-  auto error = answer_reference;
-  error -= answer_reference_cuda;
-  auto relative_error = error.Norml2() / answer_reference.Norml2();
-  std::cout << "error: " << relative_error << std::endl;
+
 
   {
     R1D = 0.0;
@@ -719,14 +733,12 @@ void run_test_suite(int num_elements) {
         compiler::please_do_not_optimize_away(&R1D);
       }
       cudaDeviceSynchronize();
-    }) / n;
-    std::cout << "average batched (cuda) kernel time: " << runtime / num_runs << std::endl;
+    }) / num_runs;
+    auto error = R1D;
+    error -= answer_reference;
+    auto relative_error = error.Norml2() / answer_reference.Norml2();
+    print("batched_gpu", n, q, num_elements, runtime, relative_error);
   }
-  answer_reference_cuda = R1D;
-  error = answer_reference;
-  error -= answer_reference_cuda;
-  relative_error = error.Norml2() / answer_reference.Norml2();
-  std::cout << "error: " << relative_error << std::endl;
 
   {
     R1D = 0.0;
@@ -742,14 +754,12 @@ void run_test_suite(int num_elements) {
         compiler::please_do_not_optimize_away(&R1D);
       }
       cudaDeviceSynchronize();
-    }) / n;
-    std::cout << "average batched (cuda, w/ cache) kernel time: " << runtime / num_runs << std::endl;
+    }) / num_runs;
+    auto error = R1D;
+    error -= answer_reference;
+    auto relative_error = error.Norml2() / answer_reference.Norml2();
+    print("batched_gpu_with_cache", n, q, num_elements, runtime, relative_error);
   }
-  answer_reference_cuda = R1D;
-  error = answer_reference;
-  error -= answer_reference_cuda;
-  relative_error = error.Norml2() / answer_reference.Norml2();
-  std::cout << "error: " << relative_error << std::endl;
 
   {
     R1D = 0.0;
@@ -765,14 +775,12 @@ void run_test_suite(int num_elements) {
         compiler::please_do_not_optimize_away(&R1D);
       }
       cudaDeviceSynchronize();
-    }) / n;
-    std::cout << "average batched (cuda, w/ union cache) kernel time: " << runtime / num_runs << std::endl;
+    }) / num_runs;
+    auto error = R1D;
+    error -= answer_reference;
+    auto relative_error = error.Norml2() / answer_reference.Norml2();
+    print("batched_gpu_with_union_cache", n, q, num_elements, runtime, relative_error);
   }
-  answer_reference_cuda = R1D;
-  error = answer_reference;
-  error -= answer_reference_cuda;
-  relative_error = error.Norml2() / answer_reference.Norml2();
-  std::cout << "error: " << relative_error << std::endl;
 
   {
     R1D = 0.0;
@@ -798,14 +806,12 @@ void run_test_suite(int num_elements) {
         compiler::please_do_not_optimize_away(&R1D);
       }
       cudaDeviceSynchronize();
-    }) / n;
-    std::cout << "average batched (cuda, w/ union cacheu, B/G in __constant__ memory) kernel time: " << runtime / num_runs << std::endl;
+    }) / num_runs;
+    auto error = R1D;
+    error -= answer_reference;
+    auto relative_error = error.Norml2() / answer_reference.Norml2();
+    print("batched_gpu_with_union_cache_and_const_memory", n, q, num_elements, runtime, relative_error);
   }
-  answer_reference_cuda = R1D;
-  error = answer_reference;
-  error -= answer_reference_cuda;
-  relative_error = error.Norml2() / answer_reference.Norml2();
-  std::cout << "error: " << relative_error << std::endl;
 
   {
     R1D = 0.0;
@@ -822,14 +828,12 @@ void run_test_suite(int num_elements) {
         compiler::please_do_not_optimize_away(&R1D);
       }
       cudaDeviceSynchronize();
-    }) / n;
-    std::cout << "average batched (cuda, using element library) kernel time: " << runtime / num_runs << std::endl;
+    }) / num_runs;
+    auto error = R1D;
+    error -= answer_reference;
+    auto relative_error = error.Norml2() / answer_reference.Norml2();
+    print("batched_gpu_with_element_library", n, q, num_elements, runtime, relative_error);
   }
-  answer_reference_cuda = R1D;
-  error = answer_reference;
-  error -= answer_reference_cuda;
-  relative_error = error.Norml2() / answer_reference.Norml2();
-  std::cout << "error: " << relative_error << std::endl;
 
   serac::GaussLegendreRule<serac::Geometry::Hexahedron, q> rule;
   auto J = mfem::Reshape(J1D.HostReadWrite(), q * q * q, dim, dim, num_elements);
@@ -871,7 +875,6 @@ void run_test_suite(int num_elements) {
     auto G = mfem::Reshape(g_.HostReadWrite(), q, n);
     auto Gt = mfem::Reshape(gt_.HostReadWrite(), n, q);
 
-
     for (int i = 0; i < q; i++) {
       auto value = serac::GaussLobattoInterpolation<n>(rule.points_1D[i]);
       auto derivative = serac::GaussLobattoInterpolationDerivative<n>(rule.points_1D[i]);
@@ -888,8 +891,7 @@ void run_test_suite(int num_elements) {
         compiler::please_do_not_optimize_away(&R1D);
       }
       cudaDeviceSynchronize();
-    }) / n;
-    std::cout << "average mfem mass kernel time: " << mass_runtime / num_runs << std::endl;
+    }) / num_runs;
 
     double diffusion_runtime = time([&]() {
       for (int i = 0; i < num_runs; i++) {
@@ -897,15 +899,14 @@ void run_test_suite(int num_elements) {
         compiler::please_do_not_optimize_away(&R1D);
       }
       cudaDeviceSynchronize();
-    }) / n;
-    std::cout << "average mfem diffusion kernel time: " << diffusion_runtime / num_runs << std::endl;
+    }) / num_runs;
 
-    std::cout << "average mfem combined kernel time: " << (mass_runtime + diffusion_runtime) / num_runs << std::endl;
-    auto answer_mfem = R1D;
-    auto error = answer_reference;
-    error -= answer_mfem;
+    auto error = R1D;
+    error -= answer_reference;
     auto relative_error = error.Norml2() / answer_reference.Norml2();
-    std::cout << "error: " << relative_error << std::endl;
+    print("mfem_mass", n, q, num_elements, mass_runtime, relative_error);
+    print("mfem_diffusion", n, q, num_elements, diffusion_runtime, relative_error);
+    print("mfem_combined", n, q, num_elements, mass_runtime + diffusion_runtime, relative_error);
 
     R1D = 0.0;
     mass_runtime = time([&]() {
@@ -914,8 +915,7 @@ void run_test_suite(int num_elements) {
         compiler::please_do_not_optimize_away(&R1D);
       }
       cudaDeviceSynchronize();
-    }) / n;
-    std::cout << "average mfem mass kernel (Smem) time: " << mass_runtime / num_runs << std::endl;
+    }) / num_runs;
 
     diffusion_runtime = time([&]() {
       for (int i = 0; i < num_runs; i++) {
@@ -923,16 +923,14 @@ void run_test_suite(int num_elements) {
         compiler::please_do_not_optimize_away(&R1D);
       }
       cudaDeviceSynchronize();
-    }) / n;
-    std::cout << "average mfem diffusion kernel (Smem) time: " << diffusion_runtime / num_runs << std::endl;
+    }) / num_runs;
 
-    std::cout << "average mfem combined kernel (Smem) time: " << (mass_runtime + diffusion_runtime) / num_runs << std::endl;
-    answer_mfem = R1D;
-    error = answer_reference;
-    error -= answer_mfem;
+    error = R1D;
+    error -= answer_reference;
     relative_error = error.Norml2() / answer_reference.Norml2();
-    std::cout << "error: " << relative_error << std::endl;
-
+    print("mfem_mass_smem", n, q, num_elements, mass_runtime, relative_error);
+    print("mfem_diffusion_smem", n, q, num_elements, diffusion_runtime, relative_error);
+    print("mfem_combined_smem", n, q, num_elements, mass_runtime + diffusion_runtime, relative_error);
   }
 
 }
@@ -943,15 +941,31 @@ int main() {
 
   initialize_globals();
 
-  //{
-  //  constexpr int n = 2;
-  //  constexpr int q = 2;
-  //  for (int i = 0; i < 10; i++) {
-  //    int num_elements = 1000 * (1 << i);
-  //    run_test_suite< q, n >(num_elements);
-  //  }
-  //}
+  {
+    constexpr int n = 2;
+    constexpr int q = 2;
+    for (int i = 0; i < 10; i++) {
+      int num_elements = (1024 << i);
+      run_test_suite< q, n >(num_elements);
+    }
+  }
 
-  run_test_suite< 4, 4 >(100000);
+  {
+    constexpr int n = 3;
+    constexpr int q = 3;
+    for (int i = 0; i < 10; i++) {
+      int num_elements = (256 << i);
+      run_test_suite< q, n >(num_elements);
+    }
+  }
+
+  {
+    constexpr int n = 4;
+    constexpr int q = 4;
+    for (int i = 0; i < 10; i++) {
+      int num_elements = (128 << i);
+      run_test_suite< q, n >(num_elements);
+    }
+  }
 
 }
