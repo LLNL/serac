@@ -85,7 +85,9 @@ void StateManager::initialize(axom::sidre::DataStore& ds, const std::string& out
 
 FiniteElementState StateManager::newState(FiniteElementVector::Options&& options, const std::string& mesh_tag)
 {
-  SLIC_ERROR_ROOT_IF(!ds_, "Serac's datacollection was not initialized - call StateManager::initialize first");
+  SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
+  SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
+                     axom::fmt::format("Mesh tag \"{}\" not found in the data store", mesh_tag));
   auto&             datacoll = datacolls_.at(mesh_tag);
   const std::string name     = options.name;
   if (is_restart_) {
@@ -105,7 +107,9 @@ FiniteElementState StateManager::newState(FiniteElementVector::Options&& options
 
 FiniteElementDual StateManager::newDual(FiniteElementVector::Options&& options, const std::string& mesh_tag)
 {
-  SLIC_ERROR_ROOT_IF(!ds_, "Serac's datacollection was not initialized - call StateManager::initialize first");
+  SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
+  SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
+                     axom::fmt::format("Mesh tag \"{}\" not found in the data store", mesh_tag));
   auto&             datacoll = datacolls_.at(mesh_tag);
   const std::string name     = options.name;
   if (is_restart_) {
@@ -132,7 +136,9 @@ FiniteElementDual StateManager::newDual(FiniteElementVector::Options&& options, 
 
 void StateManager::save(const double t, const int cycle, const std::string& mesh_tag)
 {
-  SLIC_ERROR_ROOT_IF(!ds_, "Serac's datacollection was not initialized - call StateManager::initialize first");
+  SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
+  SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
+                     axom::fmt::format("Mesh tag \"{}\" not found in the data store", mesh_tag));
   auto&       datacoll  = datacolls_.at(mesh_tag);
   std::string file_path = axom::utilities::filesystem::joinPath(datacoll.GetPrefixPath(), datacoll.GetCollectionName());
   SLIC_INFO_ROOT(axom::fmt::format("Saving data collection at time: {} to path: {}", t, file_path));
@@ -161,6 +167,8 @@ mfem::ParMesh* StateManager::setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const
 
 mfem::ParMesh& StateManager::mesh(const std::string& mesh_tag)
 {
+  SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
+                     axom::fmt::format("Mesh tag \"{}\" not found in the data store", mesh_tag));
   auto mesh = datacolls_.at(mesh_tag).GetMesh();
   SLIC_ERROR_ROOT_IF(!mesh, "The datacollection does not contain a mesh object");
   return static_cast<mfem::ParMesh&>(*mesh);
