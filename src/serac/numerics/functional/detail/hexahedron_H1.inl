@@ -85,10 +85,10 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
     // X_q(u, v, w) := (B(u, i) * B(v, j) * B(w, k)) * X_e(i, j, k)
     //
     // where 
-    //   q(u, v, w) are the quadrature-point values at position {u, v, w}, 
+    //   X_q(u, v, w) are the quadrature-point values at position {u, v, w}, 
     //   B(u, i) is the i^{th} 1D interpolation/differentiation (shape) function, 
     //           evaluated at the u^{th} 1D quadrature point, and
-    //   X(i, j, k) are the values at node {i, j, k} to be interpolated 
+    //   X_e(i, j, k) are the values at node {i, j, k} to be interpolated 
     //
     // this algorithm carries out the above calculation in 3 steps:
     //

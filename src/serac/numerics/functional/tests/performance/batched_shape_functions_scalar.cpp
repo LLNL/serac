@@ -286,54 +286,6 @@ static void PADiffusionApply3D(const int NE, const bool symmetric,
 
 namespace serac {
 
-template < Geometry geom, typename test, typename trial, int Q, typename lambda >
-void reference_kernel(const mfem::Vector & U_, mfem::Vector & R_, const mfem::Vector & J_, size_t num_elements_, lambda qf_) {
-
-  using trial_element              = finite_element<geom, trial>;
-  using test_element               = finite_element<geom, test>;
-  using element_residual_type      = typename test_element::residual_type;
-  static constexpr int  dim        = dimension_of(geom);
-  static constexpr int  test_ndof  = test_element::ndof;
-  static constexpr int  trial_ndof = trial_element::ndof;
-  static constexpr auto rule       = GaussQuadratureRule<geom, Q>();
-
-  // mfem provides this information in 1D arrays, so we reshape it
-  // into strided multidimensional arrays before using
-  auto J = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements_);
-  auto r = detail::Reshape<test>(R_.ReadWrite(), test_ndof, int(num_elements_));
-  auto u = detail::Reshape<test>(U_.Read(), trial_ndof, int(num_elements_));
-
-  // for each element in the domain
-  for (uint32_t e = 0; e < num_elements_; e++) {
-
-    // get the DOF values for this particular element
-    auto u_elem = detail::Load<trial_element>(u, e);
-
-    // this is where we will accumulate the element residual tensor
-    element_residual_type r_elem{};
-
-    // for each quadrature point in the element
-    for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-      auto   xi  = rule.points[q];
-      auto   dxi = rule.weights[q];
-      auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
-      double dx  = det(J_q) * dxi;
-
-      // evaluate the value/derivatives needed for the q-function at this quadrature point
-      auto arg = domain_integral::Preprocess<trial_element>(u_elem, xi, J_q);
-
-      // integrate qf_output against test space shape functions / gradients
-      // to get element residual contributions
-      r_elem += domain_integral::Postprocess<test_element>(qf_(arg), xi, J_q) * dx;
-
-    }
-
-    // once we've finished the element integration loop, write our element residuals
-    // out to memory, to be later assembled into global residuals by mfem
-    detail::Add(r, r_elem, int(e));
-  }
-
-}
 
 template < Geometry g, int Q >
 struct GaussLegendreRule;
@@ -962,6 +914,55 @@ SERAC_HOST_DEVICE void Add(const mfem::DeviceTensor<4, double>& r_global, const 
 }
 
 template < Geometry geom, typename test, typename trial, int Q, typename lambda >
+void reference_kernel(const mfem::Vector & U_, mfem::Vector & R_, const mfem::Vector & J_, size_t num_elements_, lambda qf_) {
+
+  using trial_element              = finite_element<geom, trial>;
+  using test_element               = finite_element<geom, test>;
+  using element_residual_type      = typename test_element::residual_type;
+  static constexpr int  dim        = dimension_of(geom);
+  static constexpr int  test_ndof  = test_element::ndof;
+  static constexpr int  trial_ndof = trial_element::ndof;
+  static constexpr auto rule       = GaussQuadratureRule<geom, Q>();
+
+  // mfem provides this information in 1D arrays, so we reshape it
+  // into strided multidimensional arrays before using
+  auto J = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements_);
+  auto r = detail::Reshape<test>(R_.ReadWrite(), test_ndof, int(num_elements_));
+  auto u = detail::Reshape<test>(U_.Read(), trial_ndof, int(num_elements_));
+
+  // for each element in the domain
+  for (uint32_t e = 0; e < num_elements_; e++) {
+
+    // get the DOF values for this particular element
+    auto u_elem = detail::Load<trial_element>(u, e);
+
+    // this is where we will accumulate the element residual tensor
+    element_residual_type r_elem{};
+
+    // for each quadrature point in the element
+    for (int q = 0; q < static_cast<int>(rule.size()); q++) {
+      auto   xi  = rule.points[q];
+      auto   dxi = rule.weights[q];
+      auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
+      double dx  = det(J_q) * dxi;
+
+      // evaluate the value/derivatives needed for the q-function at this quadrature point
+      auto arg = domain_integral::Preprocess<trial_element>(u_elem, xi, J_q);
+
+      // integrate qf_output against test space shape functions / gradients
+      // to get element residual contributions
+      r_elem += domain_integral::Postprocess<test_element>(qf_(arg), xi, J_q) * dx;
+
+    }
+
+    // once we've finished the element integration loop, write our element residuals
+    // out to memory, to be later assembled into global residuals by mfem
+    detail::Add(r, r_elem, int(e));
+  }
+
+}
+
+template < Geometry geom, typename test, typename trial, int Q, typename lambda >
 void batched_kernel(const mfem::Vector & U_, mfem::Vector & R_, const mfem::Vector & J_, size_t num_elements_, lambda qf_) {
 
   using trial_element              = finite_element<geom, trial>;
@@ -980,12 +981,16 @@ void batched_kernel(const mfem::Vector & U_, mfem::Vector & R_, const mfem::Vect
   // for each element in the domain
   for (uint32_t e = 0; e < num_elements_; e++) {
 
+    // batch-interpolate all of the quadrature point values at once
     auto args = BatchPreprocess<trial>(u, rule, e);
 
+    // batch-apply the q-function to each quadrature point at once
     auto qf_outputs = BatchApply(qf_, args, rule, J, e);
 
+    // batch-integrate the material response against the test functions at once
     auto r_elem = BatchPostprocess<test>(qf_outputs, rule);
 
+    // write the element residuals back out to memory
     detail::Add(r, r_elem, int(e));
 
   }
