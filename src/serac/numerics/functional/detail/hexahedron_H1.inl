@@ -80,6 +80,22 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
   static __device__ auto interpolate(const tensor<double, c, n, n, n>& X, const TensorProductQuadratureRule<q> & rule, 
                               tensor<double, 2, n, n, q>& A1, tensor<double, 3, n, q, q>& A2) {
 
+    // we want to compute the following:
+    //
+    // X_q(u, v, w) := (B(u, i) * B(v, j) * B(w, k)) * X_e(i, j, k)
+    //
+    // where 
+    //   q(u, v, w) are the quadrature-point values at position {u, v, w}, 
+    //   B(u, i) is the i^{th} 1D interpolation/differentiation (shape) function, 
+    //           evaluated at the u^{th} 1D quadrature point, and
+    //   X(i, j, k) are the values at node {i, j, k} to be interpolated 
+    //
+    // this algorithm carries out the above calculation in 3 steps:
+    //
+    // A1(dz, dy, qx)  := B(qx, dx) * X_e(dz, dy, dx)
+    // A2(dz, qy, qx)  := B(qy, dy) * A1(dz, dy, qx)
+    // X_q(qz, qy, qx) := B(qz, dz) * A2(dz, qy, qx)
+
     static constexpr auto points1D = GaussLegendreNodes<q>();
     static constexpr auto B_ = [=](){
       tensor< double, q, n > B{};
