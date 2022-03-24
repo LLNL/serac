@@ -80,12 +80,31 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
   static __device__ auto interpolate(const tensor<double, c, n, n, n>& X, const TensorProductQuadratureRule<q> & rule, 
                               tensor<double, 2, n, n, q>& A1, tensor<double, 3, n, q, q>& A2) {
 
+    static constexpr auto points1D = GaussLegendreNodes<q>();
+    static constexpr auto B_ = [=](){
+      tensor< double, q, n > B{};
+      for (int i = 0; i < q; i++) {
+        B[i] = GaussLobattoInterpolation<n>(points1D[i]);
+      }
+      return B;
+    }();
+
+    static constexpr auto G_ = [=](){
+      tensor< double, q, n > G{};
+      for (int i = 0; i < q; i++) {
+        G[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);
+      }
+      return G;
+    }();
+
     __shared__ tensor< double, q, n > B;
     __shared__ tensor< double, q, n > G;
-    if (threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
-      for (int i = threadIdx.x; i < q; i += blockDim.x) {
-        B[i] = GaussLobattoInterpolation<n>(rule.points1D[i]);
-        G[i] = GaussLobattoInterpolationDerivative<n>(rule.points1D[i]);
+    if (threadIdx.z == 0) {
+      for (int j = threadIdx.y; j < q; j += blockDim.y) {
+        for (int i = threadIdx.x; i < n; i += blockDim.x) {
+          B(j, i) = B_(j, i);
+          G(j, i) = G_(j, i);
+        }
       }
     }
     __syncthreads();
@@ -150,12 +169,31 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
                                      mfem::DeviceTensor<5, double> r_e, int e,
                                      tensor<double, 3, q, q, n>& A1, tensor<double, 2, q, n, n>& A2) {
                                       
+    static constexpr auto points1D = GaussLegendreNodes<q>();
+    static constexpr auto B_ = [=](){
+      tensor< double, q, n > B{};
+      for (int i = 0; i < q; i++) {
+        B[i] = GaussLobattoInterpolation<n>(points1D[i]);
+      }
+      return B;
+    }();
+
+    static constexpr auto G_ = [=](){
+      tensor< double, q, n > G{};
+      for (int i = 0; i < q; i++) {
+        G[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);
+      }
+      return G;
+    }();
+
     __shared__ tensor< double, q, n > B;
     __shared__ tensor< double, q, n > G;
-    if (threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
-      for (int i = threadIdx.x; i < q; i += blockDim.x) {
-        B[i] = GaussLobattoInterpolation<n>(rule.points1D[i]);
-        G[i] = GaussLobattoInterpolationDerivative<n>(rule.points1D[i]);
+    if (threadIdx.z == 0) {
+      for (int j = threadIdx.y; j < q; j += blockDim.y) {
+        for (int i = threadIdx.x; i < n; i += blockDim.x) {
+          B(j, i) = B_(j, i);
+          G(j, i) = G_(j, i);
+        }
       }
     }
     __syncthreads();

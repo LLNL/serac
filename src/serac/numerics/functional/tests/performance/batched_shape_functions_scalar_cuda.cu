@@ -1223,13 +1223,12 @@ __device__ auto batch_apply_qf(lambda qf, T qf_input, TensorProductQuadratureRul
 
   flux = dot(flux, transpose(invJ));
 
-  //  serac::get<1>(qf_output) = dot(invJ, serac::get<1>(qf_output));
-
   cache_source(0, threadIdx.z, threadIdx.y, threadIdx.x) = source;
 
   cache_flux(0, 0, threadIdx.z, threadIdx.y, threadIdx.x) = flux[0][0];
   cache_flux(1, 0, threadIdx.z, threadIdx.y, threadIdx.x) = flux[0][1];
   cache_flux(2, 0, threadIdx.z, threadIdx.y, threadIdx.x) = flux[0][2];
+  __syncthreads();
 
 }
 
