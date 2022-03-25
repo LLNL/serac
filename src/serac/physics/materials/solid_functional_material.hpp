@@ -18,6 +18,30 @@
 namespace serac::solid_util {
 
 /**
+ * @brief Response data type for thermal conduction simulations
+ *
+ * @tparam T1 Density type
+ * @tparam T2 Stress type (i.e. second order tensor)
+ */
+template <typename T1, typename T2>
+struct MaterialResponse {
+  /// Density of the material (mass/volume)
+  T1 density;
+
+  /// Kirchoff stress (det(deformation gradient) * Cauchy stress) for the constitutive model
+  T2 stress;
+};
+
+/**
+ * @brief Template deduction guide for the material response
+ *
+ * @tparam T1 Density type
+ * @tparam T2 Stress type
+ */
+template <typename T1, typename T2>
+MaterialResponse(T1, T2) -> MaterialResponse<T1, T2>;
+
+/**
  * @brief Linear isotropic elasticity material model
  *
  * @tparam dim Spatial dimension of the mesh
@@ -52,29 +76,23 @@ public:
   }
 
   /**
-   * @brief Function defining the Kirchoff stress (constitutive response)
+   * @brief Material response call for a linear isotropic solid
    *
-   * @tparam T type of the Kirchoff stress (i.e. second order tensor)
+   * @tparam T1 Spatial position type
+   * @tparam T2 Displacement type
+   * @tparam T3 Displacement gradient type
    * @param du_dX displacement gradient with respect to the reference configuration (du_dX)
-   * @return The Kirchoff stress (det(deformation gradient) * Cauchy stress) for the constitutive model
+   * @return The calculated material response (density, kirchoff stress) for the material
    */
-  template <typename T>
-  SERAC_HOST_DEVICE T operator()(const T& du_dX) const
+  template <typename T1, typename T2, typename T3>
+  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* displacement */, const T3& du_dX) const
   {
     auto I      = Identity<dim>();
     auto lambda = bulk_modulus_ - (2.0 / dim) * shear_modulus_;
     auto strain = 0.5 * (du_dX + transpose(du_dX));
     auto stress = lambda * tr(strain) * I + 2.0 * shear_modulus_ * strain;
-    return stress;
+    return MaterialResponse<double, T3>{.density = density_, .stress = stress};
   }
-
-  /**
-   * @brief The density (mass per volume) of the material model
-   *
-   * @tparam dim The dimension of the problem
-   * @return The density
-   */
-  SERAC_HOST_DEVICE double density(const tensor<double, dim>& /* x */) const { return density_; }
 
 private:
   /// Density
@@ -119,14 +137,16 @@ public:
   }
 
   /**
-   * @brief Function defining the Kirchoff stress (constitutive response)
+   * @brief Material response call for a neo-Hookean solid
    *
-   * @tparam T type of the Kirchoff stress (i.e. second order tensor)
+   * @tparam T1 Spatial position type
+   * @tparam T2 Displacement type
+   * @tparam T3 Displacement gradient type
    * @param du_dX displacement gradient with respect to the reference configuration (du_dX)
-   * @return The Kirchoff stress (det(deformation gradient) * Cauchy stress) for the constitutive model
+   * @return The calculated material response (density, kirchoff stress) for the material
    */
-  template <typename T>
-  SERAC_HOST_DEVICE T operator()(const T& du_dX) const
+  template <typename T1, typename T2, typename T3>
+  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* displacement */, const T3& du_dX) const
   {
     auto I         = Identity<dim>();
     auto lambda    = bulk_modulus_ - (2.0 / dim) * shear_modulus_;
@@ -139,16 +159,8 @@ public:
     // double version there. More investigation into argument-dependent lookup is needed.
     using std::log;
     auto stress = lambda * log(J) * I + shear_modulus_ * B_minus_I;
-    return stress;
+    return MaterialResponse<double, T3>{.density = density_, .stress = stress};
   }
-
-  /**
-   * @brief The density (mass per volume) of the material model
-   *
-   * @tparam dim The dimension of the problem
-   * @return The density
-   */
-  SERAC_HOST_DEVICE double density(const tensor<double, dim>& /* x */) const { return density_; }
 
 private:
   /// Density

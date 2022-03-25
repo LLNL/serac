@@ -24,6 +24,38 @@
 
 namespace serac {
 
+namespace solid_util {
+/// A timestep and boundary condition enforcement method for a dynamic solver
+struct TimesteppingOptions {
+  /// The timestepping method to be applied
+  TimestepMethod timestepper;
+
+  /// The essential boundary enforcement method to use
+  DirichletEnforcementMethod enforcement_method;
+};
+
+/**
+ * @brief A configuration variant for the various solves
+ * For quasistatic solves, leave the @a dyn_options parameter null. @a T_nonlin_options and @a T_lin_options
+ * define the solver parameters for the nonlinear residual and linear stiffness solves. For
+ * dynamic problems, @a dyn_options defines the timestepping scheme while @a T_lin_options and @a T_nonlin_options
+ * define the nonlinear residual and linear stiffness solve options as before.
+ */
+struct SolverOptions {
+  /// The linear solver options
+  LinearSolverOptions H_lin_options;
+
+  /// The nonlinear solver options
+  NonlinearSolverOptions H_nonlin_options;
+
+  /**
+   * @brief The optional ODE solver parameters
+   * @note If this is not defined, a quasi-static solve is performed
+   */
+  std::optional<TimesteppingOptions> dyn_options = std::nullopt;
+};
+}  // namespace solid_util
+
 /**
  * @brief The nonlinear solid solver class
  *
@@ -34,39 +66,9 @@ namespace serac {
  * @tparam order The order of the discretization of the displacement and velocity fields
  * @tparam dim The spatial dimension of the mesh
  */
-template <int order, int dim>
+template <int order, int dim, typename... parameter_space>
 class SolidFunctional : public BasePhysics {
 public:
-  /// A timestep and boundary condition enforcement method for a dynamic solver
-  struct TimesteppingOptions {
-    /// The timestepping method to be applied
-    TimestepMethod timestepper;
-
-    /// The essential boundary enforcement method to use
-    DirichletEnforcementMethod enforcement_method;
-  };
-
-  /**
-   * @brief A configuration variant for the various solves
-   * For quasistatic solves, leave the @a dyn_options parameter null. @a T_nonlin_options and @a T_lin_options
-   * define the solver parameters for the nonlinear residual and linear stiffness solves. For
-   * dynamic problems, @a dyn_options defines the timestepping scheme while @a T_lin_options and @a T_nonlin_options
-   * define the nonlinear residual and linear stiffness solve options as before.
-   */
-  struct SolverOptions {
-    /// The linear solver options
-    LinearSolverOptions H_lin_options;
-
-    /// The nonlinear solver options
-    NonlinearSolverOptions H_nonlin_options;
-
-    /**
-     * @brief The optional ODE solver parameters
-     * @note If this is not defined, a quasi-static solve is performed
-     */
-    std::optional<TimesteppingOptions> dyn_options = std::nullopt;
-  };
-
   /**
    * @brief Construct a new Solid Functional object
    *
@@ -75,15 +77,18 @@ public:
    * @param keep_deformation Flag to keep the deformation in the underlying mesh post-destruction
    * @param name An optional name for the physics module instance
    */
-  SolidFunctional(const SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
-                  FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "")
+  SolidFunctional(
+      const solid_util::SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
+      FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "",
+      std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states = {})
       : BasePhysics(2, order),
         velocity_(StateManager::newState(FiniteElementState::Options{
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "velocity")})),
         displacement_(StateManager::newState(FiniteElementState::Options{
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "displacement")})),
-        M_functional_(&displacement_.space(), {&displacement_.space()}),
-        K_functional_(&displacement_.space(), {&displacement_.space()}),
+        adjoint_displacement_(StateManager::newState(FiniteElementState::Options{
+            .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "adjoint_displacement")})),
+        parameter_states_(parameter_states),
         ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
               nonlin_solver_, bcs_),
         geom_nonlin_(geom_nonlin),
@@ -91,6 +96,22 @@ public:
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
+
+    // Create a pack of the primal field and parameter finite element spaces
+    std::array<mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + 1> trial_spaces;
+    trial_spaces[0] = &displacement_.space();
+
+    functional_call_args_.emplace_back(displacement_.trueVec());
+
+    for (size_t i = 0; i < sizeof...(parameter_space); ++i) {
+      trial_spaces[i + 1]         = &(parameter_states_[i].get().space());
+      parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, parameter_states_[i].get().space());
+      functional_call_args_.emplace_back(parameter_states_[i].get().trueVec());
+    }
+
+    M_functional_ = std::make_unique<Functional<test(trial, parameter_space...)>>(&displacement_.space(), trial_spaces);
+
+    K_functional_ = std::make_unique<Functional<test(trial, parameter_space...)>>(&displacement_.space(), trial_spaces);
 
     state_.push_back(velocity_);
     state_.push_back(displacement_);
@@ -241,20 +262,25 @@ public:
   template <typename MaterialType>
   void setMaterial(MaterialType material)
   {
-    static_assert(has_density<MaterialType, dim>::value,
-                  "Solid functional materials must have a public density(x) method.");
-    static_assert(has_stress<MaterialType, dim>::value,
-                  "Solid functional materials must have a public (du_dx) operator for Kirchoff stress evaluation.");
+    if constexpr (is_parameterized<MaterialType>::value) {
+      static_assert(material.numParameters() == sizeof...(parameter_space),
+                    "Number of parameters in solid does not equal the number of parameters in the "
+                    "solid material.");
+    }
 
-    K_functional_.AddDomainIntegral(
+    auto parameterized_material = parameterizeMaterial(material);
+
+    K_functional_->AddDomainIntegral(
         Dimension<dim>{},
-        [this, material](auto, auto displacement) {
+        [this, parameterized_material](auto x, auto displacement, auto... params) {
           // Get the value and the gradient from the input tuple
           auto [u, du_dX] = displacement;
 
           auto source = zero{};
 
-          auto flux = material(du_dX);
+          auto response = parameterized_material(x, u, du_dX, serac::get<0>(params)...);
+
+          auto flux = response.stress;
 
           if (geom_nonlin_ == GeometricNonlinearities::On) {
             auto deformation_grad = du_dX + I_;
@@ -265,17 +291,19 @@ public:
         },
         mesh_);
 
-    M_functional_.AddDomainIntegral(
+    M_functional_->AddDomainIntegral(
         Dimension<dim>{},
-        [this, material](auto x, auto displacement) {
+        [this, parameterized_material](auto x, auto displacement, auto... params) {
           auto [u, du_dX] = displacement;
+
+          auto response = parameterized_material(x, u, du_dX, serac::get<0>(params)...);
 
           auto flux = 0.0 * du_dX;
 
           double geom_factor = (geom_nonlin_ == GeometricNonlinearities::On ? 1.0 : 0.0);
 
           auto deformation_grad = du_dX + I_;
-          auto source           = material.density(x) * u * (1.0 + geom_factor * (det(deformation_grad) - 1.0));
+          auto source           = response.density * u * (1.0 + geom_factor * (det(deformation_grad) - 1.0));
 
           return serac::tuple{source, flux};
         },
@@ -319,12 +347,17 @@ public:
   template <typename BodyForceType>
   void addBodyForce(BodyForceType body_force_function)
   {
-    static_assert(has_body_force<BodyForceType, dim>::value,
-                  "Body forces must have a public (x, t, u, du_dx) operator for force evaluation.");
+    if constexpr (is_parameterized<BodyForceType>::value) {
+      static_assert(body_force_function.numParameters() == sizeof...(parameter_space),
+                    "Number of parameters in solid not equal the number of parameters in the "
+                    "body force.");
+    }
 
-    K_functional_.AddDomainIntegral(
+    auto parameterized_body_force = parameterizeSource(body_force_function);
+
+    K_functional_->AddDomainIntegral(
         Dimension<dim>{},
-        [body_force_function, this](auto x, auto displacement) {
+        [parameterized_body_force, this](auto x, auto displacement, auto... params) {
           // Get the value and the gradient from the input tuple
           auto [u, du_dX] = displacement;
 
@@ -334,7 +367,8 @@ public:
 
           auto deformation_grad = du_dX + I_;
 
-          auto source = body_force_function(x, time_, u, du_dX) * (1.0 + geom_factor * (det(deformation_grad) - 1.0));
+          auto source = parameterized_body_force(x, time_, u, du_dX, serac::get<0>(params)...) *
+                        (1.0 + geom_factor * (det(deformation_grad) - 1.0));
           return serac::tuple{source, flux};
         },
         mesh_);
@@ -352,15 +386,23 @@ public:
   template <typename TractionType>
   void setTractionBCs(TractionType traction_function, bool compute_on_reference = true)
   {
-    static_assert(has_traction_boundary<TractionType, dim>::value,
-                  "Traction must have a public (x, n, t) operator for traction evaluation.");
+    if constexpr (is_parameterized<TractionType>::value) {
+      static_assert(traction_function.numParameters() == sizeof...(parameter_space),
+                    "Number of parameters in solid does not equal the number of parameters in the "
+                    "traction boundary.");
+    }
+
+    auto parameterized_traction = parameterizeFlux(traction_function);
 
     // TODO fix this when we can get gradients from boundary integrals
     SLIC_ERROR_IF(!compute_on_reference, "SolidFunctional cannot compute traction BCs in deformed configuration");
 
-    K_functional_.AddBoundaryIntegral(
+    K_functional_->AddBoundaryIntegral(
         Dimension<dim - 1>{},
-        [this, traction_function](auto x, auto n, auto) { return -1.0 * traction_function(x, n, time_); }, mesh_);
+        [this, parameterized_traction](auto x, auto n, auto, auto... params) {
+          return -1.0 * parameterized_traction(x, n, time_, params...);
+        },
+        mesh_);
   }
 
   /**
@@ -375,15 +417,23 @@ public:
   template <typename PressureType>
   void setPressureBCs(PressureType pressure_function, bool compute_on_reference = true)
   {
-    static_assert(has_pressure_boundary<PressureType, dim>::value,
-                  "Pressure must have a public (x, t) operator for pressure evaluation.");
+    if constexpr (is_parameterized<PressureType>::value) {
+      static_assert(pressure_function.numParameters() == sizeof...(parameter_space),
+                    "Number of parameters in solid does not equal the number of parameters in the "
+                    "pressure boundary.");
+    }
+
+    auto parameterized_pressure = parameterizePressure(pressure_function);
 
     // TODO fix this when we can get gradients from boundary integrals
     SLIC_ERROR_IF(!compute_on_reference, "SolidFunctional cannot compute pressure BCs in deformed configuration");
 
-    K_functional_.AddBoundaryIntegral(
+    K_functional_->AddBoundaryIntegral(
         Dimension<dim - 1>{},
-        [this, pressure_function](auto x, auto n, auto) { return pressure_function(x, time_) * n; }, mesh_);
+        [this, parameterized_pressure](auto x, auto n, auto, auto... params) {
+          return parameterized_pressure(x, time_, params...) * n;
+        },
+        mesh_);
   }
 
   /**
@@ -395,6 +445,16 @@ public:
 
   /// @overload
   serac::FiniteElementState& displacement() { return displacement_; };
+
+  /**
+   * @brief Get the adjoint displacement state
+   *
+   * @return A reference to the current adjoint displacement finite element state
+   */
+  const serac::FiniteElementState& adjointDisplacement() const { return adjoint_displacement_; };
+
+  /// @overload
+  serac::FiniteElementState& adjointDisplacement() { return adjoint_displacement_; };
 
   /**
    * @brief Get the velocity state
@@ -428,13 +488,17 @@ public:
 
         // residual function
         [this](const mfem::Vector& u, mfem::Vector& r) {
-          r = K_functional_(u);
+          functional_call_args_[0] = u;
+
+          r = (*K_functional_)(u);
           r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
         },
 
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
-          auto [r, drdu] = K_functional_(differentiate_wrt(u));
+          functional_call_args_[0] = u;
+
+          auto [r, drdu] = (*K_functional_)(functional_call_args_, Index<0>{});
           J_             = assemble(drdu);
           bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
           return *J_;
@@ -471,23 +535,37 @@ public:
           displacement_.space().TrueVSize(),
 
           [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) {
+            functional_call_args_[0] = d2u_dt2;
+
+            auto M_residual = (*M_functional_)(functional_call_args_);
+
             mfem::Vector K_arg(u_.Size());
             add(1.0, u_, c0_, d2u_dt2, K_arg);
+            functional_call_args_[0] = K_arg;
 
-            add(M_functional_(d2u_dt2), K_functional_(K_arg), r);
+            auto K_residual = (*K_functional_)(functional_call_args_);
 
+            functional_call_args_[0] = u_;
+
+            add(M_residual, K_residual, r);
             r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
           },
 
           [this](const mfem::Vector& d2u_dt2) -> mfem::Operator& {
+            functional_call_args_[0] = d2u_dt2;
+
+            auto M = serac::get<1>((*M_functional_)(functional_call_args_, Index<0>{}));
+            std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
+
             // J = M + c0 * H(u_predicted)
             mfem::Vector K_arg(u_.Size());
             add(1.0, u_, c0_, d2u_dt2, K_arg);
+            functional_call_args_[0] = K_arg;
 
-            auto                                  M = serac::get<1>(M_functional_(differentiate_wrt(u_)));
-            std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
+            auto K = serac::get<1>((*K_functional_)(functional_call_args_, Index<0>{}));
 
-            auto                                  K = serac::get<1>(K_functional_(differentiate_wrt(K_arg)));
+            functional_call_args_[0] = u_;
+
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             J_.reset(mfem::Add(1.0, *m_mat, c0_, *k_mat));
@@ -513,11 +591,23 @@ protected:
   /// The displacement finite element state
   FiniteElementState displacement_;
 
+  /// The displacement finite element state
+  FiniteElementState adjoint_displacement_;
+
   /// Mass functional object
-  Functional<test(trial)> M_functional_;
+  std::unique_ptr<Functional<test(trial)>> M_functional_;
 
   /// Stiffness functional object
-  Functional<test(trial)> K_functional_;
+  std::unique_ptr<Functional<test(trial)>> K_functional_;
+
+  /// The finite element states representing user-defined parameter fields
+  std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states_;
+
+  /// The sensitivities (dual vectors) with repect to each of the input parameter fields
+  std::array<std::unique_ptr<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;
+
+  /// The set of input trial space vectors (temperature + parameters) used to call the underlying functional
+  std::vector<std::reference_wrapper<const mfem::Vector>> functional_call_args_;
 
   /**
    * @brief mfem::Operator that describes the nonlinear residual

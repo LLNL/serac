@@ -54,8 +54,7 @@ void functional_solid_test_static(double expected_disp_norm)
   const NonlinearSolverOptions default_nonlinear_options = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
 
-  const typename SolidFunctional<p, dim>::SolverOptions default_static = {default_linear_options,
-                                                                          default_nonlinear_options};
+  const typename solid_util::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
 
   // Construct a functional-based thermal conduction solver
   SolidFunctional<p, dim> solid_solver(default_static, GeometricNonlinearities::On, FinalMeshOption::Reference,
@@ -132,11 +131,11 @@ void functional_solid_test_dynamic(double expected_disp_norm)
   const NonlinearSolverOptions default_nonlinear_options = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
 
-  const typename SolidFunctional<p, dim>::TimesteppingOptions default_timestep = {
-      TimestepMethod::AverageAcceleration, DirichletEnforcementMethod::RateControl};
+  const typename solid_util::TimesteppingOptions default_timestep = {TimestepMethod::AverageAcceleration,
+                                                                     DirichletEnforcementMethod::RateControl};
 
-  const typename SolidFunctional<p, dim>::SolverOptions default_dynamic = {default_linear_options,
-                                                                           default_nonlinear_options, default_timestep};
+  const typename solid_util::SolverOptions default_dynamic = {default_linear_options, default_nonlinear_options,
+                                                              default_timestep};
 
   // Construct a functional-based thermal conduction solver
   SolidFunctional<p, dim> solid_solver(default_dynamic, GeometricNonlinearities::Off, FinalMeshOption::Reference,
@@ -220,8 +219,7 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
   const NonlinearSolverOptions default_nonlinear_options = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
 
-  const typename SolidFunctional<p, dim>::SolverOptions default_static = {default_linear_options,
-                                                                          default_nonlinear_options};
+  const typename solid_util::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
 
   // Construct a functional-based thermal conduction solver
   SolidFunctional<p, dim> solid_solver(default_static, GeometricNonlinearities::Off, FinalMeshOption::Reference,

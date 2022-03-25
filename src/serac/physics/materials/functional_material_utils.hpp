@@ -16,16 +16,6 @@
 
 namespace serac {
 
-// Use SFINAE to add static assertions checking if the given thermal material type is acceptable
-template <typename T, int dim, typename = void>
-struct has_density : std::false_type {
-};
-
-template <typename T, int dim>
-struct has_density<T, dim, std::void_t<decltype(std::declval<T&>().density(std::declval<tensor<double, dim>&>()))>>
-    : std::true_type {
-};
-
 template <typename T, typename = void>
 struct is_parameterized : std::false_type {
 };
@@ -198,50 +188,57 @@ auto parameterizeFlux(T& flux)
   }
 }
 
-template <typename T, int dim, typename = void>
-struct has_stress : std::false_type {
+/**
+ * @brief Wrapper to treat an unparameterized source as a parameterized one
+ *
+ * @tparam UnparameterizedSourceType The unparameterized source
+ */
+template <typename UnparameterizedPressureType>
+struct TriviallyParameterizedPressure {
+  /**
+   * @brief Wrapper for an unparameterized source in a parameterized context
+   *
+   * @tparam T1 Spatial position type
+   * @tparam T2 Temperature type
+   * @tparam T3 Temperature gradient type
+   * @tparam S Unused parameter pack type
+   * @param x Spatial position
+   * @param t Time
+   * @return Volumetric source for the unparameterized source
+   */
+  template <typename T1, typename... S>
+  SERAC_HOST_DEVICE auto operator()(const T1& x, double t, S...) const
+  {
+    return pressure(x, t);
+  }
+
+  /// Underlying unparameterized source
+  UnparameterizedPressureType pressure;
 };
 
-template <typename T, int dim>
-struct has_stress<T, dim, std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, dim, dim>&>()))>>
-    : std::true_type {
-};
+/**
+ * @brief Template deduction guide for the trivially parameterized source
+ *
+ * @tparam T The unparameterized source type
+ */
+template <typename T>
+TriviallyParameterizedPressure(T) -> TriviallyParameterizedPressure<T>;
 
-// Use SFINAE to add static assertions checking if the given thermal source type is acceptable
-template <typename T, int dim, typename = void>
-struct has_body_force : std::false_type {
-};
-
-template <typename T, int dim>
-struct has_body_force<T, dim,
-                      std::void_t<decltype(std::declval<T&>()(
-                          std::declval<tensor<double, dim>&>(), std::declval<double>(),
-                          std::declval<tensor<double, dim>&>(), std::declval<tensor<double, dim, dim>&>()))>>
-    : std::true_type {
-};
-
-// Use SFINAE to add static assertions checking if the given thermal flux boundary type is acceptable
-template <typename T, int dim, typename = void>
-struct has_traction_boundary : std::false_type {
-};
-
-template <typename T, int dim>
-struct has_traction_boundary<
-    T, dim,
-    std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, dim>&>(), std::declval<tensor<double, dim>&>(),
-                                            std::declval<tensor<double, 1>&>()))>> : std::true_type {
-};
-
-// Use SFINAE to add static assertions checking if the given thermal flux boundary type is acceptable
-template <typename T, int dim, typename = void>
-struct has_pressure_boundary : std::false_type {
-};
-
-template <typename T, int dim>
-struct has_pressure_boundary<
-    T, dim,
-    std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, dim>&>(), std::declval<tensor<double, 1>&>()))>>
-    : std::true_type {
-};
+/**
+ * @brief Convert an unparameterized source to one which accepts parameter values in the paren operator
+ *
+ * @tparam T The unparameterized source type
+ * @param source The unparameterized source
+ * @return The parameterized source
+ */
+template <typename T>
+auto parameterizePressure(T& pressure)
+{
+  if constexpr (is_parameterized<T>::value) {
+    return pressure;
+  } else {
+    return TriviallyParameterizedPressure{pressure};
+  }
+}
 
 }  // namespace serac
