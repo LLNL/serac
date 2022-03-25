@@ -941,31 +941,33 @@ int main() {
 
   initialize_globals();
 
-  {
-    constexpr int n = 2;
-    constexpr int q = 2;
-    for (int i = 0; i < 10; i++) {
-      int num_elements = (1024 << i);
-      run_test_suite< q, n >(num_elements);
-    }
-  }
+//  {
+//    constexpr int n = 2;
+//    constexpr int q = 2;
+//    for (int i = 0; i < 10; i++) {
+//      int num_elements = (1024 << i);
+//      run_test_suite< q, n >(num_elements);
+//    }
+//  }
+//
+//  {
+//    constexpr int n = 3;
+//    constexpr int q = 3;
+//    for (int i = 0; i < 10; i++) {
+//      int num_elements = (256 << i);
+//      run_test_suite< q, n >(num_elements);
+//    }
+//  }
+//
+//  {
+//    constexpr int n = 4;
+//    constexpr int q = 4;
+//    for (int i = 0; i < 10; i++) {
+//      int num_elements = (128 << i);
+//      run_test_suite< q, n >(num_elements);
+//    }
+//  }
 
-  {
-    constexpr int n = 3;
-    constexpr int q = 3;
-    for (int i = 0; i < 10; i++) {
-      int num_elements = (256 << i);
-      run_test_suite< q, n >(num_elements);
-    }
-  }
-
-  {
-    constexpr int n = 4;
-    constexpr int q = 4;
-    for (int i = 0; i < 10; i++) {
-      int num_elements = (128 << i);
-      run_test_suite< q, n >(num_elements);
-    }
-  }
+  run_test_suite< 4, 4 >(65536);
 
 }

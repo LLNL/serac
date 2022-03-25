@@ -27,7 +27,8 @@ if(ENABLE_CUDA)
 
     set(functional_performance_tests_cuda 
         sum_factorization_tests.cu # todo: delete this!
-        batched_shape_functions_scalar_cuda.cu)
+        batched_shape_functions_scalar_cuda.cu
+        mass_diffusion_tests_cuda.cu)
 
     foreach(filename ${functional_performance_tests_cuda})
         get_filename_component(test_name ${filename} NAME_WE)
@@ -39,5 +40,6 @@ if(ENABLE_CUDA)
     endforeach()
 
     target_compile_options(batched_shape_functions_scalar_cuda PRIVATE --extended-lambda)
+    target_compile_options(mass_diffusion_tests_cuda PRIVATE --extended-lambda)
 
 endif()
