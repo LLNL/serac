@@ -27,6 +27,7 @@ if(ENABLE_CUDA)
 
     set(functional_performance_tests_cuda 
         sum_factorization_tests.cu # todo: delete this!
+        memory_bandwidth_test.cu
         batched_shape_functions_scalar_cuda.cu
         mass_diffusion_tests_cuda.cu)
 
