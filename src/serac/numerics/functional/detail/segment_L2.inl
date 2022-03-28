@@ -29,9 +29,9 @@ struct finite_element<Geometry::Segment, L2<p, c> > {
   using residual_type =
       typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components> >::type;
 
-  static constexpr tensor<double, ndof> shape_functions(double xi) { return GaussLobattoInterpolation<ndof>(xi); }
+  SERAC_HOST_DEVICE static constexpr tensor<double, ndof> shape_functions(double xi) { return GaussLobattoInterpolation<ndof>(xi); }
 
-  static constexpr tensor<double, ndof> shape_function_gradients(double xi)
+  SERAC_HOST_DEVICE static constexpr tensor<double, ndof> shape_function_gradients(double xi)
   {
     return GaussLobattoInterpolationDerivative<ndof>(xi);
   }
