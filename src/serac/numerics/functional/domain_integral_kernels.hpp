@@ -304,6 +304,22 @@ EvaluationKernel(DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, CPUAr
     -> EvaluationKernel<DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, derivatives_type, lambda,
                         qpt_data_type>;
 
+//clang-format off
+template < bool is_QOI, typename S, typename T >
+auto chain_rule(const S & dfdx, const T & dx) {
+  if constexpr (is_QOI) {
+    return serac::chain_rule(serac::get<0>(dfdx), serac::get<0>(dx)) + serac::chain_rule(serac::get<1>(dfdx), serac::get<1>(dx));
+  }
+
+  if constexpr (!is_QOI) {
+    return serac::tuple{
+      serac::chain_rule(serac::get<0>(serac::get<0>(dfdx)), serac::get<0>(dx)) + serac::chain_rule(serac::get<1>(serac::get<0>(dfdx)), serac::get<1>(dx)),
+      serac::chain_rule(serac::get<0>(serac::get<1>(dfdx)), serac::get<0>(dx)) + serac::chain_rule(serac::get<1>(serac::get<1>(dfdx)), serac::get<1>(dx))
+    };
+  }
+}
+//clang-format on
+
 /**
  * @brief The base kernel template used to create create custom directional derivative
  * kernels associated with finite element calculations
@@ -337,6 +353,7 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
   using element_residual_type      = typename test_element::residual_type;
+  static constexpr bool is_QOI    = (test::family == Family::QOI);
   static constexpr int  dim        = dimension_of(g);
   static constexpr int  test_ndof  = test_element::ndof;
   static constexpr int  trial_ndof = trial_element::ndof;
@@ -371,12 +388,37 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
       // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
       auto dq_darg = qf_derivatives(static_cast<size_t>(e), static_cast<size_t>(q));
 
+#if 0
+      if constexpr (std::is_same<test, QOI>::value) {
+        auto dq = chain_rule(serac::get<0>(dq_darg), serac::get<0>(darg)) + 
+                  chain_rule(serac::get<1>(dq_darg), serac::get<1>(darg));
+
+        // integrate dq against test space shape functions / gradients
+        // to get the (change in) element residual contributions
+        dr_elem += Postprocess<test_element>(dq, xi, J_q) * dx;
+      }
+
+      if constexpr (!std::is_same<test, QOI>::value) {
+        auto dq = serac::tuple{
+          chain_rule(serac::get<0>(serac::get<0>(dq_darg)), serac::get<0>(darg)) + 
+          chain_rule(serac::get<1>(serac::get<0>(dq_darg)), serac::get<1>(darg)),
+          chain_rule(serac::get<0>(serac::get<1>(dq_darg)), serac::get<0>(darg)) + 
+          chain_rule(serac::get<1>(serac::get<1>(dq_darg)), serac::get<1>(darg))
+        };
+
+        // integrate dq against test space shape functions / gradients
+        // to get the (change in) element residual contributions
+        dr_elem += Postprocess<test_element>(dq, xi, J_q) * dx;
+      }
+#else
       // use the chain rule to compute the first-order change in the q-function output
-      auto dq = chain_rule(dq_darg, darg);
+      auto dq = chain_rule<is_QOI>(dq_darg, darg);
 
       // integrate dq against test space shape functions / gradients
       // to get the (change in) element residual contributions
       dr_elem += Postprocess<test_element>(dq, xi, J_q) * dx;
+#endif
+
     }
 
     // once we've finished the element integration loop, write our element residuals

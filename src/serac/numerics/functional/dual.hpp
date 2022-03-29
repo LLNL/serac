@@ -201,14 +201,14 @@ SERAC_HOST_DEVICE constexpr auto& operator-=(dual<gradient_type>& a, double b)
 
 /** @brief implementation of absolute value function for dual numbers */
 template <typename gradient_type>
-auto abs(dual<gradient_type> x)
+SERAC_HOST_DEVICE auto abs(dual<gradient_type> x)
 {
   return (x.value >= 0) ? x : -x;
 }
 
 /** @brief implementation of square root for dual numbers */
 template <typename gradient_type>
-auto sqrt(dual<gradient_type> x)
+SERAC_HOST_DEVICE auto sqrt(dual<gradient_type> x)
 {
   using std::sqrt;
   return dual<gradient_type>{sqrt(x.value), x.gradient / (2.0 * sqrt(x.value))};
@@ -216,7 +216,7 @@ auto sqrt(dual<gradient_type> x)
 
 /** @brief implementation of cosine for dual numbers */
 template <typename gradient_type>
-auto cos(dual<gradient_type> a)
+SERAC_HOST_DEVICE auto cos(dual<gradient_type> a)
 {
   using std::cos, std::sin;
   return dual<gradient_type>{cos(a.value), -a.gradient * sin(a.value)};
@@ -224,7 +224,7 @@ auto cos(dual<gradient_type> a)
 
 /** @brief implementation of sine for dual numbers */
 template <typename gradient_type>
-auto sin(dual<gradient_type> a)
+SERAC_HOST_DEVICE auto sin(dual<gradient_type> a)
 {
   using std::cos, std::sin;
   return dual<gradient_type>{sin(a.value), a.gradient * cos(a.value)};
@@ -232,7 +232,7 @@ auto sin(dual<gradient_type> a)
 
 /** @brief implementation of exponential function for dual numbers */
 template <typename gradient_type>
-auto exp(dual<gradient_type> a)
+SERAC_HOST_DEVICE auto exp(dual<gradient_type> a)
 {
   using std::exp;
   return dual<gradient_type>{exp(a.value), exp(a.value) * a.gradient};
@@ -240,7 +240,7 @@ auto exp(dual<gradient_type> a)
 
 /** @brief implementation of the natural logarithm function for dual numbers */
 template <typename gradient_type>
-auto log(dual<gradient_type> a)
+SERAC_HOST_DEVICE auto log(dual<gradient_type> a)
 {
   using std::log;
   return dual<gradient_type>{log(a.value), a.gradient / a.value};
@@ -248,7 +248,7 @@ auto log(dual<gradient_type> a)
 
 /** @brief implementation of `a` (dual) raised to the `b` (dual) power */
 template <typename gradient_type>
-auto pow(dual<gradient_type> a, dual<gradient_type> b)
+SERAC_HOST_DEVICE auto pow(dual<gradient_type> a, dual<gradient_type> b)
 {
   using std::pow, std::log;
   double value = pow(a.value, b.value);
@@ -257,7 +257,7 @@ auto pow(dual<gradient_type> a, dual<gradient_type> b)
 
 /** @brief implementation of `a` (non-dual) raised to the `b` (dual) power */
 template <typename gradient_type>
-auto pow(double a, dual<gradient_type> b)
+SERAC_HOST_DEVICE auto pow(double a, dual<gradient_type> b)
 {
   using std::pow, std::log;
   double value = pow(a, b.value);
@@ -266,7 +266,7 @@ auto pow(double a, dual<gradient_type> b)
 
 /** @brief implementation of `a` (dual) raised to the `b` (non-dual) power */
 template <typename gradient_type>
-auto pow(dual<gradient_type> a, double b)
+SERAC_HOST_DEVICE auto pow(dual<gradient_type> a, double b)
 {
   using std::pow;
   double value = pow(a.value, b);
