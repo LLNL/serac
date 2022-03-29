@@ -35,12 +35,12 @@ namespace detail {
  * @brief unfortunately std::integral_constant doesn't have __host__ __device__ annotations
  * and we're not using --expt-relaxed-constexpr, so we need to implement something similar
  * to use it in a device context
- * 
+ *
  * @tparam i the value represented by this struct
  */
-template < int i >
-struct integral_constant{
-  SERAC_HOST_DEVICE constexpr operator int(){ return i; } 
+template <int i>
+struct integral_constant {
+  SERAC_HOST_DEVICE constexpr operator int() { return i; }
 };
 
 SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING

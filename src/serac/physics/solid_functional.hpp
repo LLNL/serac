@@ -575,7 +575,7 @@ protected:
   mfem::Vector zero_;
 
   /// @brief Auxilliary identity rank 2 tensor
-  const isotropic_tensor< double, dim, dim > I_ = Identity<dim>();
+  const isotropic_tensor<double, dim, dim> I_ = Identity<dim>();
 };
 
 }  // namespace serac

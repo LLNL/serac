@@ -114,8 +114,8 @@ TEST(tensor, navier_stokes)
   }
 }
 
-TEST(tensor, isotropic_operations) {
-
+TEST(tensor, isotropic_operations)
+{
   double lambda = 5.0;
   double mu     = 3.0;
 
@@ -133,7 +133,7 @@ TEST(tensor, isotropic_operations) {
 
   auto sigma = [=](auto epsilon) { return lambda * tr(epsilon) * I + 2.0 * mu * epsilon; };
 
-  isotropic_tensor< double, 3, 3, 3, 3 > C{lambda, 2 * mu, 0.0};
+  isotropic_tensor<double, 3, 3, 3, 3> C{lambda, 2 * mu, 0.0};
 
   auto strain = sym(A);
 
@@ -142,6 +142,4 @@ TEST(tensor, isotropic_operations) {
   EXPECT_LT(det(I) - 1, tolerance);
   EXPECT_LT(tr(I) - 3, tolerance);
   EXPECT_LT(sqnorm(sym(I) - I), tolerance);
-
-
 }

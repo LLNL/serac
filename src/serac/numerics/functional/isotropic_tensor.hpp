@@ -33,7 +33,7 @@ struct isotropic_tensor<T, n> {
 template <typename T, int m>
 struct isotropic_tensor<T, m, m> {
   SERAC_HOST_DEVICE constexpr T operator()(int i, int j) const { return (i == j) * value; }
-  T value;
+  T                             value;
 };
 
 template <int m>
@@ -179,7 +179,10 @@ SERAC_HOST_DEVICE constexpr auto sqnorm(const isotropic_tensor<T, m, m>& I)
 // rank-3 isotropic tensors are just the alternating symbol
 template <typename T>
 struct isotropic_tensor<T, 3, 3, 3> {
-  SERAC_HOST_DEVICE constexpr T operator()(int i, int j, int k) const { return 0.5 * (i - j) * (j - k) * (k - i) * value; }
+  SERAC_HOST_DEVICE constexpr T operator()(int i, int j, int k) const
+  {
+    return 0.5 * (i - j) * (j - k) * (k - i) * value;
+  }
   T value;
 };
 

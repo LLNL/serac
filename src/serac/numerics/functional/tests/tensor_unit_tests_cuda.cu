@@ -204,7 +204,7 @@ TEST(tensor, navier_stokes)
   cudaFree(error);
 }
 
-__global__ void isotropic_operations(int * error)
+__global__ void isotropic_operations(int* error)
 {
   auto I = Identity<3>();
 

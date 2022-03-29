@@ -305,17 +305,19 @@ EvaluationKernel(DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, CPUAr
                         qpt_data_type>;
 
 //clang-format off
-template < bool is_QOI, typename S, typename T >
-auto chain_rule(const S & dfdx, const T & dx) {
+template <bool is_QOI, typename S, typename T>
+auto chain_rule(const S& dfdx, const T& dx)
+{
   if constexpr (is_QOI) {
-    return serac::chain_rule(serac::get<0>(dfdx), serac::get<0>(dx)) + serac::chain_rule(serac::get<1>(dfdx), serac::get<1>(dx));
+    return serac::chain_rule(serac::get<0>(dfdx), serac::get<0>(dx)) +
+           serac::chain_rule(serac::get<1>(dfdx), serac::get<1>(dx));
   }
 
   if constexpr (!is_QOI) {
-    return serac::tuple{
-      serac::chain_rule(serac::get<0>(serac::get<0>(dfdx)), serac::get<0>(dx)) + serac::chain_rule(serac::get<1>(serac::get<0>(dfdx)), serac::get<1>(dx)),
-      serac::chain_rule(serac::get<0>(serac::get<1>(dfdx)), serac::get<0>(dx)) + serac::chain_rule(serac::get<1>(serac::get<1>(dfdx)), serac::get<1>(dx))
-    };
+    return serac::tuple{serac::chain_rule(serac::get<0>(serac::get<0>(dfdx)), serac::get<0>(dx)) +
+                            serac::chain_rule(serac::get<1>(serac::get<0>(dfdx)), serac::get<1>(dx)),
+                        serac::chain_rule(serac::get<0>(serac::get<1>(dfdx)), serac::get<0>(dx)) +
+                            serac::chain_rule(serac::get<1>(serac::get<1>(dfdx)), serac::get<1>(dx))};
   }
 }
 //clang-format on
@@ -353,7 +355,7 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
   using element_residual_type      = typename test_element::residual_type;
-  static constexpr bool is_QOI    = (test::family == Family::QOI);
+  static constexpr bool is_QOI     = (test::family == Family::QOI);
   static constexpr int  dim        = dimension_of(g);
   static constexpr int  test_ndof  = test_element::ndof;
   static constexpr int  trial_ndof = trial_element::ndof;
@@ -418,7 +420,6 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
       // to get the (change in) element residual contributions
       dr_elem += Postprocess<test_element>(dq, xi, J_q) * dx;
 #endif
-
     }
 
     // once we've finished the element integration loop, write our element residuals

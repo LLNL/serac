@@ -14,7 +14,6 @@
 
 #include "serac/infrastructure/accelerator.hpp"
 
-
 #include "serac/numerics/functional/dual.hpp"
 
 #include "detail/metaprogramming.hpp"
@@ -1606,7 +1605,8 @@ auto& operator<<(std::ostream& out, const tensor<T, n...>& A)
 }
 
 /**
- * @brief print a doulbe using `printf`, so that it is suitable for use inside cuda kernels. (used in final recursion of printf(tensor<...>))
+ * @brief print a doulbe using `printf`, so that it is suitable for use inside cuda kernels. (used in final recursion of
+ * printf(tensor<...>))
  * @param[in] value The value to write out
  */
 SERAC_HOST_DEVICE void print(double value) { printf("%f", value); }
