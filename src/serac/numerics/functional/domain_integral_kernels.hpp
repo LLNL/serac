@@ -390,36 +390,12 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
       // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
       auto dq_darg = qf_derivatives(static_cast<size_t>(e), static_cast<size_t>(q));
 
-#if 0
-      if constexpr (std::is_same<test, QOI>::value) {
-        auto dq = chain_rule(serac::get<0>(dq_darg), serac::get<0>(darg)) + 
-                  chain_rule(serac::get<1>(dq_darg), serac::get<1>(darg));
-
-        // integrate dq against test space shape functions / gradients
-        // to get the (change in) element residual contributions
-        dr_elem += Postprocess<test_element>(dq, xi, J_q) * dx;
-      }
-
-      if constexpr (!std::is_same<test, QOI>::value) {
-        auto dq = serac::tuple{
-          chain_rule(serac::get<0>(serac::get<0>(dq_darg)), serac::get<0>(darg)) + 
-          chain_rule(serac::get<1>(serac::get<0>(dq_darg)), serac::get<1>(darg)),
-          chain_rule(serac::get<0>(serac::get<1>(dq_darg)), serac::get<0>(darg)) + 
-          chain_rule(serac::get<1>(serac::get<1>(dq_darg)), serac::get<1>(darg))
-        };
-
-        // integrate dq against test space shape functions / gradients
-        // to get the (change in) element residual contributions
-        dr_elem += Postprocess<test_element>(dq, xi, J_q) * dx;
-      }
-#else
       // use the chain rule to compute the first-order change in the q-function output
       auto dq = chain_rule<is_QOI>(dq_darg, darg);
 
       // integrate dq against test space shape functions / gradients
       // to get the (change in) element residual contributions
       dr_elem += Postprocess<test_element>(dq, xi, J_q) * dx;
-#endif
     }
 
     // once we've finished the element integration loop, write our element residuals
