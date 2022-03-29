@@ -20,235 +20,42 @@
 
 namespace serac {
 
-/// @cond
-namespace detail {
-template <typename T, typename i0_t>
-SERAC_HOST_DEVICE constexpr const auto& get(const T& values, i0_t i0)
-{
-  return values[i0];
-}
-
-template <typename T, typename i0_t, typename i1_t>
-SERAC_HOST_DEVICE constexpr const auto& get(const T& values, i0_t i0, i1_t i1)
-{
-  return values[i0][i1];
-}
-
-template <typename T, typename i0_t, typename i1_t, typename i2_t>
-SERAC_HOST_DEVICE constexpr const auto& get(const T& values, i0_t i0, i1_t i1, i2_t i2)
-{
-  return values[i0][i1][i2];
-}
-
-template <typename T, typename i0_t, typename i1_t, typename i2_t, typename i3_t>
-SERAC_HOST_DEVICE constexpr const auto& get(const T& values, i0_t i0, i1_t i1, i2_t i2, i3_t i3)
-{
-  return values[i0][i1][i2][i3];
-}
-
-template <typename T, typename i0_t, typename i1_t, typename i2_t, typename i3_t, typename i4_t>
-SERAC_HOST_DEVICE constexpr const auto& get(const T& values, i0_t i0, i1_t i1, i2_t i2, i3_t i3, i4_t i4)
-{
-  return values[i0][i1][i2][i3][i4];
-}
-
-template <typename T, typename i0_t>
-SERAC_HOST_DEVICE constexpr auto& get(T& values, i0_t i0)
-{
-  return values[i0];
-}
-
-template <typename T, typename i0_t, typename i1_t>
-SERAC_HOST_DEVICE constexpr auto& get(T& values, i0_t i0, i1_t i1)
-{
-  return values[i0][i1];
-}
-
-template <typename T, typename i0_t, typename i1_t, typename i2_t>
-SERAC_HOST_DEVICE constexpr auto& get(T& values, i0_t i0, i1_t i1, i2_t i2)
-{
-  return values[i0][i1][i2];
-}
-
-template <typename T, typename i0_t, typename i1_t, typename i2_t, typename i3_t>
-SERAC_HOST_DEVICE constexpr auto& get(T& values, i0_t i0, i1_t i1, i2_t i2, i3_t i3)
-{
-  return values[i0][i1][i2][i3];
-}
-
-template <typename T, typename i0_t, typename i1_t, typename i2_t, typename i3_t, typename i4_t>
-SERAC_HOST_DEVICE constexpr auto& get(T& values, i0_t i0, i1_t i1, i2_t i2, i3_t i3, i4_t i4)
-{
-  return values[i0][i1][i2][i3][i4];
-}
-
-template <int n>
-using always_int = int;
-
-}  // namespace detail
-/// @endcond
-
-/// @cond
-template <typename T, int... n>
+template < typename T, int ... n >
 struct tensor;
 
-template <typename T>
-struct tensor<T> {
-  using type                                  = T;
-  static constexpr int              ndim      = 0;
-  static constexpr int              first_dim = 1;
-  SERAC_HOST_DEVICE constexpr auto& operator[](int) { return value; }
-  SERAC_HOST_DEVICE constexpr auto  operator[](int) const { return value; }
+template < typename T, int m, int ... n >
+struct tensor< T, m, n ... > {
+  template < typename i_type >
+  SERAC_HOST_DEVICE constexpr auto & operator()(i_type i) { return data[i]; }
+  template < typename i_type >
+  SERAC_HOST_DEVICE constexpr auto & operator()(i_type i) const { return data[i]; }
+  template < typename i_type, typename ... jklm_type >
+  SERAC_HOST_DEVICE constexpr auto & operator()(i_type i, jklm_type ... jklm) { return data[i](jklm ...); }
+  template < typename i_type, typename ... jklm_type >
+  SERAC_HOST_DEVICE constexpr auto & operator()(i_type i, jklm_type ... jklm) const { return data[i](jklm ...); }
 
-  template <typename... S>
-  SERAC_HOST_DEVICE constexpr auto& operator()(S...)
-  {
-    return value;
-  }
+  SERAC_HOST_DEVICE constexpr auto & operator[](int i) { return data[i]; }
+  SERAC_HOST_DEVICE constexpr const auto & operator[](int i) const { return data[i]; }
 
-  template <typename... S>
-  SERAC_HOST_DEVICE constexpr auto& operator()(S...) const
-  {
-    return value;
-  }
-
-  SERAC_HOST_DEVICE constexpr tensor() : value{} {}
-  SERAC_HOST_DEVICE constexpr tensor(T v) : value(v) {}
-  SERAC_HOST_DEVICE constexpr operator T() { return value; }
-  T                           value;
+  tensor < T, n ... > data[m];
 };
 
-template <typename T>
-struct tensor<T, 1> {
-  using type                     = T;
-  static constexpr int ndim      = 1;
-  static constexpr int first_dim = 1;
+template < typename T, int m >
+struct tensor< T, m > {
+  template < typename i_type >
+  SERAC_HOST_DEVICE constexpr auto & operator()(i_type i) { return data[i]; }
+  template < typename i_type >
+  SERAC_HOST_DEVICE constexpr auto & operator()(i_type i) const { return data[i]; }
+  SERAC_HOST_DEVICE constexpr auto & operator[](int i) { return data[i]; }
+  SERAC_HOST_DEVICE constexpr const auto & operator[](int i) const { return data[i]; }
 
-  template <typename S>
-  SERAC_HOST_DEVICE constexpr auto& operator()(S)
-  {
-    return value;
-  }
+  template < int last_dimension = m, typename = typename std::enable_if< last_dimension == 1 >::type >
+  SERAC_HOST_DEVICE constexpr operator T() { return data[0]; }
 
-  template <typename S>
-  SERAC_HOST_DEVICE constexpr auto& operator()(S) const
-  {
-    return value;
-  }
+  template < int last_dimension = m, typename = typename std::enable_if< last_dimension == 1 >::type >
+  SERAC_HOST_DEVICE constexpr operator T() const { return data[0]; }
 
-  SERAC_HOST_DEVICE constexpr auto& operator[](int) { return value; };
-  SERAC_HOST_DEVICE constexpr auto& operator[](int) const { return value; };
-
-  SERAC_HOST_DEVICE constexpr operator T() const { return value; }
-  SERAC_HOST_DEVICE constexpr tensor() : value() {}
-  SERAC_HOST_DEVICE constexpr tensor(T v) : value(v) {}
-  T value;
-};
-
-template <typename T>
-struct tensor<T, 1, 1> {
-  using type                     = T;
-  static constexpr int ndim      = 2;
-  static constexpr int first_dim = 1;
-
-  template <typename S>
-  SERAC_HOST_DEVICE constexpr auto& operator()(S, S)
-  {
-    return value;
-  }
-
-  template <typename S>
-  SERAC_HOST_DEVICE constexpr auto& operator()(S, S) const
-  {
-    return value;
-  }
-
-  SERAC_HOST_DEVICE constexpr auto& operator[](int) { return value; };
-  SERAC_HOST_DEVICE constexpr auto& operator[](int) const { return value; };
-
-  operator tensor<T, 1>() const { return value; }
-  tensor() : value() {}
-  tensor(T v) : value(v) {}
-  tensor(tensor<T, 1> v) : value(v) {}
-
-  tensor<T, 1> value;
-};
-
-template <typename T, int n>
-struct tensor<T, n> {
-  using type                     = T;
-  static constexpr int ndim      = 1;
-  static constexpr int first_dim = n;
-
-  template <typename S>
-  SERAC_HOST_DEVICE constexpr auto& operator()(S i)
-  {
-    return detail::get(value, i);
-  }
-
-  template <typename S>
-  SERAC_HOST_DEVICE constexpr auto& operator()(S i) const
-  {
-    return detail::get(value, i);
-  }
-
-  SERAC_HOST_DEVICE constexpr auto& operator[](int i) { return value[i]; };
-  SERAC_HOST_DEVICE constexpr auto& operator[](int i) const { return value[i]; };
-  T                                 value[n];
-};
-/// @endcond
-
-/**
- * @brief Arbitrary-rank tensor class
- * @tparam T The scalar type of the tensor
- * @tparam first The leading dimension of the tensor
- * @tparam last The parameter pack of the remaining dimensions
- */
-template <typename T, int first, int... rest>
-struct tensor<T, first, rest...> {
-  /**
-   * @brief The scalar type
-   */
-  using type = T;
-  /**
-   * @brief The rank of the tensor
-   */
-  static constexpr int ndim = 1 + sizeof...(rest);
-  /**
-   * @brief The array of dimensions containing the shape (not the data itself)
-   * Similar to numpy.ndarray.shape
-   */
-  static constexpr int first_dim = first;
-
-  /**
-   * @brief Retrieves the sub-tensor corresponding to the indices provided in the pack @a i
-   * @param[in] i The pack of indices
-   */
-  template <typename... S>
-  SERAC_HOST_DEVICE constexpr auto& operator()(S... i)
-  {
-    // FIXME: Compile-time check for <= 4 indices??
-    return detail::get(value, i...);
-  };
-  /// @overload
-  template <typename... S>
-  SERAC_HOST_DEVICE constexpr const auto& operator()(S... i) const
-  {
-    return detail::get(value, i...);
-  };
-
-  /**
-   * @brief Retrieves the "row" of the tensor corresponding to index @a i
-   * @param[in] i The index to retrieve a rank - 1 tensor from
-   */
-  SERAC_HOST_DEVICE constexpr auto& operator[](int i) { return value[i]; };
-  /// @overload
-  SERAC_HOST_DEVICE constexpr auto& operator[](int i) const { return value[i]; };
-
-  /**
-   * @brief The actual tensor data
-   */
-  tensor<T, rest...> value[first];
+  T data[m];
 };
 
 /**
@@ -570,11 +377,11 @@ SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f)
  * @param[in] A The lefthand operand
  * @param[in] B The righthand operand
  */
-template <typename S, typename T, int... n>
-SERAC_HOST_DEVICE constexpr auto operator+(const tensor<S, n...>& A, const tensor<T, n...>& B)
+template <typename S, typename T, int m, int... n>
+SERAC_HOST_DEVICE constexpr auto operator+(const tensor<S, m, n...>& A, const tensor<T, m, n...>& B)
 {
-  tensor<decltype(S{} + T{}), n...> C{};
-  for (int i = 0; i < tensor<T, n...>::first_dim; i++) {
+  tensor<decltype(S{} + T{}), m, n...> C{};
+  for (int i = 0; i < m; i++) {
     C[i] = A[i] + B[i];
   }
   return C;
@@ -586,11 +393,11 @@ SERAC_HOST_DEVICE constexpr auto operator+(const tensor<S, n...>& A, const tenso
  * @tparam n integers describing the tensor shape
  * @param[in] A The tensor to negate
  */
-template <typename T, int... n>
-SERAC_HOST_DEVICE constexpr auto operator-(const tensor<T, n...>& A)
+template <typename T, int m, int... n>
+SERAC_HOST_DEVICE constexpr auto operator-(const tensor<T, m, n...>& A)
 {
-  tensor<T, n...> B{};
-  for (int i = 0; i < tensor<T, n...>::first_dim; i++) {
+  tensor<T, m, n...> B{};
+  for (int i = 0; i < m; i++) {
     B[i] = -A[i];
   }
   return B;
@@ -604,11 +411,11 @@ SERAC_HOST_DEVICE constexpr auto operator-(const tensor<T, n...>& A)
  * @param[in] A The lefthand operand
  * @param[in] B The righthand operand
  */
-template <typename S, typename T, int... n>
-SERAC_HOST_DEVICE constexpr auto operator-(const tensor<S, n...>& A, const tensor<T, n...>& B)
+template <typename S, typename T, int m, int... n>
+SERAC_HOST_DEVICE constexpr auto operator-(const tensor<S, m, n...>& A, const tensor<T, m, n...>& B)
 {
-  tensor<decltype(S{} + T{}), n...> C{};
-  for (int i = 0; i < tensor<T, n...>::first_dim; i++) {
+  tensor<decltype(S{} + T{}), m, n...> C{};
+  for (int i = 0; i < m; i++) {
     C[i] = A[i] - B[i];
   }
   return C;
@@ -622,12 +429,12 @@ SERAC_HOST_DEVICE constexpr auto operator-(const tensor<S, n...>& A, const tenso
  * @param[in] scale The scaling factor
  * @param[in] A The tensor to be scaled
  */
-template <typename S, typename T, int... n,
+template <typename S, typename T, int m, int... n,
           typename = std::enable_if_t<std::is_arithmetic_v<S> || is_dual_number<S>::value>>
-SERAC_HOST_DEVICE constexpr auto operator*(S scale, const tensor<T, n...>& A)
+SERAC_HOST_DEVICE constexpr auto operator*(S scale, const tensor<T, m, n...>& A)
 {
-  tensor<decltype(S{} * T{}), n...> C{};
-  for (int i = 0; i < tensor<T, n...>::first_dim; i++) {
+  tensor<decltype(S{} * T{}), m, n...> C{};
+  for (int i = 0; i < m; i++) {
     C[i] = scale * A[i];
   }
   return C;
@@ -641,12 +448,12 @@ SERAC_HOST_DEVICE constexpr auto operator*(S scale, const tensor<T, n...>& A)
  * @param[in] A The tensor to be scaled
  * @param[in] scale The scaling factor
  */
-template <typename S, typename T, int... n,
+template <typename S, typename T, int m, int... n,
           typename = std::enable_if_t<std::is_arithmetic_v<S> || is_dual_number<S>::value>>
-SERAC_HOST_DEVICE constexpr auto operator*(const tensor<T, n...>& A, S scale)
+SERAC_HOST_DEVICE constexpr auto operator*(const tensor<T, m, n...>& A, S scale)
 {
-  tensor<decltype(T{} * S{}), n...> C{};
-  for (int i = 0; i < tensor<T, n...>::first_dim; i++) {
+  tensor<decltype(T{} * S{}), m, n...> C{};
+  for (int i = 0; i < m; i++) {
     C[i] = A[i] * scale;
   }
   return C;
@@ -660,12 +467,12 @@ SERAC_HOST_DEVICE constexpr auto operator*(const tensor<T, n...>& A, S scale)
  * @param[in] scale The numerator
  * @param[in] A The tensor of denominators
  */
-template <typename S, typename T, int... n,
+template <typename S, typename T, int m, int... n,
           typename = std::enable_if_t<std::is_arithmetic_v<S> || is_dual_number<S>::value>>
-SERAC_HOST_DEVICE constexpr auto operator/(S scale, const tensor<T, n...>& A)
+SERAC_HOST_DEVICE constexpr auto operator/(S scale, const tensor<T, m, n...>& A)
 {
   tensor<decltype(S{} * T{}), n...> C{};
-  for (int i = 0; i < tensor<T, n...>::first_dim; i++) {
+  for (int i = 0; i < m; i++) {
     C[i] = scale / A[i];
   }
   return C;
@@ -679,12 +486,12 @@ SERAC_HOST_DEVICE constexpr auto operator/(S scale, const tensor<T, n...>& A)
  * @param[in] A The tensor of numerators
  * @param[in] scale The denominator
  */
-template <typename S, typename T, int... n,
+template <typename S, typename T, int m, int... n,
           typename = std::enable_if_t<std::is_arithmetic_v<S> || is_dual_number<S>::value>>
-SERAC_HOST_DEVICE constexpr auto operator/(const tensor<T, n...>& A, S scale)
+SERAC_HOST_DEVICE constexpr auto operator/(const tensor<T, m, n...>& A, S scale)
 {
-  tensor<decltype(T{} * S{}), n...> C{};
-  for (int i = 0; i < tensor<T, n...>::first_dim; i++) {
+  tensor<decltype(T{} * S{}), m, n...> C{};
+  for (int i = 0; i < m; i++) {
     C[i] = A[i] / scale;
   }
   return C;
@@ -698,15 +505,16 @@ SERAC_HOST_DEVICE constexpr auto operator/(const tensor<T, n...>& A, S scale)
  * @param[in] A The lefthand tensor
  * @param[in] B The righthand tensor
  */
-template <typename S, typename T, int... n>
-SERAC_HOST_DEVICE constexpr auto& operator+=(tensor<S, n...>& A, const tensor<T, n...>& B)
+template <typename S, typename T, int m, int... n>
+SERAC_HOST_DEVICE constexpr auto& operator+=(tensor<S, m, n...>& A, const tensor<T, m, n...>& B)
 {
-  for (int i = 0; i < tensor<S, n...>::first_dim; i++) {
+  for (int i = 0; i < m; i++) {
     A[i] += B[i];
   }
   return A;
 }
 
+#if 0
 /**
  * @brief compound assignment (+) on tensors
  * @tparam T the underlying type of the tensor argument
@@ -716,8 +524,9 @@ SERAC_HOST_DEVICE constexpr auto& operator+=(tensor<S, n...>& A, const tensor<T,
 template <typename T>
 SERAC_HOST_DEVICE constexpr auto& operator+=(tensor<T>& A, const T& B)
 {
-  return A.value += B;
+  return A.data += B;
 }
+#endif
 
 /**
  * @brief compound assignment (+) on tensors
@@ -728,7 +537,7 @@ SERAC_HOST_DEVICE constexpr auto& operator+=(tensor<T>& A, const T& B)
 template <typename T>
 SERAC_HOST_DEVICE constexpr auto& operator+=(tensor<T, 1>& A, const T& B)
 {
-  return A.value += B;
+  return A.data[0] += B;
 }
 
 /**
@@ -740,7 +549,7 @@ SERAC_HOST_DEVICE constexpr auto& operator+=(tensor<T, 1>& A, const T& B)
 template <typename T>
 SERAC_HOST_DEVICE constexpr auto& operator+=(tensor<T, 1, 1>& A, const T& B)
 {
-  return A.value += B;
+  return A.data[0][0] += B;
 }
 
 /**
@@ -763,10 +572,10 @@ SERAC_HOST_DEVICE constexpr auto& operator+=(tensor<T, n...>& A, zero)
  * @param[in] A The lefthand tensor
  * @param[in] B The righthand tensor
  */
-template <typename S, typename T, int... n>
-SERAC_HOST_DEVICE constexpr auto& operator-=(tensor<S, n...>& A, const tensor<T, n...>& B)
+template <typename S, typename T, int m, int... n>
+SERAC_HOST_DEVICE constexpr auto& operator-=(tensor<S, m, n...>& A, const tensor<T, m, n...>& B)
 {
-  for (int i = 0; i < tensor<S, n...>::first_dim; i++) {
+  for (int i = 0; i < m; i++) {
     A[i] -= B[i];
   }
   return A;
@@ -785,31 +594,13 @@ SERAC_HOST_DEVICE constexpr auto& operator-=(tensor<T, n...>& A, zero)
 }
 
 /**
- * @brief compute the outer product of two tensors
- * @tparam S the type of the lefthand argument
- * @tparam T the type of the righthand argument
- * @param[in] A The lefthand argument
- * @param[in] B The righthand argument
- *
- * @note this overload implements the special case where both arguments are scalars
- */
-template <typename S, typename T>
-SERAC_HOST_DEVICE constexpr auto outer(S A, T B)
-{
-  static_assert(std::is_arithmetic_v<S> && std::is_arithmetic_v<T>,
-                "outer product types must be tensor or arithmetic_type");
-  return A * B;
-}
-
-/**
  * @overload
  * @note this overload implements the case where the left argument is a scalar, and the right argument is a tensor
  */
-template <typename S, typename T, int n>
-SERAC_HOST_DEVICE constexpr auto outer(S A, tensor<T, n> B)
+template <typename T, int n>
+SERAC_HOST_DEVICE constexpr auto outer(double A, tensor<T, n> B)
 {
-  static_assert(std::is_arithmetic_v<S>, "outer product types must be tensor or arithmetic_type");
-  tensor<decltype(S{} * T{}), n> AB{};
+  tensor<decltype(double{} * T{}), n> AB{};
   for (int i = 0; i < n; i++) {
     AB[i] = A * B[i];
   }
@@ -820,11 +611,10 @@ SERAC_HOST_DEVICE constexpr auto outer(S A, tensor<T, n> B)
  * @overload
  * @note this overload implements the case where the left argument is a tensor, and the right argument is a scalar
  */
-template <typename S, typename T, int m>
-SERAC_HOST_DEVICE constexpr auto outer(const tensor<S, m>& A, T B)
+template <typename T, int m>
+SERAC_HOST_DEVICE constexpr auto outer(const tensor<T, m>& A, double B)
 {
-  static_assert(std::is_arithmetic_v<T>, "outer product types must be tensor or arithmetic_type");
-  tensor<decltype(S{} * T{}), m> AB{};
+  tensor<decltype(T{} * double{}), m> AB{};
   for (int i = 0; i < m; i++) {
     AB[i] = A[i] * B;
   }
@@ -853,23 +643,6 @@ SERAC_HOST_DEVICE constexpr auto outer(const tensor<T, n>&, zero)
 
 /**
  * @overload
- * @note this overload implements the case where the left argument is a tensor, and the right argument is `zero`
- */
-template <typename S, typename T, int m, int n>
-SERAC_HOST_DEVICE constexpr auto outer(S A, const tensor<T, m, n>& B)
-{
-  static_assert(std::is_arithmetic_v<S>, "outer product types must be tensor or arithmetic_type");
-  tensor<decltype(S{} * T{}), m, n> AB{};
-  for (int i = 0; i < m; i++) {
-    for (int j = 0; j < n; j++) {
-      AB[i][j] = A * B[i][j];
-    }
-  }
-  return AB;
-}
-
-/**
- * @overload
  * @note this overload implements the case where both arguments are vectors
  */
 template <typename S, typename T, int m, int n>
@@ -879,82 +652,6 @@ SERAC_HOST_DEVICE constexpr auto outer(const tensor<S, m>& A, const tensor<T, n>
   for (int i = 0; i < m; i++) {
     for (int j = 0; j < n; j++) {
       AB[i][j] = A[i] * B[j];
-    }
-  }
-  return AB;
-}
-
-/**
- * @overload
- * @note this overload implements the case where the left argument is a 2nd order tensor, and the right argument is a
- * scalar
- */
-template <typename S, typename T, int m, int n>
-SERAC_HOST_DEVICE constexpr auto outer(const tensor<S, m, n>& A, T B)
-{
-  static_assert(std::is_arithmetic_v<T>, "outer product types must be tensor or arithmetic_type");
-  tensor<decltype(S{} * T{}), m, n> AB{};
-  for (int i = 0; i < m; i++) {
-    for (int j = 0; j < n; j++) {
-      AB[i][j] = A[i][j] * B;
-    }
-  }
-  return AB;
-}
-
-/**
- * @overload
- * @note this overload implements the case where the left argument is a 2nd order tensor, and the right argument is a
- * first order tensor
- */
-template <typename S, typename T, int m, int n, int p>
-SERAC_HOST_DEVICE constexpr auto outer(const tensor<S, m, n>& A, const tensor<T, p>& B)
-{
-  tensor<decltype(S{} * T{}), m, n, p> AB{};
-  for (int i = 0; i < m; i++) {
-    for (int j = 0; j < n; j++) {
-      for (int k = 0; k < p; k++) {
-        AB[i][j][k] = A[i][j] * B[k];
-      }
-    }
-  }
-  return AB;
-}
-
-/**
- * @overload
- * @note this overload implements the case where the left argument is a 1st order tensor, and the right argument is a
- * 2nd order tensor
- */
-template <typename S, typename T, int m, int n, int p>
-SERAC_HOST_DEVICE constexpr auto outer(const tensor<S, m>& A, const tensor<T, n, p>& B)
-{
-  tensor<decltype(S{} * T{}), m, n, p> AB{};
-  for (int i = 0; i < m; i++) {
-    for (int j = 0; j < n; j++) {
-      for (int k = 0; k < p; k++) {
-        AB[i][j][k] = A[i] * B[j][k];
-      }
-    }
-  }
-  return AB;
-}
-
-/**
- * @overload
- * @note this overload implements the case where both arguments are second order tensors
- */
-template <typename S, typename T, int m, int n, int p, int q>
-SERAC_HOST_DEVICE constexpr auto outer(const tensor<S, m, n>& A, const tensor<T, p, q>& B)
-{
-  tensor<decltype(S{} * T{}), m, n, p, q> AB{};
-  for (int i = 0; i < m; i++) {
-    for (int j = 0; j < n; j++) {
-      for (int k = 0; k < p; k++) {
-        for (int l = 0; l < q; l++) {
-          AB[i][j][k][l] = A[i][j] * B[k][l];
-        }
-      }
     }
   }
   return AB;
@@ -1005,6 +702,20 @@ SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m, n>& A, const tensor<T, n
 
 /**
  * @overload
+ * @note vector . vector
+ */
+template <typename S, typename T, int m>
+SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m>& A, const tensor<T, m>& B)
+{
+  decltype(S{} * T{}) AB{};
+  for (int i = 0; i < m; i++) {
+    AB = AB + A[i] * B[i];
+  }
+  return AB;
+}
+
+/**
+ * @overload
  * @note vector . matrix
  */
 template <typename S, typename T, int m, int n>
@@ -1015,6 +726,40 @@ SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m>& A, const tensor<T, m, n
     for (int j = 0; j < m; j++) {
       AB[i] = AB[i] + A[j] * B[j][i];
     }
+  }
+  return AB;
+}
+
+/**
+ * @overload
+ * @note vector . tensor3D
+ */
+template <typename S, typename T, int m, int n, int p>
+SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m>& A, const tensor<T, m, n, p>& B)
+{
+  tensor<decltype(S{} * T{}), n, p> AB{};
+  for (int j = 0; j < m; j++) {
+    AB = AB + A[j] * B[j];
+  }
+  return AB;
+}
+
+/**
+ * @overload
+ * @note vector . tensor4D
+ * 
+ * this overload, and others of the form `dot(vector, tensor)`, can be
+ * implemented more succinctly as a single variadic function, but for some
+ * reason gcc-11 (but not gcc-10 or gcc-12) seemed to break when compiling
+ * that compact implementation, so we're manually writing out some of the different
+ * dot product overloads in order to support that compiler and version
+ */
+template <typename S, typename T, int m, int n, int p, int q>
+SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m>& A, const tensor<T, m, n, p, q>& B)
+{
+  tensor<decltype(S{} * T{}), n, p, q> AB{};
+  for (int j = 0; j < m; j++) {
+    AB = AB + A[j] * B[j];
   }
   return AB;
 }
@@ -1051,45 +796,6 @@ SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m, n, p>& A, const tensor<T
     }
   }
   return AB;
-}
-
-/**
- * @brief Dot product of a vector . vector and vector . tensor
- *
- * @tparam S the underlying type of the tensor (lefthand) argument
- * @tparam T the underlying type of the tensor (righthand) argument
- * @tparam m the dimension of the first tensor
- * @tparam n the parameter pack of dimensions of the second tensor
- * @param A The lefthand tensor
- * @param B The righthand tensor
- * @return The computed dot product
- */
-template <typename S, typename T, int m, int... n>
-SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m>& A, const tensor<T, m, n...>& B)
-{
-  // this dot product function includes the vector * vector implementation and
-  // the vector * tensor one, since clang emits an error about ambiguous
-  // overloads if they are separate functions. The `if constexpr` expression avoids
-  // using an `else` because that confuses nvcc (11.2) into thinking there's not
-  // a return statement
-  if constexpr (sizeof...(n) == 0) {
-    decltype(S{} * T{}) AB{};
-    for (int i = 0; i < m; i++) {
-      AB += A[i] * B[i];
-    }
-    return AB;
-  }
-
-  if constexpr (sizeof...(n) > 0) {
-    constexpr int                     dimensions[] = {n...};
-    tensor<decltype(S{} * T{}), n...> AB{};
-    for (int i = 0; i < dimensions[0]; i++) {
-      for (int j = 0; j < m; j++) {
-        AB[i] = AB[i] + A[j] * B[j][i];
-      }
-    }
-    return AB;
-  }
 }
 
 /**
@@ -1593,11 +1299,11 @@ SERAC_HOST_DEVICE auto inv(tensor<dual<gradient_type>, n, n> A)
  * @param[in] out the std::ostream to write to (e.g. std::cout or std::ofstream)
  * @param[in] A The tensor to write out
  */
-template <typename T, int... n>
-auto& operator<<(std::ostream& out, const tensor<T, n...>& A)
+template <typename T, int m, int... n>
+auto& operator<<(std::ostream& out, const tensor<T, m, n...>& A)
 {
   out << '{' << A[0];
-  for (int i = 1; i < tensor<T, n...>::first_dim; i++) {
+  for (int i = 1; i < m; i++) {
     out << ", " << A[i];
   }
   out << '}';

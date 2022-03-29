@@ -143,3 +143,12 @@ TEST(tensor, isotropic_operations)
   EXPECT_LT(tr(I) - 3, tolerance);
   EXPECT_LT(sqnorm(sym(I) - I), tolerance);
 }
+
+TEST(tensor, implicit_conversion)
+{
+  tensor< double, 1 > A;
+  A(0) = 4.5;
+
+  double value = A;
+  EXPECT_NEAR(value, A[0], tolerance);
+}

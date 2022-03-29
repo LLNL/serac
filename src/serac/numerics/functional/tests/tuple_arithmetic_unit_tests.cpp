@@ -15,12 +15,6 @@
 
 using namespace serac;
 
-auto random_real = [](auto...) {
-  static std::default_random_engine             generator;
-  static std::uniform_real_distribution<double> distribution(-1.0, 1.0);
-  return distribution(generator);
-};
-
 static constexpr auto   I   = Identity<3>();
 static constexpr double rho = 3.0;
 static constexpr double mu  = 2.0;
