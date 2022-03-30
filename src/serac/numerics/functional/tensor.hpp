@@ -1349,7 +1349,7 @@ auto& operator<<(std::ostream& out, const tensor<T, m, n...>& A)
 }
 
 /**
- * @brief print a doulbe using `printf`, so that it is suitable for use inside cuda kernels. (used in final recursion of
+ * @brief print a double using `printf`, so that it is suitable for use inside cuda kernels. (used in final recursion of
  * printf(tensor<...>))
  * @param[in] value The value to write out
  */
