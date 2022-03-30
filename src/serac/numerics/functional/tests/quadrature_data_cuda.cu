@@ -267,7 +267,7 @@ struct state_manager_varying_qfunction {
   template <typename x_t, typename field_t, typename state_t>
   __host__ __device__ auto operator()(x_t&& x, field_t&& u, state_t&& state)
   {
-    double norm = sqnorm(x);
+    double norm = squared_norm(x);
     wrapper_t::mutate(state, norm);
     mutated_data[idx++] = state;
     return u;

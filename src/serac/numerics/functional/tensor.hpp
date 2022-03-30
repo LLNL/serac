@@ -572,6 +572,21 @@ SERAC_HOST_DEVICE constexpr auto& operator+=(tensor<T>& A, const T& B)
  * @param[in] A The lefthand tensor
  * @param[in] B The righthand tensor
  */
+template <typename T, int n>
+SERAC_HOST_DEVICE constexpr auto& operator+=(tensor<T, n, 1>& A, const tensor<T, n>& B)
+{
+  for (int i = 0; i < n; i++) {
+    A.data[i][0] += B[i];
+  }
+  return A;
+}
+
+/**
+ * @brief compound assignment (+) on tensors
+ * @tparam T the underlying type of the tensor argument
+ * @param[in] A The lefthand tensor
+ * @param[in] B The righthand tensor
+ */
 template <typename T>
 SERAC_HOST_DEVICE constexpr auto& operator+=(tensor<T, 1>& A, const T& B)
 {
@@ -864,7 +879,7 @@ SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m>& u, const tensor<T, m, n
  * @param[in] B The righthand tensor
  */
 template <typename S, typename T, int m, int n, int p, int q>
-SERAC_HOST_DEVICE constexpr auto ddot(const tensor<S, m, n, p, q>& A, const tensor<T, p, q>& B)
+SERAC_HOST_DEVICE constexpr auto double_dot(const tensor<S, m, n, p, q>& A, const tensor<T, p, q>& B)
 {
   tensor<decltype(S{} * T{}), m, n> AB{};
   for (int i = 0; i < m; i++) {
@@ -884,7 +899,7 @@ SERAC_HOST_DEVICE constexpr auto ddot(const tensor<S, m, n, p, q>& A, const tens
  * @note 3rd-order-tensor : 2nd-order-tensor
  */
 template <typename S, typename T, int m, int n, int p>
-SERAC_HOST_DEVICE constexpr auto ddot(const tensor<S, m, n, p>& A, const tensor<T, n, p>& B)
+SERAC_HOST_DEVICE constexpr auto double_dot(const tensor<S, m, n, p>& A, const tensor<T, n, p>& B)
 {
   tensor<decltype(S{} * T{}), m> AB{};
   for (int i = 0; i < m; i++) {
@@ -902,7 +917,7 @@ SERAC_HOST_DEVICE constexpr auto ddot(const tensor<S, m, n, p>& A, const tensor<
  * @note 2nd-order-tensor : 2nd-order-tensor, like inner()
  */
 template <typename S, typename T, int m, int n>
-constexpr auto ddot(const tensor<S, m, n>& A, const tensor<T, m, n>& B)
+constexpr auto double_dot(const tensor<S, m, n>& A, const tensor<T, m, n>& B)
 {
   decltype(S{} * T{}) AB{};
   for (int i = 0; i < m; i++) {
@@ -927,7 +942,7 @@ SERAC_HOST_DEVICE constexpr auto operator*(const tensor<S, m...>& A, const tenso
  * @param[in] A The tensor to obtain the squared norm from
  */
 template <typename T, int m>
-SERAC_HOST_DEVICE constexpr auto sqnorm(const tensor<T, m>& A)
+SERAC_HOST_DEVICE constexpr auto squared_norm(const tensor<T, m>& A)
 {
   T total{};
   for (int i = 0; i < m; i++) {
@@ -938,7 +953,7 @@ SERAC_HOST_DEVICE constexpr auto sqnorm(const tensor<T, m>& A)
 
 /// @overload
 template <typename T, int m, int n>
-SERAC_HOST_DEVICE constexpr auto sqnorm(const tensor<T, m, n>& A)
+SERAC_HOST_DEVICE constexpr auto squared_norm(const tensor<T, m, n>& A)
 {
   T total{};
   for (int i = 0; i < m; i++) {
@@ -951,7 +966,7 @@ SERAC_HOST_DEVICE constexpr auto sqnorm(const tensor<T, m, n>& A)
 
 /// @overload
 template <typename T, int... n>
-SERAC_HOST_DEVICE constexpr auto sqnorm(const tensor<T, n...>& A)
+SERAC_HOST_DEVICE constexpr auto squared_norm(const tensor<T, n...>& A)
 {
   T total{};
   for_constexpr<n...>([&](auto... i) { total += A(i...) * A(i...); });
@@ -966,7 +981,7 @@ template <typename T, int... n>
 SERAC_HOST_DEVICE auto norm(const tensor<T, n...>& A)
 {
   using std::sqrt;
-  return sqrt(sqnorm(A));
+  return sqrt(squared_norm(A));
 }
 
 /**

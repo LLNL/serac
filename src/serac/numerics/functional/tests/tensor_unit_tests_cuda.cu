@@ -40,23 +40,23 @@ __global__ void basic_operations(int* error)
       {2.0, 4.0, 6.0},
   }};
 
-  double sqnormA = 111.0;
-  CUDA_EXPECT_LT(abs(sqnorm(A) - sqnormA), tolerance);
+  double squared_normA = 111.0;
+  CUDA_EXPECT_LT(abs(squared_norm(A) - squared_normA), tolerance);
 
   tensor<double, 3, 3> symA = {{{0, 1.5, 3}, {1.5, 3, 4.5}, {3, 4.5, 6}}};
-  CUDA_EXPECT_LT(abs(sqnorm(sym(A) - symA)), tolerance);
+  CUDA_EXPECT_LT(abs(squared_norm(sym(A) - symA)), tolerance);
 
   tensor<double, 3, 3> devA = {{{-3, 2, 4}, {1, 0, 5}, {2, 4, 3}}};
-  CUDA_EXPECT_LT(abs(sqnorm(dev(A) - devA)), tolerance);
+  CUDA_EXPECT_LT(abs(squared_norm(dev(A) - devA)), tolerance);
 
   tensor<double, 3, 3> invAp1 = {{{-4, -1, 3}, {-1.5, 0.5, 0.5}, {2, 0, -1}}};
-  CUDA_EXPECT_LT(abs(sqnorm(inv(A + I) - invAp1)), tolerance);
+  CUDA_EXPECT_LT(abs(squared_norm(inv(A + I) - invAp1)), tolerance);
 
   tensor<double, 3> Au = {16, 22, 28};
-  CUDA_EXPECT_LT(abs(sqnorm(dot(A, u) - Au)), tolerance);
+  CUDA_EXPECT_LT(abs(squared_norm(dot(A, u) - Au)), tolerance);
 
   tensor<double, 3> uA = {8, 20, 32};
-  CUDA_EXPECT_LT(abs(sqnorm(dot(u, A) - uA)), tolerance);
+  CUDA_EXPECT_LT(abs(squared_norm(dot(u, A) - uA)), tolerance);
 
   double uAu = 144;
   CUDA_EXPECT_LT(abs(dot(u, A, u) - uAu), tolerance);
@@ -107,13 +107,13 @@ __global__ void elasticity(int* error)
       {2.0, 4.0, 6.0},
   }};
 
-  CUDA_EXPECT_LT(abs(sqnorm(ddot(C, sym(grad_u)) - sigma(sym(grad_u)))), tolerance);
+  CUDA_EXPECT_LT(abs(squared_norm(double_dot(C, sym(grad_u)) - sigma(sym(grad_u)))), tolerance);
 
   auto epsilon = sym(make_dual(grad_u));
 
   tensor dsigma_depsilon = get_gradient(sigma(epsilon));
 
-  CUDA_EXPECT_LT(abs(sqnorm(dsigma_depsilon - C)), tolerance);
+  CUDA_EXPECT_LT(abs(squared_norm(dsigma_depsilon - C)), tolerance);
 }
 
 TEST(tensor, elasticity)
@@ -174,19 +174,19 @@ __global__ void navier_stokes(int* error)
   {
     auto exact = dsigma_dp(p, v, L);
     auto ad    = get_gradient(sigma(make_dual(p), v, L));
-    CUDA_EXPECT_LT(abs(sqnorm(exact - ad)), tolerance);
+    CUDA_EXPECT_LT(abs(squared_norm(exact - ad)), tolerance);
   }
 
   {
     auto exact = dsigma_dv(p, v, L);
     auto ad    = get_gradient(sigma(p, make_dual(v), L));
-    CUDA_EXPECT_LT(abs(sqnorm(exact - ad)), tolerance);
+    CUDA_EXPECT_LT(abs(squared_norm(exact - ad)), tolerance);
   }
 
   {
     auto exact = dsigma_dL(p, v, L);
     auto ad    = get_gradient(sigma(p, v, make_dual(L)));
-    CUDA_EXPECT_LT(abs(sqnorm(exact - ad)), tolerance);
+    CUDA_EXPECT_LT(abs(squared_norm(exact - ad)), tolerance);
   }
 }
 
@@ -219,13 +219,13 @@ __global__ void isotropic_operations(int* error)
       {2.0, 4.0, 6.0},
   }};
 
-  CUDA_EXPECT_LT(abs(sqnorm(dot(I, u) - u)), tolerance);
-  CUDA_EXPECT_LT(abs(sqnorm(dot(u, I) - u)), tolerance);
+  CUDA_EXPECT_LT(abs(squared_norm(dot(I, u) - u)), tolerance);
+  CUDA_EXPECT_LT(abs(squared_norm(dot(u, I) - u)), tolerance);
 
-  CUDA_EXPECT_LT(abs(sqnorm(dot(I, A) - A)), tolerance);
-  CUDA_EXPECT_LT(abs(sqnorm(dot(A, I) - A)), tolerance);
+  CUDA_EXPECT_LT(abs(squared_norm(dot(I, A) - A)), tolerance);
+  CUDA_EXPECT_LT(abs(squared_norm(dot(A, I) - A)), tolerance);
 
-  CUDA_EXPECT_LT(ddot(I, A) - tr(A), tolerance);
+  CUDA_EXPECT_LT(double_dot(I, A) - tr(A), tolerance);
 
   auto sigma = [=](auto epsilon) { return lambda * tr(epsilon) * I + 2.0 * mu * epsilon; };
 
@@ -233,11 +233,11 @@ __global__ void isotropic_operations(int* error)
 
   auto strain = sym(A);
 
-  CUDA_EXPECT_LT(sqnorm(ddot(C, strain) - sigma(strain)), tolerance);
+  CUDA_EXPECT_LT(squared_norm(double_dot(C, strain) - sigma(strain)), tolerance);
 
   CUDA_EXPECT_LT(det(I) - 1, tolerance);
   CUDA_EXPECT_LT(tr(I) - 3, tolerance);
-  CUDA_EXPECT_LT(sqnorm(sym(I) - I), tolerance);
+  CUDA_EXPECT_LT(squared_norm(sym(I) - I), tolerance);
 }
 
 TEST(tensor, isotropic_operations)

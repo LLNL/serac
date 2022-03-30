@@ -226,7 +226,7 @@ SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, n...>& A, isotropic_tensor<
  *    output := I(i,j) * A(i,j) \f$\propto\f$ tr(A)
  */
 template <typename S, typename T, int m>
-SERAC_HOST_DEVICE constexpr auto ddot(const isotropic_tensor<S, m, m>& I, const tensor<T, m, m>& A)
+SERAC_HOST_DEVICE constexpr auto double_dot(const isotropic_tensor<S, m, m>& I, const tensor<T, m, m>& A)
 {
   return I.value * tr(A);
 }
@@ -320,7 +320,7 @@ SERAC_HOST_DEVICE constexpr auto norm(const isotropic_tensor<T, m, m>& I)
  * @param I the isotropic tensor to compute the squared norm of
  */
 template <typename T, int m>
-SERAC_HOST_DEVICE constexpr auto sqnorm(const isotropic_tensor<T, m, m>& I)
+SERAC_HOST_DEVICE constexpr auto squared_norm(const isotropic_tensor<T, m, m>& I)
 {
   return I.value * I.value * m;
 }
@@ -449,7 +449,7 @@ SERAC_HOST_DEVICE constexpr auto operator-(isotropic_tensor<S, m, m, m, m> I1, i
  *    output(...) := I(i,j) * A(i,j,...)
  */
 template <typename S, typename T, int m, int... n>
-SERAC_HOST_DEVICE constexpr auto ddot(const isotropic_tensor<S, m, m, m, m>& I, const tensor<T, m, m, n...>& A)
+SERAC_HOST_DEVICE constexpr auto double_dot(const isotropic_tensor<S, m, m, m, m>& I, const tensor<T, m, m, n...>& A)
 {
   return I.c1 * tr(A) * Identity<m>() + I.c2 * sym(A) + I.c3 * antisym(A);
 }

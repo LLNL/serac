@@ -90,7 +90,7 @@ TEST(TupleArithmeticUnitTests, tensor_output_with_tuple_input)
               f(p - epsilon * dp, v - epsilon * dv, L - epsilon * dL)) /
              (2 * epsilon);
 
-  auto df1 = dfdp * dp + dfdv * dv + ddot(dfdL, dL);
+  auto df1 = dfdp * dp + dfdv * dv + double_dot(dfdL, dL);
 
   EXPECT_NEAR(norm(df1 - df0) / norm(df0), 0.0, 2.0e-8);
 }
