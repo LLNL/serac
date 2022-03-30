@@ -146,7 +146,7 @@ TEST(tensor, isotropic_operations)
 
 TEST(tensor, implicit_conversion)
 {
-  tensor< double, 1 > A;
+  tensor<double, 1> A;
   A(0) = 4.5;
 
   double value = A;

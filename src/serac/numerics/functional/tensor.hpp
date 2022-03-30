@@ -25,41 +25,65 @@ namespace serac {
  * @tparam T The type stored at each index
  * @tparam n The dimensions of the tensor
  */
-template < typename T, int ... n >
+template <typename T, int... n>
 struct tensor;
 
 /// @cond
-template < typename T, int m, int ... n >
-struct tensor< T, m, n ... > {
-  template < typename i_type >
-  SERAC_HOST_DEVICE constexpr auto & operator()(i_type i) { return data[i]; }
-  template < typename i_type >
-  SERAC_HOST_DEVICE constexpr auto & operator()(i_type i) const { return data[i]; }
-  template < typename i_type, typename ... jklm_type >
-  SERAC_HOST_DEVICE constexpr auto & operator()(i_type i, jklm_type ... jklm) { return data[i](jklm ...); }
-  template < typename i_type, typename ... jklm_type >
-  SERAC_HOST_DEVICE constexpr auto & operator()(i_type i, jklm_type ... jklm) const { return data[i](jklm ...); }
+template <typename T, int m, int... n>
+struct tensor<T, m, n...> {
+  template <typename i_type>
+  SERAC_HOST_DEVICE constexpr auto& operator()(i_type i)
+  {
+    return data[i];
+  }
+  template <typename i_type>
+  SERAC_HOST_DEVICE constexpr auto& operator()(i_type i) const
+  {
+    return data[i];
+  }
+  template <typename i_type, typename... jklm_type>
+  SERAC_HOST_DEVICE constexpr auto& operator()(i_type i, jklm_type... jklm)
+  {
+    return data[i](jklm...);
+  }
+  template <typename i_type, typename... jklm_type>
+  SERAC_HOST_DEVICE constexpr auto& operator()(i_type i, jklm_type... jklm) const
+  {
+    return data[i](jklm...);
+  }
 
-  SERAC_HOST_DEVICE constexpr auto & operator[](int i) { return data[i]; }
-  SERAC_HOST_DEVICE constexpr const auto & operator[](int i) const { return data[i]; }
+  SERAC_HOST_DEVICE constexpr auto&       operator[](int i) { return data[i]; }
+  SERAC_HOST_DEVICE constexpr const auto& operator[](int i) const { return data[i]; }
 
-  tensor < T, n ... > data[m];
+  tensor<T, n...> data[m];
 };
 
-template < typename T, int m >
-struct tensor< T, m > {
-  template < typename i_type >
-  SERAC_HOST_DEVICE constexpr auto & operator()(i_type i) { return data[i]; }
-  template < typename i_type >
-  SERAC_HOST_DEVICE constexpr auto & operator()(i_type i) const { return data[i]; }
-  SERAC_HOST_DEVICE constexpr auto & operator[](int i) { return data[i]; }
-  SERAC_HOST_DEVICE constexpr const auto & operator[](int i) const { return data[i]; }
+template <typename T, int m>
+struct tensor<T, m> {
+  template <typename i_type>
+  SERAC_HOST_DEVICE constexpr auto& operator()(i_type i)
+  {
+    return data[i];
+  }
+  template <typename i_type>
+  SERAC_HOST_DEVICE constexpr auto& operator()(i_type i) const
+  {
+    return data[i];
+  }
+  SERAC_HOST_DEVICE constexpr auto&       operator[](int i) { return data[i]; }
+  SERAC_HOST_DEVICE constexpr const auto& operator[](int i) const { return data[i]; }
 
-  template < int last_dimension = m, typename = typename std::enable_if< last_dimension == 1 >::type >
-  SERAC_HOST_DEVICE constexpr operator T() { return data[0]; }
+  template <int last_dimension = m, typename = typename std::enable_if<last_dimension == 1>::type>
+  SERAC_HOST_DEVICE constexpr operator T()
+  {
+    return data[0];
+  }
 
-  template < int last_dimension = m, typename = typename std::enable_if< last_dimension == 1 >::type >
-  SERAC_HOST_DEVICE constexpr operator T() const { return data[0]; }
+  template <int last_dimension = m, typename = typename std::enable_if<last_dimension == 1>::type>
+  SERAC_HOST_DEVICE constexpr operator T() const
+  {
+    return data[0];
+  }
 
   T data[m];
 };
@@ -761,7 +785,7 @@ SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m>& A, const tensor<T, m, n
 /**
  * @overload
  * @note vector . tensor4D
- * 
+ *
  * this overload, and others of the form `dot(vector, tensor)`, can be
  * implemented more succinctly as a single variadic function, but for some
  * reason gcc-11 (but not gcc-10 or gcc-12) seemed to break when compiling
