@@ -146,6 +146,16 @@ SERAC_HOST_DEVICE constexpr auto operator+(const tensor<S, m, m>& A, const isotr
   return output;
 }
 
+/**
+ * @brief difference of isotropic and (nonisotropic) tensor
+ * 
+ * @tparam S the type of the left isotropic tensor
+ * @tparam T the type of the right tensor
+ * @tparam m the number of rows and columns in each tensor 
+ * @param I1 the left operand
+ * @param A the (full) right operand
+ * @return a new tensor equal to the difference of I and A
+ */
 template <typename S, typename T, int m>
 SERAC_HOST_DEVICE constexpr auto operator-(const isotropic_tensor<S, m, m>& I, const tensor<T, m, m>& A)
 {
@@ -158,6 +168,7 @@ SERAC_HOST_DEVICE constexpr auto operator-(const isotropic_tensor<S, m, m>& I, c
   return output;
 }
 
+/// @overload
 template <typename S, typename T, int m>
 SERAC_HOST_DEVICE constexpr auto operator-(const tensor<S, m, m>& A, const isotropic_tensor<T, m, m>& I)
 {
@@ -170,12 +181,24 @@ SERAC_HOST_DEVICE constexpr auto operator-(const tensor<S, m, m>& A, const isotr
   return output;
 }
 
+/**
+ * @brief dot product between an isotropic and (nonisotropic) tensor
+ * 
+ * @tparam S the types stored in isotropic tensor
+ * @tparam T the types stored in tensor
+ * @tparam m the number of rows and columns in I
+ * @tparam n the trailing dimensions of A
+ * @param I the left operand
+ * @param A the (full) right operand
+ * @return a new tensor equal to the index notation expression: output(i,...) := I(i,j) * A(j,...)
+ */
 template <typename S, typename T, int m, int... n>
 SERAC_HOST_DEVICE constexpr auto dot(const isotropic_tensor<S, m, m>& I, const tensor<T, m, n...>& A)
 {
   return I.value * A;
 }
 
+/// @overload
 template <typename S, typename T, int m, int... n>
 SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, n...>& A, isotropic_tensor<T, m, m> I)
 {
@@ -184,48 +207,112 @@ SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, n...>& A, isotropic_tensor<
   return A * I.value;
 }
 
-template <typename S, typename T, int m, int... n>
+/**
+ * @brief double-dot product between an isotropic and (nonisotropic) tensor
+ * 
+ * @tparam S the types stored in isotropic tensor
+ * @tparam T the types stored in tensor
+ * @tparam m the number of rows and columns in I, A
+ * @param I the left operand
+ * @param A the (full) right operand
+ * @return a new tensor equal to the index notation expression: 
+ *    output := I(i,j) * A(i,j) \propto tr(A)
+ */
+template <typename S, typename T, int m>
 SERAC_HOST_DEVICE constexpr auto ddot(const isotropic_tensor<S, m, m>& I, const tensor<T, m, m>& A)
 {
   return I.value * tr(A);
 }
 
+/**
+ * @brief return the symmetric part of an isotropic tensor
+ * 
+ * @tparam T the types stored in the isotropic tensor
+ * @tparam m the number of rows and columns in I
+ * @param I the isotropic tensor to symmetrize
+ * @return a copy of I (isotropic matrices are already symmetric)
+ */
 template <typename T, int m>
 SERAC_HOST_DEVICE constexpr auto sym(const isotropic_tensor<T, m, m>& I)
 {
   return I;
 }
 
+/**
+ * @brief return the antisymmetric part of an isotropic tensor
+ * 
+ * @tparam T the types stored in the isotropic tensor
+ * @tparam m the number of rows and columns in I
+ * @param I the isotropic tensor to anti-symmetrize
+ * @return `zero` (isotropic matrices are symmetric, so the antisymmetric part is identically zero)
+ */
 template <typename T, int m>
 SERAC_HOST_DEVICE constexpr auto antisym(const isotropic_tensor<T, m, m>&)
 {
   return zero{};
 }
 
+/**
+ * @brief calculate the trace of an isotropic tensor
+ * 
+ * @tparam T the types stored in the isotropic tensor
+ * @tparam m the number of rows and columns in I
+ * @param I the isotropic tensor to compute the trace of
+ * @return the sum of the diagonal entries of I
+ */
 template <typename T, int m>
 SERAC_HOST_DEVICE constexpr auto tr(const isotropic_tensor<T, m, m>& I)
 {
   return I.value * m;
 }
 
+/**
+ * @brief return the transpose of an isotropic tensor
+ * 
+ * @tparam T the types stored in the isotropic tensor
+ * @tparam m the number of rows and columns in I
+ * @param I the isotropic tensor to compute the trace of
+ * @return a copy of I (isotropic matrices are symmetric)
+ */
 template <typename T, int m>
 SERAC_HOST_DEVICE constexpr auto transpose(const isotropic_tensor<T, m, m>& I)
 {
   return I;
 }
 
+/**
+ * @brief compute the determinant of an isotropic tensor
+ * 
+ * @tparam T the types stored in the isotropic tensor
+ * @tparam m the number of rows and columns in I
+ * @param I the isotropic tensor to compute the determinant of
+ */
 template <typename T, int m>
 SERAC_HOST_DEVICE constexpr auto det(const isotropic_tensor<T, m, m>& I)
 {
   return std::pow(I.value, m);
 }
 
+/**
+ * @brief compute the Frobenius norm (sqrt(tr(dot(transpose(I), I)))) of an isotropic tensor
+ * 
+ * @tparam T the types stored in the isotropic tensor
+ * @tparam m the number of rows and columns in I
+ * @param I the isotropic tensor to compute the norm of
+ */
 template <typename T, int m>
 SERAC_HOST_DEVICE constexpr auto norm(const isotropic_tensor<T, m, m>& I)
 {
   return sqrt(I.value * I.value * m);
 }
 
+/**
+ * @brief compute the squared Frobenius norm (tr(dot(transpose(I), I))) of an isotropic tensor
+ * 
+ * @tparam T the types stored in the isotropic tensor
+ * @tparam m the number of rows and columns in I
+ * @param I the isotropic tensor to compute the squared norm of
+ */
 template <typename T, int m>
 SERAC_HOST_DEVICE constexpr auto sqnorm(const isotropic_tensor<T, m, m>& I)
 {
