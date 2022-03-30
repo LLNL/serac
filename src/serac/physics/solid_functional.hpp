@@ -490,7 +490,7 @@ public:
         [this](const mfem::Vector& u, mfem::Vector& r) {
           functional_call_args_[0] = u;
 
-          r = (*K_functional_)(u);
+          r = (*K_functional_)(functional_call_args_);
           r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
         },
 
@@ -595,10 +595,10 @@ protected:
   FiniteElementState adjoint_displacement_;
 
   /// Mass functional object
-  std::unique_ptr<Functional<test(trial)>> M_functional_;
+  std::unique_ptr<Functional<test(trial, parameter_space...)>> M_functional_;
 
   /// Stiffness functional object
-  std::unique_ptr<Functional<test(trial)>> K_functional_;
+  std::unique_ptr<Functional<test(trial, parameter_space...)>> K_functional_;
 
   /// The finite element states representing user-defined parameter fields
   std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states_;

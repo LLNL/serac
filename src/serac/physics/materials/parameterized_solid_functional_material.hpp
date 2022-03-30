@@ -64,6 +64,13 @@ public:
     return MaterialResponse<double, StressType>{.density = density_, .stress = stress};
   }
 
+  /**
+   * @brief The number of parameters in the model
+   *
+   * @return The number of parameters in the model
+   */
+  static constexpr int numParameters() { return 2; }
+
 private:
   /// Density
   double density_;
@@ -105,7 +112,7 @@ public:
    * @param du_dX displacement gradient with respect to the reference configuration (du_dX)
    * @return The calculated material response (density, kirchoff stress) for the material
    */
-  template <typename T1, typename T2, typename T3>
+  template <typename T1, typename T2, typename T3, typename T4, typename T5>
   SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* displacement */, const T3& du_dX, const T4& bulk_parameter, const T5& shear_parameter) const
   {
     auto bulk_modulus = bulk_parameter + bulk_modulus_offset_;
@@ -121,12 +128,19 @@ public:
     // be removed by either putting the dual implementation of the global namespace or implementing a pure
     // double version there. More investigation into argument-dependent lookup is needed.
     using std::log;
-    auto stress = lambda * log(J) * I + shear_modulus_ * B_minus_I;
+    auto stress = lambda * log(J) * I + shear_modulus * B_minus_I;
 
     using StressType = decltype(stress);
 
     return MaterialResponse<double, StressType>{.density = density_, .stress = stress};
   }
+
+  /**
+   * @brief The number of parameters in the model
+   *
+   * @return The number of parameters in the model
+   */
+  static constexpr int numParameters() { return 2; }
 
 private:
   /// Density
