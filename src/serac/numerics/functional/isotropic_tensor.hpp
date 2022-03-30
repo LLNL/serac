@@ -8,6 +8,8 @@
  * @file isotropic_tensor.hpp
  *
  * @brief Implementation of isotropic tensor classes
+ * 
+ * @note Do not include this file directly, it is included by tensor.hpp
  */
 
 #pragma once
@@ -16,10 +18,6 @@
 #include <type_traits>
 
 namespace serac {
-
-template <int n>
-struct always_false : std::false_type {
-};
 
 /**
  * @brief an object representing a highly symmetric kind of tensor, 
@@ -34,7 +32,7 @@ struct isotropic_tensor;
 ///
 template <typename T, int n>
 struct isotropic_tensor<T, n> {
-  static_assert(always_false<n>{}, "error: there is no such thing as a rank-1 isotropic tensor!");
+  static_assert(::detail::always_false<T>{}, "error: there is no such thing as a rank-1 isotropic tensor!");
 };
 
 /**

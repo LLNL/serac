@@ -31,6 +31,10 @@ constexpr auto get(std::integer_sequence<int, n...>)
 /// @cond
 namespace detail {
 
+template <typename T>
+struct always_false : std::false_type {
+};
+
 /**
  * @brief unfortunately std::integral_constant doesn't have __host__ __device__ annotations
  * and we're not using --expt-relaxed-constexpr, so we need to implement something similar

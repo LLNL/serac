@@ -191,10 +191,17 @@ SERAC_HOST_DEVICE constexpr auto operator/(zero, T /*other*/)
   return zero{};
 }
 
-/** @brief `zero` plus `zero` is `zero */
+/// @brief Get a human-readable compiler error when you try to divide by zero
+template <typename T>
+void operator/(T, zero)
+{
+  static_assert(::detail::always_false<T>{}, "Error: Can't divide by zero!");
+}
+
+/** @brief `zero` plus `zero` is `zero` */
 SERAC_HOST_DEVICE constexpr auto operator+=(zero, zero) { return zero{}; }
 
-/** @brief `zero` minus `zero` is `zero */
+/** @brief `zero` minus `zero` is `zero` */
 SERAC_HOST_DEVICE constexpr auto operator-=(zero, zero) { return zero{}; }
 
 /** @brief let `zero` be accessed like a tuple */
