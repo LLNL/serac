@@ -21,51 +21,108 @@ template <int n>
 struct always_false : std::false_type {
 };
 
+/**
+ * @brief an object representing a highly symmetric kind of tensor, 
+ *        that is interoperable with `serac::tensor`, but uses less memory
+ *        and performs less calculation than its dense counterpart
+ * @tparam T The type stored at each index
+ * @tparam n The dimensions of the tensor
+ */
 template <typename T, int... n>
 struct isotropic_tensor;
 
+///
 template <typename T, int n>
 struct isotropic_tensor<T, n> {
   static_assert(always_false<n>{}, "error: there is no such thing as a rank-1 isotropic tensor!");
 };
 
-// rank-2 isotropic tensors are just identity matrices
+/**
+ * @brief a rank-2 isotropic tensor is essentially just the Identity matrix, with a constant of proportionality
+ * @tparam T The type stored at each index
+ * @tparam n The dimensions of the tensor
+ */
 template <typename T, int m>
 struct isotropic_tensor<T, m, m> {
   SERAC_HOST_DEVICE constexpr T operator()(int i, int j) const { return (i == j) * value; }
   T                             value;
 };
 
+/**
+ * @brief return the identity matrix of the specified size
+ * @tparam m the number of rows and columns
+ */
 template <int m>
 SERAC_HOST_DEVICE constexpr isotropic_tensor<double, m, m> Identity()
 {
   return isotropic_tensor<double, m, m>{1.0};
 }
 
+/**
+ * @brief scalar multiplication
+ * 
+ * @tparam S the type of the left operand, `scale`
+ * @tparam T the type of the isotropic tensor
+ * @tparam m the number of rows and columns in the isotropic tensor
+ * @param scale the value that multiplies each entry of I (from the left)
+ * @param I the isotropic tensor being scaled
+ * @return a new isotropic tensor equal to the product of scale * I
+ */
 template <typename S, typename T, int m>
 SERAC_HOST_DEVICE constexpr auto operator*(S scale, isotropic_tensor<T, m, m> I)
 {
   return isotropic_tensor<decltype(S{} * T{}), m, m>{I.value * scale};
 }
 
+/// @overload
 template <typename S, typename T, int m>
 SERAC_HOST_DEVICE constexpr auto operator*(isotropic_tensor<T, m, m> I, S scale)
 {
   return isotropic_tensor<decltype(S{}, T{}), m, m>{I.value * scale};
 }
 
+/**
+ * @brief addition of isotropic tensors
+ * 
+ * @tparam S the type of the left isotropic tensor
+ * @tparam T the type of the right isotropic tensor
+ * @tparam m the number of rows and columns in each isotropic tensor 
+ * @param I1 the left operand
+ * @param I2 the right operand
+ * @return a new isotropic tensor equal to the sum of I1 and I2
+ */
 template <typename S, typename T, int m>
 SERAC_HOST_DEVICE constexpr auto operator+(isotropic_tensor<S, m, m> I1, isotropic_tensor<T, m, m> I2)
 {
   return isotropic_tensor<decltype(S{} + T{}), m, m>{I1.value + I2.value};
 }
 
+/**
+ * @brief difference of isotropic tensors
+ * 
+ * @tparam S the type of the left isotropic tensor
+ * @tparam T the type of the right isotropic tensor
+ * @tparam m the number of rows and columns in each isotropic tensor 
+ * @param I1 the left operand
+ * @param I2 the right operand
+ * @return a new isotropic tensor equal to the difference of I1 and I2
+ */
 template <typename S, typename T, int m>
 SERAC_HOST_DEVICE constexpr auto operator-(isotropic_tensor<S, m, m> I1, isotropic_tensor<T, m, m> I2)
 {
   return isotropic_tensor<decltype(S{} - T{}), m, m>{I1.value - I2.value};
 }
 
+/**
+ * @brief sum of isotropic and (nonisotropic) tensor
+ * 
+ * @tparam S the type of the left isotropic tensor
+ * @tparam T the type of the right tensor
+ * @tparam m the number of rows and columns in each tensor 
+ * @param I1 the left operand
+ * @param A the (full) right operand
+ * @return a new tensor equal to the sum of I and A
+ */
 template <typename S, typename T, int m>
 SERAC_HOST_DEVICE constexpr auto operator+(const isotropic_tensor<S, m, m>& I, const tensor<T, m, m>& A)
 {
@@ -78,6 +135,7 @@ SERAC_HOST_DEVICE constexpr auto operator+(const isotropic_tensor<S, m, m>& I, c
   return output;
 }
 
+/// @overload
 template <typename S, typename T, int m>
 SERAC_HOST_DEVICE constexpr auto operator+(const tensor<S, m, m>& A, const isotropic_tensor<T, m, m>& I)
 {

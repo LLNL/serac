@@ -20,9 +20,15 @@
 
 namespace serac {
 
+/**
+ * @brief Arbitrary-rank tensor class
+ * @tparam T The type stored at each index
+ * @tparam n The dimensions of the tensor
+ */
 template < typename T, int ... n >
 struct tensor;
 
+/// @cond
 template < typename T, int m, int ... n >
 struct tensor< T, m, n ... > {
   template < typename i_type >
@@ -57,6 +63,7 @@ struct tensor< T, m > {
 
   T data[m];
 };
+/// @endcond
 
 /**
  * @brief class template argument deduction guide for type `tensor`.
