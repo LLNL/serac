@@ -578,6 +578,84 @@ public:
     nonlin_solver_.SetOperator(*residual_);
   }
 
+  /**
+   * @brief Solve the adjoint problem
+   * @pre It is expected that the forward analysis is complete and the current displacement state is valid
+   * @note If the essential boundary state is not specified, homogeneous essential boundary conditions are applied
+   *
+   * @param[in] adjoint_load The dual state that contains the right hand side of the adjoint system (d quantity of
+   * interest/d temperature)
+   * @param[in] dual_with_essential_boundary A optional finite element dual containing the non-homogenous essential
+   * boundary condition data for the adjoint problem
+   * @return The computed adjoint finite element state
+   */
+  virtual const serac::FiniteElementState& solveAdjoint(FiniteElementDual& adjoint_load,
+                                                        FiniteElementDual* dual_with_essential_boundary = nullptr)
+  {
+    mfem::HypreParVector adjoint_load_vector(adjoint_load.trueVec());
+
+    // Add the sign correction to move the term to the RHS
+    adjoint_load_vector *= -1.0;
+
+    auto& lin_solver = nonlin_solver_.LinearSolver();
+
+    // By default, use a homogeneous essential boundary condition
+    mfem::HypreParVector adjoint_essential(adjoint_load.trueVec());
+    adjoint_essential = 0.0;
+
+    functional_call_args_[0] = displacement_.trueVec();
+
+    auto [r, drdu] = (*K_functional_)(functional_call_args_, Index<0>{});
+    auto jacobian  = assemble(drdu);
+    auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
+
+    // If we have a non-homogeneous essential boundary condition, extract it from the given state
+    if (dual_with_essential_boundary) {
+      dual_with_essential_boundary->initializeTrueVec();
+      adjoint_essential = dual_with_essential_boundary->trueVec();
+    }
+
+    for (const auto& bc : bcs_.essentials()) {
+      bc.eliminateFromMatrix(*J_T);
+      bc.eliminateToRHS(*J_T, adjoint_essential, adjoint_load_vector);
+    }
+
+    lin_solver.SetOperator(*J_T);
+    lin_solver.Mult(adjoint_load_vector, adjoint_displacement_.trueVec());
+
+    adjoint_displacement_.distributeSharedDofs();
+
+    // Reset the equation solver to use the full nonlinear residual operator
+    nonlin_solver_.SetOperator(*residual_);
+
+    return adjoint_displacement_;
+  }
+
+  /**
+   * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
+   * problem with respect to the parameter field
+   *
+   * @tparam parameter_field The index of the parameter to take a derivative with respect to
+   * @return The sensitivity with respect to the parameter
+   *
+   * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
+   */
+  template <int parameter_field>
+  FiniteElementDual& computeSensitivity()
+  {
+    functional_call_args_[0] = displacement_.trueVec();
+
+    auto [r, drdparam] = (*K_functional_)(functional_call_args_, Index<parameter_field + 1>{});
+
+    auto drdparam_mat = assemble(drdparam);
+
+    drdparam_mat->MultTranspose(adjoint_displacement_.trueVec(), parameter_sensitivities_[parameter_field]->trueVec());
+
+    parameter_sensitivities_[parameter_field]->distributeSharedDofs();
+
+    return *parameter_sensitivities_[parameter_field];
+  }
+
 protected:
   /// The compile-time finite element trial space for displacement and velocity (H1 of order p)
   using trial = H1<order, dim>;

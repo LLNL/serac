@@ -33,7 +33,8 @@ public:
    * @param shear_modulus_offset Shear modulus offset of the material
    * @param bulk_modulus_offset Bulk modulus offset of the material
    */
-  ParameterizedLinearIsotropicSolid(double density = 1.0, double shear_modulus_offset = 1.0, double bulk_modulus_offset = 1.0)
+  ParameterizedLinearIsotropicSolid(double density = 1.0, double shear_modulus_offset = 1.0,
+                                    double bulk_modulus_offset = 1.0)
       : density_(density), bulk_modulus_offset_(bulk_modulus_offset), shear_modulus_offset_(shear_modulus_offset)
   {
     SLIC_ERROR_ROOT_IF(density_ < 0.0, "Density must be positive in the linear isotropic elasticity material model.");
@@ -49,9 +50,10 @@ public:
    * @return The calculated material response (density, kirchoff stress) for the material
    */
   template <typename T1, typename T2, typename T3, typename T4, typename T5>
-  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* displacement */, const T3& du_dX, const T4& bulk_parameter, const T5& shear_parameter) const
+  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* displacement */, const T3& du_dX,
+                                    const T4& bulk_parameter, const T5& shear_parameter) const
   {
-    auto bulk_modulus = bulk_parameter + bulk_modulus_offset_;
+    auto bulk_modulus  = bulk_parameter + bulk_modulus_offset_;
     auto shear_modulus = shear_parameter + shear_modulus_offset_;
 
     auto I      = Identity<dim>();
@@ -97,7 +99,8 @@ public:
    * @param shear_modulus_offset Shear modulus of the material
    * @param bulk_modulus_offset Bulk modulus of the material
    */
-  ParameterizedNeoHookeanSolid(double density = 1.0, double shear_modulus_offset = 1.0, double bulk_modulus_offset = 1.0)
+  ParameterizedNeoHookeanSolid(double density = 1.0, double shear_modulus_offset = 1.0,
+                               double bulk_modulus_offset = 1.0)
       : density_(density), bulk_modulus_offset_(bulk_modulus_offset), shear_modulus_offset_(shear_modulus_offset)
   {
     SLIC_ERROR_ROOT_IF(density_ < 0.0, "Density must be positive in the neo-Hookean material model.");
@@ -113,9 +116,10 @@ public:
    * @return The calculated material response (density, kirchoff stress) for the material
    */
   template <typename T1, typename T2, typename T3, typename T4, typename T5>
-  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* displacement */, const T3& du_dX, const T4& bulk_parameter, const T5& shear_parameter) const
+  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* displacement */, const T3& du_dX,
+                                    const T4& bulk_parameter, const T5& shear_parameter) const
   {
-    auto bulk_modulus = bulk_parameter + bulk_modulus_offset_;
+    auto bulk_modulus  = bulk_parameter + bulk_modulus_offset_;
     auto shear_modulus = shear_parameter + shear_modulus_offset_;
 
     auto I         = Identity<dim>();
