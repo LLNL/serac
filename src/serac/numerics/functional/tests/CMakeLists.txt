@@ -9,7 +9,7 @@
 blt_add_executable(NAME        tensor_unit_tests
                    SOURCES     tensor_unit_tests.cpp
                    OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
-                   DEPENDS_ON  serac_functional ${functional_depends}
+                   DEPENDS_ON  gtest serac_functional ${functional_depends}
                    FOLDER      serac/tests)
 
 # Then add the examples/tests

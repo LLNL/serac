@@ -21,6 +21,14 @@ import sys
 # Summary files were the same within the given tolerance if the
 # script exists successfully and not otherwise.
 
+# converts to list in the case it's single value
+def as_list(v):
+    if type(v) is list:
+        return v
+    else:
+        return [v]
+
+
 def ensure_file(path):
     if not os.path.exists(path):
         print("ERROR: Given file does not exist: {0}".format(path))
@@ -71,8 +79,8 @@ def ensure_timesteps(baseline_curves, test_curves):
     if error_found:
         sys.exit(1)
 
-    baseline_timesteps = baseline_curves[timestep_name]
-    test_timesteps = test_curves[timestep_name]
+    baseline_timesteps = as_list(baseline_curves[timestep_name])
+    test_timesteps = as_list(test_curves[timestep_name])
 
     if len(baseline_timesteps) != len(test_timesteps):
         print("ERROR: Number of test time steps, {0}, does not match baseline, {1}"
@@ -185,11 +193,11 @@ def ensure_field_stats(field_names, baseline_curves, test_curves):
     # Check lengths of all stat values lists
     for field_name in field_names:
         for stat_name in baseline_curves[field_name].keys():
-            baseline_values = baseline_curves[field_name][stat_name]
-            test_values = test_curves[field_name][stat_name]
+            baseline_values = as_list(baseline_curves[field_name][stat_name])
+            test_values = as_list(test_curves[field_name][stat_name])
 
             # Check if either file has no stat values under each stat
-            if len(test_values) == 0:
+            if len(baseline_values) == 0:
                 print("ERROR: Baseline file had no stat values under '{0}/{1}'".format(field_name, stat_name))
                 error_count += 1
                 zero_found = True
@@ -222,8 +230,8 @@ def ensure_field_stat_values(field_names, baseline_curves, test_curves, toleranc
     # Check if values are within given tolerance
     for field_name in field_names:
         for stat_name in baseline_curves[field_name].keys():
-            baseline_values = baseline_curves[field_name][stat_name]
-            test_values = test_curves[field_name][stat_name]
+            baseline_values = as_list(baseline_curves[field_name][stat_name])
+            test_values = as_list(test_curves[field_name][stat_name])
 
             for i in range(len(baseline_values)):
                 baseline_value = baseline_values[i]
@@ -260,7 +268,7 @@ def main():
     # Get both sets of field names
     baseline_field_names = get_field_names(baseline_curves)
     test_field_names = get_field_names(test_curves)
-     
+
     ensure_field_names(baseline_field_names, test_field_names)
     ensure_field_stats(baseline_field_names, baseline_curves, test_curves)
     ensure_field_stat_values(baseline_field_names, baseline_curves, test_curves, args.tolerance)

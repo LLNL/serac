@@ -20,6 +20,6 @@ struct finite_element<g, QOI> {
 
   using residual_type = double;
 
-  static constexpr double shape_functions(double /* xi */) { return 1.0; }
+  SERAC_HOST_DEVICE static constexpr double shape_functions(double /* xi */) { return 1.0; }
 };
 /// @endcond

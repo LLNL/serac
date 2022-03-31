@@ -44,21 +44,21 @@ dual(double, T) -> dual<T>;
 
 /** @brief addition of a dual number and a non-dual number */
 template <typename gradient_type>
-constexpr auto operator+(dual<gradient_type> a, double b)
+SERAC_HOST_DEVICE constexpr auto operator+(dual<gradient_type> a, double b)
 {
   return dual{a.value + b, a.gradient};
 }
 
 /** @brief addition of a dual number and a non-dual number */
 template <typename gradient_type>
-constexpr auto operator+(double a, dual<gradient_type> b)
+SERAC_HOST_DEVICE constexpr auto operator+(double a, dual<gradient_type> b)
 {
   return dual{a + b.value, b.gradient};
 }
 
 /** @brief addition of two dual numbers */
 template <typename gradient_type_a, typename gradient_type_b>
-constexpr auto operator+(dual<gradient_type_a> a, dual<gradient_type_b> b)
+SERAC_HOST_DEVICE constexpr auto operator+(dual<gradient_type_a> a, dual<gradient_type_b> b)
 {
   return dual{a.value + b.value, a.gradient + b.gradient};
 }
@@ -72,63 +72,63 @@ constexpr auto operator-(dual<gradient_type> x)
 
 /** @brief subtraction of a non-dual number from a dual number */
 template <typename gradient_type>
-constexpr auto operator-(dual<gradient_type> a, double b)
+SERAC_HOST_DEVICE constexpr auto operator-(dual<gradient_type> a, double b)
 {
   return dual{a.value - b, a.gradient};
 }
 
 /** @brief subtraction of a dual number from a non-dual number */
 template <typename gradient_type>
-constexpr auto operator-(double a, dual<gradient_type> b)
+SERAC_HOST_DEVICE constexpr auto operator-(double a, dual<gradient_type> b)
 {
   return dual{a - b.value, -b.gradient};
 }
 
 /** @brief subtraction of two dual numbers */
 template <typename gradient_type_a, typename gradient_type_b>
-constexpr auto operator-(dual<gradient_type_a> a, dual<gradient_type_b> b)
+SERAC_HOST_DEVICE constexpr auto operator-(dual<gradient_type_a> a, dual<gradient_type_b> b)
 {
   return dual{a.value - b.value, a.gradient - b.gradient};
 }
 
 /** @brief multiplication of a dual number and a non-dual number */
 template <typename gradient_type>
-constexpr auto operator*(const dual<gradient_type>& a, double b)
+SERAC_HOST_DEVICE constexpr auto operator*(const dual<gradient_type>& a, double b)
 {
   return dual{a.value * b, a.gradient * b};
 }
 
 /** @brief multiplication of a dual number and a non-dual number */
 template <typename gradient_type>
-constexpr auto operator*(double a, const dual<gradient_type>& b)
+SERAC_HOST_DEVICE constexpr auto operator*(double a, const dual<gradient_type>& b)
 {
   return dual{a * b.value, a * b.gradient};
 }
 
 /** @brief multiplication of two dual numbers */
 template <typename gradient_type_a, typename gradient_type_b>
-constexpr auto operator*(dual<gradient_type_a> a, dual<gradient_type_b> b)
+SERAC_HOST_DEVICE constexpr auto operator*(dual<gradient_type_a> a, dual<gradient_type_b> b)
 {
   return dual{a.value * b.value, b.value * a.gradient + a.value * b.gradient};
 }
 
 /** @brief division of a dual number by a non-dual number */
 template <typename gradient_type>
-constexpr auto operator/(const dual<gradient_type>& a, double b)
+SERAC_HOST_DEVICE constexpr auto operator/(const dual<gradient_type>& a, double b)
 {
   return dual{a.value / b, a.gradient / b};
 }
 
 /** @brief division of a non-dual number by a dual number */
 template <typename gradient_type>
-constexpr auto operator/(double a, const dual<gradient_type>& b)
+SERAC_HOST_DEVICE constexpr auto operator/(double a, const dual<gradient_type>& b)
 {
   return dual{a / b.value, -(a / (b.value * b.value)) * b.gradient};
 }
 
 /** @brief division of two dual numbers */
 template <typename gradient_type_a, typename gradient_type_b>
-constexpr auto operator/(dual<gradient_type_a> a, dual<gradient_type_b> b)
+SERAC_HOST_DEVICE constexpr auto operator/(dual<gradient_type_a> a, dual<gradient_type_b> b)
 {
   return dual{a.value / b.value, (a.gradient / b.value) - (a.value * b.gradient) / (b.value * b.value)};
 }
@@ -138,23 +138,23 @@ constexpr auto operator/(dual<gradient_type_a> a, dual<gradient_type_b> b)
  * Comparisons are conducted against the "value" part of the dual number
  * @param[in] x The comparison operator to overload
  */
-#define binary_comparator_overload(x)                           \
-  template <typename T>                                         \
-  constexpr bool operator x(const dual<T>& a, double b)         \
-  {                                                             \
-    return a.value x b;                                         \
-  }                                                             \
-                                                                \
-  template <typename T>                                         \
-  constexpr bool operator x(double a, const dual<T>& b)         \
-  {                                                             \
-    return a x b.value;                                         \
-  };                                                            \
-                                                                \
-  template <typename T, typename U>                             \
-  constexpr bool operator x(const dual<T>& a, const dual<U>& b) \
-  {                                                             \
-    return a.value x b.value;                                   \
+#define binary_comparator_overload(x)                                             \
+  template <typename T>                                                           \
+  SERAC_HOST_DEVICE constexpr bool operator x(const dual<T>& a, double b)         \
+  {                                                                               \
+    return a.value x b;                                                           \
+  }                                                                               \
+                                                                                  \
+  template <typename T>                                                           \
+  SERAC_HOST_DEVICE constexpr bool operator x(double a, const dual<T>& b)         \
+  {                                                                               \
+    return a x b.value;                                                           \
+  };                                                                              \
+                                                                                  \
+  template <typename T, typename U>                                               \
+  SERAC_HOST_DEVICE constexpr bool operator x(const dual<T>& a, const dual<U>& b) \
+  {                                                                               \
+    return a.value x b.value;                                                     \
   };
 
 binary_comparator_overload(<);   ///< implement operator<  for dual numbers
@@ -167,7 +167,7 @@ binary_comparator_overload(>);   ///< implement operator>  for dual numbers
 
 /** @brief compound assignment (+) for dual numbers */
 template <typename gradient_type>
-constexpr auto& operator+=(dual<gradient_type>& a, const dual<gradient_type>& b)
+SERAC_HOST_DEVICE constexpr auto& operator+=(dual<gradient_type>& a, const dual<gradient_type>& b)
 {
   a.value += b.value;
   a.gradient += b.gradient;
@@ -176,7 +176,7 @@ constexpr auto& operator+=(dual<gradient_type>& a, const dual<gradient_type>& b)
 
 /** @brief compound assignment (-) for dual numbers */
 template <typename gradient_type>
-constexpr auto& operator-=(dual<gradient_type>& a, const dual<gradient_type>& b)
+SERAC_HOST_DEVICE constexpr auto& operator-=(dual<gradient_type>& a, const dual<gradient_type>& b)
 {
   a.value -= b.value;
   a.gradient -= b.gradient;
@@ -185,7 +185,7 @@ constexpr auto& operator-=(dual<gradient_type>& a, const dual<gradient_type>& b)
 
 /** @brief compound assignment (+) for dual numbers with `double` righthand side */
 template <typename gradient_type>
-constexpr auto& operator+=(dual<gradient_type>& a, double b)
+SERAC_HOST_DEVICE constexpr auto& operator+=(dual<gradient_type>& a, double b)
 {
   a.value += b;
   return a;
@@ -193,7 +193,7 @@ constexpr auto& operator+=(dual<gradient_type>& a, double b)
 
 /** @brief compound assignment (-) for dual numbers with `double` righthand side */
 template <typename gradient_type>
-constexpr auto& operator-=(dual<gradient_type>& a, double b)
+SERAC_HOST_DEVICE constexpr auto& operator-=(dual<gradient_type>& a, double b)
 {
   a.value -= b;
   return a;
@@ -201,14 +201,14 @@ constexpr auto& operator-=(dual<gradient_type>& a, double b)
 
 /** @brief implementation of absolute value function for dual numbers */
 template <typename gradient_type>
-auto abs(dual<gradient_type> x)
+SERAC_HOST_DEVICE auto abs(dual<gradient_type> x)
 {
   return (x.value >= 0) ? x : -x;
 }
 
 /** @brief implementation of square root for dual numbers */
 template <typename gradient_type>
-auto sqrt(dual<gradient_type> x)
+SERAC_HOST_DEVICE auto sqrt(dual<gradient_type> x)
 {
   using std::sqrt;
   return dual<gradient_type>{sqrt(x.value), x.gradient / (2.0 * sqrt(x.value))};
@@ -216,7 +216,7 @@ auto sqrt(dual<gradient_type> x)
 
 /** @brief implementation of cosine for dual numbers */
 template <typename gradient_type>
-auto cos(dual<gradient_type> a)
+SERAC_HOST_DEVICE auto cos(dual<gradient_type> a)
 {
   using std::cos, std::sin;
   return dual<gradient_type>{cos(a.value), -a.gradient * sin(a.value)};
@@ -224,7 +224,7 @@ auto cos(dual<gradient_type> a)
 
 /** @brief implementation of sine for dual numbers */
 template <typename gradient_type>
-auto sin(dual<gradient_type> a)
+SERAC_HOST_DEVICE auto sin(dual<gradient_type> a)
 {
   using std::cos, std::sin;
   return dual<gradient_type>{sin(a.value), a.gradient * cos(a.value)};
@@ -232,7 +232,7 @@ auto sin(dual<gradient_type> a)
 
 /** @brief implementation of exponential function for dual numbers */
 template <typename gradient_type>
-auto exp(dual<gradient_type> a)
+SERAC_HOST_DEVICE auto exp(dual<gradient_type> a)
 {
   using std::exp;
   return dual<gradient_type>{exp(a.value), exp(a.value) * a.gradient};
@@ -240,7 +240,7 @@ auto exp(dual<gradient_type> a)
 
 /** @brief implementation of the natural logarithm function for dual numbers */
 template <typename gradient_type>
-auto log(dual<gradient_type> a)
+SERAC_HOST_DEVICE auto log(dual<gradient_type> a)
 {
   using std::log;
   return dual<gradient_type>{log(a.value), a.gradient / a.value};
@@ -248,7 +248,7 @@ auto log(dual<gradient_type> a)
 
 /** @brief implementation of `a` (dual) raised to the `b` (dual) power */
 template <typename gradient_type>
-auto pow(dual<gradient_type> a, dual<gradient_type> b)
+SERAC_HOST_DEVICE auto pow(dual<gradient_type> a, dual<gradient_type> b)
 {
   using std::pow, std::log;
   double value = pow(a.value, b.value);
@@ -257,7 +257,7 @@ auto pow(dual<gradient_type> a, dual<gradient_type> b)
 
 /** @brief implementation of `a` (non-dual) raised to the `b` (dual) power */
 template <typename gradient_type>
-auto pow(double a, dual<gradient_type> b)
+SERAC_HOST_DEVICE auto pow(double a, dual<gradient_type> b)
 {
   using std::pow, std::log;
   double value = pow(a, b.value);
@@ -266,7 +266,7 @@ auto pow(double a, dual<gradient_type> b)
 
 /** @brief implementation of `a` (dual) raised to the `b` (non-dual) power */
 template <typename gradient_type>
-auto pow(dual<gradient_type> a, double b)
+SERAC_HOST_DEVICE auto pow(dual<gradient_type> a, double b)
 {
   using std::pow;
   double value = pow(a.value, b);
@@ -282,7 +282,7 @@ auto& operator<<(std::ostream& out, dual<T> A)
 }
 
 /** @brief promote a value to a dual number of the appropriate type */
-constexpr auto make_dual(double x) { return dual{x, 1.0}; }
+SERAC_HOST_DEVICE constexpr auto make_dual(double x) { return dual{x, 1.0}; }
 
 /** @brief return the "value" part from a given type. For non-dual types, this is just the identity function */
 template <typename T>

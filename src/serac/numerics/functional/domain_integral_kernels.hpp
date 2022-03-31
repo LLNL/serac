@@ -112,7 +112,7 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
    * @param data user-specified quadrature data to pass to the q-function
    */
   EvaluationKernel(KernelConfig<Q, geom, test, trials...>, const mfem::Vector& J, const mfem::Vector& X,
-                   size_t num_elements, lambda qf, QuadratureData<qpt_data_type>& data)
+                   std::size_t num_elements, lambda qf, QuadratureData<qpt_data_type>& data)
       : J_(J), X_(X), num_elements_(num_elements), qf_(qf), data_(data)
   {
   }
@@ -129,7 +129,7 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
     for (uint32_t j = 0; j < num_trial_spaces; j++) {
       ptrs[j] = U[j].Read();
     }
-    EVector_t u(ptrs, size_t(num_elements_));
+    EVector_t u(ptrs, std::size_t(num_elements_));
 
     using test_element              = finite_element<geom, test>;
     using element_residual_type     = typename test_element::residual_type;
@@ -181,7 +181,7 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
 
   const mfem::Vector&            J_;             ///< Jacobian matrix entries at each quadrature point
   const mfem::Vector&            X_;             ///< Spatial positions of each quadrature point
-  size_t                         num_elements_;  ///< how many elements in the domain
+  std::size_t                    num_elements_;  ///< how many elements in the domain
   lambda                         qf_;            ///< q-function
   QuadratureData<qpt_data_type>& data_;          ///< (optional) user-provided quadrature data
 };
@@ -212,7 +212,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
    */
   EvaluationKernel(DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>,
                    CPUArrayView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J, const mfem::Vector& X,
-                   size_t num_elements, lambda qf, QuadratureData<qpt_data_type>& data)
+                   std::size_t num_elements, lambda qf, QuadratureData<qpt_data_type>& data)
       : qf_derivatives_(qf_derivatives), J_(J), X_(X), num_elements_(num_elements), qf_(qf), data_(data)
   {
   }
@@ -229,7 +229,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
     for (uint32_t j = 0; j < num_trial_spaces; j++) {
       ptrs[j] = U[j].Read();
     }
-    EVector_t u(ptrs, size_t(num_elements_));
+    EVector_t u(ptrs, std::size_t(num_elements_));
 
     using test_element              = finite_element<geom, test>;
     using element_residual_type     = typename test_element::residual_type;
@@ -287,7 +287,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
   ExecArrayView<derivatives_type, 2, exec> qf_derivatives_;  ///< derivatives of the q-function w.r.t. trial space `I`
   const mfem::Vector&                      J_;               ///< Jacobian matrix entries at each quadrature point
   const mfem::Vector&                      X_;               ///< Spatial positions of each quadrature point
-  size_t                                   num_elements_;    ///< how many elements in the domain
+  std::size_t                              num_elements_;    ///< how many elements in the domain
   lambda                                   qf_;              ///< q-function
   QuadratureData<qpt_data_type>&           data_;            ///< (optional) user-provided quadrature data
 };
@@ -303,6 +303,24 @@ EvaluationKernel(DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, CPUAr
                  const mfem::Vector&, const mfem::Vector&, int, lambda, QuadratureData<qpt_data_type>&)
     -> EvaluationKernel<DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, derivatives_type, lambda,
                         qpt_data_type>;
+
+//clang-format off
+template <bool is_QOI, typename S, typename T>
+auto chain_rule(const S& dfdx, const T& dx)
+{
+  if constexpr (is_QOI) {
+    return serac::chain_rule(serac::get<0>(dfdx), serac::get<0>(dx)) +
+           serac::chain_rule(serac::get<1>(dfdx), serac::get<1>(dx));
+  }
+
+  if constexpr (!is_QOI) {
+    return serac::tuple{serac::chain_rule(serac::get<0>(serac::get<0>(dfdx)), serac::get<0>(dx)) +
+                            serac::chain_rule(serac::get<1>(serac::get<0>(dfdx)), serac::get<1>(dx)),
+                        serac::chain_rule(serac::get<0>(serac::get<1>(dfdx)), serac::get<0>(dx)) +
+                            serac::chain_rule(serac::get<1>(serac::get<1>(dfdx)), serac::get<1>(dx))};
+  }
+}
+//clang-format on
 
 /**
  * @brief The base kernel template used to create create custom directional derivative
@@ -332,11 +350,12 @@ EvaluationKernel(DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, CPUAr
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
 void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
                                CPUArrayView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J_,
-                               size_t num_elements)
+                               std::size_t num_elements)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
   using element_residual_type      = typename test_element::residual_type;
+  static constexpr bool is_QOI     = (test::family == Family::QOI);
   static constexpr int  dim        = dimension_of(g);
   static constexpr int  test_ndof  = test_element::ndof;
   static constexpr int  trial_ndof = trial_element::ndof;
@@ -372,7 +391,7 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
       auto dq_darg = qf_derivatives(static_cast<size_t>(e), static_cast<size_t>(q));
 
       // use the chain rule to compute the first-order change in the q-function output
-      auto dq = chain_rule(dq_darg, darg);
+      auto dq = chain_rule<is_QOI>(dq_darg, darg);
 
       // integrate dq against test space shape functions / gradients
       // to get the (change in) element residual contributions
@@ -409,7 +428,7 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
 void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dk,
                              CPUArrayView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J_,
-                             size_t num_elements)
+                             std::size_t num_elements)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
