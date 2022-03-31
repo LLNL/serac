@@ -57,17 +57,17 @@ void functional_solid_test_static(double expected_disp_norm)
 
   const typename solid_util::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
 
-  // Construct a functional-based thermal conduction solver
+  // Construct a functional-based solid mechanics solver
   SolidFunctional<p, dim> solid_solver(default_static, GeometricNonlinearities::On, FinalMeshOption::Reference,
                                        "solid_functional");
 
   solid_util::NeoHookeanSolid<dim> mat(1.0, 1.0, 1.0);
   solid_solver.setMaterial(mat);
 
-  // Define the function for the initial temperature and boundary condition
+  // Define the function for the initial displacement and boundary condition
   auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
 
-  // Set the initial temperature and boundary condition
+  // Set the initial displacement and boundary condition
   solid_solver.setDisplacementBCs(ess_bdr, bc);
   solid_solver.setDisplacement(bc);
 
@@ -138,17 +138,17 @@ void functional_solid_test_dynamic(double expected_disp_norm)
   const typename solid_util::SolverOptions default_dynamic = {default_linear_options, default_nonlinear_options,
                                                               default_timestep};
 
-  // Construct a functional-based thermal conduction solver
+  // Construct a functional-based solid mechanics solver
   SolidFunctional<p, dim> solid_solver(default_dynamic, GeometricNonlinearities::Off, FinalMeshOption::Reference,
                                        "solid_functional_dynamic");
 
   solid_util::LinearIsotropicSolid<dim> mat(1.0, 1.0, 1.0);
   solid_solver.setMaterial(mat);
 
-  // Define the function for the initial temperature and boundary condition
+  // Define the function for the initial displacement and boundary condition
   auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
 
-  // Set the initial temperature and boundary condition
+  // Set the initial displacement and boundary condition
   solid_solver.setDisplacementBCs(ess_bdr, bc);
   solid_solver.setDisplacement(bc);
 
@@ -222,17 +222,17 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
 
   const typename solid_util::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
 
-  // Construct a functional-based thermal conduction solver
+  // Construct a functional-based solid mechanics solver
   SolidFunctional<p, dim> solid_solver(default_static, GeometricNonlinearities::Off, FinalMeshOption::Reference,
                                        "solid_functional");
 
   solid_util::LinearIsotropicSolid<dim> mat(1.0, 1.0, 1.0);
   solid_solver.setMaterial(mat);
 
-  // Define the function for the initial temperature and boundary condition
+  // Define the function for the initial displacement and boundary condition
   auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
 
-  // Set the initial temperature and boundary condition
+  // Set the initial displacement and boundary condition
   solid_solver.setDisplacementBCs(ess_bdr, bc);
   solid_solver.setDisplacement(bc);
 
@@ -314,8 +314,8 @@ void functional_parameterized_solid_test(double expected_disp_norm)
 
   const typename solid_util::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
 
-  // Construct and initialized the user-defined conductivity to be used as a differentiable parameter in
-  // the thermal conduction physics module.
+  // Construct and initialized the user-defined moduli to be used as a differentiable parameter in
+  // the solid mechanics physics module.
   FiniteElementState user_defined_shear_modulus(
       StateManager::newState(FiniteElementState::Options{.order = 1, .name = "parameterized_shear"}));
 
@@ -326,7 +326,7 @@ void functional_parameterized_solid_test(double expected_disp_norm)
 
   user_defined_bulk_modulus = 1.0;
 
-  // Construct a functional-based thermal conduction solver
+  // Construct a functional-based solid mechanics solver
   SolidFunctional<p, dim, H1<1>, H1<1>> solid_solver(default_static, GeometricNonlinearities::On,
                                                      FinalMeshOption::Reference, "solid_functional",
                                                      {user_defined_bulk_modulus, user_defined_shear_modulus});
@@ -334,10 +334,10 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   solid_util::ParameterizedNeoHookeanSolid<dim> mat(1.0, 0.0, 0.0);
   solid_solver.setMaterial(mat);
 
-  // Define the function for the initial temperature and boundary condition
+  // Define the function for the initial displacement and boundary condition
   auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
 
-  // Set the initial temperature and boundary condition
+  // Set the initial displacement and boundary condition
   solid_solver.setDisplacementBCs(ess_bdr, bc);
   solid_solver.setDisplacement(bc);
 

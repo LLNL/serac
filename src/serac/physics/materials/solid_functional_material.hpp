@@ -18,7 +18,7 @@
 namespace serac::solid_util {
 
 /**
- * @brief Response data type for thermal conduction simulations
+ * @brief Response data type for solid mechanics simulations
  *
  * @tparam T1 Density type
  * @tparam T2 Stress type (i.e. second order tensor)

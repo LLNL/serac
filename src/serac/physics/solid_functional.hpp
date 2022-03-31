@@ -585,7 +585,7 @@ public:
    * @note If the essential boundary state is not specified, homogeneous essential boundary conditions are applied
    *
    * @param[in] adjoint_load The dual state that contains the right hand side of the adjoint system (d quantity of
-   * interest/d temperature)
+   * interest/d displacement)
    * @param[in] dual_with_essential_boundary A optional finite element dual containing the non-homogenous essential
    * boundary condition data for the adjoint problem
    * @return The computed adjoint finite element state
@@ -685,7 +685,7 @@ protected:
   /// The sensitivities (dual vectors) with repect to each of the input parameter fields
   std::array<std::unique_ptr<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;
 
-  /// The set of input trial space vectors (temperature + parameters) used to call the underlying functional
+  /// The set of input trial space vectors (displacement + parameters) used to call the underlying functional
   std::vector<std::reference_wrapper<const mfem::Vector>> functional_call_args_;
 
   /**
