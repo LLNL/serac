@@ -46,7 +46,11 @@ public:
    * @tparam T1 Spatial position type
    * @tparam T2 Displacement type
    * @tparam T3 Displacement gradient type
-   * @param du_dX displacement gradient with respect to the reference configuration (du_dX)
+   * @tparam T4 Bulk modulus type
+   * @tparam T5 Shear modulus type
+   * @param du_dX Displacement gradient with respect to the reference configuration (du_dX)
+   * @param bulk_parameter The parameterized bulk modulus
+   * @param shear_parameter The parameterized shear modulus
    * @return The calculated material response (density, kirchoff stress) for the material
    */
   template <typename T1, typename T2, typename T3, typename T4, typename T5>
@@ -112,7 +116,11 @@ public:
    * @tparam T1 Spatial position type
    * @tparam T2 Displacement type
    * @tparam T3 Displacement gradient type
-   * @param du_dX displacement gradient with respect to the reference configuration (du_dX)
+   * @tparam T4 Bulk modulus type
+   * @tparam T5 Shear modulus type
+   * @param du_dX Displacement gradient with respect to the reference configuration (du_dX)
+   * @param bulk_parameter The parameterized bulk modulus
+   * @param shear_parameter The parameterized shear modulus
    * @return The calculated material response (density, kirchoff stress) for the material
    */
   template <typename T1, typename T2, typename T3, typename T4, typename T5>

@@ -225,11 +225,11 @@ template <typename T>
 TriviallyParameterizedPressure(T) -> TriviallyParameterizedPressure<T>;
 
 /**
- * @brief Convert an unparameterized source to one which accepts parameter values in the paren operator
+ * @brief Convert an unparameterized pressure to one which accepts parameter values in the paren operator
  *
- * @tparam T The unparameterized source type
- * @param source The unparameterized source
- * @return The parameterized source
+ * @tparam T The unparameterized pressure type
+ * @param pressure The unparameterized pressure
+ * @return The parameterized pressure
  */
 template <typename T>
 auto parameterizePressure(T& pressure)
