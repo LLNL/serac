@@ -20,6 +20,12 @@ std::optional<cali::ConfigManager> mgr;
 }  // namespace
 #endif
 
+/**
+ * @brief initialization for the profiling libraries (currently adiak and caliper, when enabled)
+ *
+ * @param comm the mpi communicator
+ * @param options string of options passed to caliper, when enabled
+ */
 void initialize([[maybe_unused]] MPI_Comm comm, [[maybe_unused]] std::string options)
 {
 #ifdef SERAC_USE_ADIAK

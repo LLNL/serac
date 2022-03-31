@@ -22,23 +22,23 @@ TEST(tensor, basic_operations)
 
   tensor<double, 3, 3> A = make_tensor<3, 3>([](int i, int j) { return i + 2.0 * j; });
 
-  double sqnormA = 111.0;
-  EXPECT_LT(abs(sqnorm(A) - sqnormA), tolerance);
+  double squared_normA = 111.0;
+  EXPECT_LT(abs(squared_norm(A) - squared_normA), tolerance);
 
   tensor<double, 3, 3> symA = {{{0, 1.5, 3}, {1.5, 3, 4.5}, {3, 4.5, 6}}};
-  EXPECT_LT(abs(sqnorm(sym(A) - symA)), tolerance);
+  EXPECT_LT(abs(squared_norm(sym(A) - symA)), tolerance);
 
   tensor<double, 3, 3> devA = {{{-3, 2, 4}, {1, 0, 5}, {2, 4, 3}}};
-  EXPECT_LT(abs(sqnorm(dev(A) - devA)), tolerance);
+  EXPECT_LT(abs(squared_norm(dev(A) - devA)), tolerance);
 
   tensor<double, 3, 3> invAp1 = {{{-4, -1, 3}, {-1.5, 0.5, 0.5}, {2, 0, -1}}};
-  EXPECT_LT(abs(sqnorm(inv(A + I) - invAp1)), tolerance);
+  EXPECT_LT(abs(squared_norm(inv(A + I) - invAp1)), tolerance);
 
   tensor<double, 3> Au = {16, 22, 28};
-  EXPECT_LT(abs(sqnorm(dot(A, u) - Au)), tolerance);
+  EXPECT_LT(abs(squared_norm(dot(A, u) - Au)), tolerance);
 
   tensor<double, 3> uA = {8, 20, 32};
-  EXPECT_LT(abs(sqnorm(dot(u, A) - uA)), tolerance);
+  EXPECT_LT(abs(squared_norm(dot(u, A) - uA)), tolerance);
 
   double uAu = 144;
   EXPECT_LT(abs(dot(u, A, u) - uAu), tolerance);
@@ -63,13 +63,13 @@ TEST(tensor, elasticity)
 
   tensor grad_u = make_tensor<3, 3>([](int i, int j) { return i + 2.0 * j; });
 
-  EXPECT_LT(abs(sqnorm(ddot(C, sym(grad_u)) - sigma(sym(grad_u)))), tolerance);
+  EXPECT_LT(abs(squared_norm(double_dot(C, sym(grad_u)) - sigma(sym(grad_u)))), tolerance);
 
   auto epsilon = sym(make_dual(grad_u));
 
   tensor dsigma_depsilon = get_gradient(sigma(epsilon));
 
-  EXPECT_LT(abs(sqnorm(dsigma_depsilon - C)), tolerance);
+  EXPECT_LT(abs(squared_norm(dsigma_depsilon - C)), tolerance);
 }
 
 TEST(tensor, navier_stokes)
@@ -98,24 +98,24 @@ TEST(tensor, navier_stokes)
   {
     auto exact = dsigma_dp(p, v, L);
     auto ad    = get_gradient(sigma(make_dual(p), v, L));
-    EXPECT_LT(abs(sqnorm(exact - ad)), tolerance);
+    EXPECT_LT(abs(squared_norm(exact - ad)), tolerance);
   }
 
   {
     auto exact = dsigma_dv(p, v, L);
     auto ad    = get_gradient(sigma(p, make_dual(v), L));
-    EXPECT_LT(abs(sqnorm(exact - ad)), tolerance);
+    EXPECT_LT(abs(squared_norm(exact - ad)), tolerance);
   }
 
   {
     auto exact = dsigma_dL(p, v, L);
     auto ad    = get_gradient(sigma(p, v, make_dual(L)));
-    EXPECT_LT(abs(sqnorm(exact - ad)), tolerance);
+    EXPECT_LT(abs(squared_norm(exact - ad)), tolerance);
   }
 }
 
-TEST(tensor, isotropic_operations) {
-
+TEST(tensor, isotropic_operations)
+{
   double lambda = 5.0;
   double mu     = 3.0;
 
@@ -123,25 +123,32 @@ TEST(tensor, isotropic_operations) {
 
   tensor<double, 3, 3> A = make_tensor<3, 3>([](int i, int j) { return i + 2.0 * j; });
 
-  EXPECT_LT(abs(sqnorm(dot(I, u) - u)), tolerance);
-  EXPECT_LT(abs(sqnorm(dot(u, I) - u)), tolerance);
+  EXPECT_LT(abs(squared_norm(dot(I, u) - u)), tolerance);
+  EXPECT_LT(abs(squared_norm(dot(u, I) - u)), tolerance);
 
-  EXPECT_LT(abs(sqnorm(dot(I, A) - A)), tolerance);
-  EXPECT_LT(abs(sqnorm(dot(A, I) - A)), tolerance);
+  EXPECT_LT(abs(squared_norm(dot(I, A) - A)), tolerance);
+  EXPECT_LT(abs(squared_norm(dot(A, I) - A)), tolerance);
 
-  EXPECT_LT(ddot(I, A) - tr(A), tolerance);
+  EXPECT_LT(double_dot(I, A) - tr(A), tolerance);
 
   auto sigma = [=](auto epsilon) { return lambda * tr(epsilon) * I + 2.0 * mu * epsilon; };
 
-  isotropic_tensor< double, 3, 3, 3, 3 > C{lambda, 2 * mu, 0.0};
+  isotropic_tensor<double, 3, 3, 3, 3> C{lambda, 2 * mu, 0.0};
 
   auto strain = sym(A);
 
-  EXPECT_LT(sqnorm(ddot(C, strain) - sigma(strain)), tolerance);
+  EXPECT_LT(squared_norm(double_dot(C, strain) - sigma(strain)), tolerance);
 
   EXPECT_LT(det(I) - 1, tolerance);
   EXPECT_LT(tr(I) - 3, tolerance);
-  EXPECT_LT(sqnorm(sym(I) - I), tolerance);
+  EXPECT_LT(squared_norm(sym(I) - I), tolerance);
+}
 
+TEST(tensor, implicit_conversion)
+{
+  tensor<double, 1> A;
+  A(0) = 4.5;
 
+  double value = A;
+  EXPECT_NEAR(value, A[0], tolerance);
 }

@@ -189,7 +189,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   mfem::Vector U(fespace.TrueVSize());
   u_global.GetTrueDofs(U);
 
-  [[maybe_unused]] static constexpr auto I = Identity<dim>();
+  [[maybe_unused]] static constexpr auto I = DenseIdentity<dim>();
 
   using test_space  = decltype(test);
   using trial_space = decltype(trial);
