@@ -14,6 +14,10 @@ if(ENABLE_TESTS)
     add_subdirectory(tests)
 endif()
 
+if(SERAC_ENABLE_BENCHMARKS)
+    add_subdirectory(benchmarks)
+endif()
+
 set(physics_sources
     base_physics.cpp
     solid.cpp
@@ -24,6 +28,7 @@ set(physics_sources
 set(physics_headers
     base_physics.hpp
     solid.hpp
+    solid_functional.hpp
     thermal_conduction.hpp
     thermal_conduction_functional.hpp
     thermal_solid.hpp

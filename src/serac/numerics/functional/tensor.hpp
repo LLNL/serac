@@ -371,6 +371,18 @@ SERAC_HOST_DEVICE constexpr auto operator*(T /*other*/, zero)
   return zero{};
 }
 
+/// @brief A false type trait to enable compile-time checking
+template <typename T>
+struct always_false : std::false_type {
+};
+
+/// @brief Get a human-readable compiler error when you try to divide by zero
+template <typename T>
+void operator/(T, zero)
+{
+  static_assert(always_false<T>{}, "Error: Can't divide by zero!");
+}
+
 /** @brief `zero` divided by something is `zero` */
 template <typename T>
 SERAC_HOST_DEVICE constexpr auto operator/(zero, T /*other*/)
@@ -387,6 +399,13 @@ SERAC_HOST_DEVICE constexpr auto operator-=(zero, zero) { return zero{}; }
 /** @brief let `zero` be accessed like a tuple */
 template <int i>
 SERAC_HOST_DEVICE zero& get(zero& x)
+{
+  return x;
+}
+
+/** @brief let `zero` be accessed like a tuple */
+template <int i>
+SERAC_HOST_DEVICE const zero& get(const zero& x)
 {
   return x;
 }
@@ -1572,7 +1591,7 @@ SERAC_HOST_DEVICE auto inv(tensor<dual<gradient_type>, n, n> A)
     gradient_type gradient{};
     for (int k = 0; k < n; k++) {
       for (int l = 0; l < n; l++) {
-        gradient -= invA[i][k] * A[k][l].gradient * invA[l][j];
+        gradient = gradient - invA[i][k] * A[k][l].gradient * invA[l][j];
       }
     }
     return dual<gradient_type>{value, gradient};
@@ -1590,7 +1609,7 @@ SERAC_HOST_DEVICE auto inv(tensor<dual<gradient_type>, n, n> A)
 template <typename T, int... n>
 auto& operator<<(std::ostream& out, const tensor<T, n...>& A)
 {
-  out << '{' << A[0];
+  out << "tensor{" << A[0];
   for (int i = 1; i < tensor<T, n...>::first_dim; i++) {
     out << ", " << A[i];
   }
@@ -1618,6 +1637,19 @@ __host__ __device__ void print(const tensor<double, m, n...>& A)
     print(A[i]);
   }
   printf("}");
+}
+
+/**
+ * @brief recursively serialize the entries in a tensor to an ostream.
+ * Output format uses braces and comma separators to mimic C syntax for multidimensional array
+ * initialization.
+ *
+ * @param[in] out the std::ostream to write to (e.g. std::cout or std::ofstream)
+ */
+auto& operator<<(std::ostream& out, serac::zero)
+{
+  out << "zero";
+  return out;
 }
 
 /**

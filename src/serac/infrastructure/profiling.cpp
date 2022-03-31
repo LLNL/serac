@@ -20,65 +20,59 @@ std::optional<cali::ConfigManager> mgr;
 }  // namespace
 #endif
 
-void initializeCaliper(const std::string& options)
+void initialize([[maybe_unused]] MPI_Comm comm, [[maybe_unused]] std::string options)
 {
+#ifdef SERAC_USE_ADIAK
+  // Initialize Adiak
+  adiak::init(&comm);
+
+  adiak::launchdate();
+  adiak::executable();
+  adiak::cmdline();
+  adiak::clustername();
+  adiak::jobsize();
+  adiak::walltime();
+  adiak::cputime();
+  adiak::systime();
+#endif
+
 #ifdef SERAC_USE_CALIPER
+  // Initialize Caliper
   mgr               = cali::ConfigManager();
   auto check_result = mgr->check(options.c_str());
+
   if (check_result.empty()) {
     mgr->add(options.c_str());
   } else {
     SLIC_WARNING_ROOT("Caliper options invalid, ignoring: " << check_result);
   }
+
   // Defaults, should probably always be enabled
-  mgr->add("event-trace, runtime-report");
+  mgr->add("runtime-report,spot");
   mgr->start();
-#else
-  // Silence warning
-  static_cast<void>(options);
 #endif
 }
 
-void terminateCaliper()
+void finalize()
 {
+#ifdef SERAC_USE_ADIAK
+  // Finalize Adiak
+  adiak::fini();
+#endif
+
 #ifdef SERAC_USE_CALIPER
+  // Finalize Caliper
   if (mgr) {
     mgr->stop();
     mgr->flush();
   }
+
   mgr.reset();
 #endif
 }
 
 /// @cond
 namespace detail {
-void setCaliperMetadata([[maybe_unused]] const std::string& name, [[maybe_unused]] double data)
-{
-#ifdef SERAC_USE_CALIPER
-  cali_set_global_double_byname(name.c_str(), data);
-#endif
-}
-
-void setCaliperMetadata([[maybe_unused]] const std::string& name, [[maybe_unused]] int data)
-{
-#ifdef SERAC_USE_CALIPER
-  cali_set_global_int_byname(name.c_str(), data);
-#endif
-}
-
-void setCaliperMetadata([[maybe_unused]] const std::string& name, [[maybe_unused]] const std::string& data)
-{
-#ifdef SERAC_USE_CALIPER
-  cali_set_global_string_byname(name.c_str(), data.c_str());
-#endif
-}
-
-void setCaliperMetadata([[maybe_unused]] const std::string& name, [[maybe_unused]] unsigned int data)
-{
-#ifdef SERAC_USE_CALIPER
-  cali_set_global_uint_byname(name.c_str(), data);
-#endif
-}
 
 void startCaliperRegion([[maybe_unused]] const char* name)
 {

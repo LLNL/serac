@@ -183,7 +183,7 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(
     thermal_material_->setTransformation(parent_to_reference_transformation);
   }
 
-  SERAC_MARK_LOOP_START(ip_loop_id, "IntegrationPt Loop");
+  SERAC_MARK_LOOP_BEGIN(ip_loop_id, "IntegrationPt Loop");
 
   for (int ip_num = 0; ip_num < ir->GetNPoints(); ip_num++) {
     // Set the integration point and calculate the deformation gradient

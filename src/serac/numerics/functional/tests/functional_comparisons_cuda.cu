@@ -96,7 +96,7 @@ void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
 
   std::cout << serac::accelerator::getCUDAMemInfoString() << std::endl;
 
-  serac::profiling::initializeCaliper();
+  serac::profiling::initialize();
 
   // Create standard MFEM bilinear and linear forms on H1
   auto                        fec = mfem::H1_FECollection(p, dim);
@@ -200,7 +200,7 @@ void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
 
   std::cout << "Functional:" << serac::accelerator::getCUDAMemInfoString() << std::endl;
 
-  serac::profiling::terminateCaliper();
+  serac::profiling::finalize();
 }
 
 // this test sets up a toy "elasticity" problem where the residual includes contributions
@@ -216,7 +216,7 @@ void functional_test(H1<p, dim> test, H1<p, dim> trial, Dimension<dim>)
 
   std::string postfix = concat("_H1<", p, ",", dim, ">");
 
-  serac::profiling::initializeCaliper();
+  serac::profiling::initialize();
 
   auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec, dim);
@@ -293,7 +293,7 @@ void functional_test(H1<p, dim> test, H1<p, dim> trial, Dimension<dim>)
   }
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
 
-  serac::profiling::terminateCaliper();
+  serac::profiling::finalize();
 }
 
 // this test sets up part of a toy "magnetic diffusion" problem where the residual includes contributions
@@ -309,7 +309,7 @@ void functional_test(Hcurl<p> test, Hcurl<p> trial, Dimension<dim>)
 
   std::string postfix = concat("_Hcurl<", p, ">");
 
-  serac::profiling::initializeCaliper();
+  serac::profiling::initialize();
 
   auto                        fec = mfem::ND_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
@@ -390,7 +390,7 @@ void functional_test(Hcurl<p> test, Hcurl<p> trial, Dimension<dim>)
   }
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-13);
 
-  serac::profiling::terminateCaliper();
+  serac::profiling::finalize();
 }
 
 TEST(thermal, 2D_linear) { functional_test(H1<1>{}, H1<1>{}, Dimension<2>{}); };

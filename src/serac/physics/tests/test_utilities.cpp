@@ -52,8 +52,8 @@ template <>
 void defineTestSchema<Solid>(axom::inlet::Inlet& inlet)
 {
   // Integration test parameters
-  inlet.addDouble("expected_u_l2norm", "Correct L2 norm of the displacement field");
-  inlet.addDouble("expected_v_l2norm", "Correct L2 norm of the velocity field");
+  inlet.addDouble("expected_displacement_l2norm", "Correct L2 norm of the displacement field");
+  inlet.addDouble("expected_velocity_l2norm", "Correct L2 norm of the velocity field");
 
   // Physics
   auto& solid_solver_table = inlet.addStruct("solid", "Finite deformation solid mechanics module");
@@ -67,7 +67,7 @@ template <>
 void defineTestSchema<ThermalConduction>(axom::inlet::Inlet& inlet)
 {
   // Integration test parameters
-  inlet.addDouble("expected_t_l2norm", "Correct L2 norm of the temperature field");
+  inlet.addDouble("expected_temperature_l2norm", "Correct L2 norm of the temperature field");
 
   auto& exact = inlet.addStruct("exact_solution", "Exact solution for the temperature field");
   serac::input::CoefficientInputOptions::defineInputFileSchema(exact);
@@ -84,9 +84,9 @@ template <>
 void defineTestSchema<ThermalSolid>(axom::inlet::Inlet& inlet)
 {
   // Integration test parameters
-  inlet.addDouble("expected_t_l2norm", "Correct L2 norm of the temperature field");
-  inlet.addDouble("expected_u_l2norm", "Correct L2 norm of the displacement field");
-  inlet.addDouble("expected_v_l2norm", "Correct L2 norm of the velocity field");
+  inlet.addDouble("expected_temperature_l2norm", "Correct L2 norm of the temperature field");
+  inlet.addDouble("expected_displacement_l2norm", "Correct L2 norm of the displacement field");
+  inlet.addDouble("expected_velocity_l2norm", "Correct L2 norm of the velocity field");
 
   // Physics
   auto& thermal_solid_table = inlet.addStruct("thermal_solid", "Thermal solid module");
@@ -146,21 +146,21 @@ void verifyFields(const PhysicsModule&, const axom::inlet::Inlet&)
 template <>
 void verifyFields(const Solid& phys_module, const axom::inlet::Inlet& inlet)
 {
-  if (inlet.contains("expected_u_l2norm")) {
+  if (inlet.contains("expected_displacement_l2norm")) {
     double x_norm = norm(phys_module.displacement());
-    EXPECT_NEAR(inlet["expected_u_l2norm"], x_norm, inlet["epsilon"]);
+    EXPECT_NEAR(inlet["expected_displacement_l2norm"], x_norm, inlet["epsilon"]);
   }
-  if (inlet.contains("expected_v_l2norm")) {
+  if (inlet.contains("expected_velocity_l2norm")) {
     double v_norm = norm(phys_module.velocity());
-    EXPECT_NEAR(inlet["expected_v_l2norm"], v_norm, inlet["epsilon"]);
+    EXPECT_NEAR(inlet["expected_velocity_l2norm"], v_norm, inlet["epsilon"]);
   }
 }
 
 template <>
 void verifyFields(const ThermalConduction& phys_module, const axom::inlet::Inlet& inlet)
 {
-  if (inlet.contains("expected_t_l2norm")) {
-    EXPECT_NEAR(inlet["expected_t_l2norm"], norm(phys_module.temperature()), inlet["epsilon"]);
+  if (inlet.contains("expected_temperature_l2norm")) {
+    EXPECT_NEAR(inlet["expected_temperature_l2norm"], norm(phys_module.temperature()), inlet["epsilon"]);
   }
 
   if (inlet.contains("exact_solution")) {
@@ -175,17 +175,17 @@ void verifyFields(const ThermalConduction& phys_module, const axom::inlet::Inlet
 template <>
 void verifyFields(const ThermalSolid& phys_module, const axom::inlet::Inlet& inlet)
 {
-  if (inlet.contains("expected_u_l2norm")) {
+  if (inlet.contains("expected_displacement_l2norm")) {
     double x_norm = norm(phys_module.displacement());
-    EXPECT_NEAR(inlet["expected_u_l2norm"], x_norm, inlet["epsilon"]);
+    EXPECT_NEAR(inlet["expected_displacement_l2norm"], x_norm, inlet["epsilon"]);
   }
-  if (inlet.contains("expected_v_l2norm")) {
+  if (inlet.contains("expected_velocity_l2norm")) {
     double v_norm = norm(phys_module.velocity());
-    EXPECT_NEAR(inlet["expected_v_l2norm"], v_norm, inlet["epsilon"]);
+    EXPECT_NEAR(inlet["expected_velocity_l2norm"], v_norm, inlet["epsilon"]);
   }
-  if (inlet.contains("expected_t_l2norm")) {
+  if (inlet.contains("expected_temperature_l2norm")) {
     double t_norm = norm(phys_module.temperature());
-    EXPECT_NEAR(inlet["expected_t_l2norm"], t_norm, inlet["epsilon"]);
+    EXPECT_NEAR(inlet["expected_temperature_l2norm"], t_norm, inlet["epsilon"]);
   }
 }
 

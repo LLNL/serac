@@ -30,6 +30,9 @@ endif()
 set(RAW_CMAKE_C_FLAGS   ${CMAKE_C_FLAGS}   CACHE STRING "")
 set(RAW_CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} CACHE STRING "")
 
+if (NOT DEFINED SERAC_ENABLE_CODEVELOP)
+   set(SERAC_ENABLE_CODEVELOP OFF)
+endif()
 message(STATUS "Serac Codevelop Build: ${SERAC_ENABLE_CODEVELOP}")
 
 #------------------------------------------------------------------------------
@@ -140,8 +143,13 @@ configure_file(
 
 message(STATUS "Serac Code Checks: ${SERAC_ENABLE_CODE_CHECKS}")
 
-# Add CUDA related files to code style checking list
+# Add extra file extensions for code styling
+# Note: Add them also to serac_add_code_checks in cmake/SeracMacros.cmake
+
+# CUDA
 list(APPEND BLT_C_FILE_EXTS ".cuh")
+# Configured C++ files
+list(APPEND BLT_C_FILE_EXTS ".cpp.in" ".hpp.in")
 
 if (SERAC_ENABLE_CODE_CHECKS)
     serac_add_code_checks(PREFIX   serac

@@ -52,7 +52,7 @@ std::pair<int, int> initialize(int argc, char* argv[], MPI_Comm comm)
   }
 
   // Start the profiler (no-op if not enabled)
-  profiling::initializeCaliper();
+  profiling::initialize(comm);
 
   // Initialize GPU (no-op if not enabled/available)
   // TODO for some reason this causes errors on Lassen. We need to look into this ASAP.

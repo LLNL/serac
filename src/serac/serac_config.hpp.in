@@ -4,16 +4,19 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#ifndef SERAC_CONFIG_HPP
-#define SERAC_CONFIG_HPP
+#pragma once
 
 // Serac Version Information
+// clang-format off
 #define SERAC_VERSION_MAJOR @SERAC_VERSION_MAJOR@
 #define SERAC_VERSION_MINOR @SERAC_VERSION_MINOR@
 #define SERAC_VERSION_PATCH @SERAC_VERSION_PATCH@
 #define SERAC_VERSION_FULL  "@SERAC_VERSION_FULL@"
-#cmakedefine SERAC_GIT_SHA "@SERAC_GIT_SHA@"
-
+// clang-format on
+/*NOTE: Do not add SERAC_GIT_SHA here.  This will force
+ * full rebuild on all local changes. It is added in serac::version()
+ * and serac::about(), as well as accessible from serac::gitSha().
+ */
 
 // Serac Locations
 #define SERAC_REPO_DIR "@SERAC_REPO_DIR@"
@@ -21,21 +24,20 @@
 
 // General defines
 #cmakedefine SERAC_DEBUG
-#cmakedefine SERAC_USE_LUMBERJACK
 
+#cmakedefine SERAC_USE_CUDA
+#cmakedefine SERAC_USE_LUMBERJACK
 
 // Compiler defines for TPLs
 #cmakedefine SERAC_USE_AXOM
 #cmakedefine SERAC_USE_CONDUIT
-#cmakedefine SERAC_USE_CUDA
 #cmakedefine SERAC_USE_FMT
 #cmakedefine SERAC_USE_HDF5
+#cmakedefine SERAC_USE_LUA
 #cmakedefine SERAC_USE_MFEM
 #cmakedefine SERAC_USE_MPI
 #cmakedefine SERAC_USE_TRIBOL
+#cmakedefine SERAC_USE_ADIAK
 #cmakedefine SERAC_USE_CALIPER
 #cmakedefine SERAC_USE_RAJA
 #cmakedefine SERAC_USE_UMPIRE
-
-
-#endif  /* SERAC_CONFIG_CPP */

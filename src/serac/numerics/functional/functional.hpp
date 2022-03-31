@@ -74,6 +74,17 @@ constexpr int index_of_differentiation()
   return -1;
 }
 
+/**
+ * @brief Compile-time alias for index of differentiation
+ */
+template <int ind>
+struct Index {
+  /**
+   * @brief Returns the index
+   */
+  constexpr operator int() { return ind; }
+};
+
 /// @cond
 template <typename T, ExecutionSpace exec = serac::default_execution_space>
 class Functional;
@@ -134,6 +145,16 @@ class Functional<test(trials...), exec> {
         mfem::Vector&                                           // otherwise, we just return the value
         >::type;
   };
+
+  template <int indx>
+  struct operator_paren_return_index {
+    using type = typename std::conditional<
+        indx >= 0,                                              // if the derivative index is valid
+        serac::tuple<mfem::Vector&, Gradient&>,                 // then we return the value and the derivative
+        mfem::Vector&                                           // otherwise, we just return the value
+        >::type;
+  };
+
   // clang-format on
 
 public:
@@ -310,7 +331,7 @@ public:
    * arguments may be a dual_vector, to indicate that Functional::operator() should not only evaluate the
    * element calculations, but also differentiate them w.r.t. the specified dual_vector argument
    */
-  void ActionOfGradient(const mfem::Vector& input_T, mfem::Vector& output_T, size_t which) const
+  void ActionOfGradient(const mfem::Vector& input_T, mfem::Vector& output_T, std::size_t which) const
   {
     P_trial_[which]->Mult(input_T, input_L_[which]);
 
@@ -348,11 +369,6 @@ public:
 
     // scatter-add to compute global residuals
     P_test_->MultTranspose(output_L_, output_T);
-
-    output_T.HostReadWrite();
-    for (int i = 0; i < ess_tdof_list_.Size(); i++) {
-      output_T(ess_tdof_list_[i]) = input_T(ess_tdof_list_[i]);
-    }
   }
 
   /**
@@ -375,12 +391,43 @@ public:
     static_assert(sizeof...(T) == num_trial_spaces,
                   "Error: Functional::operator() must take exactly as many arguments as trial spaces");
 
-    [[maybe_unused]] constexpr int                                           wrt = index_of_differentiation<T...>();
-    std::array<std::reference_wrapper<const mfem::Vector>, num_trial_spaces> input_T{args...};
+    [[maybe_unused]] constexpr int                          wrt = index_of_differentiation<T...>();
+    std::vector<std::reference_wrapper<const mfem::Vector>> input_T{args...};
 
+    return (*this)(input_T, Index<wrt>{});
+  }
+
+  /**
+   * @brief this function lets the user evaluate the serac::Functional with the given trial space values
+   *
+   * note: it accepts a vector of mfem::Vectors that must be of length `num_trial_spaces`. This interface
+   * assumes no derivative information is needed.
+   *
+   * @param input_T an array of trial space dofs used to carry out the calculation.
+   */
+  mfem::Vector& operator()(std::vector<std::reference_wrapper<const mfem::Vector>> input_T)
+  {
+    SLIC_ERROR_IF(input_T.size() != num_trial_spaces,
+                  "The input vector of trial spaces is not equal to the number of trial spaces defined in the "
+                  "Functional constructor");
+    return (*this)(input_T, Index<-1>{});
+  }
+
+  /**
+   * @brief this function lets the user evaluate the serac::Functional with the given trial space values
+   *
+   * note: it accepts a vector of mfem::Vectors that must be of length `num_trial_spaces`.
+   *
+   * @tparam wrt The index of the input trial vector to additional compute derivatives with respect to
+   * @param input_T an array of trial space dofs used to carry out the calculation.
+   */
+  template <int wrt>
+  typename operator_paren_return_index<wrt>::type operator()(
+      std::vector<std::reference_wrapper<const mfem::Vector>> input_T, Index<wrt>)
+  {
     // get the values for each local processor
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
-      P_trial_[i]->Mult(input_T[i].get(), input_L_[i]);
+      P_trial_[i]->Mult(input_T[i], input_L_[i]);
     }
 
     output_L_ = 0.0;
@@ -421,12 +468,7 @@ public:
     // scatter-add to compute global residuals
     P_test_->MultTranspose(output_L_, output_T_);
 
-    output_T_.HostReadWrite();
-    for (int i = 0; i < ess_tdof_list_.Size(); i++) {
-      output_T_(ess_tdof_list_[i]) = 0.0;
-    }
-
-    if constexpr (num_differentiated_arguments == 1) {
+    if constexpr (wrt >= 0) {
       // if the user has indicated they'd like to evaluate and differentiate w.r.t.
       // a specific argument, then we return both the value and gradient w.r.t. that argument
       //
@@ -435,7 +477,7 @@ public:
       // e.g. auto [value, gradient_wrt_arg1] = my_functional(arg0, differentiate_wrt(arg1));
       return {output_T_, grad_[wrt]};
     }
-    if constexpr (num_differentiated_arguments == 0) {
+    if constexpr (wrt == -1) {
       // if the user passes only `mfem::Vector`s then we assume they only want the output value
       //
       // mfem::Vector arg0 = ...;
@@ -443,21 +485,6 @@ public:
       // e.g. mfem::Vector value = my_functional(arg0, arg1);
       return output_T_;
     }
-  }
-
-  /**
-   * @brief Applies an essential boundary condition to the attributes specified by @a ess_attr
-   * @param[in] ess_attr The mesh attributes to apply the BC to
-   * @param[in] which which trial space the specified attributes apply to
-   *
-   * @note This gets more interesting when having more than one trial space
-   *
-   * TODO: remove this interface completely
-   */
-  void SetEssentialBC(const mfem::Array<int>& ess_attr, size_t which)
-  {
-    // TODO check that it actually makes sense to apply bcs to this trial space
-    trial_space_[which]->GetEssentialTrueDofs(ess_attr, ess_tdof_list_);
   }
 
 private:
@@ -557,8 +584,11 @@ private:
         }
       }
 
+      // Copy the column indices to an auxilliary array as MFEM can mutate these during HypreParMatrix construction
+      col_ind_copy_ = lookup_tables.col_ind;
+
       auto J_local =
-          mfem::SparseMatrix(lookup_tables.row_ptr.data(), lookup_tables.col_ind.data(), values, form_.output_L_.Size(),
+          mfem::SparseMatrix(lookup_tables.row_ptr.data(), col_ind_copy_.data(), values, form_.output_L_.Size(),
                              form_.input_L_[which_argument].Size(), sparse_matrix_frees_graph_ptrs,
                              sparse_matrix_frees_values_ptr, col_ind_is_sorted);
 
@@ -589,6 +619,12 @@ private:
      *   sparse matrix
      */
     GradientAssemblyLookupTables lookup_tables;
+
+    /**
+     * @brief Copy of the column indices for sparse matrix assembly
+     * @note These are mutated by MFEM during HypreParMatrix construction
+     */
+    std::vector<int> col_ind_copy_;
 
     /**
      * @brief this member variable tells us which argument the associated Functional this gradient
@@ -641,9 +677,6 @@ private:
 
   /// @brief Manages DOFs for the trial space
   std::array<mfem::ParFiniteElementSpace*, num_trial_spaces> trial_space_;
-
-  /// @brief The set of true DOF indices to which an essential BC should be applied
-  mfem::Array<int> ess_tdof_list_;
 
   /**
    * @brief Operator that converts true (global) DOF values to local (current rank) DOF values

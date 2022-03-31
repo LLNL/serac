@@ -41,7 +41,7 @@ FiniteElementVector::FiniteElementVector(mfem::ParMesh& mesh, FiniteElementVecto
   true_vec_ = 0.0;
 }
 
-FiniteElementVector::FiniteElementVector(mfem::ParMesh& mesh, mfem::ParFiniteElementSpace& space,
+FiniteElementVector::FiniteElementVector(mfem::ParMesh& mesh, const mfem::ParFiniteElementSpace& space,
                                          const std::string& name)
     : mesh_(mesh),
       coll_(std::unique_ptr<mfem::FiniteElementCollection>(mfem::FiniteElementCollection::New(space.FEColl()->Name()))),

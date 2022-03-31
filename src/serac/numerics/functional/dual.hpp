@@ -277,7 +277,7 @@ auto pow(dual<gradient_type> a, double b)
 template <typename T, int... n>
 auto& operator<<(std::ostream& out, dual<T> A)
 {
-  out << '(' << A.value << ' ' << A.gradient << ')';
+  out << "dual{" << A.value << ", " << A.gradient << '}';
   return out;
 }
 

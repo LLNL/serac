@@ -91,7 +91,7 @@ public:
    * @param[in] space The space to use for the finite element state. This space is deep copied into the new FE state
    * @param[in] name The name of the field
    */
-  FiniteElementVector(mfem::ParMesh& mesh, mfem::ParFiniteElementSpace& space, const std::string& name = "");
+  FiniteElementVector(mfem::ParMesh& mesh, const mfem::ParFiniteElementSpace& space, const std::string& name = "");
 
   /**
    * @brief Delete the default copy constructor
