@@ -8,7 +8,7 @@
 """
  file: common_build_functions.py
 
- description: 
+ description:
   helpers for installing src and tpls on llnl lc systems.
 
 """
@@ -23,6 +23,7 @@ import json
 import getpass
 import shutil
 import time
+import importlib
 
 from os.path import join as pjoin
 
@@ -164,7 +165,7 @@ def uberenv_build(prefix, spec, project_file, mirror_path):
     cmd += "--mirror=\"{0}\" ".format(mirror_path)
     if project_file:
         cmd += "--project-json=\"{0}\" ".format(project_file)
-        
+
     spack_tpl_build_log = pjoin(prefix,"output.log.spack.tpl.build.%s.txt" % spec.replace(" ", "_"))
     print("[starting tpl install of spec %s]" % spec)
     print("[log file: %s]" % spack_tpl_build_log)
@@ -255,7 +256,7 @@ def build_and_test_host_config(test_root,host_config, report_to_stdout = False, 
     res = sexe("%s config-build.py -DENABLE_DOCS=OFF -bp %s -hc %s -ip %s %s" % (sys.executable, build_dir, host_config, install_dir, extra_cmake_options),
                output_file = cfg_output_file,
                echo=True)
-    
+
     if report_to_stdout:
         with open(cfg_output_file, 'r') as build_out:
             print(build_out.read())
@@ -263,11 +264,11 @@ def build_and_test_host_config(test_root,host_config, report_to_stdout = False, 
     if res != 0:
         print("[ERROR: Configure for host-config: %s failed]\n" % host_config)
         return res
-        
+
     ####
     # build, test, and install
     ####
-    
+
     # build the code
     bld_output_file =  pjoin(build_dir,"output.log.make.txt")
     print("[starting build]")
@@ -343,7 +344,7 @@ def build_and_test_host_config(test_root,host_config, report_to_stdout = False, 
     if res != 0:
         print("[ERROR: Building examples for host-config: %s failed]\n\n" % host_config)
         return res
-    
+
     print("[SUCCESS: Build, test, and install for host-config: {0} complete]\n".format(host_config))
 
     set_group_and_perms(build_dir)
@@ -364,7 +365,7 @@ def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs, r
 
     test_root =  get_build_and_test_root(prefix, timestamp)
     os.mkdir(test_root)
-    write_build_info(pjoin(test_root,"info.json")) 
+    write_build_info(pjoin(test_root,"info.json"))
     ok  = []
     bad = []
     for host_config in host_configs:
@@ -407,7 +408,7 @@ def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs, r
 def set_group_and_perms(directory):
     """
     Sets the proper group and access permissions of given input
-    directory. 
+    directory.
     """
 
     skip = True
@@ -506,7 +507,7 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = 
             src_build_failed = True
         else:
             print("[SUCCESS: Build and test of src vs tpls test passed.]\n")
- 
+
     # set proper perms for installed tpls
     set_group_and_perms(prefix)
 
@@ -576,21 +577,32 @@ def build_devtools(builds_dir, timestamp):
 
 
 def get_specs_for_current_machine():
+    print("~~~~~~~~~~get_specs_for_current_machine~~~~~~~~~~")
     repo_dir = get_repo_dir()
-    specs_json_path = pjoin(repo_dir, "scripts/spack/specs.json")
 
-    with open(specs_json_path, 'r') as f:
-        specs_json = json.load(f)
+    # TODO chapman39 want to change this??
+    #specs_json_path = pjoin(repo_dir, "scripts/spack/specs.json")
+
+    #with open(specs_json_path, 'r') as f:
+        #specs_json = json.load(f)
 
     sys_type = get_system_type()
     machine_name = get_machine_name()
 
-    specs = []
+    #specs = []
+    # TODO chapman39 start here
+    build_config_file = importlib.import_module("../spack/build_config.py",
+        "build_config.py")
+    specs = getattr(build_config_file, specs())
+
     if machine_name in specs_json.keys():
         specs = specs_json[machine_name]
     else:
         specs = specs_json[sys_type]
 
+    # TODO chapman39 not sure if this is going to be like:
+    #  - "% spec1 spec2 spec3" OR
+    #  - "% spec1 % spec2 % spec3"
     specs = ['%' + spec for spec in specs]
 
     return specs
