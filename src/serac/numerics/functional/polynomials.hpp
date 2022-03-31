@@ -24,7 +24,7 @@ namespace serac {
  * @param[in] b The right endpoint of the interval
  */
 template <int n, typename T = double >
-constexpr tensor<T, n> GaussLobattoNodes(T a = T(0), T b = T(1)) {
+SERAC_HOST_DEVICE constexpr tensor<T, n> GaussLobattoNodes(T a = T(0), T b = T(1)) {
   if constexpr (n == 2) return {a, b}; 
   if constexpr (n == 3) return {a, a + 0.5000000000000000 * (b-a), b}; 
   if constexpr (n == 4) return {a, a + 0.2763932022500210 * (b-a), a + 0.7236067977499790 * (b-a), b};
@@ -42,7 +42,7 @@ constexpr tensor<T, n> GaussLobattoNodes(T a = T(0), T b = T(1)) {
  */
 // clang-format off
 template <int n, typename T = double >
-constexpr tensor<T, n> GaussLegendreNodes() {
+SERAC_HOST_DEVICE constexpr tensor<T, n> GaussLegendreNodes() {
   if constexpr (n == 1) return {0.50000000000000000};
   if constexpr (n == 2) return {0.2113248654051871, 0.7886751345948129};
   if constexpr (n == 3) return {0.1127016653792583, 0.500000000000000, 0.887298334620742};
@@ -64,7 +64,7 @@ constexpr tensor<T, n> GaussLegendreNodes() {
  * 2]]] <> ";"], {n, 1, 8}]
  */
 template <int n, typename T = double>
-constexpr tensor<T, n> GaussLegendreWeights()
+SERAC_HOST_DEVICE constexpr tensor<T, n> GaussLegendreWeights()
 {
   if constexpr (n == 1) return {1.000000000000000};
   if constexpr (n == 2) return {0.500000000000000, 0.500000000000000};
@@ -89,7 +89,7 @@ constexpr tensor<T, n> GaussLegendreWeights()
  * @brief compute n!
  * @param[in] n
  */
-constexpr int factorial(int n)
+SERAC_HOST_DEVICE constexpr int factorial(int n)
 {
   int nfactorial = 1;
   for (int i = 2; i <= n; i++) {
@@ -104,7 +104,7 @@ constexpr int factorial(int n)
  * @param[in] x the number to be raised to varying powers
  */
 template <int n, typename T>
-constexpr tensor<T, n> powers(T x)
+SERAC_HOST_DEVICE constexpr tensor<T, n> powers(T x)
 {
   tensor<T, n> values{};
   values[0] = T(1.0);
@@ -122,7 +122,7 @@ constexpr tensor<T, n> powers(T x)
  * @param[in] x where to evaluate the polynomials
  */
 template <int n, typename S>
-constexpr tensor<S, n> ChebyshevT(S x)
+SERAC_HOST_DEVICE constexpr tensor<S, n> ChebyshevT(S x)
 {
   tensor<S, n> T{};
 
@@ -143,7 +143,7 @@ constexpr tensor<S, n> ChebyshevT(S x)
  * @param[in] x where to evaluate the polynomials
  */
 template <int n, typename T>
-tensor<T, n> ChebyshevU(T x)
+SERAC_HOST_DEVICE tensor<T, n> ChebyshevU(T x)
 {
   tensor<T, n> U{};
 
@@ -163,7 +163,7 @@ tensor<T, n> ChebyshevU(T x)
  * @param[in] x where to evaluate the polynomials
  */
 template <int n, typename T>
-tensor<T, n> Legendre(T x)
+SERAC_HOST_DEVICE tensor<T, n> Legendre(T x)
 {
   tensor<T, n> P{};
 
@@ -182,7 +182,7 @@ tensor<T, n> Legendre(T x)
  * @param[in] s where to evaluate the polynomials
  */
 template <int n, typename T>
-tensor<T, n> Bernstein(T s)
+SERAC_HOST_DEVICE tensor<T, n> Bernstein(T s)
 {
   tensor<T, n> B;
 
@@ -209,7 +209,7 @@ tensor<T, n> Bernstein(T s)
  * @param[in] x where to evaluate the polynomials
  */
 template <int n, typename T>
-constexpr tensor<T, n> GaussLobattoInterpolation(T x)
+SERAC_HOST_DEVICE constexpr tensor<T, n> GaussLobattoInterpolation(T x)
 {
   if constexpr (n == 2) {
     return {1.0 - x, x};
@@ -232,7 +232,7 @@ constexpr tensor<T, n> GaussLobattoInterpolation(T x)
  * @param[in] x where to evaluate the polynomials
  */
 template <int n, typename T>
-constexpr tensor<T, n> GaussLobattoInterpolationDerivative([[maybe_unused]] T x)
+SERAC_HOST_DEVICE constexpr tensor<T, n> GaussLobattoInterpolationDerivative([[maybe_unused]] T x)
 {
   if constexpr (n == 2) {
     return {-1, 1};
@@ -265,7 +265,7 @@ constexpr tensor<T, n> GaussLobattoInterpolationDerivative([[maybe_unused]] T x)
  * @param[in] x where to evaluate the polynomials
  */
 template <int n, typename T>
-constexpr tensor<T, n> GaussLegendreInterpolation([[maybe_unused]] T x)
+SERAC_HOST_DEVICE constexpr tensor<T, n> GaussLegendreInterpolation([[maybe_unused]] T x)
 {
   if constexpr (n == 1) return {1};
   if constexpr (n == 2)
@@ -302,7 +302,7 @@ constexpr tensor<T, n> GaussLegendreInterpolation([[maybe_unused]] T x)
  * @param[in] x where to evaluate the polynomials
  */
 template <int n, typename T>
-constexpr tensor<T, n> GaussLegendreInterpolationDerivative([[maybe_unused]] T x)
+SERAC_HOST_DEVICE constexpr tensor<T, n> GaussLegendreInterpolationDerivative([[maybe_unused]] T x)
 {
   if constexpr (n == 1) return {0};
   if constexpr (n == 2) return {-1.7320508075688772935274463415, 1.7320508075688772935274463415};

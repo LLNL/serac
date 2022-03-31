@@ -103,7 +103,7 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
 
   */
 
-  static constexpr tensor<double, ndof, dim> shape_functions(tensor<double, dim> xi)
+  SERAC_HOST_DEVICE static constexpr tensor<double, ndof, dim> shape_functions(tensor<double, dim> xi)
   {
     int                       count = 0;
     tensor<double, ndof, dim> N{};
@@ -129,7 +129,7 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
   }
 
   // the curl of a 2D vector field is entirely out-of-plane, so we return just that component
-  static constexpr tensor<double, ndof> shape_function_curl(tensor<double, dim> xi)
+  SERAC_HOST_DEVICE static constexpr tensor<double, ndof> shape_function_curl(tensor<double, dim> xi)
   {
     int                  count = 0;
     tensor<double, ndof> curl_z{};

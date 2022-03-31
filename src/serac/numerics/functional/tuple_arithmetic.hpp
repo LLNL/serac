@@ -94,62 +94,6 @@ constexpr auto make_dual_helper(serac::tuple<T...> args, std::integer_sequence<i
   return serac::tuple{(make_dual_helper<i>(serac::get<i>(args), seq))...};
 }
 
-// chain rule between a tuple of values and a single value,
-// effectively equivalent to
-//
-// serac::tuple df{
-//   chain_rule(serac::get<0>(df_dx), dx),
-//   chain_rule(serac::get<1>(df_dx), dx),
-//   chain_rule(serac::get<2>(df_dx), dx),
-//   ...
-// }
-template <typename... T, typename S>
-SERAC_HOST_DEVICE auto chain_rule_tuple_scale(serac::tuple<T...> df_dx, S dx)
-{
-  return serac::apply(
-      [&](auto... each_component_of_df_dx) { return serac::tuple{chain_rule(each_component_of_df_dx, dx)...}; }, df_dx);
-}
-
-// chain rule between two tuples of values, kind of like a "dot product"
-// effectively equivalent to
-//
-// serac::tuple df{
-//   chain_rule(serac::get<0>(df_dx), serac::get<0>(dx)),
-//   chain_rule(serac::get<1>(df_dx), serac::get<1>(dx)),
-//   chain_rule(serac::get<2>(df_dx), serac::get<2>(dx)),
-//   ...
-// }
-template <typename... T, typename... S, int... i>
-SERAC_HOST_DEVICE auto chain_rule_tuple_vecvec(serac::tuple<T...> df_dx, serac::tuple<S...> dx,
-                                               std::integer_sequence<int, i...>)
-{
-  return (chain_rule(serac::get<i>(df_dx), serac::get<i>(dx)) + ...);
-}
-
-// chain rule between a tuple-of-tuples, and another tuple, kind of like a "matrix vector product"
-// effectively equivalent to
-//
-// serac::tuple df{
-//   chain_rule(serac::get<0>(serac::get<0>(df_dx)), serac::get<0>(dx)) +
-//   chain_rule(serac::get<1>(serac::get<0>(df_dx)), serac::get<1>(dx)) + ... ,
-//   chain_rule(serac::get<0>(serac::get<1>(df_dx)), serac::get<0>(dx)) +
-//   chain_rule(serac::get<1>(serac::get<1>(df_dx)), serac::get<1>(dx)) + ... ,
-//   chain_rule(serac::get<0>(serac::get<2>(df_dx)), serac::get<0>(dx)) +
-//   chain_rule(serac::get<1>(serac::get<2>(df_dx)), serac::get<1>(dx)) + ... ,
-//   ...
-// }
-template <typename... T, typename... S>
-SERAC_HOST_DEVICE auto chain_rule_tuple_matvec(serac::tuple<T...> df_dx, serac::tuple<S...> dx)
-{
-  auto int_seq = std::make_integer_sequence<int, int(sizeof...(S))>();
-
-  return serac::apply(
-      [&](auto... each_component_of_df_dx) {
-        return serac::tuple{chain_rule_tuple_vecvec(each_component_of_df_dx, dx, int_seq)...};
-      },
-      df_dx);
-}
-
 }  // namespace detail
 
 template <int i, typename S, typename T>
@@ -326,44 +270,12 @@ SERAC_HOST_DEVICE auto get_gradient(const tensor<dual<serac::tuple<T...> >, n...
   });
   return g;
 }
+
 /// @overload
 template <typename... T>
 SERAC_HOST_DEVICE auto get_gradient(serac::tuple<T...> tuple_of_values)
 {
   return serac::apply([](auto... each_value) { return serac::tuple{get_gradient(each_value)...}; }, tuple_of_values);
-}
-
-/**
- * @brief entry point for combining derivatives from get_gradient(***) with the chain rule
- * calculates df = df_dx * dx for different possible combinations of tuples-of-tuples, tuples, tensors, and scalars
- * @param[in] df_dx the derivative of some transformation f
- * @param[in] dx a small change in the inputs to the transformation f
- *
- * @note the weird implementation of these conditional statements is a work-around for a compiler warning w/ nvcc
- */
-template <typename S, typename T>
-SERAC_HOST_DEVICE auto chain_rule(S df_dx, T dx)
-{
-  constexpr bool matvec = (detail::is_tuple_of_tuples<S>::value && detail::is_tuple<T>::value);
-  if constexpr (matvec) {
-    return detail::chain_rule_tuple_matvec(df_dx, dx);
-  }
-
-  constexpr bool vecvec = !matvec && (detail::is_tuple<S>::value && detail::is_tuple<T>::value);
-  if constexpr (vecvec) {
-    auto int_seq = std::make_integer_sequence<int, int(serac::tuple_size<T>{})>();
-    return detail::chain_rule_tuple_vecvec(df_dx, dx, int_seq);
-  }
-
-  constexpr bool vecscalar = !vecvec && (detail::is_tuple<S>::value && !detail::is_tuple<T>::value);
-  if constexpr (vecscalar) {
-    return detail::chain_rule_tuple_scale(df_dx, dx);
-  }
-
-  constexpr bool scalarscalar = !vecscalar;
-  if constexpr (scalarscalar) {
-    return chain_rule(df_dx, dx);
-  }
 }
 
 }  // namespace serac
