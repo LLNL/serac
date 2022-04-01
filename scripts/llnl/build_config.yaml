@@ -1,4 +1,6 @@
 variables:
+    compiler_common:  &compiler_common "~cpp14+devtools+mfem+c2c"
+    omp: &omp "~openmp"
     base_tpl: &base_tpl >-
         ^conduit@0.7.2axom~shared~test
         ^hdf5~shared~mpi
@@ -6,30 +8,28 @@ variables:
         ^mfem@4.2.0
         ^raja~shared~examples~exercises
         ^umpire~shared~examples
-    compiler_common:  &compiler_common "~cpp14+devtools+mfem+c2c"
-    scr: &scr "+scr ^scr@3.0rc2~shared~tests~examples"
-    cuda: &cuda "+cuda cuda_arch=70"
-    omp: &omp "~openmp"
+    scr: &scr " ^scr@3.0rc2~shared~tests~examples"
+    cuda: &cuda " cuda_arch=70"
     raja_umpire_specs: &raja_umpire_specs " ^raja~openmp+rocm ^umpire~openmp+rocm"
 toss_3_x86_64_ib:
-    - ["clang@9.0.0",  *compiler_common,                  " ", *base_tpl]
-    - ["clang@10.0.0", *compiler_common, *scr,            " ", *base_tpl]
-    - ["gcc@8.3.1",    *compiler_common, *scr,            " ", *base_tpl]
-    - ["gcc@8.1.0~cpp14~fortran+devtools~mfem+c2c", *scr, " ", *base_tpl]
-    - ["intel@18.0.2", *compiler_common, *omp,            " ", *base_tpl]
-    - ["intel@19.0.4", *compiler_common, *omp,            " ", *base_tpl]
+    - ["clang@9.0.0",      *compiler_common,                  *base_tpl]
+    - ["clang@10.0.0+scr", *compiler_common,            *scr, *base_tpl]
+    - ["gcc@8.3.1+scr",    *compiler_common,            *scr, *base_tpl]
+    - ["gcc@8.1.0~cpp14~fortran+devtools~mfem+c2c+scr", *scr, *base_tpl]
+    - ["intel@18.0.2",     *compiler_common, *omp,            *base_tpl]
+    - ["intel@19.0.4",     *compiler_common, *omp,            *base_tpl]
 toss_4_x86_64_ib:
     - ["clang@13.0.0+rocm", *compiler_common, *omp, " amdgpu_target=gfx906",
-          *raja_umpire_specs, " ", *base_tpl]
+          *raja_umpire_specs, *base_tpl]
 toss_4_x86_64_ib_cray:
-    - ["clang@13.0.0+rocm", *compiler_common, *omp, " amdgpu_target=gfx908",
-          *raja_umpire_specs, " ", *base_tpl]
+    - ["clang@13.0.0+rocm", *compiler_common, *omp, " amdgpu_target=gfx908", 
+          *raja_umpire_specs, *base_tpl]
 blueos_3_ppc64le_ib_p9:
-    - ["clang@9.0.0", *compiler_common, *omp,        " ", *base_tpl]
-    - ["clang@8.0.1", *compiler_common, *omp, *cuda, " ", *base_tpl]
-    - ["xl@16.1.1.1", *compiler_common, *omp, *cuda, " ", *base_tpl]
-    - ["xl@16.1.1.2", *compiler_common, *omp,        " ", *base_tpl]
-    - ["gcc@7.3.1~cpp14+devtools~mfem+c2c",          " ", *base_tpl]
+    - ["clang@8.0.1+cuda", *compiler_common, *omp, *cuda, *base_tpl]
+    - ["clang@9.0.0",      *compiler_common, *omp,        *base_tpl]
+    - ["xl@16.1.1.1+cuda", *compiler_common, *omp, *cuda, *base_tpl]
+    - ["xl@16.1.1.2",      *compiler_common, *omp,        *base_tpl]
+    - ["gcc@7.3.1~cpp14+devtools~mfem+c2c",               *base_tpl]
 darwin-x86_64:
     - ["clang@9.0.0~cpp14+devtools+mfem", *base_tpl]
 
