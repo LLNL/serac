@@ -835,6 +835,22 @@ SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m, n>& A, const tensor<T, n
 
 /**
  * @overload
+ * @note matrix . tensor
+ */
+template <typename S, typename T, int m, int n, int p, int q, int r >
+SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m, n>& A, const tensor<T, n, p, q, r>& B)
+{
+  tensor<decltype(S{} * T{}), m, p, q, r> AB{};
+  for (int i = 0; i < m; i++) {
+    for (int j = 0; j < n; j++) {
+      AB[i] = AB[i] + A[i][j] * B[j];
+    }
+  }
+  return AB;
+}
+
+/**
+ * @overload
  * @note 3rd-order-tensor . vector
  */
 template <typename S, typename T, int m, int n, int p>

@@ -76,8 +76,9 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
     // clang-format on
   }
 
+#ifdef __CUDACC__
   template < int q >
-  static __device__ auto interpolate(const tensor<double, c, n, n, n>& X, const TensorProductQuadratureRule<q> & rule, 
+  static SERAC_DEVICE auto interpolate(const tensor<double, c, n, n, n>& X, const TensorProductQuadratureRule<q> & rule, 
                               tensor<double, 2, n, n, q>& A1, tensor<double, 3, n, q, q>& A2) {
 
     // we want to compute the following:
@@ -181,7 +182,7 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
 
   // value-only interpolation
   template < int q >
-  static __device__ auto interpolate(const tensor<double, c, n, n, n>& X, const TensorProductQuadratureRule<q> & rule, 
+  static SERAC_DEVICE auto interpolate(const tensor<double, c, n, n, n>& X, const TensorProductQuadratureRule<q> & rule, 
                               tensor<double, n, n, q>& A1, tensor<double, n, q, q>& A2) {
 
     static constexpr auto points1D = GaussLegendreNodes<q>();
@@ -250,7 +251,7 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
 
   // gradient-only calculation
   template < int q >
-  static __device__ auto gradient(const tensor<double, c, n, n, n>& X, const TensorProductQuadratureRule<q> & rule, 
+  static SERAC_DEVICE auto gradient(const tensor<double, c, n, n, n>& X, const TensorProductQuadratureRule<q> & rule, 
                               tensor<double, 2, n, n, q>& A1, tensor<double, 3, n, q, q>& A2) {
 
     static constexpr auto points1D = GaussLegendreNodes<q>();
@@ -335,10 +336,8 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
     return qf_input;
   }
 
-
-
   template <int q>
-  static __device__ void extrapolate(const tensor<double, c, q, q, q> & source, const tensor<double, 3, c, q, q, q> & flux,
+  static SERAC_DEVICE void extrapolate(const tensor<double, c, q, q, q> & source, const tensor<double, 3, c, q, q, q> & flux,
                                      const TensorProductQuadratureRule<q> & rule, 
                                      mfem::DeviceTensor<5, double> r_e, int e,
                                      tensor<double, 3, q, q, n>& A1, tensor<double, 2, q, n, n>& A2) {
@@ -427,7 +426,7 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
 
   // source-only extrapolation
   template <int q>
-  static __device__ void extrapolate(const tensor<double, c, q, q, q> & source,
+  SERAC_DEVICE static void extrapolate(const tensor<double, c, q, q, q> & source,
                                      const TensorProductQuadratureRule<q> & rule, 
                                      mfem::DeviceTensor<5, double> r_e, int e,
                                      tensor<double, q, q, n>& A1, tensor<double, q, n, n>& A2) {
@@ -498,7 +497,7 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
 
   // flux-only extrapolation
   template <int q>
-  static __device__ void extrapolate(const tensor<double, 3, c, q, q, q> & flux,
+  SERAC_DEVICE static void extrapolate(const tensor<double, 3, c, q, q, q> & flux,
                                      const TensorProductQuadratureRule<q> & rule, 
                                      mfem::DeviceTensor<5, double> r_e, int e,
                                      tensor<double, 3, q, q, n>& A1, tensor<double, 2, q, n, n>& A2) {
@@ -583,8 +582,7 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
     }
 
   }
-
-
+#endif
 
 };
 /// @endcond
