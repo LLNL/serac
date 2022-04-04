@@ -71,7 +71,7 @@ auto batched_hcurl_interpolation(tensor< double, 3, p + 1, p + 1, p > element_va
   tensor< double, 2, p + 1, q, q > A2; 
 
   /////////////////////////////////
-  ////////// Y-component //////////
+  ////////// x-component //////////
   /////////////////////////////////
   for (int k = 0; k < p + 1; k++) {
     for (int j = 0; j < p + 1; j++) {
@@ -208,11 +208,169 @@ auto batched_hcurl_interpolation(tensor< double, 3, p + 1, p + 1, p > element_va
   return tuple{value_q, curl_q};
 }
 
+template < int p, int q >
+auto batched_hcurl_extrapolation_sf(tensor< double, 3, q, q, q> source,
+                                   tensor< double, 3, q, q, q> flux) {
 
+  // clang-format off
+  union {
+    tensor< double, 3, p + 1, p + 1, p > element_residual;
+    struct {
+      tensor< double, p + 1, p + 1, p     > element_residual_x;
+      tensor< double, p + 1, p    , p + 1 > element_residual_y;
+      tensor< double, p    , p + 1, p + 1 > element_residual_z;
+    };
+  } data{};
+  // clang-format on
+
+  auto xi = GaussLegendreNodes<q>();
+
+  tensor<double, q, p > B1;
+  tensor<double, q, p+1 > B2;
+  tensor<double, q, p+1 > G2;
+  for (int i = 0; i < q; i++) {
+    B1[i] = GaussLegendreInterpolation<p>(xi[i]);
+    B2[i] = GaussLobattoInterpolation<p+1>(xi[i]);
+    G2[i] = GaussLobattoInterpolationDerivative<p+1>(xi[i]);
+  }
+
+  tensor< double, 2, p + 1, q, q > A1; 
+  tensor< double, p + 1, p + 1, q > A2; 
+
+  /////////////////////////////////
+  ////////// X-component //////////
+  /////////////////////////////////
+  for (int k = 0; k < p + 1; k++) {
+    for (int qy = 0; qy < q; qy++) {
+      for (int qx = 0; qx < q; qx++) {
+        double sum[2]{};
+        for (int qz = 0; qz < q; qz++) {
+          sum[0] += B2(qz, k) * source(0, qz, qy, qx) + G2(qz, k) * flux(1, qz, qy, qx);
+          sum[1] -= B2(qz, k) * flux(2, qz, qy, qx);
+        }
+        A1(0, k, qy, qx) = sum[0];
+        A1(1, k, qy, qx) = sum[1];
+      }
+    }
+  }
+
+  for (int k = 0; k < p + 1; k++) {
+    for (int j = 0; j < p + 1; j++) {
+      for (int qx = 0; qx < q; qx++) {
+        double sum = 0.0;
+        for (int qy = 0; qy < q; qy++) {
+          sum += B2(qy, j) * A1(0, k, qy, qx);
+          sum += G2(qy, j) * A1(1, k, qy, qx);
+        }
+        A2(k, j, qx) = sum;
+      }
+    }
+  }
+
+  for (int k = 0; k < p + 1; k++) {
+    for (int j = 0; j < p + 1; j++) {
+      for (int i = 0; i < p; i++) {
+        double sum = 0.0;
+        for (int qx = 0; qx < q; qx++) {
+          sum += B1(qx, i) * A2(k, j, qx);
+        }
+        data.element_residual_x(k, j, i) = sum;
+      }
+    }
+  }
+
+  /////////////////////////////////
+  ////////// Y-component //////////
+  /////////////////////////////////
+  for (int k = 0; k < p + 1; k++) {
+    for (int qy = 0; qy < q; qy++) {
+      for (int qx = 0; qx < q; qx++) {
+        double sum[2]{};
+        for (int qz = 0; qz < q; qz++) {
+          sum[0] += B2(qz, k) * source(1, qz, qy, qx) - G2(qz, k) * flux(0, qz, qy, qx);
+          sum[1] += B2(qz, k) * flux(2, qz, qy, qx);
+        }
+        A1(0, k, qy, qx) = sum[0];
+        A1(1, k, qy, qx) = sum[1];
+      }
+    }
+  }
+
+  for (int k = 0; k < p + 1; k++) {
+    for (int i = 0; i < p + 1; i++) {
+      for (int qy = 0; qy < q; qy++) {
+        double sum = 0.0;
+        for (int qx = 0; qx < q; qx++) {
+          sum += B2(qx, i) * A1(0, k, qy, qx);
+          sum += G2(qx, i) * A1(1, k, qy, qx);
+        }
+        A2(k, i, qy) = sum;
+      }
+    }
+  }
+
+  for (int k = 0; k < p + 1; k++) {
+    for (int j = 0; j < p; j++) {
+      for (int i = 0; i < p + 1; i++) {
+        double sum = 0.0;
+        for (int qy = 0; qy < q; qy++) {
+          sum += B1(qy, j) * A2(k, i, qy);
+        }
+        data.element_residual_y(k, j, i) = sum;
+      }
+    }
+  }
+
+  /////////////////////////////////
+  ////////// Z-component //////////
+  /////////////////////////////////
+  for (int i = 0; i < p + 1; i++) {
+    for (int qz = 0; qz < q; qz++) {
+      for (int qy = 0; qy < q; qy++) {
+        double sum[2]{};
+        for (int qx = 0; qx < q; qx++) {
+          sum[0] += B2(qx, i) * source(2, qz, qy, qx) - G2(qx, i) * flux(1, qz, qy, qx);
+          sum[1] += B2(qx, i) * flux(0, qz, qy, qx);
+        }
+        A1(0, i, qz, qy) = sum[0];
+        A1(1, i, qz, qy) = sum[1];
+      }
+    }
+  }
+
+
+  for (int j = 0; j < p + 1; j++) {
+    for (int i = 0; i < p + 1; i++) {
+      for (int qz = 0; qz < q; qz++) {
+        double sum = 0.0;
+        for (int qy = 0; qy < q; qy++) {
+          sum += B2(qy, j) * A1(0, i, qz, qy);
+          sum += G2(qy, j) * A1(1, i, qz, qy);
+        }
+        A2(j, i, qz) = sum;
+      }
+    }
+  }
+
+  for (int k = 0; k < p; k++) {
+    for (int j = 0; j < p + 1; j++) {
+      for (int i = 0; i < p + 1; i++) {
+        double sum = 0.0;
+        for (int qz = 0; qz < q; qz++) {
+          sum += B1(qz, k) * A2(j, i, qz);
+        }
+        data.element_residual_z(k, j, i) = sum;
+      }
+    }
+  }
+
+  return data.element_residual;
+
+}
 
 template < int p, int q >
-auto batched_hcurl_extrapolation(tensor< double, 3, q, q, q> source_q,
-                                 tensor< double, 3, q, q, q> flux_q) {
+auto batched_hcurl_extrapolation(tensor< double, 3, q, q, q> source,
+                                 tensor< double, 3, q, q, q> flux) {
 
   // clang-format off
   union {
@@ -244,9 +402,9 @@ auto batched_hcurl_extrapolation(tensor< double, 3, q, q, q> source_q,
           for (int v = 0; v < q; v++) {
             for (int w = 0; w < q; w++) {
               data.element_residual_x(k, j, i) += 
-                     + B1(u, i) * B2(v, j) * B2(w, k) * source_q(0, w, v, u)
-                     + B1(u, i) * B2(v, j) * G2(w, k) *   flux_q(1, w, v, u)
-                     - B1(u, i) * G2(v, j) * B2(w, k) *   flux_q(2, w, v, u);
+                + B1(u, i) * B2(v, j) * B2(w, k) * source(0, w, v, u)
+                + B1(u, i) * B2(v, j) * G2(w, k) *   flux(1, w, v, u)
+                - B1(u, i) * G2(v, j) * B2(w, k) *   flux(2, w, v, u);
             }
           }
         }
@@ -263,9 +421,9 @@ auto batched_hcurl_extrapolation(tensor< double, 3, q, q, q> source_q,
           for (int v = 0; v < q; v++) {
             for (int w = 0; w < q; w++) {
               data.element_residual_y(k, j, i) += 
-                     + B2(u, i) * B1(v, j) * B2(w, k) * source_q(1, w, v, u)
-                     + G2(u, i) * B1(v, j) * B2(w, k) *   flux_q(2, w, v, u)
-                     - B2(u, i) * B1(v, j) * G2(w, k) *   flux_q(0, w, v, u);
+                + B2(u, i) * B1(v, j) * B2(w, k) * source(1, w, v, u)
+                + G2(u, i) * B1(v, j) * B2(w, k) *   flux(2, w, v, u)
+                - B2(u, i) * B1(v, j) * G2(w, k) *   flux(0, w, v, u);
             }
           }
         }
@@ -282,9 +440,9 @@ auto batched_hcurl_extrapolation(tensor< double, 3, q, q, q> source_q,
           for (int v = 0; v < q; v++) {
             for (int w = 0; w < q; w++) {
               data.element_residual_z(k, j, i) += 
-                     + B2(u, i) * B2(v, j) * B1(w, k) * source_q(2, w, v, u)
-                     + B2(u, i) * G2(v, j) * B1(w, k) *   flux_q(0, w, v, u)
-                     - G2(u, i) * B2(v, j) * B1(w, k) *   flux_q(1, w, v, u);
+                + B2(u, i) * B2(v, j) * B1(w, k) * source(2, w, v, u)
+                + B2(u, i) * G2(v, j) * B1(w, k) *   flux(0, w, v, u)
+                - G2(u, i) * B2(v, j) * B1(w, k) *   flux(1, w, v, u);
             }
           }
         }
@@ -353,7 +511,7 @@ int main() {
   auto batched_source_q = dot(C, batched_value_q);
   auto batched_flux_q = dot(C, batched_curl_q);
 
-  auto element_residual = batched_hcurl_extrapolation<p>(batched_source_q, batched_flux_q);
+  auto element_residual = batched_hcurl_extrapolation_sf<p>(batched_source_q, batched_flux_q);
   auto element_residual_ref = reshape< 3, p + 1, p + 1, p >(element_residual_1D);
 
   //std::cout << value_q[0] << std::endl;
