@@ -38,18 +38,10 @@ serac_add_tests( SOURCES ${functional_tests_mpi}
                  DEPENDS_ON gtest serac_functional serac_state ${functional_depends}
                  NUM_MPI_TASKS 4 )
 
-# not sure how we want to handle performance-related tests
 set(functional_performance_tests
-    performance/J2_material_with_AD.cpp)
+    performance/J2_material_with_AD.cpp
+    performance/diffusion_performance_test.cpp)
 
-# Only add diffusion test for all compilers except for gcc-11 to prevent compiler-related bug
-# src/serac/numerics/functional/tests/performance/diffusion_performance_test.cpp:97:24: sorry, unimplemented: unexpected AST of kind nontype_argument_pack
-#   97 |     grad[i][j][k] = dot(x, element_type::shape_function_gradients({xi[i], xi[j], xi[k]}));
-if(NOT (C_COMPILER_FAMILY_IS_GNU AND "${CMAKE_CXX_COMPILER_VERSION}" VERSION_GREATER 11.0.0))
-    list(APPEND function_performance_tests
-         performance/diffusion_performance_test.cpp)
-endif()
- 
 foreach(filename ${functional_performance_tests})
     get_filename_component(test_name ${filename} NAME_WE)
     blt_add_executable(NAME        ${test_name}
