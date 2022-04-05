@@ -1127,6 +1127,35 @@ SERAC_HOST_DEVICE constexpr auto det(const tensor<T, 3, 3>& A)
          A[0][0] * A[1][2] * A[2][1] - A[0][1] * A[1][0] * A[2][2] - A[0][2] * A[1][1] * A[2][0];
 }
 
+template < typename T, int ... n >
+tensor< T, (n * ...) > flatten(tensor< T, n ... > A) {
+  tensor< T, (n * ...) > A_flat;
+  auto A_ptr = reinterpret_cast<double *>(&A);
+  for (int i = 0; i < (n * ...); i++) {
+    A_flat[i] = A_ptr[i];
+  }
+  return A_flat;
+}
+
+template < int ... new_dimensions, typename T, int ... old_dimensions >
+tensor< T, new_dimensions ... > reshape(tensor< T, old_dimensions ... > A) {
+  static_assert((new_dimensions * ...) == (old_dimensions * ...), 
+  "error: can't reshape to configuration with different number of elements");
+
+  tensor< T, new_dimensions ... > A_reshaped;
+  auto A_ptr = reinterpret_cast<double *>(&A);
+  auto A_reshaped_ptr = reinterpret_cast<double *>(&A_reshaped);
+  for (int i = 0; i < (old_dimensions * ...); i++) {
+    A_reshaped_ptr[i] = A_ptr[i];
+  }
+  return A_reshaped;
+}
+
+template < typename T, int ... n >
+double relative_error(tensor< T, n ... > A, tensor< T, n ... > B) {
+  return norm(A - B) / norm(A);
+}
+
 /**
  * @brief Return whether a square rank 2 tensor is symmetric
  *

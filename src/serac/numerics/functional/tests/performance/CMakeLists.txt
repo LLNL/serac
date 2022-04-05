@@ -7,7 +7,7 @@
 # not sure how we want to handle performance-related tests
 set(functional_performance_tests
     batched_shape_functions_scalar.cpp
-    batched_hcurl.cpp
+    batched_hcurl_correctness.cpp
     J2_material_with_AD.cpp
     diffusion_performance_test.cpp)
  

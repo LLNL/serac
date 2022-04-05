@@ -81,6 +81,8 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
   static SERAC_DEVICE auto interpolate(const tensor<double, c, n, n, n>& X, const TensorProductQuadratureRule<q> & rule, 
                               tensor<double, 2, n, n, q>& A1, tensor<double, 3, n, q, q>& A2) {
 
+                                     tensor<double, 3, q, q, n>& A1, tensor<double, 2, q, n, n>& A2) {
+
     // we want to compute the following:
     //
     // X_q(u, v, w) := (B(u, i) * B(v, j) * B(w, k)) * X_e(i, j, k)
