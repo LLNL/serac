@@ -37,7 +37,6 @@ def ensure_file(path):
         print("ERROR: Given file is not a file: {0}".format(path))
         sys.exit(1)
 
-
 def parse_args():
     parser = argparse.ArgumentParser(description="Compare two Serac summary files")
     group = parser.add_mutually_exclusive_group(required=True)
@@ -46,7 +45,7 @@ def parse_args():
                         help="Path to baseline summary file")
     parser.add_argument("--test", type=str, required=True,
                         help="Path to test summary file")
-    group.add_argument("--tolerance", type=float,
+    group.add_argument("--tolerance", type=str,
                         help="Allowed tolerance amount for individual values")
     group.add_argument("--tolerance-file", type=str,
                         help="JSON file specifying tolerance amount for specific values")
@@ -69,6 +68,23 @@ def parse_args():
 
     return args
 
+# Takes query string and returns a tolerance dictionary
+def parse_tolerance_query(query):
+    tolerance_dict = {}
+
+    # Two cases:
+    # 1. single value (0.1)
+    # 2. specific value(s) (velocity:0.1::displacement:0.025)
+
+    if ":" not in query:
+        tolerance_dict = { "default": float(query) }
+    else:
+        query_list = query.split("::")
+        for q in query_list:
+            q = q.split(":")
+            tolerance_dict[q[0]] = float(q[1])
+
+    return tolerance_dict
 
 # Ensure that time steps exist and the same in both files
 def ensure_timesteps(baseline_curves, test_curves):
@@ -285,14 +301,12 @@ def main():
     with open(args.test) as test_file:
         test_json = json.load(test_file)
 
-    # create a tolerance dictionary
-    # key = name of attribute
-    # value = tolerance of attribute
+    # Create a tolerance dictionary
     if args.tolerance_file is not None:
         with open(args.tolerance_file) as tolerance_file:
             tolerance_dict = json.load(tolerance_file)
     else:
-        tolerance_dict = { "default": args.tolerance }
+        tolerance_dict = parse_tolerance_query(args.tolerance)
 
     # Start at "curves"
     if not "curves" in baseline_json:
