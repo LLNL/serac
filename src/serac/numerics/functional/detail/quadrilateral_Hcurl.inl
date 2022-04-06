@@ -29,9 +29,6 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
   static constexpr int  ndof       = 2 * p * (p + 1);
   static constexpr int  components = 1;
 
-  using residual_type =
-      typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components> >::type;
-
   static constexpr auto directions = [] {
     int dof_per_direction = p * (p + 1);
 
@@ -64,6 +61,14 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
 
     return nodes;
   }();
+
+  using residual_type =
+      typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components> >::type;
+
+  struct mfem_dof_layout {
+    tensor< double, p + 1, p     > x;
+    tensor< double, p    , p + 1 > y;
+  };
 
   /*
 
@@ -154,5 +159,142 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
 
     return curl_z;
   }
+
+  template < int q >
+  static void interpolation(const mfem_dof_layout & element_values, const TensorProductQuadratureRule<q> &, 
+                            tensor<double, p + 1, q> & A1,
+                            tensor< double, 2, q, q > & value_q, tensor< double, q, q > & curl_q) {
+
+    auto xi = GaussLegendreNodes<q>();
+
+    tensor<double, q, p > B1;
+    tensor<double, q, p+1 > B2;
+    tensor<double, q, p+1 > G2;
+    for (int i = 0; i < q; i++) {
+      B1[i] = GaussLegendreInterpolation<p>(xi[i]);
+      B2[i] = GaussLobattoInterpolation<p+1>(xi[i]);
+      G2[i] = GaussLobattoInterpolationDerivative<p+1>(xi[i]);
+    }
+
+    /////////////////////////////////
+    ////////// X-component //////////
+    /////////////////////////////////
+    for (int j = 0; j < p + 1; j++) {
+      for (int qx = 0; qx < q; qx++) {
+        double sum = 0.0;
+        for (int i = 0; i < p; i++) {
+          sum += B1(qx, i) * element_values.x(j, i);
+        }
+        A1(j, qx) = sum;
+      }
+    }
+    
+    for (int qy = 0; qy < q; qy++) {
+      for (int qx = 0; qx < q; qx++) {
+        double sum[2]{};
+        for (int j = 0; j < (p + 1); j++) {
+          sum[0] += B2(qy, j) * A1(j, qx);
+          sum[1] += G2(qy, j) * A1(j, qx);
+        }
+        value_q(0, qy, qx) =  sum[0];
+        curl_q(qy, qx)     = -sum[1];
+      }
+    }
+
+    /////////////////////////////////
+    ////////// Y-component //////////
+    /////////////////////////////////
+    for (int i = 0; i < p + 1; i++) {
+      for (int qy = 0; qy < q; qy++) {
+        double sum = 0.0;
+        for (int j = 0; j < p; j++) {
+          sum += B1(qy, j) * element_values.y(j, i);
+        }
+        A1(i, qy) = sum;
+      }
+    }
+    
+    for (int qy = 0; qy < q; qy++) {
+      for (int qx = 0; qx < q; qx++) {
+        double sum[3]{};
+        for (int i = 0; i < (p + 1); i++) {
+          sum[0] += B2(qx, i) * A1(i, qy);
+          sum[1] += G2(qx, i) * A1(i, qy);
+        }
+        value_q(1, qy, qx) = sum[0];
+        curl_q(qy, qx)     += sum[1];
+      }
+    }
+
+  }
+
+  template < int q >
+  static void extrapolation(const tensor< double, 2, q, q> & source,
+                            const tensor< double, q, q> & flux,
+                            const TensorProductQuadratureRule<q> &, 
+                            tensor< double, p + 1, q > & A1, 
+                            mfem_dof_layout & element_residual) {
+
+    auto xi = GaussLegendreNodes<q>();
+
+    tensor<double, q, p > B1;
+    tensor<double, q, p+1 > B2;
+    tensor<double, q, p+1 > G2;
+    for (int i = 0; i < q; i++) {
+      B1[i] = GaussLegendreInterpolation<p>(xi[i]);
+      B2[i] = GaussLobattoInterpolation<p+1>(xi[i]);
+      G2[i] = GaussLobattoInterpolationDerivative<p+1>(xi[i]);
+    }
+
+    /////////////////////////////////
+    ////////// X-component //////////
+    /////////////////////////////////
+    for (int j = 0; j < (p + 1); j++) {
+      for (int qx = 0; qx < q; qx++) {
+        double sum = 0.0;
+        for (int qy = 0; qy < q; qy++) {
+          sum += B2(qy, j) * source(0, qy, qx) - G2(qy, j) * flux(qy, qx);
+        }
+        A1(j, qx) = sum;
+      }
+    }
+    
+    for (int j = 0; j < p + 1; j++) {
+      for (int i = 0; i < p; i++) {
+        double sum = 0.0;
+        for (int qx = 0; qx < q; qx++) {
+          sum += B1(qx, i) * A1(j, qx);
+        }
+        element_residual.x(j, i) = sum;
+      }
+    }
+
+    /////////////////////////////////
+    ////////// Y-component //////////
+    /////////////////////////////////
+    for (int i = 0; i < (p + 1); i++) {
+      for (int qy = 0; qy < q; qy++) {
+        double sum = 0.0;
+        for (int qx = 0; qx < q; qx++) {
+          sum += B2(qx, i) * source(1, qy, qx) + G2(qx, i) * flux(qy, qx);
+        }
+        A1(i, qy) = sum;
+      }
+    }
+    
+    for (int j = 0; j < p; j++) {
+      for (int i = 0; i < p + 1; i++) {
+        double sum = 0.0;
+        for (int qy = 0; qy < q; qy++) {
+          sum += B1(qy, j) * A1(i, qy);
+        }
+        element_residual.y(j, i) = sum;
+      }
+    }
+
+  }
+
+
+
 };
 /// @endcond

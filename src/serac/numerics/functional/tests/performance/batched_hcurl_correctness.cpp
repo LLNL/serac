@@ -95,16 +95,94 @@ auto batched_hcurl_extrapolation_naive(tensor< double, 3, q, q, q> source,
 
 }
 
-int main() {
+template < int p, int q >
+void correctness_test_2D() {
 
-  constexpr int p = 2;
   constexpr int n = p + 1;
-  constexpr int q = 4;
 
-  using element_type = finite_element< Geometry::Hexahedron, Hcurl<p> >;
+  using element_type = finite_element< Geometry::Quadrilateral, Hcurl<p> >;
+  using mfem_dof_layout = typename element_type::mfem_dof_layout;
 
   union {
-    element_type::mfem_dof_layout element_values;
+    mfem_dof_layout element_values;
+    tensor< double, 2 * n * p > element_values_1D;
+    tensor< double, 2, n, p > element_values_3D;
+  };
+
+  element_values_3D = make_tensor< 2, n, p >([](int c, int i, int j) {
+    return sin(c + i - j + 3);
+  });
+
+  tensor< double, 2, 2 > C1 = {{
+    {1.0, 2.0},
+    {4.0, 7.0}
+  }};
+
+  double C2 = 4.2;
+
+  // values of the interpolated field and its curl, at each quadrature point
+  tensor< double, 2, q, q > value_q{};
+  tensor< double, q, q > curl_q{};
+  tensor< double, 2 * n * p > element_residual_1D{};
+  
+  auto x1D = GaussLegendreNodes<q>();
+  
+  for (int j = 0; j < q; j++) {
+    for (int i = 0; i < q; i++) {
+      tensor xi = {{x1D[i], x1D[j]}};
+      auto value = dot(element_values_1D, element_type::shape_functions(xi));
+      auto curl = dot(element_values_1D, element_type::shape_function_curl(xi));
+
+      value_q(0, j, i) = value[0];
+      value_q(1, j, i) = value[1];
+      curl_q(j, i) = curl;
+
+      auto source = dot(C1, value);
+      auto flux = C2 * curl;
+
+      element_residual_1D += dot(element_type::shape_functions(xi), source);
+      element_residual_1D += dot(element_type::shape_function_curl(xi), flux);
+    }
+  }
+
+  tensor< double, p + 1, q > A1; 
+  TensorProductQuadratureRule<q> rule;
+
+  tensor< double, 2, q, q > batched_value_q;
+  tensor< double, q, q > batched_curl_q;
+  element_type::interpolation(element_values, rule, A1, batched_value_q, batched_curl_q);
+
+  auto batched_source_q = dot(C1, batched_value_q);
+  auto batched_flux_q = C2 * batched_curl_q;
+   
+  mfem_dof_layout element_residual;
+  element_type::extrapolation(batched_source_q, batched_flux_q, rule, A1, element_residual);
+  auto element_residual_ref = reshape< 2, p + 1, p >(element_residual_1D);
+
+  std::cout << "errors in value: " << std::endl;
+  std::cout << relative_error(value_q[0], batched_value_q[0]) << std::endl;
+  std::cout << relative_error(value_q[1], batched_value_q[1]) << std::endl;
+
+  std::cout << "errors in curl: " << std::endl;
+  std::cout << relative_error(curl_q[0], batched_curl_q[0]) << std::endl;
+  std::cout << relative_error(curl_q[1], batched_curl_q[1]) << std::endl;
+
+  std::cout << "errors in residual: " << std::endl;
+  std::cout << relative_error(flatten(element_residual.x), flatten(element_residual_ref[0])) << std::endl;
+  std::cout << relative_error(flatten(element_residual.y), flatten(element_residual_ref[1])) << std::endl;
+
+}
+
+template < int p, int q >
+void correctness_test_3D() {
+
+  constexpr int n = p + 1;
+
+  using element_type = finite_element< Geometry::Hexahedron, Hcurl<p> >;
+  using mfem_dof_layout = typename element_type::mfem_dof_layout;
+
+  union {
+    mfem_dof_layout element_values;
     tensor< double, 3 * n * n * p > element_values_1D;
     tensor< double, 3, n, n, p > element_values_4D;
   };
@@ -151,17 +229,18 @@ int main() {
   tensor< double, 2, p + 1, q, q > A2; 
   TensorProductQuadratureRule<q> rule;
 
-  tensor< double, 3, q, q, q > batched_value_q;
-  tensor< double, 3, q, q, q > batched_curl_q;
+  tensor< double, 3, q, q, q > batched_value_q{};
+  tensor< double, 3, q, q, q > batched_curl_q{};
   element_type::interpolation(element_values, rule, A1, A2, batched_value_q, batched_curl_q);
 
   auto batched_source_q = dot(C, batched_value_q);
   auto batched_flux_q = dot(C, batched_curl_q);
 
-  element_type::mfem_dof_layout element_residual;
+  mfem_dof_layout element_residual;
   element_type::extrapolation(batched_source_q, batched_flux_q, rule, A2, A1, element_residual);
   auto element_residual_ref = reshape< 3, p + 1, p + 1, p >(element_residual_1D);
 
+  std::cout << "n = " << n << ", q = " << q << std::endl;
   std::cout << "errors in value: " << std::endl;
   std::cout << relative_error(value_q[0], batched_value_q[0]) << std::endl;
   std::cout << relative_error(value_q[1], batched_value_q[1]) << std::endl;
@@ -177,4 +256,21 @@ int main() {
   std::cout << relative_error(flatten(element_residual.y), flatten(element_residual_ref[1])) << std::endl;
   std::cout << relative_error(flatten(element_residual.z), flatten(element_residual_ref[2])) << std::endl;
 
+}
+
+int main() {
+
+  correctness_test_2D< 2, 3 >();
+
+#if 0
+  correctness_test_3D< 1, 1 >();
+  correctness_test_3D< 1, 2 >();
+  correctness_test_3D< 1, 3 >();
+  correctness_test_3D< 1, 4 >();
+
+  correctness_test_3D< 2, 1 >();
+  correctness_test_3D< 2, 2 >();
+  correctness_test_3D< 2, 3 >();
+  correctness_test_3D< 2, 4 >();
+#endif
 }
