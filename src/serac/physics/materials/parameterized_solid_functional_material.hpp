@@ -144,9 +144,7 @@ public:
     using std::log;
     auto stress = lambda * log(J) * I + shear_modulus * B_minus_I;
 
-    using StressType = decltype(stress);
-
-    return MaterialResponse<double, StressType>{.density = density_, .stress = stress};
+    return MaterialResponse{.density = density_, .stress = stress};
   }
 
   /**
