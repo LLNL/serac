@@ -91,7 +91,7 @@ public:
     auto lambda = bulk_modulus_ - (2.0 / dim) * shear_modulus_;
     auto strain = 0.5 * (displacement_grad + transpose(displacement_grad));
     auto stress = lambda * tr(strain) * I + 2.0 * shear_modulus_ * strain;
-    return MaterialResponse{.density = density_, .stress = stress};
+    return MaterialResponse<double, DispGradType>{.density = density_, .stress = stress};
   }
 
 private:
