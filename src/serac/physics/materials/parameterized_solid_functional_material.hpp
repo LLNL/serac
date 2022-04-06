@@ -43,20 +43,18 @@ public:
   /**
    * @brief Material response call for a linear isotropic solid
    *
-   * @tparam PositionType Spatial position type
    * @tparam DisplacementType Displacement type
    * @tparam DispGradType Displacement gradient type
    * @tparam BulkType Bulk modulus type
    * @tparam ShearType Shear modulus type
-   * @param du_dX Displacement gradient with respect to the reference configuration (du_dX)
+   * @param displacement_grad Displacement gradient with respect to the reference configuration (displacement_grad)
    * @param bulk_parameter The parameterized bulk modulus
    * @param shear_parameter The parameterized shear modulus
    * @return The calculated material response (density, Kirchoff stress) for the material
    */
-  template <typename PositionType, typename DisplacementType, typename DispGradType, typename BulkType,
-            typename ShearType>
-  SERAC_HOST_DEVICE auto operator()(const PositionType& /* x */, const DisplacementType& /* displacement */,
-                                    const DispGradType& du_dX, const BulkType& bulk_parameter,
+  template <typename DisplacementType, typename DispGradType, typename BulkType, typename ShearType>
+  SERAC_HOST_DEVICE auto operator()(const tensor<double, dim>& /* x */, const DisplacementType& /* displacement */,
+                                    const DispGradType& displacement_grad, const BulkType& bulk_parameter,
                                     const ShearType& shear_parameter) const
   {
     auto bulk_modulus  = bulk_parameter + bulk_modulus_offset_;
@@ -64,7 +62,7 @@ public:
 
     auto I      = Identity<dim>();
     auto lambda = bulk_modulus - (2.0 / dim) * shear_modulus;
-    auto strain = 0.5 * (du_dX + transpose(du_dX));
+    auto strain = 0.5 * (displacement_grad + transpose(displacement_grad));
     auto stress = lambda * tr(strain) * I + 2.0 * shear_modulus * strain;
 
     return MaterialResponse{.density = density_, .stress = stress};
@@ -113,30 +111,29 @@ public:
   /**
    * @brief Material response call for a neo-Hookean solid
    *
-   * @tparam PositionType Spatial position type
    * @tparam DisplacementType Displacement type
    * @tparam DispGradType Displacement gradient type
    * @tparam BulkType Bulk modulus type
    * @tparam ShearType Shear modulus type
-   * @param du_dX Displacement gradient with respect to the reference configuration (du_dX)
+   * @param displacement_grad Displacement gradient with respect to the reference configuration (displacement_grad)
    * @param bulk_parameter The parameterized bulk modulus
    * @param shear_parameter The parameterized shear modulus
    * @return The calculated material response (density, kirchoff stress) for the material
    */
-  template <typename PositionType, typename DisplacementType, typename DispGradType, typename BulkType,
-            typename ShearType>
-  SERAC_HOST_DEVICE auto operator()(const PositionType& /* x */, const DisplacementType& /* displacement */,
-                                    const DispGradType& du_dX, const BulkType& bulk_parameter,
+  template <typename DisplacementType, typename DispGradType, typename BulkType, typename ShearType>
+  SERAC_HOST_DEVICE auto operator()(const tensor<double, dim>& /* x */, const DisplacementType& /* displacement */,
+                                    const DispGradType& displacement_grad, const BulkType& bulk_parameter,
                                     const ShearType& shear_parameter) const
   {
     auto bulk_modulus  = bulk_parameter + bulk_modulus_offset_;
     auto shear_modulus = shear_parameter + shear_modulus_offset_;
 
-    auto I         = Identity<dim>();
-    auto lambda    = bulk_modulus - (2.0 / dim) * shear_modulus;
-    auto B_minus_I = du_dX * transpose(du_dX) + transpose(du_dX) + du_dX;
+    auto I      = Identity<dim>();
+    auto lambda = bulk_modulus - (2.0 / dim) * shear_modulus;
+    auto B_minus_I =
+        displacement_grad * transpose(displacement_grad) + transpose(displacement_grad) + displacement_grad;
 
-    auto J = det(du_dX + I);
+    auto J = det(displacement_grad + I);
 
     // TODO this resolve to the correct std implementation of log when J resolves to a pure double. It can
     // be removed by either putting the dual implementation of the global namespace or implementing a pure

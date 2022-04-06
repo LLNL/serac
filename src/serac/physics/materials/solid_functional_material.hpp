@@ -78,21 +78,20 @@ public:
   /**
    * @brief Material response call for a linear isotropic solid
    *
-   * @tparam PositionType Spatial position type
    * @tparam DisplacementType Displacement type
    * @tparam DispGradType Displacement gradient type
-   * @param du_dX displacement gradient with respect to the reference configuration (du_dX)
+   * @param displacement_grad Displacement gradient with respect to the reference configuration (displacement_grad)
    * @return The calculated material response (density, Kirchoff stress) for the material
    */
-  template <typename PositionType, typename DisplacementType, typename DispGradType>
-  SERAC_HOST_DEVICE auto operator()(const PositionType& /* x */, const DisplacementType& /* displacement */,
-                                    const DispGradType& du_dX) const
+  template <typename DisplacementType, typename DispGradType>
+  SERAC_HOST_DEVICE auto operator()(const tensor<double, dim>& /* x */, const DisplacementType& /* displacement */,
+                                    const DispGradType& displacement_grad) const
   {
     auto I      = Identity<dim>();
     auto lambda = bulk_modulus_ - (2.0 / dim) * shear_modulus_;
-    auto strain = 0.5 * (du_dX + transpose(du_dX));
+    auto strain = 0.5 * (displacement_grad + transpose(displacement_grad));
     auto stress = lambda * tr(strain) * I + 2.0 * shear_modulus_ * strain;
-    return MaterialResponse<double, DispGradType>{.density = density_, .stress = stress};
+    return MaterialResponse{.density = density_, .stress = stress};
   }
 
 private:
@@ -143,24 +142,27 @@ public:
    * @tparam PositionType Spatial position type
    * @tparam DisplacementType Displacement type
    * @tparam DispGradType Displacement gradient type
-   * @param du_dX displacement gradient with respect to the reference configuration (du_dX)
+   * @param displacement_grad displacement gradient with respect to the reference configuration (displacement_grad)
    * @return The calculated material response (density, Kirchoff stress) for the material
    */
-  template <typename PositionType, typename DisplacementType, typename DispGradType>
-  SERAC_HOST_DEVICE auto operator()(const PositionType& /* x */, const DisplacementType& /* displacement */,
-                                    const DispGradType& du_dX) const
+  template <typename DisplacementType, typename DispGradType>
+  SERAC_HOST_DEVICE auto operator()(const tensor<double, dim>& /* x */, const DisplacementType& /* displacement */,
+                                    const DispGradType& displacement_grad) const
   {
-    auto I         = Identity<dim>();
-    auto lambda    = bulk_modulus_ - (2.0 / dim) * shear_modulus_;
-    auto B_minus_I = du_dX * transpose(du_dX) + transpose(du_dX) + du_dX;
+    auto I      = Identity<dim>();
+    auto lambda = bulk_modulus_ - (2.0 / dim) * shear_modulus_;
+    auto B_minus_I =
+        displacement_grad * transpose(displacement_grad) + transpose(displacement_grad) + displacement_grad;
 
-    auto J = det(du_dX + I);
+    auto J = det(displacement_grad + I);
 
     // TODO this resolve to the correct std implementation of log when J resolves to a pure double. It can
     // be removed by either putting the dual implementation of the global namespace or implementing a pure
     // double version there. More investigation into argument-dependent lookup is needed.
     using std::log;
     auto stress = lambda * log(J) * I + shear_modulus_ * B_minus_I;
+
+    // TODO figure out why clang can't handle CTAD here.
     return MaterialResponse<double, DispGradType>{.density = density_, .stress = stress};
   }
 
@@ -192,7 +194,7 @@ struct ConstantBodyForce {
   template <typename DisplacementType, typename DispGradType>
   SERAC_HOST_DEVICE tensor<double, dim> operator()(const tensor<double, dim>& /* x */, const double /* t */,
                                                    const DisplacementType& /* displacement */,
-                                                   const DispGradType& /* du_dX */) const
+                                                   const DispGradType& /* displacement_grad */) const
   {
     return force_;
   }
@@ -220,7 +222,7 @@ struct ConstantTraction {
 template <int dim>
 struct TractionFunction {
   /// The traction function
-  std::function<tensor<double, dim>(const tensor<double, dim>&, const tensor<double, dim>&, const double t)>
+  std::function<tensor<double, dim>(const tensor<double, dim>&, const tensor<double, dim>&, const double)>
       traction_func_;
 
   /**
