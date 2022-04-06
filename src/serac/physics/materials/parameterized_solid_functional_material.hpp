@@ -43,19 +43,21 @@ public:
   /**
    * @brief Material response call for a linear isotropic solid
    *
-   * @tparam T1 Spatial position type
-   * @tparam T2 Displacement type
-   * @tparam T3 Displacement gradient type
-   * @tparam T4 Bulk modulus type
-   * @tparam T5 Shear modulus type
+   * @tparam PositionType Spatial position type
+   * @tparam DisplacementType Displacement type
+   * @tparam DispGradType Displacement gradient type
+   * @tparam BulkType Bulk modulus type
+   * @tparam ShearType Shear modulus type
    * @param du_dX Displacement gradient with respect to the reference configuration (du_dX)
    * @param bulk_parameter The parameterized bulk modulus
    * @param shear_parameter The parameterized shear modulus
-   * @return The calculated material response (density, kirchoff stress) for the material
+   * @return The calculated material response (density, Kirchoff stress) for the material
    */
-  template <typename T1, typename T2, typename T3, typename T4, typename T5>
-  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* displacement */, const T3& du_dX,
-                                    const T4& bulk_parameter, const T5& shear_parameter) const
+  template <typename PositionType, typename DisplacementType, typename DispGradType, typename BulkType,
+            typename ShearType>
+  SERAC_HOST_DEVICE auto operator()(const PositionType& /* x */, const DisplacementType& /* displacement */,
+                                    const DispGradType& du_dX, const BulkType& bulk_parameter,
+                                    const ShearType& shear_parameter) const
   {
     auto bulk_modulus  = bulk_parameter + bulk_modulus_offset_;
     auto shear_modulus = shear_parameter + shear_modulus_offset_;
@@ -113,19 +115,21 @@ public:
   /**
    * @brief Material response call for a neo-Hookean solid
    *
-   * @tparam T1 Spatial position type
-   * @tparam T2 Displacement type
-   * @tparam T3 Displacement gradient type
-   * @tparam T4 Bulk modulus type
-   * @tparam T5 Shear modulus type
+   * @tparam PositionType Spatial position type
+   * @tparam DisplacementType Displacement type
+   * @tparam DispGradType Displacement gradient type
+   * @tparam BulkType Bulk modulus type
+   * @tparam ShearType Shear modulus type
    * @param du_dX Displacement gradient with respect to the reference configuration (du_dX)
    * @param bulk_parameter The parameterized bulk modulus
    * @param shear_parameter The parameterized shear modulus
    * @return The calculated material response (density, kirchoff stress) for the material
    */
-  template <typename T1, typename T2, typename T3, typename T4, typename T5>
-  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* displacement */, const T3& du_dX,
-                                    const T4& bulk_parameter, const T5& shear_parameter) const
+  template <typename PositionType, typename DisplacementType, typename DispGradType, typename BulkType,
+            typename ShearType>
+  SERAC_HOST_DEVICE auto operator()(const PositionType& /* x */, const DisplacementType& /* displacement */,
+                                    const DispGradType& du_dX, const BulkType& bulk_parameter,
+                                    const ShearType& shear_parameter) const
   {
     auto bulk_modulus  = bulk_parameter + bulk_modulus_offset_;
     auto shear_modulus = shear_parameter + shear_modulus_offset_;
