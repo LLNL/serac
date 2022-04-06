@@ -67,9 +67,7 @@ public:
     auto strain = 0.5 * (du_dX + transpose(du_dX));
     auto stress = lambda * tr(strain) * I + 2.0 * shear_modulus * strain;
 
-    using StressType = decltype(stress);
-
-    return MaterialResponse<double, StressType>{.density = density_, .stress = stress};
+    return MaterialResponse{.density = density_, .stress = stress};
   }
 
   /**
