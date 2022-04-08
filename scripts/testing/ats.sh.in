@@ -83,8 +83,8 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~"
 rm -rf $SYS_TYPE.*
 
 # Clean-up last run's output
-# TODO: add a mode to clean up output
-#rm -rf $ATS_SERAC_REPO_DIR/tests/integration/*/*/_output
+rm -rf $ATS_SERAC_REPO_DIR/tests/integration/*/*/_output*
 
 # Run ATS
 $ATS_EXECUTABLE $ATS_SERAC_REPO_DIR/tests/integration/test.ats
+
