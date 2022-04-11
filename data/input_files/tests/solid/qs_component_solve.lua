@@ -49,7 +49,7 @@ solid = {
 
     -- boundary condition parameters
     boundary_conds = {
-        ['displacement'] = {
+        ['displacement_1'] = {
             -- boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
             attrs = {1},
             component = 0,
@@ -57,5 +57,15 @@ solid = {
                 return v.x * -1.0e-1
             end
         },
+        ['displacement_2'] = {
+            -- boundary attribute 2 (index 0) is fixed (Dirichlet) in all directions
+            attrs = {2},
+            vector_constant = {
+                x = 0.0,
+                y = 0.0,
+                z = 0.0
+            }
+        }
+
     },
 }
