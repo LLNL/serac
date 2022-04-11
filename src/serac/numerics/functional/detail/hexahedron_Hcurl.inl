@@ -27,6 +27,31 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
   static constexpr int  ndof       = 3 * p * (p + 1) * (p + 1);
   static constexpr int  components = 1;
 
+  // this is how mfem provides the data to us for these elements
+  // if, instead, it was stored as simply tensor< double, 3, p + 1, p + q, p >,
+  // the interpolation/extrapolation implementation would be considerably shorter
+  struct dof_type {
+    tensor< double, p + 1, p + 1, p     > x;
+    tensor< double, p + 1, p    , p + 1 > y;
+    tensor< double, p    , p + 1, p + 1 > z;
+  };
+
+  /**
+   * @brief this type is used when calling the batched interpolate/extrapolate
+   *        routines, to provide memory for calculating intermediates
+   */
+  template < int q >
+  struct cache_type {
+    tensor<double, p + 1, p + 1, q> A1; 
+    tensor<double, 2, p + 1, q, q> A2;
+  };
+
+  template < int q >
+  using batched_values_type = tensor< double, 3, q, q, q >;
+
+  template < int q >
+  using batched_derivatives_type = tensor< double, 3, q, q, q >;
+
   static constexpr auto directions = [] {
     int dof_per_direction = p * (p + 1) * (p + 1);
 
@@ -73,14 +98,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
     return nodes;
   }();
 
-  using residual_type =
-      typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components>>::type;
 
-  struct mfem_dof_layout {
-    tensor< double, p + 1, p + 1, p     > x;
-    tensor< double, p + 1, p    , p + 1 > y;
-    tensor< double, p    , p + 1, p + 1 > z;
-  };
 
   SERAC_HOST_DEVICE static constexpr tensor<double, ndof, dim> shape_functions(tensor<double, dim> xi)
   {
@@ -174,9 +192,9 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
   }
 
   template < int q >
-  static void interpolation(const mfem_dof_layout & element_values, const TensorProductQuadratureRule<q> &, 
-                            tensor<double, p + 1, p + 1, q> & A1, tensor<double, 2, p + 1, q, q> & A2,
-                            tensor< double, 3, q, q, q > & value_q, tensor< double, 3, q, q, q > & curl_q) {
+  static void interpolation(const dof_type & element_values, const TensorProductQuadratureRule<q> &, 
+                            cache_type<q> & cache,
+                            batched_values_type<q> & value_q, batched_derivatives_type<q> & curl_q) {
 
     auto xi = GaussLegendreNodes<q>();
 
@@ -199,7 +217,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
           for (int i = 0; i < p; i++) {
             sum += B1(qx, i) * element_values.x(k, j, i);
           }
-          A1(k, j, qx) = sum;
+          cache.A1(k, j, qx) = sum;
         }
       }
     }
@@ -209,11 +227,11 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
         for (int qx = 0; qx < q; qx++) {
           double sum[2]{};
           for (int j = 0; j < (p + 1); j++) {
-            sum[0] += B2(qy, j) * A1(k, j, qx);
-            sum[1] += G2(qy, j) * A1(k, j, qx);
+            sum[0] += B2(qy, j) * cache.A1(k, j, qx);
+            sum[1] += G2(qy, j) * cache.A1(k, j, qx);
           }
-          A2(0, k, qy, qx) = sum[0];
-          A2(1, k, qy, qx) = sum[1];
+          cache.A2(0, k, qy, qx) = sum[0];
+          cache.A2(1, k, qy, qx) = sum[1];
         }
       }
     }
@@ -223,9 +241,9 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
         for (int qx = 0; qx < q; qx++) {
           double sum[3]{};
           for (int k = 0; k < (p + 1); k++) {
-            sum[0] += B2(qz, k) * A2(0, k, qy, qx);
-            sum[1] += G2(qz, k) * A2(0, k, qy, qx);
-            sum[2] += B2(qz, k) * A2(1, k, qy, qx);
+            sum[0] += B2(qz, k) * cache.A2(0, k, qy, qx);
+            sum[1] += G2(qz, k) * cache.A2(0, k, qy, qx);
+            sum[2] += B2(qz, k) * cache.A2(1, k, qy, qx);
           }
           value_q(0, qz, qy, qx) += sum[0];
           curl_q(1, qz, qy, qx)  += sum[1];
@@ -244,7 +262,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
           for (int j = 0; j < p; j++) {
             sum += B1(qy, j) * element_values.y(k, j, i);
           }
-          A1(k, i, qy) = sum;
+          cache.A1(k, i, qy) = sum;
         }
       }
     }
@@ -254,11 +272,11 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
         for (int qx = 0; qx < q; qx++) {
           double sum[2]{};
           for (int i = 0; i < (p + 1); i++) {
-            sum[0] += B2(qx, i) * A1(k, i, qy);
-            sum[1] += G2(qx, i) * A1(k, i, qy);
+            sum[0] += B2(qx, i) * cache.A1(k, i, qy);
+            sum[1] += G2(qx, i) * cache.A1(k, i, qy);
           }
-          A2(0, k, qy, qx) = sum[0];
-          A2(1, k, qy, qx) = sum[1];
+          cache.A2(0, k, qy, qx) = sum[0];
+          cache.A2(1, k, qy, qx) = sum[1];
         }
       }
     }
@@ -268,9 +286,9 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
         for (int qx = 0; qx < q; qx++) {
           double sum[3]{};
           for (int k = 0; k < (p + 1); k++) {
-            sum[0] += B2(qz, k) * A2(0, k, qy, qx);
-            sum[1] += G2(qz, k) * A2(0, k, qy, qx);
-            sum[2] += B2(qz, k) * A2(1, k, qy, qx);
+            sum[0] += B2(qz, k) * cache.A2(0, k, qy, qx);
+            sum[1] += G2(qz, k) * cache.A2(0, k, qy, qx);
+            sum[2] += B2(qz, k) * cache.A2(1, k, qy, qx);
           }
           value_q(1, qz, qy, qx) += sum[0];
           curl_q(2, qz, qy, qx)  += sum[2];
@@ -289,7 +307,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
           for (int k = 0; k < p; k++) {
             sum += B1(qz, k) * element_values.z(k, j, i);
           }
-          A1(j, i, qz) = sum;
+          cache.A1(j, i, qz) = sum;
         }
       }
     }
@@ -299,11 +317,11 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
         for (int qx = 0; qx < q; qx++) {
           double sum[2]{};
           for (int i = 0; i < (p + 1); i++) {
-            sum[0] += B2(qx, i) * A1(j, i, qz);
-            sum[1] += G2(qx, i) * A1(j, i, qz);
+            sum[0] += B2(qx, i) * cache.A1(j, i, qz);
+            sum[1] += G2(qx, i) * cache.A1(j, i, qz);
           }
-          A2(0, j, qz, qx) = sum[0];
-          A2(1, j, qz, qx) = sum[1];
+          cache.A2(0, j, qz, qx) = sum[0];
+          cache.A2(1, j, qz, qx) = sum[1];
         }
       }
     }
@@ -313,9 +331,9 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
         for (int qx = 0; qx < q; qx++) {
           double sum[3]{};
           for (int j = 0; j < (p + 1); j++) {
-            sum[0] += B2(qy, j) * A2(0, j, qz, qx);
-            sum[1] += G2(qy, j) * A2(0, j, qz, qx);
-            sum[2] += B2(qy, j) * A2(1, j, qz, qx);
+            sum[0] += B2(qy, j) * cache.A2(0, j, qz, qx);
+            sum[1] += G2(qy, j) * cache.A2(0, j, qz, qx);
+            sum[2] += B2(qy, j) * cache.A2(1, j, qz, qx);
           }
           value_q(2, qz, qy, qx) += sum[0];
           curl_q(0, qz, qy, qx)  += sum[1];
@@ -327,12 +345,11 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
   }
 
   template < int q >
-  static void extrapolation(const tensor< double, 3, q, q, q> & source,
-                            const tensor< double, 3, q, q, q> & flux,
+  static void extrapolation(const batched_values_type<q> & source,
+                            const batched_derivatives_type<q> & flux,
                             const TensorProductQuadratureRule<q> &, 
-                            tensor< double, 2, p + 1, q, q > & A1, 
-                            tensor< double, p + 1, p + 1, q > & A2, 
-                            mfem_dof_layout & element_residual) {
+                            cache_type<q> & cache,
+                            dof_type & element_residual) {
 
     auto xi = GaussLegendreNodes<q>();
 
@@ -356,8 +373,8 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
             sum[0] += B2(qz, k) * source(0, qz, qy, qx) + G2(qz, k) * flux(1, qz, qy, qx);
             sum[1] -= B2(qz, k) * flux(2, qz, qy, qx);
           }
-          A1(0, k, qy, qx) = sum[0];
-          A1(1, k, qy, qx) = sum[1];
+          cache.A2(0, k, qy, qx) = sum[0];
+          cache.A2(1, k, qy, qx) = sum[1];
         }
       }
     }
@@ -367,10 +384,10 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
         for (int qx = 0; qx < q; qx++) {
           double sum = 0.0;
           for (int qy = 0; qy < q; qy++) {
-            sum += B2(qy, j) * A1(0, k, qy, qx);
-            sum += G2(qy, j) * A1(1, k, qy, qx);
+            sum += B2(qy, j) * cache.A2(0, k, qy, qx);
+            sum += G2(qy, j) * cache.A2(1, k, qy, qx);
           }
-          A2(k, j, qx) = sum;
+          cache.A1(k, j, qx) = sum;
         }
       }
     }
@@ -380,7 +397,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
         for (int i = 0; i < p; i++) {
           double sum = 0.0;
           for (int qx = 0; qx < q; qx++) {
-            sum += B1(qx, i) * A2(k, j, qx);
+            sum += B1(qx, i) * cache.A1(k, j, qx);
           }
           element_residual.x(k, j, i) = sum;
         }
@@ -398,8 +415,8 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
             sum[0] += B2(qz, k) * source(1, qz, qy, qx) - G2(qz, k) * flux(0, qz, qy, qx);
             sum[1] += B2(qz, k) * flux(2, qz, qy, qx);
           }
-          A1(0, k, qy, qx) = sum[0];
-          A1(1, k, qy, qx) = sum[1];
+          cache.A2(0, k, qy, qx) = sum[0];
+          cache.A2(1, k, qy, qx) = sum[1];
         }
       }
     }
@@ -409,10 +426,10 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
         for (int qy = 0; qy < q; qy++) {
           double sum = 0.0;
           for (int qx = 0; qx < q; qx++) {
-            sum += B2(qx, i) * A1(0, k, qy, qx);
-            sum += G2(qx, i) * A1(1, k, qy, qx);
+            sum += B2(qx, i) * cache.A2(0, k, qy, qx);
+            sum += G2(qx, i) * cache.A2(1, k, qy, qx);
           }
-          A2(k, i, qy) = sum;
+          cache.A1(k, i, qy) = sum;
         }
       }
     }
@@ -422,7 +439,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
         for (int i = 0; i < p + 1; i++) {
           double sum = 0.0;
           for (int qy = 0; qy < q; qy++) {
-            sum += B1(qy, j) * A2(k, i, qy);
+            sum += B1(qy, j) * cache.A1(k, i, qy);
           }
           element_residual.y(k, j, i) = sum;
         }
@@ -440,8 +457,8 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
             sum[0] += B2(qx, i) * source(2, qz, qy, qx) - G2(qx, i) * flux(1, qz, qy, qx);
             sum[1] += B2(qx, i) * flux(0, qz, qy, qx);
           }
-          A1(0, i, qz, qy) = sum[0];
-          A1(1, i, qz, qy) = sum[1];
+          cache.A2(0, i, qz, qy) = sum[0];
+          cache.A2(1, i, qz, qy) = sum[1];
         }
       }
     }
@@ -451,10 +468,10 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
         for (int qz = 0; qz < q; qz++) {
           double sum = 0.0;
           for (int qy = 0; qy < q; qy++) {
-            sum += B2(qy, j) * A1(0, i, qz, qy);
-            sum += G2(qy, j) * A1(1, i, qz, qy);
+            sum += B2(qy, j) * cache.A2(0, i, qz, qy);
+            sum += G2(qy, j) * cache.A2(1, i, qz, qy);
           }
-          A2(j, i, qz) = sum;
+          cache.A1(j, i, qz) = sum;
         }
       }
     }
@@ -464,7 +481,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
         for (int i = 0; i < p + 1; i++) {
           double sum = 0.0;
           for (int qz = 0; qz < q; qz++) {
-            sum += B1(qz, k) * A2(j, i, qz);
+            sum += B1(qz, k) * cache.A1(j, i, qz);
           }
           element_residual.z(k, j, i) = sum;
         }

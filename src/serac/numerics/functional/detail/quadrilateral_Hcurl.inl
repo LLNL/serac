@@ -29,6 +29,27 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
   static constexpr int  ndof       = 2 * p * (p + 1);
   static constexpr int  components = 1;
 
+  // this is how mfem provides the data to us for these elements
+  // if, instead, it was stored as simply tensor< double, 2, p + 1, p >,
+  // the interpolation/extrapolation implementation would be considerably shorter
+  struct dof_type {
+    tensor< double, p + 1, p     > x;
+    tensor< double, p    , p + 1 > y;
+  };
+
+  /**
+   * @brief this type is used when calling the batched interpolate/extrapolate
+   *        routines, to provide memory for calculating intermediates
+   */
+  template < int q >
+  using cache_type = tensor<double, p + 1, q>;
+
+  template < int q >
+  using batched_values_type = tensor< double, 2, q, q >;
+
+  template < int q >
+  using batched_derivatives_type = tensor< double, q, q >;
+
   static constexpr auto directions = [] {
     int dof_per_direction = p * (p + 1);
 
@@ -61,14 +82,6 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
 
     return nodes;
   }();
-
-  using residual_type =
-      typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components> >::type;
-
-  struct mfem_dof_layout {
-    tensor< double, p + 1, p     > x;
-    tensor< double, p    , p + 1 > y;
-  };
 
   /*
 
@@ -161,9 +174,9 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
   }
 
   template < int q >
-  static void interpolation(const mfem_dof_layout & element_values, const TensorProductQuadratureRule<q> &, 
-                            tensor<double, p + 1, q> & A1,
-                            tensor< double, 2, q, q > & value_q, tensor< double, q, q > & curl_q) {
+  static void interpolation(const dof_type & element_values, const TensorProductQuadratureRule<q> &, 
+                            cache_type<q> & A1,
+                            batched_values_type<q> & value_q, batched_derivatives_type<q> & curl_q) {
 
     auto xi = GaussLegendreNodes<q>();
 
@@ -229,11 +242,11 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
   }
 
   template < int q >
-  static void extrapolation(const tensor< double, 2, q, q> & source,
-                            const tensor< double, q, q> & flux,
+  static void extrapolation(const batched_values_type<q> & source,
+                            const batched_derivatives_type<q> & flux,
                             const TensorProductQuadratureRule<q> &, 
-                            tensor< double, p + 1, q > & A1, 
-                            mfem_dof_layout & element_residual) {
+                            cache_type<q> & A1, 
+                            dof_type & element_residual) {
 
     auto xi = GaussLegendreNodes<q>();
 
@@ -293,8 +306,6 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     }
 
   }
-
-
 
 };
 /// @endcond

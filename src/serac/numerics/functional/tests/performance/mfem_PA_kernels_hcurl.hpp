@@ -3,6 +3,646 @@
 
 namespace mfem {
 
+void PAHcurlMassApply2D(const int D1D,
+                        const int Q1D,
+                        const int NE,
+                        const bool symmetric,
+                        const Array<double> &bo,
+                        const Array<double> &bc,
+                        const Array<double> &bot,
+                        const Array<double> &bct,
+                        const Vector &pa_data,
+                        const Vector &x,
+                        Vector &y)
+{
+   constexpr static int VDIM = 2;
+   constexpr static int MAX_D1D = HCURL_MAX_D1D;
+   constexpr static int MAX_Q1D = HCURL_MAX_Q1D;
+
+   auto Bo = Reshape(bo.Read(), Q1D, D1D-1);
+   auto Bc = Reshape(bc.Read(), Q1D, D1D);
+   auto Bot = Reshape(bot.Read(), D1D-1, Q1D);
+   auto Bct = Reshape(bct.Read(), D1D, Q1D);
+   auto op = Reshape(pa_data.Read(), Q1D, Q1D, symmetric ? 3 : 4, NE);
+   auto X = Reshape(x.Read(), 2*(D1D-1)*D1D, NE);
+   auto Y = Reshape(y.ReadWrite(), 2*(D1D-1)*D1D, NE);
+
+   MFEM_FORALL(e, NE,
+   {
+      double mass[MAX_Q1D][MAX_Q1D][VDIM];
+
+      for (int qy = 0; qy < Q1D; ++qy)
+      {
+         for (int qx = 0; qx < Q1D; ++qx)
+         {
+            for (int c = 0; c < VDIM; ++c)
+            {
+               mass[qy][qx][c] = 0.0;
+            }
+         }
+      }
+
+      int osc = 0;
+
+      for (int c = 0; c < VDIM; ++c)  // loop over x, y components
+      {
+         const int D1Dy = (c == 1) ? D1D - 1 : D1D;
+         const int D1Dx = (c == 0) ? D1D - 1 : D1D;
+
+         for (int dy = 0; dy < D1Dy; ++dy)
+         {
+            double massX[MAX_Q1D];
+            for (int qx = 0; qx < Q1D; ++qx)
+            {
+               massX[qx] = 0.0;
+            }
+
+            for (int dx = 0; dx < D1Dx; ++dx)
+            {
+               const double t = X(dx + (dy * D1Dx) + osc, e);
+               for (int qx = 0; qx < Q1D; ++qx)
+               {
+                  massX[qx] += t * ((c == 0) ? Bo(qx,dx) : Bc(qx,dx));
+               }
+            }
+
+            for (int qy = 0; qy < Q1D; ++qy)
+            {
+               const double wy = (c == 1) ? Bo(qy,dy) : Bc(qy,dy);
+               for (int qx = 0; qx < Q1D; ++qx)
+               {
+                  mass[qy][qx][c] += massX[qx] * wy;
+               }
+            }
+         }
+
+         osc += D1Dx * D1Dy;
+      }  // loop (c) over components
+
+      // Apply D operator.
+      for (int qy = 0; qy < Q1D; ++qy)
+      {
+         for (int qx = 0; qx < Q1D; ++qx)
+         {
+            const double O11 = op(qx,qy,0,e);
+            const double O21 = op(qx,qy,1,e);
+            const double O12 = symmetric ? O21 : op(qx,qy,2,e);
+            const double O22 = symmetric ? op(qx,qy,2,e) : op(qx,qy,3,e);
+            const double massX = mass[qy][qx][0];
+            const double massY = mass[qy][qx][1];
+            mass[qy][qx][0] = (O11*massX)+(O12*massY);
+            mass[qy][qx][1] = (O21*massX)+(O22*massY);
+         }
+      }
+
+      for (int qy = 0; qy < Q1D; ++qy)
+      {
+         osc = 0;
+
+         for (int c = 0; c < VDIM; ++c)  // loop over x, y components
+         {
+            const int D1Dy = (c == 1) ? D1D - 1 : D1D;
+            const int D1Dx = (c == 0) ? D1D - 1 : D1D;
+
+            double massX[MAX_D1D];
+            for (int dx = 0; dx < D1Dx; ++dx)
+            {
+               massX[dx] = 0.0;
+            }
+            for (int qx = 0; qx < Q1D; ++qx)
+            {
+               for (int dx = 0; dx < D1Dx; ++dx)
+               {
+                  massX[dx] += mass[qy][qx][c] * ((c == 0) ? Bot(dx,qx) : Bct(dx,qx));
+               }
+            }
+
+            for (int dy = 0; dy < D1Dy; ++dy)
+            {
+               const double wy = (c == 1) ? Bot(dy,qy) : Bct(dy,qy);
+
+               for (int dx = 0; dx < D1Dx; ++dx)
+               {
+                  Y(dx + (dy * D1Dx) + osc, e) += massX[dx] * wy;
+               }
+            }
+
+            osc += D1Dx * D1Dy;
+         }  // loop c
+      }  // loop qy
+   }); // end of element loop
+}
+
+static void PACurlCurlApply2D(const int D1D,
+                              const int Q1D,
+                              const int NE,
+                              const Array<double> &bo,
+                              const Array<double> &bot,
+                              const Array<double> &gc,
+                              const Array<double> &gct,
+                              const Vector &pa_data,
+                              const Vector &x,
+                              Vector &y)
+{
+   constexpr static int VDIM = 2;
+   constexpr static int MAX_D1D = HCURL_MAX_D1D;
+   constexpr static int MAX_Q1D = HCURL_MAX_Q1D;
+
+   auto Bo = Reshape(bo.Read(), Q1D, D1D-1);
+   auto Bot = Reshape(bot.Read(), D1D-1, Q1D);
+   auto Gc = Reshape(gc.Read(), Q1D, D1D);
+   auto Gct = Reshape(gct.Read(), D1D, Q1D);
+   auto op = Reshape(pa_data.Read(), Q1D, Q1D, NE);
+   auto X = Reshape(x.Read(), 2*(D1D-1)*D1D, NE);
+   auto Y = Reshape(y.ReadWrite(), 2*(D1D-1)*D1D, NE);
+
+   MFEM_FORALL(e, NE,
+   {
+      double curl[MAX_Q1D][MAX_Q1D];
+
+      // curl[qy][qx] will be computed as du_y/dx - du_x/dy
+
+      for (int qy = 0; qy < Q1D; ++qy)
+      {
+         for (int qx = 0; qx < Q1D; ++qx)
+         {
+            curl[qy][qx] = 0.0;
+         }
+      }
+
+      int osc = 0;
+
+      for (int c = 0; c < VDIM; ++c)  // loop over x, y components
+      {
+         const int D1Dy = (c == 1) ? D1D - 1 : D1D;
+         const int D1Dx = (c == 0) ? D1D - 1 : D1D;
+
+         for (int dy = 0; dy < D1Dy; ++dy)
+         {
+            double gradX[MAX_Q1D];
+            for (int qx = 0; qx < Q1D; ++qx)
+            {
+               gradX[qx] = 0;
+            }
+
+            for (int dx = 0; dx < D1Dx; ++dx)
+            {
+               const double t = X(dx + (dy * D1Dx) + osc, e);
+               for (int qx = 0; qx < Q1D; ++qx)
+               {
+                  gradX[qx] += t * ((c == 0) ? Bo(qx,dx) : Gc(qx,dx));
+               }
+            }
+
+            for (int qy = 0; qy < Q1D; ++qy)
+            {
+               const double wy = (c == 0) ? -Gc(qy,dy) : Bo(qy,dy);
+               for (int qx = 0; qx < Q1D; ++qx)
+               {
+                  curl[qy][qx] += gradX[qx] * wy;
+               }
+            }
+         }
+
+         osc += D1Dx * D1Dy;
+      }  // loop (c) over components
+
+      // Apply D operator.
+      for (int qy = 0; qy < Q1D; ++qy)
+      {
+         for (int qx = 0; qx < Q1D; ++qx)
+         {
+            curl[qy][qx] *= op(qx,qy,e);
+         }
+      }
+
+      for (int qy = 0; qy < Q1D; ++qy)
+      {
+         osc = 0;
+
+         for (int c = 0; c < VDIM; ++c)  // loop over x, y components
+         {
+            const int D1Dy = (c == 1) ? D1D - 1 : D1D;
+            const int D1Dx = (c == 0) ? D1D - 1 : D1D;
+
+            double gradX[MAX_D1D];
+            for (int dx = 0; dx < D1Dx; ++dx)
+            {
+               gradX[dx] = 0.0;
+            }
+            for (int qx = 0; qx < Q1D; ++qx)
+            {
+               for (int dx = 0; dx < D1Dx; ++dx)
+               {
+                  gradX[dx] += curl[qy][qx] * ((c == 0) ? Bot(dx,qx) : Gct(dx,qx));
+               }
+            }
+            for (int dy = 0; dy < D1Dy; ++dy)
+            {
+               const double wy = (c == 0) ? -Gct(dy,qy) : Bot(dy,qy);
+
+               for (int dx = 0; dx < D1Dx; ++dx)
+               {
+                  Y(dx + (dy * D1Dx) + osc, e) += gradX[dx] * wy;
+               }
+            }
+
+            osc += D1Dx * D1Dy;
+         }  // loop c
+      }  // loop qy
+   }); // end of element loop
+}
+
+
+void PAHcurlMassApply3D(const int D1D,
+                        const int Q1D,
+                        const int NE,
+                        const bool symmetric,
+                        const Array<double> &bo,
+                        const Array<double> &bc,
+                        const Array<double> &bot,
+                        const Array<double> &bct,
+                        const Vector &pa_data,
+                        const Vector &x,
+                        Vector &y)
+{
+   constexpr static int MAX_D1D = HCURL_MAX_D1D;
+   constexpr static int MAX_Q1D = HCURL_MAX_Q1D;
+
+   MFEM_VERIFY(D1D <= MAX_D1D, "Error: D1D > MAX_D1D");
+   MFEM_VERIFY(Q1D <= MAX_Q1D, "Error: Q1D > MAX_Q1D");
+   constexpr static int VDIM = 3;
+
+   auto Bo = Reshape(bo.Read(), Q1D, D1D-1);
+   auto Bc = Reshape(bc.Read(), Q1D, D1D);
+   auto Bot = Reshape(bot.Read(), D1D-1, Q1D);
+   auto Bct = Reshape(bct.Read(), D1D, Q1D);
+   auto op = Reshape(pa_data.Read(), Q1D, Q1D, Q1D, symmetric ? 6 : 9, NE);
+   auto X = Reshape(x.Read(), 3*(D1D-1)*D1D*D1D, NE);
+   auto Y = Reshape(y.ReadWrite(), 3*(D1D-1)*D1D*D1D, NE);
+
+   MFEM_FORALL(e, NE,
+   {
+      double mass[MAX_Q1D][MAX_Q1D][MAX_Q1D][VDIM];
+
+      for (int qz = 0; qz < Q1D; ++qz)
+      {
+         for (int qy = 0; qy < Q1D; ++qy)
+         {
+            for (int qx = 0; qx < Q1D; ++qx)
+            {
+               for (int c = 0; c < VDIM; ++c)
+               {
+                  mass[qz][qy][qx][c] = 0.0;
+               }
+            }
+         }
+      }
+
+      int osc = 0;
+
+      for (int c = 0; c < VDIM; ++c)  // loop over x, y, z components
+      {
+         const int D1Dz = (c == 2) ? D1D - 1 : D1D;
+         const int D1Dy = (c == 1) ? D1D - 1 : D1D;
+         const int D1Dx = (c == 0) ? D1D - 1 : D1D;
+
+         for (int dz = 0; dz < D1Dz; ++dz)
+         {
+            double massXY[MAX_Q1D][MAX_Q1D];
+            for (int qy = 0; qy < Q1D; ++qy)
+            {
+               for (int qx = 0; qx < Q1D; ++qx)
+               {
+                  massXY[qy][qx] = 0.0;
+               }
+            }
+
+            for (int dy = 0; dy < D1Dy; ++dy)
+            {
+               double massX[MAX_Q1D];
+               for (int qx = 0; qx < Q1D; ++qx)
+               {
+                  massX[qx] = 0.0;
+               }
+
+               for (int dx = 0; dx < D1Dx; ++dx)
+               {
+                  const double t = X(dx + ((dy + (dz * D1Dy)) * D1Dx) + osc, e);
+                  for (int qx = 0; qx < Q1D; ++qx)
+                  {
+                     massX[qx] += t * ((c == 0) ? Bo(qx,dx) : Bc(qx,dx));
+                  }
+               }
+
+               for (int qy = 0; qy < Q1D; ++qy)
+               {
+                  const double wy = (c == 1) ? Bo(qy,dy) : Bc(qy,dy);
+                  for (int qx = 0; qx < Q1D; ++qx)
+                  {
+                     const double wx = massX[qx];
+                     massXY[qy][qx] += wx * wy;
+                  }
+               }
+            }
+
+            for (int qz = 0; qz < Q1D; ++qz)
+            {
+               const double wz = (c == 2) ? Bo(qz,dz) : Bc(qz,dz);
+               for (int qy = 0; qy < Q1D; ++qy)
+               {
+                  for (int qx = 0; qx < Q1D; ++qx)
+                  {
+                     mass[qz][qy][qx][c] += massXY[qy][qx] * wz;
+                  }
+               }
+            }
+         }
+
+         osc += D1Dx * D1Dy * D1Dz;
+      }  // loop (c) over components
+
+      // Apply D operator.
+      for (int qz = 0; qz < Q1D; ++qz)
+      {
+         for (int qy = 0; qy < Q1D; ++qy)
+         {
+            for (int qx = 0; qx < Q1D; ++qx)
+            {
+               const double O11 = op(qx,qy,qz,0,e);
+               const double O12 = op(qx,qy,qz,1,e);
+               const double O13 = op(qx,qy,qz,2,e);
+               const double O21 = symmetric ? O12 : op(qx,qy,qz,3,e);
+               const double O22 = symmetric ? op(qx,qy,qz,3,e) : op(qx,qy,qz,4,e);
+               const double O23 = symmetric ? op(qx,qy,qz,4,e) : op(qx,qy,qz,5,e);
+               const double O31 = symmetric ? O13 : op(qx,qy,qz,6,e);
+               const double O32 = symmetric ? O23 : op(qx,qy,qz,7,e);
+               const double O33 = symmetric ? op(qx,qy,qz,5,e) : op(qx,qy,qz,8,e);
+               const double massX = mass[qz][qy][qx][0];
+               const double massY = mass[qz][qy][qx][1];
+               const double massZ = mass[qz][qy][qx][2];
+               mass[qz][qy][qx][0] = (O11*massX)+(O12*massY)+(O13*massZ);
+               mass[qz][qy][qx][1] = (O21*massX)+(O22*massY)+(O23*massZ);
+               mass[qz][qy][qx][2] = (O31*massX)+(O32*massY)+(O33*massZ);
+            }
+         }
+      }
+
+      for (int qz = 0; qz < Q1D; ++qz)
+      {
+         double massXY[MAX_D1D][MAX_D1D];
+
+         osc = 0;
+
+         for (int c = 0; c < VDIM; ++c)  // loop over x, y, z components
+         {
+            const int D1Dz = (c == 2) ? D1D - 1 : D1D;
+            const int D1Dy = (c == 1) ? D1D - 1 : D1D;
+            const int D1Dx = (c == 0) ? D1D - 1 : D1D;
+
+            for (int dy = 0; dy < D1Dy; ++dy)
+            {
+               for (int dx = 0; dx < D1Dx; ++dx)
+               {
+                  massXY[dy][dx] = 0.0;
+               }
+            }
+            for (int qy = 0; qy < Q1D; ++qy)
+            {
+               double massX[MAX_D1D];
+               for (int dx = 0; dx < D1Dx; ++dx)
+               {
+                  massX[dx] = 0;
+               }
+               for (int qx = 0; qx < Q1D; ++qx)
+               {
+                  for (int dx = 0; dx < D1Dx; ++dx)
+                  {
+                     massX[dx] += mass[qz][qy][qx][c] * ((c == 0) ? Bot(dx,qx) : Bct(dx,qx));
+                  }
+               }
+               for (int dy = 0; dy < D1Dy; ++dy)
+               {
+                  const double wy = (c == 1) ? Bot(dy,qy) : Bct(dy,qy);
+                  for (int dx = 0; dx < D1Dx; ++dx)
+                  {
+                     massXY[dy][dx] += massX[dx] * wy;
+                  }
+               }
+            }
+
+            for (int dz = 0; dz < D1Dz; ++dz)
+            {
+               const double wz = (c == 2) ? Bot(dz,qz) : Bct(dz,qz);
+               for (int dy = 0; dy < D1Dy; ++dy)
+               {
+                  for (int dx = 0; dx < D1Dx; ++dx)
+                  {
+                     Y(dx + ((dy + (dz * D1Dy)) * D1Dx) + osc, e) += massXY[dy][dx] * wz;
+                  }
+               }
+            }
+
+            osc += D1Dx * D1Dy * D1Dz;
+         }  // loop c
+      }  // loop qz
+   }); // end of element loop
+}
+
+template<int T_D1D, int T_Q1D>
+void SmemPAHcurlMassApply3D(const int D1D,
+                            const int Q1D,
+                            const int NE,
+                            const bool symmetric,
+                            const Array<double> &bo,
+                            const Array<double> &bc,
+                            const Array<double> &bot,
+                            const Array<double> &bct,
+                            const Vector &pa_data,
+                            const Vector &x,
+                            Vector &y)
+{
+   MFEM_VERIFY(D1D <= HCURL_MAX_D1D, "Error: D1D > MAX_D1D");
+   MFEM_VERIFY(Q1D <= HCURL_MAX_Q1D, "Error: Q1D > MAX_Q1D");
+
+   const int dataSize = symmetric ? 6 : 9;
+
+   auto Bo = Reshape(bo.Read(), Q1D, D1D-1);
+   auto Bc = Reshape(bc.Read(), Q1D, D1D);
+   auto op = Reshape(pa_data.Read(), Q1D, Q1D, Q1D, dataSize, NE);
+   auto X = Reshape(x.Read(), 3*(D1D-1)*D1D*D1D, NE);
+   auto Y = Reshape(y.ReadWrite(), 3*(D1D-1)*D1D*D1D, NE);
+
+   MFEM_FORALL_3D(e, NE, Q1D, Q1D, Q1D,
+   {
+      constexpr int VDIM = 3;
+      constexpr int tD1D = T_D1D ? T_D1D : HCURL_MAX_D1D;
+      constexpr int tQ1D = T_Q1D ? T_Q1D : HCURL_MAX_Q1D;
+
+      MFEM_SHARED double sBo[tQ1D][tD1D];
+      MFEM_SHARED double sBc[tQ1D][tD1D];
+
+      double op9[9];
+      MFEM_SHARED double sop[9*tQ1D*tQ1D];
+      MFEM_SHARED double mass[tQ1D][tQ1D][3];
+
+      MFEM_SHARED double sX[tD1D][tD1D][tD1D];
+
+      MFEM_FOREACH_THREAD(qx,x,Q1D)
+      {
+         MFEM_FOREACH_THREAD(qy,y,Q1D)
+         {
+            MFEM_FOREACH_THREAD(qz,z,Q1D)
+            {
+               for (int i=0; i<dataSize; ++i)
+               {
+                  op9[i] = op(qx,qy,qz,i,e);
+               }
+            }
+         }
+      }
+
+      const int tidx = MFEM_THREAD_ID(x);
+      const int tidy = MFEM_THREAD_ID(y);
+      const int tidz = MFEM_THREAD_ID(z);
+
+      if (tidz == 0)
+      {
+         MFEM_FOREACH_THREAD(d,y,D1D)
+         {
+            MFEM_FOREACH_THREAD(q,x,Q1D)
+            {
+               sBc[q][d] = Bc(q,d);
+               if (d < D1D-1)
+               {
+                  sBo[q][d] = Bo(q,d);
+               }
+            }
+         }
+      }
+      MFEM_SYNC_THREAD;
+
+      for (int qz=0; qz < Q1D; ++qz)
+      {
+         int osc = 0;
+         for (int c = 0; c < VDIM; ++c)  // loop over x, y, z components
+         {
+            const int D1Dz = (c == 2) ? D1D - 1 : D1D;
+            const int D1Dy = (c == 1) ? D1D - 1 : D1D;
+            const int D1Dx = (c == 0) ? D1D - 1 : D1D;
+
+            MFEM_FOREACH_THREAD(dz,z,D1Dz)
+            {
+               MFEM_FOREACH_THREAD(dy,y,D1Dy)
+               {
+                  MFEM_FOREACH_THREAD(dx,x,D1Dx)
+                  {
+                     sX[dz][dy][dx] = X(dx + ((dy + (dz * D1Dy)) * D1Dx) + osc, e);
+                  }
+               }
+            }
+            MFEM_SYNC_THREAD;
+
+            if (tidz == qz)
+            {
+               for (int i=0; i<dataSize; ++i)
+               {
+                  sop[i + (dataSize*tidx) + (dataSize*Q1D*tidy)] = op9[i];
+               }
+
+               MFEM_FOREACH_THREAD(qy,y,Q1D)
+               {
+                  MFEM_FOREACH_THREAD(qx,x,Q1D)
+                  {
+                     double u = 0.0;
+
+                     for (int dz = 0; dz < D1Dz; ++dz)
+                     {
+                        const double wz = (c == 2) ? sBo[qz][dz] : sBc[qz][dz];
+                        for (int dy = 0; dy < D1Dy; ++dy)
+                        {
+                           const double wy = (c == 1) ? sBo[qy][dy] : sBc[qy][dy];
+                           for (int dx = 0; dx < D1Dx; ++dx)
+                           {
+                              const double t = sX[dz][dy][dx];
+                              const double wx = (c == 0) ? sBo[qx][dx] : sBc[qx][dx];
+                              u += t * wx * wy * wz;
+                           }
+                        }
+                     }
+
+                     mass[qy][qx][c] = u;
+                  } // qx
+               } // qy
+            } // tidz == qz
+
+            osc += D1Dx * D1Dy * D1Dz;
+            MFEM_SYNC_THREAD;
+         } // c
+
+         MFEM_SYNC_THREAD;  // Sync mass[qy][qx][d] and sop
+
+         osc = 0;
+         for (int c = 0; c < VDIM; ++c)  // loop over x, y, z components
+         {
+            const int D1Dz = (c == 2) ? D1D - 1 : D1D;
+            const int D1Dy = (c == 1) ? D1D - 1 : D1D;
+            const int D1Dx = (c == 0) ? D1D - 1 : D1D;
+
+            double dxyz = 0.0;
+
+            MFEM_FOREACH_THREAD(dz,z,D1Dz)
+            {
+               const double wz = (c == 2) ? sBo[qz][dz] : sBc[qz][dz];
+
+               MFEM_FOREACH_THREAD(dy,y,D1Dy)
+               {
+                  MFEM_FOREACH_THREAD(dx,x,D1Dx)
+                  {
+                     for (int qy = 0; qy < Q1D; ++qy)
+                     {
+                        const double wy = (c == 1) ? sBo[qy][dy] : sBc[qy][dy];
+                        for (int qx = 0; qx < Q1D; ++qx)
+                        {
+                           const int os = (dataSize*qx) + (dataSize*Q1D*qy);
+                           const int id1 = os + ((c == 0) ? 0 : ((c == 1) ? (symmetric ? 1 : 3) :
+                                                                 (symmetric ? 2 : 6))); // O11, O21, O31
+                           const int id2 = os + ((c == 0) ? 1 : ((c == 1) ? (symmetric ? 3 : 4) :
+                                                                 (symmetric ? 4 : 7))); // O12, O22, O32
+                           const int id3 = os + ((c == 0) ? 2 : ((c == 1) ? (symmetric ? 4 : 5) :
+                                                                 (symmetric ? 5 : 8))); // O13, O23, O33
+
+                           const double m_c = (sop[id1] * mass[qy][qx][0]) + (sop[id2] * mass[qy][qx][1]) +
+                                              (sop[id3] * mass[qy][qx][2]);
+
+                           const double wx = (c == 0) ? sBo[qx][dx] : sBc[qx][dx];
+                           dxyz += m_c * wx * wy * wz;
+                        }
+                     }
+                  }
+               }
+            }
+
+            MFEM_SYNC_THREAD;
+
+            MFEM_FOREACH_THREAD(dz,z,D1Dz)
+            {
+               MFEM_FOREACH_THREAD(dy,y,D1Dy)
+               {
+                  MFEM_FOREACH_THREAD(dx,x,D1Dx)
+                  {
+                     Y(dx + ((dy + (dz * D1Dy)) * D1Dx) + osc, e) += dxyz;
+                  }
+               }
+            }
+
+            osc += D1Dx * D1Dy * D1Dz;
+         } // c loop
+      } // qz
+   }); // end of element loop
+}
+
+
 template<int MAX_D1D = HCURL_MAX_D1D, int MAX_Q1D = HCURL_MAX_Q1D>
 static void PACurlCurlApply3D(const int D1D,
                               const int Q1D,
