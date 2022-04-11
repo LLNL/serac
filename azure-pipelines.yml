@@ -8,11 +8,24 @@
 variables:
   Clang_10_ImageName: 'seracllnl/tpls:clang-10_02-02-22_17h-50m'
   GCC_9_ImageName: 'seracllnl/tpls:gcc-9_02-02-22_17h-50m'
+  GCC_11_ImageName: 'seracllnl/tpls:gcc-11_03-31-22_21h-15m'
 
 jobs:
 - job: Build_and_Test
   strategy:
     matrix:
+      linux_gcc11_debug:
+          VM_ImageName: 'ubuntu-20.04'
+          Compiler_ImageName: $(GCC_11_ImageName)
+          TEST_TARGET: 'linux_gcc11'
+          HOST_CONFIG: 'docker-linux-ubuntu20.04-ivybridge-gcc@11.1.0.cmake'
+          BUILD_TYPE: 'Debug'
+      linux_gcc11_release:
+          VM_ImageName: 'ubuntu-20.04'
+          Compiler_ImageName: $(GCC_11_ImageName)
+          TEST_TARGET: 'linux_gcc11'
+          HOST_CONFIG: 'docker-linux-ubuntu20.04-ivybridge-gcc@11.1.0.cmake'
+          BUILD_TYPE: 'Release'
       linux_gcc9_debug:
           VM_ImageName: 'ubuntu-20.04'
           Compiler_ImageName: $(GCC_9_ImageName)
