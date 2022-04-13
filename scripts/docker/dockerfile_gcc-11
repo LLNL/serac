@@ -1,4 +1,4 @@
-FROM axom/compilers:<NAME>-<MAJ_VER>_latest
+FROM axom/compilers:ubuntu-20-gcc-11_01-27-22_00h-07m
 LABEL maintainer="bramwell1@llnl.gov"
 ARG branch=develop
 
@@ -14,9 +14,9 @@ USER serac
 RUN git clone --recursive --branch $branch --single-branch --depth 1 https://github.com/LLNL/serac.git serac_repo
 
 # Build/install TPLs via spack and then remove the temporary build directory on success
-RUN cd serac_repo && python3 ./scripts/uberenv/uberenv.py --spack-config-dir=./scripts/spack/configs/docker/<DISTRO>/ \
+RUN cd serac_repo && python3 ./scripts/uberenv/uberenv.py --spack-config-dir=./scripts/spack/configs/docker/ubuntu20/ \
                                                           --project-json=.uberenv_config.json \
-                                                          --spec=%<NAME>@<VER>.0 --prefix=/home/serac/serac_tpls -k \
+                                                          --spec=%gcc@11.1.0 --prefix=/home/serac/serac_tpls -k \
                   && rm -rf /home/serac/serac_tpls/builds
 
 RUN mkdir -p /home/serac/export_hostconfig
@@ -25,3 +25,4 @@ RUN cp ./serac_repo/*.cmake /home/serac/export_hostconfig
 # Make sure the new hostconfig worked
 # Note: having high job slots causes build log to disappear and job to fail
 RUN cd serac_repo && python3 config-build.py -hc *.cmake -bp build && cd build && make -j4 && make -j4 test && cd /home/serac && rm -rf serac_repo
+
