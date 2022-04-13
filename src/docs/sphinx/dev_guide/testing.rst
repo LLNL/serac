@@ -48,7 +48,7 @@ Requirements:
      
      # Personal Machine (currently runs subset of tests)
      $ ./ats.sh
-
+   Append `--help` to the command to see the current options.
 #. **View results.**
    ATS gives a running summary and the final results.  ATS also outputs the following
    helpful files in the platform and timestamp specific created log directory:
@@ -84,3 +84,19 @@ easier in ``tests/test.ats``.
       :end-before: _serac_tolerance_test_end
       :language: text
       :dedent: 4
+
+Example usages for --tolerance:
+    --tolerance=0.001 // used for all field values
+    --tolerance=default:0.001,velocity:0.1,displacement:0.234 // default is for all non-specified tolerances
+
+Example usage for --tolerance-file:
+    --tolerance-file=tolerance_low.json
+    (Note: <name>.json file must be in tests/integration/tolerances directory)
+
+Example JSON file for --tolerance-file:
+    {
+        "default": 0.0001,   // default is for all non-specified tolerances
+        "velocity": 0.001,   // specific field value tolerance
+        "displacement":0.01
+    }
+
