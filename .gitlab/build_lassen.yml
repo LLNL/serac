@@ -44,7 +44,7 @@ lassen-clang_10_0_1-src:
     COMPILER: "clang@10.0.1"
     HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-${COMPILER}.cmake"
     ALLOC_NODES: "1"
-    ALLOC_TIME: "10"
+    ALLOC_TIME: "20"
   extends: [.src_build_on_lassen, .with_cuda]
 
 # Note: to reduce duplication SPEC is not defined here, if we move to more than one

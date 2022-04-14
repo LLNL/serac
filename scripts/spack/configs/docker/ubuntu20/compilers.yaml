@@ -45,3 +45,18 @@ compilers:
         fc: /usr/bin/gfortran
       spec: gcc@9.3.0
       target: x86_64
+  - compiler:
+      environment: {}
+      extra_rpaths: []
+      flags:
+        cflags: -pthread
+        cxxflags: -pthread
+      modules: []
+      operating_system: ubuntu20.04
+      paths:
+        cc: /usr/bin/gcc-11
+        cxx: /usr/bin/g++-11
+        f77: /usr/bin/gfortran
+        fc: /usr/bin/gfortran
+      spec: gcc@11.1.0
+      target: x86_64
