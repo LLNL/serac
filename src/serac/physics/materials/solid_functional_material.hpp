@@ -162,8 +162,7 @@ public:
     using std::log;
     auto stress = lambda * log(J) * I + shear_modulus_ * B_minus_I;
 
-    // TODO figure out why clang can't handle CTAD here.
-    return MaterialResponse<double, DispGradType>{.density = density_, .stress = stress};
+    return MaterialResponse{density_, stress};
   }
 
 private:
