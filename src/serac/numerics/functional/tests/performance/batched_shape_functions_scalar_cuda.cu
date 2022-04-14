@@ -570,7 +570,7 @@ __global__ void batched_cuda_kernel(mfem::DeviceTensor< 5, const double > u,
   batch_apply_qf(qf, qf_input, rule, J, e, cache2.source, cache2.flux);
 
   // integrate the material response against the test-space basis functions
-  test_element::extrapolate(cache2.source, cache2.flux, rule, r, e, cache2.A3, cache1.A4);
+  test_element::integrate(cache2.source, cache2.flux, rule, r, e, cache2.A3, cache1.A4);
 
 }
 

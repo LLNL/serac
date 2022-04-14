@@ -142,7 +142,7 @@ __global__ void postprocess_kernel_element_library(mfem::DeviceTensor<5, double>
   flux(2, 0, threadIdx.z, threadIdx.y, threadIdx.x) = threadIdx.z * 5.0;
   __syncthreads();
 
-  element_type::extrapolate(source, flux, rule, r_e, 0, A1, A2);
+  element_type::integrate(source, flux, rule, r_e, 0, A1, A2);
 }
 
 int main()

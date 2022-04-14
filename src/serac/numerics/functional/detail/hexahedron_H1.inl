@@ -26,8 +26,28 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
   static constexpr int  ndof       = (p + 1) * (p + 1) * (p + 1);
   static constexpr int  order      = p;
 
+
+  // TODO: remove this
   using residual_type =
       typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components> >::type;
+
+  using dof_type = tensor< double, c, p + 1, p + 1, p + 1 >;
+
+  /**
+   * @brief this type is used when calling the batched interpolate/integrate
+   *        routines, to provide memory for calculating intermediates
+   */
+  template < int q >
+  struct cache_type {
+    tensor<double, 2, n, n, q> A1;
+    tensor<double, 3, n, q, q> A2;
+  };
+
+  template < int q >
+  using cpu_batched_values_type = tensor< tensor< double, c >, q, q, q >;
+
+  template < int q >
+  using cpu_batched_derivatives_type = tensor< tensor< double, c, 3 >, q, q, q >;
 
   SERAC_HOST_DEVICE static constexpr tensor<double, ndof> shape_functions(tensor<double, dim> xi)
   {
@@ -76,12 +96,200 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
     // clang-format on
   }
 
+  template < int q >
+  static auto interpolate(const dof_type & X, 
+                          const tensor < double, q, q, q, dim, dim > & jacobians,
+                          const TensorProductQuadratureRule<q> &) {
+
+    // we want to compute the following:
+    //
+    // X_q(u, v, w) := (B(u, i) * B(v, j) * B(w, k)) * X_e(i, j, k)
+    //
+    // where 
+    //   X_q(u, v, w) are the quadrature-point values at position {u, v, w}, 
+    //   B(u, i) is the i^{th} 1D interpolation/differentiation (shape) function, 
+    //           evaluated at the u^{th} 1D quadrature point, and
+    //   X_e(i, j, k) are the values at node {i, j, k} to be interpolated 
+    //
+    // this algorithm carries out the above calculation in 3 steps:
+    //
+    // A1(dz, dy, qx)  := B(qx, dx) * X_e(dz, dy, dx)
+    // A2(dz, qy, qx)  := B(qy, dy) * A1(dz, dy, qx)
+    // X_q(qz, qy, qx) := B(qz, dz) * A2(dz, qy, qx)
+
+    static constexpr auto points1D = GaussLegendreNodes<q>();
+    static constexpr auto B = [=](){
+      tensor< double, q, n > B_{};
+      for (int i = 0; i < q; i++) {
+        B_[i] = GaussLobattoInterpolation<n>(points1D[i]);
+      }
+      return B_;
+    }();
+
+    static constexpr auto G = [=](){
+      tensor< double, q, n > G_{};
+      for (int i = 0; i < q; i++) {
+        G_[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);
+      }
+      return G_;
+    }();
+
+    cache_type<q> cache;
+
+    serac::tuple < cpu_batched_values_type<q>, cpu_batched_derivatives_type<q> > values_and_derivatives{};
+
+    for (int i = 0; i < c; i++) {
+
+      for (int dz = 0; dz < n; dz++) {
+        for (int dy = 0; dy < n; dy++) {
+          for (int qx = 0; qx < q; qx++) {
+            double sum[2]{};
+            for (int dx = 0; dx < n; dx++) {
+              sum[0] += B(qx, dx) * X(i, dz, dy, dx);
+              sum[1] += G(qx, dx) * X(i, dz, dy, dx);
+            }
+            cache.A1(0, dz, dy, qx) = sum[0];
+            cache.A1(1, dz, dy, qx) = sum[1];
+          }
+        }
+      }
+
+      for (int dz = 0; dz < n; dz++) {
+        for (int qy = 0; qy < q; qy++) {
+          for (int qx = 0; qx < q; qx++) {
+            double sum[3]{};
+            for (int dy = 0; dy < n; dy++) {
+              sum[0] += B(qy, dy) * cache.A1(0, dz, dy, qx);
+              sum[1] += B(qy, dy) * cache.A1(1, dz, dy, qx);
+              sum[2] += G(qy, dy) * cache.A1(0, dz, dy, qx);
+            }
+            cache.A2(0, dz, qy, qx) = sum[0];
+            cache.A2(1, dz, qy, qx) = sum[1];
+            cache.A2(2, dz, qy, qx) = sum[2];
+          }
+        }
+      }
+
+      for (int qz = 0; qz < q; qz++) {
+        for (int qy = 0; qy < q; qy++) {
+          for (int qx = 0; qx < q; qx++) {
+            for (int dz = 0; dz <n; dz++) {
+              serac::get<0>(values_and_derivatives)(qz, qy, qx)(i)    += B(qz, dz) * cache.A2(0, dz, qy, qx);
+              serac::get<1>(values_and_derivatives)(qz, qy, qx)(i, 0) += B(qz, dz) * cache.A2(1, dz, qy, qx);
+              serac::get<1>(values_and_derivatives)(qz, qy, qx)(i, 1) += B(qz, dz) * cache.A2(2, dz, qy, qx);
+              serac::get<1>(values_and_derivatives)(qz, qy, qx)(i, 2) += G(qz, dz) * cache.A2(0, dz, qy, qx);
+            }
+          }
+        }
+      }
+
+      for (int qz = 0; qz < q; qz++) {
+        for (int qy = 0; qy < q; qy++) {
+          for (int qx = 0; qx < q; qx++) {
+            auto J = jacobians(qz, qy, qx);
+            auto grad_u = serac::get<1>(values_and_derivatives)(qz, qy, qx);
+            serac::get<1>(values_and_derivatives)(qz, qy, qx) = dot(grad_u, inv(J));
+          }
+        }
+      }
+
+    }
+
+    return values_and_derivatives;
+  }
+
+  template < int q >
+  static void integrate(cpu_batched_values_type<q> & sources,
+                        cpu_batched_derivatives_type<q> & fluxes,
+                        const tensor < double, q, q, q, dim, dim > & jacobians,
+                        const TensorProductQuadratureRule<q> &, 
+                        dof_type & element_residual) {
+
+    static constexpr auto points1D = GaussLegendreNodes<q>();
+    static constexpr auto weights1D = GaussLegendreWeights<q>();
+    static constexpr auto B = [=](){
+      tensor< double, q, n > B_{};
+      for (int i = 0; i < q; i++) {
+        B_[i] = GaussLobattoInterpolation<n>(points1D[i]);
+      }
+      return B_;
+    }();
+
+    static constexpr auto G = [=](){
+      tensor< double, q, n > G_{};
+      for (int i = 0; i < q; i++) {
+        G_[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);
+      }
+      return G_;
+    }();
+
+    cache_type<q> cache{};
+
+    for (int qz = 0; qz < q; qz++) {
+      for (int qy = 0; qy < q; qy++) {
+        for (int qx = 0; qx < q; qx++) {
+          auto J_T = transpose(jacobians(qz, qy, qx));
+          auto dv = det(J_T) * weights1D[qx] * weights1D[qy] * weights1D[qz];
+          fluxes(qz, qy, qx) = dot(fluxes(qz, qy, qx), inv(J_T)) * dv;
+        }
+      }
+    }
+
+    for (int i = 0; i < c; i++) {
+
+      for (int dx = 0; dx < n; dx++) {
+        for (int qy = 0; qy < q; qy++) {
+          for (int qz = 0; qz < q; qz++) {
+            double sum[3]{};
+            for (int qx = 0; qx < q; qx++) {
+              sum[0] += B(qx, dx) * sources(qz, qy, qx)[i];
+              sum[0] += G(qx, dx) * fluxes(qz, qy, qx)[i][0];
+              sum[1] += B(qx, dx) * fluxes(qz, qy, qx)[i][1];
+              sum[2] += B(qx, dx) * fluxes(qz, qy, qx)[i][2];
+            }
+            cache.A2(0, dx, qy, qz) = sum[0];
+            cache.A2(1, dx, qy, qz) = sum[1];
+            cache.A2(2, dx, qy, qz) = sum[2];
+          }
+        }
+      }
+
+      for (int dx = 0; dx < n; dx++) {
+        for (int dy = 0; dy < n; dy++) {
+          for (int qz = 0; qz < q; qz++) {
+            double sum[2]{};
+            for (int qy = 0; qy < q; qy++) {
+              sum[0] += B(qy, dy) * cache.A2(0, dx, qy, qz);
+              sum[0] += G(qy, dy) * cache.A2(1, dx, qy, qz);
+              sum[1] += B(qy, dy) * cache.A2(2, dx, qy, qz);
+            }
+            cache.A1(0, dx, dy, qz) = sum[0];
+            cache.A1(1, dx, dy, qz) = sum[1];
+          }
+        }
+      }
+
+      for (int dx = 0; dx < n; dx++) {
+        for (int dy = 0; dy < n; dy++) {
+          for (int dz = 0; dz < n; dz++) {
+            double sum = 0.0;
+            for (int qz = 0; qz < q; qz++) {
+              sum += B(qz, dz) * cache.A1(0, dx, dy, qz);
+              sum += G(qz, dz) * cache.A1(1, dx, dy, qz);
+            }
+            element_residual(dx,dy,dz)[i] += sum;
+          }
+        }
+      }
+
+    }
+
+  }
+
 #ifdef __CUDACC__
   template < int q >
   static SERAC_DEVICE auto interpolate(const tensor<double, c, n, n, n>& X, const TensorProductQuadratureRule<q> & rule, 
                               tensor<double, 2, n, n, q>& A1, tensor<double, 3, n, q, q>& A2) {
-
-                                     tensor<double, 3, q, q, n>& A1, tensor<double, 2, q, n, n>& A2) {
 
     // we want to compute the following:
     //
@@ -339,7 +547,7 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
   }
 
   template <int q>
-  static SERAC_DEVICE void extrapolate(const tensor<double, c, q, q, q> & source, const tensor<double, 3, c, q, q, q> & flux,
+  static SERAC_DEVICE void integrate(const tensor<double, c, q, q, q> & source, const tensor<double, 3, c, q, q, q> & flux,
                                      const TensorProductQuadratureRule<q> & rule, 
                                      mfem::DeviceTensor<5, double> r_e, int e,
                                      tensor<double, 3, q, q, n>& A1, tensor<double, 2, q, n, n>& A2) {
@@ -426,9 +634,9 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
 
   }
 
-  // source-only extrapolation
+  // source-only integrate
   template <int q>
-  SERAC_DEVICE static void extrapolate(const tensor<double, c, q, q, q> & source,
+  SERAC_DEVICE static void integrate(const tensor<double, c, q, q, q> & source,
                                      const TensorProductQuadratureRule<q> & rule, 
                                      mfem::DeviceTensor<5, double> r_e, int e,
                                      tensor<double, q, q, n>& A1, tensor<double, q, n, n>& A2) {
@@ -497,9 +705,9 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
   }
 
 
-  // flux-only extrapolation
+  // flux-only integrate
   template <int q>
-  SERAC_DEVICE static void extrapolate(const tensor<double, 3, c, q, q, q> & flux,
+  SERAC_DEVICE static void integrate(const tensor<double, 3, c, q, q, q> & flux,
                                      const TensorProductQuadratureRule<q> & rule, 
                                      mfem::DeviceTensor<5, double> r_e, int e,
                                      tensor<double, 3, q, q, n>& A1, tensor<double, 2, q, n, n>& A2) {

@@ -31,14 +31,14 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
 
   // this is how mfem provides the data to us for these elements
   // if, instead, it was stored as simply tensor< double, 2, p + 1, p >,
-  // the interpolation/extrapolation implementation would be considerably shorter
+  // the interpolation/integrate implementation would be considerably shorter
   struct dof_type {
     tensor< double, p + 1, p     > x;
     tensor< double, p    , p + 1 > y;
   };
 
   /**
-   * @brief this type is used when calling the batched interpolate/extrapolate
+   * @brief this type is used when calling the batched interpolate/integrate
    *        routines, to provide memory for calculating intermediates
    */
   template < int q >
@@ -85,7 +85,7 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
 
   /*
 
-    interpolation nodes/directions and their associated numbering:
+    interpolate nodes/directions and their associated numbering:
 
                    linear
 
@@ -242,7 +242,7 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
   }
 
   template < int q >
-  static void extrapolation(const batched_values_type<q> & source,
+  static void integrate(const batched_values_type<q> & source,
                             const batched_derivatives_type<q> & flux,
                             const TensorProductQuadratureRule<q> &, 
                             cache_type<q> & A1, 

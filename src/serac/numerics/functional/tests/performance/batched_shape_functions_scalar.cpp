@@ -21,25 +21,23 @@ constexpr int MAX_D1D = 14;
 constexpr int MAX_Q1D = 14;
 #endif
 
-
 template <int T_D1D = 0, int T_Q1D = 0>
-static void PAMassApply3D(const int NE, const Array<double> &b_,
-                          const Array<double> &bt_, const Vector &d_,
-                          const Vector &x_, Vector &y_, const int d1d = 0,
-                          const int q1d = 0) {
+static void PAMassApply3D(const int NE, const Array<double>& b_, const Array<double>& bt_, const Vector& d_,
+                          const Vector& x_, Vector& y_, const int d1d = 0, const int q1d = 0)
+{
   const int D1D = T_D1D ? T_D1D : d1d;
   const int Q1D = T_Q1D ? T_Q1D : q1d;
   static_assert(D1D <= MAX_D1D);
   static_assert(Q1D <= MAX_Q1D);
-  auto B = Reshape(b_.Read(), Q1D, D1D);
+  auto B  = Reshape(b_.Read(), Q1D, D1D);
   auto Bt = Reshape(bt_.Read(), D1D, Q1D);
-  auto D = Reshape(d_.Read(), Q1D, Q1D, Q1D, NE);
-  auto X = Reshape(x_.Read(), D1D, D1D, D1D, NE);
-  auto Y = Reshape(y_.ReadWrite(), D1D, D1D, D1D, NE);
+  auto D  = Reshape(d_.Read(), Q1D, Q1D, Q1D, NE);
+  auto X  = Reshape(x_.Read(), D1D, D1D, D1D, NE);
+  auto Y  = Reshape(y_.ReadWrite(), D1D, D1D, D1D, NE);
   for (int e = 0; e < NE; e++) {
     constexpr int max_D1D = T_D1D ? T_D1D : MAX_D1D;
     constexpr int max_Q1D = T_Q1D ? T_Q1D : MAX_Q1D;
-    double sol_xyz[max_Q1D][max_Q1D][max_Q1D];
+    double        sol_xyz[max_Q1D][max_Q1D][max_Q1D];
     for (int qz = 0; qz < Q1D; ++qz) {
       for (int qy = 0; qy < Q1D; ++qy) {
         for (int qx = 0; qx < Q1D; ++qx) {
@@ -126,26 +124,25 @@ static void PAMassApply3D(const int NE, const Array<double> &b_,
 }
 
 template <int T_D1D = 0, int T_Q1D = 0>
-static void PADiffusionApply3D(const int NE, const bool symmetric,
-                               const Array<double> &b, const Array<double> &g,
-                               const Array<double> &bt, const Array<double> &gt,
-                               const Vector &d_, const Vector &x_, Vector &y_,
-                               int d1d = 0, int q1d = 0) {
+static void PADiffusionApply3D(const int NE, const bool symmetric, const Array<double>& b, const Array<double>& g,
+                               const Array<double>& bt, const Array<double>& gt, const Vector& d_, const Vector& x_,
+                               Vector& y_, int d1d = 0, int q1d = 0)
+{
   const int D1D = T_D1D ? T_D1D : d1d;
   const int Q1D = T_Q1D ? T_Q1D : q1d;
   static_assert(D1D <= MAX_D1D);
   static_assert(Q1D <= MAX_Q1D);
-  auto B = Reshape(b.Read(), Q1D, D1D);
-  auto G = Reshape(g.Read(), Q1D, D1D);
+  auto B  = Reshape(b.Read(), Q1D, D1D);
+  auto G  = Reshape(g.Read(), Q1D, D1D);
   auto Bt = Reshape(bt.Read(), D1D, Q1D);
   auto Gt = Reshape(gt.Read(), D1D, Q1D);
-  auto D = Reshape(d_.Read(), Q1D * Q1D * Q1D, symmetric ? 6 : 9, NE);
-  auto X = Reshape(x_.Read(), D1D, D1D, D1D, NE);
-  auto Y = Reshape(y_.ReadWrite(), D1D, D1D, D1D, NE);
+  auto D  = Reshape(d_.Read(), Q1D * Q1D * Q1D, symmetric ? 6 : 9, NE);
+  auto X  = Reshape(x_.Read(), D1D, D1D, D1D, NE);
+  auto Y  = Reshape(y_.ReadWrite(), D1D, D1D, D1D, NE);
   for (int e = 0; e < NE; e++) {
     constexpr int max_D1D = T_D1D ? T_D1D : MAX_D1D;
     constexpr int max_Q1D = T_Q1D ? T_Q1D : MAX_Q1D;
-    double grad[max_Q1D][max_Q1D][max_Q1D][3];
+    double        grad[max_Q1D][max_Q1D][max_Q1D][3];
     for (int qz = 0; qz < Q1D; ++qz) {
       for (int qy = 0; qy < Q1D; ++qy) {
         for (int qx = 0; qx < Q1D; ++qx) {
@@ -180,10 +177,10 @@ static void PADiffusionApply3D(const int NE, const bool symmetric,
           }
         }
         for (int qy = 0; qy < Q1D; ++qy) {
-          const double wy = B(qy, dy);
+          const double wy  = B(qy, dy);
           const double wDy = G(qy, dy);
           for (int qx = 0; qx < Q1D; ++qx) {
-            const double wx = gradX[qx][0];
+            const double wx  = gradX[qx][0];
             const double wDx = gradX[qx][1];
             gradXY[qy][qx][0] += wDx * wy;
             gradXY[qy][qx][1] += wx * wDy;
@@ -192,7 +189,7 @@ static void PADiffusionApply3D(const int NE, const bool symmetric,
         }
       }
       for (int qz = 0; qz < Q1D; ++qz) {
-        const double wz = B(qz, dz);
+        const double wz  = B(qz, dz);
         const double wDz = G(qz, dz);
         for (int qy = 0; qy < Q1D; ++qy) {
           for (int qx = 0; qx < Q1D; ++qx) {
@@ -210,18 +207,18 @@ static void PADiffusionApply3D(const int NE, const bool symmetric,
         for (int qx = 0; qx < Q1D; ++qx) {
           const int q = qx + (qy + qz * Q1D) * Q1D;
 
-          const double O11 = D(q, 0, e);
-          const double O12 = D(q, 1, e);
-          const double O13 = D(q, 2, e);
-          const double O21 = symmetric ? O12 : D(q, 3, e);
-          const double O22 = symmetric ? D(q, 3, e) : D(q, 4, e);
-          const double O23 = symmetric ? D(q, 4, e) : D(q, 5, e);
-          const double O31 = symmetric ? O13 : D(q, 6, e);
-          const double O32 = symmetric ? O23 : D(q, 7, e);
-          const double O33 = symmetric ? D(q, 5, e) : D(q, 8, e);
-          const double gradX = grad[qz][qy][qx][0];
-          const double gradY = grad[qz][qy][qx][1];
-          const double gradZ = grad[qz][qy][qx][2];
+          const double O11    = D(q, 0, e);
+          const double O12    = D(q, 1, e);
+          const double O13    = D(q, 2, e);
+          const double O21    = symmetric ? O12 : D(q, 3, e);
+          const double O22    = symmetric ? D(q, 3, e) : D(q, 4, e);
+          const double O23    = symmetric ? D(q, 4, e) : D(q, 5, e);
+          const double O31    = symmetric ? O13 : D(q, 6, e);
+          const double O32    = symmetric ? O23 : D(q, 7, e);
+          const double O33    = symmetric ? D(q, 5, e) : D(q, 8, e);
+          const double gradX  = grad[qz][qy][qx][0];
+          const double gradY  = grad[qz][qy][qx][1];
+          const double gradZ  = grad[qz][qy][qx][2];
           grad[qz][qy][qx][0] = (O11 * gradX) + (O12 * gradY) + (O13 * gradZ);
           grad[qz][qy][qx][1] = (O21 * gradX) + (O22 * gradY) + (O23 * gradZ);
           grad[qz][qy][qx][2] = (O31 * gradX) + (O32 * gradY) + (O33 * gradZ);
@@ -250,7 +247,7 @@ static void PADiffusionApply3D(const int NE, const bool symmetric,
           const double gY = grad[qz][qy][qx][1];
           const double gZ = grad[qz][qy][qx][2];
           for (int dx = 0; dx < D1D; ++dx) {
-            const double wx = Bt(dx, qx);
+            const double wx  = Bt(dx, qx);
             const double wDx = Gt(dx, qx);
             gradX[dx][0] += gX * wDx;
             gradX[dx][1] += gY * wx;
@@ -258,7 +255,7 @@ static void PADiffusionApply3D(const int NE, const bool symmetric,
           }
         }
         for (int dy = 0; dy < D1D; ++dy) {
-          const double wy = Bt(dy, qy);
+          const double wy  = Bt(dy, qy);
           const double wDy = Gt(dy, qy);
           for (int dx = 0; dx < D1D; ++dx) {
             gradXY[dy][dx][0] += gradX[dx][0] * wy;
@@ -268,13 +265,11 @@ static void PADiffusionApply3D(const int NE, const bool symmetric,
         }
       }
       for (int dz = 0; dz < D1D; ++dz) {
-        const double wz = Bt(dz, qz);
+        const double wz  = Bt(dz, qz);
         const double wDz = Gt(dz, qz);
         for (int dy = 0; dy < D1D; ++dy) {
           for (int dx = 0; dx < D1D; ++dx) {
-            Y(dx, dy, dz, e) +=
-                ((gradXY[dy][dx][0] * wz) + (gradXY[dy][dx][1] * wz) +
-                 (gradXY[dy][dx][2] * wDz));
+            Y(dx, dy, dz, e) += ((gradXY[dy][dx][0] * wz) + (gradXY[dy][dx][1] * wz) + (gradXY[dy][dx][2] * wDz));
           }
         }
       }
@@ -282,92 +277,97 @@ static void PADiffusionApply3D(const int NE, const bool symmetric,
   }
 }
 
-}
+}  // namespace mfem
 
 namespace serac {
 
-
-template < Geometry g, int Q >
+template <Geometry g, int Q>
 struct GaussLegendreRule;
 
-template < int Q >
-struct GaussLegendreRule< Geometry::Hexahedron, Q > {
-  static constexpr auto points_1D = GaussLegendreNodes<Q>();
+template <int Q>
+struct GaussLegendreRule<Geometry::Hexahedron, Q> {
+  static constexpr auto points_1D  = GaussLegendreNodes<Q>();
   static constexpr auto weights_1D = GaussLegendreWeights<Q>();
 
-  static constexpr double weight(int qx, int qy, int qz) { 
-    return weights_1D[qx] * weights_1D[qy] * weights_1D[qz];
-  }
+  static constexpr double weight(int qx, int qy, int qz) { return weights_1D[qx] * weights_1D[qy] * weights_1D[qz]; }
 
   static constexpr int size() { return Q * Q * Q; }
-
 };
 
-template < typename S, typename T >
-struct value_and_gradient { S value; T gradient; };
+template <typename S, typename T>
+struct value_and_gradient {
+  S value;
+  T gradient;
+};
 struct f64x4 {
   union {
-    value_and_gradient< double, tensor< double, 3 > > data;
-    __m256d simd_data;
+    value_and_gradient<double, tensor<double, 3> > data;
+    __m256d                                        simd_data;
   };
 };
 
-f64x4 to_f64x4(const f64x4 & value) { return value; }
+f64x4 to_f64x4(const f64x4& value) { return value; }
 
 // set all values of a f64x4 equal to `value`
-f64x4 to_f64x4(double value) { 
+f64x4 to_f64x4(double value)
+{
   f64x4 converted;
-  converted.simd_data = _mm256_set1_pd(value); 
+  converted.simd_data = _mm256_set1_pd(value);
   return converted;
 }
 
-auto to_value_and_gradient(const serac::tuple<double, serac::tensor<double, 3> >& data) { 
-  return value_and_gradient< double, serac::tensor< double, 3 > >{
-    serac::get<0>(data),
-    {serac::get<1>(data)[0], serac::get<1>(data)[1], serac::get<1>(data)[2]}
-  };
+auto to_value_and_gradient(const serac::tuple<double, serac::tensor<double, 3> >& data)
+{
+  return value_and_gradient<double, serac::tensor<double, 3> >{
+      serac::get<0>(data), {serac::get<1>(data)[0], serac::get<1>(data)[1], serac::get<1>(data)[2]}};
 }
 
-f64x4 to_f64x4(const serac::tuple<double, serac::tensor<double, 3> >& data) { 
+f64x4 to_f64x4(const serac::tuple<double, serac::tensor<double, 3> >& data)
+{
   f64x4 converted;
-  converted.data = {serac::get<0>(data), {serac::get<1>(data)[0], serac::get<1>(data)[1], serac::get<1>(data)[2]}}; 
+  converted.data = {serac::get<0>(data), {serac::get<1>(data)[0], serac::get<1>(data)[1], serac::get<1>(data)[2]}};
   return converted;
 }
 
-f64x4 operator+(const f64x4 & x, const f64x4 & y) {
+f64x4 operator+(const f64x4& x, const f64x4& y)
+{
   f64x4 sum;
   sum.simd_data = _mm256_add_pd(x.simd_data, y.simd_data);
   return sum;
 }
 
-f64x4 operator*(const f64x4 & x, const f64x4 & y) {
+f64x4 operator*(const f64x4& x, const f64x4& y)
+{
   f64x4 product;
   product.simd_data = _mm256_mul_pd(x.simd_data, y.simd_data);
   return product;
 }
 
 // SIMD version of fused multiply-add: z := z + x * y
-void fma(f64x4 & z, const f64x4 & x, const f64x4 & y) {
+void fma(f64x4& z, const f64x4& x, const f64x4& y)
+{
   z.simd_data = _mm256_fmadd_pd(x.simd_data, y.simd_data, z.simd_data);
 }
 
-// adapted from https://github.com/pcordes/vectorclass/blob/77522287e64da5e887d69659e144d2caa5d3a4f1/vectorf256.h#L900-L907
-double dot(const f64x4 & x, const f64x4 & y) {
-  auto product = x * y;
-  __m128d t1 = _mm_add_pd(_mm256_castpd256_pd128(product.simd_data), _mm256_extractf128_pd(product.simd_data,1));
-  __m128d t2 = _mm_unpackhi_pd(t1, t1);
-  __m128d t3 = _mm_add_sd(t2, t1);
+// adapted from
+// https://github.com/pcordes/vectorclass/blob/77522287e64da5e887d69659e144d2caa5d3a4f1/vectorf256.h#L900-L907
+double dot(const f64x4& x, const f64x4& y)
+{
+  auto    product = x * y;
+  __m128d t1      = _mm_add_pd(_mm256_castpd256_pd128(product.simd_data), _mm256_extractf128_pd(product.simd_data, 1));
+  __m128d t2      = _mm_unpackhi_pd(t1, t1);
+  __m128d t3      = _mm_add_sd(t2, t1);
   return _mm_cvtsd_f64(t3);
 }
 
-template < typename trial_space, Geometry geom, int q >
-auto BatchPreprocess(const mfem::DeviceTensor< 4, const double > & u_e, GaussLegendreRule<geom, q> rule, int e) {
+template <typename trial_space, Geometry geom, int q>
+auto BatchPreprocess(const mfem::DeviceTensor<4, const double>& u_e, GaussLegendreRule<geom, q> rule, int e)
+{
   static constexpr int n = trial_space::order + 1;
 
   if constexpr (geom == Geometry::Hexahedron) {
-
-    tensor< double, q, n > B{};
-    tensor< double, q, n > G{};
+    tensor<double, q, n> B{};
+    tensor<double, q, n> G{};
     for (int i = 0; i < q; i++) {
       B[i] = GaussLobattoInterpolation<n>(rule.points_1D[i]);
       G[i] = GaussLobattoInterpolationDerivative<n>(rule.points_1D[i]);
@@ -375,12 +375,12 @@ auto BatchPreprocess(const mfem::DeviceTensor< 4, const double > & u_e, GaussLeg
     auto BT = transpose(B);
     auto GT = transpose(G);
 
-    tensor< value_and_gradient< double, tensor< double, 3 > >, q, q, q> u_q{};
+    tensor<value_and_gradient<double, tensor<double, 3> >, q, q, q> u_q{};
 
     for (int iz = 0; iz < n; ++iz) {
-      tensor< value_and_gradient< double, tensor< double, 2 > >, q, q> interpolated_in_XY{};
+      tensor<value_and_gradient<double, tensor<double, 2> >, q, q> interpolated_in_XY{};
       for (int iy = 0; iy < n; ++iy) {
-        tensor< value_and_gradient< double, double >, q> interpolated_in_X{};
+        tensor<value_and_gradient<double, double>, q> interpolated_in_X{};
         for (int ix = 0; ix < n; ++ix) {
           const double s = u_e(ix, iy, iz, e);
           for (int qx = 0; qx < q; ++qx) {
@@ -389,64 +389,61 @@ auto BatchPreprocess(const mfem::DeviceTensor< 4, const double > & u_e, GaussLeg
           }
         }
         for (int qy = 0; qy < q; ++qy) {
-          const double interpolate_in_Y = BT(iy, qy);
+          const double interpolate_in_Y   = BT(iy, qy);
           const double differentiate_in_Y = GT(iy, qy);
           for (int qx = 0; qx < q; ++qx) {
-            interpolated_in_XY[qy][qx].value       += interpolated_in_X[qx].value    * interpolate_in_Y;
+            interpolated_in_XY[qy][qx].value += interpolated_in_X[qx].value * interpolate_in_Y;
             interpolated_in_XY[qy][qx].gradient[0] += interpolated_in_X[qx].gradient * interpolate_in_Y;
-            interpolated_in_XY[qy][qx].gradient[1] += interpolated_in_X[qx].value    * differentiate_in_Y;
+            interpolated_in_XY[qy][qx].gradient[1] += interpolated_in_X[qx].value * differentiate_in_Y;
           }
         }
       }
       for (int qz = 0; qz < q; ++qz) {
-        const double interpolate_in_Z = BT(iz, qz);
+        const double interpolate_in_Z   = BT(iz, qz);
         const double differentiate_in_Z = GT(iz, qz);
         for (int qy = 0; qy < q; ++qy) {
           for (int qx = 0; qx < q; ++qx) {
-            u_q[qz][qy][qx].value       += interpolated_in_XY[qy][qx].value       * interpolate_in_Z;
+            u_q[qz][qy][qx].value += interpolated_in_XY[qy][qx].value * interpolate_in_Z;
             u_q[qz][qy][qx].gradient[0] += interpolated_in_XY[qy][qx].gradient[0] * interpolate_in_Z;
             u_q[qz][qy][qx].gradient[1] += interpolated_in_XY[qy][qx].gradient[1] * interpolate_in_Z;
-            u_q[qz][qy][qx].gradient[2] += interpolated_in_XY[qy][qx].value       * differentiate_in_Z;
+            u_q[qz][qy][qx].gradient[2] += interpolated_in_XY[qy][qx].value * differentiate_in_Z;
           }
         }
       }
-
     }
 
     return u_q;
-
   }
-
 }
 
-template < typename trial_space, Geometry geom, int q >
-auto BatchPreprocessConstexpr(const mfem::DeviceTensor< 4, const double > & u_e, GaussLegendreRule<geom, q> rule, int e) {
+template <typename trial_space, Geometry geom, int q>
+auto BatchPreprocessConstexpr(const mfem::DeviceTensor<4, const double>& u_e, GaussLegendreRule<geom, q> rule, int e)
+{
   static constexpr int n = trial_space::order + 1;
 
   if constexpr (geom == Geometry::Hexahedron) {
-
-    static constexpr auto BT = [&](){
-      tensor< double, q, n > B_{};
+    static constexpr auto BT = [&]() {
+      tensor<double, q, n> B_{};
       for (int i = 0; i < q; i++) {
         B_[i] = GaussLobattoInterpolation<n>(rule.points_1D[i]);
       }
       return transpose(B_);
     }();
 
-    static constexpr auto GT = [&](){
-      tensor< double, q, n > G_{};
+    static constexpr auto GT = [&]() {
+      tensor<double, q, n> G_{};
       for (int i = 0; i < q; i++) {
         G_[i] = GaussLobattoInterpolationDerivative<n>(rule.points_1D[i]);
       }
       return transpose(G_);
     }();
 
-    tensor< value_and_gradient< double, tensor< double, 3 > >, q, q, q> u_q{};
+    tensor<value_and_gradient<double, tensor<double, 3> >, q, q, q> u_q{};
 
     for (int iz = 0; iz < n; ++iz) {
-      tensor< value_and_gradient< double, tensor< double, 2 > >, q, q> interpolated_in_XY{};
+      tensor<value_and_gradient<double, tensor<double, 2> >, q, q> interpolated_in_XY{};
       for (int iy = 0; iy < n; ++iy) {
-        tensor< value_and_gradient< double, double >, q> interpolated_in_X{};
+        tensor<value_and_gradient<double, double>, q> interpolated_in_X{};
         for (int ix = 0; ix < n; ++ix) {
           const double s = u_e(ix, iy, iz, e);
           for (int qx = 0; qx < q; ++qx) {
@@ -455,45 +452,42 @@ auto BatchPreprocessConstexpr(const mfem::DeviceTensor< 4, const double > & u_e,
           }
         }
         for (int qy = 0; qy < q; ++qy) {
-          const double interpolate_in_Y = BT(iy, qy);
+          const double interpolate_in_Y   = BT(iy, qy);
           const double differentiate_in_Y = GT(iy, qy);
           for (int qx = 0; qx < q; ++qx) {
-            interpolated_in_XY[qy][qx].value       += interpolated_in_X[qx].value    * interpolate_in_Y;
+            interpolated_in_XY[qy][qx].value += interpolated_in_X[qx].value * interpolate_in_Y;
             interpolated_in_XY[qy][qx].gradient[0] += interpolated_in_X[qx].gradient * interpolate_in_Y;
-            interpolated_in_XY[qy][qx].gradient[1] += interpolated_in_X[qx].value    * differentiate_in_Y;
+            interpolated_in_XY[qy][qx].gradient[1] += interpolated_in_X[qx].value * differentiate_in_Y;
           }
         }
       }
       for (int qz = 0; qz < q; ++qz) {
-        const double interpolate_in_Z = BT(iz, qz);
+        const double interpolate_in_Z   = BT(iz, qz);
         const double differentiate_in_Z = GT(iz, qz);
         for (int qy = 0; qy < q; ++qy) {
           for (int qx = 0; qx < q; ++qx) {
-            u_q[qz][qy][qx].value       += interpolated_in_XY[qy][qx].value       * interpolate_in_Z;
+            u_q[qz][qy][qx].value += interpolated_in_XY[qy][qx].value * interpolate_in_Z;
             u_q[qz][qy][qx].gradient[0] += interpolated_in_XY[qy][qx].gradient[0] * interpolate_in_Z;
             u_q[qz][qy][qx].gradient[1] += interpolated_in_XY[qy][qx].gradient[1] * interpolate_in_Z;
-            u_q[qz][qy][qx].gradient[2] += interpolated_in_XY[qy][qx].value       * differentiate_in_Z;
+            u_q[qz][qy][qx].gradient[2] += interpolated_in_XY[qy][qx].value * differentiate_in_Z;
           }
         }
       }
-
     }
 
     return u_q;
-
   }
-
 }
 
-template < typename trial_space, Geometry geom, int q >
-auto BatchPreprocessSIMD(const mfem::DeviceTensor< 4, const double > & u_e, GaussLegendreRule<geom, q> rule, int e) {
+template <typename trial_space, Geometry geom, int q>
+auto BatchPreprocessSIMD(const mfem::DeviceTensor<4, const double>& u_e, GaussLegendreRule<geom, q> rule, int e)
+{
   static constexpr int n = trial_space::order + 1;
 
   if constexpr (geom == Geometry::Hexahedron) {
-
-    tensor< f64x4, n, q > LUT_X{};
-    tensor< f64x4, n, q > LUT_Y{};
-    tensor< f64x4, n, q > LUT_Z{};
+    tensor<f64x4, n, q> LUT_X{};
+    tensor<f64x4, n, q> LUT_Y{};
+    tensor<f64x4, n, q> LUT_Z{};
     for (int i = 0; i < q; i++) {
       auto B = GaussLobattoInterpolation<n>(rule.points_1D[i]);
       auto G = GaussLobattoInterpolationDerivative<n>(rule.points_1D[i]);
@@ -505,12 +499,12 @@ auto BatchPreprocessSIMD(const mfem::DeviceTensor< 4, const double > & u_e, Gaus
       }
     }
 
-    tensor< f64x4, q, q, q> u_q{};
+    tensor<f64x4, q, q, q> u_q{};
 
     for (int iz = 0; iz < n; ++iz) {
-      tensor< f64x4, q, q> interpolated_in_XY{};
+      tensor<f64x4, q, q> interpolated_in_XY{};
       for (int iy = 0; iy < n; ++iy) {
-        tensor< f64x4, q> interpolated_in_X{};
+        tensor<f64x4, q> interpolated_in_X{};
         for (int ix = 0; ix < n; ++ix) {
           const auto s = to_f64x4(u_e(ix, iy, iz, e));
           for (int qx = 0; qx < q; ++qx) {
@@ -532,77 +526,72 @@ auto BatchPreprocessSIMD(const mfem::DeviceTensor< 4, const double > & u_e, Gaus
           }
         }
       }
-
     }
 
     return u_q;
-
   }
-
 }
 
-
-template < typename lambda, typename T, int ... n, Geometry geom, int q >
-auto BatchApply(lambda qf, tensor< T, n ... > qf_inputs, GaussLegendreRule<geom, q> rule, mfem::DeviceTensor< 6, const double > J_q, int e) {
-
+template <typename lambda, typename T, int... n, Geometry geom, int q>
+auto BatchApply(lambda qf, tensor<T, n...> qf_inputs, GaussLegendreRule<geom, q> rule,
+                mfem::DeviceTensor<6, const double> J_q, int e)
+{
   if constexpr (geom == Geometry::Hexahedron) {
-
     constexpr int dim = 3;
 
     using output_type = decltype(qf(qf_inputs[0][0][0]));
 
-    tensor< output_type, q, q, q > qf_outputs;
+    tensor<output_type, q, q, q> qf_outputs;
 
     int q_id = 0;
     for (int qz = 0; qz < q; ++qz) {
       for (int qy = 0; qy < q; ++qy) {
         for (int qx = 0; qx < q; ++qx) {
-
           auto qf_input = qf_inputs[qz][qy][qx];
-          
-          auto J = make_tensor<dim, dim>([&](int i, int j) { return J_q(qx, qy, qz, i, j, e); });
+
+          auto J    = make_tensor<dim, dim>([&](int i, int j) { return J_q(qx, qy, qz, i, j, e); });
           auto invJ = inv(J);
-          auto dv = det(J) * rule.weight(qx, qy, qz);
+          auto dv   = det(J) * rule.weight(qx, qy, qz);
 
           qf_input.gradient = dot(qf_input.gradient, invJ);
 
+
           qf_outputs[qz][qy][qx] = qf(qf_input) * dv;
+
+          std::cout << qx << " " << qy << " " << qz << ": " << qf_outputs[qz][qy][qx] << std::endl;
 
           serac::get<1>(qf_outputs[qz][qy][qx]) = dot(invJ, serac::get<1>(qf_outputs[qz][qy][qx]));
 
-          q_id++;
 
+          q_id++;
         }
       }
     }
 
     return qf_outputs;
-
   }
-
 }
 
-template < typename lambda, typename T, int ... n, Geometry geom, int q >
-auto BatchApplySIMD(lambda qf, tensor< T, n ... > qf_inputs, GaussLegendreRule<geom, q> rule, mfem::DeviceTensor< 6, const double > J_q, int e) {
-
+template <typename lambda, typename T, int... n, Geometry geom, int q>
+auto BatchApplySIMD(lambda qf, tensor<T, n...> qf_inputs, GaussLegendreRule<geom, q> rule,
+                    mfem::DeviceTensor<6, const double> J_q, int e)
+{
   if constexpr (geom == Geometry::Hexahedron) {
-
     constexpr int dim = 3;
 
     using output_type = decltype(qf(qf_inputs[0][0][0].data));
 
-    tensor< output_type, q, q, q > qf_outputs;
+    tensor<output_type, q, q, q> qf_outputs;
 
     int q_id = 0;
     for (int qz = 0; qz < q; ++qz) {
       for (int qy = 0; qy < q; ++qy) {
         for (int qx = 0; qx < q; ++qx) {
-
           auto qf_input = qf_inputs[qz][qy][qx].data;
-          
-          auto J = make_tensor<dim, dim>([&](int i, int j) { return J_q(qx, qy, qz, i, j, e); });
+
+          auto J    = make_tensor<dim, dim>([&](int i, int j) { return J_q(qx, qy, qz, i, j, e); });
           auto invJ = inv(J);
-          auto dv = det(J) * rule.weight(qx, qy, qz);
+          auto dv   = det(J) * rule.weight(qx, qy, qz);
 
           qf_input.gradient = dot(qf_input.gradient, invJ);
 
@@ -611,34 +600,30 @@ auto BatchApplySIMD(lambda qf, tensor< T, n ... > qf_inputs, GaussLegendreRule<g
           serac::get<1>(qf_outputs[qz][qy][qx]) = dot(invJ, serac::get<1>(qf_outputs[qz][qy][qx]));
 
           q_id++;
-
         }
       }
     }
 
     return qf_outputs;
-
   }
-
 }
 
-template < typename lambda, typename T, int ... n, Geometry geom, int q >
-void BatchApplySIMDinout(lambda qf, tensor< T, n ... > & qf_inouts, GaussLegendreRule<geom, q> rule, mfem::DeviceTensor< 6, const double > J_q, int e) {
-
+template <typename lambda, typename T, int... n, Geometry geom, int q>
+void BatchApplySIMDinout(lambda qf, tensor<T, n...>& qf_inouts, GaussLegendreRule<geom, q> rule,
+                         mfem::DeviceTensor<6, const double> J_q, int e)
+{
   if constexpr (geom == Geometry::Hexahedron) {
-
     constexpr int dim = 3;
 
     int q_id = 0;
     for (int qz = 0; qz < q; ++qz) {
       for (int qy = 0; qy < q; ++qy) {
         for (int qx = 0; qx < q; ++qx) {
-
           auto qf_inout = qf_inouts[qz][qy][qx].data;
-          
-          auto J = make_tensor<dim, dim>([&](int i, int j) { return J_q(qx, qy, qz, i, j, e); });
+
+          auto J    = make_tensor<dim, dim>([&](int i, int j) { return J_q(qx, qy, qz, i, j, e); });
           auto invJ = inv(J);
-          auto dv = det(J) * rule.weight(qx, qy, qz);
+          auto dv   = det(J) * rule.weight(qx, qy, qz);
 
           qf_inout.gradient = dot(qf_inout.gradient, invJ);
 
@@ -649,51 +634,47 @@ void BatchApplySIMDinout(lambda qf, tensor< T, n ... > & qf_inouts, GaussLegendr
           qf_inouts[qz][qy][qx].data = qf_inout;
 
           q_id++;
-
         }
       }
     }
-
   }
-
 }
 
-template < typename trial_space, typename T, Geometry geom, int q >
-auto BatchPostprocess(const tensor < T, q, q, q > qf_outputs, GaussLegendreRule<geom, q> rule) {
-
+template <typename trial_space, typename T, Geometry geom, int q>
+auto BatchPostprocess(const tensor<T, q, q, q> qf_outputs, GaussLegendreRule<geom, q> rule)
+{
   if constexpr (geom == Geometry::Hexahedron) {
-
     static constexpr int n = trial_space::order + 1;
 
-    tensor< double, q, n > B{};
-    tensor< double, q, n > G{};
+    tensor<double, q, n> B{};
+    tensor<double, q, n> G{};
     for (int i = 0; i < q; i++) {
       B[i] = GaussLobattoInterpolation<n>(rule.points_1D[i]);
       G[i] = GaussLobattoInterpolationDerivative<n>(rule.points_1D[i]);
     }
 
-    tensor< double, n, n, n > element_residual{};
+    tensor<double, n, n, n> element_residual{};
 
     for (int qz = 0; qz < q; ++qz) {
-      tensor < value_and_gradient< double, tensor< double, 3 > >, n, n > gradXY{};
+      tensor<value_and_gradient<double, tensor<double, 3> >, n, n> gradXY{};
       for (int qy = 0; qy < q; ++qy) {
-        tensor < value_and_gradient< double, tensor< double, 3 > >, n > gradX{};
+        tensor<value_and_gradient<double, tensor<double, 3> >, n> gradX{};
         for (int qx = 0; qx < q; ++qx) {
           const T qf_output = qf_outputs[qz][qy][qx];
           for (int dx = 0; dx < n; ++dx) {
-            const double wx = B(qx, dx);
+            const double wx  = B(qx, dx);
             const double wDx = G(qx, dx);
-            gradX[dx].value       += serac::get<0>(qf_output) * wx;
+            gradX[dx].value += serac::get<0>(qf_output) * wx;
             gradX[dx].gradient[0] += serac::get<1>(qf_output)[0] * wDx;
             gradX[dx].gradient[1] += serac::get<1>(qf_output)[1] * wx;
             gradX[dx].gradient[2] += serac::get<1>(qf_output)[2] * wx;
           }
         }
         for (int dy = 0; dy < n; ++dy) {
-          const double wy = B(qy, dy);
+          const double wy  = B(qy, dy);
           const double wDy = G(qy, dy);
           for (int dx = 0; dx < n; ++dx) {
-            gradXY[dy][dx].value       += gradX[dx].value       * wy;
+            gradXY[dy][dx].value += gradX[dx].value * wy;
             gradXY[dy][dx].gradient[0] += gradX[dx].gradient[0] * wy;
             gradXY[dy][dx].gradient[1] += gradX[dx].gradient[1] * wDy;
             gradXY[dy][dx].gradient[2] += gradX[dx].gradient[2] * wy;
@@ -701,33 +682,31 @@ auto BatchPostprocess(const tensor < T, q, q, q > qf_outputs, GaussLegendreRule<
         }
       }
       for (int dz = 0; dz < n; ++dz) {
-        const double wz = B(qz, dz);
+        const double wz  = B(qz, dz);
         const double wDz = G(qz, dz);
         for (int dy = 0; dy < n; ++dy) {
           for (int dx = 0; dx < n; ++dx) {
             auto tmp = gradXY[dy][dx];
-            element_residual[dx][dy][dz] += (tmp.value + tmp.gradient[0] + tmp.gradient[1]) * wz + tmp.gradient[2] * wDz;
+            element_residual[dx][dy][dz] +=
+                (tmp.value + tmp.gradient[0] + tmp.gradient[1]) * wz + tmp.gradient[2] * wDz;
           }
         }
       }
     }
 
     return element_residual;
-
   }
-
 }
 
-template < typename trial_space, typename T, Geometry geom, int q >
-auto BatchPostprocessSIMD(const tensor < T, q, q, q > qf_outputs, GaussLegendreRule<geom, q> rule) {
-
+template <typename trial_space, typename T, Geometry geom, int q>
+auto BatchPostprocessSIMD(const tensor<T, q, q, q> qf_outputs, GaussLegendreRule<geom, q> rule)
+{
   if constexpr (geom == Geometry::Hexahedron) {
-
     static constexpr int n = trial_space::order + 1;
 
-    tensor< f64x4, q, n > LUT_X{};
-    tensor< f64x4, q, n > LUT_Y{};
-    tensor< f64x4, q, n > LUT_Z{};
+    tensor<f64x4, q, n> LUT_X{};
+    tensor<f64x4, q, n> LUT_Y{};
+    tensor<f64x4, q, n> LUT_Z{};
     for (int i = 0; i < q; i++) {
       auto B = GaussLobattoInterpolation<n>(rule.points_1D[i]);
       auto G = GaussLobattoInterpolationDerivative<n>(rule.points_1D[i]);
@@ -739,12 +718,12 @@ auto BatchPostprocessSIMD(const tensor < T, q, q, q > qf_outputs, GaussLegendreR
       }
     }
 
-    tensor< double, n, n, n > element_residual{};
+    tensor<double, n, n, n> element_residual{};
 
     for (int qz = 0; qz < q; ++qz) {
-      tensor < f64x4, n, n > gradXY{};
+      tensor<f64x4, n, n> gradXY{};
       for (int qy = 0; qy < q; ++qy) {
-        tensor < f64x4, n > gradX{};
+        tensor<f64x4, n> gradX{};
         for (int qx = 0; qx < q; ++qx) {
           const f64x4 output = to_f64x4(qf_outputs[qz][qy][qx]);
           for (int dx = 0; dx < n; ++dx) {
@@ -770,56 +749,53 @@ auto BatchPostprocessSIMD(const tensor < T, q, q, q > qf_outputs, GaussLegendreR
     }
 
     return element_residual;
-
   }
-
 }
 
-template < typename trial_space, typename T, Geometry geom, int q >
-auto BatchPostprocessConstexpr(const tensor < T, q, q, q > qf_outputs, GaussLegendreRule<geom, q> rule) {
-
+template <typename trial_space, typename T, Geometry geom, int q>
+auto BatchPostprocessConstexpr(const tensor<T, q, q, q> qf_outputs, GaussLegendreRule<geom, q> rule)
+{
   if constexpr (geom == Geometry::Hexahedron) {
-
     static constexpr int n = trial_space::order + 1;
 
-    static constexpr auto B = [&](){
-      tensor< double, q, n > B_{};
+    static constexpr auto B = [&]() {
+      tensor<double, q, n> B_{};
       for (int i = 0; i < q; i++) {
         B_[i] = GaussLobattoInterpolation<n>(rule.points_1D[i]);
       }
       return B_;
     }();
 
-    static constexpr auto G = [&](){
-      tensor< double, q, n > G_{};
+    static constexpr auto G = [&]() {
+      tensor<double, q, n> G_{};
       for (int i = 0; i < q; i++) {
         G_[i] = GaussLobattoInterpolationDerivative<n>(rule.points_1D[i]);
       }
       return G_;
     }();
 
-    tensor< double, n, n, n > element_residual{};
+    tensor<double, n, n, n> element_residual{};
 
     for (int qz = 0; qz < q; ++qz) {
-      tensor < value_and_gradient< double, tensor< double, 3 > >, n, n > gradXY{};
+      tensor<value_and_gradient<double, tensor<double, 3> >, n, n> gradXY{};
       for (int qy = 0; qy < q; ++qy) {
-        tensor < value_and_gradient< double, tensor< double, 3 > >, n > gradX{};
+        tensor<value_and_gradient<double, tensor<double, 3> >, n> gradX{};
         for (int qx = 0; qx < q; ++qx) {
           const T qf_output = qf_outputs[qz][qy][qx];
           for (int dx = 0; dx < n; ++dx) {
-            const double wx = B(qx, dx);
+            const double wx  = B(qx, dx);
             const double wDx = G(qx, dx);
-            gradX[dx].value       += serac::get<0>(qf_output) * wx;
+            gradX[dx].value += serac::get<0>(qf_output) * wx;
             gradX[dx].gradient[0] += serac::get<1>(qf_output)[0] * wDx;
             gradX[dx].gradient[1] += serac::get<1>(qf_output)[1] * wx;
             gradX[dx].gradient[2] += serac::get<1>(qf_output)[2] * wx;
           }
         }
         for (int dy = 0; dy < n; ++dy) {
-          const double wy = B(qy, dy);
+          const double wy  = B(qy, dy);
           const double wDy = G(qy, dy);
           for (int dx = 0; dx < n; ++dx) {
-            gradXY[dy][dx].value       += gradX[dx].value       * wy;
+            gradXY[dy][dx].value += gradX[dx].value * wy;
             gradXY[dy][dx].gradient[0] += gradX[dx].gradient[0] * wy;
             gradXY[dy][dx].gradient[1] += gradX[dx].gradient[1] * wDy;
             gradXY[dy][dx].gradient[2] += gradX[dx].gradient[2] * wy;
@@ -827,33 +803,32 @@ auto BatchPostprocessConstexpr(const tensor < T, q, q, q > qf_outputs, GaussLege
         }
       }
       for (int dz = 0; dz < n; ++dz) {
-        const double wz = B(qz, dz);
+        const double wz  = B(qz, dz);
         const double wDz = G(qz, dz);
         for (int dy = 0; dy < n; ++dy) {
           for (int dx = 0; dx < n; ++dx) {
             auto tmp = gradXY[dy][dx];
-            element_residual[dx][dy][dz] += (tmp.value + tmp.gradient[0] + tmp.gradient[1]) * wz + tmp.gradient[2] * wDz;
+            element_residual[dx][dy][dz] +=
+                (tmp.value + tmp.gradient[0] + tmp.gradient[1]) * wz + tmp.gradient[2] * wDz;
           }
         }
       }
     }
 
     return element_residual;
-
   }
-
 }
 
-template < typename trial_space, typename T, Geometry geom, int q >
-auto BatchPostprocessDirectOutput(const tensor < T, q, q, q > qf_outputs, GaussLegendreRule<geom, q> rule, mfem::DeviceTensor< 4, double > & r_e, int e) {
-
+template <typename trial_space, typename T, Geometry geom, int q>
+auto BatchPostprocessDirectOutput(const tensor<T, q, q, q> qf_outputs, GaussLegendreRule<geom, q> rule,
+                                  mfem::DeviceTensor<4, double>& r_e, int e)
+{
   if constexpr (geom == Geometry::Hexahedron) {
-
     static constexpr int n = trial_space::order + 1;
 
-    tensor< f64x4, q, n > LUT_X{};
-    tensor< f64x4, q, n > LUT_Y{};
-    tensor< f64x4, q, n > LUT_Z{};
+    tensor<f64x4, q, n> LUT_X{};
+    tensor<f64x4, q, n> LUT_Y{};
+    tensor<f64x4, q, n> LUT_Z{};
     for (int i = 0; i < q; i++) {
       auto B = GaussLobattoInterpolation<n>(rule.points_1D[i]);
       auto G = GaussLobattoInterpolationDerivative<n>(rule.points_1D[i]);
@@ -866,9 +841,9 @@ auto BatchPostprocessDirectOutput(const tensor < T, q, q, q > qf_outputs, GaussL
     }
 
     for (int qz = 0; qz < q; ++qz) {
-      tensor < f64x4, n, n > gradXY{};
+      tensor<f64x4, n, n> gradXY{};
       for (int qy = 0; qy < q; ++qy) {
-        tensor < f64x4, n > gradX{};
+        tensor<f64x4, n> gradX{};
         for (int qx = 0; qx < q; ++qx) {
           const f64x4 output = to_f64x4(qf_outputs[qz][qy][qx]);
           for (int dx = 0; dx < n; ++dx) {
@@ -892,9 +867,7 @@ auto BatchPostprocessDirectOutput(const tensor < T, q, q, q > qf_outputs, GaussL
         }
       }
     }
-
   }
-
 }
 
 namespace detail {
@@ -911,11 +884,12 @@ SERAC_HOST_DEVICE void Add(const mfem::DeviceTensor<4, double>& r_global, const 
   }
 }
 
-}
+}  // namespace detail
 
-template < Geometry geom, typename test, typename trial, int Q, typename lambda >
-void reference_kernel(const mfem::Vector & U_, mfem::Vector & R_, const mfem::Vector & J_, size_t num_elements_, lambda qf_) {
-
+template <Geometry geom, typename test, typename trial, int Q, typename lambda>
+void reference_kernel(const mfem::Vector& U_, mfem::Vector& R_, const mfem::Vector& J_, size_t num_elements_,
+                      lambda qf_)
+{
   using trial_element              = finite_element<geom, trial>;
   using test_element               = finite_element<geom, test>;
   using element_residual_type      = typename test_element::residual_type;
@@ -932,7 +906,6 @@ void reference_kernel(const mfem::Vector & U_, mfem::Vector & R_, const mfem::Ve
 
   // for each element in the domain
   for (uint32_t e = 0; e < num_elements_; e++) {
-
     // get the DOF values for this particular element
     auto u_elem = detail::Load<trial_element>(u, e);
 
@@ -952,25 +925,23 @@ void reference_kernel(const mfem::Vector & U_, mfem::Vector & R_, const mfem::Ve
       // integrate qf_output against test space shape functions / gradients
       // to get element residual contributions
       r_elem += domain_integral::Postprocess<test_element>(qf_(arg), xi, J_q) * dx;
-
     }
 
     // once we've finished the element integration loop, write our element residuals
     // out to memory, to be later assembled into global residuals by mfem
     detail::Add(r, r_elem, int(e));
   }
-
 }
 
-template < Geometry geom, typename test, typename trial, int Q, typename lambda >
-void batched_kernel(const mfem::Vector & U_, mfem::Vector & R_, const mfem::Vector & J_, size_t num_elements_, lambda qf_) {
-
-  using trial_element              = finite_element<geom, trial>;
-  using test_element               = finite_element<geom, test>;
-  static constexpr int  dim        = dimension_of(geom);
-  static constexpr int  test_n     = test_element::order + 1;
-  static constexpr int  trial_n    = trial_element::order + 1;
-  static constexpr auto rule       = GaussLegendreRule<geom, Q>();
+template <Geometry geom, typename test, typename trial, int Q, typename lambda>
+void batched_kernel(const mfem::Vector& U_, mfem::Vector& R_, const mfem::Vector& J_, size_t num_elements_, lambda qf_)
+{
+  using trial_element           = finite_element<geom, trial>;
+  using test_element            = finite_element<geom, test>;
+  static constexpr int  dim     = dimension_of(geom);
+  static constexpr int  test_n  = test_element::order + 1;
+  static constexpr int  trial_n = trial_element::order + 1;
+  static constexpr auto rule    = GaussLegendreRule<geom, Q>();
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
@@ -980,7 +951,6 @@ void batched_kernel(const mfem::Vector & U_, mfem::Vector & R_, const mfem::Vect
 
   // for each element in the domain
   for (uint32_t e = 0; e < num_elements_; e++) {
-
     // batch-interpolate all of the quadrature point values at once
     auto args = BatchPreprocess<trial>(u, rule, e);
 
@@ -992,20 +962,19 @@ void batched_kernel(const mfem::Vector & U_, mfem::Vector & R_, const mfem::Vect
 
     // write the element residuals back out to memory
     detail::Add(r, r_elem, int(e));
-
   }
-
 }
 
-template < Geometry geom, typename test, typename trial, int Q, typename lambda >
-void batched_kernel_with_constexpr(const mfem::Vector & U_, mfem::Vector & R_, const mfem::Vector & J_, size_t num_elements_, lambda qf_) {
-
-  using trial_element              = finite_element<geom, trial>;
-  using test_element               = finite_element<geom, test>;
-  static constexpr int  dim        = dimension_of(geom);
-  static constexpr int  test_n     = test_element::order + 1;
-  static constexpr int  trial_n    = trial_element::order + 1;
-  static constexpr auto rule       = GaussLegendreRule<geom, Q>();
+template <Geometry geom, typename test, typename trial, int Q, typename lambda>
+void batched_kernel_with_constexpr(const mfem::Vector& U_, mfem::Vector& R_, const mfem::Vector& J_,
+                                   size_t num_elements_, lambda qf_)
+{
+  using trial_element           = finite_element<geom, trial>;
+  using test_element            = finite_element<geom, test>;
+  static constexpr int  dim     = dimension_of(geom);
+  static constexpr int  test_n  = test_element::order + 1;
+  static constexpr int  trial_n = trial_element::order + 1;
+  static constexpr auto rule    = GaussLegendreRule<geom, Q>();
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
@@ -1015,7 +984,6 @@ void batched_kernel_with_constexpr(const mfem::Vector & U_, mfem::Vector & R_, c
 
   // for each element in the domain
   for (uint32_t e = 0; e < num_elements_; e++) {
-
     auto args = BatchPreprocessConstexpr<trial>(u, rule, e);
 
     auto qf_outputs = BatchApply(qf_, args, rule, J, e);
@@ -1023,20 +991,19 @@ void batched_kernel_with_constexpr(const mfem::Vector & U_, mfem::Vector & R_, c
     auto r_elem = BatchPostprocessConstexpr<test>(qf_outputs, rule);
 
     detail::Add(r, r_elem, int(e));
-
   }
-
 }
 
-template < Geometry geom, typename test, typename trial, int Q, typename lambda >
-void batched_kernel_with_SIMD(const mfem::Vector & U_, mfem::Vector & R_, const mfem::Vector & J_, size_t num_elements_, lambda qf_) {
-
-  using trial_element              = finite_element<geom, trial>;
-  using test_element               = finite_element<geom, test>;
-  static constexpr int  dim        = dimension_of(geom);
-  static constexpr int  test_n     = test_element::order + 1;
-  static constexpr int  trial_n    = trial_element::order + 1;
-  static constexpr auto rule       = GaussLegendreRule<geom, Q>();
+template <Geometry geom, typename test, typename trial, int Q, typename lambda>
+void batched_kernel_with_SIMD(const mfem::Vector& U_, mfem::Vector& R_, const mfem::Vector& J_, size_t num_elements_,
+                              lambda qf_)
+{
+  using trial_element           = finite_element<geom, trial>;
+  using test_element            = finite_element<geom, test>;
+  static constexpr int  dim     = dimension_of(geom);
+  static constexpr int  test_n  = test_element::order + 1;
+  static constexpr int  trial_n = trial_element::order + 1;
+  static constexpr auto rule    = GaussLegendreRule<geom, Q>();
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
@@ -1046,7 +1013,6 @@ void batched_kernel_with_SIMD(const mfem::Vector & U_, mfem::Vector & R_, const 
 
   // for each element in the domain
   for (uint32_t e = 0; e < num_elements_; e++) {
-
     auto args = BatchPreprocessSIMD<trial>(u, rule, e);
 
     auto qf_outputs = BatchApplySIMD(qf_, args, rule, J, e);
@@ -1054,21 +1020,19 @@ void batched_kernel_with_SIMD(const mfem::Vector & U_, mfem::Vector & R_, const 
     auto r_elem = BatchPostprocessSIMD<test>(qf_outputs, rule);
 
     detail::Add(r, r_elem, int(e));
-
   }
-
 }
 
-
-template < Geometry geom, typename test, typename trial, int Q, typename lambda >
-void batched_kernel_with_SIMD_inout(const mfem::Vector & U_, mfem::Vector & R_, const mfem::Vector & J_, size_t num_elements_, lambda qf_) {
-
-  using trial_element              = finite_element<geom, trial>;
-  using test_element               = finite_element<geom, test>;
-  static constexpr int  dim        = dimension_of(geom);
-  static constexpr int  test_n     = test_element::order + 1;
-  static constexpr int  trial_n    = trial_element::order + 1;
-  static constexpr auto rule       = GaussLegendreRule<geom, Q>();
+template <Geometry geom, typename test, typename trial, int Q, typename lambda>
+void batched_kernel_with_SIMD_inout(const mfem::Vector& U_, mfem::Vector& R_, const mfem::Vector& J_,
+                                    size_t num_elements_, lambda qf_)
+{
+  using trial_element           = finite_element<geom, trial>;
+  using test_element            = finite_element<geom, test>;
+  static constexpr int  dim     = dimension_of(geom);
+  static constexpr int  test_n  = test_element::order + 1;
+  static constexpr int  trial_n = trial_element::order + 1;
+  static constexpr auto rule    = GaussLegendreRule<geom, Q>();
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
@@ -1078,7 +1042,6 @@ void batched_kernel_with_SIMD_inout(const mfem::Vector & U_, mfem::Vector & R_, 
 
   // for each element in the domain
   for (uint32_t e = 0; e < num_elements_; e++) {
-
     auto args = BatchPreprocessSIMD<trial>(u, rule, e);
 
     BatchApplySIMDinout(qf_, args, rule, J, e);
@@ -1086,20 +1049,19 @@ void batched_kernel_with_SIMD_inout(const mfem::Vector & U_, mfem::Vector & R_, 
     auto r_elem = BatchPostprocessSIMD<test>(args, rule);
 
     detail::Add(r, r_elem, int(e));
-
   }
-
 }
 
-template < Geometry geom, typename test, typename trial, int Q, typename lambda >
-void batched_kernel_with_SIMD_directout(const mfem::Vector & U_, mfem::Vector & R_, const mfem::Vector & J_, size_t num_elements_, lambda qf_) {
-
-  using trial_element              = finite_element<geom, trial>;
-  using test_element               = finite_element<geom, test>;
-  static constexpr int  dim        = dimension_of(geom);
-  static constexpr int  test_n     = test_element::order + 1;
-  static constexpr int  trial_n    = trial_element::order + 1;
-  static constexpr auto rule       = GaussLegendreRule<geom, Q>();
+template <Geometry geom, typename test, typename trial, int Q, typename lambda>
+void batched_kernel_with_SIMD_directout(const mfem::Vector& U_, mfem::Vector& R_, const mfem::Vector& J_,
+                                        size_t num_elements_, lambda qf_)
+{
+  using trial_element           = finite_element<geom, trial>;
+  using test_element            = finite_element<geom, test>;
+  static constexpr int  dim     = dimension_of(geom);
+  static constexpr int  test_n  = test_element::order + 1;
+  static constexpr int  trial_n = trial_element::order + 1;
+  static constexpr auto rule    = GaussLegendreRule<geom, Q>();
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
@@ -1109,22 +1071,147 @@ void batched_kernel_with_SIMD_directout(const mfem::Vector & U_, mfem::Vector & 
 
   // for each element in the domain
   for (uint32_t e = 0; e < num_elements_; e++) {
-
     auto args = BatchPreprocessSIMD<trial>(u, rule, e);
 
     auto qf_outputs = BatchApplySIMD(qf_, args, rule, J, e);
 
     BatchPostprocessDirectOutput<test>(qf_outputs, rule, r, e);
+  }
+}
+
+template <typename dof_type>
+void load(const dof_type& source, dof_type& destination)
+{
+#ifdef __CUDA_ARCH__
+  constexpr int ndof    = sizeof(dof_type) / sizeof(double);
+  double*       src_ptr = reinterpret_cast<double*>(&element_values);
+  for (int i = 0; i < ndof; i++) {
+    element_values_ptr[i] = ptr[i];
+  }
+#else
+  destination = source;
+#endif
+}
+
+#include <type_traits>
+
+template <typename lambda, typename value_t, typename derivative_t, int q>
+auto batch_apply_qf(lambda qf, const tensor<value_t, q, q, q>& values, const tensor<derivative_t, q, q, q>& derivatives)
+{
+  using return_type = decltype(qf(serac::tuple{value_t{}, derivative_t{}}));
+  using source_type = std::remove_const_t<std::remove_reference_t<decltype(serac::get<0>(return_type{}))> >;
+  using flux_type   = std::remove_const_t<std::remove_reference_t<decltype(serac::get<1>(return_type{}))> >;
+
+  tensor<source_type, q, q, q> sources{};
+  tensor<flux_type, q, q, q>   fluxes{};
+
+  for (int qz = 0; qz < q; ++qz) {
+    for (int qy = 0; qy < q; ++qy) {
+      for (int qx = 0; qx < q; ++qx) {
+        auto [source, flux] = qf(serac::tuple{values(qz, qy, qx), derivatives(qz, qy, qx)});
+        std::cout << qx << " " << qy << " " << qz << ": " << source << " "<< flux << std::endl;
+        sources(qz, qy, qx) = source;
+        fluxes(qz, qy, qx)  = flux;
+      }
+    }
+  }
+
+  return serac::tuple{sources, fluxes};
+}
+
+#if 0
+template <Geometry g, typename test, typename trial, int q, typename lambda>
+void cpu_batched_kernel(const double * inputs,
+                        double * outputs,
+                        const double * jacobians,
+                        TensorProductQuadratureRule<q> rule,
+                        size_t num_elements, 
+                        lambda qf) {
+
+  using test_element = finite_element<g, test>;
+  using trial_element = finite_element<g, trial>;
+
+  auto u = reinterpret_cast< const typename trial_element::dof_type * >(inputs);
+  auto r = reinterpret_cast< typename test_element::dof_type * >(outputs);
+
+  auto J = reinterpret_cast< const typename trial_element::dof_type * >(inputs);
+
+  // for each element in the domain
+  for (int e = 0; e < num_elements; e++) {
+
+    // load the element values and jacobians for this element
+    typename trial_element::dof_type u_elem;
+    load(u[e], u_elem);
+
+    // interpolate each quadrature point's value
+    typename trial_element::cache_type<q> trial_cache;
+    typename trial_element::batched_values_type<q> values;
+    typename trial_element::batched_derivatives_type<q> derivatives;
+    trial_element::interpolate(u_elem, rule, trial_cache, values, derivatives);
+
+    // evalute the q-function at each quadrature point
+    typename test_element::batched_values_type<q> sources;
+    typename test_element::batched_derivatives_type<q> fluxes;
+    batch_apply_qf(qf, rule, jacobians + e, values, derivatives, sources, fluxes);
+
+    // integrate the material response against the test-space basis functions
+    typename test_element::cache_type<q> test_cache;
+    test_element::integrate(sources, fluxes, rule, test_cache, r[e]);
 
   }
 
 }
+#endif
 
+template <Geometry g, typename test, typename trial, int q, typename lambda>
+void cpu_batched_kernel(const double* inputs, double* outputs, const double* jacobians, size_t num_elements, lambda qf)
+{
+  using test_element  = finite_element<g, test>;
+  using trial_element = finite_element<g, trial>;
+
+  static constexpr int                            dim = 3;
+  static constexpr TensorProductQuadratureRule<q> rule{};
+
+  auto u = reinterpret_cast<const typename trial_element::dof_type*>(inputs);
+  auto r = reinterpret_cast<typename test_element::dof_type*>(outputs);
+  auto J = reinterpret_cast<const tensor<double, dim, dim, q, q, q>*>(jacobians);
+
+  // for each element in the domain
+  for (size_t e = 0; e < num_elements; e++) {
+    // load the element values and jacobians for this element
+    auto u_e = u[e];
+
+    // auto J_e = J[e];
+    // auto J = make_tensor<dim, dim>([&](int i, int j) { return J_q(qx, qy, qz, i, j, e); });
+    tensor<double, q, q, q, dim, dim> J_e;
+    for (int qx = 0; qx < q; qx++) {
+      for (int qy = 0; qy < q; qy++) {
+        for (int qz = 0; qz < q; qz++) {
+          for (int i = 0; i < dim; i++) {
+            for (int j = 0; j < dim; j++) {
+              J_e(qz, qy, qx, i, j) = J[e](j, i, qz, qy, qx);
+            }
+          }
+        }
+      }
+    }
+
+    // (batch) interpolate each quadrature point's value
+    auto [values, derivatives] = trial_element::interpolate(u_e, J_e, rule);
+
+    // (batch) evalute the q-function at each quadrature point
+    auto [sources, fluxes] = batch_apply_qf(qf, values, derivatives);
+
+    // (batch) integrate the material response against the test-space basis functions
+    test_element::integrate(sources, fluxes, J_e, rule, r[e]);
+  }
 }
+
+}  // namespace serac
 
 namespace compiler {
-  static void please_do_not_optimize_away([[maybe_unused]] void* p) { asm volatile("" : : "g"(p) : "memory"); }
-}
+static void please_do_not_optimize_away([[maybe_unused]] void* p) { asm volatile("" : : "g"(p) : "memory"); }
+}  // namespace compiler
 
 template <typename lambda>
 auto time(lambda&& f)
@@ -1136,32 +1223,32 @@ auto time(lambda&& f)
   return stopwatch.elapsed();
 }
 
-int main() {
-
-  using serac::H1;
+int main()
+{
   using serac::Geometry;
+  using serac::H1;
 
-  constexpr int p = 3;
-  constexpr int n = p + 1;
-  constexpr int q = n;
-  constexpr int dim = 3;
-  int num_runs = 10;
-  int num_elements = 10000;
+  constexpr int p            = 3;
+  constexpr int n            = p + 1;
+  constexpr int q            = 2;
+  constexpr int dim          = 3;
+  int           num_runs     = 1;
+  int           num_elements = 1;
 
   double rho = 1.0;
-  double k = 1.0;
+  double k   = 1.0;
 
-  using test = H1<p>;
+  using test  = H1<p>;
   using trial = H1<p>;
 
-  auto mass_plus_diffusion = [=](auto input){ 
+  auto mass_plus_diffusion = [=](auto input) {
     auto [u, du_dx] = input;
-    auto source = rho * u;
-    auto flux = k * du_dx;
+    auto source     = rho * u;
+    auto flux       = k * du_dx;
     return serac::tuple{source, flux};
   };
 
-  std::default_random_engine generator;
+  std::default_random_engine             generator;
   std::uniform_real_distribution<double> distribution(-1.0, 1.0);
 
   mfem::Vector U1D(num_elements * n * n * n);
@@ -1170,15 +1257,14 @@ int main() {
   mfem::Vector rho_dv_1D(num_elements * q * q * q);
   mfem::Vector k_invJ_invJT_dv_1D(num_elements * dim * dim * q * q * q);
 
-  auto U = mfem::Reshape(U1D.ReadWrite(), n, n, n, num_elements);
-  auto J = mfem::Reshape(J1D.ReadWrite(), q * q * q, dim, dim, num_elements);
-  auto rho_dv = mfem::Reshape(rho_dv_1D.ReadWrite(), q * q * q, num_elements);
+  auto U               = mfem::Reshape(U1D.ReadWrite(), n, n, n, num_elements);
+  auto J               = mfem::Reshape(J1D.ReadWrite(), q * q * q, dim, dim, num_elements);
+  auto rho_dv          = mfem::Reshape(rho_dv_1D.ReadWrite(), q * q * q, num_elements);
   auto k_invJ_invJT_dv = mfem::Reshape(k_invJ_invJT_dv_1D.ReadWrite(), q * q * q, dim, dim, num_elements);
 
   serac::GaussLegendreRule<Geometry::Hexahedron, q> rule;
 
   for (int e = 0; e < num_elements; e++) {
-
     for (int ix = 0; ix < n; ix++) {
       for (int iy = 0; iy < n; iy++) {
         for (int iz = 0; iz < n; iz++) {
@@ -1188,8 +1274,7 @@ int main() {
     }
 
     for (int i = 0; i < q * q * q; i++) {
-
-      serac::tensor< double, dim, dim > J_q{};
+      serac::tensor<double, dim, dim> J_q{};
 
       for (int r = 0; r < dim; r++) {
         for (int c = 0; c < dim; c++) {
@@ -1201,131 +1286,156 @@ int main() {
       int qy = (i % (q * q)) / q;
       int qz = i / (q * q);
 
-      double qweight = rule.weight(qx, qy, qz);
-      auto invJ_invJT = dot(inv(J_q), transpose(inv(J_q)));
-      double dv = det(J_q) * qweight;
+      double qweight    = rule.weight(qx, qy, qz);
+      auto   invJ_invJT = dot(inv(J_q), transpose(inv(J_q)));
+      double dv         = det(J_q) * qweight;
 
-      rho_dv(i, e) = rho * dv; 
+      rho_dv(i, e) = rho * dv;
       for (int r = 0; r < dim; r++) {
         for (int c = 0; c < dim; c++) {
           k_invJ_invJT_dv(i, r, c, e) = k * invJ_invJT[r][c] * dv;
         }
       }
-
     }
-
   }
 
-
-
   {
-    R1D = 0.0;
+    R1D            = 0.0;
     double runtime = time([&]() {
-      for (int i = 0; i < num_runs; i++) {
-        serac::reference_kernel<Geometry::Hexahedron, test, trial, q>(U1D, R1D, J1D, num_elements, mass_plus_diffusion);
-        compiler::please_do_not_optimize_away(&R1D);
-      }
-    }) / n;
+                       for (int i = 0; i < num_runs; i++) {
+                         serac::reference_kernel<Geometry::Hexahedron, test, trial, q>(U1D, R1D, J1D, num_elements,
+                                                                                       mass_plus_diffusion);
+                         compiler::please_do_not_optimize_away(&R1D);
+                       }
+                     }) /
+                     n;
     std::cout << "average reference kernel time: " << runtime / num_runs << std::endl;
   }
   auto answer_reference = R1D;
 
   {
-    R1D = 0.0;
+    R1D            = 0.0;
     double runtime = time([&]() {
-      for (int i = 0; i < num_runs; i++) {
-        serac::batched_kernel<Geometry::Hexahedron, test, trial, q>(U1D, R1D, J1D, num_elements, mass_plus_diffusion);
-        compiler::please_do_not_optimize_away(&R1D);
-      }
-    }) / n;
+                       for (int i = 0; i < num_runs; i++) {
+                         serac::batched_kernel<Geometry::Hexahedron, test, trial, q>(U1D, R1D, J1D, num_elements,
+                                                                                     mass_plus_diffusion);
+                         compiler::please_do_not_optimize_away(&R1D);
+                       }
+                     }) /
+                     n;
     std::cout << "average batched kernel time: " << runtime / num_runs << std::endl;
   }
-  auto answer_batched = R1D;
-  mfem::Vector error = answer_reference;
+  auto         answer_batched = R1D;
+  mfem::Vector error          = answer_reference;
   error -= answer_batched;
   double relative_error = error.Norml2() / answer_reference.Norml2();
   std::cout << "error: " << relative_error << std::endl;
 
   {
-    R1D = 0.0;
+    R1D            = 0.0;
     double runtime = time([&]() {
-      for (int i = 0; i < num_runs; i++) {
-        serac::batched_kernel_with_constexpr<Geometry::Hexahedron, test, trial, q>(U1D, R1D, J1D, num_elements, mass_plus_diffusion);
-        compiler::please_do_not_optimize_away(&R1D);
-      }
-    }) / n;
+                       for (int i = 0; i < num_runs; i++) {
+                         serac::batched_kernel_with_constexpr<Geometry::Hexahedron, test, trial, q>(
+                             U1D, R1D, J1D, num_elements, mass_plus_diffusion);
+                         compiler::please_do_not_optimize_away(&R1D);
+                       }
+                     }) /
+                     n;
     std::cout << "average batched (constexpr) kernel time: " << runtime / num_runs << std::endl;
   }
   auto answer_batched_constexpr = R1D;
-  error = answer_reference;
+  error                         = answer_reference;
   error -= answer_batched_constexpr;
   relative_error = error.Norml2() / answer_reference.Norml2();
   std::cout << "error: " << relative_error << std::endl;
 
-
   {
-    R1D = 0.0;
+    R1D            = 0.0;
     double runtime = time([&]() {
-      for (int i = 0; i < num_runs; i++) {
-        serac::batched_kernel_with_SIMD<Geometry::Hexahedron, test, trial, q>(U1D, R1D, J1D, num_elements, mass_plus_diffusion);
-        compiler::please_do_not_optimize_away(&R1D);
-      }
-    }) / n;
+                       for (int i = 0; i < num_runs; i++) {
+                         serac::batched_kernel_with_SIMD<Geometry::Hexahedron, test, trial, q>(
+                             U1D, R1D, J1D, num_elements, mass_plus_diffusion);
+                         compiler::please_do_not_optimize_away(&R1D);
+                       }
+                     }) /
+                     n;
     std::cout << "average batched (simd) kernel time: " << runtime / num_runs << std::endl;
   }
   auto answer_batched_simd = R1D;
-  error = answer_reference;
+  error                    = answer_reference;
   error -= answer_batched_simd;
   relative_error = error.Norml2() / answer_reference.Norml2();
   std::cout << "error: " << relative_error << std::endl;
 
   {
-    R1D = 0.0;
+    R1D            = 0.0;
     double runtime = time([&]() {
-      for (int i = 0; i < num_runs; i++) {
-        serac::batched_kernel_with_SIMD_inout<Geometry::Hexahedron, test, trial, q>(U1D, R1D, J1D, num_elements, mass_plus_diffusion);
-        compiler::please_do_not_optimize_away(&R1D);
-      }
-    }) / n;
+                       for (int i = 0; i < num_runs; i++) {
+                         serac::batched_kernel_with_SIMD_inout<Geometry::Hexahedron, test, trial, q>(
+                             U1D, R1D, J1D, num_elements, mass_plus_diffusion);
+                         compiler::please_do_not_optimize_away(&R1D);
+                       }
+                     }) /
+                     n;
     std::cout << "average batched (simd, inout) kernel time: " << runtime / num_runs << std::endl;
   }
   auto answer_batched_simd_inout = R1D;
-  error = answer_reference;
+  error                          = answer_reference;
   error -= answer_batched_simd_inout;
   relative_error = error.Norml2() / answer_reference.Norml2();
   std::cout << "error: " << relative_error << std::endl;
 
   {
-    R1D = 0.0;
+    R1D            = 0.0;
     double runtime = time([&]() {
-      for (int i = 0; i < num_runs; i++) {
-        serac::batched_kernel_with_SIMD_directout<Geometry::Hexahedron, test, trial, q>(U1D, R1D, J1D, num_elements, mass_plus_diffusion);
-        compiler::please_do_not_optimize_away(&R1D);
-      }
-    }) / n;
+                       for (int i = 0; i < num_runs; i++) {
+                         serac::batched_kernel_with_SIMD_directout<Geometry::Hexahedron, test, trial, q>(
+                             U1D, R1D, J1D, num_elements, mass_plus_diffusion);
+                         compiler::please_do_not_optimize_away(&R1D);
+                       }
+                     }) /
+                     n;
     std::cout << "average batched (simd, directout) kernel time: " << runtime / num_runs << std::endl;
   }
   auto answer_batched_simd_directout = R1D;
-  error = answer_reference;
+  error                              = answer_reference;
   error -= answer_batched_simd_directout;
   relative_error = error.Norml2() / answer_reference.Norml2();
   std::cout << "error: " << relative_error << std::endl;
 
   {
-    R1D = 0.0;
-    bool symmetric = false;
+    R1D            = 0.0;
+    double runtime = time([&]() {
+                       for (int i = 0; i < num_runs; i++) {
+                         serac::cpu_batched_kernel<Geometry::Hexahedron, test, trial, q>(
+                             U1D.Read(), R1D.ReadWrite(), J1D.Read(), num_elements, mass_plus_diffusion);
+                         compiler::please_do_not_optimize_away(&R1D);
+                       }
+                     }) /
+                     n;
+    std::cout << "average cpu batched kernel time: " << runtime / num_runs << std::endl;
+  }
+  auto answer_cpu_batched_kernel = R1D;
+  error                          = answer_reference;
+  error -= answer_cpu_batched_kernel;
+  relative_error = error.Norml2() / answer_reference.Norml2();
+  std::cout << "error: " << relative_error << std::endl;
+
+  {
+    R1D                           = 0.0;
+    bool                symmetric = false;
     mfem::Array<double> b_(n * q);
     mfem::Array<double> bt_(n * q);
     mfem::Array<double> g_(n * q);
     mfem::Array<double> gt_(n * q);
-    auto B = mfem::Reshape(b_.ReadWrite(), q, n);
-    auto Bt = mfem::Reshape(bt_.ReadWrite(), n, q);
+    auto                B  = mfem::Reshape(b_.ReadWrite(), q, n);
+    auto                Bt = mfem::Reshape(bt_.ReadWrite(), n, q);
 
-    auto G = mfem::Reshape(g_.ReadWrite(), q, n);
+    auto G  = mfem::Reshape(g_.ReadWrite(), q, n);
     auto Gt = mfem::Reshape(gt_.ReadWrite(), n, q);
 
     for (int i = 0; i < q; i++) {
-      auto value = serac::GaussLobattoInterpolation<n>(rule.points_1D[i]);
+      auto value      = serac::GaussLobattoInterpolation<n>(rule.points_1D[i]);
       auto derivative = serac::GaussLobattoInterpolationDerivative<n>(rule.points_1D[i]);
 
       for (int j = 0; j < n; j++) {
@@ -1335,27 +1445,29 @@ int main() {
     }
 
     double mass_runtime = time([&]() {
-      for (int i = 0; i < num_runs; i++) {
-        mfem::PAMassApply3D<n,q>(num_elements, b_, bt_, rho_dv_1D, U1D, R1D);
-        compiler::please_do_not_optimize_away(&R1D);
-      }
-    }) / n;
+                            for (int i = 0; i < num_runs; i++) {
+                              mfem::PAMassApply3D<n, q>(num_elements, b_, bt_, rho_dv_1D, U1D, R1D);
+                              compiler::please_do_not_optimize_away(&R1D);
+                            }
+                          }) /
+                          n;
     std::cout << "average mfem mass kernel time: " << mass_runtime / num_runs << std::endl;
 
     double diffusion_runtime = time([&]() {
-      for (int i = 0; i < num_runs; i++) {
-        mfem::PADiffusionApply3D<n,q>(num_elements, symmetric = false, b_, g_, bt_, gt_, k_invJ_invJT_dv_1D, U1D, R1D);
-        compiler::please_do_not_optimize_away(&R1D);
-      }
-    }) / n;
+                                 for (int i = 0; i < num_runs; i++) {
+                                   mfem::PADiffusionApply3D<n, q>(num_elements, symmetric = false, b_, g_, bt_, gt_,
+                                                                  k_invJ_invJT_dv_1D, U1D, R1D);
+                                   compiler::please_do_not_optimize_away(&R1D);
+                                 }
+                               }) /
+                               n;
     std::cout << "average mfem diffusion kernel time: " << diffusion_runtime / num_runs << std::endl;
 
     std::cout << "average mfem combined kernel time: " << (mass_runtime + diffusion_runtime) / num_runs << std::endl;
   }
   auto answer_mfem = R1D;
-  error = answer_reference;
+  error            = answer_reference;
   error -= answer_mfem;
   relative_error = error.Norml2() / answer_reference.Norml2();
   std::cout << "error: " << relative_error << std::endl;
-
 }

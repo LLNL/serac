@@ -190,7 +190,7 @@ __global__ void bandwidth_test_make_tensor(mfem::DeviceTensor<6, double>       o
 }
 
 template <int dim, int q>
-__global__ void bandwidth_test_raw_ptr(serac::tensor<double, dim, dim, q>* output, serac::tensor<double, dim, dim, q>* input,
+__global__ void bandwidth_test_array_of_tensors(serac::tensor<double, dim, dim, q>* output, serac::tensor<double, dim, dim, q>* input,
                                        int num_elements)
 {
   int e = blockIdx.x;
@@ -211,6 +211,37 @@ __global__ void bandwidth_test_raw_ptr(serac::tensor<double, dim, dim, q>* outpu
 
 }
 
+template < int dim, int q >
+__device__ void read_in(serac::tensor < double, dim, dim > & output, const serac::tensor < double, dim, dim, q > & input) {
+  for (int i = 0; i < dim; i++) {
+    for (int j = 0; j < dim; j++) {
+      output[i][j] = input[i][j][threadIdx.x];
+    }
+  }
+}
+
+template < int dim, int q >
+__device__ void write_out(serac::tensor < double, dim, dim, q > & output, const serac::tensor < double, dim, dim > & input) {
+  for (int i = 0; i < dim; i++) {
+    for (int j = 0; j < dim; j++) {
+      output[i][j][threadIdx.x] = input[i][j];
+    }
+  }
+}
+
+template <int dim, int q>
+__global__ void bandwidth_test_array_of_tensors_2(serac::tensor<double, dim, dim, q>* output, serac::tensor<double, dim, dim, q>* input,
+                                       int num_elements)
+{
+  int e = blockIdx.x;
+
+  serac::tensor<double, dim, dim> J;
+
+  read_in(J, input[e]);
+
+  write_out(output[e], J);
+
+}
 
 
 int main()
@@ -250,7 +281,8 @@ int main()
     auto inputs_tensor = reinterpret_cast< serac::tensor< double, dim, dim, q * q * q > * >(inputs);
     auto outputs_tensor = reinterpret_cast< serac::tensor< double, dim, dim, q * q * q > * >(outputs);
 
-    bandwidth_test_raw_ptr<<<gridsize, blocksize1D>>>(inputs_tensor, outputs_tensor, num_elements);
+    bandwidth_test_array_of_tensors<<<gridsize, blocksize1D>>>(inputs_tensor, outputs_tensor, num_elements);
+    bandwidth_test_array_of_tensors_2<<<gridsize, blocksize1D>>>(inputs_tensor, outputs_tensor, num_elements);
 
     cudaMemcpy(inputs, outputs, sizeof(double) * num_elements * dim * dim * q * q * q, cudaMemcpyDeviceToDevice);
   }

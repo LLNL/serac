@@ -9,7 +9,7 @@
 using namespace serac;
 
 template < int p, int q >
-auto batched_hcurl_extrapolation_naive(tensor< double, 3, q, q, q> source,
+auto batched_hcurl_integrate_naive(tensor< double, 3, q, q, q> source,
                                        tensor< double, 3, q, q, q> flux) {
 
   // clang-format off
@@ -151,13 +151,13 @@ void correctness_test_2D() {
 
   tensor< double, 2, q, q > batched_value_q;
   tensor< double, q, q > batched_curl_q;
-  element_type::interpolation(element_values, rule, cache, batched_value_q, batched_curl_q);
+  element_type::interpolate(element_values, rule, cache, batched_value_q, batched_curl_q);
 
   auto batched_source_q = dot(C1, batched_value_q);
   auto batched_flux_q = C2 * batched_curl_q;
    
   dof_type element_residual;
-  element_type::extrapolation(batched_source_q, batched_flux_q, rule, cache, element_residual);
+  element_type::integrate(batched_source_q, batched_flux_q, rule, cache, element_residual);
   auto element_residual_ref = reshape< 2, p + 1, p >(element_residual_1D);
 
   std::cout << "Quadrilateral Hcurl elements: n = " << n << ", q = " << q << std::endl;
@@ -232,13 +232,13 @@ void correctness_test_3D() {
 
   tensor< double, 3, q, q, q > batched_value_q{};
   tensor< double, 3, q, q, q > batched_curl_q{};
-  element_type::interpolation(element_values, rule, cache, batched_value_q, batched_curl_q);
+  element_type::interpolate(element_values, rule, cache, batched_value_q, batched_curl_q);
 
   auto batched_source_q = dot(C, batched_value_q);
   auto batched_flux_q = dot(C, batched_curl_q);
 
   dof_type element_residual;
-  element_type::extrapolation(batched_source_q, batched_flux_q, rule, cache, element_residual);
+  element_type::integrate(batched_source_q, batched_flux_q, rule, cache, element_residual);
   auto element_residual_ref = reshape< 3, p + 1, p + 1, p >(element_residual_1D);
 
   std::cout << "Hexahedron Hcurl elements: n = " << n << ", q = " << q << std::endl;
