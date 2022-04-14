@@ -48,6 +48,7 @@ Requirements:
      
      # Personal Machine (currently runs subset of tests)
      $ ./ats.sh
+
    Append ``--help`` to the command to see the current options.
 
 #. **View results.**
