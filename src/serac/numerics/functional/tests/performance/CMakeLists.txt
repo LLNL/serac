@@ -6,7 +6,7 @@
 
 # not sure how we want to handle performance-related tests
 set(functional_performance_tests
-    batched_shape_functions_scalar.cpp
+    batched_shape_functions.cpp
     batched_hcurl_correctness.cpp
     J2_material_with_AD.cpp
     diffusion_performance_test.cpp)
@@ -20,9 +20,10 @@ foreach(filename ${functional_performance_tests})
                        FOLDER      serac/tests )
 endforeach()
 
-set_source_files_properties(batched_shape_functions_scalar.cpp PROPERTIES LANGUAGE CXX)
-target_compile_options(batched_shape_functions_scalar PUBLIC "-march=skylake-avx512")
-
+set_source_files_properties(batched_shape_functions.cpp PROPERTIES LANGUAGE CXX)
+target_compile_options(batched_shape_functions PUBLIC "-march=skylake-avx512")
+target_compile_options(batched_shape_functions PUBLIC "-Wno-unused-function")
+target_compile_options(batched_shape_functions PUBLIC "-Wno-shadow")
 
 if(ENABLE_CUDA)
 

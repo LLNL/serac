@@ -27,8 +27,12 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
   static constexpr int  ndof       = 3 * p * (p + 1) * (p + 1);
   static constexpr int  components = 1;
 
+  // TODO: delete this in favor of dof_type
+  using residual_type =
+      typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components>>::type;
+
   // this is how mfem provides the data to us for these elements
-  // if, instead, it was stored as simply tensor< double, 3, p + 1, p + q, p >,
+  // if, instead, it was stored as simply tensor< double, 3, p + 1, p + 1, p >,
   // the interpolation/integrate implementation would be considerably shorter
   struct dof_type {
     tensor< double, p + 1, p + 1, p     > x;
@@ -47,10 +51,10 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
   };
 
   template < int q >
-  using cpu_batched_values_type = tensor< double, q, q, q, 3 >;
+  using cpu_batched_values_type = tensor< tensor< double, 3 >, q, q, q >;
 
   template < int q >
-  using cpu_batched_derivatives_type = tensor< double, q, q, q, 3 >;
+  using cpu_batched_derivatives_type = tensor< tensor< double, 3 >, q, q, q >;
 
   static constexpr auto directions = [] {
     int dof_per_direction = p * (p + 1) * (p + 1);
@@ -189,6 +193,181 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
     }
 
     return curl;
+  }
+
+  template < int q >
+  static auto interpolate(const dof_type & element_values, 
+                          const tensor < double, q, q, q, dim, dim > & jacobians,
+                          const TensorProductQuadratureRule<q> &) {
+
+    auto xi = GaussLegendreNodes<q>();
+
+    tensor<double, q, p > B1;
+    tensor<double, q, p+1 > B2;
+    tensor<double, q, p+1 > G2;
+    for (int i = 0; i < q; i++) {
+      B1[i] = GaussLegendreInterpolation<p>(xi[i]);
+      B2[i] = GaussLobattoInterpolation<p+1>(xi[i]);
+      G2[i] = GaussLobattoInterpolationDerivative<p+1>(xi[i]);
+    }
+
+    cache_type<q> cache;
+
+    serac::tuple < cpu_batched_values_type<q>, cpu_batched_derivatives_type<q> > values_and_derivatives{};
+
+    tensor< double, 3 > value{};
+    tensor< double, 3 > curl{};
+
+    /////////////////////////////////
+    ////////// X-component //////////
+    /////////////////////////////////
+    for (int k = 0; k < p + 1; k++) {
+      for (int j = 0; j < p + 1; j++) {
+        for (int qx = 0; qx < q; qx++) {
+          double sum = 0.0;
+          for (int i = 0; i < p; i++) {
+            sum += B1(qx, i) * element_values.x(k, j, i);
+          }
+          cache.A1(k, j, qx) = sum;
+        }
+      }
+    }
+
+    for (int k = 0; k < p + 1; k++) {
+      for (int qy = 0; qy < q; qy++) {
+        for (int qx = 0; qx < q; qx++) {
+          double sum[2]{};
+          for (int j = 0; j < (p + 1); j++) {
+            sum[0] += B2(qy, j) * cache.A1(k, j, qx);
+            sum[1] += G2(qy, j) * cache.A1(k, j, qx);
+          }
+          cache.A2(0, k, qy, qx) = sum[0];
+          cache.A2(1, k, qy, qx) = sum[1];
+        }
+      }
+    }
+
+    for (int qz = 0; qz < q; qz++) {
+      for (int qy = 0; qy < q; qy++) {
+        for (int qx = 0; qx < q; qx++) {
+          double sum[3]{};
+          for (int k = 0; k < (p + 1); k++) {
+            sum[0] += B2(qz, k) * cache.A2(0, k, qy, qx);
+            sum[1] += G2(qz, k) * cache.A2(0, k, qy, qx);
+            sum[2] += B2(qz, k) * cache.A2(1, k, qy, qx);
+          }
+          value[0] += sum[0];
+          curl[1]  += sum[1];
+          curl[2]  -= sum[2];
+        }
+      }
+    }
+
+    /////////////////////////////////
+    ////////// Y-component //////////
+    /////////////////////////////////
+    for (int k = 0; k < p + 1; k++) {
+      for (int i = 0; i < p + 1; i++) {
+        for (int qy = 0; qy < q; qy++) {
+          double sum = 0.0;
+          for (int j = 0; j < p; j++) {
+            sum += B1(qy, j) * element_values.y(k, j, i);
+          }
+          cache.A1(k, i, qy) = sum;
+        }
+      }
+    }
+
+    for (int k = 0; k < p + 1; k++) {
+      for (int qy = 0; qy < q; qy++) {
+        for (int qx = 0; qx < q; qx++) {
+          double sum[2]{};
+          for (int i = 0; i < (p + 1); i++) {
+            sum[0] += B2(qx, i) * cache.A1(k, i, qy);
+            sum[1] += G2(qx, i) * cache.A1(k, i, qy);
+          }
+          cache.A2(0, k, qy, qx) = sum[0];
+          cache.A2(1, k, qy, qx) = sum[1];
+        }
+      }
+    }
+
+    for (int qz = 0; qz < q; qz++) {
+      for (int qy = 0; qy < q; qy++) {
+        for (int qx = 0; qx < q; qx++) {
+          double sum[3]{};
+          for (int k = 0; k < (p + 1); k++) {
+            sum[0] += B2(qz, k) * cache.A2(0, k, qy, qx);
+            sum[1] += G2(qz, k) * cache.A2(0, k, qy, qx);
+            sum[2] += B2(qz, k) * cache.A2(1, k, qy, qx);
+          }
+          value[1] += sum[0];
+          curl[2]  += sum[2];
+          curl[0]  -= sum[1];
+        }
+      }
+    }
+
+    /////////////////////////////////
+    ////////// Z-component //////////
+    /////////////////////////////////
+    for (int j = 0; j < p + 1; j++) {
+      for (int i = 0; i < p + 1; i++) {
+        for (int qz = 0; qz < q; qz++) {
+          double sum = 0.0;
+          for (int k = 0; k < p; k++) {
+            sum += B1(qz, k) * element_values.z(k, j, i);
+          }
+          cache.A1(j, i, qz) = sum;
+        }
+      }
+    }
+
+    for (int j = 0; j < p + 1; j++) {
+      for (int qz = 0; qz < q; qz++) {
+        for (int qx = 0; qx < q; qx++) {
+          double sum[2]{};
+          for (int i = 0; i < (p + 1); i++) {
+            sum[0] += B2(qx, i) * cache.A1(j, i, qz);
+            sum[1] += G2(qx, i) * cache.A1(j, i, qz);
+          }
+          cache.A2(0, j, qz, qx) = sum[0];
+          cache.A2(1, j, qz, qx) = sum[1];
+        }
+      }
+    }
+
+    for (int qz = 0; qz < q; qz++) {
+      for (int qy = 0; qy < q; qy++) {
+        for (int qx = 0; qx < q; qx++) {
+          double sum[3]{};
+          for (int j = 0; j < (p + 1); j++) {
+            sum[0] += B2(qy, j) * cache.A2(0, j, qz, qx);
+            sum[1] += G2(qy, j) * cache.A2(0, j, qz, qx);
+            sum[2] += B2(qy, j) * cache.A2(1, j, qz, qx);
+          }
+          value[2] += sum[0];
+          curl[0]  += sum[1];
+          curl[1]  -= sum[2];
+        }
+      }
+    }
+
+    // apply covariant Piola transformation to go
+    // from parent element -> physical element
+    for (int qz = 0; qz < q; qz++) {
+      for (int qy = 0; qy < q; qy++) {
+        for (int qx = 0; qx < q; qx++) {
+          auto J_T = transpose(jacobians(qz, qy, qx));
+          auto detJ = det(J_T);
+          serac::get<0>(values_and_derivatives)(qz, qy, qx) = linear_solve(J_T, value);
+          serac::get<1>(values_and_derivatives)(qz, qy, qx) = dot(curl, J_T) / detJ;
+        }
+      }
+    }
+
+    return values_and_derivatives;
+
   }
 
   template < int q >
@@ -356,6 +535,169 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
           auto J_T = transpose(jacobians(qz, qy, qx));
           value_q(qz, qy, qx) = linear_solve(J_T, value);
           curl_q(qz, qy, qx) = dot(curl, J_T) / detJ;
+        }
+      }
+    }
+
+  }
+
+  template < int q >
+  static void integrate(cpu_batched_values_type<q> & sources,
+                        cpu_batched_derivatives_type<q> & fluxes,
+                        const tensor < double, q, q, q, dim, dim > & jacobians,
+                        const TensorProductQuadratureRule<q> &, 
+                        dof_type & element_residual) {
+
+    static constexpr auto xi = GaussLegendreNodes<q>();
+    static constexpr auto weights1D = GaussLegendreWeights<q>();
+
+    cache_type<q> cache{};
+    tensor<double, q, p > B1;
+    tensor<double, q, p+1 > B2;
+    tensor<double, q, p+1 > G2;
+    for (int i = 0; i < q; i++) {
+      B1[i] = GaussLegendreInterpolation<p>(xi[i]);
+      B2[i] = GaussLobattoInterpolation<p+1>(xi[i]);
+      G2[i] = GaussLobattoInterpolationDerivative<p+1>(xi[i]);
+    }
+
+    // transform the source and flux terms from values on the physical element, 
+    // to values on the parent element. Also, the source/flux values are scaled
+    // according to the weight of their quadrature point, so that 
+    for (int qz = 0; qz < q; qz++) {
+      for (int qy = 0; qy < q; qy++) {
+        for (int qx = 0; qx < q; qx++) {
+          auto J = jacobians(qz, qy, qx);
+          auto detJ = serac::det(J);
+          auto dv = detJ * weights1D[qx] * weights1D[qy] * weights1D[qz];
+          sources(qz, qy, qx) = linear_solve(J, sources(qz, qy, qx)) * dv;
+          fluxes(qz, qy, qx) = dot(fluxes(qz, qy, qx), J) * (dv / detJ);
+        }
+      }
+    }
+
+    /////////////////////////////////
+    ////////// X-component //////////
+    /////////////////////////////////
+    for (int k = 0; k < p + 1; k++) {
+      for (int qy = 0; qy < q; qy++) {
+        for (int qx = 0; qx < q; qx++) {
+          double sum[2]{};
+          for (int qz = 0; qz < q; qz++) {
+            sum[0] += B2(qz, k) * sources(qz, qy, qx)[0] + G2(qz, k) * fluxes(qz, qy, qx)[1];
+            sum[1] -= B2(qz, k) * fluxes(qz, qy, qx)[2];
+          }
+          cache.A2(0, k, qy, qx) = sum[0];
+          cache.A2(1, k, qy, qx) = sum[1];
+        }
+      }
+    }
+
+    for (int k = 0; k < p + 1; k++) {
+      for (int j = 0; j < p + 1; j++) {
+        for (int qx = 0; qx < q; qx++) {
+          double sum = 0.0;
+          for (int qy = 0; qy < q; qy++) {
+            sum += B2(qy, j) * cache.A2(0, k, qy, qx);
+            sum += G2(qy, j) * cache.A2(1, k, qy, qx);
+          }
+          cache.A1(k, j, qx) = sum;
+        }
+      }
+    }
+
+    for (int k = 0; k < p + 1; k++) {
+      for (int j = 0; j < p + 1; j++) {
+        for (int i = 0; i < p; i++) {
+          double sum = 0.0;
+          for (int qx = 0; qx < q; qx++) {
+            sum += B1(qx, i) * cache.A1(k, j, qx);
+          }
+          element_residual.x(k, j, i) = sum;
+        }
+      }
+    }
+
+    /////////////////////////////////
+    ////////// Y-component //////////
+    /////////////////////////////////
+    for (int k = 0; k < p + 1; k++) {
+      for (int qy = 0; qy < q; qy++) {
+        for (int qx = 0; qx < q; qx++) {
+          double sum[2]{};
+          for (int qz = 0; qz < q; qz++) {
+            sum[0] += B2(qz, k) * sources(qz, qy, qx)[1] - G2(qz, k) * fluxes(qz, qy, qx)[0];
+            sum[1] += B2(qz, k) * fluxes(qz, qy, qx)[2];
+          }
+          cache.A2(0, k, qy, qx) = sum[0];
+          cache.A2(1, k, qy, qx) = sum[1];
+        }
+      }
+    }
+
+    for (int k = 0; k < p + 1; k++) {
+      for (int i = 0; i < p + 1; i++) {
+        for (int qy = 0; qy < q; qy++) {
+          double sum = 0.0;
+          for (int qx = 0; qx < q; qx++) {
+            sum += B2(qx, i) * cache.A2(0, k, qy, qx);
+            sum += G2(qx, i) * cache.A2(1, k, qy, qx);
+          }
+          cache.A1(k, i, qy) = sum;
+        }
+      }
+    }
+
+    for (int k = 0; k < p + 1; k++) {
+      for (int j = 0; j < p; j++) {
+        for (int i = 0; i < p + 1; i++) {
+          double sum = 0.0;
+          for (int qy = 0; qy < q; qy++) {
+            sum += B1(qy, j) * cache.A1(k, i, qy);
+          }
+          element_residual.y(k, j, i) = sum;
+        }
+      }
+    }
+
+    /////////////////////////////////
+    ////////// Z-component //////////
+    /////////////////////////////////
+    for (int i = 0; i < p + 1; i++) {
+      for (int qz = 0; qz < q; qz++) {
+        for (int qy = 0; qy < q; qy++) {
+          double sum[2]{};
+          for (int qx = 0; qx < q; qx++) {
+            sum[0] += B2(qx, i) * sources(qz, qy, qx)[2] - G2(qx, i) * fluxes(qz, qy, qx)[1];
+            sum[1] += B2(qx, i) * fluxes(qz, qy, qx)[0];
+          }
+          cache.A2(0, i, qz, qy) = sum[0];
+          cache.A2(1, i, qz, qy) = sum[1];
+        }
+      }
+    }
+
+    for (int j = 0; j < p + 1; j++) {
+      for (int i = 0; i < p + 1; i++) {
+        for (int qz = 0; qz < q; qz++) {
+          double sum = 0.0;
+          for (int qy = 0; qy < q; qy++) {
+            sum += B2(qy, j) * cache.A2(0, i, qz, qy);
+            sum += G2(qy, j) * cache.A2(1, i, qz, qy);
+          }
+          cache.A1(j, i, qz) = sum;
+        }
+      }
+    }
+
+    for (int k = 0; k < p; k++) {
+      for (int j = 0; j < p + 1; j++) {
+        for (int i = 0; i < p + 1; i++) {
+          double sum = 0.0;
+          for (int qz = 0; qz < q; qz++) {
+            sum += B1(qz, k) * cache.A1(j, i, qz);
+          }
+          element_residual.z(k, j, i) = sum;
         }
       }
     }

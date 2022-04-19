@@ -1257,7 +1257,7 @@ SERAC_HOST_DEVICE bool is_symmetric_and_positive_definite(tensor<double, 3, 3> A
  * @note @a A and @a b are by-value as they are mutated as part of the elimination
  */
 template <typename T, int n>
-SERAC_HOST_DEVICE constexpr tensor<T, n> linear_solve(tensor<T, n, n> A, const tensor<T, n> b)
+SERAC_HOST_DEVICE constexpr tensor<T, n> linear_solve(tensor<T, n, n> A, tensor<T, n> b)
 {
   constexpr auto abs  = [](double x) { return (x < 0) ? -x : x; };
   constexpr auto swap = [](auto& x, auto& y) {

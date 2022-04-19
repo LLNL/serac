@@ -456,8 +456,8 @@ void SmemPAHcurlMassApply3D(const int D1D,
                             const bool symmetric,
                             const Array<double> &bo,
                             const Array<double> &bc,
-                            const Array<double> &bot,
-                            const Array<double> &bct,
+                            [[maybe_unused]] const Array<double> &bot, // ?
+                            [[maybe_unused]] const Array<double> &bct, // ?
                             const Vector &pa_data,
                             const Vector &x,
                             Vector &y)
@@ -1161,10 +1161,10 @@ static void SmemPACurlCurlApply3D(const int D1D,
                                   const int NE,
                                   const Array<double> &bo,
                                   const Array<double> &bc,
-                                  const Array<double> &bot,
-                                  const Array<double> &bct,
+                                  [[maybe_unused]] const Array<double> &bot, // ?
+                                  [[maybe_unused]] const Array<double> &bct, // ?
                                   const Array<double> &gc,
-                                  const Array<double> &gct,
+                                  [[maybe_unused]] const Array<double> &gct, // ?
                                   const Vector &pa_data,
                                   const Vector &x,
                                   Vector &y)

@@ -3,45 +3,35 @@
 
 namespace mfem {
 
-template<int T_D1D = 0, int T_Q1D = 0>
+template<int D1D, int Q1D>
 static void SmemPAMassApply3D(const int NE,
                               const Array<double> &b_,
                               const Array<double> &bt_,
                               const Vector &d_,
                               const Vector &x_,
-                              Vector &y_,
-                              const int d1d = 0,
-                              const int q1d = 0)
+                              Vector &y_)
 {
    MFEM_CONTRACT_VAR(bt_);
-   const int D1D = T_D1D ? T_D1D : d1d;
-   const int Q1D = T_Q1D ? T_Q1D : q1d;
-   constexpr int M1Q = T_Q1D ? T_Q1D : MAX_Q1D;
-   constexpr int M1D = T_D1D ? T_D1D : MAX_D1D;
-   MFEM_VERIFY(D1D <= M1D, "");
-   MFEM_VERIFY(Q1D <= M1Q, "");
    auto b = Reshape(b_.Read(), Q1D, D1D);
    auto d = Reshape(d_.Read(), Q1D, Q1D, Q1D, NE);
    auto x = Reshape(x_.Read(), D1D, D1D, D1D, NE);
-   auto y = Reshape(y_.ReadWrite(), D1D, D1D, D1D, NE);
+   auto y = Reshape(y_.ReadWrite(),  D1D, D1D, D1D, NE);
    MFEM_FORALL_3D(e, NE, Q1D, Q1D, 1,
    {
-      const int D1D = T_D1D ? T_D1D : d1d;
-      const int Q1D = T_Q1D ? T_Q1D : q1d;
-      constexpr int MQ1 = T_Q1D ? T_Q1D : MAX_Q1D;
-      constexpr int MD1 = T_D1D ? T_D1D : MAX_D1D;
+      constexpr int MQ1 = Q1D;
+      constexpr int MD1 = D1D;
       constexpr int MDQ = (MQ1 > MD1) ? MQ1 : MD1;
       MFEM_SHARED double sDQ[MQ1*MD1];
-      double (*B)[MD1] = (double (*)[MD1]) sDQ;
-      double (*Bt)[MQ1] = (double (*)[MQ1]) sDQ;
+      double (*B)[MD1] = reinterpret_cast< double (*)[MD1] >(sDQ);
+      double (*Bt)[MQ1] = reinterpret_cast< double (*)[MQ1] >(sDQ);
       MFEM_SHARED double sm0[MDQ*MDQ*MDQ];
       MFEM_SHARED double sm1[MDQ*MDQ*MDQ];
-      double (*X)[MD1][MD1]   = (double (*)[MD1][MD1]) sm0;
-      double (*DDQ)[MD1][MQ1] = (double (*)[MD1][MQ1]) sm1;
-      double (*DQQ)[MQ1][MQ1] = (double (*)[MQ1][MQ1]) sm0;
-      double (*QQQ)[MQ1][MQ1] = (double (*)[MQ1][MQ1]) sm1;
-      double (*QQD)[MQ1][MD1] = (double (*)[MQ1][MD1]) sm0;
-      double (*QDD)[MD1][MD1] = (double (*)[MD1][MD1]) sm1;
+      double (*X)[MD1][MD1]   = reinterpret_cast< double (*)[MD1][MD1] >(sm0);
+      double (*DDQ)[MD1][MQ1] = reinterpret_cast< double (*)[MD1][MQ1] >(sm1);
+      double (*DQQ)[MQ1][MQ1] = reinterpret_cast< double (*)[MQ1][MQ1] >(sm0);
+      double (*QQQ)[MQ1][MQ1] = reinterpret_cast< double (*)[MQ1][MQ1] >(sm1);
+      double (*QQD)[MQ1][MD1] = reinterpret_cast< double (*)[MQ1][MD1] >(sm0);
+      double (*QDD)[MD1][MD1] = reinterpret_cast< double (*)[MD1][MD1] >(sm1);
       MFEM_FOREACH_THREAD(dy,y,D1D)
       {
          MFEM_FOREACH_THREAD(dx,x,D1D)
@@ -139,11 +129,11 @@ static void SmemPAMassApply3D(const int NE,
          }
       }
       MFEM_SYNC_THREAD;
-      MFEM_FOREACH_THREAD(d,y,D1D)
+      MFEM_FOREACH_THREAD(i,y,D1D)
       {
-         MFEM_FOREACH_THREAD(q,x,Q1D)
+         MFEM_FOREACH_THREAD(j,x,Q1D)
          {
-            Bt[d][q] = b(q,d);
+            Bt[i][j] = b(j,i);
          }
       }
       MFEM_SYNC_THREAD;
@@ -230,23 +220,15 @@ static void SmemPAMassApply3D(const int NE,
    });
 }
 
-template<int T_D1D = 0, int T_Q1D = 0>
+template<int D1D, int Q1D>
 static void SmemPADiffusionApply3D(const int NE,
                                    const bool symmetric,
                                    const Array<double> &b_,
                                    const Array<double> &g_,
                                    const Vector &d_,
                                    const Vector &x_,
-                                   Vector &y_,
-                                   const int d1d = 0,
-                                   const int q1d = 0)
+                                   Vector &y_)
 {
-   const int D1D = T_D1D ? T_D1D : d1d;
-   const int Q1D = T_Q1D ? T_Q1D : q1d;
-   constexpr int M1Q = T_Q1D ? T_Q1D : MAX_Q1D;
-   constexpr int M1D = T_D1D ? T_D1D : MAX_D1D;
-   MFEM_VERIFY(D1D <= M1D, "");
-   MFEM_VERIFY(Q1D <= M1Q, "");
    auto b = Reshape(b_.Read(), Q1D, D1D);
    auto g = Reshape(g_.Read(), Q1D, D1D);
    auto d = Reshape(d_.Read(), Q1D, Q1D, Q1D, symmetric ? 6 : 9, NE);
@@ -254,33 +236,31 @@ static void SmemPADiffusionApply3D(const int NE,
    auto y = Reshape(y_.ReadWrite(), D1D, D1D, D1D, NE);
    MFEM_FORALL_3D(e, NE, Q1D, Q1D, Q1D,
    {
-      const int D1D = T_D1D ? T_D1D : d1d;
-      const int Q1D = T_Q1D ? T_Q1D : q1d;
-      constexpr int MQ1 = T_Q1D ? T_Q1D : MAX_Q1D;
-      constexpr int MD1 = T_D1D ? T_D1D : MAX_D1D;
+      constexpr int MQ1 = Q1D;
+      constexpr int MD1 = D1D;
       constexpr int MDQ = (MQ1 > MD1) ? MQ1 : MD1;
       MFEM_SHARED double sBG[2][MQ1*MD1];
-      double (*B)[MD1] = (double (*)[MD1]) (sBG+0);
-      double (*G)[MD1] = (double (*)[MD1]) (sBG+1);
-      double (*Bt)[MQ1] = (double (*)[MQ1]) (sBG+0);
-      double (*Gt)[MQ1] = (double (*)[MQ1]) (sBG+1);
+      double (*B)[MD1]  = reinterpret_cast < double (*)[MD1] >(sBG+0);
+      double (*G)[MD1]  = reinterpret_cast < double (*)[MD1] >(sBG+1);
+      double (*Bt)[MQ1] = reinterpret_cast < double (*)[MQ1] >(sBG+0);
+      double (*Gt)[MQ1] = reinterpret_cast < double (*)[MQ1] >(sBG+1);
       MFEM_SHARED double sm0[3][MDQ*MDQ*MDQ];
       MFEM_SHARED double sm1[3][MDQ*MDQ*MDQ];
-      double (*X)[MD1][MD1]    = (double (*)[MD1][MD1]) (sm0+2);
-      double (*DDQ0)[MD1][MQ1] = (double (*)[MD1][MQ1]) (sm0+0);
-      double (*DDQ1)[MD1][MQ1] = (double (*)[MD1][MQ1]) (sm0+1);
-      double (*DQQ0)[MQ1][MQ1] = (double (*)[MQ1][MQ1]) (sm1+0);
-      double (*DQQ1)[MQ1][MQ1] = (double (*)[MQ1][MQ1]) (sm1+1);
-      double (*DQQ2)[MQ1][MQ1] = (double (*)[MQ1][MQ1]) (sm1+2);
-      double (*QQQ0)[MQ1][MQ1] = (double (*)[MQ1][MQ1]) (sm0+0);
-      double (*QQQ1)[MQ1][MQ1] = (double (*)[MQ1][MQ1]) (sm0+1);
-      double (*QQQ2)[MQ1][MQ1] = (double (*)[MQ1][MQ1]) (sm0+2);
-      double (*QQD0)[MQ1][MD1] = (double (*)[MQ1][MD1]) (sm1+0);
-      double (*QQD1)[MQ1][MD1] = (double (*)[MQ1][MD1]) (sm1+1);
-      double (*QQD2)[MQ1][MD1] = (double (*)[MQ1][MD1]) (sm1+2);
-      double (*QDD0)[MD1][MD1] = (double (*)[MD1][MD1]) (sm0+0);
-      double (*QDD1)[MD1][MD1] = (double (*)[MD1][MD1]) (sm0+1);
-      double (*QDD2)[MD1][MD1] = (double (*)[MD1][MD1]) (sm0+2);
+      double (*X)[MD1][MD1]    = reinterpret_cast < double (*)[MD1][MD1] >(sm0+2);
+      double (*DDQ0)[MD1][MQ1] = reinterpret_cast < double (*)[MD1][MQ1] >(sm0+0);
+      double (*DDQ1)[MD1][MQ1] = reinterpret_cast < double (*)[MD1][MQ1] >(sm0+1);
+      double (*DQQ0)[MQ1][MQ1] = reinterpret_cast < double (*)[MQ1][MQ1] >(sm1+0);
+      double (*DQQ1)[MQ1][MQ1] = reinterpret_cast < double (*)[MQ1][MQ1] >(sm1+1);
+      double (*DQQ2)[MQ1][MQ1] = reinterpret_cast < double (*)[MQ1][MQ1] >(sm1+2);
+      double (*QQQ0)[MQ1][MQ1] = reinterpret_cast < double (*)[MQ1][MQ1] >(sm0+0);
+      double (*QQQ1)[MQ1][MQ1] = reinterpret_cast < double (*)[MQ1][MQ1] >(sm0+1);
+      double (*QQQ2)[MQ1][MQ1] = reinterpret_cast < double (*)[MQ1][MQ1] >(sm0+2);
+      double (*QQD0)[MQ1][MD1] = reinterpret_cast < double (*)[MQ1][MD1] >(sm1+0);
+      double (*QQD1)[MQ1][MD1] = reinterpret_cast < double (*)[MQ1][MD1] >(sm1+1);
+      double (*QQD2)[MQ1][MD1] = reinterpret_cast < double (*)[MQ1][MD1] >(sm1+2);
+      double (*QDD0)[MD1][MD1] = reinterpret_cast < double (*)[MD1][MD1] >(sm0+0);
+      double (*QDD1)[MD1][MD1] = reinterpret_cast < double (*)[MD1][MD1] >(sm0+1);
+      double (*QDD2)[MD1][MD1] = reinterpret_cast < double (*)[MD1][MD1] >(sm0+2);
       MFEM_FOREACH_THREAD(dz,z,D1D)
       {
          MFEM_FOREACH_THREAD(dy,y,D1D)

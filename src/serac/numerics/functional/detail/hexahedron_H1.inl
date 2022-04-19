@@ -230,6 +230,7 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
         for (int qx = 0; qx < q; qx++) {
           auto J_T = transpose(jacobians(qz, qy, qx));
           auto dv = det(J_T) * weights1D[qx] * weights1D[qy] * weights1D[qz];
+          sources(qz, qy, qx) = sources(qz, qy, qx) * dv;
           fluxes(qz, qy, qx) = dot(fluxes(qz, qy, qx), inv(J_T)) * dv;
         }
       }
@@ -277,7 +278,7 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
               sum += B(qz, dz) * cache.A1(0, dx, dy, qz);
               sum += G(qz, dz) * cache.A1(1, dx, dy, qz);
             }
-            element_residual(dx,dy,dz)[i] += sum;
+            element_residual(i,dz,dy,dx) += sum;
           }
         }
       }
