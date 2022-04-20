@@ -48,6 +48,7 @@ namespace serac {
 TEST_F(MeshTest, lua_input_main_mesh_from_file)
 {
     MPI_Barrier(MPI_COMM_WORLD);
+
     reader_->parseString(std::string("main_mesh_from_file = { type = \"file\",") +
         "mesh = \"beam-hex.mesh\", ser_ref_levels = 1, par_ref_levels = 0, }");
     auto& mesh_table = inlet_->addStruct("main_mesh_from_file");
@@ -57,26 +58,31 @@ TEST_F(MeshTest, lua_input_main_mesh_from_file)
     auto       mesh_options = mesh_table.get<mesh::InputOptions>();
     const auto file_options = std::get_if<mesh::FileInputOptions>(&mesh_options.extra_options);
     ASSERT_NE(file_options, nullptr);
-    std::cout << "Here: " << file_options->relative_mesh_file_name << std::endl;
-    std::cout << "Here: " << base_mesh_file_ << std::endl;
-    // TODO fix this line
-    auto full_mesh_path = input::findMeshFilePath(file_options->relative_mesh_file_name, base_mesh_file_);
 
-    /*
-    file_options->absolute_mesh_file_name =
-        input::findMeshFilePath(file_options->relative_mesh_file_name, base_mesh_file_);
+    std::string mesh_path = base_mesh_file_ + file_options->relative_mesh_file_name;
+    auto full_mesh_path = serac::input::findMeshFilePath(mesh_path, "");
+    file_options->absolute_mesh_file_name = full_mesh_path;
     auto mesh = mesh::buildParallelMesh(mesh_options);
-    */
+
     MPI_Barrier(MPI_COMM_WORLD);
 }
 
-/*
 TEST_F(MeshTest, lua_input_main_mesh_cuboid)
 {
     MPI_Barrier(MPI_COMM_WORLD);
     reader_->parseString(std::string("main_mesh_cuboid = { type = \"box\",") +
         "elements = {x = 3, y = 3, z = 3}, size = {x = 1, y = 2, z = 3}," + 
         "ser_ref_levels = 0, par_ref_levels = 0, }");
+    auto& mesh_table = inlet_->addStruct("main_mesh_cuboid");
+    mesh::InputOptions::defineInputFileSchema(mesh_table);
+
+    // Build and test mesh
+    auto       mesh_options   = mesh_table.get<serac::mesh::InputOptions>();
+    const auto cuboid_options = std::get_if<serac::mesh::BoxInputOptions>(&mesh_options.extra_options);
+    ASSERT_NE(cuboid_options, nullptr);
+    EXPECT_EQ(cuboid_options->elements.size(), 3);
+    auto mesh = serac::mesh::buildParallelMesh(mesh_options);
+    EXPECT_EQ(mesh->GetNE(), cuboid_options->elements[0] * cuboid_options->elements[1] * cuboid_options->elements[2]);
 
     MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -86,6 +92,16 @@ TEST_F(MeshTest, lua_input_main_mesh_rect)
     MPI_Barrier(MPI_COMM_WORLD);
     reader_->parseString(std::string("main_mesh_rect = { type = \"box\",") +
         "elements = {x = 3, y = 3}, ser_ref_levels = 0, par_ref_levels = 0, }");
+    auto& mesh_table = inlet_->addStruct("main_mesh_rect");
+    mesh::InputOptions::defineInputFileSchema(mesh_table);
+
+    // Build and test mesh
+    auto       mesh_options = mesh_table.get<serac::mesh::InputOptions>();
+    const auto rect_options = std::get_if<serac::mesh::BoxInputOptions>(&mesh_options.extra_options);
+    ASSERT_NE(rect_options, nullptr);
+    EXPECT_EQ(rect_options->elements.size(), 2);
+    auto mesh = serac::mesh::buildParallelMesh(mesh_options);
+    EXPECT_EQ(mesh->GetNE(), rect_options->elements[0] * rect_options->elements[1]);
 
     MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -96,9 +112,14 @@ TEST_F(MeshTest, lua_input_main_mesh_fail)
     reader_->parseString(std::string("main_mesh_fail = { type = \"invalid\",") +
         "mesh = \"beam-hex.mesh\", ser_ref_levels = 1, par_ref_levels = 0, }");
 
+    // Check that we fail on an invalid mesh description
+    auto& mesh_table = inlet_->addStruct("main_mesh_fail", "An invalid mesh description");
+    mesh::InputOptions::defineInputFileSchema(mesh_table);
+
     MPI_Barrier(MPI_COMM_WORLD);
 }
 
+/*
 TEST(meshgen, lua_input)
 {
     MPI_Barrier(MPI_COMM_WORLD);
@@ -181,7 +202,7 @@ TEST(meshgen, successful_creation)
     ASSERT_EQ(buildHollowCylinderMesh(2, 1, 2.0, 3.0, 5.0, 2. * M_PI, 7).GetNE(), 112);
 }
 
-}
+} // namespace serac end
 
 //------------------------------------------------------------------------------
 #include "axom/slic/core/SimpleLogger.hpp"
