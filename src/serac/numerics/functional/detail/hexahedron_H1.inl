@@ -98,7 +98,7 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
 
   template < int q >
   static auto interpolate(const dof_type & X, 
-                          const tensor < double, q, q, q, dim, dim > & jacobians,
+                          const tensor < double, dim, dim, q, q, q > & jacobians,
                           const TensorProductQuadratureRule<q> &) {
 
     // we want to compute the following:
@@ -186,7 +186,12 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
       for (int qz = 0; qz < q; qz++) {
         for (int qy = 0; qy < q; qy++) {
           for (int qx = 0; qx < q; qx++) {
-            auto J = jacobians(qz, qy, qx);
+            tensor< double, dim, dim > J;
+            for (int row = 0; row < dim; row++) {
+              for (int col = 0; col < dim; col++) {
+                J[row][col] = jacobians(col, row, qz, qy, qx);
+              }
+            }
             auto grad_u = serac::get<1>(values_and_derivatives)(qz, qy, qx);
             serac::get<1>(values_and_derivatives)(qz, qy, qx) = dot(grad_u, inv(J));
           }
@@ -201,7 +206,7 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
   template < int q >
   static void integrate(cpu_batched_values_type<q> & sources,
                         cpu_batched_derivatives_type<q> & fluxes,
-                        const tensor < double, q, q, q, dim, dim > & jacobians,
+                        const tensor < double, dim, dim, q, q, q > & jacobians,
                         const TensorProductQuadratureRule<q> &, 
                         dof_type & element_residual) {
 
@@ -228,7 +233,12 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
     for (int qz = 0; qz < q; qz++) {
       for (int qy = 0; qy < q; qy++) {
         for (int qx = 0; qx < q; qx++) {
-          auto J_T = transpose(jacobians(qz, qy, qx));
+          tensor< double, dim, dim > J_T;
+          for (int row = 0; row < dim; row++) {
+            for (int col = 0; col < dim; col++) {
+              J_T[row][col] = jacobians(row, col, qz, qy, qx);
+            }
+          }
           auto dv = det(J_T) * weights1D[qx] * weights1D[qy] * weights1D[qz];
           sources(qz, qy, qx) = sources(qz, qy, qx) * dv;
           fluxes(qz, qy, qx) = dot(fluxes(qz, qy, qx), inv(J_T)) * dv;

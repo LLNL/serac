@@ -24,7 +24,6 @@ set_source_files_properties(batched_shape_functions.cpp PROPERTIES LANGUAGE CXX)
 target_compile_options(batched_shape_functions PUBLIC "-march=skylake-avx512")
 target_compile_options(batched_shape_functions PUBLIC "-Wno-unused-function")
 target_compile_options(batched_shape_functions PUBLIC "-Wno-shadow")
-#target_compile_options(batched_shape_functions PUBLIC "-Wno-array-bounds")
 
 
 if(ENABLE_CUDA)

@@ -355,7 +355,12 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
     for (int qz = 0; qz < q; qz++) {
       for (int qy = 0; qy < q; qy++) {
         for (int qx = 0; qx < q; qx++) {
-          auto J_T = transpose(jacobians(qz, qy, qx));
+          tensor< double, dim, dim > J_T;
+          for (int row = 0; row < dim; row++) {
+            for (int col = 0; col < dim; col++) {
+              J_T[row][col] = jacobians(row, col, qz, qy, qx);
+            }
+          }
           auto detJ = det(J_T);
           auto value = serac::get<0>(values_and_derivatives)(qz, qy, qx);
           auto curl = serac::get<1>(values_and_derivatives)(qz, qy, qx);
@@ -366,177 +371,6 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
     }
 
     return values_and_derivatives;
-
-  }
-
-  template < int q >
-  static void interpolate(const dof_type & element_values, const TensorProductQuadratureRule<q> &, 
-                          cache_type<q> & cache, 
-                          const tensor < double, q, q, q, dim, dim > & jacobians,
-                          const tensor < double, q, q, q > & jacobians_det,
-                          cpu_batched_values_type<q> & value_q, cpu_batched_derivatives_type<q> & curl_q) {
-
-    auto xi = GaussLegendreNodes<q>();
-
-    tensor<double, q, p > B1;
-    tensor<double, q, p+1 > B2;
-    tensor<double, q, p+1 > G2;
-    for (int i = 0; i < q; i++) {
-      B1[i] = GaussLegendreInterpolation<p>(xi[i]);
-      B2[i] = GaussLobattoInterpolation<p+1>(xi[i]);
-      G2[i] = GaussLobattoInterpolationDerivative<p+1>(xi[i]);
-    }
-
-    tensor< double, 3 > value{};
-    tensor< double, 3 > curl{};
-
-    /////////////////////////////////
-    ////////// X-component //////////
-    /////////////////////////////////
-    for (int k = 0; k < p + 1; k++) {
-      for (int j = 0; j < p + 1; j++) {
-        for (int qx = 0; qx < q; qx++) {
-          double sum = 0.0;
-          for (int i = 0; i < p; i++) {
-            sum += B1(qx, i) * element_values.x(k, j, i);
-          }
-          cache.A1(k, j, qx) = sum;
-        }
-      }
-    }
-
-    for (int k = 0; k < p + 1; k++) {
-      for (int qy = 0; qy < q; qy++) {
-        for (int qx = 0; qx < q; qx++) {
-          double sum[2]{};
-          for (int j = 0; j < (p + 1); j++) {
-            sum[0] += B2(qy, j) * cache.A1(k, j, qx);
-            sum[1] += G2(qy, j) * cache.A1(k, j, qx);
-          }
-          cache.A2(0, k, qy, qx) = sum[0];
-          cache.A2(1, k, qy, qx) = sum[1];
-        }
-      }
-    }
-
-    for (int qz = 0; qz < q; qz++) {
-      for (int qy = 0; qy < q; qy++) {
-        for (int qx = 0; qx < q; qx++) {
-          double sum[3]{};
-          for (int k = 0; k < (p + 1); k++) {
-            sum[0] += B2(qz, k) * cache.A2(0, k, qy, qx);
-            sum[1] += G2(qz, k) * cache.A2(0, k, qy, qx);
-            sum[2] += B2(qz, k) * cache.A2(1, k, qy, qx);
-          }
-          value[0] += sum[0];
-          curl[1]  += sum[1];
-          curl[2]  -= sum[2];
-        }
-      }
-    }
-
-    /////////////////////////////////
-    ////////// Y-component //////////
-    /////////////////////////////////
-    for (int k = 0; k < p + 1; k++) {
-      for (int i = 0; i < p + 1; i++) {
-        for (int qy = 0; qy < q; qy++) {
-          double sum = 0.0;
-          for (int j = 0; j < p; j++) {
-            sum += B1(qy, j) * element_values.y(k, j, i);
-          }
-          cache.A1(k, i, qy) = sum;
-        }
-      }
-    }
-
-    for (int k = 0; k < p + 1; k++) {
-      for (int qy = 0; qy < q; qy++) {
-        for (int qx = 0; qx < q; qx++) {
-          double sum[2]{};
-          for (int i = 0; i < (p + 1); i++) {
-            sum[0] += B2(qx, i) * cache.A1(k, i, qy);
-            sum[1] += G2(qx, i) * cache.A1(k, i, qy);
-          }
-          cache.A2(0, k, qy, qx) = sum[0];
-          cache.A2(1, k, qy, qx) = sum[1];
-        }
-      }
-    }
-
-    for (int qz = 0; qz < q; qz++) {
-      for (int qy = 0; qy < q; qy++) {
-        for (int qx = 0; qx < q; qx++) {
-          double sum[3]{};
-          for (int k = 0; k < (p + 1); k++) {
-            sum[0] += B2(qz, k) * cache.A2(0, k, qy, qx);
-            sum[1] += G2(qz, k) * cache.A2(0, k, qy, qx);
-            sum[2] += B2(qz, k) * cache.A2(1, k, qy, qx);
-          }
-          value[1] += sum[0];
-          curl[2]  += sum[2];
-          curl[0]  -= sum[1];
-        }
-      }
-    }
-
-    /////////////////////////////////
-    ////////// Z-component //////////
-    /////////////////////////////////
-    for (int j = 0; j < p + 1; j++) {
-      for (int i = 0; i < p + 1; i++) {
-        for (int qz = 0; qz < q; qz++) {
-          double sum = 0.0;
-          for (int k = 0; k < p; k++) {
-            sum += B1(qz, k) * element_values.z(k, j, i);
-          }
-          cache.A1(j, i, qz) = sum;
-        }
-      }
-    }
-
-    for (int j = 0; j < p + 1; j++) {
-      for (int qz = 0; qz < q; qz++) {
-        for (int qx = 0; qx < q; qx++) {
-          double sum[2]{};
-          for (int i = 0; i < (p + 1); i++) {
-            sum[0] += B2(qx, i) * cache.A1(j, i, qz);
-            sum[1] += G2(qx, i) * cache.A1(j, i, qz);
-          }
-          cache.A2(0, j, qz, qx) = sum[0];
-          cache.A2(1, j, qz, qx) = sum[1];
-        }
-      }
-    }
-
-    for (int qz = 0; qz < q; qz++) {
-      for (int qy = 0; qy < q; qy++) {
-        for (int qx = 0; qx < q; qx++) {
-          double sum[3]{};
-          for (int j = 0; j < (p + 1); j++) {
-            sum[0] += B2(qy, j) * cache.A2(0, j, qz, qx);
-            sum[1] += G2(qy, j) * cache.A2(0, j, qz, qx);
-            sum[2] += B2(qy, j) * cache.A2(1, j, qz, qx);
-          }
-          value[2] += sum[0];
-          curl[0]  += sum[1];
-          curl[1]  -= sum[2];
-        }
-      }
-    }
-
-    // apply covariant Piola transformation to go
-    // from parent element -> physical element
-    for (int qz = 0; qz < q; qz++) {
-      for (int qy = 0; qy < q; qy++) {
-        for (int qx = 0; qx < q; qx++) {
-          auto detJ = jacobians_det(qz, qy, qx);
-          auto J_T = transpose(jacobians(qz, qy, qx));
-          value_q(qz, qy, qx) = linear_solve(J_T, value);
-          curl_q(qz, qy, qx) = dot(curl, J_T) / detJ;
-        }
-      }
-    }
 
   }
 
@@ -566,7 +400,12 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
     for (int qz = 0; qz < q; qz++) {
       for (int qy = 0; qy < q; qy++) {
         for (int qx = 0; qx < q; qx++) {
-          auto J = jacobians(qz, qy, qx);
+          tensor< double, dim, dim > J;
+          for (int row = 0; row < dim; row++) {
+            for (int col = 0; col < dim; col++) {
+              J[row][col] = jacobians(col, row, qz, qy, qx);
+            }
+          }
           auto detJ = serac::det(J);
           auto dv = detJ * weights1D[qx] * weights1D[qy] * weights1D[qz];
           sources(qz, qy, qx) = linear_solve(J, sources(qz, qy, qx)) * dv;

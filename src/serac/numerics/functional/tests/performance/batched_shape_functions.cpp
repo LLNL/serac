@@ -112,13 +112,13 @@ auto batch_apply_qf(lambda qf, const tensor<value_t, q, q>& values, const tensor
   tensor<source_type, q, q> sources{};
   tensor<flux_type, q, q>   fluxes{};
 
-    for (int qy = 0; qy < q; ++qy) {
-      for (int qx = 0; qx < q; ++qx) {
-        auto [source, flux] = qf(serac::tuple{values(qy, qx), derivatives(qy, qx)});
-        sources(qy, qx) = source;
-        fluxes(qy, qx)  = flux;
-      }
+  for (int qy = 0; qy < q; ++qy) {
+    for (int qx = 0; qx < q; ++qx) {
+      auto [source, flux] = qf(serac::tuple{values(qy, qx), derivatives(qy, qx)});
+      sources(qy, qx)     = source;
+      fluxes(qy, qx)      = flux;
     }
+  }
 
   return serac::tuple{sources, fluxes};
 }
@@ -196,80 +196,26 @@ void cpu_batched_kernel(const double* inputs, double* outputs, const double* jac
   using test_element  = finite_element<g, test>;
   using trial_element = finite_element<g, trial>;
 
-  if constexpr (g == Geometry::Hexahedron) {
+  static constexpr TensorProductQuadratureRule<q> rule{};
 
-    static constexpr int                            dim = 3;
-    static constexpr TensorProductQuadratureRule<q> rule{};
+  auto u = reinterpret_cast<const typename trial_element::dof_type*>(inputs);
+  auto r = reinterpret_cast<typename test_element::dof_type*>(outputs);
+  auto J = reinterpret_cast<const typename batched_jacobian<g, q>::type*>(jacobians);
 
-    auto u = reinterpret_cast<const typename trial_element::dof_type*>(inputs);
-    auto r = reinterpret_cast<typename test_element::dof_type*>(outputs);
-    auto J = reinterpret_cast<const tensor<double, dim, dim, q, q, q>*>(jacobians);
+  // for each element in the domain
+  for (size_t e = 0; e < num_elements; e++) {
+    // load the element values and jacobians for this element
+    auto u_e = u[e];
+    auto J_e = J[e];
 
-    // for each element in the domain
-    for (size_t e = 0; e < num_elements; e++) {
-      // load the element values and jacobians for this element
-      auto u_e = u[e];
+    // (batch) interpolate each quadrature point's value
+    auto [values, derivatives] = trial_element::interpolate(u_e, J_e, rule);
 
-      tensor<double, q, q, q, dim, dim> J_e;
-      for (int qx = 0; qx < q; qx++) {
-        for (int qy = 0; qy < q; qy++) {
-          for (int qz = 0; qz < q; qz++) {
-            for (int i = 0; i < dim; i++) {
-              for (int j = 0; j < dim; j++) {
-                J_e(qz, qy, qx, i, j) = J[e](j, i, qz, qy, qx);
-              }
-            }
-          }
-        }
-      }
+    // (batch) evalute the q-function at each quadrature point
+    auto [sources, fluxes] = batch_apply_qf(qf, values, derivatives);
 
-      // (batch) interpolate each quadrature point's value
-      auto [values, derivatives] = trial_element::interpolate(u_e, J_e, rule);
-
-      // (batch) evalute the q-function at each quadrature point
-      auto [sources, fluxes] = batch_apply_qf(qf, values, derivatives);
-
-      // (batch) integrate the material response against the test-space basis functions
-      test_element::integrate(sources, fluxes, J_e, rule, r[e]);
-    }
-
-  }
-
-  if constexpr (g == Geometry::Quadrilateral) {
-
-    static constexpr int                            dim = 2;
-    static constexpr TensorProductQuadratureRule<q> rule{};
-
-    auto u = reinterpret_cast<const typename trial_element::dof_type*>(inputs);
-    auto r = reinterpret_cast<typename test_element::dof_type*>(outputs);
-    auto J = reinterpret_cast<const tensor<double, dim, dim, q, q>*>(jacobians);
-
-    // for each element in the domain
-    for (size_t e = 0; e < num_elements; e++) {
-      // load the element values and jacobians for this element
-      auto u_e = u[e];
-
-      tensor<double, q, q, dim, dim> J_e;
-      for (int qx = 0; qx < q; qx++) {
-        for (int qy = 0; qy < q; qy++) {
-          for (int i = 0; i < dim; i++) {
-            for (int j = 0; j < dim; j++) {
-              J_e(qy, qx, i, j) = J[e](j, i, qy, qx);
-            }
-          }
-        }
-      }
-
-      // (batch) interpolate each quadrature point's value
-      auto [values, derivatives] = trial_element::interpolate(u_e, J_e, rule);
-
-      // (batch) evalute the q-function at each quadrature point
-      auto [sources, fluxes] = batch_apply_qf(qf, values, derivatives);
-
-      // (batch) integrate the material response against the test-space basis functions
-      test_element::integrate(sources, fluxes, J_e, rule, r[e]);
-    }
-
+    // (batch) integrate the material response against the test-space basis functions
+    test_element::integrate(sources, fluxes, J_e, rule, r[e]);
   }
 }
 
@@ -364,7 +310,7 @@ void h1_h1_test_2D(int num_elements, int num_runs)
     double runtime = time([&]() {
                        for (int i = 0; i < num_runs; i++) {
                          serac::reference_kernel<Geometry::Quadrilateral, test, trial, q>(U1D, R1D, J1D, num_elements,
-                                                                                       mass_plus_diffusion);
+                                                                                          mass_plus_diffusion);
                          compiler::please_do_not_optimize_away(&R1D);
                        }
                      }) /
@@ -441,7 +387,7 @@ void h1_h1_test_2D(int num_elements, int num_runs)
   error -= answer_mfem;
   relative_error = error.Norml2() / answer_reference.Norml2();
   std::cout << "error: " << relative_error << std::endl;
-  #endif
+#endif
 }
 
 template <int p, int q>
@@ -634,8 +580,8 @@ void hcurl_hcurl_test_2D(int num_elements, int num_runs)
   // mfem::Vector rho_invJ_invJT_dv_1D(num_elements * dim * dim * q * q);
   // mfem::Vector k_JTJ_dv_over_detJsq_1D(num_elements * dim * dim * q * q);
 
-  auto U                    = mfem::Reshape(U1D.ReadWrite(), trial_element::ndof, num_elements);
-  auto J                    = mfem::Reshape(J1D.ReadWrite(), q * q, dim, dim, num_elements);
+  auto U = mfem::Reshape(U1D.ReadWrite(), trial_element::ndof, num_elements);
+  auto J = mfem::Reshape(J1D.ReadWrite(), q * q, dim, dim, num_elements);
   // auto rho_invJ_invJT_dv    = mfem::Reshape(rho_invJ_invJT_dv_1D.ReadWrite(), q * q, dim, dim, num_elements);
   // auto k_JTJ_dv_over_detJsq = mfem::Reshape(k_JTJ_dv_over_detJsq_1D.ReadWrite(), q * q, dim, dim, num_elements);
 
@@ -655,24 +601,23 @@ void hcurl_hcurl_test_2D(int num_elements, int num_runs)
         }
       }
 
-/*
-      int qx = i % q;
-      int qy = i / q;
+      /*
+            int qx = i % q;
+            int qy = i / q;
 
-      double qweight    = rule.weight(qx, qy, qz);
-      auto   JTJ        = dot(transpose(J_q), J_q);
-      auto   invJ_invJT = dot(inv(J_q), transpose(inv(J_q)));
-      auto   detJ       = det(J_q);
-      double dv         = det(J_q) * qweight;
+            double qweight    = rule.weight(qx, qy, qz);
+            auto   JTJ        = dot(transpose(J_q), J_q);
+            auto   invJ_invJT = dot(inv(J_q), transpose(inv(J_q)));
+            auto   detJ       = det(J_q);
+            double dv         = det(J_q) * qweight;
 
-      for (int r = 0; r < dim; r++) {
-        for (int c = 0; c < dim; c++) {
-          k_JTJ_dv_over_detJsq(i, r, c, e) = k * (JTJ[r][c] / (detJ * detJ)) * dv;
-          rho_invJ_invJT_dv(i, r, c, e)    = rho * invJ_invJT[r][c] * dv;
-        }
-      }
-*/
-
+            for (int r = 0; r < dim; r++) {
+              for (int c = 0; c < dim; c++) {
+                k_JTJ_dv_over_detJsq(i, r, c, e) = k * (JTJ[r][c] / (detJ * detJ)) * dv;
+                rho_invJ_invJT_dv(i, r, c, e)    = rho * invJ_invJT[r][c] * dv;
+              }
+            }
+      */
     }
   }
 
@@ -681,7 +626,7 @@ void hcurl_hcurl_test_2D(int num_elements, int num_runs)
     double runtime = time([&]() {
                        for (int i = 0; i < num_runs; i++) {
                          serac::reference_kernel<Geometry::Quadrilateral, test, trial, q>(U1D, R1D, J1D, num_elements,
-                                                                                       mass_plus_curlcurl);
+                                                                                          mass_plus_curlcurl);
                          compiler::please_do_not_optimize_away(&R1D);
                        }
                      }) /
@@ -846,7 +791,6 @@ void hcurl_hcurl_test_3D(int num_elements, int num_runs)
           rho_invJ_invJT_dv(i, r, c, e)    = rho * invJ_invJT[r][c] * dv;
         }
       }
-
     }
   }
 
@@ -929,13 +873,13 @@ void hcurl_hcurl_test_3D(int num_elements, int num_runs)
     std::cout << "average mfem mass kernel time: " << mass_runtime / num_runs << std::endl;
 
     double curlcurl_runtime = time([&]() {
-                                 for (int i = 0; i < num_runs; i++) {
-                                   mfem::PACurlCurlApply3D<n, q>(n, q, symmetric = false, num_elements, bo_, bc_, bot_,
-                                                                 bct_, gc_, gct_, k_JTJ_dv_over_detJsq_1D, U1D, R1D);
-                                   compiler::please_do_not_optimize_away(&R1D);
-                                 }
-                               }) /
-                               n;
+                                for (int i = 0; i < num_runs; i++) {
+                                  mfem::PACurlCurlApply3D<n, q>(n, q, symmetric = false, num_elements, bo_, bc_, bot_,
+                                                                bct_, gc_, gct_, k_JTJ_dv_over_detJsq_1D, U1D, R1D);
+                                  compiler::please_do_not_optimize_away(&R1D);
+                                }
+                              }) /
+                              n;
     std::cout << "average mfem curlcurl kernel time: " << curlcurl_runtime / num_runs << std::endl;
 
     std::cout << "average mfem combined kernel time: " << (mass_runtime + curlcurl_runtime) / num_runs << std::endl;
@@ -946,8 +890,6 @@ void hcurl_hcurl_test_3D(int num_elements, int num_runs)
   relative_error = error.Norml2() / answer_reference.Norml2();
   std::cout << "error: " << relative_error << std::endl;
 }
-
-
 
 int main()
 {

@@ -51,6 +51,19 @@ struct Dimension {
   constexpr operator int() { return d; }
 };
 
+template < Geometry g, int q >
+struct batched_jacobian;
+
+template < int q >
+struct batched_jacobian< Geometry::Hexahedron, q >{
+  using type = tensor<double, 3, 3, q, q, q>;
+};
+
+template < int q >
+struct batched_jacobian< Geometry::Quadrilateral, q >{
+  using type = tensor<double, 2, 2, q, q>;
+};
+
 /**
  * @brief Returns the dimension of an element geometry
  * @param[in] g The @p Geometry to retrieve the dimension of

@@ -113,7 +113,7 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
   }
 
   template <int q>
-  static auto interpolate(const dof_type& X, const tensor<double, q, q, dim, dim>& jacobians,
+  static auto interpolate(const dof_type& X, const tensor<double, dim, dim, q, q>& jacobians,
                           const TensorProductQuadratureRule<q>&)
   {
     // we want to compute the following:
@@ -181,7 +181,12 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
     }
     for (int qy = 0; qy < q; qy++) {
       for (int qx = 0; qx < q; qx++) {
-        auto J      = jacobians(qy, qx);
+        tensor< double, dim, dim > J;
+        for (int row = 0; row < dim; row++) {
+          for (int col = 0; col < dim; col++) {
+            J[row][col] = jacobians(col, row, qy, qx);
+          }
+        }
         auto grad_u = serac::get<1>(values_and_derivatives)(qy, qx);
 
         serac::get<1>(values_and_derivatives)(qy, qx) = dot(grad_u, inv(J));
@@ -193,7 +198,7 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
 
   template <int q>
   static void integrate(cpu_batched_values_type<q>& sources, cpu_batched_derivatives_type<q>& fluxes,
-                        const tensor<double, q, q, dim, dim>& jacobians, const TensorProductQuadratureRule<q>&,
+                        const tensor<double, dim, dim, q, q>& jacobians, const TensorProductQuadratureRule<q>&,
                         dof_type&                             element_residual)
   {
     static constexpr auto points1D  = GaussLegendreNodes<q>();
@@ -218,7 +223,12 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
 
     for (int qy = 0; qy < q; qy++) {
       for (int qx = 0; qx < q; qx++) {
-        auto J_T        = transpose(jacobians(qy, qx));
+        tensor< double, dim, dim > J_T;
+        for (int row = 0; row < dim; row++) {
+          for (int col = 0; col < dim; col++) {
+            J_T[row][col] = jacobians(row, col, qy, qx);
+          }
+        }
         auto dv         = det(J_T) * weights1D[qx] * weights1D[qy];
         sources(qy, qx) = sources(qy, qx) * dv;
         fluxes(qy, qx)  = dot(fluxes(qy, qx), inv(J_T)) * dv;
