@@ -37,7 +37,7 @@ class MeshTest : public ::testing::Test {
         std::optional<axom::inlet::Inlet> inlet_;
 
         // Where all of the .mesh files are located
-        std::string base_mesh_file_ = std::string(SERAC_REPO_DIR) + "/data/meshes/";
+        std::string base_mesh_dir_ = std::string(SERAC_REPO_DIR) + "/data/meshes/";
 
     private:
         axom::sidre::DataStore datastore_;
@@ -60,7 +60,7 @@ TEST_F(MeshTest, lua_input_main_mesh_from_file)
     ASSERT_NE(file_options, nullptr);
 
     // Check mesh path
-    std::string mesh_path = base_mesh_file_ + file_options->relative_mesh_file_name;
+    std::string mesh_path = base_mesh_dir_ + file_options->relative_mesh_file_name;
     EXPECT_EQ(filesystem::pathExists(possible_path), true);
     file_options->absolute_mesh_file_name = mesh_path;
 
