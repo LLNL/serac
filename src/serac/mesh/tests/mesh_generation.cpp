@@ -59,9 +59,11 @@ TEST_F(MeshTest, lua_input_main_mesh_from_file)
     const auto file_options = std::get_if<mesh::FileInputOptions>(&mesh_options.extra_options);
     ASSERT_NE(file_options, nullptr);
 
+    // Check mesh path
     std::string mesh_path = base_mesh_file_ + file_options->relative_mesh_file_name;
-    auto full_mesh_path = serac::input::findMeshFilePath(mesh_path, "");
-    file_options->absolute_mesh_file_name = full_mesh_path;
+    EXPECT_EQ(filesystem::pathExists(possible_path), true);
+    file_options->absolute_mesh_file_name = mesh_path;
+
     auto mesh = mesh::buildParallelMesh(mesh_options);
 
     MPI_Barrier(MPI_COMM_WORLD);
