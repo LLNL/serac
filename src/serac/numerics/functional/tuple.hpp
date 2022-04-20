@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -166,18 +166,28 @@ struct tuple<T0, T1, T2, T3, T4, T5, T6, T7> {
 
 /**
  * @brief Class template argument deduction rule for tuples
- *
  * @tparam T The variadic template parameter for tuple types
  */
 template <typename... T>
 tuple(T...) -> tuple<T...>;
+
+/**
+ * @brief helper function for combining a list of values into a tuple
+ * @tparam T types of the values to be tuple-d
+ * @param args the actual values to be put into a tuple
+ */
+template <typename... T>
+SERAC_HOST_DEVICE tuple<T...> make_tuple(const T&... args)
+{
+  return tuple<T...>{args...};
+}
 
 template <class... Types>
 struct tuple_size {
 };
 
 template <class... Types>
-struct tuple_size<serac::tuple<Types...> > : std::integral_constant<std::size_t, sizeof...(Types)> {
+struct tuple_size<serac::tuple<Types...>> : std::integral_constant<std::size_t, sizeof...(Types)> {
 };
 
 /**
@@ -221,7 +231,7 @@ SERAC_HOST_DEVICE constexpr auto& get(tuple<T...>& values)
  * @brief return a copy of the ith tuple entry
  */
 template <int i, typename... T>
-SERAC_HOST_DEVICE constexpr auto get(const tuple<T...>& values)
+SERAC_HOST_DEVICE constexpr const auto& get(const tuple<T...>& values)
 {
   static_assert(i < sizeof...(T), "");
   if constexpr (i == 0) {
@@ -309,6 +319,33 @@ SERAC_HOST_DEVICE constexpr auto operator+=(tuple<T...>& x, const tuple<T...>& y
 }
 
 /**
+ * @brief A helper function for the -= operator of tuples
+ *
+ * @tparam T the types stored in the tuples x and y
+ * @tparam i integer sequence used to index the tuples
+ * @param x tuple of values to be subracted from
+ * @param y tuple of values to subtract from x
+ */
+template <typename... T, int... i>
+SERAC_HOST_DEVICE constexpr void minus_equals_helper(tuple<T...>& x, const tuple<T...>& y,
+                                                     std::integer_sequence<int, i...>)
+{
+  ((get<i>(x) -= get<i>(y)), ...);
+}
+
+/**
+ * @tparam T the types stored in the tuples x and y
+ * @param x a tuple of values
+ * @param y a tuple of values
+ * @brief add values contained in y, to the tuple x
+ */
+template <typename... T>
+SERAC_HOST_DEVICE constexpr auto operator-=(tuple<T...>& x, const tuple<T...>& y)
+{
+  return minus_equals_helper(x, y, std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>());
+}
+
+/**
  * @brief A helper function for the - operator of tuples
  *
  * @tparam S the types stored in the tuple x
@@ -337,6 +374,31 @@ SERAC_HOST_DEVICE constexpr auto operator-(const tuple<S...>& x, const tuple<T..
 {
   static_assert(sizeof...(S) == sizeof...(T));
   return minus_helper(x, y, std::make_integer_sequence<int, static_cast<int>(sizeof...(S))>());
+}
+
+/**
+ * @brief A helper function for the - operator of tuples
+ *
+ * @tparam T the types stored in the tuple y
+ * @tparam i The integer sequence to i
+ * @param x tuple of values
+ * @return the returned tuple difference
+ */
+template <typename... T, int... i>
+SERAC_HOST_DEVICE constexpr auto unary_minus_helper(const tuple<T...>& x, std::integer_sequence<int, i...>)
+{
+  return tuple{-get<i>(x)...};
+}
+
+/**
+ * @tparam T the types stored in the tuple y
+ * @param x a tuple of values
+ * @brief return a tuple of values defined by applying the unary minus operator to each element of x
+ */
+template <typename... T>
+SERAC_HOST_DEVICE constexpr auto operator-(const tuple<T...>& x)
+{
+  return unary_minus_helper(x, std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>());
 }
 
 /**
@@ -510,6 +572,34 @@ SERAC_HOST_DEVICE constexpr auto operator*(const tuple<T...>& x, const double a)
 }
 
 /**
+ * @tparam T the types stored in the tuple
+ * @tparam i a list of indices used to acces each element of the tuple
+ * @param out the ostream to write the output to
+ * @param A the tuple of values
+ * @brief helper used to implement printing a tuple of values
+ */
+template <typename... T, std::size_t... i>
+auto& print_helper(std::ostream& out, const serac::tuple<T...>& A, std::integer_sequence<size_t, i...>)
+{
+  out << "tuple{";
+  (..., (out << (i == 0 ? "" : ", ") << serac::get<i>(A)));
+  out << "}";
+  return out;
+}
+
+/**
+ * @tparam T the types stored in the tuple
+ * @param out the ostream to write the output to
+ * @param A the tuple of values
+ * @brief print a tuple of values
+ */
+template <typename... T>
+auto& operator<<(std::ostream& out, const serac::tuple<T...>& A)
+{
+  return print_helper(out, A, std::make_integer_sequence<size_t, sizeof...(T)>());
+}
+
+/**
  * @brief A helper to apply a lambda to a tuple
  *
  * @tparam lambda The functor type
@@ -563,5 +653,29 @@ SERAC_HOST_DEVICE auto apply(lambda f, const tuple<T...>& args)
 {
   return apply_helper(f, std::move(args), std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>());
 }
+
+/**
+ * @brief a struct used to determine the type at index I of a tuple
+ *
+ * @note see: https://en.cppreference.com/w/cpp/utility/tuple/tuple_element
+ *
+ * @tparam I the index of the desired type
+ * @tparam T a tuple of different types
+ */
+template <size_t I, class T>
+struct tuple_element;
+
+// recursive case
+/// @overload
+template <size_t I, class Head, class... Tail>
+struct tuple_element<I, tuple<Head, Tail...>> : tuple_element<I - 1, tuple<Tail...>> {
+};
+
+// base case
+/// @overload
+template <class Head, class... Tail>
+struct tuple_element<0, tuple<Head, Tail...>> {
+  using type = Head;  ///< the type at the specified index
+};
 
 }  // namespace serac

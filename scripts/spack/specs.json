@@ -1,6 +1,6 @@
 {
     "__comment__":"##############################################################################",
-    "__comment__":"# Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and      ",
+    "__comment__":"# Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and      ",
     "__comment__":"# other Serac Project Developers. See the top-level COPYRIGHT file for details.",
     "__comment__":"#                                                                             ",
     "__comment__":"# SPDX-License-Identifier: (BSD-3-Clause)                                     ",
@@ -14,11 +14,11 @@
     "__comment__":"##############################################################################",
 
     "toss_3_x86_64_ib":
-    [ "clang@10.0.0+devtools",
-      "gcc@8.3.1+devtools" ],
+    [ "clang@10.0.0+devtools+profiling",
+      "gcc@8.3.1+devtools+profiling" ],
 
     "blueos_3_ppc64le_ib_p9":
-    [ "clang@10.0.1+devtools+cuda+raja+umpire+caliper cuda_arch=70" ],
+    [ "clang@10.0.1+devtools+cuda+raja+umpire+profiling cuda_arch=70" ],
 
     "darwin-x86_64":
     [ "clang@9.0.0+devtools" ]

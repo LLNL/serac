@@ -17,3 +17,10 @@ python:
   version: 3.7
   install:
     - requirements: src/docs/requirements.txt
+
+submodules:
+  exclude:
+  - cmake/blt
+  - scripts/uberenv
+  - axom
+  - mfem

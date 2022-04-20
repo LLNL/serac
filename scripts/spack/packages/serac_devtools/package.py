@@ -15,4 +15,5 @@ class SeracDevtools(BundlePackage):
     depends_on('doxygen')
     depends_on("llvm+clang@10.0.0")
     depends_on('python')
+    depends_on('py-ats')
     depends_on('py-sphinx')

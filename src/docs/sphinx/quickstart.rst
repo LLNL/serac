@@ -1,4 +1,4 @@
-.. ## Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+.. ## Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 .. ## other Serac Project Developers. See the top-level COPYRIGHT file for details.
 .. ##
 .. ## SPDX-License-Identifier: (BSD-3-Clause)
@@ -43,6 +43,8 @@ cmake-based `BLT HPC build system <https://github.com/LLNL/blt>`_.
   following command to upgrade your pip: ``python3 -m pip install --user --upgrade pip``.  This error
   will not necessarily be the last error on the screen.
 
+
+.. _devtools-label:
 
 Building Serac's Developer Tools
 --------------------------------
@@ -143,7 +145,7 @@ Some helpful uberenv options include :
 
 * ``--spec=+debug`` (build the MFEM and Hypre libraries with debug symbols)
 * ``--spec=+glvis`` (build the optional glvis visualization library)
-* ``--spec=+caliper`` (build the `Caliper performance profiling library <https://github.com/LLNL/Caliper>`_)
+* ``--spec=+profiling`` (build the Adiak and Caliper libraries)
 * ``--spec=+devtools`` (also build the devtools with one command)
 * ``--spec=%clang@10.0.0`` (build with a specific compiler as defined in the ``compiler.yaml`` file)
 * ``--spack-config-dir=<Path to spack configuration directory>`` (use specific Spack configuration files)
@@ -203,6 +205,7 @@ Some build options frequently used by Serac include:
 * ``ENABLE_BENCHMARKS``: Enables Google Benchmark performance tests, defaults to ``OFF``
 * ``ENABLE_WARNINGS_AS_ERRORS``: Turns compiler warnings into errors, defaults to ``ON``
 * ``ENABLE_ASAN``: Enables the Address Sanitizer for memory safety inspections, defaults to ``OFF``
+* ``SERAC_ENABLE_CODEVELOP``: Enables local development build of MFEM/Axom, see :ref:`codevelop-label`, defaults to ``OFF``
 
 Once the build has been configured, Serac can be built with the following commands:
 
@@ -238,7 +241,7 @@ install cmake, MPICH, openblas, OpenGL, and the various developer tools using th
 
    $ sudo apt-get update
    $ sudo apt-get upgrade
-   $ sudo apt-get install cmake libopenblas-dev libopenblas-base mpich mesa-common-dev libglu1-mesa-dev freeglut3-dev cppcheck doxygen libreadline-dev python3-sphinx python3-pip clang-format-10
+   $ sudo apt-get install cmake libopenblas-dev libopenblas-base mpich mesa-common-dev libglu1-mesa-dev freeglut3-dev cppcheck doxygen libreadline-dev python3-sphinx python3-pip clang-format-10 m4
    $ sudo ln -s /usr/lib/x86_64-linux-gnu/* /usr/lib
 
 **Ubuntu 18.04**

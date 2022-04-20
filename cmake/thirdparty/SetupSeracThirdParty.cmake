@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -64,9 +64,36 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     endif()
 
     #------------------------------------------------------------------------------
+    # Adiak
+    #------------------------------------------------------------------------------
+    if(SERAC_ENABLE_PROFILING AND NOT ADIAK_DIR)
+        message(FATAL_ERROR "SERAC_ENABLE_PROFILING cannot be ON without ADIAK_DIR defined.")
+    endif()
+
+    if(ADIAK_DIR AND SERAC_ENABLE_PROFILING)
+        serac_assert_is_directory(VARIABLE_NAME ADIAK_DIR)
+
+        find_package(adiak REQUIRED NO_DEFAULT_PATH PATHS ${ADIAK_DIR})
+        message(STATUS "Adiak support is ON")
+        set(ADIAK_FOUND TRUE)
+
+        # Set the include directories as Adiak does not completely
+        # configure the "adiak" target
+        set_target_properties(adiak PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES ${adiak_INCLUDE_DIRS})
+    else()
+        message(STATUS "Adiak support is OFF")
+        set(ADIAK_FOUND FALSE)
+    endif()
+
+    #------------------------------------------------------------------------------
     # Caliper
     #------------------------------------------------------------------------------
-    if(CALIPER_DIR)
+    if(SERAC_ENABLE_PROFILING AND NOT CALIPER_DIR)
+        message(FATAL_ERROR "SERAC_ENABLE_PROFILING cannot be ON without CALIPER_DIR defined.")
+    endif()
+
+    if(CALIPER_DIR AND SERAC_ENABLE_PROFILING)
         serac_assert_is_directory(VARIABLE_NAME CALIPER_DIR)
 
         # Should this logic be in the Caliper CMake package?
@@ -104,7 +131,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         message(STATUS "Using MFEM submodule")
 
         #### Store Data that MFEM clears
-        set(tpls_to_save AXOM CALIPER CONDUIT HDF5
+        set(tpls_to_save AMGX AXOM CALIPER CONDUIT HDF5
                          HYPRE LUA METIS NETCDF PETSC RAJA UMPIRE)
         foreach(_tpl ${tpls_to_save})
             set(${_tpl}_DIR_SAVE "${${_tpl}_DIR}")
@@ -133,8 +160,9 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             # Slightly different naming convention
             set(ParMETIS_DIR ${PARMETIS_DIR} CACHE PATH "")
         endif()
+        set(MFEM_USE_OPENMP ${ENABLE_OPENMP} CACHE BOOL "")
         set(MFEM_USE_PETSC ${PETSC_FOUND} CACHE BOOL "")
-        #TODO: RAJA?
+        set(MFEM_USE_RAJA ${RAJA_FOUND} CACHE BOOL "")
         if(SUNDIALS_DIR)
             serac_assert_is_directory(VARIABLE_NAME SUNDIALS_DIR)
             set(MFEM_USE_SUNDIALS ON CACHE BOOL "")
@@ -147,7 +175,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             set(SuperLUDist_DIR ${SUPERLUDIST_DIR} CACHE PATH "")
             set(MFEM_USE_SUPERLU ${ENABLE_MPI} CACHE BOOL "")
         endif()
-        #TODO: Umpire?
+        set(MFEM_USE_UMPIRE ${UMPIRE_FOUND} CACHE BOOL "")
         set(MFEM_USE_ZLIB ON CACHE BOOL "")
 
         #### MFEM Configuration Options
@@ -228,6 +256,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             message(FATAL_ERROR "Given AXOM_DIR did not contain a required header: axom/inlet/LuaReader.hpp"
                                 "\nTry building Axom with '-DLUA_DIR=path/to/lua/install'\n ")
         endif()
+        set(LUA_FOUND TRUE CACHE BOOL "")
 
         # MFEMSidreDataCollection.hpp
         find_path(

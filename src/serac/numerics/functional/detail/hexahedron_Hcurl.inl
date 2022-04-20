@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -76,7 +76,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
   using residual_type =
       typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components>>::type;
 
-  static constexpr tensor<double, ndof, dim> shape_functions(tensor<double, dim> xi)
+  SERAC_HOST_DEVICE static constexpr tensor<double, ndof, dim> shape_functions(tensor<double, dim> xi)
   {
     tensor<double, ndof, dim> N{};
 
@@ -118,7 +118,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
     return N;
   }
 
-  static constexpr tensor<double, ndof, dim> shape_function_curl(tensor<double, dim> xi)
+  SERAC_HOST_DEVICE static constexpr tensor<double, ndof, dim> shape_function_curl(tensor<double, dim> xi)
   {
     tensor<double, ndof, dim> curl{};
 

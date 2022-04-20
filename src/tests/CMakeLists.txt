@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -30,13 +30,6 @@ endif()
 
 serac_add_tests( SOURCES       axom_smoketest.cpp
                  DEPENDS_ON    axom)
-
-set(mfem_tests
-    mfem_ex9p_blockilu.cpp)
-
-serac_add_tests( SOURCES       ${mfem_tests}
-                 DEPENDS_ON    gtest serac_numerics
-                 NUM_MPI_TASKS 2)
 
 if(SERAC_USE_PETSC)
     serac_add_tests( SOURCES       petsc_smoketest.cpp

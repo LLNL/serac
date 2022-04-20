@@ -4,7 +4,7 @@ ARG branch=develop
 
 SHELL ["/bin/bash", "-c"]
 RUN sudo apt-get update -y
-RUN sudo apt-get install doxygen gfortran graphviz libopenblas-dev mpich python3-sphinx ssh texlive-full -fy
+RUN sudo apt-get install doxygen gfortran graphviz libopenblas-dev libomp-dev mpich python3-sphinx ssh texlive-full -fy
 
 RUN sudo useradd -m -s /bin/bash -G sudo serac
 
@@ -23,4 +23,5 @@ RUN mkdir -p /home/serac/export_hostconfig
 RUN cp ./serac_repo/*.cmake /home/serac/export_hostconfig
 
 # Make sure the new hostconfig worked
+# Note: having high job slots causes build log to disappear and job to fail
 RUN cd serac_repo && python3 config-build.py -hc *.cmake -bp build && cd build && make -j4 && make -j4 test && cd /home/serac && rm -rf serac_repo

@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -87,7 +87,7 @@ TEST(solid_solver, qs_component_solve)
 
   auto state = solid_solver.getState();
 
-  EXPECT_NEAR(inlet["expected_u_l2norm"], norm(solid_solver.displacement()), inlet["epsilon"]);
+  EXPECT_NEAR(inlet["expected_displacement_l2norm"], norm(solid_solver.displacement()), inlet["epsilon"]);
   MPI_Barrier(MPI_COMM_WORLD);
 }
 

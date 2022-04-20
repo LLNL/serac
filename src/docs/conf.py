@@ -67,7 +67,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Serac'
-copyright = u'2019-2021, Lawrence Livermore National Security, LLNS'
+copyright = u'2019-2022, Lawrence Livermore National Security, LLNS'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -226,7 +226,7 @@ latex_elements = {
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
   ('index', 'Serac.tex', u'Serac Documentation',
-   u'2019-2021, Lawrence Livermore National Security, LLNS', 'manual'),
+   u'2019-2022, Lawrence Livermore National Security, LLNS', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -256,7 +256,7 @@ latex_documents = [
 # (source start file, name, description, authors, manual section).
 man_pages = [
     ('index', 'serac', u'Serac Documentation',
-     [u'2019-2021, Lawrence Livermore National Security, LLNS'], 1)
+     [u'2019-2022, Lawrence Livermore National Security, LLNS'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -270,7 +270,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
   ('index', 'Serac', u'Serac Documentation',
-   u'2019-2021, Lawrence Livermore National Security, LLNS', 'Serac', 'One line description of project.',
+   u'2019-2022, Lawrence Livermore National Security, LLNS', 'Serac', 'One line description of project.',
    'Miscellaneous'),
 ]
 

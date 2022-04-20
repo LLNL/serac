@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -29,6 +29,11 @@ endif()
 # Save off "raw" flags before they are modified by serac/BLT
 set(RAW_CMAKE_C_FLAGS   ${CMAKE_C_FLAGS}   CACHE STRING "")
 set(RAW_CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} CACHE STRING "")
+
+if (NOT DEFINED SERAC_ENABLE_CODEVELOP)
+   set(SERAC_ENABLE_CODEVELOP OFF)
+endif()
+message(STATUS "Serac Codevelop Build: ${SERAC_ENABLE_CODEVELOP}")
 
 #------------------------------------------------------------------------------
 # Setup BLT
@@ -118,16 +123,19 @@ set(CMAKE_CXX_FLAGS ${SERAC_CMAKE_CXX_FLAGS})
 include(${PROJECT_SOURCE_DIR}/cmake/SeracConfigHeader.cmake)
 
 #------------------------------------------------------------------------------
-# Build src
+# Add subdirectories
 #------------------------------------------------------------------------------
 
 add_subdirectory(src)
 
-#------------------------------------------------------------------------------
-# Configure examples
-#------------------------------------------------------------------------------
-
 add_subdirectory(examples)
+
+#------------------------------------------------------------------------------
+# Generate helper script for running ATS
+#------------------------------------------------------------------------------
+configure_file(
+    ${PROJECT_SOURCE_DIR}/scripts/testing/ats.sh.in
+    ${CMAKE_BINARY_DIR}/ats.sh)
 
 #------------------------------------------------------------------------------
 # Add Code Checks
@@ -135,8 +143,13 @@ add_subdirectory(examples)
 
 message(STATUS "Serac Code Checks: ${SERAC_ENABLE_CODE_CHECKS}")
 
-# Add CUDA related files to code style checking list
+# Add extra file extensions for code styling
+# Note: Add them also to serac_add_code_checks in cmake/SeracMacros.cmake
+
+# CUDA
 list(APPEND BLT_C_FILE_EXTS ".cuh")
+# Configured C++ files
+list(APPEND BLT_C_FILE_EXTS ".cpp.in" ".hpp.in")
 
 if (SERAC_ENABLE_CODE_CHECKS)
     serac_add_code_checks(PREFIX   serac
@@ -162,9 +175,17 @@ install(TARGETS              serac
         )
 
 if (SERAC_ENABLE_CODEVELOP)
+    # This really shouldn't be needed but it keeps getting dropped from axom.
+    # It certainly shouldn't go here either.
+    target_include_directories(axom SYSTEM PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/axom/src>
+    )
+
     # Add Axom's targets to our export set
     # TODO: we should ask Axom for this list in the future
     set(axom_exported_targets axom cli11 fmt hdf5 lua sol sparsehash)
+    blt_list_append(TO axom_exported_targets ELEMENTS openmp IF ENABLE_OPENMP)
+    
     install(TARGETS              ${axom_exported_targets}
             EXPORT               serac-targets
             DESTINATION          lib

@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -267,10 +267,7 @@ struct state_manager_varying_qfunction {
   template <typename x_t, typename field_t, typename state_t>
   __host__ __device__ auto operator()(x_t&& x, field_t&& u, state_t&& state)
   {
-    double norm = 0.0;
-    for (int i = 0; i < x.first_dim; i++) {
-      norm += x[i] * x[i];
-    }
+    double norm = squared_norm(x);
     wrapper_t::mutate(state, norm);
     mutated_data[idx++] = state;
     return u;

@@ -1,7 +1,7 @@
 -- Comparison information
 -- Running the initial simulation for an extra 5s produced this result,
 -- so we would expect it to be the exact same
-expected_t_l2norm = 2.1806604032633987
+expected_temperature_l2norm = 2.1806604032633987
 epsilon = 0.000001
 
 -- Simulation time parameters

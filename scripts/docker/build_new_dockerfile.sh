@@ -1,6 +1,6 @@
 #!/bin/bash
 ##############################################################################
-# Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
@@ -24,12 +24,7 @@ tag_name="${name}-${maj_ver}"
 
 dockerfile_name="dockerfile_$tag_name"
 
-distro_name="ubuntu16"
-
-# Clang 10 uses an ubuntu 18 image
-if [[ ("$name" == "clang") && ("$maj_ver" -eq 10) ]]; then
-    distro_name="ubuntu18"
-fi
+distro_name="ubuntu20"
 
 sed -e "s/<VER>/$ver/g" \
     -e "s/<NAME>/$name/g" \

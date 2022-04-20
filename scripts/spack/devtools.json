@@ -3,9 +3,10 @@
 "package_version" : "fakeversion",
 "package_source_dir" : "../..",
 "package_final_phase" : "",
-"spack_url": "https://github.com/spack/spack",
-"spack_commit": "e75b76f433016a720027b41c0d36cdb9ef24a827",
+"spack_url": "https://github.com/spack/spack.git",
+"spack_commit": "440fcb2a3addc367b2357eaec86d07d05c1a356c",
 "spack_configs_path": "scripts/spack/devtools_configs",
 "spack_packages_path": "scripts/spack/packages",
-"spack_activate" : {"py-sphinx" : [""]}
+"spack_activate" : {"py-sphinx" : [""], "py-ats" : [""]},
+"spack_concretizer": "clingo"
 }

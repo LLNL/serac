@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -26,7 +26,7 @@ struct finite_element<Geometry::Hexahedron, L2<p, c> > {
   using residual_type =
       typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components> >::type;
 
-  static constexpr tensor<double, ndof> shape_functions(tensor<double, dim> xi)
+  SERAC_HOST_DEVICE static constexpr tensor<double, ndof> shape_functions(tensor<double, dim> xi)
   {
     auto N_xi   = GaussLobattoInterpolation<p + 1>(xi[0]);
     auto N_eta  = GaussLobattoInterpolation<p + 1>(xi[1]);
@@ -45,7 +45,7 @@ struct finite_element<Geometry::Hexahedron, L2<p, c> > {
     return N;
   }
 
-  static constexpr tensor<double, ndof, dim> shape_function_gradients(tensor<double, dim> xi)
+  SERAC_HOST_DEVICE static constexpr tensor<double, ndof, dim> shape_function_gradients(tensor<double, dim> xi)
   {
     auto N_xi    = GaussLobattoInterpolation<p + 1>(xi[0]);
     auto N_eta   = GaussLobattoInterpolation<p + 1>(xi[1]);

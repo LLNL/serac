@@ -38,7 +38,7 @@ class Axom(CachedCMakePackage, CudaPackage):
     git      = "https://github.com/LLNL/axom.git"
 
     # SERAC EDIT START
-    version('0.6.0serac', commit='65d8e67bcf629bbfacb837ba6202d26f3d960364', submodules="True")
+    version('0.6.1serac', commit='efb4d4cc44f2d176133f3f1a8be307e39c698194', submodules="True")
     # SERAC EDIT END
 
     version('main', branch='main', submodules=True)
@@ -58,8 +58,6 @@ class Axom(CachedCMakePackage, CudaPackage):
     # -----------------------------------------------------------------------
     variant('shared',   default=True,
             description='Enable build of shared libraries')
-    variant('debug',    default=False,
-            description='Build debug instead of optimized version')
 
     variant('examples', default=True, description='Build examples')
     variant('tools',    default=True, description='Build tools')

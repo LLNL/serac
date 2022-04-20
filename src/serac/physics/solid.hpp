@@ -200,6 +200,9 @@ public:
    * @param[in] keep_deformation Flag to keep the deformation in the underlying mesh post-destruction
    * @param[in] name An optional name for the physics module instance
    * @param[in] pmesh The mesh to conduct the simulation on, if different than the default mesh
+   *
+   * @note @p name is the physics module name and not the mesh tag to be used. If a non-default mesh is desired, the
+   * mesh pointer must be provided. Otherwise, it attempts to find the "default" mesh in the data store.
    */
   Solid(int order, const SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
         FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "",
@@ -209,7 +212,7 @@ public:
    * @brief Construct a new Nonlinear Solid Solver object
    *
    * @param[in] options The solver information parsed from the input file
-   * @param[in] name An optional name for the physics module instance
+   * @param[in] name An optional name for the physics module instance. Note that this is NOT the mesh tag.
    */
   Solid(const InputOptions& options, const std::string& name = "");
 
@@ -385,8 +388,6 @@ public:
    *
    * @note Before this call, a forward and adjoint solve (with the appropriate QoI-based adjoint load) must be
    * completed. If this does not occur, the returned linear form will be incorrect.
-   *
-   * @note T
    */
   virtual FiniteElementDual& shearModulusSensitivity(mfem::ParFiniteElementSpace* shear_space = nullptr);
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -30,17 +30,17 @@ TEST_P(InputFileTest, solid)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-const std::string input_files[] = {"dyn_solve",
-                                   "dyn_direct_solve",
+const std::string input_files[] = {"dyn_solve",      "dyn_direct_solve",
+// TODO Disabled while we diagnose the non-deterministic sundials error
+/*
 #ifdef MFEM_USE_SUNDIALS
                                    "dyn_linesearch_solve",
 #endif
+*/
 #ifdef MFEM_USE_AMGX
                                    "dyn_amgx_solve",
 #endif
-                                   "qs_solve",
-                                   "qs_direct_solve",
-                                   "qs_linear"};
+                                   "qs_solve",       "qs_direct_solve",  "qs_linear"};
 
 INSTANTIATE_TEST_SUITE_P(SolidInputFileTests, InputFileTest, ::testing::ValuesIn(input_files));
 
@@ -96,7 +96,7 @@ TEST(solid_solver, qs_custom_solve)
 
   solid_solver.outputState();
 
-  EXPECT_NEAR(inlet["expected_u_l2norm"], norm(solid_solver.displacement()), inlet["epsilon"]);
+  EXPECT_NEAR(inlet["expected_displacement_l2norm"], norm(solid_solver.displacement()), inlet["epsilon"]);
 
   // 0 = R(u) + K(u) du
   // u_sol = u + du

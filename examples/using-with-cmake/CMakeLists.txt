@@ -23,7 +23,7 @@ add_library(mpi INTERFACE)
 # END FIXME
 
 add_executable(serac_example serac_example.cpp)
-target_link_libraries(serac_example serac::serac axom ${MFEM_LIBRARIES})
+target_link_libraries(serac_example serac::serac axom mfem)
 
 enable_testing()
 add_test(NAME    serac_example 

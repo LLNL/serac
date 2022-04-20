@@ -50,15 +50,50 @@ packages:
     externals:
     - spec: automake@1.13.4
       prefix: /usr
+  binutils:
+    buildable: false
+    externals:
+    - spec: binutils@2.27
+      prefix: /usr
   bzip2:
     buildable: false
     externals:
     - spec: bzip2@1.0.6
       prefix: /usr
+  diffutils:
+    buildable: false
+    externals:
+    - spec: diffutils@3.3
+      prefix: /usr
+  elfutils:
+    buildable: false
+    externals:
+    - spec: elfutils@0.176
+      prefix: /usr
+  epoxy:
+    buildable: false
+    externals:
+    - spec: epoxy@1.5.2
+      prefix: /usr
+  findutils:
+    buildable: false
+    externals:
+    - spec: findutils@4.5.11
+      prefix: /usr
   gettext:
     buildable: false
     externals:
     - spec: gettext@0.19.8.1
+      prefix: /usr
+  ghostscript:
+    buildable: false
+    externals:
+    - spec: ghostscript@9.25
+      prefix: /usr
+  groff:
+    buildable: false
+    externals:
+    - spec: groff@1.22.2
       prefix: /usr
   graphviz:
     buildable: false
@@ -69,6 +104,11 @@ packages:
     buildable: false
     externals:
     - spec: libtool@2.4.2
+      prefix: /usr
+  libunwind:
+    buildable: false
+    externals:
+    - spec: libunwind@8.0.1
       prefix: /usr
   libx11:
     buildable: false
@@ -90,15 +130,15 @@ packages:
     externals:
     - spec: pkg-config@0.27.1
       prefix: /usr
-  tar:
-    buildable: false
-    externals:
-    - spec: tar@1.26
-      prefix: /usr
   readline:
     buildable: false
     externals:
     - spec: readline@6.2
+      prefix: /usr
+  tar:
+    buildable: false
+    externals:
+    - spec: tar@1.26
       prefix: /usr
   unzip:
     buildable: false
@@ -119,31 +159,37 @@ packages:
     - spec: cmake@3.14.5
       prefix: /usr/tce/packages/cmake/cmake-3.14.5
   cppcheck:
-    version: [1.87]
+    version: [2.1]
     buildable: false
     externals:
-    - spec: cppcheck@1.87
-      prefix: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/cppcheck-1.87
+    - spec: cppcheck@2.1
+      prefix: /usr/workspace/smithdev/devtools/toss_3_x86_64_ib/latest/cppcheck-2.1
   doxygen:
-    version: [1.8.17]
+    version: [1.9.3]
     buildable: false
     externals:
-    - spec: doxygen@1.8.17
-      prefix: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/doxygen-1.8.17
+    - spec: doxygen@1.9.3
+      prefix: /usr/workspace/smithdev/devtools/toss_3_x86_64_ib/latest/doxygen-1.9.3
   llvm:
     version: [10.0.0]
     buildable: false
     externals:
     - spec: llvm+clang@10.0.0
       prefix: /usr/tce/packages/clang/clang-10.0.0
+  py-ats:
+    version: [7.0.10]
+    buildable: false
+    externals:
+    - spec: py-ats@7.0.10
+      prefix: /usr/workspace/smithdev/devtools/toss_3_x86_64_ib/latest/py-ats-7.0.10
+  py-sphinx:
+    version: [4.3.1]
+    buildable: false
+    externals:
+    - spec: py-sphinx@4.3.1
+      prefix: /usr/workspace/smithdev/devtools/toss_3_x86_64_ib/latest/py-sphinx-4.3.1
   python:
     buildable: false
     externals:
     - spec: python@3.8.2
       prefix: /usr/tce/packages/python/python-3.8.2
-  py-sphinx:
-    version: [2.2.0]
-    buildable: false
-    externals:
-    - spec: py-sphinx@2.2.0
-      prefix: /usr/tce/packages/python/python-3.8.2/

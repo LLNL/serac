@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -28,6 +28,7 @@ else()
     set(_enable_serac_code_checks OFF)
 endif()
 option(SERAC_ENABLE_CODE_CHECKS "Enable Serac's code checks" ${_enable_serac_code_checks})
+option(SERAC_ENABLE_PROFILING "Enable profiling functionality" OFF)
 
 #------------------------------------------------------------------------------
 # Create symlink in installed bin

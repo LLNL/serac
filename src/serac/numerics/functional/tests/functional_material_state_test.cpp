@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -40,7 +40,8 @@ protected:
     mesh                = &new_mesh;
     festate             = std::make_unique<FiniteElementState>(*mesh);
     festate->gridFunc() = 0.0;
-    residual            = std::make_unique<Functional<test_space(trial_space)>>(&festate->space(), &festate->space());
+    std::array<mfem::ParFiniteElementSpace*, 1> trial_fes{&festate->space()};
+    residual = std::make_unique<Functional<test_space(trial_space)>>(&festate->space(), trial_fes);
   }
   static constexpr int p   = 1;
   static constexpr int dim = 2;

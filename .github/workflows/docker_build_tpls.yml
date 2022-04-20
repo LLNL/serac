@@ -11,7 +11,7 @@ jobs:
     name: Builds a docker image and extracts generated hostconfigs
     strategy:
       matrix:
-        compiler: [clang-10, gcc-9]
+        compiler: [clang-10, gcc-9, gcc-11]
     env:
       REPO: seracllnl/tpls
       HOSTCONFIG_LOC: /home/serac/export_hostconfig

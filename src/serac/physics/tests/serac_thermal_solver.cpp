@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -37,6 +37,7 @@ const std::string input_files[] = {"static_solve",
 #endif
                                    "static_solve_multiple_bcs",
                                    "static_solve_repeated_bcs",
+                                   "static_reaction_exact",
                                    "dyn_exp_solve",
                                    "dyn_imp_solve",
                                    "dyn_imp_solve_time_varying"};
