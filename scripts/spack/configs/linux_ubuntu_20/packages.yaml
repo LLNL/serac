@@ -1,5 +1,6 @@
 packages:
   all:
+    target: [ivybridge]
     compiler: [gcc]
     providers:
       mpi: [mpich]
@@ -79,8 +80,8 @@ packages:
   cuda:
     buildable: false
     externals:
-    - spec: cuda@11.2.0
-      prefix: /usr/local/cuda-11.2
+    - spec: cuda@11.4.0
+      prefix: /usr/local/cuda-11.4
   m4:
     buildable: false
     externals:

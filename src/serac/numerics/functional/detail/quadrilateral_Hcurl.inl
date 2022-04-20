@@ -29,6 +29,9 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
   static constexpr int  ndof       = 2 * p * (p + 1);
   static constexpr int  components = 1;
 
+  using residual_type =
+      typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components> >::type;
+
   // this is how mfem provides the data to us for these elements
   // if, instead, it was stored as simply tensor< double, 2, p + 1, p >,
   // the interpolation/integrate implementation would be considerably shorter
@@ -44,11 +47,11 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
   template < int q >
   using cache_type = tensor<double, p + 1, q>;
 
-  template < int q >
-  using batched_values_type = tensor< double, 2, q, q >;
+  template <int q>
+  using cpu_batched_values_type = tensor<tensor<double, 2>, q, q>;
 
-  template < int q >
-  using batched_derivatives_type = tensor< double, q, q >;
+  template <int q>
+  using cpu_batched_derivatives_type = tensor<double, q, q>;
 
   static constexpr auto directions = [] {
     int dof_per_direction = p * (p + 1);
@@ -173,10 +176,9 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     return curl_z;
   }
 
-  template < int q >
-  static void interpolation(const dof_type & element_values, const TensorProductQuadratureRule<q> &, 
-                            cache_type<q> & A1,
-                            batched_values_type<q> & value_q, batched_derivatives_type<q> & curl_q) {
+  template <int q>
+  static auto interpolate(const dof_type& element_values, const tensor<double, q, q, dim, dim>& jacobians,
+                          const TensorProductQuadratureRule<q>&) {
 
     auto xi = GaussLegendreNodes<q>();
 
@@ -189,6 +191,10 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
       G2[i] = GaussLobattoInterpolationDerivative<p+1>(xi[i]);
     }
 
+    cache_type<q> A;
+
+    serac::tuple<cpu_batched_values_type<q>, cpu_batched_derivatives_type<q> > values_and_derivatives{};
+
     /////////////////////////////////
     ////////// X-component //////////
     /////////////////////////////////
@@ -198,7 +204,7 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
         for (int i = 0; i < p; i++) {
           sum += B1(qx, i) * element_values.x(j, i);
         }
-        A1(j, qx) = sum;
+        A(j, qx) = sum;
       }
     }
     
@@ -206,11 +212,11 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
       for (int qx = 0; qx < q; qx++) {
         double sum[2]{};
         for (int j = 0; j < (p + 1); j++) {
-          sum[0] += B2(qy, j) * A1(j, qx);
-          sum[1] += G2(qy, j) * A1(j, qx);
+          sum[0] += B2(qy, j) * A(j, qx);
+          sum[1] += G2(qy, j) * A(j, qx);
         }
-        value_q(0, qy, qx) =  sum[0];
-        curl_q(qy, qx)     = -sum[1];
+        serac::get<0>(values_and_derivatives)(qy, qx)[0] += sum[0];
+        serac::get<1>(values_and_derivatives)(qy, qx)    -= sum[1];
       }
     }
 
@@ -223,7 +229,7 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
         for (int j = 0; j < p; j++) {
           sum += B1(qy, j) * element_values.y(j, i);
         }
-        A1(i, qy) = sum;
+        A(i, qy) = sum;
       }
     }
     
@@ -231,24 +237,38 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
       for (int qx = 0; qx < q; qx++) {
         double sum[3]{};
         for (int i = 0; i < (p + 1); i++) {
-          sum[0] += B2(qx, i) * A1(i, qy);
-          sum[1] += G2(qx, i) * A1(i, qy);
+          sum[0] += B2(qx, i) * A(i, qy);
+          sum[1] += G2(qx, i) * A(i, qy);
         }
-        value_q(1, qy, qx) = sum[0];
-        curl_q(qy, qx)     += sum[1];
+        serac::get<0>(values_and_derivatives)(qy, qx)[1] += sum[0];
+        serac::get<1>(values_and_derivatives)(qy, qx)    += sum[1];
       }
     }
 
+    // apply covariant Piola transformation to go
+    // from parent element -> physical element
+      for (int qy = 0; qy < q; qy++) {
+        for (int qx = 0; qx < q; qx++) {
+          auto J_T = transpose(jacobians(qy, qx));
+          auto detJ = det(J_T);
+          auto value = serac::get<0>(values_and_derivatives)(qy, qx);
+          auto curl = serac::get<1>(values_and_derivatives)(qy, qx);
+          serac::get<0>(values_and_derivatives)(qy, qx) = linear_solve(J_T, value);
+          serac::get<1>(values_and_derivatives)(qy, qx) = curl / detJ;
+        }
+      }
+
+    return values_and_derivatives;
+
   }
 
-  template < int q >
-  static void integrate(const batched_values_type<q> & source,
-                            const batched_derivatives_type<q> & flux,
-                            const TensorProductQuadratureRule<q> &, 
-                            cache_type<q> & A1, 
-                            dof_type & element_residual) {
+  template <int q>
+  static void integrate(cpu_batched_values_type<q>& sources, cpu_batched_derivatives_type<q>& fluxes,
+                        const tensor<double, q, q, dim, dim>& jacobians, const TensorProductQuadratureRule<q>&,
+                        dof_type&                             element_residual) {
 
     auto xi = GaussLegendreNodes<q>();
+    auto weights1D = GaussLegendreWeights<q>();
 
     tensor<double, q, p > B1;
     tensor<double, q, p+1 > B2;
@@ -259,6 +279,21 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
       G2[i] = GaussLobattoInterpolationDerivative<p+1>(xi[i]);
     }
 
+    // transform the source and flux terms from values on the physical element, 
+    // to values on the parent element. Also, the source/flux values are scaled
+    // according to the weight of their quadrature point, so that 
+      for (int qy = 0; qy < q; qy++) {
+        for (int qx = 0; qx < q; qx++) {
+          auto J = jacobians(qy, qx);
+          auto detJ = serac::det(J);
+          auto dv = detJ * weights1D[qx] * weights1D[qy];
+          sources(qy, qx) = linear_solve(J, sources(qy, qx)) * dv;
+          fluxes(qy, qx) = fluxes(qy, qx) * (dv / detJ);
+        }
+      }
+
+    cache_type<q> A;
+
     /////////////////////////////////
     ////////// X-component //////////
     /////////////////////////////////
@@ -266,9 +301,9 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
       for (int qx = 0; qx < q; qx++) {
         double sum = 0.0;
         for (int qy = 0; qy < q; qy++) {
-          sum += B2(qy, j) * source(0, qy, qx) - G2(qy, j) * flux(qy, qx);
+          sum += B2(qy, j) * sources(qy, qx)[0] - G2(qy, j) * fluxes(qy, qx);
         }
-        A1(j, qx) = sum;
+        A(j, qx) = sum;
       }
     }
     
@@ -276,9 +311,9 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
       for (int i = 0; i < p; i++) {
         double sum = 0.0;
         for (int qx = 0; qx < q; qx++) {
-          sum += B1(qx, i) * A1(j, qx);
+          sum += B1(qx, i) * A(j, qx);
         }
-        element_residual.x(j, i) = sum;
+        element_residual.x(j, i) += sum;
       }
     }
 
@@ -289,9 +324,9 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
       for (int qy = 0; qy < q; qy++) {
         double sum = 0.0;
         for (int qx = 0; qx < q; qx++) {
-          sum += B2(qx, i) * source(1, qy, qx) + G2(qx, i) * flux(qy, qx);
+          sum += B2(qx, i) * sources(qy, qx)[1] + G2(qx, i) * fluxes(qy, qx);
         }
-        A1(i, qy) = sum;
+        A(i, qy) = sum;
       }
     }
     
@@ -299,9 +334,9 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
       for (int i = 0; i < p + 1; i++) {
         double sum = 0.0;
         for (int qy = 0; qy < q; qy++) {
-          sum += B1(qy, j) * A1(i, qy);
+          sum += B1(qy, j) * A(i, qy);
         }
-        element_residual.y(j, i) = sum;
+        element_residual.y(j, i) += sum;
       }
     }
 

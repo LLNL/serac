@@ -215,9 +215,6 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
 
     serac::tuple < cpu_batched_values_type<q>, cpu_batched_derivatives_type<q> > values_and_derivatives{};
 
-    tensor< double, 3 > value{};
-    tensor< double, 3 > curl{};
-
     /////////////////////////////////
     ////////// X-component //////////
     /////////////////////////////////
@@ -256,9 +253,9 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
             sum[1] += G2(qz, k) * cache.A2(0, k, qy, qx);
             sum[2] += B2(qz, k) * cache.A2(1, k, qy, qx);
           }
-          value[0] += sum[0];
-          curl[1]  += sum[1];
-          curl[2]  -= sum[2];
+          serac::get<0>(values_and_derivatives)(qz, qy, qx)[0] += sum[0];
+          serac::get<1>(values_and_derivatives)(qz, qy, qx)[1] += sum[1];
+          serac::get<1>(values_and_derivatives)(qz, qy, qx)[2] -= sum[2];
         }
       }
     }
@@ -301,9 +298,9 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
             sum[1] += G2(qz, k) * cache.A2(0, k, qy, qx);
             sum[2] += B2(qz, k) * cache.A2(1, k, qy, qx);
           }
-          value[1] += sum[0];
-          curl[2]  += sum[2];
-          curl[0]  -= sum[1];
+          serac::get<0>(values_and_derivatives)(qz, qy, qx)[1] += sum[0];
+          serac::get<1>(values_and_derivatives)(qz, qy, qx)[2] += sum[2];
+          serac::get<1>(values_and_derivatives)(qz, qy, qx)[0] -= sum[1];
         }
       }
     }
@@ -346,9 +343,9 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
             sum[1] += G2(qy, j) * cache.A2(0, j, qz, qx);
             sum[2] += B2(qy, j) * cache.A2(1, j, qz, qx);
           }
-          value[2] += sum[0];
-          curl[0]  += sum[1];
-          curl[1]  -= sum[2];
+          serac::get<0>(values_and_derivatives)(qz, qy, qx)[2] += sum[0];
+          serac::get<1>(values_and_derivatives)(qz, qy, qx)[0] += sum[1];
+          serac::get<1>(values_and_derivatives)(qz, qy, qx)[1] -= sum[2];
         }
       }
     }
@@ -360,6 +357,8 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
         for (int qx = 0; qx < q; qx++) {
           auto J_T = transpose(jacobians(qz, qy, qx));
           auto detJ = det(J_T);
+          auto value = serac::get<0>(values_and_derivatives)(qz, qy, qx);
+          auto curl = serac::get<1>(values_and_derivatives)(qz, qy, qx);
           serac::get<0>(values_and_derivatives)(qz, qy, qx) = linear_solve(J_T, value);
           serac::get<1>(values_and_derivatives)(qz, qy, qx) = dot(curl, J_T) / detJ;
         }
@@ -613,7 +612,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
           for (int qx = 0; qx < q; qx++) {
             sum += B1(qx, i) * cache.A1(k, j, qx);
           }
-          element_residual.x(k, j, i) = sum;
+          element_residual.x(k, j, i) += sum;
         }
       }
     }
@@ -655,7 +654,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
           for (int qy = 0; qy < q; qy++) {
             sum += B1(qy, j) * cache.A1(k, i, qy);
           }
-          element_residual.y(k, j, i) = sum;
+          element_residual.y(k, j, i) += sum;
         }
       }
     }
@@ -697,7 +696,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
           for (int qz = 0; qz < q; qz++) {
             sum += B1(qz, k) * cache.A1(j, i, qz);
           }
-          element_residual.z(k, j, i) = sum;
+          element_residual.z(k, j, i) += sum;
         }
       }
     }
