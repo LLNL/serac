@@ -7,9 +7,11 @@
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/serac_config.hpp"
 #include "serac/infrastructure/input.hpp"
+#include "axom/core.hpp"
 #include <gtest/gtest.h>
 #include <exception>
 #include <iostream>
+#include <stdlib.h>
 
 class SlicErrorException : public std::exception {
 };
@@ -61,7 +63,7 @@ TEST_F(MeshTest, lua_input_main_mesh_from_file)
 
     // Check mesh path
     std::string mesh_path = base_mesh_dir_ + file_options->relative_mesh_file_name;
-    EXPECT_EQ(filesystem::pathExists(possible_path), true);
+    EXPECT_EQ(axom::utilities::filesystem::pathExists(mesh_path), true);
     file_options->absolute_mesh_file_name = mesh_path;
 
     auto mesh = mesh::buildParallelMesh(mesh_options);
