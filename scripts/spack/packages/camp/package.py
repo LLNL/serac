@@ -20,7 +20,7 @@ class Camp(CMakePackage, CudaPackage, ROCmPackage):
 
     version('main', branch='main', submodules='True')
     # SERAC EDIT BEGIN: camp spack package has not been updated with recent releases
-    version('2022.03.0')
+    version('2022.03.0', tag='v2022.03.0')
     # SERAC EDIT END
     version('0.3.0', sha256='129431a049ca5825443038ad5a37a86ba6d09b2618d5fe65d35f83136575afdb')
     version('0.2.2', sha256='194d38b57e50e3494482a7f94940b27f37a2bee8291f2574d64db342b981d819')
