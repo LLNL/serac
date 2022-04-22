@@ -73,7 +73,7 @@ if(NOT SERAC_FOUND)
   include(CMakeFindDependencyMacro)
 
   # MFEM
-  if(SERAC_USE_MFEM)
+  if(SERAC_USE_MFEM AND NOT TARGET mfem)
     set(SERAC_MFEM_BUILT_WITH_CMAKE @MFEM_BUILT_WITH_CMAKE@)
     if(SERAC_MFEM_BUILT_WITH_CMAKE)
       find_dependency(mfem REQUIRED NO_DEFAULT_PATH PATHS "${MFEM_DIR}/lib/cmake/mfem" NAMES MFEM)

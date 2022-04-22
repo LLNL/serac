@@ -16,16 +16,6 @@
 
 namespace serac {
 
-// Use SFINAE to add static assertions checking if the given thermal material type is acceptable
-template <typename T, int dim, typename = void>
-struct has_density : std::false_type {
-};
-
-template <typename T, int dim>
-struct has_density<T, dim, std::void_t<decltype(std::declval<T&>().density(std::declval<tensor<double, dim>&>()))>>
-    : std::true_type {
-};
-
 template <typename T, typename = void>
 struct is_parameterized : std::false_type {
 };
@@ -44,17 +34,18 @@ struct TriviallyParameterizedMaterial {
   /**
    * @brief Material response wrapper for an unparameterized material in a parameterized context
    *
-   * @tparam T1 Spatial position type
-   * @tparam T2 Temperature type
-   * @tparam T3 Temperature gradient type
-   * @tparam S Unused parameter pack type
+   * @tparam PositionType Spatial position type
+   * @tparam StateType State type
+   * @tparam StateGradType State gradient type
+   * @tparam ParamTypes Unused parameter pack type
    * @param x Spatial position
-   * @param u Temperature
-   * @param du_dx Temperature gradient
+   * @param u State
+   * @param du_dx State gradient
    * @return Material response of the unparameterized material
    */
-  template <typename T1, typename T2, typename T3, typename... S>
-  SERAC_HOST_DEVICE auto operator()(const T1& x, const T2& u, const T3& du_dx, S...) const
+  template <typename PositionType, typename StateType, typename StateGradType, typename... ParamTypes>
+  SERAC_HOST_DEVICE auto operator()(const PositionType& x, const StateType& u, const StateGradType& du_dx,
+                                    ParamTypes...) const
   {
     return mat(x, u, du_dx);
   }
@@ -66,22 +57,22 @@ struct TriviallyParameterizedMaterial {
 /**
  * @brief Template deduction guide for the trivially parameterized material
  *
- * @tparam T The unparameterized material type
+ * @tparam MaterialType The unparameterized material type
  */
-template <typename T>
-TriviallyParameterizedMaterial(T) -> TriviallyParameterizedMaterial<T>;
+template <typename MaterialType>
+TriviallyParameterizedMaterial(MaterialType) -> TriviallyParameterizedMaterial<MaterialType>;
 
 /**
  * @brief Convert an unparameterized material to one which accepts parameter values in the paren operator
  *
- * @tparam T The unparameterized material type
+ * @tparam MaterialType The unparameterized material type
  * @param material The unparameterized material
  * @return The parameterized material
  */
-template <typename T>
-auto parameterizeMaterial(T& material)
+template <typename MaterialType>
+auto parameterizeMaterial(MaterialType& material)
 {
-  if constexpr (is_parameterized<T>::value) {
+  if constexpr (is_parameterized<MaterialType>::value) {
     return material;
   } else {
     return TriviallyParameterizedMaterial{material};
@@ -98,18 +89,19 @@ struct TriviallyParameterizedSource {
   /**
    * @brief Wrapper for an unparameterized source in a parameterized context
    *
-   * @tparam T1 Spatial position type
-   * @tparam T2 Temperature type
-   * @tparam T3 Temperature gradient type
-   * @tparam S Unused parameter pack type
+   * @tparam PositionType Spatial position type
+   * @tparam StateType State type
+   * @tparam StateGradType State gradient type
+   * @tparam ParamTypes Unused parameter pack type
    * @param x Spatial position
    * @param t Time
-   * @param u Temperature
-   * @param du_dx Temperature gradient
+   * @param u State
+   * @param du_dx State gradient
    * @return Volumetric source for the unparameterized source
    */
-  template <typename T1, typename T2, typename T3, typename... S>
-  SERAC_HOST_DEVICE auto operator()(const T1& x, double t, const T2& u, const T3& du_dx, S...) const
+  template <typename PositionType, typename StateType, typename StateGradType, typename... ParamTypes>
+  SERAC_HOST_DEVICE auto operator()(const PositionType& x, double t, const StateType& u, const StateGradType& du_dx,
+                                    ParamTypes...) const
   {
     return source(x, t, u, du_dx);
   }
@@ -121,22 +113,22 @@ struct TriviallyParameterizedSource {
 /**
  * @brief Template deduction guide for the trivially parameterized source
  *
- * @tparam T The unparameterized source type
+ * @tparam SourceType The unparameterized source type
  */
-template <typename T>
-TriviallyParameterizedSource(T) -> TriviallyParameterizedSource<T>;
+template <typename SourceType>
+TriviallyParameterizedSource(SourceType) -> TriviallyParameterizedSource<SourceType>;
 
 /**
  * @brief Convert an unparameterized source to one which accepts parameter values in the paren operator
  *
- * @tparam T The unparameterized source type
+ * @tparam SourceType The unparameterized source type
  * @param source The unparameterized source
  * @return The parameterized source
  */
-template <typename T>
-auto parameterizeSource(T& source)
+template <typename SourceType>
+auto parameterizeSource(SourceType& source)
 {
-  if constexpr (is_parameterized<T>::value) {
+  if constexpr (is_parameterized<SourceType>::value) {
     return source;
   } else {
     return TriviallyParameterizedSource{source};
@@ -154,17 +146,17 @@ struct TriviallyParameterizedFlux {
    * @brief The wrapper for an unparameterized boundary flux object to be called using the parameterized
    * call signature
    *
-   * @tparam T1 Spatial position type
-   * @tparam T2 Normal vector type
-   * @tparam T3 Temperature type
-   * @tparam S Unused parameter pack type
+   * @tparam PositionType Spatial position type
+   * @tparam NormalType Normal vector type
+   * @tparam StateType State type
+   * @tparam ParamTypes Unused parameter pack type
    * @param x Spatial position
    * @param n Normal vector
-   * @param u Temperature
+   * @param u State
    * @return Computed boundary flux to be applied
    */
-  template <typename T1, typename T2, typename T3, typename... S>
-  SERAC_HOST_DEVICE auto operator()(const T1& x, const T2& n, const T3& u, S...) const
+  template <typename PositionType, typename NormalType, typename StateType, typename... ParamTypes>
+  SERAC_HOST_DEVICE auto operator()(const PositionType& x, const NormalType& n, const StateType& u, ParamTypes...) const
   {
     return flux(x, n, u);
   }
@@ -184,64 +176,69 @@ TriviallyParameterizedFlux(T) -> TriviallyParameterizedFlux<T>;
 /**
  * @brief Convert an unparameterized flux to one which accepts parameter values in the paren operator
  *
- * @tparam T The unparameterized flux type
+ * @tparam FluxType The unparameterized flux type
  * @param flux The unparameterized flux
  * @return The parameterized flux
  */
-template <typename T>
-auto parameterizeFlux(T& flux)
+template <typename FluxType>
+auto parameterizeFlux(FluxType& flux)
 {
-  if constexpr (is_parameterized<T>::value) {
+  if constexpr (is_parameterized<FluxType>::value) {
     return flux;
   } else {
     return TriviallyParameterizedFlux{flux};
   }
 }
 
-template <typename T, int dim, typename = void>
-struct has_stress : std::false_type {
+/**
+ * @brief Wrapper to treat an unparameterized source as a parameterized one
+ *
+ * @tparam UnparameterizedSourceType The unparameterized source
+ */
+template <typename UnparameterizedPressureType>
+struct TriviallyParameterizedPressure {
+  /**
+   * @brief Wrapper for an unparameterized source in a parameterized context
+   *
+   * @tparam PositionType Spatial position type
+   * @tparam ParamTypes Unused parameter pack type
+   * @param x Spatial position
+   * @param t Time
+   * @return Volumetric source for the unparameterized source
+   */
+  template <typename PositionType, typename... ParamTypes>
+  SERAC_HOST_DEVICE auto operator()(const PositionType& x, double t, ParamTypes...) const
+  {
+    return pressure(x, t);
+  }
+
+  /// Underlying unparameterized source
+  UnparameterizedPressureType pressure;
 };
 
-template <typename T, int dim>
-struct has_stress<T, dim, std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, dim, dim>&>()))>>
-    : std::true_type {
-};
+/**
+ * @brief Template deduction guide for the trivially parameterized source
+ *
+ * @tparam PressureType The unparameterized source type
+ */
+template <typename PressureType>
+TriviallyParameterizedPressure(PressureType) -> TriviallyParameterizedPressure<PressureType>;
 
-// Use SFINAE to add static assertions checking if the given thermal source type is acceptable
-template <typename T, int dim, typename = void>
-struct has_body_force : std::false_type {
-};
-
-template <typename T, int dim>
-struct has_body_force<T, dim,
-                      std::void_t<decltype(std::declval<T&>()(
-                          std::declval<tensor<double, dim>&>(), std::declval<double>(),
-                          std::declval<tensor<double, dim>&>(), std::declval<tensor<double, dim, dim>&>()))>>
-    : std::true_type {
-};
-
-// Use SFINAE to add static assertions checking if the given thermal flux boundary type is acceptable
-template <typename T, int dim, typename = void>
-struct has_traction_boundary : std::false_type {
-};
-
-template <typename T, int dim>
-struct has_traction_boundary<
-    T, dim,
-    std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, dim>&>(), std::declval<tensor<double, dim>&>(),
-                                            std::declval<tensor<double, 1>&>()))>> : std::true_type {
-};
-
-// Use SFINAE to add static assertions checking if the given thermal flux boundary type is acceptable
-template <typename T, int dim, typename = void>
-struct has_pressure_boundary : std::false_type {
-};
-
-template <typename T, int dim>
-struct has_pressure_boundary<
-    T, dim,
-    std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, dim>&>(), std::declval<tensor<double, 1>&>()))>>
-    : std::true_type {
-};
+/**
+ * @brief Convert an unparameterized pressure to one which accepts parameter values in the paren operator
+ *
+ * @tparam PressureType The unparameterized pressure type
+ * @param pressure The unparameterized pressure
+ * @return The parameterized pressure
+ */
+template <typename PressureType>
+auto parameterizePressure(PressureType& pressure)
+{
+  if constexpr (is_parameterized<PressureType>::value) {
+    return pressure;
+  } else {
+    return TriviallyParameterizedPressure{pressure};
+  }
+}
 
 }  // namespace serac
