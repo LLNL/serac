@@ -11,55 +11,29 @@ namespace serac {
 
 static constexpr auto I = Identity<3>();
 
+// An arbitrary rotation tensor for frame indifference tests
 static const tensor<double, 3, 3> Q{{{ 0.852932108456964,  0.405577416697288, -0.328654495524269 },
                                      {-0.51876824611259 ,  0.728725283562492, -0.44703351990878  },
                                      { 0.058192140263313,  0.551784758906877,  0.831953877717782 }}};
 
+/**
+ * @brief Compute Green's strain from the displacement gradient
+ */
 template <typename T>
-auto green_strain(const T& grad_u)
+auto green_strain(const tensor<T, 3, 3>& grad_u)
 {
   return 0.5*(grad_u + transpose(grad_u) + transpose(grad_u)*grad_u);
 }
 
 
-// maybe the diag operator would be nice
-
-/**
- * Very incorrectly computes the matrix logarithm.
- * This only works for diagonal matrices, but
- * that is all I need for my test right now.
- * We'll need the real implementation in the
- * tensor class eventually, so beg Sam.
- */
-template <typename T>
-auto logm(const T& A)
-{
-  T logA{{{std::log(A[0][0]), 0.0, 0.0},
-          {0.0, std::log(A[1][1]), 0.0},
-          {0.0, 0.0, std::log(A[2][2])}}};
-  return logA;
-}
-
-template <typename T>
-auto hughes_winget_rate(const T& A, double dt)
-{
-  return (2./dt)*(A - I)*inv(A + I);
-}
-
-template <typename T>
-auto compute_velocity_gradient(const T& F_new, const T& F_old, double dt)
-{
-  auto dF = F_new*inv(F_old); // this could be done with linear solves to avoid the inverse
-  return hughes_winget_rate(dF, dt);
-}
-
+/// @brief Green-Saint Venant isotropic thermoelastic model
 struct LinearThermoelasticMaterial {
-  double E;      ///< Young's modulus
-  double nu;     ///< Poisson's ratio
-  double C;      ///< heat capacity
-  double alpha;  ///< thermal expansion coefficient
-  double theta_ref;   ///< datum temperature
-  double k;      ///< thermal conductivity
+  double E;          ///< Young's modulus
+  double nu;         ///< Poisson's ratio
+  double C;          ///< volumetric heat capacity
+  double alpha;      ///< thermal expansion coefficient
+  double theta_ref;  ///< datum temperature
+  double k;          ///< thermal conductivity
 
   auto calculate_potential(const tensor<double, 3, 3>& grad_u, double theta,
                            const tensor<double, 3>& /* grad_theta */)
@@ -72,13 +46,13 @@ struct LinearThermoelasticMaterial {
     using std::log;
     auto logT = log(theta/theta_ref);
     auto psi_t = C*(theta - theta_ref + theta*logT);
-    auto psi_inter = -3.0*K*alpha*(theta - theta_ref)*trE;
+    auto psi_interaction = -3.0*K*alpha*(theta - theta_ref)*trE;
     return psi_e + psi_t + psi_inter;
   }
 
   template <typename T1, typename T2, typename T3>
-  auto calculate_potential_and_stress_AD(const T1& grad_u, T2 theta,
-                                         const T3& /* grad_theta */)
+  auto calculate_potential_and_stress_AD(const tensor<T1, 3, 3>& grad_u, T2 theta,
+                                         const tensor<T3, 3>& /* grad_theta */)
   {
     const double K = E / (3.0 * (1.0 - 2.0 * nu));
     const double G = 0.5 * E / (1.0 + nu);
@@ -91,51 +65,90 @@ struct LinearThermoelasticMaterial {
     auto psi_inter = -3.0*K*alpha*(theta - theta_ref)*trE;
     return psi_e + psi_t + psi_inter;
   }
-  
-  auto calculate_constitutive_outputs(const tensor<double, 3, 3>& grad_u,
-                                      double theta,
-                                      const tensor<double, 3>& grad_theta,
+
+  /**
+   * @brief Evalute constitutive variables for thermomechanics
+   *
+   * @param[in] grad_u displacement gradient
+   * @param[in] theta temperature
+   * @param[in] grad_theta temperature gradient
+   * @param[in] grad_u_old displacement gradient at previous time step
+   * @param[in] theta_old temperature at previous time step
+   * @param[in] dt time increment
+   * @param[out] P Piola stress
+   * @param[out] cv0 volumetric heat capacity in ref config
+   * @param[out] s0 internal heat supply in ref config
+   * @param[out] q0 Piola heat flux
+   */
+  template <typename T1, typename T2, typename T3>
+  auto calculate_constitutive_outputs(const tensor<T1, 3, 3>& grad_u,
+                                      T2 theta,
+                                      const tensor<T3, 3>& grad_theta,
                                       const tensor<double, 3, 3>& grad_u_old,
                                       double /*theta_old*/,
                                       double dt)
   {
     const double K = E / (3.0 * (1.0 - 2.0 * nu));
     const double G = 0.5 * E / (1.0 + nu);
+    auto F = grad_u + I;
     const auto Eg = green_strain(grad_u);
     const auto trEg = tr(Eg);
-    const auto F = grad_u + I;
-    const auto F_old = grad_u_old + I;
-    const auto D = sym(compute_velocity_gradient(F, F_old, dt));
-    const auto Eg_dot = transpose(F_old)*D*F_old;
 
     // stress
     const auto S = 2.0*G*dev(Eg) + K*(trEg - 3.0*alpha*(theta - theta_ref))*I;
     const auto P = F*S;
 
     // internal heat source
-    const double src = -3*K*alpha*theta*tr(Eg_dot);
+    // use backward difference to estimate rate of green strain
+    const auto Eg_old = green_strain(grad_u_old);
+    const double egdot = (trEg - tr(Eg_old))/dt;
+    const double s0 = -3*K*alpha*theta*egdot;
 
     // heat flux
-    const auto q = -k*grad_theta;
+    const auto q0 = -k*grad_theta;
 
-    return serac::tuple{P, C, src, q};
+    return serac::tuple{P, C, s0, q0};
   }
 
+  /**
+   * @brief Return constitutive output for mechanics operator
+   *
+   * @param[in] grad_u displacement gradient
+   * @param[in] theta temperature
+   * @param[in] grad_theta temperature gradient
+   * @param[in] grad_u_old displacement gradient at previous time step
+   * @param[in] theta_old temperature at previous time step
+   * @param[in] dt time increment
+   * @param[out] P Piola stress
+   */
   auto calculate_thermal_constitutive_outputs(
       const tensor<double, 3, 3>& grad_u, double theta, const tensor<double, 3>& grad_theta,
       const tensor<double, 3, 3>& grad_u_old, double theta_old, double dt)
   {
-    auto [P, c, s, q] = calculate_constitutive_outputs(grad_u, theta, grad_theta, grad_u_old,
-                                                       theta_old, dt);
-    return serac::tuple{c, s, q};
+    auto [P, cv0, s0, q0] = calculate_constitutive_outputs(grad_u, theta, grad_theta, grad_u_old,
+                                                           theta_old, dt);
+    return serac::tuple{cv0, s0, q0};
   }
 
+  /**
+   * @brief Return constitutive output for mechanics operator
+   *
+   * @param[in] grad_u displacement gradient
+   * @param[in] theta temperature
+   * @param[in] grad_theta temperature gradient
+   * @param[in] grad_u_old displacement gradient at previous time step
+   * @param[in] theta_old temperature at previous time step
+   * @param[in] dt time increment
+   * @param[out] cv0 volumetric heat capacity in ref config
+   * @param[out] s0 internal heat supply in ref config
+   * @param[out] q0 Piola heat flux
+   */
   auto calculate_mechanical_constitutive_outputs(
       const tensor<double, 3, 3>& grad_u, double theta, const tensor<double, 3>& grad_theta,
       const tensor<double, 3, 3>& grad_u_old, double theta_old, double dt)
   {
-    auto [P, c, s, q] = calculate_constitutive_outputs(grad_u, theta, grad_theta, grad_u_old,
-                                                       theta_old, dt);
+    auto [P, cv0, s0, q0] = calculate_constitutive_outputs(grad_u, theta, grad_theta, grad_u_old,
+                                                           theta_old, dt);
     return P;
   }
 };
@@ -145,9 +158,9 @@ struct LinearThermoelasticMaterial {
 TEST(ThermomechanicalMaterial, FreeEnergyIsZeroInReferenceState)
 {
   LinearThermoelasticMaterial material{.E=100.0, .nu=0.25, .C=1.0, .alpha=1.0e-3, .theta_ref=300.0, .k=1.0};
-  tensor<double, 3, 3> displacement_grad;
+  tensor<double, 3, 3> displacement_grad{};
   double temperature = material.theta_ref;
-  tensor<double, 3> temperature_grad{0.0, 0.0, 0.0};
+  tensor<double, 3> temperature_grad{};
   double free_energy = material.calculate_potential(displacement_grad, temperature, temperature_grad);
   EXPECT_NEAR(free_energy, 0.0, 1e-10);
 }
@@ -155,9 +168,9 @@ TEST(ThermomechanicalMaterial, FreeEnergyIsZeroInReferenceState)
 TEST(ThermomechanicalMaterial, StressIsZeroInReferenceState)
 {
   LinearThermoelasticMaterial material{.E=100.0, .nu=0.25, .C=1.0, .alpha=1.0e-3, .theta_ref=300.0, .k=1.0};
-  tensor<double, 3, 3> displacement_grad = serac::zero{};
+  tensor<double, 3, 3> displacement_grad{};
   double temperature = material.theta_ref;
-  tensor<double, 3> temperature_grad = serac::zero{};
+  tensor<double, 3> temperature_grad{};
   auto displacement_grad_old = displacement_grad;
   double temperature_old = temperature;
   double dt = 1.0;
@@ -165,24 +178,6 @@ TEST(ThermomechanicalMaterial, StressIsZeroInReferenceState)
       displacement_grad, temperature, temperature_grad, displacement_grad_old, temperature_old, dt);
   EXPECT_NEAR(norm(stress), 0.0, 1e-10);
 }
-
-TEST(ThermomechanicalMaterial, MechanicalConstitutiveOutputsAreFrameInvariant)
-{
-  LinearThermoelasticMaterial material{.E=100.0, .nu=0.25, .C=1.0, .alpha=1.0e-3, .theta_ref=300.0, .k=1.0};
-  tensor<double, 3, 3> displacement_grad{{{0.35490513, 0.60419905, 0.4275843 },
-                                          {0.23061597, 0.6735498 , 0.43953657},
-                                          {0.25099766, 0.27730572, 0.7678207 }}};
-  double temperature = material.theta_ref;
-  tensor<double, 3> temperature_grad{0.87241435, 0.11105156, -0.27708054};
-  auto energy = material.calculate_potential(displacement_grad, temperature, temperature_grad);
-  auto displacement_grad_transformed = Q*(displacement_grad + I) - I;
-  auto temperature_grad_transformed = Q*temperature_grad;
-  double energy2 = material.calculate_potential(displacement_grad_transformed,
-                                                temperature,
-                                                temperature_grad_transformed);
-  EXPECT_NEAR(energy, energy2, 1e-12);
-}
-
 
 TEST(ThermomechanicalMaterial, EnergyAndStressAgree)
 {
@@ -192,7 +187,7 @@ TEST(ThermomechanicalMaterial, EnergyAndStressAgree)
                                           {0.25099766, 0.27730572, 0.7678207 }}};
   double temperature = 290.0;
   tensor<double, 3> temperature_grad{0.87241435, 0.11105156, -0.27708054};
-  tensor<double, 3, 3> displacement_grad_old = serac::zero{};
+  tensor<double, 3, 3> displacement_grad_old{};
   double temperature_old = temperature;
   double dt = 1.0;
   auto energy_and_stress = material.calculate_potential_and_stress_AD(make_dual(displacement_grad), temperature, temperature_grad);
@@ -212,7 +207,7 @@ TEST(ThermomechanicalMaterial, SatisfiesDissipationInequality)
   double temperature = 290.0;
   tensor<double, 3> temperature_grad{0.87241435, 0.11105156, -0.27708054};
   double temperature_old = temperature;
-  tensor<double, 3, 3> displacement_grad_old = serac::zero{};
+  tensor<double, 3, 3> displacement_grad_old{};
   double dt = 1.0;
   auto generalized_fluxes = material.calculate_thermal_constitutive_outputs(
       displacement_grad, temperature, temperature_grad, displacement_grad_old,
@@ -224,7 +219,7 @@ TEST(ThermomechanicalMaterial, SatisfiesDissipationInequality)
   EXPECT_TRUE(dissipation >= 0.0);
 }
 
-TEST(ThermomechanicalMaterial, ThermalConstitutiveOutputsAreFrameInvariant)
+TEST(ThermomechanicalMaterial, ConstitutiveOutputsAreFrameIndifferent)
 {
   LinearThermoelasticMaterial material{.E=100.0, .nu=0.25, .C=1.0, .alpha=1.0e-3, .theta_ref=300.0, .k=1.0};
   tensor<double, 3, 3> displacement_grad{{{0.35490513, 0.60419905, 0.4275843 },
@@ -232,22 +227,26 @@ TEST(ThermomechanicalMaterial, ThermalConstitutiveOutputsAreFrameInvariant)
                                           {0.25099766, 0.27730572, 0.7678207 }}};
   double temperature = 290.0;
   tensor<double, 3> temperature_grad{0.87241435, 0.11105156, -0.27708054};
-  double temperature_old = temperature;
-  tensor<double, 3, 3> displacement_grad_old = serac::zero{};
+  double temperature_old = 300;
+  tensor<double, 3, 3> displacement_grad_old{};
   double dt = 1.0;
-  auto displacement_grad_transformed = Q*(displacement_grad + I) - I;
-  auto displacement_grad_old_transformed = Q*(displacement_grad_old + I) - I;
-  auto generalized_fluxes = material.calculate_thermal_constitutive_outputs(
+
+  auto generalized_fluxes = material.calculate_constitutive_outputs(
       displacement_grad, temperature, temperature_grad, displacement_grad_old,
       temperature_old, dt);
-  auto generalized_fluxes_2 = material.calculate_thermal_constitutive_outputs(
+
+  auto displacement_grad_transformed = Q*(displacement_grad + I) - I;
+  auto displacement_grad_old_transformed = Q*(displacement_grad_old + I) - I;
+  auto generalized_fluxes_2 = material.calculate_constitutive_outputs(
       displacement_grad_transformed, temperature, temperature_grad,
       displacement_grad_old_transformed, temperature_old, dt);
-  auto [heat_capacity, internal_source, heat_flux] = generalized_fluxes;
-  auto [heat_capacity_2, internal_source_2, heat_flux_2] = generalized_fluxes_2;
+  
+  auto [piola_stress, heat_capacity, internal_source, heat_flux] = generalized_fluxes;
+  auto [piola_stress_2, heat_capacity_2, internal_source_2, heat_flux_2] = generalized_fluxes_2;
+  EXPECT_LT(norm(piola_stress - transpose(Q)*piola_stress_2), 1e-12);
   EXPECT_NEAR(heat_capacity, heat_capacity_2, 1e-12);
   EXPECT_NEAR(internal_source, internal_source_2, 1e-12);
-  EXPECT_LT(norm(heat_flux - heat_flux_2), 1e-12); 
+  EXPECT_LT(norm(heat_flux - heat_flux_2), 1e-12);
 }
 
 
@@ -259,7 +258,7 @@ TEST(ThermomechanicalMaterial, InternalSourceHasCorrectSign)
                                           {0.25099766, 0.27730572, 0.7678207 }}};
   double temperature_old = 290.0;
   tensor<double, 3> temperature_grad{0.87241435, 0.11105156, -0.27708054};
-  tensor<double, 3, 3> displacement_grad_old = serac::zero{};
+  tensor<double, 3, 3> displacement_grad_old{};
   double temperature = temperature_old;
   double dt = 1.0;
   auto [heat_capacity, internal_source, heat_flux] =
