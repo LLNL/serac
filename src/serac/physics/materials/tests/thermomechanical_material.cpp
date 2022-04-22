@@ -252,10 +252,31 @@ TEST(ThermomechanicalMaterial, InternalSourceHasCorrectSign)
   double temperature = temperature_old;
   double dt = 1.0;
   auto [heat_capacity, internal_source, heat_flux] =
-      material.calculate_thermal_constitutive_outputs(
-          displacement_grad, temperature, temperature_grad, displacement_grad_old,
-          temperature_old, dt);
+      material.calculate_thermal_constitutive_outputs(displacement_grad, temperature,
+                                                      temperature_grad, displacement_grad_old,
+                                                      temperature_old, dt);
+  // should have same sign as sgn(alpha*trEdot), here negative
   EXPECT_LT(internal_source, 0.0);
+}
+
+TEST(ThermomechanicalMaterial, StressHasCorrectSymmetry)
+{
+  LinearThermoelasticMaterial material{.E=100.0, .nu=0.25, .C=1.0, .alpha=1.0e-3, .theta_ref=300.0, .k=1.0};
+  tensor<double, 3, 3> displacement_grad{{{0.35490513, 0.60419905, 0.4275843 },
+                                          {0.23061597, 0.6735498 , 0.43953657},
+                                          {0.25099766, 0.27730572, 0.7678207 }}};
+  double temperature_old = 290.0;
+  tensor<double, 3> temperature_grad{0.87241435, 0.11105156, -0.27708054};
+  tensor<double, 3, 3> displacement_grad_old{};
+  double temperature = temperature_old;
+  double dt = 1.0;
+  auto piola_stress = material.calculate_mechanical_constitutive_outputs(
+      displacement_grad, temperature, temperature_grad, displacement_grad_old,
+      temperature_old, dt);
+  auto deformation_grad = displacement_grad + I;
+  auto kirchhoff_stress = piola_stress*transpose(deformation_grad);
+  double tol = 1e-10;
+  EXPECT_TRUE(is_symmetric(kirchhoff_stress, tol));
 }
 
 
