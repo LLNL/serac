@@ -76,18 +76,6 @@ struct LinearThermoelasticMaterial {
     return psi_e + psi_t + psi_inter;
   }
 
-  auto calculate_stress(const tensor<double, 3, 3>& grad_u, double theta,
-                        const tensor<double, 3>& /* grad_theta */)
-  {
-    const double K = E / (3.0 * (1.0 - 2.0 * nu));
-    const double G = 0.5 * E / (1.0 + nu);
-    auto Eg = green_strain(grad_u);
-    auto trEg = tr(Eg);
-    auto S = 2.0*G*dev(Eg) + K*(trEg - 3.0*alpha*(theta - theta_ref))*I;
-    auto F = grad_u + I;
-    return F*S;
-  }
-
   template <typename T1, typename T2, typename T3>
   auto calculate_potential_and_stress_AD(const T1& grad_u, T2 theta,
                                          const T3& /* grad_theta */)
@@ -103,32 +91,13 @@ struct LinearThermoelasticMaterial {
     auto psi_inter = -3.0*K*alpha*(theta - theta_ref)*trE;
     return psi_e + psi_t + psi_inter;
   }
-
-
-  auto calculate_thermal_constitutive(const tensor<double, 3, 3>& grad_u,
+  
+  auto calculate_constitutive_outputs(const tensor<double, 3, 3>& grad_u,
                                       double theta,
                                       const tensor<double, 3>& grad_theta,
                                       const tensor<double, 3, 3>& grad_u_old,
                                       double /*theta_old*/,
                                       double dt)
-  {
-    const double K = E / (3.0 * (1.0 - 2.0 * nu));
-    auto F = grad_u + I;
-    auto F_old = grad_u_old + I;
-    auto L = compute_velocity_gradient(F, F_old, dt);
-    auto D = sym(L);
-    auto strain_rate = transpose(F_old)*D*F_old;
-    double src = -3*K*alpha*theta*tr(strain_rate);
-    auto q = -k*grad_theta;
-    return serac::tuple{C, src, q};
-  }
-  
-  auto calculate_constitutive_output(const tensor<double, 3, 3>& grad_u,
-                                     double theta,
-                                     const tensor<double, 3>& grad_theta,
-                                     const tensor<double, 3, 3>& grad_u_old,
-                                     double /*theta_old*/,
-                                     double dt)
   {
     const double K = E / (3.0 * (1.0 - 2.0 * nu));
     const double G = 0.5 * E / (1.0 + nu);
@@ -156,8 +125,8 @@ struct LinearThermoelasticMaterial {
       const tensor<double, 3, 3>& grad_u, double theta, const tensor<double, 3>& grad_theta,
       const tensor<double, 3, 3>& grad_u_old, double theta_old, double dt)
   {
-    auto [P, c, s, q] = calculate_constitutive_output(grad_u, theta, grad_theta, grad_u_old,
-                                                      theta_old, dt);
+    auto [P, c, s, q] = calculate_constitutive_outputs(grad_u, theta, grad_theta, grad_u_old,
+                                                       theta_old, dt);
     return serac::tuple{c, s, q};
   }
 
@@ -165,10 +134,9 @@ struct LinearThermoelasticMaterial {
       const tensor<double, 3, 3>& grad_u, double theta, const tensor<double, 3>& grad_theta,
       const tensor<double, 3, 3>& grad_u_old, double theta_old, double dt)
   {
-    auto [P, c, s, q] = calculate_constitutive_output(grad_u, theta, grad_theta, grad_u_old,
-                                                      theta_old, dt);
+    auto [P, c, s, q] = calculate_constitutive_outputs(grad_u, theta, grad_theta, grad_u_old,
+                                                       theta_old, dt);
     return P;
-    
   }
 };
 
