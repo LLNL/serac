@@ -132,16 +132,28 @@ public:
 
   /**
    * @brief "Manually" set the DOF indices without specifying the field to which they apply
-   * @param[in] dofs The indices of the DOFs constrained by the boundary condition
+   * @param[in] dofs The true vector indices of the DOFs constrained by the boundary condition
+   *
+   * @note This will set both the true and local internal dof value arrays.
    */
-  void setTrueDofs(const mfem::Array<int> dofs);
+  void setTrueDofs(const mfem::Array<int> true_dofs);
+
+  /**
+   * @brief "Manually" set the DOF indices without specifying the field to which they apply
+   * @param[in] dofs The local (finite element/grid function) indices of the DOFs constrained by the boundary condition
+   *
+   * @note This will set both the true and local internal dof value arrays.
+   */
+  void setLocalDofs(const mfem::Array<int> local_dofs);
 
   /**
    * @brief Uses mfem::ParFiniteElementSpace::GetEssentialTrueDofs to
    * determine the DOFs for the boundary condition
    * @param[in] state The finite element state for which the DOFs should be obtained
+   *
+   * @note This will set both the true and local dof values.
    */
-  void setTrueDofs(FiniteElementState& state);
+  void setDofs(FiniteElementState& state);
 
   /**
    * @brief Returns the DOF indices for an essential boundary condition
@@ -151,6 +163,16 @@ public:
   {
     SLIC_ERROR_ROOT_IF(!true_dofs_, "True DOFs only available with essential BC.");
     return *true_dofs_;
+  }
+
+  /**
+   * @brief Returns the DOF indices for an essential boundary condition
+   * @return A non-owning reference to the array of indices
+   */
+  const mfem::Array<int>& getLocalDofs() const
+  {
+    SLIC_ERROR_ROOT_IF(!local_dofs_, "Local DOFs only available with essential BC.");
+    return *local_dofs_;
   }
 
   /**
@@ -254,6 +276,11 @@ private:
    * @note Only used for essential (Dirichlet) BCs
    */
   std::optional<mfem::Array<int>> true_dofs_;
+  /**
+   * @brief The local (finite element) DOFs affected by this BC
+   * @note Only used for essential (Dirichlet) BCs
+   */
+  std::optional<mfem::Array<int>> local_dofs_;
   /**
    * @brief The state (field) affected by this BC
    * @note Only used for essential (Dirichlet) BCs

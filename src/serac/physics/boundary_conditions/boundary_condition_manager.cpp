@@ -26,7 +26,7 @@ void BoundaryConditionManager::addEssential(const std::set<int>& ess_bdr, serac:
   }
 
   BoundaryCondition bc(ess_bdr_coef, component, filtered_attrs, num_attrs_);
-  bc.setTrueDofs(state);
+  bc.setDofs(state);
   ess_bdr_.emplace_back(std::move(bc));
   attrs_in_use_.insert(ess_bdr.begin(), ess_bdr.end());
   all_dofs_valid_ = false;
@@ -47,14 +47,18 @@ void BoundaryConditionManager::addEssentialTrueDofs(const mfem::Array<int>&   tr
   all_dofs_valid_ = false;
 }
 
-void BoundaryConditionManager::updateAllEssentialDofs() const
+void BoundaryConditionManager::updateAllDofs() const
 {
-  all_dofs_.DeleteAll();
+  all_true_dofs_.DeleteAll();
+  all_local_dofs_.DeleteAll();
   for (const auto& bc : ess_bdr_) {
-    all_dofs_.Append(bc.getTrueDofs());
+    all_true_dofs_.Append(bc.getTrueDofs());
+    all_local_dofs_.Append(bc.getLocalDofs());
   }
-  all_dofs_.Sort();
-  all_dofs_.Unique();
+  all_true_dofs_.Sort();
+  all_local_dofs_.Sort();
+  all_true_dofs_.Unique();
+  all_local_dofs_.Unique();
   all_dofs_valid_ = true;
 }
 
