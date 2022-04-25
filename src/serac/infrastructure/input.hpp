@@ -54,7 +54,7 @@ axom::inlet::Inlet initialize(axom::sidre::DataStore& datastore, const std::stri
  *
  * @param[in] mesh_path Given mesh path from input file
  * @param[in] input_file_path Path to user given input file
- * @return initialized Inlet instance
+ * @return Absolute path of found file
  */
 std::string findMeshFilePath(const std::string& mesh_path, const std::string& input_file_path);
 
