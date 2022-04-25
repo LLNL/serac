@@ -47,7 +47,6 @@ Example usages for --tolerance:
 
 Example usage for --tolerance-file:
     --tolerance-file=tolerance_low.json
-    (Note: <name>.json file must be in tests/integration/tolerances directory)
 
 Example JSON file for --tolerance-file:
     {
