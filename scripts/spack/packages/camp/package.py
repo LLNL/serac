@@ -19,10 +19,10 @@ class Camp(CMakePackage, CudaPackage, ROCmPackage):
     maintainers = ['trws']
 
     version('main', branch='main', submodules='True')
-    # SERAC EDIT BEGIN: camp spack package has not been updated with recent releases
-    version('2022.03.0', tag='v2022.03.0')
-    # SERAC EDIT END
     version('0.3.0', sha256='129431a049ca5825443038ad5a37a86ba6d09b2618d5fe65d35f83136575afdb')
+    # SERAC EDIT BEGIN
+    version('0.2.3', tag='v0.2.3')
+    # SERAC EDIT END
     version('0.2.2', sha256='194d38b57e50e3494482a7f94940b27f37a2bee8291f2574d64db342b981d819')
     version('0.1.0', sha256='fd4f0f2a60b82a12a1d9f943f8893dc6fe770db493f8fae5ef6f7d0c439bebcc')
 
@@ -36,7 +36,7 @@ class Camp(CMakePackage, CudaPackage, ROCmPackage):
     depends_on('blt')
 
     # SERAC EDIT BEGIN: Backport CTAD and structured bindings from main
-    patch('modernize_tuple.patch', when='@2022.03.0')
+    patch('modernize_tuple_0.2.3.patch', when='@0.2.3')
     # SERAC EDIT END
 
     def cmake_args(self):

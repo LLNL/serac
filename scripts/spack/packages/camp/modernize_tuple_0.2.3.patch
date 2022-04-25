@@ -1,8 +1,8 @@
 diff --git a/include/camp/tuple.hpp b/include/camp/tuple.hpp
-index 98565d9..420b538 100644
+index 01ed387..d983f67 100644
 --- a/include/camp/tuple.hpp
 +++ b/include/camp/tuple.hpp
-@@ -359,7 +359,7 @@ public:
+@@ -320,7 +320,7 @@ public:
  };
  
  template <>
@@ -11,7 +11,7 @@ index 98565d9..420b538 100644
  {
  public:
    using TList = camp::list<>;
-@@ -367,6 +367,13 @@ public:
+@@ -328,6 +328,13 @@ public:
    using type = tuple;
  };
  
@@ -25,7 +25,30 @@ index 98565d9..420b538 100644
  template <typename... Tags, typename... Args>
  struct as_list_s<tagged_tuple<camp::list<Tags...>, Args...>> {
    using type = list<Args...>;
-@@ -484,5 +491,36 @@ auto operator<<(std::ostream& os, camp::tuple<Args...> const& tup)
+@@ -460,7 +467,7 @@ CAMP_HOST_DEVICE constexpr auto invoke_with_order(TupleLike&& t,
+                                                   camp::idx_seq<Sequence...>)
+     -> decltype(f(::camp::get<Sequence>(t)...))
+ {
+-  return f(::camp::get<Sequence>(t)...);
++  return f(::camp::get<Sequence>(std::forward<TupleLike>(t))...);
+ }
+ 
+ CAMP_SUPPRESS_HD_WARN
+@@ -497,6 +504,13 @@ constexpr T make_from_tuple(Tuple&& t)
+ }
+ }  // namespace camp
+ 
++// Forward the elements of a tuple to a callable
++template <class Fn, class TupleLike>
++CAMP_HOST_DEVICE constexpr auto apply(Fn&& f, TupleLike&& tup)
++{
++  return ::camp::invoke(std::forward<TupleLike>(tup), std::forward<Fn>(f));
++}
++
+ namespace internal
+ {
+ template <class Tuple, camp::idx_t... Idxs>
+@@ -515,5 +529,36 @@ auto operator<<(std::ostream& os, camp::tuple<Args...> const& t)
    return os << ")";
  }
  
