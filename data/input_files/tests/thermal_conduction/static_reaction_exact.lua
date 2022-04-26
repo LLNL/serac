@@ -20,7 +20,7 @@ scale_function = function (v)
 end
 
 exact_solution = {
-  coef = exact_function
+  scalar_function = exact_function
 }
 
 epsilon = 0.00001
@@ -66,12 +66,12 @@ thermal_conduction = {
         reaction_function = reaction,
         d_reaction_function = d_reaction,
         scale = {
-            coef = scale_function
+            scalar_function = scale_function
         }
     },
 
     source = {
-        coef = function (v)
+        scalar_function = function (v)
             return scale_function(v) * reaction(exact_function(v)) + minus_laplacian_temp(v)
         end
     },
@@ -80,7 +80,7 @@ thermal_conduction = {
     boundary_conds = {
         ['temperature'] = {
             attrs = {1},
-            coef = exact_function
+            scalar_function = exact_function
         },
     },
 }

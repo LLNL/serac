@@ -55,7 +55,7 @@ void exitGracefully(bool error)
   if (mpi_initialized && !mpi_finalized) {
     MPI_Finalize();
   }
-  profiling::terminateCaliper();
+  profiling::finalize();
 
   accelerator::terminateDevice();
 

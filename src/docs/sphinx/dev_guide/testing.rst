@@ -49,6 +49,8 @@ Requirements:
      # Personal Machine (currently runs subset of tests)
      $ ./ats.sh
 
+   Append ``--help`` to the command to see the current options.
+
 #. **View results.**
    ATS gives a running summary and the final results.  ATS also outputs the following
    helpful files in the platform and timestamp specific created log directory:
@@ -84,3 +86,4 @@ easier in ``tests/test.ats``.
       :end-before: _serac_tolerance_test_end
       :language: text
       :dedent: 4
+

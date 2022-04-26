@@ -64,11 +64,36 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     endif()
 
     #------------------------------------------------------------------------------
+    # Adiak
+    #------------------------------------------------------------------------------
+    if(SERAC_ENABLE_PROFILING AND NOT ADIAK_DIR)
+        message(FATAL_ERROR "SERAC_ENABLE_PROFILING cannot be ON without ADIAK_DIR defined.")
+    endif()
+
+    if(ADIAK_DIR AND SERAC_ENABLE_PROFILING)
+        serac_assert_is_directory(VARIABLE_NAME ADIAK_DIR)
+
+        find_package(adiak REQUIRED NO_DEFAULT_PATH PATHS ${ADIAK_DIR})
+        message(STATUS "Adiak support is ON")
+        set(ADIAK_FOUND TRUE)
+
+        # Set the include directories as Adiak does not completely
+        # configure the "adiak" target
+        set_target_properties(adiak PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES ${adiak_INCLUDE_DIRS})
+    else()
+        message(STATUS "Adiak support is OFF")
+        set(ADIAK_FOUND FALSE)
+    endif()
+
+    #------------------------------------------------------------------------------
     # Caliper
     #------------------------------------------------------------------------------
-    # TODO: temporarily turned off until PR # 626
-    set(CALIPER_DIR "" CACHE STRING "" FORCE)
-    if(CALIPER_DIR)
+    if(SERAC_ENABLE_PROFILING AND NOT CALIPER_DIR)
+        message(FATAL_ERROR "SERAC_ENABLE_PROFILING cannot be ON without CALIPER_DIR defined.")
+    endif()
+
+    if(CALIPER_DIR AND SERAC_ENABLE_PROFILING)
         serac_assert_is_directory(VARIABLE_NAME CALIPER_DIR)
 
         # Should this logic be in the Caliper CMake package?

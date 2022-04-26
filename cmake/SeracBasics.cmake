@@ -28,6 +28,7 @@ else()
     set(_enable_serac_code_checks OFF)
 endif()
 option(SERAC_ENABLE_CODE_CHECKS "Enable Serac's code checks" ${_enable_serac_code_checks})
+option(SERAC_ENABLE_PROFILING "Enable profiling functionality" OFF)
 
 #------------------------------------------------------------------------------
 # Create symlink in installed bin

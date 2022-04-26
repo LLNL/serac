@@ -572,6 +572,34 @@ SERAC_HOST_DEVICE constexpr auto operator*(const tuple<T...>& x, const double a)
 }
 
 /**
+ * @tparam T the types stored in the tuple
+ * @tparam i a list of indices used to acces each element of the tuple
+ * @param out the ostream to write the output to
+ * @param A the tuple of values
+ * @brief helper used to implement printing a tuple of values
+ */
+template <typename... T, std::size_t... i>
+auto& print_helper(std::ostream& out, const serac::tuple<T...>& A, std::integer_sequence<size_t, i...>)
+{
+  out << "tuple{";
+  (..., (out << (i == 0 ? "" : ", ") << serac::get<i>(A)));
+  out << "}";
+  return out;
+}
+
+/**
+ * @tparam T the types stored in the tuple
+ * @param out the ostream to write the output to
+ * @param A the tuple of values
+ * @brief print a tuple of values
+ */
+template <typename... T>
+auto& operator<<(std::ostream& out, const serac::tuple<T...>& A)
+{
+  return print_helper(out, A, std::make_integer_sequence<size_t, sizeof...(T)>());
+}
+
+/**
  * @brief A helper to apply a lambda to a tuple
  *
  * @tparam lambda The functor type

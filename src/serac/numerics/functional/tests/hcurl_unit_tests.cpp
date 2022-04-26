@@ -29,7 +29,7 @@ void verify_kronecker_delta_property()
 {
   static constexpr auto nodes      = element_type::nodes;
   static constexpr auto directions = element_type::directions;
-  static constexpr auto I          = Identity<element_type::ndof>();
+  static constexpr auto I          = DenseIdentity<element_type::ndof>();
 
   for (int i = 0; i < element_type::ndof; i++) {
     double error = norm(I[i] - dot(element_type::shape_functions(nodes[i]), directions[i]));
@@ -45,7 +45,7 @@ void verify_curl_calculation()
 {
   static constexpr double eps = 1.0e-6;
   static constexpr int    dim = element_type::dim;
-  static constexpr auto   I   = Identity<dim>();
+  static constexpr auto   I   = DenseIdentity<dim>();
   static constexpr auto   random_points =
       make_tensor<num_points, dim>([](int i, int j) { return random_numbers[i * dim + j]; });
 

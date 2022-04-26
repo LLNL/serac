@@ -6,7 +6,7 @@
 
 set(functional_depends mfem mpi serac_infrastructure serac_mesh)
 blt_list_append( TO functional_depends ELEMENTS cuda    IF ENABLE_CUDA )
-blt_list_append( TO functional_depends ELEMENTS caliper IF SERAC_USE_CALIPER )
+blt_list_append( TO functional_depends ELEMENTS caliper adiak IF SERAC_ENABLE_PROFILING )
 
 # Add the library first
 set(functional_headers

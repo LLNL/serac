@@ -62,7 +62,7 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
 
   */
 
-  static constexpr tensor<double, ndof> shape_functions(tensor<double, dim> xi)
+  SERAC_HOST_DEVICE static constexpr tensor<double, ndof> shape_functions(tensor<double, dim> xi)
   {
     auto N_xi  = GaussLobattoInterpolation<p + 1>(xi[0]);
     auto N_eta = GaussLobattoInterpolation<p + 1>(xi[1]);
@@ -78,7 +78,7 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
     return N;
   }
 
-  static constexpr tensor<double, ndof, dim> shape_function_gradients(tensor<double, dim> xi)
+  SERAC_HOST_DEVICE static constexpr tensor<double, ndof, dim> shape_function_gradients(tensor<double, dim> xi)
   {
     auto N_xi   = GaussLobattoInterpolation<p + 1>(xi[0]);
     auto N_eta  = GaussLobattoInterpolation<p + 1>(xi[1]);

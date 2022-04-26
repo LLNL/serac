@@ -21,7 +21,7 @@ namespace serac {
  * @tparam element_type the finite element types whose data is stored in this container
  */
 template <serac::ExecutionSpace exec, typename element_type>
-auto ArrayViewForElement(const double* ptr, size_t num_elements, element_type)
+auto ArrayViewForElement(const double* ptr, std::size_t num_elements, element_type)
 {
   if constexpr (element_type::components == 1) {
     return ExecArrayView<const double, 2, exec>(ptr, num_elements, element_type::ndof);
@@ -64,7 +64,7 @@ struct EVectorView {
    * @param pointers the list of raw pointers to E-vector data provided by mfem
    * @param num_elements the number of elements
    */
-  EVectorView(std::array<const double*, n> pointers, size_t num_elements)
+  EVectorView(std::array<const double*, n> pointers, std::size_t num_elements)
   {
     for_constexpr<n>([&](auto i) {
       serac::get<i>(data) = ArrayViewForElement<exec>(pointers[i], num_elements, serac::get<i>(element_types_tuple{}));
@@ -89,10 +89,10 @@ struct EVectorView {
       auto& arr = serac::get<I>(data);
 
       if constexpr (components == 1) {
-        serac::get<I>(values) = make_tensor<ndof>([&arr, e](int i) { return arr(e, size_t(i)); });
+        serac::get<I>(values) = make_tensor<ndof>([&arr, e](int i) { return arr(e, std::size_t(i)); });
       } else {
         serac::get<I>(values) =
-            make_tensor<components, ndof>([&arr, e](int j, int i) { return arr(e, size_t(j), size_t(i)); });
+            make_tensor<components, ndof>([&arr, e](int j, int i) { return arr(e, std::size_t(j), std::size_t(i)); });
       }
     });
 

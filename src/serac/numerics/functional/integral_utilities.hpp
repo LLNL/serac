@@ -302,6 +302,7 @@ SERAC_HOST_DEVICE constexpr derivatives_type& AccessDerivatives(derivatives_type
 }
 
 /// @brief layer of indirection needed to unpack the entries of the argument tuple
+SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 template <typename lambda, typename coords_type, typename T, typename qpt_data_type, int... i>
 SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, const T& arg_tuple, qpt_data_type&& qpt_data,
                                        std::integer_sequence<int, i...>)
@@ -310,6 +311,7 @@ SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, const T& 
 }
 
 /// @overload
+SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 template <typename lambda, typename coords_type, typename T, int... i>
 SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, const T& arg_tuple,
                                        std::integer_sequence<int, i...>)
@@ -318,6 +320,7 @@ SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, const T& 
 }
 
 /// @overload
+SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 template <typename lambda, typename coords_type, typename T, int... i>
 SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, coords_type&& n_q, const T& arg_tuple,
                                        std::integer_sequence<int, i...>)

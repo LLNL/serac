@@ -123,7 +123,7 @@ public:
    * @param[in] which the index of the argument being differentiated
    * @see action_of_gradient_kernel
    */
-  void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E, size_t which) const
+  void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E, std::size_t which) const
   {
     action_of_gradient_[which](input_E, output_E);
   }
@@ -134,7 +134,7 @@ public:
    * nelems)
    * @param[in] which the index of the argument being differentiated
    */
-  void ComputeElementGradients(ExecArrayView<double, 3, ExecutionSpace::CPU> K_b, size_t which) const
+  void ComputeElementGradients(ExecArrayView<double, 3, ExecutionSpace::CPU> K_b, std::size_t which) const
   {
     element_gradient_[which](K_b);
   }

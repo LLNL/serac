@@ -17,7 +17,9 @@ set(materials_headers
     thermal_expansion_material.hpp
     solid_utils.hpp
     thermal_functional_material.hpp
+    parameterized_thermal_functional_material.hpp    
     solid_functional_material.hpp
+    parameterized_solid_functional_material.hpp
     functional_material_utils.hpp
     )
 

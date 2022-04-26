@@ -20,8 +20,86 @@
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/materials/functional_material_utils.hpp"
+#include "serac/numerics/expr_template_ops.hpp"
 
 namespace serac {
+
+namespace Thermal {
+
+/// A timestep and boundary condition enforcement method for a dynamic solver
+struct TimesteppingOptions {
+  /// The timestepping method to be applied
+  serac::TimestepMethod timestepper;
+
+  /// The essential boundary enforcement method to use
+  serac::DirichletEnforcementMethod enforcement_method;
+};
+
+/**
+ * @brief A configuration variant for the various solves
+ * For quasistatic solves, leave the @a dyn_options parameter null. @a T_nonlin_options and @a T_lin_options
+ * define the solver parameters for the nonlinear residual and linear stiffness solves. For
+ * dynamic problems, @a dyn_options defines the timestepping scheme while @a T_lin_options and @a T_nonlin_options
+ * define the nonlinear residual and linear stiffness solve options as before.
+ */
+struct SolverOptions {
+  /// The linear solver options
+  LinearSolverOptions T_lin_options;
+
+  /// The nonlinear solver options
+  NonlinearSolverOptions T_nonlin_options;
+
+  /**
+   * @brief The optional ODE solver parameters
+   * @note If this is not defined, a quasi-static solve is performed
+   */
+  std::optional<TimesteppingOptions> dyn_options = std::nullopt;
+};
+
+/**
+ * @brief Reasonable defaults for most thermal linear solver options
+ *
+ * @return The default thermal linear options
+ */
+IterativeSolverOptions defaultLinearOptions()
+{
+  return {.rel_tol     = 1.0e-6,
+          .abs_tol     = 1.0e-12,
+          .print_level = 0,
+          .max_iter    = 200,
+          .lin_solver  = LinearSolver::CG,
+          .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
+}
+
+/**
+ * @brief Reasonable defaults for most thermal nonlinear solver options
+ *
+ * @return The default thermal nonlinear options
+ */
+NonlinearSolverOptions defaultNonlinearOptions()
+{
+  return {.rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
+}
+
+/**
+ * @brief Reasonable defaults for quasi-static thermal conduction simulations
+ *
+ * @return The default quasi-static solver options
+ */
+SolverOptions defaultQuasistaticOptions() { return {defaultLinearOptions(), defaultNonlinearOptions(), std::nullopt}; }
+
+/**
+ * @brief Reasonable defaults for dynamic thermal conduction simulations
+ *
+ * @return The default dynamic solver options
+ */
+SolverOptions defaultDynamicOptions()
+{
+  return {defaultLinearOptions(), defaultNonlinearOptions(),
+          Thermal::TimesteppingOptions{TimestepMethod::BackwardEuler, DirichletEnforcementMethod::RateControl}};
+}
+
+}  // namespace Thermal
 
 /**
  * @brief An object containing the solver for a thermal conduction PDE
@@ -39,82 +117,6 @@ namespace serac {
 template <int order, int dim, typename... parameter_space>
 class ThermalConductionFunctional : public BasePhysics {
 public:
-  /// A timestep and boundary condition enforcement method for a dynamic solver
-  struct TimesteppingOptions {
-    /// The timestepping method to be applied
-    TimestepMethod timestepper;
-
-    /// The essential boundary enforcement method to use
-    DirichletEnforcementMethod enforcement_method;
-  };
-
-  /**
-   * @brief A configuration variant for the various solves
-   * For quasistatic solves, leave the @a dyn_options parameter null. @a T_nonlin_options and @a T_lin_options
-   * define the solver parameters for the nonlinear residual and linear stiffness solves. For
-   * dynamic problems, @a dyn_options defines the timestepping scheme while @a T_lin_options and @a T_nonlin_options
-   * define the nonlinear residual and linear stiffness solve options as before.
-   */
-  struct SolverOptions {
-    /// The linear solver options
-    LinearSolverOptions T_lin_options;
-
-    /// The nonlinear solver options
-    NonlinearSolverOptions T_nonlin_options;
-
-    /**
-     * @brief The optional ODE solver parameters
-     * @note If this is not defined, a quasi-static solve is performed
-     */
-    std::optional<TimesteppingOptions> dyn_options = std::nullopt;
-  };
-
-  /**
-   * @brief Reasonable defaults for most thermal linear solver options
-   *
-   * @return The default thermal linear options
-   */
-  static IterativeSolverOptions defaultLinearOptions()
-  {
-    return {.rel_tol     = 1.0e-6,
-            .abs_tol     = 1.0e-12,
-            .print_level = 0,
-            .max_iter    = 200,
-            .lin_solver  = LinearSolver::CG,
-            .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
-  }
-
-  /**
-   * @brief Reasonable defaults for most thermal nonlinear solver options
-   *
-   * @return The default thermal nonlinear options
-   */
-  static NonlinearSolverOptions defaultNonlinearOptions()
-  {
-    return {.rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
-  }
-
-  /**
-   * @brief Reasonable defaults for quasi-static thermal conduction simulations
-   *
-   * @return The default quasi-static solver options
-   */
-  static SolverOptions defaultQuasistaticOptions()
-  {
-    return {defaultLinearOptions(), defaultNonlinearOptions(), std::nullopt};
-  }
-
-  /**
-   * @brief Reasonable defaults for dynamic thermal conduction simulations
-   *
-   * @return The default dynamic solver options
-   */
-  static SolverOptions defaultDynamicOptions()
-  {
-    return {defaultLinearOptions(), defaultNonlinearOptions(),
-            TimesteppingOptions{TimestepMethod::BackwardEuler, DirichletEnforcementMethod::RateControl}};
-  }
-
   /**
    * @brief Construct a new Thermal Functional Solver object
    *
@@ -124,7 +126,7 @@ public:
    * used by an underlying material model or load
    */
   ThermalConductionFunctional(
-      const SolverOptions& options, const std::string& name = {},
+      const Thermal::SolverOptions& options, const std::string& name = {},
       std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states = {})
       : BasePhysics(2, order),
         temperature_(
@@ -151,10 +153,12 @@ public:
 
     functional_call_args_.emplace_back(temperature_.trueVec());
 
-    for (long unsigned int i = 0; i < sizeof...(parameter_space); ++i) {
-      trial_spaces[i + 1]         = &(parameter_states_[i].get().space());
-      parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, parameter_states_[i].get().space());
-      functional_call_args_.emplace_back(parameter_states_[i].get().trueVec());
+    if constexpr (sizeof...(parameter_space) > 0) {
+      for (size_t i = 0; i < sizeof...(parameter_space); ++i) {
+        trial_spaces[i + 1]         = &(parameter_states_[i].get().space());
+        parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, parameter_states_[i].get().space());
+        functional_call_args_.emplace_back(parameter_states_[i].get().trueVec());
+      }
     }
 
     M_functional_ = std::make_unique<Functional<test(trial, parameter_space...)>>(&temperature_.space(), trial_spaces);
@@ -236,80 +240,44 @@ public:
   template <typename MaterialType>
   void setMaterial(MaterialType material)
   {
-    /*
-    static_assert(has_density<MaterialType, dim>::value,
-                  "Thermal functional materials must have a public density(x) method.");
-    static_assert(has_specific_heat_capacity<MaterialType, dim>::value,
-                  "Thermal functional materials must have a public specificHeatCapacity(x, temperature) method.");
-    static_assert(has_thermal_flux<MaterialType, dim>::value,
-                  "Thermal functional materials must have a public (u, du_dx) operator for thermal flux evaluation.");
-    */
-
     if constexpr (is_parameterized<MaterialType>::value) {
       static_assert(material.numParameters() == sizeof...(parameter_space),
                     "Number of parameters in thermal conduction does not equal the number of parameters in the "
                     "thermal material.");
-
-      K_functional_->AddDomainIntegral(
-          Dimension<dim>{},
-          [material](auto, auto temperature, auto... params) {
-            // Get the value and the gradient from the input tuple
-            auto [u, du_dx] = temperature;
-            auto source     = serac::zero{};
-
-            auto flux = -1.0 * material(u, du_dx, serac::get<0>(params)...);
-
-            // Return the source and the flux as a tuple
-            return serac::tuple{source, flux};
-          },
-          mesh_);
-    } else {
-      K_functional_->AddDomainIntegral(
-          Dimension<dim>{},
-          [material](auto, auto temperature, auto...) {
-            // Get the value and the gradient from the input tuple
-            auto [u, du_dx] = temperature;
-            auto source     = serac::zero{};
-            auto flux       = -1.0 * material(u, du_dx);
-
-            // Return the source and the flux as a tuple
-            return serac::tuple{source, flux};
-          },
-          mesh_);
     }
 
-    if constexpr (is_parameterized<MaterialType>::value) {
-      static_assert(material.numParameters() == sizeof...(parameter_space),
-                    "Number of parameters in thermal conduction does not equal the number of parameters in the "
-                    "thermal material.");
+    auto parameterized_material = parameterizeMaterial(material);
 
-      M_functional_->AddDomainIntegral(
-          Dimension<dim>{},
-          [material](auto x, auto temperature, auto... params) {
-            auto [u, du_dx] = temperature;
-            auto flux       = serac::zero{};
+    K_functional_->AddDomainIntegral(
+        Dimension<dim>{},
+        [parameterized_material](auto x, auto temperature, auto... params) {
+          // Get the value and the gradient from the input tuple
+          auto [u, du_dx] = temperature;
+          auto source     = serac::zero{};
 
-            auto source = material.specificHeatCapacity(x, u, serac::get<0>(params)...) *
-                          material.density(x, serac::get<0>(params)...);
+          auto response = parameterized_material(x, u, du_dx, serac::get<0>(params)...);
 
-            // Return the source and the flux as a tuple
-            return serac::tuple{source, flux};
-          },
-          mesh_);
-    } else {
-      M_functional_->AddDomainIntegral(
-          Dimension<dim>{},
-          [material](auto x, auto temperature, auto... /* params */) {
-            auto [u, du_dx] = temperature;
-            auto flux       = serac::zero{};
+          return serac::tuple{source, -1.0 * response.heat_flux};
+        },
+        mesh_);
 
-            auto source = material.specificHeatCapacity(x, u) * material.density(x);
+    M_functional_->AddDomainIntegral(
+        Dimension<dim>{},
+        [parameterized_material](auto x, auto d_temperature_dt, auto... params) {
+          auto [u, du_dx] = d_temperature_dt;
+          auto flux       = serac::zero{};
 
-            // Return the source and the flux as a tuple
-            return serac::tuple{source, flux};
-          },
-          mesh_);
-    }
+          auto temp      = u * 0.0;
+          auto temp_grad = du_dx * 0.0;
+
+          auto response = parameterized_material(x, temp, temp_grad, serac::get<0>(params)...);
+
+          auto source = response.specific_heat_capacity * response.density * u;
+
+          // Return the source and the flux as a tuple
+          return serac::tuple{source, flux};
+        },
+        mesh_);
   }
 
   /**
@@ -338,47 +306,28 @@ public:
   template <typename SourceType>
   void setSource(SourceType source_function)
   {
-    /*
-    static_assert(
-        has_thermal_source<SourceType, dim>::value,
-        "Thermal functional sources must have a public (x, t, u, du_dx) operator for thermal source evaluation.");
-    */
-
     if constexpr (is_parameterized<SourceType>::value) {
       static_assert(source_function.numParameters() == sizeof...(parameter_space),
                     "Number of parameters in thermal conduction does not equal the number of parameters in the "
                     "thermal source.");
-
-      K_functional_->AddDomainIntegral(
-          Dimension<dim>{},
-          [source_function, this](auto x, auto temperature, auto... params) {
-            // Get the value and the gradient from the input tuple
-            auto [u, du_dx] = temperature;
-
-            auto flux = serac::zero{};
-
-            auto source = -1.0 * source_function(x, time_, u, du_dx, serac::get<0>(params)...);
-
-            // Return the source and the flux as a tuple
-            return serac::tuple{source, flux};
-          },
-          mesh_);
-    } else {
-      K_functional_->AddDomainIntegral(
-          Dimension<dim>{},
-          [source_function, this](auto x, auto temperature, auto... /* params */) {
-            // Get the value and the gradient from the input tuple
-            auto [u, du_dx] = temperature;
-
-            auto flux = serac::zero{};
-
-            auto source = -1.0 * source_function(x, time_, u, du_dx);
-
-            // Return the source and the flux as a tuple
-            return serac::tuple{source, flux};
-          },
-          mesh_);
     }
+
+    auto parameterized_source = parameterizeSource(source_function);
+
+    K_functional_->AddDomainIntegral(
+        Dimension<dim>{},
+        [parameterized_source, this](auto x, auto temperature, auto... params) {
+          // Get the value and the gradient from the input tuple
+          auto [u, du_dx] = temperature;
+
+          auto flux = serac::zero{};
+
+          auto source = -1.0 * parameterized_source(x, time_, u, du_dx, serac::get<0>(params)...);
+
+          // Return the source and the flux as a tuple
+          return serac::tuple{source, flux};
+        },
+        mesh_);
   }
 
   /**
@@ -392,25 +341,18 @@ public:
   template <typename FluxType>
   void setFluxBCs(FluxType flux_function)
   {
-    /*
-    static_assert(has_thermal_flux_boundary<FluxType, dim>::value,
-                  "Thermal flux boundary condition types must have a public (x, n, u) operator for thermal boundary "
-                  "flux evaluation.");
-    */
-
     if constexpr (is_parameterized<FluxType>::value) {
       static_assert(flux_function.numParameters() == sizeof...(parameter_space),
                     "Number of parameters in thermal conduction does not equal the number of parameters in the "
                     "thermal flux boundary.");
-
-      K_functional_->AddBoundaryIntegral(
-          Dimension<dim - 1>{},
-          [flux_function](auto x, auto n, auto u, auto... params) { return flux_function(x, n, u, params...); }, mesh_);
-    } else {
-      K_functional_->AddBoundaryIntegral(
-          Dimension<dim - 1>{},
-          [flux_function](auto x, auto n, auto u, auto... /* params */) { return flux_function(x, n, u); }, mesh_);
     }
+
+    auto parameterized_flux = parameterizeFlux(flux_function);
+
+    K_functional_->AddBoundaryIntegral(
+        Dimension<dim - 1>{},
+        [parameterized_flux](auto x, auto n, auto u, auto... params) { return parameterized_flux(x, n, u, params...); },
+        mesh_);
   }
 
   /**
@@ -446,8 +388,6 @@ public:
     // Project the essential boundary coefficients
     for (auto& bc : bcs_.essentials()) {
       bc.projectBdr(temperature_, time_);
-      K_functional_->SetEssentialBC(bc.markers(), 0);
-      M_functional_->SetEssentialBC(bc.markers(), 0);
     }
 
     // Initialize the true vector
@@ -461,6 +401,7 @@ public:
             functional_call_args_[0] = u;
 
             r = (*K_functional_)(functional_call_args_);
+            r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
           },
 
           [this](const mfem::Vector& u) -> mfem::Operator& {
@@ -468,6 +409,7 @@ public:
 
             auto [r, drdu] = (*K_functional_)(functional_call_args_, Index<0>{});
             J_             = assemble(drdu);
+            bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             return *J_;
           });
 
@@ -476,13 +418,14 @@ public:
       residual_ = mfem_ext::StdFunctionOperator(
           temperature_.space().TrueVSize(),
           [this](const mfem::Vector& du_dt, mfem::Vector& r) {
-            mfem::Vector K_arg(u_.Size());
-            add(1.0, u_, dt_, du_dt, K_arg);
-
-            functional_call_args_[0] = u_;
+            functional_call_args_[0] = du_dt;
 
             auto M_residual = (*M_functional_)(functional_call_args_);
 
+            // TODO we should use the new variadic capability to directly pass temperature and d_temp_dt directly to
+            // these kernels to avoid ugly hacks like this.
+            mfem::Vector K_arg(u_.Size());
+            add(1.0, u_, dt_, du_dt, K_arg);
             functional_call_args_[0] = K_arg;
 
             auto K_residual = (*K_functional_)(functional_call_args_);
@@ -490,29 +433,28 @@ public:
             functional_call_args_[0] = u_;
 
             add(M_residual, K_residual, r);
+            r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
           },
 
           [this](const mfem::Vector& du_dt) -> mfem::Operator& {
             // Only reassemble the stiffness if it is a new timestep
-            if (dt_ != previous_dt_) {
-              mfem::Vector K_arg(u_.Size());
-              add(1.0, u_, dt_, du_dt, K_arg);
+            functional_call_args_[0] = du_dt;
 
-              functional_call_args_[0] = u_;
+            auto M = serac::get<1>((*M_functional_)(functional_call_args_, Index<0>{}));
+            std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
-              auto M = serac::get<1>((*M_functional_)(functional_call_args_, Index<0>{}));
-              std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
+            mfem::Vector K_arg(u_.Size());
+            add(1.0, u_, dt_, du_dt, K_arg);
+            functional_call_args_[0] = K_arg;
 
-              functional_call_args_[0] = K_arg;
+            auto K = serac::get<1>((*K_functional_)(functional_call_args_, Index<0>{}));
 
-              auto K = serac::get<1>((*K_functional_)(functional_call_args_, Index<0>{}));
+            functional_call_args_[0] = u_;
 
-              functional_call_args_[0] = u_;
+            std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
-              std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
-
-              J_.reset(mfem::Add(1.0, *m_mat, dt_, *k_mat));
-            }
+            J_.reset(mfem::Add(1.0, *m_mat, dt_, *k_mat));
+            bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             return *J_;
           });
     }
@@ -523,7 +465,8 @@ public:
    * @pre It is expected that the forward analysis is complete and the current temperature state is valid
    * @note If the essential boundary state is not specified, homogeneous essential boundary conditions are applied
    *
-   * @param[in] adjoint_load The dual state that contains the right hand side of the adjoint system
+   * @param[in] adjoint_load The dual state that contains the right hand side of the adjoint system (d quantity of
+   * interest/d temperature)
    * @param[in] dual_with_essential_boundary A optional finite element dual containing the non-homogenous essential
    * boundary condition data for the adjoint problem
    * @return The computed adjoint finite element state
@@ -531,12 +474,10 @@ public:
   virtual const serac::FiniteElementState& solveAdjoint(FiniteElementDual& adjoint_load,
                                                         FiniteElementDual* dual_with_essential_boundary = nullptr)
   {
-    // note: The assignment operator must be called after the copy constructor because
-    // the copy constructor only sets the partitioning, it does not copy the actual vector
-    // values
-
     mfem::HypreParVector adjoint_load_vector(adjoint_load.trueVec());
-    // adjoint_load_vector = adjoint_load.trueVec();
+
+    // Add the sign correction to move the term to the RHS
+    adjoint_load_vector *= -1.0;
 
     auto& lin_solver = nonlin_solver_.LinearSolver();
 

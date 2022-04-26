@@ -255,7 +255,7 @@ public:
    * arguments may be a dual_vector, to indicate that Functional::operator() should not only evaluate the
    * element calculations, but also differentiate them w.r.t. the specified dual_vector argument
    */
-  double ActionOfGradient(const mfem::Vector& input_T, size_t which) const
+  double ActionOfGradient(const mfem::Vector& input_T, std::size_t which) const
   {
     P_trial_[which]->Mult(input_T, input_L_[which]);
 
@@ -498,9 +498,6 @@ private:
 
   /// @brief Manages DOFs for the trial space
   std::array<mfem::ParFiniteElementSpace*, num_trial_spaces> trial_space_;
-
-  /// @brief The set of true DOF indices to which an essential BC should be applied
-  mfem::Array<int> ess_tdof_list_;
 
   /**
    * @brief Operator that converts true (global) DOF values to local (current rank) DOF values

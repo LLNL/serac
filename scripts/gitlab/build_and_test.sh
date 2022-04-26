@@ -9,6 +9,6 @@ python3 scripts/llnl/build_src.py -v --host-config ${HOST_CONFIG} ${EXTRA_BUILD_
 
 # Run integration tests
 if [[ "$DO_INTEGRATION_TESTS" == "yes" ]] ; then
-    cd _serac_build_and_test_*/build-*
+    cd *build_and_test_*/build-*
     ./ats.sh
 fi
