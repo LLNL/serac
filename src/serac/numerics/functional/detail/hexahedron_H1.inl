@@ -43,6 +43,15 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
     tensor<double, 3, n, q, q> A2;
   };
 
+  template < typename T >
+  using simd_dof_type = tensor< tensor< T, c >, p + 1, p + 1, p + 1 >;
+
+  template < typename T, int q >
+  struct simd_cache_type {
+    tensor<T, 2, n, n, q> A1;
+    tensor<T, 3, n, q, q> A2;
+  };
+
   template < int q >
   using cpu_batched_values_type = tensor< tensor< double, c >, q, q, q >;
 
@@ -203,6 +212,8 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
     return values_and_derivatives;
   }
 
+
+
   template < int q >
   static void integrate(cpu_batched_values_type<q> & sources,
                         cpu_batched_derivatives_type<q> & fluxes,
@@ -289,6 +300,173 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
               sum += G(qz, dz) * cache.A1(1, dx, dy, qz);
             }
             element_residual(i,dz,dy,dx) += sum;
+          }
+        }
+      }
+
+    }
+
+  }
+
+  template < typename T, int q >
+  static auto interpolate(const simd_dof_type<T> & X, 
+                          const TensorProductQuadratureRule<q> &) {
+
+    // we want to compute the following:
+    //
+    // X_q(u, v, w) := (B(u, i) * B(v, j) * B(w, k)) * X_e(i, j, k)
+    //
+    // where 
+    //   X_q(u, v, w) are the quadrature-point values at position {u, v, w}, 
+    //   B(u, i) is the i^{th} 1D interpolation/differentiation (shape) function, 
+    //           evaluated at the u^{th} 1D quadrature point, and
+    //   X_e(i, j, k) are the values at node {i, j, k} to be interpolated 
+    //
+    // this algorithm carries out the above calculation in 3 steps:
+    //
+    // A1(dz, dy, qx)  := B(qx, dx) * X_e(dz, dy, dx)
+    // A2(dz, qy, qx)  := B(qy, dy) * A1(dz, dy, qx)
+    // X_q(qz, qy, qx) := B(qz, dz) * A2(dz, qy, qx)
+
+    static constexpr auto points1D = GaussLegendreNodes<q>();
+    static constexpr auto B = [=](){
+      tensor< double, q, n > B_{};
+      for (int i = 0; i < q; i++) {
+        B_[i] = GaussLobattoInterpolation<n>(points1D[i]);
+      }
+      return B_;
+    }();
+
+    static constexpr auto G = [=](){
+      tensor< double, q, n > G_{};
+      for (int i = 0; i < q; i++) {
+        G_[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);
+      }
+      return G_;
+    }();
+
+    simd_cache_type<T, q> cache;
+
+    serac::tuple < tensor< tensor< T, c >, q, q, q >, 
+                   tensor< tensor< T, c, 3 >, q, q, q > > values_and_derivatives{};
+
+    for (int i = 0; i < c; i++) {
+
+      for (int dz = 0; dz < n; dz++) {
+        for (int dy = 0; dy < n; dy++) {
+          for (int qx = 0; qx < q; qx++) {
+            T sum[2]{};
+            for (int dx = 0; dx < n; dx++) {
+              sum[0] += B(qx, dx) * X(dz, dy, dx)[i];
+              sum[1] += G(qx, dx) * X(dz, dy, dx)[i];
+            }
+            cache.A1(0, dz, dy, qx) = sum[0];
+            cache.A1(1, dz, dy, qx) = sum[1];
+          }
+        }
+      }
+
+      for (int dz = 0; dz < n; dz++) {
+        for (int qy = 0; qy < q; qy++) {
+          for (int qx = 0; qx < q; qx++) {
+            T sum[3]{};
+            for (int dy = 0; dy < n; dy++) {
+              sum[0] += B(qy, dy) * cache.A1(0, dz, dy, qx);
+              sum[1] += B(qy, dy) * cache.A1(1, dz, dy, qx);
+              sum[2] += G(qy, dy) * cache.A1(0, dz, dy, qx);
+            }
+            cache.A2(0, dz, qy, qx) = sum[0];
+            cache.A2(1, dz, qy, qx) = sum[1];
+            cache.A2(2, dz, qy, qx) = sum[2];
+          }
+        }
+      }
+
+      for (int qz = 0; qz < q; qz++) {
+        for (int qy = 0; qy < q; qy++) {
+          for (int qx = 0; qx < q; qx++) {
+            for (int dz = 0; dz < n; dz++) {
+              serac::get<0>(values_and_derivatives)(qz, qy, qx)(i)    += B(qz, dz) * cache.A2(0, dz, qy, qx);
+              serac::get<1>(values_and_derivatives)(qz, qy, qx)(i, 0) += B(qz, dz) * cache.A2(1, dz, qy, qx);
+              serac::get<1>(values_and_derivatives)(qz, qy, qx)(i, 1) += B(qz, dz) * cache.A2(2, dz, qy, qx);
+              serac::get<1>(values_and_derivatives)(qz, qy, qx)(i, 2) += G(qz, dz) * cache.A2(0, dz, qy, qx);
+            }
+          }
+        }
+      }
+
+    }
+
+    return values_and_derivatives;
+  }
+
+  template < typename T, typename source_type, typename flux_type, int q >
+  static void integrate(source_type & sources, flux_type & fluxes,
+                        const TensorProductQuadratureRule<q> &, 
+                        simd_dof_type<T> & element_residual) {
+
+    static constexpr auto points1D = GaussLegendreNodes<q>();
+    static constexpr auto B = [=](){
+      tensor< double, q, n > B_{};
+      for (int i = 0; i < q; i++) {
+        B_[i] = GaussLobattoInterpolation<n>(points1D[i]);
+      }
+      return B_;
+    }();
+
+    static constexpr auto G = [=](){
+      tensor< double, q, n > G_{};
+      for (int i = 0; i < q; i++) {
+        G_[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);
+      }
+      return G_;
+    }();
+
+    simd_cache_type<T,q> cache{};
+
+    for (int i = 0; i < c; i++) {
+
+      for (int dx = 0; dx < n; dx++) {
+        for (int qy = 0; qy < q; qy++) {
+          for (int qz = 0; qz < q; qz++) {
+            T sum[3]{};
+            for (int qx = 0; qx < q; qx++) {
+              sum[0] += B(qx, dx) * sources(qz, qy, qx)[i];
+              sum[0] += G(qx, dx) * fluxes(qz, qy, qx)[i][0];
+              sum[1] += B(qx, dx) * fluxes(qz, qy, qx)[i][1];
+              sum[2] += B(qx, dx) * fluxes(qz, qy, qx)[i][2];
+            }
+            cache.A2(0, dx, qy, qz) = sum[0];
+            cache.A2(1, dx, qy, qz) = sum[1];
+            cache.A2(2, dx, qy, qz) = sum[2];
+          }
+        }
+      }
+
+      for (int dx = 0; dx < n; dx++) {
+        for (int dy = 0; dy < n; dy++) {
+          for (int qz = 0; qz < q; qz++) {
+            T sum[2]{};
+            for (int qy = 0; qy < q; qy++) {
+              sum[0] += B(qy, dy) * cache.A2(0, dx, qy, qz);
+              sum[0] += G(qy, dy) * cache.A2(1, dx, qy, qz);
+              sum[1] += B(qy, dy) * cache.A2(2, dx, qy, qz);
+            }
+            cache.A1(0, dx, dy, qz) = sum[0];
+            cache.A1(1, dx, dy, qz) = sum[1];
+          }
+        }
+      }
+
+      for (int dx = 0; dx < n; dx++) {
+        for (int dy = 0; dy < n; dy++) {
+          for (int dz = 0; dz < n; dz++) {
+            T sum{};
+            for (int qz = 0; qz < q; qz++) {
+              sum += B(qz, dz) * cache.A1(0, dx, dy, qz);
+              sum += G(qz, dz) * cache.A1(1, dx, dy, qz);
+            }
+            element_residual(dz,dy,dx)[i] += sum;
           }
         }
       }

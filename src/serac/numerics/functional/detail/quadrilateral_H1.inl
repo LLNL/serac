@@ -261,5 +261,6 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
       }
     }
   }
+
 };
 /// @endcond
