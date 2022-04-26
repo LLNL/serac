@@ -134,7 +134,7 @@ public:
    * @brief "Manually" set the DOF indices without specifying the field to which they apply
    * @param[in] true_dofs The true vector indices of the DOFs constrained by the boundary condition
    *
-   * @note This will set both the true and local internal dof value arrays.
+   * @note This will set both the true and local internal dof index arrays.
    */
   void setTrueDofs(const mfem::Array<int> true_dofs);
 
@@ -142,7 +142,7 @@ public:
    * @brief "Manually" set the DOF indices without specifying the field to which they apply
    * @param[in] local_dofs The local (finite element/grid function) indices of the DOFs constrained by the boundary condition
    *
-   * @note This will set both the true and local internal dof value arrays.
+   * @note This will set both the true and local internal dof index arrays.
    */
   void setLocalDofs(const mfem::Array<int> local_dofs);
 
