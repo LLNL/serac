@@ -98,7 +98,9 @@ struct ThermoelasticMaterial {
    * @param[in] grad_u_old displacement gradient at previous time step
    * @param[in] theta_old temperature at previous time step
    * @param[in] dt time increment
-   * @param[out] P Piola stress
+   * @param[out] cv0 volumetric heat capacity in ref config
+   * @param[out] s0 internal heat supply in ref config
+   * @param[out] q0 Piola heat flux
    */
   auto calculateThermalConstitutiveOutputs(const tensor<double, 3, 3>& grad_u, double theta,
                                            const tensor<double, 3>& grad_theta, State& state,
