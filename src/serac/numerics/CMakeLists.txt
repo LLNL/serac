@@ -11,14 +11,15 @@ if(ENABLE_TESTS)
 endif()
 
 set(numerics_headers
+    array_4D.hpp
     equation_solver.hpp
     expr_template_impl.hpp
     expr_template_ops.hpp
+    odes.hpp
     quadrature_data.hpp
     solver_config.hpp
-    vector_expression.hpp
-    odes.hpp
     stdfunction_operator.hpp
+    vector_expression.hpp
     )
 
 set(numerics_sources
