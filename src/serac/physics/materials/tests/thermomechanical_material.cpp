@@ -1,3 +1,15 @@
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// other Serac Project Developers. See the top-level LICENSE file for
+// details.
+//
+// SPDX-License-Identifier: (BSD-3-Clause)
+
+/**
+ * @file thermomechanical_material.cpp
+ *
+ * @brief unit tests for a thermoelastic material model
+ */
+
 #include <iostream>
 
 #include <gtest/gtest.h>
@@ -20,9 +32,9 @@ static const tensor<double, 3, 3> Q{{{ 0.852932108456964,  0.405577416697288, -0
  * @brief Compute Green's strain from the displacement gradient
  */
 template <typename T>
-auto green_strain(const tensor<T, 3, 3>& grad_u)
+auto greenStrain(const tensor<T, 3, 3>& grad_u)
 {
-  return 0.5*(grad_u + transpose(grad_u) + transpose(grad_u)*grad_u);
+  return 0.5*(grad_u + transpose(grad_u) + dot(transpose(grad_u), grad_u));
 }
 
 
@@ -52,18 +64,18 @@ struct   ThermoelasticMaterial {
    * @param[out] q0 Piola heat flux
    */
   template <typename T1, typename T2, typename T3>
-  auto calculate_constitutive_outputs(const tensor<T1, 3, 3>& grad_u,
-                                      T2 theta,
-                                      const tensor<T3, 3>& grad_theta,
-                                      State& /*state*/,
-                                      const tensor<double, 3, 3>& grad_u_old,
-                                      double /*theta_old*/,
-                                      double dt)
+  auto calculateConstitutiveOutputs(const tensor<T1, 3, 3>& grad_u,
+                                    T2 theta,
+                                    const tensor<T3, 3>& grad_theta,
+                                    State& /*state*/,
+                                    const tensor<double, 3, 3>& grad_u_old,
+                                    double /*theta_old*/,
+                                    double dt)
   {
     const double K = E / (3.0 * (1.0 - 2.0 * nu));
     const double G = 0.5 * E / (1.0 + nu);
     auto F = grad_u + I;
-    const auto Eg = green_strain(grad_u);
+    const auto Eg = greenStrain(grad_u);
     const auto trEg = tr(Eg);
 
     // stress
@@ -72,7 +84,7 @@ struct   ThermoelasticMaterial {
 
     // internal heat source
     // use backward difference to estimate rate of green strain
-    const auto Eg_old = green_strain(grad_u_old);
+    const auto Eg_old = greenStrain(grad_u_old);
     const double egdot = (trEg - tr(Eg_old))/dt;
     const double s0 = -3*K*alpha*theta*egdot;
 
@@ -93,12 +105,12 @@ struct   ThermoelasticMaterial {
    * @param[in] dt time increment
    * @param[out] P Piola stress
    */
-  auto calculate_thermal_constitutive_outputs(
+  auto calculateThermalConstitutiveOutputs(
       const tensor<double, 3, 3>& grad_u, double theta, const tensor<double, 3>& grad_theta,
       State& state, const tensor<double, 3, 3>& grad_u_old, double theta_old, double dt)
   {
-    auto [P, cv0, s0, q0] = calculate_constitutive_outputs(grad_u, theta, grad_theta, state,
-                                                           grad_u_old, theta_old, dt);
+    auto [P, cv0, s0, q0] = calculateConstitutiveOutputs(grad_u, theta, grad_theta, state,
+                                                         grad_u_old, theta_old, dt);
     return serac::tuple{cv0, s0, q0};
   }
 
@@ -115,12 +127,12 @@ struct   ThermoelasticMaterial {
    * @param[out] s0 internal heat supply in ref config
    * @param[out] q0 Piola heat flux
    */
-  auto calculate_mechanical_constitutive_outputs(
+  auto calculateMechanicalConstitutiveOutputs(
       const tensor<double, 3, 3>& grad_u, double theta, const tensor<double, 3>& grad_theta,
       State& state, const tensor<double, 3, 3>& grad_u_old, double theta_old, double dt)
   {
-    auto [P, cv0, s0, q0] = calculate_constitutive_outputs(grad_u, theta, grad_theta, state,
-                                                           grad_u_old, theta_old, dt);
+    auto [P, cv0, s0, q0] = calculateConstitutiveOutputs(grad_u, theta, grad_theta, state,
+                                                         grad_u_old, theta_old, dt);
     return P;
   }
 
@@ -130,13 +142,13 @@ struct   ThermoelasticMaterial {
    * @param[in] theta temperature
    */
   template <typename T1, typename T2>
-  auto calculate_free_energy(const tensor<T1, 3, 3>& grad_u, T2 theta)
+  auto calculateFreeEnergy(const tensor<T1, 3, 3>& grad_u, T2 theta)
   {
     const double K = E / (3.0 * (1.0 - 2.0 * nu));
     const double G = 0.5 * E / (1.0 + nu);
-    auto strain = green_strain(grad_u);
+    auto strain = greenStrain(grad_u);
     auto trE = tr(strain);
-    auto psi_1 = G*sqnorm(dev(strain)) + 0.5*K*trE*trE;
+    auto psi_1 = G*squared_norm(dev(strain)) + 0.5*K*trE*trE;
     using std::log;
     auto logT = log(theta/theta_ref);
     auto psi_2 = C*(theta - theta_ref + theta*logT);
@@ -153,7 +165,7 @@ TEST(ThermomechanicalMaterial, FreeEnergyIsZeroInReferenceState)
   ThermoelasticMaterial material{.E=100.0, .nu=0.25, .C=1.0, .alpha=1.0e-3, .theta_ref=300.0, .k=1.0};
   tensor<double, 3, 3> displacement_grad{};
   double temperature = material.theta_ref;
-  double free_energy = material.calculate_free_energy(displacement_grad, temperature);
+  double free_energy = material.calculateFreeEnergy(displacement_grad, temperature);
   EXPECT_NEAR(free_energy, 0.0, 1e-10);
 }
 
@@ -167,7 +179,7 @@ TEST(ThermomechanicalMaterial, StressIsZeroInReferenceState)
   auto displacement_grad_old = displacement_grad;
   double temperature_old = temperature;
   double dt = 1.0;
-  auto stress = material.calculate_mechanical_constitutive_outputs(
+  auto stress = material.calculateMechanicalConstitutiveOutputs(
       displacement_grad, temperature, temperature_grad, state,
       displacement_grad_old, temperature_old, dt);
   EXPECT_NEAR(norm(stress), 0.0, 1e-10);
@@ -185,9 +197,9 @@ TEST(ThermomechanicalMaterial, FreeEnergyAndStressAgree)
   tensor<double, 3, 3> displacement_grad_old{};
   double temperature_old = temperature;
   double dt = 1.0;
-  auto energy_and_stress = material.calculate_free_energy(
+  auto energy_and_stress = material.calculateFreeEnergy(
       make_dual(displacement_grad), temperature);
-  auto stress = material.calculate_mechanical_constitutive_outputs(
+  auto stress = material.calculateMechanicalConstitutiveOutputs(
       displacement_grad, temperature, temperature_grad, state,
       displacement_grad_old, temperature_old, dt);
   auto error = stress - get_gradient(energy_and_stress);
@@ -206,7 +218,7 @@ TEST(ThermomechanicalMaterial, SatisfiesDissipationInequality)
   ThermoelasticMaterial::State state{};
   tensor<double, 3, 3> displacement_grad_old{};
   double dt = 1.0;
-  auto generalized_fluxes = material.calculate_thermal_constitutive_outputs(
+  auto generalized_fluxes = material.calculateThermalConstitutiveOutputs(
       displacement_grad, temperature, temperature_grad, state,
       displacement_grad_old, temperature_old, dt);
   auto [heat_capacity, source, heat_flux] = generalized_fluxes;
@@ -229,13 +241,13 @@ TEST(ThermomechanicalMaterial, IsFrameIndifferent)
   tensor<double, 3, 3> displacement_grad_old{};
   double dt = 1.0;
 
-  auto generalized_fluxes = material.calculate_constitutive_outputs(
+  auto generalized_fluxes = material.calculateConstitutiveOutputs(
       displacement_grad, temperature, temperature_grad, state,
       displacement_grad_old, temperature_old, dt);
 
   auto displacement_grad_transformed = Q*(displacement_grad + I) - I;
   auto displacement_grad_old_transformed = Q*(displacement_grad_old + I) - I;
-  auto generalized_fluxes_2 = material.calculate_constitutive_outputs(
+  auto generalized_fluxes_2 = material.calculateConstitutiveOutputs(
       displacement_grad_transformed, temperature, temperature_grad, state,
       displacement_grad_old_transformed, temperature_old, dt);
   
@@ -261,9 +273,9 @@ TEST(ThermomechanicalMaterial, InternalSourceHasCorrectSign)
   double temperature = temperature_old;
   double dt = 1.0;
   auto [heat_capacity, internal_source, heat_flux] =
-      material.calculate_thermal_constitutive_outputs(displacement_grad, temperature,
-                                                      temperature_grad, state,
-                                                      displacement_grad_old, temperature_old, dt);
+      material.calculateThermalConstitutiveOutputs(displacement_grad, temperature,
+                                                   temperature_grad, state,
+                                                   displacement_grad_old, temperature_old, dt);
   // should have same sign as sgn(alpha*trEdot), here negative
   EXPECT_LT(internal_source, 0.0);
 }
@@ -280,7 +292,7 @@ TEST(ThermomechanicalMaterial, StressHasCorrectSymmetry)
   tensor<double, 3, 3> displacement_grad_old{};
   double temperature = temperature_old;
   double dt = 1.0;
-  auto piola_stress = material.calculate_mechanical_constitutive_outputs(
+  auto piola_stress = material.calculateMechanicalConstitutiveOutputs(
       displacement_grad, temperature, temperature_grad, state,
       displacement_grad_old, temperature_old, dt);
   auto deformation_grad = displacement_grad + I;

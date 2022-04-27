@@ -61,6 +61,9 @@ void functional_test_static(double expected_norm)
     default_nonlinear_options};
   
   // Construct a functional-based thermal-solid solver
+  // BT 04/27/2022 This can't be instantiated yet.
+  // The material model needs to be implemented before this
+  // module can be used.
   ThermalSolidFunctional<p, dim> thermal_solid_solver(thermal_options,
                                                       solid_options,
                                                       GeometricNonlinearities::On,

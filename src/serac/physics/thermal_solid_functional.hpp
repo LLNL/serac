@@ -44,7 +44,7 @@ public:
                          GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
                          FinalMeshOption keep_deformation = FinalMeshOption::Deformed,
                          const std::string& name = "")
-      : BasePhysics(2, order),
+      : BasePhysics(3, order),
 	temperature_(StateManager::newState(
 	    FiniteElementState::Options{.order      = order,
 	                                .vector_dim = 1,
