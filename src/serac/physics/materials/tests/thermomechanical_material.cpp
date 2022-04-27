@@ -50,7 +50,7 @@ struct   ThermoelasticMaterial {
   struct State {/* this material has no internal variables */};
 
   /**
-   * @brief Evalute constitutive variables for thermomechanics
+   * @brief Evaluate constitutive variables for thermomechanics
    *
    * @param[in] grad_u displacement gradient
    * @param[in] theta temperature
