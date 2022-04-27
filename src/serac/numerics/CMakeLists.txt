@@ -11,7 +11,6 @@ if(ENABLE_TESTS)
 endif()
 
 set(numerics_headers
-    array_4D.hpp
     equation_solver.hpp
     expr_template_impl.hpp
     expr_template_ops.hpp
