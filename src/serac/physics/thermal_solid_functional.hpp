@@ -34,7 +34,8 @@ public:
   /**
    * @brief Construct a new coupled Thermal-Solid Functional object
    *
-   * @param options The options for the linear, nonlinear, and ODE solves
+   * @param thermal_options The options for the linear, nonlinear, and ODE solves of the thermal operator
+   * @param solid)options The options for the linear, nonlinear, and ODE solves of the thermal operator
    * @param geom_nonlin Flag to include geometric nonlinearities
    * @param keep_deformation Flag to keep the deformation in the underlying mesh post-destruction
    * @param name An optional name for the physics module instance
@@ -113,7 +114,10 @@ protected:
    */
   serac::CouplingScheme coupling_;
 
+  /// A thermal functional module
   ThermalConductionFunctional<order, dim> thermal_functional_;
+
+  /// A solid functional module
   SolidFunctional<order, dim> solid_functional_;
 
 };
