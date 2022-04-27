@@ -59,16 +59,13 @@ void functional_test_static(double expected_norm)
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
 
   const typename solid_util::SolverOptions solid_options = {default_linear_options, default_nonlinear_options};
-  
+
   // Construct a functional-based thermal-solid solver
   // BT 04/27/2022 This can't be instantiated yet.
   // The material model needs to be implemented before this
   // module can be used.
-  ThermalSolidFunctional<p, dim> thermal_solid_solver(thermal_options,
-                                                      solid_options,
-                                                      GeometricNonlinearities::On,
-                                                      FinalMeshOption::Deformed,
-                                                      "thermal_solid_functional");
+  ThermalSolidFunctional<p, dim> thermal_solid_solver(thermal_options, solid_options, GeometricNonlinearities::On,
+                                                      FinalMeshOption::Deformed, "thermal_solid_functional");
 
   double u = 0.0;
   EXPECT_NEAR(u, expected_norm, 1.0e-6);
@@ -76,8 +73,7 @@ void functional_test_static(double expected_norm)
 
 TEST(thermal_solid_functional, construct) { functional_test_static<1, 2>(0.0); }
 
-} // namespace serac
-
+}  // namespace serac
 
 //------------------------------------------------------------------------------
 #include "axom/slic/core/SimpleLogger.hpp"
