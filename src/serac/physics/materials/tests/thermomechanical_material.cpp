@@ -206,9 +206,7 @@ TEST(ThermomechanicalMaterial, SatisfiesDissipationInequality)
   auto                         generalized_fluxes = material.calculateThermalConstitutiveOutputs(
       displacement_grad, temperature, temperature_grad, state, displacement_grad_old, temperature_old, dt);
   auto [heat_capacity, source, heat_flux] = generalized_fluxes;
-  // "inner" didn't work for me, but "dot" does
-  // ask sam and jamie about this
-  auto dissipation = -dot(heat_flux, temperature_grad) / temperature;
+  auto dissipation                        = -dot(heat_flux, temperature_grad) / temperature;
   EXPECT_TRUE(dissipation >= 0.0);
 }
 
