@@ -177,8 +177,11 @@ TEST(ThermomechanicalMaterial, StressIsZeroInReferenceState)
 TEST(ThermomechanicalMaterial, FreeEnergyAndStressAgree)
 {
   ThermoelasticMaterial material{.E = 100.0, .nu = 0.25, .C = 1.0, .alpha = 1.0e-3, .theta_ref = 300.0, .k = 1.0};
-  tensor<double, 3, 3>  displacement_grad{
-      {{0.35490513, 0.60419905, 0.4275843}, {0.23061597, 0.6735498, 0.43953657}, {0.25099766, 0.27730572, 0.7678207}}};
+  // clang-format off
+  tensor<double, 3, 3>  displacement_grad{{{0.35490513, 0.60419905, 0.4275843},
+                                           {0.23061597, 0.6735498,  0.43953657},
+                                           {0.25099766, 0.27730572, 0.7678207}}};
+  // clang-format on
   double                       temperature = 290.0;
   tensor<double, 3>            temperature_grad{0.87241435, 0.11105156, -0.27708054};
   ThermoelasticMaterial::State state{};
@@ -195,8 +198,11 @@ TEST(ThermomechanicalMaterial, FreeEnergyAndStressAgree)
 TEST(ThermomechanicalMaterial, SatisfiesDissipationInequality)
 {
   ThermoelasticMaterial material{.E = 100.0, .nu = 0.25, .C = 1.0, .alpha = 1.0e-3, .theta_ref = 300.0, .k = 1.0};
-  tensor<double, 3, 3>  displacement_grad{
-      {{0.35490513, 0.60419905, 0.4275843}, {0.23061597, 0.6735498, 0.43953657}, {0.25099766, 0.27730572, 0.7678207}}};
+  // clang-format off
+  tensor<double, 3, 3>  displacement_grad{{{0.35490513, 0.60419905, 0.4275843},
+                                           {0.23061597, 0.6735498,  0.43953657},
+                                           {0.25099766, 0.27730572, 0.7678207}}};
+  // clang-format on
   double                       temperature = 290.0;
   tensor<double, 3>            temperature_grad{0.87241435, 0.11105156, -0.27708054};
   double                       temperature_old = temperature;
@@ -213,8 +219,11 @@ TEST(ThermomechanicalMaterial, SatisfiesDissipationInequality)
 TEST(ThermomechanicalMaterial, IsFrameIndifferent)
 {
   ThermoelasticMaterial material{.E = 100.0, .nu = 0.25, .C = 1.0, .alpha = 1.0e-3, .theta_ref = 300.0, .k = 1.0};
-  tensor<double, 3, 3>  displacement_grad{
-      {{0.35490513, 0.60419905, 0.4275843}, {0.23061597, 0.6735498, 0.43953657}, {0.25099766, 0.27730572, 0.7678207}}};
+  // clang-format off
+  tensor<double, 3, 3>  displacement_grad{{{0.35490513, 0.60419905, 0.4275843},
+                                           {0.23061597, 0.6735498,  0.43953657},
+                                           {0.25099766, 0.27730572, 0.7678207}}};
+  // clang-format on
   double                       temperature = 290.0;
   tensor<double, 3>            temperature_grad{0.87241435, 0.11105156, -0.27708054};
   double                       temperature_old = 300;
@@ -242,8 +251,11 @@ TEST(ThermomechanicalMaterial, IsFrameIndifferent)
 TEST(ThermomechanicalMaterial, InternalSourceHasCorrectSign)
 {
   ThermoelasticMaterial material{.E = 100.0, .nu = 0.25, .C = 1.0, .alpha = 1.0e-3, .theta_ref = 300.0, .k = 1.0};
-  tensor<double, 3, 3>  displacement_grad{
-      {{0.35490513, 0.60419905, 0.4275843}, {0.23061597, 0.6735498, 0.43953657}, {0.25099766, 0.27730572, 0.7678207}}};
+  // clang-format off
+  tensor<double, 3, 3>  displacement_grad{{{0.35490513, 0.60419905, 0.4275843},
+                                           {0.23061597, 0.6735498,  0.43953657},
+                                           {0.25099766, 0.27730572, 0.7678207}}};
+  // clang-format on
   double                       temperature_old = 290.0;
   tensor<double, 3>            temperature_grad{0.87241435, 0.11105156, -0.27708054};
   ThermoelasticMaterial::State state{};
@@ -259,8 +271,11 @@ TEST(ThermomechanicalMaterial, InternalSourceHasCorrectSign)
 TEST(ThermomechanicalMaterial, StressHasCorrectSymmetry)
 {
   ThermoelasticMaterial material{.E = 100.0, .nu = 0.25, .C = 1.0, .alpha = 1.0e-3, .theta_ref = 300.0, .k = 1.0};
-  tensor<double, 3, 3>  displacement_grad{
-      {{0.35490513, 0.60419905, 0.4275843}, {0.23061597, 0.6735498, 0.43953657}, {0.25099766, 0.27730572, 0.7678207}}};
+  // clang-format off
+  tensor<double, 3, 3>  displacement_grad{{{0.35490513, 0.60419905, 0.4275843},
+                                           {0.23061597, 0.6735498,  0.43953657},
+                                           {0.25099766, 0.27730572, 0.7678207}}};
+  // clang-format on
   double                       temperature_old = 290.0;
   tensor<double, 3>            temperature_grad{0.87241435, 0.11105156, -0.27708054};
   ThermoelasticMaterial::State state{};
