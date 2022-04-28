@@ -1,8 +1,16 @@
 diff --git a/include/camp/tuple.hpp b/include/camp/tuple.hpp
-index 01ed387..d983f67 100644
+index 01ed387..56d513e 100644
 --- a/include/camp/tuple.hpp
 +++ b/include/camp/tuple.hpp
-@@ -320,7 +320,7 @@ public:
+@@ -233,6 +233,7 @@ private:
+       -> tuple_ebt_t<T, Tuple>&;
+ 
+ public:
++  CAMP_HOST_DEVICE constexpr tuple() = default;
+ 
+   CAMP_HOST_DEVICE constexpr explicit tuple(const Elements&... rest)
+       : base{rest...}
+@@ -320,7 +321,7 @@ public:
  };
  
  template <>
@@ -11,7 +19,7 @@ index 01ed387..d983f67 100644
  {
  public:
    using TList = camp::list<>;
-@@ -328,6 +328,13 @@ public:
+@@ -328,6 +329,13 @@ public:
    using type = tuple;
  };
  
@@ -25,7 +33,7 @@ index 01ed387..d983f67 100644
  template <typename... Tags, typename... Args>
  struct as_list_s<tagged_tuple<camp::list<Tags...>, Args...>> {
    using type = list<Args...>;
-@@ -460,7 +467,7 @@ CAMP_HOST_DEVICE constexpr auto invoke_with_order(TupleLike&& t,
+@@ -460,7 +468,7 @@ CAMP_HOST_DEVICE constexpr auto invoke_with_order(TupleLike&& t,
                                                    camp::idx_seq<Sequence...>)
      -> decltype(f(::camp::get<Sequence>(t)...))
  {
@@ -34,7 +42,7 @@ index 01ed387..d983f67 100644
  }
  
  CAMP_SUPPRESS_HD_WARN
-@@ -497,6 +504,13 @@ constexpr T make_from_tuple(Tuple&& t)
+@@ -497,6 +505,13 @@ constexpr T make_from_tuple(Tuple&& t)
  }
  }  // namespace camp
  
@@ -48,7 +56,7 @@ index 01ed387..d983f67 100644
  namespace internal
  {
  template <class Tuple, camp::idx_t... Idxs>
-@@ -515,5 +529,36 @@ auto operator<<(std::ostream& os, camp::tuple<Args...> const& t)
+@@ -515,5 +530,36 @@ auto operator<<(std::ostream& os, camp::tuple<Args...> const& t)
    return os << ")";
  }
  
