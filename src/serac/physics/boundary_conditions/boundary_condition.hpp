@@ -140,7 +140,8 @@ public:
 
   /**
    * @brief "Manually" set the DOF indices without specifying the field to which they apply
-   * @param[in] local_dofs The local (finite element/grid function) indices of the DOFs constrained by the boundary condition
+   * @param[in] local_dofs The local (finite element/grid function) indices of the DOFs constrained by the boundary
+   * condition
    *
    * @note This will set both the true and local internal dof index arrays.
    */
