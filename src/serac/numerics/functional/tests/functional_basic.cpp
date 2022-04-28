@@ -89,7 +89,7 @@ TEST(basic, nonlinear_thermal_test_3D)
         auto [u, du_dx] = temperature;
         auto source     = u * u - (100 * x[0] * x[1]);
         auto flux       = du_dx;
-        return serac::tuple{source, flux};
+        return camp::tuple{source, flux};
       },
       *mesh3D);
 

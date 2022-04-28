@@ -50,7 +50,7 @@ struct thermal_qfunction {
     auto [u, du_dx] = temperature;
     auto source     = a * u - (100 * x[0] * x[1]);
     auto flux       = b * du_dx;
-    return serac::tuple{source, flux};
+    return camp::tuple{source, flux};
   }
 };
 
@@ -65,7 +65,7 @@ struct elastic_qfunction {
     auto           body_force = a * u + I[0];
     auto           strain     = 0.5 * (du_dx + transpose(du_dx));
     auto           stress     = b * tr(strain) * I + 2.0 * b * strain;
-    return serac::tuple{body_force, stress};
+    return camp::tuple{body_force, stress};
   }
 };
 
@@ -77,7 +77,7 @@ struct hcurl_qfunction {
     auto [A, curl_A] = vector_potential;
     auto J_term      = a * A - tensor<double, dim>{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]};
     auto H_term      = b * curl_A;
-    return serac::tuple{J_term, H_term};
+    return camp::tuple{J_term, H_term};
   }
 };
 

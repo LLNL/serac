@@ -181,7 +181,7 @@ struct lambda_argument<H1<p, c>, dim, dim> {
   /**
    * @brief The arguments for the lambda function
    */
-  using type = serac::tuple<reduced_tensor<double, c>, reduced_tensor<double, c, dim>>;
+  using type = camp::tuple<reduced_tensor<double, c>, reduced_tensor<double, c, dim>>;
 };
 
 /**
@@ -193,7 +193,7 @@ struct lambda_argument<L2<p, c>, dim, dim> {
   /**
    * @brief The arguments for the lambda function
    */
-  using type = serac::tuple<reduced_tensor<double, c>, reduced_tensor<double, c, dim>>;
+  using type = camp::tuple<reduced_tensor<double, c>, reduced_tensor<double, c, dim>>;
 };
 
 /**
@@ -231,7 +231,7 @@ struct lambda_argument<Hcurl<p>, 2, 2> {
   /**
    * @brief The arguments for the lambda function
    */
-  using type = serac::tuple<tensor<double, 2>, double>;
+  using type = camp::tuple<tensor<double, 2>, double>;
 };
 
 /**
@@ -243,7 +243,7 @@ struct lambda_argument<Hcurl<p>, 3, 3> {
   /**
    * @brief The arguments for the lambda function
    */
-  using type = serac::tuple<tensor<double, 3>, tensor<double, 3>>;
+  using type = camp::tuple<tensor<double, 3>, tensor<double, 3>>;
 };
 
 /**
@@ -307,7 +307,7 @@ template <typename lambda, typename coords_type, typename T, typename qpt_data_t
 SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, const T& arg_tuple, qpt_data_type&& qpt_data,
                                        std::integer_sequence<int, i...>)
 {
-  return qf(x_q, serac::get<i>(arg_tuple)..., qpt_data);
+  return qf(x_q, camp::get<i>(arg_tuple)..., qpt_data);
 }
 
 /// @overload
@@ -316,7 +316,7 @@ template <typename lambda, typename coords_type, typename T, int... i>
 SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, const T& arg_tuple,
                                        std::integer_sequence<int, i...>)
 {
-  return qf(x_q, serac::get<i>(arg_tuple)...);
+  return qf(x_q, camp::get<i>(arg_tuple)...);
 }
 
 /// @overload
@@ -325,7 +325,7 @@ template <typename lambda, typename coords_type, typename T, int... i>
 SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, coords_type&& n_q, const T& arg_tuple,
                                        std::integer_sequence<int, i...>)
 {
-  return qf(x_q, n_q, serac::get<i>(arg_tuple)...);
+  return qf(x_q, n_q, camp::get<i>(arg_tuple)...);
 }
 
 /**
@@ -338,7 +338,7 @@ SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, coords_ty
  * @param[inout] qpt_data The state information at the quadrature point
  */
 template <typename lambda, typename coords_type, typename... T, typename qpt_data_type>
-SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, const serac::tuple<T...>& arg_tuple,
+SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, const camp::tuple<T...>& arg_tuple,
                                 qpt_data_type&& qpt_data)
 {
   return apply_qf_helper(qf, x_q, arg_tuple, qpt_data, std::make_integer_sequence<int, int(sizeof...(T))>{});
@@ -346,7 +346,7 @@ SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, const serac::tup
 
 /// @overload
 template <typename lambda, typename coords_type, typename... T>
-SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, const serac::tuple<T...>& arg_tuple, std::nullptr_t)
+SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, const camp::tuple<T...>& arg_tuple, std::nullptr_t)
 {
   return apply_qf_helper(qf, x_q, arg_tuple, std::make_integer_sequence<int, int(sizeof...(T))>{});
 }
@@ -356,7 +356,7 @@ SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, const serac::tup
  * @note: boundary integrals pass the unit normal vector as second argument and do not support qpt_data
  */
 template <typename lambda, typename coords_type, typename... T>
-SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, coords_type&& n_q, const serac::tuple<T...>& arg_tuple)
+SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, coords_type&& n_q, const camp::tuple<T...>& arg_tuple)
 {
   return apply_qf_helper(qf, x_q, n_q, arg_tuple, std::make_integer_sequence<int, int(sizeof...(T))>{});
 }
@@ -454,8 +454,8 @@ template <typename element_type, typename T, int dim>
 SERAC_HOST_DEVICE auto Preprocess(T u, const tensor<double, dim>& xi, const tensor<double, dim, dim>& J)
 {
   if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
-    return serac::tuple{dot(u, element_type::shape_functions(xi)),
-                        dot(u, dot(element_type::shape_function_gradients(xi), inv(J)))};
+    return camp::tuple{dot(u, element_type::shape_functions(xi)),
+                       dot(u, dot(element_type::shape_function_gradients(xi), inv(J)))};
   }
 
   if constexpr (element_type::family == Family::HCURL) {
@@ -466,7 +466,7 @@ SERAC_HOST_DEVICE auto Preprocess(T u, const tensor<double, dim>& xi, const tens
     if constexpr (dim == 3) {
       curl = dot(curl, transpose(J));
     }
-    return serac::tuple{value, curl};
+    return camp::tuple{value, curl};
   }
 }
 
@@ -485,7 +485,7 @@ template <Geometry geom, typename... trials, typename tuple_type, int dim, int..
 SERAC_HOST_DEVICE auto PreprocessHelper(const tuple_type& u, const tensor<double, dim>& xi,
                                         const tensor<double, dim, dim>& J, std::integer_sequence<int, i...>)
 {
-  return serac::make_tuple(Preprocess<finite_element<geom, trials>>(get<i>(u), xi, J)...);
+  return camp::make_tuple(Preprocess<finite_element<geom, trials>>(get<i>(u), xi, J)...);
 }
 
 /**
@@ -532,7 +532,7 @@ SERAC_HOST_DEVICE auto Postprocess(const T& f, const tensor<double, dim>& xi, co
   if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
     auto W     = element_type::shape_functions(xi);
     auto dW_dx = dot(element_type::shape_function_gradients(xi), inv(J));
-    return outer(W, serac::get<0>(f)) + dot(dW_dx, serac::get<1>(f));
+    return outer(W, camp::get<0>(f)) + dot(dW_dx, camp::get<1>(f));
   }
 
   if constexpr (element_type::family == Family::HCURL) {
@@ -541,7 +541,7 @@ SERAC_HOST_DEVICE auto Postprocess(const T& f, const tensor<double, dim>& xi, co
     if constexpr (dim == 3) {
       curl_W = dot(curl_W, transpose(J));
     }
-    return (W * serac::get<0>(f) + curl_W * serac::get<1>(f));
+    return (W * camp::get<0>(f) + curl_W * camp::get<1>(f));
   }
 }
 

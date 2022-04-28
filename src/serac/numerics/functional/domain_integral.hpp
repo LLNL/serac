@@ -35,7 +35,7 @@ class DomainIntegral;
 template <typename test, typename... trials, ExecutionSpace exec>
 class DomainIntegral<test(trials...), exec> {
 public:
-  static constexpr tuple<trials...> trial_spaces{};                        ///< a tuple of the different trial spaces
+  static constexpr camp::tuple<trials...> trial_spaces{};                        ///< a tuple of the different trial spaces
   static constexpr int              num_trial_spaces = sizeof...(trials);  ///< how many trial spaces were specified
 
   /**
@@ -78,7 +78,7 @@ public:
         // Note: ptrs' lifetime is managed in an unusual way! It is captured by-value in the
         // action_of_gradient functor below to augment the reference count, and extend its lifetime to match
         // that of the DomainIntegral that allocated it.
-        using which_trial_space = typename serac::tuple_element<i, serac::tuple<trials...> >::type;
+        using which_trial_space = typename serac::tuple_element<i, camp::tuple<trials...> >::type;
         using derivative_type   = decltype(get_derivative_type<i, dim, trials...>(qf, data(0, 0)));
         auto ptr = accelerator::make_shared_array<exec, derivative_type>(num_elements * quadrature_points_per_element);
         ExecArrayView<derivative_type, 2, exec> qf_derivatives(ptr.get(), num_elements, quadrature_points_per_element);

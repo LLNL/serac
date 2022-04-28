@@ -39,7 +39,7 @@ struct hcurl_qfunction {
     auto [A, curl_A] = vector_potential;
     auto J_term      = a * A - tensor<double, dim>{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]};
     auto H_term      = b * curl_A;
-    return serac::tuple{J_term, H_term};
+    return camp::tuple{J_term, H_term};
   }
 };
 
@@ -112,7 +112,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
         auto [u, du_dx] = temperature;
         auto source     = a * u * u - (100 * x[0] * x[1]);
         auto flux       = b * du_dx;
-        return serac::tuple{source, flux};
+        return camp::tuple{source, flux};
       },
       mesh);
 
@@ -158,7 +158,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
         auto [u, du_dx] = displacement;
         auto source     = a * u * u[0];
         auto flux       = b * du_dx;
-        return serac::tuple{source, flux};
+        return camp::tuple{source, flux};
       },
       mesh);
 

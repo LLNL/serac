@@ -13,11 +13,11 @@
 // this file defines basic arithmetic operations on tuples of values
 // so that expressions like sum1 and sum2 below are equivalent
 //
-// serac::tuple< foo, bar > a;
-// serac::tuple< baz, qux > b;
+// camp::tuple< foo, bar > a;
+// camp::tuple< baz, qux > b;
 //
-// serac::tuple sum1 = a + b;
-// serac::tuple sum2{serac::get<0>(a) + serac::get<0>(b), serac::get<1>(a) + serac::get<1>(b)};
+// camp::tuple sum1 = a + b;
+// camp::tuple sum2{camp::get<0>(a) + camp::get<0>(b), camp::get<1>(a) + camp::get<1>(b)};
 
 #pragma once
 
@@ -32,7 +32,7 @@ namespace serac {
 namespace detail {
 
 /**
- * @brief Trait for checking if a type is a @p serac::tuple
+ * @brief Trait for checking if a type is a @p camp::tuple
  */
 template <typename T>
 struct is_tuple : std::false_type {
@@ -40,11 +40,11 @@ struct is_tuple : std::false_type {
 
 /// @overload
 template <typename... T>
-struct is_tuple<serac::tuple<T...> > : std::true_type {
+struct is_tuple<camp::tuple<T...> > : std::true_type {
 };
 
 /**
- * @brief Trait for checking if a type if a @p serac::tuple containing only @p serac::tuple
+ * @brief Trait for checking if a type if a @p camp::tuple containing only @p camp::tuple
  */
 template <typename T>
 struct is_tuple_of_tuples : std::false_type {
@@ -52,7 +52,7 @@ struct is_tuple_of_tuples : std::false_type {
 
 /// @overload
 template <typename... T>
-struct is_tuple_of_tuples<serac::tuple<T...> > {
+struct is_tuple_of_tuples<camp::tuple<T...> > {
   static constexpr bool value = (is_tuple<T>::value && ...);
 };
 
@@ -64,10 +64,10 @@ struct is_tuple_of_tuples<serac::tuple<T...> > {
 template <int j, int... i>
 constexpr auto make_dual_helper(double arg, std::integer_sequence<int, i...>)
 {
-  using gradient_type = serac::tuple<typename std::conditional<i == j, double, zero>::type...>;
+  using gradient_type = camp::tuple<typename std::conditional<i == j, double, zero>::type...>;
   dual<gradient_type> arg_dual{};
   arg_dual.value                   = arg;
-  serac::get<j>(arg_dual.gradient) = 1.0;
+  camp::get<j>(arg_dual.gradient) = 1.0;
   return arg_dual;
 }
 
@@ -77,11 +77,11 @@ constexpr auto make_dual_helper(double arg, std::integer_sequence<int, i...>)
 template <int I, typename T, int... n, int... i>
 constexpr auto make_dual_helper(const tensor<T, n...>& arg, std::integer_sequence<int, i...>)
 {
-  using gradient_type = serac::tuple<typename std::conditional<i == I, tensor<T, n...>, zero>::type...>;
+  using gradient_type = camp::tuple<typename std::conditional<i == I, tensor<T, n...>, zero>::type...>;
   tensor<dual<gradient_type>, n...> arg_dual{};
   for_constexpr<n...>([&](auto... j) {
     arg_dual(j...).value                         = arg(j...);
-    serac::get<I>(arg_dual(j...).gradient)(j...) = 1.0;
+    camp::get<I>(arg_dual(j...).gradient)(j...) = 1.0;
   });
   return arg_dual;
 }
@@ -89,9 +89,9 @@ constexpr auto make_dual_helper(const tensor<T, n...>& arg, std::integer_sequenc
 // promote a tuple of values to a tuple of dual value representations that keeps track of
 // derivatives w.r.t. each tuple entry.
 template <typename... T, int... i>
-constexpr auto make_dual_helper(serac::tuple<T...> args, std::integer_sequence<int, i...> seq)
+constexpr auto make_dual_helper(camp::tuple<T...> args, std::integer_sequence<int, i...> seq)
 {
-  return serac::tuple{(make_dual_helper<i>(serac::get<i>(args), seq))...};
+  return camp::tuple{(make_dual_helper<i>(camp::get<i>(args), seq))...};
 }
 
 }  // namespace detail
@@ -101,7 +101,7 @@ struct one_hot_helper;
 
 template <int i, int... I, typename T>
 struct one_hot_helper<i, std::integer_sequence<int, I...>, T> {
-  using type = serac::tuple<std::conditional_t<i == I, T, zero>...>;
+  using type = camp::tuple<std::conditional_t<i == I, T, zero>...>;
 };
 
 template <int i, int n, typename T>
@@ -138,7 +138,7 @@ SERAC_HOST_DEVICE constexpr auto make_dual_helper(double arg)
   using gradient_t = one_hot_t<i, N, double>;
   dual<gradient_t> arg_dual{};
   arg_dual.value                   = arg;
-  serac::get<i>(arg_dual.gradient) = 1.0;
+  camp::get<i>(arg_dual.gradient) = 1.0;
   return arg_dual;
 }
 
@@ -156,7 +156,7 @@ SERAC_HOST_DEVICE constexpr auto make_dual_helper(const tensor<T, n...>& arg)
   tensor<dual<gradient_t>, n...> arg_dual{};
   for_constexpr<n...>([&](auto... j) {
     arg_dual(j...).value                         = arg(j...);
-    serac::get<i>(arg_dual(j...).gradient)(j...) = 1.0;
+    camp::get<i>(arg_dual(j...).gradient)(j...) = 1.0;
   });
   return arg_dual;
 }
@@ -170,18 +170,18 @@ SERAC_HOST_DEVICE constexpr auto make_dual_helper(const tensor<T, n...>& arg)
  *
  * example:
  * @code{.cpp}
- * serac::tuple < double, tensor< double, 3 > > f{};
+ * camp::tuple < double, tensor< double, 3 > > f{};
  *
- * serac::tuple <
- *   dual < serac::tuple < double, zero > >
- *   tensor < dual < serac::tuple < zero, tensor< double, 3 > >, 3 >
+ * camp::tuple <
+ *   dual < camp::tuple < double, zero > >
+ *   tensor < dual < camp::tuple < zero, tensor< double, 3 > >, 3 >
  * > dual_of_f = make_dual(f);
  * @endcode
  */
 template <typename T0, typename T1>
-SERAC_HOST_DEVICE constexpr auto make_dual(const tuple<T0, T1>& args)
+SERAC_HOST_DEVICE constexpr auto make_dual(const camp::tuple<T0, T1>& args)
 {
-  return tuple{make_dual_helper<0, 2>(get<0>(args)), make_dual_helper<1, 2>(get<1>(args))};
+  return camp::tuple{make_dual_helper<0, 2>(get<0>(args)), make_dual_helper<1, 2>(get<1>(args))};
 }
 
 /**
@@ -204,25 +204,25 @@ SERAC_HOST_DEVICE auto promote_to_dual_when(const T& x)
 
 /// @brief layer of indirection required to implement `make_dual_wrt`
 template <int n, typename... T, int... i>
-SERAC_HOST_DEVICE constexpr auto make_dual_helper(const serac::tuple<T...>& args, std::integer_sequence<int, i...>)
+SERAC_HOST_DEVICE constexpr auto make_dual_helper(const camp::tuple<T...>& args, std::integer_sequence<int, i...>)
 {
   // Sam: it took me longer than I'd like to admit to find this issue, so here's an explanation
   //
-  // note: we use serac::make_tuple(...) instead of serac::tuple{...} here because if
-  // the first argument passed in is of type `serac::tuple < serac::tuple < T ... > >`
+  // note: we use camp::make_tuple(...) instead of camp::tuple{...} here because if
+  // the first argument passed in is of type `camp::tuple < camp::tuple < T ... > >`
   // then doing something like
   //
-  // serac::tuple{serac::get<i>(args)...};
+  // camp::tuple{camp::get<i>(args)...};
   //
   // will be expand to something like
   //
-  // serac::tuple{serac::tuple< T ... >{}};
+  // camp::tuple{camp::tuple< T ... >{}};
   //
-  // which invokes the copy ctor, returning a `serac::tuple< T ... >`
-  // instead of `serac::tuple< serac::tuple < T ... > >`
+  // which invokes the copy ctor, returning a `camp::tuple< T ... >`
+  // instead of `camp::tuple< camp::tuple < T ... > >`
   //
-  // but serac::make_tuple(serac::get<i>(args)...) will never accidentally trigger the copy ctor
-  return serac::make_tuple(promote_to_dual_when<i == n>(serac::get<i>(args))...);
+  // but camp::make_tuple(camp::get<i>(args)...) will never accidentally trigger the copy ctor
+  return camp::make_tuple(promote_to_dual_when<i == n>(camp::get<i>(args))...);
 }
 
 /**
@@ -233,7 +233,7 @@ SERAC_HOST_DEVICE constexpr auto make_dual_helper(const serac::tuple<T...>& args
  * @param args the values to be promoted
  */
 template <int n, typename... T>
-constexpr auto make_dual_wrt(const serac::tuple<T...>& args)
+constexpr auto make_dual_wrt(const camp::tuple<T...>& args)
 {
   return make_dual_helper<n>(args, std::make_integer_sequence<int, int(sizeof...(T))>{});
 }
@@ -244,9 +244,9 @@ constexpr auto make_dual_wrt(const serac::tuple<T...>& args)
  * @pre The tuple must contain only scalars or tensors of @p dual numbers or doubles
  */
 template <typename... T>
-SERAC_HOST_DEVICE auto get_value(const serac::tuple<T...>& tuple_of_values)
+SERAC_HOST_DEVICE auto get_value(const camp::tuple<T...>& tuple_of_values)
 {
-  return serac::apply([](const auto&... each_value) { return serac::tuple{get_value(each_value)...}; },
+  return serac::apply([](const auto&... each_value) { return camp::tuple{get_value(each_value)...}; },
                       tuple_of_values);
 }
 
@@ -255,27 +255,27 @@ SERAC_HOST_DEVICE auto get_value(const serac::tuple<T...>& tuple_of_values)
  * @param[in] arg The set of numbers to retrieve gradients from
  */
 template <typename... T>
-SERAC_HOST_DEVICE auto get_gradient(dual<serac::tuple<T...> > arg)
+SERAC_HOST_DEVICE auto get_gradient(dual<camp::tuple<T...> > arg)
 {
-  return serac::apply([](auto... each_value) { return serac::tuple{each_value...}; }, arg.gradient);
+  return serac::apply([](auto... each_value) { return camp::tuple{each_value...}; }, arg.gradient);
 }
 
 /// @overload
 template <typename... T, int... n>
-SERAC_HOST_DEVICE auto get_gradient(const tensor<dual<serac::tuple<T...> >, n...>& arg)
+SERAC_HOST_DEVICE auto get_gradient(const tensor<dual<camp::tuple<T...> >, n...>& arg)
 {
-  serac::tuple<outer_product_t<tensor<double, n...>, T>...> g{};
+  camp::tuple<outer_product_t<tensor<double, n...>, T>...> g{};
   for_constexpr<n...>([&](auto... i) {
-    for_constexpr<sizeof...(T)>([&](auto j) { serac::get<j>(g)(i...) = serac::get<j>(arg(i...).gradient); });
+    for_constexpr<sizeof...(T)>([&](auto j) { camp::get<j>(g)(i...) = camp::get<j>(arg(i...).gradient); });
   });
   return g;
 }
 
 /// @overload
 template <typename... T>
-SERAC_HOST_DEVICE auto get_gradient(serac::tuple<T...> tuple_of_values)
+SERAC_HOST_DEVICE auto get_gradient(camp::tuple<T...> tuple_of_values)
 {
-  return serac::apply([](auto... each_value) { return serac::tuple{get_gradient(each_value)...}; }, tuple_of_values);
+  return serac::apply([](auto... each_value) { return camp::tuple{get_gradient(each_value)...}; }, tuple_of_values);
 }
 
 }  // namespace serac

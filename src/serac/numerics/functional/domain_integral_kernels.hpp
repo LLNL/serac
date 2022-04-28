@@ -27,42 +27,42 @@ struct QFunctionArgument;
 /// @overload
 template <int p, int dim>
 struct QFunctionArgument<H1<p, 1>, Dimension<dim> > {
-  using type = tuple<double, tensor<double, dim> >;  ///< what will be passed to the q-function
+  using type = camp::tuple<double, tensor<double, dim> >;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p, int c, int dim>
 struct QFunctionArgument<H1<p, c>, Dimension<dim> > {
-  using type = tuple<tensor<double, c>, tensor<double, c, dim> >;  ///< what will be passed to the q-function
+  using type = camp::tuple<tensor<double, c>, tensor<double, c, dim> >;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p, int dim>
 struct QFunctionArgument<L2<p, 1>, Dimension<dim> > {
-  using type = tuple<double, tensor<double, dim> >;  ///< what will be passed to the q-function
+  using type = camp::tuple<double, tensor<double, dim> >;  ///< what will be passed to the q-function
 };
 /// @overload
 template <int p, int c, int dim>
 struct QFunctionArgument<L2<p, c>, Dimension<dim> > {
-  using type = tuple<tensor<double, c>, tensor<double, c, dim> >;  ///< what will be passed to the q-function
+  using type = camp::tuple<tensor<double, c>, tensor<double, c, dim> >;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p>
 struct QFunctionArgument<Hcurl<p>, Dimension<2> > {
-  using type = tuple<tensor<double, 2>, double>;  ///< what will be passed to the q-function
+  using type = camp::tuple<tensor<double, 2>, double>;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p>
 struct QFunctionArgument<Hcurl<p>, Dimension<3> > {
-  using type = tuple<tensor<double, 3>, tensor<double, 3> >;  ///< what will be passed to the q-function
+  using type = camp::tuple<tensor<double, 3>, tensor<double, 3> >;  ///< what will be passed to the q-function
 };
 
 template <int i, int dim, typename... trials, typename lambda, typename qpt_data_type>
 auto get_derivative_type(lambda qf, qpt_data_type&& qpt_data)
 {
-  using qf_arguments = serac::tuple<typename QFunctionArgument<trials, serac::Dimension<dim> >::type...>;
+  using qf_arguments = camp::tuple<typename QFunctionArgument<trials, serac::Dimension<dim> >::type...>;
   return get_gradient(detail::apply_qf(qf, tensor<double, dim>{}, make_dual_wrt<i>(qf_arguments{}), qpt_data));
 };
 
@@ -309,15 +309,15 @@ template <bool is_QOI, typename S, typename T>
 auto chain_rule(const S& dfdx, const T& dx)
 {
   if constexpr (is_QOI) {
-    return serac::chain_rule(serac::get<0>(dfdx), serac::get<0>(dx)) +
-           serac::chain_rule(serac::get<1>(dfdx), serac::get<1>(dx));
+    return serac::chain_rule(camp::get<0>(dfdx), camp::get<0>(dx)) +
+           serac::chain_rule(camp::get<1>(dfdx), camp::get<1>(dx));
   }
 
   if constexpr (!is_QOI) {
-    return serac::tuple{serac::chain_rule(serac::get<0>(serac::get<0>(dfdx)), serac::get<0>(dx)) +
-                            serac::chain_rule(serac::get<1>(serac::get<0>(dfdx)), serac::get<1>(dx)),
-                        serac::chain_rule(serac::get<0>(serac::get<1>(dfdx)), serac::get<0>(dx)) +
-                            serac::chain_rule(serac::get<1>(serac::get<1>(dfdx)), serac::get<1>(dx))};
+    return camp::tuple{serac::chain_rule(camp::get<0>(camp::get<0>(dfdx)), camp::get<0>(dx)) +
+                           serac::chain_rule(camp::get<1>(camp::get<0>(dfdx)), camp::get<1>(dx)),
+                        serac::chain_rule(camp::get<0>(camp::get<1>(dfdx)), camp::get<0>(dx)) +
+                           serac::chain_rule(camp::get<1>(camp::get<1>(dfdx)), camp::get<1>(dx))};
   }
 }
 //clang-format on
@@ -460,8 +460,8 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dk,
       auto dq_darg = qf_derivatives(static_cast<size_t>(e), static_cast<size_t>(q));
 
       if constexpr (std::is_same<test, QOI>::value) {
-        auto& q0 = serac::get<0>(dq_darg);  // derivative of QoI w.r.t. field value
-        auto& q1 = serac::get<1>(dq_darg);  // derivative of QoI w.r.t. field derivative
+        auto& q0 = camp::get<0>(dq_darg);  // derivative of QoI w.r.t. field value
+        auto& q1 = camp::get<1>(dq_darg);  // derivative of QoI w.r.t. field derivative
 
         auto N = evaluate_shape_functions<trial_element>(xi_q, J_q);
 
@@ -471,10 +471,10 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dk,
       }
 
       if constexpr (!std::is_same<test, QOI>::value) {
-        auto& q00 = serac::get<0>(serac::get<0>(dq_darg));  // derivative of source term w.r.t. field value
-        auto& q01 = serac::get<1>(serac::get<0>(dq_darg));  // derivative of source term w.r.t. field derivative
-        auto& q10 = serac::get<0>(serac::get<1>(dq_darg));  // derivative of   flux term w.r.t. field value
-        auto& q11 = serac::get<1>(serac::get<1>(dq_darg));  // derivative of   flux term w.r.t. field derivative
+        auto& q00 = camp::get<0>(camp::get<0>(dq_darg));  // derivative of source term w.r.t. field value
+        auto& q01 = camp::get<1>(camp::get<0>(dq_darg));  // derivative of source term w.r.t. field derivative
+        auto& q10 = camp::get<0>(camp::get<1>(dq_darg));  // derivative of   flux term w.r.t. field value
+        auto& q11 = camp::get<1>(camp::get<1>(dq_darg));  // derivative of   flux term w.r.t. field derivative
 
         auto M = evaluate_shape_functions<test_element>(xi_q, J_q);
         auto N = evaluate_shape_functions<trial_element>(xi_q, J_q);

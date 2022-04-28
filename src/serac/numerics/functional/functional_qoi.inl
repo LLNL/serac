@@ -61,7 +61,7 @@ struct QoIElementRestriction : public mfem::Operator {
 template <typename... trials, ExecutionSpace exec>
 class Functional<double(trials...), exec> {
   using test = QOI;
-  static constexpr tuple<trials...> trial_spaces{};
+  static constexpr camp::tuple<trials...> trial_spaces{};
   static constexpr uint32_t         num_trial_spaces = sizeof...(trials);
 
   class Gradient;
@@ -71,7 +71,7 @@ class Functional<double(trials...), exec> {
   struct operator_paren_return {
     using type = typename std::conditional<
         (std::is_same_v<T, differentiate_wrt_this> + ...) == 1, // if the there is a dual number in the pack
-        serac::tuple<double, Gradient&>,                        // then we return the value and the derivative
+        camp::tuple<double, Gradient&>,                        // then we return the value and the derivative
         double                                                  // otherwise, we just return the value
         >::type;
   };

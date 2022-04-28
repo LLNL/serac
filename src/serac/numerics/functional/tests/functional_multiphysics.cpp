@@ -122,7 +122,7 @@ TEST(basic, nonlinear_thermal_test_3D)
         auto [du_dt, unused] = dtemperature_dt;
         auto source          = rho * cp * du_dt * du_dt - (100 * x[0] * x[1]);
         auto flux            = kappa * du_dx;
-        return serac::tuple{source, flux};
+        return camp::tuple{source, flux};
       },
       *mesh3D);
 

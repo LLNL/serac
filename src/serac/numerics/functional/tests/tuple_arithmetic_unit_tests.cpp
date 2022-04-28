@@ -23,7 +23,7 @@ static constexpr double epsilon = 1.0e-6;
 
 TEST(TupleArithmeticUnitTests, structured_binding)
 {
-  serac::tuple x{0, 1.0, 2.0f};
+  camp::tuple x{0, 1.0, 2.0f};
   auto [a, b, c] = x;
   EXPECT_NEAR(a, 0, 1.0e-10);
   EXPECT_NEAR(b, 1.00, 1.0e-10);
@@ -32,42 +32,42 @@ TEST(TupleArithmeticUnitTests, structured_binding)
 
 TEST(TupleArithmeticUnitTests, add)
 {
-  serac::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
-                 make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
-  serac::tuple b = a + a;
-  EXPECT_NEAR(serac::get<0>(b), 0.0, 1.0e-10);
-  EXPECT_NEAR(norm(serac::get<1>(b)), 10.39230484541326, 1.0e-10);
-  EXPECT_NEAR(norm(serac::get<2>(b)), 2.977782431376876, 1.0e-10);
+  camp::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
+                make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
+  camp::tuple b = a + a;
+  EXPECT_NEAR(camp::get<0>(b), 0.0, 1.0e-10);
+  EXPECT_NEAR(norm(camp::get<1>(b)), 10.39230484541326, 1.0e-10);
+  EXPECT_NEAR(norm(camp::get<2>(b)), 2.977782431376876, 1.0e-10);
 }
 
 TEST(TupleArithmeticUnitTests, subtract)
 {
-  serac::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
-                 make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
-  serac::tuple b = a - a;
-  EXPECT_NEAR(serac::get<0>(b), 0.0, 1.0e-10);
-  EXPECT_NEAR(norm(serac::get<1>(b)), 0.0, 1.0e-10);
-  EXPECT_NEAR(norm(serac::get<2>(b)), 0.0, 1.0e-10);
+  camp::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
+                make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
+  camp::tuple b = a - a;
+  EXPECT_NEAR(camp::get<0>(b), 0.0, 1.0e-10);
+  EXPECT_NEAR(norm(camp::get<1>(b)), 0.0, 1.0e-10);
+  EXPECT_NEAR(norm(camp::get<2>(b)), 0.0, 1.0e-10);
 }
 
 TEST(TupleArithmeticUnitTests, multiply)
 {
-  serac::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
-                 make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
-  serac::tuple b = 2.0 * a;
-  EXPECT_NEAR(serac::get<0>(b), 0.0, 1.0e-10);
-  EXPECT_NEAR(norm(serac::get<1>(b)), 10.39230484541326, 1.0e-10);
-  EXPECT_NEAR(norm(serac::get<2>(b)), 2.977782431376876, 1.0e-10);
+  camp::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
+                make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
+  camp::tuple b = 2.0 * a;
+  EXPECT_NEAR(camp::get<0>(b), 0.0, 1.0e-10);
+  EXPECT_NEAR(norm(camp::get<1>(b)), 10.39230484541326, 1.0e-10);
+  EXPECT_NEAR(norm(camp::get<2>(b)), 2.977782431376876, 1.0e-10);
 }
 
 TEST(TupleArithmeticUnitTests, divide)
 {
-  serac::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
-                 make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
-  serac::tuple b = a / 0.5;
-  EXPECT_NEAR(serac::get<0>(b), 0.0, 1.0e-10);
-  EXPECT_NEAR(norm(serac::get<1>(b)), 10.39230484541326, 1.0e-10);
-  EXPECT_NEAR(norm(serac::get<2>(b)), 2.977782431376876, 1.0e-10);
+  camp::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
+                make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
+  camp::tuple b = a / 0.5;
+  EXPECT_NEAR(camp::get<0>(b), 0.0, 1.0e-10);
+  EXPECT_NEAR(norm(camp::get<1>(b)), 10.39230484541326, 1.0e-10);
+  EXPECT_NEAR(norm(camp::get<2>(b)), 2.977782431376876, 1.0e-10);
 }
 
 TEST(TupleArithmeticUnitTests, tensor_output_with_tuple_input)

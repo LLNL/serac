@@ -44,11 +44,11 @@ template <serac::ExecutionSpace exec, typename... element_types>
 struct EVectorView {
   static constexpr int n = sizeof...(element_types);  ///< how many element types were provided
 
-  using element_types_tuple = serac::tuple<element_types...>;  ///< a list of the provided element types
+  using element_types_tuple = camp::tuple<element_types...>;  ///< a list of the provided element types
 
   // clang-format off
   /// @brief the return type of the `operator[]` for this class
-  using T = serac::tuple<
+  using T = camp::tuple<
     typename std::conditional<
       element_types::components == 1, 
       tensor<double, element_types::ndof>,
@@ -81,7 +81,7 @@ struct EVectorView {
 
     for_constexpr<n>([&](auto I) {
       using element_type =
-          typename serac::tuple_element<I,
+          typename camp::tuple_element<I,
                                         element_types_tuple>::type;  // decltype(serac::get<I>(element_types_tuple{}));
       constexpr int ndof       = element_type::ndof;
       constexpr int components = element_type::components;
@@ -104,7 +104,7 @@ struct EVectorView {
    * 2 when spaces == 1  (num_elements, dofs_per_element)
    * 3 when spaces  > 1  (num_elements, dofs_per_element, num_components)
    */
-  serac::tuple<serac::ExecArrayView<const double, 2 + (element_types::components > 1), exec>...> data;
+  camp::tuple<serac::ExecArrayView<const double, 2 + (element_types::components > 1), exec>...> data;
 };
 
 }  // namespace serac
