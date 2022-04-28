@@ -35,11 +35,12 @@ Requirements:
 * If using a personal machine, check the ``configs`` directory in the serac
   repo and create a json file ``<your_machine_name>.json`` if you haven't already.
   Your machine's name can be found by running the following lines of code::
+
       python3
       import socket
       socket.gethostname().rstrip('1234567890')
       exit()
-      
+
   (Currently, there are configuration files for Toss3 and BlueOS which can be
    used as reference.)
 
