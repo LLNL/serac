@@ -7,6 +7,7 @@
 #include "serac/physics/thermal_solid_functional.hpp"
 #include "serac/physics/materials/thermal_functional_material.hpp"
 #include "serac/physics/materials/solid_functional_material.hpp"
+#include "serac/physics/materials/green_saint_venant_hyperthermoelastic.hpp"
 
 #include <fstream>
 
@@ -64,14 +65,22 @@ void functional_test_static(double expected_norm)
   // BT 04/27/2022 This can't be instantiated yet.
   // The material model needs to be implemented before this
   // module can be used.
-  ThermalSolidFunctional<p, dim> thermal_solid_solver(thermal_options, solid_options, GeometricNonlinearities::On,
-                                                      FinalMeshOption::Deformed, "thermal_solid_functional");
-
+  ThermalMechanicsFunctional<p, dim> thermal_solid_solver(thermal_options, solid_options,
+                                                          GeometricNonlinearities::On,
+                                                          FinalMeshOption::Deformed, "thermal_solid_functional");
+  double E = 1.0;
+  double nu = 0.25;
+  double c = 1.0;
+  double alpha = 1.0e-3;
+  double theta_ref = 300.0;
+  double k = 1.0;
+  ThermoelasticMaterial material{E, nu, c, alpha, theta_ref, k};
+  thermal_solid_solver.setMaterial(material);
   double u = 0.0;
   EXPECT_NEAR(u, expected_norm, 1.0e-6);
 }
 
-TEST(thermal_solid_functional, construct) { functional_test_static<1, 2>(0.0); }
+TEST(thermal_solid_functional, construct) { functional_test_static<1, 3>(0.0); }
 
 }  // namespace serac
 

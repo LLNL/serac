@@ -255,7 +255,7 @@ public:
           auto [u, du_dx] = temperature;
           auto source     = serac::zero{};
 
-          auto response = parameterized_material(x, u, du_dx, serac::get<0>(params)...);
+          auto response = parameterized_material(x, u, du_dx, params...);
 
           return serac::tuple{source, -1.0 * response.heat_flux};
         },
@@ -270,7 +270,7 @@ public:
           auto temp      = u * 0.0;
           auto temp_grad = du_dx * 0.0;
 
-          auto response = parameterized_material(x, temp, temp_grad, serac::get<0>(params)...);
+          auto response = parameterized_material(x, temp, temp_grad, params...);
 
           auto source = response.specific_heat_capacity * response.density * u;
 
