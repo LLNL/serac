@@ -1,6 +1,11 @@
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// other Serac Project Developers. See the top-level LICENSE file for
+// details.
+//
+// SPDX-License-Identifier: (BSD-3-Clause)
+
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/tuple.hpp"
-//#include "serac/numerics/functional/tuple_arithmetic.hpp"
 
 namespace serac {
 
@@ -14,7 +19,8 @@ auto greenStrain(const tensor<T, 3, 3>& grad_u)
 }
 
 /// @brief Green-Saint Venant isotropic thermoelastic model
-struct ThermoelasticMaterial {
+struct GreenSaintVenantThermoelastic {
+  double rho;        ///< density
   double E;          ///< Young's modulus
   double nu;         ///< Poisson's ratio
   double C;          ///< volumetric heat capacity
