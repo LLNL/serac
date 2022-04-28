@@ -32,7 +32,7 @@ static const tensor<double, 3, 3> Q{{{0.852932108456964, 0.405577416697288, -0.3
 
 TEST(ThermomechanicalMaterial, FreeEnergyIsZeroInReferenceState)
 {
-  GreenSaintVenantThermoelastic material{.rho = 1.0, .E = 100.0, .nu = 0.25, .C = 1.0, .alpha = 1.0e-3, .theta_ref = 300.0, .k = 1.0};
+  GreenSaintVenantThermoelasticMaterial material{.rho = 1.0, .E = 100.0, .nu = 0.25, .C = 1.0, .alpha = 1.0e-3, .theta_ref = 300.0, .k = 1.0};
   tensor<double, 3, 3>  displacement_grad{};
   double                temperature = material.theta_ref;
   double                free_energy = material.calculateFreeEnergy(displacement_grad, temperature);
@@ -41,11 +41,11 @@ TEST(ThermomechanicalMaterial, FreeEnergyIsZeroInReferenceState)
 
 TEST(ThermomechanicalMaterial, StressIsZeroInReferenceState)
 {
-  GreenSaintVenantThermoelastic material{.rho = 1.0, .E = 100.0, .nu = 0.25, .C = 1.0, .alpha = 1.0e-3, .theta_ref = 300.0, .k = 1.0};
+  GreenSaintVenantThermoelasticMaterial material{.rho = 1.0, .E = 100.0, .nu = 0.25, .C = 1.0, .alpha = 1.0e-3, .theta_ref = 300.0, .k = 1.0};
   tensor<double, 3, 3>  displacement_grad{};
   double                temperature = material.theta_ref;
   tensor<double, 3>     temperature_grad{};
-  GreenSaintVenantThermoelastic::State state{};
+  GreenSaintVenantThermoelasticMaterial::State state{};
   auto                         displacement_grad_old = displacement_grad;
   double                       temperature_old       = temperature;
   double                       dt                    = 1.0;
@@ -56,7 +56,7 @@ TEST(ThermomechanicalMaterial, StressIsZeroInReferenceState)
 
 TEST(ThermomechanicalMaterial, FreeEnergyAndStressAgree)
 {
-  GreenSaintVenantThermoelastic material{.rho = 1.0, .E = 100.0, .nu = 0.25, .C = 1.0, .alpha = 1.0e-3, .theta_ref = 300.0, .k = 1.0};
+  GreenSaintVenantThermoelasticMaterial material{.rho = 1.0, .E = 100.0, .nu = 0.25, .C = 1.0, .alpha = 1.0e-3, .theta_ref = 300.0, .k = 1.0};
   // clang-format off
   tensor<double, 3, 3>  displacement_grad{{{0.35490513, 0.60419905, 0.4275843},
                                            {0.23061597, 0.6735498,  0.43953657},
@@ -64,7 +64,7 @@ TEST(ThermomechanicalMaterial, FreeEnergyAndStressAgree)
   // clang-format on
   double                       temperature = 290.0;
   tensor<double, 3>            temperature_grad{0.87241435, 0.11105156, -0.27708054};
-  GreenSaintVenantThermoelastic::State state{};
+  GreenSaintVenantThermoelasticMaterial::State state{};
   tensor<double, 3, 3>         displacement_grad_old{};
   double                       temperature_old = temperature;
   double                       dt              = 1.0;
@@ -77,7 +77,7 @@ TEST(ThermomechanicalMaterial, FreeEnergyAndStressAgree)
 
 TEST(ThermomechanicalMaterial, SatisfiesDissipationInequality)
 {
-  GreenSaintVenantThermoelastic material{.rho = 1.0, .E = 100.0, .nu = 0.25, .C = 1.0, .alpha = 1.0e-3, .theta_ref = 300.0, .k = 1.0};
+  GreenSaintVenantThermoelasticMaterial material{.rho = 1.0, .E = 100.0, .nu = 0.25, .C = 1.0, .alpha = 1.0e-3, .theta_ref = 300.0, .k = 1.0};
   // clang-format off
   tensor<double, 3, 3>  displacement_grad{{{0.35490513, 0.60419905, 0.4275843},
                                            {0.23061597, 0.6735498,  0.43953657},
@@ -86,7 +86,7 @@ TEST(ThermomechanicalMaterial, SatisfiesDissipationInequality)
   double                       temperature = 290.0;
   tensor<double, 3>            temperature_grad{0.87241435, 0.11105156, -0.27708054};
   double                       temperature_old = temperature;
-  GreenSaintVenantThermoelastic::State state{};
+  GreenSaintVenantThermoelasticMaterial::State state{};
   tensor<double, 3, 3>         displacement_grad_old{};
   double                       dt                 = 1.0;
   auto                         generalized_fluxes = material.calculateThermalConstitutiveOutputs(
@@ -98,7 +98,7 @@ TEST(ThermomechanicalMaterial, SatisfiesDissipationInequality)
 
 TEST(ThermomechanicalMaterial, IsFrameIndifferent)
 {
-  GreenSaintVenantThermoelastic material{.rho = 1.0, .E = 100.0, .nu = 0.25, .C = 1.0, .alpha = 1.0e-3, .theta_ref = 300.0, .k = 1.0};
+  GreenSaintVenantThermoelasticMaterial material{.rho = 1.0, .E = 100.0, .nu = 0.25, .C = 1.0, .alpha = 1.0e-3, .theta_ref = 300.0, .k = 1.0};
   // clang-format off
   tensor<double, 3, 3>  displacement_grad{{{0.35490513, 0.60419905, 0.4275843},
                                            {0.23061597, 0.6735498,  0.43953657},
@@ -107,7 +107,7 @@ TEST(ThermomechanicalMaterial, IsFrameIndifferent)
   double                       temperature = 290.0;
   tensor<double, 3>            temperature_grad{0.87241435, 0.11105156, -0.27708054};
   double                       temperature_old = 300;
-  GreenSaintVenantThermoelastic::State state{};
+  GreenSaintVenantThermoelasticMaterial::State state{};
   tensor<double, 3, 3>         displacement_grad_old{};
   double                       dt = 1.0;
 
@@ -130,7 +130,7 @@ TEST(ThermomechanicalMaterial, IsFrameIndifferent)
 
 TEST(ThermomechanicalMaterial, InternalSourceHasCorrectSign)
 {
-  GreenSaintVenantThermoelastic material{.rho = 1.0, .E = 100.0, .nu = 0.25, .C = 1.0, .alpha = 1.0e-3, .theta_ref = 300.0, .k = 1.0};
+  GreenSaintVenantThermoelasticMaterial material{.rho = 1.0, .E = 100.0, .nu = 0.25, .C = 1.0, .alpha = 1.0e-3, .theta_ref = 300.0, .k = 1.0};
   // clang-format off
   tensor<double, 3, 3>  displacement_grad{{{0.35490513, 0.60419905, 0.4275843},
                                            {0.23061597, 0.6735498,  0.43953657},
@@ -138,7 +138,7 @@ TEST(ThermomechanicalMaterial, InternalSourceHasCorrectSign)
   // clang-format on
   double                       temperature_old = 290.0;
   tensor<double, 3>            temperature_grad{0.87241435, 0.11105156, -0.27708054};
-  GreenSaintVenantThermoelastic::State state{};
+  GreenSaintVenantThermoelasticMaterial::State state{};
   tensor<double, 3, 3>         displacement_grad_old{};
   double                       temperature         = temperature_old;
   double                       dt                  = 1.0;
@@ -150,7 +150,7 @@ TEST(ThermomechanicalMaterial, InternalSourceHasCorrectSign)
 
 TEST(ThermomechanicalMaterial, StressHasCorrectSymmetry)
 {
-  GreenSaintVenantThermoelastic material{.rho = 1.0, .E = 100.0, .nu = 0.25, .C = 1.0, .alpha = 1.0e-3, .theta_ref = 300.0, .k = 1.0};
+  GreenSaintVenantThermoelasticMaterial material{.rho = 1.0, .E = 100.0, .nu = 0.25, .C = 1.0, .alpha = 1.0e-3, .theta_ref = 300.0, .k = 1.0};
   // clang-format off
   tensor<double, 3, 3>  displacement_grad{{{0.35490513, 0.60419905, 0.4275843},
                                            {0.23061597, 0.6735498,  0.43953657},
@@ -158,7 +158,7 @@ TEST(ThermomechanicalMaterial, StressHasCorrectSymmetry)
   // clang-format on
   double                       temperature_old = 290.0;
   tensor<double, 3>            temperature_grad{0.87241435, 0.11105156, -0.27708054};
-  GreenSaintVenantThermoelastic::State state{};
+  GreenSaintVenantThermoelasticMaterial::State state{};
   tensor<double, 3, 3>         displacement_grad_old{};
   double                       temperature  = temperature_old;
   double                       dt           = 1.0;

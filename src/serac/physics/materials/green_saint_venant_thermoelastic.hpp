@@ -19,7 +19,7 @@ auto greenStrain(const tensor<T, 3, 3>& grad_u)
 }
 
 /// @brief Green-Saint Venant isotropic thermoelastic model
-struct GreenSaintVenantThermoelastic {
+struct GreenSaintVenantThermoelasticMaterial {
   double rho;        ///< density
   double E;          ///< Young's modulus
   double nu;         ///< Poisson's ratio

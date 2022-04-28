@@ -7,7 +7,7 @@
 #include "serac/physics/thermal_solid_functional.hpp"
 #include "serac/physics/materials/thermal_functional_material.hpp"
 #include "serac/physics/materials/solid_functional_material.hpp"
-#include "serac/physics/materials/green_saint_venant_hyperthermoelastic.hpp"
+#include "serac/physics/materials/green_saint_venant_thermoelastic.hpp"
 
 #include <fstream>
 
@@ -68,13 +68,14 @@ void functional_test_static(double expected_norm)
   ThermalMechanicsFunctional<p, dim> thermal_solid_solver(thermal_options, solid_options,
                                                           GeometricNonlinearities::On,
                                                           FinalMeshOption::Deformed, "thermal_solid_functional");
+  double rho = 1.0;
   double E = 1.0;
   double nu = 0.25;
   double c = 1.0;
   double alpha = 1.0e-3;
   double theta_ref = 300.0;
   double k = 1.0;
-  ThermoelasticMaterial material{E, nu, c, alpha, theta_ref, k};
+  GreenSaintVenantThermoelasticMaterial material{rho, E, nu, c, alpha, theta_ref, k};
   thermal_solid_solver.setMaterial(material);
   double u = 0.0;
   EXPECT_NEAR(u, expected_norm, 1.0e-6);
