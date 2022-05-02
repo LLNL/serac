@@ -34,6 +34,7 @@ set(solver_tests
     serac_thermal_solid_solver.cpp
     serac_thermal_expansion.cpp
     serac_thermal_functional.cpp
+    serac_thermal_solid_functional.cpp
     )
 
 serac_add_tests( SOURCES ${solver_tests}

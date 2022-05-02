@@ -32,6 +32,7 @@ set(physics_headers
     thermal_conduction.hpp
     thermal_conduction_functional.hpp
     thermal_solid.hpp
+    thermal_solid_functional.hpp
     )
 
 set(physics_dependencies

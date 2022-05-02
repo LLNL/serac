@@ -4,6 +4,8 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
+add_subdirectory(tests)
+
 set(materials_sources
     hyperelastic_material.cpp
     thermal_expansion_material.cpp
