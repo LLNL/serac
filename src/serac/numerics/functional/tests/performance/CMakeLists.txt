@@ -20,19 +20,18 @@ foreach(filename ${functional_performance_tests})
                        FOLDER      serac/tests )
 endforeach()
 
-set_source_files_properties(batched_shape_functions.cpp PROPERTIES LANGUAGE CXX)
-target_compile_options(batched_shape_functions PUBLIC "-march=skylake-avx512")
-target_compile_options(batched_shape_functions PUBLIC "-Wno-ignored-attributes")
-target_compile_options(batched_shape_functions PUBLIC "-Wno-unused-function")
-target_compile_options(batched_shape_functions PUBLIC "-Wno-shadow")
-
+#set_source_files_properties(batched_shape_functions.cpp PROPERTIES LANGUAGE CXX)
+#target_compile_options(batched_shape_functions PUBLIC "-march=skylake-avx512")
+#target_compile_options(batched_shape_functions PUBLIC "-Wno-ignored-attributes")
+#target_compile_options(batched_shape_functions PUBLIC "-Wno-unused-function")
+#target_compile_options(batched_shape_functions PUBLIC "-Wno-shadow")
 
 if(ENABLE_CUDA)
 
     set(functional_performance_tests_cuda 
         sum_factorization_tests.cu # todo: delete this!
         memory_bandwidth_test.cu
-        batched_shape_functions_scalar_cuda.cu
+        batched_shape_functions_cuda.cu
         mass_diffusion_tests_cuda.cu)
 
     foreach(filename ${functional_performance_tests_cuda})
@@ -44,7 +43,7 @@ if(ENABLE_CUDA)
                            FOLDER      serac/tests )
     endforeach()
 
-    target_compile_options(batched_shape_functions_scalar_cuda PRIVATE --extended-lambda)
+    target_compile_options(batched_shape_functions_cuda PRIVATE --extended-lambda)
     target_compile_options(mass_diffusion_tests_cuda PRIVATE --extended-lambda)
 
 endif()
