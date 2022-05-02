@@ -93,11 +93,15 @@ __device__ auto load_jacobian(const tensor< double, dim, dim, q, q > & J) {
 
 template <int dim, int q>
 __device__ auto load_jacobian(const tensor< double, dim, dim, q, q, q > & J) {
+  int tidx =  threadIdx.x % q;
+  int tidy = (threadIdx.x % (q * q)) / q;
+  int tidz =  threadIdx.x / (q * q);
+
   tensor< double, dim, dim > J_q;
   for (int i = 0; i < dim; i++) {
     for (int j = 0; j < dim; j++) {
       for (int k = 0; k < dim; k++) {
-        J_q[i][j] = J(j, i, threadIdx.z, threadIdx.y, threadIdx.x);
+        J_q[i][j] = J(j, i, tidz, tidy, tidx);
       }
     }
   }
@@ -110,7 +114,7 @@ __device__ void load(const dof_type& source, dof_type& destination)
   constexpr int ndof    = sizeof(dof_type) / sizeof(double);
   const double* src_ptr = reinterpret_cast<const double*>(&source);
   double*       dst_ptr = reinterpret_cast<double*>(&destination);
-  for (int i = 0; i < ndof; i++) {
+  for (int i = threadIdx.x; i < ndof; i += blockDim.x) {
     dst_ptr[i] = src_ptr[i];
   }
 }
@@ -427,7 +431,7 @@ void h1_h1_test_3D(int num_elements, int num_runs)
     R1D            = 0.0;
 
     auto rule = serac::MakeGaussLegendreRule<Geometry::Hexahedron, q>();
-    dim3 blocksize{q, q, q};
+    dim3 blocksize{q * q * q, 1, 1};
     int gridsize = num_elements;
     double runtime = time([&]() {
       for (int i = 0; i < num_runs; i++) {

@@ -476,6 +476,10 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
     // A2(dz, qy, qx)  := B(qy, dy) * A1(dz, dy, qx)
     // X_q(qz, qy, qx) := B(qz, dz) * A2(dz, qy, qx)
 
+    int tidx =  threadIdx.x % q;
+    int tidy = (threadIdx.x % (q * q)) / q;
+    int tidz =  threadIdx.x / (q * q);
+
     static constexpr auto points1D = GaussLegendreNodes<q>();
     static constexpr auto B_       = [=]() {
       tensor<double, q, n> B{};
@@ -495,22 +499,20 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
 
     __shared__ tensor<double, q, n> B;
     __shared__ tensor<double, q, n> G;
-    if (threadIdx.z == 0) {
-      for (int j = threadIdx.y; j < q; j += blockDim.y) {
-        for (int i = threadIdx.x; i < n; i += blockDim.x) {
-          B(j, i) = B_(j, i);
-          G(j, i) = G_(j, i);
-        }
-      }
+    for (int entry = 0; entry < n * q; entry++) {
+      int i = entry % n; 
+      int j = entry / n;
+      B(j, i) = B_(j, i);
+      G(j, i) = G_(j, i);
     }
     __syncthreads();
 
     tuple<tensor<double, c>, tensor<double, c, 3> > qf_input{};
 
     for (int i = 0; i < c; i++) {
-      for (int dz = threadIdx.z; dz < n; dz += blockDim.z) {
-        for (int dy = threadIdx.y; dy < n; dy += blockDim.y) {
-          for (int qx = threadIdx.x; qx < q; qx += blockDim.x) {
+      for (int dz = tidz; dz < n; dz += q) {
+        for (int dy = tidy; dy < n; dy += q) {
+          for (int qx = tidx; qx < q; qx += q) {
             double sum[2]{};
             for (int dx = 0; dx < n; dx++) {
               sum[0] += B(qx, dx) * X(i, dz, dy, dx);
@@ -523,9 +525,9 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
       }
       __syncthreads();
 
-      for (int dz = threadIdx.z; dz < n; dz += blockDim.z) {
-        for (int qy = threadIdx.y; qy < q; qy += blockDim.y) {
-          for (int qx = threadIdx.x; qx < q; qx += blockDim.x) {
+      for (int dz = tidz; dz < n; dz += q) {
+        for (int qy = tidy; qy < q; qy += q) {
+          for (int qx = tidx; qx < q; qx += q) {
             double sum[3]{};
             for (int dy = 0; dy < n; dy++) {
               sum[0] += B(qy, dy) * cache.A1(0, dz, dy, qx);
@@ -540,9 +542,9 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
       }
       __syncthreads();
 
-      for (int qz = threadIdx.z; qz < q; qz += blockDim.z) {
-        for (int qy = threadIdx.y; qy < q; qy += blockDim.y) {
-          for (int qx = threadIdx.x; qx < q; qx += blockDim.x) {
+      for (int qz = tidz; qz < q; qz += q) {
+        for (int qy = tidy; qy < q; qy += q) {
+          for (int qx = tidx; qx < q; qx += q) {
             for (int dz = 0; dz < n; dz++) {
               get<0>(qf_input)[i]    += B(qz, dz) * cache.A2(0, dz, qy, qx);
               get<1>(qf_input)[i][0] += B(qz, dz) * cache.A2(1, dz, qy, qx);
@@ -564,6 +566,11 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
                                      const TensorProductQuadratureRule<q>& rule, cache_type<q>& cache,
                                      dof_type& residual)
   {
+
+    int tidx =  threadIdx.x % q;
+    int tidy = (threadIdx.x % (q * q)) / q;
+    int tidz =  threadIdx.x / (q * q);
+
     static constexpr auto points1D = GaussLegendreNodes<q>();
     static constexpr auto weights1D = GaussLegendreWeights<q>();
     static constexpr auto B_       = [=]() {
@@ -584,17 +591,15 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
 
     __shared__ tensor<double, q, n> B;
     __shared__ tensor<double, q, n> G;
-    if (threadIdx.z == 0) {
-      for (int j = threadIdx.y; j < q; j += blockDim.y) {
-        for (int i = threadIdx.x; i < n; i += blockDim.x) {
-          B(j, i) = B_(j, i);
-          G(j, i) = G_(j, i);
-        }
-      }
+    for (int entry = 0; entry < n * q; entry++) {
+      int i = entry % n; 
+      int j = entry / n;
+      B(j, i) = B_(j, i);
+      G(j, i) = G_(j, i);
     }
     __syncthreads();
 
-    auto dv = det(J) * weights1D[threadIdx.x] * weights1D[threadIdx.y] * weights1D[threadIdx.z];
+    auto dv = det(J) * weights1D[tidx] * weights1D[tidy] * weights1D[tidz];
 
     get<0>(response) = get<0>(response) * dv;
     get<1>(response) = dot(get<1>(response), inv(transpose(J))) * dv;
@@ -603,9 +608,9 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
 
       // this first contraction is performed a little differently, since `response` is not 
       // in shared memory, so each thread can only access its own values
-      for (int qz = threadIdx.z; qz < q; qz += blockDim.z) {
-        for (int qy = threadIdx.y; qy < q; qy += blockDim.y) {
-          for (int dx = threadIdx.x; dx < n; dx += blockDim.x) {
+      for (int qz = tidz; qz < q; qz += q) {
+        for (int qy = tidy; qy < q; qy += q) {
+          for (int dx = tidx; dx < n; dx += q) {
             cache.A2(0, dx, qy, qz) = 0.0;
             cache.A2(1, dx, qy, qz) = 0.0;
             cache.A2(2, dx, qy, qz) = 0.0;
@@ -615,17 +620,17 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
       __syncthreads();
 
       for (int offset = 0; offset < n; offset++) {
-        int dx = (threadIdx.x + offset) % n;
-        auto sum = B(threadIdx.x, dx) * get<0>(response)(i) + G(threadIdx.x, dx) * get<1>(response)(i, 0);
-        atomicAdd(&cache.A2(0, dx, threadIdx.z, threadIdx.y), sum);
-        atomicAdd(&cache.A2(1, dx, threadIdx.z, threadIdx.y), B(threadIdx.x, dx) * get<1>(response)(i, 1));
-        atomicAdd(&cache.A2(2, dx, threadIdx.z, threadIdx.y), B(threadIdx.x, dx) * get<1>(response)(i, 2));
+        int dx = (tidx + offset) % n;
+        auto sum = B(tidx, dx) * get<0>(response)(i) + G(tidx, dx) * get<1>(response)(i, 0);
+        atomicAdd(&cache.A2(0, dx, tidz, tidy), sum);
+        atomicAdd(&cache.A2(1, dx, tidz, tidy), B(tidx, dx) * get<1>(response)(i, 1));
+        atomicAdd(&cache.A2(2, dx, tidz, tidy), B(tidx, dx) * get<1>(response)(i, 2));
       }
       __syncthreads();
 
-      for (int qz = threadIdx.z; qz < q; qz += blockDim.z) {
-        for (int dy = threadIdx.y; dy < n; dy += blockDim.y) {
-          for (int dx = threadIdx.x; dx < n; dx += blockDim.x) {
+      for (int qz = tidz; qz < q; qz += q) {
+        for (int dy = tidy; dy < n; dy += q) {
+          for (int dx = tidx; dx < n; dx += q) {
             double sum[2]{};
             for (int qy = 0; qy < q; qy++) {
               sum[0] += B(qy, dy) * cache.A2(0, dx, qz, qy);
@@ -639,9 +644,9 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
       }
       __syncthreads();
 
-      for (int dz = threadIdx.z; dz < n; dz += blockDim.z) {
-        for (int dy = threadIdx.y; dy < n; dy += blockDim.y) {
-          for (int dx = threadIdx.x; dx < n; dx += blockDim.x) {
+      for (int dz = tidz; dz < n; dz += q) {
+        for (int dy = tidy; dy < n; dy += q) {
+          for (int dx = tidx; dx < n; dx += q) {
             double sum = 0.0;
             for (int qz = 0; qz < q; qz++) {
               sum += B(qz, dz) * cache.A1(0, qz, dy, dx);
