@@ -556,24 +556,6 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
 
     get<1>(qf_input) = dot(get<1>(qf_input), inv(J));
 
-#if 0
-    for (int k = 0; k < q; k++) {
-      for (int j = 0; j < q; j++) {
-        for (int i = 0; i < q; i++) {
-          if (threadIdx.x == i && threadIdx.y == j && threadIdx.z == k) {
-            printf("%d, %d, %d: ", i, j, k);
-            print(get<0>(qf_input));
-            print(get<1>(qf_input));
-            print(J);
-            printf("\n");
-            __syncthreads();
-          }
-        }
-      }
-    }
-    printf("\n");
-#endif
-
     return qf_input;
   }
 
@@ -617,40 +599,10 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
     get<0>(response) = get<0>(response) * dv;
     get<1>(response) = dot(get<1>(response), inv(transpose(J))) * dv;
 
-#if 0
-    for (int k = 0; k < q; k++) {
-      for (int j = 0; j < q; j++) {
-        for (int i = 0; i < q; i++) {
-          if (threadIdx.x == i && threadIdx.y == j && threadIdx.z == k) {
-            print(get<0>(response));
-            print(get<1>(response));
-            printf("\n");
-            __syncthreads();
-          }
-        }
-      }
-    }
-#endif
-
     for (int i = 0; i < c; i++) {
-      #if 0
-      for (int qz = threadIdx.z; qz < q; qz += blockDim.z) {
-        for (int qy = threadIdx.y; qy < q; qy += blockDim.y) {
-          for (int dx = threadIdx.x; dx < n; dx += blockDim.x) {
-            double sum[3]{};
-            for (int qx = 0; qx < q; qx++) {
-              sum[0] += B(qx, dx) * get<0>(response)(i);
-              sum[0] += G(qx, dx) * get<1>(response)(0, i);
-              sum[1] += B(qx, dx) * get<1>(response)(1, i);
-              sum[2] += B(qx, dx) * get<1>(response)(2, i);
-            }
-            cache.A1(0, qz, qy, dx) = sum[0];
-            cache.A1(1, qz, qy, dx) = sum[1];
-            cache.A1(2, qz, qy, dx) = sum[2];
-          }
-        }
-      }
-      #else
+
+      // this first contraction is performed a little differently, since `response` is not 
+      // in shared memory, so each thread can only access its own values
       for (int qz = threadIdx.z; qz < q; qz += blockDim.z) {
         for (int qy = threadIdx.y; qy < q; qy += blockDim.y) {
           for (int dx = threadIdx.x; dx < n; dx += blockDim.x) {
@@ -662,17 +614,13 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
       }
       __syncthreads();
 
-      if (threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
-        print(cache.A2);
-      }
-
-      for (int dx = 0; dx < n; dx++) {
-        atomicAdd(&cache.A2(0, dx, threadIdx.z, threadIdx.y), B(threadIdx.x, dx) * get<0>(response)(i));
-        atomicAdd(&cache.A2(0, dx, threadIdx.z, threadIdx.y), G(threadIdx.x, dx) * get<1>(response)(i, 0));
+      for (int offset = 0; offset < n; offset++) {
+        int dx = (threadIdx.x + offset) % n;
+        auto sum = B(threadIdx.x, dx) * get<0>(response)(i) + G(threadIdx.x, dx) * get<1>(response)(i, 0);
+        atomicAdd(&cache.A2(0, dx, threadIdx.z, threadIdx.y), sum);
         atomicAdd(&cache.A2(1, dx, threadIdx.z, threadIdx.y), B(threadIdx.x, dx) * get<1>(response)(i, 1));
         atomicAdd(&cache.A2(2, dx, threadIdx.z, threadIdx.y), B(threadIdx.x, dx) * get<1>(response)(i, 2));
       }
-      #endif
       __syncthreads();
 
       for (int qz = threadIdx.z; qz < q; qz += blockDim.z) {

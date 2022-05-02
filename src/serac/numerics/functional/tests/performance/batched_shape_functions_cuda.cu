@@ -61,11 +61,6 @@ __global__ void reference_cuda_kernel(mfem::DeviceTensor< 2, const double > u,
 
     auto u_elem = detail::Load<trial_element>(u, e);
 
-    if (q == 0) {
-      print(u_elem);
-      printf("\n");
-    }
-
     element_residual_type r_elem{};
 
     auto   xi  = rule.points[q];
@@ -74,17 +69,6 @@ __global__ void reference_cuda_kernel(mfem::DeviceTensor< 2, const double > u,
     double dx  = det(J_q) * dxi;
 
     auto arg = domain_integral::Preprocess<trial_element>(u_elem, xi, J_q);
-
-    for (int i = 0; i < rule.size(); i++) {
-      if (i == q) {
-        print(xi);
-        print(get<0>(arg));
-        print(get<1>(arg));
-        print(J_q);
-        printf("\n");
-      }
-      __syncthreads();
-    }
 
     auto qf_output = qf(arg);
 
@@ -148,28 +132,26 @@ __global__ void batched_cuda_kernel(const double * inputs,
 
   int e = blockIdx.x;
 
+  __shared__ union {
+    typename trial_element::cache_type<q> trial_cache;
+    typename test_element::cache_type<q> test_cache;
+  } shared;
+
   // load the element values for this element
   __shared__ typename trial_element::dof_type u_elem;
   load(u[e], u_elem);
-
-  if (threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
-    print(u_elem);
-    printf("\n");
-  }
 
   // and load the jacobian for this thread's quadrature point
   auto J_q = load_jacobian(J[e]);
 
   // interpolate each quadrature point's value
-  __shared__ typename trial_element::cache_type<q> trial_cache;
-  auto stimulus = trial_element::interpolate(u_elem, J_q, rule, trial_cache);
+  auto stimulus = trial_element::interpolate(u_elem, J_q, rule, shared.trial_cache);
 
   // evaluate the material response at each quadrature point
   auto response = material(stimulus);
 
   // integrate the material response against the test-space basis functions
-  __shared__ typename test_element::cache_type<q> test_cache;
-  test_element::integrate(response, J_q, rule, test_cache, r[e]);
+  test_element::integrate(response, J_q, rule, shared.test_cache, r[e]);
 
 }
 
@@ -215,9 +197,6 @@ void h1_h1_test_2D(int num_elements, int num_runs)
 
   constexpr int n   = p + 1;
   constexpr int dim = 2;
-
-  double rho = 1.0;
-  double k   = 1.0;
 
   using test  = H1<p>;
   using trial = H1<p>;
@@ -362,7 +341,7 @@ void h1_h1_test_2D(int num_elements, int num_runs)
 #endif
 }
 
-template <int p, int q>
+template <int p, int q, int elements_per_block = 1>
 void h1_h1_test_3D(int num_elements, int num_runs)
 {
   using serac::Geometry;
@@ -370,9 +349,6 @@ void h1_h1_test_3D(int num_elements, int num_runs)
 
   constexpr int n   = p + 1;
   constexpr int dim = 3;
-
-  double rho = 1.0;
-  double k   = 1.0;
 
   using test  = H1<p>;
   using trial = H1<p>;
@@ -509,9 +485,8 @@ void h1_h1_test_3D(int num_elements, int num_runs)
 
     std::cout << "average mfem combined kernel time: " << (mass_runtime + diffusion_runtime) / num_runs << std::endl;
   }
-  auto answer_mfem = R1D;
   error            = answer_reference;
-  error -= answer_mfem;
+  error -= R1D;
   relative_error = error.Norml2() / answer_reference.Norml2();
   std::cout << "error: " << relative_error << std::endl;
 }
@@ -828,18 +803,17 @@ void hcurl_hcurl_test_3D(int num_elements, int num_runs)
   std::cout << "error: " << relative_error << std::endl;
 }
 
-
-
-
 int main()
 {
 
   mfem::Device device("cuda");
 
-  int num_runs     = 1;
-  int num_elements = 1;
+  int num_runs     = 10;
+  int num_elements = 30000;
   //h1_h1_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
+  h1_h1_test_3D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
   h1_h1_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
+  h1_h1_test_3D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
   //hcurl_hcurl_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
   //hcurl_hcurl_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
 }
