@@ -1410,7 +1410,7 @@ SERAC_HOST_DEVICE constexpr tensor<T, n, n> inv(const tensor<T, n, n>& A)
  * TODO: compare performance of this hardcoded implementation to just using inv() directly
  */
 template <typename gradient_type, int n>
-SERAC_HOST_DEVICE auto inv(tensor<dual<gradient_type>, n, n> A)
+SERAC_HOST_DEVICE auto inv(const tensor<dual<gradient_type>, n, n> & A)
 {
   auto invA = inv(get_value(A));
   return make_tensor<n, n>([&](int i, int j) {
