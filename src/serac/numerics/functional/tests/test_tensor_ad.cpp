@@ -110,9 +110,19 @@ TEST(dual_number_tensor, isotropic_tensor)
 {
   double epsilon = 1.0e-8;
 
-  auto W = [](auto du_dx) {
-    auto F = Identity<3>() + du_dx;
-    return inv(F);
+  constexpr int dim = 3;
+
+  double C1 = 1.0;
+  double D1 = 1.0;
+
+  auto W = [&](auto dudx) {
+     auto I = Identity<dim>();
+     auto F = I + dudx;
+     auto J = det(F);
+     auto Jm23 = pow(J, -2.0/3.0);
+     auto Wvol = D1*(J - 1.0)*(J - 1.0);
+     auto Wdev = C1*(Jm23*inner(F,F) - 3.0);
+     return Wdev + Wvol;
   };
 
   // clang-format off
@@ -136,7 +146,7 @@ TEST(dual_number_tensor, isotropic_tensor)
     return dual< double >{du_dx[i][j], ddu_dx[i][j]};
   });
 
-  tensor<double, 3, 3> dW[3] = {
+  double dW[3] = {
     double_dot(dW_ddu_dx, ddu_dx),
     (W(du_dx + epsilon * ddu_dx) - W(du_dx - epsilon * ddu_dx)) / (2 * epsilon),
     get_gradient(W(du_dx_dual))
@@ -144,8 +154,8 @@ TEST(dual_number_tensor, isotropic_tensor)
   // clang-format on
 
   // looser tolerance for this test, since it's using a finite difference stencil
-  EXPECT_LT(norm(dW[0] - dW[1]), 1.0e-7);
+  EXPECT_LT(abs(dW[0] - dW[1]), 3.0e-7);
 
-  EXPECT_LT(norm(dW[0] - dW[2]), 1.0e-14);
+  EXPECT_LT(abs(dW[0] - dW[2]) / abs(dW[0]), 5.0e-14);
 
 }
