@@ -262,5 +262,148 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
     }
   }
 
+  template <int q>
+  static SERAC_DEVICE auto interpolate(const dof_type& X, const tensor<double, dim, dim> & J,
+                                       const TensorProductQuadratureRule<q>& rule, cache_type<q> & A)
+  {
+
+    int tidx = threadIdx.x % q;
+    int tidy = threadIdx.x / q;
+
+    static constexpr auto points1D = GaussLegendreNodes<q>();
+    static constexpr auto B_       = [=]() {
+      tensor<double, q, n> B{};
+      for (int i = 0; i < q; i++) {
+        B[i] = GaussLobattoInterpolation<n>(points1D[i]);
+      }
+      return B;
+    }();
+
+    static constexpr auto G_ = [=]() {
+      tensor<double, q, n> G{};
+      for (int i = 0; i < q; i++) {
+        G[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);
+      }
+      return G;
+    }();
+
+    __shared__ tensor<double, q, n> B;
+    __shared__ tensor<double, q, n> G;
+    for (int entry = threadIdx.x; entry < n * q; entry += q * q) {
+      int i = entry % n; 
+      int j = entry / n;
+      B(j, i) = B_(j, i);
+      G(j, i) = G_(j, i);
+    }
+    __syncthreads();
+
+    tuple<tensor<double, c>, tensor<double, c, dim> > qf_input{};
+
+    for (int i = 0; i < c; i++) {
+      for (int dy = tidy; dy < n; dy += q) {
+        for (int qx = tidx; qx < q; qx += q) {
+          double sum[2]{};
+          for (int dx = 0; dx < n; dx++) {
+            sum[0] += B(qx, dx) * X(i, dy, dx);
+            sum[1] += G(qx, dx) * X(i, dy, dx);
+          }
+          A(0, dy, qx) = sum[0];
+          A(1, dy, qx) = sum[1];
+        }
+      }
+      __syncthreads();
+
+      for (int qy = tidy; qy < q; qy += q) {
+        for (int qx = tidx; qx < q; qx += q) {
+          for (int dy = 0; dy < n; dy++) {
+            get<0>(qf_input)[i]    += B(qy, dy) * A(0, dy, qx);
+            get<1>(qf_input)[i][0] += B(qy, dy) * A(1, dy, qx);
+            get<1>(qf_input)[i][1] += G(qy, dy) * A(0, dy, qx);
+          }
+        }
+      }
+    }
+
+    get<1>(qf_input) = dot(get<1>(qf_input), inv(J));
+
+    return qf_input;
+  }
+
+  template <typename T1, typename T2, int q>
+  static SERAC_DEVICE void integrate(tuple<T1, T2> & response, const tensor<double, dim, dim> & J,
+                                     const TensorProductQuadratureRule<q>& rule, cache_type<q>& A,
+                                     dof_type& residual)
+  {
+
+    int tidx = threadIdx.x % q;
+    int tidy = threadIdx.x / q;
+
+    static constexpr auto points1D = GaussLegendreNodes<q>();
+    static constexpr auto weights1D = GaussLegendreWeights<q>();
+    static constexpr auto B_       = [=]() {
+      tensor<double, q, n> B{};
+      for (int i = 0; i < q; i++) {
+        B[i] = GaussLobattoInterpolation<n>(points1D[i]);
+      }
+      return B;
+    }();
+
+    static constexpr auto G_ = [=]() {
+      tensor<double, q, n> G{};
+      for (int i = 0; i < q; i++) {
+        G[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);
+      }
+      return G;
+    }();
+
+    __shared__ tensor<double, q, n> B;
+    __shared__ tensor<double, q, n> G;
+    for (int entry = threadIdx.x; entry < n * q; entry += q * q) {
+      int i = entry % n; 
+      int j = entry / n;
+      B(j, i) = B_(j, i);
+      G(j, i) = G_(j, i);
+    }
+    __syncthreads();
+
+    auto dv = det(J) * weights1D[tidx] * weights1D[tidy];
+
+    get<0>(response) = get<0>(response) * dv;
+    get<1>(response) = dot(get<1>(response), inv(transpose(J))) * dv;
+
+    for (int i = 0; i < c; i++) {
+
+      // this first contraction is performed a little differently, since `response` is not 
+      // in shared memory, so each thread can only access its own values
+      for (int qy = tidy; qy < q; qy += q) {
+        for (int dx = tidx; dx < n; dx += q) {
+          A(0, dx, qy) = 0.0;
+          A(1, dx, qy) = 0.0;
+          A(2, dx, qy) = 0.0;
+        }
+      }
+      __syncthreads();
+
+      for (int offset = 0; offset < n; offset++) {
+        int dx = (tidx + offset) % n;
+        auto sum = B(tidx, dx) * get<0>(response)(i) + G(tidx, dx) * get<1>(response)(i, 0);
+        atomicAdd(&A(0, dx, tidy), sum);
+        atomicAdd(&A(1, dx, tidy), B(tidx, dx) * get<1>(response)(i, 1));
+      }
+      __syncthreads();
+
+      for (int dy = tidy; dy < n; dy += q) {
+        for (int dx = tidx; dx < n; dx += q) {
+          double sum = 0.0;
+          for (int qy = 0; qy < q; qy++) {
+            sum += B(qy, dy) * A(0, dx, qy);
+            sum += G(qy, dy) * A(1, dx, qy);
+          }
+          residual(i, dy, dx) += sum;
+        }
+      }
+    }
+  }
+
 };
 /// @endcond

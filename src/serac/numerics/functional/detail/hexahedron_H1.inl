@@ -499,7 +499,7 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
 
     __shared__ tensor<double, q, n> B;
     __shared__ tensor<double, q, n> G;
-    for (int entry = 0; entry < n * q; entry++) {
+    for (int entry = threadIdx.x; entry < n * q; entry += q * q * q) {
       int i = entry % n; 
       int j = entry / n;
       B(j, i) = B_(j, i);
@@ -591,7 +591,7 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
 
     __shared__ tensor<double, q, n> B;
     __shared__ tensor<double, q, n> G;
-    for (int entry = 0; entry < n * q; entry++) {
+    for (int entry = threadIdx.x; entry < n * q; entry += q * q * q) {
       int i = entry % n; 
       int j = entry / n;
       B(j, i) = B_(j, i);

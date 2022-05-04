@@ -82,10 +82,13 @@ __global__ void reference_cuda_kernel(mfem::DeviceTensor< 2, const double > u,
 
 template <int dim, int q>
 __device__ auto load_jacobian(const tensor< double, dim, dim, q, q > & J) {
+  int tidx = threadIdx.x % q;
+  int tidy = threadIdx.x / q;
+
   tensor< double, dim, dim > J_q;
   for (int i = 0; i < dim; i++) {
     for (int j = 0; j < dim; j++) {
-      J_q[i][j] = J(j, i, threadIdx.y, threadIdx.x);
+      J_q[i][j] = J(j, i, tidy, tidx);
     }
   }
   return J_q;
@@ -119,7 +122,7 @@ __device__ void load(const dof_type& source, dof_type& destination)
   }
 }
 
-template <int elements_per_block, Geometry g, typename test, typename trial, int q, typename lambda>
+template <Geometry g, typename test, typename trial, int q, typename lambda>
 __global__ void batched_cuda_kernel(const double * inputs,
                                     double * outputs,
                                     const double * jacobians,
@@ -134,17 +137,17 @@ __global__ void batched_cuda_kernel(const double * inputs,
   auto r = reinterpret_cast< typename test_element::dof_type * >(outputs);
   auto J = reinterpret_cast<const typename batched_jacobian<g, q>::type*>(jacobians);
 
-  int e = threadIdx.y + blockDim.y * blockIdx.x;
+  int e = threadIdx.y + elements_per_block<g>(q) * blockIdx.x;
 
   if (e < num_elements) {
 
     __shared__ union {
       typename trial_element::cache_type<q> trial_cache;
       typename test_element::cache_type<q> test_cache;
-    } shared[elements_per_block];
+    } shared[elements_per_block<g>(q)];
 
     // load the element values for this element
-    __shared__ typename trial_element::dof_type u_elem[elements_per_block];
+    __shared__ typename trial_element::dof_type u_elem[elements_per_block<g>(q)];
     load(u[e], u_elem[threadIdx.y]);
 
     // and load the jacobian for this thread's quadrature point
@@ -278,9 +281,10 @@ void h1_h1_test_2D(int num_elements, int num_runs)
 
   {
     R1D            = 0.0;
-    auto rule = serac::MakeGaussLegendreRule<Geometry::Hexahedron, q>();
-    dim3 blocksize{q, q, 1};
-    int gridsize = num_elements;
+    auto rule = serac::MakeGaussLegendreRule<Geometry::Quadrilateral, q>();
+    constexpr int epb = serac::elements_per_block< Geometry::Quadrilateral >(q);
+    dim3 blocksize{q * q, epb, 1};
+    int gridsize = (num_elements + epb - 1) / epb;
     double runtime = time([&]() {
       for (int i = 0; i < num_runs; i++) {
         serac::batched_cuda_kernel<Geometry::Quadrilateral, test, trial, q><<<gridsize, blocksize>>>(U1D.Read(), R1D.ReadWrite(), J1D.Read(), rule, num_elements, qfunc);
@@ -349,7 +353,7 @@ void h1_h1_test_2D(int num_elements, int num_runs)
 #endif
 }
 
-template <int p, int q, int elements_per_block = 1>
+template <int p, int q>
 void h1_h1_test_3D(int num_elements, int num_runs)
 {
   using serac::Geometry;
@@ -434,11 +438,12 @@ void h1_h1_test_3D(int num_elements, int num_runs)
   {
     R1D            = 0.0;
     auto rule = serac::MakeGaussLegendreRule<Geometry::Hexahedron, q>();
-    dim3 blocksize{q * q * q, elements_per_block, 1};
-    int gridsize = num_elements ;
+    constexpr int epb = serac::elements_per_block< Geometry::Hexahedron >(q);
+    dim3 blocksize{q * q * q, epb, 1};
+    int gridsize = (num_elements + epb - 1) / epb;
     double runtime = time([&]() {
       for (int i = 0; i < num_runs; i++) {
-        serac::batched_cuda_kernel<elements_per_block, Geometry::Hexahedron, test, trial, q><<<gridsize, blocksize>>>(U1D.Read(), R1D.ReadWrite(), J1D.Read(), rule, num_elements, qfunc);
+        serac::batched_cuda_kernel<Geometry::Hexahedron, test, trial, q><<<gridsize, blocksize>>>(U1D.Read(), R1D.ReadWrite(), J1D.Read(), rule, num_elements, qfunc);
         compiler::please_do_not_optimize_away(&R1D);
       }
       cudaDeviceSynchronize();
@@ -817,10 +822,12 @@ int main()
 
   int num_runs     = 10;
   int num_elements = 30000;
-  //h1_h1_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
-  h1_h1_test_3D<1 /* polynomial order */, 2 /* quadrature points / dim */, 8>(num_elements, num_runs);
-  h1_h1_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */, 4>(num_elements, num_runs);
-  h1_h1_test_3D<3 /* polynomial order */, 4 /* quadrature points / dim */, 2>(num_elements, num_runs);
+  h1_h1_test_2D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
+  h1_h1_test_2D<2 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
+  h1_h1_test_2D<3 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
+  //h1_h1_test_3D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
+  //h1_h1_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
+  //h1_h1_test_3D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
   //hcurl_hcurl_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
   //hcurl_hcurl_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
 }
