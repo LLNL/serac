@@ -26,6 +26,7 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
   static constexpr auto geometry   = Geometry::Quadrilateral;
   static constexpr auto family     = Family::HCURL;
   static constexpr int  dim        = 2;
+  static constexpr int  n          = (p + 1);
   static constexpr int  ndof       = 2 * p * (p + 1);
   static constexpr int  components = 1;
 
@@ -286,7 +287,8 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
 
     // transform the source and flux terms from values on the physical element,
     // to values on the parent element. Also, the source/flux values are scaled
-    // according to the weight of their quadrature point, so that
+    // according to the weight of their quadrature point, so that when we add them
+    // together, it approximates the integral over the element
     for (int qy = 0; qy < q; qy++) {
       for (int qx = 0; qx < q; qx++) {
         tensor<double, dim, dim> J;
@@ -350,5 +352,253 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
       }
     }
   }
+
+  template <int q>
+  static SERAC_DEVICE auto interpolate(const dof_type& element_values, const tensor<double, dim, dim> & J,
+                                       const TensorProductQuadratureRule<q>& rule, cache_type<q> & A)
+  {
+    int tidx = threadIdx.x % q;
+    int tidy = threadIdx.x / q;
+
+    static constexpr auto points1D = GaussLegendreNodes<q>();
+
+    static constexpr auto B1_ = [=]() {
+      tensor<double, q, p> B1{};
+      for (int i = 0; i < q; i++) {
+        B1[i] = GaussLegendreInterpolation<p>(points1D[i]);
+      }
+      return B1;
+    }();
+
+    static constexpr auto B2_ = [=]() {
+      tensor<double, q, n> B2{};
+      for (int i = 0; i < q; i++) {
+        B2[i] = GaussLobattoInterpolation<n>(points1D[i]);
+      }
+      return B2;
+    }();
+
+    static constexpr auto G2_ = [=]() {
+      tensor<double, q, n> G2{};
+      for (int i = 0; i < q; i++) {
+        G2[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);
+      }
+      return G2;
+    }();
+
+    __shared__ tensor<double, q, p> B1;
+    __shared__ tensor<double, q, n> B2;
+    __shared__ tensor<double, q, n> G2;
+    for (int entry = threadIdx.x; entry < n * q; entry += q * q) {
+      int i = entry % n; 
+      int j = entry / n;
+      if (i < p) {
+        B1(j, i) = B1_(j, i);
+      }
+      B2(j, i) = B2_(j, i);
+      G2(j, i) = G2_(j, i);
+    }
+    __syncthreads();
+
+    tuple< tensor<double, dim>, double > qf_input{};
+
+    /////////////////////////////////
+    ////////// X-component //////////
+    /////////////////////////////////
+    for (int dy = tidy; dy < p + 1; dy += q) {
+      for (int qx = tidx; qx < q; qx += q) {
+        double sum = 0.0;
+        for (int dx = 0; dx < p; dx++) {
+          sum += B1(qx, dx) * element_values.x(dy, dx);
+        }
+        A(dy, qx) = sum;
+      }
+    }
+
+    for (int qy = tidy; qy < q; qy += q) {
+      for (int qx = tidx; qx < q; qx += q) {
+        double sum[2]{};
+        for (int dy = 0; dy < (p + 1); dy++) {
+          sum[0] += B2(qy, dy) * A(dy, qx);
+          sum[1] += G2(qy, dy) * A(dy, qx);
+        }
+        serac::get<0>(qf_input)[0] += sum[0];
+        serac::get<1>(qf_input)    -= sum[1];
+      }
+    }
+
+    /////////////////////////////////
+    ////////// Y-component //////////
+    /////////////////////////////////
+    for (int i = 0; i < p + 1; i++) {
+      for (int qy = 0; qy < q; qy++) {
+        double sum = 0.0;
+        for (int j = 0; j < p; j++) {
+          sum += B1(qy, j) * element_values.y(j, i);
+        }
+        A(i, qy) = sum;
+      }
+    }
+
+    for (int qy = 0; qy < q; qy++) {
+      for (int qx = 0; qx < q; qx++) {
+        double sum[3]{};
+        for (int i = 0; i < (p + 1); i++) {
+          sum[0] += B2(qx, i) * A(i, qy);
+          sum[1] += G2(qx, i) * A(i, qy);
+        }
+        serac::get<0>(qf_input)[1] += sum[0];
+        serac::get<1>(qf_input)    += sum[1];
+      }
+    }
+
+    // apply covariant Piola transformation to go
+    // from parent element -> physical element
+    serac::get<0>(qf_input) = linear_solve(transpose(J), serac::get<0>(qf_input));
+    serac::get<1>(qf_input) = serac::get<1>(qf_input) / det(J);
+
+    return qf_input;
+  }
+
+  template <typename T1, typename T2, int q>
+  static SERAC_DEVICE void integrate(tuple<T1, T2> & response, const tensor<double, dim, dim> & J,
+                                     const TensorProductQuadratureRule<q>& rule, cache_type<q>& A,
+                                     dof_type& residual) {
+
+    int tidx = threadIdx.x % q;
+    int tidy = threadIdx.x / q;
+
+    static constexpr auto points1D = GaussLegendreNodes<q>();
+    static constexpr auto weights1D = GaussLegendreWeights<q>();
+
+    static constexpr auto B1_ = [=]() {
+      tensor<double, q, p> B1{};
+      for (int i = 0; i < q; i++) {
+        B1[i] = GaussLegendreInterpolation<p>(points1D[i]);
+      }
+      return B1;
+    }();
+
+    static constexpr auto B2_ = [=]() {
+      tensor<double, q, n> B2{};
+      for (int i = 0; i < q; i++) {
+        B2[i] = GaussLobattoInterpolation<n>(points1D[i]);
+      }
+      return B2;
+    }();
+
+    static constexpr auto G2_ = [=]() {
+      tensor<double, q, n> G2{};
+      for (int i = 0; i < q; i++) {
+        G2[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);
+      }
+      return G2;
+    }();
+
+    __shared__ tensor<double, q, n> B1;
+    __shared__ tensor<double, q, n> B2;
+    __shared__ tensor<double, q, n> G2;
+    for (int entry = threadIdx.x; entry < n * q; entry += q * q) {
+      int i = entry % n; 
+      int j = entry / n;
+      if (i < p) {
+        B1(j, i) = B1_(j, i);
+      }
+      B2(j, i) = B2_(j, i);
+      G2(j, i) = G2_(j, i);
+    }
+    __syncthreads();
+
+    // transform the source and flux terms from values on the physical element,
+    // to values on the parent element. Also, the source/flux values are scaled
+    // according to the weight of their quadrature point, so that when we add them
+    // together, it approximates the integral over the element
+    auto detJ = det(J);
+    auto dv = detJ * weights1D[tidx] * weights1D[tidy];
+
+    get<0>(response) = linear_solve(J, get<0>(response)) * dv;
+    get<1>(response) = get<1>(response) * (dv / detJ);
+
+    /////////////////////////////////
+    ////////// X-component //////////
+    /////////////////////////////////
+
+    // this first contraction is performed a little differently, since `response` is not 
+    // in shared memory, so each thread can only access its own values
+    for (int qy = tidy; qy < q; qy += q) {
+      for (int dx = tidx; dx < n; dx += q) {
+        A(dx, qy) = 0.0;
+      }
+    }
+    __syncthreads();
+
+    for (int offset = 0; offset < n; offset++) {
+      int dy = (tidy + offset) % n;
+      auto sum = B2(tidy, dy) * get<0>(response)[0] - G2(tidy, dy) * get<1>(response);
+      atomicAdd(&A(dy, tidx), sum);
+    }
+    __syncthreads();
+
+//    for (int j = 0; j < (p + 1); j++) {
+//      for (int qx = 0; qx < q; qx++) {
+//        double sum = 0.0;
+//        for (int qy = 0; qy < q; qy++) {
+//          sum += B2(qy, j) * sources(qy, qx)[0] - G2(qy, j) * fluxes(qy, qx);
+//        }
+//        A(j, qx) = sum;
+//      }
+//    }
+
+    for (int dy = tidy; dy < p + 1; dy += q) {
+      for (int dx = tidx; dx < p; dx += q) {
+        double sum = 0.0;
+        for (int qx = 0; qx < q; qx++) {
+          sum += B1(qx, dx) * A(dy, qx);
+        }
+        residual.x(dy, dx) += sum;
+      }
+    }
+
+    /////////////////////////////////
+    ////////// Y-component //////////
+    /////////////////////////////////
+
+    // this first contraction is performed a little differently, since `response` is not 
+    // in shared memory, so each thread can only access its own values
+    for (int qy = tidy; qy < q; qy += q) {
+      for (int dx = tidx; dx < n; dx += q) {
+        A(dx, qy) = 0.0;
+      }
+    }
+    __syncthreads();
+
+    for (int offset = 0; offset < n; offset++) {
+      int dx = (tidx + offset) % n;
+      auto sum = B2(tidx, dx) * get<0>(response)[1] + G2(tidx, dx) * get<1>(response);
+      atomicAdd(&A(dx, tidy), sum);
+    }
+    __syncthreads();
+
+//    for (int i = 0; i < (p + 1); i++) {
+//      for (int qy = 0; qy < q; qy++) {
+//        double sum = 0.0;
+//        for (int qx = 0; qx < q; qx++) {
+//          sum += B2(qx, i) * sources(qy, qx)[1] + G2(qx, i) * fluxes(qy, qx);
+//        }
+//        A(i, qy) = sum;
+//      }
+//    }
+
+    for (int dy = tidy; dy < p; dy += q) {
+      for (int dx = tidx; dx < p + 1; dx += q) {
+        double sum = 0.0;
+        for (int qy = 0; qy < q; qy++) {
+          sum += B1(qy, dy) * A(dx, qy);
+        }
+        residual.y(dy, dx) += sum;
+      }
+    }
+  }
+
 };
 /// @endcond

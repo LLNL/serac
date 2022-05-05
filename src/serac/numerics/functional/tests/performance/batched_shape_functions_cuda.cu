@@ -267,7 +267,7 @@ void h1_h1_test_2D(int num_elements, int num_runs)
     mfem::DeviceTensor<2, double > r_d = mfem::Reshape(R1D.ReadWrite(), n * n, num_elements);
     mfem::DeviceTensor<4, const double > J_d = mfem::Reshape(J1D.Read(), q * q, dim, dim, num_elements);
     int blocksize = 128;
-    int gridsize = (num_elements * q * q * q + blocksize - 1) / blocksize;
+    int gridsize = (num_elements * q * q + blocksize - 1) / blocksize;
     double runtime = time([&]() {
       for (int i = 0; i < num_runs; i++) {
         serac::reference_cuda_kernel<Geometry::Quadrilateral, test, trial, q><<<gridsize, blocksize>>>(u_d, r_d, J_d, num_elements, qfunc);
@@ -525,8 +525,8 @@ void hcurl_hcurl_test_2D(int num_elements, int num_runs)
   mfem::Vector R1D(num_elements * test_element::ndof);
   mfem::Vector J1D(num_elements * dim * dim * q * q);
 
-  auto U = mfem::Reshape(U1D.ReadWrite(), trial_element::ndof, num_elements);
-  auto J = mfem::Reshape(J1D.ReadWrite(), q * q, dim, dim, num_elements);
+  auto U = mfem::Reshape(U1D.HostReadWrite(), trial_element::ndof, num_elements);
+  auto J = mfem::Reshape(J1D.HostReadWrite(), q * q, dim, dim, num_elements);
 
   for (int e = 0; e < num_elements; e++) {
     for (int i = 0; i < trial_element::ndof; i++) {
@@ -568,8 +568,9 @@ void hcurl_hcurl_test_2D(int num_elements, int num_runs)
     R1D            = 0.0;
 
     auto rule = serac::MakeGaussLegendreRule<Geometry::Quadrilateral, q>();
-    dim3 blocksize{q, q, 1};
-    int gridsize = num_elements;
+    constexpr int epb = serac::elements_per_block< Geometry::Quadrilateral >(q);
+    dim3 blocksize{q * q, epb, 1};
+    int gridsize = (num_elements + epb - 1) / epb;
     double runtime = time([&]() {
       for (int i = 0; i < num_runs; i++) {
         serac::batched_cuda_kernel<Geometry::Quadrilateral, test, trial, q><<<gridsize, blocksize>>>(U1D.Read(), R1D.ReadWrite(), J1D.Read(), rule, num_elements, qfunc);
@@ -822,12 +823,12 @@ int main()
 
   int num_runs     = 10;
   int num_elements = 30000;
-  h1_h1_test_2D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
-  h1_h1_test_2D<2 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
-  h1_h1_test_2D<3 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
+  //h1_h1_test_2D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
+  //h1_h1_test_2D<2 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
+  //h1_h1_test_2D<3 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
   //h1_h1_test_3D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
   //h1_h1_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
   //h1_h1_test_3D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
-  //hcurl_hcurl_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
+  hcurl_hcurl_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
   //hcurl_hcurl_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
 }
