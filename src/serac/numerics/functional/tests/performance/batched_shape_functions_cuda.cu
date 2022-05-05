@@ -548,8 +548,8 @@ void hcurl_hcurl_test_2D(int num_elements, int num_runs)
   {
     R1D = 0.0;
 
-    mfem::DeviceTensor<2, const double > u_d = mfem::Reshape(U1D.Read(), n * n, num_elements);
-    mfem::DeviceTensor<2, double > r_d = mfem::Reshape(R1D.ReadWrite(), n * n, num_elements);
+    mfem::DeviceTensor<2, const double > u_d = mfem::Reshape(U1D.Read(), trial_element::ndof, num_elements);
+    mfem::DeviceTensor<2, double > r_d = mfem::Reshape(R1D.ReadWrite(), test_element::ndof, num_elements);
     mfem::DeviceTensor<4, const double > J_d = mfem::Reshape(J1D.Read(), q * q, dim, dim, num_elements);
     int blocksize = 128;
     int gridsize = (num_elements * q * q + blocksize - 1) / blocksize;
@@ -822,13 +822,16 @@ int main()
   mfem::Device device("cuda");
 
   int num_runs     = 10;
-  int num_elements = 30000;
+  int num_elements = 40000;
   //h1_h1_test_2D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
   //h1_h1_test_2D<2 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
   //h1_h1_test_2D<3 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
   //h1_h1_test_3D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
   //h1_h1_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
   //h1_h1_test_3D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
+  hcurl_hcurl_test_2D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
   hcurl_hcurl_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
+  hcurl_hcurl_test_2D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
   //hcurl_hcurl_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
+
 }

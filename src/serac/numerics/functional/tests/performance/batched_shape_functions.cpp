@@ -261,9 +261,6 @@ void cpu_batched_kernel(const double* inputs, double* outputs, const double* jac
   for (size_t e = 0; e < num_elements; e++) {
     // load the element values and jacobians for this element
     auto u_e = u[e];
-
-    std::cout << u_e << std::endl;
-
     auto J_e = J[e];
 
     // (batch) interpolate each quadrature point's value
@@ -292,8 +289,6 @@ void cpu_batched_kernel_simd(const tensor<tensor<simd_type, 1>, n, n, n>* u,
 
   // for each element in the domain
   for (size_t e = 0; e < num_element_blocks; e++) {
-
-    std::cout << u[e] << std::endl;
 
     // (batch) interpolate each quadrature point's value
     auto [values, derivatives] = trial_element::interpolate(u[e], rule);
@@ -401,8 +396,7 @@ void h1_h1_test_2D(int num_elements, int num_runs)
                                                                                           mass_plus_diffusion);
                          compiler::please_do_not_optimize_away(&R1D);
                        }
-                     }) /
-                     n;
+                     });
     std::cout << "average reference kernel time: " << runtime / num_runs << std::endl;
   }
   auto answer_reference = R1D;
@@ -415,8 +409,7 @@ void h1_h1_test_2D(int num_elements, int num_runs)
                              U1D.Read(), R1D.ReadWrite(), J1D.Read(), num_elements, mass_plus_diffusion);
                          compiler::please_do_not_optimize_away(&R1D);
                        }
-                     }) /
-                     n;
+                     });
     std::cout << "average cpu batched kernel time: " << runtime / num_runs << std::endl;
   }
   auto answer_cpu_batched_kernel = R1D;
@@ -454,8 +447,7 @@ void h1_h1_test_2D(int num_elements, int num_runs)
                               mfem::SmemPAMassApply3D<n, q>(num_elements, b_, bt_, rho_dv_1D, U1D, R1D);
                               compiler::please_do_not_optimize_away(&R1D);
                             }
-                          }) /
-                          n;
+                          });
     std::cout << "average mfem mass kernel time: " << mass_runtime / num_runs << std::endl;
 
     double diffusion_runtime =
@@ -464,8 +456,7 @@ void h1_h1_test_2D(int num_elements, int num_runs)
             mfem::SmemPADiffusionApply3D<n, q>(num_elements, symmetric = false, b_, g_, k_invJ_invJT_dv_1D, U1D, R1D);
             compiler::please_do_not_optimize_away(&R1D);
           }
-        }) /
-        n;
+        });
     std::cout << "average mfem diffusion kernel time: " << diffusion_runtime / num_runs << std::endl;
 
     std::cout << "average mfem combined kernel time: " << (mass_runtime + diffusion_runtime) / num_runs << std::endl;
@@ -563,8 +554,7 @@ void h1_h1_test_3D(int num_elements, int num_runs)
                                                                                        mass_plus_diffusion);
                          compiler::please_do_not_optimize_away(&R1D);
                        }
-                     }) /
-                     n;
+                     });
     std::cout << "average reference kernel time: " << runtime / num_runs << std::endl;
   }
   auto answer_reference = R1D;
@@ -577,8 +567,7 @@ void h1_h1_test_3D(int num_elements, int num_runs)
                              U1D.Read(), R1D.ReadWrite(), J1D.Read(), num_elements, mass_plus_diffusion);
                          compiler::please_do_not_optimize_away(&R1D);
                        }
-                     }) /
-                     n;
+                     });
     std::cout << "average cpu batched kernel time: " << runtime / num_runs << std::endl;
   }
   auto answer_cpu_batched_kernel = R1D;
@@ -649,7 +638,7 @@ void h1_h1_test_3D(int num_elements, int num_runs)
                          serac::cpu_batched_kernel_simd(U_SIMD.data(), R_SIMD.data(), element_blocks, D1_SIMD.data(), D2_SIMD.data());
                          compiler::please_do_not_optimize_away(&R1D);
                         }
-                     }) / n;
+                     });
     std::cout << "average simd batched kernel time: " << runtime / num_runs << std::endl;
 
     auto R = mfem::Reshape(R1D.ReadWrite(), n, n, n, num_elements);
@@ -672,8 +661,6 @@ void h1_h1_test_3D(int num_elements, int num_runs)
 
     }
   }
-  R1D.Print(std::cout);
-  answer_reference.Print(std::cout);
   auto answer_cpu_batched_kernel_simd = R1D;
   error                     = answer_reference;
   error -= answer_cpu_batched_kernel_simd;
@@ -708,8 +695,7 @@ void h1_h1_test_3D(int num_elements, int num_runs)
                               mfem::SmemPAMassApply3D<n, q>(num_elements, b_, bt_, rho_dv_1D, U1D, R1D);
                               compiler::please_do_not_optimize_away(&R1D);
                             }
-                          }) /
-                          n;
+                          });
     std::cout << "average mfem mass kernel time: " << mass_runtime / num_runs << std::endl;
 
     double diffusion_runtime =
@@ -718,8 +704,7 @@ void h1_h1_test_3D(int num_elements, int num_runs)
             mfem::SmemPADiffusionApply3D<n, q>(num_elements, symmetric = false, b_, g_, k_invJ_invJT_dv_1D, U1D, R1D);
             compiler::please_do_not_optimize_away(&R1D);
           }
-        }) /
-        n;
+        });
     std::cout << "average mfem diffusion kernel time: " << diffusion_runtime / num_runs << std::endl;
 
     std::cout << "average mfem combined kernel time: " << (mass_runtime + diffusion_runtime) / num_runs << std::endl;
@@ -762,15 +747,9 @@ void hcurl_hcurl_test_2D(int num_elements, int num_runs)
   mfem::Vector U1D(num_elements * trial_element::ndof);
   mfem::Vector R1D(num_elements * test_element::ndof);
   mfem::Vector J1D(num_elements * dim * dim * q * q);
-  // mfem::Vector rho_invJ_invJT_dv_1D(num_elements * dim * dim * q * q);
-  // mfem::Vector k_JTJ_dv_over_detJsq_1D(num_elements * dim * dim * q * q);
 
   auto U = mfem::Reshape(U1D.ReadWrite(), trial_element::ndof, num_elements);
   auto J = mfem::Reshape(J1D.ReadWrite(), q * q, dim, dim, num_elements);
-  // auto rho_invJ_invJT_dv    = mfem::Reshape(rho_invJ_invJT_dv_1D.ReadWrite(), q * q, dim, dim, num_elements);
-  // auto k_JTJ_dv_over_detJsq = mfem::Reshape(k_JTJ_dv_over_detJsq_1D.ReadWrite(), q * q, dim, dim, num_elements);
-
-  // serac::GaussLegendreRule<Geometry::Hexahedron, q> rule;
 
   for (int e = 0; e < num_elements; e++) {
     for (int i = 0; i < trial_element::ndof; i++) {
@@ -786,23 +765,6 @@ void hcurl_hcurl_test_2D(int num_elements, int num_runs)
         }
       }
 
-      /*
-            int qx = i % q;
-            int qy = i / q;
-
-            double qweight    = rule.weight(qx, qy, qz);
-            auto   JTJ        = dot(transpose(J_q), J_q);
-            auto   invJ_invJT = dot(inv(J_q), transpose(inv(J_q)));
-            auto   detJ       = det(J_q);
-            double dv         = det(J_q) * qweight;
-
-            for (int r = 0; r < dim; r++) {
-              for (int c = 0; c < dim; c++) {
-                k_JTJ_dv_over_detJsq(i, r, c, e) = k * (JTJ[r][c] / (detJ * detJ)) * dv;
-                rho_invJ_invJT_dv(i, r, c, e)    = rho * invJ_invJT[r][c] * dv;
-              }
-            }
-      */
     }
   }
 
@@ -814,8 +776,7 @@ void hcurl_hcurl_test_2D(int num_elements, int num_runs)
                                                                                           mass_plus_curlcurl);
                          compiler::please_do_not_optimize_away(&R1D);
                        }
-                     }) /
-                     n;
+                     });
     std::cout << "average reference kernel time: " << runtime / num_runs << std::endl;
   }
   auto answer_reference = R1D;
@@ -828,8 +789,7 @@ void hcurl_hcurl_test_2D(int num_elements, int num_runs)
                              U1D.Read(), R1D.ReadWrite(), J1D.Read(), num_elements, mass_plus_curlcurl);
                          compiler::please_do_not_optimize_away(&R1D);
                        }
-                     }) /
-                     n;
+                     });
     std::cout << "average cpu batched kernel time: " << runtime / num_runs << std::endl;
   }
   auto answer_cpu_batched_kernel = R1D;
@@ -881,8 +841,7 @@ void hcurl_hcurl_test_2D(int num_elements, int num_runs)
                                                        rho_invJ_invJT_dv_1D, U1D, R1D);
                               compiler::please_do_not_optimize_away(&R1D);
                             }
-                          }) /
-                          n;
+                          });
     std::cout << "average mfem mass kernel time: " << mass_runtime / num_runs << std::endl;
 
     double curlcurl_runtime = time([&]() {
@@ -891,8 +850,7 @@ void hcurl_hcurl_test_2D(int num_elements, int num_runs)
                                                                  bct_, gc_, gct_, k_JTJ_dv_over_detJsq_1D, U1D, R1D);
                                    compiler::please_do_not_optimize_away(&R1D);
                                  }
-                               }) /
-                               n;
+                               });
     std::cout << "average mfem curlcurl kernel time: " << curlcurl_runtime / num_runs << std::endl;
 
     std::cout << "average mfem combined kernel time: " << (mass_runtime + curlcurl_runtime) / num_runs << std::endl;
@@ -987,8 +945,7 @@ void hcurl_hcurl_test_3D(int num_elements, int num_runs)
                                                                                        mass_plus_curlcurl);
                          compiler::please_do_not_optimize_away(&R1D);
                        }
-                     }) /
-                     n;
+                     });
     std::cout << "average reference kernel time: " << runtime / num_runs << std::endl;
   }
   auto answer_reference = R1D;
@@ -1001,8 +958,7 @@ void hcurl_hcurl_test_3D(int num_elements, int num_runs)
                              U1D.Read(), R1D.ReadWrite(), J1D.Read(), num_elements, mass_plus_curlcurl);
                          compiler::please_do_not_optimize_away(&R1D);
                        }
-                     }) /
-                     n;
+                     });
     std::cout << "average cpu batched kernel time: " << runtime / num_runs << std::endl;
   }
   auto answer_cpu_batched_kernel = R1D;
@@ -1053,8 +1009,7 @@ void hcurl_hcurl_test_3D(int num_elements, int num_runs)
                                                        rho_invJ_invJT_dv_1D, U1D, R1D);
                               compiler::please_do_not_optimize_away(&R1D);
                             }
-                          }) /
-                          n;
+                          });
     std::cout << "average mfem mass kernel time: " << mass_runtime / num_runs << std::endl;
 
     double curlcurl_runtime = time([&]() {
@@ -1063,8 +1018,7 @@ void hcurl_hcurl_test_3D(int num_elements, int num_runs)
                                                                 bct_, gc_, gct_, k_JTJ_dv_over_detJsq_1D, U1D, R1D);
                                   compiler::please_do_not_optimize_away(&R1D);
                                 }
-                              }) /
-                              n;
+                              });
     std::cout << "average mfem curlcurl kernel time: " << curlcurl_runtime / num_runs << std::endl;
 
     std::cout << "average mfem combined kernel time: " << (mass_runtime + curlcurl_runtime) / num_runs << std::endl;
@@ -1078,15 +1032,12 @@ void hcurl_hcurl_test_3D(int num_elements, int num_runs)
 
 int main()
 {
-  //int num_runs     = 10;
-  //int num_elements = 10000;
-  //h1_h1_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
-  //h1_h1_test_3D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
-  //h1_h1_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
-  //h1_h1_test_3D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
-  //hcurl_hcurl_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
-  //hcurl_hcurl_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
-
-
-  h1_h1_test_3D<1 /* polynomial order */, 2 /* quadrature points / dim */>(1, 1);
+  int num_runs     = 10;
+  int num_elements = 10000;
+  h1_h1_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
+  h1_h1_test_3D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
+  h1_h1_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
+  h1_h1_test_3D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
+  hcurl_hcurl_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
+  hcurl_hcurl_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
 }

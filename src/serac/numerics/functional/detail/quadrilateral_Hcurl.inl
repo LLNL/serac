@@ -414,6 +414,7 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
         A(dy, qx) = sum;
       }
     }
+    __syncthreads();
 
     for (int qy = tidy; qy < q; qy += q) {
       for (int qx = tidx; qx < q; qx += q) {
@@ -426,26 +427,28 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
         serac::get<1>(qf_input)    -= sum[1];
       }
     }
+    __syncthreads();
 
     /////////////////////////////////
     ////////// Y-component //////////
     /////////////////////////////////
-    for (int i = 0; i < p + 1; i++) {
-      for (int qy = 0; qy < q; qy++) {
+    for (int dx = tidx; dx < p + 1; dx += q) {
+      for (int qy = tidy; qy < q; qy += q) {
         double sum = 0.0;
-        for (int j = 0; j < p; j++) {
-          sum += B1(qy, j) * element_values.y(j, i);
+        for (int dy = 0; dy < p; dy++) {
+          sum += B1(qy, dy) * element_values.y(dy, dx);
         }
-        A(i, qy) = sum;
+        A(dx, qy) = sum;
       }
     }
+    __syncthreads();
 
-    for (int qy = 0; qy < q; qy++) {
-      for (int qx = 0; qx < q; qx++) {
+    for (int qy = tidy; qy < q; qy += q) {
+      for (int qx = tidx; qx < q; qx += q) {
         double sum[3]{};
-        for (int i = 0; i < (p + 1); i++) {
-          sum[0] += B2(qx, i) * A(i, qy);
-          sum[1] += G2(qx, i) * A(i, qy);
+        for (int dx = 0; dx < (p + 1); dx++) {
+          sum[0] += B2(qx, dx) * A(dx, qy);
+          sum[1] += G2(qx, dx) * A(dx, qy);
         }
         serac::get<0>(qf_input)[1] += sum[0];
         serac::get<1>(qf_input)    += sum[1];
@@ -558,6 +561,7 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
         residual.x(dy, dx) += sum;
       }
     }
+    __syncthreads();
 
     /////////////////////////////////
     ////////// Y-component //////////

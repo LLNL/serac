@@ -379,7 +379,6 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
         for (int dx = tidx; dx < n; dx += q) {
           A(0, dx, qy) = 0.0;
           A(1, dx, qy) = 0.0;
-          A(2, dx, qy) = 0.0;
         }
       }
       __syncthreads();
