@@ -1176,7 +1176,7 @@ SERAC_HOST_DEVICE bool is_symmetric_and_positive_definite(tensor<double, 3, 3> A
  * @note @a A and @a b are by-value as they are mutated as part of the elimination
  */
 template <typename T, int n>
-SERAC_HOST_DEVICE constexpr tensor<T, n> linear_solve(tensor<T, n, n> A, const tensor<T, n> b)
+SERAC_HOST_DEVICE constexpr tensor<T, n> linear_solve(tensor<T, n, n> A, tensor<T, n> b)
 {
   constexpr auto abs  = [](double x) { return (x < 0) ? -x : x; };
   constexpr auto swap = [](auto& x, auto& y) {
@@ -1220,6 +1220,58 @@ SERAC_HOST_DEVICE constexpr tensor<T, n> linear_solve(tensor<T, n, n> A, const t
   }
 
   return x;
+}
+
+/**
+ * @overload Extends solve to multiple right-hand sides
+ * @param[in] A The coefficient matrix A
+ * @param[in] B The matrix of righthand side vectors
+ * @note @a A and @a B are by-value as they are mutated as part of the elimination
+ */
+template <typename T, int n, int m>
+SERAC_HOST_DEVICE constexpr tensor<T, n, m> linear_solve(tensor<T, n, n> A, tensor<T, n, m> B)
+{
+  constexpr auto abs  = [](double x) { return (x < 0) ? -x : x; };
+  constexpr auto swap = [](auto& x, auto& y) {
+    auto tmp = x;
+    x        = y;
+    y        = tmp;
+  };
+
+  for (int i = 0; i < n; i++) {
+    // Search for maximum in this column
+    double max_val = abs(A[i][i]);
+
+    int max_row = i;
+    for (int j = i + 1; j < n; j++) {
+      if (abs(A[j][i]) > max_val) {
+        max_val = abs(A[j][i]);
+        max_row = j;
+      }
+    }
+
+    swap(B[max_row], B[i]);
+    swap(A[max_row], A[i]);
+
+    // zero entries below in this column
+    for (int j = i + 1; j < n; j++) {
+      double c = -A[j][i] / A[i][i];
+      A[j] += c * A[i];
+      B[j] += c * B[i];
+      A[j][i] = 0;
+    }
+  }
+
+  // Solve equation Ax=b for an upper triangular matrix A
+  tensor<double, n, m> X{};
+  for (int i = n - 1; i >= 0; i--) {
+    X[i] = B[i] / A[i][i];
+    for (int j = i - 1; j >= 0; j--) {
+      B[j] -= A[j][i] * X[i];
+    }
+  }
+
+  return X;
 }
 
 /**
