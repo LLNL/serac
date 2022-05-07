@@ -153,40 +153,8 @@ TEST(tensor, implicit_conversion)
   EXPECT_NEAR(value, A[0], tolerance);
 }
 
-TEST(tensor, linear_solve_with_one_rhs)
+TEST(tensor, lu_decomposition)
 {
-  const tensor<double, 3, 3> A{{{ 2,  1, -1},
-                                {-3, -1,  2},
-                                {-2,  1,  2}}};
-
-  const tensor<double, 3> b{{-1, 2, 3}};
-
-  auto A_copy = A;
-  auto b_copy = b;
-  auto x = linear_solve(A_copy, b_copy);
-  EXPECT_LT(squared_norm(dot(A, x) - b), tolerance);
-}
-
-TEST(tensor, linear_solve_with_multiple_rhs)
-{
-  const tensor<double, 3, 3> A{{{ 2,  1, -1},
-                                {-3, -1,  2},
-                                {-2,  1,  2}}};
-  const tensor<double, 3, 2> B{{{-1,  1},
-                                { 2,  1},
-                                { 3, -2}}};
-  auto A_copy = A;
-  auto B_copy = B;
-  auto X = linear_solve(A_copy, B_copy);
-  EXPECT_LT(squared_norm(dot(A, X) - B), tolerance);
-}
-
-TEST(tensor, lu)
-{
-  // const tensor<double, 3, 3> A{{{ 2,  1, -1},
-  //                               {-3, -1,  2},
-  //                               {-2,  1,  2}}};
-
   const tensor<double, 3, 3> A{{{ 2,  1, -1},
                                 {-3, -1,  2},
                                 {-2,  4,  2}}};
@@ -200,6 +168,8 @@ TEST(tensor, lu)
       EXPECT_DOUBLE_EQ(U[j][i], 0);
     }
   }
+
+  // check L and U are indeed factors of A
   auto LU = dot(L, U);
   tensor<double, 3, 3> PLU{};
   for (int i = 0; i < 3; i++) {
@@ -207,3 +177,29 @@ TEST(tensor, lu)
   }
   EXPECT_LT(squared_norm(A - PLU), tolerance);
 }
+
+TEST(tensor, linear_solve_with_one_rhs)
+{
+  const tensor<double, 3, 3> A{{{ 2,  1, -1},
+                                {-3, -1,  2},
+                                {-2,  1,  2}}};
+  
+  const tensor<double, 3> b{{-1, 2, 3}};
+
+  auto x = linear_solve(A, b);
+  EXPECT_LT(squared_norm(dot(A, x) - b), tolerance);
+}
+
+TEST(tensor, linear_solve_with_multiple_rhs)
+{
+  const tensor<double, 3, 3> A{{{ 2,  1, -1},
+                                {-3, -1,  2},
+                                {-2,  1,  2}}};
+  const tensor<double, 3, 2> B{{{-1,  1},
+                                { 2,  1},
+                                { 3, -2}}};
+  
+  auto X = linear_solve(A, B);
+  EXPECT_LT(squared_norm(dot(A, X) - B), tolerance);
+}
+
