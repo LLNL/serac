@@ -180,3 +180,30 @@ TEST(tensor, linear_solve_with_multiple_rhs)
   auto X = linear_solve(A_copy, B_copy);
   EXPECT_LT(squared_norm(dot(A, X) - B), tolerance);
 }
+
+TEST(tensor, lu)
+{
+  // const tensor<double, 3, 3> A{{{ 2,  1, -1},
+  //                               {-3, -1,  2},
+  //                               {-2,  1,  2}}};
+
+  const tensor<double, 3, 3> A{{{ 2,  1, -1},
+                                {-3, -1,  2},
+                                {-2,  4,  2}}};
+
+  auto [P, L, U] = lu(A);
+
+  // check that L is lower triangular and U is upper triangular
+  for (int i = 0; i < 3; i++) {
+    for (int j = i + 1; j < 3; j++) {
+      EXPECT_DOUBLE_EQ(L[i][j], 0);
+      EXPECT_DOUBLE_EQ(U[j][i], 0);
+    }
+  }
+  auto LU = dot(L, U);
+  tensor<double, 3, 3> PLU{};
+  for (int i = 0; i < 3; i++) {
+    PLU[P[i]] = LU[i];
+  }
+  EXPECT_LT(squared_norm(A - PLU), tolerance);
+}

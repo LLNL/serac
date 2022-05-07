@@ -16,6 +16,8 @@
 
 #include "serac/numerics/functional/dual.hpp"
 
+#include "serac/numerics/functional/tuple.hpp"
+
 #include "detail/metaprogramming.hpp"
 
 namespace serac {
@@ -1167,6 +1169,51 @@ SERAC_HOST_DEVICE bool is_symmetric_and_positive_definite(tensor<double, 3, 3> A
     return false;
   }
   return true;
+}
+
+template <typename T, int n>
+SERAC_HOST_DEVICE constexpr auto lu(const tensor<T, n, n>& A)
+{
+  // Why not use the standard library abs?
+  constexpr auto abs  = [](double x) { return (x < 0) ? -x : x; };
+  constexpr auto swap = [](auto& x, auto& y) {
+    auto tmp = x;
+    x        = y;
+    y        = tmp;
+  };
+
+  auto U = A;
+  auto L = DenseIdentity<n>();
+  tensor<int, n> P(make_tensor<n>([](auto i) { return i; }));
+
+  for (int i = 0; i < n; i++) {
+    // Search for maximum in this column
+    double max_val = abs(U[i][i]);
+
+    int max_row = i;
+    for (int j = i + 1; j < n; j++) {
+      if (abs(U[j][i]) > max_val) {
+        max_val = abs(U[j][i]);
+        max_row = j;
+      }
+    }
+
+    swap(P[max_row], P[i]);
+    swap(U[max_row], U[i]);
+  }
+  
+  for (int i = 0; i < n; i++) {
+    // zero entries below in this column in U
+    // and fill in L entries
+    for (int j = i + 1; j < n; j++) {
+      double c = U[j][i] / U[i][i];
+      L[j][i] = c;
+      U[j] -= c * U[i];
+      U[j][i] = 0;
+    }
+  }
+
+  return tuple{P, L, U};
 }
 
 /**
