@@ -1171,6 +1171,15 @@ SERAC_HOST_DEVICE bool is_symmetric_and_positive_definite(tensor<double, 3, 3> A
   return true;
 }
 
+/**
+ * @brief Compute LU factorization of a matrix with partial pivoting
+ * @param[in] A The matrix to factorize
+ * @return x tuple of [P, L, U], with
+ * L the lower triangular factor
+ * U the upper triangular factor
+ * P an array indicating the row permutations due to pivoting.
+ * Row i of A was exchanged with row P[i].
+ */
 template <typename T, int n>
 SERAC_HOST_DEVICE constexpr auto lu(const tensor<T, n, n>& A)
 {
@@ -1182,8 +1191,8 @@ SERAC_HOST_DEVICE constexpr auto lu(const tensor<T, n, n>& A)
     y        = tmp;
   };
 
-  auto U = A;
-  auto L = DenseIdentity<n>();
+  auto           U = A;
+  auto           L = DenseIdentity<n>();
   tensor<int, n> P(make_tensor<n>([](auto i) { return i; }));
 
   for (int i = 0; i < n; i++) {
@@ -1201,13 +1210,13 @@ SERAC_HOST_DEVICE constexpr auto lu(const tensor<T, n, n>& A)
     swap(P[max_row], P[i]);
     swap(U[max_row], U[i]);
   }
-  
+
   for (int i = 0; i < n; i++) {
     // zero entries below in this column in U
     // and fill in L entries
     for (int j = i + 1; j < n; j++) {
       double c = U[j][i] / U[i][i];
-      L[j][i] = c;
+      L[j][i]  = c;
       U[j] -= c * U[i];
       U[j][i] = 0;
     }
@@ -1226,14 +1235,14 @@ template <typename T, int n>
 SERAC_HOST_DEVICE constexpr tensor<T, n> linear_solve(const tensor<T, n, n> A, const tensor<T, n>& b)
 {
   auto const [P, L, U] = lu(A);
-  
+
   // Forward substitution
   // solve Ly = b
   tensor<T, n> y{};
   for (int i = 0; i < n; i++) {
     auto c = b[P[i]];
     for (int j = 0; j < i; j++) {
-      c -= L[i][j]*y[j];
+      c -= L[i][j] * y[j];
     }
     y[i] = c / L[i][i];
   }
@@ -1259,8 +1268,7 @@ SERAC_HOST_DEVICE constexpr tensor<T, n> linear_solve(const tensor<T, n, n> A, c
  * @return x The matrix of solution vectors
  */
 template <typename T, int n, int m>
-SERAC_HOST_DEVICE constexpr tensor<T, n, m>
-linear_solve(const tensor<T, n, n>& A, const tensor<T, n, m>& b)
+SERAC_HOST_DEVICE constexpr tensor<T, n, m> linear_solve(const tensor<T, n, n>& A, const tensor<T, n, m>& b)
 {
   auto [P, L, U] = lu(A);
 
@@ -1270,7 +1278,7 @@ linear_solve(const tensor<T, n, n>& A, const tensor<T, n, m>& b)
   for (int i = 0; i < n; i++) {
     auto c = b[P[i]];
     for (int j = 0; j < i; j++) {
-      c -= L[i][j]*y[j];
+      c -= L[i][j] * y[j];
     }
     y[i] = c / L[i][i];
   }
