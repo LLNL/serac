@@ -33,27 +33,33 @@ SERAC_HOST_DEVICE void Add(const mfem::DeviceTensor<4, double>& r_global, const 
   }
 }
 
-} // namespace detail
+}  // namespace detail
 
-template < typename lambda, typename T, int q >
-__device__ auto batch_apply_mass_qf(lambda qf, T qf_input, TensorProductQuadratureRule<q> rule, mfem::DeviceTensor< 6, const double > J_q, int e, tensor< double, 1, q, q, q > & cache_source) {
+template <typename lambda, typename T, int q>
+__device__ auto batch_apply_mass_qf(lambda qf, T qf_input, TensorProductQuadratureRule<q> rule,
+                                    mfem::DeviceTensor<6, const double> J_q, int e,
+                                    tensor<double, 1, q, q, q>& cache_source)
+{
   constexpr int dim = 3;
-  auto J = make_tensor<dim, dim>([&](int i, int j) { return J_q(threadIdx.x, threadIdx.y, threadIdx.z, i, j, e); });
+  auto J  = make_tensor<dim, dim>([&](int i, int j) { return J_q(threadIdx.x, threadIdx.y, threadIdx.z, i, j, e); });
   auto dv = det(J) * rule.weight(threadIdx.x, threadIdx.y, threadIdx.z);
-  auto source = qf(qf_input) * dv;
+  auto source                                            = qf(qf_input) * dv;
   cache_source(0, threadIdx.z, threadIdx.y, threadIdx.x) = source;
   __syncthreads();
 }
 
-template < typename lambda, typename T, int q >
-__device__ auto batch_apply_diffusion_qf(lambda qf, T qf_input, TensorProductQuadratureRule<q> rule, mfem::DeviceTensor< 6, const double > J_q, int e, tensor< double, 3, 1, q, q, q > & cache_flux) {
+template <typename lambda, typename T, int q>
+__device__ auto batch_apply_diffusion_qf(lambda qf, T qf_input, TensorProductQuadratureRule<q> rule,
+                                         mfem::DeviceTensor<6, const double> J_q, int e,
+                                         tensor<double, 3, 1, q, q, q>& cache_flux)
+{
   constexpr int dim = 3;
-  auto J = make_tensor<dim, dim>([&](int i, int j) { return J_q(threadIdx.x, threadIdx.y, threadIdx.z, i, j, e); });
+  auto J    = make_tensor<dim, dim>([&](int i, int j) { return J_q(threadIdx.x, threadIdx.y, threadIdx.z, i, j, e); });
   auto invJ = inv(J);
-  auto dv = det(J) * rule.weight(threadIdx.x, threadIdx.y, threadIdx.z);
-  qf_input = dot(qf_input, invJ);
+  auto dv   = det(J) * rule.weight(threadIdx.x, threadIdx.y, threadIdx.z);
+  qf_input  = dot(qf_input, invJ);
   auto flux = qf(qf_input) * dv;
-  flux = dot(flux, transpose(invJ));
+  flux      = dot(flux, transpose(invJ));
 
   cache_flux(0, 0, threadIdx.z, threadIdx.y, threadIdx.x) = flux[0][0];
   cache_flux(1, 0, threadIdx.z, threadIdx.y, threadIdx.x) = flux[0][1];
@@ -62,27 +68,24 @@ __device__ auto batch_apply_diffusion_qf(lambda qf, T qf_input, TensorProductQua
 }
 
 template <Geometry g, typename test, typename trial, int q, typename lambda>
-__global__ void batched_cuda_mass_kernel(mfem::DeviceTensor< 5, const double > u, 
-                                         mfem::DeviceTensor< 5, double > r, 
-                                         mfem::DeviceTensor< 6, const double > J, 
-                                         TensorProductQuadratureRule<q> rule,
-                                         size_t num_elements, 
-                                         lambda qf) {
-
+__global__ void batched_cuda_mass_kernel(mfem::DeviceTensor<5, const double> u, mfem::DeviceTensor<5, double> r,
+                                         mfem::DeviceTensor<6, const double> J, TensorProductQuadratureRule<q> rule,
+                                         size_t num_elements, lambda qf)
+{
   static constexpr int n = trial::order + 1;
-  using test_element = finite_element<g, test>;
-  using trial_element = finite_element<g, trial>;
+  using test_element     = finite_element<g, test>;
+  using trial_element    = finite_element<g, trial>;
 
   __shared__ union {
-    tensor < double, trial::components, n, n, n > u_elem;
-    tensor < double, n, q, q > A2;
-    tensor < double, q, n, n > A4;
+    tensor<double, trial::components, n, n, n> u_elem;
+    tensor<double, n, q, q>                    A2;
+    tensor<double, q, n, n>                    A4;
   } cache1;
 
   __shared__ union {
-    tensor < double, n, n, q > A1;
-    tensor < double, 1, q, q, q > source;
-    tensor < double, q, q, n > A3;
+    tensor<double, n, n, q>    A1;
+    tensor<double, 1, q, q, q> source;
+    tensor<double, q, q, n>    A3;
   } cache2;
 
   // for each element in the domain
@@ -97,7 +100,7 @@ __global__ void batched_cuda_mass_kernel(mfem::DeviceTensor< 5, const double > u
       }
     }
   }
-  __syncthreads(); 
+  __syncthreads();
 
   // interpolate each quadrature point's value
   auto qf_input = trial_element::interpolate(cache1.u_elem, rule, cache2.A1, cache1.A2);
@@ -107,31 +110,27 @@ __global__ void batched_cuda_mass_kernel(mfem::DeviceTensor< 5, const double > u
 
   // integrate the material response against the test-space basis functions
   test_element::integrate(cache2.source, rule, r, e, cache2.A3, cache1.A4);
-
 }
 
 template <Geometry g, typename test, typename trial, int q, typename lambda>
-__global__ void batched_cuda_diffusion_kernel(mfem::DeviceTensor< 5, const double > u, 
-                                              mfem::DeviceTensor< 5, double > r, 
-                                              mfem::DeviceTensor< 6, const double > J, 
-                                              TensorProductQuadratureRule<q> rule,
-                                              size_t num_elements, 
-                                              lambda qf) {
-
+__global__ void batched_cuda_diffusion_kernel(mfem::DeviceTensor<5, const double> u, mfem::DeviceTensor<5, double> r,
+                                              mfem::DeviceTensor<6, const double> J,
+                                              TensorProductQuadratureRule<q> rule, size_t num_elements, lambda qf)
+{
   static constexpr int n = trial::order + 1;
-  using test_element = finite_element<g, test>;
-  using trial_element = finite_element<g, trial>;
+  using test_element     = finite_element<g, test>;
+  using trial_element    = finite_element<g, trial>;
 
   __shared__ union {
-    tensor < double, trial::components, n, n, n > u_elem;
-    tensor < double, 3, n, q, q > A2;
-    tensor < double, 2, q, n, n > A4;
+    tensor<double, trial::components, n, n, n> u_elem;
+    tensor<double, 3, n, q, q>                 A2;
+    tensor<double, 2, q, n, n>                 A4;
   } cache1;
 
   __shared__ union {
-    tensor < double, 2, n, n, q > A1;
-    tensor < double, 3, 1, q, q, q > flux;
-    tensor < double, 3, q, q, n > A3;
+    tensor<double, 2, n, n, q>    A1;
+    tensor<double, 3, 1, q, q, q> flux;
+    tensor<double, 3, q, q, n>    A3;
   } cache2;
 
   // for each element in the domain
@@ -146,7 +145,7 @@ __global__ void batched_cuda_diffusion_kernel(mfem::DeviceTensor< 5, const doubl
       }
     }
   }
-  __syncthreads(); 
+  __syncthreads();
 
   // interpolate each quadrature point's value
   auto qf_input = trial_element::gradient(cache1.u_elem, rule, cache2.A1, cache1.A2);
@@ -156,24 +155,29 @@ __global__ void batched_cuda_diffusion_kernel(mfem::DeviceTensor< 5, const doubl
 
   // integrate the material response against the test-space basis functions
   test_element::integrate(cache2.flux, rule, r, e, cache2.A3, cache1.A4);
-
 }
 
-} // namespace serac
+}  // namespace serac
 
 namespace compiler {
-  static void please_do_not_optimize_away([[maybe_unused]] void* p) { asm volatile("" : : "g"(p) : "memory"); }
-}
+static void please_do_not_optimize_away([[maybe_unused]] void* p) { asm volatile("" : : "g"(p) : "memory"); }
+}  // namespace compiler
 
 struct MassQFunction {
-  template < typename T >
-  SERAC_HOST_DEVICE auto operator()(T u) { return rho * u; }
+  template <typename T>
+  SERAC_HOST_DEVICE auto operator()(T u)
+  {
+    return rho * u;
+  }
   double rho;
 };
 
 struct DiffusionQFunction {
-  template < typename T >
-  SERAC_HOST_DEVICE auto operator()(T du_dx) { return k * du_dx; }
+  template <typename T>
+  SERAC_HOST_DEVICE auto operator()(T du_dx)
+  {
+    return k * du_dx;
+  }
   double k;
 };
 
@@ -187,10 +191,10 @@ auto time(lambda&& f)
   return stopwatch.elapsed();
 }
 
-constexpr int dim = 3;
+constexpr int dim      = 3;
 constexpr int num_runs = 10;
 
-constexpr double k = 1.0;
+constexpr double k   = 1.0;
 constexpr double rho = 1.0;
 
 mfem::Vector U1D;
@@ -199,10 +203,10 @@ mfem::Vector J1D;
 mfem::Vector rho_dv_1D;
 mfem::Vector k_invJ_invJT_dv_1D;
 
-void initialize_globals() {
-
-  constexpr int n = 4;
-  constexpr int q = 4;
+void initialize_globals()
+{
+  constexpr int n            = 4;
+  constexpr int q            = 4;
   constexpr int num_elements = 128 << 10;
 
   U1D.SetSize(num_elements * n * n * n);
@@ -216,14 +220,13 @@ void initialize_globals() {
   rho_dv_1D.UseDevice(true);
   k_invJ_invJT_dv_1D.UseDevice(true);
 
-  std::default_random_engine generator{0};
+  std::default_random_engine             generator{0};
   std::uniform_real_distribution<double> distribution(-1.0, 1.0);
 
   auto U = mfem::Reshape(U1D.HostReadWrite(), n, n, n, num_elements);
   auto J = mfem::Reshape(J1D.HostReadWrite(), q * q * q, dim, dim, num_elements);
 
   for (int e = 0; e < num_elements; e++) {
-
     for (int ix = 0; ix < n; ix++) {
       for (int iy = 0; iy < n; iy++) {
         for (int iz = 0; iz < n; iz++) {
@@ -239,26 +242,25 @@ void initialize_globals() {
         }
       }
     }
-
   }
-
 }
 
-template < typename ... T >
-void print(T ... args) {
+template <typename... T>
+void print(T... args)
+{
   (..., (std::cout << " " << args));
   std::cout << std::endl;
 }
 
-template < int q, int n >
-void run_test_suite(int num_elements) {
-
+template <int q, int n>
+void run_test_suite(int num_elements)
+{
   constexpr int p = n - 1;
 
-  using serac::H1;
   using serac::Geometry;
+  using serac::H1;
 
-  using test = H1<p>;
+  using test  = H1<p>;
   using trial = H1<p>;
 
   mfem::Vector R1D(num_elements * n * n * n);
@@ -268,86 +270,88 @@ void run_test_suite(int num_elements) {
   mfem::Vector diffusion_answer;
 
   {
-    R1D = 0.0;
-    mfem::DeviceTensor<5, const double > u_d = mfem::Reshape(U1D.Read(), n, n, n, 1, num_elements);
-    mfem::DeviceTensor<5, double > r_d = mfem::Reshape(R1D.ReadWrite(), n, n, n, 1, num_elements);
-    mfem::DeviceTensor<6, const double > J_d = mfem::Reshape(J1D.Read(), q, q, q, dim, dim, num_elements);
-    auto rule = serac::MakeGaussLegendreRule<Geometry::Hexahedron, q>();
-    dim3 blocksize{q, q, q};
-    int gridsize = num_elements;
-    double runtime = time([&]() {
-      for (int i = 0; i < num_runs; i++) {
-        serac::batched_cuda_mass_kernel<Geometry::Hexahedron, test, trial, q><<<gridsize, blocksize>>>(u_d, r_d, J_d, rule, num_elements, MassQFunction{rho});
-        compiler::please_do_not_optimize_away(&R1D);
-      }
-      cudaDeviceSynchronize();
-    }) / num_runs;
-    mass_answer = R1D;
-    double relative_error = 0.0; // this is the reference answer
+    R1D                                      = 0.0;
+    mfem::DeviceTensor<5, const double> u_d  = mfem::Reshape(U1D.Read(), n, n, n, 1, num_elements);
+    mfem::DeviceTensor<5, double>       r_d  = mfem::Reshape(R1D.ReadWrite(), n, n, n, 1, num_elements);
+    mfem::DeviceTensor<6, const double> J_d  = mfem::Reshape(J1D.Read(), q, q, q, dim, dim, num_elements);
+    auto                                rule = serac::MakeGaussLegendreRule<Geometry::Hexahedron, q>();
+    dim3                                blocksize{q, q, q};
+    int                                 gridsize = num_elements;
+    double                              runtime  = time([&]() {
+                       for (int i = 0; i < num_runs; i++) {
+                         serac::batched_cuda_mass_kernel<Geometry::Hexahedron, test, trial, q>
+                             <<<gridsize, blocksize>>>(u_d, r_d, J_d, rule, num_elements, MassQFunction{rho});
+                         compiler::please_do_not_optimize_away(&R1D);
+                       }
+                       cudaDeviceSynchronize();
+                     }) /
+                     num_runs;
+    mass_answer           = R1D;
+    double relative_error = 0.0;  // this is the reference answer
     print("serac_mass_kernel", n, q, num_elements, runtime, relative_error);
   }
 
   {
-    R1D = 0.0;
-    mfem::DeviceTensor<5, const double > u_d = mfem::Reshape(U1D.Read(), n, n, n, 1, num_elements);
-    mfem::DeviceTensor<5, double > r_d = mfem::Reshape(R1D.ReadWrite(), n, n, n, 1, num_elements);
-    mfem::DeviceTensor<6, const double > J_d = mfem::Reshape(J1D.Read(), q, q, q, dim, dim, num_elements);
-    auto rule = serac::MakeGaussLegendreRule<Geometry::Hexahedron, q>();
-    dim3 blocksize{q, q, q};
-    int gridsize = num_elements;
-    double runtime = time([&]() {
-      for (int i = 0; i < num_runs; i++) {
-        serac::batched_cuda_diffusion_kernel<Geometry::Hexahedron, test, trial, q><<<gridsize, blocksize>>>(u_d, r_d, J_d, rule, num_elements, DiffusionQFunction{k});
-        compiler::please_do_not_optimize_away(&R1D);
-      }
-      cudaDeviceSynchronize();
-    }) / num_runs;
-    diffusion_answer = R1D;
-    double relative_error = 0.0; // this is the reference answer
+    R1D                                      = 0.0;
+    mfem::DeviceTensor<5, const double> u_d  = mfem::Reshape(U1D.Read(), n, n, n, 1, num_elements);
+    mfem::DeviceTensor<5, double>       r_d  = mfem::Reshape(R1D.ReadWrite(), n, n, n, 1, num_elements);
+    mfem::DeviceTensor<6, const double> J_d  = mfem::Reshape(J1D.Read(), q, q, q, dim, dim, num_elements);
+    auto                                rule = serac::MakeGaussLegendreRule<Geometry::Hexahedron, q>();
+    dim3                                blocksize{q, q, q};
+    int                                 gridsize = num_elements;
+    double                              runtime  = time([&]() {
+                       for (int i = 0; i < num_runs; i++) {
+                         serac::batched_cuda_diffusion_kernel<Geometry::Hexahedron, test, trial, q>
+                             <<<gridsize, blocksize>>>(u_d, r_d, J_d, rule, num_elements, DiffusionQFunction{k});
+                         compiler::please_do_not_optimize_away(&R1D);
+                       }
+                       cudaDeviceSynchronize();
+                     }) /
+                     num_runs;
+    diffusion_answer      = R1D;
+    double relative_error = 0.0;  // this is the reference answer
     print("serac_diffusion_kernel", n, q, num_elements, runtime, relative_error);
   }
 
   serac::GaussLegendreRule<serac::Geometry::Hexahedron, q> rule;
-  auto J = mfem::Reshape(J1D.HostReadWrite(), q * q * q, dim, dim, num_elements);
-  auto rho_dv = mfem::Reshape(rho_dv_1D.HostReadWrite(), q * q * q, num_elements);
+  auto J               = mfem::Reshape(J1D.HostReadWrite(), q * q * q, dim, dim, num_elements);
+  auto rho_dv          = mfem::Reshape(rho_dv_1D.HostReadWrite(), q * q * q, num_elements);
   auto k_invJ_invJT_dv = mfem::Reshape(k_invJ_invJT_dv_1D.HostReadWrite(), q * q * q, dim, dim, num_elements);
   for (int e = 0; e < num_elements; e++) {
     for (int i = 0; i < q * q * q; i++) {
-
-      auto J_q = serac::make_tensor< dim, dim >([=](int r, int c){ return J(i, r, c, e); });
+      auto J_q = serac::make_tensor<dim, dim>([=](int r, int c) { return J(i, r, c, e); });
 
       int qx = i % q;
       int qy = (i % (q * q)) / q;
       int qz = i / (q * q);
 
-      double qweight = rule.weight(qx, qy, qz);
-      auto invJ_invJT = dot(inv(J_q), transpose(inv(J_q)));
-      double dv = det(J_q) * qweight;
+      double qweight    = rule.weight(qx, qy, qz);
+      auto   invJ_invJT = dot(inv(J_q), transpose(inv(J_q)));
+      double dv         = det(J_q) * qweight;
 
-      rho_dv(i, e) = rho * dv; 
+      rho_dv(i, e) = rho * dv;
       for (int r = 0; r < dim; r++) {
         for (int c = 0; c < dim; c++) {
           k_invJ_invJT_dv(i, r, c, e) = k * invJ_invJT[r][c] * dv;
         }
       }
-
     }
   }
 
   {
-    bool symmetric = false;
+    bool                symmetric = false;
     mfem::Array<double> b_(n * q);
     mfem::Array<double> bt_(n * q);
     mfem::Array<double> g_(n * q);
     mfem::Array<double> gt_(n * q);
-    auto B = mfem::Reshape(b_.HostReadWrite(), q, n);
-    auto Bt = mfem::Reshape(bt_.HostReadWrite(), n, q);
+    auto                B  = mfem::Reshape(b_.HostReadWrite(), q, n);
+    auto                Bt = mfem::Reshape(bt_.HostReadWrite(), n, q);
 
-    auto G = mfem::Reshape(g_.HostReadWrite(), q, n);
+    auto G  = mfem::Reshape(g_.HostReadWrite(), q, n);
     auto Gt = mfem::Reshape(gt_.HostReadWrite(), n, q);
 
     for (int i = 0; i < q; i++) {
-      auto value = serac::GaussLobattoInterpolation<n>(rule.points_1D[i]);
+      auto value      = serac::GaussLobattoInterpolation<n>(rule.points_1D[i]);
       auto derivative = serac::GaussLobattoInterpolationDerivative<n>(rule.points_1D[i]);
 
       for (int j = 0; j < n; j++) {
@@ -356,64 +360,68 @@ void run_test_suite(int num_elements) {
       }
     }
 
-    R1D = 0.0;
+    R1D                 = 0.0;
     double mass_runtime = time([&]() {
-      for (int i = 0; i < num_runs; i++) {
-        mfem::PAMassApply3D<n,q>(num_elements, b_, bt_, rho_dv_1D, U1D, R1D);
-        compiler::please_do_not_optimize_away(&R1D);
-      }
-      cudaDeviceSynchronize();
-    }) / num_runs;
+                            for (int i = 0; i < num_runs; i++) {
+                              mfem::PAMassApply3D<n, q>(num_elements, b_, bt_, rho_dv_1D, U1D, R1D);
+                              compiler::please_do_not_optimize_away(&R1D);
+                            }
+                            cudaDeviceSynchronize();
+                          }) /
+                          num_runs;
     auto error = R1D;
     error -= mass_answer;
     auto relative_error = error.Norml2() / mass_answer.Norml2();
     print("mfem_mass", n, q, num_elements, mass_runtime, relative_error);
 
-    R1D = 0.0;
+    R1D                      = 0.0;
     double diffusion_runtime = time([&]() {
-      for (int i = 0; i < num_runs; i++) {
-        mfem::PADiffusionApply3D<n,q>(num_elements, symmetric = false, b_, g_, bt_, gt_, k_invJ_invJT_dv_1D, U1D, R1D);
-        compiler::please_do_not_optimize_away(&R1D);
-      }
-      cudaDeviceSynchronize();
-    }) / num_runs;
+                                 for (int i = 0; i < num_runs; i++) {
+                                   mfem::PADiffusionApply3D<n, q>(num_elements, symmetric = false, b_, g_, bt_, gt_,
+                                                                  k_invJ_invJT_dv_1D, U1D, R1D);
+                                   compiler::please_do_not_optimize_away(&R1D);
+                                 }
+                                 cudaDeviceSynchronize();
+                               }) /
+                               num_runs;
     error = R1D;
     error -= diffusion_answer;
     relative_error = error.Norml2() / diffusion_answer.Norml2();
     print("mfem_diffusion", n, q, num_elements, diffusion_runtime, relative_error);
 
-
-    R1D = 0.0;
+    R1D          = 0.0;
     mass_runtime = time([&]() {
-      for (int i = 0; i < num_runs; i++) {
-        mfem::SmemPAMassApply3D<n,q>(num_elements, b_, bt_, rho_dv_1D, U1D, R1D);
-        compiler::please_do_not_optimize_away(&R1D);
-      }
-      cudaDeviceSynchronize();
-    }) / num_runs;
+                     for (int i = 0; i < num_runs; i++) {
+                       mfem::SmemPAMassApply3D<n, q>(num_elements, b_, bt_, rho_dv_1D, U1D, R1D);
+                       compiler::please_do_not_optimize_away(&R1D);
+                     }
+                     cudaDeviceSynchronize();
+                   }) /
+                   num_runs;
     error = R1D;
     error -= mass_answer;
     relative_error = error.Norml2() / mass_answer.Norml2();
     print("mfem_mass_smem", n, q, num_elements, mass_runtime, relative_error);
 
     R1D = 0.0;
-    diffusion_runtime = time([&]() {
-      for (int i = 0; i < num_runs; i++) {
-        mfem::SmemPADiffusionApply3D<n,q>(num_elements, symmetric = false, b_, g_, k_invJ_invJT_dv_1D, U1D, R1D);
-        compiler::please_do_not_optimize_away(&R1D);
-      }
-      cudaDeviceSynchronize();
-    }) / num_runs;
+    diffusion_runtime =
+        time([&]() {
+          for (int i = 0; i < num_runs; i++) {
+            mfem::SmemPADiffusionApply3D<n, q>(num_elements, symmetric = false, b_, g_, k_invJ_invJT_dv_1D, U1D, R1D);
+            compiler::please_do_not_optimize_away(&R1D);
+          }
+          cudaDeviceSynchronize();
+        }) /
+        num_runs;
     error = R1D;
     error -= diffusion_answer;
     relative_error = error.Norml2() / diffusion_answer.Norml2();
     print("mfem_diffusion_smem", n, q, num_elements, diffusion_runtime, relative_error);
   }
-
 }
 
-int main() {
-
+int main()
+{
   mfem::Device device("cuda");
 
   initialize_globals();
@@ -447,5 +455,5 @@ int main() {
   }
 #endif
 
-  run_test_suite< 4, 4 >(65536);
+  run_test_suite<4, 4>(65536);
 }

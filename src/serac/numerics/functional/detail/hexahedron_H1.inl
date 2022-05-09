@@ -457,8 +457,8 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
   }
 
   template <int q>
-  static SERAC_DEVICE auto interpolate(const dof_type& X, const tensor<double, dim, dim> & J,
-                                       const TensorProductQuadratureRule<q>& rule, cache_type<q> & cache)
+  static SERAC_DEVICE auto interpolate(const dof_type& X, const tensor<double, dim, dim>& J,
+                                       const TensorProductQuadratureRule<q>& rule, cache_type<q>& cache)
   {
     // we want to compute the following:
     //
@@ -476,9 +476,9 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
     // A2(dz, qy, qx)  := B(qy, dy) * A1(dz, dy, qx)
     // X_q(qz, qy, qx) := B(qz, dz) * A2(dz, qy, qx)
 
-    int tidx =  threadIdx.x % q;
+    int tidx = threadIdx.x % q;
     int tidy = (threadIdx.x % (q * q)) / q;
-    int tidz =  threadIdx.x / (q * q);
+    int tidz = threadIdx.x / (q * q);
 
     static constexpr auto points1D = GaussLegendreNodes<q>();
     static constexpr auto B_       = [=]() {
@@ -500,8 +500,8 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
     __shared__ tensor<double, q, n> B;
     __shared__ tensor<double, q, n> G;
     for (int entry = threadIdx.x; entry < n * q; entry += q * q * q) {
-      int i = entry % n; 
-      int j = entry / n;
+      int i   = entry % n;
+      int j   = entry / n;
       B(j, i) = B_(j, i);
       G(j, i) = G_(j, i);
     }
@@ -546,7 +546,7 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
         for (int qy = tidy; qy < q; qy += q) {
           for (int qx = tidx; qx < q; qx += q) {
             for (int dz = 0; dz < n; dz++) {
-              get<0>(qf_input)[i]    += B(qz, dz) * cache.A2(0, dz, qy, qx);
+              get<0>(qf_input)[i] += B(qz, dz) * cache.A2(0, dz, qy, qx);
               get<1>(qf_input)[i][0] += B(qz, dz) * cache.A2(1, dz, qy, qx);
               get<1>(qf_input)[i][1] += B(qz, dz) * cache.A2(2, dz, qy, qx);
               get<1>(qf_input)[i][2] += G(qz, dz) * cache.A2(0, dz, qy, qx);
@@ -562,18 +562,17 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
   }
 
   template <typename T1, typename T2, int q>
-  static SERAC_DEVICE void integrate(tuple<T1, T2> & response, const tensor<double, dim, dim> & J,
+  static SERAC_DEVICE void integrate(tuple<T1, T2>& response, const tensor<double, dim, dim>& J,
                                      const TensorProductQuadratureRule<q>& rule, cache_type<q>& cache,
                                      dof_type& residual)
   {
-
-    int tidx =  threadIdx.x % q;
+    int tidx = threadIdx.x % q;
     int tidy = (threadIdx.x % (q * q)) / q;
-    int tidz =  threadIdx.x / (q * q);
+    int tidz = threadIdx.x / (q * q);
 
-    static constexpr auto points1D = GaussLegendreNodes<q>();
+    static constexpr auto points1D  = GaussLegendreNodes<q>();
     static constexpr auto weights1D = GaussLegendreWeights<q>();
-    static constexpr auto B_       = [=]() {
+    static constexpr auto B_        = [=]() {
       tensor<double, q, n> B{};
       for (int i = 0; i < q; i++) {
         B[i] = GaussLobattoInterpolation<n>(points1D[i]);
@@ -592,8 +591,8 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
     __shared__ tensor<double, q, n> B;
     __shared__ tensor<double, q, n> G;
     for (int entry = threadIdx.x; entry < n * q; entry += q * q * q) {
-      int i = entry % n; 
-      int j = entry / n;
+      int i   = entry % n;
+      int j   = entry / n;
       B(j, i) = B_(j, i);
       G(j, i) = G_(j, i);
     }
@@ -605,8 +604,7 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
     get<1>(response) = dot(get<1>(response), inv(transpose(J))) * dv;
 
     for (int i = 0; i < c; i++) {
-
-      // this first contraction is performed a little differently, since `response` is not 
+      // this first contraction is performed a little differently, since `response` is not
       // in shared memory, so each thread can only access its own values
       for (int qz = tidz; qz < q; qz += q) {
         for (int qy = tidy; qy < q; qy += q) {
@@ -620,7 +618,7 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
       __syncthreads();
 
       for (int offset = 0; offset < n; offset++) {
-        int dx = (tidx + offset) % n;
+        int  dx  = (tidx + offset) % n;
         auto sum = B(tidx, dx) * get<0>(response)(i) + G(tidx, dx) * get<1>(response)(i, 0);
         atomicAdd(&cache.A2(0, dx, tidz, tidy), sum);
         atomicAdd(&cache.A2(1, dx, tidz, tidy), B(tidx, dx) * get<1>(response)(i, 1));

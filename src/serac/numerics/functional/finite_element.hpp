@@ -51,37 +51,47 @@ struct Dimension {
   constexpr operator int() { return d; }
 };
 
-template < Geometry g, int q >
+template <Geometry g, int q>
 struct batched_jacobian;
 
-template < int q >
-struct batched_jacobian< Geometry::Hexahedron, q >{
+template <int q>
+struct batched_jacobian<Geometry::Hexahedron, q> {
   using type = tensor<double, 3, 3, q, q, q>;
 };
 
-template < int q >
-struct batched_jacobian< Geometry::Quadrilateral, q >{
+template <int q>
+struct batched_jacobian<Geometry::Quadrilateral, q> {
   using type = tensor<double, 2, 2, q, q>;
 };
 
-template < Geometry g >
-SERAC_HOST_DEVICE constexpr int elements_per_block(int q) {
+template <Geometry g>
+SERAC_HOST_DEVICE constexpr int elements_per_block(int q)
+{
   if (g == Geometry::Hexahedron) {
-    switch(q) {
-      case 1: return 64;
-      case 2: return 16;
-      case 3: return 4;
-      default: return 1;
+    switch (q) {
+      case 1:
+        return 64;
+      case 2:
+        return 16;
+      case 3:
+        return 4;
+      default:
+        return 1;
     }
   }
 
   if (g == Geometry::Quadrilateral) {
-    switch(q) {
-      case 1: return 128;
-      case 2: return  32;
-      case 3: return  16;
-      case 4: return   8;
-      default: return  1;
+    switch (q) {
+      case 1:
+        return 128;
+      case 2:
+        return 32;
+      case 3:
+        return 16;
+      case 4:
+        return 8;
+      default:
+        return 1;
     }
   }
 }

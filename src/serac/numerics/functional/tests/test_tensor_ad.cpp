@@ -103,7 +103,6 @@ TEST(dual_number_tensor, inv)
   EXPECT_LT(norm(dinvA[0] - dinvA[1]), 1.0e-7);
 
   EXPECT_LT(norm(dinvA[0] - dinvA[2]), 1.0e-14);
-
 }
 
 TEST(dual_number_tensor, isotropic_tensor)
@@ -116,13 +115,13 @@ TEST(dual_number_tensor, isotropic_tensor)
   double D1 = 1.0;
 
   auto W = [&](auto dudx) {
-     auto I = Identity<dim>();
-     auto F = I + dudx;
-     auto J = det(F);
-     auto Jm23 = pow(J, -2.0/3.0);
-     auto Wvol = D1*(J - 1.0)*(J - 1.0);
-     auto Wdev = C1*(Jm23*inner(F,F) - 3.0);
-     return Wdev + Wvol;
+    auto I    = Identity<dim>();
+    auto F    = I + dudx;
+    auto J    = det(F);
+    auto Jm23 = pow(J, -2.0 / 3.0);
+    auto Wvol = D1 * (J - 1.0) * (J - 1.0);
+    auto Wdev = C1 * (Jm23 * inner(F, F) - 3.0);
+    return Wdev + Wvol;
   };
 
   // clang-format off
@@ -157,5 +156,4 @@ TEST(dual_number_tensor, isotropic_tensor)
   EXPECT_LT(abs(dW[0] - dW[1]), 3.0e-7);
 
   EXPECT_LT(abs(dW[0] - dW[2]) / abs(dW[0]), 5.0e-14);
-
 }

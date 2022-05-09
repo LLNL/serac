@@ -11,8 +11,11 @@
 
 namespace serac {
 
-template < typename S, typename T >
-struct value_and_gradient { S value; T gradient; };
+template <typename S, typename T>
+struct value_and_gradient {
+  S value;
+  T gradient;
+};
 
 template <Geometry g, int Q>
 struct GaussLegendreRule;
@@ -22,9 +25,10 @@ struct GaussLegendreRule<Geometry::Hexahedron, Q> {
   static constexpr auto points_1D  = GaussLegendreNodes<Q>();
   static constexpr auto weights_1D = GaussLegendreWeights<Q>();
 
-  __host__ __device__ static constexpr double weight(int qx, int qy, int qz) { 
+  __host__ __device__ static constexpr double weight(int qx, int qy, int qz)
+  {
     auto weights = GaussLegendreWeights<Q>();
-    return weights[qx] * weights[qy] * weights[qz]; 
+    return weights[qx] * weights[qy] * weights[qz];
   }
 
   __host__ __device__ static constexpr double point(int i) { return GaussLegendreNodes<Q>()(i); }
@@ -32,22 +36,22 @@ struct GaussLegendreRule<Geometry::Hexahedron, Q> {
   __host__ __device__ static constexpr int size() { return Q * Q * Q; }
 };
 
-
-template < typename trial_space, Geometry geom, int q >
-__device__ auto BatchPreprocessCUDA(const mfem::DeviceTensor< 4, const double > & element_values, GaussLegendreRule<geom, q> rule, int e) {
+template <typename trial_space, Geometry geom, int q>
+__device__ auto BatchPreprocessCUDA(const mfem::DeviceTensor<4, const double>& element_values,
+                                    GaussLegendreRule<geom, q> rule, int e)
+{
   static constexpr int n = trial_space::order + 1;
 
   if constexpr (geom == Geometry::Hexahedron) {
-
     // we want to compute the following:
     //
     // r(u, v, w) := (B(u, i) * B(v, j) * B(w, k)) * f(i, j, k)
     //
-    // where 
-    //   r(u, v, w) are the quadrature-point values at position {u, v, w}, 
-    //   B(u, i) is the i^{th} 1D interpolation/differentiation (shape) function, 
+    // where
+    //   r(u, v, w) are the quadrature-point values at position {u, v, w},
+    //   B(u, i) is the i^{th} 1D interpolation/differentiation (shape) function,
     //           evaluated at the u^{th} 1D quadrature point, and
-    //   f(i, j, k) are the values at node {i, j, k} to be interpolated 
+    //   f(i, j, k) are the values at node {i, j, k} to be interpolated
     //
     // this algorithm carries out the above calculation in 3 steps:
     //
@@ -107,14 +111,14 @@ __device__ auto BatchPreprocessCUDA(const mfem::DeviceTensor< 4, const double > 
     }
     __syncthreads();
 
-    value_and_gradient< double, tensor<double, 3> > qf_input{};
+    value_and_gradient<double, tensor<double, 3> > qf_input{};
 
     // r(u, v, w) := B(u, i) * A2(i, v, w)
     for (int u = threadIdx.x; u < q; u += blockDim.x) {
       for (int v = threadIdx.y; v < q; v += blockDim.y) {
         for (int w = threadIdx.z; w < q; w += blockDim.z) {
           for (int i = 0; i < n; i++) {
-            qf_input.value       += B(u, i) * A2(0, i, v, w);
+            qf_input.value += B(u, i) * A2(0, i, v, w);
             qf_input.gradient[0] += G(u, i) * A2(0, i, v, w);
             qf_input.gradient[1] += B(u, i) * A2(1, i, v, w);
             qf_input.gradient[2] += B(u, i) * A2(2, i, v, w);
@@ -124,16 +128,13 @@ __device__ auto BatchPreprocessCUDA(const mfem::DeviceTensor< 4, const double > 
     }
 
     return qf_input;
-
   }
-
 }
 
 template <typename trial_space, Geometry geom, int q, typename T>
 __device__ void BatchPostprocessCUDA(const T& f, GaussLegendreRule<geom, q>, mfem::DeviceTensor<4, double> r_e, int e)
 {
   if constexpr (geom == Geometry::Hexahedron) {
-
     constexpr GaussLegendreRule<geom, q> rule;
     static constexpr int                 n = trial_space::order + 1;
 
@@ -212,6 +213,4 @@ __device__ void BatchPostprocessCUDA(const T& f, GaussLegendreRule<geom, q>, mfe
   }
 }
 
-
-
-}
+}  // namespace serac

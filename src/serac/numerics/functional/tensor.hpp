@@ -857,7 +857,7 @@ SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m, n>& A, const tensor<T, n
  * @overload
  * @note matrix . tensor
  */
-template <typename S, typename T, int m, int n, int p, int q, int r >
+template <typename S, typename T, int m, int n, int p, int q, int r>
 SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m, n>& A, const tensor<T, n, p, q, r>& B)
 {
   tensor<decltype(S{} * T{}), m, p, q, r> AB{};
@@ -1163,32 +1163,35 @@ SERAC_HOST_DEVICE constexpr auto det(const tensor<T, 3, 3>& A)
          A[0][0] * A[1][2] * A[2][1] - A[0][1] * A[1][0] * A[2][2] - A[0][2] * A[1][1] * A[2][0];
 }
 
-template < typename T, int ... n >
-tensor< T, (n * ...) > flatten(tensor< T, n ... > A) {
-  tensor< T, (n * ...) > A_flat;
-  auto A_ptr = reinterpret_cast<double *>(&A);
+template <typename T, int... n>
+tensor<T, (n * ...)> flatten(tensor<T, n...> A)
+{
+  tensor<T, (n * ...)> A_flat;
+  auto                 A_ptr = reinterpret_cast<double*>(&A);
   for (int i = 0; i < (n * ...); i++) {
     A_flat[i] = A_ptr[i];
   }
   return A_flat;
 }
 
-template < int ... new_dimensions, typename T, int ... old_dimensions >
-tensor< T, new_dimensions ... > reshape(tensor< T, old_dimensions ... > A) {
-  static_assert((new_dimensions * ...) == (old_dimensions * ...), 
-  "error: can't reshape to configuration with different number of elements");
+template <int... new_dimensions, typename T, int... old_dimensions>
+tensor<T, new_dimensions...> reshape(tensor<T, old_dimensions...> A)
+{
+  static_assert((new_dimensions * ...) == (old_dimensions * ...),
+                "error: can't reshape to configuration with different number of elements");
 
-  tensor< T, new_dimensions ... > A_reshaped;
-  auto A_ptr = reinterpret_cast<double *>(&A);
-  auto A_reshaped_ptr = reinterpret_cast<double *>(&A_reshaped);
+  tensor<T, new_dimensions...> A_reshaped;
+  auto                         A_ptr          = reinterpret_cast<double*>(&A);
+  auto                         A_reshaped_ptr = reinterpret_cast<double*>(&A_reshaped);
   for (int i = 0; i < (old_dimensions * ...); i++) {
     A_reshaped_ptr[i] = A_ptr[i];
   }
   return A_reshaped;
 }
 
-template < typename T, int ... n >
-double relative_error(tensor< T, n ... > A, tensor< T, n ... > B) {
+template <typename T, int... n>
+double relative_error(tensor<T, n...> A, tensor<T, n...> B)
+{
   return norm(A - B) / norm(A);
 }
 
@@ -1410,7 +1413,7 @@ SERAC_HOST_DEVICE constexpr tensor<T, n, n> inv(const tensor<T, n, n>& A)
  * TODO: compare performance of this hardcoded implementation to just using inv() directly
  */
 template <typename gradient_type, int n>
-SERAC_HOST_DEVICE auto inv(const tensor<dual<gradient_type>, n, n> & A)
+SERAC_HOST_DEVICE auto inv(const tensor<dual<gradient_type>, n, n>& A)
 {
   auto invA = inv(get_value(A));
   return make_tensor<n, n>([&](int i, int j) {

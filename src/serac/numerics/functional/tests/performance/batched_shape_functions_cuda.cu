@@ -40,12 +40,9 @@ struct GaussLegendreRule<Geometry::Hexahedron, Q> {
 };
 
 template <Geometry g, typename test, typename trial, int Q, typename lambda>
-__global__ void reference_cuda_kernel(mfem::DeviceTensor< 2, const double > u, 
-                                      mfem::DeviceTensor< 2, double > r, 
-                                      mfem::DeviceTensor< 4, const double > J, 
-                                      size_t num_elements, 
-                                      lambda qf) {
-
+__global__ void reference_cuda_kernel(mfem::DeviceTensor<2, const double> u, mfem::DeviceTensor<2, double> r,
+                                      mfem::DeviceTensor<4, const double> J, size_t num_elements, lambda qf)
+{
   using test_element          = finite_element<g, test>;
   using trial_element         = finite_element<g, trial>;
   using element_residual_type = typename test_element::residual_type;
@@ -55,7 +52,6 @@ __global__ void reference_cuda_kernel(mfem::DeviceTensor< 2, const double > u,
   const int grid_stride = blockDim.x * gridDim.x;
 
   for (int qe = blockIdx.x * blockDim.x + threadIdx.x; qe < num_elements * rule.size(); qe += grid_stride) {
-
     int e = qe / rule.size();
     int q = qe % rule.size();
 
@@ -75,17 +71,16 @@ __global__ void reference_cuda_kernel(mfem::DeviceTensor< 2, const double > u,
     r_elem += domain_integral::Postprocess<test_element>(qf_output, xi, J_q) * dx;
 
     detail::Add(r, r_elem, e);
-
   }
-
 }
 
 template <int dim, int q>
-__device__ auto load_jacobian(const tensor< double, dim, dim, q, q > & J) {
+__device__ auto load_jacobian(const tensor<double, dim, dim, q, q>& J)
+{
   int tidx = threadIdx.x % q;
   int tidy = threadIdx.x / q;
 
-  tensor< double, dim, dim > J_q;
+  tensor<double, dim, dim> J_q;
   for (int i = 0; i < dim; i++) {
     for (int j = 0; j < dim; j++) {
       J_q[i][j] = J(j, i, tidy, tidx);
@@ -95,12 +90,13 @@ __device__ auto load_jacobian(const tensor< double, dim, dim, q, q > & J) {
 }
 
 template <int dim, int q>
-__device__ auto load_jacobian(const tensor< double, dim, dim, q, q, q > & J) {
-  int tidx =  threadIdx.x % q;
+__device__ auto load_jacobian(const tensor<double, dim, dim, q, q, q>& J)
+{
+  int tidx = threadIdx.x % q;
   int tidy = (threadIdx.x % (q * q)) / q;
-  int tidz =  threadIdx.x / (q * q);
+  int tidz = threadIdx.x / (q * q);
 
-  tensor< double, dim, dim > J_q;
+  tensor<double, dim, dim> J_q;
   for (int i = 0; i < dim; i++) {
     for (int j = 0; j < dim; j++) {
       for (int k = 0; k < dim; k++) {
@@ -123,27 +119,22 @@ __device__ void load(const dof_type& source, dof_type& destination)
 }
 
 template <Geometry g, typename test, typename trial, int q, typename lambda>
-__global__ void batched_cuda_kernel(const double * inputs,
-                                    double * outputs,
-                                    const double * jacobians,
-                                    TensorProductQuadratureRule<q> rule,
-                                    size_t num_elements, 
-                                    lambda material) {
-
-  using test_element = finite_element<g, test>;
+__global__ void batched_cuda_kernel(const double* inputs, double* outputs, const double* jacobians,
+                                    TensorProductQuadratureRule<q> rule, size_t num_elements, lambda material)
+{
+  using test_element  = finite_element<g, test>;
   using trial_element = finite_element<g, trial>;
 
-  auto u = reinterpret_cast< const typename trial_element::dof_type * >(inputs);
-  auto r = reinterpret_cast< typename test_element::dof_type * >(outputs);
+  auto u = reinterpret_cast<const typename trial_element::dof_type*>(inputs);
+  auto r = reinterpret_cast<typename test_element::dof_type*>(outputs);
   auto J = reinterpret_cast<const typename batched_jacobian<g, q>::type*>(jacobians);
 
   int e = threadIdx.y + elements_per_block<g>(q) * blockIdx.x;
 
   if (e < num_elements) {
-
     __shared__ union {
       typename trial_element::cache_type<q> trial_cache;
-      typename test_element::cache_type<q> test_cache;
+      typename test_element::cache_type<q>  test_cache;
     } shared[elements_per_block<g>(q)];
 
     // load the element values for this element
@@ -161,9 +152,7 @@ __global__ void batched_cuda_kernel(const double * inputs,
 
     // integrate the material response against the test-space basis functions
     test_element::integrate(response, J_q, rule, shared[threadIdx.y].test_cache, r[e]);
-
   }
-
 }
 
 }  // namespace serac
@@ -183,11 +172,12 @@ auto time(lambda&& f)
 }
 
 struct MassAndDiffusionQFunction {
-  template < typename T >
-  SERAC_HOST_DEVICE auto operator()(T input) {
+  template <typename T>
+  SERAC_HOST_DEVICE auto operator()(T input)
+  {
     auto [u, du_dx] = input;
-    auto source = rho * u;
-    auto flux = k * du_dx;
+    auto source     = rho * u;
+    auto flux       = k * du_dx;
     return serac::tuple{source, flux};
   }
 
@@ -195,7 +185,7 @@ struct MassAndDiffusionQFunction {
   double k;
 };
 
-constexpr double k = 2.0;
+constexpr double k   = 2.0;
 constexpr double rho = 2.0;
 
 constexpr MassAndDiffusionQFunction qfunc{rho, k};
@@ -263,14 +253,15 @@ void h1_h1_test_2D(int num_elements, int num_runs)
   {
     R1D = 0.0;
 
-    mfem::DeviceTensor<2, const double > u_d = mfem::Reshape(U1D.Read(), n * n, num_elements);
-    mfem::DeviceTensor<2, double > r_d = mfem::Reshape(R1D.ReadWrite(), n * n, num_elements);
-    mfem::DeviceTensor<4, const double > J_d = mfem::Reshape(J1D.Read(), q * q, dim, dim, num_elements);
-    int blocksize = 128;
-    int gridsize = (num_elements * q * q + blocksize - 1) / blocksize;
-    double runtime = time([&]() {
+    mfem::DeviceTensor<2, const double> u_d       = mfem::Reshape(U1D.Read(), n * n, num_elements);
+    mfem::DeviceTensor<2, double>       r_d       = mfem::Reshape(R1D.ReadWrite(), n * n, num_elements);
+    mfem::DeviceTensor<4, const double> J_d       = mfem::Reshape(J1D.Read(), q * q, dim, dim, num_elements);
+    int                                 blocksize = 128;
+    int                                 gridsize  = (num_elements * q * q + blocksize - 1) / blocksize;
+    double                              runtime   = time([&]() {
       for (int i = 0; i < num_runs; i++) {
-        serac::reference_cuda_kernel<Geometry::Quadrilateral, test, trial, q><<<gridsize, blocksize>>>(u_d, r_d, J_d, num_elements, qfunc);
+        serac::reference_cuda_kernel<Geometry::Quadrilateral, test, trial, q>
+            <<<gridsize, blocksize>>>(u_d, r_d, J_d, num_elements, qfunc);
         compiler::please_do_not_optimize_away(&R1D);
       }
       cudaDeviceSynchronize();
@@ -280,14 +271,15 @@ void h1_h1_test_2D(int num_elements, int num_runs)
   auto answer_reference = R1D;
 
   {
-    R1D            = 0.0;
-    auto rule = serac::MakeGaussLegendreRule<Geometry::Quadrilateral, q>();
-    constexpr int epb = serac::elements_per_block< Geometry::Quadrilateral >(q);
-    dim3 blocksize{q * q, epb, 1};
-    int gridsize = (num_elements + epb - 1) / epb;
-    double runtime = time([&]() {
+    R1D                = 0.0;
+    auto          rule = serac::MakeGaussLegendreRule<Geometry::Quadrilateral, q>();
+    constexpr int epb  = serac::elements_per_block<Geometry::Quadrilateral>(q);
+    dim3          blocksize{q * q, epb, 1};
+    int           gridsize = (num_elements + epb - 1) / epb;
+    double        runtime  = time([&]() {
       for (int i = 0; i < num_runs; i++) {
-        serac::batched_cuda_kernel<Geometry::Quadrilateral, test, trial, q><<<gridsize, blocksize>>>(U1D.Read(), R1D.ReadWrite(), J1D.Read(), rule, num_elements, qfunc);
+        serac::batched_cuda_kernel<Geometry::Quadrilateral, test, trial, q>
+            <<<gridsize, blocksize>>>(U1D.Read(), R1D.ReadWrite(), J1D.Read(), rule, num_elements, qfunc);
         compiler::please_do_not_optimize_away(&R1D);
       }
       cudaDeviceSynchronize();
@@ -419,14 +411,15 @@ void h1_h1_test_3D(int num_elements, int num_runs)
   {
     R1D = 0.0;
 
-    mfem::DeviceTensor<2, const double > u_d = mfem::Reshape(U1D.Read(), n * n * n, num_elements);
-    mfem::DeviceTensor<2, double > r_d = mfem::Reshape(R1D.ReadWrite(), n * n * n, num_elements);
-    mfem::DeviceTensor<4, const double > J_d = mfem::Reshape(J1D.Read(), q * q * q, dim, dim, num_elements);
-    int blocksize = 128;
-    int gridsize = (num_elements * q * q * q + blocksize - 1) / blocksize;
-    double runtime = time([&]() {
+    mfem::DeviceTensor<2, const double> u_d       = mfem::Reshape(U1D.Read(), n * n * n, num_elements);
+    mfem::DeviceTensor<2, double>       r_d       = mfem::Reshape(R1D.ReadWrite(), n * n * n, num_elements);
+    mfem::DeviceTensor<4, const double> J_d       = mfem::Reshape(J1D.Read(), q * q * q, dim, dim, num_elements);
+    int                                 blocksize = 128;
+    int                                 gridsize  = (num_elements * q * q * q + blocksize - 1) / blocksize;
+    double                              runtime   = time([&]() {
       for (int i = 0; i < num_runs; i++) {
-        serac::reference_cuda_kernel<Geometry::Hexahedron, test, trial, q><<<gridsize, blocksize>>>(u_d, r_d, J_d, num_elements, qfunc);
+        serac::reference_cuda_kernel<Geometry::Hexahedron, test, trial, q>
+            <<<gridsize, blocksize>>>(u_d, r_d, J_d, num_elements, qfunc);
         compiler::please_do_not_optimize_away(&R1D);
       }
       cudaDeviceSynchronize();
@@ -436,14 +429,15 @@ void h1_h1_test_3D(int num_elements, int num_runs)
   auto answer_reference = R1D;
 
   {
-    R1D            = 0.0;
-    auto rule = serac::MakeGaussLegendreRule<Geometry::Hexahedron, q>();
-    constexpr int epb = serac::elements_per_block< Geometry::Hexahedron >(q);
-    dim3 blocksize{q * q * q, epb, 1};
-    int gridsize = (num_elements + epb - 1) / epb;
-    double runtime = time([&]() {
+    R1D                = 0.0;
+    auto          rule = serac::MakeGaussLegendreRule<Geometry::Hexahedron, q>();
+    constexpr int epb  = serac::elements_per_block<Geometry::Hexahedron>(q);
+    dim3          blocksize{q * q * q, epb, 1};
+    int           gridsize = (num_elements + epb - 1) / epb;
+    double        runtime  = time([&]() {
       for (int i = 0; i < num_runs; i++) {
-        serac::batched_cuda_kernel<Geometry::Hexahedron, test, trial, q><<<gridsize, blocksize>>>(U1D.Read(), R1D.ReadWrite(), J1D.Read(), rule, num_elements, qfunc);
+        serac::batched_cuda_kernel<Geometry::Hexahedron, test, trial, q>
+            <<<gridsize, blocksize>>>(U1D.Read(), R1D.ReadWrite(), J1D.Read(), rule, num_elements, qfunc);
         compiler::please_do_not_optimize_away(&R1D);
       }
       cudaDeviceSynchronize();
@@ -479,25 +473,24 @@ void h1_h1_test_3D(int num_elements, int num_runs)
     }
 
     double mass_runtime = time([&]() {
-                            for (int i = 0; i < num_runs; i++) {
-                              mfem::SmemPAMassApply3D<n, q>(num_elements, b_, bt_, rho_dv_1D, U1D, R1D);
-                              compiler::please_do_not_optimize_away(&R1D);
-                            }
-                          });
+      for (int i = 0; i < num_runs; i++) {
+        mfem::SmemPAMassApply3D<n, q>(num_elements, b_, bt_, rho_dv_1D, U1D, R1D);
+        compiler::please_do_not_optimize_away(&R1D);
+      }
+    });
     std::cout << "average mfem mass kernel time: " << mass_runtime / num_runs << std::endl;
 
-    double diffusion_runtime =
-        time([&]() {
-          for (int i = 0; i < num_runs; i++) {
-            mfem::SmemPADiffusionApply3D<n, q>(num_elements, symmetric = false, b_, g_, k_invJ_invJT_dv_1D, U1D, R1D);
-            compiler::please_do_not_optimize_away(&R1D);
-          }
-        });
+    double diffusion_runtime = time([&]() {
+      for (int i = 0; i < num_runs; i++) {
+        mfem::SmemPADiffusionApply3D<n, q>(num_elements, symmetric = false, b_, g_, k_invJ_invJT_dv_1D, U1D, R1D);
+        compiler::please_do_not_optimize_away(&R1D);
+      }
+    });
     std::cout << "average mfem diffusion kernel time: " << diffusion_runtime / num_runs << std::endl;
 
     std::cout << "average mfem combined kernel time: " << (mass_runtime + diffusion_runtime) / num_runs << std::endl;
   }
-  error            = answer_reference;
+  error = answer_reference;
   error -= R1D;
   relative_error = error.Norml2() / answer_reference.Norml2();
   std::cout << "error: " << relative_error << std::endl;
@@ -541,21 +534,21 @@ void hcurl_hcurl_test_2D(int num_elements, int num_runs)
           J(i, r, c, e) = J_q[r][c] = (r == c) + 0.1 * distribution(generator);
         }
       }
-
     }
   }
 
   {
     R1D = 0.0;
 
-    mfem::DeviceTensor<2, const double > u_d = mfem::Reshape(U1D.Read(), trial_element::ndof, num_elements);
-    mfem::DeviceTensor<2, double > r_d = mfem::Reshape(R1D.ReadWrite(), test_element::ndof, num_elements);
-    mfem::DeviceTensor<4, const double > J_d = mfem::Reshape(J1D.Read(), q * q, dim, dim, num_elements);
-    int blocksize = 128;
-    int gridsize = (num_elements * q * q + blocksize - 1) / blocksize;
-    double runtime = time([&]() {
+    mfem::DeviceTensor<2, const double> u_d       = mfem::Reshape(U1D.Read(), trial_element::ndof, num_elements);
+    mfem::DeviceTensor<2, double>       r_d       = mfem::Reshape(R1D.ReadWrite(), test_element::ndof, num_elements);
+    mfem::DeviceTensor<4, const double> J_d       = mfem::Reshape(J1D.Read(), q * q, dim, dim, num_elements);
+    int                                 blocksize = 128;
+    int                                 gridsize  = (num_elements * q * q + blocksize - 1) / blocksize;
+    double                              runtime   = time([&]() {
       for (int i = 0; i < num_runs; i++) {
-        serac::reference_cuda_kernel<Geometry::Quadrilateral, test, trial, q><<<gridsize, blocksize>>>(u_d, r_d, J_d, num_elements, qfunc);
+        serac::reference_cuda_kernel<Geometry::Quadrilateral, test, trial, q>
+            <<<gridsize, blocksize>>>(u_d, r_d, J_d, num_elements, qfunc);
         compiler::please_do_not_optimize_away(&R1D);
       }
       cudaDeviceSynchronize();
@@ -565,15 +558,16 @@ void hcurl_hcurl_test_2D(int num_elements, int num_runs)
   auto answer_reference = R1D;
 
   {
-    R1D            = 0.0;
+    R1D = 0.0;
 
-    auto rule = serac::MakeGaussLegendreRule<Geometry::Quadrilateral, q>();
-    constexpr int epb = serac::elements_per_block< Geometry::Quadrilateral >(q);
-    dim3 blocksize{q * q, epb, 1};
-    int gridsize = (num_elements + epb - 1) / epb;
-    double runtime = time([&]() {
+    auto          rule = serac::MakeGaussLegendreRule<Geometry::Quadrilateral, q>();
+    constexpr int epb  = serac::elements_per_block<Geometry::Quadrilateral>(q);
+    dim3          blocksize{q * q, epb, 1};
+    int           gridsize = (num_elements + epb - 1) / epb;
+    double        runtime  = time([&]() {
       for (int i = 0; i < num_runs; i++) {
-        serac::batched_cuda_kernel<Geometry::Quadrilateral, test, trial, q><<<gridsize, blocksize>>>(U1D.Read(), R1D.ReadWrite(), J1D.Read(), rule, num_elements, qfunc);
+        serac::batched_cuda_kernel<Geometry::Quadrilateral, test, trial, q>
+            <<<gridsize, blocksize>>>(U1D.Read(), R1D.ReadWrite(), J1D.Read(), rule, num_elements, qfunc);
         compiler::please_do_not_optimize_away(&R1D);
       }
       cudaDeviceSynchronize();
@@ -717,14 +711,15 @@ void hcurl_hcurl_test_3D(int num_elements, int num_runs)
   {
     R1D = 0.0;
 
-    mfem::DeviceTensor<2, const double > u_d = mfem::Reshape(U1D.Read(), n * n * n, num_elements);
-    mfem::DeviceTensor<2, double > r_d = mfem::Reshape(R1D.ReadWrite(), n * n * n, num_elements);
-    mfem::DeviceTensor<4, const double > J_d = mfem::Reshape(J1D.Read(), q * q * q, dim, dim, num_elements);
-    int blocksize = 128;
-    int gridsize = (num_elements * q * q * q + blocksize - 1) / blocksize;
-    double runtime = time([&]() {
+    mfem::DeviceTensor<2, const double> u_d       = mfem::Reshape(U1D.Read(), n * n * n, num_elements);
+    mfem::DeviceTensor<2, double>       r_d       = mfem::Reshape(R1D.ReadWrite(), n * n * n, num_elements);
+    mfem::DeviceTensor<4, const double> J_d       = mfem::Reshape(J1D.Read(), q * q * q, dim, dim, num_elements);
+    int                                 blocksize = 128;
+    int                                 gridsize  = (num_elements * q * q * q + blocksize - 1) / blocksize;
+    double                              runtime   = time([&]() {
       for (int i = 0; i < num_runs; i++) {
-        serac::reference_cuda_kernel<Geometry::Hexahedron, test, trial, q><<<gridsize, blocksize>>>(u_d, r_d, J_d, num_elements, qfunc);
+        serac::reference_cuda_kernel<Geometry::Hexahedron, test, trial, q>
+            <<<gridsize, blocksize>>>(u_d, r_d, J_d, num_elements, qfunc);
         compiler::please_do_not_optimize_away(&R1D);
       }
       cudaDeviceSynchronize();
@@ -734,14 +729,16 @@ void hcurl_hcurl_test_3D(int num_elements, int num_runs)
   auto answer_reference = R1D;
 
   {
-    R1D            = 0.0;
+    R1D = 0.0;
 
-    auto rule = serac::MakeGaussLegendreRule<Geometry::Hexahedron, q>();
-    dim3 blocksize{q, q, q};
-    int gridsize = num_elements;
-    double runtime = time([&]() {
+    auto   rule = serac::MakeGaussLegendreRule<Geometry::Hexahedron, q>();
+    constexpr int epb  = serac::elements_per_block<Geometry::Hexahedron>(q);
+    dim3          blocksize{q * q * q, epb, 1};
+    int           gridsize = (num_elements + epb - 1) / epb;
+    double runtime  = time([&]() {
       for (int i = 0; i < num_runs; i++) {
-        serac::batched_cuda_kernel<Geometry::Hexahedron, test, trial, q><<<gridsize, blocksize>>>(U1D.Read(), R1D.ReadWrite(), J1D.Read(), rule, num_elements, qfunc);
+        serac::batched_cuda_kernel<Geometry::Hexahedron, test, trial, q>
+            <<<gridsize, blocksize>>>(U1D.Read(), R1D.ReadWrite(), J1D.Read(), rule, num_elements, qfunc);
         compiler::please_do_not_optimize_away(&R1D);
       }
       cudaDeviceSynchronize();
@@ -790,21 +787,21 @@ void hcurl_hcurl_test_3D(int num_elements, int num_runs)
     }
 
     double mass_runtime = time([&]() {
-                            for (int i = 0; i < num_runs; i++) {
-                              mfem::PAHcurlMassApply3D(n, q, num_elements, symmetric = false, bo_, bc_, bot_, bct_,
-                                                       rho_invJ_invJT_dv_1D, U1D, R1D);
-                              compiler::please_do_not_optimize_away(&R1D);
-                            }
-                          });
+      for (int i = 0; i < num_runs; i++) {
+        mfem::PAHcurlMassApply3D(n, q, num_elements, symmetric = false, bo_, bc_, bot_, bct_, rho_invJ_invJT_dv_1D, U1D,
+                                 R1D);
+        compiler::please_do_not_optimize_away(&R1D);
+      }
+    });
     std::cout << "average mfem mass kernel time: " << mass_runtime / num_runs << std::endl;
 
     double curlcurl_runtime = time([&]() {
-                                for (int i = 0; i < num_runs; i++) {
-                                  mfem::PACurlCurlApply3D<n, q>(n, q, symmetric = false, num_elements, bo_, bc_, bot_,
-                                                                bct_, gc_, gct_, k_JTJ_dv_over_detJsq_1D, U1D, R1D);
-                                  compiler::please_do_not_optimize_away(&R1D);
-                                }
-                              });
+      for (int i = 0; i < num_runs; i++) {
+        mfem::PACurlCurlApply3D<n, q>(n, q, symmetric = false, num_elements, bo_, bc_, bot_, bct_, gc_, gct_,
+                                      k_JTJ_dv_over_detJsq_1D, U1D, R1D);
+        compiler::please_do_not_optimize_away(&R1D);
+      }
+    });
     std::cout << "average mfem curlcurl kernel time: " << curlcurl_runtime / num_runs << std::endl;
 
     std::cout << "average mfem combined kernel time: " << (mass_runtime + curlcurl_runtime) / num_runs << std::endl;
@@ -818,20 +815,18 @@ void hcurl_hcurl_test_3D(int num_elements, int num_runs)
 
 int main()
 {
-
   mfem::Device device("cuda");
 
   int num_runs     = 10;
-  int num_elements = 40000;
-  //h1_h1_test_2D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
-  //h1_h1_test_2D<2 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
-  //h1_h1_test_2D<3 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
-  //h1_h1_test_3D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
-  //h1_h1_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
-  //h1_h1_test_3D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
-  hcurl_hcurl_test_2D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
-  hcurl_hcurl_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
-  hcurl_hcurl_test_2D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
-  //hcurl_hcurl_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
-
+  int num_elements = 20000;
+  // h1_h1_test_2D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
+  // h1_h1_test_2D<2 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
+  // h1_h1_test_2D<3 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
+  // h1_h1_test_3D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
+  // h1_h1_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
+  // h1_h1_test_3D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
+  // hcurl_hcurl_test_2D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
+  // hcurl_hcurl_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
+  // hcurl_hcurl_test_2D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
+  hcurl_hcurl_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
 }

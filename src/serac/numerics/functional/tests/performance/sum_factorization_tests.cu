@@ -11,7 +11,7 @@ template <typename trial_space, Geometry geom, int q>
 __global__ void preprocess_kernel_element_library(mfem::DeviceTensor<4, const double> input,
                                                   mfem::DeviceTensor<5, double>       output)
 {
-  using element_type = finite_element< geom, trial_space >;
+  using element_type = finite_element<geom, trial_space>;
 
   static constexpr int  n    = trial_space::order + 1;
   static constexpr auto rule = MakeGaussLegendreRule<geom, q>();
@@ -127,7 +127,7 @@ __global__ void postprocess_kernel_with_cache(mfem::DeviceTensor<4, double> r_e)
 template <typename trial_space, Geometry geom, int q>
 __global__ void postprocess_kernel_element_library(mfem::DeviceTensor<5, double> r_e)
 {
-  using element_type = finite_element< geom, trial_space >;
+  using element_type         = finite_element<geom, trial_space>;
   static constexpr int  n    = trial_space::order + 1;
   static constexpr auto rule = MakeGaussLegendreRule<geom, q>();
 
@@ -136,7 +136,7 @@ __global__ void postprocess_kernel_element_library(mfem::DeviceTensor<5, double>
   __shared__ tensor<double, 3, q, q, n> A1;
   __shared__ tensor<double, 2, q, n, n> A2;
 
-  source(0, threadIdx.z, threadIdx.y, threadIdx.x) = 1.0;
+  source(0, threadIdx.z, threadIdx.y, threadIdx.x)  = 1.0;
   flux(0, 0, threadIdx.z, threadIdx.y, threadIdx.x) = threadIdx.x * 2.0;
   flux(1, 0, threadIdx.z, threadIdx.y, threadIdx.x) = threadIdx.y * 3.0;
   flux(2, 0, threadIdx.z, threadIdx.y, threadIdx.x) = threadIdx.z * 5.0;
@@ -418,7 +418,6 @@ int main()
       }
     }
   }
-
 
   if (true) {
     constexpr int p = 3;
@@ -725,6 +724,5 @@ int main()
         }
       }
     }
-
   }
 }

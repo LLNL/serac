@@ -238,31 +238,24 @@ static void PADiffusionApply3D(const int NE, const bool symmetric, const Array<d
         for (int dy = 0; dy < D1D; ++dy) {
           const double wy  = Bt(dy, qy);
           const double wDy = Gt(dy, qy);
-            for (int dx = 0; dx < D1D; ++dx)
-               {
-                  gradXY[dy][dx][0] += gradX[dx][0] * wy;
-                  gradXY[dy][dx][1] += gradX[dx][1] * wDy;
-                  gradXY[dy][dx][2] += gradX[dx][2] * wy;
-               }
-            }
-         }
-         for (int dz = 0; dz < D1D; ++dz)
-         {
-            const double wz  = Bt(dz,qz);
-            const double wDz = Gt(dz,qz);
-            for (int dy = 0; dy < D1D; ++dy)
-            {
-               for (int dx = 0; dx < D1D; ++dx)
-               {
-                  Y(dx,dy,dz,e) +=
-                     ((gradXY[dy][dx][0] * wz) +
-                      (gradXY[dy][dx][1] * wz) +
-                      (gradXY[dy][dx][2] * wDz));
-               }
-            }
-         }
+          for (int dx = 0; dx < D1D; ++dx) {
+            gradXY[dy][dx][0] += gradX[dx][0] * wy;
+            gradXY[dy][dx][1] += gradX[dx][1] * wDy;
+            gradXY[dy][dx][2] += gradX[dx][2] * wy;
+          }
+        }
       }
-   });
+      for (int dz = 0; dz < D1D; ++dz) {
+        const double wz  = Bt(dz, qz);
+        const double wDz = Gt(dz, qz);
+        for (int dy = 0; dy < D1D; ++dy) {
+          for (int dx = 0; dx < D1D; ++dx) {
+            Y(dx, dy, dz, e) += ((gradXY[dy][dx][0] * wz) + (gradXY[dy][dx][1] * wz) + (gradXY[dy][dx][2] * wDz));
+          }
+        }
+      }
+    }
+  });
 }
 
-}
+}  // namespace mfem

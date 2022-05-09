@@ -181,7 +181,7 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
     }
     for (int qy = 0; qy < q; qy++) {
       for (int qx = 0; qx < q; qx++) {
-        tensor< double, dim, dim > J;
+        tensor<double, dim, dim> J;
         for (int row = 0; row < dim; row++) {
           for (int col = 0; col < dim; col++) {
             J[row][col] = jacobians(col, row, qy, qx);
@@ -223,7 +223,7 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
 
     for (int qy = 0; qy < q; qy++) {
       for (int qx = 0; qx < q; qx++) {
-        tensor< double, dim, dim > J_T;
+        tensor<double, dim, dim> J_T;
         for (int row = 0; row < dim; row++) {
           for (int col = 0; col < dim; col++) {
             J_T[row][col] = jacobians(row, col, qy, qx);
@@ -263,10 +263,9 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
   }
 
   template <int q>
-  static SERAC_DEVICE auto interpolate(const dof_type& X, const tensor<double, dim, dim> & J,
-                                       const TensorProductQuadratureRule<q>& rule, cache_type<q> & A)
+  static SERAC_DEVICE auto interpolate(const dof_type& X, const tensor<double, dim, dim>& J,
+                                       const TensorProductQuadratureRule<q>& rule, cache_type<q>& A)
   {
-
     int tidx = threadIdx.x % q;
     int tidy = threadIdx.x / q;
 
@@ -290,8 +289,8 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
     __shared__ tensor<double, q, n> B;
     __shared__ tensor<double, q, n> G;
     for (int entry = threadIdx.x; entry < n * q; entry += q * q) {
-      int i = entry % n; 
-      int j = entry / n;
+      int i   = entry % n;
+      int j   = entry / n;
       B(j, i) = B_(j, i);
       G(j, i) = G_(j, i);
     }
@@ -316,7 +315,7 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
       for (int qy = tidy; qy < q; qy += q) {
         for (int qx = tidx; qx < q; qx += q) {
           for (int dy = 0; dy < n; dy++) {
-            get<0>(qf_input)[i]    += B(qy, dy) * A(0, dy, qx);
+            get<0>(qf_input)[i] += B(qy, dy) * A(0, dy, qx);
             get<1>(qf_input)[i][0] += B(qy, dy) * A(1, dy, qx);
             get<1>(qf_input)[i][1] += G(qy, dy) * A(0, dy, qx);
           }
@@ -330,17 +329,15 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
   }
 
   template <typename T1, typename T2, int q>
-  static SERAC_DEVICE void integrate(tuple<T1, T2> & response, const tensor<double, dim, dim> & J,
-                                     const TensorProductQuadratureRule<q>& rule, cache_type<q>& A,
-                                     dof_type& residual)
+  static SERAC_DEVICE void integrate(tuple<T1, T2>& response, const tensor<double, dim, dim>& J,
+                                     const TensorProductQuadratureRule<q>& rule, cache_type<q>& A, dof_type& residual)
   {
-
     int tidx = threadIdx.x % q;
     int tidy = threadIdx.x / q;
 
-    static constexpr auto points1D = GaussLegendreNodes<q>();
+    static constexpr auto points1D  = GaussLegendreNodes<q>();
     static constexpr auto weights1D = GaussLegendreWeights<q>();
-    static constexpr auto B_       = [=]() {
+    static constexpr auto B_        = [=]() {
       tensor<double, q, n> B{};
       for (int i = 0; i < q; i++) {
         B[i] = GaussLobattoInterpolation<n>(points1D[i]);
@@ -359,8 +356,8 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
     __shared__ tensor<double, q, n> B;
     __shared__ tensor<double, q, n> G;
     for (int entry = threadIdx.x; entry < n * q; entry += q * q) {
-      int i = entry % n; 
-      int j = entry / n;
+      int i   = entry % n;
+      int j   = entry / n;
       B(j, i) = B_(j, i);
       G(j, i) = G_(j, i);
     }
@@ -372,8 +369,7 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
     get<1>(response) = dot(get<1>(response), inv(transpose(J))) * dv;
 
     for (int i = 0; i < c; i++) {
-
-      // this first contraction is performed a little differently, since `response` is not 
+      // this first contraction is performed a little differently, since `response` is not
       // in shared memory, so each thread can only access its own values
       for (int qy = tidy; qy < q; qy += q) {
         for (int dx = tidx; dx < n; dx += q) {
@@ -384,7 +380,7 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
       __syncthreads();
 
       for (int offset = 0; offset < n; offset++) {
-        int dx = (tidx + offset) % n;
+        int  dx  = (tidx + offset) % n;
         auto sum = B(tidx, dx) * get<0>(response)(i) + G(tidx, dx) * get<1>(response)(i, 0);
         atomicAdd(&A(0, dx, tidy), sum);
         atomicAdd(&A(1, dx, tidy), B(tidx, dx) * get<1>(response)(i, 1));
@@ -403,6 +399,5 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
       }
     }
   }
-
 };
 /// @endcond

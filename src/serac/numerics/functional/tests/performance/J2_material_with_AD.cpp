@@ -146,9 +146,9 @@ auto displacement_gradient(double t)
               }};
 }
 
-auto directional_derivative(tensor< double, 3, 3 > A)
+auto directional_derivative(tensor<double, 3, 3> A)
 {
-  return make_tensor<3,3>([&](int i, int j){ return dual< double >{A[i][j], 1.0 * (i == 1) * (j == 1)}; });
+  return make_tensor<3, 3>([&](int i, int j) { return dual<double>{A[i][j], 1.0 * (i == 1) * (j == 1)}; });
 }
 
 int main()

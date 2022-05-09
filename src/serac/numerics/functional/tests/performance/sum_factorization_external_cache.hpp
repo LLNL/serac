@@ -5,7 +5,6 @@ __device__ auto BatchPreprocessCUDA(const tensor<double, n, n, n>& X, GaussLegen
                                     const tensor<double, q, n>& B, const tensor<double, q, n>& G,
                                     tensor<double, 3, n, n, q>& A1, tensor<double, 3, n, q, q>& A2)
 {
-
   if constexpr (geom == Geometry::Hexahedron) {
     for (int dz = threadIdx.z; dz < n; dz += blockDim.z) {
       for (int dy = threadIdx.y; dy < n; dy += blockDim.y) {
@@ -44,8 +43,8 @@ __device__ auto BatchPreprocessCUDA(const tensor<double, n, n, n>& X, GaussLegen
     for (int qz = threadIdx.z; qz < q; qz += blockDim.z) {
       for (int qy = threadIdx.y; qy < q; qy += blockDim.y) {
         for (int qx = threadIdx.x; qx < q; qx += blockDim.x) {
-          for (int dz = 0; dz <n; dz++) {
-            qf_input.value       += B(qz, dz) * A2(0, dz, qy, qx);
+          for (int dz = 0; dz < n; dz++) {
+            qf_input.value += B(qz, dz) * A2(0, dz, qy, qx);
             qf_input.gradient[0] += B(qz, dz) * A2(1, dz, qy, qx);
             qf_input.gradient[1] += B(qz, dz) * A2(2, dz, qy, qx);
             qf_input.gradient[2] += G(qz, dz) * A2(0, dz, qy, qx);
@@ -59,12 +58,12 @@ __device__ auto BatchPreprocessCUDA(const tensor<double, n, n, n>& X, GaussLegen
 }
 
 template <typename trial_space, Geometry geom, int q, int n>
-__device__ void BatchPostprocessCUDA(const tensor<double, 4, q, q, q> & f, GaussLegendreRule<geom, q>, mfem::DeviceTensor<4, double> r_e, int e,
-                                     const tensor<double, q, n>& B, const tensor<double, q, n>& G,
-                                     tensor<double, 3, q, q, n>& A1, tensor<double, 2, q, n, n>& A2) {
-
+__device__ void BatchPostprocessCUDA(const tensor<double, 4, q, q, q>& f, GaussLegendreRule<geom, q>,
+                                     mfem::DeviceTensor<4, double> r_e, int e, const tensor<double, q, n>& B,
+                                     const tensor<double, q, n>& G, tensor<double, 3, q, q, n>& A1,
+                                     tensor<double, 2, q, n, n>& A2)
+{
   if constexpr (geom == Geometry::Hexahedron) {
-
     for (int qz = threadIdx.z; qz < q; qz += blockDim.z) {
       for (int qy = threadIdx.y; qy < q; qy += blockDim.y) {
         for (int dx = threadIdx.x; dx < n; dx += blockDim.x) {
@@ -107,13 +106,11 @@ __device__ void BatchPostprocessCUDA(const tensor<double, 4, q, q, q> & f, Gauss
             sum += B(qz, dz) * A2(0, qz, dy, dx);
             sum += G(qz, dz) * A2(1, qz, dy, dx);
           }
-          r_e(dx,dy,dz,e) += sum;
+          r_e(dx, dy, dz, e) += sum;
         }
       }
     }
-
   }
-
 }
 
 }  // namespace serac

@@ -354,8 +354,8 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
   }
 
   template <int q>
-  static SERAC_DEVICE auto interpolate(const dof_type& element_values, const tensor<double, dim, dim> & J,
-                                       const TensorProductQuadratureRule<q>& rule, cache_type<q> & A)
+  static SERAC_DEVICE auto interpolate(const dof_type& element_values, const tensor<double, dim, dim>& J,
+                                       const TensorProductQuadratureRule<q>& rule, cache_type<q>& A)
   {
     int tidx = threadIdx.x % q;
     int tidy = threadIdx.x / q;
@@ -390,7 +390,7 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     __shared__ tensor<double, q, n> B2;
     __shared__ tensor<double, q, n> G2;
     for (int entry = threadIdx.x; entry < n * q; entry += q * q) {
-      int i = entry % n; 
+      int i = entry % n;
       int j = entry / n;
       if (i < p) {
         B1(j, i) = B1_(j, i);
@@ -400,7 +400,7 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     }
     __syncthreads();
 
-    tuple< tensor<double, dim>, double > qf_input{};
+    tuple<tensor<double, dim>, double> qf_input{};
 
     /////////////////////////////////
     ////////// X-component //////////
@@ -424,7 +424,7 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
           sum[1] += G2(qy, dy) * A(dy, qx);
         }
         serac::get<0>(qf_input)[0] += sum[0];
-        serac::get<1>(qf_input)    -= sum[1];
+        serac::get<1>(qf_input) -= sum[1];
       }
     }
     __syncthreads();
@@ -451,7 +451,7 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
           sum[1] += G2(qx, dx) * A(dx, qy);
         }
         serac::get<0>(qf_input)[1] += sum[0];
-        serac::get<1>(qf_input)    += sum[1];
+        serac::get<1>(qf_input) += sum[1];
       }
     }
 
@@ -464,14 +464,13 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
   }
 
   template <typename T1, typename T2, int q>
-  static SERAC_DEVICE void integrate(tuple<T1, T2> & response, const tensor<double, dim, dim> & J,
-                                     const TensorProductQuadratureRule<q>& rule, cache_type<q>& A,
-                                     dof_type& residual) {
-
+  static SERAC_DEVICE void integrate(tuple<T1, T2>& response, const tensor<double, dim, dim>& J,
+                                     const TensorProductQuadratureRule<q>& rule, cache_type<q>& A, dof_type& residual)
+  {
     int tidx = threadIdx.x % q;
     int tidy = threadIdx.x / q;
 
-    static constexpr auto points1D = GaussLegendreNodes<q>();
+    static constexpr auto points1D  = GaussLegendreNodes<q>();
     static constexpr auto weights1D = GaussLegendreWeights<q>();
 
     static constexpr auto B1_ = [=]() {
@@ -498,11 +497,11 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
       return G2;
     }();
 
-    __shared__ tensor<double, q, n> B1;
+    __shared__ tensor<double, q, p> B1;
     __shared__ tensor<double, q, n> B2;
     __shared__ tensor<double, q, n> G2;
     for (int entry = threadIdx.x; entry < n * q; entry += q * q) {
-      int i = entry % n; 
+      int i = entry % n;
       int j = entry / n;
       if (i < p) {
         B1(j, i) = B1_(j, i);
@@ -517,7 +516,7 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     // according to the weight of their quadrature point, so that when we add them
     // together, it approximates the integral over the element
     auto detJ = det(J);
-    auto dv = detJ * weights1D[tidx] * weights1D[tidy];
+    auto dv   = detJ * weights1D[tidx] * weights1D[tidy];
 
     get<0>(response) = linear_solve(J, get<0>(response)) * dv;
     get<1>(response) = get<1>(response) * (dv / detJ);
@@ -526,7 +525,7 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     ////////// X-component //////////
     /////////////////////////////////
 
-    // this first contraction is performed a little differently, since `response` is not 
+    // this first contraction is performed a little differently, since `response` is not
     // in shared memory, so each thread can only access its own values
     for (int qy = tidy; qy < q; qy += q) {
       for (int dx = tidx; dx < n; dx += q) {
@@ -536,21 +535,11 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     __syncthreads();
 
     for (int offset = 0; offset < n; offset++) {
-      int dy = (tidy + offset) % n;
+      int  dy  = (tidy + offset) % n;
       auto sum = B2(tidy, dy) * get<0>(response)[0] - G2(tidy, dy) * get<1>(response);
       atomicAdd(&A(dy, tidx), sum);
     }
     __syncthreads();
-
-//    for (int j = 0; j < (p + 1); j++) {
-//      for (int qx = 0; qx < q; qx++) {
-//        double sum = 0.0;
-//        for (int qy = 0; qy < q; qy++) {
-//          sum += B2(qy, j) * sources(qy, qx)[0] - G2(qy, j) * fluxes(qy, qx);
-//        }
-//        A(j, qx) = sum;
-//      }
-//    }
 
     for (int dy = tidy; dy < p + 1; dy += q) {
       for (int dx = tidx; dx < p; dx += q) {
@@ -567,7 +556,7 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     ////////// Y-component //////////
     /////////////////////////////////
 
-    // this first contraction is performed a little differently, since `response` is not 
+    // this first contraction is performed a little differently, since `response` is not
     // in shared memory, so each thread can only access its own values
     for (int qy = tidy; qy < q; qy += q) {
       for (int dx = tidx; dx < n; dx += q) {
@@ -577,21 +566,11 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     __syncthreads();
 
     for (int offset = 0; offset < n; offset++) {
-      int dx = (tidx + offset) % n;
+      int  dx  = (tidx + offset) % n;
       auto sum = B2(tidx, dx) * get<0>(response)[1] + G2(tidx, dx) * get<1>(response);
       atomicAdd(&A(dx, tidy), sum);
     }
     __syncthreads();
-
-//    for (int i = 0; i < (p + 1); i++) {
-//      for (int qy = 0; qy < q; qy++) {
-//        double sum = 0.0;
-//        for (int qx = 0; qx < q; qx++) {
-//          sum += B2(qx, i) * sources(qy, qx)[1] + G2(qx, i) * fluxes(qy, qx);
-//        }
-//        A(i, qy) = sum;
-//      }
-//    }
 
     for (int dy = tidy; dy < p; dy += q) {
       for (int dx = tidx; dx < p + 1; dx += q) {
@@ -603,6 +582,5 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
       }
     }
   }
-
 };
 /// @endcond

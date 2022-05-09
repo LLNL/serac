@@ -190,8 +190,8 @@ __global__ void bandwidth_test_make_tensor(mfem::DeviceTensor<6, double>       o
 }
 
 template <int dim, int q>
-__global__ void bandwidth_test_array_of_tensors(serac::tensor<double, dim, dim, q>* output, serac::tensor<double, dim, dim, q>* input,
-                                       int num_elements)
+__global__ void bandwidth_test_array_of_tensors(serac::tensor<double, dim, dim, q>* output,
+                                                serac::tensor<double, dim, dim, q>* input, int num_elements)
 {
   int e = blockIdx.x;
 
@@ -208,11 +208,11 @@ __global__ void bandwidth_test_array_of_tensors(serac::tensor<double, dim, dim, 
       output[e][i][j][threadIdx.x] = J[i][j];
     }
   }
-
 }
 
-template < int dim, int q >
-__device__ void read_in(serac::tensor < double, dim, dim > & output, const serac::tensor < double, dim, dim, q > & input) {
+template <int dim, int q>
+__device__ void read_in(serac::tensor<double, dim, dim>& output, const serac::tensor<double, dim, dim, q>& input)
+{
   for (int i = 0; i < dim; i++) {
     for (int j = 0; j < dim; j++) {
       output[i][j] = input[i][j][threadIdx.x];
@@ -220,8 +220,9 @@ __device__ void read_in(serac::tensor < double, dim, dim > & output, const serac
   }
 }
 
-template < int dim, int q >
-__device__ void write_out(serac::tensor < double, dim, dim, q > & output, const serac::tensor < double, dim, dim > & input) {
+template <int dim, int q>
+__device__ void write_out(serac::tensor<double, dim, dim, q>& output, const serac::tensor<double, dim, dim>& input)
+{
   for (int i = 0; i < dim; i++) {
     for (int j = 0; j < dim; j++) {
       output[i][j][threadIdx.x] = input[i][j];
@@ -230,8 +231,8 @@ __device__ void write_out(serac::tensor < double, dim, dim, q > & output, const 
 }
 
 template <int dim, int q>
-__global__ void bandwidth_test_array_of_tensors_2(serac::tensor<double, dim, dim, q>* output, serac::tensor<double, dim, dim, q>* input,
-                                       int num_elements)
+__global__ void bandwidth_test_array_of_tensors_2(serac::tensor<double, dim, dim, q>* output,
+                                                  serac::tensor<double, dim, dim, q>* input, int num_elements)
 {
   int e = blockIdx.x;
 
@@ -240,9 +241,7 @@ __global__ void bandwidth_test_array_of_tensors_2(serac::tensor<double, dim, dim
   read_in(J, input[e]);
 
   write_out(output[e], J);
-
 }
-
 
 int main()
 {
@@ -271,15 +270,15 @@ int main()
       bandwidth_test_raw_ptr<<<gridsize, blocksize>>>(inputs, outputs, n);
     }
 
-    dim3 blocksize = {q, q, q};
+    dim3 blocksize   = {q, q, q};
     dim3 blocksize1D = {q * q * q, 1, 1};
-    dim3 gridsize  = num_elements;
+    dim3 gridsize    = num_elements;
     bandwidth_test_DeviceTensor<dim, q><<<gridsize, blocksize>>>(inputs5D, outputs5D, num_elements);
     bandwidth_test_DeviceTensor<dim, q><<<gridsize, blocksize>>>(inputs6D, outputs6D, num_elements);
     bandwidth_test_make_tensor<dim, q><<<gridsize, blocksize>>>(inputs6D, outputs6D, num_elements);
 
-    auto inputs_tensor = reinterpret_cast< serac::tensor< double, dim, dim, q * q * q > * >(inputs);
-    auto outputs_tensor = reinterpret_cast< serac::tensor< double, dim, dim, q * q * q > * >(outputs);
+    auto inputs_tensor  = reinterpret_cast<serac::tensor<double, dim, dim, q * q * q>*>(inputs);
+    auto outputs_tensor = reinterpret_cast<serac::tensor<double, dim, dim, q * q * q>*>(outputs);
 
     bandwidth_test_array_of_tensors<<<gridsize, blocksize1D>>>(inputs_tensor, outputs_tensor, num_elements);
     bandwidth_test_array_of_tensors_2<<<gridsize, blocksize1D>>>(inputs_tensor, outputs_tensor, num_elements);
