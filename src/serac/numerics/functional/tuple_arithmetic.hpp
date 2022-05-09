@@ -31,31 +31,6 @@ namespace serac {
 /// @cond
 namespace detail {
 
-/**
- * @brief Trait for checking if a type is a @p camp::tuple
- */
-template <typename T>
-struct is_tuple : std::false_type {
-};
-
-/// @overload
-template <typename... T>
-struct is_tuple<camp::tuple<T...> > : std::true_type {
-};
-
-/**
- * @brief Trait for checking if a type if a @p camp::tuple containing only @p camp::tuple
- */
-template <typename T>
-struct is_tuple_of_tuples : std::false_type {
-};
-
-/// @overload
-template <typename... T>
-struct is_tuple_of_tuples<camp::tuple<T...> > {
-  static constexpr bool value = (is_tuple<T>::value && ...);
-};
-
 /////////////////////////////////////////////////
 
 // promote a double-precision value to a dual number representation that keeps track of
