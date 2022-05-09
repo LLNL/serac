@@ -26,11 +26,6 @@ blt_add_library(
     DEPENDS_ON  ${mesh_depends}
     )
 
-target_include_directories(serac_mesh PUBLIC 
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../..>
-    $<INSTALL_INTERFACE:include>
-    )
-
 install(FILES ${mesh_headers} DESTINATION include/serac/mesh )
 
 install(TARGETS              serac_mesh

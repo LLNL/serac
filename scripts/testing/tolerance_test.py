@@ -37,32 +37,73 @@ def ensure_file(path):
         print("ERROR: Given file is not a file: {0}".format(path))
         sys.exit(1)
 
-
 def parse_args():
-    parser = argparse.ArgumentParser(description="Compare two Serac summary files")
+    usage = """
+Compare two Serac summary files.
+
+Example usages for --tolerance:
+    --tolerance=0.001 // used for all field values
+    --tolerance=default:0.001,velocity:0.1,displacement:0.234 // default is for all non-specified tolerances
+
+Example usage for --tolerance-file:
+    --tolerance-file=tolerance_low.json
+
+Example JSON file for --tolerance-file:
+    {
+        \"default\": 0.0001,   // default is for all non-specified tolerances
+        \"velocity\": 0.001,   // specific field value tolerance
+        \"displacement\":0.01
+    }
+"""
+
+    parser = argparse.ArgumentParser(description=usage,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    tolerance_group = parser.add_mutually_exclusive_group(required=True)
 
     parser.add_argument("--baseline", type=str, required=True,
                         help="Path to baseline summary file")
     parser.add_argument("--test", type=str, required=True,
                         help="Path to test summary file")
-    parser.add_argument("--tolerance", type=float, required=True,
+    tolerance_group.add_argument("--tolerance", type=str,
                         help="Allowed tolerance amount for individual values")
+    tolerance_group.add_argument("--tolerance-file", type=str,
+                        help="JSON file specifying tolerance amount for specific values")
 
     args = parser.parse_args()
 
     # Ensure correctness of given options
     ensure_file(args.baseline)
     ensure_file(args.test)
+    if args.tolerance_file is not None:
+        ensure_file(args.tolerance_file)
 
     # Print options
     print("------- Given Options -------")
-    print("Baseline file: {0}".format(args.baseline))
-    print("Test file:     {0}".format(args.test))
-    print("Tolerance:     {0}".format(args.tolerance))
+    print("Baseline file:  {0}".format(args.baseline))
+    print("Test file:      {0}".format(args.test))
+    print("Tolerance:      {0}".format(args.tolerance))
+    print("Tolerance file: {0}".format(args.tolerance_file))
     print("-----------------------------")
 
     return args
 
+# Takes query string and returns a tolerance dictionary
+def parse_tolerance_query(query):
+    tolerance_dict = {}
+
+    # Two cases:
+    # 1. single value (0.1)
+    # 2. specific value(s) (velocity:0.1::displacement:0.025)
+
+    if ":" not in query:
+        tolerance_dict = { "default": float(query) }
+    else:
+        query_list = query.split(",")
+        for q in query_list:
+            q = q.split(":")
+            tolerance_dict[q[0]] = float(q[1])
+
+    return tolerance_dict
 
 # Ensure that time steps exist and the same in both files
 def ensure_timesteps(baseline_curves, test_curves):
@@ -134,6 +175,21 @@ def output_missing(baseline_list, test_list, type, field_name=""):
 
     return True
 
+# Ensures the tolerance dictionary contains all fields or at least contains
+# a default value
+def ensure_tolerance_dict_keys(field_names, tolerance_dict):
+    error_found = False
+
+    if "default" in tolerance_dict:
+        return
+
+    for field_name in field_names:
+        if field_name not in tolerance_dict:
+            print("ERROR: field name \"{0}\" (nor \"default\") not in tolerance dictionary".format(field_name))
+            error_found = True
+
+    if error_found:
+        sys.exit(1)
 
 # Ensure list of field names are equal and error out with useful message
 def ensure_field_names(baseline_field_names, test_field_names):
@@ -224,11 +280,20 @@ def ensure_field_stats(field_names, baseline_curves, test_curves):
 # Ensure that field stat values are within tolerance
 #
 # Pre: field and stat names and lengths are match
-def ensure_field_stat_values(field_names, baseline_curves, test_curves, tolerance):
+def ensure_field_stat_values(field_names, baseline_curves, test_curves, tolerance_dict):
     error_found = False
 
     # Check if values are within given tolerance
     for field_name in field_names:
+        # Set tolerance for this field
+        if field_name in tolerance_dict:
+            tolerance = tolerance_dict[field_name]
+        else:
+            tolerance = tolerance_dict["default"]
+
+        print("Tolerance for {0} = {1}".format(field_name, tolerance))
+
+        # Ensure all stats are within tolerance
         for stat_name in baseline_curves[field_name].keys():
             baseline_values = as_list(baseline_curves[field_name][stat_name])
             test_values = as_list(test_curves[field_name][stat_name])
@@ -249,11 +314,18 @@ def ensure_field_stat_values(field_names, baseline_curves, test_curves, toleranc
 def main():
     args = parse_args()
 
-    # Load both files
+    # Load files
     with open(args.baseline) as baseline_file:
         baseline_json = json.load(baseline_file)
     with open(args.test) as test_file:
         test_json = json.load(test_file)
+
+    # Create a tolerance dictionary
+    if args.tolerance_file is not None:
+        with open(args.tolerance_file) as tolerance_file:
+            tolerance_dict = json.load(tolerance_file)
+    else:
+        tolerance_dict = parse_tolerance_query(args.tolerance)
 
     # Start at "curves"
     if not "curves" in baseline_json:
@@ -269,9 +341,10 @@ def main():
     baseline_field_names = get_field_names(baseline_curves)
     test_field_names = get_field_names(test_curves)
 
+    ensure_tolerance_dict_keys(baseline_field_names, tolerance_dict)
     ensure_field_names(baseline_field_names, test_field_names)
     ensure_field_stats(baseline_field_names, baseline_curves, test_curves)
-    ensure_field_stat_values(baseline_field_names, baseline_curves, test_curves, args.tolerance)
+    ensure_field_stat_values(baseline_field_names, baseline_curves, test_curves, tolerance_dict)
 
     print("Success: Test file passed")
 
