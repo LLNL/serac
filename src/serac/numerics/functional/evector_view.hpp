@@ -67,7 +67,7 @@ struct EVectorView {
   EVectorView(std::array<const double*, n> pointers, std::size_t num_elements)
   {
     for_constexpr<n>([&](auto i) {
-      serac::get<i>(data) = ArrayViewForElement<exec>(pointers[i], num_elements, serac::get<i>(element_types_tuple{}));
+      camp::get<i>(data) = ArrayViewForElement<exec>(pointers[i], num_elements, camp::get<i>(element_types_tuple{}));
     });
   }
 
@@ -82,16 +82,16 @@ struct EVectorView {
     for_constexpr<n>([&](auto I) {
       using element_type =
           typename camp::tuple_element<I,
-                                        element_types_tuple>::type;  // decltype(serac::get<I>(element_types_tuple{}));
+                                        element_types_tuple>::type;  // decltype(camp::get<I>(element_types_tuple{}));
       constexpr int ndof       = element_type::ndof;
       constexpr int components = element_type::components;
 
-      auto& arr = serac::get<I>(data);
+      auto& arr = camp::get<I>(data);
 
       if constexpr (components == 1) {
-        serac::get<I>(values) = make_tensor<ndof>([&arr, e](int i) { return arr(e, std::size_t(i)); });
+        camp::get<I>(values) = make_tensor<ndof>([&arr, e](int i) { return arr(e, std::size_t(i)); });
       } else {
-        serac::get<I>(values) =
+        camp::get<I>(values) =
             make_tensor<components, ndof>([&arr, e](int j, int i) { return arr(e, std::size_t(j), std::size_t(i)); });
       }
     });
