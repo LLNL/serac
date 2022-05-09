@@ -153,6 +153,20 @@ TEST(tensor, implicit_conversion)
   EXPECT_NEAR(value, A[0], tolerance);
 }
 
+TEST(tensor, inverse4x4)
+{
+  const tensor<double, 4, 4> A{{{2, 1, -1, 1}, {-3, -1, 2, 8}, {-2, 4, 2, 6}, {1, 1, 7, 2}}};
+  auto invA = inv(A);
+  EXPECT_LT(squared_norm(dot(A, invA) - Identity<4>()), tolerance);
+}
+
+TEST(tensor, derivative_of_inverse)
+{
+  const tensor<double, 4, 4> A{{{2, 1, -1, 1}, {-3, -1, 2, 8}, {-2, 4, 2, 6}, {1, 1, 7, 2}}};
+  auto invA = inv(make_dual(A));
+  EXPECT_LT(squared_norm(dot(A, get_value(invA)) - Identity<4>()), tolerance);
+}
+
 TEST(tensor, lu_decomposition)
 {
   const tensor<double, 3, 3> A{{{2, 1, -1}, {-3, -1, 2}, {-2, 4, 2}}};

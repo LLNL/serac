@@ -1360,7 +1360,7 @@ SERAC_HOST_DEVICE constexpr tensor<double, 3, 3> inv(const tensor<double, 3, 3>&
  * with partial pivoting
  */
 template <typename T, int n>
-SERAC_HOST_DEVICE constexpr tensor<T, n, n> inv(const tensor<T, n, n>& A)
+SERAC_HOST_DEVICE constexpr tensor<T, n, n> inv(tensor<T, n, n> A)
 {
   constexpr auto abs  = [](double x) { return (x < 0) ? -x : x; };
   constexpr auto swap = [](auto& x, auto& y) {
