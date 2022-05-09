@@ -20,23 +20,21 @@
 
 namespace serac {
 
-template <int p, int dim>
+template <int p>
 void functional_test_static(double expected_norm)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
+  constexpr int dim{3};
   int serial_refinement   = 1;
   int parallel_refinement = 0;
 
   // Create DataStore
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "thermal_functional_static_solve");
-
-  static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for thermal functional test");
+  serac::StateManager::initialize(datastore, "thermal_solid_functional_static_solve");
 
   // Construct the appropriate dimension mesh and give it to the data store
-  std::string filename =
-      (dim == 2) ? SERAC_REPO_DIR "/data/meshes/star.mesh" : SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+  std::string filename = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
@@ -77,11 +75,35 @@ void functional_test_static(double expected_norm)
   double k = 1.0;
   GreenSaintVenantThermoelasticMaterial material{rho, E, nu, c, alpha, theta_ref, k};
   thermal_solid_solver.setMaterial(material);
-  double u = 0.0;
-  EXPECT_NEAR(u, expected_norm, 1.0e-6);
+
+  // Define the function for the initial temperature and boundary condition
+  auto one = [](const mfem::Vector&, double) -> double { return 1.0; };
+
+  // Set the initial temperature and boundary condition
+  thermal_solid_solver.setTemperatureBCs(ess_bdr, one);
+  thermal_solid_solver.setTemperature(one);
+
+  // Define the function for the disolacement boundary condition
+  auto zeroVector = [](const mfem::Vector&, mfem::Vector& u) { u = 0.0; };
+  
+  // Set the initial displcament and boundary condition
+  thermal_solid_solver.setDisplacementBCs(ess_bdr, zeroVector);
+
+  // Finalize the data structures
+  thermal_solid_solver.completeSetup();
+
+  // Perform the quasi-static solve
+  double dt = 1.0;
+  thermal_solid_solver.advanceTimestep(dt);
+
+  // Output the sidre-based plot files
+  // thermal_solid_solver.outputState();
+
+  // Check the final temperature norm
+  EXPECT_NEAR(expected_norm, norm(thermal_solid_solver.temperature()), 1.0e-6);
 }
 
-TEST(thermal_solid_functional, construct) { functional_test_static<1, 3>(0.0); }
+TEST(thermal_solid_functional, construct) { functional_test_static<1>(0.0); }
 
 }  // namespace serac
 
