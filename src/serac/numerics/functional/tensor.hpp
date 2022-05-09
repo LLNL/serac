@@ -1181,9 +1181,8 @@ SERAC_HOST_DEVICE bool is_symmetric_and_positive_definite(tensor<double, 3, 3> A
  * Row i of A was exchanged with row P[i].
  */
 template <typename T, int n>
-SERAC_HOST_DEVICE constexpr auto lu(const tensor<T, n, n>& A)
+SERAC_HOST_DEVICE constexpr auto lu(tensor<T, n, n> A)
 {
-  // BT question for Sam Mish: Why not use the standard library abs?
   constexpr auto abs  = [](double x) { return (x < 0) ? -x : x; };
   constexpr auto swap = [](auto& x, auto& y) {
     auto tmp = x;
@@ -1192,17 +1191,29 @@ SERAC_HOST_DEVICE constexpr auto lu(const tensor<T, n, n>& A)
   };
 
   auto           U = A;
-  auto           L = DenseIdentity<n>();
+  // initialize L to Identity
+  auto           L = tensor<T, n, n>{};
+  // This handles the case if T is a dual number
+  // TODO: consider making a dense identity that is templated on type
+  // BT 05/09/2022
+  for (int i = 0; i < 3; i++) {
+    if constexpr(is_dual_number<T>::value) {
+      L[i][i].value = 1.0;
+    } else {
+      L[i][i] = 1.0;
+    }
+  }
   tensor<int, n> P(make_tensor<n>([](auto i) { return i; }));
 
   for (int i = 0; i < n; i++) {
     // Search for maximum in this column
-    double max_val = abs(U[i][i]);
+    double max_val = abs(get_value(U[i][i]));
 
     int max_row = i;
     for (int j = i + 1; j < n; j++) {
-      if (abs(U[j][i]) > max_val) {
-        max_val = abs(U[j][i]);
+      auto U_ji = get_value(U[j][i]);
+      if (abs(U_ji) > max_val) {
+        max_val = abs(U_ji);
         max_row = j;
       }
     }
@@ -1215,10 +1226,10 @@ SERAC_HOST_DEVICE constexpr auto lu(const tensor<T, n, n>& A)
     // zero entries below in this column in U
     // and fill in L entries
     for (int j = i + 1; j < n; j++) {
-      double c = U[j][i] / U[i][i];
+      auto c = U[j][i] / U[i][i];
       L[j][i]  = c;
       U[j] -= c * U[i];
-      U[j][i] = 0;
+      U[j][i] = T{};
     }
   }
 

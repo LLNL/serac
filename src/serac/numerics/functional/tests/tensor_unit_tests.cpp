@@ -13,6 +13,17 @@ using namespace serac;
 static constexpr double tolerance = 4.0e-16;
 static constexpr auto   I         = Identity<3>();
 
+template<typename T, int n>
+tensor<T, n, n> composeMatrixFromLU(const tensor<int, n>& P, const tensor<T, n, n>& L,
+                                    const tensor<T, n, n>& U) {
+  auto                 LU = dot(L, U);
+  tensor<T, n, n> PLU{};
+  for (int i = 0; i < n; i++) {
+    PLU[P[i]] = LU[i];
+  }
+  return PLU;
+}
+
 TEST(tensor, basic_operations)
 {
   auto abs = [](auto x) { return (x < 0) ? -x : x; };
@@ -188,6 +199,26 @@ TEST(tensor, lu_decomposition)
     PLU[P[i]] = LU[i];
   }
   EXPECT_LT(squared_norm(A - PLU), tolerance);
+}
+
+TEST(tensor, lu_decomposition_works_on_dual_numbers)
+{
+  const tensor<double, 3, 3> v{{{2, 1, -1}, {-3, -1, 2}, {-2, 4, 2}}};
+  const tensor<double, 3, 3> g{{{0.337494265892494, 0.194238454581911, 0.307832573181341},
+                                {0.090147365480304, 0.610402517912401, 0.458978918716148},
+                                {0.689309323130592, 0.198321409053159, 0.901973313462065}}};
+  tensor<dual<double>, 3, 3> A{};
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      A[i][j].value = v[i][j];
+      A[i][j].gradient = g[i][j];
+    }
+  }
+  auto [P, L, U] = lu(A);
+  auto PLU = composeMatrixFromLU(P, L, U);
+
+  EXPECT_LT(squared_norm(get_value(A) - get_value(PLU)), tolerance);
+  EXPECT_LT(squared_norm(get_gradient(A) - get_gradient(PLU)), tolerance);
 }
 
 TEST(tensor, linear_solve_with_one_rhs)
