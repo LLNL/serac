@@ -179,8 +179,7 @@ TEST(tensor, lu_decomposition)
 TEST(tensor, linear_solve_with_one_rhs)
 {
   const tensor<double, 3, 3> A{{{2, 1, -1}, {-3, -1, 2}, {-2, 1, 2}}};
-
-  const tensor<double, 3> b{{-1, 2, 3}};
+  const tensor<double, 3>    b{{-1, 2, 3}};
 
   auto x = linear_solve(A, b);
   EXPECT_LT(squared_norm(dot(A, x) - b), tolerance);
@@ -193,4 +192,24 @@ TEST(tensor, linear_solve_with_multiple_rhs)
 
   auto X = linear_solve(A, B);
   EXPECT_LT(squared_norm(dot(A, X) - B), tolerance);
+}
+
+TEST(tensor, derivative_of_linear_solve)
+{
+  // x defined by: t^2 * A * x(t) = t*b
+  // implicit derivative 2*t * A * x + t^2 * A * dxdt = b
+  // t^2 * A * dxdt = b - 2*t*A*x
+  // t^2 * A * dxdt = b - 2*t*b
+  // t = 1 --> dxdt = -x
+
+  const tensor<double, 3, 3> A{{{2, 1, -1}, {-3, -1, 2}, {-2, 1, 2}}};
+  const tensor<double, 3>    b{{-1, 2, 3}};
+
+  auto f = [&A, &b](dual<double> t) { return linear_solve(t * t * A, t * b); };
+
+  double t = 1.0;
+  auto   x = f(make_dual(t));
+
+  // expect x_dot = -x
+  EXPECT_LT(squared_norm(get_value(x) + get_gradient(x)), tolerance);
 }

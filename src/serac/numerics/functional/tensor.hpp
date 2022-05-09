@@ -1262,7 +1262,8 @@ SERAC_HOST_DEVICE constexpr tensor<T, n> linear_solve(const tensor<T, n, n> A, c
 }
 
 /**
- * @overload Extends solve to multiple right-hand sides
+ * @overload
+ * @note Extends solve to multiple righthand sides
  * @param[in] A The coefficient matrix A
  * @param[in] b The matrix of righthand side vectors
  * @return x The matrix of solution vectors
@@ -1295,6 +1296,21 @@ SERAC_HOST_DEVICE constexpr tensor<T, n, m> linear_solve(const tensor<T, n, n>& 
   }
 
   return x;
+}
+
+/**
+ * @overload
+ * @note For use with dual numbers. Implements a custom derivative rule
+ * that avoids accumulating though the Gaussian eliminiation.
+ * It costs 2 linear solves (of non-dual numbers).
+ */
+template <typename gradient_type, int n>
+SERAC_HOST_DEVICE auto linear_solve(tensor<dual<gradient_type>, n, n> A, tensor<dual<gradient_type>, n> b)
+{
+  auto x  = linear_solve(get_value(A), get_value(b));
+  auto r  = get_gradient(b) - dot(get_gradient(A), x);
+  auto dx = linear_solve(get_value(A), r);
+  return make_tensor<n>([&](int i) { return dual<gradient_type>{x[i], dx[i]}; });
 }
 
 /**
