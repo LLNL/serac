@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
 {
   /*auto [num_procs, rank] = */serac::initialize(argc, argv);
 
-  int serial_refinement   = 1;
+  int serial_refinement   = 2;
   int parallel_refinement = 0;
 
   // Create DataStore
@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
 
   if(dim != 2 && dim != 3) 
   {
-    std::cout<<"Dimension must be 2 or 3 for thermal functional test"<<std::endl; 
+    std::cout<<"Dimension must be 2 or 3 for LCE functional example"<<std::endl; 
     exit(0);
   }
 
@@ -59,11 +59,11 @@ int main(int argc, char* argv[])
   std::set<int> ess_bdr = {1};
 
   // Construct a functional-based thermal conduction solver
-  serac::ThermalConductionFunctional<p, dim> LCE_solver(serac::Thermal::defaultQuasistaticOptions(), "LCE_functional");
+  serac::LCEFunctional<p, dim> LCE_solver(serac::LiqCrysElast::defaultQuasistaticOptions(), "LCE_functional");
 
   serac::tensor<double, dim, dim> cond = {{{5.0, 0.01}, {0.01, 1.0}}};
 
-  serac::Thermal::LinearConductor<dim> mat(1.0, 1.0, cond);
+  serac::LiqCrysElast::LinearConductor<dim> mat(1.0, 1.0, cond);
   LCE_solver.setMaterial(mat);
 
   // Define the function for the initial temperature and boundary condition
@@ -74,11 +74,11 @@ int main(int argc, char* argv[])
   LCE_solver.setTemperature(one);
 
   // Define a constant source term
-  serac::Thermal::ConstantSource source{1.0};
+  serac::LiqCrysElast::ConstantSource source{1.0};
   LCE_solver.setSource(source);
 
   // Set the flux term to zero for testing code paths
-  serac::Thermal::ConstantFlux flux_bc{0.0};
+  serac::LiqCrysElast::ConstantFlux flux_bc{0.0};
   LCE_solver.setFluxBCs(flux_bc);
 
   // _output_type_start

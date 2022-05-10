@@ -15,14 +15,14 @@
 #include "serac/numerics/functional/functional.hpp"
 
 /// ThermalConductionFunctional helper structs
-namespace serac::Thermal {
+namespace serac::LiqCrysElast {
 
 /**
  * @brief Response data type for thermal conduction simulations
  *
  * @tparam T1 Density type
  * @tparam T2 Specific heat capacity type
- * @tparam T3 Thermal flux type
+ * @tparam T3 LiqCrysElast flux type
  */
 template <typename T1, typename T2, typename T3>
 struct MaterialResponse {
@@ -54,7 +54,7 @@ public:
    *
    * @param density Density of the material (mass/volume)
    * @param specific_heat_capacity Specific heat capacity of the material (energy / (mass * temp))
-   * @param conductivity Thermal conductivity of the material (power / (length * temp))
+   * @param conductivity LiqCrysElast conductivity of the material (power / (length * temp))
    */
   LinearIsotropicConductor(double density = 1.0, double specific_heat_capacity = 1.0, double conductivity = 1.0)
       : density_(density), specific_heat_capacity_(specific_heat_capacity), conductivity_(conductivity)
@@ -113,7 +113,7 @@ public:
    *
    * @param density Density of the material (mass/volume)
    * @param specific_heat_capacity Specific heat capacity of the material (energy / (mass * temp))
-   * @param conductivity Thermal conductivity of the material (power / (length * temp))
+   * @param conductivity LiqCrysElast conductivity of the material (power / (length * temp))
    */
   LinearConductor(double density = 1.0, double specific_heat_capacity = 1.0,
                   tensor<double, dim, dim> conductivity = Identity<dim>())
@@ -203,4 +203,4 @@ struct ConstantFlux {
   }
 };
 
-}  // namespace serac::Thermal
+}  // namespace serac::LiqCrysElast

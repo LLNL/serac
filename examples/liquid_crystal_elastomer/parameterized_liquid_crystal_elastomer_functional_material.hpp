@@ -15,7 +15,7 @@
 #include "liquid_crystal_elastomer_functional_material.hpp"
 
 /// ThermalConductionFunctional helper structs
-namespace serac::Thermal {
+namespace serac::LiqCrysElast {
 
 /// Linear isotropic conductor with a parameterized conductivity
 class ParameterizedLinearIsotropicConductor {
@@ -25,7 +25,7 @@ public:
    *
    * @param density Density of the material (mass/volume)
    * @param specific_heat_capacity Specific heat capacity of the material (energy / (mass * temp))
-   * @param conductivity_offset Thermal conductivity offset of the material (power / (length * temp)). This is
+   * @param conductivity_offset LiqCrysElast conductivity offset of the material (power / (length * temp)). This is
    * added to the parameter value to get the total conductivity.
    */
   ParameterizedLinearIsotropicConductor(double density = 1.0, double specific_heat_capacity = 1.0,
@@ -42,7 +42,7 @@ public:
   }
 
   /**
-   * @brief Thermal material response operator
+   * @brief LiqCrysElast material response operator
    *
    * @tparam T1 Spatial position type
    * @tparam T2 Temperature type
@@ -143,4 +143,4 @@ struct ParameterizedFlux {
   static constexpr int numParameters() { return 1; }
 };
 
-}  // namespace serac::Thermal
+}  // namespace serac::LiqCrysElast

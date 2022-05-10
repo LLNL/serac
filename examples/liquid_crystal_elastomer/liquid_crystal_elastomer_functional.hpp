@@ -22,9 +22,11 @@
 #include "serac/physics/materials/functional_material_utils.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
 
-namespace serac {
+namespace serac
+{
 
-namespace Thermal {
+namespace LiqCrysElast
+{
 
 /// A timestep and boundary condition enforcement method for a dynamic solver
 struct TimesteppingOptions {
@@ -34,6 +36,8 @@ struct TimesteppingOptions {
   /// The essential boundary enforcement method to use
   serac::DirichletEnforcementMethod enforcement_method;
 };
+
+/// ---------------------------------------------------------------------------
 
 /**
  * @brief A configuration variant for the various solves
@@ -56,6 +60,8 @@ struct SolverOptions {
   std::optional<TimesteppingOptions> dyn_options = std::nullopt;
 };
 
+/// ---------------------------------------------------------------------------
+
 /**
  * @brief Reasonable defaults for most thermal linear solver options
  *
@@ -71,6 +77,8 @@ IterativeSolverOptions defaultLinearOptions()
           .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
 }
 
+/// ---------------------------------------------------------------------------
+
 /**
  * @brief Reasonable defaults for most thermal nonlinear solver options
  *
@@ -81,12 +89,16 @@ NonlinearSolverOptions defaultNonlinearOptions()
   return {.rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
 }
 
+/// ---------------------------------------------------------------------------
+
 /**
  * @brief Reasonable defaults for quasi-static thermal conduction simulations
  *
  * @return The default quasi-static solver options
  */
 SolverOptions defaultQuasistaticOptions() { return {defaultLinearOptions(), defaultNonlinearOptions(), std::nullopt}; }
+
+/// ---------------------------------------------------------------------------
 
 /**
  * @brief Reasonable defaults for dynamic thermal conduction simulations
@@ -96,10 +108,12 @@ SolverOptions defaultQuasistaticOptions() { return {defaultLinearOptions(), defa
 SolverOptions defaultDynamicOptions()
 {
   return {defaultLinearOptions(), defaultNonlinearOptions(),
-          Thermal::TimesteppingOptions{TimestepMethod::BackwardEuler, DirichletEnforcementMethod::RateControl}};
+          LiqCrysElast::TimesteppingOptions{TimestepMethod::BackwardEuler, DirichletEnforcementMethod::RateControl}};
 }
 
-}  // namespace Thermal
+}  // namespace LiqCrysElast
+
+/// ---------------------------------------------------------------------------
 
 /**
  * @brief An object containing the solver for a thermal conduction PDE
@@ -115,18 +129,18 @@ SolverOptions defaultDynamicOptions()
  */
 
 template <int order, int dim, typename... parameter_space>
-class ThermalConductionFunctional : public BasePhysics {
+class LCEFunctional : public BasePhysics {
 public:
   /**
-   * @brief Construct a new Thermal Functional Solver object
+   * @brief Construct a new LiqCrysElast Functional Solver object
    *
    * @param[in] options The system linear and nonlinear solver and timestepping parameters
    * @param[in] name An optional name for the physics module instance
    * @param[in] parameter_states The optional array of finite element states represetnting user-defined parameters to be
    * used by an underlying material model or load
    */
-  ThermalConductionFunctional(
-      const Thermal::SolverOptions& options, const std::string& name = {},
+  LCEFunctional(
+      const LiqCrysElast::SolverOptions& options, const std::string& name = {},
       std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states = {})
       : BasePhysics(2, order),
         temperature_(
@@ -191,6 +205,8 @@ public:
     zero_ = 0.0;
   }
 
+  /// ---------------------------------------------------------------------------
+
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
    *
@@ -205,6 +221,8 @@ public:
     bcs_.addEssential(temp_bdr, temp_bdr_coef_, temperature_);
   }
 
+  /// ---------------------------------------------------------------------------
+
   /**
    * @brief Advance the timestep
    *
@@ -217,7 +235,7 @@ public:
     if (is_quasistatic_) {
       nonlin_solver_.Mult(zero_, temperature_.trueVec());
     } else {
-      SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
+      SLIC_ASSERT_MSG(gf_initialized_[0], "LiqCrysElast state not initialized!");
 
       // Step the time integrator
       ode_.Step(temperature_.trueVec(), time_, dt);
@@ -226,6 +244,8 @@ public:
     temperature_.distributeSharedDofs();
     cycle_ += 1;
   }
+
+  /// ---------------------------------------------------------------------------
 
   /**
    * @brief Set the thermal flux and mass properties for the physics module
@@ -280,6 +300,8 @@ public:
         mesh_);
   }
 
+  /// ---------------------------------------------------------------------------
+
   /**
    * @brief Set the underlying finite element state to a prescribed temperature
    *
@@ -294,6 +316,8 @@ public:
     temperature_.project(temp_coef);
     gf_initialized_[0] = true;
   }
+
+  /// ---------------------------------------------------------------------------
 
   /**
    * @brief Set the thermal source function
@@ -330,6 +354,8 @@ public:
         mesh_);
   }
 
+  /// ---------------------------------------------------------------------------
+
   /**
    * @brief Set the thermal flux boundary condition
    *
@@ -355,6 +381,8 @@ public:
         mesh_);
   }
 
+  /// ---------------------------------------------------------------------------
+
   /**
    * @brief Get the temperature state
    *
@@ -374,6 +402,8 @@ public:
 
   /// @overload
   serac::FiniteElementState& adjointTemperature() { return adjoint_temperature_; };
+
+  /// ---------------------------------------------------------------------------
 
   /**
    * @brief Complete the initialization and allocation of the data structures.
@@ -460,6 +490,8 @@ public:
     }
   }
 
+  /// ---------------------------------------------------------------------------
+
   /**
    * @brief Solve the adjoint problem
    * @pre It is expected that the forward analysis is complete and the current temperature state is valid
@@ -513,6 +545,8 @@ public:
     return adjoint_temperature_;
   }
 
+  /// ---------------------------------------------------------------------------
+  
   /**
    * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
    * problem with respect to the parameter field
@@ -538,8 +572,8 @@ public:
     return *parameter_sensitivities_[parameter_field];
   }
 
-  /// Destroy the Thermal Solver object
-  virtual ~ThermalConductionFunctional() = default;
+  /// Destroy the LiqCrysElast Solver object
+  virtual ~LCEFunctional() = default;
 
 protected:
   /// The compile-time finite element trial space for thermal conduction (H1 of order p)
