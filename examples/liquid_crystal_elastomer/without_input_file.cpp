@@ -7,30 +7,16 @@
 /**
  * @file without_input_file.cpp
  *
- * @brief A simple example of steady-state thermal conduction that uses
+ * @brief A simple example of steady-state liquid crystal elastomer on that uses
  * the C++ API to configure the simulation
  */
 
-// _incl_thermal_header_start
-// #include "serac/physics/thermal_conduction.hpp"
-// _incl_thermal_header_end
-// _incl_state_manager_start
-// #include "serac/physics/state/state_manager.hpp"
-// _incl_state_manager_end
-// _incl_infra_start
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/terminator.hpp"
-// _incl_infra_end
-// _incl_mesh_start
-// #include "serac/mesh/mesh_utils.hpp"
-// _incl_mesh_end
 
 #include "liquid_crystal_elastomer_functional.hpp"
 #include "liquid_crystal_elastomer_functional_material.hpp"
 #include "parameterized_liquid_crystal_elastomer_functional_material.hpp"
-// #include "serac/physics/thermal_conduction_functional.hpp"
-// #include "serac/physics/materials/thermal_functional_material.hpp"
-// #include "serac/physics/materials/parameterized_thermal_functional_material.hpp"
 
 #include <fstream>
 
@@ -50,7 +36,7 @@ int main(int argc, char* argv[])
 
   // Create DataStore
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "thermal_functional_static_solve");
+  serac::StateManager::initialize(datastore, "LCE_functional_static_solve");
 
   // Construct the appropriate dimension mesh and give it to the data store
   std::string filename = SERAC_REPO_DIR "/data/meshes/star.mesh";
@@ -73,37 +59,41 @@ int main(int argc, char* argv[])
   std::set<int> ess_bdr = {1};
 
   // Construct a functional-based thermal conduction solver
-  serac::ThermalConductionFunctional<p, dim> thermal_solver(serac::Thermal::defaultQuasistaticOptions(), "thermal_functional");
+  serac::ThermalConductionFunctional<p, dim> LCE_solver(serac::Thermal::defaultQuasistaticOptions(), "LCE_functional");
 
   serac::tensor<double, dim, dim> cond = {{{5.0, 0.01}, {0.01, 1.0}}};
 
   serac::Thermal::LinearConductor<dim> mat(1.0, 1.0, cond);
-  thermal_solver.setMaterial(mat);
+  LCE_solver.setMaterial(mat);
 
   // Define the function for the initial temperature and boundary condition
   auto one = [](const mfem::Vector&, double) -> double { return 1.0; };
 
   // Set the initial temperature and boundary condition
-  thermal_solver.setTemperatureBCs(ess_bdr, one);
-  thermal_solver.setTemperature(one);
+  LCE_solver.setTemperatureBCs(ess_bdr, one);
+  LCE_solver.setTemperature(one);
 
   // Define a constant source term
   serac::Thermal::ConstantSource source{1.0};
-  thermal_solver.setSource(source);
+  LCE_solver.setSource(source);
 
   // Set the flux term to zero for testing code paths
   serac::Thermal::ConstantFlux flux_bc{0.0};
-  thermal_solver.setFluxBCs(flux_bc);
+  LCE_solver.setFluxBCs(flux_bc);
+
+  // _output_type_start
+  LCE_solver.initializeOutput(serac::OutputType::ParaView, "LCE_output");
+  // _output_type_end
 
   // Finalize the data structures
-  thermal_solver.completeSetup();
+  LCE_solver.completeSetup();
 
   // Perform the quasi-static solve
   double dt = 1.0;
-  thermal_solver.advanceTimestep(dt);
+  LCE_solver.advanceTimestep(dt);
 
   // Output the sidre-based plot files
-  thermal_solver.outputState();
+  LCE_solver.outputState();
 
   // _exit_start
   serac::exitGracefully();
