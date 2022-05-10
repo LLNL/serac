@@ -537,181 +537,210 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
   }
 
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
   template <int q>
-  static SERAC_DEVICE auto interpolate(const dof_type& X, const tensor<double, dim, dim>& J,
+  static SERAC_DEVICE auto interpolate(const dof_type& element_values, const tensor<double, dim, dim>& J,
                                        const TensorProductQuadratureRule<q>& rule, cache_type<q>& cache)
   {
-    auto xi = GaussLegendreNodes<q>();
+    int tidx = threadIdx.x % q;
+    int tidy = (threadIdx.x % (q * q)) / q;
+    int tidz = threadIdx.x / (q * q);
 
-    tensor<double, q, p>     B1;
-    tensor<double, q, p + 1> B2;
-    tensor<double, q, p + 1> G2;
-    for (int i = 0; i < q; i++) {
-      B1[i] = GaussLegendreInterpolation<p>(xi[i]);
-      B2[i] = GaussLobattoInterpolation<p + 1>(xi[i]);
-      G2[i] = GaussLobattoInterpolationDerivative<p + 1>(xi[i]);
+    static constexpr auto points1D  = GaussLegendreNodes<q>();
+
+    static constexpr auto B1_ = [=]() {
+      tensor<double, q, p> B1{};
+      for (int i = 0; i < q; i++) {
+        B1[i] = GaussLegendreInterpolation<p>(points1D[i]);
+      }
+      return B1;
+    }();
+
+    static constexpr auto B2_ = [=]() {
+      tensor<double, q, n> B2{};
+      for (int i = 0; i < q; i++) {
+        B2[i] = GaussLobattoInterpolation<n>(points1D[i]);
+      }
+      return B2;
+    }();
+
+    static constexpr auto G2_ = [=]() {
+      tensor<double, q, n> G2{};
+      for (int i = 0; i < q; i++) {
+        G2[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);
+      }
+      return G2;
+    }();
+
+    __shared__ tensor<double, q, p> B1;
+    __shared__ tensor<double, q, n> B2;
+    __shared__ tensor<double, q, n> G2;
+    for (int entry = threadIdx.x; entry < n * q; entry += q * q) {
+      int i = entry % n;
+      int j = entry / n;
+      if (i < p) {
+        B1(j, i) = B1_(j, i);
+      }
+      B2(j, i) = B2_(j, i);
+      G2(j, i) = G2_(j, i);
     }
+    __syncthreads();
 
-    cache_type<q> cache;
-
-    serac::tuple<cpu_batched_values_type<q>, cpu_batched_derivatives_type<q>> values_and_derivatives{};
+    tensor< double, dim > value{};
+    tensor< double, dim > curl{};
 
     /////////////////////////////////
     ////////// X-component //////////
     /////////////////////////////////
-    for (int k = 0; k < p + 1; k++) {
-      for (int j = 0; j < p + 1; j++) {
-        for (int qx = 0; qx < q; qx++) {
+    for (int dz = tidz; dz < p + 1; dz += q) {
+      for (int dy = tidy; dy < p + 1; dy += q) {
+        for (int qx = tidx; qx < q; qx += q) {
           double sum = 0.0;
-          for (int i = 0; i < p; i++) {
-            sum += B1(qx, i) * element_values.x(k, j, i);
+          for (int dx = 0; dx < p; dx++) {
+            sum += B1(qx, dx) * element_values.x(dz, dy, dx);
           }
-          cache.A1(k, j, qx) = sum;
+          cache.A1(dz, dy, qx) = sum;
         }
       }
     }
+    __syncthreads();
 
-    for (int k = 0; k < p + 1; k++) {
-      for (int qy = 0; qy < q; qy++) {
-        for (int qx = 0; qx < q; qx++) {
+
+    for (int dz = tidz; dz < p + 1; dz += q) {
+      for (int qy = tidy; qy < q; qy += q) {
+        for (int qx = tidx; qx < q; qx += q) {
           double sum[2]{};
-          for (int j = 0; j < (p + 1); j++) {
-            sum[0] += B2(qy, j) * cache.A1(k, j, qx);
-            sum[1] += G2(qy, j) * cache.A1(k, j, qx);
+          for (int dy = 0; dy < (p + 1); dy++) {
+            sum[0] += B2(qy, dy) * cache.A1(dz, dy, qx);
+            sum[1] += G2(qy, dy) * cache.A1(dz, dy, qx);
           }
-          cache.A2(0, k, qy, qx) = sum[0];
-          cache.A2(1, k, qy, qx) = sum[1];
+          cache.A2(0, dz, qy, qx) = sum[0];
+          cache.A2(1, dz, qy, qx) = sum[1];
         }
       }
     }
+    __syncthreads();
 
-    for (int qz = 0; qz < q; qz++) {
-      for (int qy = 0; qy < q; qy++) {
-        for (int qx = 0; qx < q; qx++) {
+    for (int qz = tidz; qz < q; qz += q) {
+      for (int qy = tidy; qy < q; qy += q) {
+        for (int qx = tidx; qx < q; qx += q) {
           double sum[3]{};
-          for (int k = 0; k < (p + 1); k++) {
-            sum[0] += B2(qz, k) * cache.A2(0, k, qy, qx);
-            sum[1] += G2(qz, k) * cache.A2(0, k, qy, qx);
-            sum[2] += B2(qz, k) * cache.A2(1, k, qy, qx);
+          for (int dz = 0; dz < (p + 1); dz++) {
+            sum[0] += B2(qz, dz) * cache.A2(0, dz, qy, qx);
+            sum[1] += G2(qz, dz) * cache.A2(0, dz, qy, qx);
+            sum[2] += B2(qz, dz) * cache.A2(1, dz, qy, qx);
           }
-          serac::get<0>(values_and_derivatives)(qz, qy, qx)[0] += sum[0];
-          serac::get<1>(values_and_derivatives)(qz, qy, qx)[1] += sum[1];
-          serac::get<1>(values_and_derivatives)(qz, qy, qx)[2] -= sum[2];
+          value[0] += sum[0];
+          curl[1] += sum[1];
+          curl[2] -= sum[2];
         }
       }
     }
+    __syncthreads();
 
     /////////////////////////////////
     ////////// Y-component //////////
     /////////////////////////////////
-    for (int k = 0; k < p + 1; k++) {
-      for (int i = 0; i < p + 1; i++) {
-        for (int qy = 0; qy < q; qy++) {
+    for (int dz = tidz; dz < p + 1; dz += q) {
+      for (int dx = tidx; dx < p + 1; dx += q) {
+        for (int qy = tidy; qy < q; qy += q) {
           double sum = 0.0;
-          for (int j = 0; j < p; j++) {
-            sum += B1(qy, j) * element_values.y(k, j, i);
+          for (int dy = 0; dy < p; dy++) {
+            sum += B1(qy, dy) * element_values.y(dz, dy, dx);
           }
-          cache.A1(k, i, qy) = sum;
+          cache.A1(dz, dx, qy) = sum;
         }
       }
     }
+    __syncthreads();
 
-    for (int k = 0; k < p + 1; k++) {
-      for (int qy = 0; qy < q; qy++) {
-        for (int qx = 0; qx < q; qx++) {
+    for (int dz = 0; dz < p + 1; dz += q) {
+      for (int qy = 0; qy < q; qy += q) {
+        for (int qx = 0; qx < q; qx += q) {
           double sum[2]{};
-          for (int i = 0; i < (p + 1); i++) {
-            sum[0] += B2(qx, i) * cache.A1(k, i, qy);
-            sum[1] += G2(qx, i) * cache.A1(k, i, qy);
+          for (int dx = 0; dx < (p + 1); dx++) {
+            sum[0] += B2(qx, dx) * cache.A1(dz, dx, qy);
+            sum[1] += G2(qx, dx) * cache.A1(dz, dx, qy);
           }
-          cache.A2(0, k, qy, qx) = sum[0];
-          cache.A2(1, k, qy, qx) = sum[1];
+          cache.A2(0, dz, qy, qx) = sum[0];
+          cache.A2(1, dz, qy, qx) = sum[1];
         }
       }
     }
+    __syncthreads();
 
-    for (int qz = 0; qz < q; qz++) {
-      for (int qy = 0; qy < q; qy++) {
-        for (int qx = 0; qx < q; qx++) {
+    for (int qz = tidz; qz < q; qz += q) {
+      for (int qy = tidy; qy < q; qy += q) {
+        for (int qx = tidx; qx < q; qx += q) {
           double sum[3]{};
-          for (int k = 0; k < (p + 1); k++) {
-            sum[0] += B2(qz, k) * cache.A2(0, k, qy, qx);
-            sum[1] += G2(qz, k) * cache.A2(0, k, qy, qx);
-            sum[2] += B2(qz, k) * cache.A2(1, k, qy, qx);
+          for (int dz = 0; dz < (p + 1); dz++) {
+            sum[0] += B2(qz, dz) * cache.A2(0, dz, qy, qx);
+            sum[1] += G2(qz, dz) * cache.A2(0, dz, qy, qx);
+            sum[2] += B2(qz, dz) * cache.A2(1, dz, qy, qx);
           }
-          serac::get<0>(values_and_derivatives)(qz, qy, qx)[1] += sum[0];
-          serac::get<1>(values_and_derivatives)(qz, qy, qx)[2] += sum[2];
-          serac::get<1>(values_and_derivatives)(qz, qy, qx)[0] -= sum[1];
+          value[1] += sum[0];
+          curl[2] += sum[2];
+          curl[0] -= sum[1];
         }
       }
     }
+    __syncthreads();
 
     /////////////////////////////////
     ////////// Z-component //////////
     /////////////////////////////////
-    for (int j = 0; j < p + 1; j++) {
-      for (int i = 0; i < p + 1; i++) {
-        for (int qz = 0; qz < q; qz++) {
+    for (int dy = tidy; dy < p + 1; dy += q) {
+      for (int dx = tidx; dx < p + 1; dx += q) {
+        for (int qz = tidz; qz < q; qz += q) {
           double sum = 0.0;
           for (int k = 0; k < p; k++) {
-            sum += B1(qz, k) * element_values.z(k, j, i);
+            sum += B1(qz, k) * element_values.z(k, dy, dx);
           }
-          cache.A1(j, i, qz) = sum;
+          cache.A1(dy, dx, qz) = sum;
         }
       }
     }
+    __syncthreads();
 
-    for (int j = 0; j < p + 1; j++) {
-      for (int qz = 0; qz < q; qz++) {
-        for (int qx = 0; qx < q; qx++) {
+    for (int dy = tidy; dy < p + 1; dy += q) {
+      for (int qz = tidz; qz < q; qz += q) {
+        for (int qx = tidx; qx < q; qx += q) {
           double sum[2]{};
-          for (int i = 0; i < (p + 1); i++) {
-            sum[0] += B2(qx, i) * cache.A1(j, i, qz);
-            sum[1] += G2(qx, i) * cache.A1(j, i, qz);
+          for (int dx = 0; dx < (p + 1); dx++) {
+            sum[0] += B2(qx, dx) * cache.A1(dy, dx, qz);
+            sum[1] += G2(qx, dx) * cache.A1(dy, dx, qz);
           }
-          cache.A2(0, j, qz, qx) = sum[0];
-          cache.A2(1, j, qz, qx) = sum[1];
+          cache.A2(0, dy, qz, qx) = sum[0];
+          cache.A2(1, dy, qz, qx) = sum[1];
         }
       }
     }
+    __syncthreads();
 
-    for (int qz = 0; qz < q; qz++) {
-      for (int qy = 0; qy < q; qy++) {
-        for (int qx = 0; qx < q; qx++) {
+    for (int qz = tidz; qz < q; qz += q) {
+      for (int qy = tidy; qy < q; qy += q) {
+        for (int qx = tidx; qx < q; qx += q) {
           double sum[3]{};
-          for (int j = 0; j < (p + 1); j++) {
-            sum[0] += B2(qy, j) * cache.A2(0, j, qz, qx);
-            sum[1] += G2(qy, j) * cache.A2(0, j, qz, qx);
-            sum[2] += B2(qy, j) * cache.A2(1, j, qz, qx);
+          for (int dy = 0; dy < (p + 1); dy++) {
+            sum[0] += B2(qy, dy) * cache.A2(0, dy, qz, qx);
+            sum[1] += G2(qy, dy) * cache.A2(0, dy, qz, qx);
+            sum[2] += B2(qy, dy) * cache.A2(1, dy, qz, qx);
           }
-          serac::get<0>(values_and_derivatives)(qz, qy, qx)[2] += sum[0];
-          serac::get<1>(values_and_derivatives)(qz, qy, qx)[0] += sum[1];
-          serac::get<1>(values_and_derivatives)(qz, qy, qx)[1] -= sum[2];
+          value[2] += sum[0];
+          curl[0] += sum[1];
+          curl[1] -= sum[2];
         }
       }
     }
 
     // apply covariant Piola transformation to go
     // from parent element -> physical element
-    for (int qz = 0; qz < q; qz++) {
-      for (int qy = 0; qy < q; qy++) {
-        for (int qx = 0; qx < q; qx++) {
-          tensor<double, dim, dim> J_T;
-          for (int row = 0; row < dim; row++) {
-            for (int col = 0; col < dim; col++) {
-              J_T[row][col] = jacobians(row, col, qz, qy, qx);
-            }
-          }
-          auto detJ                                         = det(J_T);
-          auto value                                        = serac::get<0>(values_and_derivatives)(qz, qy, qx);
-          auto curl                                         = serac::get<1>(values_and_derivatives)(qz, qy, qx);
-          serac::get<0>(values_and_derivatives)(qz, qy, qx) = linear_solve(J_T, value);
-          serac::get<1>(values_and_derivatives)(qz, qy, qx) = dot(curl, J_T) / detJ;
-        }
-      }
-    }
+    value = linear_solve(transpose(J), value);
+    curl = dot(J, curl) / det(J);
 
-    return values_and_derivatives;
+    return tuple{value, curl};
   }
 
   template <typename T1, typename T2, int q>
@@ -793,6 +822,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
       atomicAdd(&cache.A2(0, dz, tidy, tidx), sum);
       atomicAdd(&cache.A2(1, dz, tidy, tidx), B2(tidz, dz) * flux[2]);
     }
+    __syncthreads();
 
     for (int dz = tidz; dz < p + 1; dz += q) {
       for (int dy = tidy; dy < p + 1; dy += q) {
@@ -806,6 +836,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
         }
       }
     }
+    __syncthreads();
 
     for (int dz = tidz; dz < p + 1; dz += q) {
       for (int dy = tidy; dy < p + 1; dy += q) {
@@ -818,6 +849,8 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
         }
       }
     }
+    __syncthreads();
+
 
     /////////////////////////////////
     ////////// Y-component //////////
@@ -838,6 +871,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
       atomicAdd(&cache.A2(0, dz, tidy, tidx), sum);
       atomicAdd(&cache.A2(1, dz, tidy, tidx), B2(tidz, dz) * flux[2]);
     }
+    __syncthreads();
 
     for (int dz = tidz; dz < p + 1; dz += q) {
       for (int dx = tidx; dx < p + 1; dx += q) {
@@ -851,6 +885,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
         }
       }
     }
+    __syncthreads();
 
     for (int dz = tidz; dz < p + 1; dz+=q) {
       for (int dy = tidy; dy < p; dy+=q) {
@@ -863,6 +898,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
         }
       }
     }
+    __syncthreads();
 
     /////////////////////////////////
     ////////// Z-component //////////
@@ -883,6 +919,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
       atomicAdd(&cache.A2(0, dx, tidz, tidy), sum);
       atomicAdd(&cache.A2(1, dx, tidz, tidy), B2(tidx, dx) * flux[0]);
     }
+    __syncthreads();
 
     for (int dy = tidy; dy < p + 1; dy+=q) {
       for (int dx = tidx; dx < p + 1; dx+=q) {
@@ -896,6 +933,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
         }
       }
     }
+    __syncthreads();
 
     for (int dz = tidz; dz < p; dz+=q) {
       for (int dy = tidy; dy < p + 1; dy+=q) {
