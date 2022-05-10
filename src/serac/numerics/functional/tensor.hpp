@@ -1172,16 +1172,28 @@ SERAC_HOST_DEVICE bool is_symmetric_and_positive_definite(tensor<double, 3, 3> A
 }
 
 /**
+ * @struct A representation of an LU factorization
+ *
+ * The entries of P mean row i of the matrix was exchanged with row P[i].
+ */
+template <typename T, int n>
+struct LuFactorization {
+  tensor<int, n>  P; ///< Row permutation indices due to partial pivoting
+  tensor<T, n, n> L; ///< Lower triangular factor
+  tensor<T, n, n> U; ///< Upper triangular factor
+};
+
+/**
  * @brief Compute LU factorization of a matrix with partial pivoting
+ *
  * @param[in] A The matrix to factorize
  * @return x tuple of [P, L, U], with
  * L the lower triangular factor
  * U the upper triangular factor
  * P an array indicating the row permutations due to pivoting.
- * Row i of A was exchanged with row P[i].
  */
 template <typename T, int n>
-SERAC_HOST_DEVICE constexpr auto lu(tensor<T, n, n> A)
+SERAC_HOST_DEVICE constexpr LuFactorization<T, n> lu(tensor<T, n, n> A)
 {
   constexpr auto abs  = [](double x) { return (x < 0) ? -x : x; };
   constexpr auto swap = [](auto& x, auto& y) {
@@ -1196,7 +1208,7 @@ SERAC_HOST_DEVICE constexpr auto lu(tensor<T, n, n> A)
   // This handles the case if T is a dual number
   // TODO: consider making a dense identity that is templated on type
   // BT 05/09/2022
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < n; i++) {
     if constexpr(is_dual_number<T>::value) {
       L[i][i].value = 1.0;
     } else {
@@ -1233,7 +1245,78 @@ SERAC_HOST_DEVICE constexpr auto lu(tensor<T, n, n> A)
     }
   }
 
-  return tuple{P, L, U};
+  return LuFactorization<T, n>{.P = P, .L = L, .U = U};
+}
+
+/**
+ * @brief Solves a lower triangular system Ly = b
+ *
+ * L must be lower triangular and normalized such that the 
+ * diagonal entries are unity. This is not checked in the 
+ * function, so failure to obey this will produce 
+ * meaningless results.
+ *
+ * @param[in] L A lower triangular matrix
+ * @param[in] b The right hand side
+ * @param[in] P A list of indices to index into b in a permuted fashion.
+ *  
+ * @return y the solution vector
+ */
+template <typename T, int n>
+SERAC_HOST_DEVICE constexpr tensor<T, n> solve_lower_triangular(const tensor<T, n, n> L,
+                                                                const tensor<T, n>& b,
+                                                                const tensor<int, n>& P)
+{
+  tensor<T, n> y{};
+  for (int i = 0; i < n; i++) {
+    auto c = b[P[i]];
+    for (int j = 0; j < i; j++) {
+      c -= L[i][j] * y[j];
+    }
+    y[i] = c / L[i][i];
+  }
+  return y;
+}
+
+/**
+ * @overload
+ * @note For the case when no permutation of the rows is needed.
+ */
+template <typename T, int n>
+SERAC_HOST_DEVICE constexpr tensor<T, n> solve_lower_triangular(const tensor<T, n, n> L,
+                                                                const tensor<T, n>& b)
+{
+  // no permutation provided, so just map each equation to itself
+  // TODO make a convienience function for ranges like this
+  // BT 05/09/2022
+  tensor<int, n> P(make_tensor<n>([](auto i) { return i; }));
+  
+  return solve_lower_triangular(L, b, P);
+}
+
+/**
+ * @brief Solves an upper triangular system Ux = y
+ *
+ * U must be upper triangular. This is not checked, so
+ * failure to obey this will produce meaningless results.
+ *
+ * @param[in] U An upper triangular matrix
+ * @param[in] y The right hand side
+ * @return x the solution vector
+ */
+template <typename T, int n>
+SERAC_HOST_DEVICE constexpr tensor<T, n> solve_upper_triangular(const tensor<T, n, n> U,
+                                                                const tensor<T, n>& y)
+{
+  tensor<T, n> x{};
+  for (int i = n - 1; i >= 0; i--) {
+    auto c = y[i];
+    for (int j = i + 1; j < n; j++) {
+      c -= U[i][j] * x[j];
+    }
+    x[i] = c / U[i][i];
+  }
+  return x;
 }
 
 /**
@@ -1245,31 +1328,27 @@ SERAC_HOST_DEVICE constexpr auto lu(tensor<T, n, n> A)
 template <typename T, int n>
 SERAC_HOST_DEVICE constexpr tensor<T, n> linear_solve(const tensor<T, n, n> A, const tensor<T, n>& b)
 {
-  auto const [P, L, U] = lu(A);
+  auto const lu_factors = lu(A);
+  return linear_solve(lu_factors, b);
+}
+
+/**
+ * @overload
+ * @note For use with a matrix that has already been factorized
+ */
+template <typename T, int n>
+SERAC_HOST_DEVICE constexpr tensor<T, n> linear_solve(const LuFactorization<T, n>& LU,
+                                                      const tensor<T, n>& b)
+{
+  auto const [P, L, U] = LU;
 
   // Forward substitution
   // solve Ly = b
-  tensor<T, n> y{};
-  for (int i = 0; i < n; i++) {
-    auto c = b[P[i]];
-    for (int j = 0; j < i; j++) {
-      c -= L[i][j] * y[j];
-    }
-    y[i] = c / L[i][i];
-  }
-
+  const auto y = solve_lower_triangular(L, b, P);
+  
   // Back substitution
   // Solve Ux = y
-  tensor<T, n> x{};
-  for (int i = n - 1; i >= 0; i--) {
-    auto c = y[i];
-    for (int j = i + 1; j < n; j++) {
-      c -= U[i][j] * x[j];
-    }
-    x[i] = c / U[i][i];
-  }
-
-  return x;
+  return solve_upper_triangular(U, y);
 }
 
 /**
