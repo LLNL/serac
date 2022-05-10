@@ -305,7 +305,9 @@ TEST(LiqCrystElastMaterial, FreeEnergyAndStressAgree)
   auto stress = material.calculateMechanicalConstitutiveOutputs(
     displacement_grad, temperature, temperature_grad, state, displacement_grad_old, temperature_old, dt);
 
-  auto error  = stress - get_gradient(energy_and_stress);
+  auto stress_AD = get_gradient(energy_and_stress);
+
+  auto error  = stress - stress_AD;
 
   EXPECT_NEAR(norm(error), 0.0, 1e-12);
 }

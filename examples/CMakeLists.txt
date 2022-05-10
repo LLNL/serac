@@ -20,3 +20,4 @@ install(
 
 # Add the simple conduction examples
 add_subdirectory(simple_conduction)
+add_subdirectory(liquid_crystal_elastomer)
