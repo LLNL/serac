@@ -820,7 +820,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
       int  dz  = (tidz + offset) % n;
       auto sum = B2(tidz, dz) * source[0] + G2(tidz, dz) * flux[1];
       atomicAdd(&cache.A2(0, dz, tidy, tidx), sum);
-      atomicAdd(&cache.A2(1, dz, tidy, tidx), B2(tidz, dz) * flux[2]);
+      atomicAdd(&cache.A2(1, dz, tidy, tidx), -B2(tidz, dz) * flux[2]);
     }
     __syncthreads();
 
