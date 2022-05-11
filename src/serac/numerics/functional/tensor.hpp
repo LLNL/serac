@@ -1178,9 +1178,9 @@ SERAC_HOST_DEVICE bool is_symmetric_and_positive_definite(tensor<double, 3, 3> A
  */
 template <typename T, int n>
 struct LuFactorization {
-  tensor<int, n>  P; ///< Row permutation indices due to partial pivoting
-  tensor<T, n, n> L; ///< Lower triangular factor
-  tensor<T, n, n> U; ///< Upper triangular factor
+  tensor<int, n>  P;  ///< Row permutation indices due to partial pivoting
+  tensor<T, n, n> L;  ///< Lower triangular factor
+  tensor<T, n, n> U;  ///< Upper triangular factor
 };
 
 /**
@@ -1202,14 +1202,14 @@ SERAC_HOST_DEVICE constexpr LuFactorization<T, n> lu(tensor<T, n, n> A)
     y        = tmp;
   };
 
-  auto           U = A;
+  auto U = A;
   // initialize L to Identity
-  auto           L = tensor<T, n, n>{};
+  auto L = tensor<T, n, n>{};
   // This handles the case if T is a dual number
   // TODO: consider making a dense identity that is templated on type
   // BT 05/09/2022
   for (int i = 0; i < n; i++) {
-    if constexpr(is_dual_number<T>::value) {
+    if constexpr (is_dual_number<T>::value) {
       L[i][i].value = 1.0;
     } else {
       L[i][i] = 1.0;
@@ -1238,8 +1238,8 @@ SERAC_HOST_DEVICE constexpr LuFactorization<T, n> lu(tensor<T, n, n> A)
     // zero entries below in this column in U
     // and fill in L entries
     for (int j = i + 1; j < n; j++) {
-      auto c = U[j][i] / U[i][i];
-      L[j][i]  = c;
+      auto c  = U[j][i] / U[i][i];
+      L[j][i] = c;
       U[j] -= c * U[i];
       U[j][i] = T{};
     }
@@ -1251,23 +1251,22 @@ SERAC_HOST_DEVICE constexpr LuFactorization<T, n> lu(tensor<T, n, n> A)
 /**
  * @brief Solves a lower triangular system Ly = b
  *
- * L must be lower triangular and normalized such that the 
- * diagonal entries are unity. This is not checked in the 
- * function, so failure to obey this will produce 
+ * L must be lower triangular and normalized such that the
+ * diagonal entries are unity. This is not checked in the
+ * function, so failure to obey this will produce
  * meaningless results.
  *
  * @param[in] L A lower triangular matrix
  * @param[in] b The right hand side
  * @param[in] P A list of indices to index into b in a permuted fashion.
- *  
+ *
  * @return y the solution vector
  */
-template <typename T, int n, int ... m>
-SERAC_HOST_DEVICE constexpr auto solve_lower_triangular(const tensor<T, n, n> L,
-                                                        const tensor<T, n, m ...> b,
+template <typename T, int n, int... m>
+SERAC_HOST_DEVICE constexpr auto solve_lower_triangular(const tensor<T, n, n> L, const tensor<T, n, m...> b,
                                                         const tensor<int, n>& P)
 {
-  tensor<T, n, m ...> y{};
+  tensor<T, n, m...> y{};
   for (int i = 0; i < n; i++) {
     auto c = b[P[i]];
     for (int j = 0; j < i; j++) {
@@ -1282,15 +1281,14 @@ SERAC_HOST_DEVICE constexpr auto solve_lower_triangular(const tensor<T, n, n> L,
  * @overload
  * @note For the case when no permutation of the rows is needed.
  */
-template <typename T, int n, int ... m>
-SERAC_HOST_DEVICE constexpr auto solve_lower_triangular(const tensor<T, n, n> L,
-                                                        const tensor<T, n, m ...> b)
+template <typename T, int n, int... m>
+SERAC_HOST_DEVICE constexpr auto solve_lower_triangular(const tensor<T, n, n> L, const tensor<T, n, m...> b)
 {
   // no permutation provided, so just map each equation to itself
   // TODO make a convienience function for ranges like this
   // BT 05/09/2022
   tensor<int, n> P(make_tensor<n>([](auto i) { return i; }));
-  
+
   return solve_lower_triangular(L, b, P);
 }
 
@@ -1304,11 +1302,10 @@ SERAC_HOST_DEVICE constexpr auto solve_lower_triangular(const tensor<T, n, n> L,
  * @param[in] y The right hand side
  * @return x the solution vector
  */
-template <typename T, int n, int ... m>
-SERAC_HOST_DEVICE constexpr auto solve_upper_triangular(const tensor<T, n, n> U,
-                                                        const tensor<T, n, m ...> y)
+template <typename T, int n, int... m>
+SERAC_HOST_DEVICE constexpr auto solve_upper_triangular(const tensor<T, n, n> U, const tensor<T, n, m...> y)
 {
-  tensor<T, n, m ...> x{};
+  tensor<T, n, m...> x{};
   for (int i = n - 1; i >= 0; i--) {
     auto c = y[i];
     for (int j = i + 1; j < n; j++) {
@@ -1325,8 +1322,8 @@ SERAC_HOST_DEVICE constexpr auto solve_upper_triangular(const tensor<T, n, n> U,
  * @param[in] b The righthand side vector b
  * @return x The solution vector
  */
-template <typename T, int n, int ... m>
-SERAC_HOST_DEVICE constexpr auto linear_solve(const tensor<T, n, n> A, const tensor<T, n, m ...> b)
+template <typename T, int n, int... m>
+SERAC_HOST_DEVICE constexpr auto linear_solve(const tensor<T, n, n> A, const tensor<T, n, m...> b)
 {
   auto const lu_factors = lu(A);
   return linear_solve(lu_factors, b);
@@ -1336,19 +1333,16 @@ SERAC_HOST_DEVICE constexpr auto linear_solve(const tensor<T, n, n> A, const ten
  * @overload
  * @note For use with a matrix that has already been factorized
  */
-template <typename T, int n, int ... m>
-SERAC_HOST_DEVICE constexpr auto linear_solve(const LuFactorization<T, n>& LU,
-                                              const tensor<T, n, m ...> b)
+template <typename T, int n, int... m>
+SERAC_HOST_DEVICE constexpr auto linear_solve(const LuFactorization<T, n>& lu_factors, const tensor<T, n, m...> b)
 {
-  auto const [P, L, U] = LU;
-
   // Forward substitution
   // solve Ly = b
-  const auto y = solve_lower_triangular(L, b, P);
+  const auto y = solve_lower_triangular(lu_factors.L, b, lu_factors.P);
 
   // Back substitution
   // Solve Ux = y
-  return solve_upper_triangular(U, y);
+  return solve_upper_triangular(lu_factors.U, y);
 }
 
 /**
@@ -1357,8 +1351,8 @@ SERAC_HOST_DEVICE constexpr auto linear_solve(const LuFactorization<T, n>& LU,
  * that avoids accumulating though the Gaussian eliminiation.
  * It costs 2 linear solves (of non-dual numbers).
  */
-template <typename gradient_type, int n, int ... m>
-SERAC_HOST_DEVICE auto linear_solve(tensor<dual<gradient_type>, n, n> A, tensor<dual<gradient_type>, n, m ...> b)
+template <typename gradient_type, int n, int... m>
+SERAC_HOST_DEVICE auto linear_solve(tensor<dual<gradient_type>, n, n> A, tensor<dual<gradient_type>, n, m...> b)
 {
   auto x  = linear_solve(get_value(A), get_value(b));
   auto r  = get_gradient(b) - dot(get_gradient(A), x);

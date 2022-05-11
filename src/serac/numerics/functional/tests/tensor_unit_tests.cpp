@@ -13,10 +13,10 @@ using namespace serac;
 static constexpr double tolerance = 4.0e-16;
 static constexpr auto   I         = Identity<3>();
 
-template<typename T, int n>
-tensor<T, n, n> composeMatrixFromLU(const tensor<int, n>& P, const tensor<T, n, n>& L,
-                                    const tensor<T, n, n>& U) {
-  auto                 LU = dot(L, U);
+template <typename T, int n>
+tensor<T, n, n> composeMatrixFromLU(const tensor<int, n>& P, const tensor<T, n, n>& L, const tensor<T, n, n>& U)
+{
+  auto            LU = dot(L, U);
   tensor<T, n, n> PLU{};
   for (int i = 0; i < n; i++) {
     PLU[P[i]] = LU[i];
@@ -167,26 +167,28 @@ TEST(tensor, implicit_conversion)
 TEST(tensor, inverse4x4)
 {
   const tensor<double, 4, 4> A{{{2, 1, -1, 1}, {-3, -1, 2, 8}, {-2, 4, 2, 6}, {1, 1, 7, 2}}};
-  auto invA = inv(A);
+  auto                       invA = inv(A);
   EXPECT_LT(squared_norm(dot(A, invA) - Identity<4>()), tolerance);
 }
 
 TEST(tensor, derivative_of_inverse)
 {
   const tensor<double, 4, 4> A{{{2, 1, -1, 1}, {-3, -1, 2, 8}, {-2, 4, 2, 6}, {1, 1, 7, 2}}};
-  auto invA = inv(make_dual(A));
+  auto                       invA = inv(make_dual(A));
   EXPECT_LT(squared_norm(dot(A, get_value(invA)) - Identity<4>()), tolerance);
 }
 
-TEST(tensor, lu_decomposition)
+template <int n>
+void checkLUDecomposition(const tensor<double, n, n>& A)
 {
-  const tensor<double, 3, 3> A{{{2, 1, -1}, {-3, -1, 2}, {-2, 4, 2}}};
-
-  auto [P, L, U] = lu(A);
+  auto lu_factorization = lu(A);
+  auto P                = lu_factorization.P;
+  auto L                = lu_factorization.L;
+  auto U                = lu_factorization.U;
 
   // check that L is lower triangular and U is upper triangular
-  for (int i = 0; i < 3; i++) {
-    for (int j = i + 1; j < 3; j++) {
+  for (int i = 0; i < n; i++) {
+    for (int j = i + 1; j < n; j++) {
       EXPECT_DOUBLE_EQ(L[i][j], 0);
       EXPECT_DOUBLE_EQ(U[j][i], 0);
     }
@@ -194,11 +196,29 @@ TEST(tensor, lu_decomposition)
 
   // check L and U are indeed factors of A
   auto                 LU = dot(L, U);
-  tensor<double, 3, 3> PLU{};
-  for (int i = 0; i < 3; i++) {
+  tensor<double, n, n> PLU{};
+  for (int i = 0; i < n; i++) {
     PLU[P[i]] = LU[i];
   }
   EXPECT_LT(squared_norm(A - PLU), tolerance);
+}
+
+TEST(tensor, lu_decomposition2x2)
+{
+  const tensor<double, 2, 2> A{{{2, 1}, {-3, -1}}};
+  checkLUDecomposition(A);
+}
+
+TEST(tensor, lu_decomposition3x3)
+{
+  const tensor<double, 3, 3> A{{{2, 1, -1}, {-3, -1, 2}, {-2, 4, 2}}};
+  checkLUDecomposition(A);
+}
+
+TEST(tensor, lu_decomposition4x4)
+{
+  const tensor<double, 4, 4> A{{{2, 1, -1, 1}, {-3, -1, 2, 8}, {-2, 4, 2, 6}, {1, 1, 7, 2}}};
+  checkLUDecomposition(A);
 }
 
 TEST(tensor, lu_decomposition_works_on_dual_numbers)
@@ -210,12 +230,12 @@ TEST(tensor, lu_decomposition_works_on_dual_numbers)
   tensor<dual<double>, 3, 3> A{};
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
-      A[i][j].value = v[i][j];
+      A[i][j].value    = v[i][j];
       A[i][j].gradient = g[i][j];
     }
   }
   auto [P, L, U] = lu(A);
-  auto PLU = composeMatrixFromLU(P, L, U);
+  auto PLU       = composeMatrixFromLU(P, L, U);
 
   EXPECT_LT(squared_norm(get_value(A) - get_value(PLU)), tolerance);
   EXPECT_LT(squared_norm(get_gradient(A) - get_gradient(PLU)), tolerance);
