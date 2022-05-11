@@ -656,9 +656,9 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
     }
     __syncthreads();
 
-    for (int dz = 0; dz < p + 1; dz += q) {
-      for (int qy = 0; qy < q; qy += q) {
-        for (int qx = 0; qx < q; qx += q) {
+    for (int dz = tidz; dz < p + 1; dz += q) {
+      for (int qy = tidy; qy < q; qy += q) {
+        for (int qx = tidx; qx < q; qx += q) {
           double sum[2]{};
           for (int dx = 0; dx < (p + 1); dx++) {
             sum[0] += B2(qx, dx) * cache.A1(dz, dx, qy);

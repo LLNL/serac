@@ -66,6 +66,21 @@ __global__ void reference_cuda_kernel(mfem::DeviceTensor<2, const double> u, mfe
 
     auto arg = domain_integral::Preprocess<trial_element>(u_elem, xi, J_q);
 
+    if (q == 0) {
+      print(u_elem);
+      printf("\n");
+    }
+
+    for (int i = 0; i < rule.size(); i++) {
+      if (q == i) {
+        printf("%d, %d: ", e, q);
+        print(get<0>(arg));
+        print(get<1>(arg));
+        print(J_q);
+        printf("\n");
+      }
+    }
+
     auto qf_output = qf(arg);
 
     r_elem += domain_integral::Postprocess<test_element>(qf_output, xi, J_q) * dx;
@@ -146,6 +161,23 @@ __global__ void batched_cuda_kernel(const double* inputs, double* outputs, const
 
     // interpolate each quadrature point's value
     auto stimulus = trial_element::interpolate(u_elem[threadIdx.y], J_q, rule, shared[threadIdx.y].trial_cache);
+
+    if (e == 0 && threadIdx.x == 0) {
+      print(u_elem[threadIdx.y].x);
+      print(u_elem[threadIdx.y].y);
+      print(u_elem[threadIdx.y].z);
+      printf("\n");
+    }
+
+    for (int i = 0; i < q * q * q; i++) {
+      if (threadIdx.x == i && e == 0) {
+        printf("%d, %d: ", e, i);
+        print(get<0>(stimulus));
+        print(get<1>(stimulus));
+        print(J_q);
+        printf("\n");
+      }
+    }
 
     // evaluate the material response at each quadrature point
     auto response = material(stimulus);
@@ -668,10 +700,10 @@ void hcurl_hcurl_test_3D(int num_elements, int num_runs)
   mfem::Vector rho_invJ_invJT_dv_1D(num_elements * dim * dim * q * q * q);
   mfem::Vector k_JTJ_dv_over_detJsq_1D(num_elements * dim * dim * q * q * q);
 
-  auto U                    = mfem::Reshape(U1D.ReadWrite(), trial_element::ndof, num_elements);
-  auto J                    = mfem::Reshape(J1D.ReadWrite(), q * q * q, dim, dim, num_elements);
-  auto rho_invJ_invJT_dv    = mfem::Reshape(rho_invJ_invJT_dv_1D.ReadWrite(), q * q * q, dim, dim, num_elements);
-  auto k_JTJ_dv_over_detJsq = mfem::Reshape(k_JTJ_dv_over_detJsq_1D.ReadWrite(), q * q * q, dim, dim, num_elements);
+  auto U                    = mfem::Reshape(U1D.HostReadWrite(), trial_element::ndof, num_elements);
+  auto J                    = mfem::Reshape(J1D.HostReadWrite(), q * q * q, dim, dim, num_elements);
+  auto rho_invJ_invJT_dv    = mfem::Reshape(rho_invJ_invJT_dv_1D.HostReadWrite(), q * q * q, dim, dim, num_elements);
+  auto k_JTJ_dv_over_detJsq = mfem::Reshape(k_JTJ_dv_over_detJsq_1D.HostReadWrite(), q * q * q, dim, dim, num_elements);
 
   serac::GaussLegendreRule<Geometry::Hexahedron, q> rule;
 
@@ -764,12 +796,12 @@ void hcurl_hcurl_test_3D(int num_elements, int num_runs)
     mfem::Array<double> gc_(n * q);
     mfem::Array<double> gct_(n * q);
 
-    auto Bo  = mfem::Reshape(bo_.ReadWrite(), q, n - 1);
-    auto Bc  = mfem::Reshape(bc_.ReadWrite(), q, n);
-    auto Bot = mfem::Reshape(bot_.ReadWrite(), n - 1, q);
-    auto Bct = mfem::Reshape(bct_.ReadWrite(), n, q);
-    auto Gc  = mfem::Reshape(gc_.ReadWrite(), q, n);
-    auto Gct = mfem::Reshape(gct_.ReadWrite(), n, q);
+    auto Bo  = mfem::Reshape(bo_.HostReadWrite(), q, n - 1);
+    auto Bc  = mfem::Reshape(bc_.HostReadWrite(), q, n);
+    auto Bot = mfem::Reshape(bot_.HostReadWrite(), n - 1, q);
+    auto Bct = mfem::Reshape(bct_.HostReadWrite(), n, q);
+    auto Gc  = mfem::Reshape(gc_.HostReadWrite(), q, n);
+    auto Gct = mfem::Reshape(gct_.HostReadWrite(), n, q);
 
     for (int i = 0; i < q; i++) {
       auto lobatto_value      = serac::GaussLobattoInterpolation<n>(rule.points_1D[i]);
@@ -788,8 +820,7 @@ void hcurl_hcurl_test_3D(int num_elements, int num_runs)
 
     double mass_runtime = time([&]() {
       for (int i = 0; i < num_runs; i++) {
-        mfem::PAHcurlMassApply3D(n, q, num_elements, symmetric = false, bo_, bc_, bot_, bct_, rho_invJ_invJT_dv_1D, U1D,
-                                 R1D);
+        mfem::SmemPAHcurlMassApply3D<n,q>(n, q, num_elements, symmetric = false, bo_, bc_, bot_, bct_, rho_invJ_invJT_dv_1D, U1D, R1D);
         compiler::please_do_not_optimize_away(&R1D);
       }
     });
@@ -797,7 +828,7 @@ void hcurl_hcurl_test_3D(int num_elements, int num_runs)
 
     double curlcurl_runtime = time([&]() {
       for (int i = 0; i < num_runs; i++) {
-        mfem::PACurlCurlApply3D<n, q>(n, q, symmetric = false, num_elements, bo_, bc_, bot_, bct_, gc_, gct_,
+        mfem::SmemPACurlCurlApply3D<n, q>(n, q, symmetric = false, num_elements, bo_, bc_, bot_, bct_, gc_, gct_,
                                       k_JTJ_dv_over_detJsq_1D, U1D, R1D);
         compiler::please_do_not_optimize_away(&R1D);
       }
@@ -817,8 +848,8 @@ int main()
 {
   mfem::Device device("cuda");
 
-  int num_runs     = 10;
-  int num_elements = 20000;
+  int num_runs     = 1;
+  int num_elements = 1;
   // h1_h1_test_2D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
   // h1_h1_test_2D<2 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
   // h1_h1_test_2D<3 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
@@ -828,5 +859,5 @@ int main()
   // hcurl_hcurl_test_2D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
   // hcurl_hcurl_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
   // hcurl_hcurl_test_2D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
-  hcurl_hcurl_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
+  hcurl_hcurl_test_3D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
 }
