@@ -1262,12 +1262,12 @@ SERAC_HOST_DEVICE constexpr LuFactorization<T, n> lu(tensor<T, n, n> A)
  *  
  * @return y the solution vector
  */
-template <typename T, int n>
-SERAC_HOST_DEVICE constexpr tensor<T, n> solve_lower_triangular(const tensor<T, n, n> L,
-                                                                const tensor<T, n>& b,
-                                                                const tensor<int, n>& P)
+template <typename T, int n, int ... m>
+SERAC_HOST_DEVICE constexpr auto solve_lower_triangular(const tensor<T, n, n> L,
+                                                        const tensor<T, n, m ...> b,
+                                                        const tensor<int, n>& P)
 {
-  tensor<T, n> y{};
+  tensor<T, n, m ...> y{};
   for (int i = 0; i < n; i++) {
     auto c = b[P[i]];
     for (int j = 0; j < i; j++) {
@@ -1282,9 +1282,9 @@ SERAC_HOST_DEVICE constexpr tensor<T, n> solve_lower_triangular(const tensor<T, 
  * @overload
  * @note For the case when no permutation of the rows is needed.
  */
-template <typename T, int n>
-SERAC_HOST_DEVICE constexpr tensor<T, n> solve_lower_triangular(const tensor<T, n, n> L,
-                                                                const tensor<T, n>& b)
+template <typename T, int n, int ... m>
+SERAC_HOST_DEVICE constexpr auto solve_lower_triangular(const tensor<T, n, n> L,
+                                                        const tensor<T, n, m ...> b)
 {
   // no permutation provided, so just map each equation to itself
   // TODO make a convienience function for ranges like this
@@ -1304,11 +1304,11 @@ SERAC_HOST_DEVICE constexpr tensor<T, n> solve_lower_triangular(const tensor<T, 
  * @param[in] y The right hand side
  * @return x the solution vector
  */
-template <typename T, int n>
-SERAC_HOST_DEVICE constexpr tensor<T, n> solve_upper_triangular(const tensor<T, n, n> U,
-                                                                const tensor<T, n>& y)
+template <typename T, int n, int ... m>
+SERAC_HOST_DEVICE constexpr auto solve_upper_triangular(const tensor<T, n, n> U,
+                                                        const tensor<T, n, m ...> y)
 {
-  tensor<T, n> x{};
+  tensor<T, n, m ...> x{};
   for (int i = n - 1; i >= 0; i--) {
     auto c = y[i];
     for (int j = i + 1; j < n; j++) {
@@ -1325,8 +1325,8 @@ SERAC_HOST_DEVICE constexpr tensor<T, n> solve_upper_triangular(const tensor<T, 
  * @param[in] b The righthand side vector b
  * @return x The solution vector
  */
-template <typename T, int n>
-SERAC_HOST_DEVICE constexpr tensor<T, n> linear_solve(const tensor<T, n, n> A, const tensor<T, n>& b)
+template <typename T, int n, int ... m>
+SERAC_HOST_DEVICE constexpr auto linear_solve(const tensor<T, n, n> A, const tensor<T, n, m ...> b)
 {
   auto const lu_factors = lu(A);
   return linear_solve(lu_factors, b);
@@ -1336,56 +1336,19 @@ SERAC_HOST_DEVICE constexpr tensor<T, n> linear_solve(const tensor<T, n, n> A, c
  * @overload
  * @note For use with a matrix that has already been factorized
  */
-template <typename T, int n>
-SERAC_HOST_DEVICE constexpr tensor<T, n> linear_solve(const LuFactorization<T, n>& LU,
-                                                      const tensor<T, n>& b)
+template <typename T, int n, int ... m>
+SERAC_HOST_DEVICE constexpr auto linear_solve(const LuFactorization<T, n>& LU,
+                                              const tensor<T, n, m ...> b)
 {
   auto const [P, L, U] = LU;
 
   // Forward substitution
   // solve Ly = b
   const auto y = solve_lower_triangular(L, b, P);
-  
+
   // Back substitution
   // Solve Ux = y
   return solve_upper_triangular(U, y);
-}
-
-/**
- * @overload
- * @note Extends solve to multiple righthand sides
- * @param[in] A The coefficient matrix A
- * @param[in] b The matrix of righthand side vectors
- * @return x The matrix of solution vectors
- */
-template <typename T, int n, int m>
-SERAC_HOST_DEVICE constexpr tensor<T, n, m> linear_solve(const tensor<T, n, n>& A, const tensor<T, n, m>& b)
-{
-  auto [P, L, U] = lu(A);
-
-  // Forward substitution
-  // solve Ly = b
-  tensor<T, n, m> y{};
-  for (int i = 0; i < n; i++) {
-    auto c = b[P[i]];
-    for (int j = 0; j < i; j++) {
-      c -= L[i][j] * y[j];
-    }
-    y[i] = c / L[i][i];
-  }
-
-  // Back substitution
-  // Solve Ux = y
-  tensor<T, n, m> x{};
-  for (int i = n - 1; i >= 0; i--) {
-    auto c = y[i];
-    for (int j = i + 1; j < n; j++) {
-      c -= U[i][j] * x[j];
-    }
-    x[i] = c / U[i][i];
-  }
-
-  return x;
 }
 
 /**
@@ -1394,8 +1357,8 @@ SERAC_HOST_DEVICE constexpr tensor<T, n, m> linear_solve(const tensor<T, n, n>& 
  * that avoids accumulating though the Gaussian eliminiation.
  * It costs 2 linear solves (of non-dual numbers).
  */
-template <typename gradient_type, int n>
-SERAC_HOST_DEVICE auto linear_solve(tensor<dual<gradient_type>, n, n> A, tensor<dual<gradient_type>, n> b)
+template <typename gradient_type, int n, int ... m>
+SERAC_HOST_DEVICE auto linear_solve(tensor<dual<gradient_type>, n, n> A, tensor<dual<gradient_type>, n, m ...> b)
 {
   auto x  = linear_solve(get_value(A), get_value(b));
   auto r  = get_gradient(b) - dot(get_gradient(A), x);
@@ -1452,52 +1415,8 @@ SERAC_HOST_DEVICE constexpr tensor<double, 3, 3> inv(const tensor<double, 3, 3>&
 template <typename T, int n>
 SERAC_HOST_DEVICE constexpr tensor<T, n, n> inv(tensor<T, n, n> A)
 {
-  constexpr auto abs  = [](double x) { return (x < 0) ? -x : x; };
-  constexpr auto swap = [](auto& x, auto& y) {
-    auto tmp = x;
-    x        = y;
-    y        = tmp;
-  };
-
-  tensor<double, n, n> B = DenseIdentity<n>();
-
-  for (int i = 0; i < n; i++) {
-    // Search for maximum in this column
-    double max_val = abs(A[i][i]);
-
-    int max_row = i;
-    for (int j = i + 1; j < n; j++) {
-      if (abs(A[j][i]) > max_val) {
-        max_val = abs(A[j][i]);
-        max_row = j;
-      }
-    }
-
-    swap(B[max_row], B[i]);
-    swap(A[max_row], A[i]);
-
-    // zero entries below in this column
-    for (int j = i + 1; j < n; j++) {
-      if (A[j][i] != 0.0) {
-        double c = -A[j][i] / A[i][i];
-        A[j] += c * A[i];
-        B[j] += c * B[i];
-        A[j][i] = 0;
-      }
-    }
-  }
-
-  // upper triangular solve
-  for (int i = n - 1; i >= 0; i--) {
-    B[i] = B[i] / A[i][i];
-    for (int j = i - 1; j >= 0; j--) {
-      if (A[j][i] != 0.0) {
-        B[j] -= A[j][i] * B[i];
-      }
-    }
-  }
-
-  return B;
+  auto I = DenseIdentity<n>();
+  return linear_solve(A, I);
 }
 
 /**
