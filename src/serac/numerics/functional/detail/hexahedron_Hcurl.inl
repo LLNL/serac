@@ -536,9 +536,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
     }
   }
 
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-
+  //////////////////////////////////////////////////////////////////////////////////////////////////////
 
   template <int q>
   static SERAC_DEVICE auto interpolate(const dof_type& element_values, const tensor<double, dim, dim>& J,
@@ -548,7 +546,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
     int tidy = (threadIdx.x % (q * q)) / q;
     int tidz = threadIdx.x / (q * q);
 
-    static constexpr auto points1D  = GaussLegendreNodes<q>();
+    static constexpr auto points1D = GaussLegendreNodes<q>();
 
     static constexpr auto B1_ = [=]() {
       tensor<double, q, p> B1{};
@@ -588,8 +586,8 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
     }
     __syncthreads();
 
-    tensor< double, dim > value{};
-    tensor< double, dim > curl{};
+    tensor<double, dim> value{};
+    tensor<double, dim> curl{};
 
     /////////////////////////////////
     ////////// X-component //////////
@@ -606,7 +604,6 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
       }
     }
     __syncthreads();
-
 
     for (int dz = tidz; dz < p + 1; dz += q) {
       for (int qy = tidy; qy < q; qy += q) {
@@ -738,7 +735,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
     // apply covariant Piola transformation to go
     // from parent element -> physical element
     value = linear_solve(transpose(J), value);
-    curl = dot(J, curl) / det(J);
+    curl  = dot(J, curl) / det(J);
 
     return tuple{value, curl};
   }
@@ -801,7 +798,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
     auto dv   = detJ * weights1D[tidx] * weights1D[tidy] * weights1D[tidz];
 
     auto source = linear_solve(J, get<0>(response)) * dv;
-    auto flux = dot(get<1>(response), J) * (dv / detJ);
+    auto flux   = dot(get<1>(response), J) * (dv / detJ);
 
     /////////////////////////////////
     ////////// X-component //////////
@@ -851,7 +848,6 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
     }
     __syncthreads();
 
-
     /////////////////////////////////
     ////////// Y-component //////////
     /////////////////////////////////
@@ -887,9 +883,9 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
     }
     __syncthreads();
 
-    for (int dz = tidz; dz < p + 1; dz+=q) {
-      for (int dy = tidy; dy < p; dy+=q) {
-        for (int dx = tidx; dx < p + 1; dx+=q) {
+    for (int dz = tidz; dz < p + 1; dz += q) {
+      for (int dy = tidy; dy < p; dy += q) {
+        for (int dx = tidx; dx < p + 1; dx += q) {
           double sum = 0.0;
           for (int qy = 0; qy < q; qy++) {
             sum += B1(qy, dy) * cache.A1(dz, dx, qy);
@@ -921,9 +917,9 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
     }
     __syncthreads();
 
-    for (int dy = tidy; dy < p + 1; dy+=q) {
-      for (int dx = tidx; dx < p + 1; dx+=q) {
-        for (int qz = tidz; qz < q; qz+=q) {
+    for (int dy = tidy; dy < p + 1; dy += q) {
+      for (int dx = tidx; dx < p + 1; dx += q) {
+        for (int qz = tidz; qz < q; qz += q) {
           double sum = 0.0;
           for (int qy = 0; qy < q; qy++) {
             sum += B2(qy, dy) * cache.A2(0, dx, qz, qy);
@@ -935,9 +931,9 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
     }
     __syncthreads();
 
-    for (int dz = tidz; dz < p; dz+=q) {
-      for (int dy = tidy; dy < p + 1; dy+=q) {
-        for (int dx = tidx; dx < p + 1; dx+=q) {
+    for (int dz = tidz; dz < p; dz += q) {
+      for (int dy = tidy; dy < p + 1; dy += q) {
+        for (int dx = tidx; dx < p + 1; dx += q) {
           double sum = 0.0;
           for (int qz = 0; qz < q; qz++) {
             sum += B1(qz, dz) * cache.A1(dy, dx, qz);
@@ -947,7 +943,5 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
       }
     }
   }
-
-  
 };
 /// @endcond

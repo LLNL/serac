@@ -66,21 +66,6 @@ __global__ void reference_cuda_kernel(mfem::DeviceTensor<2, const double> u, mfe
 
     auto arg = domain_integral::Preprocess<trial_element>(u_elem, xi, J_q);
 
-    if (q == 0) {
-      print(u_elem);
-      printf("\n");
-    }
-
-    for (int i = 0; i < rule.size(); i++) {
-      if (q == i) {
-        printf("%d, %d: ", e, q);
-        print(get<0>(arg));
-        print(get<1>(arg));
-        print(J_q);
-        printf("\n");
-      }
-    }
-
     auto qf_output = qf(arg);
 
     r_elem += domain_integral::Postprocess<test_element>(qf_output, xi, J_q) * dx;
@@ -161,23 +146,6 @@ __global__ void batched_cuda_kernel(const double* inputs, double* outputs, const
 
     // interpolate each quadrature point's value
     auto stimulus = trial_element::interpolate(u_elem[threadIdx.y], J_q, rule, shared[threadIdx.y].trial_cache);
-
-    if (e == 0 && threadIdx.x == 0) {
-      print(u_elem[threadIdx.y].x);
-      print(u_elem[threadIdx.y].y);
-      print(u_elem[threadIdx.y].z);
-      printf("\n");
-    }
-
-    for (int i = 0; i < q * q * q; i++) {
-      if (threadIdx.x == i && e == 0) {
-        printf("%d, %d: ", e, i);
-        print(get<0>(stimulus));
-        print(get<1>(stimulus));
-        print(J_q);
-        printf("\n");
-      }
-    }
 
     // evaluate the material response at each quadrature point
     auto response = material(stimulus);
@@ -763,11 +731,11 @@ void hcurl_hcurl_test_3D(int num_elements, int num_runs)
   {
     R1D = 0.0;
 
-    auto   rule = serac::MakeGaussLegendreRule<Geometry::Hexahedron, q>();
+    auto          rule = serac::MakeGaussLegendreRule<Geometry::Hexahedron, q>();
     constexpr int epb  = serac::elements_per_block<Geometry::Hexahedron>(q);
     dim3          blocksize{q * q * q, epb, 1};
     int           gridsize = (num_elements + epb - 1) / epb;
-    double runtime  = time([&]() {
+    double        runtime  = time([&]() {
       for (int i = 0; i < num_runs; i++) {
         serac::batched_cuda_kernel<Geometry::Hexahedron, test, trial, q>
             <<<gridsize, blocksize>>>(U1D.Read(), R1D.ReadWrite(), J1D.Read(), rule, num_elements, qfunc);
@@ -820,7 +788,8 @@ void hcurl_hcurl_test_3D(int num_elements, int num_runs)
 
     double mass_runtime = time([&]() {
       for (int i = 0; i < num_runs; i++) {
-        mfem::SmemPAHcurlMassApply3D<n,q>(n, q, num_elements, symmetric = false, bo_, bc_, bot_, bct_, rho_invJ_invJT_dv_1D, U1D, R1D);
+        mfem::SmemPAHcurlMassApply3D<n, q>(n, q, num_elements, symmetric = false, bo_, bc_, bot_, bct_,
+                                           rho_invJ_invJT_dv_1D, U1D, R1D);
         compiler::please_do_not_optimize_away(&R1D);
       }
     });
@@ -829,7 +798,7 @@ void hcurl_hcurl_test_3D(int num_elements, int num_runs)
     double curlcurl_runtime = time([&]() {
       for (int i = 0; i < num_runs; i++) {
         mfem::SmemPACurlCurlApply3D<n, q>(n, q, symmetric = false, num_elements, bo_, bc_, bot_, bct_, gc_, gct_,
-                                      k_JTJ_dv_over_detJsq_1D, U1D, R1D);
+                                          k_JTJ_dv_over_detJsq_1D, U1D, R1D);
         compiler::please_do_not_optimize_away(&R1D);
       }
     });
