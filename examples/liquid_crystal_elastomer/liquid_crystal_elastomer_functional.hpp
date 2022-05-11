@@ -136,27 +136,30 @@ public:
    *
    * @param[in] options The system linear and nonlinear solver and timestepping parameters
    * @param[in] name An optional name for the physics module instance
-   * @param[in] parameter_states The optional array of finite element states represetnting user-defined parameters to be
+   * @param[in] parameter_states The optional array of finite element states representing user-defined parameters to be
    * used by an underlying material model or load
    */
   LCEFunctional(
       const LiqCrysElast::SolverOptions& options, const std::string& name = {},
       std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states = {})
       : BasePhysics(2, order),
-        temperature_(
-            StateManager::newState(FiniteElementState::Options{.order      = order,
-                                                               .vector_dim = 1,
-                                                               .ordering   = mfem::Ordering::byNODES,
-                                                               .name       = detail::addPrefix(name, "temperature")})),
-        adjoint_temperature_(StateManager::newState(
-            FiniteElementState::Options{.order      = order,
-                                        .vector_dim = 1,
-                                        .ordering   = mfem::Ordering::byNODES,
-                                        .name       = detail::addPrefix(name, "adjoint_temperature")})),
+        temperature_( StateManager::newState(FiniteElementState::Options{
+              .order = order, .vector_dim = 1, .ordering = mfem::Ordering::byNODES, .name = detail::addPrefix(name, "temperature")})),
+        displacement_(StateManager::newState(FiniteElementState::Options{
+            .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "displacement")})),
+        adjoint_temperature_(StateManager::newState(FiniteElementState::Options{
+          .order = order, .vector_dim = 1, .ordering = mfem::Ordering::byNODES, .name = detail::addPrefix(name, "adjoint_temperature")})),
+        adjoint_displacement_(StateManager::newState(FiniteElementState::Options{
+            .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "adjoint_displacement")})),
         parameter_states_(parameter_states),
-        residual_(temperature_.space().TrueVSize()),
-        ode_(temperature_.space().TrueVSize(), {.u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
-             nonlin_solver_, bcs_)
+        temperature_residual_(temperature_.space().TrueVSize()),
+        displacement_residual_(displacement_.space().TrueVSize()),
+        ode_(temperature_.space().TrueVSize(), {.u = T_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
+             nonlin_solver_, bcs_),
+        ode2_(displacement_.space().TrueVSize(), {.c0 = dt_, .c1 = previous_dt_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
+              nonlin_solver_, bcs_)
+        // geom_nonlin_(geom_nonlin),
+        // keep_deformation_(keep_deformation)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
@@ -182,7 +185,7 @@ public:
     state_.push_back(temperature_);
 
     nonlin_solver_ = mfem_ext::EquationSolver(mesh_.GetComm(), options.T_lin_options, options.T_nonlin_options);
-    nonlin_solver_.SetOperator(residual_);
+    nonlin_solver_.SetOperator(temperature_residual_);
 
     // Check for dynamic mode
     if (options.dyn_options) {
@@ -424,7 +427,7 @@ public:
     temperature_.initializeTrueVec();
 
     if (is_quasistatic_) {
-      residual_ = mfem_ext::StdFunctionOperator(
+      temperature_residual_ = mfem_ext::StdFunctionOperator(
           temperature_.space().TrueVSize(),
 
           [this](const mfem::Vector& u, mfem::Vector& r) {
@@ -445,7 +448,7 @@ public:
 
     } else {
       // If dynamic, assemble the mass matrix
-      residual_ = mfem_ext::StdFunctionOperator(
+      temperature_residual_ = mfem_ext::StdFunctionOperator(
           temperature_.space().TrueVSize(),
           [this](const mfem::Vector& du_dt, mfem::Vector& r) {
             functional_call_args_[0] = du_dt;
@@ -540,13 +543,13 @@ public:
     adjoint_temperature_.distributeSharedDofs();
 
     // Reset the equation solver to use the full nonlinear residual operator
-    nonlin_solver_.SetOperator(residual_);
+    nonlin_solver_.SetOperator(temperature_residual_);
 
     return adjoint_temperature_;
   }
 
   /// ---------------------------------------------------------------------------
-  
+
   /**
    * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
    * problem with respect to the parameter field
@@ -584,9 +587,11 @@ protected:
 
   /// The temperature finite element state
   serac::FiniteElementState temperature_;
+  serac::FiniteElementState displacement_;
 
   /// The adjoint temperature finite element state
   serac::FiniteElementState adjoint_temperature_;
+  serac::FiniteElementState adjoint_displacement_;
 
   /// Mass functional object \f$\mathbf{M} = \int_\Omega c_p \, \rho \, \phi_i \phi_j\, dx \f$
   std::unique_ptr<Functional<test(trial, parameter_space...)>> M_functional_;
@@ -613,7 +618,8 @@ protected:
    * @brief mfem::Operator that describes the weight residual
    * and its gradient with respect to temperature
    */
-  mfem_ext::StdFunctionOperator residual_;
+  mfem_ext::StdFunctionOperator temperature_residual_;
+  mfem_ext::StdFunctionOperator displacement_residual_;
 
   /**
    * @brief the ordinary differential equation that describes
@@ -621,6 +627,7 @@ protected:
    * the current temperature and source terms
    */
   mfem_ext::FirstOrderODE ode_;
+  mfem_ext::SecondOrderODE ode2_;
 
   /// the specific methods and tolerances specified to solve the nonlinear residual equations
   mfem_ext::EquationSolver nonlin_solver_;
@@ -638,10 +645,20 @@ protected:
   mfem::Vector zero_;
 
   /// Predicted temperature true dofs
+  mfem::Vector T_;
   mfem::Vector u_;
 
   /// Previous value of du_dt used to prime the pump for the nonlinear solver
   mfem::Vector previous_;
+
+  /// @brief used to communicate the ODE solver's predicted velocity to the residual operator
+  mfem::Vector du_dt_;  
+
+  /// @brief A flag denoting whether to compute geometric nonlinearities in the residual
+  // serac::GeometricNonlinearities geom_nonlin_;
+
+  /// @brief Flag to indicate the final mesh node state post-destruction
+  // serac::FinalMeshOption keep_deformation_;
 };
 
 }  // namespace serac

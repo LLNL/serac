@@ -46,8 +46,8 @@ int main(int argc, char* argv[])
   serac::StateManager::setMesh(std::move(mesh));
 
   // const int dim = mesh->SpaceDimension();
-  constexpr int dim = 2; 
-  constexpr int p   = 1;
+  constexpr int dim    = 2; 
+  constexpr int pOrder = 1;
 
   if(dim != 2 && dim != 3) 
   {
@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
   std::set<int> ess_bdr = {1};
 
   // Construct a functional-based thermal conduction solver
-  serac::LCEFunctional<p, dim> LCE_solver(serac::LiqCrysElast::defaultQuasistaticOptions(), "LCE_functional");
+  serac::LCEFunctional<pOrder, dim> LCE_solver(serac::LiqCrysElast::defaultQuasistaticOptions(), "LCE_functional");
 
   serac::tensor<double, dim, dim> cond = {{{5.0, 0.01}, {0.01, 1.0}}};
 
