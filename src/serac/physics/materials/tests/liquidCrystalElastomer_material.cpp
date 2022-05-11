@@ -124,20 +124,6 @@ struct LCEMaterialProperties
     // heat flux
     const auto f0 = -N_seg * grad_theta;
 
-print(F_hat);
-std::cout<<std::endl;
-print(P);
-std::cout<<std::endl;
-auto psi_1 = 3* Gshear/(N_seg*std::pow(b,2)) * tr(mu - mu_0);
-auto psi_2 = p * (J - 1);
-std::cout
-<<"\n... tr(mu - mu_0) = "<<tr(mu - mu_0)
-<<"\n... psi_1 = "<<psi_1
-<<"\n... psi_2 = "<<psi_2
-<<"\n... psi = "<<psi_1 + psi_2
-<<std::endl
-<<std::endl;
-
     return serac::tuple{P, mu, s0, f0};
   }
 
@@ -190,15 +176,8 @@ std::cout
     auto mu_b =  2*N_seg*std::pow(b,2)/3 * (Q - R_hat * Q * transpose(R_hat));
     auto mu   = mu_a + mu_b;
 
-    auto psi_1 = 3 * Gshear/(N_seg*std::pow(b,2)) * tr(mu - mu_0);
+    auto psi_1 = 3 * Gshear/(2*N_seg*std::pow(b,2)) * tr(mu - mu_0);
     auto psi_2 = p * (J - 1);
-std::cout
-<<"\n... tr(mu - mu_0) = "<<tr(mu - mu_0)
-<<"\n... psi_1 = "<<psi_1
-<<"\n... psi_2 = "<<psi_2
-<<"\n... psi = "<<psi_1 + psi_2
-<<std::endl
-<<std::endl;
 
     return psi_1 + psi_2;
   }
@@ -323,6 +302,12 @@ TEST(LiqCrystElastMaterial, FreeEnergyAndStressAgree)
     displacement_grad, temperature, temperature_grad, state, displacement_grad_old, temperature_old, dt);
 
   auto stress_AD = get_gradient(energy_and_stress);
+
+std::cout<<std::endl;
+print(stress);
+std::cout<<std::endl;
+print(stress_AD);
+std::cout<<std::endl;
 
   auto error  = stress - stress_AD;
 
