@@ -36,6 +36,8 @@ auto tensorSquareRoot(const tensor<T, 3, 3>& A)
   return X;
 }
 
+/// ---------------------------------------------------------------------------
+
 /// @brief Green-Saint Venant isotropic thermoelastic model
 struct LCEMaterialProperties
 {
@@ -49,6 +51,8 @@ struct LCEMaterialProperties
   double q0;         // initial nematic order parameter
   double p;           // hydrostatic pressure
   struct State { /* this material has no internal variables */ };
+
+/// ---------------------------------------------------------------------------
 
   /**
    * @brief Evaluate constitutive variables for thermomechanics
@@ -74,93 +78,70 @@ struct LCEMaterialProperties
     double theta_old,
     double dt)
   {
-      tensor<double, 1, 3> normal = {2/std::sqrt(3), -1/std::sqrt(3), 3/std::sqrt(3)};
-      normal = normal/norm(normal);
+    tensor<double, 1, 3> normal = {2/std::sqrt(3), -1/std::sqrt(3), 3/std::sqrt(3)};
+    normal = normal/norm(normal);
 
-      // Deformation gradients
-      auto         F     = grad_u + I;
-      auto         F_old = grad_u_old + I;
-      auto         F_hat = F * inv(F_old);
+    // Deformation gradients
+    auto         F     = grad_u + I;
+    auto         F_old = grad_u_old + I;
+    auto         F_hat = F * inv(F_old);
 
-      // Polar decomposition of deformation gradient based on F_hat
-      // auto U_hat = matrix_sqrt(transpose(F_hat) * F_hat); // need to do pow(.,0.5) still
-      auto U_hat = tensorSquareRoot(transpose(F_hat) * F_hat);
-      auto R_hat = F_hat * inv (U_hat);
- 
-      // Velocity gradient using Hughes-Winget approx
-      // auto L = 2.0 / dt * (F_hat - I) * inv(F_hat + I);
+    // Polar decomposition of deformation gradient based on F_hat
+    auto U_hat = tensorSquareRoot(transpose(F_hat) * F_hat);
+    auto R_hat = F_hat * inv (U_hat);
 
-      // Spin tensor
-      // auto W = 0.5 * (L - transpose(L));
+    // Determinant of deformation gradient
+    auto J = det(F_hat);
 
-      // Determinant of deformation gradient
-      auto J = det(F_hat);
+    // Nematic order scalar
+    double q_old = q0 / (1 + std::exp((theta_old - T_ni)/c));
+    double q     = q0 / (1 + std::exp((theta - T_ni)/c));
 
-      // Nematic order scalar
-      double q_old = q0 / (1 + std::exp((theta_old - T_ni)/c));
-      double q     = q0 / (1 + std::exp((theta - T_ni)/c));
+    // Nematic order tensor
+    auto Q_old = q_old/2 * (3 * transpose(normal) * normal - I);
+    auto Q     = q/2 * (3 * transpose(normal) * normal - I);
 
-      // Nematic order tensor
-      auto Q_old = q_old/2 * (3 * transpose(normal) * normal - I);
-      auto Q     = q/2 * (3 * transpose(normal) * normal - I);
+    // Initial distribution tensor
+    auto mu_0_a = (1 - q0) * I;
+    auto mu_0_b = 3 * q0 * (transpose(normal) * normal);
+    auto mu_0 = N_seg*std::pow(b,2)/3 * (mu_0_a + mu_0_b);
+    
+    // Distribution tensor (using 'Strang Splitting' approach)
+    auto mu_old_a = (1 - q_old) * I;
+    auto mu_old_b = 3 * q_old * (transpose(normal) * normal);
+    auto mu_old   = N_seg*std::pow(b,2)/3 * (mu_old_a + mu_old_b);
 
-      // Initial distribution tensor
-      auto mu_0_a = (1 - q0) * I;
-      auto mu_0_b = 3 * q0 * (transpose(normal) * normal);
-      auto mu_0 = N_seg*std::pow(b,2)/3 * (mu_0_a + mu_0_b);
-      
-      // Distribution tensor (using 'Strang Splitting' approach)
-      auto mu_old_a = (1 - q_old) * I;
-      auto mu_old_b = 3 * q_old * (transpose(normal) * normal);
-      auto mu_old   = N_seg*std::pow(b,2)/3 * (mu_old_a + mu_old_b);
+    auto mu_a = F_hat * ( mu_old + 2*N_seg*std::pow(b,2)/3* (Q - Q_old)) * transpose(F_hat);
+    auto mu_b = 2*N_seg*std::pow(b,2)/3 * (Q - R_hat * Q * transpose(R_hat));
+    auto mu   = mu_a + mu_b;
 
-      auto mu_a = F_hat * ( mu_old + 2*N_seg*std::pow(b,2)/3* (Q - Q_old)) * transpose(F_hat);
-      auto mu_b =  2*N_seg*std::pow(b,2)/3 * (Q - R_hat * Q * transpose(R_hat));
-      auto mu   = mu_a + mu_b;
+    // stress
+    const auto P =  J * ( (3*Gshear/(N_seg*std::pow(b,2))) * (mu - mu_0) + p*I ) * inv(transpose(F_hat));
 
-      // stress
-      const auto P =  J * ( (3*Gshear/(N_seg*std::pow(b,2))) * (mu - mu_0) + p*I ) * inv(transpose(F_hat));
+    // internal heat source
+    const double s0 = -3 * N_seg * theta * tr(F_hat)/dt;
 
-      // internal heat source
-      const double s0 = -3 * N_seg * theta * tr(F_hat)/dt;
+    // heat flux
+    const auto f0 = -N_seg * grad_theta;
 
-      // heat flux
-      const auto f0 = -N_seg * grad_theta;
+print(F_hat);
+std::cout<<std::endl;
+print(P);
+std::cout<<std::endl;
+auto psi_1 = 3* Gshear/(N_seg*std::pow(b,2)) * tr(mu - mu_0);
+auto psi_2 = p * (J - 1);
+std::cout
+<<"\n... tr(mu - mu_0) = "<<tr(mu - mu_0)
+<<"\n... psi_1 = "<<psi_1
+<<"\n... psi_2 = "<<psi_2
+<<"\n... psi = "<<psi_1 + psi_2
+<<std::endl
+<<std::endl;
 
-      return serac::tuple{P, mu, s0, f0};
+    return serac::tuple{P, mu, s0, f0};
   }
 
-  /**
-   * @brief Return constitutive output for thermal operator
-   */
-  auto calculateThermalConstitutiveOutputs(
-    const tensor<double, 3, 3>& grad_u, 
-    double theta,
-    const tensor<double, 3>& grad_theta, 
-    State& state,
-    const tensor<double, 3, 3>& grad_u_old, 
-    double theta_old, 
-    double dt)
-  {
-    auto [P, mu0, s0, f0] = calculateConstitutiveOutputs(grad_u, theta, grad_theta, state, grad_u_old, theta_old, dt);
-    return serac::tuple{mu0, s0, f0};
-  }
-
-  /**
-   * @brief Return constitutive output for mechanics operator
-   */
-  auto calculateMechanicalConstitutiveOutputs(
-    const tensor<double, 3, 3>& grad_u, 
-    double theta,
-    const tensor<double, 3>& grad_theta, 
-    State& state,
-    const tensor<double, 3, 3>& grad_u_old, 
-    double theta_old, 
-    double dt)
-  {
-    auto [P, mu0, s0, f0] = calculateConstitutiveOutputs(grad_u, theta, grad_theta, state, grad_u_old, theta_old, dt);
-    return P;
-  }
+/// ---------------------------------------------------------------------------
 
   /**
    * @brief evaluate free energy density
@@ -178,18 +159,11 @@ struct LCEMaterialProperties
     // Deformation gradients
     auto         F     = grad_u + I;
     auto         F_old = grad_u_old + I;
-    auto         F_hat = dot(F, inv(F_old));
+    auto         F_hat = F * inv(F_old);
 
     // Polar decomposition of deformation gradient based on F_hat
-    // auto U_hat = matrix_sqrt(transpose(F_hat) * F_hat); 
     auto U_hat = tensorSquareRoot(transpose(F_hat) * F_hat);
     auto R_hat = F_hat * inv (U_hat);
-
-    // Velocity gradient using Hughes-Winget approx
-    // auto L = 2.0 / dt * (F_hat - I) * inv(F_hat + I);
-
-    // Spin tensor
-    // auto W = 0.5 * (L - transpose(L));
 
     // Determinant of deformation gradient
     auto J = det(F_hat);
@@ -218,8 +192,51 @@ struct LCEMaterialProperties
 
     auto psi_1 = 3 * Gshear/(N_seg*std::pow(b,2)) * tr(mu - mu_0);
     auto psi_2 = p * (J - 1);
+std::cout
+<<"\n... tr(mu - mu_0) = "<<tr(mu - mu_0)
+<<"\n... psi_1 = "<<psi_1
+<<"\n... psi_2 = "<<psi_2
+<<"\n... psi = "<<psi_1 + psi_2
+<<std::endl
+<<std::endl;
 
     return psi_1 + psi_2;
+  }
+
+/// ---------------------------------------------------------------------------
+
+  /**
+   * @brief Return constitutive output for thermal operator
+   */
+  auto calculateThermalConstitutiveOutputs(
+    const tensor<double, 3, 3>& grad_u, 
+    double theta,
+    const tensor<double, 3>& grad_theta, 
+    State& state,
+    const tensor<double, 3, 3>& grad_u_old, 
+    double theta_old, 
+    double dt)
+  {
+    auto [P, mu0, s0, f0] = calculateConstitutiveOutputs(grad_u, theta, grad_theta, state, grad_u_old, theta_old, dt);
+    return serac::tuple{mu0, s0, f0};
+  }
+
+/// ---------------------------------------------------------------------------
+
+  /**
+   * @brief Return constitutive output for mechanics operator
+   */
+  auto calculateMechanicalConstitutiveOutputs(
+    const tensor<double, 3, 3>& grad_u, 
+    double theta,
+    const tensor<double, 3>& grad_theta, 
+    State& state,
+    const tensor<double, 3, 3>& grad_u_old, 
+    double theta_old, 
+    double dt)
+  {
+    auto [P, mu0, s0, f0] = calculateConstitutiveOutputs(grad_u, theta, grad_theta, state, grad_u_old, theta_old, dt);
+    return P;
   }
 };
 
