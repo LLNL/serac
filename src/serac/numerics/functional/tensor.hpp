@@ -1172,7 +1172,7 @@ SERAC_HOST_DEVICE bool is_symmetric_and_positive_definite(tensor<double, 3, 3> A
 }
 
 /**
- * @struct A representation of an LU factorization
+ * @brief Representation of an LU factorization
  *
  * The entries of P mean row i of the matrix was exchanged with row P[i].
  */
@@ -1187,10 +1187,8 @@ struct LuFactorization {
  * @brief Compute LU factorization of a matrix with partial pivoting
  *
  * @param[in] A The matrix to factorize
- * @return x tuple of [P, L, U], with
- * L the lower triangular factor
- * U the upper triangular factor
- * P an array indicating the row permutations due to pivoting.
+ * @return An LuFactorization object
+ * @see LuFactorization
  */
 template <typename T, int n>
 SERAC_HOST_DEVICE constexpr LuFactorization<T, n> lu(tensor<T, n, n> A)
