@@ -32,7 +32,7 @@ Requirements:
 * ``ATS_EXECUTABLE`` defined in the host-config (added automatically to
   Spack generated host-configs) or on 
   command line via ``-DATS_EXECUTABLE=/path/to/ats``.
-* If using a personal machine, check the ``configs`` directory in the serac
+* If using a personal machine, check the ``ats-config`` directory in the serac
   repo and create a json file ``<your_machine_name>.json`` if you haven't already.
   Your machine's name can be found by running the following lines of code::
 
