@@ -63,7 +63,7 @@ TEST(serac_error_handling, bc_project_requires_state)
   EXPECT_THROW(bc.project(), SlicErrorException);
 
   FiniteElementState state(*mesh);
-  bc.setTrueDofs(state);
+  bc.setDofs(state);
   EXPECT_NO_THROW(bc.project());
 }
 

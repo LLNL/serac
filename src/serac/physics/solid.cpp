@@ -339,7 +339,7 @@ void Solid::completeSetup()
         // residual function
         [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) {
           r = (*M_mat_) * d2u_dt2 + (*C_mat_) * (du_dt_ + c1_ * d2u_dt2) + (*H_) * (u_ + c0_ * d2u_dt2);
-          r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
+          r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
         },
 
         // gradient of residual function
@@ -369,7 +369,7 @@ std::unique_ptr<mfem::Operator> Solid::buildQuasistaticOperator()
       // residual function
       [this](const mfem::Vector& u, mfem::Vector& r) {
         H_->Mult(u, r);  // r := H(u)
-        r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
+        r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
       },
 
       // gradient of residual function
