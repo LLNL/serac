@@ -135,6 +135,7 @@ public:
    * @param[in] true_dofs The true vector indices of the DOFs constrained by the boundary condition
    *
    * @note This will set both the true and local internal dof index arrays.
+   * @note True and local dofs are described in the <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a>
    */
   void setTrueDofs(const mfem::Array<int> true_dofs);
 
@@ -144,6 +145,7 @@ public:
    * condition
    *
    * @note This will set both the true and local internal dof index arrays.
+   * @note True and local dofs are described in the <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a>
    */
   void setLocalDofs(const mfem::Array<int> local_dofs);
 
@@ -159,6 +161,8 @@ public:
   /**
    * @brief Returns the DOF indices for an essential boundary condition
    * @return A non-owning reference to the array of indices
+   *
+   * @note True and local dofs are described in the <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a>
    */
   const mfem::Array<int>& getTrueDofs() const
   {
@@ -169,6 +173,8 @@ public:
   /**
    * @brief Returns the DOF indices for an essential boundary condition
    * @return A non-owning reference to the array of indices
+   *
+   * @note True and local dofs are described in the <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a>
    */
   const mfem::Array<int>& getLocalDofs() const
   {
