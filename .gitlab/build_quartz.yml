@@ -2,8 +2,7 @@
 # This is the shared configuration of jobs for quartz
 .on_quartz:
   variables:
-    ALLOC_OPTIONS: "-p pdebug --exclusive --mpibind=off"
-    ALLOC_COMMAND: "salloc ${ALLOC_OPTIONS} -A ${ALLOC_BANK} -N ${ALLOC_NODES} -t ${ALLOC_TIME}"
+    ALLOC_COMMAND: "srun --interactive --exclusive --mpibind=off -A ${ALLOC_BANK} ${ALLOC_OPTIONS} "
   tags:
     - shell
     - quartz
@@ -35,30 +34,26 @@ quartz-clang_10_0_0-src:
     COMPILER: "clang@10.0.0"
     HOST_CONFIG: "quartz-toss_3_x86_64_ib-${COMPILER}.cmake"
     DO_INTEGRATION_TESTS: "yes"
-    ALLOC_NODES: "2"
-    ALLOC_TIME: "30"
+    ALLOC_OPTIONS: "-p pdebug -N 2 -t 30"
   extends: .src_build_on_quartz
 
 quartz-gcc_8_3_1-src:
   variables:
     COMPILER: "gcc@8.3.1"
     HOST_CONFIG: "quartz-toss_3_x86_64_ib-${COMPILER}.cmake"
-    ALLOC_NODES: "1"
-    ALLOC_TIME: "20"
+    ALLOC_OPTIONS: "-p pdebug -N 1 -t 20"
   extends: .src_build_on_quartz
 
 quartz-clang_10_0_0-full:
   variables:
     COMPILER: "clang@10.0.0"
     SPEC: "--spec=%${COMPILER}"
-    ALLOC_NODES: "1"
-    ALLOC_TIME: "45"
+    ALLOC_OPTIONS: "-N 1 -t 60"
   extends: .full_build_on_quartz
 
 quartz-gcc_8_3_1-full:
   variables:
     COMPILER: "gcc@8.3.1"
     SPEC: "--spec=%${COMPILER}"
-    ALLOC_NODES: "1"
-    ALLOC_TIME: "45"
+    ALLOC_OPTIONS: "-N 1 -t 60"
   extends: .full_build_on_quartz
