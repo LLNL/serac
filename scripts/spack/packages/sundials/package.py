@@ -139,45 +139,17 @@ class Sundials(CMakePackage, CudaPackage, ROCmPackage):
     variant('profiling', default=False, when='@6.0.0:',
             description='Build with profiling capabilities')
 
-    # SERAC EDIT BEGIN - Add ASan variant for memory debugging
-    # Custom variant not yet in upstream Spack; see
-    # https://github.com/spack/spack/pull/30210 for inspiration. Eventually,
-    # this variant should be replaced with a feature in upstream Spack that
-    # enables targeted use of ASan flags. The motivation for this variant is
-    # to inject ASan flags in this package, but not in its dependents;
-    # injecting ASan flags into specs will propagate them to MFEM's
-    # dependencts, which can result in undesirable behavior (e.g., building
-    # CMake with ASan flags).
+    # SERAC EDIT BEGIN - Add AddressSanitizer variant for memory debugging
     variant('asan', default=False, description='Add Address Sanitizer flags')
 
-    # ASan is only supported by GCC and (some) LLVM-derived
-    # compilers. There's no convenient spec syntax for negating sets
-    # of compilers -- in this case, the conflicts arise with compilers
-    # that aren't gcc, clang, or apple-clang.
-    #
-    # The preferred approach taken by upstream Spack as of upstream
-    # commit 24c01d5 is to raise an exception within a package stage
-    # (e.g., xios does so in its install stage, pfunit does so in its
-    # setup_build_environment stage, wrf does so in its configure
-    # stage, elemental does so in its cmake_args stage).
-    #
-    # The trouble with this approach in isolation is that the
-    # concretizer can't detect those conflicts, so the exception is
-    # raised after building all of a package's dependents. Some of the
-    # more likely conflicts are listed here to enable
-    # concretization-time conflict detection; the list of compilers in
-    # the loop is every compiler listed in the spack.compilers package
-    # (https://spack.readthedocs.io/en/latest/spack.compilers.html)
-    # except gcc, clang, and apple-clang, to err on the conservative side.
+    # AddressSanitizer (ASan) is only supported by GCC and (some) LLVM-derived
+    # compilers. Blacklist compilers not known to support ASan
     asan_compiler_blacklist = {
         'aocc', 'arm', 'cce', 'fj', 'intel', 'nag', 'nvhpc', 'oneapi', 'pgi',
         'xl', 'xl_r'
     }
 
-    # Whitelist of compilers known to support Address Sanitizer;
-    # used in conjunction with blacklist of compilers suspected
-    # not to support AddressSanitizer in this package's conflict
-    # directives.
+    # Whitelist of compilers known to support Address Sanitizer.
     asan_compiler_whitelist = {'gcc', 'clang', 'apple-clang'}
 
     # ASan compiler blacklist and whitelist should be disjoint.
@@ -292,11 +264,6 @@ class Sundials(CMakePackage, CudaPackage, ROCmPackage):
 
     # SERAC EDIT BEGIN - Add ASan variant for memory debugging
     def setup_build_environment(self, env):
-        # Logic for custom variant not yet in upstream Spack; see
-        # https://github.com/spack/spack/pull/30210 for inspiration. Eventually,
-        # this variant should be replaced with a feature in upstream Spack that
-        # enables targeted use of ASan flags; when that replacement occurs, the
-        # code in this `if '+asan' in self.spec:` block should be deleted.
         if '+asan' in self.spec:
             for flag in ("CFLAGS", "CXXFLAGS", "LDFLAGS"):
                 env.append_flags(flag, "-fsanitize=address")
