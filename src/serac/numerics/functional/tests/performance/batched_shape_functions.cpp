@@ -704,7 +704,6 @@ void hcurl_hcurl_test_2D(int num_elements, int num_runs)
   using serac::Geometry;
   using serac::Hcurl;
 
-  constexpr int n   = p + 1;
   constexpr int dim = 2;
 
   double rho = 1.0;
@@ -1014,10 +1013,19 @@ int main()
 {
   int num_runs     = 10;
   int num_elements = 10000;
+  h1_h1_test_2D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
   h1_h1_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
+  h1_h1_test_2D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
+
   h1_h1_test_3D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
   h1_h1_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
   h1_h1_test_3D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
+
+  hcurl_hcurl_test_2D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
   hcurl_hcurl_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
+  hcurl_hcurl_test_2D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
+
+  hcurl_hcurl_test_3D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
   hcurl_hcurl_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
+  hcurl_hcurl_test_3D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
 }
