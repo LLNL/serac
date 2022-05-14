@@ -91,7 +91,7 @@ struct LCEMaterialProperties
     auto R_hat = F_hat * inv (U_hat);
 
     // Determinant of deformation gradient
-    auto J = det(F_hat);
+    auto J = det(F);
 
     // Nematic order scalar
     double q_old = q0 / (1 + std::exp((theta_old - T_ni)/c));
@@ -116,7 +116,7 @@ struct LCEMaterialProperties
     auto mu   = mu_a + mu_b;
 
     // stress
-    const auto P =  J * ( (3*Gshear/(N_seg*std::pow(b,2))) * (mu - mu_0) + p*I ) * inv(transpose(F_hat));
+    const auto P =  J * ( (3*Gshear/(N_seg*std::pow(b,2))) * (mu - mu_0) + p*I ) * inv(transpose(F));
 
     // internal heat source
     const double s0 = -3 * N_seg * theta * tr(F_hat)/dt;
@@ -152,7 +152,7 @@ struct LCEMaterialProperties
     auto R_hat = F_hat * inv (U_hat);
 
     // Determinant of deformation gradient
-    auto J = det(F_hat);
+    auto J = det(F);
 
     // Nematic order scalar
     double q_old = q0 / (1 + std::exp((theta_old - T_ni)/c));
@@ -173,7 +173,7 @@ struct LCEMaterialProperties
     auto mu_old   = N_seg*std::pow(b,2)/3 * (mu_old_a + mu_old_b);
 
     auto mu_a = F_hat * ( mu_old + 2*N_seg*std::pow(b,2)/3* (Q - Q_old)) * transpose(F_hat);
-    auto mu_b =  2*N_seg*std::pow(b,2)/3 * (Q - R_hat * Q * transpose(R_hat));
+    auto mu_b = 2*N_seg*std::pow(b,2)/3 * (Q - R_hat * Q * transpose(R_hat));
     auto mu   = mu_a + mu_b;
 
     auto psi_1 = 3 * Gshear/(2*N_seg*std::pow(b,2)) * tr(mu - mu_0);
