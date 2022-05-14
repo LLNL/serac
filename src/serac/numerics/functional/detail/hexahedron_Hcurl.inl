@@ -195,7 +195,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
   }
 
   template <int q>
-  static auto interpolate(const dof_type& element_values, const tensor<double, q, q, q, dim, dim>& jacobians,
+  static auto interpolate(const dof_type& element_values, const tensor<double, dim, dim, q, q, q>& jacobians,
                           const TensorProductQuadratureRule<q>&)
   {
     auto xi = GaussLegendreNodes<q>();
@@ -373,7 +373,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
 
   template <int q>
   static void integrate(cpu_batched_values_type<q>& sources, cpu_batched_derivatives_type<q>& fluxes,
-                        const tensor<double, q, q, q, dim, dim>& jacobians, const TensorProductQuadratureRule<q>&,
+                        const tensor<double, dim, dim, q, q, q>& jacobians, const TensorProductQuadratureRule<q>&,
                         dof_type&                                element_residual)
   {
     static constexpr auto xi        = GaussLegendreNodes<q>();
@@ -537,6 +537,8 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#if defined(__CUDACC__)
 
   template <int q>
   static SERAC_DEVICE auto interpolate(const dof_type& element_values, const tensor<double, dim, dim>& J,
@@ -943,5 +945,8 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
       }
     }
   }
+
+#endif
+
 };
 /// @endcond

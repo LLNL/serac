@@ -262,6 +262,8 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
     }
   }
 
+#if defined(__CUDACC__)
+
   template <int q>
   static SERAC_DEVICE auto interpolate(const dof_type& X, const tensor<double, dim, dim>& J,
                                        const TensorProductQuadratureRule<q>& rule, cache_type<q>& A)
@@ -399,5 +401,8 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
       }
     }
   }
+
+#endif
+
 };
 /// @endcond
