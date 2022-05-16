@@ -1163,6 +1163,63 @@ SERAC_HOST_DEVICE constexpr auto det(const tensor<T, 3, 3>& A)
          A[0][0] * A[1][2] * A[2][1] - A[0][1] * A[1][0] * A[2][2] - A[0][2] * A[1][1] * A[2][0];
 }
 
+template <int i1, int i2, typename S, int m, int... n, typename T, int p, int q>
+auto contract(const tensor<S, m, n...> & A, const tensor<T, p, q> & B) {
+    constexpr int Adims[] = {m, n...};
+    constexpr int Bdims[] = {p, q};
+    static_assert(sizeof...(n) < 3);
+    static_assert(Adims[i1] == Bdims[i2],
+                  "error: incompatible tensor dimensions");
+
+    // first, we have to figure out the dimensions of the output tensor
+    constexpr int new_dim = (i2 == 0) ? q : p;
+    constexpr int d1 = (i1 == 0) ? new_dim : Adims[0];
+    constexpr int d2 = (i1 == 1) ? new_dim : Adims[1];
+    constexpr int d3 = sizeof...(n) == 1 ? 0 : ((i1 == 2) ? new_dim : Adims[2]);
+
+    // the type of the output tensor is easier to figure out
+    using U = decltype(S{} * T{});
+
+    auto C = []() {
+        if constexpr (d3 == 0) return tensor<U, d1, d2>{};
+        if constexpr (d3 != 0) return tensor<U, d1, d2, d3>{};
+    }();
+
+    if constexpr (d3 == 0) {
+        for (int i = 0; i < d1; i++) {
+            for (int j = 0; j < d2; j++) {
+                U sum{};
+                for (int k = 0; k < Adims[i1]; k++) {
+                    if constexpr (i1 == 0 && i2 == 0) sum += A(k, j) * B(k, i);
+                    if constexpr (i1 == 1 && i2 == 0) sum += A(i, k) * B(k, j);
+                    if constexpr (i1 == 0 && i2 == 1) sum += A(k, j) * B(i, k);
+                    if constexpr (i1 == 1 && i2 == 1) sum += A(i, k) * B(j, k);
+                }
+                C(i, j) = sum;
+            }
+        }
+    } else {
+        for (int i = 0; i < d1; i++) {
+            for (int j = 0; j < d2; j++) {
+                for (int k = 0; k < d3; k++) {
+                    U sum{};
+                    for (int l = 0; l < Adims[i1]; l++) {
+                        if constexpr (i1 == 0 && i2 == 0) sum += A(l, j, k) * B(l, i);
+                        if constexpr (i1 == 1 && i2 == 0) sum += A(i, l, k) * B(l, j);
+                        if constexpr (i1 == 2 && i2 == 0) sum += A(i, j, l) * B(l, k);
+                        if constexpr (i1 == 0 && i2 == 1) sum += A(l, j, k) * B(i, l);
+                        if constexpr (i1 == 1 && i2 == 1) sum += A(i, l, k) * B(j, l);
+                        if constexpr (i1 == 2 && i2 == 1) sum += A(i, j, l) * B(k, l);
+                    }
+                    C(i, j, k) = sum;
+                }
+            }
+        }
+    }
+
+    return C;
+}
+
 template <typename T, int... n>
 tensor<T, (n * ...)> flatten(tensor<T, n...> A)
 {
@@ -1695,6 +1752,12 @@ SERAC_HOST_DEVICE auto chain_rule(const tensor<double, m, n, p...>& df_dx, const
     }
   }
   return total;
+}
+
+template < int i, typename T, int ... n >
+SERAC_HOST_DEVICE constexpr int dimension(const tensor<T, n ... > &) { 
+  constexpr int dimensions[] = {n ... };
+  return dimensions[i];
 }
 
 }  // namespace serac

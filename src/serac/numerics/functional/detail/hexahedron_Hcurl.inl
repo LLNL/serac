@@ -52,6 +52,21 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
   };
 
   template <int q>
+  struct cache_type_tmp {
+    union {
+      tensor<double, p + 1, p + 1, q> x;
+      tensor<double, p + 1, q, p + 1> y;
+      tensor<double, q, p + 1, p + 1> z;
+    } A1;
+
+    union {
+      tensor<double, 2, p + 1, q, q> x; 
+      tensor<double, 2, q, q, p + 1> y; 
+      tensor<double, 2, q, p + 1, q> z; 
+    } A2;
+  };
+
+  template <int q>
   using cpu_batched_values_type = tensor<tensor<double, 3>, q, q, q>;
 
   template <int q>
@@ -209,147 +224,40 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
       G2[i] = GaussLobattoInterpolationDerivative<p + 1>(xi[i]);
     }
 
-    cache_type<q> cache;
+    cache_type_tmp<q> cache;
 
-    serac::tuple<cpu_batched_values_type<q>, cpu_batched_derivatives_type<q>> values_and_derivatives{};
+    tensor< tensor< double, q, q, q >, 3 > value{};
+    tensor< tensor< double, q, q, q >, 3 > curl{};
 
-    /////////////////////////////////
-    ////////// X-component //////////
-    /////////////////////////////////
-    for (int k = 0; k < p + 1; k++) {
-      for (int j = 0; j < p + 1; j++) {
-        for (int qx = 0; qx < q; qx++) {
-          double sum = 0.0;
-          for (int i = 0; i < p; i++) {
-            sum += B1(qx, i) * element_values.x(k, j, i);
-          }
-          cache.A1(k, j, qx) = sum;
-        }
-      }
-    }
+    // to clarify which contractions correspond to which spatial dimensions
+    constexpr int x = 2, y = 1, z = 0; 
 
-    for (int k = 0; k < p + 1; k++) {
-      for (int qy = 0; qy < q; qy++) {
-        for (int qx = 0; qx < q; qx++) {
-          double sum[2]{};
-          for (int j = 0; j < (p + 1); j++) {
-            sum[0] += B2(qy, j) * cache.A1(k, j, qx);
-            sum[1] += G2(qy, j) * cache.A1(k, j, qx);
-          }
-          cache.A2(0, k, qy, qx) = sum[0];
-          cache.A2(1, k, qy, qx) = sum[1];
-        }
-      }
-    }
+    // clang-format off
+    cache.A1.x    = contract< x, 1 >(element_values.x, B1);
+    cache.A2.x[0] = contract< y, 1 >(cache.A1.x,       B2);
+    cache.A2.x[1] = contract< y, 1 >(cache.A1.x,       G2);
+    value[0]      = contract< z, 1 >(cache.A2.x[0],    B2);
+    curl[1]      += contract< z, 1 >(cache.A2.x[0],    G2);
+    curl[2]      -= contract< z, 1 >(cache.A2.x[1],    B2);
 
-    for (int qz = 0; qz < q; qz++) {
-      for (int qy = 0; qy < q; qy++) {
-        for (int qx = 0; qx < q; qx++) {
-          double sum[3]{};
-          for (int k = 0; k < (p + 1); k++) {
-            sum[0] += B2(qz, k) * cache.A2(0, k, qy, qx);
-            sum[1] += G2(qz, k) * cache.A2(0, k, qy, qx);
-            sum[2] += B2(qz, k) * cache.A2(1, k, qy, qx);
-          }
-          serac::get<0>(values_and_derivatives)(qz, qy, qx)[0] += sum[0];
-          serac::get<1>(values_and_derivatives)(qz, qy, qx)[1] += sum[1];
-          serac::get<1>(values_and_derivatives)(qz, qy, qx)[2] -= sum[2];
-        }
-      }
-    }
+    cache.A1.y    = contract< y, 1 >(element_values.y, B1);
+    cache.A2.y[0] = contract< z, 1 >(cache.A1.y,       B2);
+    cache.A2.y[1] = contract< z, 1 >(cache.A1.y,       G2);
+    value[1]      = contract< x, 1 >(cache.A2.y[0],    B2);
+    curl[2]      += contract< x, 1 >(cache.A2.y[0],    G2);
+    curl[0]      -= contract< x, 1 >(cache.A2.y[1],    B2);
 
-    /////////////////////////////////
-    ////////// Y-component //////////
-    /////////////////////////////////
-    for (int k = 0; k < p + 1; k++) {
-      for (int i = 0; i < p + 1; i++) {
-        for (int qy = 0; qy < q; qy++) {
-          double sum = 0.0;
-          for (int j = 0; j < p; j++) {
-            sum += B1(qy, j) * element_values.y(k, j, i);
-          }
-          cache.A1(k, i, qy) = sum;
-        }
-      }
-    }
+    cache.A1.z    = contract< z, 1 >(element_values.z, B1);
+    cache.A2.z[0] = contract< x, 1 >(cache.A1.z,       B2);
+    cache.A2.z[1] = contract< x, 1 >(cache.A1.z,       G2);
+    value[2]      = contract< y, 1 >(cache.A2.z[0],    B2);
+    curl[0]      += contract< y, 1 >(cache.A2.z[0],    G2);
+    curl[1]      -= contract< y, 1 >(cache.A2.z[1],    B2);
+    // clang-format on
 
-    for (int k = 0; k < p + 1; k++) {
-      for (int qy = 0; qy < q; qy++) {
-        for (int qx = 0; qx < q; qx++) {
-          double sum[2]{};
-          for (int i = 0; i < (p + 1); i++) {
-            sum[0] += B2(qx, i) * cache.A1(k, i, qy);
-            sum[1] += G2(qx, i) * cache.A1(k, i, qy);
-          }
-          cache.A2(0, k, qy, qx) = sum[0];
-          cache.A2(1, k, qy, qx) = sum[1];
-        }
-      }
-    }
+    tensor<tensor<double, 3>, q, q, q> value_T;
+    tensor<tensor<double, 3>, q, q, q> curl_T;
 
-    for (int qz = 0; qz < q; qz++) {
-      for (int qy = 0; qy < q; qy++) {
-        for (int qx = 0; qx < q; qx++) {
-          double sum[3]{};
-          for (int k = 0; k < (p + 1); k++) {
-            sum[0] += B2(qz, k) * cache.A2(0, k, qy, qx);
-            sum[1] += G2(qz, k) * cache.A2(0, k, qy, qx);
-            sum[2] += B2(qz, k) * cache.A2(1, k, qy, qx);
-          }
-          serac::get<0>(values_and_derivatives)(qz, qy, qx)[1] += sum[0];
-          serac::get<1>(values_and_derivatives)(qz, qy, qx)[2] += sum[2];
-          serac::get<1>(values_and_derivatives)(qz, qy, qx)[0] -= sum[1];
-        }
-      }
-    }
-
-    /////////////////////////////////
-    ////////// Z-component //////////
-    /////////////////////////////////
-    for (int j = 0; j < p + 1; j++) {
-      for (int i = 0; i < p + 1; i++) {
-        for (int qz = 0; qz < q; qz++) {
-          double sum = 0.0;
-          for (int k = 0; k < p; k++) {
-            sum += B1(qz, k) * element_values.z(k, j, i);
-          }
-          cache.A1(j, i, qz) = sum;
-        }
-      }
-    }
-
-    for (int j = 0; j < p + 1; j++) {
-      for (int qz = 0; qz < q; qz++) {
-        for (int qx = 0; qx < q; qx++) {
-          double sum[2]{};
-          for (int i = 0; i < (p + 1); i++) {
-            sum[0] += B2(qx, i) * cache.A1(j, i, qz);
-            sum[1] += G2(qx, i) * cache.A1(j, i, qz);
-          }
-          cache.A2(0, j, qz, qx) = sum[0];
-          cache.A2(1, j, qz, qx) = sum[1];
-        }
-      }
-    }
-
-    for (int qz = 0; qz < q; qz++) {
-      for (int qy = 0; qy < q; qy++) {
-        for (int qx = 0; qx < q; qx++) {
-          double sum[3]{};
-          for (int j = 0; j < (p + 1); j++) {
-            sum[0] += B2(qy, j) * cache.A2(0, j, qz, qx);
-            sum[1] += G2(qy, j) * cache.A2(0, j, qz, qx);
-            sum[2] += B2(qy, j) * cache.A2(1, j, qz, qx);
-          }
-          serac::get<0>(values_and_derivatives)(qz, qy, qx)[2] += sum[0];
-          serac::get<1>(values_and_derivatives)(qz, qy, qx)[0] += sum[1];
-          serac::get<1>(values_and_derivatives)(qz, qy, qx)[1] -= sum[2];
-        }
-      }
-    }
-
-    // apply covariant Piola transformation to go
-    // from parent element -> physical element
     for (int qz = 0; qz < q; qz++) {
       for (int qy = 0; qy < q; qy++) {
         for (int qx = 0; qx < q; qx++) {
@@ -359,27 +267,32 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
               J_T[row][col] = jacobians(row, col, qz, qy, qx);
             }
           }
-          auto detJ                                         = det(J_T);
-          auto value                                        = serac::get<0>(values_and_derivatives)(qz, qy, qx);
-          auto curl                                         = serac::get<1>(values_and_derivatives)(qz, qy, qx);
-          serac::get<0>(values_and_derivatives)(qz, qy, qx) = linear_solve(J_T, value);
-          serac::get<1>(values_and_derivatives)(qz, qy, qx) = dot(curl, J_T) / detJ;
+
+          tensor<double, 3> value_q = {value[0](qz, qy, qx), value[1](qz, qy, qx), value[2](qz, qy, qx)};
+          tensor<double, 3> curl_q  = {curl[0](qz, qy, qx), curl[1](qz, qy, qx), curl[2](qz, qy, qx)};
+
+          // apply covariant Piola transformation to go
+          // from parent element -> physical element
+          value_q = linear_solve(J_T, value_q);
+          curl_q = dot(curl_q, J_T) / det(J_T);
+
+          value_T(qz, qy, qx) = value_q;
+          curl_T(qz, qy, qx) = curl_q;
         }
       }
     }
 
-    return values_and_derivatives;
+    return tuple{value_T, curl_T};
   }
 
   template <int q>
-  static void integrate(cpu_batched_values_type<q>& sources, cpu_batched_derivatives_type<q>& fluxes,
+  static void integrate(cpu_batched_values_type<q>& sources_T, cpu_batched_derivatives_type<q>& fluxes_T,
                         const tensor<double, dim, dim, q, q, q>& jacobians, const TensorProductQuadratureRule<q>&,
                         dof_type&                                element_residual)
   {
     static constexpr auto xi        = GaussLegendreNodes<q>();
     static constexpr auto weights1D = GaussLegendreWeights<q>();
 
-    cache_type<q>            cache{};
     tensor<double, q, p>     B1;
     tensor<double, q, p + 1> B2;
     tensor<double, q, p + 1> G2;
@@ -388,6 +301,11 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
       B2[i] = GaussLobattoInterpolation<p + 1>(xi[i]);
       G2[i] = GaussLobattoInterpolationDerivative<p + 1>(xi[i]);
     }
+
+    cache_type_tmp<q> cache{};
+
+    tensor< double, 3, q, q, q > source{};
+    tensor< double, 3, q, q, q > flux{};
 
     // transform the source and flux terms from values on the physical element,
     // to values on the parent element. Also, the source/flux values are scaled
@@ -401,139 +319,51 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
               J[row][col] = jacobians(col, row, qz, qy, qx);
             }
           }
-          auto detJ           = serac::det(J);
-          auto dv             = detJ * weights1D[qx] * weights1D[qy] * weights1D[qz];
-          sources(qz, qy, qx) = linear_solve(J, sources(qz, qy, qx)) * dv;
-          fluxes(qz, qy, qx)  = dot(fluxes(qz, qy, qx), J) * (dv / detJ);
+          auto detJ = serac::det(J);
+          auto dv   = detJ * weights1D[qx] * weights1D[qy] * weights1D[qz];
+
+          auto s = sources_T(qz, qy, qx);
+          auto f = fluxes_T(qz, qy, qx);
+
+          s = linear_solve(J, s) * dv;
+          f = dot(f, J) * (dv / detJ);
+
+          for (int i = 0; i < 3; i++) {
+            source[i](qz, qy, qx) = s[i];
+            flux[i](qz, qy, qx) = f[i];
+          }
         }
       }
     }
 
-    /////////////////////////////////
-    ////////// X-component //////////
-    /////////////////////////////////
-    for (int k = 0; k < p + 1; k++) {
-      for (int qy = 0; qy < q; qy++) {
-        for (int qx = 0; qx < q; qx++) {
-          double sum[2]{};
-          for (int qz = 0; qz < q; qz++) {
-            sum[0] += B2(qz, k) * sources(qz, qy, qx)[0] + G2(qz, k) * fluxes(qz, qy, qx)[1];
-            sum[1] -= B2(qz, k) * fluxes(qz, qy, qx)[2];
-          }
-          cache.A2(0, k, qy, qx) = sum[0];
-          cache.A2(1, k, qy, qx) = sum[1];
-        }
-      }
-    }
+    // to clarify which contractions correspond to which spatial dimensions
+    constexpr int x = 2, y = 1, z = 0; 
 
-    for (int k = 0; k < p + 1; k++) {
-      for (int j = 0; j < p + 1; j++) {
-        for (int qx = 0; qx < q; qx++) {
-          double sum = 0.0;
-          for (int qy = 0; qy < q; qy++) {
-            sum += B2(qy, j) * cache.A2(0, k, qy, qx);
-            sum += G2(qy, j) * cache.A2(1, k, qy, qx);
-          }
-          cache.A1(k, j, qx) = sum;
-        }
-      }
-    }
+    // clang-format off
+    //  r(0, dz, dy, dx) = s(0, qz, qy, qx) * B2(qz, dz) * B2(qy, dy) * B1(qx, dx)
+    //                   + f(1, qz, qy, qx) * G2(qz, dz) * B2(qy, dy) * B1(qx, dx)
+    //                   - f(2, qz, qy, qx) * B2(qz, dz) * G2(qy, dy) * B1(qx, dx);
+    cache.A2.x[0] = contract< z, 0 >(source[0], B2) + contract< z, 0 >(flux[1], G2);
+    cache.A2.x[1] = contract< z, 0 >(flux[2], B2);
+    cache.A1.x = contract< y, 0 >(cache.A2.x[0], B2) - contract< y, 0 >(cache.A2.x[1], G2);
+    element_residual.x += contract< x, 0 >(cache.A1.x, B1);
 
-    for (int k = 0; k < p + 1; k++) {
-      for (int j = 0; j < p + 1; j++) {
-        for (int i = 0; i < p; i++) {
-          double sum = 0.0;
-          for (int qx = 0; qx < q; qx++) {
-            sum += B1(qx, i) * cache.A1(k, j, qx);
-          }
-          element_residual.x(k, j, i) += sum;
-        }
-      }
-    }
+    //  r(1, dz, dy, dx) = s(1, qz, qy, qx) * B2(qz, dz) * B1(qy, dy) * B2(qx, dx)
+    //                   - f(0, qz, qy, qx) * G2(qz, dz) * B1(qy, dy) * B2(qx, dx)
+    //                   + f(2, qz, qy, qx) * B2(qz, dz) * B1(qy, dy) * G2(qx, dx);
+    cache.A2.y[0] = contract< x, 0 >(source[1], B2) + contract< x, 0 >(flux[2], G2);
+    cache.A2.y[1] = contract< x, 0 >(flux[0], B2);
+    cache.A1.y = contract< z, 0 >(cache.A2.y[0], B2) - contract< z, 0 >(cache.A2.y[1], G2);
+    element_residual.y += contract< y, 0 >(cache.A1.y, B1);
 
-    /////////////////////////////////
-    ////////// Y-component //////////
-    /////////////////////////////////
-    for (int k = 0; k < p + 1; k++) {
-      for (int qy = 0; qy < q; qy++) {
-        for (int qx = 0; qx < q; qx++) {
-          double sum[2]{};
-          for (int qz = 0; qz < q; qz++) {
-            sum[0] += B2(qz, k) * sources(qz, qy, qx)[1] - G2(qz, k) * fluxes(qz, qy, qx)[0];
-            sum[1] += B2(qz, k) * fluxes(qz, qy, qx)[2];
-          }
-          cache.A2(0, k, qy, qx) = sum[0];
-          cache.A2(1, k, qy, qx) = sum[1];
-        }
-      }
-    }
-
-    for (int k = 0; k < p + 1; k++) {
-      for (int i = 0; i < p + 1; i++) {
-        for (int qy = 0; qy < q; qy++) {
-          double sum = 0.0;
-          for (int qx = 0; qx < q; qx++) {
-            sum += B2(qx, i) * cache.A2(0, k, qy, qx);
-            sum += G2(qx, i) * cache.A2(1, k, qy, qx);
-          }
-          cache.A1(k, i, qy) = sum;
-        }
-      }
-    }
-
-    for (int k = 0; k < p + 1; k++) {
-      for (int j = 0; j < p; j++) {
-        for (int i = 0; i < p + 1; i++) {
-          double sum = 0.0;
-          for (int qy = 0; qy < q; qy++) {
-            sum += B1(qy, j) * cache.A1(k, i, qy);
-          }
-          element_residual.y(k, j, i) += sum;
-        }
-      }
-    }
-
-    /////////////////////////////////
-    ////////// Z-component //////////
-    /////////////////////////////////
-    for (int i = 0; i < p + 1; i++) {
-      for (int qz = 0; qz < q; qz++) {
-        for (int qy = 0; qy < q; qy++) {
-          double sum[2]{};
-          for (int qx = 0; qx < q; qx++) {
-            sum[0] += B2(qx, i) * sources(qz, qy, qx)[2] - G2(qx, i) * fluxes(qz, qy, qx)[1];
-            sum[1] += B2(qx, i) * fluxes(qz, qy, qx)[0];
-          }
-          cache.A2(0, i, qz, qy) = sum[0];
-          cache.A2(1, i, qz, qy) = sum[1];
-        }
-      }
-    }
-
-    for (int j = 0; j < p + 1; j++) {
-      for (int i = 0; i < p + 1; i++) {
-        for (int qz = 0; qz < q; qz++) {
-          double sum = 0.0;
-          for (int qy = 0; qy < q; qy++) {
-            sum += B2(qy, j) * cache.A2(0, i, qz, qy);
-            sum += G2(qy, j) * cache.A2(1, i, qz, qy);
-          }
-          cache.A1(j, i, qz) = sum;
-        }
-      }
-    }
-
-    for (int k = 0; k < p; k++) {
-      for (int j = 0; j < p + 1; j++) {
-        for (int i = 0; i < p + 1; i++) {
-          double sum = 0.0;
-          for (int qz = 0; qz < q; qz++) {
-            sum += B1(qz, k) * cache.A1(j, i, qz);
-          }
-          element_residual.z(k, j, i) += sum;
-        }
-      }
-    }
+    //  r(2, dz, dy, dx) = s(2, qz, qy, qx) * B1(qz, dz) * B2(qy, dy) * B2(qx, dx) 
+    //                   + f(0, qz, qy, qx) * B1(qz, dz) * G2(qy, dy) * B2(qx, dx) 
+    //                   - f(1, qz, qy, qx) * B1(qz, dz) * B2(qy, dy) * G2(qx, dx);
+    cache.A2.z[0] = contract< y, 0 >(source[2], B2) + contract< y, 0 >(flux[0], G2);
+    cache.A2.z[1] = contract< y, 0 >(flux[1], B2);
+    cache.A1.z = contract< x, 0 >(cache.A2.z[0], B2) - contract< x, 0 >(cache.A2.z[1], G2);
+    element_residual.z += contract< z, 0 >(cache.A1.z, B1);
+    // clang-format on
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////

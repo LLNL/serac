@@ -49,6 +49,12 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
   using cache_type = tensor<double, p + 1, q>;
 
   template <int q>
+  union cache_type_tmp {
+    tensor<double, p + 1, q> x;
+    tensor<double, q, p + 1> y;
+  };
+
+  template <int q>
   using cpu_batched_values_type = tensor<tensor<double, 2>, q, q>;
 
   template <int q>
@@ -181,6 +187,7 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
   static auto interpolate(const dof_type& element_values, const tensor<double, dim, dim, q, q>& jacobians,
                           const TensorProductQuadratureRule<q>&)
   {
+
     auto xi = GaussLegendreNodes<q>();
 
     tensor<double, q, p>     B1;
@@ -192,59 +199,23 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
       G2[i] = GaussLobattoInterpolationDerivative<p + 1>(xi[i]);
     }
 
-    cache_type<q> A;
+    cache_type_tmp<q> A;
 
-    serac::tuple<cpu_batched_values_type<q>, cpu_batched_derivatives_type<q> > values_and_derivatives{};
+    tensor< double, 2, q, q > value{};
+    tensor< double, q, q > curl{};
 
-    /////////////////////////////////
-    ////////// X-component //////////
-    /////////////////////////////////
-    for (int j = 0; j < p + 1; j++) {
-      for (int qx = 0; qx < q; qx++) {
-        double sum = 0.0;
-        for (int i = 0; i < p; i++) {
-          sum += B1(qx, i) * element_values.x(j, i);
-        }
-        A(j, qx) = sum;
-      }
-    }
+    // to clarify which contractions correspond to which spatial dimensions
+    constexpr int x = 1, y = 0; 
 
-    for (int qy = 0; qy < q; qy++) {
-      for (int qx = 0; qx < q; qx++) {
-        double sum[2]{};
-        for (int j = 0; j < (p + 1); j++) {
-          sum[0] += B2(qy, j) * A(j, qx);
-          sum[1] += G2(qy, j) * A(j, qx);
-        }
-        serac::get<0>(values_and_derivatives)(qy, qx)[0] += sum[0];
-        serac::get<1>(values_and_derivatives)(qy, qx) -= sum[1];
-      }
-    }
+    A.x      = contract<x, 1>(element_values.x, B1);
+    value[0] = contract<y, 1>(A.x, B2);
+    curl    -= contract<y, 1>(A.x, G2);
 
-    /////////////////////////////////
-    ////////// Y-component //////////
-    /////////////////////////////////
-    for (int i = 0; i < p + 1; i++) {
-      for (int qy = 0; qy < q; qy++) {
-        double sum = 0.0;
-        for (int j = 0; j < p; j++) {
-          sum += B1(qy, j) * element_values.y(j, i);
-        }
-        A(i, qy) = sum;
-      }
-    }
+    A.y      = contract<y, 1>(element_values.y, B1);
+    value[1] = contract<x, 1>(A.y, B2);
+    curl    += contract<x, 1>(A.y, G2);
 
-    for (int qy = 0; qy < q; qy++) {
-      for (int qx = 0; qx < q; qx++) {
-        double sum[3]{};
-        for (int i = 0; i < (p + 1); i++) {
-          sum[0] += B2(qx, i) * A(i, qy);
-          sum[1] += G2(qx, i) * A(i, qy);
-        }
-        serac::get<0>(values_and_derivatives)(qy, qx)[1] += sum[0];
-        serac::get<1>(values_and_derivatives)(qy, qx) += sum[1];
-      }
-    }
+    tensor<tensor<double, 2>, q, q> value_T;
 
     // apply covariant Piola transformation to go
     // from parent element -> physical element
@@ -256,20 +227,17 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
             J_T[r][c] = jacobians(r, c, qy, qx);
           }
         }
-        auto detJ  = det(J_T);
-        auto value = serac::get<0>(values_and_derivatives)(qy, qx);
-        auto curl  = serac::get<1>(values_and_derivatives)(qy, qx);
 
-        serac::get<0>(values_and_derivatives)(qy, qx) = linear_solve(J_T, value);
-        serac::get<1>(values_and_derivatives)(qy, qx) = curl / detJ;
+        value_T(qy, qx) = linear_solve(J_T, tensor<double,2>{value(0, qy, qx), value(1, qy, qx)});
+        curl(qy, qx) /= det(J_T);
       }
     }
 
-    return values_and_derivatives;
+    return tuple{value_T, curl};
   }
 
   template <int q>
-  static void integrate(cpu_batched_values_type<q>& sources, cpu_batched_derivatives_type<q>& fluxes,
+  static void integrate(cpu_batched_values_type<q>& sources_T, cpu_batched_derivatives_type<q>& fluxes,
                         const tensor<double, dim, dim, q, q>& jacobians, const TensorProductQuadratureRule<q>&,
                         dof_type&                             element_residual)
   {
@@ -285,6 +253,8 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
       G2[i] = GaussLobattoInterpolationDerivative<p + 1>(xi[i]);
     }
 
+    tensor< double, 2, q, q > source{};
+
     // transform the source and flux terms from values on the physical element,
     // to values on the parent element. Also, the source/flux values are scaled
     // according to the weight of their quadrature point, so that when we add them
@@ -297,60 +267,28 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
             J[r][c] = jacobians(c, r, qy, qx);
           }
         }
-        auto detJ       = serac::det(J);
-        auto dv         = detJ * weights1D[qx] * weights1D[qy];
-        sources(qy, qx) = linear_solve(J, sources(qy, qx)) * dv;
-        fluxes(qy, qx)  = fluxes(qy, qx) * (dv / detJ);
+
+        auto detJ         = serac::det(J);
+        auto dv           = detJ * weights1D[qx] * weights1D[qy];
+        sources_T(qy, qx) = linear_solve(J, sources_T(qy, qx)) * dv;
+        fluxes(qy, qx)    = fluxes(qy, qx) * (dv / detJ);
+
+        source(0, qy, qx) = sources_T(qy, qx)[0];
+        source(1, qy, qx) = sources_T(qy, qx)[1];
       }
     }
 
-    cache_type<q> A;
+    cache_type_tmp<q> A2;
 
-    /////////////////////////////////
-    ////////// X-component //////////
-    /////////////////////////////////
-    for (int j = 0; j < (p + 1); j++) {
-      for (int qx = 0; qx < q; qx++) {
-        double sum = 0.0;
-        for (int qy = 0; qy < q; qy++) {
-          sum += B2(qy, j) * sources(qy, qx)[0] - G2(qy, j) * fluxes(qy, qx);
-        }
-        A(j, qx) = sum;
-      }
-    }
+    // to clarify which contractions correspond to which spatial dimensions
+    constexpr int x = 1, y = 0; 
 
-    for (int j = 0; j < p + 1; j++) {
-      for (int i = 0; i < p; i++) {
-        double sum = 0.0;
-        for (int qx = 0; qx < q; qx++) {
-          sum += B1(qx, i) * A(j, qx);
-        }
-        element_residual.x(j, i) += sum;
-      }
-    }
+    A2.x = contract<y, 0>(source[0], B2) - contract<y, 0>(fluxes, G2);
+    element_residual.x += contract<x, 0>(A2.x, B1);
 
-    /////////////////////////////////
-    ////////// Y-component //////////
-    /////////////////////////////////
-    for (int i = 0; i < (p + 1); i++) {
-      for (int qy = 0; qy < q; qy++) {
-        double sum = 0.0;
-        for (int qx = 0; qx < q; qx++) {
-          sum += B2(qx, i) * sources(qy, qx)[1] + G2(qx, i) * fluxes(qy, qx);
-        }
-        A(i, qy) = sum;
-      }
-    }
+    A2.y = contract<x, 0>(source[1], B2) + contract<x, 0>(fluxes, G2);
+    element_residual.y += contract<y, 0>(A2.y, B1);
 
-    for (int j = 0; j < p; j++) {
-      for (int i = 0; i < p + 1; i++) {
-        double sum = 0.0;
-        for (int qy = 0; qy < q; qy++) {
-          sum += B1(qy, j) * A(i, qy);
-        }
-        element_residual.y(j, i) += sum;
-      }
-    }
   }
 
 #if defined(__CUDACC__)
