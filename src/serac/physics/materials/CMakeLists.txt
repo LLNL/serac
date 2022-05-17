@@ -4,7 +4,9 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-add_subdirectory(tests)
+if(ENABLE_TESTS)
+    add_subdirectory(tests)
+endif()
 
 set(materials_sources
     hyperelastic_material.cpp
