@@ -178,6 +178,21 @@ public:
     mesh_.NewNodes(*mesh_nodes, true);
   }
 
+  void setParameters(std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states)
+  {
+    parameter_states_ = parameter_states;
+    functional_call_args_.clear();
+    functional_call_args_.emplace_back(displacement_.trueVec());
+
+    if constexpr (sizeof...(parameter_space) > 0) {
+      for (size_t i = 0; i < sizeof...(parameter_space); ++i) {
+        trial_spaces[i + 1]         = &(parameter_states_[i].get().space());
+        parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, parameter_states_[i].get().space());
+        functional_call_args_.emplace_back(parameter_states_[i].get().trueVec());
+      }
+    }
+  }
+  
   /**
    * @brief Set essential displacement boundary conditions (strongly enforced)
    *

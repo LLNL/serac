@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/thermal_solid_functional.hpp"
+#include "serac/physics/thermal_mechanics_functional.hpp"
 #include "serac/physics/materials/thermal_functional_material.hpp"
 #include "serac/physics/materials/solid_functional_material.hpp"
 
