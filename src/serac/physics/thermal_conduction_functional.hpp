@@ -117,6 +117,9 @@ SolverOptions defaultDynamicOptions()
 template <int order, int dim, typename... parameter_space>
 class ThermalConductionFunctional : public BasePhysics {
 public:
+
+  static constexpr int num_parameters = sizeof ... (parameter_space);
+
   /**
    * @brief Construct a new Thermal Functional Solver object
    *
@@ -126,8 +129,7 @@ public:
    * used by an underlying material model or load
    */
   ThermalConductionFunctional(
-      const Thermal::SolverOptions& options, const std::string& name = {},
-      std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states = {})
+      const Thermal::SolverOptions& options, const std::string& name = {})
       : BasePhysics(2, order),
         temperature_(
             StateManager::newState(FiniteElementState::Options{.order      = order,
@@ -139,7 +141,6 @@ public:
                                         .vector_dim = 1,
                                         .ordering   = mfem::Ordering::byNODES,
                                         .name       = detail::addPrefix(name, "adjoint_temperature")})),
-        parameter_states_(parameter_states),
         residual_(temperature_.space().TrueVSize()),
         ode_(temperature_.space().TrueVSize(), {.u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
              nonlin_solver_, bcs_)
@@ -154,11 +155,11 @@ public:
     functional_call_args_.emplace_back(temperature_.trueVec());
 
     if constexpr (sizeof...(parameter_space) > 0) {
-      for (size_t i = 0; i < sizeof...(parameter_space); ++i) {
-        trial_spaces[i + 1]         = &(parameter_states_[i].get().space());
-        parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, parameter_states_[i].get().space());
-        functional_call_args_.emplace_back(parameter_states_[i].get().trueVec());
-      }
+      tuple < parameter_space ... > types{};
+      for_constexpr< sizeof ... (parameter_space) >([&](auto i){
+        trial_spaces[i + 1]         = generateParFiniteElementSpace< decltype(get<i>(types)) >(&mesh_);
+        parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, trial_spaces[i+1]);
+      });
     }
 
     M_functional_ = std::make_unique<Functional<test(trial, parameter_space...)>>(&temperature_.space(), trial_spaces);
@@ -194,15 +195,8 @@ public:
   void setParameters(std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states)
   {
     parameter_states_ = parameter_states;
-    functional_call_args_.clear();
-    functional_call_args_.emplace_back(temperature_.trueVec());
-
-    if constexpr (sizeof...(parameter_space) > 0) {
-      for (size_t i = 0; i < sizeof...(parameter_space); ++i) {
-        trial_spaces[i + 1]         = &(parameter_states_[i].get().space());
-        parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, parameter_states_[i].get().space());
-        functional_call_args_.emplace_back(parameter_states_[i].get().trueVec());
-      }
+    for (int i = 0; i < num_parameters; i++) {
+      functional_call_args_.emplace_back(parameter_states_[i].get().trueVec());
     }
   }
   
