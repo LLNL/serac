@@ -69,6 +69,9 @@ struct SolverOptions {
 template <int order, int dim, typename... parameter_space>
 class SolidFunctional : public BasePhysics {
 public:
+
+  static constexpr int num_parameters = sizeof ... (parameter_space);
+
   /**
    * @brief Construct a new Solid Functional object
    *
@@ -80,8 +83,7 @@ public:
    */
   SolidFunctional(
       const solid_util::SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
-      FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "",
-      std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states = {})
+      FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "")
       : BasePhysics(2, order),
         velocity_(StateManager::newState(FiniteElementState::Options{
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "velocity")})),
@@ -89,7 +91,6 @@ public:
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "displacement")})),
         adjoint_displacement_(StateManager::newState(FiniteElementState::Options{
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "adjoint_displacement")})),
-        parameter_states_(parameter_states),
         ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
               nonlin_solver_, bcs_),
         geom_nonlin_(geom_nonlin),
@@ -103,13 +104,13 @@ public:
     trial_spaces[0] = &displacement_.space();
 
     functional_call_args_.emplace_back(displacement_.trueVec());
-
+  
     if constexpr (sizeof...(parameter_space) > 0) {
-      for (size_t i = 0; i < sizeof...(parameter_space); ++i) {
-        trial_spaces[i + 1]         = &(parameter_states_[i].get().space());
-        parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, parameter_states_[i].get().space());
-        functional_call_args_.emplace_back(parameter_states_[i].get().trueVec());
-      }
+      tuple < parameter_space ... > types{};
+      for_constexpr< sizeof ... (parameter_space) >([&](auto i){
+        trial_spaces[i + 1]         = generateParFiniteElementSpace< decltype(get<i>(types)) >(&mesh_);
+        parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, trial_spaces[i+1]);
+      });
     }
 
     M_functional_ = std::make_unique<Functional<test(trial, parameter_space...)>>(&displacement_.space(), trial_spaces);
@@ -181,15 +182,8 @@ public:
   void setParameters(std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states)
   {
     parameter_states_ = parameter_states;
-    functional_call_args_.clear();
-    functional_call_args_.emplace_back(displacement_.trueVec());
-
-    if constexpr (sizeof...(parameter_space) > 0) {
-      for (size_t i = 0; i < sizeof...(parameter_space); ++i) {
-        trial_spaces[i + 1]         = &(parameter_states_[i].get().space());
-        parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, parameter_states_[i].get().space());
-        functional_call_args_.emplace_back(parameter_states_[i].get().trueVec());
-      }
+    for (int i = 0; i < num_parameters; i++) {
+      functional_call_args_.emplace_back(parameter_states_[i].get().trueVec());
     }
   }
   

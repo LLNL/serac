@@ -25,7 +25,7 @@ namespace serac {
  *
  * Uses Functional to compute action of operators
  */
-template <int order, int dim>
+template <int order, int dim >
 class ThermalSolidFunctional : public BasePhysics {
 public:
   /**
@@ -60,6 +60,12 @@ public:
     state_.push_back(thermal_functional_.temperature());
     state_.push_back(solid_functional_.velocity());
     state_.push_back(solid_functional_.displacement());
+
+  // void setParameters(std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states)
+
+    std::array<std::reference_wrapper<FiniteElementState>, 1> tmp{solid_functional_.displacement()};
+    thermal_functional_.setParameters(tmp);
+    solid_functional_.setParameters(tmp);
 
     coupling_ = serac::CouplingScheme::OperatorSplit;
   }
@@ -104,10 +110,10 @@ protected:
   serac::CouplingScheme coupling_;
 
   /// A thermal functional module
-  ThermalConductionFunctional<order, dim> thermal_functional_;
+  ThermalConductionFunctional<order, dim, H1<order, dim > > thermal_functional_;
 
   /// A solid functional module
-  SolidFunctional<order, dim> solid_functional_;
+  SolidFunctional<order, dim, H1<order> > solid_functional_;
 };
 
 }  // namespace serac
