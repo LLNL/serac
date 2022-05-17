@@ -150,35 +150,21 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
 
     cache_type<q> A;
 
-    serac::tuple<cpu_batched_values_type<q>, cpu_batched_derivatives_type<q> > values_and_derivatives{};
+    tensor< double, c, q, q> value{};
+    tensor< double, c, dim, q, q> gradient{};
 
     for (int i = 0; i < c; i++) {
-      for (int dy = 0; dy < n; dy++) {
-        for (int qx = 0; qx < q; qx++) {
-          double sum[2]{};
-          for (int dx = 0; dx < n; dx++) {
-            sum[0] += B(qx, dx) * X(i, dy, dx);
-            sum[1] += G(qx, dx) * X(i, dy, dx);
-          }
-          A(0, dy, qx) = sum[0];
-          A(1, dy, qx) = sum[1];
-        }
-      }
+      A[0] = contract<1, 1>(X[i], B);
+      A[1] = contract<1, 1>(X[i], G);
 
-      for (int qy = 0; qy < q; qy++) {
-        for (int qx = 0; qx < q; qx++) {
-          double sum[3]{};
-          for (int dy = 0; dy < n; dy++) {
-            sum[0] += B(qy, dy) * A(0, dy, qx);
-            sum[1] += B(qy, dy) * A(1, dy, qx);
-            sum[2] += G(qy, dy) * A(0, dy, qx);
-          }
-          serac::get<0>(values_and_derivatives)(qy, qx)(i)    = sum[0];
-          serac::get<1>(values_and_derivatives)(qy, qx)(i, 0) = sum[1];
-          serac::get<1>(values_and_derivatives)(qy, qx)(i, 1) = sum[2];
-        }
-      }
+      value(i)      = contract<0, 1>(A[0], B);
+      gradient(i,0) = contract<0, 1>(A[1], B);
+      gradient(i,1) = contract<0, 1>(A[0], G);
     }
+
+    tensor< tensor< double, c >, q, q > value_T{};
+    tensor< tensor< double, c, dim >, q, q > gradient_T{};
+
     for (int qy = 0; qy < q; qy++) {
       for (int qx = 0; qx < q; qx++) {
         tensor<double, dim, dim> J;
@@ -187,17 +173,23 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
             J[row][col] = jacobians(col, row, qy, qx);
           }
         }
-        auto grad_u = serac::get<1>(values_and_derivatives)(qy, qx);
 
-        serac::get<1>(values_and_derivatives)(qy, qx) = dot(grad_u, inv(J));
+        for (int i = 0; i < c; i++) {
+          value_T(qy, qx)[i] = value(i, qy, qx);
+          for (int j = 0; j < dim; j++) {
+            gradient_T(qy, qx)[i][j] = gradient(i, j, qy, qx);
+          }
+        }
+
+        gradient_T(qy, qx) = dot(gradient_T(qy, qx), inv(J));
       }
     }
-
-    return values_and_derivatives;
+ 
+    return tuple{value_T, gradient_T};
   }
 
   template <int q>
-  static void integrate(cpu_batched_values_type<q>& sources, cpu_batched_derivatives_type<q>& fluxes,
+  static void integrate(cpu_batched_values_type<q>& source_T, cpu_batched_derivatives_type<q>& flux_T,
                         const tensor<double, dim, dim, q, q>& jacobians, const TensorProductQuadratureRule<q>&,
                         dof_type&                             element_residual)
   {
@@ -219,7 +211,8 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
       return G_;
     }();
 
-    cache_type<q> A{};
+    tensor< double, c, q, q> source{};
+    tensor< double, c, dim, q, q> flux{};
 
     for (int qy = 0; qy < q; qy++) {
       for (int qx = 0; qx < q; qx++) {
@@ -229,37 +222,29 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
             J_T[row][col] = jacobians(row, col, qy, qx);
           }
         }
-        auto dv         = det(J_T) * weights1D[qx] * weights1D[qy];
-        sources(qy, qx) = sources(qy, qx) * dv;
-        fluxes(qy, qx)  = dot(fluxes(qy, qx), inv(J_T)) * dv;
+        auto dv = det(J_T) * weights1D[qx] * weights1D[qy];
+
+        source_T(qy, qx) = source_T(qy, qx) * dv;
+        flux_T(qy, qx)  = dot(flux_T(qy, qx), inv(J_T)) * dv;
+
+        for (int i = 0; i < c; i++) {
+          source(i, qy, qx) = source_T(qy, qx)[i];
+          for (int j = 0; j < dim; j++) {
+            flux(i, j, qy, qx) = flux_T(qy, qx)[i][j];
+          }
+        }
       }
     }
+
+    cache_type<q> A{};
 
     for (int i = 0; i < c; i++) {
-      for (int dx = 0; dx < n; dx++) {
-        for (int qy = 0; qy < q; qy++) {
-          double sum[2]{};
-          for (int qx = 0; qx < q; qx++) {
-            sum[0] += B(qx, dx) * sources(qy, qx)[i];
-            sum[0] += G(qx, dx) * fluxes(qy, qx)[i][0];
-            sum[1] += B(qx, dx) * fluxes(qy, qx)[i][1];
-          }
-          A(0, dx, qy) = sum[0];
-          A(1, dx, qy) = sum[1];
-        }
-      }
+      A[0] = contract< 1, 0 >(source[i], B) + contract< 1, 0 >(flux(i, 0), G);
+      A[1] = contract< 1, 0 >(flux(i, 1), B);
 
-      for (int dx = 0; dx < n; dx++) {
-        for (int dy = 0; dy < n; dy++) {
-          double sum = 0.0;
-          for (int qy = 0; qy < q; qy++) {
-            sum += B(qy, dy) * A(0, dx, qy);
-            sum += G(qy, dy) * A(1, dx, qy);
-          }
-          element_residual(i, dy, dx) += sum;
-        }
-      }
+      element_residual(i) += contract< 0, 0 >(A[0], B) + contract< 0, 0 >(A[1], G);
     }
+
   }
 
 #if defined(__CUDACC__)

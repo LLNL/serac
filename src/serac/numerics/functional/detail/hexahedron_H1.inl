@@ -143,73 +143,53 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
 
     cache_type<q> cache;
 
-    serac::tuple<cpu_batched_values_type<q>, cpu_batched_derivatives_type<q> > values_and_derivatives{};
+    tensor< double, c, q, q, q> value{};
+    tensor< double, c, dim, q, q, q> gradient{};
 
     for (int i = 0; i < c; i++) {
-      for (int dz = 0; dz < n; dz++) {
-        for (int dy = 0; dy < n; dy++) {
-          for (int qx = 0; qx < q; qx++) {
-            double sum[2]{};
-            for (int dx = 0; dx < n; dx++) {
-              sum[0] += B(qx, dx) * X(i, dz, dy, dx);
-              sum[1] += G(qx, dx) * X(i, dz, dy, dx);
-            }
-            cache.A1(0, dz, dy, qx) = sum[0];
-            cache.A1(1, dz, dy, qx) = sum[1];
-          }
-        }
-      }
+      cache.A1[0] = contract<2, 1>(X[i], B);
+      cache.A1[1] = contract<2, 1>(X[i], G);
 
-      for (int dz = 0; dz < n; dz++) {
-        for (int qy = 0; qy < q; qy++) {
-          for (int qx = 0; qx < q; qx++) {
-            double sum[3]{};
-            for (int dy = 0; dy < n; dy++) {
-              sum[0] += B(qy, dy) * cache.A1(0, dz, dy, qx);
-              sum[1] += B(qy, dy) * cache.A1(1, dz, dy, qx);
-              sum[2] += G(qy, dy) * cache.A1(0, dz, dy, qx);
-            }
-            cache.A2(0, dz, qy, qx) = sum[0];
-            cache.A2(1, dz, qy, qx) = sum[1];
-            cache.A2(2, dz, qy, qx) = sum[2];
-          }
-        }
-      }
+      cache.A2[0] = contract<1, 1>(cache.A1[0], B);
+      cache.A2[1] = contract<1, 1>(cache.A1[1], B);
+      cache.A2[2] = contract<1, 1>(cache.A1[0], G);
 
-      for (int qz = 0; qz < q; qz++) {
-        for (int qy = 0; qy < q; qy++) {
-          for (int qx = 0; qx < q; qx++) {
-            for (int dz = 0; dz < n; dz++) {
-              serac::get<0>(values_and_derivatives)(qz, qy, qx)(i) += B(qz, dz) * cache.A2(0, dz, qy, qx);
-              serac::get<1>(values_and_derivatives)(qz, qy, qx)(i, 0) += B(qz, dz) * cache.A2(1, dz, qy, qx);
-              serac::get<1>(values_and_derivatives)(qz, qy, qx)(i, 1) += B(qz, dz) * cache.A2(2, dz, qy, qx);
-              serac::get<1>(values_and_derivatives)(qz, qy, qx)(i, 2) += G(qz, dz) * cache.A2(0, dz, qy, qx);
-            }
-          }
-        }
-      }
+      value(i)      = contract<0, 1>(cache.A2[0], B);
+      gradient(i,0) = contract<0, 1>(cache.A2[1], B);
+      gradient(i,1) = contract<0, 1>(cache.A2[2], B);
+      gradient(i,2) = contract<0, 1>(cache.A2[0], G);
+    }
 
-      for (int qz = 0; qz < q; qz++) {
-        for (int qy = 0; qy < q; qy++) {
-          for (int qx = 0; qx < q; qx++) {
-            tensor<double, dim, dim> J;
-            for (int row = 0; row < dim; row++) {
-              for (int col = 0; col < dim; col++) {
-                J[row][col] = jacobians(col, row, qz, qy, qx);
-              }
+    tensor< tensor< double, c >, q, q, q > value_T{};
+    tensor< tensor< double, c, 3 >, q, q, q > gradient_T{};
+
+    for (int qz = 0; qz < q; qz++) {
+      for (int qy = 0; qy < q; qy++) {
+        for (int qx = 0; qx < q; qx++) {
+          tensor<double, dim, dim> J;
+          for (int row = 0; row < dim; row++) {
+            for (int col = 0; col < dim; col++) {
+              J[row][col] = jacobians(col, row, qz, qy, qx);
             }
-            auto grad_u                                       = serac::get<1>(values_and_derivatives)(qz, qy, qx);
-            serac::get<1>(values_and_derivatives)(qz, qy, qx) = dot(grad_u, inv(J));
           }
+
+          for (int i = 0; i < c; i++) {
+            value_T(qz, qy, qx)[i] = value(i, qz, qy, qx);
+            for (int j = 0; j < dim; j++) {
+              gradient_T(qz, qy, qx)[i][j] = gradient(i, j, qz, qy, qx);
+            }
+          }
+
+          gradient_T(qz, qy, qx) = dot(gradient_T(qz, qy, qx), inv(J));
         }
       }
     }
-
-    return values_and_derivatives;
+ 
+    return tuple{value_T, gradient_T};
   }
 
   template <int q>
-  static void integrate(cpu_batched_values_type<q>& sources, cpu_batched_derivatives_type<q>& fluxes,
+  static void integrate(cpu_batched_values_type<q>& source_T, cpu_batched_derivatives_type<q>& flux_T,
                         const tensor<double, dim, dim, q, q, q>& jacobians, const TensorProductQuadratureRule<q>&,
                         dof_type&                                element_residual)
   {
@@ -231,7 +211,8 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
       return G_;
     }();
 
-    cache_type<q> cache{};
+    tensor< double, c, q, q, q> source{};
+    tensor< double, c, dim, q, q, q> flux{};
 
     for (int qz = 0; qz < q; qz++) {
       for (int qy = 0; qy < q; qy++) {
@@ -243,57 +224,30 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
             }
           }
           auto dv             = det(J_T) * weights1D[qx] * weights1D[qy] * weights1D[qz];
-          sources(qz, qy, qx) = sources(qz, qy, qx) * dv;
-          fluxes(qz, qy, qx)  = dot(fluxes(qz, qy, qx), inv(J_T)) * dv;
+          source_T(qz, qy, qx) = source_T(qz, qy, qx) * dv;
+          flux_T(qz, qy, qx)  = dot(flux_T(qz, qy, qx), inv(J_T)) * dv;
+
+          for (int i = 0; i < c; i++) {
+            source(i, qz, qy, qx) = source_T(qz, qy, qx)[i];
+            for (int j = 0; j < dim; j++) {
+              flux(i, j, qz, qy, qx) = flux_T(qz, qy, qx)[i][j];
+            }
+          }
         }
       }
     }
 
+    cache_type<q> cache{};
+
     for (int i = 0; i < c; i++) {
-      for (int dx = 0; dx < n; dx++) {
-        for (int qy = 0; qy < q; qy++) {
-          for (int qz = 0; qz < q; qz++) {
-            double sum[3]{};
-            for (int qx = 0; qx < q; qx++) {
-              sum[0] += B(qx, dx) * sources(qz, qy, qx)[i];
-              sum[0] += G(qx, dx) * fluxes(qz, qy, qx)[i][0];
-              sum[1] += B(qx, dx) * fluxes(qz, qy, qx)[i][1];
-              sum[2] += B(qx, dx) * fluxes(qz, qy, qx)[i][2];
-            }
-            cache.A2(0, dx, qy, qz) = sum[0];
-            cache.A2(1, dx, qy, qz) = sum[1];
-            cache.A2(2, dx, qy, qz) = sum[2];
-          }
-        }
-      }
+      cache.A2[0] = contract< 2, 0 >(source[i], B) + contract< 2, 0 >(flux(i, 0), G);
+      cache.A2[1] = contract< 2, 0 >(flux(i, 1), B);
+      cache.A2[2] = contract< 2, 0 >(flux(i, 2), B);
 
-      for (int dx = 0; dx < n; dx++) {
-        for (int dy = 0; dy < n; dy++) {
-          for (int qz = 0; qz < q; qz++) {
-            double sum[2]{};
-            for (int qy = 0; qy < q; qy++) {
-              sum[0] += B(qy, dy) * cache.A2(0, dx, qy, qz);
-              sum[0] += G(qy, dy) * cache.A2(1, dx, qy, qz);
-              sum[1] += B(qy, dy) * cache.A2(2, dx, qy, qz);
-            }
-            cache.A1(0, dx, dy, qz) = sum[0];
-            cache.A1(1, dx, dy, qz) = sum[1];
-          }
-        }
-      }
+      cache.A1[0] = contract< 1, 0 >(cache.A2[0], B) + contract< 1, 0 >(cache.A2[1], G);
+      cache.A1[1] = contract< 1, 0 >(cache.A2[2], B);
 
-      for (int dx = 0; dx < n; dx++) {
-        for (int dy = 0; dy < n; dy++) {
-          for (int dz = 0; dz < n; dz++) {
-            double sum = 0.0;
-            for (int qz = 0; qz < q; qz++) {
-              sum += B(qz, dz) * cache.A1(0, dx, dy, qz);
-              sum += G(qz, dz) * cache.A1(1, dx, dy, qz);
-            }
-            element_residual(i, dz, dy, dx) += sum;
-          }
-        }
-      }
+      element_residual(i) += contract< 0, 0 >(cache.A1[0], B) + contract< 0, 0 >(cache.A1[1], G);
     }
   }
 

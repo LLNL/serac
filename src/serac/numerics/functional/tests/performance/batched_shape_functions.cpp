@@ -1021,11 +1021,11 @@ int main()
   h1_h1_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
   h1_h1_test_3D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
 
-  hcurl_hcurl_test_2D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
-  hcurl_hcurl_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
-  hcurl_hcurl_test_2D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
+  //hcurl_hcurl_test_2D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
+  //hcurl_hcurl_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
+  //hcurl_hcurl_test_2D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
 
-  hcurl_hcurl_test_3D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
-  hcurl_hcurl_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
-  hcurl_hcurl_test_3D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
+  //hcurl_hcurl_test_3D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
+  //hcurl_hcurl_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
+  //hcurl_hcurl_test_3D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
 }

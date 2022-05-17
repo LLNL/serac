@@ -20,11 +20,15 @@ foreach(filename ${functional_performance_tests})
                        FOLDER      serac/tests )
 endforeach()
 
-#set_source_files_properties(batched_shape_functions.cpp PROPERTIES LANGUAGE CXX)
-#target_compile_options(batched_shape_functions PUBLIC "-march=skylake-avx512")
-#target_compile_options(batched_shape_functions PUBLIC "-Wno-ignored-attributes")
-#target_compile_options(batched_shape_functions PUBLIC "-Wno-unused-function")
-#target_compile_options(batched_shape_functions PUBLIC "-Wno-shadow")
+
+# when mfem is compiled with cuda support it requires us to
+# use nvcc to compile everything, so this test fails to compile because nvcc
+# doesn't understand obscure avx intrinsics
+set_source_files_properties(batched_shape_functions.cpp PROPERTIES LANGUAGE CXX)
+target_compile_options(batched_shape_functions PUBLIC "-march=skylake-avx512")
+target_compile_options(batched_shape_functions PUBLIC "-Wno-ignored-attributes")
+target_compile_options(batched_shape_functions PUBLIC "-Wno-unused-function")
+target_compile_options(batched_shape_functions PUBLIC "-Wno-shadow")
 
 if(ENABLE_CUDA)
 
@@ -45,5 +49,7 @@ if(ENABLE_CUDA)
 
     target_compile_options(batched_shape_functions_cuda PRIVATE --extended-lambda)
     target_compile_options(mass_diffusion_tests_cuda PRIVATE --extended-lambda)
+
+  add_executable(sandbox cuda_sandbox.cu)
 
 endif()
