@@ -7,6 +7,7 @@
 #include "serac/physics/thermal_mechanics_functional.hpp"
 #include "serac/physics/materials/thermal_functional_material.hpp"
 #include "serac/physics/materials/solid_functional_material.hpp"
+#include "serac/physics/materials/green_saint_venant_thermoelastic.hpp"
 
 #include <fstream>
 
@@ -19,11 +20,12 @@
 
 namespace serac {
 
-template <int p, int dim>
-void functional_test_static(double expected_norm)
+template <int p>
+void functional_test_static_3D(double expected_norm)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
+  constexpr int dim = 3;
   int serial_refinement   = 1;
   int parallel_refinement = 0;
 
@@ -31,11 +33,8 @@ void functional_test_static(double expected_norm)
   axom::sidre::DataStore datastore;
   serac::StateManager::initialize(datastore, "thermal_functional_static_solve");
 
-  static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for thermal functional test");
-
   // Construct the appropriate dimension mesh and give it to the data store
-  std::string filename =
-      (dim == 2) ? SERAC_REPO_DIR "/data/meshes/star.mesh" : SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+  std::string filename = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
@@ -64,16 +63,55 @@ void functional_test_static(double expected_norm)
   // BT 04/27/2022 This can't be instantiated yet.
   // The material model needs to be implemented before this
   // module can be used.
-  ThermalSolidFunctional<p, dim> thermal_solid_solver(thermal_options, solid_options, GeometricNonlinearities::On,
+  ThermalMechanicsFunctional<p, dim> thermal_solid_solver(thermal_options, solid_options, GeometricNonlinearities::On,
                                                       FinalMeshOption::Deformed, "thermal_solid_functional");
 
-  double u = 0.0;
-  EXPECT_NEAR(u, expected_norm, 1.0e-6);
+  double rho = 1.0;
+  double E = 1.0;
+  double nu = 0.25;
+  double c = 1.0;
+  double alpha = 1.0e-3;
+  double theta_ref = 1.0;
+  double k = 1.0;
+  GreenSaintVenantThermoelasticMaterial material{rho, E, nu, c, alpha, theta_ref, k};
+  thermal_solid_solver.setMaterial(material);
+
+  // Define the function for the initial temperature and boundary condition
+  auto one = [](const mfem::Vector&, double) -> double { return 1.0; };
+
+  // Set the initial temperature and boundary condition
+  thermal_solid_solver.setTemperatureBCs(ess_bdr, one);
+  thermal_solid_solver.setTemperature(one);
+
+  // Define the function for the disolacement boundary condition
+  auto zeroVector = [](const mfem::Vector&, mfem::Vector& u) { u = 0.0; };
+  
+  // Set the initial displcament and boundary condition
+  thermal_solid_solver.setDisplacementBCs(ess_bdr, zeroVector);
+  thermal_solid_solver.setDisplacement(zeroVector);
+
+  // Finalize the data structures
+  thermal_solid_solver.completeSetup();
+
+  // Perform the quasi-static solve
+  double dt = 1.0;
+  thermal_solid_solver.advanceTimestep(dt);
+
+  // Output the sidre-based plot files
+  thermal_solid_solver.outputState();
+
+  // Check the final temperature norm
+  EXPECT_NEAR(expected_norm, norm(thermal_solid_solver.temperature()), 1.0e-6);
+
 }
 
-TEST(thermal_solid_functional, construct) { functional_test_static<1, 2>(0.0); }
-
 }  // namespace serac
+
+TEST(thermal_mechanical, static_test)
+{
+  constexpr int p = 2;
+  serac::functional_test_static_3D< p >(0.0);
+}
 
 //------------------------------------------------------------------------------
 #include "axom/slic/core/SimpleLogger.hpp"

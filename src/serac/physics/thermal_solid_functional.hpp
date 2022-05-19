@@ -27,11 +27,11 @@ namespace serac {
  *
  * Uses Functional to compute action of operators
  */
-template <int order, int dim >
+template <int order, int dim>
 class ThermalMechanicsFunctional : public BasePhysics {
 public:
   /**
-   * @brief Construct a new coupled Thermal-Solid Functional object
+   * @brief Construct a new coupled Thermal-Mechanics Functional object
    *
    * @param thermal_options The options for the linear, nonlinear, and ODE solves of the thermal operator
    * @param solid_options The options for the linear, nonlinear, and ODE solves of the thermal operator
@@ -40,9 +40,9 @@ public:
    * @param name An optional name for the physics module instance
    */
   ThermalMechanicsFunctional(const typename Thermal::SolverOptions&    thermal_options,
-                         const typename solid_util::SolverOptions& solid_options,
-                         GeometricNonlinearities                   geom_nonlin = GeometricNonlinearities::On,
-                         FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "")
+                             const typename solid_util::SolverOptions& solid_options,
+                             GeometricNonlinearities                   geom_nonlin = GeometricNonlinearities::On,
+                             FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "")
       : BasePhysics(3, order),
         temperature_(
             StateManager::newState(FiniteElementState::Options{.order      = order,
@@ -53,8 +53,8 @@ public:
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "velocity")})),
         displacement_(StateManager::newState(FiniteElementState::Options{
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "displacement")})),
-        thermal_functional_(thermal_options, name + "thermal"),
-        solid_functional_(solid_options, geom_nonlin, keep_deformation, name + "mechanical")
+        thermal_functional_(thermal_options, name + "thermal", {displacement_}),
+        solid_functional_(solid_options, geom_nonlin, keep_deformation, name + "mechanical", {temperature_})
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
@@ -62,9 +62,6 @@ public:
     state_.push_back(thermal_functional_.temperature());
     state_.push_back(solid_functional_.velocity());
     state_.push_back(solid_functional_.displacement());
-
-    thermal_functional_.setParameter(solid_functional_.displacement(), 0);
-    solid_functional_.setParameter(thermal_functional_.temperature(), 0);
 
     coupling_ = serac::CouplingScheme::OperatorSplit;
   }
@@ -227,6 +224,7 @@ public:
   /// @overload
   //serac::FiniteElementState& temperature() { return temperature_; };
 
+  
 protected:
   /// The temperature finite element state
   FiniteElementState temperature_;
@@ -241,9 +239,6 @@ protected:
    * @brief The coupling strategy
    */
   serac::CouplingScheme coupling_;
-
-  using displacement_field = H1<order, dim>;
-  using temperature_field  = H1<order>;
 
   /// A thermal functional module
   ThermalConductionFunctional<order, dim, displacement_field> thermal_functional_;
