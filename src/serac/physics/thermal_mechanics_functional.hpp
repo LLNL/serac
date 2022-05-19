@@ -61,8 +61,6 @@ public:
     state_.push_back(solid_functional_.velocity());
     state_.push_back(solid_functional_.displacement());
 
-  // void setParameters(std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states)
-
     thermal_functional_.setParameter(solid_functional_.displacement(), 0);
     solid_functional_.setParameter(thermal_functional_.temperature(), 0);
 
