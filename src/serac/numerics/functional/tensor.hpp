@@ -1320,19 +1320,39 @@ SERAC_HOST_DEVICE constexpr auto solve_upper_triangular(const tensor<T, n, n> U,
  * @param[in] b The righthand side vector b
  * @return x The solution vector
  */
-template <typename T, int n, int... m>
-SERAC_HOST_DEVICE constexpr auto linear_solve(const tensor<T, n, n> A, const tensor<T, n, m...> b)
+template <typename S, typename T, int n, int... m>
+SERAC_HOST_DEVICE constexpr auto linear_solve(const tensor<S, n, n>& A, const tensor<T, n, m...>& b)
 {
-  auto const lu_factors = lu(A);
-  return linear_solve(lu_factors, b);
+  // We want to avoid accumulating the derivative through the
+  // LU factorization, because it is computationally expensive.
+  // Instead, we perform the LU factorization on the values of
+  // A, and then two backsolves: one to compute the primal (x),
+  // and another to compute its derivative (dx).
+  // If A is not dual, the second solve is a no-op.
+
+  // Strip off derivatives, if any, and compute only x (ie no derivative)
+  auto lu_factors = lu(get_value(A));
+  auto x  = linear_solve(lu_factors, get_value(b));
+
+  // Compute directional derivative of x.
+  // If both b and A are not dual, the zero type
+  // makes these no-ops.
+  auto r  = get_gradient(b) - dot(get_gradient(A), x);
+  auto dx = linear_solve(lu_factors, r);
+
+  if constexpr (is_zero<decltype(dx)>{}) {
+    return x;
+  } else {
+    return make_dual(x, dx);
+  }
 }
 
 /**
  * @overload
  * @note For use with a matrix that has already been factorized
  */
-template <typename T, int n, int... m>
-SERAC_HOST_DEVICE constexpr auto linear_solve(const LuFactorization<T, n>& lu_factors, const tensor<T, n, m...> b)
+template <typename S, typename T, int n, int... m>
+SERAC_HOST_DEVICE constexpr auto linear_solve(const LuFactorization<S, n>& lu_factors, const tensor<T, n, m...> b)
 {
   // Forward substitution
   // solve Ly = b
@@ -1344,18 +1364,22 @@ SERAC_HOST_DEVICE constexpr auto linear_solve(const LuFactorization<T, n>& lu_fa
 }
 
 /**
- * @overload
- * @note For use with dual numbers. Implements a custom derivative rule
- * that avoids accumulating though the Gaussian eliminiation.
- * It costs 2 linear solves (of non-dual numbers).
+ * @overload Shortcut for case of zero rhs
  */
-template <typename gradient_type, int n, int... m>
-SERAC_HOST_DEVICE auto linear_solve(tensor<dual<gradient_type>, n, n> A, tensor<dual<gradient_type>, n, m...> b)
+template <typename T, int n>
+SERAC_HOST_DEVICE constexpr auto linear_solve(const LuFactorization<T, n>& /* lu_factors */,
+                                              const zero /* b */)
 {
-  auto x  = linear_solve(get_value(A), get_value(b));
-  auto r  = get_gradient(b) - dot(get_gradient(A), x);
-  auto dx = linear_solve(get_value(A), r);
-  return make_tensor<n>([&](int i) { return dual<gradient_type>{x[i], dx[i]}; });
+  return zero{};
+}
+
+/**
+ * @brief Create a tensor of dual numbers with specified seed
+ */
+template <typename T, int n>
+SERAC_HOST_DEVICE constexpr auto make_dual(const tensor<T, n>& x, const tensor<T, n>& dx)
+{
+  return make_tensor<n>([&](int i) { return dual<T>{x[i], dx[i]}; });
 }
 
 /**
@@ -1405,7 +1429,7 @@ SERAC_HOST_DEVICE constexpr tensor<double, 3, 3> inv(const tensor<double, 3, 3>&
  * with partial pivoting
  */
 template <typename T, int n>
-SERAC_HOST_DEVICE constexpr tensor<T, n, n> inv(tensor<T, n, n> A)
+SERAC_HOST_DEVICE constexpr auto inv(const tensor<T, n, n>& A)
 {
   auto I = DenseIdentity<n>();
   return linear_solve(A, I);
@@ -1421,7 +1445,7 @@ SERAC_HOST_DEVICE constexpr tensor<T, n, n> inv(tensor<T, n, n> A)
  * TODO: compare performance of this hardcoded implementation to just using inv() directly
  */
 template <typename gradient_type, int n>
-SERAC_HOST_DEVICE auto inv(tensor<dual<gradient_type>, n, n> A)
+SERAC_HOST_DEVICE constexpr auto inv(tensor<dual<gradient_type>, n, n> A)
 {
   auto invA = inv(get_value(A));
   return make_tensor<n, n>([&](int i, int j) {
