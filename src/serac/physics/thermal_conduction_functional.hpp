@@ -141,6 +141,7 @@ public:
                                         .vector_dim = 1,
                                         .ordering   = mfem::Ordering::byNODES,
                                         .name       = detail::addPrefix(name, "adjoint_temperature")})),
+        functional_call_args_(1 + num_parameters, temperature_.trueVec()), // these entries need to be overwritten by parameters
         residual_(temperature_.space().TrueVSize()),
         ode_(temperature_.space().TrueVSize(), {.u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
              nonlin_solver_, bcs_)
@@ -152,13 +153,11 @@ public:
     std::array<mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + 1> trial_spaces;
     trial_spaces[0] = &temperature_.space();
 
-    functional_call_args_.emplace_back(temperature_.trueVec());
-
     if constexpr (sizeof...(parameter_space) > 0) {
       tuple < parameter_space ... > types{};
       for_constexpr< sizeof ... (parameter_space) >([&](auto i){
-        trial_spaces[i + 1]         = generateParFiniteElementSpace< decltype(get<i>(types)) >(&mesh_);
-        parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, trial_spaces[i+1]);
+        trial_spaces[i + 1]         = generateParFiniteElementSpace< typename std::remove_reference< decltype(get<i>(types)) >::type >(&mesh_);
+        parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, *trial_spaces[i+1]);
       });
     }
 
@@ -192,12 +191,9 @@ public:
     zero_ = 0.0;
   }
 
-  void setParameters(std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states)
+  void setParameter(const FiniteElementState & parameter_state, int i)
   {
-    parameter_states_ = parameter_states;
-    for (int i = 0; i < num_parameters; i++) {
-      functional_call_args_.emplace_back(parameter_states_[i].get().trueVec());
-    }
+    functional_call_args_[i + 1] = parameter_state.trueVec();
   }
   
   /**
@@ -569,14 +565,11 @@ protected:
   /// Stiffness functional object \f$\mathbf{K} = \int_\Omega \theta \cdot \nabla \phi_i  + f \phi_i \, dx \f$
   std::unique_ptr<Functional<test(trial, parameter_space...)>> K_functional_;
 
-  /// The finite element states representing user-defined parameter fields
-  std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states_;
-
   /// The sensitivities (dual vectors) with repect to each of the input parameter fields
   std::array<std::unique_ptr<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;
 
   /// The set of input trial space vectors (temperature + parameters) used to call the underlying functional
-  std::vector<std::reference_wrapper<const mfem::Vector>> functional_call_args_;
+  std::vector< std::reference_wrapper<const mfem::Vector> > functional_call_args_;
 
   /// Assembled mass matrix
   std::unique_ptr<mfem::HypreParMatrix> M_;

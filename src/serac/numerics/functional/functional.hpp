@@ -92,7 +92,7 @@ mfem::ParFiniteElementSpace* generateParFiniteElementSpace(mfem::ParMesh* mesh)
   mfem::FiniteElementCollection *fec;
   const auto ordering = mfem::Ordering::byVDIM;
   
-  switch (function_space::Family)
+  switch (function_space::family)
   {
     case Family::H1:
       fec = new mfem::H1_FECollection(function_space::order, dim);
@@ -105,6 +105,9 @@ mfem::ParFiniteElementSpace* generateParFiniteElementSpace(mfem::ParMesh* mesh)
       break;
     case Family::L2:
       fec = new mfem::L2_FECollection(function_space::order, dim);
+      break;
+    default:
+      return NULL;
       break;
   }
 

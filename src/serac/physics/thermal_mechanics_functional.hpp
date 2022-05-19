@@ -63,9 +63,8 @@ public:
 
   // void setParameters(std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states)
 
-    std::array<std::reference_wrapper<FiniteElementState>, 1> tmp{solid_functional_.displacement()};
-    thermal_functional_.setParameters(tmp);
-    solid_functional_.setParameters(tmp);
+    thermal_functional_.setParameter(solid_functional_.displacement(), 0);
+    solid_functional_.setParameter(thermal_functional_.temperature(), 0);
 
     coupling_ = serac::CouplingScheme::OperatorSplit;
   }
