@@ -286,7 +286,7 @@ public:
 
           auto source = zero{};
 
-          auto response = parameterized_material(x, u, du_dX, serac::get<0>(params)...);
+          auto response = parameterized_material(x, u, du_dX, params...);
 
           auto flux = response.stress;
 
@@ -304,7 +304,7 @@ public:
         [this, parameterized_material](auto x, auto displacement, auto... params) {
           auto [u, du_dX] = displacement;
 
-          auto response = parameterized_material(x, u, du_dX, serac::get<0>(params)...);
+          auto response = parameterized_material(x, u, du_dX, params...);
 
           auto flux = 0.0 * du_dX;
 
