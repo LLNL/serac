@@ -91,6 +91,7 @@ public:
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "displacement")})),
         adjoint_displacement_(StateManager::newState(FiniteElementState::Options{
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "adjoint_displacement")})),
+        functional_call_args_(1 + num_parameters, displacement_.trueVec()), // these entries need to be overwritten by parameters
         ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
               nonlin_solver_, bcs_),
         geom_nonlin_(geom_nonlin),
@@ -102,14 +103,12 @@ public:
     // Create a pack of the primal field and parameter finite element spaces
     std::array<mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + 1> trial_spaces;
     trial_spaces[0] = &displacement_.space();
-
-    functional_call_args_.emplace_back(displacement_.trueVec());
   
     if constexpr (sizeof...(parameter_space) > 0) {
       tuple < parameter_space ... > types{};
       for_constexpr< sizeof ... (parameter_space) >([&](auto i){
-        trial_spaces[i + 1]         = generateParFiniteElementSpace< decltype(get<i>(types)) >(&mesh_);
-        parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, trial_spaces[i+1]);
+        trial_spaces[i + 1]         = generateParFiniteElementSpace< typename std::remove_reference< decltype(get<i>(types)) >::type >(&mesh_);
+        parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, *trial_spaces[i+1]);
       });
     }
 
@@ -179,14 +178,11 @@ public:
     mesh_.NewNodes(*mesh_nodes, true);
   }
 
-  void setParameters(std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states)
+  void setParameter(const FiniteElementState & parameter_state, int i)
   {
-    parameter_states_ = parameter_states;
-    for (int i = 0; i < num_parameters; i++) {
-      functional_call_args_.emplace_back(parameter_states_[i].get().trueVec());
-    }
+    functional_call_args_[i + 1] = parameter_state.trueVec();
   }
-  
+ 
   /**
    * @brief Set essential displacement boundary conditions (strongly enforced)
    *
@@ -689,9 +685,6 @@ protected:
 
   /// Stiffness functional object
   std::unique_ptr<Functional<test(trial, parameter_space...)>> K_functional_;
-
-  /// The finite element states representing user-defined parameter fields
-  std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states_;
 
   /// The sensitivities (dual vectors) with repect to each of the input parameter fields
   std::array<std::unique_ptr<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;
