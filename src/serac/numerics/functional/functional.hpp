@@ -88,12 +88,11 @@ struct Index {
 template <typename function_space>
 mfem::ParFiniteElementSpace* generateParFiniteElementSpace(mfem::ParMesh* mesh)
 {
-  const int dim = mesh->Dimension();
-  mfem::FiniteElementCollection *fec;
-  const auto ordering = mfem::Ordering::byVDIM;
-  
-  switch (function_space::family)
-  {
+  const int                      dim = mesh->Dimension();
+  mfem::FiniteElementCollection* fec;
+  const auto                     ordering = mfem::Ordering::byVDIM;
+
+  switch (function_space::family) {
     case Family::H1:
       fec = new mfem::H1_FECollection(function_space::order, dim);
       break;

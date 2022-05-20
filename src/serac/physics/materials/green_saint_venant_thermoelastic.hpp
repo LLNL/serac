@@ -50,12 +50,12 @@ struct GreenSaintVenantThermoelasticMaterial {
                                     State& /*state*/, const tensor<double, 3, 3>& grad_u_old, double /*theta_old*/,
                                     double dt) const
   {
-    const double K    = E / (3.0 * (1.0 - 2.0 * nu));
-    const double G    = 0.5 * E / (1.0 + nu);
-    static constexpr auto I = Identity<3>();
-    auto         F    = grad_u + I;
-    const auto   Eg   = greenStrain(grad_u);
-    const auto   trEg = tr(Eg);
+    const double          K    = E / (3.0 * (1.0 - 2.0 * nu));
+    const double          G    = 0.5 * E / (1.0 + nu);
+    static constexpr auto I    = Identity<3>();
+    auto                  F    = grad_u + I;
+    const auto            Eg   = greenStrain(grad_u);
+    const auto            trEg = tr(Eg);
 
     // stress
     const auto S = 2.0 * G * dev(Eg) + K * (trEg - 3.0 * alpha * (theta - theta_ref)) * I;
@@ -134,4 +134,4 @@ struct GreenSaintVenantThermoelasticMaterial {
   }
 };
 
-} // namespace serac
+}  // namespace serac

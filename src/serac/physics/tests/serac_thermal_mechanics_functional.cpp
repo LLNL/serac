@@ -25,9 +25,9 @@ void functional_test_static_3D(double expected_norm)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
-  constexpr int dim = 3;
-  int serial_refinement   = 1;
-  int parallel_refinement = 0;
+  constexpr int dim                 = 3;
+  int           serial_refinement   = 1;
+  int           parallel_refinement = 0;
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -64,15 +64,15 @@ void functional_test_static_3D(double expected_norm)
   // The material model needs to be implemented before this
   // module can be used.
   ThermalMechanicsFunctional<p, dim> thermal_solid_solver(thermal_options, solid_options, GeometricNonlinearities::On,
-                                                      FinalMeshOption::Deformed, "thermal_solid_functional");
+                                                          FinalMeshOption::Deformed, "thermal_solid_functional");
 
-  double rho = 1.0;
-  double E = 1.0;
-  double nu = 0.25;
-  double c = 1.0;
-  double alpha = 1.0e-3;
-  double theta_ref = 1.0;
-  double k = 1.0;
+  double                                rho       = 1.0;
+  double                                E         = 1.0;
+  double                                nu        = 0.25;
+  double                                c         = 1.0;
+  double                                alpha     = 1.0e-3;
+  double                                theta_ref = 1.0;
+  double                                k         = 1.0;
   GreenSaintVenantThermoelasticMaterial material{rho, E, nu, c, alpha, theta_ref, k};
   thermal_solid_solver.setMaterial(material);
 
@@ -85,7 +85,7 @@ void functional_test_static_3D(double expected_norm)
 
   // Define the function for the disolacement boundary condition
   auto zeroVector = [](const mfem::Vector&, mfem::Vector& u) { u = 0.0; };
-  
+
   // Set the initial displcament and boundary condition
   thermal_solid_solver.setDisplacementBCs(ess_bdr, zeroVector);
   thermal_solid_solver.setDisplacement(zeroVector);
