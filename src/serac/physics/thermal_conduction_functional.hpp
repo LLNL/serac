@@ -191,11 +191,11 @@ public:
     zero_ = 0.0;
   }
 
-  void setParameter(const FiniteElementState & parameter_state, int i)
+  void setParameter(const FiniteElementState& parameter_state, size_t i)
   {
     functional_call_args_[i + 1] = parameter_state.trueVec();
   }
-  
+
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
    *

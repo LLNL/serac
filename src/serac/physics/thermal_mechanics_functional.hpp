@@ -40,19 +40,10 @@ public:
    * @param name An optional name for the physics module instance
    */
   ThermalMechanicsFunctional(const typename Thermal::SolverOptions&    thermal_options,
-                         const typename solid_util::SolverOptions& solid_options,
-                         GeometricNonlinearities                   geom_nonlin = GeometricNonlinearities::On,
-                         FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "")
+                             const typename solid_util::SolverOptions& solid_options,
+                             GeometricNonlinearities                   geom_nonlin = GeometricNonlinearities::On,
+                             FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "")
       : BasePhysics(3, order),
-        temperature_(
-            StateManager::newState(FiniteElementState::Options{.order      = order,
-                                                               .vector_dim = 1,
-                                                               .ordering   = mfem::Ordering::byNODES,
-                                                               .name       = detail::addPrefix(name, "temperature")})),
-        velocity_(StateManager::newState(FiniteElementState::Options{
-            .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "velocity")})),
-        displacement_(StateManager::newState(FiniteElementState::Options{
-            .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "displacement")})),
         thermal_functional_(thermal_options, name + "thermal"),
         solid_functional_(solid_options, geom_nonlin, keep_deformation, name + "mechanical")
   {
@@ -218,25 +209,23 @@ public:
   }
 
   /**
+   * @brief Get the displacement state
+   *
+   * @return A reference to the current displacement finite element state
+   */
+  const serac::FiniteElementState& displacement() const { return solid_functional_.displacement(); };
+
+  /**
    * @brief Get the temperature state
    *
    * @return A reference to the current temperature finite element state
    */
-  const serac::FiniteElementState& temperature() const { return temperature_; };
+  const serac::FiniteElementState& temperature() const { return thermal_functional_.temperature(); };
 
   /// @overload
-  //serac::FiniteElementState& temperature() { return temperature_; };
+  // serac::FiniteElementState& temperature() { return temperature_; };
 
 protected:
-  /// The temperature finite element state
-  FiniteElementState temperature_;
-
-  /// The velocity finite element state
-  FiniteElementState velocity_;
-
-  /// The displacement finite element state
-  FiniteElementState displacement_;
-
   /**
    * @brief The coupling strategy
    */

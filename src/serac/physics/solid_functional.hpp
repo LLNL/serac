@@ -178,11 +178,11 @@ public:
     mesh_.NewNodes(*mesh_nodes, true);
   }
 
-  void setParameter(const FiniteElementState & parameter_state, int i)
+  void setParameter(const FiniteElementState& parameter_state, size_t i)
   {
     functional_call_args_[i + 1] = parameter_state.trueVec();
   }
- 
+
   /**
    * @brief Set essential displacement boundary conditions (strongly enforced)
    *
