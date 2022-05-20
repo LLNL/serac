@@ -94,8 +94,7 @@ public:
   struct ThermalMaterialInterface {
     const ThermalMechanicalMaterial mat;
 
-    ThermalMaterialInterface(const ThermalMechanicalMaterial& m):
-        mat(m)
+    ThermalMaterialInterface(const ThermalMechanicalMaterial& m) : mat(m)
     {
       // empty
     }
@@ -103,16 +102,16 @@ public:
     static constexpr int numParameters() { return 1; }
 
     template <typename T1, typename T2, typename T3, typename T4>
-    SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& temperature,
-                                      const T3& temperature_gradient, const T4& displacement) const
+    SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& temperature, const T3& temperature_gradient,
+                                      const T4& displacement) const
     {
       typename ThermalMechanicalMaterial::State state{};
-      const double dt = 1.0;
-      auto [u, du_dX] = displacement;
-      auto du_dX_old = tensor<double, 3, 3>{};
-      double temperature_old = 1.0;
-      auto [P, c, s0, q0] = mat.calculateConstitutiveOutputs(du_dX, temperature, temperature_gradient,
-                                                             state, du_dX_old, temperature_old, dt);
+      const double                              dt = 1.0;
+      auto [u, du_dX]                              = displacement;
+      auto   du_dX_old                             = tensor<double, 3, 3>{};
+      double temperature_old                       = 1.0;
+      auto [P, c, s0, q0] = mat.calculateConstitutiveOutputs(du_dX, temperature, temperature_gradient, state, du_dX_old,
+                                                             temperature_old, dt);
       // density * specific_heat = c
       const double density = 1.0;
       return Thermal::MaterialResponse{density, c, q0};
@@ -123,8 +122,7 @@ public:
   struct MechanicalMaterialInterface {
     const ThermalMechanicalMaterial mat;
 
-    MechanicalMaterialInterface(const ThermalMechanicalMaterial& m):
-        mat(m)
+    MechanicalMaterialInterface(const ThermalMechanicalMaterial& m) : mat(m)
     {
       // empty
     }
@@ -132,23 +130,23 @@ public:
     static constexpr int numParameters() { return 1; }
 
     template <typename T1, typename T2, typename T3, typename T4>
-    SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* displacement */,
-                                      const T3& displacement_gradient, const T4& temperature) const
+    SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* displacement */, const T3& displacement_gradient,
+                                      const T4& temperature) const
     {
       typename ThermalMechanicalMaterial::State state{};
-      const double dt = 1.0;
-      auto [theta, dtheta_dX] = temperature;
-      double temperature_old = 1.0;
-      auto displacement_gradient_old = tensor<double, 3, 3>{};
-      auto [P, c, s0, q0] = mat.calculateConstitutiveOutputs(displacement_gradient, theta, dtheta_dX,
-                                                             state, displacement_gradient_old, temperature_old, dt);
+      const double                              dt = 1.0;
+      auto [theta, dtheta_dX]                      = temperature;
+      double temperature_old                       = 1.0;
+      auto   displacement_gradient_old             = tensor<double, 3, 3>{};
+      auto [P, c, s0, q0]  = mat.calculateConstitutiveOutputs(displacement_gradient, theta, dtheta_dX, state,
+                                                             displacement_gradient_old, temperature_old, dt);
       const double density = 1.0;
-      auto F = displacement_gradient + Identity<3>();
-      auto stress = dot(P, transpose(F));
+      auto         F       = displacement_gradient + Identity<3>();
+      auto         stress  = dot(P, transpose(F));
       return solid_util::MaterialResponse{density, stress};
     }
   };
-  
+
   template <typename MaterialType>
   void setMaterial(MaterialType material)
   {
@@ -162,7 +160,7 @@ public:
    * @param[in] temperature_attributes The boundary attributes on which to enforce a temperature
    * @param[in] prescribed_value The prescribed boundary temperature function
    */
-  void setTemperatureBCs(const std::set<int>& temperature_attributes,
+  void setTemperatureBCs(const std::set<int>&                                   temperature_attributes,
                          std::function<double(const mfem::Vector& x, double t)> prescribed_value)
   {
     thermal_functional_.setTemperatureBCs(temperature_attributes, prescribed_value);
@@ -174,7 +172,7 @@ public:
    * @param[in] displacement_attributes The boundary attributes on which to enforce a displacement
    * @param[in] prescribed_value The prescribed boundary displacement function
    */
-  void setDisplacementBCs(const std::set<int>& displacement_attributes,
+  void setDisplacementBCs(const std::set<int>&                                           displacement_attributes,
                           std::function<void(const mfem::Vector& x, mfem::Vector& disp)> prescribed_value)
   {
     solid_functional_.setDisplacementBCs(displacement_attributes, prescribed_value);
@@ -222,9 +220,8 @@ public:
   const serac::FiniteElementState& temperature() const { return temperature_; };
 
   /// @overload
-  //serac::FiniteElementState& temperature() { return temperature_; };
+  // serac::FiniteElementState& temperature() { return temperature_; };
 
-  
 protected:
   /// The temperature finite element state
   FiniteElementState temperature_;
