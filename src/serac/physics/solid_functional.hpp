@@ -69,8 +69,7 @@ struct SolverOptions {
 template <int order, int dim, typename... parameter_space>
 class SolidFunctional : public BasePhysics {
 public:
-
-  static constexpr int num_parameters = sizeof ... (parameter_space);
+  static constexpr int num_parameters = sizeof...(parameter_space);
 
   /**
    * @brief Construct a new Solid Functional object
@@ -81,9 +80,9 @@ public:
    * @param name An optional name for the physics module instance
    * @param parameter_states An array of FiniteElementStates containing the user-specified parameter fields
    */
-  SolidFunctional(
-      const solid_util::SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
-      FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "")
+  SolidFunctional(const solid_util::SolverOptions& options,
+                  GeometricNonlinearities          geom_nonlin = GeometricNonlinearities::On,
+                  FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "")
       : BasePhysics(2, order),
         velocity_(StateManager::newState(FiniteElementState::Options{
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "velocity")})),
@@ -91,7 +90,8 @@ public:
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "displacement")})),
         adjoint_displacement_(StateManager::newState(FiniteElementState::Options{
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "adjoint_displacement")})),
-        functional_call_args_(1 + num_parameters, displacement_.trueVec()), // these entries need to be overwritten by parameters
+        functional_call_args_(1 + num_parameters,
+                              displacement_.trueVec()),  // these entries need to be overwritten by parameters
         ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
               nonlin_solver_, bcs_),
         geom_nonlin_(geom_nonlin),
@@ -103,12 +103,13 @@ public:
     // Create a pack of the primal field and parameter finite element spaces
     std::array<mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + 1> trial_spaces;
     trial_spaces[0] = &displacement_.space();
-  
+
     if constexpr (sizeof...(parameter_space) > 0) {
-      tuple < parameter_space ... > types{};
-      for_constexpr< sizeof ... (parameter_space) >([&](auto i){
-        trial_spaces[i + 1]         = generateParFiniteElementSpace< typename std::remove_reference< decltype(get<i>(types)) >::type >(&mesh_);
-        parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, *trial_spaces[i+1]);
+      tuple<parameter_space...> types{};
+      for_constexpr<sizeof...(parameter_space)>([&](auto i) {
+        trial_spaces[i + 1] =
+            generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_);
+        parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, *trial_spaces[i + 1]);
       });
     }
 

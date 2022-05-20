@@ -117,8 +117,7 @@ SolverOptions defaultDynamicOptions()
 template <int order, int dim, typename... parameter_space>
 class ThermalConductionFunctional : public BasePhysics {
 public:
-
-  static constexpr int num_parameters = sizeof ... (parameter_space);
+  static constexpr int num_parameters = sizeof...(parameter_space);
 
   /**
    * @brief Construct a new Thermal Functional Solver object
@@ -128,8 +127,7 @@ public:
    * @param[in] parameter_states The optional array of finite element states represetnting user-defined parameters to be
    * used by an underlying material model or load
    */
-  ThermalConductionFunctional(
-      const Thermal::SolverOptions& options, const std::string& name = {})
+  ThermalConductionFunctional(const Thermal::SolverOptions& options, const std::string& name = {})
       : BasePhysics(2, order),
         temperature_(
             StateManager::newState(FiniteElementState::Options{.order      = order,
@@ -141,7 +139,8 @@ public:
                                         .vector_dim = 1,
                                         .ordering   = mfem::Ordering::byNODES,
                                         .name       = detail::addPrefix(name, "adjoint_temperature")})),
-        functional_call_args_(1 + num_parameters, temperature_.trueVec()), // these entries need to be overwritten by parameters
+        functional_call_args_(1 + num_parameters,
+                              temperature_.trueVec()),  // these entries need to be overwritten by parameters
         residual_(temperature_.space().TrueVSize()),
         ode_(temperature_.space().TrueVSize(), {.u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
              nonlin_solver_, bcs_)
@@ -154,10 +153,11 @@ public:
     trial_spaces[0] = &temperature_.space();
 
     if constexpr (sizeof...(parameter_space) > 0) {
-      tuple < parameter_space ... > types{};
-      for_constexpr< sizeof ... (parameter_space) >([&](auto i){
-        trial_spaces[i + 1]         = generateParFiniteElementSpace< typename std::remove_reference< decltype(get<i>(types)) >::type >(&mesh_);
-        parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, *trial_spaces[i+1]);
+      tuple<parameter_space...> types{};
+      for_constexpr<sizeof...(parameter_space)>([&](auto i) {
+        trial_spaces[i + 1] =
+            generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_);
+        parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, *trial_spaces[i + 1]);
       });
     }
 
