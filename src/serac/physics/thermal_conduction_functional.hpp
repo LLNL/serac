@@ -569,7 +569,7 @@ protected:
   std::array<std::unique_ptr<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;
 
   /// The set of input trial space vectors (temperature + parameters) used to call the underlying functional
-  std::vector< std::reference_wrapper<const mfem::Vector> > functional_call_args_;
+  std::vector<std::reference_wrapper<const mfem::Vector>> functional_call_args_;
 
   /// Assembled mass matrix
   std::unique_ptr<mfem::HypreParMatrix> M_;
