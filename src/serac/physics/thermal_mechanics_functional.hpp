@@ -220,9 +220,6 @@ public:
    */
   const serac::FiniteElementState& temperature() const { return thermal_functional_.temperature(); };
 
-  /// @overload
-  // serac::FiniteElementState& temperature() { return temperature_; };
-
 protected:
   /**
    * @brief The coupling strategy
@@ -232,10 +229,10 @@ protected:
   using displacement_field = H1<order, dim>;
   using temperature_field  = H1<order>;
 
-  /// A thermal functional module
+  // Submodule to compute the thermal conduction physics
   ThermalConductionFunctional<order, dim, displacement_field> thermal_functional_;
 
-  /// A solid functional module
+  // Submodule to compute the mechanics
   SolidFunctional<order, dim, temperature_field> solid_functional_;
 };
 
