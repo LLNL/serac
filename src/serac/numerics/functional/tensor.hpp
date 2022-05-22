@@ -1332,7 +1332,7 @@ SERAC_HOST_DEVICE constexpr auto linear_solve(const tensor<S, n, n>& A, const te
 
   // Strip off derivatives, if any, and compute only x (ie no derivative)
   auto lu_factors = lu(get_value(A));
-  auto x  = linear_solve(lu_factors, get_value(b));
+  auto x          = linear_solve(lu_factors, get_value(b));
 
   // Compute directional derivative of x.
   // If both b and A are not dual, the zero type
@@ -1367,8 +1367,7 @@ SERAC_HOST_DEVICE constexpr auto linear_solve(const LuFactorization<S, n>& lu_fa
  * @overload Shortcut for case of zero rhs
  */
 template <typename T, int n>
-SERAC_HOST_DEVICE constexpr auto linear_solve(const LuFactorization<T, n>& /* lu_factors */,
-                                              const zero /* b */)
+SERAC_HOST_DEVICE constexpr auto linear_solve(const LuFactorization<T, n>& /* lu_factors */, const zero /* b */)
 {
   return zero{};
 }
