@@ -278,3 +278,45 @@ TEST(tensor, derivative_of_linear_solve)
   // expect x_dot = -x
   EXPECT_LT(squared_norm(get_value(x) + get_gradient(x)), tolerance);
 }
+
+TEST(tensor, derivative_of_linear_solve_wrt_b_matches_finite_difference)
+{
+  const tensor<double, 3, 3> A{{{2, 1, -1}, {-3, -1, 2}, {-2, 1, 2}}};
+  tensor<double, 3>    b_value{{-1, 2, 3}};
+  const tensor<double, 3> b_gradient{{0.337494265892494, 0.194238454581911, 0.307832573181341}};
+  auto b = make_dual(b_value, b_gradient);
+
+  auto x_value = linear_solve(A, b_value);
+
+  // first order forward difference
+  const double h = 1e-6;
+  auto dx_FD = (linear_solve(A, b_value + h*b_gradient) - x_value)/h;
+
+  auto x = linear_solve(A, b);
+  
+  EXPECT_LT(squared_norm(dx_FD - get_gradient(x)), tolerance);
+}
+
+TEST(tensor, derivative_of_linear_solve_wrt_A_matches_finite_difference)
+{
+  const tensor<double, 3, 3> v{{{2, 1, -1}, {-3, -1, 2}, {-2, 1, 2}}};
+  const tensor<double, 3, 3> g{{{0.337494265892494, 0.194238454581911, 0.307832573181341},
+                                {0.090147365480304, 0.610402517912401, 0.458978918716148},
+                                {0.689309323130592, 0.198321409053159, 0.901973313462065}}};
+  tensor<dual<double>, 3, 3> A{};
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      A[i][j].value    = v[i][j];
+      A[i][j].gradient = g[i][j];
+    }
+  }
+  const tensor<double, 3>    b{{-1, 2, 3}};
+
+  // central difference (2nd order accurate)
+  const double h = 1e-6;
+  auto dx_FD = (linear_solve(v + h*g, b) - linear_solve(v - h*g, b))/(2*h);
+
+  auto x = linear_solve(A, b);
+  
+  EXPECT_LT(squared_norm(dx_FD - get_gradient(x)), tolerance);
+}
