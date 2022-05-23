@@ -101,7 +101,7 @@ TEST(dynamic_solver, dyn_solve)
   double offset = 0.1;
   double scale  = 1.0;
 
-  auto temp_gf_coef = ts_solver.temperature().gridFuncCoef();
+  auto temp_gf_coef = ts_solver.temperature().coefficient();
   auto visc_coef    = std::make_unique<mfem_ext::TransformedScalarCoefficient<mfem::Coefficient>>(
       [offset, scale](double& x) -> double { return scale * x + offset; }, temp_gf_coef);
   ts_solver.setViscosity(std::move(visc_coef));
@@ -238,7 +238,7 @@ TEST(dynamic_solver, dyn_solve_restart)
     ts_solver_primary.setTemperature(*temp);
     ts_solver_primary.setCouplingScheme(serac::CouplingScheme::OperatorSplit);
 
-    auto temp_gf_coef_primary = ts_solver_primary.temperature().gridFuncCoef();
+    auto temp_gf_coef_primary = ts_solver_primary.temperature().coefficient();
     auto visc_coef_primary    = std::make_unique<mfem_ext::TransformedScalarCoefficient<mfem::Coefficient>>(
         [offset, scale](double& x) -> double { return scale * x + offset; }, temp_gf_coef_primary);
     ts_solver_primary.setViscosity(std::move(visc_coef_primary));
@@ -266,7 +266,7 @@ TEST(dynamic_solver, dyn_solve_restart)
     ts_solver_secondary.setTemperature(*temp);
     ts_solver_secondary.setCouplingScheme(serac::CouplingScheme::OperatorSplit);
 
-    auto temp_gf_coef_secondary = ts_solver_secondary.temperature().gridFuncCoef();
+    auto temp_gf_coef_secondary = ts_solver_secondary.temperature().coefficient();
     auto visc_coef_secondary    = std::make_unique<mfem_ext::TransformedScalarCoefficient<mfem::Coefficient>>(
         [offset, scale](double& x) -> double { return scale * x + offset; }, temp_gf_coef_secondary);
     ts_solver_secondary.setViscosity(std::move(visc_coef_secondary));
@@ -337,7 +337,7 @@ TEST(dynamic_solver, dyn_solve_restart)
     ts_solver_primary.setConductivity(std::make_unique<mfem::ConstantCoefficient>(0.5));
     ts_solver_primary.setCouplingScheme(serac::CouplingScheme::OperatorSplit);
 
-    auto temp_gf_coef_primary = ts_solver_primary.temperature().gridFuncCoef();
+    auto temp_gf_coef_primary = ts_solver_primary.temperature().coefficient();
     auto visc_coef_primary    = std::make_unique<mfem_ext::TransformedScalarCoefficient<mfem::Coefficient>>(
         [offset, scale](double& x) -> double { return scale * x + offset; }, temp_gf_coef_primary);
     ts_solver_primary.setViscosity(std::move(visc_coef_primary));
@@ -359,7 +359,7 @@ TEST(dynamic_solver, dyn_solve_restart)
     ts_solver_secondary.setConductivity(std::make_unique<mfem::ConstantCoefficient>(0.5));
     ts_solver_secondary.setCouplingScheme(serac::CouplingScheme::OperatorSplit);
 
-    auto temp_gf_coef_secondary = ts_solver_secondary.temperature().gridFuncCoef();
+    auto temp_gf_coef_secondary = ts_solver_secondary.temperature().coefficient();
     auto visc_coef_secondary    = std::make_unique<mfem_ext::TransformedScalarCoefficient<mfem::Coefficient>>(
         [offset, scale](double& x) -> double { return scale * x + offset; }, temp_gf_coef_secondary);
     ts_solver_secondary.setViscosity(std::move(visc_coef_secondary));

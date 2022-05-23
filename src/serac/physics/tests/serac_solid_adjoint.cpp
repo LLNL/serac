@@ -78,7 +78,7 @@ TEST(solid_solver, adjoint)
   solid_solver.advanceTimestep(dt);
 
   // Save the first true vector
-  mfem::Vector true_vec_1 = solid_solver.displacement().trueVec();
+  mfem::Vector true_vec_1 = solid_solver.displacement().vector();
 
   // Make a dummy adjoint load for testing
 
@@ -92,7 +92,7 @@ TEST(solid_solver, adjoint)
   adjoint_load.AddDomainIntegrator(new mfem::VectorDomainLFIntegrator(loadvec));
 
   adjoint_load.Assemble();
-  assembled_adjoint_load.trueVec() = *adjoint_load.ParallelAssemble();
+  assembled_adjoint_load.vector() = *adjoint_load.ParallelAssemble();
   assembled_adjoint_load.distributeSharedDofs();
 
   auto&  adjoint_state_1 = solid_solver.solveAdjoint(assembled_adjoint_load);
@@ -107,7 +107,7 @@ TEST(solid_solver, adjoint)
   // Compute, assemble, and check the sensitivities
   auto& shear_sensitivity = solid_solver.shearModulusSensitivity(&l2_fe_space);
 
-  double shear_norm = mfem::ParNormlp(shear_sensitivity.trueVec(), 2, MPI_COMM_WORLD);
+  double shear_norm = mfem::ParNormlp(shear_sensitivity.vector(), 2, MPI_COMM_WORLD);
 
   SLIC_INFO_ROOT(axom::fmt::format("Shear sensitivity vector norm: {}", shear_norm));
 
@@ -115,7 +115,7 @@ TEST(solid_solver, adjoint)
 
   auto& bulk_sensitivity = solid_solver.bulkModulusSensitivity(&l2_fe_space);
 
-  double bulk_norm = mfem::ParNormlp(bulk_sensitivity.trueVec(), 2, MPI_COMM_WORLD);
+  double bulk_norm = mfem::ParNormlp(bulk_sensitivity.vector(), 2, MPI_COMM_WORLD);
 
   SLIC_INFO_ROOT(axom::fmt::format("Bulk sensitivity vector norm: {}", bulk_norm));
 
@@ -126,7 +126,7 @@ TEST(solid_solver, adjoint)
   solid_solver.advanceTimestep(dt);
 
   // Check that the two forward solves are equal
-  EXPECT_NEAR(0.0, (mfem::Vector(true_vec_1 - solid_solver.displacement().trueVec())).Norml2(), 0.00001);
+  EXPECT_NEAR(0.0, (mfem::Vector(true_vec_1 - solid_solver.displacement().vector())).Norml2(), 0.00001);
 
   // Check that the adjoint solve is a known value
   EXPECT_NEAR(adjoint_norm_1, 738.4103079, 0.05);

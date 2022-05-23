@@ -102,13 +102,13 @@ public:
     std::array<mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + 1> trial_spaces;
     trial_spaces[0] = &displacement_.space();
 
-    functional_call_args_.emplace_back(displacement_.trueVec());
+    functional_call_args_.emplace_back(displacement_.vector());
 
     if constexpr (sizeof...(parameter_space) > 0) {
       for (size_t i = 0; i < sizeof...(parameter_space); ++i) {
         trial_spaces[i + 1]         = &(parameter_states_[i].get().space());
         parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, parameter_states_[i].get().space());
-        functional_call_args_.emplace_back(parameter_states_[i].get().trueVec());
+        functional_call_args_.emplace_back(parameter_states_[i].get().vector());
       }
     }
 
@@ -126,8 +126,8 @@ public:
 
     deformed_nodes_ = std::make_unique<mfem::ParGridFunction>(*reference_nodes_);
 
-    displacement_.trueVec() = 0.0;
-    velocity_.trueVec()     = 0.0;
+    displacement_.vector() = 0.0;
+    velocity_.vector()     = 0.0;
 
     const auto& lin_options = options.H_lin_options;
     // If the user wants the AMG preconditioner with a linear solver, set the pfes
@@ -210,7 +210,7 @@ public:
   }
 
   /// @brief Solve the Quasi-static Newton system
-  void quasiStaticSolve() { nonlin_solver_.Mult(zero_, displacement_.trueVec()); }
+  void quasiStaticSolve() { nonlin_solver_.Mult(zero_, displacement_.vector()); }
 
   /**
    * @brief Advance the timestep
@@ -223,10 +223,6 @@ public:
   {
     SLIC_ERROR_ROOT_IF(!residual_, "completeSetup() must be called prior to advanceTimestep(dt) in SolidFunctional.");
 
-    // Initialize the true vector
-    velocity_.initializeTrueVec();
-    displacement_.initializeTrueVec();
-
     // Set the mesh nodes to the reference configuration
     mesh_.NewNodes(*reference_nodes_);
 
@@ -237,12 +233,8 @@ public:
       // Update the time for housekeeping purposes
       time_ += dt;
     } else {
-      ode2_.Step(displacement_.trueVec(), velocity_.trueVec(), time_, dt);
+      ode2_.Step(displacement_.vector(), velocity_.vector(), time_, dt);
     }
-
-    // Distribute the shared DOFs
-    velocity_.distributeSharedDofs();
-    displacement_.distributeSharedDofs();
 
     // Update the mesh with the new deformed nodes
     deformed_nodes_->Set(1.0, displacement_.gridFunc());
@@ -475,9 +467,6 @@ public:
     displacement_.gridFunc() = 0.0;
     velocity_.gridFunc()     = 0.0;
 
-    velocity_.initializeTrueVec();
-    displacement_.initializeTrueVec();
-
     mesh_.NewNodes(*reference_nodes_);
   }
 
@@ -524,9 +513,6 @@ public:
     for (auto& bc : bcs_.essentials()) {
       bc.projectBdr(displacement_, time_);
     }
-
-    // Initialize the true vector
-    displacement_.initializeTrueVec();
 
     if (is_quasistatic_) {
       residual_ = buildQuasistaticOperator();
@@ -595,7 +581,7 @@ public:
   virtual const serac::FiniteElementState& solveAdjoint(FiniteElementDual& adjoint_load,
                                                         FiniteElementDual* dual_with_essential_boundary = nullptr)
   {
-    mfem::HypreParVector adjoint_load_vector(adjoint_load.trueVec());
+    mfem::HypreParVector adjoint_load_vector(adjoint_load.vector());
 
     // Add the sign correction to move the term to the RHS
     adjoint_load_vector *= -1.0;
@@ -603,10 +589,10 @@ public:
     auto& lin_solver = nonlin_solver_.LinearSolver();
 
     // By default, use a homogeneous essential boundary condition
-    mfem::HypreParVector adjoint_essential(adjoint_load.trueVec());
+    mfem::HypreParVector adjoint_essential(adjoint_load.vector());
     adjoint_essential = 0.0;
 
-    functional_call_args_[0] = displacement_.trueVec();
+    functional_call_args_[0] = displacement_.vector();
 
     auto [r, drdu] = (*K_functional_)(functional_call_args_, Index<0>{});
     auto jacobian  = assemble(drdu);
@@ -614,8 +600,7 @@ public:
 
     // If we have a non-homogeneous essential boundary condition, extract it from the given state
     if (dual_with_essential_boundary) {
-      dual_with_essential_boundary->initializeTrueVec();
-      adjoint_essential = dual_with_essential_boundary->trueVec();
+      adjoint_essential = dual_with_essential_boundary->vector();
     }
 
     for (const auto& bc : bcs_.essentials()) {
@@ -624,9 +609,7 @@ public:
     }
 
     lin_solver.SetOperator(*J_T);
-    lin_solver.Mult(adjoint_load_vector, adjoint_displacement_.trueVec());
-
-    adjoint_displacement_.distributeSharedDofs();
+    lin_solver.Mult(adjoint_load_vector, adjoint_displacement_.vector());
 
     // Reset the equation solver to use the full nonlinear residual operator
     nonlin_solver_.SetOperator(*residual_);
@@ -646,15 +629,13 @@ public:
   template <int parameter_field>
   FiniteElementDual& computeSensitivity()
   {
-    functional_call_args_[0] = displacement_.trueVec();
+    functional_call_args_[0] = displacement_.vector();
 
     auto [r, drdparam] = (*K_functional_)(functional_call_args_, Index<parameter_field + 1>{});
 
     auto drdparam_mat = assemble(drdparam);
 
-    drdparam_mat->MultTranspose(adjoint_displacement_.trueVec(), parameter_sensitivities_[parameter_field]->trueVec());
-
-    parameter_sensitivities_[parameter_field]->distributeSharedDofs();
+    drdparam_mat->MultTranspose(adjoint_displacement_.vector(), parameter_sensitivities_[parameter_field]->vector());
 
     return *parameter_sensitivities_[parameter_field];
   }

@@ -183,9 +183,6 @@ void ThermalConduction::completeSetup()
     bc.projectBdr(temperature_, time_);
   }
 
-  // Initialize the true vector
-  temperature_.initializeTrueVec();
-
   if (is_quasistatic_) {
     residual_ = mfem_ext::StdFunctionOperator(
         temperature_.space().TrueVSize(),
@@ -236,18 +233,16 @@ void ThermalConduction::completeSetup()
 
 void ThermalConduction::advanceTimestep(double& dt)
 {
-  temperature_.initializeTrueVec();
 
   if (is_quasistatic_) {
-    nonlin_solver_.Mult(zero_, temperature_.trueVec());
+    nonlin_solver_.Mult(zero_, temperature_.vector());
   } else {
     SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
 
     // Step the time integrator
-    ode_.Step(temperature_.trueVec(), time_, dt);
+    ode_.Step(temperature_.vector(), time_, dt);
   }
 
-  temperature_.distributeSharedDofs();
   cycle_ += 1;
 }
 

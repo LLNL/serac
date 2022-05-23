@@ -39,6 +39,7 @@ FiniteElementVector::FiniteElementVector(mfem::ParMesh& mesh, FiniteElementVecto
       name_(options.name)
 {
   true_vec_ = 0.0;
+  detail::retrieve(gf_) = 0.0;
 }
 
 FiniteElementVector::FiniteElementVector(mfem::ParMesh& mesh, const mfem::ParFiniteElementSpace& space,
@@ -51,6 +52,7 @@ FiniteElementVector::FiniteElementVector(mfem::ParMesh& mesh, const mfem::ParFin
       name_(name)
 {
   true_vec_ = 0.0;
+  detail::retrieve(gf_) = 0.0;
 }
 
 FiniteElementVector::FiniteElementVector(mfem::ParMesh& mesh, mfem::ParGridFunction& gf, const std::string& name)
@@ -58,7 +60,11 @@ FiniteElementVector::FiniteElementVector(mfem::ParMesh& mesh, mfem::ParGridFunct
 {
   coll_     = detail::retrieve(space_).FEColl();
   true_vec_ = 0.0;
+  detail::retrieve(gf_) = 0.0;
 }
+
+FiniteElementVector::FiniteElementVector(const FiniteElementVector& input_vector) : FiniteElementVector(input_vector.mesh_.get(), detail::retrieve(input_vector.space_), input_vector.name_)
+{}
 
 FiniteElementVector::FiniteElementVector(FiniteElementVector&& input_vector)
     : mesh_(input_vector.mesh()),
@@ -75,16 +81,16 @@ FiniteElementVector::FiniteElementVector(FiniteElementVector&& input_vector)
 FiniteElementVector& FiniteElementVector::operator=(const double value)
 {
   true_vec_ = value;
-  distributeSharedDofs();
+  detail::retrieve(gf_) = value;
   return *this;
 }
 
 double avg(const FiniteElementVector& fe_vector)
 {
   double global_sum;
-  double local_sum = fe_vector.trueVec().Sum();
+  double local_sum = fe_vector.vector().Sum();
   int    global_size;
-  int    local_size = fe_vector.trueVec().Size();
+  int    local_size = fe_vector.vector().Size();
   MPI_Allreduce(&local_sum, &global_sum, 1, MPI_DOUBLE, MPI_SUM, fe_vector.comm());
   MPI_Allreduce(&local_size, &global_size, 1, MPI_INT, MPI_SUM, fe_vector.comm());
   return global_sum / global_size;
@@ -93,7 +99,7 @@ double avg(const FiniteElementVector& fe_vector)
 double max(const FiniteElementVector& fe_vector)
 {
   double global_max;
-  double local_max = fe_vector.trueVec().Max();
+  double local_max = fe_vector.vector().Max();
   MPI_Allreduce(&local_max, &global_max, 1, MPI_DOUBLE, MPI_MAX, fe_vector.comm());
   return global_max;
 }
@@ -101,7 +107,7 @@ double max(const FiniteElementVector& fe_vector)
 double min(const FiniteElementVector& fe_vector)
 {
   double global_min;
-  double local_min = fe_vector.trueVec().Min();
+  double local_min = fe_vector.vector().Min();
   MPI_Allreduce(&local_min, &global_min, 1, MPI_DOUBLE, MPI_MIN, fe_vector.comm());
   return global_min;
 }

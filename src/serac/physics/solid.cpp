@@ -54,9 +54,9 @@ Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities ge
   reference_nodes_->GetTrueDofs(x_);
   deformed_nodes_ = std::make_unique<mfem::ParGridFunction>(*reference_nodes_);
 
-  displacement_.trueVec()         = 0.0;
-  velocity_.trueVec()             = 0.0;
-  adjoint_displacement_.trueVec() = 0.0;
+  displacement_.vector()         = 0.0;
+  velocity_.vector()             = 0.0;
+  adjoint_displacement_.vector() = 0.0;
 
   const auto& lin_options = options.H_lin_options;
   // If the user wants the AMG preconditioner with a linear solver, set the pfes
@@ -229,7 +229,6 @@ void Solid::setDisplacement(mfem::VectorCoefficient& disp_state)
 {
   disp_state.SetTime(time_);
   displacement_.project(disp_state);
-  displacement_.initializeTrueVec();
   gf_initialized_[1] = true;
 }
 
@@ -237,7 +236,6 @@ void Solid::setVelocity(mfem::VectorCoefficient& velo_state)
 {
   velo_state.SetTime(time_);
   velocity_.project(velo_state);
-  velocity_.initializeTrueVec();
   gf_initialized_[0] = true;
 }
 
@@ -245,9 +243,6 @@ void Solid::resetToReferenceConfiguration()
 {
   displacement_.gridFunc() = 0.0;
   velocity_.gridFunc()     = 0.0;
-
-  velocity_.initializeTrueVec();
-  displacement_.initializeTrueVec();
 
   mesh_.NewNodes(*reference_nodes_);
 }
@@ -357,7 +352,7 @@ void Solid::completeSetup()
 }
 
 // Solve the Quasi-static Newton system
-void Solid::quasiStaticSolve() { nonlin_solver_.Mult(zero_, displacement_.trueVec()); }
+void Solid::quasiStaticSolve() { nonlin_solver_.Mult(zero_, displacement_.vector()); }
 
 std::unique_ptr<mfem::Operator> Solid::buildQuasistaticOperator()
 {
@@ -384,9 +379,6 @@ std::unique_ptr<mfem::Operator> Solid::buildQuasistaticOperator()
 // Advance the timestep
 void Solid::advanceTimestep(double& dt)
 {
-  // Initialize the true vector
-  velocity_.initializeTrueVec();
-  displacement_.initializeTrueVec();
 
   // Set the mesh nodes to the reference configuration
   mesh_.NewNodes(*reference_nodes_);
@@ -398,12 +390,8 @@ void Solid::advanceTimestep(double& dt)
     // Update the time for housekeeping purposes
     time_ += dt;
   } else {
-    ode2_.Step(displacement_.trueVec(), velocity_.trueVec(), time_, dt);
+    ode2_.Step(displacement_.vector(), velocity_.vector(), time_, dt);
   }
-
-  // Distribute the shared DOFs
-  velocity_.distributeSharedDofs();
-  displacement_.distributeSharedDofs();
 
   // Update the mesh with the new deformed nodes
   deformed_nodes_->Set(1.0, displacement_.gridFunc());
@@ -458,10 +446,7 @@ FiniteElementDual& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace* s
 
   // Set the dual state to the assembled shear sensitivity
   std::unique_ptr<mfem::HypreParVector> assembled_vec(shear_sensitivity_form_->ParallelAssemble());
-  shear_sensitivity_->trueVec() = *assembled_vec;
-
-  // Distribute the shared dofs in the dual state
-  shear_sensitivity_->distributeSharedDofs();
+  shear_sensitivity_->vector() = *assembled_vec;
 
   // Set the mesh nodes back to the reference configuration
   mesh_.NewNodes(*deformed_nodes_);
@@ -496,10 +481,7 @@ FiniteElementDual& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace* bu
 
   // Set the dual state to the assembled bulk sensitivity
   std::unique_ptr<mfem::HypreParVector> assembled_vec(bulk_sensitivity_form_->ParallelAssemble());
-  bulk_sensitivity_->trueVec() = *assembled_vec;
-
-  // Distribute the shared dofs in the dual state
-  bulk_sensitivity_->distributeSharedDofs();
+  bulk_sensitivity_->vector() = *assembled_vec;
 
   // Set the mesh nodes back to the reference configuration
   mesh_.NewNodes(*deformed_nodes_);
@@ -516,27 +498,24 @@ const FiniteElementState& Solid::solveAdjoint(FiniteElementDual& adjoint_load,
   // Set the mesh nodes to the reference configuration
   mesh_.NewNodes(*reference_nodes_);
 
-  adjoint_load.initializeTrueVec();
-
   // note: The assignment operator must be called after the copy constructor because
   // the copy constructor only sets the partitioning, it does not copy the actual vector
   // values
-  mfem::HypreParVector adjoint_load_vector(adjoint_load.trueVec());
-  adjoint_load_vector = adjoint_load.trueVec();
+  mfem::HypreParVector adjoint_load_vector(adjoint_load.vector());
+  adjoint_load_vector = adjoint_load.vector();
 
   auto& lin_solver = nonlin_solver_.LinearSolver();
 
-  auto& J   = dynamic_cast<mfem::HypreParMatrix&>(H_->GetGradient(displacement_.trueVec()));
+  auto& J   = dynamic_cast<mfem::HypreParMatrix&>(H_->GetGradient(displacement_.vector()));
   auto  J_T = std::unique_ptr<mfem::HypreParMatrix>(J.Transpose());
 
   // By default, use a homogeneous essential boundary condition
-  mfem::HypreParVector adjoint_essential(adjoint_load.trueVec());
+  mfem::HypreParVector adjoint_essential(adjoint_load.vector());
   adjoint_essential = 0.0;
 
   // If we have a non-homogeneous essential boundary condition, extract it from the given state
   if (dual_with_essential_boundary) {
-    dual_with_essential_boundary->initializeTrueVec();
-    adjoint_essential = dual_with_essential_boundary->trueVec();
+    adjoint_essential = dual_with_essential_boundary->vector();
   }
 
   for (const auto& bc : bcs_.essentials()) {
@@ -545,9 +524,7 @@ const FiniteElementState& Solid::solveAdjoint(FiniteElementDual& adjoint_load,
   }
 
   lin_solver.SetOperator(*J_T);
-  lin_solver.Mult(adjoint_load_vector, adjoint_displacement_.trueVec());
-
-  adjoint_displacement_.distributeSharedDofs();
+  lin_solver.Mult(adjoint_load_vector, adjoint_displacement_.vector());
 
   // Update the mesh with the new deformed nodes
   deformed_nodes_->Set(1.0, displacement_.gridFunc());
@@ -606,10 +583,10 @@ void Solid::InputOptions::defineInputFileSchema(axom::inlet::Container& containe
 // Evaluate the residual at the current state
 mfem::Vector Solid::currentResidual()
 {
-  mfem::Vector eval(displacement_.trueVec().Size());
+  mfem::Vector eval(displacement_.vector().Size());
   if (is_quasistatic_) {
     // The input to the residual is displacment
-    residual_->Mult(displacement_.trueVec(), eval);
+    residual_->Mult(displacement_.vector(), eval);
   } else {
     // Currently the residual constructed uses d2u_dt2 as input,
     // but this could change
@@ -623,7 +600,7 @@ const mfem::Operator& Solid::currentGradient()
 {
   if (is_quasistatic_) {
     // The input to the residual is displacment
-    return residual_->GetGradient(displacement_.trueVec());
+    return residual_->GetGradient(displacement_.vector());
   }
 
   // Currently the residual constructed uses d2u_dt2 as input,

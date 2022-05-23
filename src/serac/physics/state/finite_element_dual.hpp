@@ -39,6 +39,8 @@ public:
    * @note While this is a grid function for plotting and parallelization, we only return a vector
    * type as the user should not use the interpolation capabilities of a grid function on the dual space
    * @note Shared degrees of freedom live on multiple MPI ranks
+   * @note This is only available for client compatibility reasons and should 
+   * not be used in physics module development.
    */
   mfem::Vector& localVec() { return detail::retrieve(gf_); }
 

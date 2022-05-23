@@ -246,7 +246,7 @@ TEST(thermal_functional, parameterized_material)
   FiniteElementDual adjoint_load(
       StateManager::newDual(FiniteElementState::Options{.order = 1, .name = "adjoint_load"}));
 
-  adjoint_load.trueVec() = 1.0;
+  adjoint_load.vector() = 1.0;
 
   // Solve the adjoint problem
   thermal_solver.solveAdjoint(adjoint_load);
@@ -254,7 +254,7 @@ TEST(thermal_functional, parameterized_material)
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
   auto& sensitivity = thermal_solver.computeSensitivity<conductivity_parameter_index>();
 
-  EXPECT_NEAR(1.6540980, mfem::ParNormlp(sensitivity.trueVec(), 2, MPI_COMM_WORLD), 1.0e-6);
+  EXPECT_NEAR(1.6540980, mfem::ParNormlp(sensitivity.vector(), 2, MPI_COMM_WORLD), 1.0e-6);
 }
 
 }  // namespace serac
