@@ -136,8 +136,19 @@ void load(const dof_type& source, dof_type& destination)
 
 #include <type_traits>
 
+template <typename lambda, int n, typename ... T, int ... I >
+auto batch_apply_qf(lambda qf, const tuple < tensor<T, n> ... > & inputs, std::integer_sequence< int, I ... >)
+{
+  using return_type = decltype(qf(T{} ...));
+  tensor<return_type, n> outputs{};
+  for (int i = 0; i < n; i++) {
+    outputs[i] = qf(get<I>(inputs)[i] ...);
+  }
+  return outputs;
+}
+
 template <typename lambda, typename value_t, typename derivative_t, int q>
-auto batch_apply_qf(lambda qf, const tensor<value_t, q, q>& values, const tensor<derivative_t, q, q>& derivatives)
+auto batch_apply_qf(lambda qf, const tensor<value_t, q, q>& X, const tensor<value_t, q, q>& values, const tensor<derivative_t, q, q>& derivatives)
 {
   using return_type = decltype(qf(serac::tuple{value_t{}, derivative_t{}}));
   using source_type = std::remove_const_t<std::remove_reference_t<decltype(serac::get<0>(return_type{}))> >;
@@ -262,13 +273,13 @@ void cpu_batched_kernel(const double* inputs, double* outputs, const double* jac
     auto J_e = J[e];
 
     // (batch) interpolate each quadrature point's value
-    auto [values, derivatives] = trial_element::interpolate(u_e, J_e, rule);
+    auto qf_input = tuple{trial_element::interpolate(u_e, J_e, rule)};
 
     // (batch) evalute the q-function at each quadrature point
-    auto [sources, fluxes] = batch_apply_qf(qf, values, derivatives);
+    auto qf_output = batch_apply_qf(qf, qf_input, std::make_integer_sequence<int, 1>{});
 
     // (batch) integrate the material response against the test-space basis functions
-    test_element::integrate(sources, fluxes, J_e, rule, r[e]);
+    test_element::integrate(qf_output, J_e, rule, r[e]);
   }
 }
 
@@ -1013,9 +1024,9 @@ int main()
 {
   int num_runs     = 10;
   int num_elements = 10000;
-  h1_h1_test_2D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
-  h1_h1_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
-  h1_h1_test_2D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
+  //h1_h1_test_2D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
+  //h1_h1_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
+  //h1_h1_test_2D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
 
   h1_h1_test_3D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
   h1_h1_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);

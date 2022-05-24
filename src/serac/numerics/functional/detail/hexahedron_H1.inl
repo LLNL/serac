@@ -51,12 +51,6 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
     tensor<T, 3, n, q, q> A2;
   };
 
-  template <int q>
-  using cpu_batched_values_type = tensor<tensor<double, c>, q, q, q>;
-
-  template <int q>
-  using cpu_batched_derivatives_type = tensor<tensor<double, c, 3>, q, q, q>;
-
   SERAC_HOST_DEVICE static constexpr tensor<double, ndof> shape_functions(tensor<double, dim> xi)
   {
     auto N_xi   = GaussLobattoInterpolation<p + 1>(xi[0]);
@@ -105,7 +99,7 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
   }
 
   template <int q>
-  static auto interpolate(const dof_type& X, const tensor<double, dim, dim, q, q, q>& jacobians,
+  static auto interpolate(const dof_type& X, const tensor<double, dim, dim, q * q * q>& jacobians,
                           const TensorProductQuadratureRule<q>&)
   {
     // we want to compute the following:
@@ -160,37 +154,40 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
       gradient(i,2) = contract<0, 1>(cache.A2[0], G);
     }
 
-    tensor< tensor< double, c >, q, q, q > value_T{};
-    tensor< tensor< double, c, 3 >, q, q, q > gradient_T{};
+    constexpr int VALUE = 0, GRADIENT = 1;
+    tensor< tuple < tensor< double, c >, tensor< double, c, 3 > >, q * q * q > output;
 
+    int k = 0;
     for (int qz = 0; qz < q; qz++) {
       for (int qy = 0; qy < q; qy++) {
         for (int qx = 0; qx < q; qx++) {
           tensor<double, dim, dim> J;
           for (int row = 0; row < dim; row++) {
             for (int col = 0; col < dim; col++) {
-              J[row][col] = jacobians(col, row, qz, qy, qx);
+              J[row][col] = jacobians(col, row, k);
             }
           }
 
           for (int i = 0; i < c; i++) {
-            value_T(qz, qy, qx)[i] = value(i, qz, qy, qx);
+            get<VALUE>(output[k])[i] = value(i, qz, qy, qx);
             for (int j = 0; j < dim; j++) {
-              gradient_T(qz, qy, qx)[i][j] = gradient(i, j, qz, qy, qx);
+              get<GRADIENT>(output[k])[i][j] = gradient(i, j, qz, qy, qx);
             }
           }
 
-          gradient_T(qz, qy, qx) = dot(gradient_T(qz, qy, qx), inv(J));
+          get<GRADIENT>(output[k]) = dot(get<GRADIENT>(output[k]), inv(J));
+
+          k++;
         }
       }
     }
  
-    return tuple{value_T, gradient_T};
+    return output;
   }
 
-  template <int q>
-  static void integrate(cpu_batched_values_type<q>& source_T, cpu_batched_derivatives_type<q>& flux_T,
-                        const tensor<double, dim, dim, q, q, q>& jacobians, const TensorProductQuadratureRule<q>&,
+  template <typename source_type, typename flux_type, int q>
+  static void integrate(tensor< tuple< source_type, flux_type >, q * q * q > & qf_output,
+                        const tensor<double, dim, dim, q * q * q>& jacobians, const TensorProductQuadratureRule<q>&,
                         dof_type&                                element_residual)
   {
     static constexpr auto points1D  = GaussLegendreNodes<q>();
@@ -214,25 +211,30 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
     tensor< double, c, q, q, q> source{};
     tensor< double, c, dim, q, q, q> flux{};
 
+    constexpr int SOURCE = 0, FLUX = 1;
+
+    int k = 0;
     for (int qz = 0; qz < q; qz++) {
       for (int qy = 0; qy < q; qy++) {
         for (int qx = 0; qx < q; qx++) {
           tensor<double, dim, dim> J_T;
           for (int row = 0; row < dim; row++) {
             for (int col = 0; col < dim; col++) {
-              J_T[row][col] = jacobians(row, col, qz, qy, qx);
+              J_T[row][col] = jacobians(row, col, k);
             }
           }
-          auto dv             = det(J_T) * weights1D[qx] * weights1D[qy] * weights1D[qz];
-          source_T(qz, qy, qx) = source_T(qz, qy, qx) * dv;
-          flux_T(qz, qy, qx)  = dot(flux_T(qz, qy, qx), inv(J_T)) * dv;
+          auto dv = det(J_T) * weights1D[qx] * weights1D[qy] * weights1D[qz];
+
+          tensor< double, c > s{get<SOURCE>(qf_output[k]) * dv};
+          tensor< double, c, dim > f{dot(get<FLUX>(qf_output[k]), inv(J_T)) * dv};
 
           for (int i = 0; i < c; i++) {
-            source(i, qz, qy, qx) = source_T(qz, qy, qx)[i];
+            source(i, qz, qy, qx) = s[i];
             for (int j = 0; j < dim; j++) {
-              flux(i, j, qz, qy, qx) = flux_T(qz, qy, qx)[i][j];
+              flux(i, j, qz, qy, qx) = f[i][j];
             }
           }
+          k++;
         }
       }
     }

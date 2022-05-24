@@ -194,3 +194,33 @@ void for_loop(lambda f)
     }
   }
 }
+
+struct nothing{};
+
+template < typename seq, int i, typename ... T >
+struct nth_type_base;
+
+template < int ... j, int i, typename ... T >
+struct nth_type_base< std::integer_sequence< int, j... >, i, T ... > : 
+    public std::conditional<i == j, T, nothing>::type ... {};
+
+template < int i, typename ... T >
+struct nth_type : public nth_type_base<std::make_integer_sequence<int, sizeof...(T)>, i, T...> {};
+
+
+template <typename S, typename... T>
+struct typelist_base;
+
+template <int i, typename T>
+struct type_at_position {
+  T operator[](detail::integral_constant<i>) const { return T{}; }
+};
+
+template <int... i, typename... T>
+struct typelist_base<std::integer_sequence<int, i...>, T...>
+    : public type_at_position<i, T>... {
+    using type_at_position<i, T>::operator[]...;
+};
+
+template <typename... T>
+struct type_list : public typelist_base<std::make_integer_sequence<int, sizeof...(T)>, T...> {};

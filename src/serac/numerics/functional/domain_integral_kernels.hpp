@@ -74,6 +74,19 @@ template <int Q, Geometry g, typename test, typename... trials>
 struct KernelConfig {
 };
 
+template <typename lambda, int dim, int n, typename ... T, int ... I >
+auto batch_apply_qf(lambda qf, const tensor< double, dim, n > x, const tuple < tensor<T, n> ... > inputs, std::integer_sequence< int, I ... >)
+{
+  using return_type = decltype(qf(tensor<double,dim>{}, T{} ...));
+  tensor<return_type, n> outputs{};
+  for (int i = 0; i < n; i++) {
+    tensor< double, dim > x_q;
+    for (int j = 0; j < dim; j++) { x_q[j] = x(j, i); }
+    outputs[i] = qf(x_q, get<I>(inputs)[i] ...);
+  }
+  return outputs;
+}
+
 /**
  * @tparam S type used to specify which argument to differentiate with respect to.
  *    `void` => evaluation kernel with no differentiation
@@ -98,6 +111,9 @@ template <int Q, Geometry geom, typename test, typename... trials, typename lamb
 struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lambda, qpt_data_type> {
   static constexpr auto exec             = ExecutionSpace::CPU;     ///< this specialization is CPU-specific
   static constexpr int  num_trial_spaces = int(sizeof...(trials));  ///< how many trial spaces are provided
+  static constexpr auto Iseq = std::make_integer_sequence<int, sizeof ... (trials)>{};
+
+  static constexpr type_list < finite_element< geom, trials > ... > trial_elements{};
 
   using EVector_t =
       EVectorView<exec, finite_element<geom, trials>...>;  ///< the type of container used to access element values
@@ -125,6 +141,12 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
    */
   void operator()(const std::array<mfem::Vector, num_trial_spaces>& U, mfem::Vector& R)
   {
+
+#define batched
+
+    #ifdef batched
+    using test_element = finite_element<geom, test>;
+    #else
     std::array<const double*, num_trial_spaces> ptrs;
     for (uint32_t j = 0; j < num_trial_spaces; j++) {
       ptrs[j] = U[j].Read();
@@ -136,15 +158,52 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
     static constexpr int  dim       = dimension_of(geom);
     static constexpr int  test_ndof = test_element::ndof;
     static constexpr auto rule      = GaussQuadratureRule<geom, Q>();
+    #endif
 
     // mfem provides this information in 1D arrays, so we reshape it
     // into strided multidimensional arrays before using
+    #ifdef batched
+    auto X = reinterpret_cast<const typename batched_position<geom, Q>::type*>(X_.Read());
+    auto r = reinterpret_cast<typename test_element::dof_type*>(R.ReadWrite());
+    auto J = reinterpret_cast<const typename batched_jacobian<geom, Q>::type*>(J_.Read());
+    static constexpr TensorProductQuadratureRule<Q> rule{};
+    #else
     auto X = mfem::Reshape(X_.Read(), rule.size(), dim, num_elements_);
     auto J = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements_);
     auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, int(num_elements_));  // TODO: integer conversions
+    #endif
+
+    using qf_inputs_type = tuple < 
+      decltype(finite_element< geom, trials >::interpolate(typename finite_element< geom, trials >::dof_type{}, J[0], rule)) ... 
+    >;
 
     // for each element in the domain
     for (uint32_t e = 0; e < num_elements_; e++) {
+
+    #ifdef batched
+      auto J_e = J[e];
+      auto X_e = X[e];
+
+      qf_inputs_type qf_inputs{};
+
+      for_constexpr< num_trial_spaces >([&](auto j){
+
+        using trial_element = decltype(trial_elements[j]);
+        
+        auto u = reinterpret_cast<const typename trial_element::dof_type*>(U[j].Read());
+
+        // (batch) interpolate each quadrature point's value
+        get<j>(qf_inputs) = trial_element::interpolate(u[e], J_e, rule);
+
+      });
+
+      // (batch) evalute the q-function at each quadrature point
+      auto qf_outputs = batch_apply_qf(qf_, X_e, qf_inputs, Iseq);
+
+      // (batch) integrate the material response against the test-space basis functions
+      test_element::integrate(qf_outputs, J_e, rule, r[e]);
+
+    #else
       // get the DOF values for this particular element
       auto u_elem = u[e];
 
@@ -176,6 +235,8 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
       // once we've finished the element integration loop, write our element residuals
       // out to memory, to be later assembled into global residuals by mfem
       detail::Add(r, r_elem, int(e));
+    #endif
+
     }
   }
 

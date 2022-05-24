@@ -56,12 +56,25 @@ struct batched_jacobian;
 
 template <int q>
 struct batched_jacobian<Geometry::Hexahedron, q> {
-  using type = tensor<double, 3, 3, q, q, q>;
+  using type = tensor<double, 3, 3, q * q * q>;
 };
 
 template <int q>
 struct batched_jacobian<Geometry::Quadrilateral, q> {
-  using type = tensor<double, 2, 2, q, q>;
+  using type = tensor<double, 2, 2, q * q>;
+};
+
+template <Geometry g, int q>
+struct batched_position;
+
+template <int q>
+struct batched_position<Geometry::Hexahedron, q> {
+  using type = tensor<double, 3, q * q * q>;
+};
+
+template <int q>
+struct batched_position<Geometry::Quadrilateral, q> {
+  using type = tensor<double, 2, q * q>;
 };
 
 template <Geometry g>
