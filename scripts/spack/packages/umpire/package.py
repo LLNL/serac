@@ -27,6 +27,9 @@ class Umpire(CachedCMakePackage, CudaPackage, ROCmPackage):
 
     version('develop', branch='develop', submodules=True)
     version('main', branch='main', submodules=True)
+    # SERAC EDIT START
+    version('2022.03.1', tag='v2022.03.1', submodules=True)
+    # SERAC EDIT END
     version('6.0.0', tag='v6.0.0', submodules=True)
     version('5.0.1', tag='v5.0.1', submodules=True)
     version('5.0.0', tag='v5.0.0', submodules=True)
