@@ -1179,13 +1179,15 @@ SERAC_HOST_DEVICE bool is_symmetric_and_positive_definite(tensor<double, 3, 3> A
 template <typename T, int n>
 struct LuFactorization {
   tensor<int, n>  P;  ///< Row permutation indices due to partial pivoting
-  tensor<T, n, n> L;  ///< Lower triangular factor
+  tensor<T, n, n> L;  ///< Lower triangular factor. Has ones on diagonal.
   tensor<T, n, n> U;  ///< Upper triangular factor
 };
 
 /**
  * @brief Compute LU factorization of a matrix with partial pivoting
  *
+ * The convention followed is to place ones on the diagonal of the lower
+ * triangular factor.
  * @param[in] A The matrix to factorize
  * @return An LuFactorization object
  * @see LuFactorization
