@@ -8,7 +8,7 @@
 
 namespace serac::mfem_ext {
 
-void GetEssentialTrueDofs(
+void GetEssentialTrueDofsFromElementAttribute(
     const mfem::ParFiniteElementSpace &fespace,
     const mfem::Array<int> &elem_attr_is_ess, 
     mfem::Array<int> &ess_tdof_list, 

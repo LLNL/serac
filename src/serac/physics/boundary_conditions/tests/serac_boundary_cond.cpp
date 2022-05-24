@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/physics/boundary_conditions/boundary_condition_manager.hpp"
+#include "serac/physics/boundary_conditions/boundary_condition_helpher.hpp"
 
 #include <memory>
 
@@ -82,6 +83,54 @@ TEST(boundary_cond, filter_generics)
     bcs_with_tag2++;
   }
   EXPECT_EQ(bcs_with_tag2, N);
+
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
+TEST(boundary_cond_helper, element_attribute_dof_list_scalar)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  auto mesh = mfem::Mesh::MakeCartesian3D(4, 4, 4, mfem::Element::HEXAHEDRON);
+  mesh.SetAttribute(1, 2);
+  mesh.SetAttribute(31, 2);
+
+  mfem::ParMesh pmesh(MPI_COMM_WORLD, mesh);
+  int sdim = pmesh.SpaceDimension();
+
+  mfem::H1_FECollection h1_fec(order, sdim);
+  mfem::ParFiniteElementSpace h1_fes(design_mesh, &h1_fec, 1);
+
+  mfem::Array<int> elem_attr_is_ess(pmesh.attributes.Max());
+  elem_attr_is_ess[2-1] = 1;
+  mfem::Array<int> ess_tdof_list;
+  serac::mfem_ext::GetEssentialTrueDofsFromElementAttribute(h1_fes, elem_attr_is_ess, ess_tdof_list, -1);
+
+  ess_tdof_list.Print();
+
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
+TEST(boundary_cond_helper, element_attribute_dof_list_vector)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  auto mesh = mfem::Mesh::MakeCartesian3D(4, 4, 4, mfem::Element::HEXAHEDRON);
+  mesh.SetAttribute(2, 2);
+  mesh.SetAttribute(3, 2);
+
+  mfem::ParMesh pmesh(MPI_COMM_WORLD, mesh);
+  int sdim = pmesh.SpaceDimension();
+
+  mfem::H1_FECollection h1_fec(order, sdim);
+  mfem::ParFiniteElementSpace h1_fes(design_mesh, &h1_fec, 1);
+
+  mfem::Array<int> elem_attr_is_ess(pmesh.attributes.Max());
+  elem_attr_is_ess[2-1] = 1;
+  mfem::Array<int> ess_tdof_list;
+  serac::mfem_ext::GetEssentialTrueDofsFromElementAttribute(h1_fes, elem_attr_is_ess, ess_tdof_list, 1);
+
+  ess_tdof_list.Print();
 
   MPI_Barrier(MPI_COMM_WORLD);
 }

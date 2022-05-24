@@ -20,12 +20,12 @@ void GetEssentialTrueDofsFromElementAttribute(
     const mfem::ParFiniteElementSpace &fespace,
     const mfem::Array<int> &elem_attr_is_ess, 
     mfem::Array<int> &ess_tdof_list, 
-    int component);
+    int component=-1);
 
 void GetEssentialVDofsFromElementAttribute(
     const mfem:ParFiniteElementSpace &fespace,
     const mfem::Array<int> &elem_attr_is_ess,
     mfem::Array<int> &ess_vdofs,
-    int component);
+    int component=-1);
 
 }  // namespace serac::mfem_ext
