@@ -117,12 +117,12 @@ class Serac(CachedCMakePackage, CudaPackage):
     #  (includes, libs, etc) instead of hdf5 info
     depends_on("hdf5@1.8.21+hl~mpi~shared")
 
-    depends_on("raja~shared~examples~exercises", when="+raja")
+    depends_on("raja@2022.03.0~shared~examples~exercises", when="+raja")
     depends_on("raja~openmp", when="+raja~openmp")
     depends_on("raja+openmp", when="+raja+openmp")
-    depends_on("camp", when="+raja")
+    depends_on("camp@2022.03.0", when="+raja")
 
-    depends_on("umpire@6.0.0serac~shared~examples~device_alloc", when="+umpire")
+    depends_on("umpire@2022.03.1~shared~examples~device_alloc", when="+umpire")
     depends_on("umpire~openmp", when="+umpire~openmp")
     depends_on("umpire+openmp", when="+umpire+openmp")
     depends_on("umpire build_type=Debug", when="+umpire+debug")
