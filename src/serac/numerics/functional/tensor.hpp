@@ -1243,7 +1243,7 @@ SERAC_HOST_DEVICE constexpr LuFactorization<T, n> lu(tensor<T, n, n> A)
     }
   }
 
-  return LuFactorization<T, n>{.P = P, .L = L, .U = U};
+  return {P, L, U};
 }
 
 /**

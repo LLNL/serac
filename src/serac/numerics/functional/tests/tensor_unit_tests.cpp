@@ -181,10 +181,7 @@ TEST(tensor, derivative_of_inverse)
 template <int n>
 void checkLUDecomposition(const tensor<double, n, n>& A)
 {
-  auto lu_factorization = lu(A);
-  auto P                = lu_factorization.P;
-  auto L                = lu_factorization.L;
-  auto U                = lu_factorization.U;
+  auto [P, L, U] = lu(A);
 
   // check that L is lower triangular and U is upper triangular
   for (int i = 0; i < n; i++) {
