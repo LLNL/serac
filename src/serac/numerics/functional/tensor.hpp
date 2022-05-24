@@ -1366,7 +1366,8 @@ SERAC_HOST_DEVICE constexpr auto linear_solve(const LuFactorization<S, n>& lu_fa
 }
 
 /**
- * @overload Shortcut for case of zero rhs
+ * @overload
+ * @note Shortcut for case of zero rhs
  */
 template <typename T, int n>
 SERAC_HOST_DEVICE constexpr auto linear_solve(const LuFactorization<T, n>& /* lu_factors */, const zero /* b */)
