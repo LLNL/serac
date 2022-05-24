@@ -20,7 +20,7 @@ class Raja(CachedCMakePackage, CudaPackage, ROCmPackage):
     version('develop', branch='develop', submodules='True')
     version('main',  branch='main',  submodules='True')
     # SERAC BEGIN EDIT
-    version('0.14.1', tag='v0.14.1', submodules='True')
+    version('2022.03.0', tag='v0.2022.03.0', submodules='True')
     # SERAC END EDIT
     version('0.14.0', tag='v0.14.0', submodules='True')
     version('0.13.0', tag='v0.13.0', submodules='True')
@@ -54,7 +54,10 @@ class Raja(CachedCMakePackage, CudaPackage, ROCmPackage):
     variant('tests', default=False, description='Build tests')
 
     depends_on('blt')
-    depends_on('blt@0.4.1:', type='build', when='@0.14.0:')
+    # SERAC BEGIN EDIT
+    depends_on('blt@0.5.0:', type='build', when='@2022.03.0:')
+    # SERAC END EDIT
+    depends_on('blt@0.4.1:', type='build', when='@0.14.0')
     depends_on('blt@0.4.0:', type='build', when='@0.13.0')
     depends_on('blt@0.3.6:', type='build', when='@:0.12.0')
 
