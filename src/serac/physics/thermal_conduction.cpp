@@ -192,7 +192,7 @@ void ThermalConduction::completeSetup()
 
         [this](const mfem::Vector& u, mfem::Vector& r) {
           K_form_->Mult(u, r);
-          r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
+          r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
         },
 
         [this](const mfem::Vector& u) -> mfem::Operator& {
@@ -218,7 +218,7 @@ void ThermalConduction::completeSetup()
         temperature_.space().TrueVSize(),
         [this](const mfem::Vector& du_dt, mfem::Vector& r) {
           r = (*M_) * du_dt + (*K_form_) * (u_ + dt_ * du_dt);
-          r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
+          r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
         },
 
         [this](const mfem::Vector& du_dt) -> mfem::Operator& {
