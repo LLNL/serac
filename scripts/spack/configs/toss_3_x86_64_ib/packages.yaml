@@ -108,7 +108,7 @@ packages:
   libunwind:
     buildable: false
     externals:
-    - spec: libunwind@8.0.1
+    - spec: libunwind@1.2
       prefix: /usr
   libx11:
     buildable: false
