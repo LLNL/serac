@@ -246,14 +246,14 @@ SERAC_HOST_DEVICE zero get(const zero&)
 
 /** @brief the dot product of anything with `zero` is `zero` */
 template <typename T>
-SERAC_HOST_DEVICE zero dot(const T&, zero)
+SERAC_HOST_DEVICE constexpr zero dot(const T&, zero)
 {
   return zero{};
 }
 
 /** @brief the dot product of anything with `zero` is `zero` */
 template <typename T>
-SERAC_HOST_DEVICE zero dot(zero, const T&)
+SERAC_HOST_DEVICE constexpr zero dot(zero, const T&)
 {
   return zero{};
 }
@@ -1621,7 +1621,7 @@ SERAC_HOST_DEVICE auto get_gradient(double /* arg */) { return zero{}; }
  * @return The sentinel, @see zero
  */
 template <int... n>
-SERAC_HOST_DEVICE auto get_gradient(const tensor<double, n...>& /* arg */)
+SERAC_HOST_DEVICE constexpr auto get_gradient(const tensor<double, n...>& /* arg */)
 {
   return zero{};
 }
@@ -1631,7 +1631,7 @@ SERAC_HOST_DEVICE auto get_gradient(const tensor<double, n...>& /* arg */)
  * @param[in] arg The tensor of dual numbers
  */
 template <int... n>
-SERAC_HOST_DEVICE auto get_gradient(const tensor<dual<double>, n...>& arg)
+SERAC_HOST_DEVICE constexpr auto get_gradient(const tensor<dual<double>, n...>& arg)
 {
   tensor<double, n...> g{};
   for_constexpr<n...>([&](auto... i) { g(i...) = arg(i...).gradient; });
@@ -1640,7 +1640,7 @@ SERAC_HOST_DEVICE auto get_gradient(const tensor<dual<double>, n...>& arg)
 
 /// @overload
 template <int... n, int... m>
-SERAC_HOST_DEVICE auto get_gradient(const tensor<dual<tensor<double, m...>>, n...>& arg)
+SERAC_HOST_DEVICE constexpr auto get_gradient(const tensor<dual<tensor<double, m...>>, n...>& arg)
 {
   tensor<double, n..., m...> g{};
   for_constexpr<n...>([&](auto... i) { g(i...) = arg(i...).gradient; });

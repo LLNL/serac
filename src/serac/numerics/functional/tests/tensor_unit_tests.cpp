@@ -256,6 +256,14 @@ TEST(tensor, linear_solve_with_multiple_rhs)
   EXPECT_LT(squared_norm(dot(A, X) - B), tolerance);
 }
 
+TEST(tensor, linear_solve_is_constexpr_correct)
+{
+  constexpr tensor<double, 3, 3> A{{{2, 1, -1}, {-3, -1, 2}, {-2, 1, 2}}};
+  constexpr tensor<double, 3>    b{{-1, 2, 3}};
+  constexpr auto x = linear_solve(A, b);
+  EXPECT_LT(squared_norm(dot(A, x) - b), tolerance);
+}
+
 TEST(tensor, derivative_of_linear_solve)
 {
   // x defined by: t^2 * A * x(t) = t*b
