@@ -23,6 +23,7 @@ set(physics_sources
     solid.cpp
     thermal_conduction.cpp
     thermal_solid.cpp
+    lce_solid.cpp
     )
 
 set(physics_headers
@@ -33,6 +34,8 @@ set(physics_headers
     thermal_conduction_functional.hpp
     thermal_solid.hpp
     thermal_solid_functional.hpp
+    lce_solid.hpp
+    lce_solid_functional.hpp
     )
 
 set(physics_dependencies
