@@ -1193,7 +1193,7 @@ struct LuFactorization {
  * @see LuFactorization
  */
 template <typename T, int n>
-SERAC_HOST_DEVICE constexpr LuFactorization<T, n> lu(tensor<T, n, n> A)
+SERAC_HOST_DEVICE constexpr LuFactorization<T, n> lu(const tensor<T, n, n>& A)
 {
   constexpr auto abs  = [](double x) { return (x < 0) ? -x : x; };
   constexpr auto swap = [](auto& x, auto& y) {
@@ -1263,8 +1263,8 @@ SERAC_HOST_DEVICE constexpr LuFactorization<T, n> lu(tensor<T, n, n> A)
  * @return y the solution vector
  */
 template <typename T, int n, int... m>
-SERAC_HOST_DEVICE constexpr auto solve_lower_triangular(const tensor<T, n, n> L, const tensor<T, n, m...> b,
-                                                        const tensor<int, n>& P)
+SERAC_HOST_DEVICE constexpr auto solve_lower_triangular(
+    const tensor<T, n, n> & L, const tensor<T, n, m...>& b, const tensor<int, n>& P)
 {
   tensor<T, n, m...> y{};
   for (int i = 0; i < n; i++) {
@@ -1282,7 +1282,7 @@ SERAC_HOST_DEVICE constexpr auto solve_lower_triangular(const tensor<T, n, n> L,
  * @note For the case when no permutation of the rows is needed.
  */
 template <typename T, int n, int... m>
-SERAC_HOST_DEVICE constexpr auto solve_lower_triangular(const tensor<T, n, n> L, const tensor<T, n, m...> b)
+SERAC_HOST_DEVICE constexpr auto solve_lower_triangular(const tensor<T, n, n>& L, const tensor<T, n, m...>& b)
 {
   // no permutation provided, so just map each equation to itself
   // TODO make a convienience function for ranges like this
@@ -1303,7 +1303,7 @@ SERAC_HOST_DEVICE constexpr auto solve_lower_triangular(const tensor<T, n, n> L,
  * @return x the solution vector
  */
 template <typename T, int n, int... m>
-SERAC_HOST_DEVICE constexpr auto solve_upper_triangular(const tensor<T, n, n> U, const tensor<T, n, m...> y)
+SERAC_HOST_DEVICE constexpr auto solve_upper_triangular(const tensor<T, n, n>& U, const tensor<T, n, m...>& y)
 {
   tensor<T, n, m...> x{};
   for (int i = n - 1; i >= 0; i--) {
@@ -1354,7 +1354,7 @@ SERAC_HOST_DEVICE constexpr auto linear_solve(const tensor<S, n, n>& A, const te
  * @note For use with a matrix that has already been factorized
  */
 template <typename S, typename T, int n, int... m>
-SERAC_HOST_DEVICE constexpr auto linear_solve(const LuFactorization<S, n>& lu_factors, const tensor<T, n, m...> b)
+SERAC_HOST_DEVICE constexpr auto linear_solve(const LuFactorization<S, n>& lu_factors, const tensor<T, n, m...>& b)
 {
   // Forward substitution
   // solve Ly = b
