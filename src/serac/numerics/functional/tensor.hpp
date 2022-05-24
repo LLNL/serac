@@ -1263,8 +1263,8 @@ SERAC_HOST_DEVICE constexpr LuFactorization<T, n> lu(const tensor<T, n, n>& A)
  * @return y the solution vector
  */
 template <typename T, int n, int... m>
-SERAC_HOST_DEVICE constexpr auto solve_lower_triangular(
-    const tensor<T, n, n> & L, const tensor<T, n, m...>& b, const tensor<int, n>& P)
+SERAC_HOST_DEVICE constexpr auto solve_lower_triangular(const tensor<T, n, n>& L, const tensor<T, n, m...>& b,
+                                                        const tensor<int, n>& P)
 {
   tensor<T, n, m...> y{};
   for (int i = 0; i < n; i++) {
