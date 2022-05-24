@@ -126,6 +126,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("umpire~openmp", when="+umpire~openmp")
     depends_on("umpire+openmp", when="+umpire+openmp")
     depends_on("umpire build_type=Debug", when="+umpire+debug")
+    depends_on("camp@2022.03.0", when="+umpire")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
     axom_spec = "axom@0.6.1serac~fortran~examples+mfem~shared+cpp14+lua"
