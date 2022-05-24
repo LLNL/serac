@@ -19,12 +19,12 @@
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/physics/state/state_manager.hpp"
-#include "serac/physics/lce_solid.hpp"
+#include "serac/physics/lce_mechanical.hpp"
 #include "serac/physics/materials/functional_material_utils.hpp"
 
 namespace serac {
 
-namespace solid_util {
+namespace lce_mechanical_util {
 /// A timestep and boundary condition enforcement method for a dynamic solver
 struct TimesteppingOptions {
   /// The timestepping method to be applied
@@ -54,10 +54,10 @@ struct SolverOptions {
    */
   std::optional<TimesteppingOptions> dyn_options = std::nullopt;
 };
-}  // namespace solid_util
+}  // namespace lce_mechanical_util
 
 /**
- * @brief The nonlinear solid solver class
+ * @brief The nonlinear mechanical solver class
  *
  * The nonlinear total Lagrangian quasi-static and dynamic
  * hyperelastic solver object. This uses Functional to compute the tangent
@@ -67,7 +67,7 @@ struct SolverOptions {
  * @tparam dim The spatial dimension of the mesh
  */
 template <int order, int dim, typename... parameter_space>
-class SolidFunctional : public BasePhysics {
+class LCEMechanicalFuncional : public BasePhysics {
 public:
   /**
    * @brief Construct a new Solid Functional object
@@ -78,8 +78,8 @@ public:
    * @param name An optional name for the physics module instance
    * @param parameter_states An array of FiniteElementStates containing the user-specified parameter fields
    */
-  SolidFunctional(
-      const solid_util::SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
+  LCEMechanicalFuncional(
+      const lce_mechanical_util::SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
       FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "",
       std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states = {})
       : BasePhysics(2, order),
@@ -157,7 +157,7 @@ public:
   }
 
   /// @brief Destroy the Solid Functional object
-  ~SolidFunctional()
+  ~LCEMechanicalFuncional()
   {
     // Update the mesh with the new deformed nodes if requested
     if (keep_deformation_ == FinalMeshOption::Deformed) {
@@ -217,11 +217,11 @@ public:
    *
    * @param[inout] dt The timestep to attempt. This will return the actual timestep for adaptive timestepping
    * schemes
-   * @pre SolidFunctional::completeSetup() must be called prior to this call
+   * @pre LCEMechanicalFuncional::completeSetup() must be called prior to this call
    */
   void advanceTimestep(double& dt) override
   {
-    SLIC_ERROR_ROOT_IF(!residual_, "completeSetup() must be called prior to advanceTimestep(dt) in SolidFunctional.");
+    SLIC_ERROR_ROOT_IF(!residual_, "completeSetup() must be called prior to advanceTimestep(dt) in LCEMechanicalFuncional.");
 
     // Initialize the true vector
     velocity_.initializeTrueVec();
@@ -398,7 +398,7 @@ public:
     auto parameterized_traction = parameterizeFlux(traction_function);
 
     // TODO fix this when we can get gradients from boundary integrals
-    SLIC_ERROR_IF(!compute_on_reference, "SolidFunctional cannot compute traction BCs in deformed configuration");
+    SLIC_ERROR_IF(!compute_on_reference, "LCEMechanicalFuncional cannot compute traction BCs in deformed configuration");
 
     K_functional_->AddBoundaryIntegral(
         Dimension<dim - 1>{},
@@ -429,7 +429,7 @@ public:
     auto parameterized_pressure = parameterizePressure(pressure_function);
 
     // TODO fix this when we can get gradients from boundary integrals
-    SLIC_ERROR_IF(!compute_on_reference, "SolidFunctional cannot compute pressure BCs in deformed configuration");
+    SLIC_ERROR_IF(!compute_on_reference, "LCEMechanicalFuncional cannot compute pressure BCs in deformed configuration");
 
     K_functional_->AddBoundaryIntegral(
         Dimension<dim - 1>{},

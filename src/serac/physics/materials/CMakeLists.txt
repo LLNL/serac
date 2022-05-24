@@ -10,6 +10,7 @@ set(materials_sources
     hyperelastic_material.cpp
     thermal_expansion_material.cpp
     solid_utils.cpp
+    lce_mechanical_utils.cpp
     )
 
 set(materials_headers
@@ -21,6 +22,8 @@ set(materials_headers
     solid_functional_material.hpp
     parameterized_solid_functional_material.hpp
     functional_material_utils.hpp
+    lce_mechanical_functional_material.hpp
+    parameterized_lce_mechanical_functional_material.hpp
     )
 
 set(materials_depends

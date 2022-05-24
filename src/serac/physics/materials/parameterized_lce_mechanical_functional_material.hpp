@@ -13,10 +13,10 @@
 #pragma once
 
 #include "serac/numerics/functional/functional.hpp"
-#include "serac/physics/materials/lce_solid_functional_material.hpp"
+#include "serac/physics/materials/lce_mechanical_functional_material.hpp"
 
 /// SolidFunctional helper data types
-namespace serac::solid_util {
+namespace serac::lce_mechanical_util {
 
 /**
  * @brief Linear isotropic elasticity material model

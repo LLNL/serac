@@ -14,8 +14,8 @@
 
 #include "serac/numerics/functional/functional.hpp"
 
-/// SolidFunctional helper data types
-namespace serac::solid_util {
+/// lce_mechanical_util helper data types
+namespace serac::lce_mechanical_util{
 
 /**
  * @brief Response data type for solid mechanics simulations
@@ -111,7 +111,7 @@ private:
  * @tparam dim The spatial dimension of the mesh
  */
 template <int dim>
-class NeoHookeanSolid {
+class NeoHookeanMechanical {
 public:
   /**
    * @brief Construct a new Neo-Hookean object
@@ -120,7 +120,7 @@ public:
    * @param shear_modulus Shear modulus of the material
    * @param bulk_modulus Bulk modulus of the material
    */
-  NeoHookeanSolid(double density = 1.0, double shear_modulus = 1.0, double bulk_modulus = 1.0)
+  NeoHookeanMechanical(double density = 1.0, double shear_modulus = 1.0, double bulk_modulus = 1.0)
       : density_(density), bulk_modulus_(bulk_modulus), shear_modulus_(shear_modulus)
   {
     SLIC_ERROR_ROOT_IF(shear_modulus_ < 0.0, "Shear modulus must be positive in the neo-Hookean material model.");
@@ -275,4 +275,4 @@ struct PressureFunction {
   }
 };
 
-}  // namespace serac::solid_util
+}  // namespace serac::lce_mechanical_util

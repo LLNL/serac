@@ -17,9 +17,9 @@
 
 // _incl_thermal_header_start
 // #include "serac/physics/thermal_conduction.hpp"
-#include "serac/physics/lce_solid_functional.hpp"
-#include "serac/physics/materials/lce_solid_functional_material.hpp"
-#include "serac/physics/materials/parameterized_lce_solid_functional_material.hpp"
+#include "serac/physics/lce_mechanical_functional.hpp"
+#include "serac/physics/materials/lce_mechanical_functional_material.hpp"
+#include "serac/physics/materials/parameterized_lce_mechanical_functional_material.hpp"
 // _incl_thermal_header_end
 // _incl_state_manager_start
 #include "serac/physics/state/state_manager.hpp"
@@ -61,41 +61,41 @@ int main(int argc, char* argv[])
   const serac::NonlinearSolverOptions default_nonlinear_options = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
 
-  const typename serac::solid_util::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
+  const typename serac::lce_mechanical_util::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
 
   // Construct a functional-based solid mechanics solver
-  serac::SolidFunctional<p, dim> solid_solver(
-    default_static, serac::GeometricNonlinearities::On, serac::FinalMeshOption::Reference, "solid_functional");
+  serac::LCEMechanicalFuncional<p, dim> lce_mechanical_solver(
+    default_static, serac::GeometricNonlinearities::On, serac::FinalMeshOption::Reference, "mechanical_functional");
 
-  serac::solid_util::NeoHookeanSolid<dim> mat(1.0, 1.0, 1.0);
-  solid_solver.setMaterial(mat);
+  serac::lce_mechanical_util::NeoHookeanMechanical<dim> mat(1.0, 1.0, 1.0);
+  lce_mechanical_solver.setMaterial(mat);
 
   // Define the function for the initial displacement and boundary condition
   auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
 
   // Set the initial displacement and boundary condition
-  solid_solver.setDisplacementBCs(boundary_constant_attributes, bc);
-  solid_solver.setDisplacement(bc);
+  lce_mechanical_solver.setDisplacementBCs(boundary_constant_attributes, bc);
+  lce_mechanical_solver.setDisplacement(bc);
 
   serac::tensor<double, dim> constant_force;
 
   constant_force[0] = 1.0e-4;
   constant_force[1] = 2.0e-3;
 
-  serac::solid_util::ConstantBodyForce<dim> force{constant_force};
-  solid_solver.addBodyForce(force);
+  serac::lce_mechanical_util::ConstantBodyForce<dim> force{constant_force};
+  lce_mechanical_solver.addBodyForce(force);
 
-  solid_solver.initializeOutput(serac::OutputType::ParaView, "sol_lce_mechanical");
+  lce_mechanical_solver.initializeOutput(serac::OutputType::ParaView, "sol_lce_mechanical");
   // _output_type_end
 
   // Finalize the data structures
-  solid_solver.completeSetup();
-  solid_solver.outputState();
+  lce_mechanical_solver.completeSetup();
+  lce_mechanical_solver.outputState();
 
   // Perform the quasi-static solve
   double dt = 0.08;
-  solid_solver.advanceTimestep(dt);
-  solid_solver.outputState();
+  lce_mechanical_solver.advanceTimestep(dt);
+  lce_mechanical_solver.outputState();
 
   // _exit_start
   serac::exitGracefully();
