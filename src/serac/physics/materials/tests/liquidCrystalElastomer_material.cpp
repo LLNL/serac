@@ -94,15 +94,14 @@ struct LCEMaterialProperties
 /// ---------------------------------------------------------------------------
 
   template <typename T1, typename T2>
-  void calculateDistributionTensor(
+  auto calculateDistributionTensor(
     const tensor<T1, 3, 3> F_hat,
     const T2 theta,
-    const double theta_old,
-    tensor<T1, 3, 3>& mu)
+    const double theta_old)
   {
     // Polar decomposition of deformation gradient based on F_hat
     auto U_hat = tensorSquareRoot(transpose(F_hat) * F_hat);
-    auto R_hat = F_hat * inv (U_hat);
+    auto R_hat = F_hat * inv(U_hat);
 
     // Nematic order scalar
     double q_old = q0 / (1 + std::exp((theta_old - T_ni)/c));
@@ -117,10 +116,10 @@ struct LCEMaterialProperties
     auto mu_old_b = 3 * q_old * (transpose(normal_) * normal_);
     auto mu_old   = N_seg*std::pow(b,2)/3 * (mu_old_a + mu_old_b);
 
-    auto mu_a = F_hat * ( mu_old + 2*N_seg*std::pow(b,2)/3* (Q - Q_old)) * transpose(F_hat);
-    auto mu_b = 2*N_seg*std::pow(b,2)/3 * (Q - R_hat * Q * transpose(R_hat));
+    auto mu_a = F_hat * ( mu_old + (2*N_seg*std::pow(b,2)/3) * (Q - Q_old)) * transpose(F_hat);
+    auto mu_b = (2*N_seg*std::pow(b,2)/3) * (Q - R_hat * Q * transpose(R_hat));
 
-    mu  = mu_a + mu_b;
+    return mu_a + mu_b;
   }
 
 /// ---------------------------------------------------------------------------
@@ -141,7 +140,7 @@ struct LCEMaterialProperties
     const tensor<double, 3, 3>& grad_u_old,
     T2 theta,
     double theta_old,
-    tensor<double, 3, 3>& P)
+    tensor<T1, 3, 3>& P)
   {
     // Deformation gradients
     auto         F     = grad_u + I;
@@ -149,16 +148,19 @@ struct LCEMaterialProperties
     auto         F_hat = F * inv(F_old);
 
     // Determinant of deformation gradient
-    auto J = det(F);
+    [[maybe_unused]] auto J = det(F);
 
     // Distribution tensor function of nematic order tensor
     tensor<double, 3, 3> mu_0;
-    tensor<T1, 3, 3> mu;
     calculateInitialDistributionTensor(mu_0);
-    calculateDistributionTensor(F_hat, theta, theta_old, mu);
+    auto mu = calculateDistributionTensor(F_hat, theta, theta_old);
 
     // stress output 
-    P =  J * ( (3*Gshear/(N_seg*std::pow(b,2))) * (mu - mu_0) + p*I ) * inv(transpose(F));
+    P = J * ( (3*Gshear/(N_seg*std::pow(b,2))) * (mu) + J*p*I ) * inv(transpose(F));
+    // P =  J * ( (3*Gshear/(N_seg*std::pow(b,2))) * (mu - mu_0) + 0.0*p*I ) * inv(transpose(F));
+    // P = det(F_hat) * inv(transpose(F_hat)) * inv(F_old);
+    // P = 1.0*(det(F)*inv(transpose(F))*inv(F_old)) + 0.0 * (J * ( (3*Gshear/(N_seg*std::pow(b,2))) * (mu) + J*p*I ) * inv(transpose(F)));
+    // P = 1.0*(det(F)*inv(transpose(F))*det(inv(F_old))) + 0.0 * (J * ( (3*Gshear/(N_seg*std::pow(b,2))) * (mu) + J*p*I ) * inv(transpose(F)));
   }
 
 /// ---------------------------------------------------------------------------
@@ -196,14 +198,16 @@ struct LCEMaterialProperties
     auto J = det(F);
 
     // Distribution tensor function of nematic order tensor
-    tensor<double, 3, 3> mu_0, mu;
+    tensor<double, 3, 3> mu_0;
     calculateInitialDistributionTensor(mu_0);
-    calculateDistributionTensor(F_hat, theta, theta_old, mu);
+    auto mu = calculateDistributionTensor(F_hat, theta, theta_old);
 
-    auto psi_1 = 3 * Gshear/(2*N_seg*std::pow(b,2)) * tr(mu - mu_0);
+    auto psi_1 = 3 * (Gshear/(2*N_seg*std::pow(b,2))) * tr(mu - mu_0);
     auto psi_2 = p * (J - 1);
 
     return psi_1 + psi_2;
+    // return 1.0*det(F_hat) + 0.0*(psi_1 + psi_2);
+    // return 1.0*det(U_hat) + 0.0*(psi_1 + psi_2);
   }
 
 /// ---------------------------------------------------------------------------
@@ -229,8 +233,9 @@ struct LCEMaterialProperties
   /**
    * @brief Return constitutive output for mechanics operator
    */
+  template < typename T >
   auto calculateMechanicalConstitutiveOutputs(
-    const tensor<double, 3, 3>& grad_u, 
+    const tensor<T, 3, 3>& grad_u, 
     double theta,
     const tensor<double, 3>& grad_theta, 
     State& state,
@@ -245,10 +250,63 @@ struct LCEMaterialProperties
 
 // --------------------------------------------------------
 
-// The energy of the polymer is non-zero in its stress-free state.
-TEST(LiqCrystElastMaterial, FreeEnergyIsZeroInReferenceState)
+#if 0
+
+// // The energy of the polymer is non-zero in its stress-free state.
+// TEST(LiqCrystElastMaterial, FreeEnergyIsZeroInReferenceState)
+// {
+// return;
+//   LCEMaterialProperties material{
+//     .Gshear = 13.33e3,
+//     .N_seg = 1.0,
+//     .b     = 1.0,         
+//     .T_ni  = 273+92,      
+//     .c     = 10,      
+//     .q0    = 0.46,
+//     .p     = 30,
+//     .normal_ = {2/std::sqrt(14), -1/std::sqrt(14), 3/std::sqrt(14)}};
+//   tensor<double, 3, 3>  displacement_grad{};
+//   tensor<double, 3, 3>  displacement_grad_old{};
+//   double                temperature = 300.0;
+//   double                temperature_old = temperature+2;
+//   double                free_energy = material.calculateFreeEnergy(displacement_grad, displacement_grad_old, temperature, temperature_old);
+
+//   EXPECT_NEAR(free_energy, 0.0, 1e-10);
+// }
+
+// // --------------------------------------------------------
+
+// // The energy of the polymer is non-zero in its stress-free state.
+// TEST(LiqCrystElastMaterial, StressIsNonZeroInReferenceState)
+// {
+// return;  
+//   LCEMaterialProperties material{
+//     .Gshear = 13.33e3,
+//     .N_seg = 1.0,
+//     .b     = 1.0,         
+//     .T_ni  = 273+92,      
+//     .c     = 10,      
+//     .q0    = 0.46,
+//     .p     = 30,
+//     .normal_ = {2/std::sqrt(14), -1/std::sqrt(14), 3/std::sqrt(14)}};
+//   tensor<double, 3, 3>  displacement_grad{};
+//   double                temperature = 300;
+//   tensor<double, 3>     temperature_grad{};
+//   LCEMaterialProperties::State state{};
+//   auto                         displacement_grad_old = displacement_grad;
+//   double                       temperature_old       = temperature;
+//   double                       dt                    = 1.0;
+//   auto stress = material.calculateMechanicalConstitutiveOutputs(displacement_grad, temperature, temperature_grad, state,
+//                                                                 displacement_grad_old, temperature_old, dt);
+
+//   EXPECT_NEAR(norm(stress), 56.6426, 1e-4);
+// }
+#endif
+
+// --------------------------------------------------------
+
+TEST(LiqCrystElastMaterial, checkMuWithAD)
 {
-return;
   LCEMaterialProperties material{
     .Gshear = 13.33e3,
     .N_seg = 1.0,
@@ -258,44 +316,31 @@ return;
     .q0    = 0.46,
     .p     = 30,
     .normal_ = {2/std::sqrt(14), -1/std::sqrt(14), 3/std::sqrt(14)}};
-  tensor<double, 3, 3>  displacement_grad{};
-  tensor<double, 3, 3>  displacement_grad_old{};
-  double                temperature = 300.0;
-  double                temperature_old = temperature+2;
-  double                free_energy = material.calculateFreeEnergy(displacement_grad, displacement_grad_old, temperature, temperature_old);
+  // clang-format off
+  tensor<double, 3, 3> Fhat{{{1.0, 0.266666666666667, 0.0},
+                             {0.0, 0.9235, 0.389418342308651},
+                             {0.0, -0.389418342308651, 0.8294}}};
 
-  EXPECT_NEAR(free_energy, 0.0, 1e-10);
+  tensor<double, 3, 3> perturbation{{{0.1, 0.0, 0.6}, 
+                                     {1.0, 0.4, 0.5}, 
+                                     {0.3, 0.2, 0.1}}};
+
+  // clang-format on
+  double temperature = 321.4141;
+  double temperature_old = 320.7035;
+  
+  double epsilon = 1.0e-6;
+
+  auto mu1 = material.calculateDistributionTensor(Fhat - epsilon * perturbation, temperature, temperature_old);
+  auto mu2 = material.calculateDistributionTensor(Fhat + epsilon * perturbation, temperature, temperature_old);
+
+  auto mu = material.calculateDistributionTensor(make_dual(Fhat), temperature, temperature_old);
+
+  auto error = ((mu2 - mu1) / (2.0 * epsilon)) - double_dot(get_gradient(mu), perturbation);
+
+  EXPECT_NEAR(norm(error), 0.0, 1e-9);
+
 }
-
-// --------------------------------------------------------
-
-// The energy of the polymer is non-zero in its stress-free state.
-TEST(LiqCrystElastMaterial, StressIsNonZeroInReferenceState)
-{
-return;  
-  LCEMaterialProperties material{
-    .Gshear = 13.33e3,
-    .N_seg = 1.0,
-    .b     = 1.0,         
-    .T_ni  = 273+92,      
-    .c     = 10,      
-    .q0    = 0.46,
-    .p     = 30,
-    .normal_ = {2/std::sqrt(14), -1/std::sqrt(14), 3/std::sqrt(14)}};
-  tensor<double, 3, 3>  displacement_grad{};
-  double                temperature = 300;
-  tensor<double, 3>     temperature_grad{};
-  LCEMaterialProperties::State state{};
-  auto                         displacement_grad_old = displacement_grad;
-  double                       temperature_old       = temperature;
-  double                       dt                    = 1.0;
-  auto stress = material.calculateMechanicalConstitutiveOutputs(displacement_grad, temperature, temperature_grad, state,
-                                                                displacement_grad_old, temperature_old, dt);
-
-  EXPECT_NEAR(norm(stress), 56.6426, 1e-4);
-}
-
-// --------------------------------------------------------
 
 TEST(LiqCrystElastMaterial, FreeEnergyAndStressAgree)
 {
@@ -315,6 +360,9 @@ TEST(LiqCrystElastMaterial, FreeEnergyAndStressAgree)
   tensor<double, 3, 3> displacement_grad{{{0.0, 0.266666666666667, 0.0},
                                            {0.0, -0.078939005997115, 0.389418342308651},
                                            {0.0, -0.389418342308651, -0.078939005997115}}};
+  tensor<double, 3, 3> perturbation{{{0.1, 0.0, 0.6}, 
+                                     {1.0, 0.4, 0.5}, 
+                                     {0.3, 0.2, 0.1}}};
   // clang-format on
   double                       temperature = 321.4141;
   double                       temperature_old = 320.7035;
@@ -322,24 +370,64 @@ TEST(LiqCrystElastMaterial, FreeEnergyAndStressAgree)
   
   LCEMaterialProperties::State state{};
   double dt = 0.2;
+  double epsilon = 1.0e-7;
 
-  auto energy_and_stress = material.calculateFreeEnergy(
-    // make_dual(displacement_grad), displacement_grad_old, temperature, temperature_old);
-    displacement_grad, displacement_grad_old, temperature, temperature_old);
-  auto stress = material.calculateMechanicalConstitutiveOutputs(
-    displacement_grad, temperature, temperature_grad, state, displacement_grad_old, temperature_old, dt);
+  // Check that the AD-computed derivatives of stress w.r.t. displacement_gradient 
+  // are in agreement with results obtained from a central finite difference stencil
+  {
+    auto stress1 = material.calculateMechanicalConstitutiveOutputs(
+      displacement_grad - epsilon * perturbation, temperature, temperature_grad, state, displacement_grad_old, temperature_old, dt);
 
-  auto stress_AD = get_gradient(energy_and_stress);
+    auto stress2 = material.calculateMechanicalConstitutiveOutputs(
+      displacement_grad + epsilon * perturbation, temperature, temperature_grad, state, displacement_grad_old, temperature_old, dt);
 
-std::cout<<std::endl;
-print(stress);
-std::cout<<std::endl;
-print(stress_AD);
-std::cout<<std::endl;
+    auto dstress = get_gradient(material.calculateMechanicalConstitutiveOutputs(
+      make_dual(displacement_grad), temperature, temperature_grad, state, displacement_grad_old, temperature_old, dt));
 
-  auto error  = stress - stress_AD;
+    auto error = double_dot(dstress, perturbation) - (stress2 - stress1) / (2 * epsilon);
 
-  EXPECT_NEAR(norm(error), 0.0, 1e-12);
+    EXPECT_NEAR(norm(error) / norm(double_dot(dstress, perturbation)), 0.0, 1e-8);
+  }
+
+  // Check that the AD-computed derivatives of energy w.r.t. displacement_gradient 
+  // are in agreement with results obtained from a central finite difference stencil
+  {
+    auto energy1 = material.calculateFreeEnergy(
+      displacement_grad - epsilon * perturbation, displacement_grad_old, temperature, temperature_old);
+
+    auto energy2 = material.calculateFreeEnergy(
+      displacement_grad + epsilon * perturbation, displacement_grad_old, temperature, temperature_old);
+
+    auto denergy = get_gradient(material.calculateFreeEnergy(
+      make_dual(displacement_grad), displacement_grad_old, temperature, temperature_old));
+
+    auto error = double_dot(denergy, perturbation) - (energy2 - energy1) / (2 * epsilon);
+
+    EXPECT_NEAR(error / double_dot(denergy, perturbation), 0.0, 1e-8);
+ std::cout<<std::endl; std::cout<<".......... energy1 = "<<energy1<<", energy2 = "<<energy2<<std::endl;    
+  }
+
+  // Check that the AD-computed derivatives of energy w.r.t. displacement_gradient 
+  // are in agreement with stress formulation
+  // {
+    auto energy_and_stress = material.calculateFreeEnergy(
+      make_dual(displacement_grad), displacement_grad_old, temperature, temperature_old);
+      //displacement_grad, displacement_grad_old, temperature, temperature_old);
+    auto stress = material.calculateMechanicalConstitutiveOutputs(
+      displacement_grad, temperature, temperature_grad, state, displacement_grad_old, temperature_old, dt);
+
+    auto stress_AD = get_gradient(energy_and_stress);
+
+    std::cout<<std::endl; std::cout<<"............................."<<std::endl;
+    print(stress);
+    std::cout<<std::endl; std::cout<<"............................."<<std::endl;
+    print(stress_AD);
+    std::cout<<std::endl; std::cout<<"............................."<<std::endl;
+
+    auto error  = stress - stress_AD;
+
+    EXPECT_NEAR(norm(error), 0.0, 1e-8);
+  // }
 }
 }  // namespace serac
 
