@@ -117,16 +117,16 @@ class Serac(CachedCMakePackage, CudaPackage):
     #  (includes, libs, etc) instead of hdf5 info
     depends_on("hdf5@1.8.21+hl~mpi~shared")
 
+    depends_on("camp@2022.03.0")
+
     depends_on("raja@2022.03.0~shared~examples~exercises", when="+raja")
     depends_on("raja~openmp", when="+raja~openmp")
     depends_on("raja+openmp", when="+raja+openmp")
-    depends_on("camp@2022.03.0", when="+raja")
 
     depends_on("umpire@2022.03.1~shared~examples~device_alloc", when="+umpire")
     depends_on("umpire~openmp", when="+umpire~openmp")
     depends_on("umpire+openmp", when="+umpire+openmp")
     depends_on("umpire build_type=Debug", when="+umpire+debug")
-    depends_on("camp@2022.03.0", when="+umpire")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
     axom_spec = "axom@0.6.1serac~fortran~examples+mfem~shared+cpp14+lua"
