@@ -98,15 +98,15 @@ TEST(boundary_cond_helper, element_attribute_dof_list_scalar)
   mesh.SetAttribute(31, attribute);
 
   mfem::ParMesh pmesh(MPI_COMM_WORLD, mesh);
-  int sdim = pmesh.SpaceDimension();
+  int           sdim = pmesh.SpaceDimension();
 
   mfem::Array<int> elem_attr_is_ess(pmesh.bdr_attributes.Max());
-  elem_attr_is_ess = 0;
-  elem_attr_is_ess[attribute-1] = 1;
+  elem_attr_is_ess                = 0;
+  elem_attr_is_ess[attribute - 1] = 1;
 
   mfem::Array<int> ess_tdof_list;
 
-  mfem::L2_FECollection l2_fec(0, sdim);
+  mfem::L2_FECollection       l2_fec(0, sdim);
   mfem::ParFiniteElementSpace l2_fes(&pmesh, &l2_fec, 1);
   serac::mfem_ext::GetEssentialTrueDofsFromElementAttribute(l2_fes, elem_attr_is_ess, ess_tdof_list);
 
@@ -115,17 +115,16 @@ TEST(boundary_cond_helper, element_attribute_dof_list_scalar)
   MPI_Allreduce(&local_num_tdof, &global_num_tdof, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
   EXPECT_EQ(global_num_tdof, 2);
-  
+
   int numRanks;
   MPI_Comm_size(MPI_COMM_WORLD, &numRanks);
 
-  if (numRanks==1)
-  {
+  if (numRanks == 1) {
     EXPECT_EQ(ess_tdof_list[0], 1);
     EXPECT_EQ(ess_tdof_list[1], 31);
   }
 
-  mfem::H1_FECollection h1_fec(1, sdim);
+  mfem::H1_FECollection       h1_fec(1, sdim);
   mfem::ParFiniteElementSpace h1_fes(&pmesh, &h1_fec, 1);
   serac::mfem_ext::GetEssentialTrueDofsFromElementAttribute(h1_fes, elem_attr_is_ess, ess_tdof_list, -1);
 
@@ -133,8 +132,7 @@ TEST(boundary_cond_helper, element_attribute_dof_list_scalar)
   MPI_Allreduce(&local_num_tdof, &global_num_tdof, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
   EXPECT_EQ(global_num_tdof, 16);
 
-  if (numRanks==1)
-  {
+  if (numRanks == 1) {
     EXPECT_EQ(ess_tdof_list[0], 25);
     EXPECT_EQ(ess_tdof_list[1], 26);
     EXPECT_EQ(ess_tdof_list[2], 30);
@@ -152,7 +150,7 @@ TEST(boundary_cond_helper, element_attribute_dof_list_scalar)
     EXPECT_EQ(ess_tdof_list[14], 111);
     EXPECT_EQ(ess_tdof_list[15], 112);
   }
-  
+
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
@@ -167,15 +165,15 @@ TEST(boundary_cond_helper, element_attribute_dof_list_vector)
   mesh.SetAttribute(3, attribute);
 
   mfem::ParMesh pmesh(MPI_COMM_WORLD, mesh);
-  int sdim = pmesh.SpaceDimension();
+  int           sdim = pmesh.SpaceDimension();
 
   mfem::Array<int> elem_attr_is_ess(pmesh.attributes.Max());
-  elem_attr_is_ess = 0;
-  elem_attr_is_ess[attribute-1] = 1;
+  elem_attr_is_ess                = 0;
+  elem_attr_is_ess[attribute - 1] = 1;
 
   mfem::Array<int> ess_tdof_list;
 
-  mfem::H1_FECollection h1_fec(1, sdim);
+  mfem::H1_FECollection       h1_fec(1, sdim);
   mfem::ParFiniteElementSpace h1_fes(&pmesh, &h1_fec, 1);
   serac::mfem_ext::GetEssentialTrueDofsFromElementAttribute(h1_fes, elem_attr_is_ess, ess_tdof_list, 1);
 
@@ -188,8 +186,7 @@ TEST(boundary_cond_helper, element_attribute_dof_list_vector)
   int numRanks;
   MPI_Comm_size(MPI_COMM_WORLD, &numRanks);
 
-  if (numRanks==1)
-  {
+  if (numRanks == 1) {
     EXPECT_EQ(ess_tdof_list[0], 1);
     EXPECT_EQ(ess_tdof_list[1], 2);
     EXPECT_EQ(ess_tdof_list[2], 6);

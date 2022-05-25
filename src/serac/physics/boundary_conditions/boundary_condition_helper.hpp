@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -7,7 +7,7 @@
 /**
  * @file boundary_condition_helper.hpp
  *
- * @brief This file contains the declation of helper methods for boundary conditions
+ * @brief This file contains the declarations of helper methods for boundary conditions
  */
 
 #pragma once
@@ -16,16 +16,12 @@
 
 namespace serac::mfem_ext {
 
-void GetEssentialTrueDofsFromElementAttribute(
-    const mfem::ParFiniteElementSpace &fespace,
-    const mfem::Array<int> &elem_attr_is_ess, 
-    mfem::Array<int> &ess_tdof_list, 
-    int component=-1);
+void GetEssentialTrueDofsFromElementAttribute(const mfem::ParFiniteElementSpace& fespace,
+                                              const mfem::Array<int>& elem_attr_is_ess, mfem::Array<int>& ess_tdof_list,
+                                              int component = -1);
 
-void GetEssentialVDofsFromElementAttribute(
-    const mfem::ParFiniteElementSpace &fespace,
-    const mfem::Array<int> &elem_attr_is_ess,
-    mfem::Array<int> &ess_vdofs,
-    int component=-1);
+void GetEssentialVDofsFromElementAttribute(const mfem::ParFiniteElementSpace& fespace,
+                                           const mfem::Array<int>& elem_attr_is_ess, mfem::Array<int>& ess_vdofs,
+                                           int component = -1);
 
 }  // namespace serac::mfem_ext
