@@ -104,9 +104,6 @@ TEST(boundary_cond_helper, element_attribute_dof_list_scalar)
   elem_attr_is_ess = 0;
   elem_attr_is_ess[attribute-1] = 1;
 
-  mfem::VisItDataCollection visit_dc("attributeLook", &pmesh);
-  visit_dc.Save();
-
   mfem::Array<int> ess_tdof_list;
 
   mfem::L2_FECollection l2_fec(0, sdim);
