@@ -43,7 +43,6 @@ void GetEssentialVDofsFromElementAttribute(
     mfem::Array<int> vdofs, dofs;
     ess_vdofs.SetSize(fespace.GetVSize());
     ess_vdofs = 0;
-
     for (int elem=0; elem<fespace.GetNE(); elem++)
     {
         if (elem_attr_is_ess[fespace.GetAttribute(elem)-1])
@@ -64,6 +63,7 @@ void GetEssentialVDofsFromElementAttribute(
             }
         }
     }
+    fespace.Synchronize(ess_vdofs);
 }
 
 
