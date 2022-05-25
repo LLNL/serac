@@ -21,7 +21,7 @@ void GetEssentialTrueDofsFromElementAttribute(
     fespace.MarkerToList(true_ess_dofs, ess_tdof_list);
 }
 
-static void mark_dofs(const Array<int> &dofs, Array<int> &mark_array)
+static void mark_dofs(const mfem::Array<int> &dofs, mfem::Array<int> &mark_array)
 {
     for (int i = 0; i < dofs.Size(); i++)
     {
@@ -32,7 +32,7 @@ static void mark_dofs(const Array<int> &dofs, Array<int> &mark_array)
 }
 
 void GetEssentialVDofsFromElementAttribute(
-    const mfem:ParFiniteElementSpace &fespace,
+    const mfem::ParFiniteElementSpace &fespace,
     const mfem::Array<int> &elem_attr_is_ess,
     mfem::Array<int> &ess_vdofs,
     int component)
@@ -42,6 +42,7 @@ void GetEssentialVDofsFromElementAttribute(
 
     mfem::Array<int> vdofs, dofs;
     ess_vdofs.SetSize(fespace.GetVSize());
+    ess_vdofs = 0;
 
     for (int elem=0; elem<fespace.GetNE(); elem++)
     {
@@ -61,8 +62,6 @@ void GetEssentialVDofsFromElementAttribute(
                 }
                 mark_dofs(dofs, ess_vdofs);
             }
-            fespace.GetElementDofs(elem, elem_dofs);
-            ess_tdof_list.Append(elem_dofs);
         }
     }
 }

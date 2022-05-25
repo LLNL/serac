@@ -23,7 +23,7 @@ void GetEssentialTrueDofsFromElementAttribute(
     int component=-1);
 
 void GetEssentialVDofsFromElementAttribute(
-    const mfem:ParFiniteElementSpace &fespace,
+    const mfem::ParFiniteElementSpace &fespace,
     const mfem::Array<int> &elem_attr_is_ess,
     mfem::Array<int> &ess_vdofs,
     int component=-1);

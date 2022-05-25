@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/physics/boundary_conditions/boundary_condition_manager.hpp"
-#include "serac/physics/boundary_conditions/boundary_condition_helpher.hpp"
+#include "serac/physics/boundary_conditions/boundary_condition_helper.hpp"
 
 #include <memory>
 
@@ -98,16 +98,36 @@ TEST(boundary_cond_helper, element_attribute_dof_list_scalar)
   mfem::ParMesh pmesh(MPI_COMM_WORLD, mesh);
   int sdim = pmesh.SpaceDimension();
 
-  mfem::H1_FECollection h1_fec(order, sdim);
-  mfem::ParFiniteElementSpace h1_fes(design_mesh, &h1_fec, 1);
+  mfem::VisItDataCollection visit_dc("attributeLook", &pmesh);
+  visit_dc.Save();
+
+  mfem::H1_FECollection h1_fec(1, sdim);
+  mfem::ParFiniteElementSpace h1_fes(&pmesh, &h1_fec, 1);
 
   mfem::Array<int> elem_attr_is_ess(pmesh.attributes.Max());
+  elem_attr_is_ess = 0;
   elem_attr_is_ess[2-1] = 1;
   mfem::Array<int> ess_tdof_list;
   serac::mfem_ext::GetEssentialTrueDofsFromElementAttribute(h1_fes, elem_attr_is_ess, ess_tdof_list, -1);
 
-  ess_tdof_list.Print();
-
+  EXPECT_EQ(ess_tdof_list.Size(), 16);
+  EXPECT_EQ(ess_tdof_list[0], 25);
+  EXPECT_EQ(ess_tdof_list[1], 26);
+  EXPECT_EQ(ess_tdof_list[2], 30);
+  EXPECT_EQ(ess_tdof_list[3], 31);
+  EXPECT_EQ(ess_tdof_list[4], 50);
+  EXPECT_EQ(ess_tdof_list[5], 51);
+  EXPECT_EQ(ess_tdof_list[6], 55);
+  EXPECT_EQ(ess_tdof_list[7], 56);
+  EXPECT_EQ(ess_tdof_list[8], 81);
+  EXPECT_EQ(ess_tdof_list[9], 82);
+  EXPECT_EQ(ess_tdof_list[10], 86);
+  EXPECT_EQ(ess_tdof_list[11], 87);
+  EXPECT_EQ(ess_tdof_list[12], 106);
+  EXPECT_EQ(ess_tdof_list[13], 107);
+  EXPECT_EQ(ess_tdof_list[14], 111);
+  EXPECT_EQ(ess_tdof_list[15], 112);
+  
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
@@ -122,15 +142,28 @@ TEST(boundary_cond_helper, element_attribute_dof_list_vector)
   mfem::ParMesh pmesh(MPI_COMM_WORLD, mesh);
   int sdim = pmesh.SpaceDimension();
 
-  mfem::H1_FECollection h1_fec(order, sdim);
-  mfem::ParFiniteElementSpace h1_fes(design_mesh, &h1_fec, 1);
+  mfem::H1_FECollection h1_fec(1, sdim);
+  mfem::ParFiniteElementSpace h1_fes(&pmesh, &h1_fec, 1);
 
   mfem::Array<int> elem_attr_is_ess(pmesh.attributes.Max());
+  elem_attr_is_ess = 0;
   elem_attr_is_ess[2-1] = 1;
   mfem::Array<int> ess_tdof_list;
   serac::mfem_ext::GetEssentialTrueDofsFromElementAttribute(h1_fes, elem_attr_is_ess, ess_tdof_list, 1);
 
-  ess_tdof_list.Print();
+  EXPECT_EQ(ess_tdof_list.Size(), 12);
+  EXPECT_EQ(ess_tdof_list[0], 1);
+  EXPECT_EQ(ess_tdof_list[1], 2);
+  EXPECT_EQ(ess_tdof_list[2], 6);
+  EXPECT_EQ(ess_tdof_list[3], 7);
+  EXPECT_EQ(ess_tdof_list[4], 26);
+  EXPECT_EQ(ess_tdof_list[5], 27);
+  EXPECT_EQ(ess_tdof_list[6], 31);
+  EXPECT_EQ(ess_tdof_list[7], 32);
+  EXPECT_EQ(ess_tdof_list[8], 51);
+  EXPECT_EQ(ess_tdof_list[9], 52);
+  EXPECT_EQ(ess_tdof_list[10], 56);
+  EXPECT_EQ(ess_tdof_list[11], 57);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
