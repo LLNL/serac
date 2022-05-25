@@ -20,10 +20,13 @@ import platform
 import shutil
 import socket
 
-_host_configs_map = {"rzgenie"   : "toss_3_x86_64_ib/clang@4.0.0.cmake",
-                     "rzalastor" : "toss_3_x86_64_ib/clang@4.0.0.cmake",
-                     "rztopaz"   : "toss_3_x86_64_ib/clang@4.0.0.cmake",
-                     "quartz"    : "toss_3_x86_64_ib/clang@4.0.0.cmake"}
+_host_configs_map = {"rzgenie"   : "rzgenie-toss_3_x86_64_ib-clang@10.0.0.cmake",
+                     "rzalastor" : "rzgenie-toss_3_x86_64_ib-clang@10.0.0.cmake",
+                     "rztopaz"   : "rzgenie-toss_3_x86_64_ib-clang@10.0.0.cmake",
+                     "rzansel"   : "rzansel-blueos_3_ppc64le_ib_p9-clang@10.0.1.cmake",
+                     "quartz"    : "quartz-toss_3_x86_64_ib-clang@10.0.0.cmake",
+                     "ruby"      : "quartz-toss_3_x86_64_ib-clang@10.0.0.cmake",
+                     "lassen"    : "lassen-blueos_3_ppc64le_ib_p9-clang@10.0.1.cmake"}
 
 def get_machine_name():
     return socket.gethostname().rstrip('1234567890')
