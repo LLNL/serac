@@ -1193,7 +1193,7 @@ struct LuFactorization {
  * @see LuFactorization
  */
 template <typename T, int n>
-SERAC_HOST_DEVICE constexpr LuFactorization<T, n> lu(const tensor<T, n, n>& A)
+SERAC_HOST_DEVICE constexpr LuFactorization<T, n> factorize_lu(const tensor<T, n, n>& A)
 {
   constexpr auto abs  = [](double x) { return (x < 0) ? -x : x; };
   constexpr auto swap = [](auto& x, auto& y) {
@@ -1206,8 +1206,7 @@ SERAC_HOST_DEVICE constexpr LuFactorization<T, n> lu(const tensor<T, n, n>& A)
   // initialize L to Identity
   auto L = tensor<T, n, n>{};
   // This handles the case if T is a dual number
-  // TODO: consider making a dense identity that is templated on type
-  // BT 05/09/2022
+  // TODO - BT: make a dense identity that is templated on type
   for (int i = 0; i < n; i++) {
     if constexpr (is_dual_number<T>::value) {
       L[i][i].value = 1.0;
@@ -1333,7 +1332,7 @@ SERAC_HOST_DEVICE constexpr auto linear_solve(const tensor<S, n, n>& A, const te
   // If A is not dual, the second solve is a no-op.
 
   // Strip off derivatives, if any, and compute only x (ie no derivative)
-  auto lu_factors = lu(get_value(A));
+  auto lu_factors = factorize_lu(get_value(A));
   auto x          = linear_solve(lu_factors, get_value(b));
 
   // Compute directional derivative of x.

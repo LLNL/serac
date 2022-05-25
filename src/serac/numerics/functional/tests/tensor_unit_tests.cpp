@@ -181,7 +181,7 @@ TEST(tensor, derivative_of_inverse)
 template <int n>
 void checkLUDecomposition(const tensor<double, n, n>& A)
 {
-  auto [P, L, U] = lu(A);
+  auto [P, L, U] = factorize_lu(A);
 
   // check that L is lower triangular and U is upper triangular
   for (int i = 0; i < n; i++) {
@@ -231,7 +231,7 @@ TEST(tensor, lu_decomposition_works_on_dual_numbers)
       A[i][j].gradient = g[i][j];
     }
   }
-  auto [P, L, U] = lu(A);
+  auto [P, L, U] = factorize_lu(A);
   auto PLU       = composeMatrixFromLU(P, L, U);
 
   EXPECT_LT(squared_norm(get_value(A) - get_value(PLU)), tolerance);
