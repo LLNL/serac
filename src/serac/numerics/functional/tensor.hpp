@@ -1221,7 +1221,7 @@ auto contract(const tensor<S, m, n...> & A, const tensor<T, p, q> & B) {
 }
 
 template <typename T, int... n>
-tensor<T, (n * ...)> flatten(tensor<T, n...> A)
+tensor<T, (n * ...)> flatten(const tensor<T, n...> & A)
 {
   tensor<T, (n * ...)> A_flat;
   auto                 A_ptr = reinterpret_cast<double*>(&A);
@@ -1232,7 +1232,7 @@ tensor<T, (n * ...)> flatten(tensor<T, n...> A)
 }
 
 template <int... new_dimensions, typename T, int... old_dimensions>
-tensor<T, new_dimensions...> reshape(tensor<T, old_dimensions...> A)
+tensor<T, new_dimensions...> reshape(const tensor<T, old_dimensions...> & A)
 {
   static_assert((new_dimensions * ...) == (old_dimensions * ...),
                 "error: can't reshape to configuration with different number of elements");

@@ -87,6 +87,22 @@ auto batch_apply_qf(lambda qf, const tensor< double, dim, n > x, const tuple < t
   return outputs;
 }
 
+template <int index_to_differentiate, typename derivative_type, typename lambda, int dim, int n, typename ... T, int ... I >
+auto batch_apply_qf_with_AD(derivative_type * qf_derivatives, lambda qf, const tensor< double, dim, n > x, const tuple < tensor<T, n> ... > inputs, std::integer_sequence< int, I ... >)
+{
+  using return_type = decltype(qf(tensor<double,dim>{}, promote_to_dual_when< I == index_to_differentiate >(T{}) ...));
+  using value_type = decltype(get_value(return_type{}));
+  tensor<value_type, n> outputs{};
+  for (int i = 0; i < n; i++) {
+    tensor< double, dim > x_q;
+    for (int j = 0; j < dim; j++) { x_q[j] = x(j, i); }
+    auto outputs_and_derivatives = qf(x_q, promote_to_dual_when< I == index_to_differentiate >(get<I>(inputs)[i]) ...);
+    outputs[i] = get_value(outputs_and_derivatives);
+    qf_derivatives[i] = get_gradient(outputs_and_derivatives);
+  }
+  return outputs;
+}
+
 /**
  * @tparam S type used to specify which argument to differentiate with respect to.
  *    `void` => evaluation kernel with no differentiation
@@ -113,10 +129,8 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
   static constexpr int  num_trial_spaces = int(sizeof...(trials));  ///< how many trial spaces are provided
   static constexpr auto Iseq = std::make_integer_sequence<int, sizeof ... (trials)>{};
 
+  using test_element = finite_element<geom, test>;
   static constexpr type_list < finite_element< geom, trials > ... > trial_elements{};
-
-  using EVector_t =
-      EVectorView<exec, finite_element<geom, trials>...>;  ///< the type of container used to access element values
 
   /**
    * @brief initialize the functor by providing the necessary quadrature point data
@@ -142,49 +156,23 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
   void operator()(const std::array<mfem::Vector, num_trial_spaces>& U, mfem::Vector& R)
   {
 
-#define batched
-
-    #ifdef batched
-    using test_element = finite_element<geom, test>;
-    #else
-    std::array<const double*, num_trial_spaces> ptrs;
-    for (uint32_t j = 0; j < num_trial_spaces; j++) {
-      ptrs[j] = U[j].Read();
-    }
-    EVector_t u(ptrs, std::size_t(num_elements_));
-
-    using test_element              = finite_element<geom, test>;
-    using element_residual_type     = typename test_element::residual_type;
-    static constexpr int  dim       = dimension_of(geom);
-    static constexpr int  test_ndof = test_element::ndof;
-    static constexpr auto rule      = GaussQuadratureRule<geom, Q>();
-    #endif
-
     // mfem provides this information in 1D arrays, so we reshape it
     // into strided multidimensional arrays before using
-    #ifdef batched
     auto X = reinterpret_cast<const typename batched_position<geom, Q>::type*>(X_.Read());
     auto r = reinterpret_cast<typename test_element::dof_type*>(R.ReadWrite());
     auto J = reinterpret_cast<const typename batched_jacobian<geom, Q>::type*>(J_.Read());
     static constexpr TensorProductQuadratureRule<Q> rule{};
-    #else
-    auto X = mfem::Reshape(X_.Read(), rule.size(), dim, num_elements_);
-    auto J = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements_);
-    auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, int(num_elements_));  // TODO: integer conversions
-    #endif
-
-    using qf_inputs_type = tuple < 
-      decltype(finite_element< geom, trials >::interpolate(typename finite_element< geom, trials >::dof_type{}, J[0], rule)) ... 
-    >;
 
     // for each element in the domain
     for (uint32_t e = 0; e < num_elements_; e++) {
 
-    #ifdef batched
+      // load the jacobians and positions for each quadrature point in this element
       auto J_e = J[e];
       auto X_e = X[e];
 
-      qf_inputs_type qf_inputs{};
+      tuple < 
+        decltype(finite_element< geom, trials >::interpolate(typename finite_element< geom, trials >::dof_type{}, J[0], rule)) ... 
+      > qf_inputs{};
 
       for_constexpr< num_trial_spaces >([&](auto j){
 
@@ -203,41 +191,8 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
       // (batch) integrate the material response against the test-space basis functions
       test_element::integrate(qf_outputs, J_e, rule, r[e]);
 
-    #else
-      // get the DOF values for this particular element
-      auto u_elem = u[e];
-
-      // this is where we will accumulate the element residual tensor
-      element_residual_type r_elem{};
-
-      // for each quadrature point in the element
-      for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-        auto   xi  = rule.points[q];
-        auto   dxi = rule.weights[q];
-        auto   x_q = make_tensor<dim>([&](int i) { return X(q, i, e); });  // Physical coords of qpt
-        auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
-        double dx  = det(J_q) * dxi;
-
-        // evaluate the value/derivatives needed for the q-function at this quadrature point
-        auto arg = Preprocess<geom, trials...>(u_elem, xi, J_q);
-
-        // evaluate the user-specified constitutive model
-        //
-        // note: make_dual(arg) promotes those arguments to dual number types
-        // so that qf_output will contain values and derivatives
-        auto qf_output = detail::apply_qf(qf_, x_q, arg, data_(int(e), q));
-
-        // integrate qf_output against test space shape functions / gradients
-        // to get element residual contributions
-        r_elem += Postprocess<test_element>(qf_output, xi, J_q) * dx;
-      }
-
-      // once we've finished the element integration loop, write our element residuals
-      // out to memory, to be later assembled into global residuals by mfem
-      detail::Add(r, r_elem, int(e));
-    #endif
-
     }
+
   }
 
   const mfem::Vector&            J_;             ///< Jacobian matrix entries at each quadrature point
@@ -257,15 +212,16 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
                         qpt_data_type> {
   static constexpr auto exec             = ExecutionSpace::CPU;     ///< this specialization is CPU-specific
   static constexpr int  num_trial_spaces = int(sizeof...(trials));  ///< how many trial spaces are provided
+  static constexpr auto Iseq = std::make_integer_sequence<int, sizeof ... (trials)>{};
 
-  using EVector_t =
-      EVectorView<exec, finite_element<geom, trials>...>;  ///< the type of container used to access element values
+  using test_element = finite_element<geom, test>;
+  static constexpr type_list < finite_element< geom, trials > ... > trial_elements{};
 
   /**
    * @brief initialize the functor by providing the necessary quadrature point data
    *
    * @param qf_derivatives a container for the derivatives of the q-function w.r.t. trial space I
-   * @param J values of sqrt(det(J^T * J)) at each quadrature point
+   * @param J values of the jacobian matrix at each quadrature point
    * @param X Spatial positions of each quadrature point
    * @param num_elements how many elements in the domain
    * @param qf q-function
@@ -286,63 +242,45 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
    */
   void operator()(const std::array<mfem::Vector, num_trial_spaces>& U, mfem::Vector& R)
   {
-    std::array<const double*, num_trial_spaces> ptrs;
-    for (uint32_t j = 0; j < num_trial_spaces; j++) {
-      ptrs[j] = U[j].Read();
-    }
-    EVector_t u(ptrs, std::size_t(num_elements_));
 
-    using test_element              = finite_element<geom, test>;
-    using element_residual_type     = typename test_element::residual_type;
-    static constexpr int  dim       = dimension_of(geom);
-    static constexpr int  test_ndof = test_element::ndof;
-    static constexpr auto rule      = GaussQuadratureRule<geom, Q>();
-
-    // mfem provides this information in 1D arrays, so we reshape it
-    // into strided multidimensional arrays before using
-    auto X = mfem::Reshape(X_.Read(), rule.size(), dim, num_elements_);
-    auto J = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements_);
-    auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, int(num_elements_));  // TODO: integer conversions
+    // mfem provides this information as opaque arrays of doubles, 
+    // so we reinterpret the pointer with 
+    auto X = reinterpret_cast<const typename batched_position<geom, Q>::type*>(X_.Read());
+    auto r = reinterpret_cast<typename test_element::dof_type*>(R.ReadWrite());
+    auto J = reinterpret_cast<const typename batched_jacobian<geom, Q>::type*>(J_.Read());
+    static constexpr TensorProductQuadratureRule<Q> rule{};
 
     // for each element in the domain
     for (uint32_t e = 0; e < num_elements_; e++) {
-      // get the DOF values for this particular element
-      auto u_elem = u[e];
 
-      // this is where we will accumulate the element residual tensor
-      element_residual_type r_elem{};
+      // load the jacobians and positions for each quadrature point in this element
+      auto J_e = J[e];
+      auto X_e = X[e];
 
-      // for each quadrature point in the element
-      for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-        auto   xi  = rule.points[q];
-        auto   dxi = rule.weights[q];
-        auto   x_q = make_tensor<dim>([&](int i) { return X(q, i, e); });  // Physical coords of qpt
-        auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
-        double dx  = det(J_q) * dxi;
+      // forward declare space for the arguments that will get passed to the q-function
+      tuple < 
+        decltype(finite_element< geom, trials >::interpolate(typename finite_element< geom, trials >::dof_type{}, J[0], rule)) ... 
+      > qf_inputs{};
 
-        // evaluate the value/derivatives needed for the q-function at this quadrature point
-        auto arg = Preprocess<geom, trials...>(u_elem, xi, J_q);
+      for_constexpr< num_trial_spaces >([&](auto j){
 
-        // evaluate the user-specified constitutive model
-        //
-        // note: make_dual(arg) promotes those arguments to dual number types
-        // so that qf_output will contain values and derivatives
-        auto qf_output = detail::apply_qf(qf_, x_q, make_dual_wrt<I>(arg), data_(int(e), q));
+        using trial_element = decltype(trial_elements[j]);
+        
+        auto u = reinterpret_cast<const typename trial_element::dof_type*>(U[j].Read());
 
-        // integrate qf_output against test space shape functions / gradients
-        // to get element residual contributions
-        r_elem += Postprocess<test_element>(get_value(qf_output), xi, J_q) * dx;
+        // (batch) interpolate each quadrature point's value
+        get<j>(qf_inputs) = trial_element::interpolate(u[e], J_e, rule);
 
-        // here, we store the derivative of the q-function w.r.t. its input arguments
-        //
-        // this will be used by other kernels to evaluate gradients / adjoints / directional derivatives
-        qf_derivatives_(static_cast<size_t>(e), static_cast<size_t>(q)) = get_gradient(qf_output);
-      }
+      });
 
-      // once we've finished the element integration loop, write our element residuals
-      // out to memory, to be later assembled into global residuals by mfem
-      detail::Add(r, r_elem, int(e));
+      // (batch) evalute the q-function at each quadrature point
+      auto qf_outputs = batch_apply_qf_with_AD< I >(&qf_derivatives_(e, 0), qf_, X_e, qf_inputs, Iseq);
+
+      // (batch) integrate the material response against the test-space basis functions
+      test_element::integrate(qf_outputs, J_e, rule, r[e]);
+
     }
+
   }
 
   ExecArrayView<derivatives_type, 2, exec> qf_derivatives_;  ///< derivatives of the q-function w.r.t. trial space `I`

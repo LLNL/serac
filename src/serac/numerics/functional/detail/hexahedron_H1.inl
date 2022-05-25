@@ -32,6 +32,10 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
 
   using dof_type = tensor<double, c, p + 1, p + 1, p + 1>;
 
+  using value_type = typename std::conditional<components == 1, double, tensor<double, components> >::type;
+  using derivative_type = typename std::conditional<components == 1, tensor<double, dim>, tensor<double, components, dim> >::type;
+  using qf_input_type = tuple< value_type, derivative_type >;
+
   /**
    * @brief this type is used when calling the batched interpolate/integrate
    *        routines, to provide memory for calculating intermediates
@@ -155,7 +159,11 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
     }
 
     constexpr int VALUE = 0, GRADIENT = 1;
-    tensor< tuple < tensor< double, c >, tensor< double, c, 3 > >, q * q * q > output;
+
+    union {
+      tensor< qf_input_type, q * q * q > a;
+      tensor< tuple < tensor< double, c >, tensor< double, c, 3 > >, q * q * q > b;
+    } output;
 
     int k = 0;
     for (int qz = 0; qz < q; qz++) {
@@ -169,20 +177,20 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
           }
 
           for (int i = 0; i < c; i++) {
-            get<VALUE>(output[k])[i] = value(i, qz, qy, qx);
+            get<VALUE>(output.b[k])[i] = value(i, qz, qy, qx);
             for (int j = 0; j < dim; j++) {
-              get<GRADIENT>(output[k])[i][j] = gradient(i, j, qz, qy, qx);
+              get<GRADIENT>(output.b[k])[i][j] = gradient(i, j, qz, qy, qx);
             }
           }
 
-          get<GRADIENT>(output[k]) = dot(get<GRADIENT>(output[k]), inv(J));
+          get<GRADIENT>(output.b[k]) = dot(get<GRADIENT>(output.b[k]), inv(J));
 
           k++;
         }
       }
     }
  
-    return output;
+    return output.a;
   }
 
   template <typename source_type, typename flux_type, int q>
