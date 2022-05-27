@@ -91,6 +91,7 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     depends_on("sundials@5.7.0~shared+hypre+monitoring~examples~examples-install",
                when="+sundials")
+    depends_on("sundials+asan", when="+sundials+asan")
 
     # Libraries that support +debug
     mfem_variants = "~shared+metis+superlu-dist+lapack+mpi"
@@ -107,6 +108,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("mfem+petsc", when="+petsc")
     depends_on("mfem+sundials", when="+sundials")
     depends_on("mfem+amgx", when="+cuda")
+    depends_on("mfem+asan", when="+asan")
     depends_on("netcdf-c@4.7.4~shared", when="+netcdf")
 
     # Needs to be first due to a bug with the Spack concretizer
@@ -123,6 +125,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("umpire@6.0.0serac~shared~examples~device_alloc", when="+umpire")
     depends_on("umpire~openmp", when="+umpire~openmp")
     depends_on("umpire+openmp", when="+umpire+openmp")
+    depends_on("umpire build_type=Debug", when="+umpire+debug")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
     axom_spec = "axom@0.6.1serac~fortran~examples+mfem~shared+cpp14+lua"

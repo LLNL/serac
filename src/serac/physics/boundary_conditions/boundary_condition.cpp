@@ -26,23 +26,48 @@ BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const std::optiona
 
 BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component,
                                      const mfem::Array<int>& true_dofs)
-    : coef_(coef), component_(component), markers_(0), true_dofs_(true_dofs)
+    : coef_(coef), component_(component), markers_(0)
 {
   if (get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_)) {
     SLIC_ERROR_IF(component_, "A vector coefficient must be applied to all components");
   }
+  setTrueDofs(true_dofs);
 }
 
-void BoundaryCondition::setTrueDofs(const mfem::Array<int> dofs) { true_dofs_ = dofs; }
+void BoundaryCondition::setTrueDofs(const mfem::Array<int> true_dofs)
+{
+  true_dofs_ = true_dofs;
+  state_->space().GetRestrictionMatrix()->BooleanMultTranspose(*true_dofs_, *local_dofs_);
+}
 
-void BoundaryCondition::setTrueDofs(FiniteElementState& state)
+void BoundaryCondition::setLocalDofs(const mfem::Array<int> local_dofs)
+{
+  local_dofs_ = local_dofs;
+  state_->space().GetRestrictionMatrix()->BooleanMult(*local_dofs_, *true_dofs_);
+}
+
+void BoundaryCondition::setDofs(FiniteElementState& state)
 {
   true_dofs_.emplace(0);
+  local_dofs_.emplace(0);
   state_ = &state;
   if (component_) {
+    mfem::Array<int> dof_markers;
+
     state.space().GetEssentialTrueDofs(markers_, *true_dofs_, *component_);
+    state.space().GetEssentialVDofs(markers_, dof_markers, *component_);
+
+    // The VDof call actually returns a marker array, so we need to transform it to a list of indices
+    state.space().MarkerToList(dof_markers, *local_dofs_);
+
   } else {
+    mfem::Array<int> dof_markers;
+
     state.space().GetEssentialTrueDofs(markers_, *true_dofs_, -1);
+    state.space().GetEssentialVDofs(markers_, *local_dofs_, -1);
+
+    // The VDof call actually returns a marker array, so we need to transform it to a list of indices
+    state.space().MarkerToList(dof_markers, *local_dofs_);
   }
 }
 
@@ -50,13 +75,13 @@ void BoundaryCondition::project(FiniteElementState& state) const
 {
   SLIC_ERROR_ROOT_IF(!true_dofs_, "Only essential boundary conditions can be projected over all DOFs.");
   // Value semantics for convenience
-  auto tdofs = *true_dofs_;
-  auto size  = tdofs.Size();
+  auto local_dofs = *local_dofs_;
+  auto size       = local_dofs.Size();
   if (size) {
     // Generate the scalar dof list from the vector dof list
     mfem::Array<int> dof_list(size);
-    std::transform(tdofs.begin(), tdofs.end(), dof_list.begin(),
-                   [&space = std::as_const(state.space())](int tdof) { return space.VDofToDof(tdof); });
+    std::transform(local_dofs.begin(), local_dofs.end(), dof_list.begin(),
+                   [&space = std::as_const(state.space())](int ldof) { return space.VDofToDof(ldof); });
 
     // the only reason to store a VectorCoefficient is to act on all components
     if (is_vector_valued(coef_)) {
@@ -68,6 +93,7 @@ void BoundaryCondition::project(FiniteElementState& state) const
       auto scalar_coef = get<std::shared_ptr<mfem::Coefficient>>(coef_);
       if (component_) {
         state.gridFunc().ProjectCoefficient(*scalar_coef, dof_list, *component_);
+
       } else {
         state.gridFunc().ProjectCoefficient(*scalar_coef, dof_list, 0);
       }
