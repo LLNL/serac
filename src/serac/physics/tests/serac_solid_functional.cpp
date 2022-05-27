@@ -328,8 +328,9 @@ void functional_parameterized_solid_test(double expected_disp_norm)
 
   // Construct a functional-based solid mechanics solver
   SolidFunctional<p, dim, H1<1>, H1<1>> solid_solver(default_static, GeometricNonlinearities::On,
-                                                     FinalMeshOption::Reference, "solid_functional",
-                                                     {user_defined_bulk_modulus, user_defined_shear_modulus});
+                                                     FinalMeshOption::Reference, "solid_functional");
+  solid_solver.setParameter(user_defined_bulk_modulus, 0);
+  solid_solver.setParameter(user_defined_shear_modulus, 1);
 
   solid_util::ParameterizedNeoHookeanSolid<dim> mat(1.0, 0.0, 0.0);
   solid_solver.setMaterial(mat);

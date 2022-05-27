@@ -57,8 +57,8 @@ public:
                                     const DispGradType& displacement_grad, const BulkType& bulk_parameter,
                                     const ShearType& shear_parameter) const
   {
-    auto bulk_modulus  = bulk_parameter + bulk_modulus_offset_;
-    auto shear_modulus = shear_parameter + shear_modulus_offset_;
+    auto bulk_modulus  = get<0>(bulk_parameter) + bulk_modulus_offset_;
+    auto shear_modulus = get<0>(shear_parameter) + shear_modulus_offset_;
 
     auto I      = Identity<dim>();
     auto lambda = bulk_modulus - (2.0 / dim) * shear_modulus;
@@ -125,8 +125,8 @@ public:
                                     const DispGradType& displacement_grad, const BulkType& bulk_parameter,
                                     const ShearType& shear_parameter) const
   {
-    auto bulk_modulus  = bulk_parameter + bulk_modulus_offset_;
-    auto shear_modulus = shear_parameter + shear_modulus_offset_;
+    auto bulk_modulus  = get<0>(bulk_parameter) + bulk_modulus_offset_;
+    auto shear_modulus = get<0>(shear_parameter) + shear_modulus_offset_;
 
     auto I      = Identity<dim>();
     auto lambda = bulk_modulus - (2.0 / dim) * shear_modulus;
