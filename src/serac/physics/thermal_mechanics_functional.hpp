@@ -107,7 +107,7 @@ public:
       auto [P, c, s0, q0] = mat.calculateConstitutiveOutputs(du_dX, temperature, temperature_gradient, state, du_dX_old,
                                                              temperature_old, dt);
       // density * specific_heat = c
-      const double density = 1.0;
+      const double density = mat.rho;
       return Thermal::MaterialResponse{density, c, q0};
     }
   };
@@ -122,7 +122,7 @@ public:
     }
 
     static constexpr int numParameters() { return 1; }
-
+    
     template <typename T1, typename T2, typename T3, typename T4>
     SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* displacement */, const T3& displacement_gradient,
                                       const T4& temperature) const
@@ -134,7 +134,7 @@ public:
       auto   displacement_gradient_old             = tensor<double, 3, 3>{};
       auto [P, c, s0, q0]  = mat.calculateConstitutiveOutputs(displacement_gradient, theta, dtheta_dX, state,
                                                              displacement_gradient_old, temperature_old, dt);
-      const double density = 1.0;
+      const double density = mat.rho;
       auto         F       = displacement_gradient + Identity<3>();
       auto         stress  = dot(P, transpose(F));
       return solid_util::MaterialResponse{density, stress};
