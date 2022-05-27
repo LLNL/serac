@@ -73,8 +73,10 @@ TEST(solid_functional_finite_diff, finite_difference)
 
   // Construct a functional-based solid solver
   SolidFunctional<p, dim, H1<1>, H1<1>> solid_solver(default_static, GeometricNonlinearities::On,
-                                                     FinalMeshOption::Reference, "solid_functional",
-                                                     {user_defined_bulk_modulus, user_defined_shear_modulus});
+                                                     FinalMeshOption::Reference, "solid_functional");
+
+  solid_solver.setParameter(user_defined_bulk_modulus, 0);
+  solid_solver.setParameter(user_defined_shear_modulus, 1);
 
   // We must know the index of the parameter finite element state in our parameter pack to take sensitivities.
   // As we only have one parameter in this example, the index is zero.
