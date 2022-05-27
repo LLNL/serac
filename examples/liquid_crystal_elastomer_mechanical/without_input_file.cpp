@@ -67,8 +67,14 @@ int main(int argc, char* argv[])
   serac::LCEMechanicalFuncional<p, dim> lce_mechanical_solver(
     default_static, serac::GeometricNonlinearities::On, serac::FinalMeshOption::Reference, "mechanical_functional");
 
-  serac::lce_mechanical_util::NeoHookeanMechanical<dim> mat(1.0, 1.0, 1.0);
-  lce_mechanical_solver.setMaterial(mat);
+  serac::lce_mechanical_util::BrighentiMechanical<dim> lceMat(
+    1.0, /*density*/
+    13.33e3, /*shear_modulus*/
+    10.0, /*order_constant*/
+    0.46, /*order_parameter*/
+    92+273, /*transition_temperature*/
+    1.0 /*hydrostatic_pressure*/);
+  lce_mechanical_solver.setMaterial(lceMat);
 
   // Define the function for the initial displacement and boundary condition
   auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };

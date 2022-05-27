@@ -41,69 +41,7 @@ struct MaterialResponse {
 template <typename DensityType, typename StressType>
 MaterialResponse(DensityType, StressType) -> MaterialResponse<DensityType, StressType>;
 
-/**
- * @brief Linear isotropic elasticity material model
- *
- * @tparam dim Spatial dimension of the mesh
- */
-template <int dim>
-class LinearIsotropicSolid {
-public:
-  /**
-   * @brief Construct a new Linear Isotropic Elasticity object
-   *
-   * @param density Density of the material
-   * @param shear_modulus Shear modulus of the material
-   * @param bulk_modulus Bulk modulus of the material
-   */
-  LinearIsotropicSolid(double density = 1.0, double shear_modulus = 1.0, double bulk_modulus = 1.0)
-      : density_(density), bulk_modulus_(bulk_modulus), shear_modulus_(shear_modulus)
-  {
-    SLIC_ERROR_ROOT_IF(shear_modulus_ < 0.0,
-                       "Shear modulus must be positive in the linear isotropic elasticity material model.");
-
-    SLIC_ERROR_ROOT_IF(density_ < 0.0, "Density must be positive in the linear isotropic elasticity material model.");
-
-    SLIC_ERROR_ROOT_IF(bulk_modulus_ < 0.0,
-                       "Bulk modulus must be positive in the linear isotropic elasticity material model.");
-
-    double K             = bulk_modulus;
-    double G             = shear_modulus;
-    double poisson_ratio = (3 * K - 2 * G) / (6 * K + 2 * G);
-
-    SLIC_ERROR_ROOT_IF(poisson_ratio < 0.0,
-                       "Poisson ratio must be positive in the linear isotropic elasticity material model.");
-  }
-
-  /**
-   * @brief Material response call for a linear isotropic solid
-   *
-   * @tparam DisplacementType Displacement type
-   * @tparam DispGradType Displacement gradient type
-   * @param displacement_grad Displacement gradient with respect to the reference configuration (displacement_grad)
-   * @return The calculated material response (density, Kirchoff stress) for the material
-   */
-  template <typename DisplacementType, typename DispGradType>
-  SERAC_HOST_DEVICE auto operator()(const tensor<double, dim>& /* x */, const DisplacementType& /* displacement */,
-                                    const DispGradType& displacement_grad) const
-  {
-    auto I      = Identity<dim>();
-    auto lambda = bulk_modulus_ - (2.0 / dim) * shear_modulus_;
-    auto strain = 0.5 * (displacement_grad + transpose(displacement_grad));
-    auto stress = lambda * tr(strain) * I + 2.0 * shear_modulus_ * strain;
-    return MaterialResponse<double, DispGradType>{.density = density_, .stress = stress};
-  }
-
-private:
-  /// Density
-  double density_;
-
-  /// Bulk modulus
-  double bulk_modulus_;
-
-  /// Shear modulus
-  double shear_modulus_;
-};
+/// -------------------------------------------------------
 
 /**
  * @brief Neo-Hookean material model
@@ -111,7 +49,7 @@ private:
  * @tparam dim The spatial dimension of the mesh
  */
 template <int dim>
-class NeoHookeanMechanical {
+class BrighentiMechanical {
 public:
   /**
    * @brief Construct a new Neo-Hookean object
@@ -120,20 +58,26 @@ public:
    * @param shear_modulus Shear modulus of the material
    * @param bulk_modulus Bulk modulus of the material
    */
-  NeoHookeanMechanical(double density = 1.0, double shear_modulus = 1.0, double bulk_modulus = 1.0)
-      : density_(density), bulk_modulus_(bulk_modulus), shear_modulus_(shear_modulus)
+  BrighentiMechanical(
+    double density = 1.0, 
+    double shear_modulus = 1.0, 
+    double order_constant = 1.0, 
+    double order_parameter = 1.0,
+    double transition_temperature = 1.0,
+    double hydrostatic_pressure = 1.0): 
+    density_(density),
+    shear_modulus_(shear_modulus),
+    order_constant_(order_constant),
+    order_parameter_(order_parameter),
+    transition_temperature_(transition_temperature),
+    hydrostatic_pressure_(hydrostatic_pressure),
+    N_seg_(1.0),
+    b_seg_(1.0)
   {
-    SLIC_ERROR_ROOT_IF(shear_modulus_ < 0.0, "Shear modulus must be positive in the neo-Hookean material model.");
-
-    SLIC_ERROR_ROOT_IF(density_ < 0.0, "Density must be positive in the neo-Hookean material model.");
-
-    SLIC_ERROR_ROOT_IF(bulk_modulus_ < 0.0, "Bulk modulus must be positive in the neo-Hookean material model.");
-
-    double K             = bulk_modulus;
-    double G             = shear_modulus;
-    double poisson_ratio = (3 * K - 2 * G) / (6 * K + 2 * G);
-
-    SLIC_ERROR_ROOT_IF(poisson_ratio < 0.0, "Poisson ratio must be positive in the neo-Hookean material model.");
+    SLIC_ERROR_ROOT_IF(density_ < 0.0, "Density must be positive in the LCE material model.");
+    SLIC_ERROR_ROOT_IF(shear_modulus_ < 0.0, "Shear modulus must be positive in the LCE material model.");
+    SLIC_ERROR_ROOT_IF(order_constant_ < -1.0, "Order constant must be greater than -1 in the LCE material model.");
+    SLIC_ERROR_ROOT_IF(transition_temperature_ < 0.0, "The transition temperaturemust be positive in the LCE material model.");
   }
 
   /**
@@ -146,35 +90,131 @@ public:
    * @return The calculated material response (density, Kirchoff stress) for the material
    */
   template <typename DisplacementType, typename DispGradType>
-  SERAC_HOST_DEVICE auto operator()(const tensor<double, dim>& /* x */, const DisplacementType& /* displacement */,
-                                    const DispGradType& displacement_grad) const
+  SERAC_HOST_DEVICE auto operator()(
+    const tensor<double, dim>& /* x */, 
+    const DisplacementType& /*displacement*/,
+    const DispGradType& displacement_grad) const
   {
-    auto I      = Identity<dim>();
-    auto lambda = bulk_modulus_ - (2.0 / dim) * shear_modulus_;
-    auto B_minus_I =
-        displacement_grad * transpose(displacement_grad) + transpose(displacement_grad) + displacement_grad;
+    // Deformation gradients
+    auto I     = Identity<dim>();
+    auto F     = displacement_grad + I;
+    auto F_old = displacement_grad*0.9 + I;
+    auto F_hat = F * inv(F_old);
 
-    auto J = det(displacement_grad + I);
+    // Determinant of deformation gradient
+    [[maybe_unused]] auto J = det(F);
 
-    // TODO this resolve to the correct std implementation of log when J resolves to a pure double. It can
-    // be removed by either putting the dual implementation of the global namespace or implementing a pure
-    // double version there. More investigation into argument-dependent lookup is needed.
-    using std::log;
-    auto stress = lambda * log(J) * I + shear_modulus_ * B_minus_I;
+    // Distribution tensor function of nematic order tensor
+    // tensor<double, 1, dim> normal = {2/std::sqrt(14), -1/std::sqrt(14), 3/std::sqrt(14)}};
+    tensor<double, 1, dim> normal;
+    normal[0][0] = 2/std::sqrt(14);
+    normal[0][1] = -1/std::sqrt(14);
+
+    if(dim>2)
+    {
+      normal[0][2] = 3/std::sqrt(14);
+    }
+    
+    // auto I      = Identity<dim>();
+    // auto mu_0_a = (1 - order_parameter_) * I;
+    // auto mu_0_b = 3 * order_parameter_ * (transpose(normal) * normal);   
+    // auto mu_0 = N_seg_*std::pow(b_seg_,2)/3 * (mu_0_a + mu_0_b); 
+
+    // auto mu_0 = calculateInitialDistributionTensor(normal);
+
+    double theta = 330;
+    double theta_old = 328;
+    auto mu = calculateDistributionTensor(normal, F_hat, theta, theta_old);
+
+    // stress output
+    auto stress = J * ( (3*shear_modulus_/(N_seg_*std::pow(b_seg_,2))) * (mu) + J*hydrostatic_pressure_*I ) * inv(transpose(F));
+    // auto stress = J * ( (3*shear_modulus_/(N_seg_*std::pow(b_seg_,2))) * (mu_0) + J*hydrostatic_pressure_*I ) * inv(transpose(F_hat));
 
     return MaterialResponse{density_, stress};
+  }
+
+/// -------------------------------------------------------
+
+  auto calculateInitialDistributionTensor(const tensor<double, 1, dim> normal) const
+  {
+    // Initial distribution tensor
+    auto I      = Identity<dim>();
+    auto mu_0_a = (1 - order_parameter_) * I;
+    auto mu_0_b = 3 * order_parameter_ * (transpose(normal) * normal);
+
+    return N_seg_*std::pow(b_seg_,2)/3 * (mu_0_a + mu_0_b);
+  }
+
+/// -------------------------------------------------------
+
+  template <typename T1, typename T2>
+  auto calculateDistributionTensor(
+    tensor<double, 1, dim> normal,
+    const tensor<T1, dim, dim> F_hat,
+    const T2 theta,
+    const double theta_old) const
+  {
+    auto I     = Identity<dim>();
+
+    // Polar decomposition of deformation gradient based on F_hat
+    auto U_hat = tensorSquareRoot(transpose(F_hat) * F_hat);
+    auto R_hat = F_hat * inv(U_hat);
+
+    // Nematic order scalar
+    double q_old = order_parameter_ / (1 + std::exp((theta_old - transition_temperature_)/order_constant_));
+    double q     = order_parameter_ / (1 + std::exp((theta - transition_temperature_)/order_constant_));
+
+    // Nematic order tensor
+    auto Q_old = q_old/2 * (3 * transpose(normal) * normal - I);
+    auto Q     = q/2 * (3 * transpose(normal) * normal - I);
+    
+    // Distribution tensor (using 'Strang Splitting' approach)
+    auto mu_old_a = (1 - q_old) * I;
+    auto mu_old_b = 3 * q_old * (transpose(normal) * normal);
+    auto mu_old   = N_seg_*std::pow(b_seg_,2)/3 * (mu_old_a + mu_old_b);
+
+    auto mu_a = F_hat * ( mu_old + (2*N_seg_*std::pow(b_seg_,2)/3) * (Q - Q_old)) * transpose(F_hat);
+    auto mu_b = (2*N_seg_*std::pow(b_seg_,2)/3) * (Q - R_hat * Q * transpose(R_hat));
+
+    return mu_a + mu_b;
+  }
+
+/// -------------------------------------------------------
+
+  template <typename T>
+  auto tensorSquareRoot(const tensor<T, dim, dim>& A) const
+  {
+    auto X = A;
+    for (int i = 0; i < 15; i++) {
+      X = 0.5 * (X + dot(A, inv(X)));
+    }
+    return X;
   }
 
 private:
   /// Density
   double density_;
 
-  /// Bulk modulus in the stress free configuration
-  double bulk_modulus_;
-
   /// Shear modulus in the stress free configuration
   double shear_modulus_;
+
+  /// Order constant
+  double order_constant_;
+
+  /// Order parameter
+  double order_parameter_;
+
+  /// Transition temperature
+  double transition_temperature_;
+
+  /// Hydrostatic pressure
+  double hydrostatic_pressure_;
+
+  double N_seg_;
+  double b_seg_;
 };
+
+/// -------------------------------------------------------
 
 /// Constant body force model
 template <int dim>
@@ -199,6 +239,8 @@ struct ConstantBodyForce {
   }
 };
 
+/// -------------------------------------------------------
+
 /// Constant traction boundary condition model
 template <int dim>
 struct ConstantTraction {
@@ -216,6 +258,8 @@ struct ConstantTraction {
     return traction_;
   }
 };
+
+/// -------------------------------------------------------
 
 /// Function-based traction boundary condition model
 template <int dim>
@@ -239,6 +283,8 @@ struct TractionFunction {
   }
 };
 
+/// -------------------------------------------------------
+
 /// Constant pressure model
 struct ConstantPressure {
   /// The constant pressure
@@ -255,6 +301,8 @@ struct ConstantPressure {
     return pressure_;
   }
 };
+
+/// -------------------------------------------------------
 
 /// Function-based pressure boundary condition
 template <int dim>
