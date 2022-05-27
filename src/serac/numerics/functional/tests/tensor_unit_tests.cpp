@@ -13,6 +13,17 @@ using namespace serac;
 static constexpr double tolerance = 4.0e-16;
 static constexpr auto   I         = Identity<3>();
 
+template <typename T, int n>
+tensor<T, n, n> composeMatrixFromLU(const tensor<int, n>& P, const tensor<T, n, n>& L, const tensor<T, n, n>& U)
+{
+  auto            LU = dot(L, U);
+  tensor<T, n, n> PLU{};
+  for (int i = 0; i < n; i++) {
+    PLU[P[i]] = LU[i];
+  }
+  return PLU;
+}
+
 TEST(tensor, basic_operations)
 {
   auto abs = [](auto x) { return (x < 0) ? -x : x; };
@@ -151,4 +162,166 @@ TEST(tensor, implicit_conversion)
 
   double value = A;
   EXPECT_NEAR(value, A[0], tolerance);
+}
+
+TEST(tensor, inverse4x4)
+{
+  const tensor<double, 4, 4> A{{{2, 1, -1, 1}, {-3, -1, 2, 8}, {-2, 4, 2, 6}, {1, 1, 7, 2}}};
+  auto                       invA = inv(A);
+  EXPECT_LT(squared_norm(dot(A, invA) - Identity<4>()), tolerance);
+}
+
+TEST(tensor, derivative_of_inverse)
+{
+  const tensor<double, 4, 4> A{{{2, 1, -1, 1}, {-3, -1, 2, 8}, {-2, 4, 2, 6}, {1, 1, 7, 2}}};
+  auto                       invA = inv(make_dual(A));
+  EXPECT_LT(squared_norm(dot(A, get_value(invA)) - Identity<4>()), tolerance);
+}
+
+template <int n>
+void checkLUDecomposition(const tensor<double, n, n>& A)
+{
+  auto [P, L, U] = factorize_lu(A);
+
+  // check that L is lower triangular and U is upper triangular
+  for (int i = 0; i < n; i++) {
+    for (int j = i + 1; j < n; j++) {
+      EXPECT_DOUBLE_EQ(L[i][j], 0);
+      EXPECT_DOUBLE_EQ(U[j][i], 0);
+    }
+  }
+
+  // check L and U are indeed factors of A
+  auto                 LU = dot(L, U);
+  tensor<double, n, n> PLU{};
+  for (int i = 0; i < n; i++) {
+    PLU[P[i]] = LU[i];
+  }
+  EXPECT_LT(squared_norm(A - PLU), tolerance);
+}
+
+TEST(tensor, lu_decomposition2x2)
+{
+  const tensor<double, 2, 2> A{{{2, 1}, {-3, -1}}};
+  checkLUDecomposition(A);
+}
+
+TEST(tensor, lu_decomposition3x3)
+{
+  const tensor<double, 3, 3> A{{{2, 1, -1}, {-3, -1, 2}, {-2, 4, 2}}};
+  checkLUDecomposition(A);
+}
+
+TEST(tensor, lu_decomposition4x4)
+{
+  const tensor<double, 4, 4> A{{{2, 1, -1, 1}, {-3, -1, 2, 8}, {-2, 4, 2, 6}, {1, 1, 7, 2}}};
+  checkLUDecomposition(A);
+}
+
+TEST(tensor, lu_decomposition_works_on_dual_numbers)
+{
+  const tensor<double, 3, 3> v{{{2, 1, -1}, {-3, -1, 2}, {-2, 4, 2}}};
+  const tensor<double, 3, 3> g{{{0.337494265892494, 0.194238454581911, 0.307832573181341},
+                                {0.090147365480304, 0.610402517912401, 0.458978918716148},
+                                {0.689309323130592, 0.198321409053159, 0.901973313462065}}};
+  tensor<dual<double>, 3, 3> A{};
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      A[i][j].value    = v[i][j];
+      A[i][j].gradient = g[i][j];
+    }
+  }
+  auto [P, L, U] = factorize_lu(A);
+  auto PLU       = composeMatrixFromLU(P, L, U);
+
+  EXPECT_LT(squared_norm(get_value(A) - get_value(PLU)), tolerance);
+  EXPECT_LT(squared_norm(get_gradient(A) - get_gradient(PLU)), tolerance);
+}
+
+TEST(tensor, linear_solve_with_one_rhs)
+{
+  const tensor<double, 3, 3> A{{{2, 1, -1}, {-3, -1, 2}, {-2, 1, 2}}};
+  const tensor<double, 3>    b{{-1, 2, 3}};
+
+  auto x = linear_solve(A, b);
+  EXPECT_LT(squared_norm(dot(A, x) - b), tolerance);
+}
+
+TEST(tensor, linear_solve_with_multiple_rhs)
+{
+  const tensor<double, 3, 3> A{{{2, 1, -1}, {-3, -1, 2}, {-2, 1, 2}}};
+  const tensor<double, 3, 2> B{{{-1, 1}, {2, 1}, {3, -2}}};
+
+  auto X = linear_solve(A, B);
+  EXPECT_LT(squared_norm(dot(A, X) - B), tolerance);
+}
+
+TEST(tensor, linear_solve_is_constexpr_correct)
+{
+  constexpr tensor<double, 3, 3> A{{{2, 1, -1}, {-3, -1, 2}, {-2, 1, 2}}};
+  constexpr tensor<double, 3>    b{{-1, 2, 3}};
+  constexpr auto                 x = linear_solve(A, b);
+  EXPECT_LT(squared_norm(dot(A, x) - b), tolerance);
+}
+
+TEST(tensor, derivative_of_linear_solve)
+{
+  // x defined by: t^2 * A * x(t) = t*b
+  // implicit derivative 2*t * A * x + t^2 * A * dxdt = b
+  // t^2 * A * dxdt = b - 2*t*A*x
+  // t^2 * A * dxdt = b - 2*t*b
+  // t = 1 --> dxdt = -x
+
+  const tensor<double, 3, 3> A{{{2, 1, -1}, {-3, -1, 2}, {-2, 1, 2}}};
+  const tensor<double, 3>    b{{-1, 2, 3}};
+
+  auto f = [&A, &b](dual<double> t) { return linear_solve(t * t * A, t * b); };
+
+  double t = 1.0;
+  auto   x = f(make_dual(t));
+
+  // expect x_dot = -x
+  EXPECT_LT(squared_norm(get_value(x) + get_gradient(x)), tolerance);
+}
+
+TEST(tensor, derivative_of_linear_solve_wrt_b_matches_finite_difference)
+{
+  const tensor<double, 3, 3> A{{{2, 1, -1}, {-3, -1, 2}, {-2, 1, 2}}};
+  tensor<double, 3>          b_value{{-1, 2, 3}};
+  const tensor<double, 3>    b_gradient{{0.337494265892494, 0.194238454581911, 0.307832573181341}};
+  auto                       b = make_dual(b_value, b_gradient);
+
+  auto x_value = linear_solve(A, b_value);
+
+  // first order forward difference
+  const double h     = 1e-6;
+  auto         dx_FD = (linear_solve(A, b_value + h * b_gradient) - x_value) / h;
+
+  auto x = linear_solve(A, b);
+
+  EXPECT_LT(squared_norm(dx_FD - get_gradient(x)), tolerance);
+}
+
+TEST(tensor, derivative_of_linear_solve_wrt_A_matches_finite_difference)
+{
+  const tensor<double, 3, 3> v{{{2, 1, -1}, {-3, -1, 2}, {-2, 1, 2}}};
+  const tensor<double, 3, 3> g{{{0.337494265892494, 0.194238454581911, 0.307832573181341},
+                                {0.090147365480304, 0.610402517912401, 0.458978918716148},
+                                {0.689309323130592, 0.198321409053159, 0.901973313462065}}};
+  tensor<dual<double>, 3, 3> A{};
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      A[i][j].value    = v[i][j];
+      A[i][j].gradient = g[i][j];
+    }
+  }
+  const tensor<double, 3> b{{-1, 2, 3}};
+
+  // central difference (2nd order accurate)
+  const double h     = 1e-6;
+  auto         dx_FD = (linear_solve(v + h * g, b) - linear_solve(v - h * g, b)) / (2 * h);
+
+  auto x = linear_solve(A, b);
+
+  EXPECT_LT(squared_norm(dx_FD - get_gradient(x)), tolerance);
 }
