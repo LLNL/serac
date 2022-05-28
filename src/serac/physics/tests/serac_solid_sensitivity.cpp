@@ -84,7 +84,7 @@ TEST(serac_solid_sensitivity, finite_diff)
   // Solve adjoint system given this made up adjoint load
   serac::FiniteElementDual assembledAdjointLoad(*mesh, solid.displacement().space(), "adjointLoad");
   mfem::HypreParVector*    assembledVector = adjointLoad.ParallelAssemble();
-  assembledAdjointLoad.vector()           = *assembledVector;
+  assembledAdjointLoad.vector()            = *assembledVector;
   delete assembledVector;
   assembledAdjointLoad.distributeSharedDofs();
 

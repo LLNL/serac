@@ -94,7 +94,7 @@ void functional_solid_test_static(double expected_disp_norm)
   solid_solver.outputState();
 
   // Check the final displacement norm
-  EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
+  EXPECT_NEAR(expected_disp_norm, myspecialnorm(solid_solver.displacement()), 1.0e-6);
 }
 
 template <int p, int dim>
@@ -176,7 +176,7 @@ void functional_solid_test_dynamic(double expected_disp_norm)
   }
 
   // Check the final displacement norm
-  EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
+  EXPECT_NEAR(expected_disp_norm, myspecialnorm(solid_solver.displacement()), 1.0e-6);
 }
 
 enum class TestType
@@ -274,7 +274,7 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
   solid_solver.outputState();
 
   // Check the final displacement norm
-  EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
+  EXPECT_NEAR(expected_disp_norm, myspecialnorm(solid_solver.displacement()), 1.0e-6);
 }
 
 template <int p, int dim>
@@ -364,7 +364,7 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   solid_solver.outputState();
 
   // Check the final displacement norm
-  EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
+  EXPECT_NEAR(expected_disp_norm, myspecialnorm(solid_solver.displacement()), 1.0e-6);
 }
 
 TEST(solid_functional, 2D_linear_static) { functional_solid_test_static<1, 2>(1.511052595); }

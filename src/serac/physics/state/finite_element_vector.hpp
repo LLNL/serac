@@ -32,7 +32,7 @@ using GeneralCoefficient = variant<std::shared_ptr<mfem::Coefficient>, std::shar
  * Namely: Mesh, FiniteElementCollection, FiniteElementVector,
  * GridFunction, and a distributed vector of the solution
  */
-class FiniteElementVector {
+class FiniteElementVector : public mfem::HypreParVector {
 public:
   /**
    * @brief Structure for optionally configuring a FiniteElementVector
@@ -61,11 +61,6 @@ public:
      * @brief The name of the field encapsulated by the state object
      */
     std::string name = "";
-    /**
-     * @brief A bool denoting if the grid function is managed by sidre
-     * @note This should only be true if calling a constructor from the StateManager class
-     */
-    bool managed_by_sidre = false;
   };
 
   /**
@@ -75,20 +70,9 @@ public:
    * the dimension of the FESpace, the type of FEColl, the DOF ordering that should be used,
    * and the name of the field
    */
-  FiniteElementVector(mfem::ParMesh& mesh, Options&& options = {.order            = 1,
-                                                                .vector_dim       = 1,
-                                                                .coll             = {},
-                                                                .ordering         = mfem::Ordering::byVDIM,
-                                                                .name             = "",
-                                                                .managed_by_sidre = false});
-
-  /**
-   * @brief Minimal constructor for a FiniteElementVector given an already-existing field
-   * @param[in] mesh The problem mesh (object does not take ownership)
-   * @param[in] gf The field for the state to create (object does not take ownership)
-   * @param[in] name The name of the field
-   */
-  FiniteElementVector(mfem::ParMesh& mesh, mfem::ParGridFunction& gf, const std::string& name = "");
+  FiniteElementVector(mfem::ParMesh& mesh,
+                      Options&&      options = {
+                          .order = 1, .vector_dim = 1, .coll = {}, .ordering = mfem::Ordering::byVDIM, .name = ""});
 
   /**
    * @brief Minimal constructor for a FiniteElementVector given a finite element space
@@ -114,7 +98,7 @@ public:
    * @brief Returns the MPI communicator for the state
    * @return The underlying MPI communicator
    */
-  MPI_Comm comm() const { return detail::retrieve(space_).GetComm(); }
+  MPI_Comm comm() const { return space_->GetComm(); }
 
   /**
    * @brief Returns a non-owning reference to the internal mesh object
@@ -126,22 +110,9 @@ public:
    * @brief Returns a non-owning reference to the internal FESpace
    * @return The underlying finite element space
    */
-  mfem::ParFiniteElementSpace& space() { return detail::retrieve(space_); }
+  mfem::ParFiniteElementSpace& space() { return *space_; }
   /// \overload
-  const mfem::ParFiniteElementSpace& space() const { return detail::retrieve(space_); }
-
-  /**
-   * @brief Returns a non-owning reference to the vector of true DOFs
-   * @return The underlying true degree of freedom vector
-   * @note This is a "true dof" vector in the standard MFEM sense. Each degree of freedom is on fully independent
-   * (e.g. not constrained by non-conforming meshes) and exists on exactly one MPI rank. Please see the
-   * <a href="https://mfem.org/pri-dual-vec/">MFEM</a> and
-   * <a href="https://libceed.readthedocs.io/en/latest/libCEEDapi/#terminology-and-notation">CEED</a> documentation for
-   * more details.
-   */
-  mfem::HypreParVector& vector() { return true_vec_; }
-  /// \overload
-  const mfem::HypreParVector& vector() const { return true_vec_; }
+  const mfem::ParFiniteElementSpace& space() const { return *space_; }
 
   /**
    * @brief Returns the name of the FEState (field)
@@ -170,21 +141,25 @@ public:
   {
     static_assert(std::is_constructible_v<Tensor, mfem::ParFiniteElementSpace*>,
                   "Tensor must be constructible with a ptr to ParFESpace");
-    return std::make_unique<Tensor>(&detail::retrieve(space_));
+    return std::make_unique<Tensor>(space_.get());
   }
 
-  void project(mfem::VectorCoefficient& coef, mfem::Array<int>& dof_list) {
-    detail::retrieve(gf_).ProjectCoefficient(coef, dof_list);
-    initializeTrueVec();
+  void project(mfem::VectorCoefficient& coef, mfem::Array<int>& dof_list)
+  {
+    mfem::ParGridFunction grid_function = gridFunction();
+    grid_function.ProjectCoefficient(coef, dof_list);
+    initializeTrueVec(grid_function);
   }
 
-  void project(mfem::Coefficient &coef, mfem::Array<int> &dof_list, std::optional<int> component = {}) {
+  void project(mfem::Coefficient& coef, mfem::Array<int>& dof_list, std::optional<int> component = {})
+  {
+    mfem::ParGridFunction grid_function = gridFunction();
     if (component) {
-      detail::retrieve(gf_).ProjectCoefficient(coef, dof_list, *component);    
+      grid_function.ProjectCoefficient(coef, dof_list, *component);
     } else {
-      detail::retrieve(gf_).ProjectCoefficient(coef, dof_list, *component);         
+      grid_function.ProjectCoefficient(coef, dof_list, *component);
     }
-    initializeTrueVec();
+    initializeTrueVec(grid_function);
   }
 
   /**
@@ -193,92 +168,101 @@ public:
    */
   void project(const GeneralCoefficient& coef)
   {
+    mfem::ParGridFunction grid_function = gridFunction();
+
     // The generic lambda parameter, auto&&, allows the component type (mfem::Coef or mfem::VecCoef)
     // to be deduced, and the appropriate version of ProjectCoefficient is dispatched.
     visit(
-        [this](auto&& concrete_coef) {
-          detail::retrieve(gf_).ProjectCoefficient(*concrete_coef);
-          initializeTrueVec();
+        [this, &grid_function](auto&& concrete_coef) {
+          grid_function.ProjectCoefficient(*concrete_coef);
+          initializeTrueVec(grid_function);
         },
         coef);
   }
   /// \overload
   void project(mfem::Coefficient& coef)
   {
-    detail::retrieve(gf_).ProjectCoefficient(coef);
-    initializeTrueVec();
+    mfem::ParGridFunction grid_function = gridFunction();
+    grid_function.ProjectCoefficient(coef);
+    initializeTrueVec(grid_function);
   }
   /// \overload
   void project(mfem::VectorCoefficient& coef)
   {
-    detail::retrieve(gf_).ProjectCoefficient(coef);
-    initializeTrueVec();
+    mfem::ParGridFunction grid_function = gridFunction();
+    grid_function.ProjectCoefficient(coef);
+    initializeTrueVec(grid_function);
   }
 
-
-  void projectBdr(mfem::Coefficient& coef, const mfem::Array<int> &markers) {
+  void projectBdr(mfem::Coefficient& coef, const mfem::Array<int>& markers)
+  {
+    mfem::ParGridFunction grid_function = gridFunction();
     // markers should be const param in mfem, but it's not
-    detail::retrieve(gf_).ProjectBdrCoefficient(coef, const_cast<mfem::Array<int>&>(markers));
-    initializeTrueVec();
+    grid_function.ProjectBdrCoefficient(coef, const_cast<mfem::Array<int>&>(markers));
+    initializeTrueVec(grid_function);
   }
 
-  void projectBdr(mfem::VectorCoefficient& coef, const mfem::Array<int> &markers) {
+  void projectBdr(mfem::VectorCoefficient& coef, const mfem::Array<int>& markers)
+  {
+    mfem::ParGridFunction grid_function = gridFunction();
     // markers should be const param in mfem, but it's not
-    detail::retrieve(gf_).ProjectBdrCoefficient(coef, const_cast<mfem::Array<int>&>(markers));
-    initializeTrueVec();
+    grid_function.ProjectBdrCoefficient(coef, const_cast<mfem::Array<int>&>(markers));
+    initializeTrueVec(grid_function);
   }
 
-  int vectorDim() {
-    return detail::retrieve(gf_).VectorDim(); }
+  void initialize(const mfem::ParGridFunction& grid_function) { initializeTrueVec(grid_function); }
 
-    /**
-     * @brief Destroy the Finite Element Vector object
-     */
-    virtual ~FiniteElementVector() {}
+  mfem::ParGridFunction gridFunction() const
+  {
+    mfem::ParGridFunction grid_function(space_.get());
+    distributeSharedDofs(grid_function);
+    return grid_function;
+  }
 
-  protected:
-    /**
-     * @brief Distribute dofs the internal grid function (local dofs) using the true DOF values
-     */
-    virtual void distributeSharedDofs() = 0;
+  void gridFunction(mfem::ParGridFunction& grid_function) const { distributeSharedDofs(grid_function); }
 
-    /**
-     * @brief Initialize the true DOF vector using the internal grid function
-     */
-    virtual void initializeTrueVec() = 0;
+  int vectorDim()
+  {
+    mfem::ParGridFunction grid_function = gridFunction();
+    return grid_function.VectorDim();
+  }
 
-    /**
-     * @brief A reference to the mesh object on which the field is defined
-     */
-    std::reference_wrapper<mfem::ParMesh> mesh_;
-    /**
-     * @brief Possibly-owning handle to the FiniteElementCollection, as it is owned
-     * by the FiniteElementVector in a normal run and by the MFEMSidreDataCollection
-     * in a restart run
-     * @note Must be const as FESpaces store a const reference to their FEColls
-     */
-    detail::MaybeOwningPointer<const mfem::FiniteElementCollection> coll_;
-    /**
-     * @brief Possibly-owning handle to the mfem::ParFiniteElementSpace, as it is owned
-     * by the FiniteElementVector in a normal run and by the MFEMSidreDataCollection
-     * in a restart run
-     */
-    detail::MaybeOwningPointer<mfem::ParFiniteElementSpace> space_;
-    /**
-     * @brief Possibly-owning handle to the ParGridFunction, as it is owned
-     * by the FiniteElementVector in a normal run and by the MFEMSidreDataCollection
-     * in a restart run
-     */
-    detail::MaybeOwningPointer<mfem::ParGridFunction> gf_;
-    /**
-     * @brief The hypre vector containing the true degrees of freedom
-     * @note Each entry in this vector is owned by exactly one MPI rank
-     */
-    mfem::HypreParVector true_vec_;
-    /**
-     * @brief The name of the finite element vector
-     */
-    std::string name_ = "";
+  /**
+   * @brief Destroy the Finite Element Vector object
+   */
+  virtual ~FiniteElementVector() {}
+
+protected:
+  /**
+   * @brief Distribute dofs the internal grid function (local dofs) using the true DOF values
+   */
+  virtual void distributeSharedDofs(mfem::ParGridFunction& grid_function) const = 0;
+
+  /**
+   * @brief Initialize the true DOF vector using the internal grid function
+   */
+  virtual void initializeTrueVec(const mfem::ParGridFunction& grid_function) = 0;
+
+  /**
+   * @brief A reference to the mesh object on which the field is defined
+   */
+  std::reference_wrapper<mfem::ParMesh> mesh_;
+  /**
+   * @brief Handle to the FiniteElementCollection, which is owned by MFEMSidreDataCollection
+   * @note Must be const as FESpaces store a const reference to their FEColls
+   */
+  std::unique_ptr<mfem::FiniteElementCollection> coll_;
+  /**
+   * @brief Handle to the mfem::ParFiniteElementSpace, which is owned by MFEMSidreDataCollection
+   */
+  std::unique_ptr<mfem::ParFiniteElementSpace> space_;
+
+  mfem::HypreParVector true_vec_;
+
+  /**
+   * @brief The name of the finite element vector
+   */
+  std::string name_ = "";
 };
 
 /**
@@ -310,5 +294,8 @@ double max(const FiniteElementVector& fe_vector);
  * implies these may or may not be nodal averages depending on the choice of finite element basis.
  */
 double min(const FiniteElementVector& fe_vector);
+
+double myspecialnorm(const FiniteElementVector& state, const double p);
+
 
 }  // namespace serac

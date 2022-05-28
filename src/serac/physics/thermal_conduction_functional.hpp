@@ -147,17 +147,20 @@ public:
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
 
+    state_.push_back(temperature_);
+    state_.push_back(adjoint_temperature_);
+
     // Create a pack of the primal field and parameter finite element spaces
     std::array<mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + 1> trial_spaces;
     trial_spaces[0] = &temperature_.space();
 
-    functional_call_args_.emplace_back(temperature_.vector());
+    functional_call_args_.emplace_back(temperature_);
 
     if constexpr (sizeof...(parameter_space) > 0) {
       for (size_t i = 0; i < sizeof...(parameter_space); ++i) {
         trial_spaces[i + 1]         = &(parameter_states_[i].get().space());
         parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, parameter_states_[i].get().space());
-        functional_call_args_.emplace_back(parameter_states_[i].get().vector());
+        functional_call_args_.emplace_back(parameter_states_[i].get());
       }
     }
 
@@ -213,12 +216,12 @@ public:
   void advanceTimestep(double& dt) override
   {
     if (is_quasistatic_) {
-      nonlin_solver_.Mult(zero_, temperature_.vector());
+      nonlin_solver_.Mult(zero_, temperature_);
     } else {
       SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
 
       // Step the time integrator
-      ode_.Step(temperature_.vector(), time_, dt);
+      ode_.Step(temperature_, time_, dt);
     }
     cycle_ += 1;
   }
@@ -467,7 +470,7 @@ public:
   virtual const serac::FiniteElementState& solveAdjoint(FiniteElementDual& adjoint_load,
                                                         FiniteElementDual* dual_with_essential_boundary = nullptr)
   {
-    mfem::HypreParVector adjoint_load_vector(adjoint_load.vector());
+    mfem::HypreParVector adjoint_load_vector(adjoint_load);
 
     // Add the sign correction to move the term to the RHS
     adjoint_load_vector *= -1.0;
@@ -475,10 +478,10 @@ public:
     auto& lin_solver = nonlin_solver_.LinearSolver();
 
     // By default, use a homogeneous essential boundary condition
-    mfem::HypreParVector adjoint_essential(adjoint_load.vector());
+    mfem::HypreParVector adjoint_essential(adjoint_load);
     adjoint_essential = 0.0;
 
-    functional_call_args_[0] = temperature_.vector();
+    functional_call_args_[0] = temperature_;
 
     auto [r, drdu] = (*K_functional_)(functional_call_args_, Index<0>{});
     auto jacobian  = assemble(drdu);
@@ -495,7 +498,7 @@ public:
     }
 
     lin_solver.SetOperator(*J_T);
-    lin_solver.Mult(adjoint_load_vector, adjoint_temperature_.vector());
+    lin_solver.Mult(adjoint_load_vector, adjoint_temperature_);
 
     // Reset the equation solver to use the full nonlinear residual operator
     nonlin_solver_.SetOperator(residual_);
@@ -515,13 +518,13 @@ public:
   template <int parameter_field>
   FiniteElementDual& computeSensitivity()
   {
-    functional_call_args_[0] = temperature_.vector();
+    functional_call_args_[0] = temperature_;
 
     auto [r, drdparam] = (*K_functional_)(functional_call_args_, Index<parameter_field + 1>{});
 
     auto drdparam_mat = assemble(drdparam);
 
-    drdparam_mat->MultTranspose(adjoint_temperature_.vector(), parameter_sensitivities_[parameter_field]->vector());
+    drdparam_mat->MultTranspose(adjoint_temperature_, parameter_sensitivities_[parameter_field]->vector());
 
     return *parameter_sensitivities_[parameter_field];
   }

@@ -37,9 +37,9 @@ protected:
 
   void resetWithNewMesh(mfem::ParMesh& new_mesh)
   {
-    mesh                = &new_mesh;
-    festate             = std::make_unique<FiniteElementState>(*mesh);
-    festate->gridFunc() = 0.0;
+    mesh     = &new_mesh;
+    festate  = std::make_unique<FiniteElementState>(*mesh);
+    *festate = 0.0;
     std::array<mfem::ParFiniteElementSpace*, 1> trial_fes{&festate->space()};
     residual = std::make_unique<Functional<test_space(trial_space)>>(&festate->space(), trial_fes);
   }

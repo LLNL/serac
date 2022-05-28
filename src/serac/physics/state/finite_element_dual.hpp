@@ -33,21 +33,6 @@ public:
   using FiniteElementVector::FiniteElementVector;
 
   /**
-   * @brief Returns a non-owning reference to the local degrees of freedom
-   *
-   * @return mfem::Vector& The local dof vector
-   * @note While this is a grid function for plotting and parallelization, we only return a vector
-   * type as the user should not use the interpolation capabilities of a grid function on the dual space
-   * @note Shared degrees of freedom live on multiple MPI ranks
-   * @note This is only available for client compatibility reasons and should 
-   * not be used in physics module development.
-   */
-  mfem::Vector& localVec() { return detail::retrieve(gf_); }
-
-  /// @overload
-  const mfem::Vector& localVec() const { return detail::retrieve(gf_); }
-
-  /**
    * @brief Set the internal grid function using the true DOF values
    *
    * This distributes true vector dofs to the finite element (local) dofs by multiplying the true dofs
@@ -56,9 +41,9 @@ public:
    * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
    *
    */
-  void distributeSharedDofs()
+  void distributeSharedDofs(mfem::ParGridFunction& grid_function) const
   {
-    detail::retrieve(space_).GetRestrictionMatrix()->MultTranspose(true_vec_, detail::retrieve(gf_));
+    space_->GetRestrictionMatrix()->MultTranspose(*this, grid_function);
   }
 
   /**
@@ -69,7 +54,7 @@ public:
    *
    * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
    */
-  void initializeTrueVec() { detail::retrieve(gf_).ParallelAssemble(true_vec_); }
+  void initializeTrueVec(const mfem::ParGridFunction& grid_function) { grid_function.ParallelAssemble(*this); }
 
   /**
    * @brief Set a finite element dual to a constant value

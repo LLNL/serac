@@ -233,14 +233,13 @@ void ThermalConduction::completeSetup()
 
 void ThermalConduction::advanceTimestep(double& dt)
 {
-
   if (is_quasistatic_) {
-    nonlin_solver_.Mult(zero_, temperature_.vector());
+    nonlin_solver_.Mult(zero_, temperature_);
   } else {
     SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
 
     // Step the time integrator
-    ode_.Step(temperature_.vector(), time_, dt);
+    ode_.Step(temperature_, time_, dt);
   }
 
   cycle_ += 1;

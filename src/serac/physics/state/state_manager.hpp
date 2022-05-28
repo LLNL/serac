@@ -111,6 +111,7 @@ public:
    */
   static void reset()
   {
+    grid_functions_.clear();
     datacolls_.clear();
     is_restart_ = false;
     syncable_data_.clear();
@@ -178,6 +179,12 @@ private:
   static std::string output_dir_;
   /// @brief Default name for the mesh - mostly for backwards compatibility
   const static std::string default_mesh_name_;
+
+  /**
+   * @brief Allocated data for MFEM data structures containing state data
+   * @note This is only used for non-restart runs
+   */
+  static std::vector<std::pair<std::string, mfem::ParGridFunction>> grid_functions_;
 };
 
 }  // namespace serac

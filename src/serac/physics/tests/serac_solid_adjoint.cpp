@@ -96,7 +96,7 @@ TEST(solid_solver, adjoint)
   assembled_adjoint_load.distributeSharedDofs();
 
   auto&  adjoint_state_1 = solid_solver.solveAdjoint(assembled_adjoint_load);
-  double adjoint_norm_1  = norm(adjoint_state_1);
+  double adjoint_norm_1  = myspecialnorm(adjoint_state_1);
 
   SLIC_INFO_ROOT(axom::fmt::format("Adjoint norm (homogeneous BCs): {}", adjoint_norm_1));
 
@@ -140,7 +140,7 @@ TEST(solid_solver, adjoint)
   adjoint_essential = 0.5;
 
   auto&  adjoint_state_2 = solid_solver.solveAdjoint(assembled_adjoint_load, &adjoint_essential);
-  double adjoint_norm_2  = norm(adjoint_state_2);
+  double adjoint_norm_2  = myspecialnorm(adjoint_state_2);
 
   SLIC_INFO_ROOT(axom::fmt::format("Adjoint norm (non-homogeneous BCs): {}", adjoint_norm_2));
 

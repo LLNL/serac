@@ -136,9 +136,9 @@ void BoundaryCondition::projectBdr(const double time) const
 void BoundaryCondition::projectBdrToDofs(mfem::Vector& dof_values, const double time) const
 {
   SLIC_ERROR_ROOT_IF(!state_, "Boundary condition must be associated with a FiniteElementState.");
-  auto state_copy = *state_;
+  FiniteElementState state_copy(*state_);
   projectBdr(state_copy, time);
-  dof_values = state_copy.vector();
+  dof_values = state_copy;
 }
 
 void BoundaryCondition::eliminateFromMatrix(mfem::HypreParMatrix& k_mat) const
@@ -160,7 +160,7 @@ void BoundaryCondition::apply(mfem::HypreParMatrix& k_mat_post_elim, mfem::Vecto
                               const double time) const
 {
   projectBdr(state, time);
-  eliminateToRHS(k_mat_post_elim, state.vector(), rhs);
+  eliminateToRHS(k_mat_post_elim, state, rhs);
 }
 
 const mfem::Coefficient& BoundaryCondition::scalarCoefficient() const

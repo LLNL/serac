@@ -133,9 +133,9 @@ TEST(dynamic_solver, dyn_solve)
   // Output the final state
   ts_solver.outputState();
 
-  EXPECT_NEAR(0.122796, norm(ts_solver.displacement()), 0.001);
-  EXPECT_NEAR(0.001791, norm(ts_solver.velocity()), 0.001);
-  EXPECT_NEAR(6.494477, norm(ts_solver.temperature()), 0.001);
+  EXPECT_NEAR(0.122796, myspecialnorm(ts_solver.displacement()), 0.001);
+  EXPECT_NEAR(0.001791, myspecialnorm(ts_solver.velocity()), 0.001);
+  EXPECT_NEAR(6.494477, myspecialnorm(ts_solver.temperature()), 0.001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -400,13 +400,13 @@ TEST(dynamic_solver, dyn_solve_restart)
     // Output the final state
     ts_solver_secondary.outputState();
 
-    EXPECT_NEAR(0.122796, norm(ts_solver_primary.displacement()), 0.001);
-    EXPECT_NEAR(0.001791, norm(ts_solver_primary.velocity()), 0.001);
-    EXPECT_NEAR(6.494477, norm(ts_solver_primary.temperature()), 0.001);
+    EXPECT_NEAR(0.122796, myspecialnorm(ts_solver_primary.displacement()), 0.001);
+    EXPECT_NEAR(0.001791, myspecialnorm(ts_solver_primary.velocity()), 0.001);
+    EXPECT_NEAR(6.494477, myspecialnorm(ts_solver_primary.temperature()), 0.001);
 
-    EXPECT_NEAR(0.122796, norm(ts_solver_secondary.displacement()), 0.001);
-    EXPECT_NEAR(0.001791, norm(ts_solver_secondary.velocity()), 0.001);
-    EXPECT_NEAR(6.494477, norm(ts_solver_secondary.temperature()), 0.001);
+    EXPECT_NEAR(0.122796, myspecialnorm(ts_solver_secondary.displacement()), 0.001);
+    EXPECT_NEAR(0.001791, myspecialnorm(ts_solver_secondary.velocity()), 0.001);
+    EXPECT_NEAR(6.494477, myspecialnorm(ts_solver_secondary.temperature()), 0.001);
   }
 
   MPI_Barrier(MPI_COMM_WORLD);

@@ -40,7 +40,8 @@ public:
   ThermalSolidFunctional(const typename Thermal::SolverOptions&    thermal_options,
                          const typename solid_util::SolverOptions& solid_options,
                          GeometricNonlinearities                   geom_nonlin = GeometricNonlinearities::On,
-                         FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "")
+                         FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "",
+                         mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(3, order),
         temperature_(
             StateManager::newState(FiniteElementState::Options{.order      = order,

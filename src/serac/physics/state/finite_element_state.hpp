@@ -54,33 +54,6 @@ public:
   using FiniteElementVector::FiniteElementVector;
 
   /**
-   * Returns a non-owning reference to the internal grid function
-   * 
-   * @note This is only available for client compatibility reasons and should 
-   * not be used in physics module development.
-   */
-  mfem::ParGridFunction& gridFunc() { return detail::retrieve(gf_); }
-  /// \overload
-  const mfem::ParGridFunction& gridFunc() const { return detail::retrieve(gf_); }
-
-  /**
-   * Returns a GridFunctionCoefficient referencing the internal grid function
-   */
-  mfem::GridFunctionCoefficient coefficient() const
-  {
-    const auto& gf = detail::retrieve(gf_);
-    return mfem::GridFunctionCoefficient{&gf, gf.VectorDim()};
-  }
-
-  /**
-   * Returns a VectorGridFunctionCoefficient referencing the internal grid function
-   */
-  mfem::VectorGridFunctionCoefficient vectorCoefficient() const
-  {
-    return mfem::VectorGridFunctionCoefficient{&detail::retrieve(gf_)};
-  }
-
-  /**
    * @brief Set a finite element state to a constant value
    *
    * @param value The constant to set the finite element state to
@@ -95,7 +68,6 @@ public:
   }
 
 protected:
-
   /**
    * @brief Set the internal grid function using the true DOF values
    *
@@ -105,7 +77,7 @@ protected:
    * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
    *
    */
-  void distributeSharedDofs() { detail::retrieve(gf_).SetFromTrueDofs(true_vec_); }
+  void distributeSharedDofs(mfem::ParGridFunction& grid_function) const { grid_function.SetFromTrueDofs(*this); }
 
   /**
    * @brief Initialize the true vector from the grid function values
@@ -115,8 +87,7 @@ protected:
    *
    * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
    */
-  void initializeTrueVec() { detail::retrieve(gf_).GetTrueDofs(true_vec_); }
-
+  void initializeTrueVec(const mfem::ParGridFunction& grid_function) { grid_function.GetTrueDofs(*this); }
 };
 
 /**
@@ -126,6 +97,6 @@ protected:
  * @param p Order of the norm
  * @return The norm value
  */
-double norm(const FiniteElementState& state, double p = 2);
+double myspecialnorm(const FiniteElementState& state, double p = 2);
 
 }  // namespace serac

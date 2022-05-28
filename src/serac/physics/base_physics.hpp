@@ -167,6 +167,9 @@ protected:
    */
   std::vector<std::reference_wrapper<serac::FiniteElementState>> state_;
 
+  /// Pairs of state references and their associated grid functions for output with Visit and ParaView
+  mutable std::vector<std::pair<FiniteElementState*, mfem::ParGridFunction>> grid_functions_;
+
   /**
    * @brief Block vector storage of the true state
    */

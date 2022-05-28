@@ -75,7 +75,8 @@ void BasePhysics::initializeOutput(const serac::OutputType output_type, const st
       auto pv_dc = std::make_unique<mfem::ParaViewDataCollection>(root_name_, &state_.front().get().mesh());
       int  max_order_in_fields = 0;
       for (FiniteElementState& state : state_) {
-        pv_dc->RegisterField(state.name(), &state.gridFunc());
+        auto& gf = grid_functions_.emplace_back(std::make_pair(&state, state.gridFunction()));
+        pv_dc->RegisterField(state.name(), &gf.second);
         max_order_in_fields = std::max(max_order_in_fields, state.space().GetOrder(0));
       }
       pv_dc->SetLevelsOfDetail(max_order_in_fields);
@@ -99,7 +100,8 @@ void BasePhysics::initializeOutput(const serac::OutputType output_type, const st
   if (output_type_ == OutputType::VisIt) {
     // Implicitly convert from ref_wrapper
     for (FiniteElementState& state : state_) {
-      dc_->RegisterField(state.name(), &state.gridFunc());
+      auto& gf = grid_functions_.emplace_back(std::make_pair(&state, state.gridFunction()));
+      dc_->RegisterField(state.name(), &gf.second);
     }
   }
 }
@@ -115,6 +117,12 @@ void BasePhysics::outputState() const
       if (!output_directory_.empty()) {
         dc_->SetPrefixPath(output_directory_);
       }
+
+      // Update the grid functions with the current data in the state vectors
+      for (auto& grid_function : grid_functions_) {
+        grid_function.first->gridFunction(grid_function.second);
+      }
+
       dc_->Save();
       break;
     case serac::OutputType::SidreVisIt: {
@@ -137,7 +145,7 @@ void BasePhysics::outputState() const
         const std::string sol_path = axom::utilities::filesystem::joinPath(output_directory_, sol_name);
         std::ofstream     osol(sol_path);
         osol.precision(FLOAT_PRECISION_);
-        state.gridFunc().Save(osol);
+        state.gridFunction().Save(osol);
       }
       break;
     }
@@ -231,9 +239,9 @@ void BasePhysics::saveSummary(axom::sidre::DataStore& datastore, const double t)
   for (FiniteElementState& state : state_) {
     // Calculate current stat value
     // Note: These are collective operations.
-    l1norm_value   = norm(state, 1);
-    l2norm_value   = norm(state, 2);
-    linfnorm_value = norm(state, mfem::infinity());
+    l1norm_value   = myspecialnorm(state, 1.0);
+    l2norm_value   = myspecialnorm(state, 2.0);
+    linfnorm_value = myspecialnorm(state, mfem::infinity());
     avg_value      = avg(state);
     max_value      = max(state);
     min_value      = min(state);

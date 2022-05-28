@@ -114,7 +114,8 @@ public:
       : ThermalExpansionMaterial(geom_nonlin),
         c_coef_thermal_expansion_(std::move(coef_thermal_expansion)),
         c_reference_temp_(std::move(reference_temp)),
-        temp_state_(temp)
+        temp_state_(temp),
+        temp_grid_function_(const_cast<mfem::ParFiniteElementSpace*>(&temp_state_.space()))
   {
   }
 
@@ -168,6 +169,8 @@ protected:
    * @brief Coefficient of thermal expansion in finite element state form
    */
   const FiniteElementState& temp_state_;
+
+  mfem::ParGridFunction temp_grid_function_;
 };
 
 }  // namespace serac
