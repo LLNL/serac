@@ -131,7 +131,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         message(STATUS "Using MFEM submodule")
 
         #### Store Data that MFEM clears
-        set(tpls_to_save AMGX AXOM CALIPER CONDUIT HDF5
+        set(tpls_to_save AMGX AXOM CALIPER CAMP CONDUIT HDF5
                          HYPRE LUA METIS NETCDF PETSC RAJA UMPIRE)
         foreach(_tpl ${tpls_to_save})
             set(${_tpl}_DIR_SAVE "${${_tpl}_DIR}")
@@ -279,7 +279,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             message(FATAL_ERROR "LUA_DIR is required to use the Axom submodule"
                                 "\nTry running CMake with '-DLUA_DIR=path/to/lua/install'\n ")
         endif()
-        set(AXOM_ENABLE_MFEM_SIDRE_DATACOLLECTION ON CACHE BOOL "")
         set(AXOM_ENABLE_EXAMPLES OFF CACHE BOOL "")
         set(AXOM_ENABLE_TESTS    OFF CACHE BOOL "")
         set(AXOM_ENABLE_DOCS     OFF CACHE BOOL "")
