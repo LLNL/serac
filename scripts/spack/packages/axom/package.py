@@ -334,7 +334,7 @@ class Axom(CachedCMakePackage, CudaPackage, ROCmPackage):
             # These flags are already part of the wrapped compilers on TOSS4 systems
             #hip_link_flags = "-Wl,--disable-new-dtags -L{0}/lib -L{0}/../lib64 -L{0}/../lib -Wl,-rpath,{0}/lib:{0}/../lib:{0}/../lib64 -lamdhip64 -lhsakmt -lhsa-runtime64".format(hip_root)
 
-            if "+fortran":
+            if "+fortran" in spec:
                 # Flags for crayftn
                 if is_fortran_compiler("crayftn"):
                     # Fix for working around CMake adding implicit link directories
