@@ -50,9 +50,11 @@ class Mfem(Package, CudaPackage, ROCmPackage):
     version('develop', branch='master')
 
     # SERAC EDIT BEGIN
-    # Note: we have a `serac-dev` branch on mfem's github that we track pending changes.
-    #  Make sure this sha coincides with the git submodule
-    version('4.3.0serac', commit='e55e90e8d0e331bba3fbe20a98a9f9b12453700b', submodules="True")
+    # Note: We have a `serac-dev` branch on mfem's github that we track pending changes.
+    # Note: Make sure this sha coincides with the git submodule
+    # Note: We add a number to the end of the real version number to indicate that we have
+    #  moved forward past the release. Increment the last number when updating the commit sha.
+    version('4.3.0.1', commit='e55e90e8d0e331bba3fbe20a98a9f9b12453700b', submodules="True")
     # SERAC EDIT END
 
     version('4.3.0',
