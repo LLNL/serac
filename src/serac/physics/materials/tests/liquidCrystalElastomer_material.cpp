@@ -156,7 +156,13 @@ struct LCEMaterialProperties
     auto mu = calculateDistributionTensor(F_hat, theta, theta_old);
 
     // stress output 
-    P = J * ( (3*Gshear/(N_seg*std::pow(b,2))) * (mu) + J*p*I ) * inv(transpose(F));
+    auto P_a =  J * ( (3*Gshear/(N_seg*std::pow(b,2))) * (mu) ) * inv(transpose(F));
+    auto P_b =  J * ( p*I ) * inv(transpose(F));
+    P = P_a + P_b;
+
+    P = J * ( (3*Gshear/(N_seg*std::pow(b,2))) * (mu) + p*I ) * inv(transpose(F));
+    
+    // 
     // P =  J * ( (3*Gshear/(N_seg*std::pow(b,2))) * (mu - mu_0) + 0.0*p*I ) * inv(transpose(F));
     // P = det(F_hat) * inv(transpose(F_hat)) * inv(F_old);
     // P = 1.0*(det(F)*inv(transpose(F))*inv(F_old)) + 0.0 * (J * ( (3*Gshear/(N_seg*std::pow(b,2))) * (mu) + J*p*I ) * inv(transpose(F)));

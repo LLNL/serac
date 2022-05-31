@@ -127,7 +127,12 @@ public:
     auto mu = calculateDistributionTensor(normal, F_hat, theta, theta_old);
 
     // stress output
-    auto stress = J * ( (3*shear_modulus_/(N_seg_*std::pow(b_seg_,2))) * (mu) + J*hydrostatic_pressure_*I ) * inv(transpose(F));
+    // auto stress_a = J * (3*shear_modulus_/(N_seg_*std::pow(b_seg_,2))) * (mu) * inv(transpose(F));
+    // auto stress_b = J * hydrostatic_pressure_*I * inv(transpose(F));
+    // auto stress = stress_a + stress_b;
+    
+    auto stress = J * ( (3*shear_modulus_/(N_seg_*std::pow(b_seg_,2))) * (mu) + J*hydrostatic_pressure_*I ) * inv(transpose(F_hat));
+
     // auto stress = J * ( (3*shear_modulus_/(N_seg_*std::pow(b_seg_,2))) * (mu_0) + J*hydrostatic_pressure_*I ) * inv(transpose(F_hat));
 
     return MaterialResponse{density_, stress};
