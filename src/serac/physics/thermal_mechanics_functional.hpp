@@ -27,9 +27,11 @@ namespace serac {
  *
  * Uses Functional to compute action of operators
  */
-template <int order, int dim>
+template <int order, int dim, typename... parameter_space>
 class ThermalMechanicsFunctional : public BasePhysics {
 public:
+  static constexpr int num_parameters = sizeof...(parameter_space);
+  
   /**
    * @brief Construct a new coupled Thermal-Solid Functional object
    *
@@ -69,6 +71,12 @@ public:
     solid_functional_.completeSetup();
   }
 
+  void setParameter(const FiniteElementState& parameter_state, size_t i)
+  {
+    thermal_functional_.setParameter(parameter_state, i + 1); // offset for displacement field
+    solid_functional_.setParameter(parameter_state, i + 1); // offset for temperature field
+  }
+  
   void advanceTimestep(double& dt) override
   {
     if (coupling_ == serac::CouplingScheme::OperatorSplit) {
@@ -93,11 +101,11 @@ public:
       // empty
     }
 
-    static constexpr int numParameters() { return 1; }
+    static constexpr int numParameters() { return 1 + num_parameters; }
 
-    template <typename T1, typename T2, typename T3, typename T4>
+    template <typename T1, typename T2, typename T3, typename T4, typename... param_types>
     SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& temperature, const T3& temperature_gradient,
-                                      const T4& displacement) const
+                                      const T4& displacement, param_types... parameters) const
     {
       typename ThermalMechanicalMaterial::State state{};
       const double                              dt = 1.0;
@@ -105,7 +113,7 @@ public:
       auto   du_dX_old                             = tensor<double, 3, 3>{};
       double temperature_old                       = 1.0;
       auto [P, c, s0, q0] = mat.calculateConstitutiveOutputs(du_dX, temperature, temperature_gradient, state, du_dX_old,
-                                                             temperature_old, dt);
+                                                             temperature_old, dt, parameters...);
       // density * specific_heat = c
       const double density = mat.rho;
       return Thermal::MaterialResponse{density, c, q0};
@@ -123,9 +131,9 @@ public:
 
     static constexpr int numParameters() { return 1; }
     
-    template <typename T1, typename T2, typename T3, typename T4>
+    template <typename T1, typename T2, typename T3, typename T4, typename... param_types>
     SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* displacement */, const T3& displacement_gradient,
-                                      const T4& temperature) const
+                                      const T4& temperature, param_types... parameters) const
     {
       typename ThermalMechanicalMaterial::State state{};
       const double                              dt = 1.0;
@@ -230,10 +238,10 @@ protected:
   using temperature_field  = H1<order>;
 
   // Submodule to compute the thermal conduction physics
-  ThermalConductionFunctional<order, dim, displacement_field> thermal_functional_;
+  ThermalConductionFunctional<order, dim, displacement_field, parameter_space...> thermal_functional_;
 
   // Submodule to compute the mechanics
-  SolidFunctional<order, dim, temperature_field> solid_functional_;
+  SolidFunctional<order, dim, temperature_field, parameter_space...> solid_functional_;
 };
 
 }  // namespace serac

@@ -238,6 +238,7 @@ public:
    * @tparam MaterialType The thermal material type
    * @param material A material containing density, specific heat, and thermal flux evaluation information
    *
+   * TODO: update these doxygen comments
    * @pre MaterialType must have a method specificHeatCapacity() defining the specific heat
    * @pre MaterialType must have a method density() defining the density
    * @pre MaterialType must have the operator (temperature, d temperature_dx) defined as the thermal flux
