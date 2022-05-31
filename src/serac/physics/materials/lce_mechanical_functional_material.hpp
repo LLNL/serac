@@ -13,6 +13,9 @@
 #pragma once
 
 #include "serac/numerics/functional/functional.hpp"
+#include "serac/numerics/functional/tuple.hpp"
+#include "serac/numerics/functional/tuple_arithmetic.hpp"
+#include <iostream>
 
 /// lce_mechanical_util helper data types
 namespace serac::lce_mechanical_util{
@@ -127,11 +130,15 @@ public:
     auto mu = calculateDistributionTensor(normal, F_hat, theta, theta_old);
 
     // stress output
-    // auto stress_a = J * (3*shear_modulus_/(N_seg_*std::pow(b_seg_,2))) * (mu) * inv(transpose(F));
-    // auto stress_b = J * hydrostatic_pressure_*I * inv(transpose(F));
-    // auto stress = stress_a + stress_b;
+    auto stress_a = J * (3*shear_modulus_/(N_seg_*std::pow(b_seg_,2))) * (mu) * inv(transpose(F));
+    auto stress_b = J * hydrostatic_pressure_* dot(I, inv(transpose(F)));
+    auto stress = stress_a + stress_b;
     
-    auto stress = J * ( (3*shear_modulus_/(N_seg_*std::pow(b_seg_,2))) * (mu) + J*hydrostatic_pressure_*I ) * inv(transpose(F_hat));
+    std::cout<<std::endl; std::cout<<"............................."<<std::endl;
+    print(stress);
+    std::cout<<std::endl; std::cout<<"............................."<<std::endl;
+
+    // auto stress = J * ( (3*shear_modulus_/(N_seg_*std::pow(b_seg_,2))) * (mu) + J*hydrostatic_pressure_*I ) * inv(transpose(F_hat));
 
     // auto stress = J * ( (3*shear_modulus_/(N_seg_*std::pow(b_seg_,2))) * (mu_0) + J*hydrostatic_pressure_*I ) * inv(transpose(F_hat));
 
