@@ -30,7 +30,6 @@ set(solver_tests
     serac_solid_adjoint.cpp
     serac_solid_functional.cpp
     serac_thermal_solver.cpp
-    serac_thermal_structural_solver.cpp
     serac_thermal_solid_solver.cpp
     serac_thermal_expansion.cpp
     serac_thermal_functional.cpp

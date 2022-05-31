@@ -107,7 +107,6 @@ TEST(thermal_functional_finite_diff, finite_difference)
   serac::FiniteElementDual              adjoint_load(*mesh, thermal_solver.temperature().space(), "adjoint_load");
   std::unique_ptr<mfem::HypreParVector> assembled_vector(adjoint_load_form.ParallelAssemble());
   adjoint_load = *assembled_vector;
-  adjoint_load.distributeSharedDofs();
 
   // Solve the adjoint problem
   thermal_solver.solveAdjoint(adjoint_load);

@@ -84,9 +84,8 @@ TEST(serac_solid_sensitivity, finite_diff)
   // Solve adjoint system given this made up adjoint load
   serac::FiniteElementDual assembledAdjointLoad(*mesh, solid.displacement().space(), "adjointLoad");
   mfem::HypreParVector*    assembledVector = adjointLoad.ParallelAssemble();
-  assembledAdjointLoad            = *assembledVector;
+  assembledAdjointLoad                     = *assembledVector;
   delete assembledVector;
-  assembledAdjointLoad.distributeSharedDofs();
 
   solid.solveAdjoint(assembledAdjointLoad);
 
@@ -119,12 +118,14 @@ TEST(serac_solid_sensitivity, finite_diff)
 
     // Compute numerical value of sensitivity of qoi with respect to bulk modulus
     // by taking the inner product between adjoint load and displacement sensitivity
-    double dqoi_dbulk = adjointLoad(du_dbulk);
+    double dqoi_dbulk              = adjointLoad(du_dbulk);
+    auto   bulkModulusSensGridFunc = bulkModulusSensitivity.gridFunction();
 
     // See if these are similar
     SLIC_INFO(axom::fmt::format("dqoi_dbulk: {}", dqoi_dbulk));
-    SLIC_INFO(axom::fmt::format("bulkModulusSensitivity: {}", bulkModulusSensitivity.localVec()(ix)));
-    EXPECT_NEAR((bulkModulusSensitivity.localVec()(ix) - dqoi_dbulk) / dqoi_dbulk, 0.0, 1.0e-3);
+    SLIC_INFO(axom::fmt::format("bulkModulusSensitivity: {}", bulkModulusSensGridFunc(ix)));
+
+    EXPECT_NEAR((bulkModulusSensGridFunc(ix) - dqoi_dbulk) / dqoi_dbulk, 0.0, 1.0e-3);
   }
 
   bulkModulus = bulkModulusValue;
@@ -150,12 +151,13 @@ TEST(serac_solid_sensitivity, finite_diff)
 
     // Compute numerical value of sensitivity of qoi with respect to bulk modulus
     // by taking the inner product between adjoint load and displacement sensitivity
-    double dqoi_dshear = adjointLoad(du_dbulk);
+    double dqoi_dshear              = adjointLoad(du_dbulk);
+    auto   shearModulusSensGridFunc = shearModulusSensitivity.gridFunction();
 
     // See if these are similar
     SLIC_INFO(axom::fmt::format("dqoi_dshear: {}", dqoi_dshear));
-    SLIC_INFO(axom::fmt::format("shearModulusSensitivity: {}", shearModulusSensitivity.localVec()(ix)));
-    EXPECT_NEAR((shearModulusSensitivity.localVec()(ix) - dqoi_dshear) / dqoi_dshear, 0.0, 1.0e-3);
+    SLIC_INFO(axom::fmt::format("shearModulusSensitivity: {}", shearModulusSensGridFunc(ix)));
+    EXPECT_NEAR((shearModulusSensGridFunc(ix) - dqoi_dshear) / dqoi_dshear, 0.0, 1.0e-3);
   }
 }
 

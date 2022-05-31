@@ -103,9 +103,7 @@ TEST(solid_solver, reuse_mesh)
 
     u_1_true_vec = solid_solver_1.displacement();
 
-    EXPECT_NEAR(
-        0.0, (mfem::Vector(solid_solver_1.displacement() - solid_solver_2.displacement())).Norml2(),
-        0.001);
+    EXPECT_NEAR(0.0, (mfem::Vector(solid_solver_1.displacement() - solid_solver_2.displacement())).Norml2(), 0.001);
   }
 
   Solid solid_solver_3(1, default_static, GeometricNonlinearities::On, FinalMeshOption::Deformed);

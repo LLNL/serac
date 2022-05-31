@@ -76,10 +76,8 @@ using enable_if_mfem_vec = std::enable_if_t<std::is_base_of_v<mfem::Vector, std:
 template <typename vec>
 auto index(vec&& v, const int idx)
 {
-
-  constexpr bool vec_is_a_HypreParVector =
-    std::is_same_v<std::decay_t<vec>, mfem::HypreParVector> ||
-    std::is_base_of_v<mfem::HypreParVector, std::decay_t<vec> >;
+  constexpr bool vec_is_a_HypreParVector = std::is_same_v<std::decay_t<vec>, mfem::HypreParVector> ||
+                                           std::is_base_of_v<mfem::HypreParVector, std::decay_t<vec>>;
 
   if constexpr (vec_is_a_HypreParVector) {
     return static_cast<const double*>(v)[idx];
@@ -89,7 +87,6 @@ auto index(vec&& v, const int idx)
   if constexpr (vec_isnt_a_HypreParVector) {
     return v[idx];
   }
-
 }
 
 using serac::VectorExpr;

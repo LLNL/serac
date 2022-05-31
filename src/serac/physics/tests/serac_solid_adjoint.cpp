@@ -93,7 +93,6 @@ TEST(solid_solver, adjoint)
 
   adjoint_load.Assemble();
   assembled_adjoint_load = *adjoint_load.ParallelAssemble();
-  assembled_adjoint_load.distributeSharedDofs();
 
   auto&  adjoint_state_1 = solid_solver.solveAdjoint(assembled_adjoint_load);
   double adjoint_norm_1  = myspecialnorm(adjoint_state_1);

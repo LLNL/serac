@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include <optional> 
+#include <optional>
 
 #include "mfem.hpp"
 
@@ -36,7 +36,6 @@ using GeneralCoefficient = variant<std::shared_ptr<mfem::Coefficient>, std::shar
  */
 class FiniteElementVector : public mfem::HypreParVector {
 public:
-
   using mfem::HypreParVector::HypreParVector;
   using mfem::HypreParVector::operator=;
 
@@ -300,6 +299,5 @@ double max(const FiniteElementVector& fe_vector);
 double min(const FiniteElementVector& fe_vector);
 
 double myspecialnorm(const FiniteElementVector& state, const double p = 2);
-
 
 }  // namespace serac

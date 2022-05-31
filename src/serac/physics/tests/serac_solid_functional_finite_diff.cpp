@@ -122,7 +122,6 @@ TEST(solid_functional_finite_diff, finite_difference)
   serac::FiniteElementDual              adjoint_load(*mesh, solid_solver.displacement().space(), "adjoint_load");
   std::unique_ptr<mfem::HypreParVector> assembled_vector(adjoint_load_form.ParallelAssemble());
   adjoint_load = *assembled_vector;
-  adjoint_load.distributeSharedDofs();
 
   // Solve the adjoint problem
   solid_solver.solveAdjoint(adjoint_load);
