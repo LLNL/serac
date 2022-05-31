@@ -265,7 +265,7 @@ public:
    * @tparam MaterialType The solid material type
    * @param material A material containing density and stress evaluation information
    *
-   * @pre MaterialType must have a method density() defining the density
+   * TODO: update this doxygen
    * @pre MaterialType must have the operator (du_dX) defined as the Kirchoff stress
    */
   template <typename MaterialType>
