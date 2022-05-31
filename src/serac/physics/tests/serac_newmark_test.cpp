@@ -128,8 +128,8 @@ TEST_F(NewmarkBetaTest, SimpleLua)
   auto solid_solver = runDynamicTest(inlet, "solid_simple");
 
   // Save initial state
-  mfem::Vector u_prev(solid_solver->displacement().gridFunc());
-  mfem::Vector v_prev(solid_solver->velocity().gridFunc());
+  mfem::Vector u_prev(solid_solver->displacement().gridFunction());
+  mfem::Vector v_prev(solid_solver->velocity().gridFunction());
 
   double dt = inlet["dt"];
 
@@ -157,8 +157,8 @@ TEST_F(NewmarkBetaTest, SimpleLua)
   // Output the final state
   solid_solver->outputState();
 
-  mfem::Vector u_next(solid_solver->displacement().gridFunc());
-  mfem::Vector v_next(solid_solver->velocity().gridFunc());
+  mfem::Vector u_next(solid_solver->displacement().gridFunction());
+  mfem::Vector v_next(solid_solver->velocity().gridFunction());
 
   // back out a_next
   mfem::Vector a_prev(u_next.Size());

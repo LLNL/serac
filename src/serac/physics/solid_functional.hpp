@@ -81,7 +81,6 @@ public:
   SolidFunctional(
       const solid_util::SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
       FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "",
-      mfem::ParMesh*                                                                     pmesh            = nullptr,
       std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states = {})
       : BasePhysics(2, order),
         velocity_(StateManager::newState(FiniteElementState::Options{
@@ -605,7 +604,7 @@ public:
 
     // If we have a non-homogeneous essential boundary condition, extract it from the given state
     if (dual_with_essential_boundary) {
-      adjoint_essential = dual_with_essential_boundary->vector();
+      adjoint_essential = *dual_with_essential_boundary;
     }
 
     for (const auto& bc : bcs_.essentials()) {
@@ -640,7 +639,7 @@ public:
 
     auto drdparam_mat = assemble(drdparam);
 
-    drdparam_mat->MultTranspose(adjoint_displacement_, parameter_sensitivities_[parameter_field]->vector());
+    drdparam_mat->MultTranspose(adjoint_displacement_, *parameter_sensitivities_[parameter_field]);
 
     return *parameter_sensitivities_[parameter_field];
   }

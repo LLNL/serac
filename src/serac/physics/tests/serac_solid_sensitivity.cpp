@@ -84,7 +84,7 @@ TEST(serac_solid_sensitivity, finite_diff)
   // Solve adjoint system given this made up adjoint load
   serac::FiniteElementDual assembledAdjointLoad(*mesh, solid.displacement().space(), "adjointLoad");
   mfem::HypreParVector*    assembledVector = adjointLoad.ParallelAssemble();
-  assembledAdjointLoad.vector()            = *assembledVector;
+  assembledAdjointLoad            = *assembledVector;
   delete assembledVector;
   assembledAdjointLoad.distributeSharedDofs();
 
@@ -102,11 +102,11 @@ TEST(serac_solid_sensitivity, finite_diff)
     // Perturb bulk sensitivity
     bulkModulus[ix] = bulkModulusValue + eps;
     solid.advanceTimestep(timestep);
-    mfem::ParGridFunction displacementPlus = solid.displacement().gridFunc();
+    mfem::ParGridFunction displacementPlus = solid.displacement().gridFunction();
 
     bulkModulus[ix] = bulkModulusValue - eps;
     solid.advanceTimestep(timestep);
-    mfem::ParGridFunction displacementMinus = solid.displacement().gridFunc();
+    mfem::ParGridFunction displacementMinus = solid.displacement().gridFunction();
 
     // Reset to the original bulk modulus value
     bulkModulus[ix] = bulkModulusValue;
@@ -133,11 +133,11 @@ TEST(serac_solid_sensitivity, finite_diff)
     // Perturb bulk sensitivity
     shearModulus[ix] = shearModulusValue + eps;
     solid.advanceTimestep(timestep);
-    auto displacementPlus = solid.displacement().gridFunc();
+    auto displacementPlus = solid.displacement().gridFunction();
 
     shearModulus[ix] = shearModulusValue - eps;
     solid.advanceTimestep(timestep);
-    auto displacementMinus = solid.displacement().gridFunc();
+    auto displacementMinus = solid.displacement().gridFunction();
 
     // Reset to the original shear modulus value
     shearModulus[ix] = shearModulusValue;

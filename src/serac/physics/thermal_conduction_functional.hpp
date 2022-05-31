@@ -489,7 +489,7 @@ public:
 
     // If we have a non-homogeneous essential boundary condition, extract it from the given state
     if (dual_with_essential_boundary) {
-      adjoint_essential = dual_with_essential_boundary->vector();
+      adjoint_essential = *dual_with_essential_boundary;
     }
 
     for (const auto& bc : bcs_.essentials()) {
@@ -524,7 +524,7 @@ public:
 
     auto drdparam_mat = assemble(drdparam);
 
-    drdparam_mat->MultTranspose(adjoint_temperature_, parameter_sensitivities_[parameter_field]->vector());
+    drdparam_mat->MultTranspose(adjoint_temperature_, *parameter_sensitivities_[parameter_field]);
 
     return *parameter_sensitivities_[parameter_field];
   }

@@ -113,7 +113,7 @@ TEST(solid_solver, qs_custom_solve)
   minres_solver.Mult(residual, du);
 
   // modify the displacement just to recompute the residual
-  solid_solver.displacement().vector() += du;
+  solid_solver.displacement() += du;
   auto residual_lower = solid_solver.currentResidual();
   EXPECT_LE(residual.Norml2(), residual_lower.Norml2());
 

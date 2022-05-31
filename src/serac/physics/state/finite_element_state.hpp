@@ -52,6 +52,7 @@ public:
    * @brief Use the finite element vector constructors
    */
   using FiniteElementVector::FiniteElementVector;
+  using FiniteElementVector::operator=;
 
   /**
    * @brief Set a finite element state to a constant value
@@ -89,14 +90,5 @@ protected:
    */
   void initializeTrueVec(const mfem::ParGridFunction& grid_function) { grid_function.GetTrueDofs(*this); }
 };
-
-/**
- * @brief Calculate the Lp norm of a finite element state
- *
- * @param state The state variable to compute a norm of
- * @param p Order of the norm
- * @return The norm value
- */
-double myspecialnorm(const FiniteElementState& state, double p = 2);
 
 }  // namespace serac

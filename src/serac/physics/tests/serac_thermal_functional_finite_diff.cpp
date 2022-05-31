@@ -106,7 +106,7 @@ TEST(thermal_functional_finite_diff, finite_difference)
   // This adjoint load is equivalent to a discrete L1 norm on the temperature.
   serac::FiniteElementDual              adjoint_load(*mesh, thermal_solver.temperature().space(), "adjoint_load");
   std::unique_ptr<mfem::HypreParVector> assembled_vector(adjoint_load_form.ParallelAssemble());
-  adjoint_load.vector() = *assembled_vector;
+  adjoint_load = *assembled_vector;
   adjoint_load.distributeSharedDofs();
 
   // Solve the adjoint problem
@@ -119,20 +119,20 @@ TEST(thermal_functional_finite_diff, finite_difference)
   // to check if computed qoi sensitivity is consistent
   // with finite difference on the temperature
   double eps = 1.0e-4;
-  for (int i = 0; i < user_defined_conductivity.gridFunc().Size(); ++i) {
+  for (int i = 0; i < user_defined_conductivity.gridFunction().Size(); ++i) {
     // Perturb the conductivity
-    user_defined_conductivity.vector()(i) = conductivity_value + eps;
+    user_defined_conductivity(i) = conductivity_value + eps;
 
     thermal_solver.advanceTimestep(dt);
-    mfem::ParGridFunction temperature_plus = thermal_solver.temperature().gridFunc();
+    mfem::ParGridFunction temperature_plus = thermal_solver.temperature().gridFunction();
 
-    user_defined_conductivity.vector()(i) = conductivity_value - eps;
+    user_defined_conductivity(i) = conductivity_value - eps;
 
     thermal_solver.advanceTimestep(dt);
-    mfem::ParGridFunction temperature_minus = thermal_solver.temperature().gridFunc();
+    mfem::ParGridFunction temperature_minus = thermal_solver.temperature().gridFunction();
 
     // Reset to the original conductivity value
-    user_defined_conductivity.vector()(i) = conductivity_value;
+    user_defined_conductivity(i) = conductivity_value;
 
     // Finite difference to compute sensitivity of temperature with respect to conductivity
     mfem::ParGridFunction dtemp_dconductivity(&thermal_solver.temperature().space());
@@ -146,8 +146,8 @@ TEST(thermal_functional_finite_diff, finite_difference)
 
     // See if these are similar
     SLIC_INFO(axom::fmt::format("dqoi_dconductivity: {}", dqoi_dconductivity));
-    SLIC_INFO(axom::fmt::format("sensitivity: {}", sensitivity.vector()(i)));
-    EXPECT_NEAR((sensitivity.vector()(i) - dqoi_dconductivity) / dqoi_dconductivity, 0.0, 1.0e-3);
+    SLIC_INFO(axom::fmt::format("sensitivity: {}", sensitivity(i)));
+    EXPECT_NEAR((sensitivity(i) - dqoi_dconductivity) / dqoi_dconductivity, 0.0, 1.0e-3);
   }
 }
 

@@ -101,10 +101,10 @@ TEST(solid_solver, reuse_mesh)
     // Output the final state
     solid_solver_1.outputState();
 
-    u_1_true_vec = solid_solver_1.displacement().vector();
+    u_1_true_vec = solid_solver_1.displacement();
 
     EXPECT_NEAR(
-        0.0, (mfem::Vector(solid_solver_1.displacement().vector() - solid_solver_2.displacement().vector())).Norml2(),
+        0.0, (mfem::Vector(solid_solver_1.displacement() - solid_solver_2.displacement())).Norml2(),
         0.001);
   }
 
@@ -124,7 +124,7 @@ TEST(solid_solver, reuse_mesh)
   double dt = 1.0;
   solid_solver_3.advanceTimestep(dt);
 
-  EXPECT_NEAR(0.0, (mfem::Vector(u_1_true_vec - solid_solver_3.displacement().vector())).Norml2(), 0.001);
+  EXPECT_NEAR(0.0, (mfem::Vector(u_1_true_vec - solid_solver_3.displacement())).Norml2(), 0.001);
 
   solid_solver_3.resetToReferenceConfiguration();
   EXPECT_NEAR(0.0, myspecialnorm(solid_solver_3.displacement()), 1.0e-8);

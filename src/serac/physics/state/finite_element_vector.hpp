@@ -13,6 +13,8 @@
 
 #pragma once
 
+#include <optional> 
+
 #include "mfem.hpp"
 
 #include "serac/infrastructure/variant.hpp"
@@ -34,6 +36,10 @@ using GeneralCoefficient = variant<std::shared_ptr<mfem::Coefficient>, std::shar
  */
 class FiniteElementVector : public mfem::HypreParVector {
 public:
+
+  using mfem::HypreParVector::HypreParVector;
+  using mfem::HypreParVector::operator=;
+
   /**
    * @brief Structure for optionally configuring a FiniteElementVector
    * @note The options are explicitly default-constructed to allow the user to partially aggregrate-initialized
@@ -257,8 +263,6 @@ protected:
    */
   std::unique_ptr<mfem::ParFiniteElementSpace> space_;
 
-  mfem::HypreParVector true_vec_;
-
   /**
    * @brief The name of the finite element vector
    */
@@ -295,7 +299,7 @@ double max(const FiniteElementVector& fe_vector);
  */
 double min(const FiniteElementVector& fe_vector);
 
-double myspecialnorm(const FiniteElementVector& state, const double p);
+double myspecialnorm(const FiniteElementVector& state, const double p = 2);
 
 
 }  // namespace serac

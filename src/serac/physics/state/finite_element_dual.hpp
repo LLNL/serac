@@ -31,6 +31,7 @@ public:
    * @brief Use the finite element vector constructors
    */
   using FiniteElementVector::FiniteElementVector;
+  using FiniteElementVector::operator=;
 
   /**
    * @brief Set the internal grid function using the true DOF values
