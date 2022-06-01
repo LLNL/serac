@@ -16,7 +16,6 @@
 #include <optional>
 
 #include "mfem.hpp"
-#include "axom/fmt.hpp"
 
 #include "serac/infrastructure/variant.hpp"
 
@@ -35,8 +34,11 @@ using GeneralCoefficient = variant<std::shared_ptr<mfem::Coefficient>, std::shar
  * Namely: Mesh, FiniteElementCollection, FiniteElementVector,
  * GridFunction, and a distributed vector of the solution
  */
-class FiniteElementVector {
+class FiniteElementVector : public mfem::HypreParVector {
 public:
+  using mfem::HypreParVector::HypreParVector;
+  using mfem::HypreParVector::operator=;
+
   /**
    * @brief Structure for optionally configuring a FiniteElementVector
    * @note The options are explicitly default-constructed to allow the user to partially aggregrate-initialized
@@ -133,32 +135,6 @@ public:
    */
   FiniteElementVector& operator=(const double value);
 
-  FiniteElementVector& operator=(const mfem::HypreParVector& input)
-  {
-    true_vec_ = input;
-    return *this;
-  }
-
-  FiniteElementVector& operator+=(const mfem::Vector& input)
-  {
-    true_vec_ += input;
-    return *this;
-  }
-
-  FiniteElementVector& operator-=(const mfem::Vector& input)
-  {
-    true_vec_ -= input;
-    return *this;
-  }
-
-  FiniteElementVector& operator*=(const double input)
-  {
-    true_vec_ *= input;
-    return *this;
-  }
-
-  double& operator()(int index) { return true_vec_(index); }
-
   /**
    * @brief Utility function for creating a tensor, e.g. mfem::HypreParVector,
    * mfem::ParBilinearForm, etc on the FESpace encapsulated by an FEState object
@@ -183,7 +159,6 @@ public:
   void project(mfem::Coefficient& coef, mfem::Array<int>& dof_list, std::optional<int> component = {})
   {
     mfem::ParGridFunction grid_function = gridFunction();
-    axom::fmt::print("grid function size: {}\n", grid_function.Size());
     if (component) {
       grid_function.ProjectCoefficient(coef, dof_list, *component);
     } else {
@@ -244,11 +219,8 @@ public:
 
   mfem::ParGridFunction gridFunction() const
   {
-    axom::fmt::print("space size: {}\n", space_->GetVSize());
     mfem::ParGridFunction grid_function(space_.get());
-    axom::fmt::print("grid function printed: {}\n", grid_function.Size());
     distributeSharedDofs(grid_function);
-    axom::fmt::print("grid function printed 2: {}\n", grid_function.Size());
     return grid_function;
   }
 
@@ -259,42 +231,6 @@ public:
     mfem::ParGridFunction grid_function = gridFunction();
     return grid_function.VectorDim();
   }
-
-  /**
-   * @brief Find the average value of a finite element vector across all dofs
-   *
-   * @param fe_vector The state variable to compute the average of
-   * @return The average value
-   * @note This acts on the actual scalar degree of freedom values, not the interpolated shape function values. This
-   * implies these may or may not be nodal averages depending on the choice of finite element basis.
-   */
-  friend double avg(const FiniteElementVector& fe_vector);
-
-  /**
-   * @brief Find the max value of a finite element vector across all dofs
-   *
-   * @param fe_vector The state variable to compute a max of
-   * @return The max value
-   * @note This acts on the actual scalar degree of freedom values, not the interpolated shape function values. This
-   * implies these may or may not be nodal averages depending on the choice of finite element basis.
-   */
-  friend double max(const FiniteElementVector& fe_vector);
-
-  /**
-   * @brief Find the min value of a finite element vector across all dofs
-   *
-   * @param fe_vector The state variable to compute a min of
-   * @return The min value
-   * @note This acts on the actual scalar degree of freedom values, not the interpolated shape function values. This
-   * implies these may or may not be nodal averages depending on the choice of finite element basis.
-   */
-  friend double min(const FiniteElementVector& fe_vector);
-
-  operator mfem::HypreParVector &() { return true_vec_; }
-
-  const mfem::HypreParVector& vector() const { return true_vec_; }
-
-  mfem::HypreParVector& vector() { return true_vec_; }
 
   /**
    * @brief Destroy the Finite Element Vector object
@@ -330,10 +266,38 @@ protected:
    * @brief The name of the finite element vector
    */
   std::string name_ = "";
-
-  mfem::HypreParVector true_vec_;
 };
 
-double norm(const FiniteElementVector& state, const double p = 2);
+/**
+ * @brief Find the average value of a finite element vector across all dofs
+ *
+ * @param fe_vector The state variable to compute the average of
+ * @return The average value
+ * @note This acts on the actual scalar degree of freedom values, not the interpolated shape function values. This
+ * implies these may or may not be nodal averages depending on the choice of finite element basis.
+ */
+double avg(const FiniteElementVector& fe_vector);
+
+/**
+ * @brief Find the max value of a finite element vector across all dofs
+ *
+ * @param fe_vector The state variable to compute a max of
+ * @return The max value
+ * @note This acts on the actual scalar degree of freedom values, not the interpolated shape function values. This
+ * implies these may or may not be nodal averages depending on the choice of finite element basis.
+ */
+double max(const FiniteElementVector& fe_vector);
+
+/**
+ * @brief Find the min value of a finite element vector across all dofs
+ *
+ * @param fe_vector The state variable to compute a min of
+ * @return The min value
+ * @note This acts on the actual scalar degree of freedom values, not the interpolated shape function values. This
+ * implies these may or may not be nodal averages depending on the choice of finite element basis.
+ */
+double min(const FiniteElementVector& fe_vector);
+
+double myspecialnorm(const FiniteElementVector& state, const double p = 2);
 
 }  // namespace serac

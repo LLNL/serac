@@ -95,7 +95,7 @@ TEST(solid_solver, adjoint)
   assembled_adjoint_load = *adjoint_load.ParallelAssemble();
 
   auto&  adjoint_state_1 = solid_solver.solveAdjoint(assembled_adjoint_load);
-  double adjoint_norm_1  = norm(adjoint_state_1);
+  double adjoint_norm_1  = myspecialnorm(adjoint_state_1);
 
   SLIC_INFO_ROOT(axom::fmt::format("Adjoint norm (homogeneous BCs): {}", adjoint_norm_1));
 
@@ -125,7 +125,7 @@ TEST(solid_solver, adjoint)
   solid_solver.advanceTimestep(dt);
 
   // Check that the two forward solves are equal
-  EXPECT_NEAR(0.0, (mfem::Vector(true_vec_1 - solid_solver.displacement().vector())).Norml2(), 0.00001);
+  EXPECT_NEAR(0.0, (mfem::Vector(true_vec_1 - solid_solver.displacement())).Norml2(), 0.00001);
 
   // Check that the adjoint solve is a known value
   EXPECT_NEAR(adjoint_norm_1, 738.4103079, 0.05);
@@ -139,7 +139,7 @@ TEST(solid_solver, adjoint)
   adjoint_essential = 0.5;
 
   auto&  adjoint_state_2 = solid_solver.solveAdjoint(assembled_adjoint_load, &adjoint_essential);
-  double adjoint_norm_2  = norm(adjoint_state_2);
+  double adjoint_norm_2  = myspecialnorm(adjoint_state_2);
 
   SLIC_INFO_ROOT(axom::fmt::format("Adjoint norm (non-homogeneous BCs): {}", adjoint_norm_2));
 

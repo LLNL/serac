@@ -44,7 +44,7 @@ public:
    */
   void distributeSharedDofs(mfem::ParGridFunction& grid_function) const
   {
-    space_->GetRestrictionMatrix()->MultTranspose(true_vec_, grid_function);
+    space_->GetRestrictionMatrix()->MultTranspose(*this, grid_function);
   }
 
   /**

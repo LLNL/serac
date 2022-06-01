@@ -583,7 +583,7 @@ void Solid::InputOptions::defineInputFileSchema(axom::inlet::Container& containe
 // Evaluate the residual at the current state
 mfem::Vector Solid::currentResidual()
 {
-  mfem::Vector eval(displacement_.vector().Size());
+  mfem::Vector eval(displacement_.Size());
   if (is_quasistatic_) {
     // The input to the residual is displacment
     residual_->Mult(displacement_, eval);
