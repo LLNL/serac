@@ -123,18 +123,13 @@ struct LCEMaterialProperties
     // auto mu_old_b = 3 * q_old * (transpose(normal_) * normal_);
     // auto mu_old   = N_seg*std::pow(b,2)/3 * (mu_old_a + mu_old_b);
 
-    // tensor<double, 3, 3> mu_0;
-    // auto mu_old_check = calculateInitialDistributionTensor();
-    // std::cout<<"... mu_old = "<<mu_old<<std::endl;
-    // std::cout<<"... mu_old_check = "<<mu_old_check<<std::endl;
-
     // Update distribution tensor (using 'Strang Splitting' approach)
     auto mu_a = dot(F_hat, dot(mu_old + (2*N_seg*std::pow(b,2)/3) * (Q - Q_old), transpose(F_hat)));
     auto mu_b = (2*N_seg*std::pow(b,2)/3) * (Q - dot( R_hat, dot(Q, transpose(R_hat))));
     auto mu   = mu_a + mu_b;
 
     // Store previous state
-    state.mu_old_state_ = mu;
+    state.mu_old_state_ = get_value(mu);
     // state.mu_old_state_ = mu_old;
 
     return mu;
@@ -289,17 +284,19 @@ TEST(LiqCrystElastMaterial, checkMuWithAD)
 
   // clang-format on
 
-  LCEMaterialProperties::State state{ .mu_old_state_ = material.calculateInitialDistributionTensor() };
+  LCEMaterialProperties::State state_mu1{ .mu_old_state_ = material.calculateInitialDistributionTensor() };
+  LCEMaterialProperties::State state_mu2{ .mu_old_state_ = material.calculateInitialDistributionTensor() };
+  LCEMaterialProperties::State state_mu{ .mu_old_state_ = material.calculateInitialDistributionTensor() };
 
   double temperature = 321.4141;
   double temperature_old = 320.7035;
   
   double epsilon = 1.0e-6;
 
-  auto mu1 = material.calculateDistributionTensor(Fhat - epsilon * perturbation, state, temperature, temperature_old);
-  auto mu2 = material.calculateDistributionTensor(Fhat + epsilon * perturbation, state, temperature, temperature_old);
+  auto mu1 = material.calculateDistributionTensor(Fhat - epsilon * perturbation, state_mu1, temperature, temperature_old);
+  auto mu2 = material.calculateDistributionTensor(Fhat + epsilon * perturbation, state_mu2, temperature, temperature_old);
 
-  auto mu = material.calculateDistributionTensor(make_dual(Fhat), state, temperature, temperature_old);
+  auto mu = material.calculateDistributionTensor(make_dual(Fhat), state_mu, temperature, temperature_old);
 
   auto error = ((mu2 - mu1) / (2.0 * epsilon)) - double_dot(get_gradient(mu), perturbation);
 
@@ -333,9 +330,7 @@ TEST(LiqCrystElastMaterial, FreeEnergyAndStressAgree)
   // clang-format on
   double                       temperature = 321.4141;
   double                       temperature_old = 320.7035;
-  tensor<double, 3>            temperature_grad{0.87241435, 0.11105156, -0.27708054};
-  
-  LCEMaterialProperties::State state{ .mu_old_state_ = material.calculateInitialDistributionTensor() };
+  tensor<double, 3>            temperature_grad{0.87241435, 0.11105156, -0.27708054};  
 
   double dt = 0.2;
   double epsilon = 1.0e-7;
@@ -343,15 +338,18 @@ TEST(LiqCrystElastMaterial, FreeEnergyAndStressAgree)
   // Check that the AD-computed derivatives of stress w.r.t. displacement_gradient 
   // are in agreement with results obtained from a central finite difference stencil
   {
-// std::cout<<" **************** stress1 *************** "<<std::endl;    
+    LCEMaterialProperties::State state_stress1{ .mu_old_state_ = material.calculateInitialDistributionTensor() };
+    LCEMaterialProperties::State state_stress2{ .mu_old_state_ = material.calculateInitialDistributionTensor() };
+    LCEMaterialProperties::State state_dstress{ .mu_old_state_ = material.calculateInitialDistributionTensor() };
+
     auto stress1 = material.calculateMechanicalConstitutiveOutputs(
-      displacement_grad - epsilon * perturbation, temperature, temperature_grad, state, displacement_grad_old, temperature_old, dt);
-// std::cout<<" **************** stress2 *************** "<<std::endl;
+      displacement_grad - epsilon * perturbation, temperature, temperature_grad, state_stress1, displacement_grad_old, temperature_old, dt);
+
     auto stress2 = material.calculateMechanicalConstitutiveOutputs(
-      displacement_grad + epsilon * perturbation, temperature, temperature_grad, state, displacement_grad_old, temperature_old, dt);
-// std::cout<<" **************** dstress *************** "<<std::endl;
+      displacement_grad + epsilon * perturbation, temperature, temperature_grad, state_stress2, displacement_grad_old, temperature_old, dt);
+
     auto dstress = get_gradient(material.calculateMechanicalConstitutiveOutputs(
-      make_dual(displacement_grad), temperature, temperature_grad, state, displacement_grad_old, temperature_old, dt));
+      make_dual(displacement_grad), temperature, temperature_grad, state_dstress, displacement_grad_old, temperature_old, dt));
 
     auto error = double_dot(dstress, perturbation) - (stress2 - stress1) / (2 * epsilon);
 
@@ -361,30 +359,35 @@ TEST(LiqCrystElastMaterial, FreeEnergyAndStressAgree)
   // Check that the AD-computed derivatives of energy w.r.t. displacement_gradient 
   // are in agreement with results obtained from a central finite difference stencil
   {
+    LCEMaterialProperties::State state_energy1{ .mu_old_state_ = material.calculateInitialDistributionTensor() };
+    LCEMaterialProperties::State state_energy2{ .mu_old_state_ = material.calculateInitialDistributionTensor() };
+    LCEMaterialProperties::State state_denergy{ .mu_old_state_ = material.calculateInitialDistributionTensor() };
+
     auto energy1 = material.calculateFreeEnergy(
-      displacement_grad - epsilon * perturbation, displacement_grad_old, state, temperature, temperature_old);
+      displacement_grad - epsilon * perturbation, displacement_grad_old, state_energy1, temperature, temperature_old);
 
     auto energy2 = material.calculateFreeEnergy(
-      displacement_grad + epsilon * perturbation, displacement_grad_old, state, temperature, temperature_old);
+      displacement_grad + epsilon * perturbation, displacement_grad_old, state_energy2, temperature, temperature_old);
 
     auto denergy = get_gradient(material.calculateFreeEnergy(
-      make_dual(displacement_grad), displacement_grad_old, state, temperature, temperature_old));
+      make_dual(displacement_grad), displacement_grad_old, state_denergy, temperature, temperature_old));
 
     auto error = double_dot(denergy, perturbation) - (energy2 - energy1) / (2 * epsilon);
 
-    EXPECT_NEAR(error / double_dot(denergy, perturbation), 0.0, 1e-8);
-
-    // std::cout<<std::endl; std::cout<<".......... energy1 = "<<energy1<<", energy2 = "<<energy2<<std::endl;    
+    EXPECT_NEAR(error / double_dot(denergy, perturbation), 0.0, 1e-8); 
   }
 
   // Check that the AD-computed derivatives of energy w.r.t. displacement_gradient 
   // are in agreement with stress formulation
   {
+    LCEMaterialProperties::State state_energy_and_stress{ .mu_old_state_ = material.calculateInitialDistributionTensor() };
+    LCEMaterialProperties::State state_stress{ .mu_old_state_ = material.calculateInitialDistributionTensor() };
+
     auto energy_and_stress = material.calculateFreeEnergy(
-      make_dual(displacement_grad), displacement_grad_old, state, temperature, temperature_old);
+      make_dual(displacement_grad), displacement_grad_old, state_energy_and_stress, temperature, temperature_old);
       //displacement_grad, displacement_grad_old, temperature, temperature_old);
     auto stress = material.calculateMechanicalConstitutiveOutputs(
-      displacement_grad, temperature, temperature_grad, state, displacement_grad_old, temperature_old, dt);
+      displacement_grad, temperature, temperature_grad, state_stress, displacement_grad_old, temperature_old, dt);
 
     auto stress_AD = get_gradient(energy_and_stress);
 
