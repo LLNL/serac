@@ -109,8 +109,8 @@ public:
 
     // Distribution tensor function of nematic order tensor
     tensor<double, 1, dim> normal;
-    normal[0][0] = 1/std::sqrt(2);
-    normal[0][1] = -1/std::sqrt(2);
+    normal[0][0] = 1; // 1/std::sqrt(2);
+    normal[0][1] = 0; // -1/std::sqrt(2);
 
     if(dim>2)
     {
@@ -118,28 +118,21 @@ public:
       normal[0][1] = -1/std::sqrt(14);
       normal[0][2] = 3/std::sqrt(14);
     }
-    
-    // auto I      = Identity<dim>();
-    // auto mu_0_a = (1 - order_parameter_) * I;
-    // auto mu_0_b = 3 * order_parameter_ * (transpose(normal) * normal);   
-    // auto mu_0 = N_seg_*std::pow(b_seg_,2)/3 * (mu_0_a + mu_0_b); 
-
-    // auto mu_0 = calculateInitialDistributionTensor(normal);
 
     double theta = 304;
     double theta_old = 300;
     auto mu = calculateDistributionTensor(normal, F_hat, theta, theta_old);
 
     // stress output
-    auto stress_a = J * (3*shear_modulus_/(N_seg_*std::pow(b_seg_,2))) * (mu) * inv(transpose(F));
-    auto stress_b = J * hydrostatic_pressure_* dot(I, inv(transpose(F)));
+    auto stress_a = 1.0 * J * (3*shear_modulus_/(N_seg_*std::pow(b_seg_,2))) * (mu) * inv(transpose(F));
+    auto stress_b = 1.0 * J * hydrostatic_pressure_* dot(I, inv(transpose(F)));
     // auto stress = stress_a + stress_b;
 
 using std::log;
 double bulk_modulus = 1.0;
 double shear_modulus = 1.0;
-auto stress_c = (bulk_modulus - (2.0 / dim) * shear_modulus) * log(J) * I ;
-auto stress_d = shear_modulus * (displacement_grad * transpose(displacement_grad) + transpose(displacement_grad) + displacement_grad);
+auto stress_c = 0.0 * (bulk_modulus - (2.0 / dim) * shear_modulus) * log(J) * I ;
+auto stress_d = 0.0 * shear_modulus * (displacement_grad * transpose(displacement_grad) + transpose(displacement_grad) + displacement_grad);
 auto stress = stress_a + stress_b + stress_c + stress_d;
     
     // std::cout<<std::endl; std::cout<<"............................."<<std::endl;
@@ -148,7 +141,6 @@ auto stress = stress_a + stress_b + stress_c + stress_d;
     // std::cout<<std::endl; std::cout<<"............................."<<std::endl;
 
     // auto stress = J * ( (3*shear_modulus_/(N_seg_*std::pow(b_seg_,2))) * (mu) + J*hydrostatic_pressure_*I ) * inv(transpose(F_hat));
-
     // auto stress = J * ( (3*shear_modulus_/(N_seg_*std::pow(b_seg_,2))) * (mu_0) + J*hydrostatic_pressure_*I ) * inv(transpose(F_hat));
 
     return MaterialResponse{density_, stress};
@@ -190,9 +182,11 @@ auto stress = stress_a + stress_b + stress_c + stress_d;
     auto Q     = q/2 * (3 * transpose(normal) * normal - I);
     
     // Distribution tensor (using 'Strang Splitting' approach)
-    auto mu_old_a = (1 - q_old) * I;
-    auto mu_old_b = 3 * q_old * (transpose(normal) * normal);
-    auto mu_old   = N_seg_*std::pow(b_seg_,2)/3 * (mu_old_a + mu_old_b);
+    // auto mu_old_a = (1 - q_old) * I;
+    // auto mu_old_b = 3 * q_old * (transpose(normal) * normal);
+    // auto mu_old   = N_seg_*std::pow(b_seg_,2)/3 * (mu_old_a + mu_old_b);
+
+    auto mu_old = calculateInitialDistributionTensor(normal);
 
     auto mu_a = dot(F_hat, dot(mu_old + (2*N_seg_*std::pow(b_seg_,2)/3) * (Q - Q_old), transpose(F_hat)));
     auto mu_b = (2*N_seg_*std::pow(b_seg_,2)/3) * (Q - dot( R_hat, dot(Q, transpose(R_hat))));

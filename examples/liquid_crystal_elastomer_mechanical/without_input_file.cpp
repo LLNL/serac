@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
   serac::StateManager::initialize(datastore, "lce_mechanical");
   // _main_init_end
   // _create_mesh_start
-  auto mesh = serac::mesh::refineAndDistribute(serac::buildRectangleMesh(20, 10, 2, 1));
+  auto mesh = serac::mesh::refineAndDistribute(serac::buildRectangleMesh(20, 10, 0.002, 0.001));
   serac::StateManager::setMesh(std::move(mesh));
   // _create_mesh_end
 
@@ -71,30 +71,46 @@ int main(int argc, char* argv[])
     10.0, /*order_constant*/
     0.46, /*order_parameter*/
     40+273, /*transition_temperature 92*/
-    1e8 /*hydrostatic_pressure*/);
+    1e4 /*hydrostatic_pressure*/);
   lce_mechanical_solver.setMaterial(lceMat);
 
   // Define the function for the initial displacement and boundary condition
-  auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
-  auto zero = std::make_shared<mfem::ConstantCoefficient>(0.0);
+  auto zero_bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
+  // auto presc_bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = -4e-5; };
+  // auto zero = std::make_shared<mfem::ConstantCoefficient>(0.0);
 
   // Set the initial displacement and boundary condition
   
-  const std::set<int> boundary_constant_attributes = {4};
-  lce_mechanical_solver.setDisplacementBCs(boundary_constant_attributes, bc);
+  const std::set<int> fixed_bc_attr = {4};
+  // const std::set<int> presc_bc_attr = {2};
+  lce_mechanical_solver.setDisplacementBCs(fixed_bc_attr, zero_bc);
+  // lce_mechanical_solver.setDisplacementBCs(presc_bc_attr, presc_bc);
   
   // lce_mechanical_solver.setDisplacementBCs({4}, zero, 0);
   // lce_mechanical_solver.setDisplacementBCs({3}, zero, 1);
   
-  lce_mechanical_solver.setDisplacement(bc);
+  lce_mechanical_solver.setDisplacement(zero_bc);
 
-  serac::tensor<double, dim> constant_force;
+  serac::lce_mechanical_util::TractionFunction<dim> traction_function{
+      [](const serac::tensor<double, dim>& x, const serac::tensor<double, dim>&, const double) {
+        serac::tensor<double, dim> traction;
+        for (int i = 0; i < dim; ++i) {
+          traction[i] = 0.0;
+        }
 
-  constant_force[0] = -1.0e-15; // 1.0e-4;
-  constant_force[1] = 0.0; // 2.0e-3;
+        if (x[0] > 1.9e-3) {
+          traction[1] = -5.0e-3;
+        }
+        return traction;
+      }};
 
-  serac::lce_mechanical_util::ConstantBodyForce<dim> force{constant_force};
-  lce_mechanical_solver.addBodyForce(force);
+  lce_mechanical_solver.setTractionBCs(traction_function);
+  // serac::tensor<double, dim> constant_force;
+  // constant_force[0] = -1.0e-5; // 1.0e-4;
+  // constant_force[1] = 0.0; // 2.0e-3;
+
+  // serac::lce_mechanical_util::ConstantBodyForce<dim> force{constant_force};
+  // lce_mechanical_solver.addBodyForce(force);
 
   lce_mechanical_solver.initializeOutput(serac::OutputType::ParaView, "sol_lce_mechanical");
   // _output_type_end
@@ -123,10 +139,10 @@ int main(int argc, char* argv[])
   conduction.setConductivity(std::move(kappa_coef));
   // _conductivity_end
   // _bc_start
-  const std::set<int> boundary_constant_attributes = {1};
+  const std::set<int> fixed_bc_attr = {1};
   constexpr double boundary_constant = 1.0;
   auto boundary_constant_coef = std::make_unique<mfem::ConstantCoefficient>(boundary_constant);
-  conduction.setTemperatureBCs(boundary_constant_attributes, std::move(boundary_constant_coef));
+  conduction.setTemperatureBCs(fixed_bc_attr, std::move(boundary_constant_coef));
 
   const std::set<int> boundary_function_attributes = {2, 3};
   auto boundary_function_coef = std::make_unique<mfem::FunctionCoefficient>([](const mfem::Vector& vec){
