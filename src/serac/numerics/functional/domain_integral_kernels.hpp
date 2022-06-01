@@ -321,6 +321,17 @@ auto chain_rule(const S& dfdx, const T& dx)
 }
 //clang-format on
 
+template <bool is_QOI, typename derivative_type, int n, typename T >
+auto batch_apply_chain_rule(derivative_type * qf_derivatives, const tensor<T, n> & inputs)
+{
+  using return_type = decltype(chain_rule<is_QOI>(derivative_type{}, T{}));
+  tensor<return_type, n> outputs{};
+  for (int i = 0; i < n; i++) {
+    outputs[i] = chain_rule<is_QOI>(qf_derivatives[i], inputs[i]);
+  }
+  return outputs;
+}
+
 /**
  * @brief The base kernel template used to create create custom directional derivative
  * kernels associated with finite element calculations
@@ -351,6 +362,39 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
                                CPUArrayView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J_,
                                std::size_t num_elements)
 {
+
+#if 1
+    using test_element  = finite_element<g, test>;
+    using trial_element = finite_element<g, trial>;
+
+    static constexpr bool is_QOI = (test::family == Family::QOI);
+
+    // mfem provides this information in 1D arrays, so we reshape it
+    // into strided multidimensional arrays before using
+    auto J = reinterpret_cast<const typename batched_jacobian<g, Q>::type*>(J_.Read());
+    auto du = reinterpret_cast<const typename trial_element::dof_type*>(dU.Read());
+    auto dr = reinterpret_cast<typename test_element::dof_type*>(dR.ReadWrite());
+    static constexpr TensorProductQuadratureRule<Q> rule{};
+
+    // for each element in the domain
+    for (uint32_t e = 0; e < num_elements; e++) {
+
+      // load the jacobians and positions for each quadrature point in this element
+      auto J_e = J[e];
+
+      // (batch) interpolate each quadrature point's value
+      auto qf_inputs = trial_element::interpolate(du[e], J_e, rule);
+
+      // (batch) evalute the q-function at each quadrature point
+      auto qf_outputs = batch_apply_chain_rule<is_QOI>(&qf_derivatives(e, 0), qf_inputs);
+
+      // (batch) integrate the material response against the test-space basis functions
+      test_element::integrate(qf_outputs, J_e, rule, dr[e]);
+    
+    }
+
+#else
+
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
   using element_residual_type      = typename test_element::residual_type;
@@ -401,6 +445,7 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
     // out to memory, to be later assembled into global residuals by mfem
     detail::Add(dr, dr_elem, static_cast<int>(e));
   }
+#endif
 }
 
 /**
