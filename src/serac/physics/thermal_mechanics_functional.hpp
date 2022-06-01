@@ -92,6 +92,8 @@ public:
     cycle_ += 1;
   }
 
+
+
   template <typename ThermalMechanicalMaterial>
   struct ThermalMaterialInterface {
     const ThermalMechanicalMaterial mat;
@@ -100,8 +102,6 @@ public:
     {
       // empty
     }
-
-    static constexpr int numParameters() { return 1 + num_parameters; }
 
     template <typename T1, typename T2, typename T3, typename T4, typename... param_types>
     SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& temperature, const T3& temperature_gradient,
@@ -118,6 +118,8 @@ public:
       const double density = mat.rho;
       return Thermal::MaterialResponse{density, c, q0};
     }
+
+    using State = typename ThermalMechanicalMaterial::State;
   };
 
   template <typename ThermalMechanicalMaterial>
@@ -128,8 +130,6 @@ public:
     {
       // empty
     }
-
-    static constexpr int numParameters() { return 1; }
     
     template <typename T1, typename T2, typename T3, typename T4, typename... param_types>
     SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* displacement */, const T3& displacement_gradient,
@@ -141,12 +141,14 @@ public:
       double temperature_old                       = 1.0;
       auto   displacement_gradient_old             = tensor<double, 3, 3>{};
       auto [P, c, s0, q0]  = mat.calculateConstitutiveOutputs(displacement_gradient, theta, dtheta_dX, state,
-                                                             displacement_gradient_old, temperature_old, dt);
+                                                             displacement_gradient_old, temperature_old, dt, parameters...);
       const double density = mat.rho;
       auto         F       = displacement_gradient + Identity<3>();
       auto         stress  = dot(P, transpose(F));
       return solid_util::MaterialResponse{density, stress};
     }
+    
+    using State = typename ThermalMechanicalMaterial::State;
   };
 
   template <typename MaterialType>

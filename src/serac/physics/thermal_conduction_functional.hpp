@@ -246,22 +246,22 @@ public:
   template <typename MaterialType>
   void setMaterial(MaterialType material)
   {
-    if constexpr (is_parameterized<MaterialType>::value) {
-      static_assert(material.numParameters() == sizeof...(parameter_space),
-                    "Number of parameters in thermal conduction does not equal the number of parameters in the "
-                    "thermal material.");
-    }
+    //if constexpr (is_parameterized<MaterialType>::value) {
+    //  static_assert(material.numParameters() == sizeof...(parameter_space),
+    //                "Number of parameters in thermal conduction does not equal the number of parameters in the "
+    //                "thermal material.");
+    //}
 
-    auto parameterized_material = parameterizeMaterial(material);
+    //auto parameterized_material = parameterizeMaterial(material);
 
     K_functional_->AddDomainIntegral(
         Dimension<dim>{},
-        [parameterized_material](auto x, auto temperature, auto... params) {
+        [material](auto x, auto temperature, auto... params) {
           // Get the value and the gradient from the input tuple
           auto [u, du_dx] = temperature;
           auto source     = serac::zero{};
 
-          auto response = parameterized_material(x, u, du_dx, params...);
+          auto response = material(x, u, du_dx, params...);
 
           return serac::tuple{source, -1.0 * response.heat_flux};
         },
@@ -269,14 +269,14 @@ public:
 
     M_functional_->AddDomainIntegral(
         Dimension<dim>{},
-        [parameterized_material](auto x, auto d_temperature_dt, auto... params) {
+        [material](auto x, auto d_temperature_dt, auto... params) {
           auto [u, du_dx] = d_temperature_dt;
           auto flux       = serac::zero{};
 
           auto temp      = u * 0.0;
           auto temp_grad = du_dx * 0.0;
 
-          auto response = parameterized_material(x, temp, temp_grad, params...);
+          auto response = material(x, temp, temp_grad, params...);
 
           auto source = response.specific_heat_capacity * response.density * u;
 
