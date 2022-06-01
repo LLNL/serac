@@ -363,89 +363,35 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
                                std::size_t num_elements)
 {
 
-#if 1
-    using test_element  = finite_element<g, test>;
-    using trial_element = finite_element<g, trial>;
+  using test_element  = finite_element<g, test>;
+  using trial_element = finite_element<g, trial>;
 
-    static constexpr bool is_QOI = (test::family == Family::QOI);
-
-    // mfem provides this information in 1D arrays, so we reshape it
-    // into strided multidimensional arrays before using
-    auto J = reinterpret_cast<const typename batched_jacobian<g, Q>::type*>(J_.Read());
-    auto du = reinterpret_cast<const typename trial_element::dof_type*>(dU.Read());
-    auto dr = reinterpret_cast<typename test_element::dof_type*>(dR.ReadWrite());
-    static constexpr TensorProductQuadratureRule<Q> rule{};
-
-    // for each element in the domain
-    for (uint32_t e = 0; e < num_elements; e++) {
-
-      // load the jacobians and positions for each quadrature point in this element
-      auto J_e = J[e];
-
-      // (batch) interpolate each quadrature point's value
-      auto qf_inputs = trial_element::interpolate(du[e], J_e, rule);
-
-      // (batch) evalute the q-function at each quadrature point
-      auto qf_outputs = batch_apply_chain_rule<is_QOI>(&qf_derivatives(e, 0), qf_inputs);
-
-      // (batch) integrate the material response against the test-space basis functions
-      test_element::integrate(qf_outputs, J_e, rule, dr[e]);
-    
-    }
-
-#else
-
-  using test_element               = finite_element<g, test>;
-  using trial_element              = finite_element<g, trial>;
-  using element_residual_type      = typename test_element::residual_type;
-  static constexpr bool is_QOI     = (test::family == Family::QOI);
-  static constexpr int  dim        = dimension_of(g);
-  static constexpr int  test_ndof  = test_element::ndof;
-  static constexpr int  trial_ndof = trial_element::ndof;
-  static constexpr auto rule       = GaussQuadratureRule<g, Q>();
+  static constexpr bool is_QOI = (test::family == Family::QOI);
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
-  auto J  = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements);
-  auto du = detail::Reshape<trial>(dU.Read(), trial_ndof, int(num_elements));     // TODO: integer conversions
-  auto dr = detail::Reshape<test>(dR.ReadWrite(), test_ndof, int(num_elements));  // TODO: integer conversions
+  auto J = reinterpret_cast<const typename batched_jacobian<g, Q>::type*>(J_.Read());
+  auto du = reinterpret_cast<const typename trial_element::dof_type*>(dU.Read());
+  auto dr = reinterpret_cast<typename test_element::dof_type*>(dR.ReadWrite());
+  static constexpr TensorProductQuadratureRule<Q> rule{};
 
   // for each element in the domain
   for (uint32_t e = 0; e < num_elements; e++) {
-    // get the (change in) values for this particular element
-    tensor du_elem = detail::Load<trial_element>(du, int(e));  // TODO: integer conversions
 
-    // this is where we will accumulate the (change in) element residual tensor
-    element_residual_type dr_elem{};
+    // load the jacobians and positions for each quadrature point in this element
+    auto J_e = J[e];
 
-    // for each quadrature point in the element
-    for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-      // get the position of this quadrature point in the parent and physical space,
-      // and calculate the measure of that point in physical space.
-      auto   xi  = rule.points[q];
-      auto   dxi = rule.weights[q];
-      auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
-      double dx  = det(J_q) * dxi;
+    // (batch) interpolate each quadrature point's value
+    auto qf_inputs = trial_element::interpolate(du[e], J_e, rule);
 
-      // evaluate the (change in) value/derivatives at this quadrature point
-      auto darg = Preprocess<trial_element>(du_elem, xi, J_q);
+    // (batch) evalute the q-function at each quadrature point
+    auto qf_outputs = batch_apply_chain_rule<is_QOI>(&qf_derivatives(e, 0), qf_inputs);
 
-      // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
-      auto dq_darg = qf_derivatives(static_cast<size_t>(e), static_cast<size_t>(q));
-
-      // use the chain rule to compute the first-order change in the q-function output
-      auto dq = chain_rule<is_QOI>(dq_darg, darg);
-
-      // integrate dq against test space shape functions / gradients
-      // to get the (change in) element residual contributions
-      dr_elem += Postprocess<test_element>(dq, xi, J_q) * dx;
-    }
-
-    // once we've finished the element integration loop, write our element residuals
-    // out to memory, to be later assembled into global residuals by mfem
-    detail::Add(dr, dr_elem, static_cast<int>(e));
+    // (batch) integrate the material response against the test-space basis functions
+    test_element::integrate(qf_outputs, J_e, rule, dr[e]);
+  
   }
-#endif
+
 }
 
 /**
