@@ -108,13 +108,14 @@ public:
     [[maybe_unused]] auto J = det(F);
 
     // Distribution tensor function of nematic order tensor
-    // tensor<double, 1, dim> normal = {2/std::sqrt(14), -1/std::sqrt(14), 3/std::sqrt(14)}};
     tensor<double, 1, dim> normal;
-    normal[0][0] = 2/std::sqrt(14);
-    normal[0][1] = -1/std::sqrt(14);
+    normal[0][0] = 1/std::sqrt(2);
+    normal[0][1] = -1/std::sqrt(2);
 
     if(dim>2)
     {
+      normal[0][0] = 2/std::sqrt(14);
+      normal[0][1] = -1/std::sqrt(14);
       normal[0][2] = 3/std::sqrt(14);
     }
     
@@ -125,18 +126,26 @@ public:
 
     // auto mu_0 = calculateInitialDistributionTensor(normal);
 
-    double theta = 330;
-    double theta_old = 328;
+    double theta = 304;
+    double theta_old = 300;
     auto mu = calculateDistributionTensor(normal, F_hat, theta, theta_old);
 
     // stress output
     auto stress_a = J * (3*shear_modulus_/(N_seg_*std::pow(b_seg_,2))) * (mu) * inv(transpose(F));
     auto stress_b = J * hydrostatic_pressure_* dot(I, inv(transpose(F)));
-    auto stress = stress_a + stress_b;
+    // auto stress = stress_a + stress_b;
+
+using std::log;
+double bulk_modulus = 1.0;
+double shear_modulus = 1.0;
+auto stress_c = (bulk_modulus - (2.0 / dim) * shear_modulus) * log(J) * I ;
+auto stress_d = shear_modulus * (displacement_grad * transpose(displacement_grad) + transpose(displacement_grad) + displacement_grad);
+auto stress = stress_a + stress_b + stress_c + stress_d;
     
-    std::cout<<std::endl; std::cout<<"............................."<<std::endl;
-    print(stress);
-    std::cout<<std::endl; std::cout<<"............................."<<std::endl;
+    // std::cout<<std::endl; std::cout<<"............................."<<std::endl;
+    // printf(stress);
+// std::cout << stress << std::endl;
+    // std::cout<<std::endl; std::cout<<"............................."<<std::endl;
 
     // auto stress = J * ( (3*shear_modulus_/(N_seg_*std::pow(b_seg_,2))) * (mu) + J*hydrostatic_pressure_*I ) * inv(transpose(F_hat));
 
@@ -185,8 +194,8 @@ public:
     auto mu_old_b = 3 * q_old * (transpose(normal) * normal);
     auto mu_old   = N_seg_*std::pow(b_seg_,2)/3 * (mu_old_a + mu_old_b);
 
-    auto mu_a = F_hat * ( mu_old + (2*N_seg_*std::pow(b_seg_,2)/3) * (Q - Q_old)) * transpose(F_hat);
-    auto mu_b = (2*N_seg_*std::pow(b_seg_,2)/3) * (Q - R_hat * Q * transpose(R_hat));
+    auto mu_a = dot(F_hat, dot(mu_old + (2*N_seg_*std::pow(b_seg_,2)/3) * (Q - Q_old), transpose(F_hat)));
+    auto mu_b = (2*N_seg_*std::pow(b_seg_,2)/3) * (Q - dot( R_hat, dot(Q, transpose(R_hat))));
 
     return mu_a + mu_b;
   }

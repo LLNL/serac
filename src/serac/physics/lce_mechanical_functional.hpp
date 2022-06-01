@@ -209,6 +209,20 @@ public:
     bcs_.addEssential(disp_bdr, component_disp_bdr_coef_, displacement_, component);
   }
 
+  //   /**
+  //  * @brief Set the displacement essential boundary conditions on a single component
+  //  *
+  //  * @param[in] disp_bdr The set of boundary attributes to set the displacement on
+  //  * @param[in] disp_bdr_coef The vector coefficient containing the set displacement values
+  //  * @param[in] component The component to set the displacment on
+  //  */
+  // void setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
+  //                         int component)
+  // {
+  //   // Project the coefficient onto the grid function
+  //   bcs_.addEssential(disp_bdr, disp_bdr_coef, displacement_, component);
+  // }
+
   /// @brief Solve the Quasi-static Newton system
   void quasiStaticSolve() { nonlin_solver_.Mult(zero_, displacement_.trueVec()); }
 

@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/solid.hpp"
+#include "serac/physics/lce_mechanical.hpp"
 
 #include "serac/infrastructure/logger.hpp"
 #include "serac/physics/integrators/traction_integrator.hpp"
@@ -22,7 +22,7 @@ namespace serac {
  */
 constexpr int NUM_FIELDS = 3;
 
-Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities geom_nonlin,
+LCEMechanical::LCEMechanical(int order, const SolverOptions& options, GeometricNonlinearities geom_nonlin,
              FinalMeshOption keep_deformation, const std::string& name, mfem::ParMesh* pmesh)
     : BasePhysics(NUM_FIELDS, order, pmesh),
       velocity_(StateManager::newState(
@@ -85,8 +85,8 @@ Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities ge
   zero_ = 0.0;
 }
 
-Solid::Solid(const Solid::InputOptions& options, const std::string& name)
-    : Solid(options.order, options.solver_options, options.geom_nonlin, FinalMeshOption::Deformed, name)
+LCEMechanical::LCEMechanical(const LCEMechanical::InputOptions& options, const std::string& name)
+    : LCEMechanical(options.order, options.solver_options, options.geom_nonlin, FinalMeshOption::Deformed, name)
 {
   // This is the only other options stored in the input file that we can use
   // in the initialization stage
@@ -144,7 +144,7 @@ Solid::Solid(const Solid::InputOptions& options, const std::string& name)
   }
 }
 
-Solid::~Solid()
+LCEMechanical::~LCEMechanical()
 {
   // Update the mesh with the new deformed nodes if requested
   if (keep_deformation_ == FinalMeshOption::Deformed) {
@@ -165,43 +165,43 @@ Solid::~Solid()
   mesh_.NewNodes(*mesh_nodes, true);
 }
 
-void Solid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
+void LCEMechanical::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
 {
   bcs_.addEssential(disp_bdr, disp_bdr_coef, displacement_);
 }
 
-void Solid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
+void LCEMechanical::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
                                int component)
 {
   bcs_.addEssential(disp_bdr, disp_bdr_coef, displacement_, component);
 }
 
-void Solid::setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
+void LCEMechanical::setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
                            bool compute_on_reference, std::optional<int> component)
 {
   if (compute_on_reference) {
-    bcs_.addGeneric(trac_bdr, trac_bdr_coef, SolidBoundaryCondition::ReferenceTraction, component);
+    bcs_.addGeneric(trac_bdr, trac_bdr_coef, LCEMechanicalBoundaryCondition::ReferenceTraction, component);
   } else {
-    bcs_.addGeneric(trac_bdr, trac_bdr_coef, SolidBoundaryCondition::DeformedTraction, component);
+    bcs_.addGeneric(trac_bdr, trac_bdr_coef, LCEMechanicalBoundaryCondition::DeformedTraction, component);
   }
 }
 
-void Solid::setPressureBCs(const std::set<int>& pres_bdr, std::shared_ptr<mfem::Coefficient> pres_bdr_coef,
+void LCEMechanical::setPressureBCs(const std::set<int>& pres_bdr, std::shared_ptr<mfem::Coefficient> pres_bdr_coef,
                            bool compute_on_reference)
 {
   if (compute_on_reference) {
-    bcs_.addGeneric(pres_bdr, pres_bdr_coef, SolidBoundaryCondition::ReferencePressure);
+    bcs_.addGeneric(pres_bdr, pres_bdr_coef, LCEMechanicalBoundaryCondition::ReferencePressure);
   } else {
-    bcs_.addGeneric(pres_bdr, pres_bdr_coef, SolidBoundaryCondition::DeformedPressure);
+    bcs_.addGeneric(pres_bdr, pres_bdr_coef, LCEMechanicalBoundaryCondition::DeformedPressure);
   }
 }
 
-void Solid::addBodyForce(std::shared_ptr<mfem::VectorCoefficient> ext_force_coef)
+void LCEMechanical::addBodyForce(std::shared_ptr<mfem::VectorCoefficient> ext_force_coef)
 {
   ext_force_coefs_.push_back(ext_force_coef);
 }
 
-void Solid::setMaterialParameters(std::unique_ptr<mfem::Coefficient>&& mu, std::unique_ptr<mfem::Coefficient>&& K,
+void LCEMechanical::setMaterialParameters(std::unique_ptr<mfem::Coefficient>&& mu, std::unique_ptr<mfem::Coefficient>&& K,
                                   const bool material_nonlin)
 {
   if (material_nonlin) {
@@ -211,21 +211,21 @@ void Solid::setMaterialParameters(std::unique_ptr<mfem::Coefficient>&& mu, std::
   }
 }
 
-void Solid::setThermalExpansion(std::unique_ptr<mfem::Coefficient>&& coef_thermal_expansion,
+void LCEMechanical::setThermalExpansion(std::unique_ptr<mfem::Coefficient>&& coef_thermal_expansion,
                                 std::unique_ptr<mfem::Coefficient>&& reference_temp, const FiniteElementState& temp)
 {
   thermal_material_ = std::make_unique<IsotropicThermalExpansionMaterial>(
       std::move(coef_thermal_expansion), std::move(reference_temp), temp, geom_nonlin_);
 }
 
-void Solid::setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef) { viscosity_ = std::move(visc_coef); }
+void LCEMechanical::setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef) { viscosity_ = std::move(visc_coef); }
 
-void Solid::setMassDensity(std::unique_ptr<mfem::Coefficient>&& rho_coef)
+void LCEMechanical::setMassDensity(std::unique_ptr<mfem::Coefficient>&& rho_coef)
 {
   initial_mass_density_ = std::move(rho_coef);
 }
 
-void Solid::setDisplacement(mfem::VectorCoefficient& disp_state)
+void LCEMechanical::setDisplacement(mfem::VectorCoefficient& disp_state)
 {
   disp_state.SetTime(time_);
   displacement_.project(disp_state);
@@ -233,7 +233,7 @@ void Solid::setDisplacement(mfem::VectorCoefficient& disp_state)
   gf_initialized_[1] = true;
 }
 
-void Solid::setVelocity(mfem::VectorCoefficient& velo_state)
+void LCEMechanical::setVelocity(mfem::VectorCoefficient& velo_state)
 {
   velo_state.SetTime(time_);
   velocity_.project(velo_state);
@@ -241,7 +241,7 @@ void Solid::setVelocity(mfem::VectorCoefficient& velo_state)
   gf_initialized_[0] = true;
 }
 
-void Solid::resetToReferenceConfiguration()
+void LCEMechanical::resetToReferenceConfiguration()
 {
   displacement_.gridFunc() = 0.0;
   velocity_.gridFunc()     = 0.0;
@@ -252,7 +252,7 @@ void Solid::resetToReferenceConfiguration()
   mesh_.NewNodes(*reference_nodes_);
 }
 
-void Solid::completeSetup()
+void LCEMechanical::completeSetup()
 {
   // Define the nonlinear form
   H_ = displacement_.createOnSpace<mfem::ParNonlinearForm>();
@@ -262,25 +262,25 @@ void Solid::completeSetup()
       new mfem_ext::DisplacementHyperelasticIntegrator(*material_, *thermal_material_, geom_nonlin_));
 
   // Add the deformed traction integrator
-  for (auto& deformed_traction_data : bcs_.genericsWithTag(SolidBoundaryCondition::DeformedTraction)) {
+  for (auto& deformed_traction_data : bcs_.genericsWithTag(LCEMechanicalBoundaryCondition::DeformedTraction)) {
     H_->AddBdrFaceIntegrator(new mfem_ext::TractionIntegrator(deformed_traction_data.vectorCoefficient(), false),
                              deformed_traction_data.markers());
   }
 
   // Add the reference traction integrator
-  for (auto& deformed_traction_data : bcs_.genericsWithTag(SolidBoundaryCondition::ReferenceTraction)) {
+  for (auto& deformed_traction_data : bcs_.genericsWithTag(LCEMechanicalBoundaryCondition::ReferenceTraction)) {
     H_->AddBdrFaceIntegrator(new mfem_ext::TractionIntegrator(deformed_traction_data.vectorCoefficient(), true),
                              deformed_traction_data.markers());
   }
 
   // Add the deformed pressure integrator
-  for (auto& deformed_pressure_data : bcs_.genericsWithTag(SolidBoundaryCondition::DeformedPressure)) {
+  for (auto& deformed_pressure_data : bcs_.genericsWithTag(LCEMechanicalBoundaryCondition::DeformedPressure)) {
     H_->AddBdrFaceIntegrator(new mfem_ext::PressureIntegrator(deformed_pressure_data.scalarCoefficient(), false),
                              deformed_pressure_data.markers());
   }
 
   // Add the reference pressure integrator
-  for (auto& reference_pressure_data : bcs_.genericsWithTag(SolidBoundaryCondition::ReferencePressure)) {
+  for (auto& reference_pressure_data : bcs_.genericsWithTag(LCEMechanicalBoundaryCondition::ReferencePressure)) {
     H_->AddBdrFaceIntegrator(new mfem_ext::PressureIntegrator(reference_pressure_data.scalarCoefficient(), true),
                              reference_pressure_data.markers());
   }
@@ -357,9 +357,9 @@ void Solid::completeSetup()
 }
 
 // Solve the Quasi-static Newton system
-void Solid::quasiStaticSolve() { nonlin_solver_.Mult(zero_, displacement_.trueVec()); }
+void LCEMechanical::quasiStaticSolve() { nonlin_solver_.Mult(zero_, displacement_.trueVec()); }
 
-std::unique_ptr<mfem::Operator> Solid::buildQuasistaticOperator()
+std::unique_ptr<mfem::Operator> LCEMechanical::buildQuasistaticOperator()
 {
   // the quasistatic case is entirely described by the residual,
   // there is no ordinary differential equation
@@ -382,7 +382,7 @@ std::unique_ptr<mfem::Operator> Solid::buildQuasistaticOperator()
 }
 
 // Advance the timestep
-void Solid::advanceTimestep(double& dt)
+void LCEMechanical::advanceTimestep(double& dt)
 {
   // Initialize the true vector
   velocity_.initializeTrueVec();
@@ -416,7 +416,7 @@ void Solid::advanceTimestep(double& dt)
   previous_solve_ = PreviousSolve::Forward;
 }
 
-void Solid::checkSensitivityMode() const
+void LCEMechanical::checkSensitivityMode() const
 {
   SLIC_ERROR_ROOT_IF(previous_solve_ == PreviousSolve::None,
                      "Sensitivities only valid following a forward and adjoint solve.");
@@ -430,7 +430,7 @@ void Solid::checkSensitivityMode() const
   SLIC_ERROR_ROOT_IF(!linear_mat, "Only linear elastic materials allowed for sensitivity analysis.");
 }
 
-FiniteElementDual& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace* shear_space)
+FiniteElementDual& LCEMechanical::shearModulusSensitivity(mfem::ParFiniteElementSpace* shear_space)
 {
   checkSensitivityMode();
 
@@ -469,7 +469,7 @@ FiniteElementDual& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace* s
   return *shear_sensitivity_;
 }
 
-FiniteElementDual& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace* bulk_space)
+FiniteElementDual& LCEMechanical::bulkModulusSensitivity(mfem::ParFiniteElementSpace* bulk_space)
 {
   checkSensitivityMode();
 
@@ -507,7 +507,7 @@ FiniteElementDual& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace* bu
   return *bulk_sensitivity_;
 }
 
-const FiniteElementState& Solid::solveAdjoint(FiniteElementDual& adjoint_load,
+const FiniteElementState& LCEMechanical::solveAdjoint(FiniteElementDual& adjoint_load,
                                               FiniteElementDual* dual_with_essential_boundary)
 {
   SLIC_ERROR_ROOT_IF(!is_quasistatic_, "Adjoint analysis only vaild for quasistatic problems.");
@@ -563,7 +563,7 @@ const FiniteElementState& Solid::solveAdjoint(FiniteElementDual& adjoint_load,
   return adjoint_displacement_;
 }
 
-void Solid::InputOptions::defineInputFileSchema(axom::inlet::Container& container)
+void LCEMechanical::InputOptions::defineInputFileSchema(axom::inlet::Container& container)
 {
   // Polynomial interpolation order - currently up to 8th order is allowed
   container.addInt("order", "Order degree of the finite elements.").defaultValue(1).range(1, 8);
@@ -604,7 +604,7 @@ void Solid::InputOptions::defineInputFileSchema(axom::inlet::Container& containe
 }
 
 // Evaluate the residual at the current state
-mfem::Vector Solid::currentResidual()
+mfem::Vector LCEMechanical::currentResidual()
 {
   mfem::Vector eval(displacement_.trueVec().Size());
   if (is_quasistatic_) {
@@ -619,7 +619,7 @@ mfem::Vector Solid::currentResidual()
 }
 
 // Get an Operator that computes the gradient (tangent stiffness) at the current internal state
-const mfem::Operator& Solid::currentGradient()
+const mfem::Operator& LCEMechanical::currentGradient()
 {
   if (is_quasistatic_) {
     // The input to the residual is displacment
@@ -634,12 +634,12 @@ const mfem::Operator& Solid::currentGradient()
 }  // namespace serac
 
 using serac::DirichletEnforcementMethod;
-using serac::Solid;
+using serac::LCEMechanical;
 using serac::TimestepMethod;
 
-serac::Solid::InputOptions FromInlet<serac::Solid::InputOptions>::operator()(const axom::inlet::Container& base)
+serac::LCEMechanical::InputOptions FromInlet<serac::LCEMechanical::InputOptions>::operator()(const axom::inlet::Container& base)
 {
-  Solid::InputOptions result;
+  LCEMechanical::InputOptions result;
 
   result.order = base["order"];
 
@@ -649,7 +649,7 @@ serac::Solid::InputOptions FromInlet<serac::Solid::InputOptions>::operator()(con
   result.solver_options.H_nonlin_options = equation_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
 
   if (base.contains("dynamics")) {
-    Solid::TimesteppingOptions dyn_options;
+    LCEMechanical::TimesteppingOptions dyn_options;
     auto                       dynamics = base["dynamics"];
 
     // FIXME: Implement all supported methods as part of an ODE schema

@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file solid.hpp
+ * @file LCEMechanical.hpp
  *
  * @brief The solver object for finite deformation hyperelasticity
  */
@@ -29,10 +29,10 @@
 namespace serac {
 
 /**
- * @brief Enum describing the generic solid boundary conditions
+ * @brief Enum describing the generic LCEMechanical boundary conditions
  *
  */
-enum class SolidBoundaryCondition
+enum class LCEMechanicalBoundaryCondition
 {
   ReferencePressure, /**< Pressure applied in the reference configuration */
   ReferenceTraction, /**< Traction applied in the reference configuration */
@@ -41,7 +41,7 @@ enum class SolidBoundaryCondition
 };
 
 /**
- * @brief Enum to save the deformation after the Solid module is destructed
+ * @brief Enum to save the deformation after the LCEMechanical module is destructed
  *
  */
 enum class FinalMeshOption
@@ -51,7 +51,7 @@ enum class FinalMeshOption
 };
 
 /**
- * @brief Enum to denote the previous solve completed in the Solid module
+ * @brief Enum to denote the previous solve completed in the LCEMechanical module
  *
  */
 enum class PreviousSolve
@@ -61,13 +61,13 @@ enum class PreviousSolve
   None     /**< No solves have been completed */
 };
 /**
- * @brief The nonlinear solid solver class
+ * @brief The nonlinear LCEMechanical solver class
  *
  * The nonlinear hyperelastic quasi-static and dynamic
  * hyperelastic solver object. It is derived from MFEM
  * example 10p.
  */
-class Solid : public BasePhysics {
+class LCEMechanical : public BasePhysics {
 public:
   /**
    * @brief A timestep method and config for the M solver
@@ -192,7 +192,7 @@ public:
   };
 
   /**
-   * @brief Construct a new Nonlinear Solid Solver object
+   * @brief Construct a new Nonlinear LCEMechanical Solver object
    *
    * @param[in] order The order of the displacement field
    * @param[in] options The options for the linear, nonlinear, and ODE solves
@@ -204,17 +204,17 @@ public:
    * @note @p name is the physics module name and not the mesh tag to be used. If a non-default mesh is desired, the
    * mesh pointer must be provided. Otherwise, it attempts to find the "default" mesh in the data store.
    */
-  Solid(int order, const SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
+  LCEMechanical(int order, const SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
         FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "",
         mfem::ParMesh* pmesh = nullptr);
 
   /**
-   * @brief Construct a new Nonlinear Solid Solver object
+   * @brief Construct a new Nonlinear LCEMechanical Solver object
    *
    * @param[in] options The solver information parsed from the input file
    * @param[in] name An optional name for the physics module instance. Note that this is NOT the mesh tag.
    */
-  Solid(const InputOptions& options, const std::string& name = "");
+  LCEMechanical(const InputOptions& options, const std::string& name = "");
 
   /**
    * @brief Set displacement boundary conditions
@@ -281,19 +281,19 @@ public:
   /**
    * @brief Set the material parameters
    *
-   * @param[in] mu Set the shear modulus for the solid
-   * @param[in] K Set the bulk modulus for the solid
+   * @param[in] mu Set the shear modulus for the LCEMechanical
+   * @param[in] K Set the bulk modulus for the LCEMechanical
    * @param[in] material_nonlin Flag to include material nonlinearities (linear elastic vs. neo-Hookean model)
    */
   void setMaterialParameters(std::unique_ptr<mfem::Coefficient>&& mu, std::unique_ptr<mfem::Coefficient>&& K,
                              bool material_nonlin = true);
 
   /**
-   * @brief Set the isotropic thermal expansion parameters for the solid mechanics module
+   * @brief Set the isotropic thermal expansion parameters for the LCEMechanical mechanics module
    *
    * @param coef_thermal_expansion The coefficient for thermal expansion
    * @param reference_temp The reference temperature
-   * @param temp The state object containing the current temperature of the solid
+   * @param temp The state object containing the current temperature of the LCEMechanical
    */
   void setThermalExpansion(std::unique_ptr<mfem::Coefficient>&& coef_thermal_expansion,
                            std::unique_ptr<mfem::Coefficient>&& reference_temp, const FiniteElementState& temp);
@@ -401,9 +401,9 @@ public:
   virtual FiniteElementDual& bulkModulusSensitivity(mfem::ParFiniteElementSpace* bulk_space = nullptr);
 
   /**
-   * @brief Destroy the Nonlinear Solid Solver object
+   * @brief Destroy the Nonlinear LCEMechanical Solver object
    */
-  virtual ~Solid();
+  virtual ~LCEMechanical();
 
   /**
    * @brief Compute the current residual vector at the current internal state value
@@ -437,7 +437,7 @@ protected:
   virtual void quasiStaticSolve();
 
   /**
-   * @brief Check that the solid module is in the appropriate state for sensitivity analysis
+   * @brief Check that the LCEMechanical module is in the appropriate state for sensitivity analysis
    */
   void checkSensitivityMode() const;
 
@@ -631,7 +631,7 @@ protected:
  * @tparam The object to be created by inlet
  */
 template <>
-struct FromInlet<serac::Solid::InputOptions> {
+struct FromInlet<serac::LCEMechanical::InputOptions> {
   /// @brief Returns created object from Inlet container
-  serac::Solid::InputOptions operator()(const axom::inlet::Container& base);
+  serac::LCEMechanical::InputOptions operator()(const axom::inlet::Container& base);
 };

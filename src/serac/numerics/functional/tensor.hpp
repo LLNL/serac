@@ -19,7 +19,6 @@
 #include "detail/metaprogramming.hpp"
 
 namespace serac {
-
 /**
  * @brief Arbitrary-rank tensor class
  * @tparam T The type stored at each index
@@ -31,6 +30,7 @@ struct tensor;
 /// @cond
 template <typename T, int m, int... n>
 struct tensor<T, m, n...> {
+  
   template <typename i_type>
   SERAC_HOST_DEVICE constexpr auto& operator()(i_type i)
   {
@@ -1611,6 +1611,12 @@ SERAC_HOST_DEVICE auto chain_rule(const tensor<double, m, n, p...>& df_dx, const
     }
   }
   return total;
+}
+
+auto& operator<<(std::ostream& out, const zero)
+{
+  out << "zero{}";
+  return out;
 }
 
 }  // namespace serac

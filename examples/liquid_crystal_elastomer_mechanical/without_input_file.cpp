@@ -44,11 +44,9 @@ int main(int argc, char* argv[])
   serac::StateManager::initialize(datastore, "lce_mechanical");
   // _main_init_end
   // _create_mesh_start
-  auto mesh = serac::mesh::refineAndDistribute(serac::buildRectangleMesh(10, 10));
+  auto mesh = serac::mesh::refineAndDistribute(serac::buildRectangleMesh(20, 10, 2, 1));
   serac::StateManager::setMesh(std::move(mesh));
   // _create_mesh_end
-
-  const std::set<int> boundary_constant_attributes = {4};
 
   // define the solver configurations
   const serac::IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
@@ -72,21 +70,28 @@ int main(int argc, char* argv[])
     13.33e3, /*shear_modulus*/
     10.0, /*order_constant*/
     0.46, /*order_parameter*/
-    92+273, /*transition_temperature*/
-    1.0 /*hydrostatic_pressure*/);
+    40+273, /*transition_temperature 92*/
+    1e8 /*hydrostatic_pressure*/);
   lce_mechanical_solver.setMaterial(lceMat);
 
   // Define the function for the initial displacement and boundary condition
   auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
+  auto zero = std::make_shared<mfem::ConstantCoefficient>(0.0);
 
   // Set the initial displacement and boundary condition
+  
+  const std::set<int> boundary_constant_attributes = {4};
   lce_mechanical_solver.setDisplacementBCs(boundary_constant_attributes, bc);
+  
+  // lce_mechanical_solver.setDisplacementBCs({4}, zero, 0);
+  // lce_mechanical_solver.setDisplacementBCs({3}, zero, 1);
+  
   lce_mechanical_solver.setDisplacement(bc);
 
   serac::tensor<double, dim> constant_force;
 
-  constant_force[0] = 1.0e-4;
-  constant_force[1] = 2.0e-3;
+  constant_force[0] = -1.0e-15; // 1.0e-4;
+  constant_force[1] = 0.0; // 2.0e-3;
 
   serac::lce_mechanical_util::ConstantBodyForce<dim> force{constant_force};
   lce_mechanical_solver.addBodyForce(force);
