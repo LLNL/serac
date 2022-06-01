@@ -51,7 +51,10 @@ struct LCEMaterialProperties
   double q0;         // initial nematic order parameter
   double p;           // hydrostatic pressure
   tensor<double, 1, 3> normal_;
-  struct State { /* this material has no internal variables */ };
+  struct State 
+  { 
+    tensor<double, 3, 3> mu_old_state_;
+  };
 
 /// ---------------------------------------------------------------------------
 
@@ -74,14 +77,14 @@ struct LCEMaterialProperties
     const tensor<T1, 3, 3>& grad_u, 
     T2 theta, 
     const tensor<T3, 3>& grad_theta, 
-    State& /*state*/, 
+    State& state,
     const tensor<double, 3, 3>& grad_u_old, 
     double theta_old,
     double dt)
   {
     // stress output
     tensor<T1, 3, 3> P;
-    calculateStressTensor(grad_u, grad_u_old, theta, theta_old, P);
+    calculateStressTensor(grad_u, grad_u_old, state, theta, theta_old, P);
 
     // thermal outputs
     double s0;
@@ -96,6 +99,7 @@ struct LCEMaterialProperties
   template <typename T1, typename T2>
   auto calculateDistributionTensor(
     const tensor<T1, 3, 3> F_hat,
+    State& state,
     const T2 theta,
     const double theta_old)
   {
@@ -111,26 +115,40 @@ struct LCEMaterialProperties
     auto Q_old = q_old/2 * (3 * transpose(normal_) * normal_ - I);
     auto Q     = q/2 * (3 * transpose(normal_) * normal_ - I);
     
-    // Distribution tensor (using 'Strang Splitting' approach)
-    auto mu_old_a = (1 - q_old) * I;
-    auto mu_old_b = 3 * q_old * (transpose(normal_) * normal_);
-    auto mu_old   = N_seg*std::pow(b,2)/3 * (mu_old_a + mu_old_b);
+    // Distribution tensor (from stored state)
+    auto mu_old = state.mu_old_state_;
 
+    // Update distribution tensor (using 'Strang Splitting' approach)
+    // auto mu_old_a = (1 - q_old) * I;
+    // auto mu_old_b = 3 * q_old * (transpose(normal_) * normal_);
+    // auto mu_old   = N_seg*std::pow(b,2)/3 * (mu_old_a + mu_old_b);
+
+    // tensor<double, 3, 3> mu_0;
+    // auto mu_old_check = calculateInitialDistributionTensor();
+    // std::cout<<"... mu_old = "<<mu_old<<std::endl;
+    // std::cout<<"... mu_old_check = "<<mu_old_check<<std::endl;
+
+    // Update distribution tensor (using 'Strang Splitting' approach)
     auto mu_a = dot(F_hat, dot(mu_old + (2*N_seg*std::pow(b,2)/3) * (Q - Q_old), transpose(F_hat)));
     auto mu_b = (2*N_seg*std::pow(b,2)/3) * (Q - dot( R_hat, dot(Q, transpose(R_hat))));
+    auto mu   = mu_a + mu_b;
 
-    return mu_a + mu_b;
+    // Store previous state
+    state.mu_old_state_ = mu;
+    // state.mu_old_state_ = mu_old;
+
+    return mu;
   }
 
 /// ---------------------------------------------------------------------------
 
-  void calculateInitialDistributionTensor(
-    tensor<double, 3, 3>& mu_0)
+  auto calculateInitialDistributionTensor()
   {
     // Initial distribution tensor
     auto mu_0_a = (1 - q0) * I;
     auto mu_0_b = 3 * q0 * (transpose(normal_) * normal_);
-    mu_0 = N_seg*std::pow(b,2)/3 * (mu_0_a + mu_0_b);
+    
+    return N_seg*std::pow(b,2)/3 * (mu_0_a + mu_0_b);
   }
 
 /// ---------------------------------------------------------------------------
@@ -138,6 +156,7 @@ struct LCEMaterialProperties
   void calculateStressTensor(
     const tensor<T1, 3, 3>& grad_u, 
     const tensor<double, 3, 3>& grad_u_old,
+    State& state,
     T2 theta,
     double theta_old,
     tensor<T1, 3, 3>& P)
@@ -151,9 +170,7 @@ struct LCEMaterialProperties
     [[maybe_unused]] auto J = det(F);
 
     // Distribution tensor function of nematic order tensor
-    tensor<double, 3, 3> mu_0;
-    calculateInitialDistributionTensor(mu_0);
-    auto mu = calculateDistributionTensor(F_hat, theta, theta_old);
+    auto mu = calculateDistributionTensor(F_hat, state, theta, theta_old);
 
     // stress output 
     auto P_a =  J * ( (3*Gshear/(N_seg*std::pow(b,2))) * (mu) ) * inv(transpose(F));
@@ -186,7 +203,8 @@ struct LCEMaterialProperties
   template <typename T1, typename T2>
   auto calculateFreeEnergy(
     const tensor<T1, 3, 3>& grad_u,
-    const tensor<double, 3, 3>& grad_u_old, 
+    const tensor<double, 3, 3>& grad_u_old,
+    State& state,
     T2 theta,
     double theta_old)
   {
@@ -199,9 +217,8 @@ struct LCEMaterialProperties
     auto J = det(F);
 
     // Distribution tensor function of nematic order tensor
-    tensor<double, 3, 3> mu_0;
-    calculateInitialDistributionTensor(mu_0);
-    auto mu = calculateDistributionTensor(F_hat, theta, theta_old);
+    auto mu_0 = calculateInitialDistributionTensor();
+    auto mu = calculateDistributionTensor(F_hat, state, theta, theta_old);
 
     auto psi_1 = 3 * (Gshear/(2*N_seg*std::pow(b,2))) * tr(mu - mu_0);
     auto psi_2 = p * (J - 1);
@@ -260,6 +277,7 @@ TEST(LiqCrystElastMaterial, checkMuWithAD)
     .q0    = 0.46,
     .p     = 30,
     .normal_ = {2/std::sqrt(14), -1/std::sqrt(14), 3/std::sqrt(14)}};
+    
   // clang-format off
   tensor<double, 3, 3> Fhat{{{1.0, 0.266666666666667, 0.0},
                              {0.0, 0.9235, 0.389418342308651},
@@ -270,21 +288,25 @@ TEST(LiqCrystElastMaterial, checkMuWithAD)
                                      {0.3, 0.2, 0.1}}};
 
   // clang-format on
+
+  LCEMaterialProperties::State state{ .mu_old_state_ = material.calculateInitialDistributionTensor() };
+
   double temperature = 321.4141;
   double temperature_old = 320.7035;
   
   double epsilon = 1.0e-6;
 
-  auto mu1 = material.calculateDistributionTensor(Fhat - epsilon * perturbation, temperature, temperature_old);
-  auto mu2 = material.calculateDistributionTensor(Fhat + epsilon * perturbation, temperature, temperature_old);
+  auto mu1 = material.calculateDistributionTensor(Fhat - epsilon * perturbation, state, temperature, temperature_old);
+  auto mu2 = material.calculateDistributionTensor(Fhat + epsilon * perturbation, state, temperature, temperature_old);
 
-  auto mu = material.calculateDistributionTensor(make_dual(Fhat), temperature, temperature_old);
+  auto mu = material.calculateDistributionTensor(make_dual(Fhat), state, temperature, temperature_old);
 
   auto error = ((mu2 - mu1) / (2.0 * epsilon)) - double_dot(get_gradient(mu), perturbation);
 
   EXPECT_NEAR(norm(error), 0.0, 1e-9);
-
 }
+
+// --------------------------------------------------------
 
 TEST(LiqCrystElastMaterial, FreeEnergyAndStressAgree)
 {
@@ -297,6 +319,7 @@ TEST(LiqCrystElastMaterial, FreeEnergyAndStressAgree)
     .q0    = 0.46,
     .p     = 30,
     .normal_ = {2/std::sqrt(14), -1/std::sqrt(14), 3/std::sqrt(14)}};
+
   // clang-format off
   tensor<double, 3, 3>  displacement_grad_old{{{0.0, 0.133333333333333, 0.0},
                                            {0.0, -0.019933422158758, 0.198669330795061},
@@ -312,19 +335,21 @@ TEST(LiqCrystElastMaterial, FreeEnergyAndStressAgree)
   double                       temperature_old = 320.7035;
   tensor<double, 3>            temperature_grad{0.87241435, 0.11105156, -0.27708054};
   
-  LCEMaterialProperties::State state{};
+  LCEMaterialProperties::State state{ .mu_old_state_ = material.calculateInitialDistributionTensor() };
+
   double dt = 0.2;
   double epsilon = 1.0e-7;
 
   // Check that the AD-computed derivatives of stress w.r.t. displacement_gradient 
   // are in agreement with results obtained from a central finite difference stencil
   {
+// std::cout<<" **************** stress1 *************** "<<std::endl;    
     auto stress1 = material.calculateMechanicalConstitutiveOutputs(
       displacement_grad - epsilon * perturbation, temperature, temperature_grad, state, displacement_grad_old, temperature_old, dt);
-
+// std::cout<<" **************** stress2 *************** "<<std::endl;
     auto stress2 = material.calculateMechanicalConstitutiveOutputs(
       displacement_grad + epsilon * perturbation, temperature, temperature_grad, state, displacement_grad_old, temperature_old, dt);
-
+// std::cout<<" **************** dstress *************** "<<std::endl;
     auto dstress = get_gradient(material.calculateMechanicalConstitutiveOutputs(
       make_dual(displacement_grad), temperature, temperature_grad, state, displacement_grad_old, temperature_old, dt));
 
@@ -337,13 +362,13 @@ TEST(LiqCrystElastMaterial, FreeEnergyAndStressAgree)
   // are in agreement with results obtained from a central finite difference stencil
   {
     auto energy1 = material.calculateFreeEnergy(
-      displacement_grad - epsilon * perturbation, displacement_grad_old, temperature, temperature_old);
+      displacement_grad - epsilon * perturbation, displacement_grad_old, state, temperature, temperature_old);
 
     auto energy2 = material.calculateFreeEnergy(
-      displacement_grad + epsilon * perturbation, displacement_grad_old, temperature, temperature_old);
+      displacement_grad + epsilon * perturbation, displacement_grad_old, state, temperature, temperature_old);
 
     auto denergy = get_gradient(material.calculateFreeEnergy(
-      make_dual(displacement_grad), displacement_grad_old, temperature, temperature_old));
+      make_dual(displacement_grad), displacement_grad_old, state, temperature, temperature_old));
 
     auto error = double_dot(denergy, perturbation) - (energy2 - energy1) / (2 * epsilon);
 
@@ -356,7 +381,7 @@ TEST(LiqCrystElastMaterial, FreeEnergyAndStressAgree)
   // are in agreement with stress formulation
   {
     auto energy_and_stress = material.calculateFreeEnergy(
-      make_dual(displacement_grad), displacement_grad_old, temperature, temperature_old);
+      make_dual(displacement_grad), displacement_grad_old, state, temperature, temperature_old);
       //displacement_grad, displacement_grad_old, temperature, temperature_old);
     auto stress = material.calculateMechanicalConstitutiveOutputs(
       displacement_grad, temperature, temperature_grad, state, displacement_grad_old, temperature_old, dt);
@@ -380,7 +405,7 @@ TEST(LiqCrystElastMaterial, FreeEnergyAndStressAgree)
 
 #if 0
 
-// // The energy of the polymer is non-zero in its stress-free state.
+// // The energy of the polymer is non-zero in its stress-free State.
 // TEST(LiqCrystElastMaterial, FreeEnergyIsZeroInReferenceState)
 // {
 // return;
@@ -404,7 +429,7 @@ TEST(LiqCrystElastMaterial, FreeEnergyAndStressAgree)
 
 // // --------------------------------------------------------
 
-// // The energy of the polymer is non-zero in its stress-free state.
+// // The energy of the polymer is non-zero in its stress-free State.
 // TEST(LiqCrystElastMaterial, StressIsNonZeroInReferenceState)
 // {
 // return;  
