@@ -86,7 +86,7 @@ void functional_test_static(double expected_temp_norm)
   thermal_solver.outputState();
 
   // Check the final temperature norm
-  EXPECT_NEAR(expected_temp_norm, myspecialnorm(thermal_solver.temperature()), 1.0e-6);
+  EXPECT_NEAR(expected_temp_norm, norm(thermal_solver.temperature()), 1.0e-6);
 }
 
 template <int p, int dim>
@@ -152,7 +152,7 @@ void functional_test_dynamic(double expected_temp_norm)
   thermal_solver.outputState();
 
   // Check the final temperature norm
-  EXPECT_NEAR(expected_temp_norm, myspecialnorm(thermal_solver.temperature()), 1.0e-6);
+  EXPECT_NEAR(expected_temp_norm, norm(thermal_solver.temperature()), 1.0e-6);
 }
 
 TEST(thermal_functional, 2D_linear_static) { functional_test_static<1, 2>(2.2909240); }

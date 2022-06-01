@@ -78,7 +78,12 @@ protected:
    * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
    *
    */
-  void distributeSharedDofs(mfem::ParGridFunction& grid_function) const { grid_function.SetFromTrueDofs(*this); }
+  void distributeSharedDofs(mfem::ParGridFunction& grid_function) const
+  {
+    axom::fmt::print("gf size 1: {}\n", grid_function.Size());
+    grid_function.SetFromTrueDofs(true_vec_);
+    axom::fmt::print("gf size 2: {}\n", grid_function.Size());
+  }
 
   /**
    * @brief Initialize the true vector from the grid function values

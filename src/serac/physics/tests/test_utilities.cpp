@@ -147,11 +147,11 @@ template <>
 void verifyFields(const Solid& phys_module, const axom::inlet::Inlet& inlet)
 {
   if (inlet.contains("expected_displacement_l2norm")) {
-    double x_norm = myspecialnorm(phys_module.displacement());
+    double x_norm = norm(phys_module.displacement());
     EXPECT_NEAR(inlet["expected_displacement_l2norm"], x_norm, inlet["epsilon"]);
   }
   if (inlet.contains("expected_velocity_l2norm")) {
-    double v_norm = myspecialnorm(phys_module.velocity());
+    double v_norm = norm(phys_module.velocity());
     EXPECT_NEAR(inlet["expected_velocity_l2norm"], v_norm, inlet["epsilon"]);
   }
 }
@@ -160,7 +160,7 @@ template <>
 void verifyFields(const ThermalConduction& phys_module, const axom::inlet::Inlet& inlet)
 {
   if (inlet.contains("expected_temperature_l2norm")) {
-    EXPECT_NEAR(inlet["expected_temperature_l2norm"], myspecialnorm(phys_module.temperature()), inlet["epsilon"]);
+    EXPECT_NEAR(inlet["expected_temperature_l2norm"], norm(phys_module.temperature()), inlet["epsilon"]);
   }
 
   if (inlet.contains("exact_solution")) {
@@ -176,15 +176,15 @@ template <>
 void verifyFields(const ThermalSolid& phys_module, const axom::inlet::Inlet& inlet)
 {
   if (inlet.contains("expected_displacement_l2norm")) {
-    double x_norm = myspecialnorm(phys_module.displacement());
+    double x_norm = norm(phys_module.displacement());
     EXPECT_NEAR(inlet["expected_displacement_l2norm"], x_norm, inlet["epsilon"]);
   }
   if (inlet.contains("expected_velocity_l2norm")) {
-    double v_norm = myspecialnorm(phys_module.velocity());
+    double v_norm = norm(phys_module.velocity());
     EXPECT_NEAR(inlet["expected_velocity_l2norm"], v_norm, inlet["epsilon"]);
   }
   if (inlet.contains("expected_temperature_l2norm")) {
-    double t_norm = myspecialnorm(phys_module.temperature());
+    double t_norm = norm(phys_module.temperature());
     EXPECT_NEAR(inlet["expected_temperature_l2norm"], t_norm, inlet["epsilon"]);
   }
 }
