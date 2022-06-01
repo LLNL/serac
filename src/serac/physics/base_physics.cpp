@@ -239,9 +239,9 @@ void BasePhysics::saveSummary(axom::sidre::DataStore& datastore, const double t)
   for (FiniteElementState& state : state_) {
     // Calculate current stat value
     // Note: These are collective operations.
-    l1norm_value   = myspecialnorm(state, 1.0);
-    l2norm_value   = myspecialnorm(state, 2.0);
-    linfnorm_value = myspecialnorm(state, mfem::infinity());
+    l1norm_value   = norm(state, 1.0);
+    l2norm_value   = norm(state, 2.0);
+    linfnorm_value = norm(state, mfem::infinity());
     avg_value      = avg(state);
     max_value      = max(state);
     min_value      = min(state);

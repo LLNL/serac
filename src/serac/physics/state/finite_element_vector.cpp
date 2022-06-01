@@ -15,7 +15,14 @@ FiniteElementVector::FiniteElementVector(mfem::ParMesh& mesh, FiniteElementVecto
       space_(std::make_unique<mfem::ParFiniteElementSpace>(&mesh, coll_.get(), options.vector_dim, options.ordering)),
       name_(options.name)
 {
-  HypreParVector(space_.get());
+  // Construct a hypre par vector based on the new finite element space
+  HypreParVector new_vector(space_.get());
+
+  // Move the data from this new hypre vector into this object without doubly allocating the data
+  auto* parallel_vec = new_vector.StealParVector();
+  WrapHypreParVector(parallel_vec);
+
+  // Initialize the vector to zero
   HypreParVector::operator=(0.0);
 }
 
@@ -26,7 +33,14 @@ FiniteElementVector::FiniteElementVector(mfem::ParMesh& mesh, const mfem::ParFin
       space_(std::make_unique<mfem::ParFiniteElementSpace>(space, &mesh, coll_.get())),
       name_(name)
 {
-  HypreParVector(space_.get());
+  // Construct a hypre par vector based on the new finite element space
+  HypreParVector new_vector(space_.get());
+
+  // Move the data from this new hypre vector into this object without doubly allocating the data
+  auto* parallel_vec = new_vector.StealParVector();
+  WrapHypreParVector(parallel_vec);
+
+  // Initialize the vector to zero
   HypreParVector::operator=(0.0);
 }
 
@@ -41,7 +55,7 @@ FiniteElementVector::FiniteElementVector(FiniteElementVector&& input_vector)
       space_(std::move(input_vector.space_)),
       name_(std::move(input_vector.name_))
 {
-  // HypreParVec doesn't have a move constructor, so it must be implemented
+  // Grab the allocated data from the input argument for the underlying Hypre vector
   auto* parallel_vec = input_vector.StealParVector();
   WrapHypreParVector(parallel_vec);
 }
@@ -79,7 +93,7 @@ double min(const FiniteElementVector& fe_vector)
   return global_min;
 }
 
-double myspecialnorm(const FiniteElementVector& state, const double p)
+double norm(const FiniteElementVector& state, const double p)
 {
   if (state.space().GetVDim() == 1) {
     mfem::ConstantCoefficient zero(0.0);
