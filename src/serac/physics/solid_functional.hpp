@@ -271,23 +271,23 @@ public:
   template <typename MaterialType>
   void setMaterial(MaterialType material)
   {
-    if constexpr (is_parameterized<MaterialType>::value) {
-      static_assert(material.numParameters() == sizeof...(parameter_space),
-                    "Number of parameters in solid does not equal the number of parameters in the "
-                    "solid material.");
-    }
+    //if constexpr (is_parameterized<MaterialType>::value) {
+    //  static_assert(material.numParameters() == sizeof...(parameter_space),
+    //                "Number of parameters in solid does not equal the number of parameters in the "
+    //                "solid material.");
+    //}
 
-    auto parameterized_material = parameterizeMaterial(material);
+    //auto parameterized_material = parameterizeMaterial(material);
 
     K_functional_->AddDomainIntegral(
         Dimension<dim>{},
-        [this, parameterized_material](auto x, auto displacement, auto... params) {
+        [this, material](auto x, auto displacement, auto... params) {
           // Get the value and the gradient from the input tuple
           auto [u, du_dX] = displacement;
 
           auto source = zero{};
 
-          auto response = parameterized_material(x, u, du_dX, params...);
+          auto response = material(x, u, du_dX, params...);
 
           auto flux = response.stress;
 
@@ -302,10 +302,10 @@ public:
 
     M_functional_->AddDomainIntegral(
         Dimension<dim>{},
-        [this, parameterized_material](auto x, auto displacement, auto... params) {
+        [this, material](auto x, auto displacement, auto... params) {
           auto [u, du_dX] = displacement;
 
-          auto response = parameterized_material(x, u, du_dX, params...);
+          auto response = material(x, u, du_dX, params...);
 
           auto flux = 0.0 * du_dX;
 

@@ -245,7 +245,7 @@ void parameterized(double expected_norm)
   const typename solid_util::SolverOptions solid_options = {default_linear_options, default_nonlinear_options};
 
   
-  ThermalMechanicsFunctional<p, dim, H1<p>> thermal_solid_solver(thermal_options, solid_options,
+  ThermalMechanicsFunctional<p, dim, H1<p> > thermal_solid_solver(thermal_options, solid_options,
                                                           GeometricNonlinearities::On,
                                                           FinalMeshOption::Deformed,
                                                           "thermal_solid_functional");
@@ -257,8 +257,21 @@ void parameterized(double expected_norm)
   double                                alpha     = 1.0e-3;
   double                                theta_ref = 2.0;
   double                                k         = 1.0;
-  GreenSaintVenantThermoelasticMaterial material{rho, E, nu, c, alpha, theta_ref, k};
-  thermal_solid_solver.setMaterial(parameterizeMaterial(material));
+  ParameterizedGreenSaintVenantThermoelasticMaterial material{rho, E, nu, c, alpha, theta_ref, k};
+  thermal_solid_solver.setMaterial(material);
+
+  FiniteElementState thermal_expansion_scaling(
+      StateManager::newState(FiniteElementState::Options{.order = p, .name = "alpha scale"}));
+  thermal_expansion_scaling = 1.5;
+
+  std::function<double(const mfem::Vector&, double)> f = [](const mfem::Vector& x, double /*t*/) {
+    return 1.0 - x[0] * 0.5;
+  };
+  mfem::FunctionCoefficient coef(f);
+  thermal_expansion_scaling.project(coef);
+
+  thermal_solid_solver.setParameter(thermal_expansion_scaling, 0);
+
 
   // Define the function for the initial temperature
   double theta_0 = 1.0;
@@ -284,13 +297,13 @@ void parameterized(double expected_norm)
   thermal_solid_solver.initializeOutput(serac::OutputType::VisIt, "thermal_mechanics_without_input_file_output");
 
   // dump initial state to output
-  //thermal_solid_solver.outputState();
+  thermal_solid_solver.outputState();
 
   // Perform the quasi-static solve
   double dt = 1.0;
   thermal_solid_solver.advanceTimestep(dt);
 
-  //thermal_solid_solver.outputState();
+  thermal_solid_solver.outputState();
 
   // Check the final displacement norm
   EXPECT_NEAR(expected_norm, norm(thermal_solid_solver.displacement()), 1.0e-4);
@@ -321,7 +334,7 @@ TEST(thermal_mechanical, parameterized)
   constexpr int p = 2;
   // this is the small strain solution, which works with a loose enought tolerance
   // TODO work out the finite deformation solution
-  double alpha = 1e-3;
+  double alpha = 1.5e-3;
   double L = 8;
   double delta_theta = 1.0;
   serac::parameterized<p>(std::sqrt(L*L*L/3.0)*alpha*delta_theta);

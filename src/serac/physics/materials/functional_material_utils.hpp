@@ -52,6 +52,8 @@ struct TriviallyParameterizedMaterial {
 
   /// Underlying unparameterized material
   UnparameterizedMaterialType mat;
+
+  using State = typename UnparameterizedMaterialType::State;
 };
 
 /**
