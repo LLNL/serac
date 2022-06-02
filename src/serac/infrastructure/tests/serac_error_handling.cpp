@@ -115,17 +115,6 @@ TEST(serac_error_handling, bc_retrieve_vec_coef)
   EXPECT_THROW(const_bc.scalarCoefficient(), SlicErrorException);
 }
 
-TEST(serac_error_handling, invalid_output_type)
-{
-  // Create DataStore
-  axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "invalid_output_type");
-  serac::StateManager::setMesh(mesh::refineAndDistribute(buildDiskMesh(1000)));
-  ThermalConduction physics(1, ThermalConduction::defaultQuasistaticOptions());
-  // Try a definitely wrong number to ensure that an invalid output type is detected
-  EXPECT_THROW(physics.initializeOutput(static_cast<OutputType>(-7), ""), SlicErrorException);
-}
-
 TEST(serac_error_handling, invalid_cmdline_arg)
 {
   // The command is actually --input-file

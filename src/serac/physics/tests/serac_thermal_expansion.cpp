@@ -71,9 +71,6 @@ TEST(solid_solver, thermal_expansion)
 
   solid_solver.setThermalExpansion(std::move(cte), std::move(ref_temp), temp);
 
-  // Initialize the VisIt output
-  solid_solver.initializeOutput(serac::OutputType::VisIt, "solid_thermal_expansion");
-
   // Construct the internal dynamic solver data structures
   solid_solver.completeSetup();
 

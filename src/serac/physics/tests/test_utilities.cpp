@@ -231,12 +231,6 @@ void runModuleTest(const std::string& input_file, const std::string& test_name, 
 
   const bool is_dynamic = inlet[module_name].contains("dynamics");
 
-  // Initialize the output
-  // FIXME: This and the FromInlet specialization are hacked together,
-  // should be inlet["output_type"].get<OutputType>() - Inlet obj
-  // needs to allow for top-level scalar retrieval as well
-  phys_module.initializeOutput(inlet.getGlobalContainer().get<OutputType>(), test_name);
-
   // Complete the solver setup
   phys_module.completeSetup();
   // Output the initial state

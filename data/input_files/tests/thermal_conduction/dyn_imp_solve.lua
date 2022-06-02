@@ -6,9 +6,6 @@ epsilon = 0.00001
 dt      = 1.0
 t_final = 5.0
 
--- Simulation output format
-output_type = "SidreVisIt"
-
 main_mesh = {
     type = "file",
     -- mesh file

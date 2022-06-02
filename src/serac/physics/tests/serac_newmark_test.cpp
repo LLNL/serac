@@ -40,7 +40,7 @@ protected:
   void TearDown() {}
 
   // Helper method to run serac_newmark_tests
-  std::unique_ptr<serac::Solid> runDynamicTest(axom::inlet::Inlet& inlet, const std::string& root_name)
+  std::unique_ptr<serac::Solid> runDynamicTest(axom::inlet::Inlet& inlet)
   {
     // Define schema
     // Simulation time parameters
@@ -99,9 +99,6 @@ protected:
       solid_solver->addBodyForce(std::make_shared<mfem::VectorConstantCoefficient>(gravity));
     }
 
-    // Initialize the output
-    solid_solver->initializeOutput(serac::OutputType::VisIt, root_name);
-
     // Complete the solver setup
     solid_solver->completeSetup();
     // Output the initial state
@@ -125,7 +122,7 @@ TEST_F(NewmarkBetaTest, SimpleLua)
   std::cout << input_file << std::endl;
   auto inlet = serac::input::initialize(datastore, input_file);
 
-  auto solid_solver = runDynamicTest(inlet, "solid_simple");
+  auto solid_solver = runDynamicTest(inlet);
 
   // Save initial state
   mfem::Vector u_prev(solid_solver->displacement().gridFunction());
@@ -195,7 +192,7 @@ TEST_F(NewmarkBetaTest, EquilbriumLua)
   auto inlet = serac::input::initialize(datastore, input_file);
 
   // User helper to run test
-  auto solid_solver = runDynamicTest(inlet, "solid");
+  auto solid_solver = runDynamicTest(inlet);
 
   double dt = inlet["dt"];
 
@@ -238,7 +235,7 @@ TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
   auto inlet = serac::input::initialize(datastore, input_file);
 
   // User helper to run test
-  auto solid_solver = runDynamicTest(inlet, "solid_first_orderlua");
+  auto solid_solver = runDynamicTest(inlet);
 
   double dt = inlet["dt"];
 

@@ -24,7 +24,6 @@ BasePhysics::BasePhysics(mfem::ParMesh* pmesh)
     : sidre_datacoll_id_(StateManager::collectionID(pmesh)),
       mesh_(StateManager::mesh(sidre_datacoll_id_)),
       comm_(mesh_.GetComm()),
-      output_type_(serac::OutputType::SidreVisIt),
       time_(0.0),
       cycle_(0),
       bcs_(mesh_)
@@ -58,102 +57,7 @@ double BasePhysics::time() const { return time_; }
 
 int BasePhysics::cycle() const { return cycle_; }
 
-void BasePhysics::initializeOutput(const serac::OutputType output_type, const std::string& root_name,
-                                   const std::string output_directory)
-{
-  root_name_        = root_name;
-  output_type_      = output_type;
-  output_directory_ = output_directory;
-
-  switch (output_type_) {
-    case serac::OutputType::VisIt: {
-      dc_ = std::make_unique<mfem::VisItDataCollection>(root_name_, &state_.front().get().mesh());
-      break;
-    }
-
-    case serac::OutputType::ParaView: {
-      auto pv_dc = std::make_unique<mfem::ParaViewDataCollection>(root_name_, &state_.front().get().mesh());
-      int  max_order_in_fields = 0;
-      for (FiniteElementState& state : state_) {
-        auto& gf = grid_functions_.emplace_back(std::make_pair(&state, state.gridFunction()));
-        pv_dc->RegisterField(state.name(), &gf.second);
-        max_order_in_fields = std::max(max_order_in_fields, state.space().GetOrder(0));
-      }
-      pv_dc->SetLevelsOfDetail(max_order_in_fields);
-      pv_dc->SetHighOrderOutput(true);
-      pv_dc->SetDataFormat(mfem::VTKFormat::BINARY);
-      pv_dc->SetCompression(true);
-      dc_ = std::move(pv_dc);
-      break;
-    }
-
-    case serac::OutputType::GLVis:
-      [[fallthrough]];
-    case OutputType::SidreVisIt: {
-      break;
-    }
-
-    default:
-      SLIC_ERROR_ROOT("OutputType not recognized!");
-  }
-
-  if (output_type_ == OutputType::VisIt) {
-    // Implicitly convert from ref_wrapper
-    for (FiniteElementState& state : state_) {
-      auto& gf = grid_functions_.emplace_back(std::make_pair(&state, state.gridFunction()));
-      dc_->RegisterField(state.name(), &gf.second);
-    }
-  }
-}
-
-void BasePhysics::outputState() const
-{
-  switch (output_type_) {
-    case serac::OutputType::VisIt:
-      [[fallthrough]];
-    case serac::OutputType::ParaView:
-      dc_->SetCycle(cycle_);
-      dc_->SetTime(time_);
-      if (!output_directory_.empty()) {
-        dc_->SetPrefixPath(output_directory_);
-      }
-
-      // Update the grid functions with the current data in the state vectors
-      for (auto& grid_function : grid_functions_) {
-        grid_function.first->gridFunction(grid_function.second);
-      }
-
-      dc_->Save();
-      break;
-    case serac::OutputType::SidreVisIt: {
-      // Implemented through a helper method as the full interface of the MFEMSidreDataCollection
-      // is restricted from global access
-      StateManager::save(time_, cycle_, sidre_datacoll_id_);
-      break;
-    }
-
-    case serac::OutputType::GLVis: {
-      const std::string mesh_name = axom::fmt::format("{0}-mesh.{1:0>6}.{2:0>6}", root_name_, cycle_, mpi_rank_);
-      const std::string mesh_path = axom::utilities::filesystem::joinPath(output_directory_, mesh_name);
-      std::ofstream     omesh(mesh_path);
-      omesh.precision(FLOAT_PRECISION_);
-      state_.front().get().mesh().Print(omesh);
-
-      for (FiniteElementState& state : state_) {
-        std::string sol_name =
-            axom::fmt::format("{0}-{1}.{2:0>6}.{3:0>6}", root_name_, state.name(), cycle_, mpi_rank_);
-        const std::string sol_path = axom::utilities::filesystem::joinPath(output_directory_, sol_name);
-        std::ofstream     osol(sol_path);
-        osol.precision(FLOAT_PRECISION_);
-        state.gridFunction().Save(osol);
-      }
-      break;
-    }
-
-    default:
-      SLIC_ERROR_ROOT("OutputType not recognized!");
-  }
-}
+void BasePhysics::outputState() const { StateManager::save(time_, cycle_, sidre_datacoll_id_); }
 
 void BasePhysics::initializeSummary(axom::sidre::DataStore& datastore, double t_final, double dt) const
 {

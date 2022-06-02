@@ -204,10 +204,6 @@ int main(int argc, char* argv[])
 
   bool last_step = false;
 
-  // FIXME: This and the FromInlet specialization are hacked together,
-  // should be inlet["output_type"].get<OutputType>()
-  main_physics->initializeOutput(inlet.getGlobalContainer().get<serac::OutputType>(), "serac", output_directory);
-
   main_physics->initializeSummary(datastore, t_final, dt);
 
   // Enter the time step loop.

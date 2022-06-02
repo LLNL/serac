@@ -27,7 +27,6 @@ std::vector<std::unique_ptr<SyncableData>>                            StateManag
 axom::sidre::DataStore*                                               StateManager::ds_                = nullptr;
 std::string                                                           StateManager::output_dir_        = "";
 const std::string                                                     StateManager::default_mesh_name_ = "default";
-std::vector<std::pair<std::string, mfem::ParGridFunction>>            StateManager::grid_functions_;
 
 void StateManager::newDataCollection(const std::string& name, const std::optional<int> cycle_to_load)
 {
@@ -98,9 +97,11 @@ FiniteElementState StateManager::newState(FiniteElementVector::Options&& options
   } else {
     SLIC_ERROR_ROOT_IF(datacoll.HasField(name),
                        axom::fmt::format("Serac's datacollection was already given a field named '{0}'", name));
-    auto& new_grid_function = grid_functions_.emplace_back(std::make_pair(name, &state.space()));
-    state.gridFunction(new_grid_function.second);
-    datacoll.RegisterField(name, &(new_grid_function.second));
+
+    // Create a new grid function with unallocated data. This will be managed by sidre.
+    auto* new_grid_function = new mfem::ParGridFunction(&state.space(), static_cast<double*>(nullptr));
+    datacoll.RegisterField(name, new_grid_function);
+    state.gridFunction(*new_grid_function);
   }
   return state;
 }
@@ -119,9 +120,10 @@ FiniteElementDual StateManager::newDual(FiniteElementVector::Options&& options, 
   } else {
     SLIC_ERROR_ROOT_IF(datacoll.HasField(name),
                        axom::fmt::format("Serac's datacollection was already given a field named '{0}'", name));
-    auto& new_grid_function = grid_functions_.emplace_back(std::make_pair(name, &dual.space()));
-    dual.gridFunction(new_grid_function.second);
-    datacoll.RegisterField(name, &(new_grid_function.second));
+    // Create a new grid function with unallocated data. This will be managed by sidre.
+    auto* new_grid_function = new mfem::ParGridFunction(&dual.space(), static_cast<double*>(nullptr));
+    datacoll.RegisterField(name, new_grid_function);
+    dual.gridFunction(*new_grid_function);
   }
   return dual;
 }

@@ -75,9 +75,6 @@ TEST(solid_solver, reuse_mesh)
                                          std::make_unique<mfem::ConstantCoefficient>(5.0));
     solid_solver_1.setDisplacement(*deform);
 
-    // Initialize the VisIt output
-    solid_solver_1.initializeOutput(serac::OutputType::VisIt, "two_mesh_solid_1");
-
     // Construct the internal dynamic solver data structures
     solid_solver_1.completeSetup();
 
@@ -87,9 +84,6 @@ TEST(solid_solver, reuse_mesh)
     solid_solver_2.setMaterialParameters(std::make_unique<mfem::ConstantCoefficient>(0.25),
                                          std::make_unique<mfem::ConstantCoefficient>(5.0));
     solid_solver_2.setDisplacement(*deform);
-
-    // Initialize the VisIt output
-    solid_solver_2.initializeOutput(serac::OutputType::VisIt, "two_mesh_solid_2");
 
     // Construct the internal dynamic solver data structures
     solid_solver_2.completeSetup();
@@ -112,9 +106,6 @@ TEST(solid_solver, reuse_mesh)
   solid_solver_3.setMaterialParameters(std::make_unique<mfem::ConstantCoefficient>(0.25),
                                        std::make_unique<mfem::ConstantCoefficient>(5.0));
   solid_solver_3.setDisplacement(*deform);
-
-  // Initialize the VisIt output
-  solid_solver_3.initializeOutput(serac::OutputType::VisIt, "two_mesh_solid_1");
 
   // Construct the internal dynamic solver data structures
   solid_solver_3.completeSetup();

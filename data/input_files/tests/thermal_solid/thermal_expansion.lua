@@ -7,8 +7,6 @@ expected_velocity_l2norm = 0.0
 expected_temperature_l2norm = 2.3424281
 epsilon = 0.0001
 
-output_type = "SidreVisIt"
-
 main_mesh = {
     type = "file",
     -- mesh file

@@ -85,9 +85,6 @@ TEST(solid_solver, qs_custom_solve)
   solid_solver_options.solver_options.H_lin_options = CustomSolverOptions{custom_solver.get()};
   Solid solid_solver(solid_solver_options);
 
-  // Initialize the output
-  solid_solver.initializeOutput(serac::OutputType::VisIt, "static_solid");
-
   // Complete the solver setup
   solid_solver.completeSetup();
 
