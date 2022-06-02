@@ -56,7 +56,7 @@ if [[ "$DO_STYLE_CHECK" == "yes" ]] ; then
     cmake_args="$cmake_args -DENABLE_CLANGFORMAT=ON -DCLANGFORMAT_EXECUTABLE=$CLANGFORMAT_EXECUTABLE"
 fi
 
-or_die ./config-build.py -hc /home/serac/serac/host-configs/docker/${HOST_CONFIG}.cmake $cmake_args
+or_die ./config-build.py -hc host-configs/docker/${HOST_CONFIG} $cmake_args
 or_die cd build-$HOST_CONFIG-debug
 
 if [[ "$DO_COVERAGE_CHECK" == "yes" ]] ; then
