@@ -56,7 +56,7 @@ TEST(MaterialDriver, testUniaxialTensionOnNonLinearMaterial)
   for (unsigned int i = 0; i < response_history.size(); i++) {
     double computed_stress = get<1>(response_history[i]);
     double strain = get<0>(response_history[i]);
-    //std::cout << strain << " " << computed_stress << std::endl;
+    std::cout << strain << " " << computed_stress << std::endl;
   }
 }
 
