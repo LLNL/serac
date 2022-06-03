@@ -31,7 +31,6 @@ set(solver_tests
     serac_solid_functional.cpp
     serac_thermal_solver.cpp
     serac_thermal_solid_solver.cpp
-    serac_thermal_expansion.cpp
     serac_thermal_functional.cpp
     serac_thermal_solid_functional.cpp
     )

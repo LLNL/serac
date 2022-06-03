@@ -115,7 +115,8 @@ public:
         c_coef_thermal_expansion_(std::move(coef_thermal_expansion)),
         c_reference_temp_(std::move(reference_temp)),
         temp_state_(temp),
-        temp_grid_function_(const_cast<mfem::ParFiniteElementSpace*>(&temp_state_.space()))
+        temp_grid_function_(temp.gridFunction()),
+        temp_coef_(&temp_grid_function_)
   {
   }
 
@@ -171,6 +172,8 @@ protected:
   const FiniteElementState& temp_state_;
 
   mfem::ParGridFunction temp_grid_function_;
+
+  mfem::GridFunctionCoefficient temp_coef_;
 };
 
 }  // namespace serac
