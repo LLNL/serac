@@ -27,9 +27,11 @@ TEST(MaterialDriver, testUniaxialTensionOnLinearMaterial)
   double K = E/3.0/(1.0 - 2.0*nu);
   solid_util::LinearIsotropicSolid<3> material(density, G, K);
   solid_util::MaterialDriver material_driver(material);
-  double max_strain = 1.0;
+  double max_time = 1.0;
   unsigned int steps = 10;
-  auto response_history = material_driver.runUniaxial(max_strain, steps);
+  const double strain_rate = 1.0;
+  std::function<double(double)> constant_eng_strain_rate = [strain_rate](double t){ return strain_rate*t; };
+  auto response_history = material_driver.runUniaxial(max_time, constant_eng_strain_rate, steps);
   
   for (unsigned int i = 0; i < response_history.size(); i++) {
     double computed_stress = get<1>(response_history[i]);
@@ -49,10 +51,12 @@ TEST(MaterialDriver, testUniaxialTensionOnNonLinearMaterial)
   double K = E/3.0/(1.0 - 2.0*nu);
   solid_util::NeoHookeanSolid<3> material(density, G, K);
   solid_util::MaterialDriver material_driver(material);
-  double max_strain = 1.0;
+  double max_time = 1.0;
   unsigned int steps = 10;
-  auto response_history = material_driver.runUniaxial(max_strain, steps);
-  
+  double strain_rate = 1.0;
+  std::function<double(double)> constant_true_strain_rate = [strain_rate](double t){ return std::expm1(strain_rate*t); };
+  auto response_history = material_driver.runUniaxial(max_time, constant_true_strain_rate, steps);
+
   for (unsigned int i = 0; i < response_history.size(); i++) {
     double computed_stress = get<1>(response_history[i]);
     double strain = get<0>(response_history[i]);

@@ -22,30 +22,6 @@
 
 namespace serac::solid_util {
 
-// tensor<double, 2> my_newton_solve(const std::function<tensor<dual<double>, 2>(tensor<dual<double>, 2>)>& f,
-//                                   const tensor<double, 2>& x0)
-// {
-//   auto& value_and_jacobian = f(make_dual(x0));
-//   const auto& r0 = get_value(value_and_jacobian);
-//   auto J = get_gradient(value_and_jacobian);
-//   constexpr double tol = 1e-10;
-//   auto r = r0;
-//   double resnorm = norm(r);
-//   auto x = x0;
-//   const double resnorm 0 = resnorm;
-//   const int MAXITERS = 10;
-//   for (int i = 0; i < MAXITERS; i++) {
-//     auto dx = linear_solve(J, r);
-//     x -= dx;
-//     auto& r_and_jac = f(x);
-//     r = get_value(r_and_jac);
-//     J = get_gradient(r_and_jac);
-//     resnorm = norm(r);
-//     if (renorm < tol*resnorm0) break;
-//   }
-//   return x;
-// }
-
 template <typename T>
 class MaterialDriver {
  public:
@@ -59,16 +35,20 @@ class MaterialDriver {
   /**
    * @brief Drive the material model thorugh a uniaxial tension experiment
    *
-   * Currently only implemented for isotropic materials.
+   * Drives material model through specified axial displacement gradient history.
+   * The time elaspses from 0 up to the specified argument.
+   * Note: Currently only implemented for isotropic materials.
    *
-   * @param maxEngineeringStrain Maximum engineering strain to apply
-   * @param nsteps The number of discrete strain points to step through
+   * @param maxTime upper limit of the time interval.
+   * @param displacement_gradient_history A function describing the desired axial displacement gradient as a function of time. (Axial displacement gradient is equivalent to engineering strain).
+   * @param nsteps The number of discrete time points at which the response is sampled (uniformly spaced).
    */
-  std::vector<tuple<double, double>> runUniaxial(double maxEngineeringStrain, unsigned int nsteps)
+  std::vector<tuple<double, double>> runUniaxial(double maxTime, const std::function<double(double)>& strain, unsigned int nsteps)
   {
-    const double strain_increment = maxEngineeringStrain/nsteps;
+    const double dt = maxTime / nsteps;
     const tensor<double, 3> x{};
     const tensor<double, 3> u{};
+    double t = 0;
     tensor<double, 3, 3> dudx{};
 
     // for output
@@ -78,7 +58,8 @@ class MaterialDriver {
     constexpr int MAXITERS = 10;
     
     for (unsigned int i = 0; i < nsteps; i++) {
-      dudx[0][0] += strain_increment;
+      t += dt;
+      dudx[0][0] = strain(t);
 
       auto response = material_(x, u, make_dual(dudx));
       auto r = makeUnknownVector(get_value(response.stress));
