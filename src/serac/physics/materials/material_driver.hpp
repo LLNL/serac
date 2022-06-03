@@ -25,6 +25,8 @@ namespace serac::solid_util {
 template <typename T>
 class MaterialDriver {
  public:
+
+  using ResponseHistory = std::vector<tuple<double, double>>;
   
   MaterialDriver(const T& material):
       material_(material)
@@ -40,10 +42,11 @@ class MaterialDriver {
    * Note: Currently only implemented for isotropic materials.
    *
    * @param maxTime upper limit of the time interval.
-   * @param displacement_gradient_history A function describing the desired axial displacement gradient as a function of time. (Axial displacement gradient is equivalent to engineering strain).
+   * @param strain A function describing the desired axial displacement gradient as a function of time. (Axial displacement gradient is equivalent to engineering strain).
    * @param nsteps The number of discrete time points at which the response is sampled (uniformly spaced).
    */
-  std::vector<tuple<double, double>> runUniaxial(double maxTime, const std::function<double(double)>& strain, unsigned int nsteps)
+  ResponseHistory runUniaxial(double maxTime, const std::function<double(double)>& strain, unsigned int nsteps,
+                              const double relative_tolerance=1e-10, const int max_equilibrium_iterations=10)
   {
     const double dt = maxTime / nsteps;
     const tensor<double, 3> x{};
@@ -52,10 +55,10 @@ class MaterialDriver {
     tensor<double, 3, 3> dudx{};
 
     // for output
-    std::vector<tuple<double, double>> stress_strain_history;
+    ResponseHistory stress_strain_history;
 
-    constexpr double tol = 1e-10;
-    constexpr int MAXITERS = 10;
+    const double& tol = relative_tolerance;
+    const int& MAXITERS = max_equilibrium_iterations;
     
     for (unsigned int i = 0; i < nsteps; i++) {
       t += dt;
