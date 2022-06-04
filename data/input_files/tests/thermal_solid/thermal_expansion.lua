@@ -12,7 +12,7 @@ main_mesh = {
     -- mesh file
     mesh = "../../../meshes/onehex.mesh",
     -- serial and parallel refinement levels
-    ser_ref_levels = 1,
+    ser_ref_levels = 2,
     par_ref_levels = 0,
 }
 
@@ -28,7 +28,7 @@ thermal_solid = {
                 rel_tol     = 1.0e-6,
                 abs_tol     = 1.0e-8,
                 max_iter    = 500,
-                print_level = 0,
+                print_level = 1,
             },
         },
 

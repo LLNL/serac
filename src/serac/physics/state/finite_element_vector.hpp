@@ -31,8 +31,8 @@ using GeneralCoefficient = variant<std::shared_ptr<mfem::Coefficient>, std::shar
  * from a MFEM finite element space. Specifically, it contains the information
  * needed for both primal finite element state fields and dual finite element vectors.
  *
- * Namely: Mesh, FiniteElementCollection, FiniteElementVector,
- * GridFunction, and a distributed vector of the solution
+ * Namely: Mesh, FiniteElementCollection, FiniteElementSpace, name, and a HypreParVector
+ * containing the true degrees of freedom for the field.
  */
 class FiniteElementVector : public mfem::HypreParVector {
 public:
@@ -88,6 +88,8 @@ public:
 
   /**
    * @brief Copy constructor
+   * 
+   * @param[in] rhs The input vector used for construction
    */
   FiniteElementVector(const FiniteElementVector& rhs);
 
@@ -148,6 +150,12 @@ public:
     return std::make_unique<Tensor>(space_.get());
   }
 
+  /**
+   * @brief Project a vector coefficient onto a set of dofs
+   * 
+   * @param coef The coefficient to project
+   * @param dof_list A list of true degrees of freedom to set
+   */
   void project(mfem::VectorCoefficient& coef, mfem::Array<int>& dof_list)
   {
     mfem::ParGridFunction grid_function = gridFunction();
@@ -155,6 +163,13 @@ public:
     initializeTrueVec(grid_function);
   }
 
+  /**
+   * @brief Project a vector coefficient onto a set of dofs
+   * 
+   * @param coef The coefficient to project
+   * @param dof_list A list of true degrees of freedom to set
+   * @param component The component to set
+   */
   void project(mfem::Coefficient& coef, mfem::Array<int>& dof_list, std::optional<int> component = {})
   {
     mfem::ParGridFunction grid_function = gridFunction();
@@ -214,8 +229,18 @@ public:
     initializeTrueVec(grid_function);
   }
 
+  /**
+   * @brief Initialize the finite element state true vector from a compatible grid function
+   * 
+   * @param grid_function The grid function used to initialize the finite element state
+   */
   void initialize(const mfem::ParGridFunction& grid_function) { initializeTrueVec(grid_function); }
 
+  /**
+   * @brief Construct a grid function from the finite element state true vector
+   * 
+   * @return The constructed grid function
+   */
   mfem::ParGridFunction gridFunction() const
   {
     mfem::ParGridFunction grid_function(space_.get());
