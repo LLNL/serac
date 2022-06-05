@@ -22,13 +22,13 @@
 
 namespace serac::solid_util {
 
-template <typename T>
+template <typename MaterialType>
 class MaterialDriver {
  public:
 
   using ResponseHistory = std::vector<tuple<double, double>>;
   
-  MaterialDriver(const T& material):
+  MaterialDriver(const MaterialType& material):
       material_(material)
   {
     // empty
@@ -42,11 +42,14 @@ class MaterialDriver {
    * Note: Currently only implemented for isotropic materials.
    *
    * @param maxTime upper limit of the time interval.
-   * @param strain A function describing the desired axial displacement gradient as a function of time. (Axial displacement gradient is equivalent to engineering strain).
    * @param nsteps The number of discrete time points at which the response is sampled (uniformly spaced).
+   * @param strain A function describing the desired axial displacement gradient as a function of time. 
+   *        (NB axial displacement gradient is equivalent to engineering strain).
    */
-  ResponseHistory runUniaxial(double maxTime, const std::function<double(double)>& strain, unsigned int nsteps,
-                              const double relative_tolerance=1e-10, const int max_equilibrium_iterations=10)
+  ResponseHistory runUniaxial(double maxTime, unsigned int nsteps,
+                              const std::function<double(double)>& strain,
+                              const double relative_tolerance=1e-10,
+                              const int max_equilibrium_iterations=10)
   {
     const double dt = maxTime / nsteps;
     const tensor<double, 3> x{};
@@ -54,6 +57,8 @@ class MaterialDriver {
     double t = 0;
     tensor<double, 3, 3> dudx{};
 
+    typename MaterialType::State state(MaterialType::initialize_state());
+    
     // for output
     ResponseHistory stress_strain_history;
 
@@ -64,7 +69,8 @@ class MaterialDriver {
       t += dt;
       dudx[0][0] = strain(t);
 
-      auto response = material_(x, u, make_dual(dudx));
+      auto scratch_state = state;
+      auto response = material_(x, u, make_dual(dudx), scratch_state);
       auto r = makeUnknownVector(get_value(response.stress));
       auto resnorm = norm(r);
       const auto resnorm0 = resnorm;
@@ -74,12 +80,14 @@ class MaterialDriver {
         auto corr = linear_solve(J, r);
         dudx[1][1] -= corr[0];
         dudx[2][2] -= corr[1];
-        response = material_(x, u, make_dual(dudx));
+        scratch_state = state;
+        response = material_(x, u, make_dual(dudx), scratch_state);
         r = makeUnknownVector(get_value(response.stress));
         resnorm = norm(r);
         if (resnorm < tol*resnorm0) break;
         J = makeJacobianMatrix(get_gradient(response.stress));
       }
+      state = scratch_state;
       auto stress = get_value(response.stress);
       //std::cout << "out of plane stress " << stress[1][1] << std::endl;
       stress_strain_history.push_back(tuple{dudx[0][0], stress[0][0]});
@@ -98,7 +106,7 @@ class MaterialDriver {
     return {{{A[1][1][1][1], A[1][1][2][2]}, {A[2][2][1][1], A[2][2][2][2]}}};
   }
       
-  const T& material_;
+  const MaterialType& material_;
 };
 
 } // namespace serac

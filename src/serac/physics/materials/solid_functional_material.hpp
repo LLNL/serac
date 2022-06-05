@@ -49,6 +49,14 @@ MaterialResponse(DensityType, StressType) -> MaterialResponse<DensityType, Stres
 template <int dim>
 class LinearIsotropicSolid {
 public:
+  
+  /**
+   * State variable type
+   *
+   * There are no state variables for this material.
+   */
+  struct State { /* no state variables */ };
+  
   /**
    * @brief Construct a new Linear Isotropic Elasticity object
    *
@@ -85,7 +93,7 @@ public:
    */
   template <typename DisplacementType, typename DispGradType>
   SERAC_HOST_DEVICE auto operator()(const tensor<double, dim>& /* x */, const DisplacementType& /* displacement */,
-                                    const DispGradType& displacement_grad) const
+                                    const DispGradType& displacement_grad, State& /* state */) const
   {
     auto I      = Identity<dim>();
     auto lambda = bulk_modulus_ - (2.0 / dim) * shear_modulus_;
@@ -94,6 +102,13 @@ public:
     return MaterialResponse<double, DispGradType>{.density = density_, .stress = stress};
   }
 
+  /**
+   * @brief Set initial values of state variables
+   *
+   * This material has no state variables, so the returned object is empty.
+   */
+  static State initialize_state() { return State{}; };
+  
 private:
   /// Density
   double density_;
@@ -113,6 +128,14 @@ private:
 template <int dim>
 class NeoHookeanSolid {
 public:
+
+  /**
+   * State variable type
+   *
+   * There are no state variables for this material.
+   */
+  struct State { /* no state variables */ };
+  
   /**
    * @brief Construct a new Neo-Hookean object
    *
@@ -147,7 +170,7 @@ public:
    */
   template <typename DisplacementType, typename DispGradType>
   SERAC_HOST_DEVICE auto operator()(const tensor<double, dim>& /* x */, const DisplacementType& /* displacement */,
-                                    const DispGradType& displacement_grad) const
+                                    const DispGradType& displacement_grad, State& /* state */) const
   {
     auto I      = Identity<dim>();
     auto lambda = bulk_modulus_ - (2.0 / dim) * shear_modulus_;
@@ -164,6 +187,13 @@ public:
 
     return MaterialResponse{density_, stress};
   }
+
+  /**
+   * @brief Set initial values of state variables
+   *
+   * This material has no state variables, so the returned object is empty.
+   */
+  static State initialize_state() { return State{}; };
 
 private:
   /// Density

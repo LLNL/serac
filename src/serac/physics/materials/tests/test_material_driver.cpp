@@ -31,14 +31,14 @@ TEST(MaterialDriver, testUniaxialTensionOnLinearMaterial)
   unsigned int steps = 10;
   const double strain_rate = 1.0;
   std::function<double(double)> constant_eng_strain_rate = [strain_rate](double t){ return strain_rate*t; };
-  auto response_history = material_driver.runUniaxial(max_time, constant_eng_strain_rate, steps);
-  
-  for (unsigned int i = 0; i < response_history.size(); i++) {
-    double computed_stress = get<1>(response_history[i]);
-    double strain = get<0>(response_history[i]);
+  auto response_history = material_driver.runUniaxial(max_time, steps, constant_eng_strain_rate);
+
+  for (const auto& r : response_history) {
+    double computed_stress = get<1>(r);
+    double strain = get<0>(r);
     double expected_stress = E*strain;
-    //std::cout << strain << " " << computed_stress << std::endl;
-    EXPECT_NEAR(computed_stress, expected_stress, 1e-8);
+    EXPECT_NEAR(computed_stress, expected_stress, 1e-10);
+    // std::cout << strain << " " << computed_stress << std::endl;
   }
 }
 
@@ -55,13 +55,14 @@ TEST(MaterialDriver, testUniaxialTensionOnNonLinearMaterial)
   unsigned int steps = 10;
   double strain_rate = 1.0;
   std::function<double(double)> constant_true_strain_rate = [strain_rate](double t){ return std::expm1(strain_rate*t); };
-  auto response_history = material_driver.runUniaxial(max_time, constant_true_strain_rate, steps);
+  auto response_history = material_driver.runUniaxial(max_time, steps, constant_true_strain_rate);
 
-  for (unsigned int i = 0; i < response_history.size(); i++) {
-    double computed_stress = get<1>(response_history[i]);
-    double strain = get<0>(response_history[i]);
+  for (const auto& r : response_history) {
+    double computed_stress = get<1>(r);
+    double strain = get<0>(r);
     std::cout << strain << " " << computed_stress << std::endl;
   }
+
 }
 
 } // namespace serac
