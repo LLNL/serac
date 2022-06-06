@@ -18,12 +18,15 @@ BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const std::optiona
     SLIC_ERROR_ROOT_IF(component_, "A vector coefficient must be applied to all components");
   }
 
-  setDofs();
-
   markers_ = 0;
   for (const int attr : attrs) {
     SLIC_ASSERT_MSG(attr <= num_attrs, "Attribute specified larger than what is found in the mesh.");
     markers_[attr - 1] = 1;
+  }
+
+  // If a finite element state is provided, set the dofs from the associated finite element space
+  if (state) {
+    setDofs();
   }
 }
 
@@ -39,21 +42,21 @@ BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const std::optiona
 
 void BoundaryCondition::setTrueDofs(const mfem::Array<int> true_dofs)
 {
-  SLIC_ERROR_ROOT_IF(!state_, "A finite element state must exist to set the boundary condition DOFs.");  
+  SLIC_ERROR_ROOT_IF(!state_, "A finite element state must exist to set the boundary condition DOFs.");
   true_dofs_ = true_dofs;
   state_->space().GetRestrictionMatrix()->BooleanMultTranspose(*true_dofs_, *local_dofs_);
 }
 
 void BoundaryCondition::setLocalDofs(const mfem::Array<int> local_dofs)
 {
-  SLIC_ERROR_ROOT_IF(!state_, "A finite element state must exist to set the boundary condition DOFs.");    
+  SLIC_ERROR_ROOT_IF(!state_, "A finite element state must exist to set the boundary condition DOFs.");
   local_dofs_ = local_dofs;
   state_->space().GetRestrictionMatrix()->BooleanMult(*local_dofs_, *true_dofs_);
 }
 
 void BoundaryCondition::setDofs()
 {
-  SLIC_ERROR_ROOT_IF(!state_, "A finite element state must exist to set the boundary condition DOFs.");    
+  SLIC_ERROR_ROOT_IF(!state_, "A finite element state must exist to set the boundary condition DOFs.");
   true_dofs_.emplace(0);
   local_dofs_.emplace(0);
 
