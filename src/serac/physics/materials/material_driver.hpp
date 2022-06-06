@@ -52,42 +52,20 @@ class MaterialDriver {
                               const int max_equilibrium_iterations=10)
   {
     const double dt = maxTime / nsteps;
+    double t = 0;
     const tensor<double, 3> x{};
     const tensor<double, 3> u{};
-    double t = 0;
     tensor<double, 3, 3> dudx{};
-
     typename MaterialType::State state(MaterialType::initialize_state());
     
     // for output
     ResponseHistory stress_strain_history;
 
-    const double& tol = relative_tolerance;
-    const int& MAXITERS = max_equilibrium_iterations;
-    
     for (unsigned int i = 0; i < nsteps; i++) {
       t += dt;
       dudx[0][0] = strain(t);
-
-      auto scratch_state = state;
-      auto response = material_(x, u, make_dual(dudx), scratch_state);
-      auto r = makeUnknownVector(get_value(response.stress));
-      auto resnorm = norm(r);
-      const auto resnorm0 = resnorm;
-      auto J = makeJacobianMatrix(get_gradient(response.stress));
-      
-      for (int j = 0; j < MAXITERS; j++) {
-        auto corr = linear_solve(J, r);
-        dudx[1][1] -= corr[0];
-        dudx[2][2] -= corr[1];
-        scratch_state = state;
-        response = material_(x, u, make_dual(dudx), scratch_state);
-        r = makeUnknownVector(get_value(response.stress));
-        resnorm = norm(r);
-        if (resnorm < tol*resnorm0) break;
-        J = makeJacobianMatrix(get_gradient(response.stress));
-      }
-      state = scratch_state;
+      dudx = solveForUniaxialState(dudx, state, relative_tolerance, max_equilibrium_iterations);
+      auto response = material_(x, u, make_dual(dudx), state);
       auto stress = get_value(response.stress);
       //std::cout << "out of plane stress " << stress[1][1] << std::endl;
       stress_strain_history.push_back(tuple{dudx[0][0], stress[0][0]});
@@ -105,7 +83,44 @@ class MaterialDriver {
   {
     return {{{A[1][1][1][1], A[1][1][2][2]}, {A[2][2][1][1], A[2][2][2][2]}}};
   }
-      
+
+  tensor<double, 3, 3> solveForUniaxialState(tensor<double, 3, 3> dudx,
+                                             const typename MaterialType::State& state,
+                                             const double tol, 
+                                             const int MAXITERS)
+  {
+    const tensor<double, 3> x{};
+    const tensor<double, 3> u{};
+    auto scratch_state = state;
+    auto response = material_(x, u, make_dual(dudx), scratch_state);
+    auto r = makeUnknownVector(get_value(response.stress));
+    auto resnorm = norm(r);
+    const auto resnorm0 = resnorm;
+    auto J = makeJacobianMatrix(get_gradient(response.stress));
+    bool converged = false;
+
+    for (int j = 0; j < MAXITERS; j++) {
+        auto corr = linear_solve(J, r);
+        dudx[1][1] -= corr[0];
+        dudx[2][2] -= corr[1];
+        scratch_state = state;
+        response = material_(x, u, make_dual(dudx), scratch_state);
+        r = makeUnknownVector(get_value(response.stress));
+        resnorm = norm(r);
+        if (resnorm < tol*resnorm0)
+        {
+          converged = true;
+          break;
+        }
+        J = makeJacobianMatrix(get_gradient(response.stress));
+    }
+    SLIC_ERROR_ROOT_IF(!converged, "Failed to converge to uniaxial state");
+    return dudx;
+  }
+
+
+  // member variables
+  
   const MaterialType& material_;
 };
 
