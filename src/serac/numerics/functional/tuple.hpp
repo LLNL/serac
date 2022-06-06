@@ -46,31 +46,7 @@ struct tuple_size<camp::tuple<Types...>> : std::integral_constant<std::size_t, s
 template <int i, typename... T>
 SERAC_HOST_DEVICE constexpr auto& get(camp::tuple<T...>& values)
 {
-  static_assert(i < sizeof...(T), "");
-  if constexpr (i == 0) {
-    return values.v0;
-  }
-  if constexpr (i == 1) {
-    return values.v1;
-  }
-  if constexpr (i == 2) {
-    return values.v2;
-  }
-  if constexpr (i == 3) {
-    return values.v3;
-  }
-  if constexpr (i == 4) {
-    return values.v4;
-  }
-  if constexpr (i == 5) {
-    return values.v5;
-  }
-  if constexpr (i == 6) {
-    return values.v6;
-  }
-  if constexpr (i == 7) {
-    return values.v7;
-  }
+  return camp::get<i>(values);
 }
 
 /**
@@ -81,31 +57,7 @@ SERAC_HOST_DEVICE constexpr auto& get(camp::tuple<T...>& values)
 template <int i, typename... T>
 SERAC_HOST_DEVICE constexpr const auto& get(const camp::tuple<T...>& values)
 {
-  static_assert(i < sizeof...(T), "");
-  if constexpr (i == 0) {
-    return values.v0;
-  }
-  if constexpr (i == 1) {
-    return values.v1;
-  }
-  if constexpr (i == 2) {
-    return values.v2;
-  }
-  if constexpr (i == 3) {
-    return values.v3;
-  }
-  if constexpr (i == 4) {
-    return values.v4;
-  }
-  if constexpr (i == 5) {
-    return values.v5;
-  }
-  if constexpr (i == 6) {
-    return values.v6;
-  }
-  if constexpr (i == 7) {
-    return values.v7;
-  }
+  return camp::get<i>(values);
 }
 
 /**
