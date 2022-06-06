@@ -35,7 +35,7 @@ struct tuple_size {
 };
 
 template <class... Types>
-struct tuple_size<serac::tuple<Types...>> : std::integral_constant<std::size_t, sizeof...(Types)> {
+struct tuple_size<camp::tuple<Types...>> : std::integral_constant<std::size_t, sizeof...(Types)> {
 };
 
 /**
@@ -427,7 +427,7 @@ SERAC_HOST_DEVICE constexpr auto operator*(const tuple<T...>& x, const double a)
  * @brief helper used to implement printing a tuple of values
  */
 template <typename... T, std::size_t... i>
-auto& print_helper(std::ostream& out, const serac::tuple<T...>& A, std::integer_sequence<size_t, i...>)
+auto& print_helper(std::ostream& out, const camp::tuple<T...>& A, std::integer_sequence<size_t, i...>)
 {
   out << "tuple{";
   (..., (out << (i == 0 ? "" : ", ") << serac::get<i>(A)));
@@ -442,7 +442,7 @@ auto& print_helper(std::ostream& out, const serac::tuple<T...>& A, std::integer_
  * @brief print a tuple of values
  */
 template <typename... T>
-auto& operator<<(std::ostream& out, const serac::tuple<T...>& A)
+auto& operator<<(std::ostream& out, const camp::tuple<T...>& A)
 {
   return print_helper(out, A, std::make_integer_sequence<size_t, sizeof...(T)>());
 }
@@ -470,7 +470,7 @@ SERAC_HOST_DEVICE auto apply_helper(lambda f, tuple<T...>& args, std::integer_se
  * @param args a tuple of arguments
  * @brief a way of passing an n-tuple to a function that expects n separate arguments
  *
- *   e.g. foo(bar, baz) is equivalent to apply(foo, serac::tuple(bar,baz));
+ *   e.g. foo(bar, baz) is equivalent to apply(foo, camp::tuple(bar,baz));
  */
 template <typename lambda, typename... T>
 SERAC_HOST_DEVICE auto apply(lambda f, tuple<T...>& args)
@@ -494,7 +494,7 @@ SERAC_HOST_DEVICE auto apply_helper(lambda f, const tuple<T...>& args, std::inte
  * @param args a tuple of arguments
  * @brief a way of passing an n-tuple to a function that expects n separate arguments
  *
- *   e.g. foo(bar, baz) is equivalent to apply(foo, serac::tuple(bar,baz));
+ *   e.g. foo(bar, baz) is equivalent to apply(foo, camp::tuple(bar,baz));
  */
 template <typename lambda, typename... T>
 SERAC_HOST_DEVICE auto apply(lambda f, const tuple<T...>& args)

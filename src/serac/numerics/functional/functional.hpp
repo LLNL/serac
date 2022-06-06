@@ -141,7 +141,7 @@ class Functional<test(trials...), exec> {
   struct operator_paren_return {
     using type = typename std::conditional<
         (std::is_same_v<T, differentiate_wrt_this> + ...) == 1, // if the there is a dual number in the pack
-        serac::tuple<mfem::Vector&, Gradient&>,                 // then we return the value and the derivative
+        camp::tuple<mfem::Vector&, Gradient&>,                  // then we return the value and the derivative
         mfem::Vector&                                           // otherwise, we just return the value
         >::type;
   };
@@ -150,7 +150,7 @@ class Functional<test(trials...), exec> {
   struct operator_paren_return_index {
     using type = typename std::conditional<
         indx >= 0,                                              // if the derivative index is valid
-        serac::tuple<mfem::Vector&, Gradient&>,                 // then we return the value and the derivative
+        camp::tuple<mfem::Vector&, Gradient&>,                  // then we return the value and the derivative
         mfem::Vector&                                           // otherwise, we just return the value
         >::type;
   };

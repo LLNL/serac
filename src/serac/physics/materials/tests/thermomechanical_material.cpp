@@ -86,7 +86,7 @@ struct ThermoelasticMaterial {
     // heat flux
     const auto q0 = -k * grad_theta;
 
-    return serac::tuple{P, C, s0, q0};
+    return camp::tuple{P, C, s0, q0};
   }
 
   /**
@@ -107,7 +107,7 @@ struct ThermoelasticMaterial {
                                            const tensor<double, 3, 3>& grad_u_old, double theta_old, double dt)
   {
     auto [P, cv0, s0, q0] = calculateConstitutiveOutputs(grad_u, theta, grad_theta, state, grad_u_old, theta_old, dt);
-    return serac::tuple{cv0, s0, q0};
+    return camp::tuple{cv0, s0, q0};
   }
 
   /**

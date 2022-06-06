@@ -257,7 +257,7 @@ public:
 
           auto response = parameterized_material(x, u, du_dx, serac::get<0>(params)...);
 
-          return serac::tuple{source, -1.0 * response.heat_flux};
+          return camp::tuple{source, -1.0 * response.heat_flux};
         },
         mesh_);
 
@@ -275,7 +275,7 @@ public:
           auto source = response.specific_heat_capacity * response.density * u;
 
           // Return the source and the flux as a tuple
-          return serac::tuple{source, flux};
+          return camp::tuple{source, flux};
         },
         mesh_);
   }
@@ -325,7 +325,7 @@ public:
           auto source = -1.0 * parameterized_source(x, time_, u, du_dx, serac::get<0>(params)...);
 
           // Return the source and the flux as a tuple
-          return serac::tuple{source, flux};
+          return camp::tuple{source, flux};
         },
         mesh_);
   }

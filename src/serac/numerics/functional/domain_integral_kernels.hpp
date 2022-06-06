@@ -62,7 +62,7 @@ struct QFunctionArgument<Hcurl<p>, Dimension<3> > {
 template <int i, int dim, typename... trials, typename lambda, typename qpt_data_type>
 auto get_derivative_type(lambda qf, qpt_data_type&& qpt_data)
 {
-  using qf_arguments = serac::tuple<typename QFunctionArgument<trials, serac::Dimension<dim> >::type...>;
+  using qf_arguments = camp::tuple<typename QFunctionArgument<trials, serac::Dimension<dim> >::type...>;
   return get_gradient(detail::apply_qf(qf, tensor<double, dim>{}, make_dual_wrt<i>(qf_arguments{}), qpt_data));
 };
 
@@ -314,10 +314,10 @@ auto chain_rule(const S& dfdx, const T& dx)
   }
 
   if constexpr (!is_QOI) {
-    return serac::tuple{serac::chain_rule(serac::get<0>(serac::get<0>(dfdx)), serac::get<0>(dx)) +
-                            serac::chain_rule(serac::get<1>(serac::get<0>(dfdx)), serac::get<1>(dx)),
-                        serac::chain_rule(serac::get<0>(serac::get<1>(dfdx)), serac::get<0>(dx)) +
-                            serac::chain_rule(serac::get<1>(serac::get<1>(dfdx)), serac::get<1>(dx))};
+    return camp::tuple{serac::chain_rule(serac::get<0>(serac::get<0>(dfdx)), serac::get<0>(dx)) +
+                           serac::chain_rule(serac::get<1>(serac::get<0>(dfdx)), serac::get<1>(dx)),
+                       serac::chain_rule(serac::get<0>(serac::get<1>(dfdx)), serac::get<0>(dx)) +
+                           serac::chain_rule(serac::get<1>(serac::get<1>(dfdx)), serac::get<1>(dx))};
   }
 }
 //clang-format on

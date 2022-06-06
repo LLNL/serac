@@ -25,7 +25,7 @@ template <typename element_type, typename T, typename coord_type>
 auto Preprocess(const T& u, const coord_type& xi)
 {
   if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
-    return serac::tuple{dot(u, element_type::shape_functions(xi)), serac::zero{}};
+    return camp::tuple{dot(u, element_type::shape_functions(xi)), serac::zero{}};
   }
 
   // we can't support HCURL until some issues in mfem are fixed
@@ -84,19 +84,19 @@ struct QFunctionArgument;
 /// @overload
 template <int p, int dim>
 struct QFunctionArgument<H1<p, 1>, Dimension<dim>> {
-  using type = serac::tuple<double, serac::zero>;  ///< what will be passed to the q-function
+  using type = camp::tuple<double, serac::zero>;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p, int c, int dim>
 struct QFunctionArgument<H1<p, c>, Dimension<dim>> {
-  using type = serac::tuple<tensor<double, c>, serac::zero>;  ///< what will be passed to the q-function
+  using type = camp::tuple<tensor<double, c>, serac::zero>;  ///< what will be passed to the q-function
 };
 
 template <int i, int dim, typename... trials, typename lambda>
 auto get_derivative_type(lambda qf)
 {
-  using qf_arguments = serac::tuple<typename QFunctionArgument<trials, serac::Dimension<dim>>::type...>;
+  using qf_arguments = camp::tuple<typename QFunctionArgument<trials, serac::Dimension<dim>>::type...>;
   return get_gradient(
       detail::apply_qf(qf, tensor<double, dim + 1>{}, tensor<double, dim + 1>{}, make_dual_wrt<i>(qf_arguments{})));
 };

@@ -290,7 +290,7 @@ public:
             flux                  = flux * inv(transpose(deformation_grad));
           }
 
-          return serac::tuple{source, flux};
+          return camp::tuple{source, flux};
         },
         mesh_);
 
@@ -308,7 +308,7 @@ public:
           auto deformation_grad = du_dX + I_;
           auto source           = response.density * u * (1.0 + geom_factor * (det(deformation_grad) - 1.0));
 
-          return serac::tuple{source, flux};
+          return camp::tuple{source, flux};
         },
         mesh_);
   }
@@ -372,7 +372,7 @@ public:
 
           auto source = parameterized_body_force(x, time_, u, du_dX, serac::get<0>(params)...) *
                         (1.0 + geom_factor * (det(deformation_grad) - 1.0));
-          return serac::tuple{source, flux};
+          return camp::tuple{source, flux};
         },
         mesh_);
   }
