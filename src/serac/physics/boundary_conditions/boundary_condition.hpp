@@ -49,7 +49,8 @@ public:
    * @param[in] true_dofs The indices of the relevant DOFs
    * @param[in] state The finite element state on which this BC is applied
    */
-  BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component, const mfem::Array<int>& true_dofs, FiniteElementState* state = nullptr);
+  BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component, const mfem::Array<int>& true_dofs,
+                    FiniteElementState* state = nullptr);
 
   /**
    * @brief Determines whether a boundary condition is associated with a tag

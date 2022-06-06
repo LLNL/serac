@@ -210,8 +210,8 @@ public:
    * @param[in] state The finite element state where the essential boundary is being applied
    * @param[in] component The component to set (-1 implies all components are set)
    */
-  void addEssentialTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, serac::FiniteElementState& state,
-                            std::optional<int> component = {});
+  void addEssentialTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef,
+                            serac::FiniteElementState& state, std::optional<int> component = {});
 
   /**
    * @brief Returns all the true degrees of freedom associated with all the essential BCs

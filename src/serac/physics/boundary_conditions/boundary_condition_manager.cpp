@@ -31,16 +31,15 @@ void BoundaryConditionManager::addEssential(const std::set<int>& ess_bdr, serac:
 }
 
 void BoundaryConditionManager::addNatural(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef,
-                                             const std::optional<int> component)
+                                          const std::optional<int> component)
 {
   nat_bdr_.emplace_back(nat_bdr_coef, component, nat_bdr, num_attrs_);
   all_dofs_valid_ = false;
 }
 
-void BoundaryConditionManager::addEssentialTrueDofs(const mfem::Array<int>&   true_dofs,
-                                                    serac::GeneralCoefficient ess_bdr_coef,
-                                                    serac::FiniteElementState& state,
-                                                    std::optional<int>        component)
+void BoundaryConditionManager::addEssentialTrueDofs(const mfem::Array<int>&    true_dofs,
+                                                    serac::GeneralCoefficient  ess_bdr_coef,
+                                                    serac::FiniteElementState& state, std::optional<int> component)
 {
   ess_bdr_.emplace_back(ess_bdr_coef, component, true_dofs, &state);
   all_dofs_valid_ = false;
