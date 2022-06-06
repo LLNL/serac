@@ -26,6 +26,9 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
   static constexpr int  ndof       = (p + 1) * (p + 1) * (p + 1);
   static constexpr int  order      = p;
 
+  static constexpr int VALUE = 0, GRADIENT = 1;
+  static constexpr int SOURCE = 0, FLUX = 1;
+
   // TODO: remove this
   using residual_type =
       typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components> >::type;
@@ -44,15 +47,6 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
   struct cache_type {
     tensor<double, 2, n, n, q> A1;
     tensor<double, 3, n, q, q> A2;
-  };
-
-  template <typename T>
-  using simd_dof_type = tensor<tensor<T, c>, p + 1, p + 1, p + 1>;
-
-  template <typename T, int q>
-  struct simd_cache_type {
-    tensor<T, 2, n, n, q> A1;
-    tensor<T, 3, n, q, q> A2;
   };
 
   SERAC_HOST_DEVICE static constexpr tensor<double, ndof> shape_functions(tensor<double, dim> xi)
@@ -158,8 +152,6 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
       gradient(i,2) = contract<0, 1>(cache.A2[0], G);
     }
 
-    constexpr int VALUE = 0, GRADIENT = 1;
-
     union {
       tensor< qf_input_type, q * q * q > a;
       tensor< tuple < tensor< double, c >, tensor< double, c, 3 > >, q * q * q > b;
@@ -218,8 +210,6 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
 
     tensor< double, c, q, q, q> source{};
     tensor< double, c, dim, q, q, q> flux{};
-
-    constexpr int SOURCE = 0, FLUX = 1;
 
     int k = 0;
     for (int qz = 0; qz < q; qz++) {

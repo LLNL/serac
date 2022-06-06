@@ -25,10 +25,17 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
   static constexpr int  n          = (p + 1);
   static constexpr int  ndof       = (p + 1) * (p + 1);
 
+  static constexpr int VALUE = 0, GRADIENT = 1;
+  static constexpr int SOURCE = 0, FLUX = 1;
+
   using residual_type =
       typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components> >::type;
 
   using dof_type = tensor<double, c, p + 1, p + 1>;
+
+  using value_type = typename std::conditional<components == 1, double, tensor<double, components> >::type;
+  using derivative_type = typename std::conditional<components == 1, tensor<double, dim>, tensor<double, components, dim> >::type;
+  using qf_input_type = tuple< value_type, derivative_type >;
 
   /**
    * @brief this type is used when calling the batched interpolate/integrate
@@ -36,12 +43,6 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
    */
   template <int q>
   using cache_type = tensor<double, 2, n, q>;
-
-  template <int q>
-  using cpu_batched_values_type = tensor<tensor<double, c>, q, q>;
-
-  template <int q>
-  using cpu_batched_derivatives_type = tensor<tensor<double, c, 2>, q, q>;
 
   /*
 
@@ -113,7 +114,7 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
   }
 
   template <int q>
-  static auto interpolate(const dof_type& X, const tensor<double, dim, dim, q, q>& jacobians,
+  static auto interpolate(const dof_type& X, const tensor<double, dim, dim, q * q>& jacobians,
                           const TensorProductQuadratureRule<q>&)
   {
     // we want to compute the following:
@@ -162,35 +163,40 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
       gradient(i,1) = contract<0, 1>(A[0], G);
     }
 
-    tensor< tensor< double, c >, q, q > value_T{};
-    tensor< tensor< double, c, dim >, q, q > gradient_T{};
+    union {
+      tensor< qf_input_type, q * q > a;
+      tensor< tuple < tensor< double, c >, tensor< double, c, dim > >, q * q > b;
+    } output;
 
+    int k = 0;
     for (int qy = 0; qy < q; qy++) {
       for (int qx = 0; qx < q; qx++) {
         tensor<double, dim, dim> J;
         for (int row = 0; row < dim; row++) {
           for (int col = 0; col < dim; col++) {
-            J[row][col] = jacobians(col, row, qy, qx);
+            J[row][col] = jacobians(col, row, k);
           }
         }
 
         for (int i = 0; i < c; i++) {
-          value_T(qy, qx)[i] = value(i, qy, qx);
+          get<VALUE>(output.b[k])[i] = value(i, qy, qx);
           for (int j = 0; j < dim; j++) {
-            gradient_T(qy, qx)[i][j] = gradient(i, j, qy, qx);
+            get<GRADIENT>(output.b[k])[i][j] = gradient(i, j, qy, qx);
           }
         }
 
-        gradient_T(qy, qx) = dot(gradient_T(qy, qx), inv(J));
+        get<GRADIENT>(output.b[k]) = dot(get<GRADIENT>(output.b[k]), inv(J));
+
+        k++;
       }
     }
  
-    return tuple{value_T, gradient_T};
+    return output.a;
   }
 
-  template <int q>
-  static void integrate(cpu_batched_values_type<q>& source_T, cpu_batched_derivatives_type<q>& flux_T,
-                        const tensor<double, dim, dim, q, q>& jacobians, const TensorProductQuadratureRule<q>&,
+  template <typename source_type, typename flux_type, int q>
+  static void integrate(tensor< tuple< source_type, flux_type >, q * q > & qf_output,
+                        const tensor<double, dim, dim, q * q>& jacobians, const TensorProductQuadratureRule<q>&,
                         dof_type&                             element_residual)
   {
     static constexpr auto points1D  = GaussLegendreNodes<q>();
@@ -214,25 +220,27 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
     tensor< double, c, q, q> source{};
     tensor< double, c, dim, q, q> flux{};
 
+    int k = 0;
     for (int qy = 0; qy < q; qy++) {
       for (int qx = 0; qx < q; qx++) {
         tensor<double, dim, dim> J_T;
         for (int row = 0; row < dim; row++) {
           for (int col = 0; col < dim; col++) {
-            J_T[row][col] = jacobians(row, col, qy, qx);
+            J_T[row][col] = jacobians(row, col, k);
           }
         }
         auto dv = det(J_T) * weights1D[qx] * weights1D[qy];
 
-        source_T(qy, qx) = source_T(qy, qx) * dv;
-        flux_T(qy, qx)  = dot(flux_T(qy, qx), inv(J_T)) * dv;
+        tensor< double, c > s{get<SOURCE>(qf_output[k]) * dv};
+        tensor< double, c, dim > f{dot(get<FLUX>(qf_output[k]), inv(J_T)) * dv};
 
         for (int i = 0; i < c; i++) {
-          source(i, qy, qx) = source_T(qy, qx)[i];
+          source(i, qy, qx) = s[i];
           for (int j = 0; j < dim; j++) {
-            flux(i, j, qy, qx) = flux_T(qy, qx)[i][j];
+            flux(i, j, qy, qx) = f[i][j];
           }
         }
+        k++;
       }
     }
 
