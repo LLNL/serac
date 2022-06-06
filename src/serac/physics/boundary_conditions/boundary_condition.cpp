@@ -109,7 +109,7 @@ void BoundaryCondition::project() const
 
 void BoundaryCondition::projectBdr(FiniteElementState& state, const double time) const
 {
-  if (state.vectorDim() > 1) {
+  if (state.space().GetVDim() > 1) {
     SLIC_ASSERT_MSG(holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(coef_),
                     "Boundary condition should have been an mfem::VectorCoefficient");
   } else {

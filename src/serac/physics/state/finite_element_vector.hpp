@@ -88,7 +88,7 @@ public:
 
   /**
    * @brief Copy constructor
-   * 
+   *
    * @param[in] rhs The input vector used for construction
    */
   FiniteElementVector(const FiniteElementVector& rhs);
@@ -152,9 +152,12 @@ public:
 
   /**
    * @brief Project a vector coefficient onto a set of dofs
+   *
+   * @param coef The vector coefficient to project
+   * @param dof_list A list of true degrees of freedom to set. Note this is the scalar dof (not vdof) numbering.
    * 
-   * @param coef The coefficient to project
-   * @param dof_list A list of true degrees of freedom to set
+   * @note This only sets nodal values based on the coefficient at that point. It does not perform
+   * a full least squares projection.
    */
   void project(mfem::VectorCoefficient& coef, mfem::Array<int>& dof_list)
   {
@@ -164,11 +167,14 @@ public:
   }
 
   /**
-   * @brief Project a vector coefficient onto a set of dofs
-   * 
-   * @param coef The coefficient to project
-   * @param dof_list A list of true degrees of freedom to set
+   * @brief Project a scalar coefficient onto a set of dofs
+   *
+   * @param coef The vector coefficient to project
+   * @param dof_list A list of true degrees of freedom to set. Note this is the scalar dof (not vdof) numbering.
    * @param component The component to set
+   * 
+   * @note This only sets nodal values based on the coefficient at that point. It does not perform
+   * a full least squares projection.
    */
   void project(mfem::Coefficient& coef, mfem::Array<int>& dof_list, std::optional<int> component = {})
   {
@@ -184,6 +190,9 @@ public:
   /**
    * Projects a coefficient (vector or scalar) onto the field
    * @param[in] coef The coefficient to project
+   * 
+   * @note This only sets nodal values based on the coefficient at that point. It does not perform
+   * a full least squares projection.  
    */
   void project(const GeneralCoefficient& coef)
   {
@@ -213,6 +222,15 @@ public:
     initializeTrueVec(grid_function);
   }
 
+  /**
+   * @brief Project a coefficient on a specific set of marked boundaries
+   *
+   * @param coef The coefficient to project
+   * @param markers A marker array of the boundaries to set
+   * 
+   * @note This only sets nodal values based on the coefficient at that point. It does not perform
+   * a full least squares projection.
+   */
   void projectBdr(mfem::Coefficient& coef, const mfem::Array<int>& markers)
   {
     mfem::ParGridFunction grid_function = gridFunction();
@@ -221,6 +239,7 @@ public:
     initializeTrueVec(grid_function);
   }
 
+  /// \overload
   void projectBdr(mfem::VectorCoefficient& coef, const mfem::Array<int>& markers)
   {
     mfem::ParGridFunction grid_function = gridFunction();
@@ -231,14 +250,14 @@ public:
 
   /**
    * @brief Initialize the finite element state true vector from a compatible grid function
-   * 
+   *
    * @param grid_function The grid function used to initialize the finite element state
    */
   void initialize(const mfem::ParGridFunction& grid_function) { initializeTrueVec(grid_function); }
 
   /**
    * @brief Construct a grid function from the finite element state true vector
-   * 
+   *
    * @return The constructed grid function
    */
   mfem::ParGridFunction gridFunction() const
@@ -248,13 +267,12 @@ public:
     return grid_function;
   }
 
+  /**
+   * @brief Fill the dofs of pre-allocated grid function from the underlying true vector
+   *
+   * @param grid_function The grid function to set from the true vector
+   */
   void gridFunction(mfem::ParGridFunction& grid_function) const { distributeSharedDofs(grid_function); }
-
-  int vectorDim()
-  {
-    mfem::ParGridFunction grid_function = gridFunction();
-    return grid_function.VectorDim();
-  }
 
   /**
    * @brief Destroy the Finite Element Vector object
@@ -264,11 +282,15 @@ public:
 protected:
   /**
    * @brief Distribute dofs the internal grid function (local dofs) using the true DOF values
+   *
+   * @param grid_function The grid function to fill
    */
   virtual void distributeSharedDofs(mfem::ParGridFunction& grid_function) const = 0;
 
   /**
    * @brief Initialize the true DOF vector using the internal grid function
+   *
+   * @param grid_function The grid function used to set the true vector
    */
   virtual void initializeTrueVec(const mfem::ParGridFunction& grid_function) = 0;
 
@@ -322,6 +344,13 @@ double max(const FiniteElementVector& fe_vector);
  */
 double min(const FiniteElementVector& fe_vector);
 
+/**
+ * @brief Find the Lp norm of a finite element vector across all dofs
+ *
+ * @param state The state variable to compute a norm of
+ * @param p The order norm to compute
+ * @return The Lp norm of the finite element state
+ */
 double norm(const FiniteElementVector& state, const double p = 2);
 
 }  // namespace serac

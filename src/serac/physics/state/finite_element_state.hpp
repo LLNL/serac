@@ -43,8 +43,7 @@ inline bool is_vector_valued(const GeneralCoefficient& coef)
 /**
  * @brief Class for encapsulating the critical MFEM components of a primal finite element field
  *
- * Namely: Mesh, FiniteElementCollection, FiniteElementState,
- * GridFunction, and a Vector of the solution
+ * Namely: Mesh, FiniteElementCollection, FiniteElementState, and the true vector of the solution
  */
 class FiniteElementState : public FiniteElementVector {
 public:
