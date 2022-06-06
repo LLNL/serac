@@ -36,9 +36,10 @@ public:
    * should be -1 for all components
    * @param[in] attrs The set of boundary condition attributes in the mesh that the BC applies to
    * @param[in] num_attrs The total number of boundary attributes for the mesh
+   * @param[in] state The finite element state on which this BC is applied
    */
   BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component, const std::set<int>& attrs,
-                    const int num_attrs = 0);
+                    const int num_attrs = 0, FiniteElementState* state = nullptr);
 
   /**
    * @brief Minimal constructor for setting the true DOFs directly
@@ -46,8 +47,9 @@ public:
    * @param[in] component The zero-indexed vector component if the BC applies to just one component,
    * should be -1 for all components
    * @param[in] true_dofs The indices of the relevant DOFs
+   * @param[in] state The finite element state on which this BC is applied
    */
-  BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component, const mfem::Array<int>& true_dofs);
+  BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component, const mfem::Array<int>& true_dofs, FiniteElementState* state = nullptr);
 
   /**
    * @brief Determines whether a boundary condition is associated with a tag
@@ -148,15 +150,6 @@ public:
    * @note True and local dofs are described in the <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a>
    */
   void setLocalDofs(const mfem::Array<int> local_dofs);
-
-  /**
-   * @brief Uses mfem::ParFiniteElementSpace::GetEssentialTrueDofs to
-   * determine the DOFs for the boundary condition
-   * @param[in] state The finite element state for which the DOFs should be obtained
-   *
-   * @note This will set both the true and local dof values.
-   */
-  void setDofs(FiniteElementState& state);
 
   /**
    * @brief Returns the DOF indices for an essential boundary condition
@@ -266,6 +259,14 @@ public:
   void setTime(const double time);
 
 private:
+  /**
+   * @brief Uses mfem::ParFiniteElementSpace::GetEssentialTrueDofs to
+   * determine the DOFs for the boundary condition from the stored marker list
+   *
+   * @note This will set both the true and local dof values.
+   */
+  void setDofs();
+
   /**
    * @brief A coefficient containing either a mfem::Coefficient or an mfem::VectorCoefficient
    */
