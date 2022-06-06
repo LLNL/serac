@@ -27,36 +27,36 @@ struct QFunctionArgument;
 /// @overload
 template <int p, int dim>
 struct QFunctionArgument<H1<p, 1>, Dimension<dim> > {
-  using type = tuple<double, tensor<double, dim> >;  ///< what will be passed to the q-function
+  using type = camp::tuple<double, tensor<double, dim> >;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p, int c, int dim>
 struct QFunctionArgument<H1<p, c>, Dimension<dim> > {
-  using type = tuple<tensor<double, c>, tensor<double, c, dim> >;  ///< what will be passed to the q-function
+  using type = camp::tuple<tensor<double, c>, tensor<double, c, dim> >;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p, int dim>
 struct QFunctionArgument<L2<p, 1>, Dimension<dim> > {
-  using type = tuple<double, tensor<double, dim> >;  ///< what will be passed to the q-function
+  using type = camp::tuple<double, tensor<double, dim> >;  ///< what will be passed to the q-function
 };
 /// @overload
 template <int p, int c, int dim>
 struct QFunctionArgument<L2<p, c>, Dimension<dim> > {
-  using type = tuple<tensor<double, c>, tensor<double, c, dim> >;  ///< what will be passed to the q-function
+  using type = camp::tuple<tensor<double, c>, tensor<double, c, dim> >;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p>
 struct QFunctionArgument<Hcurl<p>, Dimension<2> > {
-  using type = tuple<tensor<double, 2>, double>;  ///< what will be passed to the q-function
+  using type = camp::tuple<tensor<double, 2>, double>;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p>
 struct QFunctionArgument<Hcurl<p>, Dimension<3> > {
-  using type = tuple<tensor<double, 3>, tensor<double, 3> >;  ///< what will be passed to the q-function
+  using type = camp::tuple<tensor<double, 3>, tensor<double, 3> >;  ///< what will be passed to the q-function
 };
 
 template <int i, int dim, typename... trials, typename lambda, typename qpt_data_type>

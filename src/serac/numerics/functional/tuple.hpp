@@ -25,9 +25,9 @@ namespace serac {
  * @param args the actual values to be put into a tuple
  */
 template <typename... T>
-SERAC_HOST_DEVICE tuple<T...> make_tuple(const T&... args)
+SERAC_HOST_DEVICE camp::tuple<T...> make_tuple(const T&... args)
 {
-  return tuple<T...>{args...};
+  return camp::tuple<T...>{args...};
 }
 
 template <class... Types>
@@ -44,7 +44,7 @@ struct tuple_size<camp::tuple<Types...>> : std::integral_constant<std::size_t, s
  * @brief return a reference to the ith tuple entry
  */
 template <int i, typename... T>
-SERAC_HOST_DEVICE constexpr auto& get(tuple<T...>& values)
+SERAC_HOST_DEVICE constexpr auto& get(camp::tuple<T...>& values)
 {
   static_assert(i < sizeof...(T), "");
   if constexpr (i == 0) {
@@ -79,7 +79,7 @@ SERAC_HOST_DEVICE constexpr auto& get(tuple<T...>& values)
  * @brief return a copy of the ith tuple entry
  */
 template <int i, typename... T>
-SERAC_HOST_DEVICE constexpr const auto& get(const tuple<T...>& values)
+SERAC_HOST_DEVICE constexpr const auto& get(const camp::tuple<T...>& values)
 {
   static_assert(i < sizeof...(T), "");
   if constexpr (i == 0) {
@@ -119,10 +119,10 @@ SERAC_HOST_DEVICE constexpr const auto& get(const tuple<T...>& values)
  * @return the returned tuple sum
  */
 template <typename... S, typename... T, int... i>
-SERAC_HOST_DEVICE constexpr auto plus_helper(const tuple<S...>& x, const tuple<T...>& y,
+SERAC_HOST_DEVICE constexpr auto plus_helper(const camp::tuple<S...>& x, const camp::tuple<T...>& y,
                                              std::integer_sequence<int, i...>)
 {
-  return tuple{get<i>(x) + get<i>(y)...};
+  return camp::tuple{get<i>(x) + get<i>(y)...};
 }
 
 /**
@@ -133,7 +133,7 @@ SERAC_HOST_DEVICE constexpr auto plus_helper(const tuple<S...>& x, const tuple<T
  * @brief return a tuple of values defined by elementwise sum of x and y
  */
 template <typename... S, typename... T>
-SERAC_HOST_DEVICE constexpr auto operator+(const tuple<S...>& x, const tuple<T...>& y)
+SERAC_HOST_DEVICE constexpr auto operator+(const camp::tuple<S...>& x, const camp::tuple<T...>& y)
 {
   static_assert(sizeof...(S) == sizeof...(T));
   return plus_helper(x, y, std::make_integer_sequence<int, static_cast<int>(sizeof...(S))>());
@@ -148,7 +148,7 @@ SERAC_HOST_DEVICE constexpr auto operator+(const tuple<S...>& x, const tuple<T..
  * @param y tuple of increment values
  */
 template <typename... T, int... i>
-SERAC_HOST_DEVICE constexpr void plus_equals_helper(tuple<T...>& x, const tuple<T...>& y,
+SERAC_HOST_DEVICE constexpr void plus_equals_helper(camp::tuple<T...>& x, const camp::tuple<T...>& y,
                                                     std::integer_sequence<int, i...>)
 {
   ((get<i>(x) += get<i>(y)), ...);
@@ -161,7 +161,7 @@ SERAC_HOST_DEVICE constexpr void plus_equals_helper(tuple<T...>& x, const tuple<
  * @brief add values contained in y, to the tuple x
  */
 template <typename... T>
-SERAC_HOST_DEVICE constexpr auto operator+=(tuple<T...>& x, const tuple<T...>& y)
+SERAC_HOST_DEVICE constexpr auto operator+=(camp::tuple<T...>& x, const camp::tuple<T...>& y)
 {
   return plus_equals_helper(x, y, std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>());
 }
@@ -175,7 +175,7 @@ SERAC_HOST_DEVICE constexpr auto operator+=(tuple<T...>& x, const tuple<T...>& y
  * @param y tuple of values to subtract from x
  */
 template <typename... T, int... i>
-SERAC_HOST_DEVICE constexpr void minus_equals_helper(tuple<T...>& x, const tuple<T...>& y,
+SERAC_HOST_DEVICE constexpr void minus_equals_helper(camp::tuple<T...>& x, const camp::tuple<T...>& y,
                                                      std::integer_sequence<int, i...>)
 {
   ((get<i>(x) -= get<i>(y)), ...);
@@ -188,7 +188,7 @@ SERAC_HOST_DEVICE constexpr void minus_equals_helper(tuple<T...>& x, const tuple
  * @brief add values contained in y, to the tuple x
  */
 template <typename... T>
-SERAC_HOST_DEVICE constexpr auto operator-=(tuple<T...>& x, const tuple<T...>& y)
+SERAC_HOST_DEVICE constexpr auto operator-=(camp::tuple<T...>& x, const camp::tuple<T...>& y)
 {
   return minus_equals_helper(x, y, std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>());
 }
@@ -204,10 +204,10 @@ SERAC_HOST_DEVICE constexpr auto operator-=(tuple<T...>& x, const tuple<T...>& y
  * @return the returned tuple difference
  */
 template <typename... S, typename... T, int... i>
-SERAC_HOST_DEVICE constexpr auto minus_helper(const tuple<S...>& x, const tuple<T...>& y,
+SERAC_HOST_DEVICE constexpr auto minus_helper(const camp::tuple<S...>& x, const camp::tuple<T...>& y,
                                               std::integer_sequence<int, i...>)
 {
-  return tuple{get<i>(x) - get<i>(y)...};
+  return camp::tuple{get<i>(x) - get<i>(y)...};
 }
 
 /**
@@ -218,7 +218,7 @@ SERAC_HOST_DEVICE constexpr auto minus_helper(const tuple<S...>& x, const tuple<
  * @brief return a tuple of values defined by elementwise difference of x and y
  */
 template <typename... S, typename... T>
-SERAC_HOST_DEVICE constexpr auto operator-(const tuple<S...>& x, const tuple<T...>& y)
+SERAC_HOST_DEVICE constexpr auto operator-(const camp::tuple<S...>& x, const camp::tuple<T...>& y)
 {
   static_assert(sizeof...(S) == sizeof...(T));
   return minus_helper(x, y, std::make_integer_sequence<int, static_cast<int>(sizeof...(S))>());
@@ -233,9 +233,9 @@ SERAC_HOST_DEVICE constexpr auto operator-(const tuple<S...>& x, const tuple<T..
  * @return the returned tuple difference
  */
 template <typename... T, int... i>
-SERAC_HOST_DEVICE constexpr auto unary_minus_helper(const tuple<T...>& x, std::integer_sequence<int, i...>)
+SERAC_HOST_DEVICE constexpr auto unary_minus_helper(const camp::tuple<T...>& x, std::integer_sequence<int, i...>)
 {
-  return tuple{-get<i>(x)...};
+  return camp::tuple{-get<i>(x)...};
 }
 
 /**
@@ -244,7 +244,7 @@ SERAC_HOST_DEVICE constexpr auto unary_minus_helper(const tuple<T...>& x, std::i
  * @brief return a tuple of values defined by applying the unary minus operator to each element of x
  */
 template <typename... T>
-SERAC_HOST_DEVICE constexpr auto operator-(const tuple<T...>& x)
+SERAC_HOST_DEVICE constexpr auto operator-(const camp::tuple<T...>& x)
 {
   return unary_minus_helper(x, std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>());
 }
@@ -260,10 +260,10 @@ SERAC_HOST_DEVICE constexpr auto operator-(const tuple<T...>& x)
  * @return the returned tuple ratio
  */
 template <typename... S, typename... T, int... i>
-SERAC_HOST_DEVICE constexpr auto div_helper(const tuple<S...>& x, const tuple<T...>& y,
+SERAC_HOST_DEVICE constexpr auto div_helper(const camp::tuple<S...>& x, const camp::tuple<T...>& y,
                                             std::integer_sequence<int, i...>)
 {
-  return tuple{get<i>(x) / get<i>(y)...};
+  return camp::tuple{get<i>(x) / get<i>(y)...};
 }
 
 /**
@@ -274,7 +274,7 @@ SERAC_HOST_DEVICE constexpr auto div_helper(const tuple<S...>& x, const tuple<T.
  * @brief return a tuple of values defined by elementwise division of x by y
  */
 template <typename... S, typename... T>
-SERAC_HOST_DEVICE constexpr auto operator/(const tuple<S...>& x, const tuple<T...>& y)
+SERAC_HOST_DEVICE constexpr auto operator/(const camp::tuple<S...>& x, const camp::tuple<T...>& y)
 {
   static_assert(sizeof...(S) == sizeof...(T));
   return div_helper(x, y, std::make_integer_sequence<int, static_cast<int>(sizeof...(S))>());
@@ -290,9 +290,9 @@ SERAC_HOST_DEVICE constexpr auto operator/(const tuple<S...>& x, const tuple<T..
  * @return the returned tuple ratio
  */
 template <typename... T, int... i>
-SERAC_HOST_DEVICE constexpr auto div_helper(const double a, const tuple<T...>& x, std::integer_sequence<int, i...>)
+SERAC_HOST_DEVICE constexpr auto div_helper(const double a, const camp::tuple<T...>& x, std::integer_sequence<int, i...>)
 {
-  return tuple{a / get<i>(x)...};
+  return camp::tuple{a / get<i>(x)...};
 }
 
 /**
@@ -305,9 +305,9 @@ SERAC_HOST_DEVICE constexpr auto div_helper(const double a, const tuple<T...>& x
  * @return the returned tuple ratio
  */
 template <typename... T, int... i>
-SERAC_HOST_DEVICE constexpr auto div_helper(const tuple<T...>& x, const double a, std::integer_sequence<int, i...>)
+SERAC_HOST_DEVICE constexpr auto div_helper(const camp::tuple<T...>& x, const double a, std::integer_sequence<int, i...>)
 {
-  return tuple{get<i>(x) / a...};
+  return camp::tuple{get<i>(x) / a...};
 }
 
 /**
@@ -317,7 +317,7 @@ SERAC_HOST_DEVICE constexpr auto div_helper(const tuple<T...>& x, const double a
  * @brief return a tuple of values defined by division of a by the elements of x
  */
 template <typename... T>
-SERAC_HOST_DEVICE constexpr auto operator/(const double a, const tuple<T...>& x)
+SERAC_HOST_DEVICE constexpr auto operator/(const double a, const camp::tuple<T...>& x)
 {
   return div_helper(a, x, std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>());
 }
@@ -329,7 +329,7 @@ SERAC_HOST_DEVICE constexpr auto operator/(const double a, const tuple<T...>& x)
  * @brief return a tuple of values defined by elementwise division of x by a
  */
 template <typename... T>
-SERAC_HOST_DEVICE constexpr auto operator/(const tuple<T...>& x, const double a)
+SERAC_HOST_DEVICE constexpr auto operator/(const camp::tuple<T...>& x, const double a)
 {
   return div_helper(x, a, std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>());
 }
@@ -345,10 +345,10 @@ SERAC_HOST_DEVICE constexpr auto operator/(const tuple<T...>& x, const double a)
  * @return the returned tuple product
  */
 template <typename... S, typename... T, int... i>
-SERAC_HOST_DEVICE constexpr auto mult_helper(const tuple<S...>& x, const tuple<T...>& y,
+SERAC_HOST_DEVICE constexpr auto mult_helper(const camp::tuple<S...>& x, const camp::tuple<T...>& y,
                                              std::integer_sequence<int, i...>)
 {
-  return tuple{get<i>(x) * get<i>(y)...};
+  return camp::tuple{get<i>(x) * get<i>(y)...};
 }
 
 /**
@@ -359,7 +359,7 @@ SERAC_HOST_DEVICE constexpr auto mult_helper(const tuple<S...>& x, const tuple<T
  * @brief return a tuple of values defined by elementwise multiplication of x and y
  */
 template <typename... S, typename... T>
-SERAC_HOST_DEVICE constexpr auto operator*(const tuple<S...>& x, const tuple<T...>& y)
+SERAC_HOST_DEVICE constexpr auto operator*(const camp::tuple<S...>& x, const camp::tuple<T...>& y)
 {
   static_assert(sizeof...(S) == sizeof...(T));
   return mult_helper(x, y, std::make_integer_sequence<int, static_cast<int>(sizeof...(S))>());
@@ -375,9 +375,9 @@ SERAC_HOST_DEVICE constexpr auto operator*(const tuple<S...>& x, const tuple<T..
  * @return the returned tuple product
  */
 template <typename... T, int... i>
-SERAC_HOST_DEVICE constexpr auto mult_helper(const double a, const tuple<T...>& x, std::integer_sequence<int, i...>)
+SERAC_HOST_DEVICE constexpr auto mult_helper(const double a, const camp::tuple<T...>& x, std::integer_sequence<int, i...>)
 {
-  return tuple{a * get<i>(x)...};
+  return camp::tuple{a * get<i>(x)...};
 }
 
 /**
@@ -390,9 +390,9 @@ SERAC_HOST_DEVICE constexpr auto mult_helper(const double a, const tuple<T...>& 
  * @return the returned tuple product
  */
 template <typename... T, int... i>
-SERAC_HOST_DEVICE constexpr auto mult_helper(const tuple<T...>& x, const double a, std::integer_sequence<int, i...>)
+SERAC_HOST_DEVICE constexpr auto mult_helper(const camp::tuple<T...>& x, const double a, std::integer_sequence<int, i...>)
 {
-  return tuple{get<i>(x) * a...};
+  return camp::tuple{get<i>(x) * a...};
 }
 
 /**
@@ -402,7 +402,7 @@ SERAC_HOST_DEVICE constexpr auto mult_helper(const tuple<T...>& x, const double 
  * @brief multiply each component of x by the value a on the left
  */
 template <typename... T>
-SERAC_HOST_DEVICE constexpr auto operator*(const double a, const tuple<T...>& x)
+SERAC_HOST_DEVICE constexpr auto operator*(const double a, const camp::tuple<T...>& x)
 {
   return mult_helper(a, x, std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>());
 }
@@ -414,7 +414,7 @@ SERAC_HOST_DEVICE constexpr auto operator*(const double a, const tuple<T...>& x)
  * @brief multiply each component of x by the value a on the right
  */
 template <typename... T>
-SERAC_HOST_DEVICE constexpr auto operator*(const tuple<T...>& x, const double a)
+SERAC_HOST_DEVICE constexpr auto operator*(const camp::tuple<T...>& x, const double a)
 {
   return mult_helper(x, a, std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>());
 }
@@ -458,7 +458,7 @@ auto& operator<<(std::ostream& out, const camp::tuple<T...>& A)
  * @return The functor output
  */
 template <typename lambda, typename... T, int... i>
-SERAC_HOST_DEVICE auto apply_helper(lambda f, tuple<T...>& args, std::integer_sequence<int, i...>)
+SERAC_HOST_DEVICE auto apply_helper(lambda f, camp::tuple<T...>& args, std::integer_sequence<int, i...>)
 {
   return f(get<i>(args)...);
 }
@@ -473,7 +473,7 @@ SERAC_HOST_DEVICE auto apply_helper(lambda f, tuple<T...>& args, std::integer_se
  *   e.g. foo(bar, baz) is equivalent to apply(foo, camp::tuple(bar,baz));
  */
 template <typename lambda, typename... T>
-SERAC_HOST_DEVICE auto apply(lambda f, tuple<T...>& args)
+SERAC_HOST_DEVICE auto apply(lambda f, camp::tuple<T...>& args)
 {
   return apply_helper(f, std::move(args), std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>());
 }
@@ -482,7 +482,7 @@ SERAC_HOST_DEVICE auto apply(lambda f, tuple<T...>& args)
  * @overload
  */
 template <typename lambda, typename... T, int... i>
-SERAC_HOST_DEVICE auto apply_helper(lambda f, const tuple<T...>& args, std::integer_sequence<int, i...>)
+SERAC_HOST_DEVICE auto apply_helper(lambda f, const camp::tuple<T...>& args, std::integer_sequence<int, i...>)
 {
   return f(get<i>(args)...);
 }
@@ -497,7 +497,7 @@ SERAC_HOST_DEVICE auto apply_helper(lambda f, const tuple<T...>& args, std::inte
  *   e.g. foo(bar, baz) is equivalent to apply(foo, camp::tuple(bar,baz));
  */
 template <typename lambda, typename... T>
-SERAC_HOST_DEVICE auto apply(lambda f, const tuple<T...>& args)
+SERAC_HOST_DEVICE auto apply(lambda f, const camp::tuple<T...>& args)
 {
   return apply_helper(f, std::move(args), std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>());
 }
@@ -516,13 +516,13 @@ struct tuple_element;
 // recursive case
 /// @overload
 template <size_t I, class Head, class... Tail>
-struct tuple_element<I, tuple<Head, Tail...>> : tuple_element<I - 1, tuple<Tail...>> {
+struct tuple_element<I, camp::tuple<Head, Tail...>> : tuple_element<I - 1, camp::tuple<Tail...>> {
 };
 
 // base case
 /// @overload
 template <class Head, class... Tail>
-struct tuple_element<0, tuple<Head, Tail...>> {
+struct tuple_element<0, camp::tuple<Head, Tail...>> {
   using type = Head;  ///< the type at the specified index
 };
 

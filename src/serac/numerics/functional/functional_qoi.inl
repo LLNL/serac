@@ -61,8 +61,8 @@ struct QoIElementRestriction : public mfem::Operator {
 template <typename... trials, ExecutionSpace exec>
 class Functional<double(trials...), exec> {
   using test = QOI;
-  static constexpr tuple<trials...> trial_spaces{};
-  static constexpr uint32_t         num_trial_spaces = sizeof...(trials);
+  static constexpr camp::tuple<trials...> trial_spaces{};
+  static constexpr uint32_t               num_trial_spaces = sizeof...(trials);
 
   class Gradient;
 

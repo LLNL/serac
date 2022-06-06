@@ -38,8 +38,8 @@ class BoundaryIntegral;
 template <typename test, typename... trials, ExecutionSpace exec>
 class BoundaryIntegral<test(trials...), exec> {
 public:
-  static constexpr tuple<trials...> trial_spaces{};                        ///< a tuple of the different trial spaces
-  static constexpr int              num_trial_spaces = sizeof...(trials);  ///< how many trial spaces were specified
+  static constexpr camp::tuple<trials...> trial_spaces{};                        ///< a tuple of the different trial spaces
+  static constexpr int                    num_trial_spaces = sizeof...(trials);  ///< how many trial spaces were specified
 
   /**
    * @brief Constructs an @p BoundaryIntegral from a user-provided quadrature function

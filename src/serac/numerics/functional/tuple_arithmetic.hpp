@@ -113,7 +113,7 @@ struct one_hot : public one_hot_helper<i, std::make_integer_sequence<int, n>, T>
  * @brief a tuple type with n entries, all of which are of type `serac::zero`,
  * except for the i^{th} entry, which is of type T
  *
- *  e.g. one_hot_t< 2, 4, T > == tuple<zero, zero, T, zero>
+ *  e.g. one_hot_t< 2, 4, T > == camp::tuple<zero, zero, T, zero>
  */
 template <int i, int n, typename T>
 using one_hot_t = typename one_hot<i, n, T>::type;
@@ -179,9 +179,9 @@ SERAC_HOST_DEVICE constexpr auto make_dual_helper(const tensor<T, n...>& arg)
  * @endcode
  */
 template <typename T0, typename T1>
-SERAC_HOST_DEVICE constexpr auto make_dual(const tuple<T0, T1>& args)
+SERAC_HOST_DEVICE constexpr auto make_dual(const camp::tuple<T0, T1>& args)
 {
-  return tuple{make_dual_helper<0, 2>(get<0>(args)), make_dual_helper<1, 2>(get<1>(args))};
+  return camp::tuple{make_dual_helper<0, 2>(get<0>(args)), make_dual_helper<1, 2>(get<1>(args))};
 }
 
 /**
