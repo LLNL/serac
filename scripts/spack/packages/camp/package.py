@@ -32,6 +32,10 @@ class Camp(CMakePackage, CudaPackage, ROCmPackage):
 
     depends_on('blt')
 
+    # SERAC EDIT BEGIN: Backport CTAD and structured bindings from main
+    patch('modernize_tuple.patch', when='@2022.03.0')
+    # SERAC EDIT END
+
     def cmake_args(self):
         spec = self.spec
 

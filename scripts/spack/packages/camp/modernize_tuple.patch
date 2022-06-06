@@ -1,0 +1,87 @@
+diff --git a/include/camp/tuple.hpp b/include/camp/tuple.hpp
+index 524e59f..de35517 100644
+--- a/include/camp/tuple.hpp
++++ b/include/camp/tuple.hpp
+@@ -359,7 +359,7 @@ public:
+ };
+ 
+ template <>
+-class tuple<>
++struct tuple<>
+ {
+ public:
+   using TList = camp::list<>;
+@@ -367,6 +367,13 @@ public:
+   using type = tuple;
+ };
+ 
++#if defined(__cplusplus) && __cplusplus >= 201703L
++/// Class template argument deduction rule for tuples
++/// e.g. camp::tuple t{1, 2.0};
++template <class... T>
++tuple(T...) -> tuple<T...>;
++#endif
++
+ template <typename... Tags, typename... Args>
+ struct as_list_s<tagged_tuple<camp::list<Tags...>, Args...>> {
+   using type = list<Args...>;
+@@ -426,7 +433,7 @@ CAMP_HOST_DEVICE constexpr auto invoke_with_order(TupleLike&& tup,
+                                                   Fn&& f,
+                                                   camp::idx_seq<Sequence...>)
+ {
+-  return f(::camp::get<Sequence>(tup)...);
++  return f(::camp::get<Sequence>(std::forward<TupleLike>(t))...);
+ }
+ 
+ CAMP_SUPPRESS_HD_WARN
+@@ -457,6 +464,13 @@ constexpr T make_from_tuple(Tuple&& tup)
+       std::forward<Tuple>(tup),
+       make_idx_seq_t<tuple_size<type::ref::rem<Tuple>>::value>{});
+ }
++
++// Forward the elements of a tuple to a callable
++template <class Fn, class TupleLike>
++CAMP_HOST_DEVICE constexpr auto apply(Fn&& f, TupleLike&& tup)
++{
++  return ::camp::invoke(std::forward<TupleLike>(tup), std::forward<Fn>(f));
++}
+ }  // namespace camp
+ 
+ namespace internal
+@@ -477,5 +491,36 @@ auto operator<<(std::ostream& os, camp::tuple<Args...> const& tup)
+   return os << ")";
+ }
+ 
++#if defined(__cplusplus) && __cplusplus >= 201703L
++namespace std {
++  /// This allows structured bindings to be used with camp::tuple
++  /// e.g. auto t = make_tuple(1, 2.0);
++  ///      auto [a, b] = t;
++  template <typename... T>
++  struct tuple_size<camp::tuple<T...> > {
++    static constexpr size_t value = sizeof...(T);
++  };
++
++  template <size_t i, typename ... T>
++  struct tuple_element<i, camp::tuple<T...>> {
++    using type = decltype(camp::get<i>(camp::tuple<T...>{}));
++  };
++
++  /// This allows structured bindings to be used with camp::tagged_tuple
++  /// e.g. struct s1;
++  ///      struct s2;
++  ///      auto t = make_tagged_tuple<list<s1, s2>>(1, 2.0);
++  ///      auto [a, b] = t;
++  template <typename TagList, typename... Elements>
++  struct tuple_size<camp::tagged_tuple<TagList, Elements...> > {
++    static constexpr size_t value = sizeof...(Elements);
++  };
++
++  template <size_t i, typename TagList, typename... Elements>
++  struct tuple_element<i, camp::tagged_tuple<TagList, Elements...>> {
++    using type = decltype(camp::get<i>(camp::tagged_tuple<TagList, Elements...>{}));
++  };
++} // namespace std
++#endif
+ 
+ #endif /* camp_tuple_HPP__ */
