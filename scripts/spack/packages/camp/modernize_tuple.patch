@@ -1,5 +1,5 @@
 diff --git a/include/camp/tuple.hpp b/include/camp/tuple.hpp
-index 524e59f..de35517 100644
+index 524e59f..77d2b49 100644
 --- a/include/camp/tuple.hpp
 +++ b/include/camp/tuple.hpp
 @@ -359,7 +359,7 @@ public:
@@ -30,7 +30,7 @@ index 524e59f..de35517 100644
                                                    camp::idx_seq<Sequence...>)
  {
 -  return f(::camp::get<Sequence>(tup)...);
-+  return f(::camp::get<Sequence>(std::forward<TupleLike>(t))...);
++  return f(::camp::get<Sequence>(std::forward<TupleLike>(tup))...);
  }
  
  CAMP_SUPPRESS_HD_WARN
