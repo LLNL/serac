@@ -155,7 +155,7 @@ public:
    *
    * @param coef The vector coefficient to project
    * @param dof_list A list of true degrees of freedom to set. Note this is the scalar dof (not vdof) numbering.
-   * 
+   *
    * @note This only sets nodal values based on the coefficient at that point. It does not perform
    * a full least squares projection.
    */
@@ -172,7 +172,7 @@ public:
    * @param coef The vector coefficient to project
    * @param dof_list A list of true degrees of freedom to set. Note this is the scalar dof (not vdof) numbering.
    * @param component The component to set
-   * 
+   *
    * @note This only sets nodal values based on the coefficient at that point. It does not perform
    * a full least squares projection.
    */
@@ -190,9 +190,9 @@ public:
   /**
    * Projects a coefficient (vector or scalar) onto the field
    * @param[in] coef The coefficient to project
-   * 
+   *
    * @note This only sets nodal values based on the coefficient at that point. It does not perform
-   * a full least squares projection.  
+   * a full least squares projection.
    */
   void project(const GeneralCoefficient& coef)
   {
@@ -227,7 +227,7 @@ public:
    *
    * @param coef The coefficient to project
    * @param markers A marker array of the boundaries to set
-   * 
+   *
    * @note This only sets nodal values based on the coefficient at that point. It does not perform
    * a full least squares projection.
    */

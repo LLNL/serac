@@ -308,14 +308,14 @@ public:
 
 protected:
   /**
-   * @brief The single physics thermal solver
-   */
-  ThermalConduction therm_solver_;
-
-  /**
    * @brief The single physics nonlinear solid solver
    */
   Solid solid_solver_;
+
+  /**
+   * @brief The single physics thermal solver
+   */
+  ThermalConduction therm_solver_;
 
   /**
    * @brief The temperature finite element state
