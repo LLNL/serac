@@ -198,10 +198,10 @@ int main(int argc, char* argv[])
   main_physics->completeSetup();
 
   // Initialize/set the time information
+  double t       = 0;
   double t_final = inlet["t_final"];
-  double dt = inlet["dt"];
-  double t = 0;
-  int ti = 1;
+  double dt      = inlet["dt"];
+  int ti         = 1;
 
   if (restart_cycle) {
     t  = *restart_cycle * dt - dt; // TODO chapman39 read from inlet instead
