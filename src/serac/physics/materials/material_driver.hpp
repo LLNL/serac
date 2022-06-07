@@ -22,8 +22,6 @@
 
 namespace serac::solid_util {
 
-
-
 template <typename MaterialType>
 class MaterialDriver {
  public:
@@ -48,9 +46,10 @@ class MaterialDriver {
    * @param strain A function describing the desired axial displacement gradient as a function of time. 
    *        (NB axial displacement gradient is equivalent to engineering strain).
    */
+  template < typename StateType >
   ResponseHistory runUniaxial(double maxTime, unsigned int nsteps,
                               const std::function<double(double)>& strain,
-                              MaterialState<MaterialType>& state,
+                              StateType & state,
                               const double relative_tolerance=1e-10,
                               const int max_equilibrium_iterations=10)
   {
@@ -67,17 +66,10 @@ class MaterialDriver {
       t += dt;
       dudx[0][0] = strain(t);
       dudx = solveForUniaxialState(dudx, state, relative_tolerance, max_equilibrium_iterations);
-      if constexpr(state == null_state) {
-        auto response = material_(x, u, make_dual(dudx));
-        auto stress = get_value(response.stress);
-        //std::cout << "out of plane stress " << stress[1][1] << std::endl;
-        stress_strain_history.emplace_back(tuple{dudx[0][0], stress[0][0]});
-      } else {
-        auto response = material_(x, u, make_dual(dudx), state);
-        auto stress = get_value(response.stress);
-        //std::cout << "out of plane stress " << stress[1][1] << std::endl;
-        stress_strain_history.emplace_back(tuple{dudx[0][0], stress[0][0]});
-      }
+      auto response = material_(x, u, make_dual(dudx), state);
+      auto stress = get_value(response.stress);
+      //std::cout << "out of plane stress " << stress[1][1] << std::endl;
+      stress_strain_history.emplace_back(tuple{dudx[0][0], stress[0][0]});
     }
     return stress_strain_history;
   }
@@ -93,8 +85,9 @@ class MaterialDriver {
     return {{{A[1][1][1][1], A[1][1][2][2]}, {A[2][2][1][1], A[2][2][2][2]}}};
   }
 
+  template < typename StateType >
   tensor<double, 3, 3> solveForUniaxialState(tensor<double, 3, 3> dudx,
-                                             const MaterialState<MaterialType>& state,
+                                             const StateType & state,
                                              const double tol, 
                                              const int MAXITERS)
   {

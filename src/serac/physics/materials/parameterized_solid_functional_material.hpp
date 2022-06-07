@@ -26,6 +26,9 @@ namespace serac::solid_util {
 template <int dim>
 class ParameterizedLinearIsotropicSolid {
 public:
+
+  struct State{};
+
   /**
    * @brief Construct a new Linear Isotropic Elasticity object
    *
@@ -54,7 +57,7 @@ public:
    */
   template <typename DisplacementType, typename DispGradType, typename BulkType, typename ShearType>
   SERAC_HOST_DEVICE auto operator()(const tensor<double, dim>& /* x */, const DisplacementType& /* displacement */,
-                                    const DispGradType& displacement_grad, const BulkType& bulk_parameter,
+                                    const DispGradType& displacement_grad, State & /*state*/, const BulkType& bulk_parameter,
                                     const ShearType& shear_parameter) const
   {
     auto bulk_modulus  = bulk_parameter + bulk_modulus_offset_;
@@ -94,6 +97,9 @@ private:
 template <int dim>
 class ParameterizedNeoHookeanSolid {
 public:
+
+  struct State{};
+ 
   /**
    * @brief Construct a new Neo-Hookean object
    *

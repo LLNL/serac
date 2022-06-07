@@ -17,9 +17,6 @@
 /// SolidFunctional helper data types
 namespace serac::solid_util {
 
-template <typename MaterialType>
-struct MaterialState{ };
-
 /**
  * @brief Response data type for solid mechanics simulations
  *
@@ -52,6 +49,9 @@ MaterialResponse(DensityType, StressType) -> MaterialResponse<DensityType, Stres
 template <int dim>
 class LinearIsotropicSolid {
 public:  
+
+  struct State{};
+
   /**
    * @brief Construct a new Linear Isotropic Elasticity object
    *
@@ -88,7 +88,7 @@ public:
    */
   template <typename DisplacementType, typename DispGradType>
   SERAC_HOST_DEVICE auto operator()(const tensor<double, dim>& /* x */, const DisplacementType& /* displacement */,
-                                    const DispGradType& displacement_grad) const
+                                    const DispGradType& displacement_grad, State & /*state*/) const
   {
     auto I      = Identity<dim>();
     auto lambda = bulk_modulus_ - (2.0 / dim) * shear_modulus_;
@@ -115,7 +115,10 @@ private:
  */
 template <int dim>
 class NeoHookeanSolid {
+
 public:  
+  struct State{};
+
   /**
    * @brief Construct a new Neo-Hookean object
    *
@@ -150,7 +153,7 @@ public:
    */
   template <typename DisplacementType, typename DispGradType>
   SERAC_HOST_DEVICE auto operator()(const tensor<double, dim>& /* x */, const DisplacementType& /* displacement */,
-                                    const DispGradType& displacement_grad) const
+                                    const DispGradType& displacement_grad, State & /* state */) const
   {
     auto I      = Identity<dim>();
     auto lambda = bulk_modulus_ - (2.0 / dim) * shear_modulus_;
@@ -278,8 +281,14 @@ struct PressureFunction {
   }
 };
 
+
 class J2 {
  public:
+ 
+  struct State {
+    double eqps;
+    tensor<double, 3, 3> Fp;
+  };
 
   static constexpr int dim = 3;
   
@@ -319,7 +328,7 @@ class J2 {
    */
   template <typename DisplacementType, typename DispGradType>
   SERAC_HOST_DEVICE auto operator()(const tensor<double, dim>& /* x */, const DisplacementType& /* displacement */,
-                                    const DispGradType& displacement_grad, MaterialState<J2>& /* state */) const
+                                    const DispGradType& displacement_grad, State & /* state */) const
   {
     auto I      = Identity<dim>();
     auto lambda = bulk_modulus_ - (2.0 / dim) * shear_modulus_;
@@ -337,12 +346,6 @@ private:
 
   /// Shear modulus
   double shear_modulus_;
-};
-
-template<>
-struct MaterialState<J2> {
-  double eqps;
-  tensor<double, 3, 3> Fp;
 };
 
 }  // namespace serac::solid_util
