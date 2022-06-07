@@ -11,22 +11,28 @@
 namespace serac {
 
 BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component,
-                                     const std::set<int>& attrs, const int num_attrs)
-    : coef_(coef), component_(component), markers_(num_attrs)
+                                     const std::set<int>& attrs, const int num_attrs, FiniteElementState* state)
+    : coef_(coef), component_(component), markers_(num_attrs), state_(state)
 {
   if (get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_)) {
     SLIC_ERROR_ROOT_IF(component_, "A vector coefficient must be applied to all components");
   }
+
   markers_ = 0;
   for (const int attr : attrs) {
     SLIC_ASSERT_MSG(attr <= num_attrs, "Attribute specified larger than what is found in the mesh.");
     markers_[attr - 1] = 1;
   }
+
+  // If a finite element state is provided, set the dofs from the associated finite element space
+  if (state) {
+    setDofs();
+  }
 }
 
 BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component,
-                                     const mfem::Array<int>& true_dofs)
-    : coef_(coef), component_(component), markers_(0)
+                                     const mfem::Array<int>& true_dofs, FiniteElementState* state)
+    : coef_(coef), component_(component), markers_(0), state_(state)
 {
   if (get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_)) {
     SLIC_ERROR_IF(component_, "A vector coefficient must be applied to all components");
@@ -36,38 +42,41 @@ BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const std::optiona
 
 void BoundaryCondition::setTrueDofs(const mfem::Array<int> true_dofs)
 {
+  SLIC_ERROR_ROOT_IF(!state_, "A finite element state must exist to set the boundary condition DOFs.");
   true_dofs_ = true_dofs;
   state_->space().GetRestrictionMatrix()->BooleanMultTranspose(*true_dofs_, *local_dofs_);
 }
 
 void BoundaryCondition::setLocalDofs(const mfem::Array<int> local_dofs)
 {
+  SLIC_ERROR_ROOT_IF(!state_, "A finite element state must exist to set the boundary condition DOFs.");
   local_dofs_ = local_dofs;
   state_->space().GetRestrictionMatrix()->BooleanMult(*local_dofs_, *true_dofs_);
 }
 
-void BoundaryCondition::setDofs(FiniteElementState& state)
+void BoundaryCondition::setDofs()
 {
+  SLIC_ERROR_ROOT_IF(!state_, "A finite element state must exist to set the boundary condition DOFs.");
   true_dofs_.emplace(0);
   local_dofs_.emplace(0);
-  state_ = &state;
+
   if (component_) {
     mfem::Array<int> dof_markers;
 
-    state.space().GetEssentialTrueDofs(markers_, *true_dofs_, *component_);
-    state.space().GetEssentialVDofs(markers_, dof_markers, *component_);
+    state_->space().GetEssentialTrueDofs(markers_, *true_dofs_, *component_);
+    state_->space().GetEssentialVDofs(markers_, dof_markers, *component_);
 
     // The VDof call actually returns a marker array, so we need to transform it to a list of indices
-    state.space().MarkerToList(dof_markers, *local_dofs_);
+    state_->space().MarkerToList(dof_markers, *local_dofs_);
 
   } else {
     mfem::Array<int> dof_markers;
 
-    state.space().GetEssentialTrueDofs(markers_, *true_dofs_, -1);
-    state.space().GetEssentialVDofs(markers_, *local_dofs_, -1);
+    state_->space().GetEssentialTrueDofs(markers_, *true_dofs_, -1);
+    state_->space().GetEssentialVDofs(markers_, *local_dofs_, -1);
 
     // The VDof call actually returns a marker array, so we need to transform it to a list of indices
-    state.space().MarkerToList(dof_markers, *local_dofs_);
+    state_->space().MarkerToList(dof_markers, *local_dofs_);
   }
 }
 

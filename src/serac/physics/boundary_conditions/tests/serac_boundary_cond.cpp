@@ -97,11 +97,12 @@ TEST(BoundaryCondHelper, ElementAttributeDofListScalar)
   auto mesh = mfem::Mesh::MakeCartesian3D(4, 4, 4, mfem::Element::HEXAHEDRON);
   mesh.SetAttribute(1, attribute);
   mesh.SetAttribute(31, attribute);
+  mesh.SetAttributes();
 
   mfem::ParMesh pmesh(MPI_COMM_WORLD, mesh);
   int           sdim = pmesh.SpaceDimension();
 
-  mfem::Array<int> elem_attr_is_ess(pmesh.bdr_attributes.Max());
+  mfem::Array<int> elem_attr_is_ess(pmesh.attributes.Max());
   elem_attr_is_ess                = 0;
   elem_attr_is_ess[attribute - 1] = 1;
 
@@ -164,6 +165,7 @@ TEST(BoundaryCondHelper, ElementAttributeDofListVector)
   auto mesh = mfem::Mesh::MakeCartesian3D(4, 4, 4, mfem::Element::HEXAHEDRON);
   mesh.SetAttribute(2, attribute);
   mesh.SetAttribute(3, attribute);
+  mesh.SetAttributes();
 
   mfem::ParMesh pmesh(MPI_COMM_WORLD, mesh);
   int           sdim = pmesh.SpaceDimension();

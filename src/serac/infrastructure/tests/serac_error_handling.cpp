@@ -62,10 +62,6 @@ TEST(SeracErrorHandling, BcProjectRequiresState)
   auto              coef = std::make_shared<mfem::ConstantCoefficient>();
   BoundaryCondition bc(coef, 0, std::set<int>{1}, num_attrs);
   EXPECT_THROW(bc.project(), SlicErrorException);
-
-  FiniteElementState state(*mesh);
-  bc.setDofs(state);
-  EXPECT_NO_THROW(bc.project());
 }
 
 TEST(SeracErrorHandling, BcOneComponentVectorCoef)

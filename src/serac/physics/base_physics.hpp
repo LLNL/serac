@@ -54,16 +54,6 @@ public:
   BasePhysics(BasePhysics&& other) = default;
 
   /**
-   * @brief Set a list of true degrees of freedom from a coefficient
-   *
-   * @param[in] true_dofs The true degrees of freedom to set with a Dirichlet condition
-   * @param[in] ess_bdr_coef The coefficient that evaluates to the Dirichlet condition
-   * @param[in] component The component to set (-1 implies all components are set)
-   */
-  virtual void setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef,
-                           const int component = -1);
-
-  /**
    * @brief Get the list of state variable grid functions
    *
    * @return the current vector of finite element states
