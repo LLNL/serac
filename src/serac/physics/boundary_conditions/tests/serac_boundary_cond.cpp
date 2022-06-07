@@ -102,7 +102,6 @@ TEST(boundary_cond_helper, element_attribute_dof_list_scalar)
   int           sdim = pmesh.SpaceDimension();
 
   mfem::Array<int> elem_attr_is_ess(pmesh.attributes.Max());
-
   elem_attr_is_ess                = 0;
   elem_attr_is_ess[attribute - 1] = 1;
 

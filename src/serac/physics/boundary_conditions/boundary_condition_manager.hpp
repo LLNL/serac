@@ -207,10 +207,11 @@ public:
    *
    * @param[in] true_dofs The true degrees of freedom to set with a Dirichlet condition
    * @param[in] ess_bdr_coef The coefficient that evaluates to the Dirichlet condition
+   * @param[in] state The finite element state where the essential boundary is being applied
    * @param[in] component The component to set (-1 implies all components are set)
    */
   void addEssentialTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef,
-                            std::optional<int> component = {});
+                            serac::FiniteElementState& state, std::optional<int> component = {});
 
   /**
    * @brief Returns all the true degrees of freedom associated with all the essential BCs

@@ -40,11 +40,6 @@ BasePhysics::BasePhysics(int n, int p, mfem::ParMesh* pmesh) : BasePhysics(pmesh
   gf_initialized_.assign(static_cast<std::size_t>(n), StateManager::isRestart());
 }
 
-void BasePhysics::setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component)
-{
-  bcs_.addEssentialTrueDofs(true_dofs, ess_bdr_coef, component);
-}
-
 const std::vector<std::reference_wrapper<serac::FiniteElementState> >& BasePhysics::getState() const { return state_; }
 
 void BasePhysics::setTime(const double time)
