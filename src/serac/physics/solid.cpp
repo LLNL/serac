@@ -397,7 +397,6 @@ void Solid::advanceTimestep(double& dt)
 
   // Set the mesh nodes to the reference configuration
   mesh_.NewNodes(*reference_nodes_);
-  
   bcs_.setTime(time_);
 
   if (is_quasistatic_) {
