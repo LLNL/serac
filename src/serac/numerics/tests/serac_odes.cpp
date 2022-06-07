@@ -485,7 +485,7 @@ double second_order_ode_test(int nsteps, ode_type type, constraint_type constrai
 
 using param_t = std::tuple<ode_type, constraint_type, TimestepMethod, DirichletEnforcementMethod>;
 
-class FirstOrderODE_suite : public testing::TestWithParam<param_t> {
+class FirstOrderODESuite : public testing::TestWithParam<param_t> {
 protected:
   void                       SetUp() override { std::tie(type, constraint, timestepper, enforcement) = GetParam(); }
   ode_type                   type;
@@ -553,7 +553,7 @@ INSTANTIATE_TEST_SUITE_P(AllFirstOrderTests, FirstOrderODESuite,
 );
 // clang-format on
 
-class SecondOrderODE_suite : public testing::TestWithParam<param_t> {
+class SecondOrderODESuite : public testing::TestWithParam<param_t> {
 protected:
   void                       SetUp() override { std::tie(type, constraint, timestepper, enforcement) = GetParam(); }
   ode_type                   type;
