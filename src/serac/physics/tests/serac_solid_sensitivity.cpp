@@ -1,13 +1,22 @@
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// other Serac Project Developers. See the top-level LICENSE file for
+// details.
+//
+// SPDX-License-Identifier: (BSD-3-Clause)
+
+#include <memory>
+
+#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
+#include <mfem.hpp>
 #include <mpi.h>
+
 #include <serac/physics/solid.hpp>
 #include <serac/physics/state/state_manager.hpp>
 #include <serac/physics/state/finite_element_state.hpp>
 #include <serac/physics/state/finite_element_dual.hpp>
-#include <mfem.hpp>
-#include <memory>
 
-TEST(serac_solid_sensitivity, finite_diff)
+TEST(SeracSolidSensitivity, FiniteDiff)
 {
   axom::sidre::DataStore datastore;
   serac::StateManager::initialize(datastore, "solid_sensitivity");
@@ -159,7 +168,7 @@ TEST(serac_solid_sensitivity, finite_diff)
   }
 }
 
-TEST(serac_solid_sensitivity, multiple_design_spaces)
+TEST(SeracSolidSensitivity, MultipleDesignSpaces)
 {
   // Initialize the datastore
   axom::sidre::DataStore datastore;
@@ -237,9 +246,6 @@ TEST(serac_solid_sensitivity, multiple_design_spaces)
   }
 }
 
-//------------------------------------------------------------------------------
-#include "axom/slic/core/SimpleLogger.hpp"
-
 int main(int argc, char* argv[])
 {
   int result = 0;
@@ -248,7 +254,7 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when exiting main scope
+  axom::slic::SimpleLogger logger;
 
   result = RUN_ALL_TESTS();
 

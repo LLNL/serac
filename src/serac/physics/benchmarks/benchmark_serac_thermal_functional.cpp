@@ -4,17 +4,17 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/thermal_conduction_functional.hpp"
-#include "serac/physics/materials/thermal_functional_material.hpp"
-
 #include <fstream>
 
+#include "axom/slic/core/SimpleLogger.hpp"
 #include "mfem.hpp"
 
 #include "serac/serac_config.hpp"
 #include "serac/infrastructure/profiling.hpp"
 #include "serac/mesh/mesh_utils.hpp"
+#include "serac/physics/materials/thermal_functional_material.hpp"
 #include "serac/physics/state/state_manager.hpp"
+#include "serac/physics/thermal_conduction_functional.hpp"
 
 template <int p, int dim>
 void functional_test_static()
@@ -151,9 +151,6 @@ void functional_test_dynamic()
   // Output the sidre-based plot files
   thermal_solver.outputState();
 }
-
-//------------------------------------------------------------------------------
-#include "axom/slic/core/SimpleLogger.hpp"
 
 int main(int argc, char* argv[])
 {
