@@ -54,9 +54,16 @@ Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities ge
   reference_nodes_->GetTrueDofs(x_);
   deformed_nodes_ = std::make_unique<mfem::ParGridFunction>(*reference_nodes_);
 
-  displacement_.trueVec()         = 0.0;
-  velocity_.trueVec()             = 0.0;
-  adjoint_displacement_.trueVec() = 0.0;
+  if (!StateManager::isRestart()) {
+    displacement_.trueVec()         = 0.0;
+    velocity_.trueVec()             = 0.0;
+    adjoint_displacement_.trueVec() = 0.0;
+  }
+  else {
+    displacement_.initializeTrueVec();
+    velocity_.initializeTrueVec();
+    adjoint_displacement_.initializeTrueVec();
+  }
 
   const auto& lin_options = options.H_lin_options;
   // If the user wants the AMG preconditioner with a linear solver, set the pfes
@@ -390,7 +397,7 @@ void Solid::advanceTimestep(double& dt)
 
   // Set the mesh nodes to the reference configuration
   mesh_.NewNodes(*reference_nodes_);
-
+  
   bcs_.setTime(time_);
 
   if (is_quasistatic_) {

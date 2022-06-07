@@ -198,9 +198,17 @@ int main(int argc, char* argv[])
   main_physics->completeSetup();
 
   // Initialize/set the time information
-  double t       = 0;
   double t_final = inlet["t_final"];
-  double dt      = inlet["dt"];
+  double dt = inlet["dt"];
+  double t = 0;
+  int ti = 1;
+
+  if (restart_cycle) {
+    t  = *restart_cycle * dt - dt; // TODO chapman39 read from inlet instead
+    ti = *restart_cycle;
+    main_physics->setTime(t);
+    main_physics->setCycle(*restart_cycle);
+  }
 
   bool last_step = false;
 
@@ -211,7 +219,7 @@ int main(int argc, char* argv[])
   main_physics->initializeSummary(datastore, t_final, dt);
 
   // Enter the time step loop.
-  for (int ti = 1; !last_step; ti++) {
+  for (; !last_step; ti++) {
     // Flush all messages held by the logger
     serac::logger::flush();
 
