@@ -4,11 +4,11 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/numerics/expr_template_ops.hpp"
-
 #include <utility>
 
 #include <benchmark/benchmark.h>
+
+#include "serac/numerics/expr_template_ops.hpp"
 
 static std::pair<mfem::Vector, mfem::Vector> sample_vectors(const int entries)
 {

@@ -1,9 +1,10 @@
-# Copyright 2013-2021 Lawrence Livermore National Security, LLC and other
+# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
 # Spack Project Developers. See the top-level COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 import socket
+import os
 
 from spack import *
 
@@ -17,8 +18,9 @@ class Raja(CachedCMakePackage, CudaPackage, ROCmPackage):
 
     maintainers = ['davidbeckingsale']
 
-    version('develop', branch='develop', submodules='True')
-    version('main',  branch='main',  submodules='True')
+    version('develop', branch='develop', submodules=False)
+    version('main',  branch='main',  submodules=False)
+    version('2022.03.0', tag='v2022.03.0', submodules=False)
     version('0.14.0', tag='v0.14.0', submodules='True')
     version('0.13.0', tag='v0.13.0', submodules='True')
     version('0.12.1', tag='v0.12.1', submodules="True")
@@ -38,9 +40,14 @@ class Raja(CachedCMakePackage, CudaPackage, ROCmPackage):
     version('0.4.0', tag='v0.4.0', submodules="True")
 
     # export targets when building pre-2.4.0 release with BLT 0.4.0+
-    patch('https://github.com/LLNL/RAJA/commit/eca1124ee4af380d6613adc6012c307d1fd4176b.patch',
-          sha256='57dd531a50ac791b4bb214d34a4bf3fca1349354927c72915b7ccd20524701a9',
+    patch('https://github.com/LLNL/RAJA/commit/eca1124ee4af380d6613adc6012c307d1fd4176b.patch?full_index=1',
+          sha256='12bb78c00b6683ad3e7fd4e3f87f9776bae074b722431b79696bc862816735ef',
           when='@:0.13.0 ^blt@0.4:')
+
+    # BEGIN SERAC EDIT
+    # Patch for cuda and hip includes when not running on device
+    patch('arch_impl.patch', when='@2022.03.0:')
+    # END SERAC EDIT
 
     variant('openmp', default=True, description='Build OpenMP backend')
     variant('shared', default=True, description='Build Shared Libs')
@@ -51,15 +58,22 @@ class Raja(CachedCMakePackage, CudaPackage, ROCmPackage):
     variant('tests', default=False, description='Build tests')
 
     depends_on('blt')
-    depends_on('blt@0.4.1:', type='build', when='@0.14.0:')
+    # BEGIN SERAC EDIT
+    depends_on('blt@0.5.1:', type='build', when='@0.14.1:')
+    # END SERAC EDIT
+    depends_on('blt@0.4.1', type='build', when='@0.14.0')
     depends_on('blt@0.4.0:', type='build', when='@0.13.0')
     depends_on('blt@0.3.6:', type='build', when='@:0.12.0')
 
-    ## axom patch begin
-    depends_on('camp~cuda', when='~cuda')
-    #depends_on('camp@0.2.2', when='@0.14.0:')
-    #depends_on('camp@0.1.0', when='@0.12.0:0.13.0')
-    ## axom patch end
+    depends_on('camp@0.2.2', when='@0.14.0')
+    depends_on('camp@0.1.0', when='@0.12.0:0.13.0')
+    depends_on('camp@2022.03.0:', when='@2022.03.0:')
+
+    # BEGIN SERAC EDIT
+    # Prevents spack spec with CMake 3.21
+    #depends_on('cmake@:3.20', when='+rocm', type='build')
+    # END SERAC EDIT
+    depends_on('cmake@3.14:', when='@2022.03.0:')
 
     with when('+rocm @0.12.0:'):
         depends_on('camp+rocm')
@@ -107,6 +121,7 @@ class Raja(CachedCMakePackage, CudaPackage, ROCmPackage):
                     "CUDA_ARCH", 'sm_{0}'.format(cuda_arch[0])))
                 entries.append(cmake_cache_string(
                     "CMAKE_CUDA_ARCHITECTURES", '{0}'.format(cuda_arch[0])))
+
         else:
             entries.append(cmake_cache_option("ENABLE_CUDA", False))
 
@@ -114,6 +129,20 @@ class Raja(CachedCMakePackage, CudaPackage, ROCmPackage):
             entries.append(cmake_cache_option("ENABLE_HIP", True))
             entries.append(cmake_cache_path(
                 "HIP_ROOT_DIR", '{0}'.format(spec['hip'].prefix)))
+            # BEGIN SERAC EDIT
+            # Fix blt_hip getting HIP_CLANG_INCLUDE_PATH-NOTFOUND bad include directory
+            if self.spec.satisfies('%clang') and 'toss_4' in self._get_sys_type(spec):
+                hip_root = spec['hip'].prefix
+                rocm_root = hip_root + "/.."
+                clang_version= str(self.compiler.version)
+                hip_clang_include_path = rocm_root + "/llvm/lib/clang/" + clang_version + "/include"
+                if os.path.isdir(hip_clang_include_path):
+                    entries.append(cmake_cache_path("HIP_CLANG_INCLUDE_PATH", hip_clang_include_path))
+
+                # C++ 14 error fix in camp
+                entries.append(cmake_cache_string("CMAKE_CXX_FLAGS","--std=c++14"))
+                # END SERAC EDIT
+
             archs = self.spec.variants['amdgpu_target'].value
             if archs != 'none':
                 arch_str = ",".join(archs)
@@ -128,13 +157,22 @@ class Raja(CachedCMakePackage, CudaPackage, ROCmPackage):
         spec = self.spec
         entries = []
 
+        option_prefix = "RAJA_" if spec.satisfies("@2022.03.0:") else ""
+
         entries.append(cmake_cache_path("BLT_SOURCE_DIR", spec['blt'].prefix))
-        entries.append(cmake_cache_path("camp_DIR", spec['camp'].prefix))
+
+        # SERAC EDIT START
+        entries.append(cmake_cache_path("BLT_CXX_STD", "c++14"))
+        # SERAC EDIT END
+
+        if 'camp' in self.spec:
+            entries.append(cmake_cache_path("camp_DIR", spec['camp'].prefix))
         entries.append(cmake_cache_option("BUILD_SHARED_LIBS", '+shared' in spec))
-        entries.append(cmake_cache_option("ENABLE_EXAMPLES", '+examples' in spec))
+        entries.append(cmake_cache_option(
+            "{}ENABLE_EXAMPLES".format(option_prefix), '+examples' in spec))
         if spec.satisfies('@0.14.0:'):
-            entries.append(cmake_cache_option("RAJA_ENABLE_EXERCISES",
-                                              '+exercises' in spec))
+            entries.append(cmake_cache_option(
+                "{}ENABLE_EXERCISES".format(option_prefix), '+exercises' in spec))
         else:
             entries.append(cmake_cache_option("ENABLE_EXERCISES",
                                               '+exercises' in spec))
@@ -201,3 +239,4 @@ class Raja(CachedCMakePackage, CudaPackage, ROCmPackage):
     def test(self):
         """Perform smoke tests."""
         self._test_examples()
+
