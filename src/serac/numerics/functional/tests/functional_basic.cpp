@@ -59,7 +59,7 @@ void check_gradient(Functional<T>& f, mfem::Vector& U)
   std::cout << relative_error1 << " " << relative_error2 << std::endl;
 }
 
-TEST(basic, nonlinear_thermal_test_3D)
+TEST(FunctionalBasic, NonlinearThermalTest3D)
 {
   int serial_refinement   = 0;
   int parallel_refinement = 0;
@@ -104,6 +104,7 @@ int main(int argc, char* argv[])
   int num_procs, myid;
 
   ::testing::InitGoogleTest(&argc, argv);
+
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
@@ -111,6 +112,7 @@ int main(int argc, char* argv[])
   axom::slic::SimpleLogger logger;
 
   int result = RUN_ALL_TESTS();
+
   MPI_Finalize();
 
   return result;

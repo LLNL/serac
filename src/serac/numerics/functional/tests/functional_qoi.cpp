@@ -7,6 +7,8 @@
 #include <fstream>
 #include <iostream>
 
+#include "axom/slic/core/SimpleLogger.hpp"
+#include <gtest/gtest.h>
 #include "mfem.hpp"
 
 #include "serac/serac_config.hpp"
@@ -14,7 +16,6 @@
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/infrastructure/profiling.hpp"
-#include <gtest/gtest.h>
 
 using namespace serac;
 using namespace serac::profiling;
@@ -356,30 +357,30 @@ void qoi_test(mfem::ParMesh& mesh, H1<p1> trial1, H1<p2> trial2, Dimension<dim>)
 }
 
 // clang-format off
-TEST(measure, 2D_linear   ) { qoi_test(*mesh2D, H1<1>{}, Dimension<2>{}, WhichTest::Measure); }
-TEST(measure, 2D_quadratic) { qoi_test(*mesh2D, H1<2>{}, Dimension<2>{}, WhichTest::Measure); }
-TEST(measure, 3D_linear   ) { qoi_test(*mesh3D, H1<1>{}, Dimension<3>{}, WhichTest::Measure); }
-TEST(measure, 3D_quadratic) { qoi_test(*mesh3D, H1<2>{}, Dimension<3>{}, WhichTest::Measure); }
+TEST(Measure, 2DLinear   ) { qoi_test(*mesh2D, H1<1>{}, Dimension<2>{}, WhichTest::Measure); }
+TEST(Measure, 2DQuadratic) { qoi_test(*mesh2D, H1<2>{}, Dimension<2>{}, WhichTest::Measure); }
+TEST(Measure, 3DLinear   ) { qoi_test(*mesh3D, H1<1>{}, Dimension<3>{}, WhichTest::Measure); }
+TEST(Measure, 3DQuadratic) { qoi_test(*mesh3D, H1<2>{}, Dimension<3>{}, WhichTest::Measure); }
 
-TEST(moment, 2D_linear   ) { qoi_test(*mesh2D, H1<1>{}, Dimension<2>{}, WhichTest::Moment); }
-TEST(moment, 2D_quadratic) { qoi_test(*mesh2D, H1<2>{}, Dimension<2>{}, WhichTest::Moment); }
-TEST(moment, 3D_linear   ) { qoi_test(*mesh3D, H1<1>{}, Dimension<3>{}, WhichTest::Moment); }
-TEST(moment, 3D_quadratic) { qoi_test(*mesh3D, H1<2>{}, Dimension<3>{}, WhichTest::Moment); }
+TEST(Moment, 2DLinear   ) { qoi_test(*mesh2D, H1<1>{}, Dimension<2>{}, WhichTest::Moment); }
+TEST(Moment, 2DQuadratic) { qoi_test(*mesh2D, H1<2>{}, Dimension<2>{}, WhichTest::Moment); }
+TEST(Moment, 3DLinear   ) { qoi_test(*mesh3D, H1<1>{}, Dimension<3>{}, WhichTest::Moment); }
+TEST(Moment, 3DQuadratic) { qoi_test(*mesh3D, H1<2>{}, Dimension<3>{}, WhichTest::Moment); }
 
-TEST(sum_of_measures, 2D_linear   ) { qoi_test(*mesh2D, H1<1>{}, Dimension<2>{}, WhichTest::SumOfMeasures); }
-TEST(sum_of_measures, 2D_quadratic) { qoi_test(*mesh2D, H1<2>{}, Dimension<2>{}, WhichTest::SumOfMeasures); }
-TEST(sum_of_measures, 3D_linear   ) { qoi_test(*mesh3D, H1<1>{}, Dimension<3>{}, WhichTest::SumOfMeasures); }
-TEST(sum_of_measures, 3D_quadratic) { qoi_test(*mesh3D, H1<2>{}, Dimension<3>{}, WhichTest::SumOfMeasures); }
+TEST(SumOfMeasures, 2DLinear   ) { qoi_test(*mesh2D, H1<1>{}, Dimension<2>{}, WhichTest::SumOfMeasures); }
+TEST(SumOfMeasures, 2DQuadratic) { qoi_test(*mesh2D, H1<2>{}, Dimension<2>{}, WhichTest::SumOfMeasures); }
+TEST(SumOfMeasures, 3DLinear   ) { qoi_test(*mesh3D, H1<1>{}, Dimension<3>{}, WhichTest::SumOfMeasures); }
+TEST(SumOfMeasures, 3DQuadratic) { qoi_test(*mesh3D, H1<2>{}, Dimension<3>{}, WhichTest::SumOfMeasures); }
 
-TEST(nonlinear, 2D_linear   ) { qoi_test(*mesh2D, H1<1>{}, Dimension<2>{}, WhichTest::Nonlinear); }
-TEST(nonlinear, 2D_quadratic) { qoi_test(*mesh2D, H1<2>{}, Dimension<2>{}, WhichTest::Nonlinear); }
-TEST(nonlinear, 3D_linear   ) { qoi_test(*mesh3D, H1<1>{}, Dimension<3>{}, WhichTest::Nonlinear); }
-TEST(nonlinear, 3D_quadratic) { qoi_test(*mesh3D, H1<2>{}, Dimension<3>{}, WhichTest::Nonlinear); }
+TEST(Nonlinear, 2DLinear   ) { qoi_test(*mesh2D, H1<1>{}, Dimension<2>{}, WhichTest::Nonlinear); }
+TEST(Nonlinear, 2DQuadratic) { qoi_test(*mesh2D, H1<2>{}, Dimension<2>{}, WhichTest::Nonlinear); }
+TEST(Nonlinear, 3DLinear   ) { qoi_test(*mesh3D, H1<1>{}, Dimension<3>{}, WhichTest::Nonlinear); }
+TEST(Nonlinear, 3DQuadratic) { qoi_test(*mesh3D, H1<2>{}, Dimension<3>{}, WhichTest::Nonlinear); }
 
-TEST(variadic, 2D_linear   ) { qoi_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
-TEST(variadic, 2D_quadratic) { qoi_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
-TEST(variadic, 3D_linear   ) { qoi_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
-TEST(variadic, 3D_quadratic) { qoi_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
+TEST(Variadic, 2DLinear   ) { qoi_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
+TEST(Variadic, 2DQuadratic) { qoi_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
+TEST(Variadic, 3DLinear   ) { qoi_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
+TEST(Variadic, 3DQuadratic) { qoi_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
 // clang-format on
 
 int main(int argc, char* argv[])

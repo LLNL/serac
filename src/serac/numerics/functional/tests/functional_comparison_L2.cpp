@@ -1,9 +1,15 @@
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// other Serac Project Developers. See the top-level LICENSE file for
+// details.
+//
+// SPDX-License-Identifier: (BSD-3-Clause)
+
 #include <fstream>
 #include <iostream>
 
-#include "mfem.hpp"
-
 #include "axom/slic/core/SimpleLogger.hpp"
+#include <gtest/gtest.h>
+#include "mfem.hpp"
 
 #include "serac/serac_config.hpp"
 #include "serac/mesh/mesh_utils_base.hpp"
@@ -11,7 +17,6 @@
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/numerics/functional/tensor.hpp"
-#include <gtest/gtest.h>
 
 using namespace serac;
 
@@ -114,13 +119,13 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
 }
 
-TEST(L2, 2D_linear) { functional_test(*mesh2D, L2<1>{}, L2<1>{}, Dimension<2>{}); }
-TEST(L2, 2D_quadratic) { functional_test(*mesh2D, L2<2>{}, L2<2>{}, Dimension<2>{}); }
-TEST(L2, 2D_cubic) { functional_test(*mesh2D, L2<3>{}, L2<3>{}, Dimension<2>{}); }
+TEST(L2, 2DLinear) { functional_test(*mesh2D, L2<1>{}, L2<1>{}, Dimension<2>{}); }
+TEST(L2, 2DQuadratic) { functional_test(*mesh2D, L2<2>{}, L2<2>{}, Dimension<2>{}); }
+TEST(L2, 2DCubic) { functional_test(*mesh2D, L2<3>{}, L2<3>{}, Dimension<2>{}); }
 
-TEST(L2, 3D_linear) { functional_test(*mesh3D, L2<1>{}, L2<1>{}, Dimension<3>{}); }
-TEST(L2, 3D_quadratic) { functional_test(*mesh3D, L2<2>{}, L2<2>{}, Dimension<3>{}); }
-TEST(L2, 3D_cubic) { functional_test(*mesh3D, L2<3>{}, L2<3>{}, Dimension<3>{}); }
+TEST(L2, 3DLinear) { functional_test(*mesh3D, L2<1>{}, L2<1>{}, Dimension<3>{}); }
+TEST(L2, 3DQuadratic) { functional_test(*mesh3D, L2<2>{}, L2<2>{}, Dimension<3>{}); }
+TEST(L2, 3DCubic) { functional_test(*mesh3D, L2<3>{}, L2<3>{}, Dimension<3>{}); }
 
 int main(int argc, char* argv[])
 {

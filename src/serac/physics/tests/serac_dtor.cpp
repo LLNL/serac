@@ -4,23 +4,22 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/thermal_conduction.hpp"
-
-#include <sys/stat.h>
-
 #include <fstream>
 #include <memory>
+#include <sys/stat.h>
 
+#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/state/state_manager.hpp"
+#include "serac/physics/thermal_conduction.hpp"
 #include "serac/serac_config.hpp"
 
 namespace serac {
 
-TEST(serac_dtor, test1)
+TEST(SeracDtor, Test1)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -62,9 +61,6 @@ TEST(serac_dtor, test1)
 
 }  // namespace serac
 
-//------------------------------------------------------------------------------
-#include "axom/slic/core/SimpleLogger.hpp"
-
 int main(int argc, char* argv[])
 {
   int result = 0;
@@ -73,7 +69,7 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when exiting main scope
+  axom::slic::SimpleLogger logger;
 
   result = RUN_ALL_TESTS();
 

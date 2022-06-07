@@ -3,15 +3,14 @@
 // details.
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
-// # Author: Jonathan Wong @ LLNL.
-
-#include "serac/physics/coefficients/coefficient_extensions.hpp"
 
 #include <memory>
 
+#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
+#include "serac/physics/coefficients/coefficient_extensions.hpp"
 #include "serac/physics/integrators/wrapper_integrator.hpp"
 
 using namespace serac;
@@ -145,7 +144,7 @@ void SolveMixedNonlinear(std::shared_ptr<mfem::ParFiniteElementSpace> pfes_, mfe
 }
 
 /// Solve a simple laplacian problem on a cube mesh
-TEST_F(WrapperTests, nonlinear_linear_thermal)
+TEST_F(WrapperTests, LonlinearLinearThermal)
 {
   // Create a coefficient that indicates the x == 0 border of the cube
   mfem::FunctionCoefficient x_zero([](const mfem::Vector& x) {
@@ -339,7 +338,7 @@ TEST_F(WrapperTests, Transformed)
   temp2.Print();
 }
 
-TEST_F(WrapperTests, attribute_modifier_coef)
+TEST_F(WrapperTests, AttributeModifierCoef)
 {
   mfem::ConstantCoefficient three_and_a_half(3.5);
   // All the attributes in the mesh are "1", but for whatever reason the restricted coefficient
@@ -358,7 +357,7 @@ TEST_F(WrapperTests, attribute_modifier_coef)
   EXPECT_NEAR(gf.ComputeL2Error(three_and_a_half), 0.0, 1.e-8);
 }
 
-TEST_F(WrapperTests, vector_transform_coef)
+TEST_F(WrapperTests, VectorTransformCoef)
 {
   mfem::Vector one_two_three(dim_);
   one_two_three[0] = 1;
@@ -394,9 +393,6 @@ TEST_F(WrapperTests, vector_transform_coef)
   EXPECT_NEAR(dual_gf.ComputeL2Error(sum_coef), 0.0, 1.e-8);
 }
 
-//------------------------------------------------------------------------------
-#include "axom/slic/core/SimpleLogger.hpp"
-
 int main(int argc, char* argv[])
 {
   int result = 0;
@@ -405,8 +401,7 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when
-                                    // exiting main scope
+  axom::slic::SimpleLogger logger;
 
   result = RUN_ALL_TESTS();
 
