@@ -4,10 +4,11 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/infrastructure/input.hpp"
-
+#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 #include "mfem.hpp"
+
+#include "serac/infrastructure/input.hpp"
 
 class SlicErrorException : public std::exception {
 };
@@ -39,7 +40,7 @@ private:
 
 namespace serac {
 
-TEST_F(InputTest, vec_1d)
+TEST_F(InputTest, Vec1d)
 {
   reader_->parseString("vec = { x = 4.75 }");
   auto& vec_table = inlet_->addStruct("vec");
@@ -49,7 +50,7 @@ TEST_F(InputTest, vec_1d)
   EXPECT_DOUBLE_EQ(vec(0), 4.75);
 }
 
-TEST_F(InputTest, vec_2d)
+TEST_F(InputTest, Vec2d)
 {
   reader_->parseString("vec = { x = 4.75, y = 6.81 }");
   auto& vec_table = inlet_->addStruct("vec");
@@ -60,7 +61,7 @@ TEST_F(InputTest, vec_2d)
   EXPECT_DOUBLE_EQ(vec(1), 6.81);
 }
 
-TEST_F(InputTest, vec_3d)
+TEST_F(InputTest, Vec3d)
 {
   reader_->parseString("vec = { x = 4.75, y = 6.81, z = -8.33 }");
   auto& vec_table = inlet_->addStruct("vec");
@@ -72,7 +73,7 @@ TEST_F(InputTest, vec_3d)
   EXPECT_DOUBLE_EQ(vec(2), -8.33);
 }
 
-TEST_F(InputTest, coef_build_scalar)
+TEST_F(InputTest, CoefBuildScalar)
 {
   reader_->parseString("coef_opts = { scalar_function = function(v) return v.y * 2 + v.z end, component = 1}");
   auto& coef_table = inlet_->addStruct("coef_opts");
@@ -90,7 +91,7 @@ TEST_F(InputTest, coef_build_scalar)
   EXPECT_NO_THROW(coef_opts.constructScalar());
 }
 
-TEST_F(InputTest, coef_build_constant_scalar)
+TEST_F(InputTest, CoefBuildConstantScalar)
 {
   reader_->parseString("coef_opts = { constant = 2.5 }");
   auto& coef_table = inlet_->addStruct("coef_opts");
@@ -102,7 +103,7 @@ TEST_F(InputTest, coef_build_constant_scalar)
   EXPECT_NO_THROW(coef_opts.constructScalar());
 }
 
-TEST_F(InputTest, coef_build_piecewise_constant_scalar)
+TEST_F(InputTest, CoefBuildPiecewiseConstantScalar)
 {
   reader_->parseString("coef_opts = { piecewise_constant = { [1] = 2.5, [3] = 3.0 }, component = 2 } ");
   auto& coef_table = inlet_->addStruct("coef_opts");
@@ -115,7 +116,7 @@ TEST_F(InputTest, coef_build_piecewise_constant_scalar)
   EXPECT_NO_THROW(coef_opts.constructScalar());
 }
 
-TEST_F(InputTest, coef_build_scalar_timedep)
+TEST_F(InputTest, CoefBuildScalarTimedep)
 {
   reader_->parseString("coef_opts = { scalar_function = function(v, t) return (v.y * 2 + v.z) * t end, component = 1}");
   auto& coef_table = inlet_->addStruct("coef_opts");
@@ -134,7 +135,7 @@ TEST_F(InputTest, coef_build_scalar_timedep)
   EXPECT_NO_THROW(coef_opts.constructScalar());
 }
 
-TEST_F(InputTest, coef_build_vec_from_scalar)
+TEST_F(InputTest, CoefBuildVecFromScalar)
 {
   reader_->parseString("coef_opts = { scalar_function = function(v) return v.y * 2 + v.z end, component = 1}");
   auto& coef_table = inlet_->addStruct("coef_opts");
@@ -143,7 +144,7 @@ TEST_F(InputTest, coef_build_vec_from_scalar)
   EXPECT_THROW(coef_opts.constructVector(), SlicErrorException);
 }
 
-TEST_F(InputTest, coef_build_vector)
+TEST_F(InputTest, CoefBuildVector)
 {
   reader_->parseString("coef_opts = { vector_function = function(v) return Vector.new(v.y * 2, v.z, v.x) end }");
   auto& coef_table = inlet_->addStruct("coef_opts");
@@ -167,7 +168,7 @@ TEST_F(InputTest, coef_build_vector)
   EXPECT_NO_THROW(coef_opts.constructVector());
 }
 
-TEST_F(InputTest, coef_build_vector_constant)
+TEST_F(InputTest, CoefBuildVectorConstant)
 {
   reader_->parseString("coef_opts = { vector_constant = { x = 0.0, y = 1.0, z = 2.0 } }");
   auto& coef_table = inlet_->addStruct("coef_opts");
@@ -185,7 +186,7 @@ TEST_F(InputTest, coef_build_vector_constant)
   EXPECT_NO_THROW(coef_opts.constructVector());
 }
 
-TEST_F(InputTest, coef_build_vector_piecewise_constant)
+TEST_F(InputTest, CoefBuildVectorPiecewiseConstant)
 {
   reader_->parseString(
       "coef_opts = { vector_piecewise_constant = { [1] = { x = 0.0, y = 1.0 }, [4] = {x = -2.0, y = 1.0} } }");
@@ -208,7 +209,7 @@ TEST_F(InputTest, coef_build_vector_piecewise_constant)
   EXPECT_NO_THROW(coef_opts.constructVector());
 }
 
-TEST_F(InputTest, coef_build_vector_timedep)
+TEST_F(InputTest, CoefBuildVectorTimedep)
 {
   reader_->parseString("coef_opts = { vector_function = function(v, t) return Vector.new(v.y * 2, v.z, v.x) * t end }");
   auto& coef_table = inlet_->addStruct("coef_opts");
@@ -234,7 +235,7 @@ TEST_F(InputTest, coef_build_vector_timedep)
   EXPECT_NO_THROW(coef_opts.constructVector());
 }
 
-TEST_F(InputTest, coef_build_scalar_from_vec)
+TEST_F(InputTest, CoefBuildScalarFromVec)
 {
   reader_->parseString("coef_opts = { vector_function = function(v) return Vector.new(v.y * 2, v.z, v.x) end }");
   auto& coef_table = inlet_->addStruct("coef_opts");
@@ -245,9 +246,6 @@ TEST_F(InputTest, coef_build_scalar_from_vec)
 
 }  // namespace serac
 
-//------------------------------------------------------------------------------
-#include "axom/slic/core/SimpleLogger.hpp"
-
 int main(int argc, char* argv[])
 {
   int result = 0;
@@ -256,8 +254,7 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when
-                                    // exiting main scope
+  axom::slic::SimpleLogger logger;
 
   result = RUN_ALL_TESTS();
 

@@ -7,13 +7,11 @@
 #include <chrono>
 #include <iostream>
 
+#include "axom/core/utilities/Timer.hpp"
 #include "mfem.hpp"
 
 #include "serac/serac_config.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
-
-#include "axom/core/utilities/Timer.hpp"
-
 #include "serac/physics/utilities/functional/tensor.hpp"
 #include "serac/physics/utilities/functional/domain_integral.hpp"
 #include "serac/physics/utilities/functional/quadrature.hpp"

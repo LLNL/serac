@@ -4,9 +4,9 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/numerics/functional/tensor.hpp"
-
 #include <gtest/gtest.h>
+
+#include "serac/numerics/functional/tensor.hpp"
 
 using namespace serac;
 
@@ -67,7 +67,7 @@ __global__ void basic_operations(int* error)
   CUDA_EXPECT_LT(abs(dot(u, B, v) - uBv), tolerance);
 }
 
-TEST(tensor, basic_operations)
+TEST(Tensor, BasicOperations)
 {
   int* error;
   cudaMallocManaged(&error, sizeof(int));
@@ -116,7 +116,7 @@ __global__ void elasticity(int* error)
   CUDA_EXPECT_LT(abs(squared_norm(dsigma_depsilon - C)), tolerance);
 }
 
-TEST(tensor, elasticity)
+TEST(Tensor, Elasticity)
 {
   int* error;
   cudaMallocManaged(&error, sizeof(int));
@@ -190,7 +190,7 @@ __global__ void navier_stokes(int* error)
   }
 }
 
-TEST(tensor, navier_stokes)
+TEST(Tensor, NavierStokes)
 {
   int* error;
   cudaMallocManaged(&error, sizeof(int));
@@ -240,7 +240,7 @@ __global__ void isotropic_operations(int* error)
   CUDA_EXPECT_LT(squared_norm(sym(I) - I), tolerance);
 }
 
-TEST(tensor, isotropic_operations)
+TEST(Tensor, IsotropicOperations)
 {
   int* error;
   cudaMallocManaged(&error, sizeof(int));

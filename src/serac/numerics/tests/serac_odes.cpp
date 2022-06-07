@@ -4,12 +4,11 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include <gtest/gtest.h>
-
 #include <array>
 #include <fstream>
 #include <functional>
 
+#include <gtest/gtest.h>
 #include "mfem.hpp"
 
 #include "serac/numerics/expr_template_ops.hpp"
@@ -495,7 +494,7 @@ protected:
   DirichletEnforcementMethod enforcement;
 };
 
-TEST_P(FirstOrderODE_suite, all)
+TEST_P(FirstOrderODESuite, All)
 {
   int o = order_of_convergence(timestepper);
 
@@ -523,7 +522,7 @@ TEST_P(FirstOrderODE_suite, all)
 }
 
 // clang-format off
-INSTANTIATE_TEST_SUITE_P(all_first_order_tests, FirstOrderODE_suite,
+INSTANTIATE_TEST_SUITE_P(AllFirstOrderTests, FirstOrderODESuite,
   testing::Combine(
     testing::Values(
       LINEAR, 
@@ -569,7 +568,7 @@ std::vector unstable_cases = {
     std::tuple{SINE_WAVE, TimestepMethod::FoxGoodwin, DirichletEnforcementMethod::DirectControl},
     std::tuple{SINE_WAVE, TimestepMethod::LinearAcceleration, DirichletEnforcementMethod::DirectControl}};
 
-TEST_P(SecondOrderODE_suite, all)
+TEST_P(SecondOrderODESuite, All)
 {
   bool expected_to_fail = std::find(std::begin(unstable_cases), std::end(unstable_cases),
                                     std::tuple{constraint, timestepper, enforcement}) != std::end(unstable_cases);
@@ -594,7 +593,7 @@ TEST_P(SecondOrderODE_suite, all)
 
 // clang-format off
 INSTANTIATE_TEST_SUITE_P(
-    all_second_order_tests, SecondOrderODE_suite,
+    AllSecondOrderTsts, SecondOrderODESuite,
     testing::Combine(
       testing::Values(
         LINEAR, 
@@ -628,8 +627,7 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when
-                                    // exiting main scope
+  axom::slic::SimpleLogger logger;
 
   result = RUN_ALL_TESTS();
 
