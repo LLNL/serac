@@ -8,6 +8,7 @@
 
 #include <fstream>
 
+#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
@@ -20,7 +21,7 @@
 
 namespace serac {
 
-TEST(solid_solver, reuse_mesh)
+TEST(SolidSolver, ReuseMesh)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -124,9 +125,6 @@ TEST(solid_solver, reuse_mesh)
 
 }  // namespace serac
 
-//------------------------------------------------------------------------------
-#include "axom/slic/core/SimpleLogger.hpp"
-
 int main(int argc, char* argv[])
 {
   int result = 0;
@@ -135,7 +133,7 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when exiting main scope
+  axom::slic::SimpleLogger logger;
 
   result = RUN_ALL_TESTS();
 

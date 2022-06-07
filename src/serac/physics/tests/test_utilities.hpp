@@ -6,6 +6,7 @@
 #pragma once
 
 #include <gtest/gtest.h>
+
 #include "serac/infrastructure/input.hpp"
 
 namespace serac::test_utils {

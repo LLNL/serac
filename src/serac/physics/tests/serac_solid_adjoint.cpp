@@ -4,10 +4,9 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/solid.hpp"
-
 #include <fstream>
 
+#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
@@ -15,12 +14,13 @@
 #include "serac/infrastructure/input.hpp"
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/state/state_manager.hpp"
+#include "serac/physics/solid.hpp"
 #include "serac/serac_config.hpp"
 #include "test_utilities.hpp"
 
 namespace serac {
 
-TEST(solid_solver, adjoint)
+TEST(SolidSolver, Adjoint)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -151,9 +151,6 @@ TEST(solid_solver, adjoint)
 
 }  // namespace serac
 
-//------------------------------------------------------------------------------
-#include "axom/slic/core/SimpleLogger.hpp"
-
 int main(int argc, char* argv[])
 {
   int result = 0;
@@ -162,7 +159,7 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when exiting main scope
+  axom::slic::SimpleLogger logger;
 
   result = RUN_ALL_TESTS();
 

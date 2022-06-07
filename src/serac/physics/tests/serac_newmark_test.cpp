@@ -3,12 +3,11 @@
 // details.
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
-// # Author: Jonathan Wong @ LLNL.
-
-#include <gtest/gtest.h>
 
 #include <memory>
 
+#include "axom/slic/core/SimpleLogger.hpp"
+#include <gtest/gtest.h>
 #include "mfem.hpp"
 
 #include "serac/physics/coefficients/coefficient_extensions.hpp"
@@ -23,15 +22,6 @@
 #include "serac/physics/tests/test_utilities.hpp"
 
 using namespace std;
-
-int main(int argc, char** argv)
-{
-  MPI_Init(&argc, &argv);
-  ::testing::InitGoogleTest(&argc, argv);
-  int return_code = RUN_ALL_TESTS();
-  MPI_Finalize();
-  return return_code;
-}
 
 class NewmarkBetaTest : public ::testing::Test {
 protected:
@@ -262,4 +252,19 @@ TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
 
   // Output the final state
   solid_solver->outputState();
+}
+
+int main(int argc, char** argv)
+{
+  MPI_Init(&argc, &argv);
+
+  ::testing::InitGoogleTest(&argc, argv);
+
+  axom::slic::SimpleLogger logger;
+
+  int return_code = RUN_ALL_TESTS();
+
+  MPI_Finalize();
+
+  return return_code;
 }

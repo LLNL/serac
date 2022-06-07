@@ -4,22 +4,22 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/solid_functional.hpp"
-#include "serac/physics/materials/solid_functional_material.hpp"
-#include "serac/physics/materials/parameterized_solid_functional_material.hpp"
-
 #include <fstream>
 
+#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
 #include "serac/serac_config.hpp"
 #include "serac/mesh/mesh_utils.hpp"
+#include "serac/physics/solid_functional.hpp"
+#include "serac/physics/materials/solid_functional_material.hpp"
+#include "serac/physics/materials/parameterized_solid_functional_material.hpp"
 #include "serac/physics/state/state_manager.hpp"
 
 namespace serac {
 
-TEST(solid_functional_finite_diff, finite_difference)
+TEST(SolidFunctionalFiniteDiff, FiniteDifference)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -166,9 +166,6 @@ TEST(solid_functional_finite_diff, finite_difference)
 }
 
 }  // namespace serac
-
-//------------------------------------------------------------------------------
-#include "axom/slic/core/SimpleLogger.hpp"
 
 int main(int argc, char* argv[])
 {

@@ -4,9 +4,9 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/boundary_conditions/boundary_condition.hpp"
-
 #include <algorithm>
+
+#include "serac/physics/boundary_conditions/boundary_condition.hpp"
 
 namespace serac {
 

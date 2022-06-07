@@ -4,10 +4,9 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/solid.hpp"
-
 #include <fstream>
 
+#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
@@ -15,6 +14,7 @@
 #include "serac/infrastructure/input.hpp"
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/state/state_manager.hpp"
+#include "serac/physics/solid.hpp"
 #include "serac/serac_config.hpp"
 #include "test_utilities.hpp"
 
@@ -22,7 +22,7 @@ namespace serac {
 
 using test_utils::InputFileTest;
 
-TEST_P(InputFileTest, solid)
+TEST_P(InputFileTest, Solid)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   std::string input_file_path = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/" + GetParam() + ".lua";
@@ -44,7 +44,7 @@ const std::string input_files[] = {"dyn_solve",      "dyn_direct_solve",
 
 INSTANTIATE_TEST_SUITE_P(SolidInputFileTests, InputFileTest, ::testing::ValuesIn(input_files));
 
-TEST(solid_solver, qs_custom_solve)
+TEST(SolidSolver, QsCustomSolve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -119,9 +119,6 @@ TEST(solid_solver, qs_custom_solve)
 
 }  // namespace serac
 
-//------------------------------------------------------------------------------
-#include "axom/slic/core/SimpleLogger.hpp"
-
 int main(int argc, char* argv[])
 {
   int result = 0;
@@ -130,7 +127,7 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when exiting main scope
+  axom::slic::SimpleLogger logger;
 
   result = RUN_ALL_TESTS();
 
