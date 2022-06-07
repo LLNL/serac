@@ -119,4 +119,17 @@ TEST(MaterialDriver, testUniaxialTensionOnMaterialWithState)
   }
 }
 
+
+
 } // namespace serac
+
+int main(int argc, char* argv[])
+{
+  ::testing::InitGoogleTest(&argc, argv);
+
+  axom::slic::SimpleLogger logger;
+
+  int result = RUN_ALL_TESTS();
+
+  return result;
+}
