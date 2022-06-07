@@ -117,10 +117,7 @@ TEST(VerifyCurl, QuadrilateralQuadratic)
   verify_curl_calculation<finite_element<::Geometry::Quadrilateral, Hcurl<2>>>();
 }
 
-TEST(VerifyCurl, QuadrilateralCubic)
-{
-  verify_curl_calculation<finite_element<::Geometry::Quadrilateral, Hcurl<3>>>();
-}
+TEST(VerifyCurl, QuadrilateralCubic) { verify_curl_calculation<finite_element<::Geometry::Quadrilateral, Hcurl<3>>>(); }
 
 TEST(VerifyCurl, HexahedronLinear) { verify_curl_calculation<finite_element<::Geometry::Hexahedron, Hcurl<1>>>(); }
 
