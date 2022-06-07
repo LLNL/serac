@@ -4,19 +4,20 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+#include <cstring>
 #include <exception>
 
+#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 
 #include "serac/infrastructure/cli.hpp"
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/profiling.hpp"
 #include "serac/mesh/mesh_utils.hpp"
-#include <cstring>
 
 namespace serac {
 
-TEST(serac_profiling, mesh_refinement)
+TEST(SeracProfiling, MeshRefinement)
 {
   // profile mesh refinement
   MPI_Barrier(MPI_COMM_WORLD);
@@ -73,7 +74,7 @@ TEST(serac_profiling, mesh_refinement)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(serac_profiling, exception)
+TEST(SeracProfiling, Exception)
 {
   // profile mesh refinement
   MPI_Barrier(MPI_COMM_WORLD);
@@ -101,7 +102,7 @@ struct NonCopyableOrMovable {
   NonCopyableOrMovable(NonCopyableOrMovable&&)      = delete;
 };
 
-TEST(serac_profiling, lvalue_reference_expr)
+TEST(SeracProfiling, LvalueReferenceExpr)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   serac::profiling::initialize();
@@ -123,7 +124,7 @@ struct MovableOnly {
   MovableOnly(MovableOnly&&)      = default;
 };
 
-TEST(serac_profiling, rvalue_reference_expr)
+TEST(SeracProfiling, RvalueReferenceExpr)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   serac::profiling::initialize();
@@ -137,7 +138,7 @@ TEST(serac_profiling, rvalue_reference_expr)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(serac_profiling, temp_rvalue_reference_expr)
+TEST(SeracProfiling, TempRvalueReferenceExpr)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   serac::profiling::initialize();
@@ -151,9 +152,6 @@ TEST(serac_profiling, temp_rvalue_reference_expr)
 
 }  // namespace serac
 
-//------------------------------------------------------------------------------
-#include "axom/slic/core/SimpleLogger.hpp"
-
 int main(int argc, char* argv[])
 {
   int result = 0;
@@ -162,8 +160,7 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when
-                                    // exiting main scope
+  axom::slic::SimpleLogger logger;
   result = RUN_ALL_TESTS();
 
   MPI_Finalize();

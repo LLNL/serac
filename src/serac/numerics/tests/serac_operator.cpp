@@ -4,16 +4,16 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
+#include "mfem.hpp"
 
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
 
-#include "mfem.hpp"
-
 namespace serac {
 
-TEST(serac_operators, rectangular_operator)
+TEST(SeracOperators, RectangularOperator)
 {
   // profile mesh refinement
   MPI_Barrier(MPI_COMM_WORLD);
@@ -63,9 +63,6 @@ TEST(serac_operators, rectangular_operator)
 
 }  // namespace serac
 
-//------------------------------------------------------------------------------
-#include "axom/slic/core/SimpleLogger.hpp"
-
 int main(int argc, char* argv[])
 {
   int result = 0;
@@ -74,8 +71,8 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when
-                                    // exiting main scope
+  axom::slic::SimpleLogger logger;
+
   result = RUN_ALL_TESTS();
 
   MPI_Finalize();

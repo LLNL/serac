@@ -4,6 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 
 #include "serac/serac_config.hpp"
@@ -35,7 +36,7 @@ __global__ void copy(QuadratureDataView<T> destination, QuadratureDataView<T> so
   }
 }
 
-TEST(QuadratureDataCUDA, basic_fill_and_copy)
+TEST(QuadratureDataCUDA, BasicFillAndCopy)
 {
   constexpr auto mesh_file          = SERAC_REPO_DIR "/data/meshes/star.mesh";
   auto           mesh               = serac::mesh::refineAndDistribute(serac::buildMeshFromFile(mesh_file), 0, 0);
@@ -103,7 +104,7 @@ struct basic_state_qfunction {
   }
 };
 
-TEST_F(QuadratureDataGPUTest, basic_integrals)
+TEST_F(QuadratureDataGPUTest, BasicIntegrals)
 {
   QuadratureData<State> qdata(*mesh, p);
   State                 init{0.1};
@@ -135,7 +136,7 @@ struct basic_state_with_default_qfunction {
   }
 };
 
-TEST_F(QuadratureDataGPUTest, basic_integrals_default)
+TEST_F(QuadratureDataGPUTest, BasicIntegralsDefault)
 {
   QuadratureData<StateWithDefault> qdata(*mesh, p);
   residual->AddDomainIntegral(Dimension<dim>{}, basic_state_with_default_qfunction{}, *mesh, qdata);
@@ -172,7 +173,7 @@ struct basic_state_with_multi_fields_qfunction {
   }
 };
 
-TEST_F(QuadratureDataGPUTest, basic_integrals_multi_fields)
+TEST_F(QuadratureDataGPUTest, BasicEntegralsMultiFields)
 {
   QuadratureData<StateWithMultiFields> qdata(*mesh, p);
   residual->AddDomainIntegral(Dimension<dim>{}, basic_state_with_multi_fields_qfunction{}, *mesh, qdata);
@@ -186,7 +187,7 @@ TEST_F(QuadratureDataGPUTest, basic_integrals_multi_fields)
   }
 }
 
-TEST_F(QuadratureDataGPUTest, basic_integrals_multi_fields_bulk_assignment)
+TEST_F(QuadratureDataGPUTest, BasicIntegralsMultiFieldsBulkAssignment)
 {
   QuadratureData<StateWithMultiFields> qdata(*mesh, p);
   qdata = StateWithMultiFields{0.7, 0.2};
@@ -276,7 +277,7 @@ struct state_manager_varying_qfunction {
   int                                           idx = 0;
 };
 
-TYPED_TEST(QuadratureDataGPUStateManagerTest, basic_integrals_state_manager)
+TYPED_TEST(QuadratureDataGPUStateManagerTest, BasicIntegralsStateManager)
 {
   constexpr int cycle        = 0;
   const auto    mutated_once = []() {
@@ -391,9 +392,6 @@ TYPED_TEST(QuadratureDataGPUStateManagerTest, basic_integrals_state_manager)
   }
 }
 
-//------------------------------------------------------------------------------
-#include "axom/slic/core/SimpleLogger.hpp"
-
 int main(int argc, char* argv[])
 {
   int result = 0;
@@ -404,13 +402,13 @@ int main(int argc, char* argv[])
 
   serac::accelerator::initializeDevice();
 
-  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when exiting main scope
+  axom::slic::SimpleLogger logger;
 
   result = RUN_ALL_TESTS();
 
   MPI_Finalize();
 
-  // why does this test need to call terminateDevice,
+  // TODO: why does this test need to call terminateDevice,
   // but none of the other CUDA tests do?
   serac::accelerator::terminateDevice();
 

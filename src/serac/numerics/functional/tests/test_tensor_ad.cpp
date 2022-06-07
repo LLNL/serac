@@ -4,15 +4,15 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "mfem.hpp"
-#include "serac/numerics/functional/tensor.hpp"
-
 #include <gtest/gtest.h>
+#include "mfem.hpp"
+
+#include "serac/numerics/functional/tensor.hpp"
 
 using namespace mfem;
 using namespace serac;
 
-TEST(tensor, norm)
+TEST(Tensor, Norm)
 {
   tensor<double, 5> a = {{1.0, 2.0, 3.0, 4.0, 5.0}};
   EXPECT_DOUBLE_EQ(norm(a) - sqrt(55), 0.0);
@@ -21,32 +21,32 @@ TEST(tensor, norm)
 const auto   eps = std::numeric_limits<double>::epsilon();
 const double x   = 0.5;
 
-TEST(dual_number_tensor, cos)
+TEST(DualNumberTensor, Cos)
 {
   auto xd = cos(make_dual(x));
   EXPECT_DOUBLE_EQ(abs(-sin(x) - xd.gradient), 0.0);
 }
 
-TEST(dual_number_tensor, exp)
+TEST(dual_number_tensor, Exp)
 {
   auto xd = exp(make_dual(x));
   EXPECT_DOUBLE_EQ(abs(exp(x) - xd.gradient), 0.0);
 }
 
-TEST(dual_number_tensor, log)
+TEST(DualNumberTensor, Log)
 {
   auto xd = log(make_dual(x));
   EXPECT_DOUBLE_EQ(abs(1.0 / x - xd.gradient), 0.0);
 }
 
-TEST(dual_number_tensor, pow)
+TEST(DualNumberTensor, Pow)
 {
   // f(x) = x^3/2
   auto xd = pow(make_dual(x), 1.5);
   EXPECT_DOUBLE_EQ(abs(1.5 * pow(x, 0.5) - xd.gradient), 0.0);
 }
 
-TEST(dual_number_tensor, mixed_operations)
+TEST(DualNumberTensor, MixedOperations)
 {
   auto xd = make_dual(x);
   auto r  = cos(xd) * cos(xd);

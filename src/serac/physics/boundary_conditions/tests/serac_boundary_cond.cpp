@@ -4,17 +4,18 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/boundary_conditions/boundary_condition_manager.hpp"
-#include "serac/physics/boundary_conditions/boundary_condition_helper.hpp"
-
 #include <memory>
 
+#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
+#include "serac/physics/boundary_conditions/boundary_condition_manager.hpp"
+#include "serac/physics/boundary_conditions/boundary_condition_helper.hpp"
+
 namespace serac {
 
-TEST(boundary_cond, simple_repeated_dofs)
+TEST(BoundaryCond, SimpleRepeatedDofs)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   constexpr int      N    = 15;
@@ -53,7 +54,7 @@ enum OtherTag
   Fake2 = 1
 };
 
-TEST(boundary_cond, filter_generics)
+TEST(BoundaryCond, FilterGenerics)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   constexpr int N    = 15;
@@ -87,7 +88,7 @@ TEST(boundary_cond, filter_generics)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(boundary_cond_helper, element_attribute_dof_list_scalar)
+TEST(BoundaryCondHelper, ElementAttributeDofListScalar)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -154,7 +155,7 @@ TEST(boundary_cond_helper, element_attribute_dof_list_scalar)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(boundary_cond_helper, element_attribute_dof_list_vector)
+TEST(BoundaryCondHelper, ElementAttributeDofListVector)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -206,9 +207,6 @@ TEST(boundary_cond_helper, element_attribute_dof_list_vector)
 
 }  // namespace serac
 
-//------------------------------------------------------------------------------
-#include "axom/slic/core/SimpleLogger.hpp"
-
 int main(int argc, char* argv[])
 {
   int result = 0;
@@ -217,7 +215,7 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when exiting main scope
+  axom::slic::SimpleLogger logger;
 
   result = RUN_ALL_TESTS();
 
