@@ -22,6 +22,8 @@
 
 namespace serac::solid_util {
 
+
+
 template <typename MaterialType>
 class MaterialDriver {
  public:
@@ -48,6 +50,7 @@ class MaterialDriver {
    */
   ResponseHistory runUniaxial(double maxTime, unsigned int nsteps,
                               const std::function<double(double)>& strain,
+                              MaterialState<MaterialType>& state,
                               const double relative_tolerance=1e-10,
                               const int max_equilibrium_iterations=10)
   {
@@ -56,8 +59,7 @@ class MaterialDriver {
     const tensor<double, 3> x{};
     const tensor<double, 3> u{};
     tensor<double, 3, 3> dudx{};
-    typename MaterialType::State state(MaterialType::initialize_state());
-    
+
     // for output
     ResponseHistory stress_strain_history;
 
@@ -65,10 +67,17 @@ class MaterialDriver {
       t += dt;
       dudx[0][0] = strain(t);
       dudx = solveForUniaxialState(dudx, state, relative_tolerance, max_equilibrium_iterations);
-      auto response = material_(x, u, make_dual(dudx), state);
-      auto stress = get_value(response.stress);
-      //std::cout << "out of plane stress " << stress[1][1] << std::endl;
-      stress_strain_history.push_back(tuple{dudx[0][0], stress[0][0]});
+      if constexpr(state == null_state) {
+        auto response = material_(x, u, make_dual(dudx));
+        auto stress = get_value(response.stress);
+        //std::cout << "out of plane stress " << stress[1][1] << std::endl;
+        stress_strain_history.emplace_back(tuple{dudx[0][0], stress[0][0]});
+      } else {
+        auto response = material_(x, u, make_dual(dudx), state);
+        auto stress = get_value(response.stress);
+        //std::cout << "out of plane stress " << stress[1][1] << std::endl;
+        stress_strain_history.emplace_back(tuple{dudx[0][0], stress[0][0]});
+      }
     }
     return stress_strain_history;
   }
@@ -85,7 +94,7 @@ class MaterialDriver {
   }
 
   tensor<double, 3, 3> solveForUniaxialState(tensor<double, 3, 3> dudx,
-                                             const typename MaterialType::State& state,
+                                             const MaterialState<MaterialType>& state,
                                              const double tol, 
                                              const int MAXITERS)
   {

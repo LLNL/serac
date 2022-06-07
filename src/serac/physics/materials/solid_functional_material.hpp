@@ -17,6 +17,9 @@
 /// SolidFunctional helper data types
 namespace serac::solid_util {
 
+template <typename MaterialType>
+struct MaterialState{ };
+
 /**
  * @brief Response data type for solid mechanics simulations
  *
@@ -48,15 +51,7 @@ MaterialResponse(DensityType, StressType) -> MaterialResponse<DensityType, Stres
  */
 template <int dim>
 class LinearIsotropicSolid {
-public:
-  
-  /**
-   * State variable type
-   *
-   * There are no state variables for this material.
-   */
-  struct State { /* no state variables */ };
-  
+public:  
   /**
    * @brief Construct a new Linear Isotropic Elasticity object
    *
@@ -93,7 +88,7 @@ public:
    */
   template <typename DisplacementType, typename DispGradType>
   SERAC_HOST_DEVICE auto operator()(const tensor<double, dim>& /* x */, const DisplacementType& /* displacement */,
-                                    const DispGradType& displacement_grad, State& /* state */) const
+                                    const DispGradType& displacement_grad) const
   {
     auto I      = Identity<dim>();
     auto lambda = bulk_modulus_ - (2.0 / dim) * shear_modulus_;
@@ -101,13 +96,6 @@ public:
     auto stress = lambda * tr(strain) * I + 2.0 * shear_modulus_ * strain;
     return MaterialResponse<double, DispGradType>{.density = density_, .stress = stress};
   }
-
-  /**
-   * @brief Set initial values of state variables
-   *
-   * This material has no state variables, so the returned object is empty.
-   */
-  static State initialize_state() { return State{}; };
   
 private:
   /// Density
@@ -127,15 +115,7 @@ private:
  */
 template <int dim>
 class NeoHookeanSolid {
-public:
-
-  /**
-   * State variable type
-   *
-   * There are no state variables for this material.
-   */
-  struct State { /* no state variables */ };
-  
+public:  
   /**
    * @brief Construct a new Neo-Hookean object
    *
@@ -170,7 +150,7 @@ public:
    */
   template <typename DisplacementType, typename DispGradType>
   SERAC_HOST_DEVICE auto operator()(const tensor<double, dim>& /* x */, const DisplacementType& /* displacement */,
-                                    const DispGradType& displacement_grad, State& /* state */) const
+                                    const DispGradType& displacement_grad) const
   {
     auto I      = Identity<dim>();
     auto lambda = bulk_modulus_ - (2.0 / dim) * shear_modulus_;
@@ -187,13 +167,6 @@ public:
 
     return MaterialResponse{density_, stress};
   }
-
-  /**
-   * @brief Set initial values of state variables
-   *
-   * This material has no state variables, so the returned object is empty.
-   */
-  static State initialize_state() { return State{}; };
 
 private:
   /// Density
@@ -303,6 +276,73 @@ struct PressureFunction {
   {
     return pressure_func_(x, t);
   }
+};
+
+class J2 {
+ public:
+
+  static constexpr int dim = 3;
+  
+  /**
+   * @brief Construct a new Linear Isotropic Elasticity object
+   *
+   * @param density Density of the material
+   * @param shear_modulus Shear modulus of the material
+   * @param bulk_modulus Bulk modulus of the material
+   */
+  J2(double density = 1.0, double shear_modulus = 1.0, double bulk_modulus = 1.0)
+      : density_(density), bulk_modulus_(bulk_modulus), shear_modulus_(shear_modulus)
+  {
+    SLIC_ERROR_ROOT_IF(shear_modulus_ < 0.0,
+                       "Shear modulus must be positive in the linear isotropic elasticity material model.");
+
+    SLIC_ERROR_ROOT_IF(density_ < 0.0, "Density must be positive in the linear isotropic elasticity material model.");
+
+    SLIC_ERROR_ROOT_IF(bulk_modulus_ < 0.0,
+                       "Bulk modulus must be positive in the linear isotropic elasticity material model.");
+
+    double K             = bulk_modulus;
+    double G             = shear_modulus;
+    double poisson_ratio = (3 * K - 2 * G) / (6 * K + 2 * G);
+
+    SLIC_ERROR_ROOT_IF(poisson_ratio < 0.0,
+                       "Poisson ratio must be positive in the linear isotropic elasticity material model.");
+  }
+
+  /**
+   * @brief Material response call for a linear isotropic solid
+   *
+   * @tparam DisplacementType Displacement type
+   * @tparam DispGradType Displacement gradient type
+   * @param displacement_grad Displacement gradient with respect to the reference configuration (displacement_grad)
+   * @return The calculated material response (density, Kirchoff stress) for the material
+   */
+  template <typename DisplacementType, typename DispGradType>
+  SERAC_HOST_DEVICE auto operator()(const tensor<double, dim>& /* x */, const DisplacementType& /* displacement */,
+                                    const DispGradType& displacement_grad, MaterialState<J2>& /* state */) const
+  {
+    auto I      = Identity<dim>();
+    auto lambda = bulk_modulus_ - (2.0 / dim) * shear_modulus_;
+    auto strain = 0.5 * (displacement_grad + transpose(displacement_grad));
+    auto stress = lambda * tr(strain) * I + 2.0 * shear_modulus_ * strain;
+    return MaterialResponse<double, DispGradType>{.density = density_, .stress = stress};
+  }
+  
+private:
+  /// Density
+  double density_;
+
+  /// Bulk modulus
+  double bulk_modulus_;
+
+  /// Shear modulus
+  double shear_modulus_;
+};
+
+template<>
+struct MaterialState<J2> {
+  double eqps;
+  tensor<double, 3, 3> Fp;
 };
 
 }  // namespace serac::solid_util
