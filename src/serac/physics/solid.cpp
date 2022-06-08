@@ -58,8 +58,7 @@ Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities ge
     displacement_.trueVec()         = 0.0;
     velocity_.trueVec()             = 0.0;
     adjoint_displacement_.trueVec() = 0.0;
-  }
-  else {
+  } else {
     displacement_.initializeTrueVec();
     velocity_.initializeTrueVec();
     adjoint_displacement_.initializeTrueVec();

@@ -51,10 +51,7 @@ void BasePhysics::setTime(const double time)
 
 double BasePhysics::time() const { return time_; }
 
-void BasePhysics::setCycle(const int cycle)
-{
-  cycle_ = cycle;
-}
+void BasePhysics::setCycle(const int cycle) { cycle_ = cycle; }
 
 int BasePhysics::cycle() const { return cycle_; }
 

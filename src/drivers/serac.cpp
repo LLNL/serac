@@ -201,10 +201,10 @@ int main(int argc, char* argv[])
   double t       = 0;
   double t_final = inlet["t_final"];
   double dt      = inlet["dt"];
-  int ti         = 1;
+  int    ti      = 1;
 
   if (restart_cycle) {
-    t  = *restart_cycle * dt - dt; // TODO chapman39 read from inlet instead
+    t  = *restart_cycle * dt - dt;  // TODO chapman39 read from inlet instead
     ti = *restart_cycle;
     main_physics->setTime(t);
     main_physics->setCycle(*restart_cycle);
