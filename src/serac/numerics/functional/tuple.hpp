@@ -30,14 +30,6 @@ SERAC_HOST_DEVICE camp::tuple<T...> make_tuple(const T&... args)
   return camp::tuple<T...>{args...};
 }
 
-template <class... Types>
-struct tuple_size {
-};
-
-template <class... Types>
-struct tuple_size<camp::tuple<Types...>> : std::integral_constant<std::size_t, sizeof...(Types)> {
-};
-
 /**
  * @tparam i the tuple index to access
  * @tparam T the types stored in the tuple
