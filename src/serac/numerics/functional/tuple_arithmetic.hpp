@@ -246,8 +246,8 @@ constexpr auto make_dual_wrt(const camp::tuple<T...>& args)
 template <typename... T>
 SERAC_HOST_DEVICE auto get_value(const camp::tuple<T...>& tuple_of_values)
 {
-  return serac::apply([](const auto&... each_value) { return camp::tuple{get_value(each_value)...}; },
-                      tuple_of_values);
+  return camp::apply([](const auto&... each_value) { return camp::tuple{get_value(each_value)...}; },
+                     tuple_of_values);
 }
 
 /**
@@ -257,7 +257,7 @@ SERAC_HOST_DEVICE auto get_value(const camp::tuple<T...>& tuple_of_values)
 template <typename... T>
 SERAC_HOST_DEVICE auto get_gradient(dual<camp::tuple<T...> > arg)
 {
-  return serac::apply([](auto... each_value) { return camp::tuple{each_value...}; }, arg.gradient);
+  return camp::apply([](auto... each_value) { return camp::tuple{each_value...}; }, arg.gradient);
 }
 
 /// @overload
@@ -275,7 +275,7 @@ SERAC_HOST_DEVICE auto get_gradient(const tensor<dual<camp::tuple<T...> >, n...>
 template <typename... T>
 SERAC_HOST_DEVICE auto get_gradient(camp::tuple<T...> tuple_of_values)
 {
-  return serac::apply([](auto... each_value) { return camp::tuple{get_gradient(each_value)...}; }, tuple_of_values);
+  return camp::apply([](auto... each_value) { return camp::tuple{get_gradient(each_value)...}; }, tuple_of_values);
 }
 
 }  // namespace serac

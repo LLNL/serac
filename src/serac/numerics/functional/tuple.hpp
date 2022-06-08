@@ -372,61 +372,6 @@ SERAC_HOST_DEVICE constexpr auto operator*(const camp::tuple<T...>& x, const dou
 }
 
 /**
- * @brief A helper to apply a lambda to a tuple
- *
- * @tparam lambda The functor type
- * @tparam T The tuple types
- * @tparam i The integer sequence to i
- * @param f The functor to apply to the tuple
- * @param args The input tuple
- * @return The functor output
- */
-template <typename lambda, typename... T, int... i>
-SERAC_HOST_DEVICE auto apply_helper(lambda f, camp::tuple<T...>& args, std::integer_sequence<int, i...>)
-{
-  return f(get<i>(args)...);
-}
-
-/**
- * @tparam lambda a callable type
- * @tparam T the types of arguments to be passed in to f
- * @param f the callable object
- * @param args a tuple of arguments
- * @brief a way of passing an n-tuple to a function that expects n separate arguments
- *
- *   e.g. foo(bar, baz) is equivalent to apply(foo, camp::tuple(bar,baz));
- */
-template <typename lambda, typename... T>
-SERAC_HOST_DEVICE auto apply(lambda f, camp::tuple<T...>& args)
-{
-  return apply_helper(f, std::move(args), std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>());
-}
-
-/**
- * @overload
- */
-template <typename lambda, typename... T, int... i>
-SERAC_HOST_DEVICE auto apply_helper(lambda f, const camp::tuple<T...>& args, std::integer_sequence<int, i...>)
-{
-  return f(get<i>(args)...);
-}
-
-/**
- * @tparam lambda a callable type
- * @tparam T the types of arguments to be passed in to f
- * @param f the callable object
- * @param args a tuple of arguments
- * @brief a way of passing an n-tuple to a function that expects n separate arguments
- *
- *   e.g. foo(bar, baz) is equivalent to apply(foo, camp::tuple(bar,baz));
- */
-template <typename lambda, typename... T>
-SERAC_HOST_DEVICE auto apply(lambda f, const camp::tuple<T...>& args)
-{
-  return apply_helper(f, std::move(args), std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>());
-}
-
-/**
  * @brief a struct used to determine the type at index I of a tuple
  *
  * @note see: https://en.cppreference.com/w/cpp/utility/tuple/tuple_element
