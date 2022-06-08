@@ -81,8 +81,8 @@ struct EVectorView {
 
     for_constexpr<n>([&](auto I) {
       using element_type =
-          typename serac::tuple_element<I,
-                                        element_types_tuple>::type;  // decltype(serac::get<I>(element_types_tuple{}));
+          typename camp::tuple_element<I,
+                                       element_types_tuple>::type;  // decltype(serac::get<I>(element_types_tuple{}));
       constexpr int ndof       = element_type::ndof;
       constexpr int components = element_type::components;
 

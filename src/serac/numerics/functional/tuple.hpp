@@ -363,28 +363,4 @@ SERAC_HOST_DEVICE constexpr auto operator*(const camp::tuple<T...>& x, const dou
   return mult_helper(x, a, std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>());
 }
 
-/**
- * @brief a struct used to determine the type at index I of a tuple
- *
- * @note see: https://en.cppreference.com/w/cpp/utility/tuple/tuple_element
- *
- * @tparam I the index of the desired type
- * @tparam T a tuple of different types
- */
-template <size_t I, class T>
-struct tuple_element;
-
-// recursive case
-/// @overload
-template <size_t I, class Head, class... Tail>
-struct tuple_element<I, camp::tuple<Head, Tail...>> : tuple_element<I - 1, camp::tuple<Tail...>> {
-};
-
-// base case
-/// @overload
-template <class Head, class... Tail>
-struct tuple_element<0, camp::tuple<Head, Tail...>> {
-  using type = Head;  ///< the type at the specified index
-};
-
 }  // namespace serac
