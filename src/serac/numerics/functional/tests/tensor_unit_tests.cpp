@@ -4,9 +4,9 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/numerics/functional/tensor.hpp"
-
 #include <gtest/gtest.h>
+
+#include "serac/numerics/functional/tensor.hpp"
 
 using namespace serac;
 
@@ -24,7 +24,7 @@ tensor<T, n, n> composeMatrixFromLU(const tensor<int, n>& P, const tensor<T, n, 
   return PLU;
 }
 
-TEST(tensor, basic_operations)
+TEST(Tensor, BasicOperations)
 {
   auto abs = [](auto x) { return (x < 0) ? -x : x; };
 
@@ -60,7 +60,7 @@ TEST(tensor, basic_operations)
   EXPECT_LT(abs(dot(u, B, v) - uBv), tolerance);
 }
 
-TEST(tensor, elasticity)
+TEST(Tensor, Elasticity)
 {
   static auto abs = [](auto x) { return (x < 0) ? -x : x; };
 
@@ -83,7 +83,7 @@ TEST(tensor, elasticity)
   EXPECT_LT(abs(squared_norm(dsigma_depsilon - C)), tolerance);
 }
 
-TEST(tensor, navier_stokes)
+TEST(Tensor, NavierStokes)
 {
   static auto abs = [](auto x) { return (x < 0) ? -x : x; };
 
@@ -125,7 +125,7 @@ TEST(tensor, navier_stokes)
   }
 }
 
-TEST(tensor, isotropic_operations)
+TEST(Tensor, IsotropicOperations)
 {
   double lambda = 5.0;
   double mu     = 3.0;
@@ -155,7 +155,7 @@ TEST(tensor, isotropic_operations)
   EXPECT_LT(squared_norm(sym(I) - I), tolerance);
 }
 
-TEST(tensor, implicit_conversion)
+TEST(Tensor, ImplicitConversion)
 {
   tensor<double, 1> A;
   A(0) = 4.5;
@@ -164,14 +164,14 @@ TEST(tensor, implicit_conversion)
   EXPECT_NEAR(value, A[0], tolerance);
 }
 
-TEST(tensor, inverse4x4)
+TEST(Tensor, Inverse4x4)
 {
   const tensor<double, 4, 4> A{{{2, 1, -1, 1}, {-3, -1, 2, 8}, {-2, 4, 2, 6}, {1, 1, 7, 2}}};
   auto                       invA = inv(A);
   EXPECT_LT(squared_norm(dot(A, invA) - Identity<4>()), tolerance);
 }
 
-TEST(tensor, derivative_of_inverse)
+TEST(Tensor, DerivativeOfInverse)
 {
   const tensor<double, 4, 4> A{{{2, 1, -1, 1}, {-3, -1, 2, 8}, {-2, 4, 2, 6}, {1, 1, 7, 2}}};
   auto                       invA = inv(make_dual(A));
@@ -200,25 +200,25 @@ void checkLUDecomposition(const tensor<double, n, n>& A)
   EXPECT_LT(squared_norm(A - PLU), tolerance);
 }
 
-TEST(tensor, lu_decomposition2x2)
+TEST(Tensor, LuDecomposition2x2)
 {
   const tensor<double, 2, 2> A{{{2, 1}, {-3, -1}}};
   checkLUDecomposition(A);
 }
 
-TEST(tensor, lu_decomposition3x3)
+TEST(Tensor, LuDecomposition3x3)
 {
   const tensor<double, 3, 3> A{{{2, 1, -1}, {-3, -1, 2}, {-2, 4, 2}}};
   checkLUDecomposition(A);
 }
 
-TEST(tensor, lu_decomposition4x4)
+TEST(Tensor, LuDecomposition4x4)
 {
   const tensor<double, 4, 4> A{{{2, 1, -1, 1}, {-3, -1, 2, 8}, {-2, 4, 2, 6}, {1, 1, 7, 2}}};
   checkLUDecomposition(A);
 }
 
-TEST(tensor, lu_decomposition_works_on_dual_numbers)
+TEST(Tensor, LuDecompositionWorksOnDualNumbers)
 {
   const tensor<double, 3, 3> v{{{2, 1, -1}, {-3, -1, 2}, {-2, 4, 2}}};
   const tensor<double, 3, 3> g{{{0.337494265892494, 0.194238454581911, 0.307832573181341},
@@ -238,7 +238,7 @@ TEST(tensor, lu_decomposition_works_on_dual_numbers)
   EXPECT_LT(squared_norm(get_gradient(A) - get_gradient(PLU)), tolerance);
 }
 
-TEST(tensor, linear_solve_with_one_rhs)
+TEST(Tensor, LinearSolveWithOneRhs)
 {
   const tensor<double, 3, 3> A{{{2, 1, -1}, {-3, -1, 2}, {-2, 1, 2}}};
   const tensor<double, 3>    b{{-1, 2, 3}};
@@ -247,7 +247,7 @@ TEST(tensor, linear_solve_with_one_rhs)
   EXPECT_LT(squared_norm(dot(A, x) - b), tolerance);
 }
 
-TEST(tensor, linear_solve_with_multiple_rhs)
+TEST(Tensor, LinearSolveWithMultipleRhs)
 {
   const tensor<double, 3, 3> A{{{2, 1, -1}, {-3, -1, 2}, {-2, 1, 2}}};
   const tensor<double, 3, 2> B{{{-1, 1}, {2, 1}, {3, -2}}};
@@ -256,7 +256,7 @@ TEST(tensor, linear_solve_with_multiple_rhs)
   EXPECT_LT(squared_norm(dot(A, X) - B), tolerance);
 }
 
-TEST(tensor, linear_solve_is_constexpr_correct)
+TEST(Tensor, LinearSolveIsConstexprCorrect)
 {
   constexpr tensor<double, 3, 3> A{{{2, 1, -1}, {-3, -1, 2}, {-2, 1, 2}}};
   constexpr tensor<double, 3>    b{{-1, 2, 3}};
@@ -264,7 +264,7 @@ TEST(tensor, linear_solve_is_constexpr_correct)
   EXPECT_LT(squared_norm(dot(A, x) - b), tolerance);
 }
 
-TEST(tensor, derivative_of_linear_solve)
+TEST(Tensor, DerivativeOfLinearSolve)
 {
   // x defined by: t^2 * A * x(t) = t*b
   // implicit derivative 2*t * A * x + t^2 * A * dxdt = b
@@ -284,7 +284,7 @@ TEST(tensor, derivative_of_linear_solve)
   EXPECT_LT(squared_norm(get_value(x) + get_gradient(x)), tolerance);
 }
 
-TEST(tensor, derivative_of_linear_solve_wrt_b_matches_finite_difference)
+TEST(Tensor, DerivativeOfLinearSolveWrtBMatchesFiniteDifference)
 {
   const tensor<double, 3, 3> A{{{2, 1, -1}, {-3, -1, 2}, {-2, 1, 2}}};
   tensor<double, 3>          b_value{{-1, 2, 3}};
@@ -302,7 +302,7 @@ TEST(tensor, derivative_of_linear_solve_wrt_b_matches_finite_difference)
   EXPECT_LT(squared_norm(dx_FD - get_gradient(x)), tolerance);
 }
 
-TEST(tensor, derivative_of_linear_solve_wrt_A_matches_finite_difference)
+TEST(Tensor, DerivativeOfLinearSolveWrtAMatchesFiniteDifference)
 {
   const tensor<double, 3, 3> v{{{2, 1, -1}, {-3, -1, 2}, {-2, 1, 2}}};
   const tensor<double, 3, 3> g{{{0.337494265892494, 0.194238454581911, 0.307832573181341},

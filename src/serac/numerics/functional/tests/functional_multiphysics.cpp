@@ -7,9 +7,8 @@
 #include <fstream>
 #include <iostream>
 
-#include "mfem.hpp"
-
 #include <gtest/gtest.h>
+#include "mfem.hpp"
 
 #include "axom/slic/core/SimpleLogger.hpp"
 #include "serac/infrastructure/input.hpp"
@@ -85,7 +84,7 @@ void check_gradient(Functional<T>& f, mfem::Vector& U, mfem::Vector& dU_dt)
   }
 }
 
-TEST(basic, nonlinear_thermal_test_3D)
+TEST(FunctionalMultiphysics, NonlinearThermalTest3D)
 {
   int serial_refinement   = 0;
   int parallel_refinement = 0;

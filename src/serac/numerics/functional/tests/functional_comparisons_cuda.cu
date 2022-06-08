@@ -7,9 +7,8 @@
 #include <fstream>
 #include <iostream>
 
-#include "mfem.hpp"
-
 #include <gtest/gtest.h>
+#include "mfem.hpp"
 
 #include "axom/slic/core/SimpleLogger.hpp"
 #include "serac/infrastructure/input.hpp"
@@ -393,29 +392,29 @@ void functional_test(Hcurl<p> test, Hcurl<p> trial, Dimension<dim>)
   serac::profiling::finalize();
 }
 
-TEST(thermal, 2D_linear) { functional_test(H1<1>{}, H1<1>{}, Dimension<2>{}); };
-TEST(thermal, 2D_quadratic) { functional_test(H1<2>{}, H1<2>{}, Dimension<2>{}); }
-TEST(thermal, 2D_cubic) { functional_test(H1<3>{}, H1<3>{}, Dimension<2>{}); }
+TEST(Thermal, 2DLinear) { functional_test(H1<1>{}, H1<1>{}, Dimension<2>{}); };
+TEST(Thermal, 2DQuadratic) { functional_test(H1<2>{}, H1<2>{}, Dimension<2>{}); }
+TEST(Thermal, 2DCubic) { functional_test(H1<3>{}, H1<3>{}, Dimension<2>{}); }
 
-TEST(thermal, 3D_linear) { functional_test(H1<1>{}, H1<1>{}, Dimension<3>{}); }
-TEST(thermal, 3D_quadratic) { functional_test(H1<2>{}, H1<2>{}, Dimension<3>{}); }
-TEST(thermal, 3D_cubic) { functional_test(H1<3>{}, H1<3>{}, Dimension<3>{}); }
+TEST(Thermal, 3DLinear) { functional_test(H1<1>{}, H1<1>{}, Dimension<3>{}); }
+TEST(Thermal, 3DQuadratic) { functional_test(H1<2>{}, H1<2>{}, Dimension<3>{}); }
+TEST(Thermal, 3DCubic) { functional_test(H1<3>{}, H1<3>{}, Dimension<3>{}); }
 
-TEST(hcurl, 2D_linear) { functional_test(Hcurl<1>{}, Hcurl<1>{}, Dimension<2>{}); }
-TEST(hcurl, 2D_quadratic) { functional_test(Hcurl<2>{}, Hcurl<2>{}, Dimension<2>{}); }
-TEST(hcurl, 2D_cubic) { functional_test(Hcurl<3>{}, Hcurl<3>{}, Dimension<2>{}); }
+TEST(Hcurl, 2DLinear) { functional_test(Hcurl<1>{}, Hcurl<1>{}, Dimension<2>{}); }
+TEST(Hcurl, 2DQuadratic) { functional_test(Hcurl<2>{}, Hcurl<2>{}, Dimension<2>{}); }
+TEST(Hcurl, 2DCubic) { functional_test(Hcurl<3>{}, Hcurl<3>{}, Dimension<2>{}); }
 
-TEST(hcurl, 3D_linear) { functional_test(Hcurl<1>{}, Hcurl<1>{}, Dimension<3>{}); }
-TEST(hcurl, 3D_quadratic) { functional_test(Hcurl<2>{}, Hcurl<2>{}, Dimension<3>{}); }
-TEST(hcurl, 3D_cubic) { functional_test(Hcurl<3>{}, Hcurl<3>{}, Dimension<3>{}); }
+TEST(Hcurl, 3DLinear) { functional_test(Hcurl<1>{}, Hcurl<1>{}, Dimension<3>{}); }
+TEST(Hcurl, 3DQuadratic) { functional_test(Hcurl<2>{}, Hcurl<2>{}, Dimension<3>{}); }
+TEST(Hcurl, 3DCubic) { functional_test(Hcurl<3>{}, Hcurl<3>{}, Dimension<3>{}); }
 
-TEST(elasticity, 2D_linear) { functional_test(H1<1, 2>{}, H1<1, 2>{}, Dimension<2>{}); }
-TEST(elasticity, 2D_quadratic) { functional_test(H1<2, 2>{}, H1<2, 2>{}, Dimension<2>{}); }
-TEST(elasticity, 2D_cubic) { functional_test(H1<3, 2>{}, H1<3, 2>{}, Dimension<2>{}); }
+TEST(elasticity, 2DLinear) { functional_test(H1<1, 2>{}, H1<1, 2>{}, Dimension<2>{}); }
+TEST(elasticity, 2DQuadratic) { functional_test(H1<2, 2>{}, H1<2, 2>{}, Dimension<2>{}); }
+TEST(elasticity, 2DCubic) { functional_test(H1<3, 2>{}, H1<3, 2>{}, Dimension<2>{}); }
 
-TEST(elasticity, 3D_linear) { functional_test(H1<1, 3>{}, H1<1, 3>{}, Dimension<3>{}); }
-TEST(elasticity, 3D_quadratic) { functional_test(H1<2, 3>{}, H1<2, 3>{}, Dimension<3>{}); }
-TEST(elasticity, 3D_cubic) { functional_test(H1<3, 3>{}, H1<3, 3>{}, Dimension<3>{}); }
+TEST(elasticity, 3DLinear) { functional_test(H1<1, 3>{}, H1<1, 3>{}, Dimension<3>{}); }
+TEST(elasticity, 3DQuadratic) { functional_test(H1<2, 3>{}, H1<2, 3>{}, Dimension<3>{}); }
+TEST(elasticity, 3DCubic) { functional_test(H1<3, 3>{}, H1<3, 3>{}, Dimension<3>{}); }
 
 int main(int argc, char* argv[])
 {

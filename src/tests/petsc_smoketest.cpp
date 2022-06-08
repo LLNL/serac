@@ -38,6 +38,9 @@ typedef struct {
 } UserContext;
 
 // SERAC EDIT BEGIN
+
+#include "axom/slic/core/SimpleLogger.hpp"
+
 // int main(int argc,char **argv)
 int ex50_main(int argc, char** argv)
 // SERAC EDIT END
@@ -317,7 +320,7 @@ constexpr char correct_serial_output[] =
     "row 14: (10, -1.)  (13, -1.)  (14, 3.)  (15, -1.) \n"
     "row 15: (11, -1.)  (14, -1.)  (15, 2.) \n";
 
-TEST(petsc_smoketest, petsc_ex50)
+TEST(PetscSmoketest, PetscEx50)
 {
   ::testing::internal::CaptureStdout();
   const char* fake_argv[] = {"ex50", "-da_grid_x", "4", "-da_grid_y", "4", "-mat_view"};
@@ -341,10 +344,6 @@ TEST(petsc_smoketest, petsc_ex50)
   }
 }
 
-//------------------------------------------------------------------------------
-#include "axom/slic.hpp"
-using axom::slic::UnitTestLogger;
-
 int main(int argc, char* argv[])
 {
   int result = 0;
@@ -353,7 +352,7 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when exiting main scope
+  axom::slic::SimpleLogger logger;
 
   result = RUN_ALL_TESTS();
 
