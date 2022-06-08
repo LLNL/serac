@@ -1,16 +1,7 @@
 diff --git a/include/camp/tuple.hpp b/include/camp/tuple.hpp
-index 524e59f..3e1c3c9 100644
+index 524e59f..de01777 100644
 --- a/include/camp/tuple.hpp
 +++ b/include/camp/tuple.hpp
-@@ -147,7 +147,7 @@ namespace internal
- 
- // by index
- template <camp::idx_t index, class Tuple>
--CAMP_HOST_DEVICE constexpr auto& get(const Tuple& t) noexcept
-+CAMP_HOST_DEVICE constexpr const auto& get(const Tuple& t) noexcept
- {
-   using internal::tpl_get_store;
-   static_assert(tuple_size<Tuple>::value > index, "index out of range");
 @@ -278,6 +278,8 @@ private:
    CAMP_HOST_DEVICE constexpr friend auto& get(Tuple& t) noexcept;
  
