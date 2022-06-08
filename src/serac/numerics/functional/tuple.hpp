@@ -55,7 +55,7 @@ SERAC_HOST_DEVICE constexpr auto& get(camp::tuple<T...>& values)
  * @brief return a copy of the ith tuple entry
  */
 template <int i, typename... T>
-SERAC_HOST_DEVICE constexpr const auto& get(const camp::tuple<T...>& values)
+SERAC_HOST_DEVICE constexpr auto& get(const camp::tuple<T...>& values)
 {
   return camp::get<i>(values);
 }
