@@ -113,13 +113,32 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
     return dN;
   }
 
+  template < int q >
+  constexpr auto calculate_B() {
+    static constexpr auto points1D = GaussLegendreNodes<q>();
+    tensor<double, q, n> B_{};
+    for (int i = 0; i < q; i++) {
+      B_[i] = GaussLobattoInterpolation<n>(points1D[i]);
+    }
+    return B_;
+  }
+
+  template < int q >
+  constexpr auto calculate_G() {
+    static constexpr auto points1D = GaussLegendreNodes<q>();
+    tensor<double, q, n> G{};
+    for (int i = 0; i < q; i++) {
+      G[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);
+    }
+    return G;
+  }
+
   template <int q>
-  static auto interpolate(const dof_type& X, const tensor<double, dim, dim, q * q>& jacobians,
-                          const TensorProductQuadratureRule<q>&)
+  static auto interpolate(const dof_type& X, const TensorProductQuadratureRule<q>&)
   {
     // we want to compute the following:
     //
-    // X_q(u, v) := (B(u, i) * B(v, j) ) * X_e(i, j)
+    // X_q(u, v) := (B(u, i) * B(v, j)) * X_e(i, j)
     //
     // where
     //   X_q(u, v) are the quadrature-point values at position {u, v},
@@ -131,23 +150,8 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
     //
     // A(dy, qx)  := B(qx, dx) * X_e(dy, dx)
     // X_q(qy, qx) := B(qy, dy) * A(dy, qx)
-
-    static constexpr auto points1D = GaussLegendreNodes<q>();
-    static constexpr auto B        = [=]() {
-      tensor<double, q, n> B_{};
-      for (int i = 0; i < q; i++) {
-        B_[i] = GaussLobattoInterpolation<n>(points1D[i]);
-      }
-      return B_;
-    }();
-
-    static constexpr auto G = [=]() {
-      tensor<double, q, n> G_{};
-      for (int i = 0; i < q; i++) {
-        G_[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);
-      }
-      return G_;
-    }();
+    static constexpr auto B = calculate_B<q>();
+    static constexpr auto G = calculate_G<q>();
 
     cache_type<q> A;
 
@@ -194,28 +198,28 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
     return output.a;
   }
 
+  template <int q>
+  static void parent_to_physical(tensor< qf_input_type, q > quadrature_data, const tensor<double, dim, dim, q >& jacobians)
+  {
+    for (int k = 0; k < q; k++) {
+      tensor<double, dim, dim> J;
+      for (int row = 0; row < dim; row++) {
+        for (int col = 0; col < dim; col++) {
+          J[row][col] = jacobians(col, row, k);
+        }
+      }
+      get<GRADIENT>(quadrature_data[k]) = dot(get<GRADIENT>(quadrature_data[k]), inv(J));
+    }
+  }
+
   template <typename source_type, typename flux_type, int q>
   static void integrate(tensor< tuple< source_type, flux_type >, q * q > & qf_output,
                         const tensor<double, dim, dim, q * q>& jacobians, const TensorProductQuadratureRule<q>&,
                         dof_type&                             element_residual)
   {
-    static constexpr auto points1D  = GaussLegendreNodes<q>();
+    static constexpr auto B = calculate_B<q>();
+    static constexpr auto G = calculate_G<q>();
     static constexpr auto weights1D = GaussLegendreWeights<q>();
-    static constexpr auto B         = [=]() {
-      tensor<double, q, n> B_{};
-      for (int i = 0; i < q; i++) {
-        B_[i] = GaussLobattoInterpolation<n>(points1D[i]);
-      }
-      return B_;
-    }();
-
-    static constexpr auto G = [=]() {
-      tensor<double, q, n> G_{};
-      for (int i = 0; i < q; i++) {
-        G_[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);
-      }
-      return G_;
-    }();
 
     tensor< double, c, q, q> source{};
     tensor< double, c, dim, q, q> flux{};

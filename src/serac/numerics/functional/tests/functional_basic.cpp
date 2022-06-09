@@ -94,7 +94,7 @@ TEST(basic, nonlinear_thermal_test_2D)
       *mesh2D);
 
   // TODO: reenable surface integrals
-  // residual.AddSurfaceIntegral([=](auto x, auto /*n*/, auto u) { return x[0] + x[1] - cos(u); }, *mesh3D);
+  // residual.AddSurfaceIntegral([=](auto x, auto /*n*/, auto u) { return x[0] + x[1] - cos(u); }, *mesh2D);
 
   check_gradient(residual, U);
 }
@@ -134,7 +134,7 @@ TEST(basic, nonlinear_thermal_test_3D)
       *mesh3D);
 
   // TODO: reenable surface integrals
-  // residual.AddSurfaceIntegral([=](auto x, auto /*n*/, auto u) { return x[0] + x[1] - cos(u); }, *mesh3D);
+  residual.AddSurfaceIntegral([=](auto x, auto /*n*/, auto u) { return x[0] + x[1] - cos(u); }, *mesh3D);
 
   check_gradient(residual, U);
 }

@@ -109,6 +109,23 @@ template <int Q, Geometry g, typename test, typename... trials>
 struct KernelConfig {
 };
 
+template <typename lambda, int dim, int n, typename ... T, int ... I >
+auto batch_apply_qf(lambda qf, const tensor< double, dim, n > & positions, const tensor< double, dim, n > & normals, const tuple < tensor<T, n> ... > & inputs, std::integer_sequence< int, I ... >)
+{
+  using return_type = decltype(qf(tensor<double,dim>{}, T{} ...));
+  tensor<return_type, n> outputs{};
+  for (int i = 0; i < n; i++) {
+    tensor< double, dim > x_q;
+    tensor< double, dim > n_q;
+    for (int j = 0; j < dim; j++) { 
+      x_q[j] = positions(j, i); 
+      n_q[j] = normals(j, i); 
+    }
+    outputs[i] = qf(x_q, n_q, get<I>(inputs)[i] ...);
+  }
+  return outputs;
+}
+
 /**
  * @tparam S type used to specify which argument to differentiate with respect to.
  *    `void` => evaluation kernel with no differentiation
@@ -130,6 +147,10 @@ template <int Q, Geometry geom, typename test, typename... trials, typename lamb
 struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lambda> {
   static constexpr auto exec             = ExecutionSpace::CPU;     ///< this specialization is CPU-specific
   static constexpr int  num_trial_spaces = int(sizeof...(trials));  ///< how many trial spaces are provided
+  static constexpr auto Iseq = std::make_integer_sequence<int, sizeof ... (trials)>{};
+
+  using test_element = finite_element<geom, test>;
+  static constexpr type_list < finite_element< geom, trials > ... > trial_elements{};
 
   using EVector_t =
       EVectorView<exec, finite_element<geom, trials>...>;  ///< the type of container used to access element values
@@ -157,6 +178,49 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
    */
   void operator()(const std::array<mfem::Vector, num_trial_spaces>& U, mfem::Vector& R)
   {
+
+    #if 1
+    // mfem provides this information in 1D arrays, so we reshape it
+    // into strided multidimensional arrays before using
+    auto X = reinterpret_cast<const typename batched_position<geom, Q>::type*>(X_.Read());
+    auto N = reinterpret_cast<const typename batched_position<geom, Q>::type*>(N_.Read());
+    auto r = reinterpret_cast<typename test_element::dof_type*>(R.ReadWrite());
+    auto J = reinterpret_cast<const typename batched_jacobian<geom, Q>::type*>(J_.Read());
+    static constexpr TensorProductQuadratureRule<Q> rule{};
+
+    // for each element in the domain
+    for (uint32_t e = 0; e < num_elements_; e++) {
+
+      // load the jacobians and positions for each quadrature point in this element
+      auto J_e = J[e];
+      auto X_e = X[e];
+      auto N_e = N[e];
+
+      tuple < 
+        decltype(finite_element< geom, trials >::interpolate(typename finite_element< geom, trials >::dof_type{}, J[0], rule)) ... 
+      > qf_inputs{};
+
+      for_constexpr< num_trial_spaces >([&](auto j){
+
+        using trial_element = decltype(trial_elements[j]);
+        
+        auto u = reinterpret_cast<const typename trial_element::dof_type*>(U[j].Read());
+
+        // (batch) interpolate each quadrature point's value
+        get<j>(qf_inputs) = trial_element::interpolate(u[e], J_e, rule);
+
+      });
+
+      // (batch) evalute the q-function at each quadrature point
+      auto qf_outputs = batch_apply_qf(qf_, X_e, N_e, qf_inputs, Iseq);
+
+      // (batch) integrate the material response against the test-space basis functions
+      test_element::integrate(qf_outputs, J_e, rule, r[e]);
+
+    }
+
+    #else
+
     std::array<const double*, num_trial_spaces> ptrs;
     for (uint32_t j = 0; j < num_trial_spaces; j++) {
       ptrs[j] = U[j].Read();
@@ -209,6 +273,9 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
       // out to memory, to be later assembled into global residuals by mfem
       detail::Add(r, r_elem, int(e));
     }
+
+    #endif
+
   }
 
   const mfem::Vector& J_;             ///< values of sqrt(det(J^T * J)) at each quadrature point
