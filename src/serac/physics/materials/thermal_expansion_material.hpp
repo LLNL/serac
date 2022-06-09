@@ -171,8 +171,14 @@ protected:
    */
   const FiniteElementState& temp_state_;
 
+  /**
+   * @brief Grid function for the temperature
+   */
   mfem::ParGridFunction temp_grid_function_;
 
+  /**
+   * @brief Coefficient based on the temperature grid function
+   */
   mfem::GridFunctionCoefficient temp_coef_;
 };
 
