@@ -160,7 +160,7 @@ public:
    *
    * @param mesh The mesh for the underlying physics module
    */
-  BoundaryConditionManager(const mfem::ParMesh& mesh) : num_attrs_(mesh.bdr_attributes.Max()) {}
+  explicit BoundaryConditionManager(const mfem::ParMesh& mesh) : num_attrs_(mesh.bdr_attributes.Max()) {}
 
   /**
    * @brief Set the essential boundary conditions from a list of boundary markers and a coefficient

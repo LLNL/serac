@@ -164,10 +164,7 @@ private:
    * @brief Whether this simulation has been restarted from another simulation
    */
   static bool is_restart_;
-  /**
-   * @brief Name of the Sidre DataCollection
-   */
-  static std::string collection_name_;
+
   /**
    * @brief A set of @p QuadratureData<T> objects that need to be synchronized before saving to disk
    * FIXME Need one set per datacoll since we can save at different times?

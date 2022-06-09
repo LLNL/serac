@@ -233,7 +233,7 @@ public:
    *
    * @param nonlin The underlying nonlinear form integrator
    */
-  PointerNonlinearFormIntegrator(std::shared_ptr<mfem::NonlinearFormIntegrator> nonlin) : integ_(nonlin) {}
+  explicit PointerNonlinearFormIntegrator(std::shared_ptr<mfem::NonlinearFormIntegrator> nonlin) : integ_(nonlin) {}
 
   /**
    * @brief Compute the residual vector with input
