@@ -147,6 +147,12 @@ int main(int argc, char* argv[])
   std::string input_values_path = axom::utilities::filesystem::joinPath(output_directory, "serac_input_values.json");
   datastore.getRoot()->getGroup("input_file")->save(input_values_path, "json");
 
+  // Initialize/set the time information
+  double t       = 0;
+  double t_final = inlet["t_final"];
+  double dt      = inlet["dt"];
+  int    ti      = 1;
+
   // Not restarting, so we need to create the mesh and register it with the StateManager
   if (!restart_cycle) {
     // Build the mesh
@@ -159,7 +165,8 @@ int main(int argc, char* argv[])
     serac::StateManager::setMesh(std::move(mesh));
   } else {
     // If restart_cycle is non-empty, then this is a restart run and the data will be loaded here
-    serac::StateManager::load(*restart_cycle);
+    t  = serac::StateManager::load(*restart_cycle);
+    ti = *restart_cycle;
   }
 
   // Create the physics object
@@ -197,20 +204,12 @@ int main(int argc, char* argv[])
   // Complete the solver setup
   main_physics->completeSetup();
 
-  // Initialize/set the time information
-  double t       = 0;
-  double t_final = inlet["t_final"];
-  double dt      = inlet["dt"];
-  int    ti      = 1;
+  // Update physics time and cycle
+  main_physics->setTime(t);
+  main_physics->setCycle(*restart_cycle);
 
-  if (restart_cycle) {
-    t  = *restart_cycle * dt - dt;  // TODO chapman39 read from inlet instead
-    ti = *restart_cycle;
-    main_physics->setTime(t);
-    main_physics->setCycle(*restart_cycle);
-  }
-
-  bool last_step = false;
+  SLIC_INFO(axom::fmt::format("Time: {0}", main_physics->time()));
+  SLIC_INFO(axom::fmt::format("Cycle: {0}", main_physics->cycle()));
 
   // FIXME: This and the FromInlet specialization are hacked together,
   // should be inlet["output_type"].get<OutputType>()
@@ -219,7 +218,8 @@ int main(int argc, char* argv[])
   main_physics->initializeSummary(datastore, t_final, dt);
 
   // Enter the time step loop.
-  for (; !last_step; ti++) {
+  bool last_step = false;
+  while (!last_step) {
     // Flush all messages held by the logger
     serac::logger::flush();
 
@@ -243,6 +243,9 @@ int main(int argc, char* argv[])
 
     // Determine if this is the last timestep
     last_step = (t >= t_final - 1e-8 * dt);
+
+    // Increment cycle
+    ti++;
   }
 
   // Output summary file (basic run info and curve data)

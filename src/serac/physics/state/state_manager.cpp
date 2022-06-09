@@ -28,7 +28,7 @@ axom::sidre::DataStore*                                               StateManag
 std::string                                                           StateManager::output_dir_        = "";
 const std::string                                                     StateManager::default_mesh_name_ = "default";
 
-void StateManager::newDataCollection(const std::string& name, const std::optional<int> cycle_to_load)
+double StateManager::newDataCollection(const std::string& name, const std::optional<int> cycle_to_load)
 {
   SLIC_ERROR_ROOT_IF(!ds_, "Cannot construct a DataCollection without a DataStore");
   std::string coll_name = name + "_datacoll";
@@ -66,6 +66,8 @@ void StateManager::newDataCollection(const std::string& name, const std::optiona
     datacoll.SetCycle(0);   // Iteration counter
     datacoll.SetTime(0.0);  // Simulation time
   }
+
+  return datacoll.GetTime();
 }
 
 void StateManager::initialize(axom::sidre::DataStore& ds, const std::string& output_directory)
