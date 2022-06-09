@@ -124,11 +124,8 @@ void BasePhysics::saveSummary(axom::sidre::DataStore& datastore, const double t)
     SLIC_ERROR_IF(!sidre_root->hasGroup(curves_group_name),
                   axom::fmt::format("Sidre Group '{0}' did not exist when saveCurves was called", curves_group_name));
     curves_group = sidre_root->getGroup(curves_group_name);
-  }
 
-  // Save time step
-  // Only save on root node
-  if (rank == 0) {
+    // Save time step
     axom::sidre::Array<double> ts(curves_group->getView("t"));
     ts.push_back(t);
   }

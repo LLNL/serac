@@ -140,7 +140,7 @@ public:
    * & &= \alpha \left( \theta - \theta_\textbf{ref}\right)\mathbf{I}
    * \f}
    */
-  void modifyDisplacementGradient(mfem::DenseMatrix& du_dX);
+  void modifyDisplacementGradient(mfem::DenseMatrix& du_dX) override;
 
   /**
    * @brief Destroy the isotropic thermal expansion object
