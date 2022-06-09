@@ -36,7 +36,7 @@ using GeneralCoefficient = variant<std::shared_ptr<mfem::Coefficient>, std::shar
  */
 class FiniteElementVector : public mfem::HypreParVector {
 public:
-  using mfem::HypreParVector::operator=; 
+  using mfem::HypreParVector::operator=;
 
   /**
    * @brief Structure for optionally configuring a FiniteElementVector
