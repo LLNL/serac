@@ -111,7 +111,7 @@ public:
    * @param[in] output_directory The directory to output files to
    */
   virtual void initializeOutput(const serac::OutputType output_type, const std::string& root_name,
-                                const std::string output_directory = "");
+                                const std::string& output_directory = "");
 
   /**
    * @brief Output the current state of the PDE fields
