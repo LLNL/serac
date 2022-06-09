@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/physics/state/finite_element_vector.hpp"
+#include "serac/infrastructure/logger.hpp"
 
 namespace serac {
 
@@ -53,6 +54,47 @@ FiniteElementVector::FiniteElementVector(FiniteElementVector&& input_vector)
   // Grab the allocated data from the input argument for the underlying Hypre vector
   auto* parallel_vec = input_vector.StealParVector();
   WrapHypreParVector(parallel_vec);
+}
+
+FiniteElementVector& FiniteElementVector::operator=(const mfem::HypreParVector& rhs)
+{
+  SLIC_ERROR_IF(Size() != rhs.Size(), axom::fmt::format("Finite element vector of size {} assigned to a HypreParVector of size {}", Size(), rhs.Size()));
+
+  HypreParVector::operator=(rhs);
+  return *this;
+}
+
+FiniteElementVector& FiniteElementVector::operator=(const FiniteElementVector& rhs)
+{
+  mesh_ = rhs.mesh_;
+  coll_ = std::unique_ptr<mfem::FiniteElementCollection>(mfem::FiniteElementCollection::New(rhs.space_->FEColl()->Name()));
+  space_ = std::make_unique<mfem::ParFiniteElementSpace>(*rhs.space_, &(mesh_.get()), coll_.get());
+  name_  = rhs.name_;
+
+  // Construct a hypre par vector based on the new finite element space
+  HypreParVector new_vector(space_.get());
+
+  // Move the data from this new hypre vector into this object without doubly allocating the data
+  auto* parallel_vec = new_vector.StealParVector();
+  WrapHypreParVector(parallel_vec);
+
+  // Initialize the vector to zero
+  HypreParVector::operator=(rhs);
+
+  return *this;
+}
+
+FiniteElementVector& FiniteElementVector::operator=(FiniteElementVector&& rhs)
+{
+  mesh_ = rhs.mesh_;
+  coll_ = std::move(rhs.coll_);
+  space_ = std::move(rhs.space_);
+  name_  = rhs.name_;
+
+  auto* parallel_vec = rhs.StealParVector();
+  WrapHypreParVector(parallel_vec);
+
+  return *this;
 }
 
 FiniteElementVector& FiniteElementVector::operator=(const double value)

@@ -36,8 +36,6 @@ using GeneralCoefficient = variant<std::shared_ptr<mfem::Coefficient>, std::shar
  */
 class FiniteElementVector : public mfem::HypreParVector {
 public:
-  using mfem::HypreParVector::operator=;
-
   /**
    * @brief Structure for optionally configuring a FiniteElementVector
    * @note The options are explicitly default-constructed to allow the user to partially aggregrate-initialized
@@ -91,16 +89,38 @@ public:
    *
    * @param[in] rhs The input vector used for construction
    */
-  FiniteElementVector(const FiniteElementVector& rhs) : FiniteElementVector(rhs.mesh_.get(), *rhs.space_, rhs.name_)
-{
-}
+  FiniteElementVector(const FiniteElementVector& rhs) : FiniteElementVector(rhs.mesh_.get(), *rhs.space_, rhs.name_) {}
 
   /**
    * @brief Move construct a new Finite Element Vector object
    *
    * @param[in] input_vector The input vector used for construction
    */
-  FiniteElementVector(FiniteElementVector&& input_vector);
+  FiniteElementVector(FiniteElementVector&& rhs);
+
+  /**
+   * @brief Copy assignment
+   * 
+   * @param rhs The right hand side input vector
+   * @return The assigned FiniteElementVector
+   */
+  FiniteElementVector& operator=(const FiniteElementVector& rhs);
+
+  /**
+   * @brief Move assignment
+   * 
+   * @param rhs The right hand side input vector
+   * @return The move assigned input vector
+   */
+  FiniteElementVector& operator=(FiniteElementVector&& rhs);
+
+  /**
+   * @brief Copy assignment from a hypre par vector
+   * 
+   * @param rhs The rhs input hypre par vector
+   * @return The copy assigned input vector
+   */
+  FiniteElementVector& operator=(const mfem::HypreParVector& rhs);
 
   /**
    * @brief Returns the MPI communicator for the state
