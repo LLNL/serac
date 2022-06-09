@@ -36,7 +36,7 @@ using GeneralCoefficient = variant<std::shared_ptr<mfem::Coefficient>, std::shar
  */
 class FiniteElementVector : public mfem::HypreParVector {
 public:
-  using mfem::HypreParVector::operator=;
+  using mfem::HypreParVector::operator=; 
 
   /**
    * @brief Structure for optionally configuring a FiniteElementVector
@@ -91,7 +91,9 @@ public:
    *
    * @param[in] rhs The input vector used for construction
    */
-  FiniteElementVector(const FiniteElementVector& rhs);
+  FiniteElementVector(const FiniteElementVector& rhs) : FiniteElementVector(rhs.mesh_.get(), *rhs.space_, rhs.name_)
+{
+}
 
   /**
    * @brief Move construct a new Finite Element Vector object
@@ -111,6 +113,8 @@ public:
    * @return The underlying mesh
    */
   mfem::ParMesh& mesh() { return mesh_; }
+  /// \overload
+  const mfem::ParMesh& mesh() const { return mesh_; }
 
   /**
    * @brief Returns a non-owning reference to the internal FESpace

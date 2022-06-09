@@ -53,20 +53,6 @@ public:
   using FiniteElementVector::FiniteElementVector;
   using FiniteElementVector::operator=;
 
-  /**
-   * @brief Set a finite element state to a constant value
-   *
-   * @param value The constant to set the finite element state to
-   * @return The modified finite element state
-   * @note This sets the true degrees of freedom and then broadcasts to the shared grid function entries. This means
-   * that if a different value is given on different processors, a shared DOF will be set to the owning processor value.
-   */
-  FiniteElementState& operator=(const double value)
-  {
-    FiniteElementVector::operator=(value);
-    return *this;
-  }
-
 protected:
   /**
    * @brief Set the internal grid function using the true DOF values

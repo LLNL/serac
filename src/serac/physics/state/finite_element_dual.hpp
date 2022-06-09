@@ -33,6 +33,7 @@ public:
   using FiniteElementVector::FiniteElementVector;
   using FiniteElementVector::operator=;
 
+protected:
   /**
    * @brief Set the internal grid function using the true DOF values
    *
@@ -56,20 +57,6 @@ public:
    * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
    */
   void initializeTrueVec(const mfem::ParGridFunction& grid_function) { grid_function.ParallelAssemble(*this); }
-
-  /**
-   * @brief Set a finite element dual to a constant value
-   *
-   * @param value The constant to set the finite element dual to
-   * @return The modified finite element dual
-   * @note This sets the true degrees of freedom and then broadcasts to the shared grid function entries. This means
-   * that if a different value is given on different processors, a shared DOF will be set to the owning processor value.
-   */
-  FiniteElementDual& operator=(const double value)
-  {
-    FiniteElementVector::operator=(value);
-    return *this;
-  }
 };
 
 }  // namespace serac

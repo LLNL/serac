@@ -44,11 +44,6 @@ FiniteElementVector::FiniteElementVector(mfem::ParMesh& mesh, const mfem::ParFin
   HypreParVector::operator=(0.0);
 }
 
-FiniteElementVector::FiniteElementVector(const FiniteElementVector& input_vector)
-    : FiniteElementVector(input_vector.mesh_.get(), *input_vector.space_, input_vector.name_)
-{
-}
-
 FiniteElementVector::FiniteElementVector(FiniteElementVector&& input_vector)
     : mesh_(input_vector.mesh()),
       coll_(std::move(input_vector.coll_)),
