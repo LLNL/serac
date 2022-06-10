@@ -68,7 +68,7 @@ public:
     auto strain = 0.5 * (displacement_grad + transpose(displacement_grad));
     auto stress = lambda * tr(strain) * I + 2.0 * shear_modulus * strain;
 
-    return MaterialResponse{.density = density_, .stress = stress};
+    return MaterialResponse{density_, stress};
   }
 
   /**
