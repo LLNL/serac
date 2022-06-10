@@ -165,7 +165,7 @@ int main(int argc, char* argv[])
     serac::StateManager::setMesh(std::move(mesh));
   } else {
     // If restart_cycle is non-empty, then this is a restart run and the data will be loaded here
-    t  = serac::StateManager::load(*restart_cycle);
+    t     = serac::StateManager::load(*restart_cycle);
     cycle = *restart_cycle;
   }
 
