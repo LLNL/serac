@@ -94,7 +94,7 @@ public:
   /**
    * @brief Move construct a new Finite Element Vector object
    *
-   * @param[in] input_vector The input vector used for construction
+   * @param[in] rhs The input vector used for construction
    */
   FiniteElementVector(FiniteElementVector&& rhs);
 

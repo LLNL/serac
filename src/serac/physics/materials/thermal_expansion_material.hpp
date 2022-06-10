@@ -118,6 +118,7 @@ public:
         temp_grid_function_(temp.gridFunction()),
         temp_coef_(&temp_grid_function_)
   {
+    temp_state_.gridFunction(temp_grid_function_);
   }
 
   /**
@@ -141,6 +142,13 @@ public:
    * \f}
    */
   void modifyDisplacementGradient(mfem::DenseMatrix& du_dX) override;
+
+  /**
+   * @brief Update the temperature grid function based on the temperature finite element state.
+   * @note this must occur once prior to evaluation to ensure the temperature fields are 
+   * evaluated appropriately.
+   */
+  void updateGridFunction() { temp_state_.gridFunction(temp_grid_function_); }
 
   /**
    * @brief Destroy the isotropic thermal expansion object

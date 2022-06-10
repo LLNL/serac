@@ -383,6 +383,12 @@ void Solid::advanceTimestep(double& dt)
 
   bcs_.setTime(time_);
 
+  // If a thermal material is present, evaluate the grid function
+  auto* iso_expansion_mat = dynamic_cast<IsotropicThermalExpansionMaterial*>(thermal_material_.get());
+  if (iso_expansion_mat) {
+    iso_expansion_mat->updateGridFunction();
+  }
+
   if (is_quasistatic_) {
     quasiStaticSolve();
     // Update the time for housekeeping purposes
