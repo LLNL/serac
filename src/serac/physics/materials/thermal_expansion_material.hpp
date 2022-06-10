@@ -145,7 +145,7 @@ public:
 
   /**
    * @brief Update the temperature grid function based on the temperature finite element state.
-   * @note this must occur once prior to evaluation to ensure the temperature fields are 
+   * @note this must occur once prior to evaluation to ensure the temperature fields are
    * evaluated appropriately.
    */
   void updateGridFunction() { temp_state_.gridFunction(temp_grid_function_); }

@@ -124,7 +124,7 @@ public:
    *
    * @param[in] rho The mass density coefficient
    * @note We are assuming this coefficient is constant so they copy constructor can be used.
-   * This is a hacky solution, but this modulue is soon to be deleted in favor of the 
+   * This is a hacky solution, but this modulue is soon to be deleted in favor of the
    * Functional version.
    */
   void setMassDensity(std::unique_ptr<mfem::ConstantCoefficient>&& rho)

@@ -100,7 +100,7 @@ public:
 
   /**
    * @brief Copy assignment
-   * 
+   *
    * @param rhs The right hand side input vector
    * @return The assigned FiniteElementVector
    */
@@ -108,7 +108,7 @@ public:
 
   /**
    * @brief Move assignment
-   * 
+   *
    * @param rhs The right hand side input vector
    * @return The move assigned input vector
    */
@@ -116,7 +116,7 @@ public:
 
   /**
    * @brief Copy assignment from a hypre par vector
-   * 
+   *
    * @param rhs The rhs input hypre par vector
    * @return The copy assigned input vector
    */

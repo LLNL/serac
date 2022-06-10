@@ -58,7 +58,9 @@ FiniteElementVector::FiniteElementVector(FiniteElementVector&& input_vector)
 
 FiniteElementVector& FiniteElementVector::operator=(const mfem::HypreParVector& rhs)
 {
-  SLIC_ERROR_IF(Size() != rhs.Size(), axom::fmt::format("Finite element vector of size {} assigned to a HypreParVector of size {}", Size(), rhs.Size()));
+  SLIC_ERROR_IF(Size() != rhs.Size(),
+                axom::fmt::format("Finite element vector of size {} assigned to a HypreParVector of size {}", Size(),
+                                  rhs.Size()));
 
   HypreParVector::operator=(rhs);
   return *this;
@@ -67,7 +69,8 @@ FiniteElementVector& FiniteElementVector::operator=(const mfem::HypreParVector& 
 FiniteElementVector& FiniteElementVector::operator=(const FiniteElementVector& rhs)
 {
   mesh_ = rhs.mesh_;
-  coll_ = std::unique_ptr<mfem::FiniteElementCollection>(mfem::FiniteElementCollection::New(rhs.space_->FEColl()->Name()));
+  coll_ =
+      std::unique_ptr<mfem::FiniteElementCollection>(mfem::FiniteElementCollection::New(rhs.space_->FEColl()->Name()));
   space_ = std::make_unique<mfem::ParFiniteElementSpace>(*rhs.space_, &(mesh_.get()), coll_.get());
   name_  = rhs.name_;
 
@@ -86,8 +89,8 @@ FiniteElementVector& FiniteElementVector::operator=(const FiniteElementVector& r
 
 FiniteElementVector& FiniteElementVector::operator=(FiniteElementVector&& rhs)
 {
-  mesh_ = rhs.mesh_;
-  coll_ = std::move(rhs.coll_);
+  mesh_  = rhs.mesh_;
+  coll_  = std::move(rhs.coll_);
   space_ = std::move(rhs.space_);
   name_  = rhs.name_;
 
