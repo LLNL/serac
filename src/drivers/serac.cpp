@@ -151,7 +151,7 @@ int main(int argc, char* argv[])
   double t       = 0;
   double t_final = inlet["t_final"];
   double dt      = inlet["dt"];
-  int    ti      = 1;
+  int    cycle   = 1;
 
   // Not restarting, so we need to create the mesh and register it with the StateManager
   if (!restart_cycle) {
@@ -166,7 +166,7 @@ int main(int argc, char* argv[])
   } else {
     // If restart_cycle is non-empty, then this is a restart run and the data will be loaded here
     t  = serac::StateManager::load(*restart_cycle);
-    ti = *restart_cycle;
+    cycle = *restart_cycle;
   }
 
   // Create the physics object
@@ -206,10 +206,7 @@ int main(int argc, char* argv[])
 
   // Update physics time and cycle
   main_physics->setTime(t);
-  main_physics->setCycle(*restart_cycle);
-
-  SLIC_INFO(axom::fmt::format("Time: {0}", main_physics->time()));
-  SLIC_INFO(axom::fmt::format("Cycle: {0}", main_physics->cycle()));
+  main_physics->setCycle(cycle);
 
   // FIXME: This and the FromInlet specialization are hacked together,
   // should be inlet["output_type"].get<OutputType>()
@@ -230,7 +227,7 @@ int main(int argc, char* argv[])
     t = t + dt_real;
 
     // Print the timestep information
-    SLIC_INFO_ROOT("step " << ti << ", t = " << t);
+    SLIC_INFO_ROOT("step " << cycle << ", t = " << t);
 
     // Solve the physics module appropriately
     main_physics->advanceTimestep(dt_real);
@@ -245,7 +242,7 @@ int main(int argc, char* argv[])
     last_step = (t >= t_final - 1e-8 * dt);
 
     // Increment cycle
-    ti++;
+    cycle++;
   }
 
   // Output summary file (basic run info and curve data)
