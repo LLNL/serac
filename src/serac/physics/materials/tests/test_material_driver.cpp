@@ -24,13 +24,15 @@ static constexpr double nu = 0.25;
 static constexpr double G = 0.5*E/(1.0 + nu);
 static constexpr double K = E/3.0/(1.0 - 2.0*nu);
 
-template < typename MaterialType, typename StateType >
+template < typename MaterialType, typename StateType, typename ... parameter_types >
 auto uniaxial_stress_test(
-  std::function<double(double)> epsilon_xx,
   double t_max,
   size_t num_steps,
   const MaterialType material,
-  const StateType initial_state) {
+  const StateType initial_state,
+  std::function<double(double)> epsilon_xx,
+  const parameter_types ... parameter_functions) 
+  {
 
   tensor<double, 3> unused{};
 
@@ -47,7 +49,7 @@ auto uniaxial_stress_test(
     du_dx[1][1] = epsilon_yy;
     du_dx[2][2] = epsilon_zz;
     auto copy = state;
-    auto output = material(unused, unused, du_dx, copy);
+    auto output = material(unused, unused, du_dx, copy, parameter_functions(t) ... );
     return tensor{{output.stress[1][1], output.stress[2][2]}};
   };
 
@@ -65,7 +67,7 @@ auto uniaxial_stress_test(
     dudx[1][1] = epsilon_yy_and_zz[0];
     dudx[2][2] = epsilon_yy_and_zz[1];
 
-    auto stress = material(unused, unused, dudx, state).stress;
+    auto stress = material(unused, unused, dudx, state, parameter_functions(t) ...).stress;
     output_history.push_back(tuple{dudx, stress, state});
 
   }
@@ -82,7 +84,7 @@ TEST(MaterialDriver, testUniaxialTensionOnLinearMaterial)
   unsigned int steps = 10;
   const double strain_rate = 1.0;
   std::function<double(double)> prescribed_strain = [strain_rate](double t){ return strain_rate*t; };
-  auto response_history = uniaxial_stress_test(prescribed_strain, max_time, steps, material, initial_state);
+  auto response_history = uniaxial_stress_test(max_time, steps, material, initial_state, prescribed_strain);
 
   for (const auto& [strain, stress, state] : response_history) {
     EXPECT_NEAR(stress[0][0], E * strain[0][0], 1e-10);
@@ -98,8 +100,8 @@ TEST(MaterialDriver, testUniaxialTensionOnNonLinearMaterial)
   unsigned int steps = 10;
   double strain_rate = 1.0;
   // constant true strain rate extension
-  std::function<double(double)> prescribed_strain = [strain_rate](double t){ return std::expm1(strain_rate*t); };
-  auto response_history = uniaxial_stress_test(constant_true_strain_rate, max_time, steps, material, initial_state);
+  std::function<double(double)> constant_true_strain_rate = [strain_rate](double t){ return std::expm1(strain_rate*t); };
+  auto response_history = uniaxial_stress_test(max_time, steps, material, initial_state, constant_true_strain_rate);
 
   for (const auto& [strain, stress, state] : response_history) {
     EXPECT_GT(stress[0][0], E*strain[0][0]);
@@ -109,26 +111,42 @@ TEST(MaterialDriver, testUniaxialTensionOnNonLinearMaterial)
   }
 }
 
-#if 0
-TEST(MaterialDriver, testUniaxialTensionOnParameterizedMaterial)
+TEST(MaterialDriver, UniaxialTensionWithTimeIndependentParameters)
 {
   solid_util::ParameterizedLinearIsotropicSolid<3> material(density, G, K);
   auto material_with_params = [&material](auto x, auto u, auto dudx, auto & state)
   {
     return material(x, u, dudx, state, 0.0, 0.0);
   };
-  decltype(material)::State state{};
+  decltype(material)::State initial_state{};
   double max_time = 1.0;
   unsigned int steps = 10;
   const double strain_rate = 1.0;
   std::function<double(double)> constant_eng_strain_rate = [strain_rate](double t){ return strain_rate*t; };
-  auto response_history = uniaxial_stress_test(constant_eng_strain_rate, max_time, steps, material_with_params, state);
+  auto response_history = uniaxial_stress_test(max_time, steps, material_with_params, initial_state, constant_eng_strain_rate);
 
-  for (const auto& [strain, stress] : response_history) {
-    EXPECT_NEAR(stress, E * strain, 1e-10);
+  for (const auto& [strain, stress, state] : response_history) {
+    EXPECT_NEAR(stress[0][0], E * strain[0][0], 1e-10);
   }
 }
-#endif
+
+TEST(MaterialDriver, UniaxialTensionWithTimeDependentParameters)
+{
+  solid_util::ParameterizedLinearIsotropicSolid<3> material(density, G, K);
+  decltype(material)::State initial_state{};
+  double max_time = 1.0;
+  unsigned int steps = 10;
+  const double strain_rate = 1.0;
+  std::function<double(double)> constant_eng_strain_rate = [strain_rate](double t){ return strain_rate*t; };
+  auto DeltaG = [](double t){ return 1.0 + t; };
+  auto DeltaK = [](double t){ return 1.0 + 3.0 * t; };
+  auto response_history = uniaxial_stress_test(max_time, steps, material, initial_state, constant_eng_strain_rate, DeltaK, DeltaG);
+
+  // hard to verify answers without logging t as well
+  //for (const auto& [strain, stress, state] : response_history) {
+  //  EXPECT_NEAR(stress[0][0], E * strain[0][0], 1e-10);
+  //}
+}
 
 } // namespace serac
 
