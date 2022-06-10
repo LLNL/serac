@@ -113,51 +113,58 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
     return dN;
   }
 
-  template < int q >
+  template < bool apply_weights, int q >
   constexpr auto calculate_B() {
     static constexpr auto points1D = GaussLegendreNodes<q>();
+    static constexpr auto weights1D = GaussLegendreWeights<q>();
     tensor<double, q, n> B_{};
     for (int i = 0; i < q; i++) {
       B_[i] = GaussLobattoInterpolation<n>(points1D[i]);
+      if constexpr (apply_weights) B[i] *= weights1D[i];
     }
     return B_;
   }
 
-  template < int q >
+  template < bool apply_weights, int q >
   constexpr auto calculate_G() {
     static constexpr auto points1D = GaussLegendreNodes<q>();
+    static constexpr auto weights1D = GaussLegendreWeights<q>();
     tensor<double, q, n> G{};
     for (int i = 0; i < q; i++) {
       G[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);
+      if constexpr (apply_weights) G[i] *= weights1D[i];
     }
     return G;
   }
 
+  // we want to compute the following:
+  //
+  // X_q(u, v) := (B(u, i) * B(v, j)) * X_e(i, j)
+  //
+  // where
+  //   X_q(u, v) are the quadrature-point values at position {u, v},
+  //   B(u, i) is the i^{th} 1D interpolation/differentiation (shape) function,
+  //           evaluated at the u^{th} 1D quadrature point, and
+  //   X_e(i, j) are the values at node {i, j} to be interpolated
+  //
+  // this algorithm carries out the above calculation in 2 steps:
+  //
+  // A(dy, qx)  := B(qx, dx) * X_e(dy, dx)
+  // X_q(qy, qx) := B(qy, dy) * A(dy, qx)
   template <int q>
   static auto interpolate(const dof_type& X, const TensorProductQuadratureRule<q>&)
   {
-    // we want to compute the following:
-    //
-    // X_q(u, v) := (B(u, i) * B(v, j)) * X_e(i, j)
-    //
-    // where
-    //   X_q(u, v) are the quadrature-point values at position {u, v},
-    //   B(u, i) is the i^{th} 1D interpolation/differentiation (shape) function,
-    //           evaluated at the u^{th} 1D quadrature point, and
-    //   X_e(i, j) are the values at node {i, j} to be interpolated
-    //
-    // this algorithm carries out the above calculation in 2 steps:
-    //
-    // A(dy, qx)  := B(qx, dx) * X_e(dy, dx)
-    // X_q(qy, qx) := B(qy, dy) * A(dy, qx)
-    static constexpr auto B = calculate_B<q>();
-    static constexpr auto G = calculate_G<q>();
+
+    static constexpr bool apply_weights = false;
+    static constexpr auto B = calculate_B<q, apply_weights>();
+    static constexpr auto G = calculate_G<q, apply_weights>();
 
     cache_type<q> A;
 
     tensor< double, c, q, q> value{};
     tensor< double, c, dim, q, q> gradient{};
 
+    // apply the shape functions
     for (int i = 0; i < c; i++) {
       A[0] = contract<1, 1>(X[i], B);
       A[1] = contract<1, 1>(X[i], G);
@@ -167,49 +174,24 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
       gradient(i,1) = contract<0, 1>(A[0], G);
     }
 
+    // transpose the quadrature data into a flat tensor of tuples
     union {
-      tensor< qf_input_type, q * q > a;
-      tensor< tuple < tensor< double, c >, tensor< double, c, dim > >, q * q > b;
+      tensor< qf_input_type, q * q > one_dimensional;
+      tensor< tuple < tensor< double, c >, tensor< double, c, dim > >, q, q > two_dimensional;
     } output;
 
-    int k = 0;
     for (int qy = 0; qy < q; qy++) {
       for (int qx = 0; qx < q; qx++) {
-        tensor<double, dim, dim> J;
-        for (int row = 0; row < dim; row++) {
-          for (int col = 0; col < dim; col++) {
-            J[row][col] = jacobians(col, row, k);
-          }
-        }
-
         for (int i = 0; i < c; i++) {
-          get<VALUE>(output.b[k])[i] = value(i, qy, qx);
+          get<VALUE>(output.two_dimensional(qy, qx))[i] = value(i, qy, qx);
           for (int j = 0; j < dim; j++) {
-            get<GRADIENT>(output.b[k])[i][j] = gradient(i, j, qy, qx);
+            get<GRADIENT>(output.two_dimensional(qy, qx))[i][j] = gradient(i, j, qy, qx);
           }
         }
-
-        get<GRADIENT>(output.b[k]) = dot(get<GRADIENT>(output.b[k]), inv(J));
-
-        k++;
       }
     }
  
-    return output.a;
-  }
-
-  template <int q>
-  static void parent_to_physical(tensor< qf_input_type, q > quadrature_data, const tensor<double, dim, dim, q >& jacobians)
-  {
-    for (int k = 0; k < q; k++) {
-      tensor<double, dim, dim> J;
-      for (int row = 0; row < dim; row++) {
-        for (int col = 0; col < dim; col++) {
-          J[row][col] = jacobians(col, row, k);
-        }
-      }
-      get<GRADIENT>(quadrature_data[k]) = dot(get<GRADIENT>(quadrature_data[k]), inv(J));
-    }
+    return output.nondegenerate;
   }
 
   template <typename source_type, typename flux_type, int q>
@@ -217,14 +199,13 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
                         const tensor<double, dim, dim, q * q>& jacobians, const TensorProductQuadratureRule<q>&,
                         dof_type&                             element_residual)
   {
-    static constexpr auto B = calculate_B<q>();
-    static constexpr auto G = calculate_G<q>();
-    static constexpr auto weights1D = GaussLegendreWeights<q>();
+    static constexpr bool apply_weights = true;
+    static constexpr auto B = calculate_B<q, apply_weights>();
+    static constexpr auto G = calculate_G<q, apply_weights>();
 
     tensor< double, c, q, q> source{};
     tensor< double, c, dim, q, q> flux{};
 
-    int k = 0;
     for (int qy = 0; qy < q; qy++) {
       for (int qx = 0; qx < q; qx++) {
         tensor<double, dim, dim> J_T;
@@ -248,6 +229,23 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
       }
     }
 
+    // transpose the quadrature data into a tuple of multidimensional tensors 
+    union {
+      tensor< qf_input_type, q * q > one_dimensional;
+      tensor< tuple < tensor< double, c >, tensor< double, c, dim > >, q, q > two_dimensional;
+    } output;
+
+    for (int qy = 0; qy < q; qy++) {
+      for (int qx = 0; qx < q; qx++) {
+        for (int i = 0; i < c; i++) {
+          get<VALUE>(output.two_dimensional(qy, qx))[i] = value(i, qy, qx);
+          for (int j = 0; j < dim; j++) {
+            get<GRADIENT>(output.two_dimensional(qy, qx))[i][j] = gradient(i, j, qy, qx);
+          }
+        }
+      }
+    }
+ 
     cache_type<q> A{};
 
     for (int i = 0; i < c; i++) {

@@ -99,6 +99,7 @@ TEST(basic, nonlinear_thermal_test_2D)
   check_gradient(residual, U);
 }
 
+#if 0
 TEST(basic, nonlinear_thermal_test_3D)
 {
   int serial_refinement   = 0;
@@ -138,6 +139,7 @@ TEST(basic, nonlinear_thermal_test_3D)
 
   check_gradient(residual, U);
 }
+#endif
 
 int main(int argc, char* argv[])
 {

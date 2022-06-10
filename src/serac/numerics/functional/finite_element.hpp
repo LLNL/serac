@@ -193,6 +193,62 @@ struct QOI {
   static constexpr Family family     = Family::QOI;  ///< the family of the basis functions
 };
 
+template <Family f, typename T, int q, int dim>
+static void parent_to_physical(tensor< T, q > quadrature_data, const tensor<double, dim, dim, q >& jacobians)
+{
+  constexpr int VALUE = 0;
+  constexpr int DERIVATIVE = 1;
+
+  if constexpr (f == Family::H1) {
+    for (int k = 0; k < q; k++) {
+      tensor<double, dim, dim> J;
+      for (int row = 0; row < dim; row++) {
+        for (int col = 0; col < dim; col++) {
+          J[row][col] = jacobians(col, row, k);
+        }
+      }
+
+      get<DERIVATIVE>(quadrature_data[k]) = dot(get<DERIVATIVE>(quadrature_data[k]), inv(J));
+
+      // note: no transformation necessary for the values of H1-field
+    }
+  }
+
+}
+
+template <Family f, typename T, int q, int dim>
+static void test_space_transformation(tensor< T, q > quadrature_data, const tensor<double, dim, dim, q >& jacobians)
+{
+  constexpr int SOURCE = 0;
+  constexpr int FLUX = 1;
+
+  for (int k = 0; k < q; k++) {
+    tensor<double, dim, dim> J;
+    for (int row = 0; row < dim; row++) {
+      for (int col = 0; col < dim; col++) {
+        J_T[row][col] = jacobians(row, col, k);
+      }
+    }
+
+    auto dv = det(J);
+
+    if constexpr (f == Family::H1) {
+
+      tensor< double, c > s{get<SOURCE>(qf_output[k]) * dv};
+      tensor< double, c, dim > f{dot(get<FLUX>(qf_output[k]), inv(transpose(J))) * dv};
+
+      for (int i = 0; i < c; i++) {
+        source(i, qy, qx) = s[i];
+        for (int j = 0; j < dim; j++) {
+          flux(i, j, qy, qx) = f[i][j];
+        }
+      }
+    }
+
+  }
+
+}
+
 /**
  * @brief Template prototype for finite element implementations
  * @tparam g The geometry of the element

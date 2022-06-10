@@ -185,14 +185,12 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
     auto X = reinterpret_cast<const typename batched_position<geom, Q>::type*>(X_.Read());
     auto N = reinterpret_cast<const typename batched_position<geom, Q>::type*>(N_.Read());
     auto r = reinterpret_cast<typename test_element::dof_type*>(R.ReadWrite());
-    auto J = reinterpret_cast<const typename batched_jacobian<geom, Q>::type*>(J_.Read());
     static constexpr TensorProductQuadratureRule<Q> rule{};
 
     // for each element in the domain
     for (uint32_t e = 0; e < num_elements_; e++) {
 
       // load the jacobians and positions for each quadrature point in this element
-      auto J_e = J[e];
       auto X_e = X[e];
       auto N_e = N[e];
 
@@ -207,7 +205,7 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
         auto u = reinterpret_cast<const typename trial_element::dof_type*>(U[j].Read());
 
         // (batch) interpolate each quadrature point's value
-        get<j>(qf_inputs) = trial_element::interpolate(u[e], J_e, rule);
+        get<j>(qf_inputs) = trial_element::interpolate(u[e], rule);
 
       });
 
@@ -215,7 +213,7 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
       auto qf_outputs = batch_apply_qf(qf_, X_e, N_e, qf_inputs, Iseq);
 
       // (batch) integrate the material response against the test-space basis functions
-      test_element::integrate(qf_outputs, J_e, rule, r[e]);
+      test_element::integrate(qf_outputs, rule, r[e]);
 
     }
 
