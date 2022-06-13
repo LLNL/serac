@@ -98,12 +98,13 @@ public:
    * @brief Loads an existing DataCollection
    * @param[in] cycle_to_load What cycle to load the DataCollection from
    * @param[in] mesh_tag The mesh_tag associated with the DataCollection when it was saved
+   * @return The time from specified restart cycle. Otherwise zero.
    */
-  static void load(const int cycle_to_load, const std::string& mesh_tag = default_mesh_name_)
+  static double load(const int cycle_to_load, const std::string& mesh_tag = default_mesh_name_)
   {
     // FIXME: Assumes that if one DataCollection is going to be reloaded all DataCollections will be
     is_restart_ = true;
-    newDataCollection(mesh_tag, cycle_to_load);
+    return newDataCollection(mesh_tag, cycle_to_load);
   }
 
   /**
@@ -150,8 +151,9 @@ private:
    * @brief Creates a new datacollection based on a registered mesh
    * @param[in] name The name of the new datacollection
    * @param[in] cycle_to_load What cycle to load the DataCollection from, if applicable
+   * @return The time from specified restart cycle. Otherwise zero.
    */
-  static void newDataCollection(const std::string& name, const std::optional<int> cycle_to_load = {});
+  static double newDataCollection(const std::string& name, const std::optional<int> cycle_to_load = {});
 
   /**
    * @brief The datacollection instances

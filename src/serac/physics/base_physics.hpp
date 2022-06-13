@@ -75,6 +75,13 @@ public:
   virtual double time() const;
 
   /**
+   * @brief Set the current cycle
+   *
+   * @param[in] cycle The cycle
+   */
+  virtual void setCycle(const int cycle);
+
+  /**
    * @brief Get the current cycle
    *
    * @return The current cycle
