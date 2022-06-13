@@ -195,7 +195,7 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
       auto N_e = N[e];
 
       tuple < 
-        decltype(finite_element< geom, trials >::interpolate(typename finite_element< geom, trials >::dof_type{}, J[0], rule)) ... 
+        decltype(finite_element< geom, trials >::interpolate(typename finite_element< geom, trials >::dof_type{}, rule)) ... 
       > qf_inputs{};
 
       for_constexpr< num_trial_spaces >([&](auto j){

@@ -114,25 +114,25 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
   }
 
   template < bool apply_weights, int q >
-  constexpr auto calculate_B() {
-    static constexpr auto points1D = GaussLegendreNodes<q>();
-    static constexpr auto weights1D = GaussLegendreWeights<q>();
-    tensor<double, q, n> B_{};
+  static constexpr auto calculate_B() {
+    constexpr auto points1D = GaussLegendreNodes<q>();
+    constexpr auto weights1D = GaussLegendreWeights<q>();
+    tensor<double, q, n> B{};
     for (int i = 0; i < q; i++) {
-      B_[i] = GaussLobattoInterpolation<n>(points1D[i]);
-      if constexpr (apply_weights) B[i] *= weights1D[i];
+      B[i] = GaussLobattoInterpolation<n>(points1D[i]);
+      if constexpr (apply_weights) B[i] = B[i] * weights1D[i];
     }
-    return B_;
+    return B;
   }
 
   template < bool apply_weights, int q >
-  constexpr auto calculate_G() {
-    static constexpr auto points1D = GaussLegendreNodes<q>();
-    static constexpr auto weights1D = GaussLegendreWeights<q>();
+  static constexpr auto calculate_G() {
+    constexpr auto points1D = GaussLegendreNodes<q>();
+    constexpr auto weights1D = GaussLegendreWeights<q>();
     tensor<double, q, n> G{};
     for (int i = 0; i < q; i++) {
       G[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);
-      if constexpr (apply_weights) G[i] *= weights1D[i];
+      if constexpr (apply_weights) G[i] = G[i] * weights1D[i];
     }
     return G;
   }
@@ -156,8 +156,8 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
   {
 
     static constexpr bool apply_weights = false;
-    static constexpr auto B = calculate_B<q, apply_weights>();
-    static constexpr auto G = calculate_G<q, apply_weights>();
+    static constexpr auto B = calculate_B<apply_weights, q>();
+    static constexpr auto G = calculate_G<apply_weights, q>();
 
     cache_type<q> A;
 
@@ -191,61 +191,34 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
       }
     }
  
-    return output.nondegenerate;
+    return output.one_dimensional;
   }
 
   template <typename source_type, typename flux_type, int q>
-  static void integrate(tensor< tuple< source_type, flux_type >, q * q > & qf_output,
-                        const tensor<double, dim, dim, q * q>& jacobians, const TensorProductQuadratureRule<q>&,
+  static void integrate(tensor< tuple< source_type, flux_type >, q * q > & qf_output, const TensorProductQuadratureRule<q>&,
                         dof_type&                             element_residual)
   {
     static constexpr bool apply_weights = true;
-    static constexpr auto B = calculate_B<q, apply_weights>();
-    static constexpr auto G = calculate_G<q, apply_weights>();
+    static constexpr auto B = calculate_B<apply_weights, q>();
+    static constexpr auto G = calculate_G<apply_weights, q>();
 
     tensor< double, c, q, q> source{};
     tensor< double, c, dim, q, q> flux{};
 
     for (int qy = 0; qy < q; qy++) {
       for (int qx = 0; qx < q; qx++) {
-        tensor<double, dim, dim> J_T;
-        for (int row = 0; row < dim; row++) {
-          for (int col = 0; col < dim; col++) {
-            J_T[row][col] = jacobians(row, col, k);
-          }
-        }
-        auto dv = det(J_T) * weights1D[qx] * weights1D[qy];
-
-        tensor< double, c > s{get<SOURCE>(qf_output[k]) * dv};
-        tensor< double, c, dim > f{dot(get<FLUX>(qf_output[k]), inv(J_T)) * dv};
-
+        int k = qy * q + qx;
+        tensor< double, c > s{get<SOURCE>(qf_output[k])};
+        tensor< double, c, dim > f{get<FLUX>(qf_output[k])};
         for (int i = 0; i < c; i++) {
           source(i, qy, qx) = s[i];
           for (int j = 0; j < dim; j++) {
             flux(i, j, qy, qx) = f[i][j];
           }
         }
-        k++;
       }
     }
 
-    // transpose the quadrature data into a tuple of multidimensional tensors 
-    union {
-      tensor< qf_input_type, q * q > one_dimensional;
-      tensor< tuple < tensor< double, c >, tensor< double, c, dim > >, q, q > two_dimensional;
-    } output;
-
-    for (int qy = 0; qy < q; qy++) {
-      for (int qx = 0; qx < q; qx++) {
-        for (int i = 0; i < c; i++) {
-          get<VALUE>(output.two_dimensional(qy, qx))[i] = value(i, qy, qx);
-          for (int j = 0; j < dim; j++) {
-            get<GRADIENT>(output.two_dimensional(qy, qx))[i][j] = gradient(i, j, qy, qx);
-          }
-        }
-      }
-    }
- 
     cache_type<q> A{};
 
     for (int i = 0; i < c; i++) {

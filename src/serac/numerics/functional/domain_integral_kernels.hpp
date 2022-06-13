@@ -171,7 +171,7 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
       auto X_e = X[e];
 
       tuple < 
-        decltype(finite_element< geom, trials >::interpolate(typename finite_element< geom, trials >::dof_type{}, J[0], rule)) ... 
+        decltype(finite_element< geom, trials >::interpolate(typename finite_element< geom, trials >::dof_type{}, rule)) ... 
       > qf_inputs{};
 
       for_constexpr< num_trial_spaces >([&](auto j){
@@ -181,15 +181,23 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
         auto u = reinterpret_cast<const typename trial_element::dof_type*>(U[j].Read());
 
         // (batch) interpolate each quadrature point's value
-        get<j>(qf_inputs) = trial_element::interpolate(u[e], J_e, rule);
+        get<j>(qf_inputs) = trial_element::interpolate(u[e], rule);
+
+        // use J to transform values / derivatives on the parent element 
+        // to the corresponding values / derivatives on the physical element 
+        parent_to_physical< trial_element::family >(get<j>(qf_inputs), J_e);
 
       });
 
       // (batch) evalute the q-function at each quadrature point
       auto qf_outputs = batch_apply_qf(qf_, X_e, qf_inputs, Iseq);
 
+      // use J to transform sources / fluxes on the physical element 
+      // back to the corresponding sources / fluxes on the parent element 
+      physical_to_parent< test_element::family >(qf_outputs, J_e);
+
       // (batch) integrate the material response against the test-space basis functions
-      test_element::integrate(qf_outputs, J_e, rule, r[e]);
+      test_element::integrate(qf_outputs, rule, r[e]);
 
     }
 
@@ -259,7 +267,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
 
       // forward declare space for the arguments that will get passed to the q-function
       tuple < 
-        decltype(finite_element< geom, trials >::interpolate(typename finite_element< geom, trials >::dof_type{}, J[0], rule)) ... 
+        decltype(finite_element< geom, trials >::interpolate(typename finite_element< geom, trials >::dof_type{}, rule)) ... 
       > qf_inputs{};
 
       for_constexpr< num_trial_spaces >([&](auto j){
@@ -269,15 +277,23 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
         auto u = reinterpret_cast<const typename trial_element::dof_type*>(U[j].Read());
 
         // (batch) interpolate each quadrature point's value
-        get<j>(qf_inputs) = trial_element::interpolate(u[e], J_e, rule);
+        get<j>(qf_inputs) = trial_element::interpolate(u[e], rule);
+
+        // use J to transform values / derivatives on the parent element 
+        // to the corresponding values / derivatives on the physical element 
+        parent_to_physical< trial_element::family >(get<j>(qf_inputs), J_e);
 
       });
 
       // (batch) evalute the q-function at each quadrature point
       auto qf_outputs = batch_apply_qf_with_AD< I >(&qf_derivatives_(e, 0), qf_, X_e, qf_inputs, Iseq);
 
+      // use J to transform sources / fluxes on the physical element 
+      // back to the corresponding sources / fluxes on the parent element 
+      physical_to_parent< test_element::family >(qf_outputs, J_e);
+
       // (batch) integrate the material response against the test-space basis functions
-      test_element::integrate(qf_outputs, J_e, rule, r[e]);
+      test_element::integrate(qf_outputs, rule, r[e]);
 
     }
 
@@ -382,13 +398,21 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
     auto J_e = J[e];
 
     // (batch) interpolate each quadrature point's value
-    auto qf_inputs = trial_element::interpolate(du[e], J_e, rule);
+    auto qf_inputs = trial_element::interpolate(du[e], rule);
+
+    // use J to transform values / derivatives on the parent element 
+    // to the corresponding values / derivatives on the physical element 
+    parent_to_physical< trial_element::family >(qf_inputs, J_e);
 
     // (batch) evalute the q-function at each quadrature point
     auto qf_outputs = batch_apply_chain_rule<is_QOI>(&qf_derivatives(e, 0), qf_inputs);
 
+    // use J to transform sources / fluxes on the physical element 
+    // back to the corresponding sources / fluxes on the parent element 
+    physical_to_parent< test_element::family >(qf_outputs, J_e);
+
     // (batch) integrate the material response against the test-space basis functions
-    test_element::integrate(qf_outputs, J_e, rule, dr[e]);
+    test_element::integrate(qf_outputs, rule, dr[e]);
   
   }
 
