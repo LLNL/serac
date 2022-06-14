@@ -126,7 +126,7 @@ public:
     state_.push_back(displacement_);
 
     // Initialize the mesh node pointers
-    reference_nodes_ = displacement_.createOnSpace<mfem::ParGridFunction>();
+    reference_nodes_ = std::make_unique<mfem::ParGridFunction>(&displacement_.space());
     mesh_.EnsureNodes();
     mesh_.GetNodes(*reference_nodes_);
 

@@ -161,7 +161,7 @@ void ThermalConduction::completeSetup()
   SLIC_ASSERT_MSG(kappa_, "Conductivity not set in ThermalSolver!");
 
   // Add the domain diffusion integrator to the K form
-  K_form_ = temperature_.createOnSpace<mfem::ParNonlinearForm>();
+  K_form_ = std::make_unique<mfem::ParNonlinearForm>(&temperature_.space());
   K_form_->AddDomainIntegrator(
       new mfem_ext::BilinearToNonlinearFormIntegrator(std::make_unique<mfem::DiffusionIntegrator>(*kappa_)));
 
@@ -202,7 +202,7 @@ void ThermalConduction::completeSetup()
 
   } else {
     // If dynamic, assemble the mass matrix
-    M_form_ = temperature_.createOnSpace<mfem::ParBilinearForm>();
+    M_form_ = std::make_unique<mfem::ParBilinearForm>(&temperature_.space());
 
     // Define the mass matrix coefficient as a product of the density and specific heat capacity
     mass_coef_ = std::make_unique<mfem::ProductCoefficient>(*rho_, *cp_);

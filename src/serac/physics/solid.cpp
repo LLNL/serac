@@ -46,7 +46,7 @@ Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities ge
   state_.push_back(adjoint_displacement_);
 
   // Initialize the mesh node pointers
-  reference_nodes_ = displacement_.createOnSpace<mfem::ParGridFunction>();
+  reference_nodes_ = std::make_unique<mfem::ParGridFunction>(&displacement_.space());
   mesh_.EnsureNodes();
   mesh_.GetNodes(*reference_nodes_);
 
@@ -251,7 +251,7 @@ void Solid::resetToReferenceConfiguration()
 void Solid::completeSetup()
 {
   // Define the nonlinear form
-  H_ = displacement_.createOnSpace<mfem::ParNonlinearForm>();
+  H_ = std::make_unique<mfem::ParNonlinearForm>(&displacement_.space());
 
   // Add the hyperelastic integrator
   H_->AddDomainIntegrator(
@@ -298,14 +298,14 @@ void Solid::completeSetup()
 
   // If dynamic, create the mass and viscosity forms
   if (!is_quasistatic_) {
-    M_ = displacement_.createOnSpace<mfem::ParBilinearForm>();
+    M_ = std::make_unique<mfem::ParBilinearForm>(&displacement_.space());
     M_->AddDomainIntegrator(new mfem::VectorMassIntegrator(*initial_mass_density_));
     M_->Assemble(0);
     M_->Finalize(0);
 
     M_mat_.reset(M_->ParallelAssemble());
 
-    C_ = displacement_.createOnSpace<mfem::ParBilinearForm>();
+    C_ = std::make_unique<mfem::ParBilinearForm>(&displacement_.space());
     C_->AddDomainIntegrator(new mfem::VectorDiffusionIntegrator(*viscosity_));
     C_->Assemble(0);
     C_->Finalize(0);
@@ -441,7 +441,7 @@ FiniteElementDual& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace* s
     SLIC_ERROR_IF(!shear_space,
                   axom::fmt::format("Finite element space is required for first shear sensitivity call."));
     shear_sensitivity_      = std::make_unique<FiniteElementDual>(mesh_, *shear_space);
-    shear_sensitivity_form_ = shear_sensitivity_->createOnSpace<mfem::ParLinearForm>();
+    shear_sensitivity_form_ = std::make_unique<mfem::ParLinearForm>(&shear_sensitivity_->space());
 
     shear_sensitivity_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*shear_sensitivity_coef_, 2, 2));
   }
@@ -477,7 +477,7 @@ FiniteElementDual& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace* bu
   if (!bulk_sensitivity_form_ || bulk_space) {
     SLIC_ERROR_IF(!bulk_space, axom::fmt::format("Finite element space is required for first bulk sensitivity call."));
     bulk_sensitivity_      = std::make_unique<FiniteElementDual>(mesh_, *bulk_space);
-    bulk_sensitivity_form_ = bulk_sensitivity_->createOnSpace<mfem::ParLinearForm>();
+    bulk_sensitivity_form_ = std::make_unique<mfem::ParLinearForm>(&bulk_sensitivity_->space());
 
     bulk_sensitivity_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*bulk_sensitivity_coef_, 2, 2));
   }

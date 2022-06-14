@@ -161,34 +161,15 @@ public:
   FiniteElementVector& operator=(const double value);
 
   /**
-   * @brief Assigns the true vector values based on the input grid function
-   *
+   * @brief Initialize the true vector in the FiniteElementVector based on an input grid function
    * @note This dispatches to the appropriate prolongation and restriction operators based
    * on whether the underlying object is a @a FiniteElementState or a @a FiniteElementDual.
+   *
    * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
    *
-   * @param grid_function The input grid function used to initialize the FiniteElementVector
-   * @return FiniteElementVector& The modified FiniteElementVector
+   * @param grid_function The grid function used to initialize the underlying true vector.
    */
-  FiniteElementVector& operator=(const mfem::ParGridFunction& grid_function)
-  {
-    setFromGridFunction(grid_function);
-    return *this;
-  }
-
-  /**
-   * @brief Utility function for creating a tensor, e.g. mfem::HypreParVector,
-   * mfem::ParBilinearForm, etc on the FESpace encapsulated by an FEState object
-   * @return An owning pointer to a heap-allocated tensor
-   * @pre Tensor must have the constructor Tensor::Tensor(ParFiniteElementSpace*)
-   */
-  template <typename Tensor>
-  std::unique_ptr<Tensor> createOnSpace()
-  {
-    static_assert(std::is_constructible_v<Tensor, mfem::ParFiniteElementSpace*>,
-                  "Tensor must be constructible with a ptr to ParFESpace");
-    return std::make_unique<Tensor>(space_.get());
-  }
+  virtual void setFromGridFunction(const mfem::ParGridFunction& grid_function) = 0;
 
   /**
    * @brief Project a vector coefficient onto a set of dofs
@@ -223,7 +204,7 @@ public:
     if (component) {
       grid_function.ProjectCoefficient(coef, dof_list, *component);
     } else {
-      grid_function.ProjectCoefficient(coef, dof_list, *component);
+      grid_function.ProjectCoefficient(coef, dof_list);
     }
 
     setFromGridFunction(grid_function);
@@ -320,17 +301,6 @@ public:
   virtual ~FiniteElementVector() {}
 
 protected:
-  /**
-   * @brief Initialize the true vector in the FiniteElementVector based on an input grid function
-   * @note This dispatches to the appropriate prolongation and restriction operators based
-   * on whether the underlying object is a @a FiniteElementState or a @a FiniteElementDual.
-   *
-   * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
-   *
-   * @param grid_function The grid function used to initialize the underlying true vector.
-   */
-  virtual void setFromGridFunction(const mfem::ParGridFunction& grid_function) = 0;
-
   /**
    * @brief A reference to the mesh object on which the field is defined
    */

@@ -47,7 +47,6 @@ public:
     space_->GetRestrictionMatrix()->MultTranspose(*this, grid_function);
   }
 
-protected:
   /**
    * @brief Initialize the true vector in the FiniteElementDual based on an input grid function
    *

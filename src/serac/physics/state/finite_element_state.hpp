@@ -64,7 +64,6 @@ public:
    */
   void fillGridFunction(mfem::ParGridFunction& grid_function) const { grid_function.SetFromTrueDofs(*this); }
 
-protected:
   /**
    * @brief Initialize the true vector in the FiniteElementState based on an input grid function
    *

@@ -95,7 +95,7 @@ FiniteElementState StateManager::newState(FiniteElementVector::Options&& options
   auto              state    = FiniteElementState(mesh(mesh_tag), std::move(options));
   if (is_restart_) {
     auto grid_function = datacoll.GetParField(name);
-    state              = *grid_function;
+    state.setFromGridFunction(*grid_function);
   } else {
     SLIC_ERROR_ROOT_IF(datacoll.HasField(name),
                        axom::fmt::format("Serac's datacollection was already given a field named '{0}'", name));
@@ -103,7 +103,7 @@ FiniteElementState StateManager::newState(FiniteElementVector::Options&& options
     // Create a new grid function with unallocated data. This will be managed by sidre.
     auto* new_grid_function = new mfem::ParGridFunction(&state.space(), static_cast<double*>(nullptr));
     datacoll.RegisterField(name, new_grid_function);
-    state = *new_grid_function;
+    state.setFromGridFunction(*new_grid_function);
   }
   return state;
 }
@@ -118,7 +118,7 @@ FiniteElementDual StateManager::newDual(FiniteElementVector::Options&& options, 
   auto              dual     = FiniteElementDual(mesh(mesh_tag), std::move(options));
   if (is_restart_) {
     auto grid_function = datacoll.GetParField(name);
-    dual               = *grid_function;
+    dual.setFromGridFunction(*grid_function);
   } else {
     SLIC_ERROR_ROOT_IF(datacoll.HasField(name),
                        axom::fmt::format("Serac's datacollection was already given a field named '{0}'", name));
