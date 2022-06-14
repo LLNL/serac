@@ -132,14 +132,14 @@ TEST(basic, nonlinear_thermal_test_3D)
   // Construct the new functional object using the known test and trial spaces
   Functional<test_space(trial_space)> residual(&fespace, {&fespace});
 
-  //residual.AddVolumeIntegral(
-  //    [=](auto x, auto temperature) {
-  //      auto [u, du_dx] = temperature;
-  //      auto source     = u * u - (100 * x[0] * x[1]);
-  //      auto flux       = du_dx;
-  //      return serac::tuple{source, flux};
-  //    },
-  //    *mesh3D);
+  residual.AddVolumeIntegral(
+      [=](auto x, auto temperature) {
+        auto [u, du_dx] = temperature;
+        auto source     = u * u - (100 * x[0] * x[1]);
+        auto flux       = du_dx;
+        return serac::tuple{source, flux};
+      },
+      *mesh3D);
 
   // TODO: reenable surface integrals
   residual.AddSurfaceIntegral([=](auto x, auto /*n*/, auto temperature) { 

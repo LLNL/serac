@@ -96,9 +96,32 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
     // clang-format on
   }
 
+  template < bool apply_weights, int q >
+  static constexpr auto calculate_B() {
+    constexpr auto points1D = GaussLegendreNodes<q>();
+    constexpr auto weights1D = GaussLegendreWeights<q>();
+    tensor<double, q, n> B{};
+    for (int i = 0; i < q; i++) {
+      B[i] = GaussLobattoInterpolation<n>(points1D[i]);
+      if constexpr (apply_weights) B[i] = B[i] * weights1D[i];
+    }
+    return B;
+  }
+
+  template < bool apply_weights, int q >
+  static constexpr auto calculate_G() {
+    constexpr auto points1D = GaussLegendreNodes<q>();
+    constexpr auto weights1D = GaussLegendreWeights<q>();
+    tensor<double, q, n> G{};
+    for (int i = 0; i < q; i++) {
+      G[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);
+      if constexpr (apply_weights) G[i] = G[i] * weights1D[i];
+    }
+    return G;
+  }
+
   template <int q>
-  static auto interpolate(const dof_type& X, const tensor<double, dim, dim, q * q * q>& jacobians,
-                          const TensorProductQuadratureRule<q>&)
+  static auto interpolate(const dof_type& X, const TensorProductQuadratureRule<q>&)
   {
     // we want to compute the following:
     //
@@ -115,23 +138,9 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
     // A1(dz, dy, qx)  := B(qx, dx) * X_e(dz, dy, dx)
     // A2(dz, qy, qx)  := B(qy, dy) * A1(dz, dy, qx)
     // X_q(qz, qy, qx) := B(qz, dz) * A2(dz, qy, qx)
-
-    static constexpr auto points1D = GaussLegendreNodes<q>();
-    static constexpr auto B        = [=]() {
-      tensor<double, q, n> B_{};
-      for (int i = 0; i < q; i++) {
-        B_[i] = GaussLobattoInterpolation<n>(points1D[i]);
-      }
-      return B_;
-    }();
-
-    static constexpr auto G = [=]() {
-      tensor<double, q, n> G_{};
-      for (int i = 0; i < q; i++) {
-        G_[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);
-      }
-      return G_;
-    }();
+    static constexpr bool apply_weights = false;
+    static constexpr auto B = calculate_B<apply_weights, q>();
+    static constexpr auto G = calculate_G<apply_weights, q>();
 
     cache_type<q> cache;
 
@@ -152,87 +161,53 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
       gradient(i,2) = contract<0, 1>(cache.A2[0], G);
     }
 
+    // transpose the quadrature data into a flat tensor of tuples
     union {
-      tensor< qf_input_type, q * q * q > a;
-      tensor< tuple < tensor< double, c >, tensor< double, c, 3 > >, q * q * q > b;
+      tensor< qf_input_type, q * q * q > one_dimensional;
+      tensor< tuple < tensor< double, c >, tensor< double, c, dim > >, q, q, q > three_dimensional;
     } output;
 
-    int k = 0;
     for (int qz = 0; qz < q; qz++) {
       for (int qy = 0; qy < q; qy++) {
         for (int qx = 0; qx < q; qx++) {
-          tensor<double, dim, dim> J;
-          for (int row = 0; row < dim; row++) {
-            for (int col = 0; col < dim; col++) {
-              J[row][col] = jacobians(col, row, k);
-            }
-          }
-
           for (int i = 0; i < c; i++) {
-            get<VALUE>(output.b[k])[i] = value(i, qz, qy, qx);
+            get<VALUE>(output.three_dimensional(qz, qy, qx))[i] = value(i, qz, qy, qx);
             for (int j = 0; j < dim; j++) {
-              get<GRADIENT>(output.b[k])[i][j] = gradient(i, j, qz, qy, qx);
+              get<GRADIENT>(output.three_dimensional(qz, qy, qx))[i][j] = gradient(i, j, qz, qy, qx);
             }
           }
-
-          get<GRADIENT>(output.b[k]) = dot(get<GRADIENT>(output.b[k]), inv(J));
-
-          k++;
         }
       }
     }
  
-    return output.a;
+    return output.one_dimensional;
+
   }
 
   template <typename source_type, typename flux_type, int q>
   static void integrate(tensor< tuple< source_type, flux_type >, q * q * q > & qf_output,
-                        const tensor<double, dim, dim, q * q * q>& jacobians, const TensorProductQuadratureRule<q>&,
+                        const TensorProductQuadratureRule<q>&,
                         dof_type&                                element_residual)
   {
-    static constexpr auto points1D  = GaussLegendreNodes<q>();
-    static constexpr auto weights1D = GaussLegendreWeights<q>();
-    static constexpr auto B         = [=]() {
-      tensor<double, q, n> B_{};
-      for (int i = 0; i < q; i++) {
-        B_[i] = GaussLobattoInterpolation<n>(points1D[i]);
-      }
-      return B_;
-    }();
-
-    static constexpr auto G = [=]() {
-      tensor<double, q, n> G_{};
-      for (int i = 0; i < q; i++) {
-        G_[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);
-      }
-      return G_;
-    }();
+    static constexpr bool apply_weights = true;
+    static constexpr auto B = calculate_B<apply_weights, q>();
+    static constexpr auto G = calculate_G<apply_weights, q>();
 
     tensor< double, c, q, q, q> source{};
     tensor< double, c, dim, q, q, q> flux{};
 
-    int k = 0;
     for (int qz = 0; qz < q; qz++) {
       for (int qy = 0; qy < q; qy++) {
         for (int qx = 0; qx < q; qx++) {
-          tensor<double, dim, dim> J_T;
-          for (int row = 0; row < dim; row++) {
-            for (int col = 0; col < dim; col++) {
-              J_T[row][col] = jacobians(row, col, k);
-            }
-          }
-          auto dv = det(J_T) * weights1D[qx] * weights1D[qy] * weights1D[qz];
-
-          tensor< double, c > s{get<SOURCE>(qf_output[k]) * dv};
-          tensor< double, c, dim > f{dot(get<FLUX>(qf_output[k]), inv(J_T)) * dv};
-
+          int k = (qz * q + qy) * q + qx;
+          tensor< double, c > s{get<SOURCE>(qf_output[k])};
+          tensor< double, c, dim > f{get<FLUX>(qf_output[k])};
           for (int i = 0; i < c; i++) {
             source(i, qz, qy, qx) = s[i];
             for (int j = 0; j < dim; j++) {
               flux(i, j, qz, qy, qx) = f[i][j];
             }
           }
-          k++;
         }
       }
     }
