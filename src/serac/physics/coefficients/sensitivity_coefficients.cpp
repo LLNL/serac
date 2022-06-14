@@ -30,12 +30,12 @@ double ShearSensitivityCoefficient::Eval(mfem::ElementTransformation& T, const m
 {
   T.SetIntPoint(&ip);
 
-  displacement_.gridFunction(displacement_grid_function_);
+  displacement_.fillGridFunction(displacement_grid_function_);
 
   // Compute the displacement and deformation gradient
   displacement_grid_function_.GetVectorGradient(T, du_dX_);
 
-  adjoint_displacement_.gridFunction(adjoint_displacement_grid_function_);
+  adjoint_displacement_.fillGridFunction(adjoint_displacement_grid_function_);
 
   // Compute the adjoint gradient and strain
   adjoint_displacement_grid_function_.GetVectorGradient(T, dp_dX_);
@@ -80,11 +80,11 @@ double BulkSensitivityCoefficient::Eval(mfem::ElementTransformation& T, const mf
   T.SetIntPoint(&ip);
 
   // Compute the displacement and deformation gradient
-  displacement_.gridFunction(displacement_grid_function_);
+  displacement_.fillGridFunction(displacement_grid_function_);
   displacement_grid_function_.GetVectorGradient(T, du_dX_);
 
   // Compute the adjoint gradient and strain
-  adjoint_displacement_.gridFunction(adjoint_displacement_grid_function_);
+  adjoint_displacement_.fillGridFunction(adjoint_displacement_grid_function_);
   adjoint_displacement_grid_function_.GetVectorGradient(T, dp_dX_);
 
   serac::solid_util::calcLinearizedStrain(dp_dX_, adjoint_strain_);

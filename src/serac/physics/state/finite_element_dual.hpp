@@ -33,30 +33,32 @@ public:
   using FiniteElementVector::FiniteElementVector;
   using FiniteElementVector::operator=;
 
-protected:
   /**
-   * @brief Set the internal grid function using the true DOF values
+   * @brief Fill a user-provided grid function based on the underlying true vector
    *
-   * This distributes true vector dofs to the finite element (local) dofs by multiplying the true dofs
-   * by the transponse of the restriction operator.
+   * This distributes true vector dofs to the finite element (local) dofs  by multiplying the true dofs
+   * by the restriction transpose operator.
    *
    * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
    *
    */
-  void distributeSharedDofs(mfem::ParGridFunction& grid_function) const
+  void fillGridFunction(mfem::ParGridFunction& grid_function) const
   {
     space_->GetRestrictionMatrix()->MultTranspose(*this, grid_function);
   }
 
+protected:
   /**
-   * @brief Initialize the true vector from the grid function values
+   * @brief Initialize the true vector in the FiniteElementDual based on an input grid function
    *
-   * This initializes the true vector dofs by multiplying the finite element (local) dofs
-   * by the transpose of the prolongation operator.
+   * This distributes the grid function dofs to the true vector dofs by multiplying by the
+   * prolongation transpose operator.
    *
    * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
+   *
+   * @param grid_function The grid function used to initialize the underlying true vector.
    */
-  void initializeTrueVec(const mfem::ParGridFunction& grid_function) { grid_function.ParallelAssemble(*this); }
+  void setFromGridFunction(const mfem::ParGridFunction& grid_function) { grid_function.ParallelAssemble(*this); }
 };
 
 }  // namespace serac

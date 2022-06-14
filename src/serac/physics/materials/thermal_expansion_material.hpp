@@ -118,7 +118,6 @@ public:
         temp_grid_function_(temp.gridFunction()),
         temp_coef_(&temp_grid_function_)
   {
-    temp_state_.gridFunction(temp_grid_function_);
   }
 
   /**
