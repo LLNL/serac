@@ -377,7 +377,7 @@ public:
       // mfem::Vector arg0 = ...;
       // mfem::Vector arg1 = ...;
       // e.g. auto [value, gradient_wrt_arg1] = my_functional(arg0, differentiate_wrt(arg1));
-      return typename operator_paren_return<T...>::type{output_T_[0], grad_[wrt]};
+      return camp::make_tuple(output_T_[0], std::ref(grad_[wrt]));
     }
   }
 
