@@ -509,7 +509,6 @@ const FiniteElementState& Solid::solveAdjoint(FiniteElementDual& adjoint_load,
   // the copy constructor only sets the partitioning, it does not copy the actual vector
   // values
   mfem::HypreParVector adjoint_load_vector(adjoint_load);
-  adjoint_load_vector = adjoint_load;
 
   auto& lin_solver = nonlin_solver_.LinearSolver();
 

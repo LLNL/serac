@@ -327,16 +327,24 @@ protected:
    * @brief A reference to the mesh object on which the field is defined
    */
   std::reference_wrapper<mfem::ParMesh> mesh_;
+
   /**
    * @brief Handle to the FiniteElementCollection, which is owned by MFEMSidreDataCollection
    * @note Must be const as FESpaces store a const reference to their FEColls
    */
   std::unique_ptr<mfem::FiniteElementCollection> coll_;
+
   /**
    * @brief Handle to the mfem::ParFiniteElementSpace, which is owned by MFEMSidreDataCollection
    */
   std::unique_ptr<mfem::ParFiniteElementSpace> space_;
 
+  /**
+   * @brief An optional container for a grid function (L-vector) view of the finite element state.
+   *
+   * If a user requests it, it is constructed and potentially reused during subsequent calls. It is
+   * not updated unless specifically requested via the @a gridFunction method.
+   */
   mutable std::unique_ptr<mfem::ParGridFunction> grid_func_;
 
   /**

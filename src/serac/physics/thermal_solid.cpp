@@ -13,23 +13,6 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 3;
 
-void check_solution(const FiniteElementState& temp)
-{
-  for (int i = 0; i < temp.Size(); ++i) {
-    if (std::abs(temp(i) - 2.0) > 1.0e-5) {
-      std::cout << "BAD TRUE VALUE" << std::endl;
-    }
-  }
-
-  auto& grid_func = temp.gridFunction();
-
-  for (int i = 0; i < grid_func.Size(); ++i) {
-    if (std::abs(grid_func(i) - 2.0) > 1.0e-5) {
-      std::cout << "BAD VALUE" << std::endl;
-    }
-  }
-}
-
 ThermalSolid::ThermalSolid(int order, const ThermalConduction::SolverOptions& therm_options,
                            const Solid::SolverOptions& solid_options, const std::string& name, mfem::ParMesh* pmesh)
     : BasePhysics(NUM_FIELDS, order, pmesh),
@@ -41,12 +24,6 @@ ThermalSolid::ThermalSolid(int order, const ThermalConduction::SolverOptions& th
       velocity_(solid_solver_.velocity()),
       displacement_(solid_solver_.displacement())
 {
-  std::cout << "DURING CONSTRUCTION" << std::endl;
-
-  check_solution(temperature_);
-
-  std::cout << "CONSTRUCTION COMPLETE" << std::endl;
-
   // The temperature_, velocity_, displacement_ members are not currently used
   // but presumably will be needed when further coupling schemes are implemented
   // This calls the non-const version

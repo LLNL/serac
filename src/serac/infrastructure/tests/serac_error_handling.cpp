@@ -112,7 +112,7 @@ TEST(SeracErrorHandling, BcRetrieveVecCoef)
   EXPECT_THROW(const_bc.scalarCoefficient(), SlicErrorException);
 }
 
-TEST(serac_error_handling, invalid_cmdline_arg)
+TEST(SeracErrorHandling, InvalidCmdlineArg)
 {
   // The command is actually --input-file
   char const* fake_argv[] = {"serac", "--file", "input.lua"};
