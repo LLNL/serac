@@ -235,6 +235,7 @@ void ThermalConduction::advanceTimestep(double& dt)
 {
   if (is_quasistatic_) {
     nonlin_solver_.Mult(zero_, temperature_);
+    time_ += dt;
   } else {
     SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
 

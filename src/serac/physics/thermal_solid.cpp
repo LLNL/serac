@@ -82,6 +82,7 @@ void ThermalSolid::advanceTimestep(double& dt)
     double initial_dt = dt;
     therm_solver_.advanceTimestep(dt);
     solid_solver_.advanceTimestep(dt);
+    time_ += dt;
     SLIC_ERROR_ROOT_IF(std::abs(dt - initial_dt) > 1.0e-6,
                        "Operator split coupled solvers cannot adaptively change the timestep");
   } else {
