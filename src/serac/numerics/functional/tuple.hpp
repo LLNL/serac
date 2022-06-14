@@ -21,7 +21,7 @@ namespace serac {
 
 // TODO: Use camp::make_tuple and remove serac::make_tuple.
 //       Currently, however, camp::make_tuple causes compilation
-//       errors that I still don't understand.
+//       errors that I don't yet understand.
 /**
  * @brief helper function for combining a list of values into a tuple
  * @tparam T types of the values to be tuple-d
