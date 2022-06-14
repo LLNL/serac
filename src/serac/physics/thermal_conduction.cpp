@@ -56,6 +56,8 @@ ThermalConduction::ThermalConduction(int order, const SolverOptions& options, co
   // Default to constant value of 1.0 for density and specific heat capacity
   cp_  = std::make_unique<mfem::ConstantCoefficient>(1.0);
   rho_ = std::make_unique<mfem::ConstantCoefficient>(1.0);
+
+  temperature_ = 2.0;
 }
 
 ThermalConduction::ThermalConduction(const InputOptions& options, const std::string& name)

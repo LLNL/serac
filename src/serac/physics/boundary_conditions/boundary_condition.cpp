@@ -86,26 +86,25 @@ void BoundaryCondition::project(FiniteElementState& state) const
   // Value semantics for convenience
   auto local_dofs = *local_dofs_;
   auto size       = local_dofs.Size();
-  if (size) {
-    // Generate the scalar dof list from the vector dof list
-    mfem::Array<int> dof_list(size);
-    std::transform(local_dofs.begin(), local_dofs.end(), dof_list.begin(),
-                   [&space = std::as_const(state.space())](int ldof) { return space.VDofToDof(ldof); });
 
-    // the only reason to store a VectorCoefficient is to act on all components
-    if (is_vector_valued(coef_)) {
-      auto vec_coef = get<std::shared_ptr<mfem::VectorCoefficient>>(coef_);
-      state.project(*vec_coef, dof_list);
+  // Generate the scalar dof list from the vector dof list
+  mfem::Array<int> dof_list(size);
+  std::transform(local_dofs.begin(), local_dofs.end(), dof_list.begin(),
+                 [&space = std::as_const(state.space())](int ldof) { return space.VDofToDof(ldof); });
+
+  // the only reason to store a VectorCoefficient is to act on all components
+  if (is_vector_valued(coef_)) {
+    auto vec_coef = get<std::shared_ptr<mfem::VectorCoefficient>>(coef_);
+    state.project(*vec_coef, dof_list);
+  } else {
+    // an mfem::Coefficient could be used to describe a scalar-valued function, or
+    // a single component of a vector-valued function
+    auto scalar_coef = get<std::shared_ptr<mfem::Coefficient>>(coef_);
+    if (component_) {
+      state.project(*scalar_coef, dof_list, *component_);
+
     } else {
-      // an mfem::Coefficient could be used to describe a scalar-valued function, or
-      // a single component of a vector-valued function
-      auto scalar_coef = get<std::shared_ptr<mfem::Coefficient>>(coef_);
-      if (component_) {
-        state.project(*scalar_coef, dof_list, *component_);
-
-      } else {
-        state.project(*scalar_coef, dof_list, 0);
-      }
+      state.project(*scalar_coef, dof_list, 0);
     }
   }
 }

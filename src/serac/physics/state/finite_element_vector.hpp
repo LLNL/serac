@@ -185,7 +185,7 @@ public:
    */
   void project(mfem::VectorCoefficient& coef, mfem::Array<int>& dof_list)
   {
-    mfem::ParGridFunction grid_function = gridFunction();
+    mfem::ParGridFunction& grid_function = gridFunction();
     grid_function.ProjectCoefficient(coef, dof_list);
     initializeTrueVec(grid_function);
   }
@@ -202,12 +202,14 @@ public:
    */
   void project(mfem::Coefficient& coef, mfem::Array<int>& dof_list, std::optional<int> component = {})
   {
-    mfem::ParGridFunction grid_function = gridFunction();
+    mfem::ParGridFunction& grid_function = gridFunction();
+
     if (component) {
       grid_function.ProjectCoefficient(coef, dof_list, *component);
     } else {
       grid_function.ProjectCoefficient(coef, dof_list, *component);
     }
+
     initializeTrueVec(grid_function);
   }
 
@@ -220,7 +222,7 @@ public:
    */
   void project(const GeneralCoefficient& coef)
   {
-    mfem::ParGridFunction grid_function = gridFunction();
+    mfem::ParGridFunction& grid_function = gridFunction();
 
     // The generic lambda parameter, auto&&, allows the component type (mfem::Coef or mfem::VecCoef)
     // to be deduced, and the appropriate version of ProjectCoefficient is dispatched.
@@ -234,14 +236,14 @@ public:
   /// \overload
   void project(mfem::Coefficient& coef)
   {
-    mfem::ParGridFunction grid_function = gridFunction();
+    mfem::ParGridFunction& grid_function = gridFunction();
     grid_function.ProjectCoefficient(coef);
     initializeTrueVec(grid_function);
   }
   /// \overload
   void project(mfem::VectorCoefficient& coef)
   {
-    mfem::ParGridFunction grid_function = gridFunction();
+    mfem::ParGridFunction& grid_function = gridFunction();
     grid_function.ProjectCoefficient(coef);
     initializeTrueVec(grid_function);
   }
@@ -257,7 +259,7 @@ public:
    */
   void projectBdr(mfem::Coefficient& coef, const mfem::Array<int>& markers)
   {
-    mfem::ParGridFunction grid_function = gridFunction();
+    mfem::ParGridFunction& grid_function = gridFunction();
     // markers should be const param in mfem, but it's not
     grid_function.ProjectBdrCoefficient(coef, const_cast<mfem::Array<int>&>(markers));
     initializeTrueVec(grid_function);
@@ -266,7 +268,7 @@ public:
   /// \overload
   void projectBdr(mfem::VectorCoefficient& coef, const mfem::Array<int>& markers)
   {
-    mfem::ParGridFunction grid_function = gridFunction();
+    mfem::ParGridFunction& grid_function = gridFunction();
     // markers should be const param in mfem, but it's not
     grid_function.ProjectBdrCoefficient(coef, const_cast<mfem::Array<int>&>(markers));
     initializeTrueVec(grid_function);
@@ -284,11 +286,14 @@ public:
    *
    * @return The constructed grid function
    */
-  mfem::ParGridFunction gridFunction() const
+  mfem::ParGridFunction& gridFunction() const
   {
-    mfem::ParGridFunction grid_function(space_.get());
-    distributeSharedDofs(grid_function);
-    return grid_function;
+    if (!grid_func_) {
+      grid_func_ = std::make_unique<mfem::ParGridFunction>(space_.get());
+    }
+
+    distributeSharedDofs(*grid_func_);
+    return *grid_func_;
   }
 
   /**
@@ -331,6 +336,8 @@ protected:
    * @brief Handle to the mfem::ParFiniteElementSpace, which is owned by MFEMSidreDataCollection
    */
   std::unique_ptr<mfem::ParFiniteElementSpace> space_;
+
+  mutable std::unique_ptr<mfem::ParGridFunction> grid_func_;
 
   /**
    * @brief The name of the finite element vector

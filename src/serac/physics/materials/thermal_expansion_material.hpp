@@ -148,7 +148,7 @@ public:
    * @note this must occur once prior to evaluation to ensure the temperature fields are
    * evaluated appropriately.
    */
-  void updateGridFunction() { temp_state_.gridFunction(temp_grid_function_); }
+  void updateGridFunction() { temp_state_.gridFunction(); }
 
   /**
    * @brief Destroy the isotropic thermal expansion object
@@ -182,7 +182,7 @@ protected:
   /**
    * @brief Grid function for the temperature
    */
-  mfem::ParGridFunction temp_grid_function_;
+  mfem::ParGridFunction& temp_grid_function_;
 
   /**
    * @brief Coefficient based on the temperature grid function

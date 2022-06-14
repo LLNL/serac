@@ -21,7 +21,7 @@ thermal_solid = {
     solid = {
         equation_solver = {
             linear = {
-                type = "direct",
+                type = "direct"
             },
 
             nonlinear = {

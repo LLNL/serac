@@ -146,4 +146,10 @@ double norm(const FiniteElementVector& state, const double p)
   }
 }
 
+void print(const FiniteElementVector& state)
+{
+  auto& vector = static_cast<const mfem::Vector&>(state);
+  vector.Print();
+}
+
 }  // namespace serac

@@ -54,10 +54,10 @@ Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities ge
   deformed_nodes_ = std::make_unique<mfem::ParGridFunction>(*reference_nodes_);
 
   if (!StateManager::isRestart()) {
-    displacement_        = 0.0;
-    velocity_            = 0.0;
+    displacement_         = 0.0;
+    velocity_             = 0.0;
     adjoint_displacement_ = 0.0;
-  } 
+  }
 
   const auto& lin_options = options.H_lin_options;
   // If the user wants the AMG preconditioner with a linear solver, set the pfes
