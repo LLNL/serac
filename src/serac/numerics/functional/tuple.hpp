@@ -19,6 +19,9 @@
 
 namespace serac {
 
+// TODO: Use camp::make_tuple and remove serac::make_tuple.
+//       Currently, however, camp::make_tuple causes compilation
+//       errors that I still don't understand.
 /**
  * @brief helper function for combining a list of values into a tuple
  * @tparam T types of the values to be tuple-d
@@ -30,6 +33,11 @@ SERAC_HOST_DEVICE camp::tuple<T...> make_tuple(const T&... args)
   return camp::tuple<T...>{args...};
 }
 
+// TODO: Use camp::get and remove serac::get.
+//       Currently, however, camp::get is too generic - it should look more like serac::get.
+//       // current camp overload
+//       template <camp::idx_t index, class Tuple>
+//       CAMP_HOST_DEVICE constexpr auto& get(const Tuple& t) noexcept;
 /**
  * @tparam i the tuple index to access
  * @tparam T the types stored in the tuple
