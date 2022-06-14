@@ -153,7 +153,7 @@ Solid::Solid(const Solid::InputOptions& options, const std::string& name)
 Solid::~Solid()
 {
   // Update the mesh with the new deformed nodes if requested
-  if (keep_deformation_ == FinalMeshOption::Deformed) {
+  if (keep_deformation_ == FinalMeshOption::Deformed && geom_nonlin_ == GeometricNonlinearities::On) {
     *reference_nodes_ += displacement_.gridFunc();
   }
 
@@ -395,7 +395,10 @@ void Solid::advanceTimestep(double& dt)
   displacement_.initializeTrueVec();
 
   // Set the mesh nodes to the reference configuration
-  mesh_.NewNodes(*reference_nodes_);
+  if (geom_nonlin_ == GeometricNonlinearities::On) {
+    mesh_.NewNodes(*reference_nodes_);
+  }
+
   bcs_.setTime(time_);
 
   if (is_quasistatic_) {
@@ -410,11 +413,12 @@ void Solid::advanceTimestep(double& dt)
   velocity_.distributeSharedDofs();
   displacement_.distributeSharedDofs();
 
-  // Update the mesh with the new deformed nodes
-  deformed_nodes_->Set(1.0, displacement_.gridFunc());
-  deformed_nodes_->Add(1.0, *reference_nodes_);
-
-  mesh_.NewNodes(*deformed_nodes_);
+  if (geom_nonlin_ == GeometricNonlinearities::On) {
+    // Update the mesh with the new deformed nodes
+    deformed_nodes_->Set(1.0, displacement_.gridFunc());
+    deformed_nodes_->Add(1.0, *reference_nodes_);
+    mesh_.NewNodes(*deformed_nodes_);
+  }
 
   cycle_ += 1;
 
