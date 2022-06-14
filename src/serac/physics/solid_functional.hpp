@@ -92,6 +92,8 @@ public:
         parameter_states_(parameter_states),
         ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
               nonlin_solver_, bcs_),
+        c0_(0.0),
+        c1_(0.0),
         geom_nonlin_(geom_nonlin),
         keep_deformation_(keep_deformation)
   {

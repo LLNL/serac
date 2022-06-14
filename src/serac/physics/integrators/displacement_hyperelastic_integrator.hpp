@@ -37,7 +37,7 @@ public:
    */
   explicit DisplacementHyperelasticIntegrator(HyperelasticMaterial& m, ThermalExpansionMaterial& thermal_m,
                                               GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On)
-      : material_(m), thermal_material_(&thermal_m), geom_nonlin_(geom_nonlin)
+      : material_(m), thermal_material_(&thermal_m), det_J_(0.0), geom_nonlin_(geom_nonlin)
   {
   }
 
@@ -49,7 +49,7 @@ public:
    */
   explicit DisplacementHyperelasticIntegrator(HyperelasticMaterial&   m,
                                               GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On)
-      : material_(m), thermal_material_(nullptr), geom_nonlin_(geom_nonlin)
+      : material_(m), thermal_material_(nullptr), det_J_(0.0), geom_nonlin_(geom_nonlin)
   {
   }
 
