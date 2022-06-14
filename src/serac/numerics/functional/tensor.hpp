@@ -460,6 +460,29 @@ SERAC_HOST_DEVICE constexpr auto operator-(const tensor<S, m, n...>& A, const te
 }
 
 /**
+ * @brief elementwise multiplication of two tensors
+ * @tparam S the scalar value type. Must be arithmetic (e.g. float, double, int) or a dual number
+ * @tparam T the underlying type of the tensor (righthand) argument
+ * @tparam n integers describing the tensor shape
+ * @param[in] scale The scaling factor
+ * @param[in] A The tensor to be scaled
+ */
+template <typename S, typename T, int... n>
+SERAC_HOST_DEVICE constexpr auto elementwise_multiply(const tensor< S, n ... > & A, const tensor < T, n ... > & B)
+{
+  using U = decltype(S{} * T{});
+  tensor<U, n...> AB{};
+
+  const S * A_ptr  = reinterpret_cast<const S *>(&A);
+  const T * B_ptr  = reinterpret_cast<const T *>(&B);
+  U * AB_ptr = reinterpret_cast<U *>(&AB);
+  for (int i = 0; i < (n * ...); i++) {
+    AB_ptr[i] = A_ptr[i] * B_ptr[i];
+  }
+  return AB;
+}
+
+/**
  * @brief multiply a tensor by a scalar value
  * @tparam S the scalar value type. Must be arithmetic (e.g. float, double, int) or a dual number
  * @tparam T the underlying type of the tensor (righthand) argument

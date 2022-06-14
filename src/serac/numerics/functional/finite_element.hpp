@@ -52,6 +52,13 @@ struct Dimension {
 };
 
 template <Geometry g, int q>
+SERAC_HOST_DEVICE constexpr int num_quadrature_points() {
+  if (g == Geometry::Quadrilateral) { return q * q; }
+  if (g == Geometry::Hexahedron) { return q * q * q; }
+  return -1;
+}
+
+template <Geometry g, int q>
 struct batched_jacobian;
 
 template <int q>

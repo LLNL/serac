@@ -59,6 +59,7 @@ void check_gradient(Functional<T>& f, mfem::Vector& U)
   std::cout << relative_error1 << " " << relative_error2 << std::endl;
 }
 
+#if 0
 TEST(basic, nonlinear_thermal_test_2D)
 {
   int serial_refinement   = 0;
@@ -94,12 +95,18 @@ TEST(basic, nonlinear_thermal_test_2D)
       *mesh2D);
 
   // TODO: reenable surface integrals
-  // residual.AddSurfaceIntegral([=](auto x, auto /*n*/, auto u) { return x[0] + x[1] - cos(u); }, *mesh2D);
+  residual.AddBoundaryIntegral(Dimension<1>{}, [=](auto x, auto /*n*/, auto temperature) { 
+        auto [u, du_dxi] = temperature;
+        return x[0] + x[1] - cos(u); 
+      }, 
+      *mesh2D);
+
 
   check_gradient(residual, U);
 }
+#endif
 
-#if 0
+#if 1
 TEST(basic, nonlinear_thermal_test_3D)
 {
   int serial_refinement   = 0;
@@ -125,17 +132,21 @@ TEST(basic, nonlinear_thermal_test_3D)
   // Construct the new functional object using the known test and trial spaces
   Functional<test_space(trial_space)> residual(&fespace, {&fespace});
 
-  residual.AddVolumeIntegral(
-      [=](auto x, auto temperature) {
-        auto [u, du_dx] = temperature;
-        auto source     = u * u - (100 * x[0] * x[1]);
-        auto flux       = du_dx;
-        return serac::tuple{source, flux};
-      },
-      *mesh3D);
+  //residual.AddVolumeIntegral(
+  //    [=](auto x, auto temperature) {
+  //      auto [u, du_dx] = temperature;
+  //      auto source     = u * u - (100 * x[0] * x[1]);
+  //      auto flux       = du_dx;
+  //      return serac::tuple{source, flux};
+  //    },
+  //    *mesh3D);
 
   // TODO: reenable surface integrals
-  residual.AddSurfaceIntegral([=](auto x, auto /*n*/, auto u) { return x[0] + x[1] - cos(u); }, *mesh3D);
+  residual.AddSurfaceIntegral([=](auto x, auto /*n*/, auto temperature) { 
+        auto [u, du_dxi] = temperature;
+        return x[0] + x[1] - cos(u) + norm(du_dxi); 
+      }, 
+      *mesh3D);
 
   check_gradient(residual, U);
 }
