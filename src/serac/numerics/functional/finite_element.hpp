@@ -53,6 +53,7 @@ struct Dimension {
 
 template <Geometry g, int q>
 SERAC_HOST_DEVICE constexpr int num_quadrature_points() {
+  if (g == Geometry::Segment) { return q; }
   if (g == Geometry::Quadrilateral) { return q * q; }
   if (g == Geometry::Hexahedron) { return q * q * q; }
   return -1;
@@ -82,6 +83,11 @@ struct batched_position<Geometry::Hexahedron, q> {
 template <int q>
 struct batched_position<Geometry::Quadrilateral, q> {
   using type = tensor<double, 2, q * q>;
+};
+
+template <int q>
+struct batched_position<Geometry::Segment, q> {
+  using type = tensor<double, q>;
 };
 
 template <Geometry g>

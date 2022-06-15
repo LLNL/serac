@@ -59,7 +59,6 @@ void check_gradient(Functional<T>& f, mfem::Vector& U)
   std::cout << relative_error1 << " " << relative_error2 << std::endl;
 }
 
-#if 0
 TEST(basic, nonlinear_thermal_test_2D)
 {
   int serial_refinement   = 0;
@@ -104,9 +103,7 @@ TEST(basic, nonlinear_thermal_test_2D)
 
   check_gradient(residual, U);
 }
-#endif
 
-#if 1
 TEST(basic, nonlinear_thermal_test_3D)
 {
   int serial_refinement   = 0;
@@ -150,7 +147,6 @@ TEST(basic, nonlinear_thermal_test_3D)
 
   check_gradient(residual, U);
 }
-#endif
 
 int main(int argc, char* argv[])
 {

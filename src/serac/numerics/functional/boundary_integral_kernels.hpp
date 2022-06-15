@@ -196,10 +196,11 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
   {
     // mfem provides this information in 1D arrays, so we reshape it
     // into strided multidimensional arrays before using
+    constexpr int dim = dimension_of(geom);
     constexpr int nqp = num_quadrature_points<geom, Q>();
     auto J = reinterpret_cast<const tensor< double, nqp > *>(J_.Read());
-    auto X = reinterpret_cast<const typename batched_position<geom, Q>::type*>(X_.Read());
-    auto N = reinterpret_cast<const typename batched_position<geom, Q>::type*>(N_.Read());
+    auto X = reinterpret_cast<const tensor< double, dim, nqp > *>(X_.Read());
+    auto N = reinterpret_cast<const tensor< double, dim, nqp > *>(N_.Read());
     auto r = reinterpret_cast<typename test_element::dof_type*>(R.ReadWrite());
     static constexpr TensorProductQuadratureRule<Q> rule{};
 
@@ -285,10 +286,11 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
   {
     // mfem provides this information in 1D arrays, so we reshape it
     // into strided multidimensional arrays before using
+    constexpr int dim = dimension_of(geom);
     constexpr int nqp = num_quadrature_points<geom, Q>();
     auto J = reinterpret_cast<const tensor< double, nqp > *>(J_.Read());
-    auto X = reinterpret_cast<const typename batched_position<geom, Q>::type*>(X_.Read());
-    auto N = reinterpret_cast<const typename batched_position<geom, Q>::type*>(N_.Read());
+    auto X = reinterpret_cast<const tensor< double, dim, nqp > *>(X_.Read());
+    auto N = reinterpret_cast<const tensor< double, dim, nqp > *>(N_.Read());
     auto r = reinterpret_cast<typename test_element::dof_type*>(R.ReadWrite());
     static constexpr TensorProductQuadratureRule<Q> rule{};
 
