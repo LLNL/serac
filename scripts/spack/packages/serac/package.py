@@ -91,10 +91,11 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     depends_on("sundials@5.7.0~shared+hypre+monitoring~examples~examples-install",
                when="+sundials")
+    depends_on("sundials+asan", when="+sundials+asan")
 
     # Libraries that support +debug
     mfem_variants = "~shared+metis+superlu-dist+lapack+mpi"
-    debug_deps = ["mfem@4.3.0serac{0}".format(mfem_variants),
+    debug_deps = ["mfem{0}".format(mfem_variants),
                   "hypre@2.18.2~shared~superlu-dist+mpi"]
 
     depends_on("petsc~shared", when="+petsc")
@@ -107,6 +108,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("mfem+petsc", when="+petsc")
     depends_on("mfem+sundials", when="+sundials")
     depends_on("mfem+amgx", when="+cuda")
+    depends_on("mfem+asan", when="+asan")
     depends_on("netcdf-c@4.7.4~shared", when="+netcdf")
 
     # Needs to be first due to a bug with the Spack concretizer
@@ -115,17 +117,19 @@ class Serac(CachedCMakePackage, CudaPackage):
     #  (includes, libs, etc) instead of hdf5 info
     depends_on("hdf5@1.8.21+hl~mpi~shared")
 
+    depends_on("camp")
+
     depends_on("raja~shared~examples~exercises", when="+raja")
     depends_on("raja~openmp", when="+raja~openmp")
     depends_on("raja+openmp", when="+raja+openmp")
-    depends_on("camp", when="+raja")
 
-    depends_on("umpire@6.0.0serac~shared~examples~device_alloc", when="+umpire")
+    depends_on("umpire@2022.03.1~shared~examples~device_alloc", when="+umpire")
     depends_on("umpire~openmp", when="+umpire~openmp")
     depends_on("umpire+openmp", when="+umpire+openmp")
+    depends_on("umpire build_type=Debug", when="+umpire+debug")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
-    axom_spec = "axom@0.6.1serac~fortran~examples+mfem~shared+cpp14+lua"
+    axom_spec = "axom~fortran~examples+mfem~shared+cpp14+lua"
     cmake_debug_deps = [axom_spec,
                         "metis@5.1.0~shared",
                         "parmetis@4.0.3~shared"]
@@ -139,7 +143,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("axom+openmp", when="+openmp")
 
     # Libraries that do not have a debug variant
-    depends_on("conduit@0.7.2serac~shared~python~test")
+    depends_on("conduit~shared~python~test")
     depends_on("adiak@0.2.1~shared+mpi", when="+profiling")
     depends_on("caliper@2.7.0~shared+mpi+adiak~papi", when="+profiling")
     depends_on("superlu-dist@6.1.1~shared")
@@ -290,7 +294,7 @@ class Serac(CachedCMakePackage, CudaPackage):
 
         # required tpls
         # Note: lua is included in the case that axom is built via submodule
-        for dep in ('axom', 'conduit', 'lua', 'mfem', 'hdf5',
+        for dep in ('axom', 'camp', 'conduit', 'lua', 'mfem', 'hdf5',
                     'hypre', 'metis', 'parmetis'):
             dep_dir = get_spec_path(spec, dep, path_replacements)
             entries.append(cmake_cache_path('%s_DIR' % dep.upper(),

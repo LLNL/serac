@@ -4,6 +4,10 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
+if(ENABLE_TESTS)
+    add_subdirectory(tests)
+endif()
+
 set(materials_sources
     hyperelastic_material.cpp
     thermal_expansion_material.cpp
@@ -17,11 +21,13 @@ set(materials_headers
     thermal_functional_material.hpp
     parameterized_thermal_functional_material.hpp    
     solid_functional_material.hpp
+    parameterized_solid_functional_material.hpp
     functional_material_utils.hpp
     )
 
 set(materials_depends
     serac_infrastructure
+    serac_functional
     serac_numerics
     mfem
     )

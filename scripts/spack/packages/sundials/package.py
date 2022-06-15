@@ -139,6 +139,29 @@ class Sundials(CMakePackage, CudaPackage, ROCmPackage):
     variant('profiling', default=False, when='@6.0.0:',
             description='Build with profiling capabilities')
 
+    # SERAC EDIT BEGIN - Add AddressSanitizer variant for memory debugging
+    variant('asan', default=False, description='Add Address Sanitizer flags')
+
+    # AddressSanitizer (ASan) is only supported by GCC and (some) LLVM-derived
+    # compilers. Blacklist compilers not known to support ASan
+    asan_compiler_blacklist = {
+        'aocc', 'arm', 'cce', 'fj', 'intel', 'nag', 'nvhpc', 'oneapi', 'pgi',
+        'xl', 'xl_r'
+    }
+
+    # Whitelist of compilers known to support Address Sanitizer.
+    asan_compiler_whitelist = {'gcc', 'clang', 'apple-clang'}
+
+    # ASan compiler blacklist and whitelist should be disjoint.
+    assert len(asan_compiler_blacklist & asan_compiler_whitelist) == 0
+
+    for compiler_ in asan_compiler_blacklist:
+        conflicts("%{0}".format(compiler_),
+                  when="+asan",
+                  msg="{0} compilers do not support Address Sanitizer".format(
+                      compiler_))
+    # SERAC EDIT END
+
     # ==========================================================================
     # Conflicts
     # ==========================================================================
@@ -238,6 +261,18 @@ class Sundials(CMakePackage, CudaPackage, ROCmPackage):
     # ==========================================================================
     # SUNDIALS Settings
     # ==========================================================================
+
+    # SERAC EDIT BEGIN - Add ASan variant for memory debugging
+    def setup_build_environment(self, env):
+        if '+asan' in self.spec:
+            for flag in ("CFLAGS", "CXXFLAGS", "LDFLAGS"):
+                env.append_flags(flag, "-fsanitize=address")
+
+            for flag in ("CFLAGS", "CXXFLAGS"):
+                env.append_flags(flag, "-fno-omit-frame-pointer")
+                if '+debug' in self.spec:
+                    env.append_flags(flag, "-fno-optimize-sibling-calls")
+    # SERAC EDIT END
 
     def cmake_args(self):
         spec = self.spec

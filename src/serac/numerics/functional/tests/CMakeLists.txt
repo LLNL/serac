@@ -14,7 +14,6 @@ blt_add_executable(NAME        tensor_unit_tests
 
 # Then add the examples/tests
 set(functional_tests_serial
-    get_qf_derivative_type.cpp
     hcurl_unit_tests.cpp
     test_tensor_ad.cpp
     tuple_arithmetic_unit_tests.cpp)
@@ -38,11 +37,10 @@ serac_add_tests( SOURCES ${functional_tests_mpi}
                  DEPENDS_ON gtest serac_functional serac_state ${functional_depends}
                  NUM_MPI_TASKS 4 )
 
-# not sure how we want to handle performance-related tests
 set(functional_performance_tests
     performance/J2_material_with_AD.cpp
     performance/diffusion_performance_test.cpp)
- 
+
 foreach(filename ${functional_performance_tests})
     get_filename_component(test_name ${filename} NAME_WE)
     blt_add_executable(NAME        ${test_name}

@@ -94,7 +94,7 @@ public:
    * @param[in] bulk Bulk modulus K
    */
   NeoHookeanMaterial(std::unique_ptr<mfem::Coefficient>&& mu, std::unique_ptr<mfem::Coefficient>&& bulk)
-      : c_mu_(std::move(mu)), c_bulk_(std::move(bulk))
+      : mu_(0.0), bulk_(0.0), c_mu_(std::move(mu)), c_bulk_(std::move(bulk))
   {
   }
 
@@ -104,7 +104,7 @@ public:
    * @param[in] du_dX The displacement gradient
    * @return Strain energy density
    */
-  virtual double evalStrainEnergy(const mfem::DenseMatrix& du_dX) const;
+  virtual double evalStrainEnergy(const mfem::DenseMatrix& du_dX) const override;
 
   /**
    * @brief Evaluate the Cauchy stress
@@ -112,7 +112,7 @@ public:
    * @param[in] du_dX The displacement gradient
    * @param[out] sigma The evaluated Cauchy stress
    */
-  virtual void evalStress(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& sigma) const;
+  virtual void evalStress(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& sigma) const override;
 
   /**
    * @brief Evaluate the derivative of the Kirchoff stress wrt the deformation gradient
@@ -120,7 +120,7 @@ public:
    * @param[in] du_dX The displacement gradient
    * @param[out] C Tangent moduli 4D Array
    */
-  virtual void evalTangentStiffness(const mfem::DenseMatrix& du_dX, axom::Array<double, 4>& C) const;
+  virtual void evalTangentStiffness(const mfem::DenseMatrix& du_dX, axom::Array<double, 4>& C) const override;
 
   /**
    * @brief Destroy the Hyperelastic Material object
@@ -192,7 +192,7 @@ public:
    * @param[in] bulk Bulk modulus K
    */
   LinearElasticMaterial(std::unique_ptr<mfem::Coefficient>&& mu, std::unique_ptr<mfem::Coefficient>&& bulk)
-      : c_mu_(std::move(mu)), c_bulk_(std::move(bulk))
+      : mu_(0.0), bulk_(0.0), c_mu_(std::move(mu)), c_bulk_(std::move(bulk))
   {
   }
 
@@ -201,7 +201,7 @@ public:
    *
    * @return Strain energy density
    */
-  virtual double evalStrainEnergy(const mfem::DenseMatrix&) const
+  virtual double evalStrainEnergy(const mfem::DenseMatrix&) const override
   {
     SLIC_ERROR("Strain energy not implemented for the linear elastic material!");
     return 0.0;
@@ -213,7 +213,7 @@ public:
    * @param[in] du_dX the displacement gradient
    * @param[out] sigma The evaluated Cauchy stress
    */
-  virtual void evalStress(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& sigma) const;
+  virtual void evalStress(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& sigma) const override;
 
   /**
    * @brief Evaluate the derivative of the Kirchoff stress wrt the deformation gradient
@@ -221,7 +221,7 @@ public:
    * @param[in] du_dX the displacement gradient
    * @param[out] C Tangent moduli 4D Array
    */
-  virtual void evalTangentStiffness(const mfem::DenseMatrix& du_dX, axom::Array<double, 4>& C) const;
+  virtual void evalTangentStiffness(const mfem::DenseMatrix& du_dX, axom::Array<double, 4>& C) const override;
 
   /**
    * @brief Destroy the Hyperelastic Material object

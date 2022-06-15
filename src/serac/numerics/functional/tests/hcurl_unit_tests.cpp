@@ -4,11 +4,12 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+#include "axom/slic/core/SimpleLogger.hpp"
+#include <gtest/gtest.h>
+
 #include "serac/numerics/functional/detail/metaprogramming.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/finite_element.hpp"
-
-#include <gtest/gtest.h>
 
 using namespace serac;
 
@@ -76,59 +77,59 @@ void verify_curl_calculation()
   }
 }
 
-TEST(verify_kronecker_delta, Quadrilateral_Linear)
+TEST(VerifyKroneckerdelta, QuadrilateralLinear)
 {
   verify_kronecker_delta_property<finite_element<::Geometry::Quadrilateral, Hcurl<1>>>();
 }
 
-TEST(verify_kronecker_delta, Quadrilateral_Quadratic)
+TEST(VerifyKroneckerdelta, QuadrilateralQuadratic)
 {
   verify_kronecker_delta_property<finite_element<::Geometry::Quadrilateral, Hcurl<2>>>();
 }
 
-TEST(verify_kronecker_delta, Quadrilateral_Cubic)
+TEST(VerifyKroneckerdelta, QuadrilateralCubic)
 {
   verify_kronecker_delta_property<finite_element<::Geometry::Quadrilateral, Hcurl<3>>>();
 }
 
-TEST(verify_kronecker_delta, Hexahedron_Linear)
+TEST(VerifyKroneckerdelta, HexahedronLinear)
 {
   verify_kronecker_delta_property<finite_element<::Geometry::Hexahedron, Hcurl<1>>>();
 }
 
-TEST(verify_kronecker_delta, Hexahedron_Quadratic)
+TEST(VerifyKroneckerdelta, HexahedronQuadratic)
 {
   verify_kronecker_delta_property<finite_element<::Geometry::Hexahedron, Hcurl<2>>>();
 }
 
-TEST(verify_kronecker_delta, Hexahedron_Cubic)
+TEST(VerifyKroneckerdelta, HexahedronCubic)
 {
   verify_kronecker_delta_property<finite_element<::Geometry::Hexahedron, Hcurl<3>>>();
 }
 
-TEST(verify_curl, Quadrilateral_Linear)
+TEST(VerifyCurl, QuadrilateralLinear)
 {
   verify_curl_calculation<finite_element<::Geometry::Quadrilateral, Hcurl<1>>>();
 }
 
-TEST(verify_curl, Quadrilateral_Quadratic)
+TEST(VerifyCurl, QuadrilateralQuadratic)
 {
   verify_curl_calculation<finite_element<::Geometry::Quadrilateral, Hcurl<2>>>();
 }
 
-TEST(verify_curl, Quadrilateral_Cubic)
-{
-  verify_curl_calculation<finite_element<::Geometry::Quadrilateral, Hcurl<3>>>();
-}
+TEST(VerifyCurl, QuadrilateralCubic) { verify_curl_calculation<finite_element<::Geometry::Quadrilateral, Hcurl<3>>>(); }
 
-TEST(verify_curl, Hexahedron_Linear) { verify_curl_calculation<finite_element<::Geometry::Hexahedron, Hcurl<1>>>(); }
+TEST(VerifyCurl, HexahedronLinear) { verify_curl_calculation<finite_element<::Geometry::Hexahedron, Hcurl<1>>>(); }
 
-TEST(verify_curl, Hexahedron_Quadratic) { verify_curl_calculation<finite_element<::Geometry::Hexahedron, Hcurl<2>>>(); }
+TEST(VerifyCurl, HexahedronQuadratic) { verify_curl_calculation<finite_element<::Geometry::Hexahedron, Hcurl<2>>>(); }
 
-TEST(verify_curl, Hexahedron_Cubic) { verify_curl_calculation<finite_element<::Geometry::Hexahedron, Hcurl<3>>>(); }
+TEST(VerifyCurl, HexahedronCubic) { verify_curl_calculation<finite_element<::Geometry::Hexahedron, Hcurl<3>>>(); }
 
 int main(int argc, char* argv[])
 {
   ::testing::InitGoogleTest(&argc, argv);
+
+  axom::slic::SimpleLogger logger;
+
   return RUN_ALL_TESTS();
 }

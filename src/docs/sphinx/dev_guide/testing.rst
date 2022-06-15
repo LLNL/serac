@@ -24,7 +24,7 @@ Integration Tests
 -----------------
 
 .. note::
-  This is very much in development and is not fully featured.
+  Integration testing is in development and not fully featured.
 
 Requirements:
 
@@ -32,6 +32,17 @@ Requirements:
 * ``ATS_EXECUTABLE`` defined in the host-config (added automatically to
   Spack generated host-configs) or on 
   command line via ``-DATS_EXECUTABLE=/path/to/ats``.
+* If using a personal machine, check the ``ats-config`` directory in the serac
+  repo and create a json file ``<your_machine_name>.json`` if you haven't already.
+  Your machine's name can be found by running the following lines of code::
+
+      $ python3
+      >>> import socket
+      >>> socket.gethostname().rstrip('1234567890')
+      >>> exit()
+
+  Currently, there are configuration json files for Toss3 and BlueOS which can be
+  used as reference.
 
 #. **Build the code.**
    Build code with the normal steps. More info in the :ref:`quickstart-label`.
@@ -48,6 +59,8 @@ Requirements:
      
      # Personal Machine (currently runs subset of tests)
      $ ./ats.sh
+
+   Append ``--help`` to the command to see the current options.
 
 #. **View results.**
    ATS gives a running summary and the final results.  ATS also outputs the following
@@ -84,3 +97,4 @@ easier in ``tests/test.ats``.
       :end-before: _serac_tolerance_test_end
       :language: text
       :dedent: 4
+

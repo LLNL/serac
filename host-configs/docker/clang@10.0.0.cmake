@@ -7,29 +7,29 @@
 #------------------------------------------------------------------------------
 # Compilers
 #------------------------------------------------------------------------------
-# Compiler Spec: gcc@9.3.0
+# Compiler Spec: clang@10.0.0
 #------------------------------------------------------------------------------
 if(DEFINED ENV{SPACK_CC})
 
-  set(CMAKE_C_COMPILER "/home/serac/serac_tpls/spack/lib/spack/env/gcc/gcc" CACHE PATH "")
+  set(CMAKE_C_COMPILER "/home/serac/serac_tpls/spack/lib/spack/env/clang/clang" CACHE PATH "")
 
-  set(CMAKE_CXX_COMPILER "/home/serac/serac_tpls/spack/lib/spack/env/gcc/g++" CACHE PATH "")
+  set(CMAKE_CXX_COMPILER "/home/serac/serac_tpls/spack/lib/spack/env/clang/clang++" CACHE PATH "")
 
-  set(CMAKE_Fortran_COMPILER "/home/serac/serac_tpls/spack/lib/spack/env/gcc/gfortran" CACHE PATH "")
+  set(CMAKE_Fortran_COMPILER "/home/serac/serac_tpls/spack/lib/spack/env/clang/gfortran" CACHE PATH "")
 
 else()
 
-  set(CMAKE_C_COMPILER "/usr/bin/gcc-9" CACHE PATH "")
+  set(CMAKE_C_COMPILER "/usr/bin/clang" CACHE PATH "")
 
-  set(CMAKE_CXX_COMPILER "/usr/bin/g++-9" CACHE PATH "")
+  set(CMAKE_CXX_COMPILER "/usr/bin/clang++" CACHE PATH "")
 
   set(CMAKE_Fortran_COMPILER "/usr/bin/gfortran" CACHE PATH "")
 
 endif()
 
-set(CMAKE_C_FLAGS "-pthread" CACHE STRING "")
+set(CMAKE_C_FLAGS "-fPIC -pthread" CACHE STRING "")
 
-set(CMAKE_CXX_FLAGS "-pthread" CACHE STRING "")
+set(CMAKE_CXX_FLAGS "-fPIC -pthread" CACHE STRING "")
 
 #------------------------------------------------------------------------------
 # MPI
@@ -57,27 +57,29 @@ set(ENABLE_OPENMP ON CACHE BOOL "")
 # TPLs
 #------------------------------------------------------------------------------
 
-set(TPL_ROOT "/home/serac/serac_tpls/gcc-9.3.0" CACHE PATH "")
+set(TPL_ROOT "/home/serac/serac_tpls/clang-10.0.0" CACHE PATH "")
 
-set(AXOM_DIR "${TPL_ROOT}/axom-0.6.1serac" CACHE PATH "")
+set(AXOM_DIR "${TPL_ROOT}/axom-0.6.1.3-kvtxqll3ciwsq3y27kc6kffqo4dxslic" CACHE PATH "")
 
-set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.7.2serac" CACHE PATH "")
+set(CAMP_DIR "${TPL_ROOT}/camp-2022.03.0-y2x5kwxnychiiqfn67ijcugyik7j3mug" CACHE PATH "")
 
-set(LUA_DIR "${TPL_ROOT}/lua-5.3.5" CACHE PATH "")
+set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.8.3-7h45s2euddyiwwjp3vaxpxv6yojrthji" CACHE PATH "")
 
-set(MFEM_DIR "${TPL_ROOT}/mfem-4.3.0serac" CACHE PATH "")
+set(LUA_DIR "${TPL_ROOT}/lua-5.3.5-3254e6ryct7odseplj3h76t2t42ldiiw" CACHE PATH "")
 
-set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.21" CACHE PATH "")
+set(MFEM_DIR "${TPL_ROOT}/mfem-4.3.0.1-erh4in7luiqjbogbry4vbyzotyibefxj" CACHE PATH "")
 
-set(HYPRE_DIR "${TPL_ROOT}/hypre-2.18.2" CACHE PATH "")
+set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.21-yk63pqqhkxiq5algvyp7riiwae4cmcs6" CACHE PATH "")
 
-set(METIS_DIR "${TPL_ROOT}/metis-5.1.0" CACHE PATH "")
+set(HYPRE_DIR "${TPL_ROOT}/hypre-2.18.2-x7n773cxfnn6wovkhm7dombdw32h3vxv" CACHE PATH "")
 
-set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3" CACHE PATH "")
+set(METIS_DIR "${TPL_ROOT}/metis-5.1.0-6dpwyponlgfilbkddj3wmlieunqkb2yk" CACHE PATH "")
 
-set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4" CACHE PATH "")
+set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3-7uxysjj3j4cklktmkrdcdrlh7g6mocfb" CACHE PATH "")
 
-set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1" CACHE PATH "")
+set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4-zzmt6wwkhzqjxysh2q7mgktsonyhnugt" CACHE PATH "")
+
+set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1-uqgf7mi7blb44qe2xpmnmyvlyx7gx4im" CACHE PATH "")
 
 # ADIAK not built
 
@@ -87,11 +89,11 @@ set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1" CACHE PATH "")
 
 # PETSC not built
 
-set(RAJA_DIR "${TPL_ROOT}/raja-0.14.0" CACHE PATH "")
+set(RAJA_DIR "${TPL_ROOT}/raja-2022.03.0-wjefqak2flrewnoew2dntul2hfk25s3a" CACHE PATH "")
 
-set(SUNDIALS_DIR "${TPL_ROOT}/sundials-5.7.0" CACHE PATH "")
+set(SUNDIALS_DIR "${TPL_ROOT}/sundials-5.7.0-ktmatnfeu57mp4sc4jxht2biqos2hthl" CACHE PATH "")
 
-set(UMPIRE_DIR "${TPL_ROOT}/umpire-6.0.0serac" CACHE PATH "")
+set(UMPIRE_DIR "${TPL_ROOT}/umpire-2022.03.1-eitwlpyqp7ccgff6iqzxgp36et7m2v6i" CACHE PATH "")
 
 #------------------------------------------------------------------------------
 # Devtools

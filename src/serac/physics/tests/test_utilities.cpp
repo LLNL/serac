@@ -6,9 +6,8 @@
 
 #include "test_utilities.hpp"
 
-#include <gtest/gtest.h>
-
 #include "axom/core.hpp"
+#include <gtest/gtest.h>
 
 #include "serac/infrastructure/input.hpp"
 #include "serac/mesh/mesh_utils.hpp"

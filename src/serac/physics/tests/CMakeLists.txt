@@ -17,6 +17,7 @@ blt_add_library(
 set(serial_solver_tests
     serac_solid_sensitivity.cpp
     serac_thermal_functional_finite_diff.cpp
+    serac_solid_functional_finite_diff.cpp
     )
 
 serac_add_tests( SOURCES ${serial_solver_tests}
@@ -33,6 +34,7 @@ set(solver_tests
     serac_thermal_solid_solver.cpp
     serac_thermal_expansion.cpp
     serac_thermal_functional.cpp
+    serac_thermal_solid_functional.cpp
     )
 
 serac_add_tests( SOURCES ${solver_tests}

@@ -23,4 +23,5 @@ RUN mkdir -p /home/serac/export_hostconfig
 RUN cp ./serac_repo/*.cmake /home/serac/export_hostconfig
 
 # Make sure the new hostconfig worked
-RUN cd serac_repo && python3 config-build.py -hc *.cmake -bp build && cd build && make -j && make -j test && cd /home/serac && rm -rf serac_repo
+# Note: having high job slots causes build log to disappear and job to fail
+RUN cd serac_repo && python3 config-build.py -hc *.cmake -bp build && cd build && make -j4 && make -j4 test && cd /home/serac && rm -rf serac_repo

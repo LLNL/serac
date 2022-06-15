@@ -38,16 +38,35 @@ def ensure_file(path):
         sys.exit(1)
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Compare two Serac summary files")
-    group = parser.add_mutually_exclusive_group(required=True)
+    usage = """
+Compare two Serac summary files.
+
+Example usages for --tolerance:
+    --tolerance=0.001 // used for all field values
+    --tolerance=default:0.001,velocity:0.1,displacement:0.234 // default is for all non-specified tolerances
+
+Example usage for --tolerance-file:
+    --tolerance-file=tolerance_low.json
+
+Example JSON file for --tolerance-file:
+    {
+        \"default\": 0.0001,   // default is for all non-specified tolerances
+        \"velocity\": 0.001,   // specific field value tolerance
+        \"displacement\":0.01
+    }
+"""
+
+    parser = argparse.ArgumentParser(description=usage,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    tolerance_group = parser.add_mutually_exclusive_group(required=True)
 
     parser.add_argument("--baseline", type=str, required=True,
                         help="Path to baseline summary file")
     parser.add_argument("--test", type=str, required=True,
                         help="Path to test summary file")
-    group.add_argument("--tolerance", type=str,
+    tolerance_group.add_argument("--tolerance", type=str,
                         help="Allowed tolerance amount for individual values")
-    group.add_argument("--tolerance-file", type=str,
+    tolerance_group.add_argument("--tolerance-file", type=str,
                         help="JSON file specifying tolerance amount for specific values")
 
     args = parser.parse_args()
@@ -79,7 +98,7 @@ def parse_tolerance_query(query):
     if ":" not in query:
         tolerance_dict = { "default": float(query) }
     else:
-        query_list = query.split("::")
+        query_list = query.split(",")
         for q in query_list:
             q = q.split(":")
             tolerance_dict[q[0]] = float(q[1])

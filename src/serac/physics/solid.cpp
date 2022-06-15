@@ -54,9 +54,15 @@ Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities ge
   reference_nodes_->GetTrueDofs(x_);
   deformed_nodes_ = std::make_unique<mfem::ParGridFunction>(*reference_nodes_);
 
-  displacement_.trueVec()         = 0.0;
-  velocity_.trueVec()             = 0.0;
-  adjoint_displacement_.trueVec() = 0.0;
+  if (!StateManager::isRestart()) {
+    displacement_.trueVec()         = 0.0;
+    velocity_.trueVec()             = 0.0;
+    adjoint_displacement_.trueVec() = 0.0;
+  } else {
+    displacement_.initializeTrueVec();
+    velocity_.initializeTrueVec();
+    adjoint_displacement_.initializeTrueVec();
+  }
 
   const auto& lin_options = options.H_lin_options;
   // If the user wants the AMG preconditioner with a linear solver, set the pfes
@@ -339,7 +345,7 @@ void Solid::completeSetup()
         // residual function
         [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) {
           r = (*M_mat_) * d2u_dt2 + (*C_mat_) * (du_dt_ + c1_ * d2u_dt2) + (*H_) * (u_ + c0_ * d2u_dt2);
-          r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
+          r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
         },
 
         // gradient of residual function
@@ -369,7 +375,7 @@ std::unique_ptr<mfem::Operator> Solid::buildQuasistaticOperator()
       // residual function
       [this](const mfem::Vector& u, mfem::Vector& r) {
         H_->Mult(u, r);  // r := H(u)
-        r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
+        r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
       },
 
       // gradient of residual function
@@ -390,7 +396,6 @@ void Solid::advanceTimestep(double& dt)
 
   // Set the mesh nodes to the reference configuration
   mesh_.NewNodes(*reference_nodes_);
-
   bcs_.setTime(time_);
 
   if (is_quasistatic_) {
