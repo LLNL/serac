@@ -83,8 +83,7 @@ auto index(vec&& v, const int idx)
     return static_cast<const double*>(v)[idx];
   }
 
-  constexpr bool vec_isnt_a_HypreParVector = !vec_is_a_HypreParVector;
-  if constexpr (vec_isnt_a_HypreParVector) {
+  if constexpr (!vec_is_a_HypreParVector) {
     return v[idx];
   }
 }
