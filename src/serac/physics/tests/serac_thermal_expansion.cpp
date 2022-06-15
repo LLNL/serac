@@ -89,7 +89,7 @@ TEST(SolidSolver, ThermalExpansion)
   solid_solver.outputState();
 
   // Check the norm of the displacement error
-  EXPECT_NEAR(0.11536897, norm(solid_solver.displacement()), 1.0e-4);
+  EXPECT_NEAR(0.1, norm(solid_solver.displacement()), 1.0e-4);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
