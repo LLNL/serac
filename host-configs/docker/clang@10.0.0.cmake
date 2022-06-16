@@ -59,9 +59,9 @@ set(ENABLE_OPENMP ON CACHE BOOL "")
 
 set(TPL_ROOT "/home/serac/serac_tpls/clang-10.0.0" CACHE PATH "")
 
-set(AXOM_DIR "${TPL_ROOT}/axom-0.6.1.3-kvtxqll3ciwsq3y27kc6kffqo4dxslic" CACHE PATH "")
+set(AXOM_DIR "${TPL_ROOT}/axom-0.6.1.3-yaa3knpxxpheo6vi3owtqqfxwfo3f7p6" CACHE PATH "")
 
-set(CAMP_DIR "${TPL_ROOT}/camp-2022.03.0-y2x5kwxnychiiqfn67ijcugyik7j3mug" CACHE PATH "")
+set(CAMP_DIR "${TPL_ROOT}/camp-2022.03.0-3azo2jffpcgpajuuymjuv3tv5obt5n6u" CACHE PATH "")
 
 set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.8.3-7h45s2euddyiwwjp3vaxpxv6yojrthji" CACHE PATH "")
 
@@ -89,11 +89,11 @@ set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1-uqgf7mi7blb44qe2xpmnmyvlyx7g
 
 # PETSC not built
 
-set(RAJA_DIR "${TPL_ROOT}/raja-2022.03.0-wjefqak2flrewnoew2dntul2hfk25s3a" CACHE PATH "")
+set(RAJA_DIR "${TPL_ROOT}/raja-2022.03.0-uoecfh434trmnv73enmcdmcmyhy4ptzr" CACHE PATH "")
 
 set(SUNDIALS_DIR "${TPL_ROOT}/sundials-5.7.0-ktmatnfeu57mp4sc4jxht2biqos2hthl" CACHE PATH "")
 
-set(UMPIRE_DIR "${TPL_ROOT}/umpire-2022.03.1-eitwlpyqp7ccgff6iqzxgp36et7m2v6i" CACHE PATH "")
+set(UMPIRE_DIR "${TPL_ROOT}/umpire-2022.03.1-aj2dtljfdc4kiagcyswpa3t6wj7vsut2" CACHE PATH "")
 
 #------------------------------------------------------------------------------
 # Devtools
