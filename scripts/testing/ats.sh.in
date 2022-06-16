@@ -35,9 +35,8 @@ Clean()
 
     # Clean-up last run's output
     if [ "$ATS_SERAC_REBASELINE" -ne 1 ] ; then
-        rm -rf $ATS_SERAC_REPO_DIR/tests/integration/*/*/*_output
+        rm -rf $ATS_SERAC_REPO_DIR/tests/integration/*/*/*_output*
     fi
-    rm -rf $ATS_SERAC_REPO_DIR/tests/integration/*/*/*_output_restart
 }
 
 # Variables used inside of the base test.ats and this script
@@ -104,4 +103,3 @@ Clean
 # Run ATS
 $ATS_EXECUTABLE $ATS_SERAC_REPO_DIR/tests/integration/test.ats
 if [ $? -ne 0 ]; then { echo "Failed Integration tests, aborting."; exit 1; } fi
-
