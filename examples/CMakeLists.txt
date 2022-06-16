@@ -5,15 +5,15 @@
 # SPDX-License-Identifier: (BSD-3-Clause)
 
 configure_file(
-    host-config.cmake.in
-    ${CMAKE_BINARY_DIR}/examples/cmake/host-config.cmake)
+    using-with-cmake/host-config.cmake.in
+    ${CMAKE_BINARY_DIR}/examples/using-with-cmake/host-config.cmake)
 
 
 install(
     FILES
         using-with-cmake/CMakeLists.txt
         using-with-cmake/serac_example.cpp
-        ${CMAKE_BINARY_DIR}/examples/cmake/host-config.cmake
+        ${CMAKE_BINARY_DIR}/examples/using-with-cmake/host-config.cmake
     DESTINATION
         examples/serac/using-with-cmake
 )

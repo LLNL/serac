@@ -12,6 +12,7 @@
  * Intended to verify that external projects can include Serac
  */
 
+#include "serac/infrastructure/about.hpp"
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
@@ -24,11 +25,11 @@ int main(int argc, char* argv[])
 
   SLIC_INFO_ROOT(serac::about());
 
-  SLIC_INFO_ROOT("Testing important TPLs...")
+  SLIC_INFO_ROOT("Testing important TPLs...");
   SLIC_INFO_ROOT("MFEM version: " << mfem::GetVersionStr());
   axom::about();
 
-  SLIC_INFO_ROOT("Serac loaded successfully.");
+  SLIC_INFO_ROOT("\nSerac loaded successfully.");
 
   serac::exitGracefully();
 }
