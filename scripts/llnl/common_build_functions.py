@@ -207,7 +207,7 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
     # Configure examples
     log_file =  pjoin(build_dir,"output.log.configure.examples.txt")
     print("[log file: %s]" % log_file)
-    example_dir = pjoin(install_dir, "examples", "using-with-cmake")
+    example_dir = pjoin(install_dir, "examples", get_project_name(), "using-with-cmake")
     res = sexe("cd {0} && mkdir build && cd build && cmake -C {0}/host-config.cmake {0}".format(example_dir),
                 output_file = log_file,
                 echo=True)
