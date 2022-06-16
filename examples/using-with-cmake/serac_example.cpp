@@ -22,8 +22,10 @@ int main(int argc, char* argv[])
 {
   serac::initialize(argc, argv);
 
-  SLIC_INFO_ROOT("MFEM version: " << mfem::GetVersionStr());
+  SLIC_INFO_ROOT(serac::about());
 
+  SLIC_INFO_ROOT("Testing important TPLs...")
+  SLIC_INFO_ROOT("MFEM version: " << mfem::GetVersionStr());
   axom::about();
 
   SLIC_INFO_ROOT("Serac loaded successfully.");
