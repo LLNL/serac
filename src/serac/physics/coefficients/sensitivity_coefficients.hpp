@@ -58,15 +58,11 @@ private:
    */
   FiniteElementState& displacement_;
 
-  mfem::ParGridFunction displacement_grid_function_;
-
   /**
    * @brief The adjoint state for computing the sensitivities via the adjoint method
    *
    */
   FiniteElementState& adjoint_displacement_;
-
-  mfem::ParGridFunction adjoint_displacement_grid_function_;
 
   /**
    * @brief The linear elastic material model
@@ -143,15 +139,11 @@ private:
    */
   FiniteElementState& displacement_;
 
-  mfem::ParGridFunction displacement_grid_function_;
-
   /**
    * @brief The adjoint state for computing the sensitivities via the adjoint method
    *
    */
   FiniteElementState& adjoint_displacement_;
-
-  mfem::ParGridFunction adjoint_displacement_grid_function_;
 
   /**
    * @brief The linear elastic material model
