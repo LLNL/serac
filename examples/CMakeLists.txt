@@ -15,8 +15,17 @@ install(
         using-with-cmake/serac_example.cpp
         ${CMAKE_BINARY_DIR}/examples/cmake/host-config.cmake
     DESTINATION
-        examples/using-with-cmake
+        examples/serac/using-with-cmake
 )
 
 # Add the simple conduction examples
 add_subdirectory(simple_conduction)
+
+install(
+    FILES
+        simple_conduction/conduction.lua
+        simple_conduction/with_input_file.cpp
+        simple_conduction/without_input_file.cpp
+    DESTINATION
+        examples/serac/simple_conduction
+)
