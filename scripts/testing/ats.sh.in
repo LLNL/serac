@@ -22,7 +22,7 @@ Help()
     echo "BlueOS: lalloc 2 ./ats.sh"
     echo "WSL: ./ats.sh"
     echo "Options:"
-    echo "  --baseline = copies generated baselines from a pre-existing serac run"
+    echo "  --baseline   = copies generated baselines from a pre-existing serac run"
     echo "  --clean      = cleans output and log files"
     echo "  --help       = displays this message"
 }
