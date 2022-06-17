@@ -98,8 +98,6 @@ echo "REBASELINE?: " $ATS_SERAC_REBASELINE
 echo "BASELINE?:   " $ATS_SERAC_BASELINE
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
-Clean
-
 # Run ATS
 $ATS_EXECUTABLE $ATS_SERAC_REPO_DIR/tests/integration/test.ats
 if [ $? -ne 0 ]; then { echo "Failed Integration tests, aborting."; exit 1; } fi
