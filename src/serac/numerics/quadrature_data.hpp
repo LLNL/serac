@@ -255,6 +255,15 @@ private:
   static constexpr int stride_ = detail::ceil(sizeof(T) / static_cast<double>(sizeof(double)));
 };
 
+struct Empty{};
+
+template <>
+class QuadratureData<Empty> {
+public:
+  SERAC_HOST_DEVICE Empty & operator()(const int, const int) { return data; }
+  Empty data;
+};
+
 /**
  * @brief "Dummy" specialization, intended to be used as a sentinel
  * This is used as the default argument when a reference to a @p QuadratureData is used as a function

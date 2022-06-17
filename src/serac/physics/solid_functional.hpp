@@ -69,6 +69,9 @@ struct SolverOptions {
 template <int order, int dim, typename... parameter_space>
 class SolidFunctional : public BasePhysics {
 public:
+  static constexpr int VALUE = 0, DERIVATIVE = 1;
+  static constexpr auto I = Identity<dim>();
+
   /**
    * @brief Construct a new Solid Functional object
    *
@@ -101,22 +104,22 @@ public:
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
 
     // Create a pack of the primal field and parameter finite element spaces
-    std::array<mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + 1> trial_spaces;
+    mfem::ParFiniteElementSpace* test_space = &displacement_.space();
+    std::array<mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + 2> trial_spaces;
     trial_spaces[0] = &displacement_.space();
+    trial_spaces[1] = &displacement_.space();
 
     functional_call_args_.emplace_back(displacement_.trueVec());
 
     if constexpr (sizeof...(parameter_space) > 0) {
       for (size_t i = 0; i < sizeof...(parameter_space); ++i) {
-        trial_spaces[i + 1]         = &(parameter_states_[i].get().space());
+        trial_spaces[i + 2]         = &(parameter_states_[i].get().space());
         parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, parameter_states_[i].get().space());
         functional_call_args_.emplace_back(parameter_states_[i].get().trueVec());
       }
     }
 
-    M_functional_ = std::make_unique<Functional<test(trial, parameter_space...)>>(&displacement_.space(), trial_spaces);
-
-    K_functional_ = std::make_unique<Functional<test(trial, parameter_space...)>>(&displacement_.space(), trial_spaces);
+    residual_ = std::make_unique<Functional<test(trial, trial, parameter_space...)>>(test_space, trial_spaces);
 
     state_.push_back(velocity_);
     state_.push_back(displacement_);
@@ -268,55 +271,32 @@ public:
    * @pre MaterialType must have a method density() defining the density
    * @pre MaterialType must have the operator (du_dX) defined as the Kirchoff stress
    */
-  template <typename MaterialType>
-  void setMaterial(MaterialType material)
+  template <typename MaterialType, typename StateType>
+  void setMaterial(MaterialType material, const QuadratureData<StateType> & QData)
   {
-    if constexpr (is_parameterized<MaterialType>::value) {
-      static_assert(material.numParameters() == sizeof...(parameter_space),
-                    "Number of parameters in solid does not equal the number of parameters in the "
-                    "solid material.");
-    }
-
-    auto parameterized_material = parameterizeMaterial(material);
-
-    K_functional_->AddDomainIntegral(
+    residual_->AddDomainIntegral(
         Dimension<dim>{},
-        [this, parameterized_material](auto x, auto displacement, auto... params) {
-          // Get the value and the gradient from the input tuple
-          auto [u, du_dX] = displacement;
-
-          auto source = zero{};
-
-          auto response = parameterized_material(x, u, du_dX, serac::get<0>(params)...);
-
-          auto flux = response.stress;
+        [this, material](auto /*x*/, auto displacement, auto acceleration, auto & state, auto ... params) {
+          auto a = get<VALUE>(acceleration);
+          auto du_dX = get<DERIVATIVE>(displacement);
+          auto body_force = material.density * a + 0.0 * du_dX[0];
+          auto stress = material(du_dX, state, serac::get<0>(params)...);
 
           if (geom_nonlin_ == GeometricNonlinearities::On) {
-            auto deformation_grad = du_dX + I_;
-            flux                  = flux * inv(transpose(deformation_grad));
+            auto F = I + du_dX;
+            body_force = body_force * det(F);
+            stress = dot(stress, inv(transpose(F)));
           }
 
-          return serac::tuple{source, flux};
+          return serac::tuple{body_force, stress};
         },
-        mesh_);
+        mesh_, QData);
+  }
 
-    M_functional_->AddDomainIntegral(
-        Dimension<dim>{},
-        [this, parameterized_material](auto x, auto displacement, auto... params) {
-          auto [u, du_dX] = displacement;
-
-          auto response = parameterized_material(x, u, du_dX, serac::get<0>(params)...);
-
-          auto flux = 0.0 * du_dX;
-
-          double geom_factor = (geom_nonlin_ == GeometricNonlinearities::On ? 1.0 : 0.0);
-
-          auto deformation_grad = du_dX + I_;
-          auto source           = response.density * u * (1.0 + geom_factor * (det(deformation_grad) - 1.0));
-
-          return serac::tuple{source, flux};
-        },
-        mesh_);
+  template <typename MaterialType>
+  void setMaterial(MaterialType material) {
+    static_assert(std::is_same_v< typename MaterialType::State, Empty >, "Error: material requires state information, but none was provided.");
+    setMaterial(material, QuadratureData<Empty>{});
   }
 
   /**
@@ -349,36 +329,23 @@ public:
    * @brief Set the body forcefunction
    *
    * @tparam BodyForceType The type of the body force load
-   * @param body_force_function A source function for a prescribed body load
+   * @param body_force A source function for a prescribed body load
    *
    * @pre BodyForceType must have the operator (x, time, displacement, d displacement_dx) defined as the body force
    */
   template <typename BodyForceType>
-  void addBodyForce(BodyForceType body_force_function)
+  void addBodyForce(BodyForceType body_force)
   {
-    if constexpr (is_parameterized<BodyForceType>::value) {
-      static_assert(body_force_function.numParameters() == sizeof...(parameter_space),
-                    "Number of parameters in solid not equal the number of parameters in the "
-                    "body force.");
-    }
-
-    auto parameterized_body_force = parameterizeSource(body_force_function);
-
-    K_functional_->AddDomainIntegral(
+    residual_->AddDomainIntegral(
         Dimension<dim>{},
-        [parameterized_body_force, this](auto x, auto displacement, auto... params) {
-          // Get the value and the gradient from the input tuple
-          auto [u, du_dX] = displacement;
-
-          auto flux = du_dX * 0.0;
-
-          double geom_factor = (geom_nonlin_ == GeometricNonlinearities::On ? 1.0 : 0.0);
-
-          auto deformation_grad = du_dX + I_;
-
-          auto source = parameterized_body_force(x, time_, u, du_dX, serac::get<0>(params)...) *
-                        (1.0 + geom_factor * (det(deformation_grad) - 1.0));
-          return serac::tuple{source, flux};
+        [body_force, this](auto x, auto displacement, auto /* acceleration */, auto... params) {
+          auto du_dX = get<DERIVATIVE>(displacement);
+          auto one_dual = (1.0 + 0.0 * du_dX[0][0]);
+          auto source = body_force(x, time_, serac::get<0>(params)...) * one_dual;
+          if (geom_nonlin_ == GeometricNonlinearities::On) {
+            source = source * det(I + du_dX);
+          }
+          return serac::tuple{source, zero{}}; 
         },
         mesh_);
   }
@@ -388,59 +355,16 @@ public:
    *
    * @tparam TractionType The type of the traction load
    * @param traction_function A function describing the traction applied to a boundary
-   * @param compute_on_reference Flag to compute the traction in the reference configuration
    *
    * @pre TractionType must have the operator (x, normal, time) to return the thermal flux value
    */
   template <typename TractionType>
-  void setTractionBCs(TractionType traction_function, bool compute_on_reference = true)
+  void setPiolaTraction(TractionType traction_function)
   {
-    if constexpr (is_parameterized<TractionType>::value) {
-      static_assert(traction_function.numParameters() == sizeof...(parameter_space),
-                    "Number of parameters in solid does not equal the number of parameters in the "
-                    "traction boundary.");
-    }
-
-    auto parameterized_traction = parameterizeFlux(traction_function);
-
-    // TODO fix this when we can get gradients from boundary integrals
-    SLIC_ERROR_IF(!compute_on_reference, "SolidFunctional cannot compute traction BCs in deformed configuration");
-
-    K_functional_->AddBoundaryIntegral(
+    residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{},
-        [this, parameterized_traction](auto x, auto n, auto, auto... params) {
-          return -1.0 * parameterized_traction(x, n, time_, params...);
-        },
-        mesh_);
-  }
-
-  /**
-   * @brief Set the pressure boundary condition
-   *
-   * @tparam PressureType The type of the pressure load
-   * @param pressure_function A function describing the pressure applied to a boundary
-   * @param compute_on_reference Flag to compute the pressure in the reference configuration
-   *
-   * @pre PressureType must have the operator (x, time) to return the thermal flux value
-   */
-  template <typename PressureType>
-  void setPressureBCs(PressureType pressure_function, bool compute_on_reference = true)
-  {
-    if constexpr (is_parameterized<PressureType>::value) {
-      static_assert(pressure_function.numParameters() == sizeof...(parameter_space),
-                    "Number of parameters in solid does not equal the number of parameters in the "
-                    "pressure boundary.");
-    }
-
-    auto parameterized_pressure = parameterizePressure(pressure_function);
-
-    // TODO fix this when we can get gradients from boundary integrals
-    SLIC_ERROR_IF(!compute_on_reference, "SolidFunctional cannot compute pressure BCs in deformed configuration");
-
-    K_functional_->AddBoundaryIntegral(
-        Dimension<dim - 1>{},
-        [this, parameterized_pressure](auto x, auto n, auto, auto... params) {
-          return parameterized_pressure(x, time_, params...) * n;
+        [this, traction_function](auto x, auto n, auto, auto, auto... params) {
+          return -1.0 * traction_function(x, n, time_, params...);
         },
         mesh_);
   }
@@ -492,14 +416,14 @@ public:
   {
     // the quasistatic case is entirely described by the residual,
     // there is no ordinary differential equation
-    auto residual = std::make_unique<mfem_ext::StdFunctionOperator>(
+    return std::make_unique<mfem_ext::StdFunctionOperator>(
         displacement_.space().TrueVSize(),
 
         // residual function
         [this](const mfem::Vector& u, mfem::Vector& r) {
           functional_call_args_[0] = u;
 
-          r = (*K_functional_)(functional_call_args_);
+          r = (*residual_)(displacement, acceleration, );
           r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
         },
 
@@ -512,8 +436,6 @@ public:
           bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
           return *J_;
         });
-
-    return residual;
   }
 
   /**
@@ -701,11 +623,13 @@ protected:
   /// The displacement finite element state
   FiniteElementState adjoint_displacement_;
 
-  /// Mass functional object
-  std::unique_ptr<Functional<test(trial, parameter_space...)>> M_functional_;
+  std::unique_ptr<Functional<test(trial, trial, parameter_space...)>> residual_;
 
-  /// Stiffness functional object
-  std::unique_ptr<Functional<test(trial, parameter_space...)>> K_functional_;
+  /**
+   * @brief mfem::Operator that describes the nonlinear residual
+   * and its gradient with respect to displacement
+   */
+  std::unique_ptr<mfem_ext::StdFunctionOperator> residual_with_bcs_;
 
   /// The finite element states representing user-defined parameter fields
   std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states_;
@@ -715,12 +639,6 @@ protected:
 
   /// The set of input trial space vectors (displacement + parameters) used to call the underlying functional
   std::vector<std::reference_wrapper<const mfem::Vector>> functional_call_args_;
-
-  /**
-   * @brief mfem::Operator that describes the nonlinear residual
-   * and its gradient with respect to displacement
-   */
-  std::unique_ptr<mfem_ext::StdFunctionOperator> residual_;
 
   /**
    * @brief the ordinary differential equation that describes
@@ -771,8 +689,6 @@ protected:
   /// @brief An auxilliary zero vector
   mfem::Vector zero_;
 
-  /// @brief Auxilliary identity rank 2 tensor
-  const isotropic_tensor<double, dim, dim> I_ = Identity<dim>();
 };
 
 }  // namespace serac
