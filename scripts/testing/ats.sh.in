@@ -34,7 +34,7 @@ Clean()
     rm -rf $SYS_TYPE.*
 
     # Clean-up last run's output
-    if [ "$ATS_SERAC_REBASELINE" -ne 1 ] ; then
+    if [ "$ATS_SERAC_BASELINE" -ne 1 ] ; then
         rm -rf $ATS_SERAC_REPO_DIR/tests/integration/*/*/*_output*
     fi
 }
@@ -43,7 +43,6 @@ Clean()
 export ATS_SERAC_BIN_DIR=@SERAC_BIN_DIR@/bin
 export ATS_SERAC_REPO_DIR=@SERAC_REPO_DIR@
 export ATS_EXECUTABLE=@ATS_EXECUTABLE@
-export ATS_SERAC_REBASELINE=0
 export ATS_SERAC_BASELINE=0
 
 if [ ! -d "$ATS_SERAC_REPO_DIR" ]; then
@@ -68,8 +67,6 @@ while getopts ":-:" option; do
                 help)
                     Help
                     exit;;
-                rebaseline)
-                    ATS_SERAC_REBASELINE=1;;
                 baseline)
                     ATS_SERAC_BASELINE=1;;
                 clean)
@@ -91,13 +88,14 @@ done
 export PATH=$ATS_SERAC_BIN_DIR:$PATH
 
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~"
-echo "ATS:         " $ATS_EXECUTABLE
-echo "BIN DIR:     " $ATS_SERAC_BIN_DIR
-echo "REPO DIR:    " $ATS_SERAC_REPO_DIR
-echo "REBASELINE?: " $ATS_SERAC_REBASELINE
-echo "BASELINE?:   " $ATS_SERAC_BASELINE
+echo "ATS:       " $ATS_EXECUTABLE
+echo "BIN DIR:   " $ATS_SERAC_BIN_DIR
+echo "REPO DIR:  " $ATS_SERAC_REPO_DIR
+echo "BASELINE?: " $ATS_SERAC_BASELINE
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
+Clean
+
 # Run ATS
-$ATS_EXECUTABLE $ATS_SERAC_REPO_DIR/tests/integration/test.ats
+$ATS_EXECUTABLE $ATS_SERAC_REPO_DIR/tests/integration/test.ats --sleepBeforeSrun=2
 if [ $? -ne 0 ]; then { echo "Failed Integration tests, aborting."; exit 1; } fi
