@@ -23,6 +23,7 @@ set(materials_headers
     solid_functional_material.hpp
     parameterized_solid_functional_material.hpp
     functional_material_utils.hpp
+    material_verification_tools.hpp
     )
 
 set(materials_depends
