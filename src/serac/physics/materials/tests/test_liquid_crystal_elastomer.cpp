@@ -37,7 +37,7 @@ TEST(TestLiquidCrystalMaterial, agreesWithNeoHookeanInHighTemperatureLimit)
 
   const tensor<double, 3> x{};
   const tensor<double, 3> u{};
-  tensor<double, 3, 3> H{{{0.5625, 0.0, 0.0},
+  tensor<double, 3, 3> H{{{0.5625, 0.0, 0.0}, // defines a unimodular F
                           {0.0, -0.2, 0.0},
                           {0.0, 0.0, -0.2}}};
   double theta = 300.0;
@@ -55,7 +55,7 @@ TEST(TestLiquidCrystalMaterial, agreesWithNeoHookeanInHighTemperatureLimit)
   auto nh_response = nh_material(x, u, H, nh_state);
   std::cout << nh_response.stress << std::endl;
 }
-#if 0
+
 TEST(TestLiquidCrystalMaterial, generatesStressHistory)
 {
   double density = 1.0;
@@ -64,13 +64,15 @@ TEST(TestLiquidCrystalMaterial, generatesStressHistory)
   double shear_modulus = 0.5*E/(1.0 + nu);
   double bulk_modulus = E / 3.0 / (1.0 - 2.0*nu);
   double order_constant = 1.0;
-  double order_parameter = 1.0;
+  double order_parameter = 0.0;
   double transition_temperature = 1.0;
   tensor<double, 3> normal{{0.0, 1.0, 0.0}};
   double Nb2 = 1.0;
+  
   BrighentiMechanical material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
-  double temperature = 2.0;
-  auto initial_distribution = decltype(material)::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
+  double temperature = 50.0;
+
+  auto initial_distribution = BrighentiMechanical::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
   decltype(material)::State initial_state{DenseIdentity<3>(), initial_distribution, temperature};
   double max_time = 20.0;
   unsigned int steps = 10;
@@ -90,7 +92,7 @@ TEST(TestLiquidCrystalMaterial, generatesStressHistory)
     std::cout<< strain[0][0] << " " << stress << std::endl;
   }
 }
-#endif
+
 } // namespace serac
 
 int main(int argc, char* argv[])

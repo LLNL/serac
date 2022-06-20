@@ -81,14 +81,14 @@ public:
    */
   template <typename DisplacementType, typename DispGradType>
   SERAC_HOST_DEVICE auto operator()(
-    const tensor<double, dim>& /* x */,  const DisplacementType& /*displacement*/,
-    const DispGradType& displacement_grad, State& state, const double temperature) const
+      const tensor<double, dim>& /* x */,  const tensor<DisplacementType, dim>& /*displacement*/,
+      const tensor<DispGradType, dim, dim>& displacement_grad, State& state, double temperature) const
   {
     // kinematics
     auto I     = Identity<dim>();
     auto F     = displacement_grad + I;
     auto F_old = state.deformation_gradient;
-    auto F_hat = transpose(linear_solve(transpose(F_old), transpose(F)));
+    auto F_hat = dot(F, inv(F_old));
     auto J = det(F);
 
     // Distribution tensor function of nematic order tensor
@@ -96,13 +96,15 @@ public:
     auto& mu0 = initial_distribution_tensor_;
 
     // stress output
-    auto stress = J * (3*shear_modulus_/N_b_squared_) * (mu - mu0);
+    // Note to Jorge-Luis: the paper is omits a prefactor of 1/J in the
+    // Cauchy stress equation because they assume J = 1 strictly
+    // (the incompressible limit). It needs to be retained for this
+    // compressible model (and then cancelled out when converting to
+    // Kirchhoff stress).
+    auto stress = (3*shear_modulus_/N_b_squared_) * (mu - mu0);
     const double lambda = bulk_modulus_ - 2.0 / 3.0 * shear_modulus_;
-    if constexpr (is_dual_number<decltype(J)>::value) {
-      stress = stress + lambda*log(J)*I;
-    } else {
-      stress = stress + lambda*std::log(J)*I;
-    }
+    using std::log;
+    stress = stress + lambda*log(J)*I;
 
     // update state variables
     state.deformation_gradient = get_value(F);
@@ -114,7 +116,7 @@ public:
 
 /// -------------------------------------------------------
 
-  static tensor<double, 3, 3>
+  static tensor<double, dim, dim>
   calculateInitialDistributionTensor(const tensor<double, dim> normal, double q0, double N_b_squared)
   {
     // Initial distribution tensor
@@ -127,9 +129,9 @@ public:
 
 /// -------------------------------------------------------
 
-  template <typename T1, typename T2>
+  template <typename T>
   auto calculateDistributionTensor(
-    const tensor<T1, dim, dim> F_hat, const T2 theta, const State& state) const
+    const tensor<T, dim, dim> F_hat, const double theta, const State& state) const
   {
     // Nematic order scalar
     auto theta_old = state.temperature;
