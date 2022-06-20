@@ -156,24 +156,50 @@ struct LCEMaterialProperties
     double theta_old,
     tensor<T1, 3, 3>& P)
   {
-    // Deformation gradients
-    auto F     = grad_u + I;
-    auto F_old = grad_u_old + I;
-    auto F_hat = dot(F, inv(F_old));
+    bool includingHydrostaticPressure(true);
+    
+    if(includingHydrostaticPressure)
+    {
+      // Deformation gradients
+      auto F     = grad_u + I;
+      auto F_old = grad_u_old + I;
+      auto F_hat = dot(F, inv(F_old));
 
-    // Determinant of deformation gradient
-    [[maybe_unused]] auto J = det(F);
+      // Determinant of deformation gradient
+      [[maybe_unused]] auto J = det(F);
 
-    // Distribution tensor function of nematic order tensor
-    auto mu = calculateDistributionTensor(F_hat, state, theta, theta_old);
+      // Distribution tensor function of nematic order tensor
+      auto mu = calculateDistributionTensor(F_hat, state, theta, theta_old);
 
-    // stress output 
-    auto P_a =  J * ( (3*Gshear/(N_seg*std::pow(b,2))) * (mu) ) * inv(transpose(F));
-    auto P_b =  J * dot(p*I, inv(transpose(F)));
-    P = P_a + P_b;
+      // stress output 
+      auto P_a =  J * ( (3*Gshear/(N_seg*std::pow(b,2))) * (mu) ) * inv(transpose(F));
+      auto P_b =  J * dot(p*I, inv(transpose(F)));
+      P = P_a + P_b;
 
-    // P = J * ( (3*Gshear/(N_seg*std::pow(b,2))) * (mu) + p*I ) * inv(transpose(F));
-    // P =  J * ( (3*Gshear/(N_seg*std::pow(b,2))) * (mu - mu_0) + 0.0*p*I ) * inv(transpose(F));
+      // P = J * ( (3*Gshear/(N_seg*std::pow(b,2))) * (mu) + p*I ) * inv(transpose(F));
+      // P =  J * ( (3*Gshear/(N_seg*std::pow(b,2))) * (mu - mu_0) + 0.0*p*I ) * inv(transpose(F));
+    }
+    else
+    {
+      // Deformation gradients
+      auto F     = grad_u + I;
+      auto F_old = grad_u_old + I;
+      auto F_hat = dot(F, inv(F_old));
+
+      // Determinant of deformation gradient
+      [[maybe_unused]] auto J = det(F);
+
+      // Distribution tensor function of nematic order tensor
+      auto mu = calculateDistributionTensor(F_hat, state, theta, theta_old);
+
+      // stress output 
+      auto P_a =  J * ( (3*Gshear/(N_seg*std::pow(b,2))) * (mu) ) * inv(transpose(F));
+      auto P_b =  J * dot(p*I, inv(transpose(F)));
+      P = P_a + P_b;
+
+      // P = J * ( (3*Gshear/(N_seg*std::pow(b,2))) * (mu) + p*I ) * inv(transpose(F));
+      // P =  J * ( (3*Gshear/(N_seg*std::pow(b,2))) * (mu - mu_0) + 0.0*p*I ) * inv(transpose(F));
+    }
   }
 
 /// ---------------------------------------------------------------------------

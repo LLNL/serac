@@ -99,7 +99,7 @@ int main(int argc, char* argv[])
         }
 
         if (x[0] > 1.9e-3) {
-          traction[1] = -5.0e-3;
+          traction[1] = 0.0; // -5.0e-3;
         }
         return traction;
       }};
