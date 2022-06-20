@@ -39,13 +39,14 @@ public:
   /**
    * @brief Constructor
    *
-   * @param density Density of the material
+   * @param density Density of the material (in reference configuration)
    * @param shear_modulus Shear modulus of the material
    * @param bulk_modulus Bulk modulus of the material
-   * @param order_constant
+   * @param order_constant temperature-valued constant in exponential factor for order parameter
    * @param order_parameter Initial value of the order parameter
-   * @param transition_temperature
+   * @param transition_temperature Characteristic temperature of the order-disorder transition
    * @param normal Liquid crystal director vector
+   * @param N_b_squared Number of Kunh segments/chain, times square of Kuhn segment length
    */
   BrighentiMechanical(double density, double shear_modulus, double bulk_modulus,
                       double order_constant, double order_parameter,
@@ -72,11 +73,12 @@ public:
   /**
    * @brief Material response
    *
-   * @tparam PositionType Spatial position type
-   * @tparam DisplacementType Displacement type
-   * @tparam DispGradType Displacement gradient type
+   * @tparam DisplacementType number-like type for the displacement vector
+   * @tparam DispGradType number-like type for the displacement gradient tensor
    *
    * @param displacement_grad displacement gradient with respect to the reference configuration
+   * @param[in,out] state A state variable object for this material. The value is updated in place.
+   * @param temperature the temperature
    * @return The calculated material response (density, Kirchoff stress) for the material
    */
   template <typename DisplacementType, typename DispGradType>
@@ -170,26 +172,30 @@ public:
   }
 
 private:
-  /// Density
+  // Density
   double density_;
 
-  /// elastic moduli in the stress free configuration
+  // elastic moduli in the stress free configuration
   double shear_modulus_;
   double bulk_modulus_;
   
-  /// Order constant
+  // Order constant
   double order_constant_;
 
-  /// intial value of order parameter
+  // intial value of order parameter
   double initial_order_parameter_;
 
-  /// Transition temperature
+  // Transition temperature
   double transition_temperature_;
 
-  double N_b_squared_;
-
+  // director vector of the liquid crystal orientation
   tensor<double, 3> normal_;
 
+  // Kuhn segment parameters.
+  // BT: I think this can be removed - it looks like it cancels out every place it appears.
+  double N_b_squared_;
+
+  // initial value of the distribution tensor
   tensor<double, 3, 3> initial_distribution_tensor_;
 };
 
