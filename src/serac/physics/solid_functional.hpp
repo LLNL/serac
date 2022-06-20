@@ -110,6 +110,7 @@ public:
     trial_spaces[1] = &displacement_.space();
 
     functional_call_args_.emplace_back(displacement_.trueVec());
+    functional_call_args_.emplace_back(displacement_.trueVec());
 
     if constexpr (sizeof...(parameter_space) > 0) {
       for (size_t i = 0; i < sizeof...(parameter_space); ++i) {
@@ -272,7 +273,7 @@ public:
    * @pre MaterialType must have the operator (du_dX) defined as the Kirchoff stress
    */
   template <typename MaterialType, typename StateType>
-  void setMaterial(MaterialType material, const QuadratureData<StateType> & QData)
+  void setMaterial(MaterialType material, QuadratureData<StateType> & QData)
   {
     residual_->AddDomainIntegral(
         Dimension<dim>{},
@@ -423,7 +424,7 @@ public:
         [this](const mfem::Vector& u, mfem::Vector& r) {
           functional_call_args_[0] = u;
 
-          r = (*residual_)(displacement, acceleration, );
+          r = (*residual_)(functional_call_args_);
           r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
         },
 
@@ -431,7 +432,7 @@ public:
         [this](const mfem::Vector& u) -> mfem::Operator& {
           functional_call_args_[0] = u;
 
-          auto [r, drdu] = (*K_functional_)(functional_call_args_, Index<0>{});
+          auto [r, drdu] = (*residual_)(functional_call_args_, Index<0>{});
           J_             = assemble(drdu);
           bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
           return *J_;
@@ -466,38 +467,26 @@ public:
           displacement_.space().TrueVSize(),
 
           [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) {
-            functional_call_args_[0] = d2u_dt2;
-
-            auto M_residual = (*M_functional_)(functional_call_args_);
-
-            mfem::Vector K_arg(u_.Size());
-            add(1.0, u_, c0_, d2u_dt2, K_arg);
-            functional_call_args_[0] = K_arg;
-
-            auto K_residual = (*K_functional_)(functional_call_args_);
-
-            functional_call_args_[0] = u_;
-
-            add(M_residual, K_residual, r);
+            functional_call_args_[1] = d2u_dt2;
+            add(1.0, u_, c0_, d2u_dt2, functional_call_args_[0]);
+            r = (*residual_)(functional_call_args_);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
           [this](const mfem::Vector& d2u_dt2) -> mfem::Operator& {
-            functional_call_args_[0] = d2u_dt2;
+            functional_call_args_[1] = d2u_dt2;
+            add(1.0, u_, c0_, d2u_dt2, functional_call_args_[0]);
 
-            auto M = serac::get<1>((*M_functional_)(functional_call_args_, Index<0>{}));
+            auto K = serac::get<1>((*residual_)(functional_call_args_, Index<0>{}));
+            std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
+
+            auto M = serac::get<1>((*residual_)(functional_call_args_, Index<1>{}));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
             // J = M + c0 * H(u_predicted)
             mfem::Vector K_arg(u_.Size());
             add(1.0, u_, c0_, d2u_dt2, K_arg);
             functional_call_args_[0] = K_arg;
-
-            auto K = serac::get<1>((*K_functional_)(functional_call_args_, Index<0>{}));
-
-            functional_call_args_[0] = u_;
-
-            std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             J_.reset(mfem::Add(1.0, *m_mat, c0_, *k_mat));
             bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
