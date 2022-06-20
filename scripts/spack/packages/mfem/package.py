@@ -50,9 +50,11 @@ class Mfem(Package, CudaPackage, ROCmPackage):
     version('develop', branch='master')
 
     # SERAC EDIT BEGIN
-    # Note: we have a `serac-dev` branch on mfem's github that we track pending changes.
-    #  Make sure this sha coincides with the git submodule
-    version('4.3.0serac', commit='e55e90e8d0e331bba3fbe20a98a9f9b12453700b', submodules="True")
+    # Note: We have a `serac-dev` branch on mfem's github that we track pending changes.
+    # Note: Make sure this sha coincides with the git submodule
+    # Note: We add a number to the end of the real version number to indicate that we have
+    #  moved forward past the release. Increment the last number when updating the commit sha.
+    version('4.3.0.1', commit='e55e90e8d0e331bba3fbe20a98a9f9b12453700b', submodules="True")
     # SERAC EDIT END
 
     version('4.3.0',
@@ -163,6 +165,29 @@ class Mfem(Package, CudaPackage, ROCmPackage):
             description='Build and install examples')
     variant('miniapps', default=False,
             description='Build and install miniapps')
+
+    # SERAC EDIT BEGIN - add AddressSanitizer variant for memory debugging
+    variant('asan', default=False, description='Add Address Sanitizer flags')
+
+    # AddressSanitizer (ASan) is only supported by GCC and (some) LLVM-derived
+    # compilers. Blacklist compilers not known to support ASan
+    asan_compiler_blacklist = {
+        'aocc', 'arm', 'cce', 'fj', 'intel', 'nag', 'nvhpc', 'oneapi', 'pgi',
+        'xl', 'xl_r'
+    }
+
+    # Whitelist of compilers known to support Address Sanitizer
+    asan_compiler_whitelist = {'gcc', 'clang', 'apple-clang'}
+
+    # ASan compiler blacklist and whitelist should be disjoint.
+    assert len(asan_compiler_blacklist & asan_compiler_whitelist) == 0
+
+    for compiler_ in asan_compiler_blacklist:
+        conflicts("%{0}".format(compiler_),
+                  when="+asan",
+                  msg="{0} compilers do not support Address Sanitizer".format(
+                      compiler_))
+    # SERAC EDIT END
 
     conflicts('+shared', when='@:3.3.2')
     conflicts('~static~shared')
@@ -323,6 +348,17 @@ class Mfem(Package, CudaPackage, ROCmPackage):
     def setup_build_environment(self, env):
         env.unset('MFEM_DIR')
         env.unset('MFEM_BUILD_DIR')
+
+        # SERAC EDIT BEGIN - Add ASan variant for memory debugging
+        if '+asan' in self.spec:
+            for flag in ("CFLAGS", "CXXFLAGS", "LDFLAGS"):
+                env.append_flags(flag, "-fsanitize=address")
+
+            for flag in ("CFLAGS", "CXXFLAGS"):
+                env.append_flags(flag, "-fno-omit-frame-pointer")
+                if '+debug' in self.spec:
+                    env.append_flags(flag, "-fno-optimize-sibling-calls")
+        # SERAC EDIT END
 
     #
     # Note: Although MFEM does support CMake configuration, MFEM

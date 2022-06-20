@@ -126,6 +126,7 @@ public:
    */
   void setMassDensity(std::unique_ptr<mfem::Coefficient>&& rho)
   {
+    // Note: This is very wrong but this class is going away very soon.
     therm_solver_.setMassDensity(std::move(rho));
     solid_solver_.setMassDensity(std::move(rho));
   };

@@ -4,14 +4,18 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/mesh/mesh_utils.hpp"
-#include "serac/serac_config.hpp"
-#include "serac/infrastructure/input.hpp"
-#include "axom/core.hpp"
-#include <gtest/gtest.h>
 #include <exception>
 #include <iostream>
 #include <stdlib.h>
+
+#include "axom/core.hpp"
+#include "axom/slic/core/SimpleLogger.hpp"
+
+#include <gtest/gtest.h>
+
+#include "serac/mesh/mesh_utils.hpp"
+#include "serac/serac_config.hpp"
+#include "serac/infrastructure/input.hpp"
 
 class SlicErrorException : public std::exception {
 };
@@ -47,7 +51,7 @@ private:
 
 namespace serac {
 
-TEST_F(MeshTest, lua_input_main_mesh_from_file)
+TEST_F(MeshTest, LuaInputMainMeshFromFile)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -71,7 +75,7 @@ TEST_F(MeshTest, lua_input_main_mesh_from_file)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST_F(MeshTest, lua_input_main_mesh_cuboid)
+TEST_F(MeshTest, LuaInputMainMeshCuboid)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   reader_->parseString(std::string("main_mesh_cuboid = { type = \"box\",") +
@@ -91,7 +95,7 @@ TEST_F(MeshTest, lua_input_main_mesh_cuboid)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST_F(MeshTest, lua_input_main_mesh_rect)
+TEST_F(MeshTest, LuaInputMainMeshRect)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   reader_->parseString(std::string("main_mesh_rect = { type = \"box\",") +
@@ -110,7 +114,7 @@ TEST_F(MeshTest, lua_input_main_mesh_rect)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST_F(MeshTest, lua_input_main_mesh_fail)
+TEST_F(MeshTest, LuaInputMainMeshFail)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   reader_->parseString(std::string("main_mesh_fail = { type = \"invalid\",") +
@@ -123,7 +127,7 @@ TEST_F(MeshTest, lua_input_main_mesh_fail)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(meshgen, successful_creation)
+TEST(MeshGen, SuccessfulCreation)
 {
   // the disk and ball meshes don't exactly hit the number
   // of elements specified, they refine to get as close as possible
@@ -141,9 +145,6 @@ TEST(meshgen, successful_creation)
 
 }  // namespace serac
 
-//------------------------------------------------------------------------------
-#include "axom/slic/core/SimpleLogger.hpp"
-
 int main(int argc, char* argv[])
 {
   int result = 0;
@@ -152,8 +153,7 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when
-  // exiting main scope
+  axom::slic::SimpleLogger logger;
 
   axom::slic::setAbortFunction([]() { throw SlicErrorException{}; });
   axom::slic::setAbortOnError(true);

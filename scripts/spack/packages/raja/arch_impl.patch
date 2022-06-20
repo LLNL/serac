@@ -1,0 +1,18 @@
+diff --git a/include/RAJA/policy/tensor/arch_impl.hpp b/include/RAJA/policy/tensor/arch_impl.hpp
+index 4bd816a84..58b9c06a2 100644
+--- a/include/RAJA/policy/tensor/arch_impl.hpp
++++ b/include/RAJA/policy/tensor/arch_impl.hpp
+@@ -45,11 +45,11 @@
+ #include<RAJA/policy/tensor/arch/avx.hpp>
+ #endif
+ 
+-#ifdef RAJA_ENABLE_CUDA
++#ifdef RAJA_CUDA_ACTIVE
+ #include<RAJA/policy/tensor/arch/cuda.hpp>
+ #endif
+ 
+-#ifdef RAJA_ENABLE_HIP
++#ifdef RAJA_HIP_ACTIVE
+ #include<RAJA/policy/tensor/arch/hip.hpp>
+ #endif
+ 

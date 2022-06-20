@@ -41,11 +41,6 @@ BasePhysics::BasePhysics(int n, int p, mfem::ParMesh* pmesh) : BasePhysics(pmesh
   gf_initialized_.assign(static_cast<std::size_t>(n), StateManager::isRestart());
 }
 
-void BasePhysics::setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component)
-{
-  bcs_.addEssentialTrueDofs(true_dofs, ess_bdr_coef, component);
-}
-
 const std::vector<std::reference_wrapper<serac::FiniteElementState> >& BasePhysics::getState() const { return state_; }
 
 void BasePhysics::setTime(const double time)
@@ -56,10 +51,12 @@ void BasePhysics::setTime(const double time)
 
 double BasePhysics::time() const { return time_; }
 
+void BasePhysics::setCycle(const int cycle) { cycle_ = cycle; }
+
 int BasePhysics::cycle() const { return cycle_; }
 
 void BasePhysics::initializeOutput(const serac::OutputType output_type, const std::string& root_name,
-                                   const std::string output_directory)
+                                   const std::string& output_directory)
 {
   root_name_        = root_name;
   output_type_      = output_type;
@@ -217,11 +214,8 @@ void BasePhysics::saveSummary(axom::sidre::DataStore& datastore, const double t)
     SLIC_ERROR_IF(!sidre_root->hasGroup(curves_group_name),
                   axom::fmt::format("Sidre Group '{0}' did not exist when saveCurves was called", curves_group_name));
     curves_group = sidre_root->getGroup(curves_group_name);
-  }
 
-  // Save time step
-  // Only save on root node
-  if (rank == 0) {
+    // Save time step
     axom::sidre::Array<double> ts(curves_group->getView("t"));
     ts.push_back(t);
   }

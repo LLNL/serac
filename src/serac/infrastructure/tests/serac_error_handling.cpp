@@ -6,6 +6,7 @@
 
 #include <exception>
 
+#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 
 #include "serac/infrastructure/cli.hpp"
@@ -24,7 +25,7 @@ namespace serac {
 
 using mfem_ext::EquationSolver;
 
-TEST(serac_error_handling, equationsolver_bad_lin_solver)
+TEST(SeracErrorHandling, EquationSolverBadLinSolver)
 {
   IterativeSolverOptions options;
   // Try a definitely wrong number to ensure that an invalid linear solver is detected
@@ -34,7 +35,7 @@ TEST(serac_error_handling, equationsolver_bad_lin_solver)
 
 // Only need to test this when AmgX is **not** available
 #ifndef MFEM_USE_AMGX
-TEST(serac_error_handling, equationsolver_amgx_not_available)
+TEST(SeracErrorHandling, EquationSolverAmgxNotAvailable)
 {
   IterativeSolverOptions options;
   options.prec = AMGXPrec{};
@@ -44,7 +45,7 @@ TEST(serac_error_handling, equationsolver_amgx_not_available)
 
 // Only need to test this when KINSOL is **not** available
 #ifndef MFEM_USE_SUNDIALS
-TEST(serac_error_handling, equationsolver_kinsol_not_available)
+TEST(SeracErrorHandling, EquationSolverKinsolNotAvailable)
 {
   auto lin_options             = ThermalConduction::defaultLinearOptions();
   auto nonlin_options          = ThermalConduction::defaultNonlinearOptions();
@@ -53,7 +54,7 @@ TEST(serac_error_handling, equationsolver_kinsol_not_available)
 }
 #endif
 
-TEST(serac_error_handling, bc_project_requires_state)
+TEST(SeracErrorHandling, BcProjectRequiresState)
 {
   auto mesh      = mesh::refineAndDistribute(buildDiskMesh(10));
   int  num_attrs = mesh->bdr_attributes.Max();
@@ -61,20 +62,16 @@ TEST(serac_error_handling, bc_project_requires_state)
   auto              coef = std::make_shared<mfem::ConstantCoefficient>();
   BoundaryCondition bc(coef, 0, std::set<int>{1}, num_attrs);
   EXPECT_THROW(bc.project(), SlicErrorException);
-
-  FiniteElementState state(*mesh);
-  bc.setTrueDofs(state);
-  EXPECT_NO_THROW(bc.project());
 }
 
-TEST(serac_error_handling, bc_one_component_vector_coef)
+TEST(SeracErrorHandling, BcOneComponentVectorCoef)
 {
   mfem::Vector vec;
   auto         coef = std::make_shared<mfem::VectorConstantCoefficient>(vec);
   EXPECT_THROW(BoundaryCondition(coef, 0, std::set<int>{1}), SlicErrorException);
 }
 
-TEST(serac_error_handling, bc_one_component_vector_coef_dofs)
+TEST(SeracErrorHandling, BcOneComponentVectorCoefDofs)
 {
   mfem::Vector     vec;
   auto             coef = std::make_shared<mfem::VectorConstantCoefficient>(vec);
@@ -83,14 +80,14 @@ TEST(serac_error_handling, bc_one_component_vector_coef_dofs)
   EXPECT_THROW(BoundaryCondition(coef, 0, dofs), SlicErrorException);
 }
 
-TEST(serac_error_handling, bc_project_no_state)
+TEST(SeracErrorHandling, BcProjectNoState)
 {
   auto              coef = std::make_shared<mfem::ConstantCoefficient>(1.0);
   BoundaryCondition bc(coef, -1, std::set<int>{});
   EXPECT_THROW(bc.projectBdr(0.0), SlicErrorException);
 }
 
-TEST(serac_error_handling, bc_retrieve_scalar_coef)
+TEST(SeracErrorHandling, BcRetrieveScalarCoef)
 {
   auto              coef = std::make_shared<mfem::ConstantCoefficient>(1.0);
   BoundaryCondition bc(coef, -1, std::set<int>{});
@@ -102,7 +99,7 @@ TEST(serac_error_handling, bc_retrieve_scalar_coef)
   EXPECT_THROW(const_bc.vectorCoefficient(), SlicErrorException);
 }
 
-TEST(serac_error_handling, bc_retrieve_vec_coef)
+TEST(SeracErrorHandling, BcRetrieveVecCoef)
 {
   mfem::Vector      vec;
   auto              coef = std::make_shared<mfem::VectorConstantCoefficient>(vec);
@@ -115,7 +112,7 @@ TEST(serac_error_handling, bc_retrieve_vec_coef)
   EXPECT_THROW(const_bc.scalarCoefficient(), SlicErrorException);
 }
 
-TEST(serac_error_handling, invalid_output_type)
+TEST(SeracErrorHandling, InvalidOutputType)
 {
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -126,7 +123,7 @@ TEST(serac_error_handling, invalid_output_type)
   EXPECT_THROW(physics.initializeOutput(static_cast<OutputType>(-7), ""), SlicErrorException);
 }
 
-TEST(serac_error_handling, invalid_cmdline_arg)
+TEST(SeracErrorHandling, InvalidCmdlineArg)
 {
   // The command is actually --input-file
   char const* fake_argv[] = {"serac", "--file", "input.lua"};
@@ -134,7 +131,7 @@ TEST(serac_error_handling, invalid_cmdline_arg)
   EXPECT_THROW(cli::defineAndParse(fake_argc, const_cast<char**>(fake_argv), ""), SlicErrorException);
 }
 
-TEST(serac_error_handling, nonexistent_mesh_path)
+TEST(SeracErrorHandling, NonexistentMeshPath)
 {
   std::string mesh_path       = "nonexistent.mesh";
   std::string input_file_path = std::string(SERAC_REPO_DIR) + "/data/input_files/default.lua";
@@ -142,9 +139,6 @@ TEST(serac_error_handling, nonexistent_mesh_path)
 }
 
 }  // namespace serac
-
-//------------------------------------------------------------------------------
-#include "axom/slic/core/SimpleLogger.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -154,8 +148,8 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when
-                                    // exiting main scope
+  axom::slic::SimpleLogger logger;
+
   axom::slic::setAbortFunction([]() { throw SlicErrorException{}; });
   axom::slic::setAbortOnError(true);
   axom::slic::setAbortOnWarning(false);

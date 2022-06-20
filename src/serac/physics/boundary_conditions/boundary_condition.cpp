@@ -4,45 +4,79 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/boundary_conditions/boundary_condition.hpp"
-
 #include <algorithm>
+
+#include "serac/physics/boundary_conditions/boundary_condition.hpp"
 
 namespace serac {
 
 BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component,
-                                     const std::set<int>& attrs, const int num_attrs)
-    : coef_(coef), component_(component), markers_(num_attrs)
+                                     const std::set<int>& attrs, const int num_attrs, FiniteElementState* state)
+    : coef_(coef), component_(component), markers_(num_attrs), state_(state)
 {
   if (get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_)) {
     SLIC_ERROR_ROOT_IF(component_, "A vector coefficient must be applied to all components");
   }
+
   markers_ = 0;
   for (const int attr : attrs) {
     SLIC_ASSERT_MSG(attr <= num_attrs, "Attribute specified larger than what is found in the mesh.");
     markers_[attr - 1] = 1;
   }
+
+  // If a finite element state is provided, set the dofs from the associated finite element space
+  if (state) {
+    setDofs();
+  }
 }
 
 BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component,
-                                     const mfem::Array<int>& true_dofs)
-    : coef_(coef), component_(component), markers_(0), true_dofs_(true_dofs)
+                                     const mfem::Array<int>& true_dofs, FiniteElementState* state)
+    : coef_(coef), component_(component), markers_(0), state_(state)
 {
   if (get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_)) {
     SLIC_ERROR_IF(component_, "A vector coefficient must be applied to all components");
   }
+  setTrueDofs(true_dofs);
 }
 
-void BoundaryCondition::setTrueDofs(const mfem::Array<int> dofs) { true_dofs_ = dofs; }
-
-void BoundaryCondition::setTrueDofs(FiniteElementState& state)
+void BoundaryCondition::setTrueDofs(const mfem::Array<int> true_dofs)
 {
+  SLIC_ERROR_ROOT_IF(!state_, "A finite element state must exist to set the boundary condition DOFs.");
+  true_dofs_ = true_dofs;
+  state_->space().GetRestrictionMatrix()->BooleanMultTranspose(*true_dofs_, *local_dofs_);
+}
+
+void BoundaryCondition::setLocalDofs(const mfem::Array<int> local_dofs)
+{
+  SLIC_ERROR_ROOT_IF(!state_, "A finite element state must exist to set the boundary condition DOFs.");
+  local_dofs_ = local_dofs;
+  state_->space().GetRestrictionMatrix()->BooleanMult(*local_dofs_, *true_dofs_);
+}
+
+void BoundaryCondition::setDofs()
+{
+  SLIC_ERROR_ROOT_IF(!state_, "A finite element state must exist to set the boundary condition DOFs.");
   true_dofs_.emplace(0);
-  state_ = &state;
+  local_dofs_.emplace(0);
+
   if (component_) {
-    state.space().GetEssentialTrueDofs(markers_, *true_dofs_, *component_);
+    mfem::Array<int> dof_markers;
+
+    state_->space().GetEssentialTrueDofs(markers_, *true_dofs_, *component_);
+    state_->space().GetEssentialVDofs(markers_, dof_markers, *component_);
+
+    // The VDof call actually returns a marker array, so we need to transform it to a list of indices
+    state_->space().MarkerToList(dof_markers, *local_dofs_);
+
   } else {
-    state.space().GetEssentialTrueDofs(markers_, *true_dofs_, -1);
+    mfem::Array<int> dof_markers;
+
+    state_->space().GetEssentialTrueDofs(markers_, *true_dofs_, -1);
+    state_->space().GetEssentialVDofs(markers_, *local_dofs_, -1);
+
+    // The VDof call actually returns a marker array, so we need to transform it to a list of indices
+    state_->space().MarkerToList(dof_markers, *local_dofs_);
   }
 }
 
@@ -50,13 +84,13 @@ void BoundaryCondition::project(FiniteElementState& state) const
 {
   SLIC_ERROR_ROOT_IF(!true_dofs_, "Only essential boundary conditions can be projected over all DOFs.");
   // Value semantics for convenience
-  auto tdofs = *true_dofs_;
-  auto size  = tdofs.Size();
+  auto local_dofs = *local_dofs_;
+  auto size       = local_dofs.Size();
   if (size) {
     // Generate the scalar dof list from the vector dof list
     mfem::Array<int> dof_list(size);
-    std::transform(tdofs.begin(), tdofs.end(), dof_list.begin(),
-                   [&space = std::as_const(state.space())](int tdof) { return space.VDofToDof(tdof); });
+    std::transform(local_dofs.begin(), local_dofs.end(), dof_list.begin(),
+                   [&space = std::as_const(state.space())](int ldof) { return space.VDofToDof(ldof); });
 
     // the only reason to store a VectorCoefficient is to act on all components
     if (is_vector_valued(coef_)) {
@@ -68,6 +102,7 @@ void BoundaryCondition::project(FiniteElementState& state) const
       auto scalar_coef = get<std::shared_ptr<mfem::Coefficient>>(coef_);
       if (component_) {
         state.gridFunc().ProjectCoefficient(*scalar_coef, dof_list, *component_);
+
       } else {
         state.gridFunc().ProjectCoefficient(*scalar_coef, dof_list, 0);
       }

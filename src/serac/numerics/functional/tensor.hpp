@@ -16,6 +16,8 @@
 
 #include "serac/numerics/functional/dual.hpp"
 
+#include "serac/numerics/functional/tuple.hpp"
+
 #include "detail/metaprogramming.hpp"
 
 namespace serac {
@@ -244,14 +246,14 @@ SERAC_HOST_DEVICE zero get(const zero&)
 
 /** @brief the dot product of anything with `zero` is `zero` */
 template <typename T>
-SERAC_HOST_DEVICE zero dot(const T&, zero)
+SERAC_HOST_DEVICE constexpr zero dot(const T&, zero)
 {
   return zero{};
 }
 
 /** @brief the dot product of anything with `zero` is `zero` */
 template <typename T>
-SERAC_HOST_DEVICE zero dot(zero, const T&)
+SERAC_HOST_DEVICE constexpr zero dot(zero, const T&)
 {
   return zero{};
 }
@@ -1170,13 +1172,28 @@ SERAC_HOST_DEVICE bool is_symmetric_and_positive_definite(tensor<double, 3, 3> A
 }
 
 /**
- * @brief Solves Ax = b for x using Gaussian elimination with partial pivoting
- * @param[in] A The coefficient matrix A
- * @param[in] b The righthand side vector b
- * @note @a A and @a b are by-value as they are mutated as part of the elimination
+ * @brief Representation of an LU factorization
+ *
+ * The entries of P mean row i of the matrix was exchanged with row P[i].
  */
 template <typename T, int n>
-SERAC_HOST_DEVICE constexpr tensor<T, n> linear_solve(tensor<T, n, n> A, const tensor<T, n> b)
+struct LuFactorization {
+  tensor<int, n>  P;  ///< Row permutation indices due to partial pivoting
+  tensor<T, n, n> L;  ///< Lower triangular factor. Has ones on diagonal.
+  tensor<T, n, n> U;  ///< Upper triangular factor
+};
+
+/**
+ * @brief Compute LU factorization of a matrix with partial pivoting
+ *
+ * The convention followed is to place ones on the diagonal of the lower
+ * triangular factor.
+ * @param[in] A The matrix to factorize
+ * @return An LuFactorization object
+ * @see LuFactorization
+ */
+template <typename T, int n>
+SERAC_HOST_DEVICE constexpr LuFactorization<T, n> factorize_lu(const tensor<T, n, n>& A)
 {
   constexpr auto abs  = [](double x) { return (x < 0) ? -x : x; };
   constexpr auto swap = [](auto& x, auto& y) {
@@ -1185,41 +1202,185 @@ SERAC_HOST_DEVICE constexpr tensor<T, n> linear_solve(tensor<T, n, n> A, const t
     y        = tmp;
   };
 
-  tensor<double, n> x{};
+  auto U = A;
+  // initialize L to Identity
+  auto L = tensor<T, n, n>{};
+  // This handles the case if T is a dual number
+  // TODO - BT: make a dense identity that is templated on type
+  for (int i = 0; i < n; i++) {
+    if constexpr (is_dual_number<T>::value) {
+      L[i][i].value = 1.0;
+    } else {
+      L[i][i] = 1.0;
+    }
+  }
+  tensor<int, n> P(make_tensor<n>([](auto i) { return i; }));
 
   for (int i = 0; i < n; i++) {
     // Search for maximum in this column
-    double max_val = abs(A[i][i]);
+    double max_val = abs(get_value(U[i][i]));
 
     int max_row = i;
     for (int j = i + 1; j < n; j++) {
-      if (abs(A[j][i]) > max_val) {
-        max_val = abs(A[j][i]);
+      auto U_ji = get_value(U[j][i]);
+      if (abs(U_ji) > max_val) {
+        max_val = abs(U_ji);
         max_row = j;
       }
     }
 
-    swap(b[max_row], b[i]);
-    swap(A[max_row], A[i]);
+    swap(P[max_row], P[i]);
+    swap(U[max_row], U[i]);
+  }
 
-    // zero entries below in this column
+  for (int i = 0; i < n; i++) {
+    // zero entries below in this column in U
+    // and fill in L entries
     for (int j = i + 1; j < n; j++) {
-      double c = -A[j][i] / A[i][i];
-      A[j] += c * A[i];
-      b[j] += c * b[i];
-      A[j][i] = 0;
+      auto c  = U[j][i] / U[i][i];
+      L[j][i] = c;
+      U[j] -= c * U[i];
+      U[j][i] = T{};
     }
   }
 
-  // Solve equation Ax=b for an upper triangular matrix A
+  return {P, L, U};
+}
+
+/**
+ * @brief Solves a lower triangular system Ly = b
+ *
+ * L must be lower triangular and normalized such that the
+ * diagonal entries are unity. This is not checked in the
+ * function, so failure to obey this will produce
+ * meaningless results.
+ *
+ * @param[in] L A lower triangular matrix
+ * @param[in] b The right hand side
+ * @param[in] P A list of indices to index into b in a permuted fashion.
+ *
+ * @return y the solution vector
+ */
+template <typename T, int n, int... m>
+SERAC_HOST_DEVICE constexpr auto solve_lower_triangular(const tensor<T, n, n>& L, const tensor<T, n, m...>& b,
+                                                        const tensor<int, n>& P)
+{
+  tensor<T, n, m...> y{};
+  for (int i = 0; i < n; i++) {
+    auto c = b[P[i]];
+    for (int j = 0; j < i; j++) {
+      c -= L[i][j] * y[j];
+    }
+    y[i] = c / L[i][i];
+  }
+  return y;
+}
+
+/**
+ * @overload
+ * @note For the case when no permutation of the rows is needed.
+ */
+template <typename T, int n, int... m>
+SERAC_HOST_DEVICE constexpr auto solve_lower_triangular(const tensor<T, n, n>& L, const tensor<T, n, m...>& b)
+{
+  // no permutation provided, so just map each equation to itself
+  // TODO make a convienience function for ranges like this
+  // BT 05/09/2022
+  tensor<int, n> P(make_tensor<n>([](auto i) { return i; }));
+
+  return solve_lower_triangular(L, b, P);
+}
+
+/**
+ * @brief Solves an upper triangular system Ux = y
+ *
+ * U must be upper triangular. This is not checked, so
+ * failure to obey this will produce meaningless results.
+ *
+ * @param[in] U An upper triangular matrix
+ * @param[in] y The right hand side
+ * @return x the solution vector
+ */
+template <typename T, int n, int... m>
+SERAC_HOST_DEVICE constexpr auto solve_upper_triangular(const tensor<T, n, n>& U, const tensor<T, n, m...>& y)
+{
+  tensor<T, n, m...> x{};
   for (int i = n - 1; i >= 0; i--) {
-    x[i] = b[i] / A[i][i];
-    for (int j = i - 1; j >= 0; j--) {
-      b[j] -= A[j][i] * x[i];
+    auto c = y[i];
+    for (int j = i + 1; j < n; j++) {
+      c -= U[i][j] * x[j];
     }
+    x[i] = c / U[i][i];
   }
-
   return x;
+}
+
+/**
+ * @brief Solves Ax = b for x using Gaussian elimination with partial pivoting
+ * @param[in] A The coefficient matrix A
+ * @param[in] b The righthand side vector b
+ * @return x The solution vector
+ */
+template <typename S, typename T, int n, int... m>
+SERAC_HOST_DEVICE constexpr auto linear_solve(const tensor<S, n, n>& A, const tensor<T, n, m...>& b)
+{
+  // We want to avoid accumulating the derivative through the
+  // LU factorization, because it is computationally expensive.
+  // Instead, we perform the LU factorization on the values of
+  // A, and then two backsolves: one to compute the primal (x),
+  // and another to compute its derivative (dx).
+  // If A is not dual, the second solve is a no-op.
+
+  // Strip off derivatives, if any, and compute only x (ie no derivative)
+  auto lu_factors = factorize_lu(get_value(A));
+  auto x          = linear_solve(lu_factors, get_value(b));
+
+  // Compute directional derivative of x.
+  // If both b and A are not dual, the zero type
+  // makes these no-ops.
+  auto r  = get_gradient(b) - dot(get_gradient(A), x);
+  auto dx = linear_solve(lu_factors, r);
+
+  if constexpr (is_zero<decltype(dx)>{}) {
+    return x;
+  } else {
+    return make_dual(x, dx);
+  }
+}
+
+/**
+ * @overload
+ * @note For use with a matrix that has already been factorized
+ */
+template <typename S, typename T, int n, int... m>
+SERAC_HOST_DEVICE constexpr auto linear_solve(const LuFactorization<S, n>& lu_factors, const tensor<T, n, m...>& b)
+{
+  // Forward substitution
+  // solve Ly = b
+  const auto y = solve_lower_triangular(lu_factors.L, b, lu_factors.P);
+
+  // Back substitution
+  // Solve Ux = y
+  return solve_upper_triangular(lu_factors.U, y);
+}
+
+/**
+ * @overload
+ * @note Shortcut for case of zero rhs
+ */
+template <typename T, int n>
+SERAC_HOST_DEVICE constexpr auto linear_solve(const LuFactorization<T, n>& /* lu_factors */, const zero /* b */)
+{
+  return zero{};
+}
+
+/**
+ * @brief Create a tensor of dual numbers with specified seed
+ */
+template <typename T, int n>
+SERAC_HOST_DEVICE constexpr auto make_dual(const tensor<T, n>& x, const tensor<T, n>& dx)
+{
+  return make_tensor<n>([&](int i) { return dual<T>{x[i], dx[i]}; });
 }
 
 /**
@@ -1269,54 +1430,10 @@ SERAC_HOST_DEVICE constexpr tensor<double, 3, 3> inv(const tensor<double, 3, 3>&
  * with partial pivoting
  */
 template <typename T, int n>
-SERAC_HOST_DEVICE constexpr tensor<T, n, n> inv(const tensor<T, n, n>& A)
+SERAC_HOST_DEVICE constexpr auto inv(const tensor<T, n, n>& A)
 {
-  constexpr auto abs  = [](double x) { return (x < 0) ? -x : x; };
-  constexpr auto swap = [](auto& x, auto& y) {
-    auto tmp = x;
-    x        = y;
-    y        = tmp;
-  };
-
-  tensor<double, n, n> B = DenseIdentity<n>();
-
-  for (int i = 0; i < n; i++) {
-    // Search for maximum in this column
-    double max_val = abs(A[i][i]);
-
-    int max_row = i;
-    for (int j = i + 1; j < n; j++) {
-      if (abs(A[j][i]) > max_val) {
-        max_val = abs(A[j][i]);
-        max_row = j;
-      }
-    }
-
-    swap(B[max_row], B[i]);
-    swap(A[max_row], A[i]);
-
-    // zero entries below in this column
-    for (int j = i + 1; j < n; j++) {
-      if (A[j][i] != 0.0) {
-        double c = -A[j][i] / A[i][i];
-        A[j] += c * A[i];
-        B[j] += c * B[i];
-        A[j][i] = 0;
-      }
-    }
-  }
-
-  // upper triangular solve
-  for (int i = n - 1; i >= 0; i--) {
-    B[i] = B[i] / A[i][i];
-    for (int j = i - 1; j >= 0; j--) {
-      if (A[j][i] != 0.0) {
-        B[j] -= A[j][i] * B[i];
-      }
-    }
-  }
-
-  return B;
+  auto I = DenseIdentity<n>();
+  return linear_solve(A, I);
 }
 
 /**
@@ -1329,7 +1446,7 @@ SERAC_HOST_DEVICE constexpr tensor<T, n, n> inv(const tensor<T, n, n>& A)
  * TODO: compare performance of this hardcoded implementation to just using inv() directly
  */
 template <typename gradient_type, int n>
-SERAC_HOST_DEVICE auto inv(tensor<dual<gradient_type>, n, n> A)
+SERAC_HOST_DEVICE constexpr auto inv(tensor<dual<gradient_type>, n, n> A)
 {
   auto invA = inv(get_value(A));
   return make_tensor<n, n>([&](int i, int j) {
@@ -1504,7 +1621,7 @@ SERAC_HOST_DEVICE auto get_gradient(double /* arg */) { return zero{}; }
  * @return The sentinel, @see zero
  */
 template <int... n>
-SERAC_HOST_DEVICE auto get_gradient(const tensor<double, n...>& /* arg */)
+SERAC_HOST_DEVICE constexpr auto get_gradient(const tensor<double, n...>& /* arg */)
 {
   return zero{};
 }
@@ -1514,7 +1631,7 @@ SERAC_HOST_DEVICE auto get_gradient(const tensor<double, n...>& /* arg */)
  * @param[in] arg The tensor of dual numbers
  */
 template <int... n>
-SERAC_HOST_DEVICE auto get_gradient(const tensor<dual<double>, n...>& arg)
+SERAC_HOST_DEVICE constexpr auto get_gradient(const tensor<dual<double>, n...>& arg)
 {
   tensor<double, n...> g{};
   for_constexpr<n...>([&](auto... i) { g(i...) = arg(i...).gradient; });
@@ -1523,7 +1640,7 @@ SERAC_HOST_DEVICE auto get_gradient(const tensor<dual<double>, n...>& arg)
 
 /// @overload
 template <int... n, int... m>
-SERAC_HOST_DEVICE auto get_gradient(const tensor<dual<tensor<double, m...>>, n...>& arg)
+SERAC_HOST_DEVICE constexpr auto get_gradient(const tensor<dual<tensor<double, m...>>, n...>& arg)
 {
   tensor<double, n..., m...> g{};
   for_constexpr<n...>([&](auto... i) { g(i...) = arg(i...).gradient; });

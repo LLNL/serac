@@ -4,14 +4,14 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/numerics/functional/tuple.hpp"
-#include "serac/numerics/functional/tuple_arithmetic.hpp"
-#include "serac/numerics/functional/tensor.hpp"
-
 #include <random>
 #include <iostream>
 
 #include <gtest/gtest.h>
+
+#include "serac/numerics/functional/tuple.hpp"
+#include "serac/numerics/functional/tuple_arithmetic.hpp"
+#include "serac/numerics/functional/tensor.hpp"
 
 using namespace serac;
 
@@ -21,7 +21,7 @@ static constexpr double mu  = 2.0;
 
 static constexpr double epsilon = 1.0e-6;
 
-TEST(TupleArithmeticUnitTests, structured_binding)
+TEST(TupleArithmeticUnitTests, StructuredBinding)
 {
   serac::tuple x{0, 1.0, 2.0f};
   auto [a, b, c] = x;
@@ -30,7 +30,7 @@ TEST(TupleArithmeticUnitTests, structured_binding)
   EXPECT_NEAR(c, 2.0f, 1.0e-10);
 }
 
-TEST(TupleArithmeticUnitTests, add)
+TEST(TupleArithmeticUnitTests, Add)
 {
   serac::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
                  make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
@@ -40,7 +40,7 @@ TEST(TupleArithmeticUnitTests, add)
   EXPECT_NEAR(norm(serac::get<2>(b)), 2.977782431376876, 1.0e-10);
 }
 
-TEST(TupleArithmeticUnitTests, subtract)
+TEST(TupleArithmeticUnitTests, Subtract)
 {
   serac::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
                  make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
@@ -50,7 +50,7 @@ TEST(TupleArithmeticUnitTests, subtract)
   EXPECT_NEAR(norm(serac::get<2>(b)), 0.0, 1.0e-10);
 }
 
-TEST(TupleArithmeticUnitTests, multiply)
+TEST(TupleArithmeticUnitTests, Multiply)
 {
   serac::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
                  make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
@@ -60,7 +60,7 @@ TEST(TupleArithmeticUnitTests, multiply)
   EXPECT_NEAR(norm(serac::get<2>(b)), 2.977782431376876, 1.0e-10);
 }
 
-TEST(TupleArithmeticUnitTests, divide)
+TEST(TupleArithmeticUnitTests, Divide)
 {
   serac::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
                  make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
@@ -70,7 +70,7 @@ TEST(TupleArithmeticUnitTests, divide)
   EXPECT_NEAR(norm(serac::get<2>(b)), 2.977782431376876, 1.0e-10);
 }
 
-TEST(TupleArithmeticUnitTests, tensor_output_with_tuple_input)
+TEST(TupleArithmeticUnitTests, TensorOutputWithTupleInput)
 {
   constexpr auto f = [=](auto p, auto v, auto L) { return rho * outer(v, v) * det(I + L) + 2.0 * mu * sym(L) - p * I; };
 

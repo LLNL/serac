@@ -4,17 +4,17 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/thermal_solid_functional.hpp"
-#include "serac/physics/materials/thermal_functional_material.hpp"
-#include "serac/physics/materials/solid_functional_material.hpp"
-
 #include <fstream>
 
+#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
 #include "serac/serac_config.hpp"
 #include "serac/mesh/mesh_utils.hpp"
+#include "serac/physics/thermal_solid_functional.hpp"
+#include "serac/physics/materials/thermal_functional_material.hpp"
+#include "serac/physics/materials/solid_functional_material.hpp"
 #include "serac/physics/state/state_manager.hpp"
 
 namespace serac {
@@ -71,12 +71,9 @@ void functional_test_static(double expected_norm)
   EXPECT_NEAR(u, expected_norm, 1.0e-6);
 }
 
-TEST(thermal_solid_functional, construct) { functional_test_static<1, 2>(0.0); }
+TEST(ThermalSolidFunctional, Construct) { functional_test_static<1, 2>(0.0); }
 
 }  // namespace serac
-
-//------------------------------------------------------------------------------
-#include "axom/slic/core/SimpleLogger.hpp"
 
 int main(int argc, char* argv[])
 {

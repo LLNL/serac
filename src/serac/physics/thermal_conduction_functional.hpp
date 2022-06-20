@@ -401,7 +401,7 @@ public:
             functional_call_args_[0] = u;
 
             r = (*K_functional_)(functional_call_args_);
-            r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
+            r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
           [this](const mfem::Vector& u) -> mfem::Operator& {
@@ -433,7 +433,7 @@ public:
             functional_call_args_[0] = u_;
 
             add(M_residual, K_residual, r);
-            r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
+            r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
           [this](const mfem::Vector& du_dt) -> mfem::Operator& {
