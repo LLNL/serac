@@ -24,6 +24,7 @@ set(materials_headers
     parameterized_solid_functional_material.hpp
     functional_material_utils.hpp
     material_verification_tools.hpp
+    liquid_crystal_elastomer.hpp
     )
 
 set(materials_depends

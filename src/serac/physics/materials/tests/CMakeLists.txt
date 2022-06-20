@@ -9,6 +9,7 @@ set(test_dependencies gtest serac_physics test_utils)
 set(material_tests
     thermomechanical_material.cpp
     test_material_verification_tools.cpp
+    test_liquid_crystal_elastomer.cpp
     )
 
 serac_add_tests( SOURCES ${material_tests}
