@@ -32,7 +32,7 @@ TEST(TestLiquidCrystalMaterial, agreesWithNeoHookeanInHighTemperatureLimit)
   double shear_modulus = 0.5*E/(1.0 + nu);
   double bulk_modulus = E / 3.0 / (1.0 - 2.0*nu);  
 
-  BrighentiMechanical material(density, shear_modulus, bulk_modulus, order_constant,
+  LiquidCrystalElastomer material(density, shear_modulus, bulk_modulus, order_constant,
                                order_parameter, transition_temperature, normal, Nb2);
 
   const tensor<double, 3> x{};
@@ -44,8 +44,8 @@ TEST(TestLiquidCrystalMaterial, agreesWithNeoHookeanInHighTemperatureLimit)
 
   auto F_old = DenseIdentity<3>();
   double theta_old = 300.0;
-  tensor<double, 3, 3> mu_old = BrighentiMechanical::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
-  BrighentiMechanical::State state{F_old, mu_old, theta_old};
+  tensor<double, 3, 3> mu_old = LiquidCrystalElastomer::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
+  LiquidCrystalElastomer::State state{F_old, mu_old, theta_old};
 
   auto response = material(x, u, H, state, theta);
   std::cout << response.stress << std::endl;
@@ -69,10 +69,10 @@ TEST(TestLiquidCrystalMaterial, generatesStressHistory)
   tensor<double, 3> normal{{0.0, 1.0, 0.0}};
   double Nb2 = 1.0;
   
-  BrighentiMechanical material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
+  LiquidCrystalElastomer material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
   double temperature = 50.0;
 
-  auto initial_distribution = BrighentiMechanical::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
+  auto initial_distribution = LiquidCrystalElastomer::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
   decltype(material)::State initial_state{DenseIdentity<3>(), initial_distribution, temperature};
   double max_time = 20.0;
   unsigned int steps = 10;

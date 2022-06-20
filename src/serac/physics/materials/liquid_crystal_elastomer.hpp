@@ -7,7 +7,9 @@
 /**
  * @file liquid_crystal_elastomer.hpp
  *
- * @brief Brighenti constitutive model for liquid crystal elastomers
+ * @brief Brighenti's constitutive model for liquid crystal elastomers
+ *
+ * see https://doi.org/10.1016/j.ijsolstr.2021.02.023
  */
 
 #pragma once
@@ -16,7 +18,6 @@
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/dual.hpp"
 #include "serac/physics/materials/solid_functional_material.hpp"
-#include <iostream>
 
 namespace serac {
 
@@ -25,7 +26,7 @@ namespace serac {
  *
  *
  */
-class BrighentiMechanical {
+class LiquidCrystalElastomer {
 public:
 
   static constexpr int dim = 3;
@@ -48,18 +49,18 @@ public:
    * @param normal Liquid crystal director vector
    * @param N_b_squared Number of Kunh segments/chain, times square of Kuhn segment length
    */
-  BrighentiMechanical(double density, double shear_modulus, double bulk_modulus,
-                      double order_constant, double order_parameter,
-                      double transition_temperature, tensor<double, 3> normal,
-                      double N_b_squared):
+  LiquidCrystalElastomer(double density, double shear_modulus, double bulk_modulus,
+                         double order_constant, double order_parameter,
+                         double transition_temperature, tensor<double, 3> normal,
+                         double N_b_squared):
     density_(density),
     shear_modulus_(shear_modulus),
     bulk_modulus_(bulk_modulus),
     order_constant_(order_constant),
     initial_order_parameter_(order_parameter),
     transition_temperature_(transition_temperature),
-    N_b_squared_(N_b_squared),
     normal_(normal/norm(normal)),
+    N_b_squared_(N_b_squared),
     initial_distribution_tensor_(
         calculateInitialDistributionTensor(normal, order_parameter, N_b_squared))
   {
