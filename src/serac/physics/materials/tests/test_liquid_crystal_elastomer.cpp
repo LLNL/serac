@@ -127,8 +127,8 @@ TEST(TestLiquidCrystalMaterial, temperatureSweep)
   for (unsigned int i = 0; i < steps; i++) {
     t += dt;
     double temperature = temperature_func(t);
-    auto response = material(unused, unused, H, state, temperature);
-    std::cout << response.stress << " " << state.distribution_tensor[1][1] << std::endl;
+    material(unused, unused, H, state, temperature);
+    std::cout << state.distribution_tensor[1][1] << std::endl;
   }
 }
 
