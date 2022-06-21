@@ -90,7 +90,7 @@ TEST(TestLiquidCrystalMaterial, agreesWithNeoHookeanInHighTemperatureLimitOverEn
 
   for (size_t i = 0; i < steps; i++) {
     auto [t, strain, stress, state] = response_history[i];
-    auto [nh_t, nh_strain, nh_stress, nh_state] = nh_response_history[i];
+    auto [nh_t, nh_strain, nh_stress, nh_state_loop] = nh_response_history[i];
     double difference = std::abs(stress[0][0] - nh_stress[0][0]);
     EXPECT_LT(difference, 1e-8);
   }
@@ -121,8 +121,8 @@ TEST(TestLiquidCrystalMaterial, temperatureSweep)
   tensor<double, 3> unused{};
   tensor<double, 3, 3> H{};
   std::function<double(double)> temperature_func =
-      [initial_temperature, transition_temperature](double t) {
-        return initial_temperature + 2*t*(transition_temperature - initial_temperature);
+      [initial_temperature, transition_temperature](double time) {
+        return initial_temperature + 2*time*(transition_temperature - initial_temperature);
       };
   for (unsigned int i = 0; i < steps; i++) {
     t += dt;

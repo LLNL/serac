@@ -99,7 +99,7 @@ public:
     auto& mu0 = initial_distribution_tensor_;
 
     // stress output
-    // Note to Jorge-Luis: the paper is omits a prefactor of 1/J in the
+    // Note to Jorge-Luis: the paper omits a prefactor of 1/J in the
     // Cauchy stress equation because they assume J = 1 strictly
     // (the incompressible limit). It needs to be retained for this
     // compressible model (and then cancelled out when converting to
