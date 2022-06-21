@@ -85,8 +85,8 @@ TEST(TestLiquidCrystalMaterial, agreesWithNeoHookeanInHighTemperatureLimitOverEn
   auto response_history = uniaxial_stress_test(max_time, steps, material, initial_state, constant_strain_rate, constant_temperature);
 
   solid_util::NeoHookeanSolid<3> nh_material(density, shear_modulus, bulk_modulus);
-  solid_util::NeoHookeanSolid<3>::State nh_state{};
-  auto nh_response_history = uniaxial_stress_test(max_time, steps, nh_material, nh_state, constant_strain_rate);
+  solid_util::NeoHookeanSolid<3>::State nh_initial_state{};
+  auto nh_response_history = uniaxial_stress_test(max_time, steps, nh_material, nh_initial_state, constant_strain_rate);
 
   for (size_t i = 0; i < steps; i++) {
     auto [t, strain, stress, state] = response_history[i];
@@ -116,7 +116,7 @@ TEST(TestLiquidCrystalMaterial, temperatureSweep)
   decltype(material)::State state{DenseIdentity<3>(), initial_distribution, initial_temperature};
   double max_time = 1.0;
   unsigned int steps = 50;
-  double t = 0;
+  double time = 0;
   double dt = max_time / steps;
   tensor<double, 3> unused{};
   tensor<double, 3, 3> H{};
@@ -124,9 +124,10 @@ TEST(TestLiquidCrystalMaterial, temperatureSweep)
       [initial_temperature, transition_temperature](double t) {
         return initial_temperature + 2*t*(transition_temperature - initial_temperature);
       };
+
   for (unsigned int i = 0; i < steps; i++) {
-    t += dt;
-    double temperature = temperature_func(t);
+    time += dt;
+    double temperature = temperature_func(time);
     material(unused, unused, H, state, temperature);
     std::cout << state.distribution_tensor[1][1] << std::endl;
   }
