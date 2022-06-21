@@ -142,9 +142,14 @@ public:
     double q     = initial_order_parameter_ / (1 + std::exp((theta - transition_temperature_)/order_constant_));
 
     // Nematic order tensor
-    auto proj = outer(normal_, normal_) - Identity<dim>();
-    auto Q_old = q_old/2 * (3 * proj);
-    auto Q     = q/2 * (3 * proj);
+    constexpr auto I = Identity<dim>();
+    auto n_dyad = outer(normal_, normal_);
+    // BT: These are different than what Jorge-Luis had. I found the papers
+    // to be confusing on this point. I'm extrapolating from Eq (7)
+    // in https://doi.org/10.1016/j.mechrescom.2022.103858
+    // Well-defined validation problems would help to confirm.
+    auto Q_old = 0.5*((1.0 - q_old)*I + 3.0*q_old*n_dyad);
+    auto Q     = 0.5*((1.0 - q)*I + 3.0*q*n_dyad);
 
     // Polar decomposition of incremental deformation gradient
     auto U_hat = tensorSquareRoot(transpose(F_hat) * F_hat);

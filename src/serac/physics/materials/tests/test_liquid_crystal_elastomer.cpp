@@ -96,6 +96,43 @@ TEST(TestLiquidCrystalMaterial, agreesWithNeoHookeanInHighTemperatureLimitOverEn
   }
 }
 
+TEST(TestLiquidCrystalMaterial, temperatureSweep)
+{
+  double density = 1.0;
+  double E = 1.0;
+  double nu = 0.25;
+  double shear_modulus = 0.5*E/(1.0 + nu);
+  double bulk_modulus = E / 3.0 / (1.0 - 2.0*nu);
+  double order_constant = 1.0;
+  double order_parameter = 1.0;
+  double transition_temperature = 10.0;
+  tensor<double, 3> normal{{0.0, 1.0, 0.0}};
+  double Nb2 = 1.0;
+  
+  LiquidCrystalElastomer material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
+  double initial_temperature = 5.0;
+
+  auto initial_distribution = LiquidCrystalElastomer::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
+  decltype(material)::State state{DenseIdentity<3>(), initial_distribution, initial_temperature};
+  double max_time = 1.0;
+  unsigned int steps = 50;
+  double t = 0;
+  double dt = max_time / steps;
+  tensor<double, 3> unused{};
+  tensor<double, 3, 3> H{};
+  std::function<double(double)> temperature_func =
+      [initial_temperature, transition_temperature](double t) {
+        return initial_temperature + 2*t*(transition_temperature - initial_temperature);
+      };
+  for (unsigned int i = 0; i < steps; i++) {
+    t += dt;
+    double temperature = temperature_func(t);
+    auto response = material(unused, unused, H, state, temperature);
+    std::cout << response.stress << " " << state.distribution_tensor[1][1] << std::endl;
+  }
+}
+
+
 } // namespace serac
 
 int main(int argc, char* argv[])
