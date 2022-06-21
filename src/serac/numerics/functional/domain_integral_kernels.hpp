@@ -63,7 +63,7 @@ template <int i, int dim, typename... trials, typename lambda, typename qpt_data
 auto get_derivative_type(lambda qf, qpt_data_type&& qpt_data)
 {
   using qf_arguments = serac::tuple<typename QFunctionArgument<trials, serac::Dimension<dim> >::type...>;
-  return get_gradient(detail::apply_qf(qf, tensor<double, dim>{}, make_dual_wrt<i>(qf_arguments{}), qpt_data));
+  return get_gradient(detail::apply_qf(qf, tensor<double, dim>{}, qpt_data, make_dual_wrt<i>(qf_arguments{})));
 };
 
 template <int i>
@@ -166,7 +166,7 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
         //
         // note: make_dual(arg) promotes those arguments to dual number types
         // so that qf_output will contain values and derivatives
-        auto qf_output = detail::apply_qf(qf_, x_q, arg, data_(int(e), q));
+        auto qf_output = detail::apply_qf(qf_, x_q, data_(int(e), q), arg);
 
         // integrate qf_output against test space shape functions / gradients
         // to get element residual contributions
@@ -266,7 +266,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
         //
         // note: make_dual(arg) promotes those arguments to dual number types
         // so that qf_output will contain values and derivatives
-        auto qf_output = detail::apply_qf(qf_, x_q, make_dual_wrt<I>(arg), data_(int(e), q));
+        auto qf_output = detail::apply_qf(qf_, x_q, data_(int(e), q), make_dual_wrt<I>(arg));
 
         // integrate qf_output against test space shape functions / gradients
         // to get element residual contributions

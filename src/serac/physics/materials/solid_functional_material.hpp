@@ -34,7 +34,7 @@ struct LinearIsotropicSolid {
    * @return The calculated material response (density, Kirchoff stress) for the material
    */
   template <typename DispGradType>
-  SERAC_HOST_DEVICE auto operator()(const DispGradType& du_dX, State & /* state */) const
+  SERAC_HOST_DEVICE auto operator()(State & /* state */, const DispGradType& du_dX) const
   {
     auto I      = Identity<dim>();
     auto lambda = K - (2.0 / dim) * G;
@@ -64,7 +64,7 @@ struct NeoHookeanSolid {
    * @return The calculated material response (density, Kirchoff stress) for the material
    */
   template <typename DispGradType>
-  SERAC_HOST_DEVICE auto operator()(const DispGradType& du_dX, State & /* state */) const
+  SERAC_HOST_DEVICE auto operator()(State & /* state */, const DispGradType& du_dX) const
   {
     constexpr auto I = Identity<dim>();
     auto lambda = K - (2.0 / dim) * G;
@@ -100,7 +100,7 @@ struct J2 {
 
   /** @brief calculate the Cauchy stress, given the displacement gradient and previous material state */
   template <typename T>
-  auto operator()(const T du_dX, State& state) const
+  auto operator()(State & state, const T du_dX) const
   {
     using std::sqrt;
     constexpr auto I = Identity<3>();
@@ -152,10 +152,7 @@ struct ConstantBodyForce {
    * @tparam dim The dimension of the problem
    * @return The body force value
    */
-  template <typename DisplacementType, typename DispGradType>
-  SERAC_HOST_DEVICE tensor<double, dim> operator()(const tensor<double, dim>& /* x */, const double /* t */,
-                                                   const DisplacementType& /* displacement */,
-                                                   const DispGradType& /* displacement_grad */) const
+  SERAC_HOST_DEVICE tensor<double, dim> operator()(const tensor<double, dim>& /* x */, const double /* t */) const
   {
     return force_;
   }

@@ -304,10 +304,10 @@ SERAC_HOST_DEVICE constexpr derivatives_type& AccessDerivatives(derivatives_type
 /// @brief layer of indirection needed to unpack the entries of the argument tuple
 SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 template <typename lambda, typename coords_type, typename T, typename qpt_data_type, int... i>
-SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, const T& arg_tuple, qpt_data_type&& qpt_data,
+SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, qpt_data_type&& qpt_data, const T& arg_tuple, 
                                        std::integer_sequence<int, i...>)
 {
-  return qf(x_q, serac::get<i>(arg_tuple)..., qpt_data);
+  return qf(x_q, qpt_data, serac::get<i>(arg_tuple)...);
 }
 
 /// @overload
@@ -338,15 +338,14 @@ SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, coords_ty
  * @param[inout] qpt_data The state information at the quadrature point
  */
 template <typename lambda, typename coords_type, typename... T, typename qpt_data_type>
-SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, const serac::tuple<T...>& arg_tuple,
-                                qpt_data_type&& qpt_data)
+SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, qpt_data_type&& qpt_data, const serac::tuple<T...>& arg_tuple)
 {
-  return apply_qf_helper(qf, x_q, arg_tuple, qpt_data, std::make_integer_sequence<int, int(sizeof...(T))>{});
+  return apply_qf_helper(qf, x_q, qpt_data, arg_tuple, std::make_integer_sequence<int, int(sizeof...(T))>{});
 }
 
 /// @overload
 template <typename lambda, typename coords_type, typename... T>
-SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, const serac::tuple<T...>& arg_tuple, std::nullptr_t)
+SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, std::nullptr_t, const serac::tuple<T...>& arg_tuple)
 {
   return apply_qf_helper(qf, x_q, arg_tuple, std::make_integer_sequence<int, int(sizeof...(T))>{});
 }

@@ -391,8 +391,8 @@ public:
     static_assert(sizeof...(T) == num_trial_spaces,
                   "Error: Functional::operator() must take exactly as many arguments as trial spaces");
 
-    [[maybe_unused]] constexpr int                          wrt = index_of_differentiation<T...>();
-    std::vector<std::reference_wrapper<const mfem::Vector>> input_T{args...};
+    [[maybe_unused]] constexpr int                    wrt = index_of_differentiation<T...>();
+    std::vector<std::reference_wrapper<mfem::Vector>> input_T{ std::reference_wrapper(args)... };
 
     return (*this)(input_T, Index<wrt>{});
   }
@@ -405,7 +405,7 @@ public:
    *
    * @param input_T an array of trial space dofs used to carry out the calculation.
    */
-  mfem::Vector& operator()(std::vector<std::reference_wrapper<const mfem::Vector>> input_T)
+  mfem::Vector& operator()(std::vector<std::reference_wrapper<mfem::Vector>> input_T)
   {
     SLIC_ERROR_IF(input_T.size() != num_trial_spaces,
                   "The input vector of trial spaces is not equal to the number of trial spaces defined in the "
@@ -423,7 +423,7 @@ public:
    */
   template <int wrt>
   typename operator_paren_return_index<wrt>::type operator()(
-      std::vector<std::reference_wrapper<const mfem::Vector>> input_T, Index<wrt>)
+      std::vector<std::reference_wrapper<mfem::Vector>> input_T, Index<wrt>)
   {
     // get the values for each local processor
     for (uint32_t i = 0; i < num_trial_spaces; i++) {

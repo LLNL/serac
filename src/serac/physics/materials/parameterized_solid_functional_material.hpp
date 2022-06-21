@@ -83,7 +83,7 @@ struct ParameterizedNeoHookeanSolid {
    */
 
   template <typename DispGradType, typename BulkType, typename ShearType>
-  SERAC_HOST_DEVICE auto operator()(const DispGradType& du_dX, State & /* state */, const BulkType& DeltaK, const ShearType& DeltaG) const
+  SERAC_HOST_DEVICE auto operator()(State & /*state*/, const DispGradType& du_dX, const BulkType& DeltaK, const ShearType& DeltaG) const
   {
     constexpr auto I = Identity<dim>();
     auto K = K0 + DeltaK;

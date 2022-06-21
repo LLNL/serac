@@ -149,6 +149,9 @@ public:
       is_quasistatic_ = false;
     } else {
       is_quasistatic_ = true;
+
+      // for the quasistatic analyses, set the acceleration values to zero
+      functional_call_args_[1].get() = 0.0;
     }
 
     int true_size = velocity_.space().TrueVSize();
@@ -273,15 +276,16 @@ public:
    * @pre MaterialType must have the operator (du_dX) defined as the Kirchoff stress
    */
   template <typename MaterialType, typename StateType>
-  void setMaterial(MaterialType material, QuadratureData<StateType> & QData)
+  void setMaterial(MaterialType material, const QuadratureData<StateType> & QData)
   {
+    auto copy = QData;
     residual_->AddDomainIntegral(
         Dimension<dim>{},
-        [this, material](auto /*x*/, auto displacement, auto acceleration, auto & state, auto ... params) {
+        [this, material](auto /*x*/, auto & state, auto displacement, auto acceleration, auto ... params) {
           auto a = get<VALUE>(acceleration);
           auto du_dX = get<DERIVATIVE>(displacement);
           auto body_force = material.density * a + 0.0 * du_dX[0];
-          auto stress = material(du_dX, state, serac::get<0>(params)...);
+          auto stress = material(state, du_dX, serac::get<0>(params)...);
 
           if (geom_nonlin_ == GeometricNonlinearities::On) {
             auto F = I + du_dX;
@@ -291,7 +295,7 @@ public:
 
           return serac::tuple{body_force, stress};
         },
-        mesh_, QData);
+        mesh_, copy);
   }
 
   template <typename MaterialType>
@@ -339,10 +343,10 @@ public:
   {
     residual_->AddDomainIntegral(
         Dimension<dim>{},
-        [body_force, this](auto x, auto displacement, auto /* acceleration */, auto... params) {
+        [body_force, this](auto x, auto displacement, auto /* acceleration */, auto... /*params*/) {
           auto du_dX = get<DERIVATIVE>(displacement);
           auto one_dual = (1.0 + 0.0 * du_dX[0][0]);
-          auto source = body_force(x, time_, serac::get<0>(params)...) * one_dual;
+          auto source = body_force(x, time_) * one_dual;
           if (geom_nonlin_ == GeometricNonlinearities::On) {
             source = source * det(I + du_dX);
           }
@@ -422,16 +426,14 @@ public:
 
         // residual function
         [this](const mfem::Vector& u, mfem::Vector& r) {
-          functional_call_args_[0] = u;
-
+          functional_call_args_[0].get() = u;
           r = (*residual_)(functional_call_args_);
           r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
         },
 
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
-          functional_call_args_[0] = u;
-
+          functional_call_args_[0].get() = u;
           auto [r, drdu] = (*residual_)(functional_call_args_, Index<0>{});
           J_             = assemble(drdu);
           bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
@@ -458,36 +460,34 @@ public:
     displacement_.initializeTrueVec();
 
     if (is_quasistatic_) {
-      residual_ = buildQuasistaticOperator();
+      residual_with_bcs_ = buildQuasistaticOperator();
     } else {
       // the dynamic case is described by a residual function and a second order
       // ordinary differential equation. Here, we define the residual function in
       // terms of an acceleration.
-      residual_ = std::make_unique<mfem_ext::StdFunctionOperator>(
+      residual_with_bcs_ = std::make_unique<mfem_ext::StdFunctionOperator>(
           displacement_.space().TrueVSize(),
 
           [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) {
-            functional_call_args_[1] = d2u_dt2;
-            add(1.0, u_, c0_, d2u_dt2, functional_call_args_[0]);
+            functional_call_args_[1].get() = d2u_dt2;
+            add(1.0, u_, c0_, d2u_dt2, functional_call_args_[0].get());
             r = (*residual_)(functional_call_args_);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
           [this](const mfem::Vector& d2u_dt2) -> mfem::Operator& {
-            functional_call_args_[1] = d2u_dt2;
-            add(1.0, u_, c0_, d2u_dt2, functional_call_args_[0]);
+            functional_call_args_[1].get() = d2u_dt2;
+            add(1.0, u_, c0_, d2u_dt2, functional_call_args_[0].get());
 
+            // K := dR/du
             auto K = serac::get<1>((*residual_)(functional_call_args_, Index<0>{}));
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
+            // M := dR/da
             auto M = serac::get<1>((*residual_)(functional_call_args_, Index<1>{}));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
-            // J = M + c0 * H(u_predicted)
-            mfem::Vector K_arg(u_.Size());
-            add(1.0, u_, c0_, d2u_dt2, K_arg);
-            functional_call_args_[0] = K_arg;
-
+            // J = M + c0 * K
             J_.reset(mfem::Add(1.0, *m_mat, c0_, *k_mat));
             bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
 
@@ -495,7 +495,7 @@ public:
           });
     }
 
-    nonlin_solver_.SetOperator(*residual_);
+    nonlin_solver_.SetOperator(*residual_with_bcs_);
   }
 
   /**
@@ -530,7 +530,7 @@ public:
 
     functional_call_args_[0] = displacement_.trueVec();
 
-    auto [r, drdu] = (*K_functional_)(functional_call_args_, Index<0>{});
+    auto [r, drdu] = (*residual_)(functional_call_args_, Index<0>{});
     auto jacobian  = assemble(drdu);
     auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -551,7 +551,7 @@ public:
     adjoint_displacement_.distributeSharedDofs();
 
     // Reset the equation solver to use the full nonlinear residual operator
-    nonlin_solver_.SetOperator(*residual_);
+    nonlin_solver_.SetOperator(*residual_with_bcs_);
 
     if (geom_nonlin_ == GeometricNonlinearities::On) {
       // Update the mesh with the new deformed nodes
@@ -580,7 +580,7 @@ public:
 
     functional_call_args_[0] = displacement_.trueVec();
 
-    auto [r, drdparam] = (*K_functional_)(functional_call_args_, Index<parameter_field + 1>{});
+    auto [r, drdparam] = (*residual_)(functional_call_args_, Index<parameter_field + 1>{});
 
     auto drdparam_mat = assemble(drdparam);
 
@@ -627,7 +627,7 @@ protected:
   std::array<std::unique_ptr<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;
 
   /// The set of input trial space vectors (displacement + parameters) used to call the underlying functional
-  std::vector<std::reference_wrapper<const mfem::Vector>> functional_call_args_;
+  std::vector<std::reference_wrapper<mfem::Vector>> functional_call_args_;
 
   /**
    * @brief the ordinary differential equation that describes
