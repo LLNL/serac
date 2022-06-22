@@ -123,12 +123,16 @@ public:
    * @brief Set the mass density
    *
    * @param[in] rho The mass density coefficient
+   * @note We are assuming this coefficient is constant so they copy constructor can be used.
+   * This is a hacky solution, but this modulue is soon to be deleted in favor of the
+   * Functional version.
    */
-  void setMassDensity(std::unique_ptr<mfem::Coefficient>&& rho)
+  void setMassDensity(std::unique_ptr<mfem::ConstantCoefficient>&& rho)
   {
-    // Note: This is very wrong but this class is going away very soon.
+    auto rho_copy = std::make_unique<mfem::ConstantCoefficient>(*rho);
+
     therm_solver_.setMassDensity(std::move(rho));
-    solid_solver_.setMassDensity(std::move(rho));
+    solid_solver_.setMassDensity(std::move(rho_copy));
   };
 
   /**
@@ -309,14 +313,14 @@ public:
 
 protected:
   /**
-   * @brief The single physics thermal solver
-   */
-  ThermalConduction therm_solver_;
-
-  /**
    * @brief The single physics nonlinear solid solver
    */
   Solid solid_solver_;
+
+  /**
+   * @brief The single physics thermal solver
+   */
+  ThermalConduction therm_solver_;
 
   /**
    * @brief The temperature finite element state

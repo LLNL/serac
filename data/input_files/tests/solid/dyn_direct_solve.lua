@@ -16,9 +16,6 @@ main_mesh = {
     par_ref_levels = 0,
 }
 
--- Simulation output format
-output_type = "VisIt"
-
 -- Solver parameters
 solid = {
     equation_solver = {
