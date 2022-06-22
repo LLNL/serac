@@ -125,7 +125,6 @@ public:
       for (size_t i = 0; i < sizeof...(parameter_space); ++i) {
         trial_spaces[i + 2]         = &(parameter_states_[i].get().space());
         parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, parameter_states_[i].get().space());
-        functional_call_args_.emplace_back(parameter_states_[i].get());
       }
     }
 
@@ -163,6 +162,7 @@ public:
     int true_size = velocity_.space().TrueVSize();
 
     u_.SetSize(true_size);
+    u_predicted_.SetSize(true_size);
     du_dt_.SetSize(true_size);
     previous_.SetSize(true_size);
     previous_ = 0.0;
@@ -421,15 +421,13 @@ public:
 
         // residual function
         [this](const mfem::Vector& u, mfem::Vector& r) {
-          functional_call_args_[0].get() = u;
-          r = (*residual_)(functional_call_args_);
+          r = (*residual_)(u, zero_, parameter_states_[parameter_indices] ...);
           r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
         },
 
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
-          functional_call_args_[0].get() = u;
-          auto [r, drdu] = (*residual_)(functional_call_args_, Index<0>{});
+          auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, parameter_states_[parameter_indices] ...);
           J_             = assemble(drdu);
           bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
           return *J_;
@@ -461,22 +459,20 @@ public:
           displacement_.space().TrueVSize(),
 
           [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) {
-            functional_call_args_[1].get() = d2u_dt2;
-            add(1.0, u_, c0_, d2u_dt2, functional_call_args_[0].get());
-            r = (*residual_)(functional_call_args_);
+            add(1.0, u_, c0_, d2u_dt2, u_predicted_);
+            r = (*residual_)(u_predicted_, d2u_dt2, parameter_states_[parameter_indices] ...);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
           [this](const mfem::Vector& d2u_dt2) -> mfem::Operator& {
-            functional_call_args_[1].get() = d2u_dt2;
-            add(1.0, u_, c0_, d2u_dt2, functional_call_args_[0].get());
+            add(1.0, u_, c0_, d2u_dt2, u_predicted_);
 
             // K := dR/du
-            auto K = serac::get<1>((*residual_)(functional_call_args_, Index<0>{}));
+            auto K = serac::get<1>((*residual_)(differentiate_wrt(u_predicted_), d2u_dt2, parameter_states_[parameter_indices] ...));
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             // M := dR/da
-            auto M = serac::get<1>((*residual_)(functional_call_args_, Index<1>{}));
+            auto M = serac::get<1>((*residual_)(u_predicted_, differentiate_wrt(d2u_dt2), parameter_states_[parameter_indices] ...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
             // J = M + c0 * K
@@ -520,9 +516,9 @@ public:
     mfem::HypreParVector adjoint_essential(adjoint_load);
     adjoint_essential = 0.0;
 
-    functional_call_args_[0] = displacement_;
-
-    auto [r, drdu] = (*residual_)(functional_call_args_, Index<0>{});
+    // sam: is this the right thing to be doing for dynamics simulations, 
+    // or are we implicitly assuming this should only be used in quasistatic analyses?
+    auto drdu = serac::get<1>((*residual_)(differentiate_wrt(displacement_), zero_, parameter_states_[parameter_indices] ...));
     auto jacobian  = assemble(drdu);
     auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -567,9 +563,7 @@ public:
       mesh_.NewNodes(*reference_nodes_);
     }
 
-    functional_call_args_[0] = displacement_;
-
-    auto [r, drdparam] = (*residual_)(functional_call_args_, Index<parameter_field + 1>{});
+    auto drdparam = serac::get<1>((*residual_)(DifferentiateWRT<parameter_field + 2>{}, displacement_, zero_, parameter_states_[parameter_indices] ...));
 
     auto drdparam_mat = assemble(drdparam);
 
@@ -610,9 +604,6 @@ protected:
   /// The sensitivities (dual vectors) with repect to each of the input parameter fields
   std::array<std::unique_ptr<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;
 
-  /// The set of input trial space vectors (displacement + parameters) used to call the underlying functional
-  std::vector<std::reference_wrapper<mfem::Vector>> functional_call_args_;
-
   /**
    * @brief the ordinary differential equation that describes
    * how to solve for the second time derivative of displacement, given
@@ -626,6 +617,9 @@ protected:
   /// Assembled sparse matrix for the Jacobian
   std::unique_ptr<mfem::HypreParMatrix> J_;
 
+  /// @brief an intermediate variable used to store the predicted end-step displacement
+  mfem::Vector u_predicted_;
+
   /// @brief used to communicate the ODE solver's predicted displacement to the residual operator
   mfem::Vector u_;
 
@@ -635,10 +629,8 @@ protected:
   /// @brief the previous acceleration, used as a starting guess for newton's method
   mfem::Vector previous_;
 
-  /// @brief Current time step
+  // TODO: document these correctly
   double c0_;
-
-  /// @brief Previous time step
   double c1_;
 
   /// @brief A flag denoting whether to compute geometric nonlinearities in the residual
