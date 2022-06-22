@@ -319,7 +319,7 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   user_defined_bulk_modulus = 1.0;
 
   // Construct a functional-based solid mechanics solver
-  SolidFunctional<p, dim, H1<1>, H1<1>> solid_solver(default_static, GeometricNonlinearities::On,
+  SolidFunctional<p, dim, Parameters<H1<1>, H1<1>> > solid_solver(default_static, GeometricNonlinearities::On,
                                                      FinalMeshOption::Reference, "solid_functional",
                                                      {user_defined_bulk_modulus, user_defined_shear_modulus});
 
@@ -360,8 +360,8 @@ void functional_parameterized_solid_test(double expected_disp_norm)
 }
 
 TEST(SolidFunctional, 2DLinearStatic) { functional_solid_test_static<1, 2>(1.511052595); }
-//TEST(SolidFunctional, 2DQuadStatic) { functional_solid_test_static<2, 2>(2.18604855); }
-//TEST(SolidFunctional, 2DQuadParameterizedStatic) { functional_parameterized_solid_test<2, 2>(2.18604855); }
+TEST(SolidFunctional, 2DQuadStatic) { functional_solid_test_static<2, 2>(2.18604855); }
+TEST(SolidFunctional, 2DQuadParameterizedStatic) { functional_parameterized_solid_test<2, 2>(2.18604855); }
 //
 //TEST(SolidFunctional, 3DLinearStatic) { functional_solid_test_static<1, 3>(1.37084852); }
 //TEST(SolidFunctional, 3DQuadStatic) { functional_solid_test_static<2, 3>(1.949532747); }
