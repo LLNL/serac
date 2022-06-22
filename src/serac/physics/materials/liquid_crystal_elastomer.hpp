@@ -35,6 +35,7 @@ public:
     tensor<double, dim, dim> deformation_gradient;
     tensor<double, dim, dim> distribution_tensor;
     double temperature;
+    double order_parameter;
   };
   
   /**
@@ -134,22 +135,21 @@ public:
 
   template <typename T>
   auto calculateDistributionTensor(
-    const tensor<T, dim, dim> F_hat, const double theta, const State& state) const
+    const tensor<T, dim, dim> F_hat, const double theta, State& state) const
   {
     // Nematic order scalar
     auto theta_old = state.temperature;
     double q_old = initial_order_parameter_ / (1 + std::exp((theta_old - transition_temperature_)/order_constant_));
     double q     = initial_order_parameter_ / (1 + std::exp((theta - transition_temperature_)/order_constant_));
 
+    state.order_parameter = q;
+
     // Nematic order tensor
     constexpr auto I = Identity<dim>();
     auto n_dyad = outer(normal_, normal_);
-    // BT: These are different than what Jorge-Luis had. I found the papers
-    // to be confusing on this point. I'm extrapolating from Eq (7)
-    // in https://doi.org/10.1016/j.mechrescom.2022.103858
-    // Well-defined validation problems would help to confirm.
-    auto Q_old = 0.5*((1.0 - q_old)*I + 3.0*q_old*n_dyad);
-    auto Q     = 0.5*((1.0 - q)*I + 3.0*q*n_dyad);
+
+    auto Q_old = 0.5*q_old*(3.0*n_dyad - I);
+    auto Q     = 0.5*q*(3.0*n_dyad - I);
 
     // Polar decomposition of incremental deformation gradient
     auto U_hat = tensorSquareRoot(transpose(F_hat) * F_hat);
