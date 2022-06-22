@@ -53,11 +53,13 @@ ThermalConduction::ThermalConduction(int order, const SolverOptions& options, co
   zero_.SetSize(true_size);
   zero_ = 0.0;
 
-  // Default to constant value of 1.0 for density and specific heat capacity
+  // Default to constant value of 1.0 for density and specific heat capacity. This enables optional
+  // specification of these parameters.
   cp_  = std::make_unique<mfem::ConstantCoefficient>(1.0);
   rho_ = std::make_unique<mfem::ConstantCoefficient>(1.0);
 
-  temperature_ = 2.0;
+  // Initialize the finite element state data to zero.
+  temperature_ = 0.0;
 }
 
 ThermalConduction::ThermalConduction(const InputOptions& options, const std::string& name)
