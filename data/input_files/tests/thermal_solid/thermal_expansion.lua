@@ -7,14 +7,12 @@ expected_velocity_l2norm = 0.0
 expected_temperature_l2norm = 2.3424281
 epsilon = 0.0001
 
-output_type = "SidreVisIt"
-
 main_mesh = {
     type = "file",
     -- mesh file
     mesh = "../../../meshes/onehex.mesh",
     -- serial and parallel refinement levels
-    ser_ref_levels = 1,
+    ser_ref_levels = 2,
     par_ref_levels = 0,
 }
 
@@ -23,14 +21,14 @@ thermal_solid = {
     solid = {
         equation_solver = {
             linear = {
-                type = "direct",
+                type = "direct"
             },
 
             nonlinear = {
                 rel_tol     = 1.0e-6,
                 abs_tol     = 1.0e-8,
                 max_iter    = 500,
-                print_level = 0,
+                print_level = 1,
             },
         },
 

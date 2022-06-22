@@ -19,8 +19,9 @@ void IsotropicThermalExpansionMaterial::modifyDisplacementGradient(mfem::DenseMa
                                                                 parent_to_reference_transformation_->GetIntPoint());
   auto reference_temp =
       c_reference_temp_->Eval(*parent_to_reference_transformation_, parent_to_reference_transformation_->GetIntPoint());
-  auto current_temp = temp_state_.gridFuncCoef().Eval(*parent_to_reference_transformation_,
-                                                      parent_to_reference_transformation_->GetIntPoint());
+
+  auto current_temp =
+      temp_coef_.Eval(*parent_to_reference_transformation_, parent_to_reference_transformation_->GetIntPoint());
 
   auto expansion = coef_thermal_expansion * (reference_temp - current_temp);
 

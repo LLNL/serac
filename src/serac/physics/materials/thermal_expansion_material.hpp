@@ -114,7 +114,9 @@ public:
       : ThermalExpansionMaterial(geom_nonlin),
         c_coef_thermal_expansion_(std::move(coef_thermal_expansion)),
         c_reference_temp_(std::move(reference_temp)),
-        temp_state_(temp)
+        temp_state_(temp),
+        temp_grid_function_(temp.gridFunction()),
+        temp_coef_(&temp_grid_function_)
   {
   }
 
@@ -139,6 +141,13 @@ public:
    * \f}
    */
   void modifyDisplacementGradient(mfem::DenseMatrix& du_dX) override;
+
+  /**
+   * @brief Update the temperature grid function based on the temperature finite element state.
+   * @note this must occur once prior to evaluation to ensure the temperature fields are
+   * evaluated appropriately.
+   */
+  void updateGridFunction() { temp_state_.gridFunction(); }
 
   /**
    * @brief Destroy the isotropic thermal expansion object
@@ -168,6 +177,16 @@ protected:
    * @brief Coefficient of thermal expansion in finite element state form
    */
   const FiniteElementState& temp_state_;
+
+  /**
+   * @brief Grid function for the temperature
+   */
+  mfem::ParGridFunction& temp_grid_function_;
+
+  /**
+   * @brief Coefficient based on the temperature grid function
+   */
+  mfem::GridFunctionCoefficient temp_coef_;
 };
 
 }  // namespace serac
