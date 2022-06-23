@@ -157,7 +157,7 @@ TEST(TestLiquidCrystalMaterial, strainAndtemperatureSweep)
   double order_constant = 10.0;
   double order_parameter = 1.0;
   double initial_temperature = 300.0;
-  double transition_temperature = 330.0;
+  double transition_temperature = 370.0;
   double max_temperature = 400.0;
   tensor<double, 3> normal{{0.0, 1.0, 0.0}};
   double Nb2 = 1.0;
@@ -169,7 +169,7 @@ TEST(TestLiquidCrystalMaterial, strainAndtemperatureSweep)
   double max_time = 1.0;
   unsigned int steps = 100;
 
-  double strain_rate = 1e-3;
+  double strain_rate = 2e-1;
   std::function<double(double)> strain_rate_func = [strain_rate](double t){ 
         if(t<0.25)
         {
