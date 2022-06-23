@@ -51,9 +51,9 @@ public:
    * @note The @p Dimension parameters are used to assist in the deduction of the @a dim
    * and @a dim template parameters
    */
-  template <int dim, typename lambda_type, typename qpt_data_type = Empty>
+  template <int dim, typename lambda_type, typename qpt_data_type = Nothing>
   DomainIntegral(size_t num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<dim>, lambda_type&& qf,
-                 QuadratureData<qpt_data_type>& data = EmptyQData)
+                 QuadratureData<qpt_data_type>& data = NoQData)
   {
     SERAC_MARK_BEGIN("Domain Integral Set Up");
     using namespace domain_integral;

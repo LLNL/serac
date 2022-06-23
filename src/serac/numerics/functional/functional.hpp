@@ -229,9 +229,9 @@ public:
    * and @a spatial_dim template parameter
    * @param[inout] data The data for each quadrature point
    */
-  template <int dim, typename lambda, typename qpt_data_type = Empty>
+  template <int dim, typename lambda, typename qpt_data_type = Nothing>
   void AddDomainIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain,
-                         QuadratureData<qpt_data_type>& data = EmptyQData)
+                         QuadratureData<qpt_data_type>& data = NoQData)
   {
     auto num_elements = domain.GetNE();
     if (num_elements == 0) return;
@@ -296,8 +296,8 @@ public:
    * @param[in] domain The mesh to evaluate the integral on
    * @param[inout] data The data for each quadrature point
    */
-  template <typename lambda, typename qpt_data_type = void>
-  void AddAreaIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = EmptyQData)
+  template <typename lambda, typename qpt_data_type = Nothing>
+  void AddAreaIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = NoQData)
   {
     AddDomainIntegral(Dimension<2>{}, integrand, domain, data);
   }
@@ -310,8 +310,8 @@ public:
    * @param[in] domain The mesh to evaluate the integral on
    * @param[inout] data The data for each quadrature point
    */
-  template <typename lambda, typename qpt_data_type = void>
-  void AddVolumeIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = EmptyQData)
+  template <typename lambda, typename qpt_data_type = Nothing>
+  void AddVolumeIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = NoQData)
   {
     AddDomainIntegral(Dimension<3>{}, integrand, domain, data);
   }

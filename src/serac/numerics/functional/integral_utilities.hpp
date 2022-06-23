@@ -307,16 +307,11 @@ template <typename lambda, typename coords_type, typename T, typename qpt_data_t
 SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, qpt_data_type&& qpt_data, const T& arg_tuple, 
                                        std::integer_sequence<int, i...>)
 {
-  return qf(x_q, qpt_data, serac::get<i>(arg_tuple)...);
-}
-
-/// @overload
-SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
-template <typename lambda, typename coords_type, typename T, int... i>
-SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, const T& arg_tuple,
-                                       std::integer_sequence<int, i...>)
-{
-  return qf(x_q, serac::get<i>(arg_tuple)...);
+  if constexpr (std::is_same< typename std::decay< qpt_data_type >::type, Nothing >::value) {
+    return qf(x_q, serac::get<i>(arg_tuple)...);
+  } else {
+    return qf(x_q, qpt_data, serac::get<i>(arg_tuple)...);
+  }
 }
 
 /// @overload
@@ -341,13 +336,6 @@ template <typename lambda, typename coords_type, typename... T, typename qpt_dat
 SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, qpt_data_type&& qpt_data, const serac::tuple<T...>& arg_tuple)
 {
   return apply_qf_helper(qf, x_q, qpt_data, arg_tuple, std::make_integer_sequence<int, int(sizeof...(T))>{});
-}
-
-/// @overload
-template <typename lambda, typename coords_type, typename... T>
-SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, Empty, const serac::tuple<T...>& arg_tuple)
-{
-  return apply_qf_helper(qf, x_q, arg_tuple, std::make_integer_sequence<int, int(sizeof...(T))>{});
 }
 
 /**

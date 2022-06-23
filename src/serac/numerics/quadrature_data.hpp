@@ -22,6 +22,8 @@
 
 namespace serac {
 
+struct Nothing{};
+
 struct Empty{};
 
 struct SyncableData {
@@ -38,12 +40,20 @@ struct QuadratureData : public SyncableData {
 };
 
 template <>
+struct QuadratureData<Nothing> : public SyncableData {
+  void sync() final {} // ?
+  SERAC_HOST_DEVICE Nothing & operator()(const int, const int) { return data; }
+  Nothing data;
+};
+
+template <>
 struct QuadratureData<Empty> : public SyncableData {
   void sync() final {} // ?
   SERAC_HOST_DEVICE Empty & operator()(const int, const int) { return data; }
   Empty data;
 };
 
+extern QuadratureData<Nothing> NoQData;
 extern QuadratureData<Empty> EmptyQData;
 
 }  // namespace serac

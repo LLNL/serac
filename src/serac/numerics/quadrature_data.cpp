@@ -7,13 +7,14 @@
 /**
  * @file quadrature_data.cpp
  *
- * @brief This file exists to instantiate a global QuadratureData<Empty>
+ * @brief This file exists to instantiate some global QuadratureData objects
  */
 
 #include "serac/numerics/quadrature_data.hpp"
 
 namespace serac {
 
+QuadratureData<Nothing> NoQData;
 QuadratureData<Empty> EmptyQData;
 
 }  // namespace serac
