@@ -156,7 +156,7 @@ public:
    */
   template <int dim, typename lambda, typename qpt_data_type = void>
   void AddDomainIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain,
-                         QuadratureData<qpt_data_type>& data = dummy_qdata)
+                         QuadratureData<qpt_data_type>& data = EmptyQData)
   {
     auto num_elements = domain.GetNE();
     if (num_elements == 0) return;
@@ -218,7 +218,7 @@ public:
    * @brief Adds an area integral, i.e., over 2D elements in R^2
    */
   template <typename lambda, typename qpt_data_type = void>
-  void AddAreaIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = dummy_qdata)
+  void AddAreaIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = EmptyQData)
   {
     AddDomainIntegral(Dimension<2>{}, integrand, domain, data);
   }
@@ -233,7 +233,7 @@ public:
    * @brief Adds a volume integral, i.e., over 3D elements in R^3
    */
   template <typename lambda, typename qpt_data_type = void>
-  void AddVolumeIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = dummy_qdata)
+  void AddVolumeIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = EmptyQData)
   {
     AddDomainIntegral(Dimension<3>{}, integrand, domain, data);
   }

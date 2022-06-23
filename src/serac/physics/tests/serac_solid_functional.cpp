@@ -96,6 +96,91 @@ void functional_solid_test_static(double expected_disp_norm)
   EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
 }
 
+void functional_solid_test_static_J2(double expected_disp_norm)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  constexpr int p = 2;
+  constexpr int dim = 3;
+  int serial_refinement   = 0;
+  int parallel_refinement = 0;
+
+  // Create DataStore
+  axom::sidre::DataStore datastore;
+  serac::StateManager::initialize(datastore, "solid_functional_static_solve_J2");
+
+  // Construct the appropriate dimension mesh and give it to the data store
+  std::string filename = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
+  serac::StateManager::setMesh(std::move(mesh));
+
+  // Define a boundary attribute set
+  std::set<int> ess_bdr = {1};
+
+  // define the solver configurations
+  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
+                                                         .abs_tol     = 1.0e-10,
+                                                         .print_level = 0,
+                                                         .max_iter    = 500,
+                                                         .lin_solver  = LinearSolver::GMRES,
+                                                         .prec        = HypreBoomerAMGPrec{}};
+
+  const NonlinearSolverOptions default_nonlinear_options = {
+      .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
+
+  const typename solid_util::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
+
+  // Construct a functional-based solid mechanics solver
+  SolidFunctional<p, dim> solid_solver(default_static, GeometricNonlinearities::On, FinalMeshOption::Reference,
+                                       "solid_functional");
+
+  solid_util::J2 mat{
+    100,   // Young's modulus
+    0.25,  // Poisson's ratio
+    1.0,   // isotropic hardening constant
+    2.3,   // kinematic hardening constant
+    300.0, // yield stress
+    1.0    // mass density
+  };
+
+  QuadratureData<solid_util::J2::State> state;
+
+  solid_solver.setMaterial(mat, state);
+
+  // Define the function for the initial displacement and boundary condition
+  auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
+
+  // Set the initial displacement and boundary condition
+  solid_solver.setDisplacementBCs(ess_bdr, bc);
+  solid_solver.setDisplacement(bc);
+
+  tensor<double, dim> constant_force;
+
+  constant_force[0] = 0.0;
+  constant_force[1] = 5.0e-4;
+
+  if (dim == 3) {
+    constant_force[2] = 0.0;
+  }
+
+  solid_util::ConstantBodyForce<dim> force{constant_force};
+  solid_solver.addBodyForce(force);
+
+  // Finalize the data structures
+  solid_solver.completeSetup();
+
+  // Perform the quasi-static solve
+  double dt = 1.0;
+  solid_solver.advanceTimestep(dt);
+
+  // Output the sidre-based plot files
+  solid_solver.outputState();
+
+  // Check the final displacement norm
+  EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
+}
+
 template <int p, int dim>
 void functional_solid_test_dynamic(double expected_disp_norm)
 {
@@ -359,21 +444,23 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
 }
 
-TEST(SolidFunctional, 2DLinearStatic) { functional_solid_test_static<1, 2>(1.511052595); }
-TEST(SolidFunctional, 2DQuadStatic) { functional_solid_test_static<2, 2>(2.18604855); }
-TEST(SolidFunctional, 2DQuadParameterizedStatic) { functional_parameterized_solid_test<2, 2>(2.18604855); }
-
-TEST(SolidFunctional, 3DLinearStatic) { functional_solid_test_static<1, 3>(1.37084852); }
-TEST(SolidFunctional, 3DQuadStatic) { functional_solid_test_static<2, 3>(1.949532747); }
-
-TEST(SolidFunctional, 2DLinearDynamic) { functional_solid_test_dynamic<1, 2>(1.52116682); }
-TEST(SolidFunctional, 2DQuadDynamic) { functional_solid_test_dynamic<2, 2>(1.52777214); }
-
-TEST(SolidFunctional, 3DLinearDynamic) { functional_solid_test_dynamic<1, 3>(1.520679017); }
-TEST(SolidFunctional, 3DQuadDynamic) { functional_solid_test_dynamic<2, 3>(1.527009514); }
-
-TEST(SolidFunctional, 2DLinearPressure) { functional_solid_test_boundary<1, 2>(0.065326222, TestType::Pressure); }
-TEST(SolidFunctional, 2DLinearTraction) { functional_solid_test_boundary<1, 2>(0.126593590, TestType::Traction); }
+//TEST(SolidFunctional, 2DLinearStatic) { functional_solid_test_static<1, 2>(1.511052595); }
+//TEST(SolidFunctional, 2DQuadStatic) { functional_solid_test_static<2, 2>(2.18604855); }
+//TEST(SolidFunctional, 2DQuadParameterizedStatic) { functional_parameterized_solid_test<2, 2>(2.18604855); }
+//
+//TEST(SolidFunctional, 3DLinearStatic) { functional_solid_test_static<1, 3>(1.37084852); }
+//TEST(SolidFunctional, 3DQuadStatic) { functional_solid_test_static<2, 3>(1.949532747); }
+//
+TEST(SolidFunctional, 3DQuadStaticJ2) { functional_solid_test_static_J2(0.0); }
+//
+//TEST(SolidFunctional, 2DLinearDynamic) { functional_solid_test_dynamic<1, 2>(1.52116682); }
+//TEST(SolidFunctional, 2DQuadDynamic) { functional_solid_test_dynamic<2, 2>(1.52777214); }
+//
+//TEST(SolidFunctional, 3DLinearDynamic) { functional_solid_test_dynamic<1, 3>(1.520679017); }
+//TEST(SolidFunctional, 3DQuadDynamic) { functional_solid_test_dynamic<2, 3>(1.527009514); }
+//
+//TEST(SolidFunctional, 2DLinearPressure) { functional_solid_test_boundary<1, 2>(0.065326222, TestType::Pressure); }
+//TEST(SolidFunctional, 2DLinearTraction) { functional_solid_test_boundary<1, 2>(0.126593590, TestType::Traction); }
 
 }  // namespace serac
 

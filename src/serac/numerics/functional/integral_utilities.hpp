@@ -345,7 +345,7 @@ SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, qpt_data_type&& 
 
 /// @overload
 template <typename lambda, typename coords_type, typename... T>
-SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, std::nullptr_t, const serac::tuple<T...>& arg_tuple)
+SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, Empty, const serac::tuple<T...>& arg_tuple)
 {
   return apply_qf_helper(qf, x_q, arg_tuple, std::make_integer_sequence<int, int(sizeof...(T))>{});
 }

@@ -61,6 +61,19 @@ struct Parameters{
     static constexpr int n = sizeof ... (T);
 };
 
+struct Updatable {
+  virtual void reset() = 0;
+  virtual void update() = 0;
+};
+
+template < typename T >
+struct DoubleBuffer : public Updatable {
+  DoubleBuffer (const std::vector<T> &data) { buffer[0] = data; }
+  void reset() final { buffer[1] = buffer[0]; }
+  void update() final { std::swap(buffer[0], buffer[1]); }
+  std::vector < T > buffer[2];
+};
+
 /**
  * @brief The nonlinear solid solver class
  *
@@ -487,6 +500,8 @@ public:
   }
 
   /**
+   * TODO: improve tautological documentation
+   * 
    * @brief Solve the adjoint problem
    * @pre It is expected that the forward analysis is complete and the current displacement state is valid
    * @note If the essential boundary state is not specified, homogeneous essential boundary conditions are applied
@@ -653,6 +668,8 @@ protected:
 
   /// @brief An auxilliary zero vector
   mfem::Vector zero_;
+
+  std::vector < Updatable > material_state_buffers_;
 
 };
 

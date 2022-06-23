@@ -10,16 +10,6 @@
 
 namespace serac {
 
-/**
- * @brief Definition of extern QuadratureData variable
- */
-QuadratureData<void> dummy_qdata;
-
-/**
- * @brief Definition of extern QuadratureDataView variable
- */
-QuadratureDataView<void> dummy_qdata_view;
-
 // Initialize StateManager's static members - these will be fully initialized in StateManager::initialize
 std::unordered_map<std::string, axom::sidre::MFEMSidreDataCollection> StateManager::datacolls_;
 bool                                                                  StateManager::is_restart_ = false;

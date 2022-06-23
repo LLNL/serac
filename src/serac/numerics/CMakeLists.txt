@@ -23,6 +23,7 @@ set(numerics_headers
 
 set(numerics_sources
     equation_solver.cpp
+    quadrature_data.cpp
     odes.cpp
     )
 

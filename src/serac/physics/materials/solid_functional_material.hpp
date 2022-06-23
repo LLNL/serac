@@ -87,7 +87,7 @@ struct J2 {
   double Hi;       ///< isotropic hardening constant
   double Hk;       ///< kinematic hardening constant
   double sigma_y;  ///< yield stress
-  double rho;      ///< mass density
+  double density;  ///< mass density
 
   /// @brief variables required to characterize the hysteresis response
   struct State {
