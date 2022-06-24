@@ -21,7 +21,6 @@ namespace serac {
 
 TEST(TestLiquidCrystalMaterial, AgreesWithNeoHookeanInHighTemperatureLimit)
 {
-return;
   double density = 1.0;
   double E = 1.0;
   double nu = 0.49;
@@ -142,6 +141,61 @@ return;
     double temperature = temperature_func(time);
     material(unused, unused, H, state, temperature);
     std::cout << state.distribution_tensor[1][1] << std::endl;
+  }
+}
+
+TEST(TestLiquidCrystalMaterial, isNotDegenerate)
+{
+  // This is a dummy test that should be eventually removed. I (BT) am
+  // adding it only to demonstrate something unusual about this
+  // model's behavior. This is not an aspect of the model we actually
+  // want to enforce, it's just an unfortunate behavior built into
+  // this model.
+  double density = 1.0;
+  double E = 1.0;
+  double nu = 0.25;
+  double shear_modulus = 0.5*E/(1.0 + nu);
+  double bulk_modulus = E / 3.0 / (1.0 - 2.0*nu);
+  double order_constant = 1.0;
+  double order_parameter = 1.0; // this is the culprit. This must be less than 1 for the model to give meaningful results.
+  double transition_temperature = 10.0;
+  tensor<double, 3> normal{{0.0, 1.0, 0.0}};
+  double Nb2 = 1.0;
+
+  LiquidCrystalElastomer material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
+  double initial_temperature = 5.0;
+
+  auto initial_distribution = LiquidCrystalElastomer::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
+  decltype(material)::State state{DenseIdentity<3>(), initial_distribution, initial_temperature, order_parameter};
+  tensor<double, 3> unused{};
+  tensor<double, 3, 3> H{};
+  auto F = DenseIdentity<3>();
+  double dlambda = 0.1;
+  const unsigned int steps = 10;
+
+  // It is easy to verify that when this model is fully ordered in the
+  // reference state (which means `order_parameter` is set to 1), ANY
+  // diagonal deformation gradient with F[1][1] = 1.0 will cause no
+  // stress in the deviatoric response*. For this example, I assign an
+  // increasing seqeunce of F[0][0] and keep F[1][1] = 1.0. Then, all
+  // one needs to do to have a zero stress state is to keep the volume
+  // fixed, that is, sef F[2][2] = 1/[F[0][0]. No matter how large the
+  // tensile F[0][0] deformation is, the model will stay at zero
+  // stress. This is BAD - the model cannot be used in this condition,
+  // because the field problem will not have a solution. We should put
+  // a check in the model so that it errors if the initial order is
+  // close to 1.
+  //
+  // * This assumed that the normal vector is set as {0.0, 1.0,
+  // 0.0}. If the vector points in another direction, the degeneracy
+  // will involve more components of the deformation gradient. The
+  // conclusions about the model problems are the same.
+  for (unsigned int i = 0; i < steps; i++) {
+    F[0][0] += dlambda;
+    F[2][2] = 1.0/F[0][0];
+    H = F - DenseIdentity<3>();
+    auto response = material(unused, unused, H, state, initial_temperature);
+    EXPECT_GT(response.stress[0][0], 1e-8);
   }
 }
 
