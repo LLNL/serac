@@ -166,7 +166,7 @@ void verifyFields(const ThermalConduction& phys_module, const axom::inlet::Inlet
     auto coef_options = inlet["exact_solution"].get<serac::input::CoefficientInputOptions>();
     auto exact        = coef_options.constructScalar();
     exact->SetTime(phys_module.time());
-    double error = phys_module.temperature().gridFunc().ComputeLpError(2.0, *exact);
+    double error = phys_module.temperature().gridFunction().ComputeLpError(2.0, *exact);
     EXPECT_NEAR(error, 0.0, inlet["epsilon"]);
   }
 }
@@ -229,12 +229,6 @@ void runModuleTest(const std::string& input_file, const std::string& test_name, 
   PhysicsModule phys_module(module_options);
 
   const bool is_dynamic = inlet[module_name].contains("dynamics");
-
-  // Initialize the output
-  // FIXME: This and the FromInlet specialization are hacked together,
-  // should be inlet["output_type"].get<OutputType>() - Inlet obj
-  // needs to allow for top-level scalar retrieval as well
-  phys_module.initializeOutput(inlet.getGlobalContainer().get<OutputType>(), test_name);
 
   // Complete the solver setup
   phys_module.completeSetup();

@@ -85,9 +85,6 @@ TEST(SolidSolver, QsCustomSolve)
   solid_solver_options.solver_options.H_lin_options = CustomSolverOptions{custom_solver.get()};
   Solid solid_solver(solid_solver_options);
 
-  // Initialize the output
-  solid_solver.initializeOutput(serac::OutputType::VisIt, "static_solid");
-
   // Complete the solver setup
   solid_solver.completeSetup();
 
@@ -113,7 +110,7 @@ TEST(SolidSolver, QsCustomSolve)
   minres_solver.Mult(residual, du);
 
   // modify the displacement just to recompute the residual
-  solid_solver.displacement().trueVec() += du;
+  solid_solver.displacement() += du;
   auto residual_lower = solid_solver.currentResidual();
   EXPECT_LE(residual.Norml2(), residual_lower.Norml2());
 

@@ -92,19 +92,20 @@ FiniteElementState StateManager::newState(FiniteElementVector::Options&& options
                      axom::fmt::format("Mesh tag \"{}\" not found in the data store", mesh_tag));
   auto&             datacoll = datacolls_.at(mesh_tag);
   const std::string name     = options.name;
+  auto              state    = FiniteElementState(mesh(mesh_tag), std::move(options));
   if (is_restart_) {
-    auto field = datacoll.GetParField(name);
-    return {mesh(mesh_tag), *field, name};
+    auto grid_function = datacoll.GetParField(name);
+    state.setFromGridFunction(*grid_function);
   } else {
     SLIC_ERROR_ROOT_IF(datacoll.HasField(name),
                        axom::fmt::format("Serac's datacollection was already given a field named '{0}'", name));
-    options.managed_by_sidre = true;
-    FiniteElementState state(mesh(mesh_tag), std::move(options));
-    datacoll.RegisterField(name, &(state.gridFunc()));
-    // Now that it's been allocated, we can set it to zero
-    state.gridFunc() = 0.0;
-    return state;
+
+    // Create a new grid function with unallocated data. This will be managed by sidre.
+    auto* new_grid_function = new mfem::ParGridFunction(&state.space(), static_cast<double*>(nullptr));
+    datacoll.RegisterField(name, new_grid_function);
+    state.setFromGridFunction(*new_grid_function);
   }
+  return state;
 }
 
 FiniteElementDual StateManager::newDual(FiniteElementVector::Options&& options, const std::string& mesh_tag)
@@ -114,26 +115,19 @@ FiniteElementDual StateManager::newDual(FiniteElementVector::Options&& options, 
                      axom::fmt::format("Mesh tag \"{}\" not found in the data store", mesh_tag));
   auto&             datacoll = datacolls_.at(mesh_tag);
   const std::string name     = options.name;
+  auto              dual     = FiniteElementDual(mesh(mesh_tag), std::move(options));
   if (is_restart_) {
-    auto field = datacoll.GetParField(name);
-    return {mesh(mesh_tag), *field, name};
+    auto grid_function = datacoll.GetParField(name);
+    dual.setFromGridFunction(*grid_function);
   } else {
     SLIC_ERROR_ROOT_IF(datacoll.HasField(name),
                        axom::fmt::format("Serac's datacollection was already given a field named '{0}'", name));
-    options.managed_by_sidre = true;
-    FiniteElementDual dual(mesh(mesh_tag), std::move(options));
-
-    // Create a grid function view of the local vector for plotting
-    // Note: this is a static cast because we know this vector under the hood is a grid function
-    // This is hidden from the user because the interpolation capabilities of a grid function
-    // are inappropriate for dual vectors.
-    auto gf_view_of_local_dual_vector = static_cast<mfem::ParGridFunction*>(&dual.localVec());
-
-    datacoll.RegisterField(name, gf_view_of_local_dual_vector);
-    // Now that it's been allocated, we can set it to zero
-    dual.localVec() = 0.0;
-    return dual;
+    // Create a new grid function with unallocated data. This will be managed by sidre.
+    auto* new_grid_function = new mfem::ParGridFunction(&dual.space(), static_cast<double*>(nullptr));
+    datacoll.RegisterField(name, new_grid_function);
+    dual.fillGridFunction(*new_grid_function);
   }
+  return dual;
 }
 
 void StateManager::save(const double t, const int cycle, const std::string& mesh_tag)

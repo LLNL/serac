@@ -25,11 +25,6 @@
 namespace serac {
 
 /**
- * @brief A sum type for encapsulating either a scalar or vector coeffient
- */
-using GeneralCoefficient = variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
-
-/**
  * @brief convenience function for querying the type stored in a GeneralCoefficient
  */
 inline bool is_scalar_valued(const GeneralCoefficient& coef)
@@ -48,8 +43,7 @@ inline bool is_vector_valued(const GeneralCoefficient& coef)
 /**
  * @brief Class for encapsulating the critical MFEM components of a primal finite element field
  *
- * Namely: Mesh, FiniteElementCollection, FiniteElementState,
- * GridFunction, and a Vector of the solution
+ * Namely: Mesh, FiniteElementCollection, FiniteElementState, and the true vector of the solution
  */
 class FiniteElementState : public FiniteElementVector {
 public:
@@ -57,9 +51,10 @@ public:
    * @brief Use the finite element vector constructors
    */
   using FiniteElementVector::FiniteElementVector;
+  using FiniteElementVector::operator=;
 
   /**
-   * @brief Set the internal grid function using the true DOF values
+   * @brief Fill a user-provided grid function based on the underlying true vector
    *
    * This distributes true vector dofs to the finite element (local) dofs  by multiplying the true dofs
    * by the prolongation operator.
@@ -67,91 +62,19 @@ public:
    * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
    *
    */
-  void distributeSharedDofs() { detail::retrieve(gf_).SetFromTrueDofs(true_vec_); }
+  void fillGridFunction(mfem::ParGridFunction& grid_function) const { grid_function.SetFromTrueDofs(*this); }
 
   /**
-   * @brief Initialize the true vector from the grid function values
+   * @brief Initialize the true vector in the FiniteElementState based on an input grid function
    *
-   * This initializes the true vector dofs by multiplying the finite element dofs
-   * by the restriction operator.
+   * This distributes the grid function dofs to the true vector dofs by multiplying by the
+   * restriction operator.
    *
    * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
-   */
-  void initializeTrueVec() { detail::retrieve(gf_).GetTrueDofs(true_vec_); }
-
-  /**
-   * Returns a non-owning reference to the internal grid function
-   */
-  mfem::ParGridFunction& gridFunc() { return detail::retrieve(gf_); }
-  /// \overload
-  const mfem::ParGridFunction& gridFunc() const { return detail::retrieve(gf_); }
-
-  /**
-   * Returns a GridFunctionCoefficient referencing the internal grid function
-   */
-  mfem::GridFunctionCoefficient gridFuncCoef() const
-  {
-    const auto& gf = detail::retrieve(gf_);
-    return mfem::GridFunctionCoefficient{&gf, gf.VectorDim()};
-  }
-
-  /**
-   * Returns a VectorGridFunctionCoefficient referencing the internal grid function
-   */
-  mfem::VectorGridFunctionCoefficient vectorGridFuncCoef() const
-  {
-    return mfem::VectorGridFunctionCoefficient{&detail::retrieve(gf_)};
-  }
-
-  /**
-   * Projects a coefficient (vector or scalar) onto the field
-   * @param[in] coef The coefficient to project
-   */
-  void project(const GeneralCoefficient& coef)
-  {
-    // The generic lambda parameter, auto&&, allows the component type (mfem::Coef or mfem::VecCoef)
-    // to be deduced, and the appropriate version of ProjectCoefficient is dispatched.
-    visit(
-        [this](auto&& concrete_coef) {
-          detail::retrieve(gf_).ProjectCoefficient(*concrete_coef);
-          initializeTrueVec();
-        },
-        coef);
-  }
-  /// \overload
-  void project(mfem::Coefficient& coef)
-  {
-    detail::retrieve(gf_).ProjectCoefficient(coef);
-    initializeTrueVec();
-  }
-  /// \overload
-  void project(mfem::VectorCoefficient& coef)
-  {
-    detail::retrieve(gf_).ProjectCoefficient(coef);
-    initializeTrueVec();
-  }
-  /**
-   * @brief Set a finite element state to a constant value
    *
-   * @param value The constant to set the finite element state to
-   * @return The modified finite element state
-   * @note This sets the true degrees of freedom and then broadcasts to the shared grid function entries. This means
-   * that if a different value is given on different processors, a shared DOF will be set to the owning processor value.
+   * @param grid_function The grid function used to initialize the underlying true vector.
    */
-  FiniteElementState& operator=(const double value)
-  {
-    FiniteElementVector::operator=(value);
-    return *this;
-  }
+  void setFromGridFunction(const mfem::ParGridFunction& grid_function) { grid_function.GetTrueDofs(*this); }
 };
-
-/**
- * @brief Calculate the Lp norm of a finite element state
- *
- * @param state The state variable to compute a norm of
- * @param p Order of the norm
- * @return The norm value
- */
-double norm(const FiniteElementState& state, double p = 2);
 
 }  // namespace serac
