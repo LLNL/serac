@@ -68,10 +68,10 @@ struct Updatable {
 
 template < typename T >
 struct DoubleBuffer : public Updatable {
-  DoubleBuffer (const std::vector<T> &data) { buffer[0] = data; }
+  DoubleBuffer (const QuadratureData<T> &data) { buffer[0] = data; }
   void reset() final { buffer[1] = buffer[0]; }
-  void update() final { std::swap(buffer[0], buffer[1]); }
-  std::vector < T > buffer[2];
+  void update() final { buffer[0] = buffer[1]; }
+  QuadratureData< T > buffer[2];
 };
 
 /**
@@ -206,6 +206,29 @@ public:
     mesh_.NewNodes(*mesh_nodes, true);
   }
 
+  template < typename T >
+  QuadratureData<T> createQuadratureDataBuffer(T initial_state) {
+    //const mfem::FiniteElement&   el = *(displacement_.space().GetFE(0));
+    //const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
+    //constexpr auto flags = mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS;
+    //auto geom = mesh_.GetGeometricFactors(ir, flags);
+
+    constexpr auto Q                                 = order + 1;
+    constexpr auto num_quadrature_points_per_element = (dim == 2) ? Q * Q : Q * Q * Q;
+    auto num_elements = mesh_.GetNE();
+
+    QuadratureData<T> data;
+    data.resize(num_elements, num_quadrature_points_per_element);
+
+    for (int e = 0; e < num_elements; e++) {
+      for (auto q = 0; q < num_quadrature_points_per_element; q++) {
+        data(e, q) = initial_state;
+      }
+    }
+
+    return data;
+  }
+
   /**
    * @brief Set essential displacement boundary conditions (strongly enforced)
    *
@@ -289,7 +312,7 @@ public:
   template <typename MaterialType, typename StateType>
   void setMaterial(MaterialType material, const QuadratureData<StateType> & QData)
   {
-    auto copy = QData;
+    auto copy = std::make_unique<DoubleBuffer<StateType>>(QData);
     residual_->AddDomainIntegral(
         Dimension<dim>{},
         [this, material](auto /*x*/, auto & state, auto displacement, auto acceleration, auto ... params) {
@@ -306,7 +329,8 @@ public:
 
           return serac::tuple{body_force, stress};
         },
-        mesh_, copy);
+        mesh_, copy->buffer[1]);
+    material_state_buffers_.push_back(std::move(copy));
   }
 
   template <typename MaterialType>
@@ -434,12 +458,14 @@ public:
 
         // residual function
         [this](const mfem::Vector& u, mfem::Vector& r) {
+          for (auto & buffer : material_state_buffers_) { buffer->reset(); }
           r = (*residual_)(u, zero_, parameter_states_[parameter_indices] ...);
           r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
         },
 
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
+          for (auto & buffer : material_state_buffers_) { buffer->reset(); }
           auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, parameter_states_[parameter_indices] ...);
           J_             = assemble(drdu);
           bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
@@ -669,7 +695,7 @@ protected:
   /// @brief An auxilliary zero vector
   mfem::Vector zero_;
 
-  std::vector < Updatable > material_state_buffers_;
+  std::vector < std::unique_ptr< Updatable > > material_state_buffers_;
 
 };
 

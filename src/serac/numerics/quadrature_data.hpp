@@ -33,6 +33,11 @@ struct SyncableData {
 template < typename T >
 struct QuadratureData : public SyncableData {
   void sync() final {} // ?
+
+  void resize(int num_elements, int num_quadrature_points) {
+    data.resize(num_elements, num_quadrature_points);
+  }
+
   SERAC_HOST_DEVICE T& operator()(const int element, const int quadrature_point) {
     return data(element, quadrature_point);
   }
