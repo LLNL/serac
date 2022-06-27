@@ -9,7 +9,7 @@ main_mesh = {
     elements = {x = 3, y = 1},
     size = {x = 8., y = 1.},
     -- serial and parallel refinement levels
-    ser_ref_levels = 0,
+    ser_ref_levels = 1,
     par_ref_levels = 0,
 }
 
@@ -49,8 +49,6 @@ solid = {
                 abs_tol     = 1.0e-12,
                 max_iter    = 500,
                 print_level = 0,
-                solver_type = "gmres",
-                prec_type   = "HypreAMG",
             },
         },
 

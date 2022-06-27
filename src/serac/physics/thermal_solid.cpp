@@ -16,8 +16,10 @@ constexpr int NUM_FIELDS = 3;
 ThermalSolid::ThermalSolid(int order, const ThermalConduction::SolverOptions& therm_options,
                            const Solid::SolverOptions& solid_options, const std::string& name, mfem::ParMesh* pmesh)
     : BasePhysics(NUM_FIELDS, order, pmesh),
-      therm_solver_(order, therm_options, name, pmesh),
+      // Note that the solid solver must be constructed before the thermal solver as it mutates the mesh node grid
+      // function
       solid_solver_(order, solid_options, GeometricNonlinearities::On, FinalMeshOption::Deformed, name, pmesh),
+      therm_solver_(order, therm_options, name, pmesh),
       temperature_(therm_solver_.temperature()),
       velocity_(solid_solver_.velocity()),
       displacement_(solid_solver_.displacement())
@@ -35,8 +37,10 @@ ThermalSolid::ThermalSolid(int order, const ThermalConduction::SolverOptions& th
 ThermalSolid::ThermalSolid(const ThermalConduction::InputOptions& thermal_input, const Solid::InputOptions& solid_input,
                            const std::string& name)
     : BasePhysics(NUM_FIELDS, std::max(thermal_input.order, solid_input.order)),
-      therm_solver_(thermal_input, name),
+      // Note that the solid solver must be constructed before the thermal solver as it mutates the mesh node grid
+      // function
       solid_solver_(solid_input, name),
+      therm_solver_(thermal_input, name),
       temperature_(therm_solver_.temperature()),
       velocity_(solid_solver_.velocity()),
       displacement_(solid_solver_.displacement())
@@ -67,8 +71,8 @@ void ThermalSolid::completeSetup()
   SLIC_ERROR_ROOT_IF(coupling_ != serac::CouplingScheme::OperatorSplit,
                      "Only operator split is currently implemented in the thermal structural solver.");
 
-  therm_solver_.completeSetup();
   solid_solver_.completeSetup();
+  therm_solver_.completeSetup();
 }
 
 // Advance the timestep
@@ -76,9 +80,12 @@ void ThermalSolid::advanceTimestep(double& dt)
 {
   if (coupling_ == serac::CouplingScheme::OperatorSplit) {
     double initial_dt = dt;
+
     therm_solver_.advanceTimestep(dt);
     solid_solver_.advanceTimestep(dt);
+
     time_ += dt;
+
     SLIC_ERROR_ROOT_IF(std::abs(dt - initial_dt) > 1.0e-6,
                        "Operator split coupled solvers cannot adaptively change the timestep");
   } else {
