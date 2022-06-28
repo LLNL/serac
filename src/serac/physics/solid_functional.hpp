@@ -56,6 +56,24 @@ struct SolverOptions {
 };
 }  // namespace solid_util
 
+template < typename ... T >
+struct Parameters{
+    static constexpr int n = sizeof ... (T);
+};
+
+struct Updatable {
+  virtual void reset() = 0;
+  virtual void update() = 0;
+};
+
+template < typename T >
+struct DoubleBuffer : public Updatable {
+  DoubleBuffer (const QuadratureData<T> &data) { buffer[0] = data; }
+  void reset() final { buffer[1] = buffer[0]; }
+  void update() final { buffer[0] = buffer[1]; }
+  QuadratureData< T > buffer[2];
+};
+
 /**
  * @brief The nonlinear solid solver class
  *
@@ -66,9 +84,15 @@ struct SolverOptions {
  * @tparam order The order of the discretization of the displacement and velocity fields
  * @tparam dim The spatial dimension of the mesh
  */
-template <int order, int dim, typename... parameter_space>
-class SolidFunctional : public BasePhysics {
+template <int order, int dim, typename parameters = Parameters<>, typename parameter_indices  = std::make_integer_sequence< int, parameters::n > >
+class SolidFunctional;
+
+template <int order, int dim, typename ... parameter_space, int ... parameter_indices >
+class SolidFunctional< order, dim, Parameters< parameter_space ... >, std::integer_sequence< int, parameter_indices ... > > : public BasePhysics {
 public:
+  static constexpr int VALUE = 0, DERIVATIVE = 1;
+  static constexpr auto I = Identity<dim>();
+
   /**
    * @brief Construct a new Solid Functional object
    *
@@ -100,36 +124,37 @@ public:
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
 
-    // Create a pack of the primal field and parameter finite element spaces
-    std::array<mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + 1> trial_spaces;
-    trial_spaces[0] = &displacement_.space();
+    state_.push_back(velocity_);
+    state_.push_back(displacement_);
+    state_.push_back(adjoint_displacement_);
 
-    functional_call_args_.emplace_back(displacement_.trueVec());
+    // Create a pack of the primal field and parameter finite element spaces
+    mfem::ParFiniteElementSpace* test_space = &displacement_.space();
+    std::array<mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + 2> trial_spaces;
+    trial_spaces[0] = &displacement_.space();
+    trial_spaces[1] = &displacement_.space(); // the accelerations have the same trial space as displacement
 
     if constexpr (sizeof...(parameter_space) > 0) {
       for (size_t i = 0; i < sizeof...(parameter_space); ++i) {
-        trial_spaces[i + 1]         = &(parameter_states_[i].get().space());
+        trial_spaces[i + 2]         = &(parameter_states_[i].get().space());
         parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, parameter_states_[i].get().space());
-        functional_call_args_.emplace_back(parameter_states_[i].get().trueVec());
       }
     }
 
-    M_functional_ = std::make_unique<Functional<test(trial, parameter_space...)>>(&displacement_.space(), trial_spaces);
-
-    K_functional_ = std::make_unique<Functional<test(trial, parameter_space...)>>(&displacement_.space(), trial_spaces);
+    residual_ = std::make_unique<Functional<test(trial, trial, parameter_space...)>>(test_space, trial_spaces);
 
     state_.push_back(velocity_);
     state_.push_back(displacement_);
 
     // Initialize the mesh node pointers
-    reference_nodes_ = displacement_.createOnSpace<mfem::ParGridFunction>();
+    reference_nodes_ = std::make_unique<mfem::ParGridFunction>(&displacement_.space());
     mesh_.EnsureNodes();
     mesh_.GetNodes(*reference_nodes_);
 
     deformed_nodes_ = std::make_unique<mfem::ParGridFunction>(*reference_nodes_);
 
-    displacement_.trueVec() = 0.0;
-    velocity_.trueVec()     = 0.0;
+    displacement_ = 0.0;
+    velocity_     = 0.0;
 
     const auto& lin_options = options.H_lin_options;
     // If the user wants the AMG preconditioner with a linear solver, set the pfes
@@ -150,6 +175,7 @@ public:
     int true_size = velocity_.space().TrueVSize();
 
     u_.SetSize(true_size);
+    u_predicted_.SetSize(true_size);
     du_dt_.SetSize(true_size);
     previous_.SetSize(true_size);
     previous_ = 0.0;
@@ -163,7 +189,7 @@ public:
   {
     // Update the mesh with the new deformed nodes if requested
     if (keep_deformation_ == FinalMeshOption::Deformed) {
-      *reference_nodes_ += displacement_.gridFunc();
+      *reference_nodes_ += displacement_.gridFunction();
     }
 
     // Build a new grid function to store the mesh nodes post-destruction
@@ -178,6 +204,29 @@ public:
 
     // Set the mesh to the newly created nodes object and pass ownership
     mesh_.NewNodes(*mesh_nodes, true);
+  }
+
+  template < typename T >
+  QuadratureData<T> createQuadratureDataBuffer(T initial_state) {
+    //const mfem::FiniteElement&   el = *(displacement_.space().GetFE(0));
+    //const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
+    //constexpr auto flags = mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS;
+    //auto geom = mesh_.GetGeometricFactors(ir, flags);
+
+    constexpr auto Q                                 = order + 1;
+    constexpr auto num_quadrature_points_per_element = (dim == 2) ? Q * Q : Q * Q * Q;
+    auto num_elements = mesh_.GetNE();
+
+    QuadratureData<T> data;
+    data.resize(num_elements, num_quadrature_points_per_element);
+
+    for (int e = 0; e < num_elements; e++) {
+      for (auto q = 0; q < num_quadrature_points_per_element; q++) {
+        data(e, q) = initial_state;
+      }
+    }
+
+    return data;
   }
 
   /**
@@ -212,7 +261,7 @@ public:
   }
 
   /// @brief Solve the Quasi-static Newton system
-  void quasiStaticSolve() { nonlin_solver_.Mult(zero_, displacement_.trueVec()); }
+  void quasiStaticSolve() { nonlin_solver_.Mult(zero_, displacement_); }
 
   /**
    * @brief Advance the timestep
@@ -224,10 +273,6 @@ public:
   void advanceTimestep(double& dt) override
   {
     SLIC_ERROR_ROOT_IF(!residual_, "completeSetup() must be called prior to advanceTimestep(dt) in SolidFunctional.");
-
-    // Initialize the true vector
-    velocity_.initializeTrueVec();
-    displacement_.initializeTrueVec();
 
     // Set the mesh nodes to the reference configuration
     if (geom_nonlin_ == GeometricNonlinearities::On) {
@@ -241,16 +286,12 @@ public:
       // Update the time for housekeeping purposes
       time_ += dt;
     } else {
-      ode2_.Step(displacement_.trueVec(), velocity_.trueVec(), time_, dt);
+      ode2_.Step(displacement_, velocity_, time_, dt);
     }
-
-    // Distribute the shared DOFs
-    velocity_.distributeSharedDofs();
-    displacement_.distributeSharedDofs();
 
     if (geom_nonlin_ == GeometricNonlinearities::On) {
       // Update the mesh with the new deformed nodes
-      deformed_nodes_->Set(1.0, displacement_.gridFunc());
+      deformed_nodes_->Set(1.0, displacement_.gridFunction());
       deformed_nodes_->Add(1.0, *reference_nodes_);
 
       mesh_.NewNodes(*deformed_nodes_);
@@ -268,55 +309,34 @@ public:
    * @pre MaterialType must have a method density() defining the density
    * @pre MaterialType must have the operator (du_dX) defined as the Kirchoff stress
    */
-  template <typename MaterialType>
-  void setMaterial(MaterialType material)
+  template <typename MaterialType, typename StateType>
+  void setMaterial(MaterialType material, const QuadratureData<StateType> & QData)
   {
-    if constexpr (is_parameterized<MaterialType>::value) {
-      static_assert(material.numParameters() == sizeof...(parameter_space),
-                    "Number of parameters in solid does not equal the number of parameters in the "
-                    "solid material.");
-    }
-
-    auto parameterized_material = parameterizeMaterial(material);
-
-    K_functional_->AddDomainIntegral(
+    auto copy = std::make_unique<DoubleBuffer<StateType>>(QData);
+    residual_->AddDomainIntegral(
         Dimension<dim>{},
-        [this, parameterized_material](auto x, auto displacement, auto... params) {
-          // Get the value and the gradient from the input tuple
-          auto [u, du_dX] = displacement;
-
-          auto source = zero{};
-
-          auto response = parameterized_material(x, u, du_dX, serac::get<0>(params)...);
-
-          auto flux = response.stress;
+        [this, material](auto /*x*/, auto & state, auto displacement, auto acceleration, auto ... params) {
+          auto a = get<VALUE>(acceleration);
+          auto du_dX = get<DERIVATIVE>(displacement);
+          auto body_force = material.density * a + 0.0 * du_dX[0];
+          auto stress = material(state, du_dX, serac::get<0>(params)...);
 
           if (geom_nonlin_ == GeometricNonlinearities::On) {
-            auto deformation_grad = du_dX + I_;
-            flux                  = flux * inv(transpose(deformation_grad));
+            auto F = I + du_dX;
+            body_force = body_force * det(F);
+            stress = dot(stress, inv(transpose(F)));
           }
 
-          return serac::tuple{source, flux};
+          return serac::tuple{body_force, stress};
         },
-        mesh_);
+        mesh_, copy->buffer[1]);
+    material_state_buffers_.push_back(std::move(copy));
+  }
 
-    M_functional_->AddDomainIntegral(
-        Dimension<dim>{},
-        [this, parameterized_material](auto x, auto displacement, auto... params) {
-          auto [u, du_dX] = displacement;
-
-          auto response = parameterized_material(x, u, du_dX, serac::get<0>(params)...);
-
-          auto flux = 0.0 * du_dX;
-
-          double geom_factor = (geom_nonlin_ == GeometricNonlinearities::On ? 1.0 : 0.0);
-
-          auto deformation_grad = du_dX + I_;
-          auto source           = response.density * u * (1.0 + geom_factor * (det(deformation_grad) - 1.0));
-
-          return serac::tuple{source, flux};
-        },
-        mesh_);
+  template <typename MaterialType>
+  void setMaterial(MaterialType material) {
+    static_assert(std::is_same_v< typename MaterialType::State, Empty >, "Error: material requires state information, but none was provided.");
+    setMaterial(material, QuadratureData<Empty>{});
   }
 
   /**
@@ -349,36 +369,23 @@ public:
    * @brief Set the body forcefunction
    *
    * @tparam BodyForceType The type of the body force load
-   * @param body_force_function A source function for a prescribed body load
+   * @param body_force A source function for a prescribed body load
    *
    * @pre BodyForceType must have the operator (x, time, displacement, d displacement_dx) defined as the body force
    */
   template <typename BodyForceType>
-  void addBodyForce(BodyForceType body_force_function)
+  void addBodyForce(BodyForceType body_force)
   {
-    if constexpr (is_parameterized<BodyForceType>::value) {
-      static_assert(body_force_function.numParameters() == sizeof...(parameter_space),
-                    "Number of parameters in solid not equal the number of parameters in the "
-                    "body force.");
-    }
-
-    auto parameterized_body_force = parameterizeSource(body_force_function);
-
-    K_functional_->AddDomainIntegral(
+    residual_->AddDomainIntegral(
         Dimension<dim>{},
-        [parameterized_body_force, this](auto x, auto displacement, auto... params) {
-          // Get the value and the gradient from the input tuple
-          auto [u, du_dX] = displacement;
-
-          auto flux = du_dX * 0.0;
-
-          double geom_factor = (geom_nonlin_ == GeometricNonlinearities::On ? 1.0 : 0.0);
-
-          auto deformation_grad = du_dX + I_;
-
-          auto source = parameterized_body_force(x, time_, u, du_dX, serac::get<0>(params)...) *
-                        (1.0 + geom_factor * (det(deformation_grad) - 1.0));
-          return serac::tuple{source, flux};
+        [body_force, this](auto x, auto displacement, auto /* acceleration */, auto... /*params*/) {
+          auto du_dX = get<DERIVATIVE>(displacement);
+          auto one_dual = (1.0 + 0.0 * du_dX[0][0]);
+          auto source = body_force(x, time_) * one_dual;
+          if (geom_nonlin_ == GeometricNonlinearities::On) {
+            source = source * det(I + du_dX);
+          }
+          return serac::tuple{source, zero{}}; 
         },
         mesh_);
   }
@@ -388,59 +395,16 @@ public:
    *
    * @tparam TractionType The type of the traction load
    * @param traction_function A function describing the traction applied to a boundary
-   * @param compute_on_reference Flag to compute the traction in the reference configuration
    *
    * @pre TractionType must have the operator (x, normal, time) to return the thermal flux value
    */
   template <typename TractionType>
-  void setTractionBCs(TractionType traction_function, bool compute_on_reference = true)
+  void setPiolaTraction(TractionType traction_function)
   {
-    if constexpr (is_parameterized<TractionType>::value) {
-      static_assert(traction_function.numParameters() == sizeof...(parameter_space),
-                    "Number of parameters in solid does not equal the number of parameters in the "
-                    "traction boundary.");
-    }
-
-    auto parameterized_traction = parameterizeFlux(traction_function);
-
-    // TODO fix this when we can get gradients from boundary integrals
-    SLIC_ERROR_IF(!compute_on_reference, "SolidFunctional cannot compute traction BCs in deformed configuration");
-
-    K_functional_->AddBoundaryIntegral(
+    residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{},
-        [this, parameterized_traction](auto x, auto n, auto, auto... params) {
-          return -1.0 * parameterized_traction(x, n, time_, params...);
-        },
-        mesh_);
-  }
-
-  /**
-   * @brief Set the pressure boundary condition
-   *
-   * @tparam PressureType The type of the pressure load
-   * @param pressure_function A function describing the pressure applied to a boundary
-   * @param compute_on_reference Flag to compute the pressure in the reference configuration
-   *
-   * @pre PressureType must have the operator (x, time) to return the thermal flux value
-   */
-  template <typename PressureType>
-  void setPressureBCs(PressureType pressure_function, bool compute_on_reference = true)
-  {
-    if constexpr (is_parameterized<PressureType>::value) {
-      static_assert(pressure_function.numParameters() == sizeof...(parameter_space),
-                    "Number of parameters in solid does not equal the number of parameters in the "
-                    "pressure boundary.");
-    }
-
-    auto parameterized_pressure = parameterizePressure(pressure_function);
-
-    // TODO fix this when we can get gradients from boundary integrals
-    SLIC_ERROR_IF(!compute_on_reference, "SolidFunctional cannot compute pressure BCs in deformed configuration");
-
-    K_functional_->AddBoundaryIntegral(
-        Dimension<dim - 1>{},
-        [this, parameterized_pressure](auto x, auto n, auto, auto... params) {
-          return parameterized_pressure(x, time_, params...) * n;
+        [this, traction_function](auto x, auto n, auto, auto, auto... params) {
+          return -1.0 * traction_function(x, n, time_, params...);
         },
         mesh_);
   }
@@ -478,11 +442,8 @@ public:
   /// @brief Reset the mesh, displacement, and velocity to the reference (stress-free) configuration
   void resetToReferenceConfiguration()
   {
-    displacement_.gridFunc() = 0.0;
-    velocity_.gridFunc()     = 0.0;
-
-    velocity_.initializeTrueVec();
-    displacement_.initializeTrueVec();
+    displacement_ = 0.0;
+    velocity_     = 0.0;
 
     mesh_.NewNodes(*reference_nodes_);
   }
@@ -492,28 +453,24 @@ public:
   {
     // the quasistatic case is entirely described by the residual,
     // there is no ordinary differential equation
-    auto residual = std::make_unique<mfem_ext::StdFunctionOperator>(
+    return std::make_unique<mfem_ext::StdFunctionOperator>(
         displacement_.space().TrueVSize(),
 
         // residual function
         [this](const mfem::Vector& u, mfem::Vector& r) {
-          functional_call_args_[0] = u;
-
-          r = (*K_functional_)(functional_call_args_);
+          for (auto & buffer : material_state_buffers_) { buffer->reset(); }
+          r = (*residual_)(u, zero_, parameter_states_[parameter_indices] ...);
           r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
         },
 
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
-          functional_call_args_[0] = u;
-
-          auto [r, drdu] = (*K_functional_)(functional_call_args_, Index<0>{});
+          for (auto & buffer : material_state_buffers_) { buffer->reset(); }
+          auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, parameter_states_[parameter_indices] ...);
           J_             = assemble(drdu);
           bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
           return *J_;
         });
-
-    return residual;
   }
 
   /**
@@ -531,52 +488,33 @@ public:
       bc.projectBdr(displacement_, time_);
     }
 
-    // Initialize the true vector
-    displacement_.initializeTrueVec();
-
     if (is_quasistatic_) {
-      residual_ = buildQuasistaticOperator();
+      residual_with_bcs_ = buildQuasistaticOperator();
     } else {
       // the dynamic case is described by a residual function and a second order
       // ordinary differential equation. Here, we define the residual function in
       // terms of an acceleration.
-      residual_ = std::make_unique<mfem_ext::StdFunctionOperator>(
+      residual_with_bcs_ = std::make_unique<mfem_ext::StdFunctionOperator>(
           displacement_.space().TrueVSize(),
 
           [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) {
-            functional_call_args_[0] = d2u_dt2;
-
-            auto M_residual = (*M_functional_)(functional_call_args_);
-
-            mfem::Vector K_arg(u_.Size());
-            add(1.0, u_, c0_, d2u_dt2, K_arg);
-            functional_call_args_[0] = K_arg;
-
-            auto K_residual = (*K_functional_)(functional_call_args_);
-
-            functional_call_args_[0] = u_;
-
-            add(M_residual, K_residual, r);
+            add(1.0, u_, c0_, d2u_dt2, u_predicted_);
+            r = (*residual_)(u_predicted_, d2u_dt2, parameter_states_[parameter_indices] ...);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
           [this](const mfem::Vector& d2u_dt2) -> mfem::Operator& {
-            functional_call_args_[0] = d2u_dt2;
+            add(1.0, u_, c0_, d2u_dt2, u_predicted_);
 
-            auto M = serac::get<1>((*M_functional_)(functional_call_args_, Index<0>{}));
-            std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
-
-            // J = M + c0 * H(u_predicted)
-            mfem::Vector K_arg(u_.Size());
-            add(1.0, u_, c0_, d2u_dt2, K_arg);
-            functional_call_args_[0] = K_arg;
-
-            auto K = serac::get<1>((*K_functional_)(functional_call_args_, Index<0>{}));
-
-            functional_call_args_[0] = u_;
-
+            // K := dR/du
+            auto K = serac::get<1>((*residual_)(differentiate_wrt(u_predicted_), d2u_dt2, parameter_states_[parameter_indices] ...));
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
+            // M := dR/da
+            auto M = serac::get<1>((*residual_)(u_predicted_, differentiate_wrt(d2u_dt2), parameter_states_[parameter_indices] ...));
+            std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
+
+            // J = M + c0 * K
             J_.reset(mfem::Add(1.0, *m_mat, c0_, *k_mat));
             bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
 
@@ -584,10 +522,12 @@ public:
           });
     }
 
-    nonlin_solver_.SetOperator(*residual_);
+    nonlin_solver_.SetOperator(*residual_with_bcs_);
   }
 
   /**
+   * TODO: improve tautological documentation
+   * 
    * @brief Solve the adjoint problem
    * @pre It is expected that the forward analysis is complete and the current displacement state is valid
    * @note If the essential boundary state is not specified, homogeneous essential boundary conditions are applied
@@ -606,7 +546,7 @@ public:
       mesh_.NewNodes(*reference_nodes_);
     }
 
-    mfem::HypreParVector adjoint_load_vector(adjoint_load.trueVec());
+    mfem::HypreParVector adjoint_load_vector(adjoint_load);
 
     // Add the sign correction to move the term to the RHS
     adjoint_load_vector *= -1.0;
@@ -614,19 +554,18 @@ public:
     auto& lin_solver = nonlin_solver_.LinearSolver();
 
     // By default, use a homogeneous essential boundary condition
-    mfem::HypreParVector adjoint_essential(adjoint_load.trueVec());
+    mfem::HypreParVector adjoint_essential(adjoint_load);
     adjoint_essential = 0.0;
 
-    functional_call_args_[0] = displacement_.trueVec();
-
-    auto [r, drdu] = (*K_functional_)(functional_call_args_, Index<0>{});
+    // sam: is this the right thing to be doing for dynamics simulations, 
+    // or are we implicitly assuming this should only be used in quasistatic analyses?
+    auto drdu = serac::get<1>((*residual_)(differentiate_wrt(displacement_), zero_, parameter_states_[parameter_indices] ...));
     auto jacobian  = assemble(drdu);
     auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
     // If we have a non-homogeneous essential boundary condition, extract it from the given state
     if (dual_with_essential_boundary) {
-      dual_with_essential_boundary->initializeTrueVec();
-      adjoint_essential = dual_with_essential_boundary->trueVec();
+      adjoint_essential = *dual_with_essential_boundary;
     }
 
     for (const auto& bc : bcs_.essentials()) {
@@ -635,12 +574,10 @@ public:
     }
 
     lin_solver.SetOperator(*J_T);
-    lin_solver.Mult(adjoint_load_vector, adjoint_displacement_.trueVec());
-
-    adjoint_displacement_.distributeSharedDofs();
+    lin_solver.Mult(adjoint_load_vector, adjoint_displacement_);
 
     // Reset the equation solver to use the full nonlinear residual operator
-    nonlin_solver_.SetOperator(*residual_);
+    nonlin_solver_.SetOperator(*residual_with_bcs_);
 
     if (geom_nonlin_ == GeometricNonlinearities::On) {
       // Update the mesh with the new deformed nodes
@@ -667,15 +604,11 @@ public:
       mesh_.NewNodes(*reference_nodes_);
     }
 
-    functional_call_args_[0] = displacement_.trueVec();
-
-    auto [r, drdparam] = (*K_functional_)(functional_call_args_, Index<parameter_field + 1>{});
+    auto drdparam = serac::get<1>((*residual_)(DifferentiateWRT<parameter_field + 2>{}, displacement_, zero_, parameter_states_[parameter_indices] ...));
 
     auto drdparam_mat = assemble(drdparam);
 
-    drdparam_mat->MultTranspose(adjoint_displacement_.trueVec(), parameter_sensitivities_[parameter_field]->trueVec());
-
-    parameter_sensitivities_[parameter_field]->distributeSharedDofs();
+    drdparam_mat->MultTranspose(adjoint_displacement_, *parameter_sensitivities_[parameter_field]);
 
     if (geom_nonlin_ == GeometricNonlinearities::On) {
       // Set the mesh nodes back to the reference configuration
@@ -701,26 +634,16 @@ protected:
   /// The displacement finite element state
   FiniteElementState adjoint_displacement_;
 
-  /// Mass functional object
-  std::unique_ptr<Functional<test(trial, parameter_space...)>> M_functional_;
+  std::unique_ptr<Functional<test(trial, trial, parameter_space...)>> residual_;
 
-  /// Stiffness functional object
-  std::unique_ptr<Functional<test(trial, parameter_space...)>> K_functional_;
+  /// @brief mfem::Operator that calculates the residual after applying essential boundary conditions 
+  std::unique_ptr<mfem_ext::StdFunctionOperator> residual_with_bcs_;
 
   /// The finite element states representing user-defined parameter fields
   std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states_;
 
   /// The sensitivities (dual vectors) with repect to each of the input parameter fields
   std::array<std::unique_ptr<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;
-
-  /// The set of input trial space vectors (displacement + parameters) used to call the underlying functional
-  std::vector<std::reference_wrapper<const mfem::Vector>> functional_call_args_;
-
-  /**
-   * @brief mfem::Operator that describes the nonlinear residual
-   * and its gradient with respect to displacement
-   */
-  std::unique_ptr<mfem_ext::StdFunctionOperator> residual_;
 
   /**
    * @brief the ordinary differential equation that describes
@@ -735,6 +658,9 @@ protected:
   /// Assembled sparse matrix for the Jacobian
   std::unique_ptr<mfem::HypreParMatrix> J_;
 
+  /// @brief an intermediate variable used to store the predicted end-step displacement
+  mfem::Vector u_predicted_;
+
   /// @brief used to communicate the ODE solver's predicted displacement to the residual operator
   mfem::Vector u_;
 
@@ -744,10 +670,8 @@ protected:
   /// @brief the previous acceleration, used as a starting guess for newton's method
   mfem::Vector previous_;
 
-  /// @brief Current time step
+  // TODO: document these correctly
   double c0_;
-
-  /// @brief Previous time step
   double c1_;
 
   /// @brief A flag denoting whether to compute geometric nonlinearities in the residual
@@ -771,8 +695,8 @@ protected:
   /// @brief An auxilliary zero vector
   mfem::Vector zero_;
 
-  /// @brief Auxilliary identity rank 2 tensor
-  const isotropic_tensor<double, dim, dim> I_ = Identity<dim>();
+  std::vector < std::unique_ptr< Updatable > > material_state_buffers_;
+
 };
 
 }  // namespace serac
