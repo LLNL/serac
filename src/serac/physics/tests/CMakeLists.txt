@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause) 
 
-set(test_dependencies serac_physics test_utils)
+set(test_dependencies serac_physics serac_state test_utils)
 blt_list_append( TO test_dependencies ELEMENTS caliper adiak IF ${SERAC_ENABLE_PROFILING} )
 
 blt_add_library(
@@ -30,9 +30,7 @@ set(solver_tests
     serac_solid_adjoint.cpp
     serac_solid_functional.cpp
     serac_thermal_solver.cpp
-    serac_thermal_structural_solver.cpp
     serac_thermal_solid_solver.cpp
-    serac_thermal_expansion.cpp
     serac_thermal_functional.cpp
     serac_thermal_solid_functional.cpp
     )

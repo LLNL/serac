@@ -9,9 +9,6 @@ dt      = 1.0
 -- Run for 10s, since the restart is at 5s
 t_final = 10.0
 
--- Simulation output format
-output_type = "SidreVisIt"
-
 main_mesh = {
     type = "file",
     -- mesh file

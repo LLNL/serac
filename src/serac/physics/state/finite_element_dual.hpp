@@ -31,57 +31,33 @@ public:
    * @brief Use the finite element vector constructors
    */
   using FiniteElementVector::FiniteElementVector;
+  using FiniteElementVector::operator=;
 
   /**
-   * @brief Returns a non-owning reference to the local degrees of freedom
+   * @brief Fill a user-provided grid function based on the underlying true vector
    *
-   * @return mfem::Vector& The local dof vector
-   * @note While this is a grid function for plotting and parallelization, we only return a vector
-   * type as the user should not use the interpolation capabilities of a grid function on the dual space
-   * @note Shared degrees of freedom live on multiple MPI ranks
-   */
-  mfem::Vector& localVec() { return detail::retrieve(gf_); }
-
-  /// @overload
-  const mfem::Vector& localVec() const { return detail::retrieve(gf_); }
-
-  /**
-   * @brief Set the internal grid function using the true DOF values
-   *
-   * This distributes true vector dofs to the finite element (local) dofs by multiplying the true dofs
-   * by the transponse of the restriction operator.
+   * This distributes true vector dofs to the finite element (local) dofs  by multiplying the true dofs
+   * by the restriction transpose operator.
    *
    * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
    *
    */
-  void distributeSharedDofs()
+  void fillGridFunction(mfem::ParGridFunction& grid_function) const
   {
-    detail::retrieve(space_).GetRestrictionMatrix()->MultTranspose(true_vec_, detail::retrieve(gf_));
+    space_->GetRestrictionMatrix()->MultTranspose(*this, grid_function);
   }
 
   /**
-   * @brief Initialize the true vector from the grid function values
+   * @brief Initialize the true vector in the FiniteElementDual based on an input grid function
    *
-   * This initializes the true vector dofs by multiplying the finite element (local) dofs
-   * by the transpose of the prolongation operator.
+   * This distributes the grid function dofs to the true vector dofs by multiplying by the
+   * prolongation transpose operator.
    *
    * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
-   */
-  void initializeTrueVec() { detail::retrieve(gf_).ParallelAssemble(true_vec_); }
-
-  /**
-   * @brief Set a finite element dual to a constant value
    *
-   * @param value The constant to set the finite element dual to
-   * @return The modified finite element dual
-   * @note This sets the true degrees of freedom and then broadcasts to the shared grid function entries. This means
-   * that if a different value is given on different processors, a shared DOF will be set to the owning processor value.
+   * @param grid_function The grid function used to initialize the underlying true vector.
    */
-  FiniteElementDual& operator=(const double value)
-  {
-    FiniteElementVector::operator=(value);
-    return *this;
-  }
+  void setFromGridFunction(const mfem::ParGridFunction& grid_function) { grid_function.ParallelAssemble(*this); }
 };
 
 }  // namespace serac

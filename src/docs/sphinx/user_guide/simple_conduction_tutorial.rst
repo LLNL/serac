@@ -87,7 +87,7 @@ Sidre building block) and the path to the Lua input file, which in this case is 
 We then define the schema for the input file.  Instead of defining the structure of the input file in one place, Inlet
 allows Serac to separate its schema definition logic into functions that are responsible for defining just one component
 of the schema.  Since our input file contains information required for mesh construction, for Serac's ``ThermalConduction`` module,
-and for the selected output type, we use Inlet to define the corresponding schemas:
+we use Inlet to define the corresponding schemas:
 
 .. literalinclude:: ../../../../examples/simple_conduction/with_input_file.cpp
    :start-after: _inlet_schema_start
@@ -232,35 +232,6 @@ The following snippets add two Dirichlet boundary conditions:
 .. note::
   The exact names here are not critical, any entry whose name contains the string ``temperature``
   will be applied as a Dirichlet condition to the temperature field.
-
-Setting Output Type
--------------------
-
-.. hint::
-  Serac currently supports ``VisIt``, ``ParaView``, ``GLVis``, and ``SidreVisit`` output.
-
-**Using C++**
-
-.. literalinclude:: ../../../../examples/simple_conduction/without_input_file.cpp
-   :start-after: _output_type_start
-   :end-before: _output_type_end
-   :language: C++
-
-**Using Lua**
-
-In the input file (``conduction.lua``):
-
-.. literalinclude:: ../../../../examples/simple_conduction/conduction.lua
-   :start-after: _output_type_start
-   :end-before: _output_type_end
-   :language: Lua
-
-In the C++ driver:
-
-.. literalinclude:: ../../../../examples/simple_conduction/with_input_file.cpp
-   :start-after: _output_type_start
-   :end-before: _output_type_end
-   :language: C++
 
 Running the Simulation
 ----------------------
