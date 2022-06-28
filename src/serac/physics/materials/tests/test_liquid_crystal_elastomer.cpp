@@ -144,6 +144,8 @@ return;
   }
 }
 
+// --------------------------------------------------------
+
 TEST(TestLiquidCrystalMaterial, isNotDegenerate)
 {
   // This is a dummy test that should be eventually removed. I (BT) am
@@ -177,7 +179,7 @@ TEST(TestLiquidCrystalMaterial, isNotDegenerate)
   // reference state (which means `order_parameter` is set to 1), ANY
   // diagonal deformation gradient with F[1][1] = 1.0 will cause no
   // stress in the deviatoric response*. For this example, I assign an
-  // increasing seqeunce of F[0][0] and keep F[1][1] = 1.0. Then, all
+  // increasing sequence of F[0][0] and keep F[1][1] = 1.0. Then, all
   // one needs to do to have a zero stress state is to keep the volume
   // fixed, that is, sef F[2][2] = 1/[F[0][0]. No matter how large the
   // tensile F[0][0] deformation is, the model will stay at zero
@@ -195,7 +197,7 @@ TEST(TestLiquidCrystalMaterial, isNotDegenerate)
     F[2][2] = 1.0/F[0][0];
     H = F - DenseIdentity<3>();
     auto response = material(unused, unused, H, state, initial_temperature);
-    EXPECT_GT(response.stress[0][0], 1e-8);
+    EXPECT_LT(response.stress[0][0], 1e-8);
   }
 }
 
@@ -221,7 +223,7 @@ TEST(TestLiquidCrystalMaterial, strainAndtemperatureSweep)
   auto initial_distribution = LiquidCrystalElastomer::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
   decltype(material)::State initial_state{DenseIdentity<3>(), initial_distribution, initial_temperature, order_parameter};
   double max_time = 1.0;
-  unsigned int steps = 100;
+  unsigned int steps = 20;
 
   double strain_rate = 2e-1;
   std::function<double(double)> strain_rate_func = [strain_rate](double t){ 
@@ -241,6 +243,39 @@ TEST(TestLiquidCrystalMaterial, strainAndtemperatureSweep)
         {
           return 0.0;
         }
+        // if(t<0.125 || (t>=0.5 && t<0.625) )
+        // {
+        //   if(t<0.5)
+        //   {
+        //     return strain_rate*8*t;
+        //   }
+        //   else
+        //   {
+        //     return strain_rate*8*(t-0.5);
+        //   }
+        // }
+        // else if( (t>=0.125 && t<0.25) || (t>=0.625 && t<0.75) )
+        // {
+        //   return strain_rate;
+        // }
+        // else if( (t>=0.25 && t<0.375) || (t>=0.75 && t<0.875) )
+        // {
+        //   if(t<0.5)
+        //   {
+        //     return strain_rate*8*(0.375-t); 
+        //   }
+        //   else
+        //   {
+        //     return strain_rate*8*(0.875-t); 
+        //   }
+          
+        // }
+        // else if( (t>=0.375 && t<0.5) || (t>=0.875) )
+        // {
+        //   return 0.0;
+        // }
+
+        // return strain_rate*8*t;
     };
     
   std::function<double(double)> temperature_func =
@@ -261,21 +296,101 @@ TEST(TestLiquidCrystalMaterial, strainAndtemperatureSweep)
         {
           return max_temperature - 4*(t-0.75)*(max_temperature - initial_temperature);
         }
+        // if(t<0.125 || (t>=0.5 && t<0.625) )
+        // {
+        //   return initial_temperature;
+        // }
+        // else if( (t>=0.125 && t<0.25) || (t>=0.625 && t<0.75) )
+        // {
+        //   if(t<0.5)
+        //   {
+        //     return initial_temperature + 8*(t-0.125)*(max_temperature - initial_temperature);
+        //   }
+        //   else
+        //   {
+        //     return initial_temperature + 8*(t-0.625)*(max_temperature - initial_temperature);
+        //   }
+        // }
+        // else if( (t>=0.25 && t<0.375) || (t>=0.75 && t<0.875) )
+        // {
+        //   return max_temperature;
+        // }
+        // else if( (t>=0.375 && t<0.5) || (t>=0.875) )
+        // {
+        //   if(t<0.5)
+        //   {
+        //     return max_temperature - 8*(t-0.375)*(max_temperature - initial_temperature);
+        //   }
+        //   else
+        //   {
+        //     return max_temperature - 8*(t-0.875)*(max_temperature - initial_temperature);
+        //   }
+        // }
+
+        // return initial_temperature;
       };
 
   auto response_history = uniaxial_stress_test(max_time, steps, material, initial_state, strain_rate_func, temperature_func);
 
-  for (unsigned int i = 0; i < steps; i++) {
+  bool printOutput(false);
+  
+  for (unsigned int i = 0; i < steps; i++) 
+  {
     auto [t, strain, stress, state] = response_history[i];
 
-    std::cout << "... Time: " << t
-              << ", q: " << state.order_parameter
-              << ", e_xx: " << strain[0][0]
-              << ", e_yy: " << strain[1][1]
-              << ", e_zz: " << strain[2][2]
-              << ", Temp: " << state.temperature
-              << ", sigma_xx: " << stress[0][0] << std::endl;
- std::cout << strain << std::endl;
+    if(printOutput)
+    {
+      std::cout << "... Time: " << t
+                << ", q: " << state.order_parameter
+                << ", e_xx: " << strain[0][0]
+                << ", e_yy: " << strain[1][1]
+                << ", e_zz: " << strain[2][2]
+                << ", Temp: " << state.temperature
+                << ", sigma_xx: " << stress[0][0]
+                << ", mu_1: " << state.distribution_tensor[0][0]
+                << ", mu_2: " << state.distribution_tensor[1][1]
+                << ", mu_3: " << state.distribution_tensor[2][2] << std::endl;
+    }
+  }
+}
+
+// --------------------------------------------------------
+
+TEST(TestLiquidCrystalMaterial, evolDistributionTensor)
+{
+  double density = 1.0;
+  double E = 1.0;
+  double nu = 0.25;
+  double shear_modulus = 0.5*E/(1.0 + nu);
+  double bulk_modulus = E / 3.0 / (1.0 - 2.0*nu);
+  double order_constant = 1.0;
+  double order_parameter = 1.0;
+  double transition_temperature = 10.0;
+  tensor<double, 3> normal{{0.0, 1.0, 0.0}};
+  double Nb2 = 1.0;
+  
+  LiquidCrystalElastomer material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
+  double initial_temperature = 5.0;
+
+  auto initial_distribution = LiquidCrystalElastomer::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
+  decltype(material)::State state{DenseIdentity<3>(), initial_distribution, initial_temperature, order_parameter};
+  double max_time = 1.0;
+  unsigned int steps = 50;
+  double time = 0;
+  double dt = max_time / steps;
+  tensor<double, 3> unused{};
+  tensor<double, 3, 3> H{};
+  std::function<double(double)> temperature_func =
+      [initial_temperature, transition_temperature](double t) {
+        return initial_temperature + 2*t*(transition_temperature - initial_temperature);
+      };
+
+  for (unsigned int i = 0; i < steps; i++) 
+  {
+    time += dt;
+    double temperature = temperature_func(time);
+    material(unused, unused, H, state, temperature);
+    std::cout << state.distribution_tensor[1][1] << std::endl;
   }
 }
 
