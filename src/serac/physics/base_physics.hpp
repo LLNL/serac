@@ -32,9 +32,10 @@ public:
   /**
    * @brief Empty constructor
    * @param[in] pmesh An optional mesh reference, must be provided to configure the module
+   * @param[in] name Name of the physics module instance
    * when a mesh other than the primary mesh is used
    */
-  BasePhysics(mfem::ParMesh* pmesh = nullptr);
+  BasePhysics(std::string name_, mfem::ParMesh* pmesh = nullptr);
 
   /**
    * @brief Constructor that creates n entries in state_ of order p
@@ -42,9 +43,10 @@ public:
    * @param[in] n Number of state variables
    * @param[in] p Order of the solver
    * @param[in] pmesh An optional mesh reference, must be provided to configure the module
+   * @param[in] name Name of the physics module instance
    * when a mesh other than the default mesh is used
    */
-  BasePhysics(int n, int p, mfem::ParMesh* pmesh = nullptr);
+  BasePhysics(int n, int p, std::string name_, mfem::ParMesh* pmesh = nullptr);
 
   /**
    * @brief Construct a new Base Physics object (copy constructor)
@@ -105,8 +107,10 @@ public:
 
   /**
    * @brief Output the current state of the PDE fields
+   *
+   * @param[in] paraview_output_dir[in] Optional output directory for paraview visualization files
    */
-  virtual void outputState() const;
+  virtual void outputState(std::optional<std::string> paraview_output_dir = {}) const;
 
   /**
    * @brief Initializes the Sidre structure for simulation summary data
@@ -136,7 +140,10 @@ public:
   const mfem::ParMesh& mesh() const { return mesh_; }
 
 protected:
-  /// @brief ID of the corresponding MFEMSidreDataCollection
+  /// @brief Name of the physics module
+  std::string name_ = {};
+
+  /// @brief ID of the corresponding MFEMSidreDataCollection (denoting a mesh)
   std::string sidre_datacoll_id_ = {};
 
   /**
@@ -163,16 +170,6 @@ protected:
    *@brief Whether the simulation is time-independent
    */
   bool is_quasistatic_ = true;
-
-  /**
-   * @brief Root output name
-   */
-  std::string root_name_;
-
-  /**
-   * @brief Directory to output files
-   */
-  std::string output_directory_;
 
   /**
    * @brief Number of significant figures to output for floating-point
@@ -205,9 +202,9 @@ protected:
   int order_;
 
   /**
-   * @brief DataCollection pointer
+   * @brief DataCollection pointer for optional paraview output
    */
-  std::unique_ptr<mfem::DataCollection> dc_;
+  mutable std::unique_ptr<mfem::ParaViewDataCollection> paraview_dc_;
 
   /**
    * @brief State variable initialization indicator
