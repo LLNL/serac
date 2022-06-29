@@ -89,8 +89,8 @@ void functional_solid_test_static(double expected_disp_norm)
   double dt = 1.0;
   solid_solver.advanceTimestep(dt);
 
-  // Output the sidre-based plot files
-  solid_solver.outputState();
+  // Output the sidre-based and paraview plot files
+  solid_solver.outputState("paraview_output");
 
   // Check the final displacement norm
   EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);

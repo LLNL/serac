@@ -106,7 +106,7 @@ public:
       const solid_util::SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
       FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "",
       std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states = {})
-      : BasePhysics(2, order),
+      : BasePhysics(2, order, name),
         velocity_(StateManager::newState(FiniteElementState::Options{
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "velocity")})),
         displacement_(StateManager::newState(FiniteElementState::Options{
