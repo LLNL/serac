@@ -106,7 +106,8 @@ public:
   virtual void advanceTimestep(double& dt) = 0;
 
   /**
-   * @brief Output the current state of the PDE fields
+   * @brief Output the current state of the PDE fields in Sidre format and optionally in Paraview format
+   *  if \p paraview_output_dir is given.
    *
    * @param[in] paraview_output_dir Optional output directory for paraview visualization files
    */
