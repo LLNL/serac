@@ -112,7 +112,7 @@ public:
       State state{};
       
       auto [u, du_dX]     = displacement;
-      auto [T, c, s0, q0] = mat.calculateConstitutiveOutputs(du_dX, temperature, temperature_gradient, state, parameters...);
+      auto [T, c, s0, q0] = mat.calculateConstitutiveOutputs(state, du_dX, temperature, temperature_gradient, parameters...);
       // density * specific_heat = c
       const double density = mat.rho;
       return Thermal::MaterialResponse{density, c, q0};
@@ -135,7 +135,7 @@ public:
     {
       State state{};
       auto [theta, dtheta_dX]                      = temperature;
-      auto [T, c, s0, q0]  = mat.calculateConstitutiveOutputs(displacement_gradient, theta, dtheta_dX, state, parameters...);
+      auto [T, c, s0, q0]  = mat.calculateConstitutiveOutputs(state, displacement_gradient, theta, dtheta_dX, parameters...);
       const double density = mat.rho;
       return solid_util::MaterialResponse{density, T};
     }

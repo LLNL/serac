@@ -51,8 +51,8 @@ struct GreenSaintVenantThermoelasticMaterial {
    * energy per unit time and per unit area).
    */
   template <typename T1, typename T2, typename T3 >
-  auto calculateConstitutiveOutputs(const tensor<T1, 3, 3>& grad_u, T2 theta,
-                                    const tensor<T3, 3>& grad_theta, State& state) const
+  auto calculateConstitutiveOutputs(State& state, const tensor<T1, 3, 3>& grad_u, T2 theta,
+                                    const tensor<T3, 3>& grad_theta) const
   {
     const double          K    = E / (3.0 * (1.0 - 2.0 * nu));
     const double          G    = 0.5 * E / (1.0 + nu);
@@ -132,8 +132,8 @@ struct ParameterizedGreenSaintVenantThermoelasticMaterial {
    * energy per unit time and per unit area).
    */
   template <typename T1, typename T2, typename T3, typename T4 >
-  auto calculateConstitutiveOutputs(const tensor<T1, 3, 3>& grad_u, T2 theta,
-                                    const tensor<T3, 3>& grad_theta, State& state,
+  auto calculateConstitutiveOutputs(State& state, const tensor<T1, 3, 3>& grad_u, T2 theta,
+                                    const tensor<T3, 3>& grad_theta,
                                     T4 thermal_expansion_scaling) const
   {
     auto [scale, unused] = thermal_expansion_scaling;
@@ -143,7 +143,7 @@ struct ParameterizedGreenSaintVenantThermoelasticMaterial {
     auto                  F    = grad_u + I;
     const auto            Eg   = greenStrain(grad_u);
     const auto            trEg = tr(Eg);
-    const double alpha = alpha0 * scale;
+    auto alpha = alpha0 * scale;
 
     // stress
     const auto S = 2.0 * G * dev(Eg) + K * (trEg - 3.0 * alpha * (theta - theta_ref)) * I;
@@ -164,7 +164,7 @@ struct ParameterizedGreenSaintVenantThermoelasticMaterial {
    * @param[in] grad_u displacement gradient
    * @param[in] theta temperature
    */
-  template <typename T1, typename T2>
+  template <typename T1, typename T2, typename T3>
   auto calculateFreeEnergy(const tensor<T1, 3, 3>& grad_u, T2 theta, T3 thermal_expansion_scaling) const
   {
     auto [scale, unused] = thermal_expansion_scaling;
