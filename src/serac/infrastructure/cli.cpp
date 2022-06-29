@@ -32,6 +32,8 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
   app.add_option("-o, --output-directory", output_directory, "Directory to put outputted files");
   bool version{false};
   app.add_flag("-v, --version", version, "Print version and providence information, then exits");
+  bool enable_paraview{false};
+  app.add_option("-p, --paraview", enable_paraview, "Enable paraview output");
 
   // Parse the arguments and check if they are good
   try {
@@ -71,6 +73,9 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
       output_directory = serac::input::getInputFileName(input_file_path);
     }
     cli_opts.insert({"output-directory", output_directory});
+    if (enable_paraview) {
+      cli_opts.insert({"paraview-directory", output_directory + "_paraview"});
+    }
   }
 
   return cli_opts;
