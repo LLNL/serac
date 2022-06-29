@@ -51,8 +51,8 @@ struct GreenSaintVenantThermoelasticMaterial {
    * energy per unit time and per unit area).
    */
   template <typename T1, typename T2, typename T3 >
-  auto calculateConstitutiveOutputs(const tensor<T1, 3, 3>& grad_u, T2 theta, const tensor<T3, 3>& grad_theta,
-                                    State& state) const
+  auto calculateConstitutiveOutputs(const tensor<T1, 3, 3>& grad_u, T2 theta,
+                                    const tensor<T3, 3>& grad_theta, State& state) const
   {
     const double          K    = E / (3.0 * (1.0 - 2.0 * nu));
     const double          G    = 0.5 * E / (1.0 + nu);
@@ -67,7 +67,7 @@ struct GreenSaintVenantThermoelasticMaterial {
     const auto TK = dot(P, transpose(F));
 
     // internal heat source
-    const auto s0 = -3 * K * alpha * theta * trEg - state.strain_trace;
+    const auto s0 = -3 * K * alpha * theta * (trEg - state.strain_trace);
 
     // heat flux
     const auto q0 = -k * grad_theta;
@@ -90,7 +90,7 @@ struct GreenSaintVenantThermoelasticMaterial {
     auto         psi_1  = G * squared_norm(dev(strain)) + 0.5 * K * trE * trE;
     using std::log;
     auto logT  = log(theta / theta_ref);
-    auto psi_2 = C * (theta - theta_ref + theta * logT);
+    auto psi_2 = C * (theta - theta_ref - theta * logT);
     auto psi_3 = -3.0 * K * alpha * (theta - theta_ref) * trE;
     return psi_1 + psi_2 + psi_3;
   }
@@ -103,24 +103,26 @@ struct ParameterizedGreenSaintVenantThermoelasticMaterial {
   double E;          ///< Young's modulus
   double nu;         ///< Poisson's ratio
   double C;          ///< volumetric heat capacity
-  double alpha;      ///< thermal expansion coefficient
-  double theta_ref;  ///< datum temperature
+  double alpha0;     ///< reference value of thermal expansion coefficient
+  double theta_ref;  ///< datum temperature for thermal expansion
   double k;          ///< thermal conductivity
 
   struct State {
     double strain_trace; ///< trace of Green-Saint Venant strain tensor
   };
 
-/**
+  /**
    * @brief Evaluate constitutive variables for thermomechanics
    *
    * @tparam T1 Type of the displacement gradient components (number-like)
    * @tparam T2 Type of the temperature (number-like)
    * @tparam T3 Type of the temperature gradient components (number-like)
+   * @tparam T4 Type of the coefficient of thermal expansion scale factor
    *
    * @param[in] grad_u Displacement gradient
    * @param[in] theta Temperature
    * @param[in] grad_theta Temperature gradient
+   * @param[in] thermal_expansion_scaling Parameterized scale factor on the coefficient of thermal expansion
    * @param[in,out] state State variables for this material
    *
    * @return[out] tuple of constitutive outputs. Contains the
@@ -130,8 +132,9 @@ struct ParameterizedGreenSaintVenantThermoelasticMaterial {
    * energy per unit time and per unit area).
    */
   template <typename T1, typename T2, typename T3, typename T4 >
-  auto calculateConstitutiveOutputs(const tensor<T1, 3, 3>& grad_u, T2 theta, const tensor<T3, 3>& grad_theta,
-                                    State& state, T4 thermal_expansion_scaling) const
+  auto calculateConstitutiveOutputs(const tensor<T1, 3, 3>& grad_u, T2 theta,
+                                    const tensor<T3, 3>& grad_theta, State& state,
+                                    T4 thermal_expansion_scaling) const
   {
     auto [scale, unused] = thermal_expansion_scaling;
     const double          K    = E / (3.0 * (1.0 - 2.0 * nu));
@@ -140,14 +143,15 @@ struct ParameterizedGreenSaintVenantThermoelasticMaterial {
     auto                  F    = grad_u + I;
     const auto            Eg   = greenStrain(grad_u);
     const auto            trEg = tr(Eg);
+    const double alpha = alpha0 * scale;
 
     // stress
-    const auto S = 2.0 * G * dev(Eg) + K * (trEg - 3.0 * (alpha * scale) * (theta - theta_ref)) * I;
+    const auto S = 2.0 * G * dev(Eg) + K * (trEg - 3.0 * alpha * (theta - theta_ref)) * I;
     const auto P = dot(F, S);
     const auto TK = dot(P, transpose(F));
 
     // internal heat source
-    const auto s0 = -3 * K * (alpha * scale) * theta * (trEg - state.strain_trace);
+    const auto s0 = -3 * K * alpha * theta * (trEg - state.strain_trace);
 
     // heat flux
     const auto q0 = -k * grad_theta;
@@ -161,16 +165,18 @@ struct ParameterizedGreenSaintVenantThermoelasticMaterial {
    * @param[in] theta temperature
    */
   template <typename T1, typename T2>
-  auto calculateFreeEnergy(const tensor<T1, 3, 3>& grad_u, T2 theta) const
+  auto calculateFreeEnergy(const tensor<T1, 3, 3>& grad_u, T2 theta, T3 thermal_expansion_scaling) const
   {
+    auto [scale, unused] = thermal_expansion_scaling;
     const double K      = E / (3.0 * (1.0 - 2.0 * nu));
     const double G      = 0.5 * E / (1.0 + nu);
     auto         strain = greenStrain(grad_u);
     auto         trE    = tr(strain);
+    const double alpha = alpha0 * scale;
     auto         psi_1  = G * squared_norm(dev(strain)) + 0.5 * K * trE * trE;
     using std::log;
     auto logT  = log(theta / theta_ref);
-    auto psi_2 = C * (theta - theta_ref + theta * logT);
+    auto psi_2 = C * (theta - theta_ref - theta * logT);
     auto psi_3 = -3.0 * K * alpha * (theta - theta_ref) * trE;
     return psi_1 + psi_2 + psi_3;
   }
