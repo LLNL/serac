@@ -727,6 +727,7 @@ private:
   /// @brief 3D array that stores each boundary element's gradient of the residual w.r.t. trial values
   ExecArray<double, 3, exec> bdr_element_gradients_[num_trial_spaces];
 
+ public: // TODO
   /// @brief flag for denoting when a residual evaluation should update the material state buffers
   std::vector < std::vector < char > > material_state_buffers_;
 

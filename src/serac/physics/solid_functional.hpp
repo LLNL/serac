@@ -362,12 +362,16 @@ public:
       ode2_.Step(displacement_, velocity_, time_, dt);
     }
 
-    // after finding displacements that satisfy equilibrium, 
-    // compute the residual one more time, this time enabling
-    // the material state buffers to be updated
-    residual_->update_qdata = true;
-    (*residual_)(displacement_, zero_, parameter_states_[parameter_indices] ...);
-    residual_->update_qdata = false;
+    // if our simulation involves materials that have internal state 
+    if (residual_->material_state_buffers_.size()) {
+
+      // after finding displacements that satisfy equilibrium, 
+      // compute the residual one more time, this time enabling
+      // the material state buffers to be updated
+      residual_->update_qdata = true;
+      (*residual_)(displacement_, zero_, parameter_states_[parameter_indices] ...);
+      residual_->update_qdata = false;
+    }
 
     if (geom_nonlin_ == GeometricNonlinearities::On) {
       // Update the mesh with the new deformed nodes

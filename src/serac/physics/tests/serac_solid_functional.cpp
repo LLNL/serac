@@ -158,7 +158,7 @@ void functional_solid_test_static_J2(double expected_disp_norm)
   solid_solver.setDisplacement(bc);
 
   solid_solver.setPiolaTraction([](auto x, auto /*n*/, auto t){
-    return tensor<double, 3>{0, 0, 10 * (x[0] > 7.99) * t * (t - 1)};
+    return tensor<double, 3>{0, 0, 5 * (x[0] > 7.99) * t * (t - 1)};
   });
 
   // Finalize the data structures
