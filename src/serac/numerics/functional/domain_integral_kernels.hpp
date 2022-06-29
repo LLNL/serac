@@ -123,7 +123,7 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
    * @param U input E-vectors
    * @param R output E-vector
    */
-  void operator()(const std::array<mfem::Vector, num_trial_spaces>& U, mfem::Vector& R)
+  void operator()(const std::array<mfem::Vector, num_trial_spaces>& U, mfem::Vector& R, bool update_state)
   {
     std::array<const double*, num_trial_spaces> ptrs;
     for (uint32_t j = 0; j < num_trial_spaces; j++) {
@@ -162,11 +162,17 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
         // evaluate the value/derivatives needed for the q-function at this quadrature point
         auto arg = Preprocess<geom, trials...>(u_elem, xi, J_q);
 
+        auto state = data_(int(e), q);
+
         // evaluate the user-specified constitutive model
         //
         // note: make_dual(arg) promotes those arguments to dual number types
         // so that qf_output will contain values and derivatives
-        auto qf_output = detail::apply_qf(qf_, x_q, data_(int(e), q), arg);
+        auto qf_output = detail::apply_qf(qf_, x_q, state, arg);
+
+        if (update_state) {
+          data_(int(e), q) = state;          
+        }
 
         // integrate qf_output against test space shape functions / gradients
         // to get element residual contributions
@@ -223,7 +229,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
    * @param U input E-vectors
    * @param R output E-vector
    */
-  void operator()(const std::array<mfem::Vector, num_trial_spaces>& U, mfem::Vector& R)
+  void operator()(const std::array<mfem::Vector, num_trial_spaces>& U, mfem::Vector& R, bool update_state)
   {
     std::array<const double*, num_trial_spaces> ptrs;
     for (uint32_t j = 0; j < num_trial_spaces; j++) {
@@ -262,11 +268,17 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
         // evaluate the value/derivatives needed for the q-function at this quadrature point
         auto arg = Preprocess<geom, trials...>(u_elem, xi, J_q);
 
+        auto state = data_(int(e), q);
+
         // evaluate the user-specified constitutive model
         //
         // note: make_dual(arg) promotes those arguments to dual number types
         // so that qf_output will contain values and derivatives
-        auto qf_output = detail::apply_qf(qf_, x_q, data_(int(e), q), make_dual_wrt<I>(arg));
+        auto qf_output = detail::apply_qf(qf_, x_q, state, make_dual_wrt<I>(arg));
+
+        if (update_state) {
+          data_(int(e), q) = state;
+        }
 
         // integrate qf_output against test space shape functions / gradients
         // to get element residual contributions

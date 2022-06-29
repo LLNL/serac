@@ -535,20 +535,27 @@ public:
 
         // residual function
         [this](const mfem::Vector& u, mfem::Vector& r) {
-          //u_predicted_ = u;
-          //u_predicted_.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
-          //r = (*residual_)(u_predicted_, zero_, parameter_states_[parameter_indices] ...);
+          #if 1
+          u_predicted_ = u;
+          u_predicted_.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
+          r = (*residual_)(u_predicted_, zero_, parameter_states_[parameter_indices] ...);
+          #else
           r = (*residual_)(u, zero_, parameter_states_[parameter_indices] ...);
+          #endif
           r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
         },
 
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
-          //u_predicted_ = u;
-          //u_predicted_.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
-          //auto [r, drdu] = (*residual_)(differentiate_wrt(u_predicted_), zero_, parameter_states_[parameter_indices] ...);
-          check_gradient(*residual_, u, zero_);
+          #if 1
+          u_predicted_ = u;
+          u_predicted_.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
+          auto [r, drdu] = (*residual_)(differentiate_wrt(u_predicted_), zero_, parameter_states_[parameter_indices] ...);
+          check_gradient(*residual_, u_predicted_, zero_);
+          #else
           auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, parameter_states_[parameter_indices] ...);
+          check_gradient(*residual_, u, zero_);
+          #endif
           J_             = assemble(drdu);
           bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
           return *J_;

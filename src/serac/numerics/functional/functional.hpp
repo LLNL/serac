@@ -415,7 +415,7 @@ public:
       // compute residual contributions at the element level and sum them
       output_E_ = 0.0;
       for (auto& integral : domain_integrals_) {
-        integral.Mult(input_E_, output_E_, wrt);
+        integral.Mult(input_E_, output_E_, wrt, update_qdata);
       }
 
       // scatter-add to compute residuals on the local processor

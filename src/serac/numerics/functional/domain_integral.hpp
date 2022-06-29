@@ -149,15 +149,15 @@ public:
    * differentiation
    */
   void Mult(const std::array<mfem::Vector, num_trial_spaces>& input_E, mfem::Vector& output_E,
-            int which_trial_space) const
+            int which_trial_space, bool update_state) const
   {
     if (which_trial_space == -1) {
       SERAC_MARK_BEGIN("Domain Integral Evaluation");
-      evaluation_(input_E, output_E);
+      evaluation_(input_E, output_E, update_state);
       SERAC_MARK_END("Domain Integral Evaluation");
     } else {
       SERAC_MARK_BEGIN("Domain Integral Evaluation with AD");
-      evaluation_with_AD_[which_trial_space](input_E, output_E);
+      evaluation_with_AD_[which_trial_space](input_E, output_E, update_state);
       SERAC_MARK_END("Domain Integral Evaluation with AD");
     }
   }
@@ -191,10 +191,10 @@ public:
 
 private:
   /// @brief Type-erased handle to evaluation kernel
-  std::function<void(const std::array<mfem::Vector, num_trial_spaces>&, mfem::Vector&)> evaluation_;
+  std::function<void(const std::array<mfem::Vector, num_trial_spaces>&, mfem::Vector&, bool)> evaluation_;
 
   /// @brief Type-erased handle to evaluation+differentiation kernels
-  std::function<void(const std::array<mfem::Vector, num_trial_spaces>&, mfem::Vector&)>
+  std::function<void(const std::array<mfem::Vector, num_trial_spaces>&, mfem::Vector&, bool)>
       evaluation_with_AD_[num_trial_spaces];
 
   /// @brief Type-erased handle to action of gradient kernels
