@@ -25,30 +25,34 @@ struct GreenSaintVenantThermoelasticMaterial {
   double nu;         ///< Poisson's ratio
   double C;          ///< volumetric heat capacity
   double alpha;      ///< thermal expansion coefficient
-  double theta_ref;  ///< datum temperature
+  double theta_ref;  ///< datum temperature for thermal expansion
   double k;          ///< thermal conductivity
 
-  struct State { /* this material has no internal variables */
+  struct State {
+    double strain_trace; ///< trace of Green-Saint Venant strain tensor
   };
 
-  /**
+/**
    * @brief Evaluate constitutive variables for thermomechanics
    *
-   * @param[in] grad_u displacement gradient
-   * @param[in] theta temperature
-   * @param[in] grad_theta temperature gradient
-   * @param[in] grad_u_old displacement gradient at previous time step
-   * @param[in] theta_old temperature at previous time step
-   * @param[in] dt time increment
-   * @param[out] P Piola stress
-   * @param[out] cv0 volumetric heat capacity in ref config
-   * @param[out] s0 internal heat supply in ref config
-   * @param[out] q0 Piola heat flux
+   * @tparam T1 Type of the displacement gradient components (number-like)
+   * @tparam T2 Type of the temperature (number-like)
+   * @tparam T3 Type of the temperature gradient components (number-like)
+   *
+   * @param[in] grad_u Displacement gradient
+   * @param[in] theta Temperature
+   * @param[in] grad_theta Temperature gradient
+   * @param[in,out] state State variables for this material
+   *
+   * @return[out] tuple of constitutive outputs. Contains the
+   * Kirchhoff stress, the volumetric heat capacity in the reference
+   * configuration, the heat generated per unit volume during the time
+   * step (units of energy), and the referential heat flux (units of
+   * energy per unit time and per unit area).
    */
   template <typename T1, typename T2, typename T3 >
   auto calculateConstitutiveOutputs(const tensor<T1, 3, 3>& grad_u, T2 theta, const tensor<T3, 3>& grad_theta,
-                                    State& /*state*/, const tensor<double, 3, 3>& grad_u_old, double /*theta_old*/,
-                                    double dt) const
+                                    State& state) const
   {
     const double          K    = E / (3.0 * (1.0 - 2.0 * nu));
     const double          G    = 0.5 * E / (1.0 + nu);
@@ -59,18 +63,16 @@ struct GreenSaintVenantThermoelasticMaterial {
 
     // stress
     const auto S = 2.0 * G * dev(Eg) + K * (trEg - 3.0 * alpha * (theta - theta_ref)) * I;
-    const auto P = F * S;
+    const auto P = dot(F, S);
+    const auto TK = dot(P, transpose(F));
 
     // internal heat source
-    // use backward difference to estimate rate of green strain
-    const auto Eg_old = greenStrain(grad_u_old);
-    const auto egdot  = (trEg - tr(Eg_old)) / dt;
-    const auto s0     = -3 * K * alpha * theta * egdot;
+    const auto s0 = -3 * K * alpha * theta * trEg - state.strain_trace;
 
     // heat flux
     const auto q0 = -k * grad_theta;
 
-    return serac::tuple{P, C, s0, q0};
+    return serac::tuple{TK, C, s0, q0};
   }
 
   /**
@@ -105,27 +107,31 @@ struct ParameterizedGreenSaintVenantThermoelasticMaterial {
   double theta_ref;  ///< datum temperature
   double k;          ///< thermal conductivity
 
-  struct State { /* this material has no internal variables */
+  struct State {
+    double strain_trace; ///< trace of Green-Saint Venant strain tensor
   };
 
-  /**
+/**
    * @brief Evaluate constitutive variables for thermomechanics
    *
-   * @param[in] grad_u displacement gradient
-   * @param[in] theta temperature
-   * @param[in] grad_theta temperature gradient
-   * @param[in] grad_u_old displacement gradient at previous time step
-   * @param[in] theta_old temperature at previous time step
-   * @param[in] dt time increment
-   * @param[out] P Piola stress
-   * @param[out] cv0 volumetric heat capacity in ref config
-   * @param[out] s0 internal heat supply in ref config
-   * @param[out] q0 Piola heat flux
+   * @tparam T1 Type of the displacement gradient components (number-like)
+   * @tparam T2 Type of the temperature (number-like)
+   * @tparam T3 Type of the temperature gradient components (number-like)
+   *
+   * @param[in] grad_u Displacement gradient
+   * @param[in] theta Temperature
+   * @param[in] grad_theta Temperature gradient
+   * @param[in,out] state State variables for this material
+   *
+   * @return[out] tuple of constitutive outputs. Contains the
+   * Kirchhoff stress, the volumetric heat capacity in the reference
+   * configuration, the heat generated per unit volume during the time
+   * step (units of energy), and the referential heat flux (units of
+   * energy per unit time and per unit area).
    */
   template <typename T1, typename T2, typename T3, typename T4 >
   auto calculateConstitutiveOutputs(const tensor<T1, 3, 3>& grad_u, T2 theta, const tensor<T3, 3>& grad_theta,
-                                    State& /*state*/, const tensor<double, 3, 3>& grad_u_old, double /*theta_old*/,
-                                    double dt, T4 thermal_expansion_scaling) const
+                                    State& state, T4 thermal_expansion_scaling) const
   {
     auto [scale, unused] = thermal_expansion_scaling;
     const double          K    = E / (3.0 * (1.0 - 2.0 * nu));
@@ -137,18 +143,16 @@ struct ParameterizedGreenSaintVenantThermoelasticMaterial {
 
     // stress
     const auto S = 2.0 * G * dev(Eg) + K * (trEg - 3.0 * (alpha * scale) * (theta - theta_ref)) * I;
-    const auto P = F * S;
+    const auto P = dot(F, S);
+    const auto TK = dot(P, transpose(F));
 
     // internal heat source
-    // use backward difference to estimate rate of green strain
-    const auto Eg_old = greenStrain(grad_u_old);
-    const auto egdot  = (trEg - tr(Eg_old)) / dt;
-    const auto s0     = -3 * K * (alpha * scale) * theta * egdot;
+    const auto s0 = -3 * K * (alpha * scale) * theta * (trEg - state.strain_trace);
 
     // heat flux
     const auto q0 = -k * grad_theta;
 
-    return serac::tuple{P, C, s0, q0};
+    return serac::tuple{TK, C, s0, q0};
   }
 
   /**

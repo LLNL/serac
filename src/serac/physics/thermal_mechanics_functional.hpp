@@ -97,6 +97,7 @@ public:
   template <typename ThermalMechanicalMaterial>
   struct ThermalMaterialInterface {
     const ThermalMechanicalMaterial mat;
+    using State = typename ThermalMechanicalMaterial::State;
 
     ThermalMaterialInterface(const ThermalMechanicalMaterial& m) : mat(m)
     {
@@ -107,24 +108,21 @@ public:
     SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& temperature, const T3& temperature_gradient,
                                       const T4& displacement, param_types... parameters) const
     {
-      typename ThermalMechanicalMaterial::State state{};
-      const double                              dt = 1.0;
-      auto [u, du_dX]                              = displacement;
-      auto   du_dX_old                             = tensor<double, 3, 3>{};
-      double temperature_old                       = 1.0;
-      auto [P, c, s0, q0] = mat.calculateConstitutiveOutputs(du_dX, temperature, temperature_gradient, state, du_dX_old,
-                                                             temperature_old, dt, parameters...);
+      // BT: this will not update the state correctly. I just want to get the code compiling before plumbing the state variables.
+      State state{};
+      
+      auto [u, du_dX]     = displacement;
+      auto [T, c, s0, q0] = mat.calculateConstitutiveOutputs(du_dX, temperature, temperature_gradient, state, parameters...);
       // density * specific_heat = c
       const double density = mat.rho;
       return Thermal::MaterialResponse{density, c, q0};
     }
-
-    using State = typename ThermalMechanicalMaterial::State;
   };
 
   template <typename ThermalMechanicalMaterial>
   struct MechanicalMaterialInterface {
     const ThermalMechanicalMaterial mat;
+    using State = typename ThermalMechanicalMaterial::State;
 
     MechanicalMaterialInterface(const ThermalMechanicalMaterial& m) : mat(m)
     {
@@ -135,20 +133,12 @@ public:
     SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* displacement */, const T3& displacement_gradient,
                                       const T4& temperature, param_types... parameters) const
     {
-      typename ThermalMechanicalMaterial::State state{};
-      const double                              dt = 1.0;
+      State state{};
       auto [theta, dtheta_dX]                      = temperature;
-      double temperature_old                       = 1.0;
-      auto   displacement_gradient_old             = tensor<double, 3, 3>{};
-      auto [P, c, s0, q0]  = mat.calculateConstitutiveOutputs(displacement_gradient, theta, dtheta_dX, state,
-                                                             displacement_gradient_old, temperature_old, dt, parameters...);
+      auto [T, c, s0, q0]  = mat.calculateConstitutiveOutputs(displacement_gradient, theta, dtheta_dX, state, parameters...);
       const double density = mat.rho;
-      auto         F       = displacement_gradient + Identity<3>();
-      auto         stress  = dot(P, transpose(F));
-      return solid_util::MaterialResponse{density, stress};
+      return solid_util::MaterialResponse{density, T};
     }
-    
-    using State = typename ThermalMechanicalMaterial::State;
   };
 
   template <typename MaterialType>
