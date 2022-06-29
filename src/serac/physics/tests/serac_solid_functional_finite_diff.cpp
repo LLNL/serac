@@ -53,7 +53,7 @@ TEST(SolidFunctionalFiniteDiff, FiniteDifference)
   const NonlinearSolverOptions default_nonlinear_options = {
       .rel_tol = 1.0e-6, .abs_tol = 1.0e-12, .max_iter = 10, .print_level = 1};
 
-  const typename solid_util::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
+  const typename solid_utils::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
 
   // Construct and initialized the user-defined moduli to be used as a differentiable parameter in
   // the solid physics module.
@@ -80,7 +80,7 @@ TEST(SolidFunctionalFiniteDiff, FiniteDifference)
   // As we only have one parameter in this example, the index is zero.
   constexpr int bulk_parameter_index = 0;
 
-  solid_util::ParameterizedNeoHookeanSolid<dim> mat(1.0, 0.0, 0.0);
+  solid_mechanics::ParameterizedNeoHookeanSolid<dim> mat(1.0, 0.0, 0.0);
   solid_solver.setMaterial(mat);
 
   // Define the function for the initial displacement and boundary condition
@@ -99,7 +99,7 @@ TEST(SolidFunctionalFiniteDiff, FiniteDifference)
     constant_force[2] = 0.0;
   }
 
-  solid_util::ConstantBodyForce<dim> force{constant_force};
+  solid_mechanics::ConstantBodyForce<dim> force{constant_force};
   solid_solver.addBodyForce(force);
 
   // Finalize the data structures

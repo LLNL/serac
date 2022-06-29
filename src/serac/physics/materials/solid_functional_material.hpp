@@ -15,7 +15,7 @@
 #include "serac/numerics/functional/functional.hpp"
 
 /// SolidFunctional helper data types
-namespace serac::solid_util {
+namespace serac::solid_mechanics {
 
 /**
  * @brief Linear isotropic elasticity material model
@@ -23,7 +23,7 @@ namespace serac::solid_util {
  * @tparam dim Spatial dimension of the mesh
  */
 template <int dim>
-struct LinearIsotropicSolid {
+struct LinearIsotropic {
   using State = Empty;
 
   /**
@@ -53,7 +53,7 @@ struct LinearIsotropicSolid {
  * @tparam dim The spatial dimension of the mesh
  */
 template <int dim>
-struct NeoHookeanSolid {
+struct NeoHookean {
   using State = Empty;
 
   /**
@@ -122,6 +122,9 @@ struct J2 {
 
     // (ii) admissibility
     if (phi > 0.0) {
+
+      // std::cout << "returning stress to yield surface" << std::endl;
+
       // see (7.207) on pg. 261
       auto plastic_strain_inc = phi / (3 * G + Hk + Hi);
 

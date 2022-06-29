@@ -60,7 +60,7 @@ void functional_solid_test_static(double expected_disp_norm)
   SolidFunctional<p, dim> solid_solver(default_static, GeometricNonlinearities::On, FinalMeshOption::Reference,
                                        "solid_functional");
 
-  solid_util::NeoHookeanSolid<dim> mat{1.0, 1.0, 1.0};
+  solid_mechanics::NeoHookean<dim> mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
 
   // Define the function for the initial displacement and boundary condition
@@ -79,7 +79,7 @@ void functional_solid_test_static(double expected_disp_norm)
     constant_force[2] = 0.0;
   }
 
-  solid_util::ConstantBodyForce<dim> force{constant_force};
+  solid_mechanics::ConstantBodyForce<dim> force{constant_force};
   solid_solver.addBodyForce(force);
 
   // Finalize the data structures
@@ -132,19 +132,19 @@ void functional_solid_test_static_J2(double expected_disp_norm)
   const typename solid_util::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
 
   // Construct a functional-based solid mechanics solver
-  SolidFunctional<p, dim> solid_solver(default_static, GeometricNonlinearities::On, FinalMeshOption::Reference,
+  SolidFunctional<p, dim> solid_solver(default_static, GeometricNonlinearities::Off, FinalMeshOption::Deformed,
                                        "solid_functional");
 
-  solid_util::J2 mat{
+  solid_mechanics::J2 mat{
     100,   // Young's modulus
     0.25,  // Poisson's ratio
     1.0,   // isotropic hardening constant
     2.3,   // kinematic hardening constant
-    300.0, // yield stress
+    30.0,  // yield stress
     1.0    // mass density
   };
 
-  solid_util::J2::State initial_state{};
+  solid_mechanics::J2::State initial_state{};
 
   auto state = solid_solver.createQuadratureDataBuffer(initial_state);
 
@@ -157,27 +157,19 @@ void functional_solid_test_static_J2(double expected_disp_norm)
   solid_solver.setDisplacementBCs(ess_bdr, bc);
   solid_solver.setDisplacement(bc);
 
-  tensor<double, dim> constant_force;
-
-  constant_force[0] = 0.0;
-  constant_force[1] = 5.0e-4;
-
-  if (dim == 3) {
-    constant_force[2] = 0.0;
-  }
-
-  solid_util::ConstantBodyForce<dim> force{constant_force};
-  solid_solver.addBodyForce(force);
+  solid_solver.setPiolaTraction([](auto x, auto /*n*/, auto t){
+    return tensor<double, 3>{0, 0, 10 * (x[0] > 7.99) * t * (t - 1)};
+  });
 
   // Finalize the data structures
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  double dt = 1.0;
-  solid_solver.advanceTimestep(dt);
-
-  // Output the sidre-based plot files
-  solid_solver.outputState();
+  double dt = 0.1;
+  for (int i = 0; i < 10; i++) {
+    solid_solver.advanceTimestep(dt);
+    solid_solver.outputState();
+  }
 
   // Check the final displacement norm
   EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
@@ -228,7 +220,7 @@ void functional_solid_test_dynamic(double expected_disp_norm)
   SolidFunctional<p, dim> solid_solver(default_dynamic, GeometricNonlinearities::Off, FinalMeshOption::Reference,
                                        "solid_functional_dynamic");
 
-  solid_util::LinearIsotropicSolid<dim> mat{1.0, 1.0, 1.0};
+  solid_mechanics::LinearIsotropic<dim> mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
 
   // Define the function for the initial displacement and boundary condition
@@ -247,7 +239,7 @@ void functional_solid_test_dynamic(double expected_disp_norm)
     constant_force[2] = 0.0;
   }
 
-  solid_util::ConstantBodyForce<dim> force{constant_force};
+  solid_mechanics::ConstantBodyForce<dim> force{constant_force};
   solid_solver.addBodyForce(force);
 
   // Finalize the data structures
@@ -312,7 +304,7 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
   SolidFunctional<p, dim> solid_solver(default_static, GeometricNonlinearities::Off, FinalMeshOption::Reference,
                                        "solid_functional");
 
-  solid_util::LinearIsotropicSolid<dim> mat{1.0, 1.0, 1.0};
+  solid_mechanics::LinearIsotropic<dim> mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
 
   // Define the function for the initial displacement and boundary condition
@@ -410,7 +402,7 @@ void functional_parameterized_solid_test(double expected_disp_norm)
                                                      FinalMeshOption::Reference, "solid_functional",
                                                      {user_defined_bulk_modulus, user_defined_shear_modulus});
 
-  solid_util::ParameterizedNeoHookeanSolid<dim> mat{1.0, 0.0, 0.0};
+  solid_mechanics::ParameterizedNeoHookeanSolid<dim> mat{1.0, 0.0, 0.0};
   solid_solver.setMaterial(mat);
 
   // Define the function for the initial displacement and boundary condition
@@ -429,7 +421,7 @@ void functional_parameterized_solid_test(double expected_disp_norm)
     constant_force[2] = 0.0;
   }
 
-  solid_util::ConstantBodyForce<dim> force{constant_force};
+  solid_mechanics::ConstantBodyForce<dim> force{constant_force};
   solid_solver.addBodyForce(force);
 
   // Finalize the data structures

@@ -22,6 +22,77 @@
 #include "serac/physics/solid.hpp"
 #include "serac/physics/materials/functional_material_utils.hpp"
 
+
+// DELETE BELOW
+#include "serac/numerics/expr_template_ops.hpp" 
+template <typename T>
+void check_gradient(serac::Functional<T>& f, const mfem::Vector& U, const mfem::Vector& dU_dt)
+{
+  int    seed    = 42;
+  double epsilon = 1.0e-8;
+
+  mfem::Vector dU(U.Size());
+  dU.Randomize(seed);
+
+  mfem::Vector ddU_dt(U.Size());
+  ddU_dt.Randomize(seed + 1);
+
+  auto U_plus = U;
+  U_plus.Add(epsilon, dU);
+
+  auto U_minus = U;
+  U_minus.Add(-epsilon, dU);
+
+  {
+    mfem::Vector df1 = f(U_plus, dU_dt);
+    df1 -= f(U_minus, dU_dt);
+    df1 /= (2 * epsilon);
+
+    auto [value, dfdU] = f(serac::differentiate_wrt(U), dU_dt);
+    mfem::Vector df2   = dfdU(dU);
+
+    std::unique_ptr<mfem::HypreParMatrix> dfdU_matrix = assemble(dfdU);
+
+    mfem::Vector df3 = (*dfdU_matrix) * dU;
+
+    double relative_error1 = df1.DistanceTo(df2) / df1.Norml2();
+    double relative_error2 = df1.DistanceTo(df3) / df1.Norml2();
+
+    //EXPECT_NEAR(0., relative_error1, 5.e-6);
+    //EXPECT_NEAR(0., relative_error2, 5.e-6);
+
+    std::cout << relative_error1 << " " << relative_error2 << std::endl;
+  }
+
+  auto dU_dt_plus = dU_dt;
+  dU_dt_plus.Add(epsilon, ddU_dt);
+
+  auto dU_dt_minus = dU_dt;
+  dU_dt_minus.Add(-epsilon, ddU_dt);
+
+  {
+    mfem::Vector df1 = f(U, dU_dt_plus);
+    df1 -= f(U, dU_dt_minus);
+    df1 /= (2 * epsilon);
+
+    auto [value, df_ddU_dt] = f(U, serac::differentiate_wrt(dU_dt));
+    mfem::Vector df2        = df_ddU_dt(ddU_dt);
+
+    std::unique_ptr<mfem::HypreParMatrix> df_ddU_dt_matrix = assemble(df_ddU_dt);
+
+    mfem::Vector df3 = (*df_ddU_dt_matrix) * ddU_dt;
+
+    double relative_error1 = df1.DistanceTo(df2) / df1.Norml2();
+    double relative_error2 = df1.DistanceTo(df3) / df1.Norml2();
+
+    //EXPECT_NEAR(0., relative_error1, 5.e-5);
+    //EXPECT_NEAR(0., relative_error2, 5.e-5);
+
+    std::cout << relative_error1 << " " << relative_error2 << std::endl;
+  }
+}
+
+
 namespace serac {
 
 namespace solid_util {
@@ -73,6 +144,8 @@ struct DoubleBuffer : public Updatable {
   void update() final { buffer[0] = buffer[1]; }
   QuadratureData< T > buffer[2];
 };
+
+
 
 /**
  * @brief The nonlinear solid solver class
@@ -289,6 +362,13 @@ public:
       ode2_.Step(displacement_, velocity_, time_, dt);
     }
 
+    // after finding displacements that satisfy equilibrium, 
+    // compute the residual one more time, this time enabling
+    // the material state buffers to be updated
+    residual_->update_qdata = true;
+    (*residual_)(displacement_, zero_, parameter_states_[parameter_indices] ...);
+    residual_->update_qdata = false;
+
     if (geom_nonlin_ == GeometricNonlinearities::On) {
       // Update the mesh with the new deformed nodes
       deformed_nodes_->Set(1.0, displacement_.gridFunction());
@@ -310,9 +390,8 @@ public:
    * @pre MaterialType must have the operator (du_dX) defined as the Kirchoff stress
    */
   template <typename MaterialType, typename StateType>
-  void setMaterial(MaterialType material, const QuadratureData<StateType> & QData)
+  void setMaterial(MaterialType material, const QuadratureData<StateType> & qdata)
   {
-    auto copy = std::make_unique<DoubleBuffer<StateType>>(QData);
     residual_->AddDomainIntegral(
         Dimension<dim>{},
         [this, material](auto /*x*/, auto & state, auto displacement, auto acceleration, auto ... params) {
@@ -329,13 +408,11 @@ public:
 
           return serac::tuple{body_force, stress};
         },
-        mesh_, copy->buffer[1]);
-    material_state_buffers_.push_back(std::move(copy));
+        mesh_, qdata);
   }
 
   template <typename MaterialType>
   void setMaterial(MaterialType material) {
-    static_assert(std::is_same_v< typename MaterialType::State, Empty >, "Error: material requires state information, but none was provided.");
     setMaterial(material, QuadratureData<Empty>{});
   }
 
@@ -458,14 +535,19 @@ public:
 
         // residual function
         [this](const mfem::Vector& u, mfem::Vector& r) {
-          for (auto & buffer : material_state_buffers_) { buffer->reset(); }
+          //u_predicted_ = u;
+          //u_predicted_.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
+          //r = (*residual_)(u_predicted_, zero_, parameter_states_[parameter_indices] ...);
           r = (*residual_)(u, zero_, parameter_states_[parameter_indices] ...);
           r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
         },
 
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
-          for (auto & buffer : material_state_buffers_) { buffer->reset(); }
+          //u_predicted_ = u;
+          //u_predicted_.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
+          //auto [r, drdu] = (*residual_)(differentiate_wrt(u_predicted_), zero_, parameter_states_[parameter_indices] ...);
+          check_gradient(*residual_, u, zero_);
           auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, parameter_states_[parameter_indices] ...);
           J_             = assemble(drdu);
           bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
@@ -694,8 +776,6 @@ protected:
 
   /// @brief An auxilliary zero vector
   mfem::Vector zero_;
-
-  std::vector < std::unique_ptr< Updatable > > material_state_buffers_;
 
 };
 

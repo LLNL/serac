@@ -231,8 +231,15 @@ public:
    */
   template <int dim, typename lambda, typename qpt_data_type = Nothing>
   void AddDomainIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain,
-                         QuadratureData<qpt_data_type>& data = NoQData)
+                         const QuadratureData<qpt_data_type>& data = NoQData)
   {
+
+    if (!std::is_same_v< qpt_data_type, Nothing >) {
+      size_t num_bytes = sizeof(qpt_data_type) * data.size();
+      material_state_buffers_.emplace_back(num_bytes);
+      std::memcpy(material_state_buffers_.back().data(), &data(0,0), num_bytes);
+    }
+
     auto num_elements = domain.GetNE();
     if (num_elements == 0) return;
 
@@ -249,7 +256,10 @@ public:
     // NOTE: we are relying on MFEM to keep these geometric factors accurate. We store
     // the necessary data as references in the integral data structure.
     auto geom = domain.GetGeometricFactors(ir, flags);
-    domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<dim>{}, integrand, data);
+
+    auto ptr = reinterpret_cast< qpt_data_type * >(material_state_buffers_.back().data());
+    auto qdata_view = axom::ArrayView< qpt_data_type, 2 >(ptr, data.shape()[0], data.shape()[1]);
+    domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<dim>{}, integrand, qdata_view);
   }
 
   /**
@@ -466,6 +476,10 @@ public:
 
     return (*this)(DifferentiateWRT<i>{}, args ...);
   }
+
+  // TODO: expose this feature a better way
+  /// @brief flag for denoting when a residual evaluation should update the material state buffers
+  bool update_qdata;
 
 private:
   /**
@@ -712,6 +726,10 @@ private:
 
   /// @brief 3D array that stores each boundary element's gradient of the residual w.r.t. trial values
   ExecArray<double, 3, exec> bdr_element_gradients_[num_trial_spaces];
+
+  /// @brief flag for denoting when a residual evaluation should update the material state buffers
+  std::vector < std::vector < char > > material_state_buffers_;
+
 };
 
 }  // namespace serac

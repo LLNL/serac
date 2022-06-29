@@ -16,7 +16,7 @@
 #include "serac/physics/materials/solid_functional_material.hpp"
 
 /// SolidFunctional helper data types
-namespace serac::solid_util {
+namespace serac::solid_mechanics {
 
 /**
  * @brief Linear isotropic elasticity material model
@@ -24,7 +24,7 @@ namespace serac::solid_util {
  * @tparam dim Spatial dimension of the mesh
  */
 template <int dim>
-struct ParameterizedLinearIsotropicSolid {
+struct ParameterizedLinearIsotropic {
 
   /**
    * @brief stress calculation for a linear isotropic material model
