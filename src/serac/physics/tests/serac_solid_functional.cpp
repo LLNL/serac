@@ -191,17 +191,19 @@ void functional_solid_test_lce_material(double expected_disp_norm)
 
   constexpr int p = 2;
   constexpr int dim = 3;
-  int serial_refinement   = 0;
-  int parallel_refinement = 0;
+  // int serial_refinement   = 0;
+  // int parallel_refinement = 0;
 
   // Create DataStore
   axom::sidre::DataStore datastore;
   serac::StateManager::initialize(datastore, "lce_solid_functional_static_solve_J2");
 
   // Construct the appropriate dimension mesh and give it to the data store
-  std::string filename = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+  // std::string filename = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+  // auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
+  // serac::StateManager::setMesh(std::move(mesh));
 
-  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
+  auto mesh = serac::mesh::refineAndDistribute(serac::buildCuboidMesh(10, 10, 3, 0.008, 0.008, 0.00016));
   serac::StateManager::setMesh(std::move(mesh));
 
   // Define a boundary attribute set
@@ -232,7 +234,7 @@ void functional_solid_test_lce_material(double expected_disp_norm)
     300.0, // yield stress
     1.0    // mass density
   };
-  
+
 // std::cout<<"... testing"<<std::endl;
   solid_util::J2::State initial_state{};
 
@@ -257,15 +259,25 @@ void functional_solid_test_lce_material(double expected_disp_norm)
   }
 
   solid_util::ConstantBodyForce<dim> force{constant_force};
-  solid_solver.addBodyForce(force);
+  solid_solver.addBodyForce(force); 
 
-// solid_solver.initializeOutput(serac::OutputType::VisIt, "solid_lce_test");
+  solid_util::TractionFunction<dim> traction_function{
+      [](const serac::tensor<double, dim>& x, const serac::tensor<double, dim>&, const double) {
+        serac::tensor<double, dim> traction;
+        for (int i = 0; i < dim; ++i) {
+          traction[i] = 0.0;
+        }
+
+        if (x[1] > 7.9e-3) {
+          traction[1] = -5.0e-4;
+        }
+        return traction;
+      }};
+
+  solid_solver.setTractionBCs(traction_function);
 
   // Finalize the data structures
   solid_solver.completeSetup();
-
-  // Output the sidre-based plot files
-  solid_solver.outputState();
   
   // Perform the quasi-static solve
   double dt = 1.0;
@@ -273,6 +285,8 @@ void functional_solid_test_lce_material(double expected_disp_norm)
 
   // Output the sidre-based plot files
   solid_solver.outputState();
+
+  solid_solver.outputState("lce_paraview_output");
 
   // Check the final displacement norm
   EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
