@@ -63,7 +63,12 @@ void BasePhysics::outputState(std::optional<std::string> paraview_output_dir) co
   if (paraview_output_dir) {
     // Check to see if the paraview data collection exists. If not, create it.
     if (!paraview_dc_) {
-      paraview_dc_            = std::make_unique<mfem::ParaViewDataCollection>(name_, &state_.front().get().mesh());
+      std::string output_name = name_;
+      if (output_name == "") {
+        output_name = "default";
+      }
+
+      paraview_dc_            = std::make_unique<mfem::ParaViewDataCollection>(output_name, &state_.front().get().mesh());
       int max_order_in_fields = 0;
 
       // Find the maximum polynomial order in the physics module's states

@@ -30,10 +30,10 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
                "Writes Sphinx documentation for input file, then exits");
   std::string output_directory;
   app.add_option("-o, --output-directory", output_directory, "Directory to put outputted files");
+  bool enable_paraview{false};
+  app.add_flag("-p, --paraview", enable_paraview, "Enable paraview output");
   bool version{false};
   app.add_flag("-v, --version", version, "Print version and providence information, then exits");
-  bool enable_paraview{false};
-  app.add_option("-p, --paraview", enable_paraview, "Enable paraview output");
 
   // Parse the arguments and check if they are good
   try {
