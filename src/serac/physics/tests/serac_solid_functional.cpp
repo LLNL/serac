@@ -244,11 +244,19 @@ void functional_solid_test_lce_material(double expected_disp_norm)
   // Define the function for the initial displacement and boundary condition
   auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
 
-  // Define a boundary attribute set
-  std::set<int> ess_bdr = {1};
+  // // Define a boundary attribute set
+  // std::set<int> ess_bdr = {1};
 
-  // Set the initial displacement and boundary condition
-  solid_solver.setDisplacementBCs(ess_bdr, bc);
+  // // Set the initial displacement and boundary condition
+  // solid_solver.setDisplacementBCs(ess_bdr, bc);
+
+  // set the boundary conditions to be fixed on the coordinate planes
+  auto zeroFunc = [](const mfem::Vector /*x*/){ return 0.0;};
+
+  solid_solver.setDisplacementBCs({1}, zeroFunc, 1);
+  solid_solver.setDisplacementBCs({2}, zeroFunc, 0);
+  solid_solver.setDisplacementBCs({3}, zeroFunc, 2);
+
   solid_solver.setDisplacement(bc);
 
   tensor<double, dim> constant_force;
