@@ -128,7 +128,7 @@ public:
   ThermalConductionFunctional(
       const Thermal::SolverOptions& options, const std::string& name = {},
       std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states = {})
-      : BasePhysics(2, order),
+      : BasePhysics(2, order, name),
         temperature_(
             StateManager::newState(FiniteElementState::Options{.order      = order,
                                                                .vector_dim = 1,
