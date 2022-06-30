@@ -191,8 +191,8 @@ void functional_solid_test_lce_material(double expected_disp_norm)
 
   constexpr int p = 2;
   constexpr int dim = 3;
-  // int serial_refinement   = 0;
-  // int parallel_refinement = 0;
+  int serial_refinement   = 0;
+  int parallel_refinement = 0;
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -200,14 +200,13 @@ void functional_solid_test_lce_material(double expected_disp_norm)
 
   // Construct the appropriate dimension mesh and give it to the data store
   // std::string filename = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
-  // auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  // serac::StateManager::setMesh(std::move(mesh));
-
-  auto mesh = serac::mesh::refineAndDistribute(serac::buildCuboidMesh(10, 10, 3, 0.008, 0.008, 0.00016));
+  // std::string filename = SERAC_REPO_DIR "/data/meshes/LCE_tensileTestSpecimen.g";
+  std::string filename = SERAC_REPO_DIR "/data/meshes/LCE_tensileTestSpecimen_nonDim.g";
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
 
-  // Define a boundary attribute set
-  std::set<int> ess_bdr = {1};
+  // auto mesh = serac::mesh::refineAndDistribute(serac::buildCuboidMesh(10, 10, 3, 0.008, 0.008, 0.00016));
+  // serac::StateManager::setMesh(std::move(mesh));
 
   // define the solver configurations
   const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
@@ -245,6 +244,9 @@ void functional_solid_test_lce_material(double expected_disp_norm)
   // Define the function for the initial displacement and boundary condition
   auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
 
+  // Define a boundary attribute set
+  std::set<int> ess_bdr = {1};
+
   // Set the initial displacement and boundary condition
   solid_solver.setDisplacementBCs(ess_bdr, bc);
   solid_solver.setDisplacement(bc);
@@ -252,7 +254,7 @@ void functional_solid_test_lce_material(double expected_disp_norm)
   tensor<double, dim> constant_force;
 
   constant_force[0] = 0.0;
-  constant_force[1] = 5.0e-4;
+  constant_force[1] = -2.0e0;
 
   if (dim == 3) {
     constant_force[2] = 0.0;
@@ -261,20 +263,23 @@ void functional_solid_test_lce_material(double expected_disp_norm)
   solid_util::ConstantBodyForce<dim> force{constant_force};
   solid_solver.addBodyForce(force); 
 
-  solid_util::TractionFunction<dim> traction_function{
-      [](const serac::tensor<double, dim>& x, const serac::tensor<double, dim>&, const double) {
-        serac::tensor<double, dim> traction;
-        for (int i = 0; i < dim; ++i) {
-          traction[i] = 0.0;
-        }
+  // solid_util::TractionFunction<dim> traction_function{
+  //     [](const serac::tensor<double, dim>& x, const serac::tensor<double, dim>&, const double) {
+  //       serac::tensor<double, dim> traction;
+  //       for (int i = 0; i < dim; ++i) {
+  //         traction[i] = 0.0;
+  //       }
 
-        if (x[1] > 7.9e-3) {
-          traction[1] = -5.0e-4;
-        }
-        return traction;
-      }};
+  //       if (x[1] > 7.9e-3) {
+  //         traction[1] = -5.0e-4;
+  //       }
+  //       return traction;
+  //     }};
+  // solid_solver.setTractionBCs(traction_function);
 
-  solid_solver.setTractionBCs(traction_function);
+  // solid_solver.setPiolaTraction([](auto x, auto /*n*/, auto t){
+  //   return tensor<double, 3>{0, -5.0e-4 * (x[1] > 0.0079), 0*t};
+  // });
 
   // Finalize the data structures
   solid_solver.completeSetup();
