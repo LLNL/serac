@@ -120,6 +120,7 @@ int main(int argc, char* argv[])
   axom::utilities::filesystem::makeDirsForPath(output_directory);
 
   search = cli_opts.find("paraview-directory");
+
   std::optional<std::string> paraview_output_dir = {};
   if (search != cli_opts.end()) {
     paraview_output_dir = search->second;
