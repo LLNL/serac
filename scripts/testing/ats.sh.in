@@ -96,7 +96,7 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~"
 Clean
 
 # Run ATS
-$ATS_EXECUTABLE $ATS_SERAC_REPO_DIR/tests/integration/test.ats --sleepBeforeSrun=2
+$ATS_EXECUTABLE $ATS_SERAC_REPO_DIR/tests/integration/test.ats
 if [ $? -ne 0 ]; then { echo "ERROR: Failed Integration tests, aborting."; exit 1; } fi
 
 # Work around because ATS is currently not returning an error code on failed tests
