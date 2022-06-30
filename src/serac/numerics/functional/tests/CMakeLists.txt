@@ -34,7 +34,7 @@ set(functional_tests_mpi
     )
 
 serac_add_tests( SOURCES ${functional_tests_mpi}
-                 DEPENDS_ON gtest serac_functional serac_state ${functional_depends}
+                 DEPENDS_ON gtest serac_functional serac_state serac_mesh ${functional_depends}
                  NUM_MPI_TASKS 4 )
 
 set(functional_performance_tests
