@@ -30,7 +30,7 @@ Help()
 Clean()
 {
     # Clean-up old run's logs
-    rm -rf $SYS_TYPE.*
+    rm -rf $SYS_TYPE.*.logs
 
     # Clean-up last run's output
     if [ "$ATS_SERAC_BASELINE" -ne 1 ] ; then
@@ -97,4 +97,10 @@ Clean
 
 # Run ATS
 $ATS_EXECUTABLE $ATS_SERAC_REPO_DIR/tests/integration/test.ats --sleepBeforeSrun=2
-if [ $? -ne 0 ]; then { echo "Failed Integration tests, aborting."; exit 1; } fi
+if [ $? -ne 0 ]; then { echo "ERROR: Failed Integration tests, aborting."; exit 1; } fi
+
+# Work around because ATS is currently not returning an error code on failed tests
+# Get log dir that was just created by ATS
+ATS_LOG_DIR=`ls -1d $SYS_TYPE*.logs | sort -r | head -n1`
+find . -path $ATS_LOG_DIR/atsr.xml | grep -q FAIL
+if [ $? -ne 0 ]; then { echo "ERROR: Failed Integration tests, aborting."; exit 1; } fi
