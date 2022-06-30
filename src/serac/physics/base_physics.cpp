@@ -10,8 +10,6 @@
 
 #include "axom/fmt.hpp"
 
-#include "axom/core.hpp"
-
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
@@ -99,8 +97,6 @@ void BasePhysics::initializeSummary(axom::sidre::DataStore& datastore, double t_
   // Summary Sidre Structure
   // Sidre root
   // └── serac_summary
-  //     ├── user_name : const char*
-  //     ├── host_name : const char*
   //     ├── mpi_rank_count : int
   //     └── curves
   //         ├── t : Sidre::Array<axom::IndexType>
@@ -125,8 +121,6 @@ void BasePhysics::initializeSummary(axom::sidre::DataStore& datastore, double t_
   axom::sidre::Group* summary_group = sidre_root->createGroup(summary_group_name);
 
   // Write run info
-  summary_group->createViewString("user_name", axom::utilities::getUserName());
-  summary_group->createViewString("host_name", axom::utilities::getHostName());
   summary_group->createViewScalar("mpi_rank_count", count);
 
   // Write curves info

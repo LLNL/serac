@@ -18,6 +18,10 @@ namespace serac::cli {
 
 std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv[], std::string app_description)
 {
+  // NOTE: When adding/removing command line options remember to update the following places as well:
+  //   src/docs/sphinx/user_guide/command_line_options.rst
+  //   serac::cli::printGiven() (in this file)
+
   // specify all input arguments
   axom::CLI::App app{app_description};
   std::string    input_file_path;
@@ -31,9 +35,9 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
   std::string output_directory;
   app.add_option("-o, --output-directory", output_directory, "Directory to put outputted files");
   bool enable_paraview{false};
-  app.add_flag("-p, --paraview", enable_paraview, "Enable paraview output");
+  app.add_flag("-p, --paraview", enable_paraview, "Enable ParaView output");
   bool version{false};
-  app.add_flag("-v, --version", version, "Print version and providence information, then exits");
+  app.add_flag("-v, --version", version, "Print version and provenance information, then exits");
 
   // Parse the arguments and check if they are good
   try {
@@ -74,6 +78,7 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
     }
     cli_opts.insert({"output-directory", output_directory});
     if (enable_paraview) {
+      cli_opts.insert({"paraview", {}});
       cli_opts.insert({"paraview-directory", output_directory + "_paraview"});
     }
   }
@@ -102,6 +107,7 @@ void printGiven(std::unordered_map<std::string, std::string>& cli_opts)
     {"create-input-file-docs", "Create Input File Docs"},
     {"input-file", "Input File"},
     {"output-directory", "Output Directory"},
+    {"paraview", "Enable ParaView output"},
     {"restart-cycle", "Restart Cycle"},
     {"version", "Print version"}};
   // clang-format on
