@@ -18,6 +18,10 @@ namespace serac::cli {
 
 std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv[], std::string app_description)
 {
+  // NOTE: When adding/removing command line options remember to update the following places as well:
+  //   src/docs/sphinx/user_guide/command_line_options.rst
+  //   serac::cli::printGiven() (in this file)
+
   // specify all input arguments
   axom::CLI::App app{app_description};
   std::string    input_file_path;
