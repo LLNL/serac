@@ -41,3 +41,7 @@ Below is the documentation for Serac's command line options:
      - -p
      - N/A
      - Enable paraview output
+   * - --version
+     - -v
+     - N/A
+     - Print version and provenance information, then exits
