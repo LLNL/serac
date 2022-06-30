@@ -35,7 +35,7 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
   std::string output_directory;
   app.add_option("-o, --output-directory", output_directory, "Directory to put outputted files");
   bool enable_paraview{false};
-  app.add_flag("-p, --paraview", enable_paraview, "Enable paraview output");
+  app.add_flag("-p, --paraview", enable_paraview, "Enable ParaView output");
   bool version{false};
   app.add_flag("-v, --version", version, "Print version and provenance information, then exits");
 
@@ -78,6 +78,7 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
     }
     cli_opts.insert({"output-directory", output_directory});
     if (enable_paraview) {
+      cli_opts.insert({"paraview", {}});
       cli_opts.insert({"paraview-directory", output_directory + "_paraview"});
     }
   }
@@ -106,6 +107,7 @@ void printGiven(std::unordered_map<std::string, std::string>& cli_opts)
     {"create-input-file-docs", "Create Input File Docs"},
     {"input-file", "Input File"},
     {"output-directory", "Output Directory"},
+    {"paraview", "Enable ParaView output"},
     {"restart-cycle", "Restart Cycle"},
     {"version", "Print version"}};
   // clang-format on

@@ -40,7 +40,7 @@ Below is the documentation for Serac's command line options:
    * - --paraview
      - -p
      - N/A
-     - Enable paraview output
+     - Enable ParaView output
    * - --version
      - -v
      - N/A
