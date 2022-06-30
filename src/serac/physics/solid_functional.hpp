@@ -539,7 +539,7 @@ public:
 
         // residual function
         [this](const mfem::Vector& u, mfem::Vector& r) {
-          #if 1
+          #if 0
           u_predicted_ = u;
           u_predicted_.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           r = (*residual_)(u_predicted_, zero_, parameter_states_[parameter_indices] ...);
@@ -551,7 +551,7 @@ public:
 
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
-          #if 1
+          #if 0
           u_predicted_ = u;
           u_predicted_.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           auto [r, drdu] = (*residual_)(differentiate_wrt(u_predicted_), zero_, parameter_states_[parameter_indices] ...);

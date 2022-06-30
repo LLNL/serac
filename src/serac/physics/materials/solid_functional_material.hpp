@@ -123,7 +123,7 @@ struct J2 {
     // (ii) admissibility
     if (phi > 0.0) {
 
-      // std::cout << "returning stress to yield surface" << std::endl;
+      //std::cout << "returning stress to yield surface" << std::endl;
 
       // see (7.207) on pg. 261
       auto plastic_strain_inc = phi / (3 * G + Hk + Hi);
@@ -134,6 +134,9 @@ struct J2 {
       state.pl_strain = state.pl_strain + get_value(plastic_strain_inc);
 
       state.beta = state.beta + sqrt(2.0 / 3.0) * Hk * get_value(plastic_strain_inc) * normalize(get_value(eta));
+
+      //std::cout << state.pl_strain << ", " << get_value(plastic_strain_inc) << std::endl; 
+
     }
 
     return s + p * I;

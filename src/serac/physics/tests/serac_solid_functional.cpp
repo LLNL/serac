@@ -136,12 +136,12 @@ void functional_solid_test_static_J2(double expected_disp_norm)
                                        "solid_functional");
 
   solid_mechanics::J2 mat{
-    100,   // Young's modulus
-    0.25,  // Poisson's ratio
-    1.0,   // isotropic hardening constant
-    2.3,   // kinematic hardening constant
-    30.0,  // yield stress
-    1.0    // mass density
+    1000, // Young's modulus
+    0.25, // Poisson's ratio
+    1.0,  // isotropic hardening constant
+    2.0,  // kinematic hardening constant
+    5.0,  // yield stress
+    1.0   // mass density
   };
 
   solid_mechanics::J2::State initial_state{};
@@ -158,17 +158,20 @@ void functional_solid_test_static_J2(double expected_disp_norm)
   solid_solver.setDisplacement(bc);
 
   solid_solver.setPiolaTraction([](auto x, auto /*n*/, auto t){
-    return tensor<double, 3>{0, 0, 5 * (x[0] > 7.99) * t * (t - 1)};
+    return tensor<double, 3>{0, 0, (x[0] > 7.99) * t * (t - 1)};
   });
 
   // Finalize the data structures
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  double dt = 0.1;
-  for (int i = 0; i < 10; i++) {
+  int num_steps = 100;
+
+  double dt = 1.0 / num_steps;
+  for (int i = 0; i <= num_steps; i++) {
     solid_solver.advanceTimestep(dt);
-    solid_solver.outputState();
+    solid_solver.outputState("paraview");
+    std::cout << "displacement norm: " << norm(solid_solver.displacement()) << std::endl;
   }
 
   // Check the final displacement norm
