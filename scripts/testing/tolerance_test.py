@@ -39,7 +39,7 @@ def ensure_file(path, wait_for_file=False):
             if exists:
                 break
             print("File not found, attempting sleep to wait for file...")
-            time.sleep(2)
+            time.sleep(5)
             exists = os.path.exists(path)
 
     if not exists:
