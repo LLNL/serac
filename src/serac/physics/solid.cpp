@@ -24,7 +24,7 @@ constexpr int NUM_FIELDS = 3;
 
 Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities geom_nonlin,
              FinalMeshOption keep_deformation, const std::string& name, mfem::ParMesh* pmesh)
-    : BasePhysics(NUM_FIELDS, order, pmesh),
+    : BasePhysics(NUM_FIELDS, order, name, pmesh),
       velocity_(StateManager::mesh(sidre_datacoll_id_),
                 FiniteElementState::Options{
                     .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "velocity")}),

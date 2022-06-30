@@ -20,8 +20,9 @@
 
 namespace serac {
 
-BasePhysics::BasePhysics(mfem::ParMesh* pmesh)
-    : sidre_datacoll_id_(StateManager::collectionID(pmesh)),
+BasePhysics::BasePhysics(std::string name, mfem::ParMesh* pmesh)
+    : name_(name),
+      sidre_datacoll_id_(StateManager::collectionID(pmesh)),
       mesh_(StateManager::mesh(sidre_datacoll_id_)),
       comm_(mesh_.GetComm()),
       time_(0.0),
@@ -30,10 +31,9 @@ BasePhysics::BasePhysics(mfem::ParMesh* pmesh)
 {
   std::tie(mpi_size_, mpi_rank_) = getMPIInfo(comm_);
   order_                         = 1;
-  root_name_                     = "serac";
 }
 
-BasePhysics::BasePhysics(int n, int p, mfem::ParMesh* pmesh) : BasePhysics(pmesh)
+BasePhysics::BasePhysics(int n, int p, std::string name, mfem::ParMesh* pmesh) : BasePhysics(name, pmesh)
 {
   order_ = p;
   // If this is a restart run, things have already been initialized
@@ -54,7 +54,45 @@ void BasePhysics::setCycle(const int cycle) { cycle_ = cycle; }
 
 int BasePhysics::cycle() const { return cycle_; }
 
-void BasePhysics::outputState() const { StateManager::save(time_, cycle_, sidre_datacoll_id_); }
+void BasePhysics::outputState(std::optional<std::string> paraview_output_dir) const
+{
+  // First, save the restart/Sidre file
+  StateManager::save(time_, cycle_, sidre_datacoll_id_);
+
+  // Optionally output a paraview datacollection for visualization
+  if (paraview_output_dir) {
+    // Check to see if the paraview data collection exists. If not, create it.
+    if (!paraview_dc_) {
+      std::string output_name = name_;
+      if (output_name == "") {
+        output_name = "default";
+      }
+
+      paraview_dc_ = std::make_unique<mfem::ParaViewDataCollection>(output_name, &state_.front().get().mesh());
+      int max_order_in_fields = 0;
+
+      // Find the maximum polynomial order in the physics module's states
+      for (FiniteElementState& state : state_) {
+        paraview_dc_->RegisterField(state.name(), &state.gridFunction());
+        max_order_in_fields = std::max(max_order_in_fields, state.space().GetOrder(0));
+      }
+
+      // Set the options for the paraview output files
+      paraview_dc_->SetLevelsOfDetail(max_order_in_fields);
+      paraview_dc_->SetHighOrderOutput(true);
+      paraview_dc_->SetDataFormat(mfem::VTKFormat::BINARY);
+      paraview_dc_->SetCompression(true);
+    }
+
+    // Set the current time, cycle, and requested paraview directory
+    paraview_dc_->SetCycle(cycle_);
+    paraview_dc_->SetTime(time_);
+    paraview_dc_->SetPrefixPath(*paraview_output_dir);
+
+    // Write the paraview file
+    paraview_dc_->Save();
+  }
+}
 
 void BasePhysics::initializeSummary(axom::sidre::DataStore& datastore, double t_final, double dt) const
 {

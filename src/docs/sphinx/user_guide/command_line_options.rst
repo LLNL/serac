@@ -37,3 +37,7 @@ Below is the documentation for Serac's command line options:
      - -o
      - Path
      - Directory to put outputted files
+   * - --paraview
+     - -p
+     - N/A
+     - Enable paraview output

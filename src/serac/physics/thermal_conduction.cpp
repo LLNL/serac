@@ -18,7 +18,7 @@ constexpr int NUM_FIELDS = 1;
 
 ThermalConduction::ThermalConduction(int order, const SolverOptions& options, const std::string& name,
                                      mfem::ParMesh* pmesh)
-    : BasePhysics(NUM_FIELDS, order, pmesh),
+    : BasePhysics(NUM_FIELDS, order, name, pmesh),
       temperature_(StateManager::newState(FiniteElementState::Options{.order      = order,
                                                                       .vector_dim = 1,
                                                                       .ordering   = mfem::Ordering::byNODES,
