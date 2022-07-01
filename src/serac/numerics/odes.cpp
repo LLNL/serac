@@ -85,9 +85,9 @@ void SecondOrderODE::Step(mfem::Vector& x, mfem::Vector& dxdt, double& time, dou
       U_       = 0.0;
       U_plus_  = 0.0;
       for (const auto& bc : bcs_.essentials()) {
-        bc.projectBdrToDofs(U_minus_, t - epsilon);
-        bc.projectBdrToDofs(U_, t);
-        bc.projectBdrToDofs(U_plus_, t + epsilon);
+        bc.projectToDofs(U_minus_, t - epsilon);
+        bc.projectToDofs(U_, t);
+        bc.projectToDofs(U_plus_, t + epsilon);
       }
 
       auto constrained_dofs = bcs_.allEssentialTrueDofs();
@@ -163,9 +163,9 @@ void SecondOrderODE::Solve(const double time, const double c0, const double c1, 
   U_       = 0.0;
   U_plus_  = 0.0;
   for (const auto& bc : bcs_.essentials()) {
-    bc.projectBdrToDofs(U_minus_, time - epsilon);
-    bc.projectBdrToDofs(U_, time);
-    bc.projectBdrToDofs(U_plus_, time + epsilon);
+    bc.projectToDofs(U_minus_, time - epsilon);
+    bc.projectToDofs(U_, time);
+    bc.projectToDofs(U_plus_, time + epsilon);
   }
 
   bool implicit = (c0 != 0.0 || c1 != 0.0);
@@ -278,9 +278,9 @@ void FirstOrderODE::Solve(const double dt, const mfem::Vector& u, mfem::Vector& 
   U_       = 0.0;
   U_plus_  = 0.0;
   for (const auto& bc : bcs_.essentials()) {
-    bc.projectBdrToDofs(U_minus_, t - epsilon);
-    bc.projectBdrToDofs(U_, t);
-    bc.projectBdrToDofs(U_plus_, t + epsilon);
+    bc.projectToDofs(U_minus_, t - epsilon);
+    bc.projectToDofs(U_, t);
+    bc.projectToDofs(U_plus_, t + epsilon);
   }
 
   bool implicit = (dt != 0.0);

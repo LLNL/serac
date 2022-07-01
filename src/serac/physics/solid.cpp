@@ -293,7 +293,7 @@ void Solid::completeSetup()
   // Project the essential boundary coefficients
   for (auto& bc : bcs_.essentials()) {
     // Project the coefficient
-    bc.project(displacement_);
+    bc.project(time_);
   }
 
   // If dynamic, create the mass and viscosity forms

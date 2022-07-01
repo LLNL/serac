@@ -84,7 +84,7 @@ TEST(SeracErrorHandling, BcProjectNoState)
 {
   auto              coef = std::make_shared<mfem::ConstantCoefficient>(1.0);
   BoundaryCondition bc(coef, -1, std::set<int>{});
-  EXPECT_THROW(bc.projectBdr(0.0), SlicErrorException);
+  EXPECT_THROW(bc.project(0.0), SlicErrorException);
 }
 
 TEST(SeracErrorHandling, BcRetrieveScalarCoef)

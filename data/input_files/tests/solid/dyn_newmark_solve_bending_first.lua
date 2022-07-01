@@ -53,8 +53,8 @@ solid = {
         },
 
         nonlinear = {
-            rel_tol     = 1.0e-8,
-            abs_tol     = 1.0e-12,
+            rel_tol     = 1.0e-7,
+            abs_tol     = 1.0e-10,
             max_iter    = 500,
             print_level = 1,
         },

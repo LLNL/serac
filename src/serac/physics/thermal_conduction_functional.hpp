@@ -386,7 +386,7 @@ public:
 
     // Project the essential boundary coefficients
     for (auto& bc : bcs_.essentials()) {
-      bc.projectBdr(temperature_, time_);
+      bc.project(time_);
     }
 
     if (is_quasistatic_) {

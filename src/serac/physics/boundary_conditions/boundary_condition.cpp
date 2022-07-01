@@ -72,15 +72,15 @@ void BoundaryCondition::setDofs()
   } else {
     mfem::Array<int> dof_markers;
 
-    state_->space().GetEssentialTrueDofs(markers_, *true_dofs_, -1);
-    state_->space().GetEssentialVDofs(markers_, *local_dofs_, -1);
+    state_->space().GetEssentialTrueDofs(markers_, *true_dofs_);
+    state_->space().GetEssentialVDofs(markers_, *local_dofs_);
 
     // The VDof call actually returns a marker array, so we need to transform it to a list of indices
     state_->space().MarkerToList(dof_markers, *local_dofs_);
   }
 }
 
-void BoundaryCondition::project(FiniteElementState& state) const
+void BoundaryCondition::project(FiniteElementState& state, const double time) const
 {
   SLIC_ERROR_ROOT_IF(!true_dofs_, "Only essential boundary conditions can be projected over all DOFs.");
   // Value semantics for convenience
@@ -95,57 +95,33 @@ void BoundaryCondition::project(FiniteElementState& state) const
   // the only reason to store a VectorCoefficient is to act on all components
   if (is_vector_valued(coef_)) {
     auto vec_coef = get<std::shared_ptr<mfem::VectorCoefficient>>(coef_);
+    vec_coef->SetTime(time);
     state.project(*vec_coef, dof_list);
   } else {
     // an mfem::Coefficient could be used to describe a scalar-valued function, or
     // a single component of a vector-valued function
     auto scalar_coef = get<std::shared_ptr<mfem::Coefficient>>(coef_);
+    scalar_coef->SetTime(time);
     if (component_) {
       state.project(*scalar_coef, dof_list, *component_);
 
     } else {
-      state.project(*scalar_coef, dof_list, 0);
+      state.projectBdr(*scalar_coef, markers_);
     }
   }
 }
 
-void BoundaryCondition::project() const
+void BoundaryCondition::project(const double time) const
 {
   SLIC_ERROR_ROOT_IF(!state_, "Boundary condition must be associated with a FiniteElementState.");
-  project(*state_);
+  project(*state_, time);
 }
 
-void BoundaryCondition::projectBdr(FiniteElementState& state, const double time) const
-{
-  if (state.space().GetVDim() > 1) {
-    SLIC_ASSERT_MSG(holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(coef_),
-                    "Boundary condition should have been an mfem::VectorCoefficient");
-  } else {
-    SLIC_ASSERT_MSG(holds_alternative<std::shared_ptr<mfem::Coefficient>>(coef_),
-                    "Boundary condition should have been an mfem::Coefficient");
-  }
-
-  SLIC_ASSERT_MSG(!component_, "Component-wise boundary projection not implemented");
-
-  visit(
-      [&state, &markers = markers_, time](auto&& coef) {
-        coef->SetTime(time);
-        state.projectBdr(*coef, markers);
-      },
-      coef_);
-}
-
-void BoundaryCondition::projectBdr(const double time) const
-{
-  SLIC_ERROR_ROOT_IF(!state_, "Boundary condition must be associated with a FiniteElementState.");
-  projectBdr(*state_, time);
-}
-
-void BoundaryCondition::projectBdrToDofs(mfem::Vector& dof_values, const double time) const
+void BoundaryCondition::projectToDofs(mfem::Vector& dof_values, const double time) const
 {
   SLIC_ERROR_ROOT_IF(!state_, "Boundary condition must be associated with a FiniteElementState.");
   FiniteElementState state_copy(*state_);
-  projectBdr(state_copy, time);
+  project(state_copy, time);
   dof_values = state_copy;
 }
 
@@ -167,7 +143,7 @@ void BoundaryCondition::eliminateToRHS(mfem::HypreParMatrix& k_mat_post_elim, co
 void BoundaryCondition::apply(mfem::HypreParMatrix& k_mat_post_elim, mfem::Vector& rhs, FiniteElementState& state,
                               const double time) const
 {
-  projectBdr(state, time);
+  project(state, time);
   eliminateToRHS(k_mat_post_elim, state, rhs);
 }
 

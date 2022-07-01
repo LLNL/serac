@@ -180,36 +180,14 @@ public:
    * @brief Projects the boundary condition over a field
    * @param[inout] state The field to project over
    */
-  void project(FiniteElementState& state) const;
+  void project(FiniteElementState& state, const double time = 0.0) const;
 
   /**
    * @brief Projects the boundary condition over a grid function
    * @pre A corresponding field (FiniteElementState) has been associated
    * with the calling object via BoundaryCondition::setTrueDofs(FiniteElementState&)
    */
-  void project() const;
-
-  /**
-   * @brief Projects the boundary condition over boundary DOFs of a grid function
-   * @param[inout] gf The grid function representing the field to project over
-   * @param[in] time The time for the coefficient, used for time-varying coefficients
-   */
-  void projectBdr(mfem::ParGridFunction& gf, const double time) const;
-
-  /**
-   * @brief Projects the boundary condition over boundary DOFs of a field
-   * @param[inout] state The field to project over
-   * @param[in] time The time for the coefficient, used for time-varying coefficients
-   */
-  void projectBdr(FiniteElementState& state, const double time) const;
-
-  /**
-   * @brief Projects the boundary condition over boundary DOFs
-   * @param[in] time The time for the coefficient, used for time-varying coefficients
-   * @pre A corresponding field (FiniteElementState) has been associated
-   * with the calling object via BoundaryCondition::setTrueDofs(FiniteElementState&)
-   */
-  void projectBdr(const double time) const;
+  void project(const double time = 0.0) const;
 
   /**
    * @brief Projects the boundary condition over boundary to a DoF vector
@@ -218,7 +196,7 @@ public:
    * @pre A corresponding field (FiniteElementState) has been associated
    * with the calling object via BoundaryCondition::setTrueDofs(FiniteElementState&)
    */
-  void projectBdrToDofs(mfem::Vector& dof_values, const double time) const;
+  void projectToDofs(mfem::Vector& dof_values, const double time) const;
 
   /**
    * @brief Eliminates the rows and columns corresponding to the BC's true DOFS
