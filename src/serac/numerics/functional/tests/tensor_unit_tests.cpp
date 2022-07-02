@@ -42,6 +42,9 @@ TEST(Tensor, BasicOperations)
   tensor<double, 3, 3> devA = {{{-3, 2, 4}, {1, 0, 5}, {2, 4, 3}}};
   EXPECT_LT(abs(squared_norm(dev(A) - devA)), tolerance);
 
+  tensor<double, 3, 3> diagA = {{{0, 0, 0}, {0, 3, 0}, {0, 0, 6}}};
+  EXPECT_LT(abs(squared_norm(diag(A) - diagA)), tolerance);
+
   tensor<double, 3, 3> invAp1 = {{{-4, -1, 3}, {-1.5, 0.5, 0.5}, {2, 0, -1}}};
   EXPECT_LT(abs(squared_norm(inv(A + I) - invAp1)), tolerance);
 
