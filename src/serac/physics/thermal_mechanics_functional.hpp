@@ -206,6 +206,12 @@ public:
     thermal_functional_.setTemperature(temperature);
   }
 
+  template <typename BodyForceType>
+  void addBodyForce(BodyForceType body_force_function)
+  {
+    solid_functional_.addBodyForce(body_force_function);
+  }
+
   /**
    * @brief Get the displacement state
    *
