@@ -145,7 +145,7 @@ struct J2 {
 
     }
 
-    state.old_strain = new_strain;
+    state.old_strain = get_value(new_strain);
 
     return s + p * I;
   }
