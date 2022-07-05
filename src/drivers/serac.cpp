@@ -97,6 +97,8 @@ int main(int argc, char* argv[])
     serac::exitGracefully();
   }
 
+  // Output helpful run information
+  serac::printRunInfo();
   serac::cli::printGiven(cli_opts);
 
   // Read input file

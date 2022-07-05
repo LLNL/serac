@@ -34,6 +34,13 @@ std::string about();
 std::string gitSHA();
 
 /**
+ * @brief Outputs basic run information to the screen
+ *
+ * Note: Command line options are handled in `infrastructure/cli.cpp`
+ */
+void printRunInfo();
+
+/**
  * @brief Returns a string for the version of Serac
  *
  * @param[in] add_SHA boolean for whether to add the Git SHA to the version if available
