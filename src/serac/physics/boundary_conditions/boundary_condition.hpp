@@ -179,11 +179,13 @@ public:
   /**
    * @brief Projects the boundary condition over a field
    * @param[inout] state The field to project over
+   * @param[in] time The time at which to project the boundary condition
    */
   void project(FiniteElementState& state, const double time = 0.0) const;
 
   /**
    * @brief Projects the boundary condition over a grid function
+   * @param[in] time The time at which to project the boundary condition
    * @pre A corresponding field (FiniteElementState) has been associated
    * with the calling object via BoundaryCondition::setTrueDofs(FiniteElementState&)
    */
@@ -192,7 +194,7 @@ public:
   /**
    * @brief Projects the boundary condition over boundary to a DoF vector
    * @param[in] dof_values The discrete dof values to project
-   * @param[in] time The time for the coefficient, used for time-varying coefficients
+   * @param[in] time The time at which to project the boundary condition
    * @pre A corresponding field (FiniteElementState) has been associated
    * with the calling object via BoundaryCondition::setTrueDofs(FiniteElementState&)
    */
