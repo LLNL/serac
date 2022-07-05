@@ -178,8 +178,8 @@ public:
 
   /**
    * @brief Projects the boundary condition over a field
-   * @param[inout] state The field to project over
    * @param[in] time The time at which to project the boundary condition
+   * @param[inout] state The field to project over
    */
   void project(FiniteElementState& state, const double time = 0.0) const;
 
