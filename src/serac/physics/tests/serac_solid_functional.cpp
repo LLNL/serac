@@ -244,50 +244,35 @@ void functional_solid_test_lce_material(double expected_disp_norm)
   // Define the function for the initial displacement and boundary condition
   auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
 
-  // // Define a boundary attribute set
-  // std::set<int> ess_bdr = {1};
-
-  // // Set the initial displacement and boundary condition
-  // solid_solver.setDisplacementBCs(ess_bdr, bc);
-
   // set the boundary conditions to be fixed on the coordinate planes
   auto zeroFunc = [](const mfem::Vector /*x*/){ return 0.0;};
 
-  solid_solver.setDisplacementBCs({1}, zeroFunc, 1);
-  solid_solver.setDisplacementBCs({2}, zeroFunc, 0);
-  solid_solver.setDisplacementBCs({3}, zeroFunc, 2);
+  solid_solver.setDisplacementBCs({1}, zeroFunc, 1); // bottom face y-dir disp = 0
+  solid_solver.setDisplacementBCs({2}, zeroFunc, 0); // left face x-dir disp = 0
+  solid_solver.setDisplacementBCs({3}, zeroFunc, 2); // back face z-dir disp = 0
 
   solid_solver.setDisplacement(bc);
 
-  tensor<double, dim> constant_force;
+  bool includeBodyForce(false);
 
-  constant_force[0] = 0.0;
-  constant_force[1] = -2.0e0;
+  if(includeBodyForce)
+  {
+    tensor<double, dim> constant_force;
 
-  if (dim == 3) {
-    constant_force[2] = 0.0;
+    constant_force[0] = 0.0;
+    constant_force[1] = -8.0e-2;
+
+    if (dim == 3) {
+      constant_force[2] = 0.0;
+    }
+
+    solid_util::ConstantBodyForce<dim> force{constant_force};
+    solid_solver.addBodyForce(force); 
   }
 
-  solid_util::ConstantBodyForce<dim> force{constant_force};
-  solid_solver.addBodyForce(force); 
-
-  // solid_util::TractionFunction<dim> traction_function{
-  //     [](const serac::tensor<double, dim>& x, const serac::tensor<double, dim>&, const double) {
-  //       serac::tensor<double, dim> traction;
-  //       for (int i = 0; i < dim; ++i) {
-  //         traction[i] = 0.0;
-  //       }
-
-  //       if (x[1] > 7.9e-3) {
-  //         traction[1] = -5.0e-4;
-  //       }
-  //       return traction;
-  //     }};
-  // solid_solver.setTractionBCs(traction_function);
-
-  // solid_solver.setPiolaTraction([](auto x, auto /*n*/, auto t){
-  //   return tensor<double, 3>{0, -5.0e-4 * (x[1] > 0.0079), 0*t};
-  // });
+  solid_solver.setPiolaTraction([](auto x, auto /*n*/, auto t){
+    return tensor<double, 3>{0, 5.0e-3 * (x[1] > 0.0079), 0*t};
+  });
 
   // Finalize the data structures
   solid_solver.completeSetup();
