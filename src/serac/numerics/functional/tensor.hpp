@@ -1065,15 +1065,15 @@ SERAC_HOST_DEVICE constexpr auto dev(const tensor<T, n, n>& A)
 }
 
 /**
- * @brief Returns a matrix (rank-2 tensor) containing the diagonal entries of the input matrix
+ * @brief Returns a square matrix (rank-2 tensor) containing the diagonal entries of the input square matrix
  * with zeros in the off-diagonal positions
- * @param[in] A The input matrix
+ * @param[in] A The input square matrix
  * This operation is used to compute a term in the constitutive response of a linear, cubic solid material
  */
 template <typename T, int n>
 SERAC_HOST_DEVICE constexpr auto diag(const tensor<T, n, n>& A)
 {
-  auto D = make_tensor<n, n>([](int, int) { return 0.0; });
+  auto D = make_tensor<n, n>([](int, int) {return 0.0;});
   for (int i = 0; i < n; i++) {
     D[i][i] = A[i][i];
   }
