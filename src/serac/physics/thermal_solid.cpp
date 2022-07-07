@@ -15,7 +15,7 @@ constexpr int NUM_FIELDS = 3;
 
 ThermalSolid::ThermalSolid(int order, const ThermalConduction::SolverOptions& therm_options,
                            const Solid::SolverOptions& solid_options, const std::string& name, mfem::ParMesh* pmesh)
-    : BasePhysics(NUM_FIELDS, order, pmesh),
+    : BasePhysics(NUM_FIELDS, order, name, pmesh),
       // Note that the solid solver must be constructed before the thermal solver as it mutates the mesh node grid
       // function
       solid_solver_(order, solid_options, GeometricNonlinearities::On, FinalMeshOption::Deformed, name, pmesh),
@@ -36,7 +36,7 @@ ThermalSolid::ThermalSolid(int order, const ThermalConduction::SolverOptions& th
 
 ThermalSolid::ThermalSolid(const ThermalConduction::InputOptions& thermal_input, const Solid::InputOptions& solid_input,
                            const std::string& name)
-    : BasePhysics(NUM_FIELDS, std::max(thermal_input.order, solid_input.order)),
+    : BasePhysics(NUM_FIELDS, std::max(thermal_input.order, solid_input.order), name),
       // Note that the solid solver must be constructed before the thermal solver as it mutates the mesh node grid
       // function
       solid_solver_(solid_input, name),
