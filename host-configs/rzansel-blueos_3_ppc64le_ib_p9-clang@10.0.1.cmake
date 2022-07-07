@@ -11,11 +11,11 @@
 #------------------------------------------------------------------------------
 if(DEFINED ENV{SPACK_CC})
 
-  set(CMAKE_C_COMPILER "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2022_06_01_21_11_45/spack/lib/spack/env/clang/clang" CACHE PATH "")
+  set(CMAKE_C_COMPILER "/usr/WS2/dayton8/ale3d/serac_libs/blueos_3_ppc64le_ib_p9/2022_06_27_12_50_51/spack/lib/spack/env/clang/clang" CACHE PATH "")
 
-  set(CMAKE_CXX_COMPILER "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2022_06_01_21_11_45/spack/lib/spack/env/clang/clang++" CACHE PATH "")
+  set(CMAKE_CXX_COMPILER "/usr/WS2/dayton8/ale3d/serac_libs/blueos_3_ppc64le_ib_p9/2022_06_27_12_50_51/spack/lib/spack/env/clang/clang++" CACHE PATH "")
 
-  set(CMAKE_Fortran_COMPILER "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2022_06_01_21_11_45/spack/lib/spack/env/clang/gfortran" CACHE PATH "")
+  set(CMAKE_Fortran_COMPILER "/usr/WS2/dayton8/ale3d/serac_libs/blueos_3_ppc64le_ib_p9/2022_06_27_12_50_51/spack/lib/spack/env/clang/gfortran" CACHE PATH "")
 
 else()
 
@@ -77,11 +77,11 @@ set(BLT_CMAKE_IMPLICIT_LINK_DIRECTORIES_EXCLUDE "/usr/tce/packages/gcc/gcc-4.9.3
 # TPLs
 #------------------------------------------------------------------------------
 
-set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2022_06_01_21_11_45/clang-10.0.1" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/dayton8/ale3d/serac_libs/blueos_3_ppc64le_ib_p9/2022_06_27_12_50_51/clang-10.0.1" CACHE PATH "")
 
-set(AXOM_DIR "${TPL_ROOT}/axom-0.6.1.3-i6m7j2ilu65lm5ff5a4vssaiseou5wez" CACHE PATH "")
+set(AXOM_DIR "${TPL_ROOT}/axom-0.6.1.3-bhtby3hqrgsac3iyz4ghn3w5s53cwrr4" CACHE PATH "")
 
-set(CAMP_DIR "${TPL_ROOT}/camp-2022.03.0-3veploihavv3ffqxfftl2dugxrahnqaj" CACHE PATH "")
+set(CAMP_DIR "${TPL_ROOT}/camp-2022.03.0-hacjowoiz5qmbzdi5bxql3yy7yrjyksj" CACHE PATH "")
 
 set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.8.3-x2kwv22liotgs4efltucij3qlzq5mf4m" CACHE PATH "")
 
@@ -109,11 +109,11 @@ set(CALIPER_DIR "${TPL_ROOT}/caliper-2.7.0-6l6by52dgckbjswbokwng74loeo2qit4" CAC
 
 # PETSC not built
 
-set(RAJA_DIR "${TPL_ROOT}/raja-2022.03.0-3vuqmwyctkm3hx4c74mubli4shppxmoy" CACHE PATH "")
+set(RAJA_DIR "${TPL_ROOT}/raja-2022.03.0-e6x5pd4pganmug7jbxg4pstqeguxhsrg" CACHE PATH "")
 
 set(SUNDIALS_DIR "${TPL_ROOT}/sundials-5.7.0-px3dukekmuj4rejhpxudz6kkrq2u6it7" CACHE PATH "")
 
-set(UMPIRE_DIR "${TPL_ROOT}/umpire-2022.03.1-z4zq6c52xyiclzxhoh5cyyfjqjfqfrc5" CACHE PATH "")
+set(UMPIRE_DIR "${TPL_ROOT}/umpire-2022.03.1-y3dazw3jrytkjugqi474jvz5q5ggl62o" CACHE PATH "")
 
 #------------------------------------------------------------------------------
 # Devtools
