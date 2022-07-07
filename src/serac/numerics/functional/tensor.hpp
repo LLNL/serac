@@ -1071,9 +1071,9 @@ SERAC_HOST_DEVICE constexpr auto dev(const tensor<T, n, n>& A)
  * This operation is used to compute a term in the constitutive response of a linear, cubic solid material
  */
 template <typename T, int n>
-SERAC_HOST_DEVICE constexpr auto diag(const tensor<T, n, n>& A)
+SERAC_HOST_DEVICE constexpr auto diagonal_matrix(const tensor<T, n, n>& A)
 {
-  auto D = make_tensor<n, n>([](int, int) {return 0.0;});
+  tensor<T, n, n> D{};
   for (int i = 0; i < n; i++) {
     D[i][i] = A[i][i];
   }
