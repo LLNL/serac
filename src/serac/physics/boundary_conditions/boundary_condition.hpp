@@ -230,15 +230,6 @@ public:
   void apply(mfem::HypreParMatrix& k_mat_post_elim, mfem::Vector& rhs, FiniteElementState& state,
              const double time = 0.0) const;
 
-  /**
-   * @brief Sets the underlying coefficient's time
-   *
-   * @param[in] time The current simulation time
-   *
-   * Used for time-dependent coefficients
-   */
-  void setTime(const double time);
-
 private:
   /**
    * @brief Uses mfem::ParFiniteElementSpace::GetEssentialTrueDofs to

@@ -385,8 +385,6 @@ void Solid::advanceTimestep(double& dt)
     mesh_.NewNodes(*reference_nodes_);
   }
 
-  bcs_.setTime(time_);
-
   // If a thermal material is present, evaluate the grid function
   auto* iso_expansion_mat = dynamic_cast<IsotropicThermalExpansionMaterial*>(thermal_material_.get());
   if (iso_expansion_mat) {

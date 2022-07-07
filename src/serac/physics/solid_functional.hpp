@@ -234,8 +234,6 @@ public:
       mesh_.NewNodes(*reference_nodes_);
     }
 
-    bcs_.setTime(time_);
-
     if (is_quasistatic_) {
       quasiStaticSolve();
       // Update the time for housekeeping purposes

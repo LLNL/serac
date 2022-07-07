@@ -179,9 +179,4 @@ mfem::VectorCoefficient& BoundaryCondition::vectorCoefficient()
   return **vec_coef;
 }
 
-void BoundaryCondition::setTime(const double time)
-{
-  visit([time](auto&& coef) { coef->SetTime(time); }, coef_);
-}
-
 }  // namespace serac
