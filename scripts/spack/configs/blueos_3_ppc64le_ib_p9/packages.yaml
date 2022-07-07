@@ -47,6 +47,16 @@ packages:
     externals:
       - spec: cuda@11.2.0
         prefix: /usr/tce/packages/cuda/cuda-11.2.0
+      - spec: cuda@11.3.0
+        prefix: /usr/tce/packages/cuda/cuda-11.3.0
+      - spec: cuda@11.4.1
+        prefix: /usr/tce/packages/cuda/cuda-11.4.1
+      - spec: cuda@11.5.0
+        prefix: /usr/tce/packages/cuda/cuda-11.5.0
+      - spec: cuda@11.6.1
+        prefix: /usr/tce/packages/cuda/cuda-11.6.1
+      - spec: cuda@11.7.0
+        prefix: /usr/tce/packages/cuda/cuda-11.7.0
     buildable: false
 
   # LLNL blueos mpi
@@ -56,6 +66,12 @@ packages:
     externals:
       - spec: spectrum-mpi@release%clang@10.0.1
         prefix: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-10.0.1-gcc-8.3.1
+      - spec: spectrum-mpi@release%clang@11.0.1
+        prefix: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-11.0.1-gcc-8.3.1
+      - spec: spectrum-mpi@release%clang@12.0.1
+        prefix: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-12.0.1-gcc-8.3.1
+      - spec: spectrum-mpi@release%clang@13.0.1
+        prefix: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-13.0.1-gcc-8.3.1
 
   netlib-lapack:
     externals:
