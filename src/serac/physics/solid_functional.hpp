@@ -196,7 +196,7 @@ public:
     // Project the coefficient onto the grid function
     disp_bdr_coef_ = std::make_shared<mfem::VectorFunctionCoefficient>(dim, disp);
 
-    bcs_.addEssential(disp_bdr, disp_bdr_coef_, displacement_);
+    bcs_.addEssential(disp_bdr, disp_bdr_coef_, displacement_.space());
   }
 
   /**
@@ -212,7 +212,7 @@ public:
     // Project the coefficient onto the grid function
     component_disp_bdr_coef_ = std::make_shared<mfem::FunctionCoefficient>(disp);
 
-    bcs_.addEssential(disp_bdr, component_disp_bdr_coef_, displacement_, component);
+    bcs_.addEssential(disp_bdr, component_disp_bdr_coef_, displacement_.space(), component);
   }
 
   /// @brief Solve the Quasi-static Newton system
@@ -519,7 +519,7 @@ public:
 
     // Project the essential boundary coefficients
     for (auto& bc : bcs_.essentials()) {
-      bc.project(time_);
+      bc.project(displacement_, time_);
     }
 
     if (is_quasistatic_) {

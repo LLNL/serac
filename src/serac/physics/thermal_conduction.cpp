@@ -116,13 +116,13 @@ void ThermalConduction::setTemperature(mfem::Coefficient& temp)
 void ThermalConduction::setTemperatureBCs(const std::set<int>&               temp_bdr,
                                           std::shared_ptr<mfem::Coefficient> temp_bdr_coef)
 {
-  bcs_.addEssential(temp_bdr, temp_bdr_coef, temperature_);
+  bcs_.addEssential(temp_bdr, temp_bdr_coef, temperature_.space());
 }
 
 void ThermalConduction::setFluxBCs(const std::set<int>& flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef)
 {
   // Set the natural (integral) boundary condition
-  bcs_.addNatural(flux_bdr, flux_bdr_coef, -1);
+  bcs_.addNatural(flux_bdr, flux_bdr_coef, temperature_.space());
 }
 
 void ThermalConduction::setConductivity(std::unique_ptr<mfem::Coefficient>&& kappa)
@@ -184,7 +184,7 @@ void ThermalConduction::completeSetup()
 
   // Project the essential boundary coefficients
   for (auto& bc : bcs_.essentials()) {
-    bc.project(time_);
+    bc.project(temperature_, time_);
   }
 
   if (is_quasistatic_) {

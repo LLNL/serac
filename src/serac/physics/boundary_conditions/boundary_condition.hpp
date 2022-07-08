@@ -38,8 +38,8 @@ public:
    * @param[in] num_attrs The total number of boundary attributes for the mesh
    * @param[in] state The finite element state on which this BC is applied
    */
-  BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component, const std::set<int>& attrs,
-                    const int num_attrs = 0, FiniteElementState* state = nullptr);
+  BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component,
+                    const mfem::ParFiniteElementSpace& space, const std::set<int>& attrs);
 
   /**
    * @brief Minimal constructor for setting the true DOFs directly
@@ -49,8 +49,8 @@ public:
    * @param[in] true_dofs The indices of the relevant DOFs
    * @param[in] state The finite element state on which this BC is applied
    */
-  BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component, const mfem::Array<int>& true_dofs,
-                    FiniteElementState* state = nullptr);
+  BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component,
+                    const mfem::ParFiniteElementSpace& space, const mfem::Array<int>& true_dofs);
 
   /**
    * @brief Determines whether a boundary condition is associated with a tag
@@ -134,23 +134,12 @@ public:
   mfem::Coefficient& scalarCoefficient();
 
   /**
-   * @brief "Manually" set the DOF indices without specifying the field to which they apply
-   * @param[in] true_dofs The true vector indices of the DOFs constrained by the boundary condition
+   * @brief Returns the DOF indices for an essential boundary condition
+   * @return A non-owning reference to the array of indices
    *
-   * @note This will set both the true and local internal dof index arrays.
    * @note True and local dofs are described in the <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a>
    */
-  void setTrueDofs(const mfem::Array<int> true_dofs);
-
-  /**
-   * @brief "Manually" set the DOF indices without specifying the field to which they apply
-   * @param[in] local_dofs The local (finite element/grid function) indices of the DOFs constrained by the boundary
-   * condition
-   *
-   * @note This will set both the true and local internal dof index arrays.
-   * @note True and local dofs are described in the <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a>
-   */
-  void setLocalDofs(const mfem::Array<int> local_dofs);
+  const mfem::Array<int>& getTrueDofs() const { return true_dofs_; }
 
   /**
    * @brief Returns the DOF indices for an essential boundary condition
@@ -158,47 +147,14 @@ public:
    *
    * @note True and local dofs are described in the <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a>
    */
-  const mfem::Array<int>& getTrueDofs() const
-  {
-    SLIC_ERROR_ROOT_IF(!true_dofs_, "True DOFs only available with essential BC.");
-    return *true_dofs_;
-  }
-
-  /**
-   * @brief Returns the DOF indices for an essential boundary condition
-   * @return A non-owning reference to the array of indices
-   *
-   * @note True and local dofs are described in the <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a>
-   */
-  const mfem::Array<int>& getLocalDofs() const
-  {
-    SLIC_ERROR_ROOT_IF(!local_dofs_, "Local DOFs only available with essential BC.");
-    return *local_dofs_;
-  }
+  const mfem::Array<int>& getLocalDofs() const { return local_dofs_; }
 
   /**
    * @brief Projects the boundary condition over a field
    * @param[in] time The time at which to project the boundary condition
    * @param[inout] state The field to project over
    */
-  void project(FiniteElementState& state, const double time = 0.0) const;
-
-  /**
-   * @brief Projects the boundary condition over a grid function
-   * @param[in] time The time at which to project the boundary condition
-   * @pre A corresponding field (FiniteElementState) has been associated
-   * with the calling object via BoundaryCondition::setTrueDofs(FiniteElementState&)
-   */
-  void project(const double time = 0.0) const;
-
-  /**
-   * @brief Projects the boundary condition over boundary to a DoF vector
-   * @param[in] dof_values The discrete dof values to project
-   * @param[in] time The time at which to project the boundary condition
-   * @pre A corresponding field (FiniteElementState) has been associated
-   * with the calling object via BoundaryCondition::setTrueDofs(FiniteElementState&)
-   */
-  void projectToDofs(mfem::Vector& dof_values, const double time) const;
+  void project(mfem::Vector& state, const double time = 0.0) const;
 
   /**
    * @brief Eliminates the rows and columns corresponding to the BC's true DOFS
@@ -240,6 +196,25 @@ private:
   void setDofs();
 
   /**
+   * @brief "Manually" set the DOF indices without specifying the field to which they apply
+   * @param[in] true_dofs The true vector indices of the DOFs constrained by the boundary condition
+   *
+   * @note This will set both the true and local internal dof index arrays.
+   * @note True and local dofs are described in the <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a>
+   */
+  void setTrueDofs(const mfem::Array<int> true_dofs);
+
+  /**
+   * @brief "Manually" set the DOF indices without specifying the field to which they apply
+   * @param[in] local_dofs The local (finite element/grid function) indices of the DOFs constrained by the boundary
+   * condition
+   *
+   * @note This will set both the true and local internal dof index arrays.
+   * @note True and local dofs are described in the <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a>
+   */
+  void setLocalDofs(const mfem::Array<int> local_dofs);
+
+  /**
    * @brief A coefficient containing either a mfem::Coefficient or an mfem::VectorCoefficient
    */
   GeneralCoefficient coef_;
@@ -255,17 +230,17 @@ private:
    * @brief The true DOFs affected by this BC
    * @note Only used for essential (Dirichlet) BCs
    */
-  std::optional<mfem::Array<int>> true_dofs_;
+  mfem::Array<int> true_dofs_;
   /**
    * @brief The local (finite element) DOFs affected by this BC
    * @note Only used for essential (Dirichlet) BCs
    */
-  std::optional<mfem::Array<int>> local_dofs_;
+  mfem::Array<int> local_dofs_;
   /**
    * @brief The state (field) affected by this BC
    * @note Only used for essential (Dirichlet) BCs
    */
-  FiniteElementState* state_ = nullptr;
+  const mfem::ParFiniteElementSpace& space_;
   /**
    * @brief The eliminated entries for Dirichlet BCs
    */

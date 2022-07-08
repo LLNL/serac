@@ -205,7 +205,7 @@ public:
     // Project the coefficient onto the grid function
     temp_bdr_coef_ = std::make_shared<mfem::FunctionCoefficient>(temp);
 
-    bcs_.addEssential(temp_bdr, temp_bdr_coef_, temperature_);
+    bcs_.addEssential(temp_bdr, temp_bdr_coef_, temperature_.space());
   }
 
   /**
@@ -386,7 +386,7 @@ public:
 
     // Project the essential boundary coefficients
     for (auto& bc : bcs_.essentials()) {
-      bc.project(time_);
+      bc.project(temperature_, time_);
     }
 
     if (is_quasistatic_) {

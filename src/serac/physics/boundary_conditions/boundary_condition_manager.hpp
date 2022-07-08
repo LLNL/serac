@@ -170,8 +170,8 @@ public:
    * @param[in] state The finite element state to which the BC should be applied
    * @param[in] component The component to set (-1 implies all components are set)
    */
-  void addEssential(const std::set<int>& ess_bdr, serac::GeneralCoefficient ess_bdr_coef, FiniteElementState& state,
-                    const std::optional<int> component = {});
+  void addEssential(const std::set<int>& ess_bdr, serac::GeneralCoefficient ess_bdr_coef,
+                    mfem::ParFiniteElementSpace& space, const std::optional<int> component = {});
 
   /**
    * @brief Set the natural boundary conditions from a list of boundary markers and a coefficient
@@ -181,7 +181,7 @@ public:
    * @param[in] component The component to set (-1 implies all components are set)
    */
   void addNatural(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef,
-                  const std::optional<int> component = {});
+                  mfem::ParFiniteElementSpace& space, const std::optional<int> component = {});
 
   /**
    * @brief Set a generic boundary condition from a list of boundary markers and a coefficient
@@ -195,9 +195,9 @@ public:
    */
   template <typename Tag>
   void addGeneric(const std::set<int>& bdr_attr, serac::GeneralCoefficient bdr_coef, const Tag tag,
-                  const std::optional<int> component = {})
+                  mfem::ParFiniteElementSpace& space, const std::optional<int> component = {})
   {
-    other_bdr_.emplace_back(bdr_coef, component, bdr_attr, num_attrs_);
+    other_bdr_.emplace_back(bdr_coef, component, space, bdr_attr);
     other_bdr_.back().setTag(tag);
     all_dofs_valid_ = false;
   }
@@ -211,7 +211,7 @@ public:
    * @param[in] component The component to set (-1 implies all components are set)
    */
   void addEssentialTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef,
-                            serac::FiniteElementState& state, std::optional<int> component = {});
+                            mfem::ParFiniteElementSpace& space, std::optional<int> component = {});
 
   /**
    * @brief Returns all the true degrees of freedom associated with all the essential BCs

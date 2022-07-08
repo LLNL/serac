@@ -168,22 +168,24 @@ Solid::~Solid()
 
 void Solid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
 {
-  bcs_.addEssential(disp_bdr, disp_bdr_coef, displacement_);
+  bcs_.addEssential(disp_bdr, disp_bdr_coef, displacement_.space());
 }
 
 void Solid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
                                int component)
 {
-  bcs_.addEssential(disp_bdr, disp_bdr_coef, displacement_, component);
+  bcs_.addEssential(disp_bdr, disp_bdr_coef, displacement_.space(), component);
 }
 
 void Solid::setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
                            bool compute_on_reference, std::optional<int> component)
 {
   if (compute_on_reference) {
-    bcs_.addGeneric(trac_bdr, trac_bdr_coef, SolidBoundaryCondition::ReferenceTraction, component);
+    bcs_.addGeneric(trac_bdr, trac_bdr_coef, SolidBoundaryCondition::ReferenceTraction, displacement_.space(),
+                    component);
   } else {
-    bcs_.addGeneric(trac_bdr, trac_bdr_coef, SolidBoundaryCondition::DeformedTraction, component);
+    bcs_.addGeneric(trac_bdr, trac_bdr_coef, SolidBoundaryCondition::DeformedTraction, displacement_.space(),
+                    component);
   }
 }
 
@@ -191,9 +193,9 @@ void Solid::setPressureBCs(const std::set<int>& pres_bdr, std::shared_ptr<mfem::
                            bool compute_on_reference)
 {
   if (compute_on_reference) {
-    bcs_.addGeneric(pres_bdr, pres_bdr_coef, SolidBoundaryCondition::ReferencePressure);
+    bcs_.addGeneric(pres_bdr, pres_bdr_coef, SolidBoundaryCondition::ReferencePressure, displacement_.space());
   } else {
-    bcs_.addGeneric(pres_bdr, pres_bdr_coef, SolidBoundaryCondition::DeformedPressure);
+    bcs_.addGeneric(pres_bdr, pres_bdr_coef, SolidBoundaryCondition::DeformedPressure, displacement_.space());
   }
 }
 
@@ -293,7 +295,7 @@ void Solid::completeSetup()
   // Project the essential boundary coefficients
   for (auto& bc : bcs_.essentials()) {
     // Project the coefficient
-    bc.project(time_);
+    bc.project(displacement_, time_);
   }
 
   // If dynamic, create the mass and viscosity forms

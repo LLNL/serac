@@ -30,10 +30,10 @@ TEST(BoundaryCond, SimpleRepeatedDofs)
 
   BoundaryConditionManager bcs(par_mesh);
   auto                     coef = std::make_shared<mfem::ConstantCoefficient>(1);
-  bcs.addEssential({ATTR}, coef, state, 1);
+  bcs.addEssential({ATTR}, coef, state.space(), 1);
   const auto before_dofs = bcs.allEssentialTrueDofs();
 
-  bcs.addEssential({ATTR}, coef, state, 1);
+  bcs.addEssential({ATTR}, coef, state.space(), 1);
   const auto after_dofs = bcs.allEssentialTrueDofs();
 
   // Make sure that attempting to add a boundary condition
@@ -61,11 +61,14 @@ TEST(BoundaryCond, FilterGenerics)
   auto          mesh = mfem::Mesh::MakeCartesian2D(N, N, mfem::Element::TRIANGLE);
   mfem::ParMesh par_mesh(MPI_COMM_WORLD, mesh);
 
+  mfem::H1_FECollection       coll(1, par_mesh.Dimension());
+  mfem::ParFiniteElementSpace space(&par_mesh, &coll);
+
   BoundaryConditionManager bcs(par_mesh);
   auto                     coef = std::make_shared<mfem::ConstantCoefficient>(1);
   for (int i = 0; i < N; i++) {
-    bcs.addGeneric({}, coef, TestTag::Tag1, 1);
-    bcs.addGeneric({}, coef, TestTag::Tag2, 1);
+    bcs.addGeneric({}, coef, TestTag::Tag1, space, 1);
+    bcs.addGeneric({}, coef, TestTag::Tag2, space, 1);
   }
 
   int bcs_with_tag1 = 0;
