@@ -117,14 +117,14 @@ void functional_solid_test_static_J2(double expected_disp_norm)
 
   // define the solver configurations
   const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
-                                                         .abs_tol     = 1.0e-10,
+                                                         .abs_tol     = 1.0e-22,
                                                          .print_level = 0,
                                                          .max_iter    = 500,
                                                          .lin_solver  = LinearSolver::GMRES,
                                                          .prec        = HypreBoomerAMGPrec{}};
 
   const NonlinearSolverOptions default_nonlinear_options = {
-      .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
+      .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 20, .print_level = 1};
 
   const typename solid_util::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
 
@@ -132,12 +132,11 @@ void functional_solid_test_static_J2(double expected_disp_norm)
   SolidFunctional<p, dim> solid_solver(default_static, GeometricNonlinearities::Off, FinalMeshOption::Reference,
                                        "solid_functional");
 
-#if 0
   solid_mechanics::J2 mat{
     10000, // Young's modulus
     0.25,  // Poisson's ratio
-    10.0,   // isotropic hardening constant
-    0.0,   // kinematic hardening constant
+    50.0,   // isotropic hardening constant
+    5.0,   // kinematic hardening constant
     50.0,  // yield stress
     1.0    // mass density
   };
@@ -147,68 +146,45 @@ void functional_solid_test_static_J2(double expected_disp_norm)
   auto state = solid_solver.createQuadratureDataBuffer(initial_state);
 
   solid_solver.setMaterial(mat, state);
-#else
-  double E = 10000.0;
-  double nu = 0.25;
-  double K = E / (3 * (1 - 2 * nu));
-  double G = E / (2 * (1 + nu));
-  solid_mechanics::LinearIsotropic<dim> mat{1.0, K, G};
-  solid_solver.setMaterial(mat);
-#endif
 
-  // Define the function for the initial displacement and boundary condition
+  // it is confusing to me to just pull out magic numbers
+  // for the element and boundary attributes
+
+  // prescribe zero displacement at the supported end of the beam,
+  std::set < int > support = {1};
   auto zero_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; };
+  solid_solver.setDisplacementBCs(support, zero_displacement);
+
+#if 1
+  // apply a unit displacement along z to the the tip of the beam
   auto translated_in_z = [](const mfem::Vector&, double t, mfem::Vector& u) -> void { 
     u = 0.0; 
     u[2] = 1.0 * t;
   };
-
-  // it is confusing to just pull out these magic numbers
-  // for the element and boundary attributes
-  std::set < int > support = {1};
   std::set < int > tip = {2};
-
-  // prescribe zero displacement at the supported end of the beam,
-  // and apply a unit displacement along z to the the tip of the beam
-  solid_solver.setDisplacementBCs(support, zero_displacement);
   solid_solver.setDisplacementBCs(tip, translated_in_z);
-
-#if 0
-  solid_solver.setDisplacement(zero_displacement);
 #else
-  auto initial_displacement = [](const mfem::Vector& x, mfem::Vector& u) -> void { 
-    u = 0.0; 
-    u[0] = x[0] * 0.125; 
-  };
-  solid_solver.setDisplacement(initial_displacement);
+  solid_solver.setPiolaTraction([](auto x, auto /*n*/, auto t){
+    return tensor<double, 3>{0, 0, 7.0 * (x[0] > 7.99) * t * (t - 1)};
+  });
 #endif
 
-  //solid_solver.setPiolaTraction([](auto x, auto /*n*/, auto t){
-  //  return tensor<double, 3>{0, 0, 0.5 * (x[0] > 7.99) * t * (t - 1)};
-  //});
+  solid_solver.setDisplacement(zero_displacement);
+
 
   // Finalize the data structures
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  int num_steps = 10;
-
-  std::ofstream outfile("displacement0.mtx");
-  solid_solver.displacement().Print(outfile);
-  outfile.close();
+  int num_steps = 25;
 
   solid_solver.outputState("paraview");
 
   double tmax = 1.0;
   double dt = tmax / num_steps;
-  for (int i = 0; i <= num_steps; i++) {
+  for (int i = 0; i < num_steps; i++) {
     solid_solver.advanceTimestep(dt);
     solid_solver.outputState("paraview");
-
-    outfile.open("displacement" + std::to_string(i + 1) + ".mtx");
-    solid_solver.displacement().Print(outfile);
-    outfile.close();
-
     std::cout << "displacement norm: " << norm(solid_solver.displacement()) << std::endl;
   }
 

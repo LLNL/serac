@@ -239,6 +239,9 @@ public:
     du_.SetSize(true_size);
     du_ = 0.0;
 
+    dr_.SetSize(true_size);
+    dr_ = 0.0;
+
     predicted_displacement_.SetSize(true_size);
     predicted_displacement_ = 0.0;
 
@@ -448,52 +451,19 @@ public:
 
         // residual function
         [this](const mfem::Vector& u, mfem::Vector& r) {
-          std::ofstream f("u" + std::to_string(count) + ".mtx");
-          u.Print(f);
-          f.close();
-
           r = (*residual_)(u, zero_, parameter_states_[parameter_indices] ...);
-
-          r.Print(std::cout);
-          std::cout << std::endl << std::endl;
-
-          auto & constrained_dofs = bcs_.allEssentialTrueDofs();
-          for (int i = 0; i < constrained_dofs.Size(); i++) {
-            du_[i] = u[i] - predicted_displacement_[i];
-          }
-
-          r.Print(std::cout);
-          std::cout << std::endl << std::endl;
-
-          for (const auto& bc : bcs_.essentials()) {
-            bc.eliminateToRHS(*J_, du_, r);
-          }
-
-          for (int i = 0; i < constrained_dofs.Size(); i++) {
-            r[i] = u[i] - predicted_displacement_[i];
-          }
-
-          r.Print(std::cout);
-          std::cout << std::endl << std::endl;
-
-          f.open("r" + std::to_string(count) + ".mtx");
-          r.Print(f);
-          f.close();
+          r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
         },
 
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
           auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, parameter_states_[parameter_indices] ...);
-          check_gradient(*residual_, u, zero_);
-          J_             = assemble(drdu);
+          //check_gradient(*residual_, u, zero_);
+          
+          J_ = assemble(drdu);
           for (const auto& bc : bcs_.essentials()) {
             bc.eliminateFromMatrix(*J_);
           }
-
-          std::ofstream f("J" + std::to_string(count++) + ".mtx");
-          J_->PrintMatlab(f);
-          f.close();
-
           return *J_;
         });
   }
@@ -558,12 +528,40 @@ public:
 
   /// @brief Solve the Quasi-static Newton system
   void quasiStaticSolve(double dt) { 
+
     time_ += dt;
 
-    // figure out the desired end-step displacements 
-    // these will be used later in the residual evaluation operator
-    for (auto& bc : bcs_.essentials()) {
-      bc.projectBdrToDofs(predicted_displacement_, time_);
+    // the 30 lines of code below are essentially equivalent to the 1-liner
+    // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
+    {
+      for (auto& bc : bcs_.essentials()) {
+        bc.projectBdrToDofs(du_, time_);
+      }
+
+      auto & constrained_dofs = bcs_.allEssentialTrueDofs();
+      for (int i = 0; i < constrained_dofs.Size(); i++) {
+        du_[constrained_dofs[i]] -= displacement_(constrained_dofs[i]);
+      }
+
+      dr_ = 0.0;
+      for (const auto& bc : bcs_.essentials()) {
+        bc.eliminateToRHS(*J_, du_, dr_);
+      }
+
+      auto& lin_solver = nonlin_solver_.LinearSolver();
+
+      lin_solver.SetOperator(*J_);
+
+      lin_solver.Mult(dr_, du_);
+
+      displacement_ += du_;
+
+      for (auto& bc : bcs_.essentials()) {
+        bc.projectBdrToDofs(du_, time_);
+      }
+
+      // do I have to do this?
+      nonlin_solver_.SetOperator(*residual_with_bcs_);
     }
 
     nonlin_solver_.Mult(zero_, displacement_);
