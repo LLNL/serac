@@ -123,8 +123,7 @@ TEST(SolidFunctionalFiniteDiff, FiniteDifference)
   // This adjoint load is equivalent to a discrete L1 norm on the displacement.
   serac::FiniteElementDual              adjoint_load(*mesh, solid_solver.displacement().space(), "adjoint_load");
   std::unique_ptr<mfem::HypreParVector> assembled_vector(adjoint_load_form.ParallelAssemble());
-  adjoint_load.trueVec() = *assembled_vector;
-  adjoint_load.distributeSharedDofs();
+  adjoint_load = *assembled_vector;
 
   // Solve the adjoint problem
   solid_solver.solveAdjoint(adjoint_load);
@@ -136,23 +135,20 @@ TEST(SolidFunctionalFiniteDiff, FiniteDifference)
   // to check if computed qoi sensitivity is consistent
   // with finite difference on the displacement
   double eps = 1.0e-6;
-  for (int i = 0; i < user_defined_bulk_modulus.gridFunc().Size(); ++i) {
+  for (int i = 0; i < user_defined_bulk_modulus.gridFunction().Size(); ++i) {
     // Perturb the bulk modulus
-    user_defined_bulk_modulus.trueVec()(i) = bulk_modulus_value + eps;
-    user_defined_bulk_modulus.distributeSharedDofs();
+    user_defined_bulk_modulus(i) = bulk_modulus_value + eps;
 
     solid_solver.advanceTimestep(dt);
-    mfem::ParGridFunction displacement_plus = solid_solver.displacement().gridFunc();
+    mfem::ParGridFunction displacement_plus = solid_solver.displacement().gridFunction();
 
-    user_defined_bulk_modulus.trueVec()(i) = bulk_modulus_value - eps;
-    user_defined_bulk_modulus.distributeSharedDofs();
+    user_defined_bulk_modulus(i) = bulk_modulus_value - eps;
 
     solid_solver.advanceTimestep(dt);
-    mfem::ParGridFunction displacement_minus = solid_solver.displacement().gridFunc();
+    mfem::ParGridFunction displacement_minus = solid_solver.displacement().gridFunction();
 
     // Reset to the original bulk modulus value
-    user_defined_bulk_modulus.trueVec()(i) = bulk_modulus_value;
-    user_defined_bulk_modulus.distributeSharedDofs();
+    user_defined_bulk_modulus(i) = bulk_modulus_value;
 
     // Finite difference to compute sensitivity of displacement with respect to bulk modulus
     mfem::ParGridFunction ddisp_dbulk(&solid_solver.displacement().space());
@@ -166,8 +162,8 @@ TEST(SolidFunctionalFiniteDiff, FiniteDifference)
 
     // See if these are similar
     SLIC_INFO(axom::fmt::format("dqoi_dbulk: {}", dqoi_dbulk));
-    SLIC_INFO(axom::fmt::format("sensitivity: {}", sensitivity.trueVec()(i)));
-    EXPECT_NEAR((sensitivity.trueVec()(i) - dqoi_dbulk) / std::max(dqoi_dbulk, 1.0e-2), 0.0, 5.0e-3);
+    SLIC_INFO(axom::fmt::format("sensitivity: {}", sensitivity(i)));
+    EXPECT_NEAR((sensitivity(i) - dqoi_dbulk) / std::max(dqoi_dbulk, 1.0e-2), 0.0, 5.0e-3);
   }
 }
 

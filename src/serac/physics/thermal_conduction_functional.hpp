@@ -127,8 +127,10 @@ public:
    * @param[in] parameter_states The optional array of finite element states represetnting user-defined parameters to be
    * used by an underlying material model or load
    */
-  ThermalConductionFunctional(const Thermal::SolverOptions& options, const std::string& name = {})
-      : BasePhysics(2, order),
+  ThermalConductionFunctional(
+      const Thermal::SolverOptions& options, const std::string& name = {},
+      std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states = {})
+      : BasePhysics(2, order, name),
         temperature_(
             StateManager::newState(FiniteElementState::Options{.order      = order,
                                                                .vector_dim = 1,
@@ -147,6 +149,9 @@ public:
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
+
+    state_.push_back(temperature_);
+    state_.push_back(adjoint_temperature_);
 
     // Create a pack of the primal field and parameter finite element spaces
     std::array<mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + 1> trial_spaces;
@@ -217,18 +222,14 @@ public:
    */
   void advanceTimestep(double& dt) override
   {
-    temperature_.initializeTrueVec();
-
     if (is_quasistatic_) {
-      nonlin_solver_.Mult(zero_, temperature_.trueVec());
+      nonlin_solver_.Mult(zero_, temperature_);
     } else {
       SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
 
       // Step the time integrator
-      ode_.Step(temperature_.trueVec(), time_, dt);
+      ode_.Step(temperature_, time_, dt);
     }
-
-    temperature_.distributeSharedDofs();
     cycle_ += 1;
   }
 
@@ -396,9 +397,6 @@ public:
       bc.projectBdr(temperature_, time_);
     }
 
-    // Initialize the true vector
-    temperature_.initializeTrueVec();
-
     if (is_quasistatic_) {
       residual_ = mfem_ext::StdFunctionOperator(
           temperature_.space().TrueVSize(),
@@ -480,7 +478,7 @@ public:
   virtual const serac::FiniteElementState& solveAdjoint(FiniteElementDual& adjoint_load,
                                                         FiniteElementDual* dual_with_essential_boundary = nullptr)
   {
-    mfem::HypreParVector adjoint_load_vector(adjoint_load.trueVec());
+    mfem::HypreParVector adjoint_load_vector(adjoint_load);
 
     // Add the sign correction to move the term to the RHS
     adjoint_load_vector *= -1.0;
@@ -488,10 +486,10 @@ public:
     auto& lin_solver = nonlin_solver_.LinearSolver();
 
     // By default, use a homogeneous essential boundary condition
-    mfem::HypreParVector adjoint_essential(adjoint_load.trueVec());
+    mfem::HypreParVector adjoint_essential(adjoint_load);
     adjoint_essential = 0.0;
 
-    functional_call_args_[0] = temperature_.trueVec();
+    functional_call_args_[0] = temperature_;
 
     auto [r, drdu] = (*K_functional_)(functional_call_args_, Index<0>{});
     auto jacobian  = assemble(drdu);
@@ -499,8 +497,7 @@ public:
 
     // If we have a non-homogeneous essential boundary condition, extract it from the given state
     if (dual_with_essential_boundary) {
-      dual_with_essential_boundary->initializeTrueVec();
-      adjoint_essential = dual_with_essential_boundary->trueVec();
+      adjoint_essential = *dual_with_essential_boundary;
     }
 
     for (const auto& bc : bcs_.essentials()) {
@@ -509,9 +506,7 @@ public:
     }
 
     lin_solver.SetOperator(*J_T);
-    lin_solver.Mult(adjoint_load_vector, adjoint_temperature_.trueVec());
-
-    adjoint_temperature_.distributeSharedDofs();
+    lin_solver.Mult(adjoint_load_vector, adjoint_temperature_);
 
     // Reset the equation solver to use the full nonlinear residual operator
     nonlin_solver_.SetOperator(residual_);
@@ -531,15 +526,13 @@ public:
   template <int parameter_field>
   FiniteElementDual& computeSensitivity()
   {
-    functional_call_args_[0] = temperature_.trueVec();
+    functional_call_args_[0] = temperature_;
 
     auto [r, drdparam] = (*K_functional_)(functional_call_args_, Index<parameter_field + 1>{});
 
     auto drdparam_mat = assemble(drdparam);
 
-    drdparam_mat->MultTranspose(adjoint_temperature_.trueVec(), parameter_sensitivities_[parameter_field]->trueVec());
-
-    parameter_sensitivities_[parameter_field]->distributeSharedDofs();
+    drdparam_mat->MultTranspose(adjoint_temperature_, *parameter_sensitivities_[parameter_field]);
 
     return *parameter_sensitivities_[parameter_field];
   }

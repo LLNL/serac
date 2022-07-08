@@ -14,9 +14,6 @@ exact_solution = {
 dt      = 0.5
 t_final = 5.0
 
--- Simulation output format
-output_type = "VisIt"
-
 main_mesh = {
     type = "file",
     -- mesh file

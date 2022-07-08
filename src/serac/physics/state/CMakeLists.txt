@@ -13,7 +13,6 @@ set(state_headers
 
 set(state_sources
     finite_element_vector.cpp
-    finite_element_state.cpp
     state_manager.cpp
     )
 

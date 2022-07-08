@@ -97,6 +97,8 @@ int main(int argc, char* argv[])
     serac::exitGracefully();
   }
 
+  // Output helpful run information
+  serac::printRunInfo();
   serac::cli::printGiven(cli_opts);
 
   // Read input file
@@ -118,6 +120,14 @@ int main(int argc, char* argv[])
     output_directory = search->second;
   }
   axom::utilities::filesystem::makeDirsForPath(output_directory);
+
+  search = cli_opts.find("paraview-directory");
+
+  std::optional<std::string> paraview_output_dir = {};
+  if (search != cli_opts.end()) {
+    paraview_output_dir = search->second;
+    axom::utilities::filesystem::makeDirsForPath(*paraview_output_dir);
+  }
 
   // Check if a restart was requested
   std::optional<int> restart_cycle;
@@ -208,10 +218,6 @@ int main(int argc, char* argv[])
   main_physics->setTime(t);
   main_physics->setCycle(cycle);
 
-  // FIXME: This and the FromInlet specialization are hacked together,
-  // should be inlet["output_type"].get<OutputType>()
-  main_physics->initializeOutput(inlet.getGlobalContainer().get<serac::OutputType>(), "serac", output_directory);
-
   main_physics->initializeSummary(datastore, t_final, dt);
 
   // Enter the time step loop.
@@ -233,7 +239,7 @@ int main(int argc, char* argv[])
     main_physics->advanceTimestep(dt_real);
 
     // Output a visualization file
-    main_physics->outputState();
+    main_physics->outputState(paraview_output_dir);
 
     // Save curve data to Sidre datastore to be output later
     main_physics->saveSummary(datastore, t);
