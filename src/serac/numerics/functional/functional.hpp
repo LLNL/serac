@@ -234,10 +234,15 @@ public:
                          const QuadratureData<qpt_data_type>& data = NoQData)
   {
 
-    if (!std::is_same_v< qpt_data_type, Nothing >) {
+    axom::ArrayView< qpt_data_type, 2 > qdata_view;
+
+    if constexpr (!(std::is_same_v< qpt_data_type, Nothing > ||
+                    std::is_same_v< qpt_data_type, Empty >)) {
       size_t num_bytes = sizeof(qpt_data_type) * data.size();
       material_state_buffers_.emplace_back(num_bytes);
       std::memcpy(material_state_buffers_.back().data(), &data(0,0), num_bytes);
+      auto ptr = reinterpret_cast< qpt_data_type * >(material_state_buffers_.back().data());
+      qdata_view = axom::ArrayView< qpt_data_type, 2 >(ptr, data.shape()[0], data.shape()[1]);
     }
 
     auto num_elements = domain.GetNE();
@@ -256,9 +261,6 @@ public:
     // NOTE: we are relying on MFEM to keep these geometric factors accurate. We store
     // the necessary data as references in the integral data structure.
     auto geom = domain.GetGeometricFactors(ir, flags);
-
-    auto ptr = reinterpret_cast< qpt_data_type * >(material_state_buffers_.back().data());
-    auto qdata_view = axom::ArrayView< qpt_data_type, 2 >(ptr, data.shape()[0], data.shape()[1]);
     domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<dim>{}, integrand, qdata_view);
   }
 

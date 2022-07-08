@@ -53,4 +53,23 @@ struct QuadratureData<Empty> : public SyncableData {
 extern QuadratureData<Nothing> NoQData;
 extern QuadratureData<Empty> EmptyQData;
 
+
+
+
 }  // namespace serac
+
+namespace axom {
+
+template <>
+struct ArrayView<serac::Nothing, 2> {
+  SERAC_HOST_DEVICE serac::Nothing & operator()(const int, const int) { return data; }
+  serac::Nothing data;
+};
+
+template <>
+struct ArrayView<serac::Empty, 2> {
+  SERAC_HOST_DEVICE serac::Empty & operator()(const int, const int) { return data; }
+  serac::Empty data;
+};
+
+}

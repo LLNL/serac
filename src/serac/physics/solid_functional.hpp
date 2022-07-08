@@ -92,7 +92,6 @@ void check_gradient(serac::Functional<T>& f, const mfem::Vector& U, const mfem::
   }
 }
 
-
 namespace serac {
 
 namespace solid_util {
@@ -131,21 +130,6 @@ template < typename ... T >
 struct Parameters{
     static constexpr int n = sizeof ... (T);
 };
-
-struct Updatable {
-  virtual void reset() = 0;
-  virtual void update() = 0;
-};
-
-template < typename T >
-struct DoubleBuffer : public Updatable {
-  DoubleBuffer (const QuadratureData<T> &data) { buffer[0] = data; }
-  void reset() final { buffer[1] = buffer[0]; }
-  void update() final { buffer[0] = buffer[1]; }
-  QuadratureData< T > buffer[2];
-};
-
-
 
 /**
  * @brief The nonlinear solid solver class
@@ -248,10 +232,15 @@ public:
     int true_size = velocity_.space().TrueVSize();
 
     u_.SetSize(true_size);
-    u_predicted_.SetSize(true_size);
     du_dt_.SetSize(true_size);
     previous_.SetSize(true_size);
     previous_ = 0.0;
+
+    du_.SetSize(true_size);
+    du_ = 0.0;
+
+    predicted_displacement_.SetSize(true_size);
+    predicted_displacement_ = 0.0;
 
     zero_.SetSize(true_size);
     zero_ = 0.0;
@@ -317,6 +306,15 @@ public:
     bcs_.addEssential(disp_bdr, disp_bdr_coef_, displacement_);
   }
 
+  void setDisplacementBCs(const std::set<int>&                                            disp_bdr,
+                          std::function<void(const mfem::Vector&, double, mfem::Vector&)> disp)
+  {
+    // Project the coefficient onto the grid function
+    disp_bdr_coef_ = std::make_shared<mfem::VectorFunctionCoefficient>(dim, disp);
+
+    bcs_.addEssential(disp_bdr, disp_bdr_coef_, displacement_);
+  }
+
   /**
    * @brief Set the displacement essential boundary conditions on a single component
    *
@@ -333,56 +331,6 @@ public:
     bcs_.addEssential(disp_bdr, component_disp_bdr_coef_, displacement_, component);
   }
 
-  /// @brief Solve the Quasi-static Newton system
-  void quasiStaticSolve() { nonlin_solver_.Mult(zero_, displacement_); }
-
-  /**
-   * @brief Advance the timestep
-   *
-   * @param[inout] dt The timestep to attempt. This will return the actual timestep for adaptive timestepping
-   * schemes
-   * @pre SolidFunctional::completeSetup() must be called prior to this call
-   */
-  void advanceTimestep(double& dt) override
-  {
-    SLIC_ERROR_ROOT_IF(!residual_, "completeSetup() must be called prior to advanceTimestep(dt) in SolidFunctional.");
-
-    // Set the mesh nodes to the reference configuration
-    if (geom_nonlin_ == GeometricNonlinearities::On) {
-      mesh_.NewNodes(*reference_nodes_);
-    }
-
-    bcs_.setTime(time_);
-
-    if (is_quasistatic_) {
-      quasiStaticSolve();
-      // Update the time for housekeeping purposes
-      time_ += dt;
-    } else {
-      ode2_.Step(displacement_, velocity_, time_, dt);
-    }
-
-    // if our simulation involves materials that have internal state 
-    if (residual_->material_state_buffers_.size()) {
-
-      // after finding displacements that satisfy equilibrium, 
-      // compute the residual one more time, this time enabling
-      // the material state buffers to be updated
-      residual_->update_qdata = true;
-      (*residual_)(displacement_, zero_, parameter_states_[parameter_indices] ...);
-      residual_->update_qdata = false;
-    }
-
-    if (geom_nonlin_ == GeometricNonlinearities::On) {
-      // Update the mesh with the new deformed nodes
-      deformed_nodes_->Set(1.0, displacement_.gridFunction());
-      deformed_nodes_->Add(1.0, *reference_nodes_);
-
-      mesh_.NewNodes(*deformed_nodes_);
-    }
-
-    cycle_ += 1;
-  }
 
   /**
    * @brief Set the material stress response and mass properties for the physics module
@@ -490,45 +438,6 @@ public:
         mesh_);
   }
 
-  /**
-   * @brief Get the displacement state
-   *
-   * @return A reference to the current displacement finite element state
-   */
-  const serac::FiniteElementState& displacement() const { return displacement_; };
-
-  /// @overload
-  serac::FiniteElementState& displacement() { return displacement_; };
-
-  /**
-   * @brief Get the adjoint displacement state
-   *
-   * @return A reference to the current adjoint displacement finite element state
-   */
-  const serac::FiniteElementState& adjointDisplacement() const { return adjoint_displacement_; };
-
-  /// @overload
-  serac::FiniteElementState& adjointDisplacement() { return adjoint_displacement_; };
-
-  /**
-   * @brief Get the velocity state
-   *
-   * @return A reference to the current velocity finite element state
-   */
-  const serac::FiniteElementState& velocity() const { return velocity_; };
-
-  /// @overload
-  serac::FiniteElementState& velocity() { return velocity_; };
-
-  /// @brief Reset the mesh, displacement, and velocity to the reference (stress-free) configuration
-  void resetToReferenceConfiguration()
-  {
-    displacement_ = 0.0;
-    velocity_     = 0.0;
-
-    mesh_.NewNodes(*reference_nodes_);
-  }
-
   /// @brief Build the quasi-static operator corresponding to the total Lagrangian formulation
   std::unique_ptr<mfem_ext::StdFunctionOperator> buildQuasistaticOperator()
   {
@@ -539,29 +448,52 @@ public:
 
         // residual function
         [this](const mfem::Vector& u, mfem::Vector& r) {
-          #if 0
-          u_predicted_ = u;
-          u_predicted_.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
-          r = (*residual_)(u_predicted_, zero_, parameter_states_[parameter_indices] ...);
-          #else
+          std::ofstream f("u" + std::to_string(count) + ".mtx");
+          u.Print(f);
+          f.close();
+
           r = (*residual_)(u, zero_, parameter_states_[parameter_indices] ...);
-          #endif
-          r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
+
+          r.Print(std::cout);
+          std::cout << std::endl << std::endl;
+
+          auto & constrained_dofs = bcs_.allEssentialTrueDofs();
+          for (int i = 0; i < constrained_dofs.Size(); i++) {
+            du_[i] = u[i] - predicted_displacement_[i];
+          }
+
+          r.Print(std::cout);
+          std::cout << std::endl << std::endl;
+
+          for (const auto& bc : bcs_.essentials()) {
+            bc.eliminateToRHS(*J_, du_, r);
+          }
+
+          for (int i = 0; i < constrained_dofs.Size(); i++) {
+            r[i] = u[i] - predicted_displacement_[i];
+          }
+
+          r.Print(std::cout);
+          std::cout << std::endl << std::endl;
+
+          f.open("r" + std::to_string(count) + ".mtx");
+          r.Print(f);
+          f.close();
         },
 
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
-          #if 0
-          u_predicted_ = u;
-          u_predicted_.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
-          auto [r, drdu] = (*residual_)(differentiate_wrt(u_predicted_), zero_, parameter_states_[parameter_indices] ...);
-          check_gradient(*residual_, u_predicted_, zero_);
-          #else
           auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, parameter_states_[parameter_indices] ...);
           check_gradient(*residual_, u, zero_);
-          #endif
           J_             = assemble(drdu);
-          bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+          for (const auto& bc : bcs_.essentials()) {
+            bc.eliminateFromMatrix(*J_);
+          }
+
+          std::ofstream f("J" + std::to_string(count++) + ".mtx");
+          J_->PrintMatlab(f);
+          f.close();
+
           return *J_;
         });
   }
@@ -583,6 +515,12 @@ public:
 
     if (is_quasistatic_) {
       residual_with_bcs_ = buildQuasistaticOperator();
+
+      // the residual calculation uses the old stiffness matrix
+      // to help apply essential boundary conditions, so we 
+      // compute J here to prime the pump for the first solve 
+      residual_with_bcs_->GetGradient(displacement_);
+
     } else {
       // the dynamic case is described by a residual function and a second order
       // ordinary differential equation. Here, we define the residual function in
@@ -591,20 +529,20 @@ public:
           displacement_.space().TrueVSize(),
 
           [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) {
-            add(1.0, u_, c0_, d2u_dt2, u_predicted_);
-            r = (*residual_)(u_predicted_, d2u_dt2, parameter_states_[parameter_indices] ...);
+            add(1.0, u_, c0_, d2u_dt2, predicted_displacement_);
+            r = (*residual_)(predicted_displacement_, d2u_dt2, parameter_states_[parameter_indices] ...);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
           [this](const mfem::Vector& d2u_dt2) -> mfem::Operator& {
-            add(1.0, u_, c0_, d2u_dt2, u_predicted_);
+            add(1.0, u_, c0_, d2u_dt2, predicted_displacement_);
 
             // K := dR/du
-            auto K = serac::get<1>((*residual_)(differentiate_wrt(u_predicted_), d2u_dt2, parameter_states_[parameter_indices] ...));
+            auto K = serac::get<1>((*residual_)(differentiate_wrt(predicted_displacement_), d2u_dt2, parameter_states_[parameter_indices] ...));
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             // M := dR/da
-            auto M = serac::get<1>((*residual_)(u_predicted_, differentiate_wrt(d2u_dt2), parameter_states_[parameter_indices] ...));
+            auto M = serac::get<1>((*residual_)(predicted_displacement_, differentiate_wrt(d2u_dt2), parameter_states_[parameter_indices] ...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
             // J = M + c0 * K
@@ -616,6 +554,65 @@ public:
     }
 
     nonlin_solver_.SetOperator(*residual_with_bcs_);
+  }
+
+  /// @brief Solve the Quasi-static Newton system
+  void quasiStaticSolve(double dt) { 
+    time_ += dt;
+
+    // figure out the desired end-step displacements 
+    // these will be used later in the residual evaluation operator
+    for (auto& bc : bcs_.essentials()) {
+      bc.projectBdrToDofs(predicted_displacement_, time_);
+    }
+
+    nonlin_solver_.Mult(zero_, displacement_);
+  }
+
+  /**
+   * @brief Advance the timestep
+   *
+   * @param[inout] dt The timestep to attempt. This will return the actual timestep for adaptive timestepping
+   * schemes
+   * @pre SolidFunctional::completeSetup() must be called prior to this call
+   */
+  void advanceTimestep(double& dt) override
+  {
+    SLIC_ERROR_ROOT_IF(!residual_, "completeSetup() must be called prior to advanceTimestep(dt) in SolidFunctional.");
+
+    // Set the mesh nodes to the reference configuration
+    if (geom_nonlin_ == GeometricNonlinearities::On) {
+      mesh_.NewNodes(*reference_nodes_);
+    }
+
+    bcs_.setTime(time_);
+
+    if (is_quasistatic_) {
+      quasiStaticSolve(dt);
+    } else {
+      ode2_.Step(displacement_, velocity_, time_, dt);
+    }
+
+    // if our simulation involves materials that have internal state 
+    if (residual_->material_state_buffers_.size()) {
+
+      // after finding displacements that satisfy equilibrium, 
+      // compute the residual one more time, this time enabling
+      // the material state buffers to be updated
+      residual_->update_qdata = true;
+      (*residual_)(displacement_, zero_, parameter_states_[parameter_indices] ...);
+      residual_->update_qdata = false;
+    }
+
+    if (geom_nonlin_ == GeometricNonlinearities::On) {
+      // Update the mesh with the new deformed nodes
+      deformed_nodes_->Set(1.0, displacement_.gridFunction());
+      deformed_nodes_->Add(1.0, *reference_nodes_);
+
+      mesh_.NewNodes(*deformed_nodes_);
+    }
+
+    cycle_ += 1;
   }
 
   /**
@@ -711,6 +708,45 @@ public:
     return *parameter_sensitivities_[parameter_field];
   }
 
+  /**
+   * @brief Get the displacement state
+   *
+   * @return A reference to the current displacement finite element state
+   */
+  const serac::FiniteElementState& displacement() const { return displacement_; };
+
+  /// @overload
+  serac::FiniteElementState& displacement() { return displacement_; };
+
+  /**
+   * @brief Get the adjoint displacement state
+   *
+   * @return A reference to the current adjoint displacement finite element state
+   */
+  const serac::FiniteElementState& adjointDisplacement() const { return adjoint_displacement_; };
+
+  /// @overload
+  serac::FiniteElementState& adjointDisplacement() { return adjoint_displacement_; };
+
+  /**
+   * @brief Get the velocity state
+   *
+   * @return A reference to the current velocity finite element state
+   */
+  const serac::FiniteElementState& velocity() const { return velocity_; };
+
+  /// @overload
+  serac::FiniteElementState& velocity() { return velocity_; };
+
+  /// @brief Reset the mesh, displacement, and velocity to the reference (stress-free) configuration
+  void resetToReferenceConfiguration()
+  {
+    displacement_ = 0.0;
+    velocity_     = 0.0;
+
+    mesh_.NewNodes(*reference_nodes_);
+  }
+
 protected:
   /// The compile-time finite element trial space for displacement and velocity (H1 of order p)
   using trial = H1<order, dim>;
@@ -752,7 +788,9 @@ protected:
   std::unique_ptr<mfem::HypreParMatrix> J_;
 
   /// @brief an intermediate variable used to store the predicted end-step displacement
-  mfem::Vector u_predicted_;
+  mfem::Vector predicted_displacement_;
+  mfem::Vector du_;
+  mfem::Vector dr_;
 
   /// @brief used to communicate the ODE solver's predicted displacement to the residual operator
   mfem::Vector u_;
@@ -787,6 +825,8 @@ protected:
 
   /// @brief An auxilliary zero vector
   mfem::Vector zero_;
+
+  int count = 0; // DELETE
 
 };
 
