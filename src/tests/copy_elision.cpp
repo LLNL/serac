@@ -40,7 +40,7 @@ ArrayCtr doubleArrayMaker()
   return result;
 }
 
-TEST(NRVO, NRVO_mfem_array)
+TEST(NRVO, NRVOMfemArray)
 {
   ArrayCtr arr = doubleArrayMaker();
   ASSERT_EQ(ArrayCtr::numDefaultCalls(), 1);

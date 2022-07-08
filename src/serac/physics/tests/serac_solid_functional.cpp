@@ -4,10 +4,9 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/solid_functional.hpp"
-
 #include <fstream>
 
+#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
@@ -368,26 +367,23 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
 }
 
-TEST(solid_functional, 2D_linear_static) { functional_solid_test_static<1, 2>(1.511052595); }
-TEST(solid_functional, 2D_quad_static) { functional_solid_test_static<2, 2>(2.18604855); }
-TEST(solid_functional, 2D_quad_parameterized_static) { functional_parameterized_solid_test<2, 2>(2.18604855); }
+TEST(SolidFunctional, 2DLinearStatic) { functional_solid_test_static<1, 2>(1.511052595); }
+TEST(SolidFunctional, 2DQuadStatic) { functional_solid_test_static<2, 2>(2.18604855); }
+TEST(SolidFunctional, 2DQuadParameterizedStatic) { functional_parameterized_solid_test<2, 2>(2.18604855); }
 
-TEST(solid_functional, 3D_linear_static) { functional_solid_test_static<1, 3>(1.37084852); }
-TEST(solid_functional, 3D_quad_static) { functional_solid_test_static<2, 3>(1.949532747); }
+TEST(SolidFunctional, 3DLinearStatic) { functional_solid_test_static<1, 3>(1.37084852); }
+TEST(SolidFunctional, 3DQuadStatic) { functional_solid_test_static<2, 3>(1.949532747); }
 
-TEST(solid_functional, 2D_linear_dynamic) { functional_solid_test_dynamic<1, 2>(1.525641434); }
-TEST(solid_functional, 2D_quad_dynamic) { functional_solid_test_dynamic<2, 2>(1.5325754040); }
+TEST(SolidFunctional, 2DLinearDynamic) { functional_solid_test_dynamic<1, 2>(1.52116682); }
+TEST(SolidFunctional, 2DQuadDynamic) { functional_solid_test_dynamic<2, 2>(1.52777214); }
 
-TEST(solid_functional, 3D_linear_dynamic) { functional_solid_test_dynamic<1, 3>(1.52490653); }
-TEST(solid_functional, 3D_quad_dynamic) { functional_solid_test_dynamic<2, 3>(1.53140614); }
+TEST(SolidFunctional, 3DLinearDynamic) { functional_solid_test_dynamic<1, 3>(1.520679017); }
+TEST(SolidFunctional, 3DQuadDynamic) { functional_solid_test_dynamic<2, 3>(1.527009514); }
 
-TEST(solid_functional, 2D_linear_pressure) { functional_solid_test_boundary<1, 2>(0.065134188, TestType::Pressure); }
-TEST(solid_functional, 2D_linear_traction) { functional_solid_test_boundary<1, 2>(0.126610139, TestType::Traction); }
+TEST(SolidFunctional, 2DLinearPressure) { functional_solid_test_boundary<1, 2>(0.065326222, TestType::Pressure); }
+TEST(SolidFunctional, 2DLinearTraction) { functional_solid_test_boundary<1, 2>(0.126593590, TestType::Traction); }
 
 }  // namespace serac
-
-//------------------------------------------------------------------------------
-#include "axom/slic/core/SimpleLogger.hpp"
 
 int main(int argc, char* argv[])
 {

@@ -10,6 +10,12 @@
   rules:
     - if: '$CI_COMMIT_BRANCH =~ /_qnone/ || $ON_QUARTZ == "OFF"' #run except if ...
       when: never
+  before_script:
+    # python3.8 is needed on lassen to avoid trampling on the x86 clingo wheel
+    - module load python/3.8
+    # We could also extract the CMake executable location from the hostconfig in common_build_functions
+    # like we do in config-build
+    - module load cmake/3.14.5
 
 
 ####

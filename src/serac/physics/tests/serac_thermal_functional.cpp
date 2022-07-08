@@ -4,17 +4,17 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/thermal_conduction_functional.hpp"
-#include "serac/physics/materials/thermal_functional_material.hpp"
-#include "serac/physics/materials/parameterized_thermal_functional_material.hpp"
-
 #include <fstream>
 
+#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
 #include "serac/serac_config.hpp"
 #include "serac/mesh/mesh_utils.hpp"
+#include "serac/physics/thermal_conduction_functional.hpp"
+#include "serac/physics/materials/thermal_functional_material.hpp"
+#include "serac/physics/materials/parameterized_thermal_functional_material.hpp"
 #include "serac/physics/state/state_manager.hpp"
 
 namespace serac {
@@ -155,17 +155,17 @@ void functional_test_dynamic(double expected_temp_norm)
   EXPECT_NEAR(expected_temp_norm, norm(thermal_solver.temperature()), 1.0e-6);
 }
 
-TEST(thermal_functional, 2D_linear_static) { functional_test_static<1, 2>(2.2909240); }
-TEST(thermal_functional, 2D_quad_static) { functional_test_static<2, 2>(2.29424403); }
-TEST(thermal_functional, 3D_linear_static) { functional_test_static<1, 3>(46.6285642); }
-TEST(thermal_functional, 3D_quad_static) { functional_test_static<2, 3>(46.6648538); }
+TEST(ThermalFunctional, 2DLinearStatic) { functional_test_static<1, 2>(2.2909240); }
+TEST(ThermalFunctional, 2DQuadStatic) { functional_test_static<2, 2>(2.29424403); }
+TEST(ThermalFunctional, 3DLinearStatic) { functional_test_static<1, 3>(46.6285642); }
+TEST(ThermalFunctional, 3DQuadStatic) { functional_test_static<2, 3>(46.6648538); }
 
-TEST(thermal_functional, 2D_linear_dynamic) { functional_test_dynamic<1, 2>(2.18066491); }
-TEST(thermal_functional, 2D_quad_dynamic) { functional_test_dynamic<2, 2>(2.1806651); }
-TEST(thermal_functional, 3D_linear_dynamic) { functional_test_dynamic<1, 3>(3.1447306); }
-TEST(thermal_functional, 3D_quad_dynamic) { functional_test_dynamic<2, 3>(3.36129252); }
+TEST(ThermalFunctional, 2DLinearDynamic) { functional_test_dynamic<1, 2>(2.18066491); }
+TEST(ThermalFunctional, 2DQuadDynamic) { functional_test_dynamic<2, 2>(2.1806651); }
+TEST(ThermalFunctional, 3DLinearDynamic) { functional_test_dynamic<1, 3>(3.1447306); }
+TEST(ThermalFunctional, 3DQuadDynamic) { functional_test_dynamic<2, 3>(3.36129252); }
 
-TEST(thermal_functional, parameterized_material)
+TEST(ThermalFunctional, ParameterizedMaterial)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -258,9 +258,6 @@ TEST(thermal_functional, parameterized_material)
 }
 
 }  // namespace serac
-
-//------------------------------------------------------------------------------
-#include "axom/slic/core/SimpleLogger.hpp"
 
 int main(int argc, char* argv[])
 {

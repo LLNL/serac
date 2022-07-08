@@ -4,17 +4,18 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/boundary_conditions/boundary_condition_manager.hpp"
-#include "serac/physics/boundary_conditions/boundary_condition_helper.hpp"
-
 #include <memory>
 
+#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
+#include "serac/physics/boundary_conditions/boundary_condition_manager.hpp"
+#include "serac/physics/boundary_conditions/boundary_condition_helper.hpp"
+
 namespace serac {
 
-TEST(boundary_cond, simple_repeated_dofs)
+TEST(BoundaryCond, SimpleRepeatedDofs)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   constexpr int      N    = 15;
@@ -53,7 +54,7 @@ enum OtherTag
   Fake2 = 1
 };
 
-TEST(boundary_cond, filter_generics)
+TEST(BoundaryCond, FilterGenerics)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   constexpr int N    = 15;
@@ -87,7 +88,7 @@ TEST(boundary_cond, filter_generics)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(boundary_cond_helper, element_attribute_dof_list_scalar)
+TEST(BoundaryCondHelper, ElementAttributeDofListScalar)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -96,11 +97,12 @@ TEST(boundary_cond_helper, element_attribute_dof_list_scalar)
   auto mesh = mfem::Mesh::MakeCartesian3D(4, 4, 4, mfem::Element::HEXAHEDRON);
   mesh.SetAttribute(1, attribute);
   mesh.SetAttribute(31, attribute);
+  mesh.SetAttributes();
 
   mfem::ParMesh pmesh(MPI_COMM_WORLD, mesh);
   int           sdim = pmesh.SpaceDimension();
 
-  mfem::Array<int> elem_attr_is_ess(pmesh.bdr_attributes.Max());
+  mfem::Array<int> elem_attr_is_ess(pmesh.attributes.Max());
   elem_attr_is_ess                = 0;
   elem_attr_is_ess[attribute - 1] = 1;
 
@@ -154,7 +156,7 @@ TEST(boundary_cond_helper, element_attribute_dof_list_scalar)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(boundary_cond_helper, element_attribute_dof_list_vector)
+TEST(BoundaryCondHelper, ElementAttributeDofListVector)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -163,6 +165,7 @@ TEST(boundary_cond_helper, element_attribute_dof_list_vector)
   auto mesh = mfem::Mesh::MakeCartesian3D(4, 4, 4, mfem::Element::HEXAHEDRON);
   mesh.SetAttribute(2, attribute);
   mesh.SetAttribute(3, attribute);
+  mesh.SetAttributes();
 
   mfem::ParMesh pmesh(MPI_COMM_WORLD, mesh);
   int           sdim = pmesh.SpaceDimension();
@@ -206,9 +209,6 @@ TEST(boundary_cond_helper, element_attribute_dof_list_vector)
 
 }  // namespace serac
 
-//------------------------------------------------------------------------------
-#include "axom/slic/core/SimpleLogger.hpp"
-
 int main(int argc, char* argv[])
 {
   int result = 0;
@@ -217,7 +217,7 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when exiting main scope
+  axom::slic::SimpleLogger logger;
 
   result = RUN_ALL_TESTS();
 

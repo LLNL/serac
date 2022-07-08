@@ -4,22 +4,22 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/thermal_conduction_functional.hpp"
-#include "serac/physics/materials/thermal_functional_material.hpp"
-#include "serac/physics/materials/parameterized_thermal_functional_material.hpp"
-
 #include <fstream>
 
+#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
 #include "serac/serac_config.hpp"
 #include "serac/mesh/mesh_utils.hpp"
+#include "serac/physics/thermal_conduction_functional.hpp"
+#include "serac/physics/materials/thermal_functional_material.hpp"
+#include "serac/physics/materials/parameterized_thermal_functional_material.hpp"
 #include "serac/physics/state/state_manager.hpp"
 
 namespace serac {
 
-TEST(thermal_functional_finite_diff, finite_difference)
+TEST(ThermalFunctionalFiniteDiff, FiniteDifference)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -155,9 +155,6 @@ TEST(thermal_functional_finite_diff, finite_difference)
 }
 
 }  // namespace serac
-
-//------------------------------------------------------------------------------
-#include "axom/slic/core/SimpleLogger.hpp"
 
 int main(int argc, char* argv[])
 {

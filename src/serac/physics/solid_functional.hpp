@@ -94,6 +94,8 @@ public:
                               displacement_.trueVec()),  // these entries need to be overwritten by parameters
         ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
               nonlin_solver_, bcs_),
+        c0_(0.0),
+        c1_(0.0),
         geom_nonlin_(geom_nonlin),
         keep_deformation_(keep_deformation)
   {
@@ -234,7 +236,9 @@ public:
     displacement_.initializeTrueVec();
 
     // Set the mesh nodes to the reference configuration
-    mesh_.NewNodes(*reference_nodes_);
+    if (geom_nonlin_ == GeometricNonlinearities::On) {
+      mesh_.NewNodes(*reference_nodes_);
+    }
 
     bcs_.setTime(time_);
 
@@ -250,11 +254,13 @@ public:
     velocity_.distributeSharedDofs();
     displacement_.distributeSharedDofs();
 
-    // Update the mesh with the new deformed nodes
-    deformed_nodes_->Set(1.0, displacement_.gridFunc());
-    deformed_nodes_->Add(1.0, *reference_nodes_);
+    if (geom_nonlin_ == GeometricNonlinearities::On) {
+      // Update the mesh with the new deformed nodes
+      deformed_nodes_->Set(1.0, displacement_.gridFunc());
+      deformed_nodes_->Add(1.0, *reference_nodes_);
 
-    mesh_.NewNodes(*deformed_nodes_);
+      mesh_.NewNodes(*deformed_nodes_);
+    }
 
     cycle_ += 1;
   }
@@ -601,6 +607,11 @@ public:
   virtual const serac::FiniteElementState& solveAdjoint(FiniteElementDual& adjoint_load,
                                                         FiniteElementDual* dual_with_essential_boundary = nullptr)
   {
+    if (geom_nonlin_ == GeometricNonlinearities::On) {
+      // Set the mesh nodes to the reference configuration
+      mesh_.NewNodes(*reference_nodes_);
+    }
+
     mfem::HypreParVector adjoint_load_vector(adjoint_load.trueVec());
 
     // Add the sign correction to move the term to the RHS
@@ -637,6 +648,11 @@ public:
     // Reset the equation solver to use the full nonlinear residual operator
     nonlin_solver_.SetOperator(*residual_);
 
+    if (geom_nonlin_ == GeometricNonlinearities::On) {
+      // Update the mesh with the new deformed nodes
+      mesh_.NewNodes(*deformed_nodes_);
+    }
+
     return adjoint_displacement_;
   }
 
@@ -652,6 +668,11 @@ public:
   template <int parameter_field>
   FiniteElementDual& computeSensitivity()
   {
+    if (geom_nonlin_ == GeometricNonlinearities::On) {
+      // Set the mesh nodes to the reference configuration
+      mesh_.NewNodes(*reference_nodes_);
+    }
+
     functional_call_args_[0] = displacement_.trueVec();
 
     auto [r, drdparam] = (*K_functional_)(functional_call_args_, Index<parameter_field + 1>{});
@@ -661,6 +682,11 @@ public:
     drdparam_mat->MultTranspose(adjoint_displacement_.trueVec(), parameter_sensitivities_[parameter_field]->trueVec());
 
     parameter_sensitivities_[parameter_field]->distributeSharedDofs();
+
+    if (geom_nonlin_ == GeometricNonlinearities::On) {
+      // Set the mesh nodes back to the reference configuration
+      mesh_.NewNodes(*deformed_nodes_);
+    }
 
     return *parameter_sensitivities_[parameter_field];
   }

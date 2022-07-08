@@ -4,9 +4,10 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/numerics/expr_template_ops.hpp"
-
+#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
+
+#include "serac/numerics/expr_template_ops.hpp"
 
 static std::pair<mfem::Vector, mfem::Vector> sample_vectors(const int entries)
 {
@@ -55,7 +56,7 @@ static auto build_partitioning(MPI_Comm comm, const int size)
   return std::make_pair(std::move(partitioning), per_proc * rank);
 }
 
-TEST(expr_templates, basic_add)
+TEST(ExprTemplates, BasicAdd)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   constexpr int size = 10;
@@ -72,7 +73,7 @@ TEST(expr_templates, basic_add)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(expr_templates, basic_add_hyprepar)
+TEST(ExprTemplates, BasicAddHyprepar)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   constexpr int size = 10;
@@ -99,7 +100,7 @@ TEST(expr_templates, basic_add_hyprepar)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(expr_templates, basic_div)
+TEST(ExprTemplates, BasicDiv)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   constexpr int    size   = 10;
@@ -134,7 +135,7 @@ TEST(expr_templates, basic_div)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(expr_templates, basic_add_lambda)
+TEST(ExprTemplates, BasicAddLambda)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   constexpr int size = 10;
@@ -154,7 +155,7 @@ TEST(expr_templates, basic_add_lambda)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(expr_templates, subtraction_not_commutative)
+TEST(ExprTemplates, SubtractionNotCommutative)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   constexpr int size = 10;
@@ -184,7 +185,7 @@ TEST(expr_templates, subtraction_not_commutative)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(expr_templates, subtraction_not_commutative_rvalue)
+TEST(ExprTemplates, SubtractionNotCommutativeRvalue)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   constexpr int size           = 3;
@@ -210,7 +211,7 @@ TEST(expr_templates, subtraction_not_commutative_rvalue)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(expr_templates, addition_commutative)
+TEST(ExprTemplates, AdditionCommutative)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   constexpr int size = 10;
@@ -224,7 +225,7 @@ TEST(expr_templates, addition_commutative)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(expr_templates, scalar_mult_commutative)
+TEST(ExprTemplates, ScalarMultCommutative)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   constexpr int size = 10;
@@ -243,7 +244,7 @@ TEST(expr_templates, scalar_mult_commutative)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(expr_templates, move_from_temp_lambda)
+TEST(ExprTemplates, MoveFromTempLambda)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   constexpr int size = 10;
@@ -266,7 +267,7 @@ TEST(expr_templates, move_from_temp_lambda)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(expr_templates, move_from_temp_vec_lambda)
+TEST(ExprTemplates, MoveFromTempVecLambda)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   constexpr int size = 10;
@@ -289,7 +290,7 @@ TEST(expr_templates, move_from_temp_vec_lambda)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(expr_templates, small_matvec)
+TEST(ExprTemplates, SmallMatvec)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   constexpr int rows    = 10;
@@ -308,7 +309,7 @@ TEST(expr_templates, small_matvec)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(expr_templates, small_mixed_expr)
+TEST(ExprTemplates, SmallMixedExpr)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   constexpr int rows = 10;
@@ -338,7 +339,7 @@ TEST(expr_templates, small_mixed_expr)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(expr_templates, small_mixed_expr_single_alloc)
+TEST(ExprTemplates, SmallMixedExprSingleAlloc)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   constexpr int rows = 10;
@@ -368,7 +369,7 @@ TEST(expr_templates, small_mixed_expr_single_alloc)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(expr_templates, large_mixed_expr)
+TEST(ExprTemplates, LargeMixedExpr)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   constexpr int rows = 10000;
@@ -397,7 +398,7 @@ TEST(expr_templates, large_mixed_expr)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(expr_templates, complex_expr_lambda)
+TEST(ExprTemplates, ComplexExprLambda)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   constexpr int rows = 10;
@@ -428,9 +429,6 @@ TEST(expr_templates, complex_expr_lambda)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-//------------------------------------------------------------------------------
-#include "axom/slic/core/SimpleLogger.hpp"
-
 int main(int argc, char* argv[])
 {
   int result = 0;
@@ -439,8 +437,7 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when
-                                    // exiting main scope
+  axom::slic::SimpleLogger logger;
 
   result = RUN_ALL_TESTS();
 

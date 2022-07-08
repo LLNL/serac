@@ -4,18 +4,17 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/mesh/mesh_utils.hpp"
-
 #include <fstream>
 
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
+#include "serac/mesh/mesh_utils.hpp"
 #include "serac/serac_config.hpp"
 
 namespace serac {
 
-TEST(mesh, load_exodus)
+TEST(Mesh, LoadExodus)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/bortel_echem.e";
@@ -37,7 +36,7 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when exiting main scope
+  axom::slic::SimpleLogger logger;
 
   result = RUN_ALL_TESTS();
 
