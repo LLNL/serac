@@ -96,7 +96,7 @@ void functional_solid_test_static(double expected_disp_norm)
   EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
 }
 
-void functional_solid_test_static_J2(double expected_disp_norm)
+void functional_solid_test_static_J2()
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -159,7 +159,7 @@ void functional_solid_test_static_J2(double expected_disp_norm)
   // apply a unit displacement along z to the the tip of the beam
   auto translated_in_z = [](const mfem::Vector&, double t, mfem::Vector& u) -> void { 
     u = 0.0; 
-    u[2] = 1.0 * t;
+    u[2] = 4.0 * t * (t - 1);
   };
   std::set < int > tip = {2};
   solid_solver.setDisplacementBCs(tip, translated_in_z);
@@ -176,7 +176,7 @@ void functional_solid_test_static_J2(double expected_disp_norm)
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  int num_steps = 25;
+  int num_steps = 10;
 
   solid_solver.outputState("paraview");
 
@@ -188,8 +188,10 @@ void functional_solid_test_static_J2(double expected_disp_norm)
     std::cout << "displacement norm: " << norm(solid_solver.displacement()) << std::endl;
   }
 
-  // Check the final displacement norm
-  EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
+  // this a qualitative test that just verifies 
+  // that plasticity models can have permanent
+  // deformation after unloading
+  EXPECT_GT(expected_disp_norm, 0.0);
 }
 
 template <int p, int dim>
@@ -455,23 +457,23 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
 }
 
-//TEST(SolidFunctional, 2DLinearStatic) { functional_solid_test_static<1, 2>(1.511052595); }
-//TEST(SolidFunctional, 2DQuadStatic) { functional_solid_test_static<2, 2>(2.18604855); }
-//TEST(SolidFunctional, 2DQuadParameterizedStatic) { functional_parameterized_solid_test<2, 2>(2.18604855); }
-//
-//TEST(SolidFunctional, 3DLinearStatic) { functional_solid_test_static<1, 3>(1.37084852); }
-//TEST(SolidFunctional, 3DQuadStatic) { functional_solid_test_static<2, 3>(1.949532747); }
-//
-TEST(SolidFunctional, 3DQuadStaticJ2) { functional_solid_test_static_J2(0.0); }
-//
-//TEST(SolidFunctional, 2DLinearDynamic) { functional_solid_test_dynamic<1, 2>(1.52116682); }
-//TEST(SolidFunctional, 2DQuadDynamic) { functional_solid_test_dynamic<2, 2>(1.52777214); }
-//
-//TEST(SolidFunctional, 3DLinearDynamic) { functional_solid_test_dynamic<1, 3>(1.520679017); }
-//TEST(SolidFunctional, 3DQuadDynamic) { functional_solid_test_dynamic<2, 3>(1.527009514); }
-//
-//TEST(SolidFunctional, 2DLinearPressure) { functional_solid_test_boundary<1, 2>(0.065326222, TestType::Pressure); }
-//TEST(SolidFunctional, 2DLinearTraction) { functional_solid_test_boundary<1, 2>(0.126593590, TestType::Traction); }
+TEST(SolidFunctional, 2DLinearStatic) { functional_solid_test_static<1, 2>(1.511052595); }
+TEST(SolidFunctional, 2DQuadStatic) { functional_solid_test_static<2, 2>(2.18604855); }
+TEST(SolidFunctional, 2DQuadParameterizedStatic) { functional_parameterized_solid_test<2, 2>(2.18604855); }
+
+TEST(SolidFunctional, 3DLinearStatic) { functional_solid_test_static<1, 3>(1.3708454313665728); }
+TEST(SolidFunctional, 3DQuadStatic) { functional_solid_test_static<2, 3>(1.949532747); }
+
+TEST(SolidFunctional, 3DQuadStaticJ2) { functional_solid_test_static_J2(); }
+
+TEST(SolidFunctional, 2DLinearDynamic) { functional_solid_test_dynamic<1, 2>(1.52116682); }
+TEST(SolidFunctional, 2DQuadDynamic) { functional_solid_test_dynamic<2, 2>(1.52777214); }
+
+TEST(SolidFunctional, 3DLinearDynamic) { functional_solid_test_dynamic<1, 3>(1.520679017); }
+TEST(SolidFunctional, 3DQuadDynamic) { functional_solid_test_dynamic<2, 3>(1.527009514); }
+
+TEST(SolidFunctional, 2DLinearPressure) { functional_solid_test_boundary<1, 2>(0.065326222, TestType::Pressure); }
+TEST(SolidFunctional, 2DLinearTraction) { functional_solid_test_boundary<1, 2>(0.12659525750241674, TestType::Traction); }
 
 }  // namespace serac
 
