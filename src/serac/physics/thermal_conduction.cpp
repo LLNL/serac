@@ -182,11 +182,6 @@ void ThermalConduction::completeSetup()
   // Build the dof array lookup tables
   temperature_.space().BuildDofToArrays();
 
-  // Project the essential boundary coefficients
-  for (auto& bc : bcs_.essentials()) {
-    bc.project(temperature_, time_);
-  }
-
   if (is_quasistatic_) {
     residual_ = mfem_ext::StdFunctionOperator(
         temperature_.space().TrueVSize(),
@@ -238,12 +233,17 @@ void ThermalConduction::completeSetup()
 void ThermalConduction::advanceTimestep(double& dt)
 {
   if (is_quasistatic_) {
-    nonlin_solver_.Mult(zero_, temperature_);
     time_ += dt;
+    // Project the essential boundary coefficients
+    for (auto& bc : bcs_.essentials()) {
+      bc.setDofs(temperature_, time_);
+    }
+    nonlin_solver_.Mult(zero_, temperature_);
   } else {
     SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
 
     // Step the time integrator
+    // Note that the ODE solver handles the essential boundary condition application itself
     ode_.Step(temperature_, time_, dt);
   }
 

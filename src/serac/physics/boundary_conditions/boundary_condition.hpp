@@ -154,37 +154,19 @@ public:
    * @param[in] time The time at which to project the boundary condition
    * @param[inout] state The field to project over
    */
-  void project(mfem::Vector& state, const double time = 0.0) const;
-
-  /**
-   * @brief Eliminates the rows and columns corresponding to the BC's true DOFS
-   * from a stiffness matrix
-   * @param[inout] k_mat The stiffness matrix to eliminate from,
-   * will be modified.  These eliminated matrix entries can be
-   * used to eliminate an essential BC to an RHS vector with
-   * BoundaryCondition::eliminateToRHS
-   */
-  void eliminateFromMatrix(mfem::HypreParMatrix& k_mat) const;
-
-  /**
-   * @brief Eliminates boundary condition from solution to RHS
-   * @param[in] k_mat_post_elim A stiffness matrix post-elimination
-   * @param[in] soln The solution vector
-   * @param[out] rhs The RHS vector for the system
-   * @pre BoundaryCondition::eliminateFrom has been called
-   */
-  void eliminateToRHS(mfem::HypreParMatrix& k_mat_post_elim, const mfem::Vector& soln, mfem::Vector& rhs) const;
+  void setDofs(mfem::Vector& state, const double time = 0.0) const;
 
   /**
    * @brief Applies an essential boundary condition to RHS
-   * @param[in] k_mat_post_elim A stiffness (system) matrix post-elimination
+   * @param[inout] k_mat A stiffness (system) matrix post-elimination. The rows and cols of the essential dofs will be
+   * eliminated.
    * @param[out] rhs The RHS vector for the system
    * @param[inout] state The state from which the solution DOF values are extracted and used to eliminate
    * @param[in] time Simulation time, used for time-varying boundary coefficients
-   * @pre BoundaryCondition::eliminateFrom has been called
+   * @pre The input state solution must contain the correct essential DOFs. This can be done by calling the @a
+   * BoundaryCondition::setDofs method.
    */
-  void apply(mfem::HypreParMatrix& k_mat_post_elim, mfem::Vector& rhs, FiniteElementState& state,
-             const double time = 0.0) const;
+  void apply(mfem::HypreParMatrix& k_mat, mfem::Vector& rhs, mfem::Vector& state) const;
 
 private:
   /**
@@ -241,10 +223,7 @@ private:
    * @note Only used for essential (Dirichlet) BCs
    */
   const mfem::ParFiniteElementSpace& space_;
-  /**
-   * @brief The eliminated entries for Dirichlet BCs
-   */
-  mutable std::unique_ptr<mfem::HypreParMatrix> eliminated_matrix_entries_;
+
   /**
    * @brief A label for the BC, for filtering purposes, in addition to its type hash
    * @note This should always correspond to an enum

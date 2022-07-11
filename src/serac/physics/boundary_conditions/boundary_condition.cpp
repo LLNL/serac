@@ -74,7 +74,7 @@ void BoundaryCondition::setDofs()
   }
 }
 
-void BoundaryCondition::project(mfem::Vector& vector, const double time) const
+void BoundaryCondition::setDofs(mfem::Vector& vector, const double time) const
 {
   SLIC_ERROR_IF(space_.GetTrueVSize() != vector.Size(),
                 "State to project and boundary condition space are not compatible.");
@@ -100,7 +100,7 @@ void BoundaryCondition::project(mfem::Vector& vector, const double time) const
       state.project(*scalar_coef, dof_list, *component_);
 
     } else {
-      state.projectBdr(*scalar_coef, markers_);
+      state.projectOnBoundary(*scalar_coef, markers_);
     }
   }
 
@@ -109,24 +109,10 @@ void BoundaryCondition::project(mfem::Vector& vector, const double time) const
   }
 }
 
-void BoundaryCondition::eliminateFromMatrix(mfem::HypreParMatrix& k_mat) const
+void BoundaryCondition::apply(mfem::HypreParMatrix& k_mat, mfem::Vector& rhs, mfem::Vector& state) const
 {
-  eliminated_matrix_entries_.reset(k_mat.EliminateRowsCols(true_dofs_));
-}
-
-void BoundaryCondition::eliminateToRHS(mfem::HypreParMatrix& k_mat_post_elim, const mfem::Vector& soln,
-                                       mfem::Vector& rhs) const
-{
-  SLIC_ERROR_ROOT_IF(!eliminated_matrix_entries_,
-                     "Must set eliminated matrix entries with eliminateFrom before applying to RHS.");
-  mfem::EliminateBC(k_mat_post_elim, *eliminated_matrix_entries_, true_dofs_, soln, rhs);
-}
-
-void BoundaryCondition::apply(mfem::HypreParMatrix& k_mat_post_elim, mfem::Vector& rhs, FiniteElementState& state,
-                              const double time) const
-{
-  project(state, time);
-  eliminateToRHS(k_mat_post_elim, state, rhs);
+  std::unique_ptr<mfem::HypreParMatrix> eliminated_entries(k_mat.EliminateRowsCols(true_dofs_));
+  mfem::EliminateBC(k_mat, *eliminated_entries, true_dofs_, state, rhs);
 }
 
 const mfem::Coefficient& BoundaryCondition::scalarCoefficient() const

@@ -235,10 +235,16 @@ public:
     }
 
     if (is_quasistatic_) {
-      quasiStaticSolve();
       // Update the time for housekeeping purposes
       time_ += dt;
+      // Project the essential boundary coefficients
+      for (auto& bc : bcs_.essentials()) {
+        bc.setDofs(displacement_, time_);
+      }
+
+      quasiStaticSolve();
     } else {
+      // Note that the ODE solver handles the essential boundary condition application itself
       ode2_.Step(displacement_, velocity_, time_, dt);
     }
 
@@ -517,11 +523,6 @@ public:
     // Build the dof array lookup tables
     displacement_.space().BuildDofToArrays();
 
-    // Project the essential boundary coefficients
-    for (auto& bc : bcs_.essentials()) {
-      bc.project(displacement_, time_);
-    }
-
     if (is_quasistatic_) {
       residual_ = buildQuasistaticOperator();
     } else {
@@ -617,8 +618,7 @@ public:
     }
 
     for (const auto& bc : bcs_.essentials()) {
-      bc.eliminateFromMatrix(*J_T);
-      bc.eliminateToRHS(*J_T, adjoint_essential, adjoint_load_vector);
+      bc.apply(*J_T, adjoint_load_vector, adjoint_essential);
     }
 
     lin_solver.SetOperator(*J_T);

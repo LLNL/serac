@@ -216,11 +216,17 @@ public:
   void advanceTimestep(double& dt) override
   {
     if (is_quasistatic_) {
+      time_ += dt;
+      // Project the essential boundary coefficients
+      for (auto& bc : bcs_.essentials()) {
+        bc.setDofs(temperature_, time_);
+      }
       nonlin_solver_.Mult(zero_, temperature_);
     } else {
       SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
 
       // Step the time integrator
+      // Note that the ODE solver handles the essential boundary condition application itself
       ode_.Step(temperature_, time_, dt);
     }
     cycle_ += 1;
@@ -384,11 +390,6 @@ public:
     // Build the dof array lookup tables
     temperature_.space().BuildDofToArrays();
 
-    // Project the essential boundary coefficients
-    for (auto& bc : bcs_.essentials()) {
-      bc.project(temperature_, time_);
-    }
-
     if (is_quasistatic_) {
       residual_ = mfem_ext::StdFunctionOperator(
           temperature_.space().TrueVSize(),
@@ -493,8 +494,7 @@ public:
     }
 
     for (const auto& bc : bcs_.essentials()) {
-      bc.eliminateFromMatrix(*J_T);
-      bc.eliminateToRHS(*J_T, adjoint_essential, adjoint_load_vector);
+      bc.apply(*J_T, adjoint_load_vector, adjoint_essential);
     }
 
     lin_solver.SetOperator(*J_T);
