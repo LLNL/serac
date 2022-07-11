@@ -35,8 +35,8 @@ public:
    * @param[in] component The zero-indexed vector component if the BC applies to just one component,
    * should be -1 for all components
    * @param[in] attrs The set of boundary condition attributes in the mesh that the BC applies to
-   * @param[in] num_attrs The total number of boundary attributes for the mesh
-   * @param[in] state The finite element state on which this BC is applied
+   * @param[in] space The finite element space on which this BC is applied. This is used to calculate the DOFs from the
+   * attribute list.
    */
   BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component,
                     const mfem::ParFiniteElementSpace& space, const std::set<int>& attrs);
@@ -46,8 +46,8 @@ public:
    * @param[in] coef Either a mfem::Coefficient or mfem::VectorCoefficient representing the BC
    * @param[in] component The zero-indexed vector component if the BC applies to just one component,
    * should be -1 for all components
-   * @param[in] true_dofs The indices of the relevant DOFs
-   * @param[in] state The finite element state on which this BC is applied
+   * @param[in] true_dofs The vector indices of the relevant DOFs
+   * @param[in] space The finite element space on which this BC is applied.
    */
   BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component,
                     const mfem::ParFiniteElementSpace& space, const mfem::Array<int>& true_dofs);
@@ -150,7 +150,7 @@ public:
   const mfem::Array<int>& getLocalDofs() const { return local_dofs_; }
 
   /**
-   * @brief Projects the boundary condition over a field
+   * @brief Projects the associated coefficient over a solution vector on the DOFs constrained by the boundary condition
    * @param[in] time The time at which to project the boundary condition
    * @param[inout] state The field to project over
    */
@@ -162,7 +162,6 @@ public:
    * eliminated.
    * @param[out] rhs The RHS vector for the system
    * @param[inout] state The state from which the solution DOF values are extracted and used to eliminate
-   * @param[in] time Simulation time, used for time-varying boundary coefficients
    * @pre The input state solution must contain the correct essential DOFs. This can be done by calling the @a
    * BoundaryCondition::setDofs method.
    */
