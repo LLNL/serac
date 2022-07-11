@@ -50,8 +50,8 @@ void BoundaryConditionManager::updateAllDofs() const
   all_true_dofs_.DeleteAll();
   all_local_dofs_.DeleteAll();
   for (const auto& bc : ess_bdr_) {
-    all_true_dofs_.Append(bc.getTrueDofs());
-    all_local_dofs_.Append(bc.getLocalDofs());
+    all_true_dofs_.Append(bc.getTrueDofList());
+    all_local_dofs_.Append(bc.getLocalDofList());
   }
   all_true_dofs_.Sort();
   all_local_dofs_.Sort();

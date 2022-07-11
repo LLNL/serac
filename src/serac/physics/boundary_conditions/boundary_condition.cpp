@@ -25,7 +25,7 @@ BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const std::optiona
     markers_[attr - 1] = 1;
   }
 
-  setDofs();
+  setDofListsFromMarkers();
 }
 
 BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component,
@@ -35,22 +35,22 @@ BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const std::optiona
   if (get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_)) {
     SLIC_ERROR_IF(component_, "A vector coefficient must be applied to all components");
   }
-  setTrueDofs(true_dofs);
+  setTrueDofList(true_dofs);
 }
 
-void BoundaryCondition::setTrueDofs(const mfem::Array<int> true_dofs)
+void BoundaryCondition::setTrueDofList(const mfem::Array<int> true_dofs)
 {
   true_dofs_ = true_dofs;
   space_.GetRestrictionMatrix()->BooleanMultTranspose(true_dofs_, local_dofs_);
 }
 
-void BoundaryCondition::setLocalDofs(const mfem::Array<int> local_dofs)
+void BoundaryCondition::setLocalDofList(const mfem::Array<int> local_dofs)
 {
   local_dofs_ = local_dofs;
   space_.GetRestrictionMatrix()->BooleanMult(local_dofs_, true_dofs_);
 }
 
-void BoundaryCondition::setDofs()
+void BoundaryCondition::setDofListsFromMarkers()
 {
   auto& mutable_space = const_cast<mfem::ParFiniteElementSpace&>(space_);
 

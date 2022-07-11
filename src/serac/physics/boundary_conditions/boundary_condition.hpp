@@ -33,7 +33,7 @@ public:
    * @brief Constructor for setting up a boundary condition using a set of attributes
    * @param[in] coef Either a mfem::Coefficient or mfem::VectorCoefficient representing the BC
    * @param[in] component The zero-indexed vector component if the BC applies to just one component,
-   * should be -1 for all components
+   * should be null for all components
    * @param[in] attrs The set of boundary condition attributes in the mesh that the BC applies to
    * @param[in] space The finite element space on which this BC is applied. This is used to calculate the DOFs from the
    * attribute list.
@@ -45,7 +45,7 @@ public:
    * @brief Minimal constructor for setting the true DOFs directly
    * @param[in] coef Either a mfem::Coefficient or mfem::VectorCoefficient representing the BC
    * @param[in] component The zero-indexed vector component if the BC applies to just one component,
-   * should be -1 for all components
+   * should be null for all components
    * @param[in] true_dofs The vector indices of the relevant DOFs
    * @param[in] space The finite element space on which this BC is applied.
    */
@@ -139,7 +139,7 @@ public:
    *
    * @note True and local dofs are described in the <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a>
    */
-  const mfem::Array<int>& getTrueDofs() const { return true_dofs_; }
+  const mfem::Array<int>& getTrueDofList() const { return true_dofs_; }
 
   /**
    * @brief Returns the DOF indices for an essential boundary condition
@@ -147,7 +147,7 @@ public:
    *
    * @note True and local dofs are described in the <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a>
    */
-  const mfem::Array<int>& getLocalDofs() const { return local_dofs_; }
+  const mfem::Array<int>& getLocalDofList() const { return local_dofs_; }
 
   /**
    * @brief Projects the associated coefficient over a solution vector on the DOFs constrained by the boundary condition
@@ -174,7 +174,7 @@ private:
    *
    * @note This will set both the true and local dof values.
    */
-  void setDofs();
+  void setDofListsFromMarkers();
 
   /**
    * @brief "Manually" set the DOF indices without specifying the field to which they apply
@@ -183,7 +183,7 @@ private:
    * @note This will set both the true and local internal dof index arrays.
    * @note True and local dofs are described in the <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a>
    */
-  void setTrueDofs(const mfem::Array<int> true_dofs);
+  void setTrueDofList(const mfem::Array<int> true_dofs);
 
   /**
    * @brief "Manually" set the DOF indices without specifying the field to which they apply
@@ -193,7 +193,7 @@ private:
    * @note This will set both the true and local internal dof index arrays.
    * @note True and local dofs are described in the <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a>
    */
-  void setLocalDofs(const mfem::Array<int> local_dofs);
+  void setLocalDofList(const mfem::Array<int> local_dofs);
 
   /**
    * @brief A coefficient containing either a mfem::Coefficient or an mfem::VectorCoefficient
