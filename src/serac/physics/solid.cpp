@@ -292,12 +292,6 @@ void Solid::completeSetup()
   // Build the dof array lookup tables
   displacement_.space().BuildDofToArrays();
 
-  // Project the essential boundary coefficients
-  for (auto& bc : bcs_.essentials()) {
-    // Project the coefficient
-    bc.setDofs(displacement_, time_);
-  }
-
   // If dynamic, create the mass and viscosity forms
   if (!is_quasistatic_) {
     M_ = std::make_unique<mfem::ParBilinearForm>(&displacement_.space());
