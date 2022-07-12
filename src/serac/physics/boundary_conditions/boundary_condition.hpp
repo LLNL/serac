@@ -157,13 +157,13 @@ public:
   void setDofs(mfem::Vector& state, const double time = 0.0) const;
 
   /**
-   * @brief Modify the system of equations \f$ A x = b \f$ by replacing equations that correspond to
+   * @brief Modify the system of equations \f$Ax=b\f$ by replacing equations that correspond to
    * essential boundary conditions with ones that prescribe the desired values. The rows of the matrix containing
    * essential dofs are set to zero with a one on the diagonal. To preserve symmetry,
    * the off-diagonal entries of associated columns of A are also zeroed out, and b is modified accordingly.
    * This function is equivalent to:
    *
-   * /f[
+   * \f[
    * A = \tilde{A} + A_e
    * (\tilde{A} + A_e) x = b
    * \tilde{A} x = b - A_e x
