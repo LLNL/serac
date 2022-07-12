@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
       StateManager::newState(FiniteElementState::Options{.order = p, .coll = std::move(fec), .name = "gamma"}));
 
 
-  // orient fibers in the beam kind like:
+  // orient fibers in the beam like below (horizontal when y < 0.5, vertical when y > 0.5):
   //
   // y
   //
