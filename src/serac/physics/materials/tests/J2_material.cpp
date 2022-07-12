@@ -81,7 +81,7 @@ int main() {
   double E = 9 * K * G / (3 * K + G);
   double nu = (3 * K - 2 * G) / (2 * (3 * K + G));
 
-  solid_mechanics::J2alt material{
+  solid_mechanics::J2 material{
     E,               // Young's modulus
     nu,              // Poisson's ratio
     0.0,             // isotropic hardening constant
@@ -89,7 +89,7 @@ int main() {
     165 * sqrt(3.0), // yield stress
     1.0              // mass density
   };
-  solid_mechanics::J2alt::State initial_state{};
+  solid_mechanics::J2::State initial_state{};
 
   tensor< double, 3 > epsilon[2] = {
     {-0.0030000, -0.003, 0.0060000},

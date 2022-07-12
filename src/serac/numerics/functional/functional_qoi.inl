@@ -333,7 +333,8 @@ public:
       // compute residual contributions at the element level and sum them
       output_E_ = 0.0;
       for (auto& integral : domain_integrals_) {
-        integral.Mult(input_E_, output_E_, wrt);
+        const bool update_state = false; // QoIs get read-only access to material state
+        integral.Mult(input_E_, output_E_, wrt, update_state);
       }
 
       // scatter-add to compute residuals on the local processor

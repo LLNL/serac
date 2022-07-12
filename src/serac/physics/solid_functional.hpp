@@ -334,7 +334,6 @@ public:
     bcs_.addEssential(disp_bdr, component_disp_bdr_coef_, displacement_, component);
   }
 
-
   /**
    * @brief Set the material stress response and mass properties for the physics module
    *

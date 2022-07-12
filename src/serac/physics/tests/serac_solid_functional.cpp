@@ -185,13 +185,12 @@ void functional_solid_test_static_J2()
   for (int i = 0; i < num_steps; i++) {
     solid_solver.advanceTimestep(dt);
     solid_solver.outputState("paraview");
-    std::cout << "displacement norm: " << norm(solid_solver.displacement()) << std::endl;
   }
 
   // this a qualitative test that just verifies 
   // that plasticity models can have permanent
   // deformation after unloading
-  EXPECT_GT(expected_disp_norm, 0.0);
+  EXPECT_GT(norm(solid_solver.displacement()), 0.0);
 }
 
 template <int p, int dim>
