@@ -38,13 +38,13 @@ BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const std::optiona
   setTrueDofList(true_dofs);
 }
 
-void BoundaryCondition::setTrueDofList(const mfem::Array<int> true_dofs)
+void BoundaryCondition::setTrueDofList(const mfem::Array<int>& true_dofs)
 {
   true_dofs_ = true_dofs;
   space_.GetRestrictionMatrix()->BooleanMultTranspose(true_dofs_, local_dofs_);
 }
 
-void BoundaryCondition::setLocalDofList(const mfem::Array<int> local_dofs)
+void BoundaryCondition::setLocalDofList(const mfem::Array<int>& local_dofs)
 {
   local_dofs_ = local_dofs;
   space_.GetRestrictionMatrix()->BooleanMult(local_dofs_, true_dofs_);

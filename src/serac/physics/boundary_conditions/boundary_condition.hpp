@@ -157,11 +157,24 @@ public:
   void setDofs(mfem::Vector& state, const double time = 0.0) const;
 
   /**
-   * @brief Applies an essential boundary condition to RHS
-   * @param[inout] k_mat A stiffness (system) matrix post-elimination. The rows and cols of the essential dofs will be
-   * eliminated.
-   * @param[out] rhs The RHS vector for the system
-   * @param[inout] state The state from which the solution DOF values are extracted and used to eliminate
+   * @brief Modify the system of equations \f$ A x = b \f$ by replacing equations that correspond to
+   * essential boundary conditions with ones that prescribe the desired values. The rows of the matrix containing
+   * essential dofs are set to zero with a one on the diagonal. To preserve symmetry,
+   * the off-diagonal entries of associated columns of A are also zeroed out, and b is modified accordingly.
+   * This function is equivalent to:
+   *
+   * /f[
+   * A = \tilde{A} + A_e
+   * (\tilde{A} + A_e) x = b
+   * \tilde{A} x = b - A_e x
+   * \f]
+   *
+   * where \f$ A_e \f$ contains the eliminated columns of \f$ A \f$ for the essential degrees of freedom. If \f$ A \f$
+   * is given as the input @a k_mat , \f$ A_e \f$ is returned in @a k_mat .
+   * @param[inout] k_mat A stiffness (system) matrix. The rows and cols of the essential dofs will be set to zero with a
+   * one on the diagonal after the return of this method.
+   * @param[inout] rhs The RHS vector for the system
+   * @param[in] state The state from which the solution DOF values are extracted and used to modify @a k_mat
    * @pre The input state solution must contain the correct essential DOFs. This can be done by calling the @a
    * BoundaryCondition::setDofs method.
    */
@@ -183,7 +196,7 @@ private:
    * @note This will set both the true and local internal dof index arrays.
    * @note True and local dofs are described in the <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a>
    */
-  void setTrueDofList(const mfem::Array<int> & true_dofs);
+  void setTrueDofList(const mfem::Array<int>& true_dofs);
 
   /**
    * @brief "Manually" set the DOF indices without specifying the field to which they apply
@@ -193,7 +206,7 @@ private:
    * @note This will set both the true and local internal dof index arrays.
    * @note True and local dofs are described in the <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a>
    */
-  void setLocalDofList(const mfem::Array<int> local_dofs);
+  void setLocalDofList(const mfem::Array<int>& local_dofs);
 
   /**
    * @brief A coefficient containing either a mfem::Coefficient or an mfem::VectorCoefficient
