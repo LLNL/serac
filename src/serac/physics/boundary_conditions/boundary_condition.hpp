@@ -173,7 +173,7 @@ public:
    * is given as the input @a k_mat , \f$ A_e \f$ is returned in @a k_mat .
    * @param[inout] k_mat A stiffness (system) matrix. The rows and cols of the essential dofs will be set to zero with a
    * one on the diagonal after the return of this method.
-   * @param[inout] rhs The RHS vector for the system
+   * @param[inout] rhs The RHS vector for the system. At return, this vector contains \f$ b - A_e x \f$.
    * @param[in] state The state from which the solution DOF values are extracted and used to modify @a k_mat
    * @pre The input state solution must contain the correct essential DOFs. This can be done by calling the @a
    * BoundaryCondition::setDofs method.
