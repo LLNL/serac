@@ -365,11 +365,11 @@ class Serac(CachedCMakePackage, CudaPackage):
         entries.append(cmake_cache_option("ENABLE_DOCS", enable_docs))
 
         if spec.satisfies('^py-sphinx'):
-            python_bin_dir = get_spec_path(spec, "python",
+            sphinx_bin_dir = get_spec_path(spec, "py-sphinx",
                                            path_replacements,
                                            use_bin=True)
             entries.append(cmake_cache_path("SPHINX_EXECUTABLE",
-                                            pjoin(python_bin_dir,
+                                            pjoin(sphinx_bin_dir,
                                                   "sphinx-build")))
 
         for dep in ('cppcheck', 'doxygen'):
