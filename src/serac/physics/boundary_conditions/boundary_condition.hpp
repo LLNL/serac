@@ -183,7 +183,7 @@ private:
    * @note This will set both the true and local internal dof index arrays.
    * @note True and local dofs are described in the <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a>
    */
-  void setTrueDofList(const mfem::Array<int> true_dofs);
+  void setTrueDofList(const mfem::Array<int> & true_dofs);
 
   /**
    * @brief "Manually" set the DOF indices without specifying the field to which they apply
