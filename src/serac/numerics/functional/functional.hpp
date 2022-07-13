@@ -140,24 +140,14 @@ class Functional<test(trials...), exec> {
   class Gradient;
 
   // clang-format off
-  template <typename... T>
+  template <int i> 
   struct operator_paren_return {
     using type = typename std::conditional<
-        (std::is_same_v<T, differentiate_wrt_this> + ...) == 1, // if the there is a dual number in the pack
-        serac::tuple<mfem::Vector&, Gradient&>,                 // then we return the value and the derivative
-        mfem::Vector&                                           // otherwise, we just return the value
+        i >= 0,                                 // if `i` is greater than or equal to zero,
+        serac::tuple<mfem::Vector&, Gradient&>, // then we return the value and the derivative w.r.t arg `i`
+        mfem::Vector&                           // otherwise, we just return the value
         >::type;
   };
-
-  template <int indx>
-  struct operator_paren_return_index {
-    using type = typename std::conditional<
-        indx >= 0,                                              // if the derivative index is valid
-        serac::tuple<mfem::Vector&, Gradient&>,                 // then we return the value and the derivative
-        mfem::Vector&                                           // otherwise, we just return the value
-        >::type;
-  };
-
   // clang-format on
 
 public:
@@ -398,7 +388,7 @@ public:
    *  at most one of which may be of the type `differentiate_wrt_this(mfem::Vector)`
    */
   template <int wrt, typename... T>
-  typename operator_paren_return<T...>::type operator()(DifferentiateWRT<wrt>, const T&... args) {
+  typename operator_paren_return<wrt>::type operator()(DifferentiateWRT<wrt>, const T&... args) {
 
     const mfem::Vector * input_T[] = {&static_cast<const mfem::Vector &>(args) ... };
 
