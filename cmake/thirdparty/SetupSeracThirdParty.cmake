@@ -193,7 +193,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(MFEM_ENABLE_EXAMPLES OFF CACHE BOOL "")
         set(MFEM_ENABLE_MINIAPPS OFF CACHE BOOL "")
 
-        message(STATUS "Project Name: ${PROJECT_NAME}")
         if(${PROJECT_NAME} STREQUAL "smith")
             add_subdirectory(${PROJECT_SOURCE_DIR}/serac/mfem  ${CMAKE_BINARY_DIR}/mfem)
         else()
