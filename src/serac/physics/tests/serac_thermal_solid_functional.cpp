@@ -45,20 +45,9 @@ void functional_test_static(double expected_norm)
 
   // define the thermal solver configurations
   auto thermal_options = Thermal::defaultQuasistaticOptions();
+  auto solid_mechanics_options = solid_mechanics::default_static_options();
 
-  // define the solid solver configurations
-  // no default solver options for solid yet, so make some here
-  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
-                                                         .abs_tol     = 1.0e-10,
-                                                         .print_level = 0,
-                                                         .max_iter    = 500,
-                                                         .lin_solver  = LinearSolver::GMRES,
-                                                         .prec        = HypreBoomerAMGPrec{}};
 
-  const NonlinearSolverOptions default_nonlinear_options = {
-      .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
-
-  const typename solid_util::SolverOptions solid_options = {default_linear_options, default_nonlinear_options};
 
   // Construct a functional-based thermal-solid solver
   // BT 04/27/2022 This can't be instantiated yet.

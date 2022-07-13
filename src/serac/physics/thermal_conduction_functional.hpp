@@ -127,13 +127,10 @@ public:
     std::array<mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + 1> trial_spaces;
     trial_spaces[0] = &temperature_.space();
 
-    functional_call_args_.emplace_back(temperature_);
-
     if constexpr (sizeof...(parameter_space) > 0) {
       for (size_t i = 0; i < sizeof...(parameter_space); ++i) {
         trial_spaces[i + 1]         = &(parameter_states_[i].get().space());
         parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, parameter_states_[i].get().space());
-        functional_call_args_.emplace_back(parameter_states_[i].get());
       }
     }
 
@@ -513,9 +510,6 @@ protected:
 
   /// The sensitivities (dual vectors) with repect to each of the input parameter fields
   std::array<std::unique_ptr<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;
-
-  /// The set of input trial space vectors (temperature + parameters) used to call the underlying functional
-  std::vector<std::reference_wrapper<const mfem::Vector>> functional_call_args_;
 
   /// Assembled mass matrix
   std::unique_ptr<mfem::HypreParMatrix> M_;

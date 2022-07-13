@@ -19,6 +19,9 @@
 
 namespace serac {
 
+using solid_mechanics::default_static_options;
+using solid_mechanics::default_dynamic_options;
+
 template <int p, int dim>
 void functional_solid_test_static(double expected_disp_norm)
 {
@@ -43,21 +46,8 @@ void functional_solid_test_static(double expected_disp_norm)
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
-  // define the solver configurations
-  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
-                                                         .abs_tol     = 1.0e-10,
-                                                         .print_level = 0,
-                                                         .max_iter    = 500,
-                                                         .lin_solver  = LinearSolver::GMRES,
-                                                         .prec        = HypreBoomerAMGPrec{}};
-
-  const NonlinearSolverOptions default_nonlinear_options = {
-      .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
-
-  const typename solid_util::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
-
   // Construct a functional-based solid mechanics solver
-  SolidFunctional<p, dim> solid_solver(default_static, GeometricNonlinearities::On, FinalMeshOption::Reference,
+  SolidFunctional<p, dim> solid_solver(default_static_options, GeometricNonlinearities::On, FinalMeshOption::Reference,
                                        "solid_functional");
 
   solid_mechanics::NeoHookean<dim> mat{1.0, 1.0, 1.0};
@@ -115,21 +105,16 @@ void functional_solid_test_static_J2()
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
 
-  // define the solver configurations
-  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
-                                                         .abs_tol     = 1.0e-22,
-                                                         .print_level = 0,
-                                                         .max_iter    = 500,
-                                                         .lin_solver  = LinearSolver::GMRES,
-                                                         .prec        = HypreBoomerAMGPrec{}};
 
-  const NonlinearSolverOptions default_nonlinear_options = {
-      .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 20, .print_level = 1};
+  auto options = default_static_options;
+  options.nonlinear.max_iter = 30;
 
-  const typename solid_util::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
+  auto linear_options = solid_mechanics::default_linear_options;
+  linear_options.abs_tol = 1.0e-16; // prevent early-exit in linear solve
+  options.linear = linear_options;
 
   // Construct a functional-based solid mechanics solver
-  SolidFunctional<p, dim> solid_solver(default_static, GeometricNonlinearities::Off, FinalMeshOption::Reference,
+  SolidFunctional<p, dim> solid_solver(options, GeometricNonlinearities::Off, FinalMeshOption::Reference,
                                        "solid_functional");
 
   solid_mechanics::J2 mat{
@@ -214,28 +199,9 @@ void functional_solid_test_dynamic(double expected_disp_norm)
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
 
-  // Define a boundary attribute set
-  std::set<int> ess_bdr = {1};
-
-  // define the solver configurations
-  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
-                                                         .abs_tol     = 1.0e-10,
-                                                         .print_level = 0,
-                                                         .max_iter    = 500,
-                                                         .lin_solver  = LinearSolver::GMRES,
-                                                         .prec        = HypreBoomerAMGPrec{}};
-
-  const NonlinearSolverOptions default_nonlinear_options = {
-      .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
-
-  const typename solid_util::TimesteppingOptions default_timestep = {TimestepMethod::AverageAcceleration,
-                                                                     DirichletEnforcementMethod::RateControl};
-
-  const typename solid_util::SolverOptions default_dynamic = {default_linear_options, default_nonlinear_options,
-                                                              default_timestep};
 
   // Construct a functional-based solid mechanics solver
-  SolidFunctional<p, dim> solid_solver(default_dynamic, GeometricNonlinearities::Off, FinalMeshOption::Reference,
+  SolidFunctional<p, dim> solid_solver(default_dynamic_options, GeometricNonlinearities::Off, FinalMeshOption::Reference,
                                        "solid_functional_dynamic");
 
   solid_mechanics::LinearIsotropic<dim> mat{1.0, 1.0, 1.0};
@@ -244,18 +210,12 @@ void functional_solid_test_dynamic(double expected_disp_norm)
   // Define the function for the initial displacement and boundary condition
   auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
 
-  // Set the initial displacement and boundary condition
+  // Define a boundary attribute set and specify initial / boundary conditions
+  std::set<int> ess_bdr = {1};
   solid_solver.setDisplacementBCs(ess_bdr, bc);
   solid_solver.setDisplacement(bc);
 
-  tensor<double, dim> constant_force;
-
-  constant_force[0] = 0.0;
-  constant_force[1] = 5.0e-1;
-
-  if (dim == 3) {
-    constant_force[2] = 0.0;
-  }
+  tensor<double, dim> constant_force{0.0, 0.5};
 
   solid_mechanics::ConstantBodyForce<dim> force{constant_force};
   solid_solver.addBodyForce(force);
@@ -302,24 +262,9 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
 
-  // Define a boundary attribute set
-  std::set<int> ess_bdr = {1};
-
-  // define the solver configurations
-  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
-                                                         .abs_tol     = 1.0e-10,
-                                                         .print_level = 0,
-                                                         .max_iter    = 500,
-                                                         .lin_solver  = LinearSolver::GMRES,
-                                                         .prec        = HypreBoomerAMGPrec{}};
-
-  const NonlinearSolverOptions default_nonlinear_options = {
-      .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
-
-  const typename solid_util::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
 
   // Construct a functional-based solid mechanics solver
-  SolidFunctional<p, dim> solid_solver(default_static, GeometricNonlinearities::Off, FinalMeshOption::Reference,
+  SolidFunctional<p, dim> solid_solver(default_static_options, GeometricNonlinearities::Off, FinalMeshOption::Reference,
                                        "solid_functional");
 
   solid_mechanics::LinearIsotropic<dim> mat{1.0, 1.0, 1.0};
@@ -328,7 +273,8 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
   // Define the function for the initial displacement and boundary condition
   auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
 
-  // Set the initial displacement and boundary condition
+  // Define a boundary attribute set and specify initial / boundary conditions
+  std::set<int> ess_bdr = {1};
   solid_solver.setDisplacementBCs(ess_bdr, bc);
   solid_solver.setDisplacement(bc);
 
@@ -387,22 +333,6 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
 
-  // Define a boundary attribute set
-  std::set<int> ess_bdr = {1};
-
-  // define the solver configurations
-  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
-                                                         .abs_tol     = 1.0e-10,
-                                                         .print_level = 0,
-                                                         .max_iter    = 500,
-                                                         .lin_solver  = LinearSolver::GMRES,
-                                                         .prec        = HypreBoomerAMGPrec{}};
-
-  const NonlinearSolverOptions default_nonlinear_options = {
-      .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
-
-  const typename solid_util::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
-
   // Construct and initialized the user-defined moduli to be used as a differentiable parameter in
   // the solid mechanics physics module.
   FiniteElementState user_defined_shear_modulus(
@@ -416,7 +346,7 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   user_defined_bulk_modulus = 1.0;
 
   // Construct a functional-based solid mechanics solver
-  SolidFunctional<p, dim, Parameters<H1<1>, H1<1>> > solid_solver(default_static, GeometricNonlinearities::On,
+  SolidFunctional<p, dim, Parameters<H1<1>, H1<1>> > solid_solver(default_static_options, GeometricNonlinearities::On,
                                                      FinalMeshOption::Reference, "solid_functional",
                                                      {user_defined_bulk_modulus, user_defined_shear_modulus});
 
@@ -426,7 +356,8 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   // Define the function for the initial displacement and boundary condition
   auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
 
-  // Set the initial displacement and boundary condition
+  // Define a boundary attribute set and specify initial / boundary conditions
+  std::set<int> ess_bdr = {1};
   solid_solver.setDisplacementBCs(ess_bdr, bc);
   solid_solver.setDisplacement(bc);
 

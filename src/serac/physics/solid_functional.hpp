@@ -14,6 +14,7 @@
 
 #include "mfem.hpp"
 
+#include "serac/physics/common.hpp"
 #include "serac/physics/base_physics.hpp"
 #include "serac/numerics/odes.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"
@@ -21,7 +22,6 @@
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/solid.hpp"
 #include "serac/physics/materials/functional_material_utils.hpp"
-
 
 // DELETE BELOW
 #include "serac/numerics/expr_template_ops.hpp" 
@@ -91,45 +91,31 @@ void check_gradient(serac::Functional<T>& f, const mfem::Vector& U, const mfem::
     std::cout << relative_error1 << " " << relative_error2 << std::endl;
   }
 }
-
 namespace serac {
 
-namespace solid_util {
-/// A timestep and boundary condition enforcement method for a dynamic solver
-struct TimesteppingOptions {
-  /// The timestepping method to be applied
-  TimestepMethod timestepper;
+namespace solid_mechanics {
 
-  /// The essential boundary enforcement method to use
-  DirichletEnforcementMethod enforcement_method;
-};
+  // define the solid solver configurations
+  // no default solver options for solid yet, so make some here
+  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
+                                                         .abs_tol     = 1.0e-10,
+                                                         .print_level = 0,
+                                                         .max_iter    = 500,
+                                                         .lin_solver  = LinearSolver::GMRES,
+                                                         .prec        = HypreBoomerAMGPrec{}};
 
-/**
- * @brief A configuration variant for the various solves
- * For quasistatic solves, leave the @a dyn_options parameter null. @a T_nonlin_options and @a T_lin_options
- * define the solver parameters for the nonlinear residual and linear stiffness solves. For
- * dynamic problems, @a dyn_options defines the timestepping scheme while @a T_lin_options and @a T_nonlin_options
- * define the nonlinear residual and linear stiffness solve options as before.
- */
-struct SolverOptions {
-  /// The linear solver options
-  LinearSolverOptions H_lin_options;
+  const NonlinearSolverOptions default_nonlinear_options = {
+      .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
 
-  /// The nonlinear solver options
-  NonlinearSolverOptions H_nonlin_options;
+  const SolverOptions default_static_options = {default_linear_options, default_nonlinear_options};
 
-  /**
-   * @brief The optional ODE solver parameters
-   * @note If this is not defined, a quasi-static solve is performed
-   */
-  std::optional<TimesteppingOptions> dyn_options = std::nullopt;
-};
-}  // namespace solid_util
+  const SolverOptions default_dynamic_options = {
+    default_linear_options, 
+    default_nonlinear_options,
+    TimesteppingOptions{TimestepMethod::AverageAcceleration, DirichletEnforcementMethod::RateControl}
+  };
 
-template < typename ... T >
-struct Parameters{
-    static constexpr int n = sizeof ... (T);
-};
+}
 
 /**
  * @brief The nonlinear solid solver class
@@ -160,7 +146,7 @@ public:
    * @param parameter_states An array of FiniteElementStates containing the user-specified parameter fields
    */
   SolidFunctional(
-      const solid_util::SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
+      const SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
       FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "",
       std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states = {})
       : BasePhysics(2, order, name),
@@ -213,17 +199,17 @@ public:
     displacement_ = 0.0;
     velocity_     = 0.0;
 
-    const auto& lin_options = options.H_lin_options;
+    const auto& lin_options = options.linear;
     // If the user wants the AMG preconditioner with a linear solver, set the pfes
     // to be the displacement
     const auto& augmented_options = mfem_ext::AugmentAMGForElasticity(lin_options, displacement_.space());
 
-    nonlin_solver_ = mfem_ext::EquationSolver(mesh_.GetComm(), augmented_options, options.H_nonlin_options);
+    nonlin_solver_ = mfem_ext::EquationSolver(mesh_.GetComm(), augmented_options, options.nonlinear);
 
     // Check for dynamic mode
-    if (options.dyn_options) {
-      ode2_.SetTimestepper(options.dyn_options->timestepper);
-      ode2_.SetEnforcementMethod(options.dyn_options->enforcement_method);
+    if (options.dynamic) {
+      ode2_.SetTimestepper(options.dynamic->timestepper);
+      ode2_.SetEnforcementMethod(options.dynamic->enforcement_method);
       is_quasistatic_ = false;
     } else {
       is_quasistatic_ = true;
