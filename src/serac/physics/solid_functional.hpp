@@ -200,15 +200,16 @@ public:
   }
 
   /**
-   * @brief Set the displacement essential boundary conditions on a single component
-   *
-   * @param[in] disp_bdr The set of boundary attributes to set the displacement on
-   * @param[in] disp The vector function containing the set displacement values
-   * @param[in] component The component to set the displacment on
+   * @brief Only allow tangential motion along a boundary mesh attribute. Only one sliding wall BC is allowed 
+   * per SolidFunctional module.
+   * 
+   * @pre The indicated boundary must have a uniform outward normal.
+   * 
+   * @param[in] slide_bdr The set of boundary attributes to set the displacement on
    */
-  void setSlideWallBCs(const std::set<int>& disp_bdr)
+  void setSlideWallBCs(const std::set<int>& slide_bdr)
   {
-    SLIC_ERROR_ROOT_IF(disp_bdr.size() > dim,
+    SLIC_ERROR_ROOT_IF(slide_bdr.size() > dim,
                        "Number of sliding wall attribute boundaries must be less than the dimension.");
 
     auto& space = displacement_.space();
@@ -218,8 +219,8 @@ public:
     for (int i = 0; i < space.GetNBE(); ++i) {
       int att = space.GetBdrAttribute(i);
 
-      auto found = disp_bdr.find(att);
-      if (found != disp_bdr.end()) {
+      auto found = slide_bdr.find(att);
+      if (found != slide_bdr.end()) {
         // compute the boundary element normal
         mfem::ElementTransformation* Tr    = space.GetBdrElementTransformation(i);
         const mfem::FiniteElement*   fe    = space.GetBE(i);
@@ -266,7 +267,7 @@ public:
       if constexpr (dim == 2) {
         double angle              = std::acos(normal.second(0));
         coordinate_transform_     = {{{std::cos(angle), -1.0 * std::sin(angle)}, {std::sin(angle), std::cos(angle)}}};
-        inv_coordinate_transform_ = inv(coordinate_transform_);
+        inv_coordinate_transform_ = inv(*coordinate_transform_);
       }
 
       if constexpr (dim == 3) {
@@ -747,24 +748,24 @@ protected:
     if (coordinate_transform_) {
       // Rotate the mesh nodes
       auto* nodes = mesh_.GetNodes();
-      rotateGridFunction(coordinate_transform_, *nodes);
+      rotateGridFunction(*coordinate_transform_, *nodes);
 
       // Get the displacement grid function from the state
       auto& displacement_gf = displacement_.gridFunction();
 
       // Rotate the displacement
-      rotateGridFunction(coordinate_transform_, displacement_gf);
+      rotateGridFunction(*coordinate_transform_, displacement_gf);
 
       // Set the underlying true vector from the rotated grid function
       displacement_.setFromGridFunction(displacement_gf);
 
       // Get the velocity grid function
       auto& velocity_gf = velocity_.gridFunction();
-      rotateGridFunction(coordinate_transform_, velocity_gf);
+      rotateGridFunction(*coordinate_transform_, velocity_gf);
       velocity_.setFromGridFunction(velocity_gf);
 
       auto& adjoint_disp = adjoint_displacement_.gridFunction();
-      rotateGridFunction(coordinate_transform_, adjoint_disp);
+      rotateGridFunction(*coordinate_transform_, adjoint_disp);
       adjoint_displacement_.setFromGridFunction(adjoint_disp);
     }
   }
@@ -774,29 +775,29 @@ protected:
     if (coordinate_transform_) {
       // Rotate the mesh nodes
       auto* nodes = mesh_.GetNodes();
-      rotateGridFunction(inv_coordinate_transform_, *nodes);
+      rotateGridFunction(*inv_coordinate_transform_, *nodes);
 
       // Get the displacement grid function from the state
       auto& displacement_gf = displacement_.gridFunction();
 
       // Rotate the displacement
-      rotateGridFunction(inv_coordinate_transform_, displacement_gf);
+      rotateGridFunction(*inv_coordinate_transform_, displacement_gf);
 
       // Set the underlying true vector from the rotated grid function
       displacement_.setFromGridFunction(displacement_gf);
 
       // Get the velocity grid function
       auto& velocity_gf = velocity_.gridFunction();
-      rotateGridFunction(inv_coordinate_transform_, velocity_gf);
+      rotateGridFunction(*inv_coordinate_transform_, velocity_gf);
       velocity_.setFromGridFunction(velocity_gf);
 
       auto& adjoint_disp = adjoint_displacement_.gridFunction();
-      rotateGridFunction(inv_coordinate_transform_, adjoint_disp);
+      rotateGridFunction(*inv_coordinate_transform_, adjoint_disp);
       adjoint_displacement_.setFromGridFunction(adjoint_disp);
     }
   }
 
-  void rotateGridFunction(const tensor<double, dim, dim>& rotation, mfem::ParGridFunction& grid_function)
+  void rotateGridFunction(const tensor<double, dim, dim>& rotation, mfem::GridFunction& grid_function)
   {
     tensor<double, dim> unrotated_vector;
     tensor<double, dim> rotated_vector;
@@ -806,14 +807,14 @@ protected:
     for (int dof = 0; dof < grid_function.FESpace()->GetNDofs(); ++dof) {
       for (int component = 0; component < grid_function.FESpace()->GetVDim(); ++component) {
         int vector_dof_index        = grid_function.FESpace()->DofToVDof(dof, component);
-        unrotated_vector[component] = grid_fuction(vector_dof_index);
+        unrotated_vector[component] = grid_function(vector_dof_index);
       }
 
       rotated_vector = dot(rotation, unrotated_vector);
 
       for (int component = 0; component < grid_function.FESpace()->GetVDim(); ++component) {
         int vector_dof_index           = grid_function.FESpace()->DofToVDof(dof, component);
-        grid_fuction(vector_dof_index) = rotated_vector[component];
+        grid_function(vector_dof_index) = rotated_vector[component];
       }
     }
   }

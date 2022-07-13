@@ -34,13 +34,10 @@ TEST(SolidFunctional, SlideWall)
   serac::StateManager::initialize(datastore, "solid_functional_static_solve");
 
   // Construct the appropriate dimension mesh and give it to the data store
-  std::string filename = SERAC_REPO_DIR "/data/meshes/beam-quad.mesh";
+  std::string filename = SERAC_REPO_DIR "/data/meshes/beam-quad-slide.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
-
-  // Define a boundary attribute set
-  std::set<int> ess_bdr = {1};
 
   // define the solver configurations
   const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
@@ -66,7 +63,7 @@ TEST(SolidFunctional, SlideWall)
   auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
 
   // Set the initial displacement and boundary condition
-  solid_solver.setDisplacementBCs(ess_bdr, bc);
+  solid_solver.setDisplacementBCs({1}, bc);
   solid_solver.setDisplacement(bc);
   solid_solver.setSlideWallBCs({2});
 
