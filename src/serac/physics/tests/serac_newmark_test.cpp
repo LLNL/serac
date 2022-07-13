@@ -211,6 +211,11 @@ TEST_F(NewmarkBetaTest, EquilbriumLua)
   solid_solver->outputState();
 }
 
+/*
+
+TODO This is currently disabled as this test occasionally fails when run in parallel but only following another test.
+This is tracked in https://github.com/LLNL/serac/issues/741 .
+
 TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
 {
   // Create DataStore
@@ -253,7 +258,7 @@ TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
   // Output the final state
   solid_solver->outputState();
 }
-
+*/
 int main(int argc, char** argv)
 {
   MPI_Init(&argc, &argv);

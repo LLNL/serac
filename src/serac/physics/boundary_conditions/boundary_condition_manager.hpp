@@ -167,21 +167,22 @@ public:
    *
    * @param[in] ess_bdr The set of essential BC attributes
    * @param[in] ess_bdr_coef The essential BC value coefficient
-   * @param[in] state The finite element state to which the BC should be applied
-   * @param[in] component The component to set (-1 implies all components are set)
+   * @param[in] space The finite element space to which the BC should be applied
+   * @param[in] component The component to set (null implies all components are set)
    */
-  void addEssential(const std::set<int>& ess_bdr, serac::GeneralCoefficient ess_bdr_coef, FiniteElementState& state,
-                    const std::optional<int> component = {});
+  void addEssential(const std::set<int>& ess_bdr, serac::GeneralCoefficient ess_bdr_coef,
+                    mfem::ParFiniteElementSpace& space, const std::optional<int> component = {});
 
   /**
    * @brief Set the natural boundary conditions from a list of boundary markers and a coefficient
    *
    * @param[in] nat_bdr The set of mesh attributes denoting a natural boundary
    * @param[in] nat_bdr_coef The coefficient defining the natural boundary function
-   * @param[in] component The component to set (-1 implies all components are set)
+   * @param[in] space The finite element space to which the BC should be applied
+   * @param[in] component The component to set (null implies all components are set)
    */
   void addNatural(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef,
-                  const std::optional<int> component = {});
+                  mfem::ParFiniteElementSpace& space, const std::optional<int> component = {});
 
   /**
    * @brief Set a generic boundary condition from a list of boundary markers and a coefficient
@@ -190,14 +191,15 @@ public:
    * @param[in] bdr_attr The set of mesh attributes denoting a natural boundary
    * @param[in] bdr_coef The coefficient defining the natural boundary function
    * @param[in] tag The tag for the generic boundary condition, for identification purposes
-   * @param[in] component The component to set (-1 implies all components are set)
+   * @param[in] space The finite element space to which the BC should be applied
+   * @param[in] component The component to set (null implies all components are set)
    * @pre Template type "Tag" must be an enumeration
    */
   template <typename Tag>
   void addGeneric(const std::set<int>& bdr_attr, serac::GeneralCoefficient bdr_coef, const Tag tag,
-                  const std::optional<int> component = {})
+                  mfem::ParFiniteElementSpace& space, const std::optional<int> component = {})
   {
-    other_bdr_.emplace_back(bdr_coef, component, bdr_attr, num_attrs_);
+    other_bdr_.emplace_back(bdr_coef, component, space, bdr_attr);
     other_bdr_.back().setTag(tag);
     all_dofs_valid_ = false;
   }
@@ -207,11 +209,11 @@ public:
    *
    * @param[in] true_dofs The true degrees of freedom to set with a Dirichlet condition
    * @param[in] ess_bdr_coef The coefficient that evaluates to the Dirichlet condition
-   * @param[in] state The finite element state where the essential boundary is being applied
-   * @param[in] component The component to set (-1 implies all components are set)
+   * @param[in] space The finite element space to which the BC should be applied
+   * @param[in] component The component to set (null implies all components are set)
    */
   void addEssentialTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef,
-                            serac::FiniteElementState& state, std::optional<int> component = {});
+                            mfem::ParFiniteElementSpace& space, std::optional<int> component = {});
 
   /**
    * @brief Returns all the true degrees of freedom associated with all the essential BCs
@@ -248,15 +250,6 @@ public:
   {
     return std::unique_ptr<mfem::HypreParMatrix>(matrix.EliminateRowsCols(allEssentialTrueDofs()));
   }
-
-  /**
-   * @brief Sets the time for all stored boundary conditions
-   *
-   * @param[in] time The current simulation time
-   *
-   * Used for time-dependent boundary conditions
-   */
-  void setTime(const double time);
 
   /**
    * @brief Accessor for the essential BC objects

@@ -196,7 +196,7 @@ public:
     // Project the coefficient onto the grid function
     disp_bdr_coef_ = std::make_shared<mfem::VectorFunctionCoefficient>(dim, disp);
 
-    bcs_.addEssential(disp_bdr, disp_bdr_coef_, displacement_);
+    bcs_.addEssential(disp_bdr, disp_bdr_coef_, displacement_.space());
   }
 
   /**
@@ -279,7 +279,7 @@ public:
       disp_bdr_coef_ = std::make_shared<mfem::VectorFunctionCoefficient>(
           dim, [](const mfem::Vector&, mfem::Vector& vec) { vec = 0.0; });
 
-      bcs_.addEssential({normal.first}, disp_bdr_coef_, displacement_, 0);
+      bcs_.addEssential({normal.first}, disp_bdr_coef_, displacement_.space(), 0);
     }
   }
 
@@ -304,13 +304,17 @@ public:
 
     rotate();
 
-    bcs_.setTime(time_);
-
     if (is_quasistatic_) {
-      quasiStaticSolve();
       // Update the time for housekeeping purposes
       time_ += dt;
+      // Project the essential boundary coefficients
+      for (auto& bc : bcs_.essentials()) {
+        bc.setDofs(displacement_, time_);
+      }
+
+      quasiStaticSolve();
     } else {
+      // Note that the ODE solver handles the essential boundary condition application itself
       ode2_.Step(displacement_, velocity_, time_, dt);
     }
 
@@ -591,11 +595,6 @@ public:
     // Build the dof array lookup tables
     displacement_.space().BuildDofToArrays();
 
-    // Project the essential boundary coefficients
-    for (auto& bc : bcs_.essentials()) {
-      bc.projectBdr(displacement_, time_);
-    }
-
     if (is_quasistatic_) {
       residual_ = buildQuasistaticOperator();
     } else {
@@ -691,8 +690,7 @@ public:
     }
 
     for (const auto& bc : bcs_.essentials()) {
-      bc.eliminateFromMatrix(*J_T);
-      bc.eliminateToRHS(*J_T, adjoint_essential, adjoint_load_vector);
+      bc.apply(*J_T, adjoint_load_vector, adjoint_essential);
     }
 
     lin_solver.SetOperator(*J_T);
