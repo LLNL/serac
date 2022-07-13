@@ -14,6 +14,7 @@
 
 #include "mfem.hpp"
 
+#include "serac/physics/common.hpp"
 #include "serac/physics/base_physics.hpp"
 #include "serac/numerics/odes.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"
@@ -25,36 +26,6 @@
 namespace serac {
 
 namespace Thermal {
-
-/// A timestep and boundary condition enforcement method for a dynamic solver
-struct TimesteppingOptions {
-  /// The timestepping method to be applied
-  serac::TimestepMethod timestepper;
-
-  /// The essential boundary enforcement method to use
-  serac::DirichletEnforcementMethod enforcement_method;
-};
-
-/**
- * @brief A configuration variant for the various solves
- * For quasistatic solves, leave the @a dyn_options parameter null. @a T_nonlin_options and @a T_lin_options
- * define the solver parameters for the nonlinear residual and linear stiffness solves. For
- * dynamic problems, @a dyn_options defines the timestepping scheme while @a T_lin_options and @a T_nonlin_options
- * define the nonlinear residual and linear stiffness solve options as before.
- */
-struct SolverOptions {
-  /// The linear solver options
-  LinearSolverOptions T_lin_options;
-
-  /// The nonlinear solver options
-  NonlinearSolverOptions T_nonlin_options;
-
-  /**
-   * @brief The optional ODE solver parameters
-   * @note If this is not defined, a quasi-static solve is performed
-   */
-  std::optional<TimesteppingOptions> dyn_options = std::nullopt;
-};
 
 /**
  * @brief Reasonable defaults for most thermal linear solver options
@@ -96,7 +67,7 @@ SolverOptions defaultQuasistaticOptions() { return {defaultLinearOptions(), defa
 SolverOptions defaultDynamicOptions()
 {
   return {defaultLinearOptions(), defaultNonlinearOptions(),
-          Thermal::TimesteppingOptions{TimestepMethod::BackwardEuler, DirichletEnforcementMethod::RateControl}};
+          TimesteppingOptions{TimestepMethod::BackwardEuler, DirichletEnforcementMethod::RateControl}};
 }
 
 }  // namespace Thermal
@@ -113,9 +84,11 @@ SolverOptions defaultDynamicOptions()
  *  where \f$\mathbf{M}\f$ is a mass matrix, \f$\mathbf{K}\f$ is a stiffness matrix, \f$\mathbf{u}\f$ is the
  *  temperature degree of freedom vector, and \f$\mathbf{f}\f$ is a thermal load vector.
  */
+template <int order, int dim, typename parameters = Parameters<>, typename parameter_indices  = std::make_integer_sequence< int, parameters::n > >
+class ThermalConductionFunctional;
 
-template <int order, int dim, typename... parameter_space>
-class ThermalConductionFunctional : public BasePhysics {
+template <int order, int dim, typename ... parameter_space, int ... parameter_indices >
+class ThermalConductionFunctional< order, dim, Parameters< parameter_space ... >, std::integer_sequence< int, parameter_indices ... > > : public BasePhysics {
 public:
   /**
    * @brief Construct a new Thermal Functional Solver object
@@ -126,7 +99,7 @@ public:
    * used by an underlying material model or load
    */
   ThermalConductionFunctional(
-      const Thermal::SolverOptions& options, const std::string& name = {},
+      const SolverOptions& options, const std::string& name = {},
       std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states = {})
       : BasePhysics(2, order, name),
         temperature_(
@@ -170,13 +143,13 @@ public:
 
     state_.push_back(temperature_);
 
-    nonlin_solver_ = mfem_ext::EquationSolver(mesh_.GetComm(), options.T_lin_options, options.T_nonlin_options);
+    nonlin_solver_ = mfem_ext::EquationSolver(mesh_.GetComm(), options.linear, options.nonlinear);
     nonlin_solver_.SetOperator(residual_);
 
     // Check for dynamic mode
-    if (options.dyn_options) {
-      ode_.SetTimestepper(options.dyn_options->timestepper);
-      ode_.SetEnforcementMethod(options.dyn_options->enforcement_method);
+    if (options.dynamic) {
+      ode_.SetTimestepper(options.dynamic->timestepper);
+      ode_.SetEnforcementMethod(options.dynamic->enforcement_method);
       is_quasistatic_ = false;
     } else {
       is_quasistatic_ = true;
@@ -187,6 +160,8 @@ public:
 
     int true_size = temperature_.space().TrueVSize();
     u_.SetSize(true_size);
+    u_predicted_.SetSize(true_size);
+
     previous_.SetSize(true_size);
     previous_ = 0.0;
 
@@ -394,16 +369,12 @@ public:
           temperature_.space().TrueVSize(),
 
           [this](const mfem::Vector& u, mfem::Vector& r) {
-            functional_call_args_[0] = u;
-
-            r = (*K_functional_)(functional_call_args_);
+            r = (*K_functional_)(u, parameter_states_[parameter_indices] ...);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
           [this](const mfem::Vector& u) -> mfem::Operator& {
-            functional_call_args_[0] = u;
-
-            auto [r, drdu] = (*K_functional_)(functional_call_args_, Index<0>{});
+            auto [r, drdu] = (*K_functional_)(differentiate_wrt(u), parameter_states_[parameter_indices] ...);
             J_             = assemble(drdu);
             bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             return *J_;
@@ -414,19 +385,13 @@ public:
       residual_ = mfem_ext::StdFunctionOperator(
           temperature_.space().TrueVSize(),
           [this](const mfem::Vector& du_dt, mfem::Vector& r) {
-            functional_call_args_[0] = du_dt;
-
-            auto M_residual = (*M_functional_)(functional_call_args_);
+            auto M_residual = (*M_functional_)(du_dt, parameter_states_[parameter_indices] ...);
 
             // TODO we should use the new variadic capability to directly pass temperature and d_temp_dt directly to
             // these kernels to avoid ugly hacks like this.
             mfem::Vector K_arg(u_.Size());
-            add(1.0, u_, dt_, du_dt, K_arg);
-            functional_call_args_[0] = K_arg;
-
-            auto K_residual = (*K_functional_)(functional_call_args_);
-
-            functional_call_args_[0] = u_;
+            add(1.0, u_, dt_, du_dt, u_predicted_);
+            auto K_residual = (*K_functional_)(u_predicted_, parameter_states_[parameter_indices] ...);
 
             add(M_residual, K_residual, r);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
@@ -434,18 +399,14 @@ public:
 
           [this](const mfem::Vector& du_dt) -> mfem::Operator& {
             // Only reassemble the stiffness if it is a new timestep
-            functional_call_args_[0] = du_dt;
 
-            auto M = serac::get<1>((*M_functional_)(functional_call_args_, Index<0>{}));
+            auto M = serac::get<1>((*M_functional_)(differentiate_wrt(du_dt), parameter_states_[parameter_indices] ...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
             mfem::Vector K_arg(u_.Size());
-            add(1.0, u_, dt_, du_dt, K_arg);
-            functional_call_args_[0] = K_arg;
+            add(1.0, u_, dt_, du_dt, u_predicted_);
 
-            auto K = serac::get<1>((*K_functional_)(functional_call_args_, Index<0>{}));
-
-            functional_call_args_[0] = u_;
+            auto K = serac::get<1>((*K_functional_)(differentiate_wrt(u_predicted_), parameter_states_[parameter_indices] ...));
 
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
@@ -481,9 +442,7 @@ public:
     mfem::HypreParVector adjoint_essential(adjoint_load);
     adjoint_essential = 0.0;
 
-    functional_call_args_[0] = temperature_;
-
-    auto [r, drdu] = (*K_functional_)(functional_call_args_, Index<0>{});
+    auto [r, drdu] = (*K_functional_)(differentiate_wrt(temperature_), parameter_states_[parameter_indices] ...);
     auto jacobian  = assemble(drdu);
     auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -518,9 +477,7 @@ public:
   template <int parameter_field>
   FiniteElementDual& computeSensitivity()
   {
-    functional_call_args_[0] = temperature_;
-
-    auto [r, drdparam] = (*K_functional_)(functional_call_args_, Index<parameter_field + 1>{});
+    auto [r, drdparam] = (*K_functional_)(DifferentiateWRT<parameter_field + 1>{}, temperature_, parameter_states_[parameter_indices] ...);
 
     auto drdparam_mat = assemble(drdparam);
 
@@ -594,8 +551,13 @@ protected:
   /// An auxilliary zero vector
   mfem::Vector zero_;
 
+  /// sam: is this the correct description of u_?
   /// Predicted temperature true dofs
   mfem::Vector u_;
+
+  /// Predicted temperature true dofs
+  mfem::Vector u_predicted_;
+
 
   /// Previous value of du_dt used to prime the pump for the nonlinear solver
   mfem::Vector previous_;
