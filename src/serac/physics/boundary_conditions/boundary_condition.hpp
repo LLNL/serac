@@ -169,8 +169,10 @@ public:
    * \tilde{A} x = b - A_e x
    * \f]
    *
-   * where \f$ A_e \f$ contains the eliminated columns of \f$ A \f$ for the essential degrees of freedom. If \f$ A \f$
-   * is given as the input @a k_mat , \f$ A_e \f$ is returned in @a k_mat .
+   * where \f$ A_e \f$ contains the eliminated columns of \f$ A \f$ for the essential degrees of freedom. Note that
+   * these equations only apply to the non-essential dofs. For the essential rows, \f$ A \f$ is modified to contain one
+   * on the diagonal and the right hand side is modified to contain the essential value originally contained in \f$ x
+   * \f$. If \f$ A \f$ is given as the input @a k_mat , \f$ A_e \f$ is returned in @a k_mat .
    * @param[inout] k_mat A stiffness (system) matrix. The rows and cols of the essential dofs will be set to zero with a
    * one on the diagonal after the return of this method.
    * @param[inout] rhs The RHS vector for the system. At return, this vector contains \f$ b - A_e x \f$.
