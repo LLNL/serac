@@ -58,7 +58,7 @@ TEST(SolidFunctionalFiniteDiff, FiniteDifference)
   user_defined_bulk_modulus = bulk_modulus_value;
 
   // Construct a functional-based solid solver
-  SolidFunctional<p, dim, H1<1>, H1<1>> solid_solver(default_static_options, GeometricNonlinearities::On,
+  SolidFunctional<p, dim, Parameters< H1<1>, H1<1> > > solid_solver(default_static_options, GeometricNonlinearities::On,
                                                      FinalMeshOption::Reference, "solid_functional",
                                                      {user_defined_bulk_modulus, user_defined_shear_modulus});
 
@@ -66,7 +66,7 @@ TEST(SolidFunctionalFiniteDiff, FiniteDifference)
   // As we only have one parameter in this example, the index is zero.
   constexpr int bulk_parameter_index = 0;
 
-  solid_mechanics::ParameterizedNeoHookeanSolid<dim> mat(1.0, 0.0, 0.0);
+  solid_mechanics::ParameterizedNeoHookeanSolid<dim> mat{1.0, 0.0, 0.0};
   solid_solver.setMaterial(mat);
 
   // Define the function for the initial displacement and boundary condition

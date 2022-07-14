@@ -18,6 +18,8 @@
 
 using namespace serac;
 
+using serac::solid_mechanics::default_static_options;
+
 int main(int argc, char* argv[]) {
 
   MPI_Init(&argc, &argv);
@@ -39,19 +41,6 @@ int main(int argc, char* argv[]) {
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
 
-  // define the solver configurations
-  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
-                                                         .abs_tol     = 1.0e-22,
-                                                         .print_level = 0,
-                                                         .max_iter    = 500,
-                                                         .lin_solver  = LinearSolver::GMRES,
-                                                         .prec        = HypreBoomerAMGPrec{}};
-
-  const NonlinearSolverOptions default_nonlinear_options = {
-      .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 20, .print_level = 1};
-
-  const typename solid_util::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
-
   double initial_temperature = 300.0;
   double final_temperature = 400.0;
   FiniteElementState temperature(
@@ -63,7 +52,6 @@ int main(int argc, char* argv[]) {
 
   FiniteElementState gamma(
       StateManager::newState(FiniteElementState::Options{.order = p, .coll = std::move(fec), .name = "gamma"}));
-
 
   // orient fibers in the beam like below (horizontal when y < 0.5, vertical when y > 0.5):
   //
@@ -81,7 +69,7 @@ int main(int argc, char* argv[]) {
   gamma.project(coef);
 
   // Construct a functional-based solid mechanics solver
-  SolidFunctional<p, dim, Parameters< H1<p>, L2<p> > > solid_solver(default_static, GeometricNonlinearities::Off, FinalMeshOption::Reference,
+  SolidFunctional<p, dim, Parameters< H1<p>, L2<p> > > solid_solver(default_static_options, GeometricNonlinearities::Off, FinalMeshOption::Reference,
                                        "solid_functional", {temperature, gamma});
 
   double density = 1.0;

@@ -45,15 +45,13 @@ void functional_test_static(double expected_norm)
 
   // define the thermal solver configurations
   auto thermal_options = Thermal::defaultQuasistaticOptions();
-  auto solid_mechanics_options = solid_mechanics::default_static_options();
-
-
+  auto solid_mechanics_options = solid_mechanics::default_static_options;
 
   // Construct a functional-based thermal-solid solver
   // BT 04/27/2022 This can't be instantiated yet.
   // The material model needs to be implemented before this
   // module can be used.
-  ThermalSolidFunctional<p, dim> thermal_solid_solver(thermal_options, solid_options, GeometricNonlinearities::On,
+  ThermalSolidFunctional<p, dim> thermal_solid_solver(thermal_options, solid_mechanics_options, GeometricNonlinearities::On,
                                                       FinalMeshOption::Deformed, "thermal_solid_functional");
 
   double u = 0.0;
