@@ -35,7 +35,7 @@ def as_list(v):
 def ensure_file(path, wait_for_file=False):
     exists = os.path.exists(path)
     if wait_for_file:
-        for i in range(5):
+        for i in range(12):
             if exists:
                 break
             print("File not found, attempting sleep to wait for file...")
