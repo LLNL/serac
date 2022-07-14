@@ -194,9 +194,9 @@ public:
                           std::function<void(const mfem::Vector& x, mfem::Vector& disp)> disp)
   {
     // Project the coefficient onto the grid function
-    disp_bdr_coef_ = std::make_shared<mfem::VectorFunctionCoefficient>(dim, disp);
+    auto disp_bdr_coef = std::make_shared<mfem::VectorFunctionCoefficient>(dim, disp);
 
-    bcs_.addEssential(disp_bdr, disp_bdr_coef_, displacement_.space());
+    bcs_.addEssential(disp_bdr, disp_bdr_coef, displacement_.space());
   }
 
   /**
@@ -276,10 +276,9 @@ public:
 
       // Add the appropriate component-based boundary condition
       // Project the coefficient onto the grid function
-      disp_bdr_coef_ = std::make_shared<mfem::VectorFunctionCoefficient>(
-          dim, [](const mfem::Vector&, mfem::Vector& vec) { vec = 0.0; });
+      auto disp_bdr_coef = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector&) { return 0.0; });
 
-      bcs_.addEssential({normal.first}, disp_bdr_coef_, displacement_.space(), 0);
+      bcs_.addEssential({normal.first}, disp_bdr_coef, displacement_.space(), 0);
     }
   }
 
@@ -301,6 +300,10 @@ public:
     if (geom_nonlin_ == GeometricNonlinearities::On) {
       mesh_.NewNodes(*reference_nodes_);
     }
+
+    displacement_ = 1.0;
+
+    outputState("paraview_dir");
 
     rotate();
 
@@ -892,12 +895,6 @@ protected:
 
   /// @brief Pointer to the deformed mesh data
   std::unique_ptr<mfem::ParGridFunction> deformed_nodes_;
-
-  /// @brief Coefficient containing the essential boundary values
-  std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef_;
-
-  /// @brief Coefficient containing the essential boundary values
-  std::shared_ptr<mfem::Coefficient> component_disp_bdr_coef_;
 
   /// @brief An auxilliary zero vector
   mfem::Vector zero_;

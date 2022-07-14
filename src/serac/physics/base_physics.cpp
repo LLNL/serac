@@ -76,6 +76,10 @@ void BasePhysics::outputState(std::optional<std::string> paraview_output_dir) co
       paraview_dc_->SetHighOrderOutput(true);
       paraview_dc_->SetDataFormat(mfem::VTKFormat::BINARY);
       paraview_dc_->SetCompression(true);
+    } else {
+      for (FiniteElementState& state : state_) {
+        state.gridFunction();
+      }      
     }
 
     // Set the current time, cycle, and requested paraview directory
