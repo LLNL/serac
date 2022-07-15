@@ -168,22 +168,24 @@ Solid::~Solid()
 
 void Solid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
 {
-  bcs_.addEssential(disp_bdr, disp_bdr_coef, displacement_);
+  bcs_.addEssential(disp_bdr, disp_bdr_coef, displacement_.space());
 }
 
 void Solid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
                                int component)
 {
-  bcs_.addEssential(disp_bdr, disp_bdr_coef, displacement_, component);
+  bcs_.addEssential(disp_bdr, disp_bdr_coef, displacement_.space(), component);
 }
 
 void Solid::setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
                            bool compute_on_reference, std::optional<int> component)
 {
   if (compute_on_reference) {
-    bcs_.addGeneric(trac_bdr, trac_bdr_coef, SolidBoundaryCondition::ReferenceTraction, component);
+    bcs_.addGeneric(trac_bdr, trac_bdr_coef, SolidBoundaryCondition::ReferenceTraction, displacement_.space(),
+                    component);
   } else {
-    bcs_.addGeneric(trac_bdr, trac_bdr_coef, SolidBoundaryCondition::DeformedTraction, component);
+    bcs_.addGeneric(trac_bdr, trac_bdr_coef, SolidBoundaryCondition::DeformedTraction, displacement_.space(),
+                    component);
   }
 }
 
@@ -191,9 +193,9 @@ void Solid::setPressureBCs(const std::set<int>& pres_bdr, std::shared_ptr<mfem::
                            bool compute_on_reference)
 {
   if (compute_on_reference) {
-    bcs_.addGeneric(pres_bdr, pres_bdr_coef, SolidBoundaryCondition::ReferencePressure);
+    bcs_.addGeneric(pres_bdr, pres_bdr_coef, SolidBoundaryCondition::ReferencePressure, displacement_.space());
   } else {
-    bcs_.addGeneric(pres_bdr, pres_bdr_coef, SolidBoundaryCondition::DeformedPressure);
+    bcs_.addGeneric(pres_bdr, pres_bdr_coef, SolidBoundaryCondition::DeformedPressure, displacement_.space());
   }
 }
 
@@ -290,12 +292,6 @@ void Solid::completeSetup()
   // Build the dof array lookup tables
   displacement_.space().BuildDofToArrays();
 
-  // Project the essential boundary coefficients
-  for (auto& bc : bcs_.essentials()) {
-    // Project the coefficient
-    bc.project(displacement_);
-  }
-
   // If dynamic, create the mass and viscosity forms
   if (!is_quasistatic_) {
     M_ = std::make_unique<mfem::ParBilinearForm>(&displacement_.space());
@@ -385,8 +381,6 @@ void Solid::advanceTimestep(double& dt)
     mesh_.NewNodes(*reference_nodes_);
   }
 
-  bcs_.setTime(time_);
-
   // If a thermal material is present, evaluate the grid function
   auto* iso_expansion_mat = dynamic_cast<IsotropicThermalExpansionMaterial*>(thermal_material_.get());
   if (iso_expansion_mat) {
@@ -394,10 +388,16 @@ void Solid::advanceTimestep(double& dt)
   }
 
   if (is_quasistatic_) {
-    quasiStaticSolve();
     // Update the time for housekeeping purposes
     time_ += dt;
+    // Project the essential boundary coefficients
+    for (auto& bc : bcs_.essentials()) {
+      bc.setDofs(displacement_, time_);
+    }
+
+    quasiStaticSolve();
   } else {
+    // Note that the ODE solver handles the essential boundary condition application itself
     ode2_.Step(displacement_, velocity_, time_, dt);
   }
 
@@ -539,8 +539,7 @@ const FiniteElementState& Solid::solveAdjoint(FiniteElementDual& adjoint_load,
   }
 
   for (const auto& bc : bcs_.essentials()) {
-    bc.eliminateFromMatrix(*J_T);
-    bc.eliminateToRHS(*J_T, adjoint_essential, adjoint_load_vector);
+    bc.apply(*J_T, adjoint_load_vector, adjoint_essential);
   }
 
   lin_solver.SetOperator(*J_T);
