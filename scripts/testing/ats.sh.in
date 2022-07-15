@@ -14,6 +14,12 @@
 # BlueOS: lalloc 2 ./ats.sh
 # WSL: ./ats.sh
 
+# Variables used inside of the base test.ats and this script
+export ATS_SERAC_BIN_DIR=@SERAC_BIN_DIR@/bin
+export ATS_SERAC_REPO_DIR=@SERAC_REPO_DIR@
+export ATS_EXECUTABLE=@ATS_EXECUTABLE@
+export ATS_SERAC_BASELINE="none"
+
 Help()
 {
     echo "Test Invocations"
@@ -23,6 +29,7 @@ Help()
     echo "WSL: ./ats.sh"
     echo "Options:"
     echo "  --baseline   = copies generated baselines from a pre-existing serac run"
+    echo "                 options: none (default), all, or comma delimited list of tests"
     echo "  --clean      = cleans output and log files"
     echo "  --help       = displays this message"
 }
@@ -37,12 +44,6 @@ Clean()
         rm -rf $ATS_SERAC_REPO_DIR/tests/integration/*/*/*_output*
     fi
 }
-
-# Variables used inside of the base test.ats and this script
-export ATS_SERAC_BIN_DIR=@SERAC_BIN_DIR@/bin
-export ATS_SERAC_REPO_DIR=@SERAC_REPO_DIR@
-export ATS_EXECUTABLE=@ATS_EXECUTABLE@
-export ATS_SERAC_BASELINE=0
 
 if [ ! -d "$ATS_SERAC_REPO_DIR" ]; then
     echo "ERROR: Given ATS_SERAC_REPO_DIR does not exist: " $ATS_SERAC_REPO_DIR
@@ -66,8 +67,8 @@ while getopts ":-:" option; do
                 help)
                     Help
                     exit;;
-                baseline)
-                    ATS_SERAC_BASELINE=1;;
+                baseline=*)
+                    ATS_SERAC_BASELINE=${OPTARG#*=};;
                 clean)
                     Clean
                     exit;;
@@ -87,10 +88,10 @@ done
 export PATH=$ATS_SERAC_BIN_DIR:$PATH
 
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~"
-echo "ATS:       " $ATS_EXECUTABLE
-echo "BIN DIR:   " $ATS_SERAC_BIN_DIR
-echo "REPO DIR:  " $ATS_SERAC_REPO_DIR
-echo "BASELINE?: " $ATS_SERAC_BASELINE
+echo "ATS:       $ATS_EXECUTABLE"
+echo "BIN DIR:   $ATS_SERAC_BIN_DIR"
+echo "REPO DIR:  $ATS_SERAC_REPO_DIR"
+echo "BASELINE:  ${ATS_SERAC_BASELINE}"
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
 Clean
