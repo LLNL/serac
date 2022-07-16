@@ -136,6 +136,10 @@ public:
   static constexpr int VALUE = 0, DERIVATIVE = 1;
   static constexpr auto I = Identity<dim>();
 
+  // note: this is hardcoded for now, since we currently 
+  // only support tensor product elements (1 element type per spatial dimension)
+  static constexpr Geometry geom = supported_geometries[dim];
+
   /**
    * @brief Construct a new Solid Functional object
    *
@@ -156,6 +160,7 @@ public:
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "displacement")})),
         adjoint_displacement_(StateManager::newState(FiniteElementState::Options{
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "adjoint_displacement")})),
+        nodal_forces_(mesh_, displacement_.space(), "nodal_forces"),
         parameter_states_(parameter_states),
         ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
               nonlin_solver_, bcs_),
@@ -258,26 +263,21 @@ public:
   }
 
   template < typename T >
-  QuadratureData<T> createQuadratureDataBuffer(T initial_state) {
-    //const mfem::FiniteElement&   el = *(displacement_.space().GetFE(0));
-    //const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
-    //constexpr auto flags = mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS;
-    //auto geom = mesh_.GetGeometricFactors(ir, flags);
+  std::shared_ptr< QuadratureData<T> > createQuadratureDataBuffer(T initial_state) {
+    constexpr auto Q = order + 1;
 
-    constexpr auto Q                                 = order + 1;
-    constexpr auto num_quadrature_points_per_element = (dim == 2) ? Q * Q : Q * Q * Q;
-    auto num_elements = mesh_.GetNE();
+    size_t num_elements = mesh_.GetNE();
+    size_t qpoints_per_element = GaussQuadratureRule<geom, Q>().size();
 
-    QuadratureData<T> data;
-    data.resize(num_elements, num_quadrature_points_per_element);
-
-    for (int e = 0; e < num_elements; e++) {
-      for (auto q = 0; q < num_quadrature_points_per_element; q++) {
-        data(e, q) = initial_state;
+    auto qdata = std::make_shared< QuadratureData<T> >(num_elements, qpoints_per_element);
+    auto & container = *qdata;
+    for (size_t e = 0; e < num_elements; e++) {
+      for (size_t q = 0; q < qpoints_per_element; q++) {
+        container(e, q) = initial_state;
       }
     }
 
-    return data;
+    return qdata;
   }
 
   /**
@@ -330,7 +330,7 @@ public:
    * @pre MaterialType must have the operator (du_dX) defined as the Kirchoff stress
    */
   template <typename MaterialType, typename StateType>
-  void setMaterial(MaterialType material, const QuadratureData<StateType> & qdata)
+  void setMaterial(MaterialType material, std::shared_ptr < QuadratureData<StateType> > qdata)
   {
     residual_->AddDomainIntegral(
         Dimension<dim>{},
@@ -353,7 +353,7 @@ public:
 
   template <typename MaterialType>
   void setMaterial(MaterialType material) {
-    setMaterial(material, QuadratureData<Empty>{});
+    setMaterial(material, EmptyQData);
   }
 
   /**
@@ -576,14 +576,17 @@ public:
       ode2_.Step(displacement_, velocity_, time_, dt);
     }
 
-    // if our simulation involves materials that have internal state 
-    if (residual_->material_state_buffers_.size()) {
-
+    {
       // after finding displacements that satisfy equilibrium, 
       // compute the residual one more time, this time enabling
       // the material state buffers to be updated
       residual_->update_qdata = true;
-      (*residual_)(displacement_, zero_, parameter_states_[parameter_indices] ...);
+
+      // this seems like the wrong way to be doing this assignment, but
+      // nodal_forces_ = residual(displacement, ...);
+      // isn't currently supported
+      nodal_forces_.Vector::operator=((*residual_)(displacement_, zero_, parameter_states_[parameter_indices] ...));
+
       residual_->update_qdata = false;
     }
 
@@ -599,8 +602,6 @@ public:
   }
 
   /**
-   * TODO: improve tautological documentation
-   * 
    * @brief Solve the adjoint problem
    * @pre It is expected that the forward analysis is complete and the current displacement state is valid
    * @note If the essential boundary state is not specified, homogeneous essential boundary conditions are applied
@@ -721,6 +722,9 @@ public:
   /// @overload
   serac::FiniteElementState& velocity() { return velocity_; };
 
+  /// @brief getter for nodal forces (before zeroing-out essential dofs) 
+  const serac::FiniteElementDual& nodalForces() { return nodal_forces_; };
+
   /// @brief Reset the mesh, displacement, and velocity to the reference (stress-free) configuration
   void resetToReferenceConfiguration()
   {
@@ -745,6 +749,9 @@ protected:
 
   /// The displacement finite element state
   FiniteElementState adjoint_displacement_;
+
+  /// nodal forces
+  FiniteElementDual nodal_forces_;
 
   std::unique_ptr<Functional<test(trial, trial, parameter_space...)>> residual_;
 

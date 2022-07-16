@@ -22,54 +22,48 @@
 
 namespace serac {
 
+/**
+ * @brief these classes are a little confusing. These two
+ * special types represent the similar (but different) cases of:
+ * 
+ * Nothing: for qfunctions that have no notion of quadrature data (e.g. body forces).
+ *          QuadratureData<Nothing> will store no data, and `Nothing` will never appear
+ *          as an argument to a q-function (it will be omitted)
+ * 
+ * Empty: for qfunctions associated with material models (where quadrature data is part of
+ *        the interface) that do not actually need to store internal variables. QuadratureData<Empty>
+ *        will also store no data, but it will still appear as an argument to the q-function
+ *        (to make the material model interface consistent).
+ */
 struct Nothing{};
 
 struct Empty{};
 
-struct SyncableData {
-  virtual void sync() = 0;
-};
-
 template < typename T >
-struct QuadratureData : public SyncableData, public axom::Array<T, 2, axom::MemorySpace::Host> {
-  void sync() final {} // ?
-  using axom::Array<T, 2, axom::MemorySpace::Host >::Array;
+struct QuadratureData {
+  QuadratureData(size_t n1, size_t n2) : stride(n2) { data = new T[n1 * n2]; }
+  ~QuadratureData() { delete data; }
+  SERAC_HOST_DEVICE T & operator()(size_t i, size_t j) { return data[i * stride + j]; }
+  SERAC_HOST_DEVICE const T & operator()(size_t i, size_t j) const { return data[i * stride + j]; }
+  T * data;
+  size_t stride;
 };
 
 template <>
-struct QuadratureData<Nothing> : public SyncableData {
-  void sync() final {} // ?
-  SERAC_HOST_DEVICE Nothing & operator()(const int, const int) { return data; }
+struct QuadratureData<Nothing> {
+  SERAC_HOST_DEVICE Nothing & operator()(const size_t, const size_t) { return data; }
+  SERAC_HOST_DEVICE const Nothing & operator()(const size_t, const size_t) const { return data; }
   Nothing data;
 };
 
 template <>
-struct QuadratureData<Empty> : public SyncableData {
-  void sync() final {} // ?
-  SERAC_HOST_DEVICE Empty & operator()(const int, const int) { return data; }
+struct QuadratureData<Empty> {
+  SERAC_HOST_DEVICE Empty & operator()(const size_t, const size_t) { return data; }
+  SERAC_HOST_DEVICE const Empty & operator()(const size_t, const size_t) const { return data; }
   Empty data;
 };
 
-extern QuadratureData<Nothing> NoQData;
-extern QuadratureData<Empty> EmptyQData;
-
-
-
+extern std::shared_ptr< QuadratureData<Nothing> > NoQData;
+extern std::shared_ptr <QuadratureData<Empty> > EmptyQData;
 
 }  // namespace serac
-
-namespace axom {
-
-template <>
-struct ArrayView<serac::Nothing, 2> {
-  SERAC_HOST_DEVICE serac::Nothing & operator()(const int, const int) { return data; }
-  serac::Nothing data;
-};
-
-template <>
-struct ArrayView<serac::Empty, 2> {
-  SERAC_HOST_DEVICE serac::Empty & operator()(const int, const int) { return data; }
-  serac::Empty data;
-};
-
-}

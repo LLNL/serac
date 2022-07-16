@@ -53,7 +53,7 @@ public:
    */
   template <int dim, typename lambda_type, typename qpt_data_type = Nothing>
   DomainIntegral(size_t num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<dim>, lambda_type&& qf,
-                 axom::ArrayView<qpt_data_type, 2> qdata)
+                 std::shared_ptr < QuadratureData< qpt_data_type > > qdata)
   {
     SERAC_MARK_BEGIN("Domain Integral Set Up");
     using namespace domain_integral;
@@ -71,7 +71,7 @@ public:
 
       evaluation_ = EvaluationKernel{eval_config, J, X, num_elements, qf, qdata};
 
-      for_constexpr<num_trial_spaces>([this, num_elements, quadrature_points_per_element, &J, &X, &qf, &qdata,
+      for_constexpr<num_trial_spaces>([this, num_elements, quadrature_points_per_element, &J, &X, &qf, qdata,
                                        eval_config](auto i) {
         // allocate memory for the derivatives of the q-function at each quadrature point
         //
@@ -79,7 +79,7 @@ public:
         // action_of_gradient functor below to augment the reference count, and extend its lifetime to match
         // that of the DomainIntegral that allocated it.
         using which_trial_space = typename serac::tuple_element<i, serac::tuple<trials...> >::type;
-        using derivative_type   = decltype(get_derivative_type<i, dim, trials...>(qf, qdata(0, 0)));
+        using derivative_type   = decltype(get_derivative_type<i, dim, trials...>(qf, (*qdata)(0, 0)));
         auto ptr = accelerator::make_shared_array<exec, derivative_type>(num_elements * quadrature_points_per_element);
         ExecArrayView<derivative_type, 2, exec> qf_derivatives(ptr.get(), num_elements, quadrature_points_per_element);
 

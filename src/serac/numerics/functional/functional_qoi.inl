@@ -156,8 +156,9 @@ public:
    */
   template <int dim, typename lambda, typename qpt_data_type = Nothing>
   void AddDomainIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain,
-                         QuadratureData<qpt_data_type>& data = NoQData)
+                         const QuadratureData<qpt_data_type>& data = NoQData)
   {
+
     auto num_elements = domain.GetNE();
     if (num_elements == 0) return;
 

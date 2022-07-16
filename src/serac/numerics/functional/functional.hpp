@@ -221,20 +221,8 @@ public:
    */
   template <int dim, typename lambda, typename qpt_data_type = Nothing>
   void AddDomainIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain,
-                         const QuadratureData<qpt_data_type>& data = NoQData)
+                         std::shared_ptr< QuadratureData<qpt_data_type> > qdata = NoQData)
   {
-
-    axom::ArrayView< qpt_data_type, 2 > qdata_view;
-
-    if constexpr (!(std::is_same_v< qpt_data_type, Nothing > ||
-                    std::is_same_v< qpt_data_type, Empty >)) {
-      size_t num_bytes = sizeof(qpt_data_type) * data.size();
-      material_state_buffers_.emplace_back(num_bytes);
-      std::memcpy(material_state_buffers_.back().data(), &data(0,0), num_bytes);
-      auto ptr = reinterpret_cast< qpt_data_type * >(material_state_buffers_.back().data());
-      qdata_view = axom::ArrayView< qpt_data_type, 2 >(ptr, data.shape()[0], data.shape()[1]);
-    }
-
     auto num_elements = domain.GetNE();
     if (num_elements == 0) return;
 
@@ -251,7 +239,7 @@ public:
     // NOTE: we are relying on MFEM to keep these geometric factors accurate. We store
     // the necessary data as references in the integral data structure.
     auto geom = domain.GetGeometricFactors(ir, flags);
-    domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<dim>{}, integrand, qdata_view);
+    domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<dim>{}, integrand, qdata);
   }
 
   /**
@@ -299,7 +287,7 @@ public:
    * @param[inout] data The data for each quadrature point
    */
   template <typename lambda, typename qpt_data_type = Nothing>
-  void AddAreaIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = NoQData)
+  void AddAreaIntegral(lambda&& integrand, mfem::Mesh& domain, std::shared_ptr< QuadratureData<qpt_data_type> > data = NoQData)
   {
     AddDomainIntegral(Dimension<2>{}, integrand, domain, data);
   }
@@ -313,7 +301,7 @@ public:
    * @param[inout] data The data for each quadrature point
    */
   template <typename lambda, typename qpt_data_type = Nothing>
-  void AddVolumeIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = NoQData)
+  void AddVolumeIntegral(lambda&& integrand, mfem::Mesh& domain, std::shared_ptr< QuadratureData<qpt_data_type> > data = NoQData)
   {
     AddDomainIntegral(Dimension<3>{}, integrand, domain, data);
   }

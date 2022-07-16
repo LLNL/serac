@@ -14,7 +14,7 @@
 
 namespace serac {
 
-QuadratureData<Nothing> NoQData;
-QuadratureData<Empty> EmptyQData;
+std::shared_ptr < QuadratureData<Nothing> > NoQData;
+std::shared_ptr < QuadratureData<Empty> > EmptyQData;
 
 }  // namespace serac

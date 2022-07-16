@@ -385,7 +385,7 @@ void functional_parameterized_solid_test(double expected_disp_norm)
 }
 
 //TEST(SolidFunctional, 2DLinearStatic) { functional_solid_test_static<1, 2>(1.511052595); }
-//TEST(SolidFunctional, 2DQuadStatic) { functional_solid_test_static<2, 2>(2.18604855); }
+TEST(SolidFunctional, 2DQuadStatic) { functional_solid_test_static<2, 2>(2.18604855); }
 //TEST(SolidFunctional, 2DQuadParameterizedStatic) { functional_parameterized_solid_test<2, 2>(2.18604855); }
 //
 //TEST(SolidFunctional, 3DLinearStatic) { functional_solid_test_static<1, 3>(1.3708454313665728); }

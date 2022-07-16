@@ -9,6 +9,7 @@
  *
  * @brief A file defining some enums and structs that are used by the different physics modules 
  */
+#pragma once
 
 #include "serac/numerics/odes.hpp"
 
