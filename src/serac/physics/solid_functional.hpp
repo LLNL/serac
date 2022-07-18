@@ -186,6 +186,7 @@ public:
       for (size_t i = 0; i < sizeof...(parameter_space); ++i) {
         trial_spaces[i + 2]         = &(parameter_states_[i].get().space());
         parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, parameter_states_[i].get().space());
+        state_.push_back(parameter_states_[i].get());
       }
     }
 
