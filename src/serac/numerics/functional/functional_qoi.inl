@@ -156,7 +156,7 @@ public:
    */
   template <int dim, typename lambda, typename qpt_data_type = Nothing>
   void AddDomainIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain,
-                         const QuadratureData<qpt_data_type>& data = NoQData)
+                         std::shared_ptr< QuadratureData<qpt_data_type> > qdata = NoQData)
   {
 
     auto num_elements = domain.GetNE();
@@ -172,7 +172,7 @@ public:
 
     constexpr auto flags = mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS;
     auto           geom  = domain.GetGeometricFactors(ir, flags);
-    domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<dim>{}, integrand, data);
+    domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<dim>{}, integrand, qdata);
   }
 
   /**
