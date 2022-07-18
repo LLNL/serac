@@ -27,7 +27,7 @@ void functional_solid_test_slide_wall(double expected_disp_norm)
   int serial_refinement   = 0;
   int parallel_refinement = 0;
 
-  constexpr int p   = 1;
+  constexpr int p = 1;
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -36,7 +36,8 @@ void functional_solid_test_slide_wall(double expected_disp_norm)
   static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for solid functional test");
 
   // Construct the appropriate dimension mesh and give it to the data store
-  std::string filename = SERAC_REPO_DIR "/data/meshes/beam-quad-angle.mesh";
+  std::string filename = (dim == 2) ? SERAC_REPO_DIR "/data/meshes/beam-quad-angle.mesh"
+                                    : SERAC_REPO_DIR "/data/meshes/beam-hex-angle.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
@@ -96,11 +97,10 @@ void functional_solid_test_slide_wall(double expected_disp_norm)
 
   // Check the final displacement norm
   EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
-
 }
 
 TEST(SolidFunctional, 2DSlideWall) { functional_solid_test_slide_wall<2>(0.587272268806); }
-//TEST(SolidFunctional, 3DSlideWall) { functional_solid_test_slide_wall<3>(1.511052595); }
+TEST(SolidFunctional, 3DSlideWall) { functional_solid_test_slide_wall<3>(0.46093359446); }
 
 }  // namespace serac
 

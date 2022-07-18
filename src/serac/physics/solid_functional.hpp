@@ -248,7 +248,7 @@ public:
           CalcOrtho(Tr->Jacobian(), normal);
 
           double norm_l2 = normal.Norml2();
-          normal *= norm_l2;
+          normal /= norm_l2;
 
           auto found_attr = attribute_normals.find(att);
 
@@ -274,14 +274,42 @@ public:
     SLIC_ERROR_ROOT_IF(attribute_normals.size() > 1, "Sliding wall not implemented for more than one wall.");
 
     for (auto& normal : attribute_normals) {
-      if constexpr (dim == 2) {
-        double angle = std::acos(normal.second(0) / (std::sqrt(normal.second(0) * normal.second(0) + normal.second(1) * normal.second(1))));
-        coordinate_transform_     = {{{std::cos(angle), std::sin(angle)}, {-1.0 * std::sin(angle), std::cos(angle)}}};
-        inv_coordinate_transform_ = inv(*coordinate_transform_);
-      }
+      SLIC_ERROR_ROOT_IF(dim != 2 && dim != 3, "Dimension must be 2 or 3 for sliding wall boundary conditions.");
 
+      if constexpr (dim == 2) {
+        double angle = std::acos(normal.second(0));
+
+        coordinate_transform_ = {{{std::cos(angle), std::sin(angle)}, {-1.0 * std::sin(angle), std::cos(angle)}}};
+
+        inv_coordinate_transform_ = transpose(*coordinate_transform_);
+      }
       if constexpr (dim == 3) {
-        SLIC_ERROR_ROOT("Sliding wall not implemented for 3D problems.");
+        // Use Gram Schmidt orthogonalization to compute a new coordinate set
+        tensor<double, dim> normal_1{normal.second(0), normal.second(1), normal.second(2)};
+
+        int min_index = 0;
+        for (int i = 1; i < 3; ++i) {
+          if (std::abs(normal_1[i]) < std::abs(normal_1[min_index])) {
+            min_index = i;
+          }
+        }
+
+        tensor<double, dim> normal_2{0.0, 0.0, 0.0};
+        normal_2[min_index] = 1.0;
+        normal_2 -= normal_1[min_index] * normal_1;
+        normal_2 = normalize(normal_2);
+
+        // The third normal is the cross product of the first two
+        tensor<double, dim> normal_3 = cross(normal_1, normal_2);
+
+        normal_3 = normalize(normal_3);
+
+        // Generate a coordinate transform from the new basis set
+        coordinate_transform_ = {{{normal_1[0], normal_2[0], normal_3[0]},
+                                  {normal_1[1], normal_2[1], normal_3[1]},
+                                  {normal_1[2], normal_2[2], normal_3[2]}}};
+
+        inv_coordinate_transform_ = transpose(*coordinate_transform_);
       }
 
       // Add the appropriate component-based boundary condition
@@ -290,7 +318,6 @@ public:
 
       bcs_.addEssential({normal.first}, component_disp_bdr_coef_, displacement_.space(), 0);
     }
-
   }
 
   /// @brief Solve the Quasi-static Newton system
@@ -751,7 +778,7 @@ public:
   }
 
 protected:
-void rotate()
+  void rotate()
   {
     if (coordinate_transform_) {
       // Rotate the mesh nodes
@@ -777,7 +804,6 @@ void rotate()
       rotateGridFunction(*coordinate_transform_, adjoint_disp);
       adjoint_displacement_.setFromGridFunction(adjoint_disp);
     }
-
   }
 
   void undoRotate()
@@ -823,12 +849,11 @@ void rotate()
       rotated_vector = dot(rotation, unrotated_vector);
 
       for (int component = 0; component < grid_function.FESpace()->GetVDim(); ++component) {
-        int vector_dof_index           = grid_function.FESpace()->DofToVDof(dof, component);
+        int vector_dof_index            = grid_function.FESpace()->DofToVDof(dof, component);
         grid_function(vector_dof_index) = rotated_vector[component];
       }
     }
   }
-
 
   /// The compile-time finite element trial space for displacement and velocity (H1 of order p)
   using trial = H1<order, dim>;
@@ -921,7 +946,6 @@ void rotate()
   std::optional<tensor<double, dim, dim>> coordinate_transform_;
 
   std::optional<tensor<double, dim, dim>> inv_coordinate_transform_;
-
 };
 
 }  // namespace serac

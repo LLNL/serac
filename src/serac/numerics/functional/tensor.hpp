@@ -940,6 +940,25 @@ SERAC_HOST_DEVICE constexpr auto operator*(const tensor<S, m...>& A, const tenso
 }
 
 /**
+ * @brief cross product for dim 3 vectors
+ * @tparam S the underlying type of the first (lefthand) vector argument
+ * @tparam T the underlying type of the second (righthand) vector argument
+ * @tparam m first dimension of A and B (must be 3)
+ * @param[in] A The lefthand vector
+ * @param[in] B The righthand vector
+ */
+template <typename S, typename T, int m>
+SERAC_HOST_DEVICE constexpr auto cross(const tensor<S, m>& A, const tensor<T, m>& B)
+{
+  static_assert(m == 3, "Cross products are only defined on vectors of dimension 3.");
+
+  tensor<decltype(S{} * T{}), m> cross_product{
+      {A[1] * B[2] - A[2] * B[1], A[2] * B[0] - A[0] * B[2], A[0] * B[1] - A[1] * B[0]}};
+
+  return cross_product;
+}
+
+/**
  * @brief Returns the squared Frobenius norm of the tensor
  * @param[in] A The tensor to obtain the squared norm from
  */
