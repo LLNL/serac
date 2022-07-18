@@ -15,7 +15,7 @@
 #include "serac/numerics/functional/functional.hpp"
 
 /// SolidFunctional helper data types
-namespace serac::solid_util {
+namespace serac::solid_mechanics {
 
 /**
  * @brief Linear isotropic elasticity material model
@@ -23,7 +23,7 @@ namespace serac::solid_util {
  * @tparam dim Spatial dimension of the mesh
  */
 template <int dim>
-struct LinearIsotropicSolid {
+struct LinearIsotropic {
   using State = Empty;
 
   /**
@@ -53,7 +53,7 @@ struct LinearIsotropicSolid {
  * @tparam dim The spatial dimension of the mesh
  */
 template <int dim>
-struct NeoHookeanSolid {
+struct NeoHookean {
   using State = Empty;
 
   /**
@@ -92,6 +92,7 @@ struct J2 {
   /// @brief variables required to characterize the hysteresis response
   struct State {
     tensor<double, dim, dim> beta;           ///< back-stress tensor
+    tensor<double, dim, dim> old_strain;     ///< previous strain
     tensor<double, dim, dim> el_strain;      ///< elastic strain
     double                   pl_strain;      ///< plastic strain
     double                   pl_strain_inc;  ///< incremental plastic strain
@@ -112,8 +113,11 @@ struct J2 {
     // in "Computational Methods for Plasticity"
     //
 
+    auto new_strain = sym(du_dX);
+    auto dstrain = new_strain - state.old_strain;
+
     // (i) elastic predictor
-    auto el_strain = sym(du_dX);
+    auto el_strain = state.el_strain + dstrain;
     auto p         = K * tr(el_strain);
     auto s         = 2.0 * G * dev(el_strain);
     auto eta       = s - state.beta;
@@ -122,6 +126,7 @@ struct J2 {
 
     // (ii) admissibility
     if (phi > 0.0) {
+
       // see (7.207) on pg. 261
       auto plastic_strain_inc = phi / (3 * G + Hk + Hi);
 
@@ -131,7 +136,16 @@ struct J2 {
       state.pl_strain = state.pl_strain + get_value(plastic_strain_inc);
 
       state.beta = state.beta + sqrt(2.0 / 3.0) * Hk * get_value(plastic_strain_inc) * normalize(get_value(eta));
+
+      state.el_strain = get_value(s / (2.0 * G) + (p / (3.0 * K)) * I);
+
+    } else {
+
+      state.el_strain = get_value(el_strain);
+
     }
+
+    state.old_strain = get_value(new_strain);
 
     return s + p * I;
   }

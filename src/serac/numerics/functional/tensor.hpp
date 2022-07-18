@@ -1508,6 +1508,17 @@ auto& operator<<(std::ostream& out, const tensor<T, m, n...>& A)
 }
 
 /**
+  * @brief Write a zero out to an output stream
+  *
+  * @param[in] out the std::ostream to write to (e.g. std::cout or std::ofstream)
+  */
+ auto& operator<<(std::ostream& out, zero)
+ {
+   out << "zero";
+   return out;
+ }
+
+/**
  * @brief print a double using `printf`, so that it is suitable for use inside cuda kernels. (used in final recursion of
  * printf(tensor<...>))
  * @param[in] value The value to write out

@@ -140,24 +140,14 @@ class Functional<test(trials...), exec> {
   class Gradient;
 
   // clang-format off
-  template <typename... T>
+  template <int i> 
   struct operator_paren_return {
     using type = typename std::conditional<
-        (std::is_same_v<T, differentiate_wrt_this> + ...) == 1, // if the there is a dual number in the pack
-        serac::tuple<mfem::Vector&, Gradient&>,                 // then we return the value and the derivative
-        mfem::Vector&                                           // otherwise, we just return the value
+        i >= 0,                                 // if `i` is greater than or equal to zero,
+        serac::tuple<mfem::Vector&, Gradient&>, // then we return the value and the derivative w.r.t arg `i`
+        mfem::Vector&                           // otherwise, we just return the value
         >::type;
   };
-
-  template <int indx>
-  struct operator_paren_return_index {
-    using type = typename std::conditional<
-        indx >= 0,                                              // if the derivative index is valid
-        serac::tuple<mfem::Vector&, Gradient&>,                 // then we return the value and the derivative
-        mfem::Vector&                                           // otherwise, we just return the value
-        >::type;
-  };
-
   // clang-format on
 
 public:
@@ -231,7 +221,7 @@ public:
    */
   template <int dim, typename lambda, typename qpt_data_type = Nothing>
   void AddDomainIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain,
-                         QuadratureData<qpt_data_type>& data = NoQData)
+                         std::shared_ptr< QuadratureData<qpt_data_type> > qdata = NoQData)
   {
     auto num_elements = domain.GetNE();
     if (num_elements == 0) return;
@@ -249,7 +239,7 @@ public:
     // NOTE: we are relying on MFEM to keep these geometric factors accurate. We store
     // the necessary data as references in the integral data structure.
     auto geom = domain.GetGeometricFactors(ir, flags);
-    domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<dim>{}, integrand, data);
+    domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<dim>{}, integrand, qdata);
   }
 
   /**
@@ -297,7 +287,7 @@ public:
    * @param[inout] data The data for each quadrature point
    */
   template <typename lambda, typename qpt_data_type = Nothing>
-  void AddAreaIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = NoQData)
+  void AddAreaIntegral(lambda&& integrand, mfem::Mesh& domain, std::shared_ptr< QuadratureData<qpt_data_type> > data = NoQData)
   {
     AddDomainIntegral(Dimension<2>{}, integrand, domain, data);
   }
@@ -311,7 +301,7 @@ public:
    * @param[inout] data The data for each quadrature point
    */
   template <typename lambda, typename qpt_data_type = Nothing>
-  void AddVolumeIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = NoQData)
+  void AddVolumeIntegral(lambda&& integrand, mfem::Mesh& domain, std::shared_ptr< QuadratureData<qpt_data_type> > data = NoQData)
   {
     AddDomainIntegral(Dimension<3>{}, integrand, domain, data);
   }
@@ -386,7 +376,7 @@ public:
    *  at most one of which may be of the type `differentiate_wrt_this(mfem::Vector)`
    */
   template <int wrt, typename... T>
-  typename operator_paren_return<T...>::type operator()(DifferentiateWRT<wrt>, const T&... args) {
+  typename operator_paren_return<wrt>::type operator()(DifferentiateWRT<wrt>, const T&... args) {
 
     const mfem::Vector * input_T[] = {&static_cast<const mfem::Vector &>(args) ... };
 
@@ -405,7 +395,7 @@ public:
       // compute residual contributions at the element level and sum them
       output_E_ = 0.0;
       for (auto& integral : domain_integrals_) {
-        integral.Mult(input_E_, output_E_, wrt);
+        integral.Mult(input_E_, output_E_, wrt, update_qdata);
       }
 
       // scatter-add to compute residuals on the local processor
@@ -466,6 +456,10 @@ public:
 
     return (*this)(DifferentiateWRT<i>{}, args ...);
   }
+
+  // TODO: expose this feature a better way
+  /// @brief flag for denoting when a residual evaluation should update the material state buffers
+  bool update_qdata;
 
 private:
   /**
@@ -712,6 +706,11 @@ private:
 
   /// @brief 3D array that stores each boundary element's gradient of the residual w.r.t. trial values
   ExecArray<double, 3, exec> bdr_element_gradients_[num_trial_spaces];
+
+ public: // TODO
+  /// @brief flag for denoting when a residual evaluation should update the material state buffers
+  std::vector < std::vector < char > > material_state_buffers_;
+
 };
 
 }  // namespace serac

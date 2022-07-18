@@ -19,6 +19,8 @@
 
 namespace serac {
 
+using solid_mechanics::default_static_options;
+
 TEST(SolidFunctionalFiniteDiff, FiniteDifference)
 {
   MPI_Barrier(MPI_COMM_WORLD);
@@ -39,22 +41,6 @@ TEST(SolidFunctionalFiniteDiff, FiniteDifference)
   constexpr int p   = 1;
   constexpr int dim = 2;
 
-  // Define a boundary attribute set
-  std::set<int> ess_bdr = {1};
-
-  // define the solver configurations
-  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-8,
-                                                         .abs_tol     = 1.0e-14,
-                                                         .print_level = 0,
-                                                         .max_iter    = 500,
-                                                         .lin_solver  = LinearSolver::GMRES,
-                                                         .prec        = HypreBoomerAMGPrec{}};
-
-  const NonlinearSolverOptions default_nonlinear_options = {
-      .rel_tol = 1.0e-6, .abs_tol = 1.0e-12, .max_iter = 10, .print_level = 1};
-
-  const typename solid_util::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
-
   // Construct and initialized the user-defined moduli to be used as a differentiable parameter in
   // the solid physics module.
   FiniteElementState user_defined_shear_modulus(
@@ -72,7 +58,7 @@ TEST(SolidFunctionalFiniteDiff, FiniteDifference)
   user_defined_bulk_modulus = bulk_modulus_value;
 
   // Construct a functional-based solid solver
-  SolidFunctional<p, dim, H1<1>, H1<1>> solid_solver(default_static, GeometricNonlinearities::On,
+  SolidFunctional<p, dim, Parameters< H1<1>, H1<1> > > solid_solver(default_static_options, GeometricNonlinearities::On,
                                                      FinalMeshOption::Reference, "solid_functional",
                                                      {user_defined_bulk_modulus, user_defined_shear_modulus});
 
@@ -80,13 +66,14 @@ TEST(SolidFunctionalFiniteDiff, FiniteDifference)
   // As we only have one parameter in this example, the index is zero.
   constexpr int bulk_parameter_index = 0;
 
-  solid_util::ParameterizedNeoHookeanSolid<dim> mat(1.0, 0.0, 0.0);
+  solid_mechanics::ParameterizedNeoHookeanSolid<dim> mat{1.0, 0.0, 0.0};
   solid_solver.setMaterial(mat);
 
   // Define the function for the initial displacement and boundary condition
   auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
 
-  // Set the initial displacement and boundary condition
+  // Define a boundary attribute set and specify initial / boundary conditions
+  std::set<int> ess_bdr = {1};
   solid_solver.setDisplacementBCs(ess_bdr, bc);
   solid_solver.setDisplacement(bc);
 
@@ -99,7 +86,7 @@ TEST(SolidFunctionalFiniteDiff, FiniteDifference)
     constant_force[2] = 0.0;
   }
 
-  solid_util::ConstantBodyForce<dim> force{constant_force};
+  solid_mechanics::ConstantBodyForce<dim> force{constant_force};
   solid_solver.addBodyForce(force);
 
   // Finalize the data structures

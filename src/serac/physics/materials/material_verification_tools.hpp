@@ -85,4 +85,27 @@ auto uniaxial_stress_test(double t_max, size_t num_steps,
   return output_history;
 }
 
+template < typename MaterialType, typename StateType, typename ... functions >
+auto single_quadrature_point_test(double t_max, size_t num_steps,
+                                  const MaterialType material,
+                                  const StateType initial_state,
+                                  const functions ... f) {
+
+  double t = 0;
+  const double dt = t_max / double(num_steps - 1);
+  auto state = initial_state;
+
+  using output_type = decltype(std::tuple{t, state, f(0.0) ..., decltype(material(state, f(0.0) ...)){}});
+  std::vector< output_type > history;
+  history.reserve(num_steps);
+
+  for (size_t i = 0; i < num_steps; i++) {
+    auto material_output = material(state, f(t) ...);
+    history.push_back(std::tuple{t, state, f(t) ..., material_output});
+    t += dt;
+  }
+
+  return history;
+}
+
 } // namespace serac

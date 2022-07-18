@@ -62,23 +62,33 @@ void BasePhysics::outputState(std::optional<std::string> paraview_output_dir) co
   // Optionally output a paraview datacollection for visualization
   if (paraview_output_dir) {
     // Check to see if the paraview data collection exists. If not, create it.
-
     if (!paraview_dc_) {
       paraview_dc_            = std::make_unique<mfem::ParaViewDataCollection>(name_, &state_.front().get().mesh());
       int max_order_in_fields = 0;
+
+      // Find the maximum polynomial order in the physics module's states
       for (FiniteElementState& state : state_) {
         paraview_dc_->RegisterField(state.name(), &state.gridFunction());
         max_order_in_fields = std::max(max_order_in_fields, state.space().GetOrder(0));
       }
+
+      // Set the options for the paraview output files
       paraview_dc_->SetLevelsOfDetail(max_order_in_fields);
       paraview_dc_->SetHighOrderOutput(true);
       paraview_dc_->SetDataFormat(mfem::VTKFormat::BINARY);
       paraview_dc_->SetCompression(true);
+    } else {
+      for (FiniteElementState& state : state_) {
+        state.gridFunction(); // update grid function values
+      }
     }
 
+    // Set the current time, cycle, and requested paraview directory
     paraview_dc_->SetCycle(cycle_);
     paraview_dc_->SetTime(time_);
     paraview_dc_->SetPrefixPath(*paraview_output_dir);
+
+    // Write the paraview file
     paraview_dc_->Save();
   }
 }

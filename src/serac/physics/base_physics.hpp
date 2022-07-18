@@ -35,7 +35,7 @@ public:
    * @param[in] name Name of the physics module instance
    * when a mesh other than the primary mesh is used
    */
-  BasePhysics(std::string name_, mfem::ParMesh* pmesh = nullptr);
+  BasePhysics(std::string name, mfem::ParMesh* pmesh = nullptr);
 
   /**
    * @brief Constructor that creates n entries in state_ of order p
@@ -46,7 +46,7 @@ public:
    * @param[in] name Name of the physics module instance
    * when a mesh other than the default mesh is used
    */
-  BasePhysics(int n, int p, std::string name_, mfem::ParMesh* pmesh = nullptr);
+  BasePhysics(int n, int p, std::string name, mfem::ParMesh* pmesh = nullptr);
 
   /**
    * @brief Construct a new Base Physics object (copy constructor)
@@ -106,9 +106,10 @@ public:
   virtual void advanceTimestep(double& dt) = 0;
 
   /**
-   * @brief Output the current state of the PDE fields
+   * @brief Output the current state of the PDE fields in Sidre format and optionally in Paraview format
+   *  if \p paraview_output_dir is given.
    *
-   * @param[in] paraview_output_dir[in] Optional output directory for paraview visualization files
+   * @param[in] paraview_output_dir Optional output directory for paraview visualization files
    */
   virtual void outputState(std::optional<std::string> paraview_output_dir = {}) const;
 
