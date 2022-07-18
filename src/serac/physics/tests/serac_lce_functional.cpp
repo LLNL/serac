@@ -17,6 +17,8 @@
 #include "serac/physics/materials/solid_functional_material.hpp"
 #include "serac/physics/materials/parameterized_solid_functional_material.hpp"
 
+#include "serac/physics/materials/liquid_crystal_elastomer_material.hpp"
+
 namespace serac {
 void functional_solid_test_lce_material(double expected_disp_norm)
 {
