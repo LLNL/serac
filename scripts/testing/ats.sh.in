@@ -28,10 +28,10 @@ Help()
     echo "BlueOS: lalloc 2 ./ats.sh"
     echo "WSL: ./ats.sh"
     echo "Options:"
-    echo "  --baseline   = copies generated baselines from a pre-existing serac run"
-    echo "                 options: none (default), all, or comma delimited list of tests"
-    echo "  --clean      = cleans output and log files"
-    echo "  --help       = displays this message"
+    echo "  -b | --baseline   = copies generated baselines from a pre-existing serac run"
+    echo "                      options: none (default), all, or comma delimited list of tests"
+    echo "  -c | --clean      = cleans output and log files"
+    echo "  -h | --help       = displays this message"
 }
 
 Clean()
@@ -40,9 +40,7 @@ Clean()
     rm -rf $SYS_TYPE.*.logs
 
     # Clean-up last run's output
-    if [ "$ATS_SERAC_BASELINE" -ne 1 ] ; then
-        rm -rf $ATS_SERAC_REPO_DIR/tests/integration/*/*/*_output*
-    fi
+    rm -rf $ATS_SERAC_REPO_DIR/tests/integration/*/*/*_output*
 }
 
 if [ ! -d "$ATS_SERAC_REPO_DIR" ]; then
@@ -60,28 +58,14 @@ if [ ! -f "$ATS_EXECUTABLE" ]; then
     exit 1
 fi
 
-while getopts ":-:" option; do
-    case $option in
-        -)  # long options
-            case $OPTARG in
-                help)
-                    Help
-                    exit;;
-                baseline=*)
-                    ATS_SERAC_BASELINE=${OPTARG#*=};;
-                clean)
-                    Clean
-                    exit;;
-                *)  # invalid
-                    echo "Invalid"
-                    Help
-                    exit;;
-            esac;;
-        \?) # invalid
-            echo "Invalid option"
-            Help
-            exit;;
+while [ -n "$1" ] ; do
+    case "$1" in
+        -h | --help     ) Help; exit 0;;
+        -c | --clean    ) Clean; exit 0;;
+        -b | --baseline ) shift; ATS_SERAC_BASELINE=$1;;
+        *               ) echo "Invalid option: '$1'"; exit 1;;
     esac
+    shift
 done
 
 # Add Serac's bin directory to path
@@ -91,10 +75,8 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~"
 echo "ATS:       $ATS_EXECUTABLE"
 echo "BIN DIR:   $ATS_SERAC_BIN_DIR"
 echo "REPO DIR:  $ATS_SERAC_REPO_DIR"
-echo "BASELINE:  ${ATS_SERAC_BASELINE}"
+echo "BASELINE:  $ATS_SERAC_BASELINE"
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~"
-
-Clean
 
 # Run ATS
 $ATS_EXECUTABLE $ATS_SERAC_REPO_DIR/tests/integration/test.ats
