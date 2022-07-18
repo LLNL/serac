@@ -266,7 +266,7 @@ perform these conversion calculations (assuming 3D):
              R = Math.sqrt(E * E + 9 * L * L + 2 * E * L);
   
              K = (E + 3 * L + R) / 6.0;
-             G = (3 - 3 * L + R) / 4.0;
+             G = (E - 3 * L + R) / 4.0;
              nu = (2 * L) / (E + L + R);
           }
   
