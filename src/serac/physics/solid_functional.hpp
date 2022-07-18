@@ -215,6 +215,84 @@ public:
     bcs_.addEssential(disp_bdr, component_disp_bdr_coef_, displacement_.space(), component);
   }
 
+  void setSlideWallBCs(const std::set<int>& slide_bdr)
+  {
+    SLIC_ERROR_ROOT_IF(slide_bdr.size() > dim,
+                       "Number of sliding wall attribute boundaries must be less than the dimension.");
+
+    auto& space = displacement_.space();
+
+    std::unordered_map<int, mfem::Vector> attribute_normals;
+
+    for (int i = 0; i < space.GetNBE(); ++i) {
+      int att = space.GetBdrAttribute(i);
+
+      auto found = slide_bdr.find(att);
+      if (found != slide_bdr.end()) {
+        // compute the boundary element normal
+        mfem::ElementTransformation* Tr    = space.GetBdrElementTransformation(i);
+        const mfem::FiniteElement*   fe    = space.GetBE(i);
+        const mfem::IntegrationRule& nodes = fe->GetNodes();
+
+        mfem::Array<int> dofs;
+        space.GetBdrElementDofs(i, dofs);
+        SLIC_ERROR_IF(dofs.Size() != nodes.Size(), "Something wrong in finite element space!");
+
+        for (int j = 0; j < dofs.Size(); ++j) {
+          Tr->SetIntPoint(&nodes[j]);
+
+          mfem::Vector normal(dim);
+
+          // the normal returned in the next line is scaled by h. We should normalize it to 1
+          // to check for consistency along the boundary
+          CalcOrtho(Tr->Jacobian(), normal);
+
+          double norm_l2 = normal.Norml2();
+          normal *= norm_l2;
+
+          auto found_attr = attribute_normals.find(att);
+
+          if (found_attr == attribute_normals.end()) {
+            // if the normal is not already found, add it to the list
+            attribute_normals.emplace(att, normal);
+          } else {
+            // otherwise check that it is consistent with previously found normals
+            auto& other_normal = found_attr->second;
+            for (int comp = 0; comp < normal.Size(); ++comp) {
+              SLIC_ERROR_IF(std::abs(std::abs(other_normal(comp)) - std::abs(normal(comp))) > 1.0e-7,
+                            "The normal vectors on an attribute surface are not constant in the sliding wall boundary "
+                            "condition.");
+            }
+          }
+        }
+      }
+    }
+
+    // TODO reduce the normal across MPI ranks
+
+    // TODO implement for more than one sliding wall
+    SLIC_ERROR_ROOT_IF(attribute_normals.size() > 1, "Sliding wall not implemented for more than one wall.");
+
+    for (auto& normal : attribute_normals) {
+      if constexpr (dim == 2) {
+        double angle = std::acos(normal.second(0) / (std::sqrt(normal.second(0) * normal.second(0) + normal.second(1) * normal.second(1))));
+        coordinate_transform_     = {{{std::cos(angle), std::sin(angle)}, {-1.0 * std::sin(angle), std::cos(angle)}}};
+        inv_coordinate_transform_ = inv(*coordinate_transform_);
+      }
+
+      if constexpr (dim == 3) {
+        SLIC_ERROR_ROOT("Sliding wall not implemented for 3D problems.");
+      }
+
+      // Add the appropriate component-based boundary condition
+      // Project the coefficient onto the grid function
+      component_disp_bdr_coef_ = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector&) { return 0.0; });
+
+      bcs_.addEssential({normal.first}, component_disp_bdr_coef_, displacement_.space(), 0);
+    }
+
+  }
+
   /// @brief Solve the Quasi-static Newton system
   void quasiStaticSolve() { nonlin_solver_.Mult(zero_, displacement_); }
 
@@ -233,6 +311,8 @@ public:
     if (geom_nonlin_ == GeometricNonlinearities::On) {
       mesh_.NewNodes(*reference_nodes_);
     }
+
+    rotate();
 
     if (is_quasistatic_) {
       // Update the time for housekeeping purposes
@@ -255,6 +335,8 @@ public:
 
       mesh_.NewNodes(*deformed_nodes_);
     }
+
+    undoRotate();
 
     cycle_ += 1;
   }
@@ -669,6 +751,85 @@ public:
   }
 
 protected:
+void rotate()
+  {
+    if (coordinate_transform_) {
+      // Rotate the mesh nodes
+      auto* nodes = mesh_.GetNodes();
+
+      rotateGridFunction(*coordinate_transform_, *nodes);
+
+      // Get the displacement grid function from the state
+      auto& displacement_gf = displacement_.gridFunction();
+
+      // Rotate the displacement
+      rotateGridFunction(*coordinate_transform_, displacement_gf);
+
+      // Set the underlying true vector from the rotated grid function
+      displacement_.setFromGridFunction(displacement_gf);
+
+      // Get the velocity grid function
+      auto& velocity_gf = velocity_.gridFunction();
+      rotateGridFunction(*coordinate_transform_, velocity_gf);
+      velocity_.setFromGridFunction(velocity_gf);
+
+      auto& adjoint_disp = adjoint_displacement_.gridFunction();
+      rotateGridFunction(*coordinate_transform_, adjoint_disp);
+      adjoint_displacement_.setFromGridFunction(adjoint_disp);
+    }
+
+  }
+
+  void undoRotate()
+  {
+    if (coordinate_transform_) {
+      // Rotate the mesh nodes
+      auto* nodes = mesh_.GetNodes();
+      rotateGridFunction(*inv_coordinate_transform_, *nodes);
+
+      // Get the displacement grid function from the state
+      auto& displacement_gf = displacement_.gridFunction();
+
+      // Rotate the displacement
+      rotateGridFunction(*inv_coordinate_transform_, displacement_gf);
+
+      // Set the underlying true vector from the rotated grid function
+      displacement_.setFromGridFunction(displacement_gf);
+
+      // Get the velocity grid function
+      auto& velocity_gf = velocity_.gridFunction();
+      rotateGridFunction(*inv_coordinate_transform_, velocity_gf);
+      velocity_.setFromGridFunction(velocity_gf);
+
+      auto& adjoint_disp = adjoint_displacement_.gridFunction();
+      rotateGridFunction(*inv_coordinate_transform_, adjoint_disp);
+      adjoint_displacement_.setFromGridFunction(adjoint_disp);
+    }
+  }
+
+  void rotateGridFunction(const tensor<double, dim, dim>& rotation, mfem::GridFunction& grid_function)
+  {
+    tensor<double, dim> unrotated_vector;
+    tensor<double, dim> rotated_vector;
+
+    // For each degree of freedom, determine the appropriate vector degree of freedom indices
+
+    for (int dof = 0; dof < grid_function.FESpace()->GetNDofs(); ++dof) {
+      for (int component = 0; component < grid_function.FESpace()->GetVDim(); ++component) {
+        int vector_dof_index        = grid_function.FESpace()->DofToVDof(dof, component);
+        unrotated_vector[component] = grid_function(vector_dof_index);
+      }
+
+      rotated_vector = dot(rotation, unrotated_vector);
+
+      for (int component = 0; component < grid_function.FESpace()->GetVDim(); ++component) {
+        int vector_dof_index           = grid_function.FESpace()->DofToVDof(dof, component);
+        grid_function(vector_dof_index) = rotated_vector[component];
+      }
+    }
+  }
+
+
   /// The compile-time finite element trial space for displacement and velocity (H1 of order p)
   using trial = H1<order, dim>;
 
@@ -756,6 +917,11 @@ protected:
 
   /// @brief Auxilliary identity rank 2 tensor
   const isotropic_tensor<double, dim, dim> I_ = Identity<dim>();
+
+  std::optional<tensor<double, dim, dim>> coordinate_transform_;
+
+  std::optional<tensor<double, dim, dim>> inv_coordinate_transform_;
+
 };
 
 }  // namespace serac
