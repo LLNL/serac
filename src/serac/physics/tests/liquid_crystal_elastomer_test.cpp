@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
 
   axom::slic::SimpleLogger logger;
 
-  constexpr int p = 1;
+  constexpr int p = 2;
   constexpr int dim = 3;
   int serial_refinement   = 2;
   int parallel_refinement = 0;
