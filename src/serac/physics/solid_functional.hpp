@@ -293,7 +293,7 @@ public:
     // Project the coefficient onto the grid function
     disp_bdr_coef_ = std::make_shared<mfem::VectorFunctionCoefficient>(dim, disp);
 
-    bcs_.addEssential(disp_bdr, disp_bdr_coef_, displacement_);
+    bcs_.addEssential(disp_bdr, disp_bdr_coef_, displacement_.space());
   }
 
   void setDisplacementBCs(const std::set<int>&                                            disp_bdr,
@@ -318,7 +318,51 @@ public:
     // Project the coefficient onto the grid function
     component_disp_bdr_coef_ = std::make_shared<mfem::FunctionCoefficient>(disp);
 
-    bcs_.addEssential(disp_bdr, component_disp_bdr_coef_, displacement_, component);
+    bcs_.addEssential(disp_bdr, component_disp_bdr_coef_, displacement_.space(), component);
+  }
+
+  /// @brief Solve the Quasi-static Newton system
+  void quasiStaticSolve() { nonlin_solver_.Mult(zero_, displacement_); }
+
+  /**
+   * @brief Advance the timestep
+   *
+   * @param[inout] dt The timestep to attempt. This will return the actual timestep for adaptive timestepping
+   * schemes
+   * @pre SolidFunctional::completeSetup() must be called prior to this call
+   */
+  void advanceTimestep(double& dt) override
+  {
+    SLIC_ERROR_ROOT_IF(!residual_, "completeSetup() must be called prior to advanceTimestep(dt) in SolidFunctional.");
+
+    // Set the mesh nodes to the reference configuration
+    if (geom_nonlin_ == GeometricNonlinearities::On) {
+      mesh_.NewNodes(*reference_nodes_);
+    }
+
+    if (is_quasistatic_) {
+      // Update the time for housekeeping purposes
+      time_ += dt;
+      // Project the essential boundary coefficients
+      for (auto& bc : bcs_.essentials()) {
+        bc.setDofs(displacement_, time_);
+      }
+
+      quasiStaticSolve();
+    } else {
+      // Note that the ODE solver handles the essential boundary condition application itself
+      ode2_.Step(displacement_, velocity_, time_, dt);
+    }
+
+    if (geom_nonlin_ == GeometricNonlinearities::On) {
+      // Update the mesh with the new deformed nodes
+      deformed_nodes_->Set(1.0, displacement_.gridFunction());
+      deformed_nodes_->Add(1.0, *reference_nodes_);
+
+      mesh_.NewNodes(*deformed_nodes_);
+    }
+
+    cycle_ += 1;
   }
 
   /**
@@ -463,12 +507,6 @@ public:
   {
     // Build the dof array lookup tables
     displacement_.space().BuildDofToArrays();
-
-    // Project the essential boundary coefficients
-    for (auto& bc : bcs_.essentials()) {
-      // bc.projectBdr(displacement_, time_);
-      bc.project();
-    }
 
     if (is_quasistatic_) {
       residual_with_bcs_ = buildQuasistaticOperator();
@@ -645,8 +683,7 @@ public:
     }
 
     for (const auto& bc : bcs_.essentials()) {
-      bc.eliminateFromMatrix(*J_T);
-      bc.eliminateToRHS(*J_T, adjoint_essential, adjoint_load_vector);
+      bc.apply(*J_T, adjoint_load_vector, adjoint_essential);
     }
 
     lin_solver.SetOperator(*J_T);

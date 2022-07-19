@@ -116,13 +116,13 @@ void ThermalConduction::setTemperature(mfem::Coefficient& temp)
 void ThermalConduction::setTemperatureBCs(const std::set<int>&               temp_bdr,
                                           std::shared_ptr<mfem::Coefficient> temp_bdr_coef)
 {
-  bcs_.addEssential(temp_bdr, temp_bdr_coef, temperature_);
+  bcs_.addEssential(temp_bdr, temp_bdr_coef, temperature_.space());
 }
 
 void ThermalConduction::setFluxBCs(const std::set<int>& flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef)
 {
   // Set the natural (integral) boundary condition
-  bcs_.addNatural(flux_bdr, flux_bdr_coef, -1);
+  bcs_.addNatural(flux_bdr, flux_bdr_coef, temperature_.space());
 }
 
 void ThermalConduction::setConductivity(std::unique_ptr<mfem::Coefficient>&& kappa)
@@ -182,12 +182,6 @@ void ThermalConduction::completeSetup()
   // Build the dof array lookup tables
   temperature_.space().BuildDofToArrays();
 
-  // Project the essential boundary coefficients
-  for (auto& bc : bcs_.essentials()) {
-    // bc.projectBdr(temperature_, time_);
-    bc.project();
-  }
-
   if (is_quasistatic_) {
     residual_ = mfem_ext::StdFunctionOperator(
         temperature_.space().TrueVSize(),
@@ -239,12 +233,17 @@ void ThermalConduction::completeSetup()
 void ThermalConduction::advanceTimestep(double& dt)
 {
   if (is_quasistatic_) {
-    nonlin_solver_.Mult(zero_, temperature_);
     time_ += dt;
+    // Project the essential boundary coefficients
+    for (auto& bc : bcs_.essentials()) {
+      bc.setDofs(temperature_, time_);
+    }
+    nonlin_solver_.Mult(zero_, temperature_);
   } else {
     SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
 
     // Step the time integrator
+    // Note that the ODE solver handles the essential boundary condition application itself
     ode_.Step(temperature_, time_, dt);
   }
 

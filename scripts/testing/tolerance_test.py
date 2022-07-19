@@ -12,6 +12,7 @@ import json
 import math
 import os
 import sys
+import time
 
 
 # This script compares two Serac summary files against each other.
@@ -28,9 +29,20 @@ def as_list(v):
     else:
         return [v]
 
+# Check if file exists and error out if not found
+# if wait_for_file is true, attempt to sleep before failing due to
+# possible file system lag
+def ensure_file(path, wait_for_file=False):
+    exists = os.path.exists(path)
+    if wait_for_file:
+        for i in range(12):
+            if exists:
+                break
+            print("File not found, attempting sleep to wait for file...")
+            time.sleep(5)
+            exists = os.path.exists(path)
 
-def ensure_file(path):
-    if not os.path.exists(path):
+    if not exists:
         print("ERROR: Given file does not exist: {0}".format(path))
         sys.exit(1)
     if not os.path.isfile(path):
@@ -73,7 +85,7 @@ Example JSON file for --tolerance-file:
 
     # Ensure correctness of given options
     ensure_file(args.baseline)
-    ensure_file(args.test)
+    ensure_file(args.test, wait_for_file=True)
     if args.tolerance_file is not None:
         ensure_file(args.tolerance_file)
 
