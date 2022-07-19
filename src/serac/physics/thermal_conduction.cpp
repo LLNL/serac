@@ -184,7 +184,8 @@ void ThermalConduction::completeSetup()
 
   // Project the essential boundary coefficients
   for (auto& bc : bcs_.essentials()) {
-    bc.projectBdr(temperature_, time_);
+    // bc.projectBdr(temperature_, time_);
+    bc.project();
   }
 
   if (is_quasistatic_) {
