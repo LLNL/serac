@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause) 
 
-set(test_dependencies gtest serac_physics)
+set(test_dependencies gtest serac_physics serac_state)
 blt_list_append( TO test_dependencies ELEMENTS caliper adiak IF ${SERAC_ENABLE_PROFILING} )
 
 set(infrastructure_tests

@@ -14,7 +14,7 @@ ShearSensitivityCoefficient::ShearSensitivityCoefficient(FiniteElementState&    
                                                          LinearElasticMaterial& linear_mat)
     : displacement_(displacement), adjoint_displacement_(adjoint_displacement), material_(linear_mat)
 {
-  dim_ = displacement_.gridFunc().ParFESpace()->GetVDim();
+  dim_ = displacement_.space().GetVDim();
 
   du_dX_.SetSize(dim_);
   dp_dX_.SetSize(dim_);
@@ -26,11 +26,15 @@ double ShearSensitivityCoefficient::Eval(mfem::ElementTransformation& T, const m
 {
   T.SetIntPoint(&ip);
 
+  auto& displacement_gf = displacement_.gridFunction();
+
   // Compute the displacement and deformation gradient
-  displacement_.gridFunc().GetVectorGradient(T, du_dX_);
+  displacement_gf.GetVectorGradient(T, du_dX_);
+
+  auto& adjoint_gf = adjoint_displacement_.gridFunction();
 
   // Compute the adjoint gradient and strain
-  adjoint_displacement_.gridFunc().GetVectorGradient(T, dp_dX_);
+  adjoint_gf.GetVectorGradient(T, dp_dX_);
 
   serac::solid_util::calcLinearizedStrain(dp_dX_, adjoint_strain_);
 
@@ -55,7 +59,7 @@ BulkSensitivityCoefficient::BulkSensitivityCoefficient(FiniteElementState&    di
                                                        LinearElasticMaterial& linear_mat)
     : displacement_(displacement), adjoint_displacement_(adjoint_displacement), material_(linear_mat)
 {
-  dim_ = displacement_.gridFunc().ParFESpace()->GetVDim();
+  dim_ = displacement_.space().GetVDim();
 
   du_dX_.SetSize(dim_);
   dp_dX_.SetSize(dim_);
@@ -68,10 +72,12 @@ double BulkSensitivityCoefficient::Eval(mfem::ElementTransformation& T, const mf
   T.SetIntPoint(&ip);
 
   // Compute the displacement and deformation gradient
-  displacement_.gridFunc().GetVectorGradient(T, du_dX_);
+  auto& displacement_gf = displacement_.gridFunction();
+  displacement_gf.GetVectorGradient(T, du_dX_);
 
   // Compute the adjoint gradient and strain
-  adjoint_displacement_.gridFunc().GetVectorGradient(T, dp_dX_);
+  auto& adjoint_gf = adjoint_displacement_.gridFunction();
+  adjoint_gf.GetVectorGradient(T, dp_dX_);
 
   serac::solid_util::calcLinearizedStrain(dp_dX_, adjoint_strain_);
 

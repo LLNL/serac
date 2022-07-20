@@ -2,8 +2,6 @@
 t_final = 1.0
 dt      = 0.25
 
-output_type = "SidreVisIt"
-
 main_mesh = {
     type = "file",
     -- mesh file

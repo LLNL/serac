@@ -33,24 +33,24 @@ public:
    * @brief Constructor for setting up a boundary condition using a set of attributes
    * @param[in] coef Either a mfem::Coefficient or mfem::VectorCoefficient representing the BC
    * @param[in] component The zero-indexed vector component if the BC applies to just one component,
-   * should be -1 for all components
+   * should be null for all components
    * @param[in] attrs The set of boundary condition attributes in the mesh that the BC applies to
-   * @param[in] num_attrs The total number of boundary attributes for the mesh
-   * @param[in] state The finite element state on which this BC is applied
+   * @param[in] space The finite element space on which this BC is applied. This is used to calculate the DOFs from the
+   * attribute list.
    */
-  BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component, const std::set<int>& attrs,
-                    const int num_attrs = 0, FiniteElementState* state = nullptr);
+  BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component,
+                    const mfem::ParFiniteElementSpace& space, const std::set<int>& attrs);
 
   /**
    * @brief Minimal constructor for setting the true DOFs directly
    * @param[in] coef Either a mfem::Coefficient or mfem::VectorCoefficient representing the BC
    * @param[in] component The zero-indexed vector component if the BC applies to just one component,
-   * should be -1 for all components
-   * @param[in] true_dofs The indices of the relevant DOFs
-   * @param[in] state The finite element state on which this BC is applied
+   * should be null for all components
+   * @param[in] true_dofs The vector indices of the relevant DOFs
+   * @param[in] space The finite element space on which this BC is applied.
    */
-  BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component, const mfem::Array<int>& true_dofs,
-                    FiniteElementState* state = nullptr);
+  BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component,
+                    const mfem::ParFiniteElementSpace& space, const mfem::Array<int>& true_dofs);
 
   /**
    * @brief Determines whether a boundary condition is associated with a tag
@@ -134,13 +134,71 @@ public:
   mfem::Coefficient& scalarCoefficient();
 
   /**
+   * @brief Returns the DOF indices for an essential boundary condition
+   * @return A non-owning reference to the array of indices
+   *
+   * @note True and local dofs are described in the <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a>
+   */
+  const mfem::Array<int>& getTrueDofList() const { return true_dofs_; }
+
+  /**
+   * @brief Returns the DOF indices for an essential boundary condition
+   * @return A non-owning reference to the array of indices
+   *
+   * @note True and local dofs are described in the <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a>
+   */
+  const mfem::Array<int>& getLocalDofList() const { return local_dofs_; }
+
+  /**
+   * @brief Projects the associated coefficient over a solution vector on the DOFs constrained by the boundary condition
+   * @param[in] time The time at which to project the boundary condition
+   * @param[inout] state The field to project over
+   */
+  void setDofs(mfem::Vector& state, const double time = 0.0) const;
+
+  /**
+   * @brief Modify the system of equations \f$Ax=b\f$ by replacing equations that correspond to
+   * essential boundary conditions with ones that prescribe the desired values. The rows of the matrix containing
+   * essential dofs are set to zero with a one on the diagonal. To preserve symmetry,
+   * the off-diagonal entries of associated columns of A are also zeroed out, and b is modified accordingly.
+   * This function is equivalent to:
+   *
+   * \f[
+   * A = \tilde{A} + A_e
+   * (\tilde{A} + A_e) x = b
+   * \tilde{A} x = b - A_e x
+   * \f]
+   *
+   * where \f$ A_e \f$ contains the eliminated columns of \f$ A \f$ for the essential degrees of freedom. Note that
+   * these equations only apply to the non-essential dofs. For the essential rows, \f$ A \f$ is modified to contain one
+   * on the diagonal and the right hand side is modified to contain the essential value originally contained in \f$ x
+   * \f$. If \f$ A \f$ is given as the input @a k_mat , \f$ A_e \f$ is returned in @a k_mat .
+   * @param[inout] k_mat A stiffness (system) matrix. The rows and cols of the essential dofs will be set to zero with a
+   * one on the diagonal after the return of this method.
+   * @param[inout] rhs The RHS vector for the system. At return, this vector contains \f$ b - A_e x \f$.
+   * @param[in] state The state from which the solution DOF values are extracted and used to modify @a k_mat
+   * @pre The input state solution must contain the correct essential DOFs. This can be done by calling the @a
+   * BoundaryCondition::setDofs method.
+   */
+  void apply(mfem::HypreParMatrix& k_mat, mfem::Vector& rhs, mfem::Vector& state) const;
+
+private:
+  /**
+   * @brief Uses mfem::ParFiniteElementSpace::GetEssentialTrueDofs to
+   * determine the DOFs for the boundary condition from the stored marker list
+   *
+   * @note This will set both the true and local dof values.
+   */
+  void setDofListsFromMarkers();
+
+  /**
    * @brief "Manually" set the DOF indices without specifying the field to which they apply
    * @param[in] true_dofs The true vector indices of the DOFs constrained by the boundary condition
    *
    * @note This will set both the true and local internal dof index arrays.
    * @note True and local dofs are described in the <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a>
    */
-  void setTrueDofs(const mfem::Array<int> true_dofs);
+  void setTrueDofList(const mfem::Array<int>& true_dofs);
 
   /**
    * @brief "Manually" set the DOF indices without specifying the field to which they apply
@@ -150,123 +208,7 @@ public:
    * @note This will set both the true and local internal dof index arrays.
    * @note True and local dofs are described in the <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a>
    */
-  void setLocalDofs(const mfem::Array<int> local_dofs);
-
-  /**
-   * @brief Returns the DOF indices for an essential boundary condition
-   * @return A non-owning reference to the array of indices
-   *
-   * @note True and local dofs are described in the <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a>
-   */
-  const mfem::Array<int>& getTrueDofs() const
-  {
-    SLIC_ERROR_ROOT_IF(!true_dofs_, "True DOFs only available with essential BC.");
-    return *true_dofs_;
-  }
-
-  /**
-   * @brief Returns the DOF indices for an essential boundary condition
-   * @return A non-owning reference to the array of indices
-   *
-   * @note True and local dofs are described in the <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a>
-   */
-  const mfem::Array<int>& getLocalDofs() const
-  {
-    SLIC_ERROR_ROOT_IF(!local_dofs_, "Local DOFs only available with essential BC.");
-    return *local_dofs_;
-  }
-
-  /**
-   * @brief Projects the boundary condition over a field
-   * @param[inout] state The field to project over
-   */
-  void project(FiniteElementState& state) const;
-
-  /**
-   * @brief Projects the boundary condition over a grid function
-   * @pre A corresponding field (FiniteElementState) has been associated
-   * with the calling object via BoundaryCondition::setTrueDofs(FiniteElementState&)
-   */
-  void project() const;
-
-  /**
-   * @brief Projects the boundary condition over boundary DOFs of a grid function
-   * @param[inout] gf The grid function representing the field to project over
-   * @param[in] time The time for the coefficient, used for time-varying coefficients
-   */
-  void projectBdr(mfem::ParGridFunction& gf, const double time) const;
-
-  /**
-   * @brief Projects the boundary condition over boundary DOFs of a field
-   * @param[inout] state The field to project over
-   * @param[in] time The time for the coefficient, used for time-varying coefficients
-   */
-  void projectBdr(FiniteElementState& state, const double time) const;
-
-  /**
-   * @brief Projects the boundary condition over boundary DOFs
-   * @param[in] time The time for the coefficient, used for time-varying coefficients
-   * @pre A corresponding field (FiniteElementState) has been associated
-   * with the calling object via BoundaryCondition::setTrueDofs(FiniteElementState&)
-   */
-  void projectBdr(const double time) const;
-
-  /**
-   * @brief Projects the boundary condition over boundary to a DoF vector
-   * @param[in] dof_values The discrete dof values to project
-   * @param[in] time The time for the coefficient, used for time-varying coefficients
-   * @pre A corresponding field (FiniteElementState) has been associated
-   * with the calling object via BoundaryCondition::setTrueDofs(FiniteElementState&)
-   */
-  void projectBdrToDofs(mfem::Vector& dof_values, const double time) const;
-
-  /**
-   * @brief Eliminates the rows and columns corresponding to the BC's true DOFS
-   * from a stiffness matrix
-   * @param[inout] k_mat The stiffness matrix to eliminate from,
-   * will be modified.  These eliminated matrix entries can be
-   * used to eliminate an essential BC to an RHS vector with
-   * BoundaryCondition::eliminateToRHS
-   */
-  void eliminateFromMatrix(mfem::HypreParMatrix& k_mat) const;
-
-  /**
-   * @brief Eliminates boundary condition from solution to RHS
-   * @param[in] k_mat_post_elim A stiffness matrix post-elimination
-   * @param[in] soln The solution vector
-   * @param[out] rhs The RHS vector for the system
-   * @pre BoundaryCondition::eliminateFrom has been called
-   */
-  void eliminateToRHS(mfem::HypreParMatrix& k_mat_post_elim, const mfem::Vector& soln, mfem::Vector& rhs) const;
-
-  /**
-   * @brief Applies an essential boundary condition to RHS
-   * @param[in] k_mat_post_elim A stiffness (system) matrix post-elimination
-   * @param[out] rhs The RHS vector for the system
-   * @param[inout] state The state from which the solution DOF values are extracted and used to eliminate
-   * @param[in] time Simulation time, used for time-varying boundary coefficients
-   * @pre BoundaryCondition::eliminateFrom has been called
-   */
-  void apply(mfem::HypreParMatrix& k_mat_post_elim, mfem::Vector& rhs, FiniteElementState& state,
-             const double time = 0.0) const;
-
-  /**
-   * @brief Sets the underlying coefficient's time
-   *
-   * @param[in] time The current simulation time
-   *
-   * Used for time-dependent coefficients
-   */
-  void setTime(const double time);
-
-private:
-  /**
-   * @brief Uses mfem::ParFiniteElementSpace::GetEssentialTrueDofs to
-   * determine the DOFs for the boundary condition from the stored marker list
-   *
-   * @note This will set both the true and local dof values.
-   */
-  void setDofs();
+  void setLocalDofList(const mfem::Array<int>& local_dofs);
 
   /**
    * @brief A coefficient containing either a mfem::Coefficient or an mfem::VectorCoefficient
@@ -284,21 +226,18 @@ private:
    * @brief The true DOFs affected by this BC
    * @note Only used for essential (Dirichlet) BCs
    */
-  std::optional<mfem::Array<int>> true_dofs_;
+  mfem::Array<int> true_dofs_;
   /**
    * @brief The local (finite element) DOFs affected by this BC
    * @note Only used for essential (Dirichlet) BCs
    */
-  std::optional<mfem::Array<int>> local_dofs_;
+  mfem::Array<int> local_dofs_;
   /**
    * @brief The state (field) affected by this BC
    * @note Only used for essential (Dirichlet) BCs
    */
-  FiniteElementState* state_ = nullptr;
-  /**
-   * @brief The eliminated entries for Dirichlet BCs
-   */
-  mutable std::unique_ptr<mfem::HypreParMatrix> eliminated_matrix_entries_;
+  const mfem::ParFiniteElementSpace& space_;
+
   /**
    * @brief A label for the BC, for filtering purposes, in addition to its type hash
    * @note This should always correspond to an enum

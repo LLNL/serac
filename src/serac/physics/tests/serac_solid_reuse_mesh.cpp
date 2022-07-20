@@ -76,9 +76,6 @@ TEST(SolidSolver, ReuseMesh)
                                          std::make_unique<mfem::ConstantCoefficient>(5.0));
     solid_solver_1.setDisplacement(*deform);
 
-    // Initialize the VisIt output
-    solid_solver_1.initializeOutput(serac::OutputType::VisIt, "two_mesh_solid_1");
-
     // Construct the internal dynamic solver data structures
     solid_solver_1.completeSetup();
 
@@ -88,9 +85,6 @@ TEST(SolidSolver, ReuseMesh)
     solid_solver_2.setMaterialParameters(std::make_unique<mfem::ConstantCoefficient>(0.25),
                                          std::make_unique<mfem::ConstantCoefficient>(5.0));
     solid_solver_2.setDisplacement(*deform);
-
-    // Initialize the VisIt output
-    solid_solver_2.initializeOutput(serac::OutputType::VisIt, "two_mesh_solid_2");
 
     // Construct the internal dynamic solver data structures
     solid_solver_2.completeSetup();
@@ -102,11 +96,9 @@ TEST(SolidSolver, ReuseMesh)
     // Output the final state
     solid_solver_1.outputState();
 
-    u_1_true_vec = solid_solver_1.displacement().trueVec();
+    u_1_true_vec = solid_solver_1.displacement();
 
-    EXPECT_NEAR(
-        0.0, (mfem::Vector(solid_solver_1.displacement().trueVec() - solid_solver_2.displacement().trueVec())).Norml2(),
-        0.001);
+    EXPECT_NEAR(0.0, (mfem::Vector(solid_solver_1.displacement() - solid_solver_2.displacement())).Norml2(), 0.001);
   }
 
   Solid solid_solver_3(1, default_static, GeometricNonlinearities::On, FinalMeshOption::Deformed);
@@ -116,16 +108,13 @@ TEST(SolidSolver, ReuseMesh)
                                        std::make_unique<mfem::ConstantCoefficient>(5.0));
   solid_solver_3.setDisplacement(*deform);
 
-  // Initialize the VisIt output
-  solid_solver_3.initializeOutput(serac::OutputType::VisIt, "two_mesh_solid_1");
-
   // Construct the internal dynamic solver data structures
   solid_solver_3.completeSetup();
 
   double dt = 1.0;
   solid_solver_3.advanceTimestep(dt);
 
-  EXPECT_NEAR(0.0, (mfem::Vector(u_1_true_vec - solid_solver_3.displacement().trueVec())).Norml2(), 0.001);
+  EXPECT_NEAR(0.0, (mfem::Vector(u_1_true_vec - solid_solver_3.displacement())).Norml2(), 0.001);
 
   solid_solver_3.resetToReferenceConfiguration();
   EXPECT_NEAR(0.0, norm(solid_solver_3.displacement()), 1.0e-8);

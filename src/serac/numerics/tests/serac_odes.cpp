@@ -256,18 +256,15 @@ double first_order_ode_test(int nsteps, ode_type type, constraint_type constrain
   // although these test problems don't really apply to a finite element mesh,
   // the tools in serac require that these finite element data structures exist
   serac::FiniteElementState dummy(mesh, FiniteElementState::Options{.order = 1, .name = "dummy"});
-  // Explicitly allocate the gridfunction as it is not being managed by Sidre
-  dummy.gridFunc().GetMemory().New(dummy.gridFunc().Size());
-  dummy.initializeTrueVec();
 
   if (constraint == SINE_WAVE) {
     auto coef = std::make_shared<mfem::FunctionCoefficient>(sine_wave);
-    bcs.addEssential({1}, coef, dummy);
+    bcs.addEssential({1}, coef, dummy.space());
   }
 
   if (constraint == TRIANGLE_WAVE) {
     auto coef = std::make_shared<mfem::FunctionCoefficient>(triangle_wave);
-    bcs.addEssential({1}, coef, dummy);
+    bcs.addEssential({1}, coef, dummy.space());
   }
 
   std::function<mfem::Vector(const mfem::Vector&)>      f_int;
@@ -366,18 +363,15 @@ double second_order_ode_test(int nsteps, ode_type type, constraint_type constrai
   // although these test problems don't really apply to a finite element mesh,
   // the tools in serac require that these finite element data structures exist
   serac::FiniteElementState dummy(mesh, FiniteElementState::Options{.order = 1, .name = "dummy"});
-  // Explicitly allocate the gridfunction as it is not being managed by Sidre
-  dummy.gridFunc().GetMemory().New(dummy.gridFunc().Size());
-  dummy.initializeTrueVec();
 
   if (constraint == SINE_WAVE) {
     auto coef = std::make_shared<mfem::FunctionCoefficient>(sine_wave);
-    bcs.addEssential({1}, coef, dummy);
+    bcs.addEssential({1}, coef, dummy.space());
   }
 
   if (constraint == TRIANGLE_WAVE) {
     auto coef = std::make_shared<mfem::FunctionCoefficient>(triangle_wave);
-    bcs.addEssential({1}, coef, dummy);
+    bcs.addEssential({1}, coef, dummy.space());
   }
 
   std::function<mfem::Vector(const mfem::Vector&)>      f_int;

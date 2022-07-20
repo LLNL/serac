@@ -18,7 +18,7 @@ constexpr int NUM_FIELDS = 1;
 
 ThermalConduction::ThermalConduction(int order, const SolverOptions& options, const std::string& name,
                                      mfem::ParMesh* pmesh)
-    : BasePhysics(NUM_FIELDS, order, pmesh),
+    : BasePhysics(NUM_FIELDS, order, name, pmesh),
       temperature_(StateManager::newState(FiniteElementState::Options{.order      = order,
                                                                       .vector_dim = 1,
                                                                       .ordering   = mfem::Ordering::byNODES,
@@ -53,9 +53,13 @@ ThermalConduction::ThermalConduction(int order, const SolverOptions& options, co
   zero_.SetSize(true_size);
   zero_ = 0.0;
 
-  // Default to constant value of 1.0 for density and specific heat capacity
+  // Default to constant value of 1.0 for density and specific heat capacity. This enables optional
+  // specification of these parameters.
   cp_  = std::make_unique<mfem::ConstantCoefficient>(1.0);
   rho_ = std::make_unique<mfem::ConstantCoefficient>(1.0);
+
+  // Initialize the finite element state data to zero.
+  temperature_ = 0.0;
 }
 
 ThermalConduction::ThermalConduction(const InputOptions& options, const std::string& name)
@@ -112,13 +116,13 @@ void ThermalConduction::setTemperature(mfem::Coefficient& temp)
 void ThermalConduction::setTemperatureBCs(const std::set<int>&               temp_bdr,
                                           std::shared_ptr<mfem::Coefficient> temp_bdr_coef)
 {
-  bcs_.addEssential(temp_bdr, temp_bdr_coef, temperature_);
+  bcs_.addEssential(temp_bdr, temp_bdr_coef, temperature_.space());
 }
 
 void ThermalConduction::setFluxBCs(const std::set<int>& flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef)
 {
   // Set the natural (integral) boundary condition
-  bcs_.addNatural(flux_bdr, flux_bdr_coef, -1);
+  bcs_.addNatural(flux_bdr, flux_bdr_coef, temperature_.space());
 }
 
 void ThermalConduction::setConductivity(std::unique_ptr<mfem::Coefficient>&& kappa)
@@ -159,7 +163,7 @@ void ThermalConduction::completeSetup()
   SLIC_ASSERT_MSG(kappa_, "Conductivity not set in ThermalSolver!");
 
   // Add the domain diffusion integrator to the K form
-  K_form_ = temperature_.createOnSpace<mfem::ParNonlinearForm>();
+  K_form_ = std::make_unique<mfem::ParNonlinearForm>(&temperature_.space());
   K_form_->AddDomainIntegrator(
       new mfem_ext::BilinearToNonlinearFormIntegrator(std::make_unique<mfem::DiffusionIntegrator>(*kappa_)));
 
@@ -178,14 +182,6 @@ void ThermalConduction::completeSetup()
   // Build the dof array lookup tables
   temperature_.space().BuildDofToArrays();
 
-  // Project the essential boundary coefficients
-  for (auto& bc : bcs_.essentials()) {
-    bc.projectBdr(temperature_, time_);
-  }
-
-  // Initialize the true vector
-  temperature_.initializeTrueVec();
-
   if (is_quasistatic_) {
     residual_ = mfem_ext::StdFunctionOperator(
         temperature_.space().TrueVSize(),
@@ -203,7 +199,7 @@ void ThermalConduction::completeSetup()
 
   } else {
     // If dynamic, assemble the mass matrix
-    M_form_ = temperature_.createOnSpace<mfem::ParBilinearForm>();
+    M_form_ = std::make_unique<mfem::ParBilinearForm>(&temperature_.space());
 
     // Define the mass matrix coefficient as a product of the density and specific heat capacity
     mass_coef_ = std::make_unique<mfem::ProductCoefficient>(*rho_, *cp_);
@@ -236,19 +232,21 @@ void ThermalConduction::completeSetup()
 
 void ThermalConduction::advanceTimestep(double& dt)
 {
-  temperature_.initializeTrueVec();
-
   if (is_quasistatic_) {
-    nonlin_solver_.Mult(zero_, temperature_.trueVec());
     time_ += dt;
+    // Project the essential boundary coefficients
+    for (auto& bc : bcs_.essentials()) {
+      bc.setDofs(temperature_, time_);
+    }
+    nonlin_solver_.Mult(zero_, temperature_);
   } else {
     SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
 
     // Step the time integrator
-    ode_.Step(temperature_.trueVec(), time_, dt);
+    // Note that the ODE solver handles the essential boundary condition application itself
+    ode_.Step(temperature_, time_, dt);
   }
 
-  temperature_.distributeSharedDofs();
   cycle_ += 1;
 }
 
