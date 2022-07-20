@@ -209,27 +209,47 @@ public:
   void setDisplacementBCs(const std::set<int>& disp_bdr, std::function<double(const mfem::Vector& x)> disp,
                           int component)
   {
+    SLIC_ERROR_ROOT_IF(coordinate_transform_, "Component displacement BC not compatible with sliding wall BCs.");
+
     // Project the coefficient onto the grid function
     component_disp_bdr_coef_ = std::make_shared<mfem::FunctionCoefficient>(disp);
 
     bcs_.addEssential(disp_bdr, component_disp_bdr_coef_, displacement_.space(), component);
   }
 
+  /**
+   * @brief Set sliding wall essential boundary conditions
+   *
+   * This constrains the displacement on the boundary denoted by the given attribute to only tangential motion.
+   * The normal vector to constrain the displacement is calculated automatically from the best.
+   * Currently only a single sliding wall boundary condition attribute is allowed. Additionally, this is not
+   * compatible with component-wise displacement boundary conditions.
+   *
+   * @param slide_bdr The set of sliding wall boundary attributes.
+   */
   void setSlideWallBCs(const std::set<int>& slide_bdr)
   {
-    SLIC_ERROR_ROOT_IF(slide_bdr.size() > dim,
-                       "Number of sliding wall attribute boundaries must be less than the dimension.");
+    for (auto bc : bcs_.essentials()) {
+      // Check to ensure the existing essential boundary conditions constrain all of the vector dofs
+      bc.vectorCoefficient();
+    }
+
+    // TODO implement for more than one sliding wall
+    SLIC_ERROR_ROOT_IF(slide_bdr.size() > 1, "Sliding wall not implemented for more than one wall.");
 
     auto& space = displacement_.space();
 
+    // A container relating the boundary attribute with its normal
     std::unordered_map<int, mfem::Vector> attribute_normals;
 
+    // Loop over all of the boundary attributes on this processor
     for (int i = 0; i < space.GetNBE(); ++i) {
       int att = space.GetBdrAttribute(i);
 
+      // Check if this boundary attribute is the desired constrained attribute
       auto found = slide_bdr.find(att);
       if (found != slide_bdr.end()) {
-        // compute the boundary element normal
+        // Compute the boundary element normal
         mfem::ElementTransformation* Tr    = space.GetBdrElementTransformation(i);
         const mfem::FiniteElement*   fe    = space.GetBE(i);
         const mfem::IntegrationRule& nodes = fe->GetNodes();
@@ -238,25 +258,26 @@ public:
         space.GetBdrElementDofs(i, dofs);
         SLIC_ERROR_IF(dofs.Size() != nodes.Size(), "Something wrong in finite element space!");
 
+        // Loop over the surface integration points
         for (int j = 0; j < dofs.Size(); ++j) {
           Tr->SetIntPoint(&nodes[j]);
 
           mfem::Vector normal(dim);
 
-          // the normal returned in the next line is scaled by h. We should normalize it to 1
-          // to check for consistency along the boundary
+          // The normal returned in the next line is scaled by the mesh size
           CalcOrtho(Tr->Jacobian(), normal);
 
+          // Normalize the normal vector
           double norm_l2 = normal.Norml2();
           normal /= norm_l2;
 
+          // Check if this attribute already has a computed normal
           auto found_attr = attribute_normals.find(att);
-
           if (found_attr == attribute_normals.end()) {
-            // if the normal is not already found, add it to the list
+            // If the normal is not already found, add it to the list
             attribute_normals.emplace(att, normal);
           } else {
-            // otherwise check that it is consistent with previously found normals
+            // Otherwise check that it is consistent with previously found normals
             auto& other_normal = found_attr->second;
             for (int comp = 0; comp < normal.Size(); ++comp) {
               SLIC_ERROR_IF(std::abs(std::abs(other_normal(comp)) - std::abs(normal(comp))) > 1.0e-7,
@@ -268,19 +289,55 @@ public:
       }
     }
 
-    // TODO reduce the normal across MPI ranks
+    // Reduce the normals across MPI ranks to ensure consistency
+    for (int attr : slide_bdr) {
+      // Create structures to denote if a processor computed a normal and if so, the computed normal
+      auto         found_attr = attribute_normals.find(attr);
+      int8_t       found      = 0;
+      mfem::Vector normal(dim);
+      normal = 0.0;
+      if (found_attr != attribute_normals.end()) {
+        found  = 1;
+        normal = found_attr->second;
+      }
 
-    // TODO implement for more than one sliding wall
-    SLIC_ERROR_ROOT_IF(attribute_normals.size() > 1, "Sliding wall not implemented for more than one wall.");
+      std::vector<int>    rank_contains_slide_wall(mpi_size_);
+      std::vector<double> rank_normals(dim * mpi_size_);
 
+      // Gather the computed normals and marker arrays across all processors
+      MPI_Allgather(&found, 1, MPI_INT8_T, rank_contains_slide_wall.data(), 1, MPI_CXX_BOOL, mesh_.GetComm());
+      MPI_Allgather(normal.GetData(), dim, MPI_DOUBLE, rank_normals.data(), dim, MPI_DOUBLE, mesh_.GetComm());
+
+      for (int i = 0; i < mpi_size_; ++i) {
+        // Check if each rank computed a normal
+        if (rank_contains_slide_wall[i] == 1) {
+          if (found == 1) {
+            // If it did and we have a stored one, check that they are consistent.
+            for (int comp = 0; comp < normal.Size(); ++comp) {
+              SLIC_ERROR_IF(std::abs(std::abs(rank_normals[comp + (i * dim)]) - std::abs(normal(comp))) > 1.0e-7,
+                            "The normal vectors on an attribute surface are not constant in the sliding wall boundary "
+                            "condition.");
+            }
+          } else {
+            // Otherwise, store the off-processor normal in the attribute normal container
+            found = 1;
+            for (int comp = 0; comp < normal.Size(); ++comp) {
+              normal(comp) = rank_normals[comp + (i * dim)];
+            }
+            attribute_normals.emplace(attr, normal);
+          }
+        }
+      }
+    }
+
+    // Loop over the computed attribute nomral vectors
     for (auto& normal : attribute_normals) {
       SLIC_ERROR_ROOT_IF(dim != 2 && dim != 3, "Dimension must be 2 or 3 for sliding wall boundary conditions.");
 
       if constexpr (dim == 2) {
-        double angle = std::acos(normal.second(0));
-
-        coordinate_transform_ = {{{std::cos(angle), std::sin(angle)}, {-1.0 * std::sin(angle), std::cos(angle)}}};
-
+        // Compute the appropriate rotation matrix for the given normal in 2D
+        double angle              = std::acos(normal.second(0));
+        coordinate_transform_     = {{{std::cos(angle), std::sin(angle)}, {-1.0 * std::sin(angle), std::cos(angle)}}};
         inv_coordinate_transform_ = transpose(*coordinate_transform_);
       }
       if constexpr (dim == 3) {
@@ -305,17 +362,15 @@ public:
         normal_3 = normalize(normal_3);
 
         // Generate a coordinate transform from the new basis set
-        coordinate_transform_ = {{{normal_1[0], normal_2[0], normal_3[0]},
-                                  {normal_1[1], normal_2[1], normal_3[1]},
-                                  {normal_1[2], normal_2[2], normal_3[2]}}};
+        coordinate_transform_ = {{{normal_1[0], normal_1[1], normal_1[2]},
+                                  {normal_2[0], normal_2[1], normal_2[2]},
+                                  {normal_3[0], normal_3[1], normal_3[2]}}};
 
         inv_coordinate_transform_ = transpose(*coordinate_transform_);
       }
 
       // Add the appropriate component-based boundary condition
-      // Project the coefficient onto the grid function
       component_disp_bdr_coef_ = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector&) { return 0.0; });
-
       bcs_.addEssential({normal.first}, component_disp_bdr_coef_, displacement_.space(), 0);
     }
   }
@@ -778,28 +833,31 @@ public:
   }
 
 protected:
+  /**
+   * @brief Rotate the mesh nodes, displacement, and velocity grid functions to align with the sliding wall boundary
+   * condition
+   */
   void rotate()
   {
+    // Check if a sliding wall boundary condition exists
     if (coordinate_transform_) {
       // Rotate the mesh nodes
       auto* nodes = mesh_.GetNodes();
-
       rotateGridFunction(*coordinate_transform_, *nodes);
 
       // Get the displacement grid function from the state
       auto& displacement_gf = displacement_.gridFunction();
-
       // Rotate the displacement
       rotateGridFunction(*coordinate_transform_, displacement_gf);
-
       // Set the underlying true vector from the rotated grid function
       displacement_.setFromGridFunction(displacement_gf);
 
-      // Get the velocity grid function
+      // Rotate the velocity
       auto& velocity_gf = velocity_.gridFunction();
       rotateGridFunction(*coordinate_transform_, velocity_gf);
       velocity_.setFromGridFunction(velocity_gf);
 
+      // Rotate the adjoint displacement
       auto& adjoint_disp = adjoint_displacement_.gridFunction();
       rotateGridFunction(*coordinate_transform_, adjoint_disp);
       adjoint_displacement_.setFromGridFunction(adjoint_disp);
@@ -808,25 +866,23 @@ protected:
 
   void undoRotate()
   {
+    // Check if a sliding wall boundary condition exists
     if (coordinate_transform_) {
       // Rotate the mesh nodes
       auto* nodes = mesh_.GetNodes();
       rotateGridFunction(*inv_coordinate_transform_, *nodes);
 
-      // Get the displacement grid function from the state
-      auto& displacement_gf = displacement_.gridFunction();
-
       // Rotate the displacement
+      auto& displacement_gf = displacement_.gridFunction();
       rotateGridFunction(*inv_coordinate_transform_, displacement_gf);
-
-      // Set the underlying true vector from the rotated grid function
       displacement_.setFromGridFunction(displacement_gf);
 
-      // Get the velocity grid function
+      // Rotate the velocity
       auto& velocity_gf = velocity_.gridFunction();
       rotateGridFunction(*inv_coordinate_transform_, velocity_gf);
       velocity_.setFromGridFunction(velocity_gf);
 
+      // Rotate the adjoint displacement
       auto& adjoint_disp = adjoint_displacement_.gridFunction();
       rotateGridFunction(*inv_coordinate_transform_, adjoint_disp);
       adjoint_displacement_.setFromGridFunction(adjoint_disp);
@@ -835,19 +891,21 @@ protected:
 
   void rotateGridFunction(const tensor<double, dim, dim>& rotation, mfem::GridFunction& grid_function)
   {
+    // Temporary tensors for vector views of the data
     tensor<double, dim> unrotated_vector;
     tensor<double, dim> rotated_vector;
 
     // For each degree of freedom, determine the appropriate vector degree of freedom indices
-
     for (int dof = 0; dof < grid_function.FESpace()->GetNDofs(); ++dof) {
       for (int component = 0; component < grid_function.FESpace()->GetVDim(); ++component) {
         int vector_dof_index        = grid_function.FESpace()->DofToVDof(dof, component);
         unrotated_vector[component] = grid_function(vector_dof_index);
       }
 
+      // Calculate the rotated vector from the rotation tensor
       rotated_vector = dot(rotation, unrotated_vector);
 
+      // Fill the grid function dofs with the rotated degrees of freedom
       for (int component = 0; component < grid_function.FESpace()->GetVDim(); ++component) {
         int vector_dof_index            = grid_function.FESpace()->DofToVDof(dof, component);
         grid_function(vector_dof_index) = rotated_vector[component];

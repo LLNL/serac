@@ -31,9 +31,9 @@ void functional_solid_test_slide_wall(double expected_disp_norm)
 
   // Create DataStore
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "solid_functional_static_solve");
+  serac::StateManager::initialize(datastore, "solid_functional_slide_wall");
 
-  static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for solid functional test");
+  static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for solid functional slide wall test");
 
   // Construct the appropriate dimension mesh and give it to the data store
   std::string filename = (dim == 2) ? SERAC_REPO_DIR "/data/meshes/beam-quad-angle.mesh"
@@ -60,8 +60,9 @@ void functional_solid_test_slide_wall(double expected_disp_norm)
 
   // Construct a functional-based solid mechanics solver
   SolidFunctional<p, dim> solid_solver(default_static, GeometricNonlinearities::On, FinalMeshOption::Reference,
-                                       "solid_functional");
+                                       "solid_functional_slide_wall");
 
+  // Set the material parameters
   solid_util::NeoHookeanSolid<dim> mat(1.0, 1.0, 1.0);
   solid_solver.setMaterial(mat);
 
@@ -73,6 +74,7 @@ void functional_solid_test_slide_wall(double expected_disp_norm)
   solid_solver.setSlideWallBCs({2});
   solid_solver.setDisplacement(bc);
 
+  // Set a constant uniform body forms
   tensor<double, dim> constant_force;
 
   constant_force[0] = 0.0;
@@ -100,7 +102,7 @@ void functional_solid_test_slide_wall(double expected_disp_norm)
 }
 
 TEST(SolidFunctional, 2DSlideWall) { functional_solid_test_slide_wall<2>(0.587272268806); }
-TEST(SolidFunctional, 3DSlideWall) { functional_solid_test_slide_wall<3>(0.46093359446); }
+TEST(SolidFunctional, 3DSlideWall) { functional_solid_test_slide_wall<3>(0.451305370787); }
 
 }  // namespace serac
 
