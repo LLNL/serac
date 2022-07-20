@@ -221,9 +221,10 @@ public:
    * @brief Set sliding wall essential boundary conditions
    *
    * This constrains the displacement on the boundary denoted by the given attribute to only tangential motion.
-   * The normal vector to constrain the displacement is calculated automatically from the best.
-   * Currently only a single sliding wall boundary condition attribute is allowed. Additionally, this is not
-   * compatible with component-wise displacement boundary conditions.
+   * The normal vector to constrain the displacement is calculated automatically from the denoted boundary elements.
+   * Currently only a single sliding wall boundary condition attribute is allowed.
+   * 
+   * This feature is not compatible with component-wise displacement boundary conditions.
    *
    * @param slide_bdr The set of sliding wall boundary attributes.
    */

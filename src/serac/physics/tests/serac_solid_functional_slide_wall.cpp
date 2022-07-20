@@ -71,8 +71,10 @@ void functional_solid_test_slide_wall(double expected_disp_norm)
 
   // Set the initial displacement and boundary condition
   solid_solver.setDisplacementBCs(ess_bdr, bc);
-  solid_solver.setSlideWallBCs({2});
   solid_solver.setDisplacement(bc);
+
+  // Set the sliding wall boundary condition on attribute 2
+  solid_solver.setSlideWallBCs({2});
 
   // Set a constant uniform body forms
   tensor<double, dim> constant_force;
