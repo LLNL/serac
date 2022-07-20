@@ -103,8 +103,8 @@ void functional_solid_test_slide_wall(double expected_disp_norm)
   EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
 }
 
-TEST(SolidFunctional, 2DSlideWall) { functional_solid_test_slide_wall<2>(0.587272268806); }
-TEST(SolidFunctional, 3DSlideWall) { functional_solid_test_slide_wall<3>(0.451305370787); }
+TEST(SolidFunctional, 2DSlideWall) { functional_solid_test_slide_wall<2>(0.5193005416); }
+TEST(SolidFunctional, 3DSlideWall) { functional_solid_test_slide_wall<3>(0.4111308628); }
 
 }  // namespace serac
 

@@ -223,7 +223,7 @@ public:
    * This constrains the displacement on the boundary denoted by the given attribute to only tangential motion.
    * The normal vector to constrain the displacement is calculated automatically from the denoted boundary elements.
    * Currently only a single sliding wall boundary condition attribute is allowed.
-   * 
+   *
    * This feature is not compatible with component-wise displacement boundary conditions.
    *
    * @param slide_bdr The set of sliding wall boundary attributes.
@@ -541,8 +541,13 @@ public:
 
           auto deformation_grad = du_dX + I_;
 
-          auto source = parameterized_body_force(x, time_, u, du_dX, serac::get<0>(params)...) *
-                        (1.0 + geom_factor * (det(deformation_grad) - 1.0));
+          auto force_vector = parameterized_body_force(x, time_, u, du_dX, serac::get<0>(params)...);
+
+          if (coordinate_transform_) {
+            force_vector = dot(*coordinate_transform_, force_vector);
+          }
+
+          auto source = force_vector * (1.0 + geom_factor * (det(deformation_grad) - 1.0));
           return serac::tuple{source, flux};
         },
         mesh_);
@@ -574,7 +579,13 @@ public:
     K_functional_->AddBoundaryIntegral(
         Dimension<dim - 1>{},
         [this, parameterized_traction](auto x, auto n, auto, auto... params) {
-          return -1.0 * parameterized_traction(x, n, time_, params...);
+          auto traction_vector = parameterized_traction(x, n, time_, params...);
+
+          if (coordinate_transform_) {
+            traction_vector = dot(*coordinate_transform_, traction_vector);
+          }
+
+          return -1.0 * traction_vector;
         },
         mesh_);
   }
