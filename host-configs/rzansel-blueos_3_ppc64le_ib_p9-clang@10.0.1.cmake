@@ -121,7 +121,7 @@ set(UMPIRE_DIR "${TPL_ROOT}/umpire-2022.03.1-z4zq6c52xyiclzxhoh5cyyfjqjfqfrc5" C
 
 # Root directory for generated developer tools
 
-set(DEVTOOLS_ROOT "/usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/2022_06_28_17_19_50/gcc-8.3.1" CACHE PATH "")
+set(DEVTOOLS_ROOT "/usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/2022_06_29_16_59_51/gcc-8.3.1" CACHE PATH "")
 
 set(ATS_EXECUTABLE "${DEVTOOLS_ROOT}/py-ats-7.0.105/bin/ats" CACHE PATH "")
 
