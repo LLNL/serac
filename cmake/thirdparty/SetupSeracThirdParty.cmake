@@ -193,7 +193,11 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(MFEM_ENABLE_EXAMPLES OFF CACHE BOOL "")
         set(MFEM_ENABLE_MINIAPPS OFF CACHE BOOL "")
 
-        add_subdirectory(${PROJECT_SOURCE_DIR}/mfem  ${CMAKE_BINARY_DIR}/mfem)
+        if(${PROJECT_NAME} STREQUAL "smith")
+            add_subdirectory(${PROJECT_SOURCE_DIR}/serac/mfem  ${CMAKE_BINARY_DIR}/mfem)
+        else()
+            add_subdirectory(${PROJECT_SOURCE_DIR}/mfem  ${CMAKE_BINARY_DIR}/mfem)
+        endif()
  
         set(MFEM_FOUND TRUE CACHE BOOL "" FORCE)
 
@@ -291,7 +295,11 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             # This appears to be unconditionally needed for Axom, why isn't it part of the build system?
             set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda")
         endif()
-        add_subdirectory(${PROJECT_SOURCE_DIR}/axom/src ${CMAKE_BINARY_DIR}/axom)
+        if(${PROJECT_NAME} STREQUAL "smith")
+            add_subdirectory(${PROJECT_SOURCE_DIR}/serac/axom/src  ${CMAKE_BINARY_DIR}/axom)
+        else()
+            add_subdirectory(${PROJECT_SOURCE_DIR}/axom/src ${CMAKE_BINARY_DIR}/axom)
+        endif()
         set(AXOM_FOUND TRUE CACHE BOOL "" FORCE)
 
         # Mark the axom includes as "system" and filter unallowed directories
