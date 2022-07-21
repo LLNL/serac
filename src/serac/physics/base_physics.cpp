@@ -10,8 +10,6 @@
 
 #include "axom/fmt.hpp"
 
-#include "axom/core.hpp"
-
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
@@ -42,11 +40,7 @@ BasePhysics::BasePhysics(int n, int p, std::string name, mfem::ParMesh* pmesh) :
 
 const std::vector<std::reference_wrapper<serac::FiniteElementState> >& BasePhysics::getState() const { return state_; }
 
-void BasePhysics::setTime(const double time)
-{
-  time_ = time;
-  bcs_.setTime(time_);
-}
+void BasePhysics::setTime(const double time) { time_ = time; }
 
 double BasePhysics::time() const { return time_; }
 
@@ -63,7 +57,12 @@ void BasePhysics::outputState(std::optional<std::string> paraview_output_dir) co
   if (paraview_output_dir) {
     // Check to see if the paraview data collection exists. If not, create it.
     if (!paraview_dc_) {
-      paraview_dc_            = std::make_unique<mfem::ParaViewDataCollection>(name_, &state_.front().get().mesh());
+      std::string output_name = name_;
+      if (output_name == "") {
+        output_name = "default";
+      }
+
+      paraview_dc_ = std::make_unique<mfem::ParaViewDataCollection>(output_name, &state_.front().get().mesh());
       int max_order_in_fields = 0;
 
       // Find the maximum polynomial order in the physics module's states
@@ -98,8 +97,6 @@ void BasePhysics::initializeSummary(axom::sidre::DataStore& datastore, double t_
   // Summary Sidre Structure
   // Sidre root
   // └── serac_summary
-  //     ├── user_name : const char*
-  //     ├── host_name : const char*
   //     ├── mpi_rank_count : int
   //     └── curves
   //         ├── t : Sidre::Array<axom::IndexType>
@@ -124,8 +121,6 @@ void BasePhysics::initializeSummary(axom::sidre::DataStore& datastore, double t_
   axom::sidre::Group* summary_group = sidre_root->createGroup(summary_group_name);
 
   // Write run info
-  summary_group->createViewString("user_name", axom::utilities::getUserName());
-  summary_group->createViewString("host_name", axom::utilities::getHostName());
   summary_group->createViewScalar("mpi_rank_count", count);
 
   // Write curves info

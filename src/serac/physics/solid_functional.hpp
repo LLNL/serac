@@ -293,7 +293,7 @@ public:
     // Project the coefficient onto the grid function
     disp_bdr_coef_ = std::make_shared<mfem::VectorFunctionCoefficient>(dim, disp);
 
-    bcs_.addEssential(disp_bdr, disp_bdr_coef_, displacement_);
+    bcs_.addEssential(disp_bdr, disp_bdr_coef_, displacement_.space());
   }
 
   void setDisplacementBCs(const std::set<int>&                                            disp_bdr,
@@ -302,7 +302,7 @@ public:
     // Project the coefficient onto the grid function
     disp_bdr_coef_ = std::make_shared<mfem::VectorFunctionCoefficient>(dim, disp);
 
-    bcs_.addEssential(disp_bdr, disp_bdr_coef_, displacement_);
+    bcs_.addEssential(disp_bdr, disp_bdr_coef_, displacement_.space());
   }
 
   /**
@@ -318,7 +318,7 @@ public:
     // Project the coefficient onto the grid function
     component_disp_bdr_coef_ = std::make_shared<mfem::FunctionCoefficient>(disp);
 
-    bcs_.addEssential(disp_bdr, component_disp_bdr_coef_, displacement_, component);
+    bcs_.addEssential(disp_bdr, component_disp_bdr_coef_, displacement_.space(), component);
   }
 
   /**
@@ -447,9 +447,7 @@ public:
           //check_gradient(*residual_, u, zero_);
           
           J_ = assemble(drdu);
-          for (const auto& bc : bcs_.essentials()) {
-            bc.eliminateFromMatrix(*J_);
-          }
+          bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
           return *J_;
         });
   }
@@ -463,11 +461,6 @@ public:
   {
     // Build the dof array lookup tables
     displacement_.space().BuildDofToArrays();
-
-    // Project the essential boundary coefficients
-    for (auto& bc : bcs_.essentials()) {
-      bc.projectBdr(displacement_, time_);
-    }
 
     if (is_quasistatic_) {
       residual_with_bcs_ = buildQuasistaticOperator();
@@ -521,7 +514,7 @@ public:
     // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
     {
       for (auto& bc : bcs_.essentials()) {
-        bc.projectBdrToDofs(du_, time_);
+        bc.setDofs(du_, time_);
       }
 
       auto & constrained_dofs = bcs_.allEssentialTrueDofs();
@@ -531,7 +524,7 @@ public:
 
       dr_ = 0.0;
       for (const auto& bc : bcs_.essentials()) {
-        bc.eliminateToRHS(*J_, du_, dr_);
+        bc.apply(*J_, dr_, du_);
       }
 
       auto& lin_solver = nonlin_solver_.LinearSolver();
@@ -543,7 +536,7 @@ public:
       displacement_ += du_;
 
       for (auto& bc : bcs_.essentials()) {
-        bc.projectBdrToDofs(du_, time_);
+        bc.setDofs(du_, time_);
       }
 
       // do I have to do this?
@@ -569,7 +562,7 @@ public:
       mesh_.NewNodes(*reference_nodes_);
     }
 
-    bcs_.setTime(time_);
+    //bcs_.setTime(time_);
 
     if (is_quasistatic_) {
       quasiStaticSolve(dt);
@@ -644,8 +637,7 @@ public:
     }
 
     for (const auto& bc : bcs_.essentials()) {
-      bc.eliminateFromMatrix(*J_T);
-      bc.eliminateToRHS(*J_T, adjoint_essential, adjoint_load_vector);
+      bc.apply(*J_T, adjoint_load_vector, adjoint_essential);
     }
 
     lin_solver.SetOperator(*J_T);
