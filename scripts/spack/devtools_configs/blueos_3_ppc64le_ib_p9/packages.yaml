@@ -126,4 +126,10 @@ packages:
     - spec: cmake@3.18.0
       prefix: /usr/tce/packages/cmake/cmake-3.18.0
     buildable: false
+  llvm:
+    version: [10.0.0]
+    buildable: false
+    externals:
+    - spec: llvm@10.0.0+clang
+      prefix: /usr/tce/packages/clang/clang-10.0.0
 
