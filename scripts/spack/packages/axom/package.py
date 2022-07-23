@@ -43,7 +43,7 @@ class Axom(CachedCMakePackage, CudaPackage, ROCmPackage):
     # Note: Make sure this sha coincides with the git submodule
     # Note: We add a number to the end of the real version number to indicate that we have
     #  moved forward past the release. Increment the last number when updating the commit sha.
-    version('0.6.1.3', commit='a05173a070fa422b4a6a1744115754c1e7edce06', submodules="True")
+    version('0.6.1.4', commit='f009368dc05e4e428495efb45ff4f9161e4c01f2', submodules="True")
     # SERAC EDIT END
 
     version('main', branch='main', submodules=True)
