@@ -59,7 +59,7 @@ set(ENABLE_OPENMP ON CACHE BOOL "")
 
 set(TPL_ROOT "/home/serac/serac_tpls/gcc-9.3.0" CACHE PATH "")
 
-set(AXOM_DIR "${TPL_ROOT}/axom-0.6.1.3-42bzncgwr4wgvhgzehoa7igdyuqahnyz" CACHE PATH "")
+set(AXOM_DIR "${TPL_ROOT}/axom-0.6.1.4-f7n2sijn2poatrezmod5yaxwshfquvqh" CACHE PATH "")
 
 set(CAMP_DIR "${TPL_ROOT}/camp-2022.03.0-2vf3csef4qm2lprkhubay3hmjyogtwno" CACHE PATH "")
 
