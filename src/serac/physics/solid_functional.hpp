@@ -311,7 +311,7 @@ public:
 
       for (int i = 0; i < mpi_size_; ++i) {
         // Check if each rank computed a normal
-        if (rank_contains_slide_wall[i] == 1) {
+        if (rank_contains_slide_wall[static_cast<std::size_t>(i)] == 1) {
           if (found == 1) {
             // If it did and we have a stored one, check that they are consistent.
             for (int comp = 0; comp < normal.Size(); ++comp) {
@@ -876,6 +876,10 @@ protected:
     }
   }
 
+  /**
+   * @brief Rotate the mesh nodes, displacement, and velocity grid functions to align with the original coordinates after
+   * being rotated to the coordinates aligned with the sliding wall
+   */
   void undoRotate()
   {
     // Check if a sliding wall boundary condition exists
@@ -901,6 +905,12 @@ protected:
     }
   }
 
+  /**
+   * @brief Rotate a grid function given a orthonormal coordinate transformation tensor 
+   * 
+   * @param rotation An orthotnormal tensor R (i.e. R^T R = I) encoding a coordinate transformation
+   * @param grid_function A grid function to rotate into the new basis
+   */
   void rotateGridFunction(const tensor<double, dim, dim>& rotation, mfem::GridFunction& grid_function)
   {
     // Temporary tensors for vector views of the data
@@ -1013,8 +1023,10 @@ protected:
   /// @brief Auxilliary identity rank 2 tensor
   const isotropic_tensor<double, dim, dim> I_ = Identity<dim>();
 
+  /// @brief An orthonormal rotation tensor mapping the original coordinates to one aligned with the sliding wall boundary condition
   std::optional<tensor<double, dim, dim>> coordinate_transform_;
 
+  /// @brief An orthonormal rotation tensor mapping the coordinates aligned with the sliding wall boundary condition to the original coordinate system
   std::optional<tensor<double, dim, dim>> inv_coordinate_transform_;
 };
 
