@@ -91,12 +91,9 @@ struct J2 {
 
   /// @brief variables required to characterize the hysteresis response
   struct State {
-    tensor<double, dim, dim> beta;           ///< back-stress tensor
-    tensor<double, dim, dim> old_strain;     ///< previous strain
-    tensor<double, dim, dim> el_strain;      ///< elastic strain
-    double                   pl_strain;      ///< plastic strain
-    double                   pl_strain_inc;  ///< incremental plastic strain
-    double                   q;              ///< (trial) J2 stress
+    tensor<double, dim, dim> beta;                       ///< back-stress tensor
+    tensor<double, dim, dim> plastic_strain;             ///< plastic strain
+    double                   accumulated_plastic_strain; ///< incremental plastic strain
   };
 
   /** @brief calculate the Cauchy stress, given the displacement gradient and previous material state */
@@ -113,16 +110,13 @@ struct J2 {
     // in "Computational Methods for Plasticity"
     //
 
-    auto new_strain = sym(du_dX);
-    auto dstrain = new_strain - state.old_strain;
-
     // (i) elastic predictor
-    auto el_strain = state.el_strain + dstrain;
+    auto el_strain = sym(du_dX) - state.plastic_strain;
     auto p         = K * tr(el_strain);
     auto s         = 2.0 * G * dev(el_strain);
     auto eta       = s - state.beta;
     auto q         = sqrt(3.0 / 2.0) * norm(eta);
-    auto phi       = q - (sigma_y + Hi * state.pl_strain);
+    auto phi       = q - (sigma_y + Hi * state.accumulated_plastic_strain);
 
     // (ii) admissibility
     if (phi > 0.0) {
@@ -133,21 +127,16 @@ struct J2 {
       // (iii) return mapping
       s = s - sqrt(6.0) * G * plastic_strain_inc * normalize(eta);
 
-      state.pl_strain = state.pl_strain + get_value(plastic_strain_inc);
+      state.accumulated_plastic_strain += get_value(plastic_strain_inc);
+
+      state.plastic_strain += sqrt(3.0 / 2.0) * get_value(plastic_strain_inc) * normalize(get_value(eta));
 
       state.beta = state.beta + sqrt(2.0 / 3.0) * Hk * get_value(plastic_strain_inc) * normalize(get_value(eta));
 
-      state.el_strain = get_value(s / (2.0 * G) + (p / (3.0 * K)) * I);
-
-    } else {
-
-      state.el_strain = get_value(el_strain);
-
-    }
-
-    state.old_strain = get_value(new_strain);
+    } 
 
     return s + p * I;
+
   }
 
 };
