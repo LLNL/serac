@@ -85,6 +85,25 @@ auto uniaxial_stress_test(double t_max, size_t num_steps,
   return output_history;
 }
 
+/**
+ * @brief This function takes a material model (and associate state variables),
+ *        subjects it to a time history of stimuli, described by `functions ... f`,
+ *        and returns the outputs at each step. This is intended to be used for testing
+ *        materials, to ensure their response is in agreement with known data (analytic or
+ *        experimental).
+ * 
+ * @tparam MaterialType the type of the material model under test 
+ * @tparam StateType the associated state variables to be provided to the material
+ * @tparam functions a variadic list of callables
+ * @param t_max the final time value for 
+ * @param num_steps the number of timesteps to be 
+ * @param material an instance of a material model under test
+ * @param initial_state the initial conditions for materials that exhibit hysteresis
+ * @param f the functions (e.g. std::function, lambdas, etc) that are used to 
+ *          generate the inputs to the material model at each timestep
+ * @return a std::vector of tuples of the form: ( time, state(t), f(t) ... , output(t) )
+ *         evaluated at each step
+ */
 template < typename MaterialType, typename StateType, typename ... functions >
 auto single_quadrature_point_test(double t_max, size_t num_steps,
                                   const MaterialType material,
