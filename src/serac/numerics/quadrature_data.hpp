@@ -37,8 +37,16 @@ namespace serac {
  */
 struct Nothing{};
 
+/**
+ * @brief see `Nothing` for a complete description of this class and when to use it
+ */
 struct Empty{};
 
+/**
+ * @brief A class for storing and access user-defined types at quadrature points
+ * 
+ * @tparam the data type to be stored 
+ */
 template < typename T >
 struct QuadratureData {
   QuadratureData(size_t n1, size_t n2) : stride(n2) { data = new T[n1 * n2]; }
@@ -49,6 +57,11 @@ struct QuadratureData {
   size_t stride;
 };
 
+/**
+ * @brief a specialization of the QuadratureData container, for the type `Nothing`
+ * that implements the appropriate interface requirements, but does not allocate any
+ * memory on the heap
+ */
 template <>
 struct QuadratureData<Nothing> {
   SERAC_HOST_DEVICE Nothing & operator()(const size_t, const size_t) { return data; }
@@ -56,6 +69,11 @@ struct QuadratureData<Nothing> {
   Nothing data;
 };
 
+/**
+ * @brief a specialization of the QuadratureData container, for the type `Empty`
+ * that implements the appropriate interface requirements, but does not allocate any
+ * memory on the heap
+ */
 template <>
 struct QuadratureData<Empty> {
   SERAC_HOST_DEVICE Empty & operator()(const size_t, const size_t) { return data; }

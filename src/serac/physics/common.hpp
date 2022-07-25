@@ -15,6 +15,10 @@
 
 namespace serac {
 
+/**
+ * @brief a struct that is used in the physics modules to clarify which template arguments are 
+ * user-controlled parameters (e.g. for design optimization)
+ */
 template < typename ... T >
 struct Parameters{
     static constexpr int n = sizeof ... (T);
