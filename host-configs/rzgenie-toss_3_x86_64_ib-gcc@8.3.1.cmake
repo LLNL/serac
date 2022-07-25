@@ -11,11 +11,11 @@
 #------------------------------------------------------------------------------
 if(DEFINED ENV{SPACK_CC})
 
-  set(CMAKE_C_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2022_06_01_21_10_59/spack/lib/spack/env/gcc/gcc" CACHE PATH "")
+  set(CMAKE_C_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2022_07_22_20_32_34/spack/lib/spack/env/gcc/gcc" CACHE PATH "")
 
-  set(CMAKE_CXX_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2022_06_01_21_10_59/spack/lib/spack/env/gcc/g++" CACHE PATH "")
+  set(CMAKE_CXX_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2022_07_22_20_32_34/spack/lib/spack/env/gcc/g++" CACHE PATH "")
 
-  set(CMAKE_Fortran_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2022_06_01_21_10_59/spack/lib/spack/env/gcc/gfortran" CACHE PATH "")
+  set(CMAKE_Fortran_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2022_07_22_20_32_34/spack/lib/spack/env/gcc/gfortran" CACHE PATH "")
 
 else()
 
@@ -53,19 +53,19 @@ set(ENABLE_OPENMP ON CACHE BOOL "")
 # TPLs
 #------------------------------------------------------------------------------
 
-set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2022_06_01_21_10_59/gcc-8.3.1" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2022_07_22_20_32_34/gcc-8.3.1" CACHE PATH "")
 
-set(AXOM_DIR "${TPL_ROOT}/axom-0.6.1.3-basyhw2gn6m2qbkglqvu6rv6o2ipsy2z" CACHE PATH "")
+set(AXOM_DIR "${TPL_ROOT}/axom-0.6.1.4-ny2mkvqu6ifjsw5rvkmfjd7qvouzh5p6" CACHE PATH "")
 
 set(CAMP_DIR "${TPL_ROOT}/camp-2022.03.0-d5tbmmrjeftx6iopin4iab4b5vfk36s4" CACHE PATH "")
 
 set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.8.3-uxzzvoai6ttvccjo4usntqtf2sg5sjew" CACHE PATH "")
 
-set(LUA_DIR "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2022_06_01_21_10_59/clang-10.0.0/lua-5.3.5-xswudgamrkym66lww3pvvsl6g3fnkl4h" CACHE PATH "")
+set(LUA_DIR "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2022_07_22_20_32_34/clang-10.0.0/lua-5.3.5-xswudgamrkym66lww3pvvsl6g3fnkl4h" CACHE PATH "")
 
 set(MFEM_DIR "${TPL_ROOT}/mfem-4.3.0.1-n67j7dxrrwnhxsq7n2v6vjsamkndltkb" CACHE PATH "")
 
-set(HDF5_DIR "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2022_06_01_21_10_59/clang-10.0.0/hdf5-1.8.21-p3fwltavb6ndgxwe3fghhufyp2dkxb5o" CACHE PATH "")
+set(HDF5_DIR "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2022_07_22_20_32_34/clang-10.0.0/hdf5-1.8.21-p3fwltavb6ndgxwe3fghhufyp2dkxb5o" CACHE PATH "")
 
 set(HYPRE_DIR "${TPL_ROOT}/hypre-2.18.2-ft44imvdhuecue5eql5qynm4onpxddzu" CACHE PATH "")
 
@@ -73,7 +73,7 @@ set(METIS_DIR "${TPL_ROOT}/metis-5.1.0-pubalto46s264lgpxg6s7bcqdfctutpi" CACHE P
 
 set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3-wx7jgqm5jo3uuooxpddkzlje6igldpyw" CACHE PATH "")
 
-set(NETCDF_DIR "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2022_06_01_21_10_59/clang-10.0.0/netcdf-c-4.7.4-wjekvtmhb4a576hx4vmo74i3ib2y25le" CACHE PATH "")
+set(NETCDF_DIR "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2022_07_22_20_32_34/clang-10.0.0/netcdf-c-4.7.4-wjekvtmhb4a576hx4vmo74i3ib2y25le" CACHE PATH "")
 
 set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1-4vaajgwi5i7nqeguojpbm2ftyobnvaez" CACHE PATH "")
 
