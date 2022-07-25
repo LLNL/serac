@@ -302,8 +302,8 @@ public:
         normal = found_attr->second;
       }
 
-      std::vector<int>    rank_contains_slide_wall(mpi_size_);
-      std::vector<double> rank_normals(dim * mpi_size_);
+      std::vector<int>    rank_contains_slide_wall(static_cast<std::size_t>(mpi_size_));
+      std::vector<double> rank_normals(static_cast<std::size_t>(dim * mpi_size_));
 
       // Gather the computed normals and marker arrays across all processors
       MPI_Allgather(&found, 1, MPI_INT8_T, rank_contains_slide_wall.data(), 1, MPI_CXX_BOOL, mesh_.GetComm());
@@ -315,7 +315,8 @@ public:
           if (found == 1) {
             // If it did and we have a stored one, check that they are consistent.
             for (int comp = 0; comp < normal.Size(); ++comp) {
-              SLIC_ERROR_IF(std::abs(std::abs(rank_normals[comp + (i * dim)]) - std::abs(normal(comp))) > 1.0e-7,
+              SLIC_ERROR_IF(std::abs(std::abs(rank_normals[static_cast<std::size_t>(comp + (i * dim))]) -
+                                     std::abs(normal(comp))) > 1.0e-7,
                             "The normal vectors on an attribute surface are not constant in the sliding wall boundary "
                             "condition.");
             }
@@ -323,7 +324,7 @@ public:
             // Otherwise, store the off-processor normal in the attribute normal container
             found = 1;
             for (int comp = 0; comp < normal.Size(); ++comp) {
-              normal(comp) = rank_normals[comp + (i * dim)];
+              normal(comp) = rank_normals[static_cast<std::size_t>(comp + (i * dim))];
             }
             attribute_normals.emplace(attr, normal);
           }
@@ -877,8 +878,8 @@ protected:
   }
 
   /**
-   * @brief Rotate the mesh nodes, displacement, and velocity grid functions to align with the original coordinates after
-   * being rotated to the coordinates aligned with the sliding wall
+   * @brief Rotate the mesh nodes, displacement, and velocity grid functions to align with the original coordinates
+   * after being rotated to the coordinates aligned with the sliding wall
    */
   void undoRotate()
   {
@@ -906,8 +907,8 @@ protected:
   }
 
   /**
-   * @brief Rotate a grid function given a orthonormal coordinate transformation tensor 
-   * 
+   * @brief Rotate a grid function given a orthonormal coordinate transformation tensor
+   *
    * @param rotation An orthotnormal tensor R (i.e. R^T R = I) encoding a coordinate transformation
    * @param grid_function A grid function to rotate into the new basis
    */
@@ -1023,10 +1024,12 @@ protected:
   /// @brief Auxilliary identity rank 2 tensor
   const isotropic_tensor<double, dim, dim> I_ = Identity<dim>();
 
-  /// @brief An orthonormal rotation tensor mapping the original coordinates to one aligned with the sliding wall boundary condition
+  /// @brief An orthonormal rotation tensor mapping the original coordinates to one aligned with the sliding wall
+  /// boundary condition
   std::optional<tensor<double, dim, dim>> coordinate_transform_;
 
-  /// @brief An orthonormal rotation tensor mapping the coordinates aligned with the sliding wall boundary condition to the original coordinate system
+  /// @brief An orthonormal rotation tensor mapping the coordinates aligned with the sliding wall boundary condition to
+  /// the original coordinate system
   std::optional<tensor<double, dim, dim>> inv_coordinate_transform_;
 };
 
