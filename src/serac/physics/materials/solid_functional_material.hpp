@@ -124,14 +124,15 @@ struct J2 {
       // see (7.207) on pg. 261
       auto plastic_strain_inc = phi / (3 * G + Hk + Hi);
 
+      // from here on, only normalize(eta) is required
+      // so we overwrite eta with its normalized version
+      eta = normalize(eta);
+
       // (iii) return mapping
-      s = s - sqrt(6.0) * G * plastic_strain_inc * normalize(eta);
-
+      s = s - sqrt(6.0) * G * plastic_strain_inc * eta;
       state.accumulated_plastic_strain += get_value(plastic_strain_inc);
-
-      state.plastic_strain += sqrt(3.0 / 2.0) * get_value(plastic_strain_inc) * normalize(get_value(eta));
-
-      state.beta = state.beta + sqrt(2.0 / 3.0) * Hk * get_value(plastic_strain_inc) * normalize(get_value(eta));
+      state.plastic_strain += sqrt(3.0 / 2.0) * get_value(plastic_strain_inc) * get_value(eta);
+      state.beta = state.beta + sqrt(2.0 / 3.0) * Hk * get_value(plastic_strain_inc) * get_value(eta);
 
     } 
 
