@@ -57,7 +57,7 @@ public:
     /**
      * @brief Previous value of dt
      */
-    /// 
+    ///
     double& c1;
 
     /**
@@ -163,7 +163,7 @@ private:
   /**
    * @brief Internal implementation used for mfem::SOTDO::Mult and mfem::SOTDO::ImplicitSolve
    *        Solves the equation d2u_dt2 = f(u + c0 * d2u_dt2, du_dt + c1 * d2u_dt2, t)
-   * 
+   *
    * @param[in] time The current time
    * @param[in] c0 coefficient on d2u_dt2 appearing the first argument of f
    * @param[in] c1 coefficient on d2u_dt2 appearing the second argument of f

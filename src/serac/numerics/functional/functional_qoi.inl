@@ -156,9 +156,8 @@ public:
    */
   template <int dim, typename lambda, typename qpt_data_type = Nothing>
   void AddDomainIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain,
-                         std::shared_ptr< QuadratureData<qpt_data_type> > qdata = NoQData)
+                         std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
   {
-
     auto num_elements = domain.GetNE();
     if (num_elements == 0) return;
 
@@ -334,7 +333,7 @@ public:
       // compute residual contributions at the element level and sum them
       output_E_ = 0.0;
       for (auto& integral : domain_integrals_) {
-        const bool update_state = false; // QoIs get read-only access to material state
+        const bool update_state = false;  // QoIs get read-only access to material state
         integral.Mult(input_E_, output_E_, wrt, update_state);
       }
 

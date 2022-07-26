@@ -112,7 +112,7 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
    * @param data user-specified quadrature data to pass to the q-function
    */
   EvaluationKernel(KernelConfig<Q, geom, test, trials...>, const mfem::Vector& J, const mfem::Vector& X,
-                   std::size_t num_elements, lambda qf, std::shared_ptr< QuadratureData<qpt_data_type> > data)
+                   std::size_t num_elements, lambda qf, std::shared_ptr<QuadratureData<qpt_data_type> > data)
       : J_(J), X_(X), num_elements_(num_elements), qf_(qf), data_(data)
   {
   }
@@ -140,10 +140,10 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
 
     // mfem provides this information in 1D arrays, so we reshape it
     // into strided multidimensional arrays before using
-    auto X = mfem::Reshape(X_.Read(), rule.size(), dim, num_elements_);
-    auto J = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements_);
-    auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, int(num_elements_));  // TODO: integer conversions
-    auto & qdata = *data_;
+    auto  X     = mfem::Reshape(X_.Read(), rule.size(), dim, num_elements_);
+    auto  J     = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements_);
+    auto  r     = detail::Reshape<test>(R.ReadWrite(), test_ndof, int(num_elements_));  // TODO: integer conversions
+    auto& qdata = *data_;
 
     // for each element in the domain
     for (uint32_t e = 0; e < num_elements_; e++) {
@@ -173,7 +173,7 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
         auto qf_output = detail::apply_qf(qf_, x_q, state, arg);
 
         if (update_state) {
-          qdata(int(e), q) = state;          
+          qdata(int(e), q) = state;
         }
 
         // integrate qf_output against test space shape functions / gradients
@@ -187,11 +187,11 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
     }
   }
 
-  const mfem::Vector&           J_;             ///< Jacobian matrix entries at each quadrature point
-  const mfem::Vector&           X_;             ///< Spatial positions of each quadrature point
-  std::size_t                   num_elements_;  ///< how many elements in the domain
-  lambda                        qf_;            ///< q-function
-  std::shared_ptr< QuadratureData<qpt_data_type> > data_; ///< (optional) user-provided quadrature data
+  const mfem::Vector&                             J_;             ///< Jacobian matrix entries at each quadrature point
+  const mfem::Vector&                             X_;             ///< Spatial positions of each quadrature point
+  std::size_t                                     num_elements_;  ///< how many elements in the domain
+  lambda                                          qf_;            ///< q-function
+  std::shared_ptr<QuadratureData<qpt_data_type> > data_;          ///< (optional) user-provided quadrature data
 };
 
 /**
@@ -220,7 +220,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
    */
   EvaluationKernel(DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>,
                    CPUArrayView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J, const mfem::Vector& X,
-                   std::size_t num_elements, lambda qf, std::shared_ptr< QuadratureData<qpt_data_type> > data)
+                   std::size_t num_elements, lambda qf, std::shared_ptr<QuadratureData<qpt_data_type> > data)
       : qf_derivatives_(qf_derivatives), J_(J), X_(X), num_elements_(num_elements), qf_(qf), data_(data)
   {
   }
@@ -248,10 +248,10 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
 
     // mfem provides this information in 1D arrays, so we reshape it
     // into strided multidimensional arrays before using
-    auto X = mfem::Reshape(X_.Read(), rule.size(), dim, num_elements_);
-    auto J = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements_);
-    auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, int(num_elements_));  // TODO: integer conversions
-    auto & qdata = *data_;
+    auto  X     = mfem::Reshape(X_.Read(), rule.size(), dim, num_elements_);
+    auto  J     = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements_);
+    auto  r     = detail::Reshape<test>(R.ReadWrite(), test_ndof, int(num_elements_));  // TODO: integer conversions
+    auto& qdata = *data_;
 
     // for each element in the domain
     for (uint32_t e = 0; e < num_elements_; e++) {
@@ -305,18 +305,18 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
   const mfem::Vector&                      X_;               ///< Spatial positions of each quadrature point
   std::size_t                              num_elements_;    ///< how many elements in the domain
   lambda                                   qf_;              ///< q-function
-  std::shared_ptr< QuadratureData<qpt_data_type> > data_; ///< (optional) user-provided quadrature data
+  std::shared_ptr<QuadratureData<qpt_data_type> > data_;     ///< (optional) user-provided quadrature data
 };
 
 template <int Q, Geometry geom, typename test, typename... trials, typename lambda, typename qpt_data_type>
 EvaluationKernel(KernelConfig<Q, geom, test, trials...>, const mfem::Vector&, const mfem::Vector&, int, lambda,
-                 std::shared_ptr< QuadratureData<qpt_data_type> >)
+                 std::shared_ptr<QuadratureData<qpt_data_type> >)
     -> EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lambda, qpt_data_type>;
 
 template <int i, int Q, Geometry geom, typename test, typename... trials, typename derivatives_type, typename lambda,
           typename qpt_data_type>
 EvaluationKernel(DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, CPUArrayView<derivatives_type, 2>,
-                 const mfem::Vector&, const mfem::Vector&, int, lambda, std::shared_ptr< QuadratureData<qpt_data_type> >)
+                 const mfem::Vector&, const mfem::Vector&, int, lambda, std::shared_ptr<QuadratureData<qpt_data_type> >)
     -> EvaluationKernel<DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, derivatives_type, lambda,
                         qpt_data_type>;
 

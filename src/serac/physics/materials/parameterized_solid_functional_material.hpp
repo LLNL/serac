@@ -25,7 +25,6 @@ namespace serac::solid_mechanics {
  */
 template <int dim>
 struct ParameterizedLinearIsotropic {
-
   /**
    * @brief stress calculation for a linear isotropic material model
    *
@@ -38,14 +37,13 @@ struct ParameterizedLinearIsotropic {
    * @return The calculated material response (density, Kirchoff stress) for the material
    */
   template <typename DisplacementType, typename DispGradType, typename BulkType, typename ShearType>
-  SERAC_HOST_DEVICE auto operator()(const DispGradType& du_dX, const BulkType& DeltaK,
-                                    const ShearType& DeltaG) const
+  SERAC_HOST_DEVICE auto operator()(const DispGradType& du_dX, const BulkType& DeltaK, const ShearType& DeltaG) const
   {
-    constexpr auto I = Identity<dim>();
-    auto K = K0 + DeltaK;
-    auto G = G0 + DeltaG;
-    auto lambda = K - (2.0 / dim) * G;
-    auto epsilon = 0.5 * (transpose(du_dX) + du_dX);
+    constexpr auto I       = Identity<dim>();
+    auto           K       = K0 + DeltaK;
+    auto           G       = G0 + DeltaG;
+    auto           lambda  = K - (2.0 / dim) * G;
+    auto           epsilon = 0.5 * (transpose(du_dX) + du_dX);
     return lambda * tr(epsilon) * I + 2.0 * G * epsilon;
   }
 
@@ -56,9 +54,9 @@ struct ParameterizedLinearIsotropic {
    */
   static constexpr int numParameters() { return 2; }
 
-  double density; ///< mass density
-  double K0;      ///< base bulk modulus 
-  double G0;      ///< base shear modulus
+  double density;  ///< mass density
+  double K0;       ///< base bulk modulus
+  double G0;       ///< base shear modulus
 };
 
 /**
@@ -68,8 +66,7 @@ struct ParameterizedLinearIsotropic {
  */
 template <int dim>
 struct ParameterizedNeoHookeanSolid {
-
-  using State = Empty; ///< this material has no internal variables
+  using State = Empty;  ///< this material has no internal variables
 
   /**
    * @brief stress calculation for a NeoHookean material model
@@ -83,13 +80,14 @@ struct ParameterizedNeoHookeanSolid {
    * @return The calculated material response (density, kirchoff stress) for the material
    */
   template <typename DispGradType, typename BulkType, typename ShearType>
-  SERAC_HOST_DEVICE auto operator()(State & /*state*/, const DispGradType& du_dX, const BulkType& DeltaK, const ShearType& DeltaG) const
+  SERAC_HOST_DEVICE auto operator()(State& /*state*/, const DispGradType& du_dX, const BulkType& DeltaK,
+                                    const ShearType& DeltaG) const
   {
-    constexpr auto I = Identity<dim>();
-    auto K = K0 + DeltaK;
-    auto G = G0 + DeltaG;
-    auto lambda = K - (2.0 / dim) * G;
-    auto B_minus_I = du_dX * transpose(du_dX) + transpose(du_dX) + du_dX;
+    constexpr auto I         = Identity<dim>();
+    auto           K         = K0 + DeltaK;
+    auto           G         = G0 + DeltaG;
+    auto           lambda    = K - (2.0 / dim) * G;
+    auto           B_minus_I = du_dX * transpose(du_dX) + transpose(du_dX) + du_dX;
     return lambda * log(det(I + du_dX)) * I + G * B_minus_I;
   }
 
@@ -100,9 +98,9 @@ struct ParameterizedNeoHookeanSolid {
    */
   static constexpr int numParameters() { return 2; }
 
-  double density; ///< mass density
-  double K0;      ///< base bulk modulus
-  double G0;      ///< base shear modulus
+  double density;  ///< mass density
+  double K0;       ///< base bulk modulus
+  double G0;       ///< base shear modulus
 };
 
-}  // namespace serac::solid_util
+}  // namespace serac::solid_mechanics

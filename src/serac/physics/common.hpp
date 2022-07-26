@@ -7,7 +7,7 @@
 /**
  * @file common.hpp
  *
- * @brief A file defining some enums and structs that are used by the different physics modules 
+ * @brief A file defining some enums and structs that are used by the different physics modules
  */
 #pragma once
 
@@ -16,12 +16,12 @@
 namespace serac {
 
 /**
- * @brief a struct that is used in the physics modules to clarify which template arguments are 
+ * @brief a struct that is used in the physics modules to clarify which template arguments are
  * user-controlled parameters (e.g. for design optimization)
  */
-template < typename ... T >
-struct Parameters{
-  static constexpr int n = sizeof ... (T); ///< how many parameters were specified
+template <typename... T>
+struct Parameters {
+  static constexpr int n = sizeof...(T);  ///< how many parameters were specified
 };
 
 /// A timestep and boundary condition enforcement method for a dynamic solver
@@ -41,7 +41,6 @@ struct TimesteppingOptions {
  * define the nonlinear residual and linear stiffness solve options as before.
  */
 struct SolverOptions {
-
   /// the method, iteration limit, and tolerances for the linear system
   LinearSolverOptions linear;
 
@@ -55,4 +54,4 @@ struct SolverOptions {
   std::optional<TimesteppingOptions> dynamic = std::nullopt;
 };
 
-}
+}  // namespace serac

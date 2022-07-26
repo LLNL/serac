@@ -66,8 +66,8 @@ public:
   // * @param[in] mesh_tag A string that uniquely identifies the mesh on which the quadrature data is to be defined
   // * @see QuadratureData::QuadratureData
   // */
-  //template <typename T>
-  //static QuadratureData<T>& newQuadratureData(const std::string& name, const int p,
+  // template <typename T>
+  // static QuadratureData<T>& newQuadratureData(const std::string& name, const int p,
   //                                            const std::string& mesh_tag = default_mesh_name_)
   //{
   //  auto& datacoll = datacolls_.at(mesh_tag);
@@ -114,7 +114,7 @@ public:
   {
     datacolls_.clear();
     is_restart_ = false;
-    //syncable_data_.clear();
+    // syncable_data_.clear();
     ds_ = nullptr;
   };
 
@@ -169,7 +169,7 @@ private:
    * @brief A set of @p QuadratureData<T> objects that need to be synchronized before saving to disk
    * FIXME Need one set per datacoll since we can save at different times?
    */
-  //static std::vector<std::unique_ptr<SyncableData>> syncable_data_;
+  // static std::vector<std::unique_ptr<SyncableData>> syncable_data_;
 
   /// @brief Pointer (non-owning) to the datastore
   static axom::sidre::DataStore* ds_;

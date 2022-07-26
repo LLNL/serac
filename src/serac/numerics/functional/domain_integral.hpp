@@ -53,7 +53,7 @@ public:
    */
   template <int dim, typename lambda_type, typename qpt_data_type = Nothing>
   DomainIntegral(size_t num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<dim>, lambda_type&& qf,
-                 std::shared_ptr < QuadratureData< qpt_data_type > > qdata)
+                 std::shared_ptr<QuadratureData<qpt_data_type> > qdata)
   {
     SERAC_MARK_BEGIN("Domain Integral Set Up");
     using namespace domain_integral;
@@ -151,8 +151,8 @@ public:
    * @note which_trial_space == -1 implies that this function will call the evaluation kernel that performs no
    * differentiation
    */
-  void Mult(const std::array<mfem::Vector, num_trial_spaces>& input_E, mfem::Vector& output_E,
-            int which_trial_space, bool update_state) const
+  void Mult(const std::array<mfem::Vector, num_trial_spaces>& input_E, mfem::Vector& output_E, int which_trial_space,
+            bool update_state) const
   {
     if (which_trial_space == -1) {
       SERAC_MARK_BEGIN("Domain Integral Evaluation");

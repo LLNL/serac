@@ -20,16 +20,16 @@ using namespace serac;
 
 using serac::solid_mechanics::default_static_options;
 
-int main(int argc, char* argv[]) {
-
+int main(int argc, char* argv[])
+{
   MPI_Init(&argc, &argv);
 
   axom::slic::SimpleLogger logger;
 
-  constexpr int p = 1;
-  constexpr int dim = 3;
-  int serial_refinement   = 2;
-  int parallel_refinement = 0;
+  constexpr int p                   = 1;
+  constexpr int dim                 = 3;
+  int           serial_refinement   = 2;
+  int           parallel_refinement = 0;
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -41,14 +41,14 @@ int main(int argc, char* argv[]) {
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
 
-  double initial_temperature = 300.0;
-  double final_temperature = 400.0;
+  double             initial_temperature = 300.0;
+  double             final_temperature   = 400.0;
   FiniteElementState temperature(
       StateManager::newState(FiniteElementState::Options{.order = p, .name = "temperature"}));
 
   temperature = initial_temperature;
 
-  auto fec = std::unique_ptr< mfem::FiniteElementCollection >(new mfem::L2_FECollection(p, dim));
+  auto fec = std::unique_ptr<mfem::FiniteElementCollection>(new mfem::L2_FECollection(p, dim));
 
   FiniteElementState gamma(
       StateManager::newState(FiniteElementState::Options{.order = p, .coll = std::move(fec), .name = "gamma"}));
@@ -69,20 +69,22 @@ int main(int argc, char* argv[]) {
   gamma.project(coef);
 
   // Construct a functional-based solid mechanics solver
-  SolidFunctional<p, dim, Parameters< H1<p>, L2<p> > > solid_solver(default_static_options, GeometricNonlinearities::Off, FinalMeshOption::Reference,
-                                       "solid_functional", {temperature, gamma});
+  SolidFunctional<p, dim, Parameters<H1<p>, L2<p> > > solid_solver(default_static_options, GeometricNonlinearities::Off,
+                                                                   FinalMeshOption::Reference, "solid_functional",
+                                                                   {temperature, gamma});
 
-  double density = 1.0;
-  double E = 1.0;
-  double nu = 0.48;
-  double shear_modulus = 0.5*E/(1.0 + nu);
-  double bulk_modulus = E / 3.0 / (1.0 - 2.0*nu);
-  double order_constant = 10.0;
-  double order_parameter = 1.0;
+  double density                = 1.0;
+  double E                      = 1.0;
+  double nu                     = 0.48;
+  double shear_modulus          = 0.5 * E / (1.0 + nu);
+  double bulk_modulus           = E / 3.0 / (1.0 - 2.0 * nu);
+  double order_constant         = 10.0;
+  double order_parameter        = 1.0;
   double transition_temperature = 370.0;
-  double Nb2 = 1.0;
-  
-  LiquidCrystalElastomer mat(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, Nb2);
+  double Nb2                    = 1.0;
+
+  LiquidCrystalElastomer mat(density, shear_modulus, bulk_modulus, order_constant, order_parameter,
+                             transition_temperature, Nb2);
 
   LiquidCrystalElastomer::State initial_state{};
 
@@ -97,7 +99,7 @@ int main(int argc, char* argv[]) {
   solid_solver.setDisplacementBCs(support, zero_displacement);
 #else
   auto zero_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; };
-  auto zeroFunc = [](const mfem::Vector /*x*/){ return 0.0;};
+  auto zeroFunc          = [](const mfem::Vector /*x*/) { return 0.0; };
   solid_solver.setDisplacementBCs({1}, zeroFunc, 0);
   solid_solver.setDisplacementBCs({1}, zeroFunc, 1);
   solid_solver.setDisplacementBCs({1}, zeroFunc, 2);
@@ -113,9 +115,9 @@ int main(int argc, char* argv[]) {
 
   solid_solver.outputState("paraview");
 
-  double t = 0.0;
+  double t    = 0.0;
   double tmax = 1.0;
-  double dt = tmax / num_steps;
+  double dt   = tmax / num_steps;
   for (int i = 0; i < num_steps; i++) {
     t += dt;
     solid_solver.advanceTimestep(dt);
@@ -125,5 +127,4 @@ int main(int argc, char* argv[]) {
   }
 
   MPI_Finalize();
-
 }

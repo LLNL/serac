@@ -27,37 +27,35 @@ namespace serac {
 
 namespace solid_mechanics {
 
-  /**
-   * @brief default method and tolerances for solving the 
-   * systems of linear equations that show up in implicit
-   * solid mechanics simulations
-   */
-  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
-                                                         .abs_tol     = 1.0e-10,
-                                                         .print_level = 0,
-                                                         .max_iter    = 500,
-                                                         .lin_solver  = LinearSolver::GMRES,
-                                                         .prec        = HypreBoomerAMGPrec{}};
+/**
+ * @brief default method and tolerances for solving the
+ * systems of linear equations that show up in implicit
+ * solid mechanics simulations
+ */
+const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
+                                                       .abs_tol     = 1.0e-10,
+                                                       .print_level = 0,
+                                                       .max_iter    = 500,
+                                                       .lin_solver  = LinearSolver::GMRES,
+                                                       .prec        = HypreBoomerAMGPrec{}};
 
-  /**
-   * @brief default iteration limits, tolerances and verbosity for solving the 
-   * systems of nonlinear equations that show up in implicit
-   * solid mechanics simulations
-   */
-  const NonlinearSolverOptions default_nonlinear_options = {
-      .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
+/**
+ * @brief default iteration limits, tolerances and verbosity for solving the
+ * systems of nonlinear equations that show up in implicit
+ * solid mechanics simulations
+ */
+const NonlinearSolverOptions default_nonlinear_options = {
+    .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
 
-  /// the default linear and nonlinear solver options for (quasi-)static analyses
-  const SolverOptions default_static_options = {default_linear_options, default_nonlinear_options};
+/// the default linear and nonlinear solver options for (quasi-)static analyses
+const SolverOptions default_static_options = {default_linear_options, default_nonlinear_options};
 
-  /// the default solver and time integration options for dynamic analyses
-  const SolverOptions default_dynamic_options = {
-    default_linear_options, 
-    default_nonlinear_options,
-    TimesteppingOptions{TimestepMethod::AverageAcceleration, DirichletEnforcementMethod::RateControl}
-  };
+/// the default solver and time integration options for dynamic analyses
+const SolverOptions default_dynamic_options = {
+    default_linear_options, default_nonlinear_options,
+    TimesteppingOptions{TimestepMethod::AverageAcceleration, DirichletEnforcementMethod::RateControl}};
 
-}
+}  // namespace solid_mechanics
 
 /**
  * @brief The nonlinear solid solver class
@@ -69,22 +67,23 @@ namespace solid_mechanics {
  * @tparam order The order of the discretization of the displacement and velocity fields
  * @tparam dim The spatial dimension of the mesh
  */
-template <int order, int dim, typename parameters = Parameters<>, typename parameter_indices  = std::make_integer_sequence< int, parameters::n > >
+template <int order, int dim, typename parameters = Parameters<>,
+          typename parameter_indices = std::make_integer_sequence<int, parameters::n>>
 class SolidFunctional;
 
 /// @overload
-template <int order, int dim, typename ... parameter_space, int ... parameter_indices >
-class SolidFunctional< order, dim, Parameters< parameter_space ... >, std::integer_sequence< int, parameter_indices ... > > : public BasePhysics {
+template <int order, int dim, typename... parameter_space, int... parameter_indices>
+class SolidFunctional<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>
+    : public BasePhysics {
 public:
-
   //! @cond Doxygen_Suppress
-  static constexpr int VALUE = 0, DERIVATIVE = 1;
+  static constexpr int  VALUE = 0, DERIVATIVE = 1;
   static constexpr auto I = Identity<dim>();
   //! @endcond
 
   /**
    * @brief a list of the currently supported element geometries, by dimension
-   * @note: this is hardcoded for now, since we currently 
+   * @note: this is hardcoded for now, since we currently
    * only support tensor product elements (1 element type per spatial dimension)
    */
   static constexpr Geometry geom = supported_geometries[dim];
@@ -126,10 +125,10 @@ public:
     state_.push_back(adjoint_displacement_);
 
     // Create a pack of the primal field and parameter finite element spaces
-    mfem::ParFiniteElementSpace* test_space = &displacement_.space();
+    mfem::ParFiniteElementSpace*                                             test_space = &displacement_.space();
     std::array<mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + 2> trial_spaces;
     trial_spaces[0] = &displacement_.space();
-    trial_spaces[1] = &displacement_.space(); // the accelerations have the same trial space as displacement
+    trial_spaces[1] = &displacement_.space();  // the accelerations have the same trial space as displacement
 
     if constexpr (sizeof...(parameter_space) > 0) {
       for (size_t i = 0; i < sizeof...(parameter_space); ++i) {
@@ -214,20 +213,21 @@ public:
 
   /**
    * @brief Create a shared ptr to a quadrature data buffer for the given material type
-   * 
-   * @tparam T the type to be created at each quadrature point 
+   *
+   * @tparam T the type to be created at each quadrature point
    * @param initial_state the value to be broadcast to each quadrature point
-   * @return std::shared_ptr< QuadratureData<T> > 
+   * @return std::shared_ptr< QuadratureData<T> >
    */
-  template < typename T >
-  std::shared_ptr< QuadratureData<T> > createQuadratureDataBuffer(T initial_state) {
+  template <typename T>
+  std::shared_ptr<QuadratureData<T>> createQuadratureDataBuffer(T initial_state)
+  {
     constexpr auto Q = order + 1;
 
-    size_t num_elements = mesh_.GetNE();
+    size_t num_elements        = mesh_.GetNE();
     size_t qpoints_per_element = GaussQuadratureRule<geom, Q>().size();
 
-    auto qdata = std::make_shared< QuadratureData<T> >(num_elements, qpoints_per_element);
-    auto & container = *qdata;
+    auto  qdata     = std::make_shared<QuadratureData<T>>(num_elements, qpoints_per_element);
+    auto& container = *qdata;
     for (size_t e = 0; e < num_elements; e++) {
       for (size_t q = 0; q < qpoints_per_element; q++) {
         container(e, q) = initial_state;
@@ -295,20 +295,20 @@ public:
    * @pre MaterialType must define operator() that returns the Kirchoff stress
    */
   template <typename MaterialType, typename StateType>
-  void setMaterial(MaterialType material, std::shared_ptr < QuadratureData<StateType> > qdata)
+  void setMaterial(MaterialType material, std::shared_ptr<QuadratureData<StateType>> qdata)
   {
     residual_->AddDomainIntegral(
         Dimension<dim>{},
-        [this, material](auto /*x*/, auto & state, auto displacement, auto acceleration, auto ... params) {
-          auto a = get<VALUE>(acceleration);
-          auto du_dX = get<DERIVATIVE>(displacement);
+        [this, material](auto /*x*/, auto& state, auto displacement, auto acceleration, auto... params) {
+          auto a          = get<VALUE>(acceleration);
+          auto du_dX      = get<DERIVATIVE>(displacement);
           auto body_force = material.density * a + 0.0 * du_dX[0];
-          auto stress = material(state, du_dX, serac::get<0>(params)...);
+          auto stress     = material(state, du_dX, serac::get<0>(params)...);
 
           if (geom_nonlin_ == GeometricNonlinearities::On) {
-            auto F = I + du_dX;
+            auto F     = I + du_dX;
             body_force = body_force * det(F);
-            stress = dot(stress, inv(transpose(F)));
+            stress     = dot(stress, inv(transpose(F)));
           }
 
           return serac::tuple{body_force, stress};
@@ -318,7 +318,8 @@ public:
 
   /// @overload
   template <typename MaterialType>
-  void setMaterial(MaterialType material) {
+  void setMaterial(MaterialType material)
+  {
     setMaterial(material, EmptyQData);
   }
 
@@ -362,13 +363,13 @@ public:
     residual_->AddDomainIntegral(
         Dimension<dim>{},
         [body_force, this](auto x, auto displacement, auto /* acceleration */, auto... /*params*/) {
-          auto du_dX = get<DERIVATIVE>(displacement);
+          auto du_dX    = get<DERIVATIVE>(displacement);
           auto one_dual = (1.0 + 0.0 * du_dX[0][0]);
-          auto source = body_force(x, time_) * one_dual;
+          auto source   = body_force(x, time_) * one_dual;
           if (geom_nonlin_ == GeometricNonlinearities::On) {
             source = source * det(I + du_dX);
           }
-          return serac::tuple{source, zero{}}; 
+          return serac::tuple{source, zero{}};
         },
         mesh_);
   }
@@ -402,14 +403,14 @@ public:
 
         // residual function
         [this](const mfem::Vector& u, mfem::Vector& r) {
-          r = (*residual_)(u, zero_, parameter_states_[parameter_indices] ...);
+          r = (*residual_)(u, zero_, parameter_states_[parameter_indices]...);
           r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
         },
 
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
-          auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, parameter_states_[parameter_indices] ...);
-          J_ = assemble(drdu);
+          auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, parameter_states_[parameter_indices]...);
+          J_             = assemble(drdu);
           bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
           return *J_;
         });
@@ -429,8 +430,8 @@ public:
       residual_with_bcs_ = buildQuasistaticOperator();
 
       // the residual calculation uses the old stiffness matrix
-      // to help apply essential boundary conditions, so we 
-      // compute J here to prime the pump for the first solve 
+      // to help apply essential boundary conditions, so we
+      // compute J here to prime the pump for the first solve
       residual_with_bcs_->GetGradient(displacement_);
 
     } else {
@@ -442,7 +443,7 @@ public:
 
           [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) {
             add(1.0, u_, c0_, d2u_dt2, predicted_displacement_);
-            r = (*residual_)(predicted_displacement_, d2u_dt2, parameter_states_[parameter_indices] ...);
+            r = (*residual_)(predicted_displacement_, d2u_dt2, parameter_states_[parameter_indices]...);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
@@ -450,11 +451,13 @@ public:
             add(1.0, u_, c0_, d2u_dt2, predicted_displacement_);
 
             // K := dR/du
-            auto K = serac::get<1>((*residual_)(differentiate_wrt(predicted_displacement_), d2u_dt2, parameter_states_[parameter_indices] ...));
+            auto K = serac::get<1>((*residual_)(differentiate_wrt(predicted_displacement_), d2u_dt2,
+                                                parameter_states_[parameter_indices]...));
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             // M := dR/da
-            auto M = serac::get<1>((*residual_)(predicted_displacement_, differentiate_wrt(d2u_dt2), parameter_states_[parameter_indices] ...));
+            auto M = serac::get<1>((*residual_)(predicted_displacement_, differentiate_wrt(d2u_dt2),
+                                                parameter_states_[parameter_indices]...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
             // J = M + c0 * K
@@ -469,8 +472,8 @@ public:
   }
 
   /// @brief Solve the Quasi-static Newton system
-  void quasiStaticSolve(double dt) { 
-
+  void quasiStaticSolve(double dt)
+  {
     time_ += dt;
 
     // the 30 lines of code below are essentially equivalent to the 1-liner
@@ -480,7 +483,7 @@ public:
         bc.setDofs(du_, time_);
       }
 
-      auto & constrained_dofs = bcs_.allEssentialTrueDofs();
+      auto& constrained_dofs = bcs_.allEssentialTrueDofs();
       for (int i = 0; i < constrained_dofs.Size(); i++) {
         du_[constrained_dofs[i]] -= displacement_(constrained_dofs[i]);
       }
@@ -525,7 +528,7 @@ public:
       mesh_.NewNodes(*reference_nodes_);
     }
 
-    //bcs_.setTime(time_);
+    // bcs_.setTime(time_);
 
     if (is_quasistatic_) {
       quasiStaticSolve(dt);
@@ -534,7 +537,7 @@ public:
     }
 
     {
-      // after finding displacements that satisfy equilibrium, 
+      // after finding displacements that satisfy equilibrium,
       // compute the residual one more time, this time enabling
       // the material state buffers to be updated
       residual_->update_qdata = true;
@@ -542,7 +545,7 @@ public:
       // this seems like the wrong way to be doing this assignment, but
       // nodal_forces_ = residual(displacement, ...);
       // isn't currently supported
-      nodal_forces_.Vector::operator=((*residual_)(displacement_, zero_, parameter_states_[parameter_indices] ...));
+      nodal_forces_.Vector::operator=((*residual_)(displacement_, zero_, parameter_states_[parameter_indices]...));
 
       residual_->update_qdata = false;
     }
@@ -588,11 +591,12 @@ public:
     mfem::HypreParVector adjoint_essential(adjoint_load);
     adjoint_essential = 0.0;
 
-    // sam: is this the right thing to be doing for dynamics simulations, 
+    // sam: is this the right thing to be doing for dynamics simulations,
     // or are we implicitly assuming this should only be used in quasistatic analyses?
-    auto drdu = serac::get<1>((*residual_)(differentiate_wrt(displacement_), zero_, parameter_states_[parameter_indices] ...));
-    auto jacobian  = assemble(drdu);
-    auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
+    auto drdu =
+        serac::get<1>((*residual_)(differentiate_wrt(displacement_), zero_, parameter_states_[parameter_indices]...));
+    auto jacobian = assemble(drdu);
+    auto J_T      = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
     // If we have a non-homogeneous essential boundary condition, extract it from the given state
     if (dual_with_essential_boundary) {
@@ -634,7 +638,8 @@ public:
       mesh_.NewNodes(*reference_nodes_);
     }
 
-    auto drdparam = serac::get<1>((*residual_)(DifferentiateWRT<parameter_field + 2>{}, displacement_, zero_, parameter_states_[parameter_indices] ...));
+    auto drdparam = serac::get<1>((*residual_)(DifferentiateWRT<parameter_field + 2>{}, displacement_, zero_,
+                                               parameter_states_[parameter_indices]...));
 
     auto drdparam_mat = assemble(drdparam);
 
@@ -678,7 +683,7 @@ public:
   /// @overload
   serac::FiniteElementState& velocity() { return velocity_; };
 
-  /// @brief getter for nodal forces (before zeroing-out essential dofs) 
+  /// @brief getter for nodal forces (before zeroing-out essential dofs)
   const serac::FiniteElementDual& nodalForces() { return nodal_forces_; };
 
   /// @brief Reset the mesh, displacement, and velocity to the reference (stress-free) configuration
@@ -712,7 +717,7 @@ protected:
   /// serac::Functional that is used to calculate the residual and its derivatives
   std::unique_ptr<Functional<test(trial, trial, parameter_space...)>> residual_;
 
-  /// mfem::Operator that calculates the residual after applying essential boundary conditions 
+  /// mfem::Operator that calculates the residual after applying essential boundary conditions
   std::unique_ptr<mfem_ext::StdFunctionOperator> residual_with_bcs_;
 
   /// The finite element states representing user-defined parameter fields
@@ -738,7 +743,7 @@ protected:
   mfem::Vector predicted_displacement_;
 
   /// vector used to store the change in essential bcs between timesteps
-  mfem::Vector du_; 
+  mfem::Vector du_;
 
   /// vector used to store forces arising from du_ when applying time-dependent bcs
   mfem::Vector dr_;
@@ -778,7 +783,6 @@ protected:
 
   /// @brief An auxilliary zero vector
   mfem::Vector zero_;
-
 };
 
 }  // namespace serac

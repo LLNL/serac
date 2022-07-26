@@ -25,8 +25,9 @@
 
 namespace serac {
 
-template < int i >
-struct DifferentiateWRT{};
+template <int i>
+struct DifferentiateWRT {
+};
 
 /**
  * @brief this type exists solely as a way to signal to `serac::Functional` that the function
@@ -221,7 +222,7 @@ public:
    */
   template <int dim, typename lambda, typename qpt_data_type = Nothing>
   void AddDomainIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain,
-                         std::shared_ptr< QuadratureData<qpt_data_type> > qdata = NoQData)
+                         std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
   {
     auto num_elements = domain.GetNE();
     if (num_elements == 0) return;
@@ -287,7 +288,8 @@ public:
    * @param[inout] data The data for each quadrature point
    */
   template <typename lambda, typename qpt_data_type = Nothing>
-  void AddAreaIntegral(lambda&& integrand, mfem::Mesh& domain, std::shared_ptr< QuadratureData<qpt_data_type> > data = NoQData)
+  void AddAreaIntegral(lambda&& integrand, mfem::Mesh& domain,
+                       std::shared_ptr<QuadratureData<qpt_data_type>> data = NoQData)
   {
     AddDomainIntegral(Dimension<2>{}, integrand, domain, data);
   }
@@ -301,7 +303,8 @@ public:
    * @param[inout] data The data for each quadrature point
    */
   template <typename lambda, typename qpt_data_type = Nothing>
-  void AddVolumeIntegral(lambda&& integrand, mfem::Mesh& domain, std::shared_ptr< QuadratureData<qpt_data_type> > data = NoQData)
+  void AddVolumeIntegral(lambda&& integrand, mfem::Mesh& domain,
+                         std::shared_ptr<QuadratureData<qpt_data_type>> data = NoQData)
   {
     AddDomainIntegral(Dimension<3>{}, integrand, domain, data);
   }
@@ -376,9 +379,9 @@ public:
    *  at most one of which may be of the type `differentiate_wrt_this(mfem::Vector)`
    */
   template <int wrt, typename... T>
-  typename operator_paren_return<wrt>::type operator()(DifferentiateWRT<wrt>, const T&... args) {
-
-    const mfem::Vector * input_T[] = {&static_cast<const mfem::Vector &>(args) ... };
+  typename operator_paren_return<wrt>::type operator()(DifferentiateWRT<wrt>, const T&... args)
+  {
+    const mfem::Vector* input_T[] = {&static_cast<const mfem::Vector&>(args)...};
 
     // get the values for each local processor
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
@@ -440,7 +443,6 @@ public:
       // e.g. mfem::Vector value = my_functional(arg0, arg1);
       return output_T_;
     }
-
   }
 
   /// @overload
@@ -455,7 +457,7 @@ public:
 
     [[maybe_unused]] constexpr int i = index_of_differentiation<T...>();
 
-    return (*this)(DifferentiateWRT<i>{}, args ...);
+    return (*this)(DifferentiateWRT<i>{}, args...);
   }
 
   // TODO: expose this feature a better way
@@ -708,10 +710,9 @@ private:
   /// @brief 3D array that stores each boundary element's gradient of the residual w.r.t. trial values
   ExecArray<double, 3, exec> bdr_element_gradients_[num_trial_spaces];
 
- public: // TODO
+public:  // TODO
   /// @brief flag for denoting when a residual evaluation should update the material state buffers
-  std::vector < std::vector < char > > material_state_buffers_;
-
+  std::vector<std::vector<char>> material_state_buffers_;
 };
 
 }  // namespace serac

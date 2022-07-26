@@ -1132,13 +1132,13 @@ SERAC_HOST_DEVICE constexpr auto det(const tensor<T, 3, 3>& A)
 /**
  * @brief compute the matrix square root of a square, real-valued, symmetric matrix
  *        i.e. given A, find B such that A = dot(B, B)
- * 
- * @tparam T the data type stored in each element of the matrix 
+ *
+ * @tparam T the data type stored in each element of the matrix
  * @param A the matrix to compute the square root of
  * @return a square matrix, B, of the same type as A satisfying `dot(B, B) == A`
  */
 template <typename T, int dim>
-auto matrix_sqrt(const tensor<T, dim, dim>& A) 
+auto matrix_sqrt(const tensor<T, dim, dim>& A)
 {
   auto B = A;
   for (int i = 0; i < 15; i++) {
@@ -1515,15 +1515,15 @@ auto& operator<<(std::ostream& out, const tensor<T, m, n...>& A)
 }
 
 /**
-  * @brief Write a zero out to an output stream
-  *
-  * @param[in] out the std::ostream to write to (e.g. std::cout or std::ofstream)
-  */
- auto& operator<<(std::ostream& out, zero)
- {
-   out << "zero";
-   return out;
- }
+ * @brief Write a zero out to an output stream
+ *
+ * @param[in] out the std::ostream to write to (e.g. std::cout or std::ofstream)
+ */
+auto& operator<<(std::ostream& out, zero)
+{
+  out << "zero";
+  return out;
+}
 
 /**
  * @brief print a double using `printf`, so that it is suitable for use inside cuda kernels. (used in final recursion of

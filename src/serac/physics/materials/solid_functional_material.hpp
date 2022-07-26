@@ -24,8 +24,7 @@ namespace serac::solid_mechanics {
  */
 template <int dim>
 struct LinearIsotropic {
-  
-  using State = Empty; ///< this material has no internal variables
+  using State = Empty;  ///< this material has no internal variables
 
   /**
    * @brief stress calculation for a linear isotropic material model
@@ -35,17 +34,17 @@ struct LinearIsotropic {
    * @return The calculated material response (density, Kirchoff stress) for the material
    */
   template <typename DispGradType>
-  SERAC_HOST_DEVICE auto operator()(State & /* state */, const DispGradType& du_dX) const
+  SERAC_HOST_DEVICE auto operator()(State& /* state */, const DispGradType& du_dX) const
   {
-    auto I      = Identity<dim>();
-    auto lambda = K - (2.0 / dim) * G;
+    auto I       = Identity<dim>();
+    auto lambda  = K - (2.0 / dim) * G;
     auto epsilon = 0.5 * (transpose(du_dX) + du_dX);
     return lambda * tr(epsilon) * I + 2.0 * G * epsilon;
   }
 
-  double density; ///< mass density
-  double K;       ///< bulk modulus
-  double G;       ///< shear modulus
+  double density;  ///< mass density
+  double K;        ///< bulk modulus
+  double G;        ///< shear modulus
 };
 
 /**
@@ -55,8 +54,7 @@ struct LinearIsotropic {
  */
 template <int dim>
 struct NeoHookean {
-
-  using State = Empty; ///< this material has no internal variables
+  using State = Empty;  ///< this material has no internal variables
 
   /**
    * @brief stress calculation for a NeoHookean material model
@@ -66,22 +64,21 @@ struct NeoHookean {
    * @return The calculated material response (density, Kirchoff stress) for the material
    */
   template <typename DispGradType>
-  SERAC_HOST_DEVICE auto operator()(State & /* state */, const DispGradType& du_dX) const
+  SERAC_HOST_DEVICE auto operator()(State& /* state */, const DispGradType& du_dX) const
   {
-    constexpr auto I = Identity<dim>();
-    auto lambda = K - (2.0 / dim) * G;
-    auto B_minus_I = du_dX * transpose(du_dX) + transpose(du_dX) + du_dX;
+    constexpr auto I         = Identity<dim>();
+    auto           lambda    = K - (2.0 / dim) * G;
+    auto           B_minus_I = du_dX * transpose(du_dX) + transpose(du_dX) + du_dX;
     return lambda * log(det(I + du_dX)) * I + G * B_minus_I;
   }
 
-  double density; ///< mass density
-  double K;       ///< bulk modulus
-  double G;       ///< shear modulus
+  double density;  ///< mass density
+  double K;        ///< bulk modulus
+  double G;        ///< shear modulus
 };
 
 /// @brief a 3D constitutive model for a J2 material with linear isotropic and kinematic hardening.
 struct J2 {
-
   /// this material is written for 3D
   static constexpr int dim = 3;
 
@@ -94,19 +91,19 @@ struct J2 {
 
   /// @brief variables required to characterize the hysteresis response
   struct State {
-    tensor<double, dim, dim> beta;                       ///< back-stress tensor
-    tensor<double, dim, dim> plastic_strain;             ///< plastic strain
-    double                   accumulated_plastic_strain; ///< incremental plastic strain
+    tensor<double, dim, dim> beta;                        ///< back-stress tensor
+    tensor<double, dim, dim> plastic_strain;              ///< plastic strain
+    double                   accumulated_plastic_strain;  ///< incremental plastic strain
   };
 
   /** @brief calculate the Cauchy stress, given the displacement gradient and previous material state */
   template <typename T>
-  auto operator()(State & state, const T du_dX) const
+  auto operator()(State& state, const T du_dX) const
   {
     using std::sqrt;
     constexpr auto I = Identity<3>();
-    const double K = E / (3.0 * (1.0 - 2.0 * nu));
-    const double G = 0.5 * E / (1.0 + nu);
+    const double   K = E / (3.0 * (1.0 - 2.0 * nu));
+    const double   G = 0.5 * E / (1.0 + nu);
 
     //
     // see pg. 260, box 7.5,
@@ -123,7 +120,6 @@ struct J2 {
 
     // (ii) admissibility
     if (phi > 0.0) {
-
       // see (7.207) on pg. 261
       auto plastic_strain_inc = phi / (3 * G + Hk + Hi);
 
@@ -136,13 +132,10 @@ struct J2 {
       state.accumulated_plastic_strain += get_value(plastic_strain_inc);
       state.plastic_strain += sqrt(3.0 / 2.0) * get_value(plastic_strain_inc) * get_value(eta);
       state.beta = state.beta + sqrt(2.0 / 3.0) * Hk * get_value(plastic_strain_inc) * get_value(eta);
-
-    } 
+    }
 
     return s + p * I;
-
   }
-
 };
 
 /// Constant body force model
@@ -241,4 +234,4 @@ struct PressureFunction {
   }
 };
 
-}  // namespace serac::solid_util
+}  // namespace serac::solid_mechanics

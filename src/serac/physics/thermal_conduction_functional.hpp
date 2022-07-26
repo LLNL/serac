@@ -84,12 +84,14 @@ SolverOptions defaultDynamicOptions()
  *  where \f$\mathbf{M}\f$ is a mass matrix, \f$\mathbf{K}\f$ is a stiffness matrix, \f$\mathbf{u}\f$ is the
  *  temperature degree of freedom vector, and \f$\mathbf{f}\f$ is a thermal load vector.
  */
-template <int order, int dim, typename parameters = Parameters<>, typename parameter_indices  = std::make_integer_sequence< int, parameters::n > >
+template <int order, int dim, typename parameters = Parameters<>,
+          typename parameter_indices = std::make_integer_sequence<int, parameters::n>>
 class ThermalConductionFunctional;
 
 /// @overload
-template <int order, int dim, typename ... parameter_space, int ... parameter_indices >
-class ThermalConductionFunctional< order, dim, Parameters< parameter_space ... >, std::integer_sequence< int, parameter_indices ... > > : public BasePhysics {
+template <int order, int dim, typename... parameter_space, int... parameter_indices>
+class ThermalConductionFunctional<order, dim, Parameters<parameter_space...>,
+                                  std::integer_sequence<int, parameter_indices...>> : public BasePhysics {
 public:
   /**
    * @brief Construct a new Thermal Functional Solver object
@@ -368,12 +370,12 @@ public:
           temperature_.space().TrueVSize(),
 
           [this](const mfem::Vector& u, mfem::Vector& r) {
-            r = (*K_functional_)(u, parameter_states_[parameter_indices] ...);
+            r = (*K_functional_)(u, parameter_states_[parameter_indices]...);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
           [this](const mfem::Vector& u) -> mfem::Operator& {
-            auto [r, drdu] = (*K_functional_)(differentiate_wrt(u), parameter_states_[parameter_indices] ...);
+            auto [r, drdu] = (*K_functional_)(differentiate_wrt(u), parameter_states_[parameter_indices]...);
             J_             = assemble(drdu);
             bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             return *J_;
@@ -384,13 +386,13 @@ public:
       residual_ = mfem_ext::StdFunctionOperator(
           temperature_.space().TrueVSize(),
           [this](const mfem::Vector& du_dt, mfem::Vector& r) {
-            auto M_residual = (*M_functional_)(du_dt, parameter_states_[parameter_indices] ...);
+            auto M_residual = (*M_functional_)(du_dt, parameter_states_[parameter_indices]...);
 
             // TODO we should use the new variadic capability to directly pass temperature and d_temp_dt directly to
             // these kernels to avoid ugly hacks like this.
             mfem::Vector K_arg(u_.Size());
             add(1.0, u_, dt_, du_dt, u_predicted_);
-            auto K_residual = (*K_functional_)(u_predicted_, parameter_states_[parameter_indices] ...);
+            auto K_residual = (*K_functional_)(u_predicted_, parameter_states_[parameter_indices]...);
 
             add(M_residual, K_residual, r);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
@@ -399,13 +401,14 @@ public:
           [this](const mfem::Vector& du_dt) -> mfem::Operator& {
             // Only reassemble the stiffness if it is a new timestep
 
-            auto M = serac::get<1>((*M_functional_)(differentiate_wrt(du_dt), parameter_states_[parameter_indices] ...));
+            auto M = serac::get<1>((*M_functional_)(differentiate_wrt(du_dt), parameter_states_[parameter_indices]...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
             mfem::Vector K_arg(u_.Size());
             add(1.0, u_, dt_, du_dt, u_predicted_);
 
-            auto K = serac::get<1>((*K_functional_)(differentiate_wrt(u_predicted_), parameter_states_[parameter_indices] ...));
+            auto K = serac::get<1>(
+                (*K_functional_)(differentiate_wrt(u_predicted_), parameter_states_[parameter_indices]...));
 
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
@@ -441,7 +444,7 @@ public:
     mfem::HypreParVector adjoint_essential(adjoint_load);
     adjoint_essential = 0.0;
 
-    auto [r, drdu] = (*K_functional_)(differentiate_wrt(temperature_), parameter_states_[parameter_indices] ...);
+    auto [r, drdu] = (*K_functional_)(differentiate_wrt(temperature_), parameter_states_[parameter_indices]...);
     auto jacobian  = assemble(drdu);
     auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -475,7 +478,8 @@ public:
   template <int parameter_field>
   FiniteElementDual& computeSensitivity()
   {
-    auto [r, drdparam] = (*K_functional_)(DifferentiateWRT<parameter_field + 1>{}, temperature_, parameter_states_[parameter_indices] ...);
+    auto [r, drdparam] = (*K_functional_)(DifferentiateWRT<parameter_field + 1>{}, temperature_,
+                                          parameter_states_[parameter_indices]...);
 
     auto drdparam_mat = assemble(drdparam);
 
@@ -552,7 +556,6 @@ protected:
 
   /// Predicted temperature true dofs
   mfem::Vector u_predicted_;
-
 
   /// Previous value of du_dt used to prime the pump for the nonlinear solver
   mfem::Vector previous_;
