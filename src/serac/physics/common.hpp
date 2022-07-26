@@ -21,7 +21,7 @@ namespace serac {
  */
 template < typename ... T >
 struct Parameters{
-    static constexpr int n = sizeof ... (T);
+  static constexpr int n = sizeof ... (T); ///< how many parameters were specified
 };
 
 /// A timestep and boundary condition enforcement method for a dynamic solver
