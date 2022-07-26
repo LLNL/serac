@@ -24,7 +24,8 @@ namespace serac::solid_mechanics {
  */
 template <int dim>
 struct LinearIsotropic {
-  using State = Empty;
+  
+  using State = Empty; ///< this material has no internal variables
 
   /**
    * @brief stress calculation for a linear isotropic material model
@@ -42,9 +43,9 @@ struct LinearIsotropic {
     return lambda * tr(epsilon) * I + 2.0 * G * epsilon;
   }
 
-  double density;
-  double K;
-  double G;
+  double density; ///< mass density
+  double K;       ///< bulk modulus
+  double G;       ///< shear modulus
 };
 
 /**
@@ -54,13 +55,14 @@ struct LinearIsotropic {
  */
 template <int dim>
 struct NeoHookean {
-  using State = Empty;
+
+  using State = Empty; ///< this material has no internal variables
 
   /**
    * @brief stress calculation for a NeoHookean material model
    *
    * @tparam DispGradType Displacement gradient type
-   * @param displacement_grad displacement gradient with respect to the reference configuration (displacement_grad)
+   * @param du_dX displacement gradient with respect to the reference configuration (displacement_grad)
    * @return The calculated material response (density, Kirchoff stress) for the material
    */
   template <typename DispGradType>
@@ -72,14 +74,15 @@ struct NeoHookean {
     return lambda * log(det(I + du_dX)) * I + G * B_minus_I;
   }
 
-  double density;
-  double K;
-  double G;
+  double density; ///< mass density
+  double K;       ///< bulk modulus
+  double G;       ///< shear modulus
 };
 
 /// @brief a 3D constitutive model for a J2 material with linear isotropic and kinematic hardening.
 struct J2 {
 
+  /// this material is written for 3D
   static constexpr int dim = 3;
 
   double E;        ///< Young's modulus

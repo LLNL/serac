@@ -122,6 +122,7 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
    *
    * @param U input E-vectors
    * @param R output E-vector
+   * @param update_state whether or not to overwrite material state quadrature data
    */
   void operator()(const std::array<mfem::Vector, num_trial_spaces>& U, mfem::Vector& R, bool update_state)
   {
@@ -229,6 +230,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
    *
    * @param U input E-vectors
    * @param R output E-vector
+   * @param update_state whether or not to overwrite material state quadrature data
    */
   void operator()(const std::array<mfem::Vector, num_trial_spaces>& U, mfem::Vector& R, bool update_state)
   {

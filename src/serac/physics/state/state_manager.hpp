@@ -58,14 +58,14 @@ public:
   static FiniteElementDual newDual(FiniteElementVector::Options&& options  = {},
                                    const std::string&             mesh_tag = default_mesh_name_);
 
-  /**
-   * @brief Factory method for creating a new QuadratureData object
-   * @tparam T The type of the per-qpt data
-   * @param[in] name The name of the quadrature data field
-   * @param[in] p The order of the quadrature rule
-   * @param[in] mesh_tag A string that uniquely identifies the mesh on which the quadrature data is to be defined
-   * @see QuadratureData::QuadratureData
-   */
+  ///**
+  // * @brief Factory method for creating a new QuadratureData object
+  // * @tparam T The type of the per-qpt data
+  // * @param[in] name The name of the quadrature data field
+  // * @param[in] p The order of the quadrature rule
+  // * @param[in] mesh_tag A string that uniquely identifies the mesh on which the quadrature data is to be defined
+  // * @see QuadratureData::QuadratureData
+  // */
   //template <typename T>
   //static QuadratureData<T>& newQuadratureData(const std::string& name, const int p,
   //                                            const std::string& mesh_tag = default_mesh_name_)

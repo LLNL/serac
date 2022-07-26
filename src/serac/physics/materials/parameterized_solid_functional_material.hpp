@@ -32,9 +32,9 @@ struct ParameterizedLinearIsotropic {
    * @tparam DispGradType Displacement gradient type
    * @tparam BulkType Bulk modulus type
    * @tparam ShearType Shear modulus type
-   * @param displacement_grad Displacement gradient with respect to the reference configuration (displacement_grad)
-   * @param bulk_parameter The parameterized bulk modulus
-   * @param shear_parameter The parameterized shear modulus
+   * @param du_dX Displacement gradient with respect to the reference configuration (displacement_grad)
+   * @param DeltaK The bulk modulus offset
+   * @param DeltaG The shear modulus offset
    * @return The calculated material response (density, Kirchoff stress) for the material
    */
   template <typename DisplacementType, typename DispGradType, typename BulkType, typename ShearType>
@@ -56,9 +56,9 @@ struct ParameterizedLinearIsotropic {
    */
   static constexpr int numParameters() { return 2; }
 
-  double density;
-  double K0;
-  double G0;
+  double density; ///< mass density
+  double K0;      ///< base bulk modulus 
+  double G0;      ///< base shear modulus
 };
 
 /**
@@ -68,7 +68,8 @@ struct ParameterizedLinearIsotropic {
  */
 template <int dim>
 struct ParameterizedNeoHookeanSolid {
-  using State = Empty;
+
+  using State = Empty; ///< this material has no internal variables
 
   /**
    * @brief stress calculation for a NeoHookean material model
@@ -77,11 +78,10 @@ struct ParameterizedNeoHookeanSolid {
    * @tparam BulkType Bulk modulus type
    * @tparam ShearType Shear modulus type
    * @param du_dX Displacement gradient with respect to the reference configuration (displacement_grad)
-   * @param bulk_parameter The parameterized bulk modulus
-   * @param shear_parameter The parameterized shear modulus
+   * @param DeltaK The bulk modulus offset
+   * @param DeltaG The shear modulus offset
    * @return The calculated material response (density, kirchoff stress) for the material
    */
-
   template <typename DispGradType, typename BulkType, typename ShearType>
   SERAC_HOST_DEVICE auto operator()(State & /*state*/, const DispGradType& du_dX, const BulkType& DeltaK, const ShearType& DeltaG) const
   {
@@ -100,9 +100,9 @@ struct ParameterizedNeoHookeanSolid {
    */
   static constexpr int numParameters() { return 2; }
 
-  double density;
-  double K0;
-  double G0;
+  double density; ///< mass density
+  double K0;      ///< base bulk modulus
+  double G0;      ///< base shear modulus
 };
 
 }  // namespace serac::solid_util
