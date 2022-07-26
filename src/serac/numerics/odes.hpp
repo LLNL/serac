@@ -57,6 +57,7 @@ public:
     /**
      * @brief Previous value of dt
      */
+    /// 
     double& c1;
 
     /**
@@ -109,10 +110,10 @@ public:
   }
 
   /**
-   * @brief Solves the equation d2u_dt2 = f(u + 1/2 c1^2 * d2u_dt2, du_dt + c1 * d2u_dt2, t)
+   * @brief Solves the equation d2u_dt2 = f(u + c0 * d2u_dt2, du_dt + c1 * d2u_dt2, t)
    *
-   * @param[in] c0 The current time step
-   * @param[in] c1 The previous time step
+   * @param[in] c0 coefficient on d2u_dt2 appearing the first argument of f
+   * @param[in] c1 coefficient on d2u_dt2 appearing the second argument of f
    * @param[in] u The true DOFs
    * @param[in] du_dt The first time derivative of u
    * @param[out] d2u_dt2 The second time derivative of u
@@ -161,9 +162,11 @@ public:
 private:
   /**
    * @brief Internal implementation used for mfem::SOTDO::Mult and mfem::SOTDO::ImplicitSolve
+   *        Solves the equation d2u_dt2 = f(u + c0 * d2u_dt2, du_dt + c1 * d2u_dt2, t)
+   * 
    * @param[in] time The current time
-   * @param[in] c0 The current time step
-   * @param[in] c1 The previous time step
+   * @param[in] c0 coefficient on d2u_dt2 appearing the first argument of f
+   * @param[in] c1 coefficient on d2u_dt2 appearing the second argument of f
    * @param[in] u The true DOFs
    * @param[in] du_dt The first time derivative of u
    * @param[out] d2u_dt2 The second time derivative of u

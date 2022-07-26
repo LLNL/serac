@@ -76,11 +76,17 @@ class SolidFunctional;
 template <int order, int dim, typename ... parameter_space, int ... parameter_indices >
 class SolidFunctional< order, dim, Parameters< parameter_space ... >, std::integer_sequence< int, parameter_indices ... > > : public BasePhysics {
 public:
+
+  //! @cond Doxygen_Suppress
   static constexpr int VALUE = 0, DERIVATIVE = 1;
   static constexpr auto I = Identity<dim>();
+  //! @endcond
 
-  // note: this is hardcoded for now, since we currently 
-  // only support tensor product elements (1 element type per spatial dimension)
+  /**
+   * @brief a list of the currently supported element geometries, by dimension
+   * @note: this is hardcoded for now, since we currently 
+   * only support tensor product elements (1 element type per spatial dimension)
+   */
   static constexpr Geometry geom = supported_geometries[dim];
 
   /**
@@ -206,6 +212,13 @@ public:
     mesh_.NewNodes(*mesh_nodes, true);
   }
 
+  /**
+   * @brief Create a shared ptr to a quadrature data buffer for the given material type
+   * 
+   * @tparam T the type to be created at each quadrature point 
+   * @param initial_state the value to be broadcast to each quadrature point
+   * @return std::shared_ptr< QuadratureData<T> > 
+   */
   template < typename T >
   std::shared_ptr< QuadratureData<T> > createQuadratureDataBuffer(T initial_state) {
     constexpr auto Q = order + 1;
@@ -239,6 +252,12 @@ public:
     bcs_.addEssential(disp_bdr, disp_bdr_coef_, displacement_.space());
   }
 
+  /**
+   * @brief Set essential displacement boundary conditions (strongly enforced)
+   *
+   * @param[in] disp_bdr The boundary attributes on which to enforce a displacement
+   * @param[in] disp The time-dependent prescribed boundary displacement function
+   */
   void setDisplacementBCs(const std::set<int>&                                            disp_bdr,
                           std::function<void(const mfem::Vector&, double, mfem::Vector&)> disp)
   {
@@ -268,10 +287,12 @@ public:
    * @brief Set the material stress response and mass properties for the physics module
    *
    * @tparam MaterialType The solid material type
-   * @param material A material containing density and stress evaluation information
+   * @tparam StateType the type that contains the internal variables for MaterialType
+   * @param material A material that provides a function to evaluate stress
+   * @param qdata the buffer of material internal variables at each quadrature point
    *
-   * @pre MaterialType must have a method density() defining the density
-   * @pre MaterialType must have the operator (du_dX) defined as the Kirchoff stress
+   * @pre MaterialType must have a public member variable `density`
+   * @pre MaterialType must define operator() that returns the Kirchoff stress
    */
   template <typename MaterialType, typename StateType>
   void setMaterial(MaterialType material, std::shared_ptr < QuadratureData<StateType> > qdata)
@@ -295,6 +316,7 @@ public:
         mesh_, qdata);
   }
 
+  /// @overload
   template <typename MaterialType>
   void setMaterial(MaterialType material) {
     setMaterial(material, EmptyQData);
@@ -687,9 +709,10 @@ protected:
   /// nodal forces
   FiniteElementDual nodal_forces_;
 
+  /// serac::Functional that is used to calculate the residual and its derivatives
   std::unique_ptr<Functional<test(trial, trial, parameter_space...)>> residual_;
 
-  /// @brief mfem::Operator that calculates the residual after applying essential boundary conditions 
+  /// mfem::Operator that calculates the residual after applying essential boundary conditions 
   std::unique_ptr<mfem_ext::StdFunctionOperator> residual_with_bcs_;
 
   /// The finite element states representing user-defined parameter fields
@@ -711,9 +734,13 @@ protected:
   /// Assembled sparse matrix for the Jacobian
   std::unique_ptr<mfem::HypreParMatrix> J_;
 
-  /// @brief an intermediate variable used to store the predicted end-step displacement
+  /// an intermediate variable used to store the predicted end-step displacement
   mfem::Vector predicted_displacement_;
-  mfem::Vector du_;
+
+  /// vector used to store the change in essential bcs between timesteps
+  mfem::Vector du_; 
+
+  /// vector used to store forces arising from du_ when applying time-dependent bcs
   mfem::Vector dr_;
 
   /// @brief used to communicate the ODE solver's predicted displacement to the residual operator
@@ -725,8 +752,10 @@ protected:
   /// @brief the previous acceleration, used as a starting guess for newton's method
   mfem::Vector previous_;
 
-  // TODO: document these correctly
+  /// coefficient used to calculate predicted displacement: u_p := u + c0 * d2u_dt2
   double c0_;
+
+  /// coefficient used to calculate predicted velocity: dudt_p := dudt + c1 * d2u_dt2
   double c1_;
 
   /// @brief A flag denoting whether to compute geometric nonlinearities in the residual
@@ -749,8 +778,6 @@ protected:
 
   /// @brief An auxilliary zero vector
   mfem::Vector zero_;
-
-  int count = 0; // DELETE
 
 };
 
