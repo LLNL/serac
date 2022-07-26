@@ -1130,6 +1130,24 @@ SERAC_HOST_DEVICE constexpr auto det(const tensor<T, 3, 3>& A)
 }
 
 /**
+ * @brief compute the matrix square root of a square, real-valued, symmetric matrix
+ *        i.e. given A, find B such that A = dot(B, B)
+ * 
+ * @tparam T the data type stored in each element of the matrix 
+ * @param A the matrix to compute the square root of
+ * @return a square matrix, B, of the same type as A satisfying `dot(B, B) == A`
+ */
+template <typename T, int dim>
+auto matrix_sqrt(const tensor<T, dim, dim>& A) 
+{
+  auto B = A;
+  for (int i = 0; i < 15; i++) {
+    B = 0.5 * (B + dot(A, inv(B)));
+  }
+  return B;
+}
+
+/**
  * @brief Return whether a square rank 2 tensor is symmetric
  *
  * @tparam n The height of the tensor

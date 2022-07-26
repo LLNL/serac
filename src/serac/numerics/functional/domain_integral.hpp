@@ -47,7 +47,7 @@ public:
    * @param[in] X The actual (not reference) coordinates of all quadrature points
    * @see mfem::GeometricFactors
    * @param[in] qf The user-provided quadrature function
-   * @param[inout] data The data for each quadrature point
+   * @param[inout] qdata The data for each quadrature point
    * @note The @p Dimension parameters are used to assist in the deduction of the @a dim
    * and @a dim template parameters
    */
@@ -144,6 +144,9 @@ public:
    * @param[in] input_E The input to the evaluation; per-element DOF values
    * @param[out] output_E The output of the evalution; per-element DOF residuals
    * @param[in] which_trial_space specifies which trial space to compute derivatives with respect to (if any)
+   * @param[in] update_state a boolean flag for specifying if the material state data should be overwritten or not.
+   *                         Typically, this flag is kept false while looking for a solution to the
+   *                         residual equations.
    *
    * @note which_trial_space == -1 implies that this function will call the evaluation kernel that performs no
    * differentiation

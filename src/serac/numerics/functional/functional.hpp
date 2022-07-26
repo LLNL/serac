@@ -217,7 +217,7 @@ public:
    * @param[in] domain The domain on which to evaluate the integral
    * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
    * and @a spatial_dim template parameter
-   * @param[inout] data The data for each quadrature point
+   * @param[inout] qdata The data for each quadrature point
    */
   template <int dim, typename lambda, typename qpt_data_type = Nothing>
   void AddDomainIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain,
@@ -443,6 +443,7 @@ public:
 
   }
 
+  /// @overload
   template <typename... T>
   auto operator()(const T&... args)
   {

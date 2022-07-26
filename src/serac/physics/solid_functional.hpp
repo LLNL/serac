@@ -23,80 +23,15 @@
 #include "serac/physics/solid.hpp"
 #include "serac/physics/materials/functional_material_utils.hpp"
 
-// DELETE BELOW
-#include "serac/numerics/expr_template_ops.hpp" 
-template <typename T>
-void check_gradient(serac::Functional<T>& f, const mfem::Vector& U, const mfem::Vector& dU_dt)
-{
-  int    seed    = 42;
-  double epsilon = 1.0e-8;
-
-  mfem::Vector dU(U.Size());
-  dU.Randomize(seed);
-
-  mfem::Vector ddU_dt(U.Size());
-  ddU_dt.Randomize(seed + 1);
-
-  auto U_plus = U;
-  U_plus.Add(epsilon, dU);
-
-  auto U_minus = U;
-  U_minus.Add(-epsilon, dU);
-
-  {
-    mfem::Vector df1 = f(U_plus, dU_dt);
-    df1 -= f(U_minus, dU_dt);
-    df1 /= (2 * epsilon);
-
-    auto [value, dfdU] = f(serac::differentiate_wrt(U), dU_dt);
-    mfem::Vector df2   = dfdU(dU);
-
-    std::unique_ptr<mfem::HypreParMatrix> dfdU_matrix = assemble(dfdU);
-
-    mfem::Vector df3 = (*dfdU_matrix) * dU;
-
-    double relative_error1 = df1.DistanceTo(df2) / df1.Norml2();
-    double relative_error2 = df1.DistanceTo(df3) / df1.Norml2();
-
-    //EXPECT_NEAR(0., relative_error1, 5.e-6);
-    //EXPECT_NEAR(0., relative_error2, 5.e-6);
-
-    std::cout << relative_error1 << " " << relative_error2 << std::endl;
-  }
-
-  auto dU_dt_plus = dU_dt;
-  dU_dt_plus.Add(epsilon, ddU_dt);
-
-  auto dU_dt_minus = dU_dt;
-  dU_dt_minus.Add(-epsilon, ddU_dt);
-
-  {
-    mfem::Vector df1 = f(U, dU_dt_plus);
-    df1 -= f(U, dU_dt_minus);
-    df1 /= (2 * epsilon);
-
-    auto [value, df_ddU_dt] = f(U, serac::differentiate_wrt(dU_dt));
-    mfem::Vector df2        = df_ddU_dt(ddU_dt);
-
-    std::unique_ptr<mfem::HypreParMatrix> df_ddU_dt_matrix = assemble(df_ddU_dt);
-
-    mfem::Vector df3 = (*df_ddU_dt_matrix) * ddU_dt;
-
-    double relative_error1 = df1.DistanceTo(df2) / df1.Norml2();
-    double relative_error2 = df1.DistanceTo(df3) / df1.Norml2();
-
-    //EXPECT_NEAR(0., relative_error1, 5.e-5);
-    //EXPECT_NEAR(0., relative_error2, 5.e-5);
-
-    std::cout << relative_error1 << " " << relative_error2 << std::endl;
-  }
-}
 namespace serac {
 
 namespace solid_mechanics {
 
-  // define the solid solver configurations
-  // no default solver options for solid yet, so make some here
+  /**
+   * @brief default method and tolerances for solving the 
+   * systems of linear equations that show up in implicit
+   * solid mechanics simulations
+   */
   const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
                                                          .abs_tol     = 1.0e-10,
                                                          .print_level = 0,
@@ -104,11 +39,18 @@ namespace solid_mechanics {
                                                          .lin_solver  = LinearSolver::GMRES,
                                                          .prec        = HypreBoomerAMGPrec{}};
 
+  /**
+   * @brief default iteration limits, tolerances and verbosity for solving the 
+   * systems of nonlinear equations that show up in implicit
+   * solid mechanics simulations
+   */
   const NonlinearSolverOptions default_nonlinear_options = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
 
+  /// the default linear and nonlinear solver options for (quasi-)static analyses
   const SolverOptions default_static_options = {default_linear_options, default_nonlinear_options};
 
+  /// the default solver and time integration options for dynamic analyses
   const SolverOptions default_dynamic_options = {
     default_linear_options, 
     default_nonlinear_options,
@@ -130,6 +72,7 @@ namespace solid_mechanics {
 template <int order, int dim, typename parameters = Parameters<>, typename parameter_indices  = std::make_integer_sequence< int, parameters::n > >
 class SolidFunctional;
 
+/// @overload
 template <int order, int dim, typename ... parameter_space, int ... parameter_indices >
 class SolidFunctional< order, dim, Parameters< parameter_space ... >, std::integer_sequence< int, parameter_indices ... > > : public BasePhysics {
 public:
@@ -444,8 +387,6 @@ public:
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
           auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, parameter_states_[parameter_indices] ...);
-          //check_gradient(*residual_, u, zero_);
-          
           J_ = assemble(drdu);
           bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
           return *J_;

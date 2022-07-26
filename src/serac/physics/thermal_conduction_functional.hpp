@@ -87,6 +87,7 @@ SolverOptions defaultDynamicOptions()
 template <int order, int dim, typename parameters = Parameters<>, typename parameter_indices  = std::make_integer_sequence< int, parameters::n > >
 class ThermalConductionFunctional;
 
+/// @overload
 template <int order, int dim, typename ... parameter_space, int ... parameter_indices >
 class ThermalConductionFunctional< order, dim, Parameters< parameter_space ... >, std::integer_sequence< int, parameter_indices ... > > : public BasePhysics {
 public:

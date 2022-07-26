@@ -23,18 +23,17 @@ namespace serac {
 
 /**
  * @brief Brighenti liquid crystal elastomer model
- *
- *
  */
-class LiquidCrystalElastomer {
-public:
+struct LiquidCrystalElastomer {
 
+  /// this model is only intended to be used in 3D
   static constexpr int dim = 3;
 
+  /// internal variables for the liquid crystal elastomer model
   struct State {
-    tensor<double, dim, dim> deformation_gradient;
-    tensor<double, dim, dim> distribution_tensor;
-    double temperature;
+    tensor<double, dim, dim> deformation_gradient; ///< F from the last timestep
+    tensor<double, dim, dim> distribution_tensor;  ///< mu from the last timestep
+    double temperature; ///< temperature at the last timestep
   };
   
   /**
@@ -46,7 +45,6 @@ public:
    * @param order_constant temperature-valued constant in exponential factor for order parameter
    * @param order_parameter Initial value of the order parameter
    * @param transition_temperature Characteristic temperature of the order-disorder transition
-   * @param normal Liquid crystal director vector
    * @param N_b_squared Number of Kunh segments/chain, times square of Kuhn segment length
    */
   LiquidCrystalElastomer(double rho, double shear_modulus, double bulk_modulus,
@@ -72,10 +70,12 @@ public:
    *
    * @tparam DisplacementType number-like type for the displacement vector
    * @tparam DispGradType number-like type for the displacement gradient tensor
+   * @tparam AngleType number-like type for the orientation angle gamma
    *
-   * @param displacement_grad displacement gradient with respect to the reference configuration
    * @param[in,out] state A state variable object for this material. The value is updated in place.
-   * @param temperature the temperature
+   * @param[in] displacement_grad displacement gradient with respect to the reference configuration
+   * @param[in] temperature the temperature
+   * @param[in] gamma the polar angle used to define the liquid crystal orientation vector
    * @return The calculated material response (density, Kirchoff stress) for the material
    */
   template <typename DispGradType, typename TemperatureType, typename AngleType >
@@ -88,8 +88,6 @@ public:
     auto I = Identity<dim>();
     double q0 = initial_order_parameter_;
     tensor normal{{cos(gamma), sin(gamma), 0.0 * gamma}};
-
-    //std::cout << gamma << std::endl;
 
     if (norm(state.deformation_gradient) == 0) {
       state.distribution_tensor = get_value((N_b_squared_/3.0) * ((1 - q0) * I) + (3 * q0 * outer(normal, normal))); 
@@ -149,7 +147,7 @@ public:
     auto Q     = 0.5*((1.0 - q)*I + 3.0*q*n_dyad);
 
     // Polar decomposition of incremental deformation gradient
-    auto U_hat = tensorSquareRoot(transpose(F_hat) * F_hat);
+    auto U_hat = matrix_sqrt(transpose(F_hat) * F_hat);
     auto R_hat = F_hat * inv(U_hat);
     
     // Distribution tensor (using 'Strang Splitting' approach)
@@ -164,43 +162,25 @@ public:
 
 /// -------------------------------------------------------
 
-  template <typename T>
-  auto tensorSquareRoot(const tensor<T, dim, dim>& A) const
-  {
-    auto X = A;
-    for (int i = 0; i < 15; i++) {
-      X = 0.5 * (X + dot(A, inv(X)));
-    }
-    return X;
-  }
+  // Sam: please forgive some of the tautological
+  // explanations below, I'm not knowledgeable enough 
+  // about this model to write meaningful descriptions,
+  // so these placeholders really only exist to satisfy 
+  // our doxygen requirements
+  //
+  // suggestions are welcome
 
-  // Density
-  double density;
+  double density; ///<  mass density
+  double bulk_modulus_; ///< bulk modulus in stress-free configuration
+  double shear_modulus_; ///< shear modulus in stress-free configuration
+  double order_constant_; ///< Order constant
+  double initial_order_parameter_; ///< initial value of order parameter
+  double transition_temperature_; ///< Transition temperature
+  tensor<double, 3, 3> initial_distribution_tensor_; ///< initial value of the distribution tensor
 
-private:
-
-  // elastic moduli in the stress free configuration
-  double shear_modulus_;
-  double bulk_modulus_;
-  
-  // Order constant
-  double order_constant_;
-
-  // initial value of order parameter
-  double initial_order_parameter_;
-
-  // Transition temperature
-  double transition_temperature_;
-
-  // director vector of the liquid crystal orientation
-  tensor<double, 3> normal_;
-
-  // Kuhn segment parameters.
   // BT: I think this can be removed - it looks like it cancels out every place it appears.
-  double N_b_squared_;
-
-  // initial value of the distribution tensor
-  tensor<double, 3, 3> initial_distribution_tensor_;
+  double N_b_squared_; ///< Kuhn segment parameters.
+  
 };
 
 }  // namespace serac
