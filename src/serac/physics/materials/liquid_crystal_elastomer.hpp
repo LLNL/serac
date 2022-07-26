@@ -169,8 +169,8 @@ struct LiquidCrystalElastomer {
   // suggestions are welcome
 
   double               density;                       ///<  mass density
-  double               bulk_modulus_;                 ///< bulk modulus in stress-free configuration
   double               shear_modulus_;                ///< shear modulus in stress-free configuration
+  double               bulk_modulus_;                 ///< bulk modulus in stress-free configuration
   double               order_constant_;               ///< Order constant
   double               initial_order_parameter_;      ///< initial value of order parameter
   double               transition_temperature_;       ///< Transition temperature
