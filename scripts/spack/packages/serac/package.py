@@ -156,7 +156,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     # ASan is only supported by GCC and (some) LLVM-derived
     # compilers.
     asan_compiler_denylist = {'aocc', 'arm', 'cce', 'fj', 'intel', 'nag',
-                               'nvhpc', 'oneapi', 'pgi', 'xl', 'xl_r'}
+                              'nvhpc', 'oneapi', 'pgi', 'xl', 'xl_r'}
     asan_compiler_allowlist = {'gcc', 'clang', 'apple-clang'}
 
     # ASan compiler denylist and allowlist should be disjoint.
@@ -205,6 +205,34 @@ class Serac(CachedCMakePackage, CudaPackage):
             self.spec.compiler.name,
             self.spec.compiler.version
         )
+
+    def initconfig_compiler_entries(self):
+        spec = self.spec
+        entries = super(Serac, self).initconfig_compiler_entries()
+
+        # NOTE: this is adapted from <spack>/lib/spack/spack/build_systems/cmake.py
+        # and should be moved into <spack>/lib/spack/spack/build_systems/cached_cmake.py
+
+        flags = spec.compiler_flags
+
+        if flags['ldflags']:
+            ld_flags = ' '.join(flags['ldflags'])
+            ld_format_string = 'CMAKE_{0}_LINKER_FLAGS'
+            # CMake has separate linker arguments for types of builds.
+            for ld_type in ['EXE', 'MODULE', 'SHARED', 'STATIC']:
+                ld_string = ld_format_string.format(ld_type)
+                entries.append(cmake_cache_string(ld_string, ld_flags))
+
+        # CMake has libs options separated by language. Apply ours to each.
+        if flags['ldlibs']:
+            libs_flags = ' '.join(flags['ldlibs'])
+            libs_format_string = 'CMAKE_{0}_STANDARD_LIBRARIES'
+            langs = ['C', 'CXX', 'Fortran']
+            for lang in langs:
+                libs_string = libs_format_string.format(lang)
+                entries.append(cmake_cache_string(libs_string, libs_flags))
+
+        return entries
 
 
     def initconfig_hardware_entries(self):
