@@ -36,7 +36,7 @@ tensor<double, 3, 3> analytic_soln(double t)
   // clang-format off
   double a = exp(12.33 * t);
 
-  tensor< double, 3 > sigma;
+  tensor< double, 3 > sigma{};
 
   if (t <= 0.201) {
     sigma = {-474.0 * t, -474.0 * t, 948.0 * t};

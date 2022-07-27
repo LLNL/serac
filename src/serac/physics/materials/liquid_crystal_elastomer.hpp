@@ -168,13 +168,12 @@ struct LiquidCrystalElastomer {
   //
   // suggestions are welcome
 
-  double               density;                       ///<  mass density
-  double               shear_modulus_;                ///< shear modulus in stress-free configuration
-  double               bulk_modulus_;                 ///< bulk modulus in stress-free configuration
-  double               order_constant_;               ///< Order constant
-  double               initial_order_parameter_;      ///< initial value of order parameter
-  double               transition_temperature_;       ///< Transition temperature
-  tensor<double, 3, 3> initial_distribution_tensor_;  ///< initial value of the distribution tensor
+  double density;                  ///<  mass density
+  double shear_modulus_;           ///< shear modulus in stress-free configuration
+  double bulk_modulus_;            ///< bulk modulus in stress-free configuration
+  double order_constant_;          ///< Order constant
+  double initial_order_parameter_; ///< initial value of order parameter
+  double transition_temperature_;  ///< Transition temperature
 
   // BT: I think this can be removed - it looks like it cancels out every place it appears.
   double N_b_squared_;  ///< Kuhn segment parameters.

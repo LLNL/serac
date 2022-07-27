@@ -25,7 +25,7 @@ serac_add_tests( SOURCES ${serial_solver_tests}
     NUM_MPI_TASKS 1)
 
 set(solver_tests
-    liquid_crystal_elastomer_test.cpp
+    #liquid_crystal_elastomer_example.cpp
     serac_solid.cpp
     serac_solid_reuse_mesh.cpp
     serac_solid_adjoint.cpp
