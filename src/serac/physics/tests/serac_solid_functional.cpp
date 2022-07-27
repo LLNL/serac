@@ -19,6 +19,110 @@
 
 namespace serac {
 
+double patch_test()
+{
+  constexpr int dim = 3;
+  constexpr int p = 1;
+
+  mfem::DenseMatrix A(3);
+  A(0, 0) = 0.110791568544027;
+  A(0, 1) = 0.230421268325901;
+  A(0, 2) = 0.15167673653354;
+  A(1, 0) = 0.198344644470483;
+  A(1, 1) = 0.060514559793513;
+  A(1, 2) = 0.084137393813728;
+  A(2, 0) = 0.011544253485023;
+  A(2, 1) = 0.060942846497753;
+  A(2, 2) = 0.186383473579596;
+
+  mfem::Vector b(3);
+  b(0) = 0.765645367640828;
+  b(1) = 0.992487355850465;
+  b(2) = 0.162199373722092;
+
+  auto exact_displacement_function = [&A, &b](const mfem::Vector& X, mfem::Vector& u) {
+    A.Mult(X, u);
+    u += b;
+  };
+  
+  //auto body_force_function = [](auto, auto, auto, auto){ return tensor<double, dim>{}; };
+
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  int serial_refinement   = 0;
+  int parallel_refinement = 0;
+
+  // Create DataStore
+  axom::sidre::DataStore datastore;
+  serac::StateManager::initialize(datastore, "solid_functional_static_solve");
+
+  static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for solid functional test");
+
+  // Construct the appropriate dimension mesh and give it to the data store
+  constexpr int elements_in_x = 3;
+  constexpr int elements_in_y = 4;
+  constexpr int elements_in_z = 2;
+  auto mesh = mesh::refineAndDistribute(buildCuboidMesh(elements_in_x, elements_in_y, elements_in_z),
+                                        serial_refinement, parallel_refinement);
+  serac::StateManager::setMesh(std::move(mesh));
+
+  // define the solver configurations
+  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
+                                                         .abs_tol     = 1.0e-10,
+                                                         .print_level = 0,
+                                                         .max_iter    = 500,
+                                                         .lin_solver  = LinearSolver::CG,
+                                                         .prec        = HypreBoomerAMGPrec{}};
+
+  const NonlinearSolverOptions default_nonlinear_options = {
+      .rel_tol = 1.0e-10, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
+
+  const typename solid_util::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
+
+  // Construct a functional-based solid mechanics solver
+  SolidFunctional<p, dim> solid_solver(default_static, GeometricNonlinearities::On, FinalMeshOption::Reference,
+                                       "solid_functional");
+
+  double density = 1.0;
+  double shear_modulus = 1.0;
+  double bulk_modulus = 1.0;
+  solid_util::NeoHookeanSolid<dim> mat(density, shear_modulus, bulk_modulus);
+  solid_solver.setMaterial(mat);
+  
+  // Define a boundary attribute set
+  std::set<int> essential_boundaries = {1, 2, 3, 4, 5, 6};
+  
+  // displacement boundary condition
+  solid_solver.setDisplacementBCs(essential_boundaries, exact_displacement_function);
+
+  // traction
+  // tensor<double, dim> unused{};
+  // auto H = make_tensor<dim, dim>([A](int i, int j) { return A(i,j); }); 
+  // auto response = mat(unused, unused, H);
+  // tensor<double, dim, dim> tau = response.stress;
+  // std::cout << "stress\n" << tau << std::endl;
+  // solid_solver.setTractionBCs([=](auto, auto n, auto) { return dot(tau, n); });
+
+  //solid_solver.addBodyForce(force);
+
+  // Set the initial displacement
+  solid_solver.setDisplacement([](const mfem::Vector&, mfem::Vector& u) { u = 0.0; });
+  
+  // Finalize the data structures
+  solid_solver.completeSetup();
+
+  // Perform the quasi-static solve
+  double dt = 1.0;
+  solid_solver.advanceTimestep(dt);
+
+  // Output the sidre-based and paraview plot files
+  solid_solver.outputState("paraview_output");
+
+  // Compute norm of error
+  mfem::VectorFunctionCoefficient exact_solution_coef(dim, exact_displacement_function);
+  return solid_solver.displacement().gridFunction().ComputeL2Error(exact_solution_coef);
+}
+
 template <int p, int dim>
 void functional_solid_test_static(double expected_disp_norm)
 {
@@ -381,6 +485,12 @@ TEST(SolidFunctional, 3DQuadDynamic) { functional_solid_test_dynamic<2, 3>(1.527
 
 TEST(SolidFunctional, 2DLinearPressure) { functional_solid_test_boundary<1, 2>(0.065326222, TestType::Pressure); }
 TEST(SolidFunctional, 2DLinearTraction) { functional_solid_test_boundary<1, 2>(0.126593590, TestType::Traction); }
+
+TEST(SolidFunctional, PatchTest)
+{
+  double error_norm = patch_test();
+  EXPECT_LT(error_norm, 1e-10);
+}
 
 }  // namespace serac
 
