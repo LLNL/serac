@@ -88,10 +88,11 @@ TEST(SolidFunctional, BoundaryCondition)
   // note: the y-component of displacement is zero because the elastic moduli
   // were chosen such that Poisson's ratio is identically zero
   mfem::VectorFunctionCoefficient exact_soln(dim, [=](auto x, auto& u) {
-    u    = 0.0;
     u[0] = u_0 * (x[0] / L);
+    u[1] = 0.0;
   });
-  double                          L2error = solid_solver.displacement().gridFunction().ComputeLpError(2, exact_soln);
+
+  double L2error = solid_solver.displacement().gridFunction().ComputeLpError(2, exact_soln);
   EXPECT_NEAR(0.0, L2error, 1.0e-10);
 
   // sqrt(int_0^L (u_0 * (x/L))^2 dx) = u_0 * sqrt(L / 3.0)
