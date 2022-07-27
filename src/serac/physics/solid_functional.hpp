@@ -223,7 +223,7 @@ public:
   {
     constexpr auto Q = order + 1;
 
-    size_t num_elements        = mesh_.GetNE();
+    size_t num_elements        = size_t(mesh_.GetNE());
     size_t qpoints_per_element = GaussQuadratureRule<geom, Q>().size();
 
     auto  qdata     = std::make_shared<QuadratureData<T>>(num_elements, qpoints_per_element);

@@ -154,9 +154,9 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
       element_residual_type r_elem{};
 
       // for each quadrature point in the element
-      for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-        auto   xi  = rule.points[q];
-        auto   dxi = rule.weights[q];
+      for (size_t q = 0; q < rule.size(); q++) {
+        auto   xi  = rule.points[int(q)];
+        auto   dxi = rule.weights[int(q)];
         auto   x_q = make_tensor<dim>([&](int i) { return X(q, i, e); });  // Physical coords of qpt
         auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
         double dx  = det(J_q) * dxi;
@@ -164,7 +164,7 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
         // evaluate the value/derivatives needed for the q-function at this quadrature point
         auto arg = Preprocess<geom, trials...>(u_elem, xi, J_q);
 
-        auto state = qdata(int(e), q);
+        auto state = qdata(e, q);
 
         // evaluate the user-specified constitutive model
         //
@@ -173,7 +173,7 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
         auto qf_output = detail::apply_qf(qf_, x_q, state, arg);
 
         if (update_state) {
-          qdata(int(e), q) = state;
+          qdata(e, q) = state;
         }
 
         // integrate qf_output against test space shape functions / gradients
@@ -262,9 +262,9 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
       element_residual_type r_elem{};
 
       // for each quadrature point in the element
-      for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-        auto   xi  = rule.points[q];
-        auto   dxi = rule.weights[q];
+      for (size_t q = 0; q < rule.size(); q++) {
+        auto   xi  = rule.points[int(q)];
+        auto   dxi = rule.weights[int(q)];
         auto   x_q = make_tensor<dim>([&](int i) { return X(q, i, e); });  // Physical coords of qpt
         auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
         double dx  = det(J_q) * dxi;
@@ -272,7 +272,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
         // evaluate the value/derivatives needed for the q-function at this quadrature point
         auto arg = Preprocess<geom, trials...>(u_elem, xi, J_q);
 
-        auto state = qdata(int(e), q);
+        auto state = qdata(e, q);
 
         // evaluate the user-specified constitutive model
         //
@@ -281,7 +281,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
         auto qf_output = detail::apply_qf(qf_, x_q, state, make_dual_wrt<I>(arg));
 
         if (update_state) {
-          qdata(int(e), q) = state;
+          qdata(e, q) = state;
         }
 
         // integrate qf_output against test space shape functions / gradients

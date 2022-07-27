@@ -71,7 +71,7 @@ tensor<double, 3, 3> analytic_soln(double t)
 int main()
 {
   double tmax      = 2.0;
-  int    num_steps = 64;
+  size_t num_steps = 64;
 
   double G = 79000;
   double K = 10 * G;
