@@ -48,4 +48,3 @@ void finalize();
 void flush();
 
 }  // namespace serac::logger
-
