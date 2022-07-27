@@ -123,12 +123,14 @@ TEST(SolidFunctionalFiniteDiff, FiniteDifference)
   for (int i = 0; i < user_defined_bulk_modulus.gridFunction().Size(); ++i) {
     // Perturb the bulk modulus
     user_defined_bulk_modulus(i) = bulk_modulus_value + eps;
+    solid_solver.setDisplacement(bc);
 
     solid_solver.advanceTimestep(dt);
     mfem::ParGridFunction displacement_plus = solid_solver.displacement().gridFunction();
 
     user_defined_bulk_modulus(i) = bulk_modulus_value - eps;
 
+    solid_solver.setDisplacement(bc);
     solid_solver.advanceTimestep(dt);
     mfem::ParGridFunction displacement_minus = solid_solver.displacement().gridFunction();
 
