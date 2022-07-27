@@ -40,15 +40,15 @@ TEST(SolidFunctional, BoundaryCondition)
   serac::StateManager::setMesh(std::move(mesh));
 
   // define the solver configurations
-  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
-                                                         .abs_tol     = 1.0e-10,
+  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-12,
+                                                         .abs_tol     = 1.0e-22,
                                                          .print_level = 0,
                                                          .max_iter    = 500,
                                                          .lin_solver  = LinearSolver::GMRES,
                                                          .prec        = HypreBoomerAMGPrec{}};
 
   const NonlinearSolverOptions default_nonlinear_options = {
-      .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
+      .rel_tol = 1.0e-9, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
 
   const typename solid_util::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
 
@@ -59,11 +59,15 @@ TEST(SolidFunctional, BoundaryCondition)
   solid_util::LinearIsotropicSolid<dim> mat(1.0, 1.0, 1.0);
   solid_solver.setMaterial(mat);
 
+  // note: L is specific to beam-quad.mesh
+  double L   = 8.0;
+  double u_0 = 0.1;
+
   // Define the function for the Dirichlet boundary conditions
   auto zero_bc      = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
-  auto displaced_bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void {
-    bc_vec[0] = 0.0;
-    bc_vec[1] = 0.1;
+  auto displaced_bc = [=](const mfem::Vector&, mfem::Vector& bc_vec) -> void {
+    bc_vec[0] = u_0;
+    bc_vec[1] = 0.0;
   };
 
   // Set the initial displacement and boundary condition
@@ -80,8 +84,18 @@ TEST(SolidFunctional, BoundaryCondition)
   solid_solver.advanceTimestep(dt);
   solid_solver.outputState("paraview_output");
 
-  // Check the final displacement norm
-  EXPECT_NEAR(0.171720048, norm(solid_solver.displacement()), 1.0e-6);
+  // compare approximate solution to the exact,
+  // note: the y-component of displacement is zero because the elastic moduli
+  // were chosen such that Poisson's ratio is identically zero
+  mfem::VectorFunctionCoefficient exact_soln(dim, [=](auto x, auto& u) {
+    u    = 0.0;
+    u[0] = u_0 * (x[0] / L);
+  });
+  double                          L2error = solid_solver.displacement().gridFunction().ComputeLpError(2, exact_soln);
+  EXPECT_NEAR(0.0, L2error, 1.0e-10);
+
+  // sqrt(int_0^L (u_0 * (x/L))^2 dx) = u_0 * sqrt(L / 3.0)
+  EXPECT_NEAR(u_0 * ::sqrt(L / 3.0), norm(solid_solver.displacement()), 1.0e-10);
 
   auto [num_ranks, my_rank] = getMPIInfo();
 
@@ -94,10 +108,10 @@ TEST(SolidFunctional, BoundaryCondition)
   }
 
   if (my_rank == 0) {
-    EXPECT_NEAR(0.0, solid_solver.displacement()(8), 1.0e-14);
-    EXPECT_NEAR(0.1, solid_solver.displacement()(9), 1.0e-14);
-    EXPECT_NEAR(0.0, solid_solver.displacement()(18), 1.0e-14);
-    EXPECT_NEAR(0.1, solid_solver.displacement()(19), 1.0e-14);
+    EXPECT_NEAR(0.1, solid_solver.displacement()(8), 1.0e-14);
+    EXPECT_NEAR(0.0, solid_solver.displacement()(9), 1.0e-14);
+    EXPECT_NEAR(0.1, solid_solver.displacement()(18), 1.0e-14);
+    EXPECT_NEAR(0.0, solid_solver.displacement()(19), 1.0e-14);
   }
 }
 
