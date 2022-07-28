@@ -67,7 +67,7 @@ void BoundaryCondition::setDofListsFromMarkers()
     mfem::Array<int> dof_markers;
 
     mutable_space.GetEssentialTrueDofs(markers_, true_dofs_);
-    space_.GetEssentialVDofs(markers_, local_dofs_);
+    space_.GetEssentialVDofs(markers_, dof_markers);
 
     // The VDof call actually returns a marker array, so we need to transform it to a list of indices
     space_.MarkerToList(dof_markers, local_dofs_);
