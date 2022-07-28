@@ -44,17 +44,12 @@ void functional_solid_test_static(double expected_disp_norm)
   std::set<int> ess_bdr = {1};
 
   // define the solver configurations
-  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
-                                                         .abs_tol     = 1.0e-10,
-                                                         .print_level = 0,
-                                                         .max_iter    = 500,
-                                                         .lin_solver  = LinearSolver::GMRES,
-                                                         .prec        = HypreBoomerAMGPrec{}};
+  const DirectSolverOptions direct_options{.print_level = 1};
 
   const NonlinearSolverOptions default_nonlinear_options = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
 
-  const typename solid_util::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
+  const typename solid_util::SolverOptions default_static = {direct_options, default_nonlinear_options};
 
   // Construct a functional-based solid mechanics solver
   SolidFunctional<p, dim> solid_solver(default_static, GeometricNonlinearities::On, FinalMeshOption::Reference,
