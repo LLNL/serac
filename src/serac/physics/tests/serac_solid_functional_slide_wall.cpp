@@ -16,6 +16,7 @@
 #include "serac/physics/solid_functional.hpp"
 #include "serac/physics/materials/solid_functional_material.hpp"
 #include "serac/physics/materials/parameterized_solid_functional_material.hpp"
+#include "serac/infrastructure/initialize.hpp"
 
 namespace serac {
 
@@ -101,6 +102,39 @@ void functional_solid_test_slide_wall(double expected_disp_norm)
 
   // Check the final displacement norm
   EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
+
+  auto [my_rank, num_ranks] = getMPIInfo();
+
+  if (my_rank == 1) {
+    if constexpr (dim == 2) {
+      tensor<double, dim> normal{{0.894427, 0.447214}};
+
+      tensor<double, dim> end_displacement;
+
+      int end_node_index = solid_solver.displacement().Size() - dim;
+
+      end_displacement[0] = solid_solver.displacement()(end_node_index);
+      end_displacement[1] = solid_solver.displacement()(end_node_index + 1);
+
+      // Ensure the beam end displacement is orthogonal to the wall normal
+      EXPECT_NEAR(dot(normal, end_displacement), 0.0, 5.0e-7);
+    }
+
+    if constexpr (dim == 3) {
+      tensor<double, dim> normal{{0.816497, -0.408248, -0.408248}};
+
+      int end_node_index = solid_solver.displacement().Size() - dim;
+
+      tensor<double, dim> end_displacement;
+
+      end_displacement[0] = solid_solver.displacement()(end_node_index);
+      end_displacement[1] = solid_solver.displacement()(end_node_index + 1);
+      end_displacement[2] = solid_solver.displacement()(end_node_index + 2);
+
+      // Ensure the beam end displacement is orthogonal to the wall normal
+      EXPECT_NEAR(dot(normal, end_displacement), 0.0, 5.0e-7);
+    }
+  }
 }
 
 TEST(SolidFunctional, 2DSlideWall) { functional_solid_test_slide_wall<2>(0.5193005416); }
