@@ -15,31 +15,7 @@
 #include "serac/numerics/functional/functional.hpp"
 
 /// SolidFunctional helper data types
-namespace serac::solid_util {
-
-/**
- * @brief Response data type for solid mechanics simulations
- *
- * @tparam DensityType Density type
- * @tparam StressType Stress type (i.e. second order tensor)
- */
-template <typename DensityType, typename StressType>
-struct MaterialResponse {
-  /// Density of the material (mass/volume)
-  DensityType density;
-
-  /// Kirchoff stress (det(deformation gradient) * Cauchy stress) for the constitutive model
-  StressType stress;
-};
-
-/**
- * @brief Template deduction guide for the material response
- *
- * @tparam DensityType Density type
- * @tparam StressType Stress type (i.e. second order tensor)
- */
-template <typename DensityType, typename StressType>
-MaterialResponse(DensityType, StressType) -> MaterialResponse<DensityType, StressType>;
+namespace serac::solid_mechanics {
 
 /**
  * @brief Linear isotropic elasticity material model
@@ -47,62 +23,28 @@ MaterialResponse(DensityType, StressType) -> MaterialResponse<DensityType, Stres
  * @tparam dim Spatial dimension of the mesh
  */
 template <int dim>
-class LinearIsotropicSolid {
-public:
-  /**
-   * @brief Construct a new Linear Isotropic Elasticity object
-   *
-   * @param density Density of the material
-   * @param shear_modulus Shear modulus of the material
-   * @param bulk_modulus Bulk modulus of the material
-   */
-  LinearIsotropicSolid(double density = 1.0, double shear_modulus = 1.0, double bulk_modulus = 1.0)
-      : density_(density), bulk_modulus_(bulk_modulus), shear_modulus_(shear_modulus)
-  {
-    SLIC_ERROR_ROOT_IF(shear_modulus_ < 0.0,
-                       "Shear modulus must be positive in the linear isotropic elasticity material model.");
-
-    SLIC_ERROR_ROOT_IF(density_ < 0.0, "Density must be positive in the linear isotropic elasticity material model.");
-
-    SLIC_ERROR_ROOT_IF(bulk_modulus_ < 0.0,
-                       "Bulk modulus must be positive in the linear isotropic elasticity material model.");
-
-    double K             = bulk_modulus;
-    double G             = shear_modulus;
-    double poisson_ratio = (3 * K - 2 * G) / (6 * K + 2 * G);
-
-    SLIC_ERROR_ROOT_IF(poisson_ratio < 0.0,
-                       "Poisson ratio must be positive in the linear isotropic elasticity material model.");
-  }
+struct LinearIsotropic {
+  using State = Empty;  ///< this material has no internal variables
 
   /**
-   * @brief Material response call for a linear isotropic solid
+   * @brief stress calculation for a linear isotropic material model
    *
-   * @tparam DisplacementType Displacement type
    * @tparam DispGradType Displacement gradient type
-   * @param displacement_grad Displacement gradient with respect to the reference configuration (displacement_grad)
+   * @param du_dX Displacement gradient with respect to the reference configuration
    * @return The calculated material response (density, Kirchoff stress) for the material
    */
-  template <typename DisplacementType, typename DispGradType>
-  SERAC_HOST_DEVICE auto operator()(const tensor<double, dim>& /* x */, const DisplacementType& /* displacement */,
-                                    const DispGradType& displacement_grad) const
+  template <typename DispGradType>
+  SERAC_HOST_DEVICE auto operator()(State& /* state */, const DispGradType& du_dX) const
   {
-    auto I      = Identity<dim>();
-    auto lambda = bulk_modulus_ - (2.0 / dim) * shear_modulus_;
-    auto strain = 0.5 * (displacement_grad + transpose(displacement_grad));
-    auto stress = lambda * tr(strain) * I + 2.0 * shear_modulus_ * strain;
-    return MaterialResponse<double, DispGradType>{.density = density_, .stress = stress};
+    auto I       = Identity<dim>();
+    auto lambda  = K - (2.0 / dim) * G;
+    auto epsilon = 0.5 * (transpose(du_dX) + du_dX);
+    return lambda * tr(epsilon) * I + 2.0 * G * epsilon;
   }
 
-private:
-  /// Density
-  double density_;
-
-  /// Bulk modulus
-  double bulk_modulus_;
-
-  /// Shear modulus
-  double shear_modulus_;
+  double density;  ///< mass density
+  double K;        ///< bulk modulus
+  double G;        ///< shear modulus
 };
 
 /**
@@ -111,69 +53,89 @@ private:
  * @tparam dim The spatial dimension of the mesh
  */
 template <int dim>
-class NeoHookeanSolid {
-public:
-  /**
-   * @brief Construct a new Neo-Hookean object
-   *
-   * @param density Density of the material
-   * @param shear_modulus Shear modulus of the material
-   * @param bulk_modulus Bulk modulus of the material
-   */
-  NeoHookeanSolid(double density = 1.0, double shear_modulus = 1.0, double bulk_modulus = 1.0)
-      : density_(density), bulk_modulus_(bulk_modulus), shear_modulus_(shear_modulus)
-  {
-    SLIC_ERROR_ROOT_IF(shear_modulus_ < 0.0, "Shear modulus must be positive in the neo-Hookean material model.");
-
-    SLIC_ERROR_ROOT_IF(density_ < 0.0, "Density must be positive in the neo-Hookean material model.");
-
-    SLIC_ERROR_ROOT_IF(bulk_modulus_ < 0.0, "Bulk modulus must be positive in the neo-Hookean material model.");
-
-    double K             = bulk_modulus;
-    double G             = shear_modulus;
-    double poisson_ratio = (3 * K - 2 * G) / (6 * K + 2 * G);
-
-    SLIC_ERROR_ROOT_IF(poisson_ratio < 0.0, "Poisson ratio must be positive in the neo-Hookean material model.");
-  }
+struct NeoHookean {
+  using State = Empty;  ///< this material has no internal variables
 
   /**
-   * @brief Material response call for a neo-Hookean solid
+   * @brief stress calculation for a NeoHookean material model
    *
-   * @tparam PositionType Spatial position type
-   * @tparam DisplacementType Displacement type
    * @tparam DispGradType Displacement gradient type
-   * @param displacement_grad displacement gradient with respect to the reference configuration (displacement_grad)
+   * @param du_dX displacement gradient with respect to the reference configuration (displacement_grad)
    * @return The calculated material response (density, Kirchoff stress) for the material
    */
-  template <typename DisplacementType, typename DispGradType>
-  SERAC_HOST_DEVICE auto operator()(const tensor<double, dim>& /* x */, const DisplacementType& /* displacement */,
-                                    const DispGradType& displacement_grad) const
+  template <typename DispGradType>
+  SERAC_HOST_DEVICE auto operator()(State& /* state */, const DispGradType& du_dX) const
   {
-    auto I      = Identity<dim>();
-    auto lambda = bulk_modulus_ - (2.0 / dim) * shear_modulus_;
-    auto B_minus_I =
-        displacement_grad * transpose(displacement_grad) + transpose(displacement_grad) + displacement_grad;
-
-    auto J = det(displacement_grad + I);
-
-    // TODO this resolve to the correct std implementation of log when J resolves to a pure double. It can
-    // be removed by either putting the dual implementation of the global namespace or implementing a pure
-    // double version there. More investigation into argument-dependent lookup is needed.
-    using std::log;
-    auto stress = lambda * log(J) * I + shear_modulus_ * B_minus_I;
-
-    return MaterialResponse{density_, stress};
+    constexpr auto I         = Identity<dim>();
+    auto           lambda    = K - (2.0 / dim) * G;
+    auto           B_minus_I = du_dX * transpose(du_dX) + transpose(du_dX) + du_dX;
+    return lambda * log(det(I + du_dX)) * I + G * B_minus_I;
   }
 
-private:
-  /// Density
-  double density_;
+  double density;  ///< mass density
+  double K;        ///< bulk modulus
+  double G;        ///< shear modulus
+};
 
-  /// Bulk modulus in the stress free configuration
-  double bulk_modulus_;
+/// @brief a 3D constitutive model for a J2 material with linear isotropic and kinematic hardening.
+struct J2 {
+  /// this material is written for 3D
+  static constexpr int dim = 3;
 
-  /// Shear modulus in the stress free configuration
-  double shear_modulus_;
+  double E;        ///< Young's modulus
+  double nu;       ///< Poisson's ratio
+  double Hi;       ///< isotropic hardening constant
+  double Hk;       ///< kinematic hardening constant
+  double sigma_y;  ///< yield stress
+  double density;  ///< mass density
+
+  /// @brief variables required to characterize the hysteresis response
+  struct State {
+    tensor<double, dim, dim> beta;                        ///< back-stress tensor
+    tensor<double, dim, dim> plastic_strain;              ///< plastic strain
+    double                   accumulated_plastic_strain;  ///< incremental plastic strain
+  };
+
+  /** @brief calculate the Cauchy stress, given the displacement gradient and previous material state */
+  template <typename T>
+  auto operator()(State& state, const T du_dX) const
+  {
+    using std::sqrt;
+    constexpr auto I = Identity<3>();
+    const double   K = E / (3.0 * (1.0 - 2.0 * nu));
+    const double   G = 0.5 * E / (1.0 + nu);
+
+    //
+    // see pg. 260, box 7.5,
+    // in "Computational Methods for Plasticity"
+    //
+
+    // (i) elastic predictor
+    auto el_strain = sym(du_dX) - state.plastic_strain;
+    auto p         = K * tr(el_strain);
+    auto s         = 2.0 * G * dev(el_strain);
+    auto eta       = s - state.beta;
+    auto q         = sqrt(3.0 / 2.0) * norm(eta);
+    auto phi       = q - (sigma_y + Hi * state.accumulated_plastic_strain);
+
+    // (ii) admissibility
+    if (phi > 0.0) {
+      // see (7.207) on pg. 261
+      auto plastic_strain_inc = phi / (3 * G + Hk + Hi);
+
+      // from here on, only normalize(eta) is required
+      // so we overwrite eta with its normalized version
+      eta = normalize(eta);
+
+      // (iii) return mapping
+      s = s - sqrt(6.0) * G * plastic_strain_inc * eta;
+      state.accumulated_plastic_strain += get_value(plastic_strain_inc);
+      state.plastic_strain += sqrt(3.0 / 2.0) * get_value(plastic_strain_inc) * get_value(eta);
+      state.beta = state.beta + sqrt(2.0 / 3.0) * Hk * get_value(plastic_strain_inc) * get_value(eta);
+    }
+
+    return s + p * I;
+  }
 };
 
 /// Constant body force model
@@ -190,10 +152,7 @@ struct ConstantBodyForce {
    * @tparam dim The dimension of the problem
    * @return The body force value
    */
-  template <typename DisplacementType, typename DispGradType>
-  SERAC_HOST_DEVICE tensor<double, dim> operator()(const tensor<double, dim>& /* x */, const double /* t */,
-                                                   const DisplacementType& /* displacement */,
-                                                   const DispGradType& /* displacement_grad */) const
+  SERAC_HOST_DEVICE tensor<double, dim> operator()(const tensor<double, dim>& /* x */, const double /* t */) const
   {
     return force_;
   }
@@ -275,4 +234,4 @@ struct PressureFunction {
   }
 };
 
-}  // namespace serac::solid_util
+}  // namespace serac::solid_mechanics

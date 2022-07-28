@@ -41,11 +41,11 @@ public:
    * @param keep_deformation Flag to keep the deformation in the underlying mesh post-destruction
    * @param name An optional name for the physics module instance
    */
-  ThermalMechanicsFunctional(const typename Thermal::SolverOptions&    thermal_options,
-                             const typename solid_util::SolverOptions& solid_options,
+  ThermalMechanicsFunctional(const SolverOptions& thermal_options,
+                             const SolverOptions& solid_options,
                              GeometricNonlinearities                   geom_nonlin = GeometricNonlinearities::On,
                              FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "")
-      : BasePhysics(3, order),
+      : BasePhysics(3, order, name),
         thermal_functional_(thermal_options, name + "thermal"),
         solid_functional_(solid_options, geom_nonlin, keep_deformation, name + "mechanical")
   {
@@ -92,12 +92,16 @@ public:
     cycle_ += 1;
   }
 
-
+  template <typename T>
+  std::shared_ptr<QuadratureData<T>> createQuadratureDataBuffer(T initial_state) {
+    return solid_functional_.createQuadratureDataBuffer(initial_state);
+  }
 
   template <typename ThermalMechanicalMaterial>
   struct ThermalMaterialInterface {
-    const ThermalMechanicalMaterial mat;
     using State = typename ThermalMechanicalMaterial::State;
+
+    const ThermalMechanicalMaterial mat;
 
     ThermalMaterialInterface(const ThermalMechanicalMaterial& m) : mat(m)
     {
@@ -112,40 +116,48 @@ public:
       State state{};
       
       auto [u, du_dX]     = displacement;
-      auto [T, c, s0, q0] = mat.calculateConstitutiveOutputs(state, du_dX, temperature, temperature_gradient, parameters...);
+      auto [T, c, s0, q0] = mat(state, du_dX, temperature, temperature_gradient, parameters...);
       // density * specific_heat = c
-      const double density = mat.rho;
-      return Thermal::MaterialResponse{density, c, q0};
+      return Thermal::MaterialResponse{mat.density, c, q0};
     }
   };
 
   template <typename ThermalMechanicalMaterial>
   struct MechanicalMaterialInterface {
-    const ThermalMechanicalMaterial mat;
+
     using State = typename ThermalMechanicalMaterial::State;
 
-    MechanicalMaterialInterface(const ThermalMechanicalMaterial& m) : mat(m)
+    const ThermalMechanicalMaterial mat;
+
+    const double density;
+
+    MechanicalMaterialInterface(const ThermalMechanicalMaterial& m) : mat(m), density(m.density) 
     {
       // empty
     }
     
-    template <typename T1, typename T2, typename T3, typename T4, typename... param_types>
-    SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* displacement */, const T3& displacement_gradient,
-                                      const T4& temperature, param_types... parameters) const
+    template <typename T1, typename T2, typename... param_types>
+    SERAC_HOST_DEVICE auto operator()(State & state, const T1& displacement_gradient,
+                                      const T2& temperature, param_types... parameters) const
     {
-      State state{};
-      auto [theta, dtheta_dX]                      = temperature;
-      auto [T, c, s0, q0]  = mat.calculateConstitutiveOutputs(state, displacement_gradient, theta, dtheta_dX, parameters...);
-      const double density = mat.rho;
-      return solid_util::MaterialResponse{density, T};
+      auto [theta, dtheta_dX] = temperature;
+      auto [T, c, s0, q0]  = mat(state, displacement_gradient, theta, dtheta_dX, parameters...);
+      return T;
     }
   };
+
+  template <typename MaterialType, typename StateType>
+  void setMaterial(MaterialType material, std::shared_ptr<QuadratureData<StateType>> qdata)
+  {
+    thermal_functional_.setMaterial(ThermalMaterialInterface<MaterialType>{material});
+    solid_functional_.setMaterial(MechanicalMaterialInterface<MaterialType>{material}, qdata);
+  }
 
   template <typename MaterialType>
   void setMaterial(MaterialType material)
   {
-    thermal_functional_.setMaterial(ThermalMaterialInterface<MaterialType>{material});
-    solid_functional_.setMaterial(MechanicalMaterialInterface<MaterialType>{material});
+    static_assert(std::is_same_v<typename MaterialType::State, Empty>, "error: material model requires internal variables but none were provided.");
+    setMaterial(material, EmptyQData);
   }
 
   /**
@@ -236,10 +248,10 @@ protected:
   using temperature_field  = H1<order>;
 
   // Submodule to compute the thermal conduction physics
-  ThermalConductionFunctional<order, dim, displacement_field, parameter_space...> thermal_functional_;
+  ThermalConductionFunctional<order, dim, Parameters< displacement_field, parameter_space... > > thermal_functional_;
 
   // Submodule to compute the mechanics
-  SolidFunctional<order, dim, temperature_field, parameter_space...> solid_functional_;
+  SolidFunctional<order, dim, Parameters< temperature_field, parameter_space... > > solid_functional_;
 };
 
 }  // namespace serac

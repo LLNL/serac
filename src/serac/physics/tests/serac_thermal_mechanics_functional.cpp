@@ -57,7 +57,7 @@ void functional_test_static_3D(double expected_norm)
   const NonlinearSolverOptions default_nonlinear_options = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
 
-  const typename solid_util::SolverOptions solid_options = {default_linear_options, default_nonlinear_options};
+  const SolverOptions solid_options = {default_linear_options, default_nonlinear_options};
 
   // Construct a functional-based thermal-solid solver
   // BT 04/27/2022 This can't be instantiated yet.
@@ -73,8 +73,11 @@ void functional_test_static_3D(double expected_norm)
   double                                alpha     = 1.0e-3;
   double                                theta_ref = 1.0;
   double                                k         = 1.0;
+
   GreenSaintVenantThermoelasticMaterial material{rho, E, nu, c, alpha, theta_ref, k};
-  thermal_solid_solver.setMaterial(material);
+  GreenSaintVenantThermoelasticMaterial::State initial_state{};
+  auto qdata = thermal_solid_solver.createQuadratureDataBuffer(initial_state);
+  thermal_solid_solver.setMaterial(material, qdata);
 
   // Define the function for the initial temperature and boundary condition
   auto one = [](const mfem::Vector&, double) -> double { return 1.0; };
@@ -93,7 +96,7 @@ void functional_test_static_3D(double expected_norm)
   // Finalize the data structures
   thermal_solid_solver.completeSetup();
 
-  thermal_solid_solver.initializeOutput(serac::OutputType::VisIt, "thermal_mechanics_without_input_file_output");
+  //thermal_solid_solver.initializeOutput(serac::OutputType::VisIt, "thermal_mechanics_without_input_file_output");
 
   // dump initial state to output
   //thermal_solid_solver.outputState();
@@ -151,7 +154,7 @@ void functional_test_shrinking_3D(double expected_norm)
   const NonlinearSolverOptions default_nonlinear_options = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
 
-  const typename solid_util::SolverOptions solid_options = {default_linear_options, default_nonlinear_options};
+  const SolverOptions solid_options = {default_linear_options, default_nonlinear_options};
 
   ThermalMechanicsFunctional<p, dim> thermal_solid_solver(thermal_options, solid_options,
                                                           GeometricNonlinearities::On,
@@ -166,7 +169,9 @@ void functional_test_shrinking_3D(double expected_norm)
   double                                theta_ref = 2.0;
   double                                k         = 1.0;
   GreenSaintVenantThermoelasticMaterial material{rho, E, nu, c, alpha, theta_ref, k};
-  thermal_solid_solver.setMaterial(material);
+  GreenSaintVenantThermoelasticMaterial::State initial_state{};
+  auto qdata = thermal_solid_solver.createQuadratureDataBuffer(initial_state);
+  thermal_solid_solver.setMaterial(material, qdata);
 
   // Define the function for the initial temperature
   double theta_0 = 1.0;
@@ -189,7 +194,7 @@ void functional_test_shrinking_3D(double expected_norm)
   // Finalize the data structures
   thermal_solid_solver.completeSetup();
 
-  thermal_solid_solver.initializeOutput(serac::OutputType::VisIt, "thermal_mechanics_without_input_file_output");
+  //thermal_solid_solver.initializeOutput(serac::OutputType::VisIt, "thermal_mechanics_without_input_file_output");
 
   // dump initial state to output
   //thermal_solid_solver.outputState();
@@ -204,6 +209,7 @@ void functional_test_shrinking_3D(double expected_norm)
   EXPECT_NEAR(expected_norm, norm(thermal_solid_solver.displacement()), 1.0e-4);
 }
 
+// TODO: investigate this failing test
 template <int p>
 void parameterized(double expected_norm)
 {
@@ -261,7 +267,7 @@ void parameterized(double expected_norm)
   const NonlinearSolverOptions default_nonlinear_options = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
 
-  const typename solid_util::SolverOptions solid_options = {default_linear_options, default_nonlinear_options};
+  const SolverOptions solid_options = {default_linear_options, default_nonlinear_options};
 
   
   ThermalMechanicsFunctional<p, dim, H1<p> > thermal_solid_solver(thermal_options, solid_options,
@@ -277,7 +283,9 @@ void parameterized(double expected_norm)
   double                                theta_ref = 2.0;
   double                                k         = 1.0;
   ParameterizedGreenSaintVenantThermoelasticMaterial material{rho, E, nu, c, alpha0, theta_ref, k};
-  thermal_solid_solver.setMaterial(material);
+  ParameterizedGreenSaintVenantThermoelasticMaterial::State initial_state{};
+  auto qdata = thermal_solid_solver.createQuadratureDataBuffer(initial_state);
+  thermal_solid_solver.setMaterial(material, qdata);
 
   // parameterize the coefficient of thermal expansion
   FiniteElementState thermal_expansion_scaling(
@@ -326,7 +334,7 @@ void parameterized(double expected_norm)
   
   thermal_solid_solver.completeSetup();
 
-  thermal_solid_solver.initializeOutput(serac::OutputType::VisIt, "thermal_mechanics_without_input_file_output");
+  //thermal_solid_solver.initializeOutput(serac::OutputType::VisIt, "thermal_mechanics_without_input_file_output");
   // dump initial state to output
   thermal_solid_solver.outputState("pv_output");
 
@@ -340,7 +348,7 @@ void parameterized(double expected_norm)
   // auto exact_solution_coef = std::make_shared<mfem::VectorFunctionCoefficient>(
   //     dim, exact_displacement_function);
   mfem::VectorFunctionCoefficient exact_solution_coef(dim, exact_displacement_function);
-  double error_norm = thermal_solid_solver.displacement().gridFunc().ComputeL2Error(exact_solution_coef);
+  double error_norm = thermal_solid_solver.displacement().gridFunction().ComputeL2Error(exact_solution_coef);
 
   std::cout << expected_norm << std::endl;
   

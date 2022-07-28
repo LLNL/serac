@@ -150,13 +150,13 @@ public:
    * @tparam qpt_data_type The type of the data to store for each quadrature point
    * @param[in] integrand The user-provided quadrature function, see @p Integral
    * @param[in] domain The domain on which to evaluate the integral
-   * @param[in] data The data structure containing per-quadrature-point data
+   * @param[in] qdata The data structure containing per-quadrature-point data
    * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
    * and @a spatial_dim template parameter
    */
-  template <int dim, typename lambda, typename qpt_data_type = void>
+  template <int dim, typename lambda, typename qpt_data_type = Nothing>
   void AddDomainIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain,
-                         QuadratureData<qpt_data_type>& data = dummy_qdata)
+                         std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
   {
     auto num_elements = domain.GetNE();
     if (num_elements == 0) return;
@@ -171,7 +171,7 @@ public:
 
     constexpr auto flags = mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS;
     auto           geom  = domain.GetGeometricFactors(ir, flags);
-    domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<dim>{}, integrand, data);
+    domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<dim>{}, integrand, qdata);
   }
 
   /**
@@ -217,8 +217,8 @@ public:
    *
    * @brief Adds an area integral, i.e., over 2D elements in R^2
    */
-  template <typename lambda, typename qpt_data_type = void>
-  void AddAreaIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = dummy_qdata)
+  template <typename lambda, typename qpt_data_type = Nothing>
+  void AddAreaIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = NoQData)
   {
     AddDomainIntegral(Dimension<2>{}, integrand, domain, data);
   }
@@ -232,8 +232,8 @@ public:
    *
    * @brief Adds a volume integral, i.e., over 3D elements in R^3
    */
-  template <typename lambda, typename qpt_data_type = void>
-  void AddVolumeIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = dummy_qdata)
+  template <typename lambda, typename qpt_data_type = Nothing>
+  void AddVolumeIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = NoQData)
   {
     AddDomainIntegral(Dimension<3>{}, integrand, domain, data);
   }
@@ -333,7 +333,8 @@ public:
       // compute residual contributions at the element level and sum them
       output_E_ = 0.0;
       for (auto& integral : domain_integrals_) {
-        integral.Mult(input_E_, output_E_, wrt);
+        const bool update_state = false;  // QoIs get read-only access to material state
+        integral.Mult(input_E_, output_E_, wrt, update_state);
       }
 
       // scatter-add to compute residuals on the local processor

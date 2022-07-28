@@ -20,7 +20,7 @@ auto greenStrain(const tensor<T, 3, 3>& grad_u)
 
 /// @brief Green-Saint Venant isotropic thermoelastic model
 struct GreenSaintVenantThermoelasticMaterial {
-  double rho;        ///< density
+  double density;    ///< density
   double E;          ///< Young's modulus
   double nu;         ///< Poisson's ratio
   double C;          ///< volumetric heat capacity
@@ -51,7 +51,7 @@ struct GreenSaintVenantThermoelasticMaterial {
    * energy per unit time and per unit area).
    */
   template <typename T1, typename T2, typename T3 >
-  auto calculateConstitutiveOutputs(State& state, const tensor<T1, 3, 3>& grad_u, T2 theta,
+  auto operator()(State& state, const tensor<T1, 3, 3>& grad_u, T2 theta,
                                     const tensor<T3, 3>& grad_theta) const
   {
     const double          K    = E / (3.0 * (1.0 - 2.0 * nu));
@@ -71,6 +71,8 @@ struct GreenSaintVenantThermoelasticMaterial {
 
     // heat flux
     const auto q0 = -k * grad_theta;
+
+    state.strain_trace = get_value(trEg);
 
     return serac::tuple{TK, C, s0, q0};
   }
@@ -99,7 +101,7 @@ struct GreenSaintVenantThermoelasticMaterial {
 
 /// @brief Green-Saint Venant isotropic thermoelastic model
 struct ParameterizedGreenSaintVenantThermoelasticMaterial {
-  double rho;        ///< density
+  double density;    ///< density
   double E;          ///< Young's modulus
   double nu;         ///< Poisson's ratio
   double C;          ///< volumetric heat capacity
@@ -132,7 +134,7 @@ struct ParameterizedGreenSaintVenantThermoelasticMaterial {
    * energy per unit time and per unit area).
    */
   template <typename T1, typename T2, typename T3, typename T4 >
-  auto calculateConstitutiveOutputs(State& state, const tensor<T1, 3, 3>& grad_u, T2 theta,
+  auto operator()(State& state, const tensor<T1, 3, 3>& grad_u, T2 theta,
                                     const tensor<T3, 3>& grad_theta,
                                     T4 thermal_expansion_scaling) const
   {
@@ -155,6 +157,8 @@ struct ParameterizedGreenSaintVenantThermoelasticMaterial {
 
     // heat flux
     const auto q0 = -k * grad_theta;
+
+    state.strain_trace = get_value(trEg);
 
     return serac::tuple{TK, C, s0, q0};
   }

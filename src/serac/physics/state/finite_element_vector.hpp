@@ -254,7 +254,7 @@ public:
    * @note This only sets nodal values based on the coefficient at that point. It does not perform
    * a full least squares projection.
    */
-  void projectBdr(mfem::Coefficient& coef, const mfem::Array<int>& markers)
+  void projectOnBoundary(mfem::Coefficient& coef, const mfem::Array<int>& markers)
   {
     mfem::ParGridFunction& grid_function = gridFunction();
     // markers should be const param in mfem, but it's not
@@ -263,7 +263,7 @@ public:
   }
 
   /// \overload
-  void projectBdr(mfem::VectorCoefficient& coef, const mfem::Array<int>& markers)
+  void projectOnBoundary(mfem::VectorCoefficient& coef, const mfem::Array<int>& markers)
   {
     mfem::ParGridFunction& grid_function = gridFunction();
     // markers should be const param in mfem, but it's not

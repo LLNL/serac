@@ -59,7 +59,7 @@ TEST(SolidSolver, Adjoint)
                                                          .prec        = HypreBoomerAMGPrec{}};
 
   const NonlinearSolverOptions default_nonlinear_options = {
-      .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
+      .rel_tol = 1.0e-8, .abs_tol = 1.0e-10, .max_iter = 500, .print_level = 1};
 
   const Solid::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
 
@@ -110,7 +110,7 @@ TEST(SolidSolver, Adjoint)
 
   SLIC_INFO_ROOT(axom::fmt::format("Shear sensitivity vector norm: {}", shear_norm));
 
-  EXPECT_NEAR(shear_norm, 0.005673803147, 1.0e-8);
+  EXPECT_NEAR(shear_norm, 0.005673803147, 5.0e-7);
 
   auto& bulk_sensitivity = solid_solver.bulkModulusSensitivity(&l2_fe_space);
 
@@ -118,7 +118,7 @@ TEST(SolidSolver, Adjoint)
 
   SLIC_INFO_ROOT(axom::fmt::format("Bulk sensitivity vector norm: {}", bulk_norm));
 
-  EXPECT_NEAR(bulk_norm, 0.00010973046519995416, 3.0e-9);
+  EXPECT_NEAR(bulk_norm, 0.00010973046519995416, 1.0e-8);
 
   // Do a forward solve again to make sure the adjoint solve didn't break the solver
   solid_solver.setDisplacement(*deform);

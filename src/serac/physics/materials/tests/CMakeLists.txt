@@ -8,7 +8,8 @@ set(test_dependencies gtest serac_physics test_utils)
 
 set(material_tests
     thermomechanical_material.cpp
-    )
+    J2_material.cpp
+)
 
 serac_add_tests( SOURCES ${material_tests}
                  DEPENDS_ON ${test_dependencies})

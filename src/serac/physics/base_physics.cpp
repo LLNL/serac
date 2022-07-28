@@ -40,11 +40,7 @@ BasePhysics::BasePhysics(int n, int p, std::string name, mfem::ParMesh* pmesh) :
 
 const std::vector<std::reference_wrapper<serac::FiniteElementState> >& BasePhysics::getState() const { return state_; }
 
-void BasePhysics::setTime(const double time)
-{
-  time_ = time;
-  bcs_.setTime(time_);
-}
+void BasePhysics::setTime(const double time) { time_ = time; }
 
 double BasePhysics::time() const { return time_; }
 
@@ -80,6 +76,10 @@ void BasePhysics::outputState(std::optional<std::string> paraview_output_dir) co
       paraview_dc_->SetHighOrderOutput(true);
       paraview_dc_->SetDataFormat(mfem::VTKFormat::BINARY);
       paraview_dc_->SetCompression(true);
+    } else {
+      for (FiniteElementState& state : state_) {
+        state.gridFunction();  // update grid function values
+      }
     }
 
     // Set the current time, cycle, and requested paraview directory

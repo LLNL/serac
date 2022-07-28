@@ -39,9 +39,8 @@ public:
    * @param keep_deformation Flag to keep the deformation in the underlying mesh post-destruction
    * @param name An optional name for the physics module instance
    */
-  ThermalSolidFunctional(const typename Thermal::SolverOptions&    thermal_options,
-                         const typename solid_util::SolverOptions& solid_options,
-                         GeometricNonlinearities                   geom_nonlin = GeometricNonlinearities::On,
+  ThermalSolidFunctional(const SolverOptions& thermal_options, const SolverOptions& solid_options,
+                         GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
                          FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "")
       : BasePhysics(3, order, name),
         temperature_(

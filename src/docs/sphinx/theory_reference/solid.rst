@@ -13,7 +13,8 @@ Strong Form
 Consider the kinematics of finite deformation
 
 .. image:: ../figures/deformed_body.png
-   :scale: 30 %
+   :width: 80 %
+   :align: center
 
 where :math:`\mathbf{x}(\mathbf{X}, t)` is the current position of a
 point originally located at :math:`\mathbf{X}` in the undeformed (or
@@ -198,3 +199,199 @@ where
    \end{align*}
 
 This discrete nonlinear second order ODE system can now be solved using the selected linear algebra methods.
+
+
+Material Parameters:
+======================
+
+Material models in serac may use different parameters for describing elastic properties. Specifying
+any two of these parameters lets you calculate the rest. The tool below can be used to 
+perform these conversion calculations (assuming 3D):
+
+.. raw:: html
+
+  <input type="number" id="K" onchange="update_K()"> Bulk Modulus (K) <br>
+  <input type="number" id="E" onchange="update_E()"> Young's Modulus (E) <br>
+  <input type="number" id="lambda" onchange="update_lambda()"> Lamé's First Parameter (λ) <br>
+  <input type="number" id="G" onchange="update_G()"> Shear Modulus (G, μ) <br>
+  <input type="number" id="nu" onchange="update_nu()"> Poisson's Ratio (ν) <br>
+  
+  <script>
+  var ids = ["K", "E", "lambda", "G", "nu"];
+  var textboxes = [
+      document.getElementById("K"),
+      document.getElementById("E"),
+      document.getElementById("lambda"),
+      document.getElementById("G"),
+      document.getElementById("nu")
+  ];
+  var values = [0.0, 0.0, 0.0, 0.0, 0.0];
+  var which = [-1, -1];
+  
+  function update_others() {
+      if (which[1] != -1) {
+          textboxes.forEach(box => box.style.backgroundColor = "");
+  
+          var sorted = [...which].sort();
+          textboxes[sorted[0]].style.backgroundColor = "yellow";
+          textboxes[sorted[1]].style.backgroundColor = "yellow";
+  
+          var [K, E, L, G, nu] = values;
+  
+          if (sorted[0] == 0 && sorted[1] == 1) {
+              L = (3 * K) * (3 * K - E) / (9 * K - E);
+              G = (3 * K * E) / (9 * K - E);
+              nu = (3 * K - E) / (6 * K);
+          }
+  
+          if (sorted[0] == 0 && sorted[1] == 2) {
+             E = (9 * K) * (K - L) / (3 * K - L);
+             G = 1.5 * (K - L);
+             nu = L / (3 * K - L);
+          }
+  
+          if (sorted[0] == 0 && sorted[1] == 3) {
+             E = (9 * K * G) / (3 * K + G);
+             L = K - (2 * G) / 3;
+             nu = (3 * K - 2 * G) / (2 * (3 * K + G));
+          }
+  
+          if (sorted[0] == 0 && sorted[1] == 4) {
+             E = 3 * K * (1 - 2 * nu);
+             L = (3 * K * nu) / (1 + nu);
+             G = 3 * K * (1 - 2 * nu) / (2 * (1 + nu));
+          }
+  
+          if (sorted[0] == 1 && sorted[1] == 2) {
+             R = Math.sqrt(E * E + 9 * L * L + 2 * E * L);
+  
+             K = (E + 3 * L + R) / 6.0;
+             G = (E - 3 * L + R) / 4.0;
+             nu = (2 * L) / (E + L + R);
+          }
+  
+          if (sorted[0] == 1 && sorted[1] == 3) {
+             K = (E * G) / (3 * (3 * G - E));
+             L = (G * (E - 2 * G)) / (3 * G - E);
+             nu = (E / (2 * G)) - 1;
+          }
+  
+          if (sorted[0] == 1 && sorted[1] == 4) {
+             K = E / (3 * (1 - 2 * nu));
+             L = (E * nu) / ((1 + nu) * (1 - 2 * nu));
+             G = E / (2 * (1 + nu));
+          }
+  
+          if (sorted[0] == 2 && sorted[1] == 3) {
+             K = L + ((2 * G) / 3);
+             E = G * (3 * L + 2 * G) / (L + G);
+             nu = L / (2 * (L + G));
+          }
+  
+          if (sorted[0] == 2 && sorted[1] == 4) {
+             K = L * (1 + nu) / (3 * nu);
+             E = L * (1 + nu) * (1 - 2 * nu) / nu;
+             G = L * (1 - 2 * nu) / (2 * nu);
+          }
+  
+          if (sorted[0] == 3 && sorted[1] == 4) {
+             K = 2 * G * (1 + nu) / (3 * (1 - 2 * nu));
+             E = 2 * G * (1 + nu);
+             L = 2 * G * nu / (1 - 2 * nu);
+          }
+  
+          textboxes[0].valueAsNumber = values[0] = K;
+          textboxes[1].valueAsNumber = values[1] = E;
+          textboxes[2].valueAsNumber = values[2] = L;
+          textboxes[3].valueAsNumber = values[3] = G;
+          textboxes[4].valueAsNumber = values[4] = nu;
+      }
+  
+      console.log(values);
+      console.log(which);
+  }
+  
+  function update_K() {
+      var new_value = document.getElementById("K").valueAsNumber;
+      if (new_value != values[0]) {
+          values[0] = new_value;
+          if (which[0] != 0) { which = [0, which[0]]; }
+          update_others();
+      }
+  }
+  
+  function update_E() {
+      var new_value = document.getElementById("E").valueAsNumber;
+      if (new_value != values[1]) {
+          values[1] = new_value;
+          if (which[0] != 1) { which = [1, which[0]]; }
+          update_others();
+      }
+  }
+  
+  function update_lambda() {
+      var new_value = document.getElementById("lambda").valueAsNumber;
+      if (new_value != values[2]) {
+          values[2] = new_value;
+          if (which[0] != 2) { which = [2, which[0]]; }
+          update_others();
+      }
+  }
+  
+  function update_G() {
+      var new_value = document.getElementById("G").valueAsNumber;
+      if (new_value != values[3]) {
+          values[3] = new_value;
+          if (which[0] != 3) { which = [3, which[0]]; }
+          update_others();
+      }
+  }
+  
+  function update_nu() {
+      var new_value = document.getElementById("nu").valueAsNumber;
+      if (new_value != values[4]) {
+          values[4] = new_value;
+          if (which[0] != 4) { which = [4, which[0]]; }
+          update_others();
+      }
+  }
+  </script>
+
+
+J2 Linear Hardening Parameters
+------------------------------
+
+The hardening constants, :math:`H_i, H_k`, in our J2 material model describe the extent to which
+the yield surface dilates and translates, respectively, when undergoing plastic deformation. 
+The following animations illustrate the evolution of the yield surface and stress-strain relationship
+when subjected to cyclic strain, for different choices of :math:`H_i, H_k`.
+
+"Perfectly Plastic" response: zero isotropic and kinematic hardening
+
+.. image:: ../figures/J2_neither.gif
+   :width: 80%
+   :align: center
+
+--------
+
+isotropic hardening only
+
+.. image:: ../figures/J2_isotropic.gif
+   :width: 80%
+   :align: center
+
+--------
+
+kinematic hardening only
+
+.. image:: ../figures/J2_kinematic.gif
+   :width: 80%
+   :align: center
+
+--------
+
+isotropic and kinematic hardening
+
+.. image:: ../figures/J2_both.gif
+   :width: 80%
+   :align: center
