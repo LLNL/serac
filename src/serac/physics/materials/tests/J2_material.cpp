@@ -26,10 +26,6 @@
 
 using namespace serac;
 
-tensor<double, 3, 3> diag(tensor<double, 3> d)
-{
-  return tensor<double, 3, 3>{{{d[0], 0.0, 0.0}, {0.0, d[1], 0.0}, {0.0, 0.0, d[2]}}};
-}
 
 tensor<double, 3, 3> analytic_soln(double t)
 {

@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -303,7 +303,7 @@ public:
           auto a          = get<VALUE>(acceleration);
           auto du_dX      = get<DERIVATIVE>(displacement);
           auto body_force = material.density * a + 0.0 * du_dX[0];
-          auto stress     = material(state, du_dX, serac::get<0>(params)...);
+          auto stress     = material(state, du_dX, serac::get<VALUE>(params)...);
 
           if (geom_nonlin_ == GeometricNonlinearities::On) {
             auto F     = I + du_dX;
@@ -451,12 +451,12 @@ public:
             add(1.0, u_, c0_, d2u_dt2, predicted_displacement_);
 
             // K := dR/du
-            auto K = serac::get<1>((*residual_)(differentiate_wrt(predicted_displacement_), d2u_dt2,
+            auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(predicted_displacement_), d2u_dt2,
                                                 parameter_states_[parameter_indices]...));
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             // M := dR/da
-            auto M = serac::get<1>((*residual_)(predicted_displacement_, differentiate_wrt(d2u_dt2),
+            auto M = serac::get<DERIVATIVE>((*residual_)(predicted_displacement_, differentiate_wrt(d2u_dt2),
                                                 parameter_states_[parameter_indices]...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
@@ -594,7 +594,7 @@ public:
     // sam: is this the right thing to be doing for dynamics simulations,
     // or are we implicitly assuming this should only be used in quasistatic analyses?
     auto drdu =
-        serac::get<1>((*residual_)(differentiate_wrt(displacement_), zero_, parameter_states_[parameter_indices]...));
+        serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(displacement_), zero_, parameter_states_[parameter_indices]...));
     auto jacobian = assemble(drdu);
     auto J_T      = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -638,7 +638,7 @@ public:
       mesh_.NewNodes(*reference_nodes_);
     }
 
-    auto drdparam = serac::get<1>((*residual_)(DifferentiateWRT<parameter_field + 2>{}, displacement_, zero_,
+    auto drdparam = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<parameter_field + 2>{}, displacement_, zero_,
                                                parameter_states_[parameter_indices]...));
 
     auto drdparam_mat = assemble(drdparam);

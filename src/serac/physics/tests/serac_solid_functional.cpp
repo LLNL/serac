@@ -137,7 +137,6 @@ void functional_solid_test_static_J2()
   auto          zero_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; };
   solid_solver.setDisplacementBCs(support, zero_displacement);
 
-#if 1
   // apply a displacement along z to the the tip of the beam
   auto translated_in_z = [](const mfem::Vector&, double t, mfem::Vector& u) -> void {
     u    = 0.0;
@@ -145,11 +144,6 @@ void functional_solid_test_static_J2()
   };
   std::set<int> tip = {2};
   solid_solver.setDisplacementBCs(tip, translated_in_z);
-#else
-  solid_solver.setPiolaTraction([](auto x, auto /*n*/, auto t) {
-    return tensor<double, 3>{0, 0, 7.0 * (x[0] > 7.99) * t * (t - 1)};
-  });
-#endif
 
   solid_solver.setDisplacement(zero_displacement);
 
@@ -381,24 +375,24 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
 }
 
-// TEST(SolidFunctional, 2DLinearStatic) { functional_solid_test_static<1, 2>(1.511052595); }
+TEST(SolidFunctional, 2DLinearStatic) { functional_solid_test_static<1, 2>(1.511052595); }
 TEST(SolidFunctional, 2DQuadStatic) { functional_solid_test_static<2, 2>(2.18604855); }
-// TEST(SolidFunctional, 2DQuadParameterizedStatic) { functional_parameterized_solid_test<2, 2>(2.18604855); }
-//
-// TEST(SolidFunctional, 3DLinearStatic) { functional_solid_test_static<1, 3>(1.3708454313665728); }
-// TEST(SolidFunctional, 3DQuadStatic) { functional_solid_test_static<2, 3>(1.949532747); }
+TEST(SolidFunctional, 2DQuadParameterizedStatic) { functional_parameterized_solid_test<2, 2>(2.18604855); }
+
+TEST(SolidFunctional, 3DLinearStatic) { functional_solid_test_static<1, 3>(1.3708454313665728); }
+TEST(SolidFunctional, 3DQuadStatic) { functional_solid_test_static<2, 3>(1.949532747); }
 
 TEST(SolidFunctional, 3DQuadStaticJ2) { functional_solid_test_static_J2(); }
 
-// TEST(SolidFunctional, 2DLinearDynamic) { functional_solid_test_dynamic<1, 2>(1.52116682); }
-// TEST(SolidFunctional, 2DQuadDynamic) { functional_solid_test_dynamic<2, 2>(1.52777214); }
-//
-// TEST(SolidFunctional, 3DLinearDynamic) { functional_solid_test_dynamic<1, 3>(1.520679017); }
-// TEST(SolidFunctional, 3DQuadDynamic) { functional_solid_test_dynamic<2, 3>(1.527009514); }
-//
-// TEST(SolidFunctional, 2DLinearPressure) { functional_solid_test_boundary<1, 2>(0.065326222, TestType::Pressure); }
-// TEST(SolidFunctional, 2DLinearTraction) { functional_solid_test_boundary<1, 2>(0.12659525750241674,
-// TestType::Traction); }
+ TEST(SolidFunctional, 2DLinearDynamic) { functional_solid_test_dynamic<1, 2>(1.52116682); }
+ TEST(SolidFunctional, 2DQuadDynamic) { functional_solid_test_dynamic<2, 2>(1.52777214); }
+
+ TEST(SolidFunctional, 3DLinearDynamic) { functional_solid_test_dynamic<1, 3>(1.520679017); }
+ TEST(SolidFunctional, 3DQuadDynamic) { functional_solid_test_dynamic<2, 3>(1.527009514); }
+
+ TEST(SolidFunctional, 2DLinearPressure) { functional_solid_test_boundary<1, 2>(0.065326222, TestType::Pressure); }
+ TEST(SolidFunctional, 2DLinearTraction) { functional_solid_test_boundary<1, 2>(0.12659525750241674,
+ TestType::Traction); }
 
 }  // namespace serac
 
