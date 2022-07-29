@@ -86,7 +86,7 @@ public:
   {
     datacolls_.clear();
     is_restart_ = false;
-    ds_ = nullptr;
+    ds_         = nullptr;
   };
 
   /**

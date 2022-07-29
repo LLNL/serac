@@ -150,9 +150,9 @@ void functional_solid_test_static_J2()
   solid_solver.outputState("paraview");
 
   // Perform the quasi-static solve
-  int num_steps = 10;
-  double tmax = 1.0;
-  double dt   = tmax / num_steps;
+  int    num_steps = 10;
+  double tmax      = 1.0;
+  double dt        = tmax / num_steps;
   for (int i = 0; i < num_steps; i++) {
     solid_solver.advanceTimestep(dt);
     solid_solver.outputState("paraview");
@@ -161,8 +161,7 @@ void functional_solid_test_static_J2()
   // this a qualitative test that just verifies
   // that plasticity models can have permanent
   // deformation after unloading
-  //EXPECT_LT(norm(solid_solver.nodalForces()), 1.0e-5);
-
+  // EXPECT_LT(norm(solid_solver.nodalForces()), 1.0e-5);
 }
 
 template <int p, int dim>
@@ -388,7 +387,10 @@ TEST(SolidFunctional, 3DLinearDynamic) { functional_solid_test_dynamic<1, 3>(1.5
 TEST(SolidFunctional, 3DQuadDynamic) { functional_solid_test_dynamic<2, 3>(1.527009514); }
 
 TEST(SolidFunctional, 2DLinearPressure) { functional_solid_test_boundary<1, 2>(0.065326222, TestType::Pressure); }
-TEST(SolidFunctional, 2DLinearTraction) { functional_solid_test_boundary<1, 2>(0.12659525750241674, TestType::Traction); }
+TEST(SolidFunctional, 2DLinearTraction)
+{
+  functional_solid_test_boundary<1, 2>(0.12659525750241674, TestType::Traction);
+}
 
 }  // namespace serac
 

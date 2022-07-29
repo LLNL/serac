@@ -12,10 +12,10 @@ namespace serac {
 
 // Initialize StateManager's static members - these will be fully initialized in StateManager::initialize
 std::unordered_map<std::string, axom::sidre::MFEMSidreDataCollection> StateManager::datacolls_;
-bool                                                                  StateManager::is_restart_ = false;
-axom::sidre::DataStore* StateManager::ds_                = nullptr;
-std::string             StateManager::output_dir_        = "";
-const std::string       StateManager::default_mesh_name_ = "default";
+bool                                                                  StateManager::is_restart_        = false;
+axom::sidre::DataStore*                                               StateManager::ds_                = nullptr;
+std::string                                                           StateManager::output_dir_        = "";
+const std::string                                                     StateManager::default_mesh_name_ = "default";
 
 double StateManager::newDataCollection(const std::string& name, const std::optional<int> cycle_to_load)
 {

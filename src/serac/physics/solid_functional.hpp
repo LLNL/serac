@@ -300,11 +300,11 @@ public:
     residual_->AddDomainIntegral(
         Dimension<dim>{},
         [this, material](auto /*x*/, auto& state, auto displacement, auto acceleration, auto... params) {
-          auto du_dX      = get<DERIVATIVE>(displacement);
-          auto d2u_dt2    = get<VALUE>(acceleration);
-          auto stress     = material(state, du_dX, serac::get<VALUE>(params)...);
+          auto du_dX   = get<DERIVATIVE>(displacement);
+          auto d2u_dt2 = get<VALUE>(acceleration);
+          auto stress  = material(state, du_dX, serac::get<VALUE>(params)...);
           if (geom_nonlin_ == GeometricNonlinearities::On) {
-            stress     = dot(stress, inv(transpose(I + du_dX)));
+            stress = dot(stress, inv(transpose(I + du_dX)));
           }
 
           return serac::tuple{material.density * d2u_dt2, stress};
@@ -359,7 +359,7 @@ public:
     residual_->AddDomainIntegral(
         Dimension<dim>{},
         [body_force, this](auto x, auto /* displacement */, auto /* acceleration */, auto... /*params*/) {
-          // note: this assumes that the body force function is defined 
+          // note: this assumes that the body force function is defined
           // per unit volume in the reference configuration
           return serac::tuple{body_force(x, time_), zero{}};
         },
@@ -402,8 +402,8 @@ public:
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
           auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, parameter_states_[parameter_indices]...);
-          J_   = assemble(drdu);
-          J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+          J_             = assemble(drdu);
+          J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
           return *J_;
         });
   }
@@ -444,12 +444,12 @@ public:
 
             // K := dR/du
             auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(predicted_displacement_), d2u_dt2,
-                                                parameter_states_[parameter_indices]...));
+                                                         parameter_states_[parameter_indices]...));
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             // M := dR/da
             auto M = serac::get<DERIVATIVE>((*residual_)(predicted_displacement_, differentiate_wrt(d2u_dt2),
-                                                parameter_states_[parameter_indices]...));
+                                                         parameter_states_[parameter_indices]...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
             // J = M + c0 * K
@@ -492,7 +492,6 @@ public:
       lin_solver.Mult(dr_, du_);
 
       displacement_ += du_;
-
     }
 
     nonlin_solver_.Mult(zero_, displacement_);
@@ -579,8 +578,8 @@ public:
 
     // sam: is this the right thing to be doing for dynamics simulations,
     // or are we implicitly assuming this should only be used in quasistatic analyses?
-    auto drdu =
-        serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(displacement_), zero_, parameter_states_[parameter_indices]...));
+    auto drdu = serac::get<DERIVATIVE>(
+        (*residual_)(differentiate_wrt(displacement_), zero_, parameter_states_[parameter_indices]...));
     auto jacobian = assemble(drdu);
     auto J_T      = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -595,9 +594,6 @@ public:
 
     lin_solver.SetOperator(*J_T);
     lin_solver.Mult(adjoint_load_vector, adjoint_displacement_);
-
-    // Reset the equation solver to use the full nonlinear residual operator
-    nonlin_solver_.SetOperator(*residual_with_bcs_);
 
     if (geom_nonlin_ == GeometricNonlinearities::On) {
       // Update the mesh with the new deformed nodes
@@ -625,7 +621,7 @@ public:
     }
 
     auto drdparam = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<parameter_field + 2>{}, displacement_, zero_,
-                                               parameter_states_[parameter_indices]...));
+                                                        parameter_states_[parameter_indices]...));
 
     auto drdparam_mat = assemble(drdparam);
 
