@@ -402,8 +402,8 @@ public:
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
           auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, parameter_states_[parameter_indices]...);
-          J_             = assemble(drdu);
-          bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+          J_   = assemble(drdu);
+          J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
           return *J_;
         });
   }
@@ -454,7 +454,7 @@ public:
 
             // J = M + c0 * K
             J_.reset(mfem::Add(1.0, *m_mat, c0_, *k_mat));
-            bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+            J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
 
             return *J_;
           });
@@ -471,6 +471,7 @@ public:
     // the 30 lines of code below are essentially equivalent to the 1-liner
     // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
     {
+      du_ = 0.0;
       for (auto& bc : bcs_.essentials()) {
         bc.setDofs(du_, time_);
       }
@@ -481,9 +482,14 @@ public:
       }
 
       dr_ = 0.0;
+    #if 1
+      J_e_->Mult(du_, dr_);
+      dr_.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
+    #else
       for (const auto& bc : bcs_.essentials()) {
         bc.apply(*J_, dr_, du_);
       }
+    #endif
 
       auto& lin_solver = nonlin_solver_.LinearSolver();
 
@@ -493,16 +499,16 @@ public:
 
       displacement_ += du_;
 
-      for (auto& bc : bcs_.essentials()) {
-        bc.setDofs(du_, time_);
-      }
-
-      // do I have to do this?
-      nonlin_solver_.SetOperator(*residual_with_bcs_);
-
       time_ -= 0.01;
       outputState("paraview");
       time_ += 0.01;
+
+      //for (auto& bc : bcs_.essentials()) {
+      //  bc.setDofs(du_, time_);
+      //}
+
+      // do I have to do this?
+      nonlin_solver_.SetOperator(*residual_with_bcs_);
 
     }
 
@@ -735,6 +741,10 @@ protected:
 
   /// Assembled sparse matrix for the Jacobian
   std::unique_ptr<mfem::HypreParMatrix> J_;
+
+  /// rows and columns of J_ that have been separated out
+  /// because are associated with essential boundary conditions
+  std::unique_ptr<mfem::HypreParMatrix> J_e_;
 
   /// an intermediate variable used to store the predicted end-step displacement
   mfem::Vector predicted_displacement_;
