@@ -300,18 +300,14 @@ public:
     residual_->AddDomainIntegral(
         Dimension<dim>{},
         [this, material](auto /*x*/, auto& state, auto displacement, auto acceleration, auto... params) {
-          auto a          = get<VALUE>(acceleration);
           auto du_dX      = get<DERIVATIVE>(displacement);
-          auto body_force = material.density * a + 0.0 * du_dX[0];
+          auto d2u_dt2    = get<VALUE>(acceleration);
           auto stress     = material(state, du_dX, serac::get<VALUE>(params)...);
-
           if (geom_nonlin_ == GeometricNonlinearities::On) {
-            auto F     = I + du_dX;
-            body_force = body_force * det(F);
-            stress     = dot(stress, inv(transpose(F)));
+            stress     = dot(stress, inv(transpose(I + du_dX)));
           }
 
-          return serac::tuple{body_force, stress};
+          return serac::tuple{material.density * d2u_dt2, stress};
         },
         mesh_, qdata);
   }
@@ -362,14 +358,10 @@ public:
   {
     residual_->AddDomainIntegral(
         Dimension<dim>{},
-        [body_force, this](auto x, auto displacement, auto /* acceleration */, auto... /*params*/) {
-          auto du_dX    = get<DERIVATIVE>(displacement);
-          auto one_dual = (1.0 + 0.0 * du_dX[0][0]);
-          auto source   = body_force(x, time_) * one_dual;
-          if (geom_nonlin_ == GeometricNonlinearities::On) {
-            source = source * det(I + du_dX);
-          }
-          return serac::tuple{source, zero{}};
+        [body_force, this](auto x, auto /* displacement */, auto /* acceleration */, auto... /*params*/) {
+          // note: this assumes that the body force function is defined 
+          // per unit volume in the reference configuration
+          return serac::tuple{body_force(x, time_), zero{}};
         },
         mesh_);
   }
@@ -507,6 +499,11 @@ public:
 
       // do I have to do this?
       nonlin_solver_.SetOperator(*residual_with_bcs_);
+
+      time_ -= 0.01;
+      outputState("paraview");
+      time_ += 0.01;
+
     }
 
     nonlin_solver_.Mult(zero_, displacement_);
