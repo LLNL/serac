@@ -468,7 +468,7 @@ public:
   {
     time_ += dt;
 
-    // the 30 lines of code below are essentially equivalent to the 1-liner
+    // the ~20 lines of code below are essentially equivalent to the 1-liner
     // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
     {
       du_ = 0.0;
@@ -478,18 +478,12 @@ public:
 
       auto& constrained_dofs = bcs_.allEssentialTrueDofs();
       for (int i = 0; i < constrained_dofs.Size(); i++) {
-        du_[constrained_dofs[i]] -= displacement_(constrained_dofs[i]);
+        int j = constrained_dofs[i];
+        du_[j] -= displacement_(j);
       }
 
       dr_ = 0.0;
-    #if 1
-      J_e_->Mult(du_, dr_);
-      dr_.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
-    #else
-      for (const auto& bc : bcs_.essentials()) {
-        bc.apply(*J_, dr_, du_);
-      }
-    #endif
+      mfem::EliminateBC(*J_, *J_e_, constrained_dofs, du_, dr_);
 
       auto& lin_solver = nonlin_solver_.LinearSolver();
 
@@ -498,17 +492,6 @@ public:
       lin_solver.Mult(dr_, du_);
 
       displacement_ += du_;
-
-      time_ -= 0.01;
-      outputState("paraview");
-      time_ += 0.01;
-
-      //for (auto& bc : bcs_.essentials()) {
-      //  bc.setDofs(du_, time_);
-      //}
-
-      // do I have to do this?
-      nonlin_solver_.SetOperator(*residual_with_bcs_);
 
     }
 
