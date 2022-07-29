@@ -13,7 +13,6 @@ namespace serac {
 // Initialize StateManager's static members - these will be fully initialized in StateManager::initialize
 std::unordered_map<std::string, axom::sidre::MFEMSidreDataCollection> StateManager::datacolls_;
 bool                                                                  StateManager::is_restart_ = false;
-// std::vector<std::unique_ptr<SyncableData>>                            StateManager::syncable_data_;
 axom::sidre::DataStore* StateManager::ds_                = nullptr;
 std::string             StateManager::output_dir_        = "";
 const std::string       StateManager::default_mesh_name_ = "default";
@@ -129,10 +128,6 @@ void StateManager::save(const double t, const int cycle, const std::string& mesh
   std::string file_path = axom::utilities::filesystem::joinPath(datacoll.GetPrefixPath(), datacoll.GetCollectionName());
   SLIC_INFO_ROOT(axom::fmt::format("Saving data collection at time: {} to path: {}", t, file_path));
 
-  // sam: ?
-  // for (const auto& data : syncable_data_) {
-  //  data->sync();
-  //}
   datacoll.SetTime(t);
   datacoll.SetCycle(cycle);
   datacoll.Save();
