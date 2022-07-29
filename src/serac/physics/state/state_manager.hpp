@@ -58,34 +58,6 @@ public:
   static FiniteElementDual newDual(FiniteElementVector::Options&& options  = {},
                                    const std::string&             mesh_tag = default_mesh_name_);
 
-  ///**
-  // * @brief Factory method for creating a new QuadratureData object
-  // * @tparam T The type of the per-qpt data
-  // * @param[in] name The name of the quadrature data field
-  // * @param[in] p The order of the quadrature rule
-  // * @param[in] mesh_tag A string that uniquely identifies the mesh on which the quadrature data is to be defined
-  // * @see QuadratureData::QuadratureData
-  // */
-  // template <typename T>
-  // static QuadratureData<T>& newQuadratureData(const std::string& name, const int p,
-  //                                            const std::string& mesh_tag = default_mesh_name_)
-  //{
-  //  auto& datacoll = datacolls_.at(mesh_tag);
-  //  if (is_restart_) {
-  //    auto field = datacoll.GetQField(name);
-  //    syncable_data_.push_back(std::make_unique<QuadratureData<T>>(*field));
-  //    return static_cast<QuadratureData<T>&>(*syncable_data_.back());
-  //  } else {
-  //    SLIC_ERROR_ROOT_IF(datacoll.HasQField(name),
-  //                       axom::fmt::format("Serac's datacollection was already given a qfield named '{0}'", name));
-  //    syncable_data_.push_back(std::make_unique<QuadratureData<T>>(mesh(mesh_tag), p, false));
-  //    // The static_cast is safe here because we "know" what we just inserted into the vector
-  //    auto& qdata = static_cast<QuadratureData<T>&>(*syncable_data_.back());
-  //    datacoll.RegisterQField(name, &(qdata.QFunc()));
-  //    return qdata;
-  //  }
-  //}
-
   /**
    * @brief Updates the Conduit Blueprint state in the datastore and saves to a file
    * @param[in] t The current sim time
@@ -114,7 +86,6 @@ public:
   {
     datacolls_.clear();
     is_restart_ = false;
-    // syncable_data_.clear();
     ds_ = nullptr;
   };
 
@@ -164,12 +135,6 @@ private:
    * @brief Whether this simulation has been restarted from another simulation
    */
   static bool is_restart_;
-
-  /**
-   * @brief A set of @p QuadratureData<T> objects that need to be synchronized before saving to disk
-   * FIXME Need one set per datacoll since we can save at different times?
-   */
-  // static std::vector<std::unique_ptr<SyncableData>> syncable_data_;
 
   /// @brief Pointer (non-owning) to the datastore
   static axom::sidre::DataStore* ds_;
