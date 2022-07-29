@@ -46,6 +46,10 @@ void functional_solid_test_static(double expected_disp_norm)
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
+  auto options = default_static_options;
+  options.nonlinear.rel_tol = 1.0e-8;
+  options.nonlinear.abs_tol = 1.0e-16;
+
   // Construct a functional-based solid mechanics solver
   SolidFunctional<p, dim> solid_solver(default_static_options, GeometricNonlinearities::On, FinalMeshOption::Reference,
                                        "solid_functional");
@@ -83,7 +87,7 @@ void functional_solid_test_static(double expected_disp_norm)
   solid_solver.outputState("paraview_output");
 
   // Check the final displacement norm
-  EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
+  EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 5.0e-9);
 }
 
 void functional_solid_test_static_J2()
