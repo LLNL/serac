@@ -20,6 +20,8 @@
 
 namespace serac {
 
+using solid_mechanics::default_static_options;
+
 TEST(SolidFunctional, BoundaryCondition)
 {
   MPI_Barrier(MPI_COMM_WORLD);
@@ -39,24 +41,11 @@ TEST(SolidFunctional, BoundaryCondition)
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
 
-  // define the solver configurations
-  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-12,
-                                                         .abs_tol     = 1.0e-22,
-                                                         .print_level = 0,
-                                                         .max_iter    = 500,
-                                                         .lin_solver  = LinearSolver::GMRES,
-                                                         .prec        = HypreBoomerAMGPrec{}};
-
-  const NonlinearSolverOptions default_nonlinear_options = {
-      .rel_tol = 1.0e-9, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
-
-  const typename solid_util::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
-
   // Construct a functional-based solid mechanics solver
-  SolidFunctional<p, dim> solid_solver(default_static, GeometricNonlinearities::Off, FinalMeshOption::Reference,
+  SolidFunctional<p, dim> solid_solver(default_static_options, GeometricNonlinearities::Off, FinalMeshOption::Reference,
                                        "solid_functional_boundary");
 
-  solid_util::LinearIsotropicSolid<dim> mat(1.0, 1.0, 1.0);
+  solid_mechanics::LinearIsotropic<dim> mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
 
   // note: L is specific to beam-quad.mesh
