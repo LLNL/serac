@@ -33,7 +33,7 @@ namespace solid_mechanics {
  * solid mechanics simulations
  */
 const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
-                                                       .abs_tol     = 1.0e-10,
+                                                       .abs_tol     = 1.0e-16,
                                                        .print_level = 0,
                                                        .max_iter    = 500,
                                                        .lin_solver  = LinearSolver::GMRES,

@@ -87,7 +87,7 @@ void functional_solid_test_static(double expected_disp_norm)
   solid_solver.outputState("paraview_output");
 
   // Check the final displacement norm
-  EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 5.0e-9);
+  EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
 }
 
 void functional_solid_test_static_J2()
@@ -375,11 +375,11 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
 }
 
-TEST(SolidFunctional, 2DLinearStatic) { functional_solid_test_static<1, 2>(1.5110771219497878); }
+TEST(SolidFunctional, 2DLinearStatic) { functional_solid_test_static<1, 2>(1.5110743593501033); }
 TEST(SolidFunctional, 2DQuadStatic) { functional_solid_test_static<2, 2>(2.1864070695817928); }
 TEST(SolidFunctional, 2DQuadParameterizedStatic) { functional_parameterized_solid_test<2, 2>(2.1864070695817928); }
 
-TEST(SolidFunctional, 3DLinearStatic) { functional_solid_test_static<1, 3>(1.3708698270682129); }
+TEST(SolidFunctional, 3DLinearStatic) { functional_solid_test_static<1, 3>(1.3708718127987922); }
 TEST(SolidFunctional, 3DQuadStatic) { functional_solid_test_static<2, 3>(1.9497254957351946); }
 
 TEST(SolidFunctional, 3DQuadStaticJ2) { functional_solid_test_static_J2(); }
