@@ -46,7 +46,7 @@ void functional_solid_test_static(double expected_disp_norm)
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
-  auto options = default_static_options;
+  auto options              = default_static_options;
   options.nonlinear.rel_tol = 1.0e-8;
   options.nonlinear.abs_tol = 1.0e-16;
 
