@@ -51,7 +51,7 @@ void functional_solid_test_static(double expected_disp_norm)
   options.nonlinear.abs_tol = 1.0e-16;
 
   // Construct a functional-based solid mechanics solver
-  SolidFunctional<p, dim> solid_solver(default_static_options, GeometricNonlinearities::On, FinalMeshOption::Reference,
+  SolidFunctional<p, dim> solid_solver(options, GeometricNonlinearities::On, FinalMeshOption::Reference,
                                        "solid_functional");
 
   solid_mechanics::NeoHookean<dim> mat{1.0, 1.0, 1.0};
