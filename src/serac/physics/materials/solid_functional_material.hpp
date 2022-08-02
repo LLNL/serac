@@ -66,6 +66,7 @@ struct NeoHookean {
   template <typename DispGradType>
   SERAC_HOST_DEVICE auto operator()(State& /* state */, const DispGradType& du_dX) const
   {
+    using std::log;
     constexpr auto I         = Identity<dim>();
     auto           lambda    = K - (2.0 / dim) * G;
     auto           B_minus_I = du_dX * transpose(du_dX) + transpose(du_dX) + du_dX;
