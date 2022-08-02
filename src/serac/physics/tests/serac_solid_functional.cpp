@@ -19,31 +19,20 @@
 
 namespace serac {
 
-double patch_test()
+template <int dim>
+mfem::Mesh buildHypercubeMesh(std::array<int, dim> elementsPerDim)
 {
-  constexpr int dim = 3;
+  if constexpr (dim == 2) {
+    return buildRectangleMesh(elementsPerDim[0], elementsPerDim[1]);
+  } else if constexpr (dim == 3) {
+    return buildCuboidMesh(elementsPerDim[0], elementsPerDim[1], elementsPerDim[2]);
+  }
+}
+
+template <int dim>
+double patch_test(std::function<void(const mfem::Vector&, mfem::Vector&)> exact_displacement_function)
+{
   constexpr int p = 1;
-
-  mfem::DenseMatrix A(3);
-  A(0, 0) = 0.110791568544027;
-  A(0, 1) = 0.230421268325901;
-  A(0, 2) = 0.15167673653354;
-  A(1, 0) = 0.198344644470483;
-  A(1, 1) = 0.060514559793513;
-  A(1, 2) = 0.084137393813728;
-  A(2, 0) = 0.011544253485023;
-  A(2, 1) = 0.060942846497753;
-  A(2, 2) = 0.186383473579596;
-
-  mfem::Vector b(3);
-  b(0) = 0.765645367640828;
-  b(1) = 0.992487355850465;
-  b(2) = 0.162199373722092;
-
-  auto exact_displacement_function = [&A, &b](const mfem::Vector& X, mfem::Vector& u) {
-    A.Mult(X, u);
-    u += b;
-  };
   
   //auto body_force_function = [](auto, auto, auto, auto){ return tensor<double, dim>{}; };
 
@@ -59,23 +48,24 @@ double patch_test()
   static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for solid functional test");
 
   // Construct the appropriate dimension mesh and give it to the data store
-  constexpr int elements_in_x = 3;
-  constexpr int elements_in_y = 4;
-  constexpr int elements_in_z = 2;
-  auto mesh = mesh::refineAndDistribute(buildCuboidMesh(elements_in_x, elements_in_y, elements_in_z),
+  std::array<int, dim> elements_per_dim{3, 4};
+  if constexpr (dim == 3) {
+    elements_per_dim[2] = 2;
+  }
+  auto mesh = mesh::refineAndDistribute(buildHypercubeMesh<dim>(elements_per_dim),
                                         serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
 
   // define the solver configurations
-  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
-                                                         .abs_tol     = 1.0e-10,
+  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-10,
+                                                         .abs_tol     = 1.0e-11,
                                                          .print_level = 0,
-                                                         .max_iter    = 500,
-                                                         .lin_solver  = LinearSolver::CG,
+                                                         .max_iter    = 20,
+                                                         .lin_solver  = LinearSolver::GMRES,
                                                          .prec        = HypreBoomerAMGPrec{}};
 
   const NonlinearSolverOptions default_nonlinear_options = {
-      .rel_tol = 1.0e-10, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
+      .rel_tol = 1.0e-12, .abs_tol = 1.0e-15, .max_iter = 10, .print_level = 1};
 
   const typename solid_util::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
 
@@ -88,9 +78,17 @@ double patch_test()
   double bulk_modulus = 1.0;
   solid_util::NeoHookeanSolid<dim> mat(density, shear_modulus, bulk_modulus);
   solid_solver.setMaterial(mat);
+
+  // Set the initial displacement
+  //solid_solver.setDisplacement([](const mfem::Vector&, mfem::Vector& u) { u = 0.0; });
   
   // Define a boundary attribute set
-  std::set<int> essential_boundaries = {1, 2, 3, 4, 5, 6};
+  std::set<int> essential_boundaries;
+  if constexpr (dim == 2) {
+    essential_boundaries = {1, 2, 3, 4};
+  } else {
+    essential_boundaries = {1, 2, 3, 4, 5, 6};
+  }
   
   // displacement boundary condition
   solid_solver.setDisplacementBCs(essential_boundaries, exact_displacement_function);
@@ -104,9 +102,6 @@ double patch_test()
   // solid_solver.setTractionBCs([=](auto, auto n, auto) { return dot(tau, n); });
 
   //solid_solver.addBodyForce(force);
-
-  // Set the initial displacement
-  solid_solver.setDisplacement([](const mfem::Vector&, mfem::Vector& u) { u = 0.0; });
   
   // Finalize the data structures
   solid_solver.completeSetup();
@@ -120,8 +115,11 @@ double patch_test()
 
   // Compute norm of error
   mfem::VectorFunctionCoefficient exact_solution_coef(dim, exact_displacement_function);
+  double uNorm = solid_solver.displacement().gridFunction().Norml2();
+  std::cout << "||u|| = " << uNorm << std::endl;
   return solid_solver.displacement().gridFunction().ComputeL2Error(exact_solution_coef);
 }
+
 
 template <int p, int dim>
 void functional_solid_test_static(double expected_disp_norm)
@@ -486,10 +484,39 @@ TEST(SolidFunctional, 3DQuadDynamic) { functional_solid_test_dynamic<2, 3>(1.527
 TEST(SolidFunctional, 2DLinearPressure) { functional_solid_test_boundary<1, 2>(0.065326222, TestType::Pressure); }
 TEST(SolidFunctional, 2DLinearTraction) { functional_solid_test_boundary<1, 2>(0.126593590, TestType::Traction); }
 
-TEST(SolidFunctional, PatchTest)
+template <int dim>
+void affine_solution(const mfem::Vector& X, mfem::Vector u)
 {
-  double error_norm = patch_test();
-  EXPECT_LT(error_norm, 1e-10);
+  mfem::DenseMatrix A(dim);
+  mfem::Vector b(dim);
+  A(0, 0) = 0.110791568544027;
+  A(0, 1) = 0.230421268325901;
+  A(1, 0) = 0.198344644470483;
+  A(1, 1) = 0.060514559793513;
+  if constexpr (dim == 3) {
+    A(0, 2) = 0.15167673653354;
+    A(1, 2) = 0.084137393813728;
+    A(2, 0) = 0.011544253485023;
+    A(2, 1) = 0.060942846497753;
+    A(2, 2) = 0.186383473579596;
+  }
+  
+  b(0) = 0.765645367640828;
+  b(1) = 0.992487355850465;
+  if constexpr (dim == 3) {
+    b(2) = 0.162199373722092;
+  }
+
+  A.Mult(X, u);
+  u += b;
+  //u *= 0.01;
+}
+
+TEST(SolidFunctional, Patch2D)
+{
+  constexpr int dim = 2;
+  double error = patch_test<dim>(affine_solution<dim>);
+  EXPECT_LT(error, 1e-10);
 }
 
 }  // namespace serac
