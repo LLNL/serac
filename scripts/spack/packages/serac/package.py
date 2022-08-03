@@ -155,14 +155,14 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     # ASan is only supported by GCC and (some) LLVM-derived
     # compilers.
-    asan_compiler_blacklist = {'aocc', 'arm', 'cce', 'fj', 'intel', 'nag',
-                               'nvhpc', 'oneapi', 'pgi', 'xl', 'xl_r'}
-    asan_compiler_whitelist = {'gcc', 'clang', 'apple-clang'}
+    asan_compiler_denylist = {'aocc', 'arm', 'cce', 'fj', 'intel', 'nag',
+                              'nvhpc', 'oneapi', 'pgi', 'xl', 'xl_r'}
+    asan_compiler_allowlist = {'gcc', 'clang', 'apple-clang'}
 
-    # ASan compiler blacklist and whitelist should be disjoint.
-    assert len(asan_compiler_blacklist & asan_compiler_whitelist) == 0
+    # ASan compiler denylist and allowlist should be disjoint.
+    assert len(asan_compiler_denylist & asan_compiler_allowlist) == 0
 
-    for compiler_ in asan_compiler_blacklist:
+    for compiler_ in asan_compiler_denylist:
         conflicts(
             "%{0}".format(compiler_),
             when="+asan",
@@ -192,6 +192,7 @@ class Serac(CachedCMakePackage, CudaPackage):
         if "SYS_TYPE" in env:
             sys_type = env["SYS_TYPE"]
         return sys_type
+
 
     @property
     def cache_name(self):
@@ -383,7 +384,7 @@ class Serac(CachedCMakePackage, CudaPackage):
 
 
     def cmake_args(self):
-        is_asan_compiler = self.compiler.name in self.asan_compiler_whitelist
+        is_asan_compiler = self.compiler.name in self.asan_compiler_allowlist
         if self.spec.satisfies('+asan') and not is_asan_compiler:
             raise UnsupportedCompilerError(
                 "Serac cannot be built with Address Sanitizer flags "
