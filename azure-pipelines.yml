@@ -57,6 +57,7 @@ jobs:
           HOST_CONFIG: 'clang@10.0.0.cmake'
           BUILD_TYPE: 'Debug'
           CMAKE_OPTS: '-DSERAC_ENABLE_CODEVELOP=ON'
+          BUILD_SRC_OPTS: '--skip-install'
 
   pool:
     vmImage: $(VM_ImageName)
@@ -66,8 +67,8 @@ jobs:
     clean: true
     submodules: recursive
   - script:  |
-      echo " -e $TEST_TARGET -e HOST_CONFIG $(Compiler_ImageName) ./scripts/llnl/build_src.py -v --host-config $HOST_CONFIG --extra-cmake-options \"${CMAKE_OPTS} -DCMAKE_BUILD_TYPE=$BUILD_TYPE\""
-      docker run --rm -v `pwd`:/home/serac/serac -e TEST_TARGET -e HOST_CONFIG $(Compiler_ImageName) ./serac/scripts/llnl/build_src.py -v --host-config $HOST_CONFIG --extra-cmake-options "${CMAKE_OPTS} -DCMAKE_BUILD_TYPE=$BUILD_TYPE"
+      echo " -e $TEST_TARGET -e HOST_CONFIG $(Compiler_ImageName) ./scripts/llnl/build_src.py $BUILD_SRC_OPTS -v --host-config $HOST_CONFIG --extra-cmake-options \"${CMAKE_OPTS} -DCMAKE_BUILD_TYPE=$BUILD_TYPE\""
+      docker run --rm -v `pwd`:/home/serac/serac -e TEST_TARGET -e HOST_CONFIG $(Compiler_ImageName) ./serac/scripts/llnl/build_src.py $BUILD_SRC_OPTS -v --host-config $HOST_CONFIG --extra-cmake-options "${CMAKE_OPTS} -DCMAKE_BUILD_TYPE=$BUILD_TYPE"
 
     displayName: '$(TEST_TARGET) Build & Test'
   - task: PublishTestResults@2
