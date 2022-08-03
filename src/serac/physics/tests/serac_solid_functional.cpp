@@ -183,20 +183,23 @@ double patch_test_linear(std::function<void(const mfem::Vector&, mfem::Vector&)>
     essential_boundaries = {1, 2, 3};
   }
 
+  int x_equals_0 = (dim == 2) ? 4 : 0;
+  int y_equals_0 = (dim == 2) ? 4 : 0;
+
   // displacement boundary condition
   auto x_bc = [&](auto x) {
     mfem::Vector u(2);
     exact_displacement_function(x, u);
     return u[0];
   };
-  solid_solver.setDisplacementBCs(std::set<int>{4}, x_bc, 0);
+  solid_solver.setDisplacementBCs({x_equals_0}, x_bc, 0);
 
   auto y_bc = [&](auto x) {
     mfem::Vector u(2);
     exact_displacement_function(x, u);
     return u[1];
   };
-  solid_solver.setDisplacementBCs(std::set<int>{1}, y_bc, 1);
+  solid_solver.setDisplacementBCs({y_equals_0}, y_bc, 1);
 
   // traction
   solid_solver.setTractionBCs([](auto x, auto, auto) { 
