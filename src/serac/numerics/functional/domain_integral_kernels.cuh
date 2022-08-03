@@ -167,8 +167,7 @@ template <Geometry g, typename test, typename trial, int Q, typename derivatives
           typename qpt_data_type = void>
 __global__ void eval_cuda_quadrature(const solution_type u, residual_type r,
                                      GPUArrayView<derivatives_type, 2> qf_derivatives, jacobian_type J, position_type X,
-                                     int num_elements, lambda qf,
-                                     QuadratureData<qpt_data_type> data)
+                                     int num_elements, lambda qf, QuadratureData<qpt_data_type> data)
 {
   using test_element          = finite_element<g, test>;
   using trial_element         = finite_element<g, trial>;
@@ -254,7 +253,7 @@ template <Geometry g, typename test, typename trial, int Q, serac::detail::Threa
 void evaluation_kernel_cuda(serac::detail::GPULaunchConfiguration config, const mfem::Vector& U, mfem::Vector& R,
                             GPUArrayView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J_,
                             const mfem::Vector& X_, int num_elements, lambda qf,
-                            std::shared_ptr< QuadratureData<qpt_data_type> > data = NoQData)
+                            std::shared_ptr<QuadratureData<qpt_data_type>> data = NoQData)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
@@ -279,8 +278,8 @@ void evaluation_kernel_cuda(serac::detail::GPULaunchConfiguration config, const 
 
   if constexpr (policy == serac::detail::ThreadParallelizationStrategy::THREAD_PER_QUADRATURE_POINT) {
     int blocks_quadrature_element = (num_elements * rule.size() + config.blocksize - 1) / config.blocksize;
-    eval_cuda_quadrature<g, test, trial, Q><<<blocks_quadrature_element, config.blocksize>>>(
-        u, r, qf_derivatives, J, X, num_elements, qf, *data);
+    eval_cuda_quadrature<g, test, trial, Q>
+        <<<blocks_quadrature_element, config.blocksize>>>(u, r, qf_derivatives, J, X, num_elements, qf, *data);
 
   } else if constexpr (policy == serac::detail::ThreadParallelizationStrategy::THREAD_PER_ELEMENT) {
     int blocks_element = (num_elements + config.blocksize - 1) / config.blocksize;

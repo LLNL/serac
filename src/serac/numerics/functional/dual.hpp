@@ -247,7 +247,7 @@ SERAC_HOST_DEVICE auto log(dual<gradient_type> a)
 }
 
 ///** @brief implementation of the natural logarithm function for doubles */
-//SERAC_HOST_DEVICE auto log(double a) { return std::log(a); }
+// SERAC_HOST_DEVICE auto log(double a) { return std::log(a); }
 
 /** @brief implementation of `a` (dual) raised to the `b` (dual) power */
 template <typename gradient_type>
