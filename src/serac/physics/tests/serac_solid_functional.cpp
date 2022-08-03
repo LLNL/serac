@@ -120,6 +120,109 @@ double patch_test(std::function<void(const mfem::Vector&, mfem::Vector&)> exact_
   return solid_solver.displacement().gridFunction().ComputeL2Error(exact_solution_coef);
 }
 
+template <int dim>
+double patch_test_linear(std::function<void(const mfem::Vector&, mfem::Vector&)> exact_displacement_function)
+{
+  constexpr int p = 1;
+  
+  //auto body_force_function = [](auto, auto, auto, auto){ return tensor<double, dim>{}; };
+
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  int serial_refinement   = 0;
+  int parallel_refinement = 0;
+
+  // Create DataStore
+  axom::sidre::DataStore datastore;
+  serac::StateManager::initialize(datastore, "solid_functional_static_solve");
+
+  static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for solid functional test");
+
+  // Construct the appropriate dimension mesh and give it to the data store
+  std::array<int, dim> elements_per_dim{3, 4};
+  if constexpr (dim == 3) {
+    elements_per_dim[2] = 2;
+  }
+  auto mymesh = buildHypercubeMesh<dim>(elements_per_dim);
+  mymesh.Save("garbage.txt");
+  auto mesh = mesh::refineAndDistribute(buildHypercubeMesh<dim>(elements_per_dim),
+                                        serial_refinement, parallel_refinement);
+  serac::StateManager::setMesh(std::move(mesh));
+
+  // define the solver configurations
+  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-10,
+                                                         .abs_tol     = 1.0e-11,
+                                                         .print_level = 0,
+                                                         .max_iter    = 20,
+                                                         .lin_solver  = LinearSolver::GMRES,
+                                                         .prec        = HypreBoomerAMGPrec{}};
+
+  const NonlinearSolverOptions default_nonlinear_options = {
+      .rel_tol = 1.0e-12, .abs_tol = 1.0e-15, .max_iter = 10, .print_level = 1};
+
+  const typename solid_util::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
+
+  // Construct a functional-based solid mechanics solver
+  SolidFunctional<p, dim> solid_solver(default_static, GeometricNonlinearities::Off, FinalMeshOption::Reference,
+                                       "solid_functional");
+
+  double density = 1.0;
+  double shear_modulus = 1.0;
+  double bulk_modulus = 1.0;
+  solid_util::LinearIsotropicSolid<dim> mat(density, shear_modulus, bulk_modulus);
+  solid_solver.setMaterial(mat);
+
+  // Set the initial displacement
+  //solid_solver.setDisplacement([](const mfem::Vector&, mfem::Vector& u) { u = 0.0; });
+  
+  // Define a boundary attribute set
+  std::set<int> essential_boundaries;
+  if constexpr (dim == 2) {
+    essential_boundaries = {1, 2};
+  } else {
+    essential_boundaries = {1, 2, 3};
+  }
+
+
+  // displacement boundary condition
+  auto x_bc = [&](auto x) {
+    mfem::Vector u(2);
+    exact_displacement_function(x, u);
+    return u[0];
+  };
+  solid_solver.setDisplacementBCs(std::set<int>{1}, x_bc, 0);
+
+  auto y_bc = [&](auto x) {
+    mfem::Vector u(2);
+    exact_displacement_function(x, u);
+    return u[1];
+  };
+  solid_solver.setDisplacementBCs(std::set<int>{2}, y_bc, 1);
+
+
+  // traction
+  solid_solver.setTractionBCs([](auto, auto, auto) { return tensor<double, 2>{{1.0, 0.0}}; });
+
+  //solid_solver.addBodyForce(force);
+  
+  // Finalize the data structures
+  solid_solver.completeSetup();
+
+  // Perform the quasi-static solve
+  double dt = 1.0;
+  solid_solver.advanceTimestep(dt);
+
+  // Output the sidre-based and paraview plot files
+  solid_solver.outputState("paraview_output");
+
+  // Compute norm of error
+  mfem::VectorFunctionCoefficient exact_solution_coef(dim, exact_displacement_function);
+  double uNorm = solid_solver.displacement().gridFunction().Norml2();
+  std::cout << "||u|| = " << uNorm << std::endl;
+  return solid_solver.displacement().gridFunction().ComputeL2Error(exact_solution_coef);
+}
+
+
 
 template <int p, int dim>
 void functional_solid_test_static(double expected_disp_norm)
@@ -507,6 +610,18 @@ TEST(SolidFunctional, Patch2D)
   double error = patch_test<dim>(affine_solution<dim>);
   EXPECT_LT(error, 1e-10);
 }
+
+TEST(SolidFunctional, Patch2DLinear)
+{
+  auto linear_solution = [](const mfem::Vector& X, mfem::Vector& u) {
+    u(0) = X[0];
+    u(1) = -0.125*X[1];
+  };
+  constexpr int dim = 2;
+  double error = patch_test_linear<dim>(linear_solution);
+  EXPECT_LT(error, 1e-10);
+}
+
 
 }  // namespace serac
 
