@@ -153,7 +153,7 @@ double patch_test_linear(std::function<void(const mfem::Vector&, mfem::Vector&)>
   const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-10,
                                                          .abs_tol     = 1.0e-11,
                                                          .print_level = 0,
-                                                         .max_iter    = 20,
+                                                         .max_iter    = 200,
                                                          .lin_solver  = LinearSolver::GMRES,
                                                          .prec        = HypreBoomerAMGPrec{}};
 
@@ -183,25 +183,25 @@ double patch_test_linear(std::function<void(const mfem::Vector&, mfem::Vector&)>
     essential_boundaries = {1, 2, 3};
   }
 
-
   // displacement boundary condition
   auto x_bc = [&](auto x) {
     mfem::Vector u(2);
     exact_displacement_function(x, u);
     return u[0];
   };
-  solid_solver.setDisplacementBCs(std::set<int>{1}, x_bc, 0);
+  solid_solver.setDisplacementBCs(std::set<int>{4}, x_bc, 0);
 
   auto y_bc = [&](auto x) {
     mfem::Vector u(2);
     exact_displacement_function(x, u);
     return u[1];
   };
-  solid_solver.setDisplacementBCs(std::set<int>{2}, y_bc, 1);
-
+  solid_solver.setDisplacementBCs(std::set<int>{1}, y_bc, 1);
 
   // traction
-  solid_solver.setTractionBCs([](auto, auto, auto) { return tensor<double, 2>{{1.0, 0.0}}; });
+  solid_solver.setTractionBCs([](auto x, auto, auto) { 
+    return tensor<double, 2>{{(x[0] == 1) ? 1.0 : 0.0, 0.0}}; 
+  });
 
   //solid_solver.addBodyForce(force);
   
