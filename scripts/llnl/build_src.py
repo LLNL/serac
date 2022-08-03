@@ -42,6 +42,11 @@ def parse_args():
                       dest="automation",
                       default=False,
                       help="Toggle automation mode which uses env $HOST_CONFIG then $SYS_TYPE/$COMPILER if found")
+    parser.add_option("--skip-install",
+                      action="store_true",
+                      dest="skip_install",
+                      default=False,
+                      help="Skip testing install target which does not work in some configurations (codevelop)")
     parser.add_option("-v", "--verbose",
                       action="store_true",
                       dest="verbose",
@@ -90,7 +95,9 @@ def main():
         # Default to build all SYS_TYPE's host-configs in host-config/
         build_all = not opts["hostconfig"] and not opts["automation"]
         if build_all:
-            res = build_and_test_host_configs(repo_dir, timestamp, False, opts["verbose"], opts["extra_cmake_options"])
+            res = build_and_test_host_configs(repo_dir, timestamp, False,
+                                              opts["verbose"], opts["extra_cmake_options"],
+                                              opts["skip_install"])
         # Otherwise try to build a specific host-config
         else:
             # Command-line arg has highest priority
@@ -138,7 +145,8 @@ def main():
 
             test_root = get_build_and_test_root(repo_dir, timestamp)
             os.mkdir(test_root)
-            res = build_and_test_host_config(test_root, hostconfig_path, opts["verbose"], opts["extra_cmake_options"])
+            res = build_and_test_host_config(test_root, hostconfig_path, opts["verbose"], opts["extra_cmake_options"],
+                                             opts["skip_install"])
 
     finally:
         os.chdir(original_wd)
