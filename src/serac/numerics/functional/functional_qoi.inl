@@ -67,12 +67,12 @@ class Functional<double(trials...), exec> {
   class Gradient;
 
   // clang-format off
-  template <typename... T>
+  template <int i> 
   struct operator_paren_return {
     using type = typename std::conditional<
-        (std::is_same_v<T, differentiate_wrt_this> + ...) == 1, // if the there is a dual number in the pack
-        serac::tuple<double, Gradient&>,                        // then we return the value and the derivative
-        double                                                  // otherwise, we just return the value
+        i >= 0,                           // if `i` is greater than or equal to zero,
+        serac::tuple<double&, Gradient&>, // then we return the value and the derivative w.r.t arg `i`
+        double                            // otherwise, we just return the value
         >::type;
   };
   // clang-format on
@@ -306,21 +306,16 @@ public:
    * arguments may be a dual_vector, to indicate that Functional::operator() should not only evaluate the
    * element calculations, but also differentiate them w.r.t. the specified dual_vector argument
    */
-  template <typename... T>
-  typename operator_paren_return<T...>::type operator()(const T&... args)
+  template <int wrt, typename... T>
+  typename operator_paren_return<wrt>::type operator()(DifferentiateWRT<wrt>, const T&... args)
   {
-    constexpr int num_differentiated_arguments = (std::is_same_v<T, differentiate_wrt_this> + ...);
-    static_assert(num_differentiated_arguments <= 1,
-                  "Error: Functional::operator() can only differentiate w.r.t. 1 argument a time");
+    const mfem::Vector* input_T[] = {&static_cast<const mfem::Vector&>(args)...};
     static_assert(sizeof...(T) == num_trial_spaces,
                   "Error: Functional::operator() must take exactly as many arguments as trial spaces");
 
-    [[maybe_unused]] constexpr int                                           wrt = index_of_differentiation<T...>();
-    std::array<std::reference_wrapper<const mfem::Vector>, num_trial_spaces> input_T{args...};
-
     // get the values for each local processor
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
-      P_trial_[i]->Mult(input_T[i].get(), input_L_[i]);
+      P_trial_[i]->Mult(*input_T[i], input_L_[i]);
     }
 
     output_L_ = 0.0;
@@ -362,16 +357,7 @@ public:
     // scatter-add to compute global residuals
     P_test_->MultTranspose(output_L_, output_T_);
 
-    if constexpr (num_differentiated_arguments == 0) {
-      // if the user passes only `mfem::Vector`s then we assume they only want the output value
-      //
-      // mfem::Vector arg0 = ...;
-      // mfem::Vector arg1 = ...;
-      // e.g. mfem::Vector value = my_functional(arg0, arg1);
-      return output_T_[0];
-    }
-
-    if constexpr (num_differentiated_arguments == 1) {
+    if constexpr (wrt >= 0) {
       // if the user has indicated they'd like to evaluate and differentiate w.r.t.
       // a specific argument, then we return both the value and gradient w.r.t. that argument
       //
@@ -380,6 +366,32 @@ public:
       // e.g. auto [value, gradient_wrt_arg1] = my_functional(arg0, differentiate_wrt(arg1));
       return {output_T_[0], grad_[wrt]};
     }
+
+    if constexpr (wrt == -1) {
+      // if the user passes only `mfem::Vector`s then we assume they only want the output value
+      //
+      // mfem::Vector arg0 = ...;
+      // mfem::Vector arg1 = ...;
+      // e.g. mfem::Vector value = my_functional(arg0, arg1);
+      return output_T_[0];
+    }
+
+
+  }
+
+  /// @overload
+  template <typename... T>
+  auto operator()(const T&... args)
+  {
+    constexpr int num_differentiated_arguments = (std::is_same_v<T, differentiate_wrt_this> + ...);
+    static_assert(num_differentiated_arguments <= 1,
+                  "Error: Functional::operator() can only differentiate w.r.t. 1 argument a time");
+    static_assert(sizeof...(T) == num_trial_spaces,
+                  "Error: Functional::operator() must take exactly as many arguments as trial spaces");
+
+    [[maybe_unused]] constexpr int i = index_of_differentiation<T...>();
+
+    return (*this)(DifferentiateWRT<i>{}, args...);
   }
 
 private:
