@@ -375,8 +375,6 @@ public:
       // e.g. mfem::Vector value = my_functional(arg0, arg1);
       return output_T_[0];
     }
-
-
   }
 
   /// @overload
