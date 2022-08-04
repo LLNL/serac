@@ -9,13 +9,7 @@
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/terminator.hpp"
 
-#include <fstream>
-
 namespace serac::logger {
-
-static int logger_rank = 0;
-
-int rank() { return logger_rank; }
 
 bool initialize(MPI_Comm comm)
 {
@@ -25,8 +19,7 @@ bool initialize(MPI_Comm comm)
     slic::initialize();
   }
 
-  auto [num_ranks, rank] = getMPIInfo(comm);
-  logger_rank            = rank;
+  auto [num_ranks, _] = getMPIInfo(comm);
 
   std::string loggerName = num_ranks > 1 ? "serac_parallel_logger" : "serac_serial_logger";
   slic::createLogger(loggerName);
