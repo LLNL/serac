@@ -149,22 +149,15 @@ double patch_test_linear(std::function<void(const mfem::Vector&, mfem::Vector&)>
                                         serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
 
-  // define the solver configurations
-  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-10,
-                                                         .abs_tol     = 1.0e-11,
-                                                         .print_level = 0,
-                                                         .max_iter    = 200,
-                                                         .lin_solver  = LinearSolver::GMRES,
-                                                         .prec        = HypreBoomerAMGPrec{}};
+  const DirectSolverOptions linear_solver_options = {.print_level = 0};
+  const NonlinearSolverOptions nonlinear_solver_options = {
+      .rel_tol = 1.0e-10, .abs_tol = 1.0e-15, .max_iter = 1, .print_level = 1};
 
-  const NonlinearSolverOptions default_nonlinear_options = {
-      .rel_tol = 1.0e-12, .abs_tol = 1.0e-15, .max_iter = 10, .print_level = 1};
-
-  const typename solid_util::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
+  const typename solid_util::SolverOptions static_solver_options = {linear_solver_options, nonlinear_solver_options};
 
   // Construct a functional-based solid mechanics solver
-  SolidFunctional<p, dim> solid_solver(default_static, GeometricNonlinearities::Off, FinalMeshOption::Reference,
-                                       "solid_functional");
+  SolidFunctional<p, dim> solid_solver(static_solver_options, GeometricNonlinearities::Off,
+                                       FinalMeshOption::Reference, "solid_functional");
 
   double density = 1.0;
   double shear_modulus = 1.0;
@@ -174,17 +167,17 @@ double patch_test_linear(std::function<void(const mfem::Vector&, mfem::Vector&)>
 
   // Set the initial displacement
   //solid_solver.setDisplacement([](const mfem::Vector&, mfem::Vector& u) { u = 0.0; });
-  
-  // Define a boundary attribute set
-  std::set<int> essential_boundaries;
-  if constexpr (dim == 2) {
-    essential_boundaries = {1, 2};
-  } else {
-    essential_boundaries = {1, 2, 3};
-  }
 
+  // Define a boundary attribute set
   int x_equals_0 = (dim == 2) ? 4 : 0;
   int y_equals_0 = (dim == 2) ? 4 : 0;
+  std::set<int> essential_boundaries;
+  if constexpr (dim == 2) {
+    essential_boundaries = {x_equals_0, y_equals_0};
+  } else {
+    int z_equals_0 = 5;
+    essential_boundaries = {x_equals_0, y_equals_0, z_equals_0};
+  }
 
   // displacement boundary condition
   auto x_bc = [&](auto x) {
@@ -618,7 +611,7 @@ TEST(SolidFunctional, Patch2DLinear)
 {
   auto linear_solution = [](const mfem::Vector& X, mfem::Vector& u) {
     u(0) = X[0];
-    u(1) = -0.125*X[1];
+    u(1) = -1.0/7.0*X[1];
   };
   constexpr int dim = 2;
   double error = patch_test_linear<dim>(linear_solution);
