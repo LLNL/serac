@@ -61,7 +61,7 @@ auto uniaxial_stress_test(double t_max, size_t num_steps, const MaterialType mat
     return tensor{{output.stress[1][1], output.stress[2][2]}};
   };
 
-  std::vector<tuple<double, tensor<double, 3, 3>, tensor<double, 3, 3>, StateType> > output_history;
+  std::vector<camp::tuple<double, tensor<double, 3, 3>, tensor<double, 3, 3>, StateType> > output_history;
   output_history.reserve(num_steps);
 
   tensor<double, 3, 3> dudx{};
@@ -74,7 +74,7 @@ auto uniaxial_stress_test(double t_max, size_t num_steps, const MaterialType mat
     dudx[2][2]             = epsilon_yy_and_zz[1];
 
     auto stress = material(unused, unused, dudx, state, parameter_functions(t)...).stress;
-    output_history.push_back(tuple{t, dudx, stress, state});
+    output_history.push_back(camp::tuple{t, dudx, stress, state});
 
     t += dt;
   }
