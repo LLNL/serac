@@ -59,27 +59,14 @@ double patch_test(std::function<void(const mfem::Vector&, mfem::Vector&)> exact_
                                         serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
 
-  // define the solver configurations
-  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-10,
-                                                         .abs_tol     = 1.0e-11,
-                                                         .print_level = 0,
-                                                         .max_iter    = 20,
-                                                         .lin_solver  = LinearSolver::GMRES,
-                                                         .prec        = HypreBoomerAMGPrec{}};
-
-  const NonlinearSolverOptions default_nonlinear_options = {
-      .rel_tol = 1.0e-12, .abs_tol = 1.0e-15, .max_iter = 10, .print_level = 1};
-
-  const typename solid_util::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
-
   // Construct a functional-based solid mechanics solver
-  SolidFunctional<p, dim> solid_solver(default_static, GeometricNonlinearities::On, FinalMeshOption::Reference,
-                                       "solid_functional");
+  SolidFunctional<p, dim> solid_solver(default_static_options, GeometricNonlinearities::On,
+                                       FinalMeshOption::Reference, "solid_functional");
 
   double density = 1.0;
   double shear_modulus = 1.0;
   double bulk_modulus = 1.0;
-  solid_util::NeoHookeanSolid<dim> mat(density, shear_modulus, bulk_modulus);
+  solid_mechanics::NeoHookean<dim> mat{density, shear_modulus, bulk_modulus};
   solid_solver.setMaterial(mat);
 
   // Set the initial displacement
@@ -156,7 +143,7 @@ double patch_test_linear(std::function<void(const mfem::Vector&, mfem::Vector&)>
   const NonlinearSolverOptions nonlinear_solver_options = {
       .rel_tol = 1.0e-10, .abs_tol = 1.0e-15, .max_iter = 1, .print_level = 1};
 
-  const typename solid_util::SolverOptions static_solver_options = {linear_solver_options, nonlinear_solver_options};
+  const SolverOptions static_solver_options = {linear_solver_options, nonlinear_solver_options};
 
   // Construct a functional-based solid mechanics solver
   SolidFunctional<p, dim> solid_solver(static_solver_options, GeometricNonlinearities::Off,
@@ -165,7 +152,7 @@ double patch_test_linear(std::function<void(const mfem::Vector&, mfem::Vector&)>
   double density = 1.0;
   double shear_modulus = 1.0;
   double bulk_modulus = 1.0;
-  solid_util::LinearIsotropicSolid<dim> mat(density, shear_modulus, bulk_modulus);
+  solid_mechanics::LinearIsotropic<dim> mat{density, shear_modulus, bulk_modulus};
   solid_solver.setMaterial(mat);
 
   // Set the initial displacement
@@ -198,7 +185,7 @@ double patch_test_linear(std::function<void(const mfem::Vector&, mfem::Vector&)>
   solid_solver.setDisplacementBCs({y_equals_0}, y_bc, 1);
 
   // traction
-  solid_solver.setTractionBCs([](auto x, auto, auto) { 
+  solid_solver.setPiolaTraction([](auto x, auto, auto) { 
     return tensor<double, 2>{{(x[0] == 1) ? 1.0 : 0.0, 0.0}}; 
   });
 
