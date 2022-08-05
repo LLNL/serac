@@ -155,6 +155,16 @@ packages:
       - spec: tar@1.26
         prefix: /usr
     buildable: false
+  unzip:
+    buildable: false
+    externals:
+    - spec: unzip@6.0
+      prefix: /usr
+  zlib:
+    buildable: false
+    externals:
+    - spec: zlib@1.2.7
+      prefix: /usr
 
   # Lock in versions of Devtools
   cmake:

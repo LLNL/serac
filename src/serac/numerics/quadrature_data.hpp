@@ -20,335 +20,91 @@
 
 #include "serac/infrastructure/accelerator.hpp"
 
-#include "serac/infrastructure/variant.hpp"
-
 namespace serac {
 
-namespace detail {
-
 /**
- * @brief A simple constexpr implementation of @p ceil
- * @param[in] num The number to "round up"
- * @pre num must be in the range [0, std::numeric_limits<int>::max())
- */
-constexpr int ceil(const double num)
-{
-  const auto as_int = static_cast<int>(num);
-  return (static_cast<double>(as_int) == num) ? as_int : as_int + 1;
-}
-
-/**
- * @brief Helper function for creating an mfem::QuadratureFunction in both restart and not-restart scenarios
- * @param[in] space The QSpace to construct the mfem::QuadratureFunction with
- * @param[in] alloc_qf Whether to allocate the mfem::QuadratureFunction - if this is a non-restart run, we delay the
- * allocation so it can be taken care of inside MFEMSidreDataCollection
- * @param[in] stride The stride of the array (number of doubles to allocate per point)
- */
-inline MaybeOwningPointer<mfem::QuadratureFunction> initialQuadFunc(mfem::QuadratureSpace* space, const bool alloc_qf,
-                                                                    const int stride)
-{
-  if (alloc_qf) {
-    return std::make_unique<mfem::QuadratureFunction>(space, stride);
-  } else {
-    return new mfem::QuadratureFunction(space, nullptr, stride);
-  }
-}
-
-/**
- * @brief A helper type and function to obtain the inaccessible offsets member variable from an
- * mfem::QuadratureSpace
- * @see https://accu.org/journals/overload/28/156/harrison_2776/
- */
-template <auto offsetV>
-struct forbidden_offsets {
-  /**
-   * @brief Retrieves the offsets from an mfem::QuadratureSpace
-   * @param[in] from The QuadratureSpace to retrieve from
-   */
-  friend int* quadSpaceOffsets(mfem::QuadratureSpace& from) { return from.*offsetV; }
-};
-
-/**
- * @brief Retrieves the offsets from an mfem::QuadratureSpace
- * @param[in] from The QuadratureSpace to retrieve from
- */
-int* quadSpaceOffsets(mfem::QuadratureSpace& from);
-
-template struct forbidden_offsets<&mfem::QuadratureSpace::element_offsets>;
-
-}  // namespace detail
-
-/**
- * @brief A shim class for describing the interface of something that can be synced
+ * @brief these classes are a little confusing. These two
+ * special types represent the similar (but different) cases of:
  *
- * Because @p QuadratureData is templated, we cannot store a collection of them of arbitrary type.
- * To support this for the purposes of iterating over them + synchronizing them within @p StateManager::Save
- * we need to introduce a non-templated layer of indirection, i.e., this class.  We store a collection of these
- * references to @p QuadratureData<T> (of varying @p T ) and call their virtual @p sync() methods to perform
- * the type-punning synchronization such that the underlying @p mfem::QuadratureFunction contains the updated data
- * that gets saved to disk by @p MFEMSidreDataCollection.
+ * Nothing: for qfunctions that have no notion of quadrature data (e.g. body forces).
+ *          QuadratureData<Nothing> will store no data, and `Nothing` will never appear
+ *          as an argument to a q-function (it will be omitted)
  *
- * Further info:
- * In practice this is used by @p StateManager so that the @p T[] stored by @p QuadratureData
- * can be synced (copied) to the @p double[] owned by its underlying @p mfem::QuadratureFunction
- * immediately prior to saving the data to disk.  That is, the interface for this class
- * is intended to capture the @p T[] -> @p double[] action required to use @p QuadratureData
- * with @p mfem::DataCollection's interface for quadrature point data (i.e., through @p mfem::QuadratureFunction )
+ * Empty: for qfunctions associated with material models (where quadrature data is part of
+ *        the interface) that do not actually need to store internal variables. QuadratureData<Empty>
+ *        will also store no data, but it will still appear as an argument to the q-function
+ *        (to make the material model interface consistent).
  */
-class SyncableData {
-public:
-  virtual ~SyncableData() = default;
-  /**
-   * @brief Perform the sync action
-   */
-  virtual void sync() = 0;
+struct Nothing {
 };
 
 /**
- * @brief Policy class for implementing indexing of quadrature point data
+ * @brief see `Nothing` for a complete description of this class and when to use it
  */
-template <typename T, typename Derived>
-class QuadratureDataImpl {
-public:
-  /**
-   * @brief Retrieves the data for a given quadrature point
-   * @param[in] element_idx The index of the desired element within the mesh
-   * @param[in] q_idx The index of the desired quadrature point within the element
-   */
-  SERAC_HOST_DEVICE T& operator()(const int element_idx, const int q_idx);
-
-private:
-  SERAC_HOST_DEVICE Derived& asDerived() { return static_cast<Derived&>(*this); }
-  SERAC_HOST_DEVICE const Derived& asDerived() const { return static_cast<const Derived&>(*this); }
+struct Empty {
 };
 
 /**
- * @brief Stores instances of user-defined type for each quadrature point in a mesh
- * @tparam T The type of the per-qpt data
- * @pre T must be default-constructible
- * @pre T must be trivially copyable (due to the use of memcpy for type punning)
+ * @brief A class for storing and access user-defined types at quadrature points
+ *
+ * @tparam the data type to be stored
+ *
+ * @note users are not intended to create these objects directly, instead
+ *       they should use the PhysicsModule::createQuadratureDataBuffer()
  */
 template <typename T>
-class QuadratureData : public SyncableData, public QuadratureDataImpl<T, QuadratureData<T>> {
-public:
-  /**
-   * @brief Constructs using a mesh and polynomial order
-   * @param[in] mesh The mesh for which quadrature-point data should be stored
-   * @param[in] p The polynomial order of the associated finite elements
-   * @param[in] alloc Flag to allocate the underlying data
-   */
-  QuadratureData(mfem::Mesh& mesh, const int p, const bool alloc = true);
+struct QuadratureData {
+  /// ctor, allocates memory and sets up strides
+  QuadratureData(size_t n1, size_t n2) : stride(n2) { data = new T[n1 * n2]; }
 
-// Turn off null dereference warnings for GCC
-// TODO Fix the underlying possible nullptr dereference warning with the `MaybeOwnedPointer` type.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wnull-dereference"
+  /// dtor, deallocates memory
+  ~QuadratureData() { delete data; }
 
-  /**
-   * @brief Constructs from an existing quadrature function
-   * @param[in] qfunc The QuadratureFunction with existing quadrature
-   * point data
-   *
-   * @pre @a qfunc must be created via an instance of this class, i.e.,
-   * this constructor is intended to be used as part of a save/restart
-   */
-  QuadratureData(mfem::QuadratureFunction& qfunc)
-      : qspace_(qfunc.GetSpace()),
-        qfunc_(&qfunc),
-        data_(static_cast<std::size_t>(detail::retrieve(qfunc_).Size() / stride_)),
-        offsets_(static_cast<std::size_t>(qfunc.GetSpace()->GetNE() + 1))
-  {
-    std::memcpy(offsets_.data(), detail::quadSpaceOffsets(detail::retrieve(qspace_)),
-                static_cast<std::size_t>(qfunc.GetSpace()->GetNE() + 1) * sizeof(int));
-    const double* qfunc_ptr = detail::retrieve(qfunc_).GetData();
-    int           j         = 0;
-    T*            data_ptr  = data_.data();
-    for (int i = 0; i < detail::retrieve(qfunc_).Size(); i += stride_) {
-      // The only legal (portable, defined) way to do type punning in C++
-      std::memcpy(data_ptr + j, qfunc_ptr + i, sizeof(T));
-      j++;
-    }
-  }
+  /// access a mutable reference to the quadrature data at element `i`, quadrature point `j`
+  SERAC_HOST_DEVICE T& operator()(size_t i, size_t j) { return data[i * stride + j]; }
 
-#pragma GCC diagnostic pop
+  /// access a const reference to the quadrature data at element `i`, quadrature point `j`
+  SERAC_HOST_DEVICE const T& operator()(size_t i, size_t j) const { return data[i * stride + j]; }
 
-  // When a QuadratureData instance is managed by StateManager, we don't
-  // ever want to copy from or move from that instance.  This is sort of
-  // overkill when QuadratureData objects are created outside of the StateManager,
-  // but this case should be fairly rare.
-  QuadratureData(const QuadratureData&) = delete;
-  QuadratureData(QuadratureData&&)      = delete;
-
-  /**
-   * @brief Assigns an item to each quadrature point
-   * @param[in] item The item to assign
-   */
-  QuadratureData& operator=(const T& item);
-
-  /**
-   * @brief Iterator to the data for the first quadrature point
-   */
-  auto begin() { return data_.data(); }
-  /// @overload
-  auto begin() const { return data_.data(); }
-  /**
-   * @brief Iterator to one element past the data for the last quadrature point
-   */
-  auto end() { return data_.data() + data_.size(); }
-  /// @overload
-  auto end() const { return data_.data() + data_.size(); }
-
-  /**
-   * @brief Get the underlying MFEM quadrature function
-   *
-   * @return The underlying quadrature function MFEM-based data container
-   */
-  mfem::QuadratureFunction& QFunc() { return detail::retrieve(qfunc_); }
-
-  /**
-   * @brief Synchronizes data from the stored vector<T> to the raw double*
-   * array used by the underlying mfem::QuadratureFunction
-   *
-   * Used for saving to a file - MFEMSidreDataCollection
-   * (and by extension mfem::DataCollection's interface) only allow for
-   * quadrature-point-specific data via mfem::QuadratureFunction, so this logic
-   * is needed to glue together a generic array of data with that class
-   */
-  void sync() override
-  {
-    double*  qfunc_ptr = detail::retrieve(qfunc_).GetData();
-    int      j         = 0;
-    const T* data_ptr  = data_.data();
-    for (int i = 0; i < detail::retrieve(qfunc_).Size(); i += stride_) {
-      // The only legal (portable, defined) way to do type punning in C++
-      std::memcpy(qfunc_ptr + i, data_ptr + j, sizeof(T));
-      j++;
-    }
-  }
-
-  /// @brief Returns the underlying data array
-  SERAC_HOST_DEVICE T* data() { return data_.data(); }
-  /// @brief Returns the element offsets array
-  SERAC_HOST_DEVICE const int* offsets() const { return offsets_.data(); }
-
-private:
-  /**
-   * @brief Storage layout of @p qfunc_ containing mesh and polynomial order info
-   */
-  detail::MaybeOwningPointer<mfem::QuadratureSpace> qspace_;
-  /**
-   * @brief Per-quadrature point data, stored as array of doubles for compatibility with Sidre
-   * @note It may be possible to reduce memory pressure by only constructing the qfunc immediately prior to saving
-   */
-  detail::MaybeOwningPointer<mfem::QuadratureFunction> qfunc_;
-  /**
-   * @brief The actual data
-   */
-  UnifiedArray<T> data_;
-  /**
-   * @brief A copy of the element_offsets member from mfem::QuadratureSpace
-   */
-  UnifiedArray<int> offsets_;
-  /**
-   * @brief The stride of the array
-   */
-  static constexpr int stride_ = detail::ceil(sizeof(T) / static_cast<double>(sizeof(double)));
+  T*     data;    ///< pointer to the buffer of quadrature data
+  size_t stride;  ///< how many quadrature points per element
 };
 
 /**
- * @brief "Dummy" specialization, intended to be used as a sentinel
- * This is used as the default argument when a reference to a @p QuadratureData is used as a function
- * argument. By comparing the argument to the dummy instance of this class, functions to easily check
- * if the user has passed in a "real" @p QuadratureData.
+ * @brief a specialization of the QuadratureData container, for the type `Nothing`
+ * that implements the appropriate interface requirements, but does not allocate any
+ * memory on the heap
  */
 template <>
-class QuadratureData<void> {
-public:
-  /// @brief Dummy data access
-  SERAC_HOST_DEVICE std::nullptr_t operator()(const int, const int) { return nullptr; }
-};
+struct QuadratureData<Nothing> {
+  /// dummy accessor to satisfy interfacial requirements
+  SERAC_HOST_DEVICE Nothing& operator()(const size_t, const size_t) { return data; }
 
-// A dummy global so that lvalue references can be bound to something of type QData<void>
-extern QuadratureData<void> dummy_qdata;
+  /// dummy accessor to satisfy interfacial requirements
+  SERAC_HOST_DEVICE const Nothing& operator()(const size_t, const size_t) const { return data; }
 
-/**
- * @brief Stores instances of user-defined type for each quadrature point in a mesh
- * @tparam T The type of the per-qpt data
- * @pre T must be default-constructible
- * @pre T must be trivially copyable (due to the use of memcpy for type punning)
- */
-template <typename T>
-class QuadratureDataView : public QuadratureDataImpl<T, QuadratureDataView<T>> {
-public:
-  /**
-   * @brief Constructs a QuadratureDataView from a QuadratureData
-   * @param[in] quad_data The QuadratureData to take a view of
-   */
-  QuadratureDataView(QuadratureData<T>& quad_data) : data_(quad_data.data()), offsets_(quad_data.offsets()) {}
-  /// @brief Returns the underlying data array
-  SERAC_HOST_DEVICE T* data() { return data_; }
-  /// @brief Returns the element offsets array
-  SERAC_HOST_DEVICE const int* offsets() const { return offsets_; }
-
-private:
-  T*         data_    = nullptr;
-  const int* offsets_ = nullptr;
+  /// dummy data to have an object to make a reference to in operator()
+  Nothing data;
 };
 
 /**
- * @brief "Dummy" specialization, intended to be used as a sentinel
- * This is used as the default argument when a reference to a @p QuadratureData is used as a function
- * argument. By comparing the argument to the dummy instance of this class, functions to easily check
- * if the user has passed in a "real" @p QuadratureData.
+ * @brief a specialization of the QuadratureData container, for the type `Empty`
+ * that implements the appropriate interface requirements, but does not allocate any
+ * memory on the heap
  */
 template <>
-class QuadratureDataView<void> {
-public:
-  /// @brief Constructs a dummy view
-  QuadratureDataView(QuadratureData<void>& = dummy_qdata) {}
-  /// @brief Dummy data access
-  SERAC_HOST_DEVICE std::nullptr_t operator()(const int, const int) { return nullptr; }
+struct QuadratureData<Empty> {
+  /// dummy accessor to satisfy interfacial requirements
+  SERAC_HOST_DEVICE Empty& operator()(const size_t, const size_t) { return data; }
+
+  /// dummy accessor to satisfy interfacial requirements
+  SERAC_HOST_DEVICE const Empty& operator()(const size_t, const size_t) const { return data; }
+
+  /// dummy data to have an object to make a reference to in operator()
+  Empty data;
 };
 
-// A dummy global so that lvalue references can be bound to something of type QData<void>
-extern QuadratureDataView<void> dummy_qdata_view;
-
-// Hijacks the "vdim" parameter (number of doubles per qpt) to allocate the correct amount of storage
-template <typename T>
-QuadratureData<T>::QuadratureData(mfem::Mesh& mesh, const int p, const bool alloc)
-    : qspace_(std::make_unique<mfem::QuadratureSpace>(&mesh, p + 1)),
-      // When left unallocated, the allocation can happen inside the datastore
-      // Use a raw pointer here when unallocated, lifetime will be managed by the DataCollection
-      qfunc_(detail::initialQuadFunc(&detail::retrieve(qspace_), alloc, stride_)),
-      data_(static_cast<std::size_t>(detail::retrieve(qfunc_).Size() / stride_)),
-      offsets_(static_cast<std::size_t>(mesh.GetNE() + 1))
-{
-  // To avoid violating C++'s strict aliasing rule we need to std::memcpy a default-constructed object
-  // See e.g. https://gist.github.com/shafik/848ae25ee209f698763cffee272a58f8
-  // also https://en.cppreference.com/w/cpp/numeric/bit_cast
-  // also https://chromium.googlesource.com/chromium/src/base/+/refs/heads/master/bit_cast.h
-  static_assert(std::is_default_constructible_v<T>, "Must be able to default-construct the stored type");
-  static_assert(std::is_trivially_copyable_v<T>, "Uses memcpy - requires trivial copies");
-  // We cannot avoid storing a copy of the offsets array in the general case,
-  // but if we know the number of qpts per element at compile time we don't need to store offsets
-  std::memcpy(offsets_.data(), detail::quadSpaceOffsets(detail::retrieve(qspace_)),
-              static_cast<std::size_t>(mesh.GetNE() + 1) * sizeof(int));
-}
-
-template <typename T>
-QuadratureData<T>& QuadratureData<T>::operator=(const T& item)
-{
-  for (auto& datum : data_) {
-    datum = item;
-  }
-  return *this;
-}
-
-template <typename T, typename Derived>
-SERAC_HOST_DEVICE T& QuadratureDataImpl<T, Derived>::operator()(const int element_idx, const int q_idx)
-{
-  const auto idx = asDerived().offsets()[static_cast<std::size_t>(element_idx)] + q_idx;
-  return asDerived().data()[static_cast<std::size_t>(idx)];
-}
+extern std::shared_ptr<QuadratureData<Nothing> > NoQData;
+extern std::shared_ptr<QuadratureData<Empty> >   EmptyQData;
 
 }  // namespace serac

@@ -52,6 +52,7 @@ public:
    */
   using FiniteElementVector::FiniteElementVector;
   using FiniteElementVector::operator=;
+  using mfem::Vector::Print;
 
   /**
    * @brief Fill a user-provided grid function based on the underlying true vector
