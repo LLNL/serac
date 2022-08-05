@@ -364,7 +364,7 @@ public:
       // mfem::Vector arg0 = ...;
       // mfem::Vector arg1 = ...;
       // e.g. auto [value, gradient_wrt_arg1] = my_functional(arg0, differentiate_wrt(arg1));
-      return {output_T_[0], grad_[wrt]};
+      return typename operator_paren_return<T...>::type{output_T_[0], grad_[wrt]};
     }
 
     if constexpr (wrt == -1) {
