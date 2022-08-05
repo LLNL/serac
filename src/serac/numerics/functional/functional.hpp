@@ -433,7 +433,7 @@ public:
       // mfem::Vector arg0 = ...;
       // mfem::Vector arg1 = ...;
       // e.g. auto [value, gradient_wrt_arg1] = my_functional(arg0, differentiate_wrt(arg1));
-      return typename operator_paren_return_index<wrt>::type{output_T_, grad_[wrt]};
+      return typename operator_paren_return<wrt>::type{output_T_, grad_[wrt]};
     }
     if constexpr (wrt == -1) {
       // if the user passes only `mfem::Vector`s then we assume they only want the output value
