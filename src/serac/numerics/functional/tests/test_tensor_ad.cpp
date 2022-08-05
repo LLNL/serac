@@ -56,7 +56,7 @@ TEST(DualNumberTensor, MixedOperations)
   EXPECT_LT(abs(exp(x) * (cos(x) - sin(x)) - r.gradient), eps);
 
   r = log(xd) * cos(xd);
-  EXPECT_LT(abs((cos(x) / x - log(x) * sin(x)) - r.gradient), eps);
+  EXPECT_LT(abs((cos(x) / x - std::log(x) * sin(x)) - r.gradient), eps);
 
   r = exp(xd) * pow(xd, 1.5);
   EXPECT_LT(abs((exp(x) * (pow(x, 1.5) + 1.5 * pow(x, 0.5))) - r.gradient), eps);

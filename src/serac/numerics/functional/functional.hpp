@@ -25,6 +25,10 @@
 
 namespace serac {
 
+template <int i>
+struct DifferentiateWRT {
+};
+
 /**
  * @brief this type exists solely as a way to signal to `serac::Functional` that the function
  * serac::Functional::operator()` should differentiate w.r.t. a specific argument
@@ -33,7 +37,7 @@ struct differentiate_wrt_this {
   const mfem::Vector& ref;  ///< the actual data wrapped by this type
 
   /// @brief implicitly convert back to `mfem::Vector` to extract the actual data
-  operator std::reference_wrapper<const mfem::Vector>() const { return ref; }
+  operator const mfem::Vector &() const { return ref; }
 };
 
 /**
@@ -137,24 +141,14 @@ class Functional<test(trials...), exec> {
   class Gradient;
 
   // clang-format off
-  template <typename... T>
+  template <int i> 
   struct operator_paren_return {
     using type = typename std::conditional<
-        (std::is_same_v<T, differentiate_wrt_this> + ...) == 1, // if the there is a dual number in the pack
-        serac::tuple<mfem::Vector&, Gradient&>,                 // then we return the value and the derivative
-        mfem::Vector&                                           // otherwise, we just return the value
+        i >= 0,                                 // if `i` is greater than or equal to zero,
+        serac::tuple<mfem::Vector&, Gradient&>, // then we return the value and the derivative w.r.t arg `i`
+        mfem::Vector&                           // otherwise, we just return the value
         >::type;
   };
-
-  template <int indx>
-  struct operator_paren_return_index {
-    using type = typename std::conditional<
-        indx >= 0,                                              // if the derivative index is valid
-        serac::tuple<mfem::Vector&, Gradient&>,                 // then we return the value and the derivative
-        mfem::Vector&                                           // otherwise, we just return the value
-        >::type;
-  };
-
   // clang-format on
 
 public:
@@ -224,11 +218,11 @@ public:
    * @param[in] domain The domain on which to evaluate the integral
    * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
    * and @a spatial_dim template parameter
-   * @param[inout] data The data for each quadrature point
+   * @param[inout] qdata The data for each quadrature point
    */
-  template <int dim, typename lambda, typename qpt_data_type = void>
+  template <int dim, typename lambda, typename qpt_data_type = Nothing>
   void AddDomainIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain,
-                         QuadratureData<qpt_data_type>& data = dummy_qdata)
+                         std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
   {
     auto num_elements = domain.GetNE();
     if (num_elements == 0) return;
@@ -246,7 +240,7 @@ public:
     // NOTE: we are relying on MFEM to keep these geometric factors accurate. We store
     // the necessary data as references in the integral data structure.
     auto geom = domain.GetGeometricFactors(ir, flags);
-    domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<dim>{}, integrand, data);
+    domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<dim>{}, integrand, qdata);
   }
 
   /**
@@ -293,8 +287,9 @@ public:
    * @param[in] domain The mesh to evaluate the integral on
    * @param[inout] data The data for each quadrature point
    */
-  template <typename lambda, typename qpt_data_type = void>
-  void AddAreaIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = dummy_qdata)
+  template <typename lambda, typename qpt_data_type = Nothing>
+  void AddAreaIntegral(lambda&& integrand, mfem::Mesh& domain,
+                       std::shared_ptr<QuadratureData<qpt_data_type>> data = NoQData)
   {
     AddDomainIntegral(Dimension<2>{}, integrand, domain, data);
   }
@@ -307,8 +302,9 @@ public:
    * @param[in] domain The mesh to evaluate the integral on
    * @param[inout] data The data for each quadrature point
    */
-  template <typename lambda, typename qpt_data_type = void>
-  void AddVolumeIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = dummy_qdata)
+  template <typename lambda, typename qpt_data_type = Nothing>
+  void AddVolumeIntegral(lambda&& integrand, mfem::Mesh& domain,
+                         std::shared_ptr<QuadratureData<qpt_data_type>> data = NoQData)
   {
     AddDomainIntegral(Dimension<3>{}, integrand, domain, data);
   }
@@ -382,52 +378,14 @@ public:
    * @param args the trial space dofs used to carry out the calculation,
    *  at most one of which may be of the type `differentiate_wrt_this(mfem::Vector)`
    */
-  template <typename... T>
-  typename operator_paren_return<T...>::type operator()(const T&... args)
+  template <int wrt, typename... T>
+  typename operator_paren_return<wrt>::type operator()(DifferentiateWRT<wrt>, const T&... args)
   {
-    constexpr int num_differentiated_arguments = (std::is_same_v<T, differentiate_wrt_this> + ...);
-    static_assert(num_differentiated_arguments <= 1,
-                  "Error: Functional::operator() can only differentiate w.r.t. 1 argument a time");
-    static_assert(sizeof...(T) == num_trial_spaces,
-                  "Error: Functional::operator() must take exactly as many arguments as trial spaces");
+    const mfem::Vector* input_T[] = {&static_cast<const mfem::Vector&>(args)...};
 
-    [[maybe_unused]] constexpr int                          wrt = index_of_differentiation<T...>();
-    std::vector<std::reference_wrapper<const mfem::Vector>> input_T{args...};
-
-    return (*this)(input_T, Index<wrt>{});
-  }
-
-  /**
-   * @brief this function lets the user evaluate the serac::Functional with the given trial space values
-   *
-   * note: it accepts a vector of mfem::Vectors that must be of length `num_trial_spaces`. This interface
-   * assumes no derivative information is needed.
-   *
-   * @param input_T an array of trial space dofs used to carry out the calculation.
-   */
-  mfem::Vector& operator()(std::vector<std::reference_wrapper<const mfem::Vector>> input_T)
-  {
-    SLIC_ERROR_IF(input_T.size() != num_trial_spaces,
-                  "The input vector of trial spaces is not equal to the number of trial spaces defined in the "
-                  "Functional constructor");
-    return (*this)(input_T, Index<-1>{});
-  }
-
-  /**
-   * @brief this function lets the user evaluate the serac::Functional with the given trial space values
-   *
-   * note: it accepts a vector of mfem::Vectors that must be of length `num_trial_spaces`.
-   *
-   * @tparam wrt The index of the input trial vector to additional compute derivatives with respect to
-   * @param input_T an array of trial space dofs used to carry out the calculation.
-   */
-  template <int wrt>
-  typename operator_paren_return_index<wrt>::type operator()(
-      std::vector<std::reference_wrapper<const mfem::Vector>> input_T, Index<wrt>)
-  {
     // get the values for each local processor
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
-      P_trial_[i]->Mult(input_T[i], input_L_[i]);
+      P_trial_[i]->Mult(*input_T[i], input_L_[i]);
     }
 
     output_L_ = 0.0;
@@ -440,7 +398,7 @@ public:
       // compute residual contributions at the element level and sum them
       output_E_ = 0.0;
       for (auto& integral : domain_integrals_) {
-        integral.Mult(input_E_, output_E_, wrt);
+        integral.Mult(input_E_, output_E_, wrt, update_qdata);
       }
 
       // scatter-add to compute residuals on the local processor
@@ -486,6 +444,25 @@ public:
       return output_T_;
     }
   }
+
+  /// @overload
+  template <typename... T>
+  auto operator()(const T&... args)
+  {
+    constexpr int num_differentiated_arguments = (std::is_same_v<T, differentiate_wrt_this> + ...);
+    static_assert(num_differentiated_arguments <= 1,
+                  "Error: Functional::operator() can only differentiate w.r.t. 1 argument a time");
+    static_assert(sizeof...(T) == num_trial_spaces,
+                  "Error: Functional::operator() must take exactly as many arguments as trial spaces");
+
+    [[maybe_unused]] constexpr int i = index_of_differentiation<T...>();
+
+    return (*this)(DifferentiateWRT<i>{}, args...);
+  }
+
+  // TODO: expose this feature a better way
+  /// @brief flag for denoting when a residual evaluation should update the material state buffers
+  bool update_qdata;
 
 private:
   /**
