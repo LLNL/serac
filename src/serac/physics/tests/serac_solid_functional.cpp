@@ -139,9 +139,13 @@ double patch_test_linear(std::function<void(const mfem::Vector&, mfem::Vector&)>
                                         serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
 
-  const DirectSolverOptions linear_solver_options = {.print_level = 1};
-  const NonlinearSolverOptions nonlinear_solver_options = {
-      .rel_tol = 1.0e-10, .abs_tol = 1.0e-15, .max_iter = 1, .print_level = 1};
+  //const DirectSolverOptions linear_solver_options = {.print_level = 1};
+  //const NonlinearSolverOptions nonlinear_solver_options = {
+  //    .rel_tol = 1.0e-10, .abs_tol = 1.0e-15, .max_iter = 1, .print_level = 1};
+  auto linear_solver_options = solid_mechanics::default_linear_options;
+  linear_solver_options.rel_tol=1e-11;
+  linear_solver_options.abs_tol=1e-16;
+  auto nonlinear_solver_options = solid_mechanics::default_nonlinear_options;
 
   const SolverOptions static_solver_options = {linear_solver_options, nonlinear_solver_options};
 
@@ -159,8 +163,8 @@ double patch_test_linear(std::function<void(const mfem::Vector&, mfem::Vector&)>
   //solid_solver.setDisplacement([](const mfem::Vector&, mfem::Vector& u) { u = 0.0; });
 
   // Define a boundary attribute set
-  int x_equals_0 = (dim == 2) ? 1 : 0;
-  int y_equals_0 = (dim == 2) ? 4 : 0;
+  int x_equals_0 = (dim == 2) ? 4 : 0;
+  int y_equals_0 = (dim == 2) ? 1 : 0;
   std::set<int> essential_boundaries;
   if constexpr (dim == 2) {
     essential_boundaries = {x_equals_0, y_equals_0};
@@ -186,7 +190,7 @@ double patch_test_linear(std::function<void(const mfem::Vector&, mfem::Vector&)>
 
   // traction
   solid_solver.setPiolaTraction([](auto x, auto, auto) { 
-    return tensor<double, 2>{{(x[0] == 1) ? 1.0 : 0.0, 0.0}}; 
+    return tensor<double, 2>{{(x[0] == 1) ? 2.2857142857142856 : 0.0, 0.0}};
   });
 
   //solid_solver.addBodyForce(force);
