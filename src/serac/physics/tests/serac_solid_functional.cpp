@@ -66,7 +66,7 @@ double patch_test(std::function<void(const mfem::Vector&, mfem::Vector&)> exact_
   double density = 1.0;
   double shear_modulus = 1.0;
   double bulk_modulus = 1.0;
-  solid_mechanics::NeoHookean<dim> mat{density, shear_modulus, bulk_modulus};
+  solid_mechanics::NeoHookean mat{density, shear_modulus, bulk_modulus};
   solid_solver.setMaterial(mat);
 
   // Set the initial displacement
@@ -152,7 +152,7 @@ double patch_test_linear(std::function<void(const mfem::Vector&, mfem::Vector&)>
   double density = 1.0;
   double shear_modulus = 1.0;
   double bulk_modulus = 1.0;
-  solid_mechanics::LinearIsotropic<dim> mat{density, shear_modulus, bulk_modulus};
+  solid_mechanics::LinearIsotropic mat{density, shear_modulus, bulk_modulus};
   solid_solver.setMaterial(mat);
 
   // Set the initial displacement
@@ -241,7 +241,7 @@ void functional_solid_test_static(double expected_disp_norm)
   SolidFunctional<p, dim> solid_solver(options, GeometricNonlinearities::On, FinalMeshOption::Reference,
                                        "solid_functional");
 
-  solid_mechanics::NeoHookean<dim> mat{1.0, 1.0, 1.0};
+  solid_mechanics::NeoHookean mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
 
   // Define the function for the initial displacement and boundary condition
@@ -380,7 +380,7 @@ void functional_solid_test_dynamic(double expected_disp_norm)
   SolidFunctional<p, dim> solid_solver(default_dynamic_options, GeometricNonlinearities::Off,
                                        FinalMeshOption::Reference, "solid_functional_dynamic");
 
-  solid_mechanics::LinearIsotropic<dim> mat{1.0, 1.0, 1.0};
+  solid_mechanics::LinearIsotropic mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
 
   // Define the function for the initial displacement and boundary condition
@@ -442,7 +442,7 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
   SolidFunctional<p, dim> solid_solver(default_static_options, GeometricNonlinearities::Off, FinalMeshOption::Reference,
                                        "solid_functional");
 
-  solid_mechanics::LinearIsotropic<dim> mat{1.0, 1.0, 1.0};
+  solid_mechanics::LinearIsotropic mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
 
   // Define the function for the initial displacement and boundary condition

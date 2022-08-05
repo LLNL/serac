@@ -20,24 +20,26 @@ namespace serac::solid_mechanics {
 /**
  * @brief Linear isotropic elasticity material model
  *
- * @tparam dim Spatial dimension of the mesh
  */
-template <int dim>
 struct LinearIsotropic {
   using State = Empty;  ///< this material has no internal variables
 
   /**
    * @brief stress calculation for a linear isotropic material model
    *
-   * @tparam DispGradType Displacement gradient type
+   * When applied to 2D displacement gradients, the stress is computed in plane strain,
+   * returning only the in-plane components.
+   *
+   * @tparam T Number-like type for the displacement gradient components
+   * @tparam dim Dimensionality of space
    * @param du_dX Displacement gradient with respect to the reference configuration
-   * @return The calculated material response (density, Kirchoff stress) for the material
+   * @return The Kirchhoff stress
    */
-  template <typename DispGradType>
-  SERAC_HOST_DEVICE auto operator()(State& /* state */, const DispGradType& du_dX) const
+  template <typename T, int dim>
+  SERAC_HOST_DEVICE auto operator()(State& /* state */, const tensor<T, dim, dim>& du_dX) const
   {
     auto I       = Identity<dim>();
-    auto lambda  = K - (2.0 / dim) * G;
+    auto lambda  = K - (2.0 / 3.0) * G;
     auto epsilon = 0.5 * (transpose(du_dX) + du_dX);
     return lambda * tr(epsilon) * I + 2.0 * G * epsilon;
   }
@@ -50,25 +52,27 @@ struct LinearIsotropic {
 /**
  * @brief Neo-Hookean material model
  *
- * @tparam dim The spatial dimension of the mesh
  */
-template <int dim>
 struct NeoHookean {
   using State = Empty;  ///< this material has no internal variables
 
   /**
    * @brief stress calculation for a NeoHookean material model
    *
-   * @tparam DispGradType Displacement gradient type
+   * When applied to 2D displacement gradients, the stress is computed in plane strain,
+   * returning only the in-plane components.
+   *
+   * @tparam T Number-like type for the displacement gradient components
+   * @tparam dim Dimensionality of space
    * @param du_dX displacement gradient with respect to the reference configuration (displacement_grad)
-   * @return The calculated material response (density, Kirchoff stress) for the material
+   * @return The Kirchhoff stress
    */
-  template <typename DispGradType>
-  SERAC_HOST_DEVICE auto operator()(State& /* state */, const DispGradType& du_dX) const
+  template <typename T, int dim>
+  SERAC_HOST_DEVICE auto operator()(State& /* state */, const tensor<T, dim, dim>& du_dX) const
   {
     using std::log;
     constexpr auto I         = Identity<dim>();
-    auto           lambda    = K - (2.0 / dim) * G;
+    auto           lambda    = K - (2.0 / 3.0) * G;
     auto           B_minus_I = du_dX * transpose(du_dX) + transpose(du_dX) + du_dX;
     return lambda * log(det(I + du_dX)) * I + G * B_minus_I;
   }
