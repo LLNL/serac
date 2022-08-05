@@ -139,7 +139,7 @@ double patch_test_linear(std::function<void(const mfem::Vector&, mfem::Vector&)>
                                         serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
 
-  const DirectSolverOptions linear_solver_options = {.print_level = 0};
+  const DirectSolverOptions linear_solver_options = {.print_level = 1};
   const NonlinearSolverOptions nonlinear_solver_options = {
       .rel_tol = 1.0e-10, .abs_tol = 1.0e-15, .max_iter = 1, .print_level = 1};
 
@@ -159,7 +159,7 @@ double patch_test_linear(std::function<void(const mfem::Vector&, mfem::Vector&)>
   //solid_solver.setDisplacement([](const mfem::Vector&, mfem::Vector& u) { u = 0.0; });
 
   // Define a boundary attribute set
-  int x_equals_0 = (dim == 2) ? 4 : 0;
+  int x_equals_0 = (dim == 2) ? 1 : 0;
   int y_equals_0 = (dim == 2) ? 4 : 0;
   std::set<int> essential_boundaries;
   if constexpr (dim == 2) {
