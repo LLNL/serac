@@ -47,13 +47,13 @@ public:
    * @param[in] X The actual (not reference) coordinates of all quadrature points
    * @see mfem::GeometricFactors
    * @param[in] qf The user-provided quadrature function
-   * @param[inout] data The data for each quadrature point
+   * @param[inout] qdata The data for each quadrature point
    * @note The @p Dimension parameters are used to assist in the deduction of the @a dim
    * and @a dim template parameters
    */
-  template <int dim, typename lambda_type, typename qpt_data_type = void>
+  template <int dim, typename lambda_type, typename qpt_data_type = Nothing>
   DomainIntegral(size_t num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<dim>, lambda_type&& qf,
-                 QuadratureData<qpt_data_type>& data = dummy_qdata)
+                 std::shared_ptr<QuadratureData<qpt_data_type> > qdata)
   {
     SERAC_MARK_BEGIN("Domain Integral Set Up");
     using namespace domain_integral;
@@ -69,9 +69,9 @@ public:
     if constexpr (exec == ExecutionSpace::CPU) {
       KernelConfig<Q, geometry, test, trials...> eval_config;
 
-      evaluation_ = EvaluationKernel{eval_config, J, X, num_elements, qf, data};
+      evaluation_ = EvaluationKernel{eval_config, J, X, num_elements, qf, qdata};
 
-      for_constexpr<num_trial_spaces>([this, num_elements, quadrature_points_per_element, &J, &X, &qf, &data,
+      for_constexpr<num_trial_spaces>([this, num_elements, quadrature_points_per_element, &J, &X, &qf, qdata,
                                        eval_config](auto i) {
         // allocate memory for the derivatives of the q-function at each quadrature point
         //
@@ -79,12 +79,12 @@ public:
         // action_of_gradient functor below to augment the reference count, and extend its lifetime to match
         // that of the DomainIntegral that allocated it.
         using which_trial_space = typename camp::tuple_element<i, camp::tuple<trials...> >::type;
-        using derivative_type   = decltype(get_derivative_type<i, dim, trials...>(qf, data(0, 0)));
+        using derivative_type   = decltype(get_derivative_type<i, dim, trials...>(qf, (*qdata)(0, 0)));
         auto ptr = accelerator::make_shared_array<exec, derivative_type>(num_elements * quadrature_points_per_element);
         ExecArrayView<derivative_type, 2, exec> qf_derivatives(ptr.get(), num_elements, quadrature_points_per_element);
 
         evaluation_with_AD_[i] =
-            EvaluationKernel{DerivativeWRT<i>{}, eval_config, qf_derivatives, J, X, num_elements, qf, data};
+            EvaluationKernel{DerivativeWRT<i>{}, eval_config, qf_derivatives, J, X, num_elements, qf, qdata};
 
         // note: this lambda function captures ptr by-value to extend its lifetime
         //                        vvv
@@ -144,20 +144,23 @@ public:
    * @param[in] input_E The input to the evaluation; per-element DOF values
    * @param[out] output_E The output of the evalution; per-element DOF residuals
    * @param[in] which_trial_space specifies which trial space to compute derivatives with respect to (if any)
+   * @param[in] update_state a boolean flag for specifying if the material state data should be overwritten or not.
+   *                         Typically, this flag is kept false while looking for a solution to the
+   *                         residual equations.
    *
    * @note which_trial_space == -1 implies that this function will call the evaluation kernel that performs no
    * differentiation
    */
-  void Mult(const std::array<mfem::Vector, num_trial_spaces>& input_E, mfem::Vector& output_E,
-            int which_trial_space) const
+  void Mult(const std::array<mfem::Vector, num_trial_spaces>& input_E, mfem::Vector& output_E, int which_trial_space,
+            bool update_state) const
   {
     if (which_trial_space == -1) {
       SERAC_MARK_BEGIN("Domain Integral Evaluation");
-      evaluation_(input_E, output_E);
+      evaluation_(input_E, output_E, update_state);
       SERAC_MARK_END("Domain Integral Evaluation");
     } else {
       SERAC_MARK_BEGIN("Domain Integral Evaluation with AD");
-      evaluation_with_AD_[which_trial_space](input_E, output_E);
+      evaluation_with_AD_[which_trial_space](input_E, output_E, update_state);
       SERAC_MARK_END("Domain Integral Evaluation with AD");
     }
   }
@@ -191,10 +194,10 @@ public:
 
 private:
   /// @brief Type-erased handle to evaluation kernel
-  std::function<void(const std::array<mfem::Vector, num_trial_spaces>&, mfem::Vector&)> evaluation_;
+  std::function<void(const std::array<mfem::Vector, num_trial_spaces>&, mfem::Vector&, bool)> evaluation_;
 
   /// @brief Type-erased handle to evaluation+differentiation kernels
-  std::function<void(const std::array<mfem::Vector, num_trial_spaces>&, mfem::Vector&)>
+  std::function<void(const std::array<mfem::Vector, num_trial_spaces>&, mfem::Vector&, bool)>
       evaluation_with_AD_[num_trial_spaces];
 
   /// @brief Type-erased handle to action of gradient kernels

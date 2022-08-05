@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-set(functional_depends mfem mpi serac_infrastructure serac_mesh)
+set(functional_depends mfem mpi serac_infrastructure serac_mesh serac_numerics)
 blt_list_append( TO functional_depends ELEMENTS cuda    IF ENABLE_CUDA )
 blt_list_append( TO functional_depends ELEMENTS caliper adiak IF SERAC_ENABLE_PROFILING )
 

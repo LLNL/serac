@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-from spack.package import *
+from spack import *
 
 
 class Camp(CMakePackage, CudaPackage, ROCmPackage):
@@ -53,6 +53,7 @@ class Camp(CMakePackage, CudaPackage, ROCmPackage):
                 options.append('-DCUDA_ARCH=sm_{0}'.format(cuda_arch[0]))
                 flag = '-arch sm_{0}'.format(cuda_arch[0])
                 options.append('-DCMAKE_CUDA_FLAGS:STRING={0}'.format(flag))
+                options.append('-DCMAKE_CUDA_ARCHITECTURES={0}'.format(cuda_arch[0]))
         else:
             options.append('-DENABLE_CUDA=OFF')
 

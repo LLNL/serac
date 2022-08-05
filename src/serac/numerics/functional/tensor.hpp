@@ -1065,6 +1065,50 @@ SERAC_HOST_DEVICE constexpr auto dev(const tensor<T, n, n>& A)
 }
 
 /**
+ * @brief Returns a square matrix (rank-2 tensor) containing the diagonal entries of the input square matrix
+ * with zeros in the off-diagonal positions
+ * @param[in] A The input square matrix
+ * This operation is used to compute a term in the constitutive response of a linear, cubic solid material
+ */
+template <typename T, int n>
+SERAC_HOST_DEVICE constexpr auto diagonal_matrix(const tensor<T, n, n>& A)
+{
+  tensor<T, n, n> D{};
+  for (int i = 0; i < n; i++) {
+    D[i][i] = A[i][i];
+  }
+  return D;
+}
+
+/**
+ * @brief Returns a square diagonal matrix by specifying the diagonal entries
+ * @param[in] d a list of diagonal entries
+ */
+template <typename T, int n>
+SERAC_HOST_DEVICE constexpr tensor<T, n, n> diag(const tensor<T, n>& d)
+{
+  tensor<T, n, n> D{};
+  for (int i = 0; i < n; i++) {
+    D[i][i] = d[i];
+  }
+  return D;
+}
+
+/**
+ * @brief Returns an array containing the diagonal entries of a square matrix
+ * @param[in] D the matrix to extract the diagonal entries from
+ */
+template <typename T, int n>
+SERAC_HOST_DEVICE constexpr tensor<T, n> diag(const tensor<T, n, n>& D)
+{
+  tensor<T, n> d{};
+  for (int i = 0; i < n; i++) {
+    d[i] = D[i][i];
+  }
+  return d;
+}
+
+/**
  * @brief Obtains the identity matrix of the specified dimension
  * @return I_dim
  */
@@ -1111,6 +1155,24 @@ SERAC_HOST_DEVICE constexpr auto det(const tensor<T, 3, 3>& A)
 {
   return A[0][0] * A[1][1] * A[2][2] + A[0][1] * A[1][2] * A[2][0] + A[0][2] * A[1][0] * A[2][1] -
          A[0][0] * A[1][2] * A[2][1] - A[0][1] * A[1][0] * A[2][2] - A[0][2] * A[1][1] * A[2][0];
+}
+
+/**
+ * @brief compute the matrix square root of a square, real-valued, symmetric matrix
+ *        i.e. given A, find B such that A = dot(B, B)
+ *
+ * @tparam T the data type stored in each element of the matrix
+ * @param A the matrix to compute the square root of
+ * @return a square matrix, B, of the same type as A satisfying `dot(B, B) == A`
+ */
+template <typename T, int dim>
+auto matrix_sqrt(const tensor<T, dim, dim>& A)
+{
+  auto B = A;
+  for (int i = 0; i < 15; i++) {
+    B = 0.5 * (B + dot(A, inv(B)));
+  }
+  return B;
 }
 
 /**
@@ -1477,6 +1539,17 @@ auto& operator<<(std::ostream& out, const tensor<T, m, n...>& A)
     out << ", " << A[i];
   }
   out << '}';
+  return out;
+}
+
+/**
+ * @brief Write a zero out to an output stream
+ *
+ * @param[in] out the std::ostream to write to (e.g. std::cout or std::ofstream)
+ */
+auto& operator<<(std::ostream& out, zero)
+{
+  out << "zero";
   return out;
 }
 
