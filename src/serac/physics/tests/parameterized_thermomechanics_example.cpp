@@ -211,5 +211,13 @@ int main(int argc, char* argv[])
   double deltaT = 1.0;
   std::cout << "expected average vertical displacement: " << alpha0 * deltaT * height << std::endl;
 
+  // output:
+  // vertical displacement integrated over the top surface: 0.000883477
+  // total area of the top surface: 0.441959
+  // exact area of the top surface: 0.441786
+  // average vertical displacement: 0.001999
+  // expected average vertical displacement: 0.002
+
+
   MPI_Finalize();
 }
