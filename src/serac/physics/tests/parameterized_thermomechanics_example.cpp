@@ -115,19 +115,18 @@ int main(int argc, char* argv[])
   double outer_radius = 1.25;
   double height       = 2.0;
 
-  // clang-format off
-  auto mesh = mesh::refineAndDistribute(build_hollow_quarter_cylinder(radial_divisions, 
-                                                                      angular_divisions, 
-                                                                      vertical_divisions,
-                                                                      inner_radius, 
-                                                                      outer_radius, 
-                                                                      height), serial_refinement, parallel_refinement);
+  {
+    // clang-format off
+    auto mesh = mesh::refineAndDistribute(build_hollow_quarter_cylinder(radial_divisions, 
+                                                                        angular_divisions, 
+                                                                        vertical_divisions,
+                                                                        inner_radius, 
+                                                                        outer_radius, 
+                                                                        height), serial_refinement, parallel_refinement);
 
-  std::ofstream outfile("hollow_cylinder.mfem");
-  mesh->Print(outfile);
-
-  // clang-format on
-  serac::StateManager::setMesh(std::move(mesh));
+    // clang-format on
+    serac::StateManager::setMesh(std::move(mesh));
+  }
 
   SolidFunctional<p, dim, Parameters< H1<p>, H1<p> > > simulation(
       default_static_options, GeometricNonlinearities::On, FinalMeshOption::Deformed,
@@ -148,10 +147,11 @@ int main(int argc, char* argv[])
   temperature = theta_ref;
   simulation.setParameter(temperature, 0);
 
+  double alpha0 = 1.0e-3;
   auto alpha_fec = std::unique_ptr<mfem::FiniteElementCollection>(new mfem::H1_FECollection(p, dim));
   FiniteElementState alpha(
       StateManager::newState(FiniteElementState::Options{.order = p, .coll = std::move(alpha_fec), .name = "alpha"}));
-  alpha = 1.0e-3;
+  alpha = alpha0;
   simulation.setParameter(alpha, 1);
 
   // set up essential boundary conditions
@@ -174,17 +174,42 @@ int main(int argc, char* argv[])
   simulation.outputState("paraview");
 
   // Perform the quasi-static solve
-  int num_steps = 10;
+  int num_steps = 2;
   double t    = 0.0;
   double tmax = 1.0;
   double dt   = tmax / num_steps;
   for (int i = 0; i < num_steps; i++) {
     t += dt;
+    temperature = theta_ref + t;
     simulation.advanceTimestep(dt);
     simulation.outputState("paraview");
-
-    temperature = t;
   }
+
+  auto & mesh = serac::StateManager::mesh();
+
+  Functional< double(H1<p, dim>) > qoi({&simulation.displacement().space()});
+  qoi.AddSurfaceIntegral([=](auto x, auto n, auto displacement){
+    auto [u, du_dxi] = displacement;
+    return dot(u, n) * ((x[2] > 0.99 * height) ? 1.0 : 0.0);
+  }, mesh);
+
+  std::cout << "vertical displacement integrated over the top surface: " << qoi(simulation.displacement()) << std::endl;
+
+  Functional< double(H1<p, dim>) > area({&simulation.displacement().space()});
+  area.AddSurfaceIntegral([=](auto x, auto /*n*/, auto /*u*/){
+    return (x[2] > 0.99 * height) ? 1.0 : 0.0;
+  }, mesh);
+
+  std::cout << "total area of the top surface: " << area(simulation.displacement()) << std::endl;
+
+  double exact_area = M_PI_4 * ((outer_radius * outer_radius) - (inner_radius * inner_radius));
+
+  std::cout << "exact area of the top surface: " << exact_area << std::endl;
+
+  std::cout << "average vertical displacement: " << qoi(simulation.displacement()) / area(simulation.displacement()) << std::endl;
+
+  double deltaT = 1.0;
+  std::cout << "expected average vertical displacement: " << alpha0 * deltaT * height << std::endl;
 
   MPI_Finalize();
 }
