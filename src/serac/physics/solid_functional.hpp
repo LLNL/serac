@@ -33,7 +33,7 @@ namespace solid_mechanics {
  * solid mechanics simulations
  */
 const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
-                                                       .abs_tol     = 1.0e-10,
+                                                       .abs_tol     = 1.0e-16,
                                                        .print_level = 0,
                                                        .max_iter    = 500,
                                                        .lin_solver  = LinearSolver::GMRES,
@@ -303,18 +303,14 @@ public:
     residual_->AddDomainIntegral(
         Dimension<dim>{},
         [this, material](auto /*x*/, auto& state, auto displacement, auto acceleration, auto... params) {
-          auto a          = get<VALUE>(acceleration);
-          auto du_dX      = get<DERIVATIVE>(displacement);
-          auto body_force = material.density * a + 0.0 * du_dX[0];
-          auto stress     = material(state, du_dX, params...);
-
+          auto du_dX   = get<DERIVATIVE>(displacement);
+          auto d2u_dt2 = get<VALUE>(acceleration);
+          auto stress  = material(state, du_dX, serac::get<VALUE>(params)...);
           if (geom_nonlin_ == GeometricNonlinearities::On) {
-            auto F     = I + du_dX;
-            body_force = body_force * det(F);
-            stress     = dot(stress, inv(transpose(F)));
+            stress = dot(stress, inv(transpose(I + du_dX)));
           }
 
-          return serac::tuple{body_force, stress};
+          return serac::tuple{material.density * d2u_dt2, stress};
         },
         mesh_, qdata);
   }
@@ -365,14 +361,10 @@ public:
   {
     residual_->AddDomainIntegral(
         Dimension<dim>{},
-        [body_force, this](auto x, auto displacement, auto /* acceleration */, auto... /*params*/) {
-          auto du_dX    = get<DERIVATIVE>(displacement);
-          auto one_dual = (1.0 + 0.0 * du_dX[0][0]);
-          auto source   = body_force(x, time_) * one_dual;
-          if (geom_nonlin_ == GeometricNonlinearities::On) {
-            source = source * det(I + du_dX);
-          }
-          return serac::tuple{source, zero{}};
+        [body_force, this](auto x, auto /* displacement */, auto /* acceleration */, auto... /*params*/) {
+          // note: this assumes that the body force function is defined
+          // per unit volume in the reference configuration
+          return serac::tuple{body_force(x, time_), zero{}};
         },
         mesh_);
   }
@@ -414,7 +406,7 @@ public:
         [this](const mfem::Vector& u) -> mfem::Operator& {
           auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, *parameter_states_[parameter_indices]...);
           J_             = assemble(drdu);
-          bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+          J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
           return *J_;
         });
   }
@@ -461,17 +453,17 @@ public:
 
             // K := dR/du
             auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(predicted_displacement_), d2u_dt2,
-                                                *parameter_states_[parameter_indices]...));
+                                                         parameter_states_[parameter_indices]...));
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             // M := dR/da
             auto M = serac::get<DERIVATIVE>((*residual_)(predicted_displacement_, differentiate_wrt(d2u_dt2),
-                                                *parameter_states_[parameter_indices]...));
+                                                         parameter_states_[parameter_indices]...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
             // J = M + c0 * K
             J_.reset(mfem::Add(1.0, *m_mat, c0_, *k_mat));
-            bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+            J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
 
             return *J_;
           });
@@ -485,22 +477,22 @@ public:
   {
     time_ += dt;
 
-    // the 30 lines of code below are essentially equivalent to the 1-liner
+    // the ~20 lines of code below are essentially equivalent to the 1-liner
     // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
     {
+      du_ = 0.0;
       for (auto& bc : bcs_.essentials()) {
         bc.setDofs(du_, time_);
       }
 
       auto& constrained_dofs = bcs_.allEssentialTrueDofs();
       for (int i = 0; i < constrained_dofs.Size(); i++) {
-        du_[constrained_dofs[i]] -= displacement_(constrained_dofs[i]);
+        int j = constrained_dofs[i];
+        du_[j] -= displacement_(j);
       }
 
       dr_ = 0.0;
-      for (const auto& bc : bcs_.essentials()) {
-        bc.apply(*J_, dr_, du_);
-      }
+      mfem::EliminateBC(*J_, *J_e_, constrained_dofs, du_, dr_);
 
       auto& lin_solver = nonlin_solver_.LinearSolver();
 
@@ -509,13 +501,6 @@ public:
       lin_solver.Mult(dr_, du_);
 
       displacement_ += du_;
-
-      for (auto& bc : bcs_.essentials()) {
-        bc.setDofs(du_, time_);
-      }
-
-      // do I have to do this?
-      nonlin_solver_.SetOperator(*residual_with_bcs_);
     }
 
     nonlin_solver_.Mult(zero_, displacement_);
@@ -602,8 +587,8 @@ public:
 
     // sam: is this the right thing to be doing for dynamics simulations,
     // or are we implicitly assuming this should only be used in quasistatic analyses?
-    auto drdu =
-        serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(displacement_), zero_, *parameter_states_[parameter_indices]...));
+    auto drdu = serac::get<DERIVATIVE>(
+        (*residual_)(differentiate_wrt(displacement_), zero_, parameter_states_[parameter_indices]...));
     auto jacobian = assemble(drdu);
     auto J_T      = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -618,9 +603,6 @@ public:
 
     lin_solver.SetOperator(*J_T);
     lin_solver.Mult(adjoint_load_vector, adjoint_displacement_);
-
-    // Reset the equation solver to use the full nonlinear residual operator
-    nonlin_solver_.SetOperator(*residual_with_bcs_);
 
     if (geom_nonlin_ == GeometricNonlinearities::On) {
       // Update the mesh with the new deformed nodes
@@ -648,7 +630,7 @@ public:
     }
 
     auto drdparam = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<parameter_field + 2>{}, displacement_, zero_,
-                                               *parameter_states_[parameter_indices]...));
+                                                        parameter_states_[parameter_indices]...));
 
     auto drdparam_mat = assemble(drdparam);
 
@@ -747,6 +729,10 @@ protected:
 
   /// Assembled sparse matrix for the Jacobian
   std::unique_ptr<mfem::HypreParMatrix> J_;
+
+  /// rows and columns of J_ that have been separated out
+  /// because are associated with essential boundary conditions
+  std::unique_ptr<mfem::HypreParMatrix> J_e_;
 
   /// an intermediate variable used to store the predicted end-step displacement
   mfem::Vector predicted_displacement_;

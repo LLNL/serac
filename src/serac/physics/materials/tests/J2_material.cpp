@@ -26,7 +26,6 @@
 
 using namespace serac;
 
-
 tensor<double, 3, 3> analytic_soln(double t)
 {
   // clang-format off
@@ -100,7 +99,7 @@ int main()
       std::cout << t << ": " << rel_error << std::endl;
     }
 
-    // for plotting:
+    // for generating a plot like in the paper:
     // std::cout << "{" << t << ", " << stress[0][0] << ", " << stress[1][1] << ", " << stress[2][2] << "}" <<
     // std::endl;
   }

@@ -14,6 +14,12 @@
 # BlueOS: lalloc 2 ./ats.sh
 # WSL: ./ats.sh
 
+# Variables used inside of the base test.ats and this script
+export ATS_SERAC_BIN_DIR=@SERAC_BIN_DIR@/bin
+export ATS_SERAC_REPO_DIR=@SERAC_REPO_DIR@
+export ATS_EXECUTABLE=@ATS_EXECUTABLE@
+export ATS_SERAC_BASELINE="none"
+
 Help()
 {
     echo "Test Invocations"
@@ -22,9 +28,10 @@ Help()
     echo "BlueOS: lalloc 2 ./ats.sh"
     echo "WSL: ./ats.sh"
     echo "Options:"
-    echo "  --baseline   = copies generated baselines from a pre-existing serac run"
-    echo "  --clean      = cleans output and log files"
-    echo "  --help       = displays this message"
+    echo "  -b | --baseline   = copies generated baselines from a pre-existing serac run"
+    echo "                      options: none (default), all, or comma delimited list of tests"
+    echo "  -c | --clean      = cleans output and log files"
+    echo "  -h | --help       = displays this message"
 }
 
 Clean()
@@ -33,16 +40,8 @@ Clean()
     rm -rf $SYS_TYPE.*.logs
 
     # Clean-up last run's output
-    if [ "$ATS_SERAC_BASELINE" -ne 1 ] ; then
-        rm -rf $ATS_SERAC_REPO_DIR/tests/integration/*/*/*_output*
-    fi
+    rm -rf $ATS_SERAC_REPO_DIR/tests/integration/*/*/*_output*
 }
-
-# Variables used inside of the base test.ats and this script
-export ATS_SERAC_BIN_DIR=@SERAC_BIN_DIR@/bin
-export ATS_SERAC_REPO_DIR=@SERAC_REPO_DIR@
-export ATS_EXECUTABLE=@ATS_EXECUTABLE@
-export ATS_SERAC_BASELINE=0
 
 if [ ! -d "$ATS_SERAC_REPO_DIR" ]; then
     echo "ERROR: Given ATS_SERAC_REPO_DIR does not exist: " $ATS_SERAC_REPO_DIR
@@ -59,41 +58,25 @@ if [ ! -f "$ATS_EXECUTABLE" ]; then
     exit 1
 fi
 
-while getopts ":-:" option; do
-    case $option in
-        -)  # long options
-            case $OPTARG in
-                help)
-                    Help
-                    exit;;
-                baseline)
-                    ATS_SERAC_BASELINE=1;;
-                clean)
-                    Clean
-                    exit;;
-                *)  # invalid
-                    echo "Invalid"
-                    Help
-                    exit;;
-            esac;;
-        \?) # invalid
-            echo "Invalid option"
-            Help
-            exit;;
+while [ -n "$1" ] ; do
+    case "$1" in
+        -h | --help     ) Help; exit 0;;
+        -c | --clean    ) Clean; exit 0;;
+        -b | --baseline ) shift; ATS_SERAC_BASELINE=$1;;
+        *               ) echo "Invalid option: '$1'"; exit 1;;
     esac
+    shift
 done
 
 # Add Serac's bin directory to path
 export PATH=$ATS_SERAC_BIN_DIR:$PATH
 
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~"
-echo "ATS:       " $ATS_EXECUTABLE
-echo "BIN DIR:   " $ATS_SERAC_BIN_DIR
-echo "REPO DIR:  " $ATS_SERAC_REPO_DIR
-echo "BASELINE?: " $ATS_SERAC_BASELINE
+echo "ATS:       $ATS_EXECUTABLE"
+echo "BIN DIR:   $ATS_SERAC_BIN_DIR"
+echo "REPO DIR:  $ATS_SERAC_REPO_DIR"
+echo "BASELINE:  $ATS_SERAC_BASELINE"
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~"
-
-Clean
 
 # Run ATS
 $ATS_EXECUTABLE $ATS_SERAC_REPO_DIR/tests/integration/test.ats

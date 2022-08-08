@@ -550,7 +550,6 @@ protected:
   /// An auxilliary zero vector
   mfem::Vector zero_;
 
-  /// sam: is this the correct description of u_?
   /// Predicted temperature true dofs
   mfem::Vector u_;
 

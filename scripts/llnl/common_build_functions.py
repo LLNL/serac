@@ -238,7 +238,7 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
 
     return 0
 
-def build_and_test_host_config(test_root,host_config, report_to_stdout = False, extra_cmake_options = ""):
+def build_and_test_host_config(test_root, host_config, report_to_stdout=False, extra_cmake_options="", skip_install=False):
     host_config_root = get_host_config_root(host_config)
     # setup build and install dirs
     build_dir   = pjoin(test_root,"build-%s"   % host_config_root)
@@ -337,12 +337,15 @@ def build_and_test_host_config(test_root,host_config, report_to_stdout = False, 
     #     print("[ERROR: Docs generation for host-config: %s failed]\n\n" % host_config)
     #     return res
 
-    # build the examples
-    res = test_examples(host_config, build_dir, install_dir, report_to_stdout)
+    # Install and test examples
+    if skip_install:
+        print("[Skipping 'make install']\n")
+    else:
+        res = test_examples(host_config, build_dir, install_dir, report_to_stdout)
 
-    if res != 0:
-        print("[ERROR: Building examples for host-config: %s failed]\n\n" % host_config)
-        return res
+        if res != 0:
+            print("[ERROR: Building examples for host-config: %s failed]\n\n" % host_config)
+            return res
     
     print("[SUCCESS: Build, test, and install for host-config: {0} complete]\n".format(host_config))
 

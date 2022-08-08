@@ -93,8 +93,8 @@ int main(int argc, char* argv[])
   solid_solver.setMaterial(mat, qdata);
 
   // prescribe zero displacement at the supported end of the beam
-  std::set < int > support = {1};
-  auto zero_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; };
+  std::set<int> support           = {1};
+  auto          zero_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; };
   solid_solver.setDisplacementBCs(support, zero_displacement);
 
   solid_solver.setDisplacement(zero_displacement);
