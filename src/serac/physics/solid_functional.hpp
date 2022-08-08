@@ -305,7 +305,7 @@ public:
         [this, material](auto /*x*/, auto& state, auto displacement, auto acceleration, auto... params) {
           auto du_dX   = get<DERIVATIVE>(displacement);
           auto d2u_dt2 = get<VALUE>(acceleration);
-          auto stress  = material(state, du_dX, serac::get<VALUE>(params)...);
+          auto stress  = material(state, du_dX, params...);
           if (geom_nonlin_ == GeometricNonlinearities::On) {
             stress = dot(stress, inv(transpose(I + du_dX)));
           }
@@ -453,12 +453,12 @@ public:
 
             // K := dR/du
             auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(predicted_displacement_), d2u_dt2,
-                                                         parameter_states_[parameter_indices]...));
+                                                         *parameter_states_[parameter_indices]...));
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             // M := dR/da
             auto M = serac::get<DERIVATIVE>((*residual_)(predicted_displacement_, differentiate_wrt(d2u_dt2),
-                                                         parameter_states_[parameter_indices]...));
+                                                         *parameter_states_[parameter_indices]...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
             // J = M + c0 * K
@@ -588,7 +588,7 @@ public:
     // sam: is this the right thing to be doing for dynamics simulations,
     // or are we implicitly assuming this should only be used in quasistatic analyses?
     auto drdu = serac::get<DERIVATIVE>(
-        (*residual_)(differentiate_wrt(displacement_), zero_, parameter_states_[parameter_indices]...));
+        (*residual_)(differentiate_wrt(displacement_), zero_, *parameter_states_[parameter_indices]...));
     auto jacobian = assemble(drdu);
     auto J_T      = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -630,7 +630,7 @@ public:
     }
 
     auto drdparam = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<parameter_field + 2>{}, displacement_, zero_,
-                                                        parameter_states_[parameter_indices]...));
+                                                        *parameter_states_[parameter_indices]...));
 
     auto drdparam_mat = assemble(drdparam);
 
