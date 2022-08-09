@@ -174,17 +174,11 @@ int main(int argc, char* argv[])
   simulation.outputState("paraview");
 
   // Perform the quasi-static solve
-  int num_steps = 2;
-  double t    = 0.0;
-  double tmax = 1.0;
-  double dt   = tmax / num_steps;
-  for (int i = 0; i < num_steps; i++) {
-    t += dt;
-    temperature = theta_ref + t;
-    simulation.advanceTimestep(dt);
-    simulation.outputState("paraview");
-  }
+  double dt = 1.0;
+  temperature = theta_ref + 1.0;
+  simulation.advanceTimestep(dt);
 
+  // define quantities of interest
   auto & mesh = serac::StateManager::mesh();
 
   Functional< double(H1<p, dim>) > qoi({&simulation.displacement().space()});
@@ -193,7 +187,8 @@ int main(int argc, char* argv[])
     return dot(u, n) * ((x[2] > 0.99 * height) ? 1.0 : 0.0);
   }, mesh);
 
-  std::cout << "vertical displacement integrated over the top surface: " << qoi(simulation.displacement()) << std::endl;
+  double initial_qoi = qoi(simulation.displacement());
+  std::cout << "vertical displacement integrated over the top surface: " << initial_qoi << std::endl;
 
   Functional< double(H1<p, dim>) > area({&simulation.displacement().space()});
   area.AddSurfaceIntegral([=](auto x, auto /*n*/, auto /*u*/){
@@ -211,13 +206,42 @@ int main(int argc, char* argv[])
   double deltaT = 1.0;
   std::cout << "expected average vertical displacement: " << alpha0 * deltaT * height << std::endl;
 
-  // output:
-  // vertical displacement integrated over the top surface: 0.000883477
-  // total area of the top surface: 0.441959
-  // exact area of the top surface: 0.441786
-  // average vertical displacement: 0.001999
-  // expected average vertical displacement: 0.002
 
+  serac::FiniteElementDual adjoint_load(mesh, simulation.displacement().space(), "adjoint_load");
+  auto dqoi_du = get<1>(qoi(DifferentiateWRT<0>{}, simulation.displacement()));
+  adjoint_load = *assemble(dqoi_du);
 
+  simulation.solveAdjoint(adjoint_load);
+
+  auto & dqoi_dalpha = simulation.computeSensitivity<1>();
+
+  double epsilon = 1.0e-6;
+  mfem::Vector dalpha(alpha.Size());
+  dalpha.Randomize();
+  alpha += epsilon * dalpha;
+
+  // rerun the simulation to the beginning, 
+  // but this time use perturbed values of alpha
+  simulation.setDisplacement(zero_vector);
+
+  simulation.advanceTimestep(dt);
+
+  double final_qoi = qoi(simulation.displacement());
+
+  // compare the expected change in the QoI to the actual change:
+  std::cout << "directional derivative of QoI by adjoint-state method: ";
+  std::cout << mfem::InnerProduct(dqoi_dalpha, dalpha) << std::endl;
+  std::cout << "directional derivative of QoI by finite-difference: ";
+  std::cout << (final_qoi - initial_qoi) / epsilon << std::endl;
+  
   MPI_Finalize();
 }
+
+// output:
+// vertical displacement integrated over the top surface: 0.000883477
+// total area of the top surface: 0.441959
+// exact area of the top surface: 0.441786
+// average vertical displacement: 0.001999
+// expected average vertical displacement: 0.002
+// directional derivative of QoI by adjoint-state method: 0.441931
+// directional derivative of QoI by finite-difference: 0.441931
