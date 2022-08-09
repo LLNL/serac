@@ -6,11 +6,12 @@
 
 #include <fstream>
 
-#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
 #include "serac/serac_config.hpp"
+#include "serac/infrastructure/initialize.hpp"
+#include "serac/infrastructure/terminator.hpp"
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/thermal_mechanics_functional.hpp"
@@ -94,9 +95,7 @@ mfem::Mesh build_hollow_quarter_cylinder(std::size_t radial_divisions, std::size
 
 int main(int argc, char* argv[])
 {
-  MPI_Init(&argc, &argv);
-
-  axom::slic::SimpleLogger logger;
+  serac::initialize(argc, argv);
 
   constexpr int p                   = 1;
   constexpr int dim                 = 3;
@@ -233,8 +232,8 @@ int main(int argc, char* argv[])
   std::cout << mfem::InnerProduct(dqoi_dalpha, dalpha) << std::endl;
   std::cout << "directional derivative of QoI by finite-difference: ";
   std::cout << (final_qoi - initial_qoi) / epsilon << std::endl;
-  
-  MPI_Finalize();
+
+  serac::exitGracefully();
 }
 
 // output:
