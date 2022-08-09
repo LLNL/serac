@@ -59,10 +59,14 @@ double patch_test(std::function<void(const mfem::Vector&, mfem::Vector&)> exact_
       mesh::refineAndDistribute(buildHypercubeMesh<dim>(elements_per_dim), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
 
+#if 1
   auto linear_solver_options        = solid_mechanics::default_linear_options;
   linear_solver_options.rel_tol     = 1e-7;
   linear_solver_options.abs_tol     = 1e-16;
   linear_solver_options.print_level = 0;
+#else
+  DirectSolverOptions linear_solver_options{};
+#endif
   const SolverOptions options{linear_solver_options, solid_mechanics::default_nonlinear_options};
 
   // Construct a functional-based solid mechanics solver
@@ -76,7 +80,7 @@ double patch_test(std::function<void(const mfem::Vector&, mfem::Vector&)> exact_
   solid_solver.setMaterial(mat);
 
   // Set the initial displacement
-  // solid_solver.setDisplacement([](const mfem::Vector&X, mfem::Vector& u) {});
+  solid_solver.setDisplacement([](const mfem::Vector& /*X*/, mfem::Vector& u) { u = 0.0; });
 
   // Define a boundary attribute set
   std::set<int> essential_boundaries;
@@ -105,6 +109,8 @@ double patch_test(std::function<void(const mfem::Vector&, mfem::Vector&)> exact_
   // Perform the quasi-static solve
   double dt = 1.0;
   solid_solver.advanceTimestep(dt);
+
+  solid_solver.displacement().Print(std::cout);
 
   // Output the sidre-based and paraview plot files
   solid_solver.outputState("paraview_output");
@@ -595,7 +601,7 @@ TEST(SolidFunctional, 2DLinearTraction)
 }
 
 template <int dim>
-void affine_solution(const mfem::Vector& X, mfem::Vector u)
+void affine_solution(const mfem::Vector& X, mfem::Vector & u)
 {
   mfem::DenseMatrix A(dim);
   A(0, 0) = 0.110791568544027;
