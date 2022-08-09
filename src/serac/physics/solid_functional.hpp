@@ -487,9 +487,17 @@ public:
 
       auto& lin_solver = nonlin_solver_.LinearSolver();
 
-      lin_solver.SetOperator(*J_);
+      mfem::SuperLUSolver* direct_lin_solver = dynamic_cast<mfem::SuperLUSolver*>(&lin_solver);
 
-      lin_solver.Mult(dr_, du_);
+      if (direct_lin_solver) {
+        mfem::HypreParMatrix* hypre_matrix   = static_cast<mfem::HypreParMatrix*>(J_.get());
+        auto                  superlu_matrix = std::make_unique<mfem::SuperLURowLocMatrix>(*hypre_matrix);
+        lin_solver.SetOperator(*superlu_matrix);
+        lin_solver.Mult(dr_, du_);
+      } else {
+        lin_solver.SetOperator(*J_);
+        lin_solver.Mult(dr_, du_);
+      }
 
       displacement_ += du_;
     }

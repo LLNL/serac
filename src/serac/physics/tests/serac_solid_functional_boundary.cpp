@@ -45,7 +45,7 @@ TEST(SolidFunctional, BoundaryCondition)
   SolidFunctional<p, dim> solid_solver(default_static_options, GeometricNonlinearities::Off, FinalMeshOption::Reference,
                                        "solid_functional_boundary");
 
-  solid_mechanics::LinearIsotropic<dim> mat{1.0, 1.0, 1.0};
+  solid_mechanics::LinearIsotropic mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
 
   // note: L is specific to beam-quad.mesh
