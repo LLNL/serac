@@ -542,15 +542,6 @@ public:
 
       residual_->update_qdata = false;
     }
-
-    if (geom_nonlin_ == GeometricNonlinearities::On) {
-      // Update the mesh with the new deformed nodes
-      deformed_nodes_->Set(1.0, displacement_.gridFunction());
-      deformed_nodes_->Add(1.0, *reference_nodes_);
-
-      mesh_.NewNodes(*deformed_nodes_);
-    }
-
     cycle_ += 1;
   }
 

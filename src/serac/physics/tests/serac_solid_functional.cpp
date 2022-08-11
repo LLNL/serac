@@ -37,7 +37,7 @@ double patch_test(std::function<void(const mfem::Vector&, mfem::Vector&)> exact_
 {
   constexpr int p = 1;
 
-  auto body_force_function = [](auto /* x */, auto /* t */) { return tensor<double, dim>{}; };
+  //auto body_force_function = [](auto /* x */, auto /* t */) { return tensor<double, dim>{}; };
 
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -59,7 +59,7 @@ double patch_test(std::function<void(const mfem::Vector&, mfem::Vector&)> exact_
       mesh::refineAndDistribute(buildHypercubeMesh<dim>(elements_per_dim), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
 
-#if 1
+#if 0
   auto linear_solver_options        = solid_mechanics::default_linear_options;
   linear_solver_options.rel_tol     = 1e-7;
   linear_solver_options.abs_tol     = 1e-16;
@@ -70,7 +70,7 @@ double patch_test(std::function<void(const mfem::Vector&, mfem::Vector&)> exact_
   const SolverOptions options{linear_solver_options, solid_mechanics::default_nonlinear_options};
 
   // Construct a functional-based solid mechanics solver
-  SolidFunctional<p, dim> solid_solver(options, GeometricNonlinearities::On, FinalMeshOption::Reference,
+  SolidFunctional<p, dim> solid_solver(options, GeometricNonlinearities::Off, FinalMeshOption::Reference,
                                        "solid_functional");
 
   double                      density       = 1.0;
@@ -80,8 +80,15 @@ double patch_test(std::function<void(const mfem::Vector&, mfem::Vector&)> exact_
   solid_solver.setMaterial(mat);
 
   // Set the initial displacement
-  solid_solver.setDisplacement([](const mfem::Vector& /*X*/, mfem::Vector& u) { u = 0.0; });
+  //solid_solver.setDisplacement([](const mfem::Vector& /*X*/, mfem::Vector& u) { u = 0.0; });
 
+  solid_solver.setDisplacement(exact_displacement_function);
+  solid_solver.displacement().Print();
+
+  mfem::VectorFunctionCoefficient u_coef(dim, exact_displacement_function);
+  std::cout << "||u_exact|| = " << solid_solver.displacement().gridFunction().ComputeL2Error(u_coef)
+            << std::endl;
+  
   // Define a boundary attribute set
   std::set<int> essential_boundaries;
   if constexpr (dim == 2) {
@@ -101,7 +108,7 @@ double patch_test(std::function<void(const mfem::Vector&, mfem::Vector&)> exact_
   // std::cout << "stress\n" << tau << std::endl;
   // solid_solver.setTractionBCs([=](auto, auto n, auto) { return dot(tau, n); });
 
-  solid_solver.addBodyForce(body_force_function);
+  //solid_solver.addBodyForce(body_force_function);
 
   // Finalize the data structures
   solid_solver.completeSetup();
@@ -117,10 +124,15 @@ double patch_test(std::function<void(const mfem::Vector&, mfem::Vector&)> exact_
 
   // Compute norm of error
   mfem::VectorFunctionCoefficient exact_solution_coef(dim, exact_displacement_function);
-  double                          uNorm = solid_solver.displacement().gridFunction().Norml2();
-  std::cout << "||u|| = " << uNorm << std::endl;
   std::cout << "error = " << solid_solver.displacement().gridFunction().ComputeL2Error(exact_solution_coef)
             << std::endl;
+
+  auto zero_func = [](const mfem::Vector&, mfem::Vector& u) { u = 0.0; };
+  mfem::VectorFunctionCoefficient zero_coef(dim, zero_func);
+  std::cout << "||u|| = " << solid_solver.displacement().gridFunction().ComputeL2Error(zero_coef)
+            << std::endl;
+
+  
   return solid_solver.displacement().gridFunction().ComputeL2Error(exact_solution_coef);
 }
 
@@ -601,7 +613,7 @@ TEST(SolidFunctional, 2DLinearTraction)
 }
 
 template <int dim>
-void affine_solution(const mfem::Vector& X, mfem::Vector & u)
+void affine_solution(const mfem::Vector& X, mfem::Vector& u)
 {
   mfem::DenseMatrix A(dim);
   A(0, 0) = 0.110791568544027;
