@@ -371,11 +371,11 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
 }
 
-TEST(SolidFunctional, 2DLinearStatic) { functional_solid_test_static<1, 2>(1.5110529858788075); }
+TEST(SolidFunctional, 2DLinearStatic) { functional_solid_test_static<1, 2>(1.5110557316182822); }
 TEST(SolidFunctional, 2DQuadStatic) { functional_solid_test_static<2, 2>(2.1864815661936112); }
 TEST(SolidFunctional, 2DQuadParameterizedStatic) { functional_parameterized_solid_test<2, 2>(2.1864815661936112); }
 
-TEST(SolidFunctional, 3DLinearStatic) { functional_solid_test_static<1, 3>(1.3708614483662795); }
+TEST(SolidFunctional, 3DLinearStatic) { functional_solid_test_static<1, 3>(1.3708626418281913); }
 TEST(SolidFunctional, 3DQuadStatic) { functional_solid_test_static<2, 3>(1.9497651636266995); }
 
 TEST(SolidFunctional, 3DQuadStaticJ2) { functional_solid_test_static_J2(); }
