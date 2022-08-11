@@ -99,7 +99,7 @@ public:
    */
   SolidFunctional(
       const SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
-      FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "",
+      const std::string&                                                                 name             = "",
       std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states = {})
       : BasePhysics(2, order, name),
         velocity_(StateManager::newState(FiniteElementState::Options{
@@ -114,8 +114,7 @@ public:
               nonlin_solver_, bcs_),
         c0_(0.0),
         c1_(0.0),
-        geom_nonlin_(geom_nonlin),
-        keep_deformation_(keep_deformation)
+        geom_nonlin_(geom_nonlin)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
@@ -142,13 +141,6 @@ public:
 
     state_.push_back(velocity_);
     state_.push_back(displacement_);
-
-    // Initialize the mesh node pointers
-    reference_nodes_ = std::make_unique<mfem::ParGridFunction>(&displacement_.space());
-    mesh_.EnsureNodes();
-    mesh_.GetNodes(*reference_nodes_);
-
-    deformed_nodes_ = std::make_unique<mfem::ParGridFunction>(*reference_nodes_);
 
     displacement_ = 0.0;
     velocity_     = 0.0;
@@ -190,26 +182,7 @@ public:
   }
 
   /// @brief Destroy the Solid Functional object
-  ~SolidFunctional()
-  {
-    // Update the mesh with the new deformed nodes if requested
-    if (keep_deformation_ == FinalMeshOption::Deformed) {
-      *reference_nodes_ += displacement_.gridFunction();
-    }
-
-    // Build a new grid function to store the mesh nodes post-destruction
-    // NOTE: MFEM will manage the memory of these objects
-
-    auto mesh_fe_coll  = new mfem::H1_FECollection(order_, mesh_.Dimension());
-    auto mesh_fe_space = new mfem::ParFiniteElementSpace(displacement_.space(), &mesh_, mesh_fe_coll);
-    auto mesh_nodes    = new mfem::ParGridFunction(mesh_fe_space);
-    mesh_nodes->MakeOwner(mesh_fe_coll);
-
-    *mesh_nodes = *reference_nodes_;
-
-    // Set the mesh to the newly created nodes object and pass ownership
-    mesh_.NewNodes(*mesh_nodes, true);
-  }
+  ~SolidFunctional() {}
 
   /**
    * @brief Create a shared ptr to a quadrature data buffer for the given material type
@@ -508,11 +481,6 @@ public:
   {
     SLIC_ERROR_ROOT_IF(!residual_, "completeSetup() must be called prior to advanceTimestep(dt) in SolidFunctional.");
 
-    // Set the mesh nodes to the reference configuration
-    if (geom_nonlin_ == GeometricNonlinearities::On) {
-      mesh_.NewNodes(*reference_nodes_);
-    }
-
     // bcs_.setTime(time_);
 
     if (is_quasistatic_) {
@@ -535,14 +503,6 @@ public:
       residual_->update_qdata = false;
     }
 
-    if (geom_nonlin_ == GeometricNonlinearities::On) {
-      // Update the mesh with the new deformed nodes
-      deformed_nodes_->Set(1.0, displacement_.gridFunction());
-      deformed_nodes_->Add(1.0, *reference_nodes_);
-
-      mesh_.NewNodes(*deformed_nodes_);
-    }
-
     cycle_ += 1;
   }
 
@@ -560,11 +520,6 @@ public:
   virtual const serac::FiniteElementState& solveAdjoint(FiniteElementDual& adjoint_load,
                                                         FiniteElementDual* dual_with_essential_boundary = nullptr)
   {
-    if (geom_nonlin_ == GeometricNonlinearities::On) {
-      // Set the mesh nodes to the reference configuration
-      mesh_.NewNodes(*reference_nodes_);
-    }
-
     mfem::HypreParVector adjoint_load_vector(adjoint_load);
 
     // Add the sign correction to move the term to the RHS
@@ -595,11 +550,6 @@ public:
     lin_solver.SetOperator(*J_T);
     lin_solver.Mult(adjoint_load_vector, adjoint_displacement_);
 
-    if (geom_nonlin_ == GeometricNonlinearities::On) {
-      // Update the mesh with the new deformed nodes
-      mesh_.NewNodes(*deformed_nodes_);
-    }
-
     return adjoint_displacement_;
   }
 
@@ -615,22 +565,12 @@ public:
   template <int parameter_field>
   FiniteElementDual& computeSensitivity()
   {
-    if (geom_nonlin_ == GeometricNonlinearities::On) {
-      // Set the mesh nodes to the reference configuration
-      mesh_.NewNodes(*reference_nodes_);
-    }
-
     auto drdparam = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<parameter_field + 2>{}, displacement_, zero_,
                                                         parameter_states_[parameter_indices]...));
 
     auto drdparam_mat = assemble(drdparam);
 
     drdparam_mat->MultTranspose(adjoint_displacement_, *parameter_sensitivities_[parameter_field]);
-
-    if (geom_nonlin_ == GeometricNonlinearities::On) {
-      // Set the mesh nodes back to the reference configuration
-      mesh_.NewNodes(*deformed_nodes_);
-    }
 
     return *parameter_sensitivities_[parameter_field];
   }
@@ -667,15 +607,6 @@ public:
 
   /// @brief getter for nodal forces (before zeroing-out essential dofs)
   const serac::FiniteElementDual& nodalForces() { return nodal_forces_; };
-
-  /// @brief Reset the mesh, displacement, and velocity to the reference (stress-free) configuration
-  void resetToReferenceConfiguration()
-  {
-    displacement_ = 0.0;
-    velocity_     = 0.0;
-
-    mesh_.NewNodes(*reference_nodes_);
-  }
 
 protected:
   /// The compile-time finite element trial space for displacement and velocity (H1 of order p)
@@ -754,9 +685,6 @@ protected:
 
   /// @brief Pointer to the reference mesh data
   std::unique_ptr<mfem::ParGridFunction> reference_nodes_;
-
-  /// @brief Flag to indicate the final mesh node state post-destruction
-  FinalMeshOption keep_deformation_;
 
   /// @brief Pointer to the deformed mesh data
   std::unique_ptr<mfem::ParGridFunction> deformed_nodes_;

@@ -52,8 +52,7 @@ void functional_test_static(double expected_norm)
   // The material model needs to be implemented before this
   // module can be used.
   ThermalSolidFunctional<p, dim> thermal_solid_solver(thermal_options, solid_mechanics_options,
-                                                      GeometricNonlinearities::On, FinalMeshOption::Deformed,
-                                                      "thermal_solid_functional");
+                                                      GeometricNonlinearities::On, "thermal_solid_functional");
 
   double u = 0.0;
   EXPECT_NEAR(u, expected_norm, 1.0e-6);
