@@ -114,7 +114,8 @@ private:
   public:
     /**
      * @brief Constructs a wrapper over an mfem::SuperLUSolver
-     * @param[in] comm The MPI communicator used by the vectors and matrices in teh solve
+     * @param[in] comm The MPI communicator used by the vectors and matrices in the solve
+     * @param[in] options The direct solver configuration parameters struct
      */
     SuperLU(MPI_Comm comm, DirectSolverOptions options) : superlu_solver_(comm)
     {
@@ -124,10 +125,20 @@ private:
       }
     }
 
-    // Factor and solve the linear system y = Op^{-1} x.
+    /**
+     * @brief Factor and solve the linear system y = Op^{-1} x using DSuperLU
+     *
+     * @param x The input RHS vector
+     * @param y The output solution vector
+     */
     void Mult(const mfem::Vector& x, mfem::Vector& y) const;
 
-    // Set the operator.
+    /**
+     * @brief Set the underlying matrix operator to use in the solution algorithm
+     *
+     * @param op The matrix operator to factorize with SuperLU
+     * @pre This operator must be an assembled HypreParMatrix for compatibility with SuperLU
+     */
     void SetOperator(const mfem::Operator& op);
 
   private:

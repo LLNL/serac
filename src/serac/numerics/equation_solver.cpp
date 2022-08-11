@@ -213,7 +213,7 @@ void EquationSolver::SuperLU::SetOperator(const mfem::Operator& op)
 {
   const mfem::HypreParMatrix* matrix = dynamic_cast<const mfem::HypreParMatrix*>(&op);
 
-  SLIC_ERROR_ROOT_IF(matrix == nullptr, "Matrix must be an assembled HypreParMatrix");
+  SLIC_ERROR_ROOT_IF(!matrix, "Matrix must be an assembled HypreParMatrix for use with SuperLU");
   superlu_mat_ = std::make_unique<mfem::SuperLURowLocMatrix>(*matrix);
 
   superlu_solver_.SetOperator(*superlu_mat_);
