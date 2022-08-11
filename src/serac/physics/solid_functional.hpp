@@ -93,7 +93,6 @@ public:
    *
    * @param options The options for the linear, nonlinear, and ODE solves
    * @param geom_nonlin Flag to include geometric nonlinearities
-   * @param keep_deformation Flag to keep the deformation in the underlying mesh post-destruction
    * @param name An optional name for the physics module instance
    * @param parameter_states An array of FiniteElementStates containing the user-specified parameter fields
    */
