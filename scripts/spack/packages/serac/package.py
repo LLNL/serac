@@ -89,9 +89,9 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on('py-sphinx', when="+devtools")
     depends_on('py-ats', when="+devtools")
 
-    depends_on("sundials@5.7.0~shared+hypre+monitoring~examples~examples-install",
+    depends_on("sundials@5.7.0~shared+hypre+monitoring~examples~examples-install build_type=Release",
                when="+sundials")
-    depends_on("sundials+asan", when="+sundials+asan")
+    depends_on("sundials+asan build_type=Release", when="+sundials+asan")
 
     # Libraries that support +debug
     mfem_variants = "~shared+metis+superlu-dist+lapack+mpi"
@@ -115,7 +115,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     # Note: Certain combinations of CMake and Conduit do not like +mpi
     #  and cause FindHDF5.cmake to fail and only return mpi information
     #  (includes, libs, etc) instead of hdf5 info
-    depends_on("hdf5@1.8.21+hl~mpi~shared")
+    depends_on("hdf5@1.8.21+hl~mpi~shared build_type=Release")
 
     depends_on("camp")
 
@@ -123,9 +123,9 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("raja~openmp", when="+raja~openmp")
     depends_on("raja+openmp", when="+raja+openmp")
 
-    depends_on("umpire@2022.03.1~shared~examples~device_alloc", when="+umpire")
-    depends_on("umpire~openmp", when="+umpire~openmp")
-    depends_on("umpire+openmp", when="+umpire+openmp")
+    depends_on("umpire@2022.03.1~shared~examples~device_alloc build_type=Release", when="+umpire")
+    depends_on("umpire~openmp build_type=Release", when="+umpire~openmp")
+    depends_on("umpire+openmp build_type=Release", when="+umpire+openmp")
     depends_on("umpire build_type=Debug", when="+umpire+debug")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
@@ -137,16 +137,16 @@ class Serac(CachedCMakePackage, CudaPackage):
         depends_on("{0}".format(dep))
         depends_on("{0} build_type=Debug".format(dep), when="+debug")
 
-    depends_on("axom~raja", when="~raja")
-    depends_on("axom~umpire", when="~umpire")
-    depends_on("axom~openmp", when="~openmp")
-    depends_on("axom+openmp", when="+openmp")
+    depends_on("axom~raja build_type=Release", when="~raja")
+    depends_on("axom~umpire build_type=Release", when="~umpire")
+    depends_on("axom~openmp build_type=Release", when="~openmp")
+    depends_on("axom+openmp build_type=Release", when="+openmp")
 
     # Libraries that do not have a debug variant
-    depends_on("conduit~shared~python~test")
+    depends_on("conduit~shared~python~test build_type=Release")
     depends_on("adiak@0.2.1~shared+mpi", when="+profiling")
     depends_on("caliper@2.7.0~shared+mpi+adiak~papi", when="+profiling")
-    depends_on("superlu-dist@6.1.1~shared")
+    depends_on("superlu-dist@6.1.1~shared build_type=Release")
 
     # Libraries that we do not build debug
     depends_on("glvis@3.4~fonts", when='+glvis')
