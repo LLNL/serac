@@ -42,7 +42,7 @@ TEST(SolidFunctional, BoundaryCondition)
   serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a functional-based solid mechanics solver
-  SolidFunctional<p, dim> solid_solver(default_static_options, GeometricNonlinearities::Off, FinalMeshOption::Reference,
+  SolidFunctional<p, dim> solid_solver(default_static_options, GeometricNonlinearities::Off,
                                        "solid_functional_boundary");
 
   solid_mechanics::LinearIsotropic<dim> mat{1.0, 1.0, 1.0};
