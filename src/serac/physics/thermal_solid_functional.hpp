@@ -34,12 +34,11 @@ public:
    * @param thermal_options The options for the linear, nonlinear, and ODE solves of the thermal operator
    * @param solid_options The options for the linear, nonlinear, and ODE solves of the thermal operator
    * @param geom_nonlin Flag to include geometric nonlinearities
-   * @param keep_deformation Flag to keep the deformation in the underlying mesh post-destruction
    * @param name An optional name for the physics module instance
    */
   ThermalSolidFunctional(const SolverOptions& thermal_options, const SolverOptions& solid_options,
                          GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
-                         FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "")
+                         const std::string&      name        = "")
       : BasePhysics(3, order, name),
         temperature_(
             StateManager::newState(FiniteElementState::Options{.order      = order,
@@ -51,7 +50,7 @@ public:
         displacement_(StateManager::newState(FiniteElementState::Options{
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "displacement")})),
         thermal_functional_(thermal_options, name + "thermal"),
-        solid_functional_(solid_options, geom_nonlin, keep_deformation, name + "mechanical")
+        solid_functional_(solid_options, geom_nonlin, name + "mechanical")
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));

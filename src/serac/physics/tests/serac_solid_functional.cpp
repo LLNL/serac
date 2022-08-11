@@ -50,8 +50,7 @@ void functional_solid_test_static(double expected_disp_norm)
   SolverOptions options = {DirectSolverOptions{.print_level = 1}, solid_mechanics::default_nonlinear_options};
 
   // Construct a functional-based solid mechanics solver
-  SolidFunctional<p, dim> solid_solver(options, GeometricNonlinearities::On, FinalMeshOption::Reference,
-                                       "solid_functional");
+  SolidFunctional<p, dim> solid_solver(options, GeometricNonlinearities::On, "solid_functional");
 
   solid_mechanics::NeoHookean<dim> mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
@@ -114,8 +113,7 @@ void functional_solid_test_static_J2()
   options.linear         = linear_options;
 
   // Construct a functional-based solid mechanics solver
-  SolidFunctional<p, dim> solid_solver(options, GeometricNonlinearities::Off, FinalMeshOption::Reference,
-                                       "solid_functional");
+  SolidFunctional<p, dim> solid_solver(options, GeometricNonlinearities::Off, "solid_functional");
 
   solid_mechanics::J2 mat{
       10000,  // Young's modulus
@@ -190,7 +188,7 @@ void functional_solid_test_dynamic(double expected_disp_norm)
 
   // Construct a functional-based solid mechanics solver
   SolidFunctional<p, dim> solid_solver(default_dynamic_options, GeometricNonlinearities::Off,
-                                       FinalMeshOption::Reference, "solid_functional_dynamic");
+                                       "solid_functional_dynamic");
 
   solid_mechanics::LinearIsotropic<dim> mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
@@ -251,8 +249,7 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
   serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a functional-based solid mechanics solver
-  SolidFunctional<p, dim> solid_solver(default_static_options, GeometricNonlinearities::Off, FinalMeshOption::Reference,
-                                       "solid_functional");
+  SolidFunctional<p, dim> solid_solver(default_static_options, GeometricNonlinearities::Off, "solid_functional");
 
   solid_mechanics::LinearIsotropic<dim> mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
@@ -334,7 +331,7 @@ void functional_parameterized_solid_test(double expected_disp_norm)
 
   // Construct a functional-based solid mechanics solver
   SolidFunctional<p, dim, Parameters<H1<1>, H1<1>>> solid_solver(
-      default_static_options, GeometricNonlinearities::On, FinalMeshOption::Reference, "solid_functional",
+      default_static_options, GeometricNonlinearities::On, "solid_functional",
       {user_defined_bulk_modulus, user_defined_shear_modulus});
 
   solid_mechanics::ParameterizedNeoHookeanSolid<dim> mat{1.0, 0.0, 0.0};
@@ -374,12 +371,12 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
 }
 
-TEST(SolidFunctional, 2DLinearStatic) { functional_solid_test_static<1, 2>(1.5110743593501033); }
-TEST(SolidFunctional, 2DQuadStatic) { functional_solid_test_static<2, 2>(2.1864070695817928); }
-TEST(SolidFunctional, 2DQuadParameterizedStatic) { functional_parameterized_solid_test<2, 2>(2.1864070695817928); }
+TEST(SolidFunctional, 2DLinearStatic) { functional_solid_test_static<1, 2>(1.5110529858788075); }
+TEST(SolidFunctional, 2DQuadStatic) { functional_solid_test_static<2, 2>(2.1864815661936112); }
+TEST(SolidFunctional, 2DQuadParameterizedStatic) { functional_parameterized_solid_test<2, 2>(2.1864815661936112); }
 
-TEST(SolidFunctional, 3DLinearStatic) { functional_solid_test_static<1, 3>(1.3708718127987922); }
-TEST(SolidFunctional, 3DQuadStatic) { functional_solid_test_static<2, 3>(1.9497254957351946); }
+TEST(SolidFunctional, 3DLinearStatic) { functional_solid_test_static<1, 3>(1.3708614483662795); }
+TEST(SolidFunctional, 3DQuadStatic) { functional_solid_test_static<2, 3>(1.9497651636266995); }
 
 TEST(SolidFunctional, 3DQuadStaticJ2) { functional_solid_test_static_J2(); }
 
