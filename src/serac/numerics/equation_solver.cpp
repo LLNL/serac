@@ -25,12 +25,8 @@ EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverOptions& lin_opt
   }
   // If it's a direct solver (currently SuperLU only)
   else if (auto direct_options = std::get_if<DirectSolverOptions>(&lin_options)) {
-    auto direct_solver = std::make_unique<mfem::SuperLUSolver>(comm);
-    direct_solver->SetColumnPermutation(mfem::superlu::PARMETIS);
-    if (direct_options->print_level == 0) {
-      direct_solver->SetPrintStatistics(false);
-    }
-    lin_solver_ = std::move(direct_solver);
+    auto direct_solver = std::make_unique<SuperLU>(comm, *direct_options);
+    lin_solver_        = std::move(direct_solver);
   }
 
   if (nonlin_options) {
@@ -183,12 +179,7 @@ std::unique_ptr<mfem::NewtonSolver> EquationSolver::BuildNewtonSolver(MPI_Comm  
 void EquationSolver::SetOperator(const mfem::Operator& op)
 {
   if (nonlin_solver_) {
-    if (std::holds_alternative<std::unique_ptr<mfem::SuperLUSolver>>(lin_solver_)) {
-      superlu_wrapper_ = std::make_unique<SuperLUNonlinearOperatorWrapper>(op);
-      nonlin_solver_->SetOperator(*superlu_wrapper_);
-    } else {
-      nonlin_solver_->SetOperator(op);
-    }
+    nonlin_solver_->SetOperator(op);
     // Now that the nonlinear solver knows about the operator, we can set its linear solver
     if (!nonlin_solver_set_solver_called_) {
       nonlin_solver_->SetSolver(LinearSolver());
@@ -201,18 +192,6 @@ void EquationSolver::SetOperator(const mfem::Operator& op)
   width  = op.Width();
 }
 
-void EquationSolver::SetOperator(const mfem::HypreParMatrix& matrix)
-{
-  if (std::holds_alternative<std::unique_ptr<mfem::SuperLUSolver>>(lin_solver_)) {
-    superlu_mat_ = matrix;
-    SetOperator(*superlu_mat_);
-  }
-  // Otherwise just upcast and call as usual
-  else {
-    SetOperator(static_cast<const mfem::Operator&>(matrix));
-  }
-}
-
 void EquationSolver::Mult(const mfem::Vector& b, mfem::Vector& x) const
 {
   if (nonlin_solver_) {
@@ -222,14 +201,22 @@ void EquationSolver::Mult(const mfem::Vector& b, mfem::Vector& x) const
   }
 }
 
-mfem::Operator& EquationSolver::SuperLUNonlinearOperatorWrapper::GetGradient(const mfem::Vector& x) const
+void EquationSolver::SuperLU::Mult(const mfem::Vector& x, mfem::Vector& y) const
 {
-  mfem::Operator&       grad      = oper_.GetGradient(x);
-  mfem::HypreParMatrix* matr_grad = dynamic_cast<mfem::HypreParMatrix*>(&grad);
+  SLIC_ERROR_ROOT_IF(!superlu_mat_, "Operator must be set prior to solving with SuperLU");
 
-  SLIC_ERROR_ROOT_IF(matr_grad == nullptr, "Nonlinear operator gradient must be a HypreParMatrix");
-  superlu_grad_mat_.emplace(*matr_grad);
-  return *superlu_grad_mat_;
+  // Use the underlying MFEM-based solver and SuperLU matrix type to solve the system
+  superlu_solver_.Mult(x, y);
+}
+
+void EquationSolver::SuperLU::SetOperator(const mfem::Operator& op)
+{
+  const mfem::HypreParMatrix* matrix = dynamic_cast<const mfem::HypreParMatrix*>(&op);
+
+  SLIC_ERROR_ROOT_IF(matrix == nullptr, "Matrix must be an assembled HypreParMatrix");
+  superlu_mat_ = std::make_unique<mfem::SuperLURowLocMatrix>(*matrix);
+
+  superlu_solver_.SetOperator(*superlu_mat_);
 }
 
 void EquationSolver::DefineInputFileSchema(axom::inlet::Container& container)
