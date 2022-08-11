@@ -224,6 +224,12 @@ public:
     solid_functional_.addBodyForce(body_force_function);
   }
 
+  template <typename HeatSourceType>
+  void addHeatSource(HeatSourceType func)
+  {
+    thermal_functional_.addSource(func);
+  }
+
   /**
    * @brief Get the displacement state
    *
