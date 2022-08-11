@@ -46,8 +46,9 @@ void functional_solid_test_static(double expected_disp_norm)
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
-  auto options              = default_static_options;
-  options.nonlinear.rel_tol = 1.0e-8;
+  auto options              = solid_mechanics::direct_static_options;
+  options.linear.print_level = 1;
+  options.nonlinear.rel_tol  = 1.0e-8;
   options.nonlinear.abs_tol = 1.0e-16;
 
   // Construct a functional-based solid mechanics solver
