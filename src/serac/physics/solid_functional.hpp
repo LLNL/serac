@@ -683,12 +683,6 @@ protected:
   /// @brief A flag denoting whether to compute geometric nonlinearities in the residual
   GeometricNonlinearities geom_nonlin_;
 
-  /// @brief Pointer to the reference mesh data
-  std::unique_ptr<mfem::ParGridFunction> reference_nodes_;
-
-  /// @brief Pointer to the deformed mesh data
-  std::unique_ptr<mfem::ParGridFunction> deformed_nodes_;
-
   /// @brief Coefficient containing the essential boundary values
   std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef_;
 
