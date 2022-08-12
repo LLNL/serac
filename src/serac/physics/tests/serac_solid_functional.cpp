@@ -59,24 +59,13 @@ double patch_test(std::function<void(const mfem::Vector&, mfem::Vector&)> exact_
       mesh::refineAndDistribute(buildHypercubeMesh<dim>(elements_per_dim), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
 
-#if 0
-  auto linear_solver_options        = solid_mechanics::default_linear_options;
-  linear_solver_options.rel_tol     = 1e-7;
-  linear_solver_options.abs_tol     = 1e-16;
-  linear_solver_options.print_level = 0;
-#else
   DirectSolverOptions linear_solver_options{};
-#endif
   const SolverOptions options{linear_solver_options, solid_mechanics::default_nonlinear_options};
 
   // Construct a functional-based solid mechanics solver
-  SolidFunctional<p, dim> solid_solver(options, GeometricNonlinearities::Off, FinalMeshOption::Reference,
-                                       "solid_functional");
+  SolidFunctional<p, dim> solid_solver(options, GeometricNonlinearities::On, "solid_functional");
 
-  double                      density       = 1.0;
-  double                      shear_modulus = 1.0;
-  double                      bulk_modulus  = 1.0;
-  solid_mechanics::NeoHookean mat{density, shear_modulus, bulk_modulus};
+  solid_mechanics::NeoHookean mat{.density=1.0, .K=1.0, .G=1.0};
   solid_solver.setMaterial(mat);
 
   // Set the initial displacement
@@ -176,13 +165,9 @@ double patch_test_linear(std::function<void(const mfem::Vector&, mfem::Vector&)>
   const SolverOptions static_solver_options = {linear_solver_options, nonlinear_solver_options};
 
   // Construct a functional-based solid mechanics solver
-  SolidFunctional<p, dim> solid_solver(static_solver_options, GeometricNonlinearities::Off, FinalMeshOption::Reference,
-                                       "solid_functional");
+  SolidFunctional<p, dim> solid_solver(static_solver_options, GeometricNonlinearities::Off, "solid_functional");
 
-  double                           density       = 1.0;
-  double                           shear_modulus = 1.0;
-  double                           bulk_modulus  = 1.0;
-  solid_mechanics::LinearIsotropic mat{density, shear_modulus, bulk_modulus};
+  solid_mechanics::LinearIsotropic mat{.density=1.0, .K=1.0, .G=1.0};
   solid_solver.setMaterial(mat);
 
   // Set the initial displacement
