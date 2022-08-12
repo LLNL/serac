@@ -50,14 +50,6 @@ public:
   void SetOperator(const mfem::Operator& op) override;
 
   /**
-   * @brief An overload for "intercepting" HypreParMatrices
-   * such that they can be converted to a SuperLURowLocMatrix
-   * when running in SuperLU mode
-   * @param[in] matrix The operator (system matrix) to use, "A" in Ax = b
-   */
-  void SetOperator(const mfem::HypreParMatrix& matrix);
-
-  /**
    * Solves the system
    * @param[in] b RHS of the system of equations
    * @param[out] x Solution to the system of equations
@@ -116,49 +108,54 @@ private:
                                                                const NonlinearSolverOptions& nonlin_options);
 
   /**
-   * @brief A wrapper class for combining a nonlinear solver with a SuperLU direct solver
+   * @brief A wrapper class for using the MFEM super LU solver with a HypreParMatrix
    */
-  class SuperLUNonlinearOperatorWrapper : public mfem::Operator {
+  class SuperLU : public mfem::Solver {
   public:
     /**
-     * @brief Constructs a wrapper over an mfem::Operator
-     * @param[in] oper The operator to wrap
+     * @brief Constructs a wrapper over an mfem::SuperLUSolver
+     * @param[in] comm The MPI communicator used by the vectors and matrices in the solve
+     * @param[in] options The direct solver configuration parameters struct
      */
-    SuperLUNonlinearOperatorWrapper(const mfem::Operator& oper) : oper_(oper)
+    SuperLU(MPI_Comm comm, DirectSolverOptions options) : superlu_solver_(comm)
     {
-      height = oper_.Height();
-      width  = oper_.Width();
+      superlu_solver_.SetColumnPermutation(mfem::superlu::PARMETIS);
+      if (options.print_level == 0) {
+        superlu_solver_.SetPrintStatistics(false);
+      }
     }
-    /**
-     * @brief Applies the operator
-     * @param[in] b The input vector
-     * @param[out] x The output vector
-     * @note Implements mfem::Operator::Mult, forwards directly to underlying operator
-     */
-    void Mult(const mfem::Vector& b, mfem::Vector& x) const override { oper_.Mult(b, x); }
 
     /**
-     * @brief Obtains the gradient of the underlying operator
-     * as a SuperLU matrix
-     * @param[in] x The point at which the gradient should be evaluated
-     * @return A non-owning reference to an mfem::SuperLURowLocMatrix (upcasts
-     * to match interface)
-     * @note Implements mfem::Operator::GetGradient
+     * @brief Factor and solve the linear system y = Op^{-1} x using DSuperLU
+     *
+     * @param x The input RHS vector
+     * @param y The output solution vector
      */
-    mfem::Operator& GetGradient(const mfem::Vector& x) const override;
+    void Mult(const mfem::Vector& x, mfem::Vector& y) const;
+
+    /**
+     * @brief Set the underlying matrix operator to use in the solution algorithm
+     *
+     * @param op The matrix operator to factorize with SuperLU
+     * @pre This operator must be an assembled HypreParMatrix for compatibility with SuperLU
+     */
+    void SetOperator(const mfem::Operator& op);
 
   private:
-    /**
-     * @brief The underlying operator
-     */
-    const mfem::Operator& oper_;
-
     /**
      * @brief The owner of the SuperLU matrix for the gradient, stored
      * as a member variable for lifetime purposes
      */
-    mutable std::optional<mfem::SuperLURowLocMatrix> superlu_grad_mat_;
+    mutable std::unique_ptr<mfem::SuperLURowLocMatrix> superlu_mat_;
+
+    /**
+     * @brief The underlying MFEM-based superLU solver. It requires a special
+     * superLU matrix type which we store in this object. This enables compatibility
+     * with HypreParMatrix when used as an input.
+     */
+    mfem::SuperLUSolver superlu_solver_;
   };
+
   /**
    * @brief The preconditioner (used for an iterative solver only)
    */
@@ -167,7 +164,7 @@ private:
   /**
    * @brief The linear solver object, either custom, direct (SuperLU), or iterative
    */
-  std::variant<std::unique_ptr<mfem::IterativeSolver>, std::unique_ptr<mfem::SuperLUSolver>, mfem::Solver*> lin_solver_;
+  std::variant<std::unique_ptr<mfem::IterativeSolver>, std::unique_ptr<SuperLU>, mfem::Solver*> lin_solver_;
 
   /**
    * @brief The optional nonlinear Newton-Raphson solver object
@@ -180,16 +177,6 @@ private:
    * before SetSolver
    */
   bool nonlin_solver_set_solver_called_ = false;
-
-  /**
-   * @brief The operator (system matrix) used with a SuperLU solver
-   */
-  std::optional<mfem::SuperLURowLocMatrix> superlu_mat_;
-
-  /**
-   * @brief A wrapper class that allows a direct solver to be used underneath a Newton-Raphson solver
-   */
-  std::unique_ptr<SuperLUNonlinearOperatorWrapper> superlu_wrapper_;
 };
 
 /**
