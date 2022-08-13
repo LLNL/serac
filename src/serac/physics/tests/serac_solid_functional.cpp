@@ -21,6 +21,7 @@ namespace serac {
 
 using solid_mechanics::default_dynamic_options;
 using solid_mechanics::default_static_options;
+using solid_mechanics::direct_static_options;
 
 template <int dim>
 mfem::Mesh buildHypercubeMesh(std::array<int, dim> elementsPerDim)
@@ -32,11 +33,9 @@ mfem::Mesh buildHypercubeMesh(std::array<int, dim> elementsPerDim)
   }
 }
 
-template <int dim>
+template <int p, int dim>
 double patch_test(std::function<void(const mfem::Vector&, mfem::Vector&)> exact_displacement_function)
 {
-  constexpr int p = 1;
-
   //auto body_force_function = [](auto /* x */, auto /* t */) { return tensor<double, dim>{}; };
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -48,6 +47,9 @@ double patch_test(std::function<void(const mfem::Vector&, mfem::Vector&)> exact_
   axom::sidre::DataStore datastore;
   serac::StateManager::initialize(datastore, "solid_functional_static_solve");
 
+  // BT: shouldn't this assertion be in the physics module?
+  // This prevents tests from having a nonsensical spatial dimension value, but Serac
+  // is left free to do so in the wild.
   static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for solid functional test");
 
   // Construct the appropriate dimension mesh and give it to the data store
@@ -59,24 +61,12 @@ double patch_test(std::function<void(const mfem::Vector&, mfem::Vector&)> exact_
       mesh::refineAndDistribute(buildHypercubeMesh<dim>(elements_per_dim), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
 
-  DirectSolverOptions linear_solver_options{};
-  const SolverOptions options{linear_solver_options, solid_mechanics::default_nonlinear_options};
-
   // Construct a functional-based solid mechanics solver
-  SolidFunctional<p, dim> solid_solver(options, GeometricNonlinearities::On, "solid_functional");
+  SolidFunctional<p, dim> solid_solver(direct_static_options, GeometricNonlinearities::On,
+                                       "solid_functional");
 
   solid_mechanics::NeoHookean mat{.density=1.0, .K=1.0, .G=1.0};
   solid_solver.setMaterial(mat);
-
-  // Set the initial displacement
-  //solid_solver.setDisplacement([](const mfem::Vector& /*X*/, mfem::Vector& u) { u = 0.0; });
-
-  solid_solver.setDisplacement(exact_displacement_function);
-  solid_solver.displacement().Print();
-
-  mfem::VectorFunctionCoefficient u_coef(dim, exact_displacement_function);
-  std::cout << "||u_exact|| = " << solid_solver.displacement().gridFunction().ComputeL2Error(u_coef)
-            << std::endl;
   
   // Define a boundary attribute set
   std::set<int> essential_boundaries;
@@ -106,22 +96,12 @@ double patch_test(std::function<void(const mfem::Vector&, mfem::Vector&)> exact_
   double dt = 1.0;
   solid_solver.advanceTimestep(dt);
 
-  solid_solver.displacement().Print(std::cout);
-
-  // Output the sidre-based and paraview plot files
-  solid_solver.outputState("paraview_output");
+  // Output solution for debugging
+  //solid_solver.outputState("paraview_output");
+  //solid_solver.displacement().Print(std::cout);
 
   // Compute norm of error
   mfem::VectorFunctionCoefficient exact_solution_coef(dim, exact_displacement_function);
-  std::cout << "error = " << solid_solver.displacement().gridFunction().ComputeL2Error(exact_solution_coef)
-            << std::endl;
-
-  auto zero_func = [](const mfem::Vector&, mfem::Vector& u) { u = 0.0; };
-  mfem::VectorFunctionCoefficient zero_coef(dim, zero_func);
-  std::cout << "||u|| = " << solid_solver.displacement().gridFunction().ComputeL2Error(zero_coef)
-            << std::endl;
-
-  
   return solid_solver.displacement().gridFunction().ComputeL2Error(exact_solution_coef);
 }
 
@@ -620,11 +600,36 @@ void affine_solution(const mfem::Vector& X, mfem::Vector& u)
   u += b;
 }
 
-TEST(SolidFunctional, Patch2D)
+TEST(SolidFunctionalPatch, P12D)
 {
+  constexpr int p = 1;
   constexpr int dim   = 2;
-  double        error = patch_test<dim>(affine_solution<dim>);
-  EXPECT_LT(error, 1e-10);
+  double        error = patch_test<p, dim>(affine_solution<dim>);
+  EXPECT_LT(error, 1e-13);
+}
+
+TEST(SolidFunctionalPatch, P22D)
+{
+  constexpr int p = 2;
+  constexpr int dim   = 2;
+  double        error = patch_test<p, dim>(affine_solution<dim>);
+  EXPECT_LT(error, 1e-13);
+}
+
+TEST(SolidFunctionalPatch, P13D)
+{
+  constexpr int p = 1;
+  constexpr int dim   = 3;
+  double        error = patch_test<p, dim>(affine_solution<dim>);
+  EXPECT_LT(error, 1e-13);
+}
+
+TEST(SolidFunctionalPatch, P23D)
+{
+  constexpr int p = 2;
+  constexpr int dim   = 3;
+  double        error = patch_test<p, dim>(affine_solution<dim>);
+  EXPECT_LT(error, 1e-13);
 }
 
 TEST(SolidFunctional, Patch2DLinear)
