@@ -372,7 +372,7 @@ public:
       }
     }
 
-    // Loop over the computed attribute nomral vectors
+    // Loop over the computed attribute normal vectors
     for (auto& normal : attribute_normals) {
       SLIC_ERROR_ROOT_IF(dim != 2 && dim != 3, "Dimension must be 2 or 3 for sliding wall boundary conditions.");
 
