@@ -96,9 +96,8 @@ public:
    * @param keep_deformation Flag to keep the deformation in the underlying mesh post-destruction
    * @param name An optional name for the physics module instance
    */
-  SolidFunctional(
-      const SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
-      FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "")
+  SolidFunctional(const SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
+                  FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "")
       : BasePhysics(2, order, name),
         velocity_(StateManager::newState(FiniteElementState::Options{
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "velocity")})),
@@ -130,7 +129,7 @@ public:
     if constexpr (sizeof...(parameter_space) > 0) {
       tuple<parameter_space...> types{};
       for_constexpr<sizeof...(parameter_space)>([&](auto i) {
-        trial_spaces[i+2] =
+        trial_spaces[i + 2] =
             generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_);
         parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, *trial_spaces[i + 2]);
       });
@@ -209,10 +208,7 @@ public:
     mesh_.NewNodes(*mesh_nodes, true);
   }
 
-  void setParameter(const FiniteElementState& parameter_state, size_t i)
-  {
-    parameter_states_[i] = &parameter_state;
-  }
+  void setParameter(const FiniteElementState& parameter_state, size_t i) { parameter_states_[i] = &parameter_state; }
 
   /**
    * @brief Create a shared ptr to a quadrature data buffer for the given material type
@@ -418,9 +414,10 @@ public:
    */
   void completeSetup() override
   {
-    if constexpr (sizeof ... (parameter_space) > 0) {
-      for (size_t i = 0; i < sizeof ... (parameter_space); i++) {
-        SLIC_ERROR_ROOT_IF(!parameter_states_[i], "all parameters fields must be initialized before calling completeSetup()");
+    if constexpr (sizeof...(parameter_space) > 0) {
+      for (size_t i = 0; i < sizeof...(parameter_space); i++) {
+        SLIC_ERROR_ROOT_IF(!parameter_states_[i],
+                           "all parameters fields must be initialized before calling completeSetup()");
       }
     }
 
@@ -712,7 +709,7 @@ protected:
   std::unique_ptr<mfem_ext::StdFunctionOperator> residual_with_bcs_;
 
   /// The finite element states representing user-defined parameter fields
-  std::array<const FiniteElementState *, sizeof...(parameter_space)> parameter_states_;
+  std::array<const FiniteElementState*, sizeof...(parameter_space)> parameter_states_;
 
   /// The sensitivities (dual vectors) with repect to each of the input parameter fields
   std::array<std::unique_ptr<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;

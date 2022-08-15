@@ -31,7 +31,7 @@ template <int order, int dim, typename... parameter_space>
 class ThermalMechanicsFunctional : public BasePhysics {
 public:
   static constexpr int num_parameters = sizeof...(parameter_space);
-  
+
   /**
    * @brief Construct a new coupled Thermal-Solid Functional object
    *
@@ -41,9 +41,8 @@ public:
    * @param keep_deformation Flag to keep the deformation in the underlying mesh post-destruction
    * @param name An optional name for the physics module instance
    */
-  ThermalMechanicsFunctional(const SolverOptions& thermal_options,
-                             const SolverOptions& solid_options,
-                             GeometricNonlinearities                   geom_nonlin = GeometricNonlinearities::On,
+  ThermalMechanicsFunctional(const SolverOptions& thermal_options, const SolverOptions& solid_options,
+                             GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
                              FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "")
       : BasePhysics(3, order, name),
         thermal_functional_(thermal_options, name + "thermal"),
@@ -73,10 +72,10 @@ public:
 
   void setParameter(const FiniteElementState& parameter_state, size_t i)
   {
-    thermal_functional_.setParameter(parameter_state, i + 1); // offset for displacement field
-    solid_functional_.setParameter(parameter_state, i + 1); // offset for temperature field
+    thermal_functional_.setParameter(parameter_state, i + 1);  // offset for displacement field
+    solid_functional_.setParameter(parameter_state, i + 1);    // offset for temperature field
   }
-  
+
   void advanceTimestep(double& dt) override
   {
     if (coupling_ == serac::CouplingScheme::OperatorSplit) {
@@ -93,7 +92,8 @@ public:
   }
 
   template <typename T>
-  std::shared_ptr<QuadratureData<T>> createQuadratureDataBuffer(T initial_state) {
+  std::shared_ptr<QuadratureData<T>> createQuadratureDataBuffer(T initial_state)
+  {
     return solid_functional_.createQuadratureDataBuffer(initial_state);
   }
 
@@ -112,9 +112,10 @@ public:
     SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& temperature, const T3& temperature_gradient,
                                       const T4& displacement, param_types... parameters) const
     {
-      // BT: this will not update the state correctly. I just want to get the code compiling before plumbing the state variables.
+      // BT: this will not update the state correctly. I just want to get the code compiling before plumbing the state
+      // variables.
       State state{};
-      
+
       auto [u, du_dX]     = displacement;
       auto [T, c, s0, q0] = mat(state, du_dX, temperature, temperature_gradient, parameters...);
       // density * specific_heat = c
@@ -124,24 +125,23 @@ public:
 
   template <typename ThermalMechanicalMaterial>
   struct MechanicalMaterialInterface {
-
     using State = typename ThermalMechanicalMaterial::State;
 
     const ThermalMechanicalMaterial mat;
 
     const double density;
 
-    MechanicalMaterialInterface(const ThermalMechanicalMaterial& m) : mat(m), density(m.density) 
+    MechanicalMaterialInterface(const ThermalMechanicalMaterial& m) : mat(m), density(m.density)
     {
       // empty
     }
-    
+
     template <typename T1, typename T2, typename... param_types>
-    SERAC_HOST_DEVICE auto operator()(State & state, const T1& displacement_gradient,
-                                      const T2& temperature, param_types... parameters) const
+    SERAC_HOST_DEVICE auto operator()(State& state, const T1& displacement_gradient, const T2& temperature,
+                                      param_types... parameters) const
     {
       auto [theta, dtheta_dX] = temperature;
-      auto [T, c, s0, q0]  = mat(state, displacement_gradient, theta, dtheta_dX, parameters...);
+      auto [T, c, s0, q0]     = mat(state, displacement_gradient, theta, dtheta_dX, parameters...);
       return T;
     }
   };
@@ -156,7 +156,8 @@ public:
   template <typename MaterialType>
   void setMaterial(MaterialType material)
   {
-    static_assert(std::is_same_v<typename MaterialType::State, Empty>, "error: material model requires internal variables but none were provided.");
+    static_assert(std::is_same_v<typename MaterialType::State, Empty>,
+                  "error: material model requires internal variables but none were provided.");
     setMaterial(material, EmptyQData);
   }
 
@@ -254,10 +255,10 @@ protected:
   using temperature_field  = H1<order>;
 
   // Submodule to compute the thermal conduction physics
-  ThermalConductionFunctional<order, dim, Parameters< displacement_field, parameter_space... > > thermal_functional_;
+  ThermalConductionFunctional<order, dim, Parameters<displacement_field, parameter_space...>> thermal_functional_;
 
   // Submodule to compute the mechanics
-  SolidFunctional<order, dim, Parameters< temperature_field, parameter_space... > > solid_functional_;
+  SolidFunctional<order, dim, Parameters<temperature_field, parameter_space...>> solid_functional_;
 };
 
 }  // namespace serac

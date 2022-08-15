@@ -102,8 +102,7 @@ public:
    * @param[in] name An optional name for the physics module instance
    * used by an underlying material model or load
    */
-  ThermalConductionFunctional(
-      const SolverOptions& options, const std::string& name = {})
+  ThermalConductionFunctional(const SolverOptions& options, const std::string& name = {})
       : BasePhysics(2, order, name),
         temperature_(
             StateManager::newState(FiniteElementState::Options{.order      = order,
@@ -170,10 +169,7 @@ public:
     zero_ = 0.0;
   }
 
-  void setParameter(const FiniteElementState& parameter_state, size_t i)
-  {
-    parameter_states_[i] = &parameter_state;
-  }
+  void setParameter(const FiniteElementState& parameter_state, size_t i) { parameter_states_[i] = &parameter_state; }
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
@@ -227,7 +223,6 @@ public:
   template <typename MaterialType>
   void setMaterial(MaterialType material)
   {
-
     K_functional_->AddDomainIntegral(
         Dimension<dim>{},
         [material](auto x, auto temperature, auto... params) {
@@ -401,7 +396,8 @@ public:
           [this](const mfem::Vector& du_dt) -> mfem::Operator& {
             // Only reassemble the stiffness if it is a new timestep
 
-            auto M = serac::get<1>((*M_functional_)(differentiate_wrt(du_dt), *parameter_states_[parameter_indices]...));
+            auto M =
+                serac::get<1>((*M_functional_)(differentiate_wrt(du_dt), *parameter_states_[parameter_indices]...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
             mfem::Vector K_arg(u_.Size());
@@ -511,7 +507,7 @@ protected:
   std::unique_ptr<Functional<test(trial, parameter_space...)>> K_functional_;
 
   /// The finite element states representing user-defined parameter fields
-  std::array<const FiniteElementState *, sizeof...(parameter_space)> parameter_states_;
+  std::array<const FiniteElementState*, sizeof...(parameter_space)> parameter_states_;
 
   /// The sensitivities (dual vectors) with repect to each of the input parameter fields
   std::array<std::unique_ptr<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;

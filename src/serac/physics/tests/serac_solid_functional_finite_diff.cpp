@@ -59,8 +59,8 @@ TEST(SolidFunctionalFiniteDiff, FiniteDifference)
 
   // Construct a functional-based solid solver
 
-  SolidFunctional<p, dim, Parameters< H1<1>, H1<1> > > solid_solver(
-      default_static_options, GeometricNonlinearities::On, FinalMeshOption::Reference, "solid_functional");
+  SolidFunctional<p, dim, Parameters<H1<1>, H1<1> > > solid_solver(default_static_options, GeometricNonlinearities::On,
+                                                                   FinalMeshOption::Reference, "solid_functional");
   solid_solver.setParameter(user_defined_bulk_modulus, 0);
   solid_solver.setParameter(user_defined_shear_modulus, 1);
 

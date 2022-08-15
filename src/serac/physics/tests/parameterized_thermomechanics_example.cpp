@@ -27,7 +27,6 @@ auto greenStrain(const tensor<T, 3, 3>& grad_u)
 }
 
 struct ParameterizedThermoelasticMaterial {
-
   using State = Empty;
 
   static constexpr int VALUE = 0, GRADIENT = 1;
@@ -37,8 +36,9 @@ struct ParameterizedThermoelasticMaterial {
   double nu;         ///< Poisson's ratio
   double theta_ref;  ///< datum temperature for thermal expansion
 
-  template <typename T1, typename T2, typename T3 >
-  auto operator()(State& /*state*/, const tensor<T1, 3, 3>& grad_u, T2 temperature, T3 coefficient_of_thermal_expansion) const
+  template <typename T1, typename T2, typename T3>
+  auto operator()(State& /*state*/, const tensor<T1, 3, 3>& grad_u, T2 temperature,
+                  T3 coefficient_of_thermal_expansion) const
   {
     auto theta = get<VALUE>(temperature);
     auto alpha = get<VALUE>(coefficient_of_thermal_expansion);
@@ -54,7 +54,6 @@ struct ParameterizedThermoelasticMaterial {
     const auto P = dot(F, S);
     return dot(P, transpose(F));
   }
-
 };
 
 /// @brief Constructs an MFEM mesh of a hollow cylinder restricted to the first orthant
@@ -127,27 +126,26 @@ int main(int argc, char* argv[])
     serac::StateManager::setMesh(std::move(mesh));
   }
 
-  SolidFunctional<p, dim, Parameters< H1<p>, H1<p> > > simulation(
-      default_static_options, GeometricNonlinearities::On, FinalMeshOption::Deformed,
-      "thermomechanics_simulation");
+  SolidFunctional<p, dim, Parameters<H1<p>, H1<p> > > simulation(
+      default_static_options, GeometricNonlinearities::On, FinalMeshOption::Deformed, "thermomechanics_simulation");
 
-  double density = 1.0;   ///< density
-  double E = 1000.0;      ///< Young's modulus
-  double nu = 0.25;       ///< Poisson's ratio
-  double theta_ref = 0.0; ///< datum temperature for thermal expansion
+  double density   = 1.0;     ///< density
+  double E         = 1000.0;  ///< Young's modulus
+  double nu        = 0.25;    ///< Poisson's ratio
+  double theta_ref = 0.0;     ///< datum temperature for thermal expansion
 
   ParameterizedThermoelasticMaterial material{density, E, nu, theta_ref};
 
   simulation.setMaterial(material);
 
   auto temperature_fec = std::unique_ptr<mfem::FiniteElementCollection>(new mfem::H1_FECollection(p, dim));
-  FiniteElementState temperature(
-      StateManager::newState(FiniteElementState::Options{.order = p, .coll = std::move(temperature_fec), .name = "theta"}));
+  FiniteElementState temperature(StateManager::newState(
+      FiniteElementState::Options{.order = p, .coll = std::move(temperature_fec), .name = "theta"}));
   temperature = theta_ref;
   simulation.setParameter(temperature, 0);
 
-  double alpha0 = 1.0e-3;
-  auto alpha_fec = std::unique_ptr<mfem::FiniteElementCollection>(new mfem::H1_FECollection(p, dim));
+  double             alpha0    = 1.0e-3;
+  auto               alpha_fec = std::unique_ptr<mfem::FiniteElementCollection>(new mfem::H1_FECollection(p, dim));
   FiniteElementState alpha(
       StateManager::newState(FiniteElementState::Options{.order = p, .coll = std::move(alpha_fec), .name = "alpha"}));
   alpha = alpha0;
@@ -173,26 +171,26 @@ int main(int argc, char* argv[])
   simulation.outputState("paraview");
 
   // Perform the quasi-static solve
-  double dt = 1.0;
+  double dt   = 1.0;
   temperature = theta_ref + 1.0;
   simulation.advanceTimestep(dt);
 
   // define quantities of interest
-  auto & mesh = serac::StateManager::mesh();
+  auto& mesh = serac::StateManager::mesh();
 
-  Functional< double(H1<p, dim>) > qoi({&simulation.displacement().space()});
-  qoi.AddSurfaceIntegral([=](auto x, auto n, auto displacement){
-    auto [u, du_dxi] = displacement;
-    return dot(u, n) * ((x[2] > 0.99 * height) ? 1.0 : 0.0);
-  }, mesh);
+  Functional<double(H1<p, dim>)> qoi({&simulation.displacement().space()});
+  qoi.AddSurfaceIntegral(
+      [=](auto x, auto n, auto displacement) {
+        auto [u, du_dxi] = displacement;
+        return dot(u, n) * ((x[2] > 0.99 * height) ? 1.0 : 0.0);
+      },
+      mesh);
 
   double initial_qoi = qoi(simulation.displacement());
   std::cout << "vertical displacement integrated over the top surface: " << initial_qoi << std::endl;
 
-  Functional< double(H1<p, dim>) > area({&simulation.displacement().space()});
-  area.AddSurfaceIntegral([=](auto x, auto /*n*/, auto /*u*/){
-    return (x[2] > 0.99 * height) ? 1.0 : 0.0;
-  }, mesh);
+  Functional<double(H1<p, dim>)> area({&simulation.displacement().space()});
+  area.AddSurfaceIntegral([=](auto x, auto /*n*/, auto /*u*/) { return (x[2] > 0.99 * height) ? 1.0 : 0.0; }, mesh);
 
   std::cout << "total area of the top surface: " << area(simulation.displacement()) << std::endl;
 
@@ -200,26 +198,26 @@ int main(int argc, char* argv[])
 
   std::cout << "exact area of the top surface: " << exact_area << std::endl;
 
-  std::cout << "average vertical displacement: " << qoi(simulation.displacement()) / area(simulation.displacement()) << std::endl;
+  std::cout << "average vertical displacement: " << qoi(simulation.displacement()) / area(simulation.displacement())
+            << std::endl;
 
   double deltaT = 1.0;
   std::cout << "expected average vertical displacement: " << alpha0 * deltaT * height << std::endl;
 
-
   serac::FiniteElementDual adjoint_load(mesh, simulation.displacement().space(), "adjoint_load");
-  auto dqoi_du = get<1>(qoi(DifferentiateWRT<0>{}, simulation.displacement()));
-  adjoint_load = *assemble(dqoi_du);
+  auto                     dqoi_du = get<1>(qoi(DifferentiateWRT<0>{}, simulation.displacement()));
+  adjoint_load                     = *assemble(dqoi_du);
 
   simulation.solveAdjoint(adjoint_load);
 
-  auto & dqoi_dalpha = simulation.computeSensitivity<1>();
+  auto& dqoi_dalpha = simulation.computeSensitivity<1>();
 
-  double epsilon = 1.0e-6;
+  double       epsilon = 1.0e-6;
   mfem::Vector dalpha(alpha.Size());
   dalpha.Randomize();
   alpha += epsilon * dalpha;
 
-  // rerun the simulation to the beginning, 
+  // rerun the simulation to the beginning,
   // but this time use perturbed values of alpha
   simulation.setDisplacement(zero_vector);
 

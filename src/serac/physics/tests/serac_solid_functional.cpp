@@ -334,8 +334,8 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   user_defined_bulk_modulus = 1.0;
 
   // Construct a functional-based solid mechanics solver
-  SolidFunctional<p, dim, Parameters<H1<1>, H1<1>>> solid_solver(
-      default_static_options, GeometricNonlinearities::On, FinalMeshOption::Reference, "solid_functional");
+  SolidFunctional<p, dim, Parameters<H1<1>, H1<1>>> solid_solver(default_static_options, GeometricNonlinearities::On,
+                                                                 FinalMeshOption::Reference, "solid_functional");
   solid_solver.setParameter(user_defined_bulk_modulus, 0);
   solid_solver.setParameter(user_defined_shear_modulus, 1);
 
