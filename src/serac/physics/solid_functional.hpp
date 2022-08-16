@@ -181,6 +181,12 @@ public:
   /// @brief Destroy the Solid Functional object
   ~SolidFunctional() {}
 
+  /**
+   * @brief register the provided FiniteElementState object as the source of values for parameter `i`
+   * 
+   * @param parameter_state the values to use for the specified parameter
+   * @param i the index of the parameter
+   */
   void setParameter(const FiniteElementState& parameter_state, size_t i) { parameter_states_[i] = &parameter_state; }
 
   /**

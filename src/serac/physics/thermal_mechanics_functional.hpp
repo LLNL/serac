@@ -61,6 +61,11 @@ public:
     coupling_ = serac::CouplingScheme::OperatorSplit;
   }
 
+  /**
+   * @brief Complete the initialization and allocation of the data structures.
+   *
+   * @note This must be called before AdvanceTimestep().
+   */
   void completeSetup() override
   {
     SLIC_ERROR_ROOT_IF(coupling_ != serac::CouplingScheme::OperatorSplit,
@@ -70,12 +75,25 @@ public:
     solid_functional_.completeSetup();
   }
 
+  /**
+   * @brief register the provided FiniteElementState object as the source of values for parameter `i`
+   * 
+   * @param parameter_state the values to use for the specified parameter
+   * @param i the index of the parameter
+   */
   void setParameter(const FiniteElementState& parameter_state, size_t i)
   {
     thermal_functional_.setParameter(parameter_state, i + 1);  // offset for displacement field
     solid_functional_.setParameter(parameter_state, i + 1);    // offset for temperature field
   }
 
+  /**
+   * @brief Advance the timestep
+   *
+   * @param[inout] dt The timestep to attempt. This will return the actual timestep for adaptive timestepping
+   * schemes
+   * @pre completeSetup() must be called prior to this call
+   */
   void advanceTimestep(double& dt) override
   {
     if (coupling_ == serac::CouplingScheme::OperatorSplit) {
@@ -91,12 +109,25 @@ public:
     cycle_ += 1;
   }
 
+  /**
+   * @brief Create a shared ptr to a quadrature data buffer for the given material type
+   *
+   * @tparam T the type to be created at each quadrature point
+   * @param initial_state the value to be broadcast to each quadrature point
+   * @return std::shared_ptr< QuadratureData<T> >
+   */
   template <typename T>
   std::shared_ptr<QuadratureData<T>> createQuadratureDataBuffer(T initial_state)
   {
     return solid_functional_.createQuadratureDataBuffer(initial_state);
   }
 
+  /**
+   * @brief This is an adaptor class that makes a thermomechanical material usable by
+   * the thermal module, by discarding the solid-mechanics-specific information
+   * 
+   * @tparam ThermalMechanicalMaterial the material model being wrapped
+   */
   template <typename ThermalMechanicalMaterial>
   struct ThermalMaterialInterface {
     using State = typename ThermalMechanicalMaterial::State;
@@ -123,8 +154,15 @@ public:
     }
   };
 
+  /**
+   * @brief This is an adaptor class that makes a thermomechanical material usable by
+   * the solid mechanics module, by discarding the thermal-specific information
+   * 
+   * @tparam ThermalMechanicalMaterial the material model being wrapped
+   */
   template <typename ThermalMechanicalMaterial>
   struct MechanicalMaterialInterface {
+
     using State = typename ThermalMechanicalMaterial::State;
 
     const ThermalMechanicalMaterial mat;
