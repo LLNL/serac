@@ -329,7 +329,7 @@ public:
    * @tparam BodyForceType The type of the body force load
    * @param body_force A source function for a prescribed body load
    *
-   * @pre BodyForceType must have the operator (x, time, displacement, d displacement_dx) defined as the body force
+   * @pre BodyForceType must have the operator (x, time) defined as the body force
    */
   template <typename BodyForceType>
   void addBodyForce(BodyForceType body_force)

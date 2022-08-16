@@ -28,6 +28,7 @@ struct GreenSaintVenantThermoelasticMaterial {
   double theta_ref;  ///< datum temperature for thermal expansion
   double k;          ///< thermal conductivity
 
+  /// internal variables for the material model
   struct State {
     double strain_trace;  ///< trace of Green-Saint Venant strain tensor
   };
@@ -107,6 +108,7 @@ struct ParameterizedGreenSaintVenantThermoelasticMaterial {
   double theta_ref;  ///< datum temperature for thermal expansion
   double k;          ///< thermal conductivity
 
+  /// internal variables for the material model
   struct State {
     double strain_trace;  ///< trace of Green-Saint Venant strain tensor
   };
@@ -164,6 +166,7 @@ struct ParameterizedGreenSaintVenantThermoelasticMaterial {
    * @brief evaluate free energy density
    * @param[in] grad_u displacement gradient
    * @param[in] theta temperature
+   * @param[in] thermal_expansion_scaling a scaling factor to be applied to alpha0
    */
   template <typename T1, typename T2, typename T3>
   auto calculateFreeEnergy(const tensor<T1, 3, 3>& grad_u, T2 theta, T3 thermal_expansion_scaling) const

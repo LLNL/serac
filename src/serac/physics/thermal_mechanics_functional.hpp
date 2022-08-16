@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file thermal_solid_functional.hpp
+ * @file thermal_mechanics_functional.hpp
  *
  * @brief An object containing an operator-split thermal structural solver
  */
@@ -30,7 +30,6 @@ namespace serac {
 template <int order, int dim, typename... parameter_space>
 class ThermalMechanicsFunctional : public BasePhysics {
 public:
-  static constexpr int num_parameters = sizeof...(parameter_space);
 
   /**
    * @brief Construct a new coupled Thermal-Solid Functional object
@@ -184,6 +183,17 @@ public:
     }
   };
 
+  /**
+   * @brief Set the material response for the physics module
+   *
+   * @tparam MaterialType The type of material model
+   * @tparam StateType The type that contains the internal variables for MaterialType
+   * @param material A material that provides a function to evaluate stress, heat flux
+   * @param qdata the buffer of material internal variables at each quadrature point
+   *
+   * @pre MaterialType must have a public member variable `density`
+   * @pre MaterialType must define operator() that returns the Kirchoff stress, heat flux and heat source terms
+   */
   template <typename MaterialType, typename StateType>
   void setMaterial(MaterialType material, std::shared_ptr<QuadratureData<StateType>> qdata)
   {
@@ -191,6 +201,7 @@ public:
     solid_functional_.setMaterial(MechanicalMaterialInterface<MaterialType>{material}, qdata);
   }
 
+  /// @overload
   template <typename MaterialType>
   void setMaterial(MaterialType material)
   {
@@ -257,16 +268,32 @@ public:
     thermal_functional_.setTemperature(temperature);
   }
 
+  /**
+   * @brief Set the body forcefunction
+   *
+   * @tparam BodyForceType The type of the body force load
+   * @param body_force A source function for a prescribed body load
+   *
+   * @pre BodyForceType must have the operator (x, time) defined as the body force
+   */
   template <typename BodyForceType>
   void addBodyForce(BodyForceType body_force_function)
   {
     solid_functional_.addBodyForce(body_force_function);
   }
 
+  /**
+   * @brief Set the thermal source function
+   *
+   * @tparam SourceType The type of the source function
+   * @param source_function A source function for a prescribed thermal load
+   *
+   * @pre SourceType must have the operator (x, time, temperature, d temperature_dx) defined as the thermal source
+   */
   template <typename HeatSourceType>
   void addHeatSource(HeatSourceType func)
   {
-    thermal_functional_.addSource(func);
+    thermal_functional_.setSource(func);
   }
 
   /**
@@ -289,13 +316,13 @@ protected:
    */
   serac::CouplingScheme coupling_;
 
-  using displacement_field = H1<order, dim>;
-  using temperature_field  = H1<order>;
+  using displacement_field = H1<order, dim>; /// the function space for the displacement field
+  using temperature_field  = H1<order>; /// the function space for the temperature field
 
-  // Submodule to compute the thermal conduction physics
+  /// Submodule to compute the thermal conduction physics
   ThermalConductionFunctional<order, dim, Parameters<displacement_field, parameter_space...>> thermal_functional_;
 
-  // Submodule to compute the mechanics
+  /// Submodule to compute the mechanics
   SolidFunctional<order, dim, Parameters<temperature_field, parameter_space...>> solid_functional_;
 };
 
