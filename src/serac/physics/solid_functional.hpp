@@ -183,7 +183,7 @@ public:
 
   /**
    * @brief register the provided FiniteElementState object as the source of values for parameter `i`
-   * 
+   *
    * @param parameter_state the values to use for the specified parameter
    * @param i the index of the parameter
    */

@@ -92,7 +92,7 @@ struct Index {
 /**
  * @brief create an mfem::ParFiniteElementSpace from one of serac's
  * tag types: H1, Hcurl, L2
- * 
+ *
  * @tparam function_space a tag type containing the kind of function space and polynomial order
  * @param mesh the mesh on which the space is defined
  */

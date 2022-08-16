@@ -30,14 +30,12 @@ namespace serac {
 template <int order, int dim, typename... parameter_space>
 class ThermalMechanicsFunctional : public BasePhysics {
 public:
-
   /**
    * @brief Construct a new coupled Thermal-Solid Functional object
    *
    * @param thermal_options The options for the linear, nonlinear, and ODE solves of the thermal operator
    * @param solid_options The options for the linear, nonlinear, and ODE solves of the thermal operator
    * @param geom_nonlin Flag to include geometric nonlinearities
-   * @param keep_deformation Flag to keep the deformation in the underlying mesh post-destruction
    * @param name An optional name for the physics module instance
    */
   ThermalMechanicsFunctional(const SolverOptions& thermal_options, const SolverOptions& solid_options,
@@ -76,7 +74,7 @@ public:
 
   /**
    * @brief register the provided FiniteElementState object as the source of values for parameter `i`
-   * 
+   *
    * @param parameter_state the values to use for the specified parameter
    * @param i the index of the parameter
    */
@@ -124,20 +122,34 @@ public:
   /**
    * @brief This is an adaptor class that makes a thermomechanical material usable by
    * the thermal module, by discarding the solid-mechanics-specific information
-   * 
+   *
    * @tparam ThermalMechanicalMaterial the material model being wrapped
    */
   template <typename ThermalMechanicalMaterial>
   struct ThermalMaterialInterface {
-    using State = typename ThermalMechanicalMaterial::State;
+    using State = typename ThermalMechanicalMaterial::State;  ///< internal variables for the wrapped material model
 
-    const ThermalMechanicalMaterial mat;
+    const ThermalMechanicalMaterial mat;  ///< the wrapped material model
 
+    /// constructor
     ThermalMaterialInterface(const ThermalMechanicalMaterial& m) : mat(m)
     {
       // empty
     }
 
+    /**
+     * @brief glue code to evaluate a thermomechanical material and extract the thermal outputs
+     *
+     * @tparam T1 the type of the spatial coordinate values
+     * @tparam T2 the type of the temperature value
+     * @tparam T3 the type of the temperature gradient values
+     * @tparam T4 the type of the displacement gradient values
+     * @tparam param_types the types of user-specified parameters
+     * @param temperature the temperature at this quadrature point
+     * @param temperature_gradient the gradient w.r.t. physical coordinates of the temperature
+     * @param displacement the value and gradient w.r.t. physical coordinates of the displacement
+     * @param parameters values and derivatives of any additional user-specified parameters
+     */
     template <typename T1, typename T2, typename T3, typename T4, typename... param_types>
     SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& temperature, const T3& temperature_gradient,
                                       const T4& displacement, param_types... parameters) const
@@ -156,23 +168,34 @@ public:
   /**
    * @brief This is an adaptor class that makes a thermomechanical material usable by
    * the solid mechanics module, by discarding the thermal-specific information
-   * 
+   *
    * @tparam ThermalMechanicalMaterial the material model being wrapped
    */
   template <typename ThermalMechanicalMaterial>
   struct MechanicalMaterialInterface {
+    using State = typename ThermalMechanicalMaterial::State;  ///< internal variables for the wrapped material model
 
-    using State = typename ThermalMechanicalMaterial::State;
+    const ThermalMechanicalMaterial mat;  ///< the wrapped material model
 
-    const ThermalMechanicalMaterial mat;
+    const double density;  ///< mass density
 
-    const double density;
-
+    /// constructor
     MechanicalMaterialInterface(const ThermalMechanicalMaterial& m) : mat(m), density(m.density)
     {
       // empty
     }
 
+    /**
+     * @brief glue code to evaluate a thermomechanical material and extract the stress
+     *
+     * @tparam T1 the type of the displacement gradient values
+     * @tparam T2 the type of the temperature value
+     * @tparam param_types the types of user-specified parameters
+     * @param state any internal variables needed to evaluate this material
+     * @param displacement_gradient the gradient w.r.t. physical coordinates of the displacement
+     * @param temperature the temperature at this quadrature point
+     * @param parameters values and derivatives of any additional user-specified parameters
+     */
     template <typename T1, typename T2, typename... param_types>
     SERAC_HOST_DEVICE auto operator()(State& state, const T1& displacement_gradient, const T2& temperature,
                                       param_types... parameters) const
@@ -272,7 +295,7 @@ public:
    * @brief Set the body forcefunction
    *
    * @tparam BodyForceType The type of the body force load
-   * @param body_force A source function for a prescribed body load
+   * @param body_force_function A source function for a prescribed body load
    *
    * @pre BodyForceType must have the operator (x, time) defined as the body force
    */
@@ -291,9 +314,9 @@ public:
    * @pre SourceType must have the operator (x, time, temperature, d temperature_dx) defined as the thermal source
    */
   template <typename HeatSourceType>
-  void addHeatSource(HeatSourceType func)
+  void addHeatSource(HeatSourceType source_function)
   {
-    thermal_functional_.setSource(func);
+    thermal_functional_.setSource(source_function);
   }
 
   /**
@@ -311,13 +334,11 @@ public:
   const serac::FiniteElementState& temperature() const { return thermal_functional_.temperature(); };
 
 protected:
-  /**
-   * @brief The coupling strategy
-   */
+  /// @brief The coupling strategy
   serac::CouplingScheme coupling_;
 
-  using displacement_field = H1<order, dim>; /// the function space for the displacement field
-  using temperature_field  = H1<order>; /// the function space for the temperature field
+  using displacement_field = H1<order, dim>;  ///< the function space for the displacement field
+  using temperature_field  = H1<order>;       ///< the function space for the temperature field
 
   /// Submodule to compute the thermal conduction physics
   ThermalConductionFunctional<order, dim, Parameters<displacement_field, parameter_space...>> thermal_functional_;

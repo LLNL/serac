@@ -93,7 +93,6 @@ template <int order, int dim, typename... parameter_space, int... parameter_indi
 class ThermalConductionFunctional<order, dim, Parameters<parameter_space...>,
                                   std::integer_sequence<int, parameter_indices...>> : public BasePhysics {
 public:
-
   /**
    * @brief Construct a new Thermal Functional Solver object
    *
@@ -170,7 +169,7 @@ public:
 
   /**
    * @brief register the provided FiniteElementState object as the source of values for parameter `i`
-   * 
+   *
    * @param parameter_state the values to use for the specified parameter
    * @param i the index of the parameter
    */

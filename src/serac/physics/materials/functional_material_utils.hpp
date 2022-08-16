@@ -53,6 +53,7 @@ struct TriviallyParameterizedMaterial {
   /// Underlying unparameterized material
   UnparameterizedMaterialType mat;
 
+  /// any internal variables used by the underlying material model
   using State = typename UnparameterizedMaterialType::State;
 };
 
