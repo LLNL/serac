@@ -67,14 +67,18 @@ const SolverOptions default_dynamic_options = {
  * @tparam order The order of the discretization of the displacement and velocity fields
  * @tparam dim The spatial dimension of the mesh
  */
-template <int order, int dim, typename parameters = Parameters<>,
-          typename parameter_indices = std::make_integer_sequence<int, parameters::n>>
+template <int order, int dim, typename mat_parameters = MaterialParameters<>,
+          typename load_parameters        = LoadParameters<>,
+          typename mat_parameter_indices  = std::make_integer_sequence<int, mat_parameters::n>,
+          typename load_parameter_indices = std::make_integer_sequence<int, load_parameters::n>>
 class SolidFunctional;
 
 /// @overload
-template <int order, int dim, typename... parameter_space, int... parameter_indices>
-class SolidFunctional<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>
-    : public BasePhysics {
+template <int order, int dim, typename... mat_parameter_space, typename... load_parameter_space,
+          int... mat_parameter_indices, int... load_parameter_indices>
+class SolidFunctional<order, dim, MaterialParameters<mat_parameter_space...>, LoadParameters<load_parameter_space...>,
+                      std::integer_sequence<int, mat_parameter_indices...>,
+                      std::integer_sequence<int, load_parameter_indices...>> : public BasePhysics {
 public:
   //! @cond Doxygen_Suppress
   static constexpr int  VALUE = 0, DERIVATIVE = 1;
@@ -98,8 +102,10 @@ public:
    */
   SolidFunctional(
       const SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
-      const std::string&                                                                 name             = "",
-      std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states = {})
+      const std::string&                                                                      name                 = "",
+      std::array<std::reference_wrapper<FiniteElementState>, sizeof...(mat_parameter_space)>  mat_parameter_states = {},
+      std::array<std::reference_wrapper<FiniteElementState>, sizeof...(load_parameter_space)> load_parameter_states =
+          {})
       : BasePhysics(2, order, name),
         velocity_(StateManager::newState(FiniteElementState::Options{
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "velocity")})),
@@ -108,7 +114,8 @@ public:
         adjoint_displacement_(StateManager::newState(FiniteElementState::Options{
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "adjoint_displacement")})),
         nodal_forces_(mesh_, displacement_.space(), "nodal_forces"),
-        parameter_states_(parameter_states),
+        mat_parameter_states_(mat_parameter_states),
+        load_parameter_states_(load_parameter_states),
         ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
               nonlin_solver_, bcs_),
         c0_(0.0),
@@ -123,20 +130,32 @@ public:
     state_.push_back(adjoint_displacement_);
 
     // Create a pack of the primal field and parameter finite element spaces
-    mfem::ParFiniteElementSpace*                                             test_space = &displacement_.space();
-    std::array<mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + 2> trial_spaces;
+    mfem::ParFiniteElementSpace* test_space = &displacement_.space();
+    std::array<mfem::ParFiniteElementSpace*, sizeof...(mat_parameter_space) + sizeof...(load_parameter_space) + 2>
+        trial_spaces;
     trial_spaces[0] = &displacement_.space();
     trial_spaces[1] = &displacement_.space();  // the accelerations have the same trial space as displacement
 
-    if constexpr (sizeof...(parameter_space) > 0) {
-      for (size_t i = 0; i < sizeof...(parameter_space); ++i) {
-        trial_spaces[i + 2]         = &(parameter_states_[i].get().space());
-        parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, parameter_states_[i].get().space());
-        state_.push_back(parameter_states_[i].get());
+    if constexpr (sizeof...(mat_parameter_space) > 0) {
+      for (size_t i = 0; i < sizeof...(mat_parameter_space); ++i) {
+        trial_spaces[i + 2] = &(mat_parameter_states_[i].get().space());
+        mat_parameter_sensitivities_[i] =
+            std::make_unique<FiniteElementDual>(mesh_, mat_parameter_states_[i].get().space());
+        state_.push_back(mat_parameter_states_[i].get());
       }
     }
 
-    residual_ = std::make_unique<Functional<test(trial, trial, parameter_space...)>>(test_space, trial_spaces);
+    if constexpr (sizeof...(load_parameter_space) > 0) {
+      for (size_t i = 0; i < sizeof...(load_parameter_space); ++i) {
+        trial_spaces[i + sizeof...(mat_parameter_space) + 2] = &(load_parameter_states_[i].get().space());
+        load_parameter_sensitivities_[i] =
+            std::make_unique<FiniteElementDual>(mesh_, load_parameter_states_[i].get().space());
+        state_.push_back(load_parameter_states_[i].get());
+      }
+    }
+
+    residual_ = std::make_unique<Functional<test(trial, trial, mat_parameter_space..., load_parameter_space...)>>(
+        test_space, trial_spaces);
 
     state_.push_back(velocity_);
     state_.push_back(displacement_);
@@ -272,9 +291,12 @@ public:
     residual_->AddDomainIntegral(
         Dimension<dim>{},
         [this, material](auto /*x*/, auto& state, auto displacement, auto acceleration, auto... params) {
+          // Extract the material parameters from the parameter pack
+          [[maybe_unused]] auto param_values = serac::make_tuple(serac::get<VALUE>(params)...);
+
           auto du_dX   = get<DERIVATIVE>(displacement);
           auto d2u_dt2 = get<VALUE>(acceleration);
-          auto stress  = material(state, du_dX, serac::get<VALUE>(params)...);
+          auto stress  = material(state, du_dX, serac::get<mat_parameter_indices>(param_values)...);
           if (geom_nonlin_ == GeometricNonlinearities::On) {
             stress = dot(stress, inv(transpose(I + du_dX)));
           }
@@ -330,10 +352,17 @@ public:
   {
     residual_->AddDomainIntegral(
         Dimension<dim>{},
-        [body_force, this](auto x, auto /* displacement */, auto /* acceleration */, auto... /*params*/) {
+        [body_force, this](auto x, auto /* displacement */, auto /* acceleration */, auto... params) {
           // note: this assumes that the body force function is defined
           // per unit volume in the reference configuration
-          return serac::tuple{body_force(x, time_), zero{}};
+
+          // Extract the material parameters from the parameter pack
+          [[maybe_unused]] auto param_values = serac::make_tuple(serac::get<VALUE>(params)...);
+
+          return serac::tuple{
+              body_force(x, time_,
+                         serac::get<sizeof...(mat_parameter_indices) + load_parameter_indices>(param_values)...),
+              zero{}};
         },
         mesh_);
   }
@@ -352,7 +381,11 @@ public:
     residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{},
         [this, traction_function](auto x, auto n, auto, auto, auto... params) {
-          return -1.0 * traction_function(x, n, time_, params...);
+          [[maybe_unused]] auto param_values = serac::make_tuple(serac::get<VALUE>(params)...);
+
+          return -1.0 * traction_function(
+                            x, n, time_,
+                            serac::get<sizeof...(mat_parameter_indices) + load_parameter_indices>(param_values)...);
         },
         mesh_);
   }
@@ -367,13 +400,15 @@ public:
 
         // residual function
         [this](const mfem::Vector& u, mfem::Vector& r) {
-          r = (*residual_)(u, zero_, parameter_states_[parameter_indices]...);
+          r = (*residual_)(u, zero_, mat_parameter_states_[mat_parameter_indices]...,
+                           load_parameter_states_[load_parameter_indices]...);
           r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
         },
 
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
-          auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, parameter_states_[parameter_indices]...);
+          auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, mat_parameter_states_[mat_parameter_indices]...,
+                                        load_parameter_states_[load_parameter_indices]...);
           J_             = assemble(drdu);
           J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
           return *J_;
@@ -407,7 +442,8 @@ public:
 
           [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) {
             add(1.0, u_, c0_, d2u_dt2, predicted_displacement_);
-            r = (*residual_)(predicted_displacement_, d2u_dt2, parameter_states_[parameter_indices]...);
+            r = (*residual_)(predicted_displacement_, d2u_dt2, mat_parameter_states_[mat_parameter_indices]...,
+                             load_parameter_states_[load_parameter_indices]...);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
@@ -416,12 +452,14 @@ public:
 
             // K := dR/du
             auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(predicted_displacement_), d2u_dt2,
-                                                         parameter_states_[parameter_indices]...));
+                                                         mat_parameter_states_[mat_parameter_indices]...,
+                                                         load_parameter_states_[load_parameter_indices]...));
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             // M := dR/da
             auto M = serac::get<DERIVATIVE>((*residual_)(predicted_displacement_, differentiate_wrt(d2u_dt2),
-                                                         parameter_states_[parameter_indices]...));
+                                                         mat_parameter_states_[mat_parameter_indices]...,
+                                                         load_parameter_states_[load_parameter_indices]...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
             // J = M + c0 * K
@@ -497,7 +535,9 @@ public:
       // this seems like the wrong way to be doing this assignment, but
       // nodal_forces_ = residual(displacement, ...);
       // isn't currently supported
-      nodal_forces_.Vector::operator=((*residual_)(displacement_, zero_, parameter_states_[parameter_indices]...));
+      nodal_forces_.Vector::operator=((*residual_)(displacement_, zero_,
+                                                   mat_parameter_states_[mat_parameter_indices]...,
+                                                   load_parameter_states_[load_parameter_indices]...));
 
       residual_->update_qdata = false;
     }
@@ -532,8 +572,9 @@ public:
 
     // sam: is this the right thing to be doing for dynamics simulations,
     // or are we implicitly assuming this should only be used in quasistatic analyses?
-    auto drdu = serac::get<DERIVATIVE>(
-        (*residual_)(differentiate_wrt(displacement_), zero_, parameter_states_[parameter_indices]...));
+    auto drdu     = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(displacement_), zero_,
+                                                    mat_parameter_states_[mat_parameter_indices]...,
+                                                    load_parameter_states_[load_parameter_indices]...));
     auto jacobian = assemble(drdu);
     auto J_T      = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -562,16 +603,31 @@ public:
    * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
    */
   template <int parameter_field>
-  FiniteElementDual& computeSensitivity()
+  FiniteElementDual& computeMaterialSensitivity()
   {
     auto drdparam = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<parameter_field + 2>{}, displacement_, zero_,
-                                                        parameter_states_[parameter_indices]...));
+                                                        mat_parameter_states_[mat_parameter_indices]...,
+                                                        load_parameter_states_[load_parameter_indices]...));
 
     auto drdparam_mat = assemble(drdparam);
 
-    drdparam_mat->MultTranspose(adjoint_displacement_, *parameter_sensitivities_[parameter_field]);
+    drdparam_mat->MultTranspose(adjoint_displacement_, *mat_parameter_sensitivities_[parameter_field]);
 
-    return *parameter_sensitivities_[parameter_field];
+    return *mat_parameter_sensitivities_[parameter_field];
+  }
+
+  template <int parameter_field>
+  FiniteElementDual& computeLoadSensitivity()
+  {
+    auto drdparam = serac::get<DERIVATIVE>((*residual_)(
+        DifferentiateWRT<parameter_field + static_cast<int>(sizeof...(mat_parameter_space)) + 2>{}, displacement_,
+        zero_, mat_parameter_states_[mat_parameter_indices]..., load_parameter_states_[load_parameter_indices]...));
+
+    auto drdparam_mat = assemble(drdparam);
+
+    drdparam_mat->MultTranspose(adjoint_displacement_, *load_parameter_sensitivities_[parameter_field]);
+
+    return *load_parameter_sensitivities_[parameter_field];
   }
 
   /**
@@ -627,16 +683,18 @@ protected:
   FiniteElementDual nodal_forces_;
 
   /// serac::Functional that is used to calculate the residual and its derivatives
-  std::unique_ptr<Functional<test(trial, trial, parameter_space...)>> residual_;
+  std::unique_ptr<Functional<test(trial, trial, mat_parameter_space..., load_parameter_space...)>> residual_;
 
   /// mfem::Operator that calculates the residual after applying essential boundary conditions
   std::unique_ptr<mfem_ext::StdFunctionOperator> residual_with_bcs_;
 
   /// The finite element states representing user-defined parameter fields
-  std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states_;
+  std::array<std::reference_wrapper<FiniteElementState>, sizeof...(mat_parameter_space)>  mat_parameter_states_;
+  std::array<std::reference_wrapper<FiniteElementState>, sizeof...(load_parameter_space)> load_parameter_states_;
 
   /// The sensitivities (dual vectors) with repect to each of the input parameter fields
-  std::array<std::unique_ptr<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;
+  std::array<std::unique_ptr<FiniteElementDual>, sizeof...(mat_parameter_space)>  mat_parameter_sensitivities_;
+  std::array<std::unique_ptr<FiniteElementDual>, sizeof...(load_parameter_space)> load_parameter_sensitivities_;
 
   /**
    * @brief the ordinary differential equation that describes

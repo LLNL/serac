@@ -204,7 +204,7 @@ TEST(ThermalFunctional, ParameterizedMaterial)
   // Note that we now include an extra template parameter indicating the finite element space for the parameterized
   // field, in this case the thermal conductivity. We also pass an array of finite element states for each of the
   // requested parameterized fields.
-  ThermalConductionFunctional<p, dim, Parameters<H1<1> > > thermal_solver(
+  ThermalConductionFunctional<p, dim, MaterialParameters<H1<1> > > thermal_solver(
       Thermal::defaultQuasistaticOptions(), "thermal_functional", {user_defined_conductivity});
 
   // Construct a potentially user-defined parameterized material and send it to the thermal module
@@ -252,7 +252,7 @@ TEST(ThermalFunctional, ParameterizedMaterial)
   thermal_solver.solveAdjoint(adjoint_load);
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
-  auto& sensitivity = thermal_solver.computeSensitivity<conductivity_parameter_index>();
+  auto& sensitivity = thermal_solver.computeMaterialSensitivity<conductivity_parameter_index>();
 
   EXPECT_NEAR(1.6540980, mfem::ParNormlp(sensitivity, 2, MPI_COMM_WORLD), 1.0e-6);
 }

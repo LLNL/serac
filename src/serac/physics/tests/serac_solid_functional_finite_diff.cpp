@@ -58,7 +58,7 @@ TEST(SolidFunctionalFiniteDiff, FiniteDifference)
   user_defined_bulk_modulus = bulk_modulus_value;
 
   // Construct a functional-based solid solver
-  SolidFunctional<p, dim, Parameters<H1<1>, H1<1> > > solid_solver(
+  SolidFunctional<p, dim, MaterialParameters<H1<1>, H1<1> > > solid_solver(
       default_static_options, GeometricNonlinearities::On, "solid_functional",
       {user_defined_bulk_modulus, user_defined_shear_modulus});
 
@@ -114,7 +114,7 @@ TEST(SolidFunctionalFiniteDiff, FiniteDifference)
   solid_solver.solveAdjoint(adjoint_load);
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
-  [[maybe_unused]] auto& sensitivity = solid_solver.computeSensitivity<bulk_parameter_index>();
+  [[maybe_unused]] auto& sensitivity = solid_solver.computeMaterialSensitivity<bulk_parameter_index>();
 
   // Perform finite difference on each bulk modulus value
   // to check if computed qoi sensitivity is consistent

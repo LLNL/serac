@@ -20,7 +20,17 @@ namespace serac {
  * user-controlled parameters (e.g. for design optimization)
  */
 template <typename... T>
-struct Parameters {
+struct MaterialParameters {
+  static constexpr int n = sizeof...(T);  ///< how many parameters were specified
+};
+
+template <typename... T>
+struct ShapeParameter {
+  static constexpr int n = sizeof...(T);  ///< how many parameters were specified
+};
+
+template <typename... T>
+struct LoadParameters {
   static constexpr int n = sizeof...(T);  ///< how many parameters were specified
 };
 

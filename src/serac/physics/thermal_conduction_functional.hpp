@@ -59,7 +59,7 @@ NonlinearSolverOptions defaultNonlinearOptions()
  */
 SolverOptions defaultQuasistaticOptions() { return {defaultLinearOptions(), defaultNonlinearOptions(), std::nullopt}; }
 
-/**
+/*
  * @brief Reasonable defaults for dynamic thermal conduction simulations
  *
  * @return The default dynamic solver options
@@ -84,15 +84,24 @@ SolverOptions defaultDynamicOptions()
  *  where \f$\mathbf{M}\f$ is a mass matrix, \f$\mathbf{K}\f$ is a stiffness matrix, \f$\mathbf{u}\f$ is the
  *  temperature degree of freedom vector, and \f$\mathbf{f}\f$ is a thermal load vector.
  */
-template <int order, int dim, typename parameters = Parameters<>,
-          typename parameter_indices = std::make_integer_sequence<int, parameters::n>>
+template <int order, int dim, typename mat_parameters = MaterialParameters<>,
+          typename load_parameters        = LoadParameters<>,
+          typename mat_parameter_indices  = std::make_integer_sequence<int, mat_parameters::n>,
+          typename load_parameter_indices = std::make_integer_sequence<int, load_parameters::n>>
 class ThermalConductionFunctional;
 
 /// @overload
-template <int order, int dim, typename... parameter_space, int... parameter_indices>
-class ThermalConductionFunctional<order, dim, Parameters<parameter_space...>,
-                                  std::integer_sequence<int, parameter_indices...>> : public BasePhysics {
+template <int order, int dim, typename... mat_parameter_space, typename... load_parameter_space,
+          int... mat_parameter_indices, int... load_parameter_indices>
+class ThermalConductionFunctional<
+    order, dim, MaterialParameters<mat_parameter_space...>, LoadParameters<load_parameter_space...>,
+    std::integer_sequence<int, mat_parameter_indices...>, std::integer_sequence<int, load_parameter_indices...>>
+    : public BasePhysics {
 public:
+  //! @cond Doxygen_Suppress
+  static constexpr int VALUE = 0, DERIVATIVE = 1;
+  //! @endcond
+
   /**
    * @brief Construct a new Thermal Functional Solver object
    *
@@ -103,7 +112,9 @@ public:
    */
   ThermalConductionFunctional(
       const SolverOptions& options, const std::string& name = {},
-      std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states = {})
+      std::array<std::reference_wrapper<FiniteElementState>, sizeof...(mat_parameter_space)>  mat_parameter_states = {},
+      std::array<std::reference_wrapper<FiniteElementState>, sizeof...(load_parameter_space)> load_parameter_states =
+          {})
       : BasePhysics(2, order, name),
         temperature_(
             StateManager::newState(FiniteElementState::Options{.order      = order,
@@ -115,7 +126,8 @@ public:
                                         .vector_dim = 1,
                                         .ordering   = mfem::Ordering::byNODES,
                                         .name       = detail::addPrefix(name, "adjoint_temperature")})),
-        parameter_states_(parameter_states),
+        mat_parameter_states_(mat_parameter_states),
+        load_parameter_states_(load_parameter_states),
         residual_(temperature_.space().TrueVSize()),
         ode_(temperature_.space().TrueVSize(), {.u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
              nonlin_solver_, bcs_)
@@ -127,19 +139,33 @@ public:
     state_.push_back(adjoint_temperature_);
 
     // Create a pack of the primal field and parameter finite element spaces
-    std::array<mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + 1> trial_spaces;
+    std::array<mfem::ParFiniteElementSpace*, sizeof...(mat_parameter_space) + sizeof...(load_parameter_space) + 1>
+        trial_spaces;
     trial_spaces[0] = &temperature_.space();
 
-    if constexpr (sizeof...(parameter_space) > 0) {
-      for (size_t i = 0; i < sizeof...(parameter_space); ++i) {
-        trial_spaces[i + 1]         = &(parameter_states_[i].get().space());
-        parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, parameter_states_[i].get().space());
+    if constexpr (sizeof...(mat_parameter_space) > 0) {
+      for (size_t i = 0; i < sizeof...(mat_parameter_space); ++i) {
+        trial_spaces[i + 1] = &(mat_parameter_states_[i].get().space());
+        mat_parameter_sensitivities_[i] =
+            std::make_unique<FiniteElementDual>(mesh_, mat_parameter_states_[i].get().space());
+        state_.push_back(mat_parameter_states_[i].get());
       }
     }
 
-    M_functional_ = std::make_unique<Functional<test(trial, parameter_space...)>>(&temperature_.space(), trial_spaces);
+    if constexpr (sizeof...(load_parameter_space) > 0) {
+      for (size_t i = 0; i < sizeof...(load_parameter_space); ++i) {
+        trial_spaces[i + sizeof...(mat_parameter_space) + 1] = &(load_parameter_states_[i].get().space());
+        load_parameter_sensitivities_[i] =
+            std::make_unique<FiniteElementDual>(mesh_, load_parameter_states_[i].get().space());
+        state_.push_back(load_parameter_states_[i].get());
+      }
+    }
 
-    K_functional_ = std::make_unique<Functional<test(trial, parameter_space...)>>(&temperature_.space(), trial_spaces);
+    M_functional_ = std::make_unique<Functional<test(trial, mat_parameter_space..., load_parameter_space...)>>(
+        &temperature_.space(), trial_spaces);
+
+    K_functional_ = std::make_unique<Functional<test(trial, mat_parameter_space..., load_parameter_space...)>>(
+        &temperature_.space(), trial_spaces);
 
     state_.push_back(temperature_);
 
@@ -221,7 +247,7 @@ public:
   void setMaterial(MaterialType material)
   {
     if constexpr (is_parameterized<MaterialType>::value) {
-      static_assert(material.numParameters() == sizeof...(parameter_space),
+      static_assert(material.numParameters() == sizeof...(mat_parameter_space),
                     "Number of parameters in thermal conduction does not equal the number of parameters in the "
                     "thermal material.");
     }
@@ -287,7 +313,7 @@ public:
   void setSource(SourceType source_function)
   {
     if constexpr (is_parameterized<SourceType>::value) {
-      static_assert(source_function.numParameters() == sizeof...(parameter_space),
+      static_assert(source_function.numParameters() == sizeof...(load_parameter_space),
                     "Number of parameters in thermal conduction does not equal the number of parameters in the "
                     "thermal source.");
     }
@@ -322,7 +348,7 @@ public:
   void setFluxBCs(FluxType flux_function)
   {
     if constexpr (is_parameterized<FluxType>::value) {
-      static_assert(flux_function.numParameters() == sizeof...(parameter_space),
+      static_assert(flux_function.numParameters() == sizeof...(load_parameter_space),
                     "Number of parameters in thermal conduction does not equal the number of parameters in the "
                     "thermal flux boundary.");
     }
@@ -370,12 +396,14 @@ public:
           temperature_.space().TrueVSize(),
 
           [this](const mfem::Vector& u, mfem::Vector& r) {
-            r = (*K_functional_)(u, parameter_states_[parameter_indices]...);
+            r = (*K_functional_)(u, mat_parameter_states_[mat_parameter_indices]...,
+                                 load_parameter_states_[load_parameter_indices]...);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
           [this](const mfem::Vector& u) -> mfem::Operator& {
-            auto [r, drdu] = (*K_functional_)(differentiate_wrt(u), parameter_states_[parameter_indices]...);
+            auto [r, drdu] = (*K_functional_)(differentiate_wrt(u), mat_parameter_states_[mat_parameter_indices]...,
+                                              load_parameter_states_[load_parameter_indices]...);
             J_             = assemble(drdu);
             bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             return *J_;
@@ -386,13 +414,15 @@ public:
       residual_ = mfem_ext::StdFunctionOperator(
           temperature_.space().TrueVSize(),
           [this](const mfem::Vector& du_dt, mfem::Vector& r) {
-            auto M_residual = (*M_functional_)(du_dt, parameter_states_[parameter_indices]...);
+            auto M_residual = (*M_functional_)(du_dt, mat_parameter_states_[mat_parameter_indices]...,
+                                               load_parameter_states_[load_parameter_indices]...);
 
             // TODO we should use the new variadic capability to directly pass temperature and d_temp_dt directly to
             // these kernels to avoid ugly hacks like this.
             mfem::Vector K_arg(u_.Size());
             add(1.0, u_, dt_, du_dt, u_predicted_);
-            auto K_residual = (*K_functional_)(u_predicted_, parameter_states_[parameter_indices]...);
+            auto K_residual = (*K_functional_)(u_predicted_, mat_parameter_states_[mat_parameter_indices]...,
+                                               load_parameter_states_[load_parameter_indices]...);
 
             add(M_residual, K_residual, r);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
@@ -401,14 +431,17 @@ public:
           [this](const mfem::Vector& du_dt) -> mfem::Operator& {
             // Only reassemble the stiffness if it is a new timestep
 
-            auto M = serac::get<1>((*M_functional_)(differentiate_wrt(du_dt), parameter_states_[parameter_indices]...));
+            auto                                  M = serac::get<1>((*M_functional_)(differentiate_wrt(du_dt),
+                                                    mat_parameter_states_[mat_parameter_indices]...,
+                                                    load_parameter_states_[load_parameter_indices]...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
             mfem::Vector K_arg(u_.Size());
             add(1.0, u_, dt_, du_dt, u_predicted_);
 
-            auto K = serac::get<1>(
-                (*K_functional_)(differentiate_wrt(u_predicted_), parameter_states_[parameter_indices]...));
+            auto K = serac::get<1>((*K_functional_)(differentiate_wrt(u_predicted_),
+                                                    mat_parameter_states_[mat_parameter_indices]...,
+                                                    load_parameter_states_[load_parameter_indices]...));
 
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
@@ -444,7 +477,8 @@ public:
     mfem::HypreParVector adjoint_essential(adjoint_load);
     adjoint_essential = 0.0;
 
-    auto [r, drdu] = (*K_functional_)(differentiate_wrt(temperature_), parameter_states_[parameter_indices]...);
+    auto [r, drdu] = (*K_functional_)(differentiate_wrt(temperature_), mat_parameter_states_[mat_parameter_indices]...,
+                                      load_parameter_states_[load_parameter_indices]...);
     auto jacobian  = assemble(drdu);
     auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -476,16 +510,31 @@ public:
    * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
    */
   template <int parameter_field>
-  FiniteElementDual& computeSensitivity()
+  FiniteElementDual& computeMaterialSensitivity()
   {
     auto [r, drdparam] = (*K_functional_)(DifferentiateWRT<parameter_field + 1>{}, temperature_,
-                                          parameter_states_[parameter_indices]...);
+                                          mat_parameter_states_[mat_parameter_indices]...,
+                                          load_parameter_states_[load_parameter_indices]...);
 
     auto drdparam_mat = assemble(drdparam);
 
-    drdparam_mat->MultTranspose(adjoint_temperature_, *parameter_sensitivities_[parameter_field]);
+    drdparam_mat->MultTranspose(adjoint_temperature_, *mat_parameter_sensitivities_[parameter_field]);
 
-    return *parameter_sensitivities_[parameter_field];
+    return *mat_parameter_sensitivities_[parameter_field];
+  }
+
+  template <int parameter_field>
+  FiniteElementDual& computeLoadSensitivity()
+  {
+    auto [r, drdparam] = (*K_functional_)(
+        DifferentiateWRT<parameter_field + static_cast<int>(sizeof...(mat_parameter_space)) + 1>{}, temperature_,
+        mat_parameter_states_[mat_parameter_indices]..., load_parameter_states_[load_parameter_indices]...);
+
+    auto drdparam_mat = assemble(drdparam);
+
+    drdparam_mat->MultTranspose(adjoint_temperature_, *load_parameter_sensitivities_[parameter_field]);
+
+    return *load_parameter_sensitivities_[parameter_field];
   }
 
   /// Destroy the Thermal Solver object
@@ -505,16 +554,18 @@ protected:
   serac::FiniteElementState adjoint_temperature_;
 
   /// Mass functional object \f$\mathbf{M} = \int_\Omega c_p \, \rho \, \phi_i \phi_j\, dx \f$
-  std::unique_ptr<Functional<test(trial, parameter_space...)>> M_functional_;
+  std::unique_ptr<Functional<test(trial, mat_parameter_space..., load_parameter_space...)>> M_functional_;
 
   /// Stiffness functional object \f$\mathbf{K} = \int_\Omega \theta \cdot \nabla \phi_i  + f \phi_i \, dx \f$
-  std::unique_ptr<Functional<test(trial, parameter_space...)>> K_functional_;
+  std::unique_ptr<Functional<test(trial, mat_parameter_space..., load_parameter_space...)>> K_functional_;
 
   /// The finite element states representing user-defined parameter fields
-  std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states_;
+  std::array<std::reference_wrapper<FiniteElementState>, sizeof...(mat_parameter_space)>  mat_parameter_states_;
+  std::array<std::reference_wrapper<FiniteElementState>, sizeof...(load_parameter_space)> load_parameter_states_;
 
   /// The sensitivities (dual vectors) with repect to each of the input parameter fields
-  std::array<std::unique_ptr<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;
+  std::array<std::unique_ptr<FiniteElementDual>, sizeof...(mat_parameter_space)>  mat_parameter_sensitivities_;
+  std::array<std::unique_ptr<FiniteElementDual>, sizeof...(load_parameter_space)> load_parameter_sensitivities_;
 
   /// Assembled mass matrix
   std::unique_ptr<mfem::HypreParMatrix> M_;
