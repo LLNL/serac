@@ -207,8 +207,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         target_include_directories(mfem SYSTEM INTERFACE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>)
         target_include_directories(mfem SYSTEM INTERFACE $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/mfem>)
 
-        blt_print_target_properties(TARGET mfem)
-
         #### Restore previously stored data
         foreach(_tpl ${tpls_to_save})
             set(${_tpl}_DIR "${${_tpl}_DIR_SAVE}" CACHE PATH "" FORCE)
