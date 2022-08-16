@@ -42,11 +42,10 @@ public:
    * @param name An optional name for the physics module instance
    */
   ThermalMechanicsFunctional(const SolverOptions& thermal_options, const SolverOptions& solid_options,
-                             GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
-                             FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "")
+                             GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "")
       : BasePhysics(3, order, name),
         thermal_functional_(thermal_options, name + "thermal"),
-        solid_functional_(solid_options, geom_nonlin, keep_deformation, name + "mechanical")
+        solid_functional_(solid_options, geom_nonlin, name + "mechanical")
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));

@@ -97,7 +97,7 @@ public:
    */
 
   SolidFunctional(const SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
-                  FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "")
+                  const std::string& name = "")
       : BasePhysics(2, order, name),
         velocity_(StateManager::newState(FiniteElementState::Options{
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "velocity")})),

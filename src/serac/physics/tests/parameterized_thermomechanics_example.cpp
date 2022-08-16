@@ -127,7 +127,7 @@ int main(int argc, char* argv[])
   }
 
   SolidFunctional<p, dim, Parameters<H1<p>, H1<p> > > simulation(
-      default_static_options, GeometricNonlinearities::On, FinalMeshOption::Deformed, "thermomechanics_simulation");
+      default_static_options, GeometricNonlinearities::On, "thermomechanics_simulation");
 
   double density   = 1.0;     ///< density
   double E         = 1000.0;  ///< Young's modulus
