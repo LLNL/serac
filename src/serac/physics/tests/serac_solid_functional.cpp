@@ -33,12 +33,45 @@ mfem::Mesh buildHypercubeMesh(std::array<int, dim> elementsPerDim)
   }
 }
 
-template <int p, int dim>
-double patch_test(std::function<void(SolidFunctional<p, dim>&)> apply_loads,
-                  std::function<void(const mfem::Vector&, mfem::Vector&)> exact_displacement)
-{
-  //auto body_force_function = [](auto /* x */, auto /* t */) { return tensor<double, dim>{}; };
+template <int dim>
+struct AffineSolution {
+  mfem::DenseMatrix A;
+  mfem::Vector b;
 
+  AffineSolution():
+    A(dim), b(dim)
+  {
+    A(0, 0) = 0.110791568544027;
+    A(0, 1) = 0.230421268325901;
+    A(1, 0) = 0.198344644470483;
+    A(1, 1) = 0.060514559793513;
+    if constexpr (dim == 3) {
+      A(0, 2) = 0.15167673653354;
+      A(1, 2) = 0.084137393813728;
+      A(2, 0) = 0.011544253485023;
+      A(2, 1) = 0.060942846497753;
+      A(2, 2) = 0.186383473579596;
+    }
+
+    b(0) = 0.765645367640828;
+    b(1) = 0.992487355850465;
+    if constexpr (dim == 3) {
+      b(2) = 0.162199373722092;
+    }
+  };
+
+  void operator()(const mfem::Vector& X, mfem::Vector& u) const
+  {
+    u = 0.0;
+    A.Mult(X, u);
+    u += b;
+  }
+};
+
+template <int p, int dim>
+double patch_test(std::function<void(SolidFunctional<p, dim>&, const AffineSolution<dim>&)> apply_loads,
+                  const AffineSolution<dim>& exact_displacement)
+{
   MPI_Barrier(MPI_COMM_WORLD);
 
   int serial_refinement   = 0;
@@ -68,7 +101,7 @@ double patch_test(std::function<void(SolidFunctional<p, dim>&)> apply_loads,
   solid_mechanics::NeoHookean mat{.density=1.0, .K=1.0, .G=1.0};
   solid_functional.setMaterial(mat);
 
-  apply_loads(solid_functional);
+  apply_loads(solid_functional, exact_displacement);
 
   // Finalize the data structures
   solid_functional.completeSetup();
@@ -451,37 +484,12 @@ TEST(SolidFunctional, 2DLinearTraction)
   functional_solid_test_boundary<1, 2>(0.12659525750241674, TestType::Traction);
 }
 
-template <int dim>
-void affine_solution(const mfem::Vector& X, mfem::Vector& u)
-{
-  mfem::DenseMatrix A(dim);
-  A(0, 0) = 0.110791568544027;
-  A(0, 1) = 0.230421268325901;
-  A(1, 0) = 0.198344644470483;
-  A(1, 1) = 0.060514559793513;
-  if constexpr (dim == 3) {
-    A(0, 2) = 0.15167673653354;
-    A(1, 2) = 0.084137393813728;
-    A(2, 0) = 0.011544253485023;
-    A(2, 1) = 0.060942846497753;
-    A(2, 2) = 0.186383473579596;
-  }
-
-  mfem::Vector b(dim);
-  b(0) = 0.765645367640828;
-  b(1) = 0.992487355850465;
-  if constexpr (dim == 3) {
-    b(2) = 0.162199373722092;
-  }
-
-  A.Mult(X, u);
-  u += b;
-}
-
 template <int p, int dim>
-void applyEssentialBCLoading(SolidFunctional<p, dim>& sf)
+void applyEssentialBCLoading(SolidFunctional<p, dim>& sf, const AffineSolution<dim>& exact_solution)
 {
-  // Define a boundary attribute set
+  // Define boundary set to apply essential BCs on
+  // TODO: query mesh to get all boundaries, instead of hard coding
+  // values for a particular mesh.
   std::set<int> essential_boundaries;
   if constexpr (dim == 2) {
     essential_boundaries = {1, 2, 3, 4};
@@ -489,15 +497,15 @@ void applyEssentialBCLoading(SolidFunctional<p, dim>& sf)
     essential_boundaries = {1, 2, 3, 4, 5, 6};
   }
 
-  // displacement boundary condition
-  sf.setDisplacementBCs(essential_boundaries, affine_solution<dim>);
+  sf.setDisplacementBCs(essential_boundaries, exact_solution);
 }
 
 TEST(SolidFunctionalPatch, P12D)
 {
   constexpr int p = 1;
   constexpr int dim   = 2;
-  double        error = patch_test<p, dim>(applyEssentialBCLoading<p, dim>, affine_solution<dim>);
+  AffineSolution<dim> affine_solution;
+  double        error = patch_test<p, dim>(applyEssentialBCLoading<p, dim>, affine_solution);
   EXPECT_LT(error, 1e-13);
 }
 #if 0
