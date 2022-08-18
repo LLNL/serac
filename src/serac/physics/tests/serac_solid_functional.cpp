@@ -34,11 +34,11 @@ mfem::Mesh buildHypercubeMesh(std::array<int, dim> elementsPerDim)
 }
 
 template <int dim>
-struct AffineSolution {
+struct ExactSolution {
   mfem::DenseMatrix A;
   mfem::Vector b;
 
-  AffineSolution():
+  ExactSolution():
     A(dim), b(dim)
   {
     A(0, 0) = 0.110791568544027;
@@ -69,8 +69,8 @@ struct AffineSolution {
 };
 
 template <int p, int dim>
-double patch_test(std::function<void(SolidFunctional<p, dim>&, const AffineSolution<dim>&)> apply_loads,
-                  const AffineSolution<dim>& exact_displacement)
+double patch_test(std::function<void(const ExactSolution<dim>&, const solid_mechanics::NeoHookean, SolidFunctional<p, dim>&)> apply_loads,
+                  const ExactSolution<dim>& exact_displacement)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -101,7 +101,7 @@ double patch_test(std::function<void(SolidFunctional<p, dim>&, const AffineSolut
   solid_mechanics::NeoHookean mat{.density=1.0, .K=1.0, .G=1.0};
   solid_functional.setMaterial(mat);
 
-  apply_loads(solid_functional, exact_displacement);
+  apply_loads(exact_displacement, mat, solid_functional);
 
   // Finalize the data structures
   solid_functional.completeSetup();
@@ -485,7 +485,7 @@ TEST(SolidFunctional, 2DLinearTraction)
 }
 
 template <int p, int dim>
-void applyEssentialBCLoading(SolidFunctional<p, dim>& sf, const AffineSolution<dim>& exact_solution)
+void applyEssentialBCLoading(const ExactSolution<dim>& exact_solution, const solid_mechanics::NeoHookean&, SolidFunctional<p, dim>& sf)
 {
   // Define boundary set to apply essential BCs on
   // TODO: query mesh to get all boundaries, instead of hard coding
@@ -500,12 +500,44 @@ void applyEssentialBCLoading(SolidFunctional<p, dim>& sf, const AffineSolution<d
   sf.setDisplacementBCs(essential_boundaries, exact_solution);
 }
 
+template <int p, int dim>
+void applyNaturalAndEssentialBCLoading(const ExactSolution<dim>& exact_solution, const solid_mechanics::NeoHookean& material, SolidFunctional<p, dim>& sf)
+{
+  // Define boundary set to apply essential BCs on
+  // These are only some of the boundaries, we leave the rest for natural BCs
+  std::set<int> essential_boundaries;
+  if constexpr (dim == 2) {
+    essential_boundaries = {1, 2};
+  } else {
+    essential_boundaries = {1, 2, 3};
+  }
+
+  sf.setDisplacementBCs(essential_boundaries, exact_solution);
+
+  solid_mechanics::NeoHookean::State state;
+  auto H = make_tensor<dim, dim>([&](int i, int j) { return exact_solution.A(i,j); });
+  tensor<double, dim, dim> tau = material(state, H);
+  auto F = H + Identity<dim>();
+  auto P = dot(tau, transpose(inv(F)));
+  auto traction = [P](auto, auto n, auto) { return dot(P, n); };
+  sf.setPiolaTraction(traction);
+}
+
 TEST(SolidFunctionalPatch, P12D)
 {
   constexpr int p = 1;
   constexpr int dim   = 2;
-  AffineSolution<dim> affine_solution;
+  ExactSolution<dim> affine_solution;
   double        error = patch_test<p, dim>(applyEssentialBCLoading<p, dim>, affine_solution);
+  EXPECT_LT(error, 1e-13);
+}
+
+TEST(SolidFunctionalPatch, P12DTraction)
+{
+  constexpr int p = 1;
+  constexpr int dim   = 2;
+  ExactSolution<dim> affine_solution;
+  double        error = patch_test<p, dim>(applyNaturalAndEssentialBCLoading<p, dim>, affine_solution);
   EXPECT_LT(error, 1e-13);
 }
 #if 0
