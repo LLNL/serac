@@ -265,13 +265,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         # Patch the mfem target with the correct include directories
         get_target_property(_mfem_includes mfem INCLUDE_DIRECTORIES)
         target_include_directories(mfem SYSTEM INTERFACE ${_mfem_includes})
-
-        # Add the base of serac (which is not PROJECT_SOURCE_DIR in smith)
-        # so mfem can find its headers
-        set(_serac_root)
-        serac_make_absolute_path(PATH ${CMAKE_CURRENT_LIST_DIR}/../.. OUT_VAR _serac_root)
-        target_include_directories(mfem SYSTEM INTERFACE $<BUILD_INTERFACE:${_serac_root}>)
-
+        target_include_directories(mfem SYSTEM INTERFACE $<BUILD_INTERFACE:${SERAC_SOURCE_DIR}>)
         target_include_directories(mfem SYSTEM INTERFACE $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/mfem>)
 
         #### Restore previously stored data

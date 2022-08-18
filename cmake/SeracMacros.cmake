@@ -188,33 +188,3 @@ macro(serac_configure_file _source _target)
     execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different ${_tmp_target} ${_target})
     execute_process(COMMAND ${CMAKE_COMMAND} -E remove ${_tmp_target})
 endmacro(serac_configure_file)
-
-##------------------------------------------------------------------------------
-## serac_make_absolute_path
-##
-## This macro converts a relative path to an absolute path
-##------------------------------------------------------------------------------
-macro(serac_make_absolute_path)
-    set(options )
-    set(singleValueArgs PATH OUT_VAR)
-    set(multiValueArgs)
-
-    # Parse the arguments to the macro
-    cmake_parse_arguments(arg
-        "${options}" "${singleValueArgs}" "${multiValueArgs}" ${ARGN})
-
-    if ( NOT DEFINED arg_PATH )
-        message(FATAL_ERROR "'serac_make_absolute_path" requires a given PATH)
-    endif()
-
-    if ( NOT DEFINED arg_OUT_VAR )
-        message(FATAL_ERROR "'serac_make_absolute_path" requires OUT_VAR to be set to a variable name)
-    endif()
-
-    if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.20.0")
-        cmake_path(ABSOLUTE_PATH arg_PATH NORMALIZE OUTPUT_VARIABLE ${arg_OUT_VAR})
-    else()
-        get_filename_component(${arg_OUT_VAR} "${arg_PATH}" ABSOLUTE)
-    endif()
-
-endmacro(serac_make_absolute_path)
