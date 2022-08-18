@@ -59,10 +59,6 @@ void functional_test_static_3D(double expected_norm)
 
   const SolverOptions solid_options = {default_linear_options, default_nonlinear_options};
 
-  // Construct a functional-based thermal-solid solver
-  // BT 04/27/2022 This can't be instantiated yet.
-  // The material model needs to be implemented before this
-  // module can be used.
   ThermalMechanicsFunctional<p, dim> thermal_solid_solver(thermal_options, solid_options, GeometricNonlinearities::On,
                                                           "thermal_solid_functional");
 
@@ -96,18 +92,9 @@ void functional_test_static_3D(double expected_norm)
   // Finalize the data structures
   thermal_solid_solver.completeSetup();
 
-  // thermal_solid_solver.initializeOutput(serac::OutputType::VisIt, "thermal_mechanics_without_input_file_output");
-
-  // dump initial state to output
-  // thermal_solid_solver.outputState();
-
   // Perform the quasi-static solve
   double dt = 1.0;
   thermal_solid_solver.advanceTimestep(dt);
-
-  // thermal_solid_solver.outputState();
-
-  // thermal_solid_solver.temperature().gridFunc().Print();
 
   EXPECT_NEAR(expected_norm, norm(thermal_solid_solver.displacement()), 1.0e-6);
 
@@ -192,16 +179,9 @@ void functional_test_shrinking_3D(double expected_norm)
   // Finalize the data structures
   thermal_solid_solver.completeSetup();
 
-  // thermal_solid_solver.initializeOutput(serac::OutputType::VisIt, "thermal_mechanics_without_input_file_output");
-
-  // dump initial state to output
-  // thermal_solid_solver.outputState();
-
   // Perform the quasi-static solve
   double dt = 1.0;
   thermal_solid_solver.advanceTimestep(dt);
-
-  // thermal_solid_solver.outputState();
 
   // Check the final displacement norm
   EXPECT_NEAR(expected_norm, norm(thermal_solid_solver.displacement()), 1.0e-4);

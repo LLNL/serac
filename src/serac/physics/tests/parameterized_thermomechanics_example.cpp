@@ -56,42 +56,6 @@ struct ParameterizedThermoelasticMaterial {
   }
 };
 
-/// @brief Constructs an MFEM mesh of a hollow cylinder restricted to the first orthant
-mfem::Mesh build_hollow_quarter_cylinder(std::size_t radial_divisions, std::size_t angular_divisions,
-                                         std::size_t vertical_divisions, double inner_radius, double outer_radius,
-                                         double height)
-{
-  constexpr int dim = 3;
-
-  // start with a structured mesh of a cube
-  mfem::Mesh mesh = mfem::Mesh::MakeCartesian3D(int(radial_divisions), int(angular_divisions), int(vertical_divisions),
-                                                mfem::Element::HEXAHEDRON);
-
-  int          num_vertices = mesh.GetNV();
-  mfem::Vector new_vertices;
-  mesh.GetVertices(new_vertices);
-  mfem::Vector vertex(dim);
-  for (int i = 0; i < num_vertices; i++) {
-    for (int d = 0; d < dim; d++) {
-      vertex(d) = new_vertices[d * num_vertices + i];
-    }
-
-    // transform the vertices to make it into a cylindrical shell
-    double r     = inner_radius + (outer_radius - inner_radius) * vertex[0];
-    double theta = vertex[1] * M_PI_2;
-    vertex(0)    = r * cos(theta);
-    vertex(1)    = r * sin(theta);
-    vertex(2)    = vertex(2) * height;
-
-    for (int d = 0; d < dim; d++) {
-      new_vertices[d * num_vertices + i] = vertex(d);
-    }
-  }
-  mesh.SetVertices(new_vertices);
-
-  return mesh;
-}
-
 int main(int argc, char* argv[])
 {
   serac::initialize(argc, argv);
