@@ -36,7 +36,7 @@ endif()
 message(STATUS "Serac Codevelop Build: ${SERAC_ENABLE_CODEVELOP}")
 
 if(NOT DEFINED SERAC_SOURCE_DIR)
-  set(SERAC_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR})
+  set(SERAC_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR} CACHE PATH "")
 endif()
 message(STATUS "Serac Source Dir: ${SERAC_SOURCE_DIR}")
 
