@@ -96,7 +96,10 @@ double patch_test(std::function<void(const ExactSolution<dim>&, const solid_mech
   serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a functional-based solid mechanics solver
-  SolidFunctional<p, dim> solid_functional(direct_static_options, GeometricNonlinearities::On, "solid_functional");
+  auto solver_options = direct_static_options;
+  solver_options.nonlinear.abs_tol = 1e-14;
+  solver_options.nonlinear.rel_tol = 1e-14;
+  SolidFunctional<p, dim> solid_functional(solver_options, GeometricNonlinearities::On, "solid_functional");
 
   solid_mechanics::NeoHookean mat{.density=1.0, .K=1.0, .G=1.0};
   solid_functional.setMaterial(mat);
@@ -111,8 +114,11 @@ double patch_test(std::function<void(const ExactSolution<dim>&, const solid_mech
   solid_functional.advanceTimestep(dt);
 
   // Output solution for debugging
-  //solid_solver.outputState("paraview_output");
-  //solid_solver.displacement().Print(std::cout);
+  // solid_functional.outputState("paraview_output");
+  // std::cout << "displacement =\n";
+  // solid_functional.displacement().Print(std::cout);
+  // std::cout << "forces =\n";
+  // solid_functional.nodalForces().Print();
 
   // Compute norm of error
   mfem::VectorFunctionCoefficient exact_solution_coef(dim, exact_displacement);
@@ -467,7 +473,7 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   // Check the final displacement norm
   EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
 }
-
+#if 0
 TEST(SolidFunctional, 2DQuadParameterizedStatic) { functional_parameterized_solid_test<2, 2>(2.1864815661936112); }
 
 TEST(SolidFunctional, 3DQuadStaticJ2) { functional_solid_test_static_J2(); }
@@ -483,6 +489,7 @@ TEST(SolidFunctional, 2DLinearTraction)
 {
   functional_solid_test_boundary<1, 2>(0.12659525750241674, TestType::Traction);
 }
+#endif
 
 template <int p, int dim>
 void applyEssentialBCLoading(const ExactSolution<dim>& exact_solution, const solid_mechanics::NeoHookean&, SolidFunctional<p, dim>& sf)
@@ -507,28 +514,51 @@ void applyNaturalAndEssentialBCLoading(const ExactSolution<dim>& exact_solution,
   // These are only some of the boundaries, we leave the rest for natural BCs
   std::set<int> essential_boundaries;
   if constexpr (dim == 2) {
-    essential_boundaries = {1, 2};
+    essential_boundaries = {1, 4};
   } else {
-    essential_boundaries = {1, 2, 3};
+    essential_boundaries = {1, 2, 5};
   }
 
   sf.setDisplacementBCs(essential_boundaries, exact_solution);
 
   solid_mechanics::NeoHookean::State state;
   auto H = make_tensor<dim, dim>([&](int i, int j) { return exact_solution.A(i,j); });
+  // Kirchhoff stress
   tensor<double, dim, dim> tau = material(state, H);
+  // convert to Piola
   auto F = H + Identity<dim>();
-  auto P = dot(tau, transpose(inv(F)));
-  auto traction = [P](auto, auto n, auto) { return dot(P, n); };
+  // next line is $P = tau F^{-T}$ (recall tau is symmetric)
+  auto P = transpose(linear_solve(F, tau));
+  // Following line indicates bug. Should have
+  // t0 = dot(P, n0)
+  auto traction = [P](auto, auto n0, auto) { return dot(transpose(P), n0); };
   sf.setPiolaTraction(traction);
 }
-
+#if 0
 TEST(SolidFunctionalPatch, P12D)
 {
   constexpr int p = 1;
   constexpr int dim   = 2;
   ExactSolution<dim> affine_solution;
   double        error = patch_test<p, dim>(applyEssentialBCLoading<p, dim>, affine_solution);
+  EXPECT_LT(error, 1e-13);
+}
+
+TEST(SolidFunctionalPatch, P13D)
+{
+  constexpr int p = 1;
+  constexpr int dim   = 3;
+  ExactSolution<dim> affine_solution;
+  double        error = patch_test<p, dim>(applyEssentialBCLoading<p, dim>, affine_solution);
+  EXPECT_LT(error, 1e-13);
+}
+#endif
+TEST(SolidFunctionalPatch, P13DTraction)
+{
+  constexpr int p = 1;
+  constexpr int dim   = 3;
+  ExactSolution<dim> affine_solution;
+  double        error = patch_test<p, dim>(applyNaturalAndEssentialBCLoading<p, dim>, affine_solution);
   EXPECT_LT(error, 1e-13);
 }
 
