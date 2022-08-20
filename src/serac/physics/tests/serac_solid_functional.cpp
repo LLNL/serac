@@ -528,10 +528,12 @@ void applyNaturalAndEssentialBCLoading(const ExactSolution<dim>& exact_solution,
   // convert to Piola
   auto F = H + Identity<dim>();
   // next line is $P = tau F^{-T}$ (recall tau is symmetric)
+  // P F^T = tau
+  // F P^T = tau^T
   auto P = transpose(linear_solve(F, tau));
   // Following line indicates bug. Should have
   // t0 = dot(P, n0)
-  auto traction = [P](auto, auto n0, auto) { return dot(transpose(P), n0); };
+  auto traction = [P](auto, auto n0, auto) { return dot(P, n0); };
   sf.setPiolaTraction(traction);
 }
 #if 0
