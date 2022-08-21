@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include <fstream>
+#include <string>
 
 #include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
@@ -22,16 +23,6 @@ namespace serac {
 using solid_mechanics::default_dynamic_options;
 using solid_mechanics::default_static_options;
 using solid_mechanics::direct_static_options;
-
-template <int dim>
-mfem::Mesh buildHypercubeMesh(std::array<int, dim> elementsPerDim)
-{
-  if constexpr (dim == 2) {
-    return buildRectangleMesh(elementsPerDim[0], elementsPerDim[1]);
-  } else if constexpr (dim == 3) {
-    return buildCuboidMesh(elementsPerDim[0], elementsPerDim[1], elementsPerDim[2]);
-  }
-}
 
 template <int dim>
 struct ExactSolution {
@@ -74,9 +65,6 @@ double patch_test(std::function<void(const ExactSolution<dim>&, const solid_mech
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
-  int serial_refinement   = 0;
-  int parallel_refinement = 0;
-
   // Create DataStore
   axom::sidre::DataStore datastore;
   serac::StateManager::initialize(datastore, "solid_functional_static_solve");
@@ -86,13 +74,8 @@ double patch_test(std::function<void(const ExactSolution<dim>&, const solid_mech
   // is left free to do so in the wild.
   static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for solid functional test");
 
-  // Construct the appropriate dimension mesh and give it to the data store
-  std::array<int, dim> elements_per_dim{3, 4};
-  if constexpr (dim == 3) {
-    elements_per_dim[2] = 2;
-  }
-  auto mesh =
-      mesh::refineAndDistribute(buildHypercubeMesh<dim>(elements_per_dim), serial_refinement, parallel_refinement);
+  std::string filename = std::string(SERAC_REPO_DIR) +  "/data/meshes/patch" + std::to_string(dim) + "d.mesh";
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename));
   serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a functional-based solid mechanics solver
@@ -495,7 +478,7 @@ template <int p, int dim>
 void applyEssentialBCLoading(const ExactSolution<dim>& exact_solution, const solid_mechanics::NeoHookean&, SolidFunctional<p, dim>& sf)
 {
   // Define boundary set to apply essential BCs on
-  // TODO: query mesh to get all boundaries, instead of hard coding
+  // Possible improvement: query mesh to get desired boundaries, instead of hard coding
   // values for a particular mesh.
   std::set<int> essential_boundaries;
   if constexpr (dim == 2) {
@@ -528,15 +511,11 @@ void applyNaturalAndEssentialBCLoading(const ExactSolution<dim>& exact_solution,
   // convert to Piola
   auto F = H + Identity<dim>();
   // next line is $P = tau F^{-T}$ (recall tau is symmetric)
-  // P F^T = tau
-  // F P^T = tau^T
   auto P = transpose(linear_solve(F, tau));
-  // Following line indicates bug. Should have
-  // t0 = dot(P, n0)
   auto traction = [P](auto, auto n0, auto) { return dot(P, n0); };
   sf.setPiolaTraction(traction);
 }
-#if 0
+
 TEST(SolidFunctionalPatch, P12D)
 {
   constexpr int p = 1;
@@ -554,13 +533,22 @@ TEST(SolidFunctionalPatch, P13D)
   double        error = patch_test<p, dim>(applyEssentialBCLoading<p, dim>, affine_solution);
   EXPECT_LT(error, 1e-13);
 }
-#endif
-TEST(SolidFunctionalPatch, P13DTraction)
+
+TEST(SolidFunctionalPatch, P22D)
 {
-  constexpr int p = 1;
+  constexpr int p = 2;
+  constexpr int dim   = 2;
+  ExactSolution<dim> affine_solution;
+  double        error = patch_test<p, dim>(applyEssentialBCLoading<p, dim>, affine_solution);
+  EXPECT_LT(error, 1e-13);
+}
+
+TEST(SolidFunctionalPatch, P23D)
+{
+  constexpr int p = 2;
   constexpr int dim   = 3;
   ExactSolution<dim> affine_solution;
-  double        error = patch_test<p, dim>(applyNaturalAndEssentialBCLoading<p, dim>, affine_solution);
+  double        error = patch_test<p, dim>(applyEssentialBCLoading<p, dim>, affine_solution);
   EXPECT_LT(error, 1e-13);
 }
 
@@ -572,31 +560,16 @@ TEST(SolidFunctionalPatch, P12DTraction)
   double        error = patch_test<p, dim>(applyNaturalAndEssentialBCLoading<p, dim>, affine_solution);
   EXPECT_LT(error, 1e-13);
 }
-#if 0
-TEST(SolidFunctionalPatch, P22D)
-{
-  constexpr int p = 2;
-  constexpr int dim   = 2;
-  double        error = patch_test<p, dim>(affine_solution<dim>);
-  EXPECT_LT(error, 1e-13);
-}
 
-TEST(SolidFunctionalPatch, P13D)
+TEST(SolidFunctionalPatch, P13DTraction)
 {
   constexpr int p = 1;
   constexpr int dim   = 3;
-  double        error = patch_test<p, dim>(affine_solution<dim>);
+  ExactSolution<dim> affine_solution;
+  double        error = patch_test<p, dim>(applyNaturalAndEssentialBCLoading<p, dim>, affine_solution);
   EXPECT_LT(error, 1e-13);
 }
 
-TEST(SolidFunctionalPatch, P23D)
-{
-  constexpr int p = 2;
-  constexpr int dim   = 3;
-  double        error = patch_test<p, dim>(affine_solution<dim>);
-  EXPECT_LT(error, 1e-13);
-}
-#endif
 }  // namespace serac
 
 int main(int argc, char* argv[])
