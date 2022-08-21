@@ -25,11 +25,9 @@ using solid_mechanics::default_static_options;
 using solid_mechanics::direct_static_options;
 
 template <int dim>
-struct ExactSolution {
-  mfem::DenseMatrix A;
-  mfem::Vector b;
-
-  ExactSolution():
+class AffineSolution {
+ public:
+  AffineSolution():
     A(dim), b(dim)
   {
     A(0, 0) = 0.110791568544027;
@@ -57,11 +55,39 @@ struct ExactSolution {
     A.Mult(X, u);
     u += b;
   }
+
+  template <int p, typename Material>
+  void applyLoads(const Material& material, SolidFunctional<p, dim>& sf) const
+  {
+    // essential BCs
+    std::set<int> essential_boundaries;
+    if constexpr (dim == 2) {
+      essential_boundaries = {1, 4};
+    } else {
+      essential_boundaries = {1, 2, 5};
+    }
+    auto ebc_func = [*this](const auto& X, auto& u){ this->operator()(X, u); };
+    sf.setDisplacementBCs(essential_boundaries, ebc_func);
+
+    // natural BCs
+    typename Material::State state;
+    auto H = make_tensor<dim, dim>([&](int i, int j) { return A(i,j); });
+    // Kirchhoff stress
+    tensor<double, dim, dim> tau = material(state, H);
+    // convert to Piola
+    // next line is $P = tau F^{-T}$ (recall tau is symmetric)
+    auto P = transpose(linear_solve(H + Identity<dim>(), tau));
+    auto traction = [P](auto, auto n0, auto) { return dot(P, n0); };
+    sf.setPiolaTraction(traction);
+  }
+
+ private:
+  mfem::DenseMatrix A;
+  mfem::Vector b;
 };
 
-template <int p, int dim>
-double patch_test(std::function<void(const ExactSolution<dim>&, const solid_mechanics::NeoHookean, SolidFunctional<p, dim>&)> apply_loads,
-                  const ExactSolution<dim>& exact_displacement)
+template <int p, int dim, typename ExactSolution>
+double patch_test(const ExactSolution& exact_displacement)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -87,7 +113,7 @@ double patch_test(std::function<void(const ExactSolution<dim>&, const solid_mech
   solid_mechanics::NeoHookean mat{.density=1.0, .K=1.0, .G=1.0};
   solid_functional.setMaterial(mat);
 
-  apply_loads(exact_displacement, mat, solid_functional);
+  exact_displacement.applyLoads(mat, solid_functional);
 
   // Finalize the data structures
   solid_functional.completeSetup();
@@ -474,54 +500,12 @@ TEST(SolidFunctional, 2DLinearTraction)
 }
 #endif
 
-template <int p, int dim>
-void applyEssentialBCLoading(const ExactSolution<dim>& exact_solution, const solid_mechanics::NeoHookean&, SolidFunctional<p, dim>& sf)
-{
-  // Define boundary set to apply essential BCs on
-  // Possible improvement: query mesh to get desired boundaries, instead of hard coding
-  // values for a particular mesh.
-  std::set<int> essential_boundaries;
-  if constexpr (dim == 2) {
-    essential_boundaries = {1, 2, 3, 4};
-  } else {
-    essential_boundaries = {1, 2, 3, 4, 5, 6};
-  }
-
-  sf.setDisplacementBCs(essential_boundaries, exact_solution);
-}
-
-template <int p, int dim>
-void applyNaturalAndEssentialBCLoading(const ExactSolution<dim>& exact_solution, const solid_mechanics::NeoHookean& material, SolidFunctional<p, dim>& sf)
-{
-  // Define boundary set to apply essential BCs on
-  // These are only some of the boundaries, we leave the rest for natural BCs
-  std::set<int> essential_boundaries;
-  if constexpr (dim == 2) {
-    essential_boundaries = {1, 4};
-  } else {
-    essential_boundaries = {1, 2, 5};
-  }
-
-  sf.setDisplacementBCs(essential_boundaries, exact_solution);
-
-  solid_mechanics::NeoHookean::State state;
-  auto H = make_tensor<dim, dim>([&](int i, int j) { return exact_solution.A(i,j); });
-  // Kirchhoff stress
-  tensor<double, dim, dim> tau = material(state, H);
-  // convert to Piola
-  auto F = H + Identity<dim>();
-  // next line is $P = tau F^{-T}$ (recall tau is symmetric)
-  auto P = transpose(linear_solve(F, tau));
-  auto traction = [P](auto, auto n0, auto) { return dot(P, n0); };
-  sf.setPiolaTraction(traction);
-}
-
 TEST(SolidFunctionalPatch, P12D)
 {
   constexpr int p = 1;
   constexpr int dim   = 2;
-  ExactSolution<dim> affine_solution;
-  double        error = patch_test<p, dim>(applyEssentialBCLoading<p, dim>, affine_solution);
+  AffineSolution<dim> affine_solution;
+  double        error = patch_test<p, dim>(affine_solution);
   EXPECT_LT(error, 1e-13);
 }
 
@@ -529,8 +513,8 @@ TEST(SolidFunctionalPatch, P13D)
 {
   constexpr int p = 1;
   constexpr int dim   = 3;
-  ExactSolution<dim> affine_solution;
-  double        error = patch_test<p, dim>(applyEssentialBCLoading<p, dim>, affine_solution);
+  AffineSolution<dim> affine_solution;
+  double        error = patch_test<p, dim>(affine_solution);
   EXPECT_LT(error, 1e-13);
 }
 
@@ -538,8 +522,8 @@ TEST(SolidFunctionalPatch, P22D)
 {
   constexpr int p = 2;
   constexpr int dim   = 2;
-  ExactSolution<dim> affine_solution;
-  double        error = patch_test<p, dim>(applyEssentialBCLoading<p, dim>, affine_solution);
+  AffineSolution<dim> affine_solution;
+  double        error = patch_test<p, dim>(affine_solution);
   EXPECT_LT(error, 1e-13);
 }
 
@@ -547,8 +531,8 @@ TEST(SolidFunctionalPatch, P23D)
 {
   constexpr int p = 2;
   constexpr int dim   = 3;
-  ExactSolution<dim> affine_solution;
-  double        error = patch_test<p, dim>(applyEssentialBCLoading<p, dim>, affine_solution);
+  AffineSolution<dim> affine_solution;
+  double        error = patch_test<p, dim>(affine_solution);
   EXPECT_LT(error, 1e-13);
 }
 
@@ -556,8 +540,8 @@ TEST(SolidFunctionalPatch, P12DTraction)
 {
   constexpr int p = 1;
   constexpr int dim   = 2;
-  ExactSolution<dim> affine_solution;
-  double        error = patch_test<p, dim>(applyNaturalAndEssentialBCLoading<p, dim>, affine_solution);
+  AffineSolution<dim> affine_solution;
+  double        error = patch_test<p, dim>(affine_solution);
   EXPECT_LT(error, 1e-13);
 }
 
@@ -565,8 +549,8 @@ TEST(SolidFunctionalPatch, P13DTraction)
 {
   constexpr int p = 1;
   constexpr int dim   = 3;
-  ExactSolution<dim> affine_solution;
-  double        error = patch_test<p, dim>(applyNaturalAndEssentialBCLoading<p, dim>, affine_solution);
+  AffineSolution<dim> affine_solution;
+  double        error = patch_test<p, dim>(affine_solution);
   EXPECT_LT(error, 1e-13);
 }
 
