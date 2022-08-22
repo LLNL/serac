@@ -4,7 +4,9 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+#include <functional>
 #include <fstream>
+#include <set>
 #include <string>
 
 #include "axom/slic/core/SimpleLogger.hpp"
@@ -57,15 +59,9 @@ class AffineSolution {
   }
 
   template <int p, typename Material>
-  void applyLoads(const Material& material, SolidFunctional<p, dim>& sf) const
+  void applyLoads(const Material& material, SolidFunctional<p, dim>& sf, std::set<int> essential_boundaries) const
   {
     // essential BCs
-    std::set<int> essential_boundaries;
-    if constexpr (dim == 2) {
-      essential_boundaries = {1, 4};
-    } else {
-      essential_boundaries = {1, 2, 5};
-    }
     auto ebc_func = [*this](const auto& X, auto& u){ this->operator()(X, u); };
     sf.setDisplacementBCs(essential_boundaries, ebc_func);
 
@@ -86,8 +82,30 @@ class AffineSolution {
   mfem::Vector b;
 };
 
+enum class BoundarySet { ALL, PARTIAL };
+
+template <int dim>
+std::set<int> essentialBoundaryAttributes(BoundarySet b)
+{
+  if constexpr (dim == 2) {
+    switch (b) {
+      case BoundarySet::ALL:
+        return {1, 2, 3, 4};
+      case BoundarySet::PARTIAL:
+        return {1, 4};
+    }
+  } else {
+    switch (b) {
+      case BoundarySet::ALL:
+        return {1, 2, 3, 4, 5, 6};
+      case BoundarySet::PARTIAL:
+        return {1, 2, 5};
+    }
+  }
+}
+
 template <int p, int dim, typename ExactSolution>
-double patch_test(const ExactSolution& exact_displacement)
+double patch_test(const ExactSolution& exact_displacement, BoundarySet essential_boundary)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -113,7 +131,7 @@ double patch_test(const ExactSolution& exact_displacement)
   solid_mechanics::NeoHookean mat{.density=1.0, .K=1.0, .G=1.0};
   solid_functional.setMaterial(mat);
 
-  exact_displacement.applyLoads(mat, solid_functional);
+  exact_displacement.applyLoads(mat, solid_functional, essentialBoundaryAttributes<dim>(essential_boundary));
 
   // Finalize the data structures
   solid_functional.completeSetup();
@@ -503,9 +521,8 @@ TEST(SolidFunctional, 2DLinearTraction)
 TEST(SolidFunctionalPatch, P12D)
 {
   constexpr int p = 1;
-  constexpr int dim   = 2;
-  AffineSolution<dim> affine_solution;
-  double        error = patch_test<p, dim>(affine_solution);
+  constexpr int dim = 2;
+  double error = patch_test<p, dim>(AffineSolution<dim>(), BoundarySet::ALL);
   EXPECT_LT(error, 1e-13);
 }
 
@@ -513,8 +530,7 @@ TEST(SolidFunctionalPatch, P13D)
 {
   constexpr int p = 1;
   constexpr int dim   = 3;
-  AffineSolution<dim> affine_solution;
-  double        error = patch_test<p, dim>(affine_solution);
+  double error = patch_test<p, dim>(AffineSolution<dim>(), BoundarySet::ALL);
   EXPECT_LT(error, 1e-13);
 }
 
@@ -522,8 +538,7 @@ TEST(SolidFunctionalPatch, P22D)
 {
   constexpr int p = 2;
   constexpr int dim   = 2;
-  AffineSolution<dim> affine_solution;
-  double        error = patch_test<p, dim>(affine_solution);
+  double error = patch_test<p, dim>(AffineSolution<dim>(), BoundarySet::ALL);
   EXPECT_LT(error, 1e-13);
 }
 
@@ -531,8 +546,7 @@ TEST(SolidFunctionalPatch, P23D)
 {
   constexpr int p = 2;
   constexpr int dim   = 3;
-  AffineSolution<dim> affine_solution;
-  double        error = patch_test<p, dim>(affine_solution);
+  double error = patch_test<p, dim>(AffineSolution<dim>(), BoundarySet::ALL);
   EXPECT_LT(error, 1e-13);
 }
 
@@ -540,8 +554,7 @@ TEST(SolidFunctionalPatch, P12DTraction)
 {
   constexpr int p = 1;
   constexpr int dim   = 2;
-  AffineSolution<dim> affine_solution;
-  double        error = patch_test<p, dim>(affine_solution);
+  double error = patch_test<p, dim>(AffineSolution<dim>(), BoundarySet::PARTIAL);
   EXPECT_LT(error, 1e-13);
 }
 
@@ -549,8 +562,7 @@ TEST(SolidFunctionalPatch, P13DTraction)
 {
   constexpr int p = 1;
   constexpr int dim   = 3;
-  AffineSolution<dim> affine_solution;
-  double        error = patch_test<p, dim>(affine_solution);
+  double error = patch_test<p, dim>(AffineSolution<dim>(), BoundarySet::PARTIAL);
   EXPECT_LT(error, 1e-13);
 }
 
