@@ -108,6 +108,22 @@ mfem::Mesh buildHollowCylinderMesh(int radial_refinement, int elements_lengthwis
                                    double outer_radius, double height, double total_angle = M_PI, int sectors = 8);
 
 /**
+ * @brief Constructs an MFEM mesh of a hollow cylinder restricted to the first orthant
+ *
+ * @param radial_divisions number of elements in the radial direction
+ * @param angular_divisions number of elements in the theta direction
+ * @param vertical_divisions number of elements in the z-direction
+ * @param inner_radius the radius of the inner wall of the cylinder
+ * @param outer_radius the radius of the outer wall of the cylinder
+ * @param height the height of the top surface of the cylinder
+ *
+ * @note the cylinder's axis of symmetry is along the z-direction
+ */
+mfem::Mesh build_hollow_quarter_cylinder(std::size_t radial_divisions, std::size_t angular_divisions,
+                                         std::size_t vertical_divisions, double inner_radius, double outer_radius,
+                                         double height);
+
+/**
  * @brief Constructs a 2D MFEM mesh of a ring
  *
  * @param[in] radial_refinement the number of times to apply uniform mesh refinement to the cross section

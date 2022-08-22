@@ -94,12 +94,10 @@ public:
    * @param options The options for the linear, nonlinear, and ODE solves
    * @param geom_nonlin Flag to include geometric nonlinearities
    * @param name An optional name for the physics module instance
-   * @param parameter_states An array of FiniteElementStates containing the user-specified parameter fields
    */
-  SolidFunctional(
-      const SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
-      const std::string&                                                                 name             = "",
-      std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states = {})
+
+  SolidFunctional(const SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
+                  const std::string& name = "")
       : BasePhysics(2, order, name),
         velocity_(StateManager::newState(FiniteElementState::Options{
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "velocity")})),
@@ -108,7 +106,6 @@ public:
         adjoint_displacement_(StateManager::newState(FiniteElementState::Options{
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "adjoint_displacement")})),
         nodal_forces_(mesh_, displacement_.space(), "nodal_forces"),
-        parameter_states_(parameter_states),
         ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
               nonlin_solver_, bcs_),
         c0_(0.0),
@@ -126,14 +123,15 @@ public:
     mfem::ParFiniteElementSpace*                                             test_space = &displacement_.space();
     std::array<mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + 2> trial_spaces;
     trial_spaces[0] = &displacement_.space();
-    trial_spaces[1] = &displacement_.space();  // the accelerations have the same trial space as displacement
+    trial_spaces[1] = &displacement_.space();
 
     if constexpr (sizeof...(parameter_space) > 0) {
-      for (size_t i = 0; i < sizeof...(parameter_space); ++i) {
-        trial_spaces[i + 2]         = &(parameter_states_[i].get().space());
-        parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, parameter_states_[i].get().space());
-        state_.push_back(parameter_states_[i].get());
-      }
+      tuple<parameter_space...> types{};
+      for_constexpr<sizeof...(parameter_space)>([&](auto i) {
+        trial_spaces[i + 2] =
+            generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_);
+        parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, *trial_spaces[i + 2]);
+      });
     }
 
     residual_ = std::make_unique<Functional<test(trial, trial, parameter_space...)>>(test_space, trial_spaces);
@@ -182,6 +180,14 @@ public:
 
   /// @brief Destroy the Solid Functional object
   ~SolidFunctional() {}
+
+  /**
+   * @brief register the provided FiniteElementState object as the source of values for parameter `i`
+   *
+   * @param parameter_state the values to use for the specified parameter
+   * @param i the index of the parameter
+   */
+  void setParameter(const FiniteElementState& parameter_state, size_t i) { parameter_states_[i] = &parameter_state; }
 
   /**
    * @brief Create a shared ptr to a quadrature data buffer for the given material type
@@ -274,7 +280,7 @@ public:
         [this, material](auto /*x*/, auto& state, auto displacement, auto acceleration, auto... params) {
           auto du_dX   = get<DERIVATIVE>(displacement);
           auto d2u_dt2 = get<VALUE>(acceleration);
-          auto stress  = material(state, du_dX, serac::get<VALUE>(params)...);
+          auto stress  = material(state, du_dX, params...);
           if (geom_nonlin_ == GeometricNonlinearities::On) {
             stress = dot(stress, inv(transpose(I + du_dX)));
           }
@@ -323,7 +329,7 @@ public:
    * @tparam BodyForceType The type of the body force load
    * @param body_force A source function for a prescribed body load
    *
-   * @pre BodyForceType must have the operator (x, time, displacement, d displacement_dx) defined as the body force
+   * @pre BodyForceType must have the operator (x, time) defined as the body force
    */
   template <typename BodyForceType>
   void addBodyForce(BodyForceType body_force)
@@ -367,13 +373,13 @@ public:
 
         // residual function
         [this](const mfem::Vector& u, mfem::Vector& r) {
-          r = (*residual_)(u, zero_, parameter_states_[parameter_indices]...);
+          r = (*residual_)(u, zero_, *parameter_states_[parameter_indices]...);
           r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
         },
 
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
-          auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, parameter_states_[parameter_indices]...);
+          auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, *parameter_states_[parameter_indices]...);
           J_             = assemble(drdu);
           J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
           return *J_;
@@ -387,6 +393,13 @@ public:
    */
   void completeSetup() override
   {
+    if constexpr (sizeof...(parameter_space) > 0) {
+      for (size_t i = 0; i < sizeof...(parameter_space); i++) {
+        SLIC_ERROR_ROOT_IF(!parameter_states_[i],
+                           "all parameters fields must be initialized before calling completeSetup()");
+      }
+    }
+
     // Build the dof array lookup tables
     displacement_.space().BuildDofToArrays();
 
@@ -407,7 +420,7 @@ public:
 
           [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) {
             add(1.0, u_, c0_, d2u_dt2, predicted_displacement_);
-            r = (*residual_)(predicted_displacement_, d2u_dt2, parameter_states_[parameter_indices]...);
+            r = (*residual_)(predicted_displacement_, d2u_dt2, *parameter_states_[parameter_indices]...);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
@@ -416,12 +429,12 @@ public:
 
             // K := dR/du
             auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(predicted_displacement_), d2u_dt2,
-                                                         parameter_states_[parameter_indices]...));
+                                                         *parameter_states_[parameter_indices]...));
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             // M := dR/da
             auto M = serac::get<DERIVATIVE>((*residual_)(predicted_displacement_, differentiate_wrt(d2u_dt2),
-                                                         parameter_states_[parameter_indices]...));
+                                                         *parameter_states_[parameter_indices]...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
             // J = M + c0 * K
@@ -497,7 +510,7 @@ public:
       // this seems like the wrong way to be doing this assignment, but
       // nodal_forces_ = residual(displacement, ...);
       // isn't currently supported
-      nodal_forces_.Vector::operator=((*residual_)(displacement_, zero_, parameter_states_[parameter_indices]...));
+      nodal_forces_.Vector::operator=((*residual_)(displacement_, zero_, *parameter_states_[parameter_indices]...));
 
       residual_->update_qdata = false;
     }
@@ -533,7 +546,7 @@ public:
     // sam: is this the right thing to be doing for dynamics simulations,
     // or are we implicitly assuming this should only be used in quasistatic analyses?
     auto drdu = serac::get<DERIVATIVE>(
-        (*residual_)(differentiate_wrt(displacement_), zero_, parameter_states_[parameter_indices]...));
+        (*residual_)(differentiate_wrt(displacement_), zero_, *parameter_states_[parameter_indices]...));
     auto jacobian = assemble(drdu);
     auto J_T      = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -565,7 +578,7 @@ public:
   FiniteElementDual& computeSensitivity()
   {
     auto drdparam = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<parameter_field + 2>{}, displacement_, zero_,
-                                                        parameter_states_[parameter_indices]...));
+                                                        *parameter_states_[parameter_indices]...));
 
     auto drdparam_mat = assemble(drdparam);
 
@@ -633,7 +646,7 @@ protected:
   std::unique_ptr<mfem_ext::StdFunctionOperator> residual_with_bcs_;
 
   /// The finite element states representing user-defined parameter fields
-  std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states_;
+  std::array<const FiniteElementState*, sizeof...(parameter_space)> parameter_states_;
 
   /// The sensitivities (dual vectors) with repect to each of the input parameter fields
   std::array<std::unique_ptr<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;
