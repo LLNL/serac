@@ -370,4 +370,13 @@ double min(const FiniteElementVector& fe_vector);
  */
 double norm(const FiniteElementVector& state, const double p = 2);
 
+/**
+ * @brief Find the L2 norm of the error of a finite element vector with respect to an exact solution
+ *
+ * @param state The state variable to compute a norm of
+ * @param exact_solution The exact solution to measure error against
+ * @return The Lp norm of the finite element state
+ */
+double computeL2Error(const FiniteElementVector& state, mfem::VectorCoefficient& exact_solution);
+
 }  // namespace serac

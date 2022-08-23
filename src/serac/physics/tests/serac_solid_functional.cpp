@@ -226,7 +226,7 @@ double patch_test(const ExactSolution& exact_displacement, PatchBoundaryConditio
 
   // Compute norm of error
   mfem::VectorFunctionCoefficient exact_solution_coef(dim, exact_displacement);
-  return solid_functional.displacement().gridFunction().ComputeL2Error(exact_solution_coef);
+  return computeL2Error(solid_functional.displacement(), exact_solution_coef);
 }
 
 template <int p, int dim>
