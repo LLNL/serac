@@ -116,7 +116,10 @@ public:
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "displacement")})),
         adjoint_displacement_(StateManager::newState(FiniteElementState::Options{
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "adjoint_displacement")})),
+        shape_displacement_(StateManager::newState(FiniteElementState::Options{
+            .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "shape_displacement")})),
         nodal_forces_(mesh_, displacement_.space(), "nodal_forces"),
+        shape_sensitivity_(mesh_, displacement_.space(), "shape_sensitivity"),
         ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
               nonlin_solver_, bcs_),
         c0_(0.0),
@@ -129,29 +132,31 @@ public:
     state_.push_back(velocity_);
     state_.push_back(displacement_);
     state_.push_back(adjoint_displacement_);
+    state_.push_back(shape_displacement_);      
 
     // Create a pack of the primal field and parameter finite element spaces
     mfem::ParFiniteElementSpace*                                             test_space = &displacement_.space();
-    std::array<mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + 2> trial_spaces;
+
+    std::array<mfem::ParFiniteElementSpace*, 3 + sizeof...(parameter_space)> trial_spaces;
     trial_spaces[0] = &displacement_.space();
     trial_spaces[1] = &displacement_.space();
+    trial_spaces[2] = &displacement_.space();
 
     if constexpr (sizeof...(parameter_space) > 0) {
       tuple<parameter_space...> types{};
       for_constexpr<sizeof...(parameter_space)>([&](auto i) {
-        trial_spaces[i + 2] =
+        trial_spaces[i + 3] =
             generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_);
         parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, *trial_spaces[i + 2]);
       });
     }
 
-    residual_ = std::make_unique<Functional<test(trial, trial, parameter_space...)>>(test_space, trial_spaces);
-
-    state_.push_back(velocity_);
-    state_.push_back(displacement_);
+    residual_ = std::make_unique<Functional<test(trial, trial, trial, parameter_space...)>>(test_space, trial_spaces);
 
     displacement_ = 0.0;
     velocity_     = 0.0;
+    adjoint_displacement_ = 0.0;
+    shape_displacement_  = 0.0;
 
     const auto& lin_options = options.linear;
     // If the user wants the AMG preconditioner with a linear solver, set the pfes
@@ -199,6 +204,15 @@ public:
    * @param i the index of the parameter
    */
   void setParameter(const FiniteElementState& parameter_state, size_t i) { parameter_states_[i] = &parameter_state; }
+
+  /**
+   * @brief register the provided FiniteElementState object as the source of values for the shape displacement field
+   *
+   * @param shape_displacement the values to use for the shape displacement
+   */
+  void setShapeDisplacement(const FiniteElementState& shape_displacement) {
+    shape_displacement_ = shape_displacement;
+  }
 
   /**
    * @brief Create a shared ptr to a quadrature data buffer for the given material type
@@ -286,19 +300,39 @@ public:
   template <typename MaterialType, typename StateType>
   void setMaterial(MaterialType material, std::shared_ptr<QuadratureData<StateType>> qdata)
   {
-    residual_->AddDomainIntegral(
-        Dimension<dim>{},
-        [this, material](auto /*x*/, auto& state, auto displacement, auto acceleration, auto... params) {
-          auto du_dX   = get<DERIVATIVE>(displacement);
-          auto d2u_dt2 = get<VALUE>(acceleration);
-          auto stress  = material(state, du_dX, params...);
-          if (geom_nonlin_ == GeometricNonlinearities::On) {
-            stress = dot(stress, inv(transpose(I + du_dX)));
-          }
+      residual_->AddDomainIntegral(
+          Dimension<dim>{},
+          [this, material](auto /*x*/, auto& state, auto displacement, auto acceleration, auto shape, auto... params) {
+            auto  dp_dX    = get<DERIVATIVE>(shape);
+            auto  du_dX    = get<DERIVATIVE>(displacement);
+            auto  d2u_dt2 = get<VALUE>(acceleration);
 
-          return serac::tuple{material.density * d2u_dt2, stress};
-        },
-        mesh_, qdata);
+          // Compute the displacement gradient with respect to the shape-adjusted coordinate.
+
+          // Note that the current configuration x' = X + u + p, where X is the original reference
+          // configuration, u is the displacement, and p is the shape displacement. We need the gradient with
+          // respect to the perturbed reference configuration X' = X + p for the material model. Therefore, we calculate
+          // du/dX' = du/dX * dX/dX' = du/dX * (dX'/dX)^-1 = du/dX * (I + dp/dX)^-1
+
+          auto du_dX_prime = dot(du_dX, inv(I + dp_dX));
+
+          auto stress  = material(state, du_dX_prime, params...);
+
+          // This deformation gradient is the volumetric transform to get us back to the original
+          // reference configuration dx'/dX = I + du/dX + dp/dX. If we are not including geometric
+          // nonlinearities, we ignore the du/dX factor.
+
+          auto deformation_grad = 0.0 * du_dX + dp_dX + I;
+
+          if (geom_nonlin_ == GeometricNonlinearities::On) {
+            deformation_grad = deformation_grad + du_dX;
+          } 
+
+          auto flux      = dot(inv(deformation_grad), stress) * det(deformation_grad);
+          return serac::tuple{material.density * d2u_dt2, flux};
+
+          },
+          mesh_, qdata);
   }
 
   /// @overload
@@ -347,7 +381,7 @@ public:
   {
     residual_->AddDomainIntegral(
         Dimension<dim>{},
-        [body_force, this](auto x, auto /* displacement */, auto /* acceleration */, auto... /*params*/) {
+        [body_force, this](auto x, auto /* displacement */, auto /* acceleration */, auto /* shape */, auto... /* params */) {
           // note: this assumes that the body force function is defined
           // per unit volume in the reference configuration
           return serac::tuple{body_force(x, time_), zero{}};
@@ -368,7 +402,7 @@ public:
   {
     residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{},
-        [this, traction_function](auto x, auto n, auto, auto, auto... params) {
+        [this, traction_function](auto x, auto n, auto, auto, auto, auto... params) {
           return -1.0 * traction_function(x, n, time_, params...);
         },
         mesh_);
@@ -384,13 +418,13 @@ public:
 
         // residual function
         [this](const mfem::Vector& u, mfem::Vector& r) {
-          r = (*residual_)(u, zero_, *parameter_states_[parameter_indices]...);
+          r = (*residual_)(u, zero_, shape_displacement_, *parameter_states_[parameter_indices]...);
           r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
         },
 
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
-          auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, *parameter_states_[parameter_indices]...);
+          auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, shape_displacement_, *parameter_states_[parameter_indices]...);
           J_             = assemble(drdu);
           J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
           return *J_;
@@ -431,7 +465,7 @@ public:
 
           [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) {
             add(1.0, u_, c0_, d2u_dt2, predicted_displacement_);
-            r = (*residual_)(predicted_displacement_, d2u_dt2, *parameter_states_[parameter_indices]...);
+            r = (*residual_)(predicted_displacement_, d2u_dt2, shape_displacement_, *parameter_states_[parameter_indices]...);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
@@ -439,12 +473,12 @@ public:
             add(1.0, u_, c0_, d2u_dt2, predicted_displacement_);
 
             // K := dR/du
-            auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(predicted_displacement_), d2u_dt2,
+            auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(predicted_displacement_), d2u_dt2, shape_displacement_,
                                                          *parameter_states_[parameter_indices]...));
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             // M := dR/da
-            auto M = serac::get<DERIVATIVE>((*residual_)(predicted_displacement_, differentiate_wrt(d2u_dt2),
+            auto M = serac::get<DERIVATIVE>((*residual_)(predicted_displacement_, differentiate_wrt(d2u_dt2), shape_displacement_,
                                                          *parameter_states_[parameter_indices]...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
@@ -521,7 +555,7 @@ public:
       // this seems like the wrong way to be doing this assignment, but
       // nodal_forces_ = residual(displacement, ...);
       // isn't currently supported
-      nodal_forces_.Vector::operator=((*residual_)(displacement_, zero_, *parameter_states_[parameter_indices]...));
+      nodal_forces_.Vector::operator=((*residual_)(displacement_, zero_, shape_displacement_, *parameter_states_[parameter_indices]...));
 
       residual_->update_qdata = false;
     }
@@ -557,7 +591,7 @@ public:
     // sam: is this the right thing to be doing for dynamics simulations,
     // or are we implicitly assuming this should only be used in quasistatic analyses?
     auto drdu = serac::get<DERIVATIVE>(
-        (*residual_)(differentiate_wrt(displacement_), zero_, *parameter_states_[parameter_indices]...));
+        (*residual_)(differentiate_wrt(displacement_), zero_, shape_displacement_, *parameter_states_[parameter_indices]...));
     auto jacobian = assemble(drdu);
     auto J_T      = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -588,7 +622,7 @@ public:
   template <int parameter_field>
   FiniteElementDual& computeSensitivity()
   {
-    auto drdparam = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<parameter_field + 2>{}, displacement_, zero_,
+    auto drdparam = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<parameter_field + 2>{}, displacement_, zero_, shape_displacement_,
                                                         *parameter_states_[parameter_indices]...));
 
     auto drdparam_mat = assemble(drdparam);
@@ -596,6 +630,18 @@ public:
     drdparam_mat->MultTranspose(adjoint_displacement_, *parameter_sensitivities_[parameter_field]);
 
     return *parameter_sensitivities_[parameter_field];
+  }
+
+  FiniteElementDual& computeShapeSensitivity()
+  {
+    auto drdparam = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<2>{}, displacement_, zero_, shape_displacement_,
+                                                        *parameter_states_[parameter_indices]...));
+
+    auto drdparam_mat = assemble(drdparam);
+
+    drdparam_mat->MultTranspose(adjoint_displacement_, shape_sensitivity_);
+
+    return shape_sensitivity_;
   }
 
   /**
@@ -647,11 +693,14 @@ protected:
   /// The displacement finite element state
   FiniteElementState adjoint_displacement_;
 
+  /// The shape displacement finite element state
+  FiniteElementState shape_displacement_;
+
   /// nodal forces
   FiniteElementDual nodal_forces_;
 
   /// serac::Functional that is used to calculate the residual and its derivatives
-  std::unique_ptr<Functional<test(trial, trial, parameter_space...)>> residual_;
+  std::unique_ptr<Functional<test(trial, trial, trial, parameter_space...)>> residual_;
 
   /// mfem::Operator that calculates the residual after applying essential boundary conditions
   std::unique_ptr<mfem_ext::StdFunctionOperator> residual_with_bcs_;
@@ -661,6 +710,9 @@ protected:
 
   /// The sensitivities (dual vectors) with repect to each of the input parameter fields
   std::array<std::unique_ptr<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;
+
+  /// Sensitivity with respect to the shape displacement field
+  FiniteElementDual shape_sensitivity_;
 
   /**
    * @brief the ordinary differential equation that describes
