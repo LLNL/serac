@@ -160,7 +160,7 @@ std::set<int> essentialBoundaryAttributes(PatchBoundaryCondition bc)
       case PatchBoundaryCondition::Essential:
         return {1, 2, 3, 4, 5, 6};
       case PatchBoundaryCondition::Mixed_essential_and_natural:
-        return {1, 2, 5};
+        return {1, 2};
     }
   }
 }
