@@ -4,6 +4,8 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+#include "serac/physics/solid_functional.hpp"
+
 #include <functional>
 #include <fstream>
 #include <set>
@@ -13,12 +15,11 @@
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
-#include "serac/serac_config.hpp"
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/state/state_manager.hpp"
-#include "serac/physics/solid_functional.hpp"
 #include "serac/physics/materials/solid_functional_material.hpp"
 #include "serac/physics/materials/parameterized_solid_functional_material.hpp"
+#include "serac/serac_config.hpp"
 
 namespace serac {
 
@@ -26,22 +27,42 @@ using solid_mechanics::default_dynamic_options;
 using solid_mechanics::default_static_options;
 using solid_mechanics::direct_static_options;
 
+/**
+ * @brief Transform the Kirchhoff stress to the Piola stress
+ *
+ * @tparam T1 number-like type of the displacement gradient components
+ * @tparam T1 number-like type of the Kirchhoff stress components
+ * @tparam dim number of spatial dimensions
+ *
+ * @param displacement_gradient Displacement gradient
+ * @param kirchhoff_stress Kirchoff stress
+ * @return Piola stress
+ */
+template<typename T1, typename T2, int dim>
+auto transformKirchhoffToPiola(const tensor<T1, dim, dim>& displacement_gradient,
+                               const tensor<T2, dim, dim>& kirchhoff_stress)
+{
+  return transpose(linear_solve(displacement_gradient + Identity<dim>(), kirchhoff_stress));
+}
+
+/**
+ * @brief Exact displacement solution that is an affine function
+ *
+ * @tparam dim number of spatial dimensions
+ */
 template <int dim>
 class AffineSolution {
  public:
   AffineSolution():
     A(dim), b(dim)
   {
-    A(0, 0) = 0.110791568544027;
-    A(0, 1) = 0.230421268325901;
-    A(1, 0) = 0.198344644470483;
-    A(1, 1) = 0.060514559793513;
+    // clang-format off
+    A(0, 0) = 0.110791568544027; A(0, 1) = 0.230421268325901;
+    A(1, 0) = 0.198344644470483; A(1, 1) = 0.060514559793513;
     if constexpr (dim == 3) {
       A(0, 2) = 0.15167673653354;
       A(1, 2) = 0.084137393813728;
-      A(2, 0) = 0.011544253485023;
-      A(2, 1) = 0.060942846497753;
-      A(2, 2) = 0.186383473579596;
+      A(2, 0) = 0.011544253485023; A(2, 1) = 0.060942846497753; A(2, 2) = 0.186383473579596;
     }
 
     b(0) = 0.765645367640828;
@@ -49,8 +70,15 @@ class AffineSolution {
     if constexpr (dim == 3) {
       b(2) = 0.162199373722092;
     }
+    //clang-format on
   };
 
+  /**
+   * @brief MFEM-style coefficient function corresponding to this solution
+   *
+   * @param X Coordinates of point in reference configuration at which solution is sought
+   * @param u Exact solution evaluated at \p X
+   */
   void operator()(const mfem::Vector& X, mfem::Vector& u) const
   {
     u = 0.0;
@@ -58,6 +86,24 @@ class AffineSolution {
     u += b;
   }
 
+  /**
+   * @brief Apply forcing that should produce this exact displacement
+   *
+   * Given the physics module, apply boundary conditions and a source
+   * term that are consistent with the exact solution. This is
+   * independent of the domain. The solution is imposed as an essential
+   * boundary condition on the parts of the boundary identified by \p
+   * essential_boundaries. On the complement of
+   * \p essential_boundaries, the traction corresponding to the exact
+   * solution is applied.
+   *
+   * @tparam p Polynomial degree of the finite element approximation
+   * @tparam Material Type of the material model used in the problem
+   *
+   * @param material Material model used in the problem
+   * @param sf The SolidFunctional module for the problem
+   * @param essential_boundaries Boundary attributes on which essential boundary conditions are desired
+   */
   template <int p, typename Material>
   void applyLoads(const Material& material, SolidFunctional<p, dim>& sf, std::set<int> essential_boundaries) const
   {
@@ -68,44 +114,71 @@ class AffineSolution {
     // natural BCs
     typename Material::State state;
     auto H = make_tensor<dim, dim>([&](int i, int j) { return A(i,j); });
-    // Kirchhoff stress
     tensor<double, dim, dim> tau = material(state, H);
-    // convert to Piola
-    // next line is $P = tau F^{-T}$ (recall tau is symmetric)
-    auto P = transpose(linear_solve(H + Identity<dim>(), tau));
+    auto P = transformKirchhoffToPiola(H, tau);
     auto traction = [P](auto, auto n0, auto) { return dot(P, n0); };
     sf.setPiolaTraction(traction);
   }
 
  private:
-  mfem::DenseMatrix A;
-  mfem::Vector b;
+  mfem::DenseMatrix A; /// Linear part of solution. Equivalently, the displacement gradient
+  mfem::Vector b;      /// Constant part of solution. Rigid mody displacement.
 };
 
-enum class BoundarySet { ALL, PARTIAL };
+/**
+ * @brief Specify the kinds of boundary condition to apply
+ */
+enum class BoundaryConditionKind { ESSENTIAL, MIXED_ESSENTIAL_AND_NATURAL };
 
+/**
+ * @brief Get boundary attributes for patch meshes on which to apply essential boundary conditions
+ * 
+ * Parameterizes patch tests boundary conditions, as either essential
+ * boundary conditions or partly essential boundary conditions and
+ * partly natural boundary conditions. The return values are specific
+ * to the meshes "patch2d.mesh" and "patch3d.mesh". The particular
+ * portions of the boundary that get essential boundary conditions in
+ * the mixed case are the faces with normals that point in the negative
+ * coordinate directions.
+ * 
+ * @tparam dim Spatial dimension
+ * 
+ * @param b Kind of boundary conditions to apply in the problem
+ * @return std::set<int> Boundary attributes for the essential boundary condition
+ */
 template <int dim>
-std::set<int> essentialBoundaryAttributes(BoundarySet b)
+std::set<int> essentialBoundaryAttributes(BoundaryConditionKind bc)
 {
   if constexpr (dim == 2) {
-    switch (b) {
-      case BoundarySet::ALL:
+    switch (bc) {
+      case BoundaryConditionKind::ESSENTIAL:
         return {1, 2, 3, 4};
-      case BoundarySet::PARTIAL:
+      case BoundaryConditionKind::MIXED_ESSENTIAL_AND_NATURAL:
         return {1, 4};
     }
   } else {
-    switch (b) {
-      case BoundarySet::ALL:
+    switch (bc) {
+      case BoundaryConditionKind::ESSENTIAL:
         return {1, 2, 3, 4, 5, 6};
-      case BoundarySet::PARTIAL:
+      case BoundaryConditionKind::MIXED_ESSENTIAL_AND_NATURAL:
         return {1, 2, 5};
     }
   }
 }
 
+/**
+ * @brief Solve problem and compare numerical solution to exact answer
+ * 
+ * @tparam p Polynomial degree of finite element approximation
+ * @tparam dim Number of spatial dimensions
+ * @tparam ExactSolution A class that satisfies the exact solution concept
+ * 
+ * @param exact_displacement Exact solution of problem
+ * @param bc Specifier for boundary condition type to test
+ * @return double L2 norm (continuous) of error in computed solution
+ */
 template <int p, int dim, typename ExactSolution>
-double patch_test(const ExactSolution& exact_displacement, BoundarySet essential_boundary)
+double patch_test(const ExactSolution& exact_displacement, BoundaryConditionKind bc)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -131,7 +204,7 @@ double patch_test(const ExactSolution& exact_displacement, BoundarySet essential
   solid_mechanics::NeoHookean mat{.density=1.0, .K=1.0, .G=1.0};
   solid_functional.setMaterial(mat);
 
-  exact_displacement.applyLoads(mat, solid_functional, essentialBoundaryAttributes<dim>(essential_boundary));
+  exact_displacement.applyLoads(mat, solid_functional, essentialBoundaryAttributes<dim>(bc));
 
   // Finalize the data structures
   solid_functional.completeSetup();
@@ -522,7 +595,7 @@ TEST(SolidFunctionalPatch, P12D)
 {
   constexpr int p = 1;
   constexpr int dim = 2;
-  double error = patch_test<p, dim>(AffineSolution<dim>(), BoundarySet::ALL);
+  double error = patch_test<p, dim>(AffineSolution<dim>(), BoundaryConditionKind::ESSENTIAL);
   EXPECT_LT(error, 1e-13);
 }
 
@@ -530,7 +603,7 @@ TEST(SolidFunctionalPatch, P13D)
 {
   constexpr int p = 1;
   constexpr int dim   = 3;
-  double error = patch_test<p, dim>(AffineSolution<dim>(), BoundarySet::ALL);
+  double error = patch_test<p, dim>(AffineSolution<dim>(), BoundaryConditionKind::ESSENTIAL);
   EXPECT_LT(error, 1e-13);
 }
 
@@ -538,7 +611,7 @@ TEST(SolidFunctionalPatch, P22D)
 {
   constexpr int p = 2;
   constexpr int dim   = 2;
-  double error = patch_test<p, dim>(AffineSolution<dim>(), BoundarySet::ALL);
+  double error = patch_test<p, dim>(AffineSolution<dim>(), BoundaryConditionKind::ESSENTIAL);
   EXPECT_LT(error, 1e-13);
 }
 
@@ -546,7 +619,7 @@ TEST(SolidFunctionalPatch, P23D)
 {
   constexpr int p = 2;
   constexpr int dim   = 3;
-  double error = patch_test<p, dim>(AffineSolution<dim>(), BoundarySet::ALL);
+  double error = patch_test<p, dim>(AffineSolution<dim>(), BoundaryConditionKind::ESSENTIAL);
   EXPECT_LT(error, 1e-13);
 }
 
@@ -554,7 +627,7 @@ TEST(SolidFunctionalPatch, P12DTraction)
 {
   constexpr int p = 1;
   constexpr int dim   = 2;
-  double error = patch_test<p, dim>(AffineSolution<dim>(), BoundarySet::PARTIAL);
+  double error = patch_test<p, dim>(AffineSolution<dim>(), BoundaryConditionKind::MIXED_ESSENTIAL_AND_NATURAL);
   EXPECT_LT(error, 1e-13);
 }
 
@@ -562,7 +635,7 @@ TEST(SolidFunctionalPatch, P13DTraction)
 {
   constexpr int p = 1;
   constexpr int dim   = 3;
-  double error = patch_test<p, dim>(AffineSolution<dim>(), BoundarySet::PARTIAL);
+  double error = patch_test<p, dim>(AffineSolution<dim>(), BoundaryConditionKind::MIXED_ESSENTIAL_AND_NATURAL);
   EXPECT_LT(error, 1e-13);
 }
 
