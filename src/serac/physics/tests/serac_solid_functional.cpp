@@ -128,7 +128,7 @@ class AffineSolution {
 /**
  * @brief Specify the kinds of boundary condition to apply
  */
-enum class BoundaryConditionKind { ESSENTIAL, MIXED_ESSENTIAL_AND_NATURAL };
+enum class PatchBoundaryCondition { Essential, Mixed_essential_and_natural };
 
 /**
  * @brief Get boundary attributes for patch meshes on which to apply essential boundary conditions
@@ -137,9 +137,8 @@ enum class BoundaryConditionKind { ESSENTIAL, MIXED_ESSENTIAL_AND_NATURAL };
  * boundary conditions or partly essential boundary conditions and
  * partly natural boundary conditions. The return values are specific
  * to the meshes "patch2d.mesh" and "patch3d.mesh". The particular
- * portions of the boundary that get essential boundary conditions in
- * the mixed case are the faces with normals that point in the negative
- * coordinate directions.
+ * portions of the boundary that get essential boundary conditions
+ * are arbitrarily chosen.
  * 
  * @tparam dim Spatial dimension
  * 
@@ -147,20 +146,20 @@ enum class BoundaryConditionKind { ESSENTIAL, MIXED_ESSENTIAL_AND_NATURAL };
  * @return std::set<int> Boundary attributes for the essential boundary condition
  */
 template <int dim>
-std::set<int> essentialBoundaryAttributes(BoundaryConditionKind bc)
+std::set<int> essentialBoundaryAttributes(PatchBoundaryCondition bc)
 {
   if constexpr (dim == 2) {
     switch (bc) {
-      case BoundaryConditionKind::ESSENTIAL:
+      case PatchBoundaryCondition::Essential:
         return {1, 2, 3, 4};
-      case BoundaryConditionKind::MIXED_ESSENTIAL_AND_NATURAL:
+      case PatchBoundaryCondition::Mixed_essential_and_natural:
         return {1, 4};
     }
   } else {
     switch (bc) {
-      case BoundaryConditionKind::ESSENTIAL:
+      case PatchBoundaryCondition::Essential:
         return {1, 2, 3, 4, 5, 6};
-      case BoundaryConditionKind::MIXED_ESSENTIAL_AND_NATURAL:
+      case PatchBoundaryCondition::Mixed_essential_and_natural:
         return {1, 2, 5};
     }
   }
@@ -178,7 +177,7 @@ std::set<int> essentialBoundaryAttributes(BoundaryConditionKind bc)
  * @return double L2 norm (continuous) of error in computed solution
  */
 template <int p, int dim, typename ExactSolution>
-double patch_test(const ExactSolution& exact_displacement, BoundaryConditionKind bc)
+double patch_test(const ExactSolution& exact_displacement, PatchBoundaryCondition bc)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -595,7 +594,7 @@ TEST(SolidFunctionalPatch, P12D)
 {
   constexpr int p = 1;
   constexpr int dim = 2;
-  double error = patch_test<p, dim>(AffineSolution<dim>(), BoundaryConditionKind::ESSENTIAL);
+  double error = patch_test<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
   EXPECT_LT(error, 1e-13);
 }
 
@@ -603,7 +602,7 @@ TEST(SolidFunctionalPatch, P13D)
 {
   constexpr int p = 1;
   constexpr int dim   = 3;
-  double error = patch_test<p, dim>(AffineSolution<dim>(), BoundaryConditionKind::ESSENTIAL);
+  double error = patch_test<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
   EXPECT_LT(error, 1e-13);
 }
 
@@ -611,7 +610,7 @@ TEST(SolidFunctionalPatch, P22D)
 {
   constexpr int p = 2;
   constexpr int dim   = 2;
-  double error = patch_test<p, dim>(AffineSolution<dim>(), BoundaryConditionKind::ESSENTIAL);
+  double error = patch_test<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
   EXPECT_LT(error, 1e-13);
 }
 
@@ -619,7 +618,7 @@ TEST(SolidFunctionalPatch, P23D)
 {
   constexpr int p = 2;
   constexpr int dim   = 3;
-  double error = patch_test<p, dim>(AffineSolution<dim>(), BoundaryConditionKind::ESSENTIAL);
+  double error = patch_test<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
   EXPECT_LT(error, 1e-13);
 }
 
@@ -627,7 +626,7 @@ TEST(SolidFunctionalPatch, P12DTraction)
 {
   constexpr int p = 1;
   constexpr int dim   = 2;
-  double error = patch_test<p, dim>(AffineSolution<dim>(), BoundaryConditionKind::MIXED_ESSENTIAL_AND_NATURAL);
+  double error = patch_test<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
   EXPECT_LT(error, 1e-13);
 }
 
@@ -635,7 +634,7 @@ TEST(SolidFunctionalPatch, P13DTraction)
 {
   constexpr int p = 1;
   constexpr int dim   = 3;
-  double error = patch_test<p, dim>(AffineSolution<dim>(), BoundaryConditionKind::MIXED_ESSENTIAL_AND_NATURAL);
+  double error = patch_test<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
   EXPECT_LT(error, 1e-13);
 }
 
