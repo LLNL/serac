@@ -19,7 +19,10 @@ bool initialize(MPI_Comm comm)
     slic::initialize();
   }
 
-  auto [num_ranks, _] = getMPIInfo(comm);
+  auto [num_ranks, rank] = getMPIInfo(comm);
+
+  // Mark rank 0 as the root for message filtering macros
+  slic::setIsRoot(rank == 0);
 
   std::string loggerName = num_ranks > 1 ? "serac_parallel_logger" : "serac_serial_logger";
   slic::createLogger(loggerName);
