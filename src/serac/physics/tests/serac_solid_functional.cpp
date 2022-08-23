@@ -175,6 +175,11 @@ std::set<int> essentialBoundaryAttributes(PatchBoundaryCondition bc)
  * @param exact_displacement Exact solution of problem
  * @param bc Specifier for boundary condition type to test
  * @return double L2 norm (continuous) of error in computed solution
+ * *
+ * @pre ExactSolution object must implement operator() that is an MFEM
+ * coefficient-generating function and the method applyLoads(...) that
+ * applies the load that should lead to the exact solution.
+ * See AffineSolution for an example.
  */
 template <int p, int dim, typename ExactSolution>
 double patch_test(const ExactSolution& exact_displacement, PatchBoundaryCondition bc)
@@ -590,52 +595,70 @@ TEST(SolidFunctional, 2DLinearTraction)
 }
 #endif
 
-TEST(SolidFunctionalPatch, P12D)
+const double tol = 1e-13;
+
+TEST(SolidFunctional, PatchTest2dQ1EssentialBcs)
 {
   constexpr int p = 1;
   constexpr int dim = 2;
   double error = patch_test<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
-  EXPECT_LT(error, 1e-13);
+  EXPECT_LT(error, tol);
 }
 
-TEST(SolidFunctionalPatch, P13D)
+TEST(SolidFunctional, PatchTest3dQ1EssentialBcs)
 {
   constexpr int p = 1;
   constexpr int dim   = 3;
   double error = patch_test<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
-  EXPECT_LT(error, 1e-13);
+  EXPECT_LT(error, tol);
 }
 
-TEST(SolidFunctionalPatch, P22D)
+TEST(SolidFunctional, PatchTest2dQ2EssentialBcs)
 {
   constexpr int p = 2;
   constexpr int dim   = 2;
   double error = patch_test<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
-  EXPECT_LT(error, 1e-13);
+  EXPECT_LT(error, tol);
 }
 
-TEST(SolidFunctionalPatch, P23D)
+TEST(SolidFunctional, PatchTest3dQ2EssentialBcs)
 {
   constexpr int p = 2;
   constexpr int dim   = 3;
   double error = patch_test<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
-  EXPECT_LT(error, 1e-13);
+  EXPECT_LT(error, tol);
 }
 
-TEST(SolidFunctionalPatch, P12DTraction)
+TEST(SolidFunctional, PatchTest2dQ1TractionBcs)
 {
   constexpr int p = 1;
   constexpr int dim   = 2;
   double error = patch_test<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
-  EXPECT_LT(error, 1e-13);
+  EXPECT_LT(error, tol);
 }
 
-TEST(SolidFunctionalPatch, P13DTraction)
+TEST(SolidFunctional, PatchTest3dQ1TractionBcs)
 {
   constexpr int p = 1;
   constexpr int dim   = 3;
   double error = patch_test<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
-  EXPECT_LT(error, 1e-13);
+  EXPECT_LT(error, tol);
+}
+
+TEST(SolidFunctional, PatchTest2dQ2TractionBcs)
+{
+  constexpr int p = 2;
+  constexpr int dim   = 2;
+  double error = patch_test<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+  EXPECT_LT(error, tol);
+}
+
+TEST(SolidFunctional, PatchTest3dQ2TractionBcs)
+{
+  constexpr int p = 2;
+  constexpr int dim   = 3;
+  double error = patch_test<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+  EXPECT_LT(error, tol);
 }
 
 }  // namespace serac
