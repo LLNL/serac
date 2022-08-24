@@ -408,6 +408,12 @@ Here is an example of ``packages.yaml``:
       externals:
       - spec: bzip2@1.0.8
          prefix: /opt/local
+   cmake:
+      version: [3.22.4]
+      buildable: false
+      externals:
+      - spec: cmake@3.22.4
+         prefix: /opt/local
    gettext:
       buildable: false
       externals:
@@ -489,12 +495,6 @@ Then, append the following to ``packages.yaml``:
 
 .. code-block:: yaml
 
-   cmake:
-    version: [3.22.4]
-    buildable: false
-    externals:
-    - spec: cmake@3.22.4
-      prefix: /opt/local
   cppcheck:
     version: [2.3]
     buildable: false
