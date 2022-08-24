@@ -25,7 +25,7 @@ EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverOptions& lin_opt
   }
   // If it's a direct solver (currently SuperLU only)
   else if (auto direct_options = std::get_if<DirectSolverOptions>(&lin_options)) {
-    auto direct_solver = std::make_unique<SuperLU>(comm, *direct_options);
+    auto direct_solver = std::make_unique<SuperLUSolver>(comm, *direct_options);
     lin_solver_        = std::move(direct_solver);
   }
 
@@ -201,7 +201,7 @@ void EquationSolver::Mult(const mfem::Vector& b, mfem::Vector& x) const
   }
 }
 
-void EquationSolver::SuperLU::Mult(const mfem::Vector& x, mfem::Vector& y) const
+void EquationSolver::SuperLUSolver::Mult(const mfem::Vector& x, mfem::Vector& y) const
 {
   SLIC_ERROR_ROOT_IF(!superlu_mat_, "Operator must be set prior to solving with SuperLU");
 
@@ -209,7 +209,7 @@ void EquationSolver::SuperLU::Mult(const mfem::Vector& x, mfem::Vector& y) const
   superlu_solver_.Mult(x, y);
 }
 
-void EquationSolver::SuperLU::SetOperator(const mfem::Operator& op)
+void EquationSolver::SuperLUSolver::SetOperator(const mfem::Operator& op)
 {
   const mfem::HypreParMatrix* matrix = dynamic_cast<const mfem::HypreParMatrix*>(&op);
 

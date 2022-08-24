@@ -110,14 +110,14 @@ private:
   /**
    * @brief A wrapper class for using the MFEM super LU solver with a HypreParMatrix
    */
-  class SuperLU : public mfem::Solver {
+  class SuperLUSolver : public mfem::Solver {
   public:
     /**
      * @brief Constructs a wrapper over an mfem::SuperLUSolver
      * @param[in] comm The MPI communicator used by the vectors and matrices in the solve
      * @param[in] options The direct solver configuration parameters struct
      */
-    SuperLU(MPI_Comm comm, DirectSolverOptions options) : superlu_solver_(comm)
+    SuperLUSolver(MPI_Comm comm, DirectSolverOptions options) : superlu_solver_(comm)
     {
       superlu_solver_.SetColumnPermutation(mfem::superlu::PARMETIS);
       if (options.print_level == 0) {
@@ -164,7 +164,7 @@ private:
   /**
    * @brief The linear solver object, either custom, direct (SuperLU), or iterative
    */
-  std::variant<std::unique_ptr<mfem::IterativeSolver>, std::unique_ptr<SuperLU>, mfem::Solver*> lin_solver_;
+  std::variant<std::unique_ptr<mfem::IterativeSolver>, std::unique_ptr<SuperLUSolver>, mfem::Solver*> lin_solver_;
 
   /**
    * @brief The optional nonlinear Newton-Raphson solver object

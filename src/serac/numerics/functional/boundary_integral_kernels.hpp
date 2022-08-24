@@ -475,7 +475,7 @@ void element_gradient_kernel(CPUArrayView<double, 3> dk, CPUArrayView<derivative
       if constexpr (std::is_same<test, QOI>::value) {
         auto N = trial_element::shape_functions(xi_q);
         for (int j = 0; j < trial_ndof; j++) {
-          K_elem[0][j] += serac::get<0>(dq_darg) * N[j] * dx;
+          K_elem[0][j][0] += serac::get<0>(dq_darg) * N[j] * dx;
         }
       } else {
         auto M = test_element::shape_functions(xi_q);
