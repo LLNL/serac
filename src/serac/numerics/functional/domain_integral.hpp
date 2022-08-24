@@ -24,19 +24,16 @@
 #endif
 
 namespace serac {
-template <typename spaces, ExecutionSpace exec>
-class DomainIntegral;
 
 /**
  * @brief Describes a single integral term in a weak forumulation of a partial differential equation
  * @tparam spaces A @p std::function -like set of template parameters that describe the test and trial
  * function spaces, i.e., @p test(trial)
  */
-template <typename test, typename... trials, ExecutionSpace exec>
-class DomainIntegral<test(trials...), exec> {
+template <int num_trial_spaces, ExecutionSpace exec>
+class DomainIntegral{
+
 public:
-  static constexpr tuple<trials...> trial_spaces{};                        ///< a tuple of the different trial spaces
-  static constexpr int              num_trial_spaces = sizeof...(trials);  ///< how many trial spaces were specified
 
   /**
    * @brief Constructs a @p DomainIntegral from a user-provided quadrature function
@@ -51,10 +48,16 @@ public:
    * @note The @p Dimension parameters are used to assist in the deduction of the @a dim
    * and @a dim template parameters
    */
-  template <int dim, typename lambda_type, typename qpt_data_type = Nothing>
-  DomainIntegral(size_t num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<dim>, lambda_type&& qf,
-                 std::shared_ptr<QuadratureData<qpt_data_type> > qdata)
+  template <int dim, typename test, typename ... trials, typename lambda_type, typename qpt_data_type = Nothing>
+  DomainIntegral(test, serac::tuple< trials ... >, size_t num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<dim>, lambda_type&& qf,
+                 std::shared_ptr<QuadratureData<qpt_data_type> > qdata, std::vector<int> arg_indices)
   {
+    argument_indices = arg_indices;
+
+    constexpr size_t num_active_trial_spaces = sizeof ... (trials);
+
+    SLIC_ERROR_ROOT_IF(num_active_trial_spaces != arg_indices.size(), "Error: argument indices inconsistent with provided number of arguments");
+
     SERAC_MARK_BEGIN("Domain Integral Set Up");
     using namespace domain_integral;
 
@@ -71,8 +74,8 @@ public:
 
       evaluation_ = EvaluationKernel{eval_config, J, X, num_elements, qf, qdata};
 
-      for_constexpr<num_trial_spaces>([this, num_elements, quadrature_points_per_element, &J, &X, &qf, qdata,
-                                       eval_config](auto i) {
+      for_constexpr<num_active_trial_spaces>([this, num_elements, quadrature_points_per_element, &J, &X, &qf, qdata,
+                                              eval_config](auto i) {
         // allocate memory for the derivatives of the q-function at each quadrature point
         //
         // Note: ptrs' lifetime is managed in an unusual way! It is captured by-value in the
@@ -151,16 +154,21 @@ public:
    * @note which_trial_space == -1 implies that this function will call the evaluation kernel that performs no
    * differentiation
    */
-  void Mult(const std::array<mfem::Vector, num_trial_spaces>& input_E, mfem::Vector& output_E, int which_trial_space,
+  void Mult(const std::array<mfem::Vector, num_trial_spaces> & input_E, mfem::Vector& output_E, int which_trial_space,
             bool update_state) const
   {
+    std::vector < const mfem::Vector * > selected(argument_indices.size());
+    for (size_t i = 0; i < argument_indices.size(); i++) {
+      selected[i] = &input_E[size_t(argument_indices[i])];
+    }
+
     if (which_trial_space == -1) {
       SERAC_MARK_BEGIN("Domain Integral Evaluation");
-      evaluation_(input_E, output_E, update_state);
+      evaluation_(selected, output_E, update_state);
       SERAC_MARK_END("Domain Integral Evaluation");
     } else {
       SERAC_MARK_BEGIN("Domain Integral Evaluation with AD");
-      evaluation_with_AD_[which_trial_space](input_E, output_E, update_state);
+      evaluation_with_AD_[which_trial_space](selected, output_E, update_state);
       SERAC_MARK_END("Domain Integral Evaluation with AD");
     }
   }
@@ -194,10 +202,10 @@ public:
 
 private:
   /// @brief Type-erased handle to evaluation kernel
-  std::function<void(const std::array<mfem::Vector, num_trial_spaces>&, mfem::Vector&, bool)> evaluation_;
+  std::function<void(const std::vector< const mfem::Vector * >, mfem::Vector&, bool)> evaluation_;
 
   /// @brief Type-erased handle to evaluation+differentiation kernels
-  std::function<void(const std::array<mfem::Vector, num_trial_spaces>&, mfem::Vector&, bool)>
+  std::function<void(const std::vector< const mfem::Vector * >, mfem::Vector&, bool)>
       evaluation_with_AD_[num_trial_spaces];
 
   /// @brief Type-erased handle to action of gradient kernels
@@ -205,6 +213,8 @@ private:
 
   /// @brief Type-erased handle to gradient matrix assembly kernels
   std::function<void(ExecArrayView<double, 3, exec>)> element_gradient_[num_trial_spaces];
+
+  std::vector < int > argument_indices;
 };
 
 }  // namespace serac

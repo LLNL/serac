@@ -549,7 +549,7 @@ private:
   /**
    * @brief The set of domain integrals (spatial_dim == geometric_dim)
    */
-  std::vector<DomainIntegral<test(trials...), exec>> domain_integrals_;
+  std::vector<DomainIntegral<num_trial_spaces, exec>> domain_integrals_;
 
   /**
    * @brief The set of boundary integral (spatial_dim > geometric_dim)

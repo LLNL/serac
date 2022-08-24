@@ -29,6 +29,9 @@ template <int i>
 struct DifferentiateWRT {
 };
 
+template <int ... i>
+struct DependsOn {};
+
 /**
  * @brief this type exists solely as a way to signal to `serac::Functional` that the function
  * serac::Functional::operator()` should differentiate w.r.t. a specific argument
@@ -255,8 +258,8 @@ public:
    * and @a spatial_dim template parameter
    * @param[inout] qdata The data for each quadrature point
    */
-  template <int dim, typename lambda, typename qpt_data_type = Nothing>
-  void AddDomainIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain,
+  template <int dim, int ... args, typename lambda, typename qpt_data_type = Nothing>
+  void AddDomainIntegral(Dimension<dim>, DependsOn< args ... >, lambda&& integrand, mfem::Mesh& domain,
                          std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
   {
     auto num_elements = domain.GetNE();
@@ -275,7 +278,10 @@ public:
     // NOTE: we are relying on MFEM to keep these geometric factors accurate. We store
     // the necessary data as references in the integral data structure.
     auto geom = domain.GetGeometricFactors(ir, flags);
-    domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<dim>{}, integrand, qdata);
+
+    auto selected_trial_spaces = serac::make_tuple(serac::get<args>(trial_spaces) ...);
+    
+    domain_integrals_.emplace_back(test{}, selected_trial_spaces, num_elements, geom->J, geom->X, Dimension<dim>{}, integrand, qdata, std::vector<int>{args...});
   }
 
   /**
@@ -727,7 +733,7 @@ private:
   const mfem::Operator* G_trial_boundary_[num_trial_spaces];
 
   /// @brief The set of domain integrals (spatial_dim == geometric_dim)
-  std::vector<DomainIntegral<test(trials...), exec>> domain_integrals_;
+  std::vector<DomainIntegral<num_trial_spaces, exec>> domain_integrals_;
 
   /// @brief The set of boundary integral (spatial_dim == geometric_dim + 1)
   std::vector<BoundaryIntegral<test(trials...), exec>> bdr_integrals_;

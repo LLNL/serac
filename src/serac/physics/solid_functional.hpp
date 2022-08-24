@@ -272,11 +272,14 @@ public:
    * @pre MaterialType must have a public member variable `density`
    * @pre MaterialType must define operator() that returns the Kirchoff stress
    */
-  template <typename MaterialType, typename StateType>
-  void setMaterial(MaterialType material, std::shared_ptr<QuadratureData<StateType>> qdata)
+  template <int ... active_parameters, typename MaterialType, typename StateType = Empty>
+  void setMaterial(
+    DependsOn< active_parameters ... >, 
+    MaterialType material, std::shared_ptr<QuadratureData<StateType>> qdata = EmptyQData)
   {
     residual_->AddDomainIntegral(
         Dimension<dim>{},
+        DependsOn<0, 1, active_parameters + 2 ... >{},
         [this, material](auto /*x*/, auto& state, auto displacement, auto acceleration, auto... params) {
           auto du_dX   = get<DERIVATIVE>(displacement);
           auto d2u_dt2 = get<VALUE>(acceleration);
@@ -284,17 +287,15 @@ public:
           if (geom_nonlin_ == GeometricNonlinearities::On) {
             stress = dot(stress, inv(transpose(I + du_dX)));
           }
-
           return serac::tuple{material.density * d2u_dt2, stress};
         },
         mesh_, qdata);
   }
 
-  /// @overload
-  template <typename MaterialType>
-  void setMaterial(MaterialType material)
+  template <typename MaterialType, typename StateType = Empty>
+  void setMaterial(MaterialType material, std::shared_ptr<QuadratureData<StateType>> qdata = EmptyQData)
   {
-    setMaterial(material, EmptyQData);
+    setMaterial(DependsOn<>{}, material, qdata);
   }
 
   /**
@@ -336,6 +337,7 @@ public:
   {
     residual_->AddDomainIntegral(
         Dimension<dim>{},
+        DependsOn<0, 1>{},
         [body_force, this](auto x, auto /* displacement */, auto /* acceleration */, auto... /*params*/) {
           // note: this assumes that the body force function is defined
           // per unit volume in the reference configuration
