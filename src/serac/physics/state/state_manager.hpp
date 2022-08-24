@@ -142,6 +142,16 @@ private:
   static std::string output_dir_;
   /// @brief Default name for the mesh - mostly for backwards compatibility
   const static std::string default_mesh_name_;
+
+  struct RelatedStateInfo {
+    FiniteElementVector&   state;
+    mfem::ParGridFunction& grid_function;
+    std::string            mesh_tag;
+  };
+
+  /// @brief Vector of references to associated finite element vector and their associated grid functions which are
+  /// managed by Sidre
+  static std::vector<RelatedStateInfo> state_gf_info_;
 };
 
 }  // namespace serac

@@ -16,6 +16,7 @@ bool                                                                  StateManag
 axom::sidre::DataStore*                                               StateManager::ds_                = nullptr;
 std::string                                                           StateManager::output_dir_        = "";
 const std::string                                                     StateManager::default_mesh_name_ = "default";
+std::vector<StateManager::RelatedStateInfo>                           StateManager::state_gf_info_     = {};
 
 double StateManager::newDataCollection(const std::string& name, const std::optional<int> cycle_to_load)
 {
@@ -93,6 +94,8 @@ FiniteElementState StateManager::newState(FiniteElementVector::Options&& options
     auto* new_grid_function = new mfem::ParGridFunction(&state.space(), static_cast<double*>(nullptr));
     datacoll.RegisterField(name, new_grid_function);
     state.setFromGridFunction(*new_grid_function);
+    state_gf_info_.emplace_back(
+        RelatedStateInfo{.state = state, .grid_function = *new_grid_function, .mesh_tag = mesh_tag});
   }
   return state;
 }
@@ -115,6 +118,8 @@ FiniteElementDual StateManager::newDual(FiniteElementVector::Options&& options, 
     auto* new_grid_function = new mfem::ParGridFunction(&dual.space(), static_cast<double*>(nullptr));
     datacoll.RegisterField(name, new_grid_function);
     dual.fillGridFunction(*new_grid_function);
+    state_gf_info_.emplace_back(
+        RelatedStateInfo{.state = dual, .grid_function = *new_grid_function, .mesh_tag = mesh_tag});
   }
   return dual;
 }
@@ -122,6 +127,14 @@ FiniteElementDual StateManager::newDual(FiniteElementVector::Options&& options, 
 void StateManager::save(const double t, const int cycle, const std::string& mesh_tag)
 {
   SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
+
+  // Update all of the grid functions owned by Sidre associated with this mesh tag
+  for (auto& state_gf_data : state_gf_info_) {
+    if (state_gf_data.mesh_tag == mesh_tag) {
+      state_gf_data.state.fillGridFunction(state_gf_data.grid_function);
+    }
+  }
+
   SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
                      axom::fmt::format("Mesh tag \"{}\" not found in the data store", mesh_tag));
   auto&       datacoll  = datacolls_.at(mesh_tag);
