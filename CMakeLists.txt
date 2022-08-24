@@ -116,6 +116,7 @@ blt_add_library(
     DEPENDS_ON  mfem axom gtest
 )
 set_property(TARGET serac_precompiled_headers PROPERTY POSITION_INDEPENDENT_CODE 0)
+target_include_directories(serac_precompiled_headers PUBLIC ${PROJECT_SOURCE_DIR}/src)
 target_precompile_headers(serac_precompiled_headers PUBLIC ${PROJECT_SOURCE_DIR}/src/serac/infrastructure/pch.hpp)
 
 include(${PROJECT_SOURCE_DIR}/cmake/SeracMacros.cmake)
