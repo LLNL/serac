@@ -110,16 +110,16 @@ enum class PatchBoundaryCondition { Essential, Mixed_essential_and_natural };
 
 /**
  * @brief Get boundary attributes for patch meshes on which to apply essential boundary conditions
- * 
+ *
  * Parameterizes patch tests boundary conditions, as either essential
  * boundary conditions or partly essential boundary conditions and
  * partly natural boundary conditions. The return values are specific
  * to the meshes "patch2d.mesh" and "patch3d.mesh". The particular
  * portions of the boundary that get essential boundary conditions
  * are arbitrarily chosen.
- * 
+ *
  * @tparam dim Spatial dimension
- * 
+ *
  * @param b Kind of boundary conditions to apply in the problem
  * @return std::set<int> Boundary attributes for the essential boundary condition
  */
@@ -145,11 +145,11 @@ std::set<int> essentialBoundaryAttributes(PatchBoundaryCondition bc)
 
 /**
  * @brief Solve problem and compare numerical solution to exact answer
- * 
+ *
  * @tparam p Polynomial degree of finite element approximation
  * @tparam dim Number of spatial dimensions
  * @tparam ExactSolution A class that satisfies the exact solution concept
- * 
+ *
  * @param exact_displacement Exact solution of problem
  * @param bc Specifier for boundary condition type to test
  * @return double L2 norm (continuous) of error in computed solution

@@ -296,9 +296,9 @@ public:
             stress = dot(stress, inv(transpose(I + du_dX)));
           }
 
-          // This transpose on the stress in the following line is a 
-          // hack to fix a bug in the resdual operator. The stress 
-          // should be transposed in the contraction of the Piola 
+          // This transpose on the stress in the following line is a
+          // hack to fix a bug in the resdual operator. The stress
+          // should be transposed in the contraction of the Piola
           // stress with the shape function gradients.
           //
           // TODO: fix the residual implementation and remove this transpose.
