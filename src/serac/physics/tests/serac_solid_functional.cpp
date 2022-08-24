@@ -28,24 +28,6 @@ using solid_mechanics::default_static_options;
 using solid_mechanics::direct_static_options;
 
 /**
- * @brief Transform the Kirchhoff stress to the Piola stress
- *
- * @tparam T1 number-like type of the displacement gradient components
- * @tparam T1 number-like type of the Kirchhoff stress components
- * @tparam dim number of spatial dimensions
- *
- * @param displacement_gradient Displacement gradient
- * @param kirchhoff_stress Kirchoff stress
- * @return Piola stress
- */
-template<typename T1, typename T2, int dim>
-auto transformKirchhoffToPiola(const tensor<T1, dim, dim>& displacement_gradient,
-                               const tensor<T2, dim, dim>& kirchhoff_stress)
-{
-  return transpose(linear_solve(displacement_gradient + Identity<dim>(), kirchhoff_stress));
-}
-
-/**
  * @brief Exact displacement solution that is an affine function
  *
  * @tparam dim number of spatial dimensions
@@ -115,7 +97,7 @@ class AffineSolution {
     typename Material::State state;
     auto H = make_tensor<dim, dim>([&](int i, int j) { return A(i,j); });
     tensor<double, dim, dim> tau = material(state, H);
-    auto P = transformKirchhoffToPiola(H, tau);
+    auto P = solid_mechanics::KirchhoffToPiola(tau, H);
     auto traction = [P](auto, auto n0, auto) { return dot(P, n0); };
     sf.setPiolaTraction(traction);
   }

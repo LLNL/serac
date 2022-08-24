@@ -143,6 +143,24 @@ struct J2 {
   }
 };
 
+/**
+ * @brief Transform the Kirchhoff stress to the Piola stress
+ *
+ * @tparam T1 number-like type of the displacement gradient components
+ * @tparam T1 number-like type of the Kirchhoff stress components
+ * @tparam dim number of spatial dimensions
+ *
+ * @param displacement_gradient Displacement gradient
+ * @param kirchhoff_stress Kirchoff stress
+ * @return Piola stress
+ */
+template<typename T1, typename T2, int dim>
+auto KirchhoffToPiola(const tensor<T1, dim, dim>& kirchhoff_stress,
+                      const tensor<T2, dim, dim>& displacement_gradient)
+{
+  return transpose(linear_solve(displacement_gradient + Identity<dim>(), kirchhoff_stress));
+}
+
 /// Constant body force model
 template <int dim>
 struct ConstantBodyForce {
