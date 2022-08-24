@@ -23,8 +23,6 @@
 
 namespace serac {
 
-using solid_mechanics::default_dynamic_options;
-using solid_mechanics::default_static_options;
 using solid_mechanics::direct_static_options;
 
 /**
@@ -158,13 +156,14 @@ std::set<int> essentialBoundaryAttributes(PatchBoundaryCondition bc)
  * @param bc Specifier for boundary condition type to test
  * @return double L2 norm (continuous) of error in computed solution
  * *
- * @pre ExactSolution object must implement operator() that is an MFEM
- * coefficient-generating function and the method applyLoads(...) that
- * applies the load that should lead to the exact solution.
- * See AffineSolution for an example.
+ * @pre ExactSolution must implement operator() that is an MFEM
+ * coefficient-generating function
+ * @pre ExactSolution must have a method applyLoads that applies forcing terms to the
+ * solid functional that should lead to the exact solution
+ * See AffineSolution for an example
  */
 template <int p, int dim, typename ExactSolution>
-double patch_test(const ExactSolution& exact_displacement, PatchBoundaryCondition bc)
+double solution_error(const ExactSolution& exact_displacement, PatchBoundaryCondition bc)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -173,8 +172,8 @@ double patch_test(const ExactSolution& exact_displacement, PatchBoundaryConditio
   serac::StateManager::initialize(datastore, "solid_functional_static_solve");
 
   // BT: shouldn't this assertion be in the physics module?
-  // This prevents tests from having a nonsensical spatial dimension value, but Serac
-  // is left free to do so in the wild.
+  // Putting it here prevents tests from having a nonsensical spatial dimension value, 
+  // but the physics module should be catching this error to protect users.
   static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for solid functional test");
 
   std::string filename = std::string(SERAC_REPO_DIR) +  "/data/meshes/patch" + std::to_string(dim) + "d.mesh";
@@ -217,7 +216,7 @@ TEST(SolidFunctional, PatchTest2dQ1EssentialBcs)
 {
   constexpr int p = 1;
   constexpr int dim = 2;
-  double error = patch_test<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
+  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
   EXPECT_LT(error, tol);
 }
 
@@ -225,7 +224,7 @@ TEST(SolidFunctional, PatchTest3dQ1EssentialBcs)
 {
   constexpr int p = 1;
   constexpr int dim   = 3;
-  double error = patch_test<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
+  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
   EXPECT_LT(error, tol);
 }
 
@@ -233,7 +232,7 @@ TEST(SolidFunctional, PatchTest2dQ2EssentialBcs)
 {
   constexpr int p = 2;
   constexpr int dim   = 2;
-  double error = patch_test<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
+  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
   EXPECT_LT(error, tol);
 }
 
@@ -241,7 +240,7 @@ TEST(SolidFunctional, PatchTest3dQ2EssentialBcs)
 {
   constexpr int p = 2;
   constexpr int dim   = 3;
-  double error = patch_test<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
+  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
   EXPECT_LT(error, tol);
 }
 
@@ -249,7 +248,7 @@ TEST(SolidFunctional, PatchTest2dQ1TractionBcs)
 {
   constexpr int p = 1;
   constexpr int dim   = 2;
-  double error = patch_test<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
   EXPECT_LT(error, tol);
 }
 
@@ -257,7 +256,7 @@ TEST(SolidFunctional, PatchTest3dQ1TractionBcs)
 {
   constexpr int p = 1;
   constexpr int dim   = 3;
-  double error = patch_test<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
   EXPECT_LT(error, tol);
 }
 
@@ -265,7 +264,7 @@ TEST(SolidFunctional, PatchTest2dQ2TractionBcs)
 {
   constexpr int p = 2;
   constexpr int dim   = 2;
-  double error = patch_test<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
   EXPECT_LT(error, tol);
 }
 
@@ -273,7 +272,7 @@ TEST(SolidFunctional, PatchTest3dQ2TractionBcs)
 {
   constexpr int p = 2;
   constexpr int dim   = 3;
-  double error = patch_test<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
   EXPECT_LT(error, tol);
 }
 
