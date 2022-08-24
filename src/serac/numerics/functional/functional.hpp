@@ -89,6 +89,41 @@ struct Index {
   constexpr operator int() { return ind; }
 };
 
+/**
+ * @brief create an mfem::ParFiniteElementSpace from one of serac's
+ * tag types: H1, Hcurl, L2
+ *
+ * @tparam function_space a tag type containing the kind of function space and polynomial order
+ * @param mesh the mesh on which the space is defined
+ */
+template <typename function_space>
+mfem::ParFiniteElementSpace* generateParFiniteElementSpace(mfem::ParMesh* mesh)
+{
+  const int                      dim = mesh->Dimension();
+  mfem::FiniteElementCollection* fec;
+  const auto                     ordering = mfem::Ordering::byVDIM;
+
+  switch (function_space::family) {
+    case Family::H1:
+      fec = new mfem::H1_FECollection(function_space::order, dim);
+      break;
+    case Family::HCURL:
+      fec = new mfem::ND_FECollection(function_space::order, dim);
+      break;
+    case Family::HDIV:
+      fec = new mfem::RT_FECollection(function_space::order, dim);
+      break;
+    case Family::L2:
+      fec = new mfem::L2_FECollection(function_space::order, dim);
+      break;
+    default:
+      return NULL;
+      break;
+  }
+
+  return new mfem::ParFiniteElementSpace(mesh, fec, function_space::components, ordering);
+}
+
 /// @cond
 template <typename T, ExecutionSpace exec = serac::default_execution_space>
 class Functional;
