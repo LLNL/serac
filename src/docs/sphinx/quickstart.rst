@@ -277,31 +277,30 @@ Meeting base dependency requirements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 One way to install the required depedencies is with the MacPorts package manager.
-Suggested ports to install:
+Install the required ports as follows:
 
-* clang-12 (or another version as you prefer)
-* openmpi-clang12 (matching the version of clang you installed)
-* gcc12 (or another version; this is needed only for a fortran compiler)
-* cmake
-* autoconf
-* automake
-* graphviz
-* pkgconfig
-* xorg-libX11
+.. code-block:: bash
 
-Activate the particular package versions with MacPorts:
+   $ sudo port install clang-12 openmpi-clang12 gcc12 bzip2 cmake autoconf automake gettext graphviz pkgconfig xorg-libX11 lapack readline zlib
+
+(Note: The port ``gcc12`` is included only to have a fortran compiler.)
+
+Activate the particular compiler packages with MacPorts:
 
 .. code-block:: bash
 
    $ sudo port select clang mp-clang-12
-   $ sudo port select mpi openmpi-clang-fortran
+   $ sudo port select mpi openmpi-clang12-fortran
    $ sudo port select gcc mp-gcc12
 
-This step tells MacPorts to make symbolic links in your path so that, for example, ``clang`` will invoke the clang12 from the MacPorts package and not the ``clang`` shipped by Apple. 
+This step tells MacPorts to make symbolic links in your path so that, for example, the command ``clang`` will invoke the compiler installed by the MacPorts package and not the one shipped by Apple. 
 It also sets up a set of symlinks so that Clang, GCC, and the MPI wrappers all work without you having to muck with environment variables to locate header files and libraries. 
 It may be possible to skip this step and give full paths to your compilers in ``compilers.yaml`` (instead of the symlinks ``/opt/local/bin/clang``, etc.), but we haven't tried this.
 
-While building ParMetis, spack invokes the MPI compiler wrapper with the ``mpic++`` command, but MacPorts does not create this particular synonym for OpenMPI. 
+.. note::
+   If you want to remove these symlinks, use the ``port select`` command with ``none`` as the desired port; e.g., ``sudo port select clang none``
+
+While building ParMetis, Spack invokes the MPI compiler wrapper with the ``mpic++`` command, but MacPorts does not create this particular synonym for OpenMPI. 
 It does create ``mpicxx``. This can be solved by making a symlink:
 
 .. code-block:: bash
@@ -317,7 +316,7 @@ Python environment
 
 The Serac build scripts install the ``clingo`` package in your Python environment (and may even *uninstall* it if it finds it with a version it considers too old). 
 I don't like to let software packages change my Python environment, particularly by adding or removing packages with ``pip``, as this can lead to version dependency conflicts.  
-I create a Python virtual environment in the serac root directory with the built-in ``venv`` module. 
+I create a Python virtual environment with the built-in ``venv`` module. Run this in a location where you want to hold this sandboxed python envirnonment.
 
 .. (I use the name "venv" for the virtual environment; We might consider adding `venv/` to the list of git ignores in the root directory).
 
@@ -325,23 +324,25 @@ I create a Python virtual environment in the serac root directory with the built
 
    $ python3 -m venv <virtual-env-name>
 
-Since spack will need ``clingo``, activate the python vitual environment and 
+Since Spack will need ``clingo``, activate the python vitual environment and 
 install the package to meet this dependency:
 
 .. code-block:: bash
 
-   $ source <virtual-env-name>/bin/activate
-   $ pip install clingo
+   $ <path/to/virtual-env>/bin/pip install clingo
 
-The python virtual environment must be active when invoking the ``uberenv.py`` script below.
-
-Configuring spack
+Configuring Spack
 ^^^^^^^^^^^^^^^^^
 
-In ``compilers.yaml``:
+Next, you must tailor the Spack configuration files. We will modify the ``compilers.yaml`` and ``packages.yaml`` files in ``scripts/spack/configs/darwin/``.
+Instead of modifying them directly, you may wish to copy these files to another location outside of the Serac repo, use them as templates for the customization, 
+and use the ``--spack-config-dir`` option to use them when invoking uberenv as described above.
+
+Example ``compilers.yaml``:
 
 .. code-block:: yaml
 
+   compilers:
    - compiler:
       environment: {}
       extra_rpaths: []
@@ -358,15 +359,17 @@ In ``compilers.yaml``:
 
 NOTES: 
 
-* The `operating_system` field should be set to ``bigsur`` for macOS 11. Refer to the spack documentation for other versions of macOS.
-* By default, MacPorts installs packages in ``/opt/local``; the above paths need to be adjusted if you choose a different location.
+* The ``operating_system`` field should be set according to your macOS version. (For example, ``"mojave", "catalina", "bigsur", "monterey", "ventura"``).
+* By default, MacPorts installs packages in ``/opt/local``; the above ``paths`` need to be adjusted if you choose a different location.
   This of course applies to the packages in ``packages.yaml`` as well.
 * As noted above, the ``port select ...`` commands will set which version of clang gets invoked by the executables ``/opt/local/bin/clang``, etc.
   The paths above are thus valid only if you activated the ``clang`` package that matches the compiler spec.
-  Alternatively, you could set the full name and path of the executables of the desired compilers if you don't want MacPorts settings to interfere with your spack settings.
-* You should set the spec to be equal to the actual version of the compiler you installed.
+  Alternatively, you could set the full name and path of the executables of the desired compilers if you don't want the operation of 
+  Spack to be influenced by your MacPorts settings.
+* You should set ``spec`` to the actual version of the compiler you installed.
+* The ``target`` entry should be set to ``x86_64`` or ``m1`` depending on which architecture your machine uses.  
 
-In ``packages.yaml``:
+Here is an example of ``packages.yaml``:
 
 .. code-block:: yaml
 
@@ -433,8 +436,8 @@ In ``packages.yaml``:
    perl:
       buildable: false
       externals:
-      - spec: perl@v5.34.1
-         prefix: /opt/local
+      - spec: perl@v5.30.2
+         prefix: /usr
    pkg-config:
       buildable: false
       externals:
@@ -463,16 +466,24 @@ In ``packages.yaml``:
 
 Notes:
 
-* OpenGL is not supported on modern Macs, hence those packages are not specified as they are on other platforms. 
-  This means that the optional ``glvis`` spec can't be built.
+* OpenGL is not well supported on modern Macs. We recommend commenting this section out. This means that the optional ``glvis`` spec can't be built.
 * The version specs should be set to the actual versions of the packages you have, which will not neccesarily be the same as the above.
+  This can be discovered for the packages installed with MacPorts using the following command:
 
-The above spack settings and MacPorts packages will cover the basic installation of Serac. 
+.. code-block:: bash
+
+   $ port info clang-12 openmpi-clang12 gcc12 bzip2 cmake autoconf automake gettext graphviz pkgconfig xorg-libX11 lapack readline zlib
+
+* Use the version number provided, taking the values up to, but excluding, any underscore.
+* The packages not installed by MacPorts are the ones that have ``/usr`` as the prefix.
+  The versions already present on the system are sufficient for the build.
+
+The above Spack settings and MacPorts packages will cover the basic installation of Serac. 
 If you want to build the optional devtools, you should install the additional packages with MacPorts:
 
-* cmake (CMake is present by default on current MacOS distributions, but is often out of date, hence we recommend installing this package.)
-* cppcheck
-* doxygen
+.. code-block: bash
+
+   $ sudo port install cppcheck doxygen
 
 Then, append the following to ``packages.yaml``:
 
@@ -517,18 +528,18 @@ Notes:
   See the following two notes. 
 * LLVM 10.0.0 has been superseded as the version for llvm-10; so this package is not easily installable with MacPorts.
   You must build it yourself and then point to the build location.
-* For ``<path/to/python/venv>``, specify the the virtual environment directory.
+* For ``<path/to/python/venv>``, specify the the virtual environment directory created above.
 
 Building dependencies
 ^^^^^^^^^^^^^^^^^^^^^
 
-The invocation of ``uberenv.py`` is slightly modified from the standard instructions above: 
+The invocation of ``uberenv.py`` is slightly modified from the standard instructions above in order to force the use of the
+MacPorts-installed MPI:
 
 .. code-block:: bash
 
-   $ ./scripts/uberenv/uberenv.py --prefix=../path/for/TPLs --spec="clang@12.0.1 ^openmpi@4.1.4"
+   $ ./scripts/uberenv/uberenv.py --prefix=../path/for/TPLs --spec="%clang@12.0.1 ^openmpi@4.1.4"
 
 Notice the caret with the MPI spec. 
-This is necessary to force spack to use the installed MPI. 
-Without this, current versions of spack ignore the ``packages.yaml`` file and try to build a version of MPI from source.
-You can add additional specs as noted above.
+Without this, current versions of Spack ignore the ``packages.yaml`` file and try to build a version of MPI from source.
+You can add additional specs as noted in the section `Building Serac's Dependencies via Spack/uberenv`.
