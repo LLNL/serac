@@ -59,7 +59,6 @@ class AffineSolution {
    */
   void operator()(const mfem::Vector& X, mfem::Vector& u) const
   {
-    u = 0.0;
     A.Mult(X, u);
     u += b;
   }
