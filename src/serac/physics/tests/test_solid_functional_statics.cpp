@@ -125,21 +125,23 @@ enum class PatchBoundaryCondition { Essential, Mixed_essential_and_natural };
 template <int dim>
 std::set<int> essentialBoundaryAttributes(PatchBoundaryCondition bc)
 {
+  std::set<int> essential_boundaries;
   if constexpr (dim == 2) {
     switch (bc) {
       case PatchBoundaryCondition::Essential:
-        return {1, 2, 3, 4};
+        essential_boundaries = {1, 2, 3, 4};
       case PatchBoundaryCondition::Mixed_essential_and_natural:
-        return {1, 4};
+        essential_boundaries = {1, 4};
     }
   } else {
     switch (bc) {
       case PatchBoundaryCondition::Essential:
-        return {1, 2, 3, 4, 5, 6};
+        essential_boundaries = {1, 2, 3, 4, 5, 6};
       case PatchBoundaryCondition::Mixed_essential_and_natural:
-        return {1, 2};
+        essential_boundaries = {1, 2};
     }
   }
+  return essential_boundaries;
 }
 
 /**
