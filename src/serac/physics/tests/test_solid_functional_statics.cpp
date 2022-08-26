@@ -130,15 +130,19 @@ std::set<int> essentialBoundaryAttributes(PatchBoundaryCondition bc)
     switch (bc) {
       case PatchBoundaryCondition::Essential:
         essential_boundaries = {1, 2, 3, 4};
+        break;
       case PatchBoundaryCondition::Mixed_essential_and_natural:
         essential_boundaries = {1, 4};
+        break;
     }
   } else {
     switch (bc) {
       case PatchBoundaryCondition::Essential:
         essential_boundaries = {1, 2, 3, 4, 5, 6};
+        break;
       case PatchBoundaryCondition::Mixed_essential_and_natural:
         essential_boundaries = {1, 2};
+        break;
     }
   }
   return essential_boundaries;
