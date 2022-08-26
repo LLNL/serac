@@ -392,7 +392,7 @@ Here is an example of ``packages.yaml``:
       buildable: false
       externals:
       - spec: netlib-lapack@3.10.1
-         prefix: /opt/local
+        prefix: /opt/local
    autoconf:
       buildable: false
       externals:
