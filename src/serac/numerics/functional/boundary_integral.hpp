@@ -26,20 +26,15 @@
 
 namespace serac {
 
-template <typename spaces, ExecutionSpace exec>
-class BoundaryIntegral;
-
 /**
  * @brief Describes a single boundary integral term in a weak forumulation of a partial differential equation
  * @tparam spaces A @p std::function -like set of template parameters that describe the test and trial
  * function spaces, i.e., @p test(trial)
  * @tparam exec whether or not the calculation and memory will be on the CPU or GPU
  */
-template <typename test, typename... trials, ExecutionSpace exec>
-class BoundaryIntegral<test(trials...), exec> {
+template <int num_trial_spaces, ExecutionSpace exec>
+class BoundaryIntegral{
 public:
-  static constexpr tuple<trials...> trial_spaces{};                        ///< a tuple of the different trial spaces
-  static constexpr int              num_trial_spaces = sizeof...(trials);  ///< how many trial spaces were specified
 
   /**
    * @brief Constructs an @p BoundaryIntegral from a user-provided quadrature function
@@ -53,10 +48,16 @@ public:
    * @param[in] qf The user-provided quadrature function
    * @note The @p Dimension parameters are used to assist in the deduction of the dim template parameter
    */
-  template <int dim, typename lambda_type, typename qpt_data_type = void>
-  BoundaryIntegral(size_t num_elements, const mfem::Vector& J, const mfem::Vector& X, const mfem::Vector& N,
-                   Dimension<dim>, lambda_type&& qf)
+  template <int dim, typename test, typename ... trials, typename lambda_type, typename qpt_data_type = void>
+  BoundaryIntegral(test, serac::tuple< trials ... >, size_t num_elements, const mfem::Vector& J, const mfem::Vector& X, const mfem::Vector& N,
+                   Dimension<dim>, lambda_type&& qf, std::vector<int> arg_indices)
   {
+    argument_indices = arg_indices;
+
+    constexpr size_t num_active_trial_spaces = sizeof ... (trials);
+
+    SLIC_ERROR_ROOT_IF(num_active_trial_spaces != arg_indices.size(), "Error: argument indices inconsistent with provided number of arguments");
+
     using namespace boundary_integral;
 
     constexpr auto geometry                      = supported_geometries[dim];
@@ -72,7 +73,7 @@ public:
 
       evaluation_ = EvaluationKernel{eval_config, J, X, N, num_elements, qf};
 
-      for_constexpr<num_trial_spaces>([this, num_elements, quadrature_points_per_element, &J, &X, &N, &qf,
+      for_constexpr<num_active_trial_spaces>([this, num_elements, quadrature_points_per_element, &J, &X, &N, &qf,
                                        eval_config](auto i) {
         // allocate memory for the derivatives of the q-function at each quadrature point
         //
@@ -109,10 +110,15 @@ public:
    */
   void Mult(const std::array<mfem::Vector, num_trial_spaces>& input_E, mfem::Vector& output_E, int which) const
   {
+    std::vector < const mfem::Vector * > selected(argument_indices.size());
+    for (size_t i = 0; i < argument_indices.size(); i++) {
+      selected[i] = &input_E[size_t(argument_indices[i])];
+    }
+
     if (which == -1) {
-      evaluation_(input_E, output_E);
+      evaluation_(selected, output_E);
     } else {
-      evaluation_with_AD_[which](input_E, output_E);
+      evaluation_with_AD_[which](selected, output_E);
     }
   }
 
@@ -141,10 +147,10 @@ public:
 
 private:
   /// @brief kernel for integrating the q-function over the domain
-  std::function<void(const std::array<mfem::Vector, num_trial_spaces>&, mfem::Vector&)> evaluation_;
+  std::function<void(const std::vector< const mfem::Vector * >, mfem::Vector&)> evaluation_;
 
   /// @brief kernels for integrating the q-function over the domain, and caching some data about its derivatives
-  std::function<void(const std::array<mfem::Vector, num_trial_spaces>&, mfem::Vector&)>
+  std::function<void(const std::vector< const mfem::Vector * >, mfem::Vector&)>
       evaluation_with_AD_[num_trial_spaces];
 
   /// @brief kernels for computing directional derivatives, using the most recently cached q-function derivatives
@@ -152,6 +158,8 @@ private:
 
   /// @brief kernels for computing consistent "element stiffness" matrices
   std::function<void(ExecArrayView<double, 3, exec>)> element_gradient_[num_trial_spaces];
+
+  std::vector < int > argument_indices;
 };
 
 }  // namespace serac

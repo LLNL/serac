@@ -220,7 +220,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
     case WhichTest::Measure: {
       Functional<double(trial_space)> measure({&fespace});
       measure.AddDomainIntegral(
-          Dimension<dim>{}, [&](auto /*x*/, auto /*u*/) { return 1.0; }, mesh);
+          Dimension<dim>{}, DependsOn<>{}, [&](auto /*x*/) { return 1.0; }, mesh);
 
       double relative_error = (measure(U) - measure_mfem(mesh)) / measure(U);
 
@@ -231,7 +231,9 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
     case WhichTest::Moment: {
       Functional<double(trial_space)> x_moment({&fespace});
       x_moment.AddDomainIntegral(
-          Dimension<dim>{}, [&](auto x, auto /*u*/) { return x[0]; }, mesh);
+          Dimension<dim>{},
+          DependsOn<>{},
+          [&](auto x) { return x[0]; }, mesh);
 
       double relative_error = (x_moment(U) - x_moment_mfem(mesh)) / x_moment(U);
 
@@ -241,9 +243,9 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
     case WhichTest::SumOfMeasures: {
       Functional<double(trial_space)> sum_of_measures({&fespace});
       sum_of_measures.AddDomainIntegral(
-          Dimension<dim>{}, [&](auto /*x*/, auto /*u*/) { return 1.0; }, mesh);
+          Dimension<dim>{}, DependsOn<>{}, [&](auto /*x*/) { return 1.0; }, mesh);
       sum_of_measures.AddBoundaryIntegral(
-          Dimension<dim - 1>{}, [&](auto /*x*/, auto /*n*/, auto /*u*/) { return 1.0; }, mesh);
+          Dimension<dim - 1>{}, DependsOn<>{}, [&](auto /*x*/, auto /*n*/) { return 1.0; }, mesh);
 
       double relative_error = (sum_of_measures(U) - sum_of_measures_mfem(mesh)) / sum_of_measures(U);
 
@@ -254,6 +256,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
       Functional<double(trial_space)> f({&fespace});
       f.AddDomainIntegral(
           Dimension<dim>{},
+          DependsOn<0>{},
           [&](auto x, auto temperature) {
             auto [u, grad_u] = temperature;
             return x[0] * x[0] + sin(x[1]) + x[0] * u * u * u;
@@ -261,6 +264,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
           mesh);
       f.AddBoundaryIntegral(
           Dimension<dim - 1>{},
+          DependsOn<0>{},
           [&](auto x, auto /*n*/, auto temperature) {
             auto [u, unused] = temperature;
             return x[0] - x[1] + cos(u * x[1]);
@@ -324,6 +328,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p1> trial1, H1<p2> trial2, Dimension<dim>)
   Functional<double(trial_space1, trial_space2)> f({&fespace1, &fespace2});
   f.AddDomainIntegral(
       Dimension<dim>{},
+      DependsOn<0, 1>{},
       [&](auto x, auto temperature, auto dtemperature_dt) {
         auto [u, grad_u]     = temperature;
         auto [du_dt, unused] = dtemperature_dt;
@@ -332,6 +337,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p1> trial1, H1<p2> trial2, Dimension<dim>)
       mesh);
   f.AddBoundaryIntegral(
       Dimension<dim - 1>{},
+      DependsOn<0, 1>{},
       [&](auto x, auto /*n*/, auto temperature, auto dtemperature_dt) {
         auto [u, grad_u]     = temperature;
         auto [du_dt, unused] = dtemperature_dt;

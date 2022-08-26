@@ -130,6 +130,7 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{},
+      DependsOn<0>{},
       [&](auto x, auto n, auto temperature) {
         auto [u, unused] = temperature;
         tensor<double, dim> b{sin(x[0]), x[0] * x[1]};

@@ -356,11 +356,12 @@ public:
    *
    * @pre TractionType must have the operator (x, normal, time) to return the thermal flux value
    */
-  template <typename TractionType>
+  template <int ... active_parameters, typename TractionType>
   void setPiolaTraction(TractionType traction_function)
   {
     residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{},
+        DependsOn< 0, 1, active_parameters + 2 ... >{},
         [this, traction_function](auto x, auto n, auto, auto, auto... params) {
           return -1.0 * traction_function(x, n, time_, params...);
         },

@@ -155,11 +155,11 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
    * @param U input E-vectors
    * @param R output E-vector
    */
-  void operator()(const std::array<mfem::Vector, num_trial_spaces>& U, mfem::Vector& R)
+  void operator()(const std::vector< const mfem::Vector * > U, mfem::Vector& R)
   {
     std::array<const double*, num_trial_spaces> ptrs;
     for (uint32_t j = 0; j < num_trial_spaces; j++) {
-      ptrs[j] = U[j].Read();
+      ptrs[j] = U[j]->Read();
     }
     EVector_t u(ptrs, std::size_t(num_elements_));
 
@@ -253,11 +253,11 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
    * @param U input E-vectors
    * @param R output E-vector
    */
-  void operator()(const std::array<mfem::Vector, num_trial_spaces>& U, mfem::Vector& R)
+  void operator()(const std::vector< const mfem::Vector * > U, mfem::Vector& R)
   {
     std::array<const double*, num_trial_spaces> ptrs;
     for (uint32_t j = 0; j < num_trial_spaces; j++) {
-      ptrs[j] = U[j].Read();
+      ptrs[j] = U[j]->Read();
     }
     EVector_t u(ptrs, std::size_t(num_elements_));
 
