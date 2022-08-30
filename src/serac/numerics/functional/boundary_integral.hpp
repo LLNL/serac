@@ -32,7 +32,7 @@ namespace serac {
  * function spaces, i.e., @p test(trial)
  * @tparam exec whether or not the calculation and memory will be on the CPU or GPU
  */
-template <int num_trial_spaces, ExecutionSpace exec>
+template <int num_trial_spaces, int Q, ExecutionSpace exec>
 class BoundaryIntegral{
 public:
 
@@ -61,7 +61,6 @@ public:
     using namespace boundary_integral;
 
     constexpr auto geometry                      = supported_geometries[dim];
-    constexpr auto Q                             = std::max({test::order, trials::order...}) + 1;
     constexpr auto quadrature_points_per_element = detail::pow(Q, dim);
 
     // this is where we actually specialize the finite element kernel templates with

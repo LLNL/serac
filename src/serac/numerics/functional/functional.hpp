@@ -175,6 +175,7 @@ template <typename test, typename... trials, ExecutionSpace exec>
 class Functional<test(trials...), exec> {
   static constexpr tuple<trials...> trial_spaces{};
   static constexpr uint32_t         num_trial_spaces = sizeof...(trials);
+  static constexpr auto             Q = std::max({test::order, trials::order...}) + 1;
 
   class Gradient;
 
@@ -734,10 +735,10 @@ private:
   const mfem::Operator* G_trial_boundary_[num_trial_spaces];
 
   /// @brief The set of domain integrals (spatial_dim == geometric_dim)
-  std::vector<DomainIntegral<num_trial_spaces, exec>> domain_integrals_;
+  std::vector<DomainIntegral<num_trial_spaces, Q, exec>> domain_integrals_;
 
   /// @brief The set of boundary integral (spatial_dim == geometric_dim + 1)
-  std::vector<BoundaryIntegral<num_trial_spaces, exec>> bdr_integrals_;
+  std::vector<BoundaryIntegral<num_trial_spaces, Q, exec>> bdr_integrals_;
 
   // simplex elements are currently not supported;
   static constexpr mfem::Element::Type supported_types[4] = {mfem::Element::POINT, mfem::Element::SEGMENT,

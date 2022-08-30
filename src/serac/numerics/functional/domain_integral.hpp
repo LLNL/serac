@@ -30,7 +30,7 @@ namespace serac {
  * @tparam spaces A @p std::function -like set of template parameters that describe the test and trial
  * function spaces, i.e., @p test(trial)
  */
-template <int num_trial_spaces, ExecutionSpace exec>
+template <int num_trial_spaces, int Q, ExecutionSpace exec>
 class DomainIntegral{
 
 public:
@@ -62,7 +62,6 @@ public:
     using namespace domain_integral;
 
     [[maybe_unused]] constexpr auto geometry                      = supported_geometries[dim];
-    constexpr auto                  Q                             = std::max({test::order, trials::order...}) + 1;
     constexpr auto                  quadrature_points_per_element = (dim == 2) ? Q * Q : Q * Q * Q;
 
     // this is where we actually specialize the finite element kernel templates with
@@ -157,17 +156,31 @@ public:
   void Mult(const std::array<mfem::Vector, num_trial_spaces> & input_E, mfem::Vector& output_E, int which_trial_space,
             bool update_state) const
   {
+
+    int which_local_trial_space = -1;
     std::vector < const mfem::Vector * > selected(argument_indices.size());
     for (size_t i = 0; i < argument_indices.size(); i++) {
       selected[i] = &input_E[size_t(argument_indices[i])];
+
+      // now that these integrals don't depend on all of the arguments,
+      // we have to figure out which of our local arguments correspond to
+      // `which_trial_space` 
+      //
+      // if this calculation doesn't depend on that argument at all, then
+      // we just call the evaluation kernel without any differentiation
+      // 
+      if (which_trial_space == argument_indices[i]) {
+        which_local_trial_space = int(i);
+      }
     }
 
-    if (which_trial_space == -1) {
+    if (which_local_trial_space == -1) {
       SERAC_MARK_BEGIN("Domain Integral Evaluation");
       evaluation_(selected, output_E, update_state);
       SERAC_MARK_END("Domain Integral Evaluation");
     } else {
       SERAC_MARK_BEGIN("Domain Integral Evaluation with AD");
+
       evaluation_with_AD_[which_trial_space](selected, output_E, update_state);
       SERAC_MARK_END("Domain Integral Evaluation with AD");
     }
