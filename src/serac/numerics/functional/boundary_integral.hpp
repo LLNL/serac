@@ -104,20 +104,32 @@ public:
    * @brief Applies the integral, i.e., @a output_E = evaluate( @a input_E )
    * @param[in] input_E The input to the evaluation; per-element DOF values
    * @param[out] output_E The output of the evalution; per-element DOF residuals
-   * @param[in] which the index of the argument being differentiated,
+   * @param[in] which_trial_space the index of the argument being differentiated,
    *    which == -1 corresponds to direct evaluation without any differentiation
    */
-  void Mult(const std::array<mfem::Vector, num_trial_spaces>& input_E, mfem::Vector& output_E, int which) const
+  void Mult(const std::array<mfem::Vector, num_trial_spaces>& input_E, mfem::Vector& output_E, int which_trial_space) const
   {
+    int which_local_trial_space = -1;
     std::vector < const mfem::Vector * > selected(argument_indices.size());
     for (size_t i = 0; i < argument_indices.size(); i++) {
       selected[i] = &input_E[size_t(argument_indices[i])];
+
+      // now that these integrals don't depend on all of the arguments,
+      // we have to figure out which of our local arguments correspond to
+      // `which_trial_space` 
+      //
+      // if this calculation doesn't depend on that argument at all, then
+      // we just call the evaluation kernel without any differentiation
+      // 
+      if (which_trial_space == argument_indices[i]) {
+        which_local_trial_space = int(i);
+      }
     }
 
-    if (which == -1) {
+    if (which_local_trial_space == -1) {
       evaluation_(selected, output_E);
     } else {
-      evaluation_with_AD_[which](selected, output_E);
+      evaluation_with_AD_[which_local_trial_space](selected, output_E);
     }
   }
 
@@ -125,23 +137,39 @@ public:
    * @brief Applies the integral, i.e., @a output_E = gradient( @a input_E )
    * @param[in] input_E The input to the evaluation; per-element DOF values
    * @param[out] output_E The output of the evalution; per-element DOF residuals
-   * @param[in] which the index of the argument being differentiated
+   * @param[in] which_trial_space the index of the argument being differentiated
    * @see action_of_gradient_kernel
    */
-  void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E, std::size_t which) const
+  void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E, std::size_t which_trial_space) const
   {
-    action_of_gradient_[which](input_E, output_E);
+    int which_local_trial_space = -1;
+    for (size_t i = 0; i < argument_indices.size(); i++) {
+      if (which_trial_space == std::size_t(argument_indices[i])) {
+        which_local_trial_space = int(i);
+      }
+    }
+    if (which_local_trial_space != -1) {
+      action_of_gradient_[which_local_trial_space](input_E, output_E);
+    }
   }
 
   /**
    * @brief Computes the derivative of each element's residual with respect to the element values
    * @param[inout] K_b The reshaped vector as a mfem::DeviceTensor of size (test_dim * test_dof, trial_dim * trial_dof,
    * nelems)
-   * @param[in] which the index of the argument being differentiated
+   * @param[in] which_trial_space the index of the argument being differentiated
    */
-  void ComputeElementGradients(ExecArrayView<double, 3, ExecutionSpace::CPU> K_b, std::size_t which) const
+  void ComputeElementGradients(ExecArrayView<double, 3, ExecutionSpace::CPU> K_b, std::size_t which_trial_space) const
   {
-    element_gradient_[which](K_b);
+    int which_local_trial_space = -1;
+    for (size_t i = 0; i < argument_indices.size(); i++) {
+      if (which_trial_space == std::size_t(argument_indices[i])) {
+        which_local_trial_space = int(i);
+      }
+    }
+    if (which_local_trial_space != -1) { 
+      element_gradient_[which_local_trial_space](K_b);
+    }
   }
 
 private:
