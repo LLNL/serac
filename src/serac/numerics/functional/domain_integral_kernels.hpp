@@ -482,7 +482,7 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dk,
         auto N = evaluate_shape_functions<trial_element>(xi_q, J_q);
 
         for (int j = 0; j < trial_ndof; j++) {
-          K_elem[0][j] += (q0 * N[j].value + q1 * N[j].derivative) * dx;
+          K_elem[0][j][0] += (q0 * N[j].value + q1 * N[j].derivative) * dx;
         }
       }
 

@@ -362,6 +362,39 @@ void qoi_test(mfem::ParMesh& mesh, H1<p1> trial1, H1<p2> trial2, Dimension<dim>)
   check_gradient(f, U1, U2);
 }
 
+TEST(QoI, DependsOnVectorValuedInput) {
+  constexpr int p = 2;
+  constexpr int dim = 3;
+
+  mfem::ParMesh & mesh = *mesh3D;
+
+  auto                        fec = mfem::H1_FECollection(p, dim);
+  mfem::ParFiniteElementSpace fespace(&mesh, &fec, dim);
+
+  mfem::ParGridFunction     U_gf(&fespace);
+  mfem::VectorFunctionCoefficient x_squared(dim, [](const mfem::Vector x, mfem::Vector & y) { 
+    y = 0.0;
+    y[0] = x[0] * x[0];
+  });
+  U_gf.ProjectCoefficient(x_squared);
+
+  mfem::HypreParVector* tmp = fespace.NewTrueDofVector();
+  mfem::HypreParVector  U   = *tmp;
+  U_gf.GetTrueDofs(U);
+
+  // Define the types for the test and trial spaces using the function arguments
+  using trial_space = H1<p, dim>;
+
+  Functional<double(trial_space)> f({&fespace});
+  f.AddVolumeIntegral(DependsOn<0>{}, [&](auto /*x*/, auto u) { return norm(serac::get<0>(u)); }, mesh);
+
+  double exact_answer = 512.0 / 3.0; // \int_0^8 x^2 dx = 512/3
+  double relative_error = (f(U) - exact_answer) / exact_answer;
+  EXPECT_NEAR(0.0, relative_error, 1.0e-10);
+
+  delete tmp;
+}
+
 TEST(QoI, AddAreaIntegral) {
   constexpr int p = 1;
   constexpr int dim = 2;
@@ -380,7 +413,7 @@ TEST(QoI, AddAreaIntegral) {
   U_gf.GetTrueDofs(U);
 
   // Define the types for the test and trial spaces using the function arguments
-  using trial_space = H1<1>;
+  using trial_space = H1<p>;
 
   Functional<double(trial_space)> measure({&fespace});
   measure.AddAreaIntegral(DependsOn<>{}, [&](auto /*x*/) { return 1.0; }, mesh);
@@ -408,7 +441,7 @@ TEST(QoI, AddVolumeIntegral) {
   U_gf.GetTrueDofs(U);
 
   // Define the types for the test and trial spaces using the function arguments
-  using trial_space = H1<1>;
+  using trial_space = H1<p>;
 
   Functional<double(trial_space)> measure({&fespace});
   measure.AddVolumeIntegral(DependsOn<>{}, [&](auto /*x*/) { return 1.0; }, mesh);
