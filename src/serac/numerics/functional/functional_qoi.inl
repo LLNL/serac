@@ -223,10 +223,10 @@ public:
    *
    * @brief Adds an area integral, i.e., over 2D elements in R^2
    */
-  template <typename lambda, typename qpt_data_type = Nothing>
-  void AddAreaIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = NoQData)
+  template <int ... args, typename lambda, typename qpt_data_type = Nothing>
+  void AddAreaIntegral(DependsOn< args ... > which_args, lambda&& integrand, mfem::Mesh& domain, std::shared_ptr< QuadratureData<qpt_data_type> > & data = NoQData)
   {
-    AddDomainIntegral(Dimension<2>{}, integrand, domain, data);
+    AddDomainIntegral(Dimension<2>{}, which_args, integrand, domain, data);
   }
 
   /**
@@ -239,7 +239,7 @@ public:
    * @brief Adds a volume integral, i.e., over 3D elements in R^3
    */
   template <int ... args, typename lambda, typename qpt_data_type = Nothing>
-  void AddVolumeIntegral(DependsOn< args ... > which_args, lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = NoQData)
+  void AddVolumeIntegral(DependsOn< args ... > which_args, lambda&& integrand, mfem::Mesh& domain, std::shared_ptr< QuadratureData<qpt_data_type> > & data = NoQData)
   {
     AddDomainIntegral(Dimension<3>{}, which_args, integrand, domain, data);
   }

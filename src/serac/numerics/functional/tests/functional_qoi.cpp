@@ -362,6 +362,62 @@ void qoi_test(mfem::ParMesh& mesh, H1<p1> trial1, H1<p2> trial2, Dimension<dim>)
   check_gradient(f, U1, U2);
 }
 
+TEST(QoI, AddAreaIntegral) {
+  constexpr int p = 1;
+  constexpr int dim = 2;
+
+  mfem::ParMesh & mesh = *mesh2D;
+
+  auto                        fec = mfem::H1_FECollection(p, dim);
+  mfem::ParFiniteElementSpace fespace(&mesh, &fec);
+
+  mfem::ParGridFunction     U_gf(&fespace);
+  mfem::FunctionCoefficient x_squared([](mfem::Vector x) { return x[0] * x[0]; });
+  U_gf.ProjectCoefficient(x_squared);
+
+  mfem::HypreParVector* tmp = fespace.NewTrueDofVector();
+  mfem::HypreParVector  U   = *tmp;
+  U_gf.GetTrueDofs(U);
+
+  // Define the types for the test and trial spaces using the function arguments
+  using trial_space = H1<1>;
+
+  Functional<double(trial_space)> measure({&fespace});
+  measure.AddAreaIntegral(DependsOn<>{}, [&](auto /*x*/) { return 1.0; }, mesh);
+  double relative_error = (measure(U) - measure_mfem(mesh)) / measure(U);
+  EXPECT_NEAR(0.0, relative_error, 1.0e-10);
+
+  delete tmp;
+}
+
+TEST(QoI, AddVolumeIntegral) {
+  constexpr int p = 1;
+  constexpr int dim = 3;
+
+  mfem::ParMesh & mesh = *mesh3D;
+
+  auto                        fec = mfem::H1_FECollection(p, dim);
+  mfem::ParFiniteElementSpace fespace(&mesh, &fec);
+
+  mfem::ParGridFunction     U_gf(&fespace);
+  mfem::FunctionCoefficient x_squared([](mfem::Vector x) { return x[0] * x[0]; });
+  U_gf.ProjectCoefficient(x_squared);
+
+  mfem::HypreParVector* tmp = fespace.NewTrueDofVector();
+  mfem::HypreParVector  U   = *tmp;
+  U_gf.GetTrueDofs(U);
+
+  // Define the types for the test and trial spaces using the function arguments
+  using trial_space = H1<1>;
+
+  Functional<double(trial_space)> measure({&fespace});
+  measure.AddVolumeIntegral(DependsOn<>{}, [&](auto /*x*/) { return 1.0; }, mesh);
+  double relative_error = (measure(U) - measure_mfem(mesh)) / measure(U);
+  EXPECT_NEAR(0.0, relative_error, 1.0e-10);
+
+  delete tmp;
+}
+
 // clang-format off
 TEST(Measure, 2DLinear   ) { qoi_test(*mesh2D, H1<1>{}, Dimension<2>{}, WhichTest::Measure); }
 TEST(Measure, 2DQuadratic) { qoi_test(*mesh2D, H1<2>{}, Dimension<2>{}, WhichTest::Measure); }
