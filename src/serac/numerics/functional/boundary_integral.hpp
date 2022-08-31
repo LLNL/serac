@@ -52,6 +52,8 @@ public:
   BoundaryIntegral(test, serac::tuple< trials ... >, size_t num_elements, const mfem::Vector& J, const mfem::Vector& X, const mfem::Vector& N,
                    Dimension<dim>, lambda_type&& qf, std::vector<int> arg_indices)
   {
+    static_assert(((trials::family == Family::H1) && ...) , "Error: boundary integrals currently only support H1 trial spaces");
+
     argument_indices = arg_indices;
 
     constexpr size_t num_active_trial_spaces = sizeof ... (trials);
