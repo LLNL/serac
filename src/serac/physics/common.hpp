@@ -54,4 +54,23 @@ struct SolverOptions {
   std::optional<TimesteppingOptions> dynamic = std::nullopt;
 };
 
+/**
+ * @brief Enum to set the geometric nonlinearity flag
+ *
+ */
+enum class GeometricNonlinearities
+{
+  On, /**< Include geometric nonlinearities */
+  Off /**< Do not include geometric nonlinearities */
+};
+
+/**
+ * @brief Flag to enable shape diplacement (and its gradient) in a physics module
+ */
+enum class ShapeDisplacement
+{
+  On, /**< Allow shape displacement and its gradient */
+  Off /**< Don't allow displacement and its gradient */
+};
+
 }  // namespace serac
