@@ -215,7 +215,10 @@ public:
    *
    * @param shape_displacement the values to use for the shape displacement
    */
-  void setShapeDisplacement(const FiniteElementState& shape_displacement) { shape_displacement_ = shape_displacement; }
+  void setShapeDisplacement(const FiniteElementState& shape_displacement) { 
+    // TODO why isn't the assignment operator working on FiniteElementState?
+    static_cast<mfem::HypreParVector&>(shape_displacement_) = shape_displacement; 
+  }
 
   /**
    * @brief Create a shared ptr to a quadrature data buffer for the given material type
