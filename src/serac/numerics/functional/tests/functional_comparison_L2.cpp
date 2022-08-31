@@ -120,6 +120,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
 }
 
+TEST(L2, 2DConstant) { functional_test(*mesh2D, L2<0>{}, L2<0>{}, Dimension<2>{}); }
 TEST(L2, 2DLinear) { functional_test(*mesh2D, L2<1>{}, L2<1>{}, Dimension<2>{}); }
 TEST(L2, 2DQuadratic) { functional_test(*mesh2D, L2<2>{}, L2<2>{}, Dimension<2>{}); }
 TEST(L2, 2DCubic) { functional_test(*mesh2D, L2<3>{}, L2<3>{}, Dimension<2>{}); }
