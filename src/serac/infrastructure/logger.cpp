@@ -51,17 +51,11 @@ bool initialize(MPI_Comm comm)
     d_format_string  = "[<RANK>]" + d_format_string;
     we_format_string = "[<RANK>]" + we_format_string;
 
-#ifdef SERAC_USE_LUMBERJACK
     const int RLIMIT = 8;
 
     i_logstream  = new slic::LumberjackStream(&std::cout, comm, RLIMIT, i_format_string);
     d_logstream  = new slic::LumberjackStream(&std::cout, comm, RLIMIT, d_format_string);
     we_logstream = new slic::LumberjackStream(&std::cerr, comm, RLIMIT, we_format_string);
-#else
-    i_logstream  = new slic::SynchronizedStream(&std::cout, comm, i_format_string);
-    d_logstream  = new slic::SynchronizedStream(&std::cout, comm, d_format_string);
-    we_logstream = new slic::SynchronizedStream(&std::cerr, comm, we_format_string);
-#endif
   } else {
     i_logstream  = new slic::GenericOutputStream(&std::cout, i_format_string);
     d_logstream  = new slic::GenericOutputStream(&std::cout, d_format_string);
