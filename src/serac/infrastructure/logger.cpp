@@ -76,8 +76,10 @@ bool initialize(MPI_Comm comm)
   addStreamToMsgLevel(we_logstream, slic::message::Warning);
   addStreamToMsgLevel(we_logstream, slic::message::Error);
 
-  // Exit gracefully on error
-  slic::setAbortFunction([]() { exitGracefully(true); });
+  // Set SLIC abort functionality
+  // NOTE: Do not set a collective abort function via `slic::setAbortFunction`.
+  // This can cause runs to hang. SLIC flushs locally on the node that fails,
+  // so that the error message is not lost.
   slic::setAbortOnError(true);
   slic::setAbortOnWarning(false);
 
