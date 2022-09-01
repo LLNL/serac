@@ -78,7 +78,7 @@ int main(int argc, char* argv[]) {
   // ┃ - - - - - - - - - - - - ┃
   // ┗━━━━━━━━━━━━━━━━━━━━━━━━━┛--> x
 
-  int lceArrangementTag = 3;
+  int lceArrangementTag = 4;
   auto gamma_func = [lceArrangementTag](const mfem::Vector& x, double) -> double 
   { 
     if (lceArrangementTag==1)
@@ -91,17 +91,17 @@ int main(int argc, char* argv[]) {
     }
     else if (lceArrangementTag==3)
     {
-      return ( (x[0]-2.0)*(x[1]-2.0) > 0.0) ? 0.667*M_PI_2 : 0.667*M_PI_2; 
+      return ( (x[0]-2.0)*(x[1]-2.0) > 0.0) ? 0.333*M_PI_2 : 0.667*M_PI_2; 
     }
     else
     {
-      double rad = 0.25;
+      double rad = 0.65;
       return ( 
         std::pow(x[0]-3.0, 2) + std::pow(x[1]-3.0, 2) - std::pow(rad, 2) < 0.0 ||  
         std::pow(x[0]-1.0, 2) + std::pow(x[1]-3.0, 2) - std::pow(rad, 2) < 0.0 ||  
         std::pow(x[0]-3.0, 2) + std::pow(x[1]-1.0, 2) - std::pow(rad, 2) < 0.0 ||  
         std::pow(x[0]-1.0, 2) + std::pow(x[1]-1.0, 2) - std::pow(rad, 2) < 0.0
-        )? M_PI_2 : 0.0; 
+        )? 0.333*M_PI_2 : 0.667*M_PI_2; 
     }
   };
 
@@ -143,7 +143,8 @@ int main(int argc, char* argv[]) {
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  solid_solver.outputState("LCE_tensile_test_paraview_60d_60d"); 
+  std::string output_filename = "LCE_tensile_test_paraview_rad_0p65_4_30d_60d";
+  solid_solver.outputState(output_filename); 
 
   double t = 0.0;
   double tmax = 1.0;
@@ -160,7 +161,7 @@ int main(int argc, char* argv[]) {
     }
     
     solid_solver.advanceTimestep(dt);
-    solid_solver.outputState("LCE_tensile_test_paraview_60d_60d");
+    solid_solver.outputState(output_filename);
 
     t += dt;
     temperature = initial_temperature * (1.0 - (t / tmax)) + final_temperature * (t / tmax);
