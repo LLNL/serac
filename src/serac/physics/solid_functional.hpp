@@ -105,6 +105,7 @@ public:
    * @param options The options for the linear, nonlinear, and ODE solves
    * @param geom_nonlin Flag to include geometric nonlinearities
    * @param name An optional name for the physics module instance
+   * @param calc_shape A flag for computing the shape displacement and associated sensitivity
    */
 
   SolidFunctional(const SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
@@ -649,6 +650,14 @@ public:
     return *parameter_sensitivities_[parameter_field];
   }
 
+  /**
+   * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
+   * problem with respect to the shape displacement field
+   *
+   * @return The sensitivity with respect to the shape displacement
+   *
+   * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
+   */
   FiniteElementDual& computeShapeSensitivity()
   {
     auto drdshape = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<2>{}, displacement_, zero_,
