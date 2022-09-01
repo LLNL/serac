@@ -70,7 +70,7 @@ enum class GeometricNonlinearities
 enum class ShapeDisplacement
 {
   On, /**< Allow shape displacement and its gradient */
-  Off /**< Don't allow displacement and its gradient */
+  Off /**< Don't allow shape displacement and its gradient */
 };
 
 }  // namespace serac
