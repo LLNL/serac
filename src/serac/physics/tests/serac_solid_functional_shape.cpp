@@ -91,13 +91,13 @@ TEST(solidFunctionalShape, manualNodes)
 
     // Construct a functional-based solid mechanics solver including references to the shape velocity field.
     SolidFunctional<p, dim> solid_solver(options, GeometricNonlinearities::On, "solid_functional",
-                                                                  ShapeDisplacement::On);
+                                         ShapeDisplacement::On);
 
     // Set the initial displacement and boundary condition
     solid_solver.setDisplacementBCs(ess_bdr, bc);
     solid_solver.setDisplacement(bc);
 
-    solid_solver.setShapeDisplacement(user_defined_shape_displacement);
+    solid_solver.shapeDisplacement() = user_defined_shape_displacement;
 
     solid_solver.setMaterial(mat);
 
@@ -161,7 +161,7 @@ TEST(solidFunctionalShape, manualNodes)
 
   for (int i = 0; i < shape_displacement.Size(); ++i) {
     // Check the final displacement norm
-    EXPECT_NEAR(shape_displacement[i], pure_displacement[i], 1.0e-8);
+    EXPECT_NEAR(shape_displacement[i], pure_displacement[i], 1.0e-11);
   }
 }
 

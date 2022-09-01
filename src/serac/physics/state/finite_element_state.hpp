@@ -47,12 +47,84 @@ inline bool is_vector_valued(const GeneralCoefficient& coef)
  */
 class FiniteElementState : public FiniteElementVector {
 public:
-  /**
-   * @brief Use the finite element vector constructors
-   */
-  using FiniteElementVector::FiniteElementVector;
-  using FiniteElementVector::operator=;
   using mfem::Vector::Print;
+
+  /**
+   * @brief Main constructor for building a new finite element state
+   * @param[in] mesh The problem mesh (object does not take ownership)
+   * @param[in] options The options specified, namely those relating to the order of the problem,
+   * the dimension of the FESpace, the type of FEColl, the DOF ordering that should be used,
+   * and the name of the field
+   */
+  FiniteElementState(
+      mfem::ParMesh& mesh,
+      Options&& options = {.order = 1, .vector_dim = 1, .coll = {}, .ordering = mfem::Ordering::byVDIM, .name = ""})
+      : FiniteElementVector(mesh, std::move(options))
+  {
+  }
+
+  /**
+   * @brief Minimal constructor for a FiniteElementState given a finite element space
+   * @param[in] mesh The problem mesh (object does not take ownership)
+   * @param[in] space The space to use for the finite element state. This space is deep copied into the new FE state
+   * @param[in] name The name of the field
+   */
+  FiniteElementState(mfem::ParMesh& mesh, const mfem::ParFiniteElementSpace& space, const std::string& name = "")
+      : FiniteElementVector(mesh, space, name)
+  {
+  }
+
+  /**
+   * @brief Copy constructor
+   *
+   * @param[in] rhs The input state used for construction
+   */
+  FiniteElementState(const FiniteElementState& rhs) : FiniteElementVector(rhs) {}
+
+  /**
+   * @brief Move construct a new Finite Element State object
+   *
+   * @param[in] rhs The input vector used for construction
+   */
+  FiniteElementState(FiniteElementState&& rhs) : FiniteElementVector(std::move(rhs)) {}
+
+  /**
+   * @brief Copy assignment
+   *
+   * @param rhs The right hand side input state
+   * @return The assigned FiniteElementState
+   */
+  FiniteElementState& operator=(const FiniteElementState& rhs)
+  {
+    FiniteElementVector::operator=(rhs);
+    return *this;
+  }
+
+  /**
+   * @brief Copy assignment from a hypre par vector
+   *
+   * @param rhs The rhs input hypre par vector
+   * @return The copy assigned state
+   */
+  FiniteElementState& operator=(const mfem::HypreParVector& rhs)
+  {
+    FiniteElementVector::operator=(rhs);
+    return *this;
+  }
+
+  /**
+   * @brief Set a finite element state to a constant value
+   *
+   * @param value The constant to set the finite element state to
+   * @return The modified finite element state
+   * @note This sets the true degrees of freedom and then broadcasts to the shared grid function entries. This means
+   * that if a different value is given on different processors, a shared DOF will be set to the owning processor value.
+   */
+  FiniteElementState& operator=(const double value)
+  {
+    FiniteElementVector::operator=(value);
+    return *this;
+  }
 
   /**
    * @brief Fill a user-provided grid function based on the underlying true vector

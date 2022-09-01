@@ -211,16 +211,6 @@ public:
   void setParameter(const FiniteElementState& parameter_state, size_t i) { parameter_states_[i] = &parameter_state; }
 
   /**
-   * @brief register the provided FiniteElementState object as the source of values for the shape displacement field
-   *
-   * @param shape_displacement the values to use for the shape displacement
-   */
-  void setShapeDisplacement(const FiniteElementState& shape_displacement) { 
-    // TODO why isn't the assignment operator working on FiniteElementState?
-    static_cast<mfem::HypreParVector&>(shape_displacement_) = shape_displacement; 
-  }
-
-  /**
    * @brief Create a shared ptr to a quadrature data buffer for the given material type
    *
    * @tparam T the type to be created at each quadrature point
@@ -334,8 +324,8 @@ public:
             deformation_grad = deformation_grad + du_dX;
           }
 
-          auto flux = dot(inv(deformation_grad), stress) * det(deformation_grad);
-          return serac::tuple{material.density * d2u_dt2, flux};
+          auto flux = dot(stress, transpose(inv(deformation_grad))) * det(deformation_grad);
+          return serac::tuple{material.density * d2u_dt2, transpose(flux)};
         },
         mesh_, qdata);
   }
@@ -649,7 +639,7 @@ public:
   template <int parameter_field>
   FiniteElementDual& computeSensitivity()
   {
-    auto drdparam = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<parameter_field + 2>{}, displacement_, zero_,
+    auto drdparam = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<parameter_field + 3>{}, displacement_, zero_,
                                                         shape_displacement_, *parameter_states_[parameter_indices]...));
 
     auto drdparam_mat = assemble(drdparam);
@@ -661,12 +651,12 @@ public:
 
   FiniteElementDual& computeShapeSensitivity()
   {
-    auto drdparam = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<2>{}, displacement_, zero_,
+    auto drdshape = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<2>{}, displacement_, zero_,
                                                         shape_displacement_, *parameter_states_[parameter_indices]...));
 
-    auto drdparam_mat = assemble(drdparam);
+    auto drdshape_mat = assemble(drdshape);
 
-    drdparam_mat->MultTranspose(adjoint_displacement_, shape_sensitivity_);
+    drdshape_mat->MultTranspose(adjoint_displacement_, shape_sensitivity_);
 
     return shape_sensitivity_;
   }
@@ -690,6 +680,16 @@ public:
 
   /// @overload
   serac::FiniteElementState& adjointDisplacement() { return adjoint_displacement_; };
+
+  /**
+   * @brief Get the shape displacement state
+   *
+   * @return A reference to the current shape displacement finite element state
+   */
+  const serac::FiniteElementState& shapeDisplacement() const { return shape_displacement_; };
+
+  /// @overload
+  serac::FiniteElementState& shapeDisplacement() { return shape_displacement_; };
 
   /**
    * @brief Get the velocity state
@@ -785,7 +785,12 @@ protected:
   /// @brief A flag denoting whether to compute geometric nonlinearities in the residual
   GeometricNonlinearities geom_nonlin_;
 
-  /// @brief A flag denoting whether to calculate a shape displacement field and its derivative
+  /**
+   * @brief A Flag denoting whether to calculate the shape displacement field or not
+   *
+   * @note This is currently not used as the shape displacement field is always constructed. It is here
+   * to maintain a stable API when this feature is added.
+   */
   ShapeDisplacement calc_shape_;
 
   /// @brief Coefficient containing the essential boundary values
