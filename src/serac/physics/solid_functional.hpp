@@ -325,7 +325,11 @@ public:
             deformation_grad = deformation_grad + du_dX;
           }
 
-          auto flux = dot(stress, transpose(inv(deformation_grad)));
+          // Note that the jacobian needs the fixup for the shape displacement.
+          // The material returns Kirchoff stress, which contains det(du / dX'). We want
+          // The final Jacobian to be det(du / dX), so we compute
+          // det(du / dX) = det(du / dX') * det(dX' / dX) = det(du / dX') * det(I + dp / dX)
+          auto flux = dot(stress, transpose(inv(deformation_grad))) * det(I + dp_dX);
           return serac::tuple{material.density * d2u_dt2, transpose(flux)};
         },
         mesh_, qdata);
