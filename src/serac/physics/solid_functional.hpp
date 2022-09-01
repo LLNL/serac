@@ -324,7 +324,7 @@ public:
             deformation_grad = deformation_grad + du_dX;
           }
 
-          auto flux = dot(stress, transpose(inv(deformation_grad))) * det(deformation_grad);
+          auto flux = dot(stress, transpose(inv(deformation_grad)));
           return serac::tuple{material.density * d2u_dt2, transpose(flux)};
         },
         mesh_, qdata);
