@@ -39,6 +39,9 @@ const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
                                                        .lin_solver  = LinearSolver::GMRES,
                                                        .prec        = HypreBoomerAMGPrec{}};
 
+/// the default direct solver option for solving the linear stiffness equations
+const DirectSolverOptions direct_linear_options = {.print_level = 0};
+
 /**
  * @brief default iteration limits, tolerances and verbosity for solving the
  * systems of nonlinear equations that show up in implicit
@@ -50,9 +53,17 @@ const NonlinearSolverOptions default_nonlinear_options = {
 /// the default linear and nonlinear solver options for (quasi-)static analyses
 const SolverOptions default_static_options = {default_linear_options, default_nonlinear_options};
 
+/// solver options that use a direct linear solver for (quasi-)static analyses
+const SolverOptions direct_static_options = {direct_linear_options, default_nonlinear_options};
+
 /// the default solver and time integration options for dynamic analyses
 const SolverOptions default_dynamic_options = {
     default_linear_options, default_nonlinear_options,
+    TimesteppingOptions{TimestepMethod::AverageAcceleration, DirichletEnforcementMethod::RateControl}};
+
+/// the direct solver and time integration options for dynamic analyses
+const SolverOptions direct_dynamic_options = {
+    direct_linear_options, default_nonlinear_options,
     TimesteppingOptions{TimestepMethod::AverageAcceleration, DirichletEnforcementMethod::RateControl}};
 
 }  // namespace solid_mechanics
