@@ -48,8 +48,8 @@ inline bool is_vector_valued(const GeneralCoefficient& coef)
 class FiniteElementState : public FiniteElementVector {
 public:
   using FiniteElementVector::FiniteElementVector;
-  using mfem::Vector::Print;
   using FiniteElementVector::operator=;
+  using mfem::Vector::Print;
 
   /**
    * @brief Copy constructor

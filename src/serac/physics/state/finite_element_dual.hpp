@@ -28,8 +28,8 @@ namespace serac {
 class FiniteElementDual : public FiniteElementVector {
 public:
   using FiniteElementVector::FiniteElementVector;
-  using mfem::Vector::Print;
   using FiniteElementVector::operator=;
+  using mfem::Vector::Print;
 
   /**
    * @brief Copy constructor
