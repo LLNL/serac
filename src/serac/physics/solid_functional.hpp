@@ -262,6 +262,41 @@ public:
   }
 
   /**
+   * @brief register a custom domain integral calculation as part of the residual
+   *
+   * @tparam active_parameters a list of indices, describing which parameters to pass to the q-function
+   * @tparam StateType the type that contains the internal variables (if any) for q-function 
+   * @param qfunction a callable that returns a tuple of body-force and stress
+   * @param qdata the buffer of material internal variables at each quadrature point
+   *
+   * ~~~ {.cpp}
+   * 
+   *  double lambda = 500.0;
+   *  double mu = 500.0;
+   *  solid_mechanics.addCustomDomainIntegral(DependsOn<>{}, [=](auto x, auto displacement, auto acceleration){
+   *    auto du_dx = serac::get<1>(displacement);
+   *
+   *    auto I       = Identity<dim>();
+   *    auto epsilon = 0.5 * (transpose(du_dx) + du_dx);
+   *    auto stress = lambda * tr(epsilon) * I + 2.0 * mu * epsilon;
+   *   
+   *    auto d2u_dt2 = serac::get<0>(acceleration);
+   *    double rho = 1.0 + x[0]; // spatially-varying density
+   *   
+   *    return serac::tuple{rho * d2u_dt2, stress};
+   *  });
+   * 
+   * ~~~
+   */
+  template <int ... active_parameters, typename callable, typename StateType = Nothing>
+  void addCustomDomainIntegral(
+    DependsOn< active_parameters ... >, 
+    callable qfunction, std::shared_ptr<QuadratureData<StateType>> qdata = NoQData)
+  {
+    residual_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1, active_parameters + 2 ... >{}, qfunction, mesh_, qdata);
+  }
+
+  /**
    * @brief Set the material stress response and mass properties for the physics module
    *
    * @tparam MaterialType The solid material type
