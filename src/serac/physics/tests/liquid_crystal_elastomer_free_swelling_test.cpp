@@ -165,7 +165,7 @@ int main(int argc, char* argv[]) {
   solid_solver.setMaterial(mat, qdata);
 
   // prescribe symmetry conditions
-  auto zeroFunc = [](const mfem::Vector /*x*/){ return 0.0;};
+  auto zeroFunc = []( const mfem::Vector /*x*/){ return 0.0;};
   solid_solver.setDisplacementBCs({1}, zeroFunc, 1); // bottom face y-dir disp = 0
   solid_solver.setDisplacementBCs({2}, zeroFunc, 0); // left face x-dir disp = 0
   solid_solver.setDisplacementBCs({3}, zeroFunc, 2); // back face z-dir disp = 0
@@ -189,15 +189,41 @@ int main(int argc, char* argv[]) {
     solid_solver.advanceTimestep(dt);
     solid_solver.outputState(output_filename);
 
-    FiniteElementState displacement = solid_solver.displacement();
-    displacement.Print();
+    FiniteElementState &displacement = solid_solver.displacement();
+    auto &fes = displacement.space();
+
+    mfem::Vector dispVecX(fes.GetNDofs()); dispVecX = 0.0;
+    mfem::Vector dispVecY(fes.GetNDofs()); dispVecY = 0.0;
+    mfem::Vector dispVecZ(fes.GetNDofs()); dispVecZ = 0.0;
+
+    // int nvdofs = -1;
+
+std::cout << "\n... NDofs: "<< fes.GetNDofs() << std::endl;
+std::cout << "\n... VSize: "<< fes.GetVSize() << std::endl;
+std::cout << "\n... NVDofs: "<< fes.GetNVDofs() << std::endl;
+std::cout << "\n... GetVDim: "<< fes.GetVDim() << std::endl;
+
+std::cout << "\n... displacement.Size(): "<< displacement.Size()<< std::endl;
+
+  for (int k = 0; k < fes.GetNDofs(); k++) 
+  {
+    dispVecX(k) = displacement(3*k+0);
+    dispVecY(k) = displacement(3*k+1);
+    dispVecZ(k) = displacement(3*k+2);
+  }
+
     if(rank==0)
     {
       std::cout 
       << "\n... Entering time step: "<< i + 1
       << "\n... At time: "<< t
       << "\n... And with uniform temperature of: " << initial_temperature * (1.0 - (t / tmax)) + final_temperature * (t / tmax) 
-      <<"\n... Max displacement: " << displacement.Min()
+      <<"\n... Min X displacement: " << dispVecX.Min()
+      <<"\n... Max X displacement: " << dispVecX.Max()
+      <<"\n... Min Y displacement: " << dispVecY.Min()
+      <<"\n... Max Y displacement: " << dispVecY.Max()
+      <<"\n... Min Z displacement: " << dispVecZ.Min()
+      <<"\n... Max Z displacement: " << dispVecZ.Max()
       << std::endl;
     }
 
