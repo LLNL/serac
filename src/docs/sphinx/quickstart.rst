@@ -329,7 +329,8 @@ install the package to meet this dependency:
 
 .. code-block:: bash
 
-   $ <path/to/virtual-env>/bin/pip install clingo
+   $ source <path/to/virtual-env>/bin/activate
+   $ pip install clingo
 
 Configuring Spack
 ^^^^^^^^^^^^^^^^^
