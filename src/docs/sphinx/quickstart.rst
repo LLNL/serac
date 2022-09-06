@@ -359,7 +359,7 @@ Example ``compilers.yaml``:
 
 NOTES: 
 
-* The ``operating_system`` field should be set according to your macOS version. (For example, ``"mojave", "catalina", "bigsur", "monterey", "ventura"``).
+* The ``operating_system`` field should be set according to your macOS version. (For example, ``mojave``, ``catalina``, ``bigsur``, ``monterey``, ``ventura``).
 * By default, MacPorts installs packages in ``/opt/local``; the above ``paths`` need to be adjusted if you choose a different location.
   This of course applies to the packages in ``packages.yaml`` as well.
 * As noted above, the ``port select ...`` commands will set which version of clang gets invoked by the executables ``/opt/local/bin/clang``, etc.
@@ -386,89 +386,89 @@ Here is an example of ``packages.yaml``:
    openmpi:
       externals:
       - spec: openmpi@4.1.4
-         prefix: /opt/local
+        prefix: /opt/local
    
    netlib-lapack:
       buildable: false
       externals:
       - spec: netlib-lapack@3.10.1
-         prefix: /opt/local
+        prefix: /opt/local
    autoconf:
       buildable: false
       externals:
       - spec: autoconf@2.71
-         prefix: /opt/local
+        prefix: /opt/local
    automake:
       buildable: false
       externals:
       - spec: automake@1.16.5
-         prefix: /opt/local
+        prefix: /opt/local
    bzip2:
       buildable: false
       externals:
       - spec: bzip2@1.0.8
-         prefix: /opt/local
+        prefix: /opt/local
    cmake:
       version: [3.22.4]
       buildable: false
       externals:
       - spec: cmake@3.22.4
-         prefix: /opt/local
+        prefix: /opt/local
    gettext:
       buildable: false
       externals:
       - spec: gettext@0.21
-         prefix: /opt/local
+        prefix: /opt/local
    graphviz:
       buildable: false
       externals:
       - spec: graphviz@2.50.0
-         prefix: /opt/local
+        prefix: /opt/local
    libtool:
       buildable: false
       externals:
       - spec: libtool@2.4.6
-         prefix: /opt/local
+        prefix: /opt/local
    libx11:
       buildable: false
       externals:
       - spec: libx11@1.8.1
-         prefix: /opt/local
+        prefix: /opt/local
    m4:
       buildable: false
       externals:
       - spec: m4@1.4.6
-         prefix: /usr
+        prefix: /usr
    perl:
       buildable: false
       externals:
       - spec: perl@v5.30.2
-         prefix: /usr
+        prefix: /usr
    pkg-config:
       buildable: false
       externals:
       - spec: pkg-config@0.29.2
-         prefix: /opt/local
+        prefix: /opt/local
    tar:
       buildable: false
       externals:
       - spec: tar@3.3.2
-         prefix: /usr
+        prefix: /usr
    readline:
       buildable: false
       externals:
       - spec: readline@8.1.2.000
-         prefix: /opt/local
+        prefix: /opt/local
    unzip:
       buildable: false
       externals:
       - spec: unzip@6.0
-         prefix: /usr
+        prefix: /usr
    zlib:
       buildable: false
       externals:
       - spec: zlib@1.2.12
-         prefix: /opt/local
+        prefix: /opt/local
 
 Notes:
 
@@ -478,7 +478,7 @@ Notes:
 
 .. code-block:: bash
 
-   $ port info clang-12 openmpi-clang12 gcc12 bzip2 cmake autoconf automake gettext graphviz pkgconfig xorg-libX11 lapack readline zlib
+   $ port info clang-12 openmpi-clang12 gcc12 bzip2 autoconf automake gettext graphviz pkgconfig xorg-libX11 lapack readline zlib
 
 * Use the version number provided, taking the values up to, but excluding, any underscore.
 * The packages not installed by MacPorts are the ones that have ``/usr`` as the prefix.
