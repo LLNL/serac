@@ -126,9 +126,11 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
    */
   void operator()(const std::vector<const mfem::Vector*> U, mfem::Vector& R, bool update_state)
   {
-    std::array<const double*, num_trial_spaces> ptrs;
-    for (uint32_t j = 0; j < num_trial_spaces; j++) {
-      ptrs[j] = U[j]->Read();
+    std::array<const double*, num_trial_spaces> ptrs{};
+    if constexpr (num_trial_spaces > 0) {
+      for (uint32_t j = 0; j < num_trial_spaces; j++) {
+        ptrs[j] = U[j]->Read();
+      }
     }
     EVector_t u(ptrs, std::size_t(num_elements_));
 
@@ -234,9 +236,11 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
    */
   void operator()(const std::vector<const mfem::Vector*> U, mfem::Vector& R, bool update_state)
   {
-    std::array<const double*, num_trial_spaces> ptrs;
-    for (uint32_t j = 0; j < num_trial_spaces; j++) {
-      ptrs[j] = U[j]->Read();
+    std::array<const double*, num_trial_spaces> ptrs{};
+    if constexpr (num_trial_spaces > 0) {
+      for (uint32_t j = 0; j < num_trial_spaces; j++) {
+        ptrs[j] = U[j]->Read();
+      }
     }
     EVector_t u(ptrs, std::size_t(num_elements_));
 
