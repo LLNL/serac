@@ -38,12 +38,16 @@ public:
   /**
    * @brief Constructs a @p DomainIntegral from a user-provided quadrature function
    * @tparam dim The dimension of the mesh
+   * @tparam test the test function space 
+   * @tparam trials the trial function space(s)
    * @tparam qpt_data_type The type of the data to store for each quadrature point
    * @param[in] num_elements The number of elements in the mesh
    * @param[in] J The Jacobians of the element transformations at all quadrature points
    * @param[in] X The actual (not reference) coordinates of all quadrature points
-   * @see mfem::GeometricFactors
    * @param[in] qf The user-provided quadrature function
+   * @param[in] arg_indices indices used to select which trail spaces to use in evaluation kernels
+   * 
+   * @see mfem::GeometricFactors
    * @param[inout] qdata The data for each quadrature point
    * @note The @p Dimension parameters are used to assist in the deduction of the @a dim
    * and @a dim template parameters

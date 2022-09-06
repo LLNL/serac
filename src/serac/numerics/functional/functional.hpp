@@ -326,6 +326,7 @@ public:
    * @brief Adds an area integral, i.e., over 2D elements in R^2 space
    * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
    * @tparam qpt_data_type The type of the data to store for each quadrature point
+   * @param[in] which_args a tag type used to indicate which trial spaces are required by this calculation
    * @param[in] integrand The quadrature function
    * @param[in] domain The mesh to evaluate the integral on
    * @param[inout] data The data for each quadrature point
@@ -341,6 +342,7 @@ public:
    * @brief Adds a volume integral, i.e., over 3D elements in R^3 space
    * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
    * @tparam qpt_data_type The type of the data to store for each quadrature point
+   * @param[in] which_args a tag type used to indicate which trial spaces are required by this calculation
    * @param[in] integrand The quadrature function
    * @param[in] domain The mesh to evaluate the integral on
    * @param[inout] data The data for each quadrature point
