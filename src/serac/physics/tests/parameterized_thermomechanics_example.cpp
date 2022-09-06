@@ -155,7 +155,8 @@ int main(int argc, char* argv[])
   std::cout << "vertical displacement integrated over the top surface: " << initial_qoi << std::endl;
 
   Functional<double(H1<p, dim>)> area({&simulation.displacement().space()});
-  area.AddSurfaceIntegral(DependsOn<>{}, [=](auto x, auto /*n*/) { return (x[2] > 0.99 * height) ? 1.0 : 0.0; }, mesh);
+  area.AddSurfaceIntegral(
+      DependsOn<>{}, [=](auto x, auto /*n*/) { return (x[2] > 0.99 * height) ? 1.0 : 0.0; }, mesh);
 
   std::cout << "total area of the top surface: " << area(simulation.displacement()) << std::endl;
 

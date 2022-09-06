@@ -217,14 +217,17 @@ public:
    * @pre MaterialType must have a public member variable `density`
    * @pre MaterialType must define operator() that returns the Kirchoff stress, heat flux and heat source terms
    */
-  template <int ... active_parameters, typename MaterialType, typename StateType>
-  void setMaterial(DependsOn< active_parameters ... >, MaterialType material, std::shared_ptr<QuadratureData<StateType>> qdata)
+  template <int... active_parameters, typename MaterialType, typename StateType>
+  void setMaterial(DependsOn<active_parameters...>, MaterialType material,
+                   std::shared_ptr<QuadratureData<StateType>> qdata)
   {
     // note: these parameter indices are offset by 1 since, internally, this module uses the first parameter
     // to communicate the temperature and displacement field information to the other physics module
     //
-    thermal_functional_.setMaterial(DependsOn< 0, active_parameters + 1 ... >{}, ThermalMaterialInterface<MaterialType>{material});
-    solid_functional_.setMaterial(DependsOn< 0, active_parameters + 1 ... >{}, MechanicalMaterialInterface<MaterialType>{material}, qdata);
+    thermal_functional_.setMaterial(DependsOn<0, active_parameters + 1 ...>{},
+                                    ThermalMaterialInterface<MaterialType>{material});
+    solid_functional_.setMaterial(DependsOn<0, active_parameters + 1 ...>{},
+                                  MechanicalMaterialInterface<MaterialType>{material}, qdata);
   }
 
   /// @overload
@@ -233,8 +236,6 @@ public:
   {
     setMaterial(DependsOn<>{}, material, qdata);
   }
-
-
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)

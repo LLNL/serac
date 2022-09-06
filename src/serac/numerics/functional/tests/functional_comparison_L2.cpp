@@ -80,8 +80,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
 
   // Add the total domain residual term to the weak form
   residual.AddDomainIntegral(
-      Dimension<dim>{},
-      DependsOn<0>{},
+      Dimension<dim>{}, DependsOn<0>{},
       [&]([[maybe_unused]] auto x, [[maybe_unused]] auto temperature) {
         // get the value and the gradient from the input tuple
         auto [u, du_dx] = temperature;
@@ -91,10 +90,10 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
       },
       mesh);
 
-  // uncomment lines below to verify that compile-time error messages 
+  // uncomment lines below to verify that compile-time error messages
   // explain L2 spaces are not currently supported in boundary integrals.
   //
-  //residual.AddBoundaryIntegral(
+  // residual.AddBoundaryIntegral(
   //    Dimension<dim-1>{},
   //    DependsOn<0>{},
   //    [&]([[maybe_unused]] auto x, [[maybe_unused]] auto temperature) { return 1.0; },

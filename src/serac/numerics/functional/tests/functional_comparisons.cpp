@@ -98,8 +98,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
 
   // Add the total domain residual term to the functional
   residual.AddDomainIntegral(
-      Dimension<dim>{},
-      DependsOn<0>{},
+      Dimension<dim>{}, DependsOn<0>{},
       [=](auto x, auto temperature) {
         // get the value and the gradient from the input tuple
         auto [u, du_dx] = temperature;
@@ -198,8 +197,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   Functional<test_space(trial_space)> residual(&fespace, {&fespace});
 
   residual.AddDomainIntegral(
-      Dimension<dim>{},
-      DependsOn<0>{},
+      Dimension<dim>{}, DependsOn<0>{},
       [=](auto /*x*/, auto displacement) {
         auto [u, du_dx] = displacement;
         auto body_force = a * u + I[0];

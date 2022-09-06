@@ -231,9 +231,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
     case WhichTest::Moment: {
       Functional<double(trial_space)> x_moment({&fespace});
       x_moment.AddDomainIntegral(
-          Dimension<dim>{},
-          DependsOn<>{},
-          [&](auto x) { return x[0]; }, mesh);
+          Dimension<dim>{}, DependsOn<>{}, [&](auto x) { return x[0]; }, mesh);
 
       double relative_error = (x_moment(U) - x_moment_mfem(mesh)) / x_moment(U);
 
@@ -255,16 +253,14 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
     case WhichTest::Nonlinear: {
       Functional<double(trial_space)> f({&fespace});
       f.AddDomainIntegral(
-          Dimension<dim>{},
-          DependsOn<0>{},
+          Dimension<dim>{}, DependsOn<0>{},
           [&](auto x, auto temperature) {
             auto [u, grad_u] = temperature;
             return x[0] * x[0] + sin(x[1]) + x[0] * u * u * u;
           },
           mesh);
       f.AddBoundaryIntegral(
-          Dimension<dim - 1>{},
-          DependsOn<0>{},
+          Dimension<dim - 1>{}, DependsOn<0>{},
           [&](auto x, auto /*n*/, auto temperature) {
             auto [u, unused] = temperature;
             return x[0] - x[1] + cos(u * x[1]);
@@ -327,8 +323,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p1> trial1, H1<p2> trial2, Dimension<dim>)
 
   Functional<double(trial_space1, trial_space2)> f({&fespace1, &fespace2});
   f.AddDomainIntegral(
-      Dimension<dim>{},
-      DependsOn<0, 1>{},
+      Dimension<dim>{}, DependsOn<0, 1>{},
       [&](auto x, auto temperature, auto dtemperature_dt) {
         auto [u, grad_u]     = temperature;
         auto [du_dt, unused] = dtemperature_dt;
@@ -336,8 +331,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p1> trial1, H1<p2> trial2, Dimension<dim>)
       },
       mesh);
   f.AddBoundaryIntegral(
-      Dimension<dim - 1>{},
-      DependsOn<0, 1>{},
+      Dimension<dim - 1>{}, DependsOn<0, 1>{},
       [&](auto x, auto /*n*/, auto temperature, auto dtemperature_dt) {
         auto [u, grad_u]     = temperature;
         auto [du_dt, unused] = dtemperature_dt;
@@ -362,18 +356,19 @@ void qoi_test(mfem::ParMesh& mesh, H1<p1> trial1, H1<p2> trial2, Dimension<dim>)
   check_gradient(f, U1, U2);
 }
 
-TEST(QoI, DependsOnVectorValuedInput) {
-  constexpr int p = 2;
+TEST(QoI, DependsOnVectorValuedInput)
+{
+  constexpr int p   = 2;
   constexpr int dim = 3;
 
-  mfem::ParMesh & mesh = *mesh3D;
+  mfem::ParMesh& mesh = *mesh3D;
 
   auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec, dim);
 
-  mfem::ParGridFunction     U_gf(&fespace);
-  mfem::VectorFunctionCoefficient x_squared(dim, [](const mfem::Vector x, mfem::Vector & y) { 
-    y = 0.0;
+  mfem::ParGridFunction           U_gf(&fespace);
+  mfem::VectorFunctionCoefficient x_squared(dim, [](const mfem::Vector x, mfem::Vector& y) {
+    y    = 0.0;
     y[0] = x[0] * x[0];
   });
   U_gf.ProjectCoefficient(x_squared);
@@ -386,20 +381,22 @@ TEST(QoI, DependsOnVectorValuedInput) {
   using trial_space = H1<p, dim>;
 
   Functional<double(trial_space)> f({&fespace});
-  f.AddVolumeIntegral(DependsOn<0>{}, [&](auto /*x*/, auto u) { return norm(serac::get<0>(u)); }, mesh);
+  f.AddVolumeIntegral(
+      DependsOn<0>{}, [&](auto /*x*/, auto u) { return norm(serac::get<0>(u)); }, mesh);
 
-  double exact_answer = 512.0 / 3.0; // \int_0^8 x^2 dx = 512/3
+  double exact_answer   = 512.0 / 3.0;  // \int_0^8 x^2 dx = 512/3
   double relative_error = (f(U) - exact_answer) / exact_answer;
   EXPECT_NEAR(0.0, relative_error, 1.0e-10);
 
   delete tmp;
 }
 
-TEST(QoI, AddAreaIntegral) {
-  constexpr int p = 1;
+TEST(QoI, AddAreaIntegral)
+{
+  constexpr int p   = 1;
   constexpr int dim = 2;
 
-  mfem::ParMesh & mesh = *mesh2D;
+  mfem::ParMesh& mesh = *mesh2D;
 
   auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
@@ -416,18 +413,20 @@ TEST(QoI, AddAreaIntegral) {
   using trial_space = H1<p>;
 
   Functional<double(trial_space)> measure({&fespace});
-  measure.AddAreaIntegral(DependsOn<>{}, [&](auto /*x*/) { return 1.0; }, mesh);
+  measure.AddAreaIntegral(
+      DependsOn<>{}, [&](auto /*x*/) { return 1.0; }, mesh);
   double relative_error = (measure(U) - measure_mfem(mesh)) / measure(U);
   EXPECT_NEAR(0.0, relative_error, 1.0e-10);
 
   delete tmp;
 }
 
-TEST(QoI, AddVolumeIntegral) {
-  constexpr int p = 1;
+TEST(QoI, AddVolumeIntegral)
+{
+  constexpr int p   = 1;
   constexpr int dim = 3;
 
-  mfem::ParMesh & mesh = *mesh3D;
+  mfem::ParMesh& mesh = *mesh3D;
 
   auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
@@ -444,7 +443,8 @@ TEST(QoI, AddVolumeIntegral) {
   using trial_space = H1<p>;
 
   Functional<double(trial_space)> measure({&fespace});
-  measure.AddVolumeIntegral(DependsOn<>{}, [&](auto /*x*/) { return 1.0; }, mesh);
+  measure.AddVolumeIntegral(
+      DependsOn<>{}, [&](auto /*x*/) { return 1.0; }, mesh);
   double relative_error = (measure(U) - measure_mfem(mesh)) / measure(U);
   EXPECT_NEAR(0.0, relative_error, 1.0e-10);
 

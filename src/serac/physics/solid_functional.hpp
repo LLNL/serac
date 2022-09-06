@@ -276,12 +276,12 @@ public:
    * @brief register a custom domain integral calculation as part of the residual
    *
    * @tparam active_parameters a list of indices, describing which parameters to pass to the q-function
-   * @tparam StateType the type that contains the internal variables (if any) for q-function 
+   * @tparam StateType the type that contains the internal variables (if any) for q-function
    * @param qfunction a callable that returns a tuple of body-force and stress
    * @param qdata the buffer of material internal variables at each quadrature point
    *
    * ~~~ {.cpp}
-   * 
+   *
    *  double lambda = 500.0;
    *  double mu = 500.0;
    *  solid_mechanics.addCustomDomainIntegral(DependsOn<>{}, [=](auto x, auto displacement, auto acceleration){
@@ -290,21 +290,21 @@ public:
    *    auto I       = Identity<dim>();
    *    auto epsilon = 0.5 * (transpose(du_dx) + du_dx);
    *    auto stress = lambda * tr(epsilon) * I + 2.0 * mu * epsilon;
-   *   
+   *
    *    auto d2u_dt2 = serac::get<0>(acceleration);
    *    double rho = 1.0 + x[0]; // spatially-varying density
-   *   
+   *
    *    return serac::tuple{rho * d2u_dt2, stress};
    *  });
-   * 
+   *
    * ~~~
    */
-  template <int ... active_parameters, typename callable, typename StateType = Nothing>
-  void addCustomDomainIntegral(
-    DependsOn< active_parameters ... >, 
-    callable qfunction, std::shared_ptr<QuadratureData<StateType>> qdata = NoQData)
+  template <int... active_parameters, typename callable, typename StateType = Nothing>
+  void addCustomDomainIntegral(DependsOn<active_parameters...>, callable qfunction,
+                               std::shared_ptr<QuadratureData<StateType>> qdata = NoQData)
   {
-    residual_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1, active_parameters + 2 ... >{}, qfunction, mesh_, qdata);
+    residual_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1, active_parameters + 2 ...>{}, qfunction, mesh_,
+                                 qdata);
   }
 
   /**
@@ -318,16 +318,15 @@ public:
    * @pre MaterialType must have a public member variable `density`
    * @pre MaterialType must define operator() that returns the Kirchoff stress
    */
-  template <int ... active_parameters, typename MaterialType, typename StateType = Empty>
-  void setMaterial(
-    DependsOn< active_parameters ... >, 
-    MaterialType material, std::shared_ptr<QuadratureData<StateType>> qdata = EmptyQData)
+  template <int... active_parameters, typename MaterialType, typename StateType = Empty>
+  void setMaterial(DependsOn<active_parameters...>, MaterialType material,
+                   std::shared_ptr<QuadratureData<StateType>> qdata = EmptyQData)
   {
     residual_->AddDomainIntegral(
         Dimension<dim>{},
-        DependsOn<0, 1, active_parameters + 2 ... >{}, // the magic number "+2" accounts for the fact that the
-                                                       // displacement and acceleration fields are always-on and come first,
-                                                       // so the `n`th parameter will actually be argument `n+2`
+        DependsOn<0, 1, active_parameters + 2 ...>{},  // the magic number "+2" accounts for the fact that the
+                                                       // displacement and acceleration fields are always-on and come
+                                                       // first, so the `n`th parameter will actually be argument `n+2`
         [this, material](auto /*x*/, auto& state, auto displacement, auto acceleration, auto... params) {
           auto du_dX   = get<DERIVATIVE>(displacement);
           auto d2u_dt2 = get<VALUE>(acceleration);
@@ -385,8 +384,7 @@ public:
   void addBodyForce(BodyForceType body_force)
   {
     residual_->AddDomainIntegral(
-        Dimension<dim>{},
-        DependsOn<0, 1>{},
+        Dimension<dim>{}, DependsOn<0, 1>{},
         [body_force, this](auto x, auto /* displacement */, auto /* acceleration */, auto... /*params*/) {
           // note: this assumes that the body force function is defined
           // per unit volume in the reference configuration
@@ -403,12 +401,11 @@ public:
    *
    * @pre TractionType must have the operator (x, normal, time) to return the thermal flux value
    */
-  template <int ... active_parameters, typename TractionType>
+  template <int... active_parameters, typename TractionType>
   void setPiolaTraction(TractionType traction_function)
   {
     residual_->AddBoundaryIntegral(
-        Dimension<dim - 1>{},
-        DependsOn< 0, 1, active_parameters + 2 ... >{},
+        Dimension<dim - 1>{}, DependsOn<0, 1, active_parameters + 2 ...>{},
         [this, traction_function](auto x, auto n, auto, auto, auto... params) {
           return -1.0 * traction_function(x, n, time_, params...);
         },

@@ -224,12 +224,11 @@ public:
    * @pre MaterialType must have a method density() defining the density
    * @pre MaterialType must have the operator (temperature, d temperature_dx) defined as the thermal flux
    */
-  template <int ... active_parameters, typename MaterialType>
-  void setMaterial(DependsOn< active_parameters ... >, MaterialType material)
+  template <int... active_parameters, typename MaterialType>
+  void setMaterial(DependsOn<active_parameters...>, MaterialType material)
   {
     K_functional_->AddDomainIntegral(
-        Dimension<dim>{},
-        DependsOn<0, active_parameters + 1 ...>{},
+        Dimension<dim>{}, DependsOn<0, active_parameters + 1 ...>{},
         [material](auto x, auto temperature, auto... params) {
           // Get the value and the gradient from the input tuple
           auto [u, du_dx] = temperature;
@@ -242,8 +241,7 @@ public:
         mesh_);
 
     M_functional_->AddDomainIntegral(
-        Dimension<dim>{},
-        DependsOn<0, active_parameters + 1 ...>{},
+        Dimension<dim>{}, DependsOn<0, active_parameters + 1 ...>{},
         [material](auto x, auto d_temperature_dt, auto... params) {
           auto [u, du_dx] = d_temperature_dt;
           auto flux       = serac::zero{};
@@ -263,7 +261,8 @@ public:
 
   /// @overload
   template <typename MaterialType>
-  void setMaterial(MaterialType material) {
+  void setMaterial(MaterialType material)
+  {
     setMaterial(DependsOn<>{}, material);
   }
 
@@ -290,8 +289,8 @@ public:
    *
    * @pre SourceType must have the operator (x, time, temperature, d temperature_dx) defined as the thermal source
    */
-  template < int ... active_parameters, typename SourceType>
-  void setSource(DependsOn< active_parameters ... >, SourceType source_function)
+  template <int... active_parameters, typename SourceType>
+  void setSource(DependsOn<active_parameters...>, SourceType source_function)
   {
     if constexpr (is_parameterized<SourceType>::value) {
       static_assert(source_function.numParameters() == sizeof...(parameter_space),
@@ -302,8 +301,7 @@ public:
     auto parameterized_source = parameterizeSource(source_function);
 
     K_functional_->AddDomainIntegral(
-        Dimension<dim>{},
-        DependsOn<0, active_parameters + 1 ...>{},
+        Dimension<dim>{}, DependsOn<0, active_parameters + 1 ...>{},
         [parameterized_source, this](auto x, auto temperature, auto... params) {
           // Get the value and the gradient from the input tuple
           auto [u, du_dx] = temperature;
@@ -333,19 +331,20 @@ public:
    *
    * @pre FluxType must have the operator (x, normal, temperature) to return the thermal flux value
    */
-  template <int ... active_parameters, typename FluxType>
-  void setFluxBCs(DependsOn< active_parameters ... >, FluxType flux_function)
+  template <int... active_parameters, typename FluxType>
+  void setFluxBCs(DependsOn<active_parameters...>, FluxType flux_function)
   {
     K_functional_->AddBoundaryIntegral(
-        Dimension<dim - 1>{},
-        DependsOn<0, active_parameters + 1 ...>{},
-        [flux_function](auto x, auto n, auto u, auto... params) { return flux_function(x, n, u, params...); },
-        mesh_);
+        Dimension<dim - 1>{}, DependsOn<0, active_parameters + 1 ...>{},
+        [flux_function](auto x, auto n, auto u, auto... params) { return flux_function(x, n, u, params...); }, mesh_);
   }
 
   /// @overload
   template <typename FluxType>
-  void setFluxBCs(FluxType flux_function) { setFluxBCs(DependsOn<>{}, flux_function); }
+  void setFluxBCs(FluxType flux_function)
+  {
+    setFluxBCs(DependsOn<>{}, flux_function);
+  }
 
   /**
    * @brief Get the temperature state

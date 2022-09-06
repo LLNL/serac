@@ -188,7 +188,8 @@ struct ConstantPressure {
    * @tparam dim Spatial dimension
    */
   template <int dim>
-  SERAC_HOST_DEVICE double operator()(const tensor<double, dim>& /* x */, const tensor<double, dim>& n, const double /* t */) const
+  SERAC_HOST_DEVICE double operator()(const tensor<double, dim>& /* x */, const tensor<double, dim>& n,
+                                      const double /* t */) const
   {
     return pressure_ * n;
   }
