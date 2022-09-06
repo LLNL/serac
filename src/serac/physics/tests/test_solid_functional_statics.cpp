@@ -30,9 +30,8 @@ using solid_mechanics::direct_static_options;
  */
 template <int dim>
 class AffineSolution {
- public:
-  AffineSolution():
-    A(dim), b(dim)
+public:
+  AffineSolution() : A(dim), b(dim)
   {
     // clang-format off
     A(0, 0) = 0.110791568544027; A(0, 1) = 0.230421268325901;
