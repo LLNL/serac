@@ -380,6 +380,19 @@ public:
    *
    * @pre BodyForceType must have the operator (x, time) defined as the body force
    */
+  template <int... active_parameters,typename BodyForceType>
+  void addBodyForce(DependsOn<active_parameters...>, BodyForceType body_force)
+  {
+    residual_->AddDomainIntegral(
+        Dimension<dim>{}, DependsOn<0, 1, active_parameters + 2 ...>{},
+        [body_force, this](auto x, auto /* displacement */, auto /* acceleration */, auto... /*params*/) {
+          // note: this assumes that the body force function is defined
+          // per unit volume in the reference configuration
+          return serac::tuple{body_force(x, time_), zero{}};
+        },
+        mesh_);
+  }
+
   template <typename BodyForceType>
   void addBodyForce(BodyForceType body_force)
   {
@@ -402,7 +415,7 @@ public:
    * @pre TractionType must have the operator (x, normal, time) to return the thermal flux value
    */
   template <int... active_parameters, typename TractionType>
-  void setPiolaTraction(TractionType traction_function)
+  void setPiolaTraction(DependsOn<active_parameters...>, TractionType traction_function)
   {
     residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{}, DependsOn<0, 1, active_parameters + 2 ...>{},
@@ -410,6 +423,13 @@ public:
           return -1.0 * traction_function(x, n, time_, params...);
         },
         mesh_);
+  }
+
+  /// @overload
+  template <typename TractionType>
+  void setPiolaTraction(TractionType traction_function)
+  {
+    setPiolaTraction(DependsOn<>{}, traction_function);
   }
 
   /// @brief Build the quasi-static operator corresponding to the total Lagrangian formulation
