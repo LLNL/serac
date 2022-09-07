@@ -228,7 +228,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
 
       constexpr double expected[] = {4.755279810979, 8.0};
 
-      double relative_error = (measure(U) - expected[dim-2]) / expected[dim-2];
+      double relative_error = (measure(U) - expected[dim - 2]) / expected[dim - 2];
       EXPECT_NEAR(0.0, relative_error, 1.0e-10);
 
       relative_error = (measure(U) - measure_mfem(mesh)) / measure(U);
@@ -243,7 +243,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
 
       constexpr double expected[] = {0.00001117269646130209, 32.0};
 
-      double relative_error = (x_moment(U) - expected[dim-2]) / expected[dim-2];
+      double relative_error = (x_moment(U) - expected[dim - 2]) / expected[dim - 2];
       EXPECT_NEAR(0.0, relative_error, 1.0e-10);
 
       relative_error = (x_moment(U) - x_moment_mfem(mesh)) / x_moment(U);
@@ -260,7 +260,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
 
       constexpr double expected[] = {14.75527630972663, 42.0};
 
-      double relative_error = (sum_of_measures(U) - expected[dim-2]) / expected[dim-2];
+      double relative_error = (sum_of_measures(U) - expected[dim - 2]) / expected[dim - 2];
       EXPECT_NEAR(0.0, relative_error, 1.0e-10);
 
       relative_error = (sum_of_measures(U) - sum_of_measures_mfem(mesh)) / sum_of_measures(U);
@@ -285,10 +285,9 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
           },
           mesh);
 
-
       constexpr double expected[] = {9.71388562400895, 2.097457548402147e6};
 
-      double relative_error = (f(U) - expected[dim-2]) / expected[dim-2];
+      double relative_error = (f(U) - expected[dim - 2]) / expected[dim - 2];
 
       // the tolerance on this one isn't very tight since
       // we're using a pretty the coarse integration rule
@@ -359,7 +358,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p1> trial1, H1<p2> trial2, Dimension<dim>)
   // see scripts/wolfram/qoi_examples.nb for more info
   constexpr double expected[] = {9.71388562400895, 2.097457548402147e6};
 
-  double relative_error = (f(U1, U2) - expected[dim-2]) / expected[dim-2];
+  double relative_error = (f(U1, U2) - expected[dim - 2]) / expected[dim - 2];
 
   // the tolerance on this one isn't very tight since
   // we're using a pretty the coarse integration rule

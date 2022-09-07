@@ -380,7 +380,7 @@ public:
    *
    * @pre BodyForceType must have the operator (x, time) defined as the body force
    */
-  template <int... active_parameters,typename BodyForceType>
+  template <int... active_parameters, typename BodyForceType>
   void addBodyForce(DependsOn<active_parameters...>, BodyForceType body_force)
   {
     residual_->AddDomainIntegral(
@@ -393,6 +393,7 @@ public:
         mesh_);
   }
 
+  /// @overload
   template <typename BodyForceType>
   void addBodyForce(BodyForceType body_force)
   {
