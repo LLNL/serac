@@ -220,11 +220,11 @@ with a scalar-valued output, use ``double`` as the test space in its function si
 
 .. code-block:: cpp
 
-    using test = H1<order, dim>;
+    using trial = H1<order, dim>;
 
     // this indicates that the calculation will 
     // return a scalar, rather than a residual vector
-    using trial = double; 
+    using test = double; 
 
     Functional< test(trial) > qoi(&test_fes, {&trial_fes});
     
