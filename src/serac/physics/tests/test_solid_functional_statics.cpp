@@ -178,7 +178,7 @@ double solution_error(const ExactSolution& exact_displacement, PatchBoundaryCond
   // but the physics module should be catching this error to protect users.
   static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for solid functional test");
 
-  std::string filename = std::string(SERAC_REPO_DIR) +  "/data/meshes/patch" + std::to_string(dim) + "d.mesh";
+  std::string filename = std::string(SERAC_REPO_DIR) +  "/data/meshes/patch" + std::to_string(dim) + "D.mesh";
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename));
   serac::StateManager::setMesh(std::move(mesh));
 
