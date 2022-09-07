@@ -311,26 +311,9 @@ It does create ``mpicxx``. This can be solved by making a symlink:
 MacPorts will automatically update the ``mpicxx`` symlink in ``/opt/local/bin`` to point to the correct executable when you use the ``port select`` command to activate a partiular MPI package. 
 By making ``mpic++`` point to ``mpicxx``, this command will also automatically point to the correct executable if you change the global MPI package through MacPorts in the future.
 
-Python environment
-^^^^^^^^^^^^^^^^^^
-
-The Serac build scripts install the ``clingo`` package in your Python environment (and may even *uninstall* it if it finds it with a version it considers too old). 
-I don't like to let software packages change my Python environment, particularly by adding or removing packages with ``pip``, as this can lead to version dependency conflicts.  
-I create a Python virtual environment with the built-in ``venv`` module. Run this in a location where you want to hold this sandboxed python envirnonment.
-
-.. (I use the name "venv" for the virtual environment; We might consider adding `venv/` to the list of git ignores in the root directory).
-
-.. code-block:: bash
-
-   $ python3 -m venv <virtual-env-name>
-
-Since Spack will need ``clingo``, activate the python vitual environment and 
-install the package to meet this dependency:
-
-.. code-block:: bash
-
-   $ source <path/to/virtual-env>/bin/activate
-   $ pip install clingo
+The Serac build scripts will install the ``clingo`` package in your Python environment (and may even *uninstall* it if it finds it with a version it considers too old).
+If you don't want the install to modify your Python environment, you may wish to conisder using tools like 
+`virtual environments <https://docs.python.org/3/library/venv.html>`_  or `conda <https://docs.conda.io/projects/conda/en/stable/>`_ to isolate this change.
 
 Configuring Spack
 ^^^^^^^^^^^^^^^^^
