@@ -43,7 +43,8 @@ auto PreprocessHelper(const tuple_type& u, const tensor<double, dim>& xi, std::i
 template <Geometry geom, typename... trials, typename tuple_type, int dim>
 auto Preprocess(const tuple_type& u, const tensor<double, dim>& xi)
 {
-  return PreprocessHelper<geom, trials...>(u, xi, std::make_integer_sequence<int, int(sizeof...(trials))>{});
+  return PreprocessHelper<geom, trials...>(u, xi,
+                                           std::make_integer_sequence<int, static_cast<int>(sizeof...(trials))>{});
 }
 
 /**
@@ -128,8 +129,8 @@ struct EvaluationKernel;
  */
 template <int Q, Geometry geom, typename test, typename... trials, typename lambda>
 struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lambda> {
-  static constexpr auto exec             = ExecutionSpace::CPU;     ///< this specialization is CPU-specific
-  static constexpr int  num_trial_spaces = int(sizeof...(trials));  ///< how many trial spaces are provided
+  static constexpr auto exec             = ExecutionSpace::CPU;  ///< this specialization is CPU-specific
+  static constexpr int  num_trial_spaces = static_cast<int>(sizeof...(trials));  ///< how many trial spaces are provided
 
   using EVector_t =
       EVectorView<exec, finite_element<geom, trials>...>;  ///< the type of container used to access element values
@@ -176,7 +177,8 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
     auto X = mfem::Reshape(X_.Read(), rule.size(), dim + 1, num_elements_);
     auto N = mfem::Reshape(N_.Read(), rule.size(), dim + 1, num_elements_);
     auto J = mfem::Reshape(J_.Read(), rule.size(), num_elements_);
-    auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, int(num_elements_));  // TODO: integer conversions
+    auto r =
+        detail::Reshape<test>(R.ReadWrite(), test_ndof, static_cast<int>(num_elements_));  // TODO: integer conversions
 
     // for each element in the domain
     for (uint32_t e = 0; e < num_elements_; e++) {
@@ -209,7 +211,7 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
 
       // once we've finished the element integration loop, write our element residuals
       // out to memory, to be later assembled into global residuals by mfem
-      detail::Add(r, r_elem, int(e));
+      detail::Add(r, r_elem, static_cast<int>(e));
     }
   }
 
@@ -226,8 +228,8 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
  */
 template <int I, int Q, Geometry geom, typename test, typename... trials, typename derivatives_type, typename lambda>
 struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>, derivatives_type, lambda> {
-  static constexpr auto exec             = ExecutionSpace::CPU;     ///< this specialization is CPU-specific
-  static constexpr int  num_trial_spaces = int(sizeof...(trials));  ///< how many trial spaces are provided
+  static constexpr auto exec             = ExecutionSpace::CPU;  ///< this specialization is CPU-specific
+  static constexpr int  num_trial_spaces = static_cast<int>(sizeof...(trials));  ///< how many trial spaces are provided
 
   using EVector_t =
       EVectorView<exec, finite_element<geom, trials>...>;  ///< the type of container used to access element values
@@ -276,7 +278,8 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
     auto X = mfem::Reshape(X_.Read(), rule.size(), dim + 1, num_elements_);
     auto N = mfem::Reshape(N_.Read(), rule.size(), dim + 1, num_elements_);
     auto J = mfem::Reshape(J_.Read(), rule.size(), num_elements_);
-    auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, int(num_elements_));  // TODO: integer conversions
+    auto r =
+        detail::Reshape<test>(R.ReadWrite(), test_ndof, static_cast<int>(num_elements_));  // TODO: integer conversions
 
     // for each element in the domain
     for (uint32_t e = 0; e < num_elements_; e++) {
@@ -317,7 +320,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
 
       // once we've finished the element integration loop, write our element residuals
       // out to memory, to be later assembled into global residuals by mfem
-      detail::Add(r, r_elem, int(e));
+      detail::Add(r, r_elem, static_cast<int>(e));
     }
   }
 
@@ -378,13 +381,13 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
   auto J  = mfem::Reshape(J_.Read(), rule.size(), num_elements);
-  auto du = detail::Reshape<trial>(dU.Read(), trial_ndof, int(num_elements));
-  auto dr = detail::Reshape<test>(dR.ReadWrite(), test_ndof, int(num_elements));
+  auto du = detail::Reshape<trial>(dU.Read(), trial_ndof, static_cast<int>(num_elements));
+  auto dr = detail::Reshape<test>(dR.ReadWrite(), test_ndof, static_cast<int>(num_elements));
 
   // for each element in the domain
   for (uint32_t e = 0; e < num_elements; e++) {
     // get the (change in) values for this particular element
-    tensor du_elem = detail::Load<trial_element>(du, int(e));
+    tensor du_elem = detail::Load<trial_element>(du, static_cast<int>(e));
 
     // this is where we will accumulate the (change in) element residual tensor
     element_residual_type dr_elem{};
@@ -417,7 +420,7 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
 
     // once we've finished the element integration loop, write our element residuals
     // out to memory, to be later assembled into global residuals by mfem
-    detail::Add(dr, dr_elem, int(e));
+    detail::Add(dr, dr_elem, static_cast<int>(e));
   }
 }
 

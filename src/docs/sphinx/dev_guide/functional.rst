@@ -36,7 +36,7 @@ case, solid mechanics uses nodal displacements and residuals (i.e. H1 test and t
    using trial = H1<order, dim>;
    Functional< test(trial) > residual(&test_fes, {&trial_fes});
 
-where ``test_fes``, ``trial_fes`` are the ``mfem::FiniteElementSpace``s for the problem. 
+where ``test_fes``, ``trial_fes`` are the ``mfem::FiniteElementSpaces`` for the problem. 
 The template argument follows the same convention of ``std::function``:
 the output-type appears outside the parentheses, and the input-type(s)
 appear, inside the parentheses (in order).  So, the last line of code in

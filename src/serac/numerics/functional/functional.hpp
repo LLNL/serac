@@ -72,7 +72,7 @@ auto differentiate_wrt(const mfem::Vector& v) { return differentiate_wrt_this{v}
 template <typename... T>
 constexpr int index_of_differentiation()
 {
-  constexpr int n          = int(sizeof...(T));
+  constexpr int n          = static_cast<int>(sizeof...(T));
   bool          matching[] = {std::is_same_v<T, differentiate_wrt_this>...};
   for (int i = 0; i < n; i++) {
     if (matching[i]) {

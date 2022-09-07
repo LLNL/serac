@@ -295,7 +295,7 @@ SERAC_HOST_DEVICE constexpr derivatives_type& AccessDerivatives(derivatives_type
                                                                 [[maybe_unused]] int        num_elements)
 {
   if constexpr (row_major) {
-    return derivatives_ptr[e * int(rule.size()) + q];
+    return derivatives_ptr[e * static_cast<int>(rule.size()) + q];
   } else {
     return derivatives_ptr[q * num_elements + e];
   }
@@ -336,7 +336,8 @@ template <typename lambda, typename coords_type, typename... T, typename qpt_dat
 SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, qpt_data_type&& qpt_data,
                                 const serac::tuple<T...>& arg_tuple)
 {
-  return apply_qf_helper(qf, x_q, qpt_data, arg_tuple, std::make_integer_sequence<int, int(sizeof...(T))>{});
+  return apply_qf_helper(qf, x_q, qpt_data, arg_tuple,
+                         std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>{});
 }
 
 /**
@@ -346,7 +347,7 @@ SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, qpt_data_type&& 
 template <typename lambda, typename coords_type, typename... T>
 SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, coords_type&& n_q, const serac::tuple<T...>& arg_tuple)
 {
-  return apply_qf_helper(qf, x_q, n_q, arg_tuple, std::make_integer_sequence<int, int(sizeof...(T))>{});
+  return apply_qf_helper(qf, x_q, n_q, arg_tuple, std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>{});
 }
 
 }  // namespace detail
@@ -483,7 +484,8 @@ SERAC_HOST_DEVICE auto PreprocessHelper(const tuple_type& u, const tensor<double
 template <Geometry geom, typename... trials, typename tuple_type, int dim>
 SERAC_HOST_DEVICE auto Preprocess(const tuple_type& u, const tensor<double, dim>& xi, const tensor<double, dim, dim>& J)
 {
-  return PreprocessHelper<geom, trials...>(u, xi, J, std::make_integer_sequence<int, int(sizeof...(trials))>{});
+  return PreprocessHelper<geom, trials...>(u, xi, J,
+                                           std::make_integer_sequence<int, static_cast<int>(sizeof...(trials))>{});
 }
 
 /**

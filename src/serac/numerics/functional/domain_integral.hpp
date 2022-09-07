@@ -173,7 +173,7 @@ public:
       // we just call the evaluation kernel without any differentiation
       //
       if (which_trial_space == argument_indices[i]) {
-        which_local_trial_space = int(i);
+        which_local_trial_space = static_cast<int>(i);
       }
     }
 
@@ -200,7 +200,7 @@ public:
     int which_local_trial_space = -1;
     for (size_t i = 0; i < argument_indices.size(); i++) {
       if (which_trial_space == std::size_t(argument_indices[i])) {
-        which_local_trial_space = int(i);
+        which_local_trial_space = static_cast<int>(i);
       }
     }
     if (which_local_trial_space != -1) {
@@ -222,7 +222,7 @@ public:
     int which_local_trial_space = -1;
     for (size_t i = 0; i < argument_indices.size(); i++) {
       if (which_trial_space == std::size_t(argument_indices[i])) {
-        which_local_trial_space = int(i);
+        which_local_trial_space = static_cast<int>(i);
       }
     }
     if (which_local_trial_space != -1) {
