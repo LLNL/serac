@@ -377,21 +377,17 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
 }
 
-TEST(SolidFunctional, 2DQuadParameterizedStatic) { functional_parameterized_solid_test<2, 2>(2.1864815661936112); }
+TEST(SolidFunctional, 2DQuadParameterizedStatic) { functional_parameterized_solid_test<2, 2>(2.1906312704664623); }
 
 TEST(SolidFunctional, 3DQuadStaticJ2) { functional_solid_test_static_J2(); }
 
-TEST(SolidFunctional, 2DLinearDynamic) { functional_solid_test_dynamic<1, 2>(1.52116682); }
-TEST(SolidFunctional, 2DQuadDynamic) { functional_solid_test_dynamic<2, 2>(1.52777214); }
+TEST(SolidFunctional, 2DLinearDynamic) { functional_solid_test_dynamic<1, 2>(1.5206694864511661); }
+TEST(SolidFunctional, 2DQuadDynamic) { functional_solid_test_dynamic<2, 2>(1.5269845689546435); }
 
 TEST(SolidFunctional, 3DLinearDynamic) { functional_solid_test_dynamic<1, 3>(1.520679017); }
 TEST(SolidFunctional, 3DQuadDynamic) { functional_solid_test_dynamic<2, 3>(1.527009514); }
 
-TEST(SolidFunctional, 2DLinearPressure) { functional_solid_test_boundary<1, 2>(0.065326222, TestType::Pressure); }
-TEST(SolidFunctional, 2DLinearTraction)
-{
-  functional_solid_test_boundary<1, 2>(0.12659525750241674, TestType::Traction);
-}
+TEST(SolidFunctional, 2DLinearPressure) { functional_solid_test_boundary<1, 2>(0.057051396685822188, TestType::Pressure); }
 
 }  // namespace serac
 
