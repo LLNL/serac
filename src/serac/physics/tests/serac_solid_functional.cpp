@@ -387,7 +387,10 @@ TEST(SolidFunctional, 2DQuadDynamic) { functional_solid_test_dynamic<2, 2>(1.526
 TEST(SolidFunctional, 3DLinearDynamic) { functional_solid_test_dynamic<1, 3>(1.520679017); }
 TEST(SolidFunctional, 3DQuadDynamic) { functional_solid_test_dynamic<2, 3>(1.527009514); }
 
-TEST(SolidFunctional, 2DLinearPressure) { functional_solid_test_boundary<1, 2>(0.057051396685822188, TestType::Pressure); }
+TEST(SolidFunctional, 2DLinearPressure)
+{
+  functional_solid_test_boundary<1, 2>(0.057051396685822188, TestType::Pressure);
+}
 
 }  // namespace serac
 
