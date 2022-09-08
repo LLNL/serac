@@ -48,7 +48,7 @@ TEST(solidFunctionalShape, manualNodes)
   // Use a direct solver (DSuperLU) for the Jacobian solve
   SolverOptions options = {DirectSolverOptions{.print_level = 1}, solid_mechanics::default_nonlinear_options};
 
-  solid_mechanics::LinearIsotropic<dim> mat{1.0, 1.0, 1.0};
+  solid_mechanics::LinearIsotropic mat{1.0, 1.0, 1.0};
 
   double shape_factor = 2.0;
 

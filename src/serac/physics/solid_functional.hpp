@@ -370,6 +370,13 @@ public:
           // The final Jacobian to be det(du / dX), so we compute
           // det(du / dX) = det(du / dX') * det(dX' / dX) = det(du / dX') * det(I + dp / dX)
           auto flux = dot(stress, transpose(inv(deformation_grad))) * det(I + dp_dX);
+
+          // This transpose on the stress in the following line is a
+          // hack to fix a bug in the resdual operator. The stress
+          // should be transposed in the contraction of the Piola
+          // stress with the shape function gradients.
+          //
+          // TODO: fix the residual implementation and remove this transpose.
           return serac::tuple{material.density * d2u_dt2, transpose(flux)};
         },
         mesh_, qdata);

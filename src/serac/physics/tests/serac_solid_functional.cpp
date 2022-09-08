@@ -4,23 +4,28 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+#include "serac/physics/solid_functional.hpp"
+
+#include <functional>
 #include <fstream>
+#include <set>
+#include <string>
 
 #include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
-#include "serac/serac_config.hpp"
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/state/state_manager.hpp"
-#include "serac/physics/solid_functional.hpp"
 #include "serac/physics/materials/solid_functional_material.hpp"
 #include "serac/physics/materials/parameterized_solid_functional_material.hpp"
+#include "serac/serac_config.hpp"
 
 namespace serac {
 
 using solid_mechanics::default_dynamic_options;
 using solid_mechanics::default_static_options;
+using solid_mechanics::direct_static_options;
 
 template <int p, int dim>
 void functional_solid_test_static(double expected_disp_norm)
@@ -52,7 +57,7 @@ void functional_solid_test_static(double expected_disp_norm)
   // Construct a functional-based solid mechanics solver
   SolidFunctional<p, dim> solid_solver(options, GeometricNonlinearities::On, "solid_functional");
 
-  solid_mechanics::NeoHookean<dim> mat{1.0, 1.0, 1.0};
+  solid_mechanics::NeoHookean mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
 
   // Define the function for the initial displacement and boundary condition
@@ -190,7 +195,7 @@ void functional_solid_test_dynamic(double expected_disp_norm)
   SolidFunctional<p, dim> solid_solver(default_dynamic_options, GeometricNonlinearities::Off,
                                        "solid_functional_dynamic");
 
-  solid_mechanics::LinearIsotropic<dim> mat{1.0, 1.0, 1.0};
+  solid_mechanics::LinearIsotropic mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
 
   // Define the function for the initial displacement and boundary condition
@@ -251,7 +256,7 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
   // Construct a functional-based solid mechanics solver
   SolidFunctional<p, dim> solid_solver(default_static_options, GeometricNonlinearities::Off, "solid_functional");
 
-  solid_mechanics::LinearIsotropic<dim> mat{1.0, 1.0, 1.0};
+  solid_mechanics::LinearIsotropic mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
 
   // Define the function for the initial displacement and boundary condition
@@ -372,25 +377,19 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
 }
 
-TEST(SolidFunctional, 2DLinearStatic) { functional_solid_test_static<1, 2>(1.4860973349187394); }
-TEST(SolidFunctional, 2DQuadStatic) { functional_solid_test_static<2, 2>(2.1906312703943991); }
-TEST(SolidFunctional, 2DQuadParameterizedStatic) { functional_parameterized_solid_test<2, 2>(2.1906312704027076); }
-
-TEST(SolidFunctional, 3DLinearStatic) { functional_solid_test_static<1, 3>(1.353957948771201); }
-TEST(SolidFunctional, 3DQuadStatic) { functional_solid_test_static<2, 3>(1.9530246633315185); }
+TEST(SolidFunctional, 2DQuadParameterizedStatic) { functional_parameterized_solid_test<2, 2>(2.1906312704664623); }
 
 TEST(SolidFunctional, 3DQuadStaticJ2) { functional_solid_test_static_J2(); }
 
-TEST(SolidFunctional, 2DLinearDynamic) { functional_solid_test_dynamic<1, 2>(1.52116682); }
-TEST(SolidFunctional, 2DQuadDynamic) { functional_solid_test_dynamic<2, 2>(1.52777214); }
+TEST(SolidFunctional, 2DLinearDynamic) { functional_solid_test_dynamic<1, 2>(1.5206694864511661); }
+TEST(SolidFunctional, 2DQuadDynamic) { functional_solid_test_dynamic<2, 2>(1.5269845689546435); }
 
 TEST(SolidFunctional, 3DLinearDynamic) { functional_solid_test_dynamic<1, 3>(1.520679017); }
 TEST(SolidFunctional, 3DQuadDynamic) { functional_solid_test_dynamic<2, 3>(1.527009514); }
 
-TEST(SolidFunctional, 2DLinearPressure) { functional_solid_test_boundary<1, 2>(0.065326222, TestType::Pressure); }
-TEST(SolidFunctional, 2DLinearTraction)
+TEST(SolidFunctional, 2DLinearPressure)
 {
-  functional_solid_test_boundary<1, 2>(0.12659525750241674, TestType::Traction);
+  functional_solid_test_boundary<1, 2>(0.057051396685822188, TestType::Pressure);
 }
 
 }  // namespace serac

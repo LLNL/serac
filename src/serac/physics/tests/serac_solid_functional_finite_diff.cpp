@@ -190,7 +190,7 @@ TEST(solid_functional_finite_diff, finite_difference_shape)
   // Construct a functional-based solid solver
   SolidFunctional<p, dim> solid_solver(options, GeometricNonlinearities::On, "solid_functional");
 
-  solid_mechanics::NeoHookean<dim> mat{1.0, 1.0, 1.0};
+  solid_mechanics::NeoHookean mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
 
   solid_solver.shapeDisplacement() = shape_displacement_value;
