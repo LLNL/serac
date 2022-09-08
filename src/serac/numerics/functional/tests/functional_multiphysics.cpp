@@ -116,6 +116,7 @@ TEST(FunctionalMultiphysics, NonlinearThermalTest3D)
   Functional<test_space(trial_space, trial_space)> residual(&fespace, {&fespace, &fespace});
 
   residual.AddVolumeIntegral(
+      DependsOn<0, 1>{},
       [=](auto x, auto temperature, auto dtemperature_dt) {
         auto [u, du_dx]      = temperature;
         auto [du_dt, unused] = dtemperature_dt;
@@ -126,6 +127,7 @@ TEST(FunctionalMultiphysics, NonlinearThermalTest3D)
       *mesh3D);
 
   residual.AddSurfaceIntegral(
+      DependsOn<0, 1>{},
       [=](auto x, auto /*n*/, auto temperature, auto dtemperature_dt) {
         auto [u, _0]     = temperature;
         auto [du_dt, _1] = dtemperature_dt;

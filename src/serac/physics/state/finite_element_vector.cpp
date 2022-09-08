@@ -146,4 +146,9 @@ double norm(const FiniteElementVector& state, const double p)
   }
 }
 
+double computeL2Error(const FiniteElementVector& state, mfem::VectorCoefficient& exact_solution)
+{
+  return state.gridFunction().ComputeL2Error(exact_solution);
+}
+
 }  // namespace serac

@@ -273,6 +273,41 @@ public:
   }
 
   /**
+   * @brief register a custom domain integral calculation as part of the residual
+   *
+   * @tparam active_parameters a list of indices, describing which parameters to pass to the q-function
+   * @tparam StateType the type that contains the internal variables (if any) for q-function
+   * @param qfunction a callable that returns a tuple of body-force and stress
+   * @param qdata the buffer of material internal variables at each quadrature point
+   *
+   * ~~~ {.cpp}
+   *
+   *  double lambda = 500.0;
+   *  double mu = 500.0;
+   *  solid_mechanics.addCustomDomainIntegral(DependsOn<>{}, [=](auto x, auto displacement, auto acceleration){
+   *    auto du_dx = serac::get<1>(displacement);
+   *
+   *    auto I       = Identity<dim>();
+   *    auto epsilon = 0.5 * (transpose(du_dx) + du_dx);
+   *    auto stress = lambda * tr(epsilon) * I + 2.0 * mu * epsilon;
+   *
+   *    auto d2u_dt2 = serac::get<0>(acceleration);
+   *    double rho = 1.0 + x[0]; // spatially-varying density
+   *
+   *    return serac::tuple{rho * d2u_dt2, stress};
+   *  });
+   *
+   * ~~~
+   */
+  template <int... active_parameters, typename callable, typename StateType = Nothing>
+  void addCustomDomainIntegral(DependsOn<active_parameters...>, callable qfunction,
+                               std::shared_ptr<QuadratureData<StateType>> qdata = NoQData)
+  {
+    residual_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1, active_parameters + 2 ...>{}, qfunction, mesh_,
+                                 qdata);
+  }
+
+  /**
    * @brief Set the material stress response and mass properties for the physics module
    *
    * @tparam MaterialType The solid material type
@@ -283,11 +318,15 @@ public:
    * @pre MaterialType must have a public member variable `density`
    * @pre MaterialType must define operator() that returns the Kirchoff stress
    */
-  template <typename MaterialType, typename StateType>
-  void setMaterial(MaterialType material, std::shared_ptr<QuadratureData<StateType>> qdata)
+  template <int... active_parameters, typename MaterialType, typename StateType = Empty>
+  void setMaterial(DependsOn<active_parameters...>, MaterialType material,
+                   std::shared_ptr<QuadratureData<StateType>> qdata = EmptyQData)
   {
     residual_->AddDomainIntegral(
         Dimension<dim>{},
+        DependsOn<0, 1, active_parameters + 2 ...>{},  // the magic number "+2" accounts for the fact that the
+                                                       // displacement and acceleration fields are always-on and come
+                                                       // first, so the `n`th parameter will actually be argument `n+2`
         [this, material](auto /*x*/, auto& state, auto displacement, auto acceleration, auto... params) {
           auto du_dX   = get<DERIVATIVE>(displacement);
           auto d2u_dt2 = get<VALUE>(acceleration);
@@ -296,16 +335,22 @@ public:
             stress = dot(stress, inv(transpose(I + du_dX)));
           }
 
-          return serac::tuple{material.density * d2u_dt2, stress};
+          // This transpose on the stress in the following line is a
+          // hack to fix a bug in the resdual operator. The stress
+          // should be transposed in the contraction of the Piola
+          // stress with the shape function gradients.
+          //
+          // TODO: fix the residual implementation and remove this transpose.
+          return serac::tuple{material.density * d2u_dt2, transpose(stress)};
         },
         mesh_, qdata);
   }
 
   /// @overload
-  template <typename MaterialType>
-  void setMaterial(MaterialType material)
+  template <typename MaterialType, typename StateType = Empty>
+  void setMaterial(MaterialType material, std::shared_ptr<QuadratureData<StateType>> qdata = EmptyQData)
   {
-    setMaterial(material, EmptyQData);
+    setMaterial(DependsOn<>{}, material, qdata);
   }
 
   /**
@@ -342,11 +387,25 @@ public:
    *
    * @pre BodyForceType must have the operator (x, time) defined as the body force
    */
+  template <int... active_parameters, typename BodyForceType>
+  void addBodyForce(DependsOn<active_parameters...>, BodyForceType body_force)
+  {
+    residual_->AddDomainIntegral(
+        Dimension<dim>{}, DependsOn<0, 1, active_parameters + 2 ...>{},
+        [body_force, this](auto x, auto /* displacement */, auto /* acceleration */, auto... /*params*/) {
+          // note: this assumes that the body force function is defined
+          // per unit volume in the reference configuration
+          return serac::tuple{body_force(x, time_), zero{}};
+        },
+        mesh_);
+  }
+
+  /// @overload
   template <typename BodyForceType>
   void addBodyForce(BodyForceType body_force)
   {
     residual_->AddDomainIntegral(
-        Dimension<dim>{},
+        Dimension<dim>{}, DependsOn<0, 1>{},
         [body_force, this](auto x, auto /* displacement */, auto /* acceleration */, auto... /*params*/) {
           // note: this assumes that the body force function is defined
           // per unit volume in the reference configuration
@@ -363,15 +422,22 @@ public:
    *
    * @pre TractionType must have the operator (x, normal, time) to return the thermal flux value
    */
-  template <typename TractionType>
-  void setPiolaTraction(TractionType traction_function)
+  template <int... active_parameters, typename TractionType>
+  void setPiolaTraction(DependsOn<active_parameters...>, TractionType traction_function)
   {
     residual_->AddBoundaryIntegral(
-        Dimension<dim - 1>{},
+        Dimension<dim - 1>{}, DependsOn<0, 1, active_parameters + 2 ...>{},
         [this, traction_function](auto x, auto n, auto, auto, auto... params) {
           return -1.0 * traction_function(x, n, time_, params...);
         },
         mesh_);
+  }
+
+  /// @overload
+  template <typename TractionType>
+  void setPiolaTraction(TractionType traction_function)
+  {
+    setPiolaTraction(DependsOn<>{}, traction_function);
   }
 
   /// @brief Build the quasi-static operator corresponding to the total Lagrangian formulation

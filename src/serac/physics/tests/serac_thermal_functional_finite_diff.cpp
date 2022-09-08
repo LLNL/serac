@@ -66,7 +66,7 @@ TEST(ThermalFunctionalFiniteDiff, FiniteDifference)
 
   // Construct a potentially user-defined parameterized material and send it to the thermal module
   Thermal::ParameterizedLinearIsotropicConductor mat;
-  thermal_solver.setMaterial(mat);
+  thermal_solver.setMaterial(DependsOn<0>{}, mat);
 
   // Define the function for the initial temperature and boundary condition
   auto bdr_temp = [](const mfem::Vector& x, double) -> double { return (x[0] < 0.5 || x[1] < 0.5) ? 1.0 : 0.0; };
