@@ -362,8 +362,8 @@ mfem::Mesh build_hollow_quarter_cylinder(std::size_t radial_divisions, std::size
   constexpr int dim = 3;
 
   // start with a structured mesh of a cube
-  mfem::Mesh mesh = mfem::Mesh::MakeCartesian3D(int(radial_divisions), int(angular_divisions), int(vertical_divisions),
-                                                mfem::Element::HEXAHEDRON);
+  mfem::Mesh mesh = mfem::Mesh::MakeCartesian3D(static_cast<int>(radial_divisions), static_cast<int>(angular_divisions),
+                                                static_cast<int>(vertical_divisions), mfem::Element::HEXAHEDRON);
 
   int          num_vertices = mesh.GetNV();
   mfem::Vector new_vertices;

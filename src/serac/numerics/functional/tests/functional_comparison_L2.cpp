@@ -80,7 +80,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
 
   // Add the total domain residual term to the weak form
   residual.AddDomainIntegral(
-      Dimension<dim>{},
+      Dimension<dim>{}, DependsOn<0>{},
       [&]([[maybe_unused]] auto x, [[maybe_unused]] auto temperature) {
         // get the value and the gradient from the input tuple
         auto [u, du_dx] = temperature;
@@ -89,6 +89,15 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
         return serac::tuple{source, flux};
       },
       mesh);
+
+  // uncomment lines below to verify that compile-time error messages
+  // explain L2 spaces are not currently supported in boundary integrals.
+  //
+  // residual.AddBoundaryIntegral(
+  //    Dimension<dim-1>{},
+  //    DependsOn<0>{},
+  //    [&]([[maybe_unused]] auto x, [[maybe_unused]] auto temperature) { return 1.0; },
+  //    mesh);
 
   // Compute the residual using standard MFEM methods
   mfem::Vector r1 = A * U - (*F);
@@ -119,6 +128,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
 }
 
+TEST(L2, 2DConstant) { functional_test(*mesh2D, L2<0>{}, L2<0>{}, Dimension<2>{}); }
 TEST(L2, 2DLinear) { functional_test(*mesh2D, L2<1>{}, L2<1>{}, Dimension<2>{}); }
 TEST(L2, 2DQuadratic) { functional_test(*mesh2D, L2<2>{}, L2<2>{}, Dimension<2>{}); }
 TEST(L2, 2DCubic) { functional_test(*mesh2D, L2<3>{}, L2<3>{}, Dimension<2>{}); }

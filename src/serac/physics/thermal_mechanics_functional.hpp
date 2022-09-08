@@ -217,20 +217,24 @@ public:
    * @pre MaterialType must have a public member variable `density`
    * @pre MaterialType must define operator() that returns the Kirchoff stress, heat flux and heat source terms
    */
-  template <typename MaterialType, typename StateType>
-  void setMaterial(MaterialType material, std::shared_ptr<QuadratureData<StateType>> qdata)
+  template <int... active_parameters, typename MaterialType, typename StateType>
+  void setMaterial(DependsOn<active_parameters...>, MaterialType material,
+                   std::shared_ptr<QuadratureData<StateType>> qdata)
   {
-    thermal_functional_.setMaterial(ThermalMaterialInterface<MaterialType>{material});
-    solid_functional_.setMaterial(MechanicalMaterialInterface<MaterialType>{material}, qdata);
+    // note: these parameter indices are offset by 1 since, internally, this module uses the first parameter
+    // to communicate the temperature and displacement field information to the other physics module
+    //
+    thermal_functional_.setMaterial(DependsOn<0, active_parameters + 1 ...>{},
+                                    ThermalMaterialInterface<MaterialType>{material});
+    solid_functional_.setMaterial(DependsOn<0, active_parameters + 1 ...>{},
+                                  MechanicalMaterialInterface<MaterialType>{material}, qdata);
   }
 
   /// @overload
-  template <typename MaterialType>
-  void setMaterial(MaterialType material)
+  template <typename MaterialType, typename StateType = Empty>
+  void setMaterial(MaterialType material, std::shared_ptr<QuadratureData<StateType>> qdata = EmptyQData)
   {
-    static_assert(std::is_same_v<typename MaterialType::State, Empty>,
-                  "error: material model requires internal variables but none were provided.");
-    setMaterial(material, EmptyQData);
+    setMaterial(DependsOn<>{}, material, qdata);
   }
 
   /**

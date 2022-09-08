@@ -198,28 +198,6 @@ struct ConstantTraction {
   }
 };
 
-/// Function-based traction boundary condition model
-template <int dim>
-struct TractionFunction {
-  /// The traction function
-  std::function<tensor<double, dim>(const tensor<double, dim>&, const tensor<double, dim>&, const double)>
-      traction_func_;
-
-  /**
-   * @brief Evaluation for the function-based traction model
-   *
-   * @param x The spatial coordinate
-   * @param n The normal vector
-   * @param t The current time
-   * @return The traction to apply
-   */
-  SERAC_HOST_DEVICE tensor<double, dim> operator()(const tensor<double, dim>& x, const tensor<double, dim>& n,
-                                                   const double t) const
-  {
-    return traction_func_(x, n, t);
-  }
-};
-
 /// Constant pressure model
 struct ConstantPressure {
   /// The constant pressure
@@ -231,28 +209,10 @@ struct ConstantPressure {
    * @tparam dim Spatial dimension
    */
   template <int dim>
-  SERAC_HOST_DEVICE double operator()(const tensor<double, dim>& /* x */, const double /* t */) const
+  SERAC_HOST_DEVICE double operator()(const tensor<double, dim>& /* x */, const tensor<double, dim>& n,
+                                      const double /* t */) const
   {
-    return pressure_;
-  }
-};
-
-/// Function-based pressure boundary condition
-template <int dim>
-struct PressureFunction {
-  /// The pressure function
-  std::function<double(const tensor<double, dim>&, const double)> pressure_func_;
-
-  /**
-   * @brief Evaluation for the function-based pressure model
-   *
-   * @param x The spatial coordinate
-   * @param t The current time
-   * @return The pressure to apply
-   */
-  SERAC_HOST_DEVICE double operator()(const tensor<double, dim>& x, const double t) const
-  {
-    return pressure_func_(x, t);
+    return pressure_ * n;
   }
 };
 
