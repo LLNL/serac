@@ -235,7 +235,7 @@ SERAC_HOST_DEVICE constexpr auto make_dual_helper(const serac::tuple<T...>& args
 template <int n, typename... T>
 constexpr auto make_dual_wrt(const serac::tuple<T...>& args)
 {
-  return make_dual_helper<n>(args, std::make_integer_sequence<int, int(sizeof...(T))>{});
+  return make_dual_helper<n>(args, std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>{});
 }
 
 /**
