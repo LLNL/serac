@@ -69,7 +69,7 @@ TEST(SolidFunctionalFiniteDiff, FiniteDifference)
   constexpr int bulk_parameter_index = 0;
 
   solid_mechanics::ParameterizedNeoHookeanSolid<dim> mat{1.0, 0.0, 0.0};
-  solid_solver.setMaterial(mat);
+  solid_solver.setMaterial(DependsOn<0, 1>{}, mat);
 
   // Define the function for the initial displacement and boundary condition
   auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };

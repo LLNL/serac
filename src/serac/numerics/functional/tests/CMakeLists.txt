@@ -33,9 +33,14 @@ set(functional_tests_mpi
     #functional_material_state_test.cpp
     )
 
+
 serac_add_tests( SOURCES ${functional_tests_mpi}
                  DEPENDS_ON gtest serac_functional serac_state ${functional_depends}
                  NUM_MPI_TASKS 4 )
+
+foreach(filename ${functional_tests_mpi})
+    set_source_files_properties(${filename} PROPERTIES LANGUAGE CXX)
+endforeach()
 
 set(functional_performance_tests
     performance/J2_material_with_AD.cpp

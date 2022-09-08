@@ -85,6 +85,7 @@ TEST(FunctionalBasic, NonlinearThermalTest3D)
   Functional<test_space(trial_space)> residual(&fespace, {&fespace});
 
   residual.AddVolumeIntegral(
+      DependsOn<0>{},
       [=](auto x, auto temperature) {
         auto [u, du_dx] = temperature;
         auto source     = u * u - (100 * x[0] * x[1]);
