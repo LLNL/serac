@@ -68,6 +68,10 @@ const SolverOptions direct_dynamic_options = {
 
 }  // namespace solid_mechanics
 
+template <int order, int dim, typename parameters = Parameters<>,
+          typename parameter_indices = std::make_integer_sequence<int, parameters::n>>
+class SolidFunctional;
+
 /**
  * @brief The nonlinear solid solver class
  *
@@ -78,11 +82,6 @@ const SolverOptions direct_dynamic_options = {
  * @tparam order The order of the discretization of the displacement and velocity fields
  * @tparam dim The spatial dimension of the mesh
  */
-template <int order, int dim, typename parameters = Parameters<>,
-          typename parameter_indices = std::make_integer_sequence<int, parameters::n>>
-class SolidFunctional;
-
-/// @overload
 template <int order, int dim, typename... parameter_space, int... parameter_indices>
 class SolidFunctional<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>
     : public BasePhysics {
@@ -392,10 +391,10 @@ public:
   {
     residual_->AddDomainIntegral(
         Dimension<dim>{}, DependsOn<0, 1, active_parameters + 2 ...>{},
-        [body_force, this](auto x, auto /* displacement */, auto /* acceleration */, auto... /*params*/) {
+        [body_force, this](auto x, auto /* displacement */, auto /* acceleration */, auto... params) {
           // note: this assumes that the body force function is defined
           // per unit volume in the reference configuration
-          return serac::tuple{body_force(x, time_), zero{}};
+          return serac::tuple{body_force(x, time_, params...), zero{}};
         },
         mesh_);
   }

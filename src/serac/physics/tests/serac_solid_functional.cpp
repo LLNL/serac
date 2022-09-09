@@ -363,6 +363,9 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   solid_mechanics::ConstantBodyForce<dim> force{constant_force};
   solid_solver.addBodyForce(force);
 
+  // add a nonexistent body force to check that the parameterized version compiles
+  solid_solver.addBodyForce(DependsOn<0>{}, [](auto x, double /*t*/, auto /* bulk */) { return x * 0.0; });
+
   // Finalize the data structures
   solid_solver.completeSetup();
 
