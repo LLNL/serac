@@ -205,7 +205,7 @@ public:
       }
     }
     if (which_local_trial_space != -1) {
-      action_of_gradient_[which_trial_space](input_E, output_E);
+      action_of_gradient_[which_local_trial_space](input_E, output_E);
     }
     SERAC_MARK_END("Domain Integral Action of Gradient");
   }
@@ -227,7 +227,7 @@ public:
       }
     }
     if (which_local_trial_space != -1) {
-      element_gradient_[which_trial_space](K_e);
+      element_gradient_[which_local_trial_space](K_e);
     }
     SERAC_MARK_END("Domain Integral Element Gradient");
   }
