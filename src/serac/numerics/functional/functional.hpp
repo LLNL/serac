@@ -23,6 +23,9 @@
 #include "serac/numerics/functional/boundary_integral.hpp"
 #include "serac/numerics/functional/dof_numbering.hpp"
 
+#include <array>
+#include <vector>
+
 namespace serac {
 
 template <int i>

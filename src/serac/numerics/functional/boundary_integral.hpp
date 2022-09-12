@@ -24,6 +24,8 @@
 #include "serac/numerics/functional/boundary_integral_kernels.cuh"
 #endif
 
+#include <array>
+
 namespace serac {
 
 /**

@@ -10,6 +10,8 @@
 #include "serac/numerics/functional/integral_utilities.hpp"
 #include "serac/numerics/functional/evector_view.hpp"
 
+#include <array>
+
 namespace serac {
 
 namespace domain_integral {
