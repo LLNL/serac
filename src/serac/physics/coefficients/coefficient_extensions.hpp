@@ -438,7 +438,6 @@ public:
    * @param[in] v  The evaluated coefficient vector at the quadrature point
    * @param[in] Tr The element transformation for the evaluation
    * @param[in] ip The integration point for the evaluation
-   * @return The value of the coefficient at the quadrature point
    */
   void Eval(mfem::Vector& v, mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip) override
   {

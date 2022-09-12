@@ -13,6 +13,7 @@
  */
 #pragma once
 
+#include <array>
 #include <memory>
 
 #include "mfem.hpp"
