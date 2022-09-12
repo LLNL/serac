@@ -301,16 +301,18 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
   EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
 }
 
-template < typename lambda >
+template <typename lambda>
 struct ParameterizedBodyForce {
-  template < int dim, typename T > 
-  auto operator()(const tensor<double, dim> x, double /*t*/, T density) const {
+  template <int dim, typename T>
+  auto operator()(const tensor<double, dim> x, double /*t*/, T density) const
+  {
     return get<0>(density) * acceleration(x);
   }
   lambda acceleration;
 };
 
-template < typename T > ParameterizedBodyForce(T) -> ParameterizedBodyForce<T>;
+template <typename T>
+ParameterizedBodyForce(T) -> ParameterizedBodyForce<T>;
 
 template <int p, int dim>
 void functional_parameterized_solid_test(double expected_disp_norm)
@@ -377,7 +379,8 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   // add some nonexistent body forces to check that these parameterized versions compile and run without error
   solid_solver.addBodyForce(DependsOn<0>{}, [](auto x, double /*t*/, auto /* bulk */) { return x * 0.0; });
 
-  solid_solver.addBodyForce(DependsOn<0>{}, ParameterizedBodyForce{[](const tensor< double, dim > & x){ return 0.0 * x; }});
+  solid_solver.addBodyForce(DependsOn<0>{},
+                            ParameterizedBodyForce{[](const tensor<double, dim>& x) { return 0.0 * x; }});
 
   // Finalize the data structures
   solid_solver.completeSetup();
