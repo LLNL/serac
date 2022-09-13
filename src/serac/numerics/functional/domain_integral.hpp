@@ -44,7 +44,7 @@ public:
    * @param[in] J The Jacobians of the element transformations at all quadrature points
    * @param[in] X The actual (not reference) coordinates of all quadrature points
    * @param[in] qf The user-provided quadrature function
-   * @param[in] arg_indices indices used to select which trail spaces to use in evaluation kernels
+   * @param[in] active_arguments indices used to select which trial spaces to use in evaluation kernels
    *
    * @see mfem::GeometricFactors
    * @param[inout] qdata The data for each quadrature point
@@ -54,14 +54,18 @@ public:
   template <int dim, typename test, typename... trials, typename lambda_type, typename qpt_data_type = Nothing>
   DomainIntegral(test, serac::tuple<trials...>, size_t num_elements, const mfem::Vector& J, const mfem::Vector& X,
                  Dimension<dim>, lambda_type&& qf, std::shared_ptr<QuadratureData<qpt_data_type> > qdata,
-                 std::vector<int> arg_indices)
+                 std::vector<int> active_arguments)
   {
-    argument_indices = arg_indices;
 
     constexpr size_t num_active_trial_spaces = sizeof...(trials);
-
-    SLIC_ERROR_ROOT_IF(num_active_trial_spaces != arg_indices.size(),
+    SLIC_ERROR_ROOT_IF(num_active_trial_spaces != active_arguments.size(),
                        "Error: argument indices inconsistent with provided number of arguments");
+
+    active_arguments_ = active_arguments; 
+    local_indices_ = std::vector<int>(num_trial_spaces, -1);
+    for (size_t i = 0; i < active_arguments.size(); i++) {
+      local_indices_[active_arguments[i]] = static_cast<int>(i);
+    }
 
     SERAC_MARK_BEGIN("Domain Integral Set Up");
     using namespace domain_integral;
@@ -161,21 +165,10 @@ public:
   void Mult(const std::array<mfem::Vector, num_trial_spaces>& input_E, mfem::Vector& output_E, int which_trial_space,
             bool update_state) const
   {
-    int                              which_local_trial_space = -1;
-    std::vector<const mfem::Vector*> selected(argument_indices.size());
-    for (size_t i = 0; i < argument_indices.size(); i++) {
-      selected[i] = &input_E[size_t(argument_indices[i])];
-
-      // now that these integrals don't depend on all of the arguments,
-      // we have to figure out which of our local arguments correspond to
-      // `which_trial_space`
-      //
-      // if this calculation doesn't depend on that argument at all, then
-      // we just call the evaluation kernel without any differentiation
-      //
-      if (which_trial_space == argument_indices[i]) {
-        which_local_trial_space = static_cast<int>(i);
-      }
+    int which_local_trial_space = local_indices_[which_trial_space];
+    std::vector<const mfem::Vector*> selected(active_arguments_.size());
+    for (size_t i = 0; i < active_arguments_.size(); i++) {
+      selected[i] = &input_E[size_t(active_arguments_[i])];
     }
 
     if (which_local_trial_space == -1) {
@@ -198,12 +191,7 @@ public:
   void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E, std::size_t which_trial_space) const
   {
     SERAC_MARK_BEGIN("Domain Integral Action of Gradient");
-    int which_local_trial_space = -1;
-    for (size_t i = 0; i < argument_indices.size(); i++) {
-      if (which_trial_space == std::size_t(argument_indices[i])) {
-        which_local_trial_space = static_cast<int>(i);
-      }
-    }
+    int which_local_trial_space = local_indices_[which_trial_space];
     if (which_local_trial_space != -1) {
       action_of_gradient_[which_local_trial_space](input_E, output_E);
     }
@@ -220,12 +208,7 @@ public:
   void ComputeElementGradients(ExecArrayView<double, 3, ExecutionSpace::CPU> K_e, std::size_t which_trial_space) const
   {
     SERAC_MARK_BEGIN("Domain Integral Element Gradient");
-    int which_local_trial_space = -1;
-    for (size_t i = 0; i < argument_indices.size(); i++) {
-      if (which_trial_space == std::size_t(argument_indices[i])) {
-        which_local_trial_space = static_cast<int>(i);
-      }
-    }
+    int which_local_trial_space = local_indices_[which_trial_space];
     if (which_local_trial_space != -1) {
       element_gradient_[which_local_trial_space](K_e);
     }
@@ -246,7 +229,8 @@ private:
   /// @brief Type-erased handle to gradient matrix assembly kernels
   std::function<void(ExecArrayView<double, 3, exec>)> element_gradient_[num_trial_spaces];
 
-  std::vector<int> argument_indices;
+  std::vector<int> active_arguments_;
+  std::vector<int> local_indices_;
 };
 
 }  // namespace serac

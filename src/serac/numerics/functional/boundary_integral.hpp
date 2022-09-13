@@ -48,24 +48,27 @@ public:
    * @param[in] X The actual (not reference) coordinates of all quadrature points
    * @param[in] N The unit normals of all quadrature points
    * @param[in] qf The user-provided quadrature function
-   * @param[in] arg_indices indices used to select which trail spaces to use in evaluation kernels
+   * @param[in] active_arguments indices used to select which trail spaces to use in evaluation kernels
    *
    * @see mfem::GeometricFactors
    * @note The @p Dimension parameters are used to assist in the deduction of the dim template parameter
    */
   template <int dim, typename test, typename... trials, typename lambda_type, typename qpt_data_type = void>
   BoundaryIntegral(test, serac::tuple<trials...>, size_t num_elements, const mfem::Vector& J, const mfem::Vector& X,
-                   const mfem::Vector& N, Dimension<dim>, lambda_type&& qf, std::vector<int> arg_indices)
+                   const mfem::Vector& N, Dimension<dim>, lambda_type&& qf, std::vector<int> active_arguments)
   {
     static_assert(((trials::family == Family::H1) && ...),
                   "Error: boundary integrals currently only support H1 trial spaces");
 
-    argument_indices = arg_indices;
-
     constexpr size_t num_active_trial_spaces = sizeof...(trials);
-
-    SLIC_ERROR_ROOT_IF(num_active_trial_spaces != arg_indices.size(),
+    SLIC_ERROR_ROOT_IF(num_active_trial_spaces != active_arguments.size(),
                        "Error: argument indices inconsistent with provided number of arguments");
+
+    active_arguments_ = active_arguments; 
+    local_indices_ = std::vector<int>(num_trial_spaces, -1);
+    for (size_t i = 0; i < active_arguments.size(); i++) {
+      local_indices_[active_arguments[i]] = static_cast<int>(i);
+    }
 
     using namespace boundary_integral;
 
@@ -119,21 +122,10 @@ public:
   void Mult(const std::array<mfem::Vector, num_trial_spaces>& input_E, mfem::Vector& output_E,
             int which_trial_space) const
   {
-    int                              which_local_trial_space = -1;
-    std::vector<const mfem::Vector*> selected(argument_indices.size());
-    for (size_t i = 0; i < argument_indices.size(); i++) {
-      selected[i] = &input_E[size_t(argument_indices[i])];
-
-      // now that these integrals don't depend on all of the arguments,
-      // we have to figure out which of our local arguments correspond to
-      // `which_trial_space`
-      //
-      // if this calculation doesn't depend on that argument at all, then
-      // we just call the evaluation kernel without any differentiation
-      //
-      if (which_trial_space == argument_indices[i]) {
-        which_local_trial_space = static_cast<int>(i);
-      }
+    int which_local_trial_space = local_indices_[which_trial_space];
+    std::vector<const mfem::Vector*> selected(active_arguments_.size());
+    for (size_t i = 0; i < active_arguments_.size(); i++) {
+      selected[i] = &input_E[size_t(active_arguments_[i])];
     }
 
     if (which_local_trial_space == -1) {
@@ -152,12 +144,7 @@ public:
    */
   void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E, std::size_t which_trial_space) const
   {
-    int which_local_trial_space = -1;
-    for (size_t i = 0; i < argument_indices.size(); i++) {
-      if (which_trial_space == std::size_t(argument_indices[i])) {
-        which_local_trial_space = static_cast<int>(i);
-      }
-    }
+    int which_local_trial_space = local_indices_[which_trial_space];
     if (which_local_trial_space != -1) {
       action_of_gradient_[which_local_trial_space](input_E, output_E);
     }
@@ -171,12 +158,7 @@ public:
    */
   void ComputeElementGradients(ExecArrayView<double, 3, ExecutionSpace::CPU> K_b, std::size_t which_trial_space) const
   {
-    int which_local_trial_space = -1;
-    for (size_t i = 0; i < argument_indices.size(); i++) {
-      if (which_trial_space == std::size_t(argument_indices[i])) {
-        which_local_trial_space = static_cast<int>(i);
-      }
-    }
+    int which_local_trial_space = local_indices_[which_trial_space];
     if (which_local_trial_space != -1) {
       element_gradient_[which_local_trial_space](K_b);
     }
@@ -195,7 +177,20 @@ private:
   /// @brief kernels for computing consistent "element stiffness" matrices
   std::function<void(ExecArrayView<double, 3, exec>)> element_gradient_[num_trial_spaces];
 
-  std::vector<int> argument_indices;
+  /**
+   * @brief an array for mapping local argument indices to parent argument indices
+   * e.g. `active_arguments_[0] == 2` means that the 
+   * local index 0 corresponds to * the parent index 2
+   */
+  std::vector<int> active_arguments_;
+
+  /**
+   * @brief an array for mapping parent argument indices to local argument indices
+   * e.g. `active_arguments_[0] == 2` means that the 
+   * local index 0 corresponds to * the parent index 2
+   */
+  std::vector<int> local_indices_;
+
 };
 
 }  // namespace serac
