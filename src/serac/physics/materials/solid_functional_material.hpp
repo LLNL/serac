@@ -169,12 +169,12 @@ struct ConstantBodyForce {
   /**
    * @brief Evaluation function for the constant body force model
    *
-   * @tparam DisplacementType Displacement type
-   * @tparam DispGradType Displacement gradient type
+   * @tparam T Position type
    * @tparam dim The dimension of the problem
    * @return The body force value
    */
-  SERAC_HOST_DEVICE tensor<double, dim> operator()(const tensor<double, dim>& /* x */, const double /* t */) const
+  template <typename T>
+  SERAC_HOST_DEVICE tensor<double, dim> operator()(const tensor<T, dim>& /* x */, const double /* t */) const
   {
     return force_;
   }
@@ -189,30 +189,14 @@ struct ConstantTraction {
   /**
    * @brief Evaluation function for the constant traction model
    *
+   * @tparam T Position type
    * @return The traction value
    */
-  SERAC_HOST_DEVICE tensor<double, dim> operator()(const tensor<double, dim>& /* x */,
-                                                   const tensor<double, dim>& /* n */, const double /* t */) const
+  template <typename T>
+  SERAC_HOST_DEVICE tensor<double, dim> operator()(const tensor<T, dim>& /* x */, const tensor<T, dim>& /* n */,
+                                                   const double /* t */) const
   {
     return traction_;
-  }
-};
-
-/// Constant pressure model
-struct ConstantPressure {
-  /// The constant pressure
-  double pressure_;
-
-  /**
-   * @brief Evaluation of the constant pressure model
-   *
-   * @tparam dim Spatial dimension
-   */
-  template <int dim>
-  SERAC_HOST_DEVICE double operator()(const tensor<double, dim>& /* x */, const tensor<double, dim>& n,
-                                      const double /* t */) const
-  {
-    return pressure_ * n;
   }
 };
 

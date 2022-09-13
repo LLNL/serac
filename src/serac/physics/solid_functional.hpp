@@ -91,6 +91,10 @@ public:
   static constexpr auto I = Identity<dim>();
   //! @endcond
 
+  /// @brief The total number of non-parameter state variables (displacement, velocity, shape) passed to the FEM
+  /// integrators
+  static constexpr auto NUM_STATE_VARS = 3;
+
   /**
    * @brief a list of the currently supported element geometries, by dimension
    * @note: this is hardcoded for now, since we currently
@@ -141,7 +145,7 @@ public:
     // Create a pack of the primal field and parameter finite element spaces
     mfem::ParFiniteElementSpace* test_space = &displacement_.space();
 
-    std::array<mfem::ParFiniteElementSpace*, 3 + sizeof...(parameter_space)> trial_spaces;
+    std::array<mfem::ParFiniteElementSpace*, NUM_STATE_VARS + sizeof...(parameter_space)> trial_spaces;
     trial_spaces[0] = &displacement_.space();
     trial_spaces[1] = &displacement_.space();
     trial_spaces[2] = &displacement_.space();
@@ -149,9 +153,9 @@ public:
     if constexpr (sizeof...(parameter_space) > 0) {
       tuple<parameter_space...> types{};
       for_constexpr<sizeof...(parameter_space)>([&](auto i) {
-        trial_spaces[i + 3] =
+        trial_spaces[i + NUM_STATE_VARS] =
             generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_);
-        parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, *trial_spaces[i + 2]);
+        parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, *trial_spaces[i + NUM_STATE_VARS]);
       });
     }
 
@@ -294,8 +298,8 @@ public:
    *
    *  double lambda = 500.0;
    *  double mu = 500.0;
-   *  solid_mechanics.addCustomDomainIntegral(DependsOn<>{}, [=](auto x, auto displacement, auto acceleration){
-   *    auto du_dx = serac::get<1>(displacement);
+   *  solid_mechanics.addCustomDomainIntegral(DependsOn<>{}, [=](auto x, auto displacement, auto acceleration, auto
+   * shape_displacement){ auto du_dx = serac::get<1>(displacement);
    *
    *    auto I       = Identity<dim>();
    *    auto epsilon = 0.5 * (transpose(du_dx) + du_dx);
@@ -313,8 +317,8 @@ public:
   void addCustomDomainIntegral(DependsOn<active_parameters...>, callable qfunction,
                                std::shared_ptr<QuadratureData<StateType>> qdata = NoQData)
   {
-    residual_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1, active_parameters + 2 ...>{}, qfunction, mesh_,
-                                 qdata);
+    residual_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
+                                 qfunction, mesh_, qdata);
   }
 
   /**
@@ -335,9 +339,10 @@ public:
     residual_->AddDomainIntegral(
         Dimension<dim>{},
         DependsOn<0, 1, 2,
-                  active_parameters + 3 ...>{},  // the magic number "+3" accounts for the fact that the
-                                                 // displacement and acceleration fields are always-on and come
-                                                 // first, so the `n`th parameter will actually be argument `n+3`
+                  active_parameters + NUM_STATE_VARS...>{},  // the magic number "+ NUM_STATE_VARS" accounts for the
+                                                             // fact that the displacement, acceleration, and shape
+                                                             // fields are always-on and come first, so the `n`th
+                                                             // parameter will actually be argument `n + NUM_STATE_VARS`
         [this, material](auto /*x*/, auto& state, auto displacement, auto acceleration, auto shape, auto... params) {
           auto du_dX   = get<DERIVATIVE>(displacement);
           auto d2u_dt2 = get<VALUE>(acceleration);
@@ -426,11 +431,13 @@ public:
   void addBodyForce(DependsOn<active_parameters...>, BodyForceType body_force)
   {
     residual_->AddDomainIntegral(
-        Dimension<dim>{}, DependsOn<0, 1, active_parameters + 2 ...>{},
-        [body_force, this](auto x, auto /* displacement */, auto /* acceleration */, auto... params) {
+        Dimension<dim>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
+        [body_force, this](auto x, auto /* displacement */, auto /* acceleration */, auto shape, auto... params) {
           // note: this assumes that the body force function is defined
           // per unit volume in the reference configuration
-          return serac::tuple{body_force(x, time_, params...), zero{}};
+          auto p     = get<VALUE>(shape);
+          auto dp_dX = get<DERIVATIVE>(shape);
+          return serac::tuple{body_force(x + p, time_, params...) * det(dp_dX + I), zero{}};
         },
         mesh_);
   }
@@ -439,19 +446,7 @@ public:
   template <typename BodyForceType>
   void addBodyForce(BodyForceType body_force)
   {
-    residual_->AddDomainIntegral(
-        Dimension<dim>{}, DependsOn<0, 1, 2>{},
-        [body_force, this](auto x, auto /* displacement */, auto /* acceleration */, auto shape, auto... /* params */) {
-          auto dp_dX = get<DERIVATIVE>(shape);
-          // auto p     = get<VALUE>(shape);
-
-          // note: this assumes that the body force function is defined
-          // per unit volume in the reference configuration
-
-          // TODO should we add the shape parameter to x?
-          return serac::tuple{body_force(x, time_) * det(dp_dX + I), zero{}};
-        },
-        mesh_);
+    addBodyForce(DependsOn<>{}, body_force);
   }
 
   /**
@@ -466,21 +461,27 @@ public:
   void setPiolaTraction(DependsOn<active_parameters...>, TractionType traction_function)
   {
     residual_->AddBoundaryIntegral(
-        Dimension<dim - 1>{}, DependsOn<0, 1, 2, active_parameters + 3 ...>{},
+        Dimension<dim - 1>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
         [this, traction_function](auto x, auto n, auto, auto, auto shape, auto... params) {
           auto dp_dX = get<DERIVATIVE>(shape);
-          // auto p     = get<VALUE>(shape);
+          auto p     = get<VALUE>(shape);
 
-          auto def_grad     = I + dp_dX;
-          auto inv_def_grad = inv(def_grad);
+          auto def_grad           = I + dp_dX;
+          auto inv_trans_def_grad = inv(transpose(def_grad));
+
+          // Compute the normal vector after the shape displacement is applied using the Piola transformation
+          // n = det(F)F^-T n_0
+          auto shape_normal = det(def_grad) * dot(inv_trans_def_grad, n);
+          shape_normal      = shape_normal / norm(shape_normal);
 
           // Needed to be able to switch between dual and double square root functions
           using std::sqrt;
 
-          auto area_correction = det(def_grad) * sqrt(dot(n, dot(inv_def_grad, dot(transpose(inv_def_grad), n))));
+          // Compute the updated area contribution using the Piola transformation
+          // dA = det(F) * norm(F^-T n_0)
+          auto area_correction = det(def_grad) * norm(dot(inv_trans_def_grad, n));
 
-          // TODO should x be modified by the shape parameter?
-          return -1.0 * traction_function(x, n, time_, params...) * area_correction;
+          return -1.0 * traction_function(x + p, shape_normal, time_, params...) * area_correction;
         },
         mesh_);
   }
@@ -711,8 +712,9 @@ public:
   template <int parameter_field>
   FiniteElementDual& computeSensitivity()
   {
-    auto drdparam = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<parameter_field + 3>{}, displacement_, zero_,
-                                                        shape_displacement_, *parameter_states_[parameter_indices]...));
+    auto drdparam =
+        serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<parameter_field + NUM_STATE_VARS>{}, displacement_, zero_,
+                                            shape_displacement_, *parameter_states_[parameter_indices]...));
 
     auto drdparam_mat = assemble(drdparam);
 
