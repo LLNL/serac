@@ -48,7 +48,7 @@ public:
    * @param[in] X The actual (not reference) coordinates of all quadrature points
    * @param[in] N The unit normals of all quadrature points
    * @param[in] qf The user-provided quadrature function
-   * @param[in] active_arguments indices used to select which trail spaces to use in evaluation kernels
+   * @param[in] active_arguments indices used to select which trial spaces to use in evaluation kernels
    *
    * @see mfem::GeometricFactors
    * @note The @p Dimension parameters are used to assist in the deduction of the dim template parameter
