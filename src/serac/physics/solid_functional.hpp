@@ -335,9 +335,9 @@ public:
     residual_->AddDomainIntegral(
         Dimension<dim>{},
         DependsOn<0, 1, 2,
-                  active_parameters + 3 ...>{},  // the magic number "+2" accounts for the fact that the
+                  active_parameters + 3 ...>{},  // the magic number "+3" accounts for the fact that the
                                                  // displacement and acceleration fields are always-on and come
-                                                 // first, so the `n`th parameter will actually be argument `n+2`
+                                                 // first, so the `n`th parameter will actually be argument `n+3`
         [this, material](auto /*x*/, auto& state, auto displacement, auto acceleration, auto shape, auto... params) {
           auto du_dX   = get<DERIVATIVE>(displacement);
           auto d2u_dt2 = get<VALUE>(acceleration);
@@ -371,7 +371,7 @@ public:
           auto flux = dot(stress, transpose(inv(deformation_grad))) * det(I + dp_dX);
 
           // This transpose on the stress in the following line is a
-          // hack to fix a bug in the resdual operator. The stress
+          // hack to fix a bug in the residual operator. The stress
           // should be transposed in the contraction of the Piola
           // stress with the shape function gradients.
           //
