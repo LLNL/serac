@@ -229,7 +229,7 @@ private:
   std::function<void(ExecArrayView<double, 3, exec>)> element_gradient_[num_trial_spaces];
 
   /**
-   * @brief an array for mapping @c DomainIntegral argument indices to @c Functional argument indices
+   * @brief an array for mapping `DomainIntegral` argument indices to `Functional` argument indices
    * e.g. `integral_to_functional_[0] == 2` means that the
    * argument 0 of this integral corresponds to argument 2 in the associated `Functional`
    */
