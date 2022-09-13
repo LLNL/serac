@@ -372,7 +372,7 @@ public:
           auto flux = dot(stress, transpose(inv(deformation_grad))) * det(I + dp_dX);
 
           // This transpose on the stress in the following line is a
-          // hack to fix a bug in the resdual operator. The stress
+          // hack to fix a bug in the residual operator. The stress
           // should be transposed in the contraction of the Piola
           // stress with the shape function gradients.
           //
