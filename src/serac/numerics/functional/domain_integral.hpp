@@ -56,12 +56,11 @@ public:
                  Dimension<dim>, lambda_type&& qf, std::shared_ptr<QuadratureData<qpt_data_type> > qdata,
                  std::vector<int> active_arguments)
   {
-
     constexpr size_t num_active_trial_spaces = sizeof...(trials);
     SLIC_ERROR_ROOT_IF(num_active_trial_spaces != active_arguments.size(),
                        "Error: argument indices inconsistent with provided number of arguments");
 
-    integral_to_functional_ = active_arguments; 
+    integral_to_functional_ = active_arguments;
     functional_to_integral_ = std::vector<int>(num_trial_spaces, -1);
     for (size_t i = 0; i < active_arguments.size(); i++) {
       functional_to_integral_[active_arguments[i]] = static_cast<int>(i);
@@ -231,14 +230,14 @@ private:
 
   /**
    * @brief an array for mapping @c DomainIntegral argument indices to @c Functional argument indices
-   * e.g. `integral_to_functional_[0] == 2` means that the 
+   * e.g. `integral_to_functional_[0] == 2` means that the
    * argument 0 of this integral corresponds to argument 2 in the associated `Functional`
    */
   std::vector<int> integral_to_functional_;
 
   /**
    * @brief an array for mapping `Functional` argument indices to `DomainIntegral` argument indices
-   * e.g. `functional_to_integral[2] == 0` means that the 
+   * e.g. `functional_to_integral[2] == 0` means that the
    * argument 2 of the associated functional corresponds to argument 0 of this integral
    */
   std::vector<int> functional_to_integral_;
