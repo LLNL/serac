@@ -127,8 +127,8 @@ public:
       selected[i] = &input_E[size_t(integral_to_functional_[i])];
     }
 
-    int index = functional_to_integral_[functional_index];
-    if (index != -1) {
+    int index = (functional_index == -1) ? -1 : functional_to_integral_[functional_index];
+    if (index == -1) {
       evaluation_(selected, output_E);
     } else {
       evaluation_with_AD_[index](selected, output_E);

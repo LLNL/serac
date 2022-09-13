@@ -169,7 +169,7 @@ public:
       selected[i] = &input_E[size_t(integral_to_functional_[i])];
     }
 
-    int index = functional_to_integral_[functional_index];
+    int index = (functional_index == -1) ? -1 : functional_to_integral_[functional_index];
     if (index == -1) {
       SERAC_MARK_BEGIN("Domain Integral Evaluation");
       evaluation_(selected, output_E, update_state);
