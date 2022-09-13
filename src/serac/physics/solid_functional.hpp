@@ -165,7 +165,6 @@ public:
     velocity_             = 0.0;
     shape_displacement_   = 0.0;
     adjoint_displacement_ = 0.0;
-    shape_displacement_   = 0.0;
 
     const auto& lin_options = options.linear;
     // If the user wants the AMG preconditioner with a linear solver, set the pfes
