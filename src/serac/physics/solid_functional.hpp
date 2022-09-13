@@ -338,7 +338,7 @@ public:
         DependsOn<0, 1, 2,
                   active_parameters + 3 ...>{},  // the magic number "+3" accounts for the fact that the
                                                  // displacement and acceleration fields are always-on and come
-                                                 // first, so the `n`th parameter will actually be argument `n+2`
+                                                 // first, so the `n`th parameter will actually be argument `n+3`
         [this, material](auto /*x*/, auto& state, auto displacement, auto acceleration, auto shape, auto... params) {
           auto du_dX   = get<DERIVATIVE>(displacement);
           auto d2u_dt2 = get<VALUE>(acceleration);
