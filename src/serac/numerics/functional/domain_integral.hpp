@@ -61,10 +61,10 @@ public:
     SLIC_ERROR_ROOT_IF(num_active_trial_spaces != active_arguments.size(),
                        "Error: argument indices inconsistent with provided number of arguments");
 
-    active_arguments_ = active_arguments; 
-    local_indices_ = std::vector<int>(num_trial_spaces, -1);
+    integral_to_functional_ = active_arguments; 
+    functional_to_integral_ = std::vector<int>(num_trial_spaces, -1);
     for (size_t i = 0; i < active_arguments.size(); i++) {
-      local_indices_[active_arguments[i]] = static_cast<int>(i);
+      functional_to_integral_[active_arguments[i]] = static_cast<int>(i);
     }
 
     SERAC_MARK_BEGIN("Domain Integral Set Up");
@@ -154,30 +154,30 @@ public:
    * @brief Applies the integral, i.e., @a output_E = evaluate( @a input_E )
    * @param[in] input_E The input to the evaluation; per-element DOF values
    * @param[out] output_E The output of the evalution; per-element DOF residuals
-   * @param[in] which_trial_space specifies which trial space to compute derivatives with respect to (if any)
+   * @param[in] functional_index specifies which trial space to compute derivatives with respect to (if any)
    * @param[in] update_state a boolean flag for specifying if the material state data should be overwritten or not.
    *                         Typically, this flag is kept false while looking for a solution to the
    *                         residual equations.
    *
-   * @note which_trial_space == -1 implies that this function will call the evaluation kernel that performs no
+   * @note functional_index == -1 implies that this function will call the evaluation kernel that performs no
    * differentiation
    */
-  void Mult(const std::array<mfem::Vector, num_trial_spaces>& input_E, mfem::Vector& output_E, int which_trial_space,
+  void Mult(const std::array<mfem::Vector, num_trial_spaces>& input_E, mfem::Vector& output_E, int functional_index,
             bool update_state) const
   {
-    int which_local_trial_space = local_indices_[which_trial_space];
-    std::vector<const mfem::Vector*> selected(active_arguments_.size());
-    for (size_t i = 0; i < active_arguments_.size(); i++) {
-      selected[i] = &input_E[size_t(active_arguments_[i])];
+    std::vector<const mfem::Vector*> selected(integral_to_functional_.size());
+    for (size_t i = 0; i < integral_to_functional_.size(); i++) {
+      selected[i] = &input_E[size_t(integral_to_functional_[i])];
     }
 
-    if (which_local_trial_space == -1) {
+    int index = functional_to_integral_[functional_index];
+    if (index == -1) {
       SERAC_MARK_BEGIN("Domain Integral Evaluation");
       evaluation_(selected, output_E, update_state);
       SERAC_MARK_END("Domain Integral Evaluation");
     } else {
       SERAC_MARK_BEGIN("Domain Integral Evaluation with AD");
-      evaluation_with_AD_[which_local_trial_space](selected, output_E, update_state);
+      evaluation_with_AD_[index](selected, output_E, update_state);
       SERAC_MARK_END("Domain Integral Evaluation with AD");
     }
   }
@@ -186,14 +186,14 @@ public:
    * @brief Applies the integral, i.e., @a output_E = gradient( @a input_E )
    * @param[in] input_E The input to the evaluation; per-element DOF values
    * @param[out] output_E The output of the evalution; per-element DOF residuals
-   * @param[in] which_trial_space specifies which trial space input_E correpsonds to
+   * @param[in] functional_index specifies which trial space input_E correpsonds to
    */
-  void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E, std::size_t which_trial_space) const
+  void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E, std::size_t functional_index) const
   {
     SERAC_MARK_BEGIN("Domain Integral Action of Gradient");
-    int which_local_trial_space = local_indices_[which_trial_space];
-    if (which_local_trial_space != -1) {
-      action_of_gradient_[which_local_trial_space](input_E, output_E);
+    int index = functional_to_integral_[functional_index];
+    if (index != -1) {
+      action_of_gradient_[index](input_E, output_E);
     }
     SERAC_MARK_END("Domain Integral Action of Gradient");
   }
@@ -203,14 +203,14 @@ public:
    * multidimensional array
    * @param[inout] K_e The reshaped vector as a mfem::DeviceTensor of size (test_dim * test_dof, trial_dim * trial_dof,
    * elem)
-   * @param[in] which_trial_space specifies which trial space K_e correpsonds to
+   * @param[in] functional_index specifies which trial space K_e correpsonds to
    */
-  void ComputeElementGradients(ExecArrayView<double, 3, ExecutionSpace::CPU> K_e, std::size_t which_trial_space) const
+  void ComputeElementGradients(ExecArrayView<double, 3, ExecutionSpace::CPU> K_e, std::size_t functional_index) const
   {
     SERAC_MARK_BEGIN("Domain Integral Element Gradient");
-    int which_local_trial_space = local_indices_[which_trial_space];
-    if (which_local_trial_space != -1) {
-      element_gradient_[which_local_trial_space](K_e);
+    int index = functional_to_integral_[functional_index];
+    if (index != -1) {
+      element_gradient_[index](K_e);
     }
     SERAC_MARK_END("Domain Integral Element Gradient");
   }
@@ -229,8 +229,19 @@ private:
   /// @brief Type-erased handle to gradient matrix assembly kernels
   std::function<void(ExecArrayView<double, 3, exec>)> element_gradient_[num_trial_spaces];
 
-  std::vector<int> active_arguments_;
-  std::vector<int> local_indices_;
+  /**
+   * @brief an array for mapping @c DomainIntegral argument indices to @c Functional argument indices
+   * e.g. `integral_to_functional_[0] == 2` means that the 
+   * argument 0 of this integral corresponds to argument 2 in the associated `Functional`
+   */
+  std::vector<int> integral_to_functional_;
+
+  /**
+   * @brief an array for mapping `Functional` argument indices to `DomainIntegral` argument indices
+   * e.g. `functional_to_integral[2] == 0` means that the 
+   * argument 2 of the associated functional corresponds to argument 0 of this integral
+   */
+  std::vector<int> functional_to_integral_;
 };
 
 }  // namespace serac

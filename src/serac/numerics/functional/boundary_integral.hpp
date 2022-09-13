@@ -64,10 +64,10 @@ public:
     SLIC_ERROR_ROOT_IF(num_active_trial_spaces != active_arguments.size(),
                        "Error: argument indices inconsistent with provided number of arguments");
 
-    active_arguments_ = active_arguments; 
-    local_indices_ = std::vector<int>(num_trial_spaces, -1);
+    integral_to_functional_ = active_arguments; 
+    functional_to_integral_ = std::vector<int>(num_trial_spaces, -1);
     for (size_t i = 0; i < active_arguments.size(); i++) {
-      local_indices_[active_arguments[i]] = static_cast<int>(i);
+      functional_to_integral_[active_arguments[i]] = static_cast<int>(i);
     }
 
     using namespace boundary_integral;
@@ -116,22 +116,22 @@ public:
    * @brief Applies the integral, i.e., @a output_E = evaluate( @a input_E )
    * @param[in] input_E The input to the evaluation; per-element DOF values
    * @param[out] output_E The output of the evalution; per-element DOF residuals
-   * @param[in] which_trial_space the index of the argument being differentiated,
-   *    which == -1 corresponds to direct evaluation without any differentiation
+   * @param[in] functional_index the index of the argument being differentiated
+   *    note: -1 corresponds to direct evaluation without any differentiation
    */
   void Mult(const std::array<mfem::Vector, num_trial_spaces>& input_E, mfem::Vector& output_E,
-            int which_trial_space) const
+            int functional_index) const
   {
-    int which_local_trial_space = local_indices_[which_trial_space];
-    std::vector<const mfem::Vector*> selected(active_arguments_.size());
-    for (size_t i = 0; i < active_arguments_.size(); i++) {
-      selected[i] = &input_E[size_t(active_arguments_[i])];
+    std::vector<const mfem::Vector*> selected(integral_to_functional_.size());
+    for (size_t i = 0; i < integral_to_functional_.size(); i++) {
+      selected[i] = &input_E[size_t(integral_to_functional_[i])];
     }
 
-    if (which_local_trial_space == -1) {
+    int index = functional_to_integral_[functional_index];
+    if (index != -1) {
       evaluation_(selected, output_E);
     } else {
-      evaluation_with_AD_[which_local_trial_space](selected, output_E);
+      evaluation_with_AD_[index](selected, output_E);
     }
   }
 
@@ -139,14 +139,14 @@ public:
    * @brief Applies the integral, i.e., @a output_E = gradient( @a input_E )
    * @param[in] input_E The input to the evaluation; per-element DOF values
    * @param[out] output_E The output of the evalution; per-element DOF residuals
-   * @param[in] which_trial_space the index of the argument being differentiated
+   * @param[in] functional_index specifies which trial space input_E correpsonds to
    * @see action_of_gradient_kernel
    */
-  void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E, std::size_t which_trial_space) const
+  void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E, std::size_t functional_index) const
   {
-    int which_local_trial_space = local_indices_[which_trial_space];
-    if (which_local_trial_space != -1) {
-      action_of_gradient_[which_local_trial_space](input_E, output_E);
+    int index = functional_to_integral_[functional_index];
+    if (index != -1) {
+      action_of_gradient_[index](input_E, output_E);
     }
   }
 
@@ -154,13 +154,13 @@ public:
    * @brief Computes the derivative of each element's residual with respect to the element values
    * @param[inout] K_b The reshaped vector as a mfem::DeviceTensor of size (test_dim * test_dof, trial_dim * trial_dof,
    * nelems)
-   * @param[in] which_trial_space the index of the argument being differentiated
+   * @param[in] functional_index specifies which trial space K_e correpsonds to
    */
-  void ComputeElementGradients(ExecArrayView<double, 3, ExecutionSpace::CPU> K_b, std::size_t which_trial_space) const
+  void ComputeElementGradients(ExecArrayView<double, 3, ExecutionSpace::CPU> K_b, std::size_t functional_index) const
   {
-    int which_local_trial_space = local_indices_[which_trial_space];
-    if (which_local_trial_space != -1) {
-      element_gradient_[which_local_trial_space](K_b);
+    int index = functional_to_integral_[functional_index];
+    if (index != -1) {
+      element_gradient_[index](K_b);
     }
   }
 
@@ -178,18 +178,18 @@ private:
   std::function<void(ExecArrayView<double, 3, exec>)> element_gradient_[num_trial_spaces];
 
   /**
-   * @brief an array for mapping local argument indices to parent argument indices
-   * e.g. `active_arguments_[0] == 2` means that the 
-   * local index 0 corresponds to * the parent index 2
+   * @brief an array for mapping `BoundaryIntegral` argument indices to `Functional` argument indices
+   * e.g. `integral_to_functional_[0] == 2` means that the 
+   * argument 0 of this integral corresponds to argument 2 in the associated `Functional`
    */
-  std::vector<int> active_arguments_;
+  std::vector<int> integral_to_functional_;
 
   /**
-   * @brief an array for mapping parent argument indices to local argument indices
-   * e.g. `active_arguments_[0] == 2` means that the 
-   * local index 0 corresponds to * the parent index 2
+   * @brief an array for mapping `Functional` argument indices to `BoundaryIntegral` argument indices
+   * e.g. `functional_to_integral[2] == 0` means that the 
+   * argument 2 of the associated functional corresponds to argument 0 of this integral
    */
-  std::vector<int> local_indices_;
+  std::vector<int> functional_to_integral_;
 
 };
 
