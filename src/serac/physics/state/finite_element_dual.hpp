@@ -58,39 +58,6 @@ public:
   }
 
   /**
-   * @brief Fill a user-provided grid function based on the underlying true vector
-   *
-   * This distributes true vector dofs to the finite element (local) dofs  by multiplying the true dofs
-   * by the restriction transpose operator.
-   *
-   * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
-   *
-   * @note It is more mathematically correct to use a linear form on the dual space. However, grid functions
-   * are common containers in MFEM-based codes, so this is left for convenience.
-   *
-   * @param grid_function The grid function to fill with the dual vector values
-   */
-  void fillGridFunction(mfem::ParGridFunction& grid_function) const
-  {
-    space_->GetRestrictionMatrix()->MultTranspose(*this, grid_function);
-  }
-
-  /**
-   * @brief Initialize the true vector in the FiniteElementDual based on an input grid function
-   *
-   * This distributes the grid function dofs to the true vector dofs by multiplying by the
-   * prolongation transpose operator.
-   *
-   * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
-   *
-   * @note It is more mathematically correct to use a linear form on the dual space. However, grid functions
-   * are common containers in MFEM-based codes, so this is left for convenience.
-   *
-   * @param grid_function The grid function used to initialize the underlying true vector.
-   */
-  void setFromGridFunction(const mfem::ParGridFunction& grid_function) { grid_function.ParallelAssemble(*this); }
-
-  /**
    * @brief Fill a user-provided linear form based on the underlying true vector
    *
    * This distributes true vector dofs to the finite element (local) dofs by multiplying the true dofs
@@ -121,6 +88,30 @@ public:
   {
     const_cast<mfem::ParLinearForm&>(linear_form).ParallelAssemble(*this);
   }
+
+  /**
+   * @brief Construct a linear form from the finite element dual true vector
+   *
+   * @return The constructed linear form
+   */
+  mfem::ParLinearForm& linearForm() const
+  {
+    if (!linear_form_) {
+      linear_form_ = std::make_unique<mfem::ParLinearForm>(space_.get());
+    }
+
+    fillLinearForm(*linear_form_);
+    return *linear_form_;
+  }
+
+protected:
+  /**
+   * @brief An optional container for a linear form (L-vector) view of the finite element dual.
+   *
+   * If a user requests it, it is constructed and potentially reused during subsequent calls. It is
+   * not updated unless specifically requested via the @a linearForm method.
+   */
+  mutable std::unique_ptr<mfem::ParLinearForm> linear_form_;
 };
 
 }  // namespace serac
