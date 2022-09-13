@@ -67,7 +67,7 @@ public:
     integral_to_functional_ = active_arguments;
     functional_to_integral_ = std::vector<int>(num_trial_spaces, -1);
     for (size_t i = 0; i < active_arguments.size(); i++) {
-      functional_to_integral_[active_arguments[i]] = static_cast<int>(i);
+      functional_to_integral_[static_cast<size_t>(active_arguments[i])] = static_cast<int>(i);
     }
 
     using namespace boundary_integral;
@@ -127,7 +127,7 @@ public:
       selected[i] = &input_E[size_t(integral_to_functional_[i])];
     }
 
-    int index = (functional_index == -1) ? -1 : functional_to_integral_[functional_index];
+    int index = (functional_index == -1) ? -1 : functional_to_integral_[static_cast<size_t>(functional_index)];
     if (index == -1) {
       evaluation_(selected, output_E);
     } else {
