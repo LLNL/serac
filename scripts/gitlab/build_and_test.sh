@@ -12,5 +12,8 @@ if [ $? -ne 0 ]; then { echo "ERROR: build_src.py failed." ; exit 1; } fi
 if [[ "$DO_INTEGRATION_TESTS" == "yes" ]] ; then
     cd *build_and_test_*/build-*
     ./ats.sh
-    if [ $? -ne 0 ]; then { echo "ERROR: ATS failed." ; exit 1; } fi
+    if [ $? -ne 0 ]; then 
+        echo "ERROR: ATS failed."
+        exit 1
+    fi
 fi
