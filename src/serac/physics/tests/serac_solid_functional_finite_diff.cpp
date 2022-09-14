@@ -153,7 +153,8 @@ TEST(SolidFunctionalFiniteDiff, FiniteDifference)
     // See if these are similar
     SLIC_INFO(axom::fmt::format("dqoi_dbulk: {}", dqoi_dbulk));
     SLIC_INFO(axom::fmt::format("sensitivity: {}", sensitivity(i)));
-    EXPECT_NEAR((sensitivity(i) - dqoi_dbulk) / std::max(dqoi_dbulk, 1.0e-2), 0.0, 5.0e-3);
+    double relative_error = (sensitivity(i) - dqoi_dbulk) / std::max(dqoi_dbulk, 1.0e-2);
+    EXPECT_NEAR(relative_error, 0.0, 5.0e-4);
   }
 }
 

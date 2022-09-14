@@ -268,14 +268,14 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
   solid_solver.setDisplacement(bc);
 
   if (test_mode == TestType::Pressure) {
-    solid_solver.setPiolaTraction([](const tensor<auto, dim>& x, const tensor<auto, dim>& n, const double) {
+    solid_solver.setPiolaTraction([](const auto & x, const tensor<double, dim>& n, const double) {
       if (x[0] > 7.5) {
         return 1.0e-2 * n;
       }
       return 0.0 * n;
     });
   } else if (test_mode == TestType::Traction) {
-    solid_solver.setPiolaTraction([](const tensor<auto, dim>& x, const tensor<auto, dim>& /*n*/, const double) {
+    solid_solver.setPiolaTraction([](const auto & x, const tensor<double, dim>& /*n*/, const double) {
       tensor<double, dim> traction;
       for (int i = 0; i < dim; ++i) {
         traction[i] = (x[0] > 7.9) ? 1.0e-4 : 0.0;
@@ -378,9 +378,9 @@ void functional_parameterized_solid_test(double expected_disp_norm)
 
   // add some nonexistent body forces to check that these parameterized versions compile and run without error
   solid_solver.addBodyForce(DependsOn<0>{},
-                            [](const tensor<auto, dim> x, double /*t*/, auto /* bulk */) { return x * 0.0; });
+                            [](const auto & x, double /*t*/, auto /* bulk */) { return x * 0.0; });
 
-  solid_solver.addBodyForce(DependsOn<0>{}, ParameterizedBodyForce{[](const tensor<auto, dim>& x) { return 0.0 * x; }});
+  solid_solver.addBodyForce(DependsOn<0>{}, ParameterizedBodyForce{[](const auto & x) { return 0.0 * x; }});
 
   // Finalize the data structures
   solid_solver.completeSetup();
