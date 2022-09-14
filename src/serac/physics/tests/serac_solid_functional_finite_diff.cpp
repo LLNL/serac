@@ -186,7 +186,7 @@ TEST(solid_functional_finite_diff, finite_difference_shape)
   // The nonlinear solver must have tight tolerances to ensure at least one Newton step occurs
   SolverOptions options = {
       DirectSolverOptions{},
-      NonlinearSolverOptions{.rel_tol = 1.0e-6, .abs_tol = 1.0e-12, .max_iter = 10, .print_level = 1}};
+      NonlinearSolverOptions{.rel_tol = 1.0e-8, .abs_tol = 1.0e-14, .max_iter = 10, .print_level = 1}};
 
   // Construct a functional-based solid solver
   SolidFunctional<p, dim> solid_solver(options, GeometricNonlinearities::On, "solid_functional");
@@ -245,7 +245,7 @@ TEST(solid_functional_finite_diff, finite_difference_shape)
   // Perform finite difference on each shape velocity value
   // to check if computed qoi sensitivity is consistent
   // with finite difference on the displacement
-  double eps = 1.0e-5;
+  double eps = 1.0e-6;
   for (int i = 0; i < solid_solver.shapeDisplacement().Size(); ++i) {
     // Perturb the shape field
     solid_solver.shapeDisplacement()(i) = shape_displacement_value + eps;
@@ -274,7 +274,7 @@ TEST(solid_functional_finite_diff, finite_difference_shape)
     // See if these are similar
     SLIC_INFO(axom::fmt::format("dqoi_dshape: {}", dqoi_dshape));
     SLIC_INFO(axom::fmt::format("sensitivity: {}", sensitivity(i)));
-    EXPECT_NEAR((sensitivity(i) - dqoi_dshape) / std::max(dqoi_dshape, 1.0e-2), 0.0, 8.0e-3);
+    EXPECT_NEAR((sensitivity(i) - dqoi_dshape) / std::max(dqoi_dshape, 1.0e-3), 0.0, 6.0e-5);
   }
 }
 
