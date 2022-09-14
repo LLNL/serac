@@ -14,18 +14,9 @@
 
 #include "mfem.hpp"
 #include "serac/physics/state/finite_element_state.hpp"
+#include "serac/physics/common.hpp"
 
 namespace serac {
-
-/**
- * @brief Enum to set the geometric nonlinearity flag
- *
- */
-enum class GeometricNonlinearities
-{
-  On, /**< Include geometric nonlinearities */
-  Off /**< Do not include geometric nonlinearities */
-};
 
 /**
  * @brief Abstract interface class for a generic thermal expansion model
