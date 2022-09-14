@@ -194,7 +194,10 @@ TEST(solid_functional_finite_diff, finite_difference_shape)
   solid_mechanics::NeoHookean mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
 
-  solid_solver.shapeDisplacement() = shape_displacement_value;
+  FiniteElementState shape_displacement(solid_solver.shapeDisplacement());
+
+  shape_displacement = shape_displacement_value;
+  solid_solver.setShapeDisplacement(shape_displacement);
 
   // Define the function for the initial displacement and boundary condition
   auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
@@ -246,20 +249,23 @@ TEST(solid_functional_finite_diff, finite_difference_shape)
   // to check if computed qoi sensitivity is consistent
   // with finite difference on the displacement
   double eps = 1.0e-6;
-  for (int i = 0; i < solid_solver.shapeDisplacement().Size(); ++i) {
+  for (int i = 0; i < shape_displacement.Size(); ++i) {
     // Perturb the shape field
-    solid_solver.shapeDisplacement()(i) = shape_displacement_value + eps;
+    shape_displacement(i) = shape_displacement_value + eps;
+    solid_solver.setShapeDisplacement(shape_displacement);
 
     solid_solver.advanceTimestep(dt);
     mfem::ParGridFunction displacement_plus = solid_solver.displacement().gridFunction();
 
-    solid_solver.shapeDisplacement()(i) = shape_displacement_value - eps;
+    shape_displacement(i) = shape_displacement_value - eps;
+    solid_solver.setShapeDisplacement(shape_displacement);
 
     solid_solver.advanceTimestep(dt);
     mfem::ParGridFunction displacement_minus = solid_solver.displacement().gridFunction();
 
     // Reset to the original bulk modulus value
-    solid_solver.shapeDisplacement()(i) = shape_displacement_value;
+    shape_displacement(i) = shape_displacement_value;
+    solid_solver.setShapeDisplacement(shape_displacement);
 
     // Finite difference to compute sensitivity of displacement with respect to bulk modulus
     mfem::ParGridFunction ddisp_dshape(&solid_solver.displacement().space());
@@ -274,7 +280,7 @@ TEST(solid_functional_finite_diff, finite_difference_shape)
     // See if these are similar
     SLIC_INFO(axom::fmt::format("dqoi_dshape: {}", dqoi_dshape));
     SLIC_INFO(axom::fmt::format("sensitivity: {}", sensitivity(i)));
-    EXPECT_NEAR((sensitivity(i) - dqoi_dshape) / std::max(dqoi_dshape, 1.0e-3), 0.0, 6.0e-5);
+    EXPECT_NEAR((sensitivity(i) - dqoi_dshape) / std::max(dqoi_dshape, 1.0e-3), 0.0, 1.0e-4);
   }
 }
 
