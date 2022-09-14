@@ -47,12 +47,35 @@ inline bool is_vector_valued(const GeneralCoefficient& coef)
  */
 class FiniteElementState : public FiniteElementVector {
 public:
-  /**
-   * @brief Use the finite element vector constructors
-   */
   using FiniteElementVector::FiniteElementVector;
   using FiniteElementVector::operator=;
   using mfem::Vector::Print;
+
+  /**
+   * @brief Copy constructor
+   *
+   * @param[in] rhs The input state used for construction
+   */
+  FiniteElementState(const FiniteElementState& rhs) : FiniteElementVector(rhs) {}
+
+  /**
+   * @brief Move construct a new Finite Element State object
+   *
+   * @param[in] rhs The input vector used for construction
+   */
+  FiniteElementState(FiniteElementState&& rhs) : FiniteElementVector(std::move(rhs)) {}
+
+  /**
+   * @brief Copy assignment
+   *
+   * @param rhs The right hand side input state
+   * @return The assigned FiniteElementState
+   */
+  FiniteElementState& operator=(const FiniteElementState& rhs)
+  {
+    FiniteElementVector::operator=(rhs);
+    return *this;
+  }
 
   /**
    * @brief Fill a user-provided grid function based on the underlying true vector
@@ -76,6 +99,92 @@ public:
    * @param grid_function The grid function used to initialize the underlying true vector.
    */
   void setFromGridFunction(const mfem::ParGridFunction& grid_function) { grid_function.GetTrueDofs(*this); }
+
+  /**
+   * @brief Project a vector coefficient onto a set of dofs
+   *
+   * @param coef The vector coefficient to project
+   * @param dof_list A list of true degrees of freedom to set. Note this is the scalar dof (not vdof) numbering.
+   *
+   * @note This only sets nodal values based on the coefficient at that point. It does not perform
+   * a full least squares projection.
+   */
+  void project(mfem::VectorCoefficient& coef, mfem::Array<int>& dof_list);
+
+  /**
+   * @brief Project a scalar coefficient onto a set of dofs
+   *
+   * @param coef The vector coefficient to project
+   * @param dof_list A list of true degrees of freedom to set. Note this is the scalar dof (not vdof) numbering.
+   * @param component The component to set
+   *
+   * @note This only sets nodal values based on the coefficient at that point. It does not perform
+   * a full least squares projection.
+   */
+  void project(mfem::Coefficient& coef, mfem::Array<int>& dof_list, std::optional<int> component = {});
+
+  /**
+   * Projects a coefficient (vector or scalar) onto the field
+   * @param[in] coef The coefficient to project
+   *
+   * @note This only sets nodal values based on the coefficient at that point. It does not perform
+   * a full least squares projection.
+   */
+  void project(const GeneralCoefficient& coef);
+
+  /// \overload
+  void project(mfem::Coefficient& coef);
+
+  /// \overload
+  void project(mfem::VectorCoefficient& coef);
+
+  /**
+   * @brief Project a coefficient on a specific set of marked boundaries
+   *
+   * @param coef The coefficient to project
+   * @param markers A marker array of the boundaries to set
+   *
+   * @note This only sets nodal values based on the coefficient at that point. It does not perform
+   * a full least squares projection.
+   */
+  void projectOnBoundary(mfem::Coefficient& coef, const mfem::Array<int>& markers);
+
+  /// \overload
+  void projectOnBoundary(mfem::VectorCoefficient& coef, const mfem::Array<int>& markers);
+
+  /**
+   * @brief Construct a grid function from the finite element state true vector
+   *
+   * @return The constructed grid function
+   */
+  mfem::ParGridFunction& gridFunction() const;
+
+protected:
+  /**
+   * @brief An optional container for a grid function (L-vector) view of the finite element state.
+   *
+   * If a user requests it, it is constructed and potentially reused during subsequent calls. It is
+   * not updated unless specifically requested via the @a gridFunction method.
+   */
+  mutable std::unique_ptr<mfem::ParGridFunction> grid_func_;
 };
+
+/**
+ * @brief Find the Lp norm of a finite element state across all dofs
+ *
+ * @param state The state variable to compute a norm of
+ * @param p The order norm to compute
+ * @return The Lp norm of the finite element state
+ */
+double norm(const FiniteElementState& state, const double p = 2);
+
+/**
+ * @brief Find the L2 norm of the error of a finite element state with respect to an exact solution
+ *
+ * @param state The numerical solution
+ * @param exact_solution The exact solution to measure error against
+ * @return The L2 norm of the difference between \p state and \p exact_solution
+ */
+double computeL2Error(const FiniteElementState& state, mfem::VectorCoefficient& exact_solution);
 
 }  // namespace serac
