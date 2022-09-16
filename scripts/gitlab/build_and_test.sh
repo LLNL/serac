@@ -17,10 +17,8 @@ if [[ "$DO_INTEGRATION_TESTS" == "yes" ]] ; then
         cd *.*.logs
         FAILING_TEST_NUMBERS=$(awk '/#[0-9]* FAIL/ {print $1}' ats.log | cut -c 2-)
         for num in $FAILING_TEST_NUMBERS ; do
-            echo "Showing logs for failing test #$num"
-            LOGS=$(cat *$num*.log*)
-            for log in $LOGS ; do
-                echo "$log:" && cat $log
+            echo *$num*.log     && cat *$num*.log
+            echo *$num*.log.err && cat *$num*.log.err
             done
         done 
 
