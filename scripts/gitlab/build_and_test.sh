@@ -19,7 +19,6 @@ if [[ "$DO_INTEGRATION_TESTS" == "yes" ]] ; then
         for num in $FAILING_TEST_NUMBERS ; do
             echo *$num*.log     && cat *$num*.log
             echo *$num*.log.err && cat *$num*.log.err
-            done
         done 
 
         echo "ERROR: ATS failed."
