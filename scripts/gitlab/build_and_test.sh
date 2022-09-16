@@ -13,17 +13,15 @@ if [[ "$DO_INTEGRATION_TESTS" == "yes" ]] ; then
     cd *build_and_test_*/build-*
     ./ats.sh
     if [ $? -ne 0 ]; then 
-        # Go to the dir with all the logs
-        cd *.*.logs
-
-        # Find all failing test numbers
-        FAILING_TEST_NUMBERS=$(awk '/#[0-9]* FAIL/ {print $1}' ats.log | cut -c 2-)
-
         # Print each failing test's logs
-        for i in $FAILING_TEST_NUMBERS ; do
-            echo "Showing logs for failing test #$i"
-            cat *$i*.log
-            cat *$i*.log.err
+        cd *.*.logs
+        FAILING_TEST_NUMBERS=$(awk '/#[0-9]* FAIL/ {print $1}' ats.log | cut -c 2-)
+        for num in $FAILING_TEST_NUMBERS ; do
+            echo "Showing logs for failing test #$num"
+            LOGS=$(cat *$num*.log*)
+            for log in $LOGS ; do
+                echo "$log:" && cat $log
+            done
         done 
 
         echo "ERROR: ATS failed."
