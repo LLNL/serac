@@ -19,7 +19,7 @@
 #include "mfem.hpp"
 
 #include "serac/infrastructure/accelerator.hpp"
-#include "serac/numerics/functional/domain_integral_kernels.hpp"
+#include "serac/numerics/functional/old/domain_integral_kernels.hpp"
 #if defined(__CUDACC__)
 #include "serac/numerics/functional/domain_integral_kernels.cuh"
 #endif

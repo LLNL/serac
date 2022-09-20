@@ -6,29 +6,18 @@
 
 # not sure how we want to handle performance-related tests
 set(functional_performance_tests
-    batched_shape_functions.cpp
-    batched_hcurl_correctness.cpp
-    J2_material_with_AD.cpp
-    diffusion_performance_test.cpp)
+    thermal_comparison.cpp)
  
 foreach(filename ${functional_performance_tests})
-    get_filename_component(test_name ${filename} NAME_WE)
-    blt_add_executable(NAME        ${test_name}
-                       SOURCES     ${filename}
-                       OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
-                       DEPENDS_ON  gtest serac_functional ${functional_depends}
-                       FOLDER      serac/tests )
+  get_filename_component(test_name ${filename} NAME_WE)
+  blt_add_executable(NAME        ${test_name}
+                     SOURCES     ${filename}
+                     OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
+                     DEPENDS_ON  gtest serac_functional ${functional_depends}
+                     FOLDER      serac/tests )
+  set_source_files_properties(${filename} PROPERTIES LANGUAGE CXX)
+  target_compile_definitions(${test_name} PUBLIC USE_OLD_IMPLEMENTATION)
 endforeach()
-
-
-# when mfem is compiled with cuda support it requires us to
-# use nvcc to compile everything, so this test fails to compile because nvcc
-# doesn't understand obscure avx intrinsics
-set_source_files_properties(batched_shape_functions.cpp PROPERTIES LANGUAGE CXX)
-target_compile_options(batched_shape_functions PUBLIC "-march=skylake-avx512")
-target_compile_options(batched_shape_functions PUBLIC "-Wno-ignored-attributes")
-target_compile_options(batched_shape_functions PUBLIC "-Wno-unused-function")
-target_compile_options(batched_shape_functions PUBLIC "-Wno-shadow")
 
 if(ENABLE_CUDA)
 

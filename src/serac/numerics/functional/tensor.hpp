@@ -1311,7 +1311,7 @@ template <typename T, int... n>
 tensor<T, (n * ...)> flatten(const tensor<T, n...> & A)
 {
   tensor<T, (n * ...)> A_flat;
-  auto                 A_ptr = reinterpret_cast<double*>(&A);
+  auto                 A_ptr = reinterpret_cast<const double*>(&A);
   for (int i = 0; i < (n * ...); i++) {
     A_flat[i] = A_ptr[i];
   }
@@ -1325,7 +1325,7 @@ tensor<T, new_dimensions...> reshape(const tensor<T, old_dimensions...> & A)
                 "error: can't reshape to configuration with different number of elements");
 
   tensor<T, new_dimensions...> A_reshaped;
-  auto                         A_ptr          = reinterpret_cast<double*>(&A);
+  auto                         A_ptr          = reinterpret_cast<const double*>(&A);
   auto                         A_reshaped_ptr = reinterpret_cast<double*>(&A_reshaped);
   for (int i = 0; i < (old_dimensions * ...); i++) {
     A_reshaped_ptr[i] = A_ptr[i];

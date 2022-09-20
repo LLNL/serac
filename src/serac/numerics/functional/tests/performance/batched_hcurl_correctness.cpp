@@ -8,17 +8,20 @@
 
 using namespace serac;
 
+template < int p >
+struct residuals_by_component {
+  tensor< double, p + 1, p + 1, p     > element_residual_x;
+  tensor< double, p + 1, p    , p + 1 > element_residual_y;
+  tensor< double, p    , p + 1, p + 1 > element_residual_z;
+};
+
 template <int p, int q>
 auto batched_hcurl_integrate_naive(tensor<double, 3, q, q, q> source, tensor<double, 3, q, q, q> flux)
 {
   // clang-format off
   union {
-    tensor< double, 3, p + 1, p + 1, p > element_residual;
-    struct {
-      tensor< double, p + 1, p + 1, p     > element_residual_x;
-      tensor< double, p + 1, p    , p + 1 > element_residual_y;
-      tensor< double, p    , p + 1, p + 1 > element_residual_z;
-    };
+    tensor< double, 3, p + 1, p + 1, p > element_residuals;
+    residuals_by_component<p> element_residuals_by_component;
   } data{};
   // clang-format on
 
@@ -40,8 +43,8 @@ auto batched_hcurl_integrate_naive(tensor<double, 3, q, q, q> source, tensor<dou
           for (int v = 0; v < q; v++) {
             for (int w = 0; w < q; w++) {
               data.element_residual_x(k, j, i) += +B1(u, i) * B2(v, j) * B2(w, k) * source(0, w, v, u) +
-                                                  B1(u, i) * B2(v, j) * G2(w, k) * flux(1, w, v, u) -
-                                                  B1(u, i) * G2(v, j) * B2(w, k) * flux(2, w, v, u);
+                                                   B1(u, i) * B2(v, j) * G2(w, k) * flux(1, w, v, u) -
+                                                   B1(u, i) * G2(v, j) * B2(w, k) * flux(2, w, v, u);
             }
           }
         }
@@ -56,8 +59,8 @@ auto batched_hcurl_integrate_naive(tensor<double, 3, q, q, q> source, tensor<dou
           for (int v = 0; v < q; v++) {
             for (int w = 0; w < q; w++) {
               data.element_residual_y(k, j, i) += +B2(u, i) * B1(v, j) * B2(w, k) * source(1, w, v, u) +
-                                                  G2(u, i) * B1(v, j) * B2(w, k) * flux(2, w, v, u) -
-                                                  B2(u, i) * B1(v, j) * G2(w, k) * flux(0, w, v, u);
+                                                   G2(u, i) * B1(v, j) * B2(w, k) * flux(2, w, v, u) -
+                                                   B2(u, i) * B1(v, j) * G2(w, k) * flux(0, w, v, u);
             }
           }
         }
@@ -72,8 +75,8 @@ auto batched_hcurl_integrate_naive(tensor<double, 3, q, q, q> source, tensor<dou
           for (int v = 0; v < q; v++) {
             for (int w = 0; w < q; w++) {
               data.element_residual_z(k, j, i) += +B2(u, i) * B2(v, j) * B1(w, k) * source(2, w, v, u) +
-                                                  B2(u, i) * G2(v, j) * B1(w, k) * flux(0, w, v, u) -
-                                                  G2(u, i) * B2(v, j) * B1(w, k) * flux(1, w, v, u);
+                                                   B2(u, i) * G2(v, j) * B1(w, k) * flux(0, w, v, u) -
+                                                   G2(u, i) * B2(v, j) * B1(w, k) * flux(1, w, v, u);
             }
           }
         }
@@ -224,7 +227,7 @@ void correctness_test_3D()
 
   TensorProductQuadratureRule<q> rule;
 
-  tensor<double, q, q, q, 3, 3> J_e;
+  tensor<double, 3, 3, q, q, q> J_e;
   for (int k = 0; k < q; k++) {
     for (int j = 0; j < q; j++) {
       for (int i = 0; i < q; i++) {

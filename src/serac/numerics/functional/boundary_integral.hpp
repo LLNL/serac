@@ -19,7 +19,7 @@
 #include "serac/numerics/functional/quadrature.hpp"
 #include "serac/numerics/functional/tuple_arithmetic.hpp"
 #include "serac/numerics/functional/integral_utilities.hpp"
-#include "serac/numerics/functional/boundary_integral_kernels.hpp"
+#include "serac/numerics/functional/old/boundary_integral_kernels.hpp" // TODO
 #if defined(__CUDACC__)
 #include "serac/numerics/functional/boundary_integral_kernels.cuh"
 #endif

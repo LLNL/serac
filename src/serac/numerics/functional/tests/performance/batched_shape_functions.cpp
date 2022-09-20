@@ -94,7 +94,7 @@ void reference_kernel(const mfem::Vector& U_, mfem::Vector& R_, const mfem::Vect
   // for each element in the domain
   for (uint32_t e = 0; e < num_elements_; e++) {
     // get the DOF values for this particular element
-    auto u_elem = detail::Load<trial_element>(u, e);
+    auto u_elem = detail::Load<trial_element>(u, static_cast<int>(e));
 
     // this is where we will accumulate the element residual tensor
     element_residual_type r_elem{};
@@ -148,7 +148,7 @@ auto batch_apply_qf(lambda qf, const tuple < tensor<T, n> ... > & inputs, std::i
 }
 
 template <typename lambda, typename value_t, typename derivative_t, int q>
-auto batch_apply_qf(lambda qf, const tensor<value_t, q, q>& X, const tensor<value_t, q, q>& values, const tensor<derivative_t, q, q>& derivatives)
+auto batch_apply_qf(lambda qf, const tensor<value_t, q, q>& /*X*/, const tensor<value_t, q, q>& values, const tensor<derivative_t, q, q>& derivatives)
 {
   using return_type = decltype(qf(serac::tuple{value_t{}, derivative_t{}}));
   using source_type = std::remove_const_t<std::remove_reference_t<decltype(serac::get<0>(return_type{}))> >;
@@ -283,6 +283,7 @@ void cpu_batched_kernel(const double* inputs, double* outputs, const double* jac
   }
 }
 
+#if 0
 template <typename simd_type, int q, int n>
 void cpu_batched_kernel_simd(const tensor<tensor<simd_type, 1>, n, n, n>* u, tensor<tensor<simd_type, 1>, n, n, n>* r,
                              const size_t num_element_blocks, tensor<simd_type, q, q, q>* D1,
@@ -308,6 +309,7 @@ void cpu_batched_kernel_simd(const tensor<tensor<simd_type, 1>, n, n, n>* u, ten
     test_element::integrate(sources, fluxes, rule, r[e]);
   }
 }
+#endif
 
 }  // namespace serac
 
@@ -477,7 +479,7 @@ void h1_h1_test_2D(int num_elements, int num_runs)
 }
 
 template <int p, int q>
-void h1_h1_test_3D(int num_elements, int num_runs)
+void h1_h1_test_3D(size_t num_elements, size_t num_runs)
 {
   using serac::Geometry;
   using serac::H1;
@@ -488,6 +490,8 @@ void h1_h1_test_3D(int num_elements, int num_runs)
 
   constexpr int n   = p + 1;
   constexpr int dim = 3;
+
+  const double num_runs_d = static_cast<double>(num_runs);
 
   double rho = 1.0;
   double k   = 1.0;
@@ -505,11 +509,11 @@ void h1_h1_test_3D(int num_elements, int num_runs)
   std::default_random_engine             generator;
   std::uniform_real_distribution<double> distribution(-1.0, 1.0);
 
-  mfem::Vector U1D(num_elements * n * n * n);
-  mfem::Vector R1D(num_elements * n * n * n);
-  mfem::Vector J1D(num_elements * dim * dim * q * q * q);
-  mfem::Vector rho_dv_1D(num_elements * q * q * q);
-  mfem::Vector k_invJ_invJT_dv_1D(num_elements * dim * dim * q * q * q);
+  mfem::Vector U1D(static_cast<int>(num_elements * n * n * n));
+  mfem::Vector R1D(static_cast<int>(num_elements * n * n * n));
+  mfem::Vector J1D(static_cast<int>(num_elements * dim * dim * q * q * q));
+  mfem::Vector rho_dv_1D(static_cast<int>(num_elements * q * q * q));
+  mfem::Vector k_invJ_invJT_dv_1D(static_cast<int>(num_elements * dim * dim * q * q * q));
 
   auto U               = mfem::Reshape(U1D.ReadWrite(), n, n, n, num_elements);
   auto J               = mfem::Reshape(J1D.ReadWrite(), q * q * q, dim, dim, num_elements);
@@ -518,7 +522,7 @@ void h1_h1_test_3D(int num_elements, int num_runs)
 
   serac::GaussLegendreRule<Geometry::Hexahedron, q> rule;
 
-  for (int e = 0; e < num_elements; e++) {
+  for (size_t e = 0; e < num_elements; e++) {
     for (int ix = 0; ix < n; ix++) {
       for (int iy = 0; iy < n; iy++) {
         for (int iz = 0; iz < n; iz++) {
@@ -556,25 +560,25 @@ void h1_h1_test_3D(int num_elements, int num_runs)
   {
     R1D            = 0.0;
     double runtime = time([&]() {
-      for (int i = 0; i < num_runs; i++) {
+      for (size_t i = 0; i < num_runs; i++) {
         serac::reference_kernel<Geometry::Hexahedron, test, trial, q>(U1D, R1D, J1D, num_elements, mass_plus_diffusion);
         compiler::please_do_not_optimize_away(&R1D);
       }
     });
-    std::cout << "average reference kernel time: " << runtime / num_runs << std::endl;
+    std::cout << "average reference kernel time: " << runtime / static_cast< double >(num_runs) << std::endl;
   }
   auto answer_reference = R1D;
 
   {
     R1D            = 0.0;
     double runtime = time([&]() {
-      for (int i = 0; i < num_runs; i++) {
+      for (size_t i = 0; i < num_runs; i++) {
         serac::cpu_batched_kernel<Geometry::Hexahedron, test, trial, q>(U1D.Read(), R1D.ReadWrite(), J1D.Read(),
                                                                         num_elements, mass_plus_diffusion);
         compiler::please_do_not_optimize_away(&R1D);
       }
     });
-    std::cout << "average cpu batched kernel time: " << runtime / num_runs << std::endl;
+    std::cout << "average cpu batched kernel time: " << runtime / num_runs_d << std::endl;
   }
   auto answer_cpu_batched_kernel = R1D;
   auto error                     = answer_reference;
@@ -582,18 +586,19 @@ void h1_h1_test_3D(int num_elements, int num_runs)
   double relative_error = error.Norml2() / answer_reference.Norml2();
   std::cout << "error: " << relative_error << std::endl;
 
-  int                                                 element_blocks = (num_elements + SIMD_WIDTH - 1) / SIMD_WIDTH;
+  size_t element_blocks = (num_elements + SIMD_WIDTH - 1) / SIMD_WIDTH;
+
   std::vector<tensor<tensor<simd_type, 1>, n, n, n> > U_SIMD(element_blocks);
   std::vector<tensor<tensor<simd_type, 1>, n, n, n> > R_SIMD(element_blocks, tensor<tensor<simd_type, 1>, n, n, n>{});
   std::vector<tensor<simd_type, q, q, q> >            D1_SIMD(element_blocks);
   std::vector<tensor<tensor<simd_type, 3, 3>, q, q, q> > D2_SIMD(element_blocks);
 
-  for (int b = 0; b < element_blocks; b++) {
+  for (size_t b = 0; b < element_blocks; b++) {
     for (int ix = 0; ix < n; ix++) {
       for (int iy = 0; iy < n; iy++) {
         for (int iz = 0; iz < n; iz++) {
-          for (int s = 0; s < SIMD_WIDTH; s++) {
-            int e = b * SIMD_WIDTH + s;
+          for (size_t s = 0; s < SIMD_WIDTH; s++) {
+            size_t e = b * SIMD_WIDTH + s;
             if (e < num_elements) {
               U_SIMD[b](ix, iy, iz)[0][s] = U(iz, iy, ix, e);
             } else {
@@ -609,8 +614,8 @@ void h1_h1_test_3D(int num_elements, int num_runs)
       int qy = (i % (q * q)) / q;
       int qz = i / (q * q);
 
-      for (int s = 0; s < SIMD_WIDTH; s++) {
-        int e = b * SIMD_WIDTH + s;
+      for (size_t s = 0; s < SIMD_WIDTH; s++) {
+        size_t e = b * SIMD_WIDTH + s;
         if (e < num_elements) {
           D1_SIMD[b](qz, qy, qx)[s] = rho_dv(i, e);
         }
@@ -618,8 +623,8 @@ void h1_h1_test_3D(int num_elements, int num_runs)
 
       for (int r = 0; r < dim; r++) {
         for (int c = 0; c < dim; c++) {
-          for (int s = 0; s < SIMD_WIDTH; s++) {
-            int e = b * SIMD_WIDTH + s;
+          for (size_t s = 0; s < SIMD_WIDTH; s++) {
+            size_t e = b * SIMD_WIDTH + s;
             if (e < num_elements) {
               D2_SIMD[b](qz, qy, qx)[r][c][s] = k_invJ_invJT_dv(i, r, c, e);
             }
@@ -629,23 +634,24 @@ void h1_h1_test_3D(int num_elements, int num_runs)
     }
   }
 
+#if 0
   {
     R1D            = 0.0;
     double runtime = time([&]() {
-      for (int i = 0; i < num_runs; i++) {
+      for (size_t i = 0; i < num_runs; i++) {
         serac::cpu_batched_kernel_simd(U_SIMD.data(), R_SIMD.data(), element_blocks, D1_SIMD.data(), D2_SIMD.data());
         compiler::please_do_not_optimize_away(&R1D);
       }
     });
-    std::cout << "average simd batched kernel time: " << runtime / num_runs << std::endl;
+    std::cout << "average simd batched kernel time: " << runtime / num_runs_d << std::endl;
 
     auto R = mfem::Reshape(R1D.ReadWrite(), n, n, n, num_elements);
-    for (int b = 0; b < element_blocks; b++) {
+    for (size_t b = 0; b < element_blocks; b++) {
       for (int ix = 0; ix < n; ix++) {
         for (int iy = 0; iy < n; iy++) {
           for (int iz = 0; iz < n; iz++) {
-            for (int s = 0; s < SIMD_WIDTH; s++) {
-              int e = b * SIMD_WIDTH + s;
+            for (size_t s = 0; s < SIMD_WIDTH; s++) {
+              size_t e = b * SIMD_WIDTH + s;
               if (e < num_elements) {
                 R(ix, iy, iz, e) = R_SIMD[b](iz, iy, ix)[0][s];
               }
@@ -660,6 +666,7 @@ void h1_h1_test_3D(int num_elements, int num_runs)
   error -= answer_cpu_batched_kernel_simd;
   relative_error = error.Norml2() / answer_reference.Norml2();
   std::cout << "error: " << relative_error << std::endl;
+#endif
 
   {
     R1D                           = 0.0;
@@ -685,22 +692,22 @@ void h1_h1_test_3D(int num_elements, int num_runs)
     }
 
     double mass_runtime = time([&]() {
-      for (int i = 0; i < num_runs; i++) {
-        mfem::SmemPAMassApply3D<n, q>(num_elements, b_, bt_, rho_dv_1D, U1D, R1D);
+      for (size_t i = 0; i < num_runs; i++) {
+        mfem::SmemPAMassApply3D<n, q>(static_cast<int>(num_elements), b_, bt_, rho_dv_1D, U1D, R1D);
         compiler::please_do_not_optimize_away(&R1D);
       }
     });
-    std::cout << "average mfem mass kernel time: " << mass_runtime / num_runs << std::endl;
+    std::cout << "average mfem mass kernel time: " << mass_runtime / num_runs_d << std::endl;
 
     double diffusion_runtime = time([&]() {
-      for (int i = 0; i < num_runs; i++) {
-        mfem::SmemPADiffusionApply3D<n, q>(num_elements, symmetric = false, b_, g_, k_invJ_invJT_dv_1D, U1D, R1D);
+      for (size_t i = 0; i < num_runs; i++) {
+        mfem::SmemPADiffusionApply3D<n, q>(static_cast<int>(num_elements), symmetric = false, b_, g_, k_invJ_invJT_dv_1D, U1D, R1D);
         compiler::please_do_not_optimize_away(&R1D);
       }
     });
-    std::cout << "average mfem diffusion kernel time: " << diffusion_runtime / num_runs << std::endl;
+    std::cout << "average mfem diffusion kernel time: " << diffusion_runtime / num_runs_d << std::endl;
 
-    std::cout << "average mfem combined kernel time: " << (mass_runtime + diffusion_runtime) / num_runs << std::endl;
+    std::cout << "average mfem combined kernel time: " << (mass_runtime + diffusion_runtime) / num_runs_d << std::endl;
   }
   auto answer_mfem = R1D;
   error            = answer_reference;
@@ -1022,8 +1029,8 @@ void hcurl_hcurl_test_3D(int num_elements, int num_runs)
 
 int main()
 {
-  int num_runs     = 10;
-  int num_elements = 10000;
+  size_t num_runs     = 10;
+  size_t num_elements = 10000;
   //h1_h1_test_2D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
   //h1_h1_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
   //h1_h1_test_2D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
