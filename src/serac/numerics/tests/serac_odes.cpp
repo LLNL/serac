@@ -4,12 +4,11 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include <gtest/gtest.h>
-
 #include <array>
 #include <fstream>
 #include <functional>
 
+#include <gtest/gtest.h>
 #include "mfem.hpp"
 
 #include "serac/numerics/expr_template_ops.hpp"
@@ -257,18 +256,15 @@ double first_order_ode_test(int nsteps, ode_type type, constraint_type constrain
   // although these test problems don't really apply to a finite element mesh,
   // the tools in serac require that these finite element data structures exist
   serac::FiniteElementState dummy(mesh, FiniteElementState::Options{.order = 1, .name = "dummy"});
-  // Explicitly allocate the gridfunction as it is not being managed by Sidre
-  dummy.gridFunc().GetMemory().New(dummy.gridFunc().Size());
-  dummy.initializeTrueVec();
 
   if (constraint == SINE_WAVE) {
     auto coef = std::make_shared<mfem::FunctionCoefficient>(sine_wave);
-    bcs.addEssential({1}, coef, dummy);
+    bcs.addEssential({1}, coef, dummy.space());
   }
 
   if (constraint == TRIANGLE_WAVE) {
     auto coef = std::make_shared<mfem::FunctionCoefficient>(triangle_wave);
-    bcs.addEssential({1}, coef, dummy);
+    bcs.addEssential({1}, coef, dummy.space());
   }
 
   std::function<mfem::Vector(const mfem::Vector&)>      f_int;
@@ -367,18 +363,15 @@ double second_order_ode_test(int nsteps, ode_type type, constraint_type constrai
   // although these test problems don't really apply to a finite element mesh,
   // the tools in serac require that these finite element data structures exist
   serac::FiniteElementState dummy(mesh, FiniteElementState::Options{.order = 1, .name = "dummy"});
-  // Explicitly allocate the gridfunction as it is not being managed by Sidre
-  dummy.gridFunc().GetMemory().New(dummy.gridFunc().Size());
-  dummy.initializeTrueVec();
 
   if (constraint == SINE_WAVE) {
     auto coef = std::make_shared<mfem::FunctionCoefficient>(sine_wave);
-    bcs.addEssential({1}, coef, dummy);
+    bcs.addEssential({1}, coef, dummy.space());
   }
 
   if (constraint == TRIANGLE_WAVE) {
     auto coef = std::make_shared<mfem::FunctionCoefficient>(triangle_wave);
-    bcs.addEssential({1}, coef, dummy);
+    bcs.addEssential({1}, coef, dummy.space());
   }
 
   std::function<mfem::Vector(const mfem::Vector&)>      f_int;
@@ -486,7 +479,7 @@ double second_order_ode_test(int nsteps, ode_type type, constraint_type constrai
 
 using param_t = std::tuple<ode_type, constraint_type, TimestepMethod, DirichletEnforcementMethod>;
 
-class FirstOrderODE_suite : public testing::TestWithParam<param_t> {
+class FirstOrderODESuite : public testing::TestWithParam<param_t> {
 protected:
   void                       SetUp() override { std::tie(type, constraint, timestepper, enforcement) = GetParam(); }
   ode_type                   type;
@@ -495,7 +488,7 @@ protected:
   DirichletEnforcementMethod enforcement;
 };
 
-TEST_P(FirstOrderODE_suite, all)
+TEST_P(FirstOrderODESuite, All)
 {
   int o = order_of_convergence(timestepper);
 
@@ -523,7 +516,7 @@ TEST_P(FirstOrderODE_suite, all)
 }
 
 // clang-format off
-INSTANTIATE_TEST_SUITE_P(all_first_order_tests, FirstOrderODE_suite,
+INSTANTIATE_TEST_SUITE_P(AllFirstOrderTests, FirstOrderODESuite,
   testing::Combine(
     testing::Values(
       LINEAR, 
@@ -554,7 +547,7 @@ INSTANTIATE_TEST_SUITE_P(all_first_order_tests, FirstOrderODE_suite,
 );
 // clang-format on
 
-class SecondOrderODE_suite : public testing::TestWithParam<param_t> {
+class SecondOrderODESuite : public testing::TestWithParam<param_t> {
 protected:
   void                       SetUp() override { std::tie(type, constraint, timestepper, enforcement) = GetParam(); }
   ode_type                   type;
@@ -569,7 +562,7 @@ std::vector unstable_cases = {
     std::tuple{SINE_WAVE, TimestepMethod::FoxGoodwin, DirichletEnforcementMethod::DirectControl},
     std::tuple{SINE_WAVE, TimestepMethod::LinearAcceleration, DirichletEnforcementMethod::DirectControl}};
 
-TEST_P(SecondOrderODE_suite, all)
+TEST_P(SecondOrderODESuite, All)
 {
   bool expected_to_fail = std::find(std::begin(unstable_cases), std::end(unstable_cases),
                                     std::tuple{constraint, timestepper, enforcement}) != std::end(unstable_cases);
@@ -594,7 +587,7 @@ TEST_P(SecondOrderODE_suite, all)
 
 // clang-format off
 INSTANTIATE_TEST_SUITE_P(
-    all_second_order_tests, SecondOrderODE_suite,
+    AllSecondOrderTsts, SecondOrderODESuite,
     testing::Combine(
       testing::Values(
         LINEAR, 
@@ -628,8 +621,7 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when
-                                    // exiting main scope
+  axom::slic::SimpleLogger logger;
 
   result = RUN_ALL_TESTS();
 

@@ -10,25 +10,14 @@
 
 namespace serac {
 
-/**
- * @brief Definition of extern QuadratureData variable
- */
-QuadratureData<void> dummy_qdata;
-
-/**
- * @brief Definition of extern QuadratureDataView variable
- */
-QuadratureDataView<void> dummy_qdata_view;
-
 // Initialize StateManager's static members - these will be fully initialized in StateManager::initialize
 std::unordered_map<std::string, axom::sidre::MFEMSidreDataCollection> StateManager::datacolls_;
-bool                                                                  StateManager::is_restart_ = false;
-std::vector<std::unique_ptr<SyncableData>>                            StateManager::syncable_data_;
+bool                                                                  StateManager::is_restart_        = false;
 axom::sidre::DataStore*                                               StateManager::ds_                = nullptr;
 std::string                                                           StateManager::output_dir_        = "";
 const std::string                                                     StateManager::default_mesh_name_ = "default";
 
-void StateManager::newDataCollection(const std::string& name, const std::optional<int> cycle_to_load)
+double StateManager::newDataCollection(const std::string& name, const std::optional<int> cycle_to_load)
 {
   SLIC_ERROR_ROOT_IF(!ds_, "Cannot construct a DataCollection without a DataStore");
   std::string coll_name = name + "_datacoll";
@@ -66,6 +55,8 @@ void StateManager::newDataCollection(const std::string& name, const std::optiona
     datacoll.SetCycle(0);   // Iteration counter
     datacoll.SetTime(0.0);  // Simulation time
   }
+
+  return datacoll.GetTime();
 }
 
 void StateManager::initialize(axom::sidre::DataStore& ds, const std::string& output_directory)
@@ -90,19 +81,20 @@ FiniteElementState StateManager::newState(FiniteElementVector::Options&& options
                      axom::fmt::format("Mesh tag \"{}\" not found in the data store", mesh_tag));
   auto&             datacoll = datacolls_.at(mesh_tag);
   const std::string name     = options.name;
+  auto              state    = FiniteElementState(mesh(mesh_tag), std::move(options));
   if (is_restart_) {
-    auto field = datacoll.GetParField(name);
-    return {mesh(mesh_tag), *field, name};
+    auto grid_function = datacoll.GetParField(name);
+    state.setFromGridFunction(*grid_function);
   } else {
     SLIC_ERROR_ROOT_IF(datacoll.HasField(name),
                        axom::fmt::format("Serac's datacollection was already given a field named '{0}'", name));
-    options.managed_by_sidre = true;
-    FiniteElementState state(mesh(mesh_tag), std::move(options));
-    datacoll.RegisterField(name, &(state.gridFunc()));
-    // Now that it's been allocated, we can set it to zero
-    state.gridFunc() = 0.0;
-    return state;
+
+    // Create a new grid function with unallocated data. This will be managed by sidre.
+    auto* new_grid_function = new mfem::ParGridFunction(&state.space(), static_cast<double*>(nullptr));
+    datacoll.RegisterField(name, new_grid_function);
+    state.setFromGridFunction(*new_grid_function);
   }
+  return state;
 }
 
 FiniteElementDual StateManager::newDual(FiniteElementVector::Options&& options, const std::string& mesh_tag)
@@ -112,26 +104,21 @@ FiniteElementDual StateManager::newDual(FiniteElementVector::Options&& options, 
                      axom::fmt::format("Mesh tag \"{}\" not found in the data store", mesh_tag));
   auto&             datacoll = datacolls_.at(mesh_tag);
   const std::string name     = options.name;
+  auto              dual     = FiniteElementDual(mesh(mesh_tag), std::move(options));
   if (is_restart_) {
-    auto field = datacoll.GetParField(name);
-    return {mesh(mesh_tag), *field, name};
+    auto*                                 grid_function = datacoll.GetParField(name);
+    std::unique_ptr<mfem::HypreParVector> true_dofs(grid_function->GetTrueDofs());
+    dual = *true_dofs;
   } else {
     SLIC_ERROR_ROOT_IF(datacoll.HasField(name),
                        axom::fmt::format("Serac's datacollection was already given a field named '{0}'", name));
-    options.managed_by_sidre = true;
-    FiniteElementDual dual(mesh(mesh_tag), std::move(options));
-
-    // Create a grid function view of the local vector for plotting
-    // Note: this is a static cast because we know this vector under the hood is a grid function
-    // This is hidden from the user because the interpolation capabilities of a grid function
-    // are inappropriate for dual vectors.
-    auto gf_view_of_local_dual_vector = static_cast<mfem::ParGridFunction*>(&dual.localVec());
-
-    datacoll.RegisterField(name, gf_view_of_local_dual_vector);
-    // Now that it's been allocated, we can set it to zero
-    dual.localVec() = 0.0;
-    return dual;
+    // Create a new grid function with unallocated data. This will be managed by sidre.
+    auto* new_grid_function = new mfem::ParGridFunction(&dual.space(), static_cast<double*>(nullptr));
+    datacoll.RegisterField(name, new_grid_function);
+    std::unique_ptr<mfem::HypreParVector> true_dofs(new_grid_function->GetTrueDofs());
+    dual = *true_dofs;
   }
+  return dual;
 }
 
 void StateManager::save(const double t, const int cycle, const std::string& mesh_tag)
@@ -143,9 +130,6 @@ void StateManager::save(const double t, const int cycle, const std::string& mesh
   std::string file_path = axom::utilities::filesystem::joinPath(datacoll.GetPrefixPath(), datacoll.GetCollectionName());
   SLIC_INFO_ROOT(axom::fmt::format("Saving data collection at time: {} to path: {}", t, file_path));
 
-  for (const auto& data : syncable_data_) {
-    data->sync();
-  }
   datacoll.SetTime(t);
   datacoll.SetCycle(cycle);
   datacoll.Save();

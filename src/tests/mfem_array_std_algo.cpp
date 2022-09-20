@@ -14,7 +14,7 @@
 // naive for-loops should be used everywhere else in a given
 // test to ensure only the single use of the algorithm is tested
 
-TEST(array_algo, std_transform)
+TEST(ArrayAlgo, StdTransform)
 {
   constexpr int    size = 10;
   mfem::Array<int> input(size);
@@ -28,7 +28,7 @@ TEST(array_algo, std_transform)
   }
 }
 
-TEST(array_algo, std_accumulate)
+TEST(ArrayAlgo, StdAccumulate)
 {
   constexpr int    size = 10;
   mfem::Array<int> input(size);

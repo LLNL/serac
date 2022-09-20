@@ -1,4 +1,4 @@
-# Copyright 2013-2021 Lawrence Livermore National Security, LLC and other
+# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
 # Spack Project Developers. See the top-level COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
@@ -19,16 +19,16 @@ class Camp(CMakePackage, CudaPackage, ROCmPackage):
     maintainers = ['trws']
 
     version('main', branch='main', submodules='True')
+    version('2022.03.0', sha256='e9090d5ee191ea3a8e36b47a8fe78f3ac95d51804f1d986d931e85b8f8dad721')
     version('0.3.0', sha256='129431a049ca5825443038ad5a37a86ba6d09b2618d5fe65d35f83136575afdb')
+    version('0.2.3', sha256='58a0f3bd5eadb588d7dc83f3d050aff8c8db639fc89e8d6553f9ce34fc2421a7')
     version('0.2.2', sha256='194d38b57e50e3494482a7f94940b27f37a2bee8291f2574d64db342b981d819')
     version('0.1.0', sha256='fd4f0f2a60b82a12a1d9f943f8893dc6fe770db493f8fae5ef6f7d0c439bebcc')
 
     # TODO: figure out gtest dependency and then set this default True.
     variant('tests', default=False, description='Build tests')
 
-    # SERAC EDIT BEGIN: CUDA 11+ comes with CUB
-    depends_on('cub', when='+cuda ^cuda@:10.99')
-    # SERAC EDIT END
+    depends_on('cub', when='+cuda')
 
     depends_on('blt')
 
@@ -49,6 +49,7 @@ class Camp(CMakePackage, CudaPackage, ROCmPackage):
                 options.append('-DCUDA_ARCH=sm_{0}'.format(cuda_arch[0]))
                 flag = '-arch sm_{0}'.format(cuda_arch[0])
                 options.append('-DCMAKE_CUDA_FLAGS:STRING={0}'.format(flag))
+                options.append('-DCMAKE_CUDA_ARCHITECTURES={0}'.format(cuda_arch[0]))
         else:
             options.append('-DENABLE_CUDA=OFF')
 

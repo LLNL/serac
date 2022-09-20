@@ -246,6 +246,9 @@ SERAC_HOST_DEVICE auto log(dual<gradient_type> a)
   return dual<gradient_type>{log(a.value), a.gradient / a.value};
 }
 
+///** @brief implementation of the natural logarithm function for doubles */
+// SERAC_HOST_DEVICE auto log(double a) { return std::log(a); }
+
 /** @brief implementation of `a` (dual) raised to the `b` (dual) power */
 template <typename gradient_type>
 SERAC_HOST_DEVICE auto pow(dual<gradient_type> a, dual<gradient_type> b)
@@ -286,21 +289,21 @@ SERAC_HOST_DEVICE constexpr auto make_dual(double x) { return dual{x, 1.0}; }
 
 /** @brief return the "value" part from a given type. For non-dual types, this is just the identity function */
 template <typename T>
-SERAC_HOST_DEVICE auto get_value(const T& arg)
+SERAC_HOST_DEVICE constexpr auto get_value(const T& arg)
 {
   return arg;
 }
 
 /** @brief return the "value" part from a dual number type */
 template <typename T>
-SERAC_HOST_DEVICE auto get_value(dual<T> arg)
+SERAC_HOST_DEVICE constexpr auto get_value(dual<T> arg)
 {
   return arg.value;
 }
 
 /** @brief return the "gradient" part from a dual number type */
 template <typename gradient_type>
-SERAC_HOST_DEVICE auto get_gradient(dual<gradient_type> arg)
+SERAC_HOST_DEVICE constexpr auto get_gradient(dual<gradient_type> arg)
 {
   return arg.gradient;
 }

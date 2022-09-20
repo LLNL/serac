@@ -32,11 +32,13 @@ set(physics_headers
     thermal_conduction.hpp
     thermal_conduction_functional.hpp
     thermal_solid.hpp
+    thermal_mechanics_functional.hpp
     )
 
 set(physics_dependencies
     serac_infrastructure
     serac_coefficients
+    serac_functional
     serac_physics_integrators
     serac_physics_materials
     serac_numerics

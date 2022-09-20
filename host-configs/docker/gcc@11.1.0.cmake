@@ -7,7 +7,7 @@
 #------------------------------------------------------------------------------
 # Compilers
 #------------------------------------------------------------------------------
-# Compiler Spec: gcc@9.3.0
+# Compiler Spec: gcc@11.1.0
 #------------------------------------------------------------------------------
 if(DEFINED ENV{SPACK_CC})
 
@@ -19,9 +19,9 @@ if(DEFINED ENV{SPACK_CC})
 
 else()
 
-  set(CMAKE_C_COMPILER "/usr/bin/gcc-9" CACHE PATH "")
+  set(CMAKE_C_COMPILER "/usr/bin/gcc-11" CACHE PATH "")
 
-  set(CMAKE_CXX_COMPILER "/usr/bin/g++-9" CACHE PATH "")
+  set(CMAKE_CXX_COMPILER "/usr/bin/g++-11" CACHE PATH "")
 
   set(CMAKE_Fortran_COMPILER "/usr/bin/gfortran" CACHE PATH "")
 
@@ -57,27 +57,29 @@ set(ENABLE_OPENMP ON CACHE BOOL "")
 # TPLs
 #------------------------------------------------------------------------------
 
-set(TPL_ROOT "/home/serac/serac_tpls/gcc-9.3.0" CACHE PATH "")
+set(TPL_ROOT "/home/serac/serac_tpls/gcc-11.1.0" CACHE PATH "")
 
-set(AXOM_DIR "${TPL_ROOT}/axom-0.6.1serac" CACHE PATH "")
+set(AXOM_DIR "${TPL_ROOT}/axom-0.6.1.5-5vy6nxrfrm4bixfca6p67tr4p4opdmoy" CACHE PATH "")
 
-set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.7.2serac" CACHE PATH "")
+set(CAMP_DIR "${TPL_ROOT}/camp-2022.03.0-x3kpkzzvlmjtaauqysjkdkjy4ziozlwm" CACHE PATH "")
 
-set(LUA_DIR "${TPL_ROOT}/lua-5.3.5" CACHE PATH "")
+set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.8.3-qxmuyi22hrwyxi4xi4tgjhoioep44h47" CACHE PATH "")
 
-set(MFEM_DIR "${TPL_ROOT}/mfem-4.3.0serac" CACHE PATH "")
+set(LUA_DIR "${TPL_ROOT}/lua-5.3.5-e2a4tlyhrfhljmrpv5iwq5myimvxc6df" CACHE PATH "")
 
-set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.21" CACHE PATH "")
+set(MFEM_DIR "${TPL_ROOT}/mfem-4.3.0.1-apzveiogy7ce4vjkw4vinirukdetl6j4" CACHE PATH "")
 
-set(HYPRE_DIR "${TPL_ROOT}/hypre-2.18.2" CACHE PATH "")
+set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.21-y5mcv3fdp2rjh3nh4lin7fovrrzmkkpc" CACHE PATH "")
 
-set(METIS_DIR "${TPL_ROOT}/metis-5.1.0" CACHE PATH "")
+set(HYPRE_DIR "${TPL_ROOT}/hypre-2.18.2-uc5okkg3jndqve4knflsse4uyepka2th" CACHE PATH "")
 
-set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3" CACHE PATH "")
+set(METIS_DIR "${TPL_ROOT}/metis-5.1.0-pbt67xoopw53ebdjgmjbgcmr364ycjwp" CACHE PATH "")
 
-set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4" CACHE PATH "")
+set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3-rkp7c5xpg2ek7wzxtttlgid2r7k65kun" CACHE PATH "")
 
-set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1" CACHE PATH "")
+set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4-nzih5s6umzaobiyjvoqn25yzbhhcsklv" CACHE PATH "")
+
+set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1-bggnjsx4n2j32uwpvuv5dktobrz4dilr" CACHE PATH "")
 
 # ADIAK not built
 
@@ -87,11 +89,11 @@ set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1" CACHE PATH "")
 
 # PETSC not built
 
-set(RAJA_DIR "${TPL_ROOT}/raja-0.14.0" CACHE PATH "")
+set(RAJA_DIR "${TPL_ROOT}/raja-2022.03.0-juqgshoyq45n5vvdklshggj5c7sc5roq" CACHE PATH "")
 
-set(SUNDIALS_DIR "${TPL_ROOT}/sundials-5.7.0" CACHE PATH "")
+set(SUNDIALS_DIR "${TPL_ROOT}/sundials-5.7.0-4zwhbjj5f44yha53e3ehtzdlvehsi7tr" CACHE PATH "")
 
-set(UMPIRE_DIR "${TPL_ROOT}/umpire-6.0.0serac" CACHE PATH "")
+set(UMPIRE_DIR "${TPL_ROOT}/umpire-2022.03.1-ktsx5uzj4gmcaw3ghxywnyrzoqkvhyz3" CACHE PATH "")
 
 #------------------------------------------------------------------------------
 # Devtools

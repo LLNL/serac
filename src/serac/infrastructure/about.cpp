@@ -44,6 +44,7 @@
 #endif
 
 #include "serac/infrastructure/git_sha.hpp"
+#include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/logger.hpp"
 
 namespace serac {
@@ -51,7 +52,7 @@ namespace serac {
 std::string about()
 {
   using namespace axom::fmt;
-  constexpr std::string_view                  on  = "ON";
+  [[maybe_unused]] constexpr std::string_view on  = "ON";
   [[maybe_unused]] constexpr std::string_view off = "OFF";
 
   std::string about = "\n";
@@ -191,6 +192,26 @@ std::string about()
 }
 
 std::string gitSHA() { return SERAC_GIT_SHA; }
+
+void printRunInfo()
+{
+  // Add header
+  std::string infoMsg = axom::fmt::format("\n{:*^80}\n", "Run Information");
+
+  infoMsg += axom::fmt::format("{0}: {1}\n", "Version", version());
+
+  infoMsg += axom::fmt::format("{0}: {1}\n", "User Name", axom::utilities::getUserName());
+  infoMsg += axom::fmt::format("{0}: {1}\n", "Host Name", axom::utilities::getHostName());
+
+  auto [count, rank] = getMPIInfo();
+  infoMsg += axom::fmt::format("{0}: {1}\n", "MPI Rank Count", count);
+
+  // Add footer
+  infoMsg += axom::fmt::format("{:*^80}\n", "*");
+
+  SLIC_INFO_ROOT(infoMsg);
+  serac::logger::flush();
+}
 
 std::string version(bool add_SHA)
 {

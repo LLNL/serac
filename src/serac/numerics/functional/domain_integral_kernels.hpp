@@ -10,6 +10,8 @@
 #include "serac/numerics/functional/integral_utilities.hpp"
 #include "serac/numerics/functional/evector_view.hpp"
 
+#include <array>
+
 namespace serac {
 
 namespace domain_integral {
@@ -63,7 +65,7 @@ template <int i, int dim, typename... trials, typename lambda, typename qpt_data
 auto get_derivative_type(lambda qf, qpt_data_type&& qpt_data)
 {
   using qf_arguments = serac::tuple<typename QFunctionArgument<trials, serac::Dimension<dim> >::type...>;
-  return get_gradient(detail::apply_qf(qf, tensor<double, dim>{}, make_dual_wrt<i>(qf_arguments{}), qpt_data));
+  return get_gradient(detail::apply_qf(qf, tensor<double, dim>{}, qpt_data, make_dual_wrt<i>(qf_arguments{})));
 };
 
 template <int i>
@@ -142,7 +144,7 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
    * @param data user-specified quadrature data to pass to the q-function
    */
   EvaluationKernel(KernelConfig<Q, geom, test, trials...>, const mfem::Vector& J, const mfem::Vector& X,
-                   std::size_t num_elements, lambda qf, QuadratureData<qpt_data_type>& data)
+                   std::size_t num_elements, lambda qf, std::shared_ptr<QuadratureData<qpt_data_type> > data)
       : J_(J), X_(X), num_elements_(num_elements), qf_(qf), data_(data)
   {
   }
@@ -152,8 +154,9 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
    *
    * @param U input E-vectors
    * @param R output E-vector
+   * @param update_state whether or not to overwrite material state quadrature data
    */
-  void operator()(const std::array<mfem::Vector, num_trial_spaces>& U, mfem::Vector& R)
+  void operator()(const std::vector<const mfem::Vector*> U, mfem::Vector& R, bool update_state)
   {
 
     // mfem provides this information in 1D arrays, so we reshape it
@@ -203,11 +206,11 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
 
   }
 
-  const mfem::Vector&            J_;             ///< Jacobian matrix entries at each quadrature point
-  const mfem::Vector&            X_;             ///< Spatial positions of each quadrature point
-  std::size_t                    num_elements_;  ///< how many elements in the domain
-  lambda                         qf_;            ///< q-function
-  QuadratureData<qpt_data_type>& data_;          ///< (optional) user-provided quadrature data
+  const mfem::Vector&                             J_;             ///< Jacobian matrix entries at each quadrature point
+  const mfem::Vector&                             X_;             ///< Spatial positions of each quadrature point
+  std::size_t                                     num_elements_;  ///< how many elements in the domain
+  lambda                                          qf_;            ///< q-function
+  std::shared_ptr<QuadratureData<qpt_data_type> > data_;          ///< (optional) user-provided quadrature data
 };
 
 /**
@@ -237,7 +240,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
    */
   EvaluationKernel(DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>,
                    CPUArrayView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J, const mfem::Vector& X,
-                   std::size_t num_elements, lambda qf, QuadratureData<qpt_data_type>& data)
+                   std::size_t num_elements, lambda qf, std::shared_ptr<QuadratureData<qpt_data_type> > data)
       : qf_derivatives_(qf_derivatives), J_(J), X_(X), num_elements_(num_elements), qf_(qf), data_(data)
   {
   }
@@ -247,8 +250,9 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
    *
    * @param U input E-vectors
    * @param R output E-vector
+   * @param update_state whether or not to overwrite material state quadrature data
    */
-  void operator()(const std::array<mfem::Vector, num_trial_spaces>& U, mfem::Vector& R)
+  void operator()(const std::vector<const mfem::Vector*> U, mfem::Vector& R, bool update_state)
   {
 
     // mfem provides this information as opaque arrays of doubles, 
@@ -304,18 +308,18 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
   const mfem::Vector&                      X_;               ///< Spatial positions of each quadrature point
   std::size_t                              num_elements_;    ///< how many elements in the domain
   lambda                                   qf_;              ///< q-function
-  QuadratureData<qpt_data_type>&           data_;            ///< (optional) user-provided quadrature data
+  std::shared_ptr<QuadratureData<qpt_data_type> > data_;     ///< (optional) user-provided quadrature data
 };
 
 template <int Q, Geometry geom, typename test, typename... trials, typename lambda, typename qpt_data_type>
 EvaluationKernel(KernelConfig<Q, geom, test, trials...>, const mfem::Vector&, const mfem::Vector&, int, lambda,
-                 QuadratureData<qpt_data_type>&)
+                 std::shared_ptr<QuadratureData<qpt_data_type> >)
     -> EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lambda, qpt_data_type>;
 
 template <int i, int Q, Geometry geom, typename test, typename... trials, typename derivatives_type, typename lambda,
           typename qpt_data_type>
 EvaluationKernel(DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, CPUArrayView<derivatives_type, 2>,
-                 const mfem::Vector&, const mfem::Vector&, int, lambda, QuadratureData<qpt_data_type>&)
+                 const mfem::Vector&, const mfem::Vector&, int, lambda, std::shared_ptr<QuadratureData<qpt_data_type> >)
     -> EvaluationKernel<DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, derivatives_type, lambda,
                         qpt_data_type>;
 
@@ -480,7 +484,7 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dk,
         auto N = evaluate_shape_functions<trial_element>(xi_q, J_q);
 
         for (int j = 0; j < trial_ndof; j++) {
-          K_elem[0][j] += (q0 * N[j].value + q1 * N[j].derivative) * dx;
+          K_elem[0][j][0] += (q0 * N[j].value + q1 * N[j].derivative) * dx;
         }
       }
 

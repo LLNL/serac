@@ -207,7 +207,7 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
     # Configure examples
     log_file =  pjoin(build_dir,"output.log.configure.examples.txt")
     print("[log file: %s]" % log_file)
-    example_dir = pjoin(install_dir, "examples", "using-with-cmake")
+    example_dir = pjoin(install_dir, "examples", get_project_name(), "using-with-cmake")
     res = sexe("cd {0} && mkdir build && cd build && cmake -C {0}/host-config.cmake {0}".format(example_dir),
                 output_file = log_file,
                 echo=True)
@@ -238,7 +238,7 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
 
     return 0
 
-def build_and_test_host_config(test_root,host_config, report_to_stdout = False, extra_cmake_options = ""):
+def build_and_test_host_config(test_root, host_config, report_to_stdout=False, extra_cmake_options="", skip_install=False):
     host_config_root = get_host_config_root(host_config)
     # setup build and install dirs
     build_dir   = pjoin(test_root,"build-%s"   % host_config_root)
@@ -337,12 +337,15 @@ def build_and_test_host_config(test_root,host_config, report_to_stdout = False, 
     #     print("[ERROR: Docs generation for host-config: %s failed]\n\n" % host_config)
     #     return res
 
-    # build the examples
-    res = test_examples(host_config, build_dir, install_dir, report_to_stdout)
+    # Install and test examples
+    if skip_install:
+        print("[Skipping 'make install']\n")
+    else:
+        res = test_examples(host_config, build_dir, install_dir, report_to_stdout)
 
-    if res != 0:
-        print("[ERROR: Building examples for host-config: %s failed]\n\n" % host_config)
-        return res
+        if res != 0:
+            print("[ERROR: Building examples for host-config: %s failed]\n\n" % host_config)
+            return res
     
     print("[SUCCESS: Build, test, and install for host-config: {0} complete]\n".format(host_config))
 

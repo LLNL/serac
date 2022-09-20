@@ -1,5 +1,5 @@
 -- Comparison information
-expected_displacement_l2norm = 2.9787340
+expected_displacement_l2norm = 2.79954039
 epsilon = 0.0001
 
 -- Simulation time parameters
@@ -13,9 +13,6 @@ main_mesh = {
     ser_ref_levels = 1,
     par_ref_levels = 0,
 }
-
--- Simulation output format
-output_type = "VisIt"
 
 -- Solver parameters
 solid = {

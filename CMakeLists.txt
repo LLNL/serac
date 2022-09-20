@@ -35,6 +35,11 @@ if (NOT DEFINED SERAC_ENABLE_CODEVELOP)
 endif()
 message(STATUS "Serac Codevelop Build: ${SERAC_ENABLE_CODEVELOP}")
 
+if(NOT DEFINED SERAC_SOURCE_DIR)
+  set(SERAC_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR} CACHE PATH "")
+endif()
+message(STATUS "Serac Source Dir: ${SERAC_SOURCE_DIR}")
+
 #------------------------------------------------------------------------------
 # Setup BLT
 #------------------------------------------------------------------------------
@@ -181,12 +186,7 @@ if (SERAC_ENABLE_CODEVELOP)
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/axom/src>
     )
 
-    # Add Axom's targets to our export set
-    # TODO: we should ask Axom for this list in the future
-    set(axom_exported_targets axom cli11 fmt hdf5 lua sol sparsehash)
-    blt_list_append(TO axom_exported_targets ELEMENTS openmp IF ENABLE_OPENMP)
-    
-    install(TARGETS              ${axom_exported_targets}
+    install(TARGETS              mfem ${axom_exported_targets}
             EXPORT               serac-targets
             DESTINATION          lib
             )

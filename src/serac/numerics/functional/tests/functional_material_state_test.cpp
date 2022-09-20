@@ -4,19 +4,18 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 
 #include "serac/serac_config.hpp"
-
 #include "serac/mesh/mesh_utils_base.hpp"
-
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/terminator.hpp"
-
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/numerics/functional/tensor.hpp"
-
 #include "serac/physics/state/state_manager.hpp"
+
+#include <array>
 
 using namespace serac;
 
@@ -37,9 +36,9 @@ protected:
 
   void resetWithNewMesh(mfem::ParMesh& new_mesh)
   {
-    mesh                = &new_mesh;
-    festate             = std::make_unique<FiniteElementState>(*mesh);
-    festate->gridFunc() = 0.0;
+    mesh     = &new_mesh;
+    festate  = std::make_unique<FiniteElementState>(*mesh);
+    *festate = 0.0;
     std::array<mfem::ParFiniteElementSpace*, 1> trial_fes{&festate->space()};
     residual = std::make_unique<Functional<test_space(trial_space)>>(&festate->space(), trial_fes);
   }
@@ -69,7 +68,7 @@ bool operator==(const StateWithMultiFields& lhs, const StateWithMultiFields& rhs
   return lhs.x == rhs.x && lhs.y == rhs.y;
 }
 
-TEST_F(QuadratureDataTest, basic_integrals)
+TEST_F(QuadratureDataTest, BasicIntegrals)
 {
   QuadratureData<State> qdata(*mesh, p);
   State                 init{0.1};
@@ -95,7 +94,7 @@ TEST_F(QuadratureDataTest, basic_integrals)
       Dimension<dim>{}, [&](auto /* x */, auto u) { return u; }, *mesh);
 }
 
-TEST_F(QuadratureDataTest, basic_integrals_default)
+TEST_F(QuadratureDataTest, BasicIntegralsDefault)
 {
   QuadratureData<StateWithDefault> qdata(*mesh, p);
   residual->AddDomainIntegral(
@@ -116,7 +115,7 @@ TEST_F(QuadratureDataTest, basic_integrals_default)
   }
 }
 
-TEST_F(QuadratureDataTest, basic_integrals_multi_fields)
+TEST_F(QuadratureDataTest, BasicIntegralsMultiFields)
 {
   QuadratureData<StateWithMultiFields> qdata(*mesh, p);
   residual->AddDomainIntegral(
@@ -188,7 +187,7 @@ using StateTypes = ::testing::Types<MultiFieldWrapper, IntWrapper, ThreeBytesWra
 // so instead, we leave it unspecified/empty
 TYPED_TEST_SUITE(QuadratureDataStateManagerTest, StateTypes, );
 
-TYPED_TEST(QuadratureDataStateManagerTest, basic_integrals_state_manager)
+TYPED_TEST(QuadratureDataStateManagerTest, BasicIntegralsStateManager)
 {
   constexpr int cycle        = 0;
   const auto    mutated_once = []() {
@@ -316,9 +315,6 @@ TYPED_TEST(QuadratureDataStateManagerTest, basic_integrals_state_manager)
   }
 }
 
-//------------------------------------------------------------------------------
-#include "axom/slic/core/SimpleLogger.hpp"
-
 int main(int argc, char* argv[])
 {
   int result = 0;
@@ -327,7 +323,7 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when exiting main scope
+  axom::slic::SimpleLogger logger;
 
   result = RUN_ALL_TESTS();
 

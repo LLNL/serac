@@ -13,6 +13,8 @@
 
 #pragma once
 
+#include <optional>
+
 #include "mfem.hpp"
 
 #include "serac/infrastructure/variant.hpp"
@@ -20,14 +22,19 @@
 namespace serac {
 
 /**
+ * @brief A sum type for encapsulating either a scalar or vector coeffient
+ */
+using GeneralCoefficient = variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
+
+/**
  * @brief Class for encapsulating the data associated with a vector derived
  * from a MFEM finite element space. Specifically, it contains the information
  * needed for both primal finite element state fields and dual finite element vectors.
  *
- * Namely: Mesh, FiniteElementCollection, FiniteElementVector,
- * GridFunction, and a distributed vector of the solution
+ * Namely: Mesh, FiniteElementCollection, FiniteElementSpace, name, and a HypreParVector
+ * containing the true degrees of freedom for the field.
  */
-class FiniteElementVector {
+class FiniteElementVector : public mfem::HypreParVector {
 public:
   /**
    * @brief Structure for optionally configuring a FiniteElementVector
@@ -56,11 +63,6 @@ public:
      * @brief The name of the field encapsulated by the state object
      */
     std::string name = "";
-    /**
-     * @brief A bool denoting if the grid function is managed by sidre
-     * @note This should only be true if calling a constructor from the StateManager class
-     */
-    bool managed_by_sidre = false;
   };
 
   /**
@@ -70,20 +72,9 @@ public:
    * the dimension of the FESpace, the type of FEColl, the DOF ordering that should be used,
    * and the name of the field
    */
-  FiniteElementVector(mfem::ParMesh& mesh, Options&& options = {.order            = 1,
-                                                                .vector_dim       = 1,
-                                                                .coll             = {},
-                                                                .ordering         = mfem::Ordering::byVDIM,
-                                                                .name             = "",
-                                                                .managed_by_sidre = false});
-
-  /**
-   * @brief Minimal constructor for a FiniteElementVector given an already-existing field
-   * @param[in] mesh The problem mesh (object does not take ownership)
-   * @param[in] gf The field for the state to create (object does not take ownership)
-   * @param[in] name The name of the field
-   */
-  FiniteElementVector(mfem::ParMesh& mesh, mfem::ParGridFunction& gf, const std::string& name = "");
+  FiniteElementVector(mfem::ParMesh& mesh,
+                      Options&&      options = {
+                          .order = 1, .vector_dim = 1, .coll = {}, .ordering = mfem::Ordering::byVDIM, .name = ""});
 
   /**
    * @brief Minimal constructor for a FiniteElementVector given a finite element space
@@ -94,49 +85,64 @@ public:
   FiniteElementVector(mfem::ParMesh& mesh, const mfem::ParFiniteElementSpace& space, const std::string& name = "");
 
   /**
-   * @brief Delete the default copy constructor
+   * @brief Copy constructor
+   *
+   * @param[in] rhs The input vector used for construction
    */
-  FiniteElementVector(const FiniteElementVector&) = delete;
+  FiniteElementVector(const FiniteElementVector& rhs) : FiniteElementVector(rhs.mesh_.get(), *rhs.space_, rhs.name_) {}
 
   /**
    * @brief Move construct a new Finite Element Vector object
    *
-   * @param[in] input_vector The input vector used for construction
+   * @param[in] rhs The input vector used for construction
    */
-  FiniteElementVector(FiniteElementVector&& input_vector);
+  FiniteElementVector(FiniteElementVector&& rhs);
+
+  /**
+   * @brief Copy assignment
+   *
+   * @param rhs The right hand side input vector
+   * @return The assigned FiniteElementVector
+   */
+  FiniteElementVector& operator=(const FiniteElementVector& rhs);
+
+  /**
+   * @brief Move assignment
+   *
+   * @param rhs The right hand side input vector
+   * @return The move assigned input vector
+   */
+  FiniteElementVector& operator=(FiniteElementVector&& rhs);
+
+  /**
+   * @brief Copy assignment from a hypre par vector
+   *
+   * @param rhs The rhs input hypre par vector
+   * @return The copy assigned input vector
+   */
+  FiniteElementVector& operator=(const mfem::HypreParVector& rhs);
 
   /**
    * @brief Returns the MPI communicator for the state
    * @return The underlying MPI communicator
    */
-  MPI_Comm comm() const { return detail::retrieve(space_).GetComm(); }
+  MPI_Comm comm() const { return space_->GetComm(); }
 
   /**
    * @brief Returns a non-owning reference to the internal mesh object
    * @return The underlying mesh
    */
   mfem::ParMesh& mesh() { return mesh_; }
+  /// \overload
+  const mfem::ParMesh& mesh() const { return mesh_; }
 
   /**
    * @brief Returns a non-owning reference to the internal FESpace
    * @return The underlying finite element space
    */
-  mfem::ParFiniteElementSpace& space() { return detail::retrieve(space_); }
+  mfem::ParFiniteElementSpace& space() { return *space_; }
   /// \overload
-  const mfem::ParFiniteElementSpace& space() const { return detail::retrieve(space_); }
-
-  /**
-   * @brief Returns a non-owning reference to the vector of true DOFs
-   * @return The underlying true degree of freedom vector
-   * @note This is a "true dof" vector in the standard MFEM sense. Each degree of freedom is on fully independent
-   * (e.g. not constrained by non-conforming meshes) and exists on exactly one MPI rank. Please see the
-   * <a href="https://mfem.org/pri-dual-vec/">MFEM</a> and
-   * <a href="https://libceed.readthedocs.io/en/latest/libCEEDapi/#terminology-and-notation">CEED</a> documentation for
-   * more details.
-   */
-  mfem::HypreParVector& trueVec() { return true_vec_; }
-  /// \overload
-  const mfem::HypreParVector& trueVec() const { return true_vec_; }
+  const mfem::ParFiniteElementSpace& space() const { return *space_; }
 
   /**
    * @brief Returns the name of the FEState (field)
@@ -155,30 +161,6 @@ public:
   FiniteElementVector& operator=(const double value);
 
   /**
-   * @brief Distribute dofs the internal grid function (local dofs) using the true DOF values
-   */
-  virtual void distributeSharedDofs() = 0;
-
-  /**
-   * @brief Initialize the true DOF vector using the internal grid function
-   */
-  virtual void initializeTrueVec() = 0;
-
-  /**
-   * @brief Utility function for creating a tensor, e.g. mfem::HypreParVector,
-   * mfem::ParBilinearForm, etc on the FESpace encapsulated by an FEState object
-   * @return An owning pointer to a heap-allocated tensor
-   * @pre Tensor must have the constructor Tensor::Tensor(ParFiniteElementSpace*)
-   */
-  template <typename Tensor>
-  std::unique_ptr<Tensor> createOnSpace()
-  {
-    static_assert(std::is_constructible_v<Tensor, mfem::ParFiniteElementSpace*>,
-                  "Tensor must be constructible with a ptr to ParFESpace");
-    return std::make_unique<Tensor>(&detail::retrieve(space_));
-  }
-
-  /**
    * @brief Destroy the Finite Element Vector object
    */
   virtual ~FiniteElementVector() {}
@@ -188,30 +170,18 @@ protected:
    * @brief A reference to the mesh object on which the field is defined
    */
   std::reference_wrapper<mfem::ParMesh> mesh_;
+
   /**
-   * @brief Possibly-owning handle to the FiniteElementCollection, as it is owned
-   * by the FiniteElementVector in a normal run and by the MFEMSidreDataCollection
-   * in a restart run
+   * @brief Handle to the FiniteElementCollection, which is owned by MFEMSidreDataCollection
    * @note Must be const as FESpaces store a const reference to their FEColls
    */
-  detail::MaybeOwningPointer<const mfem::FiniteElementCollection> coll_;
+  std::unique_ptr<mfem::FiniteElementCollection> coll_;
+
   /**
-   * @brief Possibly-owning handle to the mfem::ParFiniteElementSpace, as it is owned
-   * by the FiniteElementVector in a normal run and by the MFEMSidreDataCollection
-   * in a restart run
+   * @brief Handle to the mfem::ParFiniteElementSpace, which is owned by MFEMSidreDataCollection
    */
-  detail::MaybeOwningPointer<mfem::ParFiniteElementSpace> space_;
-  /**
-   * @brief Possibly-owning handle to the ParGridFunction, as it is owned
-   * by the FiniteElementVector in a normal run and by the MFEMSidreDataCollection
-   * in a restart run
-   */
-  detail::MaybeOwningPointer<mfem::ParGridFunction> gf_;
-  /**
-   * @brief The hypre vector containing the true degrees of freedom
-   * @note Each entry in this vector is owned by exactly one MPI rank
-   */
-  mfem::HypreParVector true_vec_;
+  std::unique_ptr<mfem::ParFiniteElementSpace> space_;
+
   /**
    * @brief The name of the finite element vector
    */

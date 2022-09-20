@@ -231,7 +231,7 @@ inline void displayLastCUDAMessage(const char* success_string = "", bool exit_on
 inline std::tuple<std::size_t, std::size_t> getCUDAMemInfo()
 {
   std::size_t free_memory, total_memory;
-  auto        error = cudaMemGetInfo(&free_memory, &total_memory);
+  cudaMemGetInfo(&free_memory, &total_memory);
   displayLastCUDAMessage();
   return std::make_tuple(free_memory, total_memory);
 }

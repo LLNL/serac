@@ -16,33 +16,33 @@ a solid mechanics simulation may look something like:
 .. math::
 
    r(u) := 
-   \underbrace{\int_\Omega \nabla\psi : \sigma(\nabla u) \; \text{d}v}_{\text{stress response}}
+   \underbrace{\int_\Omega \sigma(\nabla u) \cdot \nabla\psi \; \text{d}v}_{\text{stress response}}
    \;+\;
-   \underbrace{\int_\Omega \psi \cdot b(\mathbf{x}) \; \text{d}v}_{\text{body forces}} 
+   \underbrace{\int_\Omega b(\mathbf{x}) \; \psi \; \text{d}v}_{\text{body forces}} 
    \;+\;
-   \underbrace{\int_{\partial\Omega} \psi \cdot \mathbf{t}(\mathbf{x}) \; \text{d}a}_{\text{surface loads}},
+   \underbrace{\int_{\partial\Omega} \mathbf{t}(\mathbf{x}) \; \psi \; \text{d}a}_{\text{surface loads}},
 
 where :math:`\psi` are the test basis functions. To describe this
 residual using ``Functional``, we first create the object itself, providing a
-template parameter that expresses the test and trial spaces (i.e. the
-"inputs" and "outputs" of the residual function, :math:`r`). In this
+template parameter that expresses the test and trial spaces (i.e. the respective
+"outputs" and "inputs" of the residual function, :math:`r`). In this
 case, solid mechanics uses nodal displacements and residuals (i.e. H1 test and trial spaces), so we write:
 
 .. code-block:: cpp
 
    constexpr int order = 2; // the polynomial order of the basis functions
-   constexpr int dim = 3; // the dimension of our problem
+   constexpr int dim = 3; // the number of components per node
    using test = H1<order, dim>;
    using trial = H1<order, dim>;
-   Functional< test(trial) > residual(test_fes, trial_fes);
+   Functional< test(trial) > residual(&test_fes, {&trial_fes});
 
-where ``test_fes``, ``trial_fes`` are the ``mfem`` finite element spaces for the problem. 
+where ``test_fes``, ``trial_fes`` are the ``mfem::FiniteElementSpaces`` for the problem. 
 The template argument follows the same convention of ``std::function``:
 the output-type appears outside the parentheses, and the input-type(s)
-appear, inside the parentheses (in order). So, the last line of code in
+appear, inside the parentheses (in order).  So, the last line of code in
 the snippet above is saying that ``residual`` is going to represent a
-calculation that takes in an H1 field (displacements), and returns a
-vector of weighted residuals, using H1 test functions.
+calculation that takes in an H1 field (displacements), and returns 
+weighted residual vectors for each node, using H1 test functions.
 
 Now that the ``Functional`` object is created, we can use the
 following functions to define integral terms (depending on their
@@ -55,79 +55,127 @@ dimensionality). Here, we use :math:`s` to denote the "source" term
 
    .. code-block:: cpp
 
-      Functional::AddAreaIntegral([](auto ... args){
+    residual.AddAreaIntegral(
+      DependsOn< ... >{},
+      [](auto x, auto ... args){
       	auto s = ...;
       	auto f = ...;
-      	return std::tuple{s, f};
-      }, domain_of_integration);
+      	return serac::tuple{s, f};
+      }, 
+      domain_of_integration
+    );
 
 2. Integrals of the form:
    :math:`\displaystyle \iiint_\Omega \psi \cdot s + \nabla \psi : f \; dv`
 
    .. code-block:: cpp
 
-      Functional::AddVolumeIntegral([](auto ... args){
+    residual.AddVolumeIntegral(
+      DependsOn< ... >{},
+      [](auto x, auto ... args){
       	auto s = ...;
       	auto f = ...;
-      	return std::tuple{s, f};
-      }, domain_of_integration);
+      	return serac::tuple{s, f};
+      }, 
+      domain_of_integration
+    );
 
 3. Integrals of the form:
    :math:`\displaystyle \iint_{\partial \Omega} \psi \cdot s \; da`
 
    .. code-block:: cpp
 
-      Functional::AddSurfaceIntegral([](auto ... args){
+    residual.AddSurfaceIntegral(
+      DependsOn< ... >{},
+      [](auto ... args){
       	auto s = ...;
       	return s;
-      }, domain_of_integration);	
+      }, 
+      domain_of_integration
+    );	
 
-So, for our problem (since we assumed 3D earlier) we can make an
+Note: the first argument ``DependsOn< ... >{}`` is a way to specify
+which of the trial spaces (if any) are required by that integral.
+e.g. ``DependsOn< 1, 2 >{}`` will indicate that the values
+from trial spaces 1 and 2 (zero-based indexing) will be passed in
+to the provided q-function.
+
+Going back to our example problem (since we assumed 3D earlier) we can make an
 ``Add****Integral()`` call for each of the integral terms in the
-original residual. In each of these functions, the first argument is the
+original residual. In each of these functions, the first argument tells
+which trial spaces the calculation depends on, the second argument is the
 integrand (a lambda function or functor returning :math:`\{s, f\}`),
-and the second argument is the domain of integration. Let's start with
+and the third argument is the domain of integration. Let's start with
 the stress response term:
 
 .. code-block:: cpp
 
-   // The integrand lambda function is passed the spatial position of the quadrature point,
-   // as well as a {value, derivative} tuple for the trial space.
-   residual.AddVolumeIntegral([](auto x, auto disp){
+  // The integrand lambda function is passed the spatial position of the quadrature point,
+  // as well as a {value, derivative} tuple for the trial space.
+  residual.AddVolumeIntegral(
+
+    // this calculation depends on the displacement field, which is the 0th trial space
+    DependsOn<0>{}, 
+
+    [](auto x, auto disp){
      
-     // Here, we unpack the {value, derivative} tuple into separate variables
-     auto [u, grad_u] = disp;
+      // Here, we unpack the {value, derivative} tuple into separate variables
+      auto [u, grad_u] = disp;
+      
+      // call some constitutive model for the material in this domain
+      auto stress = material_model(grad_u); 
+      
+      // Functional::AddVolumeIntegral() expects us to return a tuple of the form {s, f},
+      // but this integral has no term that get integrated against the test functions,
+      // so the "source" term is just zero
+      return serac::tuple{zero{}, stress};
      
-     // Functional expects us to return a tuple of the form {s, f} (see table above)
-     auto body_force = zero{}; // for this case, the source term is identically zero.
-     auto stress = material_model(grad_u); // call some constitutive model for the material in this domain
-     
-     return std::tuple{body_force, stress};
-     
-   }, mesh);
+    }, 
+    mesh
+  );
 
 The other terms follow a similar pattern. For the body force:
 
 .. code-block:: cpp
 
-   residual.AddVolumeIntegral([](auto x, auto disp /* unused */){
+  residual.AddVolumeIntegral(
+
+    // this calculation doesn't require values from any trial space
+    // so there is nothing between the angle brackets
+    DependsOn</* nothing in here */>{}, 
+
+    [](auto x){    
+
+      // evaluate the body force function at the location of the quadrature point
+      auto body_force = b(x); 
      
-     // Functional::AddVolumeIntegral() expects us to return a tuple of the form {s, f}
-     auto body_force = b(x); // evaluate the body-force at the location of the quadrature point
-     auto stress = zero{}; // for this term, the stress term is identically zero
+      // Functional::AddVolumeIntegral() expects us to return a tuple of the form {s, f},
+      // but this integral has no term that get integrated against the test function gradients,
+      // so the "flux" term is just zero
+      return std::tuple{body_force, zero{}}; 
      
-     return std::tuple{body_force, stress};
-     
-   }, mesh);
+    }, 
+    mesh
+  );
 
 And finally, for the surface tractions:
 
 .. code-block:: cpp
 
-   // Functional::AddSurfaceIntegral() only expects us to return s, so we don't need a tuple
-   residual.AddSurfaceIntegral([](auto x, auto disp /* unused */){
-     return traction(x); // evaluate the traction at the location of the quadrature point
-   }, surface_mesh);
+    // Functional::AddSurfaceIntegral() only expects us to return s, so we don't need a tuple
+    residual.AddSurfaceIntegral(
+
+      // this calculation doesn't require values from any trial space
+      // so there is nothing between the angle brackets
+      DependsOn</* nothing in here */>{}, 
+
+      // evaluate the traction at the location of the quadrature point
+      // note: the q-function for boundary integrals is also passed
+      // the unit surface normal as the second argument
+      [](auto x, auto n){ return t(x); }, 
+
+      surface_mesh
+    );
 
 Now that we've finished describing all the integral terms that appear in
 our residual, we can carry out the actual calculation by calling
@@ -141,24 +189,113 @@ Putting these snippets together without the verbose comments, we have (note: the
 
 .. code-block:: cpp
 
-   using test = H1<order, dim>;
-   using trial = H1<order, dim>;
-   Functional< test(trial) > residual(test_fes, trial_fes);
+    using test = H1<order, dim>;
+    using trial = H1<order, dim>;
+    Functional< test(trial) > residual(test_fes, trial_fes);
 
-   // note: the first two AddVolumeIntegral calls can be fused
-   // into one, provided they share the same domain of integration
-   residual.AddVolumeIntegral([](auto x, auto disp){
-     auto [u, grad_u] = disp;
-     return std::tuple{b(x), material_model(grad_u))};
-   }, mesh);
+    // note: the first two AddVolumeIntegral calls can be fused
+    // into one, provided they share the same domain of integration
+    residual.AddVolumeIntegral(
+      DependsOn<0>{}, // depends on the displacement field
+      [](auto x, auto disp){
+        auto [u, grad_u] = disp;
+        return serac::tuple{b(x), material_model(grad_u)};
+      }, 
+      mesh
+    );
 
-   residual.AddSurfaceIntegral([](auto x, auto disp /* unused */){ return traction(x); }, surface_mesh);
+    residual.AddSurfaceIntegral([](auto x, auto disp /* unused */){ return traction(x); }, surface_mesh);
 
-   auto r = residual(displacements);
+    auto r = residual(displacements);
 
 So, in only a few lines of code, we can create optimized, custom finite
 element kernels!
 
+Quantities of Interest
+----------------------
+
+``Functional`` can also be used to represent scalar-valued integral expressions. These can be used
+to represent objective functions, constraints, or other "quantities of interest". To make a ``Functional``
+with a scalar-valued output, use ``double`` as the test space in its function signature:
+
+.. code-block:: cpp
+
+    using trial = H1<order, dim>;
+
+    // this indicates that the calculation will 
+    // return a scalar, rather than a residual vector
+    using test = double; 
+
+    Functional< test(trial) > qoi(&test_fes, {&trial_fes});
+    
+    ...
+
+Like before, the actual integral calculations are defined by calling the following member functions:
+
+1. Integrals of the form:
+   :math:`\displaystyle \iint_\Omega s \; da`
+
+   .. code-block:: cpp
+
+    qoi.AddAreaIntegral(
+      DependsOn< ... >{},
+      [](auto x, auto ... args){
+      	auto s = ...;
+      	return s;
+      }, 
+      domain_of_integration
+    );
+
+2. Integrals of the form:
+   :math:`\displaystyle \iiint_\Omega s \; dv`
+
+   .. code-block:: cpp
+
+    qoi.AddVolumeIntegral(
+      DependsOn< ... >{},
+      [](auto x, auto ... args){
+      	auto s = ...;
+      	return s;
+      }, 
+      domain_of_integration
+    );
+
+3. Integrals of the form:
+   :math:`\displaystyle \iint_{\partial \Omega} s \; da`
+
+   .. code-block:: cpp
+
+    qoi.AddSurfaceIntegral(
+      DependsOn< ... >{},
+      [](auto ... args){
+      	auto s = ...;
+      	return s;
+      }, 
+      domain_of_integration
+    );
+
+Note: since there aren't really test functions in this case (or equivalently, :math:`\phi(x) = 1`), there
+is never a "flux" term, so these q-functions all just return a scalar. Here's an example of how to
+use ``Functional`` to implement a strain-energy calculation to accompany our solid mechanics example:
+
+Strain energy:   :math:`\displaystyle \qquad U(u) = \frac{1}{2} \iiint_\Omega \sigma : \epsilon \; dv`
+
+.. code-block:: cpp
+
+    using displacement_field = H1<order,dim>
+
+    Functional< double(displacement_field) > strain_energy(&test_fes, {&trial_fes});
+    strain_energy.AddVolumeIntegral(
+      DependsOn<0>{}, // depends on displacement
+      [](auto x, auto displacement){
+        auto [u, dudx] = displacement;
+        auto epsilon = 0.5 * (transpose(dudx) + dudx);
+        auto sigma = my_material_model(epsilon);
+        auto strain_energy_density = 0.5 * double_dot(sigma, epsilon);
+        return strain_energy_density;
+      },
+      mesh
+    );
 
 Implementation
 --------------

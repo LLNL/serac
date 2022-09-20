@@ -130,6 +130,7 @@ TEST(basic, nonlinear_thermal_test_3D)
   Functional<test_space(trial_space)> residual(&fespace, {&fespace});
 
   residual.AddVolumeIntegral(
+      DependsOn<0>{},
       [=](auto x, auto temperature) {
         auto [u, du_dx] = temperature;
         auto source     = u * u - (100 * x[0] * x[1]);
@@ -153,6 +154,7 @@ int main(int argc, char* argv[])
   int num_procs, myid;
 
   ::testing::InitGoogleTest(&argc, argv);
+
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
@@ -160,6 +162,7 @@ int main(int argc, char* argv[])
   axom::slic::SimpleLogger logger;
 
   int result = RUN_ALL_TESTS();
+
   MPI_Finalize();
 
   return result;

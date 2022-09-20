@@ -5,6 +5,8 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 #pragma once
 
+#include <array>
+
 #include "serac/numerics/quadrature_data.hpp"
 #include "serac/numerics/functional/integral_utilities.hpp"
 #include "serac/numerics/functional/evector_view.hpp"
@@ -43,7 +45,8 @@ auto PreprocessHelper(const tuple_type& u, const tensor<double, dim>& xi, std::i
 template <Geometry geom, typename... trials, typename tuple_type, int dim>
 auto Preprocess(const tuple_type& u, const tensor<double, dim>& xi)
 {
-  return PreprocessHelper<geom, trials...>(u, xi, std::make_integer_sequence<int, int(sizeof...(trials))>{});
+  return PreprocessHelper<geom, trials...>(u, xi,
+                                           std::make_integer_sequence<int, static_cast<int>(sizeof...(trials))>{});
 }
 
 /**
@@ -192,8 +195,22 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
    * @param U input E-vectors
    * @param R output E-vector
    */
-  void operator()(const std::array<mfem::Vector, num_trial_spaces>& U, mfem::Vector& R)
+  void operator()(const std::vector<const mfem::Vector*> U, mfem::Vector& R)
   {
+    std::array<const double*, num_trial_spaces> ptrs{};
+    if constexpr (num_trial_spaces > 0) {
+      for (uint32_t j = 0; j < num_trial_spaces; j++) {
+        ptrs[j] = U[j]->Read();
+      }
+    }
+    EVector_t u(ptrs, std::size_t(num_elements_));
+
+    using test_element              = finite_element<geom, test>;
+    using element_residual_type     = typename test_element::residual_type;
+    static constexpr int  dim       = dimension_of(geom);
+    static constexpr int  test_ndof = test_element::ndof;
+    static constexpr auto rule      = GaussQuadratureRule<geom, Q>();
+
     // mfem provides this information in 1D arrays, so we reshape it
     // into strided multidimensional arrays before using
     constexpr int dim = dimension_of(geom);
@@ -253,7 +270,7 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
 template <int I, int Q, Geometry geom, typename test, typename... trials, typename derivatives_type, typename lambda>
 struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>, derivatives_type, lambda> {
   static constexpr auto exec             = ExecutionSpace::CPU;     ///< this specialization is CPU-specific
-  static constexpr int  num_trial_spaces = int(sizeof...(trials));  ///< how many trial spaces are provided
+  static constexpr int  num_trial_spaces = static_cast<int>(sizeof...(trials));  ///< how many trial spaces are provided
   static constexpr auto Iseq = std::make_integer_sequence<int, sizeof ... (trials)>{};
 
   using test_element = finite_element<geom, test>;
@@ -282,7 +299,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
    * @param U input E-vectors
    * @param R output E-vector
    */
-  void operator()(const std::array<mfem::Vector, num_trial_spaces>& U, mfem::Vector& R)
+  void operator()(const std::vector<const mfem::Vector*> U, mfem::Vector& R)
   {
     // mfem provides this information in 1D arrays, so we reshape it
     // into strided multidimensional arrays before using
@@ -294,22 +311,6 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
     auto r = reinterpret_cast<typename test_element::dof_type*>(R.ReadWrite());
     static constexpr TensorProductQuadratureRule<Q> rule{};
 
-    // for each element in the domain
-    for (uint32_t e = 0; e < num_elements_; e++) {
-
-      // load the jacobians, positions and normals for each quadrature point in this element
-      auto J_e = J[e];
-      auto X_e = X[e];
-      auto N_e = N[e];
-
-      tuple < 
-        decltype(finite_element< geom, trials >::interpolate(typename finite_element< geom, trials >::dof_type{}, rule)) ... 
-      > qf_inputs{};
-
-      for_constexpr< num_trial_spaces >([&](auto j){
-
-        using trial_element = decltype(trial_elements[j]);
-        
         auto u = reinterpret_cast<const typename trial_element::dof_type*>(U[j].Read());
 
         // (batch) interpolate each quadrature point's value
@@ -486,7 +487,7 @@ void element_gradient_kernel(CPUArrayView<double, 3> dk, CPUArrayView<derivative
       if constexpr (std::is_same<test, QOI>::value) {
         auto N = trial_element::shape_functions(xi_q);
         for (int j = 0; j < trial_ndof; j++) {
-          K_elem[0][j] += serac::get<0>(dq_darg) * N[j] * dx;
+          K_elem[0][j][0] += serac::get<0>(dq_darg) * N[j] * dx;
         }
       } else {
         auto M = test_element::shape_functions(xi_q);

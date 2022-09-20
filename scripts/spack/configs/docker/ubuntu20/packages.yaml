@@ -15,9 +15,7 @@
 # -------------------------------------------------------------------------
 packages:
   all:
-    # This defaults us to machine specific flags of ivybridge which allows
-    # us to run on broadwell as well
-    target: [ivybridge]
+    target: [x86_64]
     compiler: [gcc, intel, pgi, clang, xl, nag]
     providers:
       awk: [gawk]

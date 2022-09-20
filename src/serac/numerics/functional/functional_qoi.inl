@@ -63,16 +63,17 @@ class Functional<double(trials...), exec> {
   using test = QOI;
   static constexpr tuple<trials...> trial_spaces{};
   static constexpr uint32_t         num_trial_spaces = sizeof...(trials);
+  static constexpr auto             Q                = std::max({test::order, trials::order...}) + 1;
 
   class Gradient;
 
   // clang-format off
-  template <typename... T>
+  template <int i> 
   struct operator_paren_return {
     using type = typename std::conditional<
-        (std::is_same_v<T, differentiate_wrt_this> + ...) == 1, // if the there is a dual number in the pack
-        serac::tuple<double, Gradient&>,                        // then we return the value and the derivative
-        double                                                  // otherwise, we just return the value
+        i >= 0,                           // if `i` is greater than or equal to zero,
+        serac::tuple<double&, Gradient&>, // then we return the value and the derivative w.r.t arg `i`
+        double                            // otherwise, we just return the value
         >::type;
   };
   // clang-format on
@@ -150,13 +151,13 @@ public:
    * @tparam qpt_data_type The type of the data to store for each quadrature point
    * @param[in] integrand The user-provided quadrature function, see @p Integral
    * @param[in] domain The domain on which to evaluate the integral
-   * @param[in] data The data structure containing per-quadrature-point data
+   * @param[in] qdata The data structure containing per-quadrature-point data
    * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
    * and @a spatial_dim template parameter
    */
-  template <int dim, typename lambda, typename qpt_data_type = void>
-  void AddDomainIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain,
-                         QuadratureData<qpt_data_type>& data = dummy_qdata)
+  template <int dim, int... args, typename lambda, typename qpt_data_type = Nothing>
+  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain,
+                         std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
   {
     auto num_elements = domain.GetNE();
     if (num_elements == 0) return;
@@ -171,7 +172,11 @@ public:
 
     constexpr auto flags = mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS;
     auto           geom  = domain.GetGeometricFactors(ir, flags);
-    domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<dim>{}, integrand, data);
+
+    auto selected_trial_spaces = serac::make_tuple(serac::get<args>(trial_spaces)...);
+
+    domain_integrals_.emplace_back(test{}, selected_trial_spaces, num_elements, geom->J, geom->X, Dimension<dim>{},
+                                   integrand, qdata, std::vector<int>{args...});
   }
 
   /**
@@ -185,8 +190,8 @@ public:
    * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
    * and @a spatial_dim template parameter
    */
-  template <int dim, typename lambda, typename qpt_data_type = void>
-  void AddBoundaryIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain)
+  template <int dim, int... args, typename lambda, typename qpt_data_type = void>
+  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain)
   {
     // TODO: fix mfem::FaceGeometricFactors
     auto num_bdr_elements = domain.GetNBE();
@@ -202,47 +207,54 @@ public:
     constexpr auto flags = mfem::FaceGeometricFactors::COORDINATES | mfem::FaceGeometricFactors::DETERMINANTS |
                            mfem::FaceGeometricFactors::NORMALS;
 
-    // despite what their documentation says, mfem doesn't actually support the JACOBIANS flag.
-    // this is currently a dealbreaker, as we need this information to do any calculations
+    // sam: did mfem ever implement support for the JACOBIANS flag here?
     auto geom = domain.GetFaceGeometricFactors(ir, flags, mfem::FaceType::Boundary);
-    bdr_integrals_.emplace_back(num_bdr_elements, geom->detJ, geom->X, geom->normal, Dimension<dim>{}, integrand);
+
+    auto selected_trial_spaces = serac::make_tuple(serac::get<args>(trial_spaces)...);
+
+    bdr_integrals_.emplace_back(test{}, selected_trial_spaces, num_bdr_elements, geom->detJ, geom->X, geom->normal,
+                                Dimension<dim>{}, integrand, std::vector<int>{args...});
   }
 
   /**
    * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
    * @tparam qpt_data_type The type of the data to store for each quadrature point
+   * @param[in] which_args a tag type used to indicate which trial spaces are required by this calculation
    * @param[in] integrand The quadrature function
    * @param[in] domain The mesh to evaluate the integral on
    * @param[in] data The data structure containing per-quadrature-point data
    *
    * @brief Adds an area integral, i.e., over 2D elements in R^2
    */
-  template <typename lambda, typename qpt_data_type = void>
-  void AddAreaIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = dummy_qdata)
+  template <int... args, typename lambda, typename qpt_data_type = Nothing>
+  void AddAreaIntegral(DependsOn<args...> which_args, lambda&& integrand, mfem::Mesh& domain,
+                       std::shared_ptr<QuadratureData<qpt_data_type>>& data = NoQData)
   {
-    AddDomainIntegral(Dimension<2>{}, integrand, domain, data);
+    AddDomainIntegral(Dimension<2>{}, which_args, integrand, domain, data);
   }
 
   /**
    * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
    * @tparam qpt_data_type The type of the data to store for each quadrature point
+   * @param[in] which_args a tag type used to indicate which trial spaces are required by this calculation
    * @param[in] integrand The quadrature function
    * @param[in] domain The mesh to evaluate the integral on
    * @param[in] data The data structure containing per-quadrature-point data
    *
    * @brief Adds a volume integral, i.e., over 3D elements in R^3
    */
-  template <typename lambda, typename qpt_data_type = void>
-  void AddVolumeIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = dummy_qdata)
+  template <int... args, typename lambda, typename qpt_data_type = Nothing>
+  void AddVolumeIntegral(DependsOn<args...> which_args, lambda&& integrand, mfem::Mesh& domain,
+                         std::shared_ptr<QuadratureData<qpt_data_type>>& data = NoQData)
   {
-    AddDomainIntegral(Dimension<3>{}, integrand, domain, data);
+    AddDomainIntegral(Dimension<3>{}, which_args, integrand, domain, data);
   }
 
   /// @brief alias for Functional::AddBoundaryIntegral(Dimension<2>{}, integrand, domain);
-  template <typename lambda>
-  void AddSurfaceIntegral(lambda&& integrand, mfem::Mesh& domain)
+  template <int... args, typename lambda>
+  void AddSurfaceIntegral(DependsOn<args...> which_args, lambda&& integrand, mfem::Mesh& domain)
   {
-    AddBoundaryIntegral(Dimension<2>{}, integrand, domain);
+    AddBoundaryIntegral(Dimension<2>{}, which_args, integrand, domain);
   }
 
   /**
@@ -306,21 +318,16 @@ public:
    * arguments may be a dual_vector, to indicate that Functional::operator() should not only evaluate the
    * element calculations, but also differentiate them w.r.t. the specified dual_vector argument
    */
-  template <typename... T>
-  typename operator_paren_return<T...>::type operator()(const T&... args)
+  template <int wrt, typename... T>
+  typename operator_paren_return<wrt>::type operator()(DifferentiateWRT<wrt>, const T&... args)
   {
-    constexpr int num_differentiated_arguments = (std::is_same_v<T, differentiate_wrt_this> + ...);
-    static_assert(num_differentiated_arguments <= 1,
-                  "Error: Functional::operator() can only differentiate w.r.t. 1 argument a time");
+    const mfem::Vector* input_T[] = {&static_cast<const mfem::Vector&>(args)...};
     static_assert(sizeof...(T) == num_trial_spaces,
                   "Error: Functional::operator() must take exactly as many arguments as trial spaces");
 
-    [[maybe_unused]] constexpr int                                           wrt = index_of_differentiation<T...>();
-    std::array<std::reference_wrapper<const mfem::Vector>, num_trial_spaces> input_T{args...};
-
     // get the values for each local processor
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
-      P_trial_[i]->Mult(input_T[i].get(), input_L_[i]);
+      P_trial_[i]->Mult(*input_T[i], input_L_[i]);
     }
 
     output_L_ = 0.0;
@@ -333,7 +340,8 @@ public:
       // compute residual contributions at the element level and sum them
       output_E_ = 0.0;
       for (auto& integral : domain_integrals_) {
-        integral.Mult(input_E_, output_E_, wrt);
+        const bool update_state = false;  // QoIs get read-only access to material state
+        integral.Mult(input_E_, output_E_, wrt, update_state);
       }
 
       // scatter-add to compute residuals on the local processor
@@ -361,16 +369,7 @@ public:
     // scatter-add to compute global residuals
     P_test_->MultTranspose(output_L_, output_T_);
 
-    if constexpr (num_differentiated_arguments == 0) {
-      // if the user passes only `mfem::Vector`s then we assume they only want the output value
-      //
-      // mfem::Vector arg0 = ...;
-      // mfem::Vector arg1 = ...;
-      // e.g. mfem::Vector value = my_functional(arg0, arg1);
-      return output_T_[0];
-    }
-
-    if constexpr (num_differentiated_arguments == 1) {
+    if constexpr (wrt >= 0) {
       // if the user has indicated they'd like to evaluate and differentiate w.r.t.
       // a specific argument, then we return both the value and gradient w.r.t. that argument
       //
@@ -379,6 +378,30 @@ public:
       // e.g. auto [value, gradient_wrt_arg1] = my_functional(arg0, differentiate_wrt(arg1));
       return {output_T_[0], grad_[wrt]};
     }
+
+    if constexpr (wrt == -1) {
+      // if the user passes only `mfem::Vector`s then we assume they only want the output value
+      //
+      // mfem::Vector arg0 = ...;
+      // mfem::Vector arg1 = ...;
+      // e.g. mfem::Vector value = my_functional(arg0, arg1);
+      return output_T_[0];
+    }
+  }
+
+  /// @overload
+  template <typename... T>
+  auto operator()(const T&... args)
+  {
+    constexpr int num_differentiated_arguments = (std::is_same_v<T, differentiate_wrt_this> + ...);
+    static_assert(num_differentiated_arguments <= 1,
+                  "Error: Functional::operator() can only differentiate w.r.t. 1 argument a time");
+    static_assert(sizeof...(T) == num_trial_spaces,
+                  "Error: Functional::operator() must take exactly as many arguments as trial spaces");
+
+    [[maybe_unused]] constexpr int i = index_of_differentiation<T...>();
+
+    return (*this)(DifferentiateWRT<i>{}, args...);
   }
 
 private:
@@ -538,12 +561,12 @@ private:
   /**
    * @brief The set of domain integrals (spatial_dim == geometric_dim)
    */
-  std::vector<DomainIntegral<test(trials...), exec>> domain_integrals_;
+  std::vector<DomainIntegral<num_trial_spaces, Q, exec>> domain_integrals_;
 
   /**
    * @brief The set of boundary integral (spatial_dim > geometric_dim)
    */
-  std::vector<BoundaryIntegral<test(trials...), exec>> bdr_integrals_;
+  std::vector<BoundaryIntegral<num_trial_spaces, Q, exec>> bdr_integrals_;
 
   // simplex elements are currently not supported;
   static constexpr mfem::Element::Type supported_types[4] = {mfem::Element::POINT, mfem::Element::SEGMENT,

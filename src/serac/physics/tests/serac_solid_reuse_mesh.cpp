@@ -8,6 +8,7 @@
 
 #include <fstream>
 
+#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
@@ -20,7 +21,7 @@
 
 namespace serac {
 
-TEST(solid_solver, reuse_mesh)
+TEST(SolidSolver, ReuseMesh)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -75,9 +76,6 @@ TEST(solid_solver, reuse_mesh)
                                          std::make_unique<mfem::ConstantCoefficient>(5.0));
     solid_solver_1.setDisplacement(*deform);
 
-    // Initialize the VisIt output
-    solid_solver_1.initializeOutput(serac::OutputType::VisIt, "two_mesh_solid_1");
-
     // Construct the internal dynamic solver data structures
     solid_solver_1.completeSetup();
 
@@ -87,9 +85,6 @@ TEST(solid_solver, reuse_mesh)
     solid_solver_2.setMaterialParameters(std::make_unique<mfem::ConstantCoefficient>(0.25),
                                          std::make_unique<mfem::ConstantCoefficient>(5.0));
     solid_solver_2.setDisplacement(*deform);
-
-    // Initialize the VisIt output
-    solid_solver_2.initializeOutput(serac::OutputType::VisIt, "two_mesh_solid_2");
 
     // Construct the internal dynamic solver data structures
     solid_solver_2.completeSetup();
@@ -101,11 +96,9 @@ TEST(solid_solver, reuse_mesh)
     // Output the final state
     solid_solver_1.outputState();
 
-    u_1_true_vec = solid_solver_1.displacement().trueVec();
+    u_1_true_vec = solid_solver_1.displacement();
 
-    EXPECT_NEAR(
-        0.0, (mfem::Vector(solid_solver_1.displacement().trueVec() - solid_solver_2.displacement().trueVec())).Norml2(),
-        0.001);
+    EXPECT_NEAR(0.0, (mfem::Vector(solid_solver_1.displacement() - solid_solver_2.displacement())).Norml2(), 0.001);
   }
 
   Solid solid_solver_3(1, default_static, GeometricNonlinearities::On, FinalMeshOption::Deformed);
@@ -115,16 +108,13 @@ TEST(solid_solver, reuse_mesh)
                                        std::make_unique<mfem::ConstantCoefficient>(5.0));
   solid_solver_3.setDisplacement(*deform);
 
-  // Initialize the VisIt output
-  solid_solver_3.initializeOutput(serac::OutputType::VisIt, "two_mesh_solid_1");
-
   // Construct the internal dynamic solver data structures
   solid_solver_3.completeSetup();
 
   double dt = 1.0;
   solid_solver_3.advanceTimestep(dt);
 
-  EXPECT_NEAR(0.0, (mfem::Vector(u_1_true_vec - solid_solver_3.displacement().trueVec())).Norml2(), 0.001);
+  EXPECT_NEAR(0.0, (mfem::Vector(u_1_true_vec - solid_solver_3.displacement())).Norml2(), 0.001);
 
   solid_solver_3.resetToReferenceConfiguration();
   EXPECT_NEAR(0.0, norm(solid_solver_3.displacement()), 1.0e-8);
@@ -135,9 +125,6 @@ TEST(solid_solver, reuse_mesh)
 
 }  // namespace serac
 
-//------------------------------------------------------------------------------
-#include "axom/slic/core/SimpleLogger.hpp"
-
 int main(int argc, char* argv[])
 {
   int result = 0;
@@ -146,7 +133,7 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when exiting main scope
+  axom::slic::SimpleLogger logger;
 
   result = RUN_ALL_TESTS();
 

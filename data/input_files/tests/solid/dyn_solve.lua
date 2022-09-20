@@ -7,9 +7,6 @@ epsilon = 0.0001
 dt      = 1.0
 t_final = 6.0
 
--- Simulation output format
-output_type = "VisIt"
-
 main_mesh = {
     type = "file",
     -- mesh file

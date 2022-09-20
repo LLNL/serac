@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause) 
 
-set(test_dependencies serac_physics test_utils)
+set(test_dependencies serac_physics serac_state test_utils)
 blt_list_append( TO test_dependencies ELEMENTS caliper adiak IF ${SERAC_ENABLE_PROFILING} )
 
 blt_add_library(
@@ -18,6 +18,7 @@ set(serial_solver_tests
     serac_solid_sensitivity.cpp
     serac_thermal_functional_finite_diff.cpp
     serac_solid_functional_finite_diff.cpp
+    test_solid_functional_statics.cpp
     )
 
 serac_add_tests( SOURCES ${serial_solver_tests}
@@ -25,15 +26,17 @@ serac_add_tests( SOURCES ${serial_solver_tests}
     NUM_MPI_TASKS 1)
 
 set(solver_tests
+    #liquid_crystal_elastomer_example.cpp
+    parameterized_thermomechanics_example.cpp
     serac_solid.cpp
     serac_solid_reuse_mesh.cpp
     serac_solid_adjoint.cpp
     serac_solid_functional.cpp
+    serac_solid_functional_shape.cpp
     serac_thermal_solver.cpp
-    serac_thermal_structural_solver.cpp
     serac_thermal_solid_solver.cpp
-    serac_thermal_expansion.cpp
     serac_thermal_functional.cpp
+    serac_thermal_mechanics_functional.cpp
     )
 
 serac_add_tests( SOURCES ${solver_tests}

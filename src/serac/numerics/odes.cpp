@@ -85,12 +85,12 @@ void SecondOrderODE::Step(mfem::Vector& x, mfem::Vector& dxdt, double& time, dou
       U_       = 0.0;
       U_plus_  = 0.0;
       for (const auto& bc : bcs_.essentials()) {
-        bc.projectBdrToDofs(U_minus_, t - epsilon);
-        bc.projectBdrToDofs(U_, t);
-        bc.projectBdrToDofs(U_plus_, t + epsilon);
+        bc.setDofs(U_minus_, t - epsilon);
+        bc.setDofs(U_, t);
+        bc.setDofs(U_plus_, t + epsilon);
       }
 
-      auto constrained_dofs = bcs_.allEssentialDofs();
+      auto constrained_dofs = bcs_.allEssentialTrueDofs();
       for (int i = 0; i < constrained_dofs.Size(); i++) {
         x[i]    = U_[i];
         dxdt[i] = (U_plus_[i] - U_minus_[i]) / (2.0 * epsilon);
@@ -163,9 +163,9 @@ void SecondOrderODE::Solve(const double time, const double c0, const double c1, 
   U_       = 0.0;
   U_plus_  = 0.0;
   for (const auto& bc : bcs_.essentials()) {
-    bc.projectBdrToDofs(U_minus_, time - epsilon);
-    bc.projectBdrToDofs(U_, time);
-    bc.projectBdrToDofs(U_plus_, time + epsilon);
+    bc.setDofs(U_minus_, time - epsilon);
+    bc.setDofs(U_, time);
+    bc.setDofs(U_plus_, time + epsilon);
   }
 
   bool implicit = (c0 != 0.0 || c1 != 0.0);
@@ -192,7 +192,7 @@ void SecondOrderODE::Solve(const double time, const double c0, const double c1, 
     dU_dt_   = (U_plus_ - U_minus_) / (2.0 * epsilon);
   }
 
-  auto constrained_dofs = bcs_.allEssentialDofs();
+  auto constrained_dofs = bcs_.allEssentialTrueDofs();
   state_.u.SetSubVector(constrained_dofs, 0.0);
   U_.SetSubVectorComplement(constrained_dofs, 0.0);
   state_.u += U_;
@@ -278,9 +278,9 @@ void FirstOrderODE::Solve(const double dt, const mfem::Vector& u, mfem::Vector& 
   U_       = 0.0;
   U_plus_  = 0.0;
   for (const auto& bc : bcs_.essentials()) {
-    bc.projectBdrToDofs(U_minus_, t - epsilon);
-    bc.projectBdrToDofs(U_, t);
-    bc.projectBdrToDofs(U_plus_, t + epsilon);
+    bc.setDofs(U_minus_, t - epsilon);
+    bc.setDofs(U_, t);
+    bc.setDofs(U_plus_, t + epsilon);
   }
 
   bool implicit = (dt != 0.0);
@@ -303,7 +303,7 @@ void FirstOrderODE::Solve(const double dt, const mfem::Vector& u, mfem::Vector& 
     dU_dt_ = (U_plus_ - U_minus_) / (2.0 * epsilon);
   }
 
-  auto constrained_dofs = bcs_.allEssentialDofs();
+  auto constrained_dofs = bcs_.allEssentialTrueDofs();
   state_.u.SetSubVector(constrained_dofs, 0.0);
   U_.SetSubVectorComplement(constrained_dofs, 0.0);
   state_.u += U_;

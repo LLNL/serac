@@ -14,9 +14,6 @@ main_mesh = {
     par_ref_levels = 0,
 }
 
--- Simulation output format
-output_type = "GLVis"
-
 -- Solver parameters
 solid = {
     equation_solver = {

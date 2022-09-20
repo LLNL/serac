@@ -160,28 +160,29 @@ public:
    *
    * @param mesh The mesh for the underlying physics module
    */
-  BoundaryConditionManager(const mfem::ParMesh& mesh) : num_attrs_(mesh.bdr_attributes.Max()) {}
+  explicit BoundaryConditionManager(const mfem::ParMesh& mesh) : num_attrs_(mesh.bdr_attributes.Max()) {}
 
   /**
    * @brief Set the essential boundary conditions from a list of boundary markers and a coefficient
    *
    * @param[in] ess_bdr The set of essential BC attributes
    * @param[in] ess_bdr_coef The essential BC value coefficient
-   * @param[in] state The finite element state to which the BC should be applied
-   * @param[in] component The component to set (-1 implies all components are set)
+   * @param[in] space The finite element space to which the BC should be applied
+   * @param[in] component The component to set (null implies all components are set)
    */
-  void addEssential(const std::set<int>& ess_bdr, serac::GeneralCoefficient ess_bdr_coef, FiniteElementState& state,
-                    const std::optional<int> component = {});
+  void addEssential(const std::set<int>& ess_bdr, serac::GeneralCoefficient ess_bdr_coef,
+                    mfem::ParFiniteElementSpace& space, const std::optional<int> component = {});
 
   /**
    * @brief Set the natural boundary conditions from a list of boundary markers and a coefficient
    *
    * @param[in] nat_bdr The set of mesh attributes denoting a natural boundary
    * @param[in] nat_bdr_coef The coefficient defining the natural boundary function
-   * @param[in] component The component to set (-1 implies all components are set)
+   * @param[in] space The finite element space to which the BC should be applied
+   * @param[in] component The component to set (null implies all components are set)
    */
   void addNatural(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef,
-                  const std::optional<int> component = {});
+                  mfem::ParFiniteElementSpace& space, const std::optional<int> component = {});
 
   /**
    * @brief Set a generic boundary condition from a list of boundary markers and a coefficient
@@ -190,14 +191,15 @@ public:
    * @param[in] bdr_attr The set of mesh attributes denoting a natural boundary
    * @param[in] bdr_coef The coefficient defining the natural boundary function
    * @param[in] tag The tag for the generic boundary condition, for identification purposes
-   * @param[in] component The component to set (-1 implies all components are set)
+   * @param[in] space The finite element space to which the BC should be applied
+   * @param[in] component The component to set (null implies all components are set)
    * @pre Template type "Tag" must be an enumeration
    */
   template <typename Tag>
   void addGeneric(const std::set<int>& bdr_attr, serac::GeneralCoefficient bdr_coef, const Tag tag,
-                  const std::optional<int> component = {})
+                  mfem::ParFiniteElementSpace& space, const std::optional<int> component = {})
   {
-    other_bdr_.emplace_back(bdr_coef, component, bdr_attr, num_attrs_);
+    other_bdr_.emplace_back(bdr_coef, component, space, bdr_attr);
     other_bdr_.back().setTag(tag);
     all_dofs_valid_ = false;
   }
@@ -207,21 +209,34 @@ public:
    *
    * @param[in] true_dofs The true degrees of freedom to set with a Dirichlet condition
    * @param[in] ess_bdr_coef The coefficient that evaluates to the Dirichlet condition
-   * @param[in] component The component to set (-1 implies all components are set)
+   * @param[in] space The finite element space to which the BC should be applied
+   * @param[in] component The component to set (null implies all components are set)
    */
   void addEssentialTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef,
-                            std::optional<int> component = {});
+                            mfem::ParFiniteElementSpace& space, std::optional<int> component = {});
 
   /**
-   * @brief Returns all the degrees of freedom associated with all the essential BCs
-   * @return A const reference to the list of DOF indices, without duplicates and sorted
+   * @brief Returns all the true degrees of freedom associated with all the essential BCs
+   * @return A const reference to the list of true DOF indices, without duplicates and sorted
    */
-  const mfem::Array<int>& allEssentialDofs() const
+  const mfem::Array<int>& allEssentialTrueDofs() const
   {
     if (!all_dofs_valid_) {
-      updateAllEssentialDofs();
+      updateAllDofs();
     }
-    return all_dofs_;
+    return all_true_dofs_;
+  }
+
+  /**
+   * @brief Returns all the local degrees of freedom associated with all the essential BCs
+   * @return A const reference to the list of local DOF indices, without duplicates and sorted
+   */
+  const mfem::Array<int>& allEssentialLocalDofs() const
+  {
+    if (!all_dofs_valid_) {
+      updateAllDofs();
+    }
+    return all_local_dofs_;
   }
 
   /**
@@ -233,17 +248,8 @@ public:
    */
   std::unique_ptr<mfem::HypreParMatrix> eliminateAllEssentialDofsFromMatrix(mfem::HypreParMatrix& matrix) const
   {
-    return std::unique_ptr<mfem::HypreParMatrix>(matrix.EliminateRowsCols(allEssentialDofs()));
+    return std::unique_ptr<mfem::HypreParMatrix>(matrix.EliminateRowsCols(allEssentialTrueDofs()));
   }
-
-  /**
-   * @brief Sets the time for all stored boundary conditions
-   *
-   * @param[in] time The current simulation time
-   *
-   * Used for time-dependent boundary conditions
-   */
-  void setTime(const double time);
 
   /**
    * @brief Accessor for the essential BC objects
@@ -288,7 +294,7 @@ private:
   /**
    * @brief Updates the "cached" list of all DOF indices
    */
-  void updateAllEssentialDofs() const;
+  void updateAllDofs() const;
 
   /**
    * @brief The total number of boundary attributes for a mesh
@@ -319,9 +325,15 @@ private:
 
   /**
    * @brief The set of true DOF indices corresponding
-   * to all registered BCs
+   * to all registered essential BCs
    */
-  mutable mfem::Array<int> all_dofs_;
+  mutable mfem::Array<int> all_true_dofs_;
+
+  /**
+   * @brief The set of local DOF indices corresponding
+   * to all registered essential BCs
+   */
+  mutable mfem::Array<int> all_local_dofs_;
 
   /**
    * @brief Whether the set of stored total DOFs is valid

@@ -3,12 +3,11 @@
 // details.
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
-// # Author: Jonathan Wong @ LLNL.
-
-#include <gtest/gtest.h>
 
 #include <memory>
 
+#include "axom/slic/core/SimpleLogger.hpp"
+#include <gtest/gtest.h>
 #include "mfem.hpp"
 
 #include "serac/physics/coefficients/coefficient_extensions.hpp"
@@ -24,15 +23,6 @@
 
 using namespace std;
 
-int main(int argc, char** argv)
-{
-  MPI_Init(&argc, &argv);
-  ::testing::InitGoogleTest(&argc, argv);
-  int return_code = RUN_ALL_TESTS();
-  MPI_Finalize();
-  return return_code;
-}
-
 class NewmarkBetaTest : public ::testing::Test {
 protected:
   void SetUp() {}
@@ -40,7 +30,7 @@ protected:
   void TearDown() {}
 
   // Helper method to run serac_newmark_tests
-  std::unique_ptr<serac::Solid> runDynamicTest(axom::inlet::Inlet& inlet, const std::string& root_name)
+  std::unique_ptr<serac::Solid> runDynamicTest(axom::inlet::Inlet& inlet)
   {
     // Define schema
     // Simulation time parameters
@@ -99,9 +89,6 @@ protected:
       solid_solver->addBodyForce(std::make_shared<mfem::VectorConstantCoefficient>(gravity));
     }
 
-    // Initialize the output
-    solid_solver->initializeOutput(serac::OutputType::VisIt, root_name);
-
     // Complete the solver setup
     solid_solver->completeSetup();
     // Output the initial state
@@ -125,11 +112,11 @@ TEST_F(NewmarkBetaTest, SimpleLua)
   std::cout << input_file << std::endl;
   auto inlet = serac::input::initialize(datastore, input_file);
 
-  auto solid_solver = runDynamicTest(inlet, "solid_simple");
+  auto solid_solver = runDynamicTest(inlet);
 
   // Save initial state
-  mfem::Vector u_prev(solid_solver->displacement().gridFunc());
-  mfem::Vector v_prev(solid_solver->velocity().gridFunc());
+  mfem::Vector u_prev(solid_solver->displacement().gridFunction());
+  mfem::Vector v_prev(solid_solver->velocity().gridFunction());
 
   double dt = inlet["dt"];
 
@@ -157,8 +144,8 @@ TEST_F(NewmarkBetaTest, SimpleLua)
   // Output the final state
   solid_solver->outputState();
 
-  mfem::Vector u_next(solid_solver->displacement().gridFunc());
-  mfem::Vector v_next(solid_solver->velocity().gridFunc());
+  mfem::Vector u_next(solid_solver->displacement().gridFunction());
+  mfem::Vector v_next(solid_solver->velocity().gridFunction());
 
   // back out a_next
   mfem::Vector a_prev(u_next.Size());
@@ -195,7 +182,7 @@ TEST_F(NewmarkBetaTest, EquilbriumLua)
   auto inlet = serac::input::initialize(datastore, input_file);
 
   // User helper to run test
-  auto solid_solver = runDynamicTest(inlet, "solid");
+  auto solid_solver = runDynamicTest(inlet);
 
   double dt = inlet["dt"];
 
@@ -224,6 +211,11 @@ TEST_F(NewmarkBetaTest, EquilbriumLua)
   solid_solver->outputState();
 }
 
+/*
+
+TODO This is currently disabled as this test occasionally fails when run in parallel but only following another test.
+This is tracked in https://github.com/LLNL/serac/issues/741 .
+
 TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
 {
   // Create DataStore
@@ -238,7 +230,7 @@ TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
   auto inlet = serac::input::initialize(datastore, input_file);
 
   // User helper to run test
-  auto solid_solver = runDynamicTest(inlet, "solid_first_orderlua");
+  auto solid_solver = runDynamicTest(inlet);
 
   double dt = inlet["dt"];
 
@@ -265,4 +257,19 @@ TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
 
   // Output the final state
   solid_solver->outputState();
+}
+*/
+int main(int argc, char** argv)
+{
+  MPI_Init(&argc, &argv);
+
+  ::testing::InitGoogleTest(&argc, argv);
+
+  axom::slic::SimpleLogger logger;
+
+  int return_code = RUN_ALL_TESTS();
+
+  MPI_Finalize();
+
+  return return_code;
 }

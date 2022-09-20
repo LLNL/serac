@@ -287,6 +287,20 @@ SERAC_HOST_DEVICE constexpr auto transpose(const isotropic_tensor<T, m, m>& I)
 }
 
 /**
+ * @brief return the inverse of an isotropic tensor
+ *
+ * @tparam T the types stored in the isotropic tensor
+ * @tparam m the number of rows and columns in I
+ * @param I the isotropic tensor to compute the inverse of
+ * @return the inverse of I
+ */
+template <typename T, int m>
+SERAC_HOST_DEVICE constexpr auto inv(const isotropic_tensor<T, m, m>& I)
+{
+  return isotropic_tensor<T, m, m>{1.0 / I.value};
+}
+
+/**
  * @brief compute the determinant of an isotropic tensor
  *
  * @tparam T the types stored in the isotropic tensor

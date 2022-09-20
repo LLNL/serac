@@ -27,61 +27,91 @@ namespace serac {
  */
 class FiniteElementDual : public FiniteElementVector {
 public:
-  /**
-   * @brief Use the finite element vector constructors
-   */
   using FiniteElementVector::FiniteElementVector;
+  using FiniteElementVector::operator=;
+  using mfem::Vector::Print;
 
   /**
-   * @brief Returns a non-owning reference to the local degrees of freedom
+   * @brief Copy constructor
    *
-   * @return mfem::Vector& The local dof vector
-   * @note While this is a grid function for plotting and parallelization, we only return a vector
-   * type as the user should not use the interpolation capabilities of a grid function on the dual space
-   * @note Shared degrees of freedom live on multiple MPI ranks
+   * @param[in] rhs The input Dual used for construction
    */
-  mfem::Vector& localVec() { return detail::retrieve(gf_); }
-
-  /// @overload
-  const mfem::Vector& localVec() const { return detail::retrieve(gf_); }
+  FiniteElementDual(const FiniteElementDual& rhs) : FiniteElementVector(rhs) {}
 
   /**
-   * @brief Set the internal grid function using the true DOF values
+   * @brief Move construct a new Finite Element Dual object
    *
-   * This distributes true vector dofs to the finite element (local) dofs by multiplying the true dofs
-   * by the transponse of the restriction operator.
-   *
-   * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
-   *
+   * @param[in] rhs The input vector used for construction
    */
-  void distributeSharedDofs()
+  FiniteElementDual(FiniteElementDual&& rhs) : FiniteElementVector(std::move(rhs)) {}
+
+  /**
+   * @brief Copy assignment
+   *
+   * @param rhs The right hand side input Dual
+   * @return The assigned FiniteElementDual
+   */
+  FiniteElementDual& operator=(const FiniteElementDual& rhs)
   {
-    detail::retrieve(space_).GetRestrictionMatrix()->MultTranspose(true_vec_, detail::retrieve(gf_));
-  }
-
-  /**
-   * @brief Initialize the true vector from the grid function values
-   *
-   * This initializes the true vector dofs by multiplying the finite element (local) dofs
-   * by the transpose of the prolongation operator.
-   *
-   * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
-   */
-  void initializeTrueVec() { detail::retrieve(gf_).ParallelAssemble(true_vec_); }
-
-  /**
-   * @brief Set a finite element dual to a constant value
-   *
-   * @param value The constant to set the finite element dual to
-   * @return The modified finite element dual
-   * @note This sets the true degrees of freedom and then broadcasts to the shared grid function entries. This means
-   * that if a different value is given on different processors, a shared DOF will be set to the owning processor value.
-   */
-  FiniteElementDual& operator=(const double value)
-  {
-    FiniteElementVector::operator=(value);
+    FiniteElementVector::operator=(rhs);
     return *this;
   }
+
+  /**
+   * @brief Fill a user-provided linear form based on the underlying true vector
+   *
+   * This distributes true vector dofs to the finite element (local) dofs by multiplying the true dofs
+   * by the restriction transpose operator.
+   *
+   * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
+   *
+   * @param linear_form The linear form used to initialize the underlying true vector.
+   */
+  void fillLinearForm(mfem::ParLinearForm& linear_form) const
+  {
+    space_->GetRestrictionMatrix()->MultTranspose(*this, linear_form);
+  }
+
+  /**
+   * @brief Initialize the true vector in the FiniteElementDual based on an input linear form
+   *
+   * This distributes the linear form dofs to the true vector dofs by multiplying by the
+   * prolongation transpose operator.
+   *
+   * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
+   *
+   * @note The underlying MFEM call should really be const
+   *
+   * @param linear_form The linear form used to initialize the underlying true vector.
+   */
+  void setFromLinearForm(const mfem::ParLinearForm& linear_form)
+  {
+    const_cast<mfem::ParLinearForm&>(linear_form).ParallelAssemble(*this);
+  }
+
+  /**
+   * @brief Construct a linear form from the finite element dual true vector
+   *
+   * @return The constructed linear form
+   */
+  mfem::ParLinearForm& linearForm() const
+  {
+    if (!linear_form_) {
+      linear_form_ = std::make_unique<mfem::ParLinearForm>(space_.get());
+    }
+
+    fillLinearForm(*linear_form_);
+    return *linear_form_;
+  }
+
+protected:
+  /**
+   * @brief An optional container for a linear form (L-vector) view of the finite element dual.
+   *
+   * If a user requests it, it is constructed and potentially reused during subsequent calls. It is
+   * not updated unless specifically requested via the @a linearForm method.
+   */
+  mutable std::unique_ptr<mfem::ParLinearForm> linear_form_;
 };
 
 }  // namespace serac

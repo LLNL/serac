@@ -14,7 +14,7 @@
 namespace serac {
 
 void BoundaryConditionManager::addEssential(const std::set<int>& ess_bdr, serac::GeneralCoefficient ess_bdr_coef,
-                                            FiniteElementState& state, const std::optional<int> component)
+                                            mfem::ParFiniteElementSpace& space, const std::optional<int> component)
 {
   std::set<int> filtered_attrs;
   std::set_difference(ess_bdr.begin(), ess_bdr.end(), attrs_in_use_.begin(), attrs_in_use_.end(),
@@ -25,50 +25,39 @@ void BoundaryConditionManager::addEssential(const std::set<int>& ess_bdr, serac:
     SLIC_WARNING_ROOT("Multiple definition of essential boundary! Using first definition given.");
   }
 
-  BoundaryCondition bc(ess_bdr_coef, component, filtered_attrs, num_attrs_);
-  bc.setTrueDofs(state);
-  ess_bdr_.emplace_back(std::move(bc));
+  ess_bdr_.emplace_back(ess_bdr_coef, component, space, filtered_attrs);
   attrs_in_use_.insert(ess_bdr.begin(), ess_bdr.end());
   all_dofs_valid_ = false;
 }
 
 void BoundaryConditionManager::addNatural(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef,
-                                          const std::optional<int> component)
+                                          mfem::ParFiniteElementSpace& space, const std::optional<int> component)
 {
-  nat_bdr_.emplace_back(nat_bdr_coef, component, nat_bdr, num_attrs_);
+  nat_bdr_.emplace_back(nat_bdr_coef, component, space, nat_bdr);
   all_dofs_valid_ = false;
 }
 
-void BoundaryConditionManager::addEssentialTrueDofs(const mfem::Array<int>&   true_dofs,
-                                                    serac::GeneralCoefficient ess_bdr_coef,
-                                                    std::optional<int>        component)
+void BoundaryConditionManager::addEssentialTrueDofs(const mfem::Array<int>&      true_dofs,
+                                                    serac::GeneralCoefficient    ess_bdr_coef,
+                                                    mfem::ParFiniteElementSpace& space, std::optional<int> component)
 {
-  ess_bdr_.emplace_back(ess_bdr_coef, component, true_dofs);
+  ess_bdr_.emplace_back(ess_bdr_coef, component, space, true_dofs);
   all_dofs_valid_ = false;
 }
 
-void BoundaryConditionManager::updateAllEssentialDofs() const
+void BoundaryConditionManager::updateAllDofs() const
 {
-  all_dofs_.DeleteAll();
+  all_true_dofs_.DeleteAll();
+  all_local_dofs_.DeleteAll();
   for (const auto& bc : ess_bdr_) {
-    all_dofs_.Append(bc.getTrueDofs());
+    all_true_dofs_.Append(bc.getTrueDofList());
+    all_local_dofs_.Append(bc.getLocalDofList());
   }
-  all_dofs_.Sort();
-  all_dofs_.Unique();
+  all_true_dofs_.Sort();
+  all_local_dofs_.Sort();
+  all_true_dofs_.Unique();
+  all_local_dofs_.Unique();
   all_dofs_valid_ = true;
-}
-
-void BoundaryConditionManager::setTime(const double time)
-{
-  for (auto& bc : ess_bdr_) {
-    bc.setTime(time);
-  }
-  for (auto& bc : nat_bdr_) {
-    bc.setTime(time);
-  }
-  for (auto& bc : other_bdr_) {
-    bc.setTime(time);
-  }
 }
 
 }  // namespace serac

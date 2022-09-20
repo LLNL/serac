@@ -10,8 +10,6 @@
 
 #include "axom/fmt.hpp"
 
-#include "axom/core.hpp"
-
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
@@ -20,130 +18,77 @@
 
 namespace serac {
 
-BasePhysics::BasePhysics(mfem::ParMesh* pmesh)
-    : sidre_datacoll_id_(StateManager::collectionID(pmesh)),
+BasePhysics::BasePhysics(std::string name, mfem::ParMesh* pmesh)
+    : name_(name),
+      sidre_datacoll_id_(StateManager::collectionID(pmesh)),
       mesh_(StateManager::mesh(sidre_datacoll_id_)),
       comm_(mesh_.GetComm()),
-      output_type_(serac::OutputType::SidreVisIt),
       time_(0.0),
       cycle_(0),
       bcs_(mesh_)
 {
   std::tie(mpi_size_, mpi_rank_) = getMPIInfo(comm_);
   order_                         = 1;
-  root_name_                     = "serac";
 }
 
-BasePhysics::BasePhysics(int n, int p, mfem::ParMesh* pmesh) : BasePhysics(pmesh)
+BasePhysics::BasePhysics(int n, int p, std::string name, mfem::ParMesh* pmesh) : BasePhysics(name, pmesh)
 {
   order_ = p;
   // If this is a restart run, things have already been initialized
   gf_initialized_.assign(static_cast<std::size_t>(n), StateManager::isRestart());
 }
 
-void BasePhysics::setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component)
-{
-  bcs_.addEssentialTrueDofs(true_dofs, ess_bdr_coef, component);
-}
-
 const std::vector<std::reference_wrapper<serac::FiniteElementState> >& BasePhysics::getState() const { return state_; }
 
-void BasePhysics::setTime(const double time)
-{
-  time_ = time;
-  bcs_.setTime(time_);
-}
+void BasePhysics::setTime(const double time) { time_ = time; }
 
 double BasePhysics::time() const { return time_; }
 
+void BasePhysics::setCycle(const int cycle) { cycle_ = cycle; }
+
 int BasePhysics::cycle() const { return cycle_; }
 
-void BasePhysics::initializeOutput(const serac::OutputType output_type, const std::string& root_name,
-                                   const std::string output_directory)
+void BasePhysics::outputState(std::optional<std::string> paraview_output_dir) const
 {
-  root_name_        = root_name;
-  output_type_      = output_type;
-  output_directory_ = output_directory;
+  // First, save the restart/Sidre file
+  StateManager::save(time_, cycle_, sidre_datacoll_id_);
 
-  switch (output_type_) {
-    case serac::OutputType::VisIt: {
-      dc_ = std::make_unique<mfem::VisItDataCollection>(root_name_, &state_.front().get().mesh());
-      break;
-    }
+  // Optionally output a paraview datacollection for visualization
+  if (paraview_output_dir) {
+    // Check to see if the paraview data collection exists. If not, create it.
+    if (!paraview_dc_) {
+      std::string output_name = name_;
+      if (output_name == "") {
+        output_name = "default";
+      }
 
-    case serac::OutputType::ParaView: {
-      auto pv_dc = std::make_unique<mfem::ParaViewDataCollection>(root_name_, &state_.front().get().mesh());
-      int  max_order_in_fields = 0;
+      paraview_dc_ = std::make_unique<mfem::ParaViewDataCollection>(output_name, &state_.front().get().mesh());
+      int max_order_in_fields = 0;
+
+      // Find the maximum polynomial order in the physics module's states
       for (FiniteElementState& state : state_) {
-        pv_dc->RegisterField(state.name(), &state.gridFunc());
+        paraview_dc_->RegisterField(state.name(), &state.gridFunction());
         max_order_in_fields = std::max(max_order_in_fields, state.space().GetOrder(0));
       }
-      pv_dc->SetLevelsOfDetail(max_order_in_fields);
-      pv_dc->SetHighOrderOutput(true);
-      pv_dc->SetDataFormat(mfem::VTKFormat::BINARY);
-      pv_dc->SetCompression(true);
-      dc_ = std::move(pv_dc);
-      break;
-    }
 
-    case serac::OutputType::GLVis:
-      [[fallthrough]];
-    case OutputType::SidreVisIt: {
-      break;
-    }
-
-    default:
-      SLIC_ERROR_ROOT("OutputType not recognized!");
-  }
-
-  if (output_type_ == OutputType::VisIt) {
-    // Implicitly convert from ref_wrapper
-    for (FiniteElementState& state : state_) {
-      dc_->RegisterField(state.name(), &state.gridFunc());
-    }
-  }
-}
-
-void BasePhysics::outputState() const
-{
-  switch (output_type_) {
-    case serac::OutputType::VisIt:
-      [[fallthrough]];
-    case serac::OutputType::ParaView:
-      dc_->SetCycle(cycle_);
-      dc_->SetTime(time_);
-      if (!output_directory_.empty()) {
-        dc_->SetPrefixPath(output_directory_);
-      }
-      dc_->Save();
-      break;
-    case serac::OutputType::SidreVisIt: {
-      // Implemented through a helper method as the full interface of the MFEMSidreDataCollection
-      // is restricted from global access
-      StateManager::save(time_, cycle_, sidre_datacoll_id_);
-      break;
-    }
-
-    case serac::OutputType::GLVis: {
-      const std::string mesh_name = axom::fmt::format("{0}-mesh.{1:0>6}.{2:0>6}", root_name_, cycle_, mpi_rank_);
-      const std::string mesh_path = axom::utilities::filesystem::joinPath(output_directory_, mesh_name);
-      std::ofstream     omesh(mesh_path);
-      omesh.precision(FLOAT_PRECISION_);
-      state_.front().get().mesh().Print(omesh);
-
+      // Set the options for the paraview output files
+      paraview_dc_->SetLevelsOfDetail(max_order_in_fields);
+      paraview_dc_->SetHighOrderOutput(true);
+      paraview_dc_->SetDataFormat(mfem::VTKFormat::BINARY);
+      paraview_dc_->SetCompression(true);
+    } else {
       for (FiniteElementState& state : state_) {
-        std::string sol_name =
-            axom::fmt::format("{0}-{1}.{2:0>6}.{3:0>6}", root_name_, state.name(), cycle_, mpi_rank_);
-        const std::string sol_path = axom::utilities::filesystem::joinPath(output_directory_, sol_name);
-        std::ofstream     osol(sol_path);
-        osol.precision(FLOAT_PRECISION_);
-        state.gridFunc().Save(osol);
+        state.gridFunction();  // update grid function values
       }
-      break;
     }
 
-    default:
-      SLIC_ERROR_ROOT("OutputType not recognized!");
+    // Set the current time, cycle, and requested paraview directory
+    paraview_dc_->SetCycle(cycle_);
+    paraview_dc_->SetTime(time_);
+    paraview_dc_->SetPrefixPath(*paraview_output_dir);
+
+    // Write the paraview file
+    paraview_dc_->Save();
   }
 }
 
@@ -152,8 +97,6 @@ void BasePhysics::initializeSummary(axom::sidre::DataStore& datastore, double t_
   // Summary Sidre Structure
   // Sidre root
   // └── serac_summary
-  //     ├── user_name : const char*
-  //     ├── host_name : const char*
   //     ├── mpi_rank_count : int
   //     └── curves
   //         ├── t : Sidre::Array<axom::IndexType>
@@ -178,8 +121,6 @@ void BasePhysics::initializeSummary(axom::sidre::DataStore& datastore, double t_
   axom::sidre::Group* summary_group = sidre_root->createGroup(summary_group_name);
 
   // Write run info
-  summary_group->createViewString("user_name", axom::utilities::getUserName());
-  summary_group->createViewString("host_name", axom::utilities::getHostName());
   summary_group->createViewScalar("mpi_rank_count", count);
 
   // Write curves info
@@ -217,11 +158,8 @@ void BasePhysics::saveSummary(axom::sidre::DataStore& datastore, const double t)
     SLIC_ERROR_IF(!sidre_root->hasGroup(curves_group_name),
                   axom::fmt::format("Sidre Group '{0}' did not exist when saveCurves was called", curves_group_name));
     curves_group = sidre_root->getGroup(curves_group_name);
-  }
 
-  // Save time step
-  // Only save on root node
-  if (rank == 0) {
+    // Save time step
     axom::sidre::Array<double> ts(curves_group->getView("t"));
     ts.push_back(t);
   }
@@ -231,8 +169,8 @@ void BasePhysics::saveSummary(axom::sidre::DataStore& datastore, const double t)
   for (FiniteElementState& state : state_) {
     // Calculate current stat value
     // Note: These are collective operations.
-    l1norm_value   = norm(state, 1);
-    l2norm_value   = norm(state, 2);
+    l1norm_value   = norm(state, 1.0);
+    l2norm_value   = norm(state, 2.0);
     linfnorm_value = norm(state, mfem::infinity());
     avg_value      = avg(state);
     max_value      = max(state);

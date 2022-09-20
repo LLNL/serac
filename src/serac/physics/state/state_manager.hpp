@@ -59,34 +59,6 @@ public:
                                    const std::string&             mesh_tag = default_mesh_name_);
 
   /**
-   * @brief Factory method for creating a new QuadratureData object
-   * @tparam T The type of the per-qpt data
-   * @param[in] name The name of the quadrature data field
-   * @param[in] p The order of the quadrature rule
-   * @param[in] mesh_tag A string that uniquely identifies the mesh on which the quadrature data is to be defined
-   * @see QuadratureData::QuadratureData
-   */
-  template <typename T>
-  static QuadratureData<T>& newQuadratureData(const std::string& name, const int p,
-                                              const std::string& mesh_tag = default_mesh_name_)
-  {
-    auto& datacoll = datacolls_.at(mesh_tag);
-    if (is_restart_) {
-      auto field = datacoll.GetQField(name);
-      syncable_data_.push_back(std::make_unique<QuadratureData<T>>(*field));
-      return static_cast<QuadratureData<T>&>(*syncable_data_.back());
-    } else {
-      SLIC_ERROR_ROOT_IF(datacoll.HasQField(name),
-                         axom::fmt::format("Serac's datacollection was already given a qfield named '{0}'", name));
-      syncable_data_.push_back(std::make_unique<QuadratureData<T>>(mesh(mesh_tag), p, false));
-      // The static_cast is safe here because we "know" what we just inserted into the vector
-      auto& qdata = static_cast<QuadratureData<T>&>(*syncable_data_.back());
-      datacoll.RegisterQField(name, &(qdata.QFunc()));
-      return qdata;
-    }
-  }
-
-  /**
    * @brief Updates the Conduit Blueprint state in the datastore and saves to a file
    * @param[in] t The current sim time
    * @param[in] cycle The current iteration number of the simulation
@@ -98,12 +70,13 @@ public:
    * @brief Loads an existing DataCollection
    * @param[in] cycle_to_load What cycle to load the DataCollection from
    * @param[in] mesh_tag The mesh_tag associated with the DataCollection when it was saved
+   * @return The time from specified restart cycle. Otherwise zero.
    */
-  static void load(const int cycle_to_load, const std::string& mesh_tag = default_mesh_name_)
+  static double load(const int cycle_to_load, const std::string& mesh_tag = default_mesh_name_)
   {
     // FIXME: Assumes that if one DataCollection is going to be reloaded all DataCollections will be
     is_restart_ = true;
-    newDataCollection(mesh_tag, cycle_to_load);
+    return newDataCollection(mesh_tag, cycle_to_load);
   }
 
   /**
@@ -113,8 +86,7 @@ public:
   {
     datacolls_.clear();
     is_restart_ = false;
-    syncable_data_.clear();
-    ds_ = nullptr;
+    ds_         = nullptr;
   };
 
   /**
@@ -150,8 +122,9 @@ private:
    * @brief Creates a new datacollection based on a registered mesh
    * @param[in] name The name of the new datacollection
    * @param[in] cycle_to_load What cycle to load the DataCollection from, if applicable
+   * @return The time from specified restart cycle. Otherwise zero.
    */
-  static void newDataCollection(const std::string& name, const std::optional<int> cycle_to_load = {});
+  static double newDataCollection(const std::string& name, const std::optional<int> cycle_to_load = {});
 
   /**
    * @brief The datacollection instances
@@ -162,15 +135,6 @@ private:
    * @brief Whether this simulation has been restarted from another simulation
    */
   static bool is_restart_;
-  /**
-   * @brief Name of the Sidre DataCollection
-   */
-  static std::string collection_name_;
-  /**
-   * @brief A set of @p QuadratureData<T> objects that need to be synchronized before saving to disk
-   * FIXME Need one set per datacoll since we can save at different times?
-   */
-  static std::vector<std::unique_ptr<SyncableData>> syncable_data_;
 
   /// @brief Pointer (non-owning) to the datastore
   static axom::sidre::DataStore* ds_;

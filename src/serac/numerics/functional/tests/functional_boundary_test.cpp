@@ -7,9 +7,9 @@
 #include <fstream>
 #include <iostream>
 
-#include "mfem.hpp"
-
 #include "axom/slic/core/SimpleLogger.hpp"
+#include <gtest/gtest.h>
+#include "mfem.hpp"
 
 #include "serac/serac_config.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"
@@ -17,8 +17,6 @@
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/mesh/mesh_utils_base.hpp"
-
-#include <gtest/gtest.h>
 
 using namespace serac;
 
@@ -131,7 +129,7 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
   Functional<test_space(trial_space)> residual(&fespace, {&fespace});
 
   residual.AddBoundaryIntegral(
-      Dimension<dim - 1>{},
+      Dimension<dim - 1>{}, DependsOn<0>{},
       [&](auto x, auto n, auto temperature) {
         auto [u, unused] = temperature;
         tensor<double, dim> b{sin(x[0]), x[0] * x[1]};
@@ -217,19 +215,19 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
   EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-12);
 }
 
-TEST(boundary, 2D_linear) { boundary_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
-TEST(boundary, 2D_quadratic) { boundary_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
+TEST(FunctionalBoundary, 2DLinear) { boundary_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
+TEST(FunctionalBoundary, 2DQuadratic) { boundary_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
 
-TEST(boundary, 3D_linear) { boundary_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
-TEST(boundary, 3D_quadratic) { boundary_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
+TEST(FunctionalBoundary, 3DLinear) { boundary_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
+TEST(FunctionalBoundary, 3DQuadratic) { boundary_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
 
 // TODO: mfem treats L2 differently w.r.t. boundary elements, need to figure out how to get
 // the appropriate information (dofs, dof_ids for each boundary element) before these can be reenabled
-// TEST(boundary_L2, 2D_linear) { boundary_test(*mesh2D, L2<1>{}, L2<1>{}, Dimension<2>{}); }
-// TEST(boundary_L2, 2D_quadratic) { boundary_test(*mesh2D, L2<2>{}, L2<2>{}, Dimension<2>{}); }
+// TEST(boundaryL2, 2DLinear) { boundary_test(*mesh2D, L2<1>{}, L2<1>{}, Dimension<2>{}); }
+// TEST(boundaryL2, 2DQuadratic) { boundary_test(*mesh2D, L2<2>{}, L2<2>{}, Dimension<2>{}); }
 //
-// TEST(boundary_L2, 3D_linear) { boundary_test(*mesh3D, L2<1>{}, L2<1>{}, Dimension<3>{}); }
-// TEST(boundary_L2, 3D_quadratic) { boundary_test(*mesh3D, L2<2>{}, L2<2>{}, Dimension<3>{}); }
+// TEST(boundaryL2, 3DLinear) { boundary_test(*mesh3D, L2<1>{}, L2<1>{}, Dimension<3>{}); }
+// TEST(boundaryL2, 3DQuadratic) { boundary_test(*mesh3D, L2<2>{}, L2<2>{}, Dimension<3>{}); }
 
 int main(int argc, char* argv[])
 {

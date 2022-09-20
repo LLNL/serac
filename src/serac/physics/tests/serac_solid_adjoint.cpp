@@ -4,10 +4,9 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/solid.hpp"
-
 #include <fstream>
 
+#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
@@ -15,12 +14,13 @@
 #include "serac/infrastructure/input.hpp"
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/state/state_manager.hpp"
+#include "serac/physics/solid.hpp"
 #include "serac/serac_config.hpp"
 #include "test_utilities.hpp"
 
 namespace serac {
 
-TEST(solid_solver, adjoint)
+TEST(SolidSolver, Adjoint)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -59,7 +59,7 @@ TEST(solid_solver, adjoint)
                                                          .prec        = HypreBoomerAMGPrec{}};
 
   const NonlinearSolverOptions default_nonlinear_options = {
-      .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
+      .rel_tol = 1.0e-8, .abs_tol = 1.0e-10, .max_iter = 500, .print_level = 1};
 
   const Solid::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
 
@@ -78,7 +78,7 @@ TEST(solid_solver, adjoint)
   solid_solver.advanceTimestep(dt);
 
   // Save the first true vector
-  mfem::Vector true_vec_1 = solid_solver.displacement().trueVec();
+  mfem::Vector true_vec_1 = solid_solver.displacement();
 
   // Make a dummy adjoint load for testing
 
@@ -92,8 +92,7 @@ TEST(solid_solver, adjoint)
   adjoint_load.AddDomainIntegrator(new mfem::VectorDomainLFIntegrator(loadvec));
 
   adjoint_load.Assemble();
-  assembled_adjoint_load.trueVec() = *adjoint_load.ParallelAssemble();
-  assembled_adjoint_load.distributeSharedDofs();
+  assembled_adjoint_load = *adjoint_load.ParallelAssemble();
 
   auto&  adjoint_state_1 = solid_solver.solveAdjoint(assembled_adjoint_load);
   double adjoint_norm_1  = norm(adjoint_state_1);
@@ -107,26 +106,26 @@ TEST(solid_solver, adjoint)
   // Compute, assemble, and check the sensitivities
   auto& shear_sensitivity = solid_solver.shearModulusSensitivity(&l2_fe_space);
 
-  double shear_norm = mfem::ParNormlp(shear_sensitivity.trueVec(), 2, MPI_COMM_WORLD);
+  double shear_norm = mfem::ParNormlp(shear_sensitivity, 2, MPI_COMM_WORLD);
 
   SLIC_INFO_ROOT(axom::fmt::format("Shear sensitivity vector norm: {}", shear_norm));
 
-  EXPECT_NEAR(shear_norm, 0.005673835517459125, 1.0e-8);
+  EXPECT_NEAR(shear_norm, 0.005673803147, 5.0e-7);
 
   auto& bulk_sensitivity = solid_solver.bulkModulusSensitivity(&l2_fe_space);
 
-  double bulk_norm = mfem::ParNormlp(bulk_sensitivity.trueVec(), 2, MPI_COMM_WORLD);
+  double bulk_norm = mfem::ParNormlp(bulk_sensitivity, 2, MPI_COMM_WORLD);
 
   SLIC_INFO_ROOT(axom::fmt::format("Bulk sensitivity vector norm: {}", bulk_norm));
 
-  EXPECT_NEAR(bulk_norm, 0.00010973046519995416, 3.0e-9);
+  EXPECT_NEAR(bulk_norm, 0.00010973046519995416, 1.0e-8);
 
   // Do a forward solve again to make sure the adjoint solve didn't break the solver
   solid_solver.setDisplacement(*deform);
   solid_solver.advanceTimestep(dt);
 
   // Check that the two forward solves are equal
-  EXPECT_NEAR(0.0, (mfem::Vector(true_vec_1 - solid_solver.displacement().trueVec())).Norml2(), 0.00001);
+  EXPECT_NEAR(0.0, (mfem::Vector(true_vec_1 - solid_solver.displacement())).Norml2(), 0.00001);
 
   // Check that the adjoint solve is a known value
   EXPECT_NEAR(adjoint_norm_1, 738.4103079, 0.05);
@@ -152,9 +151,6 @@ TEST(solid_solver, adjoint)
 
 }  // namespace serac
 
-//------------------------------------------------------------------------------
-#include "axom/slic/core/SimpleLogger.hpp"
-
 int main(int argc, char* argv[])
 {
   int result = 0;
@@ -163,7 +159,7 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when exiting main scope
+  axom::slic::SimpleLogger logger;
 
   result = RUN_ALL_TESTS();
 

@@ -16,7 +16,6 @@ blt_add_executable(NAME        tensor_unit_tests
 
 # Then add the examples/tests
 set(functional_tests_serial
-    get_qf_derivative_type.cpp
     hcurl_unit_tests.cpp
     test_tensor_ad.cpp
     tuple_arithmetic_unit_tests.cpp)
@@ -33,12 +32,30 @@ set(functional_tests_mpi
     functional_boundary_test.cpp
     functional_comparisons.cpp
     functional_comparison_L2.cpp
-    functional_material_state_test.cpp
+    #functional_material_state_test.cpp
     )
+
 
 serac_add_tests( SOURCES ${functional_tests_mpi}
                  DEPENDS_ON gtest serac_functional serac_state ${functional_depends}
                  NUM_MPI_TASKS 4 )
+
+foreach(filename ${functional_tests_mpi})
+    set_source_files_properties(${filename} PROPERTIES LANGUAGE CXX)
+endforeach()
+
+set(functional_performance_tests
+    performance/J2_material_with_AD.cpp
+    performance/diffusion_performance_test.cpp)
+
+foreach(filename ${functional_performance_tests})
+    get_filename_component(test_name ${filename} NAME_WE)
+    blt_add_executable(NAME        ${test_name}
+                       SOURCES     ${filename}
+                       OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
+                       DEPENDS_ON  gtest serac_functional ${functional_depends}
+                       FOLDER      serac/tests )
+endforeach()
 
 if(ENABLE_CUDA)
 

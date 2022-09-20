@@ -4,22 +4,22 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/thermal_conduction_functional.hpp"
-#include "serac/physics/materials/thermal_functional_material.hpp"
-#include "serac/physics/materials/parameterized_thermal_functional_material.hpp"
-
 #include <fstream>
 
+#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
 #include "serac/serac_config.hpp"
 #include "serac/mesh/mesh_utils.hpp"
+#include "serac/physics/thermal_conduction_functional.hpp"
+#include "serac/physics/materials/thermal_functional_material.hpp"
+#include "serac/physics/materials/parameterized_thermal_functional_material.hpp"
 #include "serac/physics/state/state_manager.hpp"
 
 namespace serac {
 
-TEST(thermal_functional_finite_diff, finite_difference)
+TEST(ThermalFunctionalFiniteDiff, FiniteDifference)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -60,20 +60,16 @@ TEST(thermal_functional_finite_diff, finite_difference)
   // Note that we now include an extra template parameter indicating the finite element space for the parameterized
   // field, in this case the thermal conductivity. We also pass an array of finite element states for each of the
   // requested parameterized fields.
-  ThermalConductionFunctional<p, dim, H1<1>> thermal_solver(Thermal::defaultQuasistaticOptions(), "thermal_functional",
-                                                            {user_defined_conductivity});
+  ThermalConductionFunctional<p, dim, Parameters<H1<1> > > thermal_solver(Thermal::defaultQuasistaticOptions(),
+                                                                          "thermal_functional");
+  thermal_solver.setParameter(user_defined_conductivity, 0);
 
   // Construct a potentially user-defined parameterized material and send it to the thermal module
   Thermal::ParameterizedLinearIsotropicConductor mat;
-  thermal_solver.setMaterial(mat);
+  thermal_solver.setMaterial(DependsOn<0>{}, mat);
 
   // Define the function for the initial temperature and boundary condition
-  auto bdr_temp = [](const mfem::Vector& x, double) -> double {
-    if (x[0] < 0.5 || x[1] < 0.5) {
-      return 1.0;
-    }
-    return 0.0;
-  };
+  auto bdr_temp = [](const mfem::Vector& x, double) -> double { return (x[0] < 0.5 || x[1] < 0.5) ? 1.0 : 0.0; };
 
   // Set the initial temperature and boundary condition
   thermal_solver.setTemperatureBCs(ess_bdr, bdr_temp);
@@ -106,8 +102,7 @@ TEST(thermal_functional_finite_diff, finite_difference)
   // This adjoint load is equivalent to a discrete L1 norm on the temperature.
   serac::FiniteElementDual              adjoint_load(*mesh, thermal_solver.temperature().space(), "adjoint_load");
   std::unique_ptr<mfem::HypreParVector> assembled_vector(adjoint_load_form.ParallelAssemble());
-  adjoint_load.trueVec() = *assembled_vector;
-  adjoint_load.distributeSharedDofs();
+  adjoint_load = *assembled_vector;
 
   // Solve the adjoint problem
   thermal_solver.solveAdjoint(adjoint_load);
@@ -119,23 +114,20 @@ TEST(thermal_functional_finite_diff, finite_difference)
   // to check if computed qoi sensitivity is consistent
   // with finite difference on the temperature
   double eps = 1.0e-4;
-  for (int i = 0; i < user_defined_conductivity.gridFunc().Size(); ++i) {
+  for (int i = 0; i < user_defined_conductivity.gridFunction().Size(); ++i) {
     // Perturb the conductivity
-    user_defined_conductivity.trueVec()(i) = conductivity_value + eps;
-    user_defined_conductivity.distributeSharedDofs();
+    user_defined_conductivity(i) = conductivity_value + eps;
 
     thermal_solver.advanceTimestep(dt);
-    mfem::ParGridFunction temperature_plus = thermal_solver.temperature().gridFunc();
+    mfem::ParGridFunction temperature_plus = thermal_solver.temperature().gridFunction();
 
-    user_defined_conductivity.trueVec()(i) = conductivity_value - eps;
-    user_defined_conductivity.distributeSharedDofs();
+    user_defined_conductivity(i) = conductivity_value - eps;
 
     thermal_solver.advanceTimestep(dt);
-    mfem::ParGridFunction temperature_minus = thermal_solver.temperature().gridFunc();
+    mfem::ParGridFunction temperature_minus = thermal_solver.temperature().gridFunction();
 
     // Reset to the original conductivity value
-    user_defined_conductivity.trueVec()(i) = conductivity_value;
-    user_defined_conductivity.distributeSharedDofs();
+    user_defined_conductivity(i) = conductivity_value;
 
     // Finite difference to compute sensitivity of temperature with respect to conductivity
     mfem::ParGridFunction dtemp_dconductivity(&thermal_solver.temperature().space());
@@ -149,15 +141,12 @@ TEST(thermal_functional_finite_diff, finite_difference)
 
     // See if these are similar
     SLIC_INFO(axom::fmt::format("dqoi_dconductivity: {}", dqoi_dconductivity));
-    SLIC_INFO(axom::fmt::format("sensitivity: {}", sensitivity.trueVec()(i)));
-    EXPECT_NEAR((sensitivity.trueVec()(i) - dqoi_dconductivity) / dqoi_dconductivity, 0.0, 1.0e-3);
+    SLIC_INFO(axom::fmt::format("sensitivity: {}", sensitivity(i)));
+    EXPECT_NEAR((sensitivity(i) - dqoi_dconductivity) / dqoi_dconductivity, 0.0, 1.0e-3);
   }
 }
 
 }  // namespace serac
-
-//------------------------------------------------------------------------------
-#include "axom/slic/core/SimpleLogger.hpp"
 
 int main(int argc, char* argv[])
 {

@@ -7,9 +7,8 @@
 #include <fstream>
 #include <iostream>
 
-#include "mfem.hpp"
-
 #include <gtest/gtest.h>
+#include "mfem.hpp"
 
 #include "axom/slic/core/SimpleLogger.hpp"
 #include "serac/infrastructure/input.hpp"
@@ -85,7 +84,7 @@ void check_gradient(Functional<T>& f, mfem::Vector& U, mfem::Vector& dU_dt)
   }
 }
 
-TEST(basic, nonlinear_thermal_test_3D)
+TEST(FunctionalMultiphysics, NonlinearThermalTest3D)
 {
   int serial_refinement   = 0;
   int parallel_refinement = 0;
@@ -117,6 +116,7 @@ TEST(basic, nonlinear_thermal_test_3D)
   Functional<test_space(trial_space, trial_space)> residual(&fespace, {&fespace, &fespace});
 
   residual.AddVolumeIntegral(
+      DependsOn<0, 1>{},
       [=](auto x, auto temperature, auto dtemperature_dt) {
         auto [u, du_dx]      = temperature;
         auto [du_dt, unused] = dtemperature_dt;
@@ -127,6 +127,7 @@ TEST(basic, nonlinear_thermal_test_3D)
       *mesh3D);
 
   residual.AddSurfaceIntegral(
+      DependsOn<0, 1>{},
       [=](auto x, auto /*n*/, auto temperature, auto dtemperature_dt) {
         auto [u, _0]     = temperature;
         auto [du_dt, _1] = dtemperature_dt;

@@ -1,6 +1,7 @@
 /build*/
 /install*/
 *.swp
+*.code-workspace
 /uberenv_libs*
 /spack*
 /src/docs/doxygen/html/

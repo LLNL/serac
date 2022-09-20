@@ -1,13 +1,22 @@
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// other Serac Project Developers. See the top-level LICENSE file for
+// details.
+//
+// SPDX-License-Identifier: (BSD-3-Clause)
+
+#include <memory>
+
+#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
+#include <mfem.hpp>
 #include <mpi.h>
+
 #include <serac/physics/solid.hpp>
 #include <serac/physics/state/state_manager.hpp>
 #include <serac/physics/state/finite_element_state.hpp>
 #include <serac/physics/state/finite_element_dual.hpp>
-#include <mfem.hpp>
-#include <memory>
 
-TEST(serac_solid_sensitivity, finite_diff)
+TEST(SeracSolidSensitivity, FiniteDiff)
 {
   axom::sidre::DataStore datastore;
   serac::StateManager::initialize(datastore, "solid_sensitivity");
@@ -84,9 +93,8 @@ TEST(serac_solid_sensitivity, finite_diff)
   // Solve adjoint system given this made up adjoint load
   serac::FiniteElementDual assembledAdjointLoad(*mesh, solid.displacement().space(), "adjointLoad");
   mfem::HypreParVector*    assembledVector = adjointLoad.ParallelAssemble();
-  assembledAdjointLoad.trueVec()           = *assembledVector;
+  assembledAdjointLoad                     = *assembledVector;
   delete assembledVector;
-  assembledAdjointLoad.distributeSharedDofs();
 
   solid.solveAdjoint(assembledAdjointLoad);
 
@@ -102,11 +110,11 @@ TEST(serac_solid_sensitivity, finite_diff)
     // Perturb bulk sensitivity
     bulkModulus[ix] = bulkModulusValue + eps;
     solid.advanceTimestep(timestep);
-    mfem::ParGridFunction displacementPlus = solid.displacement().gridFunc();
+    mfem::ParGridFunction displacementPlus = solid.displacement().gridFunction();
 
     bulkModulus[ix] = bulkModulusValue - eps;
     solid.advanceTimestep(timestep);
-    mfem::ParGridFunction displacementMinus = solid.displacement().gridFunc();
+    mfem::ParGridFunction displacementMinus = solid.displacement().gridFunction();
 
     // Reset to the original bulk modulus value
     bulkModulus[ix] = bulkModulusValue;
@@ -123,8 +131,9 @@ TEST(serac_solid_sensitivity, finite_diff)
 
     // See if these are similar
     SLIC_INFO(axom::fmt::format("dqoi_dbulk: {}", dqoi_dbulk));
-    SLIC_INFO(axom::fmt::format("bulkModulusSensitivity: {}", bulkModulusSensitivity.localVec()(ix)));
-    EXPECT_NEAR((bulkModulusSensitivity.localVec()(ix) - dqoi_dbulk) / dqoi_dbulk, 0.0, 1.0e-3);
+    SLIC_INFO(axom::fmt::format("bulkModulusSensitivity: {}", bulkModulusSensitivity(ix)));
+
+    EXPECT_NEAR((bulkModulusSensitivity(ix) - dqoi_dbulk) / dqoi_dbulk, 0.0, 1.0e-3);
   }
 
   bulkModulus = bulkModulusValue;
@@ -133,11 +142,11 @@ TEST(serac_solid_sensitivity, finite_diff)
     // Perturb bulk sensitivity
     shearModulus[ix] = shearModulusValue + eps;
     solid.advanceTimestep(timestep);
-    auto displacementPlus = solid.displacement().gridFunc();
+    auto displacementPlus = solid.displacement().gridFunction();
 
     shearModulus[ix] = shearModulusValue - eps;
     solid.advanceTimestep(timestep);
-    auto displacementMinus = solid.displacement().gridFunc();
+    auto displacementMinus = solid.displacement().gridFunction();
 
     // Reset to the original shear modulus value
     shearModulus[ix] = shearModulusValue;
@@ -154,12 +163,12 @@ TEST(serac_solid_sensitivity, finite_diff)
 
     // See if these are similar
     SLIC_INFO(axom::fmt::format("dqoi_dshear: {}", dqoi_dshear));
-    SLIC_INFO(axom::fmt::format("shearModulusSensitivity: {}", shearModulusSensitivity.localVec()(ix)));
-    EXPECT_NEAR((shearModulusSensitivity.localVec()(ix) - dqoi_dshear) / dqoi_dshear, 0.0, 1.0e-3);
+    SLIC_INFO(axom::fmt::format("shearModulusSensitivity: {}", shearModulusSensitivity(ix)));
+    EXPECT_NEAR((shearModulusSensitivity(ix) - dqoi_dshear) / dqoi_dshear, 0.0, 1.0e-3);
   }
 }
 
-TEST(serac_solid_sensitivity, multiple_design_spaces)
+TEST(SeracSolidSensitivity, MultipleDesignSpaces)
 {
   // Initialize the datastore
   axom::sidre::DataStore datastore;
@@ -237,9 +246,6 @@ TEST(serac_solid_sensitivity, multiple_design_spaces)
   }
 }
 
-//------------------------------------------------------------------------------
-#include "axom/slic/core/SimpleLogger.hpp"
-
 int main(int argc, char* argv[])
 {
   int result = 0;
@@ -248,7 +254,7 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when exiting main scope
+  axom::slic::SimpleLogger logger;
 
   result = RUN_ALL_TESTS();
 
