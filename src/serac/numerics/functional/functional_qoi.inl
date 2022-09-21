@@ -453,7 +453,7 @@ private:
         for (axom::IndexType e = 0; e < K_elem.shape()[0]; e++) {
           for (axom::IndexType j = 0; j < K_elem.shape()[2]; j++) {
             auto [index, sign] = LUT(e, j);
-            gradient_L_.GetData()[index] += sign * K_elem(e, 0, j);
+            gradient_L_(static_cast<int>(index)) += sign * K_elem(e, 0, j);
           }
         }
       }
@@ -470,7 +470,7 @@ private:
         for (axom::IndexType e = 0; e < K_belem.shape()[0]; e++) {
           for (axom::IndexType j = 0; j < K_belem.shape()[2]; j++) {
             auto [index, sign] = LUT(e, j);
-            gradient_L_.GetData()[index] += sign * K_belem(e, 0, j);
+            gradient_L_(static_cast<int>(index)) += sign * K_belem(e, 0, j);
           }
         }
       }
