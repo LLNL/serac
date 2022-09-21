@@ -171,9 +171,12 @@ void SecondOrderODE::Solve(const double time, const double c0, const double c1, 
   bool implicit = (c0 != 0.0 || c1 != 0.0);
   if (implicit) {
     if (enforcement_method_ == DirichletEnforcementMethod::DirectControl) {
-      d2U_dt2_ = (U_ - u) / c0;
-      dU_dt_   = du_dt;
-      U_       = u;
+      // TODO: MFEM PR#3064 explicitly deleted the const vector operator-.  This
+      // is in active discusion and may be un-deleted. Original line commented.
+      // d2U_dt2_ = (U_ - u) / c0;
+      subtract(1.0 / c0, U_, u, d2U_dt2_);
+      dU_dt_ = du_dt;
+      U_     = u;
     }
 
     if (enforcement_method_ == DirichletEnforcementMethod::RateControl) {
@@ -286,8 +289,11 @@ void FirstOrderODE::Solve(const double dt, const mfem::Vector& u, mfem::Vector& 
   bool implicit = (dt != 0.0);
   if (implicit) {
     if (enforcement_method_ == DirichletEnforcementMethod::DirectControl) {
-      dU_dt_ = (U_ - u) / dt;
-      U_     = u;
+      // TODO: MFEM PR#3064 explicitly deleted the const vector operator-.  This
+      // is in active discusion and may be un-deleted. Original line commented.
+      // dU_dt_ = (U_ - u) / dt;
+      subtract(1.0 / dt, U_, u, dU_dt_);
+      U_ = u;
     }
 
     if (enforcement_method_ == DirichletEnforcementMethod::RateControl) {

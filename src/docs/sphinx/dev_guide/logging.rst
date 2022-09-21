@@ -37,17 +37,12 @@ Serac creates the following logging streams under different conditions:
 
    * LumberjackStream
 
-     * Parallel and SERAC_USE_LUMBERJACK is true
+     * Parallel
      * Debug and info messages to ``std::cout``
      * Warning and error messages to ``std::cerr``
      * Flushing causes messages to be scalably passed and filtered down to rank 0 then outputted.
-
-   * SynchronizedStream
-
-     * Parallel and SERAC_USE_LUMBERJACK is false
-     * Debug and info messages to ``std::cout``
-     * Warning and error messages to ``std::cerr``
-     * Prints messages on one rank at a time each flush.
+     * On error, SLIC does a local flush on the aborting rank, then does an ``MPI_Abort``. Messages
+       on other ranks since the last flush will be lost.
 
 Message Levels
 --------------
@@ -63,7 +58,7 @@ Logging Macros
 --------------
 
 SLIC provides many helper macros that assist in logging messages. Here is a list of them but more information
-can be found `here <https://axom.readthedocs.io/en/develop/axom/slic/docs/sphinx/sections/appendix.html#slic-macros-used-in-axom>`_ :
+can be found `in the Axom documentation <https://axom.readthedocs.io/en/develop/axom/slic/docs/sphinx/sections/appendix.html#slic-macros-used-in-axom>`_ :
 
  * ``SLIC_INFO(msg)`` - Logs info message
  * ``SLIC_INFO_IF(expression, msg)`` - Logs info message if expression is true
@@ -88,6 +83,3 @@ The following macros are compiled out if not in a debug build:
  * ``SLIC_DEBUG_IF(expression, msg)`` - Logs debug message if expression is true
  * ``SLIC_DEBUG_ROOT(msg)`` - Logs debug message if on rank 0
  * ``SLIC_DEBUG_ROOT_IF(expression, msg)`` - Logs debug message if on rank 0 and expression is true
-
-.. note::
-  Macros with ROOT in the name are not true SLIC macros but are defined by Serac.

@@ -81,8 +81,8 @@ TEST(ExprTemplates, BasicAddHyprepar)
 
   auto [partitioning, start] = build_partitioning(MPI_COMM_WORLD, size);
 
-  mfem::HypreParVector lhs_par(MPI_COMM_WORLD, size, lhs + start, partitioning.get());
-  mfem::HypreParVector rhs_par(MPI_COMM_WORLD, size, rhs + start, partitioning.get());
+  mfem::HypreParVector lhs_par(MPI_COMM_WORLD, size, lhs.GetData() + start, partitioning.get());
+  mfem::HypreParVector rhs_par(MPI_COMM_WORLD, size, rhs.GetData() + start, partitioning.get());
 
   mfem::HypreParVector mfem_result(MPI_COMM_WORLD, size, partitioning.get());
   add(lhs_par, rhs_par, mfem_result);
@@ -90,8 +90,8 @@ TEST(ExprTemplates, BasicAddHyprepar)
   mfem::HypreParVector expr_result(MPI_COMM_WORLD, size, partitioning.get());
   evaluate(lhs_par + rhs_par, expr_result);
 
-  double* mfem_local = mfem_result;
-  double* expr_local = expr_result;
+  double* mfem_local = mfem_result.GetData();
+  double* expr_local = expr_result.GetData();
 
   for (int i = 0; i < expr_result.Size(); i++) {
     EXPECT_DOUBLE_EQ(mfem_local[i], expr_local[i]);
