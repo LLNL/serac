@@ -16,7 +16,7 @@ foreach(filename ${functional_performance_tests})
                      DEPENDS_ON  gtest serac_functional ${functional_depends}
                      FOLDER      serac/tests )
   set_source_files_properties(${filename} PROPERTIES LANGUAGE CXX)
-  target_compile_definitions(${test_name} PUBLIC USE_OLD_IMPLEMENTATION)
+  #target_compile_definitions(${test_name} PUBLIC USE_OLD_IMPLEMENTATION)
 endforeach()
 
 if(ENABLE_CUDA)
