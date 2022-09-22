@@ -50,8 +50,8 @@ void check_gradient(Functional<T>& f, mfem::Vector& U)
 
   mfem::Vector df3 = (*dfdU_matrix) * dU;
 
-  double relative_error1 = df1.DistanceTo(df2) / df1.Norml2();
-  double relative_error2 = df1.DistanceTo(df3) / df1.Norml2();
+  double relative_error1 = df1.DistanceTo(df2.GetData()) / df1.Norml2();
+  double relative_error2 = df1.DistanceTo(df3.GetData()) / df1.Norml2();
 
   EXPECT_NEAR(0., relative_error1, 5.e-6);
   EXPECT_NEAR(0., relative_error2, 5.e-6);
@@ -85,6 +85,7 @@ TEST(FunctionalBasic, NonlinearThermalTest3D)
   Functional<test_space(trial_space)> residual(&fespace, {&fespace});
 
   residual.AddVolumeIntegral(
+      DependsOn<0>{},
       [=](auto x, auto temperature) {
         auto [u, du_dx] = temperature;
         auto source     = u * u - (100 * x[0] * x[1]);

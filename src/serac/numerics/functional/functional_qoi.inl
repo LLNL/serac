@@ -63,6 +63,7 @@ class Functional<double(trials...), exec> {
   using test = QOI;
   static constexpr tuple<trials...> trial_spaces{};
   static constexpr uint32_t         num_trial_spaces = sizeof...(trials);
+  static constexpr auto             Q                = std::max({test::order, trials::order...}) + 1;
 
   class Gradient;
 
@@ -154,8 +155,8 @@ public:
    * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
    * and @a spatial_dim template parameter
    */
-  template <int dim, typename lambda, typename qpt_data_type = Nothing>
-  void AddDomainIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain,
+  template <int dim, int... args, typename lambda, typename qpt_data_type = Nothing>
+  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain,
                          std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
   {
     auto num_elements = domain.GetNE();
@@ -171,7 +172,11 @@ public:
 
     constexpr auto flags = mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS;
     auto           geom  = domain.GetGeometricFactors(ir, flags);
-    domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<dim>{}, integrand, qdata);
+
+    auto selected_trial_spaces = serac::make_tuple(serac::get<args>(trial_spaces)...);
+
+    domain_integrals_.emplace_back(test{}, selected_trial_spaces, num_elements, geom->J, geom->X, Dimension<dim>{},
+                                   integrand, qdata, std::vector<int>{args...});
   }
 
   /**
@@ -185,8 +190,8 @@ public:
    * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
    * and @a spatial_dim template parameter
    */
-  template <int dim, typename lambda, typename qpt_data_type = void>
-  void AddBoundaryIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain)
+  template <int dim, int... args, typename lambda, typename qpt_data_type = void>
+  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain)
   {
     // TODO: fix mfem::FaceGeometricFactors
     auto num_bdr_elements = domain.GetNBE();
@@ -202,47 +207,54 @@ public:
     constexpr auto flags = mfem::FaceGeometricFactors::COORDINATES | mfem::FaceGeometricFactors::DETERMINANTS |
                            mfem::FaceGeometricFactors::NORMALS;
 
-    // despite what their documentation says, mfem doesn't actually support the JACOBIANS flag.
-    // this is currently a dealbreaker, as we need this information to do any calculations
+    // sam: did mfem ever implement support for the JACOBIANS flag here?
     auto geom = domain.GetFaceGeometricFactors(ir, flags, mfem::FaceType::Boundary);
-    bdr_integrals_.emplace_back(num_bdr_elements, geom->detJ, geom->X, geom->normal, Dimension<dim>{}, integrand);
+
+    auto selected_trial_spaces = serac::make_tuple(serac::get<args>(trial_spaces)...);
+
+    bdr_integrals_.emplace_back(test{}, selected_trial_spaces, num_bdr_elements, geom->detJ, geom->X, geom->normal,
+                                Dimension<dim>{}, integrand, std::vector<int>{args...});
   }
 
   /**
    * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
    * @tparam qpt_data_type The type of the data to store for each quadrature point
+   * @param[in] which_args a tag type used to indicate which trial spaces are required by this calculation
    * @param[in] integrand The quadrature function
    * @param[in] domain The mesh to evaluate the integral on
    * @param[in] data The data structure containing per-quadrature-point data
    *
    * @brief Adds an area integral, i.e., over 2D elements in R^2
    */
-  template <typename lambda, typename qpt_data_type = Nothing>
-  void AddAreaIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = NoQData)
+  template <int... args, typename lambda, typename qpt_data_type = Nothing>
+  void AddAreaIntegral(DependsOn<args...> which_args, lambda&& integrand, mfem::Mesh& domain,
+                       std::shared_ptr<QuadratureData<qpt_data_type>>& data = NoQData)
   {
-    AddDomainIntegral(Dimension<2>{}, integrand, domain, data);
+    AddDomainIntegral(Dimension<2>{}, which_args, integrand, domain, data);
   }
 
   /**
    * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
    * @tparam qpt_data_type The type of the data to store for each quadrature point
+   * @param[in] which_args a tag type used to indicate which trial spaces are required by this calculation
    * @param[in] integrand The quadrature function
    * @param[in] domain The mesh to evaluate the integral on
    * @param[in] data The data structure containing per-quadrature-point data
    *
    * @brief Adds a volume integral, i.e., over 3D elements in R^3
    */
-  template <typename lambda, typename qpt_data_type = Nothing>
-  void AddVolumeIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = NoQData)
+  template <int... args, typename lambda, typename qpt_data_type = Nothing>
+  void AddVolumeIntegral(DependsOn<args...> which_args, lambda&& integrand, mfem::Mesh& domain,
+                         std::shared_ptr<QuadratureData<qpt_data_type>>& data = NoQData)
   {
-    AddDomainIntegral(Dimension<3>{}, integrand, domain, data);
+    AddDomainIntegral(Dimension<3>{}, which_args, integrand, domain, data);
   }
 
   /// @brief alias for Functional::AddBoundaryIntegral(Dimension<2>{}, integrand, domain);
-  template <typename lambda>
-  void AddSurfaceIntegral(lambda&& integrand, mfem::Mesh& domain)
+  template <int... args, typename lambda>
+  void AddSurfaceIntegral(DependsOn<args...> which_args, lambda&& integrand, mfem::Mesh& domain)
   {
-    AddBoundaryIntegral(Dimension<2>{}, integrand, domain);
+    AddBoundaryIntegral(Dimension<2>{}, which_args, integrand, domain);
   }
 
   /**
@@ -441,7 +453,7 @@ private:
         for (axom::IndexType e = 0; e < K_elem.shape()[0]; e++) {
           for (axom::IndexType j = 0; j < K_elem.shape()[2]; j++) {
             auto [index, sign] = LUT(e, j);
-            gradient_L_[index] += sign * K_elem(e, 0, j);
+            gradient_L_(static_cast<int>(index)) += sign * K_elem(e, 0, j);
           }
         }
       }
@@ -458,7 +470,7 @@ private:
         for (axom::IndexType e = 0; e < K_belem.shape()[0]; e++) {
           for (axom::IndexType j = 0; j < K_belem.shape()[2]; j++) {
             auto [index, sign] = LUT(e, j);
-            gradient_L_[index] += sign * K_belem(e, 0, j);
+            gradient_L_(static_cast<int>(index)) += sign * K_belem(e, 0, j);
           }
         }
       }
@@ -549,12 +561,12 @@ private:
   /**
    * @brief The set of domain integrals (spatial_dim == geometric_dim)
    */
-  std::vector<DomainIntegral<test(trials...), exec>> domain_integrals_;
+  std::vector<DomainIntegral<num_trial_spaces, Q, exec>> domain_integrals_;
 
   /**
    * @brief The set of boundary integral (spatial_dim > geometric_dim)
    */
-  std::vector<BoundaryIntegral<test(trials...), exec>> bdr_integrals_;
+  std::vector<BoundaryIntegral<num_trial_spaces, Q, exec>> bdr_integrals_;
 
   // simplex elements are currently not supported;
   static constexpr mfem::Element::Type supported_types[4] = {mfem::Element::POINT, mfem::Element::SEGMENT,

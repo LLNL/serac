@@ -4,23 +4,28 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+#include "serac/physics/solid_functional.hpp"
+
+#include <functional>
 #include <fstream>
+#include <set>
+#include <string>
 
 #include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
-#include "serac/serac_config.hpp"
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/state/state_manager.hpp"
-#include "serac/physics/solid_functional.hpp"
 #include "serac/physics/materials/solid_functional_material.hpp"
 #include "serac/physics/materials/parameterized_solid_functional_material.hpp"
+#include "serac/serac_config.hpp"
 
 namespace serac {
 
 using solid_mechanics::default_dynamic_options;
 using solid_mechanics::default_static_options;
+using solid_mechanics::direct_static_options;
 
 template <int p, int dim>
 void functional_solid_test_static(double expected_disp_norm)
@@ -46,14 +51,13 @@ void functional_solid_test_static(double expected_disp_norm)
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
-  auto options              = default_static_options;
-  options.nonlinear.rel_tol = 1.0e-8;
-  options.nonlinear.abs_tol = 1.0e-16;
+  // Use a direct solver (DSuperLU) for the Jacobian solve
+  SolverOptions options = {DirectSolverOptions{}, solid_mechanics::default_nonlinear_options};
 
   // Construct a functional-based solid mechanics solver
   SolidFunctional<p, dim> solid_solver(options, GeometricNonlinearities::On, "solid_functional");
 
-  solid_mechanics::NeoHookean<dim> mat{1.0, 1.0, 1.0};
+  solid_mechanics::NeoHookean mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
 
   // Define the function for the initial displacement and boundary condition
@@ -191,7 +195,7 @@ void functional_solid_test_dynamic(double expected_disp_norm)
   SolidFunctional<p, dim> solid_solver(default_dynamic_options, GeometricNonlinearities::Off,
                                        "solid_functional_dynamic");
 
-  solid_mechanics::LinearIsotropic<dim> mat{1.0, 1.0, 1.0};
+  solid_mechanics::LinearIsotropic mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
 
   // Define the function for the initial displacement and boundary condition
@@ -252,7 +256,7 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
   // Construct a functional-based solid mechanics solver
   SolidFunctional<p, dim> solid_solver(default_static_options, GeometricNonlinearities::Off, "solid_functional");
 
-  solid_mechanics::LinearIsotropic<dim> mat{1.0, 1.0, 1.0};
+  solid_mechanics::LinearIsotropic mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
 
   // Define the function for the initial displacement and boundary condition
@@ -264,14 +268,14 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
   solid_solver.setDisplacement(bc);
 
   if (test_mode == TestType::Pressure) {
-    solid_solver.setPiolaTraction([](const tensor<double, dim>& x, const tensor<double, dim>& n, const double) {
+    solid_solver.setPiolaTraction([](const auto& x, const tensor<double, dim>& n, const double) {
       if (x[0] > 7.5) {
         return 1.0e-2 * n;
       }
       return 0.0 * n;
     });
   } else if (test_mode == TestType::Traction) {
-    solid_solver.setPiolaTraction([](const tensor<double, dim>& x, const tensor<double, dim>& /*n*/, const double) {
+    solid_solver.setPiolaTraction([](const auto& x, const tensor<double, dim>& /*n*/, const double) {
       tensor<double, dim> traction;
       for (int i = 0; i < dim; ++i) {
         traction[i] = (x[0] > 7.9) ? 1.0e-4 : 0.0;
@@ -296,6 +300,19 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
   // Check the final displacement norm
   EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
 }
+
+template <typename lambda>
+struct ParameterizedBodyForce {
+  template <int dim, typename T1, typename T2>
+  auto operator()(const tensor<T1, dim> x, double /*t*/, T2 density) const
+  {
+    return get<0>(density) * acceleration(x);
+  }
+  lambda acceleration;
+};
+
+template <typename T>
+ParameterizedBodyForce(T) -> ParameterizedBodyForce<T>;
 
 template <int p, int dim>
 void functional_parameterized_solid_test(double expected_disp_norm)
@@ -331,12 +348,13 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   user_defined_bulk_modulus = 1.0;
 
   // Construct a functional-based solid mechanics solver
-  SolidFunctional<p, dim, Parameters<H1<1>, H1<1>>> solid_solver(
-      default_static_options, GeometricNonlinearities::On, "solid_functional",
-      {user_defined_bulk_modulus, user_defined_shear_modulus});
+  SolidFunctional<p, dim, Parameters<H1<1>, H1<1>>> solid_solver(default_static_options, GeometricNonlinearities::On,
+                                                                 "solid_functional");
+  solid_solver.setParameter(user_defined_bulk_modulus, 0);
+  solid_solver.setParameter(user_defined_shear_modulus, 1);
 
   solid_mechanics::ParameterizedNeoHookeanSolid<dim> mat{1.0, 0.0, 0.0};
-  solid_solver.setMaterial(mat);
+  solid_solver.setMaterial(DependsOn<0, 1>{}, mat);
 
   // Define the function for the initial displacement and boundary condition
   auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
@@ -358,12 +376,27 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   solid_mechanics::ConstantBodyForce<dim> force{constant_force};
   solid_solver.addBodyForce(force);
 
+  // add some nonexistent body forces / tractions to check that
+  // these parameterized versions compile and run without error
+  solid_solver.addBodyForce(DependsOn<0>{}, [](const auto& x, double /*t*/, auto /* bulk */) { return x * 0.0; });
+
+  solid_solver.addBodyForce(DependsOn<1>{}, ParameterizedBodyForce{[](const auto& x) { return 0.0 * x; }});
+
+  solid_solver.setPiolaTraction(DependsOn<1>{}, [](const auto& x, auto...) { return 0 * x; });
+
   // Finalize the data structures
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
   double dt = 1.0;
   solid_solver.advanceTimestep(dt);
+
+  // the calculations peformed in these lines of code
+  // are not used, but running them as part of this test
+  // checks the index-translation part of the derivative
+  // kernels is working
+  solid_solver.template computeSensitivity<0>();
+  solid_solver.template computeSensitivity<1>();
 
   // Output the sidre-based plot files
   solid_solver.outputState();
@@ -372,25 +405,19 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
 }
 
-TEST(SolidFunctional, 2DLinearStatic) { functional_solid_test_static<1, 2>(1.5110529858788075); }
-TEST(SolidFunctional, 2DQuadStatic) { functional_solid_test_static<2, 2>(2.1864815661936112); }
-TEST(SolidFunctional, 2DQuadParameterizedStatic) { functional_parameterized_solid_test<2, 2>(2.1864815661936112); }
-
-TEST(SolidFunctional, 3DLinearStatic) { functional_solid_test_static<1, 3>(1.3708614483662795); }
-TEST(SolidFunctional, 3DQuadStatic) { functional_solid_test_static<2, 3>(1.9497651636266995); }
+TEST(SolidFunctional, 2DQuadParameterizedStatic) { functional_parameterized_solid_test<2, 2>(2.1906312704664623); }
 
 TEST(SolidFunctional, 3DQuadStaticJ2) { functional_solid_test_static_J2(); }
 
-TEST(SolidFunctional, 2DLinearDynamic) { functional_solid_test_dynamic<1, 2>(1.52116682); }
-TEST(SolidFunctional, 2DQuadDynamic) { functional_solid_test_dynamic<2, 2>(1.52777214); }
+TEST(SolidFunctional, 2DLinearDynamic) { functional_solid_test_dynamic<1, 2>(1.5206694864511661); }
+TEST(SolidFunctional, 2DQuadDynamic) { functional_solid_test_dynamic<2, 2>(1.5269845689546435); }
 
 TEST(SolidFunctional, 3DLinearDynamic) { functional_solid_test_dynamic<1, 3>(1.520679017); }
 TEST(SolidFunctional, 3DQuadDynamic) { functional_solid_test_dynamic<2, 3>(1.527009514); }
 
-TEST(SolidFunctional, 2DLinearPressure) { functional_solid_test_boundary<1, 2>(0.065326222, TestType::Pressure); }
-TEST(SolidFunctional, 2DLinearTraction)
+TEST(SolidFunctional, 2DLinearPressure)
 {
-  functional_solid_test_boundary<1, 2>(0.12659525750241674, TestType::Traction);
+  functional_solid_test_boundary<1, 2>(0.057051396685822188, TestType::Pressure);
 }
 
 }  // namespace serac

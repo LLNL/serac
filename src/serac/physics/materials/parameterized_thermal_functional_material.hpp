@@ -57,12 +57,13 @@ public:
   SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* temperature */, const T3& temperature_gradient,
                                     const T4& parameter) const
   {
-    using FluxType = decltype((conductivity_offset_ + parameter) * temperature_gradient);
+    // TODO : Do we need this FluxType?
+    using FluxType = decltype((conductivity_offset_ + get<0>(parameter)) * temperature_gradient);
 
     return MaterialResponse<double, double, FluxType>{
         .density                = density_,
         .specific_heat_capacity = specific_heat_capacity_,
-        .heat_flux              = -1.0 * (conductivity_offset_ + parameter) * temperature_gradient};
+        .heat_flux              = -1.0 * (conductivity_offset_ + get<0>(parameter)) * temperature_gradient};
   }
 
   /**

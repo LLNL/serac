@@ -209,8 +209,12 @@ SERAC_HOST_DEVICE tensor<T, n> Bernstein(T s)
  * @param[in] x where to evaluate the polynomials
  */
 template <int n, typename T>
-SERAC_HOST_DEVICE constexpr tensor<T, n> GaussLobattoInterpolation(T x)
+SERAC_HOST_DEVICE constexpr tensor<T, n> GaussLobattoInterpolation([[maybe_unused]] T x)
 {
+  static_assert(1 <= n && n <= 4, "error: invalid polynomial order in GaussLobattoInterpolation");
+  if constexpr (n == 1) {
+    return {1.0};
+  }
   if constexpr (n == 2) {
     return {1.0 - x, x};
   }
@@ -234,6 +238,10 @@ SERAC_HOST_DEVICE constexpr tensor<T, n> GaussLobattoInterpolation(T x)
 template <int n, typename T>
 SERAC_HOST_DEVICE constexpr tensor<T, n> GaussLobattoInterpolationDerivative([[maybe_unused]] T x)
 {
+  static_assert(1 <= n && n <= 4, "error: invalid polynomial order in GaussLobattoInterpolationDerivative");
+  if constexpr (n == 1) {
+    return {0.0};
+  }
   if constexpr (n == 2) {
     return {-1, 1};
   }
