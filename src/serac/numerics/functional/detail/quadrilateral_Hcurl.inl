@@ -30,6 +30,9 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
   static constexpr int  ndof       = 2 * p * (p + 1);
   static constexpr int  components = 1;
 
+  static constexpr int VALUE = 0, CURL = 1;
+  static constexpr int SOURCE = 0, FLUX = 1;
+
   using residual_type =
       typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components> >::type;
 
@@ -184,8 +187,7 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
   }
 
   template <int q>
-  static auto interpolate(const dof_type& element_values, const tensor<double, dim, dim, q, q>& jacobians,
-                          const TensorProductQuadratureRule<q>&)
+  static auto interpolate(const dof_type& element_values, const TensorProductQuadratureRule<q>&)
   {
 
     auto xi = GaussLegendreNodes<q>();
@@ -215,66 +217,50 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     value[1] = contract<x, 1>(A.y, B2);
     curl    += contract<x, 1>(A.y, G2);
 
-    tensor<tensor<double, 2>, q, q> value_T;
+    tensor< tuple < tensor<double, 2>, double >, q * q> qf_inputs;
 
-    // apply covariant Piola transformation to go
-    // from parent element -> physical element
+    int count = 0; 
     for (int qy = 0; qy < q; qy++) {
       for (int qx = 0; qx < q; qx++) {
-        tensor<double, dim, dim> J_T;
-        for (int r = 0; r < dim; r++) {
-          for (int c = 0; c < dim; c++) {
-            J_T[r][c] = jacobians(r, c, qy, qx);
-          }
+        for (int i = 0; i < dim; i++) {
+          get<VALUE>(qf_inputs(count))[i] = value[i](qy, qx);
         }
-
-        value_T(qy, qx) = linear_solve(J_T, tensor<double,2>{value(0, qy, qx), value(1, qy, qx)});
-        curl(qy, qx) /= det(J_T);
+        get<CURL>(qf_inputs(count)) = curl(qy, qx);
+        count++;
       }
     }
-
-    return tuple{value_T, curl};
+ 
+    return qf_inputs;
   }
 
-  template <int q>
-  static void integrate(cpu_batched_values_type<q>& sources_T, cpu_batched_derivatives_type<q>& fluxes,
-                        const tensor<double, dim, dim, q, q>& jacobians, const TensorProductQuadratureRule<q>&,
-                        dof_type&                             element_residual)
+  template <typename source_type, typename flux_type, int q>
+  static void integrate(tensor< tuple< source_type, flux_type >, q * q > & qf_output,
+                        const TensorProductQuadratureRule<q>&,
+                        dof_type& element_residual)
   {
-    auto xi        = GaussLegendreNodes<q>();
-    auto weights1D = GaussLegendreWeights<q>();
+    auto xi  = GaussLegendreNodes<q>();
+    auto wts = GaussLegendreWeights<q>();
 
     tensor<double, q, p>     B1;
     tensor<double, q, p + 1> B2;
     tensor<double, q, p + 1> G2;
     for (int i = 0; i < q; i++) {
-      B1[i] = GaussLegendreInterpolation<p>(xi[i]);
-      B2[i] = GaussLobattoInterpolation<p + 1>(xi[i]);
-      G2[i] = GaussLobattoInterpolationDerivative<p + 1>(xi[i]);
+      B1[i] = GaussLegendreInterpolation<p>(xi[i]) * wts[i];
+      B2[i] = GaussLobattoInterpolation<p + 1>(xi[i]) * wts[i];
+      G2[i] = GaussLobattoInterpolationDerivative<p + 1>(xi[i]) * wts[i];
     }
 
-    tensor< double, 2, q, q > source{};
+    tensor< double, 2, q, q> source{};
+    tensor< double, q, q> flux{};
 
-    // transform the source and flux terms from values on the physical element,
-    // to values on the parent element. Also, the source/flux values are scaled
-    // according to the weight of their quadrature point, so that when we add them
-    // together, it approximates the integral over the element
     for (int qy = 0; qy < q; qy++) {
       for (int qx = 0; qx < q; qx++) {
-        tensor<double, dim, dim> J;
-        for (int r = 0; r < dim; r++) {
-          for (int c = 0; c < dim; c++) {
-            J[r][c] = jacobians(c, r, qy, qx);
-          }
+        int k = qy * q + qx;
+        tensor< double, dim > s{get<SOURCE>(qf_output[k])};
+        for (int i = 0; i < dim; i++) {
+          source(i, qy, qx) = s[i];
         }
-
-        auto detJ         = serac::det(J);
-        auto dv           = detJ * weights1D[qx] * weights1D[qy];
-        sources_T(qy, qx) = linear_solve(J, sources_T(qy, qx)) * dv;
-        fluxes(qy, qx)    = fluxes(qy, qx) * (dv / detJ);
-
-        source(0, qy, qx) = sources_T(qy, qx)[0];
-        source(1, qy, qx) = sources_T(qy, qx)[1];
+        flux(qy, qx) = get<FLUX>(qf_output[k]);
       }
     }
 
@@ -283,10 +269,10 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     // to clarify which contractions correspond to which spatial dimensions
     constexpr int x = 1, y = 0; 
 
-    A2.x = contract<y, 0>(source[0], B2) - contract<y, 0>(fluxes, G2);
+    A2.x = contract<y, 0>(source[0], B2) - contract<y, 0>(flux, G2);
     element_residual.x += contract<x, 0>(A2.x, B1);
 
-    A2.y = contract<x, 0>(source[1], B2) + contract<x, 0>(fluxes, G2);
+    A2.y = contract<x, 0>(source[1], B2) + contract<x, 0>(flux, G2);
     element_residual.y += contract<y, 0>(A2.y, B1);
 
   }

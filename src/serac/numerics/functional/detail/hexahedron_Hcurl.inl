@@ -16,7 +16,7 @@
 //
 // note 1: mfem assumes the parent element domain is [0,1]x[0,1]x[0,1]
 // note 2: dofs are numbered by direction and then lexicographically in space.
-//         quadrilateral_hcurl.inl for more information
+//         see quadrilateral_hcurl.inl for more information
 // for additional information on the finite_element concept requirements, see finite_element.hpp
 /// @cond
 template <int p>
@@ -27,6 +27,9 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
   static constexpr int  n          = p + 1;
   static constexpr int  ndof       = 3 * p * (p + 1) * (p + 1);
   static constexpr int  components = 1;
+
+  static constexpr int VALUE = 0, CURL = 1;
+  static constexpr int SOURCE = 0, FLUX = 1;
 
   // TODO: delete this in favor of dof_type
   using residual_type =
@@ -210,8 +213,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
   }
 
   template <int q>
-  static auto interpolate(const dof_type& element_values, const tensor<double, dim, dim, q, q, q>& jacobians,
-                          const TensorProductQuadratureRule<q>&)
+  static auto interpolate(const dof_type& element_values, const TensorProductQuadratureRule<q>&)
   {
     auto xi = GaussLegendreNodes<q>();
 
@@ -255,86 +257,59 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
     curl[1]      -= contract< y, 1 >(cache.A2.z[1],    B2);
     // clang-format on
 
-    tensor<tensor<double, 3>, q, q, q> value_T;
-    tensor<tensor<double, 3>, q, q, q> curl_T;
+    tensor< tuple < tensor<double, 3>, tensor< double, 3 > >, q * q * q> qf_inputs;
 
+    int count = 0; 
     for (int qz = 0; qz < q; qz++) {
       for (int qy = 0; qy < q; qy++) {
         for (int qx = 0; qx < q; qx++) {
-          tensor<double, dim, dim> J_T;
-          for (int row = 0; row < dim; row++) {
-            for (int col = 0; col < dim; col++) {
-              J_T[row][col] = jacobians(row, col, qz, qy, qx);
-            }
+          for (int i = 0; i < 3; i++) {
+            get<VALUE>(qf_inputs(count))[i] = value[i](qz, qy, qx);
+            get<CURL>(qf_inputs(count))[i] = curl[i](qz, qy, qx);
           }
-
-          tensor<double, 3> value_q = {value[0](qz, qy, qx), value[1](qz, qy, qx), value[2](qz, qy, qx)};
-          tensor<double, 3> curl_q  = {curl[0](qz, qy, qx), curl[1](qz, qy, qx), curl[2](qz, qy, qx)};
-
-          // apply covariant Piola transformation to go
-          // from parent element -> physical element
-          value_q = linear_solve(J_T, value_q);
-          curl_q = dot(curl_q, J_T) / det(J_T);
-
-          value_T(qz, qy, qx) = value_q;
-          curl_T(qz, qy, qx) = curl_q;
+          count++;
         }
       }
     }
-
-    return tuple{value_T, curl_T};
+ 
+    return qf_inputs;
   }
 
-  template <int q>
-  static void integrate(cpu_batched_values_type<q>& sources_T, cpu_batched_derivatives_type<q>& fluxes_T,
-                        const tensor<double, dim, dim, q, q, q>& jacobians, const TensorProductQuadratureRule<q>&,
-                        dof_type&                                element_residual)
+  template <typename source_type, typename flux_type, int q>
+  static void integrate(tensor< tuple< source_type, flux_type >, q * q * q > & qf_output,
+                        const TensorProductQuadratureRule<q>&,
+                        dof_type& element_residual)
   {
-    static constexpr auto xi        = GaussLegendreNodes<q>();
-    static constexpr auto weights1D = GaussLegendreWeights<q>();
+    static constexpr auto xi  = GaussLegendreNodes<q>();
+    static constexpr auto wts = GaussLegendreWeights<q>();
 
     tensor<double, q, p>     B1;
     tensor<double, q, p + 1> B2;
     tensor<double, q, p + 1> G2;
     for (int i = 0; i < q; i++) {
-      B1[i] = GaussLegendreInterpolation<p>(xi[i]);
-      B2[i] = GaussLobattoInterpolation<p + 1>(xi[i]);
-      G2[i] = GaussLobattoInterpolationDerivative<p + 1>(xi[i]);
+      B1[i] = GaussLegendreInterpolation<p>(xi[i]) * wts[i];
+      B2[i] = GaussLobattoInterpolation<p + 1>(xi[i]) * wts[i];
+      G2[i] = GaussLobattoInterpolationDerivative<p + 1>(xi[i]) * wts[i];
     }
 
-    cache_type_tmp<q> cache{};
+    tensor< double, 3, q, q, q> source{};
+    tensor< double, 3, q, q, q> flux{};
 
-    tensor< double, 3, q, q, q > source{};
-    tensor< double, 3, q, q, q > flux{};
-
-    // transform the source and flux terms from values on the physical element,
-    // to values on the parent element. Also, the source/flux values are scaled
-    // according to the weight of their quadrature point, so that
     for (int qz = 0; qz < q; qz++) {
       for (int qy = 0; qy < q; qy++) {
         for (int qx = 0; qx < q; qx++) {
-          tensor<double, dim, dim> J;
-          for (int row = 0; row < dim; row++) {
-            for (int col = 0; col < dim; col++) {
-              J[row][col] = jacobians(col, row, qz, qy, qx);
-            }
-          }
-          auto detJ = serac::det(J);
-          auto dv   = detJ * weights1D[qx] * weights1D[qy] * weights1D[qz];
-
-          auto s = sources_T(qz, qy, qx);
-          auto f = fluxes_T(qz, qy, qx);
-
-          s = linear_solve(J, s) * dv;
-          f = dot(f, J) * (dv / detJ);
-
+          int k = (qz * q + qy) * q + qx;
+          tensor< double, 3 > s{get<SOURCE>(qf_output[k])};
+          tensor< double, 3 > f{get<FLUX>(qf_output[k])};
           for (int i = 0; i < 3; i++) {
-            source[i](qz, qy, qx) = s[i];
-            flux[i](qz, qy, qx) = f[i];
+            source(i, qz, qy, qx) = s[i];
+            flux(i, qz, qy, qx) = f[i];
           }
         }
       }
     }
+
+    cache_type_tmp<q> cache{};
 
     // to clarify which contractions correspond to which spatial dimensions
     constexpr int x = 2, y = 1, z = 0; 

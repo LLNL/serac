@@ -224,6 +224,15 @@ void parent_to_physical(tensor< T, q > & qf_input, const tensor<double, dim, dim
       // note: no transformation necessary for the values of H1-field
       get<DERIVATIVE>(qf_input[k]) = dot(get<DERIVATIVE>(qf_input[k]), inv(J));
     }
+
+    if constexpr (f == Family::HCURL) {
+      get<VALUE>(qf_input[k]) = dot(get<VALUE>(qf_input[k]), inv(J));
+      get<DERIVATIVE>(qf_input[k]) = get<DERIVATIVE>(qf_input[k]) / det(J);
+      if constexpr (dim == 3) {
+        get<DERIVATIVE>(qf_input[k]) = dot(get<DERIVATIVE>(qf_input[k]), transpose(J));
+      }
+    }
+
   }
 
 }
@@ -247,6 +256,16 @@ void physical_to_parent(tensor< T, q > & qf_output, const tensor<double, dim, di
     if constexpr (f == Family::H1) {
       get<SOURCE>(qf_output[k]) = get<SOURCE>(qf_output[k]) * dv;
       get<FLUX>(qf_output[k]) = dot(get<FLUX>(qf_output[k]), inv(J_T)) * dv;
+    }
+
+    // note: the flux term here is usually divided by detJ, but 
+    // physical_to_parent also multiplies every quadrature-point value by det(J)
+    // so that part cancels out
+    if constexpr (f == Family::HCURL) {
+      get<SOURCE>(qf_output[k]) = dot(get<SOURCE>(qf_output[k]), inv(J_T)) * dv;
+      if constexpr (dim == 3) {
+        get<FLUX>(qf_output[k]) = dot(get<FLUX>(qf_output[k]), transpose(J_T));
+      }
     }
 
   }

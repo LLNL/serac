@@ -69,8 +69,8 @@ void h1_h1_test_2D(size_t num_elements, size_t num_runs)
   using serac::Geometry;
   using serac::H1;
 
-  constexpr int n   = p + 1;
   constexpr int dim = 2;
+  constexpr int n   = p + 1;
 
   const double num_runs_d = static_cast<double>(num_runs);
 
@@ -137,7 +137,7 @@ void h1_h1_test_2D(size_t num_elements, size_t num_runs)
   }
 
   {
-    R1D            = 0.0;
+    R1D = 0.0;
 
     auto X1D = U1D;
 

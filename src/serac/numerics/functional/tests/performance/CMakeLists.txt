@@ -6,7 +6,8 @@
 
 # not sure how we want to handle performance-related tests
 set(functional_performance_tests
-    thermal_comparison.cpp)
+    comparisons_H1.cpp
+    comparisons_Hcurl.cpp)
  
 foreach(filename ${functional_performance_tests})
   get_filename_component(test_name ${filename} NAME_WE)
