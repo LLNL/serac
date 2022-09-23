@@ -106,7 +106,7 @@ void PAHcurlMassApply2D(const int D1D, const int Q1D, const int NE, const bool s
 }
 
 #if 1
-static void PACurlCurlApply2D(const int D1D, const int Q1D, const int NE, const Array<double>& bo,
+static inline void PACurlCurlApply2D(const int D1D, const int Q1D, const int NE, const Array<double>& bo,
                               const Array<double>& bot, const Array<double>& gc, const Array<double>& gct,
                               const Vector& pa_data, const Vector& x, Vector& y)
 {

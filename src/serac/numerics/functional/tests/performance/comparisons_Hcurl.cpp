@@ -226,13 +226,87 @@ void hcurl_hcurl_test_2D(size_t num_elements, size_t num_runs)
   std::cout << "error: " << relative_error << std::endl;
 }
 
+
+template <int p, int q>
+void mfem_test_3D(
+  size_t num_elements,
+  size_t num_runs,
+  mfem::Vector & U1D,
+  mfem::Vector & R1D,
+  mfem::Vector & rho_invJ_invJT_dv_1D,
+  mfem::Vector & k_JTJ_dv_over_detJsq_1D) {
+
+  constexpr int n = p + 1;
+  double num_runs_d = static_cast<double>(num_runs);
+
+  R1D            = 0.0;
+  bool symmetric = false;
+
+  serac::GaussLegendreRule<serac::Geometry::Hexahedron, q> rule;
+
+  // I think the "o" and "c" are supposed to be short for
+  // "open" and "closed", referring to placing interpolation
+  // nodes at the gauss-legendre, and gauss-lobatto points (respectively)
+  mfem::Array<double> bo_((n - 1) * q);
+  mfem::Array<double> bc_(n * q);
+  mfem::Array<double> bot_((n - 1) * q);
+  mfem::Array<double> bct_(n * q);
+  mfem::Array<double> gc_(n * q);
+  mfem::Array<double> gct_(n * q);
+
+  auto Bo  = mfem::Reshape(bo_.ReadWrite(), q, n - 1);
+  auto Bc  = mfem::Reshape(bc_.ReadWrite(), q, n);
+  auto Bot = mfem::Reshape(bot_.ReadWrite(), n - 1, q);
+  auto Bct = mfem::Reshape(bct_.ReadWrite(), n, q);
+  auto Gc  = mfem::Reshape(gc_.ReadWrite(), q, n);
+  auto Gct = mfem::Reshape(gct_.ReadWrite(), n, q);
+
+  for (int i = 0; i < q; i++) {
+    auto lobatto_value      = serac::GaussLobattoInterpolation<n>(rule.points_1D[i]);
+    auto lobatto_derivative = serac::GaussLobattoInterpolationDerivative<n>(rule.points_1D[i]);
+
+    for (int j = 0; j < n; j++) {
+      Bct(j, i) = Bc(i, j) = lobatto_value[j];
+      Gct(j, i) = Gc(i, j) = lobatto_derivative[j];
+    }
+
+    auto legendre_value = serac::GaussLegendreInterpolation<n - 1>(rule.points_1D[i]);
+    for (int j = 0; j < n - 1; j++) {
+      Bot(j, i) = Bo(i, j) = legendre_value[j];
+    }
+  }
+
+  double mass_runtime = time([&]() {
+    for (size_t i = 0; i < num_runs; i++) {
+      mfem::PAHcurlMassApply3D(n, q, static_cast<int>(num_elements), symmetric = false, bo_, bc_, bot_, bct_, rho_invJ_invJT_dv_1D, U1D,
+                               R1D);
+      compiler::please_do_not_optimize_away(&R1D);
+    }
+  });
+  std::cout << "average mfem mass kernel time: " << mass_runtime / num_runs_d << std::endl;
+
+  double curlcurl_runtime = time([&]() {
+    for (size_t i = 0; i < num_runs; i++) {
+      mfem::PACurlCurlApply3D<n, q>(n, q, symmetric = false, static_cast<int>(num_elements), bo_, bc_, bot_, bct_, gc_, gct_,
+                                    k_JTJ_dv_over_detJsq_1D, U1D, R1D);
+      compiler::please_do_not_optimize_away(&R1D);
+    }
+  });
+  std::cout << "average mfem curlcurl kernel time: " << curlcurl_runtime / num_runs_d << std::endl;
+
+  std::cout << "average mfem combined kernel time: " << (mass_runtime + curlcurl_runtime) / num_runs_d << std::endl;
+
+}
+
+
+
 template <int p, int q>
 void hcurl_hcurl_test_3D(size_t num_elements, size_t num_runs)
 {
   using serac::Geometry;
   using serac::Hcurl;
 
-  constexpr int n   = p + 1;
+  [[maybe_unused]] constexpr int n   = p + 1;
   constexpr int dim = 3;
 
   const double num_runs_d = static_cast<double>(num_runs);
@@ -245,14 +319,6 @@ void hcurl_hcurl_test_3D(size_t num_elements, size_t num_runs)
 
   using trial_element = serac::finite_element<Geometry::Hexahedron, trial>;
   using test_element  = serac::finite_element<Geometry::Hexahedron, test>;
-
-  // a mass + curlcurl qfunction
-  auto qf = [=](auto /*x*/, auto input) {
-    auto [u, curl_u] = input;
-    auto source      = rho * u;
-    auto flux        = k * curl_u;
-    return serac::tuple{source, flux};
-  };
 
   std::default_random_engine             generator;
   std::uniform_real_distribution<double> distribution(-1.0, 1.0);
@@ -305,6 +371,14 @@ void hcurl_hcurl_test_3D(size_t num_elements, size_t num_runs)
     }
   }
 
+  // a mass + curlcurl qfunction
+  auto qf = [=](auto /*x*/, auto input) {
+    auto [u, curl_u] = input;
+    auto source      = rho * u;
+    auto flux        = k * curl_u;
+    return serac::tuple{source, flux};
+  };
+
   {
     R1D = 0.0;
 
@@ -325,6 +399,7 @@ void hcurl_hcurl_test_3D(size_t num_elements, size_t num_runs)
   }
   auto answer_reference = R1D;
 
+#if 0
   {
     R1D            = 0.0;
     bool symmetric = false;
@@ -381,6 +456,9 @@ void hcurl_hcurl_test_3D(size_t num_elements, size_t num_runs)
 
     std::cout << "average mfem combined kernel time: " << (mass_runtime + curlcurl_runtime) / num_runs_d << std::endl;
   }
+#else
+  mfem_test_3D<p,q>(num_elements, num_runs, U1D, R1D, rho_invJ_invJT_dv_1D, k_JTJ_dv_over_detJsq_1D);
+#endif
   auto answer_mfem = R1D;
   auto error       = answer_reference;
   error -= answer_mfem;
@@ -391,13 +469,13 @@ void hcurl_hcurl_test_3D(size_t num_elements, size_t num_runs)
 int main()
 {
   size_t num_runs     = 10;
-  size_t num_elements = 1000;
+  size_t num_elements = 10000;
 
-  hcurl_hcurl_test_2D<1 /* polynomial order */, 2 /* quadrature points / dim */>(8 * num_elements, num_runs);
-  hcurl_hcurl_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(4 * num_elements, num_runs);
-  hcurl_hcurl_test_2D<3 /* polynomial order */, 4 /* quadrature points / dim */>(1 * num_elements, num_runs);
+  //hcurl_hcurl_test_2D<1 /* polynomial order */, 2 /* quadrature points / dim */>(8 * num_elements, num_runs);
+  //hcurl_hcurl_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(4 * num_elements, num_runs);
+  //hcurl_hcurl_test_2D<3 /* polynomial order */, 4 /* quadrature points / dim */>(1 * num_elements, num_runs);
 
-  hcurl_hcurl_test_3D<1 /* polynomial order */, 2 /* quadrature points / dim */>(8 * num_elements, num_runs);
-  hcurl_hcurl_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(4 * num_elements, num_runs);
+  //hcurl_hcurl_test_3D<1 /* polynomial order */, 2 /* quadrature points / dim */>(8 * num_elements, num_runs);
+  //hcurl_hcurl_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(4 * num_elements, num_runs);
   hcurl_hcurl_test_3D<3 /* polynomial order */, 4 /* quadrature points / dim */>(1 * num_elements, num_runs);
 }
