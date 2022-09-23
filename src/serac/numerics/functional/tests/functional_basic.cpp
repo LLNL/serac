@@ -85,6 +85,7 @@ TEST(basic, nonlinear_thermal_test_2D)
   Functional<test_space(trial_space)> residual(&fespace, {&fespace});
 
   residual.AddAreaIntegral(
+      DependsOn<0>{},
       [=](auto x, auto temperature) {
         auto [u, du_dx] = temperature;
         auto source     = u * u - (100 * x[0] * x[1]);
@@ -94,7 +95,7 @@ TEST(basic, nonlinear_thermal_test_2D)
       *mesh2D);
 
   // TODO: reenable surface integrals
-  residual.AddBoundaryIntegral(Dimension<1>{}, [=](auto x, auto /*n*/, auto temperature) { 
+  residual.AddBoundaryIntegral(Dimension<1>{}, DependsOn<0>{}, [=](auto x, auto /*n*/, auto temperature) { 
         auto [u, du_dxi] = temperature;
         return x[0] + x[1] - cos(u); 
       }, 
@@ -140,7 +141,9 @@ TEST(basic, nonlinear_thermal_test_3D)
       *mesh3D);
 
   // TODO: reenable surface integrals
-  residual.AddSurfaceIntegral([=](auto x, auto /*n*/, auto temperature) { 
+  residual.AddSurfaceIntegral(
+      DependsOn<0>{}, 
+      [=](auto x, auto /*n*/, auto temperature) { 
         auto [u, du_dxi] = temperature;
         return x[0] + x[1] - cos(u) + norm(du_dxi); 
       }, 

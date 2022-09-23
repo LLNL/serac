@@ -1062,6 +1062,11 @@ SERAC_HOST_DEVICE auto norm(const tensor<T, n...>& A)
 }
 
 /**
+ * @brief overload of Frobenius norm for zero type
+ */
+SERAC_HOST_DEVICE constexpr auto norm(zero) { return zero{}; }
+
+/**
  * @brief Normalizes the tensor
  * Each element is divided by the Frobenius norm of the tensor, @see norm
  * @param[in] A The tensor to normalize

@@ -14,18 +14,18 @@ static void SmemPAMassApply2D(const int NE,
                               const int q1d = 0)
 {
    MFEM_CONTRACT_VAR(bt_);
-   const int D1D = T_D1D ? T_D1D : d1d;
-   const int Q1D = T_Q1D ? T_Q1D : q1d;
-   constexpr int NBZ = T_NBZ ? T_NBZ : 1;
-   constexpr int MQ1 = T_Q1D ? T_Q1D : MAX_Q1D;
-   constexpr int MD1 = T_D1D ? T_D1D : MAX_D1D;
-   MFEM_VERIFY(D1D <= MD1, "");
-   MFEM_VERIFY(Q1D <= MQ1, "");
-   auto b = Reshape(b_.Read(), Q1D, D1D);
-   auto D = Reshape(d_.Read(), Q1D, Q1D, NE);
-   auto x = Reshape(x_.Read(), D1D, D1D, NE);
-   auto Y = Reshape(y_.ReadWrite(), D1D, D1D, NE);
-   MFEM_FORALL_2D(e, NE, Q1D, Q1D, NBZ,
+   const int D1D_ = T_D1D ? T_D1D : d1d;
+   const int Q1D_ = T_Q1D ? T_Q1D : q1d;
+   constexpr int NBZ_ = T_NBZ ? T_NBZ : 1;
+   constexpr int MQ1_ = T_Q1D ? T_Q1D : MAX_Q1D;
+   constexpr int MD1_ = T_D1D ? T_D1D : MAX_D1D;
+   MFEM_VERIFY(D1D_ <= MD1_, "");
+   MFEM_VERIFY(Q1D_ <= MQ1_, "");
+   auto b = Reshape(b_.Read(), Q1D_, D1D_);
+   auto D = Reshape(d_.Read(), Q1D_, Q1D_, NE);
+   auto x = Reshape(x_.Read(), D1D_, D1D_, NE);
+   auto Y = Reshape(y_.ReadWrite(), D1D_, D1D_, NE);
+   MFEM_FORALL_2D(e, NE, Q1D_, Q1D_, NBZ_,
    {
       const int tidz = MFEM_THREAD_ID(z);
       const int D1D = T_D1D ? T_D1D : d1d;
@@ -138,19 +138,19 @@ static void SmemPADiffusionApply2D(const int NE,
                                    const int d1d = 0,
                                    const int q1d = 0)
 {
-   const int D1D = T_D1D ? T_D1D : d1d;
-   const int Q1D = T_Q1D ? T_Q1D : q1d;
-   constexpr int NBZ = T_NBZ ? T_NBZ : 1;
-   constexpr int MQ1 = T_Q1D ? T_Q1D : MAX_Q1D;
-   constexpr int MD1 = T_D1D ? T_D1D : MAX_D1D;
-   MFEM_VERIFY(D1D <= MD1, "");
-   MFEM_VERIFY(Q1D <= MQ1, "");
-   auto b = Reshape(b_.Read(), Q1D, D1D);
-   auto g = Reshape(g_.Read(), Q1D, D1D);
-   auto D = Reshape(d_.Read(), Q1D*Q1D, symmetric ? 3 : 4, NE);
-   auto x = Reshape(x_.Read(), D1D, D1D, NE);
-   auto Y = Reshape(y_.ReadWrite(), D1D, D1D, NE);
-   MFEM_FORALL_2D(e, NE, Q1D, Q1D, NBZ,
+   const int D1D_ = T_D1D ? T_D1D : d1d;
+   const int Q1D_ = T_Q1D ? T_Q1D : q1d;
+   constexpr int NBZ_ = T_NBZ ? T_NBZ : 1;
+   constexpr int MQ1_ = T_Q1D ? T_Q1D : MAX_Q1D;
+   constexpr int MD1_ = T_D1D ? T_D1D : MAX_D1D;
+   MFEM_VERIFY(D1D_ <= MD1_, "");
+   MFEM_VERIFY(Q1D_ <= MQ1_, "");
+   auto b = Reshape(b_.Read(), Q1D_, D1D_);
+   auto g = Reshape(g_.Read(), Q1D_, D1D_);
+   auto D = Reshape(d_.Read(), Q1D_*Q1D_, symmetric ? 3 : 4, NE);
+   auto x = Reshape(x_.Read(), D1D_, D1D_, NE);
+   auto Y = Reshape(y_.ReadWrite(), D1D_, D1D_, NE);
+   MFEM_FORALL_2D(e, NE, Q1D_, Q1D_, NBZ_,
    {
       const int tidz = MFEM_THREAD_ID(z);
       const int D1D = T_D1D ? T_D1D : d1d;
