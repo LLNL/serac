@@ -51,11 +51,8 @@ public:
   using FiniteElementVector::operator=;
   using mfem::Vector::Print;
 
-  /**
-   * @brief Copy constructor
-   *
-   * @param[in] rhs The input state used for construction
-   */
+  /// We delete the copy constructor as these are often returned by reference, particularly by the state manager class. We want to 
+  /// avoid users accidentally using a stale reference.
   FiniteElementState(const FiniteElementState& rhs) = delete;
 
   /**

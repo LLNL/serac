@@ -187,20 +187,6 @@ void StateManager::save(const double t, const int cycle, const std::string& mesh
 {
   // Sync the sidre grid functions representing finite element states
   for (auto& state_pair : managed_states_) {
-    axom::fmt::print("filling {} grid function...\n", state_pair.first->name());
-
-    if (state_pair.first->name() == "solid_functional_shape_displacement") {
-      std::cout << "got the bad one" << std::endl;
-    }
-
-    auto* space = state_pair.second->ParFESpace();
-
-    std::cout << "fe space in the grid function: " << space << std::endl;
-
-    const mfem::Operator* prolong = state_pair.second->ParFESpace()->GetProlongationMatrix();
-
-    std::cout << "prolongation operator: " << prolong << std::endl;
-
     state_pair.first->fillGridFunction(*state_pair.second);
   }
 
