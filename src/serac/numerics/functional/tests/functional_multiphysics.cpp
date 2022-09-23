@@ -51,8 +51,8 @@ void check_gradient(Functional<T>& f, mfem::Vector& U, mfem::Vector& dU_dt)
 
     mfem::Vector df3 = (*dfdU_matrix) * dU;
 
-    double relative_error1 = df1.DistanceTo(df2) / df1.Norml2();
-    double relative_error2 = df1.DistanceTo(df3) / df1.Norml2();
+    double relative_error1 = df1.DistanceTo(df2.GetData()) / df1.Norml2();
+    double relative_error2 = df1.DistanceTo(df3.GetData()) / df1.Norml2();
 
     EXPECT_NEAR(0., relative_error1, 5.e-6);
     EXPECT_NEAR(0., relative_error2, 5.e-6);
@@ -76,8 +76,8 @@ void check_gradient(Functional<T>& f, mfem::Vector& U, mfem::Vector& dU_dt)
 
     mfem::Vector df3 = (*df_ddU_dt_matrix) * ddU_dt;
 
-    double relative_error1 = df1.DistanceTo(df2) / df1.Norml2();
-    double relative_error2 = df1.DistanceTo(df3) / df1.Norml2();
+    double relative_error1 = df1.DistanceTo(df2.GetData()) / df1.Norml2();
+    double relative_error2 = df1.DistanceTo(df3.GetData()) / df1.Norml2();
 
     EXPECT_NEAR(0., relative_error1, 5.e-5);
     EXPECT_NEAR(0., relative_error2, 5.e-5);

@@ -75,12 +75,6 @@ std::string about()
   about += format("CUDA:            {0}\n", off);
 #endif
 
-#ifdef SERAC_USE_LUMBERJACK
-  about += format("Lumberjack:      {0}\n", on);
-#else
-  about += format("Lumberjack:      {0}\n", off);
-#endif
-
   about += "\n";
 
   //------------------------
