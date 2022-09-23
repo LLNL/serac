@@ -337,12 +337,12 @@ void functional_parameterized_solid_test(double expected_disp_norm)
 
   // Construct and initialized the user-defined moduli to be used as a differentiable parameter in
   // the solid mechanics physics module.
-  FiniteElementState user_defined_shear_modulus(
+  FiniteElementState& user_defined_shear_modulus(
       StateManager::newState(FiniteElementState::Options{.order = 1, .name = "parameterized_shear"}));
 
   user_defined_shear_modulus = 1.0;
 
-  FiniteElementState user_defined_bulk_modulus(
+  FiniteElementState& user_defined_bulk_modulus(
       StateManager::newState(FiniteElementState::Options{.order = 1, .name = "parameterized_bulk"}));
 
   user_defined_bulk_modulus = 1.0;

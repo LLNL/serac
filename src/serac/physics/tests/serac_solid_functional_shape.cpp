@@ -84,7 +84,7 @@ TEST(solidFunctionalShape, manualNodes)
 
   {
     // Construct and initialized the user-defined shape velocity to offset the computational mesh
-    FiniteElementState user_defined_shape_displacement(StateManager::newState(
+    FiniteElementState& user_defined_shape_displacement(StateManager::newState(
         FiniteElementState::Options{.order = p, .vector_dim = dim, .name = "parameterized_shape"}));
 
     user_defined_shape_displacement.project(shape_coef);
@@ -122,7 +122,7 @@ TEST(solidFunctionalShape, manualNodes)
 
   {
     // Construct and initialized the user-defined shape velocity to offset the computational mesh
-    FiniteElementState user_defined_shape_displacement(StateManager::newState(
+    FiniteElementState& user_defined_shape_displacement(StateManager::newState(
         FiniteElementState::Options{.order = p, .vector_dim = dim, .name = "parameterized_shape"}));
 
     user_defined_shape_displacement.project(shape_coef);

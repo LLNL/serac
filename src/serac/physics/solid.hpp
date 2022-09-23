@@ -444,17 +444,17 @@ protected:
   /**
    * @brief Velocity field
    */
-  FiniteElementState velocity_;
+  FiniteElementState& velocity_;
 
   /**
    * @brief Displacement field
    */
-  FiniteElementState displacement_;
+  FiniteElementState& displacement_;
 
   /**
    * @brief Adjoint displacement field
    */
-  FiniteElementState adjoint_displacement_;
+  FiniteElementState& adjoint_displacement_;
 
   /**
    * @brief Flag denoting the previous solve mode

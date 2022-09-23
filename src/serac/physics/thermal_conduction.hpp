@@ -317,7 +317,7 @@ protected:
   /**
    * @brief The temperature finite element state
    */
-  serac::FiniteElementState temperature_;
+  serac::FiniteElementState& temperature_;
 
   /**
    * @brief Mass bilinear form object

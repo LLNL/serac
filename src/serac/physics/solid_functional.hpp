@@ -122,8 +122,8 @@ public:
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "adjoint_displacement")})),
         shape_displacement_(StateManager::newState(FiniteElementState::Options{
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "shape_displacement")})),
-        nodal_forces_(mesh_, displacement_.space(), "nodal_forces"),
-        shape_sensitivity_(mesh_, displacement_.space(), "shape_sensitivity"),
+        nodal_forces_(StateManager::newDual(displacement_.space(), "nodal_forces")),
+        shape_sensitivity_(StateManager::newDual(displacement_.space(), "shape_sensitivity")),
         ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
               nonlin_solver_, bcs_),
         c0_(0.0),
@@ -155,7 +155,6 @@ public:
       for_constexpr<sizeof...(parameter_space)>([&](auto i) {
         trial_spaces[i + NUM_STATE_VARS] =
             generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_);
-        parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, *trial_spaces[i + NUM_STATE_VARS]);
       });
     }
 
@@ -211,7 +210,12 @@ public:
    * @param parameter_state the values to use for the specified parameter
    * @param i the index of the parameter
    */
-  void setParameter(const FiniteElementState& parameter_state, size_t i) { parameter_states_[i] = &parameter_state; }
+  void setParameter(const FiniteElementState& parameter_state, size_t i)
+  {
+    parameter_states_[i] = &parameter_state;
+    parameter_sensitivities_[i] =
+        &StateManager::newDual(parameter_state.space(), parameter_state.name() + "_sensitivity");
+  }
 
   /**
    * @brief Create a shared ptr to a quadrature data buffer for the given material type
@@ -810,19 +814,19 @@ protected:
   using test = H1<order, dim>;
 
   /// The velocity finite element state
-  FiniteElementState velocity_;
+  FiniteElementState& velocity_;
 
   /// The displacement finite element state
-  FiniteElementState displacement_;
+  FiniteElementState& displacement_;
 
   /// The displacement finite element state
-  FiniteElementState adjoint_displacement_;
+  FiniteElementState& adjoint_displacement_;
 
   /// The shape displacement finite element state
-  FiniteElementState shape_displacement_;
+  FiniteElementState& shape_displacement_;
 
   /// nodal forces
-  FiniteElementDual nodal_forces_;
+  FiniteElementDual& nodal_forces_;
 
   /// serac::Functional that is used to calculate the residual and its derivatives
   std::unique_ptr<Functional<test(trial, trial, trial, parameter_space...)>> residual_;
@@ -834,10 +838,10 @@ protected:
   std::array<const FiniteElementState*, sizeof...(parameter_space)> parameter_states_;
 
   /// The sensitivities (dual vectors) with repect to each of the input parameter fields
-  std::array<std::unique_ptr<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;
+  std::array<FiniteElementDual*, sizeof...(parameter_space)> parameter_sensitivities_;
 
   /// Sensitivity with respect to the shape displacement field
-  FiniteElementDual shape_sensitivity_;
+  FiniteElementDual& shape_sensitivity_;
 
   /**
    * @brief the ordinary differential equation that describes

@@ -44,14 +44,14 @@ TEST(SolidFunctionalFiniteDiff, FiniteDifference)
 
   // Construct and initialized the user-defined moduli to be used as a differentiable parameter in
   // the solid physics module.
-  FiniteElementState user_defined_shear_modulus(
+  FiniteElementState& user_defined_shear_modulus(
       StateManager::newState(FiniteElementState::Options{.order = 1, .name = "parameterized_shear"}));
 
   double shear_modulus_value = 1.0;
 
   user_defined_shear_modulus = shear_modulus_value;
 
-  FiniteElementState user_defined_bulk_modulus(
+  FiniteElementState& user_defined_bulk_modulus(
       StateManager::newState(FiniteElementState::Options{.order = 1, .name = "parameterized_bulk"}));
 
   double bulk_modulus_value = 1.0;
@@ -194,7 +194,8 @@ TEST(solid_functional_finite_diff, finite_difference_shape)
   solid_mechanics::NeoHookean mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
 
-  FiniteElementState shape_displacement(solid_solver.shapeDisplacement());
+  FiniteElementState shape_displacement(StateManager::mesh(), solid_solver.shapeDisplacement().space(),
+                                        std::string("user_defined_shape_displacement"));
 
   shape_displacement = shape_displacement_value;
   solid_solver.setShapeDisplacement(shape_displacement);

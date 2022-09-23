@@ -44,7 +44,7 @@ TEST(ThermalFunctionalFiniteDiff, FiniteDifference)
 
   // Construct and initialized the user-defined conductivity to be used as a differentiable parameter in
   // the thermal conduction physics module.
-  FiniteElementState user_defined_conductivity(
+  FiniteElementState& user_defined_conductivity(
       StateManager::newState(FiniteElementState::Options{.order = 1, .name = "parameterized_conductivity"}));
 
   double conductivity_value = 1.2;

@@ -84,12 +84,9 @@ public:
    */
   FiniteElementVector(mfem::ParMesh& mesh, const mfem::ParFiniteElementSpace& space, const std::string& name = "");
 
-  /**
-   * @brief Copy constructor
-   *
-   * @param[in] rhs The input vector used for construction
-   */
-  FiniteElementVector(const FiniteElementVector& rhs) : FiniteElementVector(rhs.mesh_.get(), *rhs.space_, rhs.name_) {}
+  /// We delete the copy constructor as these are often returned by reference, particularly by the state manager class.
+  /// We want to avoid users accidentally using a stale reference.
+  FiniteElementVector(const FiniteElementVector& rhs) = delete;
 
   /**
    * @brief Move construct a new Finite Element Vector object

@@ -56,7 +56,7 @@ public:
    *
    * @param[in] rhs The input state used for construction
    */
-  FiniteElementState(const FiniteElementState& rhs) : FiniteElementVector(rhs) {}
+  FiniteElementState(const FiniteElementState& rhs) = delete;
 
   /**
    * @brief Move construct a new Finite Element State object

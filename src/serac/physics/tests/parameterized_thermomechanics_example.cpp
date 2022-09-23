@@ -103,14 +103,14 @@ int main(int argc, char* argv[])
   simulation.setMaterial(DependsOn<0, 1>{}, material);
 
   auto temperature_fec = std::unique_ptr<mfem::FiniteElementCollection>(new mfem::H1_FECollection(p, dim));
-  FiniteElementState temperature(StateManager::newState(
+  FiniteElementState& temperature(StateManager::newState(
       FiniteElementState::Options{.order = p, .coll = std::move(temperature_fec), .name = "theta"}));
   temperature = theta_ref;
   simulation.setParameter(temperature, 0);
 
-  double             alpha0    = 1.0e-3;
-  auto               alpha_fec = std::unique_ptr<mfem::FiniteElementCollection>(new mfem::H1_FECollection(p, dim));
-  FiniteElementState alpha(
+  double              alpha0    = 1.0e-3;
+  auto                alpha_fec = std::unique_ptr<mfem::FiniteElementCollection>(new mfem::H1_FECollection(p, dim));
+  FiniteElementState& alpha(
       StateManager::newState(FiniteElementState::Options{.order = p, .coll = std::move(alpha_fec), .name = "alpha"}));
   alpha = alpha0;
   simulation.setParameter(alpha, 1);

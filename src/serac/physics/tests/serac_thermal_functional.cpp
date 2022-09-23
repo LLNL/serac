@@ -190,7 +190,7 @@ TEST(ThermalFunctional, ParameterizedMaterial)
 
   // Construct and initialized the user-defined conductivity to be used as a differentiable parameter in
   // the thermal conduction physics module.
-  FiniteElementState user_defined_conductivity(
+  FiniteElementState& user_defined_conductivity(
       StateManager::newState(FiniteElementState::Options{.order = 1, .name = "parameterized_conductivity"}));
 
   user_defined_conductivity = 1.0;
@@ -244,7 +244,7 @@ TEST(ThermalFunctional, ParameterizedMaterial)
 
   // Construct a dummy adjoint load (this would come from a QOI downstream).
   // This adjoint load is equivalent to a discrete L1 norm on the temperature.
-  FiniteElementDual adjoint_load(
+  FiniteElementDual& adjoint_load(
       StateManager::newDual(FiniteElementState::Options{.order = 1, .name = "adjoint_load"}));
 
   adjoint_load = 1.0;

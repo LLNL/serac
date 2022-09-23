@@ -31,12 +31,9 @@ public:
   using FiniteElementVector::operator=;
   using mfem::Vector::Print;
 
-  /**
-   * @brief Copy constructor
-   *
-   * @param[in] rhs The input Dual used for construction
-   */
-  FiniteElementDual(const FiniteElementDual& rhs) : FiniteElementVector(rhs) {}
+  /// We delete the copy constructor as these are often returned by reference, particularly by the state manager class.
+  /// We want to avoid users accidentally using a stale reference.
+  FiniteElementDual(const FiniteElementDual& rhs) = delete;
 
   /**
    * @brief Move construct a new Finite Element Dual object

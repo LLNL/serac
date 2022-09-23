@@ -131,7 +131,6 @@ public:
       for_constexpr<sizeof...(parameter_space)>([&](auto i) {
         trial_spaces[i + 1] =
             generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_);
-        parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, *trial_spaces[i + 1]);
       });
     }
 
@@ -173,7 +172,12 @@ public:
    * @param parameter_state the values to use for the specified parameter
    * @param i the index of the parameter
    */
-  void setParameter(const FiniteElementState& parameter_state, size_t i) { parameter_states_[i] = &parameter_state; }
+  void setParameter(const FiniteElementState& parameter_state, size_t i)
+  {
+    parameter_states_[i] = &parameter_state;
+    parameter_sensitivities_[i] =
+        &StateManager::newDual(parameter_state.space(), parameter_state.name() + "_sensitivity");
+  }
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
@@ -511,10 +515,10 @@ protected:
   using test = H1<order>;
 
   /// The temperature finite element state
-  serac::FiniteElementState temperature_;
+  serac::FiniteElementState& temperature_;
 
   /// The adjoint temperature finite element state
-  serac::FiniteElementState adjoint_temperature_;
+  serac::FiniteElementState& adjoint_temperature_;
 
   /// Mass functional object \f$\mathbf{M} = \int_\Omega c_p \, \rho \, \phi_i \phi_j\, dx \f$
   std::unique_ptr<Functional<test(trial, parameter_space...)>> M_functional_;
@@ -526,7 +530,7 @@ protected:
   std::array<const FiniteElementState*, sizeof...(parameter_space)> parameter_states_;
 
   /// The sensitivities (dual vectors) with repect to each of the input parameter fields
-  std::array<std::unique_ptr<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;
+  std::array<FiniteElementDual*, sizeof...(parameter_space)> parameter_sensitivities_;
 
   /// Assembled mass matrix
   std::unique_ptr<mfem::HypreParMatrix> M_;

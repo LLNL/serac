@@ -45,8 +45,19 @@ public:
    * @see FiniteElementState::FiniteElementState
    * @note If this is a restart then the options (except for the name) will be ignored
    */
-  static FiniteElementState newState(FiniteElementVector::Options&& options  = {},
-                                     const std::string&             mesh_tag = default_mesh_name_);
+  static FiniteElementState& newState(FiniteElementVector::Options&& options  = {},
+                                      const std::string&             mesh_tag = default_mesh_name_);
+
+  /**
+   * @brief Factory method for creating a new FEState object, signature is identical to FEState constructor
+   *
+   * @param[in] mesh The problem mesh (object does not take ownership)
+   * @param[in] space The space to use for the finite element state. This space is deep copied into the new FE state
+   * @param[in] name The name of the field
+   * @return The constructed finite element state
+   */
+  static FiniteElementState& newState(const mfem::ParFiniteElementSpace& space, const std::string& name,
+                                      const std::string& mesh_tag = default_mesh_name_);
 
   /**
    * @brief Factory method for creating a new FEDual object, signature is identical to FEDual constructor
@@ -55,8 +66,19 @@ public:
    * @see FiniteElementDual::FiniteElementDual
    * @note If this is a restart then the options (except for the name) will be ignored
    */
-  static FiniteElementDual newDual(FiniteElementVector::Options&& options  = {},
-                                   const std::string&             mesh_tag = default_mesh_name_);
+  static FiniteElementDual& newDual(FiniteElementVector::Options&& options  = {},
+                                    const std::string&             mesh_tag = default_mesh_name_);
+
+  /**
+   * @brief Factory method for creating a new FEState object, signature is identical to FEState constructor
+   *
+   * @param[in] mesh The problem mesh (object does not take ownership)
+   * @param[in] space The space to use for the finite element state. This space is deep copied into the new FE state
+   * @param[in] name The name of the field
+   * @return The constructed finite element state
+   */
+  static FiniteElementDual& newDual(const mfem::ParFiniteElementSpace& space, const std::string& name,
+                                    const std::string& mesh_tag = default_mesh_name_);
 
   /**
    * @brief Updates the Conduit Blueprint state in the datastore and saves to a file
@@ -84,6 +106,8 @@ public:
    */
   static void reset()
   {
+    managed_states_.clear();
+    managed_duals_.clear();
     datacolls_.clear();
     is_restart_ = false;
     ds_         = nullptr;
@@ -142,6 +166,14 @@ private:
   static std::string output_dir_;
   /// @brief Default name for the mesh - mostly for backwards compatibility
   const static std::string default_mesh_name_;
+
+  /// @brief A vector of owned finite element states including its associated grid function for the
+  /// MFEMSidreDataCollection
+  static std::vector<std::pair<std::unique_ptr<FiniteElementState>, mfem::ParGridFunction*>> managed_states_;
+
+  /// @brief A vector of owned finite element states including its associated grid function for the
+  /// MFEMSidreDataCollection
+  static std::vector<std::pair<std::unique_ptr<FiniteElementDual>, mfem::ParGridFunction*>> managed_duals_;
 };
 
 }  // namespace serac
