@@ -80,7 +80,7 @@ auto index(vec&& v, const int idx)
                                            std::is_base_of_v<mfem::HypreParVector, std::decay_t<vec>>;
 
   if constexpr (vec_is_a_HypreParVector) {
-    return static_cast<const double*>(v)[idx];
+    return static_cast<const double*>(v.GetData())[idx];
   }
 
   if constexpr (!vec_is_a_HypreParVector) {

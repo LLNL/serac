@@ -80,8 +80,8 @@ void check_gradient(Functional<T>& f, mfem::Vector& U)
   std::unique_ptr<mfem::HypreParMatrix> dfdU_matrix = assemble(dfdU);
   mfem::Vector                          df3         = (*dfdU_matrix) * dU;
 
-  double relative_error1 = df1.DistanceTo(df2) / df1.Norml2();
-  double relative_error2 = df1.DistanceTo(df3) / df1.Norml2();
+  double relative_error1 = df1.DistanceTo(df2.GetData()) / df1.Norml2();
+  double relative_error2 = df1.DistanceTo(df3.GetData()) / df1.Norml2();
 
   std::cout << df1.Norml2() << " " << df2.Norml2() << std::endl;
 
