@@ -162,9 +162,11 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     # Required
     for dep in ["axom", "conduit", "hdf5", "metis", "parmetis", "superlu-dist"]:
-        depends_on("{0}".format(dep))
         depends_on("{0} build_type=Debug".format(dep), when="+debug")
         depends_on("{0} build_type=Release".format(dep), when="~debug")
+        if dep == "hdf5":
+            # TODO: hdf5+shared causes Axom to not find hdf5, should possibly fix at a later date
+            continue
         depends_on("{0}+shared".format(dep), when="+shared")
         depends_on("{0}~shared".format(dep), when="~shared")
 
