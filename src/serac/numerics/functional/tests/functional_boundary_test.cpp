@@ -83,7 +83,7 @@ void check_gradient(Functional<T>& f, mfem::Vector& U)
   double relative_error1 = df1.DistanceTo(df2.GetData()) / df1.Norml2();
   double relative_error2 = df1.DistanceTo(df3.GetData()) / df1.Norml2();
 
-  std::cout << df1.Norml2() << " " << df2.Norml2() << std::endl;
+  std::cout << df1.Norml2() << " " << df2.Norml2() << ", " << df3.Norml2() << std::endl;
 
   EXPECT_NEAR(0., relative_error1, 5.e-6);
   EXPECT_NEAR(0., relative_error2, 5.e-6);

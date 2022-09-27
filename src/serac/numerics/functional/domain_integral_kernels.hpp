@@ -278,7 +278,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
 
         using trial_element = decltype(trial_elements[j]);
         
-        auto u = reinterpret_cast<const typename trial_element::dof_type*>(U[j].Read());
+        auto u = reinterpret_cast<const typename trial_element::dof_type*>(U[j]->Read());
 
         // (batch) interpolate each quadrature point's value
         get<j>(qf_inputs) = trial_element::interpolate(u[e], rule);

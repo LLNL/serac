@@ -207,16 +207,14 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
     }
     EVector_t u(ptrs, std::size_t(num_elements_));
 
-    using element_residual_type     = typename test_element::residual_type;
-    static constexpr int  dim       = dimension_of(geom);
-    static constexpr int  test_ndof = test_element::ndof;
+    static constexpr int sdim = dimension_of(geom) + 1; // spatial dimension
 
     // mfem provides this information in 1D arrays, so we reshape it
     // into strided multidimensional arrays before using
     constexpr int nqp = num_quadrature_points<geom, Q>();
     auto J = reinterpret_cast<const tensor< double, nqp > *>(J_.Read());
-    auto X = reinterpret_cast<const tensor< double, dim, nqp > *>(X_.Read());
-    auto N = reinterpret_cast<const tensor< double, dim, nqp > *>(N_.Read());
+    auto X = reinterpret_cast<const tensor< double, sdim, nqp > *>(X_.Read());
+    auto N = reinterpret_cast<const tensor< double, sdim, nqp > *>(N_.Read());
     auto r = reinterpret_cast<typename test_element::dof_type*>(R.ReadWrite());
     static constexpr TensorProductQuadratureRule<Q> rule{};
 
@@ -236,7 +234,7 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
 
         using trial_element = decltype(trial_elements[j]);
         
-        auto u = reinterpret_cast<const typename trial_element::dof_type*>(U[j].Read());
+        auto u = reinterpret_cast<const typename trial_element::dof_type*>(U[j]->Read());
 
         // (batch) interpolate each quadrature point's value
         get<j>(qf_inputs) = trial_element::interpolate(u[e], rule);
@@ -302,15 +300,31 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
   {
     // mfem provides this information in 1D arrays, so we reshape it
     // into strided multidimensional arrays before using
-    constexpr int dim = dimension_of(geom);
+    constexpr int sdim = dimension_of(geom) + 1; // spatial dimension
     constexpr int nqp = num_quadrature_points<geom, Q>();
     auto J = reinterpret_cast<const tensor< double, nqp > *>(J_.Read());
-    auto X = reinterpret_cast<const tensor< double, dim, nqp > *>(X_.Read());
-    auto N = reinterpret_cast<const tensor< double, dim, nqp > *>(N_.Read());
+    auto X = reinterpret_cast<const tensor< double, sdim, nqp > *>(X_.Read());
+    auto N = reinterpret_cast<const tensor< double, sdim, nqp > *>(N_.Read());
     auto r = reinterpret_cast<typename test_element::dof_type*>(R.ReadWrite());
     static constexpr TensorProductQuadratureRule<Q> rule{};
 
-        auto u = reinterpret_cast<const typename trial_element::dof_type*>(U[j].Read());
+    // for each element in the domain
+    for (uint32_t e = 0; e < num_elements_; e++) {
+
+      // load the jacobians, positions and normals for each quadrature point in this element
+      auto J_e = J[e];
+      auto X_e = X[e];
+      auto N_e = N[e];
+
+      tuple < 
+        decltype(finite_element< geom, trials >::interpolate(typename finite_element< geom, trials >::dof_type{}, rule)) ... 
+      > qf_inputs{};
+
+      for_constexpr< num_trial_spaces >([&](auto j){
+
+        using trial_element = decltype(trial_elements[j]);
+        
+        auto u = reinterpret_cast<const typename trial_element::dof_type*>(U[j]->Read());
 
         // (batch) interpolate each quadrature point's value
         get<j>(qf_inputs) = trial_element::interpolate(u[e], rule);

@@ -168,7 +168,7 @@ TEST(dual_number_tensor, isotropic_tensor)
   // clang-format on
 
   // looser tolerance for this test, since it's using a finite difference stencil
-  EXPECT_LT(abs(dW[0] - dW[1]), 3.0e-7);
+  EXPECT_LT(abs(dW[0] - dW[1]), 3.0e-5);
 
   EXPECT_LT(abs(dW[0] - dW[2]) / abs(dW[0]), 5.0e-14);
 }
