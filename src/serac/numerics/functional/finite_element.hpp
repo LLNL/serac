@@ -268,6 +268,10 @@ void physical_to_parent(tensor< T, q > & qf_output, const tensor<double, dim, di
       }
     }
 
+    if constexpr (f == Family::QOI) {
+      qf_output[k] *= dv;
+    }
+
   }
 
 }
