@@ -129,7 +129,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("umpire build_type=Debug", when="+umpire+debug")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
-    axom_spec = "axom~fortran~examples+mfem~shared+cpp14+lua"
+    axom_spec = "axom~fortran~tools~examples+mfem~shared+cpp14+lua"
     cmake_debug_deps = [axom_spec,
                         "metis@5.1.0~shared",
                         "parmetis@4.0.3~shared"]
