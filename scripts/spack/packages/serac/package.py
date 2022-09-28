@@ -117,7 +117,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     #  (includes, libs, etc) instead of hdf5 info
     depends_on("hdf5@1.8.21+hl~mpi~shared")
 
-    depends_on("camp")
+    depends_on("camp@2022.03.2:")
 
     depends_on("raja~shared~examples~exercises", when="+raja")
     depends_on("raja~openmp", when="+raja~openmp")
