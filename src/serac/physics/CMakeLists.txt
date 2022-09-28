@@ -27,12 +27,13 @@ set(physics_sources
 
 set(physics_headers
     base_physics.hpp
+    common.hpp
     solid.hpp
     solid_functional.hpp
     thermal_conduction.hpp
     thermal_conduction_functional.hpp
-    thermal_solid.hpp
     thermal_mechanics_functional.hpp
+    thermal_solid.hpp
     )
 
 set(physics_dependencies
