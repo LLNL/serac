@@ -17,13 +17,15 @@ if [[ "$DO_INTEGRATION_TESTS" == "yes" ]] ; then
         cd *.*.logs
         FAILING_TEST_NUMBERS=$(awk '/#[0-9]* FAIL/ {print $1}' ats.log | cut -c 2-)
         for num in $FAILING_TEST_NUMBERS ; do
-            echo "-------- *$num*.log START --------"
+            LOG_FILENAME=(*$num*.log)
+            echo "-------- $LOG_FILENAME START --------"
             cat *$num*.log
-            echo "-------- *$num*.log END --------"
+            echo "-------- $LOG_FILENAME END --------"
 
-            echo "-------- *$num*.log.err START --------"
+            LOG_FILENAME=(*$num*.log.err)
+            echo "-------- $LOG_FILENAME START --------"
             cat *$num*.log.err
-            echo "-------- *$num*.log.err END --------"
+            echo "-------- $LOG_FILENAME END --------"
         done 
 
         echo "ERROR: ATS failed."
