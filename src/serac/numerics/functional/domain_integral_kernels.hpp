@@ -77,20 +77,37 @@ struct KernelConfig {
 };
 
 template <typename lambda, int dim, int n, typename ... T, int ... I >
-auto batch_apply_qf(lambda qf, const tensor< double, dim, n > x, const tuple < tensor<T, n> ... > inputs, std::integer_sequence< int, I ... >)
+auto batch_apply_qf(lambda qf, const tensor< double, dim, n > x, Nothing * /*qpt_data*/ , const tuple < tensor<T, n> ... > inputs, std::integer_sequence< int, I ... >)
 {
   using return_type = decltype(qf(tensor<double,dim>{}, T{} ...));
   tensor<return_type, n> outputs{};
   for (int i = 0; i < n; i++) {
     tensor< double, dim > x_q;
-    for (int j = 0; j < dim; j++) { x_q[j] = x(j, i); }
+    for (int j = 0; j < dim; j++) { 
+      x_q[j] = x(j, i); 
+    }
     outputs[i] = qf(x_q, get<I>(inputs)[i] ...);
   }
   return outputs;
 }
 
+template <typename lambda, int dim, int n, typename qpt_data_type, typename ... T, int ... I >
+auto batch_apply_qf(lambda qf, const tensor< double, dim, n > x, qpt_data_type * qpt_data, const tuple < tensor<T, n> ... > inputs, std::integer_sequence< int, I ... >)
+{
+  using return_type = decltype(qf(tensor<double,dim>{}, qpt_data[0], T{} ...));
+  tensor<return_type, n> outputs{};
+  for (int i = 0; i < n; i++) {
+    tensor< double, dim > x_q;
+    for (int j = 0; j < dim; j++) { x_q[j] = x(j, i); }
+
+    auto qdata = qpt_data[i];
+    outputs[i] = qf(x_q, qdata, get<I>(inputs)[i] ...);
+  }
+  return outputs;
+}
+
 template <int index_to_differentiate, typename derivative_type, typename lambda, int dim, int n, typename ... T, int ... I >
-auto batch_apply_qf_with_AD(derivative_type * qf_derivatives, lambda qf, const tensor< double, dim, n > x, const tuple < tensor<T, n> ... > inputs, std::integer_sequence< int, I ... >)
+auto batch_apply_qf_with_AD(derivative_type * qf_derivatives, lambda qf, const tensor< double, dim, n > x, Nothing *, const tuple < tensor<T, n> ... > inputs, std::integer_sequence< int, I ... >)
 {
   using return_type = decltype(qf(tensor<double,dim>{}, promote_to_dual_when< I == index_to_differentiate >(T{}) ...));
   using value_type = decltype(get_value(return_type{}));
@@ -99,6 +116,26 @@ auto batch_apply_qf_with_AD(derivative_type * qf_derivatives, lambda qf, const t
     tensor< double, dim > x_q;
     for (int j = 0; j < dim; j++) { x_q[j] = x(j, i); }
     auto outputs_and_derivatives = qf(x_q, promote_to_dual_when< I == index_to_differentiate >(get<I>(inputs)[i]) ...);
+    outputs[i] = get_value(outputs_and_derivatives);
+    qf_derivatives[i] = get_gradient(outputs_and_derivatives);
+  }
+  return outputs;
+}
+
+template <int index_to_differentiate, typename derivative_type, typename lambda, int dim, int n, typename qpt_data_type, typename ... T, int ... I >
+auto batch_apply_qf_with_AD(derivative_type * qf_derivatives, lambda qf, const tensor< double, dim, n > x, qpt_data_type * qpt_data, const tuple < tensor<T, n> ... > inputs, std::integer_sequence< int, I ... >)
+{
+  using return_type = decltype(qf(tensor<double,dim>{}, qpt_data[0], promote_to_dual_when< I == index_to_differentiate >(T{}) ...));
+  using value_type = decltype(get_value(return_type{}));
+  tensor<value_type, n> outputs{};
+  for (int i = 0; i < n; i++) {
+    tensor< double, dim > x_q;
+    for (int j = 0; j < dim; j++) { 
+      x_q[j] = x(j, i); 
+    }
+
+    auto qdata = qpt_data[i];
+    auto outputs_and_derivatives = qf(x_q, qdata, promote_to_dual_when< I == index_to_differentiate >(get<I>(inputs)[i]) ...);
     outputs[i] = get_value(outputs_and_derivatives);
     qf_derivatives[i] = get_gradient(outputs_and_derivatives);
   }
@@ -166,6 +203,8 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
     auto J = reinterpret_cast<const typename batched_jacobian<geom, Q>::type*>(J_.Read());
     static constexpr TensorProductQuadratureRule<Q> rule{};
 
+    auto& qdata = *data_;
+
     // for each element in the domain
     for (uint32_t e = 0; e < num_elements_; e++) {
 
@@ -193,7 +232,7 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
       });
 
       // (batch) evalute the q-function at each quadrature point
-      auto qf_outputs = batch_apply_qf(qf_, X_e, qf_inputs, Iseq);
+      auto qf_outputs = batch_apply_qf(qf_, X_e, &qdata(e, 0), qf_inputs, Iseq);
 
       // use J to transform sources / fluxes on the physical element 
       // back to the corresponding sources / fluxes on the parent element 
@@ -262,6 +301,8 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
     auto J = reinterpret_cast<const typename batched_jacobian<geom, Q>::type*>(J_.Read());
     static constexpr TensorProductQuadratureRule<Q> rule{};
 
+    auto& qdata = *data_;
+
     // for each element in the domain
     for (uint32_t e = 0; e < num_elements_; e++) {
 
@@ -290,7 +331,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
       });
 
       // (batch) evalute the q-function at each quadrature point
-      auto qf_outputs = batch_apply_qf_with_AD< I >(&qf_derivatives_(e, 0), qf_, X_e, qf_inputs, Iseq);
+      auto qf_outputs = batch_apply_qf_with_AD< I >(&qf_derivatives_(e, 0), qf_, X_e, &qdata(e, 0), qf_inputs, Iseq);
 
       // use J to transform sources / fluxes on the physical element 
       // back to the corresponding sources / fluxes on the parent element 

@@ -479,25 +479,26 @@ public:
     residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
         [this, traction_function](auto x, auto n, auto, auto, auto shape, auto... params) {
-          auto dp_dX = get<DERIVATIVE>(shape);
           auto p     = get<VALUE>(shape);
 
-          auto def_grad           = I + dp_dX;
-          auto inv_trans_def_grad = inv(transpose(def_grad));
+          //auto dp_dX = get<DERIVATIVE>(shape);
+          //auto def_grad           = I + dp_dX;
+          //auto inv_trans_def_grad = inv(transpose(def_grad));
 
-          // Compute the normal vector after the shape displacement is applied using the Piola transformation
-          // n = det(F)F^-T n_0
-          auto shape_normal = det(def_grad) * dot(inv_trans_def_grad, n);
-          shape_normal      = shape_normal / norm(shape_normal);
+          //// Compute the normal vector after the shape displacement is applied using the Piola transformation
+          //// n = det(F)F^-T n_0
+          //auto shape_normal = det(def_grad) * dot(inv_trans_def_grad, n);
+          //shape_normal      = shape_normal / norm(shape_normal);
 
-          // Needed to be able to switch between dual and double square root functions
-          using std::sqrt;
+          //// Needed to be able to switch between dual and double square root functions
+          //using std::sqrt;
 
-          // Compute the updated area contribution using the Piola transformation
-          // dA = det(F) * norm(F^-T n_0)
-          auto area_correction = det(def_grad) * norm(dot(inv_trans_def_grad, n));
-
-          return -1.0 * traction_function(x + p, shape_normal, time_, params...) * area_correction;
+          //// Compute the updated area contribution using the Piola transformation
+          //// dA = det(F) * norm(F^-T n_0)
+          //auto area_correction = det(def_grad) * norm(dot(inv_trans_def_grad, n));
+          // 
+          // return -1.0 * traction_function(x + p, shape_normal, time_, params...) * area_correction;
+          return -1.0 * traction_function(x + p, n, time_, params...);
         },
         mesh_);
   }
