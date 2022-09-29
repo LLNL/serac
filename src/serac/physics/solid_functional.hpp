@@ -362,10 +362,10 @@ public:
           // reference configuration dx'/dX = I + du/dX + dp/dX. If we are not including geometric
           // nonlinearities, we ignore the du/dX factor.
 
-          auto deformation_grad = 0.0 * du_dX + 0.0 * dp_dX + I;
+          auto deformation_grad = 0.0 * du_dX + dp_dX + I;
 
           if (geom_nonlin_ == GeometricNonlinearities::On) {
-            deformation_grad = deformation_grad + du_dX + dp_dX;
+            deformation_grad = deformation_grad + du_dX;
           }
 
           // Note that the jacobian needs the fixup for the shape displacement.
