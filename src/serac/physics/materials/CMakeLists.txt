@@ -15,14 +15,17 @@ set(materials_sources
     )
 
 set(materials_headers
-    hyperelastic_material.hpp
-    thermal_expansion_material.hpp
-    solid_utils.hpp
-    thermal_functional_material.hpp
-    parameterized_thermal_functional_material.hpp    
-    solid_functional_material.hpp
-    parameterized_solid_functional_material.hpp
     functional_material_utils.hpp
+    green_saint_venant_thermoelastic.hpp
+    hyperelastic_material.hpp
+    liquid_crystal_elastomer.hpp
+    material_verification_tools.hpp
+    parameterized_solid_functional_material.hpp
+    parameterized_thermal_functional_material.hpp
+    solid_functional_material.hpp
+    solid_utils.hpp
+    thermal_expansion_material.hpp
+    thermal_functional_material.hpp
     )
 
 set(materials_depends
