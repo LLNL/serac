@@ -160,7 +160,7 @@ void shape_test(GeometricNonlinearities geo_nonlin)
 
   for (int i = 0; i < shape_displacement.Size(); ++i) {
     // Check the final displacement norm
-    EXPECT_NEAR(shape_displacement[i], pure_displacement[i], 9.0e-11);
+    EXPECT_NEAR(shape_displacement[i], pure_displacement[i], 2.0e-10);
   }
 }
 
