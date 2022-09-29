@@ -46,7 +46,7 @@ void shape_test(GeometricNonlinearities geo_nonlin)
   std::set<int> ess_bdr = {1};
 
   // Use a direct solver (DSuperLU) for the Jacobian solve
-  SolverOptions options = {DirectSolverOptions{.print_level = 1}, solid_mechanics::default_nonlinear_options};
+  SolverOptions options = {DirectSolverOptions{.print_level = 0}, solid_mechanics::default_nonlinear_options};
 
   solid_mechanics::LinearIsotropic mat{1.0, 1.0, 1.0};
 
@@ -162,7 +162,8 @@ void shape_test(GeometricNonlinearities geo_nonlin)
     // Check the final displacement norm
 
     // TODO why is this tolerance so high? It should be closer to machine precision.
-    EXPECT_NEAR(shape_displacement[i], pure_displacement[i], 2.0e-10);
+    // There is definitely something wrong here. 
+    EXPECT_NEAR((shape_displacement[i] - pure_displacement[i])/std::max(pure_displacement[i], 1.0e-5), 0.0, 1.0e-8);
   }
 }
 
