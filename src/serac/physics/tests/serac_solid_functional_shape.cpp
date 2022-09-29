@@ -160,6 +160,8 @@ void shape_test(GeometricNonlinearities geo_nonlin)
 
   for (int i = 0; i < shape_displacement.Size(); ++i) {
     // Check the final displacement norm
+
+    // TODO why is this tolerance so high? It should be closer to machine precision.
     EXPECT_NEAR(shape_displacement[i], pure_displacement[i], 2.0e-10);
   }
 }
