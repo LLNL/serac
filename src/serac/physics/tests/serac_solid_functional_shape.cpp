@@ -19,7 +19,7 @@
 
 namespace serac {
 
-TEST(solidFunctionalShape, manualNodes)
+void shape_test(GeometricNonlinearities geo_nonlin)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -90,8 +90,7 @@ TEST(solidFunctionalShape, manualNodes)
     user_defined_shape_displacement.project(shape_coef);
 
     // Construct a functional-based solid mechanics solver including references to the shape velocity field.
-    SolidFunctional<p, dim> solid_solver(options, GeometricNonlinearities::On, "solid_functional",
-                                         ShapeDisplacement::On);
+    SolidFunctional<p, dim> solid_solver(options, geo_nonlin, "solid_functional", ShapeDisplacement::On);
 
     // Set the initial displacement and boundary condition
     solid_solver.setDisplacementBCs(ess_bdr, bc);
@@ -133,7 +132,7 @@ TEST(solidFunctionalShape, manualNodes)
     *mesh_nodes += user_defined_shape_displacement.gridFunction();
 
     // Construct a functional-based solid mechanics solver including references to the shape velocity field.
-    SolidFunctional<p, dim> solid_solver_no_shape(options, GeometricNonlinearities::On, "solid_functional");
+    SolidFunctional<p, dim> solid_solver_no_shape(options, geo_nonlin, "solid_functional");
 
     mfem::VisItDataCollection visit_dc("pure_version", const_cast<mfem::ParMesh*>(&solid_solver_no_shape.mesh()));
     visit_dc.RegisterField("displacement", &solid_solver_no_shape.displacement().gridFunction());
@@ -161,9 +160,12 @@ TEST(solidFunctionalShape, manualNodes)
 
   for (int i = 0; i < shape_displacement.Size(); ++i) {
     // Check the final displacement norm
-    EXPECT_NEAR(shape_displacement[i], pure_displacement[i], 1.0e-11);
+    EXPECT_NEAR(shape_displacement[i], pure_displacement[i], 1.0e-10);
   }
 }
+
+TEST(solidFunctionalShape, manualNodesLinear) { shape_test(GeometricNonlinearities::Off); }
+TEST(solidFunctionalShape, manualNodesNonlinear) { shape_test(GeometricNonlinearities::On); }
 
 }  // namespace serac
 
