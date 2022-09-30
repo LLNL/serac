@@ -161,12 +161,12 @@ class Serac(CachedCMakePackage, CudaPackage):
         depends_on("{0}~shared".format(dep), when="+profiling~shared".format(dep))
 
     # Required
-    for dep in ["axom", "conduit", "hdf5", "metis", "parmetis", "superlu-dist"]:
+    # TODO: don't put hdf5 in this list, for the following reasons:
+    #  hdf5+shared causes Axom to not find hdf5
+    #  hdf5 build_type=Release causes netcdf-c to not find hdf5 on ubuntu 20
+    for dep in ["axom", "conduit", "metis", "parmetis", "superlu-dist"]:
         depends_on("{0} build_type=Debug".format(dep), when="+debug")
         depends_on("{0} build_type=Release".format(dep), when="~debug")
-        if dep == "hdf5":
-            # TODO: hdf5+shared causes Axom to not find hdf5, should possibly fix at a later date
-            continue
         depends_on("{0}+shared".format(dep), when="+shared")
         depends_on("{0}~shared".format(dep), when="~shared")
 

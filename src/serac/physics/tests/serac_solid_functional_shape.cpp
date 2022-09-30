@@ -19,7 +19,7 @@
 
 namespace serac {
 
-TEST(solidFunctionalShape, manualNodes)
+void shape_test(GeometricNonlinearities geo_nonlin)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -45,8 +45,15 @@ TEST(solidFunctionalShape, manualNodes)
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
-  // Use a direct solver (DSuperLU) for the Jacobian solve
-  SolverOptions options = {DirectSolverOptions{.print_level = 1}, solid_mechanics::default_nonlinear_options};
+  // Use a krylov solver for the Jacobian solve
+  SolverOptions options = {solid_mechanics::default_linear_options, solid_mechanics::default_nonlinear_options};
+
+  // Use tight tolerances as this is a machine precision test
+  get<IterativeSolverOptions>(options.linear).rel_tol = 1.0e-15;
+  get<IterativeSolverOptions>(options.linear).abs_tol = 1.0e-15;
+
+  options.nonlinear.abs_tol = 1.0e-14;
+  options.nonlinear.rel_tol = 1.0e-14;
 
   solid_mechanics::LinearIsotropic mat{1.0, 1.0, 1.0};
 
@@ -90,8 +97,7 @@ TEST(solidFunctionalShape, manualNodes)
     user_defined_shape_displacement.project(shape_coef);
 
     // Construct a functional-based solid mechanics solver including references to the shape velocity field.
-    SolidFunctional<p, dim> solid_solver(options, GeometricNonlinearities::On, "solid_functional",
-                                         ShapeDisplacement::On);
+    SolidFunctional<p, dim> solid_solver(options, geo_nonlin, "solid_functional", ShapeDisplacement::On);
 
     // Set the initial displacement and boundary condition
     solid_solver.setDisplacementBCs(ess_bdr, bc);
@@ -133,7 +139,7 @@ TEST(solidFunctionalShape, manualNodes)
     *mesh_nodes += user_defined_shape_displacement.gridFunction();
 
     // Construct a functional-based solid mechanics solver including references to the shape velocity field.
-    SolidFunctional<p, dim> solid_solver_no_shape(options, GeometricNonlinearities::On, "solid_functional");
+    SolidFunctional<p, dim> solid_solver_no_shape(options, geo_nonlin, "solid_functional");
 
     mfem::VisItDataCollection visit_dc("pure_version", const_cast<mfem::ParMesh*>(&solid_solver_no_shape.mesh()));
     visit_dc.RegisterField("displacement", &solid_solver_no_shape.displacement().gridFunction());
@@ -159,11 +165,13 @@ TEST(solidFunctionalShape, manualNodes)
     visit_dc.Save();
   }
 
-  for (int i = 0; i < shape_displacement.Size(); ++i) {
-    // Check the final displacement norm
-    EXPECT_NEAR(shape_displacement[i], pure_displacement[i], 1.0e-11);
-  }
+  double error          = pure_displacement.DistanceTo(shape_displacement.GetData());
+  double relative_error = error / pure_displacement.Norml2();
+  EXPECT_LT(relative_error, 1.0e-14);
 }
+
+TEST(solidFunctionalShape, manualNodesLinear) { shape_test(GeometricNonlinearities::Off); }
+TEST(solidFunctionalShape, manualNodesNonlinear) { shape_test(GeometricNonlinearities::On); }
 
 }  // namespace serac
 
