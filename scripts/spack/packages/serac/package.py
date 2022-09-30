@@ -155,10 +155,10 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     # Optional (require when="+profile")
     for dep in ["adiak", "caliper"]:
-        depends_on("{0} build_type=Debug".format(dep), when="+profiling+debug".format(dep))
-        depends_on("{0} build_type=Release".format(dep), when="+profiling~debug".format(dep))
-        depends_on("{0}+shared".format(dep), when="+profiling+shared".format(dep))
-        depends_on("{0}~shared".format(dep), when="+profiling~shared".format(dep))
+        depends_on("{0} build_type=Debug".format(dep), when="+profiling+debug")
+        depends_on("{0} build_type=Release".format(dep), when="+profiling~debug")
+        depends_on("{0}+shared".format(dep), when="+profiling+shared")
+        depends_on("{0}~shared".format(dep), when="+profiling~shared")
 
     # Required
     # NOTE: Don't put HDF5 in this list, for the following reasons:
