@@ -46,7 +46,7 @@ struct GreenSaintVenantThermoelasticMaterial {
    * @param[in,out] state State variables for this material
    *
    * @return[out] tuple of constitutive outputs. Contains the
-   * Kirchhoff stress, the volumetric heat capacity in the reference
+   * Cauchy stress, the volumetric heat capacity in the reference
    * configuration, the heat generated per unit volume during the time
    * step (units of energy), and the referential heat flux (units of
    * energy per unit time and per unit area).
@@ -64,7 +64,7 @@ struct GreenSaintVenantThermoelasticMaterial {
     // stress
     const auto S  = 2.0 * G * dev(Eg) + K * (trEg - 3.0 * alpha * (theta - theta_ref)) * I;
     const auto P  = dot(F, S);
-    const auto TK = dot(P, transpose(F));
+    const auto TK = dot(P, transpose(F)) / det(F);
 
     // internal heat source
     const auto s0 = -3 * K * alpha * theta * (trEg - state.strain_trace);
@@ -128,7 +128,7 @@ struct ParameterizedGreenSaintVenantThermoelasticMaterial {
    * @param[in,out] state State variables for this material
    *
    * @return[out] tuple of constitutive outputs. Contains the
-   * Kirchhoff stress, the volumetric heat capacity in the reference
+   * Cauchy stress, the volumetric heat capacity in the reference
    * configuration, the heat generated per unit volume during the time
    * step (units of energy), and the referential heat flux (units of
    * energy per unit time and per unit area).
@@ -149,7 +149,7 @@ struct ParameterizedGreenSaintVenantThermoelasticMaterial {
     // stress
     const auto S  = 2.0 * G * dev(Eg) + K * (trEg - 3.0 * alpha * (theta - theta_ref)) * I;
     const auto P  = dot(F, S);
-    const auto TK = dot(P, transpose(F));
+    const auto TK = (dot(P, transpose(F))) / det(F);
 
     // internal heat source
     const auto s0 = -3 * K * alpha * theta * (trEg - state.strain_trace);

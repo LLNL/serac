@@ -33,7 +33,7 @@ struct LinearIsotropic {
    * @tparam T Number-like type for the displacement gradient components
    * @tparam dim Dimensionality of space
    * @param du_dX Displacement gradient with respect to the reference configuration
-   * @return The Kirchhoff stress
+   * @return The Cauchy stress
    */
   template <typename T, int dim>
   SERAC_HOST_DEVICE auto operator()(State& /* state */, const tensor<T, dim, dim>& du_dX) const
@@ -65,7 +65,7 @@ struct NeoHookean {
    * @tparam T Number-like type for the displacement gradient components
    * @tparam dim Dimensionality of space
    * @param du_dX displacement gradient with respect to the reference configuration (displacement_grad)
-   * @return The Kirchhoff stress
+   * @return The Cauchy stress
    */
   template <typename T, int dim>
   SERAC_HOST_DEVICE auto operator()(State& /* state */, const tensor<T, dim, dim>& du_dX) const
@@ -74,7 +74,7 @@ struct NeoHookean {
     constexpr auto I         = Identity<dim>();
     auto           lambda    = K - (2.0 / 3.0) * G;
     auto           B_minus_I = du_dX * transpose(du_dX) + transpose(du_dX) + du_dX;
-    return lambda * log(det(I + du_dX)) * I + G * B_minus_I;
+    return (lambda * log(det(I + du_dX)) * I + G * B_minus_I) / det(I + du_dX);
   }
 
   double density;  ///< mass density
