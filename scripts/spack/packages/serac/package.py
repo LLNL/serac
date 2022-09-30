@@ -89,69 +89,108 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on('py-sphinx', when="+devtools")
     depends_on('py-ats', when="+devtools")
 
-    depends_on("sundials@5.7.0~shared+hypre+monitoring~examples~examples-install",
+    depends_on("sundials@5.7.0+hypre+monitoring~examples~examples-install",
                when="+sundials")
     depends_on("sundials+asan", when="+sundials+asan")
 
-    # Libraries that support +debug
-    mfem_variants = "~shared+metis+superlu-dist+lapack+mpi"
-    debug_deps = ["mfem{0}".format(mfem_variants),
-                  "hypre@2.18.2~shared~superlu-dist+mpi"]
-
-    depends_on("petsc~shared", when="+petsc")
-    depends_on("petsc+debug", when="+petsc+debug")
-
-    for dep in debug_deps:
-        depends_on("{0}".format(dep))
-        depends_on("{0}+debug".format(dep), when="+debug")
+    depends_on("mfem+metis+superlu-dist+lapack+mpi")
     depends_on("mfem+netcdf", when="+netcdf")
     depends_on("mfem+petsc", when="+petsc")
     depends_on("mfem+sundials", when="+sundials")
     depends_on("mfem+amgx", when="+cuda")
     depends_on("mfem+asan", when="+asan")
-    depends_on("netcdf-c@4.7.4~shared", when="+netcdf")
+
+    depends_on("netcdf-c@4.7.4", when="+netcdf")
+
+    depends_on("hypre@2.18.2~superlu-dist+mpi")
+
+    depends_on("petsc", when="+petsc")
 
     # Needs to be first due to a bug with the Spack concretizer
     # Note: Certain combinations of CMake and Conduit do not like +mpi
     #  and cause FindHDF5.cmake to fail and only return mpi information
     #  (includes, libs, etc) instead of hdf5 info
-    depends_on("hdf5@1.8.21+hl~mpi~shared")
+    depends_on("hdf5@1.8.21+hl~mpi")
 
     depends_on("camp@2022.03.2:")
 
-    depends_on("raja~shared~examples~exercises", when="+raja")
+    depends_on("raja~examples~exercises", when="+raja")
     depends_on("raja~openmp", when="+raja~openmp")
     depends_on("raja+openmp", when="+raja+openmp")
 
-    depends_on("umpire@2022.03.1~shared~examples~device_alloc", when="+umpire")
+    depends_on("umpire@2022.03.1~examples~device_alloc", when="+umpire")
     depends_on("umpire~openmp", when="+umpire~openmp")
     depends_on("umpire+openmp", when="+umpire+openmp")
-    depends_on("umpire build_type=Debug", when="+umpire+debug")
 
-    # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
-    axom_spec = "axom~fortran~tools~examples+mfem~shared+cpp14+lua"
-    cmake_debug_deps = [axom_spec,
-                        "metis@5.1.0~shared",
-                        "parmetis@4.0.3~shared"]
-    for dep in cmake_debug_deps:
-        depends_on("{0}".format(dep))
-        depends_on("{0} build_type=Debug".format(dep), when="+debug")
-
+    depends_on("axom~fortran~tools~examples+mfem+cpp14+lua")
     depends_on("axom~raja", when="~raja")
     depends_on("axom~umpire", when="~umpire")
     depends_on("axom~openmp", when="~openmp")
     depends_on("axom+openmp", when="+openmp")
 
-    # Libraries that do not have a debug variant
-    depends_on("conduit~shared~python~test")
-    depends_on("adiak@0.2.1~shared+mpi", when="+profiling")
-    depends_on("caliper@2.7.0~shared+mpi+adiak~papi", when="+profiling")
-    depends_on("superlu-dist@6.1.1~shared")
+    depends_on("metis@5.1.0")
+    depends_on("parmetis@4.0.3")
 
-    # Libraries that we do not build debug
+    depends_on("conduit~python~test")
+
+    depends_on("adiak@0.2.1+mpi", when="+profiling")
+    depends_on("caliper@2.7.0+mpi+adiak~papi", when="+profiling")
+
+    depends_on("superlu-dist@6.1.1")
+
     depends_on("glvis@3.4~fonts", when='+glvis')
 
-    conflicts('%intel', msg="Intel has a bug with c++17 support as of May 2020")
+    #
+    # Forward variants
+    #
+
+    # CMake packages "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
+
+    # Optional (require our variant in "when")
+    for dep in ["raja", "sundials", "umpire"]:
+        depends_on("{0} build_type=Debug".format(dep), when="+{0}+debug".format(dep))
+        depends_on("{0} build_type=Release".format(dep), when="+{0}~debug".format(dep))
+        depends_on("{0}+shared".format(dep), when="+{0}+shared".format(dep))
+        depends_on("{0}~shared".format(dep), when="+{0}~shared".format(dep))
+
+    # Optional (require when="+profile")
+    for dep in ["adiak", "caliper"]:
+        depends_on("{0} build_type=Debug".format(dep), when="+profiling+debug".format(dep))
+        depends_on("{0} build_type=Release".format(dep), when="+profiling~debug".format(dep))
+        depends_on("{0}+shared".format(dep), when="+profiling+shared".format(dep))
+        depends_on("{0}~shared".format(dep), when="+profiling~shared".format(dep))
+
+    # Required
+    for dep in ["axom", "conduit", "hdf5", "metis", "parmetis", "superlu-dist"]:
+        depends_on("{0} build_type=Debug".format(dep), when="+debug")
+        depends_on("{0} build_type=Release".format(dep), when="~debug")
+        if dep == "hdf5":
+            # TODO: hdf5+shared causes Axom to not find hdf5, should possibly fix at a later date
+            continue
+        depends_on("{0}+shared".format(dep), when="+shared")
+        depends_on("{0}~shared".format(dep), when="~shared")
+
+    # Packages that are controlled by variants
+    for dep in ["petsc"]:
+        depends_on("{0}+debug".format(dep), when="+{0}+debug".format(dep))
+        depends_on("{0}~debug".format(dep), when="+{0}~debug".format(dep))
+        depends_on("{0}+shared".format(dep), when="+{0}+shared".format(dep))
+        depends_on("{0}~shared".format(dep), when="+{0}~shared".format(dep))
+
+    # Package name doesnt match variant name
+    # netcdf-c does not have a debug variant
+    depends_on("netcdf-c+shared", when="+netcdf+shared")
+    depends_on("netcdf-c~shared", when="+netcdf~shared")
+
+    # Required but not CMake
+    for dep in ["hypre", "mfem"]:
+        depends_on("{0}+debug".format(dep), when="+debug")
+        depends_on("{0}~debug".format(dep), when="~debug")
+        depends_on("{0}+shared".format(dep), when="+shared")
+        depends_on("{0}~shared".format(dep), when="~shared")
+    # MFEM has a static variant
+    depends_on("{0}+static".format(dep), when="~shared")
+    depends_on("{0}~static".format(dep), when="+shared")
 
     # ASan is only supported by GCC and (some) LLVM-derived
     # compilers.
@@ -169,7 +208,9 @@ class Serac(CachedCMakePackage, CudaPackage):
             msg="{0} compilers do not support Address Sanitizer".format(compiler_)
         )
 
-    # Libraries that have a GPU variant
+    #
+    # GPU
+    #
     conflicts('cuda_arch=none', when='+cuda',
               msg='CUDA architecture is required')
     depends_on("amgx@2.1.x", when="+cuda")
@@ -184,6 +225,8 @@ class Serac(CachedCMakePackage, CudaPackage):
     for sm_ in CudaPackage.cuda_arch_values:
         depends_on('caliper cuda_arch={0}'.format(sm_),
                 when='+profiling cuda_arch={0}'.format(sm_))
+
+    conflicts('%intel', msg="Intel has a bug with C++17 support as of May 2020")
 
 
     def _get_sys_type(self, spec):
