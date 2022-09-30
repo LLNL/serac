@@ -161,9 +161,9 @@ void shape_test(GeometricNonlinearities geo_nonlin)
     visit_dc.Save();
   }
 
-  double error = pure_displacement.DistanceTo(shape_displacement.GetData());
+  double error          = pure_displacement.DistanceTo(shape_displacement.GetData());
   double relative_error = error / pure_displacement.Norml2();
-  EXPECT_LT(relative_error, 1.0e-14);
+  EXPECT_LT(relative_error, 2.0e-11);
 }
 
 TEST(solidFunctionalShape, manualNodesLinear) { shape_test(GeometricNonlinearities::Off); }
