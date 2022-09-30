@@ -45,8 +45,12 @@ void shape_test(GeometricNonlinearities geo_nonlin)
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
-  // Use a direct solver (DSuperLU) for the Jacobian solve
-  SolverOptions options = {DirectSolverOptions{.print_level = 0}, solid_mechanics::default_nonlinear_options};
+  // Use a krylov solver for the Jacobian solve
+  SolverOptions options = {solid_mechanics::default_linear_options, solid_mechanics::default_nonlinear_options};
+
+  // Use tight tolerances as this is a machine precision test
+  get<IterativeSolverOptions>(options.linear).rel_tol = 1.0e-15;
+  get<IterativeSolverOptions>(options.linear).abs_tol = 1.0e-15;
 
   options.nonlinear.abs_tol = 1.0e-14;
   options.nonlinear.rel_tol = 1.0e-14;
@@ -163,7 +167,7 @@ void shape_test(GeometricNonlinearities geo_nonlin)
 
   double error          = pure_displacement.DistanceTo(shape_displacement.GetData());
   double relative_error = error / pure_displacement.Norml2();
-  EXPECT_LT(relative_error, 2.0e-11);
+  EXPECT_LT(relative_error, 1.0e-14);
 }
 
 TEST(solidFunctionalShape, manualNodesLinear) { shape_test(GeometricNonlinearities::Off); }
