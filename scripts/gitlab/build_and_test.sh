@@ -20,9 +20,9 @@ if [[ "$DO_INTEGRATION_TESTS" == "yes" ]] ; then
             LOG_FILENAMES=(*$num*.log *$num*.log.err)
             for f in ${LOG_FILENAMES[@]} ; do
                 if [ -s $f ] ; then
-                    echo "-------- $f START --------"
+                    echo "\n======== START $f START ========"
                     cat $f
-                    echo "-------- $f END --------"
+                    echo "======== END $f END ========"
                 fi
             done
         done
