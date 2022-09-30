@@ -104,7 +104,7 @@ public:
 /**
  * @brief Specify the kinds of boundary condition to apply
  */
-enum class PatchBoundaryCondition { Essential, Mixed_essential_and_natural };
+enum class PatchBoundaryCondition { Essential, EssentialAndNatural };
 
 /**
  * @brief Get boundary attributes for patch meshes on which to apply essential boundary conditions
@@ -130,7 +130,7 @@ std::set<int> essentialBoundaryAttributes(PatchBoundaryCondition bc)
       case PatchBoundaryCondition::Essential:
         essential_boundaries = {1, 2, 3, 4};
         break;
-      case PatchBoundaryCondition::Mixed_essential_and_natural:
+      case PatchBoundaryCondition::EssentialAndNatural:
         essential_boundaries = {1, 4};
         break;
     }
@@ -139,7 +139,7 @@ std::set<int> essentialBoundaryAttributes(PatchBoundaryCondition bc)
       case PatchBoundaryCondition::Essential:
         essential_boundaries = {1, 2, 3, 4, 5, 6};
         break;
-      case PatchBoundaryCondition::Mixed_essential_and_natural:
+      case PatchBoundaryCondition::EssentialAndNatural:
         essential_boundaries = {1, 2};
         break;
     }
@@ -250,7 +250,7 @@ TEST(SolidFunctional, PatchTest2dQ1TractionBcs)
 {
   constexpr int p = 1;
   constexpr int dim   = 2;
-  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
+  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::EssentialAndNatural);
   EXPECT_LT(error, tol);
 }
 
@@ -258,7 +258,7 @@ TEST(SolidFunctional, PatchTest3dQ1TractionBcs)
 {
   constexpr int p = 1;
   constexpr int dim   = 3;
-  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
+  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::EssentialAndNatural);
   EXPECT_LT(error, tol);
 }
 
@@ -266,7 +266,7 @@ TEST(SolidFunctional, PatchTest2dQ2TractionBcs)
 {
   constexpr int p = 2;
   constexpr int dim   = 2;
-  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
+  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::EssentialAndNatural);
   EXPECT_LT(error, tol);
 }
 
@@ -274,7 +274,7 @@ TEST(SolidFunctional, PatchTest3dQ2TractionBcs)
 {
   constexpr int p = 2;
   constexpr int dim   = 3;
-  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
+  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::EssentialAndNatural);
   EXPECT_LT(error, tol);
 }
 
