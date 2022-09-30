@@ -62,9 +62,9 @@ struct GreenSaintVenantThermoelasticMaterial {
     const auto            trEg = tr(Eg);
 
     // stress
-    const auto S  = 2.0 * G * dev(Eg) + K * (trEg - 3.0 * alpha * (theta - theta_ref)) * I;
-    const auto P  = dot(F, S);
-    const auto TK = dot(P, transpose(F)) / det(F);
+    const auto S     = 2.0 * G * dev(Eg) + K * (trEg - 3.0 * alpha * (theta - theta_ref)) * I;
+    const auto P     = dot(F, S);
+    const auto sigma = dot(P, transpose(F)) / det(F);
 
     // internal heat source
     const auto s0 = -3 * K * alpha * theta * (trEg - state.strain_trace);
@@ -74,7 +74,7 @@ struct GreenSaintVenantThermoelasticMaterial {
 
     state.strain_trace = get_value(trEg);
 
-    return serac::tuple{TK, C, s0, q0};
+    return serac::tuple{sigma, C, s0, q0};
   }
 
   /**
@@ -147,9 +147,9 @@ struct ParameterizedGreenSaintVenantThermoelasticMaterial {
     auto                  alpha = alpha0 * scale;
 
     // stress
-    const auto S  = 2.0 * G * dev(Eg) + K * (trEg - 3.0 * alpha * (theta - theta_ref)) * I;
-    const auto P  = dot(F, S);
-    const auto TK = (dot(P, transpose(F))) / det(F);
+    const auto S     = 2.0 * G * dev(Eg) + K * (trEg - 3.0 * alpha * (theta - theta_ref)) * I;
+    const auto P     = dot(F, S);
+    const auto sigma = (dot(P, transpose(F))) / det(F);
 
     // internal heat source
     const auto s0 = -3 * K * alpha * theta * (trEg - state.strain_trace);
@@ -159,7 +159,7 @@ struct ParameterizedGreenSaintVenantThermoelasticMaterial {
 
     state.strain_trace = get_value(trEg);
 
-    return serac::tuple{TK, C, s0, q0};
+    return serac::tuple{sigma, C, s0, q0};
   }
 
   /**
