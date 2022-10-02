@@ -20,6 +20,8 @@ foreach(filename ${functional_performance_tests})
   #target_compile_definitions(${test_name} PUBLIC USE_OLD_IMPLEMENTATION)
 endforeach()
 
+target_precompile_headers(comparisons_H1 PUBLIC pch.hpp)
+
 if(ENABLE_CUDA)
 
     set(functional_performance_tests_cuda 

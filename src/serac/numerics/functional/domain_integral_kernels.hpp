@@ -133,7 +133,6 @@ auto batch_apply_qf_with_AD(derivative_type * qf_derivatives, lambda qf, const t
     for (int j = 0; j < dim; j++) { 
       x_q[j] = x(j, i); 
     }
-
     auto qdata = qpt_data[i];
     auto outputs_and_derivatives = qf(x_q, qdata, promote_to_dual_when< I == index_to_differentiate >(get<I>(inputs)[i]) ...);
     outputs[i] = get_value(outputs_and_derivatives);
@@ -463,6 +462,53 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
 
 }
 
+// K_e(i, j, k, l, m, n) := (B(u, i) * B(v, j) * B(w, k)) * X_q(u, v, w) * ((B(u, l) * B(v, m) * B(w, n))
+
+
+namespace detail {
+  template < int n, int q >
+  static constexpr auto calculate_B() {
+    constexpr auto points1D = GaussLegendreNodes<q>();
+    constexpr auto weights1D = GaussLegendreWeights<q>();
+    tensor<double, q, n> B{};
+    for (int i = 0; i < q; i++) {
+      B[i] = GaussLobattoInterpolation<n>(points1D[i]);
+    }
+    return B;
+  }
+
+  template < int n, int q >
+  static constexpr auto calculate_G() {
+    constexpr auto points1D = GaussLegendreNodes<q>();
+    constexpr auto weights1D = GaussLegendreWeights<q>();
+    tensor<double, q, n> G{};
+    for (int i = 0; i < q; i++) {
+      G[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);
+    }
+    return G;
+  }
+
+}
+
+// K_e(i, j, k, l, m, n) := {(B(u, i) * B(v, j) * B(w, k)) * 
+//                              X_q(u, v, w, p, q) * 
+//                           (B(u, l) * B(v, m) * B(w, n))
+//
+//  naive:
+//  (B(u, i) * B(v, j) * B(w, k)) X_q(u, v, w) (B(u, l) * B(v, m) * B(w, n))
+//  O(n^6 * q^3) 
+//
+//  B(u, i) * B(v, j) * B(w, k) X_q(u, v, w) * B(u, l) * B(v, m) * B(w, n)
+//
+//  X1(i,l,v,w) := (B(u, i) * B(u, l) * X_q(u, v, w))
+//  O(n^2 * q^3) 
+//
+//  X2(i,l,m,n,w) := B(w, k) * B(w, n) * X1(i, l, v, w))
+//  O(n^4 * q^2) 
+//
+//  K_e(i, j, k, l, m, n) := B(v, j) * B(v, m) * X2(i, l, m, n, w))
+//  O(n^6 * q^3) 
+
 /**
  * @brief The base kernel template used to compute tangent element entries that can be assembled
  * into a tangent matrix
@@ -485,7 +531,95 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
  * @param[in] num_elements The number of elements in the mesh
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
-void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dk,
+void element_gradient_kernel_new(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
+                             CPUArrayView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J_,
+                             std::size_t num_elements)
+{
+  using test_element        = finite_element<g, test>;
+  using trial_element       = finite_element<g, trial>;
+  static constexpr int  dim = dimension_of(g);
+  static constexpr int  N = test_element::n;
+
+  constexpr int nquad = (g == Geometry::Quadrilateral) ? Q * Q : Q * Q * Q;
+
+  // mfem provides this information in 1D arrays, so we reshape it
+  // into strided multidimensional arrays before using
+  auto J = mfem::Reshape(J_.Read(), nquad, dim, dim, num_elements);
+  static constexpr TensorProductQuadratureRule<Q> rule{};
+
+  static constexpr auto B = test_element::template calculate_B<false, Q>();
+  static constexpr auto G = test_element::template calculate_G<false, Q>();
+
+  // for each element in the domain
+  for (uint32_t e = 0; e < num_elements; e++) {
+
+    auto * output_ptr = reinterpret_cast<typename test_element::dof_type *>(&dK(e, 0, 0));
+
+    tensor< derivatives_type, nquad > derivatives{};
+    for (int q = 0; q < nquad; q++) {
+      auto J_q = make_tensor<dim, dim>([&](int r, int c) { return J(q, r, c, e); });
+      auto dx = det(J_q);
+      auto invJ = inv(J_q);
+      derivatives(q) = qf_derivatives(e, q);
+      get<0>(get<0>(derivatives(q))) = get<0>(get<0>(derivatives(q))) * dx;
+      get<1>(get<1>(derivatives(q))) = dot(invJ, dot(get<1>(get<1>(derivatives(q))), transpose(invJ))) * dx;
+    }
+
+    tensor< tuple < double, tensor< double, dim > >, nquad > source_and_flux;
+
+    for (int i = 0; i < test_element::ndof; i++) {
+
+      if constexpr (g == Geometry::Quadrilateral) {
+        int ix = i % N;
+        int iy = i / N;
+
+        for (int q = 0; q < Q * Q; q++) {
+          int qx = q % Q;
+          int qy = q / Q;
+
+          double phi = B(qx, ix) * B(qy, iy);
+          tensor<double, dim> dphi_dxi = {G(qx, ix) * B(qy, iy), B(qx, ix) * G(qy, iy)};
+
+          source_and_flux(q) = serac::tuple{
+            get<0>(get<0>(derivatives(q))) * phi,
+            dot(dphi_dxi, get<1>(get<1>(derivatives(q))))
+          };
+        }
+      }
+
+      if constexpr (g == Geometry::Hexahedron) {
+        int ix = i % N;
+        int iy = (i % (N * N)) / N;
+        int iz = i / (N * N);
+
+        for (int q = 0; q < nquad; q++) {
+          int qx = q % Q;
+          int qy = (q % (Q * Q)) / Q;
+          int qz = q / (Q * Q);
+
+          double phi = B(qx, ix) * B(qy, iy) * B(qz, iz);
+          tensor<double, dim> dphi_dxi = {
+            G(qx, ix) * B(qy, iy) * B(qz, iz), 
+            B(qx, ix) * G(qy, iy) * B(qz, iz),
+            B(qx, ix) * B(qy, iy) * G(qz, iz)
+          };
+
+          source_and_flux(q) = serac::tuple{
+            get<0>(get<0>(derivatives(q))) * phi,
+            dot(dphi_dxi, get<1>(get<1>(derivatives(q))))
+          };
+        }
+      }
+
+      trial_element::integrate(source_and_flux, rule, output_ptr[i]);
+    }
+
+  }
+
+}
+
+template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
+void element_gradient_kernel_old(ExecArrayView<double, 3, ExecutionSpace::CPU> dk,
                              CPUArrayView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J_,
                              std::size_t num_elements)
 {

@@ -23,8 +23,8 @@ struct TensorProductQuadratureRule {
   tensor<double, q> weights1D;
   tensor<double, q> points1D;
 
-  SERAC_HOST_DEVICE double weight(int ix, int iy) { return weights1D[ix] * weights1D[iy]; }
-  SERAC_HOST_DEVICE double weight(int ix, int iy, int iz) { return weights1D[ix] * weights1D[iy] * weights1D[iz]; }
+  SERAC_HOST_DEVICE double weight(int ix, int iy) const { return weights1D[ix] * weights1D[iy]; }
+  SERAC_HOST_DEVICE double weight(int ix, int iy, int iz) const { return weights1D[ix] * weights1D[iy] * weights1D[iz]; }
 };
 
 /**
