@@ -12,7 +12,7 @@
 
 #include "serac/serac_config.hpp"
 #include "serac/mesh/mesh_utils.hpp"
-#include "serac/physics/thermal_conduction_functional.hpp"
+#include "serac/physics/thermal_conduction.hpp"
 #include "serac/physics/materials/thermal_functional_material.hpp"
 #include "serac/physics/materials/parameterized_thermal_functional_material.hpp"
 #include "serac/physics/state/state_manager.hpp"
@@ -60,7 +60,7 @@ TEST(ThermalFunctionalFiniteDiff, FiniteDifference)
   // Note that we now include an extra template parameter indicating the finite element space for the parameterized
   // field, in this case the thermal conductivity. We also pass an array of finite element states for each of the
   // requested parameterized fields.
-  ThermalConductionFunctional<p, dim, Parameters<H1<1> > > thermal_solver(Thermal::defaultQuasistaticOptions(),
+  ThermalConduction<p, dim, Parameters<H1<1> > > thermal_solver(Thermal::defaultQuasistaticOptions(),
                                                                           "thermal_functional");
   thermal_solver.setParameter(user_defined_conductivity, 0);
 

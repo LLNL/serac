@@ -12,7 +12,7 @@
 
 #include "serac/serac_config.hpp"
 #include "serac/mesh/mesh_utils.hpp"
-#include "serac/physics/solid_functional.hpp"
+#include "serac/physics/solid.hpp"
 #include "serac/physics/materials/solid_functional_material.hpp"
 #include "serac/physics/materials/parameterized_solid_functional_material.hpp"
 #include "serac/physics/state/state_manager.hpp"
@@ -60,7 +60,7 @@ TEST(SolidFunctionalFiniteDiff, FiniteDifference)
 
   // Construct a functional-based solid solver
 
-  SolidFunctional<p, dim, Parameters<H1<1>, H1<1> > > solid_solver(default_static_options, GeometricNonlinearities::On,
+  Solid<p, dim, Parameters<H1<1>, H1<1> > > solid_solver(default_static_options, GeometricNonlinearities::On,
                                                                    "solid_functional");
   solid_solver.setParameter(user_defined_bulk_modulus, 0);
   solid_solver.setParameter(user_defined_shear_modulus, 1);
@@ -189,7 +189,7 @@ TEST(solid_functional_finite_diff, finite_difference_shape)
       NonlinearSolverOptions{.rel_tol = 1.0e-8, .abs_tol = 1.0e-14, .max_iter = 10, .print_level = 1}};
 
   // Construct a functional-based solid solver
-  SolidFunctional<p, dim> solid_solver(options, GeometricNonlinearities::On, "solid_functional");
+  Solid<p, dim> solid_solver(options, GeometricNonlinearities::On, "solid_functional");
 
   solid_mechanics::NeoHookean mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);

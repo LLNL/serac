@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/thermal_solid.hpp"
+#include "serac/physics/thermal_solid_legacy.hpp"
 
 #include "serac/infrastructure/logger.hpp"
 #include "serac/numerics/solver_config.hpp"
@@ -13,8 +13,9 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 3;
 
-ThermalSolid::ThermalSolid(int order, const ThermalConduction::SolverOptions& therm_options,
-                           const Solid::SolverOptions& solid_options, const std::string& name, mfem::ParMesh* pmesh)
+ThermalSolidLegacy::ThermalSolidLegacy(int order, const ThermalConductionLegacy::SolverOptions& therm_options,
+                                       const SolidLegacy::SolverOptions& solid_options, const std::string& name,
+                                       mfem::ParMesh* pmesh)
     : BasePhysics(NUM_FIELDS, order, name, pmesh),
       // Note that the solid solver must be constructed before the thermal solver as it mutates the mesh node grid
       // function
@@ -34,8 +35,8 @@ ThermalSolid::ThermalSolid(int order, const ThermalConduction::SolverOptions& th
   coupling_ = serac::CouplingScheme::OperatorSplit;
 }
 
-ThermalSolid::ThermalSolid(const ThermalConduction::InputOptions& thermal_input, const Solid::InputOptions& solid_input,
-                           const std::string& name)
+ThermalSolidLegacy::ThermalSolidLegacy(const ThermalConductionLegacy::InputOptions& thermal_input,
+                                       const SolidLegacy::InputOptions& solid_input, const std::string& name)
     : BasePhysics(NUM_FIELDS, std::max(thermal_input.order, solid_input.order), name),
       // Note that the solid solver must be constructed before the thermal solver as it mutates the mesh node grid
       // function
@@ -55,8 +56,9 @@ ThermalSolid::ThermalSolid(const ThermalConduction::InputOptions& thermal_input,
   coupling_ = serac::CouplingScheme::OperatorSplit;
 }
 
-ThermalSolid::ThermalSolid(const ThermalSolid::InputOptions& thermal_solid_input, const std::string& name)
-    : ThermalSolid(thermal_solid_input.thermal_input, thermal_solid_input.solid_input, name)
+ThermalSolidLegacy::ThermalSolidLegacy(const ThermalSolidLegacy::InputOptions& thermal_solid_input,
+                                       const std::string&                      name)
+    : ThermalSolidLegacy(thermal_solid_input.thermal_input, thermal_solid_input.solid_input, name)
 {
   if (thermal_solid_input.coef_thermal_expansion) {
     std::unique_ptr<mfem::Coefficient> cte(thermal_solid_input.coef_thermal_expansion->constructScalar());
@@ -66,7 +68,7 @@ ThermalSolid::ThermalSolid(const ThermalSolid::InputOptions& thermal_solid_input
   }
 }
 
-void ThermalSolid::completeSetup()
+void ThermalSolidLegacy::completeSetup()
 {
   SLIC_ERROR_ROOT_IF(coupling_ != serac::CouplingScheme::OperatorSplit,
                      "Only operator split is currently implemented in the thermal structural solver.");
@@ -76,7 +78,7 @@ void ThermalSolid::completeSetup()
 }
 
 // Advance the timestep
-void ThermalSolid::advanceTimestep(double& dt)
+void ThermalSolidLegacy::advanceTimestep(double& dt)
 {
   if (coupling_ == serac::CouplingScheme::OperatorSplit) {
     double initial_dt = dt;
@@ -95,15 +97,15 @@ void ThermalSolid::advanceTimestep(double& dt)
   cycle_ += 1;
 }
 
-void ThermalSolid::InputOptions::defineInputFileSchema(axom::inlet::Container& container)
+void ThermalSolidLegacy::InputOptions::defineInputFileSchema(axom::inlet::Container& container)
 {
   // The solid mechanics options
   auto& solid_solver_table = container.addStruct("solid", "Finite deformation solid mechanics module").required();
-  serac::Solid::InputOptions::defineInputFileSchema(solid_solver_table);
+  serac::SolidLegacy::InputOptions::defineInputFileSchema(solid_solver_table);
 
   // The thermal conduction options
   auto& thermal_solver_table = container.addStruct("thermal_conduction", "Thermal conduction module").required();
-  serac::ThermalConduction::InputOptions::defineInputFileSchema(thermal_solver_table);
+  serac::ThermalConductionLegacy::InputOptions::defineInputFileSchema(thermal_solver_table);
 
   auto& ref_temp = container.addStruct("reference_temperature",
                                        "Coefficient for the reference temperature for isotropic thermal expansion");
@@ -133,14 +135,14 @@ void ThermalSolid::InputOptions::defineInputFileSchema(axom::inlet::Container& c
 
 }  // namespace serac
 
-serac::ThermalSolid::InputOptions FromInlet<serac::ThermalSolid::InputOptions>::operator()(
+serac::ThermalSolidLegacy::InputOptions FromInlet<serac::ThermalSolidLegacy::InputOptions>::operator()(
     const axom::inlet::Container& base)
 {
-  serac::ThermalSolid::InputOptions result;
+  serac::ThermalSolidLegacy::InputOptions result;
 
-  result.solid_input = base["solid"].get<serac::Solid::InputOptions>();
+  result.solid_input = base["solid"].get<serac::SolidLegacy::InputOptions>();
 
-  result.thermal_input = base["thermal_conduction"].get<serac::ThermalConduction::InputOptions>();
+  result.thermal_input = base["thermal_conduction"].get<serac::ThermalConductionLegacy::InputOptions>();
 
   if (base.contains("coef_thermal_expansion")) {
     result.coef_thermal_expansion = base["coef_thermal_expansion"].get<serac::input::CoefficientInputOptions>();

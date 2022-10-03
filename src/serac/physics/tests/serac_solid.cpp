@@ -14,7 +14,7 @@
 #include "serac/infrastructure/input.hpp"
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/state/state_manager.hpp"
-#include "serac/physics/solid.hpp"
+#include "serac/physics/solid_legacy.hpp"
 #include "serac/serac_config.hpp"
 #include "test_utilities.hpp"
 
@@ -22,11 +22,11 @@ namespace serac {
 
 using test_utils::InputFileTest;
 
-TEST_P(InputFileTest, Solid)
+TEST_P(InputFileTest, SolidLegacy)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   std::string input_file_path = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/" + GetParam() + ".lua";
-  test_utils::runModuleTest<Solid>(input_file_path, GetParam());
+  test_utils::runModuleTest<SolidLegacy>(input_file_path, GetParam());
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
@@ -57,7 +57,7 @@ TEST(SolidSolver, QsCustomSolve)
   auto inlet = serac::input::initialize(datastore, input_file_path);
   serac::StateManager::initialize(datastore, "solid_qs_custom_solve");
 
-  test_utils::defineTestSchema<Solid>(inlet);
+  test_utils::defineTestSchema<SolidLegacy>(inlet);
 
   // Build the mesh
   auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
@@ -69,7 +69,7 @@ TEST(SolidSolver, QsCustomSolve)
   serac::StateManager::setMesh(std::move(mesh));
 
   // Define the solid solver object
-  auto solid_solver_options = inlet["solid"].get<serac::Solid::InputOptions>();
+  auto solid_solver_options = inlet["solid"].get<serac::SolidLegacy::InputOptions>();
 
   // Simulate a custom solver by manually building the linear solver and passing it in
   // The custom solver built here should be identical to what is internally built in the
@@ -83,7 +83,7 @@ TEST(SolidSolver, QsCustomSolve)
   custom_solver->SetPrintLevel(iter_options.print_level);
 
   solid_solver_options.solver_options.H_lin_options = CustomSolverOptions{custom_solver.get()};
-  Solid solid_solver(solid_solver_options);
+  SolidLegacy solid_solver(solid_solver_options);
 
   // Complete the solver setup
   solid_solver.completeSetup();

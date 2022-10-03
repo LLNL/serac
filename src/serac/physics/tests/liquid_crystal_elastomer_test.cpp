@@ -13,7 +13,7 @@
 #include "serac/serac_config.hpp"
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/state/state_manager.hpp"
-#include "serac/physics/solid_functional.hpp"
+#include "serac/physics/solid.hpp"
 #include "serac/physics/materials/liquid_crystal_elastomer.hpp"
 
 using namespace serac;
@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
   gamma.project(coef);
 
   // Construct a functional-based solid mechanics solver
-  SolidFunctional<p, dim, Parameters<H1<p>, L2<p> > > solid_solver(default_static_options, GeometricNonlinearities::Off,
+  Solid<p, dim, Parameters<H1<p>, L2<p> > > solid_solver(default_static_options, GeometricNonlinearities::Off,
                                                                    FinalMeshOption::Reference, "solid_functional",
                                                                    {temperature, gamma});
 

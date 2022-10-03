@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/solid.hpp"
+#include "serac/physics/solid_legacy.hpp"
 
 #include "serac/infrastructure/logger.hpp"
 #include "serac/physics/integrators/traction_integrator.hpp"
@@ -22,8 +22,8 @@ namespace serac {
  */
 constexpr int NUM_FIELDS = 3;
 
-Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities geom_nonlin,
-             FinalMeshOption keep_deformation, const std::string& name, mfem::ParMesh* pmesh)
+SolidLegacy::SolidLegacy(int order, const SolverOptions& options, GeometricNonlinearities geom_nonlin,
+                         FinalMeshOption keep_deformation, const std::string& name, mfem::ParMesh* pmesh)
     : BasePhysics(NUM_FIELDS, order, name, pmesh),
       velocity_(StateManager::mesh(sidre_datacoll_id_),
                 FiniteElementState::Options{
@@ -86,8 +86,8 @@ Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities ge
   zero_ = 0.0;
 }
 
-Solid::Solid(const Solid::InputOptions& options, const std::string& name)
-    : Solid(options.order, options.solver_options, options.geom_nonlin, FinalMeshOption::Deformed, name)
+SolidLegacy::SolidLegacy(const SolidLegacy::InputOptions& options, const std::string& name)
+    : SolidLegacy(options.order, options.solver_options, options.geom_nonlin, FinalMeshOption::Deformed, name)
 {
   // This is the only other options stored in the input file that we can use
   // in the initialization stage
@@ -145,7 +145,7 @@ Solid::Solid(const Solid::InputOptions& options, const std::string& name)
   }
 }
 
-Solid::~Solid()
+SolidLegacy::~SolidLegacy()
 {
   // Update the mesh with the new deformed nodes if requested
   if (keep_deformation_ == FinalMeshOption::Deformed && geom_nonlin_ == GeometricNonlinearities::On) {
@@ -166,19 +166,20 @@ Solid::~Solid()
   mesh_.NewNodes(*mesh_nodes, true);
 }
 
-void Solid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
+void SolidLegacy::setDisplacementBCs(const std::set<int>&                     disp_bdr,
+                                     std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
 {
   bcs_.addEssential(disp_bdr, disp_bdr_coef, displacement_.space());
 }
 
-void Solid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
-                               int component)
+void SolidLegacy::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
+                                     int component)
 {
   bcs_.addEssential(disp_bdr, disp_bdr_coef, displacement_.space(), component);
 }
 
-void Solid::setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
-                           bool compute_on_reference, std::optional<int> component)
+void SolidLegacy::setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
+                                 bool compute_on_reference, std::optional<int> component)
 {
   if (compute_on_reference) {
     bcs_.addGeneric(trac_bdr, trac_bdr_coef, SolidBoundaryCondition::ReferenceTraction, displacement_.space(),
@@ -189,8 +190,8 @@ void Solid::setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::
   }
 }
 
-void Solid::setPressureBCs(const std::set<int>& pres_bdr, std::shared_ptr<mfem::Coefficient> pres_bdr_coef,
-                           bool compute_on_reference)
+void SolidLegacy::setPressureBCs(const std::set<int>& pres_bdr, std::shared_ptr<mfem::Coefficient> pres_bdr_coef,
+                                 bool compute_on_reference)
 {
   if (compute_on_reference) {
     bcs_.addGeneric(pres_bdr, pres_bdr_coef, SolidBoundaryCondition::ReferencePressure, displacement_.space());
@@ -199,13 +200,13 @@ void Solid::setPressureBCs(const std::set<int>& pres_bdr, std::shared_ptr<mfem::
   }
 }
 
-void Solid::addBodyForce(std::shared_ptr<mfem::VectorCoefficient> ext_force_coef)
+void SolidLegacy::addBodyForce(std::shared_ptr<mfem::VectorCoefficient> ext_force_coef)
 {
   ext_force_coefs_.push_back(ext_force_coef);
 }
 
-void Solid::setMaterialParameters(std::unique_ptr<mfem::Coefficient>&& mu, std::unique_ptr<mfem::Coefficient>&& K,
-                                  const bool material_nonlin)
+void SolidLegacy::setMaterialParameters(std::unique_ptr<mfem::Coefficient>&& mu, std::unique_ptr<mfem::Coefficient>&& K,
+                                        const bool material_nonlin)
 {
   if (material_nonlin) {
     material_ = std::make_unique<NeoHookeanMaterial>(std::move(mu), std::move(K));
@@ -214,35 +215,36 @@ void Solid::setMaterialParameters(std::unique_ptr<mfem::Coefficient>&& mu, std::
   }
 }
 
-void Solid::setThermalExpansion(std::unique_ptr<mfem::Coefficient>&& coef_thermal_expansion,
-                                std::unique_ptr<mfem::Coefficient>&& reference_temp, const FiniteElementState& temp)
+void SolidLegacy::setThermalExpansion(std::unique_ptr<mfem::Coefficient>&& coef_thermal_expansion,
+                                      std::unique_ptr<mfem::Coefficient>&& reference_temp,
+                                      const FiniteElementState&            temp)
 {
   thermal_material_ = std::make_unique<IsotropicThermalExpansionMaterial>(
       std::move(coef_thermal_expansion), std::move(reference_temp), temp, geom_nonlin_);
 }
 
-void Solid::setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef) { viscosity_ = std::move(visc_coef); }
+void SolidLegacy::setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef) { viscosity_ = std::move(visc_coef); }
 
-void Solid::setMassDensity(std::unique_ptr<mfem::Coefficient>&& rho_coef)
+void SolidLegacy::setMassDensity(std::unique_ptr<mfem::Coefficient>&& rho_coef)
 {
   initial_mass_density_ = std::move(rho_coef);
 }
 
-void Solid::setDisplacement(mfem::VectorCoefficient& disp_state)
+void SolidLegacy::setDisplacement(mfem::VectorCoefficient& disp_state)
 {
   disp_state.SetTime(time_);
   displacement_.project(disp_state);
   gf_initialized_[1] = true;
 }
 
-void Solid::setVelocity(mfem::VectorCoefficient& velo_state)
+void SolidLegacy::setVelocity(mfem::VectorCoefficient& velo_state)
 {
   velo_state.SetTime(time_);
   velocity_.project(velo_state);
   gf_initialized_[0] = true;
 }
 
-void Solid::resetToReferenceConfiguration()
+void SolidLegacy::resetToReferenceConfiguration()
 {
   displacement_ = 0.0;
   velocity_     = 0.0;
@@ -250,7 +252,7 @@ void Solid::resetToReferenceConfiguration()
   mesh_.NewNodes(*reference_nodes_);
 }
 
-void Solid::completeSetup()
+void SolidLegacy::completeSetup()
 {
   // Define the nonlinear form
   H_ = std::make_unique<mfem::ParNonlinearForm>(&displacement_.space());
@@ -349,9 +351,9 @@ void Solid::completeSetup()
 }
 
 // Solve the Quasi-static Newton system
-void Solid::quasiStaticSolve() { nonlin_solver_.Mult(zero_, displacement_); }
+void SolidLegacy::quasiStaticSolve() { nonlin_solver_.Mult(zero_, displacement_); }
 
-std::unique_ptr<mfem::Operator> Solid::buildQuasistaticOperator()
+std::unique_ptr<mfem::Operator> SolidLegacy::buildQuasistaticOperator()
 {
   // the quasistatic case is entirely described by the residual,
   // there is no ordinary differential equation
@@ -374,7 +376,7 @@ std::unique_ptr<mfem::Operator> Solid::buildQuasistaticOperator()
 }
 
 // Advance the timestep
-void Solid::advanceTimestep(double& dt)
+void SolidLegacy::advanceTimestep(double& dt)
 {
   // Set the mesh nodes to the reference configuration
   if (geom_nonlin_ == GeometricNonlinearities::On) {
@@ -413,7 +415,7 @@ void Solid::advanceTimestep(double& dt)
   previous_solve_ = PreviousSolve::Forward;
 }
 
-void Solid::checkSensitivityMode() const
+void SolidLegacy::checkSensitivityMode() const
 {
   SLIC_ERROR_ROOT_IF(previous_solve_ == PreviousSolve::None,
                      "Sensitivities only valid following a forward and adjoint solve.");
@@ -427,7 +429,7 @@ void Solid::checkSensitivityMode() const
   SLIC_ERROR_ROOT_IF(!linear_mat, "Only linear elastic materials allowed for sensitivity analysis.");
 }
 
-FiniteElementDual& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace* shear_space)
+FiniteElementDual& SolidLegacy::shearModulusSensitivity(mfem::ParFiniteElementSpace* shear_space)
 {
   checkSensitivityMode();
 
@@ -468,7 +470,7 @@ FiniteElementDual& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace* s
   return *shear_sensitivity_;
 }
 
-FiniteElementDual& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace* bulk_space)
+FiniteElementDual& SolidLegacy::bulkModulusSensitivity(mfem::ParFiniteElementSpace* bulk_space)
 {
   checkSensitivityMode();
 
@@ -508,8 +510,8 @@ FiniteElementDual& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace* bu
   return *bulk_sensitivity_;
 }
 
-const FiniteElementState& Solid::solveAdjoint(FiniteElementDual& adjoint_load,
-                                              FiniteElementDual* dual_with_essential_boundary)
+const FiniteElementState& SolidLegacy::solveAdjoint(FiniteElementDual& adjoint_load,
+                                                    FiniteElementDual* dual_with_essential_boundary)
 {
   SLIC_ERROR_ROOT_IF(!is_quasistatic_, "Adjoint analysis only vaild for quasistatic problems.");
   SLIC_ERROR_ROOT_IF(previous_solve_ == PreviousSolve::None, "Adjoint analysis only valid following a forward solve.");
@@ -557,7 +559,7 @@ const FiniteElementState& Solid::solveAdjoint(FiniteElementDual& adjoint_load,
   return adjoint_displacement_;
 }
 
-void Solid::InputOptions::defineInputFileSchema(axom::inlet::Container& container)
+void SolidLegacy::InputOptions::defineInputFileSchema(axom::inlet::Container& container)
 {
   // Polynomial interpolation order - currently up to 8th order is allowed
   container.addInt("order", "Order degree of the finite elements.").defaultValue(1).range(1, 8);
@@ -598,7 +600,7 @@ void Solid::InputOptions::defineInputFileSchema(axom::inlet::Container& containe
 }
 
 // Evaluate the residual at the current state
-mfem::Vector Solid::currentResidual()
+mfem::Vector SolidLegacy::currentResidual()
 {
   mfem::Vector eval(displacement_.Size());
   if (is_quasistatic_) {
@@ -613,7 +615,7 @@ mfem::Vector Solid::currentResidual()
 }
 
 // Get an Operator that computes the gradient (tangent stiffness) at the current internal state
-const mfem::Operator& Solid::currentGradient()
+const mfem::Operator& SolidLegacy::currentGradient()
 {
   if (is_quasistatic_) {
     // The input to the residual is displacment
@@ -628,12 +630,13 @@ const mfem::Operator& Solid::currentGradient()
 }  // namespace serac
 
 using serac::DirichletEnforcementMethod;
-using serac::Solid;
+using serac::SolidLegacy;
 using serac::TimestepMethod;
 
-serac::Solid::InputOptions FromInlet<serac::Solid::InputOptions>::operator()(const axom::inlet::Container& base)
+serac::SolidLegacy::InputOptions FromInlet<serac::SolidLegacy::InputOptions>::operator()(
+    const axom::inlet::Container& base)
 {
-  Solid::InputOptions result;
+  SolidLegacy::InputOptions result;
 
   result.order = base["order"];
 
@@ -643,8 +646,8 @@ serac::Solid::InputOptions FromInlet<serac::Solid::InputOptions>::operator()(con
   result.solver_options.H_nonlin_options = equation_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
 
   if (base.contains("dynamics")) {
-    Solid::TimesteppingOptions dyn_options;
-    auto                       dynamics = base["dynamics"];
+    SolidLegacy::TimesteppingOptions dyn_options;
+    auto                             dynamics = base["dynamics"];
 
     // FIXME: Implement all supported methods as part of an ODE schema
     const static std::map<std::string, TimestepMethod> timestep_methods = {

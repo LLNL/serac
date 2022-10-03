@@ -14,7 +14,7 @@
 
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/state/state_manager.hpp"
-#include "serac/physics/thermal_conduction.hpp"
+#include "serac/physics/thermal_conduction_legacy.hpp"
 #include "serac/serac_config.hpp"
 
 namespace serac {
@@ -34,8 +34,8 @@ TEST(SeracDtor, Test1)
   serac::StateManager::setMesh(std::move(pmesh));
 
   // Initialize the second order thermal solver on the parallel mesh
-  auto therm_solver =
-      std::make_unique<ThermalConduction>(2, ThermalConduction::defaultQuasistaticOptions(), "first_thermal");
+  auto therm_solver = std::make_unique<ThermalConductionLegacy>(2, ThermalConductionLegacy::defaultQuasistaticOptions(),
+                                                                "first_thermal");
 
   // Initialize the temperature boundary condition
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector& x) { return x.Norml2(); });
@@ -53,7 +53,8 @@ TEST(SeracDtor, Test1)
   therm_solver->completeSetup();
 
   // Destruct the old thermal solver and build a new one
-  therm_solver.reset(new ThermalConduction(1, ThermalConduction::defaultQuasistaticOptions(), "second_thermal"));
+  therm_solver.reset(
+      new ThermalConductionLegacy(1, ThermalConductionLegacy::defaultQuasistaticOptions(), "second_thermal"));
 
   // Destruct the second thermal solver and leave the pointer empty
   therm_solver.reset(nullptr);

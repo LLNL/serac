@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/thermal_mechanics_functional.hpp"
+#include "serac/physics/thermal_mechanics.hpp"
 #include "serac/physics/materials/thermal_functional_material.hpp"
 #include "serac/physics/materials/solid_functional_material.hpp"
 #include "serac/physics/materials/green_saint_venant_thermoelastic.hpp"
@@ -59,7 +59,7 @@ void functional_test_static_3D(double expected_norm)
 
   const SolverOptions solid_options = {default_linear_options, default_nonlinear_options};
 
-  ThermalMechanicsFunctional<p, dim> thermal_solid_solver(thermal_options, solid_options, GeometricNonlinearities::On,
+  ThermalMechanics<p, dim> thermal_solid_solver(thermal_options, solid_options, GeometricNonlinearities::On,
                                                           "thermal_solid_functional");
 
   double rho       = 1.0;
@@ -143,7 +143,7 @@ void functional_test_shrinking_3D(double expected_norm)
 
   const SolverOptions solid_options = {default_linear_options, default_nonlinear_options};
 
-  ThermalMechanicsFunctional<p, dim> thermal_solid_solver(thermal_options, solid_options, GeometricNonlinearities::On,
+  ThermalMechanics<p, dim> thermal_solid_solver(thermal_options, solid_options, GeometricNonlinearities::On,
                                                           "thermal_solid_functional");
 
   double                                       rho       = 1.0;
@@ -247,7 +247,7 @@ void parameterized()
 
   const SolverOptions solid_options = {default_linear_options, default_nonlinear_options};
 
-  ThermalMechanicsFunctional<p, dim, H1<p> > thermal_solid_solver(
+  ThermalMechanics<p, dim, H1<p> > thermal_solid_solver(
       thermal_options, solid_options, GeometricNonlinearities::On, FinalMeshOption::Deformed,
       "thermal_solid_functional");
 

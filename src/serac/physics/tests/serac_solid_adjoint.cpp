@@ -14,7 +14,7 @@
 #include "serac/infrastructure/input.hpp"
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/state/state_manager.hpp"
-#include "serac/physics/solid.hpp"
+#include "serac/physics/solid_legacy.hpp"
 #include "serac/serac_config.hpp"
 #include "test_utilities.hpp"
 
@@ -61,10 +61,10 @@ TEST(SolidSolver, Adjoint)
   const NonlinearSolverOptions default_nonlinear_options = {
       .rel_tol = 1.0e-8, .abs_tol = 1.0e-10, .max_iter = 500, .print_level = 1};
 
-  const Solid::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
+  const SolidLegacy::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
 
   // initialize the solver object
-  Solid solid_solver(1, default_static, GeometricNonlinearities::Off, FinalMeshOption::Deformed, "first_solve");
+  SolidLegacy solid_solver(1, default_static, GeometricNonlinearities::Off, FinalMeshOption::Deformed, "first_solve");
   solid_solver.setDisplacementBCs(ess_bdr, deform);
   solid_solver.setTractionBCs(trac_bdr, traction_coef, false);
   solid_solver.setMaterialParameters(std::make_unique<mfem::ConstantCoefficient>(0.25),

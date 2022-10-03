@@ -13,7 +13,7 @@
 
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/state/state_manager.hpp"
-#include "serac/physics/thermal_solid.hpp"
+#include "serac/physics/thermal_solid_legacy.hpp"
 #include "serac/serac_config.hpp"
 #include "test_utilities.hpp"
 
@@ -21,12 +21,12 @@ namespace serac {
 
 using test_utils::InputFileTest;
 
-TEST_P(InputFileTest, ThermalSolid)
+TEST_P(InputFileTest, ThermalSolidLegacy)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   std::string input_file_path =
       std::string(SERAC_REPO_DIR) + "/data/input_files/tests/thermal_solid/" + GetParam() + ".lua";
-  test_utils::runModuleTest<ThermalSolid>(input_file_path, GetParam());
+  test_utils::runModuleTest<ThermalSolidLegacy>(input_file_path, GetParam());
   MPI_Barrier(MPI_COMM_WORLD);
 }
 

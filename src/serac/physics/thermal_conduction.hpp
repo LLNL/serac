@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file thermal_conduction.hpp
+ * @file thermal_conduction_legacy.hpp
  *
  * @brief An object containing the solver for a thermal conduction PDE
  */
@@ -14,279 +14,337 @@
 
 #include "mfem.hpp"
 
+#include "serac/physics/common.hpp"
 #include "serac/physics/base_physics.hpp"
 #include "serac/numerics/odes.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"
+#include "serac/numerics/functional/functional.hpp"
+#include "serac/physics/state/state_manager.hpp"
+#include "serac/physics/materials/functional_material_utils.hpp"
+#include "serac/numerics/expr_template_ops.hpp"
 
 namespace serac {
+
+namespace Thermal {
+
+/**
+ * @brief Reasonable defaults for most thermal linear solver options
+ *
+ * @return The default thermal linear options
+ */
+IterativeSolverOptions defaultLinearOptions()
+{
+  return {.rel_tol     = 1.0e-6,
+          .abs_tol     = 1.0e-12,
+          .print_level = 0,
+          .max_iter    = 200,
+          .lin_solver  = LinearSolver::CG,
+          .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
+}
+
+/**
+ * @brief Reasonable defaults for most thermal nonlinear solver options
+ *
+ * @return The default thermal nonlinear options
+ */
+NonlinearSolverOptions defaultNonlinearOptions()
+{
+  return {.rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
+}
+
+/**
+ * @brief Reasonable defaults for quasi-static thermal conduction simulations
+ *
+ * @return The default quasi-static solver options
+ */
+SolverOptions defaultQuasistaticOptions() { return {defaultLinearOptions(), defaultNonlinearOptions(), std::nullopt}; }
+
+/**
+ * @brief Reasonable defaults for dynamic thermal conduction simulations
+ *
+ * @return The default dynamic solver options
+ */
+SolverOptions defaultDynamicOptions()
+{
+  return {defaultLinearOptions(), defaultNonlinearOptions(),
+          TimesteppingOptions{TimestepMethod::BackwardEuler, DirichletEnforcementMethod::RateControl}};
+}
+
+}  // namespace Thermal
 
 /**
  * @brief An object containing the solver for a thermal conduction PDE
  *
  * This is a generic linear thermal diffusion oeprator of the form
  *
- *    M du/dt = -kappa Ku + f
+ * \f[
+ * \mathbf{M} \frac{\partial \mathbf{u}}{\partial t} = -\kappa \mathbf{K} \mathbf{u} + \mathbf{f}
+ * \f]
  *
- *  where M is a mass matrix, K is a stiffness matrix, and f is a
- *  thermal load vector.
+ *  where \f$\mathbf{M}\f$ is a mass matrix, \f$\mathbf{K}\f$ is a stiffness matrix, \f$\mathbf{u}\f$ is the
+ *  temperature degree of freedom vector, and \f$\mathbf{f}\f$ is a thermal load vector.
  */
-class ThermalConduction : public BasePhysics {
+template <int order, int dim, typename parameters = Parameters<>,
+          typename parameter_indices = std::make_integer_sequence<int, parameters::n>>
+class ThermalConduction;
+
+/// @overload
+template <int order, int dim, typename... parameter_space, int... parameter_indices>
+class ThermalConduction<order, dim, Parameters<parameter_space...>,
+                                  std::integer_sequence<int, parameter_indices...>> : public BasePhysics {
 public:
   /**
-   * @brief A timestep method and config for the M solver
-   */
-  struct TimesteppingOptions {
-    /**
-     * @brief The timestepping method to be applied
-     *
-     */
-    TimestepMethod timestepper;
-
-    /**
-     * @brief The essential boundary enforcement method to use
-     *
-     */
-    DirichletEnforcementMethod enforcement_method;
-  };
-
-  /**
-   * @brief A configuration variant for the various solves
-   * Either quasistatic, or time-dependent with timestep and M options
-   */
-  struct SolverOptions {
-    /**
-     * @brief The linear solver options
-     *
-     */
-    LinearSolverOptions T_lin_options;
-
-    /**
-     * @brief The nonlinear solver options
-     *
-     */
-    NonlinearSolverOptions T_nonlin_options;
-
-    /**
-     * @brief The optional ODE solver parameters
-     * @note If this is not defined, a quasi-static solve is performed
-     *
-     */
-    std::optional<TimesteppingOptions> dyn_options = std::nullopt;
-  };
-
-  /**
-   * @brief Stores all information held in the input file that
-   * is used to configure the solver
-   */
-  struct InputOptions {
-    /**
-     * @brief Input file parameters specific to this class
-     *
-     * @param[in] container Inlet's Container that input files will be added to
-     **/
-    static void defineInputFileSchema(axom::inlet::Container& container);
-
-    /**
-     * @brief The order of the discretized field
-     *
-     */
-    int order;
-
-    /**
-     * @brief The linear, nonlinear, and ODE solver options
-     *
-     */
-    SolverOptions solver_options;
-
-    /**
-     * @brief The conductivity parameter
-     *
-     */
-    double kappa;
-
-    /**
-     * @brief The specific heat capacity
-     *
-     */
-    double cp;
-
-    /**
-     * @brief The mass density
-     *
-     */
-    double rho;
-
-    /**
-     * @brief Reaction function r(T)
-     *
-     */
-    std::function<double(double)> reaction_func;
-
-    /**
-     * @brief Derivative of the reaction function dR(T)/dT
-     *
-     */
-    std::function<double(double)> d_reaction_func;
-
-    /**
-     * @brief The coefficient options for the scaling factor
-     *
-     */
-    std::optional<input::CoefficientInputOptions> reaction_scale_coef;
-
-    /**
-     * @brief Source function coefficient
-     *
-     */
-    std::optional<input::CoefficientInputOptions> source_coef;
-
-    /**
-     * @brief The boundary condition information
-     */
-    std::unordered_map<std::string, input::BoundaryConditionInputOptions> boundary_conditions;
-
-    /**
-     * @brief The initial temperature field
-     * @note This can be used as either an intialization for dynamic simulations or an
-     *       initial guess for quasi-static ones
-     *
-     */
-    std::optional<input::CoefficientInputOptions> initial_temperature;
-  };
-
-  /**
-   * @brief Reasonable defaults for most thermal linear solver options
+   * @brief Construct a new Thermal Functional Solver object
    *
-   * @return The default thermal linear options
-   */
-  static IterativeSolverOptions defaultLinearOptions()
-  {
-    return {.rel_tol     = 1.0e-6,
-            .abs_tol     = 1.0e-12,
-            .print_level = 0,
-            .max_iter    = 200,
-            .lin_solver  = LinearSolver::CG,
-            .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
-  }
-
-  /**
-   * @brief Reasonable defaults for most thermal nonlinear solver options
-   *
-   * @return The default thermal nonlinear options
-   */
-  static NonlinearSolverOptions defaultNonlinearOptions()
-  {
-    return {.rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
-  }
-
-  /**
-   * @brief Reasonable defaults for quasi-static thermal conduction simulations
-   *
-   * @return The default quasi-static solver options
-   */
-  static SolverOptions defaultQuasistaticOptions()
-  {
-    return {defaultLinearOptions(), defaultNonlinearOptions(), std::nullopt};
-  }
-
-  /**
-   * @brief Reasonable defaults for dynamic thermal conduction simulations
-   *
-   * @return The default dynamic solver options
-   */
-  static SolverOptions defaultDynamicOptions()
-  {
-    return {defaultLinearOptions(), defaultNonlinearOptions(),
-            TimesteppingOptions{TimestepMethod::BackwardEuler, DirichletEnforcementMethod::RateControl}};
-  }
-
-  /**
-   * @brief Construct a new Thermal Solver object
-   *
-   * @param[in] order The order of the thermal field discretization
-   * @param[in] options The system solver parameters
+   * @param[in] options The system linear and nonlinear solver and timestepping parameters
    * @param[in] name An optional name for the physics module instance
-   * @param[in] pmesh An optional mesh reference, must be provided to configure the module
-   * when a mesh other than the default mesh is used
+   * used by an underlying material model or load
    */
-  ThermalConduction(int order, const SolverOptions& options, const std::string& name = "",
-                    mfem::ParMesh* pmesh = nullptr);
+  ThermalConduction(const SolverOptions& options, const std::string& name = {})
+      : BasePhysics(2, order, name),
+        temperature_(
+            StateManager::newState(FiniteElementState::Options{.order      = order,
+                                                               .vector_dim = 1,
+                                                               .ordering   = mfem::Ordering::byNODES,
+                                                               .name       = detail::addPrefix(name, "temperature")})),
+        adjoint_temperature_(StateManager::newState(
+            FiniteElementState::Options{.order      = order,
+                                        .vector_dim = 1,
+                                        .ordering   = mfem::Ordering::byNODES,
+                                        .name       = detail::addPrefix(name, "adjoint_temperature")})),
+        residual_(temperature_.space().TrueVSize()),
+        ode_(temperature_.space().TrueVSize(), {.u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
+             nonlin_solver_, bcs_)
+  {
+    SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
+                       axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
+
+    state_.push_back(temperature_);
+    state_.push_back(adjoint_temperature_);
+
+    // Create a pack of the primal field and parameter finite element spaces
+    std::array<mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + 1> trial_spaces;
+    trial_spaces[0] = &temperature_.space();
+
+    if constexpr (sizeof...(parameter_space) > 0) {
+      tuple<parameter_space...> types{};
+      for_constexpr<sizeof...(parameter_space)>([&](auto i) {
+        trial_spaces[i + 1] =
+            generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_);
+        parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, *trial_spaces[i + 1]);
+      });
+    }
+
+    M_functional_ = std::make_unique<Functional<test(trial, parameter_space...)>>(&temperature_.space(), trial_spaces);
+
+    K_functional_ = std::make_unique<Functional<test(trial, parameter_space...)>>(&temperature_.space(), trial_spaces);
+
+    state_.push_back(temperature_);
+
+    nonlin_solver_ = mfem_ext::EquationSolver(mesh_.GetComm(), options.linear, options.nonlinear);
+    nonlin_solver_.SetOperator(residual_);
+
+    // Check for dynamic mode
+    if (options.dynamic) {
+      ode_.SetTimestepper(options.dynamic->timestepper);
+      ode_.SetEnforcementMethod(options.dynamic->enforcement_method);
+      is_quasistatic_ = false;
+    } else {
+      is_quasistatic_ = true;
+    }
+
+    dt_          = 0.0;
+    previous_dt_ = -1.0;
+
+    int true_size = temperature_.space().TrueVSize();
+    u_.SetSize(true_size);
+    u_predicted_.SetSize(true_size);
+
+    previous_.SetSize(true_size);
+    previous_ = 0.0;
+
+    zero_.SetSize(true_size);
+    zero_ = 0.0;
+  }
 
   /**
-   * @brief Construct a new Thermal Solver object
+   * @brief register the provided FiniteElementState object as the source of values for parameter `i`
    *
-   * @param[in] options The solver information parsed from the input file
-   * @param[in] name An optional name for the physics module instance
+   * @param parameter_state the values to use for the specified parameter
+   * @param i the index of the parameter
    */
-  ThermalConduction(const InputOptions& options, const std::string& name = "");
+  void setParameter(const FiniteElementState& parameter_state, size_t i) { parameter_states_[i] = &parameter_state; }
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
    *
    * @param[in] temp_bdr The boundary attributes on which to enforce a temperature
-   * @param[in] temp_bdr_coef The prescribed boundary temperature
+   * @param[in] temp The prescribed boundary temperature function
    */
-  void setTemperatureBCs(const std::set<int>& temp_bdr, std::shared_ptr<mfem::Coefficient> temp_bdr_coef);
+  void setTemperatureBCs(const std::set<int>& temp_bdr, std::function<double(const mfem::Vector& x, double t)> temp)
+  {
+    // Project the coefficient onto the grid function
+    temp_bdr_coef_ = std::make_shared<mfem::FunctionCoefficient>(temp);
 
-  /**
-   * @brief Set flux boundary conditions (weakly enforced)
-   *
-   * @param[in] flux_bdr The boundary attributes on which to enforce a heat flux (weakly enforced)
-   * @param[in] flux_bdr_coef The prescribed boundary heat flux
-   */
-  void setFluxBCs(const std::set<int>& flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef);
+    bcs_.addEssential(temp_bdr, temp_bdr_coef_, temperature_.space());
+  }
 
   /**
    * @brief Advance the timestep
    *
    * @param[inout] dt The timestep to advance. For adaptive time integration methods, the actual timestep is returned.
    */
-  void advanceTimestep(double& dt) override;
+  void advanceTimestep(double& dt) override
+  {
+    if (is_quasistatic_) {
+      time_ += dt;
+      // Project the essential boundary coefficients
+      for (auto& bc : bcs_.essentials()) {
+        bc.setDofs(temperature_, time_);
+      }
+      nonlin_solver_.Mult(zero_, temperature_);
+    } else {
+      SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
+
+      // Step the time integrator
+      // Note that the ODE solver handles the essential boundary condition application itself
+      ode_.Step(temperature_, time_, dt);
+    }
+    cycle_ += 1;
+  }
 
   /**
-   * @brief Set the thermal conductivity
+   * @brief Set the thermal flux and mass properties for the physics module
    *
-   * @param[in] kappa The thermal conductivity
+   * @tparam MaterialType The thermal material type
+   * @param material A material containing density, specific heat, and thermal flux evaluation information
+   *
+   * TODO: update these doxygen comments
+   * @pre MaterialType must have a method specificHeatCapacity() defining the specific heat
+   * @pre MaterialType must have a method density() defining the density
+   * @pre MaterialType must have the operator (temperature, d temperature_dx) defined as the thermal flux
    */
-  void setConductivity(std::unique_ptr<mfem::Coefficient>&& kappa);
+  template <int... active_parameters, typename MaterialType>
+  void setMaterial(DependsOn<active_parameters...>, MaterialType material)
+  {
+    K_functional_->AddDomainIntegral(
+        Dimension<dim>{}, DependsOn<0, active_parameters + 1 ...>{},
+        [material](auto x, auto temperature, auto... params) {
+          // Get the value and the gradient from the input tuple
+          auto [u, du_dx] = temperature;
+          auto source     = serac::zero{};
+
+          auto response = material(x, u, du_dx, params...);
+
+          return serac::tuple{source, -1.0 * response.heat_flux};
+        },
+        mesh_);
+
+    M_functional_->AddDomainIntegral(
+        Dimension<dim>{}, DependsOn<0, active_parameters + 1 ...>{},
+        [material](auto x, auto d_temperature_dt, auto... params) {
+          auto [u, du_dx] = d_temperature_dt;
+          auto flux       = serac::zero{};
+
+          auto temp      = u * 0.0;
+          auto temp_grad = du_dx * 0.0;
+
+          auto response = material(x, temp, temp_grad, params...);
+
+          auto source = response.specific_heat_capacity * response.density * u;
+
+          // Return the source and the flux as a tuple
+          return serac::tuple{source, flux};
+        },
+        mesh_);
+  }
+
+  /// @overload
+  template <typename MaterialType>
+  void setMaterial(MaterialType material)
+  {
+    setMaterial(DependsOn<>{}, material);
+  }
 
   /**
-   * @brief Set the temperature state vector from a coefficient
+   * @brief Set the underlying finite element state to a prescribed temperature
    *
-   * @param[in] temp The temperature coefficient
+   * @param temp The function describing the temperature field
    */
-  void setTemperature(mfem::Coefficient& temp);
+  void setTemperature(std::function<double(const mfem::Vector& x, double t)> temp)
+  {
+    // Project the coefficient onto the grid function
+    mfem::FunctionCoefficient temp_coef(temp);
+
+    temp_coef.SetTime(time_);
+    temperature_.project(temp_coef);
+    gf_initialized_[0] = true;
+  }
 
   /**
-   * @brief Set the thermal body source from a coefficient
+   * @brief Set the thermal source function
    *
-   * @param[in] source The source function coefficient
+   * @tparam SourceType The type of the source function
+   * @param source_function A source function for a prescribed thermal load
+   *
+   * @pre SourceType must have the operator (x, time, temperature, d temperature_dx) defined as the thermal source
    */
-  void setSource(std::unique_ptr<mfem::Coefficient>&& source);
+  template <int... active_parameters, typename SourceType>
+  void setSource(DependsOn<active_parameters...>, SourceType source_function)
+  {
+    if constexpr (is_parameterized<SourceType>::value) {
+      static_assert(source_function.numParameters() == sizeof...(parameter_space),
+                    "Number of parameters in thermal conduction does not equal the number of parameters in the "
+                    "thermal source.");
+    }
+
+    auto parameterized_source = parameterizeSource(source_function);
+
+    K_functional_->AddDomainIntegral(
+        Dimension<dim>{}, DependsOn<0, active_parameters + 1 ...>{},
+        [parameterized_source, this](auto x, auto temperature, auto... params) {
+          // Get the value and the gradient from the input tuple
+          auto [u, du_dx] = temperature;
+
+          auto flux = serac::zero{};
+
+          auto source = -1.0 * parameterized_source(x, time_, u, du_dx, serac::get<0>(params)...);
+
+          // Return the source and the flux as a tuple
+          return serac::tuple{source, flux};
+        },
+        mesh_);
+  }
+
+  /// @overload
+  template <typename SourceType>
+  void setSource(SourceType source_function)
+  {
+    setSource(DependsOn<>{}, source_function);
+  }
 
   /**
-   * @brief Set a nonlinear temperature dependent reaction term
+   * @brief Set the thermal flux boundary condition
    *
-   * @param[in] reaction A function describing the temperature dependent reaction q=q(T)
-   * @param[in] d_reaction A function describing the derivative of the reaction dq = dq(T)/dT
-   * @param[in] scale A scaling coefficient for the reaction term
+   * @tparam FluxType The type of the flux function
+   * @param flux_function A function describing the thermal flux applied to a boundary
+   *
+   * @pre FluxType must have the operator (x, normal, temperature) to return the thermal flux value
    */
-  void setNonlinearReaction(std::function<double(double)> reaction, std::function<double(double)> d_reaction,
-                            std::unique_ptr<mfem::Coefficient>&& scale);
+  template <int... active_parameters, typename FluxType>
+  void setFluxBCs(DependsOn<active_parameters...>, FluxType flux_function)
+  {
+    K_functional_->AddBoundaryIntegral(
+        Dimension<dim - 1>{}, DependsOn<0, active_parameters + 1 ...>{},
+        [flux_function](auto x, auto n, auto u, auto... params) { return flux_function(x, n, u, params...); }, mesh_);
+  }
 
-  /**
-   * @brief Set the density field. Defaults to 1.0 if not set.
-   *
-   * @param[in] rho The density field coefficient
-   */
-  void setMassDensity(std::unique_ptr<mfem::Coefficient>&& rho);
-
-  /**
-   * @brief Set the specific heat capacity. Defaults to 1.0 if not set.
-   *
-   * @param[in] cp The specific heat capacity
-   */
-  void setSpecificHeatCapacity(std::unique_ptr<mfem::Coefficient>&& cp);
+  /// @overload
+  template <typename FluxType>
+  void setFluxBCs(FluxType flux_function)
+  {
+    setFluxBCs(DependsOn<>{}, flux_function);
+  }
 
   /**
    * @brief Get the temperature state
@@ -295,72 +353,186 @@ public:
    */
   const serac::FiniteElementState& temperature() const { return temperature_; };
 
-  /**
-   * @overload
-   */
+  /// @overload
   serac::FiniteElementState& temperature() { return temperature_; };
+
+  /**
+   * @brief Get the adjoint temperature state
+   *
+   * @return A reference to the current adjoint temperature finite element state
+   */
+  const serac::FiniteElementState& adjointTemperature() const { return adjoint_temperature_; };
+
+  /// @overload
+  serac::FiniteElementState& adjointTemperature() { return adjoint_temperature_; };
 
   /**
    * @brief Complete the initialization and allocation of the data structures.
    *
-   * This must be called before StaticSolve() or AdvanceTimestep(). If allow_dynamic
-   * = false, do not allocate the mass matrix or dynamic operator
+   * This must be called before AdvanceTimestep().
    */
-  void completeSetup() override;
+  void completeSetup() override
+  {
+    // Build the dof array lookup tables
+    temperature_.space().BuildDofToArrays();
+
+    if (is_quasistatic_) {
+      residual_ = mfem_ext::StdFunctionOperator(
+          temperature_.space().TrueVSize(),
+
+          [this](const mfem::Vector& u, mfem::Vector& r) {
+            r = (*K_functional_)(u, *parameter_states_[parameter_indices]...);
+            r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
+          },
+
+          [this](const mfem::Vector& u) -> mfem::Operator& {
+            auto [r, drdu] = (*K_functional_)(differentiate_wrt(u), *parameter_states_[parameter_indices]...);
+            J_             = assemble(drdu);
+            bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+            return *J_;
+          });
+
+    } else {
+      // If dynamic, assemble the mass matrix
+      residual_ = mfem_ext::StdFunctionOperator(
+          temperature_.space().TrueVSize(),
+          [this](const mfem::Vector& du_dt, mfem::Vector& r) {
+            auto M_residual = (*M_functional_)(du_dt, *parameter_states_[parameter_indices]...);
+
+            // TODO we should use the new variadic capability to directly pass temperature and d_temp_dt directly to
+            // these kernels to avoid ugly hacks like this.
+            mfem::Vector K_arg(u_.Size());
+            add(1.0, u_, dt_, du_dt, u_predicted_);
+            auto K_residual = (*K_functional_)(u_predicted_, *parameter_states_[parameter_indices]...);
+
+            add(M_residual, K_residual, r);
+            r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
+          },
+
+          [this](const mfem::Vector& du_dt) -> mfem::Operator& {
+            // Only reassemble the stiffness if it is a new timestep
+
+            auto M =
+                serac::get<1>((*M_functional_)(differentiate_wrt(du_dt), *parameter_states_[parameter_indices]...));
+            std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
+
+            mfem::Vector K_arg(u_.Size());
+            add(1.0, u_, dt_, du_dt, u_predicted_);
+
+            auto K = serac::get<1>(
+                (*K_functional_)(differentiate_wrt(u_predicted_), *parameter_states_[parameter_indices]...));
+
+            std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
+
+            J_.reset(mfem::Add(1.0, *m_mat, dt_, *k_mat));
+            bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+            return *J_;
+          });
+    }
+  }
 
   /**
-   * @brief Destroy the Thermal Solver object
+   * @brief Solve the adjoint problem
+   * @pre It is expected that the forward analysis is complete and the current temperature state is valid
+   * @note If the essential boundary state is not specified, homogeneous essential boundary conditions are applied
+   *
+   * @param[in] adjoint_load The dual state that contains the right hand side of the adjoint system (d quantity of
+   * interest/d temperature)
+   * @param[in] dual_with_essential_boundary A optional finite element dual containing the non-homogenous essential
+   * boundary condition data for the adjoint problem
+   * @return The computed adjoint finite element state
    */
+  virtual const serac::FiniteElementState& solveAdjoint(FiniteElementDual& adjoint_load,
+                                                        FiniteElementDual* dual_with_essential_boundary = nullptr)
+  {
+    mfem::HypreParVector adjoint_load_vector(adjoint_load);
+
+    // Add the sign correction to move the term to the RHS
+    adjoint_load_vector *= -1.0;
+
+    auto& lin_solver = nonlin_solver_.LinearSolver();
+
+    // By default, use a homogeneous essential boundary condition
+    mfem::HypreParVector adjoint_essential(adjoint_load);
+    adjoint_essential = 0.0;
+
+    auto [r, drdu] = (*K_functional_)(differentiate_wrt(temperature_), *parameter_states_[parameter_indices]...);
+    auto jacobian  = assemble(drdu);
+    auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
+
+    // If we have a non-homogeneous essential boundary condition, extract it from the given state
+    if (dual_with_essential_boundary) {
+      adjoint_essential = *dual_with_essential_boundary;
+    }
+
+    for (const auto& bc : bcs_.essentials()) {
+      bc.apply(*J_T, adjoint_load_vector, adjoint_essential);
+    }
+
+    lin_solver.SetOperator(*J_T);
+    lin_solver.Mult(adjoint_load_vector, adjoint_temperature_);
+
+    // Reset the equation solver to use the full nonlinear residual operator
+    nonlin_solver_.SetOperator(residual_);
+
+    return adjoint_temperature_;
+  }
+
+  /**
+   * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
+   * problem with respect to the parameter field
+   *
+   * @tparam parameter_field The index of the parameter to take a derivative with respect to
+   * @return The sensitivity with respect to the parameter
+   *
+   * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
+   */
+  template <int parameter_field>
+  FiniteElementDual& computeSensitivity()
+  {
+    auto [r, drdparam] = (*K_functional_)(DifferentiateWRT<parameter_field + 1>{}, temperature_,
+                                          *parameter_states_[parameter_indices]...);
+
+    auto drdparam_mat = assemble(drdparam);
+
+    drdparam_mat->MultTranspose(adjoint_temperature_, *parameter_sensitivities_[parameter_field]);
+
+    return *parameter_sensitivities_[parameter_field];
+  }
+
+  /// Destroy the Thermal Solver object
   virtual ~ThermalConduction() = default;
 
 protected:
-  /**
-   * @brief The temperature finite element state
-   */
+  /// The compile-time finite element trial space for thermal conduction (H1 of order p)
+  using trial = H1<order>;
+
+  /// The compile-time finite element test space for thermal conduction (H1 of order p)
+  using test = H1<order>;
+
+  /// The temperature finite element state
   serac::FiniteElementState temperature_;
 
-  /**
-   * @brief Mass bilinear form object
-   */
-  std::unique_ptr<mfem::ParBilinearForm> M_form_;
+  /// The adjoint temperature finite element state
+  serac::FiniteElementState adjoint_temperature_;
 
-  /**
-   * @brief Stiffness nonlinear form object
-   */
-  std::unique_ptr<mfem::ParNonlinearForm> K_form_;
+  /// Mass functional object \f$\mathbf{M} = \int_\Omega c_p \, \rho \, \phi_i \phi_j\, dx \f$
+  std::unique_ptr<Functional<test(trial, parameter_space...)>> M_functional_;
 
-  /**
-   * @brief Assembled mass matrix
-   */
+  /// Stiffness functional object \f$\mathbf{K} = \int_\Omega \theta \cdot \nabla \phi_i  + f \phi_i \, dx \f$
+  std::unique_ptr<Functional<test(trial, parameter_space...)>> K_functional_;
+
+  /// The finite element states representing user-defined parameter fields
+  std::array<const FiniteElementState*, sizeof...(parameter_space)> parameter_states_;
+
+  /// The sensitivities (dual vectors) with repect to each of the input parameter fields
+  std::array<std::unique_ptr<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;
+
+  /// Assembled mass matrix
   std::unique_ptr<mfem::HypreParMatrix> M_;
 
-  /**
-   * @brief Conduction coefficient
-   */
-  std::unique_ptr<mfem::Coefficient> kappa_;
-
-  /**
-   * @brief Body source coefficient
-   */
-  std::unique_ptr<mfem::Coefficient> source_;
-
-  /**
-   * @brief Density coefficient
-   *
-   */
-  std::unique_ptr<mfem::Coefficient> rho_;
-
-  /**
-   * @brief Specific heat capacity
-   *
-   */
-  std::unique_ptr<mfem::Coefficient> cp_;
-
-  /**
-   * @brief Combined mass matrix coefficient (rho * cp)
-   *
-   */
-  std::unique_ptr<mfem::Coefficient> mass_coef_;
+  /// Coefficient containing the essential boundary values
+  std::shared_ptr<mfem::Coefficient> temp_bdr_coef_;
 
   /**
    * @brief mfem::Operator that describes the weight residual
@@ -375,72 +547,29 @@ protected:
    */
   mfem_ext::FirstOrderODE ode_;
 
-  /**
-   * @brief the specific methods and tolerances specified to
-   * solve the nonlinear residual equations
-   */
+  /// the specific methods and tolerances specified to solve the nonlinear residual equations
   mfem_ext::EquationSolver nonlin_solver_;
 
-  /**
-   * @brief assembled sparse matrix for the Jacobian
-   * at the predicted temperature
-   */
+  /// Assembled sparse matrix for the Jacobian
   std::unique_ptr<mfem::HypreParMatrix> J_;
 
-  /**
-   * @brief The current timestep
-   */
+  /// The current timestep
   double dt_;
 
-  /**
-   * @brief The previous timestep
-   */
+  /// The previous timestep
   double previous_dt_;
 
-  /**
-   * @brief A zero vector
-   */
+  /// An auxilliary zero vector
   mfem::Vector zero_;
 
-  /**
-   * @brief predicted temperature true dofs
-   */
+  /// Predicted temperature true dofs
   mfem::Vector u_;
 
-  /**
-   * @brief previous value of du_dt used to prime the pump for the
-   * nonlinear solver
-   */
+  /// Predicted temperature true dofs
+  mfem::Vector u_predicted_;
+
+  /// Previous value of du_dt used to prime the pump for the nonlinear solver
   mfem::Vector previous_;
-
-  /**
-   * @brief the nonlinear reaction function
-   *
-   */
-  std::function<double(double)> reaction_;
-
-  /**
-   * @brief the derivative of the nonlinear reaction function
-   *
-   */
-  std::function<double(double)> d_reaction_;
-
-  /**
-   * @brief a scaling factor for the reaction
-   *
-   */
-  std::unique_ptr<mfem::Coefficient> reaction_scale_;
 };
 
 }  // namespace serac
-
-/**
- * @brief Prototype the specialization for Inlet parsing
- *
- * @tparam The object to be created by inlet
- */
-template <>
-struct FromInlet<serac::ThermalConduction::InputOptions> {
-  /// @brief Returns created object from Inlet container
-  serac::ThermalConduction::InputOptions operator()(const axom::inlet::Container& base);
-};

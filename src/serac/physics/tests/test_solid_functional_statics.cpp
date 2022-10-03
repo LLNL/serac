@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/solid_functional.hpp"
+#include "serac/physics/solid.hpp"
 
 #include <functional>
 #include <set>
@@ -77,11 +77,11 @@ public:
    * @tparam Material Type of the material model used in the problem
    *
    * @param material Material model used in the problem
-   * @param sf The SolidFunctional module for the problem
+   * @param sf The Solid module for the problem
    * @param essential_boundaries Boundary attributes on which essential boundary conditions are desired
    */
   template <int p, typename Material>
-  void applyLoads(const Material& material, SolidFunctional<p, dim>& sf, std::set<int> essential_boundaries) const
+  void applyLoads(const Material& material, Solid<p, dim>& sf, std::set<int> essential_boundaries) const
   {
     // essential BCs
     auto ebc_func = [*this](const auto& X, auto& u){ this->operator()(X, u); };
@@ -186,7 +186,7 @@ double solution_error(const ExactSolution& exact_displacement, PatchBoundaryCond
   auto solver_options = direct_static_options;
   solver_options.nonlinear.abs_tol = 1e-14;
   solver_options.nonlinear.rel_tol = 1e-14;
-  SolidFunctional<p, dim> solid_functional(solver_options, GeometricNonlinearities::On, "solid_functional");
+  Solid<p, dim> solid_functional(solver_options, GeometricNonlinearities::On, "solid_functional");
 
   solid_mechanics::NeoHookean mat{.density=1.0, .K=1.0, .G=1.0};
   solid_functional.setMaterial(mat);
@@ -214,7 +214,7 @@ double solution_error(const ExactSolution& exact_displacement, PatchBoundaryCond
 
 const double tol = 1e-13;
 
-TEST(SolidFunctional, PatchTest2dQ1EssentialBcs)
+TEST(Solid, PatchTest2dQ1EssentialBcs)
 {
   constexpr int p = 1;
   constexpr int dim = 2;
@@ -222,7 +222,7 @@ TEST(SolidFunctional, PatchTest2dQ1EssentialBcs)
   EXPECT_LT(error, tol);
 }
 
-TEST(SolidFunctional, PatchTest3dQ1EssentialBcs)
+TEST(Solid, PatchTest3dQ1EssentialBcs)
 {
   constexpr int p = 1;
   constexpr int dim   = 3;
@@ -230,7 +230,7 @@ TEST(SolidFunctional, PatchTest3dQ1EssentialBcs)
   EXPECT_LT(error, tol);
 }
 
-TEST(SolidFunctional, PatchTest2dQ2EssentialBcs)
+TEST(Solid, PatchTest2dQ2EssentialBcs)
 {
   constexpr int p = 2;
   constexpr int dim   = 2;
@@ -238,7 +238,7 @@ TEST(SolidFunctional, PatchTest2dQ2EssentialBcs)
   EXPECT_LT(error, tol);
 }
 
-TEST(SolidFunctional, PatchTest3dQ2EssentialBcs)
+TEST(Solid, PatchTest3dQ2EssentialBcs)
 {
   constexpr int p = 2;
   constexpr int dim   = 3;
@@ -246,7 +246,7 @@ TEST(SolidFunctional, PatchTest3dQ2EssentialBcs)
   EXPECT_LT(error, tol);
 }
 
-TEST(SolidFunctional, PatchTest2dQ1TractionBcs)
+TEST(Solid, PatchTest2dQ1TractionBcs)
 {
   constexpr int p = 1;
   constexpr int dim   = 2;
@@ -254,7 +254,7 @@ TEST(SolidFunctional, PatchTest2dQ1TractionBcs)
   EXPECT_LT(error, tol);
 }
 
-TEST(SolidFunctional, PatchTest3dQ1TractionBcs)
+TEST(Solid, PatchTest3dQ1TractionBcs)
 {
   constexpr int p = 1;
   constexpr int dim   = 3;
@@ -262,7 +262,7 @@ TEST(SolidFunctional, PatchTest3dQ1TractionBcs)
   EXPECT_LT(error, tol);
 }
 
-TEST(SolidFunctional, PatchTest2dQ2TractionBcs)
+TEST(Solid, PatchTest2dQ2TractionBcs)
 {
   constexpr int p = 2;
   constexpr int dim   = 2;
@@ -270,7 +270,7 @@ TEST(SolidFunctional, PatchTest2dQ2TractionBcs)
   EXPECT_LT(error, tol);
 }
 
-TEST(SolidFunctional, PatchTest3dQ2TractionBcs)
+TEST(Solid, PatchTest3dQ2TractionBcs)
 {
   constexpr int p = 2;
   constexpr int dim   = 3;

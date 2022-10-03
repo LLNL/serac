@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file thermal_solid.hpp
+ * @file thermal_solid_legacy.hpp
  *
  * @brief An object containing an operator-split thermal structural solver
  */
@@ -15,15 +15,15 @@
 #include "mfem.hpp"
 
 #include "serac/physics/base_physics.hpp"
-#include "serac/physics/solid.hpp"
-#include "serac/physics/thermal_conduction.hpp"
+#include "serac/physics/solid_legacy.hpp"
+#include "serac/physics/thermal_conduction_legacy.hpp"
 
 namespace serac {
 
 /**
  * @brief The operator-split thermal structural solver
  */
-class ThermalSolid : public BasePhysics {
+class ThermalSolidLegacy : public BasePhysics {
 public:
   /**
    * @brief Stores all information held in the input file that
@@ -38,15 +38,15 @@ public:
     static void defineInputFileSchema(axom::inlet::Container& container);
 
     /**
-     * @brief Solid mechanics input options
+     * @brief SolidLegacy mechanics input options
      */
-    Solid::InputOptions solid_input;
+    SolidLegacy::InputOptions solid_input;
 
     /**
      * @brief Thermal conduction input options
      *
      */
-    ThermalConduction::InputOptions thermal_input;
+    ThermalConductionLegacy::InputOptions thermal_input;
 
     /**
      * @brief The isotropic coefficient of thermal expansion
@@ -69,26 +69,27 @@ public:
    * @param[in] pmesh An optional mesh reference, must be provided to configure the module
    * when a mesh other than the primary mesh is used
    */
-  ThermalSolid(int order, const ThermalConduction::SolverOptions& therm_options,
-               const Solid::SolverOptions& solid_options, const std::string& name = "", mfem::ParMesh* pmesh = nullptr);
+  ThermalSolidLegacy(int order, const ThermalConductionLegacy::SolverOptions& therm_options,
+                     const SolidLegacy::SolverOptions& solid_options, const std::string& name = "",
+                     mfem::ParMesh* pmesh = nullptr);
 
   /**
-   * @brief Construct a new Thermal Solid object from input file options
+   * @brief Construct a new Thermal SolidLegacy object from input file options
    *
    * @param[in] thermal_solid_input The thermal solid physics module input file option struct
    * @param[in] name A name for the physics module
    */
-  ThermalSolid(const ThermalSolid::InputOptions& thermal_solid_input, const std::string& name = "");
+  ThermalSolidLegacy(const ThermalSolidLegacy::InputOptions& thermal_solid_input, const std::string& name = "");
 
   /**
-   * @brief Construct a new Thermal Solid object from input file options
+   * @brief Construct a new Thermal SolidLegacy object from input file options
    *
    * @param[in] thermal_input The thermal physics module input file option struct
    * @param[in] solid_input The solid physics module input file option struct
    * @param[in] name A name for the physics module
    */
-  ThermalSolid(const ThermalConduction::InputOptions& thermal_input, const Solid::InputOptions& solid_input,
-               const std::string& name = "");
+  ThermalSolidLegacy(const ThermalConductionLegacy::InputOptions& thermal_input,
+                     const SolidLegacy::InputOptions& solid_input, const std::string& name = "");
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
@@ -309,18 +310,18 @@ public:
   /**
    * @brief Destroy the Thermal Structural Solver object
    */
-  virtual ~ThermalSolid() = default;
+  virtual ~ThermalSolidLegacy() = default;
 
 protected:
   /**
    * @brief The single physics nonlinear solid solver
    */
-  Solid solid_solver_;
+  SolidLegacy solid_solver_;
 
   /**
    * @brief The single physics thermal solver
    */
-  ThermalConduction therm_solver_;
+  ThermalConductionLegacy therm_solver_;
 
   /**
    * @brief The temperature finite element state
@@ -351,7 +352,7 @@ protected:
  * @tparam The object to be created by inlet
  */
 template <>
-struct FromInlet<serac::ThermalSolid::InputOptions> {
+struct FromInlet<serac::ThermalSolidLegacy::InputOptions> {
   /// @brief Returns created object from Inlet container
-  serac::ThermalSolid::InputOptions operator()(const axom::inlet::Container& base);
+  serac::ThermalSolidLegacy::InputOptions operator()(const axom::inlet::Container& base);
 };

@@ -14,7 +14,7 @@
 
 #include "serac/numerics/functional/functional.hpp"
 
-/// SolidFunctional helper data types
+/// Solid helper data types
 namespace serac::solid_mechanics {
 
 /**

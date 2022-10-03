@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file thermal_mechanics_functional.hpp
+ * @file thermal_mechanics.hpp
  *
  * @brief An object containing an operator-split thermal structural solver
  */
@@ -15,8 +15,8 @@
 #include "mfem.hpp"
 
 #include "serac/physics/base_physics.hpp"
-#include "serac/physics/solid_functional.hpp"
-#include "serac/physics/thermal_conduction_functional.hpp"
+#include "serac/physics/solid.hpp"
+#include "serac/physics/thermal_conduction.hpp"
 #include "serac/physics/materials/thermal_functional_material.hpp"
 #include "serac/physics/materials/solid_functional_material.hpp"
 
@@ -28,7 +28,7 @@ namespace serac {
  * Uses Functional to compute action of operators
  */
 template <int order, int dim, typename... parameter_space>
-class ThermalMechanicsFunctional : public BasePhysics {
+class ThermalMechanics : public BasePhysics {
 public:
   /**
    * @brief Construct a new coupled Thermal-Solid Functional object
@@ -38,7 +38,7 @@ public:
    * @param geom_nonlin Flag to include geometric nonlinearities
    * @param name An optional name for the physics module instance
    */
-  ThermalMechanicsFunctional(const SolverOptions& thermal_options, const SolverOptions& solid_options,
+  ThermalMechanics(const SolverOptions& thermal_options, const SolverOptions& solid_options,
                              GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
                              const std::string&      name        = "")
       : BasePhysics(3, order, name),
@@ -345,10 +345,10 @@ protected:
   using temperature_field  = H1<order>;       ///< the function space for the temperature field
 
   /// Submodule to compute the thermal conduction physics
-  ThermalConductionFunctional<order, dim, Parameters<displacement_field, parameter_space...>> thermal_functional_;
+  ThermalConduction<order, dim, Parameters<displacement_field, parameter_space...>> thermal_functional_;
 
   /// Submodule to compute the mechanics
-  SolidFunctional<order, dim, Parameters<temperature_field, parameter_space...>> solid_functional_;
+  Solid<order, dim, Parameters<temperature_field, parameter_space...>> solid_functional_;
 };
 
 }  // namespace serac

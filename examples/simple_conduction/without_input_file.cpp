@@ -12,7 +12,7 @@
  */
 
 // _incl_thermal_header_start
-#include "serac/physics/thermal_conduction.hpp"
+#include "serac/physics/thermal_conduction_legacy.hpp"
 // _incl_thermal_header_end
 // _incl_state_manager_start
 #include "serac/physics/state/state_manager.hpp"
@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
 
   // _create_module_start
   constexpr int order = 2;
-  serac::ThermalConduction conduction(order, serac::ThermalConduction::defaultQuasistaticOptions());
+  serac::ThermalConductionLegacy conduction(order, serac::ThermalConductionLegacy::defaultQuasistaticOptions());
   // _create_module_end
 
   // _conductivity_start

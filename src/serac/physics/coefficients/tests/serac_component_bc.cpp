@@ -15,7 +15,7 @@
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/serac_config.hpp"
-#include "serac/physics/solid.hpp"
+#include "serac/physics/solid_legacy.hpp"
 #include "serac/physics/tests/test_utilities.hpp"
 
 namespace serac {
@@ -24,7 +24,7 @@ TEST(SolidSolver, QsAttributeSolve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   std::string input_file_path = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/qs_attribute_solve.lua";
-  test_utils::runModuleTest<Solid>(input_file_path, "qs_attribute_solve");
+  test_utils::runModuleTest<SolidLegacy>(input_file_path, "qs_attribute_solve");
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
@@ -32,7 +32,7 @@ TEST(SolidSolver, QsComponentSolve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   std::string input_file_path = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/qs_component_solve.lua";
-  test_utils::runModuleTest<Solid>(input_file_path, "qs_component_solve");
+  test_utils::runModuleTest<SolidLegacy>(input_file_path, "qs_component_solve");
   MPI_Barrier(MPI_COMM_WORLD);
 }
 

@@ -14,7 +14,7 @@
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/materials/thermal_functional_material.hpp"
 #include "serac/physics/state/state_manager.hpp"
-#include "serac/physics/thermal_conduction_functional.hpp"
+#include "serac/physics/thermal_conduction.hpp"
 
 template <int p, int dim>
 void functional_test_static()
@@ -41,7 +41,7 @@ void functional_test_static()
   std::set<int> ess_bdr = {1};
 
   // Construct a functional-based thermal conduction solver
-  ThermalConductionFunctional<p, dim> thermal_solver(ThermalConductionFunctional<p, dim>::defaultQuasistaticOptions(),
+  ThermalConduction<p, dim> thermal_solver(ThermalConduction<p, dim>::defaultQuasistaticOptions(),
                                                      "thermal_functional");
 
   tensor<double, dim, dim> cond;
@@ -109,7 +109,7 @@ void functional_test_dynamic()
   std::set<int> ess_bdr = {1};
 
   // Construct a functional-based thermal conduction solver
-  ThermalConductionFunctional<p, dim> thermal_solver(ThermalConductionFunctional<p, dim>::defaultDynamicOptions(),
+  ThermalConduction<p, dim> thermal_solver(ThermalConduction<p, dim>::defaultDynamicOptions(),
                                                      "thermal_functional");
 
   // Define an isotropic conductor material model

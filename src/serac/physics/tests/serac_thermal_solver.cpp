@@ -13,7 +13,7 @@
 
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/state/state_manager.hpp"
-#include "serac/physics/thermal_conduction.hpp"
+#include "serac/physics/thermal_conduction_legacy.hpp"
 #include "serac/serac_config.hpp"
 #include "test_utilities.hpp"
 
@@ -21,12 +21,12 @@ namespace serac {
 
 using test_utils::InputFileTest;
 
-TEST_P(InputFileTest, ThermalConduction)
+TEST_P(InputFileTest, ThermalConductionLegacy)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   std::string input_file_path =
       std::string(SERAC_REPO_DIR) + "/data/input_files/tests/thermal_conduction/" + GetParam() + ".lua";
-  test_utils::runModuleTest<ThermalConduction>(input_file_path, GetParam());
+  test_utils::runModuleTest<ThermalConductionLegacy>(input_file_path, GetParam());
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
@@ -50,7 +50,7 @@ TEST(ThermalSolver, DynImpSolveRestart)
     MPI_Barrier(MPI_COMM_WORLD);
     const std::string input_file_path =
         std::string(SERAC_REPO_DIR) + "/data/input_files/tests/thermal_conduction/dyn_imp_solve.lua";
-    test_utils::runModuleTest<ThermalConduction>(input_file_path, "dyn_imp_solve_restart");
+    test_utils::runModuleTest<ThermalConductionLegacy>(input_file_path, "dyn_imp_solve_restart");
     MPI_Barrier(MPI_COMM_WORLD);
   }
 
@@ -62,7 +62,7 @@ TEST(ThermalSolver, DynImpSolveRestart)
     const std::string input_file_path =
         std::string(SERAC_REPO_DIR) + "/data/input_files/tests/thermal_conduction/dyn_imp_solve_restart.lua";
     const int restart_cycle = 5;
-    test_utils::runModuleTest<ThermalConduction>(input_file_path, "dyn_imp_solve_restart", restart_cycle);
+    test_utils::runModuleTest<ThermalConductionLegacy>(input_file_path, "dyn_imp_solve_restart", restart_cycle);
     MPI_Barrier(MPI_COMM_WORLD);
   }
 

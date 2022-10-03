@@ -13,7 +13,7 @@
 #include "serac/physics/coefficients/coefficient_extensions.hpp"
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/state/state_manager.hpp"
-#include "serac/physics/thermal_solid.hpp"
+#include "serac/physics/thermal_solid_legacy.hpp"
 #include "serac/serac_config.hpp"
 
 namespace serac {
@@ -43,10 +43,10 @@ TEST(SolidSolver, ThermalExpansion)
   const NonlinearSolverOptions default_nonlinear_options = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
 
-  const Solid::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
+  const SolidLegacy::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
 
   // initialize the solver object
-  Solid solid_solver(1, default_static, GeometricNonlinearities::Off);
+  SolidLegacy solid_solver(1, default_static, GeometricNonlinearities::Off);
 
   solid_solver.setMaterialParameters(std::make_unique<mfem::ConstantCoefficient>(0.25),
                                      std::make_unique<mfem::ConstantCoefficient>(5.0), false);

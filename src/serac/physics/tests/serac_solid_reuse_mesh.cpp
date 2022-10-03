@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/solid.hpp"
+#include "serac/physics/solid_legacy.hpp"
 
 #include <fstream>
 
@@ -62,14 +62,15 @@ TEST(SolidSolver, ReuseMesh)
   const NonlinearSolverOptions default_nonlinear_options = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
 
-  const Solid::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
+  const SolidLegacy::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
 
   mfem::Vector u_1_true_vec;
 
   // Keep the solver_1 and solver_2 objects in a different scope for testing
   {
     // initialize the dynamic solver object
-    Solid solid_solver_1(1, default_static, GeometricNonlinearities::On, FinalMeshOption::Deformed, "first_solid");
+    SolidLegacy solid_solver_1(1, default_static, GeometricNonlinearities::On, FinalMeshOption::Deformed,
+                               "first_solid");
     solid_solver_1.setDisplacementBCs(ess_bdr, deform);
     solid_solver_1.setTractionBCs(trac_bdr, traction_coef, false);
     solid_solver_1.setMaterialParameters(std::make_unique<mfem::ConstantCoefficient>(0.25),
@@ -79,7 +80,8 @@ TEST(SolidSolver, ReuseMesh)
     // Construct the internal dynamic solver data structures
     solid_solver_1.completeSetup();
 
-    Solid solid_solver_2(1, default_static, GeometricNonlinearities::On, FinalMeshOption::Deformed, "second_solid");
+    SolidLegacy solid_solver_2(1, default_static, GeometricNonlinearities::On, FinalMeshOption::Deformed,
+                               "second_solid");
     solid_solver_2.setDisplacementBCs(ess_bdr, deform);
     solid_solver_2.setTractionBCs(trac_bdr, traction_coef, false);
     solid_solver_2.setMaterialParameters(std::make_unique<mfem::ConstantCoefficient>(0.25),
@@ -101,7 +103,7 @@ TEST(SolidSolver, ReuseMesh)
     EXPECT_NEAR(0.0, (mfem::Vector(solid_solver_1.displacement() - solid_solver_2.displacement())).Norml2(), 0.001);
   }
 
-  Solid solid_solver_3(1, default_static, GeometricNonlinearities::On, FinalMeshOption::Deformed);
+  SolidLegacy solid_solver_3(1, default_static, GeometricNonlinearities::On, FinalMeshOption::Deformed);
   solid_solver_3.setDisplacementBCs(ess_bdr, deform);
   solid_solver_3.setTractionBCs(trac_bdr, traction_coef, false);
   solid_solver_3.setMaterialParameters(std::make_unique<mfem::ConstantCoefficient>(0.25),

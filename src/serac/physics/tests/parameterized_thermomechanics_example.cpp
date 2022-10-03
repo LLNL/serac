@@ -14,7 +14,7 @@
 #include "serac/infrastructure/terminator.hpp"
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/state/state_manager.hpp"
-#include "serac/physics/thermal_mechanics_functional.hpp"
+#include "serac/physics/thermal_mechanics.hpp"
 
 using namespace serac;
 
@@ -90,7 +90,7 @@ int main(int argc, char* argv[])
     serac::StateManager::setMesh(std::move(mesh));
   }
 
-  SolidFunctional<p, dim, Parameters<H1<p>, H1<p> > > simulation(default_static_options, GeometricNonlinearities::On,
+  Solid<p, dim, Parameters<H1<p>, H1<p> > > simulation(default_static_options, GeometricNonlinearities::On,
                                                                  "thermomechanics_simulation");
 
   double density   = 1.0;     ///< density

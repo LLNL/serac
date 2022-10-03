@@ -11,7 +11,7 @@
 #include <mfem.hpp>
 #include <mpi.h>
 
-#include <serac/physics/solid.hpp>
+#include <serac/physics/solid_legacy.hpp>
 #include <serac/physics/state/state_manager.hpp>
 #include <serac/physics/state/finite_element_state.hpp>
 #include <serac/physics/state/finite_element_dual.hpp>
@@ -38,12 +38,12 @@ TEST(SeracSolidSensitivity, FiniteDiff)
   serac::NonlinearSolverOptions const default_nonlinear_options = {
       .rel_tol = 1.0e-6, .abs_tol = 1.0e-11, .max_iter = 500, .print_level = 1};
 
-  serac::Solid::SolverOptions const solverOptions = {default_linear_options, default_nonlinear_options};
+  serac::SolidLegacy::SolverOptions const solverOptions = {default_linear_options, default_nonlinear_options};
 
-  // Make the serac Solid object
-  int          order = 1;
-  serac::Solid solid(order, solverOptions, serac::GeometricNonlinearities::Off, serac::FinalMeshOption::Reference, "hi",
-                     mesh);
+  // Make the serac SolidLegacy object
+  int                order = 1;
+  serac::SolidLegacy solid(order, solverOptions, serac::GeometricNonlinearities::Off, serac::FinalMeshOption::Reference,
+                           "hi", mesh);
 
   // Set up some fixed displacement conditions
   std::set<int> fixedBC{1};
@@ -188,9 +188,10 @@ TEST(SeracSolidSensitivity, MultipleDesignSpaces)
                                                                 .prec        = serac::HypreBoomerAMGPrec{}};
   serac::NonlinearSolverOptions const default_nonlinear_options = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-6, .max_iter = 3, .print_level = 1};
-  serac::Solid::SolverOptions const solverOptions = {default_linear_options, default_nonlinear_options};
-  int                               order         = 1;
-  serac::Solid solid(order, solverOptions, serac::GeometricNonlinearities::Off, serac::FinalMeshOption::Reference);
+  serac::SolidLegacy::SolverOptions const solverOptions = {default_linear_options, default_nonlinear_options};
+  int                                     order         = 1;
+  serac::SolidLegacy                      solid(order, solverOptions, serac::GeometricNonlinearities::Off,
+                           serac::FinalMeshOption::Reference);
 
   // Set the fixed Dirichlet BCs
   std::set<int> fixedBCs{1};

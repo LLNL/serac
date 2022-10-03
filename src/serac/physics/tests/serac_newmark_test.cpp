@@ -15,7 +15,7 @@
 #include "serac/numerics/expr_template_ops.hpp"
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/infrastructure/input.hpp"
-#include "serac/physics/solid.hpp"
+#include "serac/physics/solid_legacy.hpp"
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/numerics/odes.hpp"
 #include "serac/serac_config.hpp"
@@ -30,7 +30,7 @@ protected:
   void TearDown() {}
 
   // Helper method to run serac_newmark_tests
-  std::unique_ptr<serac::Solid> runDynamicTest(axom::inlet::Inlet& inlet)
+  std::unique_ptr<serac::SolidLegacy> runDynamicTest(axom::inlet::Inlet& inlet)
   {
     // Define schema
     // Simulation time parameters
@@ -45,7 +45,7 @@ protected:
 
     // Physics
     auto& solid_solver_table = inlet.addStruct("solid", "Finite deformation solid mechanics module");
-    serac::Solid::InputOptions::defineInputFileSchema(solid_solver_table);
+    serac::SolidLegacy::InputOptions::defineInputFileSchema(solid_solver_table);
     // get gravity parameter for this problem
     inlet.addDouble("g", "the gravity acceleration");
 
@@ -59,7 +59,7 @@ protected:
     auto pmesh        = serac::mesh::buildParallelMesh(mesh_options);
 
     // Define the solid solver object
-    auto solid_solver_options = inlet["solid"].get<serac::Solid::InputOptions>();
+    auto solid_solver_options = inlet["solid"].get<serac::SolidLegacy::InputOptions>();
 
     // We only want to add these boundary conditions if we've defined boundary_conds for the serac_newmark_beta test
     if (inlet["solid"].contains("boundary_conds")) {
@@ -72,7 +72,7 @@ protected:
     const int space_dim = pmesh->SpaceDimension();
     serac::StateManager::setMesh(std::move(pmesh));
 
-    auto solid_solver = std::make_unique<serac::Solid>(solid_solver_options);
+    auto solid_solver = std::make_unique<serac::SolidLegacy>(solid_solver_options);
 
     const bool is_dynamic = inlet["solid"].contains("dynamics");
 

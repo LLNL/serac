@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/thermal_conduction.hpp"
+#include "serac/physics/thermal_conduction_legacy.hpp"
 
 #include "serac/infrastructure/logger.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
@@ -16,8 +16,8 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 1;
 
-ThermalConduction::ThermalConduction(int order, const SolverOptions& options, const std::string& name,
-                                     mfem::ParMesh* pmesh)
+ThermalConductionLegacy::ThermalConductionLegacy(int order, const SolverOptions& options, const std::string& name,
+                                                 mfem::ParMesh* pmesh)
     : BasePhysics(NUM_FIELDS, order, name, pmesh),
       temperature_(StateManager::newState(FiniteElementState::Options{.order      = order,
                                                                       .vector_dim = 1,
@@ -62,8 +62,8 @@ ThermalConduction::ThermalConduction(int order, const SolverOptions& options, co
   temperature_ = 0.0;
 }
 
-ThermalConduction::ThermalConduction(const InputOptions& options, const std::string& name)
-    : ThermalConduction(options.order, options.solver_options, name)
+ThermalConductionLegacy::ThermalConductionLegacy(const InputOptions& options, const std::string& name)
+    : ThermalConductionLegacy(options.order, options.solver_options, name)
 {
   setConductivity(std::make_unique<mfem::ConstantCoefficient>(options.kappa));
   setMassDensity(std::make_unique<mfem::ConstantCoefficient>(options.rho));
@@ -105,7 +105,7 @@ ThermalConduction::ThermalConduction(const InputOptions& options, const std::str
   }
 }
 
-void ThermalConduction::setTemperature(mfem::Coefficient& temp)
+void ThermalConductionLegacy::setTemperature(mfem::Coefficient& temp)
 {
   // Project the coefficient onto the grid function
   temp.SetTime(time_);
@@ -113,52 +113,53 @@ void ThermalConduction::setTemperature(mfem::Coefficient& temp)
   gf_initialized_[0] = true;
 }
 
-void ThermalConduction::setTemperatureBCs(const std::set<int>&               temp_bdr,
-                                          std::shared_ptr<mfem::Coefficient> temp_bdr_coef)
+void ThermalConductionLegacy::setTemperatureBCs(const std::set<int>&               temp_bdr,
+                                                std::shared_ptr<mfem::Coefficient> temp_bdr_coef)
 {
   bcs_.addEssential(temp_bdr, temp_bdr_coef, temperature_.space());
 }
 
-void ThermalConduction::setFluxBCs(const std::set<int>& flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef)
+void ThermalConductionLegacy::setFluxBCs(const std::set<int>&               flux_bdr,
+                                         std::shared_ptr<mfem::Coefficient> flux_bdr_coef)
 {
   // Set the natural (integral) boundary condition
   bcs_.addNatural(flux_bdr, flux_bdr_coef, temperature_.space());
 }
 
-void ThermalConduction::setConductivity(std::unique_ptr<mfem::Coefficient>&& kappa)
+void ThermalConductionLegacy::setConductivity(std::unique_ptr<mfem::Coefficient>&& kappa)
 {
   // Set the conduction coefficient
   kappa_ = std::move(kappa);
 }
 
-void ThermalConduction::setSource(std::unique_ptr<mfem::Coefficient>&& source)
+void ThermalConductionLegacy::setSource(std::unique_ptr<mfem::Coefficient>&& source)
 {
   // Set the body source integral coefficient
   source_ = std::move(source);
 }
 
-void ThermalConduction::setNonlinearReaction(std::function<double(double)>        reaction,
-                                             std::function<double(double)>        d_reaction,
-                                             std::unique_ptr<mfem::Coefficient>&& scale)
+void ThermalConductionLegacy::setNonlinearReaction(std::function<double(double)>        reaction,
+                                                   std::function<double(double)>        d_reaction,
+                                                   std::unique_ptr<mfem::Coefficient>&& scale)
 {
   reaction_       = reaction;
   d_reaction_     = d_reaction;
   reaction_scale_ = std::move(scale);
 }
 
-void ThermalConduction::setSpecificHeatCapacity(std::unique_ptr<mfem::Coefficient>&& cp)
+void ThermalConductionLegacy::setSpecificHeatCapacity(std::unique_ptr<mfem::Coefficient>&& cp)
 {
   // Set the specific heat capacity coefficient
   cp_ = std::move(cp);
 }
 
-void ThermalConduction::setMassDensity(std::unique_ptr<mfem::Coefficient>&& rho)
+void ThermalConductionLegacy::setMassDensity(std::unique_ptr<mfem::Coefficient>&& rho)
 {
   // Set the density coefficient
   rho_ = std::move(rho);
 }
 
-void ThermalConduction::completeSetup()
+void ThermalConductionLegacy::completeSetup()
 {
   SLIC_ASSERT_MSG(kappa_, "Conductivity not set in ThermalSolver!");
 
@@ -230,7 +231,7 @@ void ThermalConduction::completeSetup()
   }
 }
 
-void ThermalConduction::advanceTimestep(double& dt)
+void ThermalConductionLegacy::advanceTimestep(double& dt)
 {
   if (is_quasistatic_) {
     time_ += dt;
@@ -250,7 +251,7 @@ void ThermalConduction::advanceTimestep(double& dt)
   cycle_ += 1;
 }
 
-void ThermalConduction::InputOptions::defineInputFileSchema(axom::inlet::Container& container)
+void ThermalConductionLegacy::InputOptions::defineInputFileSchema(axom::inlet::Container& container)
 {
   // Polynomial interpolation order - currently up to 8th order is allowed
   container.addInt("order", "Order degree of the finite elements.").defaultValue(1).range(1, 8);
@@ -290,13 +291,13 @@ void ThermalConduction::InputOptions::defineInputFileSchema(axom::inlet::Contain
 }  // namespace serac
 
 using serac::DirichletEnforcementMethod;
-using serac::ThermalConduction;
+using serac::ThermalConductionLegacy;
 using serac::TimestepMethod;
 
-serac::ThermalConduction::InputOptions FromInlet<serac::ThermalConduction::InputOptions>::operator()(
+serac::ThermalConductionLegacy::InputOptions FromInlet<serac::ThermalConductionLegacy::InputOptions>::operator()(
     const axom::inlet::Container& base)
 {
-  ThermalConduction::InputOptions result;
+  ThermalConductionLegacy::InputOptions result;
 
   result.order = base["order"];
 
@@ -306,8 +307,8 @@ serac::ThermalConduction::InputOptions FromInlet<serac::ThermalConduction::Input
   result.solver_options.T_nonlin_options = equation_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
 
   if (base.contains("dynamics")) {
-    ThermalConduction::TimesteppingOptions dyn_options;
-    auto                                   dynamics = base["dynamics"];
+    ThermalConductionLegacy::TimesteppingOptions dyn_options;
+    auto                                         dynamics = base["dynamics"];
 
     // FIXME: Implement all supported methods as part of an ODE schema
     const static std::map<std::string, TimestepMethod> timestep_methods = {
