@@ -12,5 +12,22 @@ if [ $? -ne 0 ]; then { echo "ERROR: build_src.py failed." ; exit 1; } fi
 if [[ "$DO_INTEGRATION_TESTS" == "yes" ]] ; then
     cd *build_and_test_*/build-*
     ./ats.sh
-    if [ $? -ne 0 ]; then { echo "ERROR: ATS failed." ; exit 1; } fi
+    if [ $? -ne 0 ]; then 
+        # Print each failing test's logs
+        cd *.*.logs
+        FAILING_TEST_NUMBERS=$(awk '/#[0-9]* FAIL/ {print $1}' ats.log | cut -c 2-)
+        for num in $FAILING_TEST_NUMBERS ; do
+            LOG_FILENAMES=(*$num*.log *$num*.log.err)
+            for f in ${LOG_FILENAMES[@]} ; do
+                if [ -s $f ] ; then
+                    echo "======== START $f START ========"
+                    cat $f
+                    echo "======== END $f END ========"
+                fi
+            done
+        done
+
+        echo "ERROR: ATS failed."
+        exit 1
+    fi
 fi
