@@ -19,6 +19,7 @@ set(serial_solver_tests
     serac_thermal_functional_finite_diff.cpp
     serac_solid_functional_finite_diff.cpp
     test_solid_functional_statics.cpp
+    test_solid_functional_dynamics.cpp
     )
 
 serac_add_tests( SOURCES ${serial_solver_tests}
