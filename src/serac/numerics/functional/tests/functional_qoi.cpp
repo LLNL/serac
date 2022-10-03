@@ -463,6 +463,27 @@ TEST(QoI, AddVolumeIntegral)
   delete tmp;
 }
 
+TEST(QoI, UsingL2)
+{
+  constexpr int p   = 1;
+  constexpr int dim = 3;
+
+  mfem::ParMesh& mesh = *mesh3D;
+
+  auto                        fec1 = mfem::H1_FECollection(p, dim);
+  mfem::ParFiniteElementSpace fespace_0(&mesh, &fec1);
+
+  auto                        fec2 = mfem::L2_FECollection(p, dim);
+  mfem::ParFiniteElementSpace fespace_1(&mesh, &fec2);
+
+  // Define the types for the test and trial spaces using the function arguments
+  using trial_space_0 = H1<p>;
+  using trial_space_1 = L2<0>;
+
+  // this tests a fix for the QoI constructor segfaulting when using L2 spaces
+  Functional<double(trial_space_0, trial_space_1)> f({&fespace_0, &fespace_1});
+}
+
 // clang-format off
 TEST(Measure, 2DLinear   ) { qoi_test(*mesh2D, H1<1>{}, Dimension<2>{}, WhichTest::Measure); }
 TEST(Measure, 2DQuadratic) { qoi_test(*mesh2D, H1<2>{}, Dimension<2>{}, WhichTest::Measure); }
