@@ -60,7 +60,7 @@ void functional_test_static_3D(double expected_norm)
   const SolverOptions solid_options = {default_linear_options, default_nonlinear_options};
 
   ThermalMechanics<p, dim> thermal_solid_solver(thermal_options, solid_options, GeometricNonlinearities::On,
-                                                          "thermal_solid_functional");
+                                                "thermal_solid_functional");
 
   double rho       = 1.0;
   double E         = 1.0;
@@ -144,7 +144,7 @@ void functional_test_shrinking_3D(double expected_norm)
   const SolverOptions solid_options = {default_linear_options, default_nonlinear_options};
 
   ThermalMechanics<p, dim> thermal_solid_solver(thermal_options, solid_options, GeometricNonlinearities::On,
-                                                          "thermal_solid_functional");
+                                                "thermal_solid_functional");
 
   double                                       rho       = 1.0;
   double                                       E         = 1.0;
@@ -247,9 +247,8 @@ void parameterized()
 
   const SolverOptions solid_options = {default_linear_options, default_nonlinear_options};
 
-  ThermalMechanics<p, dim, H1<p> > thermal_solid_solver(
-      thermal_options, solid_options, GeometricNonlinearities::On, FinalMeshOption::Deformed,
-      "thermal_solid_functional");
+  ThermalMechanics<p, dim, H1<p> > thermal_solid_solver(thermal_options, solid_options, GeometricNonlinearities::On,
+                                                        FinalMeshOption::Deformed, "thermal_solid_functional");
 
   double                                                    rho       = 1.0;
   double                                                    E         = 1.0;

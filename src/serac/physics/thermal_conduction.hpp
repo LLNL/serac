@@ -90,8 +90,8 @@ class ThermalConduction;
 
 /// @overload
 template <int order, int dim, typename... parameter_space, int... parameter_indices>
-class ThermalConduction<order, dim, Parameters<parameter_space...>,
-                                  std::integer_sequence<int, parameter_indices...>> : public BasePhysics {
+class ThermalConduction<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>
+    : public BasePhysics {
 public:
   /**
    * @brief Construct a new Thermal Functional Solver object
@@ -99,19 +99,21 @@ public:
    * @param[in] options The system linear and nonlinear solver and timestepping parameters
    * @param[in] name An optional name for the physics module instance
    * used by an underlying material model or load
+   * @param[in] pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
-  ThermalConduction(const SolverOptions& options, const std::string& name = {})
-      : BasePhysics(2, order, name),
-        temperature_(
+  ThermalConduction(const SolverOptions& options, const std::string& name = {}, mfem::ParMesh* pmesh = nullptr)
+      : BasePhysics(2, order, name, pmesh),
+        temperature_(StateManager::newState(FiniteElementState::Options{.order      = order,
+                                                                        .vector_dim = 1,
+                                                                        .ordering   = mfem::Ordering::byNODES,
+                                                                        .name = detail::addPrefix(name, "temperature")},
+                                            sidre_datacoll_id_)),
+        adjoint_temperature_(
             StateManager::newState(FiniteElementState::Options{.order      = order,
                                                                .vector_dim = 1,
                                                                .ordering   = mfem::Ordering::byNODES,
-                                                               .name       = detail::addPrefix(name, "temperature")})),
-        adjoint_temperature_(StateManager::newState(
-            FiniteElementState::Options{.order      = order,
-                                        .vector_dim = 1,
-                                        .ordering   = mfem::Ordering::byNODES,
-                                        .name       = detail::addPrefix(name, "adjoint_temperature")})),
+                                                               .name = detail::addPrefix(name, "adjoint_temperature")},
+                                   sidre_datacoll_id_)),
         residual_(temperature_.space().TrueVSize()),
         ode_(temperature_.space().TrueVSize(), {.u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
              nonlin_solver_, bcs_)

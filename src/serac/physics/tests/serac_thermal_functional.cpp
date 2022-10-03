@@ -205,7 +205,7 @@ TEST(ThermalFunctional, ParameterizedMaterial)
   // field, in this case the thermal conductivity. We also pass an array of finite element states for each of the
   // requested parameterized fields.
   ThermalConduction<p, dim, Parameters<H1<1> > > thermal_solver(Thermal::defaultQuasistaticOptions(),
-                                                                          "thermal_functional");
+                                                                "thermal_functional");
   thermal_solver.setParameter(user_defined_conductivity, 0);
 
   // Construct a potentially user-defined parameterized material and send it to the thermal module

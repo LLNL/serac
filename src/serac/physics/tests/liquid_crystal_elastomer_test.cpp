@@ -70,8 +70,8 @@ int main(int argc, char* argv[])
 
   // Construct a functional-based solid mechanics solver
   Solid<p, dim, Parameters<H1<p>, L2<p> > > solid_solver(default_static_options, GeometricNonlinearities::Off,
-                                                                   FinalMeshOption::Reference, "solid_functional",
-                                                                   {temperature, gamma});
+                                                         FinalMeshOption::Reference, "solid_functional",
+                                                         {temperature, gamma});
 
   double density                = 1.0;
   double E                      = 1.0;

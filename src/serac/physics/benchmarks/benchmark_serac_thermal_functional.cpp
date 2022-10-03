@@ -42,7 +42,7 @@ void functional_test_static()
 
   // Construct a functional-based thermal conduction solver
   ThermalConduction<p, dim> thermal_solver(ThermalConduction<p, dim>::defaultQuasistaticOptions(),
-                                                     "thermal_functional");
+                                           "thermal_functional");
 
   tensor<double, dim, dim> cond;
 
@@ -109,8 +109,7 @@ void functional_test_dynamic()
   std::set<int> ess_bdr = {1};
 
   // Construct a functional-based thermal conduction solver
-  ThermalConduction<p, dim> thermal_solver(ThermalConduction<p, dim>::defaultDynamicOptions(),
-                                                     "thermal_functional");
+  ThermalConduction<p, dim> thermal_solver(ThermalConduction<p, dim>::defaultDynamicOptions(), "thermal_functional");
 
   // Define an isotropic conductor material model
   Thermal::LinearIsotropicConductor mat(1.0, 1.0, 1.0);

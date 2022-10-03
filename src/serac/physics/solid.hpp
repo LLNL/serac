@@ -109,19 +109,30 @@ public:
    * @param geom_nonlin Flag to include geometric nonlinearities
    * @param name An optional name for the physics module instance
    * @param calc_shape A flag for computing the shape displacement and associated sensitivity
+   * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
 
   Solid(const SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
-                  const std::string& name = "", ShapeDisplacement calc_shape = ShapeDisplacement::Off)
-      : BasePhysics(2, order, name),
-        velocity_(StateManager::newState(FiniteElementState::Options{
-            .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "velocity")})),
-        displacement_(StateManager::newState(FiniteElementState::Options{
-            .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "displacement")})),
-        adjoint_displacement_(StateManager::newState(FiniteElementState::Options{
-            .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "adjoint_displacement")})),
-        shape_displacement_(StateManager::newState(FiniteElementState::Options{
-            .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "shape_displacement")})),
+        const std::string& name = "", ShapeDisplacement calc_shape = ShapeDisplacement::Off,
+        mfem::ParMesh* pmesh = nullptr)
+      : BasePhysics(2, order, name, pmesh),
+        velocity_(StateManager::newState(
+            FiniteElementState::Options{
+                .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "velocity")},
+            sidre_datacoll_id_)),
+        displacement_(StateManager::newState(
+            FiniteElementState::Options{
+                .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "displacement")},
+            sidre_datacoll_id_)),
+        adjoint_displacement_(
+            StateManager::newState(FiniteElementState::Options{.order      = order,
+                                                               .vector_dim = mesh_.Dimension(),
+                                                               .name = detail::addPrefix(name, "adjoint_displacement")},
+                                   sidre_datacoll_id_)),
+        shape_displacement_(StateManager::newState(
+            FiniteElementState::Options{
+                .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "shape_displacement")},
+            sidre_datacoll_id_)),
         nodal_forces_(mesh_, displacement_.space(), "nodal_forces"),
         shape_sensitivity_(mesh_, displacement_.space(), "shape_sensitivity"),
         ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},

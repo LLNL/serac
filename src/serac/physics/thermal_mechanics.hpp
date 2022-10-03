@@ -37,13 +37,14 @@ public:
    * @param solid_options The options for the linear, nonlinear, and ODE solves of the thermal operator
    * @param geom_nonlin Flag to include geometric nonlinearities
    * @param name An optional name for the physics module instance
+   * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
   ThermalMechanics(const SolverOptions& thermal_options, const SolverOptions& solid_options,
-                             GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
-                             const std::string&      name        = "")
-      : BasePhysics(3, order, name),
-        thermal_functional_(thermal_options, name + "thermal"),
-        solid_functional_(solid_options, geom_nonlin, name + "mechanical")
+                   GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
+                   mfem::ParMesh* pmesh = nullptr)
+      : BasePhysics(3, order, name, pmesh),
+        thermal_functional_(thermal_options, name + "thermal", pmesh),
+        solid_functional_(solid_options, geom_nonlin, name + "mechanical", ShapeDisplacement::Off, pmesh)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
