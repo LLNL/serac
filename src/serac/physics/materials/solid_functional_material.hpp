@@ -74,7 +74,8 @@ struct NeoHookean {
     constexpr auto I         = Identity<dim>();
     auto           lambda    = K - (2.0 / 3.0) * G;
     auto           B_minus_I = du_dX * transpose(du_dX) + transpose(du_dX) + du_dX;
-    return (lambda * log(det(I + du_dX)) * I + G * B_minus_I) / det(I + du_dX);
+    auto J = det(I + du_dX);
+    return (lambda * log(J) * I + G * B_minus_I) / J;
   }
 
   double density;  ///< mass density
