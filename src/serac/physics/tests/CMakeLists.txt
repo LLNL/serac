@@ -18,7 +18,7 @@ set(serial_solver_tests
     solid_legacy_sensitivity.cpp
     thermal_finite_diff.cpp
     solid_finite_diff.cpp
-    test_solid_statics.cpp
+    solid_statics_patch.cpp
     )
 
 serac_add_tests( SOURCES ${serial_solver_tests}
