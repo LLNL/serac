@@ -22,7 +22,7 @@ namespace serac {
 using solid_mechanics::default_static_options;
 using solid_mechanics::direct_static_options;
 
-TEST(SolidFunctionalFiniteDiff, FiniteDifference)
+TEST(Solid, FiniteDifferenceParameter)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -158,7 +158,7 @@ TEST(SolidFunctionalFiniteDiff, FiniteDifference)
   }
 }
 
-TEST(solid_functional_finite_diff, finite_difference_shape)
+TEST(Solid, FiniteDifferenceShape)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 

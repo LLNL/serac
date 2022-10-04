@@ -19,7 +19,7 @@
 
 namespace serac {
 
-TEST(SeracDtor, Test1)
+TEST(PhysicsDtor, Test1)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 

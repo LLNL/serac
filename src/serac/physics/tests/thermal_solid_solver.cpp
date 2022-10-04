@@ -32,7 +32,7 @@ TEST_P(InputFileTest, ThermalSolidLegacy)
 
 const std::string input_files[] = {"thermal_expansion"};
 
-INSTANTIATE_TEST_SUITE_P(ThermalConductionInputFileTests, InputFileTest, ::testing::ValuesIn(input_files));
+INSTANTIATE_TEST_SUITE_P(ThermalSolidLegacyInputFileTest, InputFileTest, ::testing::ValuesIn(input_files));
 
 }  // namespace serac
 

@@ -19,7 +19,7 @@
 
 namespace serac {
 
-TEST(ThermalFunctionalFiniteDiff, FiniteDifference)
+TEST(Thermal, FiniteDifference)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 

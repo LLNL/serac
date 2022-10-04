@@ -170,8 +170,8 @@ void shape_test(GeometricNonlinearities geo_nonlin)
   EXPECT_LT(relative_error, 1.0e-14);
 }
 
-TEST(solidFunctionalShape, manualNodesLinear) { shape_test(GeometricNonlinearities::Off); }
-TEST(solidFunctionalShape, manualNodesNonlinear) { shape_test(GeometricNonlinearities::On); }
+TEST(Solid, MoveShapeLinear) { shape_test(GeometricNonlinearities::Off); }
+TEST(Solid, MoveShapeNonlinear) { shape_test(GeometricNonlinearities::On); }
 
 }  // namespace serac
 

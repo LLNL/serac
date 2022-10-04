@@ -16,7 +16,7 @@
 #include <serac/physics/state/finite_element_state.hpp>
 #include <serac/physics/state/finite_element_dual.hpp>
 
-TEST(SeracSolidSensitivity, FiniteDiff)
+TEST(SolidLegacy, FiniteDiff)
 {
   axom::sidre::DataStore datastore;
   serac::StateManager::initialize(datastore, "solid_sensitivity");
@@ -168,7 +168,7 @@ TEST(SeracSolidSensitivity, FiniteDiff)
   }
 }
 
-TEST(SeracSolidSensitivity, MultipleDesignSpaces)
+TEST(SolidLegacy, MultipleDesignSpaces)
 {
   // Initialize the datastore
   axom::sidre::DataStore datastore;

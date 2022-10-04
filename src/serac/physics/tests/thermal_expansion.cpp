@@ -18,7 +18,7 @@
 
 namespace serac {
 
-TEST(SolidSolver, ThermalExpansion)
+TEST(SolidLegacy, ThermalExpansion)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 

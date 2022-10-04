@@ -20,7 +20,7 @@
 
 namespace serac {
 
-TEST(SolidSolver, Adjoint)
+TEST(SolidLegacy, Adjoint)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 

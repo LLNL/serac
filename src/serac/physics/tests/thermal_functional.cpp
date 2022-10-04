@@ -155,17 +155,17 @@ void functional_test_dynamic(double expected_temp_norm)
   EXPECT_NEAR(expected_temp_norm, norm(thermal_solver.temperature()), 1.0e-6);
 }
 
-TEST(ThermalFunctional, 2DLinearStatic) { functional_test_static<1, 2>(2.2909240); }
-TEST(ThermalFunctional, 2DQuadStatic) { functional_test_static<2, 2>(2.29424403); }
-TEST(ThermalFunctional, 3DLinearStatic) { functional_test_static<1, 3>(46.6285642); }
-TEST(ThermalFunctional, 3DQuadStatic) { functional_test_static<2, 3>(46.6648538); }
+TEST(Thermal, 2DLinearStatic) { functional_test_static<1, 2>(2.2909240); }
+TEST(Thermal, 2DQuadStatic) { functional_test_static<2, 2>(2.29424403); }
+TEST(Thermal, 3DLinearStatic) { functional_test_static<1, 3>(46.6285642); }
+TEST(Thermal, 3DQuadStatic) { functional_test_static<2, 3>(46.6648538); }
 
-TEST(ThermalFunctional, 2DLinearDynamic) { functional_test_dynamic<1, 2>(2.18066491); }
-TEST(ThermalFunctional, 2DQuadDynamic) { functional_test_dynamic<2, 2>(2.1806651); }
-TEST(ThermalFunctional, 3DLinearDynamic) { functional_test_dynamic<1, 3>(3.1447306); }
-TEST(ThermalFunctional, 3DQuadDynamic) { functional_test_dynamic<2, 3>(3.36129252); }
+TEST(Thermal, 2DLinearDynamic) { functional_test_dynamic<1, 2>(2.18066491); }
+TEST(Thermal, 2DQuadDynamic) { functional_test_dynamic<2, 2>(2.1806651); }
+TEST(Thermal, 3DLinearDynamic) { functional_test_dynamic<1, 3>(3.1447306); }
+TEST(Thermal, 3DQuadDynamic) { functional_test_dynamic<2, 3>(3.36129252); }
 
-TEST(ThermalFunctional, ParameterizedMaterial)
+TEST(Thermal, ParameterizedMaterial)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 

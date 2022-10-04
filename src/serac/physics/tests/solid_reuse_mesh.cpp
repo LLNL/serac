@@ -21,7 +21,7 @@
 
 namespace serac {
 
-TEST(SolidSolver, ReuseMesh)
+TEST(SolidLegacy, ReuseMesh)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 

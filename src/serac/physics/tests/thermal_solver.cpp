@@ -41,9 +41,9 @@ const std::string input_files[] = {"static_solve",
                                    "dyn_imp_solve",
                                    "dyn_imp_solve_time_varying"};
 
-INSTANTIATE_TEST_SUITE_P(ThermalConductionInputFileTests, InputFileTest, ::testing::ValuesIn(input_files));
+INSTANTIATE_TEST_SUITE_P(ThermalLegacyInputFileTests, InputFileTest, ::testing::ValuesIn(input_files));
 
-TEST(ThermalSolver, DynImpSolveRestart)
+TEST(ThermalConductionLegacy, DynImpSolveRestart)
 {
   // Start a scope block to guarantee separation between the simulated nominal/restart runs
   {
