@@ -90,8 +90,8 @@ public:
     // natural BCs
     typename Material::State state;
     auto H = make_tensor<dim, dim>([&](int i, int j) { return A(i,j); });
-    tensor<double, dim, dim> tau = material(state, H);
-    auto P = solid_mechanics::KirchhoffToPiola(tau, H);
+    tensor<double, dim, dim> sigma = material(state, H);
+    auto P = solid_mechanics::CauchyToPiola(sigma, H);
     auto traction = [P](auto, auto n0, auto) { return dot(P, n0); };
     sf.setPiolaTraction(traction);
   }
@@ -250,7 +250,7 @@ TEST(SolidFunctional, PatchTest2dQ1TractionBcs)
 {
   constexpr int p = 1;
   constexpr int dim   = 2;
-  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
+  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
   EXPECT_LT(error, tol);
 }
 
@@ -258,7 +258,7 @@ TEST(SolidFunctional, PatchTest3dQ1TractionBcs)
 {
   constexpr int p = 1;
   constexpr int dim   = 3;
-  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
+  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
   EXPECT_LT(error, tol);
 }
 
@@ -266,7 +266,7 @@ TEST(SolidFunctional, PatchTest2dQ2TractionBcs)
 {
   constexpr int p = 2;
   constexpr int dim   = 2;
-  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
+  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
   EXPECT_LT(error, tol);
 }
 
@@ -274,7 +274,7 @@ TEST(SolidFunctional, PatchTest3dQ2TractionBcs)
 {
   constexpr int p = 2;
   constexpr int dim   = 3;
-  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
+  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
   EXPECT_LT(error, tol);
 }
 

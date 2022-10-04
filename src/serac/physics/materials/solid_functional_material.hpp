@@ -161,6 +161,26 @@ auto KirchhoffToPiola(const tensor<T1, dim, dim>& kirchhoff_stress, const tensor
   return transpose(linear_solve(displacement_gradient + Identity<dim>(), kirchhoff_stress));
 }
 
+/**
+ * @brief Transform the Cauchy stress to the Piola stress
+ *
+ * @tparam T1 number-like type of the displacement gradient components
+ * @tparam T1 number-like type of the Cauchy stress components
+ * @tparam dim number of spatial dimensions
+ *
+ * @param displacement_gradient Displacement gradient
+ * @param cauchy_stress Cauchy stress
+ * @return Piola stress
+ */
+template <typename T1, typename T2, int dim>
+auto CauchyToPiola(const tensor<T1, dim, dim>& cauchy_stress, const tensor<T2, dim, dim>& displacement_gradient)
+{
+  auto kirchhoff_stress = det(displacement_gradient + Identity<dim>())*cauchy_stress;
+  return KirchhoffToPiola(kirchhoff_stress, displacement_gradient);
+}
+
+
+
 /// Constant body force model
 template <int dim>
 struct ConstantBodyForce {
