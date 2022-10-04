@@ -17,8 +17,8 @@
 #include "serac/physics/base_physics.hpp"
 #include "serac/physics/solid.hpp"
 #include "serac/physics/thermal_conduction.hpp"
-#include "serac/physics/materials/thermal_functional_material.hpp"
-#include "serac/physics/materials/solid_functional_material.hpp"
+#include "serac/physics/materials/thermal_material.hpp"
+#include "serac/physics/materials/solid_material.hpp"
 
 namespace serac {
 

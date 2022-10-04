@@ -4,8 +4,8 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/materials/hyperelastic_material.hpp"
-#include "serac/physics/materials/solid_utils.hpp"
+#include "serac/physics/materials/hyperelastic_legacy_material.hpp"
+#include "serac/physics/materials/solid_legacy_utils.hpp"
 
 #include "serac/infrastructure/logger.hpp"
 

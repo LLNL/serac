@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file hyperelastic_material.hpp
+ * @file hyperelastic_legacy_material.hpp
  *
  * @brief The hyperelastic material models for the solid module
  */

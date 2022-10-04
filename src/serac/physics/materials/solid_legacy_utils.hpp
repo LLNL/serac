@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file equation_solver.hpp
+ * @file solid_legacy_utils.hpp
  *
  * @brief This file contains the declaration of an equation solver wrapper
  */

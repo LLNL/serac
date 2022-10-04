@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file solid_functional_material.hpp
+ * @file solid_material.hpp
  *
  * @brief The material and load types for the solid functional physics module
  */

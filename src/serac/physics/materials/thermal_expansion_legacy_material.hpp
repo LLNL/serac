@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file thermal_expansion_material.hpp
+ * @file thermal_expansion_legacy_material.hpp
  *
  * @brief The thermal expansion material models for the solid module
  */

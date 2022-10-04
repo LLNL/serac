@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file solid_functional_material.hpp
+ * @file parameterized_solid_material.hpp
  *
  * @brief The material and load types for the solid functional physics module
  */
@@ -13,7 +13,7 @@
 #pragma once
 
 #include "serac/numerics/functional/functional.hpp"
-#include "serac/physics/materials/solid_functional_material.hpp"
+#include "serac/physics/materials/solid_material.hpp"
 
 /// Solid helper data types
 namespace serac::solid_mechanics {

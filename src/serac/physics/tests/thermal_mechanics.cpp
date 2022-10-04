@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/physics/thermal_mechanics.hpp"
-#include "serac/physics/materials/thermal_functional_material.hpp"
-#include "serac/physics/materials/solid_functional_material.hpp"
+#include "serac/physics/materials/thermal_material.hpp"
+#include "serac/physics/materials/solid_material.hpp"
 #include "serac/physics/materials/green_saint_venant_thermoelastic.hpp"
 
 #include <fstream>

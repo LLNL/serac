@@ -5,14 +5,14 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file thermal_functional_material.hpp
+ * @file parameterized_thermal_material.hpp
  *
  * @brief The material and load types for the thermal functional physics module
  */
 
 #pragma once
 
-#include "serac/physics/materials/thermal_functional_material.hpp"
+#include "serac/physics/materials/thermal_material.hpp"
 
 /// ThermalConduction helper structs
 namespace serac::Thermal {

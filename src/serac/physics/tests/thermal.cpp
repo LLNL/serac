@@ -13,8 +13,8 @@
 #include "serac/serac_config.hpp"
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/thermal_conduction.hpp"
-#include "serac/physics/materials/thermal_functional_material.hpp"
-#include "serac/physics/materials/parameterized_thermal_functional_material.hpp"
+#include "serac/physics/materials/thermal_material.hpp"
+#include "serac/physics/materials/parameterized_thermal_material.hpp"
 #include "serac/physics/state/state_manager.hpp"
 
 namespace serac {

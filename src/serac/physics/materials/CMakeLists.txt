@@ -9,23 +9,23 @@ if(ENABLE_TESTS)
 endif()
 
 set(materials_sources
-    hyperelastic_material.cpp
-    thermal_expansion_material.cpp
-    solid_utils.cpp
+    hyperelastic_legacy_material.cpp
+    thermal_expansion_legacy_material.cpp
+    solid_legacy_utils.cpp
     )
 
 set(materials_headers
-    functional_material_utils.hpp
+    material_utils.hpp
     green_saint_venant_thermoelastic.hpp
-    hyperelastic_material.hpp
+    hyperelastic_legacy_material.hpp
     liquid_crystal_elastomer.hpp
     material_verification_tools.hpp
-    parameterized_solid_functional_material.hpp
-    parameterized_thermal_functional_material.hpp
-    solid_functional_material.hpp
-    solid_utils.hpp
-    thermal_expansion_material.hpp
-    thermal_functional_material.hpp
+    parameterized_solid_material.hpp
+    parameterized_thermal_material.hpp
+    solid_material.hpp
+    solid_legacy_utils.hpp
+    thermal_expansion_legacy_material.hpp
+    thermal_material.hpp
     )
 
 set(materials_depends

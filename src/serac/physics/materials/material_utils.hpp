@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file functional_material_utils.hpp
+ * @file material_utils.hpp
  *
  * @brief Utilities for compile-time checking of types for user-defined loads and materials
  */
