@@ -171,45 +171,45 @@ double solution_error(const ExactSolution& exact_displacement, PatchBoundaryCond
 
   // Create DataStore
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "solid_functional_static_solve");
+  serac::StateManager::initialize(datastore, "solid_static_solve");
 
   // BT: shouldn't this assertion be in the physics module?
   // Putting it here prevents tests from having a nonsensical spatial dimension value, 
   // but the physics module should be catching this error to protect users.
-  static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for solid functional test");
+  static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for solid test");
 
   std::string filename = std::string(SERAC_REPO_DIR) +  "/data/meshes/patch" + std::to_string(dim) + "D.mesh";
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename));
   serac::StateManager::setMesh(std::move(mesh));
 
-  // Construct a functional-based solid mechanics solver
+  // Construct a solid mechanics solver
   auto solver_options = direct_static_options;
   solver_options.nonlinear.abs_tol = 1e-14;
   solver_options.nonlinear.rel_tol = 1e-14;
-  Solid<p, dim> solid_functional(solver_options, GeometricNonlinearities::On, "solid_functional");
+  Solid<p, dim> solid(solver_options, GeometricNonlinearities::On, "solid");
 
   solid_mechanics::NeoHookean mat{.density=1.0, .K=1.0, .G=1.0};
-  solid_functional.setMaterial(mat);
+  solid.setMaterial(mat);
 
-  exact_displacement.applyLoads(mat, solid_functional, essentialBoundaryAttributes<dim>(bc));
+  exact_displacement.applyLoads(mat, solid, essentialBoundaryAttributes<dim>(bc));
 
   // Finalize the data structures
-  solid_functional.completeSetup();
+  solid.completeSetup();
 
   // Perform the quasi-static solve
   double dt = 1.0;
-  solid_functional.advanceTimestep(dt);
+  solid.advanceTimestep(dt);
 
   // Output solution for debugging
-  // solid_functional.outputState("paraview_output");
+  // solid.outputState("paraview_output");
   // std::cout << "displacement =\n";
-  // solid_functional.displacement().Print(std::cout);
+  // solid.displacement().Print(std::cout);
   // std::cout << "forces =\n";
-  // solid_functional.nodalForces().Print();
+  // solid.nodalForces().Print();
 
   // Compute norm of error
   mfem::VectorFunctionCoefficient exact_solution_coef(dim, exact_displacement);
-  return computeL2Error(solid_functional.displacement(), exact_solution_coef);
+  return computeL2Error(solid.displacement(), exact_solution_coef);
 }
 
 const double tol = 1e-13;
