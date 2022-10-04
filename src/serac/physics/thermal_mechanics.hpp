@@ -43,18 +43,18 @@ public:
                    GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
                    mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(3, order, name, pmesh),
-        thermal_functional_(thermal_options, name + "thermal", pmesh),
-        solid_functional_(solid_options, geom_nonlin, name + "mechanical", ShapeDisplacement::Off, pmesh)
+        thermal_(thermal_options, name + "thermal", pmesh),
+        solid_(solid_options, geom_nonlin, name + "mechanical", ShapeDisplacement::Off, pmesh)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
 
-    state_.push_back(thermal_functional_.temperature());
-    state_.push_back(solid_functional_.velocity());
-    state_.push_back(solid_functional_.displacement());
+    state_.push_back(thermal_.temperature());
+    state_.push_back(solid_.velocity());
+    state_.push_back(solid_.displacement());
 
-    thermal_functional_.setParameter(solid_functional_.displacement(), 0);
-    solid_functional_.setParameter(thermal_functional_.temperature(), 0);
+    thermal_.setParameter(solid_.displacement(), 0);
+    solid_.setParameter(thermal_.temperature(), 0);
 
     coupling_ = serac::CouplingScheme::OperatorSplit;
   }
@@ -69,8 +69,8 @@ public:
     SLIC_ERROR_ROOT_IF(coupling_ != serac::CouplingScheme::OperatorSplit,
                        "Only operator split is currently implemented in the thermal structural solver.");
 
-    thermal_functional_.completeSetup();
-    solid_functional_.completeSetup();
+    thermal_.completeSetup();
+    solid_.completeSetup();
   }
 
   /**
@@ -81,8 +81,8 @@ public:
    */
   void setParameter(const FiniteElementState& parameter_state, size_t i)
   {
-    thermal_functional_.setParameter(parameter_state, i + 1);  // offset for displacement field
-    solid_functional_.setParameter(parameter_state, i + 1);    // offset for temperature field
+    thermal_.setParameter(parameter_state, i + 1);  // offset for displacement field
+    solid_.setParameter(parameter_state, i + 1);    // offset for temperature field
   }
 
   /**
@@ -96,8 +96,8 @@ public:
   {
     if (coupling_ == serac::CouplingScheme::OperatorSplit) {
       double initial_dt = dt;
-      thermal_functional_.advanceTimestep(dt);
-      solid_functional_.advanceTimestep(dt);
+      thermal_.advanceTimestep(dt);
+      solid_.advanceTimestep(dt);
       SLIC_ERROR_ROOT_IF(std::abs(dt - initial_dt) > 1.0e-6,
                          "Operator split coupled solvers cannot adaptively change the timestep");
     } else {
@@ -117,7 +117,7 @@ public:
   template <typename T>
   std::shared_ptr<QuadratureData<T>> createQuadratureDataBuffer(T initial_state)
   {
-    return solid_functional_.createQuadratureDataBuffer(initial_state);
+    return solid_.createQuadratureDataBuffer(initial_state);
   }
 
   /**
@@ -225,9 +225,9 @@ public:
     // note: these parameter indices are offset by 1 since, internally, this module uses the first parameter
     // to communicate the temperature and displacement field information to the other physics module
     //
-    thermal_functional_.setMaterial(DependsOn<0, active_parameters + 1 ...>{},
+    thermal_.setMaterial(DependsOn<0, active_parameters + 1 ...>{},
                                     ThermalMaterialInterface<MaterialType>{material});
-    solid_functional_.setMaterial(DependsOn<0, active_parameters + 1 ...>{},
+    solid_.setMaterial(DependsOn<0, active_parameters + 1 ...>{},
                                   MechanicalMaterialInterface<MaterialType>{material}, qdata);
   }
 
@@ -247,7 +247,7 @@ public:
   void setTemperatureBCs(const std::set<int>&                                   temperature_attributes,
                          std::function<double(const mfem::Vector& x, double t)> prescribed_value)
   {
-    thermal_functional_.setTemperatureBCs(temperature_attributes, prescribed_value);
+    thermal_.setTemperatureBCs(temperature_attributes, prescribed_value);
   }
 
   /**
@@ -259,7 +259,7 @@ public:
   void setDisplacementBCs(const std::set<int>&                                           displacement_attributes,
                           std::function<void(const mfem::Vector& x, mfem::Vector& disp)> prescribed_value)
   {
-    solid_functional_.setDisplacementBCs(displacement_attributes, prescribed_value);
+    solid_.setDisplacementBCs(displacement_attributes, prescribed_value);
   }
 
   /**
@@ -273,7 +273,7 @@ public:
   template <typename FluxType>
   void setHeatFluxBCs(FluxType flux_function)
   {
-    thermal_functional_.setFluxBCs(flux_function);
+    thermal_.setFluxBCs(flux_function);
   }
 
   /**
@@ -283,7 +283,7 @@ public:
    */
   void setDisplacement(std::function<void(const mfem::Vector& x, mfem::Vector& u)> displacement)
   {
-    solid_functional_.setDisplacement(displacement);
+    solid_.setDisplacement(displacement);
   }
 
   /**
@@ -293,7 +293,7 @@ public:
    */
   void setTemperature(std::function<double(const mfem::Vector& x, double t)> temperature)
   {
-    thermal_functional_.setTemperature(temperature);
+    thermal_.setTemperature(temperature);
   }
 
   /**
@@ -307,7 +307,7 @@ public:
   template <typename BodyForceType>
   void addBodyForce(BodyForceType body_force_function)
   {
-    solid_functional_.addBodyForce(body_force_function);
+    solid_.addBodyForce(body_force_function);
   }
 
   /**
@@ -321,7 +321,7 @@ public:
   template <typename HeatSourceType>
   void addHeatSource(HeatSourceType source_function)
   {
-    thermal_functional_.setSource(source_function);
+    thermal_.setSource(source_function);
   }
 
   /**
@@ -329,14 +329,14 @@ public:
    *
    * @return A reference to the current displacement finite element state
    */
-  const serac::FiniteElementState& displacement() const { return solid_functional_.displacement(); };
+  const serac::FiniteElementState& displacement() const { return solid_.displacement(); };
 
   /**
    * @brief Get the temperature state
    *
    * @return A reference to the current temperature finite element state
    */
-  const serac::FiniteElementState& temperature() const { return thermal_functional_.temperature(); };
+  const serac::FiniteElementState& temperature() const { return thermal_.temperature(); };
 
 protected:
   /// @brief The coupling strategy
@@ -346,10 +346,10 @@ protected:
   using temperature_field  = H1<order>;       ///< the function space for the temperature field
 
   /// Submodule to compute the thermal conduction physics
-  ThermalConduction<order, dim, Parameters<displacement_field, parameter_space...>> thermal_functional_;
+  ThermalConduction<order, dim, Parameters<displacement_field, parameter_space...>> thermal_;
 
   /// Submodule to compute the mechanics
-  Solid<order, dim, Parameters<temperature_field, parameter_space...>> solid_functional_;
+  Solid<order, dim, Parameters<temperature_field, parameter_space...>> solid_;
 };
 
 }  // namespace serac
