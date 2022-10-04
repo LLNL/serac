@@ -150,8 +150,8 @@ void check_gradient(Functional<T>& f, mfem::HypreParVector& U, mfem::HypreParVec
 
     double df3 = mfem::InnerProduct(*dfdU_vector, dU);
 
-    double relative_error1 = fabs(df1 - df2) / fabs(df1);
-    double relative_error2 = fabs(df1 - df3) / fabs(df1);
+    double relative_error1 = fabs(df1 - df2) / std::max(fabs(df1), 1.0e-8);
+    double relative_error2 = fabs(df1 - df3) / std::max(fabs(df1), 1.0e-8);
 
     EXPECT_NEAR(0., relative_error1, 5.e-6);
     EXPECT_NEAR(0., relative_error2, 5.e-6);
@@ -175,9 +175,9 @@ void check_gradient(Functional<T>& f, mfem::HypreParVector& U, mfem::HypreParVec
 
     double df3 = mfem::InnerProduct(*df_ddU_dt_vector, ddU_dt);
 
-    double relative_error1 = fabs(df1 - df2) / fabs(df1);
-    double relative_error2 = fabs(df1 - df3) / fabs(df1);
-    double relative_error3 = fabs(df2 - df3) / fabs(df2);
+    double relative_error1 = fabs(df1 - df2) / std::max(fabs(df1), 1.0e-8);
+    double relative_error2 = fabs(df1 - df3) / std::max(fabs(df1), 1.0e-8);
+    double relative_error3 = fabs(df2 - df3) / std::max(fabs(df2), 1.0e-8);
 
     // note: these first two relative tolerances are really coarse,
     // since it seems the finite-difference approximation of the derivative
@@ -470,18 +470,29 @@ TEST(QoI, UsingL2)
 
   mfem::ParMesh& mesh = *mesh3D;
 
-  auto                        fec1 = mfem::H1_FECollection(p, dim);
-  mfem::ParFiniteElementSpace fespace_0(&mesh, &fec1);
+  auto                        fec0 = mfem::H1_FECollection(p, dim);
+  mfem::ParFiniteElementSpace fespace_0(&mesh, &fec0);
 
-  auto                        fec2 = mfem::L2_FECollection(p, dim);
-  mfem::ParFiniteElementSpace fespace_1(&mesh, &fec2);
+  auto                        fec1 = mfem::L2_FECollection(p, dim);
+  mfem::ParFiniteElementSpace fespace_1(&mesh, &fec1);
 
-  // Define the types for the test and trial spaces using the function arguments
+  std::unique_ptr< mfem::HypreParVector > U0(fespace_0.NewTrueDofVector());
+  U0->Randomize(0);
+
+  std::unique_ptr< mfem::HypreParVector > U1(fespace_1.NewTrueDofVector());
+  U1->Randomize(1);
+
+  // Define the types for the test spaces
   using trial_space_0 = H1<p>;
   using trial_space_1 = L2<0>;
 
   // this tests a fix for the QoI constructor segfaulting when using L2 spaces
   Functional<double(trial_space_0, trial_space_1)> f({&fespace_0, &fespace_1});
+
+  f.AddVolumeIntegral(DependsOn<1>{}, [&](auto ...) { return 1.0; }, mesh);
+  f.AddSurfaceIntegral(DependsOn<0>{}, [&](auto ...) { return 1.0; }, mesh);
+
+  check_gradient(f, *U0, *U1);
 }
 
 // clang-format off
