@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file solid.hpp
+ * @file solid_legacy.hpp
  *
  * @brief The solver object for finite deformation hyperelasticity
  */

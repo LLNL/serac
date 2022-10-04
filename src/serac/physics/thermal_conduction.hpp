@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file thermal_conduction_legacy.hpp
+ * @file thermal_conduction.hpp
  *
  * @brief An object containing the solver for a thermal conduction PDE
  */
