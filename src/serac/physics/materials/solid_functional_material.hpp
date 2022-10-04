@@ -164,8 +164,8 @@ auto KirchhoffToPiola(const tensor<T1, dim, dim>& kirchhoff_stress, const tensor
 /**
  * @brief Transform the Cauchy stress to the Piola stress
  *
- * @tparam T1 number-like type of the displacement gradient components
  * @tparam T1 number-like type of the Cauchy stress components
+ * @tparam T2 number-like type of the displacement gradient components
  * @tparam dim number of spatial dimensions
  *
  * @param displacement_gradient Displacement gradient
