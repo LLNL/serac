@@ -20,7 +20,7 @@
 
 namespace serac {
 
-TEST(SolidSolver, QsAttributeSolve)
+TEST(SolidLegacy, QsAttributeSolve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   std::string input_file_path = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/qs_attribute_solve.lua";
@@ -28,7 +28,7 @@ TEST(SolidSolver, QsAttributeSolve)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(SolidSolver, QsComponentSolve)
+TEST(SolidLegacy, QsComponentSolve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   std::string input_file_path = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/qs_component_solve.lua";

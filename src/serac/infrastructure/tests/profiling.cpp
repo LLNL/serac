@@ -18,7 +18,7 @@
 
 namespace serac {
 
-TEST(SeracProfiling, MeshRefinement)
+TEST(Profiling, MeshRefinement)
 {
   // profile mesh refinement
   MPI_Barrier(MPI_COMM_WORLD);
@@ -75,7 +75,7 @@ TEST(SeracProfiling, MeshRefinement)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(SeracProfiling, Exception)
+TEST(Profiling, Exception)
 {
   // profile mesh refinement
   MPI_Barrier(MPI_COMM_WORLD);
@@ -103,7 +103,7 @@ struct NonCopyableOrMovable {
   NonCopyableOrMovable(NonCopyableOrMovable&&)      = delete;
 };
 
-TEST(SeracProfiling, LvalueReferenceExpr)
+TEST(Profiling, LvalueReferenceExpr)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   serac::profiling::initialize();
@@ -125,7 +125,7 @@ struct MovableOnly {
   MovableOnly(MovableOnly&&)      = default;
 };
 
-TEST(SeracProfiling, RvalueReferenceExpr)
+TEST(Profiling, RvalueReferenceExpr)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   serac::profiling::initialize();
@@ -139,7 +139,7 @@ TEST(SeracProfiling, RvalueReferenceExpr)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(SeracProfiling, TempRvalueReferenceExpr)
+TEST(Profiling, TempRvalueReferenceExpr)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   serac::profiling::initialize();

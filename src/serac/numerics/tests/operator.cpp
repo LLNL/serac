@@ -13,7 +13,7 @@
 
 namespace serac {
 
-TEST(SeracOperators, RectangularOperator)
+TEST(Operators, RectangularOperator)
 {
   // profile mesh refinement
   MPI_Barrier(MPI_COMM_WORLD);

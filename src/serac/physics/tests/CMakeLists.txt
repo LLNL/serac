@@ -15,10 +15,10 @@ blt_add_library(
     )
 
 set(serial_solver_tests
-    solid_sensitivity.cpp
-    thermal_functional_finite_diff.cpp
-    solid_functional_finite_diff.cpp
-    test_solid_functional_statics.cpp
+    solid_legacy_sensitivity.cpp
+    thermal_finite_diff.cpp
+    solid_finite_diff.cpp
+    test_solid_statics.cpp
     )
 
 serac_add_tests( SOURCES ${serial_solver_tests}
@@ -28,15 +28,15 @@ serac_add_tests( SOURCES ${serial_solver_tests}
 set(solver_tests
     #liquid_crystal_elastomer_example.cpp
     parameterized_thermomechanics_example.cpp
+    solid_legacy.cpp
+    solid_legacy_reuse_mesh.cpp
+    solid_legacy_adjoint.cpp
     solid.cpp
-    solid_reuse_mesh.cpp
-    solid_adjoint.cpp
-    solid_functional.cpp
-    solid_functional_shape.cpp
-    thermal_solver.cpp
-    thermal_solid_solver.cpp
-    thermal_functional.cpp
-    thermal_mechanics_functional.cpp
+    solid_shape.cpp
+    thermal_legacy.cpp
+    thermal_solid_legacy.cpp
+    thermal.cpp
+    thermal_mechanics.cpp
     )
 
 serac_add_tests( SOURCES ${solver_tests}

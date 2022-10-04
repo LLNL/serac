@@ -16,12 +16,12 @@ serac_add_tests( SOURCES ${language_tests}
                  DEPENDS_ON gtest mfem mpi)
 
 if(ENABLE_CUDA)
-    blt_add_library( NAME       serac_cuda_smoketest_kernel
-                     SOURCES    serac_cuda_smoketest_kernel.cpp 
+    blt_add_library( NAME       cuda_smoketest_kernel
+                     SOURCES    cuda_smoketest_kernel.cpp 
                      DEPENDS_ON cuda)
 
-    serac_add_tests( SOURCES    serac_cuda_smoketest.cpp
-                     DEPENDS_ON serac_cuda_smoketest_kernel gtest)
+    serac_add_tests( SOURCES    cuda_smoketest.cpp
+                     DEPENDS_ON cuda_smoketest_kernel gtest)
 endif()
 
 #

@@ -25,7 +25,7 @@ namespace serac {
 
 using mfem_ext::EquationSolver;
 
-TEST(SeracErrorHandling, EquationSolverBadLinSolver)
+TEST(ErrorHandling, EquationSolverBadLinSolver)
 {
   IterativeSolverOptions options;
   // Try a definitely wrong number to ensure that an invalid linear solver is detected
@@ -35,7 +35,7 @@ TEST(SeracErrorHandling, EquationSolverBadLinSolver)
 
 // Only need to test this when AmgX is **not** available
 #ifndef MFEM_USE_AMGX
-TEST(SeracErrorHandling, EquationSolverAmgxNotAvailable)
+TEST(ErrorHandling, EquationSolverAmgxNotAvailable)
 {
   IterativeSolverOptions options;
   options.prec = AMGXPrec{};
@@ -45,7 +45,7 @@ TEST(SeracErrorHandling, EquationSolverAmgxNotAvailable)
 
 // Only need to test this when KINSOL is **not** available
 #ifndef MFEM_USE_SUNDIALS
-TEST(SeracErrorHandling, EquationSolverKinsolNotAvailable)
+TEST(ErrorHandling, EquationSolverKinsolNotAvailable)
 {
   auto lin_options             = ThermalConductionLegacy::defaultLinearOptions();
   auto nonlin_options          = ThermalConductionLegacy::defaultNonlinearOptions();
@@ -54,7 +54,7 @@ TEST(SeracErrorHandling, EquationSolverKinsolNotAvailable)
 }
 #endif
 
-TEST(SeracErrorHandling, BcOneComponentVectorCoef)
+TEST(ErrorHandling, BcOneComponentVectorCoef)
 {
   mfem::Vector vec;
   auto         coef = std::make_shared<mfem::VectorConstantCoefficient>(vec);
@@ -67,7 +67,7 @@ TEST(SeracErrorHandling, BcOneComponentVectorCoef)
   EXPECT_THROW(BoundaryCondition(coef, 0, space, std::set<int>{1}), SlicErrorException);
 }
 
-TEST(SeracErrorHandling, BcOneComponentVectorCoefDofs)
+TEST(ErrorHandling, BcOneComponentVectorCoefDofs)
 {
   mfem::Vector     vec;
   auto             coef = std::make_shared<mfem::VectorConstantCoefficient>(vec);
@@ -82,7 +82,7 @@ TEST(SeracErrorHandling, BcOneComponentVectorCoefDofs)
   EXPECT_THROW(BoundaryCondition(coef, 0, space, dofs), SlicErrorException);
 }
 
-TEST(SeracErrorHandling, BcRetrieveScalarCoef)
+TEST(ErrorHandling, BcRetrieveScalarCoef)
 {
   auto mesh = mesh::refineAndDistribute(buildDiskMesh(10), 0, 0);
 
@@ -99,7 +99,7 @@ TEST(SeracErrorHandling, BcRetrieveScalarCoef)
   EXPECT_THROW(const_bc.vectorCoefficient(), SlicErrorException);
 }
 
-TEST(SeracErrorHandling, BcRetrieveVecCoef)
+TEST(ErrorHandling, BcRetrieveVecCoef)
 {
   auto mesh = mesh::refineAndDistribute(buildDiskMesh(10), 0, 0);
 
@@ -117,7 +117,7 @@ TEST(SeracErrorHandling, BcRetrieveVecCoef)
   EXPECT_THROW(const_bc.scalarCoefficient(), SlicErrorException);
 }
 
-TEST(SeracErrorHandling, InvalidCmdlineArg)
+TEST(ErrorHandling, InvalidCmdlineArg)
 {
   // The command is actually --input-file
   char const* fake_argv[] = {"serac", "--file", "input.lua"};
@@ -125,7 +125,7 @@ TEST(SeracErrorHandling, InvalidCmdlineArg)
   EXPECT_THROW(cli::defineAndParse(fake_argc, const_cast<char**>(fake_argv), ""), SlicErrorException);
 }
 
-TEST(SeracErrorHandling, NonexistentMeshPath)
+TEST(ErrorHandling, NonexistentMeshPath)
 {
   std::string mesh_path       = "nonexistent.mesh";
   std::string input_file_path = std::string(SERAC_REPO_DIR) + "/data/input_files/default.lua";
