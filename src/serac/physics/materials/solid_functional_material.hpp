@@ -175,11 +175,9 @@ auto KirchhoffToPiola(const tensor<T1, dim, dim>& kirchhoff_stress, const tensor
 template <typename T1, typename T2, int dim>
 auto CauchyToPiola(const tensor<T1, dim, dim>& cauchy_stress, const tensor<T2, dim, dim>& displacement_gradient)
 {
-  auto kirchhoff_stress = det(displacement_gradient + Identity<dim>())*cauchy_stress;
+  auto kirchhoff_stress = det(displacement_gradient + Identity<dim>()) * cauchy_stress;
   return KirchhoffToPiola(kirchhoff_stress, displacement_gradient);
 }
-
-
 
 /// Constant body force model
 template <int dim>
