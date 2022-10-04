@@ -89,11 +89,15 @@ public:
     sf.setDisplacementBCs(essential_boundaries, ebc_func);
 
     // natural BCs
-    typename Material::State state;
-    auto H = make_tensor<dim, dim>([&](int i, int j) { return A(i,j); });
-    tensor<double, dim, dim> tau = material(state, H);
-    auto P = solid_mechanics::KirchhoffToPiola(tau, H);
-    auto traction = [P](auto, auto n0, auto) { return dot(P, n0); };
+    auto Hdot = make_tensor<dim, dim>([&](int i, int j) { return A(i,j); });
+    auto traction = [material, Hdot](auto, auto n0, auto t) {
+      auto H = Hdot*t;
+      // std::cout << "H " << H << std::endl;
+      typename Material::State state; // needs to be reconfigured for mats with state
+      tensor<double, dim, dim> tau = material(state, H);
+      auto P = solid_mechanics::KirchhoffToPiola(tau, H);
+      return dot(P, n0); 
+      };
     sf.setPiolaTraction(traction);
   }
 
@@ -185,8 +189,8 @@ double dynamic_solution_error(const ExactSolution& exact_displacement, PatchBoun
 
   // Construct a functional-based solid mechanics solver
   auto solver_options = direct_dynamic_options;
-  //solver_options.nonlinear.abs_tol = 1e-13;
-  //solver_options.nonlinear.rel_tol = 1e-13;
+  solver_options.nonlinear.abs_tol = 1e-13;
+  solver_options.nonlinear.rel_tol = 1e-13;
   SolidFunctional<p, dim> solid_functional(solver_options, GeometricNonlinearities::On, "solid_functional");
 
   solid_mechanics::NeoHookean mat{.density=1.0, .K=1.0, .G=1.0};
@@ -205,16 +209,20 @@ double dynamic_solution_error(const ExactSolution& exact_displacement, PatchBoun
 
   // Perform the quasi-static solve
   double dt = 1.0;
+  mfem::VectorFunctionCoefficient exact_solution_coef2(dim, exact_displacement);
   for (int i = 0; i < 5; i++) {
     std::cout << "cycle " << i << std::endl;
     solid_functional.advanceTimestep(dt);
 
     // Output solution for debugging
-    // solid_functional.outputState("paraview_output");
+    solid_functional.outputState("paraview_output");
     // std::cout << "displacement =\n";
     // solid_functional.displacement().Print(std::cout);
     // std::cout << "forces =\n";
     // solid_functional.nodalForces().Print();
+    exact_solution_coef2.SetTime(solid_functional.time());
+    double err = computeL2Error(solid_functional.displacement(), exact_solution_coef2);
+    std::cout << err << std::endl;
   }
 
   // Compute norm of error
@@ -225,13 +233,13 @@ double dynamic_solution_error(const ExactSolution& exact_displacement, PatchBoun
 
 const double tol = 1e-12;
 
-TEST(SolidFunctional, PatchTest2dQ1EssentialBcs)
-{
-  constexpr int p = 1;
-  constexpr int dim = 2;
-  double error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
-  EXPECT_LT(error, tol);
-}
+// TEST(SolidFunctional, PatchTest2dQ1EssentialBcs)
+// {
+//   constexpr int p = 1;
+//   constexpr int dim = 2;
+//   double error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
+//   EXPECT_LT(error, tol);
+// }
 
 // TEST(SolidFunctional, PatchTest3dQ1EssentialBcs)
 // {
@@ -257,13 +265,13 @@ TEST(SolidFunctional, PatchTest2dQ1EssentialBcs)
 //   EXPECT_LT(error, tol);
 // }
 
-// TEST(SolidFunctional, PatchTest2dQ1TractionBcs)
-// {
-//   constexpr int p = 1;
-//   constexpr int dim   = 2;
-//   double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
-//   EXPECT_LT(error, tol);
-// }
+TEST(SolidFunctional, PatchTest2dQ1TractionBcs)
+{
+  constexpr int p = 1;
+  constexpr int dim   = 2;
+  double error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+  EXPECT_LT(error, tol);
+}
 
 // TEST(SolidFunctional, PatchTest3dQ1TractionBcs)
 // {
