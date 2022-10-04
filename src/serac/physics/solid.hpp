@@ -21,7 +21,6 @@
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/solid_legacy.hpp"
-#include "serac/physics/materials/functional_material_utils.hpp"
 
 namespace serac {
 
@@ -360,7 +359,7 @@ public:
 
           // Compute the displacement gradient with respect to the shape-adjusted coordinate.
 
-          // Note that the current configuration x' = X + u + p, where X is the original reference
+          // Note that the current configuration x = X + u + p, where X is the original reference
           // configuration, u is the displacement, and p is the shape displacement. We need the gradient with
           // respect to the perturbed reference configuration X' = X + p for the material model. Therefore, we calculate
           // du/dX' = du/dX * dX/dX' = du/dX * (dX'/dX)^-1 = du/dX * (I + dp/dX)^-1
@@ -369,26 +368,25 @@ public:
 
           auto stress = material(state, du_dX_prime, params...);
 
-          // This deformation gradient is the volumetric transform to get us back to the original
-          // reference configuration dx'/dX = I + du/dX + dp/dX. If we are not including geometric
+          // dx_dX is the volumetric transform to get us back to the original
+          // reference configuration (dx/dX = I + du/dX + dp/dX). If we are not including geometric
           // nonlinearities, we ignore the du/dX factor.
 
-          auto deformation_grad = 0.0 * du_dX + dp_dX + I;
+          auto dx_dX = 0.0 * du_dX + dp_dX + I;
 
           if (geom_nonlin_ == GeometricNonlinearities::On) {
-            deformation_grad = deformation_grad + du_dX;
+            dx_dX += du_dX;
           }
 
-          // Note that the jacobian needs the fixup for the shape displacement.
-          // The material returns Kirchoff stress, which contains det(du / dX'). We want
-          // The final Jacobian to be det(du / dX), so we compute
-          // det(du / dX) = det(du / dX') * det(dX' / dX) = det(du / dX') * det(I + dp / dX)
-          auto flux = dot(stress, transpose(inv(deformation_grad))) * det(I + dp_dX);
+          auto flux = dot(stress, transpose(inv(dx_dX))) * det(dx_dX);
 
           // This transpose on the stress in the following line is a
           // hack to fix a bug in the residual operator. The stress
           // should be transposed in the contraction of the Piola
           // stress with the shape function gradients.
+          //
+          // Note that the mass part of the return is integrated in the perturbed reference
+          // configuration, hence the det(I + dp_dx) = det(dX'/dX)
           //
           // TODO: fix the residual implementation and remove this transpose.
           return serac::tuple{material.density * d2u_dt2 * det(I + dp_dX), transpose(flux)};
