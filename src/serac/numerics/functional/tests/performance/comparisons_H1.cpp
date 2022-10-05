@@ -429,7 +429,7 @@ void h1_h1_test_EA_3D(size_t num_elements, size_t num_runs)
 
     double runtime = time([&]() {
       for (size_t i = 0; i < num_runs; i++) {
-        serac::domain_integral::element_gradient_kernel_old<Geometry::Hexahedron, test, trial, q>(
+        serac::domain_integral::element_gradient_kernel<Geometry::Hexahedron, test, trial, q>(
           serac::CPUArrayView<double, 3>(KE_1D.GetData(), num_elements, n * n * n, n * n * n),
           view(derivatives), J1D, num_elements);
         compiler::please_do_not_optimize_away(&KE_1D);

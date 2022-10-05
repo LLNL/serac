@@ -25,6 +25,8 @@ serac_add_tests( SOURCES ${serial_solver_tests}
     DEPENDS_ON ${test_dependencies}
     NUM_MPI_TASKS 1)
 
+target_precompile_headers(test_solid_functional_statics PUBLIC pch.hpp)
+
 set(solver_tests
     #liquid_crystal_elastomer_example.cpp
     parameterized_thermomechanics_example.cpp

@@ -30,7 +30,6 @@ std::unique_ptr<mfem::ParMesh> mesh3D;
 
 static constexpr double a = 1.7;
 static constexpr double b = 2.1;
-
 template <int dim>
 struct hcurl_qfunction {
   template <typename x_t, typename vector_potential_t>

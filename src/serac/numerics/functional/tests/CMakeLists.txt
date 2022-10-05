@@ -25,7 +25,8 @@ serac_add_tests( SOURCES ${functional_tests_serial}
 
 # Then add the examples/tests
 set(functional_tests_mpi
-    functional_basic.cpp
+    functional_basic_thermal.cpp
+    functional_basic_elasticity.cpp
     functional_multiphysics.cpp
     functional_qoi.cpp
     functional_nonlinear.cpp
@@ -35,10 +36,11 @@ set(functional_tests_mpi
     #functional_material_state_test.cpp
     )
 
-
 serac_add_tests( SOURCES ${functional_tests_mpi}
                  DEPENDS_ON gtest serac_functional serac_state ${functional_depends}
                  NUM_MPI_TASKS 4 )
+            
+target_precompile_headers(functional_basic_elasticity PUBLIC pch.hpp)
 
 foreach(filename ${functional_tests_mpi})
     set_source_files_properties(${filename} PROPERTIES LANGUAGE CXX)

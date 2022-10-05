@@ -380,7 +380,8 @@ public:
           // stress with the shape function gradients.
           //
           // TODO: fix the residual implementation and remove this transpose.
-          return serac::tuple{material.density * d2u_dt2, transpose(flux)};
+          //return serac::tuple{material.density * d2u_dt2, transpose(flux)};
+          return serac::tuple{material.density * d2u_dt2, flux};
         },
         mesh_, qdata);
   }
