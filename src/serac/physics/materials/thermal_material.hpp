@@ -14,7 +14,7 @@
 
 #include "serac/numerics/functional/functional.hpp"
 
-/// ThermalConduction helper structs
+/// HeatTransfer helper structs
 namespace serac::Thermal {
 
 /**

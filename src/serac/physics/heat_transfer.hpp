@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file thermal_conduction.hpp
+ * @file heat_transfer.hpp
  *
  * @brief An object containing the solver for a thermal conduction PDE
  */
@@ -86,11 +86,11 @@ SolverOptions defaultDynamicOptions()
  */
 template <int order, int dim, typename parameters = Parameters<>,
           typename parameter_indices = std::make_integer_sequence<int, parameters::n>>
-class ThermalConduction;
+class HeatTransfer;
 
 /// @overload
 template <int order, int dim, typename... parameter_space, int... parameter_indices>
-class ThermalConduction<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>
+class HeatTransfer<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>
     : public BasePhysics {
 public:
   /**
@@ -101,7 +101,7 @@ public:
    * used by an underlying material model or load
    * @param[in] pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
-  ThermalConduction(const SolverOptions& options, const std::string& name = {}, mfem::ParMesh* pmesh = nullptr)
+  HeatTransfer(const SolverOptions& options, const std::string& name = {}, mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(2, order, name, pmesh),
         temperature_(StateManager::newState(FiniteElementState::Options{.order      = order,
                                                                         .vector_dim = 1,
@@ -503,7 +503,7 @@ public:
   }
 
   /// Destroy the Thermal Solver object
-  virtual ~ThermalConduction() = default;
+  virtual ~HeatTransfer() = default;
 
 protected:
   /// The compile-time finite element trial space for thermal conduction (H1 of order p)

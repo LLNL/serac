@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file solid.hpp
+ * @file solid_mechanics.hpp
  *
  * @brief An object containing the solver for total Lagrangian finite deformation solid mechanics
  */
@@ -69,7 +69,7 @@ const SolverOptions direct_dynamic_options = {
 
 template <int order, int dim, typename parameters = Parameters<>,
           typename parameter_indices = std::make_integer_sequence<int, parameters::n>>
-class Solid;
+class SolidMechanics;
 
 /**
  * @brief The nonlinear solid solver class
@@ -82,7 +82,7 @@ class Solid;
  * @tparam dim The spatial dimension of the mesh
  */
 template <int order, int dim, typename... parameter_space, int... parameter_indices>
-class Solid<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>
+class SolidMechanics<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>
     : public BasePhysics {
 public:
   //! @cond Doxygen_Suppress
@@ -102,7 +102,7 @@ public:
   static constexpr Geometry geom = supported_geometries[dim];
 
   /**
-   * @brief Construct a new Solid Functional object
+   * @brief Construct a new SolidMechanics Functional object
    *
    * @param options The options for the linear, nonlinear, and ODE solves
    * @param geom_nonlin Flag to include geometric nonlinearities
@@ -111,9 +111,9 @@ public:
    * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
 
-  Solid(const SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
-        const std::string& name = "", ShapeDisplacement calc_shape = ShapeDisplacement::Off,
-        mfem::ParMesh* pmesh = nullptr)
+  SolidMechanics(const SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
+                 const std::string& name = "", ShapeDisplacement calc_shape = ShapeDisplacement::Off,
+                 mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(2, order, name, pmesh),
         velocity_(StateManager::newState(
             FiniteElementState::Options{
@@ -212,8 +212,8 @@ public:
     zero_ = 0.0;
   }
 
-  /// @brief Destroy the Solid Functional object
-  ~Solid() {}
+  /// @brief Destroy the SolidMechanics Functional object
+  ~SolidMechanics() {}
 
   /**
    * @brief register the provided FiniteElementState object as the source of values for parameter `i`
@@ -646,11 +646,11 @@ public:
    *
    * @param[inout] dt The timestep to attempt. This will return the actual timestep for adaptive timestepping
    * schemes
-   * @pre Solid::completeSetup() must be called prior to this call
+   * @pre SolidMechanics::completeSetup() must be called prior to this call
    */
   void advanceTimestep(double& dt) override
   {
-    SLIC_ERROR_ROOT_IF(!residual_, "completeSetup() must be called prior to advanceTimestep(dt) in Solid.");
+    SLIC_ERROR_ROOT_IF(!residual_, "completeSetup() must be called prior to advanceTimestep(dt) in SolidMechanics.");
 
     // bcs_.setTime(time_);
 

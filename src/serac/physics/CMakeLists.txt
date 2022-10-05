@@ -29,10 +29,10 @@ set(physics_headers
     base_physics.hpp
     common.hpp
     solid_legacy.hpp
-    solid.hpp
+    solid_mechanics.hpp
     thermal_conduction_legacy.hpp
-    thermal_conduction.hpp
-    thermal_mechanics.hpp
+    heat_transfer.hpp
+    thermomechanics.hpp
     thermal_solid_legacy.hpp
     )
 

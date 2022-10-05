@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file thermal_mechanics.hpp
+ * @file thermomechanics.hpp
  *
  * @brief An object containing an operator-split thermal structural solver
  */
@@ -15,8 +15,8 @@
 #include "mfem.hpp"
 
 #include "serac/physics/base_physics.hpp"
-#include "serac/physics/solid.hpp"
-#include "serac/physics/thermal_conduction.hpp"
+#include "serac/physics/solid_mechanics.hpp"
+#include "serac/physics/heat_transfer.hpp"
 #include "serac/physics/materials/thermal_material.hpp"
 #include "serac/physics/materials/solid_material.hpp"
 
@@ -28,10 +28,10 @@ namespace serac {
  * Uses Functional to compute action of operators
  */
 template <int order, int dim, typename... parameter_space>
-class ThermalMechanics : public BasePhysics {
+class Thermomechanics : public BasePhysics {
 public:
   /**
-   * @brief Construct a new coupled Thermal-Solid Functional object
+   * @brief Construct a new coupled Thermal-SolidMechanics Functional object
    *
    * @param thermal_options The options for the linear, nonlinear, and ODE solves of the thermal operator
    * @param solid_options The options for the linear, nonlinear, and ODE solves of the thermal operator
@@ -39,9 +39,9 @@ public:
    * @param name An optional name for the physics module instance
    * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
-  ThermalMechanics(const SolverOptions& thermal_options, const SolverOptions& solid_options,
-                   GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
-                   mfem::ParMesh* pmesh = nullptr)
+  Thermomechanics(const SolverOptions& thermal_options, const SolverOptions& solid_options,
+                  GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
+                  mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(3, order, name, pmesh),
         thermal_(thermal_options, name + "thermal", pmesh),
         solid_(solid_options, geom_nonlin, name + "mechanical", ShapeDisplacement::Off, pmesh)
@@ -225,10 +225,9 @@ public:
     // note: these parameter indices are offset by 1 since, internally, this module uses the first parameter
     // to communicate the temperature and displacement field information to the other physics module
     //
-    thermal_.setMaterial(DependsOn<0, active_parameters + 1 ...>{},
-                                    ThermalMaterialInterface<MaterialType>{material});
-    solid_.setMaterial(DependsOn<0, active_parameters + 1 ...>{},
-                                  MechanicalMaterialInterface<MaterialType>{material}, qdata);
+    thermal_.setMaterial(DependsOn<0, active_parameters + 1 ...>{}, ThermalMaterialInterface<MaterialType>{material});
+    solid_.setMaterial(DependsOn<0, active_parameters + 1 ...>{}, MechanicalMaterialInterface<MaterialType>{material},
+                       qdata);
   }
 
   /// @overload
@@ -346,10 +345,10 @@ protected:
   using temperature_field  = H1<order>;       ///< the function space for the temperature field
 
   /// Submodule to compute the thermal conduction physics
-  ThermalConduction<order, dim, Parameters<displacement_field, parameter_space...>> thermal_;
+  HeatTransfer<order, dim, Parameters<displacement_field, parameter_space...>> thermal_;
 
   /// Submodule to compute the mechanics
-  Solid<order, dim, Parameters<temperature_field, parameter_space...>> solid_;
+  SolidMechanics<order, dim, Parameters<temperature_field, parameter_space...>> solid_;
 };
 
 }  // namespace serac

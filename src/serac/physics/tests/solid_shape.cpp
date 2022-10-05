@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/solid.hpp"
+#include "serac/physics/solid_mechanics.hpp"
 #include "serac/physics/materials/solid_material.hpp"
 #include "serac/physics/materials/parameterized_solid_material.hpp"
 
@@ -97,7 +97,7 @@ void shape_test(GeometricNonlinearities geo_nonlin)
     user_defined_shape_displacement.project(shape_coef);
 
     // Construct a functional-based solid mechanics solver including references to the shape velocity field.
-    Solid<p, dim> solid_solver(options, geo_nonlin, "solid_functional", ShapeDisplacement::On);
+    SolidMechanics<p, dim> solid_solver(options, geo_nonlin, "solid_functional", ShapeDisplacement::On);
 
     // Set the initial displacement and boundary condition
     solid_solver.setDisplacementBCs(ess_bdr, bc);
@@ -139,7 +139,7 @@ void shape_test(GeometricNonlinearities geo_nonlin)
     *mesh_nodes += user_defined_shape_displacement.gridFunction();
 
     // Construct a functional-based solid mechanics solver including references to the shape velocity field.
-    Solid<p, dim> solid_solver_no_shape(options, geo_nonlin, "solid_functional");
+    SolidMechanics<p, dim> solid_solver_no_shape(options, geo_nonlin, "solid_functional");
 
     mfem::VisItDataCollection visit_dc("pure_version", const_cast<mfem::ParMesh*>(&solid_solver_no_shape.mesh()));
     visit_dc.RegisterField("displacement", &solid_solver_no_shape.displacement().gridFunction());
@@ -170,8 +170,8 @@ void shape_test(GeometricNonlinearities geo_nonlin)
   EXPECT_LT(relative_error, 1.0e-14);
 }
 
-TEST(Solid, MoveShapeLinear) { shape_test(GeometricNonlinearities::Off); }
-TEST(Solid, MoveShapeNonlinear) { shape_test(GeometricNonlinearities::On); }
+TEST(SolidMechanics, MoveShapeLinear) { shape_test(GeometricNonlinearities::Off); }
+TEST(SolidMechanics, MoveShapeNonlinear) { shape_test(GeometricNonlinearities::On); }
 
 }  // namespace serac
 

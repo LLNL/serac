@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/solid.hpp"
+#include "serac/physics/solid_mechanics.hpp"
 
 #include <functional>
 #include <fstream>
@@ -55,7 +55,7 @@ void functional_solid_test_static(double expected_disp_norm)
   SolverOptions options = {DirectSolverOptions{}, solid_mechanics::default_nonlinear_options};
 
   // Construct a functional-based solid mechanics solver
-  Solid<p, dim> solid_solver(options, GeometricNonlinearities::On, "solid_functional");
+  SolidMechanics<p, dim> solid_solver(options, GeometricNonlinearities::On, "solid_functional");
 
   solid_mechanics::NeoHookean mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
@@ -118,7 +118,7 @@ void functional_solid_test_static_J2()
   options.linear         = linear_options;
 
   // Construct a functional-based solid mechanics solver
-  Solid<p, dim> solid_solver(options, GeometricNonlinearities::Off, "solid_functional");
+  SolidMechanics<p, dim> solid_solver(options, GeometricNonlinearities::Off, "solid_functional");
 
   solid_mechanics::J2 mat{
       10000,  // Young's modulus
@@ -192,7 +192,8 @@ void functional_solid_test_dynamic(double expected_disp_norm)
   serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a functional-based solid mechanics solver
-  Solid<p, dim> solid_solver(default_dynamic_options, GeometricNonlinearities::Off, "solid_functional_dynamic");
+  SolidMechanics<p, dim> solid_solver(default_dynamic_options, GeometricNonlinearities::Off,
+                                      "solid_functional_dynamic");
 
   solid_mechanics::LinearIsotropic mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
@@ -253,7 +254,7 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
   serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a functional-based solid mechanics solver
-  Solid<p, dim> solid_solver(default_static_options, GeometricNonlinearities::Off, "solid_functional");
+  SolidMechanics<p, dim> solid_solver(default_static_options, GeometricNonlinearities::Off, "solid_functional");
 
   solid_mechanics::LinearIsotropic mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
@@ -347,8 +348,8 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   user_defined_bulk_modulus = 1.0;
 
   // Construct a functional-based solid mechanics solver
-  Solid<p, dim, Parameters<H1<1>, H1<1>>> solid_solver(default_static_options, GeometricNonlinearities::On,
-                                                       "solid_functional");
+  SolidMechanics<p, dim, Parameters<H1<1>, H1<1>>> solid_solver(default_static_options, GeometricNonlinearities::On,
+                                                                "solid_functional");
   solid_solver.setParameter(user_defined_bulk_modulus, 0);
   solid_solver.setParameter(user_defined_shear_modulus, 1);
 
@@ -404,17 +405,20 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
 }
 
-TEST(Solid, 2DQuadParameterizedStatic) { functional_parameterized_solid_test<2, 2>(2.1906312704664623); }
+TEST(SolidMechanics, 2DQuadParameterizedStatic) { functional_parameterized_solid_test<2, 2>(2.1906312704664623); }
 
-TEST(Solid, 3DQuadStaticJ2) { functional_solid_test_static_J2(); }
+TEST(SolidMechanics, 3DQuadStaticJ2) { functional_solid_test_static_J2(); }
 
-TEST(Solid, 2DLinearDynamic) { functional_solid_test_dynamic<1, 2>(1.5206694864511661); }
-TEST(Solid, 2DQuadDynamic) { functional_solid_test_dynamic<2, 2>(1.5269845689546435); }
+TEST(SolidMechanics, 2DLinearDynamic) { functional_solid_test_dynamic<1, 2>(1.5206694864511661); }
+TEST(SolidMechanics, 2DQuadDynamic) { functional_solid_test_dynamic<2, 2>(1.5269845689546435); }
 
-TEST(Solid, 3DLinearDynamic) { functional_solid_test_dynamic<1, 3>(1.520679017); }
-TEST(Solid, 3DQuadDynamic) { functional_solid_test_dynamic<2, 3>(1.527009514); }
+TEST(SolidMechanics, 3DLinearDynamic) { functional_solid_test_dynamic<1, 3>(1.520679017); }
+TEST(SolidMechanics, 3DQuadDynamic) { functional_solid_test_dynamic<2, 3>(1.527009514); }
 
-TEST(Solid, 2DLinearPressure) { functional_solid_test_boundary<1, 2>(0.057051396685822188, TestType::Pressure); }
+TEST(SolidMechanics, 2DLinearPressure)
+{
+  functional_solid_test_boundary<1, 2>(0.057051396685822188, TestType::Pressure);
+}
 
 }  // namespace serac
 

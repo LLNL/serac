@@ -14,7 +14,7 @@
 
 #include "serac/physics/materials/thermal_material.hpp"
 
-/// ThermalConduction helper structs
+/// HeatTransfer helper structs
 namespace serac::Thermal {
 
 /// Linear isotropic conductor with a parameterized conductivity
