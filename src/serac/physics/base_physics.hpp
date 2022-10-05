@@ -159,10 +159,13 @@ protected:
   MPI_Comm comm_;
 
   /**
-   * @brief List of finite element data structures
+   * @brief List of finite element states associated with this physics module
    */
   std::vector<std::reference_wrapper<serac::FiniteElementState>> state_;
 
+  /**
+   * @brief List of finite element duals associated with this physics module
+   */
   std::vector<std::reference_wrapper<serac::FiniteElementDual>> dual_;
 
   /**
