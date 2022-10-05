@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <array>
+
 #include "serac/infrastructure/accelerator.hpp"
 #include "serac/numerics/functional/tuple.hpp"
 #include "serac/numerics/functional/finite_element.hpp"

@@ -98,12 +98,9 @@ public:
    *
    * @param[in] options The system linear and nonlinear solver and timestepping parameters
    * @param[in] name An optional name for the physics module instance
-   * @param[in] parameter_states The optional array of finite element states represetnting user-defined parameters to be
    * used by an underlying material model or load
    */
-  ThermalConductionFunctional(
-      const SolverOptions& options, const std::string& name = {},
-      std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states = {})
+  ThermalConductionFunctional(const SolverOptions& options, const std::string& name = {})
       : BasePhysics(2, order, name),
         temperature_(
             StateManager::newState(FiniteElementState::Options{.order      = order,
@@ -115,7 +112,6 @@ public:
                                         .vector_dim = 1,
                                         .ordering   = mfem::Ordering::byNODES,
                                         .name       = detail::addPrefix(name, "adjoint_temperature")})),
-        parameter_states_(parameter_states),
         residual_(temperature_.space().TrueVSize()),
         ode_(temperature_.space().TrueVSize(), {.u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
              nonlin_solver_, bcs_)
@@ -131,10 +127,12 @@ public:
     trial_spaces[0] = &temperature_.space();
 
     if constexpr (sizeof...(parameter_space) > 0) {
-      for (size_t i = 0; i < sizeof...(parameter_space); ++i) {
-        trial_spaces[i + 1]         = &(parameter_states_[i].get().space());
-        parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, parameter_states_[i].get().space());
-      }
+      tuple<parameter_space...> types{};
+      for_constexpr<sizeof...(parameter_space)>([&](auto i) {
+        trial_spaces[i + 1] =
+            generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_);
+        parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, *trial_spaces[i + 1]);
+      });
     }
 
     M_functional_ = std::make_unique<Functional<test(trial, parameter_space...)>>(&temperature_.space(), trial_spaces);
@@ -168,6 +166,14 @@ public:
     zero_.SetSize(true_size);
     zero_ = 0.0;
   }
+
+  /**
+   * @brief register the provided FiniteElementState object as the source of values for parameter `i`
+   *
+   * @param parameter_state the values to use for the specified parameter
+   * @param i the index of the parameter
+   */
+  void setParameter(const FiniteElementState& parameter_state, size_t i) { parameter_states_[i] = &parameter_state; }
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
@@ -213,44 +219,37 @@ public:
    * @tparam MaterialType The thermal material type
    * @param material A material containing density, specific heat, and thermal flux evaluation information
    *
+   * TODO: update these doxygen comments
    * @pre MaterialType must have a method specificHeatCapacity() defining the specific heat
    * @pre MaterialType must have a method density() defining the density
    * @pre MaterialType must have the operator (temperature, d temperature_dx) defined as the thermal flux
    */
-  template <typename MaterialType>
-  void setMaterial(MaterialType material)
+  template <int... active_parameters, typename MaterialType>
+  void setMaterial(DependsOn<active_parameters...>, MaterialType material)
   {
-    if constexpr (is_parameterized<MaterialType>::value) {
-      static_assert(material.numParameters() == sizeof...(parameter_space),
-                    "Number of parameters in thermal conduction does not equal the number of parameters in the "
-                    "thermal material.");
-    }
-
-    auto parameterized_material = parameterizeMaterial(material);
-
     K_functional_->AddDomainIntegral(
-        Dimension<dim>{},
-        [parameterized_material](auto x, auto temperature, auto... params) {
+        Dimension<dim>{}, DependsOn<0, active_parameters + 1 ...>{},
+        [material](auto x, auto temperature, auto... params) {
           // Get the value and the gradient from the input tuple
           auto [u, du_dx] = temperature;
           auto source     = serac::zero{};
 
-          auto response = parameterized_material(x, u, du_dx, serac::get<0>(params)...);
+          auto response = material(x, u, du_dx, params...);
 
           return camp::tuple{source, -1.0 * response.heat_flux};
         },
         mesh_);
 
     M_functional_->AddDomainIntegral(
-        Dimension<dim>{},
-        [parameterized_material](auto x, auto d_temperature_dt, auto... params) {
+        Dimension<dim>{}, DependsOn<0, active_parameters + 1 ...>{},
+        [material](auto x, auto d_temperature_dt, auto... params) {
           auto [u, du_dx] = d_temperature_dt;
           auto flux       = serac::zero{};
 
           auto temp      = u * 0.0;
           auto temp_grad = du_dx * 0.0;
 
-          auto response = parameterized_material(x, temp, temp_grad, serac::get<0>(params)...);
+          auto response = material(x, temp, temp_grad, params...);
 
           auto source = response.specific_heat_capacity * response.density * u;
 
@@ -258,6 +257,13 @@ public:
           return camp::tuple{source, flux};
         },
         mesh_);
+  }
+
+  /// @overload
+  template <typename MaterialType>
+  void setMaterial(MaterialType material)
+  {
+    setMaterial(DependsOn<>{}, material);
   }
 
   /**
@@ -283,8 +289,8 @@ public:
    *
    * @pre SourceType must have the operator (x, time, temperature, d temperature_dx) defined as the thermal source
    */
-  template <typename SourceType>
-  void setSource(SourceType source_function)
+  template <int... active_parameters, typename SourceType>
+  void setSource(DependsOn<active_parameters...>, SourceType source_function)
   {
     if constexpr (is_parameterized<SourceType>::value) {
       static_assert(source_function.numParameters() == sizeof...(parameter_space),
@@ -295,7 +301,7 @@ public:
     auto parameterized_source = parameterizeSource(source_function);
 
     K_functional_->AddDomainIntegral(
-        Dimension<dim>{},
+        Dimension<dim>{}, DependsOn<0, active_parameters + 1 ...>{},
         [parameterized_source, this](auto x, auto temperature, auto... params) {
           // Get the value and the gradient from the input tuple
           auto [u, du_dx] = temperature;
@@ -310,6 +316,13 @@ public:
         mesh_);
   }
 
+  /// @overload
+  template <typename SourceType>
+  void setSource(SourceType source_function)
+  {
+    setSource(DependsOn<>{}, source_function);
+  }
+
   /**
    * @brief Set the thermal flux boundary condition
    *
@@ -318,21 +331,19 @@ public:
    *
    * @pre FluxType must have the operator (x, normal, temperature) to return the thermal flux value
    */
+  template <int... active_parameters, typename FluxType>
+  void setFluxBCs(DependsOn<active_parameters...>, FluxType flux_function)
+  {
+    K_functional_->AddBoundaryIntegral(
+        Dimension<dim - 1>{}, DependsOn<0, active_parameters + 1 ...>{},
+        [flux_function](auto x, auto n, auto u, auto... params) { return flux_function(x, n, u, params...); }, mesh_);
+  }
+
+  /// @overload
   template <typename FluxType>
   void setFluxBCs(FluxType flux_function)
   {
-    if constexpr (is_parameterized<FluxType>::value) {
-      static_assert(flux_function.numParameters() == sizeof...(parameter_space),
-                    "Number of parameters in thermal conduction does not equal the number of parameters in the "
-                    "thermal flux boundary.");
-    }
-
-    auto parameterized_flux = parameterizeFlux(flux_function);
-
-    K_functional_->AddBoundaryIntegral(
-        Dimension<dim - 1>{},
-        [parameterized_flux](auto x, auto n, auto u, auto... params) { return parameterized_flux(x, n, u, params...); },
-        mesh_);
+    setFluxBCs(DependsOn<>{}, flux_function);
   }
 
   /**
@@ -370,12 +381,12 @@ public:
           temperature_.space().TrueVSize(),
 
           [this](const mfem::Vector& u, mfem::Vector& r) {
-            r = (*K_functional_)(u, parameter_states_[parameter_indices]...);
+            r = (*K_functional_)(u, *parameter_states_[parameter_indices]...);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
           [this](const mfem::Vector& u) -> mfem::Operator& {
-            auto [r, drdu] = (*K_functional_)(differentiate_wrt(u), parameter_states_[parameter_indices]...);
+            auto [r, drdu] = (*K_functional_)(differentiate_wrt(u), *parameter_states_[parameter_indices]...);
             J_             = assemble(drdu);
             bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             return *J_;
@@ -386,13 +397,13 @@ public:
       residual_ = mfem_ext::StdFunctionOperator(
           temperature_.space().TrueVSize(),
           [this](const mfem::Vector& du_dt, mfem::Vector& r) {
-            auto M_residual = (*M_functional_)(du_dt, parameter_states_[parameter_indices]...);
+            auto M_residual = (*M_functional_)(du_dt, *parameter_states_[parameter_indices]...);
 
             // TODO we should use the new variadic capability to directly pass temperature and d_temp_dt directly to
             // these kernels to avoid ugly hacks like this.
             mfem::Vector K_arg(u_.Size());
             add(1.0, u_, dt_, du_dt, u_predicted_);
-            auto K_residual = (*K_functional_)(u_predicted_, parameter_states_[parameter_indices]...);
+            auto K_residual = (*K_functional_)(u_predicted_, *parameter_states_[parameter_indices]...);
 
             add(M_residual, K_residual, r);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
@@ -401,14 +412,15 @@ public:
           [this](const mfem::Vector& du_dt) -> mfem::Operator& {
             // Only reassemble the stiffness if it is a new timestep
 
-            auto M = serac::get<1>((*M_functional_)(differentiate_wrt(du_dt), parameter_states_[parameter_indices]...));
+            auto M =
+                serac::get<1>((*M_functional_)(differentiate_wrt(du_dt), *parameter_states_[parameter_indices]...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
             mfem::Vector K_arg(u_.Size());
             add(1.0, u_, dt_, du_dt, u_predicted_);
 
             auto K = serac::get<1>(
-                (*K_functional_)(differentiate_wrt(u_predicted_), parameter_states_[parameter_indices]...));
+                (*K_functional_)(differentiate_wrt(u_predicted_), *parameter_states_[parameter_indices]...));
 
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
@@ -444,7 +456,7 @@ public:
     mfem::HypreParVector adjoint_essential(adjoint_load);
     adjoint_essential = 0.0;
 
-    auto [r, drdu] = (*K_functional_)(differentiate_wrt(temperature_), parameter_states_[parameter_indices]...);
+    auto [r, drdu] = (*K_functional_)(differentiate_wrt(temperature_), *parameter_states_[parameter_indices]...);
     auto jacobian  = assemble(drdu);
     auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -479,7 +491,7 @@ public:
   FiniteElementDual& computeSensitivity()
   {
     auto [r, drdparam] = (*K_functional_)(DifferentiateWRT<parameter_field + 1>{}, temperature_,
-                                          parameter_states_[parameter_indices]...);
+                                          *parameter_states_[parameter_indices]...);
 
     auto drdparam_mat = assemble(drdparam);
 
@@ -511,7 +523,7 @@ protected:
   std::unique_ptr<Functional<test(trial, parameter_space...)>> K_functional_;
 
   /// The finite element states representing user-defined parameter fields
-  std::array<std::reference_wrapper<FiniteElementState>, sizeof...(parameter_space)> parameter_states_;
+  std::array<const FiniteElementState*, sizeof...(parameter_space)> parameter_states_;
 
   /// The sensitivities (dual vectors) with repect to each of the input parameter fields
   std::array<std::unique_ptr<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;

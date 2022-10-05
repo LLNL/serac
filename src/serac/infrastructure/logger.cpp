@@ -19,7 +19,10 @@ bool initialize(MPI_Comm comm)
     slic::initialize();
   }
 
-  auto [num_ranks, _] = getMPIInfo(comm);
+  auto [num_ranks, rank] = getMPIInfo(comm);
+
+  // Mark rank 0 as the root for message filtering macros
+  slic::setIsRoot(rank == 0);
 
   std::string loggerName = num_ranks > 1 ? "serac_parallel_logger" : "serac_serial_logger";
   slic::createLogger(loggerName);
@@ -48,17 +51,11 @@ bool initialize(MPI_Comm comm)
     d_format_string  = "[<RANK>]" + d_format_string;
     we_format_string = "[<RANK>]" + we_format_string;
 
-#ifdef SERAC_USE_LUMBERJACK
     const int RLIMIT = 8;
 
     i_logstream  = new slic::LumberjackStream(&std::cout, comm, RLIMIT, i_format_string);
     d_logstream  = new slic::LumberjackStream(&std::cout, comm, RLIMIT, d_format_string);
     we_logstream = new slic::LumberjackStream(&std::cerr, comm, RLIMIT, we_format_string);
-#else
-    i_logstream  = new slic::SynchronizedStream(&std::cout, comm, i_format_string);
-    d_logstream  = new slic::SynchronizedStream(&std::cout, comm, d_format_string);
-    we_logstream = new slic::SynchronizedStream(&std::cerr, comm, we_format_string);
-#endif
   } else {
     i_logstream  = new slic::GenericOutputStream(&std::cout, i_format_string);
     d_logstream  = new slic::GenericOutputStream(&std::cout, d_format_string);
@@ -73,8 +70,10 @@ bool initialize(MPI_Comm comm)
   addStreamToMsgLevel(we_logstream, slic::message::Warning);
   addStreamToMsgLevel(we_logstream, slic::message::Error);
 
-  // Exit gracefully on error
-  slic::setAbortFunction([]() { exitGracefully(true); });
+  // Set SLIC abort functionality
+  // NOTE: Do not set a collective abort function via `slic::setAbortFunction`.
+  // This can cause runs to hang. SLIC flushs locally on the node that fails,
+  // so that the error message is not lost.
   slic::setAbortOnError(true);
   slic::setAbortOnWarning(false);
 

@@ -27,38 +27,91 @@ namespace serac {
  */
 class FiniteElementDual : public FiniteElementVector {
 public:
-  /**
-   * @brief Use the finite element vector constructors
-   */
   using FiniteElementVector::FiniteElementVector;
   using FiniteElementVector::operator=;
   using mfem::Vector::Print;
 
   /**
-   * @brief Fill a user-provided grid function based on the underlying true vector
+   * @brief Copy constructor
    *
-   * This distributes true vector dofs to the finite element (local) dofs  by multiplying the true dofs
+   * @param[in] rhs The input Dual used for construction
+   */
+  FiniteElementDual(const FiniteElementDual& rhs) : FiniteElementVector(rhs) {}
+
+  /**
+   * @brief Move construct a new Finite Element Dual object
+   *
+   * @param[in] rhs The input vector used for construction
+   */
+  FiniteElementDual(FiniteElementDual&& rhs) : FiniteElementVector(std::move(rhs)) {}
+
+  /**
+   * @brief Copy assignment
+   *
+   * @param rhs The right hand side input Dual
+   * @return The assigned FiniteElementDual
+   */
+  FiniteElementDual& operator=(const FiniteElementDual& rhs)
+  {
+    FiniteElementVector::operator=(rhs);
+    return *this;
+  }
+
+  /**
+   * @brief Fill a user-provided linear form based on the underlying true vector
+   *
+   * This distributes true vector dofs to the finite element (local) dofs by multiplying the true dofs
    * by the restriction transpose operator.
    *
    * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
    *
+   * @param linear_form The linear form used to initialize the underlying true vector.
    */
-  void fillGridFunction(mfem::ParGridFunction& grid_function) const
+  void fillLinearForm(mfem::ParLinearForm& linear_form) const
   {
-    space_->GetRestrictionMatrix()->MultTranspose(*this, grid_function);
+    space_->GetRestrictionMatrix()->MultTranspose(*this, linear_form);
   }
 
   /**
-   * @brief Initialize the true vector in the FiniteElementDual based on an input grid function
+   * @brief Initialize the true vector in the FiniteElementDual based on an input linear form
    *
-   * This distributes the grid function dofs to the true vector dofs by multiplying by the
+   * This distributes the linear form dofs to the true vector dofs by multiplying by the
    * prolongation transpose operator.
    *
    * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
    *
-   * @param grid_function The grid function used to initialize the underlying true vector.
+   * @note The underlying MFEM call should really be const
+   *
+   * @param linear_form The linear form used to initialize the underlying true vector.
    */
-  void setFromGridFunction(const mfem::ParGridFunction& grid_function) { grid_function.ParallelAssemble(*this); }
+  void setFromLinearForm(const mfem::ParLinearForm& linear_form)
+  {
+    const_cast<mfem::ParLinearForm&>(linear_form).ParallelAssemble(*this);
+  }
+
+  /**
+   * @brief Construct a linear form from the finite element dual true vector
+   *
+   * @return The constructed linear form
+   */
+  mfem::ParLinearForm& linearForm() const
+  {
+    if (!linear_form_) {
+      linear_form_ = std::make_unique<mfem::ParLinearForm>(space_.get());
+    }
+
+    fillLinearForm(*linear_form_);
+    return *linear_form_;
+  }
+
+protected:
+  /**
+   * @brief An optional container for a linear form (L-vector) view of the finite element dual.
+   *
+   * If a user requests it, it is constructed and potentially reused during subsequent calls. It is
+   * not updated unless specifically requested via the @a linearForm method.
+   */
+  mutable std::unique_ptr<mfem::ParLinearForm> linear_form_;
 };
 
 }  // namespace serac

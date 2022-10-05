@@ -54,7 +54,7 @@ class Mfem(Package, CudaPackage, ROCmPackage):
     # Note: Make sure this sha coincides with the git submodule
     # Note: We add a number to the end of the real version number to indicate that we have
     #  moved forward past the release. Increment the last number when updating the commit sha.
-    version('4.3.0.1', commit='e55e90e8d0e331bba3fbe20a98a9f9b12453700b', submodules="True")
+    version('4.4.1.1', commit='bf30f3715027e49daefa0548825b59d9f8ab5c21')
     # SERAC EDIT END
 
     version('4.3.0',

@@ -20,24 +20,26 @@ namespace serac::solid_mechanics {
 /**
  * @brief Linear isotropic elasticity material model
  *
- * @tparam dim Spatial dimension of the mesh
  */
-template <int dim>
 struct LinearIsotropic {
   using State = Empty;  ///< this material has no internal variables
 
   /**
    * @brief stress calculation for a linear isotropic material model
    *
-   * @tparam DispGradType Displacement gradient type
+   * When applied to 2D displacement gradients, the stress is computed in plane strain,
+   * returning only the in-plane components.
+   *
+   * @tparam T Number-like type for the displacement gradient components
+   * @tparam dim Dimensionality of space
    * @param du_dX Displacement gradient with respect to the reference configuration
-   * @return The calculated material response (density, Kirchoff stress) for the material
+   * @return The Cauchy stress
    */
-  template <typename DispGradType>
-  SERAC_HOST_DEVICE auto operator()(State& /* state */, const DispGradType& du_dX) const
+  template <typename T, int dim>
+  SERAC_HOST_DEVICE auto operator()(State& /* state */, const tensor<T, dim, dim>& du_dX) const
   {
     auto I       = Identity<dim>();
-    auto lambda  = K - (2.0 / dim) * G;
+    auto lambda  = K - (2.0 / 3.0) * G;
     auto epsilon = 0.5 * (transpose(du_dX) + du_dX);
     return lambda * tr(epsilon) * I + 2.0 * G * epsilon;
   }
@@ -50,27 +52,30 @@ struct LinearIsotropic {
 /**
  * @brief Neo-Hookean material model
  *
- * @tparam dim The spatial dimension of the mesh
  */
-template <int dim>
 struct NeoHookean {
   using State = Empty;  ///< this material has no internal variables
 
   /**
    * @brief stress calculation for a NeoHookean material model
    *
-   * @tparam DispGradType Displacement gradient type
+   * When applied to 2D displacement gradients, the stress is computed in plane strain,
+   * returning only the in-plane components.
+   *
+   * @tparam T Number-like type for the displacement gradient components
+   * @tparam dim Dimensionality of space
    * @param du_dX displacement gradient with respect to the reference configuration (displacement_grad)
-   * @return The calculated material response (density, Kirchoff stress) for the material
+   * @return The Cauchy stress
    */
-  template <typename DispGradType>
-  SERAC_HOST_DEVICE auto operator()(State& /* state */, const DispGradType& du_dX) const
+  template <typename T, int dim>
+  SERAC_HOST_DEVICE auto operator()(State& /* state */, const tensor<T, dim, dim>& du_dX) const
   {
     using std::log;
     constexpr auto I         = Identity<dim>();
-    auto           lambda    = K - (2.0 / dim) * G;
+    auto           lambda    = K - (2.0 / 3.0) * G;
     auto           B_minus_I = du_dX * transpose(du_dX) + transpose(du_dX) + du_dX;
-    return lambda * log(det(I + du_dX)) * I + G * B_minus_I;
+    auto           J         = det(I + du_dX);
+    return (lambda * log(J) * I + G * B_minus_I) / J;
   }
 
   double density;  ///< mass density
@@ -139,6 +144,41 @@ struct J2 {
   }
 };
 
+/**
+ * @brief Transform the Kirchhoff stress to the Piola stress
+ *
+ * @tparam T1 number-like type of the displacement gradient components
+ * @tparam T1 number-like type of the Kirchhoff stress components
+ * @tparam dim number of spatial dimensions
+ *
+ * @param displacement_gradient Displacement gradient
+ * @param kirchhoff_stress Kirchoff stress
+ * @return Piola stress
+ */
+template <typename T1, typename T2, int dim>
+auto KirchhoffToPiola(const tensor<T1, dim, dim>& kirchhoff_stress, const tensor<T2, dim, dim>& displacement_gradient)
+{
+  return transpose(linear_solve(displacement_gradient + Identity<dim>(), kirchhoff_stress));
+}
+
+/**
+ * @brief Transform the Cauchy stress to the Piola stress
+ *
+ * @tparam T1 number-like type of the Cauchy stress components
+ * @tparam T2 number-like type of the displacement gradient components
+ * @tparam dim number of spatial dimensions
+ *
+ * @param displacement_gradient Displacement gradient
+ * @param cauchy_stress Cauchy stress
+ * @return Piola stress
+ */
+template <typename T1, typename T2, int dim>
+auto CauchyToPiola(const tensor<T1, dim, dim>& cauchy_stress, const tensor<T2, dim, dim>& displacement_gradient)
+{
+  auto kirchhoff_stress = det(displacement_gradient + Identity<dim>()) * cauchy_stress;
+  return KirchhoffToPiola(kirchhoff_stress, displacement_gradient);
+}
+
 /// Constant body force model
 template <int dim>
 struct ConstantBodyForce {
@@ -148,12 +188,12 @@ struct ConstantBodyForce {
   /**
    * @brief Evaluation function for the constant body force model
    *
-   * @tparam DisplacementType Displacement type
-   * @tparam DispGradType Displacement gradient type
+   * @tparam T Position type
    * @tparam dim The dimension of the problem
    * @return The body force value
    */
-  SERAC_HOST_DEVICE tensor<double, dim> operator()(const tensor<double, dim>& /* x */, const double /* t */) const
+  template <typename T>
+  SERAC_HOST_DEVICE tensor<double, dim> operator()(const tensor<T, dim>& /* x */, const double /* t */) const
   {
     return force_;
   }
@@ -168,70 +208,14 @@ struct ConstantTraction {
   /**
    * @brief Evaluation function for the constant traction model
    *
+   * @tparam T Position type
    * @return The traction value
    */
-  SERAC_HOST_DEVICE tensor<double, dim> operator()(const tensor<double, dim>& /* x */,
-                                                   const tensor<double, dim>& /* n */, const double /* t */) const
+  template <typename T>
+  SERAC_HOST_DEVICE tensor<double, dim> operator()(const tensor<T, dim>& /* x */, const tensor<T, dim>& /* n */,
+                                                   const double /* t */) const
   {
     return traction_;
-  }
-};
-
-/// Function-based traction boundary condition model
-template <int dim>
-struct TractionFunction {
-  /// The traction function
-  std::function<tensor<double, dim>(const tensor<double, dim>&, const tensor<double, dim>&, const double)>
-      traction_func_;
-
-  /**
-   * @brief Evaluation for the function-based traction model
-   *
-   * @param x The spatial coordinate
-   * @param n The normal vector
-   * @param t The current time
-   * @return The traction to apply
-   */
-  SERAC_HOST_DEVICE tensor<double, dim> operator()(const tensor<double, dim>& x, const tensor<double, dim>& n,
-                                                   const double t) const
-  {
-    return traction_func_(x, n, t);
-  }
-};
-
-/// Constant pressure model
-struct ConstantPressure {
-  /// The constant pressure
-  double pressure_;
-
-  /**
-   * @brief Evaluation of the constant pressure model
-   *
-   * @tparam dim Spatial dimension
-   */
-  template <int dim>
-  SERAC_HOST_DEVICE double operator()(const tensor<double, dim>& /* x */, const double /* t */) const
-  {
-    return pressure_;
-  }
-};
-
-/// Function-based pressure boundary condition
-template <int dim>
-struct PressureFunction {
-  /// The pressure function
-  std::function<double(const tensor<double, dim>&, const double)> pressure_func_;
-
-  /**
-   * @brief Evaluation for the function-based pressure model
-   *
-   * @param x The spatial coordinate
-   * @param t The current time
-   * @return The pressure to apply
-   */
-  SERAC_HOST_DEVICE double operator()(const tensor<double, dim>& x, const double t) const
-  {
-    return pressure_func_(x, t);
   }
 };
 

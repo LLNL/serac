@@ -60,12 +60,13 @@ TEST(ThermalFunctionalFiniteDiff, FiniteDifference)
   // Note that we now include an extra template parameter indicating the finite element space for the parameterized
   // field, in this case the thermal conductivity. We also pass an array of finite element states for each of the
   // requested parameterized fields.
-  ThermalConductionFunctional<p, dim, Parameters<H1<1> > > thermal_solver(
-      Thermal::defaultQuasistaticOptions(), "thermal_functional", {user_defined_conductivity});
+  ThermalConductionFunctional<p, dim, Parameters<H1<1> > > thermal_solver(Thermal::defaultQuasistaticOptions(),
+                                                                          "thermal_functional");
+  thermal_solver.setParameter(user_defined_conductivity, 0);
 
   // Construct a potentially user-defined parameterized material and send it to the thermal module
   Thermal::ParameterizedLinearIsotropicConductor mat;
-  thermal_solver.setMaterial(mat);
+  thermal_solver.setMaterial(DependsOn<0>{}, mat);
 
   // Define the function for the initial temperature and boundary condition
   auto bdr_temp = [](const mfem::Vector& x, double) -> double { return (x[0] < 0.5 || x[1] < 0.5) ? 1.0 : 0.0; };

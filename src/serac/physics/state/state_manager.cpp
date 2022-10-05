@@ -106,15 +106,17 @@ FiniteElementDual StateManager::newDual(FiniteElementVector::Options&& options, 
   const std::string name     = options.name;
   auto              dual     = FiniteElementDual(mesh(mesh_tag), std::move(options));
   if (is_restart_) {
-    auto grid_function = datacoll.GetParField(name);
-    dual.setFromGridFunction(*grid_function);
+    auto*                                 grid_function = datacoll.GetParField(name);
+    std::unique_ptr<mfem::HypreParVector> true_dofs(grid_function->GetTrueDofs());
+    dual = *true_dofs;
   } else {
     SLIC_ERROR_ROOT_IF(datacoll.HasField(name),
                        axom::fmt::format("Serac's datacollection was already given a field named '{0}'", name));
     // Create a new grid function with unallocated data. This will be managed by sidre.
     auto* new_grid_function = new mfem::ParGridFunction(&dual.space(), static_cast<double*>(nullptr));
     datacoll.RegisterField(name, new_grid_function);
-    dual.fillGridFunction(*new_grid_function);
+    std::unique_ptr<mfem::HypreParVector> true_dofs(new_grid_function->GetTrueDofs());
+    dual = *true_dofs;
   }
   return dual;
 }

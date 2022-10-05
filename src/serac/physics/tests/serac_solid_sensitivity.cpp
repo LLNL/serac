@@ -127,14 +127,13 @@ TEST(SeracSolidSensitivity, FiniteDiff)
 
     // Compute numerical value of sensitivity of qoi with respect to bulk modulus
     // by taking the inner product between adjoint load and displacement sensitivity
-    double dqoi_dbulk              = adjointLoad(du_dbulk);
-    auto   bulkModulusSensGridFunc = bulkModulusSensitivity.gridFunction();
+    double dqoi_dbulk = adjointLoad(du_dbulk);
 
     // See if these are similar
     SLIC_INFO(axom::fmt::format("dqoi_dbulk: {}", dqoi_dbulk));
-    SLIC_INFO(axom::fmt::format("bulkModulusSensitivity: {}", bulkModulusSensGridFunc(ix)));
+    SLIC_INFO(axom::fmt::format("bulkModulusSensitivity: {}", bulkModulusSensitivity(ix)));
 
-    EXPECT_NEAR((bulkModulusSensGridFunc(ix) - dqoi_dbulk) / dqoi_dbulk, 0.0, 1.0e-3);
+    EXPECT_NEAR((bulkModulusSensitivity(ix) - dqoi_dbulk) / dqoi_dbulk, 0.0, 1.0e-3);
   }
 
   bulkModulus = bulkModulusValue;
@@ -160,13 +159,12 @@ TEST(SeracSolidSensitivity, FiniteDiff)
 
     // Compute numerical value of sensitivity of qoi with respect to bulk modulus
     // by taking the inner product between adjoint load and displacement sensitivity
-    double dqoi_dshear              = adjointLoad(du_dbulk);
-    auto   shearModulusSensGridFunc = shearModulusSensitivity.gridFunction();
+    double dqoi_dshear = adjointLoad(du_dbulk);
 
     // See if these are similar
     SLIC_INFO(axom::fmt::format("dqoi_dshear: {}", dqoi_dshear));
-    SLIC_INFO(axom::fmt::format("shearModulusSensitivity: {}", shearModulusSensGridFunc(ix)));
-    EXPECT_NEAR((shearModulusSensGridFunc(ix) - dqoi_dshear) / dqoi_dshear, 0.0, 1.0e-3);
+    SLIC_INFO(axom::fmt::format("shearModulusSensitivity: {}", shearModulusSensitivity(ix)));
+    EXPECT_NEAR((shearModulusSensitivity(ix) - dqoi_dshear) / dqoi_dshear, 0.0, 1.0e-3);
   }
 }
 

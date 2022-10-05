@@ -87,7 +87,7 @@ void evaluate(const VectorExpr<T>& expr, mfem::Vector& result)
 {
   SLIC_ERROR_IF(expr.Size() != result.Size(), "Vector sizes in expression assignment must be equal");
   // Get the underlying array for indexing compatibility with mfem::HypreParVector
-  double* result_arr = result;
+  double* result_arr = result.GetData();
   for (int i = 0; i < expr.Size(); i++) {
     result_arr[i] = expr[i];
   }

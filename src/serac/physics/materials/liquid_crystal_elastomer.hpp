@@ -75,7 +75,7 @@ struct LiquidCrystalElastomer {
    * @param[in] displacement_grad displacement gradient with respect to the reference configuration
    * @param[in] temperature the temperature
    * @param[in] gamma the polar angle used to define the liquid crystal orientation vector
-   * @return The calculated material response (density, Kirchoff stress) for the material
+   * @return The calculated material response (Cauchy stress) for the material
    */
   template <typename DispGradType, typename TemperatureType, typename AngleType>
   SERAC_HOST_DEVICE auto operator()(State& state, const tensor<DispGradType, dim, dim>& displacement_grad,
@@ -107,12 +107,12 @@ struct LiquidCrystalElastomer {
     // Note to Jorge-Luis: the paper is omits a prefactor of 1/J in the
     // Cauchy stress equation because they assume J = 1 strictly
     // (the incompressible limit). It needs to be retained for this
-    // compressible model (and then cancelled out when converting to
-    // Kirchhoff stress).
+    // compressible model.
     auto         stress = (3 * shear_modulus_ / N_b_squared_) * (mu - mu0);
     const double lambda = bulk_modulus_ - (2.0 / 3.0) * shear_modulus_;
     using std::log;
-    stress = stress + lambda * log(J) * I;
+    stress += lambda * log(J) * I;
+    stress /= det(J);
 
     // update state variables
     state.deformation_gradient = get_value(F);

@@ -13,6 +13,7 @@
  */
 #pragma once
 
+#include <array>
 #include <memory>
 
 #include "mfem.hpp"
@@ -24,42 +25,51 @@
 #endif
 
 namespace serac {
-template <typename spaces, ExecutionSpace exec>
-class DomainIntegral;
 
 /**
  * @brief Describes a single integral term in a weak forumulation of a partial differential equation
  * @tparam spaces A @p std::function -like set of template parameters that describe the test and trial
  * function spaces, i.e., @p test(trial)
  */
-template <typename test, typename... trials, ExecutionSpace exec>
-class DomainIntegral<test(trials...), exec> {
+template <int num_trial_spaces, int Q, ExecutionSpace exec>
+class DomainIntegral {
 public:
-  static constexpr camp::tuple<trials...> trial_spaces{};                        ///< a tuple of the different trial spaces
-  static constexpr int                    num_trial_spaces = sizeof...(trials);  ///< how many trial spaces were specified
-
   /**
    * @brief Constructs a @p DomainIntegral from a user-provided quadrature function
    * @tparam dim The dimension of the mesh
+   * @tparam test the test function space
+   * @tparam trials the trial function space(s)
    * @tparam qpt_data_type The type of the data to store for each quadrature point
    * @param[in] num_elements The number of elements in the mesh
    * @param[in] J The Jacobians of the element transformations at all quadrature points
    * @param[in] X The actual (not reference) coordinates of all quadrature points
-   * @see mfem::GeometricFactors
    * @param[in] qf The user-provided quadrature function
+   * @param[in] active_arguments indices used to select which trial spaces to use in evaluation kernels
+   *
+   * @see mfem::GeometricFactors
    * @param[inout] qdata The data for each quadrature point
    * @note The @p Dimension parameters are used to assist in the deduction of the @a dim
    * and @a dim template parameters
    */
-  template <int dim, typename lambda_type, typename qpt_data_type = Nothing>
-  DomainIntegral(size_t num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<dim>, lambda_type&& qf,
-                 std::shared_ptr<QuadratureData<qpt_data_type> > qdata)
+  template <int dim, typename test, typename... trials, typename lambda_type, typename qpt_data_type = Nothing>
+  DomainIntegral(test, serac::tuple<trials...>, size_t num_elements, const mfem::Vector& J, const mfem::Vector& X,
+                 Dimension<dim>, lambda_type&& qf, std::shared_ptr<QuadratureData<qpt_data_type> > qdata,
+                 std::vector<int> active_arguments)
   {
+    constexpr size_t num_active_trial_spaces = sizeof...(trials);
+    SLIC_ERROR_ROOT_IF(num_active_trial_spaces != active_arguments.size(),
+                       "Error: argument indices inconsistent with provided number of arguments");
+
+    integral_to_functional_ = active_arguments;
+    functional_to_integral_ = std::vector<int>(num_trial_spaces, -1);
+    for (size_t i = 0; i < active_arguments.size(); i++) {
+      functional_to_integral_[static_cast<size_t>(active_arguments[i])] = static_cast<int>(i);
+    }
+
     SERAC_MARK_BEGIN("Domain Integral Set Up");
     using namespace domain_integral;
 
     [[maybe_unused]] constexpr auto geometry                      = supported_geometries[dim];
-    constexpr auto                  Q                             = std::max({test::order, trials::order...}) + 1;
     constexpr auto                  quadrature_points_per_element = (dim == 2) ? Q * Q : Q * Q * Q;
 
     // this is where we actually specialize the finite element kernel templates with
@@ -71,8 +81,8 @@ public:
 
       evaluation_ = EvaluationKernel{eval_config, J, X, num_elements, qf, qdata};
 
-      for_constexpr<num_trial_spaces>([this, num_elements, quadrature_points_per_element, &J, &X, &qf, qdata,
-                                       eval_config](auto i) {
+      for_constexpr<num_active_trial_spaces>([this, num_elements, quadrature_points_per_element, &J, &X, &qf, qdata,
+                                              eval_config](auto i) {
         // allocate memory for the derivatives of the q-function at each quadrature point
         //
         // Note: ptrs' lifetime is managed in an unusual way! It is captured by-value in the
@@ -143,24 +153,30 @@ public:
    * @brief Applies the integral, i.e., @a output_E = evaluate( @a input_E )
    * @param[in] input_E The input to the evaluation; per-element DOF values
    * @param[out] output_E The output of the evalution; per-element DOF residuals
-   * @param[in] which_trial_space specifies which trial space to compute derivatives with respect to (if any)
+   * @param[in] functional_index specifies which trial space to compute derivatives with respect to (if any)
    * @param[in] update_state a boolean flag for specifying if the material state data should be overwritten or not.
    *                         Typically, this flag is kept false while looking for a solution to the
    *                         residual equations.
    *
-   * @note which_trial_space == -1 implies that this function will call the evaluation kernel that performs no
+   * @note functional_index == -1 implies that this function will call the evaluation kernel that performs no
    * differentiation
    */
-  void Mult(const std::array<mfem::Vector, num_trial_spaces>& input_E, mfem::Vector& output_E, int which_trial_space,
+  void Mult(const std::array<mfem::Vector, num_trial_spaces>& input_E, mfem::Vector& output_E, int functional_index,
             bool update_state) const
   {
-    if (which_trial_space == -1) {
+    std::vector<const mfem::Vector*> selected(integral_to_functional_.size());
+    for (size_t i = 0; i < integral_to_functional_.size(); i++) {
+      selected[i] = &input_E[size_t(integral_to_functional_[i])];
+    }
+
+    int index = (functional_index == -1) ? -1 : functional_to_integral_[static_cast<size_t>(functional_index)];
+    if (index == -1) {
       SERAC_MARK_BEGIN("Domain Integral Evaluation");
-      evaluation_(input_E, output_E, update_state);
+      evaluation_(selected, output_E, update_state);
       SERAC_MARK_END("Domain Integral Evaluation");
     } else {
       SERAC_MARK_BEGIN("Domain Integral Evaluation with AD");
-      evaluation_with_AD_[which_trial_space](input_E, output_E, update_state);
+      evaluation_with_AD_[index](selected, output_E, update_state);
       SERAC_MARK_END("Domain Integral Evaluation with AD");
     }
   }
@@ -169,12 +185,15 @@ public:
    * @brief Applies the integral, i.e., @a output_E = gradient( @a input_E )
    * @param[in] input_E The input to the evaluation; per-element DOF values
    * @param[out] output_E The output of the evalution; per-element DOF residuals
-   * @param[in] which_trial_space specifies which trial space input_E correpsonds to
+   * @param[in] functional_index specifies which trial space input_E correpsonds to
    */
-  void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E, std::size_t which_trial_space) const
+  void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E, std::size_t functional_index) const
   {
     SERAC_MARK_BEGIN("Domain Integral Action of Gradient");
-    action_of_gradient_[which_trial_space](input_E, output_E);
+    int index = functional_to_integral_[functional_index];
+    if (index != -1) {
+      action_of_gradient_[index](input_E, output_E);
+    }
     SERAC_MARK_END("Domain Integral Action of Gradient");
   }
 
@@ -183,21 +202,24 @@ public:
    * multidimensional array
    * @param[inout] K_e The reshaped vector as a mfem::DeviceTensor of size (test_dim * test_dof, trial_dim * trial_dof,
    * elem)
-   * @param[in] which_trial_space specifies which trial space K_e correpsonds to
+   * @param[in] functional_index specifies which trial space K_e correpsonds to
    */
-  void ComputeElementGradients(ExecArrayView<double, 3, ExecutionSpace::CPU> K_e, std::size_t which_trial_space) const
+  void ComputeElementGradients(ExecArrayView<double, 3, ExecutionSpace::CPU> K_e, std::size_t functional_index) const
   {
     SERAC_MARK_BEGIN("Domain Integral Element Gradient");
-    element_gradient_[which_trial_space](K_e);
+    int index = functional_to_integral_[functional_index];
+    if (index != -1) {
+      element_gradient_[index](K_e);
+    }
     SERAC_MARK_END("Domain Integral Element Gradient");
   }
 
 private:
   /// @brief Type-erased handle to evaluation kernel
-  std::function<void(const std::array<mfem::Vector, num_trial_spaces>&, mfem::Vector&, bool)> evaluation_;
+  std::function<void(const std::vector<const mfem::Vector*>, mfem::Vector&, bool)> evaluation_;
 
   /// @brief Type-erased handle to evaluation+differentiation kernels
-  std::function<void(const std::array<mfem::Vector, num_trial_spaces>&, mfem::Vector&, bool)>
+  std::function<void(const std::vector<const mfem::Vector*>, mfem::Vector&, bool)>
       evaluation_with_AD_[num_trial_spaces];
 
   /// @brief Type-erased handle to action of gradient kernels
@@ -205,6 +227,20 @@ private:
 
   /// @brief Type-erased handle to gradient matrix assembly kernels
   std::function<void(ExecArrayView<double, 3, exec>)> element_gradient_[num_trial_spaces];
+
+  /**
+   * @brief an array for mapping `DomainIntegral` argument indices to `Functional` argument indices
+   * e.g. `integral_to_functional_[0] == 2` means that the
+   * argument 0 of this integral corresponds to argument 2 in the associated `Functional`
+   */
+  std::vector<int> integral_to_functional_;
+
+  /**
+   * @brief an array for mapping `Functional` argument indices to `DomainIntegral` argument indices
+   * e.g. `functional_to_integral[2] == 0` means that the
+   * argument 2 of the associated functional corresponds to argument 0 of this integral
+   */
+  std::vector<int> functional_to_integral_;
 };
 
 }  // namespace serac
