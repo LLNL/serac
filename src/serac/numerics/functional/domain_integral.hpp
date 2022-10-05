@@ -52,7 +52,7 @@ public:
    * and @a dim template parameters
    */
   template <int dim, typename test, typename... trials, typename lambda_type, typename qpt_data_type = Nothing>
-  DomainIntegral(test, serac::tuple<trials...>, size_t num_elements, const mfem::Vector& J, const mfem::Vector& X,
+  DomainIntegral(test, camp::tuple<trials...>, size_t num_elements, const mfem::Vector& J, const mfem::Vector& X,
                  Dimension<dim>, lambda_type&& qf, std::shared_ptr<QuadratureData<qpt_data_type> > qdata,
                  std::vector<int> active_arguments)
   {

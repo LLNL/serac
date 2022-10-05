@@ -306,7 +306,7 @@ public:
    *    auto d2u_dt2 = serac::get<0>(acceleration);
    *    double rho = 1.0 + x[0]; // spatially-varying density
    *
-   *    return serac::tuple{rho * d2u_dt2, stress};
+   *    return camp::tuple{rho * d2u_dt2, stress};
    *  });
    *
    * ~~~

@@ -60,7 +60,7 @@ dimensionality). Here, we use :math:`s` to denote the "source" term
       [](auto x, auto ... args){
       	auto s = ...;
       	auto f = ...;
-      	return serac::tuple{s, f};
+      	return camp::tuple{s, f};
       }, 
       domain_of_integration
     );
@@ -75,7 +75,7 @@ dimensionality). Here, we use :math:`s` to denote the "source" term
       [](auto x, auto ... args){
       	auto s = ...;
       	auto f = ...;
-      	return serac::tuple{s, f};
+      	return camp::tuple{s, f};
       }, 
       domain_of_integration
     );
@@ -128,7 +128,7 @@ the stress response term:
       // Functional::AddVolumeIntegral() expects us to return a tuple of the form {s, f},
       // but this integral has no term that get integrated against the test functions,
       // so the "source" term is just zero
-      return serac::tuple{zero{}, stress};
+      return camp::tuple{zero{}, stress};
      
     }, 
     mesh
@@ -199,7 +199,7 @@ Putting these snippets together without the verbose comments, we have (note: the
       DependsOn<0>{}, // depends on the displacement field
       [](auto x, auto disp){
         auto [u, grad_u] = disp;
-        return serac::tuple{b(x), material_model(grad_u)};
+        return camp::tuple{b(x), material_model(grad_u)};
       }, 
       mesh
     );
