@@ -3,9 +3,9 @@
 #### Physics Simulation Modules ####
 
 * [Base physics](@ref serac::BasePhysics)
-* [Thermal conduction](@ref serac::ThermalConduction)
-* [Solid mechanics](@ref serac::Solid)
-* [Thermal-structural mechanics](@ref serac::ThermalSolid)
+* [Heat Transfer](@ref serac::HeatTransfer)
+* [Solid mechanics](@ref serac::SolidMechanics)
+* [Thermomechanics](@ref serac::Thermomechanics)
 
 #### Simulation Utilities ####
 
