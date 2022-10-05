@@ -25,17 +25,18 @@ constexpr int NUM_FIELDS = 3;
 Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities geom_nonlin,
              FinalMeshOption keep_deformation, const std::string& name, mfem::ParMesh* pmesh)
     : BasePhysics(NUM_FIELDS, order, name, pmesh),
-      velocity_(StateManager::mesh(sidre_datacoll_id_),
-                FiniteElementState::Options{
-                    .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "velocity")}),
-      displacement_(
-          StateManager::mesh(sidre_datacoll_id_),
+      velocity_(StateManager::newState(
           FiniteElementState::Options{
-              .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "displacement")}),
-      adjoint_displacement_(StateManager::mesh(sidre_datacoll_id_),
-                            FiniteElementState::Options{.order      = order,
-                                                        .vector_dim = mesh_.Dimension(),
-                                                        .name       = detail::addPrefix(name, "adjoint_displacement")}),
+              .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "velocity")},
+          StateManager::collectionID(pmesh))),
+      displacement_(StateManager::newState(
+          FiniteElementState::Options{
+              .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "displacement")},
+          StateManager::collectionID(pmesh))),
+      adjoint_displacement_(StateManager::newState(
+          FiniteElementState::Options{
+              .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "adjoint_displacement")},
+          StateManager::collectionID(pmesh))),
       geom_nonlin_(geom_nonlin),
       keep_deformation_(keep_deformation),
       ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},

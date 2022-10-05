@@ -50,7 +50,16 @@ int BasePhysics::cycle() const { return cycle_; }
 
 void BasePhysics::outputState(std::optional<std::string> paraview_output_dir) const
 {
-  // First, save the restart/Sidre file
+  // Update the states and duals in the state manager
+  for (auto& state : state_) {
+    StateManager::updateState(state);
+  }
+
+  for (auto& dual : dual_) {
+    StateManager::updateDual(dual);
+  }
+
+  // Save the restart/Sidre file
   StateManager::save(time_, cycle_, sidre_datacoll_id_);
 
   // Optionally output a paraview datacollection for visualization

@@ -21,6 +21,7 @@
 #include "serac/physics/boundary_conditions/boundary_condition_manager.hpp"
 #include "serac/numerics/equation_solver.hpp"
 #include "serac/physics/state/finite_element_state.hpp"
+#include "serac/physics/state/finite_element_dual.hpp"
 
 namespace serac {
 
@@ -161,6 +162,8 @@ protected:
    * @brief List of finite element data structures
    */
   std::vector<std::reference_wrapper<serac::FiniteElementState>> state_;
+
+  std::vector<std::reference_wrapper<serac::FiniteElementDual>> dual_;
 
   /**
    * @brief Block vector storage of the true state

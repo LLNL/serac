@@ -59,6 +59,38 @@ public:
                                    const std::string&             mesh_tag = default_mesh_name_);
 
   /**
+   * @brief Updates the StateManager-owned grid function using the values from a given
+   * FiniteElementState.
+   *
+   * This sync operation must occur prior to writing a restart file.
+   *
+   * @param state The state used to update the internal grid function
+   */
+  static void updateState(const FiniteElementState& state)
+  {
+    SLIC_ERROR_ROOT_IF(named_states_.find(state.name()) == named_states_.end(),
+                       axom::fmt::format("State manager does not contain state named {}", state.name()));
+
+    state.fillGridFunction(*named_states_[state.name()]);
+  }
+
+  /**
+   * @brief Updates the StateManager-owned grid function using the values from a given
+   * FiniteElementDual.
+   *
+   * This sync operation must occur prior to writing a restart file.
+   *
+   * @param dual The dual used to update the internal grid function
+   */
+  static void updateDual(const FiniteElementDual& dual)
+  {
+    SLIC_ERROR_ROOT_IF(named_duals_.find(dual.name()) == named_duals_.end(),
+                       axom::fmt::format("State manager does not contain dual named {}", dual.name()));
+
+    dual.space().GetRestrictionMatrix()->MultTranspose(dual, *named_duals_[dual.name()]);
+  }
+
+  /**
    * @brief Updates the Conduit Blueprint state in the datastore and saves to a file
    * @param[in] t The current sim time
    * @param[in] cycle The current iteration number of the simulation
@@ -84,6 +116,8 @@ public:
    */
   static void reset()
   {
+    named_states_.clear();
+    named_duals_.clear();
     datacolls_.clear();
     is_restart_ = false;
     ds_         = nullptr;
@@ -142,6 +176,11 @@ private:
   static std::string output_dir_;
   /// @brief Default name for the mesh - mostly for backwards compatibility
   const static std::string default_mesh_name_;
+
+  /// @brief A collection of FiniteElementState names and their corresponding Sidre-owned grid function pointers
+  static std::unordered_map<std::string, mfem::ParGridFunction*> named_states_;
+  /// @brief A collection of FiniteElementDual names and their corresponding Sidre-owned grid function pointers
+  static std::unordered_map<std::string, mfem::ParGridFunction*> named_duals_;
 };
 
 }  // namespace serac
