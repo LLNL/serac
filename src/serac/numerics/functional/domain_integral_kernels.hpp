@@ -248,6 +248,8 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
   const mfem::Vector&                             X_;             ///< Spatial positions of each quadrature point
   std::size_t                                     num_elements_;  ///< how many elements in the domain
   lambda                                          qf_;            ///< q-function
+
+  // TODO: address sanitizer is warning me that data_ is potentially double-freeing
   std::shared_ptr<QuadratureData<qpt_data_type> > data_;          ///< (optional) user-provided quadrature data
 };
 
@@ -618,8 +620,21 @@ void element_gradient_kernel_new(ExecArrayView<double, 3, ExecutionSpace::CPU> d
 
 }
 
+zero transpose_first_two(zero) { return {}; }
+
+template < int m, int n, int ... rest >
+tensor< double, n, m, rest ... > transpose_first_two(const tensor< double, m, n, rest ... > & input) {
+  tensor< double, n, m, rest ... > output{};
+  for (int i = 0; i < m; i++) {
+    for (int j = 0; j < n; j++) {
+      output[j][i] = input[i][j]; 
+    }
+  }
+  return output;
+}
+
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
-void element_gradient_kernel_old(ExecArrayView<double, 3, ExecutionSpace::CPU> dk,
+void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dk,
                              CPUArrayView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J_,
                              std::size_t num_elements)
 {
@@ -666,8 +681,8 @@ void element_gradient_kernel_old(ExecArrayView<double, 3, ExecutionSpace::CPU> d
       if constexpr (!std::is_same<test, QOI>::value) {
         auto& q00 = serac::get<0>(serac::get<0>(dq_darg));  // derivative of source term w.r.t. field value
         auto& q01 = serac::get<1>(serac::get<0>(dq_darg));  // derivative of source term w.r.t. field derivative
-        auto& q10 = serac::get<0>(serac::get<1>(dq_darg));  // derivative of   flux term w.r.t. field value
-        auto& q11 = serac::get<1>(serac::get<1>(dq_darg));  // derivative of   flux term w.r.t. field derivative
+        auto q10 = transpose_first_two(serac::get<0>(serac::get<1>(dq_darg)));  // derivative of   flux term w.r.t. field value
+        auto q11 = transpose_first_two(serac::get<1>(serac::get<1>(dq_darg)));  // derivative of   flux term w.r.t. field derivative
 
         auto M = evaluate_shape_functions<test_element>(xi_q, J_q);
         auto N = evaluate_shape_functions<trial_element>(xi_q, J_q);

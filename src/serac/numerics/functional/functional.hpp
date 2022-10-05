@@ -128,6 +128,7 @@ mfem::ParFiniteElementSpace* generateParFiniteElementSpace(mfem::ParMesh* mesh)
       break;
   }
 
+  // note: this leaks memory: `fec` is never destroyed, but how to fix?
   return new mfem::ParFiniteElementSpace(mesh, fec, function_space::components, ordering);
 }
 
