@@ -103,6 +103,63 @@ FiniteElementState StateManager::newState(FiniteElementVector::Options&& options
   return state;
 }
 
+FiniteElementState StateManager::newState(const mfem::ParFiniteElementSpace& space, const std::string& state_name)
+{
+  std::string mesh_tag = collectionID(space.GetParMesh());
+
+  SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
+  SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
+                     axom::fmt::format("Mesh tag \"{}\" not found in the data store", mesh_tag));
+  SLIC_ERROR_ROOT_IF(named_states_.find(state_name) != named_states_.end(),
+                     axom::fmt::format("StateManager already contains a state named {}", state_name));
+  auto&                  datacoll = datacolls_.at(mesh_tag);
+  auto                   state    = FiniteElementState(mesh(mesh_tag), space, state_name);
+  mfem::ParGridFunction* grid_function;
+  if (is_restart_) {
+    grid_function = datacoll.GetParField(state_name);
+    state.setFromGridFunction(*grid_function);
+  } else {
+    SLIC_ERROR_ROOT_IF(datacoll.HasField(state_name),
+                       axom::fmt::format("Serac's datacollection was already given a field named '{0}'", state_name));
+
+    // Create a new grid function with unallocated data. This will be managed by sidre.
+    grid_function = new mfem::ParGridFunction(&state.space(), static_cast<double*>(nullptr));
+    datacoll.RegisterField(state_name, grid_function);
+    state.setFromGridFunction(*grid_function);
+  }
+  named_states_[state_name] = grid_function;
+  return state;
+}
+
+FiniteElementDual StateManager::newDual(const mfem::ParFiniteElementSpace& space, const std::string& dual_name)
+{
+  std::string mesh_tag = collectionID(space.GetParMesh());
+
+  SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
+  SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
+                     axom::fmt::format("Mesh tag \"{}\" not found in the data store", mesh_tag));
+  SLIC_ERROR_ROOT_IF(named_duals_.find(dual_name) != named_duals_.end(),
+                     axom::fmt::format("StateManager already contains a dual named {}", dual_name));
+  auto&                  datacoll = datacolls_.at(mesh_tag);
+  auto                   dual     = FiniteElementDual(mesh(mesh_tag), space, dual_name);
+  mfem::ParGridFunction* grid_function;
+  if (is_restart_) {
+    grid_function = datacoll.GetParField(dual_name);
+    std::unique_ptr<mfem::HypreParVector> true_dofs(grid_function->GetTrueDofs());
+    dual = *true_dofs;
+  } else {
+    SLIC_ERROR_ROOT_IF(datacoll.HasField(dual_name),
+                       axom::fmt::format("Serac's datacollection was already given a field named '{0}'", dual_name));
+    // Create a new grid function with unallocated data. This will be managed by sidre.
+    grid_function = new mfem::ParGridFunction(&dual.space(), static_cast<double*>(nullptr));
+    datacoll.RegisterField(dual_name, grid_function);
+    std::unique_ptr<mfem::HypreParVector> true_dofs(grid_function->GetTrueDofs());
+    dual = *true_dofs;
+  }
+  named_duals_[dual_name] = grid_function;
+  return dual;
+}
+
 FiniteElementDual StateManager::newDual(FiniteElementVector::Options&& options, const std::string& mesh_tag)
 {
   SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");

@@ -49,6 +49,15 @@ public:
                                      const std::string&             mesh_tag = default_mesh_name_);
 
   /**
+   * @brief Factory method for creating a new FEState object
+   *
+   * @param space A finite element space to copy for use in the new state
+   * @param state_name The name of the new state
+   * @return The constructed finite element state
+   */
+  static FiniteElementState newState(const mfem::ParFiniteElementSpace& space, const std::string& state_name);
+
+  /**
    * @brief Factory method for creating a new FEDual object, signature is identical to FEDual constructor
    * @param[in] options Configuration options for the FEDual, if a new state is created
    * @param[in] mesh_tag A string that uniquely identifies the mesh on which the dual is to be defined
@@ -57,6 +66,15 @@ public:
    */
   static FiniteElementDual newDual(FiniteElementVector::Options&& options  = {},
                                    const std::string&             mesh_tag = default_mesh_name_);
+
+  /**
+   * @brief Factory method for creating a new FEDual object
+   *
+   * @param space A finite element space to copy for use in the new dual
+   * @param dual_name The name of the new dual
+   * @return The constructed finite element dual
+   */
+  static FiniteElementDual newDual(const mfem::ParFiniteElementSpace& space, const std::string& dual_name);
 
   /**
    * @brief Updates the StateManager-owned grid function using the values from a given

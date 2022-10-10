@@ -28,7 +28,7 @@ ThermalConduction::ThermalConduction(int order, const SolverOptions& options, co
       ode_(temperature_.space().TrueVSize(), {.u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
            nonlin_solver_, bcs_)
 {
-  state_.push_back(temperature_);
+  states_.push_back(temperature_);
 
   nonlin_solver_ = mfem_ext::EquationSolver(mesh_.GetComm(), options.T_lin_options, options.T_nonlin_options);
   nonlin_solver_.SetOperator(residual_);

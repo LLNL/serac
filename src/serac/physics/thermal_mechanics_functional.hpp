@@ -48,9 +48,9 @@ public:
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
 
-    state_.push_back(thermal_functional_.temperature());
-    state_.push_back(solid_functional_.velocity());
-    state_.push_back(solid_functional_.displacement());
+    states_.push_back(thermal_functional_.temperature());
+    states_.push_back(solid_functional_.velocity());
+    states_.push_back(solid_functional_.displacement());
 
     thermal_functional_.setParameter(solid_functional_.displacement(), 0);
     solid_functional_.setParameter(thermal_functional_.temperature(), 0);

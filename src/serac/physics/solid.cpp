@@ -42,9 +42,9 @@ Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities ge
       ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
             nonlin_solver_, bcs_)
 {
-  state_.push_back(velocity_);
-  state_.push_back(displacement_);
-  state_.push_back(adjoint_displacement_);
+  states_.push_back(velocity_);
+  states_.push_back(displacement_);
+  states_.push_back(adjoint_displacement_);
 
   // Initialize the mesh node pointers
   reference_nodes_ = std::make_unique<mfem::ParGridFunction>(&displacement_.space());

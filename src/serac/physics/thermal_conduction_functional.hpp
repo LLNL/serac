@@ -119,19 +119,19 @@ public:
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
 
-    state_.push_back(temperature_);
-    state_.push_back(adjoint_temperature_);
+    states_.push_back(temperature_);
+    states_.push_back(adjoint_temperature_);
 
     // Create a pack of the primal field and parameter finite element spaces
-    std::array<mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + 1> trial_spaces;
+    std::array<const mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + 1> trial_spaces;
     trial_spaces[0] = &temperature_.space();
 
     if constexpr (sizeof...(parameter_space) > 0) {
       tuple<parameter_space...> types{};
       for_constexpr<sizeof...(parameter_space)>([&](auto i) {
-        trial_spaces[i + 1] =
-            generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_);
-        parameter_sensitivities_[i] = std::make_unique<FiniteElementDual>(mesh_, *trial_spaces[i + 1]);
+        parameter_trial_spaces_[i] = std::unique_ptr<mfem::ParFiniteElementSpace>(
+            generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_));
+        trial_spaces[i + 1] = parameter_trial_spaces_[i].get();
       });
     }
 
@@ -139,7 +139,7 @@ public:
 
     K_functional_ = std::make_unique<Functional<test(trial, parameter_space...)>>(&temperature_.space(), trial_spaces);
 
-    state_.push_back(temperature_);
+    states_.push_back(temperature_);
 
     nonlin_solver_ = mfem_ext::EquationSolver(mesh_.GetComm(), options.linear, options.nonlinear);
     nonlin_solver_.SetOperator(residual_);
@@ -173,7 +173,13 @@ public:
    * @param parameter_state the values to use for the specified parameter
    * @param i the index of the parameter
    */
-  void setParameter(const FiniteElementState& parameter_state, size_t i) { parameter_states_[i] = &parameter_state; }
+  void setParameter(const FiniteElementState& parameter_state, size_t i)
+  {
+    parameter_states_[i] = &parameter_state;
+    parameter_sensitivities_[i] =
+        StateManager::newDual(parameter_state.space(), parameter_state.name() + "_sensitivity");
+    duals_.push_back(*parameter_sensitivities_[i]);
+  }
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
@@ -522,11 +528,18 @@ protected:
   /// Stiffness functional object \f$\mathbf{K} = \int_\Omega \theta \cdot \nabla \phi_i  + f \phi_i \, dx \f$
   std::unique_ptr<Functional<test(trial, parameter_space...)>> K_functional_;
 
+  /// Trial finite element spaces for the functional object
+  std::array<std::unique_ptr<mfem::ParFiniteElementSpace>, sizeof...(parameter_space)> parameter_trial_spaces_;
+
   /// The finite element states representing user-defined parameter fields
   std::array<const FiniteElementState*, sizeof...(parameter_space)> parameter_states_;
 
-  /// The sensitivities (dual vectors) with repect to each of the input parameter fields
-  std::array<std::unique_ptr<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;
+  /**
+   * @brief The sensitivities (dual vectors) with repect to each of the input parameter fields
+   * @note this is an array of optionals as FiniteElementDual is not default constructable and
+   * we want to set this during the setParameter method.
+   */
+  std::array<std::optional<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;
 
   /// Assembled mass matrix
   std::unique_ptr<mfem::HypreParMatrix> M_;
