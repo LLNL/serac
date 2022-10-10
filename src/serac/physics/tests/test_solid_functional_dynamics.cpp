@@ -85,17 +85,23 @@ public:
   void applyLoads(const Material& material, SolidFunctional<p, dim>& sf, std::set<int> essential_boundaries) const
   {
     // essential BCs
-    auto ebc_func = [*this](const auto& X, double t, auto& u){ this->operator()(X, t, u); };
+    auto ebc_func = [*this](const auto& X, double t, auto& u){ 
+      std::cout << "   t in bc = " << t << std::endl;
+      this->operator()(X, t, u);
+      };
     sf.setDisplacementBCs(essential_boundaries, ebc_func);
 
     // natural BCs
     auto Hdot = make_tensor<dim, dim>([&](int i, int j) { return A(i,j); });
     auto traction = [material, Hdot](auto, auto n0, auto t) {
       auto H = Hdot*t;
-      // std::cout << "H " << H << std::endl;
+      std::cout << "             t in traction " << t << std::endl;
+      std::cout << "normal " << n0 << std::endl;
       typename Material::State state; // needs to be reconfigured for mats with state
-      tensor<double, dim, dim> tau = material(state, H);
-      auto P = solid_mechanics::KirchhoffToPiola(tau, H);
+      tensor<double, dim, dim> sigma = material(state, H);
+      auto F = Identity<dim>() + H;
+      auto J = det(F);
+      auto P = J*dot(sigma, inv(transpose(F)));
       return dot(P, n0); 
       };
     sf.setPiolaTraction(traction);
@@ -216,8 +222,8 @@ double dynamic_solution_error(const ExactSolution& exact_displacement, PatchBoun
 
     // Output solution for debugging
     solid_functional.outputState("paraview_output");
-    // std::cout << "displacement =\n";
-    // solid_functional.displacement().Print(std::cout);
+    std::cout << "displacement =\n";
+    solid_functional.displacement().Print(std::cout);
     // std::cout << "forces =\n";
     // solid_functional.nodalForces().Print();
     exact_solution_coef2.SetTime(solid_functional.time());

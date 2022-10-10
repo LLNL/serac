@@ -123,8 +123,9 @@ public:
             .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "shape_displacement")})),
         nodal_forces_(mesh_, displacement_.space(), "nodal_forces"),
         shape_sensitivity_(mesh_, displacement_.space(), "shape_sensitivity"),
-        ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
+        ode2_(displacement_.space().TrueVSize(), {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
               nonlin_solver_, bcs_),
+        ode_time_point_(0.0),
         c0_(0.0),
         c1_(0.0),
         geom_nonlin_(geom_nonlin),
@@ -451,7 +452,7 @@ public:
           // per unit volume in the reference configuration
           auto p     = get<VALUE>(shape);
           auto dp_dX = get<DERIVATIVE>(shape);
-          return serac::tuple{body_force(x + p, time_, params...) * det(dp_dX + I), zero{}};
+          return serac::tuple{body_force(x + p, ode_time_point_, params...) * det(dp_dX + I), zero{}};
         },
         mesh_);
   }
@@ -495,7 +496,7 @@ public:
           // dA = det(F) * norm(F^-T n_0)
           auto area_correction = det(def_grad) * norm(dot(inv_trans_def_grad, n));
 
-          return -1.0 * traction_function(x + p, shape_normal, time_, params...) * area_correction;
+          return -1.0 * traction_function(x + p, shape_normal, ode_time_point_, params...) * area_correction;
         },
         mesh_);
   }
@@ -871,6 +872,8 @@ protected:
 
   /// @brief the previous acceleration, used as a starting guess for newton's method
   mfem::Vector previous_;
+
+  double ode_time_point_;
 
   /// coefficient used to calculate predicted displacement: u_p := u + c0 * d2u_dt2
   double c0_;

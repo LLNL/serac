@@ -49,6 +49,8 @@ public:
    * used by the residual operator
    */
   struct State {
+    double& time;
+
     /**
      * @brief Current time step
      */
