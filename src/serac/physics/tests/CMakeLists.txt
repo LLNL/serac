@@ -27,6 +27,7 @@ serac_add_tests( SOURCES ${serial_solver_tests}
 
 set(solver_tests
     #liquid_crystal_elastomer_example.cpp
+    serac_solid_bdr.cpp
     parameterized_thermomechanics_example.cpp
     serac_solid.cpp
     serac_solid_reuse_mesh.cpp
