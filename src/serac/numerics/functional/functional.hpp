@@ -586,7 +586,7 @@ private:
           for (axom::IndexType i = 0; i < K_elem.shape()[1]; i++) {
             for (axom::IndexType j = 0; j < K_elem.shape()[2]; j++) {
               auto [index, sign] = LUT(e, i, j);
-              values[index] += sign * K_elem(e, i, j);
+              values[index] += sign * K_elem(e, j, i);
             }
           }
         }

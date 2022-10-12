@@ -113,6 +113,9 @@ tensor(const T (&data)[n1]) -> tensor<T, n1>;
 template <typename T, int n1, int n2>
 tensor(const T (&data)[n1][n2]) -> tensor<T, n1, n2>;
 
+template < typename T, int m, int ... n >
+SERAC_HOST_DEVICE constexpr int leading_dimension(tensor<T,m,n...>) { return m; }
+
 /**
  * @brief A sentinel struct for eliding no-op tensor operations
  */
@@ -1849,6 +1852,20 @@ SERAC_HOST_DEVICE auto get_value(const tensor<dual<T>, n...>& arg)
   tensor<double, n...> value{};
   for_constexpr<n...>([&](auto... i) { value(i...) = arg(i...).value; });
   return value;
+}
+
+/**
+ * @brief Retrieves a value tensor from a tensor of dual numbers
+ * @param[in] arg The tensor of dual numbers
+ */
+template <typename T1, typename T2, int n>
+SERAC_HOST_DEVICE auto get_value(const tensor<tuple<T1, T2>, n>& input)
+{
+  tensor< decltype(get_value(tuple<T1,T2>{})), n > output{};
+  for (int i = 0; i < n; i++) {
+    output[i] = get_value(input[i]);
+  }
+  return output;
 }
 
 /**

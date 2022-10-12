@@ -210,7 +210,7 @@ template <Family f, typename T, int q, int dim>
 void parent_to_physical(tensor< T, q > & qf_input, const tensor<double, dim, dim, q >& jacobians)
 {
   [[maybe_unused]] constexpr int VALUE = 0;
-  constexpr int DERIVATIVE = 1;
+  [[maybe_unused]] constexpr int DERIVATIVE = 1;
 
   for (int k = 0; k < q; k++) {
     tensor<double, dim, dim> J;

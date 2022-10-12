@@ -154,15 +154,15 @@ auto batch_apply_qf_with_AD(derivative_type * qf_derivatives, lambda qf, const t
  *
  * @brief Functor type providing a callback for the evaluation of the user-specified q-function over the domain
  */
-template <typename S, typename T, typename derivatives_type, typename lambda, typename qpt_data_type>
+template <typename S, typename T, typename derivatives_type, typename lambda, typename qpt_data_type, typename int_seq >
 struct EvaluationKernel;
 
 /**
  * @overload
  * @note evaluation kernel with no differentiation
  */
-template <int Q, Geometry geom, typename test, typename... trials, typename lambda, typename qpt_data_type>
-struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lambda, qpt_data_type> {
+template <int Q, Geometry geom, typename test, typename... trials, typename lambda, typename qpt_data_type, int ... int_seq >
+struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lambda, qpt_data_type, std::integer_sequence < int, int_seq ... > > {
   static constexpr auto exec             = ExecutionSpace::CPU;     ///< this specialization is CPU-specific
   static constexpr int  num_trial_spaces = int(sizeof...(trials));  ///< how many trial spaces are provided
   static constexpr auto Iseq = std::make_integer_sequence<int, sizeof ... (trials)>{};
@@ -258,15 +258,15 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
  * @note evaluation kernel that also calculates derivative w.r.t. `I`th trial space
  */
 template <int I, int Q, Geometry geom, typename test, typename... trials, typename derivatives_type, typename lambda,
-          typename qpt_data_type>
+          typename qpt_data_type, int ... j>
 struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>, derivatives_type, lambda,
-                        qpt_data_type> {
+                        qpt_data_type, std::integer_sequence< int , j ... > > {
   static constexpr auto exec             = ExecutionSpace::CPU;     ///< this specialization is CPU-specific
   static constexpr int  num_trial_spaces = int(sizeof...(trials));  ///< how many trial spaces are provided
   static constexpr auto Iseq = std::make_integer_sequence<int, sizeof ... (trials)>{};
 
   using test_element = finite_element<geom, test>;
-  static constexpr type_list < finite_element< geom, trials > ... > trial_elements{};
+  static constexpr tuple < finite_element< geom, trials > ... > trial_elements{};
 
   /**
    * @brief initialize the functor by providing the necessary quadrature point data
@@ -304,6 +304,10 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
 
     auto& qdata = *data_;
 
+    tuple u_e = {
+      reinterpret_cast<const typename decltype(type<j>(trial_elements))::dof_type*>(U[j]->Read()) ...
+    };
+
     // for each element in the domain
     for (uint32_t e = 0; e < num_elements_; e++) {
 
@@ -311,35 +315,32 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
       auto J_e = J[e];
       auto X_e = X[e];
 
-      // forward declare space for the arguments that will get passed to the q-function
-      tuple < 
-        decltype(finite_element< geom, trials >::interpolate(typename finite_element< geom, trials >::dof_type{}, rule)) ... 
-      > qf_inputs{};
+      // batch-calculate values / derivatives of each trial space, at each quadrature point
+      tuple qf_inputs = {
+        promote_each_to_dual_when< j == I >(type<j>(trial_elements).interpolate(get<j>(u_e)[e], rule)) ...
+      };
 
-      for_constexpr< num_trial_spaces >([&](auto j){
-
-        using trial_element = decltype(trial_elements[j]);
-        
-        auto u = reinterpret_cast<const typename trial_element::dof_type*>(U[j]->Read());
-
-        // (batch) interpolate each quadrature point's value
-        get<j>(qf_inputs) = trial_element::interpolate(u[e], rule);
-
-        // use J to transform values / derivatives on the parent element 
-        // to the corresponding values / derivatives on the physical element 
-        parent_to_physical< trial_element::family >(get<j>(qf_inputs), J_e);
-
-      });
+      // use J to transform values / derivatives on the parent element 
+      // to the to the corresponding values / derivatives on the physical element 
+      (parent_to_physical< type<j>(trial_elements).family >(get<j>(qf_inputs), J_e), ...);
 
       // (batch) evalute the q-function at each quadrature point
-      auto qf_outputs = batch_apply_qf_with_AD< I >(&qf_derivatives_(e, 0), qf_, X_e, &qdata(e, 0), qf_inputs, Iseq);
+      //auto qf_outputs = batch_apply_qf_with_AD< I >(&qf_derivatives_(e, 0), qf_, X_e, &qdata(e, 0), qf_inputs, Iseq);
+      auto qf_outputs = batch_apply_qf(qf_, X_e, &qdata(e, 0), qf_inputs, Iseq);
 
       // use J to transform sources / fluxes on the physical element 
       // back to the corresponding sources / fluxes on the parent element 
       physical_to_parent< test_element::family >(qf_outputs, J_e);
 
+      // write out the q-function derivatives after applying the
+      // physical_to_parent transformation, so that those transformations
+      // won't need to be applied in the action_of_gradient and element_gradient kernels
+      for (int q = 0; q < leading_dimension(qf_outputs); q++) {
+        qf_derivatives_(e, q) = get_gradient(qf_outputs[q]);
+      }
+
       // (batch) integrate the material response against the test-space basis functions
-      test_element::integrate(qf_outputs, rule, r[e]);
+      test_element::integrate(get_value(qf_outputs), rule, r[e]);
 
     }
 
@@ -356,14 +357,14 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
 template <int Q, Geometry geom, typename test, typename... trials, typename lambda, typename qpt_data_type>
 EvaluationKernel(KernelConfig<Q, geom, test, trials...>, const mfem::Vector&, const mfem::Vector&, int, lambda,
                  std::shared_ptr<QuadratureData<qpt_data_type> >)
-    -> EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lambda, qpt_data_type>;
+    -> EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lambda, qpt_data_type, std::make_integer_sequence< int, sizeof ... (trials) > >;
 
 template <int i, int Q, Geometry geom, typename test, typename... trials, typename derivatives_type, typename lambda,
           typename qpt_data_type>
 EvaluationKernel(DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, CPUArrayView<derivatives_type, 2>,
                  const mfem::Vector&, const mfem::Vector&, int, lambda, std::shared_ptr<QuadratureData<qpt_data_type> >)
     -> EvaluationKernel<DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, derivatives_type, lambda,
-                        qpt_data_type>;
+                        qpt_data_type, std::make_integer_sequence< int, sizeof ... (trials) > >;
 
 //clang-format off
 template <bool is_QOI, typename S, typename T>
@@ -432,7 +433,7 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
-  auto J = reinterpret_cast<const typename batched_jacobian<g, Q>::type*>(J_.Read());
+  [[maybe_unused]] auto J = reinterpret_cast<const typename batched_jacobian<g, Q>::type*>(J_.Read());
   auto du = reinterpret_cast<const typename trial_element::dof_type*>(dU.Read());
   auto dr = reinterpret_cast<typename test_element::dof_type*>(dR.ReadWrite());
   static constexpr TensorProductQuadratureRule<Q> rule{};
@@ -441,21 +442,21 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
   for (uint32_t e = 0; e < num_elements; e++) {
 
     // load the jacobians and positions for each quadrature point in this element
-    auto J_e = J[e];
+    //auto J_e = J[e];
 
     // (batch) interpolate each quadrature point's value
     auto qf_inputs = trial_element::interpolate(du[e], rule);
 
     // use J to transform values / derivatives on the parent element 
     // to the corresponding values / derivatives on the physical element 
-    parent_to_physical< trial_element::family >(qf_inputs, J_e);
+    //parent_to_physical< trial_element::family >(qf_inputs, J_e);
 
     // (batch) evalute the q-function at each quadrature point
     auto qf_outputs = batch_apply_chain_rule<is_QOI>(&qf_derivatives(e, 0), qf_inputs);
 
     // use J to transform sources / fluxes on the physical element 
     // back to the corresponding sources / fluxes on the parent element 
-    physical_to_parent< test_element::family >(qf_outputs, J_e);
+    //physical_to_parent< test_element::family >(qf_outputs, J_e);
 
     // (batch) integrate the material response against the test-space basis functions
     test_element::integrate(qf_outputs, rule, dr[e]);
@@ -465,32 +466,6 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
 }
 
 // K_e(i, j, k, l, m, n) := (B(u, i) * B(v, j) * B(w, k)) * X_q(u, v, w) * ((B(u, l) * B(v, m) * B(w, n))
-
-
-namespace detail {
-  template < int n, int q >
-  static constexpr auto calculate_B() {
-    constexpr auto points1D = GaussLegendreNodes<q>();
-    constexpr auto weights1D = GaussLegendreWeights<q>();
-    tensor<double, q, n> B{};
-    for (int i = 0; i < q; i++) {
-      B[i] = GaussLobattoInterpolation<n>(points1D[i]);
-    }
-    return B;
-  }
-
-  template < int n, int q >
-  static constexpr auto calculate_G() {
-    constexpr auto points1D = GaussLegendreNodes<q>();
-    constexpr auto weights1D = GaussLegendreWeights<q>();
-    tensor<double, q, n> G{};
-    for (int i = 0; i < q; i++) {
-      G[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);
-    }
-    return G;
-  }
-
-}
 
 // K_e(i, j, k, l, m, n) := {(B(u, i) * B(v, j) * B(w, k)) * 
 //                              X_q(u, v, w, p, q) * 
@@ -534,103 +509,32 @@ namespace detail {
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
 void element_gradient_kernel_new(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
-                             CPUArrayView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J_,
+                             CPUArrayView<derivatives_type, 2> qf_derivatives, const mfem::Vector&,
                              std::size_t num_elements)
 {
   using test_element        = finite_element<g, test>;
   using trial_element       = finite_element<g, trial>;
-  static constexpr int  dim = dimension_of(g);
-  static constexpr int  N = test_element::n;
 
   constexpr int nquad = (g == Geometry::Quadrilateral) ? Q * Q : Q * Q * Q;
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
-  auto J = mfem::Reshape(J_.Read(), nquad, dim, dim, num_elements);
   static constexpr TensorProductQuadratureRule<Q> rule{};
-
-  static constexpr auto B = test_element::template calculate_B<false, Q>();
-  static constexpr auto G = test_element::template calculate_G<false, Q>();
 
   // for each element in the domain
   for (uint32_t e = 0; e < num_elements; e++) {
-
     auto * output_ptr = reinterpret_cast<typename test_element::dof_type *>(&dK(e, 0, 0));
 
     tensor< derivatives_type, nquad > derivatives{};
     for (int q = 0; q < nquad; q++) {
-      auto J_q = make_tensor<dim, dim>([&](int r, int c) { return J(q, r, c, e); });
-      auto dx = det(J_q);
-      auto invJ = inv(J_q);
       derivatives(q) = qf_derivatives(e, q);
-      get<0>(get<0>(derivatives(q))) = get<0>(get<0>(derivatives(q))) * dx;
-      get<1>(get<1>(derivatives(q))) = dot(invJ, dot(get<1>(get<1>(derivatives(q))), transpose(invJ))) * dx;
     }
 
-    tensor< tuple < double, tensor< double, dim > >, nquad > source_and_flux;
-
-    for (int i = 0; i < test_element::ndof; i++) {
-
-      if constexpr (g == Geometry::Quadrilateral) {
-        int ix = i % N;
-        int iy = i / N;
-
-        for (int q = 0; q < Q * Q; q++) {
-          int qx = q % Q;
-          int qy = q / Q;
-
-          double phi = B(qx, ix) * B(qy, iy);
-          tensor<double, dim> dphi_dxi = {G(qx, ix) * B(qy, iy), B(qx, ix) * G(qy, iy)};
-
-          source_and_flux(q) = serac::tuple{
-            get<0>(get<0>(derivatives(q))) * phi,
-            dot(dphi_dxi, get<1>(get<1>(derivatives(q))))
-          };
-        }
-      }
-
-      if constexpr (g == Geometry::Hexahedron) {
-        int ix = i % N;
-        int iy = (i % (N * N)) / N;
-        int iz = i / (N * N);
-
-        for (int q = 0; q < nquad; q++) {
-          int qx = q % Q;
-          int qy = (q % (Q * Q)) / Q;
-          int qz = q / (Q * Q);
-
-          double phi = B(qx, ix) * B(qy, iy) * B(qz, iz);
-          tensor<double, dim> dphi_dxi = {
-            G(qx, ix) * B(qy, iy) * B(qz, iz), 
-            B(qx, ix) * G(qy, iy) * B(qz, iz),
-            B(qx, ix) * B(qy, iy) * G(qz, iz)
-          };
-
-          source_and_flux(q) = serac::tuple{
-            get<0>(get<0>(derivatives(q))) * phi,
-            dot(dphi_dxi, get<1>(get<1>(derivatives(q))))
-          };
-        }
-      }
-
-      trial_element::integrate(source_and_flux, rule, output_ptr[i]);
-    }
-
-  }
-
-}
-
-zero transpose_first_two(zero) { return {}; }
-
-template < int m, int n, int ... rest >
-tensor< double, n, m, rest ... > transpose_first_two(const tensor< double, m, n, rest ... > & input) {
-  tensor< double, n, m, rest ... > output{};
-  for (int i = 0; i < m; i++) {
-    for (int j = 0; j < n; j++) {
-      output[j][i] = input[i][j]; 
+    for (int i = 0; i < trial_element::ndof; i++) {
+      auto source_and_flux = test_element::batch_apply_shape_fn(i, derivatives, rule);
+      test_element::integrate(source_and_flux, rule, output_ptr[i]);
     }
   }
-  return output;
 }
 
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
@@ -679,10 +583,10 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dk,
       }
 
       if constexpr (!std::is_same<test, QOI>::value) {
-        auto& q00 = serac::get<0>(serac::get<0>(dq_darg));  // derivative of source term w.r.t. field value
-        auto& q01 = serac::get<1>(serac::get<0>(dq_darg));  // derivative of source term w.r.t. field derivative
-        auto q10 = transpose_first_two(serac::get<0>(serac::get<1>(dq_darg)));  // derivative of   flux term w.r.t. field value
-        auto q11 = transpose_first_two(serac::get<1>(serac::get<1>(dq_darg)));  // derivative of   flux term w.r.t. field derivative
+        auto& q00 = serac::get<0>(serac::get<0>(dq_darg)); // derivative of source term w.r.t. field value
+        auto& q01 = serac::get<1>(serac::get<0>(dq_darg)); // derivative of source term w.r.t. field derivative
+        auto q10 = serac::get<0>(serac::get<1>(dq_darg));  // derivative of   flux term w.r.t. field value
+        auto q11 = serac::get<1>(serac::get<1>(dq_darg));  // derivative of   flux term w.r.t. field derivative
 
         auto M = evaluate_shape_functions<test_element>(xi_q, J_q);
         auto N = evaluate_shape_functions<trial_element>(xi_q, J_q);

@@ -278,7 +278,7 @@ void h1_h1_test_EA_2D(size_t num_elements, size_t num_runs)
 
     double runtime = time([&]() {
       for (size_t i = 0; i < num_runs; i++) {
-        serac::domain_integral::element_gradient_kernel_old<Geometry::Quadrilateral, test, trial, q>(
+        serac::domain_integral::element_gradient_kernel<Geometry::Quadrilateral, test, trial, q>(
           serac::CPUArrayView<double, 3>(KE_1D.GetData(), num_elements, n * n, n * n),
           view(derivatives), J1D, num_elements);
         compiler::please_do_not_optimize_away(&KE_1D);
@@ -663,7 +663,9 @@ int main()
 
   //h1_h1_test_3D<1 /* polynomial order */, 2 /* quadrature points / dim */>(8 * num_elements, num_runs);
   //h1_h1_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(4 * num_elements, num_runs);
-  //h1_h1_test_3D<3 /* polynomial order */, 4 /* quadrature points / dim */>(1 * num_elements, num_runs);
+  h1_h1_test_3D<3 /* polynomial order */, 4 /* quadrature points / dim */>(1 * num_elements, num_runs);
 
-  h1_h1_test_EA_2D< 1, 2 >(num_elements, num_runs);
+  //h1_h1_test_EA_3D< 1, 2 >(num_elements, num_runs);
+  //h1_h1_test_EA_3D< 2, 3 >(num_elements, num_runs);
+  //h1_h1_test_EA_3D< 3, 4 >(num_elements, num_runs);
 }

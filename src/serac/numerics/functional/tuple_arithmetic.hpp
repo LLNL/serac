@@ -202,6 +202,30 @@ SERAC_HOST_DEVICE auto promote_to_dual_when(const T& x)
   }
 }
 
+/**
+ * @tparam dualify specify whether or not the input should be made into its dual type
+ * @tparam T the type of the values passed in
+ * @tparam n how many values were passed in
+ *
+ * @brief a function that optionally (decided at compile time) converts a list of values to their dual types
+ * @param x the values to be promoted
+ */
+template <bool dualify, typename T, int n>
+SERAC_HOST_DEVICE auto promote_each_to_dual_when(const tensor<T, n> & x)
+{
+  if constexpr (dualify) {
+    using return_type = decltype(make_dual(T{}));
+    tensor< return_type, n > output;
+    for (int i = 0; i < n; i++) {
+      output[i] = make_dual(x[i]);
+    }
+    return output;
+  }
+  if constexpr (!dualify) {
+    return x;
+  }
+}
+
 /// @brief layer of indirection required to implement `make_dual_wrt`
 template <int n, typename... T, int... i>
 SERAC_HOST_DEVICE constexpr auto make_dual_helper(const serac::tuple<T...>& args, std::integer_sequence<int, i...>)

@@ -137,6 +137,42 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
     return G;
   }
 
+  template <typename in_t, int q>
+  static auto batch_apply_shape_fn(int j, tensor< in_t, q * q > input, const TensorProductQuadratureRule<q>&)
+  {
+    static constexpr bool apply_weights = false;
+    static constexpr auto B = calculate_B<apply_weights, q>();
+    static constexpr auto G = calculate_G<apply_weights, q>();
+
+    int jx = j % n;
+    int jy = j / n;
+
+    using source_t = decltype(get<0>(get<0>(in_t{})) + dot(get<1>(get<0>(in_t{})), tensor<double,2>{}));
+    using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double,2>{}));
+
+    tensor< tuple< source_t, flux_t >, q * q > output;
+
+    for (int qy = 0; qy < q; qy++) {
+      for (int qx = 0; qx < q; qx++) {
+        double phi_j = B(qx, jx) * B(qy, jy);
+        tensor<double, dim> dphi_j_dxi = {G(qx, jx) * B(qy, jy), B(qx, jx) * G(qy, jy)};
+
+        int Q = qy * q + qx;
+        auto & d00 = get<0>(get<0>(input(Q)));
+        auto & d01 = get<1>(get<0>(input(Q)));
+        auto & d10 = get<0>(get<1>(input(Q)));
+        auto & d11 = get<1>(get<1>(input(Q)));
+
+        output[Q] = {
+          d00 * phi_j + dot(d01, dphi_j_dxi), 
+          d10 * phi_j + dot(d11, dphi_j_dxi) 
+        };
+      }
+    }
+
+    return output;
+  }
+
   // we want to compute the following:
   //
   // X_q(u, v) := (B(u, i) * B(v, j)) * X_e(i, j)
@@ -154,7 +190,6 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
   template <int q>
   static auto interpolate(const dof_type& X, const TensorProductQuadratureRule<q>&)
   {
-
     static constexpr bool apply_weights = false;
     static constexpr auto B = calculate_B<apply_weights, q>();
     static constexpr auto G = calculate_G<apply_weights, q>();
@@ -195,7 +230,7 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
   }
 
   template <typename source_type, typename flux_type, int q>
-  static void integrate(tensor< tuple< source_type, flux_type >, q * q > & qf_output, const TensorProductQuadratureRule<q>&,
+  static void integrate(const tensor< tuple< source_type, flux_type >, q * q > & qf_output, const TensorProductQuadratureRule<q>&,
                         dof_type&                             element_residual)
   {
     static constexpr bool apply_weights = true;
@@ -213,7 +248,8 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
         for (int i = 0; i < c; i++) {
           source(i, qy, qx) = s[i];
           for (int j = 0; j < dim; j++) {
-            flux(i, j, qy, qx) = f[i][j];
+            //flux(i, j, qy, qx) = f[i][j];
+            flux(i, j, qy, qx) = f[j][i];
           }
         }
       }

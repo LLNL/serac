@@ -27,14 +27,13 @@ using namespace serac::profiling;
 
 TEST(basic, nonlinear_thermal_test_2D)
 {
-  int serial_refinement   = 0;
-  int parallel_refinement = 0;
-
-  constexpr auto p   = 2;
+  constexpr auto p   = 1;
   constexpr auto dim = 2;
 
   std::string meshfile = SERAC_REPO_DIR "/data/meshes/star.mesh";
-  auto        mesh2D   = mesh::refineAndDistribute(buildMeshFromFile(meshfile), serial_refinement, parallel_refinement);
+  auto        mesh2D   = mesh::refineAndDistribute(buildMeshFromFile(meshfile));
+
+  //auto mesh2D = mesh::refineAndDistribute(buildRectangleMesh(1, 1, 1, 1));
 
   // Create standard MFEM bilinear and linear forms on H1
   auto                        fec = mfem::H1_FECollection(p, dim);
@@ -42,6 +41,10 @@ TEST(basic, nonlinear_thermal_test_2D)
 
   mfem::Vector U(fespace.TrueVSize());
   U.Randomize();
+  //U[0] = 1;
+  //U[1] = 2;
+  //U[2] = 3;
+  //U[3] = 4;
 
   // Define the types for the test and trial spaces using the function arguments
   using test_space  = H1<p>;
@@ -50,26 +53,38 @@ TEST(basic, nonlinear_thermal_test_2D)
   // Construct the new functional object using the known test and trial spaces
   Functional<test_space(trial_space)> residual(&fespace, {&fespace});
 
+  auto d00 = 1.0;
+  auto d01 = 1.0 * make_tensor<dim>([](int i){ return i; });
+  auto d10 = 1.0 * make_tensor<dim>([](int i){ return 2*i*i; });
+  auto d11 = 1.0 * make_tensor<dim, dim>([](int i, int j){ return i + j*(j+1) + 1; });
+
   residual.AddAreaIntegral(
       DependsOn<0>{},
       [=](auto x, auto temperature) {
         auto [u, du_dx] = temperature;
-        auto source     = u * u - (100 * x[0] * x[1]);
-        auto flux       = du_dx;
+        auto source     = d00 * u + dot(d01, du_dx) - 0.0 * (100 * x[0] * x[1]);
+        auto flux       = d10 * u + dot(d11, du_dx);
         return serac::tuple{source, flux};
       },
       *mesh2D);
 
+  auto K = get<1>(residual(differentiate_wrt(U)));
+
+  std::unique_ptr<mfem::HypreParMatrix> K_matrix = assemble(K);
+
+  K_matrix->Print("K.mtx");
+
   // TODO: reenable surface integrals
-  residual.AddBoundaryIntegral(Dimension<1>{}, DependsOn<0>{}, [=](auto x, auto /*n*/, auto temperature) { 
-        auto [u, du_dxi] = temperature;
-        return x[0] + x[1] - cos(u); 
-      }, 
-      *mesh2D);
+  //residual.AddBoundaryIntegral(Dimension<1>{}, DependsOn<0>{}, [=](auto x, auto /*n*/, auto temperature) { 
+  //      auto [u, du_dxi] = temperature;
+  //      return x[0] + x[1] - cos(u); 
+  //    }, 
+  //    *mesh2D);
 
   check_gradient(residual, U);
 }
 
+#if 0
 TEST(basic, nonlinear_thermal_test_3D)
 {
   int serial_refinement   = 0;
@@ -116,6 +131,7 @@ TEST(basic, nonlinear_thermal_test_3D)
 
   check_gradient(residual, U);
 }
+#endif
 
 int main(int argc, char* argv[])
 {
