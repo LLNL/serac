@@ -7,7 +7,7 @@ import os
 import socket
 from os.path import join as pjoin
 
-from spack import *
+from spack.package import *
 
 import re
 
