@@ -150,7 +150,7 @@ public:
     trial_spaces[2] = &displacement_.space();
 
     if constexpr (sizeof...(parameter_space) > 0) {
-      tuple<parameter_space...> types{};
+      camp::tuple<parameter_space...> types{};
       for_constexpr<sizeof...(parameter_space)>([&](auto i) {
         trial_spaces[i + NUM_STATE_VARS] =
             generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_);

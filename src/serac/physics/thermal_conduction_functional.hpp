@@ -127,7 +127,7 @@ public:
     trial_spaces[0] = &temperature_.space();
 
     if constexpr (sizeof...(parameter_space) > 0) {
-      tuple<parameter_space...> types{};
+      camp::tuple<parameter_space...> types{};
       for_constexpr<sizeof...(parameter_space)>([&](auto i) {
         trial_spaces[i + 1] =
             generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_);

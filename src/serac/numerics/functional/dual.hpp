@@ -28,7 +28,7 @@ namespace serac {
 template <typename gradient_type>
 struct dual {
   double        value;     ///< the actual numerical value
-  gradient_type gradient;  ///< the partial derivatives of value w.r.t. some other quantity
+  gradient_type gradient{};  ///< the partial derivatives of value w.r.t. some other quantity
 };
 
 /**
