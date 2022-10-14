@@ -96,7 +96,6 @@ public:
     auto traction = [material, Hdot](auto, auto n0, auto t) {
       auto H = Hdot*t;
       std::cout << "             t in traction " << t << std::endl;
-      std::cout << "normal " << n0 << std::endl;
       typename Material::State state; // needs to be reconfigured for mats with state
       tensor<double, dim, dim> sigma = material(state, H);
       auto F = Identity<dim>() + H;
@@ -197,6 +196,8 @@ double dynamic_solution_error(const ExactSolution& exact_displacement, PatchBoun
   auto solver_options = direct_dynamic_options;
   solver_options.nonlinear.abs_tol = 1e-13;
   solver_options.nonlinear.rel_tol = 1e-13;
+  solver_options.dynamic->timestepper = TimestepMethod::AverageAcceleration;
+  solver_options.dynamic->enforcement_method = DirichletEnforcementMethod::DirectControl;
   SolidFunctional<p, dim> solid_functional(solver_options, GeometricNonlinearities::On, "solid_functional");
 
   solid_mechanics::NeoHookean mat{.density=1.0, .K=1.0, .G=1.0};
@@ -216,7 +217,7 @@ double dynamic_solution_error(const ExactSolution& exact_displacement, PatchBoun
   // Perform the quasi-static solve
   double dt = 1.0;
   mfem::VectorFunctionCoefficient exact_solution_coef2(dim, exact_displacement);
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 1; i++) {
     std::cout << "cycle " << i << std::endl;
     solid_functional.advanceTimestep(dt);
 
@@ -224,8 +225,8 @@ double dynamic_solution_error(const ExactSolution& exact_displacement, PatchBoun
     solid_functional.outputState("paraview_output");
     std::cout << "displacement =\n";
     solid_functional.displacement().Print(std::cout);
-    // std::cout << "forces =\n";
-    // solid_functional.nodalForces().Print();
+    std::cout << "forces =\n";
+    solid_functional.nodalForces().Print();
     exact_solution_coef2.SetTime(solid_functional.time());
     double err = computeL2Error(solid_functional.displacement(), exact_solution_coef2);
     std::cout << err << std::endl;
