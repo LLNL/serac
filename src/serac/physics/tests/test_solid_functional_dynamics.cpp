@@ -63,6 +63,11 @@ public:
     //u += b;
   }
 
+  void velocity(const mfem::Vector& X, double /* t */, mfem::Vector& v) const
+  {
+    A.Mult(X, v);
+  }
+
   /**
    * @brief Apply forcing that should produce this exact displacement
    *
@@ -206,13 +211,16 @@ double dynamic_solution_error(const ExactSolution& exact_displacement, PatchBoun
   // set initial conditions
   solid_functional.setVelocity(
     [exact_displacement](const mfem::Vector& x, mfem::Vector& v) {
-      exact_displacement(x, 1.0, v);
+      exact_displacement.velocity(x, 0.0, v);
     });
 
   exact_displacement.applyLoads(mat, solid_functional, essentialBoundaryAttributes<dim>(bc));
 
   // Finalize the data structures
   solid_functional.completeSetup();
+
+  std::cout << "initial velocity =\n";
+  solid_functional.velocity().Print(std::cout);
 
   // Perform the quasi-static solve
   double dt = 1.0;
