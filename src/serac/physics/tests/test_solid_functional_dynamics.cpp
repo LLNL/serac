@@ -107,12 +107,19 @@ public:
       // We don't have a good way to restrict the tractions to the
       // complement of the essential boundary segments. 
       // The following matches the case when the top and left surfaces
-      // have essential boundary conditions.
+      // have essential boundary conditions:
+      //
+      // auto T = (n0[0] > 0.99 || n0[1] < -0.99)? dot(P, n0) : 0.0*n0;
+      //
       // Note that the patch test should pass even if we apply the
       // tractions to all boundaries. The point of choosing the surfaces
       // is to make the nodal reaction forces correct for debugging
       // output.
-      auto T = (n0[0] > 0.99 || n0[1] < -0.99)? dot(P, n0) : 0.0*n0;
+
+      // This version applies the traction to all surfaces. The reaction
+      // forces reported will be zero. (Tractions get summed into reactions
+      // even on essential boundary portions).
+      auto T = dot(P, n0);
       return T; 
       };
     sf.setPiolaTraction(traction);
@@ -301,7 +308,6 @@ TEST(SolidFunctional, PatchTest2dQ1TractionBcs)
   constexpr int p = 1;
   constexpr int dim   = 2;
   double error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
-  std::cout << "error in TEST = " << error << std::endl;
   EXPECT_LT(error, tol);
 }
 
