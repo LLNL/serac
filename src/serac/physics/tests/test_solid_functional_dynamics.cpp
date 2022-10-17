@@ -235,9 +235,17 @@ double dynamic_solution_error(const ExactSolution& exact_displacement, PatchBoun
     solid_functional.displacement().Print(std::cout);
     std::cout << "forces =\n";
     solid_functional.nodalForces().Print();
+    tensor<double, dim> resultant = make_tensor<dim>([&](int j) {
+      double y = 0;
+      for (int n = 0; n < solid_functional.nodalForces().Size()/dim; n++) {
+        y += solid_functional.nodalForces()(dim*n + j);
+      }
+      return y;
+    });
+    std::cout << "resultant = " << resultant << std::endl;
     exact_solution_coef2.SetTime(solid_functional.time());
     double err = computeL2Error(solid_functional.displacement(), exact_solution_coef2);
-    std::cout << err << std::endl;
+    std::cout << "L2 error = " << err << std::endl;
   }
 
   // Compute norm of error
@@ -313,6 +321,8 @@ TEST(SolidFunctional, PatchTest2dQ1TractionBcs)
 // }
 
 }  // namespace serac
+
+
 
 int main(int argc, char* argv[])
 {
