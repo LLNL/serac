@@ -91,7 +91,6 @@ public:
   {
     // essential BCs
     auto ebc_func = [*this](const auto& X, double t, auto& u){ 
-      std::cout << "   t in bc = " << t << std::endl;
       this->operator()(X, t, u);
       };
     sf.setDisplacementBCs(essential_boundaries, ebc_func);
@@ -100,13 +99,21 @@ public:
     auto Hdot = make_tensor<dim, dim>([&](int i, int j) { return A(i,j); });
     auto traction = [material, Hdot](auto, auto n0, auto t) {
       auto H = Hdot*t;
-      std::cout << "             t in traction " << t << std::endl;
       typename Material::State state; // needs to be reconfigured for mats with state
       tensor<double, dim, dim> sigma = material(state, H);
       auto F = Identity<dim>() + H;
       auto J = det(F);
       auto P = J*dot(sigma, inv(transpose(F)));
-      return dot(P, n0); 
+      // We don't have a good way to restrict the tractions to the
+      // complement of the essential boundary segments. 
+      // The following matches the case when the top and left surfaces
+      // have essential boundary conditions.
+      // Note that the patch test should pass even if we apply the
+      // tractions to all boundaries. The point of choosing the surfaces
+      // is to make the nodal reaction forces correct for debugging
+      // output.
+      auto T = (n0[0] > 0.99 || n0[1] < -0.99)? dot(P, n0) : 0.0*n0;
+      return T; 
       };
     sf.setPiolaTraction(traction);
   }
@@ -243,6 +250,7 @@ double dynamic_solution_error(const ExactSolution& exact_displacement, PatchBoun
       return y;
     });
     std::cout << "resultant = " << resultant << std::endl;
+    std::cout << "time = " << solid_functional.time() << std::endl;
     exact_solution_coef2.SetTime(solid_functional.time());
     double err = computeL2Error(solid_functional.displacement(), exact_solution_coef2);
     std::cout << "L2 error = " << err << std::endl;
@@ -293,6 +301,7 @@ TEST(SolidFunctional, PatchTest2dQ1TractionBcs)
   constexpr int p = 1;
   constexpr int dim   = 2;
   double error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+  std::cout << "error in TEST = " << error << std::endl;
   EXPECT_LT(error, tol);
 }
 
