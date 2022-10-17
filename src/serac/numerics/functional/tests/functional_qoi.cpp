@@ -476,10 +476,10 @@ TEST(QoI, UsingL2)
   auto                        fec1 = mfem::L2_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace_1(&mesh, &fec1);
 
-  std::unique_ptr< mfem::HypreParVector > U0(fespace_0.NewTrueDofVector());
+  std::unique_ptr<mfem::HypreParVector> U0(fespace_0.NewTrueDofVector());
   U0->Randomize(0);
 
-  std::unique_ptr< mfem::HypreParVector > U1(fespace_1.NewTrueDofVector());
+  std::unique_ptr<mfem::HypreParVector> U1(fespace_1.NewTrueDofVector());
   U1->Randomize(1);
 
   // Define the types for the test spaces
@@ -489,8 +489,10 @@ TEST(QoI, UsingL2)
   // this tests a fix for the QoI constructor segfaulting when using L2 spaces
   Functional<double(trial_space_0, trial_space_1)> f({&fespace_0, &fespace_1});
 
-  f.AddVolumeIntegral(DependsOn<1>{}, [&](auto ...) { return 1.0; }, mesh);
-  f.AddSurfaceIntegral(DependsOn<0>{}, [&](auto ...) { return 1.0; }, mesh);
+  f.AddVolumeIntegral(
+      DependsOn<1>{}, [&](auto...) { return 1.0; }, mesh);
+  f.AddSurfaceIntegral(
+      DependsOn<0>{}, [&](auto...) { return 1.0; }, mesh);
 
   check_gradient(f, *U0, *U1);
 }
