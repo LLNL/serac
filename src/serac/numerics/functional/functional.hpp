@@ -202,7 +202,7 @@ public:
    */
   Functional(mfem::ParFiniteElementSpace*                               test_fes,
              std::array<mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
-      : test_space_(test_fes), trial_space_(trial_fes)
+      : update_qdata(false), test_space_(test_fes), trial_space_(trial_fes)
   {
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
       P_trial_[i] = trial_space_[i]->GetProlongationMatrix();
