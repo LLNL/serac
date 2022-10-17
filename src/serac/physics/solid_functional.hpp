@@ -660,7 +660,7 @@ public:
       // nodal_forces_ = residual(displacement, ...);
       // isn't currently supported
       nodal_forces_.Vector::operator=(
-          (*residual_)(displacement_, zero_, shape_displacement_, *parameter_states_[parameter_indices]...));
+          (*residual_)(displacement_, previous_, shape_displacement_, *parameter_states_[parameter_indices]...));
 
       residual_->update_qdata = false;
     }
