@@ -33,7 +33,7 @@ struct LinearIsotropic {
    * @tparam T Number-like type for the displacement gradient components
    * @tparam dim Dimensionality of space
    * @param du_dX Displacement gradient with respect to the reference configuration
-   * @return The Kirchhoff stress
+   * @return The Cauchy stress
    */
   template <typename T, int dim>
   SERAC_HOST_DEVICE auto operator()(State& /* state */, const tensor<T, dim, dim>& du_dX) const
@@ -65,7 +65,7 @@ struct NeoHookean {
    * @tparam T Number-like type for the displacement gradient components
    * @tparam dim Dimensionality of space
    * @param du_dX displacement gradient with respect to the reference configuration (displacement_grad)
-   * @return The Kirchhoff stress
+   * @return The Cauchy stress
    */
   template <typename T, int dim>
   SERAC_HOST_DEVICE auto operator()(State& /* state */, const tensor<T, dim, dim>& du_dX) const
@@ -74,7 +74,8 @@ struct NeoHookean {
     constexpr auto I         = Identity<dim>();
     auto           lambda    = K - (2.0 / 3.0) * G;
     auto           B_minus_I = du_dX * transpose(du_dX) + transpose(du_dX) + du_dX;
-    return lambda * log(det(I + du_dX)) * I + G * B_minus_I;
+    auto           J         = det(I + du_dX);
+    return (lambda * log(J) * I + G * B_minus_I) / J;
   }
 
   double density;  ///< mass density
@@ -158,6 +159,24 @@ template <typename T1, typename T2, int dim>
 auto KirchhoffToPiola(const tensor<T1, dim, dim>& kirchhoff_stress, const tensor<T2, dim, dim>& displacement_gradient)
 {
   return transpose(linear_solve(displacement_gradient + Identity<dim>(), kirchhoff_stress));
+}
+
+/**
+ * @brief Transform the Cauchy stress to the Piola stress
+ *
+ * @tparam T1 number-like type of the Cauchy stress components
+ * @tparam T2 number-like type of the displacement gradient components
+ * @tparam dim number of spatial dimensions
+ *
+ * @param displacement_gradient Displacement gradient
+ * @param cauchy_stress Cauchy stress
+ * @return Piola stress
+ */
+template <typename T1, typename T2, int dim>
+auto CauchyToPiola(const tensor<T1, dim, dim>& cauchy_stress, const tensor<T2, dim, dim>& displacement_gradient)
+{
+  auto kirchhoff_stress = det(displacement_gradient + Identity<dim>()) * cauchy_stress;
+  return KirchhoffToPiola(kirchhoff_stress, displacement_gradient);
 }
 
 /// Constant body force model
