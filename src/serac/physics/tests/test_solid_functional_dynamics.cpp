@@ -208,7 +208,7 @@ double dynamic_solution_error(const ExactSolution& exact_displacement, PatchBoun
   auto solver_options = direct_dynamic_options;
   solver_options.nonlinear.abs_tol = 1e-13;
   solver_options.nonlinear.rel_tol = 1e-13;
-  solver_options.dynamic->timestepper = TimestepMethod::AverageAcceleration;
+  solver_options.dynamic->timestepper = TimestepMethod::Newmark;
   solver_options.dynamic->enforcement_method = DirichletEnforcementMethod::DirectControl;
   SolidFunctional<p, dim> solid_functional(solver_options, GeometricNonlinearities::On, "solid_functional");
 
