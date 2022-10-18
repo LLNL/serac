@@ -266,8 +266,6 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
 
     cache_type<q> cache{};
 
-    std::cout << ntrial << std::endl;
-
     for (int j = 0; j < ntrial; j++) {
       for (int i = 0; i < c; i++) {
         s_buffer_type source;
