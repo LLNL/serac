@@ -11,7 +11,7 @@
  * a Lua input file to configure the simulation
  */
 
-#include "serac/physics/thermal_conduction.hpp"
+#include "serac/physics/thermal_conduction_legacy.hpp"
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/terminator.hpp"
@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
   serac::mesh::InputOptions::defineInputFileSchema(mesh_schema);
 
   auto& thermal_schema = inlet.addStruct("thermal_conduction", "Thermal conduction module");
-  serac::ThermalConduction::InputOptions::defineInputFileSchema(thermal_schema);
+  serac::ThermalConductionLegacy::InputOptions::defineInputFileSchema(thermal_schema);
 
   serac::input::defineOutputTypeInputFileSchema(inlet.getGlobalContainer());
   // _inlet_schema_end
@@ -51,8 +51,8 @@ int main(int argc, char* argv[])
   // _create_mesh_end
 
   // _create_module_start
-  auto conduction_opts = inlet["thermal_conduction"].get<serac::ThermalConduction::InputOptions>();
-  serac::ThermalConduction conduction(conduction_opts);
+  auto conduction_opts = inlet["thermal_conduction"].get<serac::ThermalConductionLegacy::InputOptions>();
+  serac::ThermalConductionLegacy conduction(conduction_opts);
   // _create_module_end
 
   // Complete the solver setup

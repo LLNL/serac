@@ -9,8 +9,8 @@ blt_list_append( TO test_dependencies ELEMENTS caliper adiak IF ${SERAC_ENABLE_P
 
 set(numerics_serial_tests
     expr_templates.cpp
-    serac_operator.cpp
-    serac_odes.cpp
+    operator.cpp
+    odes.cpp
     )
 
 serac_add_tests( SOURCES ${numerics_serial_tests}
