@@ -35,18 +35,21 @@ enum class PatchBoundaryCondition { Essential, Mixed_essential_and_natural };
  * @tparam dim Number of spatial dimensions
  * @tparam ExactSolution A class that satisfies the exact solution concept
  *
- * @param exact_displacement Exact solution of problem
+ * @param exact_solution Exact solution of problem
  * @param bc Specifier for boundary condition type to test
  * @return double L2 norm (continuous) of error in computed solution
  * *
  * @pre ExactSolution must implement operator() that is an MFEM
- * coefficient-generating function
+ * coefficient-generating function for the exact solution of the displacement
+ * as a function of space and time.
+ * @pre ExactSolution must implement velocity() that is an MFEM
+ * coefficient-generating function for the exact solution of the velocity
+ * as a function of space and time.
  * @pre ExactSolution must have a method applyLoads that applies forcing terms to the
  * solid functional that should lead to the exact solution
- * See AffineSolution for an example
  */
 template <int p, int dim, typename ExactSolution>
-double dynamic_solution_error(const ExactSolution& exact_displacement, PatchBoundaryCondition bc)
+double dynamic_solution_error(const ExactSolution& exact_solution, PatchBoundaryCondition bc)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -76,17 +79,17 @@ double dynamic_solution_error(const ExactSolution& exact_displacement, PatchBoun
 
   // initial conditions
   solid_functional.setVelocity(
-    [exact_displacement](const mfem::Vector& x, mfem::Vector& v) {
-      exact_displacement.velocity(x, 0.0, v);
+    [exact_solution](const mfem::Vector& x, mfem::Vector& v) {
+      exact_solution.velocity(x, 0.0, v);
     });
 
   solid_functional.setDisplacement(
-    [exact_displacement](const mfem::Vector& x, mfem::Vector& u) {
-      exact_displacement(x, 0.0, u);
+    [exact_solution](const mfem::Vector& x, mfem::Vector& u) {
+      exact_solution(x, 0.0, u);
     });
 
   // forcing terms
-  exact_displacement.applyLoads(mat, solid_functional, essentialBoundaryAttributes<dim>(bc));
+  exact_solution.applyLoads(mat, solid_functional, essentialBoundaryAttributes<dim>(bc));
 
   // Finalize the data structures
   solid_functional.completeSetup();
@@ -97,25 +100,25 @@ double dynamic_solution_error(const ExactSolution& exact_displacement, PatchBoun
     solid_functional.advanceTimestep(dt);
 
     // Output solution for debugging
-    solid_functional.outputState("paraview_output");
-    std::cout << "cycle " << i << std::endl;
-    std::cout << "time = " << solid_functional.time() << std::endl;
-    std::cout << "displacement =\n";
-    solid_functional.displacement().Print(std::cout);
-    std::cout << "forces =\n";
-    solid_functional.reactions().Print();
-    tensor<double, dim> resultant = make_tensor<dim>([&](int j) {
-      double y = 0;
-      for (int n = 0; n < solid_functional.reactions().Size()/dim; n++) {
-        y += solid_functional.reactions()(dim*n + j);
-      }
-      return y;
-    });
-    std::cout << "resultant = " << resultant << std::endl;
+    // solid_functional.outputState("paraview_output");
+    // std::cout << "cycle " << i << std::endl;
+    // std::cout << "time = " << solid_functional.time() << std::endl;
+    // std::cout << "displacement =\n";
+    // solid_functional.displacement().Print(std::cout);
+    // std::cout << "forces =\n";
+    // solid_functional.reactions().Print();
+    // tensor<double, dim> resultant = make_tensor<dim>([&](int j) {
+    //   double y = 0;
+    //   for (int n = 0; n < solid_functional.reactions().Size()/dim; n++) {
+    //     y += solid_functional.reactions()(dim*n + j);
+    //   }
+    //   return y;
+    // });
+    // std::cout << "resultant = " << resultant << std::endl;
   }
 
   // Compute norm of error
-  mfem::VectorFunctionCoefficient exact_solution_coef(dim, exact_displacement);
+  mfem::VectorFunctionCoefficient exact_solution_coef(dim, exact_solution);
   exact_solution_coef.SetTime(solid_functional.time());
   return computeL2Error(solid_functional.displacement(), exact_solution_coef);
 }
