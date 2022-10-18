@@ -660,7 +660,11 @@ public:
       // reactions_ = residual(displacement, ...);
       // isn't currently supported
       reactions_.Vector::operator=(
-          (*residual_)(displacement_, previous_, shape_displacement_, *parameter_states_[parameter_indices]...));
+          (*residual_)(displacement_, zero_, shape_displacement_, *parameter_states_[parameter_indices]...));
+      // TODO (talamini1): Fix above reactions for dynamics. Setting the accelerations to zero
+      // works for quasi-statics, but we need to account for the accelerations in
+      // dynamics. We need to figure out how to get the updated accelerations out of the
+      // ODE solver.
 
       residual_->update_qdata = false;
     }
@@ -873,6 +877,7 @@ protected:
   /// @brief the previous acceleration, used as a starting guess for newton's method
   mfem::Vector previous_;
 
+  /// @brief The value of time at which the ODE solver wants to evaluate the residual
   double ode_time_point_;
 
   /// coefficient used to calculate predicted displacement: u_p := u + c0 * d2u_dt2
