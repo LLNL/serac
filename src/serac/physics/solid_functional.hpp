@@ -58,12 +58,12 @@ const SolverOptions direct_static_options = {direct_linear_options, default_nonl
 /// the default solver and time integration options for dynamic analyses
 const SolverOptions default_dynamic_options = {
     default_linear_options, default_nonlinear_options,
-    TimesteppingOptions{TimestepMethod::AverageAcceleration, DirichletEnforcementMethod::RateControl}};
+    TimesteppingOptions{TimestepMethod::Newmark, DirichletEnforcementMethod::RateControl}};
 
 /// the direct solver and time integration options for dynamic analyses
 const SolverOptions direct_dynamic_options = {
     direct_linear_options, default_nonlinear_options,
-    TimesteppingOptions{TimestepMethod::AverageAcceleration, DirichletEnforcementMethod::RateControl}};
+    TimesteppingOptions{TimestepMethod::Newmark, DirichletEnforcementMethod::RateControl}};
 
 }  // namespace solid_mechanics
 
