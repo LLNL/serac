@@ -31,7 +31,7 @@ using solid_mechanics::direct_dynamic_options;
 template <int dim>
 class AffineSolution {
 public:
-  AffineSolution() : A(dim)//, b(dim)
+  AffineSolution() : A(dim), b(dim)
   {
     // clang-format off
     A(0, 0) = 0.110791568544027; A(0, 1) = 0.230421268325901;
@@ -42,11 +42,11 @@ public:
       A(2, 0) = 0.011544253485023; A(2, 1) = 0.060942846497753; A(2, 2) = 0.186383473579596;
     }
 
-    // b(0) = 0.765645367640828;
-    // b(1) = 0.992487355850465;
-    // if constexpr (dim == 3) {
-    //   b(2) = 0.162199373722092;
-    // }
+    b(0) = 0.765645367640828;
+    b(1) = 0.992487355850465;
+    if constexpr (dim == 3) {
+      b(2) = 0.162199373722092;
+    }
     //clang-format on
   };
 
@@ -60,7 +60,7 @@ public:
   {
     A.Mult(X, u);
     u *= t;
-    //u += b;
+    u += b;
   }
 
   void velocity(const mfem::Vector& X, double /* t */, mfem::Vector& v) const
@@ -126,8 +126,8 @@ public:
   }
 
  private:
-  mfem::DenseMatrix A; /// Linear part of solution. Equivalently, the displacement gradient
-  //mfem::Vector b;      /// Constant part of solution. Rigid mody displacement.
+  mfem::DenseMatrix A; /// Linear part of solution. Equivalently, the displacement gradient rate
+  mfem::Vector b;      /// Constant part of solution. Rigid body displacement.
 };
 
 /**
@@ -227,24 +227,26 @@ double dynamic_solution_error(const ExactSolution& exact_displacement, PatchBoun
     [exact_displacement](const mfem::Vector& x, mfem::Vector& v) {
       exact_displacement.velocity(x, 0.0, v);
     });
+  
+  solid_functional.setDisplacement(
+    [exact_displacement](const mfem::Vector& x, mfem::Vector& u) {
+      exact_displacement(x, 0.0, u);
+    });
 
   exact_displacement.applyLoads(mat, solid_functional, essentialBoundaryAttributes<dim>(bc));
 
   // Finalize the data structures
   solid_functional.completeSetup();
 
-  std::cout << "initial velocity =\n";
-  solid_functional.velocity().Print(std::cout);
-
   // Perform the quasi-static solve
   double dt = 1.0;
-  mfem::VectorFunctionCoefficient exact_solution_coef2(dim, exact_displacement);
   for (int i = 0; i < 1; i++) {
-    std::cout << "cycle " << i << std::endl;
     solid_functional.advanceTimestep(dt);
 
     // Output solution for debugging
     solid_functional.outputState("paraview_output");
+    std::cout << "cycle " << i << std::endl;
+    std::cout << "time = " << solid_functional.time() << std::endl;
     std::cout << "displacement =\n";
     solid_functional.displacement().Print(std::cout);
     std::cout << "forces =\n";
@@ -257,10 +259,6 @@ double dynamic_solution_error(const ExactSolution& exact_displacement, PatchBoun
       return y;
     });
     std::cout << "resultant = " << resultant << std::endl;
-    std::cout << "time = " << solid_functional.time() << std::endl;
-    exact_solution_coef2.SetTime(solid_functional.time());
-    double err = computeL2Error(solid_functional.displacement(), exact_solution_coef2);
-    std::cout << "L2 error = " << err << std::endl;
   }
 
   // Compute norm of error
