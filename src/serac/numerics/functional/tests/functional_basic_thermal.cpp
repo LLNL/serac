@@ -25,17 +25,22 @@
 using namespace serac;
 using namespace serac::profiling;
 
-TEST(basic, nonlinear_thermal_test_2D)
-{
-  constexpr auto p   = 1;
-  constexpr auto dim = 2;
+template < int p, int dim >
+void thermal_test() {
 
-  std::string meshfile = SERAC_REPO_DIR "/data/meshes/star.mesh";
-  auto        mesh2D   = mesh::refineAndDistribute(buildMeshFromFile(meshfile));
+  std::string meshfile;
+  if (dim == 2) {
+    meshfile = SERAC_REPO_DIR "/data/meshes/star.mesh";
+  }
+  if (dim == 3) {
+    meshfile = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+  }
+
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(meshfile));
 
   // Create standard MFEM bilinear and linear forms on H1
   auto                        fec = mfem::H1_FECollection(p, dim);
-  mfem::ParFiniteElementSpace fespace(mesh2D.get(), &fec);
+  mfem::ParFiniteElementSpace fespace(mesh.get(), &fec);
 
   mfem::Vector U(fespace.TrueVSize());
   U.Randomize();
@@ -52,7 +57,8 @@ TEST(basic, nonlinear_thermal_test_2D)
   auto d10 = 1.0 * make_tensor<dim>([](int i){ return 2*i*i; });
   auto d11 = 1.0 * make_tensor<dim, dim>([](int i, int j){ return i + j*(j+1) + 1; });
 
-  residual.AddAreaIntegral(
+  residual.AddDomainIntegral(
+      Dimension<dim>{},
       DependsOn<0>{},
       [=](auto x, auto temperature) {
         auto [u, du_dx] = temperature;
@@ -60,7 +66,7 @@ TEST(basic, nonlinear_thermal_test_2D)
         auto flux       = d10 * u + dot(d11, du_dx);
         return serac::tuple{source, flux};
       },
-      *mesh2D);
+      *mesh);
 
   // TODO: reenable surface integrals
   //residual.AddBoundaryIntegral(Dimension<1>{}, DependsOn<0>{}, [=](auto x, auto /*n*/, auto temperature) { 
@@ -72,54 +78,8 @@ TEST(basic, nonlinear_thermal_test_2D)
   check_gradient(residual, U);
 }
 
-#if 0
-TEST(basic, nonlinear_thermal_test_3D)
-{
-  int serial_refinement   = 0;
-  int parallel_refinement = 0;
-
-  constexpr auto p   = 2;
-  constexpr auto dim = 3;
-
-  std::string meshfile = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
-  auto        mesh3D   = mesh::refineAndDistribute(buildMeshFromFile(meshfile), serial_refinement, parallel_refinement);
-
-  // Create standard MFEM bilinear and linear forms on H1
-  auto                        fec = mfem::H1_FECollection(p, dim);
-  mfem::ParFiniteElementSpace fespace(mesh3D.get(), &fec);
-
-  mfem::Vector U(fespace.TrueVSize());
-  U.Randomize();
-
-  // Define the types for the test and trial spaces using the function arguments
-  using test_space  = H1<p>;
-  using trial_space = H1<p>;
-
-  // Construct the new functional object using the known test and trial spaces
-  Functional<test_space(trial_space)> residual(&fespace, {&fespace});
-
-  residual.AddVolumeIntegral(
-      DependsOn<0>{},
-      [=](auto x, auto temperature) {
-        auto [u, du_dx] = temperature;
-        auto source     = u * u - (100 * x[0] * x[1]);
-        auto flux       = du_dx;
-        return serac::tuple{source, flux};
-      },
-      *mesh3D);
-
-  // TODO: reenable surface integrals
-  residual.AddSurfaceIntegral(
-      DependsOn<0>{}, 
-      [=](auto x, auto /*n*/, auto temperature) { 
-        auto [u, du_dxi] = temperature;
-        return x[0] + x[1] - cos(u) + norm(du_dxi); 
-      }, 
-      *mesh3D);
-
-  check_gradient(residual, U);
-}
-#endif
+TEST(basic, thermal_test_2D) { thermal_test<1, 2>(); }
+TEST(basic, thermal_test_3D) { thermal_test<1, 3>(); }
 
 int main(int argc, char* argv[])
 {

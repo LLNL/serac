@@ -32,7 +32,6 @@ void weird_mixed_test(){
   using test_space  = H1<p, dim + 1>;
   using trial_space = H1<p, dim + 2>;
 
-#if 0
   std::string meshfile;
   if (dim == 2) {
     meshfile = SERAC_REPO_DIR "/data/meshes/star.mesh";
@@ -42,22 +41,16 @@ void weird_mixed_test(){
   }
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(meshfile));
-#else
-  auto mesh = mesh::refineAndDistribute(buildRectangleMesh(1, 1, 1.0, 1.0));
-#endif
 
   auto trial_fes = generateParFiniteElementSpace<trial_space>(mesh.get());
   auto test_fes = generateParFiniteElementSpace<test_space>(mesh.get());
 
   mfem::Vector U(trial_fes->TrueVSize());
-  for (int i = 0; i < 8; i++) {
-    U[i] = 0.1 * (i + 1);
-  }
-  //U.Randomize();
+  U.Randomize();
 
   Functional<test_space(trial_space)> residual(test_fes, {trial_fes});
 
-  auto d11 = 1.0 * make_tensor< 3, 2, 4, 2 >([](int i, int j, int k, int l){ return i - j + 2 * k - 3 * l; });
+  auto d11 = 1.0 * make_tensor< dim+1, dim, dim+2, dim >([](int i, int j, int k, int l){ return i - j + 2 * k - 3 * l; });
 
   // note: this is not really an elasticity problem, it's testing source and flux
   // terms that have the appropriate shapes to ensure that all the differentiation
@@ -111,9 +104,9 @@ void elasticity_test(){
   Functional<test_space(trial_space)> residual(test_fes, {trial_fes});
 
   [[maybe_unused]] auto d00 = 1.0 * make_tensor<dim, dim>([](int i, int j){ return i + 2 * j + 1; });
-  [[maybe_unused]] auto d01 = 1.0 * make_tensor<dim, dim, dim>([](int i, int j, int k){ return i + 2 * j - k + 1; });
-  [[maybe_unused]] auto d10 = 1.0 * make_tensor<dim, dim, dim>([](int i, int j, int k){ return i + 3 * j - 2 * k; });
-  [[maybe_unused]] auto d11 = 1.0 * make_tensor<dim, dim, dim, dim>([](int i, int j, int k, int l){ return i - j + 2 * k - 3 * l + 1; });
+  [[maybe_unused]] auto d01 = 0.0 * make_tensor<dim, dim, dim>([](int i, int j, int k){ return i + 2 * j - k + 1; });
+  [[maybe_unused]] auto d10 = 0.0 * make_tensor<dim, dim, dim>([](int i, int j, int k){ return i + 3 * j - 2 * k; });
+  [[maybe_unused]] auto d11 = 0.0 * make_tensor<dim, dim, dim, dim>([](int i, int j, int k, int l){ return i - j + 2 * k - 3 * l + 1; });
 
   // note: this is not really an elasticity problem, it's testing source and flux
   // terms that have the appropriate shapes to ensure that all the differentiation
@@ -143,8 +136,8 @@ void elasticity_test(){
 
 TEST(basic, weird_mixed_test_2D) { weird_mixed_test<1, 2>(); }
 
-TEST(basic, elasticity_test_2D) { elasticity_test<1, 2>(); }
-//TEST(basic, elasticity_test_3D) { elasticity_test<2, 3>(); }
+//TEST(basic, elasticity_test_2D) { elasticity_test<1, 2>(); }
+TEST(basic, elasticity_test_3D) { elasticity_test<2, 3>(); }
 
 int main(int argc, char* argv[])
 {

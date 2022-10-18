@@ -146,7 +146,7 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
             B(qx, jx) * B(qy, jy) * G(qz, jz)
           };
 
-          int Q = qz * (q + qy) * q + qx;
+          int Q = (qz * q + qy) * q + qx;
           auto & d00 = get<0>(get<0>(input(Q)));
           auto & d01 = get<1>(get<0>(input(Q)));
           auto & d10 = get<0>(get<1>(input(Q)));
@@ -232,42 +232,68 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
   template <typename source_type, typename flux_type, int q>
   static void integrate(const tensor< tuple< source_type, flux_type >, q * q * q > & qf_output,
                         const TensorProductQuadratureRule<q>&,
-                        dof_type&                                element_residual)
+                        dof_type * element_residual,
+                        int step = 1)
   {
+    if constexpr (is_zero<source_type>{} && is_zero<flux_type>{}) { return; }
+
+    constexpr int ntrial = std::max(size(source_type{}), size(flux_type{}) / dim) / c;
+
+    using s_buffer_type = std::conditional_t< is_zero<source_type>{}, zero, tensor<double, q, q, q> >;
+    using f_buffer_type = std::conditional_t< is_zero<  flux_type>{}, zero, tensor<double, dim, q, q, q> >;
+
     static constexpr bool apply_weights = true;
     static constexpr auto B = calculate_B<apply_weights, q>();
     static constexpr auto G = calculate_G<apply_weights, q>();
 
-    tensor< double, c, q, q, q> source{};
-    tensor< double, c, dim, q, q, q> flux{};
-
-    for (int qz = 0; qz < q; qz++) {
-      for (int qy = 0; qy < q; qy++) {
-        for (int qx = 0; qx < q; qx++) {
-          int k = (qz * q + qy) * q + qx;
-          tensor< double, c > s{get<SOURCE>(qf_output[k])};
-          tensor< double, c, dim > f{get<FLUX>(qf_output[k])};
-          for (int i = 0; i < c; i++) {
-            source(i, qz, qy, qx) = s[i];
-            for (int j = 0; j < dim; j++) {
-              flux(i, j, qz, qy, qx) = f[i][j];
-            }
-          }
-        }
-      }
-    }
+    //tensor< double, c, q, q, q> source{};
+    //tensor< double, c, dim, q, q, q> flux{};
+    //for (int qz = 0; qz < q; qz++) {
+    //  for (int qy = 0; qy < q; qy++) {
+    //    for (int qx = 0; qx < q; qx++) {
+    //      int k = (qz * q + qy) * q + qx;
+    //      tensor< double, c > s{get<SOURCE>(qf_output[k])};
+    //      tensor< double, c, dim > f{get<FLUX>(qf_output[k])};
+    //      for (int i = 0; i < c; i++) {
+    //        source(i, qz, qy, qx) = s[i];
+    //        for (int j = 0; j < dim; j++) {
+    //          flux(i, j, qz, qy, qx) = f[i][j];
+    //        }
+    //      }
+    //    }
+    //  }
+    //}
 
     cache_type<q> cache{};
 
-    for (int i = 0; i < c; i++) {
-      cache.A2[0] = contract< 2, 0 >(source[i], B) + contract< 2, 0 >(flux(i, 0), G);
-      cache.A2[1] = contract< 2, 0 >(flux(i, 1), B);
-      cache.A2[2] = contract< 2, 0 >(flux(i, 2), B);
+    std::cout << ntrial << std::endl;
 
-      cache.A1[0] = contract< 1, 0 >(cache.A2[0], B) + contract< 1, 0 >(cache.A2[1], G);
-      cache.A1[1] = contract< 1, 0 >(cache.A2[2], B);
+    for (int j = 0; j < ntrial; j++) {
+      for (int i = 0; i < c; i++) {
+        s_buffer_type source;
+        f_buffer_type flux;
 
-      element_residual(i) += contract< 0, 0 >(cache.A1[0], B) + contract< 0, 0 >(cache.A1[1], G);
+        for (int qz = 0; qz < q; qz++) {
+          for (int qy = 0; qy < q; qy++) {
+            for (int qx = 0; qx < q; qx++) {
+              int Q = (qz * q + qy) * q + qx;
+              source(qz, qy, qx) = reinterpret_cast< const double * >(&get<SOURCE>(qf_output[Q]))[i * ntrial + j];
+              for (int k = 0; k < dim; k++) {
+                flux(k, qz, qy, qx) = reinterpret_cast< const double * >(&get<FLUX>(qf_output[Q]))[(i * dim + k) * ntrial + j];
+              }
+            }
+          }
+        }
+
+        cache.A2[0] = contract< 2, 0 >(source, B) + contract< 2, 0 >(flux(0), G);
+        cache.A2[1] = contract< 2, 0 >(flux(1), B);
+        cache.A2[2] = contract< 2, 0 >(flux(2), B);
+
+        cache.A1[0] = contract< 1, 0 >(cache.A2[0], B) + contract< 1, 0 >(cache.A2[1], G);
+        cache.A1[1] = contract< 1, 0 >(cache.A2[2], B);
+
+        element_residual[j * step](i) += contract< 0, 0 >(cache.A1[0], B) + contract< 0, 0 >(cache.A1[1], G);
+      }
     }
   }
 
