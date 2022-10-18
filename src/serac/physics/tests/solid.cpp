@@ -170,62 +170,6 @@ void functional_solid_test_static_J2()
   // EXPECT_LT(norm(solid_solver.reactions()), 1.0e-5);
 }
 
-template <int p, int dim>
-void functional_solid_test_dynamic(double expected_disp_norm)
-{
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  int serial_refinement   = 0;
-  int parallel_refinement = 0;
-
-  // Create DataStore
-  axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "solid_functional_dynamic_solve");
-
-  static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for solid functional test");
-
-  // Construct the appropriate dimension mesh and give it to the data store
-  std::string filename =
-      (dim == 2) ? SERAC_REPO_DIR "/data/meshes/beam-quad.mesh" : SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
-
-  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
-
-  // Construct a functional-based solid mechanics solver
-  SolidMechanics<p, dim> solid_solver(default_dynamic_options, GeometricNonlinearities::Off,
-                                      "solid_functional_dynamic");
-
-  solid_mechanics::LinearIsotropic mat{1.0, 1.0, 1.0};
-  solid_solver.setMaterial(mat);
-
-  // Define the function for the initial displacement and boundary condition
-  auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
-
-  // Define a boundary attribute set and specify initial / boundary conditions
-  std::set<int> ess_bdr = {1};
-  solid_solver.setDisplacementBCs(ess_bdr, bc);
-  solid_solver.setDisplacement(bc);
-
-  tensor<double, dim> constant_force{0.0, 0.5};
-
-  solid_mechanics::ConstantBodyForce<dim> force{constant_force};
-  solid_solver.addBodyForce(force);
-
-  // Finalize the data structures
-  solid_solver.completeSetup();
-
-  // Perform the quasi-static solve
-  double dt = 0.5;
-
-  for (int i = 0; i < 3; ++i) {
-    solid_solver.advanceTimestep(dt);
-    solid_solver.outputState();
-  }
-
-  // Check the final displacement norm
-  EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
-}
-
 enum class TestType
 {
   Pressure,
@@ -408,12 +352,6 @@ void functional_parameterized_solid_test(double expected_disp_norm)
 TEST(SolidMechanics, 2DQuadParameterizedStatic) { functional_parameterized_solid_test<2, 2>(2.1906312704664623); }
 
 TEST(SolidMechanics, 3DQuadStaticJ2) { functional_solid_test_static_J2(); }
-
-TEST(SolidMechanics, 2DLinearDynamic) { functional_solid_test_dynamic<1, 2>(1.5206694864511661); }
-TEST(SolidMechanics, 2DQuadDynamic) { functional_solid_test_dynamic<2, 2>(1.5269845689546435); }
-
-TEST(SolidMechanics, 3DLinearDynamic) { functional_solid_test_dynamic<1, 3>(1.520679017); }
-TEST(SolidMechanics, 3DQuadDynamic) { functional_solid_test_dynamic<2, 3>(1.527009514); }
 
 TEST(SolidMechanics, 2DLinearPressure)
 {
