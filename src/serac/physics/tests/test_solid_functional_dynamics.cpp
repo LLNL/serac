@@ -23,6 +23,14 @@ namespace serac {
 
 using solid_mechanics::direct_dynamic_options;
 
+// clang-format off
+const tensor<double, 3, 3> A{{{0.110791568544027, 0.230421268325901, 0.15167673653354},
+                              {0.198344644470483, 0.060514559793513, 0.084137393813728},
+                              {0.011544253485023, 0.060942846497753, 0.186383473579596}}};
+
+const tensor<double, 3> b{{0.765645367640828, 0.992487355850465, 0.162199373722092}};
+// clang-format on
+
 /**
  * @brief Exact displacement solution that is an affine function
  *
@@ -31,23 +39,14 @@ using solid_mechanics::direct_dynamic_options;
 template <int dim>
 class AffineSolution {
 public:
-  AffineSolution() : A(dim), b(dim)
+  AffineSolution() : disp_grad_rate(dim), initial_displacement(dim)
   {
-    // clang-format off
-    A(0, 0) = 0.110791568544027; A(0, 1) = 0.230421268325901;
-    A(1, 0) = 0.198344644470483; A(1, 1) = 0.060514559793513;
-    if constexpr (dim == 3) {
-                                                                A(0, 2) = 0.15167673653354;
-                                                                A(1, 2) = 0.084137393813728;
-      A(2, 0) = 0.011544253485023; A(2, 1) = 0.060942846497753; A(2, 2) = 0.186383473579596;
+    for (int i = 0; i < dim; i++) {
+      initial_displacement(i) = b[i];
+      for (int j = 0; j < dim; j++) {
+        disp_grad_rate(i, j) = A[i][j];
+      }
     }
-
-    b(0) = 0.765645367640828;
-    b(1) = 0.992487355850465;
-    if constexpr (dim == 3) {
-      b(2) = 0.162199373722092;
-    }
-    //clang-format on
   };
 
   /**
@@ -58,14 +57,14 @@ public:
    */
   void operator()(const mfem::Vector& X, double t, mfem::Vector& u) const
   {
-    A.Mult(X, u);
+    disp_grad_rate.Mult(X, u);
     u *= t;
-    u += b;
+    u += initial_displacement;
   }
 
   void velocity(const mfem::Vector& X, double /* t */, mfem::Vector& v) const
   {
-    A.Mult(X, v);
+    disp_grad_rate.Mult(X, v);
   }
 
   /**
@@ -96,7 +95,7 @@ public:
     sf.setDisplacementBCs(essential_boundaries, ebc_func);
 
     // natural BCs
-    auto Hdot = make_tensor<dim, dim>([&](int i, int j) { return A(i,j); });
+    auto Hdot = make_tensor<dim, dim>([&](int i, int j) { return disp_grad_rate(i,j); });
     auto traction = [material, Hdot](auto, auto n0, auto t) {
       auto H = Hdot*t;
       typename Material::State state; // needs to be reconfigured for mats with state
@@ -126,8 +125,8 @@ public:
   }
 
  private:
-  mfem::DenseMatrix A; /// Linear part of solution. Equivalently, the displacement gradient rate
-  mfem::Vector b;      /// Constant part of solution. Rigid body displacement.
+  mfem::DenseMatrix disp_grad_rate;  /// Linear part of solution. Equivalently, the displacement gradient rate
+  mfem::Vector initial_displacement; /// Constant part of solution. Rigid body displacement.
 };
 
 /**
