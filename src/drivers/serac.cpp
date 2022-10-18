@@ -28,7 +28,7 @@
 #include "serac/infrastructure/output.hpp"
 #include "serac/infrastructure/terminator.hpp"
 #include "serac/mesh/mesh_utils.hpp"
-#include "serac/physics/thermal_solid.hpp"
+#include "serac/physics/thermal_solid_legacy.hpp"
 #include "serac/numerics/equation_solver.hpp"
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/serac_config.hpp"
@@ -55,15 +55,15 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet)
 
   // The solid mechanics options
   auto& solid_solver_table = inlet.addStruct("solid", "Finite deformation solid mechanics module");
-  serac::Solid::InputOptions::defineInputFileSchema(solid_solver_table);
+  serac::SolidLegacy::InputOptions::defineInputFileSchema(solid_solver_table);
 
   // The thermal conduction options
   auto& thermal_solver_table = inlet.addStruct("thermal_conduction", "Thermal conduction module");
-  serac::ThermalConduction::InputOptions::defineInputFileSchema(thermal_solver_table);
+  serac::ThermalConductionLegacy::InputOptions::defineInputFileSchema(thermal_solver_table);
 
   // The thermal solid options
   auto& thermal_solid_solver_table = inlet.addStruct("thermal_solid", "Thermal solid module");
-  serac::ThermalSolid::InputOptions::defineInputFileSchema(thermal_solid_solver_table);
+  serac::ThermalSolidLegacy::InputOptions::defineInputFileSchema(thermal_solid_solver_table);
 
   // Verify the input file
   if (!inlet.verify()) {
@@ -183,30 +183,30 @@ int main(int argc, char* argv[])
   std::unique_ptr<serac::BasePhysics> main_physics;
 
   // Create nullable contains for the solid and thermal input file options
-  std::optional<serac::Solid::InputOptions>             solid_solver_options;
-  std::optional<serac::ThermalConduction::InputOptions> thermal_solver_options;
-  std::optional<serac::ThermalSolid::InputOptions>      thermal_solid_solver_options;
+  std::optional<serac::SolidLegacy::InputOptions>             solid_solver_options;
+  std::optional<serac::ThermalConductionLegacy::InputOptions> thermal_solver_options;
+  std::optional<serac::ThermalSolidLegacy::InputOptions>      thermal_solid_solver_options;
 
   // If the blocks exist, read the appropriate input file options
   if (inlet.isUserProvided("solid")) {
-    solid_solver_options = inlet["solid"].get<serac::Solid::InputOptions>();
+    solid_solver_options = inlet["solid"].get<serac::SolidLegacy::InputOptions>();
   }
   if (inlet.isUserProvided("thermal_conduction")) {
-    thermal_solver_options = inlet["thermal_conduction"].get<serac::ThermalConduction::InputOptions>();
+    thermal_solver_options = inlet["thermal_conduction"].get<serac::ThermalConductionLegacy::InputOptions>();
   }
   if (inlet.isUserProvided("thermal_solid")) {
-    thermal_solid_solver_options = inlet["thermal_solid"].get<serac::ThermalSolid::InputOptions>();
+    thermal_solid_solver_options = inlet["thermal_solid"].get<serac::ThermalSolidLegacy::InputOptions>();
   }
 
   // Construct the appropriate physics object using the input file options
   if (thermal_solid_solver_options) {
-    main_physics = std::make_unique<serac::ThermalSolid>(*thermal_solid_solver_options);
+    main_physics = std::make_unique<serac::ThermalSolidLegacy>(*thermal_solid_solver_options);
   } else if (solid_solver_options && thermal_solver_options) {
-    main_physics = std::make_unique<serac::ThermalSolid>(*thermal_solver_options, *solid_solver_options);
+    main_physics = std::make_unique<serac::ThermalSolidLegacy>(*thermal_solver_options, *solid_solver_options);
   } else if (solid_solver_options) {
-    main_physics = std::make_unique<serac::Solid>(*solid_solver_options);
+    main_physics = std::make_unique<serac::SolidLegacy>(*solid_solver_options);
   } else if (thermal_solver_options) {
-    main_physics = std::make_unique<serac::ThermalConduction>(*thermal_solver_options);
+    main_physics = std::make_unique<serac::ThermalConductionLegacy>(*thermal_solver_options);
   } else {
     SLIC_ERROR_ROOT("Neither solid, thermal_conduction, nor thermal_solid blocks specified in the input file.");
   }
