@@ -17,6 +17,12 @@ void check_gradient(serac::Functional<T>& f, mfem::Vector& U)
 {
   int seed = 42;
 
+  // DELETE
+  //mfem::Vector output = f(U);
+  //std::cout << "residual: "; 
+  //output.Print();
+  // DELETE
+
   mfem::Vector dU(U.Size());
   dU.Randomize(seed);
 
@@ -36,6 +42,10 @@ void check_gradient(serac::Functional<T>& f, mfem::Vector& U)
   mfem::Vector df2   = dfdU(dU);
 
   std::unique_ptr<mfem::HypreParMatrix> dfdU_matrix = assemble(dfdU);
+
+  // DELETE
+  dfdU_matrix->Print("K.mtx");
+  // DELETE
 
   mfem::Vector df3 = (*dfdU_matrix) * dU;
 

@@ -238,7 +238,7 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
       physical_to_parent< test_element::family >(qf_outputs, J_e);
 
       // (batch) integrate the material response against the test-space basis functions
-      test_element::integrate(qf_outputs, rule, r[e]);
+      test_element::integrate(qf_outputs, rule, &r[e]);
 
     }
 
@@ -340,7 +340,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
       }
 
       // (batch) integrate the material response against the test-space basis functions
-      test_element::integrate(get_value(qf_outputs), rule, r[e]);
+      test_element::integrate(get_value(qf_outputs), rule, &r[e]);
 
     }
 
@@ -459,7 +459,7 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
     //physical_to_parent< test_element::family >(qf_outputs, J_e);
 
     // (batch) integrate the material response against the test-space basis functions
-    test_element::integrate(qf_outputs, rule, dr[e]);
+    test_element::integrate(qf_outputs, rule, &dr[e]);
   
   }
 
@@ -517,8 +517,6 @@ void element_gradient_kernel_new(ExecArrayView<double, 3, ExecutionSpace::CPU> d
 
   constexpr int nquad = (g == Geometry::Quadrilateral) ? Q * Q : Q * Q * Q;
 
-  // mfem provides this information in 1D arrays, so we reshape it
-  // into strided multidimensional arrays before using
   static constexpr TensorProductQuadratureRule<Q> rule{};
 
   // for each element in the domain
@@ -530,9 +528,9 @@ void element_gradient_kernel_new(ExecArrayView<double, 3, ExecutionSpace::CPU> d
       derivatives(q) = qf_derivatives(e, q);
     }
 
-    for (int i = 0; i < trial_element::ndof; i++) {
-      auto source_and_flux = test_element::batch_apply_shape_fn(i, derivatives, rule);
-      test_element::integrate(source_and_flux, rule, output_ptr[i]);
+    for (int J = 0; J < trial_element::ndof; J++) {
+      auto source_and_flux = trial_element::batch_apply_shape_fn(J, derivatives, rule);
+      test_element::integrate(source_and_flux, rule, output_ptr + J, trial_element::ndof);
     }
   }
 }

@@ -26,6 +26,66 @@ using namespace serac;
 using namespace serac::profiling;
 
 template < int p, int dim >
+void weird_mixed_test(){
+
+  // Define vector-valued test and trial spaces of different sizes
+  using test_space  = H1<p, dim + 1>;
+  using trial_space = H1<p, dim + 2>;
+
+#if 0
+  std::string meshfile;
+  if (dim == 2) {
+    meshfile = SERAC_REPO_DIR "/data/meshes/star.mesh";
+  }
+  if (dim == 3) {
+    meshfile = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+  }
+
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(meshfile));
+#else
+  auto mesh = mesh::refineAndDistribute(buildRectangleMesh(1, 1, 1.0, 1.0));
+#endif
+
+  auto trial_fes = generateParFiniteElementSpace<trial_space>(mesh.get());
+  auto test_fes = generateParFiniteElementSpace<test_space>(mesh.get());
+
+  mfem::Vector U(trial_fes->TrueVSize());
+  for (int i = 0; i < 8; i++) {
+    U[i] = 0.1 * (i + 1);
+  }
+  //U.Randomize();
+
+  Functional<test_space(trial_space)> residual(test_fes, {trial_fes});
+
+  auto d11 = 1.0 * make_tensor< 3, 2, 4, 2 >([](int i, int j, int k, int l){ return i - j + 2 * k - 3 * l; });
+
+  // note: this is not really an elasticity problem, it's testing source and flux
+  // terms that have the appropriate shapes to ensure that all the differentiation
+  // code works as intended
+  residual.AddDomainIntegral(
+      Dimension<dim>{},
+      DependsOn<0>{},
+      [=](auto /* x */, auto displacement) {
+        auto [u, du_dx] = displacement;
+        auto source = zero{};
+        auto flux = double_dot(d11, du_dx); 
+        return serac::tuple{source, flux};
+      },
+      *mesh);
+
+  //residual.AddBoundaryIntegral(Dimension<dim-1>{}, DependsOn<0>{}, [=](auto x, auto /*n*/, auto displacement) { 
+  //      auto [u, du_dxi] = displacement;
+  //      return u * x[0]; 
+  //    }, 
+  //    *mesh);
+
+  check_gradient(residual, U);
+
+  delete test_fes;
+  delete trial_fes;
+}
+
+template < int p, int dim >
 void elasticity_test(){
 
   // Define the test and trial spaces for an elasticity-like problem
@@ -50,25 +110,30 @@ void elasticity_test(){
 
   Functional<test_space(trial_space)> residual(test_fes, {trial_fes});
 
+  [[maybe_unused]] auto d00 = 1.0 * make_tensor<dim, dim>([](int i, int j){ return i + 2 * j + 1; });
+  [[maybe_unused]] auto d01 = 1.0 * make_tensor<dim, dim, dim>([](int i, int j, int k){ return i + 2 * j - k + 1; });
+  [[maybe_unused]] auto d10 = 1.0 * make_tensor<dim, dim, dim>([](int i, int j, int k){ return i + 3 * j - 2 * k; });
+  [[maybe_unused]] auto d11 = 1.0 * make_tensor<dim, dim, dim, dim>([](int i, int j, int k, int l){ return i - j + 2 * k - 3 * l + 1; });
+
   // note: this is not really an elasticity problem, it's testing source and flux
   // terms that have the appropriate shapes to ensure that all the differentiation
   // code works as intended
   residual.AddDomainIntegral(
       Dimension<dim>{},
       DependsOn<0>{},
-      [=](auto x, auto displacement) {
+      [=](auto /* x */, auto displacement) {
         auto [u, du_dx] = displacement;
-        auto source     = u * x[0];
-        auto flux       = du_dx;
+        auto source = dot(d00, u) + double_dot(d01, du_dx);
+        auto flux   = dot(d10, u) + double_dot(d11, du_dx);
         return serac::tuple{source, flux};
       },
       *mesh);
 
-  residual.AddBoundaryIntegral(Dimension<dim-1>{}, DependsOn<0>{}, [=](auto x, auto /*n*/, auto displacement) { 
-        auto [u, du_dxi] = displacement;
-        return u * x[0]; 
-      }, 
-      *mesh);
+  //residual.AddBoundaryIntegral(Dimension<dim-1>{}, DependsOn<0>{}, [=](auto x, auto /*n*/, auto displacement) { 
+  //      auto [u, du_dxi] = displacement;
+  //      return u * x[0]; 
+  //    }, 
+  //    *mesh);
 
   check_gradient(residual, U);
 
@@ -76,8 +141,10 @@ void elasticity_test(){
   delete trial_fes;
 }
 
-TEST(basic, elasticity_test_2D) { elasticity_test<2, 2>(); }
-TEST(basic, elasticity_test_3D) { elasticity_test<2, 3>(); }
+TEST(basic, weird_mixed_test_2D) { weird_mixed_test<1, 2>(); }
+
+TEST(basic, elasticity_test_2D) { elasticity_test<1, 2>(); }
+//TEST(basic, elasticity_test_3D) { elasticity_test<2, 3>(); }
 
 int main(int argc, char* argv[])
 {

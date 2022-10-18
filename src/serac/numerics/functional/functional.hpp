@@ -248,7 +248,8 @@ public:
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
       auto ndof_per_trial_element =
           static_cast<size_t>(trial_space_[i]->GetFE(0)->GetDof() * trial_space_[i]->GetVDim());
-      element_gradients_[i] = ExecArray<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
+      //element_gradients_[i] = ExecArray<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
+      element_gradients_[i] = ExecArray<double, 3, exec>(num_elements, ndof_per_trial_element, ndof_per_test_element);
       bdr_element_gradients_[i] = allocateMemoryForBdrElementGradients<double, exec>(*trial_space_[i], *test_space_);
     }
   }
@@ -585,8 +586,8 @@ private:
         for (axom::IndexType e = 0; e < K_elem.shape()[0]; e++) {
           for (axom::IndexType i = 0; i < K_elem.shape()[1]; i++) {
             for (axom::IndexType j = 0; j < K_elem.shape()[2]; j++) {
-              auto [index, sign] = LUT(e, i, j);
-              values[index] += sign * K_elem(e, j, i);
+              auto [index, sign] = LUT(e, j, i);
+              values[index] += sign * K_elem(e, i, j);
             }
           }
         }
@@ -606,7 +607,7 @@ private:
         for (axom::IndexType e = 0; e < K_belem.shape()[0]; e++) {
           for (axom::IndexType i = 0; i < K_belem.shape()[1]; i++) {
             for (axom::IndexType j = 0; j < K_belem.shape()[2]; j++) {
-              auto [index, sign] = LUT(e, i, j);
+              auto [index, sign] = LUT(e, j, i);
               values[index] += sign * K_belem(e, i, j);
             }
           }

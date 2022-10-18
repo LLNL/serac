@@ -33,18 +33,12 @@ TEST(basic, nonlinear_thermal_test_2D)
   std::string meshfile = SERAC_REPO_DIR "/data/meshes/star.mesh";
   auto        mesh2D   = mesh::refineAndDistribute(buildMeshFromFile(meshfile));
 
-  //auto mesh2D = mesh::refineAndDistribute(buildRectangleMesh(1, 1, 1, 1));
-
   // Create standard MFEM bilinear and linear forms on H1
   auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(mesh2D.get(), &fec);
 
   mfem::Vector U(fespace.TrueVSize());
   U.Randomize();
-  //U[0] = 1;
-  //U[1] = 2;
-  //U[2] = 3;
-  //U[3] = 4;
 
   // Define the types for the test and trial spaces using the function arguments
   using test_space  = H1<p>;
@@ -67,12 +61,6 @@ TEST(basic, nonlinear_thermal_test_2D)
         return serac::tuple{source, flux};
       },
       *mesh2D);
-
-  auto K = get<1>(residual(differentiate_wrt(U)));
-
-  std::unique_ptr<mfem::HypreParMatrix> K_matrix = assemble(K);
-
-  K_matrix->Print("K.mtx");
 
   // TODO: reenable surface integrals
   //residual.AddBoundaryIntegral(Dimension<1>{}, DependsOn<0>{}, [=](auto x, auto /*n*/, auto temperature) { 

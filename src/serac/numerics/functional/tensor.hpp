@@ -113,9 +113,6 @@ tensor(const T (&data)[n1]) -> tensor<T, n1>;
 template <typename T, int n1, int n2>
 tensor(const T (&data)[n1][n2]) -> tensor<T, n1, n2>;
 
-template < typename T, int m, int ... n >
-SERAC_HOST_DEVICE constexpr int leading_dimension(tensor<T,m,n...>) { return m; }
-
 /**
  * @brief A sentinel struct for eliding no-op tensor operations
  */
@@ -947,6 +944,22 @@ SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m>& u, const tensor<T, m, n
   return uAv;
 }
 
+template <typename S, typename T, int m, int n, int p, int q>
+SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m, n, p, q>& A, const tensor<T, q>& B)
+{
+  tensor<decltype(S{} * T{}), m, n, p> AB{};
+  for (int i = 0; i < m; i++) {
+    for (int j = 0; j < n; j++) {
+      for (int k = 0; k < p; k++) {
+        for (int l = 0; l < q; l++) {
+          AB[i][j][k] += A[i][j][k][l] * B[l];
+        }
+      }
+    }
+  }
+  return AB;
+}
+
 /**
  * @brief double dot product, contracting over the two "middle" indices
  * @tparam S the underlying type of the tensor (lefthand) argument
@@ -1257,6 +1270,9 @@ auto matrix_sqrt(const tensor<T, dim, dim>& A)
   }
   return B;
 }
+
+template <int i1, int i2, typename T>
+auto contract(const zero &, const T &) { return zero{}; }
 
 template <int i1, int i2, typename S, int m, int... n, typename T, int p, int q>
 auto contract(const tensor<S, m, n...> & A, const tensor<T, p, q> & B) {
@@ -1989,11 +2005,30 @@ SERAC_HOST_DEVICE auto chain_rule(const tensor<double, m, n, p...>& df_dx, const
   return total;
 }
 
+template < typename T, int ... n >
+SERAC_HOST_DEVICE constexpr int size(const tensor<T, n ... > &) { return (n * ... * 1); }
+
+SERAC_HOST_DEVICE constexpr int size(const double &) { return 1; }
+
+SERAC_HOST_DEVICE constexpr int size(zero) { return 0; }
+
 template < int i, typename T, int ... n >
 SERAC_HOST_DEVICE constexpr int dimension(const tensor<T, n ... > &) { 
   constexpr int dimensions[] = {n ... };
   return dimensions[i];
 }
+
+template < typename T, int m, int ... n >
+SERAC_HOST_DEVICE constexpr int leading_dimension(tensor<T,m,n...>) { return m; }
+
+template < typename T, int m, int ... n >
+SERAC_HOST_DEVICE constexpr int trailing_dimension_product(tensor<T,m,n...>) { return (n * ... * 1); }
+
+SERAC_HOST_DEVICE constexpr int trailing_dimension_product(double) { return 1; }
+
+SERAC_HOST_DEVICE constexpr int trailing_dimension_product(serac::zero) { return 0; }
+
+
 
 }  // namespace serac
 
@@ -2236,5 +2271,6 @@ inline mat < 3, 3 > R3_basis(const vec3 & n) {
   };
 }
 #endif
+
 
 #include "serac/numerics/functional/isotropic_tensor.hpp"
