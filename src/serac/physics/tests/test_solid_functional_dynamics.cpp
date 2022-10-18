@@ -23,6 +23,144 @@ namespace serac {
 
 using solid_mechanics::direct_dynamic_options;
 
+/**
+ * @brief Specify the kinds of boundary condition to apply
+ */
+enum class PatchBoundaryCondition { Essential, Mixed_essential_and_natural };
+
+/**
+ * @brief Solve problem and compare numerical solution to exact answer
+ *
+ * @tparam p Polynomial degree of finite element approximation
+ * @tparam dim Number of spatial dimensions
+ * @tparam ExactSolution A class that satisfies the exact solution concept
+ *
+ * @param exact_displacement Exact solution of problem
+ * @param bc Specifier for boundary condition type to test
+ * @return double L2 norm (continuous) of error in computed solution
+ * *
+ * @pre ExactSolution must implement operator() that is an MFEM
+ * coefficient-generating function
+ * @pre ExactSolution must have a method applyLoads that applies forcing terms to the
+ * solid functional that should lead to the exact solution
+ * See AffineSolution for an example
+ */
+template <int p, int dim, typename ExactSolution>
+double dynamic_solution_error(const ExactSolution& exact_displacement, PatchBoundaryCondition bc)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  // Create DataStore
+  axom::sidre::DataStore datastore;
+  serac::StateManager::initialize(datastore, "solid_functional_dynamic_solve");
+
+  // BT: shouldn't this assertion be in the physics module?
+  // Putting it here prevents tests from having a nonsensical spatial dimension value, 
+  // but the physics module should be catching this error to protect users.
+  static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for solid functional test");
+
+  std::string filename = std::string(SERAC_REPO_DIR) +  "/data/meshes/patch" + std::to_string(dim) + "D.mesh";
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename));
+  serac::StateManager::setMesh(std::move(mesh));
+
+  // Construct a functional-based solid mechanics solver
+  auto solver_options = direct_dynamic_options;
+  solver_options.nonlinear.abs_tol = 1e-13;
+  solver_options.nonlinear.rel_tol = 1e-13;
+  solver_options.dynamic->timestepper = TimestepMethod::Newmark;
+  solver_options.dynamic->enforcement_method = DirichletEnforcementMethod::DirectControl;
+  SolidFunctional<p, dim> solid_functional(solver_options, GeometricNonlinearities::On, "solid_functional");
+
+  solid_mechanics::NeoHookean mat{.density=1.0, .K=1.0, .G=1.0};
+  solid_functional.setMaterial(mat);
+
+  // initial conditions
+  solid_functional.setVelocity(
+    [exact_displacement](const mfem::Vector& x, mfem::Vector& v) {
+      exact_displacement.velocity(x, 0.0, v);
+    });
+
+  solid_functional.setDisplacement(
+    [exact_displacement](const mfem::Vector& x, mfem::Vector& u) {
+      exact_displacement(x, 0.0, u);
+    });
+
+  // forcing terms
+  exact_displacement.applyLoads(mat, solid_functional, essentialBoundaryAttributes<dim>(bc));
+
+  // Finalize the data structures
+  solid_functional.completeSetup();
+
+  // Integrate in time
+  double dt = 1.0;
+  for (int i = 0; i < 1; i++) {
+    solid_functional.advanceTimestep(dt);
+
+    // Output solution for debugging
+    solid_functional.outputState("paraview_output");
+    std::cout << "cycle " << i << std::endl;
+    std::cout << "time = " << solid_functional.time() << std::endl;
+    std::cout << "displacement =\n";
+    solid_functional.displacement().Print(std::cout);
+    std::cout << "forces =\n";
+    solid_functional.reactions().Print();
+    tensor<double, dim> resultant = make_tensor<dim>([&](int j) {
+      double y = 0;
+      for (int n = 0; n < solid_functional.reactions().Size()/dim; n++) {
+        y += solid_functional.reactions()(dim*n + j);
+      }
+      return y;
+    });
+    std::cout << "resultant = " << resultant << std::endl;
+  }
+
+  // Compute norm of error
+  mfem::VectorFunctionCoefficient exact_solution_coef(dim, exact_displacement);
+  exact_solution_coef.SetTime(solid_functional.time());
+  return computeL2Error(solid_functional.displacement(), exact_solution_coef);
+}
+
+/**
+ * @brief Get boundary attributes for patch meshes on which to apply essential boundary conditions
+ *
+ * Parameterizes patch tests boundary conditions, as either essential
+ * boundary conditions or partly essential boundary conditions and
+ * partly natural boundary conditions. The return values are specific
+ * to the meshes "patch2d.mesh" and "patch3d.mesh". The particular
+ * portions of the boundary that get essential boundary conditions
+ * are arbitrarily chosen.
+ *
+ * @tparam dim Spatial dimension
+ *
+ * @param b Kind of boundary conditions to apply in the problem
+ * @return std::set<int> Boundary attributes for the essential boundary condition
+ */
+template <int dim>
+std::set<int> essentialBoundaryAttributes(PatchBoundaryCondition bc)
+{
+  std::set<int> essential_boundaries;
+  if constexpr (dim == 2) {
+    switch (bc) {
+      case PatchBoundaryCondition::Essential:
+        essential_boundaries = {1, 2, 3, 4};
+        break;
+      case PatchBoundaryCondition::Mixed_essential_and_natural:
+        essential_boundaries = {1, 4};
+        break;
+    }
+  } else {
+    switch (bc) {
+      case PatchBoundaryCondition::Essential:
+        essential_boundaries = {1, 2, 3, 4, 5, 6};
+        break;
+      case PatchBoundaryCondition::Mixed_essential_and_natural:
+        essential_boundaries = {1, 2};
+        break;
+    }
+  }
+  return essential_boundaries;
+}
+
 // clang-format off
 const tensor<double, 3, 3> A{{{0.110791568544027, 0.230421268325901, 0.15167673653354},
                               {0.198344644470483, 0.060514559793513, 0.084137393813728},
@@ -32,7 +170,7 @@ const tensor<double, 3> b{{0.765645367640828, 0.992487355850465, 0.1621993737220
 // clang-format on
 
 /**
- * @brief Exact displacement solution that is an affine function
+ * @brief Exact solution that is affine in space and time
  *
  * @tparam dim number of spatial dimensions
  */
@@ -129,178 +267,41 @@ public:
   mfem::Vector initial_displacement; /// Constant part of solution. Rigid body displacement.
 };
 
-/**
- * @brief Specify the kinds of boundary condition to apply
- */
-enum class PatchBoundaryCondition { Essential, Mixed_essential_and_natural };
-
-/**
- * @brief Get boundary attributes for patch meshes on which to apply essential boundary conditions
- *
- * Parameterizes patch tests boundary conditions, as either essential
- * boundary conditions or partly essential boundary conditions and
- * partly natural boundary conditions. The return values are specific
- * to the meshes "patch2d.mesh" and "patch3d.mesh". The particular
- * portions of the boundary that get essential boundary conditions
- * are arbitrarily chosen.
- *
- * @tparam dim Spatial dimension
- *
- * @param b Kind of boundary conditions to apply in the problem
- * @return std::set<int> Boundary attributes for the essential boundary condition
- */
-template <int dim>
-std::set<int> essentialBoundaryAttributes(PatchBoundaryCondition bc)
-{
-  std::set<int> essential_boundaries;
-  if constexpr (dim == 2) {
-    switch (bc) {
-      case PatchBoundaryCondition::Essential:
-        essential_boundaries = {1, 2, 3, 4};
-        break;
-      case PatchBoundaryCondition::Mixed_essential_and_natural:
-        essential_boundaries = {1, 4};
-        break;
-    }
-  } else {
-    switch (bc) {
-      case PatchBoundaryCondition::Essential:
-        essential_boundaries = {1, 2, 3, 4, 5, 6};
-        break;
-      case PatchBoundaryCondition::Mixed_essential_and_natural:
-        essential_boundaries = {1, 2};
-        break;
-    }
-  }
-  return essential_boundaries;
-}
-
-/**
- * @brief Solve problem and compare numerical solution to exact answer
- *
- * @tparam p Polynomial degree of finite element approximation
- * @tparam dim Number of spatial dimensions
- * @tparam ExactSolution A class that satisfies the exact solution concept
- *
- * @param exact_displacement Exact solution of problem
- * @param bc Specifier for boundary condition type to test
- * @return double L2 norm (continuous) of error in computed solution
- * *
- * @pre ExactSolution must implement operator() that is an MFEM
- * coefficient-generating function
- * @pre ExactSolution must have a method applyLoads that applies forcing terms to the
- * solid functional that should lead to the exact solution
- * See AffineSolution for an example
- */
-template <int p, int dim, typename ExactSolution>
-double dynamic_solution_error(const ExactSolution& exact_displacement, PatchBoundaryCondition bc)
-{
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  // Create DataStore
-  axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "solid_functional_dynamic_solve");
-
-  // BT: shouldn't this assertion be in the physics module?
-  // Putting it here prevents tests from having a nonsensical spatial dimension value, 
-  // but the physics module should be catching this error to protect users.
-  static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for solid functional test");
-
-  std::string filename = std::string(SERAC_REPO_DIR) +  "/data/meshes/patch" + std::to_string(dim) + "D.mesh";
-  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename));
-  serac::StateManager::setMesh(std::move(mesh));
-
-  // Construct a functional-based solid mechanics solver
-  auto solver_options = direct_dynamic_options;
-  solver_options.nonlinear.abs_tol = 1e-13;
-  solver_options.nonlinear.rel_tol = 1e-13;
-  solver_options.dynamic->timestepper = TimestepMethod::Newmark;
-  solver_options.dynamic->enforcement_method = DirichletEnforcementMethod::DirectControl;
-  SolidFunctional<p, dim> solid_functional(solver_options, GeometricNonlinearities::On, "solid_functional");
-
-  solid_mechanics::NeoHookean mat{.density=1.0, .K=1.0, .G=1.0};
-  solid_functional.setMaterial(mat);
-
-  // set initial conditions
-  solid_functional.setVelocity(
-    [exact_displacement](const mfem::Vector& x, mfem::Vector& v) {
-      exact_displacement.velocity(x, 0.0, v);
-    });
-  
-  solid_functional.setDisplacement(
-    [exact_displacement](const mfem::Vector& x, mfem::Vector& u) {
-      exact_displacement(x, 0.0, u);
-    });
-
-  exact_displacement.applyLoads(mat, solid_functional, essentialBoundaryAttributes<dim>(bc));
-
-  // Finalize the data structures
-  solid_functional.completeSetup();
-
-  // Perform the quasi-static solve
-  double dt = 1.0;
-  for (int i = 0; i < 1; i++) {
-    solid_functional.advanceTimestep(dt);
-
-    // Output solution for debugging
-    solid_functional.outputState("paraview_output");
-    std::cout << "cycle " << i << std::endl;
-    std::cout << "time = " << solid_functional.time() << std::endl;
-    std::cout << "displacement =\n";
-    solid_functional.displacement().Print(std::cout);
-    std::cout << "forces =\n";
-    solid_functional.reactions().Print();
-    tensor<double, dim> resultant = make_tensor<dim>([&](int j) {
-      double y = 0;
-      for (int n = 0; n < solid_functional.reactions().Size()/dim; n++) {
-        y += solid_functional.reactions()(dim*n + j);
-      }
-      return y;
-    });
-    std::cout << "resultant = " << resultant << std::endl;
-  }
-
-  // Compute norm of error
-  mfem::VectorFunctionCoefficient exact_solution_coef(dim, exact_displacement);
-  exact_solution_coef.SetTime(solid_functional.time());
-  return computeL2Error(solid_functional.displacement(), exact_solution_coef);
-}
-
 const double tol = 1e-12;
 
-// TEST(SolidFunctional, PatchTest2dQ1EssentialBcs)
-// {
-//   constexpr int p = 1;
-//   constexpr int dim = 2;
-//   double error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
-//   EXPECT_LT(error, tol);
-// }
+TEST(SolidFunctionalDynamic, PatchTest2dQ1EssentialBcs)
+{
+  constexpr int p = 1;
+  constexpr int dim = 2;
+  double error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
+  EXPECT_LT(error, tol);
+}
 
-// TEST(SolidFunctional, PatchTest3dQ1EssentialBcs)
-// {
-//   constexpr int p = 1;
-//   constexpr int dim   = 3;
-//   double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
-//   EXPECT_LT(error, tol);
-// }
+TEST(SolidFunctionalDynamic, PatchTest3dQ1EssentialBcs)
+{
+  constexpr int p = 1;
+  constexpr int dim   = 3;
+  double error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
+  EXPECT_LT(error, tol);
+}
 
-// TEST(SolidFunctional, PatchTest2dQ2EssentialBcs)
-// {
-//   constexpr int p = 2;
-//   constexpr int dim   = 2;
-//   double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
-//   EXPECT_LT(error, tol);
-// }
+TEST(SolidFunctionalDynamic, PatchTest2dQ2EssentialBcs)
+{
+  constexpr int p = 2;
+  constexpr int dim   = 2;
+  double error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
+  EXPECT_LT(error, tol);
+}
 
-// TEST(SolidFunctional, PatchTest3dQ2EssentialBcs)
-// {
-//   constexpr int p = 2;
-//   constexpr int dim   = 3;
-//   double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
-//   EXPECT_LT(error, tol);
-// }
+TEST(SolidFunctionalDynamic, PatchTest3dQ2EssentialBcs)
+{
+  constexpr int p = 2;
+  constexpr int dim   = 3;
+  double error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
+  EXPECT_LT(error, tol);
+}
 
-TEST(SolidFunctional, PatchTest2dQ1TractionBcs)
+TEST(SolidFunctionalDynamic, PatchTest2dQ1TractionBcs)
 {
   constexpr int p = 1;
   constexpr int dim   = 2;
@@ -308,29 +309,29 @@ TEST(SolidFunctional, PatchTest2dQ1TractionBcs)
   EXPECT_LT(error, tol);
 }
 
-// TEST(SolidFunctional, PatchTest3dQ1TractionBcs)
-// {
-//   constexpr int p = 1;
-//   constexpr int dim   = 3;
-//   double error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
-//   EXPECT_LT(error, tol);
-// }
+TEST(SolidFunctionalDynamic, PatchTest3dQ1TractionBcs)
+{
+  constexpr int p = 1;
+  constexpr int dim   = 3;
+  double error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+  EXPECT_LT(error, tol);
+}
 
-// TEST(SolidFunctional, PatchTest2dQ2TractionBcs)
-// {
-//   constexpr int p = 2;
-//   constexpr int dim   = 2;
-//   double error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
-//   EXPECT_LT(error, tol);
-// }
+TEST(SolidFunctionalDynamic, PatchTest2dQ2TractionBcs)
+{
+  constexpr int p = 2;
+  constexpr int dim   = 2;
+  double error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+  EXPECT_LT(error, tol);
+}
 
-// TEST(SolidFunctional, PatchTest3dQ2TractionBcs)
-// {
-//   constexpr int p = 2;
-//   constexpr int dim   = 3;
-//   double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
-//   EXPECT_LT(error, tol);
-// }
+TEST(SolidFunctionalDynamic, PatchTest3dQ2TractionBcs)
+{
+  constexpr int p = 2;
+  constexpr int dim   = 3;
+  double error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+  EXPECT_LT(error, tol);
+}
 
 }  // namespace serac
 
