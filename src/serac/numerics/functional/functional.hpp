@@ -202,7 +202,7 @@ public:
    */
   Functional(mfem::ParFiniteElementSpace*                               test_fes,
              std::array<mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
-      : test_space_(test_fes), trial_space_(trial_fes)
+      : update_qdata(false), test_space_(test_fes), trial_space_(trial_fes)
   {
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
       P_trial_[i] = trial_space_[i]->GetProlongationMatrix();
@@ -458,7 +458,9 @@ public:
 
     if (bdr_integrals_.size() > 0) {
       for (uint32_t i = 0; i < num_trial_spaces; i++) {
-        G_trial_boundary_[i]->Mult(input_L_[i], input_E_boundary_[i]);
+        if (!isL2(*trial_space_[i])) {
+          G_trial_boundary_[i]->Mult(input_L_[i], input_E_boundary_[i]);
+        }
       }
 
       output_E_boundary_ = 0.0;

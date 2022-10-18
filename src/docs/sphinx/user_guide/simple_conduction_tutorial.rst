@@ -3,9 +3,9 @@
 .. ##
 .. ## SPDX-License-Identifier: (BSD-3-Clause)
 
-##########################
-Simple Conduction Tutorial
-##########################
+#############################
+Simple Heat Transfer Tutorial
+#############################
 
 This tutorial provides an introduction to running simulations with Serac and demonstrates
 the setup of a simple steady-state thermal conduction problem.  The tutorial also provides

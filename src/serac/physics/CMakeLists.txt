@@ -20,20 +20,20 @@ endif()
 
 set(physics_sources
     base_physics.cpp
-    solid.cpp
-    thermal_conduction.cpp
-    thermal_solid.cpp
+    solid_legacy.cpp
+    thermal_conduction_legacy.cpp
+    thermal_solid_legacy.cpp
     )
 
 set(physics_headers
     base_physics.hpp
     common.hpp
-    solid.hpp
-    solid_functional.hpp
-    thermal_conduction.hpp
-    thermal_conduction_functional.hpp
-    thermal_mechanics_functional.hpp
-    thermal_solid.hpp
+    solid_legacy.hpp
+    solid_mechanics.hpp
+    thermal_conduction_legacy.hpp
+    heat_transfer.hpp
+    thermomechanics.hpp
+    thermal_solid_legacy.hpp
     )
 
 set(physics_dependencies
