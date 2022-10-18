@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/solid_functional.hpp"
+#include "serac/physics/solid_mechanics.hpp"
 
 #include <functional>
 #include <set>
@@ -16,7 +16,7 @@
 
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/state/state_manager.hpp"
-#include "serac/physics/materials/solid_functional_material.hpp"
+#include "serac/physics/materials/solid_material.hpp"
 #include "serac/serac_config.hpp"
 
 namespace serac {
@@ -72,45 +72,45 @@ double dynamic_solution_error(const ExactSolution& exact_solution, PatchBoundary
   solver_options.nonlinear.rel_tol = 1e-13;
   solver_options.dynamic->timestepper = TimestepMethod::Newmark;
   solver_options.dynamic->enforcement_method = DirichletEnforcementMethod::DirectControl;
-  SolidFunctional<p, dim> solid_functional(solver_options, GeometricNonlinearities::On, "solid_functional");
+  SolidMechanics<p, dim> solid(solver_options, GeometricNonlinearities::On, "solid_dynamics");
 
   solid_mechanics::NeoHookean mat{.density=1.0, .K=1.0, .G=1.0};
-  solid_functional.setMaterial(mat);
+  solid.setMaterial(mat);
 
   // initial conditions
-  solid_functional.setVelocity(
+  solid.setVelocity(
     [exact_solution](const mfem::Vector& x, mfem::Vector& v) {
       exact_solution.velocity(x, 0.0, v);
     });
 
-  solid_functional.setDisplacement(
+  solid.setDisplacement(
     [exact_solution](const mfem::Vector& x, mfem::Vector& u) {
       exact_solution(x, 0.0, u);
     });
 
   // forcing terms
-  exact_solution.applyLoads(mat, solid_functional, essentialBoundaryAttributes<dim>(bc));
+  exact_solution.applyLoads(mat, solid, essentialBoundaryAttributes<dim>(bc));
 
   // Finalize the data structures
-  solid_functional.completeSetup();
+  solid.completeSetup();
 
   // Integrate in time
   double dt = 1.0;
   for (int i = 0; i < 1; i++) {
-    solid_functional.advanceTimestep(dt);
+    solid.advanceTimestep(dt);
 
     // Output solution for debugging
-    // solid_functional.outputState("paraview_output");
+    // solid.outputState("paraview_output");
     // std::cout << "cycle " << i << std::endl;
-    // std::cout << "time = " << solid_functional.time() << std::endl;
+    // std::cout << "time = " << solid.time() << std::endl;
     // std::cout << "displacement =\n";
-    // solid_functional.displacement().Print(std::cout);
+    // solid.displacement().Print(std::cout);
     // std::cout << "forces =\n";
-    // solid_functional.reactions().Print();
+    // solid.reactions().Print();
     // tensor<double, dim> resultant = make_tensor<dim>([&](int j) {
     //   double y = 0;
-    //   for (int n = 0; n < solid_functional.reactions().Size()/dim; n++) {
-    //     y += solid_functional.reactions()(dim*n + j);
+    //   for (int n = 0; n < solid.reactions().Size()/dim; n++) {
+    //     y += solid.reactions()(dim*n + j);
     //   }
     //   return y;
     // });
@@ -119,8 +119,8 @@ double dynamic_solution_error(const ExactSolution& exact_solution, PatchBoundary
 
   // Compute norm of error
   mfem::VectorFunctionCoefficient exact_solution_coef(dim, exact_solution);
-  exact_solution_coef.SetTime(solid_functional.time());
-  return computeL2Error(solid_functional.displacement(), exact_solution_coef);
+  exact_solution_coef.SetTime(solid.time());
+  return computeL2Error(solid.displacement(), exact_solution_coef);
 }
 
 /**
@@ -223,17 +223,17 @@ public:
    * @tparam Material Type of the material model used in the problem
    *
    * @param material Material model used in the problem
-   * @param sf The SolidFunctional module for the problem
+   * @param solid The SolidMechanics module for the problem
    * @param essential_boundaries Boundary attributes on which essential boundary conditions are desired
    */
   template <int p, typename Material>
-  void applyLoads(const Material& material, SolidFunctional<p, dim>& sf, std::set<int> essential_boundaries) const
+  void applyLoads(const Material& material, SolidMechanics<p, dim>& solid, std::set<int> essential_boundaries) const
   {
     // essential BCs
     auto ebc_func = [*this](const auto& X, double t, auto& u){ 
       this->operator()(X, t, u);
       };
-    sf.setDisplacementBCs(essential_boundaries, ebc_func);
+    solid.setDisplacementBCs(essential_boundaries, ebc_func);
 
     // natural BCs
     auto Hdot = make_tensor<dim, dim>([&](int i, int j) { return disp_grad_rate(i,j); });
@@ -262,7 +262,7 @@ public:
       auto T = dot(P, n0);
       return T; 
       };
-    sf.setPiolaTraction(traction);
+    solid.setPiolaTraction(traction);
   }
 
  private:
@@ -272,7 +272,7 @@ public:
 
 const double tol = 1e-12;
 
-TEST(SolidFunctionalDynamic, PatchTest2dQ1EssentialBcs)
+TEST(SolidMechanicsDynamic, PatchTest2dQ1EssentialBcs)
 {
   constexpr int p = 1;
   constexpr int dim = 2;
@@ -280,7 +280,7 @@ TEST(SolidFunctionalDynamic, PatchTest2dQ1EssentialBcs)
   EXPECT_LT(error, tol);
 }
 
-TEST(SolidFunctionalDynamic, PatchTest3dQ1EssentialBcs)
+TEST(SolidMechanicsDynamic, PatchTest3dQ1EssentialBcs)
 {
   constexpr int p = 1;
   constexpr int dim   = 3;
@@ -288,7 +288,7 @@ TEST(SolidFunctionalDynamic, PatchTest3dQ1EssentialBcs)
   EXPECT_LT(error, tol);
 }
 
-TEST(SolidFunctionalDynamic, PatchTest2dQ2EssentialBcs)
+TEST(SolidMechanicsDynamic, PatchTest2dQ2EssentialBcs)
 {
   constexpr int p = 2;
   constexpr int dim   = 2;
@@ -296,7 +296,7 @@ TEST(SolidFunctionalDynamic, PatchTest2dQ2EssentialBcs)
   EXPECT_LT(error, tol);
 }
 
-TEST(SolidFunctionalDynamic, PatchTest3dQ2EssentialBcs)
+TEST(SolidMechanicsDynamic, PatchTest3dQ2EssentialBcs)
 {
   constexpr int p = 2;
   constexpr int dim   = 3;
@@ -304,7 +304,7 @@ TEST(SolidFunctionalDynamic, PatchTest3dQ2EssentialBcs)
   EXPECT_LT(error, tol);
 }
 
-TEST(SolidFunctionalDynamic, PatchTest2dQ1TractionBcs)
+TEST(SolidMechanicsDynamic, PatchTest2dQ1TractionBcs)
 {
   constexpr int p = 1;
   constexpr int dim   = 2;
@@ -312,7 +312,7 @@ TEST(SolidFunctionalDynamic, PatchTest2dQ1TractionBcs)
   EXPECT_LT(error, tol);
 }
 
-TEST(SolidFunctionalDynamic, PatchTest3dQ1TractionBcs)
+TEST(SolidMechanicsDynamic, PatchTest3dQ1TractionBcs)
 {
   constexpr int p = 1;
   constexpr int dim   = 3;
@@ -320,7 +320,7 @@ TEST(SolidFunctionalDynamic, PatchTest3dQ1TractionBcs)
   EXPECT_LT(error, tol);
 }
 
-TEST(SolidFunctionalDynamic, PatchTest2dQ2TractionBcs)
+TEST(SolidMechanicsDynamic, PatchTest2dQ2TractionBcs)
 {
   constexpr int p = 2;
   constexpr int dim   = 2;
@@ -328,7 +328,7 @@ TEST(SolidFunctionalDynamic, PatchTest2dQ2TractionBcs)
   EXPECT_LT(error, tol);
 }
 
-TEST(SolidFunctionalDynamic, PatchTest3dQ2TractionBcs)
+TEST(SolidMechanicsDynamic, PatchTest3dQ2TractionBcs)
 {
   constexpr int p = 2;
   constexpr int dim   = 3;
