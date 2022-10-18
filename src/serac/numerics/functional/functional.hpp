@@ -458,7 +458,9 @@ public:
 
     if (bdr_integrals_.size() > 0) {
       for (uint32_t i = 0; i < num_trial_spaces; i++) {
-        G_trial_boundary_[i]->Mult(input_L_[i], input_E_boundary_[i]);
+        if (!isL2(*trial_space_[i])) {
+          G_trial_boundary_[i]->Mult(input_L_[i], input_E_boundary_[i]);
+        }
       }
 
       output_E_boundary_ = 0.0;
