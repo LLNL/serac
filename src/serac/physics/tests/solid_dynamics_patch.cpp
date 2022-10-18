@@ -96,7 +96,7 @@ double dynamic_solution_error(const ExactSolution& exact_solution, PatchBoundary
 
   // Integrate in time
   double dt = 1.0;
-  for (int i = 0; i < 1; i++) {
+  for (int i = 0; i < 3; i++) {
     solid.advanceTimestep(dt);
 
     // Output solution for debugging
