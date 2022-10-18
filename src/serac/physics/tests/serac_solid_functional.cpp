@@ -167,7 +167,7 @@ void functional_solid_test_static_J2()
   // this a qualitative test that just verifies
   // that plasticity models can have permanent
   // deformation after unloading
-  // EXPECT_LT(norm(solid_solver.nodalForces()), 1.0e-5);
+  // EXPECT_LT(norm(solid_solver.reactions()), 1.0e-5);
 }
 
 template <int p, int dim>

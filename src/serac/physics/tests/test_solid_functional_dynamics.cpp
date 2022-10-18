@@ -248,11 +248,11 @@ double dynamic_solution_error(const ExactSolution& exact_displacement, PatchBoun
     std::cout << "displacement =\n";
     solid_functional.displacement().Print(std::cout);
     std::cout << "forces =\n";
-    solid_functional.nodalForces().Print();
+    solid_functional.reactions().Print();
     tensor<double, dim> resultant = make_tensor<dim>([&](int j) {
       double y = 0;
-      for (int n = 0; n < solid_functional.nodalForces().Size()/dim; n++) {
-        y += solid_functional.nodalForces()(dim*n + j);
+      for (int n = 0; n < solid_functional.reactions().Size()/dim; n++) {
+        y += solid_functional.reactions()(dim*n + j);
       }
       return y;
     });
@@ -315,7 +315,7 @@ TEST(SolidFunctional, PatchTest2dQ1TractionBcs)
 // {
 //   constexpr int p = 1;
 //   constexpr int dim   = 3;
-//   double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+//   double error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
 //   EXPECT_LT(error, tol);
 // }
 
@@ -323,7 +323,7 @@ TEST(SolidFunctional, PatchTest2dQ1TractionBcs)
 // {
 //   constexpr int p = 2;
 //   constexpr int dim   = 2;
-//   double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+//   double error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
 //   EXPECT_LT(error, tol);
 // }
 
