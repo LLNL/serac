@@ -345,9 +345,9 @@ double first_order_ode_test(int nsteps, ode_type type, constraint_type constrain
 double second_order_ode_test(int nsteps, ode_type type, constraint_type constraint, TimestepMethod timestepper,
                              DirichletEnforcementMethod enforcement)
 {
-  double t  = 0.0;
+  double t                      = 0.0;
   double ode_residual_eval_time = 0.0;
-  double dt = 1.0 / nsteps;
+  double dt                     = 1.0 / nsteps;
   double c0, c1;
 
   mfem::Vector x(3);
@@ -412,7 +412,8 @@ double second_order_ode_test(int nsteps, ode_type type, constraint_type constrai
   solver.SetOperator(residual);
 
   SecondOrderODE ode(dummy.space().TrueVSize(),
-                     {.time = ode_residual_eval_time, .c0 = c0, .c1 = c1, .u = x, .du_dt = dx_dt, .d2u_dt2 = previous}, solver, bcs);
+                     {.time = ode_residual_eval_time, .c0 = c0, .c1 = c1, .u = x, .du_dt = dx_dt, .d2u_dt2 = previous},
+                     solver, bcs);
 
   ode.SetTimestepper(timestepper);
   ode.SetEnforcementMethod(enforcement);
