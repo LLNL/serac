@@ -1,7 +1,3 @@
--- _output_type_start
-output_type = "ParaView"
--- _output_type_end
-
 -- Mesh information
 -- _mesh_start
 main_mesh = {
