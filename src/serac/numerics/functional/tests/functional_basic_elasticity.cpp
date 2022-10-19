@@ -34,10 +34,10 @@ void weird_mixed_test(){
 
   std::string meshfile;
   if (dim == 2) {
-    meshfile = SERAC_REPO_DIR "/data/meshes/star.mesh";
+    meshfile = SERAC_REPO_DIR "/data/meshes/patch2D.mesh";
   }
   if (dim == 3) {
-    meshfile = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+    meshfile = SERAC_REPO_DIR "/data/meshes/patch3D.mesh";
   }
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(meshfile));
@@ -51,6 +51,8 @@ void weird_mixed_test(){
   Functional<test_space(trial_space)> residual(test_fes, {trial_fes});
 
   auto d11 = 1.0 * make_tensor< dim+1, dim, dim+2, dim >([](int i, int j, int k, int l){ return i - j + 2 * k - 3 * l; });
+
+  auto s11 = 1.0 * make_tensor< dim+1, dim+2 >([](int i, int j){ return i * i - j; });
 
   // note: this is not really an elasticity problem, it's testing source and flux
   // terms that have the appropriate shapes to ensure that all the differentiation
@@ -66,11 +68,11 @@ void weird_mixed_test(){
       },
       *mesh);
 
-  //residual.AddBoundaryIntegral(Dimension<dim-1>{}, DependsOn<0>{}, [=](auto x, auto /*n*/, auto displacement) { 
-  //      auto [u, du_dxi] = displacement;
-  //      return u * x[0]; 
-  //    }, 
-  //    *mesh);
+    residual.AddBoundaryIntegral(Dimension<dim-1>{}, DependsOn<0>{}, [=](auto x, auto /*n*/, auto displacement) { 
+          auto [u, du_dxi] = displacement;
+          return dot(s11, u) * x[0]; 
+        }, 
+        *mesh);
 
   check_gradient(residual, U);
 
@@ -135,8 +137,9 @@ void elasticity_test(){
 }
 
 TEST(basic, weird_mixed_test_2D) { weird_mixed_test<1, 2>(); }
+TEST(basic, weird_mixed_test_3D) { weird_mixed_test<1, 3>(); }
 
-//TEST(basic, elasticity_test_2D) { elasticity_test<1, 2>(); }
+TEST(basic, elasticity_test_2D) { elasticity_test<1, 2>(); }
 TEST(basic, elasticity_test_3D) { elasticity_test<2, 3>(); }
 
 int main(int argc, char* argv[])

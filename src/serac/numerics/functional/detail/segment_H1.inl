@@ -71,6 +71,33 @@ struct finite_element<Geometry::Segment, H1<p, c> > {
     return G;
   }
 
+  template <typename T, int q>
+  static auto batch_apply_shape_fn(int jx, tensor< T, q > input, const TensorProductQuadratureRule<q>&)
+  {
+    static constexpr bool apply_weights = false;
+    static constexpr auto B = calculate_B<apply_weights, q>();
+    static constexpr auto G = calculate_G<apply_weights, q>();
+
+    using source_t = decltype(get<0>(get<0>(T{})) + get<1>(get<0>(T{})));
+    using flux_t   = decltype(get<0>(get<1>(T{})) + get<1>(get<1>(T{})));
+
+    tensor< tuple< source_t, flux_t >, q > output;
+
+    for (int qx = 0; qx < q; qx++) {
+      double phi_j = B(qx, jx);
+      double dphi_j_dxi = G(qx, jx);
+
+      auto & d00 = get<0>(get<0>(input(qx)));
+      auto & d01 = get<1>(get<0>(input(qx)));
+      auto & d10 = get<0>(get<1>(input(qx)));
+      auto & d11 = get<1>(get<1>(input(qx)));
+
+      output[qx] = {d00 * phi_j + d01 * dphi_j_dxi, d10 * phi_j + d11 * dphi_j_dxi};
+    }
+
+    return output;
+  }
+
   template <int q>
   static auto interpolate(const dof_type& X, const TensorProductQuadratureRule<q>&)
   {
@@ -107,28 +134,36 @@ struct finite_element<Geometry::Segment, H1<p, c> > {
   }
 
   template <typename source_type, typename flux_type, int q>
-  static void integrate(tensor< tuple< source_type, flux_type >, q > & qf_output, const TensorProductQuadratureRule<q>&,
-                        dof_type&                             element_residual)
+  static void integrate(const tensor< tuple< source_type, flux_type >, q > & qf_output, const TensorProductQuadratureRule<q>&,
+                        dof_type * element_residual,
+                        [[maybe_unused]] int step = 1)
   {
+
+    if constexpr (is_zero<source_type>{} && is_zero<flux_type>{}) { return; }
+
+    constexpr int ntrial = std::max(size(source_type{}), size(flux_type{}) / dim) / c;
+
+    using s_buffer_type = std::conditional_t< is_zero<source_type>{}, zero, tensor<double, q> >;
+    using f_buffer_type = std::conditional_t< is_zero<  flux_type>{}, zero, tensor<double, q> >;
+
     static constexpr bool apply_weights = true;
     static constexpr auto B = calculate_B<apply_weights, q>();
     static constexpr auto G = calculate_G<apply_weights, q>();
 
-    // transpose the quadrature data back into a tuple of tensors
-    tensor< double, c, q> source{};
-    tensor< double, c, q> flux{};
+    std::cout << ntrial << " " << c << std::endl;
 
-    for (int qx = 0; qx < q; qx++) {
-      tensor< double, c > s{get<SOURCE>(qf_output[qx])};
-      tensor< double, c > f{get<FLUX>(qf_output[qx])};
+    for (int j = 0; j < ntrial; j++) {
       for (int i = 0; i < c; i++) {
-        source(i, qx) = s[i];
-        flux(i, qx) = f[i];
-      }
-    }
+        s_buffer_type source;
+        f_buffer_type flux;
 
-    for (int i = 0; i < c; i++) {
-      element_residual(i) += dot(source(i), B) + dot(flux(i), G);
+        for (int qx = 0; qx < q; qx++) {
+          source(qx) = reinterpret_cast< const double * >(&get<SOURCE>(qf_output[qx]))[i * ntrial + j];
+          flux(qx) = reinterpret_cast< const double * >(&get<FLUX>(qf_output[qx]))[i * ntrial + j];
+        }
+
+        element_residual[j](i) += dot(source, B) + dot(flux, G);
+      }
     }
 
   }

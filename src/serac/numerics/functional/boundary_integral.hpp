@@ -101,12 +101,12 @@ public:
 
         // note: this lambda function captures ptr by-value to extend its lifetime
         //                        vvv
-        action_of_gradient_[i] = [ptr, qf_derivatives, num_elements, J](const mfem::Vector& dU, mfem::Vector& dR) {
-          action_of_gradient_kernel<geometry, test, which_trial_space, Q>(dU, dR, qf_derivatives, J, num_elements);
+        action_of_gradient_[i] = [ptr, qf_derivatives, num_elements](const mfem::Vector& dU, mfem::Vector& dR) {
+          action_of_gradient_kernel<geometry, test, which_trial_space, Q>(dU, dR, qf_derivatives, num_elements);
         };
 
-        element_gradient_[i] = [qf_derivatives, num_elements, J](CPUArrayView<double, 3> K_e) {
-          element_gradient_kernel<geometry, test, which_trial_space, Q>(K_e, qf_derivatives, J, num_elements);
+        element_gradient_[i] = [qf_derivatives, num_elements](CPUArrayView<double, 3> K_e) {
+          element_gradient_kernel_new<geometry, test, which_trial_space, Q>(K_e, qf_derivatives, num_elements);
         };
       });
     }

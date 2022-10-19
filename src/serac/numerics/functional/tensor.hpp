@@ -129,7 +129,7 @@ struct zero {
 
   /** @brief `zero` can be accessed like a multidimensional array */
   template <typename... T>
-  SERAC_HOST_DEVICE auto operator()(T...)
+  SERAC_HOST_DEVICE auto operator()(T...) const
   {
     return zero{};
   }
