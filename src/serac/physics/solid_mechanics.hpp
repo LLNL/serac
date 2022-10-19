@@ -464,7 +464,7 @@ public:
           // per unit volume in the reference configuration
           auto p     = get<VALUE>(shape);
           auto dp_dX = get<DERIVATIVE>(shape);
-          return -1.0 * serac::tuple{body_force(x + p, ode_time_point_, params...) * det(dp_dX + I), zero{}};
+          return serac::tuple{-1.0 * body_force(x + p, ode_time_point_, params...) * det(dp_dX + I), zero{}};
         },
         mesh_);
   }
