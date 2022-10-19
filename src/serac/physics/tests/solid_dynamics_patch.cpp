@@ -33,6 +33,47 @@ enum class PatchBoundaryCondition
 };
 
 /**
+ * @brief Get boundary attributes for patch meshes on which to apply essential boundary conditions
+ *
+ * Parameterizes patch tests boundary conditions, as either essential
+ * boundary conditions or partly essential boundary conditions and
+ * partly natural boundary conditions. The return values are specific
+ * to the meshes "patch2d.mesh" and "patch3d.mesh". The particular
+ * portions of the boundary that get essential boundary conditions
+ * are arbitrarily chosen.
+ *
+ * @tparam dim Spatial dimension
+ *
+ * @param b Kind of boundary conditions to apply in the problem
+ * @return std::set<int> Boundary attributes for the essential boundary condition
+ */
+template <int dim>
+std::set<int> essentialBoundaryAttributes(PatchBoundaryCondition bc)
+{
+  std::set<int> essential_boundaries;
+  if constexpr (dim == 2) {
+    switch (bc) {
+      case PatchBoundaryCondition::Essential:
+        essential_boundaries = {1, 2, 3, 4};
+        break;
+      case PatchBoundaryCondition::MixedEssentialAndNatural:
+        essential_boundaries = {1, 4};
+        break;
+    }
+  } else {
+    switch (bc) {
+      case PatchBoundaryCondition::Essential:
+        essential_boundaries = {1, 2, 3, 4, 5, 6};
+        break;
+      case PatchBoundaryCondition::MixedEssentialAndNatural:
+        essential_boundaries = {1, 2};
+        break;
+    }
+  }
+  return essential_boundaries;
+}
+
+/**
  * @brief Solve problem and compare numerical solution to exact answer
  *
  * @tparam p Polynomial degree of finite element approximation
@@ -119,47 +160,6 @@ double dynamic_solution_error(const ExactSolution& exact_solution, PatchBoundary
   mfem::VectorFunctionCoefficient exact_solution_coef(dim, exact_solution);
   exact_solution_coef.SetTime(solid.time());
   return computeL2Error(solid.displacement(), exact_solution_coef);
-}
-
-/**
- * @brief Get boundary attributes for patch meshes on which to apply essential boundary conditions
- *
- * Parameterizes patch tests boundary conditions, as either essential
- * boundary conditions or partly essential boundary conditions and
- * partly natural boundary conditions. The return values are specific
- * to the meshes "patch2d.mesh" and "patch3d.mesh". The particular
- * portions of the boundary that get essential boundary conditions
- * are arbitrarily chosen.
- *
- * @tparam dim Spatial dimension
- *
- * @param b Kind of boundary conditions to apply in the problem
- * @return std::set<int> Boundary attributes for the essential boundary condition
- */
-template <int dim>
-std::set<int> essentialBoundaryAttributes(PatchBoundaryCondition bc)
-{
-  std::set<int> essential_boundaries;
-  if constexpr (dim == 2) {
-    switch (bc) {
-      case PatchBoundaryCondition::Essential:
-        essential_boundaries = {1, 2, 3, 4};
-        break;
-      case PatchBoundaryCondition::MixedEssentialAndNatural:
-        essential_boundaries = {1, 4};
-        break;
-    }
-  } else {
-    switch (bc) {
-      case PatchBoundaryCondition::Essential:
-        essential_boundaries = {1, 2, 3, 4, 5, 6};
-        break;
-      case PatchBoundaryCondition::MixedEssentialAndNatural:
-        essential_boundaries = {1, 2};
-        break;
-    }
-  }
-  return essential_boundaries;
 }
 
 // clang-format off
