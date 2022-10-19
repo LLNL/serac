@@ -38,7 +38,8 @@ SolidLegacy::SolidLegacy(int order, const SolverOptions& options, GeometricNonli
                                                         .name       = detail::addPrefix(name, "adjoint_displacement")}),
       geom_nonlin_(geom_nonlin),
       keep_deformation_(keep_deformation),
-      ode2_(displacement_.space().TrueVSize(), {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
+      ode2_(displacement_.space().TrueVSize(),
+            {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
             nonlin_solver_, bcs_)
 {
   state_.push_back(velocity_);

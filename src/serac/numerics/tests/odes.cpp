@@ -410,8 +410,8 @@ double second_order_ode_test(int nsteps, ode_type type, constraint_type constrai
   EquationSolver solver(MPI_COMM_WORLD, linear_options, nonlinear_options);
   solver.SetOperator(residual);
 
-  SecondOrderODE ode(dummy.space().TrueVSize(), {.time = t, .c0 = c0, .c1 = c1, .u = x, .du_dt = dx_dt, .d2u_dt2 = previous},
-                     solver, bcs);
+  SecondOrderODE ode(dummy.space().TrueVSize(),
+                     {.time = t, .c0 = c0, .c1 = c1, .u = x, .du_dt = dx_dt, .d2u_dt2 = previous}, solver, bcs);
 
   ode.SetTimestepper(timestepper);
   ode.SetEnforcementMethod(enforcement);

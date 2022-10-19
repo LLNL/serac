@@ -26,7 +26,11 @@ using solid_mechanics::direct_dynamic_options;
 /**
  * @brief Specify the kinds of boundary condition to apply
  */
-enum class PatchBoundaryCondition { Essential, Mixed_essential_and_natural };
+enum class PatchBoundaryCondition
+{
+  Essential,
+  Mixed_essential_and_natural
+};
 
 /**
  * @brief Solve problem and compare numerical solution to exact answer
@@ -58,35 +62,29 @@ double dynamic_solution_error(const ExactSolution& exact_solution, PatchBoundary
   serac::StateManager::initialize(datastore, "solid_functional_dynamic_solve");
 
   // BT: shouldn't this assertion be in the physics module?
-  // Putting it here prevents tests from having a nonsensical spatial dimension value, 
+  // Putting it here prevents tests from having a nonsensical spatial dimension value,
   // but the physics module should be catching this error to protect users.
   static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for solid functional test");
 
-  std::string filename = std::string(SERAC_REPO_DIR) +  "/data/meshes/patch" + std::to_string(dim) + "D.mesh";
-  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename));
+  std::string filename = std::string(SERAC_REPO_DIR) + "/data/meshes/patch" + std::to_string(dim) + "D.mesh";
+  auto        mesh     = mesh::refineAndDistribute(buildMeshFromFile(filename));
   serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a functional-based solid mechanics solver
-  auto solver_options = direct_dynamic_options;
-  solver_options.nonlinear.abs_tol = 1e-13;
-  solver_options.nonlinear.rel_tol = 1e-13;
-  solver_options.dynamic->timestepper = TimestepMethod::Newmark;
+  auto solver_options                        = direct_dynamic_options;
+  solver_options.nonlinear.abs_tol           = 1e-13;
+  solver_options.nonlinear.rel_tol           = 1e-13;
+  solver_options.dynamic->timestepper        = TimestepMethod::Newmark;
   solver_options.dynamic->enforcement_method = DirichletEnforcementMethod::DirectControl;
   SolidMechanics<p, dim> solid(solver_options, GeometricNonlinearities::On, "solid_dynamics");
 
-  solid_mechanics::NeoHookean mat{.density=1.0, .K=1.0, .G=1.0};
+  solid_mechanics::NeoHookean mat{.density = 1.0, .K = 1.0, .G = 1.0};
   solid.setMaterial(mat);
 
   // initial conditions
-  solid.setVelocity(
-    [exact_solution](const mfem::Vector& x, mfem::Vector& v) {
-      exact_solution.velocity(x, 0.0, v);
-    });
+  solid.setVelocity([exact_solution](const mfem::Vector& x, mfem::Vector& v) { exact_solution.velocity(x, 0.0, v); });
 
-  solid.setDisplacement(
-    [exact_solution](const mfem::Vector& x, mfem::Vector& u) {
-      exact_solution(x, 0.0, u);
-    });
+  solid.setDisplacement([exact_solution](const mfem::Vector& x, mfem::Vector& u) { exact_solution(x, 0.0, u); });
 
   // forcing terms
   exact_solution.applyLoads(mat, solid, essentialBoundaryAttributes<dim>(bc));
@@ -203,10 +201,7 @@ public:
     u += initial_displacement;
   }
 
-  void velocity(const mfem::Vector& X, double /* t */, mfem::Vector& v) const
-  {
-    disp_grad_rate.Mult(X, v);
-  }
+  void velocity(const mfem::Vector& X, double /* t */, mfem::Vector& v) const { disp_grad_rate.Mult(X, v); }
 
   /**
    * @brief Apply forcing that should produce this exact displacement
@@ -230,22 +225,20 @@ public:
   void applyLoads(const Material& material, SolidMechanics<p, dim>& solid, std::set<int> essential_boundaries) const
   {
     // essential BCs
-    auto ebc_func = [*this](const auto& X, double t, auto& u){ 
-      this->operator()(X, t, u);
-      };
+    auto ebc_func = [*this](const auto& X, double t, auto& u) { this->operator()(X, t, u); };
     solid.setDisplacementBCs(essential_boundaries, ebc_func);
 
     // natural BCs
-    auto Hdot = make_tensor<dim, dim>([&](int i, int j) { return disp_grad_rate(i,j); });
+    auto Hdot     = make_tensor<dim, dim>([&](int i, int j) { return disp_grad_rate(i, j); });
     auto traction = [material, Hdot](auto, auto n0, auto t) {
-      auto H = Hdot*t;
-      typename Material::State state; // needs to be reconfigured for mats with state
+      auto                     H = Hdot * t;
+      typename Material::State state;  // needs to be reconfigured for mats with state
       tensor<double, dim, dim> sigma = material(state, H);
-      auto F = Identity<dim>() + H;
-      auto J = det(F);
-      auto P = J*dot(sigma, inv(transpose(F)));
+      auto                     F     = Identity<dim>() + H;
+      auto                     J     = det(F);
+      auto                     P     = J * dot(sigma, inv(transpose(F)));
       // We don't have a good way to restrict the tractions to the
-      // complement of the essential boundary segments. 
+      // complement of the essential boundary segments.
       // The following matches the case when the top and left surfaces
       // have essential boundary conditions:
       //
@@ -260,79 +253,83 @@ public:
       // forces reported will be zero. (Tractions get summed into reactions
       // even on essential boundary portions).
       auto T = dot(P, n0);
-      return T; 
-      };
+      return T;
+    };
     solid.setPiolaTraction(traction);
   }
 
- private:
-  mfem::DenseMatrix disp_grad_rate;  /// Linear part of solution. Equivalently, the displacement gradient rate
-  mfem::Vector initial_displacement; /// Constant part of solution. Rigid body displacement.
+private:
+  mfem::DenseMatrix disp_grad_rate;        /// Linear part of solution. Equivalently, the displacement gradient rate
+  mfem::Vector      initial_displacement;  /// Constant part of solution. Rigid body displacement.
 };
 
 const double tol = 1e-12;
 
 TEST(SolidMechanicsDynamic, PatchTest2dQ1EssentialBcs)
 {
-  constexpr int p = 1;
-  constexpr int dim = 2;
-  double error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
+  constexpr int p     = 1;
+  constexpr int dim   = 2;
+  double        error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
   EXPECT_LT(error, tol);
 }
 
 TEST(SolidMechanicsDynamic, PatchTest3dQ1EssentialBcs)
 {
-  constexpr int p = 1;
+  constexpr int p     = 1;
   constexpr int dim   = 3;
-  double error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
+  double        error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
   EXPECT_LT(error, tol);
 }
 
 TEST(SolidMechanicsDynamic, PatchTest2dQ2EssentialBcs)
 {
-  constexpr int p = 2;
+  constexpr int p     = 2;
   constexpr int dim   = 2;
-  double error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
+  double        error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
   EXPECT_LT(error, tol);
 }
 
 TEST(SolidMechanicsDynamic, PatchTest3dQ2EssentialBcs)
 {
-  constexpr int p = 2;
+  constexpr int p     = 2;
   constexpr int dim   = 3;
-  double error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
+  double        error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
   EXPECT_LT(error, tol);
 }
 
 TEST(SolidMechanicsDynamic, PatchTest2dQ1TractionBcs)
 {
-  constexpr int p = 1;
-  constexpr int dim   = 2;
-  double error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+  constexpr int p   = 1;
+  constexpr int dim = 2;
+  double        error =
+      dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
   EXPECT_LT(error, tol);
 }
 
 TEST(SolidMechanicsDynamic, PatchTest3dQ1TractionBcs)
 {
-  constexpr int p = 1;
-  constexpr int dim   = 3;
-  double error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+  constexpr int p   = 1;
+  constexpr int dim = 3;
+  double        error =
+      dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
   EXPECT_LT(error, tol);
 }
 
 TEST(SolidMechanicsDynamic, PatchTest2dQ2TractionBcs)
 {
-  constexpr int p = 2;
-  constexpr int dim   = 2;
-  double error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+  constexpr int p   = 2;
+  constexpr int dim = 2;
+  double        error =
+      dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
   EXPECT_LT(error, tol);
 }
 
 TEST(SolidMechanicsDynamic, PatchTest3dQ2TractionBcs)
 {
-  constexpr int p = 2;
-  constexpr int dim   = 3;
-  double error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+  constexpr int p   = 2;
+  constexpr int dim = 3;
+  double        error =
+      dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
   EXPECT_LT(error, tol);
 }
 
@@ -350,7 +347,7 @@ public:
   {
     acceleration(0) = 0.1;
     acceleration(1) = -0.2;
-    if constexpr(dim == 3) acceleration(2) = 0.25;
+    if constexpr (dim == 3) acceleration(2) = 0.25;
   };
 
   /**
@@ -362,7 +359,7 @@ public:
   void operator()(const mfem::Vector& /* X */, double t, mfem::Vector& u) const
   {
     u = acceleration;
-    u *= 0.5*t*t;
+    u *= 0.5 * t * t;
   }
 
   void velocity(const mfem::Vector& /* X */, double t, mfem::Vector& v) const
@@ -400,32 +397,32 @@ public:
 
     // body force
     auto a = make_tensor<dim>([*this](int i) { return this->acceleration(i); });
-    solid.addBodyForce([&material, a](auto /* X */, auto /* t */) { return material.density*a; });
+    solid.addBodyForce([&material, a](auto /* X */, auto /* t */) { return material.density * a; });
   }
 
- private:
-  mfem::Vector acceleration; /// Constant acceleration vector of solution
+private:
+  mfem::Vector acceleration;  /// Constant acceleration vector of solution
 };
 
 TEST(SolidMechanicsDynamic, ConstantAcceleration2dQ1TractionBcs)
 {
-  constexpr int p   = 1;
-  constexpr int dim = 2;
-  double error = dynamic_solution_error<p, dim>(ConstantAccelerationSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+  constexpr int p     = 1;
+  constexpr int dim   = 2;
+  double        error = dynamic_solution_error<p, dim>(ConstantAccelerationSolution<dim>(),
+                                                PatchBoundaryCondition::Mixed_essential_and_natural);
   EXPECT_LT(error, tol);
 }
 
 TEST(SolidMechanicsDynamic, ConstantAcceleration3dQ1TractionBcs)
 {
-  constexpr int p   = 1;
-  constexpr int dim = 3;
-  double error = dynamic_solution_error<p, dim>(ConstantAccelerationSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+  constexpr int p     = 1;
+  constexpr int dim   = 3;
+  double        error = dynamic_solution_error<p, dim>(ConstantAccelerationSolution<dim>(),
+                                                PatchBoundaryCondition::Mixed_essential_and_natural);
   EXPECT_LT(error, tol);
 }
 
 }  // namespace serac
-
-
 
 int main(int argc, char* argv[])
 {
