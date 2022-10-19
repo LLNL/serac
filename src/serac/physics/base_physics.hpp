@@ -188,6 +188,11 @@ protected:
   int cycle_;
 
   /**
+   * @brief The value of time at which the ODE solver wants to evaluate the residual
+   */
+  double ode_time_point_;
+
+  /**
    * @brief MPI rank
    */
   int mpi_rank_;

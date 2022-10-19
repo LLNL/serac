@@ -137,7 +137,6 @@ public:
         ode2_(displacement_.space().TrueVSize(),
               {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
               nonlin_solver_, bcs_),
-        ode_time_point_(0.0),
         c0_(0.0),
         c1_(0.0),
         geom_nonlin_(geom_nonlin),
@@ -888,9 +887,6 @@ protected:
 
   /// @brief the previous acceleration, used as a starting guess for newton's method
   mfem::Vector previous_;
-
-  /// @brief The value of time at which the ODE solver wants to evaluate the residual
-  double ode_time_point_;
 
   /// coefficient used to calculate predicted displacement: u_p := u + c0 * d2u_dt2
   double c0_;

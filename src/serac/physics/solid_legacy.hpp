@@ -581,8 +581,6 @@ protected:
    */
   mfem::Vector previous_;
 
-  double ode_time_point_;
-
   /**
    * @brief Current time step
    */
