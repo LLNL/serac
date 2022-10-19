@@ -336,6 +336,93 @@ TEST(SolidMechanicsDynamic, PatchTest3dQ2TractionBcs)
   EXPECT_LT(error, tol);
 }
 
+/**
+ * @brief Constant acceleration exact solution
+ *
+ * This test can only be passed by second-order accurate time integrators.
+ *
+ * @tparam dim number of spatial dimensions
+ */
+template <int dim>
+class ConstantAccelerationSolution {
+public:
+  ConstantAccelerationSolution() : acceleration(dim)
+  {
+    acceleration(0) = 0.1;
+    acceleration(1) = -0.2;
+    if constexpr(dim == 3) acceleration(2) = 0.25;
+  };
+
+  /**
+   * @brief MFEM-style coefficient function corresponding to this solution
+   *
+   * @param X Coordinates of point in reference configuration at which solution is sought
+   * @param u Exact solution evaluated at \p X
+   */
+  void operator()(const mfem::Vector& /* X */, double t, mfem::Vector& u) const
+  {
+    u = acceleration;
+    u *= 0.5*t*t;
+  }
+
+  void velocity(const mfem::Vector& /* X */, double t, mfem::Vector& v) const
+  {
+    v = acceleration;
+    v *= t;
+  }
+
+  /**
+   * @brief Apply forcing that should produce this exact displacement
+   *
+   * Given the physics module, apply boundary conditions and a source
+   * term that are consistent with the exact solution. This is
+   * independent of the domain. The solution is imposed as an essential
+   * boundary condition on the parts of the boundary identified by \p
+   * essential_boundaries. On the complement of
+   * \p essential_boundaries, the traction corresponding to the exact
+   * solution is applied.
+   *
+   * @tparam p Polynomial degree of the finite element approximation
+   * @tparam Material Type of the material model used in the problem
+   *
+   * @param material Material model used in the problem
+   * @param solid The SolidMechanics module for the problem
+   * @param essential_boundaries Boundary attributes on which essential boundary conditions are desired
+   */
+  template <int p, typename Material>
+  void applyLoads(const Material& material, SolidMechanics<p, dim>& solid, std::set<int> essential_boundaries) const
+  {
+    // essential BCs
+    auto ebc_func = [*this](const auto& X, double t, auto& u) { this->operator()(X, t, u); };
+    solid.setDisplacementBCs(essential_boundaries, ebc_func);
+
+    // no natural BCs
+
+    // body force
+    auto a = make_tensor<dim>([*this](int i) { return this->acceleration(i); });
+    solid.addBodyForce([&material, a](auto /* X */, auto /* t */) { return material.density*a; });
+  }
+
+ private:
+  mfem::Vector acceleration; /// Constant acceleration vector of solution
+};
+
+TEST(SolidMechanicsDynamic, ConstantAcceleration2dQ1TractionBcs)
+{
+  constexpr int p   = 1;
+  constexpr int dim = 2;
+  double error = dynamic_solution_error<p, dim>(ConstantAccelerationSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+  EXPECT_LT(error, tol);
+}
+
+TEST(SolidMechanicsDynamic, ConstantAcceleration3dQ1TractionBcs)
+{
+  constexpr int p   = 1;
+  constexpr int dim = 3;
+  double error = dynamic_solution_error<p, dim>(ConstantAccelerationSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+  EXPECT_LT(error, tol);
+}
+
 }  // namespace serac
 
 
