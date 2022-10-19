@@ -150,8 +150,6 @@ struct finite_element<Geometry::Segment, H1<p, c> > {
     static constexpr auto B = calculate_B<apply_weights, q>();
     static constexpr auto G = calculate_G<apply_weights, q>();
 
-    std::cout << ntrial << " " << c << std::endl;
-
     for (int j = 0; j < ntrial; j++) {
       for (int i = 0; i < c; i++) {
         s_buffer_type source;
@@ -162,7 +160,7 @@ struct finite_element<Geometry::Segment, H1<p, c> > {
           flux(qx) = reinterpret_cast< const double * >(&get<FLUX>(qf_output[qx]))[i * ntrial + j];
         }
 
-        element_residual[j](i) += dot(source, B) + dot(flux, G);
+        element_residual[j * step](i) += dot(source, B) + dot(flux, G);
       }
     }
 

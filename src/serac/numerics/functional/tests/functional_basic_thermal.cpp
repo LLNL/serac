@@ -69,11 +69,11 @@ void thermal_test() {
       *mesh);
 
   // TODO: reenable surface integrals
-  //residual.AddBoundaryIntegral(Dimension<1>{}, DependsOn<0>{}, [=](auto x, auto /*n*/, auto temperature) { 
-  //      auto [u, du_dxi] = temperature;
-  //      return x[0] + x[1] - cos(u); 
-  //    }, 
-  //    *mesh2D);
+  residual.AddBoundaryIntegral(Dimension<dim-1>{}, DependsOn<0>{}, [=](auto x, auto /*n*/, auto temperature) { 
+        auto [u, du_dxi] = temperature;
+        return x[0] + x[1] - cos(u); 
+      }, 
+      *mesh);
 
   check_gradient(residual, U);
 }
