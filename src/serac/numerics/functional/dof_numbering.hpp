@@ -101,7 +101,7 @@ bool isL2(const mfem::ParFiniteElementSpace& fes)
 bool compatibleWithFaceRestriction(const mfem::ParFiniteElementSpace& fes)
 {
   return !(isHcurl(fes) && fes.GetMesh()->Dimension() == 2) && !(isHcurl(fes) && fes.GetMesh()->Dimension() == 3) &&
-         !(isL2(fes));
+         !(isL2(fes)) && fes.GetMesh()->GetNBE() > 0;
 }
 
 /**

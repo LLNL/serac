@@ -12,8 +12,8 @@
 
 #pragma once
 
-#include "serac/physics/materials/hyperelastic_material.hpp"
-#include "serac/physics/materials/thermal_expansion_material.hpp"
+#include "serac/physics/materials/hyperelastic_legacy_material.hpp"
+#include "serac/physics/materials/thermal_expansion_legacy_material.hpp"
 
 #include "mfem.hpp"
 #include "axom/core.hpp"

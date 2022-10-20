@@ -50,14 +50,18 @@ public:
    */
   struct State {
     /**
-     * @brief Current time step
+     * @brief Time value at which the ODE solver wants to compute a residual
+     */
+    double& time;
+
+    /**
+     * @brief coefficient used to calculate updated displacement: u_{n + 1} := u + c0 * d2u_dt2
      */
     double& c0;
 
     /**
-     * @brief Previous value of dt
+     * @brief coefficient used to calculate updated velocity: du_dt_{n+1} := du_dt + c1 * d2u_dt2
      */
-    ///
     double& c1;
 
     /**
