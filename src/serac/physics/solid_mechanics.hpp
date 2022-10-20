@@ -149,7 +149,7 @@ public:
     states_.push_back(displacement_);
     states_.push_back(adjoint_displacement_);
 
-    duals_.push_back(nodal_forces_);
+    duals_.push_back(reactions_);
 
     if (calc_shape_ == ShapeDisplacement::On) {
       states_.push_back(shape_displacement_);
