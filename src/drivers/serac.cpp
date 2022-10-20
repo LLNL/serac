@@ -46,9 +46,6 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet)
   inlet.addDouble("t_final", "Final time for simulation.").defaultValue(1.0);
   inlet.addDouble("dt", "Time step.").defaultValue(0.25);
 
-  // The output type (visit, glvis, paraview, etc)
-  serac::input::defineOutputTypeInputFileSchema(inlet.getGlobalContainer());
-
   // The mesh options
   auto& mesh_table = inlet.addStruct("main_mesh", "The main mesh for the problem");
   serac::mesh::InputOptions::defineInputFileSchema(mesh_table);

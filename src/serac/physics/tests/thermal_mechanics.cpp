@@ -309,7 +309,6 @@ void parameterized()
 
   thermal_solid_solver.completeSetup();
 
-  // thermal_solid_solver.initializeOutput(serac::OutputType::VisIt, "thermal_mechanics_without_input_file_output");
   // dump initial state to output
   thermal_solid_solver.outputState("pv_output");
 

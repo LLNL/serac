@@ -36,8 +36,6 @@ int main(int argc, char* argv[])
 
   auto& thermal_schema = inlet.addStruct("thermal_conduction", "Thermal conduction module");
   serac::ThermalConductionLegacy::InputOptions::defineInputFileSchema(thermal_schema);
-
-  serac::input::defineOutputTypeInputFileSchema(inlet.getGlobalContainer());
   // _inlet_schema_end
 
   // _inlet_verify_start

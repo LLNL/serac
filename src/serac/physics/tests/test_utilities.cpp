@@ -33,8 +33,6 @@ void defineCommonTestSchema(axom::inlet::Inlet& inlet)
   inlet.addDouble("dt", "Time step.");
   inlet.addDouble("t_final", "Stopping point");
 
-  serac::input::defineOutputTypeInputFileSchema(inlet.getGlobalContainer());
-
   // Comparison parameter
   inlet.addDouble("epsilon", "Threshold to be used in the comparison");
 
