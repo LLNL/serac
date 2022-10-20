@@ -25,6 +25,7 @@ serac_add_tests( SOURCES ${functional_tests_serial}
 
 # Then add the examples/tests
 set(functional_tests_mpi
+    functional_basic_hcurl.cpp
     functional_basic_thermal.cpp
     functional_basic_elasticity.cpp
     functional_multiphysics.cpp

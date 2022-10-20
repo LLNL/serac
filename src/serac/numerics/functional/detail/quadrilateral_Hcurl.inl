@@ -96,6 +96,42 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     return nodes;
   }();
 
+  template < bool apply_weights, int q >
+  static constexpr auto calculate_B1() {
+    constexpr auto points1D = GaussLegendreNodes<q>();
+    constexpr auto weights1D = GaussLegendreWeights<q>();
+    tensor<double, q, p> B1{};
+    for (int i = 0; i < q; i++) {
+      B1[i] = GaussLegendreInterpolation<p>(points1D[i]);
+      if constexpr (apply_weights) B1[i] = B1[i] * weights1D[i];
+    }
+    return B1;
+  }
+
+  template < bool apply_weights, int q >
+  static constexpr auto calculate_B2() {
+    constexpr auto points1D = GaussLegendreNodes<q>();
+    constexpr auto weights1D = GaussLegendreWeights<q>();
+    tensor<double, q, p + 1> B2{};
+    for (int i = 0; i < q; i++) {
+      B2[i] = GaussLobattoInterpolation<p + 1>(points1D[i]);
+      if constexpr (apply_weights) B2[i] = B2[i] * weights1D[i];
+    }
+    return B2;
+  }
+
+  template < bool apply_weights, int q >
+  static constexpr auto calculate_G2() {
+    constexpr auto points1D = GaussLegendreNodes<q>();
+    constexpr auto weights1D = GaussLegendreWeights<q>();
+    tensor<double, q, p + 1> G2{};
+    for (int i = 0; i < q; i++) {
+      G2[i] = GaussLobattoInterpolationDerivative<p + 1>(points1D[i]);
+      if constexpr (apply_weights) G2[i] = G2[i] * weights1D[i];
+    }
+    return G2;
+  }
+
   /*
 
     interpolate nodes/directions and their associated numbering:
@@ -186,20 +222,63 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     return curl_z;
   }
 
+  template <typename in_t, int q>
+  static auto batch_apply_shape_fn(int j, tensor< in_t, q * q > input, const TensorProductQuadratureRule<q>&)
+  {
+    constexpr bool apply_weights = false;
+    constexpr tensor<double, q, p>     B1 = calculate_B1<apply_weights, q>();
+    constexpr tensor<double, q, p + 1> B2 = calculate_B2<apply_weights, q>();
+    constexpr tensor<double, q, p + 1> G2 = calculate_G2<apply_weights, q>();
+
+    int jx, jy;
+    int dir = j / ((p + 1) * p);
+    if (dir == 0) {
+      jx = j % p;
+      jy = j / p;
+    } else {
+      jx = (j % ((p + 1) * p)) % n;
+      jy = (j % ((p + 1) * p)) / n;
+    }
+
+    using source_t = decltype(dot(get<0>(get<0>(in_t{})), tensor<double,2>{}) + get<1>(get<0>(in_t{})) * double{});
+    using flux_t   = decltype(dot(get<0>(get<1>(in_t{})), tensor<double,2>{}) + get<1>(get<1>(in_t{})) * double{});
+
+    tensor< tuple< source_t, flux_t >, q * q > output;
+
+    for (int qy = 0; qy < q; qy++) {
+      for (int qx = 0; qx < q; qx++) {
+        tensor<double,2> phi_j{
+          (dir == 0) * B1(qx, jx) * B2(qy, jy),
+          (dir == 1) * B1(qy, jy) * B2(qx, jx)
+        };
+
+        double curl_dphi_j = 
+          (dir == 0) * -B1(qx, jx) * G2(qy, jy) +
+          (dir == 1) *  B1(qy, jy) * G2(qx, jx);
+
+        int Q = qy * q + qx;
+        auto & d00 = get<0>(get<0>(input(Q)));
+        auto & d01 = get<1>(get<0>(input(Q)));
+        auto & d10 = get<0>(get<1>(input(Q)));
+        auto & d11 = get<1>(get<1>(input(Q)));
+
+        output[Q] = {
+          dot(d00, phi_j) + d01 * curl_dphi_j, 
+          dot(d10, phi_j) + d11 * curl_dphi_j 
+        };
+      }
+    }
+
+    return output;
+  }
+
   template <int q>
   static auto interpolate(const dof_type& element_values, const TensorProductQuadratureRule<q>&)
   {
-
-    auto xi = GaussLegendreNodes<q>();
-
-    tensor<double, q, p>     B1;
-    tensor<double, q, p + 1> B2;
-    tensor<double, q, p + 1> G2;
-    for (int i = 0; i < q; i++) {
-      B1[i] = GaussLegendreInterpolation<p>(xi[i]);
-      B2[i] = GaussLobattoInterpolation<p + 1>(xi[i]);
-      G2[i] = GaussLobattoInterpolationDerivative<p + 1>(xi[i]);
-    }
+    constexpr bool apply_weights = false;
+    constexpr tensor<double, q, p>     B1 = calculate_B1<apply_weights, q>();
+    constexpr tensor<double, q, p + 1> B2 = calculate_B2<apply_weights, q>();
+    constexpr tensor<double, q, p + 1> G2 = calculate_G2<apply_weights, q>();
 
     cache_type_tmp<q> A;
 
@@ -234,9 +313,10 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
   }
 
   template <typename source_type, typename flux_type, int q>
-  static void integrate(tensor< tuple< source_type, flux_type >, q * q > & qf_output,
+  static void integrate(const tensor< tuple< source_type, flux_type >, q * q > & qf_output,
                         const TensorProductQuadratureRule<q>&,
-                        dof_type& element_residual)
+                        dof_type * element_residual,
+                        [[maybe_unused]] int step = 1)
   {
     auto xi  = GaussLegendreNodes<q>();
     auto wts = GaussLegendreWeights<q>();
@@ -270,10 +350,10 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     constexpr int x = 1, y = 0; 
 
     A2.x = contract<y, 0>(source[0], B2) - contract<y, 0>(flux, G2);
-    element_residual.x += contract<x, 0>(A2.x, B1);
+    element_residual[0].x += contract<x, 0>(A2.x, B1);
 
     A2.y = contract<x, 0>(source[1], B2) + contract<x, 0>(flux, G2);
-    element_residual.y += contract<y, 0>(A2.y, B1);
+    element_residual[0].y += contract<y, 0>(A2.y, B1);
 
   }
 
