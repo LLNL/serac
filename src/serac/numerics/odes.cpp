@@ -150,6 +150,7 @@ void SecondOrderODE::Solve(const double time, const double c0, const double c1, 
 {
   // assign these values to variables with greater scope,
   // so that the residual operator can see them
+  state_.time  = time;
   state_.c0    = c0;
   state_.c1    = c1;
   state_.u     = u;

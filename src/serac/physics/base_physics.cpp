@@ -25,6 +25,7 @@ BasePhysics::BasePhysics(std::string name, mfem::ParMesh* pmesh)
       comm_(mesh_.GetComm()),
       time_(0.0),
       cycle_(0),
+      ode_time_point_(0.0),
       bcs_(mesh_)
 {
   std::tie(mpi_size_, mpi_rank_) = getMPIInfo(comm_);

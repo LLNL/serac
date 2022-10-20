@@ -58,12 +58,12 @@ const SolverOptions direct_static_options = {direct_linear_options, default_nonl
 /// the default solver and time integration options for dynamic analyses
 const SolverOptions default_dynamic_options = {
     default_linear_options, default_nonlinear_options,
-    TimesteppingOptions{TimestepMethod::AverageAcceleration, DirichletEnforcementMethod::RateControl}};
+    TimesteppingOptions{TimestepMethod::Newmark, DirichletEnforcementMethod::RateControl}};
 
 /// the direct solver and time integration options for dynamic analyses
 const SolverOptions direct_dynamic_options = {
     direct_linear_options, default_nonlinear_options,
-    TimesteppingOptions{TimestepMethod::AverageAcceleration, DirichletEnforcementMethod::RateControl}};
+    TimesteppingOptions{TimestepMethod::Newmark, DirichletEnforcementMethod::RateControl}};
 
 }  // namespace solid_mechanics
 
@@ -132,9 +132,10 @@ public:
             FiniteElementState::Options{
                 .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "shape_displacement")},
             sidre_datacoll_id_)),
-        nodal_forces_(mesh_, displacement_.space(), "nodal_forces"),
+        reactions_(mesh_, displacement_.space(), "reactions"),
         shape_sensitivity_(mesh_, displacement_.space(), "shape_sensitivity"),
-        ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
+        ode2_(displacement_.space().TrueVSize(),
+              {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
               nonlin_solver_, bcs_),
         c0_(0.0),
         c1_(0.0),
@@ -462,7 +463,7 @@ public:
           // per unit volume in the reference configuration
           auto p     = get<VALUE>(shape);
           auto dp_dX = get<DERIVATIVE>(shape);
-          return serac::tuple{body_force(x + p, time_, params...) * det(dp_dX + I), zero{}};
+          return serac::tuple{-1.0 * body_force(x + p, ode_time_point_, params...) * det(dp_dX + I), zero{}};
         },
         mesh_);
   }
@@ -506,7 +507,7 @@ public:
           // dA = det(F) * norm(F^-T n_0)
           auto area_correction = det(def_grad) * norm(dot(inv_trans_def_grad, n));
 
-          return -1.0 * traction_function(x + p, shape_normal, time_, params...) * area_correction;
+          return -1.0 * traction_function(x + p, shape_normal, ode_time_point_, params...) * area_correction;
         },
         mesh_);
   }
@@ -667,10 +668,14 @@ public:
       residual_->update_qdata = true;
 
       // this seems like the wrong way to be doing this assignment, but
-      // nodal_forces_ = residual(displacement, ...);
+      // reactions_ = residual(displacement, ...);
       // isn't currently supported
-      nodal_forces_.Vector::operator=(
+      reactions_.Vector::operator=(
           (*residual_)(displacement_, zero_, shape_displacement_, *parameter_states_[parameter_indices]...));
+      // TODO (talamini1): Fix above reactions for dynamics. Setting the accelerations to zero
+      // works for quasi-statics, but we need to account for the accelerations in
+      // dynamics. We need to figure out how to get the updated accelerations out of the
+      // ODE solver.
 
       residual_->update_qdata = false;
     }
@@ -809,7 +814,7 @@ public:
   serac::FiniteElementState& velocity() { return velocity_; };
 
   /// @brief getter for nodal forces (before zeroing-out essential dofs)
-  const serac::FiniteElementDual& nodalForces() { return nodal_forces_; };
+  const serac::FiniteElementDual& reactions() { return reactions_; };
 
 protected:
   /// The compile-time finite element trial space for displacement and velocity (H1 of order p)
@@ -831,7 +836,7 @@ protected:
   FiniteElementState shape_displacement_;
 
   /// nodal forces
-  FiniteElementDual nodal_forces_;
+  FiniteElementDual reactions_;
 
   /// serac::Functional that is used to calculate the residual and its derivatives
   std::unique_ptr<Functional<test(trial, trial, trial, parameter_space...)>> residual_;

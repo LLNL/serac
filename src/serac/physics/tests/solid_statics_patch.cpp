@@ -205,7 +205,7 @@ double solution_error(const ExactSolution& exact_displacement, PatchBoundaryCond
   // std::cout << "displacement =\n";
   // solid.displacement().Print(std::cout);
   // std::cout << "forces =\n";
-  // solid.nodalForces().Print();
+  // solid_functional.reactions().Print();
 
   // Compute norm of error
   mfem::VectorFunctionCoefficient exact_solution_coef(dim, exact_displacement);
