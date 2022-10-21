@@ -242,7 +242,8 @@ struct GradientAssemblyLookupTables {
    * @brief create lookup tables of which degrees of freedom correspond to
    * each element and boundary element
    */
-  GradientAssemblyLookupTables(mfem::ParFiniteElementSpace& test_fespace, mfem::ParFiniteElementSpace& trial_fespace)
+  GradientAssemblyLookupTables(const mfem::ParFiniteElementSpace& test_fespace,
+                               const mfem::ParFiniteElementSpace& trial_fespace)
       : element_nonzero_LUT(static_cast<size_t>(trial_fespace.GetNE()),
                             static_cast<size_t>(test_fespace.GetFE(0)->GetDof() * test_fespace.GetVDim()),
                             static_cast<size_t>(trial_fespace.GetFE(0)->GetDof() * trial_fespace.GetVDim())),

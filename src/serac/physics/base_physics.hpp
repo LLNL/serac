@@ -21,6 +21,7 @@
 #include "serac/physics/boundary_conditions/boundary_condition_manager.hpp"
 #include "serac/numerics/equation_solver.hpp"
 #include "serac/physics/state/finite_element_state.hpp"
+#include "serac/physics/state/finite_element_dual.hpp"
 
 namespace serac {
 
@@ -38,7 +39,7 @@ public:
   BasePhysics(std::string name, mfem::ParMesh* pmesh = nullptr);
 
   /**
-   * @brief Constructor that creates n entries in state_ of order p
+   * @brief Constructor that creates n entries in states_ of order p
    *
    * @param[in] n Number of state variables
    * @param[in] p Order of the solver
@@ -158,9 +159,14 @@ protected:
   MPI_Comm comm_;
 
   /**
-   * @brief List of finite element data structures
+   * @brief List of finite element states associated with this physics module
    */
-  std::vector<std::reference_wrapper<serac::FiniteElementState>> state_;
+  std::vector<std::reference_wrapper<serac::FiniteElementState>> states_;
+
+  /**
+   * @brief List of finite element duals associated with this physics module
+   */
+  std::vector<std::reference_wrapper<serac::FiniteElementDual>> duals_;
 
   /**
    * @brief Block vector storage of the true state
