@@ -258,11 +258,6 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
           (dir == 0) * -B1(qx, jx) * G2(qy, jy) +
           (dir == 1) *  B1(qy, jy) * G2(qx, jx);
 
-        //tensor<double,2> phi_check = shape_functions({xi[qx], xi[qy]})[j];
-        //double curl_check = shape_function_curl({xi[qx], xi[qy]})[j];
-        //std::cout << phi_j - phi_check << std::endl;
-        //std::cout << curl_phi_j - curl_check << std::endl;
-
         int Q = qy * q + qx;
         auto & d00 = get<0>(get<0>(input(Q)));
         auto & d01 = get<1>(get<0>(input(Q)));

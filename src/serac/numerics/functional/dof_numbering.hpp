@@ -169,10 +169,6 @@ struct DofNumbering {
     {
       auto elem_restriction = fespace.GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC);
 
-      std::ofstream outfile("element_restriction.mtx");
-      elem_restriction->PrintMatlab(outfile);
-      outfile.close();
-
       mfem::Vector iota(elem_restriction->Width());
       mfem::Vector dof_ids(elem_restriction->Height());
       dof_ids = 0.0;
@@ -274,7 +270,6 @@ struct GradientAssemblyLookupTables {
     for (uint32_t e = 0; e < num_elements; e++) {
       for (axom::IndexType i = 0; i < test_dofs.element_dofs_.shape()[1]; i++) {
         auto test_dof = test_dofs.element_dofs_(e, i);
-        std::cout << e << ", " << i << ": " << test_dof.index_ << " " << test_dof.sign_ << std::endl;
         for (axom::IndexType j = 0; j < trial_dofs.element_dofs_.shape()[1]; j++) {
           auto trial_dof = trial_dofs.element_dofs_(e, j);
           infos.push_back(ElemInfo{test_dof, trial_dof, static_cast<uint32_t>(i), static_cast<uint32_t>(j), e,
