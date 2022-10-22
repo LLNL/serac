@@ -245,8 +245,6 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
 
     tensor< tuple< source_t, flux_t >, q * q > output;
 
-    //constexpr auto xi = GaussLegendreNodes<q>();
-
     for (int qy = 0; qy < q; qy++) {
       for (int qx = 0; qx < q; qx++) {
         tensor<double,2> phi_j{
@@ -320,17 +318,10 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
                         dof_type * element_residual,
                         [[maybe_unused]] int step = 1)
   {
-    auto xi  = GaussLegendreNodes<q>();
-    auto wts = GaussLegendreWeights<q>();
-
-    tensor<double, q, p>     B1;
-    tensor<double, q, p + 1> B2;
-    tensor<double, q, p + 1> G2;
-    for (int i = 0; i < q; i++) {
-      B1[i] = GaussLegendreInterpolation<p>(xi[i]) * wts[i];
-      B2[i] = GaussLobattoInterpolation<p + 1>(xi[i]) * wts[i];
-      G2[i] = GaussLobattoInterpolationDerivative<p + 1>(xi[i]) * wts[i];
-    }
+    constexpr bool apply_weights = true;
+    constexpr tensor<double, q, p>     B1 = calculate_B1<apply_weights, q>();
+    constexpr tensor<double, q, p + 1> B2 = calculate_B2<apply_weights, q>();
+    constexpr tensor<double, q, p + 1> G2 = calculate_G2<apply_weights, q>();
 
     tensor< double, 2, q, q> source{};
     tensor< double, q, q> flux{};
@@ -356,7 +347,6 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
 
     A2.y = contract<x, 0>(source[1], B2) + contract<x, 0>(flux, G2);
     element_residual[0].y += contract<y, 0>(A2.y, B1);
-
   }
 
 #if defined(__CUDACC__)

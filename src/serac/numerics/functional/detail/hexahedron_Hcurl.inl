@@ -119,6 +119,42 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
     return nodes;
   }();
 
+  template < bool apply_weights, int q >
+  static constexpr auto calculate_B1() {
+    constexpr auto points1D = GaussLegendreNodes<q>();
+    constexpr auto weights1D = GaussLegendreWeights<q>();
+    tensor<double, q, p> B1{};
+    for (int i = 0; i < q; i++) {
+      B1[i] = GaussLegendreInterpolation<p>(points1D[i]);
+      if constexpr (apply_weights) B1[i] = B1[i] * weights1D[i];
+    }
+    return B1;
+  }
+
+  template < bool apply_weights, int q >
+  static constexpr auto calculate_B2() {
+    constexpr auto points1D = GaussLegendreNodes<q>();
+    constexpr auto weights1D = GaussLegendreWeights<q>();
+    tensor<double, q, p + 1> B2{};
+    for (int i = 0; i < q; i++) {
+      B2[i] = GaussLobattoInterpolation<p + 1>(points1D[i]);
+      if constexpr (apply_weights) B2[i] = B2[i] * weights1D[i];
+    }
+    return B2;
+  }
+
+  template < bool apply_weights, int q >
+  static constexpr auto calculate_G2() {
+    constexpr auto points1D = GaussLegendreNodes<q>();
+    constexpr auto weights1D = GaussLegendreWeights<q>();
+    tensor<double, q, p + 1> G2{};
+    for (int i = 0; i < q; i++) {
+      G2[i] = GaussLobattoInterpolationDerivative<p + 1>(points1D[i]);
+      if constexpr (apply_weights) G2[i] = G2[i] * weights1D[i];
+    }
+    return G2;
+  }
+
   SERAC_HOST_DEVICE static constexpr tensor<double, ndof, dim> shape_functions(tensor<double, dim> xi)
   {
     tensor<double, ndof, dim> N{};
@@ -210,19 +246,99 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
     return curl;
   }
 
+  template <typename in_t, int q>
+  static auto batch_apply_shape_fn(int j, tensor< in_t, q * q * q > input, const TensorProductQuadratureRule<q>&)
+  {
+    constexpr bool apply_weights = false;
+    constexpr tensor<double, q, p>     B1 = calculate_B1<apply_weights, q>();
+    constexpr tensor<double, q, p + 1> B2 = calculate_B2<apply_weights, q>();
+    constexpr tensor<double, q, p + 1> G2 = calculate_G2<apply_weights, q>();
+
+    // figure out which node and which direction 
+    // correspond to the dof index "j"
+    int jx, jy, jz;
+    int dir = j / (p * (p + 1) * (p + 1));
+    int remainder = j % (p * (p + 1) * (p + 1));
+    switch(dir) {
+      case 0: // x-direction
+        jx =  remainder % p;
+        jy = (remainder % (p * (p + 1))) / p;
+        jz =  remainder / (p * (p + 1));
+        break;
+
+      case 1: // y-direction
+        jx =  remainder % (p + 1);
+        jy = (remainder % (p * (p + 1))) / (p + 1);
+        jz =  remainder / (p * (p + 1));
+        break;
+
+      case 2: // z-direction
+        jx =  remainder % (p + 1);
+        jy = (remainder % ((p + 1) * (p + 1))) / (p + 1);
+        jz =  remainder / ((p + 1) * (p + 1));
+        break;
+    }
+
+    using vec3 = tensor<double,3>;
+    using source_t = decltype(dot(get<0>(get<0>(in_t{})), vec3{}) + dot(get<1>(get<0>(in_t{})), vec3{}));
+    using flux_t   = decltype(dot(get<0>(get<1>(in_t{})), vec3{}) + dot(get<1>(get<1>(in_t{})), vec3{}));
+
+    tensor< tuple< source_t, flux_t >, q * q * q > output;
+
+    for (int qz = 0; qz < q; qz++) {
+      for (int qy = 0; qy < q; qy++) {
+        for (int qx = 0; qx < q; qx++) {
+
+          tensor<double,3> phi_j{};
+          tensor<double,3> curl_phi_j{};
+
+          switch(dir) {
+            case 0:
+              phi_j[0]      =  B1(qx, jx) * B2(qy, jy) * B2(qz, jz);
+              curl_phi_j[1] =  B1(qx, jx) * B2(qy, jy) * G2(qz, jz);
+              curl_phi_j[2] = -B1(qx, jx) * G2(qy, jy) * B2(qz, jz);
+              break;
+
+            case 1:
+              curl_phi_j[0] = -B2(qx, jx) * B1(qy, jy) * G2(qz, jz);
+              phi_j[1]      =  B2(qx, jx) * B1(qy, jy) * B2(qz, jz);
+              curl_phi_j[2] =  G2(qx, jx) * B1(qy, jy) * B2(qz, jz);
+            break;
+
+            case 2:
+              curl_phi_j[0] =  B2(qx, jx) * G2(qy, jy) * B1(qz, jz);
+              curl_phi_j[1] = -G2(qx, jx) * B2(qy, jy) * B1(qz, jz);
+              phi_j[2]      =  B2(qx, jx) * B2(qy, jy) * B1(qz, jz);
+              break;
+          }
+
+
+
+
+          int Q = (qz * q + qy) * q + qx;
+          auto & d00 = get<0>(get<0>(input(Q)));
+          auto & d01 = get<1>(get<0>(input(Q)));
+          auto & d10 = get<0>(get<1>(input(Q)));
+          auto & d11 = get<1>(get<1>(input(Q)));
+
+          output[Q] = {
+            dot(d00, phi_j) + dot(d01, curl_phi_j), 
+            dot(d10, phi_j) + dot(d11, curl_phi_j) 
+          };
+        }
+      }
+    }
+
+    return output;
+  }
+
   template <int q>
   static auto interpolate(const dof_type& element_values, const TensorProductQuadratureRule<q>&)
   {
-    auto xi = GaussLegendreNodes<q>();
-
-    tensor<double, q, p>     B1;
-    tensor<double, q, p + 1> B2;
-    tensor<double, q, p + 1> G2;
-    for (int i = 0; i < q; i++) {
-      B1[i] = GaussLegendreInterpolation<p>(xi[i]);
-      B2[i] = GaussLobattoInterpolation<p + 1>(xi[i]);
-      G2[i] = GaussLobattoInterpolationDerivative<p + 1>(xi[i]);
-    }
+    constexpr bool apply_weights = false;
+    constexpr tensor<double, q, p>     B1 = calculate_B1<apply_weights, q>();
+    constexpr tensor<double, q, p + 1> B2 = calculate_B2<apply_weights, q>();
+    constexpr tensor<double, q, p + 1> G2 = calculate_G2<apply_weights, q>();
 
     cache_type_tmp<q> cache;
 
@@ -274,21 +390,15 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
   }
 
   template <typename source_type, typename flux_type, int q>
-  static void integrate(tensor< tuple< source_type, flux_type >, q * q * q > & qf_output,
+  static void integrate(const tensor< tuple< source_type, flux_type >, q * q * q > & qf_output,
                         const TensorProductQuadratureRule<q>&,
-                        dof_type& element_residual)
+                        dof_type * element_residual,
+                        [[maybe_unused]] int step = 1)
   {
-    static constexpr auto xi  = GaussLegendreNodes<q>();
-    static constexpr auto wts = GaussLegendreWeights<q>();
-
-    tensor<double, q, p>     B1;
-    tensor<double, q, p + 1> B2;
-    tensor<double, q, p + 1> G2;
-    for (int i = 0; i < q; i++) {
-      B1[i] = GaussLegendreInterpolation<p>(xi[i]) * wts[i];
-      B2[i] = GaussLobattoInterpolation<p + 1>(xi[i]) * wts[i];
-      G2[i] = GaussLobattoInterpolationDerivative<p + 1>(xi[i]) * wts[i];
-    }
+    constexpr bool apply_weights = true;
+    constexpr tensor<double, q, p>     B1 = calculate_B1<apply_weights, q>();
+    constexpr tensor<double, q, p + 1> B2 = calculate_B2<apply_weights, q>();
+    constexpr tensor<double, q, p + 1> G2 = calculate_G2<apply_weights, q>();
 
     tensor< double, 3, q, q, q> source{};
     tensor< double, 3, q, q, q> flux{};
@@ -319,7 +429,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
     cache.A2.x[0] = contract< z, 0 >(source[0], B2) + contract< z, 0 >(flux[1], G2);
     cache.A2.x[1] = contract< z, 0 >(flux[2], B2);
     cache.A1.x = contract< y, 0 >(cache.A2.x[0], B2) - contract< y, 0 >(cache.A2.x[1], G2);
-    element_residual.x += contract< x, 0 >(cache.A1.x, B1);
+    element_residual[0].x += contract< x, 0 >(cache.A1.x, B1);
 
     //  r(1, dz, dy, dx) = s(1, qz, qy, qx) * B2(qz, dz) * B1(qy, dy) * B2(qx, dx)
     //                   - f(0, qz, qy, qx) * G2(qz, dz) * B1(qy, dy) * B2(qx, dx)
@@ -327,7 +437,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
     cache.A2.y[0] = contract< x, 0 >(source[1], B2) + contract< x, 0 >(flux[2], G2);
     cache.A2.y[1] = contract< x, 0 >(flux[0], B2);
     cache.A1.y = contract< z, 0 >(cache.A2.y[0], B2) - contract< z, 0 >(cache.A2.y[1], G2);
-    element_residual.y += contract< y, 0 >(cache.A1.y, B1);
+    element_residual[0].y += contract< y, 0 >(cache.A1.y, B1);
 
     //  r(2, dz, dy, dx) = s(2, qz, qy, qx) * B1(qz, dz) * B2(qy, dy) * B2(qx, dx) 
     //                   + f(0, qz, qy, qx) * B1(qz, dz) * G2(qy, dy) * B2(qx, dx) 
@@ -335,7 +445,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
     cache.A2.z[0] = contract< y, 0 >(source[2], B2) + contract< y, 0 >(flux[0], G2);
     cache.A2.z[1] = contract< y, 0 >(flux[1], B2);
     cache.A1.z = contract< x, 0 >(cache.A2.z[0], B2) - contract< x, 0 >(cache.A2.z[1], G2);
-    element_residual.z += contract< z, 0 >(cache.A1.z, B1);
+    element_residual[0].z += contract< z, 0 >(cache.A1.z, B1);
     // clang-format on
   }
 

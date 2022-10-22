@@ -68,11 +68,11 @@ void weird_mixed_test(){
       },
       *mesh);
 
-    residual.AddBoundaryIntegral(Dimension<dim-1>{}, DependsOn<0>{}, [=](auto x, auto /*n*/, auto displacement) { 
-          auto [u, du_dxi] = displacement;
-          return dot(s11, u) * x[0]; 
-        }, 
-        *mesh);
+  residual.AddBoundaryIntegral(Dimension<dim-1>{}, DependsOn<0>{}, [=](auto x, auto /*n*/, auto displacement) { 
+        auto [u, du_dxi] = displacement;
+        return dot(s11, u) * x[0]; 
+      }, 
+      *mesh);
 
   check_gradient(residual, U);
 
@@ -124,11 +124,11 @@ void elasticity_test(){
       },
       *mesh);
 
-  //residual.AddBoundaryIntegral(Dimension<dim-1>{}, DependsOn<0>{}, [=](auto x, auto /*n*/, auto displacement) { 
-  //      auto [u, du_dxi] = displacement;
-  //      return u * x[0]; 
-  //    }, 
-  //    *mesh);
+  residual.AddBoundaryIntegral(Dimension<dim-1>{}, DependsOn<0>{}, [=](auto x, auto /*n*/, auto displacement) { 
+        auto [u, du_dxi] = displacement;
+        return u * x[0]; 
+      },
+      *mesh);
 
   check_gradient(residual, U);
 
