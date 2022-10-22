@@ -169,11 +169,15 @@ struct DofNumbering {
     {
       auto elem_restriction = fespace.GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC);
 
+      std::ofstream outfile("element_restriction.mtx");
+      elem_restriction->PrintMatlab(outfile);
+      outfile.close();
+
       mfem::Vector iota(elem_restriction->Width());
       mfem::Vector dof_ids(elem_restriction->Height());
       dof_ids = 0.0;
       for (int i = 0; i < iota.Size(); i++) {
-        iota[i] = i;
+        iota[i] = i + 1; //  note: 1-based index
       }
 
       // we're using Mult() to reveal the locations nonzero entries
@@ -185,10 +189,13 @@ struct DofNumbering {
       elem_restriction->Mult(iota, dof_ids);
       const double* dof_ids_h = dof_ids.HostRead();
 
+      int index = 0;
       for (axom::IndexType e = 0; e < element_dofs_.shape()[0]; e++) {
         for (axom::IndexType i = 0; i < element_dofs_.shape()[1]; i++) {
-          int mfem_id         = static_cast<int>(dof_ids_h[&element_dofs_(e, i) - element_dofs_.data()]);
-          element_dofs_(e, i) = decodeSignedIndex(mfem_id);
+          uint32_t dof_id = static_cast<uint32_t>(fabs(dof_ids_h[index])); // note: 1-based index
+          int dof_sign    = dof_ids[index] > 0 ? +1 : -1;
+          element_dofs_(e, i) = {dof_id - 1, dof_sign}; // subtract 1 to get back to 0-based index
+          index++;
         }
       }
     }
@@ -200,16 +207,19 @@ struct DofNumbering {
       mfem::Vector iota(face_restriction->Width());
       mfem::Vector dof_ids(face_restriction->Height());
       for (int i = 0; i < iota.Size(); i++) {
-        iota[i] = i;
+        iota[i] = i + 1; //  note: 1-based index
       }
 
       face_restriction->Mult(iota, dof_ids);
       const double* dof_ids_h = dof_ids.HostRead();
 
+      int index = 0;
       for (axom::IndexType e = 0; e < bdr_element_dofs_.shape()[0]; e++) {
         for (axom::IndexType i = 0; i < bdr_element_dofs_.shape()[1]; i++) {
-          int mfem_id             = static_cast<int>(dof_ids_h[&bdr_element_dofs_(e, i) - bdr_element_dofs_.data()]);
-          bdr_element_dofs_(e, i) = decodeSignedIndex(mfem_id);
+          uint32_t dof_id = static_cast<uint32_t>(fabs(dof_ids_h[index])); // note: 1-based index
+          int dof_sign    = dof_ids[index] > 0 ? +1 : -1;
+          bdr_element_dofs_(e, i) = {dof_id - 1, dof_sign}; // subtract 1 to get back to 0-based index
+          index++;
         }
       }
     }
@@ -264,6 +274,7 @@ struct GradientAssemblyLookupTables {
     for (uint32_t e = 0; e < num_elements; e++) {
       for (axom::IndexType i = 0; i < test_dofs.element_dofs_.shape()[1]; i++) {
         auto test_dof = test_dofs.element_dofs_(e, i);
+        std::cout << e << ", " << i << ": " << test_dof.index_ << " " << test_dof.sign_ << std::endl;
         for (axom::IndexType j = 0; j < trial_dofs.element_dofs_.shape()[1]; j++) {
           auto trial_dof = trial_dofs.element_dofs_(e, j);
           infos.push_back(ElemInfo{test_dof, trial_dof, static_cast<uint32_t>(i), static_cast<uint32_t>(j), e,
