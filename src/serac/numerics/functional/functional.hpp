@@ -591,6 +591,13 @@ private:
             }
           }
         }
+
+        std::ofstream outfile("K_elem.bin", std::ios::binary);
+        outfile.write(reinterpret_cast<char *>(&K_elem(0, 0, 0)), 8 * static_cast<std::streamsize>(K_elem.size()));
+        outfile.close();
+
+        std::cout << "K_elem: " << K_elem.shape()[0] << " " << K_elem.shape()[1] << " " << K_elem.shape()[2] << std::endl;
+
       }
 
       // each boundary element uses the lookup tables to add its contributions
@@ -622,15 +629,23 @@ private:
                              form_.input_L_[which_argument].Size(), sparse_matrix_frees_graph_ptrs,
                              sparse_matrix_frees_values_ptr, col_ind_is_sorted);
 
+      std::ofstream outfile("J_local.txt");
+      J_local.PrintMatlab(outfile);
+      outfile.close();
+
       auto* R = form_.test_space_->Dof_TrueDof_Matrix();
 
       auto* A =
           new mfem::HypreParMatrix(test_space_->GetComm(), test_space_->GlobalVSize(), trial_space_->GlobalVSize(),
                                    test_space_->GetDofOffsets(), trial_space_->GetDofOffsets(), &J_local);
 
+      A->Print("A.mtx");
+
       auto* P = trial_space_->Dof_TrueDof_Matrix();
 
       std::unique_ptr<mfem::HypreParMatrix> K(mfem::RAP(R, A, P));
+
+      K->Print("K.mtx");
 
       delete A;
 

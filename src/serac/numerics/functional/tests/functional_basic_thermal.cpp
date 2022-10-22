@@ -30,10 +30,10 @@ void thermal_test() {
 
   std::string meshfile;
   if (dim == 2) {
-    meshfile = SERAC_REPO_DIR "/data/meshes/star.mesh";
+    meshfile = SERAC_REPO_DIR "/data/meshes/patch2D.mesh";
   }
   if (dim == 3) {
-    meshfile = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+    meshfile = SERAC_REPO_DIR "/data/meshes/patch3D.mesh";
   }
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(meshfile));

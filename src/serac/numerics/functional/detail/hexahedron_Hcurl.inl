@@ -36,8 +36,6 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
       typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components>>::type;
 
   // this is how mfem provides the data to us for these elements
-  // if, instead, it was stored as simply tensor< double, 3, p + 1, p + 1, p >,
-  // the interpolation/integrate implementation would be considerably shorter
   struct dof_type {
     tensor<double, p + 1, p + 1, p> x;
     tensor<double, p + 1, p, p + 1> y;

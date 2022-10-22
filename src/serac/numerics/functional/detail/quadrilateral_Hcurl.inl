@@ -245,6 +245,8 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
 
     tensor< tuple< source_t, flux_t >, q * q > output;
 
+    //constexpr auto xi = GaussLegendreNodes<q>();
+
     for (int qy = 0; qy < q; qy++) {
       for (int qx = 0; qx < q; qx++) {
         tensor<double,2> phi_j{
@@ -252,9 +254,14 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
           (dir == 1) * B1(qy, jy) * B2(qx, jx)
         };
 
-        double curl_dphi_j = 
+        double curl_phi_j = 
           (dir == 0) * -B1(qx, jx) * G2(qy, jy) +
           (dir == 1) *  B1(qy, jy) * G2(qx, jx);
+
+        //tensor<double,2> phi_check = shape_functions({xi[qx], xi[qy]})[j];
+        //double curl_check = shape_function_curl({xi[qx], xi[qy]})[j];
+        //std::cout << phi_j - phi_check << std::endl;
+        //std::cout << curl_phi_j - curl_check << std::endl;
 
         int Q = qy * q + qx;
         auto & d00 = get<0>(get<0>(input(Q)));
@@ -263,8 +270,8 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
         auto & d11 = get<1>(get<1>(input(Q)));
 
         output[Q] = {
-          dot(d00, phi_j) + d01 * curl_dphi_j, 
-          dot(d10, phi_j) + d11 * curl_dphi_j 
+          dot(d00, phi_j) + d01 * curl_phi_j, 
+          dot(d10, phi_j) + d11 * curl_phi_j 
         };
       }
     }
@@ -335,12 +342,12 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
 
     for (int qy = 0; qy < q; qy++) {
       for (int qx = 0; qx < q; qx++) {
-        int k = qy * q + qx;
-        tensor< double, dim > s{get<SOURCE>(qf_output[k])};
+        int Q = qy * q + qx;
+        tensor< double, dim > s{get<SOURCE>(qf_output[Q])};
         for (int i = 0; i < dim; i++) {
           source(i, qy, qx) = s[i];
         }
-        flux(qy, qx) = get<FLUX>(qf_output[k]);
+        flux(qy, qx) = get<FLUX>(qf_output[Q]);
       }
     }
 
