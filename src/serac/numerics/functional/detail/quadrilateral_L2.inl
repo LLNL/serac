@@ -137,6 +137,42 @@ struct finite_element<Geometry::Quadrilateral, L2<p, c> > {
     return G;
   }
 
+  template <typename in_t, int q>
+  static auto batch_apply_shape_fn(int j, tensor< in_t, q * q > input, const TensorProductQuadratureRule<q>&)
+  {
+    static constexpr bool apply_weights = false;
+    static constexpr auto B = calculate_B<apply_weights, q>();
+    static constexpr auto G = calculate_G<apply_weights, q>();
+
+    int jx = j % n;
+    int jy = j / n;
+
+    using source_t = decltype(get<0>(get<0>(in_t{})) + dot(get<1>(get<0>(in_t{})), tensor<double,2>{}));
+    using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double,2>{}));
+
+    tensor< tuple< source_t, flux_t >, q * q > output;
+
+    for (int qy = 0; qy < q; qy++) {
+      for (int qx = 0; qx < q; qx++) {
+        double phi_j = B(qx, jx) * B(qy, jy);
+        tensor<double, dim> dphi_j_dxi = {G(qx, jx) * B(qy, jy), B(qx, jx) * G(qy, jy)};
+
+        int Q = qy * q + qx;
+        auto & d00 = get<0>(get<0>(input(Q)));
+        auto & d01 = get<1>(get<0>(input(Q)));
+        auto & d10 = get<0>(get<1>(input(Q)));
+        auto & d11 = get<1>(get<1>(input(Q)));
+
+        output[Q] = {
+          d00 * phi_j + dot(d01, dphi_j_dxi), 
+          d10 * phi_j + dot(d11, dphi_j_dxi) 
+        };
+      }
+    }
+
+    return output;
+  }
+
   // we want to compute the following:
   //
   // X_q(u, v) := (B(u, i) * B(v, j)) * X_e(i, j)
@@ -154,7 +190,6 @@ struct finite_element<Geometry::Quadrilateral, L2<p, c> > {
   template <int q>
   static auto interpolate(const dof_type& X, const TensorProductQuadratureRule<q>&)
   {
-
     static constexpr bool apply_weights = false;
     static constexpr auto B = calculate_B<apply_weights, q>();
     static constexpr auto G = calculate_G<apply_weights, q>();
@@ -194,38 +229,45 @@ struct finite_element<Geometry::Quadrilateral, L2<p, c> > {
     return output.one_dimensional;
   }
 
+  // source can be one of: {zero, double, tensor<double,dim>, tensor<double,dim,dim>}
+  // flux can be one of: {zero, tensor<double,dim>, tensor<double,dim,dim>, tensor<double,dim,dim,dim>, tensor<double,dim,dim,dim>}
   template <typename source_type, typename flux_type, int q>
-  static void integrate(tensor< tuple< source_type, flux_type >, q * q > & qf_output, const TensorProductQuadratureRule<q>&,
-                        dof_type&                             element_residual)
+  static void integrate(const tensor< tuple< source_type, flux_type >, q * q > & qf_output, const TensorProductQuadratureRule<q>&,
+                        dof_type * element_residual, int step = 1)
   {
+    if constexpr (is_zero<source_type>{} && is_zero<flux_type>{}) { return; }
+
+    constexpr int ntrial = std::max(size(source_type{}), size(flux_type{}) / dim) / c;
+
+    using s_buffer_type = std::conditional_t< is_zero<source_type>{}, zero, tensor<double, q, q> >;
+    using f_buffer_type = std::conditional_t< is_zero<  flux_type>{}, zero, tensor<double, dim, q, q> >;
+
     static constexpr bool apply_weights = true;
     static constexpr auto B = calculate_B<apply_weights, q>();
     static constexpr auto G = calculate_G<apply_weights, q>();
 
-    tensor< double, c, q, q> source{};
-    tensor< double, c, dim, q, q> flux{};
-
-    for (int qy = 0; qy < q; qy++) {
-      for (int qx = 0; qx < q; qx++) {
-        int k = qy * q + qx;
-        tensor< double, c > s{get<SOURCE>(qf_output[k])};
-        tensor< double, c, dim > f{get<FLUX>(qf_output[k])};
-        for (int i = 0; i < c; i++) {
-          source(i, qy, qx) = s[i];
-          for (int j = 0; j < dim; j++) {
-            flux(i, j, qy, qx) = f[i][j];
-          }
-        }
-      }
-    }
-
     cache_type<q> A{};
 
-    for (int i = 0; i < c; i++) {
-      A[0] = contract< 1, 0 >(source[i], B) + contract< 1, 0 >(flux(i, 0), G);
-      A[1] = contract< 1, 0 >(flux(i, 1), B);
+    for (int j = 0; j < ntrial; j++) {
+      for (int i = 0; i < c; i++) {
+        s_buffer_type source;
+        f_buffer_type flux;
 
-      element_residual(i) += contract< 0, 0 >(A[0], B) + contract< 0, 0 >(A[1], G);
+        for (int qy = 0; qy < q; qy++) {
+          for (int qx = 0; qx < q; qx++) {
+            int Q = qy * q + qx;
+            source(qy, qx) = reinterpret_cast< const double * >(&get<SOURCE>(qf_output[Q]))[i * ntrial + j];
+            for (int k = 0; k < dim; k++) {
+              flux(k, qy, qx) = reinterpret_cast< const double * >(&get<FLUX>(qf_output[Q]))[(i * dim + k) * ntrial + j];
+            }
+          }
+        }
+
+        A[0] = contract< 1, 0 >(source, B) + contract< 1, 0 >(flux(0), G);
+        A[1] = contract< 1, 0 >(flux(1), B);
+
+        element_residual[j * step](i) += contract< 0, 0 >(A[0], B) + contract< 0, 0 >(A[1], G);
+      }
     }
 
   }

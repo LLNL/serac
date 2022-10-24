@@ -32,8 +32,8 @@ void hcurl_test_2D() {
   using test_space  = Hcurl<p>;
   using trial_space = Hcurl<p>;
 
-  //std::string meshfile = SERAC_REPO_DIR "/data/meshes/patch2D.mesh";
-  std::string meshfile = SERAC_REPO_DIR "/data/meshes/beam-quad.mesh";
+  std::string meshfile = SERAC_REPO_DIR "/data/meshes/patch2D.mesh";
+  //std::string meshfile = SERAC_REPO_DIR "/data/meshes/beam-quad.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(meshfile), 1);
 

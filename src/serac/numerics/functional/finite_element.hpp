@@ -220,7 +220,7 @@ void parent_to_physical(tensor< T, q > & qf_input, const tensor<double, dim, dim
       }
     }
 
-    if constexpr (f == Family::H1) {
+    if constexpr (f == Family::H1 || f == Family::L2) {
       // note: no transformation necessary for the values of H1-field
       get<DERIVATIVE>(qf_input[k]) = dot(get<DERIVATIVE>(qf_input[k]), inv(J));
     }
@@ -253,7 +253,7 @@ void physical_to_parent(tensor< T, q > & qf_output, const tensor<double, dim, di
 
     auto dv = det(J_T);
 
-    if constexpr (f == Family::H1) {
+    if constexpr (f == Family::H1 || f == Family::L2) {
       get<SOURCE>(qf_output[k]) = get<SOURCE>(qf_output[k]) * dv;
       get<FLUX>(qf_output[k]) = dot(get<FLUX>(qf_output[k]), inv(J_T)) * dv;
     }
