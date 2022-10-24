@@ -206,6 +206,48 @@ SERAC_HOST_DEVICE auto abs(dual<gradient_type> x)
   return (x.value >= 0) ? x : -x;
 }
 
+/** @brief implementation of max for dual numbers */
+template <typename gradient_type>
+SERAC_HOST_DEVICE auto max(dual<gradient_type> a, double b)
+{
+  return (a.value > b) ? a : b;
+}
+
+/** @brief implementation of max for dual numbers */
+template <typename gradient_type>
+SERAC_HOST_DEVICE auto max(double a, dual<gradient_type> b)
+{
+  return (a > b.value) ? a : b;
+}
+
+/** @brief implementation of max for dual numbers */
+template <typename gradient_type>
+SERAC_HOST_DEVICE auto max(dual<gradient_type> a, dual<gradient_type> b)
+{
+  return (a.value > b.value) ? a : b;
+}
+
+/** @brief implementation of max for dual numbers */
+template <typename gradient_type>
+SERAC_HOST_DEVICE auto min(dual<gradient_type> a, double b)
+{
+  return (a.value < b) ? a : b;
+}
+
+/** @brief implementation of max for dual numbers */
+template <typename gradient_type>
+SERAC_HOST_DEVICE auto min(double a, dual<gradient_type> b)
+{
+  return (a < b.value) ? a : b;
+}
+
+/** @brief implementation of max for dual numbers */
+template <typename gradient_type>
+SERAC_HOST_DEVICE auto min(dual<gradient_type> a, dual<gradient_type> b)
+{
+  return (a.value < b.value) ? a : b;
+}
+
 /** @brief implementation of square root for dual numbers */
 template <typename gradient_type>
 SERAC_HOST_DEVICE auto sqrt(dual<gradient_type> x)
@@ -228,6 +270,30 @@ SERAC_HOST_DEVICE auto sin(dual<gradient_type> a)
 {
   using std::cos, std::sin;
   return dual<gradient_type>{sin(a.value), a.gradient * cos(a.value)};
+}
+
+/** @brief implementation of atan for dual numbers */
+template <typename gradient_type>
+SERAC_HOST_DEVICE auto atan(dual<gradient_type> a)
+{
+  using std::atan, std::pow;
+  return dual<gradient_type>{atan(a.value), a.gradient / (1.0 + pow(a.value, 2))};
+}
+
+/** @brief implementation of asin for dual numbers */
+template <typename gradient_type>
+SERAC_HOST_DEVICE auto asin(dual<gradient_type> a)
+{
+  using std::asin, std::pow, std::sqrt;
+  return dual<gradient_type>{asin(a.value), a.gradient / sqrt(1.0 - pow(a.value, 2))};
+}
+
+/** @brief implementation of acos for dual numbers */
+template <typename gradient_type>
+SERAC_HOST_DEVICE auto acos(dual<gradient_type> a)
+{
+  using std::acos, std::pow, std::sqrt;
+  return dual<gradient_type>{acos(a.value), -a.gradient / sqrt(1.0 - pow(a.value, 2))};
 }
 
 /** @brief implementation of exponential function for dual numbers */
