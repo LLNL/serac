@@ -444,6 +444,11 @@ void element_gradient_kernel_new(ExecArrayView<double, 3, ExecutionSpace::CPU> d
                              CPUArrayView<derivatives_type, 2> qf_derivatives, const mfem::Vector&,
                              std::size_t num_elements)
 {
+  // quantities of interest have no flux term, so we pad the derivative
+  // tuple with a "zero" type in the second position to treat it like the standard case
+  constexpr bool is_QOI = test::family == Family::QOI;
+  using padded_derivative_type = std::conditional_t< is_QOI, tuple< derivatives_type, zero >, derivatives_type >;
+
   using test_element        = finite_element<g, test>;
   using trial_element       = finite_element<g, trial>;
 
@@ -455,9 +460,13 @@ void element_gradient_kernel_new(ExecArrayView<double, 3, ExecutionSpace::CPU> d
   for (uint32_t e = 0; e < num_elements; e++) {
     auto * output_ptr = reinterpret_cast<typename test_element::dof_type *>(&dK(e, 0, 0));
 
-    tensor< derivatives_type, nquad > derivatives{};
+    tensor< padded_derivative_type, nquad > derivatives{};
     for (int q = 0; q < nquad; q++) {
-      derivatives(q) = qf_derivatives(e, q);
+      if constexpr (is_QOI) {
+        get<0>(derivatives(q)) = qf_derivatives(e, q);
+      } else {
+        derivatives(q) = qf_derivatives(e, q);
+      }
     }
 
     for (int J = 0; J < trial_element::ndof; J++) {
