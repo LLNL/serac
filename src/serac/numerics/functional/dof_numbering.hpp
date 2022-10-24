@@ -101,7 +101,7 @@ bool isL2(const mfem::ParFiniteElementSpace& fes)
 bool compatibleWithFaceRestriction(const mfem::ParFiniteElementSpace& fes)
 {
   return !(isHcurl(fes) && fes.GetMesh()->Dimension() == 2) && !(isHcurl(fes) && fes.GetMesh()->Dimension() == 3) &&
-         !(isL2(fes));
+         !(isL2(fes)) && fes.GetMesh()->GetNBE() > 0;
 }
 
 /**
@@ -248,7 +248,8 @@ struct GradientAssemblyLookupTables {
    * @brief create lookup tables of which degrees of freedom correspond to
    * each element and boundary element
    */
-  GradientAssemblyLookupTables(mfem::ParFiniteElementSpace& test_fespace, mfem::ParFiniteElementSpace& trial_fespace)
+  GradientAssemblyLookupTables(const mfem::ParFiniteElementSpace& test_fespace,
+                               const mfem::ParFiniteElementSpace& trial_fespace)
       : element_nonzero_LUT(static_cast<size_t>(trial_fespace.GetNE()),
                             static_cast<size_t>(test_fespace.GetFE(0)->GetDof() * test_fespace.GetVDim()),
                             static_cast<size_t>(trial_fespace.GetFE(0)->GetDof() * trial_fespace.GetVDim())),

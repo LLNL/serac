@@ -144,14 +144,13 @@ these configuration files is located in the `Spack docs <https://spack.readthedo
 Some helpful uberenv options include :
 
 * ``--spec=+debug`` (build the MFEM and Hypre libraries with debug symbols)
-* ``--spec=+glvis`` (build the optional glvis visualization library)
 * ``--spec=+profiling`` (build the Adiak and Caliper libraries)
 * ``--spec=+devtools`` (also build the devtools with one command)
 * ``--spec=%clang@10.0.0`` (build with a specific compiler as defined in the ``compiler.yaml`` file)
 * ``--spack-config-dir=<Path to spack configuration directory>`` (use specific Spack configuration files)
 * ``--prefix=<Path>`` (required, build and install the dependencies in a particular location) - this *must be outside* of your local Serac repository
 
-The modifiers to the Spack specification ``spec`` can be chained together, e.g. ``--spec=%clang@10.0.0+debug+glvis+devtools``.
+The modifiers to the Spack specification ``spec`` can be chained together, e.g. ``--spec=%clang@10.0.0+debug+devtools``.
 
 If you already have a Spack instance from another project that you would like to reuse,
 you can do so by changing the uberenv command as follows:
@@ -456,7 +455,6 @@ Here is an example of ``packages.yaml``:
 
 Notes:
 
-* OpenGL is not well supported on modern Macs. We recommend commenting this section out. This means that the optional ``glvis`` spec can't be built.
 * The version specs should be set to the actual versions of the packages you have, which will not neccesarily be the same as the above.
   This can be discovered for the packages installed with MacPorts using the following command:
 

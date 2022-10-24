@@ -17,16 +17,6 @@
 #include "mfem.hpp"
 
 namespace serac {
-/**
- * @brief Output file type associated with a solver
- */
-enum class OutputType
-{
-  GLVis,     /**< GLVis output */
-  ParaView,  /**< Paraview output */
-  VisIt,     /**< VisIt output */
-  SidreVisIt /**< Binary VisIt output via Sidre */
-};
 
 /**
  * @brief Timestep method of a solver

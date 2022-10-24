@@ -85,6 +85,11 @@ packages:
     externals:
     - spec: bzip2@1.0.6
       prefix: /usr
+  curl:
+    buildable: false
+    externals:
+    - spec: curl@7.29.0
+      prefix: /usr
   diffutils:
     buildable: false
     externals:

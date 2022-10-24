@@ -83,12 +83,6 @@ std::string getInputFileName(const std::string& file_path);
 void defineVectorInputFileSchema(axom::inlet::Container& container);
 
 /**
- * @brief Defines the schema for serac::OutputType
- * @param[inout] container The base container on which to define the schema
- */
-void defineOutputTypeInputFileSchema(axom::inlet::Container& container);
-
-/**
  * @brief The information required from the input file for an mfem::(Vector)(Function)Coefficient
  */
 struct CoefficientInputOptions {
@@ -186,22 +180,6 @@ template <>
 struct FromInlet<mfem::Vector> {
   /// @brief Returns created object from Inlet container
   mfem::Vector operator()(const axom::inlet::Container& base);
-};
-
-// Forward declaration
-namespace serac {
-enum class OutputType;
-}  // namespace serac
-
-/**
- * @brief Prototype the specialization for Inlet parsing
- *
- * @tparam The object to be created by Inlet
- */
-template <>
-struct FromInlet<serac::OutputType> {
-  /// @brief Returns created object from Inlet container
-  serac::OutputType operator()(const axom::inlet::Container& base);
 };
 
 /**
