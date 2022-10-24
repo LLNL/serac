@@ -514,7 +514,7 @@ public:
           // dA = det(F) * norm(F^-T n_0)
           //auto area_correction = det(def_grad) * norm(dot(inv_trans_def_grad, n));
 
-          return -1.0 * traction_function(x + p, shape_normal, ode_time_point_, params...);
+          return -1.0 * traction_function(x + p, n, ode_time_point_, params...);
         },
         mesh_);
   }

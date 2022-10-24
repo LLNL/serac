@@ -489,10 +489,8 @@ TEST(QoI, UsingL2)
   // this tests a fix for the QoI constructor segfaulting when using L2 spaces
   Functional<double(trial_space_0, trial_space_1)> f({&fespace_0, &fespace_1});
 
-  f.AddVolumeIntegral(
-      DependsOn<1>{}, [&](auto...) { return 1.0; }, mesh);
-  f.AddSurfaceIntegral(
-      DependsOn<0>{}, [&](auto...) { return 1.0; }, mesh);
+  f.AddVolumeIntegral(DependsOn<1>{}, [&](auto...) { return 1.0; }, mesh);
+  f.AddSurfaceIntegral(DependsOn<0>{}, [&](auto...) { return 1.0; }, mesh);
 
   check_gradient(f, *U0, *U1);
 }

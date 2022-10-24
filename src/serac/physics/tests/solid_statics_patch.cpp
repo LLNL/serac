@@ -250,7 +250,7 @@ TEST(SolidMechanics, PatchTest2dQ1TractionBcs)
 {
   constexpr int p = 1;
   constexpr int dim   = 2;
-  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::EssentialAndNatural);
   EXPECT_LT(error, tol);
 }
 
@@ -258,7 +258,7 @@ TEST(SolidMechanics, PatchTest3dQ1TractionBcs)
 {
   constexpr int p = 1;
   constexpr int dim   = 3;
-  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::EssentialAndNatural);
   EXPECT_LT(error, tol);
 }
 
@@ -266,7 +266,7 @@ TEST(SolidMechanics, PatchTest2dQ2TractionBcs)
 {
   constexpr int p = 2;
   constexpr int dim   = 2;
-  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::EssentialAndNatural);
   EXPECT_LT(error, tol);
 }
 
@@ -274,7 +274,7 @@ TEST(SolidMechanics, PatchTest3dQ2TractionBcs)
 {
   constexpr int p = 2;
   constexpr int dim   = 3;
-  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::EssentialAndNatural);
   EXPECT_LT(error, tol);
 }
 

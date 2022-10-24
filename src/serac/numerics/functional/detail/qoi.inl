@@ -24,6 +24,12 @@ struct finite_element<g, QOI> {
   SERAC_HOST_DEVICE static constexpr double shape_functions(double /* xi */) { return 1.0; }
 
   template <int Q, int q>
+  static void integrate(const tensor<zero, Q>&, const TensorProductQuadratureRule<q>&,
+                        dof_type*, [[maybe_unused]] int step = 1) {
+    return; // integrating zeros is a no-op
+  }
+
+  template <int Q, int q>
   static void integrate(const tensor<double, Q>& qf_output, const TensorProductQuadratureRule<q>&,
                         dof_type* element_total, [[maybe_unused]] int step = 1)
   {
