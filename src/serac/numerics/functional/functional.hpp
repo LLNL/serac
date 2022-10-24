@@ -200,8 +200,8 @@ public:
    * @param[in] test_fes The (non-qoi) test space
    * @param[in] trial_fes The trial space
    */
-  Functional(mfem::ParFiniteElementSpace*                               test_fes,
-             std::array<mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
+  Functional(const mfem::ParFiniteElementSpace*                               test_fes,
+             std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
       : update_qdata(false), test_space_(test_fes), trial_space_(trial_fes)
   {
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
@@ -458,7 +458,9 @@ public:
 
     if (bdr_integrals_.size() > 0) {
       for (uint32_t i = 0; i < num_trial_spaces; i++) {
-        G_trial_boundary_[i]->Mult(input_L_[i], input_E_boundary_[i]);
+        if (compatibleWithFaceRestriction(*trial_space_[i])) {
+          G_trial_boundary_[i]->Mult(input_L_[i], input_E_boundary_[i]);
+        }
       }
 
       output_E_boundary_ = 0.0;
@@ -667,10 +669,10 @@ private:
     uint32_t which_argument;
 
     /// @brief shallow copy of the test space from the associated Functional
-    mfem::ParFiniteElementSpace* test_space_;
+    const mfem::ParFiniteElementSpace* test_space_;
 
     /// @brief shallow copy of the trial space from the associated Functional
-    mfem::ParFiniteElementSpace* trial_space_;
+    const mfem::ParFiniteElementSpace* trial_space_;
 
     /// @brief storage for computing the action-of-gradient output
     mfem::Vector df_;
@@ -701,10 +703,10 @@ private:
   mutable mfem::Vector output_T_;
 
   /// @brief Manages DOFs for the test space
-  mfem::ParFiniteElementSpace* test_space_;
+  const mfem::ParFiniteElementSpace* test_space_;
 
   /// @brief Manages DOFs for the trial space
-  std::array<mfem::ParFiniteElementSpace*, num_trial_spaces> trial_space_;
+  std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_space_;
 
   /**
    * @brief Operator that converts true (global) DOF values to local (current rank) DOF values

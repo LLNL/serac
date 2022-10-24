@@ -8,7 +8,7 @@
 
 #include "serac/infrastructure/profiling.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
-#include "serac/physics/materials/solid_utils.hpp"
+#include "serac/physics/materials/solid_legacy_utils.hpp"
 
 namespace serac::mfem_ext {
 

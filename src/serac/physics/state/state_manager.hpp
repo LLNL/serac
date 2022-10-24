@@ -49,6 +49,15 @@ public:
                                      const std::string&             mesh_tag = default_mesh_name_);
 
   /**
+   * @brief Factory method for creating a new FEState object
+   *
+   * @param space A finite element space to copy for use in the new state
+   * @param state_name The name of the new state
+   * @return The constructed finite element state
+   */
+  static FiniteElementState newState(const mfem::ParFiniteElementSpace& space, const std::string& state_name);
+
+  /**
    * @brief Factory method for creating a new FEDual object, signature is identical to FEDual constructor
    * @param[in] options Configuration options for the FEDual, if a new state is created
    * @param[in] mesh_tag A string that uniquely identifies the mesh on which the dual is to be defined
@@ -57,6 +66,47 @@ public:
    */
   static FiniteElementDual newDual(FiniteElementVector::Options&& options  = {},
                                    const std::string&             mesh_tag = default_mesh_name_);
+
+  /**
+   * @brief Factory method for creating a new FEDual object
+   *
+   * @param space A finite element space to copy for use in the new dual
+   * @param dual_name The name of the new dual
+   * @return The constructed finite element dual
+   */
+  static FiniteElementDual newDual(const mfem::ParFiniteElementSpace& space, const std::string& dual_name);
+
+  /**
+   * @brief Updates the StateManager-owned grid function using the values from a given
+   * FiniteElementState.
+   *
+   * This sync operation must occur prior to writing a restart file.
+   *
+   * @param state The state used to update the internal grid function
+   */
+  static void updateState(const FiniteElementState& state)
+  {
+    SLIC_ERROR_ROOT_IF(named_states_.find(state.name()) == named_states_.end(),
+                       axom::fmt::format("State manager does not contain state named {}", state.name()));
+
+    state.fillGridFunction(*named_states_[state.name()]);
+  }
+
+  /**
+   * @brief Updates the StateManager-owned grid function using the values from a given
+   * FiniteElementDual.
+   *
+   * This sync operation must occur prior to writing a restart file.
+   *
+   * @param dual The dual used to update the internal grid function
+   */
+  static void updateDual(const FiniteElementDual& dual)
+  {
+    SLIC_ERROR_ROOT_IF(named_duals_.find(dual.name()) == named_duals_.end(),
+                       axom::fmt::format("State manager does not contain dual named {}", dual.name()));
+
+    dual.space().GetRestrictionMatrix()->MultTranspose(dual, *named_duals_[dual.name()]);
+  }
 
   /**
    * @brief Updates the Conduit Blueprint state in the datastore and saves to a file
@@ -84,6 +134,8 @@ public:
    */
   static void reset()
   {
+    named_states_.clear();
+    named_duals_.clear();
     datacolls_.clear();
     is_restart_ = false;
     ds_         = nullptr;
@@ -142,6 +194,11 @@ private:
   static std::string output_dir_;
   /// @brief Default name for the mesh - mostly for backwards compatibility
   const static std::string default_mesh_name_;
+
+  /// @brief A collection of FiniteElementState names and their corresponding Sidre-owned grid function pointers
+  static std::unordered_map<std::string, mfem::ParGridFunction*> named_states_;
+  /// @brief A collection of FiniteElementDual names and their corresponding Sidre-owned grid function pointers
+  static std::unordered_map<std::string, mfem::ParGridFunction*> named_duals_;
 };
 
 }  // namespace serac
