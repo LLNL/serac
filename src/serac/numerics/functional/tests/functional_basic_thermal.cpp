@@ -25,9 +25,9 @@
 using namespace serac;
 using namespace serac::profiling;
 
-template < int p, int dim >
-void thermal_test() {
-
+template <int p, int dim>
+void thermal_test()
+{
   std::string meshfile;
   if (dim == 2) {
     meshfile = SERAC_REPO_DIR "/data/meshes/patch2D.mesh";
@@ -53,13 +53,12 @@ void thermal_test() {
   Functional<test_space(trial_space)> residual(&fespace, {&fespace});
 
   auto d00 = 1.0;
-  auto d01 = 1.0 * make_tensor<dim>([](int i){ return i; });
-  auto d10 = 1.0 * make_tensor<dim>([](int i){ return 2*i*i; });
-  auto d11 = 1.0 * make_tensor<dim, dim>([](int i, int j){ return i + j*(j+1) + 1; });
+  auto d01 = 1.0 * make_tensor<dim>([](int i) { return i; });
+  auto d10 = 1.0 * make_tensor<dim>([](int i) { return 2 * i * i; });
+  auto d11 = 1.0 * make_tensor<dim, dim>([](int i, int j) { return i + j * (j + 1) + 1; });
 
   residual.AddDomainIntegral(
-      Dimension<dim>{},
-      DependsOn<0>{},
+      Dimension<dim>{}, DependsOn<0>{},
       [=](auto x, auto temperature) {
         auto [u, du_dx] = temperature;
         auto source     = d00 * u + dot(d01, du_dx) - 0.0 * (100 * x[0] * x[1]);
@@ -68,10 +67,12 @@ void thermal_test() {
       },
       *mesh);
 
-  residual.AddBoundaryIntegral(Dimension<dim-1>{}, DependsOn<0>{}, [=](auto x, auto /*n*/, auto temperature) { 
+  residual.AddBoundaryIntegral(
+      Dimension<dim - 1>{}, DependsOn<0>{},
+      [=](auto x, auto /*n*/, auto temperature) {
         auto [u, du_dxi] = temperature;
-        return x[0] + x[1] - cos(u); 
-      }, 
+        return x[0] + x[1] - cos(u);
+      },
       *mesh);
 
   check_gradient(residual, U);

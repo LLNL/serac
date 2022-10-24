@@ -25,7 +25,7 @@
 
 namespace compiler {
 static void please_do_not_optimize_away([[maybe_unused]] void* p) { asm volatile("" : : "g"(p) : "memory"); }
-} // namespace compiler
+}  // namespace compiler
 
 template <typename lambda>
 auto time(lambda&& f)
@@ -62,7 +62,7 @@ struct GaussLegendreRule<Geometry::Hexahedron, Q> {
   static constexpr int size() { return Q * Q * Q; }
 };
 
-}
+}  // namespace serac
 
 template <int p, int q>
 void h1_h1_test_2D(size_t num_elements, size_t num_runs)
@@ -147,7 +147,7 @@ void h1_h1_test_2D(size_t num_elements, size_t num_runs)
     serac::domain_integral::EvaluationKernel element_residual{eval_config, J1D, X1D, num_elements, qf, serac::NoQData};
 
     // unused anyway, since there is no material state
-    bool update_state = false; 
+    bool update_state = false;
 
     double runtime = time([&]() {
       for (size_t i = 0; i < num_runs; i++) {
@@ -183,26 +183,26 @@ void h1_h1_test_2D(size_t num_elements, size_t num_runs)
     }
 
     double mass_runtime = time([&]() {
-                            for (size_t i = 0; i < num_runs; i++) {
-                              mfem::SmemPAMassApply2D<n, q>(static_cast<int>(num_elements), b_, bt_, rho_dv_1D, U1D, R1D);
-                              compiler::please_do_not_optimize_away(&R1D);
-                            }
-                          });
+      for (size_t i = 0; i < num_runs; i++) {
+        mfem::SmemPAMassApply2D<n, q>(static_cast<int>(num_elements), b_, bt_, rho_dv_1D, U1D, R1D);
+        compiler::please_do_not_optimize_away(&R1D);
+      }
+    });
     std::cout << "average mfem mass kernel time: " << mass_runtime / num_runs_d << std::endl;
 
-    double diffusion_runtime =
-        time([&]() {
-          for (size_t i = 0; i < num_runs; i++) {
-            mfem::SmemPADiffusionApply2D<n, q>(static_cast<int>(num_elements), symmetric = false, b_, g_, k_invJ_invJT_dv_1D, U1D, R1D);
-            compiler::please_do_not_optimize_away(&R1D);
-          }
-        });
+    double diffusion_runtime = time([&]() {
+      for (size_t i = 0; i < num_runs; i++) {
+        mfem::SmemPADiffusionApply2D<n, q>(static_cast<int>(num_elements), symmetric = false, b_, g_,
+                                           k_invJ_invJT_dv_1D, U1D, R1D);
+        compiler::please_do_not_optimize_away(&R1D);
+      }
+    });
     std::cout << "average mfem diffusion kernel time: " << diffusion_runtime / num_runs_d << std::endl;
 
     std::cout << "average mfem combined kernel time: " << (mass_runtime + diffusion_runtime) / num_runs_d << std::endl;
   }
   auto answer_mfem = R1D;
-  auto error            = answer_reference;
+  auto error       = answer_reference;
   error -= answer_mfem;
   auto relative_error = error.Norml2() / answer_reference.Norml2();
   std::cout << "error: " << relative_error << std::endl;
@@ -237,17 +237,14 @@ void h1_h1_test_EA_2D(size_t num_elements, size_t num_runs)
   auto rho_dv          = mfem::Reshape(rho_dv_1D.ReadWrite(), q * q, num_elements);
   auto k_invJ_invJT_dv = mfem::Reshape(k_invJ_invJT_dv_1D.ReadWrite(), q * q, 3, num_elements);
 
-  using derivative_type = serac::tuple <
-    serac::tuple < double, serac::zero >,
-    serac::tuple < serac::zero, serac::tensor< double, dim, dim > >
-  >;
+  using derivative_type =
+      serac::tuple<serac::tuple<double, serac::zero>, serac::tuple<serac::zero, serac::tensor<double, dim, dim> > >;
 
   serac::CPUArray<derivative_type, 2> derivatives(num_elements, q * q);
 
   serac::GaussLegendreRule<Geometry::Quadrilateral, q> rule;
 
   for (size_t e = 0; e < num_elements; e++) {
-
     for (int i = 0; i < q * q; i++) {
       serac::tensor<double, dim, dim> J_q{};
 
@@ -264,7 +261,7 @@ void h1_h1_test_EA_2D(size_t num_elements, size_t num_runs)
       auto   invJ_invJT = dot(inv(J_q), transpose(inv(J_q)));
       double dv         = det(J_q) * qweight;
 
-      rho_dv(i, e) = rho * dv;
+      rho_dv(i, e)             = rho * dv;
       k_invJ_invJT_dv(i, 0, e) = k * invJ_invJT[0][0] * dv;
       k_invJ_invJT_dv(i, 1, e) = k * invJ_invJT[0][1] * dv;
       k_invJ_invJT_dv(i, 2, e) = k * invJ_invJT[1][1] * dv;
@@ -279,8 +276,8 @@ void h1_h1_test_EA_2D(size_t num_elements, size_t num_runs)
     double runtime = time([&]() {
       for (size_t i = 0; i < num_runs; i++) {
         serac::domain_integral::element_gradient_kernel<Geometry::Quadrilateral, test, trial, q>(
-          serac::CPUArrayView<double, 3>(KE_1D.GetData(), num_elements, n * n, n * n),
-          view(derivatives), J1D, num_elements);
+            serac::CPUArrayView<double, 3>(KE_1D.GetData(), num_elements, n * n, n * n), view(derivatives), J1D,
+            num_elements);
         compiler::please_do_not_optimize_away(&KE_1D);
       }
     });
@@ -294,8 +291,8 @@ void h1_h1_test_EA_2D(size_t num_elements, size_t num_runs)
     double runtime = time([&]() {
       for (size_t i = 0; i < num_runs; i++) {
         serac::domain_integral::element_gradient_kernel_new<Geometry::Quadrilateral, test, trial, q>(
-          serac::CPUArrayView<double, 3>(KE_1D.GetData(), num_elements, n * n, n * n),
-          view(derivatives), J1D, num_elements);
+            serac::CPUArrayView<double, 3>(KE_1D.GetData(), num_elements, n * n, n * n), view(derivatives), J1D,
+            num_elements);
         compiler::please_do_not_optimize_away(&KE_1D);
       }
     });
@@ -308,7 +305,7 @@ void h1_h1_test_EA_2D(size_t num_elements, size_t num_runs)
   }
 
   {
-    KE_1D               = 0.0;
+    KE_1D = 0.0;
     mfem::Array<double> b_(n * q);
     mfem::Array<double> bt_(n * q);
     mfem::Array<double> g_(n * q);
@@ -329,24 +326,24 @@ void h1_h1_test_EA_2D(size_t num_elements, size_t num_runs)
       }
     }
 
-    //double mass_runtime = time([&]() {
+    // double mass_runtime = time([&]() {
     //                        for (size_t i = 0; i < num_runs; i++) {
-    //                          mfem::SmemPAMassApply2D<n, q>(static_cast<int>(num_elements), b_, bt_, rho_dv_1D, U1D, R1D);
-    //                          compiler::please_do_not_optimize_away(&R1D);
+    //                          mfem::SmemPAMassApply2D<n, q>(static_cast<int>(num_elements), b_, bt_, rho_dv_1D, U1D,
+    //                          R1D); compiler::please_do_not_optimize_away(&R1D);
     //                        }
     //                      });
-    //std::cout << "average mfem mass kernel time: " << mass_runtime / num_runs_d << std::endl;
+    // std::cout << "average mfem mass kernel time: " << mass_runtime / num_runs_d << std::endl;
 
-    double diffusion_runtime =
-        time([&]() {
-          for (size_t i = 0; i < num_runs; i++) {
-            mfem::EADiffusionAssemble2D<n, q>(static_cast<int>(num_elements), b_, g_, k_invJ_invJT_dv_1D, KE_1D, true);
-            compiler::please_do_not_optimize_away(&KE_1D);
-          }
-        });
+    double diffusion_runtime = time([&]() {
+      for (size_t i = 0; i < num_runs; i++) {
+        mfem::EADiffusionAssemble2D<n, q>(static_cast<int>(num_elements), b_, g_, k_invJ_invJT_dv_1D, KE_1D, true);
+        compiler::please_do_not_optimize_away(&KE_1D);
+      }
+    });
     std::cout << "average mfem diffusion kernel time: " << diffusion_runtime / num_runs_d << std::endl;
 
-    //std::cout << "average mfem combined kernel time: " << (mass_runtime + diffusion_runtime) / num_runs_d << std::endl;
+    // std::cout << "average mfem combined kernel time: " << (mass_runtime + diffusion_runtime) / num_runs_d <<
+    // std::endl;
   }
   auto answer_mfem = KE_1D;
   auto error       = answer_reference;
@@ -384,17 +381,14 @@ void h1_h1_test_EA_3D(size_t num_elements, size_t num_runs)
   auto rho_dv          = mfem::Reshape(rho_dv_1D.ReadWrite(), q * q * q, num_elements);
   auto k_invJ_invJT_dv = mfem::Reshape(k_invJ_invJT_dv_1D.ReadWrite(), q * q * q, 6, num_elements);
 
-  using derivative_type = serac::tuple <
-    serac::tuple < double, serac::zero >,
-    serac::tuple < serac::zero, serac::tensor< double, dim, dim > >
-  >;
+  using derivative_type =
+      serac::tuple<serac::tuple<double, serac::zero>, serac::tuple<serac::zero, serac::tensor<double, dim, dim> > >;
 
   serac::CPUArray<derivative_type, 2> derivatives(num_elements, q * q * q);
 
   serac::GaussLegendreRule<Geometry::Hexahedron, q> rule;
 
   for (size_t e = 0; e < num_elements; e++) {
-
     for (int i = 0; i < q * q * q; i++) {
       serac::tensor<double, dim, dim> J_q{};
 
@@ -412,7 +406,7 @@ void h1_h1_test_EA_3D(size_t num_elements, size_t num_runs)
       auto   invJ_invJT = dot(inv(J_q), transpose(inv(J_q)));
       double dv         = det(J_q) * qweight;
 
-      rho_dv(i, e) = rho * dv;
+      rho_dv(i, e)             = rho * dv;
       k_invJ_invJT_dv(i, 0, e) = k * invJ_invJT[0][0] * dv;
       k_invJ_invJT_dv(i, 1, e) = k * invJ_invJT[0][1] * dv;
       k_invJ_invJT_dv(i, 2, e) = k * invJ_invJT[0][2] * dv;
@@ -430,8 +424,8 @@ void h1_h1_test_EA_3D(size_t num_elements, size_t num_runs)
     double runtime = time([&]() {
       for (size_t i = 0; i < num_runs; i++) {
         serac::domain_integral::element_gradient_kernel<Geometry::Hexahedron, test, trial, q>(
-          serac::CPUArrayView<double, 3>(KE_1D.GetData(), num_elements, n * n * n, n * n * n),
-          view(derivatives), J1D, num_elements);
+            serac::CPUArrayView<double, 3>(KE_1D.GetData(), num_elements, n * n * n, n * n * n), view(derivatives), J1D,
+            num_elements);
         compiler::please_do_not_optimize_away(&KE_1D);
       }
     });
@@ -440,12 +434,12 @@ void h1_h1_test_EA_3D(size_t num_elements, size_t num_runs)
   auto answer_reference = KE_1D;
 
   {
-    KE_1D = 0.0;
+    KE_1D          = 0.0;
     double runtime = time([&]() {
       for (size_t i = 0; i < num_runs; i++) {
         serac::domain_integral::element_gradient_kernel_new<Geometry::Hexahedron, test, trial, q>(
-          serac::CPUArrayView<double, 3>(KE_1D.GetData(), num_elements, n * n * n, n * n * n),
-          view(derivatives), J1D, num_elements);
+            serac::CPUArrayView<double, 3>(KE_1D.GetData(), num_elements, n * n * n, n * n * n), view(derivatives), J1D,
+            num_elements);
         compiler::please_do_not_optimize_away(&KE_1D);
       }
     });
@@ -458,7 +452,7 @@ void h1_h1_test_EA_3D(size_t num_elements, size_t num_runs)
   }
 
   {
-    KE_1D               = 0.0;
+    KE_1D = 0.0;
     mfem::Array<double> b_(n * q);
     mfem::Array<double> bt_(n * q);
     mfem::Array<double> g_(n * q);
@@ -479,24 +473,24 @@ void h1_h1_test_EA_3D(size_t num_elements, size_t num_runs)
       }
     }
 
-    //double mass_runtime = time([&]() {
+    // double mass_runtime = time([&]() {
     //                        for (size_t i = 0; i < num_runs; i++) {
-    //                          mfem::SmemPAMassApply2D<n, q>(static_cast<int>(num_elements), b_, bt_, rho_dv_1D, U1D, R1D);
-    //                          compiler::please_do_not_optimize_away(&R1D);
+    //                          mfem::SmemPAMassApply2D<n, q>(static_cast<int>(num_elements), b_, bt_, rho_dv_1D, U1D,
+    //                          R1D); compiler::please_do_not_optimize_away(&R1D);
     //                        }
     //                      });
-    //std::cout << "average mfem mass kernel time: " << mass_runtime / num_runs_d << std::endl;
+    // std::cout << "average mfem mass kernel time: " << mass_runtime / num_runs_d << std::endl;
 
-    double diffusion_runtime =
-        time([&]() {
-          for (size_t i = 0; i < num_runs; i++) {
-            mfem::EADiffusionAssemble3D<n, q>(static_cast<int>(num_elements), b_, g_, k_invJ_invJT_dv_1D, KE_1D, true);
-            compiler::please_do_not_optimize_away(&KE_1D);
-          }
-        });
+    double diffusion_runtime = time([&]() {
+      for (size_t i = 0; i < num_runs; i++) {
+        mfem::EADiffusionAssemble3D<n, q>(static_cast<int>(num_elements), b_, g_, k_invJ_invJT_dv_1D, KE_1D, true);
+        compiler::please_do_not_optimize_away(&KE_1D);
+      }
+    });
     std::cout << "average mfem diffusion kernel time: " << diffusion_runtime / num_runs_d << std::endl;
 
-    //std::cout << "average mfem combined kernel time: " << (mass_runtime + diffusion_runtime) / num_runs_d << std::endl;
+    // std::cout << "average mfem combined kernel time: " << (mass_runtime + diffusion_runtime) / num_runs_d <<
+    // std::endl;
   }
   auto answer_mfem = KE_1D;
   auto error       = answer_reference;
@@ -583,7 +577,7 @@ void h1_h1_test_3D(size_t num_elements, size_t num_runs)
   }
 
   {
-    R1D            = 0.0;
+    R1D = 0.0;
 
     auto X1D = U1D;
 
@@ -592,7 +586,7 @@ void h1_h1_test_3D(size_t num_elements, size_t num_runs)
     serac::domain_integral::EvaluationKernel element_residual{eval_config, J1D, X1D, num_elements, qf, serac::NoQData};
 
     // unused anyway, since there is no material state
-    bool update_state = false; 
+    bool update_state = false;
 
     double runtime = time([&]() {
       for (size_t i = 0; i < num_runs; i++) {
@@ -637,7 +631,8 @@ void h1_h1_test_3D(size_t num_elements, size_t num_runs)
 
     double diffusion_runtime = time([&]() {
       for (size_t i = 0; i < num_runs; i++) {
-        mfem::SmemPADiffusionApply3D<n, q>(static_cast<int>(num_elements), symmetric = false, b_, g_, k_invJ_invJT_dv_1D, U1D, R1D);
+        mfem::SmemPADiffusionApply3D<n, q>(static_cast<int>(num_elements), symmetric = false, b_, g_,
+                                           k_invJ_invJT_dv_1D, U1D, R1D);
         compiler::please_do_not_optimize_away(&R1D);
       }
     });
@@ -646,7 +641,7 @@ void h1_h1_test_3D(size_t num_elements, size_t num_runs)
     std::cout << "average mfem combined kernel time: " << (mass_runtime + diffusion_runtime) / num_runs_d << std::endl;
   }
   auto answer_mfem = R1D;
-  auto error            = answer_reference;
+  auto error       = answer_reference;
   error -= answer_mfem;
   auto relative_error = error.Norml2() / answer_reference.Norml2();
   std::cout << "error: " << relative_error << std::endl;
@@ -657,15 +652,15 @@ int main()
   size_t num_runs     = 5;
   size_t num_elements = 1000;
 
-  //h1_h1_test_2D<1 /* polynomial order */, 2 /* quadrature points / dim */>(8 * num_elements, num_runs);
-  //h1_h1_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(4 * num_elements, num_runs);
-  //h1_h1_test_2D<3 /* polynomial order */, 4 /* quadrature points / dim */>(1 * num_elements, num_runs);
+  // h1_h1_test_2D<1 /* polynomial order */, 2 /* quadrature points / dim */>(8 * num_elements, num_runs);
+  // h1_h1_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(4 * num_elements, num_runs);
+  // h1_h1_test_2D<3 /* polynomial order */, 4 /* quadrature points / dim */>(1 * num_elements, num_runs);
 
-  //h1_h1_test_3D<1 /* polynomial order */, 2 /* quadrature points / dim */>(8 * num_elements, num_runs);
-  //h1_h1_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(4 * num_elements, num_runs);
-  //h1_h1_test_3D<3 /* polynomial order */, 4 /* quadrature points / dim */>(1 * num_elements, num_runs);
+  // h1_h1_test_3D<1 /* polynomial order */, 2 /* quadrature points / dim */>(8 * num_elements, num_runs);
+  // h1_h1_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(4 * num_elements, num_runs);
+  // h1_h1_test_3D<3 /* polynomial order */, 4 /* quadrature points / dim */>(1 * num_elements, num_runs);
 
-  h1_h1_test_EA_3D< 1, 2 >(num_elements, num_runs);
-  h1_h1_test_EA_3D< 2, 3 >(num_elements, num_runs);
-  h1_h1_test_EA_3D< 3, 4 >(num_elements, num_runs);
+  h1_h1_test_EA_3D<1, 2>(num_elements, num_runs);
+  h1_h1_test_EA_3D<2, 3>(num_elements, num_runs);
+  h1_h1_test_EA_3D<3, 4>(num_elements, num_runs);
 }

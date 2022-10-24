@@ -136,19 +136,20 @@ void load(const dof_type& source, dof_type& destination)
 
 #include <type_traits>
 
-template <typename lambda, int n, typename ... T, int ... I >
-auto batch_apply_qf(lambda qf, const tuple < tensor<T, n> ... > & inputs, std::integer_sequence< int, I ... >)
+template <typename lambda, int n, typename... T, int... I>
+auto batch_apply_qf(lambda qf, const tuple<tensor<T, n>...>& inputs, std::integer_sequence<int, I...>)
 {
-  using return_type = decltype(qf(T{} ...));
+  using return_type = decltype(qf(T{}...));
   tensor<return_type, n> outputs{};
   for (int i = 0; i < n; i++) {
-    outputs[i] = qf(get<I>(inputs)[i] ...);
+    outputs[i] = qf(get<I>(inputs)[i]...);
   }
   return outputs;
 }
 
 template <typename lambda, typename value_t, typename derivative_t, int q>
-auto batch_apply_qf(lambda qf, const tensor<value_t, q, q>& /*X*/, const tensor<value_t, q, q>& values, const tensor<derivative_t, q, q>& derivatives)
+auto batch_apply_qf(lambda qf, const tensor<value_t, q, q>& /*X*/, const tensor<value_t, q, q>& values,
+                    const tensor<derivative_t, q, q>& derivatives)
 {
   using return_type = decltype(qf(serac::tuple{value_t{}, derivative_t{}}));
   using source_type = std::remove_const_t<std::remove_reference_t<decltype(serac::get<0>(return_type{}))> >;
@@ -565,7 +566,7 @@ void h1_h1_test_3D(size_t num_elements, size_t num_runs)
         compiler::please_do_not_optimize_away(&R1D);
       }
     });
-    std::cout << "average reference kernel time: " << runtime / static_cast< double >(num_runs) << std::endl;
+    std::cout << "average reference kernel time: " << runtime / static_cast<double>(num_runs) << std::endl;
   }
   auto answer_reference = R1D;
 
@@ -701,7 +702,8 @@ void h1_h1_test_3D(size_t num_elements, size_t num_runs)
 
     double diffusion_runtime = time([&]() {
       for (size_t i = 0; i < num_runs; i++) {
-        mfem::SmemPADiffusionApply3D<n, q>(static_cast<int>(num_elements), symmetric = false, b_, g_, k_invJ_invJT_dv_1D, U1D, R1D);
+        mfem::SmemPADiffusionApply3D<n, q>(static_cast<int>(num_elements), symmetric = false, b_, g_,
+                                           k_invJ_invJT_dv_1D, U1D, R1D);
         compiler::please_do_not_optimize_away(&R1D);
       }
     });
@@ -1031,19 +1033,19 @@ int main()
 {
   size_t num_runs     = 10;
   size_t num_elements = 10000;
-  //h1_h1_test_2D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
-  //h1_h1_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
-  //h1_h1_test_2D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
+  // h1_h1_test_2D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
+  // h1_h1_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
+  // h1_h1_test_2D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
 
   h1_h1_test_3D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
   h1_h1_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
   h1_h1_test_3D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
 
-  //hcurl_hcurl_test_2D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
-  //hcurl_hcurl_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
-  //hcurl_hcurl_test_2D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
+  // hcurl_hcurl_test_2D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
+  // hcurl_hcurl_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
+  // hcurl_hcurl_test_2D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
 
-  //hcurl_hcurl_test_3D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
-  //hcurl_hcurl_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
-  //hcurl_hcurl_test_3D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
+  // hcurl_hcurl_test_3D<1 /* polynomial order */, 2 /* quadrature points / dim */>(num_elements, num_runs);
+  // hcurl_hcurl_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(num_elements, num_runs);
+  // hcurl_hcurl_test_3D<3 /* polynomial order */, 4 /* quadrature points / dim */>(num_elements, num_runs);
 }

@@ -352,13 +352,12 @@ TEST(Tensor, DerivativeOfLinearSolveWrtAMatchesFiniteDifference)
   auto x = linear_solve(A, b);
 
   EXPECT_LT(squared_norm(dx_FD - get_gradient(x)), tolerance);
-
 }
 
 TEST(Tensor, TrailingDimensions)
 {
-  EXPECT_TRUE(trailing_dimension_product(tensor<double, 2, 3, 4, 5 >{}) == 60);
-  EXPECT_TRUE(trailing_dimension_product(tensor<double, 2 >{}) == 1);
+  EXPECT_TRUE(trailing_dimension_product(tensor<double, 2, 3, 4, 5>{}) == 60);
+  EXPECT_TRUE(trailing_dimension_product(tensor<double, 2>{}) == 1);
   EXPECT_TRUE(trailing_dimension_product(double{}) == 1);
   EXPECT_TRUE(trailing_dimension_product(zero{}) == 0);
 }

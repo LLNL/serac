@@ -25,7 +25,7 @@
 
 namespace compiler {
 static void please_do_not_optimize_away([[maybe_unused]] void* p) { asm volatile("" : : "g"(p) : "memory"); }
-} // namespace compiler
+}  // namespace compiler
 
 template <typename lambda>
 auto time(lambda&& f)
@@ -62,7 +62,7 @@ struct GaussLegendreRule<Geometry::Hexahedron, Q> {
   static constexpr int size() { return Q * Q * Q; }
 };
 
-}
+}  // namespace serac
 
 template <int p, int q>
 void hcurl_hcurl_test_2D(size_t num_elements, size_t num_runs)
@@ -102,11 +102,11 @@ void hcurl_hcurl_test_2D(size_t num_elements, size_t num_runs)
   mfem::Vector rho_invJ_invJT_dv_1D(static_cast<int>(num_elements * dim * dim * q * q));
   mfem::Vector k_dv_over_detJsq_1D(static_cast<int>(num_elements * q * q));
 
-  X1D = 0.0;
-  auto U = mfem::Reshape(U1D.ReadWrite(), trial_element::ndof, num_elements);
-  auto J = mfem::Reshape(J1D.ReadWrite(), q * q, dim, dim, num_elements);
+  X1D                    = 0.0;
+  auto U                 = mfem::Reshape(U1D.ReadWrite(), trial_element::ndof, num_elements);
+  auto J                 = mfem::Reshape(J1D.ReadWrite(), q * q, dim, dim, num_elements);
   auto rho_invJ_invJT_dv = mfem::Reshape(rho_invJ_invJT_dv_1D.ReadWrite(), q * q, dim, dim, num_elements);
-  auto k_dv_over_detJsq = mfem::Reshape(k_dv_over_detJsq_1D.ReadWrite(), q * q, num_elements);
+  auto k_dv_over_detJsq  = mfem::Reshape(k_dv_over_detJsq_1D.ReadWrite(), q * q, num_elements);
 
   serac::GaussLegendreRule<Geometry::Quadrilateral, q> rule;
 
@@ -137,20 +137,19 @@ void hcurl_hcurl_test_2D(size_t num_elements, size_t num_runs)
           rho_invJ_invJT_dv(i, r, c, e) = rho * invJ_invJT[r][c] * dv;
         }
       }
-      k_dv_over_detJsq(i, e)  = (k * dv) / (detJ * detJ);
-
+      k_dv_over_detJsq(i, e) = (k * dv) / (detJ * detJ);
     }
   }
 
   {
-    R1D            = 0.0;
+    R1D = 0.0;
 
     serac::domain_integral::KernelConfig<q, Geometry::Quadrilateral, test, trial> eval_config;
 
     serac::domain_integral::EvaluationKernel element_residual{eval_config, J1D, X1D, num_elements, qf, serac::NoQData};
 
     // unused anyway, since there is no material state
-    bool update_state = false; 
+    bool update_state = false;
 
     double runtime = time([&]() {
       for (size_t i = 0; i < num_runs; i++) {
@@ -199,45 +198,38 @@ void hcurl_hcurl_test_2D(size_t num_elements, size_t num_runs)
     }
 
     double mass_runtime = time([&]() {
-                            for (size_t i = 0; i < num_runs; i++) {
-                              mfem::PAHcurlMassApply2D(n, q, static_cast<int>(num_elements), symmetric, bo_, bc_, bot_, bct_,
-                                                       rho_invJ_invJT_dv_1D, U1D, R1D);
-                              compiler::please_do_not_optimize_away(&R1D);
-                            }
-                          });
+      for (size_t i = 0; i < num_runs; i++) {
+        mfem::PAHcurlMassApply2D(n, q, static_cast<int>(num_elements), symmetric, bo_, bc_, bot_, bct_,
+                                 rho_invJ_invJT_dv_1D, U1D, R1D);
+        compiler::please_do_not_optimize_away(&R1D);
+      }
+    });
     std::cout << "average mfem mass kernel time: " << mass_runtime / num_runs_d << std::endl;
 
-
     double curlcurl_runtime = time([&]() {
-                                 for (size_t i = 0; i < num_runs; i++) {
-                                   mfem::PACurlCurlApply2D(n, q, static_cast<int>(num_elements), bo_, bot_,
-                                                           gc_, gct_, k_dv_over_detJsq_1D, U1D, R1D);
-                                   compiler::please_do_not_optimize_away(&R1D);
-                                 }
-                               });
+      for (size_t i = 0; i < num_runs; i++) {
+        mfem::PACurlCurlApply2D(n, q, static_cast<int>(num_elements), bo_, bot_, gc_, gct_, k_dv_over_detJsq_1D, U1D,
+                                R1D);
+        compiler::please_do_not_optimize_away(&R1D);
+      }
+    });
     std::cout << "average mfem curlcurl kernel time: " << curlcurl_runtime / num_runs_d << std::endl;
 
     std::cout << "average mfem combined kernel time: " << (mass_runtime + curlcurl_runtime) / num_runs_d << std::endl;
   }
   auto answer_mfem = R1D;
-  auto error            = answer_reference;
+  auto error       = answer_reference;
   error -= answer_mfem;
   auto relative_error = error.Norml2() / answer_reference.Norml2();
   std::cout << "error: " << relative_error << std::endl;
 }
 
-
 template <int p, int q>
-void mfem_test_3D(
-  size_t num_elements,
-  size_t num_runs,
-  mfem::Vector & U1D,
-  mfem::Vector & R1D,
-  mfem::Vector & rho_invJ_invJT_dv_1D,
-  mfem::Vector & k_JTJ_dv_over_detJsq_1D) {
-
-  constexpr int n = p + 1;
-  double num_runs_d = static_cast<double>(num_runs);
+void mfem_test_3D(size_t num_elements, size_t num_runs, mfem::Vector& U1D, mfem::Vector& R1D,
+                  mfem::Vector& rho_invJ_invJT_dv_1D, mfem::Vector& k_JTJ_dv_over_detJsq_1D)
+{
+  constexpr int n          = p + 1;
+  double        num_runs_d = static_cast<double>(num_runs);
 
   R1D            = 0.0;
   bool symmetric = false;
@@ -278,8 +270,8 @@ void mfem_test_3D(
 
   double mass_runtime = time([&]() {
     for (size_t i = 0; i < num_runs; i++) {
-      mfem::PAHcurlMassApply3D(n, q, static_cast<int>(num_elements), symmetric = false, bo_, bc_, bot_, bct_, rho_invJ_invJT_dv_1D, U1D,
-                               R1D);
+      mfem::PAHcurlMassApply3D(n, q, static_cast<int>(num_elements), symmetric = false, bo_, bc_, bot_, bct_,
+                               rho_invJ_invJT_dv_1D, U1D, R1D);
       compiler::please_do_not_optimize_away(&R1D);
     }
   });
@@ -287,18 +279,15 @@ void mfem_test_3D(
 
   double curlcurl_runtime = time([&]() {
     for (size_t i = 0; i < num_runs; i++) {
-      mfem::PACurlCurlApply3D<n, q>(n, q, symmetric = false, static_cast<int>(num_elements), bo_, bc_, bot_, bct_, gc_, gct_,
-                                    k_JTJ_dv_over_detJsq_1D, U1D, R1D);
+      mfem::PACurlCurlApply3D<n, q>(n, q, symmetric = false, static_cast<int>(num_elements), bo_, bc_, bot_, bct_, gc_,
+                                    gct_, k_JTJ_dv_over_detJsq_1D, U1D, R1D);
       compiler::please_do_not_optimize_away(&R1D);
     }
   });
   std::cout << "average mfem curlcurl kernel time: " << curlcurl_runtime / num_runs_d << std::endl;
 
   std::cout << "average mfem combined kernel time: " << (mass_runtime + curlcurl_runtime) / num_runs_d << std::endl;
-
 }
-
-
 
 template <int p, int q>
 void hcurl_hcurl_test_3D(size_t num_elements, size_t num_runs)
@@ -307,7 +296,7 @@ void hcurl_hcurl_test_3D(size_t num_elements, size_t num_runs)
   using serac::Hcurl;
 
   [[maybe_unused]] constexpr int n   = p + 1;
-  constexpr int dim = 3;
+  constexpr int                  dim = 3;
 
   const double num_runs_d = static_cast<double>(num_runs);
 
@@ -330,7 +319,7 @@ void hcurl_hcurl_test_3D(size_t num_elements, size_t num_runs)
   mfem::Vector rho_invJ_invJT_dv_1D(static_cast<int>(num_elements * dim * dim * q * q * q));
   mfem::Vector k_JTJ_dv_over_detJsq_1D(static_cast<int>(num_elements * dim * dim * q * q * q));
 
-  X1D = 0.0;
+  X1D                       = 0.0;
   auto U                    = mfem::Reshape(U1D.ReadWrite(), trial_element::ndof, num_elements);
   auto J                    = mfem::Reshape(J1D.ReadWrite(), q * q * q, dim, dim, num_elements);
   auto rho_invJ_invJT_dv    = mfem::Reshape(rho_invJ_invJT_dv_1D.ReadWrite(), q * q * q, dim, dim, num_elements);
@@ -387,7 +376,7 @@ void hcurl_hcurl_test_3D(size_t num_elements, size_t num_runs)
     serac::domain_integral::EvaluationKernel element_residual{eval_config, J1D, X1D, num_elements, qf, serac::NoQData};
 
     // unused anyway, since there is no material state
-    bool update_state = false; 
+    bool update_state = false;
 
     double runtime = time([&]() {
       for (size_t i = 0; i < num_runs; i++) {
@@ -457,7 +446,7 @@ void hcurl_hcurl_test_3D(size_t num_elements, size_t num_runs)
     std::cout << "average mfem combined kernel time: " << (mass_runtime + curlcurl_runtime) / num_runs_d << std::endl;
   }
 #else
-  mfem_test_3D<p,q>(num_elements, num_runs, U1D, R1D, rho_invJ_invJT_dv_1D, k_JTJ_dv_over_detJsq_1D);
+  mfem_test_3D<p, q>(num_elements, num_runs, U1D, R1D, rho_invJ_invJT_dv_1D, k_JTJ_dv_over_detJsq_1D);
 #endif
   auto answer_mfem = R1D;
   auto error       = answer_reference;
@@ -471,11 +460,11 @@ int main()
   size_t num_runs     = 10;
   size_t num_elements = 10000;
 
-  //hcurl_hcurl_test_2D<1 /* polynomial order */, 2 /* quadrature points / dim */>(8 * num_elements, num_runs);
-  //hcurl_hcurl_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(4 * num_elements, num_runs);
-  //hcurl_hcurl_test_2D<3 /* polynomial order */, 4 /* quadrature points / dim */>(1 * num_elements, num_runs);
+  // hcurl_hcurl_test_2D<1 /* polynomial order */, 2 /* quadrature points / dim */>(8 * num_elements, num_runs);
+  // hcurl_hcurl_test_2D<2 /* polynomial order */, 3 /* quadrature points / dim */>(4 * num_elements, num_runs);
+  // hcurl_hcurl_test_2D<3 /* polynomial order */, 4 /* quadrature points / dim */>(1 * num_elements, num_runs);
 
-  //hcurl_hcurl_test_3D<1 /* polynomial order */, 2 /* quadrature points / dim */>(8 * num_elements, num_runs);
-  //hcurl_hcurl_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(4 * num_elements, num_runs);
+  // hcurl_hcurl_test_3D<1 /* polynomial order */, 2 /* quadrature points / dim */>(8 * num_elements, num_runs);
+  // hcurl_hcurl_test_3D<2 /* polynomial order */, 3 /* quadrature points / dim */>(4 * num_elements, num_runs);
   hcurl_hcurl_test_3D<3 /* polynomial order */, 4 /* quadrature points / dim */>(1 * num_elements, num_runs);
 }

@@ -110,13 +110,13 @@ TEST(dual_number_tensor, perturbation_confusion_confusion)
   {
     const auto x_ = dual<double>{1.0, 1.0};
     const auto y_ = dual<double>{1.0, 1.0};
-    EXPECT_EQ((x_*((x_+y_).gradient)).gradient, 2);
+    EXPECT_EQ((x_ * ((x_ + y_).gradient)).gradient, 2);
   }
 
   {
-    const auto x_ = dual< tensor<double, 2> >{1.0, {1.0, 0.0}};
-    const auto y_ = dual< tensor<double, 2> >{1.0, {0.0, 1.0}};
-    EXPECT_EQ((x_*((x_+y_).gradient[1])).gradient[0], 1);
+    const auto x_ = dual<tensor<double, 2> >{1.0, {1.0, 0.0}};
+    const auto y_ = dual<tensor<double, 2> >{1.0, {0.0, 1.0}};
+    EXPECT_EQ((x_ * ((x_ + y_).gradient[1])).gradient[0], 1);
   }
 }
 

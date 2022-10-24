@@ -25,9 +25,9 @@
 using namespace serac;
 using namespace serac::profiling;
 
-template < int p, int dim >
-void weird_mixed_test(){
-
+template <int p, int dim>
+void weird_mixed_test()
+{
   // Define vector-valued test and trial spaces of different sizes
   using test_space  = H1<p, dim + 1>;
   using trial_space = H1<p, dim + 2>;
@@ -43,35 +43,37 @@ void weird_mixed_test(){
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(meshfile), 1);
 
   auto trial_fes = generateParFiniteElementSpace<trial_space>(mesh.get());
-  auto test_fes = generateParFiniteElementSpace<test_space>(mesh.get());
+  auto test_fes  = generateParFiniteElementSpace<test_space>(mesh.get());
 
   mfem::Vector U(trial_fes->TrueVSize());
   U.Randomize();
 
   Functional<test_space(trial_space)> residual(test_fes, {trial_fes});
 
-  auto d11 = 1.0 * make_tensor< dim+1, dim, dim+2, dim >([](int i, int j, int k, int l){ return i - j + 2 * k - 3 * l; });
+  auto d11 =
+      1.0 * make_tensor<dim + 1, dim, dim + 2, dim>([](int i, int j, int k, int l) { return i - j + 2 * k - 3 * l; });
 
-  auto s11 = 1.0 * make_tensor< dim+1, dim+2 >([](int i, int j){ return i * i - j; });
+  auto s11 = 1.0 * make_tensor<dim + 1, dim + 2>([](int i, int j) { return i * i - j; });
 
   // note: this is not really an elasticity problem, it's testing source and flux
   // terms that have the appropriate shapes to ensure that all the differentiation
   // code works as intended
   residual.AddDomainIntegral(
-      Dimension<dim>{},
-      DependsOn<0>{},
+      Dimension<dim>{}, DependsOn<0>{},
       [=](auto /* x */, auto displacement) {
         auto [u, du_dx] = displacement;
-        auto source = zero{};
-        auto flux = double_dot(d11, du_dx); 
+        auto source     = zero{};
+        auto flux       = double_dot(d11, du_dx);
         return serac::tuple{source, flux};
       },
       *mesh);
 
-  residual.AddBoundaryIntegral(Dimension<dim-1>{}, DependsOn<0>{}, [=](auto x, auto /*n*/, auto displacement) { 
+  residual.AddBoundaryIntegral(
+      Dimension<dim - 1>{}, DependsOn<0>{},
+      [=](auto x, auto /*n*/, auto displacement) {
         auto [u, du_dxi] = displacement;
-        return dot(s11, u) * x[0]; 
-      }, 
+        return dot(s11, u) * x[0];
+      },
       *mesh);
 
   check_gradient(residual, U);
@@ -80,9 +82,9 @@ void weird_mixed_test(){
   delete trial_fes;
 }
 
-template < int p, int dim >
-void elasticity_test(){
-
+template <int p, int dim>
+void elasticity_test()
+{
   // Define the test and trial spaces for an elasticity-like problem
   using test_space  = H1<p, dim>;
   using trial_space = H1<p, dim>;
@@ -98,35 +100,37 @@ void elasticity_test(){
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(meshfile));
 
   auto trial_fes = generateParFiniteElementSpace<trial_space>(mesh.get());
-  auto test_fes = generateParFiniteElementSpace<test_space>(mesh.get());
+  auto test_fes  = generateParFiniteElementSpace<test_space>(mesh.get());
 
   mfem::Vector U(trial_fes->TrueVSize());
   U.Randomize();
 
   Functional<test_space(trial_space)> residual(test_fes, {trial_fes});
 
-  [[maybe_unused]] auto d00 = 1.0 * make_tensor<dim, dim>([](int i, int j){ return i + 2 * j + 1; });
-  [[maybe_unused]] auto d01 = 0.0 * make_tensor<dim, dim, dim>([](int i, int j, int k){ return i + 2 * j - k + 1; });
-  [[maybe_unused]] auto d10 = 0.0 * make_tensor<dim, dim, dim>([](int i, int j, int k){ return i + 3 * j - 2 * k; });
-  [[maybe_unused]] auto d11 = 0.0 * make_tensor<dim, dim, dim, dim>([](int i, int j, int k, int l){ return i - j + 2 * k - 3 * l + 1; });
+  [[maybe_unused]] auto d00 = 1.0 * make_tensor<dim, dim>([](int i, int j) { return i + 2 * j + 1; });
+  [[maybe_unused]] auto d01 = 0.0 * make_tensor<dim, dim, dim>([](int i, int j, int k) { return i + 2 * j - k + 1; });
+  [[maybe_unused]] auto d10 = 0.0 * make_tensor<dim, dim, dim>([](int i, int j, int k) { return i + 3 * j - 2 * k; });
+  [[maybe_unused]] auto d11 =
+      0.0 * make_tensor<dim, dim, dim, dim>([](int i, int j, int k, int l) { return i - j + 2 * k - 3 * l + 1; });
 
   // note: this is not really an elasticity problem, it's testing source and flux
   // terms that have the appropriate shapes to ensure that all the differentiation
   // code works as intended
   residual.AddDomainIntegral(
-      Dimension<dim>{},
-      DependsOn<0>{},
+      Dimension<dim>{}, DependsOn<0>{},
       [=](auto /* x */, auto displacement) {
         auto [u, du_dx] = displacement;
-        auto source = dot(d00, u) + double_dot(d01, du_dx);
-        auto flux   = dot(d10, u) + double_dot(d11, du_dx);
+        auto source     = dot(d00, u) + double_dot(d01, du_dx);
+        auto flux       = dot(d10, u) + double_dot(d11, du_dx);
         return serac::tuple{source, flux};
       },
       *mesh);
 
-  residual.AddBoundaryIntegral(Dimension<dim-1>{}, DependsOn<0>{}, [=](auto x, auto /*n*/, auto displacement) { 
+  residual.AddBoundaryIntegral(
+      Dimension<dim - 1>{}, DependsOn<0>{},
+      [=](auto x, auto /*n*/, auto displacement) {
         auto [u, du_dxi] = displacement;
-        return u * x[0]; 
+        return u * x[0];
       },
       *mesh);
 

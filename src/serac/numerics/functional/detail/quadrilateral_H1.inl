@@ -34,8 +34,9 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
   using dof_type = tensor<double, c, p + 1, p + 1>;
 
   using value_type = typename std::conditional<components == 1, double, tensor<double, components> >::type;
-  using derivative_type = typename std::conditional<components == 1, tensor<double, dim>, tensor<double, components, dim> >::type;
-  using qf_input_type = tuple< value_type, derivative_type >;
+  using derivative_type =
+      typename std::conditional<components == 1, tensor<double, dim>, tensor<double, components, dim> >::type;
+  using qf_input_type = tuple<value_type, derivative_type>;
 
   /**
    * @brief this type is used when calling the batched interpolate/integrate
@@ -113,10 +114,11 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
     return dN;
   }
 
-  template < bool apply_weights, int q >
-  static constexpr auto calculate_B() {
-    constexpr auto points1D = GaussLegendreNodes<q>();
-    constexpr auto weights1D = GaussLegendreWeights<q>();
+  template <bool apply_weights, int q>
+  static constexpr auto calculate_B()
+  {
+    constexpr auto       points1D  = GaussLegendreNodes<q>();
+    constexpr auto       weights1D = GaussLegendreWeights<q>();
     tensor<double, q, n> B{};
     for (int i = 0; i < q; i++) {
       B[i] = GaussLobattoInterpolation<n>(points1D[i]);
@@ -125,10 +127,11 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
     return B;
   }
 
-  template < bool apply_weights, int q >
-  static constexpr auto calculate_G() {
-    constexpr auto points1D = GaussLegendreNodes<q>();
-    constexpr auto weights1D = GaussLegendreWeights<q>();
+  template <bool apply_weights, int q>
+  static constexpr auto calculate_G()
+  {
+    constexpr auto       points1D  = GaussLegendreNodes<q>();
+    constexpr auto       weights1D = GaussLegendreWeights<q>();
     tensor<double, q, n> G{};
     for (int i = 0; i < q; i++) {
       G[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);
@@ -138,35 +141,32 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
   }
 
   template <typename in_t, int q>
-  static auto batch_apply_shape_fn(int j, tensor< in_t, q * q > input, const TensorProductQuadratureRule<q>&)
+  static auto batch_apply_shape_fn(int j, tensor<in_t, q * q> input, const TensorProductQuadratureRule<q>&)
   {
     static constexpr bool apply_weights = false;
-    static constexpr auto B = calculate_B<apply_weights, q>();
-    static constexpr auto G = calculate_G<apply_weights, q>();
+    static constexpr auto B             = calculate_B<apply_weights, q>();
+    static constexpr auto G             = calculate_G<apply_weights, q>();
 
     int jx = j % n;
     int jy = j / n;
 
-    using source_t = decltype(get<0>(get<0>(in_t{})) + dot(get<1>(get<0>(in_t{})), tensor<double,2>{}));
-    using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double,2>{}));
+    using source_t = decltype(get<0>(get<0>(in_t{})) + dot(get<1>(get<0>(in_t{})), tensor<double, 2>{}));
+    using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double, 2>{}));
 
-    tensor< tuple< source_t, flux_t >, q * q > output;
+    tensor<tuple<source_t, flux_t>, q * q> output;
 
     for (int qy = 0; qy < q; qy++) {
       for (int qx = 0; qx < q; qx++) {
-        double phi_j = B(qx, jx) * B(qy, jy);
+        double              phi_j      = B(qx, jx) * B(qy, jy);
         tensor<double, dim> dphi_j_dxi = {G(qx, jx) * B(qy, jy), B(qx, jx) * G(qy, jy)};
 
-        int Q = qy * q + qx;
-        auto & d00 = get<0>(get<0>(input(Q)));
-        auto & d01 = get<1>(get<0>(input(Q)));
-        auto & d10 = get<0>(get<1>(input(Q)));
-        auto & d11 = get<1>(get<1>(input(Q)));
+        int   Q   = qy * q + qx;
+        auto& d00 = get<0>(get<0>(input(Q)));
+        auto& d01 = get<1>(get<0>(input(Q)));
+        auto& d10 = get<0>(get<1>(input(Q)));
+        auto& d11 = get<1>(get<1>(input(Q)));
 
-        output[Q] = {
-          d00 * phi_j + dot(d01, dphi_j_dxi), 
-          d10 * phi_j + dot(d11, dphi_j_dxi) 
-        };
+        output[Q] = {d00 * phi_j + dot(d01, dphi_j_dxi), d10 * phi_j + dot(d11, dphi_j_dxi)};
       }
     }
 
@@ -191,28 +191,28 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
   static auto interpolate(const dof_type& X, const TensorProductQuadratureRule<q>&)
   {
     static constexpr bool apply_weights = false;
-    static constexpr auto B = calculate_B<apply_weights, q>();
-    static constexpr auto G = calculate_G<apply_weights, q>();
+    static constexpr auto B             = calculate_B<apply_weights, q>();
+    static constexpr auto G             = calculate_G<apply_weights, q>();
 
     cache_type<q> A;
 
-    tensor< double, c, q, q> value{};
-    tensor< double, c, dim, q, q> gradient{};
+    tensor<double, c, q, q>      value{};
+    tensor<double, c, dim, q, q> gradient{};
 
     // apply the shape functions
     for (int i = 0; i < c; i++) {
       A[0] = contract<1, 1>(X[i], B);
       A[1] = contract<1, 1>(X[i], G);
 
-      value(i)      = contract<0, 1>(A[0], B);
-      gradient(i,0) = contract<0, 1>(A[1], B);
-      gradient(i,1) = contract<0, 1>(A[0], G);
+      value(i)       = contract<0, 1>(A[0], B);
+      gradient(i, 0) = contract<0, 1>(A[1], B);
+      gradient(i, 1) = contract<0, 1>(A[0], G);
     }
 
     // transpose the quadrature data into a flat tensor of tuples
     union {
-      tensor< qf_input_type, q * q > one_dimensional;
-      tensor< tuple < tensor< double, c >, tensor< double, c, dim > >, q, q > two_dimensional;
+      tensor<qf_input_type, q * q>                                    one_dimensional;
+      tensor<tuple<tensor<double, c>, tensor<double, c, dim> >, q, q> two_dimensional;
     } output;
 
     for (int qy = 0; qy < q; qy++) {
@@ -225,26 +225,29 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
         }
       }
     }
- 
+
     return output.one_dimensional;
   }
 
   // source can be one of: {zero, double, tensor<double,dim>, tensor<double,dim,dim>}
-  // flux can be one of: {zero, tensor<double,dim>, tensor<double,dim,dim>, tensor<double,dim,dim,dim>, tensor<double,dim,dim,dim>}
+  // flux can be one of: {zero, tensor<double,dim>, tensor<double,dim,dim>, tensor<double,dim,dim,dim>,
+  // tensor<double,dim,dim,dim>}
   template <typename source_type, typename flux_type, int q>
-  static void integrate(const tensor< tuple< source_type, flux_type >, q * q > & qf_output, const TensorProductQuadratureRule<q>&,
-                        dof_type * element_residual, int step = 1)
+  static void integrate(const tensor<tuple<source_type, flux_type>, q * q>& qf_output,
+                        const TensorProductQuadratureRule<q>&, dof_type* element_residual, int step = 1)
   {
-    if constexpr (is_zero<source_type>{} && is_zero<flux_type>{}) { return; }
+    if constexpr (is_zero<source_type>{} && is_zero<flux_type>{}) {
+      return;
+    }
 
     constexpr int ntrial = std::max(size(source_type{}), size(flux_type{}) / dim) / c;
 
-    using s_buffer_type = std::conditional_t< is_zero<source_type>{}, zero, tensor<double, q, q> >;
-    using f_buffer_type = std::conditional_t< is_zero<  flux_type>{}, zero, tensor<double, dim, q, q> >;
+    using s_buffer_type = std::conditional_t<is_zero<source_type>{}, zero, tensor<double, q, q> >;
+    using f_buffer_type = std::conditional_t<is_zero<flux_type>{}, zero, tensor<double, dim, q, q> >;
 
     static constexpr bool apply_weights = true;
-    static constexpr auto B = calculate_B<apply_weights, q>();
-    static constexpr auto G = calculate_G<apply_weights, q>();
+    static constexpr auto B             = calculate_B<apply_weights, q>();
+    static constexpr auto G             = calculate_G<apply_weights, q>();
 
     cache_type<q> A{};
 
@@ -255,21 +258,20 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
 
         for (int qy = 0; qy < q; qy++) {
           for (int qx = 0; qx < q; qx++) {
-            int Q = qy * q + qx;
-            source(qy, qx) = reinterpret_cast< const double * >(&get<SOURCE>(qf_output[Q]))[i * ntrial + j];
+            int Q          = qy * q + qx;
+            source(qy, qx) = reinterpret_cast<const double*>(&get<SOURCE>(qf_output[Q]))[i * ntrial + j];
             for (int k = 0; k < dim; k++) {
-              flux(k, qy, qx) = reinterpret_cast< const double * >(&get<FLUX>(qf_output[Q]))[(i * dim + k) * ntrial + j];
+              flux(k, qy, qx) = reinterpret_cast<const double*>(&get<FLUX>(qf_output[Q]))[(i * dim + k) * ntrial + j];
             }
           }
         }
 
-        A[0] = contract< 1, 0 >(source, B) + contract< 1, 0 >(flux(0), G);
-        A[1] = contract< 1, 0 >(flux(1), B);
+        A[0] = contract<1, 0>(source, B) + contract<1, 0>(flux(0), G);
+        A[1] = contract<1, 0>(flux(1), B);
 
-        element_residual[j * step](i) += contract< 0, 0 >(A[0], B) + contract< 0, 0 >(A[1], G);
+        element_residual[j * step](i) += contract<0, 0>(A[0], B) + contract<0, 0>(A[1], G);
       }
     }
-
   }
 
 #if defined(__CUDACC__)
@@ -413,6 +415,5 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
   }
 
 #endif
-
 };
 /// @endcond

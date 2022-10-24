@@ -36,8 +36,9 @@ struct finite_element<Geometry::Hexahedron, L2<p, c> > {
   using dof_type = tensor<double, c, p + 1, p + 1, p + 1>;
 
   using value_type = typename std::conditional<components == 1, double, tensor<double, components> >::type;
-  using derivative_type = typename std::conditional<components == 1, tensor<double, dim>, tensor<double, components, dim> >::type;
-  using qf_input_type = tuple< value_type, derivative_type >;
+  using derivative_type =
+      typename std::conditional<components == 1, tensor<double, dim>, tensor<double, components, dim> >::type;
+  using qf_input_type = tuple<value_type, derivative_type>;
 
   /**
    * @brief this type is used when calling the batched interpolate/integrate
@@ -96,10 +97,11 @@ struct finite_element<Geometry::Hexahedron, L2<p, c> > {
     // clang-format on
   }
 
-  template < bool apply_weights, int q >
-  static constexpr auto calculate_B() {
-    constexpr auto points1D = GaussLegendreNodes<q>();
-    constexpr auto weights1D = GaussLegendreWeights<q>();
+  template <bool apply_weights, int q>
+  static constexpr auto calculate_B()
+  {
+    constexpr auto       points1D  = GaussLegendreNodes<q>();
+    constexpr auto       weights1D = GaussLegendreWeights<q>();
     tensor<double, q, n> B{};
     for (int i = 0; i < q; i++) {
       B[i] = GaussLobattoInterpolation<n>(points1D[i]);
@@ -108,10 +110,11 @@ struct finite_element<Geometry::Hexahedron, L2<p, c> > {
     return B;
   }
 
-  template < bool apply_weights, int q >
-  static constexpr auto calculate_G() {
-    constexpr auto points1D = GaussLegendreNodes<q>();
-    constexpr auto weights1D = GaussLegendreWeights<q>();
+  template <bool apply_weights, int q>
+  static constexpr auto calculate_G()
+  {
+    constexpr auto       points1D  = GaussLegendreNodes<q>();
+    constexpr auto       weights1D = GaussLegendreWeights<q>();
     tensor<double, q, n> G{};
     for (int i = 0; i < q; i++) {
       G[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);
@@ -121,41 +124,35 @@ struct finite_element<Geometry::Hexahedron, L2<p, c> > {
   }
 
   template <typename in_t, int q>
-  static auto batch_apply_shape_fn(int j, tensor< in_t, q * q * q > input, const TensorProductQuadratureRule<q>&)
+  static auto batch_apply_shape_fn(int j, tensor<in_t, q * q * q> input, const TensorProductQuadratureRule<q>&)
   {
     static constexpr bool apply_weights = false;
-    static constexpr auto B = calculate_B<apply_weights, q>();
-    static constexpr auto G = calculate_G<apply_weights, q>();
+    static constexpr auto B             = calculate_B<apply_weights, q>();
+    static constexpr auto G             = calculate_G<apply_weights, q>();
 
     int jx = j % n;
     int jy = (j % (n * n)) / n;
     int jz = j / (n * n);
 
-    using source_t = decltype(get<0>(get<0>(in_t{})) + dot(get<1>(get<0>(in_t{})), tensor<double,dim>{}));
-    using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double,dim>{}));
+    using source_t = decltype(get<0>(get<0>(in_t{})) + dot(get<1>(get<0>(in_t{})), tensor<double, dim>{}));
+    using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double, dim>{}));
 
-    tensor< tuple< source_t, flux_t >, q * q * q > output;
+    tensor<tuple<source_t, flux_t>, q * q * q> output;
 
     for (int qz = 0; qz < q; qz++) {
       for (int qy = 0; qy < q; qy++) {
         for (int qx = 0; qx < q; qx++) {
-          double phi_j = B(qx, jx) * B(qy, jy) * B(qz, jz);
-          tensor<double, dim> dphi_j_dxi = {
-            G(qx, jx) * B(qy, jy) * B(qz, jz), 
-            B(qx, jx) * G(qy, jy) * B(qz, jz),
-            B(qx, jx) * B(qy, jy) * G(qz, jz)
-          };
+          double              phi_j      = B(qx, jx) * B(qy, jy) * B(qz, jz);
+          tensor<double, dim> dphi_j_dxi = {G(qx, jx) * B(qy, jy) * B(qz, jz), B(qx, jx) * G(qy, jy) * B(qz, jz),
+                                            B(qx, jx) * B(qy, jy) * G(qz, jz)};
 
-          int Q = (qz * q + qy) * q + qx;
-          auto & d00 = get<0>(get<0>(input(Q)));
-          auto & d01 = get<1>(get<0>(input(Q)));
-          auto & d10 = get<0>(get<1>(input(Q)));
-          auto & d11 = get<1>(get<1>(input(Q)));
+          int   Q   = (qz * q + qy) * q + qx;
+          auto& d00 = get<0>(get<0>(input(Q)));
+          auto& d01 = get<1>(get<0>(input(Q)));
+          auto& d10 = get<0>(get<1>(input(Q)));
+          auto& d11 = get<1>(get<1>(input(Q)));
 
-          output[Q] = {
-            d00 * phi_j + dot(d01, dphi_j_dxi), 
-            d10 * phi_j + dot(d11, dphi_j_dxi) 
-          };
+          output[Q] = {d00 * phi_j + dot(d01, dphi_j_dxi), d10 * phi_j + dot(d11, dphi_j_dxi)};
         }
       }
     }
@@ -182,13 +179,13 @@ struct finite_element<Geometry::Hexahedron, L2<p, c> > {
     // A2(dz, qy, qx)  := B(qy, dy) * A1(dz, dy, qx)
     // X_q(qz, qy, qx) := B(qz, dz) * A2(dz, qy, qx)
     static constexpr bool apply_weights = false;
-    static constexpr auto B = calculate_B<apply_weights, q>();
-    static constexpr auto G = calculate_G<apply_weights, q>();
+    static constexpr auto B             = calculate_B<apply_weights, q>();
+    static constexpr auto G             = calculate_G<apply_weights, q>();
 
     cache_type<q> cache;
 
-    tensor< double, c, q, q, q> value{};
-    tensor< double, c, dim, q, q, q> gradient{};
+    tensor<double, c, q, q, q>      value{};
+    tensor<double, c, dim, q, q, q> gradient{};
 
     for (int i = 0; i < c; i++) {
       cache.A1[0] = contract<2, 1>(X[i], B);
@@ -198,16 +195,16 @@ struct finite_element<Geometry::Hexahedron, L2<p, c> > {
       cache.A2[1] = contract<1, 1>(cache.A1[1], B);
       cache.A2[2] = contract<1, 1>(cache.A1[0], G);
 
-      value(i)      = contract<0, 1>(cache.A2[0], B);
-      gradient(i,0) = contract<0, 1>(cache.A2[1], B);
-      gradient(i,1) = contract<0, 1>(cache.A2[2], B);
-      gradient(i,2) = contract<0, 1>(cache.A2[0], G);
+      value(i)       = contract<0, 1>(cache.A2[0], B);
+      gradient(i, 0) = contract<0, 1>(cache.A2[1], B);
+      gradient(i, 1) = contract<0, 1>(cache.A2[2], B);
+      gradient(i, 2) = contract<0, 1>(cache.A2[0], G);
     }
 
     // transpose the quadrature data into a flat tensor of tuples
     union {
-      tensor< qf_input_type, q * q * q > one_dimensional;
-      tensor< tuple < tensor< double, c >, tensor< double, c, dim > >, q, q, q > three_dimensional;
+      tensor<qf_input_type, q * q * q>                                   one_dimensional;
+      tensor<tuple<tensor<double, c>, tensor<double, c, dim> >, q, q, q> three_dimensional;
     } output;
 
     for (int qz = 0; qz < q; qz++) {
@@ -222,31 +219,30 @@ struct finite_element<Geometry::Hexahedron, L2<p, c> > {
         }
       }
     }
- 
-    return output.one_dimensional;
 
+    return output.one_dimensional;
   }
 
   template <typename source_type, typename flux_type, int q>
-  static void integrate(const tensor< tuple< source_type, flux_type >, q * q * q > & qf_output,
-                        const TensorProductQuadratureRule<q>&,
-                        dof_type * element_residual,
-                        int step = 1)
+  static void integrate(const tensor<tuple<source_type, flux_type>, q * q * q>& qf_output,
+                        const TensorProductQuadratureRule<q>&, dof_type* element_residual, int step = 1)
   {
-    if constexpr (is_zero<source_type>{} && is_zero<flux_type>{}) { return; }
+    if constexpr (is_zero<source_type>{} && is_zero<flux_type>{}) {
+      return;
+    }
 
     constexpr int ntrial = std::max(size(source_type{}), size(flux_type{}) / dim) / c;
 
-    using s_buffer_type = std::conditional_t< is_zero<source_type>{}, zero, tensor<double, q, q, q> >;
-    using f_buffer_type = std::conditional_t< is_zero<  flux_type>{}, zero, tensor<double, dim, q, q, q> >;
+    using s_buffer_type = std::conditional_t<is_zero<source_type>{}, zero, tensor<double, q, q, q> >;
+    using f_buffer_type = std::conditional_t<is_zero<flux_type>{}, zero, tensor<double, dim, q, q, q> >;
 
     static constexpr bool apply_weights = true;
-    static constexpr auto B = calculate_B<apply_weights, q>();
-    static constexpr auto G = calculate_G<apply_weights, q>();
+    static constexpr auto B             = calculate_B<apply_weights, q>();
+    static constexpr auto G             = calculate_G<apply_weights, q>();
 
-    //tensor< double, c, q, q, q> source{};
-    //tensor< double, c, dim, q, q, q> flux{};
-    //for (int qz = 0; qz < q; qz++) {
+    // tensor< double, c, q, q, q> source{};
+    // tensor< double, c, dim, q, q, q> flux{};
+    // for (int qz = 0; qz < q; qz++) {
     //  for (int qy = 0; qy < q; qy++) {
     //    for (int qx = 0; qx < q; qx++) {
     //      int k = (qz * q + qy) * q + qx;
@@ -272,23 +268,24 @@ struct finite_element<Geometry::Hexahedron, L2<p, c> > {
         for (int qz = 0; qz < q; qz++) {
           for (int qy = 0; qy < q; qy++) {
             for (int qx = 0; qx < q; qx++) {
-              int Q = (qz * q + qy) * q + qx;
-              source(qz, qy, qx) = reinterpret_cast< const double * >(&get<SOURCE>(qf_output[Q]))[i * ntrial + j];
+              int Q              = (qz * q + qy) * q + qx;
+              source(qz, qy, qx) = reinterpret_cast<const double*>(&get<SOURCE>(qf_output[Q]))[i * ntrial + j];
               for (int k = 0; k < dim; k++) {
-                flux(k, qz, qy, qx) = reinterpret_cast< const double * >(&get<FLUX>(qf_output[Q]))[(i * dim + k) * ntrial + j];
+                flux(k, qz, qy, qx) =
+                    reinterpret_cast<const double*>(&get<FLUX>(qf_output[Q]))[(i * dim + k) * ntrial + j];
               }
             }
           }
         }
 
-        cache.A2[0] = contract< 2, 0 >(source, B) + contract< 2, 0 >(flux(0), G);
-        cache.A2[1] = contract< 2, 0 >(flux(1), B);
-        cache.A2[2] = contract< 2, 0 >(flux(2), B);
+        cache.A2[0] = contract<2, 0>(source, B) + contract<2, 0>(flux(0), G);
+        cache.A2[1] = contract<2, 0>(flux(1), B);
+        cache.A2[2] = contract<2, 0>(flux(2), B);
 
-        cache.A1[0] = contract< 1, 0 >(cache.A2[0], B) + contract< 1, 0 >(cache.A2[1], G);
-        cache.A1[1] = contract< 1, 0 >(cache.A2[2], B);
+        cache.A1[0] = contract<1, 0>(cache.A2[0], B) + contract<1, 0>(cache.A2[1], G);
+        cache.A1[1] = contract<1, 0>(cache.A2[2], B);
 
-        element_residual[j * step](i) += contract< 0, 0 >(cache.A1[0], B) + contract< 0, 0 >(cache.A1[1], G);
+        element_residual[j * step](i) += contract<0, 0>(cache.A1[0], B) + contract<0, 0>(cache.A1[1], G);
       }
     }
   }
@@ -497,6 +494,5 @@ struct finite_element<Geometry::Hexahedron, L2<p, c> > {
   }
 
 #endif
-
 };
 /// @endcond

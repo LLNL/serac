@@ -470,14 +470,14 @@ SERAC_HOST_DEVICE constexpr auto operator-(const tensor<S, m, n...>& A, const te
  * @param[in] A The tensor to be scaled
  */
 template <typename S, typename T, int... n>
-SERAC_HOST_DEVICE constexpr auto elementwise_multiply(const tensor< S, n ... > & A, const tensor < T, n ... > & B)
+SERAC_HOST_DEVICE constexpr auto elementwise_multiply(const tensor<S, n...>& A, const tensor<T, n...>& B)
 {
   using U = decltype(S{} * T{});
   tensor<U, n...> AB{};
 
-  const S * A_ptr  = reinterpret_cast<const S *>(&A);
-  const T * B_ptr  = reinterpret_cast<const T *>(&B);
-  U * AB_ptr = reinterpret_cast<U *>(&AB);
+  const S* A_ptr  = reinterpret_cast<const S*>(&A);
+  const T* B_ptr  = reinterpret_cast<const T*>(&B);
+  U*       AB_ptr = reinterpret_cast<U*>(&AB);
   for (int i = 0; i < (n * ...); i++) {
     AB_ptr[i] = A_ptr[i] * B_ptr[i];
   }
@@ -1272,67 +1272,70 @@ auto matrix_sqrt(const tensor<T, dim, dim>& A)
 }
 
 template <int i1, int i2, typename T>
-auto contract(const zero &, const T &) { return zero{}; }
+auto contract(const zero&, const T&)
+{
+  return zero{};
+}
 
 template <int i1, int i2, typename S, int m, int... n, typename T, int p, int q>
-auto contract(const tensor<S, m, n...> & A, const tensor<T, p, q> & B) {
-    constexpr int Adims[] = {m, n...};
-    constexpr int Bdims[] = {p, q};
-    static_assert(sizeof...(n) < 3);
-    static_assert(Adims[i1] == Bdims[i2],
-                  "error: incompatible tensor dimensions");
+auto contract(const tensor<S, m, n...>& A, const tensor<T, p, q>& B)
+{
+  constexpr int Adims[] = {m, n...};
+  constexpr int Bdims[] = {p, q};
+  static_assert(sizeof...(n) < 3);
+  static_assert(Adims[i1] == Bdims[i2], "error: incompatible tensor dimensions");
 
-    // first, we have to figure out the dimensions of the output tensor
-    constexpr int new_dim = (i2 == 0) ? q : p;
-    constexpr int d1 = (i1 == 0) ? new_dim : Adims[0];
-    constexpr int d2 = (i1 == 1) ? new_dim : Adims[1];
-    constexpr int d3 = sizeof...(n) == 1 ? 0 : ((i1 == 2) ? new_dim : Adims[2]);
+  // first, we have to figure out the dimensions of the output tensor
+  constexpr int new_dim = (i2 == 0) ? q : p;
+  constexpr int d1      = (i1 == 0) ? new_dim : Adims[0];
+  constexpr int d2      = (i1 == 1) ? new_dim : Adims[1];
+  constexpr int d3      = sizeof...(n) == 1 ? 0 : ((i1 == 2) ? new_dim : Adims[2]);
 
-    // the type of the output tensor is easier to figure out
-    using U = decltype(S{} * T{});
+  // the type of the output tensor is easier to figure out
+  using U = decltype(S{} * T{});
 
-    auto C = []() {
-        if constexpr (d3 == 0) return tensor<U, d1, d2>{};
-        if constexpr (d3 != 0) return tensor<U, d1, d2, d3>{};
-    }();
+  auto C = []() {
+    if constexpr (d3 == 0) return tensor<U, d1, d2>{};
+    if constexpr (d3 != 0) return tensor<U, d1, d2, d3>{};
+  }();
 
-    if constexpr (d3 == 0) {
-        for (int i = 0; i < d1; i++) {
-            for (int j = 0; j < d2; j++) {
-                U sum{};
-                for (int k = 0; k < Adims[i1]; k++) {
-                    if constexpr (i1 == 0 && i2 == 0) sum += A(k, j) * B(k, i);
-                    if constexpr (i1 == 1 && i2 == 0) sum += A(i, k) * B(k, j);
-                    if constexpr (i1 == 0 && i2 == 1) sum += A(k, j) * B(i, k);
-                    if constexpr (i1 == 1 && i2 == 1) sum += A(i, k) * B(j, k);
-                }
-                C(i, j) = sum;
-            }
+  if constexpr (d3 == 0) {
+    for (int i = 0; i < d1; i++) {
+      for (int j = 0; j < d2; j++) {
+        U sum{};
+        for (int k = 0; k < Adims[i1]; k++) {
+          if constexpr (i1 == 0 && i2 == 0) sum += A(k, j) * B(k, i);
+          if constexpr (i1 == 1 && i2 == 0) sum += A(i, k) * B(k, j);
+          if constexpr (i1 == 0 && i2 == 1) sum += A(k, j) * B(i, k);
+          if constexpr (i1 == 1 && i2 == 1) sum += A(i, k) * B(j, k);
         }
-    } else {
-        for (int i = 0; i < d1; i++) {
-            for (int j = 0; j < d2; j++) {
-                for (int k = 0; k < d3; k++) {
-                    U sum{};
-                    for (int l = 0; l < Adims[i1]; l++) {
-                        if constexpr (i1 == 0 && i2 == 0) sum += A(l, j, k) * B(l, i);
-                        if constexpr (i1 == 1 && i2 == 0) sum += A(i, l, k) * B(l, j);
-                        if constexpr (i1 == 2 && i2 == 0) sum += A(i, j, l) * B(l, k);
-                        if constexpr (i1 == 0 && i2 == 1) sum += A(l, j, k) * B(i, l);
-                        if constexpr (i1 == 1 && i2 == 1) sum += A(i, l, k) * B(j, l);
-                        if constexpr (i1 == 2 && i2 == 1) sum += A(i, j, l) * B(k, l);
-                    }
-                    C(i, j, k) = sum;
-                }
-            }
-        }
+        C(i, j) = sum;
+      }
     }
+  } else {
+    for (int i = 0; i < d1; i++) {
+      for (int j = 0; j < d2; j++) {
+        for (int k = 0; k < d3; k++) {
+          U sum{};
+          for (int l = 0; l < Adims[i1]; l++) {
+            if constexpr (i1 == 0 && i2 == 0) sum += A(l, j, k) * B(l, i);
+            if constexpr (i1 == 1 && i2 == 0) sum += A(i, l, k) * B(l, j);
+            if constexpr (i1 == 2 && i2 == 0) sum += A(i, j, l) * B(l, k);
+            if constexpr (i1 == 0 && i2 == 1) sum += A(l, j, k) * B(i, l);
+            if constexpr (i1 == 1 && i2 == 1) sum += A(i, l, k) * B(j, l);
+            if constexpr (i1 == 2 && i2 == 1) sum += A(i, j, l) * B(k, l);
+          }
+          C(i, j, k) = sum;
+        }
+      }
+    }
+  }
 
-    return C;
+  return C;
 }
 
 template <typename T, int... n>
-tensor<T, (n * ...)> flatten(const tensor<T, n...> & A)
+tensor<T, (n * ...)> flatten(const tensor<T, n...>& A)
 {
   tensor<T, (n * ...)> A_flat;
   auto                 A_ptr = reinterpret_cast<const double*>(&A);
@@ -1343,7 +1346,7 @@ tensor<T, (n * ...)> flatten(const tensor<T, n...> & A)
 }
 
 template <int... new_dimensions, typename T, int... old_dimensions>
-tensor<T, new_dimensions...> reshape(const tensor<T, old_dimensions...> & A)
+tensor<T, new_dimensions...> reshape(const tensor<T, old_dimensions...>& A)
 {
   static_assert((new_dimensions * ...) == (old_dimensions * ...),
                 "error: can't reshape to configuration with different number of elements");
@@ -1877,7 +1880,7 @@ SERAC_HOST_DEVICE auto get_value(const tensor<dual<T>, n...>& arg)
 template <typename T1, typename T2, int n>
 SERAC_HOST_DEVICE auto get_value(const tensor<tuple<T1, T2>, n>& input)
 {
-  tensor< decltype(get_value(tuple<T1,T2>{})), n > output{};
+  tensor<decltype(get_value(tuple<T1, T2>{})), n> output{};
   for (int i = 0; i < n; i++) {
     output[i] = get_value(input[i]);
   }
@@ -2005,30 +2008,38 @@ SERAC_HOST_DEVICE auto chain_rule(const tensor<double, m, n, p...>& df_dx, const
   return total;
 }
 
-template < typename T, int ... n >
-SERAC_HOST_DEVICE constexpr int size(const tensor<T, n ... > &) { return (n * ... * 1); }
+template <typename T, int... n>
+SERAC_HOST_DEVICE constexpr int size(const tensor<T, n...>&)
+{
+  return (n * ... * 1);
+}
 
-SERAC_HOST_DEVICE constexpr int size(const double &) { return 1; }
+SERAC_HOST_DEVICE constexpr int size(const double&) { return 1; }
 
 SERAC_HOST_DEVICE constexpr int size(zero) { return 0; }
 
-template < int i, typename T, int ... n >
-SERAC_HOST_DEVICE constexpr int dimension(const tensor<T, n ... > &) { 
-  constexpr int dimensions[] = {n ... };
+template <int i, typename T, int... n>
+SERAC_HOST_DEVICE constexpr int dimension(const tensor<T, n...>&)
+{
+  constexpr int dimensions[] = {n...};
   return dimensions[i];
 }
 
-template < typename T, int m, int ... n >
-SERAC_HOST_DEVICE constexpr int leading_dimension(tensor<T,m,n...>) { return m; }
+template <typename T, int m, int... n>
+SERAC_HOST_DEVICE constexpr int leading_dimension(tensor<T, m, n...>)
+{
+  return m;
+}
 
-template < typename T, int m, int ... n >
-SERAC_HOST_DEVICE constexpr int trailing_dimension_product(tensor<T,m,n...>) { return (n * ... * 1); }
+template <typename T, int m, int... n>
+SERAC_HOST_DEVICE constexpr int trailing_dimension_product(tensor<T, m, n...>)
+{
+  return (n * ... * 1);
+}
 
 SERAC_HOST_DEVICE constexpr int trailing_dimension_product(double) { return 1; }
 
 SERAC_HOST_DEVICE constexpr int trailing_dimension_product(serac::zero) { return 0; }
-
-
 
 }  // namespace serac
 
@@ -2271,6 +2282,5 @@ inline mat < 3, 3 > R3_basis(const vec3 & n) {
   };
 }
 #endif
-
 
 #include "serac/numerics/functional/isotropic_tensor.hpp"

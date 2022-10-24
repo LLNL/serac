@@ -211,11 +211,11 @@ SERAC_HOST_DEVICE auto promote_to_dual_when(const T& x)
  * @param x the values to be promoted
  */
 template <bool dualify, typename T, int n>
-SERAC_HOST_DEVICE auto promote_each_to_dual_when(const tensor<T, n> & x)
+SERAC_HOST_DEVICE auto promote_each_to_dual_when(const tensor<T, n>& x)
 {
   if constexpr (dualify) {
     using return_type = decltype(make_dual(T{}));
-    tensor< return_type, n > output;
+    tensor<return_type, n> output;
     for (int i = 0; i < n; i++) {
       output[i] = make_dual(x[i]);
     }

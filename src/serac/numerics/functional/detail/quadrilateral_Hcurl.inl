@@ -96,10 +96,11 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     return nodes;
   }();
 
-  template < bool apply_weights, int q >
-  static constexpr auto calculate_B1() {
-    constexpr auto points1D = GaussLegendreNodes<q>();
-    constexpr auto weights1D = GaussLegendreWeights<q>();
+  template <bool apply_weights, int q>
+  static constexpr auto calculate_B1()
+  {
+    constexpr auto       points1D  = GaussLegendreNodes<q>();
+    constexpr auto       weights1D = GaussLegendreWeights<q>();
     tensor<double, q, p> B1{};
     for (int i = 0; i < q; i++) {
       B1[i] = GaussLegendreInterpolation<p>(points1D[i]);
@@ -108,10 +109,11 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     return B1;
   }
 
-  template < bool apply_weights, int q >
-  static constexpr auto calculate_B2() {
-    constexpr auto points1D = GaussLegendreNodes<q>();
-    constexpr auto weights1D = GaussLegendreWeights<q>();
+  template <bool apply_weights, int q>
+  static constexpr auto calculate_B2()
+  {
+    constexpr auto           points1D  = GaussLegendreNodes<q>();
+    constexpr auto           weights1D = GaussLegendreWeights<q>();
     tensor<double, q, p + 1> B2{};
     for (int i = 0; i < q; i++) {
       B2[i] = GaussLobattoInterpolation<p + 1>(points1D[i]);
@@ -120,10 +122,11 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     return B2;
   }
 
-  template < bool apply_weights, int q >
-  static constexpr auto calculate_G2() {
-    constexpr auto points1D = GaussLegendreNodes<q>();
-    constexpr auto weights1D = GaussLegendreWeights<q>();
+  template <bool apply_weights, int q>
+  static constexpr auto calculate_G2()
+  {
+    constexpr auto           points1D  = GaussLegendreNodes<q>();
+    constexpr auto           weights1D = GaussLegendreWeights<q>();
     tensor<double, q, p + 1> G2{};
     for (int i = 0; i < q; i++) {
       G2[i] = GaussLobattoInterpolationDerivative<p + 1>(points1D[i]);
@@ -223,12 +226,12 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
   }
 
   template <typename in_t, int q>
-  static auto batch_apply_shape_fn(int j, tensor< in_t, q * q > input, const TensorProductQuadratureRule<q>&)
+  static auto batch_apply_shape_fn(int j, tensor<in_t, q * q> input, const TensorProductQuadratureRule<q>&)
   {
-    constexpr bool apply_weights = false;
-    constexpr tensor<double, q, p>     B1 = calculate_B1<apply_weights, q>();
-    constexpr tensor<double, q, p + 1> B2 = calculate_B2<apply_weights, q>();
-    constexpr tensor<double, q, p + 1> G2 = calculate_G2<apply_weights, q>();
+    constexpr bool                     apply_weights = false;
+    constexpr tensor<double, q, p>     B1            = calculate_B1<apply_weights, q>();
+    constexpr tensor<double, q, p + 1> B2            = calculate_B2<apply_weights, q>();
+    constexpr tensor<double, q, p + 1> G2            = calculate_G2<apply_weights, q>();
 
     int jx, jy;
     int dir = j / ((p + 1) * p);
@@ -240,32 +243,24 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
       jy = (j % ((p + 1) * p)) / n;
     }
 
-    using source_t = decltype(dot(get<0>(get<0>(in_t{})), tensor<double,2>{}) + get<1>(get<0>(in_t{})) * double{});
-    using flux_t   = decltype(dot(get<0>(get<1>(in_t{})), tensor<double,2>{}) + get<1>(get<1>(in_t{})) * double{});
+    using source_t = decltype(dot(get<0>(get<0>(in_t{})), tensor<double, 2>{}) + get<1>(get<0>(in_t{})) * double{});
+    using flux_t   = decltype(dot(get<0>(get<1>(in_t{})), tensor<double, 2>{}) + get<1>(get<1>(in_t{})) * double{});
 
-    tensor< tuple< source_t, flux_t >, q * q > output;
+    tensor<tuple<source_t, flux_t>, q * q> output;
 
     for (int qy = 0; qy < q; qy++) {
       for (int qx = 0; qx < q; qx++) {
-        tensor<double,2> phi_j{
-          (dir == 0) * B1(qx, jx) * B2(qy, jy),
-          (dir == 1) * B1(qy, jy) * B2(qx, jx)
-        };
+        tensor<double, 2> phi_j{(dir == 0) * B1(qx, jx) * B2(qy, jy), (dir == 1) * B1(qy, jy) * B2(qx, jx)};
 
-        double curl_phi_j = 
-          (dir == 0) * -B1(qx, jx) * G2(qy, jy) +
-          (dir == 1) *  B1(qy, jy) * G2(qx, jx);
+        double curl_phi_j = (dir == 0) * -B1(qx, jx) * G2(qy, jy) + (dir == 1) * B1(qy, jy) * G2(qx, jx);
 
-        int Q = qy * q + qx;
-        auto & d00 = get<0>(get<0>(input(Q)));
-        auto & d01 = get<1>(get<0>(input(Q)));
-        auto & d10 = get<0>(get<1>(input(Q)));
-        auto & d11 = get<1>(get<1>(input(Q)));
+        int   Q   = qy * q + qx;
+        auto& d00 = get<0>(get<0>(input(Q)));
+        auto& d01 = get<1>(get<0>(input(Q)));
+        auto& d10 = get<0>(get<1>(input(Q)));
+        auto& d11 = get<1>(get<1>(input(Q)));
 
-        output[Q] = {
-          dot(d00, phi_j) + d01 * curl_phi_j, 
-          dot(d10, phi_j) + d11 * curl_phi_j 
-        };
+        output[Q] = {dot(d00, phi_j) + d01 * curl_phi_j, dot(d10, phi_j) + d11 * curl_phi_j};
       }
     }
 
@@ -275,30 +270,30 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
   template <int q>
   static auto interpolate(const dof_type& element_values, const TensorProductQuadratureRule<q>&)
   {
-    constexpr bool apply_weights = false;
-    constexpr tensor<double, q, p>     B1 = calculate_B1<apply_weights, q>();
-    constexpr tensor<double, q, p + 1> B2 = calculate_B2<apply_weights, q>();
-    constexpr tensor<double, q, p + 1> G2 = calculate_G2<apply_weights, q>();
+    constexpr bool                     apply_weights = false;
+    constexpr tensor<double, q, p>     B1            = calculate_B1<apply_weights, q>();
+    constexpr tensor<double, q, p + 1> B2            = calculate_B2<apply_weights, q>();
+    constexpr tensor<double, q, p + 1> G2            = calculate_G2<apply_weights, q>();
 
     cache_type_tmp<q> A;
 
-    tensor< double, 2, q, q > value{};
-    tensor< double, q, q > curl{};
+    tensor<double, 2, q, q> value{};
+    tensor<double, q, q>    curl{};
 
     // to clarify which contractions correspond to which spatial dimensions
-    constexpr int x = 1, y = 0; 
+    constexpr int x = 1, y = 0;
 
     A.x      = contract<x, 1>(element_values.x, B1);
     value[0] = contract<y, 1>(A.x, B2);
-    curl    -= contract<y, 1>(A.x, G2);
+    curl -= contract<y, 1>(A.x, G2);
 
     A.y      = contract<y, 1>(element_values.y, B1);
     value[1] = contract<x, 1>(A.y, B2);
-    curl    += contract<x, 1>(A.y, G2);
+    curl += contract<x, 1>(A.y, G2);
 
-    tensor< tuple < tensor<double, 2>, double >, q * q> qf_inputs;
+    tensor<tuple<tensor<double, 2>, double>, q * q> qf_inputs;
 
-    int count = 0; 
+    int count = 0;
     for (int qy = 0; qy < q; qy++) {
       for (int qx = 0; qx < q; qx++) {
         for (int i = 0; i < dim; i++) {
@@ -308,28 +303,27 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
         count++;
       }
     }
- 
+
     return qf_inputs;
   }
 
   template <typename source_type, typename flux_type, int q>
-  static void integrate(const tensor< tuple< source_type, flux_type >, q * q > & qf_output,
-                        const TensorProductQuadratureRule<q>&,
-                        dof_type * element_residual,
+  static void integrate(const tensor<tuple<source_type, flux_type>, q * q>& qf_output,
+                        const TensorProductQuadratureRule<q>&, dof_type* element_residual,
                         [[maybe_unused]] int step = 1)
   {
-    constexpr bool apply_weights = true;
-    constexpr tensor<double, q, p>     B1 = calculate_B1<apply_weights, q>();
-    constexpr tensor<double, q, p + 1> B2 = calculate_B2<apply_weights, q>();
-    constexpr tensor<double, q, p + 1> G2 = calculate_G2<apply_weights, q>();
+    constexpr bool                     apply_weights = true;
+    constexpr tensor<double, q, p>     B1            = calculate_B1<apply_weights, q>();
+    constexpr tensor<double, q, p + 1> B2            = calculate_B2<apply_weights, q>();
+    constexpr tensor<double, q, p + 1> G2            = calculate_G2<apply_weights, q>();
 
-    tensor< double, 2, q, q> source{};
-    tensor< double, q, q> flux{};
+    tensor<double, 2, q, q> source{};
+    tensor<double, q, q>    flux{};
 
     for (int qy = 0; qy < q; qy++) {
       for (int qx = 0; qx < q; qx++) {
-        int Q = qy * q + qx;
-        tensor< double, dim > s{get<SOURCE>(qf_output[Q])};
+        int                 Q = qy * q + qx;
+        tensor<double, dim> s{get<SOURCE>(qf_output[Q])};
         for (int i = 0; i < dim; i++) {
           source(i, qy, qx) = s[i];
         }
@@ -340,7 +334,7 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     cache_type_tmp<q> A2;
 
     // to clarify which contractions correspond to which spatial dimensions
-    constexpr int x = 1, y = 0; 
+    constexpr int x = 1, y = 0;
 
     A2.x = contract<y, 0>(source[0], B2) - contract<y, 0>(flux, G2);
     element_residual[0].x += contract<x, 0>(A2.x, B1);
@@ -582,6 +576,5 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
   }
 
 #endif
-
 };
 /// @endcond

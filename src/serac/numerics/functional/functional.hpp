@@ -248,7 +248,8 @@ public:
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
       auto ndof_per_trial_element =
           static_cast<size_t>(trial_space_[i]->GetFE(0)->GetDof() * trial_space_[i]->GetVDim());
-      //element_gradients_[i] = ExecArray<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
+      // element_gradients_[i] = ExecArray<double, 3, exec>(num_elements, ndof_per_test_element,
+      // ndof_per_trial_element);
       element_gradients_[i] = ExecArray<double, 3, exec>(num_elements, ndof_per_trial_element, ndof_per_test_element);
       bdr_element_gradients_[i] = allocateMemoryForBdrElementGradients<double, exec>(*test_space_, *trial_space_[i]);
     }

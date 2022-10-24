@@ -8,11 +8,11 @@
 
 using namespace serac;
 
-template < int p >
+template <int p>
 struct residuals_by_component {
-  tensor< double, p + 1, p + 1, p     > element_residual_x;
-  tensor< double, p + 1, p    , p + 1 > element_residual_y;
-  tensor< double, p    , p + 1, p + 1 > element_residual_z;
+  tensor<double, p + 1, p + 1, p> element_residual_x;
+  tensor<double, p + 1, p, p + 1> element_residual_y;
+  tensor<double, p, p + 1, p + 1> element_residual_z;
 };
 
 template <int p, int q>
@@ -43,8 +43,8 @@ auto batched_hcurl_integrate_naive(tensor<double, 3, q, q, q> source, tensor<dou
           for (int v = 0; v < q; v++) {
             for (int w = 0; w < q; w++) {
               data.element_residual_x(k, j, i) += +B1(u, i) * B2(v, j) * B2(w, k) * source(0, w, v, u) +
-                                                   B1(u, i) * B2(v, j) * G2(w, k) * flux(1, w, v, u) -
-                                                   B1(u, i) * G2(v, j) * B2(w, k) * flux(2, w, v, u);
+                                                  B1(u, i) * B2(v, j) * G2(w, k) * flux(1, w, v, u) -
+                                                  B1(u, i) * G2(v, j) * B2(w, k) * flux(2, w, v, u);
             }
           }
         }
@@ -59,8 +59,8 @@ auto batched_hcurl_integrate_naive(tensor<double, 3, q, q, q> source, tensor<dou
           for (int v = 0; v < q; v++) {
             for (int w = 0; w < q; w++) {
               data.element_residual_y(k, j, i) += +B2(u, i) * B1(v, j) * B2(w, k) * source(1, w, v, u) +
-                                                   G2(u, i) * B1(v, j) * B2(w, k) * flux(2, w, v, u) -
-                                                   B2(u, i) * B1(v, j) * G2(w, k) * flux(0, w, v, u);
+                                                  G2(u, i) * B1(v, j) * B2(w, k) * flux(2, w, v, u) -
+                                                  B2(u, i) * B1(v, j) * G2(w, k) * flux(0, w, v, u);
             }
           }
         }
@@ -75,8 +75,8 @@ auto batched_hcurl_integrate_naive(tensor<double, 3, q, q, q> source, tensor<dou
           for (int v = 0; v < q; v++) {
             for (int w = 0; w < q; w++) {
               data.element_residual_z(k, j, i) += +B2(u, i) * B2(v, j) * B1(w, k) * source(2, w, v, u) +
-                                                   B2(u, i) * G2(v, j) * B1(w, k) * flux(0, w, v, u) -
-                                                   G2(u, i) * B2(v, j) * B1(w, k) * flux(1, w, v, u);
+                                                  B2(u, i) * G2(v, j) * B1(w, k) * flux(0, w, v, u) -
+                                                  G2(u, i) * B2(v, j) * B1(w, k) * flux(1, w, v, u);
             }
           }
         }

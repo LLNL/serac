@@ -24,7 +24,10 @@ struct TensorProductQuadratureRule {
   tensor<double, q> points1D;
 
   SERAC_HOST_DEVICE double weight(int ix, int iy) const { return weights1D[ix] * weights1D[iy]; }
-  SERAC_HOST_DEVICE double weight(int ix, int iy, int iz) const { return weights1D[ix] * weights1D[iy] * weights1D[iz]; }
+  SERAC_HOST_DEVICE double weight(int ix, int iy, int iz) const
+  {
+    return weights1D[ix] * weights1D[iy] * weights1D[iz];
+  }
 };
 
 /**
@@ -52,10 +55,17 @@ struct Dimension {
 };
 
 template <Geometry g, int q>
-SERAC_HOST_DEVICE constexpr int num_quadrature_points() {
-  if (g == Geometry::Segment) { return q; }
-  if (g == Geometry::Quadrilateral) { return q * q; }
-  if (g == Geometry::Hexahedron) { return q * q * q; }
+SERAC_HOST_DEVICE constexpr int num_quadrature_points()
+{
+  if (g == Geometry::Segment) {
+    return q;
+  }
+  if (g == Geometry::Quadrilateral) {
+    return q * q;
+  }
+  if (g == Geometry::Hexahedron) {
+    return q * q * q;
+  }
   return -1;
 }
 
@@ -207,9 +217,9 @@ struct QOI {
 };
 
 template <Family f, typename T, int q, int dim>
-void parent_to_physical(tensor< T, q > & qf_input, const tensor<double, dim, dim, q >& jacobians)
+void parent_to_physical(tensor<T, q>& qf_input, const tensor<double, dim, dim, q>& jacobians)
 {
-  [[maybe_unused]] constexpr int VALUE = 0;
+  [[maybe_unused]] constexpr int VALUE      = 0;
   [[maybe_unused]] constexpr int DERIVATIVE = 1;
 
   for (int k = 0; k < q; k++) {
@@ -226,22 +236,20 @@ void parent_to_physical(tensor< T, q > & qf_input, const tensor<double, dim, dim
     }
 
     if constexpr (f == Family::HCURL) {
-      get<VALUE>(qf_input[k]) = dot(get<VALUE>(qf_input[k]), inv(J));
+      get<VALUE>(qf_input[k])      = dot(get<VALUE>(qf_input[k]), inv(J));
       get<DERIVATIVE>(qf_input[k]) = get<DERIVATIVE>(qf_input[k]) / det(J);
       if constexpr (dim == 3) {
         get<DERIVATIVE>(qf_input[k]) = dot(get<DERIVATIVE>(qf_input[k]), transpose(J));
       }
     }
-
   }
-
 }
 
 template <Family f, typename T, int q, int dim>
-void physical_to_parent(tensor< T, q > & qf_output, const tensor<double, dim, dim, q >& jacobians)
+void physical_to_parent(tensor<T, q>& qf_output, const tensor<double, dim, dim, q>& jacobians)
 {
   constexpr int SOURCE = 0;
-  constexpr int FLUX = 1;
+  constexpr int FLUX   = 1;
 
   for (int k = 0; k < q; k++) {
     tensor<double, dim, dim> J_T;
@@ -255,10 +263,10 @@ void physical_to_parent(tensor< T, q > & qf_output, const tensor<double, dim, di
 
     if constexpr (f == Family::H1 || f == Family::L2) {
       get<SOURCE>(qf_output[k]) = get<SOURCE>(qf_output[k]) * dv;
-      get<FLUX>(qf_output[k]) = dot(get<FLUX>(qf_output[k]), inv(J_T)) * dv;
+      get<FLUX>(qf_output[k])   = dot(get<FLUX>(qf_output[k]), inv(J_T)) * dv;
     }
 
-    // note: the flux term here is usually divided by detJ, but 
+    // note: the flux term here is usually divided by detJ, but
     // physical_to_parent also multiplies every quadrature-point value by det(J)
     // so that part cancels out
     if constexpr (f == Family::HCURL) {
@@ -271,9 +279,7 @@ void physical_to_parent(tensor< T, q > & qf_output, const tensor<double, dim, di
     if constexpr (f == Family::QOI) {
       qf_output[k] = qf_output[k] * dv;
     }
-
   }
-
 }
 
 /**

@@ -173,7 +173,7 @@ struct DofNumbering {
       mfem::Vector dof_ids(elem_restriction->Height());
       dof_ids = 0.0;
       for (int i = 0; i < iota.Size(); i++) {
-        iota[i] = i + 1; //  note: 1-based index
+        iota[i] = i + 1;  //  note: 1-based index
       }
 
       // we're using Mult() to reveal the locations nonzero entries
@@ -188,9 +188,9 @@ struct DofNumbering {
       int index = 0;
       for (axom::IndexType e = 0; e < element_dofs_.shape()[0]; e++) {
         for (axom::IndexType i = 0; i < element_dofs_.shape()[1]; i++) {
-          uint32_t dof_id = static_cast<uint32_t>(fabs(dof_ids_h[index])); // note: 1-based index
-          int dof_sign    = dof_ids[index] > 0 ? +1 : -1;
-          element_dofs_(e, i) = {dof_id - 1, dof_sign}; // subtract 1 to get back to 0-based index
+          uint32_t dof_id     = static_cast<uint32_t>(fabs(dof_ids_h[index]));  // note: 1-based index
+          int      dof_sign   = dof_ids[index] > 0 ? +1 : -1;
+          element_dofs_(e, i) = {dof_id - 1, dof_sign};  // subtract 1 to get back to 0-based index
           index++;
         }
       }
@@ -203,7 +203,7 @@ struct DofNumbering {
       mfem::Vector iota(face_restriction->Width());
       mfem::Vector dof_ids(face_restriction->Height());
       for (int i = 0; i < iota.Size(); i++) {
-        iota[i] = i + 1; //  note: 1-based index
+        iota[i] = i + 1;  //  note: 1-based index
       }
 
       face_restriction->Mult(iota, dof_ids);
@@ -212,9 +212,9 @@ struct DofNumbering {
       int index = 0;
       for (axom::IndexType e = 0; e < bdr_element_dofs_.shape()[0]; e++) {
         for (axom::IndexType i = 0; i < bdr_element_dofs_.shape()[1]; i++) {
-          uint32_t dof_id = static_cast<uint32_t>(fabs(dof_ids_h[index])); // note: 1-based index
-          int dof_sign    = dof_ids[index] > 0 ? +1 : -1;
-          bdr_element_dofs_(e, i) = {dof_id - 1, dof_sign}; // subtract 1 to get back to 0-based index
+          uint32_t dof_id         = static_cast<uint32_t>(fabs(dof_ids_h[index]));  // note: 1-based index
+          int      dof_sign       = dof_ids[index] > 0 ? +1 : -1;
+          bdr_element_dofs_(e, i) = {dof_id - 1, dof_sign};  // subtract 1 to get back to 0-based index
           index++;
         }
       }
