@@ -227,21 +227,21 @@ SERAC_HOST_DEVICE auto max(dual<gradient_type> a, dual<gradient_type> b)
   return (a.value > b.value) ? a : b;
 }
 
-/** @brief implementation of max for dual numbers */
+/** @brief implementation of min for dual numbers */
 template <typename gradient_type>
 SERAC_HOST_DEVICE auto min(dual<gradient_type> a, double b)
 {
   return (a.value < b) ? a : b;
 }
 
-/** @brief implementation of max for dual numbers */
+/** @brief implementation of min for dual numbers */
 template <typename gradient_type>
 SERAC_HOST_DEVICE auto min(double a, dual<gradient_type> b)
 {
   return (a < b.value) ? a : b;
 }
 
-/** @brief implementation of max for dual numbers */
+/** @brief implementation of min for dual numbers */
 template <typename gradient_type>
 SERAC_HOST_DEVICE auto min(dual<gradient_type> a, dual<gradient_type> b)
 {
