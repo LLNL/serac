@@ -201,7 +201,7 @@ SERAC_HOST_DEVICE constexpr auto& operator-=(dual<gradient_type>& a, double b)
 
 /**
  * @brief Implementation of absolute value function for dual numbers
- * @note This is not differentiable at x = 0.0
+ * @note This is not differentiable at x = 0.0. At that point, the gradient is calculated as the gradient of x.
  */
 template <typename gradient_type>
 SERAC_HOST_DEVICE auto abs(dual<gradient_type> x)
@@ -211,7 +211,7 @@ SERAC_HOST_DEVICE auto abs(dual<gradient_type> x)
 
 /**
  * @brief Implementation of max for dual numbers
- * @note This is not differentiable at a == b
+ * @note This is not differentiable at a == b. At that point, the gradient is calculated as the gradient of b.
  */
 template <typename gradient_type>
 SERAC_HOST_DEVICE auto max(dual<gradient_type> a, double b)
@@ -220,10 +220,7 @@ SERAC_HOST_DEVICE auto max(dual<gradient_type> a, double b)
   return (a > b_dual) ? a : b_dual;
 }
 
-/**
- * @brief Implementation of max for dual numbers
- * @note This is not differentiable at a == b
- */
+/// @overload
 template <typename gradient_type>
 SERAC_HOST_DEVICE auto max(double a, dual<gradient_type> b)
 {
@@ -231,10 +228,7 @@ SERAC_HOST_DEVICE auto max(double a, dual<gradient_type> b)
   return (a_dual > b) ? a_dual : b;
 }
 
-/**
- * @brief Implementation of max for dual numbers
- * @note This is not differentiable at a == b
- */
+/// @overload
 template <typename gradient_type>
 SERAC_HOST_DEVICE auto max(dual<gradient_type> a, dual<gradient_type> b)
 {
@@ -243,7 +237,7 @@ SERAC_HOST_DEVICE auto max(dual<gradient_type> a, dual<gradient_type> b)
 
 /**
  * @brief Implementation of min for dual numbers
- * @note This is not differentiable at a == b
+ * @note This is not differentiable at a == b. At that point, the gradient is calculated as the gradient of b.
  */
 template <typename gradient_type>
 SERAC_HOST_DEVICE auto min(dual<gradient_type> a, double b)
@@ -252,10 +246,7 @@ SERAC_HOST_DEVICE auto min(dual<gradient_type> a, double b)
   return (a < b_dual) ? a : b_dual;
 }
 
-/**
- * @brief Implementation of min for dual numbers
- * @note This is not differentiable at a == b
- */
+/// @overload
 template <typename gradient_type>
 SERAC_HOST_DEVICE auto min(double a, dual<gradient_type> b)
 {
@@ -263,10 +254,7 @@ SERAC_HOST_DEVICE auto min(double a, dual<gradient_type> b)
   return (a_dual < b) ? a_dual : b;
 }
 
-/**
- * @brief Implementation of min for dual numbers
- * @note This is not differentiable at a == b
- */
+/// @overload
 template <typename gradient_type>
 SERAC_HOST_DEVICE auto min(dual<gradient_type> a, dual<gradient_type> b)
 {
