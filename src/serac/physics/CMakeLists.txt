@@ -37,15 +37,11 @@ set(physics_headers
     )
 
 set(physics_dependencies
-    serac_infrastructure
     serac_coefficients
-    serac_functional
     serac_physics_integrators
-    serac_physics_materials
-    serac_numerics
-    serac_boundary_conditions
     serac_state
-    serac_mesh
+    serac_boundary_conditions
+    serac_numerics
     )
 
 blt_add_library(
