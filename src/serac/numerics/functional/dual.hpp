@@ -216,7 +216,7 @@ SERAC_HOST_DEVICE auto abs(dual<gradient_type> x)
 template <typename gradient_type>
 SERAC_HOST_DEVICE auto max(dual<gradient_type> a, double b)
 {
-  auto b_dual = dual{b, 0.0};
+  dual<gradient_type> b_dual{b, 0.0 * a.gradient};
   return (a > b_dual) ? a : b_dual;
 }
 
@@ -227,7 +227,7 @@ SERAC_HOST_DEVICE auto max(dual<gradient_type> a, double b)
 template <typename gradient_type>
 SERAC_HOST_DEVICE auto max(double a, dual<gradient_type> b)
 {
-  auto a_dual = dual{a, 0.0};
+  dual<gradient_type> a_dual{a, 0.0 * b.gradient};
   return (a_dual > b) ? a_dual : b;
 }
 
@@ -248,7 +248,7 @@ SERAC_HOST_DEVICE auto max(dual<gradient_type> a, dual<gradient_type> b)
 template <typename gradient_type>
 SERAC_HOST_DEVICE auto min(dual<gradient_type> a, double b)
 {
-  auto b_dual = dual{b, 0.0};
+  dual<gradient_type> b_dual{b, 0.0 * a.gradient};
   return (a < b_dual) ? a : b_dual;
 }
 
@@ -259,7 +259,7 @@ SERAC_HOST_DEVICE auto min(dual<gradient_type> a, double b)
 template <typename gradient_type>
 SERAC_HOST_DEVICE auto min(double a, dual<gradient_type> b)
 {
-  auto a_dual = dual{a, 0.0};
+  dual<gradient_type> a_dual{a, 0.0 * b.gradient};
   return (a_dual < b) ? a_dual : b;
 }
 
