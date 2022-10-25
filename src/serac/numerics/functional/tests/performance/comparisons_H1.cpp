@@ -15,11 +15,7 @@
 #include "serac/numerics/functional/tuple_arithmetic.hpp"
 #include "serac/numerics/functional/integral_utilities.hpp"
 
-#ifdef USE_OLD_IMPLEMENTATION
-#include "serac/numerics/functional/old/domain_integral_kernels.hpp"
-#else
 #include "serac/numerics/functional/domain_integral_kernels.hpp"
-#endif
 
 #include <vector>
 
