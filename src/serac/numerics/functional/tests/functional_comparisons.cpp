@@ -55,15 +55,24 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
 
+  // by default, mfem uses a different integration rule than serac
+  // so we manually specify the one that we use
+  const mfem::FiniteElement&   el = *fespace.GetFE(0);
+  const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
+
   mfem::ParBilinearForm A(&fespace);
 
   // Add the mass term using the standard MFEM method
   mfem::ConstantCoefficient a_coef(a);
-  A.AddDomainIntegrator(new mfem::MassIntegrator(a_coef));
+  auto * mass = new mfem::MassIntegrator(a_coef);
+  mass->SetIntRule(&ir);
+  A.AddDomainIntegrator(mass);
 
   // Add the diffusion term using the standard MFEM method
   mfem::ConstantCoefficient b_coef(b);
-  A.AddDomainIntegrator(new mfem::DiffusionIntegrator(b_coef));
+  auto * diffusion = new mfem::DiffusionIntegrator(b_coef);
+  diffusion->SetIntRule(&ir);
+  A.AddDomainIntegrator(diffusion);
 
   // Assemble the bilinear form into a matrix
   A.Assemble(0);
@@ -76,7 +85,9 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   mfem::FunctionCoefficient load_func([&](const mfem::Vector& coords) { return 100 * coords(0) * coords(1); });
 
   // Create and assemble the linear load term into a vector
-  f.AddDomainIntegrator(new mfem::DomainLFIntegrator(load_func));
+  auto * load = new mfem::DomainLFIntegrator(load_func);
+  load->SetIntRule(&ir);
+  f.AddDomainIntegrator(load);
   f.Assemble();
   std::unique_ptr<mfem::HypreParVector> F(f.ParallelAssemble());
 
@@ -157,14 +168,23 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec, dim);
 
+  // by default, mfem uses a different integration rule than serac
+  // so we manually specify the one that we use
+  const mfem::FiniteElement&   el = *fespace.GetFE(0);
+  const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
+
   mfem::ParBilinearForm A(&fespace);
 
   mfem::ConstantCoefficient a_coef(a);
-  A.AddDomainIntegrator(new mfem::VectorMassIntegrator(a_coef));
+  auto * mass = new mfem::VectorMassIntegrator(a_coef);
+  mass->SetIntRule(&ir);
+  A.AddDomainIntegrator(mass);
 
   mfem::ConstantCoefficient lambda_coef(b);
   mfem::ConstantCoefficient mu_coef(b);
-  A.AddDomainIntegrator(new mfem::ElasticityIntegrator(lambda_coef, mu_coef));
+  auto * elasticity = new mfem::ElasticityIntegrator(lambda_coef, mu_coef);
+  elasticity->SetIntRule(&ir);
+  A.AddDomainIntegrator(elasticity);
   {
     SERAC_PROFILE_SCOPE("mfem_localAssemble");
     A.Assemble(0);
@@ -179,7 +199,9 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
     force(0) = -1.0;
   });
 
-  f.AddDomainIntegrator(new mfem::VectorDomainLFIntegrator(load_func));
+  auto * load = new mfem::VectorDomainLFIntegrator(load_func);
+  load->SetIntRule(&ir);
+  f.AddDomainIntegrator(load);
   f.Assemble();
   std::unique_ptr<mfem::HypreParVector> F(f.ParallelAssemble());
 
@@ -249,13 +271,22 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
   auto                        fec = mfem::ND_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
 
+  // by default, mfem uses a different integration rule than serac
+  // so we manually specify the one that we use
+  const mfem::FiniteElement&   el = *fespace.GetFE(0);
+  const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
+
   mfem::ParBilinearForm B(&fespace);
 
   mfem::ConstantCoefficient a_coef(a);
-  B.AddDomainIntegrator(new mfem::VectorFEMassIntegrator(a_coef));
+  auto * mass = new mfem::VectorFEMassIntegrator(a_coef);
+  mass->SetIntRule(&ir);
+  B.AddDomainIntegrator(mass);
 
   mfem::ConstantCoefficient b_coef(b);
-  B.AddDomainIntegrator(new mfem::CurlCurlIntegrator(b_coef));
+  auto * curlcurl = new mfem::CurlCurlIntegrator(b_coef);
+  curlcurl->SetIntRule(&ir);
+  B.AddDomainIntegrator(curlcurl);
   B.Assemble(0);
   B.Finalize();
   std::unique_ptr<mfem::HypreParMatrix> J_mfem(B.ParallelAssemble());
@@ -269,7 +300,10 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
     output(1) = -5 * (x - y) * y;
   });
 
-  f.AddDomainIntegrator(new mfem::VectorFEDomainLFIntegrator(load_func));
+  auto * load = new mfem::VectorFEDomainLFIntegrator(load_func);
+  load->SetIntRule(&ir);
+
+  f.AddDomainIntegrator(load);
   f.Assemble();
   std::unique_ptr<mfem::HypreParVector> F(f.ParallelAssemble());
 
@@ -315,13 +349,13 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
   EXPECT_NEAR(0., mfem::Vector(g1 - g3).Norml2() / g1.Norml2(), 1.e-13);
 }
 
-// TEST(Thermal, 2DLinear) { functional_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
-// TEST(Thermal, 2DQuadratic) { functional_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
-// TEST(Thermal, 2DCubic) { functional_test(*mesh2D, H1<3>{}, H1<3>{}, Dimension<2>{}); }
-//
-// TEST(Thermal, 3DLinear) { functional_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
-// TEST(Thermal, 3DQuadratic) { functional_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
-// TEST(Thermal, 3DCubic) { functional_test(*mesh3D, H1<3>{}, H1<3>{}, Dimension<3>{}); }
+TEST(Thermal, 2DLinear) { functional_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
+TEST(Thermal, 2DQuadratic) { functional_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
+TEST(Thermal, 2DCubic) { functional_test(*mesh2D, H1<3>{}, H1<3>{}, Dimension<2>{}); }
+
+TEST(Thermal, 3DLinear) { functional_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
+TEST(Thermal, 3DQuadratic) { functional_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
+TEST(Thermal, 3DCubic) { functional_test(*mesh3D, H1<3>{}, H1<3>{}, Dimension<3>{}); }
 
 TEST(Hcurl, 2DLinear) { functional_test(*mesh2D, Hcurl<1>{}, Hcurl<1>{}, Dimension<2>{}); }
 TEST(Hcurl, 2DQuadratic) { functional_test(*mesh2D, Hcurl<2>{}, Hcurl<2>{}, Dimension<2>{}); }
@@ -331,13 +365,13 @@ TEST(Hcurl, 3DLinear) { functional_test(*mesh3D, Hcurl<1>{}, Hcurl<1>{}, Dimensi
 TEST(Hcurl, 3DQuadratic) { functional_test(*mesh3D, Hcurl<2>{}, Hcurl<2>{}, Dimension<3>{}); }
 TEST(Hcurl, 3DCubic) { functional_test(*mesh3D, Hcurl<3>{}, Hcurl<3>{}, Dimension<3>{}); }
 
-// TEST(Elasticity, 2DLinear) { functional_test(*mesh2D, H1<1, 2>{}, H1<1, 2>{}, Dimension<2>{}); }
-// TEST(Elasticity, 2DQuadratic) { functional_test(*mesh2D, H1<2, 2>{}, H1<2, 2>{}, Dimension<2>{}); }
-// TEST(Elasticity, 2DCubic) { functional_test(*mesh2D, H1<3, 2>{}, H1<3, 2>{}, Dimension<2>{}); }
-//
-// TEST(Elasticity, 3DLinear) { functional_test(*mesh3D, H1<1, 3>{}, H1<1, 3>{}, Dimension<3>{}); }
-// TEST(Elasticity, 3DQuadratic) { functional_test(*mesh3D, H1<2, 3>{}, H1<2, 3>{}, Dimension<3>{}); }
-// TEST(Elasticity, 3DCubic) { functional_test(*mesh3D, H1<3, 3>{}, H1<3, 3>{}, Dimension<3>{}); }
+TEST(Elasticity, 2DLinear) { functional_test(*mesh2D, H1<1, 2>{}, H1<1, 2>{}, Dimension<2>{}); }
+TEST(Elasticity, 2DQuadratic) { functional_test(*mesh2D, H1<2, 2>{}, H1<2, 2>{}, Dimension<2>{}); }
+TEST(Elasticity, 2DCubic) { functional_test(*mesh2D, H1<3, 2>{}, H1<3, 2>{}, Dimension<2>{}); }
+
+TEST(Elasticity, 3DLinear) { functional_test(*mesh3D, H1<1, 3>{}, H1<1, 3>{}, Dimension<3>{}); }
+TEST(Elasticity, 3DQuadratic) { functional_test(*mesh3D, H1<2, 3>{}, H1<2, 3>{}, Dimension<3>{}); }
+TEST(Elasticity, 3DCubic) { functional_test(*mesh3D, H1<3, 3>{}, H1<3, 3>{}, Dimension<3>{}); }
 
 int main(int argc, char* argv[])
 {
@@ -348,7 +382,7 @@ int main(int argc, char* argv[])
 
   axom::slic::SimpleLogger logger;
 
-  int serial_refinement   = 0;
+  int serial_refinement   = 1;
   int parallel_refinement = 0;
 
   mfem::OptionsParser args(argc, argv);
@@ -368,13 +402,11 @@ int main(int argc, char* argv[])
     args.PrintOptions(std::cout);
   }
 
-  // std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
-  // std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/beam-quad.mesh";
   std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/patch2D.mesh";
   mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
   mesh2D->ExchangeFaceNbrData();
 
-  std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+  std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/patch3D.mesh";
   mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
   mesh3D->ExchangeFaceNbrData();
 
