@@ -21,7 +21,7 @@
 
 #include <iostream>
 
-#include "serac/physics/materials/solid_functional_material.hpp"
+#include "serac/physics/materials/solid_material.hpp"
 #include "serac/physics/materials/material_verification_tools.hpp"
 
 using namespace serac;

@@ -8,7 +8,7 @@ set(test_dependencies gtest serac_physics_integrators)
 blt_list_append( TO test_dependencies ELEMENTS caliper adiak IF ${SERAC_ENABLE_PROFILING} )
 
 set(integrator_tests
-    serac_wrapper_tests.cpp)
+    wrapper_tests.cpp)
 
 serac_add_tests( SOURCES ${integrator_tests}
                  DEPENDS_ON ${test_dependencies})    

@@ -125,8 +125,8 @@ public:
         element_gradients_[i] = ExecArray<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
       }
 
-      // note: mfem calls to L2 boundary elements will segfault, so we guard these setup operations
-      if (!isL2(*trial_space_[i])) {
+      // note: mfem calls to spaces without boundary elements will segfault, so we guard these setup operations
+      if (compatibleWithFaceRestriction(*trial_space_[i])) {
         auto num_bdr_elements          = static_cast<size_t>(trial_space_[i]->GetNFbyType(mfem::FaceType::Boundary));
         auto ndof_per_test_bdr_element = static_cast<size_t>(1);
         auto ndof_per_trial_bdr_element =
@@ -289,7 +289,9 @@ public:
     }
 
     if (bdr_integrals_.size() > 0) {
-      G_trial_boundary_[which]->Mult(input_L_[which], input_E_boundary_[which]);
+      if (compatibleWithFaceRestriction(*trial_space_[which])) {
+        G_trial_boundary_[which]->Mult(input_L_[which], input_E_boundary_[which]);
+      }
 
       output_E_boundary_ = 0.0;
       for (auto& integral : bdr_integrals_) {
@@ -351,7 +353,9 @@ public:
 
     if (bdr_integrals_.size() > 0) {
       for (uint32_t i = 0; i < num_trial_spaces; i++) {
-        G_trial_boundary_[i]->Mult(input_L_[i], input_E_boundary_[i]);
+        if (compatibleWithFaceRestriction(*trial_space_[i])) {
+          G_trial_boundary_[i]->Mult(input_L_[i], input_E_boundary_[i]);
+        }
       }
 
       output_E_boundary_ = 0.0;

@@ -59,8 +59,6 @@ class Serac(CachedCMakePackage, CudaPackage):
     variant('profiling', default=False, 
             description='Build with hooks for Adiak/Caliper performance analysis')
 
-    variant('glvis', default=False,
-            description='Build the glvis visualization executable')
     variant('petsc', default=False,
             description='Enable PETSC')
     variant('netcdf', default=True,
@@ -137,8 +135,6 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("caliper@2.7.0+mpi+adiak~papi", when="+profiling")
 
     depends_on("superlu-dist@6.1.1")
-
-    depends_on("glvis@3.4~fonts", when='+glvis')
 
     #
     # Forward variants
@@ -360,12 +356,6 @@ class Serac(CachedCMakePackage, CudaPackage):
                                                 dep_dir))
             else:
                 entries.append('# %s not built\n' % dep.upper())
-
-        if spec.satisfies('^glvis'):
-            glvis_bin_dir = get_spec_path(spec, "glvis",
-                                          path_replacements, use_bin=True)
-            entries.append(cmake_cache_path("GLVIS_EXECUTABLE",
-                                            pjoin(glvis_bin_dir, "glvis")))
 
         ##################################
         # Devtools
