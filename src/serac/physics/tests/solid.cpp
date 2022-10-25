@@ -27,6 +27,86 @@ using solid_mechanics::default_dynamic_options;
 using solid_mechanics::default_static_options;
 using solid_mechanics::direct_static_options;
 
+void functional_solid_test_spatially_varying()
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  int serial_refinement   = 0;
+  int parallel_refinement = 0;
+
+  const int p   = 1;
+  const int dim = 2;
+
+  // Create DataStore
+  axom::sidre::DataStore datastore;
+  serac::StateManager::initialize(datastore, "solid_functional_spatially_varying");
+
+  // Construct the appropriate dimension mesh and give it to the data store
+  std::string filename = SERAC_REPO_DIR "/data/meshes/beam-quad.mesh";
+
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
+  serac::StateManager::setMesh(std::move(mesh));
+
+  // Define a boundary attribute set
+  std::set<int> ess_bdr = {1};
+
+  // Use a direct solver (DSuperLU) for the Jacobian solve
+  SolverOptions options = {DirectSolverOptions{}, solid_mechanics::default_nonlinear_options};
+
+  // Construct a functional-based solid mechanics solver
+  SolidMechanics<p, dim> solid_solver(options, GeometricNonlinearities::On, "solid_functional_spatially_varying");
+
+  solid_mechanics::NeoHookean mat{1.0, 1.0, 1.0};
+  solid_solver.setMaterial(mat);
+
+  // Define the function for the initial displacement and boundary condition
+  auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
+
+  // Set the initial displacement and boundary condition
+  solid_solver.setDisplacementBCs(ess_bdr, bc);
+  solid_solver.setDisplacement(bc);
+
+  // Finalize the data structures
+  solid_solver.completeSetup();
+
+  auto traction_function([](const auto& x, const auto&, const auto&) {
+    using std::sin, std::cos, std::abs, std::atan, std::sqrt;
+
+    // shift coordinates to "design centroid" in y-z plane
+    double y0 = 0.179528;
+    double z0 = -5.5090945;
+
+    auto y = x[1] - y0;
+    auto z = x[2] - z0;
+
+    // nodes with r < r0 define inner surface
+    double r0 = 5.52;
+    auto   r  = sqrt(y * y + z * z);
+
+    // define traction with cosine rolloff
+    double pi       = 3.1415926536;
+    double sin48    = sin(48.0 * pi / 180.0);
+    double cos48    = cos(48.0 * pi / 180.0);
+    auto   traction = 0.0 * x;
+    if (r <= r0) {
+      auto t  = atan(z / y);
+      auto P0 = abs(cos(1.5 * (t - pi / 2.0)));
+      traction[0] -= P0 * sin48;
+      traction[2] += P0 * cos48;
+    }
+    return traction;
+  });
+
+  solid_solver.setPiolaTraction(traction_function);
+
+  // Perform the quasi-static solve
+  double dt = 1.0;
+  solid_solver.advanceTimestep(dt);
+
+  // Output the sidre-based and paraview plot files
+  solid_solver.outputState("paraview_output");
+}
+
 template <int p, int dim>
 void functional_solid_test_static(double expected_disp_norm)
 {
@@ -357,6 +437,8 @@ TEST(SolidMechanics, 2DLinearPressure)
 {
   functional_solid_test_boundary<1, 2>(0.057051396685822188, TestType::Pressure);
 }
+
+TEST(SolidMechanics, 2DSpatiallyVarying) { functional_solid_test_spatially_varying(); }
 
 }  // namespace serac
 

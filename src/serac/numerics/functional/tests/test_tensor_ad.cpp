@@ -26,12 +26,30 @@ TEST(DualNumberTensor, Max)
 {
   auto xd = max(make_dual(x), make_dual(y));
   EXPECT_DOUBLE_EQ(std::max(x, y), xd.value);
+  EXPECT_DOUBLE_EQ(1.0, xd.gradient);
+
+  auto xd2 = max(x, make_dual(y));
+  EXPECT_DOUBLE_EQ(std::max(x, y), xd2.value);
+  EXPECT_DOUBLE_EQ(0.0, xd2.gradient);
+
+  auto xd3 = max(make_dual(x), y);
+  EXPECT_DOUBLE_EQ(std::max(x, y), xd3.value);
+  EXPECT_DOUBLE_EQ(1.0, xd3.gradient);
 }
 
 TEST(DualNumberTensor, Min)
 {
   auto xd = min(make_dual(x), make_dual(y));
   EXPECT_DOUBLE_EQ(std::min(x, y), xd.value);
+  EXPECT_DOUBLE_EQ(1.0, xd.gradient);
+
+  auto xd2 = min(x, make_dual(y));
+  EXPECT_DOUBLE_EQ(std::min(x, y), xd2.value);
+  EXPECT_DOUBLE_EQ(1.0, xd2.gradient);
+
+  auto xd3 = min(make_dual(x), y);
+  EXPECT_DOUBLE_EQ(std::min(x, y), xd3.value);
+  EXPECT_DOUBLE_EQ(0.0, xd3.gradient);
 }
 
 TEST(DualNumberTensor, Cos)

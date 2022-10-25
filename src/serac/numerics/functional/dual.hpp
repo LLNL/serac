@@ -210,42 +210,46 @@ SERAC_HOST_DEVICE auto abs(dual<gradient_type> x)
 template <typename gradient_type>
 SERAC_HOST_DEVICE auto max(dual<gradient_type> a, double b)
 {
-  return (a.value > b) ? a : b;
+  auto b_dual = dual{b, 0.0};
+  return (a > b_dual) ? a : b_dual;
 }
 
 /** @brief implementation of max for dual numbers */
 template <typename gradient_type>
 SERAC_HOST_DEVICE auto max(double a, dual<gradient_type> b)
 {
-  return (a > b.value) ? a : b;
+  auto a_dual = dual{a, 0.0};
+  return (a_dual > b) ? a_dual : b;
 }
 
 /** @brief implementation of max for dual numbers */
 template <typename gradient_type>
 SERAC_HOST_DEVICE auto max(dual<gradient_type> a, dual<gradient_type> b)
 {
-  return (a.value > b.value) ? a : b;
+  return (a > b) ? a : b;
 }
 
 /** @brief implementation of min for dual numbers */
 template <typename gradient_type>
 SERAC_HOST_DEVICE auto min(dual<gradient_type> a, double b)
 {
-  return (a.value < b) ? a : b;
+  auto b_dual = dual{b, 0.0};
+  return (a < b_dual) ? a : b_dual;
 }
 
 /** @brief implementation of min for dual numbers */
 template <typename gradient_type>
 SERAC_HOST_DEVICE auto min(double a, dual<gradient_type> b)
 {
-  return (a < b.value) ? a : b;
+  auto a_dual = dual{a, 0.0};
+  return (a_dual < b) ? a_dual : b;
 }
 
 /** @brief implementation of min for dual numbers */
 template <typename gradient_type>
 SERAC_HOST_DEVICE auto min(dual<gradient_type> a, dual<gradient_type> b)
 {
-  return (a.value < b.value) ? a : b;
+  return (a < b) ? a : b;
 }
 
 /** @brief implementation of square root for dual numbers */
