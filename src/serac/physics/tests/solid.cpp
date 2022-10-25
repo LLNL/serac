@@ -353,7 +353,10 @@ TEST(SolidMechanics, 2DQuadParameterizedStatic) { functional_parameterized_solid
 
 TEST(SolidMechanics, 3DQuadStaticJ2) { functional_solid_test_static_J2(); }
 
-TEST(SolidMechanics, 2DSpatiallyVarying) { functional_solid_test_spatially_varying(); }
+TEST(SolidMechanics, 2DLinearPressure)
+{
+  functional_solid_test_boundary<1, 2>(0.057051396685822188, TestType::Pressure);
+}
 
 }  // namespace serac
 
