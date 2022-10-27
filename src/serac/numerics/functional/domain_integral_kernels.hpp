@@ -68,6 +68,9 @@ auto get_derivative_type(lambda qf, qpt_data_type&& qpt_data)
   return get_gradient(detail::apply_qf(qf, tensor<double, dim>{}, qpt_data, make_dual_wrt<i>(qf_arguments{})));
 };
 
+template < typename ... trials >
+struct qf_info{};
+
 template <int i>
 struct DerivativeWRT {
 };
@@ -76,6 +79,7 @@ template <int Q, Geometry g, typename test, typename... trials>
 struct KernelConfig {
 };
 
+#if 0
 template <typename lambda, int dim, int n, typename... T, int... I>
 auto batch_apply_qf(lambda qf, const tensor<double, dim, n> x, Nothing* /*qpt_data*/,
                     const tuple<tensor<T, n>...> inputs, std::integer_sequence<int, I...>)
@@ -109,6 +113,71 @@ auto batch_apply_qf(lambda qf, const tensor<double, dim, n> x, qpt_data_type* qp
   }
   return outputs;
 }
+#else
+//template <typename lambda, int dim, int n, typename... T>
+//auto batch_apply_qf(lambda qf, const tensor<double, dim, n> x, Nothing* /*qpt_data*/,
+//                    const tensor<T, n> & ... inputs)
+//{
+//  using return_type = decltype(qf(tensor<double, dim>{}, T{}...));
+//  tensor<return_type, n> outputs{};
+//  for (int i = 0; i < n; i++) {
+//    tensor<double, dim> x_q;
+//    for (int j = 0; j < dim; j++) {
+//      x_q[j] = x(j, i);
+//    }
+//    outputs[i] = qf(x_q, inputs[i]...);
+//  }
+//  return outputs;
+//}
+
+template <typename T1, typename T2, typename T3>
+int foo(T1 x1, T2 x2, T3 x3) {return 4;}
+
+template <typename lambda, int dim, int n, typename T>
+auto batch_apply_qf(const lambda & qf, const tensor<double, dim, n> x, Nothing * qpt_data,
+                    const tensor<T, n> & inputs)
+{
+  using return_type = decltype(qf(tensor<double, dim>{}, T{}));
+  tensor<return_type, n> outputs{};
+  for (int i = 0; i < n; i++) {
+    tensor<double, dim> x_q;
+    for (int j = 0; j < dim; j++) {
+      x_q[j] = x(j, i);
+    }
+    outputs[i] = qf(x_q, inputs[i]);
+  }
+  return outputs;
+}
+
+template <typename lambda, int n, typename T>
+auto batch_apply_qf(const lambda & qf, Nothing * , const tensor<T, n> & inputs)
+{
+  using return_type = decltype(qf(tensor<double, 2>{}, T{}));
+  tensor<return_type, n> outputs{};
+  for (int i = 0; i < n; i++) {
+    outputs[i] = qf(tensor<double,2>{}, inputs[i]);
+  }
+  return outputs;
+}
+
+template <typename lambda, int dim, int n, typename qpt_data_type, typename T>
+auto batch_apply_qf(const lambda & qf, const tensor<double, dim, n> x, qpt_data_type* qpt_data,
+                    const tensor<T, n> & inputs)
+{
+  using return_type = decltype(qf(tensor<double, dim>{}, qpt_data_type{}, T{}));
+  tensor<return_type, n> outputs{};
+  for (int i = 0; i < n; i++) {
+    tensor<double, dim> x_q;
+    for (int j = 0; j < dim; j++) {
+      x_q[j] = x(j, i);
+    }
+    auto qdata = qpt_data[i];
+    outputs[i] = qf(x_q, qdata, inputs[i]);
+  }
+  return outputs;
+}
+#endif
+
 
 /**
  * @tparam S type used to specify which argument to differentiate with respect to.
@@ -126,20 +195,22 @@ auto batch_apply_qf(lambda qf, const tensor<double, dim, n> x, qpt_data_type* qp
 template <typename S, typename T, typename derivatives_type, typename lambda, typename qpt_data_type, typename int_seq>
 struct EvaluationKernel;
 
+#if 0
 /**
  * @overload
  * @note evaluation kernel with no differentiation
  */
 template <int Q, Geometry geom, typename test, typename... trials, typename lambda, typename qpt_data_type,
-          int... int_seq>
+          int... j>
 struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lambda, qpt_data_type,
-                        std::integer_sequence<int, int_seq...> > {
+                        std::integer_sequence<int, j...> > {
+  static constexpr int I = -1;
   static constexpr auto exec             = ExecutionSpace::CPU;     ///< this specialization is CPU-specific
   static constexpr int  num_trial_spaces = int(sizeof...(trials));  ///< how many trial spaces are provided
   static constexpr auto Iseq             = std::make_integer_sequence<int, sizeof...(trials)>{};
 
   using test_element = finite_element<geom, test>;
-  static constexpr type_list<finite_element<geom, trials>...> trial_elements{};
+  static constexpr tuple<finite_element<geom, trials>...> trial_elements{};
 
   /**
    * @brief initialize the functor by providing the necessary quadrature point data
@@ -172,7 +243,9 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
     auto J = reinterpret_cast<const typename batched_jacobian<geom, Q>::type*>(J_.Read());
     static constexpr TensorProductQuadratureRule<Q> rule{};
 
-    auto& qdata = *data_;
+    [[maybe_unused]] auto& qdata = *data_;
+
+    tuple u_e = {reinterpret_cast<const typename decltype(type<j>(trial_elements))::dof_type*>(U[j]->Read())...};
 
     // for each element in the domain
     for (uint32_t e = 0; e < num_elements_; e++) {
@@ -180,25 +253,31 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
       auto J_e = J[e];
       auto X_e = X[e];
 
-      tuple<decltype(
-          finite_element<geom, trials>::interpolate(typename finite_element<geom, trials>::dof_type{}, rule))...>
-          qf_inputs{};
+      // batch-calculate values / derivatives of each trial space, at each quadrature point
+      tuple qf_inputs = {
+          promote_each_to_dual_when<j == I>(type<j>(trial_elements).interpolate(get<j>(u_e)[e], rule))...};
 
-      for_constexpr<num_trial_spaces>([&](auto j) {
-        using trial_element = decltype(trial_elements[j]);
-
-        auto u = reinterpret_cast<const typename trial_element::dof_type*>(U[j]->Read());
-
-        // (batch) interpolate each quadrature point's value
-        get<j>(qf_inputs) = trial_element::interpolate(u[e], rule);
-
-        // use J to transform values / derivatives on the parent element
-        // to the corresponding values / derivatives on the physical element
-        parent_to_physical<trial_element::family>(get<j>(qf_inputs), J_e);
-      });
+      // use J to transform values / derivatives on the parent element
+      // to the to the corresponding values / derivatives on the physical element
+      (parent_to_physical<type<j>(trial_elements).family>(get<j>(qf_inputs), J_e), ...);
 
       // (batch) evalute the q-function at each quadrature point
-      auto qf_outputs = batch_apply_qf(qf_, X_e, &qdata(e, 0), qf_inputs, Iseq);
+      #if 0
+      auto qf_outputs = batch_apply_qf(qf_, X_e, get<j>(qf_inputs) ...);
+      #else
+      auto tmp = get<0>(qf_inputs);
+      constexpr int n = leading_dimension(decltype(tmp){});
+      constexpr int dim = dimension_of(geom);
+      using return_type = decltype(qf_(tensor<double, dim>{}, tmp[0]));
+      tensor<return_type, n> qf_outputs{};
+      for (int i = 0; i < n; i++) {
+        tensor<double, dim> x_q;
+        for (int k = 0; k < dim; k++) {
+          x_q[k] = X_e(k, i);
+        }
+        qf_outputs[i] = qf_(x_q, get<0>(qf_inputs)[i]);
+      }
+      #endif
 
       // use J to transform sources / fluxes on the physical element
       // back to the corresponding sources / fluxes on the parent element
@@ -212,11 +291,12 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
   const mfem::Vector& J_;             ///< Jacobian matrix entries at each quadrature point
   const mfem::Vector& X_;             ///< Spatial positions of each quadrature point
   std::size_t         num_elements_;  ///< how many elements in the domain
-  lambda              qf_;            ///< q-function
+  const lambda & qf_;            ///< q-function
 
   // TODO: address sanitizer is warning me that data_ is potentially double-freeing
   std::shared_ptr<QuadratureData<qpt_data_type> > data_;  ///< (optional) user-provided quadrature data
 };
+#endif
 
 /**
  * @overload
@@ -250,6 +330,12 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
   {
   }
 
+  EvaluationKernel(DerivativeWRT<-1>, KernelConfig<Q, geom, test, trials...>, const mfem::Vector& J, const mfem::Vector& X,
+                   std::size_t num_elements, lambda qf, std::shared_ptr<QuadratureData<qpt_data_type> > data)
+      : J_(J), X_(X), num_elements_(num_elements), qf_(qf), data_(data) {}
+
+
+
   /**
    * @brief integrate the q-function over the specified domain, at the specified trial space values
    *
@@ -266,15 +352,16 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
     auto J = reinterpret_cast<const typename batched_jacobian<geom, Q>::type*>(J_.Read());
     static constexpr TensorProductQuadratureRule<Q> rule{};
 
-    auto& qdata = *data_;
+    [[maybe_unused]] auto& qdata = *data_;
 
     tuple u_e = {reinterpret_cast<const typename decltype(type<j>(trial_elements))::dof_type*>(U[j]->Read())...};
 
     // for each element in the domain
     for (uint32_t e = 0; e < num_elements_; e++) {
+
       // load the jacobians and positions for each quadrature point in this element
       auto J_e = J[e];
-      auto X_e = X[e];
+      [[maybe_unused]] auto X_e = X[e];
 
       // batch-calculate values / derivatives of each trial space, at each quadrature point
       tuple qf_inputs = {
@@ -285,7 +372,25 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
       (parent_to_physical<type<j>(trial_elements).family>(get<j>(qf_inputs), J_e), ...);
 
       // (batch) evalute the q-function at each quadrature point
-      auto qf_outputs = batch_apply_qf(qf_, X_e, &qdata(e, 0), qf_inputs, Iseq);
+      #if 1
+      auto qf_outputs = batch_apply_qf(qf_, &qdata(e, 0), get<0>(qf_inputs));
+      #else
+      auto tmp = get<0>(qf_inputs);
+      constexpr int n = leading_dimension(decltype(tmp){});
+      constexpr int dim = dimension_of(geom);
+      using return_type = std::conditional_t< std::is_same_v< qpt_data_type, Nothing >,
+                            decltype(qf_(tensor<double, dim>{}, get<j>(qf_inputs)[0]...)),
+                            decltype(qf_(tensor<double, dim>{}, qpt_data_type{}, get<j>(qf_inputs)[0]...))
+                          >;
+      tensor<return_type, n> qf_outputs{};
+      for (int i = 0; i < n; i++) {
+        tensor<double, dim> x_q;
+        for (int k = 0; k < dim; k++) {
+          x_q[k] = X_e(k, i);
+        }
+        qf_outputs[i] = qf_(x_q, get<j>(qf_inputs)[i] ...);
+      }
+      #endif
 
       // use J to transform sources / fluxes on the physical element
       // back to the corresponding sources / fluxes on the parent element
@@ -294,8 +399,10 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
       // write out the q-function derivatives after applying the
       // physical_to_parent transformation, so that those transformations
       // won't need to be applied in the action_of_gradient and element_gradient kernels
-      for (int q = 0; q < leading_dimension(qf_outputs); q++) {
-        qf_derivatives_(e, q) = get_gradient(qf_outputs[q]);
+      if constexpr (I != -1) {
+        for (int q = 0; q < leading_dimension(qf_outputs); q++) {
+          qf_derivatives_(e, q) = get_gradient(qf_outputs[q]);
+        }
       }
 
       // (batch) integrate the material response against the test-space basis functions
@@ -311,17 +418,24 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
   std::shared_ptr<QuadratureData<qpt_data_type> > data_;     ///< (optional) user-provided quadrature data
 };
 
-template <int Q, Geometry geom, typename test, typename... trials, typename lambda, typename qpt_data_type>
-EvaluationKernel(KernelConfig<Q, geom, test, trials...>, const mfem::Vector&, const mfem::Vector&, int, lambda,
-                 std::shared_ptr<QuadratureData<qpt_data_type> >)
-    -> EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lambda, qpt_data_type,
-                        std::make_integer_sequence<int, sizeof...(trials)> >;
+//template <int Q, Geometry geom, typename test, typename... trials, typename lambda, typename qpt_data_type>
+//EvaluationKernel(KernelConfig<Q, geom, test, trials...>, const mfem::Vector&, const mfem::Vector&, int, lambda,
+//                 std::shared_ptr<QuadratureData<qpt_data_type> >)
+//    -> EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lambda, qpt_data_type,
+//                        std::make_integer_sequence<int, sizeof...(trials)> >;
 
 template <int i, int Q, Geometry geom, typename test, typename... trials, typename derivatives_type, typename lambda,
           typename qpt_data_type>
 EvaluationKernel(DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, CPUArrayView<derivatives_type, 2>,
                  const mfem::Vector&, const mfem::Vector&, int, lambda, std::shared_ptr<QuadratureData<qpt_data_type> >)
     -> EvaluationKernel<DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, derivatives_type, lambda,
+                        qpt_data_type, std::make_integer_sequence<int, sizeof...(trials)> >;
+
+template <int Q, Geometry geom, typename test, typename... trials, typename lambda,
+          typename qpt_data_type>
+EvaluationKernel(DerivativeWRT<-1>, KernelConfig<Q, geom, test, trials...>,
+                 const mfem::Vector&, const mfem::Vector&, int, lambda, std::shared_ptr<QuadratureData<qpt_data_type> >)
+    -> EvaluationKernel<DerivativeWRT<-1>, KernelConfig<Q, geom, test, trials...>, char, lambda,
                         qpt_data_type, std::make_integer_sequence<int, sizeof...(trials)> >;
 
 //clang-format off

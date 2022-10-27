@@ -79,7 +79,7 @@ public:
     if constexpr (exec == ExecutionSpace::CPU) {
       KernelConfig<Q, geometry, test, trials...> eval_config;
 
-      evaluation_ = EvaluationKernel{eval_config, J, X, num_elements, qf, qdata};
+      evaluation_ = EvaluationKernel{DerivativeWRT<-1>{}, eval_config, J, X, num_elements, qf, qdata};
 
       for_constexpr<num_active_trial_spaces>([this, num_elements, quadrature_points_per_element, &J, &X, &qf, qdata,
                                               eval_config](auto i) {

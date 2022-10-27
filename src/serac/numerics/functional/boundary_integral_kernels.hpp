@@ -184,14 +184,6 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
    */
   void operator()(const std::vector<const mfem::Vector*> U, mfem::Vector& R)
   {
-    std::array<const double*, num_trial_spaces> ptrs{};
-    if constexpr (num_trial_spaces > 0) {
-      for (uint32_t j = 0; j < num_trial_spaces; j++) {
-        ptrs[j] = U[j]->Read();
-      }
-    }
-    EVector_t u(ptrs, std::size_t(num_elements_));
-
     static constexpr int sdim = dimension_of(geom) + 1;  // spatial dimension
 
     // mfem provides this information in 1D arrays, so we reshape it
