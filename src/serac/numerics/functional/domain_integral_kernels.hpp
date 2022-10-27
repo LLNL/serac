@@ -79,12 +79,12 @@ template <int Q, Geometry g, typename test, typename... trials>
 struct KernelConfig {
 };
 
-#if 0
+#if 1
 template <typename lambda, int dim, int n, typename... T, int... I>
 auto batch_apply_qf(lambda qf, const tensor<double, dim, n> x, Nothing* /*qpt_data*/,
-                    const tuple<tensor<T, n>...> inputs, std::integer_sequence<int, I...>)
+                    const tuple<T...> & inputs, std::integer_sequence<int, I...>)
 {
-  using return_type = decltype(qf(tensor<double, dim>{}, T{}...));
+  using return_type = decltype(qf(tensor<double, dim>{}, T{}[0]...));
   tensor<return_type, n> outputs{};
   for (int i = 0; i < n; i++) {
     tensor<double, dim> x_q;
@@ -98,9 +98,9 @@ auto batch_apply_qf(lambda qf, const tensor<double, dim, n> x, Nothing* /*qpt_da
 
 template <typename lambda, int dim, int n, typename qpt_data_type, typename... T, int... I>
 auto batch_apply_qf(lambda qf, const tensor<double, dim, n> x, qpt_data_type* qpt_data,
-                    const tuple<tensor<T, n>...> inputs, std::integer_sequence<int, I...>)
+                    const tuple<T...> inputs, std::integer_sequence<int, I...>)
 {
-  using return_type = decltype(qf(tensor<double, dim>{}, qpt_data[0], T{}...));
+  using return_type = decltype(qf(tensor<double, dim>{}, qpt_data[0], T{}[0]...));
   tensor<return_type, n> outputs{};
   for (int i = 0; i < n; i++) {
     tensor<double, dim> x_q;
@@ -352,16 +352,16 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
     auto J = reinterpret_cast<const typename batched_jacobian<geom, Q>::type*>(J_.Read());
     static constexpr TensorProductQuadratureRule<Q> rule{};
 
-    [[maybe_unused]] auto& qdata = *data_;
+    auto& qdata = *data_;
 
-    tuple u_e = {reinterpret_cast<const typename decltype(type<j>(trial_elements))::dof_type*>(U[j]->Read())...};
+    [[maybe_unused]] tuple u_e = {reinterpret_cast<const typename decltype(type<j>(trial_elements))::dof_type*>(U[j]->Read())...};
 
     // for each element in the domain
     for (uint32_t e = 0; e < num_elements_; e++) {
 
       // load the jacobians and positions for each quadrature point in this element
       auto J_e = J[e];
-      [[maybe_unused]] auto X_e = X[e];
+      auto X_e = X[e];
 
       // batch-calculate values / derivatives of each trial space, at each quadrature point
       tuple qf_inputs = {
@@ -373,7 +373,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
 
       // (batch) evalute the q-function at each quadrature point
       #if 1
-      auto qf_outputs = batch_apply_qf(qf_, &qdata(e, 0), get<0>(qf_inputs));
+      auto qf_outputs = batch_apply_qf(qf_, X_e, &qdata(e, 0), qf_inputs, Iseq);
       #else
       auto tmp = get<0>(qf_inputs);
       constexpr int n = leading_dimension(decltype(tmp){});
