@@ -298,7 +298,7 @@ template <typename gradient_type>
 SERAC_HOST_DEVICE auto atan2(dual<gradient_type> y, dual<gradient_type> x)
 {
   using std::atan2, std::pow;
-  return dual<gradient_type>{atan2(y.value, x.value), y.gradient * x.value / (pow(x.value, 2) + pow(y.value, 2)) - x.gradient * y.value / (pow(x.value, 2) + pow(y.value, 2)) )};
+  return dual<gradient_type>{atan2(y.value, x.value), y.gradient * x.value / (pow(x.value, 2) + pow(y.value, 2)) - x.gradient * y.value / (pow(x.value, 2) + pow(y.value, 2))};
 }
 
 /** @brief implementation of asin for dual numbers */
