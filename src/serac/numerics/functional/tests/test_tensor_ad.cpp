@@ -62,6 +62,22 @@ TEST(DualNumberTensor, Atan)
 {
   auto xd = atan(make_dual(x));
   EXPECT_DOUBLE_EQ(abs(1.0 / (1.0 + pow(x, 2.0)) - xd.gradient), 0.0);
+  EXPECT_DOUBLE_EQ(atan(x) - xd.value, 0.0);
+}
+
+TEST(DualNumberTensor, Atan2)
+{
+  auto xd = atan2(make_dual(y), make_dual(x));
+  EXPECT_DOUBLE_EQ(abs((x / (pow(x, 2.0) + pow(y, 2.0)) - y / (pow(x, 2.0) + pow(y, 2.0))) - xd.gradient), 0.0);
+  EXPECT_DOUBLE_EQ(atan2(y, x) - xd.value, 0.0);
+
+  auto xd1 = atan2(make_dual(y), x);
+  EXPECT_DOUBLE_EQ(abs(x / (pow(x, 2.0) + pow(y, 2.0)) - xd1.gradient), 0.0);
+  EXPECT_DOUBLE_EQ(atan2(y, x) - xd1.value, 0.0);
+
+  auto xd2 = atan2(y, make_dual(x));
+  EXPECT_DOUBLE_EQ(abs(-y / (pow(x, 2.0) + pow(y, 2.0)) - xd2.gradient), 0.0);
+  EXPECT_DOUBLE_EQ(atan2(y, x) - xd2.value, 0.0);
 }
 
 TEST(DualNumberTensor, Asin)
