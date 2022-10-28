@@ -29,10 +29,7 @@ set(materials_headers
     )
 
 set(materials_depends
-    serac_infrastructure
     serac_functional
-    serac_numerics
-    mfem
     )
 
 blt_add_library(

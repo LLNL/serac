@@ -23,7 +23,7 @@ blt_add_library(
     NAME        serac_coefficients
     SOURCES     ${coefficients_sources}
     HEADERS     ${coefficients_headers}
-    DEPENDS_ON  serac_numerics serac_state serac_physics_materials
+    DEPENDS_ON  serac_state serac_physics_materials
     )
 
 install(FILES ${coefficients_headers} DESTINATION include/serac/physics/coefficients )

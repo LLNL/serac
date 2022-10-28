@@ -20,6 +20,37 @@ TEST(Tensor, Norm)
 
 const auto   eps = std::numeric_limits<double>::epsilon();
 const double x   = 0.5;
+const double y   = 0.25;
+
+TEST(DualNumberTensor, Max)
+{
+  auto xd = max(make_dual(x), make_dual(y));
+  EXPECT_DOUBLE_EQ(std::max(x, y), xd.value);
+  EXPECT_DOUBLE_EQ(1.0, xd.gradient);
+
+  auto xd2 = max(x, make_dual(y));
+  EXPECT_DOUBLE_EQ(std::max(x, y), xd2.value);
+  EXPECT_DOUBLE_EQ(0.0, xd2.gradient);
+
+  auto xd3 = max(make_dual(x), y);
+  EXPECT_DOUBLE_EQ(std::max(x, y), xd3.value);
+  EXPECT_DOUBLE_EQ(1.0, xd3.gradient);
+}
+
+TEST(DualNumberTensor, Min)
+{
+  auto xd = min(make_dual(x), make_dual(y));
+  EXPECT_DOUBLE_EQ(std::min(x, y), xd.value);
+  EXPECT_DOUBLE_EQ(1.0, xd.gradient);
+
+  auto xd2 = min(x, make_dual(y));
+  EXPECT_DOUBLE_EQ(std::min(x, y), xd2.value);
+  EXPECT_DOUBLE_EQ(1.0, xd2.gradient);
+
+  auto xd3 = min(make_dual(x), y);
+  EXPECT_DOUBLE_EQ(std::min(x, y), xd3.value);
+  EXPECT_DOUBLE_EQ(0.0, xd3.gradient);
+}
 
 TEST(DualNumberTensor, Cos)
 {
@@ -27,7 +58,41 @@ TEST(DualNumberTensor, Cos)
   EXPECT_DOUBLE_EQ(abs(-sin(x) - xd.gradient), 0.0);
 }
 
-TEST(dual_number_tensor, Exp)
+TEST(DualNumberTensor, Atan)
+{
+  auto xd = atan(make_dual(x));
+  EXPECT_DOUBLE_EQ(abs(1.0 / (1.0 + pow(x, 2.0)) - xd.gradient), 0.0);
+  EXPECT_DOUBLE_EQ(atan(x) - xd.value, 0.0);
+}
+
+TEST(DualNumberTensor, Atan2)
+{
+  auto xd = atan2(make_dual(y), make_dual(x));
+  EXPECT_DOUBLE_EQ(abs((x / (pow(x, 2.0) + pow(y, 2.0)) - y / (pow(x, 2.0) + pow(y, 2.0))) - xd.gradient), 0.0);
+  EXPECT_DOUBLE_EQ(atan2(y, x) - xd.value, 0.0);
+
+  auto xd1 = atan2(make_dual(y), x);
+  EXPECT_DOUBLE_EQ(abs(x / (pow(x, 2.0) + pow(y, 2.0)) - xd1.gradient), 0.0);
+  EXPECT_DOUBLE_EQ(atan2(y, x) - xd1.value, 0.0);
+
+  auto xd2 = atan2(y, make_dual(x));
+  EXPECT_DOUBLE_EQ(abs(-y / (pow(x, 2.0) + pow(y, 2.0)) - xd2.gradient), 0.0);
+  EXPECT_DOUBLE_EQ(atan2(y, x) - xd2.value, 0.0);
+}
+
+TEST(DualNumberTensor, Asin)
+{
+  auto xd = asin(make_dual(x));
+  EXPECT_DOUBLE_EQ(abs(1.0 / sqrt(1.0 - pow(x, 2.0)) - xd.gradient), 0.0);
+}
+
+TEST(DualNumberTensor, Acos)
+{
+  auto xd = acos(make_dual(x));
+  EXPECT_DOUBLE_EQ(abs(-1.0 / sqrt(1.0 - pow(x, 2.0)) - xd.gradient), 0.0);
+}
+
+TEST(DualNumberTensor, Exp)
 {
   auto xd = exp(make_dual(x));
   EXPECT_DOUBLE_EQ(abs(exp(x) - xd.gradient), 0.0);

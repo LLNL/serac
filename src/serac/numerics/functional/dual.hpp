@@ -199,11 +199,66 @@ SERAC_HOST_DEVICE constexpr auto& operator-=(dual<gradient_type>& a, double b)
   return a;
 }
 
-/** @brief implementation of absolute value function for dual numbers */
+/**
+ * @brief Implementation of absolute value function for dual numbers
+ * @note This is not differentiable at x = 0.0. At that point, the gradient is calculated as the gradient of x.
+ */
 template <typename gradient_type>
 SERAC_HOST_DEVICE auto abs(dual<gradient_type> x)
 {
   return (x.value >= 0) ? x : -x;
+}
+
+/**
+ * @brief Implementation of max for dual numbers
+ * @note This is not differentiable at a == b. At that point, the gradient is calculated as the gradient of b.
+ */
+template <typename gradient_type>
+SERAC_HOST_DEVICE auto max(dual<gradient_type> a, double b)
+{
+  dual<gradient_type> b_dual{b, 0.0 * a.gradient};
+  return (a > b_dual) ? a : b_dual;
+}
+
+/// @overload
+template <typename gradient_type>
+SERAC_HOST_DEVICE auto max(double a, dual<gradient_type> b)
+{
+  dual<gradient_type> a_dual{a, 0.0 * b.gradient};
+  return (a_dual > b) ? a_dual : b;
+}
+
+/// @overload
+template <typename gradient_type>
+SERAC_HOST_DEVICE auto max(dual<gradient_type> a, dual<gradient_type> b)
+{
+  return (a > b) ? a : b;
+}
+
+/**
+ * @brief Implementation of min for dual numbers
+ * @note This is not differentiable at a == b. At that point, the gradient is calculated as the gradient of b.
+ */
+template <typename gradient_type>
+SERAC_HOST_DEVICE auto min(dual<gradient_type> a, double b)
+{
+  dual<gradient_type> b_dual{b, 0.0 * a.gradient};
+  return (a < b_dual) ? a : b_dual;
+}
+
+/// @overload
+template <typename gradient_type>
+SERAC_HOST_DEVICE auto min(double a, dual<gradient_type> b)
+{
+  dual<gradient_type> a_dual{a, 0.0 * b.gradient};
+  return (a_dual < b) ? a_dual : b;
+}
+
+/// @overload
+template <typename gradient_type>
+SERAC_HOST_DEVICE auto min(dual<gradient_type> a, dual<gradient_type> b)
+{
+  return (a < b) ? a : b;
 }
 
 /** @brief implementation of square root for dual numbers */
@@ -228,6 +283,55 @@ SERAC_HOST_DEVICE auto sin(dual<gradient_type> a)
 {
   using std::cos, std::sin;
   return dual<gradient_type>{sin(a.value), a.gradient * cos(a.value)};
+}
+
+/** @brief implementation of atan for dual numbers */
+template <typename gradient_type>
+SERAC_HOST_DEVICE auto atan(dual<gradient_type> a)
+{
+  using std::atan, std::pow;
+  return dual<gradient_type>{atan(a.value), a.gradient / (1.0 + pow(a.value, 2))};
+}
+
+/** @brief implementation of atan2 for dual numbers */
+template <typename gradient_type>
+SERAC_HOST_DEVICE auto atan2(dual<gradient_type> y, dual<gradient_type> x)
+{
+  using std::atan2, std::pow;
+  return dual<gradient_type>{atan2(y.value, x.value), y.gradient * x.value / (pow(x.value, 2) + pow(y.value, 2)) -
+                                                          x.gradient * y.value / (pow(x.value, 2) + pow(y.value, 2))};
+}
+
+/** @brief implementation of atan2 for dual numbers */
+template <typename gradient_type>
+SERAC_HOST_DEVICE auto atan2(double y, dual<gradient_type> x)
+{
+  using std::atan2, std::pow;
+  return dual<gradient_type>{atan2(y, x.value), -x.gradient * y / (pow(x.value, 2) + pow(y, 2))};
+}
+
+/** @brief implementation of atan2 for dual numbers */
+template <typename gradient_type>
+SERAC_HOST_DEVICE auto atan2(dual<gradient_type> y, double x)
+{
+  using std::atan2, std::pow;
+  return dual<gradient_type>{atan2(y.value, x), y.gradient * x / (pow(x, 2) + pow(y.value, 2))};
+}
+
+/** @brief implementation of asin for dual numbers */
+template <typename gradient_type>
+SERAC_HOST_DEVICE auto asin(dual<gradient_type> a)
+{
+  using std::asin, std::pow, std::sqrt;
+  return dual<gradient_type>{asin(a.value), a.gradient / sqrt(1.0 - pow(a.value, 2))};
+}
+
+/** @brief implementation of acos for dual numbers */
+template <typename gradient_type>
+SERAC_HOST_DEVICE auto acos(dual<gradient_type> a)
+{
+  using std::acos, std::pow, std::sqrt;
+  return dual<gradient_type>{acos(a.value), -a.gradient / sqrt(1.0 - pow(a.value, 2))};
 }
 
 /** @brief implementation of exponential function for dual numbers */
