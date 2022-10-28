@@ -77,9 +77,9 @@ struct KernelConfig {
 };
 
 #if 1
-template <typename lambda, int dim, int n, typename... T, int... I>
+template <typename lambda, int dim, int n, typename... T>
 auto batch_apply_qf(lambda qf, const tensor<double, dim, n> x, Nothing* /*qpt_data*/,
-                    const tuple<T...> & inputs, std::integer_sequence<int, I...>)
+                    const T & ... inputs)
 {
   using return_type = decltype(qf(tensor<double, dim>{}, T{}[0]...));
   tensor<return_type, n> outputs{};
@@ -88,14 +88,14 @@ auto batch_apply_qf(lambda qf, const tensor<double, dim, n> x, Nothing* /*qpt_da
     for (int j = 0; j < dim; j++) {
       x_q[j] = x(j, i);
     }
-    outputs[i] = qf(x_q, get<I>(inputs)[i]...);
+    outputs[i] = qf(x_q, inputs[i]...);
   }
   return outputs;
 }
 
-template <typename lambda, int dim, int n, typename qpt_data_type, typename... T, int... I>
+template <typename lambda, int dim, int n, typename qpt_data_type, typename... T>
 auto batch_apply_qf(lambda qf, const tensor<double, dim, n> x, qpt_data_type* qpt_data,
-                    const tuple<T...> inputs, std::integer_sequence<int, I...>)
+                    const T & ... inputs)
 {
   using return_type = decltype(qf(tensor<double, dim>{}, qpt_data[0], T{}[0]...));
   tensor<return_type, n> outputs{};
@@ -106,7 +106,7 @@ auto batch_apply_qf(lambda qf, const tensor<double, dim, n> x, qpt_data_type* qp
     }
 
     auto qdata = qpt_data[i];
-    outputs[i] = qf(x_q, qdata, get<I>(inputs)[i]...);
+    outputs[i] = qf(x_q, qdata, inputs[i]...);
   }
   return outputs;
 }
@@ -361,7 +361,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
       auto X_e = X[e];
 
       // batch-calculate values / derivatives of each trial space, at each quadrature point
-      tuple qf_inputs = {
+      [[maybe_unused]] tuple qf_inputs = {
           promote_each_to_dual_when<j == I>(type<j>(trial_elements).interpolate(get<j>(u_e)[e], rule))...};
 
       // use J to transform values / derivatives on the parent element
@@ -369,25 +369,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
       (parent_to_physical<type<j>(trial_elements).family>(get<j>(qf_inputs), J_e), ...);
 
       // (batch) evalute the q-function at each quadrature point
-      #if 1
-      auto qf_outputs = batch_apply_qf(qf_, X_e, &qdata(e, 0), qf_inputs, Iseq);
-      #else
-      auto tmp = get<0>(qf_inputs);
-      constexpr int n = leading_dimension(decltype(tmp){});
-      constexpr int dim = dimension_of(geom);
-      using return_type = std::conditional_t< std::is_same_v< qpt_data_type, Nothing >,
-                            decltype(qf_(tensor<double, dim>{}, get<j>(qf_inputs)[0]...)),
-                            decltype(qf_(tensor<double, dim>{}, qpt_data_type{}, get<j>(qf_inputs)[0]...))
-                          >;
-      tensor<return_type, n> qf_outputs{};
-      for (int i = 0; i < n; i++) {
-        tensor<double, dim> x_q;
-        for (int k = 0; k < dim; k++) {
-          x_q[k] = X_e(k, i);
-        }
-        qf_outputs[i] = qf_(x_q, get<j>(qf_inputs)[i] ...);
-      }
-      #endif
+      auto qf_outputs = batch_apply_qf(qf_, X_e, &qdata(e, 0), get<j>(qf_inputs) ...);
 
       // use J to transform sources / fluxes on the physical element
       // back to the corresponding sources / fluxes on the parent element
