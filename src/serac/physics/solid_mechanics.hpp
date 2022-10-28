@@ -512,7 +512,7 @@ public:
 
           // Compute the updated area contribution using the Piola transformation
           // dA = det(F) * norm(F^-T n_0)
-          //auto area_correction = det(def_grad) * norm(dot(inv_trans_def_grad, n));
+          // auto area_correction = det(def_grad) * norm(dot(inv_trans_def_grad, n));
 
           return -1.0 * traction_function(x + p, n, ode_time_point_, params...);
         },

@@ -100,9 +100,9 @@ struct finite_element<Geometry::Hexahedron, L2<p, c> > {
   template <bool apply_weights, int q>
   static constexpr auto calculate_B()
   {
-    constexpr auto       points1D  = GaussLegendreNodes<q>();
-    [[maybe_unused]] constexpr auto       weights1D = GaussLegendreWeights<q>();
-    tensor<double, q, n> B{};
+    constexpr auto                  points1D  = GaussLegendreNodes<q>();
+    [[maybe_unused]] constexpr auto weights1D = GaussLegendreWeights<q>();
+    tensor<double, q, n>            B{};
     for (int i = 0; i < q; i++) {
       B[i] = GaussLobattoInterpolation<n>(points1D[i]);
       if constexpr (apply_weights) B[i] = B[i] * weights1D[i];
@@ -113,9 +113,9 @@ struct finite_element<Geometry::Hexahedron, L2<p, c> > {
   template <bool apply_weights, int q>
   static constexpr auto calculate_G()
   {
-    constexpr auto       points1D  = GaussLegendreNodes<q>();
-    [[maybe_unused]] constexpr auto       weights1D = GaussLegendreWeights<q>();
-    tensor<double, q, n> G{};
+    constexpr auto                  points1D  = GaussLegendreNodes<q>();
+    [[maybe_unused]] constexpr auto weights1D = GaussLegendreWeights<q>();
+    tensor<double, q, n>            G{};
     for (int i = 0; i < q; i++) {
       G[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);
       if constexpr (apply_weights) G[i] = G[i] * weights1D[i];
