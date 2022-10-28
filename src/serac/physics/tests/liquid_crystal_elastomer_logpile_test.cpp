@@ -39,10 +39,12 @@ int main(int argc, char* argv[]) {
 
   // Create DataStore
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "LCE_free_swelling_test");
+  serac::StateManager::initialize(datastore, "LCE_logpile_test");
 
-  // Construct the appropriate dimension mesh and give it to the data store
-  std::string filename = SERAC_REPO_DIR "/data/meshes/LCE_freeSwelling_nonDim_rect.g";
+  // Construct the appropriate dimension mesh and give it to the data store 
+  
+  // std::string filename = SERAC_REPO_DIR "/data/meshes/LCE_logpile_mesh_noPlates.g";
+  std::string filename = SERAC_REPO_DIR "/data/meshes/LCE_finalLogMesh_2layers_coarse.g";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
@@ -78,11 +80,16 @@ int main(int argc, char* argv[]) {
   // ┃ - - - - - - - - - - - - ┃ /
   // ┗━━━━━━━━━━━━━━━━━━━━━━━━━┛--> x
 
-  int lceArrangementTag = 1;
+  int lceArrangementTag = 2;
   auto gamma_func = [lceArrangementTag](const mfem::Vector& x, double) -> double 
   {
     if (lceArrangementTag==1)
     {
+      return  M_PI_2;
+    }
+    else if (lceArrangementTag==2)
+    {
+      // r = 0.125
       return  M_PI_2;
     }
     else if (lceArrangementTag==2)
@@ -145,6 +152,8 @@ int main(int argc, char* argv[]) {
   // Construct a functional-based solid mechanics solver
   SolidFunctional<p, dim, Parameters< H1<p>, L2<p> > > solid_solver(default_static_options, GeometricNonlinearities::Off, FinalMeshOption::Reference,
                                        "solid_functional", {temperature, gamma});
+  // SolidFunctional<p, dim, Parameters< H1<p>, L2<p> > > solid_solver(default_static_options, GeometricNonlinearities::On, FinalMeshOption::Reference,
+  //                                      "solid_functional", {temperature, gamma});
 
   double density = 1.0;
   double E = 1.0e-1; // 1e-2
@@ -165,10 +174,31 @@ int main(int argc, char* argv[]) {
   solid_solver.setMaterial(mat, qdata);
 
   // prescribe symmetry conditions
-  auto zeroFunc = []( const mfem::Vector /*x*/){ return 0.0;};
-  solid_solver.setDisplacementBCs({1}, zeroFunc, 1); // bottom face y-dir disp = 0
-  solid_solver.setDisplacementBCs({2}, zeroFunc, 0); // left face x-dir disp = 0
-  solid_solver.setDisplacementBCs({3}, zeroFunc, 2); // back face z-dir disp = 0
+  // auto zeroFunc = []( const mfem::Vector /*x*/){ return 0.0;};
+  // solid_solver.setDisplacementBCs({1}, zeroFunc, 0); // bottom face x-dir disp = 0
+  // solid_solver.setDisplacementBCs({1}, zeroFunc, 1); // bottom face y-dir disp = 0
+  // solid_solver.setDisplacementBCs({1}, zeroFunc, 2); // bottom face z-dir disp = 0
+
+  auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
+  solid_solver.setDisplacementBCs({1}, bc); // bottom face = 0
+
+  // auto prescDispFunc = []( const mfem::Vector /*x*/){ return -0.001;};
+  // solid_solver.setDisplacementBCs({2}, prescDispFunc, 2); // bottom face z-dir disp = 0
+
+  // solid_solver.setPiolaTraction([](auto x, auto /*n*/, auto /*t*/){
+  //   return tensor<double, 3>{0, 0, -5.0e-3 * (x[2] > 0.45)};
+  // });
+
+  // solid_solver.setPiolaTraction([](const tensor<double, dim>& x, const tensor<double, dim> & n, const double) {
+  //   if (x[2] > 0.45) {
+  //     return -1.0e-2 * n;
+  //   }
+  //   return 0.0 * n;
+  // });
+
+  // solid_solver.setPiolaTraction([](auto x, auto /*n*/, auto /*t*/){
+  //   return tensor<double, 3>{0, 0, -10 * (x[2] > 0.45)};
+  // });
 
   auto zero_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; };
   solid_solver.setDisplacement(zero_displacement);
@@ -177,7 +207,7 @@ int main(int argc, char* argv[]) {
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  std::string output_filename = "LCE_free_swelling_test_paraview_00d";
+  std::string output_filename = "LCE_logpile_test_paraview_90d";
   solid_solver.outputState(output_filename); 
 
 

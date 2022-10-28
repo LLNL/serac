@@ -25,6 +25,7 @@ serac_add_tests( SOURCES ${serial_solver_tests}
     NUM_MPI_TASKS 1)
 
 set(solver_tests
+    liquid_crystal_elastomer_logpile_test.cpp
     liquid_crystal_elastomer_free_swelling_test.cpp
     liquid_crystal_elastomer_tensile_test.cpp
     liquid_crystal_elastomer_test.cpp
