@@ -40,8 +40,6 @@ set(functional_tests_mpi
 serac_add_tests( SOURCES ${functional_tests_mpi}
                  DEPENDS_ON gtest serac_functional serac_state ${functional_depends}
                  NUM_MPI_TASKS 4 )
-            
-target_precompile_headers(functional_basic_elasticity PUBLIC pch.hpp)
 
 foreach(filename ${functional_tests_mpi})
     set_source_files_properties(${filename} PROPERTIES LANGUAGE CXX)

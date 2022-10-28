@@ -248,8 +248,8 @@ void parent_to_physical(tensor<T, q>& qf_input, const tensor<double, dim, dim, q
 template <Family f, typename T, int q, int dim>
 void physical_to_parent(tensor<T, q>& qf_output, const tensor<double, dim, dim, q>& jacobians)
 {
-  constexpr int SOURCE = 0;
-  constexpr int FLUX   = 1;
+  [[maybe_unused]] constexpr int SOURCE = 0;
+  [[maybe_unused]] constexpr int FLUX   = 1;
 
   for (int k = 0; k < q; k++) {
     tensor<double, dim, dim> J_T;

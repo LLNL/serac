@@ -100,7 +100,7 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
   static constexpr auto calculate_B1()
   {
     constexpr auto       points1D  = GaussLegendreNodes<q>();
-    constexpr auto       weights1D = GaussLegendreWeights<q>();
+    [[maybe_unused]] constexpr auto       weights1D = GaussLegendreWeights<q>();
     tensor<double, q, p> B1{};
     for (int i = 0; i < q; i++) {
       B1[i] = GaussLegendreInterpolation<p>(points1D[i]);
@@ -113,7 +113,7 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
   static constexpr auto calculate_B2()
   {
     constexpr auto           points1D  = GaussLegendreNodes<q>();
-    constexpr auto           weights1D = GaussLegendreWeights<q>();
+    [[maybe_unused]] constexpr auto           weights1D = GaussLegendreWeights<q>();
     tensor<double, q, p + 1> B2{};
     for (int i = 0; i < q; i++) {
       B2[i] = GaussLobattoInterpolation<p + 1>(points1D[i]);
@@ -126,7 +126,7 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
   static constexpr auto calculate_G2()
   {
     constexpr auto           points1D  = GaussLegendreNodes<q>();
-    constexpr auto           weights1D = GaussLegendreWeights<q>();
+    [[maybe_unused]] constexpr auto           weights1D = GaussLegendreWeights<q>();
     tensor<double, q, p + 1> G2{};
     for (int i = 0; i < q; i++) {
       G2[i] = GaussLobattoInterpolationDerivative<p + 1>(points1D[i]);

@@ -154,7 +154,7 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
                         std::integer_sequence<int, int_seq...>> {
   static constexpr auto exec             = ExecutionSpace::CPU;     ///< this specialization is CPU-specific
   static constexpr int  num_trial_spaces = int(sizeof...(trials));  ///< how many trial spaces are provided
-  static constexpr auto Iseq             = std::make_integer_sequence<int, sizeof...(trials)>{};
+  static constexpr auto Iseq             = std::make_integer_sequence<int, static_cast<int>(sizeof...(trials))>{};
 
   using test_element = finite_element<geom, test>;
   static constexpr type_list<finite_element<geom, trials>...> trial_elements{};
@@ -242,7 +242,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
                         std::integer_sequence<int, j...>> {
   static constexpr auto exec             = ExecutionSpace::CPU;  ///< this specialization is CPU-specific
   static constexpr int  num_trial_spaces = static_cast<int>(sizeof...(trials));  ///< how many trial spaces are provided
-  static constexpr auto Iseq             = std::make_integer_sequence<int, sizeof...(trials)>{};
+  static constexpr auto Iseq             = std::make_integer_sequence<int, static_cast<int>(sizeof...(trials))>{};
 
   using test_element = finite_element<geom, test>;
   static constexpr tuple<finite_element<geom, trials>...> trial_elements{};
@@ -322,13 +322,13 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
 template <int Q, Geometry geom, typename test, typename... trials, typename lambda>
 EvaluationKernel(KernelConfig<Q, geom, test, trials...>, const mfem::Vector&, const mfem::Vector&, const mfem::Vector&,
                  int, lambda) -> EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lambda,
-                                                  std::make_integer_sequence<int, sizeof...(trials)>>;
+                                                  std::make_integer_sequence<int, static_cast<int>(sizeof...(trials))>>;
 
 template <int i, int Q, Geometry geom, typename test, typename... trials, typename derivatives_type, typename lambda>
 EvaluationKernel(DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, CPUArrayView<derivatives_type, 2>,
                  const mfem::Vector&, const mfem::Vector&, const mfem::Vector&, int, lambda)
     -> EvaluationKernel<DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, derivatives_type, lambda,
-                        std::make_integer_sequence<int, sizeof...(trials)>>;
+                        std::make_integer_sequence<int, static_cast<int>(sizeof...(trials))>>;
 
 //clang-format off
 template <typename S, typename T>

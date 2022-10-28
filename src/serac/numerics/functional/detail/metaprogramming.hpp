@@ -206,7 +206,7 @@ struct nth_type_base<std::integer_sequence<int, j...>, i, T...> : public std::co
 };
 
 template <int i, typename... T>
-struct nth_type : public nth_type_base<std::make_integer_sequence<int, sizeof...(T)>, i, T...> {
+struct nth_type : public nth_type_base<std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>, i, T...> {
 };
 
 template <typename S, typename... T>
@@ -223,5 +223,5 @@ struct typelist_base<std::integer_sequence<int, i...>, T...> : public type_at_po
 };
 
 template <typename... T>
-struct type_list : public typelist_base<std::make_integer_sequence<int, sizeof...(T)>, T...> {
+struct type_list : public typelist_base<std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>, T...> {
 };

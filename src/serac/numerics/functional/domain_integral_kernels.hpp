@@ -68,9 +68,6 @@ auto get_derivative_type(lambda qf, qpt_data_type&& qpt_data)
   return get_gradient(detail::apply_qf(qf, tensor<double, dim>{}, qpt_data, make_dual_wrt<i>(qf_arguments{})));
 };
 
-template < typename ... trials >
-struct qf_info{};
-
 template <int i>
 struct DerivativeWRT {
 };
@@ -308,7 +305,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
                         qpt_data_type, std::integer_sequence<int, j...> > {
   static constexpr auto exec             = ExecutionSpace::CPU;     ///< this specialization is CPU-specific
   static constexpr int  num_trial_spaces = int(sizeof...(trials));  ///< how many trial spaces are provided
-  static constexpr auto Iseq             = std::make_integer_sequence<int, sizeof...(trials)>{};
+  static constexpr auto Iseq             = std::make_integer_sequence<int, static_cast<int>(sizeof...(trials))>{};
 
   using test_element = finite_element<geom, test>;
   static constexpr tuple<finite_element<geom, trials>...> trial_elements{};
@@ -429,14 +426,14 @@ template <int i, int Q, Geometry geom, typename test, typename... trials, typena
 EvaluationKernel(DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, CPUArrayView<derivatives_type, 2>,
                  const mfem::Vector&, const mfem::Vector&, int, lambda, std::shared_ptr<QuadratureData<qpt_data_type> >)
     -> EvaluationKernel<DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, derivatives_type, lambda,
-                        qpt_data_type, std::make_integer_sequence<int, sizeof...(trials)> >;
+                        qpt_data_type, std::make_integer_sequence<int, static_cast<int>(sizeof...(trials)) > >;
 
 template <int Q, Geometry geom, typename test, typename... trials, typename lambda,
           typename qpt_data_type>
 EvaluationKernel(DerivativeWRT<-1>, KernelConfig<Q, geom, test, trials...>,
                  const mfem::Vector&, const mfem::Vector&, int, lambda, std::shared_ptr<QuadratureData<qpt_data_type> >)
     -> EvaluationKernel<DerivativeWRT<-1>, KernelConfig<Q, geom, test, trials...>, char, lambda,
-                        qpt_data_type, std::make_integer_sequence<int, sizeof...(trials)> >;
+                        qpt_data_type, std::make_integer_sequence<int, static_cast<int>(sizeof...(trials))> >;
 
 //clang-format off
 template <bool is_QOI, typename S, typename T>
