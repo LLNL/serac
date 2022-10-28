@@ -52,8 +52,8 @@ void shape_test(GeometricNonlinearities geo_nonlin)
   get<IterativeSolverOptions>(options.linear).rel_tol = 1.0e-15;
   get<IterativeSolverOptions>(options.linear).abs_tol = 1.0e-15;
 
-  options.nonlinear.abs_tol = 1.0e-15;
-  options.nonlinear.rel_tol = 1.0e-15;
+  options.nonlinear.abs_tol  = 1.0e-15;
+  options.nonlinear.rel_tol  = 1.0e-15;
   options.nonlinear.max_iter = 5;
 
   solid_mechanics::LinearIsotropic mat{1.0, 1.0, 1.0};

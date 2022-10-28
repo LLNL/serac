@@ -140,11 +140,11 @@ void elasticity_test()
   delete trial_fes;
 }
 
-//TEST(basic, weird_mixed_test_2D) { weird_mixed_test<1, 2>(); }
-//TEST(basic, weird_mixed_test_3D) { weird_mixed_test<1, 3>(); }
+// TEST(basic, weird_mixed_test_2D) { weird_mixed_test<1, 2>(); }
+// TEST(basic, weird_mixed_test_3D) { weird_mixed_test<1, 3>(); }
 
 TEST(basic, elasticity_test_2D) { elasticity_test<1, 2>(); }
-//TEST(basic, elasticity_test_3D) { elasticity_test<2, 3>(); }
+// TEST(basic, elasticity_test_3D) { elasticity_test<2, 3>(); }
 
 int main(int argc, char* argv[])
 {

@@ -64,13 +64,13 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
 
   // Add the mass term using the standard MFEM method
   mfem::ConstantCoefficient a_coef(a);
-  auto * mass = new mfem::MassIntegrator(a_coef);
+  auto*                     mass = new mfem::MassIntegrator(a_coef);
   mass->SetIntRule(&ir);
   A.AddDomainIntegrator(mass);
 
   // Add the diffusion term using the standard MFEM method
   mfem::ConstantCoefficient b_coef(b);
-  auto * diffusion = new mfem::DiffusionIntegrator(b_coef);
+  auto*                     diffusion = new mfem::DiffusionIntegrator(b_coef);
   diffusion->SetIntRule(&ir);
   A.AddDomainIntegrator(diffusion);
 
@@ -85,7 +85,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   mfem::FunctionCoefficient load_func([&](const mfem::Vector& coords) { return 100 * coords(0) * coords(1); });
 
   // Create and assemble the linear load term into a vector
-  auto * load = new mfem::DomainLFIntegrator(load_func);
+  auto* load = new mfem::DomainLFIntegrator(load_func);
   load->SetIntRule(&ir);
   f.AddDomainIntegrator(load);
   f.Assemble();
@@ -176,13 +176,13 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   mfem::ParBilinearForm A(&fespace);
 
   mfem::ConstantCoefficient a_coef(a);
-  auto * mass = new mfem::VectorMassIntegrator(a_coef);
+  auto*                     mass = new mfem::VectorMassIntegrator(a_coef);
   mass->SetIntRule(&ir);
   A.AddDomainIntegrator(mass);
 
   mfem::ConstantCoefficient lambda_coef(b);
   mfem::ConstantCoefficient mu_coef(b);
-  auto * elasticity = new mfem::ElasticityIntegrator(lambda_coef, mu_coef);
+  auto*                     elasticity = new mfem::ElasticityIntegrator(lambda_coef, mu_coef);
   elasticity->SetIntRule(&ir);
   A.AddDomainIntegrator(elasticity);
   {
@@ -199,7 +199,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
     force(0) = -1.0;
   });
 
-  auto * load = new mfem::VectorDomainLFIntegrator(load_func);
+  auto* load = new mfem::VectorDomainLFIntegrator(load_func);
   load->SetIntRule(&ir);
   f.AddDomainIntegrator(load);
   f.Assemble();
@@ -279,12 +279,12 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
   mfem::ParBilinearForm B(&fespace);
 
   mfem::ConstantCoefficient a_coef(a);
-  auto * mass = new mfem::VectorFEMassIntegrator(a_coef);
+  auto*                     mass = new mfem::VectorFEMassIntegrator(a_coef);
   mass->SetIntRule(&ir);
   B.AddDomainIntegrator(mass);
 
   mfem::ConstantCoefficient b_coef(b);
-  auto * curlcurl = new mfem::CurlCurlIntegrator(b_coef);
+  auto*                     curlcurl = new mfem::CurlCurlIntegrator(b_coef);
   curlcurl->SetIntRule(&ir);
   B.AddDomainIntegrator(curlcurl);
   B.Assemble(0);
@@ -300,7 +300,7 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
     output(1) = -5 * (x - y) * y;
   });
 
-  auto * load = new mfem::VectorFEDomainLFIntegrator(load_func);
+  auto* load = new mfem::VectorFEDomainLFIntegrator(load_func);
   load->SetIntRule(&ir);
 
   f.AddDomainIntegrator(load);
