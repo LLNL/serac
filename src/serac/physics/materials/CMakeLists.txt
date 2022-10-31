@@ -15,7 +15,6 @@ set(materials_sources
     )
 
 set(materials_headers
-    material_utils.hpp
     green_saint_venant_thermoelastic.hpp
     hyperelastic_legacy_material.hpp
     liquid_crystal_elastomer.hpp
