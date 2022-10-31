@@ -168,11 +168,17 @@ int main(int argc, char* argv[]) {
   
   LiquidCrystalElastomer mat(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, Nb2);
 
+  constexpr int TEMPERATURE_INDEX = 0;
+  constexpr int GAMMA_INDEX       = 1;
+
+  solid_solver.setParameter(temperature, TEMPERATURE_INDEX);
+  solid_solver.setParameter(gamma, GAMMA_INDEX);
+
   LiquidCrystalElastomer::State initial_state{};
 
   auto qdata = solid_solver.createQuadratureDataBuffer(initial_state);
 
-  solid_solver.setMaterial(mat, qdata);
+  solid_solver.setMaterial(DependsOn<TEMPERATURE_INDEX, GAMMA_INDEX>{}, mat, qdata);
 
   // prescribe symmetry conditions
   // auto zeroFunc = []( const mfem::Vector /*x*/){ return 0.0;};

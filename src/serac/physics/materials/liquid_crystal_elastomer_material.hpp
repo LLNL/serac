@@ -83,10 +83,10 @@ public:
    * @param temperature the temperature
    * @return The calculated material response (density, Kirchoff stress) for the material
    */
-  template <typename DisplacementType, typename DispGradType>
+  template <typename DispGradType, typename TempType>
   SERAC_HOST_DEVICE auto operator()(
-      const tensor<double, dim>& /* x */,  const tensor<DisplacementType, dim>& /*displacement*/,
-      const tensor<DispGradType, dim, dim>& displacement_grad, State& state, double temperature) const
+      State& state,
+      const tensor<DispGradType, dim, dim>& displacement_grad, TempType temperature) const
   {
     // kinematics
     auto I     = Identity<dim>();
@@ -108,14 +108,14 @@ public:
     auto stress = (3*shear_modulus_/N_b_squared_) * (mu - mu0);
     const double lambda = bulk_modulus_ - 2.0 / 3.0 * shear_modulus_;
     using std::log;
-    stress = stress + lambda*log(J)*I;
+    stress = (stress + log(J) * lambda*I) / J;
 
     // update state variables
     state.deformation_gradient = get_value(F);
     state.temperature = temperature;
     state.distribution_tensor = get_value(mu);
     
-    return solid_util::MaterialResponse{density_, stress};
+    return stress;
   }
 
 /// -------------------------------------------------------

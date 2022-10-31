@@ -79,9 +79,13 @@ struct LiquidCrystalElastomer {
    */
   template <typename DispGradType, typename TemperatureType, typename AngleType>
   SERAC_HOST_DEVICE auto operator()(State& state, const tensor<DispGradType, dim, dim>& displacement_grad,
-                                    TemperatureType temperature, AngleType gamma) const
+                                    TemperatureType temperature_tuple, AngleType gamma_tuple) const
   {
     using std::cos, std::sin;
+
+    // get the values from the packed value/gradient tuples
+    auto temperature = get<0>(temperature_tuple);
+    auto gamma = get<0>(gamma_tuple);
 
     auto   I  = Identity<dim>();
     double q0 = initial_order_parameter_;
@@ -108,11 +112,9 @@ struct LiquidCrystalElastomer {
     // Cauchy stress equation because they assume J = 1 strictly
     // (the incompressible limit). It needs to be retained for this
     // compressible model.
-    auto         stress = (3 * shear_modulus_ / N_b_squared_) * (mu - mu0);
     const double lambda = bulk_modulus_ - (2.0 / 3.0) * shear_modulus_;
     using std::log;
-    stress += lambda * log(J) * I;
-    stress /= det(J);
+    auto stress = ((3 * shear_modulus_ / N_b_squared_) * (mu - mu0) + lambda * log(J) * I) / J;
 
     // update state variables
     state.deformation_gradient = get_value(F);

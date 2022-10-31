@@ -42,8 +42,6 @@ template <typename MaterialType, typename StateType, typename... parameter_types
 auto uniaxial_stress_test(double t_max, size_t num_steps, const MaterialType material, const StateType initial_state,
                           std::function<double(double)> epsilon_xx, const parameter_types... parameter_functions)
 {
-  tensor<double, 3> unused{};
-
   double t = 0;
 
   auto state = initial_state;
@@ -57,8 +55,8 @@ auto uniaxial_stress_test(double t_max, size_t num_steps, const MaterialType mat
     du_dx[1][1] = epsilon_yy;
     du_dx[2][2] = epsilon_zz;
     auto copy   = state;
-    auto output = material(unused, unused, du_dx, copy, parameter_functions(t)...);
-    return tensor{{output.stress[1][1], output.stress[2][2]}};
+    auto stress = material(copy, du_dx, parameter_functions(t)...);
+    return tensor{{stress[1][1], stress[2][2]}};
   };
 
   std::vector<tuple<double, tensor<double, 3, 3>, tensor<double, 3, 3>, StateType> > output_history;
@@ -73,7 +71,7 @@ auto uniaxial_stress_test(double t_max, size_t num_steps, const MaterialType mat
     dudx[1][1]             = epsilon_yy_and_zz[0];
     dudx[2][2]             = epsilon_yy_and_zz[1];
 
-    auto stress = material(unused, unused, dudx, state, parameter_functions(t)...).stress;
+    auto stress = material(state, dudx, parameter_functions(t)...);
     output_history.push_back(tuple{t, dudx, stress, state});
 
     t += dt;

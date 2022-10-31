@@ -143,8 +143,14 @@ int main(int argc, char* argv[]) {
   gamma.project(coef);
 
   // Construct a functional-based solid mechanics solver
-  SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver(default_static_options, GeometricNonlinearities::Off, FinalMeshOption::Reference,
-                                       "solid_functional", {temperature, gamma});
+  SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver(solid_mechanics::default_static_options, GeometricNonlinearities::Off, 
+                                       "solid_functional");
+
+  constexpr int TEMPERATURE_INDEX = 0;
+  constexpr int GAMMA_INDEX       = 1;
+
+  solid_solver.setParameter(temperature, TEMPERATURE_INDEX);
+  solid_solver.setParameter(gamma, GAMMA_INDEX);
 
   double density = 1.0;
   double E = 1.0e-1; // 1e-2
@@ -162,7 +168,7 @@ int main(int argc, char* argv[]) {
 
   auto qdata = solid_solver.createQuadratureDataBuffer(initial_state);
 
-  solid_solver.setMaterial(mat, qdata);
+  solid_solver.setMaterial(DependsOn<TEMPERATURE_INDEX, GAMMA_INDEX>{}, mat, qdata);
 
   // prescribe symmetry conditions
   auto zeroFunc = []( const mfem::Vector /*x*/){ return 0.0;};

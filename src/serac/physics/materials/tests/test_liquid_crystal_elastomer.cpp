@@ -15,7 +15,7 @@
 
 #include "serac/physics/materials/material_verification_tools.hpp"
 #include "serac/physics/materials/liquid_crystal_elastomer.hpp"
-// #include "serac/physics/materials/liquid_crystal_elastomer_material.hpp"
+#include "serac/physics/materials/liquid_crystal_elastomer_material.hpp"
 #include "serac/physics/materials/solid_material.hpp" // for neohookean comparison
 
 namespace serac {
@@ -33,12 +33,10 @@ TEST(TestLiquidCrystalMaterial, AgreesWithNeoHookeanInHighTemperatureLimit)
   double shear_modulus = 0.5*E/(1.0 + nu);
   double bulk_modulus = E / 3.0 / (1.0 - 2.0*nu);  
 
-  LiquidCrystalElastomer material(density, shear_modulus, bulk_modulus, order_constant,
+  LiquidCrystalElastomerMaterial material(density, shear_modulus, bulk_modulus, order_constant,
                                order_parameter, transition_temperature, normal, Nb2);
 
   // test conditions
-  const tensor<double, 3> x{};
-  const tensor<double, 3> u{};
   tensor<double, 3, 3> H{{{-0.474440607694436,  0.109876281988692, -0.752574057841232},
                           {-0.890004651428391, -1.254064550255045, -0.742440671831607},
                           {-0.310665550306666,  0.90643674423369 , -1.090724491652343}}};
@@ -49,14 +47,14 @@ TEST(TestLiquidCrystalMaterial, AgreesWithNeoHookeanInHighTemperatureLimit)
   double theta_old = 300.0;
   tensor<double, 3, 3> mu_old = LiquidCrystalElastomerMaterial::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
   LiquidCrystalElastomerMaterial::State state{F_old, mu_old, theta_old, order_parameter};
-  auto response = material(x, u, H, state, theta);
+  auto response = material(state, H, theta);
 
   // neo-hookean for comparison
-  solid_util::NeoHookeanSolid<3> nh_material(density, shear_modulus, bulk_modulus);
-  solid_util::NeoHookeanSolid<3>::State nh_state{};
-  auto nh_response = nh_material(x, u, H, nh_state);
+  solid_mechanics::NeoHookean nh_material{.density = density, .K = bulk_modulus, .G = shear_modulus};
+  solid_mechanics::NeoHookean::State nh_state{};
+  auto nh_response = nh_material(nh_state, H);
 
-  auto stress_difference = response.stress - nh_response.stress;
+  auto stress_difference = response - nh_response;
   EXPECT_LT(norm(stress_difference), 1e-8);
 }
 
@@ -88,8 +86,8 @@ return;
   std::function<double(double)> constant_temperature = [temperature](double){ return temperature; };
   auto response_history = uniaxial_stress_test(max_time, steps, material, initial_state, constant_strain_rate, constant_temperature);
 
-  solid_util::NeoHookeanSolid<3> nh_material(density, shear_modulus, bulk_modulus);
-  solid_util::NeoHookeanSolid<3>::State nh_initial_state{};
+  solid_mechanics::NeoHookean nh_material{.density = density, .K = bulk_modulus, .G = shear_modulus};
+  solid_mechanics::NeoHookean::State nh_initial_state{};
   auto nh_response_history = uniaxial_stress_test(max_time, steps, nh_material, nh_initial_state, constant_strain_rate);
 
   for (size_t i = 0; i < steps; i++) {
@@ -130,7 +128,6 @@ return;
   unsigned int steps = 50;
   double time = 0;
   double dt = max_time / steps;
-  tensor<double, 3> unused{};
   tensor<double, 3, 3> H{};
   std::function<double(double)> temperature_func =
       [initial_temperature, transition_temperature](double t) {
@@ -140,7 +137,7 @@ return;
   for (unsigned int i = 0; i < steps; i++) {
     time += dt;
     double temperature = temperature_func(time);
-    material(unused, unused, H, state, temperature);
+    material(state, H, temperature);
     std::cout << state.distribution_tensor[1][1] << std::endl;
   }
 }
@@ -170,7 +167,6 @@ TEST(TestLiquidCrystalMaterial, isNotDegenerate)
 
   auto initial_distribution = LiquidCrystalElastomerMaterial::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
   decltype(material)::State state{DenseIdentity<3>(), initial_distribution, initial_temperature, order_parameter};
-  tensor<double, 3> unused{};
   tensor<double, 3, 3> H{};
   auto F = DenseIdentity<3>();
   double dlambda = 0.1;
@@ -197,8 +193,8 @@ TEST(TestLiquidCrystalMaterial, isNotDegenerate)
     F[0][0] += dlambda;
     F[2][2] = 1.0/F[0][0];
     H = F - DenseIdentity<3>();
-    auto response = material(unused, unused, H, state, initial_temperature);
-    EXPECT_LT(response.stress[0][0], 1e-8);
+    auto response = material(state, H, initial_temperature);
+    EXPECT_LT(response[0][0], 1e-8);
   }
 }
 
@@ -379,7 +375,6 @@ TEST(TestLiquidCrystalMaterial, evolDistributionTensor)
   unsigned int steps = 50;
   double time = 0;
   double dt = max_time / steps;
-  tensor<double, 3> unused{};
   tensor<double, 3, 3> H{};
   std::function<double(double)> temperature_func =
       [initial_temperature, transition_temperature](double t) {
@@ -390,7 +385,7 @@ TEST(TestLiquidCrystalMaterial, evolDistributionTensor)
   {
     time += dt;
     double temperature = temperature_func(time);
-    material(unused, unused, H, state, temperature);
+    material(state, H, temperature);
     std::cout << state.distribution_tensor[1][1] << std::endl;
   }
 }

@@ -72,8 +72,14 @@ int main(int argc, char* argv[])
   // SolidMechanics<p, dim, Parameters<H1<p>, L2<p> > > solid_solver(default_static_options, GeometricNonlinearities::Off,
   //                                                                 FinalMeshOption::Reference, "solid_functional",
   //                                                                 {temperature, gamma});
-  SolidMechanics<p, dim, Parameters<H1<p>, L2<p> > > solid_solver(default_static_options, GeometricNonlinearities::Off,
+  SolidMechanics<p, dim, Parameters<H1<p>, L2<p>>> solid_solver(default_static_options, GeometricNonlinearities::Off,
                                                                   "solid_functional");
+
+  constexpr int TEMPERATURE_INDEX = 0;
+  constexpr int GAMMA_INDEX       = 1;
+
+  solid_solver.setParameter(temperature, TEMPERATURE_INDEX);
+  solid_solver.setParameter(gamma, GAMMA_INDEX);
 
   double density                = 1.0;
   double E                      = 1.0;
@@ -92,7 +98,7 @@ int main(int argc, char* argv[])
 
   auto qdata = solid_solver.createQuadratureDataBuffer(initial_state);
 
-  solid_solver.setMaterial(mat, qdata);
+  solid_solver.setMaterial(DependsOn<TEMPERATURE_INDEX, GAMMA_INDEX>{}, mat, qdata);
 
   // prescribe zero displacement at the supported end of the beam
   std::set<int> support           = {1};

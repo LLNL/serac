@@ -206,13 +206,13 @@ void functional_solid_test_lce_material(double expected_disp_norm)
   const NonlinearSolverOptions default_nonlinear_options = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
 
-  const typename solid_util::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
+  const SolverOptions default_static = {default_linear_options, default_nonlinear_options};
 
   // Construct a functional-based solid mechanics solver
-  SolidMechanics<p, dim> solid_solver(default_static, GeometricNonlinearities::On, FinalMeshOption::Reference,
+  SolidMechanics<p, dim> solid_solver(default_static, GeometricNonlinearities::On, 
                                        "lce_solid_functional");
 
-  solid_util::J2 mat{
+  solid_mechanics::J2 mat{
     100,   // Young's modulus
     0.25,  // Poisson's ratio
     1.0,   // isotropic hardening constant
@@ -222,7 +222,7 @@ void functional_solid_test_lce_material(double expected_disp_norm)
   };
 
 // std::cout<<"... testing"<<std::endl;
-  solid_util::J2::State initial_state{};
+  solid_mechanics::J2::State initial_state{};
 
   auto state = solid_solver.createQuadratureDataBuffer(initial_state);
 
@@ -253,7 +253,7 @@ void functional_solid_test_lce_material(double expected_disp_norm)
       constant_force[2] = 0.0;
     }
 
-    solid_util::ConstantBodyForce<dim> force{constant_force};
+    solid_mechanics::ConstantBodyForce<dim> force{constant_force};
     solid_solver.addBodyForce(force); 
   }
 
@@ -303,7 +303,7 @@ void functional_solid_test_dynamic(double expected_disp_norm)
   SolidMechanics<p, dim> solid_solver(default_dynamic_options, GeometricNonlinearities::Off, FinalMeshOption::Reference,
                                        "solid_functional_dynamic");
 
-  solid_mechanics::LinearIsotropic<dim> mat{1.0, 1.0, 1.0};
+  solid_mechanics::LinearIsotropic mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
 
   // Define the function for the initial displacement and boundary condition
