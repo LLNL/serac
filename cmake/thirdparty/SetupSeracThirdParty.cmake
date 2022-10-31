@@ -28,6 +28,67 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     endif()
 
     #------------------------------------------------------------------------------
+    # Camp
+    #------------------------------------------------------------------------------
+    if ((RAJA_DIR OR UMPIRE_DIR) AND NOT CAMP_DIR)
+        message(FATAL_ERROR "CAMP_DIR is required if RAJA_DIR or UMPIRE_DIR is provided.")
+    endif()
+
+    if (CAMP_DIR)
+        if (NOT EXISTS "${CAMP_DIR}")
+            message(FATAL_ERROR "Given CAMP_DIR does not exist: ${CAMP_DIR}")
+        endif()
+
+        if (NOT IS_DIRECTORY "${CAMP_DIR}")
+            message(FATAL_ERROR "Given CAMP_DIR is not a directory: ${CAMP_DIR}")
+        endif()
+
+        find_package(camp REQUIRED PATHS ${CAMP_DIR})
+
+        message(STATUS "Checking for expected Camp target 'camp'")
+        if (NOT TARGET camp)
+            message(FATAL_ERROR "Camp failed to load: ${CAMP_DIR}")
+        else()
+            message(STATUS "Camp loaded: ${CAMP_DIR}")
+            set(CAMP_FOUND TRUE CACHE BOOL "")
+        endif()
+
+        # Note: camp sets a compile feature that is not available on XL
+        set_target_properties(camp PROPERTIES INTERFACE_COMPILE_FEATURES "")
+    else()
+        message(STATUS "Camp support is OFF")
+        set(CAMP_FOUND FALSE CACHE BOOL "")
+    endif()
+
+    #------------------------------------------------------------------------------
+    # Umpire
+    #------------------------------------------------------------------------------
+    if(UMPIRE_DIR)
+        serac_assert_is_directory(VARIABLE_NAME UMPIRE_DIR)
+        find_package(umpire REQUIRED NO_DEFAULT_PATH 
+                     PATHS ${UMPIRE_DIR})
+        message(STATUS "Umpire support is ON")
+        set(UMPIRE_FOUND TRUE)
+    else()
+        message(STATUS "Umpire support is OFF")
+        set(UMPIRE_FOUND FALSE)
+    endif()
+
+    #------------------------------------------------------------------------------
+    # RAJA
+    #------------------------------------------------------------------------------
+    if(RAJA_DIR)
+        serac_assert_is_directory(VARIABLE_NAME RAJA_DIR)
+        find_package(RAJA REQUIRED NO_DEFAULT_PATH 
+                     PATHS ${RAJA_DIR})
+        message(STATUS "RAJA support is ON")
+        set(RAJA_FOUND TRUE)
+    else()
+        message(STATUS "RAJA support is OFF")
+        set(RAJA_FOUND FALSE)
+    endif()
+
+    #------------------------------------------------------------------------------
     # Conduit (required by Axom)
     #------------------------------------------------------------------------------
     if(NOT CONDUIT_DIR)
@@ -162,7 +223,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endif()
         set(MFEM_USE_OPENMP ${ENABLE_OPENMP} CACHE BOOL "")
         set(MFEM_USE_PETSC ${PETSC_FOUND} CACHE BOOL "")
-        set(MFEM_USE_RAJA ${RAJA_FOUND} CACHE BOOL "")
+        set(MFEM_USE_RAJA OFF CACHE BOOL "")
         if(SUNDIALS_DIR)
             serac_assert_is_directory(VARIABLE_NAME SUNDIALS_DIR)
             set(MFEM_USE_SUNDIALS ON CACHE BOOL "")
@@ -175,7 +236,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             set(SuperLUDist_DIR ${SUPERLUDIST_DIR} CACHE PATH "")
             set(MFEM_USE_SUPERLU ${ENABLE_MPI} CACHE BOOL "")
         endif()
-        set(MFEM_USE_UMPIRE ${UMPIRE_FOUND} CACHE BOOL "")
+        set(MFEM_USE_UMPIRE OFF CACHE BOOL "")
         set(MFEM_USE_ZLIB ON CACHE BOOL "")
 
         #### MFEM Configuration Options
@@ -193,15 +254,20 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(MFEM_ENABLE_EXAMPLES OFF CACHE BOOL "")
         set(MFEM_ENABLE_MINIAPPS OFF CACHE BOOL "")
 
-        add_subdirectory(${PROJECT_SOURCE_DIR}/mfem  ${CMAKE_BINARY_DIR}/mfem)
+        if(${PROJECT_NAME} STREQUAL "smith")
+            add_subdirectory(${PROJECT_SOURCE_DIR}/serac/mfem  ${CMAKE_BINARY_DIR}/mfem)
+        else()
+            add_subdirectory(${PROJECT_SOURCE_DIR}/mfem  ${CMAKE_BINARY_DIR}/mfem)
+        endif()
  
         set(MFEM_FOUND TRUE CACHE BOOL "" FORCE)
 
         # Patch the mfem target with the correct include directories
         get_target_property(_mfem_includes mfem INCLUDE_DIRECTORIES)
-        target_include_directories(mfem SYSTEM INTERFACE $<BUILD_INTERFACE:${_mfem_includes}>)
+        target_include_directories(mfem SYSTEM INTERFACE ${_mfem_includes})
+        target_include_directories(mfem SYSTEM INTERFACE $<BUILD_INTERFACE:${SERAC_SOURCE_DIR}>)
         target_include_directories(mfem SYSTEM INTERFACE $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/mfem>)
-        
+
         #### Restore previously stored data
         foreach(_tpl ${tpls_to_save})
             set(${_tpl}_DIR "${${_tpl}_DIR_SAVE}" CACHE PATH "" FORCE)
@@ -291,7 +357,11 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             # This appears to be unconditionally needed for Axom, why isn't it part of the build system?
             set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda")
         endif()
-        add_subdirectory(${PROJECT_SOURCE_DIR}/axom/src ${CMAKE_BINARY_DIR}/axom)
+        if(${PROJECT_NAME} STREQUAL "smith")
+            add_subdirectory(${PROJECT_SOURCE_DIR}/serac/axom/src  ${CMAKE_BINARY_DIR}/axom)
+        else()
+            add_subdirectory(${PROJECT_SOURCE_DIR}/axom/src ${CMAKE_BINARY_DIR}/axom)
+        endif()
         set(AXOM_FOUND TRUE CACHE BOOL "" FORCE)
 
         # Mark the axom includes as "system" and filter unallowed directories
@@ -332,20 +402,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     endif()
     
     message(STATUS "Tribol support is " ${TRIBOL_FOUND})
-
-    #------------------------------------------------------------------------------
-    # Umpire
-    #------------------------------------------------------------------------------
-    if(UMPIRE_DIR)
-        serac_assert_is_directory(VARIABLE_NAME UMPIRE_DIR)
-        find_package(umpire REQUIRED NO_DEFAULT_PATH 
-                     PATHS ${UMPIRE_DIR})
-        message(STATUS "Umpire support is ON")
-        set(UMPIRE_FOUND TRUE)
-    else()
-        message(STATUS "Umpire support is OFF")
-        set(UMPIRE_FOUND FALSE)
-    endif()
 
     #------------------------------------------------------------------------------
     # PETSC

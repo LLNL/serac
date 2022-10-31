@@ -4,11 +4,11 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-set(test_dependencies gtest serac_physics test_utils)
+set(test_dependencies test_utils)
 
 set(material_tests
     thermomechanical_material.cpp
-    test_material_verification_tools.cpp
+    #test_material_verification_tools.cpp
     test_liquid_crystal_elastomer.cpp
     J2_material.cpp
     )

@@ -54,7 +54,7 @@ class Mfem(Package, CudaPackage, ROCmPackage):
     # Note: Make sure this sha coincides with the git submodule
     # Note: We add a number to the end of the real version number to indicate that we have
     #  moved forward past the release. Increment the last number when updating the commit sha.
-    version('4.3.0.1', commit='e55e90e8d0e331bba3fbe20a98a9f9b12453700b', submodules="True")
+    version('4.4.1.1', commit='bf30f3715027e49daefa0548825b59d9f8ab5c21')
     # SERAC EDIT END
 
     version('4.3.0',
@@ -170,19 +170,19 @@ class Mfem(Package, CudaPackage, ROCmPackage):
     variant('asan', default=False, description='Add Address Sanitizer flags')
 
     # AddressSanitizer (ASan) is only supported by GCC and (some) LLVM-derived
-    # compilers. Blacklist compilers not known to support ASan
-    asan_compiler_blacklist = {
+    # compilers. Denylist compilers not known to support ASan
+    asan_compiler_denylist = {
         'aocc', 'arm', 'cce', 'fj', 'intel', 'nag', 'nvhpc', 'oneapi', 'pgi',
         'xl', 'xl_r'
     }
 
-    # Whitelist of compilers known to support Address Sanitizer
-    asan_compiler_whitelist = {'gcc', 'clang', 'apple-clang'}
+    # Allowlist of compilers known to support Address Sanitizer
+    asan_compiler_allowlist = {'gcc', 'clang', 'apple-clang'}
 
-    # ASan compiler blacklist and whitelist should be disjoint.
-    assert len(asan_compiler_blacklist & asan_compiler_whitelist) == 0
+    # ASan compiler denylist and allowlist should be disjoint.
+    assert len(asan_compiler_denylist & asan_compiler_allowlist) == 0
 
-    for compiler_ in asan_compiler_blacklist:
+    for compiler_ in asan_compiler_denylist:
         conflicts("%{0}".format(compiler_),
                   when="+asan",
                   msg="{0} compilers do not support Address Sanitizer".format(

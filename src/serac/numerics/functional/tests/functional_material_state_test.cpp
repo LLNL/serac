@@ -15,6 +15,8 @@
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/physics/state/state_manager.hpp"
 
+#include <array>
+
 using namespace serac;
 
 struct State {

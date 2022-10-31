@@ -17,7 +17,7 @@
 #include "serac/numerics/functional/tuple.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/dual.hpp"
-#include "serac/physics/materials/solid_functional_material.hpp"
+#include "serac/physics/materials/solid_material.hpp"
 
 namespace serac {
 
@@ -26,7 +26,7 @@ namespace serac {
  *
  *
  */
-class LiquidCrystalElastomer {
+class LiquidCrystalElastomerMaterial {
 public:
 
   static constexpr int dim = 3;
@@ -50,7 +50,7 @@ public:
    * @param normal Liquid crystal director vector
    * @param N_b_squared Number of Kunh segments/chain, times square of Kuhn segment length
    */
-  LiquidCrystalElastomer(double density, double shear_modulus, double bulk_modulus,
+  LiquidCrystalElastomerMaterial(double density, double shear_modulus, double bulk_modulus,
                          double order_constant, double order_parameter,
                          double transition_temperature, tensor<double, 3> normal,
                          double N_b_squared):

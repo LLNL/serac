@@ -20,31 +20,28 @@ endif()
 
 set(physics_sources
     base_physics.cpp
-    solid.cpp
-    thermal_conduction.cpp
-    thermal_solid.cpp
+    solid_legacy.cpp
+    thermal_conduction_legacy.cpp
+    thermal_solid_legacy.cpp
     )
 
 set(physics_headers
     base_physics.hpp
-    solid.hpp
-    solid_functional.hpp
-    thermal_conduction.hpp
-    thermal_conduction_functional.hpp
-    thermal_solid.hpp
-    thermal_solid_functional.hpp
+    common.hpp
+    solid_legacy.hpp
+    solid_mechanics.hpp
+    thermal_conduction_legacy.hpp
+    heat_transfer.hpp
+    thermomechanics.hpp
+    thermal_solid_legacy.hpp
     )
 
 set(physics_dependencies
-    serac_infrastructure
     serac_coefficients
-    serac_functional
     serac_physics_integrators
-    serac_physics_materials
-    serac_numerics
-    serac_boundary_conditions
     serac_state
-    serac_mesh
+    serac_boundary_conditions
+    serac_numerics
     )
 
 blt_add_library(

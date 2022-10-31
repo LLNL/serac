@@ -15,7 +15,8 @@
 
 #include "serac/physics/materials/material_verification_tools.hpp"
 #include "serac/physics/materials/liquid_crystal_elastomer.hpp"
-#include "serac/physics/materials/solid_functional_material.hpp" // for neohookean comparison
+// #include "serac/physics/materials/liquid_crystal_elastomer_material.hpp"
+#include "serac/physics/materials/solid_material.hpp" // for neohookean comparison
 
 namespace serac {
 
@@ -46,8 +47,8 @@ TEST(TestLiquidCrystalMaterial, AgreesWithNeoHookeanInHighTemperatureLimit)
   // liquid crystal elastomer model response
   auto F_old = DenseIdentity<3>();
   double theta_old = 300.0;
-  tensor<double, 3, 3> mu_old = LiquidCrystalElastomer::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
-  LiquidCrystalElastomer::State state{F_old, mu_old, theta_old, order_parameter};
+  tensor<double, 3, 3> mu_old = LiquidCrystalElastomerMaterial::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
+  LiquidCrystalElastomerMaterial::State state{F_old, mu_old, theta_old, order_parameter};
   auto response = material(x, u, H, state, theta);
 
   // neo-hookean for comparison
@@ -75,10 +76,10 @@ return;
   tensor<double, 3> normal{{0.0, 1.0, 0.0}};
   double Nb2 = 1.0;
   
-  LiquidCrystalElastomer material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
+  LiquidCrystalElastomerMaterial material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
   double temperature = 300.0; // far above transition temperature
 
-  auto initial_distribution = LiquidCrystalElastomer::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
+  auto initial_distribution = LiquidCrystalElastomerMaterial::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
   decltype(material)::State initial_state{DenseIdentity<3>(), initial_distribution, temperature, order_parameter};
   double max_time = 20.0;
   unsigned int steps = 10;
@@ -120,10 +121,10 @@ return;
   tensor<double, 3> normal{{0.0, 1.0, 0.0}};
   double Nb2 = 1.0;
   
-  LiquidCrystalElastomer material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
+  LiquidCrystalElastomerMaterial material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
   double initial_temperature = 5.0;
 
-  auto initial_distribution = LiquidCrystalElastomer::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
+  auto initial_distribution = LiquidCrystalElastomerMaterial::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
   decltype(material)::State state{DenseIdentity<3>(), initial_distribution, initial_temperature, order_parameter};
   double max_time = 1.0;
   unsigned int steps = 50;
@@ -164,10 +165,10 @@ TEST(TestLiquidCrystalMaterial, isNotDegenerate)
   tensor<double, 3> normal{{0.0, 1.0, 0.0}};
   double Nb2 = 1.0;
 
-  LiquidCrystalElastomer material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
+  LiquidCrystalElastomerMaterial material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
   double initial_temperature = 5.0;
 
-  auto initial_distribution = LiquidCrystalElastomer::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
+  auto initial_distribution = LiquidCrystalElastomerMaterial::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
   decltype(material)::State state{DenseIdentity<3>(), initial_distribution, initial_temperature, order_parameter};
   tensor<double, 3> unused{};
   tensor<double, 3, 3> H{};
@@ -218,9 +219,9 @@ TEST(TestLiquidCrystalMaterial, strainAndtemperatureSweep)
   tensor<double, 3> normal{{0.0, 1.0, 0.0}};
   double Nb2 = 1.0;
   
-  LiquidCrystalElastomer material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
+  LiquidCrystalElastomerMaterial material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
 
-  auto initial_distribution = LiquidCrystalElastomer::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
+  auto initial_distribution = LiquidCrystalElastomerMaterial::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
   decltype(material)::State initial_state{DenseIdentity<3>(), initial_distribution, initial_temperature, order_parameter};
   double max_time = 1.0;
   unsigned int steps = 20;
@@ -369,10 +370,10 @@ TEST(TestLiquidCrystalMaterial, evolDistributionTensor)
   tensor<double, 3> normal{{0.0, 1.0, 0.0}};
   double Nb2 = 1.0;
   
-  LiquidCrystalElastomer material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
+  LiquidCrystalElastomerMaterial material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
   double initial_temperature = 5.0;
 
-  auto initial_distribution = LiquidCrystalElastomer::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
+  auto initial_distribution = LiquidCrystalElastomerMaterial::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
   decltype(material)::State state{DenseIdentity<3>(), initial_distribution, initial_temperature, order_parameter};
   double max_time = 1.0;
   unsigned int steps = 50;

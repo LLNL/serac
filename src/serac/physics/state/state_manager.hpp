@@ -49,6 +49,15 @@ public:
                                      const std::string&             mesh_tag = default_mesh_name_);
 
   /**
+   * @brief Factory method for creating a new FEState object
+   *
+   * @param space A finite element space to copy for use in the new state
+   * @param state_name The name of the new state
+   * @return The constructed finite element state
+   */
+  static FiniteElementState newState(const mfem::ParFiniteElementSpace& space, const std::string& state_name);
+
+  /**
    * @brief Factory method for creating a new FEDual object, signature is identical to FEDual constructor
    * @param[in] options Configuration options for the FEDual, if a new state is created
    * @param[in] mesh_tag A string that uniquely identifies the mesh on which the dual is to be defined
@@ -59,32 +68,45 @@ public:
                                    const std::string&             mesh_tag = default_mesh_name_);
 
   /**
-   * @brief Factory method for creating a new QuadratureData object
-   * @tparam T The type of the per-qpt data
-   * @param[in] name The name of the quadrature data field
-   * @param[in] p The order of the quadrature rule
-   * @param[in] mesh_tag A string that uniquely identifies the mesh on which the quadrature data is to be defined
-   * @see QuadratureData::QuadratureData
+   * @brief Factory method for creating a new FEDual object
+   *
+   * @param space A finite element space to copy for use in the new dual
+   * @param dual_name The name of the new dual
+   * @return The constructed finite element dual
    */
-  //template <typename T>
-  //static QuadratureData<T>& newQuadratureData(const std::string& name, const int p,
-  //                                            const std::string& mesh_tag = default_mesh_name_)
-  //{
-  //  auto& datacoll = datacolls_.at(mesh_tag);
-  //  if (is_restart_) {
-  //    auto field = datacoll.GetQField(name);
-  //    syncable_data_.push_back(std::make_unique<QuadratureData<T>>(*field));
-  //    return static_cast<QuadratureData<T>&>(*syncable_data_.back());
-  //  } else {
-  //    SLIC_ERROR_ROOT_IF(datacoll.HasQField(name),
-  //                       axom::fmt::format("Serac's datacollection was already given a qfield named '{0}'", name));
-  //    syncable_data_.push_back(std::make_unique<QuadratureData<T>>(mesh(mesh_tag), p, false));
-  //    // The static_cast is safe here because we "know" what we just inserted into the vector
-  //    auto& qdata = static_cast<QuadratureData<T>&>(*syncable_data_.back());
-  //    datacoll.RegisterQField(name, &(qdata.QFunc()));
-  //    return qdata;
-  //  }
-  //}
+  static FiniteElementDual newDual(const mfem::ParFiniteElementSpace& space, const std::string& dual_name);
+
+  /**
+   * @brief Updates the StateManager-owned grid function using the values from a given
+   * FiniteElementState.
+   *
+   * This sync operation must occur prior to writing a restart file.
+   *
+   * @param state The state used to update the internal grid function
+   */
+  static void updateState(const FiniteElementState& state)
+  {
+    SLIC_ERROR_ROOT_IF(named_states_.find(state.name()) == named_states_.end(),
+                       axom::fmt::format("State manager does not contain state named {}", state.name()));
+
+    state.fillGridFunction(*named_states_[state.name()]);
+  }
+
+  /**
+   * @brief Updates the StateManager-owned grid function using the values from a given
+   * FiniteElementDual.
+   *
+   * This sync operation must occur prior to writing a restart file.
+   *
+   * @param dual The dual used to update the internal grid function
+   */
+  static void updateDual(const FiniteElementDual& dual)
+  {
+    SLIC_ERROR_ROOT_IF(named_duals_.find(dual.name()) == named_duals_.end(),
+                       axom::fmt::format("State manager does not contain dual named {}", dual.name()));
+
+    dual.space().GetRestrictionMatrix()->MultTranspose(dual, *named_duals_[dual.name()]);
+  }
 
   /**
    * @brief Updates the Conduit Blueprint state in the datastore and saves to a file
@@ -112,10 +134,11 @@ public:
    */
   static void reset()
   {
+    named_states_.clear();
+    named_duals_.clear();
     datacolls_.clear();
     is_restart_ = false;
-    //syncable_data_.clear();
-    ds_ = nullptr;
+    ds_         = nullptr;
   };
 
   /**
@@ -165,18 +188,17 @@ private:
    */
   static bool is_restart_;
 
-  /**
-   * @brief A set of @p QuadratureData<T> objects that need to be synchronized before saving to disk
-   * FIXME Need one set per datacoll since we can save at different times?
-   */
-  //static std::vector<std::unique_ptr<SyncableData>> syncable_data_;
-
   /// @brief Pointer (non-owning) to the datastore
   static axom::sidre::DataStore* ds_;
   /// @brief Output directory to which all datacollections are saved
   static std::string output_dir_;
   /// @brief Default name for the mesh - mostly for backwards compatibility
   const static std::string default_mesh_name_;
+
+  /// @brief A collection of FiniteElementState names and their corresponding Sidre-owned grid function pointers
+  static std::unordered_map<std::string, mfem::ParGridFunction*> named_states_;
+  /// @brief A collection of FiniteElementDual names and their corresponding Sidre-owned grid function pointers
+  static std::unordered_map<std::string, mfem::ParGridFunction*> named_duals_;
 };
 
 }  // namespace serac

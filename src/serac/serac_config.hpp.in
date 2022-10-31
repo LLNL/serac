@@ -26,7 +26,6 @@
 #cmakedefine SERAC_DEBUG
 
 #cmakedefine SERAC_USE_CUDA
-#cmakedefine SERAC_USE_LUMBERJACK
 
 // Compiler defines for TPLs
 #cmakedefine SERAC_USE_AXOM

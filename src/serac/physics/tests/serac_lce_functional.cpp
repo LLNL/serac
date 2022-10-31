@@ -14,8 +14,8 @@
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/solid_functional.hpp"
-#include "serac/physics/materials/solid_functional_material.hpp"
-#include "serac/physics/materials/parameterized_solid_functional_material.hpp"
+#include "serac/physics/materials/solid_material.hpp"
+#include "serac/physics/materials/parameterized_solid_material.hpp"
 
 #include "serac/physics/materials/liquid_crystal_elastomer_material.hpp"
 

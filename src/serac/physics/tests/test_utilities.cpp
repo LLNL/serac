@@ -11,9 +11,9 @@
 
 #include "serac/infrastructure/input.hpp"
 #include "serac/mesh/mesh_utils.hpp"
-#include "serac/physics/solid.hpp"
-#include "serac/physics/thermal_conduction.hpp"
-#include "serac/physics/thermal_solid.hpp"
+#include "serac/physics/solid_legacy.hpp"
+#include "serac/physics/thermal_conduction_legacy.hpp"
+#include "serac/physics/thermal_solid_legacy.hpp"
 #include "serac/physics/state/state_manager.hpp"
 
 namespace serac {
@@ -33,8 +33,6 @@ void defineCommonTestSchema(axom::inlet::Inlet& inlet)
   inlet.addDouble("dt", "Time step.");
   inlet.addDouble("t_final", "Stopping point");
 
-  serac::input::defineOutputTypeInputFileSchema(inlet.getGlobalContainer());
-
   // Comparison parameter
   inlet.addDouble("epsilon", "Threshold to be used in the comparison");
 
@@ -48,7 +46,7 @@ void defineCommonTestSchema(axom::inlet::Inlet& inlet)
 }
 
 template <>
-void defineTestSchema<Solid>(axom::inlet::Inlet& inlet)
+void defineTestSchema<SolidLegacy>(axom::inlet::Inlet& inlet)
 {
   // Integration test parameters
   inlet.addDouble("expected_displacement_l2norm", "Correct L2 norm of the displacement field");
@@ -57,13 +55,13 @@ void defineTestSchema<Solid>(axom::inlet::Inlet& inlet)
   // Physics
   auto& solid_solver_table = inlet.addStruct("solid", "Finite deformation solid mechanics module");
   // This is the "standard" schema for the actual physics module
-  serac::Solid::InputOptions::defineInputFileSchema(solid_solver_table);
+  serac::SolidLegacy::InputOptions::defineInputFileSchema(solid_solver_table);
 
   defineCommonTestSchema(inlet);
 }
 
 template <>
-void defineTestSchema<ThermalConduction>(axom::inlet::Inlet& inlet)
+void defineTestSchema<ThermalConductionLegacy>(axom::inlet::Inlet& inlet)
 {
   // Integration test parameters
   inlet.addDouble("expected_temperature_l2norm", "Correct L2 norm of the temperature field");
@@ -74,13 +72,13 @@ void defineTestSchema<ThermalConduction>(axom::inlet::Inlet& inlet)
   // Physics
   auto& conduction_table = inlet.addStruct("thermal_conduction", "Thermal conduction module");
   // This is the "standard" schema for the actual physics module
-  serac::ThermalConduction::InputOptions::defineInputFileSchema(conduction_table);
+  serac::ThermalConductionLegacy::InputOptions::defineInputFileSchema(conduction_table);
 
   defineCommonTestSchema(inlet);
 }
 
 template <>
-void defineTestSchema<ThermalSolid>(axom::inlet::Inlet& inlet)
+void defineTestSchema<ThermalSolidLegacy>(axom::inlet::Inlet& inlet)
 {
   // Integration test parameters
   inlet.addDouble("expected_temperature_l2norm", "Correct L2 norm of the temperature field");
@@ -90,7 +88,7 @@ void defineTestSchema<ThermalSolid>(axom::inlet::Inlet& inlet)
   // Physics
   auto& thermal_solid_table = inlet.addStruct("thermal_solid", "Thermal solid module");
   // This is the "standard" schema for the actual physics module
-  serac::ThermalSolid::InputOptions::defineInputFileSchema(thermal_solid_table);
+  serac::ThermalSolidLegacy::InputOptions::defineInputFileSchema(thermal_solid_table);
 
   defineCommonTestSchema(inlet);
 }
@@ -114,19 +112,19 @@ std::string moduleName()
 }
 
 template <>
-std::string moduleName<Solid>()
+std::string moduleName<SolidLegacy>()
 {
   return "solid";
 }
 
 template <>
-std::string moduleName<ThermalConduction>()
+std::string moduleName<ThermalConductionLegacy>()
 {
   return "thermal_conduction";
 }
 
 template <>
-std::string moduleName<ThermalSolid>()
+std::string moduleName<ThermalSolidLegacy>()
 {
   return "thermal_solid";
 }
@@ -143,7 +141,7 @@ void verifyFields(const PhysicsModule&, const axom::inlet::Inlet&)
 }
 
 template <>
-void verifyFields(const Solid& phys_module, const axom::inlet::Inlet& inlet)
+void verifyFields(const SolidLegacy& phys_module, const axom::inlet::Inlet& inlet)
 {
   if (inlet.contains("expected_displacement_l2norm")) {
     double x_norm = norm(phys_module.displacement());
@@ -156,7 +154,7 @@ void verifyFields(const Solid& phys_module, const axom::inlet::Inlet& inlet)
 }
 
 template <>
-void verifyFields(const ThermalConduction& phys_module, const axom::inlet::Inlet& inlet)
+void verifyFields(const ThermalConductionLegacy& phys_module, const axom::inlet::Inlet& inlet)
 {
   if (inlet.contains("expected_temperature_l2norm")) {
     EXPECT_NEAR(inlet["expected_temperature_l2norm"], norm(phys_module.temperature()), inlet["epsilon"]);
@@ -172,7 +170,7 @@ void verifyFields(const ThermalConduction& phys_module, const axom::inlet::Inlet
 }
 
 template <>
-void verifyFields(const ThermalSolid& phys_module, const axom::inlet::Inlet& inlet)
+void verifyFields(const ThermalSolidLegacy& phys_module, const axom::inlet::Inlet& inlet)
 {
   if (inlet.contains("expected_displacement_l2norm")) {
     double x_norm = norm(phys_module.displacement());
@@ -261,13 +259,13 @@ void runModuleTest(const std::string& input_file, const std::string& test_name, 
   phys_module.outputState();
 
   detail::verifyFields(phys_module, inlet);
-  // WARNING: This will destroy the mesh before the Solid module destructor gets called
+  // WARNING: This will destroy the mesh before the SolidLegacy module destructor gets called
   // serac::StateManager::reset();
 }
 
-template void runModuleTest<Solid>(const std::string&, const std::string&, std::optional<int>);
-template void runModuleTest<ThermalConduction>(const std::string&, const std::string&, std::optional<int>);
-template void runModuleTest<ThermalSolid>(const std::string&, const std::string&, std::optional<int>);
+template void runModuleTest<SolidLegacy>(const std::string&, const std::string&, std::optional<int>);
+template void runModuleTest<ThermalConductionLegacy>(const std::string&, const std::string&, std::optional<int>);
+template void runModuleTest<ThermalSolidLegacy>(const std::string&, const std::string&, std::optional<int>);
 
 }  // end namespace test_utils
 

@@ -43,7 +43,7 @@ class Axom(CachedCMakePackage, CudaPackage, ROCmPackage):
     # Note: Make sure this sha coincides with the git submodule
     # Note: We add a number to the end of the real version number to indicate that we have
     #  moved forward past the release. Increment the last number when updating the commit sha.
-    version('0.6.1.3', commit='a05173a070fa422b4a6a1744115754c1e7edce06', submodules="True")
+    version('0.6.1.6', commit='f30d0c861a84aaad8ec92cd6f022d660e250cba1', submodules=False)
     # SERAC EDIT END
 
     version('main', branch='main', submodules=True)
@@ -554,6 +554,8 @@ class Axom(CachedCMakePackage, CudaPackage, ROCmPackage):
 
     def cmake_args(self):
         options = []
+
+        options.append("-DBLT_SOURCE_DIR:PATH={0}".format(self.spec["blt"].prefix))
 
         if self.run_tests is False:
             options.append('-DENABLE_TESTS=OFF')

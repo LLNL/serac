@@ -7,7 +7,7 @@
 /**
  * @file J2_material.cpp
  *
- * @brief a verification problem for the J2 material model, taken from example 2 of 
+ * @brief a verification problem for the J2 material model, taken from example 2 of
  * R. M. Brannon · S. Leelavanichkul (2009)
  * A multi-stage return algorithm for solving the classical
  * damage component of constitutive models for rocks,
@@ -21,24 +21,17 @@
 
 #include <iostream>
 
-#include "serac/physics/materials/solid_functional_material.hpp"
+#include "serac/physics/materials/solid_material.hpp"
 #include "serac/physics/materials/material_verification_tools.hpp"
 
 using namespace serac;
 
-tensor< double, 3, 3 > diag(tensor< double, 3 > d) {
-  return tensor< double, 3, 3 >{{
-    {d[0], 0.0, 0.0},
-    {0.0, d[1], 0.0},
-    {0.0, 0.0, d[2]}
-  }};
-}
-
-tensor< double, 3, 3 > analytic_soln(double t) {
+tensor<double, 3, 3> analytic_soln(double t)
+{
   // clang-format off
   double a = exp(12.33 * t);
 
-  tensor< double, 3 > sigma;
+  tensor< double, 3 > sigma{};
 
   if (t <= 0.201) {
     sigma = {-474.0 * t, -474.0 * t, 948.0 * t};
@@ -70,37 +63,31 @@ tensor< double, 3, 3 > analytic_soln(double t) {
   // clang-format on
 }
 
-int main() {
-
-  double tmax = 2.0;
-  int num_steps = 64;
+int main()
+{
+  double tmax      = 2.0;
+  size_t num_steps = 64;
 
   double G = 79000;
   double K = 10 * G;
 
-  double E = 9 * K * G / (3 * K + G);
+  double E  = 9 * K * G / (3 * K + G);
   double nu = (3 * K - 2 * G) / (2 * (3 * K + G));
 
   solid_mechanics::J2 material{
-    E,               // Young's modulus
-    nu,              // Poisson's ratio
-    0.0,             // isotropic hardening constant
-    0.0,             // kinematic hardening constant
-    165 * sqrt(3.0), // yield stress
-    1.0              // mass density
+      E,                // Young's modulus
+      nu,               // Poisson's ratio
+      0.0,              // isotropic hardening constant
+      0.0,              // kinematic hardening constant
+      165 * sqrt(3.0),  // yield stress
+      1.0               // mass density
   };
   solid_mechanics::J2::State initial_state{};
 
-  tensor< double, 3 > epsilon[2] = {
-    {-0.0030000, -0.003, 0.0060000},
-    {-0.0103923,  0.000, 0.0103923}
-  };
+  tensor<double, 3> epsilon[2] = {{-0.0030000, -0.003, 0.0060000}, {-0.0103923, 0.000, 0.0103923}};
 
-  auto du_dX = [=](double t){
-    double a[2] = {
-      (t < 1) ? t : 2.0 - t,
-      (t < 1) ? 0 : t - 1.0
-    };
+  auto du_dX = [=](double t) {
+    double a[2] = {(t < 1) ? t : 2.0 - t, (t < 1) ? 0 : t - 1.0};
     return diag(a[0] * epsilon[0] + a[1] * epsilon[1]);
   };
 
@@ -112,8 +99,8 @@ int main() {
       std::cout << t << ": " << rel_error << std::endl;
     }
 
-    //for plotting:
-    //std::cout << "{" << t << ", " << stress[0][0] << ", " << stress[1][1] << ", " << stress[2][2] << "}" << std::endl;
+    // for generating a plot like in the paper:
+    // std::cout << "{" << t << ", " << stress[0][0] << ", " << stress[1][1] << ", " << stress[2][2] << "}" <<
+    // std::endl;
   }
-
 }

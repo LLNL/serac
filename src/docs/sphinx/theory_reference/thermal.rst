@@ -6,13 +6,13 @@
 .. _conduction-theory-label:
 
 ==================
-Thermal Conduction
+Heat Transfer
 ==================
 
 Strong Form
 ===========
 
-The thermal conduction module solves the heat equation
+The heat transfer module solves the heat equation
 
 .. math:: c_p \rho\frac{\partial T}{\partial t} - \nabla \cdot (\kappa \nabla T ) + s(x, t)f(T) = g(x, t)
 

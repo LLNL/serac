@@ -85,6 +85,11 @@ packages:
     externals:
     - spec: bzip2@1.0.6
       prefix: /usr
+  curl:
+    buildable: false
+    externals:
+    - spec: curl@7.29.0
+      prefix: /usr
   diffutils:
     buildable: false
     externals:
@@ -155,6 +160,16 @@ packages:
       - spec: tar@1.26
         prefix: /usr
     buildable: false
+  unzip:
+    buildable: false
+    externals:
+    - spec: unzip@6.0
+      prefix: /usr
+  zlib:
+    buildable: false
+    externals:
+    - spec: zlib@1.2.7
+      prefix: /usr
 
   # Lock in versions of Devtools
   cmake:

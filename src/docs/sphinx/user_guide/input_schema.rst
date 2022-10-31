@@ -26,11 +26,6 @@ input_file
      - Default Value
      - Range/Valid Values
      - Required
-   * - output_type
-     - Desired output format
-     - VisIt
-     - GLVis, ParaView, VisIt, SidreVisIt
-     - |uncheck|
    * - dt
      - Time step.
      - 0.250000

@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -7,7 +7,7 @@
 /**
  * @file common.hpp
  *
- * @brief A file defining some enums and structs that are used by the different physics modules 
+ * @brief A file defining some enums and structs that are used by the different physics modules
  */
 #pragma once
 
@@ -15,9 +15,13 @@
 
 namespace serac {
 
-template < typename ... T >
-struct Parameters{
-    static constexpr int n = sizeof ... (T);
+/**
+ * @brief a struct that is used in the physics modules to clarify which template arguments are
+ * user-controlled parameters (e.g. for design optimization)
+ */
+template <typename... T>
+struct Parameters {
+  static constexpr int n = sizeof...(T);  ///< how many parameters were specified
 };
 
 /// A timestep and boundary condition enforcement method for a dynamic solver
@@ -37,7 +41,6 @@ struct TimesteppingOptions {
  * define the nonlinear residual and linear stiffness solve options as before.
  */
 struct SolverOptions {
-
   /// the method, iteration limit, and tolerances for the linear system
   LinearSolverOptions linear;
 
@@ -51,4 +54,23 @@ struct SolverOptions {
   std::optional<TimesteppingOptions> dynamic = std::nullopt;
 };
 
-}
+/**
+ * @brief Enum to set the geometric nonlinearity flag
+ *
+ */
+enum class GeometricNonlinearities
+{
+  On, /**< Include geometric nonlinearities */
+  Off /**< Do not include geometric nonlinearities */
+};
+
+/**
+ * @brief Flag to enable shape diplacement (and its gradient) in a physics module
+ */
+enum class ShapeDisplacement
+{
+  On, /**< Allow shape displacement and its gradient */
+  Off /**< Don't allow shape displacement and its gradient */
+};
+
+}  // namespace serac

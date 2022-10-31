@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/physics/integrators/traction_integrator.hpp"
-#include "serac/physics/materials/solid_utils.hpp"
+#include "serac/physics/materials/solid_legacy_utils.hpp"
 
 namespace serac::mfem_ext {
 

@@ -35,7 +35,6 @@ If you would like to include Serac's simulation capabilities in your software pr
 #. Set the boundary conditions via a ``std::set`` of boundary attributes and a ``mfem::Coefficient``.
 #. Set the right hand side source terms (e.g. body forces).
 #. Set the `time integration scheme <../../doxygen/html/solver__config_8hpp.html>`_ (e.g. quasi-static or backward Euler). Note that not all time integrators are available for all physics modules.
-#. Set the output type by calling ``initializeOutput(...)``.
 #. Complete the setup of the physics module by calling ``completeSetup()``. This allocates and builds all of the underlying linear algebra data structures.
 #. Advance the timestep by calling ``advanceTimestep(double dt)``. 
-#. Output the state variables in GLVis, VisIt, or ParaView format by calling ``outputState()``. You can also access the underlying `state data <../../doxygen/html/classserac_1_1FiniteElementState.html>`_ via the generic ``getState()`` or physics-specific calls (e.g. ``temperature()``).
+#. Output the state variables in VisIt, and optionally ParaView, format by calling ``outputState()``. You can also access the underlying `state data <../../doxygen/html/classserac_1_1FiniteElementState.html>`_ via the generic ``getState()`` or physics-specific calls (e.g. ``temperature()``).

@@ -133,17 +133,4 @@ double min(const FiniteElementVector& fe_vector)
   return global_min;
 }
 
-double norm(const FiniteElementVector& state, const double p)
-{
-  if (state.space().GetVDim() == 1) {
-    mfem::ConstantCoefficient zero(0.0);
-    return state.gridFunction().ComputeLpError(p, zero);
-  } else {
-    mfem::Vector zero(state.space().GetVDim());
-    zero = 0.0;
-    mfem::VectorConstantCoefficient zerovec(zero);
-    return state.gridFunction().ComputeLpError(p, zerovec);
-  }
-}
-
 }  // namespace serac

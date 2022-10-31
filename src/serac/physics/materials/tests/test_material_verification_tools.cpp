@@ -13,8 +13,8 @@
 #include <gtest/gtest.h>
 
 #include "serac/physics/materials/material_verification_tools.hpp"
-#include "serac/physics/materials/solid_functional_material.hpp"
-#include "serac/physics/materials/parameterized_solid_functional_material.hpp"
+#include "serac/physics/materials/solid_material.hpp"
+#include "serac/physics/materials/parameterized_solid_material.hpp"
 
 namespace serac {
 
