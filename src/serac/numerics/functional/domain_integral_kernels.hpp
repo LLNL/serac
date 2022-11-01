@@ -92,8 +92,7 @@ auto batch_apply_qf_no_qdata(lambda qf, const tensor<double, dim, n> x, const T 
 }
 
 template <typename lambda, int dim, int n, typename qpt_data_type, typename... T>
-auto batch_apply_qf(lambda qf, const tensor<double, dim, n> x, qpt_data_type* qpt_data,
-                    const T & ... inputs)
+auto batch_apply_qf(lambda qf, const tensor<double, dim, n> x, qpt_data_type* qpt_data, bool update_state, const T & ... inputs)
 {
   using return_type = decltype(qf(tensor<double, dim>{}, qpt_data[0], T{}[0]...));
   tensor<return_type, n> outputs{};
@@ -105,6 +104,9 @@ auto batch_apply_qf(lambda qf, const tensor<double, dim, n> x, qpt_data_type* qp
 
     auto qdata = qpt_data[i];
     outputs[i] = qf(x_q, qdata, inputs[i]...);
+    if (update_state) {
+      qpt_data[i] = qdata;
+    }
   }
   return outputs;
 }
@@ -171,7 +173,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
    * @param R output E-vector
    * @param update_state whether or not to overwrite material state quadrature data
    */
-  void operator()(const std::vector<const mfem::Vector*> U, mfem::Vector& R, bool /*update_state*/)
+  void operator()(const std::vector<const mfem::Vector*> U, mfem::Vector& R, bool update_state)
   {
     // mfem provides this information as opaque arrays of doubles,
     // so we reinterpret the pointer with
@@ -208,7 +210,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
 	      if constexpr (std::is_same_v< qpt_data_type, Nothing >) {
 	        return batch_apply_qf_no_qdata(qf_, X_e, get<j>(qf_inputs) ...);
 	      } else {
-	        return batch_apply_qf(qf_, X_e, &qdata(e, 0), get<j>(qf_inputs) ...);
+	        return batch_apply_qf(qf_, X_e, &qdata(e, 0), update_state, get<j>(qf_inputs) ...);
 	      }
       }();
 

@@ -104,7 +104,7 @@ void functional_solid_test_static_J2()
 
   // Create DataStore
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "solid_functional_static_solve_J2");
+  serac::StateManager::initialize(datastore, "solid_mechanics_J2_test");
 
   // Construct the appropriate dimension mesh and give it to the data store
   std::string filename = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
@@ -118,7 +118,7 @@ void functional_solid_test_static_J2()
   options.linear         = linear_options;
 
   // Construct a functional-based solid mechanics solver
-  SolidMechanics<p, dim> solid_solver(options, GeometricNonlinearities::Off, "solid_functional");
+  SolidMechanics<p, dim> solid_solver(options, GeometricNonlinearities::Off, "solid_mechanics");
 
   solid_mechanics::J2 mat{
       10000,  // Young's modulus
