@@ -70,7 +70,7 @@ void hcurl_test_3D()
 
   std::string meshfile = SERAC_REPO_DIR "/data/meshes/patch3D.mesh";
 
-  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(meshfile));
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(meshfile), 1);
 
   // Create standard MFEM bilinear and linear forms on H1
   auto                        fec = mfem::ND_FECollection(p, dim);

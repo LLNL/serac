@@ -97,7 +97,7 @@ void elasticity_test()
     meshfile = SERAC_REPO_DIR "/data/meshes/patch3D.mesh";
   }
 
-  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(meshfile));
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(meshfile), 1);
 
   auto trial_fes = generateParFiniteElementSpace<trial_space>(mesh.get());
   auto test_fes  = generateParFiniteElementSpace<test_space>(mesh.get());
