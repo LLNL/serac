@@ -18,6 +18,12 @@
 
 namespace serac {
 
+/**
+ * @brief a convenience class for generating information about tensor product 
+ * integration rules from the underlying 1D rule.
+ * 
+ * @tparam q how many quadrature points per dimension
+ */
 template <int q>
 struct TensorProductQuadratureRule {
   tensor<double, q> weights1D;
@@ -54,6 +60,13 @@ struct Dimension {
   constexpr operator int() { return d; }
 };
 
+/**
+ * @brief return the number of quadrature points in a Gauss-Legendre rule
+ * with parameter "q"
+ * 
+ * @tparam g the element geometry
+ * @tparam q the number of quadrature points per dimension
+ */
 template <Geometry g, int q>
 SERAC_HOST_DEVICE constexpr int num_quadrature_points()
 {
@@ -69,37 +82,66 @@ SERAC_HOST_DEVICE constexpr int num_quadrature_points()
   return -1;
 }
 
+/**
+ * @brief this struct is used to look up mfem's memory layout of
+ * the quadrature point jacobian matrices
+ * 
+ * @tparam g the element geometry 
+ * @tparam q the number of quadrature points per dimension
+ */
 template <Geometry g, int q>
 struct batched_jacobian;
 
+/// @overload
 template <int q>
 struct batched_jacobian<Geometry::Hexahedron, q> {
   using type = tensor<double, 3, 3, q * q * q>;
 };
 
+/// @overload
 template <int q>
 struct batched_jacobian<Geometry::Quadrilateral, q> {
   using type = tensor<double, 2, 2, q * q>;
 };
 
+/**
+ * @brief this struct is used to look up mfem's memory layout of the 
+ * quadrature point position vectors
+ * 
+ * @tparam g the element geometry 
+ * @tparam q the number of quadrature points per dimension
+ */
 template <Geometry g, int q>
 struct batched_position;
 
+/// @overload
 template <int q>
 struct batched_position<Geometry::Hexahedron, q> {
   using type = tensor<double, 3, q * q * q>;
 };
 
+/// @overload
 template <int q>
 struct batched_position<Geometry::Quadrilateral, q> {
   using type = tensor<double, 2, q * q>;
 };
 
+/// @overload
 template <int q>
 struct batched_position<Geometry::Segment, q> {
   using type = tensor<double, q>;
 };
 
+/**
+ * @brief this function returns information about how many elements
+ * should be processed by a single thread block in CUDA (note: the optimal
+ * values are hardware and problem specific, but these values are still significantly
+ * faster than naively allocating only 1 element / block)
+ * 
+ * @tparam g the element geometry
+ * @param q the number of quadrature points per dimension
+ * @return how many elements each thread block should process
+ */
 template <Geometry g>
 SERAC_HOST_DEVICE constexpr int elements_per_block(int q)
 {
@@ -216,6 +258,17 @@ struct QOI {
   static constexpr Family family     = Family::QOI;  ///< the family of the basis functions
 };
 
+/**
+ * @brief transform information in the parent space  (i.e. values and derivatives w.r.t {xi, eta, zeta})
+ * into the physical space (i.e. values and derivatives w.r.t. {x, y, z})
+ * 
+ * @tparam f the element family, used to determine which kind of transformation to apply
+ * @tparam T the types of quantities to be transformed
+ * @tparam q how many values need to be transformed
+ * @tparam dim the spatial dimension
+ * @param qf_input the values to be transformed from parent to physical space
+ * @param jacobians the jacobians of the isoparametric map from parent to physical space of each quadrature point
+ */
 template <Family f, typename T, int q, int dim>
 void parent_to_physical(tensor<T, q>& qf_input, const tensor<double, dim, dim, q>& jacobians)
 {
@@ -245,6 +298,18 @@ void parent_to_physical(tensor<T, q>& qf_input, const tensor<double, dim, dim, q
   }
 }
 
+/**
+ * @brief transform information in the physical space  (i.e. sources and fluxes w.r.t {x, y, z})
+ * back to the parent space (i.e. values and derivatives w.r.t. {xi, eta, zeta}). Note: this also 
+ * multiplies by the outputs by the determinant of the quadrature point Jacobian.
+ * 
+ * @tparam f the element family, used to determine which kind of transformation to apply
+ * @tparam T the types of quantities to be transformed
+ * @tparam q how many values need to be transformed
+ * @tparam dim the spatial dimension
+ * @param qf_output the values to be transformed from physical back to parent space
+ * @param jacobians the jacobians of the isoparametric map from parent to physical space of each quadrature point
+ */
 template <Family f, typename T, int q, int dim>
 void physical_to_parent(tensor<T, q>& qf_output, const tensor<double, dim, dim, q>& jacobians)
 {
