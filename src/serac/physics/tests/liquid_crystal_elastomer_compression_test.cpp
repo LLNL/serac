@@ -16,8 +16,8 @@
 #include "serac/physics/solid_mechanics.hpp"
 #include "serac/physics/materials/liquid_crystal_elastomer.hpp"
 
-#define CONST_TEMP
-// #undef CONST_TEMP
+#define LOAD_DRIVEN
+// #undef LOAD_DRIVEN
 
 using namespace serac;
 
@@ -42,7 +42,7 @@ int main(int argc, char* argv[]) {
 
   // Create DataStore
   axom::sidre::DataStore datastore;
-#ifdef CONST_TEMP
+#ifdef LOAD_DRIVEN
   serac::StateManager::initialize(datastore, "lce_compression_test_load");
 #else
   serac::StateManager::initialize(datastore, "lce_compression_test_temp");
@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
   // std::string filename = SERAC_REPO_DIR "/data/meshes/LCE_tensileTestSpecimen_nonDim.g";
   // auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
 
-  int nElem = 8;
+  int nElem = 6;
   ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(4*nElem, 4*nElem, nElem, mfem::Element::HEXAHEDRON, 8.5/2, 8.5/2, 2.162/2));
   auto         mesh = std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, cuboid);
   serac::StateManager::setMesh(std::move(mesh));
@@ -164,10 +164,14 @@ int main(int argc, char* argv[]) {
   solid_solver.setDisplacementBCs({2}, zeroFunc, 1); // left face x-dir disp = 0
   solid_solver.setDisplacementBCs({5}, zeroFunc, 0); // back face z-dir disp = 0
 
+#ifdef LOAD_DRIVEN
+  auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = -0.00001; };
+#else
   auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.001; };
+#endif
   solid_solver.setDisplacement(ini_displacement);
 
-  double loadVal = -5.0e-8;
+  double loadVal = -5.0e-7;
   solid_solver.setPiolaTraction([loadVal](auto x, auto /*n*/, auto /*t*/){
     return tensor<double, 3>{0, 0, loadVal * (x[2]>(2.16/2))};
   });
@@ -176,7 +180,7 @@ int main(int argc, char* argv[]) {
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-#ifdef CONST_TEMP
+#ifdef LOAD_DRIVEN
   std::string output_filename = "sol_lce_compression_load";
 #else
   std::string output_filename = "sol_lce_compression_temp";
@@ -194,7 +198,7 @@ int main(int argc, char* argv[]) {
       std::cout 
       << "\n... Entering time step: "<< i + 1
       << "\n... At time: "<< t
-#ifdef CONST_TEMP
+#ifdef LOAD_DRIVEN
       << "\n... And with a compression load of: " << loadVal
 #else
       << "\n... And with uniform temperature of: " << initial_temperature * (1.0 - (t / tmax)) + final_temperature * (t / tmax) 
@@ -207,7 +211,7 @@ int main(int argc, char* argv[]) {
 
     t += dt;
 
-#ifdef CONST_TEMP
+#ifdef LOAD_DRIVEN
     loadVal = loadVal * (1 + 50 * t / tmax);
 #else
     temperature = initial_temperature * (1.0 - (t / tmax)) + final_temperature * (t / tmax);
