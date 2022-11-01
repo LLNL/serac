@@ -77,7 +77,7 @@ struct KernelConfig {
 };
 
 template <typename lambda, int dim, int n, typename... T>
-auto batch_apply_qf_no_qdata(lambda qf, const tensor<double, dim, n> x, const T & ... inputs)
+auto batch_apply_qf_no_qdata(lambda qf, const tensor<double, dim, n> x, const T&... inputs)
 {
   using return_type = decltype(qf(tensor<double, dim>{}, T{}[0]...));
   tensor<return_type, n> outputs{};
@@ -92,7 +92,8 @@ auto batch_apply_qf_no_qdata(lambda qf, const tensor<double, dim, n> x, const T 
 }
 
 template <typename lambda, int dim, int n, typename qpt_data_type, typename... T>
-auto batch_apply_qf(lambda qf, const tensor<double, dim, n> x, qpt_data_type* qpt_data, bool update_state, const T & ... inputs)
+auto batch_apply_qf(lambda qf, const tensor<double, dim, n> x, qpt_data_type* qpt_data, bool update_state,
+                    const T&... inputs)
 {
   using return_type = decltype(qf(tensor<double, dim>{}, qpt_data[0], T{}[0]...));
   tensor<return_type, n> outputs{};
@@ -202,16 +203,16 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
       (parent_to_physical<type<j>(trial_elements).family>(get<j>(qf_inputs), J_e), ...);
 
       // (batch) evalute the q-function at each quadrature point
-      // 
-      // note: the weird immediately-invoked lambda expression is 
+      //
+      // note: the weird immediately-invoked lambda expression is
       // a workaround for a bug in GCC(<12.0) where it fails to
       // decide which function overload to use, and crashes
       auto qf_outputs = [&]() {
-	      if constexpr (std::is_same_v< qpt_data_type, Nothing >) {
-	        return batch_apply_qf_no_qdata(qf_, X_e, get<j>(qf_inputs) ...);
-	      } else {
-	        return batch_apply_qf(qf_, X_e, &qdata(e, 0), update_state, get<j>(qf_inputs) ...);
-	      }
+        if constexpr (std::is_same_v<qpt_data_type, Nothing>) {
+          return batch_apply_qf_no_qdata(qf_, X_e, get<j>(qf_inputs)...);
+        } else {
+          return batch_apply_qf(qf_, X_e, &qdata(e, 0), update_state, get<j>(qf_inputs)...);
+        }
       }();
 
       // use J to transform sources / fluxes on the physical element
