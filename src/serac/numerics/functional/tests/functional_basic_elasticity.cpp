@@ -91,10 +91,10 @@ void elasticity_test()
 
   std::string meshfile;
   if (dim == 2) {
-    meshfile = SERAC_REPO_DIR "/data/meshes/star.mesh";
+    meshfile = SERAC_REPO_DIR "/data/meshes/patch2D.mesh";
   }
   if (dim == 3) {
-    meshfile = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+    meshfile = SERAC_REPO_DIR "/data/meshes/patch3D.mesh";
   }
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(meshfile));
@@ -107,11 +107,11 @@ void elasticity_test()
 
   Functional<test_space(trial_space)> residual(test_fes, {trial_fes});
 
-  [[maybe_unused]] auto d00 = 1.0 * make_tensor<dim, dim>([](int i, int j) { return i + 2 * j + 1; });
-  [[maybe_unused]] auto d01 = 0.0 * make_tensor<dim, dim, dim>([](int i, int j, int k) { return i + 2 * j - k + 1; });
-  [[maybe_unused]] auto d10 = 0.0 * make_tensor<dim, dim, dim>([](int i, int j, int k) { return i + 3 * j - 2 * k; });
+  [[maybe_unused]] auto d00 = make_tensor<dim, dim>([](int i, int j) { return i + 2 * j + 1; });
+  [[maybe_unused]] auto d01 = make_tensor<dim, dim, dim>([](int i, int j, int k) { return i + 2 * j - k + 1; });
+  [[maybe_unused]] auto d10 = make_tensor<dim, dim, dim>([](int i, int j, int k) { return i + 3 * j - 2 * k; });
   [[maybe_unused]] auto d11 =
-      0.0 * make_tensor<dim, dim, dim, dim>([](int i, int j, int k, int l) { return i - j + 2 * k - 3 * l + 1; });
+      make_tensor<dim, dim, dim, dim>([](int i, int j, int k, int l) { return i - j + 2 * k - 3 * l + 1; });
 
   // note: this is not really an elasticity problem, it's testing source and flux
   // terms that have the appropriate shapes to ensure that all the differentiation
@@ -140,11 +140,11 @@ void elasticity_test()
   delete trial_fes;
 }
 
-// TEST(basic, weird_mixed_test_2D) { weird_mixed_test<1, 2>(); }
-// TEST(basic, weird_mixed_test_3D) { weird_mixed_test<1, 3>(); }
+TEST(basic, weird_mixed_test_2D) { weird_mixed_test<1, 2>(); }
+TEST(basic, weird_mixed_test_3D) { weird_mixed_test<1, 3>(); }
 
 TEST(basic, elasticity_test_2D) { elasticity_test<1, 2>(); }
-// TEST(basic, elasticity_test_3D) { elasticity_test<2, 3>(); }
+TEST(basic, elasticity_test_3D) { elasticity_test<2, 3>(); }
 
 int main(int argc, char* argv[])
 {
