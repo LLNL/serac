@@ -33,7 +33,6 @@ void hcurl_test_2D()
   using trial_space = Hcurl<p>;
 
   std::string meshfile = SERAC_REPO_DIR "/data/meshes/patch2D.mesh";
-  // std::string meshfile = SERAC_REPO_DIR "/data/meshes/beam-quad.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(meshfile), 1);
 
@@ -46,9 +45,9 @@ void hcurl_test_2D()
   // Construct the new functional object using the specified test and trial spaces
   Functional<test_space(trial_space)> residual(&fespace, {&fespace});
 
-  auto d00 = 0.0 * make_tensor<dim, dim>([](int i, int j) { return i + j * j - 1; });
-  auto d01 = 0.0 * make_tensor<dim>([](int i) { return i * i + 3; });
-  auto d10 = 0.0 * make_tensor<dim>([](int i) { return 3 * i - 2; });
+  auto d00 = make_tensor<dim, dim>([](int i, int j) { return i + j * j - 1; });
+  auto d01 = make_tensor<dim>([](int i) { return i * i + 3; });
+  auto d10 = make_tensor<dim>([](int i) { return 3 * i - 2; });
   auto d11 = 1.0;
 
   residual.AddDomainIntegral(
@@ -87,10 +86,10 @@ void hcurl_test_3D()
   // Construct the new functional object using the known test and trial spaces
   Functional<test_space(trial_space)> residual(&fespace, {&fespace});
 
-  auto d00 = 1.0 * make_tensor<dim, dim>([](int i, int j) { return i + j * j - 1; });
-  auto d01 = 1.0 * make_tensor<dim, dim>([](int i, int j) { return i * i - j + 3; });
-  auto d10 = 1.0 * make_tensor<dim, dim>([](int i, int j) { return 3 * i + j - 2; });
-  auto d11 = 1.0 * make_tensor<dim, dim>([](int i, int j) { return i * i + j + 2; });
+  auto d00 = make_tensor<dim, dim>([](int i, int j) { return i + j * j - 1; });
+  auto d01 = make_tensor<dim, dim>([](int i, int j) { return i * i - j + 3; });
+  auto d10 = make_tensor<dim, dim>([](int i, int j) { return 3 * i + j - 2; });
+  auto d11 = make_tensor<dim, dim>([](int i, int j) { return i * i + j + 2; });
 
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
@@ -107,7 +106,7 @@ void hcurl_test_3D()
 
 TEST(basic, hcurl_test_2D_linear) { hcurl_test_2D<1>(); }
 
-// TEST(basic, hcurl_test_3D_linear) { hcurl_test_3D<1>(); }
+TEST(basic, hcurl_test_3D_linear) { hcurl_test_3D<1>(); }
 
 int main(int argc, char* argv[])
 {
