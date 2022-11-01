@@ -368,7 +368,7 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
  * @param[in] num_elements The number of elements in the mesh
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
-void element_gradient_kernel_new(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
+void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
                                  CPUArrayView<derivatives_type, 2>             qf_derivatives, const mfem::Vector&,
                                  std::size_t                                   num_elements)
 {
@@ -401,96 +401,6 @@ void element_gradient_kernel_new(ExecArrayView<double, 3, ExecutionSpace::CPU> d
       auto source_and_flux = trial_element::batch_apply_shape_fn(J, derivatives, rule);
       test_element::integrate(source_and_flux, rule, output_ptr + J, trial_element::ndof);
     }
-  }
-}
-
-template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
-void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dk,
-                             CPUArrayView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J_,
-                             std::size_t num_elements)
-{
-  using test_element               = finite_element<g, test>;
-  using trial_element              = finite_element<g, trial>;
-  static constexpr int  dim        = dimension_of(g);
-  static constexpr int  test_ndof  = test_element::ndof;
-  static constexpr int  test_dim   = test_element::components;
-  static constexpr int  trial_ndof = trial_element::ndof;
-  static constexpr int  trial_dim  = trial_element::components;
-  static constexpr auto rule       = GaussQuadratureRule<g, Q>();
-
-  // mfem provides this information in 1D arrays, so we reshape it
-  // into strided multidimensional arrays before using
-  auto J = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements);
-
-  // for each element in the domain
-  for (uint32_t e = 0; e < num_elements; e++) {
-    tensor<double, test_ndof, trial_ndof, test_dim, trial_dim> K_elem{};
-
-    // for each quadrature point in the element
-    for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-      // get the position of this quadrature point in the parent and physical space,
-      // and calculate the measure of that point in physical space.
-      auto   xi_q  = rule.points[q];
-      auto   dxi_q = rule.weights[q];
-      auto   J_q   = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
-      double dx    = det(J_q) * dxi_q;
-
-      // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
-      auto dq_darg = qf_derivatives(static_cast<size_t>(e), static_cast<size_t>(q));
-
-      if constexpr (std::is_same<test, QOI>::value) {
-        auto& q0 = serac::get<0>(dq_darg);  // derivative of QoI w.r.t. field value
-        auto& q1 = serac::get<1>(dq_darg);  // derivative of QoI w.r.t. field derivative
-
-        auto N = evaluate_shape_functions<trial_element>(xi_q, J_q);
-
-        for (int j = 0; j < trial_ndof; j++) {
-          K_elem[0][j][0] += (q0 * N[j].value + q1 * N[j].derivative) * dx;
-        }
-      }
-
-      if constexpr (!std::is_same<test, QOI>::value) {
-        auto& q00 = serac::get<0>(serac::get<0>(dq_darg));  // derivative of source term w.r.t. field value
-        auto& q01 = serac::get<1>(serac::get<0>(dq_darg));  // derivative of source term w.r.t. field derivative
-        auto  q10 = serac::get<0>(serac::get<1>(dq_darg));  // derivative of   flux term w.r.t. field value
-        auto  q11 = serac::get<1>(serac::get<1>(dq_darg));  // derivative of   flux term w.r.t. field derivative
-
-        auto M = evaluate_shape_functions<test_element>(xi_q, J_q);
-        auto N = evaluate_shape_functions<trial_element>(xi_q, J_q);
-
-        // clang-format off
-        for (int i = 0; i < test_ndof; i++) {
-          for (int j = 0; j < trial_ndof; j++) {
-            K_elem[i][j] += (
-              M[i].value      * q00 * N[j].value +
-              M[i].value      * q01 * N[j].derivative + 
-              M[i].derivative * q10 * N[j].value +
-              M[i].derivative * q11 * N[j].derivative
-            ) * dx;
-          } 
-        }
-        // clang-format on
-      }
-    }
-
-    // once we've finished the element integration loop, write our element gradients
-    // out to memory, to be later assembled into the global gradient by mfem
-    // clang-format off
-    if constexpr (std::is_same< test, QOI >::value) {
-      for (int k = 0; k < trial_ndof; k++) {
-        for (int l = 0; l < trial_dim; l++) {
-          dk(static_cast<size_t>(e), 0, static_cast<size_t>(k + trial_ndof * l)) += K_elem[0][k][0][l];
-        }
-      }
-    } 
-
-    if constexpr (!std::is_same< test, QOI >::value) {
-      // Note: we "transpose" these values to get them into the layout that mfem expects
-      for_loop<test_ndof, test_dim, trial_ndof, trial_dim>([&](int i, int j, int k, int l) {
-        dk(static_cast<size_t>(e), static_cast<size_t>(i + test_ndof * j), static_cast<size_t>(k + trial_ndof * l)) += K_elem[i][k][j][l];
-      });
-    }
-    // clang-format on
   }
 }
 

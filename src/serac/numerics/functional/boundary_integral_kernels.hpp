@@ -157,7 +157,7 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
   static constexpr auto Iseq             = std::make_integer_sequence<int, static_cast<int>(sizeof...(trials))>{};
 
   using test_element = finite_element<geom, test>;
-  static constexpr type_list<finite_element<geom, trials>...> trial_elements{};
+  static constexpr tuple<finite_element<geom, trials>...> trial_elements{};
   using EVector_t =
       EVectorView<exec, finite_element<geom, trials>...>;  ///< the type of container used to access element values
 
@@ -207,7 +207,7 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
           qf_inputs{};
 
       for_constexpr<num_trial_spaces>([&](auto j) {
-        using trial_element = decltype(trial_elements[j]);
+        using trial_element = decltype(type<j>(trial_elements));
 
         auto u = reinterpret_cast<const typename trial_element::dof_type*>(U[j]->Read());
 
@@ -423,8 +423,8 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
  * @param[in] num_elements The number of elements in the mesh
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
-void element_gradient_kernel_new(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
-                                 CPUArrayView<derivatives_type, 2> qf_derivatives, std::size_t num_elements)
+void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
+                             CPUArrayView<derivatives_type, 2> qf_derivatives, std::size_t num_elements)
 {
   using test_element  = finite_element<g, test>;
   using trial_element = finite_element<g, trial>;
@@ -446,91 +446,6 @@ void element_gradient_kernel_new(ExecArrayView<double, 3, ExecutionSpace::CPU> d
       auto source_and_flux = trial_element::batch_apply_shape_fn(J, derivatives, rule);
       test_element::integrate(source_and_flux, rule, output_ptr + J, trial_element::ndof);
     }
-  }
-}
-
-/**
- * @brief The base kernel template used to create create custom element stiffness matrices
- * associated with finite element calculations
- *
- * @tparam test The type of the test function space
- * @tparam trial The type of the trial function space
- * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO), QOI}
- *
- * Template parameters other than the test and trial spaces are used for customization + optimization
- * and are erased through the @p std::function members of @p BoundaryIntegral
- * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
- * @tparam Q Quadrature parameter describing how many points per dimension
- * @tparam derivatives_type Type representing the derivative of the q-function w.r.t. its input arguments
- *
- * @note lambda does not appear as a template argument, as the stiffness matrix is
- * inherently just a linear transformation
- *
- * @param[in] dk array for storing each element's gradient contributions
- * @param[in] derivatives_ptr The address at which derivatives of the q-function with
- * respect to its arguments are stored
- * @param[in] J_ The Jacobians of the element transformations at all quadrature points
- * @see mfem::GeometricFactors
- * @param[in] num_elements The number of elements in the mesh
- */
-template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
-void element_gradient_kernel(CPUArrayView<double, 3> dk, CPUArrayView<derivatives_type, 2> qf_derivatives,
-                             const mfem::Vector& J_, std::size_t num_elements)
-{
-  using test_element               = finite_element<g, test>;
-  using trial_element              = finite_element<g, trial>;
-  static constexpr int  test_ndof  = test_element::ndof;
-  static constexpr int  test_dim   = test_element::components;
-  static constexpr int  trial_ndof = trial_element::ndof;
-  static constexpr int  trial_dim  = trial_element::components;
-  static constexpr auto rule       = GaussQuadratureRule<g, Q>();
-
-  // mfem provides this information in 1D arrays, so we reshape it
-  // into strided multidimensional arrays before using
-  auto J = mfem::Reshape(J_.Read(), rule.size(), num_elements);
-
-  // for each element in the domain
-  for (size_t e = 0; e < num_elements; e++) {
-    tensor<double, test_ndof, trial_ndof, test_dim, trial_dim> K_elem{};
-
-    // for each quadrature point in the element
-    for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-      // get the position of this quadrature point in the parent and physical space,
-      // and calculate the measure of that point in physical space.
-      auto   xi_q  = rule.points[q];
-      auto   dxi_q = rule.weights[q];
-      double dx    = J(q, e) * dxi_q;
-
-      // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
-      auto dq_darg = qf_derivatives(static_cast<size_t>(e), static_cast<size_t>(q));
-
-      if constexpr (std::is_same<test, QOI>::value) {
-        auto N = trial_element::shape_functions(xi_q);
-        for (int j = 0; j < trial_ndof; j++) {
-          K_elem[0][j][0] += serac::get<0>(dq_darg) * N[j] * dx;
-        }
-      } else {
-        auto M  = test_element::shape_functions(xi_q);
-        auto N  = trial_element::shape_functions(xi_q);
-        auto dN = trial_element::shape_function_gradients(xi_q);
-
-        for (int i = 0; i < test_ndof; i++) {
-          for (int j = 0; j < trial_ndof; j++) {
-            K_elem[i][j] += M[i] * (serac::get<0>(dq_darg) * N[j] + serac::get<1>(dq_darg) * dN[j]) * dx;
-          }
-        }
-      }
-    }
-
-    // once we've finished the element integration loop, write our element gradients
-    // out to memory, to be later assembled into the global gradient by mfem
-    //
-    // Note: we "transpose" these values to get them into the layout that mfem expects
-    // clang-format off
-    for_loop<test_ndof, test_dim, trial_ndof, trial_dim>([e, &dk, &K_elem](int i, int j, int k, int l) {
-      dk(static_cast<size_t>(e), static_cast<size_t>(i + test_ndof * j), static_cast<size_t>(k + trial_ndof * l)) += K_elem[i][k][j][l];
-    });
-    // clang-format on
   }
 }
 

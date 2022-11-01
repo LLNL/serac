@@ -106,7 +106,7 @@ public:
         };
 
         element_gradient_[i] = [qf_derivatives, num_elements](CPUArrayView<double, 3> K_e) {
-          element_gradient_kernel_new<geometry, test, which_trial_space, Q>(K_e, qf_derivatives, num_elements);
+          element_gradient_kernel<geometry, test, which_trial_space, Q>(K_e, qf_derivatives, num_elements);
         };
       });
     }
