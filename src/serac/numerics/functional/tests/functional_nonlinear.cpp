@@ -20,6 +20,8 @@
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/infrastructure/profiling.hpp"
 
+#include "serac/numerics/functional/tests/check_gradient.hpp"
+
 using namespace serac;
 using namespace serac::profiling;
 
@@ -41,42 +43,6 @@ struct hcurl_qfunction {
     return serac::tuple{J_term, H_term};
   }
 };
-
-template <typename T>
-void check_gradient(Functional<T>& f, mfem::Vector& U)
-{
-  int seed = 42;
-
-  mfem::Vector dU(U.Size());
-  dU.Randomize(seed);
-
-  double epsilon = 1.0e-8;
-
-  auto U_plus = U;
-  U_plus.Add(epsilon, dU);
-
-  auto U_minus = U;
-  U_minus.Add(-epsilon, dU);
-
-  mfem::Vector df1 = f(U_plus);
-  df1 -= f(U_minus);
-  df1 /= (2 * epsilon);
-
-  auto [value, dfdU] = f(differentiate_wrt(U));
-  mfem::Vector df2   = dfdU(dU);
-
-  std::unique_ptr<mfem::HypreParMatrix> dfdU_matrix = assemble(dfdU);
-
-  mfem::Vector df3 = (*dfdU_matrix) * dU;
-
-  double relative_error1 = df1.DistanceTo(df2.GetData()) / df1.Norml2();
-  double relative_error2 = df1.DistanceTo(df3.GetData()) / df1.Norml2();
-
-  EXPECT_NEAR(0., relative_error1, 5.e-6);
-  EXPECT_NEAR(0., relative_error2, 5.e-6);
-
-  std::cout << relative_error1 << " " << relative_error2 << std::endl;
-}
 
 // this test sets up a toy "thermal" problem where the residual includes contributions
 // from a temperature-dependent source term and a temperature-gradient-dependent flux
