@@ -150,7 +150,7 @@ int main(int argc, char* argv[]) {
   gamma.project(coef);
 
   // Construct a functional-based solid mechanics solver
-    SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver(default_static_options, GeometricNonlinearities::On, "solid_functional");
+    SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver(default_static_options, GeometricNonlinearities::On, "lce_solid_functional");
   // SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver(default_static_options, GeometricNonlinearities::Off, FinalMeshOption::Reference,
   //                                      "solid_functional", {temperature, gamma});
   // SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver(default_static_options, GeometricNonlinearities::On, FinalMeshOption::Reference,

@@ -144,7 +144,7 @@ int main(int argc, char* argv[]) {
 
   // Construct a functional-based solid mechanics solver
   SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver(solid_mechanics::default_static_options, GeometricNonlinearities::Off, 
-                                       "solid_functional");
+                                       "lce_solid_functional");
 
   constexpr int TEMPERATURE_INDEX = 0;
   constexpr int GAMMA_INDEX       = 1;
@@ -183,7 +183,7 @@ int main(int argc, char* argv[]) {
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  std::string output_filename = "LCE_free_swelling_test_paraview_00d";
+  std::string output_filename = "sol_lce_free_swelling_00d";
   solid_solver.outputState(output_filename); 
 
 

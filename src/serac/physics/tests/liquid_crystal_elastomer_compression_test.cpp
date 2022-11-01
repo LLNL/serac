@@ -35,22 +35,25 @@ int main(int argc, char* argv[]) {
   
   int num_steps = 10;
 
-  int serial_refinement   = 0;
-  int parallel_refinement = 1;
+  // int serial_refinement   = 0;
+  // int parallel_refinement = 0;
 
   // Create DataStore
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "LCE_tensile_test");
+  serac::StateManager::initialize(datastore, "lce_compression_test");
 
   // Construct the appropriate dimension mesh and give it to the data store
   // std::string filename = SERAC_REPO_DIR "/data/meshes/beam-hex-flat.mesh";
-  std::string filename = SERAC_REPO_DIR "/data/meshes/LCE_tensileTestSpecimen_nonDim.g";
+  // std::string filename = SERAC_REPO_DIR "/data/meshes/LCE_tensileTestSpecimen_nonDim.g";
+  // auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
 
-  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
+  int nElem = 8;
+  ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(4*nElem, 4*nElem, nElem, mfem::Element::HEXAHEDRON, 8.5/2, 8.5/2, 2.162/2));
+  auto         mesh = std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, cuboid);
   serac::StateManager::setMesh(std::move(mesh));
 
-  double initial_temperature = 300.0;
-  double final_temperature = 430.0;
+  double initial_temperature = 290; // 300.0;
+  double final_temperature = 400; // 430.0;
   FiniteElementState temperature(
       StateManager::newState(FiniteElementState::Options{.order = p, .name = "temperature"}));
 
@@ -63,7 +66,7 @@ int main(int argc, char* argv[]) {
 
   // orient fibers in the beam like below (horizontal when y < 0.5, vertical when y > 0.5):
   //
-  // y
+  // y  
   // ^                         4
   // |                         |
   // ┏━━━━━━━━━━━━━━━━━━━━━━━━━┓-- 4
@@ -79,12 +82,13 @@ int main(int argc, char* argv[]) {
   // ┃ - - - - - - - - - - - - ┃
   // ┗━━━━━━━━━━━━━━━━━━━━━━━━━┛--> x
 
-  int lceArrangementTag = 4;
+  int lceArrangementTag = 1;
   auto gamma_func = [lceArrangementTag](const mfem::Vector& x, double) -> double 
   { 
     if (lceArrangementTag==1)
     {
-      return (x[0] > 1.0) ? M_PI_2 : 0.0; 
+      // return (x[0] > 1.0) ? M_PI_2 : 0.0; 
+      return M_PI_2; 
     }
     else if (lceArrangementTag==2)
     {
@@ -139,19 +143,30 @@ int main(int argc, char* argv[]) {
 
   // prescribe symmetry conditions
   auto zeroFunc = [](const mfem::Vector /*x*/){ return 0.0;};
-  solid_solver.setDisplacementBCs({1}, zeroFunc, 1); // bottom face y-dir disp = 0
-  solid_solver.setDisplacementBCs({2}, zeroFunc, 0); // left face x-dir disp = 0
-  solid_solver.setDisplacementBCs({3}, zeroFunc, 2); // back face z-dir disp = 0
+  solid_solver.setDisplacementBCs({1}, zeroFunc, 2); // bottom face z-dir disp = 0
+  solid_solver.setDisplacementBCs({2}, zeroFunc, 1); // left face x-dir disp = 0
+  solid_solver.setDisplacementBCs({5}, zeroFunc, 0); // back face z-dir disp = 0
+
+  // solid_solver.setDisplacementBCs({1}, [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.1; });
+  // solid_solver.setDisplacementBCs({2}, [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.2; });
+  // solid_solver.setDisplacementBCs({3}, [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.3; });
+  // solid_solver.setDisplacementBCs({4}, [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.4; });
+  // solid_solver.setDisplacementBCs({5}, [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.5; });
+  // solid_solver.setDisplacementBCs({6}, [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.6; });
 
   auto zero_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; };
   solid_solver.setDisplacement(zero_displacement);
+
+  solid_solver.setPiolaTraction([](auto x, auto /*n*/, auto /*t*/){
+    return tensor<double, 3>{0, 0, -5.0e-8 * (x[2]>(2.16/2))};
+  });
 
   // Finalize the data structures
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  // std::string output_filename = "LCE_tensile_test_paraview_rad_0p65_4_30d_60d";
-  std::string output_filename = "sol_lce_tensile";
+  // std::string output_filename = "LCE_compression_test_paraview_rad_0p65_4_30d_60d";
+  std::string output_filename = "sol_lce_compression";
   solid_solver.outputState(output_filename); 
 
   double t = 0.0;

@@ -30,6 +30,7 @@ set(solver_tests
     liquid_crystal_elastomer_logpile_test.cpp
     liquid_crystal_elastomer_free_swelling_test.cpp
     liquid_crystal_elastomer_tensile_test.cpp
+    liquid_crystal_elastomer_compression_test.cpp
     liquid_crystal_elastomer_test.cpp
     parameterized_thermomechanics_example.cpp
     solid_legacy.cpp

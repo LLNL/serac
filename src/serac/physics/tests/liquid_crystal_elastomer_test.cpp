@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
   //                                                                 FinalMeshOption::Reference, "solid_functional",
   //                                                                 {temperature, gamma});
   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>>> solid_solver(default_static_options, GeometricNonlinearities::Off,
-                                                                  "solid_functional");
+                                                                  "lce_solid_functional");
 
   constexpr int TEMPERATURE_INDEX = 0;
   constexpr int GAMMA_INDEX       = 1;
@@ -113,7 +113,7 @@ int main(int argc, char* argv[])
   // Perform the quasi-static solve
   int num_steps = 10;
 
-  solid_solver.outputState("paraview");
+  solid_solver.outputState("sol_lce_test");
 
   double t    = 0.0;
   double tmax = 1.0;
@@ -121,7 +121,7 @@ int main(int argc, char* argv[])
   for (int i = 0; i < num_steps; i++) {
     t += dt;
     solid_solver.advanceTimestep(dt);
-    solid_solver.outputState("paraview");
+    solid_solver.outputState("sol_lce_test");
 
     temperature = initial_temperature * (1.0 - (t / tmax)) + final_temperature * (t / tmax);
   }
