@@ -4,8 +4,6 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-add_subdirectory(performance)
-
 # This test is all constexpr-evaluated, so it doesn't
 # actually need to run, if it compiles without error, the tests have passed
 blt_add_executable(NAME        tensor_unit_tests

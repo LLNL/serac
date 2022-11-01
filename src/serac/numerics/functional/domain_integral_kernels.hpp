@@ -200,14 +200,17 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
       (parent_to_physical<type<j>(trial_elements).family>(get<j>(qf_inputs), J_e), ...);
 
       // (batch) evalute the q-function at each quadrature point
+      // 
+      // note: the weird immediately-invoked lambda expression is 
+      // a workaround for a bug in GCC(<12.0) where it fails to
+      // decide which function overload to use, and crashes
       auto qf_outputs = [&]() {
-	if constexpr (std::is_same_v< qpt_data_type, Nothing >) {
-	  return batch_apply_qf_no_qdata(qf_, X_e, get<j>(qf_inputs) ...);
-	} else {
-	  return batch_apply_qf(qf_, X_e, &qdata(e, 0), get<j>(qf_inputs) ...);
-	}
+	      if constexpr (std::is_same_v< qpt_data_type, Nothing >) {
+	        return batch_apply_qf_no_qdata(qf_, X_e, get<j>(qf_inputs) ...);
+	      } else {
+	        return batch_apply_qf(qf_, X_e, &qdata(e, 0), get<j>(qf_inputs) ...);
+	      }
       }();
-      // auto qf_outputs = batch_apply_qf(qf_, X_e, &qdata(e, 0), get<j>(qf_inputs) ...);
 
       // use J to transform sources / fluxes on the physical element
       // back to the corresponding sources / fluxes on the parent element
@@ -221,6 +224,8 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
           qf_derivatives_(e, q) = get_gradient(qf_outputs[q]);
         }
       }
+
+      // R = \int dphi_dxi (dxi_dx C dxi_xi) dphi_dxi^T * u dx
 
       // (batch) integrate the material response against the test-space basis functions
       test_element::integrate(get_value(qf_outputs), rule, &r[e]);

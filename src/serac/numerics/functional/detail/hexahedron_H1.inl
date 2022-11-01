@@ -240,24 +240,6 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
     static constexpr auto B             = calculate_B<apply_weights, q>();
     static constexpr auto G             = calculate_G<apply_weights, q>();
 
-    // tensor< double, c, q, q, q> source{};
-    // tensor< double, c, dim, q, q, q> flux{};
-    // for (int qz = 0; qz < q; qz++) {
-    //  for (int qy = 0; qy < q; qy++) {
-    //    for (int qx = 0; qx < q; qx++) {
-    //      int k = (qz * q + qy) * q + qx;
-    //      tensor< double, c > s{get<SOURCE>(qf_output[k])};
-    //      tensor< double, c, dim > f{get<FLUX>(qf_output[k])};
-    //      for (int i = 0; i < c; i++) {
-    //        source(i, qz, qy, qx) = s[i];
-    //        for (int j = 0; j < dim; j++) {
-    //          flux(i, j, qz, qy, qx) = f[i][j];
-    //        }
-    //      }
-    //    }
-    //  }
-    //}
-
     cache_type<q> cache{};
 
     for (int j = 0; j < ntrial; j++) {
