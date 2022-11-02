@@ -113,8 +113,17 @@ int main(int argc, char* argv[]) {
   mfem::FunctionCoefficient coef(gamma_func);
   gamma.project(coef);
 
+  IterativeSolverOptions linear_options = {.rel_tol     = 1.0e-6,
+                                                       .abs_tol     = 1.0e-16,
+                                                       .print_level = 0,
+                                                       .max_iter    = 500,
+                                                       .lin_solver  = LinearSolver::GMRES,
+                                                       .prec        = HypreBoomerAMGPrec{}};
+  NonlinearSolverOptions nonlinear_options = {
+    .rel_tol = 1.0e-4, .abs_tol = 1.0e-7, .max_iter = 50, .print_level = 1};
+
   // Construct a functional-based solid mechanics solver
-  SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver(solid_mechanics::default_static_options, GeometricNonlinearities::Off,
+  SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver({linear_options, nonlinear_options}, GeometricNonlinearities::Off,
                                        "lce_solid_functional");
 
   constexpr int TEMPERATURE_INDEX = 0;
@@ -154,8 +163,9 @@ int main(int argc, char* argv[]) {
   // solid_solver.setDisplacementBCs({5}, [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.5; });
   // solid_solver.setDisplacementBCs({6}, [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.6; });
 
-  auto zero_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; };
-  solid_solver.setDisplacement(zero_displacement);
+  // Project a non-zero initial guess to help out the nonlinear solver for the first iteration
+  auto initial_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; };
+  solid_solver.setDisplacement(initial_displacement);
 
   solid_solver.setPiolaTraction([](auto x, auto /*n*/, auto /*t*/){
     return tensor<double, 3>{0, 0, -5.0e-8 * (x[2]>(2.16/2))};
