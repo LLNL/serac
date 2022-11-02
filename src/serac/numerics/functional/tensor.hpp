@@ -1611,8 +1611,9 @@ SERAC_HOST_DEVICE constexpr auto linear_solve(const tensor<S, n, n>& A, const te
   if constexpr (is_zero<decltype(dx)>{}) {
     return x;
   }
-
-  return make_dual(x, dx);
+  if constexpr (!is_zero<decltype(dx)>{}) {
+    return make_dual(x, dx);
+  }
 }
 
 /**
