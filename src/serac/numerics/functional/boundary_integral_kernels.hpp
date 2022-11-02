@@ -154,12 +154,15 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
                         std::integer_sequence<int, int_seq...>> {
   static constexpr auto exec             = ExecutionSpace::CPU;     ///< this specialization is CPU-specific
   static constexpr int  num_trial_spaces = int(sizeof...(trials));  ///< how many trial spaces are provided
-  static constexpr auto Iseq             = std::make_integer_sequence<int, static_cast<int>(sizeof...(trials))>{};
 
+  /// @brief an integer sequence used to iterate through the trial spaces that appear in this kernel
+  static constexpr auto Iseq = std::make_integer_sequence<int, static_cast<int>(sizeof...(trials))>{};
+
+  /// @brief the element type for the test space
   using test_element = finite_element<geom, test>;
+
+  /// @brief the element type for each trial space
   static constexpr tuple<finite_element<geom, trials>...> trial_elements{};
-  using EVector_t =
-      EVectorView<exec, finite_element<geom, trials>...>;  ///< the type of container used to access element values
 
   /**
    * @brief initialize the functor by providing the necessary quadrature point data
@@ -242,9 +245,14 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
                         std::integer_sequence<int, j...>> {
   static constexpr auto exec             = ExecutionSpace::CPU;  ///< this specialization is CPU-specific
   static constexpr int  num_trial_spaces = static_cast<int>(sizeof...(trials));  ///< how many trial spaces are provided
-  static constexpr auto Iseq             = std::make_integer_sequence<int, static_cast<int>(sizeof...(trials))>{};
 
+  /// @brief an integer sequence used to iterate through the trial spaces that appear in this kernel
+  static constexpr auto Iseq = std::make_integer_sequence<int, static_cast<int>(sizeof...(trials))>{};
+
+  /// @brief the element type for the test space
   using test_element = finite_element<geom, test>;
+
+  /// @brief the element type for each trial space
   static constexpr tuple<finite_element<geom, trials>...> trial_elements{};
 
   /**

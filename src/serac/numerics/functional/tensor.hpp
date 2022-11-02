@@ -463,11 +463,11 @@ SERAC_HOST_DEVICE constexpr auto operator-(const tensor<S, m, n...>& A, const te
 
 /**
  * @brief elementwise multiplication of two tensors
- * @tparam S the scalar value type. Must be arithmetic (e.g. float, double, int) or a dual number
- * @tparam T the underlying type of the tensor (righthand) argument
+ * @tparam S the underlying type of the (lefthand) argument
+ * @tparam T the underlying type of the (righthand) argument
  * @tparam n integers describing the tensor shape
- * @param[in] scale The scaling factor
- * @param[in] A The tensor to be scaled
+ * @param[in] A one of the tensors to be multiplied
+ * @param[in] B one of the tensors to be multiplied
  */
 template <typename S, typename T, int... n>
 SERAC_HOST_DEVICE constexpr auto elementwise_multiply(const tensor<S, n...>& A, const tensor<T, n...>& B)
@@ -1365,6 +1365,15 @@ auto contract(const zero&, const T&)
   return zero{};
 }
 
+/**
+ * @brief computes the relative error (in the frobenius norm) between two tensors of the same shape
+ * 
+ * @tparam T the datatype stored in each tensor
+ * @tparam n the dimensions of each tensor
+ * @param A the left argument
+ * @param B the right argument
+ * @return norm(A - B) / norm(A)
+ */
 template <typename T, int... n>
 double relative_error(tensor<T, n...> A, tensor<T, n...> B)
 {
@@ -1879,8 +1888,13 @@ SERAC_HOST_DEVICE auto get_value(const tensor<dual<T>, n...>& arg)
 }
 
 /**
- * @brief Retrieves a value tensor from a tensor of dual numbers
- * @param[in] arg The tensor of dual numbers
+ * @brief Extracts all of the values from a tensor of dual numbers
+ * 
+ * @tparam T1 the first type of the tuple stored in the tensor
+ * @tparam T2 the second type of the tuple stored in the tensor
+ * @tparam n  the number of entries in the input argument
+ * @param[in] input The tensor of dual numbers
+ * @return the tensor of all of the values
  */
 template <typename T1, typename T2, int n>
 SERAC_HOST_DEVICE auto get_value(const tensor<tuple<T1, T2>, n>& input)

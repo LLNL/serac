@@ -26,10 +26,13 @@ namespace serac {
  */
 template <int q>
 struct TensorProductQuadratureRule {
-  tensor<double, q> weights1D;
-  tensor<double, q> points1D;
+  tensor<double, q> weights1D; ///< the weights of the underlying 1D quadrature rule
+  tensor<double, q> points1D;  ///< the abscissae of the underlying 1D quadrature rule
 
+  /// @brief return the quadrature weight for a quadrilateral
   SERAC_HOST_DEVICE double weight(int ix, int iy) const { return weights1D[ix] * weights1D[iy]; }
+
+  /// @brief return the quadrature weight for a hexahedron
   SERAC_HOST_DEVICE double weight(int ix, int iy, int iz) const
   {
     return weights1D[ix] * weights1D[iy] * weights1D[iz];
