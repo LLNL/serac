@@ -944,6 +944,7 @@ SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m>& u, const tensor<T, m, n
   return uAv;
 }
 
+/// @overload
 template <typename S, typename T, int m, int n, int p, int q>
 SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m, n, p, q>& A, const tensor<T, q>& B)
 {
@@ -1271,12 +1272,35 @@ auto matrix_sqrt(const tensor<T, dim, dim>& A)
   return B;
 }
 
-template <int i1, int i2, typename T>
-auto contract(const zero&, const T&)
-{
-  return zero{};
-}
-
+/**
+ * @brief a convenience function that computes a dot product between 
+ * two tensor, but that allows the user to specify which indices should
+ * be summed over. For example:
+ * 
+ * @code{.cpp}
+ * tensor< double, 4, 4, 4 > A = ...;
+ * tensor< double, 4, 4 > B = ...;
+ * tensor< double, 4, 4, 4 > C = contract<1, 0>(A, B);
+ * 
+ * //                 sum over index 1 for A
+ * //                          V
+ * // C(i, j, k) = \sum_l A(i, l, j) * B(l, k)
+ * //                                    ^
+ * //                          sum over index 0 for B
+ * 
+ * @endcode 
+ * 
+ * @tparam i1 the index of contraction for the left operand
+ * @tparam i2 the index of contraction for the right operand
+ * @tparam S the datatype stored in the left operand
+ * @tparam m leading dimension of the left operand
+ * @tparam n the trailing dimensions of the left operand
+ * @tparam T the datatype stored in the right operand
+ * @tparam p the number of rows in the right operand
+ * @tparam q the number of columns in the right operand
+ * @param A the left operand
+ * @param B the right operand
+ */
 template <int i1, int i2, typename S, int m, int... n, typename T, int p, int q>
 auto contract(const tensor<S, m, n...>& A, const tensor<T, p, q>& B)
 {
@@ -1334,30 +1358,11 @@ auto contract(const tensor<S, m, n...>& A, const tensor<T, p, q>& B)
   return C;
 }
 
-template <typename T, int... n>
-tensor<T, (n * ...)> flatten(const tensor<T, n...>& A)
+/// @overload
+template <int i1, int i2, typename T>
+auto contract(const zero&, const T&)
 {
-  tensor<T, (n * ...)> A_flat;
-  auto                 A_ptr = reinterpret_cast<const double*>(&A);
-  for (int i = 0; i < (n * ...); i++) {
-    A_flat[i] = A_ptr[i];
-  }
-  return A_flat;
-}
-
-template <int... new_dimensions, typename T, int... old_dimensions>
-tensor<T, new_dimensions...> reshape(const tensor<T, old_dimensions...>& A)
-{
-  static_assert((new_dimensions * ...) == (old_dimensions * ...),
-                "error: can't reshape to configuration with different number of elements");
-
-  tensor<T, new_dimensions...> A_reshaped;
-  auto                         A_ptr          = reinterpret_cast<const double*>(&A);
-  auto                         A_reshaped_ptr = reinterpret_cast<double*>(&A_reshaped);
-  for (int i = 0; i < (old_dimensions * ...); i++) {
-    A_reshaped_ptr[i] = A_ptr[i];
-  }
-  return A_reshaped;
+  return zero{};
 }
 
 template <typename T, int... n>
@@ -2008,16 +2013,37 @@ SERAC_HOST_DEVICE auto chain_rule(const tensor<double, m, n, p...>& df_dx, const
   return total;
 }
 
+/**
+ * @brief returns the total number of stored values in a tensor
+ * 
+ * @tparam T the datatype stored in the tensor
+ * @tparam n the extents of each dimension
+ * @return the total number of values stored in the tensor
+ */
 template <typename T, int... n>
 SERAC_HOST_DEVICE constexpr int size(const tensor<T, n...>&)
 {
   return (n * ... * 1);
 }
 
+/**
+ * @overload
+ * @brief overload of size() for `double`, we say a double "stores" 1 value
+ */
 SERAC_HOST_DEVICE constexpr int size(const double&) { return 1; }
 
+/// @overload
 SERAC_HOST_DEVICE constexpr int size(zero) { return 0; }
 
+
+/**
+ * @brief a function for querying the ith dimension of a tensor
+ * 
+ * @tparam i which dimension to query
+ * @tparam T the datatype stored in the tensor
+ * @tparam n the tensor extents
+ * @return the ith dimension
+ */
 template <int i, typename T, int... n>
 SERAC_HOST_DEVICE constexpr int dimension(const tensor<T, n...>&)
 {
@@ -2025,21 +2051,19 @@ SERAC_HOST_DEVICE constexpr int dimension(const tensor<T, n...>&)
   return dimensions[i];
 }
 
+/**
+ * @brief a function for querying the first dimension of a tensor
+ * 
+ * @tparam T the datatype stored in the tensor
+ * @tparam m the first dimension of the tensor
+ * @tparam n the trailing dimensions of the tensor
+ * @return m
+ */
 template <typename T, int m, int... n>
 SERAC_HOST_DEVICE constexpr int leading_dimension(tensor<T, m, n...>)
 {
   return m;
 }
-
-template <typename T, int m, int... n>
-SERAC_HOST_DEVICE constexpr int trailing_dimension_product(tensor<T, m, n...>)
-{
-  return (n * ... * 1);
-}
-
-SERAC_HOST_DEVICE constexpr int trailing_dimension_product(double) { return 1; }
-
-SERAC_HOST_DEVICE constexpr int trailing_dimension_product(serac::zero) { return 0; }
 
 }  // namespace serac
 

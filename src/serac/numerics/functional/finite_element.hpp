@@ -95,12 +95,14 @@ struct batched_jacobian;
 /// @overload
 template <int q>
 struct batched_jacobian<Geometry::Hexahedron, q> {
-  using type = tensor<double, 3, 3, q * q * q>;
+  /// the data layout for this geometry and quadrature rule
+  using type = tensor<double, 3, 3, q * q * q>; 
 };
 
 /// @overload
 template <int q>
 struct batched_jacobian<Geometry::Quadrilateral, q> {
+  /// the data layout for this geometry and quadrature rule
   using type = tensor<double, 2, 2, q * q>;
 };
 
@@ -117,18 +119,21 @@ struct batched_position;
 /// @overload
 template <int q>
 struct batched_position<Geometry::Hexahedron, q> {
+  /// the data layout for this geometry and quadrature rule
   using type = tensor<double, 3, q * q * q>;
 };
 
 /// @overload
 template <int q>
 struct batched_position<Geometry::Quadrilateral, q> {
+  /// the data layout for this geometry and quadrature rule
   using type = tensor<double, 2, q * q>;
 };
 
 /// @overload
 template <int q>
 struct batched_position<Geometry::Segment, q> {
+  /// the data layout for this geometry and quadrature rule
   using type = tensor<double, q>;
 };
 
