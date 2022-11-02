@@ -165,14 +165,15 @@ int main(int argc, char* argv[]) {
   solid_solver.setDisplacementBCs({5}, zeroFunc, 0); // back face z-dir disp = 0
 
 #ifdef LOAD_DRIVEN
-  auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = -0.00001; };
+  auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.000001; };
 #else
   auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.001; };
 #endif
   solid_solver.setDisplacement(ini_displacement);
 
-  double loadVal = -5.0e-7;
-  solid_solver.setPiolaTraction([loadVal](auto x, auto /*n*/, auto /*t*/){
+  double iniLoadVal = -5.0e-5;
+  double loadVal = iniLoadVal;
+  solid_solver.setPiolaTraction([&loadVal](auto x, auto /*n*/, auto /*t*/){
     return tensor<double, 3>{0, 0, loadVal * (x[2]>(2.16/2))};
   });
 
@@ -212,7 +213,7 @@ int main(int argc, char* argv[]) {
     t += dt;
 
 #ifdef LOAD_DRIVEN
-    loadVal = loadVal * (1 + 50 * t / tmax);
+    loadVal = iniLoadVal * 500 * t / tmax;
 #else
     temperature = initial_temperature * (1.0 - (t / tmax)) + final_temperature * (t / tmax);
 #endif
