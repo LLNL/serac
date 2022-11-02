@@ -138,9 +138,11 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
                         qpt_data_type, std::integer_sequence<int, j...> > {
   static constexpr auto exec             = ExecutionSpace::CPU;     ///< this specialization is CPU-specific
   static constexpr int  num_trial_spaces = int(sizeof...(trials));  ///< how many trial spaces are provided
-  static constexpr auto Iseq             = std::make_integer_sequence<int, static_cast<int>(sizeof...(trials))>{};
 
+  /// @brief the element type for the test space
   using test_element = finite_element<geom, test>;
+
+  /// @brief the element type for each trial space
   static constexpr tuple<finite_element<geom, trials>...> trial_elements{};
 
   /**
@@ -160,6 +162,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
   {
   }
 
+  /// @overload
   EvaluationKernel(DerivativeWRT<-1>, KernelConfig<Q, geom, test, trials...>, const mfem::Vector& J,
                    const mfem::Vector& X, std::size_t num_elements, lambda qf,
                    std::shared_ptr<QuadratureData<qpt_data_type> > data)
