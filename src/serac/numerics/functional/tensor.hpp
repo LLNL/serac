@@ -1606,13 +1606,13 @@ SERAC_HOST_DEVICE constexpr auto linear_solve(const tensor<S, n, n>& A, const te
   // If both b and A are not dual, the zero type
   // makes these no-ops.
   auto r  = get_gradient(b) - dot(get_gradient(A), x);
-  auto dx = linear_solve(lu_factors, r);
+  [[maybe_unused]] auto dx = linear_solve(lu_factors, r);
 
   if constexpr (is_zero<decltype(dx)>{}) {
     return x;
-  } else {
-    return make_dual(x, dx);
-  }
+  } 
+
+  return make_dual(x, dx);
 }
 
 /**

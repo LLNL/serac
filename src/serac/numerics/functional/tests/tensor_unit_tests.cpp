@@ -181,11 +181,11 @@ TEST(tensor, matrix_sqrt)
     return X;
   };
 
-  tensor FTF = dot(transpose(F), F);
+  tensor<double,3,3> FTF = dot(transpose(F), F);
 
-  tensor Uhat = matrix_sqrt(FTF);
+  tensor<double,3,3> Uhat = matrix_sqrt(FTF);
 
-  tensor Uhat_exact = {{{0.3718851927062453, -0.0809474212888889, 0.2048642780892224},
+  tensor<double,3,3> Uhat_exact = {{{0.3718851927062453, -0.0809474212888889, 0.2048642780892224},
                         {-0.0809474212888888, 0.967374407775298, 0.2888955723924189},
                         {0.2048642780892223, 0.288895572392419, 1.388488261683237}}};
 
