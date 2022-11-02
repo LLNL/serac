@@ -105,7 +105,7 @@ public:
 
         element_gradient_[i] = [qf_derivatives, num_elements, J](CPUArrayView<double, 3> K_e) {
           domain_integral::element_gradient_kernel<geometry, test, which_trial_space, Q>(K_e, qf_derivatives, J,
-                                                                                             num_elements);
+                                                                                         num_elements);
         };
       });
     }

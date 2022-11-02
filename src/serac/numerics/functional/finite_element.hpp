@@ -19,15 +19,15 @@
 namespace serac {
 
 /**
- * @brief a convenience class for generating information about tensor product 
+ * @brief a convenience class for generating information about tensor product
  * integration rules from the underlying 1D rule.
- * 
+ *
  * @tparam q how many quadrature points per dimension
  */
 template <int q>
 struct TensorProductQuadratureRule {
-  tensor<double, q> weights1D; ///< the weights of the underlying 1D quadrature rule
-  tensor<double, q> points1D;  ///< the abscissae of the underlying 1D quadrature rule
+  tensor<double, q> weights1D;  ///< the weights of the underlying 1D quadrature rule
+  tensor<double, q> points1D;   ///< the abscissae of the underlying 1D quadrature rule
 
   /// @brief return the quadrature weight for a quadrilateral
   SERAC_HOST_DEVICE double weight(int ix, int iy) const { return weights1D[ix] * weights1D[iy]; }
@@ -66,7 +66,7 @@ struct Dimension {
 /**
  * @brief return the number of quadrature points in a Gauss-Legendre rule
  * with parameter "q"
- * 
+ *
  * @tparam g the element geometry
  * @tparam q the number of quadrature points per dimension
  */
@@ -88,8 +88,8 @@ SERAC_HOST_DEVICE constexpr int num_quadrature_points()
 /**
  * @brief this struct is used to look up mfem's memory layout of
  * the quadrature point jacobian matrices
- * 
- * @tparam g the element geometry 
+ *
+ * @tparam g the element geometry
  * @tparam q the number of quadrature points per dimension
  */
 template <Geometry g, int q>
@@ -99,7 +99,7 @@ struct batched_jacobian;
 template <int q>
 struct batched_jacobian<Geometry::Hexahedron, q> {
   /// the data layout for this geometry and quadrature rule
-  using type = tensor<double, 3, 3, q * q * q>; 
+  using type = tensor<double, 3, 3, q * q * q>;
 };
 
 /// @overload
@@ -110,10 +110,10 @@ struct batched_jacobian<Geometry::Quadrilateral, q> {
 };
 
 /**
- * @brief this struct is used to look up mfem's memory layout of the 
+ * @brief this struct is used to look up mfem's memory layout of the
  * quadrature point position vectors
- * 
- * @tparam g the element geometry 
+ *
+ * @tparam g the element geometry
  * @tparam q the number of quadrature points per dimension
  */
 template <Geometry g, int q>
@@ -145,7 +145,7 @@ struct batched_position<Geometry::Segment, q> {
  * should be processed by a single thread block in CUDA (note: the optimal
  * values are hardware and problem specific, but these values are still significantly
  * faster than naively allocating only 1 element / block)
- * 
+ *
  * @tparam g the element geometry
  * @param q the number of quadrature points per dimension
  * @return how many elements each thread block should process
@@ -269,7 +269,7 @@ struct QOI {
 /**
  * @brief transform information in the parent space  (i.e. values and derivatives w.r.t {xi, eta, zeta})
  * into the physical space (i.e. values and derivatives w.r.t. {x, y, z})
- * 
+ *
  * @tparam f the element family, used to determine which kind of transformation to apply
  * @tparam T the types of quantities to be transformed
  * @tparam q how many values need to be transformed
@@ -308,9 +308,9 @@ void parent_to_physical(tensor<T, q>& qf_input, const tensor<double, dim, dim, q
 
 /**
  * @brief transform information in the physical space  (i.e. sources and fluxes w.r.t {x, y, z})
- * back to the parent space (i.e. values and derivatives w.r.t. {xi, eta, zeta}). Note: this also 
+ * back to the parent space (i.e. values and derivatives w.r.t. {xi, eta, zeta}). Note: this also
  * multiplies by the outputs by the determinant of the quadrature point Jacobian.
- * 
+ *
  * @tparam f the element family, used to determine which kind of transformation to apply
  * @tparam T the types of quantities to be transformed
  * @tparam q how many values need to be transformed

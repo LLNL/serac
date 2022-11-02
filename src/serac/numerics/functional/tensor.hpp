@@ -1273,23 +1273,23 @@ auto matrix_sqrt(const tensor<T, dim, dim>& A)
 }
 
 /**
- * @brief a convenience function that computes a dot product between 
+ * @brief a convenience function that computes a dot product between
  * two tensor, but that allows the user to specify which indices should
  * be summed over. For example:
- * 
+ *
  * @code{.cpp}
  * tensor< double, 4, 4, 4 > A = ...;
  * tensor< double, 4, 4 > B = ...;
  * tensor< double, 4, 4, 4 > C = contract<1, 0>(A, B);
- * 
+ *
  * //                 sum over index 1 for A
  * //                          V
  * // C(i, j, k) = \sum_l A(i, l, j) * B(l, k)
  * //                                    ^
  * //                          sum over index 0 for B
- * 
- * @endcode 
- * 
+ *
+ * @endcode
+ *
  * @tparam i1 the index of contraction for the left operand
  * @tparam i2 the index of contraction for the right operand
  * @tparam S the datatype stored in the left operand
@@ -1367,7 +1367,7 @@ auto contract(const zero&, const T&)
 
 /**
  * @brief computes the relative error (in the frobenius norm) between two tensors of the same shape
- * 
+ *
  * @tparam T the datatype stored in each tensor
  * @tparam n the dimensions of each tensor
  * @param A the left argument
@@ -1605,12 +1605,12 @@ SERAC_HOST_DEVICE constexpr auto linear_solve(const tensor<S, n, n>& A, const te
   // Compute directional derivative of x.
   // If both b and A are not dual, the zero type
   // makes these no-ops.
-  auto r  = get_gradient(b) - dot(get_gradient(A), x);
+  auto                  r  = get_gradient(b) - dot(get_gradient(A), x);
   [[maybe_unused]] auto dx = linear_solve(lu_factors, r);
 
   if constexpr (is_zero<decltype(dx)>{}) {
     return x;
-  } 
+  }
 
   return make_dual(x, dx);
 }
@@ -1889,7 +1889,7 @@ SERAC_HOST_DEVICE auto get_value(const tensor<dual<T>, n...>& arg)
 
 /**
  * @brief Extracts all of the values from a tensor of dual numbers
- * 
+ *
  * @tparam T1 the first type of the tuple stored in the tensor
  * @tparam T2 the second type of the tuple stored in the tensor
  * @tparam n  the number of entries in the input argument
@@ -2029,7 +2029,7 @@ SERAC_HOST_DEVICE auto chain_rule(const tensor<double, m, n, p...>& df_dx, const
 
 /**
  * @brief returns the total number of stored values in a tensor
- * 
+ *
  * @tparam T the datatype stored in the tensor
  * @tparam n the extents of each dimension
  * @return the total number of values stored in the tensor
@@ -2049,10 +2049,9 @@ SERAC_HOST_DEVICE constexpr int size(const double&) { return 1; }
 /// @overload
 SERAC_HOST_DEVICE constexpr int size(zero) { return 0; }
 
-
 /**
  * @brief a function for querying the ith dimension of a tensor
- * 
+ *
  * @tparam i which dimension to query
  * @tparam T the datatype stored in the tensor
  * @tparam n the tensor extents
@@ -2067,7 +2066,7 @@ SERAC_HOST_DEVICE constexpr int dimension(const tensor<T, n...>&)
 
 /**
  * @brief a function for querying the first dimension of a tensor
- * 
+ *
  * @tparam T the datatype stored in the tensor
  * @tparam m the first dimension of the tensor
  * @tparam n the trailing dimensions of the tensor

@@ -372,8 +372,8 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
 void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
-                                 CPUArrayView<derivatives_type, 2>             qf_derivatives, const mfem::Vector&,
-                                 std::size_t                                   num_elements)
+                             CPUArrayView<derivatives_type, 2>             qf_derivatives, const mfem::Vector&,
+                             std::size_t                                   num_elements)
 {
   // quantities of interest have no flux term, so we pad the derivative
   // tuple with a "zero" type in the second position to treat it like the standard case
