@@ -73,9 +73,9 @@ SignedIndex decodeSignedIndex(int i)
 }
 
 /**
- * @param fes the finite element space in question
- *
  * @brief return whether or not the underlying function space is Hcurl or not
+ *
+ * @param fes the finite element space in question
  */
 bool isHcurl(const mfem::ParFiniteElementSpace& fes)
 {
@@ -83,9 +83,9 @@ bool isHcurl(const mfem::ParFiniteElementSpace& fes)
 }
 
 /**
- * @param fes the finite element space in question
- *
  * @brief return whether or not the underlying function space is L2 or not
+ *
+ * @param fes the finite element space in question
  */
 bool isL2(const mfem::ParFiniteElementSpace& fes)
 {
@@ -93,10 +93,10 @@ bool isL2(const mfem::ParFiniteElementSpace& fes)
 }
 
 /**
- * @param fes the finite element space in question
- *
  * @brief attempt to characterize which FiniteElementSpaces
  * mfem::FaceRestriction actually works with
+ *
+ * @param fes the finite element space in question
  */
 bool compatibleWithFaceRestriction(const mfem::ParFiniteElementSpace& fes)
 {

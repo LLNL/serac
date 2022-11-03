@@ -261,9 +261,9 @@ SERAC_HOST_DEVICE constexpr const auto& get(const tuple<T...>& values)
 }
 
 /**
- * @brief a function intended to be used for extracting the ith type from a tuple
- * get<i>(my_tuple) returns a reference, so it requires additional postprocessing to
- * extract the underlying type (without a reference)
+ * @brief a function intended to be used for extracting the ith type from a tuple.
+ *
+ * @note type<i>(my_tuple) returns a value, whereas get<i>(my_tuple) returns a reference
  *
  * @tparam i the index of the tuple to query
  * @tparam T the types stored in the tuple

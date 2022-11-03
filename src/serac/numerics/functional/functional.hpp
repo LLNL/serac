@@ -63,9 +63,9 @@ struct differentiate_wrt_this {
 auto differentiate_wrt(const mfem::Vector& v) { return differentiate_wrt_this{v}; }
 
 /**
- * @tparam T a list of types, containing at most 1 `differentiate_wrt_this`
- *
  * @brief given a list of types, this function returns the index that corresponds to the type `dual_vector`.
+ *
+ * @tparam T a list of types, containing at most 1 `differentiate_wrt_this`
  *
  * e.g.
  * @code{.cpp}

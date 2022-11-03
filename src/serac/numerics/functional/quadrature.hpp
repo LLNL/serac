@@ -33,7 +33,7 @@ struct QuadratureRule {
   tensor<double, n, dim> points;
 
   /// @brief Returns the number of points in the rule
-  SERAC_HOST_DEVICE constexpr size_t size() const { return n; }
+  SERAC_HOST_DEVICE constexpr std::size_t size() const { return n; }
 };
 
 /**
