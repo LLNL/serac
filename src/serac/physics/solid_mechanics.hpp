@@ -491,7 +491,7 @@ public:
    * @pre TractionType must have the operator (x, normal, time) to return the thermal flux value
    *
    * @note: until mfem::GetFaceGeometricFactors implements their JACOBIANS option,
-   * (or we implement a replacement kernel ourselves) we are not able to compute 
+   * (or we implement a replacement kernel ourselves) we are not able to compute
    * shape sensitivities for boundary integrals.
    */
   template <int... active_parameters, typename TractionType>

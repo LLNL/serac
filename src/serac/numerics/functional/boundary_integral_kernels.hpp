@@ -239,10 +239,10 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
  * @overload
  * @note evaluation kernel that also calculates derivative w.r.t. `I`th trial space
  */
-template <int I, int Q, Geometry geom, typename test, typename... trials, typename derivatives_type, typename lambda,
-          int... j>
-struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>, derivatives_type, lambda,
-                        std::integer_sequence<int, j...>> {
+template <int differentiation_index, int Q, Geometry geom, typename test, typename... trials, typename derivatives_type,
+          typename lambda, int... indices>
+struct EvaluationKernel<DerivativeWRT<differentiation_index>, KernelConfig<Q, geom, test, trials...>, derivatives_type,
+                        lambda, std::integer_sequence<int, indices...>> {
   static constexpr auto exec             = ExecutionSpace::CPU;  ///< this specialization is CPU-specific
   static constexpr int  num_trial_spaces = static_cast<int>(sizeof...(trials));  ///< how many trial spaces are provided
 
@@ -265,7 +265,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
    * @param num_elements how many elements in the domain
    * @param qf q-function
    */
-  EvaluationKernel(DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>,
+  EvaluationKernel(DerivativeWRT<differentiation_index>, KernelConfig<Q, geom, test, trials...>,
                    CPUArrayView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J, const mfem::Vector& X,
                    const mfem::Vector& N, std::size_t num_elements, lambda qf)
       : qf_derivatives_(qf_derivatives), J_(J), X_(X), N_(N), num_elements_(num_elements), qf_(qf)
@@ -290,7 +290,8 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
     auto          r    = reinterpret_cast<typename test_element::dof_type*>(R.ReadWrite());
     static constexpr TensorProductQuadratureRule<Q> rule{};
 
-    tuple u_e = {reinterpret_cast<const typename decltype(type<j>(trial_elements))::dof_type*>(U[j]->Read())...};
+    tuple u_e = {
+        reinterpret_cast<const typename decltype(type<indices>(trial_elements))::dof_type*>(U[indices]->Read())...};
 
     // for each element in the domain
     for (uint32_t e = 0; e < num_elements_; e++) {
@@ -300,8 +301,8 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
       auto N_e = N[e];
 
       // batch-calculate values / derivatives of each trial space, at each quadrature point
-      tuple qf_inputs = {
-          promote_each_to_dual_when<j == I>(type<j>(trial_elements).interpolate(get<j>(u_e)[e], rule))...};
+      tuple qf_inputs = {promote_each_to_dual_when<indices == differentiation_index>(
+          type<indices>(trial_elements).interpolate(get<indices>(u_e)[e], rule))...};
 
       // (batch) evalute the q-function at each quadrature point
       auto qf_outputs = batch_apply_qf(qf_, X_e, N_e, qf_inputs, Iseq);
@@ -332,11 +333,13 @@ EvaluationKernel(KernelConfig<Q, geom, test, trials...>, const mfem::Vector&, co
                  int, lambda) -> EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lambda,
                                                   std::make_integer_sequence<int, static_cast<int>(sizeof...(trials))>>;
 
-template <int i, int Q, Geometry geom, typename test, typename... trials, typename derivatives_type, typename lambda>
-EvaluationKernel(DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, CPUArrayView<derivatives_type, 2>,
-                 const mfem::Vector&, const mfem::Vector&, const mfem::Vector&, int, lambda)
-    -> EvaluationKernel<DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, derivatives_type, lambda,
-                        std::make_integer_sequence<int, static_cast<int>(sizeof...(trials))>>;
+template <int differentiation_index, int Q, Geometry geom, typename test, typename... trials, typename derivatives_type,
+          typename lambda>
+EvaluationKernel(DerivativeWRT<differentiation_index>, KernelConfig<Q, geom, test, trials...>,
+                 CPUArrayView<derivatives_type, 2>, const mfem::Vector&, const mfem::Vector&, const mfem::Vector&, int,
+                 lambda)
+    -> EvaluationKernel<DerivativeWRT<differentiation_index>, KernelConfig<Q, geom, test, trials...>, derivatives_type,
+                        lambda, std::make_integer_sequence<int, static_cast<int>(sizeof...(trials))>>;
 
 //clang-format off
 template <typename S, typename T>

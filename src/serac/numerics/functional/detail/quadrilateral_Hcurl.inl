@@ -96,6 +96,16 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     return nodes;
   }();
 
+  /**
+   * @brief B1(i,j) is the
+   *  jth 1D Gauss-Legendre interpolating polynomial,
+   *  evaluated at the ith 1D quadrature point
+   *
+   * @tparam apply_weights optionally multiply the rows of B1 by the associated quadrature weight
+   * @tparam q the number of quadrature points in the 1D rule
+   *
+   * @return the matrix B1 of 1D polynomial evaluations
+   */
   template <bool apply_weights, int q>
   static constexpr auto calculate_B1()
   {
@@ -109,6 +119,16 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     return B1;
   }
 
+  /**
+   * @brief B2(i,j) is the
+   *  jth 1D Gauss-Lobatto interpolating polynomial,
+   *  evaluated at the ith 1D quadrature point
+   *
+   * @tparam apply_weights optionally multiply the rows of B2 by the associated quadrature weight
+   * @tparam q the number of quadrature points in the 1D rule
+   *
+   * @return the matrix B2 of 1D polynomial evaluations
+   */
   template <bool apply_weights, int q>
   static constexpr auto calculate_B2()
   {
@@ -122,6 +142,16 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     return B2;
   }
 
+  /**
+   * @brief G2(i,j) is the derivative of the
+   *  jth 1D Gauss-Lobatto interpolating polynomial,
+   *  evaluated at the ith 1D quadrature point
+   *
+   * @tparam apply_weights optionally multiply the rows of G by the associated quadrature weight
+   * @tparam q the number of quadrature points in the 1D rule
+   *
+   * @return the matrix G2 of 1D polynomial evaluations
+   */
   template <bool apply_weights, int q>
   static constexpr auto calculate_G2()
   {

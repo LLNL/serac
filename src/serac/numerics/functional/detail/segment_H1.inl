@@ -47,6 +47,16 @@ struct finite_element<Geometry::Segment, H1<p, c> > {
     return GaussLobattoInterpolationDerivative<ndof>(xi);
   }
 
+  /**
+   * @brief B(i,j) is the
+   *  jth 1D Gauss-Lobatto interpolating polynomial,
+   *  evaluated at the ith 1D quadrature point
+   *
+   * @tparam apply_weights optionally multiply the rows of B by the associated quadrature weight
+   * @tparam q the number of quadrature points in the 1D rule
+   *
+   * @return the matrix B of 1D polynomial evaluations
+   */
   template <bool apply_weights, int q>
   static constexpr auto calculate_B()
   {
@@ -60,6 +70,16 @@ struct finite_element<Geometry::Segment, H1<p, c> > {
     return B;
   }
 
+  /**
+   * @brief G(i,j) is the derivative of the
+   *  jth 1D Gauss-Lobatto interpolating polynomial,
+   *  evaluated at the ith 1D quadrature point
+   *
+   * @tparam apply_weights optionally multiply the rows of G by the associated quadrature weight
+   * @tparam q the number of quadrature points in the 1D rule
+   *
+   * @return the matrix G of 1D polynomial evaluations
+   */
   template <bool apply_weights, int q>
   static constexpr auto calculate_G()
   {

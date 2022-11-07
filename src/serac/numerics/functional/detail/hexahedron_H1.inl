@@ -29,10 +29,6 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
   static constexpr int VALUE = 0, GRADIENT = 1;
   static constexpr int SOURCE = 0, FLUX = 1;
 
-  // TODO: remove this
-  using residual_type =
-      typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components> >::type;
-
   using dof_type = tensor<double, c, p + 1, p + 1, p + 1>;
 
   using value_type = typename std::conditional<components == 1, double, tensor<double, components> >::type;
@@ -97,6 +93,16 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
     // clang-format on
   }
 
+  /**
+   * @brief B(i,j) is the
+   *  jth 1D Gauss-Lobatto interpolating polynomial,
+   *  evaluated at the ith 1D quadrature point
+   *
+   * @tparam apply_weights optionally multiply the rows of B by the associated quadrature weight
+   * @tparam q the number of quadrature points in the 1D rule
+   *
+   * @return the matrix B of 1D polynomial evaluations
+   */
   template <bool apply_weights, int q>
   static constexpr auto calculate_B()
   {
@@ -110,6 +116,16 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
     return B;
   }
 
+  /**
+   * @brief G(i,j) is the derivative of the
+   *  jth 1D Gauss-Lobatto interpolating polynomial,
+   *  evaluated at the ith 1D quadrature point
+   *
+   * @tparam apply_weights optionally multiply the rows of G by the associated quadrature weight
+   * @tparam q the number of quadrature points in the 1D rule
+   *
+   * @return the matrix G of 1D polynomial evaluations
+   */
   template <bool apply_weights, int q>
   static constexpr auto calculate_G()
   {

@@ -72,6 +72,8 @@ template <int i>
 struct DerivativeWRT {
 };
 
+using NoDifferentiation = DerivativeWRT<-1>;
+
 template <int Q, Geometry g, typename test, typename... trials>
 struct KernelConfig {
 };
@@ -115,7 +117,8 @@ auto batch_apply_qf(lambda qf, const tensor<double, dim, n> x, qpt_data_type* qp
 /**
  * @tparam S type used to specify which argument to differentiate with respect to.
  *    `void` => evaluation kernel with no differentiation
- *    `DerivativeWRT<i>` => evaluation kernel with AD applied to trial space `i`
+ *    `DerivativeWRT<i>` => evaluation kernel with AD applied to trial space `i`, where (i == -1 implies no
+ * differentiation)
  * @tparam T a configuration argument containing:
  *    quadrature rule information,
  *    element geometry
@@ -132,10 +135,10 @@ struct EvaluationKernel;
  * @overload
  * @note evaluation kernel that also calculates derivative w.r.t. `I`th trial space
  */
-template <int I, int Q, Geometry geom, typename test, typename... trials, typename derivatives_type, typename lambda,
-          typename qpt_data_type, int... j>
-struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>, derivatives_type, lambda,
-                        qpt_data_type, std::integer_sequence<int, j...> > {
+template <int differentiation_index, int Q, Geometry geom, typename test, typename... trials, typename derivatives_type,
+          typename lambda, typename qpt_data_type, int... indices>
+struct EvaluationKernel<DerivativeWRT<differentiation_index>, KernelConfig<Q, geom, test, trials...>, derivatives_type,
+                        lambda, qpt_data_type, std::integer_sequence<int, indices...> > {
   static constexpr auto exec             = ExecutionSpace::CPU;     ///< this specialization is CPU-specific
   static constexpr int  num_trial_spaces = int(sizeof...(trials));  ///< how many trial spaces are provided
 
@@ -155,7 +158,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
    * @param qf q-function
    * @param data user-specified quadrature data to pass to the q-function
    */
-  EvaluationKernel(DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>,
+  EvaluationKernel(DerivativeWRT<differentiation_index>, KernelConfig<Q, geom, test, trials...>,
                    CPUArrayView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J, const mfem::Vector& X,
                    std::size_t num_elements, lambda qf, std::shared_ptr<QuadratureData<qpt_data_type> > data)
       : qf_derivatives_(qf_derivatives), J_(J), X_(X), num_elements_(num_elements), qf_(qf), data_(data)
@@ -163,7 +166,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
   }
 
   /// @overload
-  EvaluationKernel(DerivativeWRT<-1>, KernelConfig<Q, geom, test, trials...>, const mfem::Vector& J,
+  EvaluationKernel(NoDifferentiation, KernelConfig<Q, geom, test, trials...>, const mfem::Vector& J,
                    const mfem::Vector& X, std::size_t num_elements, lambda qf,
                    std::shared_ptr<QuadratureData<qpt_data_type> > data)
       : J_(J), X_(X), num_elements_(num_elements), qf_(qf), data_(data)
@@ -189,7 +192,7 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
     auto& qdata = *data_;
 
     [[maybe_unused]] tuple u_e = {
-        reinterpret_cast<const typename decltype(type<j>(trial_elements))::dof_type*>(U[j]->Read())...};
+        reinterpret_cast<const typename decltype(type<indices>(trial_elements))::dof_type*>(U[indices]->Read())...};
 
     // for each element in the domain
     for (uint32_t e = 0; e < num_elements_; e++) {
@@ -198,12 +201,12 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
       auto X_e = X[e];
 
       // batch-calculate values / derivatives of each trial space, at each quadrature point
-      [[maybe_unused]] tuple qf_inputs = {
-          promote_each_to_dual_when<j == I>(type<j>(trial_elements).interpolate(get<j>(u_e)[e], rule))...};
+      [[maybe_unused]] tuple qf_inputs = {promote_each_to_dual_when<indices == differentiation_index>(
+          type<indices>(trial_elements).interpolate(get<indices>(u_e)[e], rule))...};
 
-      // use J to transform values / derivatives on the parent element
+      // use J_e to transform values / derivatives on the parent element
       // to the to the corresponding values / derivatives on the physical element
-      (parent_to_physical<type<j>(trial_elements).family>(get<j>(qf_inputs), J_e), ...);
+      (parent_to_physical<type<indices>(trial_elements).family>(get<indices>(qf_inputs), J_e), ...);
 
       // (batch) evalute the q-function at each quadrature point
       //
@@ -212,9 +215,9 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
       // decide which function overload to use, and crashes
       auto qf_outputs = [&]() {
         if constexpr (std::is_same_v<qpt_data_type, Nothing>) {
-          return batch_apply_qf_no_qdata(qf_, X_e, get<j>(qf_inputs)...);
+          return batch_apply_qf_no_qdata(qf_, X_e, get<indices>(qf_inputs)...);
         } else {
-          return batch_apply_qf(qf_, X_e, &qdata(e, 0), update_state, get<j>(qf_inputs)...);
+          return batch_apply_qf(qf_, X_e, &qdata(e, 0), update_state, get<indices>(qf_inputs)...);
         }
       }();
 
@@ -225,13 +228,11 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
       // write out the q-function derivatives after applying the
       // physical_to_parent transformation, so that those transformations
       // won't need to be applied in the action_of_gradient and element_gradient kernels
-      if constexpr (I != -1) {
+      if constexpr (differentiation_index != -1) {
         for (int q = 0; q < leading_dimension(qf_outputs); q++) {
           qf_derivatives_(e, q) = get_gradient(qf_outputs[q]);
         }
       }
-
-      // R = \int dphi_dxi (dxi_dx C dxi_xi) dphi_dxi^T * u dx
 
       // (batch) integrate the material response against the test-space basis functions
       test_element::integrate(get_value(qf_outputs), rule, &r[e]);
@@ -246,17 +247,11 @@ struct EvaluationKernel<DerivativeWRT<I>, KernelConfig<Q, geom, test, trials...>
   std::shared_ptr<QuadratureData<qpt_data_type> > data_;     ///< (optional) user-provided quadrature data
 };
 
-// template <int Q, Geometry geom, typename test, typename... trials, typename lambda, typename qpt_data_type>
-// EvaluationKernel(KernelConfig<Q, geom, test, trials...>, const mfem::Vector&, const mfem::Vector&, int, lambda,
-//                 std::shared_ptr<QuadratureData<qpt_data_type> >)
-//    -> EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lambda, qpt_data_type,
-//                        std::make_integer_sequence<int, sizeof...(trials)> >;
-
-template <int i, int Q, Geometry geom, typename test, typename... trials, typename derivatives_type, typename lambda,
-          typename qpt_data_type>
-EvaluationKernel(DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, CPUArrayView<derivatives_type, 2>,
+template <int which, int Q, Geometry geom, typename test, typename... trials, typename derivatives_type,
+          typename lambda, typename qpt_data_type>
+EvaluationKernel(DerivativeWRT<which>, KernelConfig<Q, geom, test, trials...>, CPUArrayView<derivatives_type, 2>,
                  const mfem::Vector&, const mfem::Vector&, int, lambda, std::shared_ptr<QuadratureData<qpt_data_type> >)
-    -> EvaluationKernel<DerivativeWRT<i>, KernelConfig<Q, geom, test, trials...>, derivatives_type, lambda,
+    -> EvaluationKernel<DerivativeWRT<which>, KernelConfig<Q, geom, test, trials...>, derivatives_type, lambda,
                         qpt_data_type, std::make_integer_sequence<int, static_cast<int>(sizeof...(trials))> >;
 
 template <int Q, Geometry geom, typename test, typename... trials, typename lambda, typename qpt_data_type>
