@@ -43,7 +43,7 @@ public:
                   GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
                   mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(3, order, name, pmesh),
-        thermal_(thermal_options, name + "thermal", pmesh),
+        thermal_(thermal_options, name + "thermal", ShapeDisplacement::Off, pmesh),
         solid_(solid_options, geom_nonlin, name + "mechanical", ShapeDisplacement::Off, pmesh)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,

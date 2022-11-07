@@ -92,30 +92,45 @@ template <int order, int dim, typename... parameter_space, int... parameter_indi
 class HeatTransfer<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>
     : public BasePhysics {
 public:
+  //! @cond Doxygen_Suppress
+  static constexpr int  VALUE = 0, DERIVATIVE = 1;
+  static constexpr auto I = Identity<dim>();
+  //! @endcond
+
+  /// @brief The total number of non-parameter state variables (temperature, shape) passed to the FEM
+  /// integrators
+  static constexpr auto NUM_STATE_VARS = 3;
+
   /**
    * @brief Construct a new Thermal Functional Solver object
    *
    * @param[in] options The system linear and nonlinear solver and timestepping parameters
    * @param[in] name An optional name for the physics module instance
    * used by an underlying material model or load
+   * @param calc_shape A flag for computing the shape displacement and associated sensitivity
    * @param[in] pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
-  HeatTransfer(const SolverOptions& options, const std::string& name = {}, mfem::ParMesh* pmesh = nullptr)
+  HeatTransfer(const SolverOptions& options, const std::string& name = {},
+               ShapeDisplacement calc_shape = ShapeDisplacement::Off, mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(2, order, name, pmesh),
-        temperature_(StateManager::newState(FiniteElementState::Options{.order      = order,
-                                                                        .vector_dim = 1,
-                                                                        .ordering   = mfem::Ordering::byNODES,
-                                                                        .name = detail::addPrefix(name, "temperature")},
-                                            sidre_datacoll_id_)),
-        adjoint_temperature_(
-            StateManager::newState(FiniteElementState::Options{.order      = order,
-                                                               .vector_dim = 1,
-                                                               .ordering   = mfem::Ordering::byNODES,
-                                                               .name = detail::addPrefix(name, "adjoint_temperature")},
-                                   sidre_datacoll_id_)),
-        residual_(temperature_.space().TrueVSize()),
+        temperature_(StateManager::newState(
+            FiniteElementState::Options{
+                .order = order, .vector_dim = 1, .name = detail::addPrefix(name, "temperature")},
+            sidre_datacoll_id_)),
+        adjoint_temperature_(StateManager::newState(
+            FiniteElementState::Options{
+                .order = order, .vector_dim = 1, .name = detail::addPrefix(name, "adjoint_temperature")},
+            sidre_datacoll_id_)),
+        shape_displacement_(StateManager::newState(
+            FiniteElementState::Options{
+                .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "shape_displacement")},
+            sidre_datacoll_id_)),
+        shape_sensitivity_(
+            StateManager::newDual(shape_displacement_.space(), detail::addPrefix(name, "shape_sensitivity"))),
+        residual_with_bcs_(temperature_.space().TrueVSize()),
         ode_(temperature_.space().TrueVSize(), {.u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
-             nonlin_solver_, bcs_)
+             nonlin_solver_, bcs_),
+        calc_shape_(calc_shape)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
@@ -123,27 +138,35 @@ public:
     states_.push_back(temperature_);
     states_.push_back(adjoint_temperature_);
 
+    if (calc_shape_ == ShapeDisplacement::On) {
+      states_.push_back(shape_displacement_);
+      duals_.push_back(shape_sensitivity_);
+    }
+
     // Create a pack of the primal field and parameter finite element spaces
-    std::array<const mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + 1> trial_spaces;
+    mfem::ParFiniteElementSpace* test_space = &temperature_.space();
+
+    std::array<const mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + NUM_STATE_VARS> trial_spaces;
     trial_spaces[0] = &temperature_.space();
+    trial_spaces[1] = &temperature_.space();
+    trial_spaces[2] = &shape_displacement_.space();
 
     if constexpr (sizeof...(parameter_space) > 0) {
       tuple<parameter_space...> types{};
       for_constexpr<sizeof...(parameter_space)>([&](auto i) {
         parameter_trial_spaces_[i] = std::unique_ptr<mfem::ParFiniteElementSpace>(
             generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_));
-        trial_spaces[i + 1] = parameter_trial_spaces_[i].get();
+        trial_spaces[i + NUM_STATE_VARS] = parameter_trial_spaces_[i].get();
       });
     }
 
-    M_functional_ = std::make_unique<Functional<test(trial, parameter_space...)>>(&temperature_.space(), trial_spaces);
-
-    K_functional_ = std::make_unique<Functional<test(trial, parameter_space...)>>(&temperature_.space(), trial_spaces);
+    residual_ = std::make_unique<Functional<test(scalar_trial, scalar_trial, vector_trial, parameter_space...)>>(
+        test_space, trial_spaces);
 
     states_.push_back(temperature_);
 
     nonlin_solver_ = mfem_ext::EquationSolver(mesh_.GetComm(), options.linear, options.nonlinear);
-    nonlin_solver_.SetOperator(residual_);
+    nonlin_solver_.SetOperator(residual_with_bcs_);
 
     // Check for dynamic mode
     if (options.dynamic) {
@@ -166,6 +189,8 @@ public:
 
     zero_.SetSize(true_size);
     zero_ = 0.0;
+
+    shape_displacement_ = 0.0;
   }
 
   /**
@@ -234,34 +259,27 @@ public:
   template <int... active_parameters, typename MaterialType>
   void setMaterial(DependsOn<active_parameters...>, MaterialType material)
   {
-    K_functional_->AddDomainIntegral(
-        Dimension<dim>{}, DependsOn<0, active_parameters + 1 ...>{},
-        [material](auto x, auto temperature, auto... params) {
+    residual_->AddDomainIntegral(
+        Dimension<dim>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
+        [material](auto x, auto temperature, auto dtemp_dt, auto shape, auto... params) {
           // Get the value and the gradient from the input tuple
-          auto [u, du_dx] = temperature;
-          auto source     = serac::zero{};
+          auto [u, du_dX] = temperature;
+          auto [p, dp_dX] = shape;
+          auto du_dt      = get<VALUE>(dtemp_dt);
 
-          auto response = material(x, u, du_dx, params...);
+          // Note that the current configuration x = X + p, where X is the original reference
+          // configuration and p is the shape displacement. We need the gradient with
+          // respect to the perturbed reference configuration x = X + p for the material model. Therefore, we calculate
+          // du/dx = du/dX * dX/dx = du/dX * (dx/dX)^-1 = du/dX * (I + dp/dX)^-1
 
-          return serac::tuple{source, -1.0 * response.heat_flux};
-        },
-        mesh_);
+          auto du_dx = dot(du_dX, inv(I + dp_dX));
 
-    M_functional_->AddDomainIntegral(
-        Dimension<dim>{}, DependsOn<0, active_parameters + 1 ...>{},
-        [material](auto x, auto d_temperature_dt, auto... params) {
-          auto [u, du_dx] = d_temperature_dt;
-          auto flux       = serac::zero{};
+          auto response = material(x + p, u, du_dx, params...);
+          auto source   = response.specific_heat_capacity * response.density * du_dt;
 
-          auto temp      = u * 0.0;
-          auto temp_grad = du_dx * 0.0;
-
-          auto response = material(x, temp, temp_grad, params...);
-
-          auto source = response.specific_heat_capacity * response.density * u;
-
-          // Return the source and the flux as a tuple
-          return serac::tuple{source, flux};
+          // Note that the return is integrated in the perturbed reference
+          // configuration, hence the det(I + dp_dx) = det(dx/dX)
+          return serac::tuple{source * det(I + dp_dX), -1.0 * response.heat_flux * det(I + dp_dX)};
         },
         mesh_);
   }
@@ -299,18 +317,23 @@ public:
   template <int... active_parameters, typename SourceType>
   void setSource(DependsOn<active_parameters...>, SourceType source_function)
   {
-    K_functional_->AddDomainIntegral(
-        Dimension<dim>{}, DependsOn<0, active_parameters + 1 ...>{},
-        [source_function, this](auto x, auto temperature, auto... params) {
+    residual_->AddDomainIntegral(
+        Dimension<dim>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
+        [source_function, this](auto x, auto temperature, auto /* dtemp_dt */, auto shape, auto... params) {
           // Get the value and the gradient from the input tuple
-          auto [u, du_dx] = temperature;
+          auto [u, du_dX] = temperature;
+          auto [p, dp_dX] = shape;
+          // Note that the current configuration x = X + p, where X is the original reference
+          // configuration and p is the shape displacement. We need the gradient with
+          // respect to the perturbed reference configuration x = X + p for the material model. Therefore, we calculate
+          // du/dx = du/dX * dX/dx = du/dX * (dx/dX)^-1 = du/dX * (I + dp/dX)^-1
 
-          auto flux = serac::zero{};
+          auto du_dx = dot(du_dX, inv(I + dp_dX));
 
-          auto source = -1.0 * source_function(x, time_, u, du_dx, params...);
+          auto source = -1.0 * source_function(x + p, time_, u, du_dx, params...);
 
           // Return the source and the flux as a tuple
-          return serac::tuple{source, flux};
+          return serac::tuple{source * det(I + dp_dX), serac::zero{}};
         },
         mesh_);
   }
@@ -333,9 +356,13 @@ public:
   template <int... active_parameters, typename FluxType>
   void setFluxBCs(DependsOn<active_parameters...>, FluxType flux_function)
   {
-    K_functional_->AddBoundaryIntegral(
-        Dimension<dim - 1>{}, DependsOn<0, active_parameters + 1 ...>{},
-        [flux_function](auto x, auto n, auto u, auto... params) { return flux_function(x, n, u, params...); }, mesh_);
+    residual_->AddBoundaryIntegral(
+        Dimension<dim - 1>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
+        [flux_function](auto x, auto n, auto u, auto /* dtemp_dt */, auto shape, auto... params) {
+          auto p = get<VALUE>(shape);
+          return flux_function(x + p, n, u, params...);
+        },
+        mesh_);
   }
 
   /// @overload
@@ -344,6 +371,23 @@ public:
   {
     setFluxBCs(DependsOn<>{}, flux_function);
   }
+
+  /**
+   * @brief Set the underlying finite element state to a prescribed shape displacement
+   *
+   * This field will perturb the mesh nodes as required by shape optimization workflows.
+   *
+   * @param shape_disp The function describing the shape displacement field
+   */
+  void setShapeDisplacement(std::function<void(const mfem::Vector& x, mfem::Vector& shape_disp)> shape_disp)
+  {
+    // Project the coefficient onto the grid function
+    mfem::VectorFunctionCoefficient shape_disp_coef(dim, shape_disp);
+    shape_displacement_.project(shape_disp_coef);
+  }
+
+  /// @overload
+  void setShapeDisplacement(FiniteElementState& shape_disp) { shape_displacement_ = shape_disp; }
 
   /**
    * @brief Get the temperature state
@@ -376,55 +420,49 @@ public:
     temperature_.space().BuildDofToArrays();
 
     if (is_quasistatic_) {
-      residual_ = mfem_ext::StdFunctionOperator(
+      residual_with_bcs_ = mfem_ext::StdFunctionOperator(
           temperature_.space().TrueVSize(),
 
           [this](const mfem::Vector& u, mfem::Vector& r) {
-            r = (*K_functional_)(u, *parameter_states_[parameter_indices]...);
+            r = (*residual_)(u, zero_, shape_displacement_, *parameter_states_[parameter_indices]...);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
           [this](const mfem::Vector& u) -> mfem::Operator& {
-            auto [r, drdu] = (*K_functional_)(differentiate_wrt(u), *parameter_states_[parameter_indices]...);
+            auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, shape_displacement_,
+                                          *parameter_states_[parameter_indices]...);
             J_             = assemble(drdu);
-            bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+            J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             return *J_;
           });
 
     } else {
-      // If dynamic, assemble the mass matrix
-      residual_ = mfem_ext::StdFunctionOperator(
+      residual_with_bcs_ = mfem_ext::StdFunctionOperator(
           temperature_.space().TrueVSize(),
+
           [this](const mfem::Vector& du_dt, mfem::Vector& r) {
-            auto M_residual = (*M_functional_)(du_dt, *parameter_states_[parameter_indices]...);
-
-            // TODO we should use the new variadic capability to directly pass temperature and d_temp_dt directly to
-            // these kernels to avoid ugly hacks like this.
-            mfem::Vector K_arg(u_.Size());
             add(1.0, u_, dt_, du_dt, u_predicted_);
-            auto K_residual = (*K_functional_)(u_predicted_, *parameter_states_[parameter_indices]...);
-
-            add(M_residual, K_residual, r);
+            r = (*residual_)(u_predicted_, du_dt, shape_displacement_, *parameter_states_[parameter_indices]...);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
           [this](const mfem::Vector& du_dt) -> mfem::Operator& {
-            // Only reassemble the stiffness if it is a new timestep
-
-            auto M =
-                serac::get<1>((*M_functional_)(differentiate_wrt(du_dt), *parameter_states_[parameter_indices]...));
-            std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
-
-            mfem::Vector K_arg(u_.Size());
             add(1.0, u_, dt_, du_dt, u_predicted_);
 
-            auto K = serac::get<1>(
-                (*K_functional_)(differentiate_wrt(u_predicted_), *parameter_states_[parameter_indices]...));
-
+            // K := dR/du
+            auto K = serac::get<1>((*residual_)(differentiate_wrt(u_predicted_), du_dt, shape_displacement_,
+                                                *parameter_states_[parameter_indices]...));
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
+            // M := dR/du_dot
+            auto M = serac::get<1>((*residual_)(u_predicted_, differentiate_wrt(du_dt), shape_displacement_,
+                                                *parameter_states_[parameter_indices]...));
+            std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
+
+            // J := M + dt K
             J_.reset(mfem::Add(1.0, *m_mat, dt_, *k_mat));
-            bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+            J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+
             return *J_;
           });
     }
@@ -455,7 +493,8 @@ public:
     mfem::HypreParVector adjoint_essential(adjoint_load);
     adjoint_essential = 0.0;
 
-    auto [r, drdu] = (*K_functional_)(differentiate_wrt(temperature_), *parameter_states_[parameter_indices]...);
+    auto [r, drdu] = (*residual_)(differentiate_wrt(temperature_), zero_, shape_displacement_,
+                                  *parameter_states_[parameter_indices]...);
     auto jacobian  = assemble(drdu);
     auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -472,7 +511,7 @@ public:
     lin_solver.Mult(adjoint_load_vector, adjoint_temperature_);
 
     // Reset the equation solver to use the full nonlinear residual operator
-    nonlin_solver_.SetOperator(residual_);
+    nonlin_solver_.SetOperator(residual_with_bcs_);
 
     return adjoint_temperature_;
   }
@@ -489,8 +528,8 @@ public:
   template <int parameter_field>
   FiniteElementDual& computeSensitivity()
   {
-    auto [r, drdparam] = (*K_functional_)(DifferentiateWRT<parameter_field + 1>{}, temperature_,
-                                          *parameter_states_[parameter_indices]...);
+    auto [r, drdparam] = (*residual_)(DifferentiateWRT<parameter_field + NUM_STATE_VARS>{}, temperature_, zero_,
+                                      shape_displacement_, *parameter_states_[parameter_indices]...);
 
     auto drdparam_mat = assemble(drdparam);
 
@@ -499,12 +538,35 @@ public:
     return *parameter_sensitivities_[parameter_field];
   }
 
+  /**
+   * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
+   * problem with respect to the shape displacement field
+   *
+   * @return The sensitivity with respect to the shape displacement
+   *
+   * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
+   */
+  FiniteElementDual& computeShapeSensitivity()
+  {
+    auto drdshape = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<1>{}, temperature_, zero_, shape_displacement_,
+                                                        *parameter_states_[parameter_indices]...));
+
+    auto drdshape_mat = assemble(drdshape);
+
+    drdshape_mat->MultTranspose(adjoint_temperature_, shape_sensitivity_);
+
+    return shape_sensitivity_;
+  }
+
   /// Destroy the Thermal Solver object
   virtual ~HeatTransfer() = default;
 
 protected:
   /// The compile-time finite element trial space for thermal conduction (H1 of order p)
-  using trial = H1<order>;
+  using scalar_trial = H1<order>;
+
+  /// The compile-time finite element trial space for shape displacement (vector H1 of order p)
+  using vector_trial = H1<order, dim>;
 
   /// The compile-time finite element test space for thermal conduction (H1 of order p)
   using test = H1<order>;
@@ -515,11 +577,11 @@ protected:
   /// The adjoint temperature finite element state
   serac::FiniteElementState adjoint_temperature_;
 
-  /// Mass functional object \f$\mathbf{M} = \int_\Omega c_p \, \rho \, \phi_i \phi_j\, dx \f$
-  std::unique_ptr<Functional<test(trial, parameter_space...)>> M_functional_;
+  /// The shape displacement finite element state
+  FiniteElementState shape_displacement_;
 
-  /// Stiffness functional object \f$\mathbf{K} = \int_\Omega \theta \cdot \nabla \phi_i  + f \phi_i \, dx \f$
-  std::unique_ptr<Functional<test(trial, parameter_space...)>> K_functional_;
+  /// serac::Functional that is used to calculate the residual and its derivatives
+  std::unique_ptr<Functional<test(scalar_trial, scalar_trial, vector_trial, parameter_space...)>> residual_;
 
   /// Trial finite element spaces for the functional object
   std::array<std::unique_ptr<mfem::ParFiniteElementSpace>, sizeof...(parameter_space)> parameter_trial_spaces_;
@@ -534,6 +596,9 @@ protected:
    */
   std::array<std::optional<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;
 
+  /// Sensitivity with respect to the shape displacement field
+  FiniteElementDual shape_sensitivity_;
+
   /// Assembled mass matrix
   std::unique_ptr<mfem::HypreParMatrix> M_;
 
@@ -544,7 +609,7 @@ protected:
    * @brief mfem::Operator that describes the weight residual
    * and its gradient with respect to temperature
    */
-  mfem_ext::StdFunctionOperator residual_;
+  mfem_ext::StdFunctionOperator residual_with_bcs_;
 
   /**
    * @brief the ordinary differential equation that describes
@@ -558,6 +623,10 @@ protected:
 
   /// Assembled sparse matrix for the Jacobian
   std::unique_ptr<mfem::HypreParMatrix> J_;
+
+  /// rows and columns of J_ that have been separated out
+  /// because are associated with essential boundary conditions
+  std::unique_ptr<mfem::HypreParMatrix> J_e_;
 
   /// The current timestep
   double dt_;
@@ -576,6 +645,14 @@ protected:
 
   /// Previous value of du_dt used to prime the pump for the nonlinear solver
   mfem::Vector previous_;
+
+  /**
+   * @brief A Flag denoting whether to calculate the shape displacement field or not
+   *
+   * @note This is currently not used as the shape displacement field is always constructed. It is here
+   * to maintain a stable API when this feature is added.
+   */
+  ShapeDisplacement calc_shape_;
 };
 
 }  // namespace serac
