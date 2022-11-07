@@ -97,7 +97,7 @@ public:
   static constexpr auto I = Identity<dim>();
   //! @endcond
 
-  /// @brief The total number of non-parameter state variables (temperature, shape) passed to the FEM
+  /// @brief The total number of non-parameter state variables (temperature, dtemp_dt, shape) passed to the FEM
   /// integrators
   static constexpr auto NUM_STATE_VARS = 3;
 
@@ -279,7 +279,7 @@ public:
 
           // Note that the return is integrated in the perturbed reference
           // configuration, hence the det(I + dp_dx) = det(dx/dX)
-          return serac::tuple{source * det(I + dp_dX), -1.0 * response.heat_flux * det(I + dp_dX)};
+          return serac::tuple{source * det(I + dp_dX), -1.0 * dot(inv(I + dp_dX), response.heat_flux) * det(I + dp_dX)};
         },
         mesh_);
   }
@@ -408,6 +408,16 @@ public:
 
   /// @overload
   serac::FiniteElementState& adjointTemperature() { return adjoint_temperature_; };
+
+  /**
+   * @brief Get the shape displacement state
+   *
+   * @return A reference to the current shape displacement finite element state
+   */
+  const serac::FiniteElementState& shapeDisplacement() const { return shape_displacement_; };
+
+  /// @overload
+  serac::FiniteElementState& shapeDisplacement() { return shape_displacement_; };
 
   /**
    * @brief Complete the initialization and allocation of the data structures.

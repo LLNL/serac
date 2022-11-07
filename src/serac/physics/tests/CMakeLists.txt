@@ -35,6 +35,7 @@ set(solver_tests
     solid.cpp
     solid_shape.cpp
     thermal_legacy.cpp
+    thermal_shape.cpp
     thermal_solid_legacy.cpp
     thermal.cpp
     thermal_mechanics.cpp
