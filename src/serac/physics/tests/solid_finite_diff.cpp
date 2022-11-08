@@ -109,7 +109,7 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
 
   // Construct a dummy adjoint load (this would come from a QOI downstream).
   // This adjoint load is equivalent to a discrete L1 norm on the displacement.
-  serac::FiniteElementDual              adjoint_load(*mesh, solid_solver.displacement().space(), "adjoint_load");
+  serac::FiniteElementDual              adjoint_load(solid_solver.displacement().space(), "adjoint_load");
   std::unique_ptr<mfem::HypreParVector> assembled_vector(adjoint_load_form.ParallelAssemble());
   adjoint_load = *assembled_vector;
 
@@ -235,7 +235,7 @@ TEST(SolidMechanics, FiniteDifferenceShape)
 
   // Construct a dummy adjoint load (this would come from a QOI downstream).
   // This adjoint load is equivalent to a discrete L1 norm on the displacement.
-  serac::FiniteElementDual              adjoint_load(*mesh, solid_solver.displacement().space(), "adjoint_load");
+  serac::FiniteElementDual              adjoint_load(solid_solver.displacement().space(), "adjoint_load");
   std::unique_ptr<mfem::HypreParVector> assembled_vector(adjoint_load_form.ParallelAssemble());
   adjoint_load = *assembled_vector;
 

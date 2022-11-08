@@ -78,18 +78,17 @@ public:
 
   /**
    * @brief Minimal constructor for a FiniteElementVector given a finite element space
-   * @param[in] mesh The problem mesh (object does not take ownership)
    * @param[in] space The space to use for the finite element state. This space is deep copied into the new FE state
    * @param[in] name The name of the field
    */
-  FiniteElementVector(mfem::ParMesh& mesh, const mfem::ParFiniteElementSpace& space, const std::string& name = "");
+  FiniteElementVector(const mfem::ParFiniteElementSpace& space, const std::string& name = "");
 
   /**
    * @brief Copy constructor
    *
    * @param[in] rhs The input vector used for construction
    */
-  FiniteElementVector(const FiniteElementVector& rhs) : FiniteElementVector(rhs.mesh_.get(), *rhs.space_, rhs.name_) {}
+  FiniteElementVector(const FiniteElementVector& rhs) : FiniteElementVector(*rhs.space_, rhs.name_) {}
 
   /**
    * @brief Move construct a new Finite Element Vector object

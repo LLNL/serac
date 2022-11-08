@@ -99,7 +99,7 @@ TEST(Thermal, FiniteDifference)
 
   // Construct a dummy adjoint load (this would come from a QOI downstream).
   // This adjoint load is equivalent to a discrete L1 norm on the temperature.
-  serac::FiniteElementDual              adjoint_load(*mesh, thermal_solver.temperature().space(), "adjoint_load");
+  serac::FiniteElementDual              adjoint_load(thermal_solver.temperature().space(), "adjoint_load");
   std::unique_ptr<mfem::HypreParVector> assembled_vector(adjoint_load_form.ParallelAssemble());
   adjoint_load = *assembled_vector;
 
@@ -214,7 +214,7 @@ TEST(HeatTransfer, FiniteDifferenceShape)
 
   // Construct a dummy adjoint load (this would come from a QOI downstream).
   // This adjoint load is equivalent to a discrete L1 norm on the temperature.
-  serac::FiniteElementDual              adjoint_load(*mesh, thermal_solver.temperature().space(), "adjoint_load");
+  serac::FiniteElementDual              adjoint_load(thermal_solver.temperature().space(), "adjoint_load");
   std::unique_ptr<mfem::HypreParVector> assembled_vector(adjoint_load_form.ParallelAssemble());
   adjoint_load = *assembled_vector;
 

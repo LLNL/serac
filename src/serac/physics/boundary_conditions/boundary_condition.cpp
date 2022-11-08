@@ -79,7 +79,7 @@ void BoundaryCondition::setDofs(mfem::Vector& vector, const double time) const
   SLIC_ERROR_IF(space_.GetTrueVSize() != vector.Size(),
                 "State to project and boundary condition space are not compatible.");
 
-  FiniteElementState state(*space_.GetParMesh(), space_);
+  FiniteElementState state(space_);
 
   // Generate the scalar dof list from the vector dof list
   mfem::Array<int> dof_list(local_dofs_.Size());

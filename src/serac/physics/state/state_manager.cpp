@@ -113,7 +113,7 @@ FiniteElementState StateManager::newState(const mfem::ParFiniteElementSpace& spa
   SLIC_ERROR_ROOT_IF(named_states_.find(state_name) != named_states_.end(),
                      axom::fmt::format("StateManager already contains a state named {}", state_name));
   auto&                  datacoll = datacolls_.at(mesh_tag);
-  auto                   state    = FiniteElementState(mesh(mesh_tag), space, state_name);
+  auto                   state    = FiniteElementState(space, state_name);
   mfem::ParGridFunction* grid_function;
   if (is_restart_) {
     grid_function = datacoll.GetParField(state_name);
@@ -141,7 +141,7 @@ FiniteElementDual StateManager::newDual(const mfem::ParFiniteElementSpace& space
   SLIC_ERROR_ROOT_IF(named_duals_.find(dual_name) != named_duals_.end(),
                      axom::fmt::format("StateManager already contains a dual named {}", dual_name));
   auto&                  datacoll = datacolls_.at(mesh_tag);
-  auto                   dual     = FiniteElementDual(mesh(mesh_tag), space, dual_name);
+  auto                   dual     = FiniteElementDual(space, dual_name);
   mfem::ParGridFunction* grid_function;
   if (is_restart_) {
     grid_function = datacoll.GetParField(dual_name);

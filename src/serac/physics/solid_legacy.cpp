@@ -450,7 +450,7 @@ FiniteElementDual& SolidLegacy::shearModulusSensitivity(mfem::ParFiniteElementSp
   if (!shear_sensitivity_form_ || shear_space) {
     SLIC_ERROR_IF(!shear_space,
                   axom::fmt::format("Finite element space is required for first shear sensitivity call."));
-    shear_sensitivity_      = std::make_unique<FiniteElementDual>(mesh_, *shear_space);
+    shear_sensitivity_      = std::make_unique<FiniteElementDual>(*shear_space);
     shear_sensitivity_form_ = std::make_unique<mfem::ParLinearForm>(&shear_sensitivity_->space());
 
     shear_sensitivity_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*shear_sensitivity_coef_, 2, 2));
@@ -490,7 +490,7 @@ FiniteElementDual& SolidLegacy::bulkModulusSensitivity(mfem::ParFiniteElementSpa
   // element space
   if (!bulk_sensitivity_form_ || bulk_space) {
     SLIC_ERROR_IF(!bulk_space, axom::fmt::format("Finite element space is required for first bulk sensitivity call."));
-    bulk_sensitivity_      = std::make_unique<FiniteElementDual>(mesh_, *bulk_space);
+    bulk_sensitivity_      = std::make_unique<FiniteElementDual>(*bulk_space);
     bulk_sensitivity_form_ = std::make_unique<mfem::ParLinearForm>(&bulk_sensitivity_->space());
 
     bulk_sensitivity_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*bulk_sensitivity_coef_, 2, 2));

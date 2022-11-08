@@ -170,7 +170,7 @@ int main(int argc, char* argv[])
   double deltaT = 1.0;
   std::cout << "expected average vertical displacement: " << alpha0 * deltaT * height << std::endl;
 
-  serac::FiniteElementDual adjoint_load(mesh, simulation.displacement().space(), "adjoint_load");
+  serac::FiniteElementDual adjoint_load(simulation.displacement().space(), "adjoint_load");
   auto                     dqoi_du = get<1>(qoi(DifferentiateWRT<0>{}, simulation.displacement()));
   adjoint_load                     = *assemble(dqoi_du);
 
