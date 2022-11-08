@@ -53,12 +53,14 @@ TEST(HeatTransfer, MoveShape)
   options.nonlinear.abs_tol = 1.0e-14;
   options.nonlinear.rel_tol = 1.0e-14;
 
-  Thermal::LinearIsotropicConductor mat{1.0, 1.0, 1.0};
+  // Define an anisotropic conductor material model
+  tensor<double, 2, 2>          cond{{{5.0, 0.4}, {0.4, 1.0}}};
+  Thermal::LinearConductor<dim> mat(1.0, 1.0, cond);
 
   Thermal::ConstantSource source{1.0};
 
-  double shape_factor_1 = 100.0;
-  double shape_factor_2 = 200.0;
+  double shape_factor_1 = 200.0;
+  double shape_factor_2 = 0.0;
   // Project a non-affine transformation with an affine transformation on the boundary
   mfem::VectorFunctionCoefficient shape_coef(
       2, [shape_factor_1, shape_factor_2](const mfem::Vector& x, mfem::Vector& shape) {

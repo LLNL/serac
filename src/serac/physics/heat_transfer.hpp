@@ -279,7 +279,8 @@ public:
 
           // Note that the return is integrated in the perturbed reference
           // configuration, hence the det(I + dp_dx) = det(dx/dX)
-          return serac::tuple{source * det(I + dp_dX), -1.0 * dot(inv(I + dp_dX), response.heat_flux) * det(I + dp_dX)};
+          return serac::tuple{source * det(I + dp_dX),
+                              -1.0 * dot(response.heat_flux, inv(transpose(I + dp_dX))) * det(I + dp_dX)};
         },
         mesh_);
   }
