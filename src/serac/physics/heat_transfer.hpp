@@ -353,6 +353,10 @@ public:
    * @param flux_function A function describing the thermal flux applied to a boundary
    *
    * @pre FluxType must have the operator (x, normal, temperature) to return the thermal flux value
+   *
+   * @note: until mfem::GetFaceGeometricFactors implements their JACOBIANS option,
+   * (or we implement a replacement kernel ourselves) we are not able to compute
+   * shape sensitivities for boundary integrals.
    */
   template <int... active_parameters, typename FluxType>
   void setFluxBCs(DependsOn<active_parameters...>, FluxType flux_function)
