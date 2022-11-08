@@ -45,11 +45,10 @@ TEST(HeatTransfer, MoveShape)
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
-  // Use a krylov solver for the Jacobian solve
+  // Use a direct solver for the Jacobian solve
   SolverOptions options = {DirectSolverOptions{}, Thermal::defaultNonlinearOptions()};
 
   // Use tight tolerances as this is a machine precision test
-
   options.nonlinear.abs_tol = 1.0e-14;
   options.nonlinear.rel_tol = 1.0e-14;
 
@@ -61,7 +60,7 @@ TEST(HeatTransfer, MoveShape)
 
   double shape_factor_1 = 200.0;
   double shape_factor_2 = 0.0;
-  // Project a non-affine transformation with an affine transformation on the boundary
+  // Project a non-affine transformation
   mfem::VectorFunctionCoefficient shape_coef(
       2, [shape_factor_1, shape_factor_2](const mfem::Vector& x, mfem::Vector& shape) {
         shape[0] = x[1] * shape_factor_1;
@@ -69,15 +68,15 @@ TEST(HeatTransfer, MoveShape)
       });
 
   // Define the function for the initial temperature and boundary condition
-  auto one = [](const mfem::Vector&, double) -> double { return 0.0; };
+  auto zero = [](const mfem::Vector&, double) -> double { return 0.0; };
 
   {
-    // Construct a functional-based solid mechanics solver including references to the shape velocity field.
+    // Construct a functional-based thermal solver including references to the shape displacement field.
     HeatTransfer<p, dim> thermal_solver(options, "thermal_shape", ShapeDisplacement::On);
 
-    // Set the initial displacement and boundary condition
-    thermal_solver.setTemperatureBCs(ess_bdr, one);
-    thermal_solver.setTemperature(one);
+    // Set the initial temperature and boundary condition
+    thermal_solver.setTemperatureBCs(ess_bdr, zero);
+    thermal_solver.setTemperature(zero);
 
     thermal_solver.shapeDisplacement().project(shape_coef);
 
@@ -105,7 +104,7 @@ TEST(HeatTransfer, MoveShape)
   serac::StateManager::setMesh(std::move(new_mesh));
 
   {
-    // Construct and initialized the user-defined shape velocity to offset the computational mesh
+    // Construct and initialized the user-defined shape displacement to offset the computational mesh
     FiniteElementState user_defined_shape_displacement(StateManager::newState(
         FiniteElementState::Options{.order = p, .vector_dim = dim, .name = "parameterized_shape"}));
 
@@ -116,12 +115,12 @@ TEST(HeatTransfer, MoveShape)
     auto* mesh_nodes = StateManager::mesh().GetNodes();
     *mesh_nodes += user_defined_shape_displacement.gridFunction();
 
-    // Construct a functional-based solid mechanics solver including references to the shape velocity field.
+    // Construct a functional-based thermal solver including references to the shape displacement field.
     HeatTransfer<p, dim> thermal_solver_no_shape(options, "thermal_pure", ShapeDisplacement::Off);
 
-    // Set the initial displacement and boundary condition
-    thermal_solver_no_shape.setTemperatureBCs(ess_bdr, one);
-    thermal_solver_no_shape.setTemperature(one);
+    // Set the initial temperature and boundary condition
+    thermal_solver_no_shape.setTemperatureBCs(ess_bdr, zero);
+    thermal_solver_no_shape.setTemperature(zero);
 
     thermal_solver_no_shape.setMaterial(mat);
 

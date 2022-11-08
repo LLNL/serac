@@ -208,12 +208,12 @@ TEST(HeatTransfer, FiniteDifferenceShape)
   thermal_solver.outputState();
 
   // Make up an adjoint load which can also be viewed as a
-  // sensitivity of some qoi with respect to displacement
+  // sensitivity of some qoi with respect to temperature
   mfem::ParLinearForm adjoint_load_form(&thermal_solver.temperature().space());
   adjoint_load_form = 1.0;
 
   // Construct a dummy adjoint load (this would come from a QOI downstream).
-  // This adjoint load is equivalent to a discrete L1 norm on the displacement.
+  // This adjoint load is equivalent to a discrete L1 norm on the temperature.
   serac::FiniteElementDual              adjoint_load(*mesh, thermal_solver.temperature().space(), "adjoint_load");
   std::unique_ptr<mfem::HypreParVector> assembled_vector(adjoint_load_form.ParallelAssemble());
   adjoint_load = *assembled_vector;
@@ -224,9 +224,9 @@ TEST(HeatTransfer, FiniteDifferenceShape)
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
   [[maybe_unused]] auto& sensitivity = thermal_solver.computeShapeSensitivity();
 
-  // Perform finite difference on each shape velocity value
+  // Perform finite difference on each shape displacement value
   // to check if computed qoi sensitivity is consistent
-  // with finite difference on the displacement
+  // with finite difference on the temperature
   double eps = 1.0e-6;
   for (int i = 0; i < shape_displacement.Size(); ++i) {
     // Perturb the shape field
@@ -234,27 +234,27 @@ TEST(HeatTransfer, FiniteDifferenceShape)
     thermal_solver.setShapeDisplacement(shape_displacement);
 
     thermal_solver.advanceTimestep(dt);
-    mfem::ParGridFunction displacement_plus = thermal_solver.temperature().gridFunction();
+    mfem::ParGridFunction temperature_plus = thermal_solver.temperature().gridFunction();
 
     shape_displacement(i) = shape_displacement_value - eps;
     thermal_solver.setShapeDisplacement(shape_displacement);
 
     thermal_solver.advanceTimestep(dt);
-    mfem::ParGridFunction displacement_minus = thermal_solver.temperature().gridFunction();
+    mfem::ParGridFunction temperature_minus = thermal_solver.temperature().gridFunction();
 
     // Reset to the original bulk modulus value
     shape_displacement(i) = shape_displacement_value;
     thermal_solver.setShapeDisplacement(shape_displacement);
 
     // Finite difference to compute sensitivity of displacement with respect to bulk modulus
-    mfem::ParGridFunction ddisp_dshape(&thermal_solver.temperature().space());
-    for (int i2 = 0; i2 < displacement_plus.Size(); ++i2) {
-      ddisp_dshape(i2) = (displacement_plus(i2) - displacement_minus(i2)) / (2.0 * eps);
+    mfem::ParGridFunction dtemp_dshape(&thermal_solver.temperature().space());
+    for (int i2 = 0; i2 < temperature_plus.Size(); ++i2) {
+      dtemp_dshape(i2) = (temperature_plus(i2) - temperature_minus(i2)) / (2.0 * eps);
     }
 
     // Compute numerical value of sensitivity of qoi with respect to bulk modulus
     // by taking the inner product between adjoint load and displacement sensitivity
-    double dqoi_dshape = adjoint_load_form(ddisp_dshape);
+    double dqoi_dshape = adjoint_load_form(dtemp_dshape);
 
     // See if these are similar
     SLIC_INFO(axom::fmt::format("dqoi_dshape: {}", dqoi_dshape));
