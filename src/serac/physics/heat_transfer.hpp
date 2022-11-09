@@ -179,6 +179,9 @@ public:
     parameter_states_[i] = &parameter_state;
     parameter_sensitivities_[i] =
         StateManager::newDual(parameter_state.space(), parameter_state.name() + "_sensitivity");
+
+    // Add the parameter to the BasePhysics containers for output
+    states_.push_back(parameter_state);
     duals_.push_back(*parameter_sensitivities_[i]);
   }
 
