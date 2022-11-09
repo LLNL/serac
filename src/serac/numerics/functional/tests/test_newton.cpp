@@ -17,6 +17,12 @@ T f(T x)
 }
 
 template <typename T>
+T g(T x, double p)
+{
+    return x*x - p;
+}
+
+template <typename T>
 T function_that_kills_newton(T x)
 {
     return sin(x) + x;
@@ -33,15 +39,27 @@ TEST(ScalarEquationSolver, Converges)
     EXPECT_LT(error, tolerance);
 }
 
-TEST(ScalarEquationSolver, AbortsIfRootNotBracketedByCaller)
+TEST(ScalarEquationSolver, WorksWithParameter)
 {
-    double x0 = 5.0;
+    double x0 = 2.0;
     double tolerance = 1e-8;
-    double lower = 2.0;
-    double upper = 10.0;
-    double x = solve_scalar_equation([](auto x){ return f(x);}, x0, tolerance, lower, upper);
-    std::cout << "x = " << x << std::endl;
+    double lower = 1e-3;
+    double upper = 2.5;
+    double p = 2.0;
+    double x = solve_scalar_equation([](auto x, auto a){ return g(x, a);}, x0, tolerance, lower, upper, p);
+    double error = std::abs((x - std::sqrt(p))/std::sqrt(p));
+    EXPECT_LT(error, tolerance);
 }
+
+// TEST(ScalarEquationSolver, AbortsIfRootNotBracketedByCaller)
+// {
+//     double x0 = 5.0;
+//     double tolerance = 1e-8;
+//     double lower = 2.0;
+//     double upper = 10.0;
+//     double x = solve_scalar_equation([](auto x){ return f(x);}, x0, tolerance, lower, upper);
+//     std::cout << "x = " << x << std::endl;
+// }
 
 TEST(ScalarEquationSolver, ConvergesWithGuessOutsideNewtonBasin)
 {

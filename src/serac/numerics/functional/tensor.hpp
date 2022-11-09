@@ -1625,11 +1625,12 @@ SERAC_HOST_DEVICE constexpr auto make_dual(const tensor<double, n...>& A)
 
 
 /* differentiable Newton solver for scalar-valued equations */
-template <typename function>
-double solve_scalar_equation(function && f, double x0, double tolerance, double lower_bound, double upper_bound)
+template <typename function, typename... ParamTypes>
+double solve_scalar_equation(function && f, double x0, double tolerance,
+                             double lower_bound, double upper_bound, ParamTypes... p)
 {
-  double fl = f(lower_bound);
-  double fh = f(upper_bound);
+  double fl = f(lower_bound, p...);
+  double fh = f(upper_bound, p...);
 
   SLIC_WARNING_IF(fl*fh > 0, "solve_scalar_equation: root not bracketed by input bounds.");
 
@@ -1656,7 +1657,7 @@ double solve_scalar_equation(function && f, double x0, double tolerance, double 
   auto x = x0;
   double dx_old = std::abs(upper_bound - lower_bound);
   double dx = dx_old;
-  auto [fval, df_dx] = f(make_dual(x));
+  auto [fval, df_dx] = f(make_dual(x), p...);
   for (int i = 0; i < MAX_ITERATIONS; i++) {
     // use bisection if Newton oversteps brackets or is not decreasing sufficiently
     if ((x - xh)*df_dx - fval > 0 ||
@@ -1674,12 +1675,13 @@ double solve_scalar_equation(function && f, double x0, double tolerance, double 
       if (x == temp) return x;
     }
 
-    std::cout << "iter " << i << " x = " << x << std::endl;
+    // std::cout << "iter " << i << " x = " << x << std::endl;
+
     // convergence check
     if (std::abs(dx) < tolerance) return x;
     
     // function and jacobian evaluation
-    auto R = f(make_dual(x));
+    auto R = f(make_dual(x), p...);
     fval = get_value(R);
     df_dx = get_gradient(R);
 
