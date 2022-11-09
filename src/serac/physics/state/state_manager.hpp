@@ -131,12 +131,19 @@ public:
 
   /**
    * @brief Resets the underlying global datacollection object
+   *
+   * @details After this method, the StateManager is in the same state
+   * that it would be after the program started and before any
+   * StateManager methods have been called. If the client wants to use
+   * StateManager after a call to reset(), the initialize() method
+   * must be called.
    */
   static void reset()
   {
     named_states_.clear();
     named_duals_.clear();
     datacolls_.clear();
+    output_dir_.clear();
     is_restart_ = false;
     ds_         = nullptr;
   };

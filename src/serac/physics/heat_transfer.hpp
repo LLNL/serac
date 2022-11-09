@@ -20,7 +20,6 @@
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/physics/state/state_manager.hpp"
-#include "serac/physics/materials/material_utils.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
 
 namespace serac {
@@ -180,6 +179,9 @@ public:
     parameter_states_[i] = &parameter_state;
     parameter_sensitivities_[i] =
         StateManager::newDual(parameter_state.space(), parameter_state.name() + "_sensitivity");
+
+    // Add the parameter to the BasePhysics containers for output
+    states_.push_back(parameter_state);
     duals_.push_back(*parameter_sensitivities_[i]);
   }
 
@@ -300,23 +302,15 @@ public:
   template <int... active_parameters, typename SourceType>
   void setSource(DependsOn<active_parameters...>, SourceType source_function)
   {
-    if constexpr (is_parameterized<SourceType>::value) {
-      static_assert(source_function.numParameters() == sizeof...(parameter_space),
-                    "Number of parameters in thermal conduction does not equal the number of parameters in the "
-                    "thermal source.");
-    }
-
-    auto parameterized_source = parameterizeSource(source_function);
-
     K_functional_->AddDomainIntegral(
         Dimension<dim>{}, DependsOn<0, active_parameters + 1 ...>{},
-        [parameterized_source, this](auto x, auto temperature, auto... params) {
+        [source_function, this](auto x, auto temperature, auto... params) {
           // Get the value and the gradient from the input tuple
           auto [u, du_dx] = temperature;
 
           auto flux = serac::zero{};
 
-          auto source = -1.0 * parameterized_source(x, time_, u, du_dx, serac::get<0>(params)...);
+          auto source = -1.0 * source_function(x, time_, u, du_dx, params...);
 
           // Return the source and the flux as a tuple
           return serac::tuple{source, flux};
