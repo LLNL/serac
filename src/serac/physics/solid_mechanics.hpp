@@ -225,7 +225,7 @@ public:
    * @param parameter_state the values to use for the specified parameter
    * @param i the index of the parameter
    */
-  void setParameter(const FiniteElementState& parameter_state, size_t i)
+  void setParameter(FiniteElementState& parameter_state, size_t i)
   {
     parameter_states_[i] = &parameter_state;
     parameter_sensitivities_[i] =
@@ -857,7 +857,7 @@ protected:
   std::unique_ptr<mfem_ext::StdFunctionOperator> residual_with_bcs_;
 
   /// The finite element states representing user-defined parameter fields
-  std::array<const FiniteElementState*, sizeof...(parameter_space)> parameter_states_;
+  std::array<FiniteElementState*, sizeof...(parameter_space)> parameter_states_;
 
   /// The trial spaces used for the Functional object
   std::array<std::unique_ptr<mfem::ParFiniteElementSpace>, sizeof...(parameter_space)> parameter_trial_spaces_;
