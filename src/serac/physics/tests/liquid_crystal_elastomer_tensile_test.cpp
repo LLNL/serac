@@ -165,8 +165,8 @@ SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver({default_linear
   solid_solver.setDisplacementBCs({5}, zeroFunc, 0); // back face z-dir disp = 0
 
 #ifdef LOAD_DRIVEN
-  // auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.00000001; };
-  auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0000000001; };
+  auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0001; };
+  // auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0000000001; };
 
   double iniLoadVal = 7.0e-4;
   double maxLoadVal = 1.3e0;
