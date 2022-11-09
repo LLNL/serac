@@ -1625,16 +1625,13 @@ SERAC_HOST_DEVICE constexpr auto make_dual(const tensor<double, n...>& A)
 
 
 /* differentiable Newton solver for scalar-valued equations */
-double solve_scalar_equation(std::function<dual<double>(dual<double>)> f, double x0, double tolerance, double lower_bound, double upper_bound)
+template <typename function>
+double solve_scalar_equation(function && f, double x0, double tolerance, double lower_bound, double upper_bound)
 {
-  double fl = get_value(f(make_dual(lower_bound)));
-  double fh = get_value(f(make_dual(upper_bound)));
+  double fl = f(lower_bound);
+  double fh = f(upper_bound);
 
-  // Check that root is bracketed
-  if (fl*fh > 0) {
-    // How do we handle errors in serac?
-    std::abort();
-  }
+  SLIC_WARNING_IF(fl*fh > 0, "solve_scalar_equation: root not bracketed by input bounds.");
 
   // handle corner case where one of the brackets is the root
   if (fl == 0) {
@@ -1662,14 +1659,14 @@ double solve_scalar_equation(std::function<dual<double>(dual<double>)> f, double
   auto [fval, df_dx] = f(make_dual(x));
   for (int i = 0; i < MAX_ITERATIONS; i++) {
     // use bisection if Newton oversteps brackets or is not decreasing sufficiently
-    if (((x - xh)*df_dx - fval) > 0 ||
-        ((x - xl)*df_dx - fval) < 0 ||
-        (std::abs(2.*fval) > dx_old*df_dx)) {
+    if ((x - xh)*df_dx - fval > 0 ||
+        (x - xl)*df_dx - fval < 0 ||
+        std::abs(2.*fval) > dx_old*df_dx) {
       dx_old = dx;
       dx = 0.5*(xh - xl);
       x = xl + dx;
       if (x == xl) return x;
-    } else {
+    } else { // use Newton step
       dx_old = dx;
       dx = fval/df_dx;
       auto temp = x;
@@ -1677,6 +1674,7 @@ double solve_scalar_equation(std::function<dual<double>(dual<double>)> f, double
       if (x == temp) return x;
     }
 
+    std::cout << "iter " << i << " x = " << x << std::endl;
     // convergence check
     if (std::abs(dx) < tolerance) return x;
     
@@ -1693,7 +1691,8 @@ double solve_scalar_equation(std::function<dual<double>(dual<double>)> f, double
     }
   }
   // if control flow reaches here, Newton didn't converge in allotted iterations
-  std::abort();
+  SLIC_WARNING("solve_scalar_equation failed to converge in allotted iterations.");
+  return x;
 }
 
 /// @cond
