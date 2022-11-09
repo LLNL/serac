@@ -141,13 +141,13 @@ int main(int argc, char* argv[]) {
   solid_solver.setParameter(gamma, GAMMA_INDEX);
 
   double density = 1.0;
-  double E = 1.0;
-  double nu = 0.49;
+  double E = 1.0e-1; // 1.0;
+  double nu = 0.38; // 0.49;
   double shear_modulus = 0.5*E/(1.0 + nu);
   double bulk_modulus = E / 3.0 / (1.0 - 2.0*nu);
-  double order_constant = 6.0;
-  double order_parameter = 0.7;
-  double transition_temperature = 370.0;
+  double order_constant = 10; // 6.0;
+  double order_parameter = 0.95; // 0.7;
+  double transition_temperature = 348; // 370.0;
   double Nb2 = 1.0;
   
   LiquidCrystalElastomer mat(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, Nb2);
