@@ -1623,6 +1623,79 @@ SERAC_HOST_DEVICE constexpr auto make_dual(const tensor<double, n...>& A)
   return A_dual;
 }
 
+
+/* differentiable Newton solver for scalar-valued equations */
+double solve_scalar_equation(std::function<dual<double>(dual<double>)> f, double x0, double tolerance, double lower_bound, double upper_bound)
+{
+  double fl = get_value(f(make_dual(lower_bound)));
+  double fh = get_value(f(make_dual(upper_bound)));
+
+  // Check that root is bracketed
+  if (fl*fh > 0) {
+    // How do we handle errors in serac?
+    std::abort();
+  }
+
+  // handle corner case where one of the brackets is the root
+  if (fl == 0) {
+    return lower_bound;
+  } else if (fh == 0) {
+    return upper_bound;
+  }
+
+  // orient search so that f(xl) < 0
+  double xl = lower_bound;
+  double xh = upper_bound;
+  if (fl > 0) {
+    xl = upper_bound;
+    xh = lower_bound;
+  }
+
+  // move initial guess if it is not between brackets
+  if (x0 < lower_bound || x0 > upper_bound) {
+    x0 = 0.5*(lower_bound + upper_bound);
+  }
+  const int MAX_ITERATIONS = 25;
+  auto x = x0;
+  double dx_old = std::abs(upper_bound - lower_bound);
+  double dx = dx_old;
+  auto [fval, df_dx] = f(make_dual(x));
+  for (int i = 0; i < MAX_ITERATIONS; i++) {
+    // use bisection if Newton oversteps brackets or is not decreasing sufficiently
+    if (((x - xh)*df_dx - fval) > 0 ||
+        ((x - xl)*df_dx - fval) < 0 ||
+        (std::abs(2.*fval) > dx_old*df_dx)) {
+      dx_old = dx;
+      dx = 0.5*(xh - xl);
+      x = xl + dx;
+      if (x == xl) return x;
+    } else {
+      dx_old = dx;
+      dx = fval/df_dx;
+      auto temp = x;
+      x -= dx;
+      if (x == temp) return x;
+    }
+
+    // convergence check
+    if (std::abs(dx) < tolerance) return x;
+    
+    // function and jacobian evaluation
+    auto R = f(make_dual(x));
+    fval = get_value(R);
+    df_dx = get_gradient(R);
+
+    // maintain bracket on root
+    if (fval < 0) {
+      xl = x;
+    } else {
+      xh = x;
+    }
+  }
+  // if control flow reaches here, Newton didn't converge in allotted iterations
+  std::abort();
+}
+
 /// @cond
 namespace detail {
 
