@@ -219,19 +219,6 @@ public:
   /// @brief Destroy the SolidMechanics Functional object
   ~SolidMechanics() {}
 
-  /**
-   * @brief register the provided FiniteElementState object as the source of values for parameter `i`
-   *
-   * @param parameter_state the values to use for the specified parameter
-   * @param i the index of the parameter
-   */
-  void setParameter(const FiniteElementState& parameter_state, size_t i)
-  {
-    parameter_states_[i] = &parameter_state;
-    parameter_sensitivities_[i] =
-        StateManager::newDual(parameter_state.space(), parameter_state.name() + "_sensitivity");
-    duals_.push_back(*parameter_sensitivities_[i]);
-  }
 
   /**
    * @brief Create a shared ptr to a quadrature data buffer for the given material type

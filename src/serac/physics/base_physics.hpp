@@ -57,13 +57,6 @@ public:
   BasePhysics(BasePhysics&& other) = default;
 
   /**
-   * @brief Get the list of state variable grid functions
-   *
-   * @return the current vector of finite element states
-   */
-  virtual const std::vector<std::reference_wrapper<serac::FiniteElementState>>& getState() const;
-
-  /**
    * @brief Set the current time
    *
    * @param[in] time The time
@@ -98,6 +91,90 @@ public:
    * enables it to be run through a timestepping loop
    */
   virtual void completeSetup() = 0;
+
+  /**
+   * @brief Generate a finite element state object for the given parameter index
+   * 
+   * @param parameter_index The index of the parameter to generate
+   */
+  virtual std::unique_ptr<FiniteElementState> generateParameter(int parameter_index)
+  {
+    SLIC_ERROR_ROOT(axom::fmt::format("Parameter generation not defined for physics module {}", name_));
+  }
+
+  /**
+   * @brief Accessor for getting named finite element state fields from the physics modules
+   * 
+   * @param state_name The name of the Finite Element State to retrieve
+   * @return The named Finite Element State
+   */
+  virtual const FiniteElementState& getState(const std::string& state_name) = 0;
+
+  /**
+   * @brief Get the parameter field of the physics module
+   * 
+   * @param parameter_index The parameter index to retrieve
+   * @return The FiniteElementState representing the user-defined parameter
+   */
+  virtual FiniteElementState& getParameter(size_t parameter_index) 
+  {
+    SLIC_ERROR_ROOT_IF(parameter_index >= parameter_states_.size(),
+                       axom::fmt::format("Parameter index {} is not available in physics module {}", parameter_index, name_));
+    SLIC_ERROR_ROOT_IF(!parameter_states_[parameter_index],
+                       axom::fmt::format("Parameter index {} is not set in physics module {}", parameter_index, name_));
+    return *parameter_states_[parameter_index]; 
+  }
+
+  /// @overload
+  virtual const FiniteElementState& getParameter(size_t parameter_index) const
+  {
+    SLIC_ERROR_ROOT_IF(parameter_index >= parameter_states_.size(),
+                       axom::fmt::format("Parameter index {} is not available in physics module {}", parameter_index, name_));
+    SLIC_ERROR_ROOT_IF(!parameter_states_[parameter_index],
+                       axom::fmt::format("Parameter index {} is not set in physics module {}", parameter_index, name_));
+    return *parameter_states_[parameter_index]; 
+  }
+
+  /**
+   * @brief Get the sensitivity of a parameter field of the physics module
+   * 
+   * @param parameter_index The parameter index to retrieve
+   * @return The FiniteElementDual representing the sensitivity of the user-defined parameter
+   */
+  virtual FiniteElementDual& getParameterSensitivity(size_t parameter_index) 
+  {
+    SLIC_ERROR_ROOT_IF(parameter_index >= parameter_sensitivities_.size(),
+                       axom::fmt::format("Sensitivity of parameter index {} is not available in physics module {}", parameter_index, name_));
+    SLIC_ERROR_ROOT_IF(!parameter_sensitivities_[parameter_index],
+                       axom::fmt::format("Sensitivity of parameter index {} is not set in physics module {}", parameter_index, name_));
+    return *parameter_sensitivities_[parameter_index]; 
+  }
+
+  virtual const FiniteElementDual& getParameterSensitivity(size_t parameter_index) const 
+  {
+    SLIC_ERROR_ROOT_IF(parameter_index >= parameter_sensitivities_.size(),
+                       axom::fmt::format("Sensitivity of parameter index {} is not available in physics module {}", parameter_index, name_));
+    SLIC_ERROR_ROOT_IF(!parameter_sensitivities_[parameter_index],
+                       axom::fmt::format("Sensitivity of parameter index {} is not set in physics module {}", parameter_index, name_));
+    return *parameter_sensitivities_[parameter_index]; 
+  }
+
+  /**
+   * @brief register the provided FiniteElementState object as the source of values for parameter `i`
+   *
+   * @param parameter_state the values to use for the specified parameter
+   * @param parameter_index the index of the parameter
+   */
+  void setParameter(FiniteElementState& parameter_state, size_t parameter_index)
+  {
+    SLIC_ERROR_ROOT_IF(parameter_index >= parameter_states_.size(),
+                       axom::fmt::format("Parameter index {} is not available in physics module {}", parameter_index, name_));
+    SLIC_ERROR_ROOT_IF(parameter_index >= parameter_sensitivities_.size(),
+                       axom::fmt::format("Sensitivity of parameter index {} is not available in physics module {}", parameter_index, name_));
+    parameter_states_[parameter_index] = &parameter_state;
+    parameter_sensitivities_[parameter_index] =
+        StateManager::newDual(parameter_state.space(), parameter_state.name() + "_sensitivity");
+  }
 
   /**
    * @brief Advance the state variables according to the chosen time integrator
@@ -161,12 +238,22 @@ protected:
   /**
    * @brief List of finite element states associated with this physics module
    */
-  std::vector<std::reference_wrapper<serac::FiniteElementState>> states_;
+  std::vector<serac::FiniteElementState*> states_;
 
   /**
    * @brief List of finite element duals associated with this physics module
    */
-  std::vector<std::reference_wrapper<serac::FiniteElementDual>> duals_;
+  std::vector<serac::FiniteElementDual*> duals_;
+
+  /// The finite element states representing user-defined parameter fields
+  std::vector<serac::FiniteElementState*> parameter_states_;
+
+  /**
+   * @brief The sensitivities (dual vectors) with repect to each of the input parameter fields
+   * @note this is a vector of optionals as FiniteElementDual is not default constructable and
+   * we want to set this during the setParameter method.
+   */
+  std::vector<std::optional<FiniteElementDual>> parameter_sensitivities_;
 
   /**
    * @brief Block vector storage of the true state
@@ -227,6 +314,9 @@ protected:
    * @brief Boundary condition manager instance
    */
   BoundaryConditionManager bcs_;
+
+  /// @brief Number of expected parameters of the physics module instance
+  int num_parameters_ = 0;
 };
 
 namespace detail {

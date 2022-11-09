@@ -524,15 +524,6 @@ protected:
   /// Trial finite element spaces for the functional object
   std::array<std::unique_ptr<mfem::ParFiniteElementSpace>, sizeof...(parameter_space)> parameter_trial_spaces_;
 
-  /// The finite element states representing user-defined parameter fields
-  std::array<const FiniteElementState*, sizeof...(parameter_space)> parameter_states_;
-
-  /**
-   * @brief The sensitivities (dual vectors) with repect to each of the input parameter fields
-   * @note this is an array of optionals as FiniteElementDual is not default constructable and
-   * we want to set this during the setParameter method.
-   */
-  std::array<std::optional<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;
 
   /// Assembled mass matrix
   std::unique_ptr<mfem::HypreParMatrix> M_;
