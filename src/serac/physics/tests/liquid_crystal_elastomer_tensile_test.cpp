@@ -35,11 +35,12 @@ int main(int argc, char* argv[]) {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   axom::slic::SimpleLogger logger;
+  axom::slic::setIsRoot(rank == 0);
 
   constexpr int p = 1;
   constexpr int dim = 3;
   
-  int num_steps = 10;
+  int num_steps = 20;
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -126,7 +127,7 @@ int main(int argc, char* argv[]) {
                                                        .lin_solver  = LinearSolver::GMRES,
                                                        .prec        = HypreBoomerAMGPrec{}};
   NonlinearSolverOptions default_nonlinear_options = {
-    .rel_tol = 1.0e-4, .abs_tol = 1.0e-7, .max_iter = 5, .print_level = 1};
+    .rel_tol = 1.0e-4, .abs_tol = 1.0e-7, .max_iter = 7, .print_level = 1};
 SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver({default_linear_options, default_nonlinear_options}, GeometricNonlinearities::Off,
                                        "lce_solid_functional");
   // SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver(solid_mechanics::default_static_options, GeometricNonlinearities::Off,
@@ -164,10 +165,12 @@ SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver({default_linear
   solid_solver.setDisplacementBCs({5}, zeroFunc, 0); // back face z-dir disp = 0
 
 #ifdef LOAD_DRIVEN
-  auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.00000001; };
+  // auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.00000001; };
+  auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0000000001; };
 
-  double iniLoadVal = 8.0e-5;
-  double loadVal = iniLoadVal;
+  double iniLoadVal = 7.0e-4;
+  double maxLoadVal = 1.3e0;
+  double loadVal = iniLoadVal + 0.0 * maxLoadVal;
   solid_solver.setPiolaTraction([&loadVal](auto x, auto /*n*/, auto /*t*/){
 
     return tensor<double, 3>{0, loadVal * (x[1]>4.95), 0};
@@ -194,7 +197,7 @@ SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver({default_linear
   double dt = tmax / num_steps;
   bool outputDispInfo(true);
 
-  for (int i = 0; i < num_steps; i++) 
+  for (int i = 0; i < (num_steps+1); i++) 
   {
     if(rank==0)
     {
@@ -203,6 +206,7 @@ SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver({default_linear
       << "\n... At time: "<< t
 #ifdef LOAD_DRIVEN
       << "\n... And with a tension load of: " << loadVal
+      << "\n... And with uniform temperature of: " << initial_temperature
 #else
       << "\n... And with uniform temperature of: " << initial_temperature * (1.0 - (t / tmax)) + final_temperature * (t / tmax) 
 #endif
@@ -253,11 +257,17 @@ SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver({default_linear
         <<"\n... Max Z displacement: " << gblDispZmax
         << std::endl;
       }
+
+      if(gblDispYmax>1e10)
+      {
+        std::cout << "... Solution blew up... Check (maybe reduce) initial displacement." << std::endl;
+        exit(1);
+      }
     }
 
     t += dt;
 #ifdef LOAD_DRIVEN
-    loadVal = loadVal * ( 5.5 * t / tmax);
+    loadVal = iniLoadVal +  t / tmax * (maxLoadVal - iniLoadVal);
 #else
     temperature = initial_temperature * (1.0 - (t / tmax)) + final_temperature * (t / tmax);
 #endif
