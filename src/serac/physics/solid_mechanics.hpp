@@ -349,6 +349,16 @@ public:
    * @tparam MaterialType The solid material type
    * @tparam StateType the type that contains the internal variables for MaterialType
    * @param material A material that provides a function to evaluate stress
+   * @pre body_force must be a object that can be called with the following arguments:
+   *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
+   *    2. `double t` the time (note: time will be handled differently in the future)
+   *    3+. `tuple{value, derivative}`, a tuple of values and derivatives for each of the trial spaces
+   *            specified in the `DependsOn<...>` argument. 
+   *
+   *    The actual types of these arguments will be `double`, `tensor<double, ... >` or tuples thereof
+   *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
+   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` -> `tensor<dual<...>, 3>`) 
+   *
    * @param qdata the buffer of material internal variables at each quadrature point
    *
    * @pre MaterialType must have a public member variable `density`
@@ -459,7 +469,15 @@ public:
    * @brief Set the body forcefunction
    *
    * @tparam BodyForceType The type of the body force load
-   * @param body_force A source function for a prescribed body load
+   * @pre body_force must be a object that can be called with the following arguments:
+   *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
+   *    2. `double t` the time (note: time will be handled differently in the future)
+   *    3+. `tuple{value, derivative}`, a tuple of values and derivatives for each of the trial spaces
+   *            specified in the `DependsOn<...>` argument. 
+   *
+   *    The actual types of these arguments will be `double`, `tensor<double, ... >` or tuples thereof
+   *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
+   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` -> `tensor<dual<...>, 3>`) 
    *
    * @pre BodyForceType must have the operator (x, time) defined as the body force
    */
@@ -491,7 +509,16 @@ public:
    * @tparam TractionType The type of the traction load
    * @param traction_function A function describing the traction applied to a boundary
    *
-   * @pre TractionType must have the operator (x, normal, time) to return the thermal flux value
+   * @pre TractionType must be a object that can be called with the following arguments:
+   *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
+   *    2. `tensor<T,dim> n` the outward-facing unit normal for the quadrature point
+   *    3. `double t` the time (note: time will be handled differently in the future)
+   *    4+. `tuple{value, derivative}`, a tuple of values and derivatives for each of the trial spaces
+   *            specified in the `DependsOn<...>` argument. 
+   *
+   *    The actual types of these arguments will be `double`, `tensor<double, ... >` or tuples thereof
+   *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
+   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` -> `tensor<dual<...>, 3>`) 
    *
    * @note: until mfem::GetFaceGeometricFactors implements their JACOBIANS option,
    * (or we implement a replacement kernel ourselves) we are not able to compute
