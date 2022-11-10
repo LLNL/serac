@@ -123,15 +123,17 @@ TEST(ScalarEquationSolver, DerivativeWithTensorParameter2)
     //     error = np.abs(dsqrt(p) - 0.5/np.sqrt(p))
     //     self.assertLess(error, 1e-10)
 
-// TEST(ScalarEquationSolver, AbortsIfRootNotBracketedByCaller)
-// {
-//     double x0 = 5.0;
-//     double tolerance = 1e-8;
-//     double lower = 2.0;
-//     double upper = 10.0;
-//     double x = solve_scalar_equation([](auto x){ return f(x);}, x0, tolerance, lower, upper);
-//     std::cout << "x = " << x << std::endl;
-// }
+TEST(ScalarEquationSolver, AbortsIfRootNotBracketedByCaller)
+{
+    double x0 = 5.0;
+    double tolerance = 1e-8;
+    double lower = 2.0;
+    double upper = 10.0;
+    EXPECT_DEATH_IF_SUPPORTED({
+            [[maybe_unused]] auto result = 
+                solve_scalar_equation([](auto x){ return f(x); }, x0, tolerance, lower, upper);
+        }, "solve_scalar_equation: root not bracketed by input bounds.");
+}
 
 TEST(ScalarEquationSolver, ConvergesWithGuessOutsideNewtonBasin)
 {

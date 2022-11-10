@@ -1450,7 +1450,10 @@ auto solve_scalar_equation(function && f, double x0, double tolerance,
   double fl = f(lower_bound, get_value(params)...);
   double fh = f(upper_bound, get_value(params)...);
 
-  SLIC_WARNING_IF(fl*fh > 0, "solve_scalar_equation: root not bracketed by input bounds.");
+  if (fl*fh > 0) {
+    SLIC_ERROR("solve_scalar_equation: root not bracketed by input bounds.");
+  }
+  
 
   unsigned int iterations = 0;
   bool converged = false;
