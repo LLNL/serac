@@ -135,6 +135,41 @@ TEST(ScalarEquationSolver, AbortsIfRootNotBracketedByCaller)
         }, "solve_scalar_equation: root not bracketed by input bounds.");
 }
 
+TEST(ScalarEquationSolver, ReturnsImmediatelyIfUpperBoundIsARoot)
+{
+    double p = 4.0;
+    double upper = 2.0;
+    
+    double x0 = 1.0;
+    double tolerance = 1e-8;
+    double lower = 0.0;
+
+    auto result = solve_scalar_equation([](auto x, auto a){ return g(x, a);}, x0, tolerance, lower, upper, p);
+
+    double error = std::abs((result.root - 2.0))/2.0;
+    EXPECT_LT(error, tolerance);
+
+    EXPECT_EQ(result.iterations, 0);
+}
+
+TEST(ScalarEquationSolver, ReturnsImmediatelyIfLowerBoundIsARoot)
+{
+    double p = 4.0;
+    double lower = 2.0;
+    
+    double x0 = 6.0;
+    double tolerance = 1e-8;
+    double upper = 8.0;
+
+    auto result = solve_scalar_equation([](auto x, auto a){ return g(x, a);}, x0, tolerance, lower, upper, p);
+
+    double error = std::abs((result.root - 2.0))/2.0;
+    EXPECT_LT(error, tolerance);
+
+    EXPECT_EQ(result.iterations, 0);
+}
+
+
 TEST(ScalarEquationSolver, ConvergesWithGuessOutsideNewtonBasin)
 {
     double x0 = 9.5;
@@ -146,6 +181,21 @@ TEST(ScalarEquationSolver, ConvergesWithGuessOutsideNewtonBasin)
     auto x = result.root;
     double error = std::abs(x);
     EXPECT_LT(error, tolerance);
+}
+
+TEST(ScalarEquationSolver, DerivativeOfPrimal)
+{
+    auto my_sqrt = [](dual<double> p) {
+        double x0 = get_value(p);
+        double tolerance = 1e-6;
+        double lower = 0;
+        double upper = (get_value(p) > 1.0) ? get_value(p) : 1.0;
+        auto result = solve_scalar_equation([](auto x, auto a){ return g(x, a); }, x0, tolerance, lower, upper, p);
+        return result.root;
+    };
+    double p = 2.0;
+    auto [sqrt_p, dsqrt_p] = my_sqrt(make_dual(p));
+    EXPECT_NEAR(dsqrt_p, 0.5/std::sqrt(p), 1e-12);
 }
 
 int main(int argc, char* argv[])
