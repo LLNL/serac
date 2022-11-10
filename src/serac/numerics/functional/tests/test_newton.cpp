@@ -58,13 +58,13 @@ TEST(ScalarEquationSolver, DerivativeOfPrimal)
         double tolerance = 1e-10;
         double lower = 1e-3;
         double upper = 10.0;
-        auto x = solve_scalar_equation([](auto x, auto a){ return g(x, a);}, x0, tolerance, lower, upper, p);
-        return x;
+        return solve_scalar_equation([](auto x, auto a){ return g(x, a); }, x0, tolerance, lower, upper, p);
     };
     double p = 2.0;
     auto [sqrt_p, dsqrt_p] = my_sqrt(make_dual(p));
-    std::cout << "sqrt_x = " << sqrt_p << std::endl;
-    std::cout << "dsqrt_x = " << dsqrt_p << std::endl;
+    std::cout << "sqrt_p = " << sqrt_p << std::endl;
+    std::cout << "dsqrt_p (AD)     = " << dsqrt_p << std::endl;
+    std::cout << "dsqrt_p (exact)) = " << 0.5 / (sqrt_p) << std::endl;
 }
 
     // def test_scalar_newton_jvp(self):

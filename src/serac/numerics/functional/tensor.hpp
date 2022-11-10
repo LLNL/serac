@@ -244,6 +244,22 @@ SERAC_HOST_DEVICE zero get(const zero&)
   return zero{};
 }
 
+/** @brief let a scalar be accessed like a degenerate tuple */
+template <int i>
+SERAC_HOST_DEVICE const double& get(const double& x)
+{
+  static_assert(i == 0);
+  return x;
+}
+
+/** @brief let a scalar be accessed like a degenerate tuple */
+template <int i>
+SERAC_HOST_DEVICE double& get(double& x)
+{
+  static_assert(i == 0);
+  return x;
+}
+
 /** @brief the dot product of anything with `zero` is `zero` */
 template <typename T>
 SERAC_HOST_DEVICE constexpr zero dot(const T&, zero)
@@ -732,6 +748,18 @@ SERAC_HOST_DEVICE constexpr auto inner(const tensor<S, m, n>& A, const tensor<T,
   }
   return sum;
 }
+
+template <typename S, typename T, int m>
+SERAC_HOST_DEVICE constexpr auto inner(const tensor<S, m >& A, const tensor<T, m>& B)
+{
+  decltype(S{} * T{}) sum{};
+  for (int i = 0; i < m; i++) {
+    sum += A[i] * B[i];
+  }
+  return sum;
+}
+
+SERAC_HOST_DEVICE constexpr auto inner(double A, double B) { return A * B; }
 
 /**
  * @brief this function contracts over the "middle" index of the two tensor arguments
@@ -1626,94 +1654,110 @@ SERAC_HOST_DEVICE constexpr auto make_dual(const tensor<double, n...>& A)
 
 /* differentiable Newton solver for scalar-valued equations */
 template <typename function, typename... ParamTypes>
-double solve_scalar_equation(function && f, double x0, double tolerance,
+auto solve_scalar_equation(function && f, double x0, double tolerance,
                              double lower_bound, double upper_bound, ParamTypes... params)
 {
+  double x, df_dx;
   double fl = f(lower_bound, get_value(params)...);
   double fh = f(upper_bound, get_value(params)...);
 
   SLIC_WARNING_IF(fl*fh > 0, "solve_scalar_equation: root not bracketed by input bounds.");
 
   // handle corner case where one of the brackets is the root
+  bool already_solved = false;
   if (fl == 0) {
-    return lower_bound;
+    x = lower_bound;
+    already_solved = true;
   } else if (fh == 0) {
-    return upper_bound;
+    x = upper_bound;
+    already_solved = true;
   }
-
-  // orient search so that f(xl) < 0
-  double xl = lower_bound;
-  double xh = upper_bound;
-  if (fl > 0) {
-    xl = upper_bound;
-    xh = lower_bound;
-  }
-
-  // move initial guess if it is not between brackets
-  if (x0 < lower_bound || x0 > upper_bound) {
-    x0 = 0.5*(lower_bound + upper_bound);
-  }
-  const unsigned int MAX_ITERATIONS = 25;
-  auto x = x0;
-  double dx_old = std::abs(upper_bound - lower_bound);
-  double dx = dx_old;
-  auto [fval, df_dx] = f(make_dual(x), get_value(params)...);
   
-  unsigned int iterations = 0;
-  bool converged = false;
-
-  while (!converged) {
-    if (iterations == MAX_ITERATIONS) {
-      SLIC_WARNING("solve_scalar_equation failed to converge in allotted iterations.");
-      break;
-    }
+  if (already_solved) {
     
-    // use bisection if Newton oversteps brackets or is not decreasing sufficiently
-    if ((x - xh)*df_dx - fval > 0 ||
-        (x - xl)*df_dx - fval < 0 ||
-        std::abs(2.*fval) > dx_old*df_dx) {
-      dx_old = dx;
-      dx = 0.5*(xh - xl);
-      x = xl + dx;
-      converged = (x == xl);
-    } else { // use Newton step
-      dx_old = dx;
-      dx = fval/df_dx;
-      auto temp = x;
-      x -= dx;
-      converged = (x == temp);
+    df_dx = get_gradient(f(make_dual(x), get_value(params)...));
+
+  } else {
+
+    // orient search so that f(xl) < 0
+    double xl = lower_bound;
+    double xh = upper_bound;
+    if (fl > 0) {
+      xl = upper_bound;
+      xh = lower_bound;
     }
 
-    // std::cout << "iter " << i << " x = " << x << std::endl;
-
-    // convergence check
-    converged = converged || (std::abs(dx) < tolerance);
-    
-    // function and jacobian evaluation
+    // move initial guess if it is not between brackets
+    if (x0 < lower_bound || x0 > upper_bound) {
+      x0 = 0.5*(lower_bound + upper_bound);
+    }
+    const unsigned int MAX_ITERATIONS = 25;
+    x = x0;
+    double dx_old = std::abs(upper_bound - lower_bound);
+    double dx = dx_old;
     auto R = f(make_dual(x), get_value(params)...);
-    fval = get_value(R);
+    auto fval = get_value(R);
     df_dx = get_gradient(R);
 
-    // maintain bracket on root
-    if (fval < 0) {
-      xl = x;
-    } else {
-      xh = x;
+    
+    unsigned int iterations = 0;
+    bool converged = false;
+
+    while (!converged) {
+      if (iterations == MAX_ITERATIONS) {
+        SLIC_WARNING("solve_scalar_equation failed to converge in allotted iterations.");
+        break;
+      }
+      
+      // use bisection if Newton oversteps brackets or is not decreasing sufficiently
+      if ((x - xh)*df_dx - fval > 0 ||
+          (x - xl)*df_dx - fval < 0 ||
+          std::abs(2.*fval) > dx_old*df_dx) {
+        dx_old = dx;
+        dx = 0.5*(xh - xl);
+        x = xl + dx;
+        converged = (x == xl);
+      } else { // use Newton step
+        dx_old = dx;
+        dx = fval/df_dx;
+        auto temp = x;
+        x -= dx;
+        converged = (x == temp);
+      }
+
+      // std::cout << "iter " << i << " x = " << x << std::endl;
+
+      // convergence check
+      converged = converged || (std::abs(dx) < tolerance);
+      
+      // function and jacobian evaluation
+      R = f(make_dual(x), get_value(params)...);
+      fval = get_value(R);
+      df_dx = get_gradient(R);
+
+      // maintain bracket on root
+      if (fval < 0) {
+        xl = x;
+      } else {
+        xh = x;
+      }
+
+      ++iterations;
     }
 
-    ++iterations;
   }
+
   // [fval, df_dp] = f(get_value(x), p)
   // for p in params:
   //   accumulate x_dot += inner(df_dp, p_dot)
   // x_dot /= -df_dx
   constexpr bool contains_duals = (is_dual_number<ParamTypes>::value || ...);
-  static_assert(contains_duals, "Has duals");
   if constexpr (contains_duals) {
     auto seq = std::make_integer_sequence<int, static_cast<int>(sizeof...(params))>();
     auto df = solver_derivative_helper(f, x, tuple{params...}, seq);
-    return dual{x, -df/df_dx};
-  } else {
+    return dual<double>{x, -df/df_dx};
+  }
+  if constexpr (!contains_duals) {
     return x;
   }
 }
