@@ -355,7 +355,7 @@ public:
    *    3+. `tuple{value, derivative}`, a tuple of values and derivatives for each of the trial spaces
    *            specified in the `DependsOn<...>` argument. 
    *
-   *    The actual types of these arguments will be `double`, `tensor<double, ... >` or tuples thereof
+   * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
    *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
    *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` -> `tensor<dual<...>, 3>`) 
    *
@@ -472,14 +472,12 @@ public:
    * @pre body_force must be a object that can be called with the following arguments:
    *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
    *    2. `double t` the time (note: time will be handled differently in the future)
-   *    3+. `tuple{value, derivative}`, a tuple of values and derivatives for each of the trial spaces
-   *            specified in the `DependsOn<...>` argument. 
-   *
-   *    The actual types of these arguments will be `double`, `tensor<double, ... >` or tuples thereof
+   *    3. `tuple{value, derivative}`, a variadic list of tuples (each with a values and derivative), 
+   *            one tuple for each of the trial spaces specified in the `DependsOn<...>` argument. 
+   * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
    *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
    *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` -> `tensor<dual<...>, 3>`) 
    *
-   * @pre BodyForceType must have the operator (x, time) defined as the body force
    */
   template <int... active_parameters, typename BodyForceType>
   void addBodyForce(DependsOn<active_parameters...>, BodyForceType body_force)
@@ -513,10 +511,10 @@ public:
    *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
    *    2. `tensor<T,dim> n` the outward-facing unit normal for the quadrature point
    *    3. `double t` the time (note: time will be handled differently in the future)
-   *    4+. `tuple{value, derivative}`, a tuple of values and derivatives for each of the trial spaces
-   *            specified in the `DependsOn<...>` argument. 
+   *    4. `tuple{value, derivative}`, a variadic list of tuples (each with a values and derivative), 
+   *            one tuple for each of the trial spaces specified in the `DependsOn<...>` argument. 
    *
-   *    The actual types of these arguments will be `double`, `tensor<double, ... >` or tuples thereof
+   * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
    *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
    *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` -> `tensor<dual<...>, 3>`) 
    *

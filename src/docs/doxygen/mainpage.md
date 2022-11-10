@@ -3,8 +3,8 @@
 #### Physics Simulation Modules ####
 
 * [Base physics](@ref serac::BasePhysics)
-* [Heat Transfer](@ref serac::HeatTransfer)
-* [Solid mechanics](@ref serac::SolidMechanics)
+* [Heat Transfer](classserac_1_1HeatTransfer_3_01order_00_01dim_00_01Parameters_3_01parameter__space_8_8_8_01_4_00b10147e2187ea0fff3ed4d400f86c2eb.html)
+* [Solid mechanics](classserac_1_1SolidMechanics_3_01order_00_01dim_00_01Parameters_3_01parameter__space_8_8_8_01_4_0a4b58643425b41433838b2828455c49.html)
 * [Thermomechanics](@ref serac::Thermomechanics)
 
 #### Simulation Utilities ####
@@ -23,7 +23,7 @@
 
 #### Functional Interface ####
 
-* <a style="font-weight:bold" href="classserac_1_1Functional_3_01test_07trial_08_4.html">Functional</a>
+* [Functional](classserac_1_1Functional_3_01test_07trials_8_8_8_08_00_01exec_01_4.html)
 * [Domain integral](@ref serac::DomainIntegral)
 * [Boundary integral](@ref serac::BoundaryIntegral)
 
