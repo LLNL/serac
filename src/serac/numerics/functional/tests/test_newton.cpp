@@ -34,7 +34,8 @@ TEST(ScalarEquationSolver, Converges)
     double tolerance = 1e-8;
     double lower = 1e-3;
     double upper = 2.5;
-    double x = solve_scalar_equation([](auto x){ return f(x);}, x0, tolerance, lower, upper);
+    auto result = solve_scalar_equation([](auto x){ return f(x);}, x0, tolerance, lower, upper);
+    auto x = result.root;
     double error = std::abs((x - std::sqrt(2.0))/std::sqrt(2.0));
     EXPECT_LT(error, tolerance);
 }
@@ -46,7 +47,8 @@ TEST(ScalarEquationSolver, WorksWithParameter)
     double lower = 1e-3;
     double upper = 2.5;
     double p = 2.0;
-    double x = solve_scalar_equation([](auto x, auto a){ return g(x, a);}, x0, tolerance, lower, upper, p);
+    auto result = solve_scalar_equation([](auto x, auto a){ return g(x, a);}, x0, tolerance, lower, upper, p);
+    auto x = result.root;
     double error = std::abs((x - std::sqrt(p))/std::sqrt(p));
     EXPECT_LT(error, tolerance);
 }
@@ -58,7 +60,8 @@ TEST(ScalarEquationSolver, DerivativeOfPrimal)
         double tolerance = 1e-6;
         double lower = 0;
         double upper = (get_value(p) > 1.0) ? get_value(p) : 1.0;
-        return solve_scalar_equation([](auto x, auto a){ return g(x, a); }, x0, tolerance, lower, upper, p);
+        auto result = solve_scalar_equation([](auto x, auto a){ return g(x, a); }, x0, tolerance, lower, upper, p);
+        return result.root;
     };
     double p = 2.0;
     auto [sqrt_p, dsqrt_p] = my_sqrt(make_dual(p));
@@ -136,8 +139,9 @@ TEST(ScalarEquationSolver, ConvergesWithGuessOutsideNewtonBasin)
     double tolerance = 1e-8;
     double lower = -10.0;
     double upper = 10.0;
-    double x = solve_scalar_equation([](auto x) { return function_that_kills_newton(x); }, 
-                                     x0, tolerance, lower, upper);
+    auto result = solve_scalar_equation([](auto x) { return function_that_kills_newton(x); }, 
+                                        x0, tolerance, lower, upper);
+    auto x = result.root;
     double error = std::abs(x);
     EXPECT_LT(error, tolerance);
 }
