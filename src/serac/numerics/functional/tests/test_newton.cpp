@@ -28,43 +28,41 @@ T function_that_kills_newton(T x)
     return sin(x) + x;
 }
 
-// TEST(ScalarEquationSolver, Converges)
-// {
-//     double x0 = 2.0;
-//     double tolerance = 1e-8;
-//     double lower = 1e-3;
-//     double upper = 2.5;
-//     double x = solve_scalar_equation([](auto x){ return f(x);}, x0, tolerance, lower, upper);
-//     double error = std::abs((x - std::sqrt(2.0))/std::sqrt(2.0));
-//     EXPECT_LT(error, tolerance);
-// }
+TEST(ScalarEquationSolver, Converges)
+{
+    double x0 = 2.0;
+    double tolerance = 1e-8;
+    double lower = 1e-3;
+    double upper = 2.5;
+    double x = solve_scalar_equation([](auto x){ return f(x);}, x0, tolerance, lower, upper);
+    double error = std::abs((x - std::sqrt(2.0))/std::sqrt(2.0));
+    EXPECT_LT(error, tolerance);
+}
 
-// TEST(ScalarEquationSolver, WorksWithParameter)
-// {
-//     double x0 = 2.0;
-//     double tolerance = 1e-8;
-//     double lower = 1e-3;
-//     double upper = 2.5;
-//     double p = 2.0;
-//     double x = solve_scalar_equation([](auto x, auto a){ return g(x, a);}, x0, tolerance, lower, upper, p);
-//     double error = std::abs((x - std::sqrt(p))/std::sqrt(p));
-//     EXPECT_LT(error, tolerance);
-// }
+TEST(ScalarEquationSolver, WorksWithParameter)
+{
+    double x0 = 2.0;
+    double tolerance = 1e-8;
+    double lower = 1e-3;
+    double upper = 2.5;
+    double p = 2.0;
+    double x = solve_scalar_equation([](auto x, auto a){ return g(x, a);}, x0, tolerance, lower, upper, p);
+    double error = std::abs((x - std::sqrt(p))/std::sqrt(p));
+    EXPECT_LT(error, tolerance);
+}
 
 TEST(ScalarEquationSolver, DerivativeOfPrimal)
 {
     auto my_sqrt = [](dual<double> p) {
         double x0 = get_value(p);
-        double tolerance = 1e-10;
-        double lower = 1e-3;
-        double upper = 10.0;
+        double tolerance = 1e-6;
+        double lower = 0;
+        double upper = (get_value(p) > 1.0) ? get_value(p) : 1.0;
         return solve_scalar_equation([](auto x, auto a){ return g(x, a); }, x0, tolerance, lower, upper, p);
     };
     double p = 2.0;
     auto [sqrt_p, dsqrt_p] = my_sqrt(make_dual(p));
-    std::cout << "sqrt_p = " << sqrt_p << std::endl;
-    std::cout << "dsqrt_p (AD)     = " << dsqrt_p << std::endl;
-    std::cout << "dsqrt_p (exact)) = " << 0.5 / (sqrt_p) << std::endl;
+    EXPECT_NEAR(dsqrt_p, 0.5/std::sqrt(p), 1e-12);
 }
 
 TEST(ScalarEquationSolver, DerivativeWithTensorParameter)
@@ -132,18 +130,17 @@ TEST(ScalarEquationSolver, DerivativeWithTensorParameter2)
 //     std::cout << "x = " << x << std::endl;
 // }
 
-// TEST(ScalarEquationSolver, ConvergesWithGuessOutsideNewtonBasin)
-// {
-//     double x0 = 9.5;
-//     double tolerance = 1e-8;
-//     double lower = -10.0;
-//     double upper = 10.0;
-//     double x = solve_scalar_equation([](auto x) { return function_that_kills_newton(x); }, 
-//                                      x0, tolerance, lower, upper);
-//     double error = std::abs(x);
-//     std::cout << "x = " << x << std::endl;
-//     EXPECT_LT(error, tolerance);
-// }
+TEST(ScalarEquationSolver, ConvergesWithGuessOutsideNewtonBasin)
+{
+    double x0 = 9.5;
+    double tolerance = 1e-8;
+    double lower = -10.0;
+    double upper = 10.0;
+    double x = solve_scalar_equation([](auto x) { return function_that_kills_newton(x); }, 
+                                     x0, tolerance, lower, upper);
+    double error = std::abs(x);
+    EXPECT_LT(error, tolerance);
+}
 
 int main(int argc, char* argv[])
 {
