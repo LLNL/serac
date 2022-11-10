@@ -1627,10 +1627,10 @@ SERAC_HOST_DEVICE constexpr auto make_dual(const tensor<double, n...>& A)
 /* differentiable Newton solver for scalar-valued equations */
 template <typename function, typename... ParamTypes>
 double solve_scalar_equation(function && f, double x0, double tolerance,
-                             double lower_bound, double upper_bound, ParamTypes... p)
+                             double lower_bound, double upper_bound, ParamTypes... params)
 {
-  double fl = f(lower_bound, p...);
-  double fh = f(upper_bound, p...);
+  double fl = f(lower_bound, get_value(params)...);
+  double fh = f(upper_bound, get_value(params)...);
 
   SLIC_WARNING_IF(fl*fh > 0, "solve_scalar_equation: root not bracketed by input bounds.");
 
@@ -1653,12 +1653,21 @@ double solve_scalar_equation(function && f, double x0, double tolerance,
   if (x0 < lower_bound || x0 > upper_bound) {
     x0 = 0.5*(lower_bound + upper_bound);
   }
-  const int MAX_ITERATIONS = 25;
+  const unsigned int MAX_ITERATIONS = 25;
   auto x = x0;
   double dx_old = std::abs(upper_bound - lower_bound);
   double dx = dx_old;
-  auto [fval, df_dx] = f(make_dual(x), p...);
-  for (int i = 0; i < MAX_ITERATIONS; i++) {
+  auto [fval, df_dx] = f(make_dual(x), get_value(params)...);
+  
+  unsigned int iterations = 0;
+  bool converged = false;
+
+  while (!converged) {
+    if (iterations == MAX_ITERATIONS) {
+      SLIC_WARNING("solve_scalar_equation failed to converge in allotted iterations.");
+      break;
+    }
+    
     // use bisection if Newton oversteps brackets or is not decreasing sufficiently
     if ((x - xh)*df_dx - fval > 0 ||
         (x - xl)*df_dx - fval < 0 ||
@@ -1666,22 +1675,22 @@ double solve_scalar_equation(function && f, double x0, double tolerance,
       dx_old = dx;
       dx = 0.5*(xh - xl);
       x = xl + dx;
-      if (x == xl) return x;
+      converged = (x == xl);
     } else { // use Newton step
       dx_old = dx;
       dx = fval/df_dx;
       auto temp = x;
       x -= dx;
-      if (x == temp) return x;
+      converged = (x == temp);
     }
 
     // std::cout << "iter " << i << " x = " << x << std::endl;
 
     // convergence check
-    if (std::abs(dx) < tolerance) return x;
+    converged = converged || (std::abs(dx) < tolerance);
     
     // function and jacobian evaluation
-    auto R = f(make_dual(x), p...);
+    auto R = f(make_dual(x), get_value(params)...);
     fval = get_value(R);
     df_dx = get_gradient(R);
 
@@ -1691,11 +1700,31 @@ double solve_scalar_equation(function && f, double x0, double tolerance,
     } else {
       xh = x;
     }
+
+    ++iterations;
   }
-  // if control flow reaches here, Newton didn't converge in allotted iterations
-  SLIC_WARNING("solve_scalar_equation failed to converge in allotted iterations.");
-  return x;
+  // [fval, df_dp] = f(get_value(x), p)
+  // for p in params:
+  //   accumulate x_dot += inner(df_dp, p_dot)
+  // x_dot /= -df_dx
+  constexpr bool contains_duals = (is_dual_number<ParamTypes>::value || ...);
+  static_assert(contains_duals, "Has duals");
+  if constexpr (contains_duals) {
+    auto seq = std::make_integer_sequence<int, static_cast<int>(sizeof...(params))>();
+    auto df = solver_derivative_helper(f, x, tuple{params...}, seq);
+    return dual{x, -df/df_dx};
+  } else {
+    return x;
+  }
 }
+
+template <typename function, typename... ParamTypes, int... i>
+auto solver_derivative_helper(function && f, double x, tuple<ParamTypes...> params, std::integer_sequence<int, i...>)
+{
+  auto [fval, df_dp] = f(get_value(x), get<i>(params)...);
+  return (inner(get<i>(df_dp), get_gradient(get<i>(params))) + ...);
+}
+
 
 /// @cond
 namespace detail {

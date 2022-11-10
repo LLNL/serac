@@ -16,8 +16,8 @@ T f(T x)
     return x*x - 2.0;
 }
 
-template <typename T>
-T g(T x, double p)
+template <typename S, typename T>
+auto g(S x, T p)
 {
     return x*x - p;
 }
@@ -28,28 +28,58 @@ T function_that_kills_newton(T x)
     return sin(x) + x;
 }
 
-TEST(ScalarEquationSolver, Converges)
+// TEST(ScalarEquationSolver, Converges)
+// {
+//     double x0 = 2.0;
+//     double tolerance = 1e-8;
+//     double lower = 1e-3;
+//     double upper = 2.5;
+//     double x = solve_scalar_equation([](auto x){ return f(x);}, x0, tolerance, lower, upper);
+//     double error = std::abs((x - std::sqrt(2.0))/std::sqrt(2.0));
+//     EXPECT_LT(error, tolerance);
+// }
+
+// TEST(ScalarEquationSolver, WorksWithParameter)
+// {
+//     double x0 = 2.0;
+//     double tolerance = 1e-8;
+//     double lower = 1e-3;
+//     double upper = 2.5;
+//     double p = 2.0;
+//     double x = solve_scalar_equation([](auto x, auto a){ return g(x, a);}, x0, tolerance, lower, upper, p);
+//     double error = std::abs((x - std::sqrt(p))/std::sqrt(p));
+//     EXPECT_LT(error, tolerance);
+// }
+
+TEST(ScalarEquationSolver, DerivativeOfPrimal)
 {
-    double x0 = 2.0;
-    double tolerance = 1e-8;
-    double lower = 1e-3;
-    double upper = 2.5;
-    double x = solve_scalar_equation([](auto x){ return f(x);}, x0, tolerance, lower, upper);
-    double error = std::abs((x - std::sqrt(2.0))/std::sqrt(2.0));
-    EXPECT_LT(error, tolerance);
+    auto my_sqrt = [](dual<double> p) {
+        double x0 = get_value(p);
+        double tolerance = 1e-10;
+        double lower = 1e-3;
+        double upper = 10.0;
+        auto x = solve_scalar_equation([](auto x, auto a){ return g(x, a);}, x0, tolerance, lower, upper, p);
+        return x;
+    };
+    double p = 2.0;
+    auto [sqrt_p, dsqrt_p] = my_sqrt(make_dual(p));
+    std::cout << "sqrt_x = " << sqrt_p << std::endl;
+    std::cout << "dsqrt_x = " << dsqrt_p << std::endl;
 }
 
-TEST(ScalarEquationSolver, WorksWithParameter)
-{
-    double x0 = 2.0;
-    double tolerance = 1e-8;
-    double lower = 1e-3;
-    double upper = 2.5;
-    double p = 2.0;
-    double x = solve_scalar_equation([](auto x, auto a){ return g(x, a);}, x0, tolerance, lower, upper, p);
-    double error = std::abs((x - std::sqrt(p))/std::sqrt(p));
-    EXPECT_LT(error, tolerance);
-}
+    // def test_scalar_newton_jvp(self):
+    //     def my_sqrt(p):
+    //         tol = 1e-12
+    //         x = newton.solve_scalar(f, p, tol, p)
+    //         return x
+        
+    //     p = 2.0
+    //     s = my_sqrt(p)
+    //     print(f"{s:.14f}")
+    //     dsqrt = jax.jacfwd(my_sqrt)
+    //     print(f"{dsqrt(p):.14f}")
+    //     error = np.abs(dsqrt(p) - 0.5/np.sqrt(p))
+    //     self.assertLess(error, 1e-10)
 
 // TEST(ScalarEquationSolver, AbortsIfRootNotBracketedByCaller)
 // {
@@ -61,18 +91,18 @@ TEST(ScalarEquationSolver, WorksWithParameter)
 //     std::cout << "x = " << x << std::endl;
 // }
 
-TEST(ScalarEquationSolver, ConvergesWithGuessOutsideNewtonBasin)
-{
-    double x0 = 9.5;
-    double tolerance = 1e-8;
-    double lower = -10.0;
-    double upper = 10.0;
-    double x = solve_scalar_equation([](auto x) { return function_that_kills_newton(x); }, 
-                                     x0, tolerance, lower, upper);
-    double error = std::abs(x);
-    std::cout << "x = " << x << std::endl;
-    EXPECT_LT(error, tolerance);
-}
+// TEST(ScalarEquationSolver, ConvergesWithGuessOutsideNewtonBasin)
+// {
+//     double x0 = 9.5;
+//     double tolerance = 1e-8;
+//     double lower = -10.0;
+//     double upper = 10.0;
+//     double x = solve_scalar_equation([](auto x) { return function_that_kills_newton(x); }, 
+//                                      x0, tolerance, lower, upper);
+//     double error = std::abs(x);
+//     std::cout << "x = " << x << std::endl;
+//     EXPECT_LT(error, tolerance);
+// }
 
 int main(int argc, char* argv[])
 {
