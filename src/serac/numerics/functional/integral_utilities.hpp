@@ -15,6 +15,7 @@
 #include "mfem.hpp"
 #include "mfem/linalg/dtensor.hpp"
 
+#include "serac/numerics/quadrature_data.hpp"
 #include "serac/numerics/functional/tuple.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/quadrature.hpp"

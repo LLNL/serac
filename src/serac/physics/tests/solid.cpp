@@ -104,7 +104,7 @@ void functional_solid_test_static_J2()
 
   // Create DataStore
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "solid_functional_static_solve_J2");
+  serac::StateManager::initialize(datastore, "solid_mechanics_J2_test");
 
   // Construct the appropriate dimension mesh and give it to the data store
   std::string filename = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
@@ -118,7 +118,7 @@ void functional_solid_test_static_J2()
   options.linear         = linear_options;
 
   // Construct a functional-based solid mechanics solver
-  SolidMechanics<p, dim> solid_solver(options, GeometricNonlinearities::Off, "solid_functional");
+  SolidMechanics<p, dim> solid_solver(options, GeometricNonlinearities::Off, "solid_mechanics");
 
   solid_mechanics::J2 mat{
       10000,  // Young's modulus
@@ -323,9 +323,7 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   // add some nonexistent body forces / tractions to check that
   // these parameterized versions compile and run without error
   solid_solver.addBodyForce(DependsOn<0>{}, [](const auto& x, double /*t*/, auto /* bulk */) { return x * 0.0; });
-
   solid_solver.addBodyForce(DependsOn<1>{}, ParameterizedBodyForce{[](const auto& x) { return 0.0 * x; }});
-
   solid_solver.setPiolaTraction(DependsOn<1>{}, [](const auto& x, auto...) { return 0 * x; });
 
   // Finalize the data structures

@@ -73,9 +73,9 @@ SignedIndex decodeSignedIndex(int i)
 }
 
 /**
- * @param fes the finite element space in question
- *
  * @brief return whether or not the underlying function space is Hcurl or not
+ *
+ * @param fes the finite element space in question
  */
 bool isHcurl(const mfem::ParFiniteElementSpace& fes)
 {
@@ -83,9 +83,9 @@ bool isHcurl(const mfem::ParFiniteElementSpace& fes)
 }
 
 /**
- * @param fes the finite element space in question
- *
  * @brief return whether or not the underlying function space is L2 or not
+ *
+ * @param fes the finite element space in question
  */
 bool isL2(const mfem::ParFiniteElementSpace& fes)
 {
@@ -93,10 +93,10 @@ bool isL2(const mfem::ParFiniteElementSpace& fes)
 }
 
 /**
- * @param fes the finite element space in question
- *
  * @brief attempt to characterize which FiniteElementSpaces
  * mfem::FaceRestriction actually works with
+ *
+ * @param fes the finite element space in question
  */
 bool compatibleWithFaceRestriction(const mfem::ParFiniteElementSpace& fes)
 {
@@ -173,7 +173,7 @@ struct DofNumbering {
       mfem::Vector dof_ids(elem_restriction->Height());
       dof_ids = 0.0;
       for (int i = 0; i < iota.Size(); i++) {
-        iota[i] = i;
+        iota[i] = i + 1;  //  note: 1-based index
       }
 
       // we're using Mult() to reveal the locations nonzero entries
@@ -185,10 +185,13 @@ struct DofNumbering {
       elem_restriction->Mult(iota, dof_ids);
       const double* dof_ids_h = dof_ids.HostRead();
 
+      int index = 0;
       for (axom::IndexType e = 0; e < element_dofs_.shape()[0]; e++) {
         for (axom::IndexType i = 0; i < element_dofs_.shape()[1]; i++) {
-          int mfem_id         = static_cast<int>(dof_ids_h[&element_dofs_(e, i) - element_dofs_.data()]);
-          element_dofs_(e, i) = decodeSignedIndex(mfem_id);
+          uint32_t dof_id     = static_cast<uint32_t>(fabs(dof_ids_h[index]));  // note: 1-based index
+          int      dof_sign   = dof_ids[index] > 0 ? +1 : -1;
+          element_dofs_(e, i) = {dof_id - 1, dof_sign};  // subtract 1 to get back to 0-based index
+          index++;
         }
       }
     }
@@ -200,16 +203,19 @@ struct DofNumbering {
       mfem::Vector iota(face_restriction->Width());
       mfem::Vector dof_ids(face_restriction->Height());
       for (int i = 0; i < iota.Size(); i++) {
-        iota[i] = i;
+        iota[i] = i + 1;  //  note: 1-based index
       }
 
       face_restriction->Mult(iota, dof_ids);
       const double* dof_ids_h = dof_ids.HostRead();
 
+      int index = 0;
       for (axom::IndexType e = 0; e < bdr_element_dofs_.shape()[0]; e++) {
         for (axom::IndexType i = 0; i < bdr_element_dofs_.shape()[1]; i++) {
-          int mfem_id             = static_cast<int>(dof_ids_h[&bdr_element_dofs_(e, i) - bdr_element_dofs_.data()]);
-          bdr_element_dofs_(e, i) = decodeSignedIndex(mfem_id);
+          uint32_t dof_id         = static_cast<uint32_t>(fabs(dof_ids_h[index]));  // note: 1-based index
+          int      dof_sign       = dof_ids[index] > 0 ? +1 : -1;
+          bdr_element_dofs_(e, i) = {dof_id - 1, dof_sign};  // subtract 1 to get back to 0-based index
+          index++;
         }
       }
     }

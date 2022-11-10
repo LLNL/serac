@@ -126,10 +126,10 @@ SERAC_HOST_DEVICE constexpr auto make_dual_helper(zero)
 }
 
 /**
+ * @brief promote a double value to dual number with a one_hot_t< i, N, double > gradient type
+ *
  * @tparam i the index where the non-`serac::zero` derivative term appears
  * @tparam N how many entries in the gradient type
- *
- * @brief promote a double value to dual number with a one_hot_t< i, N, double > gradient type
  * @param arg the value to be promoted
  */
 template <int i, int N>
@@ -143,10 +143,10 @@ SERAC_HOST_DEVICE constexpr auto make_dual_helper(double arg)
 }
 
 /**
+ * @brief promote a tensor value to dual number with a one_hot_t< i, N, tensor > gradient type
+ *
  * @tparam i the index where the non-`serac::zero` derivative term appears
  * @tparam N how many entries in the gradient type
- *
- * @brief promote a tensor value to dual number with a one_hot_t< i, N, tensor > gradient type
  * @param arg the value to be promoted
  */
 template <int i, int N, typename T, int... n>
@@ -162,10 +162,10 @@ SERAC_HOST_DEVICE constexpr auto make_dual_helper(const tensor<T, n...>& arg)
 }
 
 /**
+ * @brief Promote a tuple of values to their corresponding dual types
+ *
  * @tparam T0 the first type of the tuple argument
  * @tparam T1 the first type of the tuple argument
- *
- * @brief Promote a tuple of values to their corresponding dual types
  * @param args the values to be promoted
  *
  * example:
@@ -185,10 +185,10 @@ SERAC_HOST_DEVICE constexpr auto make_dual(const tuple<T0, T1>& args)
 }
 
 /**
+ * @brief a function that optionally (decided at compile time) converts a value to its dual type
+ *
  * @tparam dualify specify whether or not the value should be made into its dual type
  * @tparam T the type of the value passed in
- *
- * @brief a function that optionally (decided at compile time) converts a value to its dual type
  * @param x the values to be promoted
  */
 template <bool dualify, typename T>
@@ -196,6 +196,30 @@ SERAC_HOST_DEVICE auto promote_to_dual_when(const T& x)
 {
   if constexpr (dualify) {
     return make_dual(x);
+  }
+  if constexpr (!dualify) {
+    return x;
+  }
+}
+
+/**
+ * @brief a function that optionally (decided at compile time) converts a list of values to their dual types
+ *
+ * @tparam dualify specify whether or not the input should be made into its dual type
+ * @tparam T the type of the values passed in
+ * @tparam n how many values were passed in
+ * @param x the values to be promoted
+ */
+template <bool dualify, typename T, int n>
+SERAC_HOST_DEVICE auto promote_each_to_dual_when(const tensor<T, n>& x)
+{
+  if constexpr (dualify) {
+    using return_type = decltype(make_dual(T{}));
+    tensor<return_type, n> output;
+    for (int i = 0; i < n; i++) {
+      output[i] = make_dual(x[i]);
+    }
+    return output;
   }
   if constexpr (!dualify) {
     return x;
@@ -226,10 +250,10 @@ SERAC_HOST_DEVICE constexpr auto make_dual_helper(const serac::tuple<T...>& args
 }
 
 /**
+ * @brief take a tuple of values, and promote the `n`th one to a one-hot dual number of the appropriate type
+ *
  * @tparam n the index of the tuple argument to be made into a dual number
  * @tparam T the types of the values in the tuple
- *
- * @brief take a tuple of values, and promote the `n`th one to a one-hot dual number of the appropriate type
  * @param args the values to be promoted
  */
 template <int n, typename... T>

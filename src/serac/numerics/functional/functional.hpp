@@ -63,9 +63,9 @@ struct differentiate_wrt_this {
 auto differentiate_wrt(const mfem::Vector& v) { return differentiate_wrt_this{v}; }
 
 /**
- * @tparam T a list of types, containing at most 1 `differentiate_wrt_this`
- *
  * @brief given a list of types, this function returns the index that corresponds to the type `dual_vector`.
+ *
+ * @tparam T a list of types, containing at most 1 `differentiate_wrt_this`
  *
  * e.g.
  * @code{.cpp}
@@ -128,6 +128,7 @@ mfem::ParFiniteElementSpace* generateParFiniteElementSpace(mfem::ParMesh* mesh)
       break;
   }
 
+  // note: this leaks memory: `fec` is never destroyed, but how to fix?
   return new mfem::ParFiniteElementSpace(mesh, fec, function_space::components, ordering);
 }
 
@@ -247,8 +248,8 @@ public:
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
       auto ndof_per_trial_element =
           static_cast<size_t>(trial_space_[i]->GetFE(0)->GetDof() * trial_space_[i]->GetVDim());
-      element_gradients_[i] = ExecArray<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
-      bdr_element_gradients_[i] = allocateMemoryForBdrElementGradients<double, exec>(*trial_space_[i], *test_space_);
+      element_gradients_[i] = ExecArray<double, 3, exec>(num_elements, ndof_per_trial_element, ndof_per_test_element);
+      bdr_element_gradients_[i] = allocateMemoryForBdrElementGradients<double, exec>(*test_space_, *trial_space_[i]);
     }
   }
 
@@ -586,7 +587,7 @@ private:
         for (axom::IndexType e = 0; e < K_elem.shape()[0]; e++) {
           for (axom::IndexType i = 0; i < K_elem.shape()[1]; i++) {
             for (axom::IndexType j = 0; j < K_elem.shape()[2]; j++) {
-              auto [index, sign] = LUT(e, i, j);
+              auto [index, sign] = LUT(e, j, i);
               values[index] += sign * K_elem(e, i, j);
             }
           }
@@ -607,7 +608,7 @@ private:
         for (axom::IndexType e = 0; e < K_belem.shape()[0]; e++) {
           for (axom::IndexType i = 0; i < K_belem.shape()[1]; i++) {
             for (axom::IndexType j = 0; j < K_belem.shape()[2]; j++) {
-              auto [index, sign] = LUT(e, i, j);
+              auto [index, sign] = LUT(e, j, i);
               values[index] += sign * K_belem(e, i, j);
             }
           }
