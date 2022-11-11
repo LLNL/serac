@@ -236,6 +236,37 @@ public:
                           int component);
 
   /**
+   * @brief Accessor for getting named finite element state fields from the physics modules
+   *
+   * @param state_name The name of the Finite Element State to retrieve
+   * @return The named Finite Element State
+   */
+  const FiniteElementState& getState(const std::string& state_name) override
+  {
+    if (state_name == "displacement") {
+      return displacement_;
+    } else if (state_name == "velocity") {
+      return velocity_;
+    } else if (state_name == "adjoint_displacement") {
+      return adjoint_displacement_;
+    }
+
+    SLIC_ERROR_ROOT(axom::fmt::format("State {} requestion from solid mechanics module {}, but it doesn't exist",
+                                      state_name, name_));
+    return displacement_;
+  }
+
+  /**
+   * @brief Get a vector of the finite element state solution variable names
+   *
+   * @return The solution variable names
+   */
+  virtual std::vector<std::string> getStateNames()
+  {
+    return std::vector<std::string>{{"displacement"}, {"velocity"}, {"adjoint_displacement"}};
+  }
+
+  /**
    * @brief Set the traction boundary conditions
    *
    * @param[in] trac_bdr The set of boundary attributes to apply a traction to

@@ -39,8 +39,6 @@ BasePhysics::BasePhysics(int n, int p, std::string name, mfem::ParMesh* pmesh) :
   gf_initialized_.assign(static_cast<std::size_t>(n), StateManager::isRestart());
 }
 
-const std::vector<std::reference_wrapper<serac::FiniteElementState> >& BasePhysics::getState() const { return states_; }
-
 void BasePhysics::setTime(const double time) { time_ = time; }
 
 double BasePhysics::time() const { return time_; }
@@ -49,15 +47,31 @@ void BasePhysics::setCycle(const int cycle) { cycle_ = cycle; }
 
 int BasePhysics::cycle() const { return cycle_; }
 
+void BasePhysics::setParameter(FiniteElementState& parameter_state, size_t parameter_index)
+{
+  SLIC_ERROR_ROOT_IF(
+      parameter_index >= parameter_states_.size(),
+      axom::fmt::format("Parameter index {} is not available in physics module {}", parameter_index, name_));
+  SLIC_ERROR_ROOT_IF(parameter_index >= parameter_sensitivities_.size(),
+                     axom::fmt::format("Sensitivity of parameter index {} is not available in physics module {}",
+                                       parameter_index, name_));
+  SLIC_ERROR_ROOT_IF(
+      parameter_states_[parameter_index],
+      axom::fmt::format("Parameter index {} has been previously defined in physics module {}", parameter_index, name_));
+  parameter_states_[parameter_index] = &parameter_state;
+  parameter_sensitivities_[parameter_index] =
+      StateManager::newDual(parameter_state.space(), parameter_state.name() + "_sensitivity");
+}
+
 void BasePhysics::outputState(std::optional<std::string> paraview_output_dir) const
 {
   // Update the states and duals in the state manager
   for (auto& state : states_) {
-    StateManager::updateState(state);
+    StateManager::updateState(*state);
   }
 
   for (auto& dual : duals_) {
-    StateManager::updateDual(dual);
+    StateManager::updateDual(*dual);
   }
 
   // Save the restart/Sidre file
@@ -72,13 +86,13 @@ void BasePhysics::outputState(std::optional<std::string> paraview_output_dir) co
         output_name = "default";
       }
 
-      paraview_dc_ = std::make_unique<mfem::ParaViewDataCollection>(output_name, &states_.front().get().mesh());
+      paraview_dc_            = std::make_unique<mfem::ParaViewDataCollection>(output_name, &states_.front()->mesh());
       int max_order_in_fields = 0;
 
       // Find the maximum polynomial order in the physics module's states
-      for (FiniteElementState& state : states_) {
-        paraview_dc_->RegisterField(state.name(), &state.gridFunction());
-        max_order_in_fields = std::max(max_order_in_fields, state.space().GetOrder(0));
+      for (FiniteElementState* state : states_) {
+        paraview_dc_->RegisterField(state->name(), &state->gridFunction());
+        max_order_in_fields = std::max(max_order_in_fields, state->space().GetOrder(0));
       }
 
       // Set the options for the paraview output files
@@ -87,8 +101,8 @@ void BasePhysics::outputState(std::optional<std::string> paraview_output_dir) co
       paraview_dc_->SetDataFormat(mfem::VTKFormat::BINARY);
       paraview_dc_->SetCompression(true);
     } else {
-      for (FiniteElementState& state : states_) {
-        state.gridFunction();  // update grid function values
+      for (FiniteElementState* state : states_) {
+        state->gridFunction();  // update grid function values
       }
     }
 
@@ -143,9 +157,9 @@ void BasePhysics::initializeSummary(axom::sidre::DataStore& datastore, double t_
   axom::sidre::View*         t_array_view = curves_group->createView("t");
   axom::sidre::Array<double> ts(t_array_view, 0, array_size);
 
-  for (FiniteElementState& state : states_) {
+  for (FiniteElementState* state : states_) {
     // Group for this Finite Element State (Field)
-    axom::sidre::Group* state_group = curves_group->createGroup(state.name());
+    axom::sidre::Group* state_group = curves_group->createGroup(state->name());
 
     // Create an array for each stat type to hold a value at each time step
     for (std::string stat_name : {"l1norms", "l2norms", "linfnorms", "avgs", "mins", "maxs"}) {
@@ -176,20 +190,20 @@ void BasePhysics::saveSummary(axom::sidre::DataStore& datastore, const double t)
 
   // For each Finite Element State (Field)
   double l1norm_value, l2norm_value, linfnorm_value, avg_value, max_value, min_value;
-  for (FiniteElementState& state : states_) {
+  for (FiniteElementState* state : states_) {
     // Calculate current stat value
     // Note: These are collective operations.
-    l1norm_value   = norm(state, 1.0);
-    l2norm_value   = norm(state, 2.0);
-    linfnorm_value = norm(state, mfem::infinity());
-    avg_value      = avg(state);
-    max_value      = max(state);
-    min_value      = min(state);
+    l1norm_value   = norm(*state, 1.0);
+    l2norm_value   = norm(*state, 2.0);
+    linfnorm_value = norm(*state, mfem::infinity());
+    avg_value      = avg(*state);
+    max_value      = max(*state);
+    min_value      = min(*state);
 
     // Only save on root node
     if (rank == 0) {
       // Group for this Finite Element State (Field)
-      axom::sidre::Group* state_group = curves_group->getGroup(state.name());
+      axom::sidre::Group* state_group = curves_group->getGroup(state->name());
 
       // Save all current stat values in their respective sidre arrays
       axom::sidre::View*         l1norms_view = state_group->getView("l1norms");

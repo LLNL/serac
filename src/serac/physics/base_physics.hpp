@@ -93,70 +93,30 @@ public:
   virtual void completeSetup() = 0;
 
   /**
-   * @brief Generate a finite element state object for the given parameter index
-   * 
-   * @param parameter_index The index of the parameter to generate
-   */
-  virtual std::unique_ptr<FiniteElementState> generateParameter(int parameter_index)
-  {
-    SLIC_ERROR_ROOT(axom::fmt::format("Parameter generation not defined for physics module {}", name_));
-  }
-
-  /**
    * @brief Accessor for getting named finite element state fields from the physics modules
-   * 
+   *
    * @param state_name The name of the Finite Element State to retrieve
    * @return The named Finite Element State
    */
   virtual const FiniteElementState& getState(const std::string& state_name) = 0;
 
   /**
-   * @brief Get the parameter field of the physics module
-   * 
-   * @param parameter_index The parameter index to retrieve
-   * @return The FiniteElementState representing the user-defined parameter
+   * @brief Get a vector of the finite element state solution variable names
+   *
+   * @return The solution variable names
    */
-  virtual FiniteElementState& getParameter(size_t parameter_index) 
-  {
-    SLIC_ERROR_ROOT_IF(parameter_index >= parameter_states_.size(),
-                       axom::fmt::format("Parameter index {} is not available in physics module {}", parameter_index, name_));
-    SLIC_ERROR_ROOT_IF(!parameter_states_[parameter_index],
-                       axom::fmt::format("Parameter index {} is not set in physics module {}", parameter_index, name_));
-    return *parameter_states_[parameter_index]; 
-  }
-
-  /// @overload
-  virtual const FiniteElementState& getParameter(size_t parameter_index) const
-  {
-    SLIC_ERROR_ROOT_IF(parameter_index >= parameter_states_.size(),
-                       axom::fmt::format("Parameter index {} is not available in physics module {}", parameter_index, name_));
-    SLIC_ERROR_ROOT_IF(!parameter_states_[parameter_index],
-                       axom::fmt::format("Parameter index {} is not set in physics module {}", parameter_index, name_));
-    return *parameter_states_[parameter_index]; 
-  }
+  virtual std::vector<std::string> getStateNames() = 0;
 
   /**
-   * @brief Get the sensitivity of a parameter field of the physics module
-   * 
-   * @param parameter_index The parameter index to retrieve
-   * @return The FiniteElementDual representing the sensitivity of the user-defined parameter
+   * @brief Generate a finite element state object for the given parameter index
+   *
+   * @param parameter_index The index of the parameter to generate
    */
-  virtual FiniteElementDual& getParameterSensitivity(size_t parameter_index) 
+  virtual std::unique_ptr<FiniteElementState> generateParameter(int /* parameter_index */,
+                                                                const std::string& /*parameter_name*/)
   {
-    SLIC_ERROR_ROOT_IF(parameter_index >= parameter_sensitivities_.size(),
-                       axom::fmt::format("Sensitivity of parameter index {} is not available in physics module {}", parameter_index, name_));
-    SLIC_ERROR_ROOT_IF(!parameter_sensitivities_[parameter_index],
-                       axom::fmt::format("Sensitivity of parameter index {} is not set in physics module {}", parameter_index, name_));
-    return *parameter_sensitivities_[parameter_index]; 
-  }
-
-  virtual const FiniteElementDual& getParameterSensitivity(size_t parameter_index) const 
-  {
-    SLIC_ERROR_ROOT_IF(parameter_index >= parameter_sensitivities_.size(),
-                       axom::fmt::format("Sensitivity of parameter index {} is not available in physics module {}", parameter_index, name_));
-    SLIC_ERROR_ROOT_IF(!parameter_sensitivities_[parameter_index],
-                       axom::fmt::format("Sensitivity of parameter index {} is not set in physics module {}", parameter_index, name_));
-    return *parameter_sensitivities_[parameter_index]; 
+    SLIC_ERROR_ROOT(axom::fmt::format("Parameter generation not defined for physics module {}", name_));
+    return nullptr;
   }
 
   /**
@@ -165,15 +125,51 @@ public:
    * @param parameter_state the values to use for the specified parameter
    * @param parameter_index the index of the parameter
    */
-  void setParameter(FiniteElementState& parameter_state, size_t parameter_index)
+  void setParameter(FiniteElementState& parameter_state, size_t parameter_index);
+
+  /**
+   * @brief Get the parameter field of the physics module
+   *
+   * @param parameter_index The parameter index to retrieve
+   * @return The FiniteElementState representing the user-defined parameter
+   */
+  virtual FiniteElementState& getParameter(size_t parameter_index)
   {
-    SLIC_ERROR_ROOT_IF(parameter_index >= parameter_states_.size(),
-                       axom::fmt::format("Parameter index {} is not available in physics module {}", parameter_index, name_));
-    SLIC_ERROR_ROOT_IF(parameter_index >= parameter_sensitivities_.size(),
-                       axom::fmt::format("Sensitivity of parameter index {} is not available in physics module {}", parameter_index, name_));
-    parameter_states_[parameter_index] = &parameter_state;
-    parameter_sensitivities_[parameter_index] =
-        StateManager::newDual(parameter_state.space(), parameter_state.name() + "_sensitivity");
+    SLIC_ERROR_ROOT_IF(
+        parameter_index >= parameter_states_.size(),
+        axom::fmt::format("Parameter index {} is not available in physics module {}", parameter_index, name_));
+    SLIC_ERROR_ROOT_IF(!parameter_states_[parameter_index],
+                       axom::fmt::format("Parameter index {} is not set in physics module {}", parameter_index, name_));
+    return *parameter_states_[parameter_index];
+  }
+
+  /// @overload
+  virtual const FiniteElementState& getParameter(size_t parameter_index) const
+  {
+    SLIC_ERROR_ROOT_IF(
+        parameter_index >= parameter_states_.size(),
+        axom::fmt::format("Parameter index {} is not available in physics module {}", parameter_index, name_));
+    SLIC_ERROR_ROOT_IF(!parameter_states_[parameter_index],
+                       axom::fmt::format("Parameter index {} is not set in physics module {}", parameter_index, name_));
+    return *parameter_states_[parameter_index];
+  }
+
+  /**
+   * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
+   * problem with respect to the parameter field
+   *
+   * @tparam parameter_field The index of the parameter to take a derivative with respect to
+   * @return The sensitivity with respect to the parameter
+   *
+   * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
+   */
+  template <int parameter_field>
+  FiniteElementDual& computeSensitivity()
+  {
+    SLIC_ERROR_ROOT(axom::fmt::format("Parameter sensitivity calculation not defined for physics module {}", name_));
+
+    // Return a dummy dual value to quiet the compiler. This will never get used.
+    return *duals_[0];
   }
 
   /**
@@ -182,6 +178,26 @@ public:
    * @param[inout] dt The timestep to advance. For adaptive time integration methods, the actual timestep is returned.
    */
   virtual void advanceTimestep(double& dt) = 0;
+
+  /**
+   * @brief Solve the adjoint problem
+   * @pre It is expected that the forward analysis is complete and the current state is valid
+   * @note If the essential boundary state is not specified, homogeneous essential boundary conditions are applied
+   *
+   * @param[in] adjoint_load The dual state that contains the right hand side of the adjoint system (d quantity of
+   * interest/d displacement)
+   * @param[in] dual_with_essential_boundary A optional finite element dual containing the non-homogenous essential
+   * boundary condition data for the adjoint problem
+   * @return The computed adjoint finite element state
+   */
+  virtual const serac::FiniteElementState& solveAdjoint(FiniteElementDual& /*adjoint_load */,
+                                                        FiniteElementDual* /* dual_with_essential_boundary */ = nullptr)
+  {
+    SLIC_ERROR_ROOT(axom::fmt::format("Adjoint analysis not defined for physics module {}", name_));
+
+    // Return a dummy state value to quiet the compiler. This will never get used.
+    return *states_[0];
+  }
 
   /**
    * @brief Output the current state of the PDE fields in Sidre format and optionally in Paraview format

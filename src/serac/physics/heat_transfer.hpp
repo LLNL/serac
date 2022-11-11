@@ -120,8 +120,11 @@ public:
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
 
-    states_.push_back(temperature_);
-    states_.push_back(adjoint_temperature_);
+    states_.push_back(&temperature_);
+    states_.push_back(&adjoint_temperature_);
+
+    parameter_states_.resize(sizeof...(parameter_space));
+    parameter_sensitivities_.resize(sizeof...(parameter_space));
 
     // Create a pack of the primal field and parameter finite element spaces
     std::array<const mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + 1> trial_spaces;
@@ -139,8 +142,6 @@ public:
     M_functional_ = std::make_unique<Functional<test(trial, parameter_space...)>>(&temperature_.space(), trial_spaces);
 
     K_functional_ = std::make_unique<Functional<test(trial, parameter_space...)>>(&temperature_.space(), trial_spaces);
-
-    states_.push_back(temperature_);
 
     nonlin_solver_ = mfem_ext::EquationSolver(mesh_.GetComm(), options.linear, options.nonlinear);
     nonlin_solver_.SetOperator(residual_);
@@ -174,12 +175,11 @@ public:
    * @param parameter_state the values to use for the specified parameter
    * @param i the index of the parameter
    */
-  void setParameter(const FiniteElementState& parameter_state, size_t i)
+  void setParameter(FiniteElementState& parameter_state, size_t i)
   {
     parameter_states_[i] = &parameter_state;
     parameter_sensitivities_[i] =
         StateManager::newDual(parameter_state.space(), parameter_state.name() + "_sensitivity");
-    duals_.push_back(*parameter_sensitivities_[i]);
   }
 
   /**
@@ -366,6 +366,51 @@ public:
   serac::FiniteElementState& adjointTemperature() { return adjoint_temperature_; };
 
   /**
+   * @brief Accessor for getting named finite element state fields from the physics modules
+   *
+   * @param state_name The name of the Finite Element State to retrieve
+   * @return The named Finite Element State
+   */
+  const FiniteElementState& getState(const std::string& state_name) override
+  {
+    if (state_name == "temperature") {
+      return temperature_;
+    } else if (state_name == "adjoint_temperature") {
+      return adjoint_temperature_;
+    }
+
+    SLIC_ERROR_ROOT(axom::fmt::format("State {} requestion from solid mechanics module {}, but it doesn't exist",
+                                      state_name, name_));
+    return temperature_;
+  }
+
+  /**
+   * @brief Get a vector of the finite element state solution variable names
+   *
+   * @return The solution variable names
+   */
+  virtual std::vector<std::string> getStateNames()
+  {
+    return std::vector<std::string>{{"temperature"}, {"adjoint_displacement"}};
+  }
+
+  /**
+   * @brief Generate a finite element state object for the given parameter index
+   *
+   * @param parameter_index The index of the parameter to generate
+   */
+  virtual std::unique_ptr<FiniteElementState> generateParameter(int parameter_index, const std::string& parameter_name)
+  {
+    auto new_state = std::make_unique<FiniteElementState>(mesh_, *parameter_trial_spaces_[parameter_index],
+                                                          detail::addPrefix(name_, parameter_name));
+    StateManager::storeState(*new_state);
+    parameter_states_[parameter_index] = new_state.get();
+    parameter_sensitivities_[parameter_index] =
+        StateManager::newDual(new_state->space(), new_state->name() + "_sensitivity");
+    return new_state;
+  }
+
+  /**
    * @brief Complete the initialization and allocation of the data structures.
    *
    * This must be called before AdvanceTimestep().
@@ -523,7 +568,6 @@ protected:
 
   /// Trial finite element spaces for the functional object
   std::array<std::unique_ptr<mfem::ParFiniteElementSpace>, sizeof...(parameter_space)> parameter_trial_spaces_;
-
 
   /// Assembled mass matrix
   std::unique_ptr<mfem::HypreParMatrix> M_;

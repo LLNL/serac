@@ -58,6 +58,13 @@ public:
   static FiniteElementState newState(const mfem::ParFiniteElementSpace& space, const std::string& state_name);
 
   /**
+   * @brief Store a pre-constructed finite element state in the state manager
+   *
+   * @param state The finite element state to store
+   */
+  static void storeState(FiniteElementState& state);
+
+  /**
    * @brief Factory method for creating a new FEDual object, signature is identical to FEDual constructor
    * @param[in] options Configuration options for the FEDual, if a new state is created
    * @param[in] mesh_tag A string that uniquely identifies the mesh on which the dual is to be defined
@@ -75,6 +82,13 @@ public:
    * @return The constructed finite element dual
    */
   static FiniteElementDual newDual(const mfem::ParFiniteElementSpace& space, const std::string& dual_name);
+
+  /**
+   * @brief Store a pre-constructed finite element dual in the state manager
+   *
+   * @param dual The finite element dual to store
+   */
+  static void storeDual(FiniteElementDual& dual);
 
   /**
    * @brief Updates the StateManager-owned grid function using the values from a given
@@ -171,7 +185,7 @@ public:
    * @note A raw pointer comparison is used to identify the datacollection, i.e.,
    * @a pmesh must either been returned by either the setMesh() or mesh() method
    */
-  static std::string collectionID(mfem::ParMesh* pmesh);
+  static std::string collectionID(const mfem::ParMesh* pmesh);
 
   /// @brief Returns true if data was loaded into a DataCollection
   static bool isRestart() { return is_restart_; }

@@ -145,16 +145,19 @@ public:
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
 
-    states_.push_back(velocity_);
-    states_.push_back(displacement_);
-    states_.push_back(adjoint_displacement_);
+    states_.push_back(&velocity_);
+    states_.push_back(&displacement_);
+    states_.push_back(&adjoint_displacement_);
 
-    duals_.push_back(reactions_);
+    duals_.push_back(&reactions_);
 
     if (calc_shape_ == ShapeDisplacement::On) {
-      states_.push_back(shape_displacement_);
-      duals_.push_back(shape_sensitivity_);
+      states_.push_back(&shape_displacement_);
+      duals_.push_back(&shape_sensitivity_);
     }
+
+    parameter_states_.resize(sizeof...(parameter_space));
+    parameter_sensitivities_.resize(sizeof...(parameter_space));
 
     // Create a pack of the primal field and parameter finite element spaces
     mfem::ParFiniteElementSpace* test_space = &displacement_.space();
@@ -218,7 +221,6 @@ public:
 
   /// @brief Destroy the SolidMechanics Functional object
   ~SolidMechanics() {}
-
 
   /**
    * @brief Create a shared ptr to a quadrature data buffer for the given material type
@@ -290,6 +292,53 @@ public:
     component_disp_bdr_coef_ = std::make_shared<mfem::FunctionCoefficient>(disp);
 
     bcs_.addEssential(disp_bdr, component_disp_bdr_coef_, displacement_.space(), component);
+  }
+
+  /**
+   * @brief Accessor for getting named finite element state fields from the physics modules
+   *
+   * @param state_name The name of the Finite Element State to retrieve
+   * @return The named Finite Element State
+   */
+  const FiniteElementState& getState(const std::string& state_name) override
+  {
+    if (state_name == "displacement") {
+      return displacement_;
+    } else if (state_name == "velocity") {
+      return velocity_;
+    } else if (state_name == "adjoint_displacement") {
+      return adjoint_displacement_;
+    }
+
+    SLIC_ERROR_ROOT(axom::fmt::format("State {} requestion from solid mechanics module {}, but it doesn't exist",
+                                      state_name, name_));
+    return displacement_;
+  }
+
+  /**
+   * @brief Get a vector of the finite element state solution variable names
+   *
+   * @return The solution variable names
+   */
+  virtual std::vector<std::string> getStateNames()
+  {
+    return std::vector<std::string>{{"displacement"}, {"velocity"}, {"adjoint_displacement"}};
+  }
+
+  /**
+   * @brief Generate a finite element state object for the given parameter index
+   *
+   * @param parameter_index The index of the parameter to generate
+   */
+  virtual std::unique_ptr<FiniteElementState> generateParameter(int parameter_index, const std::string& parameter_name)
+  {
+    auto new_state = std::make_unique<FiniteElementState>(mesh_, *parameter_trial_spaces_[parameter_index],
+                                                          detail::addPrefix(name_, parameter_name));
+    StateManager::storeState(*new_state);
+    parameter_states_[parameter_index] = new_state.get();
+    parameter_sensitivities_[parameter_index] =
+        StateManager::newDual(new_state->space(), new_state->name() + "_sensitivity");
+    return new_state;
   }
 
   /**
@@ -840,18 +889,8 @@ protected:
   /// mfem::Operator that calculates the residual after applying essential boundary conditions
   std::unique_ptr<mfem_ext::StdFunctionOperator> residual_with_bcs_;
 
-  /// The finite element states representing user-defined parameter fields
-  std::array<const FiniteElementState*, sizeof...(parameter_space)> parameter_states_;
-
   /// The trial spaces used for the Functional object
   std::array<std::unique_ptr<mfem::ParFiniteElementSpace>, sizeof...(parameter_space)> parameter_trial_spaces_;
-
-  /**
-   * @brief The sensitivities (dual vectors) with repect to each of the input parameter fields
-   * @note this is an array of optionals as FiniteElementDual is not default constructable and
-   * we want to set this during the setParameter method.
-   */
-  std::array<std::optional<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;
 
   /// Sensitivity with respect to the shape displacement field
   FiniteElementDual shape_sensitivity_;

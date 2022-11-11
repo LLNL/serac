@@ -258,6 +258,30 @@ public:
   void setTemperature(mfem::Coefficient& temp);
 
   /**
+   * @brief Accessor for getting named finite element state fields from the physics modules
+   *
+   * @param state_name The name of the Finite Element State to retrieve
+   * @return The named Finite Element State
+   */
+  const FiniteElementState& getState(const std::string& state_name) override
+  {
+    if (state_name == "temperature") {
+      return temperature_;
+    }
+
+    SLIC_ERROR_ROOT(axom::fmt::format("State {} requestion from solid mechanics module {}, but it doesn't exist",
+                                      state_name, name_));
+    return temperature_;
+  }
+
+  /**
+   * @brief Get a vector of the finite element state solution variable names
+   *
+   * @return The solution variable names
+   */
+  virtual std::vector<std::string> getStateNames() { return std::vector<std::string>{{"temperature"}}; }
+
+  /**
    * @brief Set the thermal body source from a coefficient
    *
    * @param[in] source The source function coefficient
