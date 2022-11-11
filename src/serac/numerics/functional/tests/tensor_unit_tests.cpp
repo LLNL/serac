@@ -167,6 +167,31 @@ TEST(Tensor, ImplicitConversion)
   EXPECT_NEAR(value, A[0], tolerance);
 }
 
+TEST(tensor, matrix_sqrt)
+{
+  tensor<double, 3, 3> F = {{{0.3852817904392833, 0.1735582533169708, 0.5598788687303271},
+                             {-0.04379404406828202, 0.914979929679738, 0.995874974838651},
+                             {0.1909462690511288, -0.3981402297792775, 0.864926796819512}}};
+
+  auto matrix_sqrt = [](auto A) {
+    auto X = A;
+    for (int i = 0; i < 10; i++) {
+      X = 0.5 * (X + dot(A, inv(X)));
+    }
+    return X;
+  };
+
+  tensor<double, 3, 3> FTF = dot(transpose(F), F);
+
+  tensor<double, 3, 3> Uhat = matrix_sqrt(FTF);
+
+  tensor<double, 3, 3> Uhat_exact = {{{0.3718851927062453, -0.0809474212888889, 0.2048642780892224},
+                                      {-0.0809474212888888, 0.967374407775298, 0.2888955723924189},
+                                      {0.2048642780892223, 0.288895572392419, 1.388488261683237}}};
+
+  EXPECT_LT(norm(Uhat - Uhat_exact), 1.0e-10);
+}
+
 TEST(Tensor, Inverse4x4)
 {
   const tensor<double, 4, 4> A{{{2, 1, -1, 1}, {-3, -1, 2, 8}, {-2, 4, 2, 6}, {1, 1, 7, 2}}};

@@ -433,9 +433,7 @@ public:
           //
           // Note that the mass part of the return is integrated in the perturbed reference
           // configuration, hence the det(I + dp_dx) = det(dX'/dX)
-          //
-          // TODO: fix the residual implementation and remove this transpose.
-          return serac::tuple{material.density * d2u_dt2 * det(I + dp_dX), transpose(flux)};
+          return serac::tuple{material.density * d2u_dt2 * det(I + dp_dX), flux};
         },
         mesh_, qdata);
   }
@@ -527,6 +525,10 @@ public:
    * @param traction_function A function describing the traction applied to a boundary
    *
    * @pre TractionType must have the operator (x, normal, time) to return the thermal flux value
+   *
+   * @note: until mfem::GetFaceGeometricFactors implements their JACOBIANS option,
+   * (or we implement a replacement kernel ourselves) we are not able to compute
+   * shape sensitivities for boundary integrals.
    */
   template <int... active_parameters, typename TractionType>
   void setPiolaTraction(DependsOn<active_parameters...>, TractionType traction_function)
@@ -534,25 +536,8 @@ public:
     residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
         [this, traction_function](auto x, auto n, auto, auto, auto shape, auto... params) {
-          auto dp_dX = get<DERIVATIVE>(shape);
-          auto p     = get<VALUE>(shape);
-
-          auto def_grad           = I + dp_dX;
-          auto inv_trans_def_grad = inv(transpose(def_grad));
-
-          // Compute the normal vector after the shape displacement is applied using the Piola transformation
-          // n = det(F)F^-T n_0
-          auto shape_normal = det(def_grad) * dot(inv_trans_def_grad, n);
-          shape_normal      = shape_normal / norm(shape_normal);
-
-          // Needed to be able to switch between dual and double square root functions
-          using std::sqrt;
-
-          // Compute the updated area contribution using the Piola transformation
-          // dA = det(F) * norm(F^-T n_0)
-          auto area_correction = det(def_grad) * norm(dot(inv_trans_def_grad, n));
-
-          return -1.0 * traction_function(x + p, shape_normal, ode_time_point_, params...) * area_correction;
+          auto p = get<VALUE>(shape);
+          return -1.0 * traction_function(x + p, n, ode_time_point_, params...);
         },
         mesh_);
   }

@@ -261,6 +261,46 @@ SERAC_HOST_DEVICE constexpr const auto& get(const tuple<T...>& values)
 }
 
 /**
+ * @brief a function intended to be used for extracting the ith type from a tuple.
+ *
+ * @note type<i>(my_tuple) returns a value, whereas get<i>(my_tuple) returns a reference
+ *
+ * @tparam i the index of the tuple to query
+ * @tparam T the types stored in the tuple
+ * @param values the tuple of values
+ * @return a copy of the ith entry of the input
+ */
+template <int i, typename... T>
+SERAC_HOST_DEVICE constexpr auto type(const tuple<T...>& values)
+{
+  static_assert(i < sizeof...(T), "");
+  if constexpr (i == 0) {
+    return values.v0;
+  }
+  if constexpr (i == 1) {
+    return values.v1;
+  }
+  if constexpr (i == 2) {
+    return values.v2;
+  }
+  if constexpr (i == 3) {
+    return values.v3;
+  }
+  if constexpr (i == 4) {
+    return values.v4;
+  }
+  if constexpr (i == 5) {
+    return values.v5;
+  }
+  if constexpr (i == 6) {
+    return values.v6;
+  }
+  if constexpr (i == 7) {
+    return values.v7;
+  }
+}
+
+/**
  * @brief A helper function for the + operator of tuples
  *
  * @tparam S the types stored in the tuple x
