@@ -157,7 +157,10 @@ int main(int argc, char* argv[]) {
   auto qdata = solid_solver.createQuadratureDataBuffer(initial_state);
 
   solid_solver.setMaterial(DependsOn<TEMPERATURE_INDEX, GAMMA_INDEX>{}, mat, qdata);
-
+// 5.16837e-09
+// 8.15141e-09
+// 9.10675e-08
+// 1.53078e-09
   // prescribe symmetry conditions
   auto zeroFunc = [](const mfem::Vector /*x*/){ return 0.0;};
   solid_solver.setDisplacementBCs({1}, zeroFunc, 2); // bottom face z-dir disp = 0

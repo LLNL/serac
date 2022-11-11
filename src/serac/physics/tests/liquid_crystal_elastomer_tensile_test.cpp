@@ -20,9 +20,6 @@
 #define LOAD_DRIVEN
 // #undef LOAD_DRIVEN
 
-// #define USER_MESH
-#undef USER_MESH
-
 using namespace serac;
 
 using serac::solid_mechanics::default_static_options;
@@ -40,7 +37,7 @@ int main(int argc, char* argv[]) {
   constexpr int p = 1;
   constexpr int dim = 3;
   
-  int num_steps = 20;
+  int num_steps = 30;
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -52,18 +49,13 @@ int main(int argc, char* argv[]) {
 
   // Construct the appropriate dimension mesh and give it to the data store
 
-#ifdef USER_MESH
-  int serial_refinement   = 0;
-  int parallel_refinement = 1;
+  int nElem = 5;
+  double lx = 0.67e-3/2, ly = 10.0e-3, lz = 0.25e-3/2;
+  ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(2*nElem, 40*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
+  // double lx = 0.67e-3, ly = 10.0e-3, lz = 0.25e-3;
+  // ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(2*nElem, 25*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
 
-  // std::string filename = SERAC_REPO_DIR "/data/meshes/beam-hex-flat.mesh";
-  std::string filename = SERAC_REPO_DIR "/data/meshes/LCE_tensileTestSpecimen_nonDim.g"; 
-  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-#else
-  int nElem = 4;
-  ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(2*nElem, 10*nElem, nElem, mfem::Element::HEXAHEDRON, 0.67/2, 10.0/2, 0.25/2));
   auto mesh = std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, cuboid);
-#endif
 
   serac::StateManager::setMesh(std::move(mesh));
 
@@ -95,6 +87,7 @@ int main(int argc, char* argv[]) {
     {
       // return (x[0] > 1.0) ? M_PI_2 : 0.0; 
       return M_PI_2;
+      // return 0.0;
     }
     else if (lceArrangementTag==2)
     {
@@ -127,7 +120,7 @@ int main(int argc, char* argv[]) {
                                                        .lin_solver  = LinearSolver::GMRES,
                                                        .prec        = HypreBoomerAMGPrec{}};
   NonlinearSolverOptions default_nonlinear_options = {
-    .rel_tol = 1.0e-4, .abs_tol = 1.0e-7, .max_iter = 7, .print_level = 1};
+    .rel_tol = 1.0e-4, .abs_tol = 1.0e-7, .max_iter = 6, .print_level = 1};
 SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver({default_linear_options, default_nonlinear_options}, GeometricNonlinearities::Off,
                                        "lce_solid_functional");
   // SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver(solid_mechanics::default_static_options, GeometricNonlinearities::Off,
@@ -139,16 +132,26 @@ SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver({default_linear
   solid_solver.setParameter(temperature, TEMPERATURE_INDEX);
   solid_solver.setParameter(gamma, GAMMA_INDEX);
 
+  // double density = 1.0;
+  // double E = 1e7; // 1.0e-1; // 1.0;
+  // double nu = 0.38; // 0.49;
+  // double shear_modulus = 0.5*E/(1.0 + nu);
+  // double bulk_modulus = E / 3.0 / (1.0 - 2.0*nu);
+  // double order_constant = 10; // 6.0;
+  // double order_parameter = 0.95; // 0.7;
+  // double transition_temperature = 348; // 370.0;
+  // double Nb2 = 1.0;
+
   double density = 1.0;
-  double E = 1.0;
+  double E = 4.0e7; // 1.0e-1; // 1.0;
   double nu = 0.49;
   double shear_modulus = 0.5*E/(1.0 + nu);
   double bulk_modulus = E / 3.0 / (1.0 - 2.0*nu);
-  double order_constant = 6.0;
-  double order_parameter = 0.7;
-  double transition_temperature = 370.0;
+  double order_constant = 10; // 6.0;
+  double order_parameter = 0.95; // 0.7;
+  double transition_temperature = 348; // 370.0;
   double Nb2 = 1.0;
-  
+
   LiquidCrystalElastomer mat(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, Nb2);
 
   LiquidCrystalElastomer::State initial_state{};
@@ -161,19 +164,20 @@ SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver({default_linear
   auto zeroFunc = [](const mfem::Vector /*x*/){ return 0.0;};
   solid_solver.setDisplacementBCs({1}, zeroFunc, 2); // bottom face y-dir disp = 0
   solid_solver.setDisplacementBCs({2}, zeroFunc, 1); // left face x-dir disp = 0
-  // solid_solver.setDisplacementBCs({2}, [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; });
   solid_solver.setDisplacementBCs({5}, zeroFunc, 0); // back face z-dir disp = 0
+
+  // solid_solver.setDisplacementBCs({2}, [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; });
 
 #ifdef LOAD_DRIVEN
   auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0001; };
   // auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0000000001; };
 
-  double iniLoadVal = 7.0e-4;
-  double maxLoadVal = 1.3e0;
+  double iniLoadVal = 1.0e0;
+  double maxLoadVal = 1.3e0/lx/lz; // 1.3e2/lx;
   double loadVal = iniLoadVal + 0.0 * maxLoadVal;
-  solid_solver.setPiolaTraction([&loadVal](auto x, auto /*n*/, auto /*t*/){
+  solid_solver.setPiolaTraction([&loadVal, ly](auto x, auto /*n*/, auto /*t*/){
 
-    return tensor<double, 3>{0, loadVal * (x[1]>4.95), 0};
+    return tensor<double, 3>{0, loadVal * (x[1]>0.99*ly), 0};
   });
 
 #else
@@ -205,7 +209,7 @@ SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver({default_linear
       << "\n... Entering time step: "<< i + 1
       << "\n... At time: "<< t
 #ifdef LOAD_DRIVEN
-      << "\n... And with a tension load of: " << loadVal
+      << "\n... And with a tension load of: " << loadVal <<" ("<<loadVal/maxLoadVal*100<<"\% of max)"
       << "\n... And with uniform temperature of: " << initial_temperature
 #else
       << "\n... And with uniform temperature of: " << initial_temperature * (1.0 - (t / tmax)) + final_temperature * (t / tmax) 
@@ -218,18 +222,18 @@ SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver({default_linear
 
     if(outputDispInfo)
     {
-      FiniteElementState &displacement = solid_solver.displacement();
-      auto &fes = displacement.space();
-
+      // FiniteElementState &displacement = solid_solver.displacement();
+      auto &fes = solid_solver.displacement().space();
+      mfem::ParGridFunction displacement_gf = solid_solver.displacement().gridFunction();
       mfem::Vector dispVecX(fes.GetNDofs()); dispVecX = 0.0;
       mfem::Vector dispVecY(fes.GetNDofs()); dispVecY = 0.0;
       mfem::Vector dispVecZ(fes.GetNDofs()); dispVecZ = 0.0;
 
       for (int k = 0; k < fes.GetNDofs(); k++) 
       {
-        dispVecX(k) = displacement(3*k+0);
-        dispVecY(k) = displacement(3*k+1);
-        dispVecZ(k) = displacement(3*k+2);
+        dispVecX(k) = displacement_gf(3*k+0);
+        dispVecY(k) = displacement_gf(3*k+1);
+        dispVecZ(k) = displacement_gf(3*k+2);
       }
 
       double gblDispXmin, lclDispXmin = dispVecX.Min();
@@ -258,16 +262,21 @@ SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver({default_linear
         << std::endl;
       }
 
-      if(gblDispYmax>1e10)
+      if(std::isnan(gblDispYmax))
       {
-        std::cout << "... Solution blew up... Check (maybe reduce) initial displacement." << std::endl;
+        if(rank==0)
+        {
+          std::cout << "... Solution blew up... Check boundary and initial conditions." << std::endl;
+        }
         exit(1);
       }
     }
 
     t += dt;
 #ifdef LOAD_DRIVEN
-    loadVal = iniLoadVal +  t / tmax * (maxLoadVal - iniLoadVal);
+    // loadVal = iniLoadVal +  t / tmax * (maxLoadVal - iniLoadVal);
+    // loadVal = iniLoadVal * std::exp( std::log(maxLoadVal/iniLoadVal) * t / tmax  );
+    loadVal = iniLoadVal  + (maxLoadVal - iniLoadVal) * std::pow( t / tmax, 0.75  );
 #else
     temperature = initial_temperature * (1.0 - (t / tmax)) + final_temperature * (t / tmax);
 #endif
