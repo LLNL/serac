@@ -20,6 +20,9 @@
 #define LOAD_DRIVEN
 // #undef LOAD_DRIVEN
 
+#define FULL_DOMAIN
+// #undef FULL_DOMAIN
+
 using namespace serac;
 
 using serac::solid_mechanics::default_static_options;
@@ -50,11 +53,13 @@ int main(int argc, char* argv[]) {
   // Construct the appropriate dimension mesh and give it to the data store
 
   int nElem = 5;
+#ifdef FULL_DOMAIN
+  double lx = 0.67e-3, ly = 10.0e-3, lz = 0.25e-3;
+  ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(2*nElem, 25*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
+#else
   double lx = 0.67e-3/2, ly = 10.0e-3, lz = 0.25e-3/2;
   ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(2*nElem, 40*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
-  // double lx = 0.67e-3, ly = 10.0e-3, lz = 0.25e-3;
-  // ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(2*nElem, 25*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
-
+#endif
   auto mesh = std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, cuboid);
 
   serac::StateManager::setMesh(std::move(mesh));
@@ -160,20 +165,27 @@ SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver({default_linear
 
   solid_solver.setMaterial(DependsOn<TEMPERATURE_INDEX, GAMMA_INDEX>{}, mat, qdata);
 
+#ifdef FULL_DOMAIN
+  // Fixed bottom
+  solid_solver.setDisplacementBCs({2}, [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; });
+#else
   // prescribe symmetry conditions
   auto zeroFunc = [](const mfem::Vector /*x*/){ return 0.0;};
   solid_solver.setDisplacementBCs({1}, zeroFunc, 2); // bottom face y-dir disp = 0
   solid_solver.setDisplacementBCs({2}, zeroFunc, 1); // left face x-dir disp = 0
   solid_solver.setDisplacementBCs({5}, zeroFunc, 0); // back face z-dir disp = 0
-
-  // solid_solver.setDisplacementBCs({2}, [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; });
+#endif
 
 #ifdef LOAD_DRIVEN
-  auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0001; };
+  auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.000000001; };
   // auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0000000001; };
 
   double iniLoadVal = 1.0e0;
-  double maxLoadVal = 1.3e0/lx/lz; // 1.3e2/lx;
+#ifdef FULL_DOMAIN
+  double maxLoadVal = 4*1.3e0/lx/lz;
+#else
+  double maxLoadVal = 1.3e0/lx/lz;
+#endif
   double loadVal = iniLoadVal + 0.0 * maxLoadVal;
   solid_solver.setPiolaTraction([&loadVal, ly](auto x, auto /*n*/, auto /*t*/){
 
