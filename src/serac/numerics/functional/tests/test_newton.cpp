@@ -67,6 +67,47 @@ TEST(ScalarEquationSolver, DerivativeOfPrimal)
     std::cout << "dsqrt_p (exact)) = " << 0.5 / (sqrt_p) << std::endl;
 }
 
+TEST(ScalarEquationSolver, DerivativeWithTensorParameter)
+{
+    auto my_norm = [](auto A) {
+        auto p = squared_norm(A);
+        double tolerance = 1e-10;
+        double lower = 1e-3;
+        double upper = 20.0;
+        double x0 = get_value(p);
+        return solve_scalar_equation([](auto x, auto a){ return g(x, a); }, x0, tolerance, lower, upper, p);
+    };
+
+    tensor< double, 3, 3 > A = {{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}}};
+
+    auto [my_norm_p, dmy_norm_p] = my_norm(make_dual(A));
+    auto [norm_p, dnorm_p] = norm(make_dual(A));
+    std::cout << "my_norm_p  = " << my_norm_p << std::endl;
+    std::cout << "norm_p     = " << norm_p << std::endl;
+    std::cout << "dmy_norm_p = " << dmy_norm_p << std::endl;
+    std::cout << "dnorm_p    = " << dnorm_p << std::endl;
+}
+
+TEST(ScalarEquationSolver, DerivativeWithTensorParameter2)
+{
+    auto my_norm = [](auto A) {
+        double tolerance = 1e-10;
+        double lower = 1e-3;
+        double upper = 20.0;
+        double x0 = 10.0;
+        return solve_scalar_equation([](auto x, auto P){ return x*x - squared_norm(P); }, x0, tolerance, lower, upper, A);
+    };
+
+    tensor< double, 3, 3 > A = {{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}}};
+
+    auto [my_norm_p, dmy_norm_p] = my_norm(make_dual(A));
+    auto [norm_p, dnorm_p] = norm(make_dual(A));
+    std::cout << "my_norm_p  = " << my_norm_p << std::endl;
+    std::cout << "norm_p     = " << norm_p << std::endl;
+    std::cout << "dmy_norm_p = " << dmy_norm_p << std::endl;
+    std::cout << "dnorm_p    = " << dnorm_p << std::endl;
+}
+
     // def test_scalar_newton_jvp(self):
     //     def my_sqrt(p):
     //         tol = 1e-12

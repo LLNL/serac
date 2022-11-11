@@ -14,10 +14,6 @@
 
 #include "serac/infrastructure/accelerator.hpp"
 
-#include "serac/numerics/functional/dual.hpp"
-
-#include "serac/numerics/functional/tuple.hpp"
-
 #include "detail/metaprogramming.hpp"
 
 namespace serac {
@@ -477,81 +473,7 @@ SERAC_HOST_DEVICE constexpr auto operator-(const tensor<S, m, n...>& A, const te
   return C;
 }
 
-/**
- * @brief multiply a tensor by a scalar value
- * @tparam S the scalar value type. Must be arithmetic (e.g. float, double, int) or a dual number
- * @tparam T the underlying type of the tensor (righthand) argument
- * @tparam n integers describing the tensor shape
- * @param[in] scale The scaling factor
- * @param[in] A The tensor to be scaled
- */
-template <typename S, typename T, int m, int... n,
-          typename = std::enable_if_t<std::is_arithmetic_v<S> || is_dual_number<S>::value>>
-SERAC_HOST_DEVICE constexpr auto operator*(S scale, const tensor<T, m, n...>& A)
-{
-  tensor<decltype(S{} * T{}), m, n...> C{};
-  for (int i = 0; i < m; i++) {
-    C[i] = scale * A[i];
-  }
-  return C;
-}
 
-/**
- * @brief multiply a tensor by a scalar value
- * @tparam S the scalar value type. Must be arithmetic (e.g. float, double, int) or a dual number
- * @tparam T the underlying type of the tensor (righthand) argument
- * @tparam n integers describing the tensor shape
- * @param[in] A The tensor to be scaled
- * @param[in] scale The scaling factor
- */
-template <typename S, typename T, int m, int... n,
-          typename = std::enable_if_t<std::is_arithmetic_v<S> || is_dual_number<S>::value>>
-SERAC_HOST_DEVICE constexpr auto operator*(const tensor<T, m, n...>& A, S scale)
-{
-  tensor<decltype(T{} * S{}), m, n...> C{};
-  for (int i = 0; i < m; i++) {
-    C[i] = A[i] * scale;
-  }
-  return C;
-}
-
-/**
- * @brief divide a scalar by each element in a tensor
- * @tparam S the scalar value type. Must be arithmetic (e.g. float, double, int) or a dual number
- * @tparam T the underlying type of the tensor (righthand) argument
- * @tparam n integers describing the tensor shape
- * @param[in] scale The numerator
- * @param[in] A The tensor of denominators
- */
-template <typename S, typename T, int m, int... n,
-          typename = std::enable_if_t<std::is_arithmetic_v<S> || is_dual_number<S>::value>>
-SERAC_HOST_DEVICE constexpr auto operator/(S scale, const tensor<T, m, n...>& A)
-{
-  tensor<decltype(S{} * T{}), n...> C{};
-  for (int i = 0; i < m; i++) {
-    C[i] = scale / A[i];
-  }
-  return C;
-}
-
-/**
- * @brief divide a tensor by a scalar
- * @tparam S the scalar value type. Must be arithmetic (e.g. float, double, int) or a dual number
- * @tparam T the underlying type of the tensor (righthand) argument
- * @tparam n integers describing the tensor shape
- * @param[in] A The tensor of numerators
- * @param[in] scale The denominator
- */
-template <typename S, typename T, int m, int... n,
-          typename = std::enable_if_t<std::is_arithmetic_v<S> || is_dual_number<S>::value>>
-SERAC_HOST_DEVICE constexpr auto operator/(const tensor<T, m, n...>& A, S scale)
-{
-  tensor<decltype(T{} * S{}), m, n...> C{};
-  for (int i = 0; i < m; i++) {
-    C[i] = A[i] / scale;
-  }
-  return C;
-}
 
 /**
  * @brief compound assignment (+) on tensors
@@ -1274,70 +1196,6 @@ struct LuFactorization {
 };
 
 /**
- * @brief Compute LU factorization of a matrix with partial pivoting
- *
- * The convention followed is to place ones on the diagonal of the lower
- * triangular factor.
- * @param[in] A The matrix to factorize
- * @return An LuFactorization object
- * @see LuFactorization
- */
-template <typename T, int n>
-SERAC_HOST_DEVICE constexpr LuFactorization<T, n> factorize_lu(const tensor<T, n, n>& A)
-{
-  constexpr auto abs  = [](double x) { return (x < 0) ? -x : x; };
-  constexpr auto swap = [](auto& x, auto& y) {
-    auto tmp = x;
-    x        = y;
-    y        = tmp;
-  };
-
-  auto U = A;
-  // initialize L to Identity
-  auto L = tensor<T, n, n>{};
-  // This handles the case if T is a dual number
-  // TODO - BT: make a dense identity that is templated on type
-  for (int i = 0; i < n; i++) {
-    if constexpr (is_dual_number<T>::value) {
-      L[i][i].value = 1.0;
-    } else {
-      L[i][i] = 1.0;
-    }
-  }
-  tensor<int, n> P(make_tensor<n>([](auto i) { return i; }));
-
-  for (int i = 0; i < n; i++) {
-    // Search for maximum in this column
-    double max_val = abs(get_value(U[i][i]));
-
-    int max_row = i;
-    for (int j = i + 1; j < n; j++) {
-      auto U_ji = get_value(U[j][i]);
-      if (abs(U_ji) > max_val) {
-        max_val = abs(U_ji);
-        max_row = j;
-      }
-    }
-
-    swap(P[max_row], P[i]);
-    swap(U[max_row], U[i]);
-  }
-
-  for (int i = 0; i < n; i++) {
-    // zero entries below in this column in U
-    // and fill in L entries
-    for (int j = i + 1; j < n; j++) {
-      auto c  = U[j][i] / U[i][i];
-      L[j][i] = c;
-      U[j] -= c * U[i];
-      U[j][i] = T{};
-    }
-  }
-
-  return {P, L, U};
-}
-
-/**
  * @brief Solves a lower triangular system Ly = b
  *
  * L must be lower triangular and normalized such that the
@@ -1405,38 +1263,7 @@ SERAC_HOST_DEVICE constexpr auto solve_upper_triangular(const tensor<T, n, n>& U
   return x;
 }
 
-/**
- * @brief Solves Ax = b for x using Gaussian elimination with partial pivoting
- * @param[in] A The coefficient matrix A
- * @param[in] b The righthand side vector b
- * @return x The solution vector
- */
-template <typename S, typename T, int n, int... m>
-SERAC_HOST_DEVICE constexpr auto linear_solve(const tensor<S, n, n>& A, const tensor<T, n, m...>& b)
-{
-  // We want to avoid accumulating the derivative through the
-  // LU factorization, because it is computationally expensive.
-  // Instead, we perform the LU factorization on the values of
-  // A, and then two backsolves: one to compute the primal (x),
-  // and another to compute its derivative (dx).
-  // If A is not dual, the second solve is a no-op.
 
-  // Strip off derivatives, if any, and compute only x (ie no derivative)
-  auto lu_factors = factorize_lu(get_value(A));
-  auto x          = linear_solve(lu_factors, get_value(b));
-
-  // Compute directional derivative of x.
-  // If both b and A are not dual, the zero type
-  // makes these no-ops.
-  auto r  = get_gradient(b) - dot(get_gradient(A), x);
-  auto dx = linear_solve(lu_factors, r);
-
-  if constexpr (is_zero<decltype(dx)>{}) {
-    return x;
-  } else {
-    return make_dual(x, dx);
-  }
-}
 
 /**
  * @overload
@@ -1464,14 +1291,6 @@ SERAC_HOST_DEVICE constexpr auto linear_solve(const LuFactorization<T, n>& /* lu
   return zero{};
 }
 
-/**
- * @brief Create a tensor of dual numbers with specified seed
- */
-template <typename T, int n>
-SERAC_HOST_DEVICE constexpr auto make_dual(const tensor<T, n>& x, const tensor<T, n>& dx)
-{
-  return make_tensor<n>([&](int i) { return dual<T>{x[i], dx[i]}; });
-}
 
 /**
  * @brief Inverts a matrix
@@ -1526,30 +1345,7 @@ SERAC_HOST_DEVICE constexpr auto inv(const tensor<T, n, n>& A)
   return linear_solve(A, I);
 }
 
-/**
- * @overload
- * @note when inverting a tensor of dual numbers,
- * hardcode the analytic derivative of the
- * inverse of a square matrix, rather than
- * apply gauss elimination directly on the dual number types
- *
- * TODO: compare performance of this hardcoded implementation to just using inv() directly
- */
-template <typename gradient_type, int n>
-SERAC_HOST_DEVICE constexpr auto inv(tensor<dual<gradient_type>, n, n> A)
-{
-  auto invA = inv(get_value(A));
-  return make_tensor<n, n>([&](int i, int j) {
-    auto          value = invA[i][j];
-    gradient_type gradient{};
-    for (int k = 0; k < n; k++) {
-      for (int l = 0; l < n; l++) {
-        gradient -= invA[i][k] * A[k][l].gradient * invA[l][j];
-      }
-    }
-    return dual<gradient_type>{value, gradient};
-  });
-}
+
 
 /**
  * @brief recursively serialize the entries in a tensor to an ostream.
@@ -1635,139 +1431,7 @@ SERAC_HOST_DEVICE constexpr auto chop(const tensor<double, m, n>& A)
   return copy;
 }
 
-/**
- * @brief Constructs a tensor of dual numbers from a tensor of values
- * @param[in] A The tensor of values
- * @note a d-order tensor's gradient will be initialized to the (2*d)-order identity tensor
- */
-template <int... n>
-SERAC_HOST_DEVICE constexpr auto make_dual(const tensor<double, n...>& A)
-{
-  tensor<dual<tensor<double, n...>>, n...> A_dual{};
-  for_constexpr<n...>([&](auto... i) {
-    A_dual(i...).value          = A(i...);
-    A_dual(i...).gradient(i...) = 1.0;
-  });
-  return A_dual;
-}
 
-
-/* differentiable Newton solver for scalar-valued equations */
-template <typename function, typename... ParamTypes>
-auto solve_scalar_equation(function && f, double x0, double tolerance,
-                             double lower_bound, double upper_bound, ParamTypes... params)
-{
-  double x, df_dx;
-  double fl = f(lower_bound, get_value(params)...);
-  double fh = f(upper_bound, get_value(params)...);
-
-  SLIC_WARNING_IF(fl*fh > 0, "solve_scalar_equation: root not bracketed by input bounds.");
-
-  // handle corner case where one of the brackets is the root
-  bool already_solved = false;
-  if (fl == 0) {
-    x = lower_bound;
-    already_solved = true;
-  } else if (fh == 0) {
-    x = upper_bound;
-    already_solved = true;
-  }
-  
-  if (already_solved) {
-    
-    df_dx = get_gradient(f(make_dual(x), get_value(params)...));
-
-  } else {
-
-    // orient search so that f(xl) < 0
-    double xl = lower_bound;
-    double xh = upper_bound;
-    if (fl > 0) {
-      xl = upper_bound;
-      xh = lower_bound;
-    }
-
-    // move initial guess if it is not between brackets
-    if (x0 < lower_bound || x0 > upper_bound) {
-      x0 = 0.5*(lower_bound + upper_bound);
-    }
-    const unsigned int MAX_ITERATIONS = 25;
-    x = x0;
-    double dx_old = std::abs(upper_bound - lower_bound);
-    double dx = dx_old;
-    auto R = f(make_dual(x), get_value(params)...);
-    auto fval = get_value(R);
-    df_dx = get_gradient(R);
-
-    
-    unsigned int iterations = 0;
-    bool converged = false;
-
-    while (!converged) {
-      if (iterations == MAX_ITERATIONS) {
-        SLIC_WARNING("solve_scalar_equation failed to converge in allotted iterations.");
-        break;
-      }
-      
-      // use bisection if Newton oversteps brackets or is not decreasing sufficiently
-      if ((x - xh)*df_dx - fval > 0 ||
-          (x - xl)*df_dx - fval < 0 ||
-          std::abs(2.*fval) > dx_old*df_dx) {
-        dx_old = dx;
-        dx = 0.5*(xh - xl);
-        x = xl + dx;
-        converged = (x == xl);
-      } else { // use Newton step
-        dx_old = dx;
-        dx = fval/df_dx;
-        auto temp = x;
-        x -= dx;
-        converged = (x == temp);
-      }
-
-      // std::cout << "iter " << i << " x = " << x << std::endl;
-
-      // convergence check
-      converged = converged || (std::abs(dx) < tolerance);
-      
-      // function and jacobian evaluation
-      R = f(make_dual(x), get_value(params)...);
-      fval = get_value(R);
-      df_dx = get_gradient(R);
-
-      // maintain bracket on root
-      if (fval < 0) {
-        xl = x;
-      } else {
-        xh = x;
-      }
-
-      ++iterations;
-    }
-
-  }
-
-  // [fval, df_dp] = f(get_value(x), p)
-  // for p in params:
-  //   accumulate x_dot += inner(df_dp, p_dot)
-  // x_dot /= -df_dx
-  constexpr bool contains_duals = (is_dual_number<ParamTypes>::value || ...);
-  if constexpr (contains_duals) {
-    auto seq = std::make_integer_sequence<int, static_cast<int>(sizeof...(params))>();
-    auto df = solver_derivative_helper(f, x, tuple{params...}, seq);
-    return dual<double>{x, -df/df_dx};
-  }
-  if constexpr (!contains_duals) {
-    return x;
-  }
-}
-
-template <typename function, typename... ParamTypes, int... i>
-auto solver_derivative_helper(function && f, double x, tuple<ParamTypes...> params, std::integer_sequence<int, i...>)
-{
-  auto [fval, df_dp] = f(get_value(x), get<i>(params)...);
-  return (inner(get<i>(df_dp), get_gradient(get<i>(params))) + ...);
-}
 
 
 /// @cond
@@ -1817,17 +1481,6 @@ struct outer_prod<T, zero> {
 template <typename T1, typename T2>
 using outer_product_t = typename detail::outer_prod<T1, T2>::type;
 
-/**
- * @brief Retrieves a value tensor from a tensor of dual numbers
- * @param[in] arg The tensor of dual numbers
- */
-template <typename T, int... n>
-SERAC_HOST_DEVICE auto get_value(const tensor<dual<T>, n...>& arg)
-{
-  tensor<double, n...> value{};
-  for_constexpr<n...>([&](auto... i) { value(i...) = arg(i...).value; });
-  return value;
-}
 
 /**
  * @brief Retrieves the gradient component of a double (which is nothing)
@@ -1844,27 +1497,6 @@ template <int... n>
 SERAC_HOST_DEVICE constexpr auto get_gradient(const tensor<double, n...>& /* arg */)
 {
   return zero{};
-}
-
-/**
- * @brief Retrieves a gradient tensor from a tensor of dual numbers
- * @param[in] arg The tensor of dual numbers
- */
-template <int... n>
-SERAC_HOST_DEVICE constexpr auto get_gradient(const tensor<dual<double>, n...>& arg)
-{
-  tensor<double, n...> g{};
-  for_constexpr<n...>([&](auto... i) { g(i...) = arg(i...).gradient; });
-  return g;
-}
-
-/// @overload
-template <int... n, int... m>
-SERAC_HOST_DEVICE constexpr auto get_gradient(const tensor<dual<tensor<double, m...>>, n...>& arg)
-{
-  tensor<double, n..., m...> g{};
-  for_constexpr<n...>([&](auto... i) { g(i...) = arg(i...).gradient; });
-  return g;
 }
 
 /**
@@ -1953,3 +1585,5 @@ SERAC_HOST_DEVICE auto chain_rule(const tensor<double, m, n, p...>& df_dx, const
 }  // namespace serac
 
 #include "serac/numerics/functional/isotropic_tensor.hpp"
+
+#include "serac/numerics/functional/tuple_tensor_dual_functions.hpp"

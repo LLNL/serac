@@ -678,4 +678,31 @@ struct tuple_element<0, tuple<Head, Tail...>> {
   using type = Head;  ///< the type at the specified index
 };
 
+/**
+ * @brief Trait for checking if a type is a @p serac::tuple
+ */
+template <typename T>
+struct is_tuple : std::false_type {
+};
+
+/// @overload
+template <typename... T>
+struct is_tuple<serac::tuple<T...> > : std::true_type {
+};
+
+/**
+ * @brief Trait for checking if a type if a @p serac::tuple containing only @p serac::tuple
+ */
+template <typename T>
+struct is_tuple_of_tuples : std::false_type {
+};
+
+/// @overload
+template <typename... T>
+struct is_tuple_of_tuples<serac::tuple<T...> > {
+  static constexpr bool value = (is_tuple<T>::value && ...);
+};
+
 }  // namespace serac
+
+#include "serac/numerics/functional/tuple_tensor_dual_functions.hpp"
