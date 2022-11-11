@@ -111,13 +111,10 @@ public:
    * @brief Generate a finite element state object for the given parameter index
    *
    * @param parameter_index The index of the parameter to generate
+   * @param parameter_name The name of the parameter to generate
    */
-  virtual std::unique_ptr<FiniteElementState> generateParameter(int /* parameter_index */,
-                                                                const std::string& /*parameter_name*/)
-  {
-    SLIC_ERROR_ROOT(axom::fmt::format("Parameter generation not defined for physics module {}", name_));
-    return nullptr;
-  }
+  virtual std::unique_ptr<FiniteElementState> generateParameter(size_t             parameter_index,
+                                                                const std::string& parameter_name);
 
   /**
    * @brief register the provided FiniteElementState object as the source of values for parameter `i`
@@ -136,22 +133,22 @@ public:
   virtual FiniteElementState& getParameter(size_t parameter_index)
   {
     SLIC_ERROR_ROOT_IF(
-        parameter_index >= parameter_states_.size(),
+        parameter_index >= parameter_info_.size(),
         axom::fmt::format("Parameter index {} is not available in physics module {}", parameter_index, name_));
-    SLIC_ERROR_ROOT_IF(!parameter_states_[parameter_index],
+    SLIC_ERROR_ROOT_IF(!parameter_info_[parameter_index].state,
                        axom::fmt::format("Parameter index {} is not set in physics module {}", parameter_index, name_));
-    return *parameter_states_[parameter_index];
+    return *parameter_info_[parameter_index].state;
   }
 
   /// @overload
   virtual const FiniteElementState& getParameter(size_t parameter_index) const
   {
     SLIC_ERROR_ROOT_IF(
-        parameter_index >= parameter_states_.size(),
+        parameter_index >= parameter_info_.size(),
         axom::fmt::format("Parameter index {} is not available in physics module {}", parameter_index, name_));
-    SLIC_ERROR_ROOT_IF(!parameter_states_[parameter_index],
+    SLIC_ERROR_ROOT_IF(!parameter_info_[parameter_index].state,
                        axom::fmt::format("Parameter index {} is not set in physics module {}", parameter_index, name_));
-    return *parameter_states_[parameter_index];
+    return *parameter_info_[parameter_index].state;
   }
 
   /**
@@ -261,15 +258,24 @@ protected:
    */
   std::vector<serac::FiniteElementDual*> duals_;
 
-  /// The finite element states representing user-defined parameter fields
-  std::vector<serac::FiniteElementState*> parameter_states_;
+  /// @brief The information needed for the physics parameters stored as Finite Element State fields
+  struct ParameterInfo {
+    /// The trial spaces used for the Functional object
+    std::unique_ptr<mfem::ParFiniteElementSpace> trial_space;
 
-  /**
-   * @brief The sensitivities (dual vectors) with repect to each of the input parameter fields
-   * @note this is a vector of optionals as FiniteElementDual is not default constructable and
-   * we want to set this during the setParameter method.
-   */
-  std::vector<std::optional<FiniteElementDual>> parameter_sensitivities_;
+    /// The finite element states representing user-defined parameter fields
+    serac::FiniteElementState* state;
+
+    /**
+     * @brief The sensitivities (dual vectors) with repect to each of the input parameter fields
+     * @note this is a vector of optionals as FiniteElementDual is not default constructable and
+     * we want to set this during the setParameter method.
+     */
+    std::optional<FiniteElementDual> sensitivity;
+  };
+
+  /// @brief A vector of the parameters associated with this physics module
+  std::vector<ParameterInfo> parameter_info_;
 
   /**
    * @brief Block vector storage of the true state

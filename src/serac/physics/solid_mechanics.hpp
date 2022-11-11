@@ -156,8 +156,7 @@ public:
       duals_.push_back(&shape_sensitivity_);
     }
 
-    parameter_states_.resize(sizeof...(parameter_space));
-    parameter_sensitivities_.resize(sizeof...(parameter_space));
+    parameter_info_.resize(sizeof...(parameter_space));
 
     // Create a pack of the primal field and parameter finite element spaces
     mfem::ParFiniteElementSpace* test_space = &displacement_.space();
@@ -170,9 +169,9 @@ public:
     if constexpr (sizeof...(parameter_space) > 0) {
       tuple<parameter_space...> types{};
       for_constexpr<sizeof...(parameter_space)>([&](auto i) {
-        parameter_trial_spaces_[i] = std::unique_ptr<mfem::ParFiniteElementSpace>(
+        parameter_info_[i].trial_space = std::unique_ptr<mfem::ParFiniteElementSpace>(
             generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_));
-        trial_spaces[i + NUM_STATE_VARS] = parameter_trial_spaces_[i].get();
+        trial_spaces[i + NUM_STATE_VARS] = parameter_info_[i].trial_space.get();
       });
     }
 
@@ -323,22 +322,6 @@ public:
   virtual std::vector<std::string> getStateNames()
   {
     return std::vector<std::string>{{"displacement"}, {"velocity"}, {"adjoint_displacement"}};
-  }
-
-  /**
-   * @brief Generate a finite element state object for the given parameter index
-   *
-   * @param parameter_index The index of the parameter to generate
-   */
-  virtual std::unique_ptr<FiniteElementState> generateParameter(int parameter_index, const std::string& parameter_name)
-  {
-    auto new_state = std::make_unique<FiniteElementState>(mesh_, *parameter_trial_spaces_[parameter_index],
-                                                          detail::addPrefix(name_, parameter_name));
-    StateManager::storeState(*new_state);
-    parameter_states_[parameter_index] = new_state.get();
-    parameter_sensitivities_[parameter_index] =
-        StateManager::newDual(new_state->space(), new_state->name() + "_sensitivity");
-    return new_state;
   }
 
   /**
@@ -559,16 +542,16 @@ public:
 
         // residual function
         [this](const mfem::Vector& u, mfem::Vector& r) {
-          r = (*residual_)(u, zero_, shape_displacement_, *parameter_states_[parameter_indices]...);
+          r = (*residual_)(u, zero_, shape_displacement_, *parameter_info_[parameter_indices].state...);
           r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
         },
 
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
-          auto [r, drdu] =
-              (*residual_)(differentiate_wrt(u), zero_, shape_displacement_, *parameter_states_[parameter_indices]...);
-          J_   = assemble(drdu);
-          J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+          auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, shape_displacement_,
+                                        *parameter_info_[parameter_indices].state...);
+          J_             = assemble(drdu);
+          J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
           return *J_;
         });
   }
@@ -582,7 +565,7 @@ public:
   {
     if constexpr (sizeof...(parameter_space) > 0) {
       for (size_t i = 0; i < sizeof...(parameter_space); i++) {
-        SLIC_ERROR_ROOT_IF(!parameter_states_[i],
+        SLIC_ERROR_ROOT_IF(!parameter_info_[i].state,
                            "all parameters fields must be initialized before calling completeSetup()");
       }
     }
@@ -608,7 +591,7 @@ public:
           [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) {
             add(1.0, u_, c0_, d2u_dt2, predicted_displacement_);
             r = (*residual_)(predicted_displacement_, d2u_dt2, shape_displacement_,
-                             *parameter_states_[parameter_indices]...);
+                             *parameter_info_[parameter_indices].state...);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
@@ -618,13 +601,13 @@ public:
             // K := dR/du
             auto K =
                 serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(predicted_displacement_), d2u_dt2,
-                                                    shape_displacement_, *parameter_states_[parameter_indices]...));
+                                                    shape_displacement_, *parameter_info_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             // M := dR/da
             auto M =
                 serac::get<DERIVATIVE>((*residual_)(predicted_displacement_, differentiate_wrt(d2u_dt2),
-                                                    shape_displacement_, *parameter_states_[parameter_indices]...));
+                                                    shape_displacement_, *parameter_info_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
             // J = M + c0 * K
@@ -701,7 +684,7 @@ public:
       // reactions_ = residual(displacement, ...);
       // isn't currently supported
       reactions_.Vector::operator=(
-          (*residual_)(displacement_, zero_, shape_displacement_, *parameter_states_[parameter_indices]...));
+          (*residual_)(displacement_, zero_, shape_displacement_, *parameter_info_[parameter_indices].state...));
       // TODO (talamini1): Fix above reactions for dynamics. Setting the accelerations to zero
       // works for quasi-statics, but we need to account for the accelerations in
       // dynamics. We need to figure out how to get the updated accelerations out of the
@@ -741,7 +724,7 @@ public:
     // sam: is this the right thing to be doing for dynamics simulations,
     // or are we implicitly assuming this should only be used in quasistatic analyses?
     auto drdu     = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(displacement_), zero_, shape_displacement_,
-                                                    *parameter_states_[parameter_indices]...));
+                                                    *parameter_info_[parameter_indices].state...));
     auto jacobian = assemble(drdu);
     auto J_T      = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -774,13 +757,13 @@ public:
   {
     auto drdparam =
         serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<parameter_field + NUM_STATE_VARS>{}, displacement_, zero_,
-                                            shape_displacement_, *parameter_states_[parameter_indices]...));
+                                            shape_displacement_, *parameter_info_[parameter_indices].state...));
 
     auto drdparam_mat = assemble(drdparam);
 
-    drdparam_mat->MultTranspose(adjoint_displacement_, *parameter_sensitivities_[parameter_field]);
+    drdparam_mat->MultTranspose(adjoint_displacement_, *parameter_info_[parameter_field].sensitivity);
 
-    return *parameter_sensitivities_[parameter_field];
+    return *parameter_info_[parameter_field].sensitivity;
   }
 
   /**
@@ -793,8 +776,9 @@ public:
    */
   FiniteElementDual& computeShapeSensitivity()
   {
-    auto drdshape = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<2>{}, displacement_, zero_,
-                                                        shape_displacement_, *parameter_states_[parameter_indices]...));
+    auto drdshape =
+        serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<2>{}, displacement_, zero_, shape_displacement_,
+                                            *parameter_info_[parameter_indices].state...));
 
     auto drdshape_mat = assemble(drdshape);
 
@@ -873,9 +857,6 @@ protected:
 
   /// mfem::Operator that calculates the residual after applying essential boundary conditions
   std::unique_ptr<mfem_ext::StdFunctionOperator> residual_with_bcs_;
-
-  /// The trial spaces used for the Functional object
-  std::array<std::unique_ptr<mfem::ParFiniteElementSpace>, sizeof...(parameter_space)> parameter_trial_spaces_;
 
   /// Sensitivity with respect to the shape displacement field
   FiniteElementDual shape_sensitivity_;

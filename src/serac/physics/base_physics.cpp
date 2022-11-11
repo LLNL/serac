@@ -47,19 +47,35 @@ void BasePhysics::setCycle(const int cycle) { cycle_ = cycle; }
 
 int BasePhysics::cycle() const { return cycle_; }
 
+std::unique_ptr<FiniteElementState> BasePhysics::generateParameter(size_t             parameter_index,
+                                                                   const std::string& parameter_name)
+{
+  SLIC_ERROR_ROOT_IF(
+      parameter_index >= parameter_info_.size(),
+      axom::fmt::format("Parameter index {} is not available in physics module {}", parameter_index, name_));
+  SLIC_ERROR_ROOT_IF(
+      parameter_info_[parameter_index].state,
+      axom::fmt::format("Parameter index {} is already set in physics module {}", parameter_index, name_));
+
+  auto new_state = std::make_unique<FiniteElementState>(mesh_, *parameter_info_[parameter_index].trial_space,
+                                                        detail::addPrefix(name_, parameter_name));
+  StateManager::storeState(*new_state);
+  parameter_info_[parameter_index].state = new_state.get();
+  parameter_info_[parameter_index].sensitivity =
+      StateManager::newDual(new_state->space(), new_state->name() + "_sensitivity");
+  return new_state;
+}
+
 void BasePhysics::setParameter(FiniteElementState& parameter_state, size_t parameter_index)
 {
   SLIC_ERROR_ROOT_IF(
-      parameter_index >= parameter_states_.size(),
+      parameter_index >= parameter_info_.size(),
       axom::fmt::format("Parameter index {} is not available in physics module {}", parameter_index, name_));
-  SLIC_ERROR_ROOT_IF(parameter_index >= parameter_sensitivities_.size(),
-                     axom::fmt::format("Sensitivity of parameter index {} is not available in physics module {}",
+  SLIC_ERROR_ROOT_IF(parameter_info_[parameter_index].state,
+                     axom::fmt::format("Parameter state index {} has been previously defined in physics module {}",
                                        parameter_index, name_));
-  SLIC_ERROR_ROOT_IF(
-      parameter_states_[parameter_index],
-      axom::fmt::format("Parameter index {} has been previously defined in physics module {}", parameter_index, name_));
-  parameter_states_[parameter_index] = &parameter_state;
-  parameter_sensitivities_[parameter_index] =
+  parameter_info_[parameter_index].state = &parameter_state;
+  parameter_info_[parameter_index].sensitivity =
       StateManager::newDual(parameter_state.space(), parameter_state.name() + "_sensitivity");
 }
 

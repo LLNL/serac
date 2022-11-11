@@ -123,8 +123,7 @@ public:
     states_.push_back(&temperature_);
     states_.push_back(&adjoint_temperature_);
 
-    parameter_states_.resize(sizeof...(parameter_space));
-    parameter_sensitivities_.resize(sizeof...(parameter_space));
+    parameter_info_.resize(sizeof...(parameter_space));
 
     // Create a pack of the primal field and parameter finite element spaces
     std::array<const mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + 1> trial_spaces;
@@ -133,9 +132,9 @@ public:
     if constexpr (sizeof...(parameter_space) > 0) {
       tuple<parameter_space...> types{};
       for_constexpr<sizeof...(parameter_space)>([&](auto i) {
-        parameter_trial_spaces_[i] = std::unique_ptr<mfem::ParFiniteElementSpace>(
+        parameter_info_[i].trial_space = std::unique_ptr<mfem::ParFiniteElementSpace>(
             generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_));
-        trial_spaces[i + 1] = parameter_trial_spaces_[i].get();
+        trial_spaces[i + 1] = parameter_info_[i].trial_space.get();
       });
     }
 
@@ -167,19 +166,6 @@ public:
 
     zero_.SetSize(true_size);
     zero_ = 0.0;
-  }
-
-  /**
-   * @brief register the provided FiniteElementState object as the source of values for parameter `i`
-   *
-   * @param parameter_state the values to use for the specified parameter
-   * @param i the index of the parameter
-   */
-  void setParameter(FiniteElementState& parameter_state, size_t i)
-  {
-    parameter_states_[i] = &parameter_state;
-    parameter_sensitivities_[i] =
-        StateManager::newDual(parameter_state.space(), parameter_state.name() + "_sensitivity");
   }
 
   /**
@@ -395,22 +381,6 @@ public:
   }
 
   /**
-   * @brief Generate a finite element state object for the given parameter index
-   *
-   * @param parameter_index The index of the parameter to generate
-   */
-  virtual std::unique_ptr<FiniteElementState> generateParameter(int parameter_index, const std::string& parameter_name)
-  {
-    auto new_state = std::make_unique<FiniteElementState>(mesh_, *parameter_trial_spaces_[parameter_index],
-                                                          detail::addPrefix(name_, parameter_name));
-    StateManager::storeState(*new_state);
-    parameter_states_[parameter_index] = new_state.get();
-    parameter_sensitivities_[parameter_index] =
-        StateManager::newDual(new_state->space(), new_state->name() + "_sensitivity");
-    return new_state;
-  }
-
-  /**
    * @brief Complete the initialization and allocation of the data structures.
    *
    * This must be called before AdvanceTimestep().
@@ -425,12 +395,12 @@ public:
           temperature_.space().TrueVSize(),
 
           [this](const mfem::Vector& u, mfem::Vector& r) {
-            r = (*K_functional_)(u, *parameter_states_[parameter_indices]...);
+            r = (*K_functional_)(u, *parameter_info_[parameter_indices].state...);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
           [this](const mfem::Vector& u) -> mfem::Operator& {
-            auto [r, drdu] = (*K_functional_)(differentiate_wrt(u), *parameter_states_[parameter_indices]...);
+            auto [r, drdu] = (*K_functional_)(differentiate_wrt(u), *parameter_info_[parameter_indices].state...);
             J_             = assemble(drdu);
             bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             return *J_;
@@ -441,13 +411,13 @@ public:
       residual_ = mfem_ext::StdFunctionOperator(
           temperature_.space().TrueVSize(),
           [this](const mfem::Vector& du_dt, mfem::Vector& r) {
-            auto M_residual = (*M_functional_)(du_dt, *parameter_states_[parameter_indices]...);
+            auto M_residual = (*M_functional_)(du_dt, *parameter_info_[parameter_indices].state...);
 
             // TODO we should use the new variadic capability to directly pass temperature and d_temp_dt directly to
             // these kernels to avoid ugly hacks like this.
             mfem::Vector K_arg(u_.Size());
             add(1.0, u_, dt_, du_dt, u_predicted_);
-            auto K_residual = (*K_functional_)(u_predicted_, *parameter_states_[parameter_indices]...);
+            auto K_residual = (*K_functional_)(u_predicted_, *parameter_info_[parameter_indices].state...);
 
             add(M_residual, K_residual, r);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
@@ -457,14 +427,14 @@ public:
             // Only reassemble the stiffness if it is a new timestep
 
             auto M =
-                serac::get<1>((*M_functional_)(differentiate_wrt(du_dt), *parameter_states_[parameter_indices]...));
+                serac::get<1>((*M_functional_)(differentiate_wrt(du_dt), *parameter_info_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
             mfem::Vector K_arg(u_.Size());
             add(1.0, u_, dt_, du_dt, u_predicted_);
 
             auto K = serac::get<1>(
-                (*K_functional_)(differentiate_wrt(u_predicted_), *parameter_states_[parameter_indices]...));
+                (*K_functional_)(differentiate_wrt(u_predicted_), *parameter_info_[parameter_indices].state...));
 
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
@@ -500,7 +470,7 @@ public:
     mfem::HypreParVector adjoint_essential(adjoint_load);
     adjoint_essential = 0.0;
 
-    auto [r, drdu] = (*K_functional_)(differentiate_wrt(temperature_), *parameter_states_[parameter_indices]...);
+    auto [r, drdu] = (*K_functional_)(differentiate_wrt(temperature_), *parameter_info_[parameter_indices].state...);
     auto jacobian  = assemble(drdu);
     auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -535,13 +505,13 @@ public:
   FiniteElementDual& computeSensitivity()
   {
     auto [r, drdparam] = (*K_functional_)(DifferentiateWRT<parameter_field + 1>{}, temperature_,
-                                          *parameter_states_[parameter_indices]...);
+                                          *parameter_info_[parameter_indices].state...);
 
     auto drdparam_mat = assemble(drdparam);
 
-    drdparam_mat->MultTranspose(adjoint_temperature_, *parameter_sensitivities_[parameter_field]);
+    drdparam_mat->MultTranspose(adjoint_temperature_, *parameter_info_[parameter_field].sensitivity);
 
-    return *parameter_sensitivities_[parameter_field];
+    return *parameter_info_[parameter_field].sensitivity;
   }
 
   /// Destroy the Thermal Solver object
@@ -565,9 +535,6 @@ protected:
 
   /// Stiffness functional object \f$\mathbf{K} = \int_\Omega \theta \cdot \nabla \phi_i  + f \phi_i \, dx \f$
   std::unique_ptr<Functional<test(trial, parameter_space...)>> K_functional_;
-
-  /// Trial finite element spaces for the functional object
-  std::array<std::unique_ptr<mfem::ParFiniteElementSpace>, sizeof...(parameter_space)> parameter_trial_spaces_;
 
   /// Assembled mass matrix
   std::unique_ptr<mfem::HypreParMatrix> M_;
