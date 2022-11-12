@@ -119,7 +119,7 @@ using one_hot_t = typename one_hot<i, n, T>::type;
 
 /// @overload
 template <int i, int N>
-SERAC_HOST_DEVICE constexpr auto make_dual_helper(zero arg)
+SERAC_HOST_DEVICE constexpr auto make_dual_helper(zero /*arg*/)
 {
   return zero{};
 }
@@ -293,117 +293,6 @@ SERAC_HOST_DEVICE constexpr auto make_dual(const tensor<double, n...>& A)
   return A_dual;
 }
 
-
-/* differentiable Newton solver for scalar-valued equations */
-template <typename function, typename... ParamTypes>
-auto solve_scalar_equation(function && f, double x0, double tolerance,
-                             double lower_bound, double upper_bound, ParamTypes... params)
-{
-  double x, df_dx;
-  double fl = f(lower_bound, get_value(params)...);
-  double fh = f(upper_bound, get_value(params)...);
-
-  SLIC_WARNING_IF(fl*fh > 0, "solve_scalar_equation: root not bracketed by input bounds.");
-
-  // handle corner case where one of the brackets is the root
-  bool already_solved = false;
-  if (fl == 0) {
-    x = lower_bound;
-    already_solved = true;
-  } else if (fh == 0) {
-    x = upper_bound;
-    already_solved = true;
-  }
-  
-  if (already_solved) {
-    
-    df_dx = get_gradient(f(make_dual(x), get_value(params)...));
-
-  } else {
-
-    // orient search so that f(xl) < 0
-    double xl = lower_bound;
-    double xh = upper_bound;
-    if (fl > 0) {
-      xl = upper_bound;
-      xh = lower_bound;
-    }
-
-    // move initial guess if it is not between brackets
-    if (x0 < lower_bound || x0 > upper_bound) {
-      x0 = 0.5*(lower_bound + upper_bound);
-    }
-    const unsigned int MAX_ITERATIONS = 25;
-    x = x0;
-    double dx_old = std::abs(upper_bound - lower_bound);
-    double dx = dx_old;
-    auto R = f(make_dual(x), get_value(params)...);
-    auto fval = get_value(R);
-    df_dx = get_gradient(R);
-
-    
-    unsigned int iterations = 0;
-    bool converged = false;
-
-    while (!converged) {
-      if (iterations == MAX_ITERATIONS) {
-        SLIC_WARNING("solve_scalar_equation failed to converge in allotted iterations.");
-        break;
-      }
-      
-      // use bisection if Newton oversteps brackets or is not decreasing sufficiently
-      if ((x - xh)*df_dx - fval > 0 ||
-          (x - xl)*df_dx - fval < 0 ||
-          std::abs(2.*fval) > dx_old*df_dx) {
-        dx_old = dx;
-        dx = 0.5*(xh - xl);
-        x = xl + dx;
-        converged = (x == xl);
-      } else { // use Newton step
-        dx_old = dx;
-        dx = fval/df_dx;
-        auto temp = x;
-        x -= dx;
-        converged = (x == temp);
-      }
-
-      // std::cout << "iter " << i << " x = " << x << std::endl;
-
-      // convergence check
-      converged = converged || (std::abs(dx) < tolerance);
-      
-      // function and jacobian evaluation
-      R = f(make_dual(x), get_value(params)...);
-      fval = get_value(R);
-      df_dx = get_gradient(R);
-
-      // maintain bracket on root
-      if (fval < 0) {
-        xl = x;
-      } else {
-        xh = x;
-      }
-
-      ++iterations;
-    }
-
-  }
-
-  // [fval, df_dp] = f(get_value(x), p)
-  // for p in params:
-  //   accumulate x_dot += inner(df_dp, p_dot)
-  // x_dot /= -df_dx
-  constexpr bool contains_duals = (is_dual_number<ParamTypes>::value || ...) || 
-                                  (is_tensor_of_dual_number<ParamTypes>::value || ...);
-  if constexpr (contains_duals) {
-    auto df = get_gradient(f(get_value(x), params...));
-    return dual{x, -df/df_dx};
-  }
-  if constexpr (!contains_duals) {
-    return x;
-  }
-}
-
 /**
  * @brief Compute LU factorization of a matrix with partial pivoting
  *
@@ -566,6 +455,135 @@ SERAC_HOST_DEVICE constexpr auto get_gradient(const tensor<dual<tensor<double, m
   tensor<double, n..., m...> g{};
   for_constexpr<n...>([&](auto... i) { g(i...) = arg(i...).gradient; });
   return g;
+}
+
+template <typename T>
+struct SolverResults {
+  T root;
+  bool converged;
+  unsigned int iterations;
+
+  SolverResults(T root, bool converged, unsigned int iterations) :
+    root(root), converged(converged), iterations(iterations) {};
+};
+
+template <typename function, typename... ParamTypes>
+auto solve_scalar_equation(function && f, double x0, double tolerance,
+                             double lower_bound, double upper_bound, ParamTypes... params)
+{
+  double x, df_dx;
+  double fl = f(lower_bound, get_value(params)...);
+  double fh = f(upper_bound, get_value(params)...);
+
+  if (fl*fh > 0) {
+    SLIC_ERROR("solve_scalar_equation: root not bracketed by input bounds.");
+  }
+  
+
+  unsigned int iterations = 0;
+  bool converged = false;
+
+  // handle corner case where one of the brackets is the root
+  if (fl == 0) {
+    x = lower_bound;
+    converged = true;
+  } else if (fh == 0) {
+    x = upper_bound;
+    converged = true;
+  }
+  
+  if (converged) {
+    
+    df_dx = get_gradient(f(make_dual(x), get_value(params)...));
+
+  } else {
+
+    // orient search so that f(xl) < 0
+    double xl = lower_bound;
+    double xh = upper_bound;
+    if (fl > 0) {
+      xl = upper_bound;
+      xh = lower_bound;
+    }
+
+    // move initial guess if it is not between brackets
+    if (x0 < lower_bound || x0 > upper_bound) {
+      x0 = 0.5*(lower_bound + upper_bound);
+    }
+    const unsigned int MAX_ITERATIONS = 25;
+    x = x0;
+    double dx_old = std::abs(upper_bound - lower_bound);
+    double dx = dx_old;
+    auto R = f(make_dual(x), get_value(params)...);
+    auto fval = get_value(R);
+    df_dx = get_gradient(R);
+
+    while (!converged) {
+      if (iterations == MAX_ITERATIONS) {
+        SLIC_WARNING("solve_scalar_equation failed to converge in allotted iterations.");
+        break;
+      }
+      std::cout << "iter " << iterations << " x = " << x << std::endl;
+
+      // use bisection if Newton oversteps brackets or is not decreasing sufficiently
+      if ((x - xh)*df_dx - fval > 0 ||
+          (x - xl)*df_dx - fval < 0 ||
+          std::abs(2.*fval) > std::abs(dx_old*df_dx)) {
+        dx_old = dx;
+        dx = 0.5*(xh - xl);
+        x = xl + dx;
+        converged = (x == xl);
+        std::cout << "bisect" << std::endl;
+      } else { // use Newton step
+        dx_old = dx;
+        dx = fval/df_dx;
+        auto temp = x;
+        x -= dx;
+        converged = (x == temp);
+        std::cout << "newton" << std::endl;
+      }
+
+      // convergence check
+      converged = converged || (std::abs(dx) < tolerance);
+      
+      // function and jacobian evaluation
+      R = f(make_dual(x), get_value(params)...);
+      fval = get_value(R);
+      df_dx = get_gradient(R);
+
+      // maintain bracket on root
+      if (fval < 0) {
+        xl = x;
+      } else {
+        xh = x;
+      }
+
+      ++iterations;
+    }
+
+  }
+
+  // Accumulate derivatives so that the user can get derivatives
+  // with respect to parameters, subject to constraing that f(x, p) = 0 for all p
+  // Conceptually, we're doing the following:
+  // [fval, df_dp] = f(get_value(x), p)
+  // df = 0
+  // for p in params:
+  //   accumulate df += inner(df_dp, p_dot)
+  // x_dot = -df / df_dx
+  constexpr bool contains_duals = (is_dual_number<ParamTypes>::value || ...);
+  if constexpr (contains_duals) {
+    // auto seq = std::make_integer_sequence<int, static_cast<int>(sizeof...(params))>();
+    // auto df = solver_derivative_helper(f, x, tuple{params...}, seq);
+    std::cout << "contains duals!" <<std::endl;
+    auto val_and_grad = f(x, params...);
+    auto df = get_gradient(val_and_grad);
+    auto x_dot = -df/df_dx;
+    return SolverResults(dual<double>{x, x_dot}, converged, iterations);
+  }
+  if constexpr (!contains_duals) {
+    return SolverResults(x, converged, iterations);
+  }
 }
 
 }
