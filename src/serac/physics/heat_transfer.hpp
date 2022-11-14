@@ -270,20 +270,23 @@ public:
           auto [p, dp_dX] = shape;
           auto du_dt      = get<VALUE>(dtemp_dt);
 
+          auto I_plus_dp_dX     = I + dp_dX;
+          auto inv_I_plus_dp_dX = inv(I_plus_dp_dX);
+          auto det_I_plus_dp_dX = det(I_plus_dp_dX);
+
           // Note that the current configuration x = X + p, where X is the original reference
           // configuration and p is the shape displacement. We need the gradient with
           // respect to the perturbed reference configuration x = X + p for the material model. Therefore, we calculate
           // du/dx = du/dX * dX/dx = du/dX * (dx/dX)^-1 = du/dX * (I + dp/dX)^-1
 
-          auto du_dx = dot(du_dX, inv(I + dp_dX));
+          auto du_dx = dot(du_dX, inv_I_plus_dp_dX);
 
           auto heat_flux = material(x + p, u, du_dx, params...);
           auto source    = material.specific_heat_capacity * material.density * du_dt;
 
           // Note that the return is integrated in the perturbed reference
           // configuration, hence the det(I + dp_dx) = det(dx/dX)
-          return serac::tuple{source * det(I + dp_dX),
-                              -1.0 * dot(heat_flux, inv(transpose(I + dp_dX))) * det(I + dp_dX)};
+          return serac::tuple{source * det_I_plus_dp_dX, -1.0 * dot(inv_I_plus_dp_dX, heat_flux) * det_I_plus_dp_dX};
         },
         mesh_);
   }
@@ -327,17 +330,20 @@ public:
           // Get the value and the gradient from the input tuple
           auto [u, du_dX] = temperature;
           auto [p, dp_dX] = shape;
+
+          auto I_plus_dp_dX = I + dp_dX;
+
           // Note that the current configuration x = X + p, where X is the original reference
           // configuration and p is the shape displacement. We need the gradient with
           // respect to the perturbed reference configuration x = X + p for the material model. Therefore, we calculate
           // du/dx = du/dX * dX/dx = du/dX * (dx/dX)^-1 = du/dX * (I + dp/dX)^-1
 
-          auto du_dx = dot(du_dX, inv(I + dp_dX));
+          auto du_dx = dot(du_dX, inv(I_plus_dp_dX));
 
           auto source = -1.0 * source_function(x + p, time_, u, du_dx, params...);
 
           // Return the source and the flux as a tuple
-          return serac::tuple{source * det(I + dp_dX), serac::zero{}};
+          return serac::tuple{source * det(I_plus_dp_dX), serac::zero{}};
         },
         mesh_);
   }
