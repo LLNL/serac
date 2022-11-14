@@ -112,6 +112,9 @@ public:
    *
    * @param parameter_index The index of the parameter to generate
    * @param parameter_name The name of the parameter to generate
+   *
+   * @note The user is responsible for managing the lifetime of this object. It is required
+   * to exist whenever this physics module is called.
    */
   virtual std::unique_ptr<FiniteElementState> generateParameter(size_t             parameter_index,
                                                                 const std::string& parameter_name);
@@ -263,24 +266,19 @@ protected:
     /// The trial spaces used for the Functional object
     std::unique_ptr<mfem::ParFiniteElementSpace> trial_space;
 
-    /// The finite element states representing user-defined parameter fields
+    /// The finite element states representing user-defined and owned parameter fields
     serac::FiniteElementState* state;
 
     /**
      * @brief The sensitivities (dual vectors) with repect to each of the input parameter fields
-     * @note this is a vector of optionals as FiniteElementDual is not default constructable and
-     * we want to set this during the setParameter method.
+     * @note this optional as FiniteElementDuals are not default constructable and
+     * we want to set this during the setParameter or generateParameter method.
      */
     std::optional<FiniteElementDual> sensitivity;
   };
 
   /// @brief A vector of the parameters associated with this physics module
   std::vector<ParameterInfo> parameter_info_;
-
-  /**
-   * @brief Block vector storage of the true state
-   */
-  std::unique_ptr<mfem::BlockVector> block_;
 
   /**
    *@brief Whether the simulation is time-independent
@@ -336,9 +334,6 @@ protected:
    * @brief Boundary condition manager instance
    */
   BoundaryConditionManager bcs_;
-
-  /// @brief Number of expected parameters of the physics module instance
-  int num_parameters_ = 0;
 };
 
 namespace detail {
