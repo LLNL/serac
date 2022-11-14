@@ -24,52 +24,52 @@
 
 namespace serac {
 
-namespace Thermal {
+namespace heat_transfer {
 
 /**
  * @brief Reasonable defaults for most thermal linear solver options
- *
- * @return The default thermal linear options
  */
-IterativeSolverOptions defaultLinearOptions()
-{
-  return {.rel_tol     = 1.0e-6,
-          .abs_tol     = 1.0e-12,
-          .print_level = 0,
-          .max_iter    = 200,
-          .lin_solver  = LinearSolver::CG,
-          .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
-}
+const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
+                                                       .abs_tol     = 1.0e-12,
+                                                       .print_level = 0,
+                                                       .max_iter    = 200,
+                                                       .lin_solver  = LinearSolver::CG,
+                                                       .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
+
+/// the default direct solver option for solving the linear stiffness equations
+const DirectSolverOptions direct_linear_options = {.print_level = 0};
 
 /**
  * @brief Reasonable defaults for most thermal nonlinear solver options
- *
- * @return The default thermal nonlinear options
  */
-NonlinearSolverOptions defaultNonlinearOptions()
-{
-  return {.rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
-}
+const NonlinearSolverOptions default_nonlinear_options = {
+    .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
 
 /**
  * @brief Reasonable defaults for quasi-static thermal conduction simulations
- *
- * @return The default quasi-static solver options
  */
-SolverOptions defaultQuasistaticOptions() { return {defaultLinearOptions(), defaultNonlinearOptions(), std::nullopt}; }
+const SolverOptions default_static_options = {default_linear_options, default_nonlinear_options};
+
+/**
+ * @brief Reasonable defaults for quasi-static thermal conduction simulations with a direct solver
+ */
+const SolverOptions direct_static_options = {direct_linear_options, default_nonlinear_options};
 
 /**
  * @brief Reasonable defaults for dynamic thermal conduction simulations
- *
- * @return The default dynamic solver options
  */
-SolverOptions defaultDynamicOptions()
-{
-  return {defaultLinearOptions(), defaultNonlinearOptions(),
-          TimesteppingOptions{TimestepMethod::BackwardEuler, DirichletEnforcementMethod::RateControl}};
-}
+const SolverOptions default_dynamic_options = {
+    default_linear_options, default_nonlinear_options,
+    TimesteppingOptions{TimestepMethod::BackwardEuler, DirichletEnforcementMethod::RateControl}};
 
-}  // namespace Thermal
+/**
+ * @brief Reasonable defaults for dynamic thermal conduction simulations with a direct solver
+ */
+const SolverOptions direct_dynamic_options = {
+    direct_linear_options, default_nonlinear_options,
+    TimesteppingOptions{TimestepMethod::BackwardEuler, DirichletEnforcementMethod::RateControl}};
+
+}  // namespace heat_transfer
 
 /**
  * @brief An object containing the solver for a thermal conduction PDE
@@ -573,8 +573,8 @@ public:
    */
   FiniteElementDual& computeShapeSensitivity()
   {
-    auto drdshape = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<SHAPE>{}, temperature_, zero_, shape_displacement_,
-                                                        *parameter_states_[parameter_indices]...));
+    auto drdshape = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<SHAPE>{}, temperature_, zero_,
+                                                        shape_displacement_, *parameter_states_[parameter_indices]...));
 
     auto drdshape_mat = assemble(drdshape);
 

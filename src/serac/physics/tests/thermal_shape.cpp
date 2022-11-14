@@ -45,8 +45,7 @@ TEST(HeatTransfer, MoveShape)
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
-  // Use a direct solver for the Jacobian solve
-  SolverOptions options = {DirectSolverOptions{}, Thermal::defaultNonlinearOptions()};
+  auto options = heat_transfer::default_static_options;
 
   // Use tight tolerances as this is a machine precision test
   options.nonlinear.abs_tol = 1.0e-14;
