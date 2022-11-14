@@ -94,7 +94,8 @@ class HeatTransfer<order, dim, Parameters<parameter_space...>, std::integer_sequ
 public:
   //! @cond Doxygen_Suppress
   static constexpr int  VALUE = 0, DERIVATIVE = 1;
-  static constexpr auto I = Identity<dim>();
+  static constexpr int  SHAPE = 2;
+  static constexpr auto I     = Identity<dim>();
   //! @endcond
 
   /// @brief The total number of non-parameter state variables (temperature, dtemp_dt, shape) passed to the FEM
@@ -112,7 +113,7 @@ public:
    */
   HeatTransfer(const SolverOptions& options, const std::string& name = {},
                ShapeDisplacement calc_shape = ShapeDisplacement::Off, mfem::ParMesh* pmesh = nullptr)
-      : BasePhysics(2, order, name, pmesh),
+      : BasePhysics(NUM_STATE_VARS, order, name, pmesh),
         temperature_(StateManager::newState(
             FiniteElementState::Options{
                 .order = order, .vector_dim = 1, .name = detail::addPrefix(name, "temperature")},
