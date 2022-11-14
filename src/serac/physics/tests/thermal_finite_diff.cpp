@@ -64,7 +64,7 @@ TEST(Thermal, FiniteDifference)
   thermal_solver.setParameter(user_defined_conductivity, 0);
 
   // Construct a potentially user-defined parameterized material and send it to the thermal module
-  Thermal::ParameterizedLinearIsotropicConductor mat;
+  heat_transfer::ParameterizedLinearIsotropicConductor mat;
   thermal_solver.setMaterial(DependsOn<0>{}, mat);
 
   // Define the function for the initial temperature and boundary condition
@@ -75,11 +75,11 @@ TEST(Thermal, FiniteDifference)
   thermal_solver.setTemperature(bdr_temp);
 
   // Define a constant source term
-  Thermal::ConstantSource source{1.0};
+  heat_transfer::ConstantSource source{1.0};
   thermal_solver.setSource(source);
 
   // Set the flux term to zero for testing code paths
-  Thermal::ConstantFlux flux_bc{0.0};
+  heat_transfer::ConstantFlux flux_bc{0.0};
   thermal_solver.setFluxBCs(flux_bc);
 
   // Finalize the data structures
@@ -178,7 +178,7 @@ TEST(HeatTransfer, FiniteDifferenceShape)
   // Construct a functional-based thermal solver
   HeatTransfer<p, dim> thermal_solver(options, "thermal_functional_shape", ShapeDisplacement::On);
 
-  Thermal::LinearIsotropicConductor mat(1.0, 1.0, 1.0);
+  heat_transfer::LinearIsotropicConductor mat(1.0, 1.0, 1.0);
 
   thermal_solver.setMaterial(mat);
 
@@ -194,7 +194,7 @@ TEST(HeatTransfer, FiniteDifferenceShape)
   thermal_solver.setTemperatureBCs(ess_bdr, one);
   thermal_solver.setTemperature(one);
 
-  Thermal::ConstantSource source{1.0};
+  heat_transfer::ConstantSource source{1.0};
   thermal_solver.setSource(source);
 
   // Finalize the data structures

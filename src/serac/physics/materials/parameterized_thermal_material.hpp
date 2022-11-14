@@ -15,7 +15,7 @@
 #include "serac/physics/materials/thermal_material.hpp"
 
 /// HeatTransfer helper structs
-namespace serac::Thermal {
+namespace serac::heat_transfer {
 
 /// Linear isotropic conductor with a parameterized conductivity
 class ParameterizedLinearIsotropicConductor {
@@ -28,16 +28,18 @@ public:
    * @param conductivity_offset Thermal conductivity offset of the material (power / (length * temp)). This is
    * added to the parameter value to get the total conductivity.
    */
-  ParameterizedLinearIsotropicConductor(double density = 1.0, double specific_heat_capacity = 1.0,
-                                        double conductivity_offset = 0.0)
-      : density_(density), specific_heat_capacity_(specific_heat_capacity), conductivity_offset_(conductivity_offset)
+  ParameterizedLinearIsotropicConductor(double input_density = 1.0, double input_specific_heat_capacity = 1.0,
+                                        double input_conductivity_offset = 0.0)
+      : density(input_density),
+        specific_heat_capacity(input_specific_heat_capacity),
+        conductivity_offset_(input_conductivity_offset)
   {
     SLIC_ERROR_ROOT_IF(conductivity_offset_ < 0.0,
                        "Conductivity must be positive in the linear isotropic conductor material model.");
 
-    SLIC_ERROR_ROOT_IF(density_ < 0.0, "Density must be positive in the linear isotropic conductor material model.");
+    SLIC_ERROR_ROOT_IF(density < 0.0, "Density must be positive in the linear isotropic conductor material model.");
 
-    SLIC_ERROR_ROOT_IF(specific_heat_capacity_ < 0.0,
+    SLIC_ERROR_ROOT_IF(specific_heat_capacity < 0.0,
                        "Specific heat capacity must be positive in the linear isotropic conductor material model.");
   }
 
@@ -57,13 +59,7 @@ public:
   SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* temperature */, const T3& temperature_gradient,
                                     const T4& parameter) const
   {
-    // TODO : Do we need this FluxType?
-    using FluxType = decltype((conductivity_offset_ + get<0>(parameter)) * temperature_gradient);
-
-    return MaterialResponse<double, double, FluxType>{
-        .density                = density_,
-        .specific_heat_capacity = specific_heat_capacity_,
-        .heat_flux              = -1.0 * (conductivity_offset_ + get<0>(parameter)) * temperature_gradient};
+    return -1.0 * (conductivity_offset_ + get<0>(parameter)) * temperature_gradient;
   }
 
   /**
@@ -73,13 +69,13 @@ public:
    */
   static constexpr int numParameters() { return 1; }
 
-private:
   /// Density
-  double density_;
+  double density;
 
   /// Specific heat capacity
-  double specific_heat_capacity_;
+  double specific_heat_capacity;
 
+private:
   /// Conductivity offset
   double conductivity_offset_;
 };
@@ -144,4 +140,4 @@ struct ParameterizedFlux {
   static constexpr int numParameters() { return 1; }
 };
 
-}  // namespace serac::Thermal
+}  // namespace serac::heat_transfer

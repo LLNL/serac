@@ -132,8 +132,13 @@ public:
 
     const ThermalMechanicalMaterial mat;  ///< the wrapped material model
 
+    const double density;  ///< mass density
+
+    const double specific_heat_capacity;  ///< specific heat capacity
+
     /// constructor
-    ThermalMaterialInterface(const ThermalMechanicalMaterial& m) : mat(m)
+    ThermalMaterialInterface(const ThermalMechanicalMaterial& m)
+        : mat(m), density(m.density), specific_heat_capacity(m.C)
     {
       // empty
     }
@@ -162,7 +167,7 @@ public:
       auto [u, du_dX]     = displacement;
       auto [T, c, s0, q0] = mat(state, du_dX, temperature, temperature_gradient, parameters...);
       // density * specific_heat = c
-      return Thermal::MaterialResponse{mat.density, c, q0};
+      return q0;
     }
   };
 

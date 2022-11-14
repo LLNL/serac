@@ -53,10 +53,10 @@ TEST(HeatTransfer, MoveShape)
   options.nonlinear.rel_tol = 1.0e-14;
 
   // Define an anisotropic conductor material model
-  tensor<double, 2, 2>          cond{{{5.0, 0.4}, {0.4, 1.0}}};
-  Thermal::LinearConductor<dim> mat(1.0, 1.0, cond);
+  tensor<double, 2, 2>                cond{{{5.0, 0.4}, {0.4, 1.0}}};
+  heat_transfer::LinearConductor<dim> mat(1.0, 1.0, cond);
 
-  Thermal::ConstantSource source{1.0};
+  heat_transfer::ConstantSource source{1.0};
 
   double shape_factor_1 = 200.0;
   double shape_factor_2 = 0.0;

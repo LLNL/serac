@@ -277,13 +277,13 @@ public:
 
           auto du_dx = dot(du_dX, inv(I + dp_dX));
 
-          auto response = material(x + p, u, du_dx, params...);
-          auto source   = response.specific_heat_capacity * response.density * du_dt;
+          auto heat_flux = material(x + p, u, du_dx, params...);
+          auto source    = material.specific_heat_capacity * material.density * du_dt;
 
           // Note that the return is integrated in the perturbed reference
           // configuration, hence the det(I + dp_dx) = det(dx/dX)
           return serac::tuple{source * det(I + dp_dX),
-                              -1.0 * dot(response.heat_flux, inv(transpose(I + dp_dX))) * det(I + dp_dX)};
+                              -1.0 * dot(heat_flux, inv(transpose(I + dp_dX))) * det(I + dp_dX)};
         },
         mesh_);
   }

@@ -57,7 +57,7 @@ void functional_test_static(double expected_temp_norm)
     cond = {{{1.5, 0.01, 0.0}, {0.01, 1.0, 0.0}, {0.0, 0.0, 1.0}}};
   }
 
-  Thermal::LinearConductor<dim> mat(1.0, 1.0, cond);
+  heat_transfer::LinearConductor<dim> mat(1.0, 1.0, cond);
   thermal_solver.setMaterial(mat);
 
   // Define the function for the initial temperature and boundary condition
@@ -68,11 +68,11 @@ void functional_test_static(double expected_temp_norm)
   thermal_solver.setTemperature(one);
 
   // Define a constant source term
-  Thermal::ConstantSource source{1.0};
+  heat_transfer::ConstantSource source{1.0};
   thermal_solver.setSource(source);
 
   // Set the flux term to zero for testing code paths
-  Thermal::ConstantFlux flux_bc{0.0};
+  heat_transfer::ConstantFlux flux_bc{0.0};
   thermal_solver.setFluxBCs(flux_bc);
 
   // Finalize the data structures
@@ -117,7 +117,7 @@ void functional_test_dynamic(double expected_temp_norm)
   HeatTransfer<p, dim> thermal_solver(Thermal::defaultDynamicOptions(), "thermal_functional");
 
   // Define an isotropic conductor material model
-  Thermal::LinearIsotropicConductor mat(0.5, 0.5, 0.5);
+  heat_transfer::LinearIsotropicConductor mat(0.5, 0.5, 0.5);
 
   thermal_solver.setMaterial(mat);
 
@@ -134,7 +134,7 @@ void functional_test_dynamic(double expected_temp_norm)
   thermal_solver.setTemperature(initial_temp);
 
   // Set the flux term to zero for testing code paths
-  Thermal::ConstantFlux flux_bc{0.0};
+  heat_transfer::ConstantFlux flux_bc{0.0};
   thermal_solver.setFluxBCs(flux_bc);
 
   // Finalize the data structures
@@ -208,7 +208,7 @@ TEST(Thermal, ParameterizedMaterial)
   thermal_solver.setParameter(user_defined_conductivity, 0);
 
   // Construct a potentially user-defined parameterized material and send it to the thermal module
-  Thermal::ParameterizedLinearIsotropicConductor mat;
+  heat_transfer::ParameterizedLinearIsotropicConductor mat;
   thermal_solver.setMaterial(DependsOn<0>{}, mat);
 
   // Define the function for the initial temperature and boundary condition
@@ -224,11 +224,11 @@ TEST(Thermal, ParameterizedMaterial)
   thermal_solver.setTemperature(bdr_temp);
 
   // Define a constant source term
-  Thermal::ConstantSource source{1.0};
+  heat_transfer::ConstantSource source{1.0};
   thermal_solver.setSource(source);
 
   // Set the flux term to zero for testing code paths
-  Thermal::ConstantFlux flux_bc{0.0};
+  heat_transfer::ConstantFlux flux_bc{0.0};
   thermal_solver.setFluxBCs(flux_bc);
 
   // Finalize the data structures
