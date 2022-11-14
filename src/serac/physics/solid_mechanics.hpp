@@ -349,7 +349,7 @@ public:
    * @tparam MaterialType The solid material type
    * @tparam StateType the type that contains the internal variables for MaterialType
    * @param material A material that provides a function to evaluate stress
-   * @pre body_force must be a object that can be called with the following arguments:
+   * @pre material must be a object that can be called with the following arguments:
    *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
    *    2. `double t` the time (note: time will be handled differently in the future)
    *    3+. `tuple{value, derivative}`, a tuple of values and derivatives for each of the trial spaces
