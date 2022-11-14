@@ -572,7 +572,7 @@ public:
    */
   FiniteElementDual& computeShapeSensitivity()
   {
-    auto drdshape = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<2>{}, temperature_, zero_, shape_displacement_,
+    auto drdshape = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<SHAPE>{}, temperature_, zero_, shape_displacement_,
                                                         *parameter_states_[parameter_indices]...));
 
     auto drdshape_mat = assemble(drdshape);
