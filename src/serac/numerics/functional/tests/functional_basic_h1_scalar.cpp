@@ -20,59 +20,27 @@
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 
+#include "serac/numerics/functional/tests/check_gradient.hpp"
+
 using namespace serac;
 using namespace serac::profiling;
 
-template <typename T>
-void check_gradient(Functional<T>& f, mfem::Vector& U)
+template <int p, int dim>
+void thermal_test()
 {
-  int seed = 42;
+  std::string meshfile;
+  if (dim == 2) {
+    meshfile = SERAC_REPO_DIR "/data/meshes/patch2D.mesh";
+  }
+  if (dim == 3) {
+    meshfile = SERAC_REPO_DIR "/data/meshes/patch3D.mesh";
+  }
 
-  mfem::Vector dU(U.Size());
-  dU.Randomize(seed);
-
-  double epsilon = 1.0e-8;
-
-  auto U_plus = U;
-  U_plus.Add(epsilon, dU);
-
-  auto U_minus = U;
-  U_minus.Add(-epsilon, dU);
-
-  mfem::Vector df1 = f(U_plus);
-  df1 -= f(U_minus);
-  df1 /= (2 * epsilon);
-
-  auto [value, dfdU] = f(differentiate_wrt(U));
-  mfem::Vector df2   = dfdU(dU);
-
-  std::unique_ptr<mfem::HypreParMatrix> dfdU_matrix = assemble(dfdU);
-
-  mfem::Vector df3 = (*dfdU_matrix) * dU;
-
-  double relative_error1 = df1.DistanceTo(df2.GetData()) / df1.Norml2();
-  double relative_error2 = df1.DistanceTo(df3.GetData()) / df1.Norml2();
-
-  EXPECT_NEAR(0., relative_error1, 5.e-6);
-  EXPECT_NEAR(0., relative_error2, 5.e-6);
-
-  std::cout << relative_error1 << " " << relative_error2 << std::endl;
-}
-
-TEST(FunctionalBasic, NonlinearThermalTest3D)
-{
-  int serial_refinement   = 0;
-  int parallel_refinement = 0;
-
-  constexpr auto p   = 2;
-  constexpr auto dim = 3;
-
-  std::string meshfile = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
-  auto        mesh3D   = mesh::refineAndDistribute(buildMeshFromFile(meshfile), serial_refinement, parallel_refinement);
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(meshfile), 1);
 
   // Create standard MFEM bilinear and linear forms on H1
   auto                        fec = mfem::H1_FECollection(p, dim);
-  mfem::ParFiniteElementSpace fespace(mesh3D.get(), &fec);
+  mfem::ParFiniteElementSpace fespace(mesh.get(), &fec);
 
   mfem::Vector U(fespace.TrueVSize());
   U.Randomize();
@@ -84,21 +52,34 @@ TEST(FunctionalBasic, NonlinearThermalTest3D)
   // Construct the new functional object using the known test and trial spaces
   Functional<test_space(trial_space)> residual(&fespace, {&fespace});
 
-  residual.AddVolumeIntegral(
-      DependsOn<0>{},
+  auto d00 = 1.0;
+  auto d01 = 1.0 * make_tensor<dim>([](int i) { return i; });
+  auto d10 = 1.0 * make_tensor<dim>([](int i) { return 2 * i * i; });
+  auto d11 = 1.0 * make_tensor<dim, dim>([](int i, int j) { return i + j * (j + 1) + 1; });
+
+  residual.AddDomainIntegral(
+      Dimension<dim>{}, DependsOn<0>{},
       [=](auto x, auto temperature) {
         auto [u, du_dx] = temperature;
-        auto source     = u * u - (100 * x[0] * x[1]);
-        auto flux       = du_dx;
+        auto source     = d00 * u + dot(d01, du_dx) - 0.0 * (100 * x[0] * x[1]);
+        auto flux       = d10 * u + dot(d11, du_dx);
         return serac::tuple{source, flux};
       },
-      *mesh3D);
+      *mesh);
 
-  // TODO: reenable surface integrals
-  // residual.AddSurfaceIntegral([=](auto x, auto /*n*/, auto u) { return x[0] + x[1] - cos(u); }, *mesh3D);
+  residual.AddBoundaryIntegral(
+      Dimension<dim - 1>{}, DependsOn<0>{},
+      [=](auto x, auto /*n*/, auto temperature) {
+        auto [u, du_dxi] = temperature;
+        return x[0] + x[1] - cos(u);
+      },
+      *mesh);
 
   check_gradient(residual, U);
 }
+
+TEST(basic, thermal_test_2D) { thermal_test<1, 2>(); }
+TEST(basic, thermal_test_3D) { thermal_test<1, 3>(); }
 
 int main(int argc, char* argv[])
 {

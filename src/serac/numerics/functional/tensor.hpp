@@ -129,7 +129,7 @@ struct zero {
 
   /** @brief `zero` can be accessed like a multidimensional array */
   template <typename... T>
-  SERAC_HOST_DEVICE auto operator()(T...)
+  SERAC_HOST_DEVICE auto operator()(T...) const
   {
     return zero{};
   }
@@ -462,6 +462,29 @@ SERAC_HOST_DEVICE constexpr auto operator-(const tensor<S, m, n...>& A, const te
 }
 
 /**
+ * @brief elementwise multiplication of two tensors
+ * @tparam S the underlying type of the (lefthand) argument
+ * @tparam T the underlying type of the (righthand) argument
+ * @tparam n integers describing the tensor shape
+ * @param[in] A one of the tensors to be multiplied
+ * @param[in] B one of the tensors to be multiplied
+ */
+template <typename S, typename T, int... n>
+SERAC_HOST_DEVICE constexpr auto elementwise_multiply(const tensor<S, n...>& A, const tensor<T, n...>& B)
+{
+  using U = decltype(S{} * T{});
+  tensor<U, n...> AB{};
+
+  const S* A_ptr  = reinterpret_cast<const S*>(&A);
+  const T* B_ptr  = reinterpret_cast<const T*>(&B);
+  U*       AB_ptr = reinterpret_cast<U*>(&AB);
+  for (int i = 0; i < (n * ...); i++) {
+    AB_ptr[i] = A_ptr[i] * B_ptr[i];
+  }
+  return AB;
+}
+
+/**
  * @brief multiply a tensor by a scalar value
  * @tparam S the scalar value type. Must be arithmetic (e.g. float, double, int) or a dual number
  * @tparam T the underlying type of the tensor (righthand) argument
@@ -772,6 +795,26 @@ SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m, n>& A, const tensor<T, n
 
 /**
  * @overload
+ * @note vector . scalar
+ */
+template <typename T, int m>
+SERAC_HOST_DEVICE constexpr auto dot(const tensor<T, m>& A, double B)
+{
+  return A * B;
+}
+
+/**
+ * @overload
+ * @note scalar * vector
+ */
+template <typename T, int m>
+SERAC_HOST_DEVICE constexpr auto dot(double B, const tensor<T, m>& A)
+{
+  return B * A;
+}
+
+/**
+ * @overload
  * @note vector . vector
  */
 template <typename S, typename T, int m>
@@ -852,6 +895,38 @@ SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m, n>& A, const tensor<T, n
 
 /**
  * @overload
+ * @note matrix . tensor
+ */
+template <typename S, typename T, int m, int n, int p, int q, int r>
+SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m, n>& A, const tensor<T, n, p, q, r>& B)
+{
+  tensor<decltype(S{} * T{}), m, p, q, r> AB{};
+  for (int i = 0; i < m; i++) {
+    for (int j = 0; j < n; j++) {
+      AB[i] = AB[i] + A[i][j] * B[j];
+    }
+  }
+  return AB;
+}
+
+/**
+ * @overload
+ * @note matrix . tensor
+ */
+template <typename S, typename T, int m, int n, int p, int q>
+SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m, n>& A, const tensor<T, n, p, q>& B)
+{
+  tensor<decltype(S{} * T{}), m, p, q> AB{};
+  for (int i = 0; i < m; i++) {
+    for (int j = 0; j < n; j++) {
+      AB[i] = AB[i] + A[i][j] * B[j];
+    }
+  }
+  return AB;
+}
+
+/**
+ * @overload
  * @note 3rd-order-tensor . vector
  */
 template <typename S, typename T, int m, int n, int p>
@@ -882,6 +957,23 @@ SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m>& u, const tensor<T, m, n
     }
   }
   return uAv;
+}
+
+/// @overload
+template <typename S, typename T, int m, int n, int p, int q>
+SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m, n, p, q>& A, const tensor<T, q>& B)
+{
+  tensor<decltype(S{} * T{}), m, n, p> AB{};
+  for (int i = 0; i < m; i++) {
+    for (int j = 0; j < n; j++) {
+      for (int k = 0; k < p; k++) {
+        for (int l = 0; l < q; l++) {
+          AB[i][j][k] += A[i][j][k][l] * B[l];
+        }
+      }
+    }
+  }
+  return AB;
 }
 
 /**
@@ -1000,6 +1092,11 @@ SERAC_HOST_DEVICE auto norm(const tensor<T, n...>& A)
   using std::sqrt;
   return sqrt(squared_norm(A));
 }
+
+/**
+ * @brief overload of Frobenius norm for zero type
+ */
+SERAC_HOST_DEVICE constexpr auto norm(zero) { return zero{}; }
 
 /**
  * @brief Normalizes the tensor
@@ -1188,6 +1285,114 @@ auto matrix_sqrt(const tensor<T, dim, dim>& A)
     B = 0.5 * (B + dot(A, inv(B)));
   }
   return B;
+}
+
+/**
+ * @brief a convenience function that computes a dot product between
+ * two tensor, but that allows the user to specify which indices should
+ * be summed over. For example:
+ *
+ * @code{.cpp}
+ * tensor< double, 4, 4, 4 > A = ...;
+ * tensor< double, 4, 4 > B = ...;
+ * tensor< double, 4, 4, 4 > C = contract<1, 0>(A, B);
+ *
+ * //                 sum over index 1 for A
+ * //                          V
+ * // C(i, j, k) = \sum_l A(i, l, j) * B(l, k)
+ * //                                    ^
+ * //                          sum over index 0 for B
+ *
+ * @endcode
+ *
+ * @tparam i1 the index of contraction for the left operand
+ * @tparam i2 the index of contraction for the right operand
+ * @tparam S the datatype stored in the left operand
+ * @tparam m leading dimension of the left operand
+ * @tparam n the trailing dimensions of the left operand
+ * @tparam T the datatype stored in the right operand
+ * @tparam p the number of rows in the right operand
+ * @tparam q the number of columns in the right operand
+ * @param A the left operand
+ * @param B the right operand
+ */
+template <int i1, int i2, typename S, int m, int... n, typename T, int p, int q>
+auto contract(const tensor<S, m, n...>& A, const tensor<T, p, q>& B)
+{
+  constexpr int Adims[] = {m, n...};
+  constexpr int Bdims[] = {p, q};
+  static_assert(sizeof...(n) < 3);
+  static_assert(Adims[i1] == Bdims[i2], "error: incompatible tensor dimensions");
+
+  // first, we have to figure out the dimensions of the output tensor
+  constexpr int new_dim = (i2 == 0) ? q : p;
+  constexpr int d1      = (i1 == 0) ? new_dim : Adims[0];
+  constexpr int d2      = (i1 == 1) ? new_dim : Adims[1];
+  constexpr int d3      = sizeof...(n) == 1 ? 0 : ((i1 == 2) ? new_dim : Adims[2]);
+
+  // the type of the output tensor is easier to figure out
+  using U = decltype(S{} * T{});
+
+  auto C = []() {
+    if constexpr (d3 == 0) return tensor<U, d1, d2>{};
+    if constexpr (d3 != 0) return tensor<U, d1, d2, d3>{};
+  }();
+
+  if constexpr (d3 == 0) {
+    for (int i = 0; i < d1; i++) {
+      for (int j = 0; j < d2; j++) {
+        U sum{};
+        for (int k = 0; k < Adims[i1]; k++) {
+          if constexpr (i1 == 0 && i2 == 0) sum += A(k, j) * B(k, i);
+          if constexpr (i1 == 1 && i2 == 0) sum += A(i, k) * B(k, j);
+          if constexpr (i1 == 0 && i2 == 1) sum += A(k, j) * B(i, k);
+          if constexpr (i1 == 1 && i2 == 1) sum += A(i, k) * B(j, k);
+        }
+        C(i, j) = sum;
+      }
+    }
+  } else {
+    for (int i = 0; i < d1; i++) {
+      for (int j = 0; j < d2; j++) {
+        for (int k = 0; k < d3; k++) {
+          U sum{};
+          for (int l = 0; l < Adims[i1]; l++) {
+            if constexpr (i1 == 0 && i2 == 0) sum += A(l, j, k) * B(l, i);
+            if constexpr (i1 == 1 && i2 == 0) sum += A(i, l, k) * B(l, j);
+            if constexpr (i1 == 2 && i2 == 0) sum += A(i, j, l) * B(l, k);
+            if constexpr (i1 == 0 && i2 == 1) sum += A(l, j, k) * B(i, l);
+            if constexpr (i1 == 1 && i2 == 1) sum += A(i, l, k) * B(j, l);
+            if constexpr (i1 == 2 && i2 == 1) sum += A(i, j, l) * B(k, l);
+          }
+          C(i, j, k) = sum;
+        }
+      }
+    }
+  }
+
+  return C;
+}
+
+/// @overload
+template <int i1, int i2, typename T>
+auto contract(const zero&, const T&)
+{
+  return zero{};
+}
+
+/**
+ * @brief computes the relative error (in the frobenius norm) between two tensors of the same shape
+ *
+ * @tparam T the datatype stored in each tensor
+ * @tparam n the dimensions of each tensor
+ * @param A the left argument
+ * @param B the right argument
+ * @return norm(A - B) / norm(A)
+ */
+template <typename T, int... n>
+double relative_error(tensor<T, n...> A, tensor<T, n...> B)
+{
+  return norm(A - B) / norm(A);
 }
 
 /**
@@ -1415,12 +1620,13 @@ SERAC_HOST_DEVICE constexpr auto linear_solve(const tensor<S, n, n>& A, const te
   // Compute directional derivative of x.
   // If both b and A are not dual, the zero type
   // makes these no-ops.
-  auto r  = get_gradient(b) - dot(get_gradient(A), x);
-  auto dx = linear_solve(lu_factors, r);
+  auto                  r  = get_gradient(b) - dot(get_gradient(A), x);
+  [[maybe_unused]] auto dx = linear_solve(lu_factors, r);
 
   if constexpr (is_zero<decltype(dx)>{}) {
     return x;
-  } else {
+  }
+  if constexpr (!is_zero<decltype(dx)>{}) {
     return make_dual(x, dx);
   }
 }
@@ -1698,6 +1904,25 @@ SERAC_HOST_DEVICE auto get_value(const tensor<dual<T>, n...>& arg)
 }
 
 /**
+ * @brief Extracts all of the values from a tensor of dual numbers
+ *
+ * @tparam T1 the first type of the tuple stored in the tensor
+ * @tparam T2 the second type of the tuple stored in the tensor
+ * @tparam n  the number of entries in the input argument
+ * @param[in] input The tensor of dual numbers
+ * @return the tensor of all of the values
+ */
+template <typename T1, typename T2, int n>
+SERAC_HOST_DEVICE auto get_value(const tensor<tuple<T1, T2>, n>& input)
+{
+  tensor<decltype(get_value(tuple<T1, T2>{})), n> output{};
+  for (int i = 0; i < n; i++) {
+    output[i] = get_value(input[i]);
+  }
+  return output;
+}
+
+/**
  * @brief Retrieves the gradient component of a double (which is nothing)
  * @return The sentinel, @see zero
  */
@@ -1818,6 +2043,297 @@ SERAC_HOST_DEVICE auto chain_rule(const tensor<double, m, n, p...>& df_dx, const
   return total;
 }
 
+/**
+ * @brief returns the total number of stored values in a tensor
+ *
+ * @tparam T the datatype stored in the tensor
+ * @tparam n the extents of each dimension
+ * @return the total number of values stored in the tensor
+ */
+template <typename T, int... n>
+SERAC_HOST_DEVICE constexpr int size(const tensor<T, n...>&)
+{
+  return (n * ... * 1);
+}
+
+/**
+ * @overload
+ * @brief overload of size() for `double`, we say a double "stores" 1 value
+ */
+SERAC_HOST_DEVICE constexpr int size(const double&) { return 1; }
+
+/// @overload
+SERAC_HOST_DEVICE constexpr int size(zero) { return 0; }
+
+/**
+ * @brief a function for querying the ith dimension of a tensor
+ *
+ * @tparam i which dimension to query
+ * @tparam T the datatype stored in the tensor
+ * @tparam n the tensor extents
+ * @return the ith dimension
+ */
+template <int i, typename T, int... n>
+SERAC_HOST_DEVICE constexpr int dimension(const tensor<T, n...>&)
+{
+  constexpr int dimensions[] = {n...};
+  return dimensions[i];
+}
+
+/**
+ * @brief a function for querying the first dimension of a tensor
+ *
+ * @tparam T the datatype stored in the tensor
+ * @tparam m the first dimension of the tensor
+ * @tparam n the trailing dimensions of the tensor
+ * @return m
+ */
+template <typename T, int m, int... n>
+SERAC_HOST_DEVICE constexpr int leading_dimension(tensor<T, m, n...>)
+{
+  return m;
+}
+
 }  // namespace serac
+
+// todo: port to current tensor class:
+#if 0
+// eigendecomposition for symmetric A
+//
+// based on "A robust algorithm for finding the eigenvalues and
+// eigenvectors of 3x3 symmetric matrices", by Scherzinger & Dohrmann
+__host__ __device__
+inline void eig(const r2tensor < 3, 3 > & A,
+                      r1tensor < 3 >    & eta,
+                      r2tensor < 3, 3 > & Q) {
+
+  for (int i = 0; i < 3; i++) {
+    eta(i) = 1.0;
+    for (int j = 0; j < 3; j++) {
+      Q(i,j) = (i == j);
+    }
+  }
+
+  auto A_dev = dev(A);
+
+  double J2 = I2(A_dev);
+  double J3 = I3(A_dev);
+
+  if (J2 > 0.0) {
+
+    // angle used to find eigenvalues
+    double tmp = (0.5 * J3) * pow(3.0 / J2, 1.5);
+    double alpha = acos(fmin(fmax(tmp, -1.0), 1.0)) / 3.0;
+
+    // consider the most distinct eigenvalue first
+    if (6.0 * alpha < M_PI) {
+      eta(0) = 2 * sqrt(J2 / 3.0) * cos(alpha);
+    } else {
+      eta(0) = 2 * sqrt(J2 / 3.0) * cos(alpha + 2.0 * M_PI / 3.0);
+    }
+
+    // find the eigenvector for that eigenvalue
+    r1tensor < 3 > r[3];
+
+    int imax = -1;
+    double norm_max = -1.0;
+
+    for (int i = 0; i < 3; i++) {
+
+      for (int j = 0; j < 3; j++) {
+        r[i](j) = A_dev(j,i) - (i == j) * eta(0);
+      }
+
+      double norm_r = norm(r[i]);
+      if (norm_max < norm_r) {
+        imax = i;
+        norm_max = norm_r;
+      }
+
+    }
+
+    r1tensor < 3 > s0, s1, t1, t2, v0, v1, v2, w;
+
+    s0 = normalize(r[imax]);
+    t1 = r[(imax+1)%3] - dot(r[(imax+1)%3], s0) * s0;
+    t2 = r[(imax+2)%3] - dot(r[(imax+2)%3], s0) * s0;
+    s1 = normalize((norm(t1) > norm(t2)) ? t1 : t2);
+
+    // record the first eigenvector
+    v0 = cross(s0, s1);
+    for (int i = 0; i < 3; i++) {
+      Q(i,0) = v0(i);
+    }
+
+    // get the other two eigenvalues by solving the
+    // remaining quadratic characteristic polynomial
+    auto A_dev_s0 = dot(A_dev, s0);
+    auto A_dev_s1 = dot(A_dev, s1);
+
+    double A11 = dot(s0, A_dev_s0);
+    double A12 = dot(s0, A_dev_s1);
+    double A21 = dot(s1, A_dev_s0);
+    double A22 = dot(s1, A_dev_s1);
+
+    double delta = 0.5 * signum(A11-A22) * sqrt((A11-A22)*(A11-A22) + 4*A12*A21);
+
+    eta(1) = 0.5 * (A11 + A22) - delta;
+    eta(2) = 0.5 * (A11 + A22) + delta;
+
+    // if the remaining eigenvalues are exactly the same
+    // then just use the basis for the orthogonal complement
+    // found earlier
+    if (fabs(delta) <= 1.0e-15) {
+      
+      for (int i = 0; i < 3; i++){
+        Q(i,1) = s0(i);
+        Q(i,2) = s1(i);
+      } 
+      
+    // otherwise compute the remaining eigenvectors
+    } else {
+
+      t1 = A_dev_s0 - eta(1) * s0;
+      t2 = A_dev_s1 - eta(1) * s1;
+
+      w = normalize((norm(t1) > norm(t2)) ? t1 : t2);
+
+      v1 = normalize(cross(w, v0));
+      for (int i = 0; i < 3; i++) Q(i,1) = v1(i);
+
+      // define the last eigenvector as
+      // the direction perpendicular to the
+      // first two directions
+      v2 = normalize(cross(v0, v1));
+      for (int i = 0; i < 3; i++) Q(i,2) = v2(i);
+
+    }
+
+    // eta are actually eigenvalues of A_dev, so
+    // shift them to get eigenvalues of A
+    eta += tr(A) / 3.0;
+
+  }
+
+}
+
+inline float angle_between(const vec < 2 > & a, const vec < 2 > & b) {
+  return acos(clip(dot(normalize(a), normalize(b)), -1.0f, 1.0f));
+}
+
+inline float angle_between(const vec < 3 > & a, const vec < 3 > & b) {
+  return acos(clip(dot(normalize(a), normalize(b)), -1.0f, 1.0f));
+}
+
+// angle between proper orthogonal matrices
+inline float angle_between(const mat < 3, 3 > & U, const mat < 3, 3 > & V) {
+  return acos(0.5f * (tr(dot(U, transpose(V))) - 1.0f));
+}
+
+inline mat < 2, 2 > rotation(const float theta) {
+  return mat< 2, 2 >{
+    {cos(theta), -sin(theta)},
+    { sin(theta), cos(theta) }
+  };
+}
+
+inline mat < 3, 3 > axis_to_rotation(const vec < 3 > & omega) {
+
+  float norm_omega = norm(omega);
+
+  if (fabs(norm_omega) < 0.000001f) {
+
+    return eye< 3 >();
+
+  } else {
+
+    vec3 u = omega / norm_omega;
+
+    float c = cos(norm_omega);
+    float s = sin(norm_omega);
+
+    return mat < 3, 3 >{
+      {
+        u[0]*u[0]*(1.0f - c) + c,
+        u[0]*u[1]*(1.0f - c) - u[2]*s,
+        u[0]*u[2]*(1.0f - c) + u[1]*s
+      },{
+        u[1]*u[0]*(1.0f - c) + u[2]*s,
+        u[1]*u[1]*(1.0f - c) + c,
+        u[1]*u[2]*(1.0f - c) - u[0]*s
+      },{
+        u[2]*u[0]*(1.0f - c) - u[1]*s,
+        u[2]*u[1]*(1.0f - c) + u[0]*s,
+        u[2]*u[2]*(1.0f - c) + c
+      }
+    };
+
+  }
+
+}
+
+// assumes R is a proper-orthogonal matrix
+inline vec < 3 > rotation_to_axis(const mat < 3, 3 > & R) {
+
+  float theta = acos(clip(0.5f * (tr(R) - 1.0f), -1.0f, 1.0f));
+
+  float scale;
+
+  // for small angles, prefer series expansion to division by sin(theta) ~ 0
+  if (fabs(theta) < 0.00001f) {
+    scale = 0.5f + theta * theta / 12.0f;
+  }
+  else {
+    scale = 0.5f * theta / sin(theta);
+  }
+
+  return vec3{ R(2,1) - R(1,2), R(0,2) - R(2,0), R(1,0) - R(0,1) } *scale;
+
+}
+
+inline mat < 3, 3 > look_at(const vec < 3 > & direction, const vec < 3 > & up = vec3{ 0.0f, 0.0f, 1.0f }) {
+  vec3 f = normalize(direction);
+  vec3 u = normalize(cross(f, cross(up, f)));
+  vec3 l = normalize(cross(u, f));
+
+  return mat3{
+    {f[0], l[0], u[0]},
+    {f[1], l[1], u[1]},
+    {f[2], l[2], u[2]}
+  };
+}
+
+inline mat < 2, 2 > look_at(const vec < 2 > & direction) {
+  vec2 f = normalize(direction);
+  vec2 l = cross(f);
+
+  return mat2{
+    {f[0], l[0]},
+    {f[1], l[1]},
+  };
+}
+
+inline mat < 3, 3 > R3_basis(const vec3 & n) {
+  float sign = (n[2] >= 0.0f) ? 1.0f : -1.0f;
+  float a = -1.0f / (sign + n[2]); 
+  float b = n[0] * n[1] * a;
+
+  return mat < 3, 3 >{
+    {
+      1.0f + sign * n[0] * n[0] * a,
+      b,
+      n[0],
+    },{
+      sign * b,
+      sign + n[1] * n[1] * a,
+      n[1]
+    },{
+      -sign * n[0],
+      -n[1],
+      n[2]
+    }
+  };
+}
+#endif
 
 #include "serac/numerics/functional/isotropic_tensor.hpp"
