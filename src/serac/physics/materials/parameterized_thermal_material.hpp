@@ -23,9 +23,9 @@ public:
   /**
    * @brief Construct a new Parameterized Linear Isotropic Conductor object
    *
-   * @param density Density of the material (mass/volume)
-   * @param specific_heat_capacity Specific heat capacity of the material (energy / (mass * temp))
-   * @param conductivity_offset Thermal conductivity offset of the material (power / (length * temp)). This is
+   * @param input_density Density of the material (mass/volume)
+   * @param input_specific_heat_capacity Specific heat capacity of the material (energy / (mass * temp))
+   * @param input_conductivity_offset Thermal conductivity offset of the material (power / (length * temp)). This is
    * added to the parameter value to get the total conductivity.
    */
   ParameterizedLinearIsotropicConductor(double input_density = 1.0, double input_specific_heat_capacity = 1.0,
