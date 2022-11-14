@@ -115,7 +115,7 @@ public:
   virtual void evalStress(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& sigma) const override;
 
   /**
-   * @brief Evaluate the derivative of the Kirchoff stress wrt the deformation gradient
+   * @brief Evaluate the derivative of the Kirchhoff stress wrt the deformation gradient
    * and assemble its contribution to the 4D array (spatial elasticity tensor)
    * @param[in] du_dX The displacement gradient
    * @param[out] C Tangent moduli 4D Array
@@ -216,7 +216,7 @@ public:
   virtual void evalStress(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& sigma) const override;
 
   /**
-   * @brief Evaluate the derivative of the Kirchoff stress wrt the deformation gradient
+   * @brief Evaluate the derivative of the Kirchhoff stress wrt the deformation gradient
    * and assemble its contribution to the 4D array (spatial elasticity tensor)
    * @param[in] du_dX the displacement gradient
    * @param[out] C Tangent moduli 4D Array
