@@ -173,6 +173,20 @@ TEST(ScalarEquationSolver, DerivativeWithTensorParameter2)
     std::cout << "dnorm_p    = " << dnorm_p << std::endl;
 }
 
+TEST(ScalarEquationSolver, dummy)
+{
+    auto f = [](auto c, auto v, auto w) { return dot(v, w)*c; };
+
+    double x = 2.0;
+    tensor<double, 2> v{{1.0, 2.0}};
+    tensor<double, 2> w{{3.0, 4.0}};
+    auto v_dual = make_dual(v);
+    auto w_dual = make_dual(w);
+    auto r = f(x, v_dual, w_dual);
+    std::cout << "r val = " << get_value(r) << std::endl;
+    std::cout << "r grad = " << get_gradient(r) << std::endl;
+}
+
 int main(int argc, char* argv[])
 {
   ::testing::InitGoogleTest(&argc, argv);
