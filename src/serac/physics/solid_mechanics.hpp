@@ -353,11 +353,12 @@ public:
    *    1. `MaterialType::State & state` an mutable reference to the internal variables for this quadrature point
    *    2. `tensor<T,dim,dim> du_dx` the displacement gradient at this quadrature point
    *    3. `tuple{value, derivative}`, a tuple of values and derivatives for each parameter field
-   *            specified in the `DependsOn<...>` argument. 
+   *            specified in the `DependsOn<...>` argument.
    *
    * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
    *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
-   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>, 3>`) 
+   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
+   * 3>`)
    *
    * @param qdata the buffer of material internal variables at each quadrature point
    *
@@ -472,11 +473,12 @@ public:
    * @pre body_force must be a object that can be called with the following arguments:
    *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
    *    2. `double t` the time (note: time will be handled differently in the future)
-   *    3. `tuple{value, derivative}`, a variadic list of tuples (each with a values and derivative), 
-   *            one tuple for each of the trial spaces specified in the `DependsOn<...>` argument. 
+   *    3. `tuple{value, derivative}`, a variadic list of tuples (each with a values and derivative),
+   *            one tuple for each of the trial spaces specified in the `DependsOn<...>` argument.
    * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
    *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
-   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>, 3>`) 
+   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
+   * 3>`)
    *
    */
   template <int... active_parameters, typename BodyForceType>
@@ -511,12 +513,13 @@ public:
    *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
    *    2. `tensor<T,dim> n` the outward-facing unit normal for the quadrature point
    *    3. `double t` the time (note: time will be handled differently in the future)
-   *    4. `tuple{value, derivative}`, a variadic list of tuples (each with a values and derivative), 
-   *            one tuple for each of the trial spaces specified in the `DependsOn<...>` argument. 
+   *    4. `tuple{value, derivative}`, a variadic list of tuples (each with a values and derivative),
+   *            one tuple for each of the trial spaces specified in the `DependsOn<...>` argument.
    *
    * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
    *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
-   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>, 3>`) 
+   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
+   * 3>`)
    *
    * @note: until mfem::GetFaceGeometricFactors implements their JACOBIANS option,
    * (or we implement a replacement kernel ourselves) we are not able to compute
