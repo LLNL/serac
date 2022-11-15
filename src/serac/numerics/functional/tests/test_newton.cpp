@@ -28,7 +28,7 @@ T function_that_kills_newton(T x)
     return sin(x) + x;
 }
 
-TEST(ScalarEquationSolver, Converges)
+TEST(ScalarEquationSolver, ConvergesOnEasyProblem)
 {
     double x0 = 2.0;
     double tolerance = 1e-8;
@@ -144,7 +144,7 @@ TEST(ScalarEquationSolver, WorksWithTensorParameter)
     EXPECT_LT(norm(dnormA_dA - exact_derivative)/norm(exact_derivative), 1e-12);
 }
 
-TEST(ScalarEquationSolver, NameMe)
+TEST(ScalarEquationSolver, CanTakeDirectionalDerivative)
 {
     auto my_norm = [](auto A) {
         double tolerance = 1e-10;
@@ -163,12 +163,11 @@ TEST(ScalarEquationSolver, NameMe)
                                   {4.0, 5.0, 6.0},
                                   {7.0, 8.0, 9.0}}};
 
-    auto [my_norm_p, dmy_norm_p] = my_norm(make_dual(A, dA));
-    auto [norm_p, dnorm_p] = norm(make_dual(A));
-    std::cout << "my_norm_p  = " << my_norm_p << std::endl;
-    std::cout << "norm_p     = " << norm_p << std::endl;
-    std::cout << "dmy_norm_p = " << dmy_norm_p << std::endl;
-    std::cout << "dnorm_p    = " << dnorm_p << std::endl;
+    // this should give dx_dA : dA = A:A/norm(A) = norm(A)
+    auto [normA, dnormA] = my_norm(make_dual(A, dA));
+
+    double exact_derivative = norm(A);
+    EXPECT_LT(std::abs(exact_derivative - dnormA)/exact_derivative, 1e-12);
 }
 
 
