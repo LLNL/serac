@@ -521,8 +521,8 @@ auto solve_scalar_equation(function && f, double x0, double tolerance,
     }
     const unsigned int MAX_ITERATIONS = 25;
     x = x0;
-    double dx_old = std::abs(upper_bound - lower_bound);
-    double dx = dx_old;
+    double delta_x_old = std::abs(upper_bound - lower_bound);
+    double delta_x = delta_x_old;
     auto R = f(make_dual(x), get_value(params)...);
     auto fval = get_value(R);
     df_dx = get_gradient(R);
@@ -532,28 +532,27 @@ auto solve_scalar_equation(function && f, double x0, double tolerance,
         SLIC_WARNING("solve_scalar_equation failed to converge in allotted iterations.");
         break;
       }
-      std::cout << "iter " << iterations << " x = " << x << std::endl;
 
       // use bisection if Newton oversteps brackets or is not decreasing sufficiently
       if ((x - xh)*df_dx - fval > 0 ||
           (x - xl)*df_dx - fval < 0 ||
-          std::abs(2.*fval) > std::abs(dx_old*df_dx)) {
-        dx_old = dx;
-        dx = 0.5*(xh - xl);
-        x = xl + dx;
+          std::abs(2.*fval) > std::abs(delta_x_old*df_dx)) {
+        delta_x_old = delta_x;
+        delta_x = 0.5*(xh - xl);
+        x = xl + delta_x;
         converged = (x == xl);
-        std::cout << "bisect" << std::endl;
       } else { // use Newton step
-        dx_old = dx;
-        dx = fval/df_dx;
+        delta_x_old = delta_x;
+        delta_x = fval/df_dx;
         auto temp = x;
-        x -= dx;
+        x -= delta_x;
         converged = (x == temp);
-        std::cout << "newton" << std::endl;
       }
 
+      // std::cout << "iter " << iterations << " x = " << x << std::endl;
+
       // convergence check
-      converged = converged || (std::abs(dx) < tolerance);
+      converged = converged || (std::abs(delta_x) < tolerance);
       
       // function and jacobian evaluation
       R = f(make_dual(x), get_value(params)...);
@@ -578,14 +577,14 @@ auto solve_scalar_equation(function && f, double x0, double tolerance,
   // [fval, df_dp] = f(get_value(x), p)
   // df = 0
   // for p in params:
-  //   accumulate df += inner(df_dp, p_dot)
-  // x_dot = -df / df_dx
+  //   df += inner(df_dp, dp)
+  // dx = -df / df_dx
   constexpr bool contains_duals = (is_dual_number<ParamTypes>::value || ...) || (is_tensor_of_dual_number<ParamTypes>::value || ...);
   if constexpr (contains_duals) {
     auto f_and_grad = f(x, params...);
     auto df = get_gradient(f_and_grad);
-    auto x_dot = -df/df_dx;
-    return SolverResults(dual{x, x_dot}, converged, iterations);
+    auto dx = -df/df_dx;
+    return SolverResults(dual{x, dx}, converged, iterations);
   }
   if constexpr (!contains_duals) {
     return SolverResults(x, converged, iterations);
