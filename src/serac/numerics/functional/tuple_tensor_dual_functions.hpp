@@ -478,7 +478,7 @@ struct SolverResults {
 
 template <typename function, typename... ParamTypes>
 auto solve_scalar_equation(function && f, double x0, double tolerance,
-                             double lower_bound, double upper_bound, ParamTypes... params)
+                           double lower_bound, double upper_bound, ParamTypes... params)
 {
   double x, df_dx;
   double fl = f(lower_bound, get_value(params)...);
