@@ -30,8 +30,7 @@ TEST_P(InputFileTest, SolidLegacy)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-const std::string input_files[] = {"dyn_solve",      
-                                   "dyn_direct_solve",
+const std::string input_files[] = {"dyn_solve", "dyn_direct_solve",
 // TODO Disabled while we diagnose the non-deterministic sundials error
 /*
 #ifdef MFEM_USE_SUNDIALS
@@ -41,7 +40,7 @@ const std::string input_files[] = {"dyn_solve",
 #ifdef MFEM_USE_AMGX
                                    "dyn_amgx_solve",
 #endif
-                                   "qs_solve",       
+                                   "qs_solve",
                                    // "qs_direct_solve", disabled due to segfault in DSUPERLU
                                    "qs_linear"};
 

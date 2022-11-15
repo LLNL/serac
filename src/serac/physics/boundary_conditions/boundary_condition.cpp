@@ -146,7 +146,6 @@ const mfem::VectorCoefficient& BoundaryCondition::vectorCoefficient() const
     SLIC_ERROR_ROOT("Asking for a vector coefficient on a BoundaryCondition that contains a scalar coefficient.");
     exit(1);
   }
-
 }
 
 mfem::VectorCoefficient& BoundaryCondition::vectorCoefficient()
