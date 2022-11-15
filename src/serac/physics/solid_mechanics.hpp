@@ -357,7 +357,7 @@ public:
    *
    * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
    *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
-   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` -> `tensor<dual<...>, 3>`) 
+   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>, 3>`) 
    *
    * @param qdata the buffer of material internal variables at each quadrature point
    *
@@ -476,7 +476,7 @@ public:
    *            one tuple for each of the trial spaces specified in the `DependsOn<...>` argument. 
    * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
    *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
-   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` -> `tensor<dual<...>, 3>`) 
+   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>, 3>`) 
    *
    */
   template <int... active_parameters, typename BodyForceType>
@@ -516,7 +516,7 @@ public:
    *
    * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
    *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
-   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` -> `tensor<dual<...>, 3>`) 
+   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>, 3>`) 
    *
    * @note: until mfem::GetFaceGeometricFactors implements their JACOBIANS option,
    * (or we implement a replacement kernel ourselves) we are not able to compute
