@@ -40,20 +40,7 @@ TEST(ScalarEquationSolver, Converges)
     EXPECT_LT(error, tolerance);
 }
 
-TEST(ScalarEquationSolver, WorksWithParameter)
-{
-    double x0 = 2.0;
-    double tolerance = 1e-8;
-    double lower = 1e-3;
-    double upper = 2.5;
-    double p = 2.0;
-    auto result = solve_scalar_equation([](auto x, auto a){ return g(x, a);}, x0, tolerance, lower, upper, p);
-    auto x = result.root;
-    double error = std::abs((x - std::sqrt(p))/std::sqrt(p));
-    EXPECT_LT(error, tolerance);
-}
-
-TEST(ScalarEquationSolver, DerivativeOfPrimal)
+TEST(ScalarEquationSolver, WorksWithScalarParameter)
 {
     auto my_sqrt = [](dual<double> p) {
         double x0 = get_value(p);
@@ -65,7 +52,13 @@ TEST(ScalarEquationSolver, DerivativeOfPrimal)
     };
     double p = 2.0;
     auto [sqrt_p, dsqrt_p] = my_sqrt(make_dual(p));
-    EXPECT_NEAR(dsqrt_p, 0.5/std::sqrt(p), 1e-12);
+
+    // check value
+    double exact_value = std::sqrt(2.0);
+    EXPECT_LT(std::abs(sqrt_p - exact_value)/exact_value, 1e-12);
+
+    double exact_derivative = 0.5/std::sqrt(p);
+    EXPECT_LT(std::abs(dsqrt_p - exact_derivative)/exact_derivative, 1e-12);
 }
 
 TEST(ScalarEquationSolver, AbortsIfRootNotBracketedByCaller)
@@ -128,7 +121,7 @@ TEST(ScalarEquationSolver, ConvergesWithGuessOutsideNewtonBasin)
     EXPECT_LT(error, tolerance);
 }
 
-TEST(ScalarEquationSolver, DerivativeWithTensorParameter)
+TEST(ScalarEquationSolver, WorksWithTensorParameter)
 {
     auto my_norm = [](auto A) {
         double tolerance = 1e-10;
@@ -143,12 +136,12 @@ TEST(ScalarEquationSolver, DerivativeWithTensorParameter)
                                  {4.0, 5.0, 6.0}, 
                                  {7.0, 8.0, 9.0}}};
 
-    auto [my_norm_p, dmy_norm_p] = my_norm(make_dual(A));
-    auto [norm_p, dnorm_p] = norm(make_dual(A));
-    std::cout << "my_norm_p  = " << my_norm_p << std::endl;
-    std::cout << "norm_p     = " << norm_p << std::endl;
-    std::cout << "dmy_norm_p = " << dmy_norm_p << std::endl;
-    std::cout << "dnorm_p    = " << dnorm_p << std::endl;
+    auto [normA, dnormA_dA] = my_norm(make_dual(A));
+    double exact_value = norm(A);
+    EXPECT_LT(std::abs(normA - exact_value)/exact_value, 1e-12);
+
+    tensor<double, 3, 3> exact_derivative = A/norm(A);
+    EXPECT_LT(norm(dnormA_dA - exact_derivative)/norm(exact_derivative), 1e-12);
 }
 
 TEST(ScalarEquationSolver, NameMe)
