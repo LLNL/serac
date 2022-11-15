@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
   axom::slic::SimpleLogger logger;
   axom::slic::setIsRoot(rank == 0);
 
-  constexpr int p = 1;
+  constexpr int p = 2;
   constexpr int dim = 3;
   
   int num_steps = 30;
@@ -51,11 +51,13 @@ int main(int argc, char* argv[]) {
 #endif
 
   // Construct the appropriate dimension mesh and give it to the data store
-
-  int nElem = 5;
+  int nElem = 4;
 #ifdef FULL_DOMAIN
   double lx = 0.67e-3, ly = 10.0e-3, lz = 0.25e-3;
   ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(2*nElem, 25*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
+  // ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(12, 40, 5 + 0*nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
+  // ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(10, 50, 4 + 0*nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
+
 #else
   double lx = 0.67e-3/2, ly = 10.0e-3, lz = 0.25e-3/2;
   ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(2*nElem, 40*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
@@ -121,12 +123,12 @@ int main(int argc, char* argv[]) {
   IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
                                                        .abs_tol     = 1.0e-16,
                                                        .print_level = 0,
-                                                       .max_iter    = 500,
+                                                       .max_iter    = 600,
                                                        .lin_solver  = LinearSolver::GMRES,
                                                        .prec        = HypreBoomerAMGPrec{}};
   NonlinearSolverOptions default_nonlinear_options = {
     .rel_tol = 1.0e-4, .abs_tol = 1.0e-7, .max_iter = 6, .print_level = 1};
-SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver({default_linear_options, default_nonlinear_options}, GeometricNonlinearities::Off,
+  SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver({default_linear_options, default_nonlinear_options}, GeometricNonlinearities::Off,
                                        "lce_solid_functional");
   // SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver(solid_mechanics::default_static_options, GeometricNonlinearities::Off,
   //                                      "lce_solid_functional");
@@ -153,7 +155,7 @@ SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver({default_linear
   double shear_modulus = 0.5*E/(1.0 + nu);
   double bulk_modulus = E / 3.0 / (1.0 - 2.0*nu);
   double order_constant = 10; // 6.0;
-  double order_parameter = 0.95; // 0.7;
+  double order_parameter = 0.70; // 0.7;
   double transition_temperature = 348; // 370.0;
   double Nb2 = 1.0;
 
@@ -177,8 +179,7 @@ SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver({default_linear
 #endif
 
 #ifdef LOAD_DRIVEN
-  auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.000000001; };
-  // auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0000000001; };
+  auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0000001; };
 
   double iniLoadVal = 1.0e0;
 #ifdef FULL_DOMAIN
@@ -208,6 +209,29 @@ SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver({default_linear
 #endif
   solid_solver.outputState(output_filename); 
 
+
+  // QoI for output:
+  auto& pmesh = serac::StateManager::mesh();
+  Functional<double(H1<p, dim>)> avgYDispQoI({&solid_solver.displacement().space()});
+  avgYDispQoI.AddSurfaceIntegral(
+      DependsOn<0>{},
+      [=](auto x, auto n, auto displacement) {
+        auto [u, du_dxi] = displacement;
+        return dot(u, n) * ((x[1] > 0.99 * ly) ? 1.0 : 0.0);
+      },
+      pmesh);
+      
+  Functional<double(H1<p, dim>)> area({&solid_solver.displacement().space()});
+  area.AddSurfaceIntegral(
+      DependsOn<>{}, [=](auto x, auto /*n*/) { return (x[1] > 0.99 * ly) ? 1.0 : 0.0; }, pmesh); 
+
+  double initial_area = area(solid_solver.displacement());
+  if(rank==0)
+  {
+    std::cout << "... Initial Area of the top surface: " << initial_area << std::endl;
+    // exit(0);
+  }
+
   double t = 0.0;
   double tmax = 1.0;
   double dt = tmax / num_steps;
@@ -218,7 +242,9 @@ SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver({default_linear
     if(rank==0)
     {
       std::cout 
+      << "\n\n............................"
       << "\n... Entering time step: "<< i + 1
+      << "\n............................\n"
       << "\n... At time: "<< t
 #ifdef LOAD_DRIVEN
       << "\n... And with a tension load of: " << loadVal <<" ("<<loadVal/maxLoadVal*100<<"\% of max)"
@@ -231,6 +257,9 @@ SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver({default_linear
     
     solid_solver.advanceTimestep(dt);
     solid_solver.outputState(output_filename);
+
+    double current_qoi = avgYDispQoI(solid_solver.displacement());
+    double current_area = area(solid_solver.displacement());
 
     if(outputDispInfo)
     {
@@ -265,12 +294,10 @@ SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver({default_linear
       if(rank==0)
       {
         std::cout 
-        <<"\n... Min X displacement: " << gblDispXmin
-        <<"\n... Max X displacement: " << gblDispXmax
-        <<"\n... Min Y displacement: " << gblDispYmin
         <<"\n... Max Y displacement: " << gblDispYmax
-        <<"\n... Min Z displacement: " << gblDispZmin
-        <<"\n... Max Z displacement: " << gblDispZmax
+        <<"\n... The QoIVal is: " << current_qoi
+        <<"\n... The top surface current area is: " << std::setprecision(9) << current_area
+        <<"\n... The vertical displacement integrated over the top surface is: " << current_qoi/current_area
         << std::endl;
       }
 
