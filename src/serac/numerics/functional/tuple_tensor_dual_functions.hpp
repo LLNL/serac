@@ -582,25 +582,14 @@ auto solve_scalar_equation(function && f, double x0, double tolerance,
   // x_dot = -df / df_dx
   constexpr bool contains_duals = (is_dual_number<ParamTypes>::value || ...) || (is_tensor_of_dual_number<ParamTypes>::value || ...);
   if constexpr (contains_duals) {
-    // auto seq = std::make_integer_sequence<int, static_cast<int>(sizeof...(params))>();
-    // auto df = solver_derivative_helper(f, x, tuple{params...}, seq);
-    // auto x_dot = -df/df_dx;
-    double x_dot = 0;
-    return SolverResults(dual<double>{x, x_dot}, converged, iterations);
+    auto f_and_grad = f(x, params...);
+    auto df = get_gradient(f_and_grad);
+    auto x_dot = -df/df_dx;
+    return SolverResults(dual{x, x_dot}, converged, iterations);
   }
   if constexpr (!contains_duals) {
     return SolverResults(x, converged, iterations);
   }
-}
-
-
-template <typename function, typename... ParamTypes, int... i>
-auto solver_derivative_helper(function && f, double x, tuple<ParamTypes...> params, std::integer_sequence<int, i...>)
-{
-  auto fval_and_dfdp = f(x, get<i>(params)...);
-  auto df_dp = tuple{get_gradient(fval_and_dfdp)};
-  return (inner(get<i>(df_dp), get_gradient(get<i>(params))) + ...);
-
 }
 
 } // namespace serac
