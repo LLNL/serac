@@ -400,6 +400,15 @@ SERAC_HOST_DEVICE constexpr auto make_dual(const tensor<T, n>& x, const tensor<T
 }
 
 /**
+ * @brief Create a tensor of dual numbers with specified seed
+ */
+template <typename T, int m, int n>
+SERAC_HOST_DEVICE constexpr auto make_dual(const tensor<T, m, n>& x, const tensor<T, m, n>& dx)
+{
+  return make_tensor<m, n>([&](int i, int j) { return dual<T>{x[i][j], dx[i][j]}; });
+}
+
+/**
  * @overload
  * @note when inverting a tensor of dual numbers,
  * hardcode the analytic derivative of the
