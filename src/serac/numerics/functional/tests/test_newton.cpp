@@ -10,33 +10,16 @@
 
 using namespace serac;
 
-template <typename T>
-T f(T x)
-{
-    return x*x - 2.0;
-}
-
-template <typename S, typename T>
-auto g(S x, T p)
-{
-    return x*x - p;
-}
-
-template <typename T>
-T function_that_kills_newton(T x)
-{
-    return sin(x) + x;
-}
-
 TEST(ScalarEquationSolver, ConvergesOnEasyProblem)
 {
     double x0 = 2.0;
     double tolerance = 1e-8;
     double lower = 1e-3;
     double upper = 2.5;
-    auto result = solve_scalar_equation([](auto x){ return f(x);}, x0, tolerance, lower, upper);
+    auto result = solve_scalar_equation([](auto x){ return exp(x) - 2.0; }, x0, tolerance, lower, upper);
     auto x = result.root;
-    double error = std::abs((x - std::sqrt(2.0))/std::sqrt(2.0));
+    double exact = std::log(2.0);
+    double error = std::abs((x - exact)/abs(exact));
     EXPECT_LT(error, tolerance);
 }
 
@@ -47,7 +30,7 @@ TEST(ScalarEquationSolver, WorksWithScalarParameter)
         double tolerance = 1e-6;
         double lower = 0;
         double upper = (get_value(p) > 1.0) ? get_value(p) : 1.0;
-        auto result = solve_scalar_equation([](auto x, auto a){ return g(x, a); }, x0, tolerance, lower, upper, p);
+        auto result = solve_scalar_equation([](auto x, auto a){ return x*x - a; }, x0, tolerance, lower, upper, p);
         return result.root;
     };
     double p = 2.0;
@@ -58,7 +41,7 @@ TEST(ScalarEquationSolver, WorksWithScalarParameter)
     EXPECT_LT(std::abs(sqrt_p - exact_value)/exact_value, 1e-12);
 
     double exact_derivative = 0.5/std::sqrt(p);
-    EXPECT_LT(std::abs(dsqrt_p - exact_derivative)/exact_derivative, 1e-12);
+    EXPECT_LT(std::abs(dsqrt_p - exact_derivative)/std::abs(exact_derivative), 1e-12);
 }
 
 TEST(ScalarEquationSolver, AbortsIfRootNotBracketedByCaller)
@@ -69,7 +52,7 @@ TEST(ScalarEquationSolver, AbortsIfRootNotBracketedByCaller)
     double upper = 10.0;
     EXPECT_DEATH_IF_SUPPORTED({
             [[maybe_unused]] auto result = 
-                solve_scalar_equation([](auto x){ return f(x); }, x0, tolerance, lower, upper);
+                solve_scalar_equation([](auto x){ return x*x - 2.0; }, x0, tolerance, lower, upper);
         }, "solve_scalar_equation: root not bracketed by input bounds.");
 }
 
@@ -82,7 +65,7 @@ TEST(ScalarEquationSolver, ReturnsImmediatelyIfUpperBoundIsARoot)
     double tolerance = 1e-8;
     double lower = 0.0;
 
-    auto result = solve_scalar_equation([](auto x, auto a){ return g(x, a);}, x0, tolerance, lower, upper, p);
+    auto result = solve_scalar_equation([](auto x, auto a){ return x*x - a; }, x0, tolerance, lower, upper, p);
 
     double error = std::abs((result.root - 2.0))/2.0;
     EXPECT_LT(error, tolerance);
@@ -99,7 +82,7 @@ TEST(ScalarEquationSolver, ReturnsImmediatelyIfLowerBoundIsARoot)
     double tolerance = 1e-8;
     double upper = 8.0;
 
-    auto result = solve_scalar_equation([](auto x, auto a){ return g(x, a);}, x0, tolerance, lower, upper, p);
+    auto result = solve_scalar_equation([](auto x, auto a){ return x*x - a; }, x0, tolerance, lower, upper, p);
 
     double error = std::abs((result.root - 2.0))/2.0;
     EXPECT_LT(error, tolerance);
@@ -114,7 +97,8 @@ TEST(ScalarEquationSolver, ConvergesWithGuessOutsideNewtonBasin)
     double tolerance = 1e-8;
     double lower = -10.0;
     double upper = 10.0;
-    auto result = solve_scalar_equation([](auto x) { return function_that_kills_newton(x); }, 
+    auto nasty_function = [](auto x) { return sin(x) + x; };
+    auto result = solve_scalar_equation(nasty_function, 
                                         x0, tolerance, lower, upper);
     auto x = result.root;
     double error = std::abs(x);
