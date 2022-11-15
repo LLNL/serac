@@ -350,9 +350,9 @@ public:
    * @tparam StateType the type that contains the internal variables for MaterialType
    * @param material A material that provides a function to evaluate stress
    * @pre body_force must be a object that can be called with the following arguments:
-   *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
-   *    2. `double t` the time (note: time will be handled differently in the future)
-   *    3+. `tuple{value, derivative}`, a tuple of values and derivatives for each of the trial spaces
+   *    1. `MaterialType::State & state` an mutable reference to the internal variables for this quadrature point
+   *    2. `tensor<T,dim,dim> du_dx` the displacement gradient at this quadrature point
+   *    3. `tuple{value, derivative}`, a tuple of values and derivatives for each parameter field
    *            specified in the `DependsOn<...>` argument. 
    *
    * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
