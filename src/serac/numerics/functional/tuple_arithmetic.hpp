@@ -184,6 +184,17 @@ SERAC_HOST_DEVICE constexpr auto make_dual(const tuple<T0, T1>& args)
   return tuple{make_dual_helper<0, 2>(get<0>(args)), make_dual_helper<1, 2>(get<1>(args))};
 }
 
+/// @overload
+template <typename T0, typename T1, typename T2>
+SERAC_HOST_DEVICE constexpr auto make_dual(const tuple<T0, T1, T2>& args)
+{
+  return tuple{
+    make_dual_helper<0, 3>(get<0>(args)), 
+    make_dual_helper<1, 3>(get<1>(args)), 
+    make_dual_helper<2, 3>(get<2>(args))
+  };
+}
+
 /**
  * @brief a function that optionally (decided at compile time) converts a value to its dual type
  *

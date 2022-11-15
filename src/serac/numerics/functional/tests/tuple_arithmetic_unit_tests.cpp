@@ -95,6 +95,41 @@ TEST(TupleArithmeticUnitTests, TensorOutputWithTupleInput)
   EXPECT_NEAR(norm(df1 - df0) / norm(df0), 0.0, 2.0e-8);
 }
 
+
+TEST(TupleArithmeticUnitTests, ReadTheDocsExample)
+{
+  auto f = [=](auto p, auto v, auto L){
+     auto strain_rate = 0.5 * (L + transpose(L));
+     auto stress = - p * I + 2 * mu * strain_rate;
+     auto kinetic_energy_density = 0.5 * p * dot(v, v);
+     return tuple{stress, kinetic_energy_density};
+  };
+
+  [[maybe_unused]] constexpr double p = 3.14;
+  [[maybe_unused]] constexpr tensor v = {{1.0, 2.0, 3.0}};
+  constexpr tensor<double, 3, 3>    L = {{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}}};
+
+  // promote the arguments to dual numbers with make_dual()
+  tuple dual_args = make_dual(tuple{p, v, L});
+
+  // then call the function with the dual arguments
+  //
+  // note: serac::apply is a way to pass an n-tuple to a function that expects n arguments
+  //
+  // i.e. the two following lines have the same effect
+  // f(p, v, L);
+  // serac::apply(f, serac::tuple{p, v, L});
+  auto outputs = apply(f, dual_args);
+
+  // verify that the derivative types are what we expect
+  [[maybe_unused]] tuple<
+    tuple<tensor<double, 3, 3>, zero,              tensor<double, 3, 3, 3, 3> >,
+    tuple<double,               tensor<double, 3>, zero                       >
+  > gradients = get_gradient(outputs);
+
+}
+
+
 int main(int argc, char* argv[])
 {
   ::testing::InitGoogleTest(&argc, argv);
