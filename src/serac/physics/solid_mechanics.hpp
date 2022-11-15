@@ -363,7 +363,7 @@ public:
    * @param qdata the buffer of material internal variables at each quadrature point
    *
    * @pre MaterialType must have a public member variable `density`
-   * @pre MaterialType must define operator() that returns the Kirchoff stress
+   * @pre MaterialType must define operator() that returns the Cauchy stress
    */
   template <int... active_parameters, typename MaterialType, typename StateType = Empty>
   void setMaterial(DependsOn<active_parameters...>, MaterialType material,
