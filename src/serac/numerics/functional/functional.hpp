@@ -140,10 +140,11 @@ class Functional;
 /**
  * @brief Intended to be like @p std::function for finite element kernels
  *
- * That is: you tell it the inputs (trial spaces) for a kernel, and the outputs (test space) like @p std::function
+ * That is: you tell it the inputs (trial spaces) for a kernel, and the outputs (test space) like @p std::function.
+ *
  * For example, this code represents a function that takes an integer argument and returns a double:
  * @code{.cpp}
- * std::function< double(double, int) > my_func;
+ * std::function< double(int) > my_func;
  * @endcode
  * And this represents a function that takes values from an Hcurl field and returns a
  * residual vector associated with an H1 field:
