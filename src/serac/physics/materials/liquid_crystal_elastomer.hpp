@@ -8,6 +8,8 @@
  * @file liquid_crystal_elastomer.hpp
  *
  * @brief Brighenti's constitutive model for liquid crystal elastomers
+ * Cosma, M. P., & Brighenti, R. (2022). Controlled morphing of architected liquid crystal elastomer elements:
+ *  modeling and simulations. Mechanics Research Communications, 121, 103858.
  *
  * see https://doi.org/10.1016/j.ijsolstr.2021.02.023
  */
@@ -22,7 +24,7 @@
 namespace serac {
 
 /**
- * @brief Brighenti liquid crystal elastomer model
+ * @brief Brighenti's liquid crystal elastomer model
  */
 struct LiqCrystElast_Brighenti {
   /// this model is only intended to be used in 3D
@@ -77,9 +79,9 @@ struct LiqCrystElast_Brighenti {
    * @param[in] gamma the polar angle used to define the liquid crystal orientation vector
    * @return The calculated material response (Cauchy stress) for the material
    */
-  template <typename DispGradType, typename TemperatureType, typename AngleType>
+  template <typename DispGradType, typename orderParamType, typename AngleType>
   SERAC_HOST_DEVICE auto operator()(State& state, const tensor<DispGradType, dim, dim>& displacement_grad,
-                                    TemperatureType temperature_tuple, AngleType gamma_tuple) const
+                                    orderParamType temperature_tuple, AngleType gamma_tuple) const
   {
     using std::cos, std::sin;
 
@@ -170,7 +172,7 @@ struct LiqCrystElast_Brighenti {
   //
   // suggestions are welcome
 
-  double density;                   ///<  mass density
+  double density;                  ///<  mass density
   double shear_modulus_;            ///< shear modulus in stress-free configuration
   double bulk_modulus_;             ///< bulk modulus in stress-free configuration
   double order_constant_;           ///< Order constant
@@ -179,6 +181,140 @@ struct LiqCrystElast_Brighenti {
 
   // BT: I think this can be removed - it looks like it cancels out every place it appears.
   double N_b_squared_;  ///< Kuhn segment parameters.
+};
+
+/// -----------------------------------------------------------------------------
+/// -----------------------------------------------------------------------------
+/// -----------------------------------------------------------------------------
+
+/**
+ * @brief Bertoldi's liquid crystal elastomer model
+ * Paper: Li, S., Librandi, G., Yao, Y., Richard, A. J., Schneider‐Yamamura, A., Aizenberg, J., & Bertoldi, K. (2021). 
+ * Controlling Liquid Crystal Orientations for Programmable Anisotropic Transformations in Cellular Microstructures. 
+ * Advanced Materials, 33(42), 2105024.
+ */
+struct LiqCrystElast_Bertoldi {
+  /// this model is only intended to be used in 3D
+  static constexpr int dim = 3;
+
+  /// internal variables for the liquid crystal elastomer model
+  struct State {};
+
+  /**
+   * @brief Constructor
+   *
+   * @param rho mass density of the material (in reference configuration)
+   * @param young_modulus Bulk modulus of the material
+   * @param poisson_ratio Poisson ratio of the material
+   * @param initial_order_parameter Initial value of the order parameter
+   * @param beta_parameter Parameter for degree of coupling between elastic and nematic energies
+   */
+  LiqCrystElast_Bertoldi(double rho, double young_modulus, double poisson_ratio,
+                         double initial_order_parameter, double beta_parameter)
+      : density(rho),
+        young_modulus_(young_modulus),
+        poisson_ratio_(poisson_ratio),
+        initial_order_parameter_(initial_order_parameter),
+        beta_parameter_(beta_parameter)
+  {
+    SLIC_ERROR_ROOT_IF(density <= 0.0, "Density must be positive in the LCE material model.");
+    SLIC_ERROR_ROOT_IF(young_modulus_ <= 0.0, "Bulk modulus must be positive in the LCE material model.");
+    SLIC_ERROR_ROOT_IF(poisson_ratio_ <= 0.0, "Poisson ratio must be positive in the LCE material model.");
+    SLIC_ERROR_ROOT_IF(initial_order_parameter_ <= 0.0, "Initial order parameter must be positive in the LCE material model.");
+    SLIC_ERROR_ROOT_IF(beta_parameter_ <= 0.0, "The beta parameter must be positive in the LCE material model.");
+  }
+
+  /// -------------------------------------------------------
+
+  /**
+   * @brief Material response
+   *
+   * @tparam DisplacementType number-like type for the displacement vector
+   * @tparam DispGradType number-like type for the displacement gradient tensor
+   * @tparam AngleType number-like type for the orientation angle gamma
+   *
+   * @param[in,out] state A state variable object for this material. The value is updated in place.
+   * @param[in] displacement_grad displacement gradient with respect to the reference configuration
+   * @param[in] inst_order_param_tuple the current order parameter
+   * @param[in] gamma the polar angle used to define the liquid crystal orientation vector
+   * @return The calculated material response (Cauchy stress) for the material
+   */
+  template <typename DispGradType, typename orderParamType, typename AngleType>
+  SERAC_HOST_DEVICE auto operator()(State& /*state*/, const tensor<DispGradType, dim, dim>& displacement_grad,
+                                    orderParamType inst_order_param_tuple, AngleType gamma_tuple) const
+  {
+    using std::cos, std::sin;
+
+    // Compute the normal 
+    auto gamma = get<0>(gamma_tuple);
+    tensor normal{{cos(gamma), sin(gamma), 0.0 * gamma}};
+
+    // Get order parameters
+    auto St   = get<0>(inst_order_param_tuple);
+    double S0 = initial_order_parameter_;
+    
+    const double lambda = poisson_ratio_ * young_modulus_ / (1.0 + poisson_ratio_) / (1.0 - 2.0 * poisson_ratio_);
+    const double mu     = young_modulus_ / 2.0 / (1.0 + poisson_ratio_);
+
+    // kinematics
+    auto I = Identity<dim>();
+    auto F = displacement_grad + I;
+    auto C = dot(inv(F),F);
+    auto E = 0.5 * (C - I);
+    auto J = det(F);
+
+    // Compute the second Piola-Kirchhoff stress, i.e., \partial strain_energy / \partial E
+    auto S_stress_1 = lambda * tr(E) * I;
+    auto S_stress_2 = 2 * mu * E;
+    auto S_stress_3 = -0.5 * beta_parameter_ * (St - S0) * (3 * outer(normal, normal) - I);
+
+    // transform from second Piola-Lichhoff to Cauchy stress
+    auto stress = 1.0 / J * F * (S_stress_1 + S_stress_2 + S_stress_3) * transpose(F);
+
+    return stress;
+  }
+
+  /// -------------------------------------------------------
+
+  template <typename DispGradType, typename orderParamType, typename AngleType>
+  auto calculateStrainEnergy(const State& /*state*/, const tensor<DispGradType, dim, dim>& displacement_grad,
+                                    orderParamType inst_order_param_tuple, AngleType gamma_tuple) const
+  {
+    using std::cos, std::sin;
+    
+    // Compute the normal 
+    auto gamma = get<0>(gamma_tuple);
+    tensor normal{{cos(gamma), sin(gamma), 0.0 * gamma}};
+
+    // Get order parameters
+    auto St   = get<0>(inst_order_param_tuple);
+    double S0 = initial_order_parameter_;
+
+    const double lambda = poisson_ratio_ * young_modulus_ / (1.0 + poisson_ratio_) / (1.0 - 2.0 * poisson_ratio_);
+    const double mu     = young_modulus_ / 2.0 / (1.0 + poisson_ratio_);
+
+    // kinematics
+    auto I = Identity<dim>();
+    auto F = displacement_grad + I;
+    auto C = dot(inv(F),F);
+    auto E = 0.5 * (C - I);
+
+    // Compute the second Piola-Kirchhoff stress, i.e., \partial strain_energy / \partial E
+    auto strain_energy_1 = lambda * tr(E) * tr(E);
+    auto strain_energy_2 = mu * inner(E, E);
+    auto strain_energy_3 = -0.5 * beta_parameter_ * (St - S0) * inner( 3 * outer(normal, normal) - I, E);
+
+    // transform from second Piola-Lichhoff to Cauchy stress
+    auto strain_energy = strain_energy_1 + strain_energy_2 + strain_energy_3;
+
+    return strain_energy;
+  }
+
+  double density;                   ///<  mass density
+  double young_modulus_;             ///< bulk modulus in stress-free configuration
+  double poisson_ratio_;            ///< poisson's ratio
+  double initial_order_parameter_;  ///< initial value of order parameter
+  double beta_parameter_;            ///< Degree of coupling between elastic and nematic energies
 };
 
 }  // namespace serac

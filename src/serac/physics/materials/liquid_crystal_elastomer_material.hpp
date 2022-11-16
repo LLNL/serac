@@ -161,13 +161,7 @@ public:
     auto mu_hat = mu_old + alpha * (Q - Q_old);
     auto mu_a = dot(F_hat, dot(mu_hat, transpose(F_hat)));
     auto mu_b = alpha * (Q - dot(R_hat, dot(Q, transpose(R_hat))));
-// std::cout<<"-----------------------"<<std::endl;
-// std::cout<<mu_old<<std::endl;
-// std::cout<<"-----------------------"<<std::endl;
-// auto mu_ = mu_a + mu_b;
-// std::cout<<mu_a<<std::endl;
-// std::cout<<mu_b<<std::endl;
-// std::cout<<"-----------------------"<<std::endl;
+
     return mu_a + mu_b;
   }
 
