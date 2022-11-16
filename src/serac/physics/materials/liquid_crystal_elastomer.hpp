@@ -24,7 +24,7 @@ namespace serac {
 /**
  * @brief Brighenti liquid crystal elastomer model
  */
-struct LiquidCrystalElastomer {
+struct LiqCrystElast_Brighenti {
   /// this model is only intended to be used in 3D
   static constexpr int dim = 3;
 
@@ -46,7 +46,7 @@ struct LiquidCrystalElastomer {
    * @param transition_temperature Characteristic temperature of the order-disorder transition
    * @param N_b_squared Number of Kunh segments/chain, times square of Kuhn segment length
    */
-  LiquidCrystalElastomer(double rho, double shear_modulus, double bulk_modulus, double order_constant,
+  LiqCrystElast_Brighenti(double rho, double shear_modulus, double bulk_modulus, double order_constant,
                          double order_parameter, double transition_temperature, double N_b_squared)
       : density(rho),
         shear_modulus_(shear_modulus),

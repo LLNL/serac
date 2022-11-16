@@ -162,9 +162,9 @@ int main(int argc, char* argv[]) {
   double transition_temperature = 348; // 350; // 330; //  370.0;
   double Nb2 = 1.0;
   
-  LiquidCrystalElastomer mat(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, Nb2);
+  LiqCrystElast_Brighenti mat(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, Nb2);
 
-  LiquidCrystalElastomer::State initial_state{};
+  LiqCrystElast_Brighenti::State initial_state{};
 
   auto qdata = solid_solver.createQuadratureDataBuffer(initial_state);
 

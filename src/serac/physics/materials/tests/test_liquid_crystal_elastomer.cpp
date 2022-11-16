@@ -33,7 +33,7 @@ TEST(TestLiquidCrystalMaterial, AgreesWithNeoHookeanInHighTemperatureLimit)
   double shear_modulus = 0.5*E/(1.0 + nu);
   double bulk_modulus = E / 3.0 / (1.0 - 2.0*nu);  
 
-  LiquidCrystalElastomerMaterial material(density, shear_modulus, bulk_modulus, order_constant,
+  LiqCrystElast_Brighenti_Material material(density, shear_modulus, bulk_modulus, order_constant,
                                order_parameter, transition_temperature, normal, Nb2);
 
   // test conditions
@@ -45,8 +45,8 @@ TEST(TestLiquidCrystalMaterial, AgreesWithNeoHookeanInHighTemperatureLimit)
   // liquid crystal elastomer model response
   auto F_old = DenseIdentity<3>();
   double theta_old = 300.0;
-  tensor<double, 3, 3> mu_old = LiquidCrystalElastomerMaterial::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
-  LiquidCrystalElastomerMaterial::State state{F_old, mu_old, theta_old, order_parameter};
+  tensor<double, 3, 3> mu_old = LiqCrystElast_Brighenti_Material::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
+  LiqCrystElast_Brighenti_Material::State state{F_old, mu_old, theta_old, order_parameter};
   auto response = material(state, H, theta);
 
   // neo-hookean for comparison
@@ -74,10 +74,10 @@ return;
   tensor<double, 3> normal{{0.0, 1.0, 0.0}};
   double Nb2 = 1.0;
   
-  LiquidCrystalElastomerMaterial material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
+  LiqCrystElast_Brighenti_Material material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
   double temperature = 300.0; // far above transition temperature
 
-  auto initial_distribution = LiquidCrystalElastomerMaterial::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
+  auto initial_distribution = LiqCrystElast_Brighenti_Material::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
   decltype(material)::State initial_state{DenseIdentity<3>(), initial_distribution, temperature, order_parameter};
   double max_time = 20.0;
   unsigned int steps = 10;
@@ -119,10 +119,10 @@ return;
   tensor<double, 3> normal{{0.0, 1.0, 0.0}};
   double Nb2 = 1.0;
   
-  LiquidCrystalElastomerMaterial material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
+  LiqCrystElast_Brighenti_Material material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
   double initial_temperature = 5.0;
 
-  auto initial_distribution = LiquidCrystalElastomerMaterial::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
+  auto initial_distribution = LiqCrystElast_Brighenti_Material::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
   decltype(material)::State state{DenseIdentity<3>(), initial_distribution, initial_temperature, order_parameter};
   double max_time = 1.0;
   unsigned int steps = 50;
@@ -162,10 +162,10 @@ TEST(TestLiquidCrystalMaterial, isNotDegenerate)
   tensor<double, 3> normal{{0.0, 1.0, 0.0}};
   double Nb2 = 1.0;
 
-  LiquidCrystalElastomerMaterial material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
+  LiqCrystElast_Brighenti_Material material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
   double initial_temperature = 5.0;
 
-  auto initial_distribution = LiquidCrystalElastomerMaterial::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
+  auto initial_distribution = LiqCrystElast_Brighenti_Material::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
   decltype(material)::State state{DenseIdentity<3>(), initial_distribution, initial_temperature, order_parameter};
   tensor<double, 3, 3> H{};
   auto F = DenseIdentity<3>();
@@ -215,9 +215,9 @@ TEST(TestLiquidCrystalMaterial, strainAndtemperatureSweep)
   tensor<double, 3> normal{{0.0, 1.0, 0.0}};
   double Nb2 = 1.0;
   
-  LiquidCrystalElastomerMaterial material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
+  LiqCrystElast_Brighenti_Material material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
 
-  auto initial_distribution = LiquidCrystalElastomerMaterial::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
+  auto initial_distribution = LiqCrystElast_Brighenti_Material::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
   decltype(material)::State initial_state{DenseIdentity<3>(), initial_distribution, initial_temperature, order_parameter};
   double max_time = 1.0;
   unsigned int steps = 20;
@@ -366,10 +366,10 @@ TEST(TestLiquidCrystalMaterial, evolDistributionTensor)
   tensor<double, 3> normal{{0.0, 1.0, 0.0}};
   double Nb2 = 1.0;
   
-  LiquidCrystalElastomerMaterial material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
+  LiqCrystElast_Brighenti_Material material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
   double initial_temperature = 5.0;
 
-  auto initial_distribution = LiquidCrystalElastomerMaterial::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
+  auto initial_distribution = LiqCrystElast_Brighenti_Material::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
   decltype(material)::State state{DenseIdentity<3>(), initial_distribution, initial_temperature, order_parameter};
   double max_time = 1.0;
   unsigned int steps = 50;

@@ -26,7 +26,7 @@ namespace serac {
  *
  *
  */
-class LiquidCrystalElastomerMaterial {
+class LiqCrystElast_Brighenti_Material {
 public:
 
   static constexpr int dim = 3;
@@ -50,7 +50,7 @@ public:
    * @param normal Liquid crystal director vector
    * @param N_b_squared Number of Kunh segments/chain, times square of Kuhn segment length
    */
-  LiquidCrystalElastomerMaterial(double density, double shear_modulus, double bulk_modulus,
+  LiqCrystElast_Brighenti_Material(double density, double shear_modulus, double bulk_modulus,
                          double order_constant, double order_parameter,
                          double transition_temperature, tensor<double, 3> normal,
                          double N_b_squared):
