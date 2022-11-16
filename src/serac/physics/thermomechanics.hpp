@@ -218,6 +218,31 @@ public:
    * @pre MaterialType must have a public member variable `density`
    * @pre MaterialType must define operator() that returns the Cauchy stress, heat flux and heat source terms
    */
+
+  /**
+   * @brief Set the thermomechanical material response
+   *
+   * @tparam MaterialType The thermomechanical material type
+   * @tparam StateType The type that contains the internal variables for MaterialType
+   * @param material A material that provides a function to evaluate stress, heat flux, density, and heat capacity
+   * @param qdata the buffer of material internal variables at each quadrature point
+   *
+   * @pre material must be a object that can be called with the following arguments:
+   *    1. `MaterialType::State & state` an mutable reference to the internal variables for this quadrature point
+   *    2. `tensor<T,dim,dim> du_dx` the displacement gradient at this quadrature point
+   *    3. `T temperature` the current temperature at the quadrature point
+   *    4. `tensor<T,dim>` the spatial gradient of the temperature at the quadrature point
+   *    5. `tuple{value, derivative}`, a tuple of values and derivatives for each parameter field
+   *            specified in the `DependsOn<...>` argument.
+   *
+   * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
+   *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
+   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
+   * 3>`)
+   *
+   * @pre MaterialType must return a serac::tuple of Cauchy stress, volumetric heat capacity, internal heat source, and
+   * thermal flux when operator() is called with the arguments listed above.
+   */
   template <int... active_parameters, typename MaterialType, typename StateType>
   void setMaterial(DependsOn<active_parameters...>, MaterialType material,
                    std::shared_ptr<QuadratureData<StateType>> qdata)
@@ -264,10 +289,25 @@ public:
   /**
    * @brief Set the thermal flux boundary condition
    *
-   * @tparam FluxType The type of the flux function
-   * @param flux_function A function describing the thermal flux applied to a boundary
+   * @tparam FluxType The type of the thermal flux object
+   * @param flux_function A function describing the flux applied to a boundary
    *
-   * @pre FluxType must have the operator (x, normal, temperature) to return the thermal flux value
+   * @pre FluxType must be a object that can be called with the following arguments:
+   *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
+   *    2. `tensor<T,dim> n` the outward-facing unit normal for the quadrature point
+   *    3. `double t` the time (note: time will be handled differently in the future)
+   *    4. `T temperature` the current temperature at the quadrature point
+   *    4. `tuple{value, derivative}`, a variadic list of tuples (each with a values and derivative),
+   *            one tuple for each of the trial spaces specified in the `DependsOn<...>` argument.
+   *
+   * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
+   *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
+   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
+   * 3>`)
+   *
+   * @note: until mfem::GetFaceGeometricFactors implements their JACOBIANS option,
+   * (or we implement a replacement kernel ourselves) we are not able to compute
+   * shape sensitivities for boundary integrals.
    */
   template <typename FluxType>
   void setHeatFluxBCs(FluxType flux_function)
@@ -299,9 +339,16 @@ public:
    * @brief Set the body forcefunction
    *
    * @tparam BodyForceType The type of the body force load
-   * @param body_force_function A source function for a prescribed body load
+   * @pre body_force_function must be a object that can be called with the following arguments:
+   *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
+   *    2. `double t` the time (note: time will be handled differently in the future)
+   *    3. `tuple{value, derivative}`, a variadic list of tuples (each with a values and derivative),
+   *            one tuple for each of the trial spaces specified in the `DependsOn<...>` argument.
+   * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
+   *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
+   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
+   * 3>`)
    *
-   * @pre BodyForceType must have the operator (x, time) defined as the body force
    */
   template <typename BodyForceType>
   void addBodyForce(BodyForceType body_force_function)
@@ -312,10 +359,21 @@ public:
   /**
    * @brief Set the thermal source function
    *
-   * @tparam SourceType The type of the source function
+   * @tparam HeatSourceType The type of the source function
    * @param source_function A source function for a prescribed thermal load
    *
-   * @pre SourceType must have the operator (x, time, temperature, d temperature_dx) defined as the thermal source
+   * @pre source_function must be a object that can be called with the following arguments:
+   *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
+   *    2. `double t` the time (note: time will be handled differently in the future)
+   *    3. `T temperature` the current temperature at the quadrature point
+   *    4. `tensor<T,dim>` the spatial gradient of the temperature at the quadrature point
+   *    5. `tuple{value, derivative}`, a variadic list of tuples (each with a values and derivative),
+   *            one tuple for each of the trial spaces specified in the `DependsOn<...>` argument.
+   *
+   * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
+   *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
+   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
+   * 3>`)
    */
   template <typename HeatSourceType>
   void addHeatSource(HeatSourceType source_function)
