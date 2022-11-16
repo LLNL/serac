@@ -35,7 +35,7 @@ void functional_test_static(double expected_temp_norm)
 
   // Construct the appropriate dimension mesh and give it to the data store
   std::string filename =
-      (dim == 2) ? SERAC_REPO_DIR "/data/meshes/star.mesh" : SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+      (dim == 2) ? SERAC_REPO_DIR "/data/meshes/beam-quad.mesh" : SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
@@ -67,13 +67,12 @@ void functional_test_static(double expected_temp_norm)
   thermal_solver.setTemperatureBCs(ess_bdr, one);
   thermal_solver.setTemperature(one);
 
-  // Define a constant source term
-  heat_transfer::ConstantSource source{1.0};
-  thermal_solver.setSource(source);
-
-  // Set the flux term to zero for testing code paths
-  heat_transfer::ConstantFlux flux_bc{0.0};
-  thermal_solver.setFluxBCs(flux_bc);
+  thermal_solver.setFluxBCs([](const auto& x, const auto& /* n */, const double /* t */, const auto& /* temp */) {
+    if (x[0] > 4.0) {
+      return 0.01;
+    }
+    return 0.0;
+  });
 
   // Finalize the data structures
   thermal_solver.completeSetup();
@@ -155,10 +154,10 @@ void functional_test_dynamic(double expected_temp_norm)
   EXPECT_NEAR(expected_temp_norm, norm(thermal_solver.temperature()), 1.0e-6);
 }
 
-TEST(Thermal, 2DLinearStatic) { functional_test_static<1, 2>(2.2909240); }
-TEST(Thermal, 2DQuadStatic) { functional_test_static<2, 2>(2.29424403); }
-TEST(Thermal, 3DLinearStatic) { functional_test_static<1, 3>(46.6285642); }
-TEST(Thermal, 3DQuadStatic) { functional_test_static<2, 3>(46.6648538); }
+TEST(Thermal, 2DLinearStatic) { functional_test_static<1, 2>(3.0184961962491594); }
+TEST(Thermal, 2DQuadStatic) { functional_test_static<2, 2>(3.0186175426112518); }
+TEST(Thermal, 3DLinearStatic) { functional_test_static<1, 3>(4.0564914381870958); }
+TEST(Thermal, 3DQuadStatic) { functional_test_static<2, 3>(4.0573746914550073); }
 
 TEST(Thermal, 2DLinearDynamic) { functional_test_dynamic<1, 2>(2.18066491); }
 TEST(Thermal, 2DQuadDynamic) { functional_test_dynamic<2, 2>(2.1806651); }
