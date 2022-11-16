@@ -208,18 +208,6 @@ public:
   };
 
   /**
-   * @brief Set the material response for the physics module
-   *
-   * @tparam MaterialType The type of material model
-   * @tparam StateType The type that contains the internal variables for MaterialType
-   * @param material A material that provides a function to evaluate stress, heat flux
-   * @param qdata the buffer of material internal variables at each quadrature point
-   *
-   * @pre MaterialType must have a public member variable `density`
-   * @pre MaterialType must define operator() that returns the Cauchy stress, heat flux and heat source terms
-   */
-
-  /**
    * @brief Set the thermomechanical material response
    *
    * @tparam MaterialType The thermomechanical material type
