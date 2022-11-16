@@ -92,7 +92,7 @@ struct GreenSaintVenantThermoelasticMaterial {
     auto         psi_1  = G * squared_norm(dev(strain)) + 0.5 * K * trE * trE;
     using std::log;
     auto logT  = log(theta / theta_ref);
-    auto psi_2 = C_v * (theta - theta_ref - theta * logT) / density;
+    auto psi_2 = C_v * (theta - theta_ref - theta * logT);
     auto psi_3 = -3.0 * K * alpha * (theta - theta_ref) * trE;
     return psi_1 + psi_2 + psi_3;
   }
