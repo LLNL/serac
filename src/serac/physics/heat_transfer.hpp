@@ -250,15 +250,25 @@ public:
   }
 
   /**
-   * @brief Set the thermal flux and mass properties for the physics module
+   * @brief Set the thermal flux and heat capacity properties for the physics module
    *
    * @tparam MaterialType The thermal material type
-   * @param material A material containing density, specific heat, and thermal flux evaluation information
+   * @param material A material containing heat capacity and thermal flux evaluation information
    *
-   * TODO: update these doxygen comments
-   * @pre MaterialType must have a method specificHeatCapacity() defining the specific heat
-   * @pre MaterialType must have a method density() defining the density
-   * @pre MaterialType must have the operator (temperature, d temperature_dx) defined as the thermal flux
+   * @pre material must be a object that can be called with the following arguments:
+   *    1. `tensor<T,dim> x` the spatial position of the material evaluation call
+   *    2. `T temperature` the current temperature at the quadrature point
+   *    3. `tensor<T,dim>` the spatial gradient of the temperature at the quadrature point
+   *    4. `tuple{value, derivative}`, a tuple of values and derivatives for each parameter field
+   *            specified in the `DependsOn<...>` argument.
+   *
+   * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
+   *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
+   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
+   * 3>`)
+   *
+   * @pre MaterialType must return a serac::tuple of volumetric heat capacity and thermal flux when operator() is called
+   * with the arguments listed above.
    */
   template <int... active_parameters, typename MaterialType>
   void setMaterial(DependsOn<active_parameters...>, MaterialType material)
@@ -282,12 +292,12 @@ public:
 
           auto du_dx = dot(du_dX, inv_I_plus_dp_dX);
 
-          auto heat_flux = material(x + p, u, du_dx, params...);
-          auto source    = material.specific_heat_capacity * material.density * du_dt;
+          auto [heat_capacity, heat_flux] = material(x + p, u, du_dx, params...);
 
           // Note that the return is integrated in the perturbed reference
           // configuration, hence the det(I + dp_dx) = det(dx/dX)
-          return serac::tuple{source * det_I_plus_dp_dX, -1.0 * dot(inv_I_plus_dp_dX, heat_flux) * det_I_plus_dp_dX};
+          return serac::tuple{heat_capacity * du_dt * det_I_plus_dp_dX,
+                              -1.0 * dot(inv_I_plus_dp_dX, heat_flux) * det_I_plus_dp_dX};
         },
         mesh_);
   }
@@ -320,7 +330,18 @@ public:
    * @tparam SourceType The type of the source function
    * @param source_function A source function for a prescribed thermal load
    *
-   * @pre SourceType must have the operator (x, time, temperature, d temperature_dx) defined as the thermal source
+   * @pre source_function must be a object that can be called with the following arguments:
+   *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
+   *    2. `double t` the time (note: time will be handled differently in the future)
+   *    3. `T temperature` the current temperature at the quadrature point
+   *    4. `tensor<T,dim>` the spatial gradient of the temperature at the quadrature point
+   *    5. `tuple{value, derivative}`, a variadic list of tuples (each with a values and derivative),
+   *            one tuple for each of the trial spaces specified in the `DependsOn<...>` argument.
+   *
+   * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
+   *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
+   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
+   * 3>`)
    */
   template <int... active_parameters, typename SourceType>
   void setSource(DependsOn<active_parameters...>, SourceType source_function)
@@ -359,10 +380,21 @@ public:
   /**
    * @brief Set the thermal flux boundary condition
    *
-   * @tparam FluxType The type of the flux function
-   * @param flux_function A function describing the thermal flux applied to a boundary
+   * @tparam FluxType The type of the thermal flux object
+   * @param flux_function A function describing the flux applied to a boundary
    *
-   * @pre FluxType must have the operator (x, normal, temperature) to return the thermal flux value
+   * @pre FluxType must be a object that can be called with the following arguments:
+   *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
+   *    2. `tensor<T,dim> n` the outward-facing unit normal for the quadrature point
+   *    3. `double t` the time (note: time will be handled differently in the future)
+   *    4. `T temperature` the current temperature at the quadrature point
+   *    4. `tuple{value, derivative}`, a variadic list of tuples (each with a values and derivative),
+   *            one tuple for each of the trial spaces specified in the `DependsOn<...>` argument.
+   *
+   * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
+   *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
+   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
+   * 3>`)
    *
    * @note: until mfem::GetFaceGeometricFactors implements their JACOBIANS option,
    * (or we implement a replacement kernel ourselves) we are not able to compute
@@ -373,9 +405,9 @@ public:
   {
     residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
-        [flux_function](auto x, auto n, auto u, auto /* dtemp_dt */, auto shape, auto... params) {
+        [this, flux_function](auto x, auto n, auto u, auto /* dtemp_dt */, auto shape, auto... params) {
           auto p = get<VALUE>(shape);
-          return flux_function(x + p, n, u, params...);
+          return flux_function(x + p, n, ode_time_point_, u, params...);
         },
         mesh_);
   }

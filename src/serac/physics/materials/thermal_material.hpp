@@ -21,20 +21,19 @@ struct LinearIsotropicConductor {
   /**
    * @brief Construct a new Linear Isotropic Conductor object
    *
-   * @param input_density Density of the material (mass/volume)
-   * @param input_specific_heat_capacity Specific heat capacity of the material (energy / (mass * temp))
-   * @param input_conductivity Thermal conductivity of the material (power / (length * temp))
+   * @param density Density of the material (mass/volume)
+   * @param specific_heat_capacity Specific heat capacity of the material (energy / (mass * temp))
+   * @param conductivity Thermal conductivity of the material (power / (length * temp))
    */
-  LinearIsotropicConductor(double input_density = 1.0, double input_specific_heat_capacity = 1.0,
-                           double input_conductivity = 1.0)
-      : density(input_density), specific_heat_capacity(input_specific_heat_capacity), conductivity(input_conductivity)
+  LinearIsotropicConductor(double density = 1.0, double specific_heat_capacity = 1.0, double conductivity = 1.0)
+      : density_(density), specific_heat_capacity_(specific_heat_capacity), conductivity_(conductivity)
   {
-    SLIC_ERROR_ROOT_IF(conductivity < 0.0,
+    SLIC_ERROR_ROOT_IF(conductivity_ < 0.0,
                        "Conductivity must be positive in the linear isotropic conductor material model.");
 
-    SLIC_ERROR_ROOT_IF(density < 0.0, "Density must be positive in the linear isotropic conductor material model.");
+    SLIC_ERROR_ROOT_IF(density_ < 0.0, "Density must be positive in the linear isotropic conductor material model.");
 
-    SLIC_ERROR_ROOT_IF(specific_heat_capacity < 0.0,
+    SLIC_ERROR_ROOT_IF(specific_heat_capacity_ < 0.0,
                        "Specific heat capacity must be positive in the linear isotropic conductor material model.");
   }
 
@@ -45,24 +44,25 @@ struct LinearIsotropicConductor {
    * @tparam T2 Temperature type
    * @tparam T3 Temperature gradient type
    * @param[in] temperature_gradient Temperature gradient
-   * @return The calculated material response (density, specific heat capacity, thermal flux) for a linear
+   * @return The calculated material response (tuple of volumetric heat capacity and thermal flux) for a linear
    * isotropic material
    */
   template <typename T1, typename T2, typename T3>
   SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* temperature */,
                                     const T3& temperature_gradient) const
   {
-    return -1.0 * conductivity * temperature_gradient;
+    return serac::tuple{density_ * specific_heat_capacity_, -1.0 * conductivity_ * temperature_gradient};
   }
 
+private:
   /// Density
-  double density;
+  double density_;
 
   /// Specific heat capacity
-  double specific_heat_capacity;
+  double specific_heat_capacity_;
 
   /// Constant isotropic thermal conductivity
-  double conductivity;
+  double conductivity_;
 };
 
 /**
@@ -75,20 +75,20 @@ struct LinearConductor {
   /**
    * @brief Construct a new Linear Isotropic Conductor object
    *
-   * @param input_density Density of the material (mass/volume)
-   * @param input_specific_heat_capacity Specific heat capacity of the material (energy / (mass * temp))
-   * @param input_conductivity Thermal conductivity of the material (power / (length * temp))
+   * @param density Density of the material (mass/volume)
+   * @param specific_heat_capacity Specific heat capacity of the material (energy / (mass * temp))
+   * @param conductivity Thermal conductivity of the material (power / (length * temp))
    */
-  LinearConductor(double input_density = 1.0, double input_specific_heat_capacity = 1.0,
-                  tensor<double, dim, dim> input_conductivity = Identity<dim>())
-      : density(input_density), specific_heat_capacity(input_specific_heat_capacity), conductivity(input_conductivity)
+  LinearConductor(double density = 1.0, double specific_heat_capacity = 1.0,
+                  tensor<double, dim, dim> conductivity = Identity<dim>())
+      : density_(density), specific_heat_capacity_(specific_heat_capacity), conductivity_(conductivity)
   {
-    SLIC_ERROR_ROOT_IF(density < 0.0, "Density must be positive in the linear conductor material model.");
+    SLIC_ERROR_ROOT_IF(density_ < 0.0, "Density must be positive in the linear conductor material model.");
 
-    SLIC_ERROR_ROOT_IF(specific_heat_capacity < 0.0,
+    SLIC_ERROR_ROOT_IF(specific_heat_capacity_ < 0.0,
                        "Specific heat capacity must be positive in the linear conductor material model.");
 
-    SLIC_ERROR_ROOT_IF(!is_symmetric_and_positive_definite(conductivity),
+    SLIC_ERROR_ROOT_IF(!is_symmetric_and_positive_definite(conductivity_),
                        "Conductivity tensor must be symmetric and positive definite.");
   }
 
@@ -99,24 +99,25 @@ struct LinearConductor {
    * @tparam T2 Temperature type
    * @tparam T3 Temperature gradient type
    * @param[in] temperature_gradient Temperature gradient
-   * @return The calculated material response (density, specific heat capacity, thermal flux) for a linear
+   * @return The calculated material response (tuple of volumetric heat capacity and thermal flux) for a linear
    * anisotropic material
    */
   template <typename T1, typename T2, typename T3>
   SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* temperature */,
                                     const T3& temperature_gradient) const
   {
-    return -1.0 * conductivity * temperature_gradient;
+    return serac::tuple{density_ * specific_heat_capacity_, -1.0 * conductivity_ * temperature_gradient};
   }
 
+private:
   /// Density
-  double density;
+  double density_;
 
   /// Specific heat capacity
-  double specific_heat_capacity;
+  double specific_heat_capacity_;
 
   /// Constant thermal conductivity
-  tensor<double, dim, dim> conductivity;
+  tensor<double, dim, dim> conductivity_;
 };
 
 /// Constant thermal source model
@@ -156,7 +157,8 @@ struct ConstantFlux {
    * @return The flux applied to the boundary
    */
   template <typename T1, typename T2, typename T3>
-  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* normal */, const T3& /* temperature */) const
+  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* normal */, const double /* time */,
+                                    const T3& /* temperature */) const
   {
     return flux_;
   }

@@ -132,13 +132,8 @@ public:
 
     const ThermalMechanicalMaterial mat;  ///< the wrapped material model
 
-    const double density;  ///< mass density
-
-    const double specific_heat_capacity;  ///< specific heat capacity
-
     /// constructor
-    ThermalMaterialInterface(const ThermalMechanicalMaterial& m)
-        : mat(m), density(m.density), specific_heat_capacity(m.C)
+    ThermalMaterialInterface(const ThermalMechanicalMaterial& m) : mat(m)
     {
       // empty
     }
@@ -164,10 +159,10 @@ public:
       // variables.
       State state{};
 
-      auto [u, du_dX]     = displacement;
-      auto [T, c, s0, q0] = mat(state, du_dX, temperature, temperature_gradient, parameters...);
-      // density * specific_heat = c
-      return q0;
+      auto [u, du_dX]                 = displacement;
+      auto [T, heat_capacity, s0, q0] = mat(state, du_dX, temperature, temperature_gradient, parameters...);
+
+      return serac::tuple{heat_capacity, q0};
     }
   };
 
@@ -206,8 +201,8 @@ public:
     SERAC_HOST_DEVICE auto operator()(State& state, const T1& displacement_gradient, const T2& temperature,
                                       param_types... parameters) const
     {
-      auto [theta, dtheta_dX] = temperature;
-      auto [T, c, s0, q0]     = mat(state, displacement_gradient, theta, dtheta_dX, parameters...);
+      auto [theta, dtheta_dX]         = temperature;
+      auto [T, heat_capacity, s0, q0] = mat(state, displacement_gradient, theta, dtheta_dX, parameters...);
       return T;
     }
   };
