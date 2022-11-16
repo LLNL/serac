@@ -33,7 +33,7 @@ const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
                                                        .abs_tol     = 1.0e-12,
                                                        .print_level = 0,
                                                        .max_iter    = 200,
-                                                       .lin_solver  = LinearSolver::CG,
+                                                       .lin_solver  = LinearSolver::GMRES,
                                                        .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
 
 /// the default direct solver option for solving the linear stiffness equations
@@ -250,7 +250,7 @@ public:
   }
 
   /**
-   * @brief Set the thermal flux and heat capacity properties for the physics module
+   * @brief Set the thermal material model for the physics solver
    *
    * @tparam MaterialType The thermal material type
    * @param material A material containing heat capacity and thermal flux evaluation information
