@@ -466,14 +466,10 @@ SERAC_HOST_DEVICE constexpr auto get_gradient(const tensor<dual<tensor<double, m
   return g;
 }
 
-template <typename T>
-struct SolverResults {
-  T root;
+struct SolverStatus {
   bool converged;
   unsigned int iterations;
-
-  SolverResults(T root, bool converged, unsigned int iterations) :
-    root(root), converged(converged), iterations(iterations) {};
+  double residual;
 };
 
 template <typename function, typename... ParamTypes>
@@ -581,13 +577,15 @@ auto solve_scalar_equation(function && f, double x0, double tolerance,
   // dx = -df / df_dx
   constexpr bool contains_duals = (is_dual_number<ParamTypes>::value || ...) || (is_tensor_of_dual_number<ParamTypes>::value || ...);
   if constexpr (contains_duals) {
-    auto f_and_grad = f(x, params...);
-    auto df = get_gradient(f_and_grad);
+    auto [fval, df] = f(x, params...);
     auto dx = -df/df_dx;
-    return SolverResults(dual{x, dx}, converged, iterations);
+    SolverStatus status{.converged=converged, .iterations=iterations, .residual=fval};
+    return tuple{dual{x, dx}, status};
   }
   if constexpr (!contains_duals) {
-    return SolverResults(x, converged, iterations);
+    auto fval = f(x, params...);
+    SolverStatus status{.converged=converged, .iterations=iterations, .residual=fval};
+    return tuple{x, status};
   }
 }
 

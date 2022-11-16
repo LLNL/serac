@@ -16,8 +16,7 @@ TEST(ScalarEquationSolver, ConvergesOnEasyProblem)
     double tolerance = 1e-8;
     double lower = 1e-3;
     double upper = 2.5;
-    auto result = solve_scalar_equation([](auto x){ return exp(x) - 2.0; }, x0, tolerance, lower, upper);
-    auto x = result.root;
+    auto [x, status] = solve_scalar_equation([](auto x){ return exp(x) - 2.0; }, x0, tolerance, lower, upper);
     double exact = std::log(2.0);
     double error = std::abs((x - exact)/abs(exact));
     EXPECT_LT(error, tolerance);
@@ -30,8 +29,8 @@ TEST(ScalarEquationSolver, WorksWithScalarParameter)
         double tolerance = 1e-6;
         double lower = 0;
         double upper = (get_value(p) > 1.0) ? get_value(p) : 1.0;
-        auto result = solve_scalar_equation([](auto x, auto a){ return x*x - a; }, x0, tolerance, lower, upper, p);
-        return result.root;
+        auto [x, status] = solve_scalar_equation([](auto x, auto a){ return x*x - a; }, x0, tolerance, lower, upper, p);
+        return x;
     };
     double p = 2.0;
     auto [sqrt_p, dsqrt_p] = my_sqrt(make_dual(p));
@@ -65,12 +64,12 @@ TEST(ScalarEquationSolver, ReturnsImmediatelyIfUpperBoundIsARoot)
     double tolerance = 1e-8;
     double lower = 0.0;
 
-    auto result = solve_scalar_equation([](auto x, auto a){ return x*x - a; }, x0, tolerance, lower, upper, p);
+    auto [x, status] = solve_scalar_equation([](auto x, auto a){ return x*x - a; }, x0, tolerance, lower, upper, p);
 
-    double error = std::abs((result.root - 2.0))/2.0;
+    double error = std::abs((x - 2.0))/2.0;
     EXPECT_LT(error, tolerance);
 
-    EXPECT_EQ(result.iterations, 0);
+    EXPECT_EQ(status.iterations, 0);
 }
 
 TEST(ScalarEquationSolver, ReturnsImmediatelyIfLowerBoundIsARoot)
@@ -82,12 +81,12 @@ TEST(ScalarEquationSolver, ReturnsImmediatelyIfLowerBoundIsARoot)
     double tolerance = 1e-8;
     double upper = 8.0;
 
-    auto result = solve_scalar_equation([](auto x, auto a){ return x*x - a; }, x0, tolerance, lower, upper, p);
+    auto [x, status] = solve_scalar_equation([](auto x, auto a){ return x*x - a; }, x0, tolerance, lower, upper, p);
 
-    double error = std::abs((result.root - 2.0))/2.0;
+    double error = std::abs((x - 2.0))/2.0;
     EXPECT_LT(error, tolerance);
 
-    EXPECT_EQ(result.iterations, 0);
+    EXPECT_EQ(status.iterations, 0);
 }
 
 
@@ -98,9 +97,8 @@ TEST(ScalarEquationSolver, ConvergesWithGuessOutsideNewtonBasin)
     double lower = -10.0;
     double upper = 10.0;
     auto nasty_function = [](auto x) { return sin(x) + x; };
-    auto result = solve_scalar_equation(nasty_function, 
-                                        x0, tolerance, lower, upper);
-    auto x = result.root;
+    auto [x, status] = solve_scalar_equation(
+        nasty_function, x0, tolerance, lower, upper);
     double error = std::abs(x);
     EXPECT_LT(error, tolerance);
 }
@@ -112,8 +110,9 @@ TEST(ScalarEquationSolver, WorksWithTensorParameter)
         double lower = 1e-3;
         double upper = 20.0;
         double x0 = 10.0;
-        auto sol = solve_scalar_equation([](auto x, auto P){ return x*x - squared_norm(P); }, x0, tolerance, lower, upper, A);
-        return sol.root;
+        auto [x, status] = solve_scalar_equation(
+            [](auto x, auto P){ return x*x - squared_norm(P); }, x0, tolerance, lower, upper, A);
+        return x;
     };
 
     tensor< double, 3, 3 > A = {{{1.0, 2.0, 3.0}, 
@@ -135,8 +134,9 @@ TEST(ScalarEquationSolver, CanTakeDirectionalDerivative)
         double lower = 1e-3;
         double upper = 20.0;
         double x0 = 10.0;
-        auto sol = solve_scalar_equation([](auto x, auto P){ return x*x - squared_norm(P); }, x0, tolerance, lower, upper, A);
-        return sol.root;
+        auto [x, status] = solve_scalar_equation(
+            [](auto x, auto P){ return x*x - squared_norm(P); }, x0, tolerance, lower, upper, A);
+        return x;
     };
 
     tensor< double, 3, 3 > A = {{{1.0, 2.0, 3.0},
