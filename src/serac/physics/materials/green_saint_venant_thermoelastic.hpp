@@ -74,7 +74,7 @@ struct GreenSaintVenantThermoelasticMaterial {
 
     state.strain_trace = get_value(trEg);
 
-    return serac::tuple{sigma, C_v * density, s0, q0};
+    return serac::tuple{sigma, C_v, s0, q0};
   }
 
   /**
@@ -159,7 +159,7 @@ struct ParameterizedGreenSaintVenantThermoelasticMaterial {
 
     state.strain_trace = get_value(trEg);
 
-    return serac::tuple{sigma, C_v * density, s0, q0};
+    return serac::tuple{sigma, C_v, s0, q0};
   }
 
   /**
