@@ -14,7 +14,7 @@ packages:
     buildable: false
   mpich:
     externals:
-    - spec: mpich@3.3.2%gcc
+    - spec: mpich@4.0%gcc
       prefix: /usr
 
   # Lock down versions of packages we depend on
