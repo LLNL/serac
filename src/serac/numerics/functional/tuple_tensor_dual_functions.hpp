@@ -466,12 +466,47 @@ SERAC_HOST_DEVICE constexpr auto get_gradient(const tensor<dual<tensor<double, m
   return g;
 }
 
+/**
+ * @brief Status and diagnostics of nonlinear equation solvers
+ * 
+ * @param converged Flag indicating whether solver converged to a solution or aborted.
+ * @param iterations Number of iterations taken.
+ * @param residual Final value of residual.
+ */
 struct SolverStatus {
   bool converged;
   unsigned int iterations;
   double residual;
 };
 
+/// @brief Solves a nonlinear scalar-valued equation and gives derivatives of solution to parameters
+///
+/// @tparam function Function object type for the nonlinear equation to solve
+/// @tparam ...ParamTypes Types of the (optional) parameters to the nonlinear function
+///
+/// @param f Nonlinear function of which a root is sought. Must have the form 
+/// $f(x, p_1, p_2, \ldots)$, where $x$ is the independent variable, and the $p_i$ are
+/// optional parameters (scalars or tensors of arbitrary order).
+/// @param x0 Initial guess of root. If x0 is outside the search interval, the initial
+/// guess will be changed to the midpoint of the search interval.
+/// @param tolerance Tolerance for convergence test, using absolute value of correction as the
+/// criterion.
+/// @param lower_bound Lower bound of interval to search for root.
+/// @param upper_bound Upper bound of interval to search for root.
+/// @param ...params Optional parameters to the nonlinear function.
+///
+/// @return a tuple (@p x, @p status) where @p x is the root, and @p status is a SolverStatus 
+/// object reporting the status of the solution procedure. If any of the parameters are
+/// dual number-valued, @p x will be dual containing the corresponding directional derivative
+/// of the root. Otherwise, x will be a @p double containing the root.
+/// For example, if one gives the function as $f(x, p)$, where $p$ is a @p dual<double> with
+/// @p p.gradient = 1, then the @p x.gradient will be $dx/dp$.
+///
+/// The solver uses Newton's method, safeguarded by bisection. If the Newton update would take
+/// the next iterate out of the search interval, or the absolute value of the residual is not 
+/// decreasing fast enough, bisection will be used to compute the next iterate. The bounds of the
+/// search interval are updated automatically to maintain a bracket around the root. If the sign
+/// of the residual is the same at both @p lower_bound and @p upper_bound, the solver aborts.
 template <typename function, typename... ParamTypes>
 auto solve_scalar_equation(function && f, double x0, double tolerance,
                            double lower_bound, double upper_bound, ParamTypes... params)
@@ -488,7 +523,7 @@ auto solve_scalar_equation(function && f, double x0, double tolerance,
   unsigned int iterations = 0;
   bool converged = false;
 
-  // handle corner case where one of the brackets is the root
+  // handle corner cases where one of the brackets is the root
   if (fl == 0) {
     x = lower_bound;
     converged = true;
