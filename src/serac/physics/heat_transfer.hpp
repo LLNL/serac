@@ -507,12 +507,12 @@ public:
             add(1.0, u_, dt_, du_dt, u_predicted_);
 
             // K := dR/du
-            auto K = serac::get<1>((*residual_)(differentiate_wrt(u_predicted_), du_dt, shape_displacement_,
+            auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(u_predicted_), du_dt, shape_displacement_,
                                                 *parameter_states_[parameter_indices]...));
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             // M := dR/du_dot
-            auto M = serac::get<1>((*residual_)(u_predicted_, differentiate_wrt(du_dt), shape_displacement_,
+            auto M = serac::get<DERIVATIVE>((*residual_)(u_predicted_, differentiate_wrt(du_dt), shape_displacement_,
                                                 *parameter_states_[parameter_indices]...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
