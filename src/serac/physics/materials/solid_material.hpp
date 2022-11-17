@@ -152,7 +152,7 @@ struct J2 {
  * @tparam dim number of spatial dimensions
  *
  * @param displacement_gradient Displacement gradient
- * @param kirchhoff_stress Kirchoff stress
+ * @param kirchhoff_stress Kirchhoff stress
  * @return Piola stress
  */
 template <typename T1, typename T2, int dim>

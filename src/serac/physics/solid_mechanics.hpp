@@ -225,11 +225,14 @@ public:
    * @param parameter_state the values to use for the specified parameter
    * @param i the index of the parameter
    */
-  void setParameter(const FiniteElementState& parameter_state, size_t i)
+  void setParameter(FiniteElementState& parameter_state, size_t i)
   {
     parameter_states_[i] = &parameter_state;
     parameter_sensitivities_[i] =
         StateManager::newDual(parameter_state.space(), parameter_state.name() + "_sensitivity");
+
+    // Add the parameter to the BasePhysics containers for output
+    states_.push_back(parameter_state);
     duals_.push_back(*parameter_sensitivities_[i]);
   }
 
@@ -346,10 +349,21 @@ public:
    * @tparam MaterialType The solid material type
    * @tparam StateType the type that contains the internal variables for MaterialType
    * @param material A material that provides a function to evaluate stress
+   * @pre material must be a object that can be called with the following arguments:
+   *    1. `MaterialType::State & state` an mutable reference to the internal variables for this quadrature point
+   *    2. `tensor<T,dim,dim> du_dx` the displacement gradient at this quadrature point
+   *    3. `tuple{value, derivative}`, a tuple of values and derivatives for each parameter field
+   *            specified in the `DependsOn<...>` argument.
+   *
+   * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
+   *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
+   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
+   * 3>`)
+   *
    * @param qdata the buffer of material internal variables at each quadrature point
    *
    * @pre MaterialType must have a public member variable `density`
-   * @pre MaterialType must define operator() that returns the Kirchoff stress
+   * @pre MaterialType must define operator() that returns the Cauchy stress
    */
   template <int... active_parameters, typename MaterialType, typename StateType = Empty>
   void setMaterial(DependsOn<active_parameters...>, MaterialType material,
@@ -397,9 +411,7 @@ public:
           //
           // Note that the mass part of the return is integrated in the perturbed reference
           // configuration, hence the det(I + dp_dx) = det(dX'/dX)
-          //
-          // TODO: fix the residual implementation and remove this transpose.
-          return serac::tuple{material.density * d2u_dt2 * det(I + dp_dX), transpose(flux)};
+          return serac::tuple{material.density * d2u_dt2 * det(I + dp_dX), flux};
         },
         mesh_, qdata);
   }
@@ -458,9 +470,16 @@ public:
    * @brief Set the body forcefunction
    *
    * @tparam BodyForceType The type of the body force load
-   * @param body_force A source function for a prescribed body load
+   * @pre body_force must be a object that can be called with the following arguments:
+   *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
+   *    2. `double t` the time (note: time will be handled differently in the future)
+   *    3. `tuple{value, derivative}`, a variadic list of tuples (each with a values and derivative),
+   *            one tuple for each of the trial spaces specified in the `DependsOn<...>` argument.
+   * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
+   *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
+   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
+   * 3>`)
    *
-   * @pre BodyForceType must have the operator (x, time) defined as the body force
    */
   template <int... active_parameters, typename BodyForceType>
   void addBodyForce(DependsOn<active_parameters...>, BodyForceType body_force)
@@ -490,7 +509,21 @@ public:
    * @tparam TractionType The type of the traction load
    * @param traction_function A function describing the traction applied to a boundary
    *
-   * @pre TractionType must have the operator (x, normal, time) to return the thermal flux value
+   * @pre TractionType must be a object that can be called with the following arguments:
+   *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
+   *    2. `tensor<T,dim> n` the outward-facing unit normal for the quadrature point
+   *    3. `double t` the time (note: time will be handled differently in the future)
+   *    4. `tuple{value, derivative}`, a variadic list of tuples (each with a values and derivative),
+   *            one tuple for each of the trial spaces specified in the `DependsOn<...>` argument.
+   *
+   * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
+   *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
+   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
+   * 3>`)
+   *
+   * @note: until mfem::GetFaceGeometricFactors implements their JACOBIANS option,
+   * (or we implement a replacement kernel ourselves) we are not able to compute
+   * shape sensitivities for boundary integrals.
    */
   template <int... active_parameters, typename TractionType>
   void setPiolaTraction(DependsOn<active_parameters...>, TractionType traction_function)
@@ -498,25 +531,8 @@ public:
     residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
         [this, traction_function](auto x, auto n, auto, auto, auto shape, auto... params) {
-          auto dp_dX = get<DERIVATIVE>(shape);
-          auto p     = get<VALUE>(shape);
-
-          auto def_grad           = I + dp_dX;
-          auto inv_trans_def_grad = inv(transpose(def_grad));
-
-          // Compute the normal vector after the shape displacement is applied using the Piola transformation
-          // n = det(F)F^-T n_0
-          auto shape_normal = det(def_grad) * dot(inv_trans_def_grad, n);
-          shape_normal      = shape_normal / norm(shape_normal);
-
-          // Needed to be able to switch between dual and double square root functions
-          using std::sqrt;
-
-          // Compute the updated area contribution using the Piola transformation
-          // dA = det(F) * norm(F^-T n_0)
-          auto area_correction = det(def_grad) * norm(dot(inv_trans_def_grad, n));
-
-          return -1.0 * traction_function(x + p, shape_normal, ode_time_point_, params...) * area_correction;
+          auto p = get<VALUE>(shape);
+          return -1.0 * traction_function(x + p, n, ode_time_point_, params...);
         },
         mesh_);
   }
@@ -854,7 +870,7 @@ protected:
   std::unique_ptr<mfem_ext::StdFunctionOperator> residual_with_bcs_;
 
   /// The finite element states representing user-defined parameter fields
-  std::array<const FiniteElementState*, sizeof...(parameter_space)> parameter_states_;
+  std::array<FiniteElementState*, sizeof...(parameter_space)> parameter_states_;
 
   /// The trial spaces used for the Functional object
   std::array<std::unique_ptr<mfem::ParFiniteElementSpace>, sizeof...(parameter_space)> parameter_trial_spaces_;
