@@ -693,7 +693,7 @@ SERAC_HOST_DEVICE constexpr auto inner(const tensor<S, m, n>& A, const tensor<T,
 }
 
 template <typename S, typename T, int m>
-SERAC_HOST_DEVICE constexpr auto inner(const tensor<S, m >& A, const tensor<T, m>& B)
+SERAC_HOST_DEVICE constexpr auto inner(const tensor<S, m>& A, const tensor<T, m>& B)
 {
   decltype(S{} * T{}) sum{};
   for (int i = 0; i < m; i++) {
@@ -1492,7 +1492,6 @@ SERAC_HOST_DEVICE constexpr auto linear_solve(const LuFactorization<T, n>& /* lu
   return zero{};
 }
 
-
 /**
  * @brief Inverts a matrix
  * @param[in] A The matrix to invert
@@ -1545,8 +1544,6 @@ SERAC_HOST_DEVICE constexpr auto inv(const tensor<T, n, n>& A)
   auto I = DenseIdentity<n>();
   return linear_solve(A, I);
 }
-
-
 
 /**
  * @brief recursively serialize the entries in a tensor to an ostream.
@@ -1678,26 +1675,6 @@ struct outer_prod<T, zero> {
  */
 template <typename T1, typename T2>
 using outer_product_t = typename detail::outer_prod<T1, T2>::type;
-
-
-/**
- * @brief Extracts all of the values from a tensor of dual numbers
- *
- * @tparam T1 the first type of the tuple stored in the tensor
- * @tparam T2 the second type of the tuple stored in the tensor
- * @tparam n  the number of entries in the input argument
- * @param[in] input The tensor of dual numbers
- * @return the tensor of all of the values
- */
-template <typename T1, typename T2, int n>
-SERAC_HOST_DEVICE auto get_value(const tensor<tuple<T1, T2>, n>& input)
-{
-  tensor<decltype(get_value(tuple<T1, T2>{})), n> output{};
-  for (int i = 0; i < n; i++) {
-    output[i] = get_value(input[i]);
-  }
-  return output;
-}
 
 /**
  * @brief Retrieves the gradient component of a double (which is nothing)

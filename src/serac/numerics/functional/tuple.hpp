@@ -727,7 +727,7 @@ struct is_tuple : std::false_type {
 
 /// @overload
 template <typename... T>
-struct is_tuple<serac::tuple<T...> > : std::true_type {
+struct is_tuple<serac::tuple<T...>> : std::true_type {
 };
 
 /**
@@ -739,7 +739,7 @@ struct is_tuple_of_tuples : std::false_type {
 
 /// @overload
 template <typename... T>
-struct is_tuple_of_tuples<serac::tuple<T...> > {
+struct is_tuple_of_tuples<serac::tuple<T...>> {
   static constexpr bool value = (is_tuple<T>::value && ...);
 };
 

@@ -13,8 +13,8 @@ struct is_tensor_of_dual_number {
 };
 
 /** @brief class for checking if a type is a tensor of dual numbers or not */
-template <typename T, int ... n >
-struct is_tensor_of_dual_number<tensor< dual<T>, n ... > > {
+template <typename T, int... n>
+struct is_tensor_of_dual_number<tensor<dual<T>, n...>> {
   static constexpr bool value = true;  ///< whether or not type T is a dual number
 };
 
@@ -94,7 +94,6 @@ SERAC_HOST_DEVICE constexpr auto operator/(const tensor<T, m, n...>& A, S scale)
   return C;
 }
 
-
 template <int i, typename S, typename T>
 struct one_hot_helper;
 
@@ -151,7 +150,7 @@ SERAC_HOST_DEVICE constexpr auto make_dual_helper(double arg)
 template <int i, int N, typename T, int... n>
 SERAC_HOST_DEVICE constexpr auto make_dual_helper(const tensor<T, n...>& arg)
 {
-  using gradient_t = one_hot_t<i, N, tensor<T, n...> >;
+  using gradient_t = one_hot_t<i, N, tensor<T, n...>>;
   tensor<dual<gradient_t>, n...> arg_dual{};
   for_constexpr<n...>([&](auto... j) {
     arg_dual(j...).value                         = arg(j...);
@@ -183,6 +182,14 @@ SERAC_HOST_DEVICE constexpr auto make_dual(const tuple<T0, T1>& args)
   return tuple{make_dual_helper<0, 2>(get<0>(args)), make_dual_helper<1, 2>(get<1>(args))};
 }
 
+/// @overload
+template <typename T0, typename T1, typename T2>
+SERAC_HOST_DEVICE constexpr auto make_dual(const tuple<T0, T1, T2>& args)
+{
+  return tuple{make_dual_helper<0, 3>(get<0>(args)), make_dual_helper<1, 3>(get<1>(args)),
+               make_dual_helper<2, 3>(get<2>(args))};
+}
+
 /**
  * @tparam dualify specify whether or not the value should be made into its dual type
  * @tparam T the type of the value passed in
@@ -195,6 +202,30 @@ SERAC_HOST_DEVICE auto promote_to_dual_when(const T& x)
 {
   if constexpr (dualify) {
     return make_dual(x);
+  }
+  if constexpr (!dualify) {
+    return x;
+  }
+}
+
+/**
+ * @brief a function that optionally (decided at compile time) converts a list of values to their dual types
+ *
+ * @tparam dualify specify whether or not the input should be made into its dual type
+ * @tparam T the type of the values passed in
+ * @tparam n how many values were passed in
+ * @param x the values to be promoted
+ */
+template <bool dualify, typename T, int n>
+SERAC_HOST_DEVICE auto promote_each_to_dual_when(const tensor<T, n>& x)
+{
+  if constexpr (dualify) {
+    using return_type = decltype(make_dual(T{}));
+    tensor<return_type, n> output;
+    for (int i = 0; i < n; i++) {
+      output[i] = make_dual(x[i]);
+    }
+    return output;
   }
   if constexpr (!dualify) {
     return x;
@@ -238,6 +269,25 @@ constexpr auto make_dual_wrt(const serac::tuple<T...>& args)
 }
 
 /**
+ * @brief Extracts all of the values from a tensor of dual numbers
+ *
+ * @tparam T1 the first type of the tuple stored in the tensor
+ * @tparam T2 the second type of the tuple stored in the tensor
+ * @tparam n  the number of entries in the input argument
+ * @param[in] input The tensor of dual numbers
+ * @return the tensor of all of the values
+ */
+template <typename T1, typename T2, int n>
+SERAC_HOST_DEVICE auto get_value(const tensor<tuple<T1, T2>, n>& input)
+{
+  tensor<decltype(get_value(tuple<T1, T2>{})), n> output{};
+  for (int i = 0; i < n; i++) {
+    output[i] = get_value(input[i]);
+  }
+  return output;
+}
+
+/**
  * @brief Retrieves the value components of a set of (possibly dual) numbers
  * @param[in] tuple_of_values The tuple of numbers to retrieve values from
  * @pre The tuple must contain only scalars or tensors of @p dual numbers or doubles
@@ -254,14 +304,14 @@ SERAC_HOST_DEVICE auto get_value(const serac::tuple<T...>& tuple_of_values)
  * @param[in] arg The set of numbers to retrieve gradients from
  */
 template <typename... T>
-SERAC_HOST_DEVICE auto get_gradient(dual<serac::tuple<T...> > arg)
+SERAC_HOST_DEVICE auto get_gradient(dual<serac::tuple<T...>> arg)
 {
   return serac::apply([](auto... each_value) { return serac::tuple{each_value...}; }, arg.gradient);
 }
 
 /// @overload
 template <typename... T, int... n>
-SERAC_HOST_DEVICE auto get_gradient(const tensor<dual<serac::tuple<T...> >, n...>& arg)
+SERAC_HOST_DEVICE auto get_gradient(const tensor<dual<serac::tuple<T...>>, n...>& arg)
 {
   serac::tuple<outer_product_t<tensor<double, n...>, T>...> g{};
   for_constexpr<n...>([&](auto... i) {
@@ -468,15 +518,15 @@ SERAC_HOST_DEVICE constexpr auto get_gradient(const tensor<dual<tensor<double, m
 
 /**
  * @brief Status and diagnostics of nonlinear equation solvers
- * 
+ *
  * @param converged Flag indicating whether solver converged to a solution or aborted.
  * @param iterations Number of iterations taken.
  * @param residual Final value of residual.
  */
 struct SolverStatus {
-  bool converged;
+  bool         converged;
   unsigned int iterations;
-  double residual;
+  double       residual;
 };
 
 /// @brief Solves a nonlinear scalar-valued equation and gives derivatives of solution to parameters
@@ -484,7 +534,7 @@ struct SolverStatus {
 /// @tparam function Function object type for the nonlinear equation to solve
 /// @tparam ...ParamTypes Types of the (optional) parameters to the nonlinear function
 ///
-/// @param f Nonlinear function of which a root is sought. Must have the form 
+/// @param f Nonlinear function of which a root is sought. Must have the form
 /// $f(x, p_1, p_2, \ldots)$, where $x$ is the independent variable, and the $p_i$ are
 /// optional parameters (scalars or tensors of arbitrary order).
 /// @param x0 Initial guess of root. If x0 is outside the search interval, the initial
@@ -495,7 +545,7 @@ struct SolverStatus {
 /// @param upper_bound Upper bound of interval to search for root.
 /// @param ...params Optional parameters to the nonlinear function.
 ///
-/// @return a tuple (@p x, @p status) where @p x is the root, and @p status is a SolverStatus 
+/// @return a tuple (@p x, @p status) where @p x is the root, and @p status is a SolverStatus
 /// object reporting the status of the solution procedure. If any of the parameters are
 /// dual number-valued, @p x will be dual containing the corresponding directional derivative
 /// of the root. Otherwise, x will be a @p double containing the root.
@@ -503,41 +553,38 @@ struct SolverStatus {
 /// @p p.gradient = 1, then the @p x.gradient will be $dx/dp$.
 ///
 /// The solver uses Newton's method, safeguarded by bisection. If the Newton update would take
-/// the next iterate out of the search interval, or the absolute value of the residual is not 
+/// the next iterate out of the search interval, or the absolute value of the residual is not
 /// decreasing fast enough, bisection will be used to compute the next iterate. The bounds of the
 /// search interval are updated automatically to maintain a bracket around the root. If the sign
 /// of the residual is the same at both @p lower_bound and @p upper_bound, the solver aborts.
 template <typename function, typename... ParamTypes>
-auto solve_scalar_equation(function && f, double x0, double tolerance,
-                           double lower_bound, double upper_bound, ParamTypes... params)
+auto solve_scalar_equation(function&& f, double x0, double tolerance, double lower_bound, double upper_bound,
+                           ParamTypes... params)
 {
   double x, df_dx;
   double fl = f(lower_bound, get_value(params)...);
   double fh = f(upper_bound, get_value(params)...);
 
-  if (fl*fh > 0) {
+  if (fl * fh > 0) {
     SLIC_ERROR("solve_scalar_equation: root not bracketed by input bounds.");
   }
-  
 
   unsigned int iterations = 0;
-  bool converged = false;
+  bool         converged  = false;
 
   // handle corner cases where one of the brackets is the root
   if (fl == 0) {
-    x = lower_bound;
+    x         = lower_bound;
     converged = true;
   } else if (fh == 0) {
-    x = upper_bound;
+    x         = upper_bound;
     converged = true;
   }
-  
+
   if (converged) {
-    
     df_dx = get_gradient(f(make_dual(x), get_value(params)...));
 
   } else {
-
     // orient search so that f(xl) < 0
     double xl = lower_bound;
     double xh = upper_bound;
@@ -548,15 +595,15 @@ auto solve_scalar_equation(function && f, double x0, double tolerance,
 
     // move initial guess if it is not between brackets
     if (x0 < lower_bound || x0 > upper_bound) {
-      x0 = 0.5*(lower_bound + upper_bound);
+      x0 = 0.5 * (lower_bound + upper_bound);
     }
     const unsigned int MAX_ITERATIONS = 25;
-    x = x0;
-    double delta_x_old = std::abs(upper_bound - lower_bound);
-    double delta_x = delta_x_old;
-    auto R = f(make_dual(x), get_value(params)...);
-    auto fval = get_value(R);
-    df_dx = get_gradient(R);
+    x                                 = x0;
+    double delta_x_old                = std::abs(upper_bound - lower_bound);
+    double delta_x                    = delta_x_old;
+    auto   R                          = f(make_dual(x), get_value(params)...);
+    auto   fval                       = get_value(R);
+    df_dx                             = get_gradient(R);
 
     while (!converged) {
       if (iterations == MAX_ITERATIONS) {
@@ -565,17 +612,16 @@ auto solve_scalar_equation(function && f, double x0, double tolerance,
       }
 
       // use bisection if Newton oversteps brackets or is not decreasing sufficiently
-      if ((x - xh)*df_dx - fval > 0 ||
-          (x - xl)*df_dx - fval < 0 ||
-          std::abs(2.*fval) > std::abs(delta_x_old*df_dx)) {
+      if ((x - xh) * df_dx - fval > 0 || (x - xl) * df_dx - fval < 0 ||
+          std::abs(2. * fval) > std::abs(delta_x_old * df_dx)) {
         delta_x_old = delta_x;
-        delta_x = 0.5*(xh - xl);
-        x = xl + delta_x;
-        converged = (x == xl);
-      } else { // use Newton step
+        delta_x     = 0.5 * (xh - xl);
+        x           = xl + delta_x;
+        converged   = (x == xl);
+      } else {  // use Newton step
         delta_x_old = delta_x;
-        delta_x = fval/df_dx;
-        auto temp = x;
+        delta_x     = fval / df_dx;
+        auto temp   = x;
         x -= delta_x;
         converged = (x == temp);
       }
@@ -584,10 +630,10 @@ auto solve_scalar_equation(function && f, double x0, double tolerance,
 
       // convergence check
       converged = converged || (std::abs(delta_x) < tolerance);
-      
+
       // function and jacobian evaluation
-      R = f(make_dual(x), get_value(params)...);
-      fval = get_value(R);
+      R     = f(make_dual(x), get_value(params)...);
+      fval  = get_value(R);
       df_dx = get_gradient(R);
 
       // maintain bracket on root
@@ -599,7 +645,6 @@ auto solve_scalar_equation(function && f, double x0, double tolerance,
 
       ++iterations;
     }
-
   }
 
   // Accumulate derivatives so that the user can get derivatives
@@ -610,18 +655,19 @@ auto solve_scalar_equation(function && f, double x0, double tolerance,
   // for p in params:
   //   df += inner(df_dp, dp)
   // dx = -df / df_dx
-  constexpr bool contains_duals = (is_dual_number<ParamTypes>::value || ...) || (is_tensor_of_dual_number<ParamTypes>::value || ...);
+  constexpr bool contains_duals =
+      (is_dual_number<ParamTypes>::value || ...) || (is_tensor_of_dual_number<ParamTypes>::value || ...);
   if constexpr (contains_duals) {
     auto [fval, df] = f(x, params...);
-    auto dx = -df/df_dx;
-    SolverStatus status{.converged=converged, .iterations=iterations, .residual=fval};
+    auto         dx = -df / df_dx;
+    SolverStatus status{.converged = converged, .iterations = iterations, .residual = fval};
     return tuple{dual{x, dx}, status};
   }
   if constexpr (!contains_duals) {
-    auto fval = f(x, params...);
-    SolverStatus status{.converged=converged, .iterations=iterations, .residual=fval};
+    auto         fval = f(x, params...);
+    SolverStatus status{.converged = converged, .iterations = iterations, .residual = fval};
     return tuple{x, status};
   }
 }
 
-} // namespace serac
+}  // namespace serac

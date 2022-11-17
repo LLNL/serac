@@ -10,7 +10,6 @@
 #include <gtest/gtest.h>
 
 #include "serac/numerics/functional/tuple.hpp"
-#include "serac/numerics/functional/tuple_arithmetic.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 
 using namespace serac;
