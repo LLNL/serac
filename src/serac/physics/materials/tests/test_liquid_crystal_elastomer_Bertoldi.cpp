@@ -20,7 +20,7 @@
 
 namespace serac {
 
-TEST(TestLiquidCrystalMaterial, ConsistentStressDerivedFromStrainEnergy)
+TEST(TestLiquidCrystalBertoldiMat, ConsistentStressDerivedFromStrainEnergy)
 {
   double density = 1.0;
   double young_modulus = 1.0;
@@ -32,7 +32,7 @@ TEST(TestLiquidCrystalMaterial, ConsistentStressDerivedFromStrainEnergy)
   order_param_tuple = make_tuple(0.1, 123);
   gamma_param_tuple = make_tuple(0.9, 456);
 
-  LiqCrystElast_Bertoldi material(density, young_modulus, possion_ratio, initial_order_param, beta_param);
+  LiqCrystElast_Bertoldi LCEMat_Bertoldi(density, young_modulus, possion_ratio, initial_order_param, beta_param);
 
   // test conditions
   tensor<double, 3, 3> H{{{0.423,  0.11, -0.123},
@@ -41,7 +41,7 @@ TEST(TestLiquidCrystalMaterial, ConsistentStressDerivedFromStrainEnergy)
 
   // liquid crystal elastomer model response
   LiqCrystElast_Bertoldi::State state{};
-  auto stress = material(state, H, order_param_tuple, gamma_param_tuple);
+  auto stress = LCEMat_Bertoldi(state, H, order_param_tuple, gamma_param_tuple);
 
   // Transform Cauchy stress into Piola stress, which is what the AD computation returns
   auto I = Identity<3>();  
@@ -49,8 +49,8 @@ TEST(TestLiquidCrystalMaterial, ConsistentStressDerivedFromStrainEnergy)
   auto J = det(F);
   auto P_stress = J*stress*inv(transpose(F));
 
-  // Strain energy of the model
-  auto free_energy = material.calculateStrainEnergy(state, make_dual(H), order_param_tuple, gamma_param_tuple);
+  // Strain energy
+  auto free_energy = LCEMat_Bertoldi.calculateStrainEnergy(state, make_dual(H), order_param_tuple, gamma_param_tuple);
 
   // Compute stress from strain energy using automatic differentiation
   auto P_stress_AD = get_gradient(free_energy);
@@ -60,22 +60,153 @@ TEST(TestLiquidCrystalMaterial, ConsistentStressDerivedFromStrainEnergy)
 
   // Check that the stress is consistent with the strain energy
   EXPECT_LT(norm(stress_difference), 1e-8);
+
+  // Note: The part below is just to make sure that AD is doing it's thing correctly
+  // Check that the AD-computed derivatives of energy w.r.t. displacement_gradient 
+  // are in agreement with results obtained from a central finite difference stencil
+  {
+    double epsilon = 1.0e-6;
+    tensor<double, 3, 3> perturbation{{{0.1, 0.0, 0.6}, 
+                                      {1.0, 0.4, 0.5}, 
+                                      {0.3, 0.2, 0.1}}};
+
+    auto energy1 = LCEMat_Bertoldi.calculateStrainEnergy(
+      state, H - epsilon * perturbation, order_param_tuple, gamma_param_tuple);
+
+    auto energy2 = LCEMat_Bertoldi.calculateStrainEnergy(
+      state, H + epsilon * perturbation, order_param_tuple, gamma_param_tuple);
+
+    auto denergy = get_gradient(LCEMat_Bertoldi.calculateStrainEnergy(
+      state, make_dual(H), order_param_tuple, gamma_param_tuple));
+
+    auto error = double_dot(denergy, perturbation) - (energy2 - energy1) / (2 * epsilon);
+
+    EXPECT_NEAR(error / double_dot(denergy, perturbation), 0.0, 1e-8); 
+  }
 }
 
 // --------------------------------------------------------
 
-// TEST(TestLiquidCrystalMaterial, AgreesWithNeoHookeanInOrderParameterLimit)
-// {
-//   double density = 1.0;
-//   double E = 1.0;
-//   double possion_ratio = 0.49;
-//   double order_constant = 1.0;
-//   double order_parameter = 0.0;
-//   double transition_temperature = 1.0;
-//   tensor<double, 3> normal{{1.0, 0.0, 0.0}};
-//   double Nb2 = 1.0;
-//   double shear_modulus = 0.5*E/(1.0 + possion_ratio);
-//   double bulk_modulus = E / 3.0 / (1.0 - 2.0*possion_ratio);  
+TEST(TestLiquidCrystalBertoldiMat, AgreesWithNeoHookeanInOrderParameterLimit)
+{
+  double density = 1.0;
+  double young_modulus = 1.0;
+  double possion_ratio = 0.49;
+  double beta_param = 1.0;
+  double initial_order_param = 0.5;
+
+  tuple <double, int> order_param_tuple, gamma_param_tuple;
+  order_param_tuple = make_tuple(initial_order_param, 123); // same as initial to remove its contribution
+  gamma_param_tuple = make_tuple(0.6, 456);
+
+  LiqCrystElast_Bertoldi LCEMat_Bertoldi(density, young_modulus, possion_ratio, initial_order_param, beta_param);
+
+  // test conditions
+  tensor<double, 3, 3> H{{{0.000123,  0.00011, -0.000123},
+                          {-0.00019, 0.00015, 0.0},
+                          {0.0,  0.00011 , 0.00019}}};
+
+  // liquid crystal elastomer model response
+  LiqCrystElast_Bertoldi::State state{};
+  auto stress_Bertoldi = LCEMat_Bertoldi(state, H, order_param_tuple, gamma_param_tuple);
+
+  // neo-hookean for comparison
+  double bulk_modulus = young_modulus / 3.0 / (1.0 - 2.0*possion_ratio);
+  double shear_modulus = 0.5 * young_modulus / (1.0 + possion_ratio);
+
+  solid_mechanics::LinearIsotropic solidMat_isotropic{.density = density, .K = bulk_modulus, .G = shear_modulus};
+  solid_mechanics::LinearIsotropic::State state_isotropic{};
+  auto stress_isotropic = solidMat_isotropic(state_isotropic, H);
+
+  // Get difference
+  auto stress_difference = stress_Bertoldi - stress_isotropic;
+
+  // Check that the stress is consistent with the strain energy
+  EXPECT_LT(norm(stress_difference), 1e-5);
+}
+
+// --------------------------------------------------------
+
+TEST(TestLiquidCrystalBertoldiMat, IdentityDefGradientNoEnergyNorStress)
+{
+  double density = 1.0;
+  double young_modulus = 1.0;
+  double possion_ratio = 0.49;
+  double beta_param = 1.0;
+  double initial_order_param = 0.5;
+
+  tuple <double, int> order_param_tuple, gamma_param_tuple;
+  order_param_tuple = make_tuple(initial_order_param, 123); // same as initial to remove its contribution
+  gamma_param_tuple = make_tuple(0.6, 456);
+
+  LiqCrystElast_Bertoldi LCEMat_Bertoldi(density, young_modulus, possion_ratio, initial_order_param, beta_param);
+
+  // test conditions
+  tensor<double, 3, 3> H{{{0.0,  0.0, 0.0},
+                          {0.0, 0.0, 0.0},
+                          {0.0,  0.0, 0.0}}};
+
+  // liquid crystal elastomer model response
+  LiqCrystElast_Bertoldi::State state{};
+  auto stress_Bertoldi = LCEMat_Bertoldi(state, H, order_param_tuple, gamma_param_tuple);
+
+  // Strain energy
+  auto free_energy = LCEMat_Bertoldi.calculateStrainEnergy(state, H, order_param_tuple, gamma_param_tuple);
+
+  // Check that the stress is consistent with the strain energy
+  EXPECT_LT(free_energy, 1e-8);
+  EXPECT_LT(norm(stress_Bertoldi), 1e-8);
+}
+
+// --------------------------------------------------------
+
+TEST(TestLiquidCrystalBertoldiMat, orderParameterSweep)
+{
+  double density = 1.0;
+  double young_modulus = 1.0;
+  double possion_ratio = 0.49;
+  double beta_param = 1.0;
+  double initial_order_param = 0.5;
+
+  // test conditions
+  tensor<double, 3, 3> H{{{0.423,  0.11, -0.123},
+                          {-0.19, 0.25, 0.0},
+                          {0.0,  0.11 , 0.39}}};
+
+  tuple <double, int> order_param_tuple, gamma_param_tuple;
+  order_param_tuple = make_tuple(0.1, 123);
+  gamma_param_tuple = make_tuple(0.9, 456);
+
+  LiqCrystElast_Bertoldi LCEMat_Bertoldi(density, young_modulus, possion_ratio, initial_order_param, beta_param);
+
+  // liquid crystal elastomer model response
+  LiqCrystElast_Bertoldi::State state{};
+  auto stress = LCEMat_Bertoldi(state, H, order_param_tuple, gamma_param_tuple);
+
+  unsigned int steps = 10;
+  double max_time = 1.0;
+  double time = 0;
+  double dt = max_time / steps;
+
+  double strain_rate = 1e-2;
+  std::function<double(double)> constant_strain_rate = [strain_rate](double t){ return strain_rate*t; };
+  // std::function<double(double)> constant_order_param = [initial_order_param](double){ return initial_order_param; };
+  auto response_history = uniaxial_stress_test(max_time, steps, LCEMat_Bertoldi, state, constant_strain_rate, order_param_tuple, gamma_param_tuple);
+
+  // Note: defining the material inside the loop just because I am not sure how to change the parameters 
+  // in the material
+  for (unsigned int i = 0; i < steps; i++) 
+  {
+    time += dt;
+    
+    // std::cout << stress[1][1] << std::endl;
+  }
+
+  // Check that the stress is consistent with the strain energy
+  EXPECT_LT(stress[1][1]-13.8029, 1e-3);
+}
+
+// --------------------------------------------------------
 
 // 
 // std::cout << "\n..... P_stress ....." << std::endl;
@@ -85,58 +216,11 @@ TEST(TestLiquidCrystalMaterial, ConsistentStressDerivedFromStrainEnergy)
 // std::cout << "\n..... stress_difference ....." << std::endl;
 // std::cout << stress_difference << std::endl;
 // std::cout << std::endl;
-// //
-//   LiqCrystElast_Brighenti_Material material(density, bulk_modulus, possion_ratio, order_constant,
-//                                order_parameter, transition_temperature, normal, Nb2);
-
-//   // test conditions
-//   tensor<double, 3, 3> H{{{-0.474440607694436,  0.109876281988692, -0.752574057841232},
-//                           {-0.890004651428391, -1.254064550255045, -0.742440671831607},
-//                           {-0.310665550306666,  0.90643674423369 , -1.090724491652343}}};
-//   double theta = 300.0; // far above transition temperature
-
-  // double epsilon = 1.0e-6;
-  // tensor<double, 3, 3> perturbation{{{0.1, 0.0, 0.6}, 
-  //                                    {1.0, 0.4, 0.5}, 
-  //                                    {0.3, 0.2, 0.1}}};
-
-  // // Check that the AD-computed derivatives of energy w.r.t. displacement_gradient 
-  // // are in agreement with results obtained from a central finite difference stencil
-  // {
-  //   auto energy1 = material.calculateStrainEnergy(
-  //     state, H - epsilon * perturbation, order_param_tuple, gamma_param_tuple);
-
-  //   auto energy2 = material.calculateStrainEnergy(
-  //     state, H + epsilon * perturbation, order_param_tuple, gamma_param_tuple);
-
-  //   auto denergy = get_gradient(material.calculateStrainEnergy(
-  //     state, make_dual(H), order_param_tuple, gamma_param_tuple));
-
-  //   auto error = double_dot(denergy, perturbation) - (energy2 - energy1) / (2 * epsilon);
-
-  //   EXPECT_NEAR(error / double_dot(denergy, perturbation), 0.0, 1e-8); 
-  // }
-
-
-//   // liquid crystal elastomer model response
-//   auto F_old = DenseIdentity<3>();
-//   double theta_old = 300.0;
-//   tensor<double, 3, 3> mu_old = LiqCrystElast_Brighenti_Material::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
-//   LiqCrystElast_Brighenti_Material::State state{F_old, mu_old, theta_old, order_parameter};
-//   auto response = material(state, H, theta);
-
-//   // neo-hookean for comparison
-//   solid_mechanics::NeoHookean nh_material{.density = density, .K = bulk_modulus, .G = shear_modulus};
-//   solid_mechanics::NeoHookean::State nh_state{};
-//   auto nh_response = nh_material(nh_state, H);
-
-//   auto stress_difference = response - nh_response;
-//   EXPECT_LT(norm(stress_difference), 1e-8);
-// }
+// 
 
 // --------------------------------------------------------
 
-// TEST(TestLiquidCrystalMaterial, agreesWithNeoHookeanInOrderParameterLimitOverEntireUniaxialTest)
+// TEST(TestLiquidCrystalBertoldiMat, agreesWithNeoHookeanInOrderParameterLimitOverEntireUniaxialTest)
 // {
 // return;
 //   double density = 1.0;
@@ -150,21 +234,21 @@ TEST(TestLiquidCrystalMaterial, ConsistentStressDerivedFromStrainEnergy)
 //   tensor<double, 3> normal{{0.0, 1.0, 0.0}};
 //   double Nb2 = 1.0;
   
-//   LiqCrystElast_Bertoldi material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
+//   LiqCrystElast_Bertoldi LCEMat_Bertoldi(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
 //   double temperature = 300.0; // far above transition temperature
 
 //   auto initial_distribution = LiqCrystElast_Bertoldi::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
-//   decltype(material)::State initial_state{DenseIdentity<3>(), initial_distribution, temperature, order_parameter};
+//   decltype(LCEMat_Bertoldi)::State initial_state{DenseIdentity<3>(), initial_distribution, temperature, order_parameter};
 //   double max_time = 20.0;
 //   unsigned int steps = 10;
 //   double strain_rate = 1e-2;
 //   std::function<double(double)> constant_strain_rate = [strain_rate](double t){ return strain_rate*t; };
-//   std::function<double(double)> constant_temperature = [temperature](double){ return temperature; };
-//   auto response_history = uniaxial_stress_test(max_time, steps, material, initial_state, constant_strain_rate, constant_temperature);
+//   std::function<double(double)> constant_order_param = [temperature](double){ return temperature; };
+//   auto response_history = uniaxial_stress_test(max_time, steps, LCEMat_Bertoldi, initial_state, constant_strain_rate, constant_order_param);
 
-//   solid_mechanics::NeoHookean nh_material{.density = density, .K = bulk_modulus, .G = shear_modulus};
+//   solid_mechanics::NeoHookean solidMat_isotropic{.density = density, .K = bulk_modulus, .G = shear_modulus};
 //   solid_mechanics::NeoHookean::State nh_initial_state{};
-//   auto nh_response_history = uniaxial_stress_test(max_time, steps, nh_material, nh_initial_state, constant_strain_rate);
+//   auto nh_response_history = uniaxial_stress_test(max_time, steps, solidMat_isotropic, nh_initial_state, constant_strain_rate);
 
 //   for (size_t i = 0; i < steps; i++) {
 //     auto [t, strain, stress, state] = response_history[i];
@@ -181,7 +265,7 @@ TEST(TestLiquidCrystalMaterial, ConsistentStressDerivedFromStrainEnergy)
 
 // // --------------------------------------------------------
 
-// TEST(TestLiquidCrystalMaterial, orderParameterSweep)
+// TEST(TestLiquidCrystalBertoldiMat, orderParameterSweep)
 // {
 // return;
 //   double density = 1.0;
@@ -195,11 +279,11 @@ TEST(TestLiquidCrystalMaterial, ConsistentStressDerivedFromStrainEnergy)
 //   tensor<double, 3> normal{{0.0, 1.0, 0.0}};
 //   double Nb2 = 1.0;
   
-//   LiqCrystElast_Bertoldi material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
+//   LiqCrystElast_Bertoldi LCEMat_Bertoldi(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
 //   double initial_temperature = 5.0;
 
 //   auto initial_distribution = LiqCrystElast_Bertoldi::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
-//   decltype(material)::State state{DenseIdentity<3>(), initial_distribution, initial_temperature, order_parameter};
+//   decltype(LCEMat_Bertoldi)::State state{DenseIdentity<3>(), initial_distribution, initial_temperature, order_parameter};
 //   double max_time = 1.0;
 //   unsigned int steps = 50;
 //   double time = 0;
@@ -213,14 +297,14 @@ TEST(TestLiquidCrystalMaterial, ConsistentStressDerivedFromStrainEnergy)
 //   for (unsigned int i = 0; i < steps; i++) {
 //     time += dt;
 //     double temperature = temperature_func(time);
-//     material(state, H, temperature);
+//     LCEMat_Bertoldi(state, H, temperature);
 //     std::cout << state.distribution_tensor[1][1] << std::endl;
 //   }
 // }
 
 // // --------------------------------------------------------
 
-// TEST(TestLiquidCrystalMaterial, isNotDegenerate)
+// TEST(TestLiquidCrystalBertoldiMat, isNotDegenerate)
 // {
 //   // This is a dummy test that should be eventually removed. I (BT) am
 //   // adding it only to demonstrate something unusual about this
@@ -238,11 +322,11 @@ TEST(TestLiquidCrystalMaterial, ConsistentStressDerivedFromStrainEnergy)
 //   tensor<double, 3> normal{{0.0, 1.0, 0.0}};
 //   double Nb2 = 1.0;
 
-//   LiqCrystElast_Bertoldi material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
+//   LiqCrystElast_Bertoldi LCEMat_Bertoldi(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
 //   double initial_temperature = 5.0;
 
 //   auto initial_distribution = LiqCrystElast_Bertoldi::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
-//   decltype(material)::State state{DenseIdentity<3>(), initial_distribution, initial_temperature, order_parameter};
+//   decltype(LCEMat_Bertoldi)::State state{DenseIdentity<3>(), initial_distribution, initial_temperature, order_parameter};
 //   tensor<double, 3, 3> H{};
 //   auto F = DenseIdentity<3>();
 //   double dlambda = 0.1;
@@ -269,14 +353,14 @@ TEST(TestLiquidCrystalMaterial, ConsistentStressDerivedFromStrainEnergy)
 //     F[0][0] += dlambda;
 //     F[2][2] = 1.0/F[0][0];
 //     H = F - DenseIdentity<3>();
-//     auto response = material(state, H, initial_temperature);
+//     auto response = LCEMat_Bertoldi(state, H, initial_temperature);
 //     EXPECT_LT(response[0][0], 1e-8);
 //   }
 // }
 
 // // --------------------------------------------------------
 
-// TEST(TestLiquidCrystalMaterial, strainAndOrderParamSweep)
+// TEST(TestLiquidCrystalBertoldiMat, strainAndOrderParamSweep)
 // {
 //   double density = 1.0;
 //   double nu = 0.48;
@@ -291,10 +375,10 @@ TEST(TestLiquidCrystalMaterial, ConsistentStressDerivedFromStrainEnergy)
 //   tensor<double, 3> normal{{0.0, 1.0, 0.0}};
 //   double Nb2 = 1.0;
   
-//   LiqCrystElast_Bertoldi material(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
+//   LiqCrystElast_Bertoldi LCEMat_Bertoldi(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
 
 //   auto initial_distribution = LiqCrystElast_Bertoldi::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
-//   decltype(material)::State initial_state{DenseIdentity<3>(), initial_distribution, initial_temperature, order_parameter};
+//   decltype(LCEMat_Bertoldi)::State initial_state{DenseIdentity<3>(), initial_distribution, initial_temperature, order_parameter};
 //   double max_time = 1.0;
 //   unsigned int steps = 20;
 
@@ -338,7 +422,7 @@ TEST(TestLiquidCrystalMaterial, ConsistentStressDerivedFromStrainEnergy)
 //         }
 //       };
 
-//   auto response_history = uniaxial_stress_test(max_time, steps, material, initial_state, strain_rate_func, temperature_func);
+//   auto response_history = uniaxial_stress_test(max_time, steps, LCEMat_Bertoldi, initial_state, strain_rate_func, temperature_func);
 
 //   bool printOutput(false);
   
