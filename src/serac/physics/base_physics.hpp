@@ -155,24 +155,6 @@ public:
   }
 
   /**
-   * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
-   * problem with respect to the parameter field
-   *
-   * @tparam parameter_field The index of the parameter to take a derivative with respect to
-   * @return The sensitivity with respect to the parameter
-   *
-   * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
-   */
-  template <int parameter_field>
-  FiniteElementDual& computeSensitivity()
-  {
-    SLIC_ERROR_ROOT(axom::fmt::format("Parameter sensitivity calculation not defined for physics module {}", name_));
-
-    // Return a dummy dual value to quiet the compiler. This will never get used.
-    return *duals_[0];
-  }
-
-  /**
    * @brief Advance the state variables according to the chosen time integrator
    *
    * @param[inout] dt The timestep to advance. For adaptive time integration methods, the actual timestep is returned.

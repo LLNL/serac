@@ -111,7 +111,7 @@ public:
    *
    * @return The solution variable names
    */
-  virtual std::vector<std::string> getStateNames()
+  virtual std::vector<std::string> getStateNames() override
   {
     return std::vector<std::string>{{"displacement"}, {"velocity"}, {"temperature"}};
   }

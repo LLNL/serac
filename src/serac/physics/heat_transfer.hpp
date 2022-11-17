@@ -375,9 +375,9 @@ public:
    *
    * @return The solution variable names
    */
-  virtual std::vector<std::string> getStateNames()
+  virtual std::vector<std::string> getStateNames() override
   {
-    return std::vector<std::string>{{"temperature"}, {"adjoint_displacement"}};
+    return std::vector<std::string>{{"temperature"}, {"adjoint_temperature"}};
   }
 
   /**
@@ -456,8 +456,8 @@ public:
    * boundary condition data for the adjoint problem
    * @return The computed adjoint finite element state
    */
-  virtual const serac::FiniteElementState& solveAdjoint(FiniteElementDual& adjoint_load,
-                                                        FiniteElementDual* dual_with_essential_boundary = nullptr)
+  virtual const serac::FiniteElementState& solveAdjoint(
+      FiniteElementDual& adjoint_load, FiniteElementDual* dual_with_essential_boundary = nullptr) override
   {
     mfem::HypreParVector adjoint_load_vector(adjoint_load);
 

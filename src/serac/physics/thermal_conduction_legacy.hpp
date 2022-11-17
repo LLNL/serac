@@ -279,7 +279,7 @@ public:
    *
    * @return The solution variable names
    */
-  virtual std::vector<std::string> getStateNames() { return std::vector<std::string>{{"temperature"}}; }
+  virtual std::vector<std::string> getStateNames() override { return std::vector<std::string>{{"temperature"}}; }
 
   /**
    * @brief Set the thermal body source from a coefficient
