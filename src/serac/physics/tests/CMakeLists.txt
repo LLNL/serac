@@ -27,11 +27,11 @@ serac_add_tests( SOURCES ${serial_solver_tests}
     NUM_MPI_TASKS 1)
 
 set(solver_tests
-    liquid_crystal_elastomer_logpile_test.cpp
-    liquid_crystal_elastomer_free_swelling_test.cpp
-    liquid_crystal_elastomer_tensile_test.cpp
-    liquid_crystal_elastomer_compression_test.cpp
-    liquid_crystal_elastomer_test.cpp
+    lce_Brighenti_logpile.cpp
+    lce_Brighenti_free_swelling.cpp
+    lce_Brighenti_tensile.cpp
+    lce_Brighenti_compression.cpp
+    lce_Brighenti.cpp
     parameterized_thermomechanics_example.cpp
     solid_legacy.cpp
     solid_legacy_reuse_mesh.cpp
@@ -50,7 +50,7 @@ serac_add_tests( SOURCES ${solver_tests}
 
 set(solver_utility_tests
     physics_dtor.cpp
-    newmark_test.cpp)
+    newmark.cpp)
 
 serac_add_tests( SOURCES ${solver_utility_tests}
                  DEPENDS_ON ${test_dependencies}
