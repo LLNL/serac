@@ -98,6 +98,12 @@ void BasePhysics::outputState(std::optional<std::string> paraview_output_dir) co
     StateManager::updateDual(*dual);
   }
 
+  for (auto& parameter : parameter_info_) {
+    SLIC_ERROR_ROOT_IF(!parameter.state, "Parameter state expected but not defined");
+    StateManager::updateState(*parameter.state);
+    StateManager::updateDual(*parameter.sensitivity);
+  }
+
   // Save the restart/Sidre file
   StateManager::save(time_, cycle_, sidre_datacoll_id_);
 
@@ -119,6 +125,11 @@ void BasePhysics::outputState(std::optional<std::string> paraview_output_dir) co
         max_order_in_fields = std::max(max_order_in_fields, state->space().GetOrder(0));
       }
 
+      for (auto& parameter : parameter_info_) {
+        paraview_dc_->RegisterField(parameter.state->name(), &parameter.state->gridFunction());
+        max_order_in_fields = std::max(max_order_in_fields, parameter.state->space().GetOrder(0));
+      }
+
       // Set the options for the paraview output files
       paraview_dc_->SetLevelsOfDetail(max_order_in_fields);
       paraview_dc_->SetHighOrderOutput(true);
@@ -127,6 +138,9 @@ void BasePhysics::outputState(std::optional<std::string> paraview_output_dir) co
     } else {
       for (FiniteElementState* state : states_) {
         state->gridFunction();  // update grid function values
+      }
+      for (auto& parameter : parameter_info_) {
+        parameter.state->gridFunction();
       }
     }
 
