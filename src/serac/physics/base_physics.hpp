@@ -114,10 +114,9 @@ public:
    * @param parameter_name The name of the parameter to generate
    *
    * @note The user is responsible for managing the lifetime of this object. It is required
-   * to exist whenever this physics module is called.
+   * to exist whenever advanceTimestep, solveAdjoint, or computeSensitivity is called.
    */
-  virtual std::unique_ptr<FiniteElementState> generateParameter(size_t             parameter_index,
-                                                                const std::string& parameter_name);
+  std::unique_ptr<FiniteElementState> generateParameter(const std::string& parameter_name, size_t parameter_index);
 
   /**
    * @brief register the provided FiniteElementState object as the source of values for parameter `i`
@@ -133,7 +132,7 @@ public:
    * @param parameter_index The parameter index to retrieve
    * @return The FiniteElementState representing the user-defined parameter
    */
-  virtual FiniteElementState& getParameter(size_t parameter_index)
+  FiniteElementState& getParameter(size_t parameter_index)
   {
     SLIC_ERROR_ROOT_IF(
         parameter_index >= parameter_info_.size(),
@@ -144,7 +143,7 @@ public:
   }
 
   /// @overload
-  virtual const FiniteElementState& getParameter(size_t parameter_index) const
+  const FiniteElementState& getParameter(size_t parameter_index) const
   {
     SLIC_ERROR_ROOT_IF(
         parameter_index >= parameter_info_.size(),

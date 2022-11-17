@@ -56,7 +56,7 @@ TEST(Thermal, FiniteDifference)
   // Construct and initialized the user-defined conductivity to be used as a differentiable parameter in
   // the thermal conduction physics module.
   auto user_defined_conductivity =
-      thermal_solver.generateParameter(conductivity_parameter_index, "parameterized_conductivity");
+      thermal_solver.generateParameter("parameterized_conductivity", conductivity_parameter_index);
 
   double conductivity_value  = 1.2;
   *user_defined_conductivity = conductivity_value;
@@ -105,7 +105,8 @@ TEST(Thermal, FiniteDifference)
   thermal_solver.solveAdjoint(adjoint_load);
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
-  [[maybe_unused]] auto& sensitivity = thermal_solver.computeSensitivity<conductivity_parameter_index>();
+  [[maybe_unused]] auto& sensitivity =
+      thermal_solver.computeSensitivity(ParameterIndex<conductivity_parameter_index>{});
 
   // Perform finite difference on each conduction value
   // to check if computed qoi sensitivity is consistent

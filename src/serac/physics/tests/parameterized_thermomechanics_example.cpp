@@ -176,7 +176,7 @@ int main(int argc, char* argv[])
 
   simulation.solveAdjoint(adjoint_load);
 
-  auto& dqoi_dalpha = simulation.computeSensitivity<1>();
+  auto& dqoi_dalpha = simulation.computeSensitivity(ParameterIndex<1>{});
 
   double       epsilon = 1.0e-6;
   mfem::Vector dalpha(alpha.Size());

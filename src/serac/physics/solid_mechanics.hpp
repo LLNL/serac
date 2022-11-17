@@ -781,8 +781,11 @@ public:
    * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
    */
   template <int parameter_field>
-  FiniteElementDual& computeSensitivity()
+  FiniteElementDual& computeSensitivity(ParameterIndex<parameter_field>)
   {
+    SLIC_ASSERT_MSG(parameter_field >= 0 && parameter_field < sizeof...(parameter_indices),
+                    axom::fmt::format("Invalid parameter index {} reqested for sensitivity."));
+
     auto drdparam =
         serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<parameter_field + NUM_STATE_VARS>{}, displacement_, zero_,
                                             shape_displacement_, *parameter_info_[parameter_indices].state...));

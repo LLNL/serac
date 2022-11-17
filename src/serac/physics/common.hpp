@@ -16,6 +16,15 @@
 namespace serac {
 
 /**
+ * @brief Object denoting which parameter index to take a sensitivity with respect to
+ *
+ * @tparam i The parameter index to take the sensitivity of
+ */
+template <int i>
+struct ParameterIndex {
+};
+
+/**
  * @brief a struct that is used in the physics modules to clarify which template arguments are
  * user-controlled parameters (e.g. for design optimization)
  */

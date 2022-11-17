@@ -47,8 +47,8 @@ void BasePhysics::setCycle(const int cycle) { cycle_ = cycle; }
 
 int BasePhysics::cycle() const { return cycle_; }
 
-std::unique_ptr<FiniteElementState> BasePhysics::generateParameter(size_t             parameter_index,
-                                                                   const std::string& parameter_name)
+std::unique_ptr<FiniteElementState> BasePhysics::generateParameter(const std::string& parameter_name,
+                                                                   size_t             parameter_index)
 {
   SLIC_ERROR_ROOT_IF(
       parameter_index >= parameter_info_.size(),

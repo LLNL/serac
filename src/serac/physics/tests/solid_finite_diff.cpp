@@ -117,7 +117,7 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
   solid_solver.solveAdjoint(adjoint_load);
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
-  [[maybe_unused]] auto& sensitivity = solid_solver.computeSensitivity<bulk_parameter_index>();
+  [[maybe_unused]] auto& sensitivity = solid_solver.computeSensitivity(ParameterIndex<bulk_parameter_index>{});
 
   // Perform finite difference on each bulk modulus value
   // to check if computed qoi sensitivity is consistent
