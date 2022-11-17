@@ -122,7 +122,7 @@ TEST(TestLiquidCrystalBertoldiMat, AgreesWithNeoHookeanInOrderParameterLimit)
   auto stress_difference = stress_Bertoldi - stress_isotropic;
 
   // Check that the stress is consistent with the strain energy
-  EXPECT_LT(norm(stress_difference), 1e-5);
+  EXPECT_NEAR(norm(stress_difference), 0.0, 1e-5);
 }
 
 // --------------------------------------------------------
@@ -166,197 +166,75 @@ TEST(TestLiquidCrystalBertoldiMat, orderParameterSweep)
   double young_modulus = 1.0;
   double possion_ratio = 0.49;
   double beta_param = 1.0;
-  double initial_order_param = 0.5;
-
-  // test conditions
-  tensor<double, 3, 3> H{{{0.423,  0.11, -0.123},
-                          {-0.19, 0.25, 0.0},
-                          {0.0,  0.11 , 0.39}}};
-
-  tuple <double, int> order_param_tuple, gamma_param_tuple;
-  order_param_tuple = make_tuple(0.1, 123);
-  gamma_param_tuple = make_tuple(0.9, 456);
+  double initial_order_param = 0.5;                                                                                                                                                                                          
 
   LiqCrystElast_Bertoldi LCEMat_Bertoldi(density, young_modulus, possion_ratio, initial_order_param, beta_param);
 
   // liquid crystal elastomer model response
   LiqCrystElast_Bertoldi::State state{};
-  auto stress = LCEMat_Bertoldi(state, H, order_param_tuple, gamma_param_tuple);
 
-  unsigned int steps = 10;
+  unsigned int num_steps = 5;
   double max_time = 1.0;
-  double time = 0;
-  double dt = max_time / steps;
+  double dt = max_time / num_steps;
+  double t = 0;
 
+  // Note: implemented here something similar to what is in the uniaxial_stress_test methdo in the material_verification_tools.hpp file
+  // since I was not sure how to explicitly change the parameters provided as doubles in a tuple.
+
+  // strain function of time
   double strain_rate = 1e-2;
-  std::function<double(double)> constant_strain_rate = [strain_rate](double t){ return strain_rate*t; };
-  // std::function<double(double)> constant_order_param = [initial_order_param](double){ return initial_order_param; };
-  auto response_history = uniaxial_stress_test(max_time, steps, LCEMat_Bertoldi, state, constant_strain_rate, order_param_tuple, gamma_param_tuple);
+  std::function<double(double)> epsilon_xx = [strain_rate](double time){ return strain_rate + 0.0*strain_rate*time; }; // Kept constant here
 
-  // Note: defining the material inside the loop just because I am not sure how to change the parameters 
-  // in the material
-  for (unsigned int i = 0; i < steps; i++) 
+  auto sigma_yy_and_zz = [&epsilon_xx, &initial_order_param, &max_time, &t, LCEMat_Bertoldi, state](auto x) 
   {
-    time += dt;
+    auto epsilon_yy = x[0];
+    auto epsilon_zz = x[1];
+    using T         = decltype(epsilon_yy);
+    tensor<T, 3, 3> du_dx{};
+
+    du_dx[0][0] = epsilon_xx(t);
+    du_dx[1][1] = epsilon_yy;
+    du_dx[2][2] = epsilon_zz;
+
+    auto copy   = state;
+    tuple <double, int> copy_order_param_tuple, copy_gamma_param_tuple;
+    copy_order_param_tuple = make_tuple(initial_order_param* t / max_time, 123);
+    copy_gamma_param_tuple = make_tuple(0.6, 456);
+    auto stress = LCEMat_Bertoldi(copy, du_dx, copy_order_param_tuple, copy_gamma_param_tuple);
+
+    return tensor{{stress[1][1], stress[2][2]}};
+  };
+
+  // Loop over time and change order parameter from min to max
+  tensor<double, 3, 3> dudx{};
+  tensor<double, 5> refSxx{0.432068, 0.339607, .252902, 0.170087, 0.0896447};
+
+  if(num_steps!=5){std::cout<<"... Test temporary hardcoded for 5 steps because of refSxx definition"<<std::endl; exit(0);}
+  bool printStress(false);
+
+  for (size_t i = 0; i < num_steps; i++) 
+  {
+    auto initial_guess     = tensor<double, 2>{dudx[1][1], dudx[2][2]};
+    auto epsilon_yy_and_zz = find_root(sigma_yy_and_zz, initial_guess);
+    dudx[0][0]             = epsilon_xx(t);
+    dudx[1][1]             = epsilon_yy_and_zz[0];
+    dudx[2][2]             = epsilon_yy_and_zz[1];
+
+    tuple <double, int> order_param_tuple, gamma_param_tuple;
+    order_param_tuple = make_tuple(initial_order_param* t / max_time, 123);
+    gamma_param_tuple = make_tuple(0.6, 456);
+    auto stress = LCEMat_Bertoldi(state, dudx, order_param_tuple, gamma_param_tuple);
+
+    t += dt;
     
-    // std::cout << stress[1][1] << std::endl;
+    EXPECT_NEAR(stress[0][0], refSxx[static_cast<int>(i)], 1e-6);
+
+    if(printStress)
+    {
+      std::cout << "... Sxx = " << stress[0][0] << ", Syy = " << stress[1][1] << ", Szz = " << stress[2][2] << std::endl;
+    }
   }
-
-  // Check that the stress is consistent with the strain energy
-  EXPECT_LT(stress[1][1]-13.8029, 1e-3);
 }
-
-// --------------------------------------------------------
-
-// 
-// std::cout << "\n..... P_stress ....." << std::endl;
-// std::cout << P_stress << std::endl;
-// std::cout << "\n..... P_stress_AD ....." << std::endl;
-// std::cout << P_stress_AD << std::endl;
-// std::cout << "\n..... stress_difference ....." << std::endl;
-// std::cout << stress_difference << std::endl;
-// std::cout << std::endl;
-// 
-
-// --------------------------------------------------------
-
-// TEST(TestLiquidCrystalBertoldiMat, agreesWithNeoHookeanInOrderParameterLimitOverEntireUniaxialTest)
-// {
-// return;
-//   double density = 1.0;
-//   double E = 1.0;
-//   double nu = 0.25;
-//   double shear_modulus = 0.5*E/(1.0 + nu);
-//   double bulk_modulus = E / 3.0 / (1.0 - 2.0*nu);
-//   double order_constant = 1.0;
-//   double order_parameter = 1.0e-10;
-//   double transition_temperature = 1.0;
-//   tensor<double, 3> normal{{0.0, 1.0, 0.0}};
-//   double Nb2 = 1.0;
-  
-//   LiqCrystElast_Bertoldi LCEMat_Bertoldi(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
-//   double temperature = 300.0; // far above transition temperature
-
-//   auto initial_distribution = LiqCrystElast_Bertoldi::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
-//   decltype(LCEMat_Bertoldi)::State initial_state{DenseIdentity<3>(), initial_distribution, temperature, order_parameter};
-//   double max_time = 20.0;
-//   unsigned int steps = 10;
-//   double strain_rate = 1e-2;
-//   std::function<double(double)> constant_strain_rate = [strain_rate](double t){ return strain_rate*t; };
-//   std::function<double(double)> constant_order_param = [temperature](double){ return temperature; };
-//   auto response_history = uniaxial_stress_test(max_time, steps, LCEMat_Bertoldi, initial_state, constant_strain_rate, constant_order_param);
-
-//   solid_mechanics::NeoHookean solidMat_isotropic{.density = density, .K = bulk_modulus, .G = shear_modulus};
-//   solid_mechanics::NeoHookean::State nh_initial_state{};
-//   auto nh_response_history = uniaxial_stress_test(max_time, steps, solidMat_isotropic, nh_initial_state, constant_strain_rate);
-
-//   for (size_t i = 0; i < steps; i++) {
-//     auto [t, strain, stress, state] = response_history[i];
-//     auto [nh_t, nh_strain, nh_stress, nh_state_loop] = nh_response_history[i];
-//     double difference = std::abs(stress[0][0] - nh_stress[0][0]);
-//     EXPECT_LT(difference, 1e-8);
-
-//     std::cout << "+++ Time: " << t
-//               << " , strain: " << strain
-//               << " , order parameter: " << state.instantaneous_order_parameter
-//               << " , stress_xx: " << stress[0][0] << std::endl;
-//   }
-// }
-
-// // --------------------------------------------------------
-
-// TEST(TestLiquidCrystalBertoldiMat, orderParameterSweep)
-// {
-// return;
-//   double density = 1.0;
-//   double E = 1.0;
-//   double nu = 0.25;
-//   double shear_modulus = 0.5*E/(1.0 + nu);
-//   double bulk_modulus = E / 3.0 / (1.0 - 2.0*nu);
-//   double order_constant = 1.0;
-//   double order_parameter = 1.0;
-//   double transition_temperature = 10.0;
-//   tensor<double, 3> normal{{0.0, 1.0, 0.0}};
-//   double Nb2 = 1.0;
-  
-//   LiqCrystElast_Bertoldi LCEMat_Bertoldi(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
-//   double initial_temperature = 5.0;
-
-//   auto initial_distribution = LiqCrystElast_Bertoldi::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
-//   decltype(LCEMat_Bertoldi)::State state{DenseIdentity<3>(), initial_distribution, initial_temperature, order_parameter};
-//   double max_time = 1.0;
-//   unsigned int steps = 50;
-//   double time = 0;
-//   double dt = max_time / steps;
-//   tensor<double, 3, 3> H{};
-//   std::function<double(double)> temperature_func =
-//       [initial_temperature, transition_temperature](double t) {
-//         return initial_temperature + 2*t*(transition_temperature - initial_temperature);
-//       };
-
-//   for (unsigned int i = 0; i < steps; i++) {
-//     time += dt;
-//     double temperature = temperature_func(time);
-//     LCEMat_Bertoldi(state, H, temperature);
-//     std::cout << state.distribution_tensor[1][1] << std::endl;
-//   }
-// }
-
-// // --------------------------------------------------------
-
-// TEST(TestLiquidCrystalBertoldiMat, isNotDegenerate)
-// {
-//   // This is a dummy test that should be eventually removed. I (BT) am
-//   // adding it only to demonstrate something unusual about this
-//   // model's behavior. This is not an aspect of the model we actually
-//   // want to enforce, it's just an unfortunate behavior built into
-//   // this model.
-//   double density = 1.0;
-//   double E = 1.0;
-//   double nu = 0.25;
-//   double shear_modulus = 0.5*E/(1.0 + nu);
-//   double bulk_modulus = E / 3.0 / (1.0 - 2.0*nu);
-//   double order_constant = 1.0;
-//   double order_parameter = 1.0; // this is the culprit. This must be less than 1 for the model to give meaningful results.
-//   double transition_temperature = 10.0;
-//   tensor<double, 3> normal{{0.0, 1.0, 0.0}};
-//   double Nb2 = 1.0;
-
-//   LiqCrystElast_Bertoldi LCEMat_Bertoldi(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, normal, Nb2);
-//   double initial_temperature = 5.0;
-
-//   auto initial_distribution = LiqCrystElast_Bertoldi::calculateInitialDistributionTensor(normal, order_parameter, Nb2);
-//   decltype(LCEMat_Bertoldi)::State state{DenseIdentity<3>(), initial_distribution, initial_temperature, order_parameter};
-//   tensor<double, 3, 3> H{};
-//   auto F = DenseIdentity<3>();
-//   double dlambda = 0.1;
-//   const unsigned int steps = 10;
-
-//   // It is easy to verify that when this model is fully ordered in the
-//   // reference state (which means `order_parameter` is set to 1), ANY
-//   // diagonal deformation gradient with F[1][1] = 1.0 will cause no
-//   // stress in the deviatoric response*. For this example, I assign an
-//   // increasing sequence of F[0][0] and keep F[1][1] = 1.0. Then, all
-//   // one needs to do to have a zero stress state is to keep the volume
-//   // fixed, that is, sef F[2][2] = 1/[F[0][0]. No matter how large the
-//   // tensile F[0][0] deformation is, the model will stay at zero
-//   // stress. This is BAD - the model cannot be used in this condition,
-//   // because the field problem will not have a solution. We should put
-//   // a check in the model so that it errors if the initial order is
-//   // close to 1.
-//   //
-//   // * This assumed that the normal vector is set as {0.0, 1.0,
-//   // 0.0}. If the vector points in another direction, the degeneracy
-//   // will involve more components of the deformation gradient. The
-//   // conclusions about the model problems are the same.
-//   for (unsigned int i = 0; i < steps; i++) {
-//     F[0][0] += dlambda;
-//     F[2][2] = 1.0/F[0][0];
-//     H = F - DenseIdentity<3>();
-//     auto response = LCEMat_Bertoldi(state, H, initial_temperature);
-//     EXPECT_LT(response[0][0], 1e-8);
-//   }
-// }
 
 // // --------------------------------------------------------
 
