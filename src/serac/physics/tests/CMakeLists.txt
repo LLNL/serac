@@ -17,6 +17,7 @@ blt_add_library(
 set(serial_solver_tests
     solid_legacy_sensitivity.cpp
     thermal_finite_diff.cpp
+    thermal_statics_patch.cpp
     solid_finite_diff.cpp
     solid_statics_patch.cpp
     solid_dynamics_patch.cpp
