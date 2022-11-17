@@ -74,6 +74,14 @@ void BasePhysics::setParameter(FiniteElementState& parameter_state, size_t param
   SLIC_ERROR_ROOT_IF(parameter_info_[parameter_index].state,
                      axom::fmt::format("Parameter state index {} has been previously defined in physics module {}",
                                        parameter_index, name_));
+  SLIC_ERROR_ROOT_IF(&parameter_state.mesh() != &mesh_,
+                     axom::fmt::format("Mesh of parameter state is not the same as the physics mesh"));
+  SLIC_ERROR_ROOT_IF(
+      parameter_state.space().GetTrueVSize() != parameter_info_[parameter_index].trial_space->GetTrueVSize(),
+      axom::fmt::format("Physics module parameter {} has size {} while given state has size {}. The finite element "
+                        "spaces are inconsistent.",
+                        parameter_index, parameter_info_[parameter_index].trial_space->GetTrueVSize(),
+                        parameter_state.space().GetTrueVSize()));
   parameter_info_[parameter_index].state = &parameter_state;
   parameter_info_[parameter_index].sensitivity =
       StateManager::newDual(parameter_state.space(), parameter_state.name() + "_sensitivity");

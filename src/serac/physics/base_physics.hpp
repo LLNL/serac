@@ -115,6 +115,9 @@ public:
    *
    * @note The user is responsible for managing the lifetime of this object. It is required
    * to exist whenever advanceTimestep, solveAdjoint, or computeSensitivity is called.
+   *
+   * @note The finite element space for this object is generated from the parameter
+   * discretization space (e.g. L2, H1) and the computational mesh given in the physics module constructor.
    */
   std::unique_ptr<FiniteElementState> generateParameter(const std::string& parameter_name, size_t parameter_index);
 
@@ -123,6 +126,9 @@ public:
    *
    * @param parameter_state the values to use for the specified parameter
    * @param parameter_index the index of the parameter
+   *
+   * @pre The discretization space and mesh for this finite element state must be consistent with the arguments
+   * provided in the physics module constructor.
    */
   void setParameter(FiniteElementState& parameter_state, size_t parameter_index);
 
