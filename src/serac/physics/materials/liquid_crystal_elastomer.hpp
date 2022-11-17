@@ -259,7 +259,7 @@ struct LiqCrystElast_Bertoldi {
     // kinematics
     auto I = Identity<dim>();
     auto F = displacement_grad + I;
-    auto C = dot(inv(F),F);
+    auto C = dot(transpose(F),F);
     auto E = 0.5 * (C - I);
     auto J = det(F);
 
@@ -296,25 +296,24 @@ struct LiqCrystElast_Bertoldi {
     // kinematics
     auto I = Identity<dim>();
     auto F = displacement_grad + I;
-    auto C = dot(inv(F),F);
+    auto C = dot(transpose(F),F);
     auto E = 0.5 * (C - I);
 
     // Compute the second Piola-Kirchhoff stress, i.e., \partial strain_energy / \partial E
-    auto strain_energy_1 = lambda * tr(E) * tr(E);
+    auto strain_energy_1 = 0.5 * lambda * tr(E) * tr(E);
     auto strain_energy_2 = mu * inner(E, E);
     auto strain_energy_3 = -0.5 * beta_parameter_ * (St - S0) * inner( 3 * outer(normal, normal) - I, E);
 
-    // transform from second Piola-Lichhoff to Cauchy stress
-    auto strain_energy = strain_energy_1 + strain_energy_2 + strain_energy_3;
+    auto strain_energy   = strain_energy_1 + strain_energy_2 + strain_energy_3;
 
     return strain_energy;
   }
 
   double density;                   ///<  mass density
-  double young_modulus_;             ///< bulk modulus in stress-free configuration
+  double young_modulus_;            ///< Young's modulus in stress-free configuration
   double poisson_ratio_;            ///< poisson's ratio
   double initial_order_parameter_;  ///< initial value of order parameter
-  double beta_parameter_;            ///< Degree of coupling between elastic and nematic energies
+  double beta_parameter_;           ///< Degree of coupling between elastic and nematic energies
 };
 
 }  // namespace serac

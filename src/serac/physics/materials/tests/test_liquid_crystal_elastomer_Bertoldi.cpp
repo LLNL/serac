@@ -35,30 +35,28 @@ TEST(TestLiquidCrystalMaterial, ConsistentStressDerivedFromStrainEnergy)
   LiqCrystElast_Bertoldi material(density, young_modulus, possion_ratio, initial_order_param, beta_param);
 
   // test conditions
-  tensor<double, 3, 3> H{{{-0.474440607694436,  0.109876281988692, -0.752574057841232},
-                          {-0.890004651428391, -1.254064550255045, -0.742440671831607},
-                          {-0.310665550306666,  0.90643674423369 , -1.090724491652343}}};
+  tensor<double, 3, 3> H{{{0.423,  0.11, -0.123},
+                          {-0.19, 0.25, 0.0},
+                          {0.0,  0.11 , 0.39}}};
 
   // liquid crystal elastomer model response
   LiqCrystElast_Bertoldi::State state{};
   auto stress = material(state, H, order_param_tuple, gamma_param_tuple);
 
-  // Strain energy of themodel
-  auto free_energy = material.calculateStrainEnergy(state, H, order_param_tuple, gamma_param_tuple);
+  // Transform Cauchy stress into Piola stress, which is what the AD computation returns
+  auto I = Identity<3>();  
+  auto F = H + I;
+  auto J = det(F);
+  auto P_stress = J*stress*inv(transpose(F));
+
+  // Strain energy of the model
+  auto free_energy = material.calculateStrainEnergy(state, make_dual(H), order_param_tuple, gamma_param_tuple);
 
   // Compute stress from strain energy using automatic differentiation
-  auto stress_AD = get_gradient(free_energy);
+  auto P_stress_AD = get_gradient(free_energy);
 
   // Get difference
-  auto stress_difference = stress - stress_AD;
-
-std::cout << "\n..... stresss ....." << std::endl;
-std::cout << stress << std::endl;
-std::cout << "\n..... stress_AD ....." << std::endl;
-std::cout << stress_AD << std::endl;
-std::cout << "\n..... stress_difference ....." << std::endl;
-std::cout << stress_difference << std::endl;
-std::cout << std::endl;
+  auto stress_difference = P_stress - P_stress_AD;
 
   // Check that the stress is consistent with the strain energy
   EXPECT_LT(norm(stress_difference), 1e-8);
@@ -79,6 +77,15 @@ std::cout << std::endl;
 //   double shear_modulus = 0.5*E/(1.0 + possion_ratio);
 //   double bulk_modulus = E / 3.0 / (1.0 - 2.0*possion_ratio);  
 
+// 
+// std::cout << "\n..... P_stress ....." << std::endl;
+// std::cout << P_stress << std::endl;
+// std::cout << "\n..... P_stress_AD ....." << std::endl;
+// std::cout << P_stress_AD << std::endl;
+// std::cout << "\n..... stress_difference ....." << std::endl;
+// std::cout << stress_difference << std::endl;
+// std::cout << std::endl;
+// //
 //   LiqCrystElast_Brighenti_Material material(density, bulk_modulus, possion_ratio, order_constant,
 //                                order_parameter, transition_temperature, normal, Nb2);
 
@@ -87,6 +94,29 @@ std::cout << std::endl;
 //                           {-0.890004651428391, -1.254064550255045, -0.742440671831607},
 //                           {-0.310665550306666,  0.90643674423369 , -1.090724491652343}}};
 //   double theta = 300.0; // far above transition temperature
+
+  // double epsilon = 1.0e-6;
+  // tensor<double, 3, 3> perturbation{{{0.1, 0.0, 0.6}, 
+  //                                    {1.0, 0.4, 0.5}, 
+  //                                    {0.3, 0.2, 0.1}}};
+
+  // // Check that the AD-computed derivatives of energy w.r.t. displacement_gradient 
+  // // are in agreement with results obtained from a central finite difference stencil
+  // {
+  //   auto energy1 = material.calculateStrainEnergy(
+  //     state, H - epsilon * perturbation, order_param_tuple, gamma_param_tuple);
+
+  //   auto energy2 = material.calculateStrainEnergy(
+  //     state, H + epsilon * perturbation, order_param_tuple, gamma_param_tuple);
+
+  //   auto denergy = get_gradient(material.calculateStrainEnergy(
+  //     state, make_dual(H), order_param_tuple, gamma_param_tuple));
+
+  //   auto error = double_dot(denergy, perturbation) - (energy2 - energy1) / (2 * epsilon);
+
+  //   EXPECT_NEAR(error / double_dot(denergy, perturbation), 0.0, 1e-8); 
+  // }
+
 
 //   // liquid crystal elastomer model response
 //   auto F_old = DenseIdentity<3>();
