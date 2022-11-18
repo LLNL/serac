@@ -626,8 +626,6 @@ auto solve_scalar_equation(function&& f, double x0, double tolerance, double low
         converged = (x == temp);
       }
 
-      // std::cout << "iter " << iterations << " x = " << x << std::endl;
-
       // convergence check
       converged = converged || (std::abs(delta_x) < tolerance);
 
