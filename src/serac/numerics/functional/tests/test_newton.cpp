@@ -144,7 +144,7 @@ TEST(ScalarEquationSolver, CanTakeDirectionalDerivative)
 
   tensor<double, 3, 3> dA = {{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}}};
 
-  // this should give dx_dA : dA = A:A/norm(A) = norm(A)
+  // this should give d( norm(A) )/dA : dA = (A/norm(A)) : A = norm(A)
   auto [normA, dnormA] = my_norm(make_dual(A, dA));
 
   double exact_derivative = norm(A);
