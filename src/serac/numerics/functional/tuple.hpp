@@ -742,7 +742,7 @@ struct is_tuple_of_tuples : std::false_type {
  */
 template <typename... T>
 struct is_tuple_of_tuples<serac::tuple<T...>> {
-  static constexpr bool value = (is_tuple<T>::value && ...);
+  static constexpr bool value = (is_tuple<T>::value && ...);  ///< true/false result of type check
 };
 
 }  // namespace serac
