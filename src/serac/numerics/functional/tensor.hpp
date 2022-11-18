@@ -676,6 +676,10 @@ SERAC_HOST_DEVICE constexpr auto inner(const tensor<S, m, n>& A, const tensor<T,
   return sum;
 }
 
+/**
+ * @overload
+ * @note for first order tensors (vectors)
+ */
 template <typename S, typename T, int m>
 SERAC_HOST_DEVICE constexpr auto inner(const tensor<S, m>& A, const tensor<T, m>& B)
 {
@@ -686,6 +690,10 @@ SERAC_HOST_DEVICE constexpr auto inner(const tensor<S, m>& A, const tensor<T, m>
   return sum;
 }
 
+/**
+ * @overload
+ * @note for zeroth-order tensors (scalars)
+ */
 SERAC_HOST_DEVICE constexpr auto inner(double A, double B) { return A * B; }
 
 /**
