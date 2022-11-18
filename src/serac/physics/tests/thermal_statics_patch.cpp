@@ -24,7 +24,7 @@ namespace serac {
 using heat_transfer::direct_static_options;
 
 /**
- * @brief Exact displacement solution that is an affine function
+ * @brief Exact temperature solution that is an affine function
  *
  * @tparam dim number of spatial dimensions
  */
