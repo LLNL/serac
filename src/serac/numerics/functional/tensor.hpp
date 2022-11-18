@@ -240,22 +240,6 @@ SERAC_HOST_DEVICE zero get(const zero&)
   return zero{};
 }
 
-/** @brief let a scalar be accessed like a degenerate tuple */
-template <int i>
-SERAC_HOST_DEVICE const double& get(const double& x)
-{
-  static_assert(i == 0);
-  return x;
-}
-
-/** @brief let a scalar be accessed like a degenerate tuple */
-template <int i>
-SERAC_HOST_DEVICE double& get(double& x)
-{
-  static_assert(i == 0);
-  return x;
-}
-
 /** @brief the dot product of anything with `zero` is `zero` */
 template <typename T>
 SERAC_HOST_DEVICE constexpr zero dot(const T&, zero)
