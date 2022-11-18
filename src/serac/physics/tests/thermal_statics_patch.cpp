@@ -80,6 +80,7 @@ public:
     auto temp_grad = make_tensor<dim>([&](int i) { return A(i); });
     tensor<double, dim> dummy_x;
     auto [heat_capacity, flux] = material(dummy_x, 1.0, temp_grad);
+
     auto surface_flux = [flux](auto, auto n0, auto, auto) { return dot(flux, n0); };
     physics.setFluxBCs(surface_flux);
   }
@@ -149,7 +150,7 @@ std::set<int> essentialBoundaryAttributes(PatchBoundaryCondition bc)
  * @pre ExactSolution must implement operator() that is an MFEM
  * coefficient-generating function
  * @pre ExactSolution must have a method applyLoads that applies forcing terms to the
- * solid functional that should lead to the exact solution
+ * heat transfer that should lead to the exact solution
  * See AffineSolution for an example
  */
 template <int p, int dim, typename ExactSolution>
@@ -161,16 +162,15 @@ double solution_error(const ExactSolution& exact_temperature, PatchBoundaryCondi
   axom::sidre::DataStore datastore;
   serac::StateManager::initialize(datastore, "thermal_static_solve");
 
-  // BT: shouldn't this assertion be in the physics module?
   // Putting it here prevents tests from having a nonsensical spatial dimension value, 
   // but the physics module should be catching this error to protect users.
-  static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for solid test");
+  static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for heat transfer test");
 
   std::string filename = std::string(SERAC_REPO_DIR) +  "/data/meshes/patch" + std::to_string(dim) + "D.mesh";
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename));
   serac::StateManager::setMesh(std::move(mesh));
 
-  // Construct a solid mechanics solver
+  // Construct a heat transfer mechanics solver
   auto solver_options = direct_static_options;
   solver_options.nonlinear.abs_tol = 1e-14;
   solver_options.nonlinear.rel_tol = 1e-14;
@@ -195,7 +195,7 @@ double solution_error(const ExactSolution& exact_temperature, PatchBoundaryCondi
 
 const double tol = 1e-13;
 
-TEST(SolidMechanics, PatchTest2dQ1EssentialBcs)
+TEST(HeatTransfer, PatchTest2dQ1EssentialBcs)
 {
   constexpr int p = 1;
   constexpr int dim = 2;
@@ -203,7 +203,7 @@ TEST(SolidMechanics, PatchTest2dQ1EssentialBcs)
   EXPECT_LT(error, tol);
 }
 
-TEST(SolidMechanics, PatchTest3dQ1EssentialBcs)
+TEST(HeatTransfer, PatchTest3dQ1EssentialBcs)
 {
   constexpr int p = 1;
   constexpr int dim   = 3;
@@ -211,7 +211,7 @@ TEST(SolidMechanics, PatchTest3dQ1EssentialBcs)
   EXPECT_LT(error, tol);
 }
 
-TEST(SolidMechanics, PatchTest2dQ2EssentialBcs)
+TEST(HeatTransfer, PatchTest2dQ2EssentialBcs)
 {
   constexpr int p = 2;
   constexpr int dim   = 2;
@@ -219,7 +219,7 @@ TEST(SolidMechanics, PatchTest2dQ2EssentialBcs)
   EXPECT_LT(error, tol);
 }
 
-TEST(SolidMechanics, PatchTest3dQ2EssentialBcs)
+TEST(HeatTransfer, PatchTest3dQ2EssentialBcs)
 {
   constexpr int p = 2;
   constexpr int dim   = 3;
@@ -227,7 +227,7 @@ TEST(SolidMechanics, PatchTest3dQ2EssentialBcs)
   EXPECT_LT(error, tol);
 }
 
-TEST(SolidMechanics, PatchTest2dQ1FluxBcs)
+TEST(HeatTransfer, PatchTest2dQ1FluxBcs)
 {
   constexpr int p = 1;
   constexpr int dim   = 2;
@@ -235,7 +235,7 @@ TEST(SolidMechanics, PatchTest2dQ1FluxBcs)
   EXPECT_LT(error, tol);
 }
 
-TEST(SolidMechanics, PatchTest3dQ1FluxBcs)
+TEST(HeatTransfer, PatchTest3dQ1FluxBcs)
 {
   constexpr int p = 1;
   constexpr int dim   = 3;
@@ -243,7 +243,7 @@ TEST(SolidMechanics, PatchTest3dQ1FluxBcs)
   EXPECT_LT(error, tol);
 }
 
-TEST(SolidMechanics, PatchTest2dQ2FluxBcs)
+TEST(HeatTransfer, PatchTest2dQ2FluxBcs)
 {
   constexpr int p = 2;
   constexpr int dim   = 2;
@@ -251,7 +251,7 @@ TEST(SolidMechanics, PatchTest2dQ2FluxBcs)
   EXPECT_LT(error, tol);
 }
 
-TEST(SolidMechanics, PatchTest3dQ2FluxBcs)
+TEST(HeatTransfer, PatchTest3dQ2FluxBcs)
 {
   constexpr int p = 2;
   constexpr int dim   = 3;
