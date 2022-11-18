@@ -737,7 +737,9 @@ template <typename T>
 struct is_tuple_of_tuples : std::false_type {
 };
 
-/// @overload
+/**
+ * @brief Trait for checking if a type if a @p serac::tuple containing only @p serac::tuple
+ */
 template <typename... T>
 struct is_tuple_of_tuples<serac::tuple<T...>> {
   static constexpr bool value = (is_tuple<T>::value && ...);

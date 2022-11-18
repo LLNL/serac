@@ -531,7 +531,7 @@ struct SolverStatus {
 /// @tparam ...ParamTypes Types of the (optional) parameters to the nonlinear function
 ///
 /// @param f Nonlinear function of which a root is sought. Must have the form
-/// $f(x, p_1, p_2, \ldots)$, where $x$ is the independent variable, and the $p_i$ are
+/// $f(x, p_1, p_2, ...)$, where $x$ is the independent variable, and the $p_i$ are
 /// optional parameters (scalars or tensors of arbitrary order).
 /// @param x0 Initial guess of root. If x0 is outside the search interval, the initial
 /// guess will be changed to the midpoint of the search interval.
