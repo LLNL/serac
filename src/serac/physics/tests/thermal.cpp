@@ -20,75 +20,6 @@
 namespace serac {
 
 template <int p, int dim>
-void functional_test_static(double expected_temp_norm)
-{
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  int serial_refinement   = 1;
-  int parallel_refinement = 0;
-
-  // Create DataStore
-  axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "thermal_functional_static_solve");
-
-  static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for thermal functional test");
-
-  // Construct the appropriate dimension mesh and give it to the data store
-  std::string filename =
-      (dim == 2) ? SERAC_REPO_DIR "/data/meshes/beam-quad.mesh" : SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
-
-  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
-
-  // Define a boundary attribute set
-  std::set<int> ess_bdr = {1};
-
-  // Construct a functional-based thermal conduction solver
-  HeatTransfer<p, dim> thermal_solver(heat_transfer::default_static_options, "thermal_functional");
-
-  tensor<double, dim, dim> cond;
-
-  // Define an anisotropic conductor material model
-  if constexpr (dim == 2) {
-    cond = {{{5.0, 0.01}, {0.01, 1.0}}};
-  }
-
-  if constexpr (dim == 3) {
-    cond = {{{1.5, 0.01, 0.0}, {0.01, 1.0, 0.0}, {0.0, 0.0, 1.0}}};
-  }
-
-  heat_transfer::LinearConductor<dim> mat(1.0, 1.0, cond);
-  thermal_solver.setMaterial(mat);
-
-  // Define the function for the initial temperature and boundary condition
-  auto one = [](const mfem::Vector&, double) -> double { return 1.0; };
-
-  // Set the initial temperature and boundary condition
-  thermal_solver.setTemperatureBCs(ess_bdr, one);
-  thermal_solver.setTemperature(one);
-
-  thermal_solver.setFluxBCs([](const auto& x, const auto& /* n */, const double /* t */, const auto& /* temp */) {
-    if (x[0] > 4.0) {
-      return 0.01;
-    }
-    return 0.0;
-  });
-
-  // Finalize the data structures
-  thermal_solver.completeSetup();
-
-  // Perform the quasi-static solve
-  double dt = 1.0;
-  thermal_solver.advanceTimestep(dt);
-
-  // Output the sidre-based plot files
-  thermal_solver.outputState();
-
-  // Check the final temperature norm
-  EXPECT_NEAR(expected_temp_norm, norm(thermal_solver.temperature()), 1.0e-6);
-}
-
-template <int p, int dim>
 void functional_test_dynamic(double expected_temp_norm)
 {
   MPI_Barrier(MPI_COMM_WORLD);
@@ -153,11 +84,6 @@ void functional_test_dynamic(double expected_temp_norm)
   // Check the final temperature norm
   EXPECT_NEAR(expected_temp_norm, norm(thermal_solver.temperature()), 1.0e-6);
 }
-
-TEST(Thermal, 2DLinearStatic) { functional_test_static<1, 2>(3.0184961962491594); }
-TEST(Thermal, 2DQuadStatic) { functional_test_static<2, 2>(3.0186175426112518); }
-TEST(Thermal, 3DLinearStatic) { functional_test_static<1, 3>(4.0564914381870958); }
-TEST(Thermal, 3DQuadStatic) { functional_test_static<2, 3>(4.0573746914550073); }
 
 TEST(Thermal, 2DLinearDynamic) { functional_test_dynamic<1, 2>(2.18066491); }
 TEST(Thermal, 2DQuadDynamic) { functional_test_dynamic<2, 2>(2.1806651); }
@@ -253,7 +179,7 @@ TEST(Thermal, ParameterizedMaterial)
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
   auto& sensitivity = thermal_solver.computeSensitivity<conductivity_parameter_index>();
 
-  EXPECT_NEAR(1.6540980, mfem::ParNormlp(sensitivity, 2, MPI_COMM_WORLD), 1.0e-6);
+  EXPECT_NEAR(1.7890782925134845, mfem::ParNormlp(sensitivity, 2, MPI_COMM_WORLD), 1.0e-6);
 }
 
 }  // namespace serac
