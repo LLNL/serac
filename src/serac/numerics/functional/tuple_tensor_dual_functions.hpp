@@ -518,15 +518,11 @@ SERAC_HOST_DEVICE constexpr auto get_gradient(const tensor<dual<tensor<double, m
 
 /**
  * @brief Status and diagnostics of nonlinear equation solvers
- *
- * @param converged Flag indicating whether solver converged to a solution or aborted.
- * @param iterations Number of iterations taken.
- * @param residual Final value of residual.
  */
 struct SolverStatus {
-  bool         converged;
-  unsigned int iterations;
-  double       residual;
+  bool         converged;   ///< converged Flag indicating whether solver converged to a solution or aborted.
+  unsigned int iterations;  ///< Number of iterations taken
+  double       residual;    ///< Final value of residual.
 };
 
 /// @brief Solves a nonlinear scalar-valued equation and gives derivatives of solution to parameters
