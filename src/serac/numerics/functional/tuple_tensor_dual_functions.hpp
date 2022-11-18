@@ -94,6 +94,7 @@ SERAC_HOST_DEVICE constexpr auto operator/(const tensor<T, m, n...>& A, S scale)
   return C;
 }
 
+/// @cond
 template <int i, typename S, typename T>
 struct one_hot_helper;
 
