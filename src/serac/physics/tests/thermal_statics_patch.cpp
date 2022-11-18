@@ -34,10 +34,10 @@ public:
   AffineSolution() : A(dim)
   {
     // clang-format off
-    A(0) = 2.0;; A(1) = 3.0;
-    if constexpr (dim == 3) { A(2) = 4.0; }
+    A(0) = 0.2; A(1) = 0.3;
+    if constexpr (dim == 3) { A(2) = 0.4; }
 
-    b = 5.0;
+    b = 1.0;
     //clang-format on
   };
 
