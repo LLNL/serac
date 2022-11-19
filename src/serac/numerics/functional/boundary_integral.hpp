@@ -17,7 +17,6 @@
 
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/quadrature.hpp"
-#include "serac/numerics/functional/tuple_arithmetic.hpp"
 #include "serac/numerics/functional/integral_utilities.hpp"
 #include "serac/numerics/functional/boundary_integral_kernels.hpp"
 #if defined(__CUDACC__)

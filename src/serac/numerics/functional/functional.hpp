@@ -18,7 +18,6 @@
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/quadrature.hpp"
 #include "serac/numerics/functional/finite_element.hpp"
-#include "serac/numerics/functional/tuple_arithmetic.hpp"
 #include "serac/numerics/functional/domain_integral.hpp"
 #include "serac/numerics/functional/boundary_integral.hpp"
 #include "serac/numerics/functional/dof_numbering.hpp"
