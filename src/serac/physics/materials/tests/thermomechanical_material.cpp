@@ -16,7 +16,6 @@
 
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/tuple.hpp"
-#include "serac/numerics/functional/tuple_arithmetic.hpp"
 
 namespace serac {
 

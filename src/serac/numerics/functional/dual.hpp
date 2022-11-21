@@ -425,3 +425,5 @@ struct is_dual_number<dual<T> > {
 };
 
 }  // namespace serac
+
+#include "serac/numerics/functional/tuple_tensor_dual_functions.hpp"
