@@ -894,9 +894,10 @@ protected:
   /// @brief Array functions computing the derivative of the residual with respect to each given parameter
   /// @note This is needed so the user can ask for a specific sensitivity at runtime as opposed to it being a
   /// template parameter.
-  std::function<decltype((*residual_)(DifferentiateWRT<0>{}, displacement_, zero_, shape_displacement_,
-                                      *parameters_[parameter_indices].state...))()>
-      d_residual_d_[sizeof...(parameter_indices)] = {[&]() {
+  std::array<std::function<decltype((*residual_)(DifferentiateWRT<0>{}, displacement_, zero_, shape_displacement_,
+                                                 *parameters_[parameter_indices].state...))()>,
+             sizeof...(parameter_indices)>
+      d_residual_d_ = {[&]() {
         return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + parameter_indices>{}, displacement_, zero_,
                             shape_displacement_, *parameters_[parameter_indices].state...);
       }...};
