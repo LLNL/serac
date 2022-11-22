@@ -78,7 +78,7 @@ TEST(Thermal, ParameterizedMaterial)
   thermal_solver.setTemperature(bdr_temp);
 
   // Define a constant source term
-  heat_transfer::ConstantSource source{1.0};
+  heat_transfer::ConstantSource source{-1.0};
   thermal_solver.setSource(source);
 
   // Set the flux term to zero for testing code paths

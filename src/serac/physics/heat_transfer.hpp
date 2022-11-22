@@ -337,7 +337,7 @@ public:
           auto source = source_function(x + p, ode_time_point_, u, du_dx, params...);
 
           // Return the source and the flux as a tuple
-          return serac::tuple{source * det(I_plus_dp_dX), serac::zero{}};
+          return serac::tuple{-1.0 * source * det(I_plus_dp_dX), serac::zero{}};
         },
         mesh_);
   }

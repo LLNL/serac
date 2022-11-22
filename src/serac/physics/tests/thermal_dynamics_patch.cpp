@@ -107,8 +107,8 @@ double dynamic_solution_error(const ExactSolution& exact_solution, PatchBoundary
 
   // Construct a heat transfer solver
   auto solver_options                        = direct_dynamic_options;
-  solver_options.nonlinear.abs_tol           = 1e-13;
-  solver_options.nonlinear.rel_tol           = 1e-13;
+  solver_options.nonlinear.abs_tol           = 5e-13;
+  solver_options.nonlinear.rel_tol           = 5e-13;
   solver_options.dynamic->timestepper        = TimestepMethod::BackwardEuler;
   solver_options.dynamic->enforcement_method = DirichletEnforcementMethod::DirectControl;
   HeatTransfer<p, dim> thermal(solver_options, "thermal");
@@ -140,7 +140,7 @@ double dynamic_solution_error(const ExactSolution& exact_solution, PatchBoundary
 }
 
 // clang-format off
-const tensor<double, 3> A{{0.5, 1.0, 1.5}};
+const tensor<double, 3> A{{10.0, 8.0, 4.0}};
 
 const double b{3.0};
 // clang-format on
@@ -151,9 +151,9 @@ const double b{3.0};
  * @tparam dim number of spatial dimensions
  */
 template <int dim>
-class AffineSolution {
+class LinearSolution {
 public:
-  AffineSolution() : temp_grad_rate(dim)
+  LinearSolution() : temp_grad_rate(dim)
   {
     initial_temperature = b;
 
@@ -209,7 +209,7 @@ public:
 
     // volumetric source
     auto source_function = [temp_rate_grad](auto X, auto /* time */, auto /* u */, auto /* du_dx */) {
-      return -1.0 * dot(X, temp_rate_grad);
+      return dot(X, temp_rate_grad);
     };
     thermal.setSource(source_function);
   }
@@ -225,7 +225,7 @@ TEST(HeatTransferDynamic, PatchTest2dQ1EssentialBcs)
 {
   constexpr int p     = 1;
   constexpr int dim   = 2;
-  double        error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
+  double        error = dynamic_solution_error<p, dim>(LinearSolution<dim>(), PatchBoundaryCondition::Essential);
   EXPECT_LT(error, tol);
 }
 
@@ -233,7 +233,7 @@ TEST(HeatTransferDynamic, PatchTest3dQ1EssentialBcs)
 {
   constexpr int p     = 1;
   constexpr int dim   = 3;
-  double        error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
+  double        error = dynamic_solution_error<p, dim>(LinearSolution<dim>(), PatchBoundaryCondition::Essential);
   EXPECT_LT(error, tol);
 }
 
@@ -241,7 +241,7 @@ TEST(HeatTransferDynamic, PatchTest2dQ2EssentialBcs)
 {
   constexpr int p     = 2;
   constexpr int dim   = 2;
-  double        error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
+  double        error = dynamic_solution_error<p, dim>(LinearSolution<dim>(), PatchBoundaryCondition::Essential);
   EXPECT_LT(error, tol);
 }
 
@@ -249,43 +249,43 @@ TEST(HeatTransferDynamic, PatchTest3dQ2EssentialBcs)
 {
   constexpr int p     = 2;
   constexpr int dim   = 3;
-  double        error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
+  double        error = dynamic_solution_error<p, dim>(LinearSolution<dim>(), PatchBoundaryCondition::Essential);
   EXPECT_LT(error, tol);
 }
 
-TEST(HeatTransferDynamic, PatchTest2dQ1TractionBcs)
+TEST(HeatTransferDynamic, PatchTest2dQ1FluxBcs)
 {
   constexpr int p   = 1;
   constexpr int dim = 2;
   double        error =
-      dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::MixedEssentialAndNatural);
+      dynamic_solution_error<p, dim>(LinearSolution<dim>(), PatchBoundaryCondition::MixedEssentialAndNatural);
   EXPECT_LT(error, tol);
 }
 
-TEST(HeatTransferDynamic, PatchTest3dQ1TractionBcs)
+TEST(HeatTransferDynamic, PatchTest3dQ1FluxBcs)
 {
   constexpr int p   = 1;
   constexpr int dim = 3;
   double        error =
-      dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::MixedEssentialAndNatural);
+      dynamic_solution_error<p, dim>(LinearSolution<dim>(), PatchBoundaryCondition::MixedEssentialAndNatural);
   EXPECT_LT(error, tol);
 }
 
-TEST(HeatTransferDynamic, PatchTest2dQ2TractionBcs)
+TEST(HeatTransferDynamic, PatchTest2dQ2FluxBcs)
 {
   constexpr int p   = 2;
   constexpr int dim = 2;
   double        error =
-      dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::MixedEssentialAndNatural);
+      dynamic_solution_error<p, dim>(LinearSolution<dim>(), PatchBoundaryCondition::MixedEssentialAndNatural);
   EXPECT_LT(error, tol);
 }
 
-TEST(HeatTransferDynamic, PatchTest3dQ2TractionBcs)
+TEST(HeatTransferDynamic, PatchTest3dQ2FluxBcs)
 {
   constexpr int p   = 2;
   constexpr int dim = 3;
   double        error =
-      dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::MixedEssentialAndNatural);
+      dynamic_solution_error<p, dim>(LinearSolution<dim>(), PatchBoundaryCondition::MixedEssentialAndNatural);
   EXPECT_LT(error, tol);
 }
 
