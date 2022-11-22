@@ -503,7 +503,7 @@ public:
    */
   FiniteElementDual& computeSensitivity(size_t parameter_field) override
   {
-    SLIC_ASSERT_MSG(parameter_field >= 0 && parameter_field < sizeof...(parameter_indices),
+    SLIC_ASSERT_MSG(parameter_field < sizeof...(parameter_indices),
                     axom::fmt::format("Invalid parameter index {} reqested for sensitivity."));
 
     auto drdparam = serac::get<1>(d_residual_d_[parameter_field]());

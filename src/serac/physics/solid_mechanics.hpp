@@ -764,7 +764,7 @@ public:
       return shape_displacement_sensitivity_;
     }
 
-    SLIC_ASSERT_MSG(parameter_field >= 0 && parameter_field < sizeof...(parameter_indices),
+    SLIC_ASSERT_MSG(parameter_field < sizeof...(parameter_indices),
                     axom::fmt::format("Invalid parameter index {} reqested for sensitivity."));
 
     auto drdparam = serac::get<DERIVATIVE>(d_residual_d_[parameter_field]());
