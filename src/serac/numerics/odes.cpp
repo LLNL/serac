@@ -267,12 +267,13 @@ void FirstOrderODE::SetTimestepper(const serac::TimestepMethod timestepper)
   ode_solver_->Init(*this);
 }
 
-void FirstOrderODE::Solve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt) const
+void FirstOrderODE::Solve(const double time, const double dt, const mfem::Vector& u, mfem::Vector& du_dt) const
 {
   // assign these values to variables with greater scope,
   // so that the residual operator can see them
-  state_.dt = dt;
-  state_.u  = u;
+  state_.time = time;
+  state_.dt   = dt;
+  state_.u    = u;
 
   // evaluate the constraint functions at a 3-point
   // stencil of times centered on the time of interest
@@ -282,9 +283,9 @@ void FirstOrderODE::Solve(const double dt, const mfem::Vector& u, mfem::Vector& 
   U_       = 0.0;
   U_plus_  = 0.0;
   for (const auto& bc : bcs_.essentials()) {
-    bc.setDofs(U_minus_, t - epsilon);
-    bc.setDofs(U_, t);
-    bc.setDofs(U_plus_, t + epsilon);
+    bc.setDofs(U_minus_, time - epsilon);
+    bc.setDofs(U_, time);
+    bc.setDofs(U_plus_, time + epsilon);
   }
 
   bool implicit = (dt != 0.0);

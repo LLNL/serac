@@ -121,7 +121,8 @@ public:
                 .order = order, .vector_dim = 1, .name = detail::addPrefix(name, "adjoint_temperature")},
             sidre_datacoll_id_)),
         residual_with_bcs_(temperature_.space().TrueVSize()),
-        ode_(temperature_.space().TrueVSize(), {.u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
+        ode_(temperature_.space().TrueVSize(),
+             {.time = ode_time_point_, .u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
              nonlin_solver_, bcs_)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
@@ -333,7 +334,7 @@ public:
 
           auto du_dx = dot(du_dX, inv(I_plus_dp_dX));
 
-          auto source = source_function(x + p, time_, u, du_dx, params...);
+          auto source = source_function(x + p, ode_time_point_, u, du_dx, params...);
 
           // Return the source and the flux as a tuple
           return serac::tuple{source * det(I_plus_dp_dX), serac::zero{}};

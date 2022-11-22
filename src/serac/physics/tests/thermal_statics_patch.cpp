@@ -162,8 +162,6 @@ double solution_error(const ExactSolution& exact_temperature, PatchBoundaryCondi
   axom::sidre::DataStore datastore;
   serac::StateManager::initialize(datastore, "thermal_static_solve");
 
-  // Putting it here prevents tests from having a nonsensical spatial dimension value, 
-  // but the physics module should be catching this error to protect users.
   static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for heat transfer test");
 
   std::string filename = std::string(SERAC_REPO_DIR) +  "/data/meshes/patch" + std::to_string(dim) + "D.mesh";
