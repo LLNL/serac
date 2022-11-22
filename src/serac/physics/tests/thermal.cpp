@@ -130,7 +130,7 @@ TEST(Thermal, ParameterizedMaterial)
   // field, in this case the thermal conductivity. We also pass an array of finite element states for each of the
   // requested parameterized fields.
   HeatTransfer<p, dim, Parameters<H1<1> > > thermal_solver(heat_transfer::direct_static_options, "thermal_functional");
-  thermal_solver.setParameter(user_defined_conductivity, 0);
+  thermal_solver.setParameter(0, user_defined_conductivity);
 
   // Construct a potentially user-defined parameterized material and send it to the thermal module
   heat_transfer::ParameterizedLinearIsotropicConductor mat;
@@ -177,7 +177,7 @@ TEST(Thermal, ParameterizedMaterial)
   thermal_solver.solveAdjoint(adjoint_load);
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
-  auto& sensitivity = thermal_solver.computeSensitivity<conductivity_parameter_index>();
+  auto& sensitivity = thermal_solver.computeSensitivity(conductivity_parameter_index);
 
   EXPECT_NEAR(1.7890782925134845, mfem::ParNormlp(sensitivity, 2, MPI_COMM_WORLD), 1.0e-6);
 }

@@ -62,8 +62,8 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
 
   SolidMechanics<p, dim, Parameters<H1<1>, H1<1> > > solid_solver(default_static_options, GeometricNonlinearities::On,
                                                                   "solid_functional");
-  solid_solver.setParameter(user_defined_bulk_modulus, 0);
-  solid_solver.setParameter(user_defined_shear_modulus, 1);
+  solid_solver.setParameter(0, user_defined_bulk_modulus);
+  solid_solver.setParameter(1, user_defined_shear_modulus);
 
   // We must know the index of the parameter finite element state in our parameter pack to take sensitivities.
   // As we only have one parameter in this example, the index is zero.
@@ -117,7 +117,7 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
   solid_solver.solveAdjoint(adjoint_load);
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
-  [[maybe_unused]] auto& sensitivity = solid_solver.computeSensitivity<bulk_parameter_index>();
+  [[maybe_unused]] auto& sensitivity = solid_solver.computeSensitivity(bulk_parameter_index);
 
   // Perform finite difference on each bulk modulus value
   // to check if computed qoi sensitivity is consistent

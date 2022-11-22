@@ -108,11 +108,9 @@ public:
    * @param[in] options The system linear and nonlinear solver and timestepping parameters
    * @param[in] name An optional name for the physics module instance
    * used by an underlying material model or load
-   * @param calc_shape A flag for computing the shape displacement and associated sensitivity
    * @param[in] pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
-  HeatTransfer(const SolverOptions& options, const std::string& name = {},
-               ShapeDisplacement calc_shape = ShapeDisplacement::Off, mfem::ParMesh* pmesh = nullptr)
+  HeatTransfer(const SolverOptions& options, const std::string& name = {}, mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(NUM_STATE_VARS, order, name, pmesh),
         temperature_(StateManager::newState(
             FiniteElementState::Options{
@@ -122,27 +120,17 @@ public:
             FiniteElementState::Options{
                 .order = order, .vector_dim = 1, .name = detail::addPrefix(name, "adjoint_temperature")},
             sidre_datacoll_id_)),
-        shape_displacement_(StateManager::newState(
-            FiniteElementState::Options{
-                .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "shape_displacement")},
-            sidre_datacoll_id_)),
-        shape_sensitivity_(
-            StateManager::newDual(shape_displacement_.space(), detail::addPrefix(name, "shape_sensitivity"))),
         residual_with_bcs_(temperature_.space().TrueVSize()),
         ode_(temperature_.space().TrueVSize(), {.u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
-             nonlin_solver_, bcs_),
-        calc_shape_(calc_shape)
+             nonlin_solver_, bcs_)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
 
-    states_.push_back(temperature_);
-    states_.push_back(adjoint_temperature_);
+    states_.push_back(&temperature_);
+    states_.push_back(&adjoint_temperature_);
 
-    if (calc_shape_ == ShapeDisplacement::On) {
-      states_.push_back(shape_displacement_);
-      duals_.push_back(shape_sensitivity_);
-    }
+    parameters_.resize(sizeof...(parameter_space));
 
     // Create a pack of the primal field and parameter finite element spaces
     mfem::ParFiniteElementSpace* test_space = &temperature_.space();
@@ -155,16 +143,14 @@ public:
     if constexpr (sizeof...(parameter_space) > 0) {
       tuple<parameter_space...> types{};
       for_constexpr<sizeof...(parameter_space)>([&](auto i) {
-        parameter_trial_spaces_[i] = std::unique_ptr<mfem::ParFiniteElementSpace>(
+        parameters_[i].trial_space = std::unique_ptr<mfem::ParFiniteElementSpace>(
             generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_));
-        trial_spaces[i + NUM_STATE_VARS] = parameter_trial_spaces_[i].get();
+        trial_spaces[i + NUM_STATE_VARS] = parameters_[i].trial_space.get();
       });
     }
 
-    residual_ = std::make_unique<Functional<test(scalar_trial, scalar_trial, vector_trial, parameter_space...)>>(
+    residual_ = std::make_unique<Functional<test(scalar_trial, scalar_trial, shape_trial, parameter_space...)>>(
         test_space, trial_spaces);
-
-    states_.push_back(temperature_);
 
     nonlin_solver_ = mfem_ext::EquationSolver(mesh_.GetComm(), options.linear, options.nonlinear);
     nonlin_solver_.SetOperator(residual_with_bcs_);
@@ -192,23 +178,6 @@ public:
     zero_ = 0.0;
 
     shape_displacement_ = 0.0;
-  }
-
-  /**
-   * @brief register the provided FiniteElementState object as the source of values for parameter `i`
-   *
-   * @param parameter_state the values to use for the specified parameter
-   * @param i the index of the parameter
-   */
-  void setParameter(FiniteElementState& parameter_state, size_t i)
-  {
-    parameter_states_[i] = &parameter_state;
-    parameter_sensitivities_[i] =
-        StateManager::newDual(parameter_state.space(), parameter_state.name() + "_sensitivity");
-
-    // Add the parameter to the BasePhysics containers for output
-    states_.push_back(parameter_state);
-    duals_.push_back(*parameter_sensitivities_[i]);
   }
 
   /**
@@ -458,14 +427,33 @@ public:
   serac::FiniteElementState& adjointTemperature() { return adjoint_temperature_; };
 
   /**
-   * @brief Get the shape displacement state
+   * @brief Accessor for getting named finite element state fields from the physics modules
    *
-   * @return A reference to the current shape displacement finite element state
+   * @param state_name The name of the Finite Element State to retrieve
+   * @return The named Finite Element State
    */
-  const serac::FiniteElementState& shapeDisplacement() const { return shape_displacement_; };
+  const FiniteElementState& getState(const std::string& state_name) override
+  {
+    if (state_name == "temperature") {
+      return temperature_;
+    } else if (state_name == "adjoint_temperature") {
+      return adjoint_temperature_;
+    }
 
-  /// @overload
-  serac::FiniteElementState& shapeDisplacement() { return shape_displacement_; };
+    SLIC_ERROR_ROOT(axom::fmt::format("State {} requestion from solid mechanics module {}, but it doesn't exist",
+                                      state_name, name_));
+    return temperature_;
+  }
+
+  /**
+   * @brief Get a vector of the finite element state solution variable names
+   *
+   * @return The solution variable names
+   */
+  virtual std::vector<std::string> getStateNames() override
+  {
+    return std::vector<std::string>{{"temperature"}, {"adjoint_temperature"}};
+  }
 
   /**
    * @brief Complete the initialization and allocation of the data structures.
@@ -482,13 +470,13 @@ public:
           temperature_.space().TrueVSize(),
 
           [this](const mfem::Vector& u, mfem::Vector& r) {
-            r = (*residual_)(u, zero_, shape_displacement_, *parameter_states_[parameter_indices]...);
+            r = (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
           [this](const mfem::Vector& u) -> mfem::Operator& {
             auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, shape_displacement_,
-                                          *parameter_states_[parameter_indices]...);
+                                          *parameters_[parameter_indices].state...);
             J_             = assemble(drdu);
             J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             return *J_;
@@ -500,7 +488,7 @@ public:
 
           [this](const mfem::Vector& du_dt, mfem::Vector& r) {
             add(1.0, u_, dt_, du_dt, u_predicted_);
-            r = (*residual_)(u_predicted_, du_dt, shape_displacement_, *parameter_states_[parameter_indices]...);
+            r = (*residual_)(u_predicted_, du_dt, shape_displacement_, *parameters_[parameter_indices].state...);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
@@ -509,12 +497,12 @@ public:
 
             // K := dR/du
             auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(u_predicted_), du_dt, shape_displacement_,
-                                                         *parameter_states_[parameter_indices]...));
+                                                         *parameters_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             // M := dR/du_dot
             auto M = serac::get<DERIVATIVE>((*residual_)(u_predicted_, differentiate_wrt(du_dt), shape_displacement_,
-                                                         *parameter_states_[parameter_indices]...));
+                                                         *parameters_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
             // J := M + dt K
@@ -537,8 +525,8 @@ public:
    * boundary condition data for the adjoint problem
    * @return The computed adjoint finite element state
    */
-  virtual const serac::FiniteElementState& solveAdjoint(FiniteElementDual& adjoint_load,
-                                                        FiniteElementDual* dual_with_essential_boundary = nullptr)
+  virtual const serac::FiniteElementState& solveAdjoint(
+      FiniteElementDual& adjoint_load, FiniteElementDual* dual_with_essential_boundary = nullptr) override
   {
     mfem::HypreParVector adjoint_load_vector(adjoint_load);
 
@@ -552,7 +540,7 @@ public:
     adjoint_essential = 0.0;
 
     auto [r, drdu] = (*residual_)(differentiate_wrt(temperature_), zero_, shape_displacement_,
-                                  *parameter_states_[parameter_indices]...);
+                                  *parameters_[parameter_indices].state...);
     auto jacobian  = assemble(drdu);
     auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -583,17 +571,17 @@ public:
    *
    * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
    */
-  template <int parameter_field>
-  FiniteElementDual& computeSensitivity()
+  FiniteElementDual& computeSensitivity(size_t parameter_field) override
   {
-    auto [r, drdparam] = (*residual_)(DifferentiateWRT<parameter_field + NUM_STATE_VARS>{}, temperature_, zero_,
-                                      shape_displacement_, *parameter_states_[parameter_indices]...);
+    SLIC_ASSERT_MSG(parameter_field < sizeof...(parameter_indices),
+                    axom::fmt::format("Invalid parameter index {} reqested for sensitivity."));
 
+    auto drdparam     = serac::get<1>(d_residual_d_[parameter_field]());
     auto drdparam_mat = assemble(drdparam);
 
-    drdparam_mat->MultTranspose(adjoint_temperature_, *parameter_sensitivities_[parameter_field]);
+    drdparam_mat->MultTranspose(adjoint_temperature_, *parameters_[parameter_field].sensitivity);
 
-    return *parameter_sensitivities_[parameter_field];
+    return *parameters_[parameter_field].sensitivity;
   }
 
   /**
@@ -607,13 +595,13 @@ public:
   FiniteElementDual& computeShapeSensitivity()
   {
     auto drdshape = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<SHAPE>{}, temperature_, zero_,
-                                                        shape_displacement_, *parameter_states_[parameter_indices]...));
+                                                        shape_displacement_, *parameters_[parameter_indices].state...));
 
     auto drdshape_mat = assemble(drdshape);
 
-    drdshape_mat->MultTranspose(adjoint_temperature_, shape_sensitivity_);
+    drdshape_mat->MultTranspose(adjoint_temperature_, shape_displacement_sensitivity_);
 
-    return shape_sensitivity_;
+    return shape_displacement_sensitivity_;
   }
 
   /// Destroy the Thermal Solver object
@@ -623,8 +611,8 @@ protected:
   /// The compile-time finite element trial space for thermal conduction (H1 of order p)
   using scalar_trial = H1<order>;
 
-  /// The compile-time finite element trial space for shape displacement (vector H1 of order p)
-  using vector_trial = H1<order, dim>;
+  /// The compile-time finite element trial space for shape displacement (vector H1 of order 1)
+  using shape_trial = H1<1, dim>;
 
   /// The compile-time finite element test space for thermal conduction (H1 of order p)
   using test = H1<order>;
@@ -635,27 +623,8 @@ protected:
   /// The adjoint temperature finite element state
   serac::FiniteElementState adjoint_temperature_;
 
-  /// The shape displacement finite element state
-  FiniteElementState shape_displacement_;
-
   /// serac::Functional that is used to calculate the residual and its derivatives
-  std::unique_ptr<Functional<test(scalar_trial, scalar_trial, vector_trial, parameter_space...)>> residual_;
-
-  /// Trial finite element spaces for the functional object
-  std::array<std::unique_ptr<mfem::ParFiniteElementSpace>, sizeof...(parameter_space)> parameter_trial_spaces_;
-
-  /// The finite element states representing user-defined parameter fields
-  std::array<FiniteElementState*, sizeof...(parameter_space)> parameter_states_;
-
-  /**
-   * @brief The sensitivities (dual vectors) with repect to each of the input parameter fields
-   * @note this is an array of optionals as FiniteElementDual is not default constructable and
-   * we want to set this during the setParameter method.
-   */
-  std::array<std::optional<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;
-
-  /// Sensitivity with respect to the shape displacement field
-  FiniteElementDual shape_sensitivity_;
+  std::unique_ptr<Functional<test(scalar_trial, scalar_trial, shape_trial, parameter_space...)>> residual_;
 
   /// Assembled mass matrix
   std::unique_ptr<mfem::HypreParMatrix> M_;
@@ -704,13 +673,16 @@ protected:
   /// Previous value of du_dt used to prime the pump for the nonlinear solver
   mfem::Vector previous_;
 
-  /**
-   * @brief A Flag denoting whether to calculate the shape displacement field or not
-   *
-   * @note This is currently not used as the shape displacement field is always constructed. It is here
-   * to maintain a stable API when this feature is added.
-   */
-  ShapeDisplacement calc_shape_;
+  /// @brief Array functions computing the derivative of the residual with respect to each given parameter
+  /// @note This is needed so the user can ask for a specific sensitivity at runtime as opposed to it being a
+  /// template parameter.
+  std::array<std::function<decltype((*residual_)(DifferentiateWRT<0>{}, temperature_, zero_, shape_displacement_,
+                                                 *parameters_[parameter_indices].state...))()>,
+             sizeof...(parameter_indices)>
+      d_residual_d_ = {[&]() {
+        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + parameter_indices>{}, temperature_, zero_,
+                            shape_displacement_, *parameters_[parameter_indices].state...);
+      }...};
 };
 
 }  // namespace serac

@@ -71,7 +71,7 @@ TEST(HeatTransfer, MoveShape)
 
   {
     // Construct a functional-based thermal solver including references to the shape displacement field.
-    HeatTransfer<p, dim> thermal_solver(options, "thermal_shape", ShapeDisplacement::On);
+    HeatTransfer<p, dim> thermal_solver(options, "thermal_shape");
 
     // Set the initial temperature and boundary condition
     thermal_solver.setTemperatureBCs(ess_bdr, zero);
@@ -115,7 +115,7 @@ TEST(HeatTransfer, MoveShape)
     *mesh_nodes += user_defined_shape_displacement.gridFunction();
 
     // Construct a functional-based thermal solver including references to the shape displacement field.
-    HeatTransfer<p, dim> thermal_solver_no_shape(options, "thermal_pure", ShapeDisplacement::Off);
+    HeatTransfer<p, dim> thermal_solver_no_shape(options, "thermal_pure");
 
     // Set the initial temperature and boundary condition
     thermal_solver_no_shape.setTemperatureBCs(ess_bdr, zero);

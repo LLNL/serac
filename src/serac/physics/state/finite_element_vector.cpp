@@ -71,7 +71,6 @@ FiniteElementVector& FiniteElementVector::operator=(const FiniteElementVector& r
                 axom::fmt::format("Finite element vector of size {} assigned to a FiniteElementVector of size {}",
                                   Size(), rhs.Size()));
 
-  // Initialize the vector to zero
   HypreParVector::operator=(rhs);
 
   return *this;

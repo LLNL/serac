@@ -28,9 +28,9 @@ ThermalSolidLegacy::ThermalSolidLegacy(int order, const ThermalConductionLegacy:
   // The temperature_, velocity_, displacement_ members are not currently used
   // but presumably will be needed when further coupling schemes are implemented
   // This calls the non-const version
-  states_.push_back(therm_solver_.temperature());
-  states_.push_back(solid_solver_.velocity());
-  states_.push_back(solid_solver_.displacement());
+  states_.push_back(&therm_solver_.temperature());
+  states_.push_back(&solid_solver_.velocity());
+  states_.push_back(&solid_solver_.displacement());
 
   coupling_ = serac::CouplingScheme::OperatorSplit;
 }
@@ -49,9 +49,9 @@ ThermalSolidLegacy::ThermalSolidLegacy(const ThermalConductionLegacy::InputOptio
   // The temperature_, velocity_, displacement_ members are not currently used
   // but presumably will be needed when further coupling schemes are implemented
   // This calls the non-const version
-  states_.push_back(therm_solver_.temperature());
-  states_.push_back(solid_solver_.velocity());
-  states_.push_back(solid_solver_.displacement());
+  states_.push_back(&therm_solver_.temperature());
+  states_.push_back(&solid_solver_.velocity());
+  states_.push_back(&solid_solver_.displacement());
 
   coupling_ = serac::CouplingScheme::OperatorSplit;
 }
