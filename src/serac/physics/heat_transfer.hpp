@@ -177,8 +177,8 @@ public:
     zero_.SetSize(true_size);
     zero_ = 0.0;
 
-    shape_displacement_ = 0.0;
-    temperature_ = 0.0;
+    shape_displacement_  = 0.0;
+    temperature_         = 0.0;
     adjoint_temperature_ = 0.0;
   }
 
