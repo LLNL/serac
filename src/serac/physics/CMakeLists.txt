@@ -4,6 +4,7 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
+add_subdirectory(core)
 add_subdirectory(integrators)
 add_subdirectory(materials)
 add_subdirectory(state)
@@ -27,7 +28,6 @@ set(physics_sources
 
 set(physics_headers
     base_physics.hpp
-    common.hpp
     solid_legacy.hpp
     solid_mechanics.hpp
     thermal_conduction_legacy.hpp
@@ -38,6 +38,7 @@ set(physics_headers
 
 set(physics_dependencies
     serac_coefficients
+    serac_physics_core
     serac_physics_integrators
     serac_state
     serac_boundary_conditions

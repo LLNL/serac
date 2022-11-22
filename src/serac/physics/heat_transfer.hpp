@@ -14,7 +14,7 @@
 
 #include "mfem.hpp"
 
-#include "serac/physics/common.hpp"
+#include "serac/physics/core/common.hpp"
 #include "serac/physics/base_physics.hpp"
 #include "serac/numerics/odes.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"
