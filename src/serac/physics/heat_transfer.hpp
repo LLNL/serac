@@ -178,6 +178,8 @@ public:
     zero_ = 0.0;
 
     shape_displacement_ = 0.0;
+    temperature_ = 0.0;
+    adjoint_temperature_ = 0.0;
   }
 
   /**
@@ -592,7 +594,7 @@ public:
    *
    * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
    */
-  FiniteElementDual& computeShapeSensitivity()
+  FiniteElementDual& computeShapeSensitivity() override
   {
     auto drdshape = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<SHAPE>{}, temperature_, zero_,
                                                         shape_displacement_, *parameters_[parameter_indices].state...));

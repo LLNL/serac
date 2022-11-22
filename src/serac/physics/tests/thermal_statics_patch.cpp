@@ -79,7 +79,7 @@ public:
     // natural BCs
     auto temp_grad = make_tensor<dim>([&](int i) { return A(i); });
     tensor<double, dim> dummy_x;
-    auto [heat_capacity, flux] = material(dummy_x, 1.0, temp_grad);
+    auto flux = serac::get<1>(material(dummy_x, 1.0, temp_grad));
 
     auto surface_flux = [flux](auto, auto n0, auto, auto) { return dot(flux, n0); };
     physics.setFluxBCs(surface_flux);
