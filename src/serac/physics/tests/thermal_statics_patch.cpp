@@ -158,8 +158,6 @@ double solution_error(const ExactSolution& exact_temperature, PatchBoundaryCondi
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
-  serac::StateManager::reset();
-
   // Create DataStore
   axom::sidre::DataStore datastore;
   serac::StateManager::initialize(datastore, "thermal_static_solve");
