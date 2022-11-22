@@ -98,13 +98,13 @@ void shape_test(GeometricNonlinearities geo_nonlin)
     user_defined_shape_displacement.project(shape_coef);
 
     // Construct a functional-based solid mechanics solver including references to the shape velocity field.
-    SolidMechanics<p, dim> solid_solver(options, geo_nonlin, "solid_functional", ShapeDisplacement::On);
+    SolidMechanics<p, dim> solid_solver(options, geo_nonlin, "solid_functional");
 
     // Set the initial displacement and boundary condition
     solid_solver.setDisplacementBCs(ess_bdr, bc);
     solid_solver.setDisplacement(bc);
 
-    solid_solver.shapeDisplacement() = user_defined_shape_displacement;
+    solid_solver.setParameter(SHAPE, user_defined_shape_displacement);
 
     solid_solver.setMaterial(mat);
 

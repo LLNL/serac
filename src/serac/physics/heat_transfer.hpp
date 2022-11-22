@@ -123,7 +123,7 @@ public:
     states_.push_back(&temperature_);
     states_.push_back(&adjoint_temperature_);
 
-    parameter_info_.resize(sizeof...(parameter_space));
+    parameters_.resize(sizeof...(parameter_space));
 
     // Create a pack of the primal field and parameter finite element spaces
     std::array<const mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + 1> trial_spaces;
@@ -132,9 +132,9 @@ public:
     if constexpr (sizeof...(parameter_space) > 0) {
       tuple<parameter_space...> types{};
       for_constexpr<sizeof...(parameter_space)>([&](auto i) {
-        parameter_info_[i].trial_space = std::unique_ptr<mfem::ParFiniteElementSpace>(
+        parameters_[i].trial_space = std::unique_ptr<mfem::ParFiniteElementSpace>(
             generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_));
-        trial_spaces[i + 1] = parameter_info_[i].trial_space.get();
+        trial_spaces[i + 1] = parameters_[i].trial_space.get();
       });
     }
 
@@ -395,12 +395,12 @@ public:
           temperature_.space().TrueVSize(),
 
           [this](const mfem::Vector& u, mfem::Vector& r) {
-            r = (*K_functional_)(u, *parameter_info_[parameter_indices].state...);
+            r = (*K_functional_)(u, *parameters_[parameter_indices].state...);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
           [this](const mfem::Vector& u) -> mfem::Operator& {
-            auto [r, drdu] = (*K_functional_)(differentiate_wrt(u), *parameter_info_[parameter_indices].state...);
+            auto [r, drdu] = (*K_functional_)(differentiate_wrt(u), *parameters_[parameter_indices].state...);
             J_             = assemble(drdu);
             bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             return *J_;
@@ -411,13 +411,13 @@ public:
       residual_ = mfem_ext::StdFunctionOperator(
           temperature_.space().TrueVSize(),
           [this](const mfem::Vector& du_dt, mfem::Vector& r) {
-            auto M_residual = (*M_functional_)(du_dt, *parameter_info_[parameter_indices].state...);
+            auto M_residual = (*M_functional_)(du_dt, *parameters_[parameter_indices].state...);
 
             // TODO we should use the new variadic capability to directly pass temperature and d_temp_dt directly to
             // these kernels to avoid ugly hacks like this.
             mfem::Vector K_arg(u_.Size());
             add(1.0, u_, dt_, du_dt, u_predicted_);
-            auto K_residual = (*K_functional_)(u_predicted_, *parameter_info_[parameter_indices].state...);
+            auto K_residual = (*K_functional_)(u_predicted_, *parameters_[parameter_indices].state...);
 
             add(M_residual, K_residual, r);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
@@ -427,14 +427,14 @@ public:
             // Only reassemble the stiffness if it is a new timestep
 
             auto M =
-                serac::get<1>((*M_functional_)(differentiate_wrt(du_dt), *parameter_info_[parameter_indices].state...));
+                serac::get<1>((*M_functional_)(differentiate_wrt(du_dt), *parameters_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
             mfem::Vector K_arg(u_.Size());
             add(1.0, u_, dt_, du_dt, u_predicted_);
 
             auto K = serac::get<1>(
-                (*K_functional_)(differentiate_wrt(u_predicted_), *parameter_info_[parameter_indices].state...));
+                (*K_functional_)(differentiate_wrt(u_predicted_), *parameters_[parameter_indices].state...));
 
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
@@ -470,7 +470,7 @@ public:
     mfem::HypreParVector adjoint_essential(adjoint_load);
     adjoint_essential = 0.0;
 
-    auto [r, drdu] = (*K_functional_)(differentiate_wrt(temperature_), *parameter_info_[parameter_indices].state...);
+    auto [r, drdu] = (*K_functional_)(differentiate_wrt(temperature_), *parameters_[parameter_indices].state...);
     auto jacobian  = assemble(drdu);
     auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -501,20 +501,18 @@ public:
    *
    * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
    */
-  template <int parameter_field>
-  FiniteElementDual& computeSensitivity(ParameterIndex<parameter_field>)
+  FiniteElementDual& computeSensitivity(size_t parameter_field) override
   {
     SLIC_ASSERT_MSG(parameter_field >= 0 && parameter_field < sizeof...(parameter_indices),
                     axom::fmt::format("Invalid parameter index {} reqested for sensitivity."));
 
-    auto [r, drdparam] = (*K_functional_)(DifferentiateWRT<parameter_field + 1>{}, temperature_,
-                                          *parameter_info_[parameter_indices].state...);
+    auto drdparam = serac::get<1>(d_residual_d_[parameter_field]());
 
     auto drdparam_mat = assemble(drdparam);
 
-    drdparam_mat->MultTranspose(adjoint_temperature_, *parameter_info_[parameter_field].sensitivity);
+    drdparam_mat->MultTranspose(adjoint_temperature_, *parameters_[parameter_field].sensitivity);
 
-    return *parameter_info_[parameter_field].sensitivity;
+    return *parameters_[parameter_field].sensitivity;
   }
 
   /// Destroy the Thermal Solver object
@@ -550,6 +548,16 @@ protected:
    * and its gradient with respect to temperature
    */
   mfem_ext::StdFunctionOperator residual_;
+
+  /// @brief Array functions computing the derivative of the residual with respect to each given parameter
+  /// @note This is needed so the user can ask for a specific sensitivity at runtime as opposed to it being a
+  /// template parameter.
+  std::function<decltype(
+      (*K_functional_)(DifferentiateWRT<0>{}, temperature_, *parameters_[parameter_indices].state...))()>
+      d_residual_d_[sizeof...(parameter_indices)] = {[&]() {
+        return (*K_functional_)(DifferentiateWRT<1 + parameter_indices>{}, temperature_,
+                                *parameters_[parameter_indices].state...);
+      }...};
 
   /**
    * @brief the ordinary differential equation that describes

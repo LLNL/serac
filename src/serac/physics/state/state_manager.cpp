@@ -12,6 +12,8 @@ namespace serac {
 
 // Initialize StateManager's static members - these will be fully initialized in StateManager::initialize
 std::unordered_map<std::string, axom::sidre::MFEMSidreDataCollection> StateManager::datacolls_;
+std::unordered_map<std::string, std::unique_ptr<FiniteElementState>>  StateManager::shape_displacements_;
+std::unordered_map<std::string, std::unique_ptr<FiniteElementDual>>   StateManager::shape_sensitivities_;
 bool                                                                  StateManager::is_restart_        = false;
 axom::sidre::DataStore*                                               StateManager::ds_                = nullptr;
 std::string                                                           StateManager::output_dir_        = "";
@@ -53,6 +55,9 @@ double StateManager::newDataCollection(const std::string& name, const std::optio
     mesh(name).EnsureNodes();
     mesh(name).ExchangeFaceNbrData();
 
+    // Construct and store the shape displacement fields and sensitivities associated with this mesh
+    constructShapeFields(name);
+
   } else {
     datacoll.SetCycle(0);   // Iteration counter
     datacoll.SetTime(0.0);  // Simulation time
@@ -74,6 +79,16 @@ void StateManager::initialize(axom::sidre::DataStore& ds, const std::string& out
         "DataCollection output directory cannot be empty - this will result in problems if executables are run in "
         "parallel");
   }
+}
+
+FiniteElementState& StateManager::shapeDisplacement(const std::string& mesh_tag)
+{
+  return *shape_displacements_[mesh_tag];
+}
+
+FiniteElementDual& StateManager::shapeDisplacementSensitivity(const std::string& mesh_tag)
+{
+  return *shape_sensitivities_[mesh_tag];
 }
 
 void StateManager::storeState(FiniteElementState& state)
@@ -205,7 +220,33 @@ mfem::ParMesh* StateManager::setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const
   auto& new_pmesh = mesh(mesh_tag);
   new_pmesh.EnsureNodes();
   new_pmesh.ExchangeFaceNbrData();
+
+  // We must construct the shape fields here as the mesh did not exist during the newDataCollection call
+  // for the non-restart case
+  constructShapeFields(mesh_tag);
+
   return &new_pmesh;
+}
+
+void StateManager::constructShapeFields(const std::string& mesh_tag)
+{
+  // Construct the shape displacement and sensitivity fields associated with this mesh
+  auto& new_mesh = mesh(mesh_tag);
+
+  shape_displacements_[mesh_tag] = std::make_unique<FiniteElementState>(
+      new_mesh,
+      FiniteElementState::Options{
+          .order = SHAPE_ORDER, .vector_dim = new_mesh.Dimension(), .name = mesh_tag + "_shape_displacement"});
+
+  shape_sensitivities_[mesh_tag] = std::make_unique<FiniteElementDual>(
+      new_mesh, FiniteElementState::Options{
+                    .order = SHAPE_ORDER, .vector_dim = new_mesh.Dimension(), .name = mesh_tag + "_shape_sensitivity"});
+
+  storeState(*shape_displacements_[mesh_tag]);
+  storeDual(*shape_sensitivities_[mesh_tag]);
+
+  *shape_displacements_[mesh_tag] = 0.0;
+  *shape_sensitivities_[mesh_tag] = 0.0;
 }
 
 mfem::ParMesh& StateManager::mesh(const std::string& mesh_tag)

@@ -107,13 +107,11 @@ public:
    * @param options The options for the linear, nonlinear, and ODE solves
    * @param geom_nonlin Flag to include geometric nonlinearities
    * @param name An optional name for the physics module instance
-   * @param calc_shape A flag for computing the shape displacement and associated sensitivity
    * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
 
   SolidMechanics(const SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
-                 const std::string& name = "", ShapeDisplacement calc_shape = ShapeDisplacement::Off,
-                 mfem::ParMesh* pmesh = nullptr)
+                 const std::string& name = "", mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(2, order, name, pmesh),
         velocity_(StateManager::newState(
             FiniteElementState::Options{
@@ -128,19 +126,13 @@ public:
                                                                .vector_dim = mesh_.Dimension(),
                                                                .name = detail::addPrefix(name, "adjoint_displacement")},
                                    sidre_datacoll_id_)),
-        shape_displacement_(StateManager::newState(
-            FiniteElementState::Options{
-                .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "shape_displacement")},
-            sidre_datacoll_id_)),
         reactions_(StateManager::newDual(displacement_.space(), "reactions")),
-        shape_sensitivity_(StateManager::newDual(displacement_.space(), "shape_sensitivity")),
         ode2_(displacement_.space().TrueVSize(),
               {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
               nonlin_solver_, bcs_),
         c0_(0.0),
         c1_(0.0),
-        geom_nonlin_(geom_nonlin),
-        calc_shape_(calc_shape)
+        geom_nonlin_(geom_nonlin)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
@@ -151,12 +143,7 @@ public:
 
     duals_.push_back(&reactions_);
 
-    if (calc_shape_ == ShapeDisplacement::On) {
-      states_.push_back(&shape_displacement_);
-      duals_.push_back(&shape_sensitivity_);
-    }
-
-    parameter_info_.resize(sizeof...(parameter_space));
+    parameters_.resize(sizeof...(parameter_space));
 
     // Create a pack of the primal field and parameter finite element spaces
     mfem::ParFiniteElementSpace* test_space = &displacement_.space();
@@ -164,18 +151,19 @@ public:
     std::array<const mfem::ParFiniteElementSpace*, NUM_STATE_VARS + sizeof...(parameter_space)> trial_spaces;
     trial_spaces[0] = &displacement_.space();
     trial_spaces[1] = &displacement_.space();
-    trial_spaces[2] = &displacement_.space();
+    trial_spaces[2] = &shape_displacement_.space();
 
     if constexpr (sizeof...(parameter_space) > 0) {
       tuple<parameter_space...> types{};
       for_constexpr<sizeof...(parameter_space)>([&](auto i) {
-        parameter_info_[i].trial_space = std::unique_ptr<mfem::ParFiniteElementSpace>(
+        parameters_[i].trial_space = std::unique_ptr<mfem::ParFiniteElementSpace>(
             generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_));
-        trial_spaces[i + NUM_STATE_VARS] = parameter_info_[i].trial_space.get();
+        trial_spaces[i + NUM_STATE_VARS] = parameters_[i].trial_space.get();
       });
     }
 
-    residual_ = std::make_unique<Functional<test(trial, trial, trial, parameter_space...)>>(test_space, trial_spaces);
+    residual_ =
+        std::make_unique<Functional<test(trial, trial, shape_trial, parameter_space...)>>(test_space, trial_spaces);
 
     displacement_         = 0.0;
     velocity_             = 0.0;
@@ -466,23 +454,6 @@ public:
   }
 
   /**
-   * @brief Set the underlying finite element state to a prescribed shape displacement
-   *
-   * This field will perturb the mesh nodes as required by shape optimization workflows.
-   *
-   * @param shape_disp The function describing the shape displacement field
-   */
-  void setShapeDisplacement(std::function<void(const mfem::Vector& x, mfem::Vector& shape_disp)> shape_disp)
-  {
-    // Project the coefficient onto the grid function
-    mfem::VectorFunctionCoefficient shape_disp_coef(dim, shape_disp);
-    shape_displacement_.project(shape_disp_coef);
-  }
-
-  /// @overload
-  void setShapeDisplacement(FiniteElementState& shape_disp) { shape_displacement_ = shape_disp; }
-
-  /**
    * @brief Set the body forcefunction
    *
    * @tparam BodyForceType The type of the body force load
@@ -570,16 +541,16 @@ public:
 
         // residual function
         [this](const mfem::Vector& u, mfem::Vector& r) {
-          r = (*residual_)(u, zero_, shape_displacement_, *parameter_info_[parameter_indices].state...);
+          r = (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
           r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
         },
 
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
-          auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, shape_displacement_,
-                                        *parameter_info_[parameter_indices].state...);
-          J_             = assemble(drdu);
-          J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+          auto [r, drdu] =
+              (*residual_)(differentiate_wrt(u), zero_, shape_displacement_, *parameters_[parameter_indices].state...);
+          J_   = assemble(drdu);
+          J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
           return *J_;
         });
   }
@@ -593,7 +564,7 @@ public:
   {
     if constexpr (sizeof...(parameter_space) > 0) {
       for (size_t i = 0; i < sizeof...(parameter_space); i++) {
-        SLIC_ERROR_ROOT_IF(!parameter_info_[i].state,
+        SLIC_ERROR_ROOT_IF(!parameters_[i].state,
                            "all parameters fields must be initialized before calling completeSetup()");
       }
     }
@@ -619,7 +590,7 @@ public:
           [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) {
             add(1.0, u_, c0_, d2u_dt2, predicted_displacement_);
             r = (*residual_)(predicted_displacement_, d2u_dt2, shape_displacement_,
-                             *parameter_info_[parameter_indices].state...);
+                             *parameters_[parameter_indices].state...);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
@@ -629,13 +600,13 @@ public:
             // K := dR/du
             auto K =
                 serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(predicted_displacement_), d2u_dt2,
-                                                    shape_displacement_, *parameter_info_[parameter_indices].state...));
+                                                    shape_displacement_, *parameters_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             // M := dR/da
             auto M =
                 serac::get<DERIVATIVE>((*residual_)(predicted_displacement_, differentiate_wrt(d2u_dt2),
-                                                    shape_displacement_, *parameter_info_[parameter_indices].state...));
+                                                    shape_displacement_, *parameters_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
             // J = M + c0 * K
@@ -712,7 +683,7 @@ public:
       // reactions_ = residual(displacement, ...);
       // isn't currently supported
       reactions_.Vector::operator=(
-          (*residual_)(displacement_, zero_, shape_displacement_, *parameter_info_[parameter_indices].state...));
+          (*residual_)(displacement_, zero_, shape_displacement_, *parameters_[parameter_indices].state...));
       // TODO (talamini1): Fix above reactions for dynamics. Setting the accelerations to zero
       // works for quasi-statics, but we need to account for the accelerations in
       // dynamics. We need to figure out how to get the updated accelerations out of the
@@ -752,7 +723,7 @@ public:
     // sam: is this the right thing to be doing for dynamics simulations,
     // or are we implicitly assuming this should only be used in quasistatic analyses?
     auto drdu     = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(displacement_), zero_, shape_displacement_,
-                                                    *parameter_info_[parameter_indices].state...));
+                                                    *parameters_[parameter_indices].state...));
     auto jacobian = assemble(drdu);
     auto J_T      = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -780,42 +751,29 @@ public:
    *
    * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
    */
-  template <int parameter_field>
-  FiniteElementDual& computeSensitivity(ParameterIndex<parameter_field>)
+  FiniteElementDual& computeSensitivity(size_t parameter_field) override
   {
+    if (parameter_field == SHAPE) {
+      auto drdshape = serac::get<DERIVATIVE>((*residual_)(
+          DifferentiateWRT<2>{}, displacement_, zero_, shape_displacement_, *parameters_[parameter_indices].state...));
+
+      auto drdshape_mat = assemble(drdshape);
+
+      drdshape_mat->MultTranspose(adjoint_displacement_, shape_displacement_sensitivity_);
+
+      return shape_displacement_sensitivity_;
+    }
+
     SLIC_ASSERT_MSG(parameter_field >= 0 && parameter_field < sizeof...(parameter_indices),
                     axom::fmt::format("Invalid parameter index {} reqested for sensitivity."));
 
-    auto drdparam =
-        serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<parameter_field + NUM_STATE_VARS>{}, displacement_, zero_,
-                                            shape_displacement_, *parameter_info_[parameter_indices].state...));
+    auto drdparam = serac::get<DERIVATIVE>(d_residual_d_[parameter_field]());
 
     auto drdparam_mat = assemble(drdparam);
 
-    drdparam_mat->MultTranspose(adjoint_displacement_, *parameter_info_[parameter_field].sensitivity);
+    drdparam_mat->MultTranspose(adjoint_displacement_, *parameters_[parameter_field].sensitivity);
 
-    return *parameter_info_[parameter_field].sensitivity;
-  }
-
-  /**
-   * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
-   * problem with respect to the shape displacement field
-   *
-   * @return The sensitivity with respect to the shape displacement
-   *
-   * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
-   */
-  FiniteElementDual& computeShapeSensitivity()
-  {
-    auto drdshape =
-        serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<2>{}, displacement_, zero_, shape_displacement_,
-                                            *parameter_info_[parameter_indices].state...));
-
-    auto drdshape_mat = assemble(drdshape);
-
-    drdshape_mat->MultTranspose(adjoint_displacement_, shape_sensitivity_);
-
-    return shape_sensitivity_;
+    return *parameters_[parameter_field].sensitivity;
   }
 
   /**
@@ -839,16 +797,6 @@ public:
   serac::FiniteElementState& adjointDisplacement() { return adjoint_displacement_; };
 
   /**
-   * @brief Get the shape displacement state
-   *
-   * @return A reference to the current shape displacement finite element state
-   */
-  const serac::FiniteElementState& shapeDisplacement() const { return shape_displacement_; };
-
-  /// @overload
-  serac::FiniteElementState& shapeDisplacement() { return shape_displacement_; };
-
-  /**
    * @brief Get the velocity state
    *
    * @return A reference to the current velocity finite element state
@@ -868,6 +816,10 @@ protected:
   /// The compile-time finite element test space for displacement and velocity (H1 of order p)
   using test = H1<order, dim>;
 
+  /// The compile-time finite element trial space for shape displacement (H1 of order 1, nodal displacements)
+  /// The choice of polynomial order for the shape sensitivity is determined in the StateManager
+  using shape_trial = H1<SHAPE_ORDER, dim>;
+
   /// The velocity finite element state
   FiniteElementState velocity_;
 
@@ -877,20 +829,14 @@ protected:
   /// The displacement finite element state
   FiniteElementState adjoint_displacement_;
 
-  /// The shape displacement finite element state
-  FiniteElementState shape_displacement_;
-
   /// nodal forces
   FiniteElementDual reactions_;
 
   /// serac::Functional that is used to calculate the residual and its derivatives
-  std::unique_ptr<Functional<test(trial, trial, trial, parameter_space...)>> residual_;
+  std::unique_ptr<Functional<test(trial, trial, shape_trial, parameter_space...)>> residual_;
 
   /// mfem::Operator that calculates the residual after applying essential boundary conditions
   std::unique_ptr<mfem_ext::StdFunctionOperator> residual_with_bcs_;
-
-  /// Sensitivity with respect to the shape displacement field
-  FiniteElementDual shape_sensitivity_;
 
   /**
    * @brief the ordinary differential equation that describes
@@ -936,14 +882,6 @@ protected:
   /// @brief A flag denoting whether to compute geometric nonlinearities in the residual
   GeometricNonlinearities geom_nonlin_;
 
-  /**
-   * @brief A Flag denoting whether to calculate the shape displacement field or not
-   *
-   * @note This is currently not used as the shape displacement field is always constructed. It is here
-   * to maintain a stable API when this feature is added.
-   */
-  ShapeDisplacement calc_shape_;
-
   /// @brief Coefficient containing the essential boundary values
   std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef_;
 
@@ -952,6 +890,16 @@ protected:
 
   /// @brief An auxilliary zero vector
   mfem::Vector zero_;
+
+  /// @brief Array functions computing the derivative of the residual with respect to each given parameter
+  /// @note This is needed so the user can ask for a specific sensitivity at runtime as opposed to it being a
+  /// template parameter.
+  std::function<decltype((*residual_)(DifferentiateWRT<0>{}, displacement_, zero_, shape_displacement_,
+                                      *parameters_[parameter_indices].state...))()>
+      d_residual_d_[sizeof...(parameter_indices)] = {[&]() {
+        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + parameter_indices>{}, displacement_, zero_,
+                            shape_displacement_, *parameters_[parameter_indices].state...);
+      }...};
 };
 
 }  // namespace serac

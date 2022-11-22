@@ -62,8 +62,8 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
 
   SolidMechanics<p, dim, Parameters<H1<1>, H1<1> > > solid_solver(default_static_options, GeometricNonlinearities::On,
                                                                   "solid_functional");
-  solid_solver.setParameter(user_defined_bulk_modulus, 0);
-  solid_solver.setParameter(user_defined_shear_modulus, 1);
+  solid_solver.setParameter(0, user_defined_bulk_modulus);
+  solid_solver.setParameter(1, user_defined_shear_modulus);
 
   // We must know the index of the parameter finite element state in our parameter pack to take sensitivities.
   // As we only have one parameter in this example, the index is zero.
@@ -117,7 +117,7 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
   solid_solver.solveAdjoint(adjoint_load);
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
-  [[maybe_unused]] auto& sensitivity = solid_solver.computeSensitivity(ParameterIndex<bulk_parameter_index>{});
+  [[maybe_unused]] auto& sensitivity = solid_solver.computeSensitivity(bulk_parameter_index);
 
   // Perform finite difference on each bulk modulus value
   // to check if computed qoi sensitivity is consistent
@@ -194,10 +194,10 @@ TEST(SolidMechanics, FiniteDifferenceShape)
   solid_mechanics::NeoHookean mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
 
-  FiniteElementState shape_displacement(solid_solver.shapeDisplacement());
+  FiniteElementState shape_displacement(solid_solver.getParameter(SHAPE));
 
   shape_displacement = shape_displacement_value;
-  solid_solver.setShapeDisplacement(shape_displacement);
+  solid_solver.setParameter(SHAPE, shape_displacement);
 
   // Define the function for the initial displacement and boundary condition
   auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
@@ -243,7 +243,7 @@ TEST(SolidMechanics, FiniteDifferenceShape)
   solid_solver.solveAdjoint(adjoint_load);
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
-  [[maybe_unused]] auto& sensitivity = solid_solver.computeShapeSensitivity();
+  [[maybe_unused]] auto& sensitivity = solid_solver.computeSensitivity(SHAPE);
 
   // Perform finite difference on each shape velocity value
   // to check if computed qoi sensitivity is consistent
@@ -252,20 +252,20 @@ TEST(SolidMechanics, FiniteDifferenceShape)
   for (int i = 0; i < shape_displacement.Size(); ++i) {
     // Perturb the shape field
     shape_displacement(i) = shape_displacement_value + eps;
-    solid_solver.setShapeDisplacement(shape_displacement);
+    solid_solver.setParameter(SHAPE, shape_displacement);
 
     solid_solver.advanceTimestep(dt);
     mfem::ParGridFunction displacement_plus = solid_solver.displacement().gridFunction();
 
     shape_displacement(i) = shape_displacement_value - eps;
-    solid_solver.setShapeDisplacement(shape_displacement);
+    solid_solver.setParameter(SHAPE, shape_displacement);
 
     solid_solver.advanceTimestep(dt);
     mfem::ParGridFunction displacement_minus = solid_solver.displacement().gridFunction();
 
     // Reset to the original bulk modulus value
     shape_displacement(i) = shape_displacement_value;
-    solid_solver.setShapeDisplacement(shape_displacement);
+    solid_solver.setParameter(SHAPE, shape_displacement);
 
     // Finite difference to compute sensitivity of displacement with respect to bulk modulus
     mfem::ParGridFunction ddisp_dshape(&solid_solver.displacement().space());

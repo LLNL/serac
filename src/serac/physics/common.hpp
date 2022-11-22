@@ -16,15 +16,6 @@
 namespace serac {
 
 /**
- * @brief Object denoting which parameter index to take a sensitivity with respect to
- *
- * @tparam i The parameter index to take the sensitivity of
- */
-template <int i>
-struct ParameterIndex {
-};
-
-/**
  * @brief a struct that is used in the physics modules to clarify which template arguments are
  * user-controlled parameters (e.g. for design optimization)
  */
@@ -71,15 +62,6 @@ enum class GeometricNonlinearities
 {
   On, /**< Include geometric nonlinearities */
   Off /**< Do not include geometric nonlinearities */
-};
-
-/**
- * @brief Flag to enable shape diplacement (and its gradient) in a physics module
- */
-enum class ShapeDisplacement
-{
-  On, /**< Allow shape displacement and its gradient */
-  Off /**< Don't allow shape displacement and its gradient */
 };
 
 }  // namespace serac

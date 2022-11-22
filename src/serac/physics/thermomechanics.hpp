@@ -44,7 +44,7 @@ public:
                   mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(3, order, name, pmesh),
         thermal_(thermal_options, name + "thermal", pmesh),
-        solid_(solid_options, geom_nonlin, name + "mechanical", ShapeDisplacement::Off, pmesh)
+        solid_(solid_options, geom_nonlin, name + "mechanical", pmesh)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
@@ -53,8 +53,8 @@ public:
     states_.push_back(&solid_.velocity());
     states_.push_back(&solid_.displacement());
 
-    thermal_.setParameter(solid_.displacement(), 0);
-    solid_.setParameter(thermal_.temperature(), 0);
+    thermal_.setParameter(0, solid_.displacement());
+    solid_.setParameter(0, thermal_.temperature());
 
     coupling_ = serac::CouplingScheme::OperatorSplit;
   }

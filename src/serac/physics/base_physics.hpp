@@ -22,8 +22,12 @@
 #include "serac/numerics/equation_solver.hpp"
 #include "serac/physics/state/finite_element_state.hpp"
 #include "serac/physics/state/finite_element_dual.hpp"
+#include "serac/physics/common.hpp"
 
 namespace serac {
+
+/// @brief Index denoting the shape parameter for the BasePhysics methods
+constexpr size_t SHAPE = 999;
 
 /**
  * @brief This is the abstract base class for a generic forward solver
@@ -130,7 +134,7 @@ public:
    * @pre The discretization space and mesh for this finite element state must be consistent with the arguments
    * provided in the physics module constructor.
    */
-  void setParameter(FiniteElementState& parameter_state, size_t parameter_index);
+  void setParameter(const size_t parameter_index, FiniteElementState& parameter_state);
 
   /**
    * @brief Get the parameter field of the physics module
@@ -138,25 +142,50 @@ public:
    * @param parameter_index The parameter index to retrieve
    * @return The FiniteElementState representing the user-defined parameter
    */
-  FiniteElementState& getParameter(size_t parameter_index)
+  FiniteElementState& getParameter(const size_t parameter_index)
   {
+    if (parameter_index == SHAPE) {
+      return shape_displacement_;
+    }
+
     SLIC_ERROR_ROOT_IF(
-        parameter_index >= parameter_info_.size(),
+        parameter_index >= parameters_.size(),
         axom::fmt::format("Parameter index {} is not available in physics module {}", parameter_index, name_));
-    SLIC_ERROR_ROOT_IF(!parameter_info_[parameter_index].state,
+
+    SLIC_ERROR_ROOT_IF(!parameters_[parameter_index].state,
                        axom::fmt::format("Parameter index {} is not set in physics module {}", parameter_index, name_));
-    return *parameter_info_[parameter_index].state;
+    return *parameters_[parameter_index].state;
   }
 
   /// @overload
   const FiniteElementState& getParameter(size_t parameter_index) const
   {
+    if (parameter_index == SHAPE) {
+      return shape_displacement_;
+    }
+
     SLIC_ERROR_ROOT_IF(
-        parameter_index >= parameter_info_.size(),
+        parameter_index >= parameters_.size(),
         axom::fmt::format("Parameter index {} is not available in physics module {}", parameter_index, name_));
-    SLIC_ERROR_ROOT_IF(!parameter_info_[parameter_index].state,
+
+    SLIC_ERROR_ROOT_IF(!parameters_[parameter_index].state,
                        axom::fmt::format("Parameter index {} is not set in physics module {}", parameter_index, name_));
-    return *parameter_info_[parameter_index].state;
+    return *parameters_[parameter_index].state;
+  }
+
+  /**
+   * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
+   * problem with respect to the parameter field
+   *
+   * @tparam parameter_field The index of the parameter to take a derivative with respect to
+   * @return The sensitivity with respect to the parameter
+   *
+   * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
+   */
+  virtual FiniteElementDual& computeSensitivity(size_t /* parameter_index */)
+  {
+    SLIC_ERROR_ROOT(axom::fmt::format("Parameter sensitivities not enabled in physics module {}", name_));
+    return *parameters_[0].sensitivity;
   }
 
   /**
@@ -257,11 +286,19 @@ protected:
      * @note this optional as FiniteElementDuals are not default constructable and
      * we want to set this during the setParameter or generateParameter method.
      */
-    std::optional<FiniteElementDual> sensitivity;
+    std::optional<serac::FiniteElementDual> sensitivity;
   };
 
   /// @brief A vector of the parameters associated with this physics module
-  std::vector<ParameterInfo> parameter_info_;
+  std::vector<ParameterInfo> parameters_;
+
+  /// @brief The parameter info associated with the shape displacement field
+  /// @note This is owned by the State Manager since it is associated with the mesh
+  FiniteElementState& shape_displacement_;
+
+  /// @brief Sensitivity with respect to the shape displacement field
+  /// @note This is owned by the State Manager since it is associated with the mesh
+  FiniteElementDual& shape_displacement_sensitivity_;
 
   /**
    *@brief Whether the simulation is time-independent

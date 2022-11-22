@@ -294,8 +294,8 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   // Construct a functional-based solid mechanics solver
   SolidMechanics<p, dim, Parameters<H1<1>, H1<1>>> solid_solver(default_static_options, GeometricNonlinearities::On,
                                                                 "solid_functional");
-  solid_solver.setParameter(user_defined_bulk_modulus, 0);
-  solid_solver.setParameter(user_defined_shear_modulus, 1);
+  solid_solver.setParameter(0, user_defined_bulk_modulus);
+  solid_solver.setParameter(1, user_defined_shear_modulus);
 
   solid_mechanics::ParameterizedNeoHookeanSolid<dim> mat{1.0, 0.0, 0.0};
   solid_solver.setMaterial(DependsOn<0, 1>{}, mat);
@@ -337,8 +337,8 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   // are not used, but running them as part of this test
   // checks the index-translation part of the derivative
   // kernels is working
-  solid_solver.computeSensitivity(ParameterIndex<0>{});
-  solid_solver.computeSensitivity(ParameterIndex<1>{});
+  solid_solver.computeSensitivity(0);
+  solid_solver.computeSensitivity(1);
 
   // Output the sidre-based plot files
   solid_solver.outputState();
