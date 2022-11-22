@@ -41,9 +41,14 @@ main_mesh = {
 thermal_conduction = {
     equation_solver = {
         linear = {
-            type = "direct",
-            direct_options = {
+            type = "iterative",
+            iterative_options = {
+                rel_tol     = 1.0e-6,
+                abs_tol     = 1.0e-12,
+                max_iter    = 200,
                 print_level = 0,
+                solver_type = "cg",
+                prec_type   = "JacobiSmoother",
             },
         },
 
