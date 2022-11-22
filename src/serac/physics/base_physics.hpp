@@ -26,9 +26,6 @@
 
 namespace serac {
 
-/// @brief Index denoting the shape parameter for the BasePhysics methods
-constexpr size_t SHAPE = 999;
-
 /**
  * @brief This is the abstract base class for a generic forward solver
  */
@@ -137,6 +134,16 @@ public:
   void setParameter(const size_t parameter_index, FiniteElementState& parameter_state);
 
   /**
+   * @brief Set the shape displacement field to a known finite element state
+   *
+   * @param shape_displacement the values to use for the shape displacement
+   *
+   * @pre The discretization space and mesh for this finite element state must be consistent with the shape
+   * displacement of the associated mesh
+   */
+  void setShapeDisplacement(FiniteElementState& shape_displacement);
+
+  /**
    * @brief Get the parameter field of the physics module
    *
    * @param parameter_index The parameter index to retrieve
@@ -144,10 +151,6 @@ public:
    */
   FiniteElementState& getParameter(const size_t parameter_index)
   {
-    if (parameter_index == SHAPE) {
-      return shape_displacement_;
-    }
-
     SLIC_ERROR_ROOT_IF(
         parameter_index >= parameters_.size(),
         axom::fmt::format("Parameter index {} is not available in physics module {}", parameter_index, name_));
@@ -160,10 +163,6 @@ public:
   /// @overload
   const FiniteElementState& getParameter(size_t parameter_index) const
   {
-    if (parameter_index == SHAPE) {
-      return shape_displacement_;
-    }
-
     SLIC_ERROR_ROOT_IF(
         parameter_index >= parameters_.size(),
         axom::fmt::format("Parameter index {} is not available in physics module {}", parameter_index, name_));
@@ -174,10 +173,19 @@ public:
   }
 
   /**
+   * @brief Get the shape displacement of the associated mesh for this physics object
+   *
+   * @return The associated shape displacement
+   */
+  FiniteElementState& getShapeDisplacement() { return shape_displacement_; }
+
+  /// @overload
+  const FiniteElementState& getShapeDisplacement() const { return shape_displacement_; }
+
+  /**
    * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
    * problem with respect to the parameter field
    *
-   * @tparam parameter_field The index of the parameter to take a derivative with respect to
    * @return The sensitivity with respect to the parameter
    *
    * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
@@ -186,6 +194,20 @@ public:
   {
     SLIC_ERROR_ROOT(axom::fmt::format("Parameter sensitivities not enabled in physics module {}", name_));
     return *parameters_[0].sensitivity;
+  }
+
+  /**
+   * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
+   * problem with respect to the shape displacement field
+   *
+   * @return The sensitivity with respect to the shape displacement
+   *
+   * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
+   */
+  virtual FiniteElementDual& computeShapeSensitivity()
+  {
+    SLIC_ERROR_ROOT(axom::fmt::format("Shape sensitivities not enabled in physics module {}", name_));
+    return shape_displacement_sensitivity_;
   }
 
   /**

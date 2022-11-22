@@ -52,9 +52,6 @@ int BasePhysics::cycle() const { return cycle_; }
 std::unique_ptr<FiniteElementState> BasePhysics::generateParameter(const std::string& parameter_name,
                                                                    size_t             parameter_index)
 {
-  SLIC_ERROR_ROOT_IF(parameter_index == SHAPE,
-                     "Shape displacement cannot be generated. It is owned by the physics module");
-
   SLIC_ERROR_ROOT_IF(
       parameter_index >= parameters_.size(),
       axom::fmt::format("Parameter index {} is not available in physics module {}", parameter_index, name_));
@@ -76,31 +73,35 @@ void BasePhysics::setParameter(size_t parameter_index, FiniteElementState& param
   SLIC_ERROR_ROOT_IF(&parameter_state.mesh() != &mesh_,
                      axom::fmt::format("Mesh of parameter state is not the same as the physics mesh"));
 
-  if (parameter_index == SHAPE) {
-    SLIC_ERROR_ROOT_IF(
-        parameter_state.space().GetTrueVSize() != shape_displacement_.space().GetTrueVSize(),
-        axom::fmt::format(
-            "Physics module shape displacement has size {} while given state has size {}. The finite element "
-            "spaces are inconsistent.",
-            shape_displacement_.space().GetTrueVSize(), parameter_state.space().GetTrueVSize()));
-    shape_displacement_ = parameter_state;
-  } else {
-    SLIC_ERROR_ROOT_IF(
-        parameter_index >= parameters_.size(),
-        axom::fmt::format("Parameter index {} is not available in physics module {}", parameter_index, name_));
-    SLIC_ERROR_ROOT_IF(parameters_[parameter_index].state,
-                       axom::fmt::format("Parameter state index {} has been previously defined in physics module {}",
-                                         parameter_index, name_));
-    SLIC_ERROR_ROOT_IF(
-        parameter_state.space().GetTrueVSize() != parameters_[parameter_index].trial_space->GetTrueVSize(),
-        axom::fmt::format("Physics module parameter {} has size {} while given state has size {}. The finite element "
-                          "spaces are inconsistent.",
-                          parameter_index, parameters_[parameter_index].trial_space->GetTrueVSize(),
-                          parameter_state.space().GetTrueVSize()));
-    parameters_[parameter_index].state = &parameter_state;
-    parameters_[parameter_index].sensitivity =
-        StateManager::newDual(parameter_state.space(), parameter_state.name() + "_sensitivity");
-  }
+  SLIC_ERROR_ROOT_IF(
+      parameter_index >= parameters_.size(),
+      axom::fmt::format("Parameter index {} is not available in physics module {}", parameter_index, name_));
+  SLIC_ERROR_ROOT_IF(parameters_[parameter_index].state,
+                     axom::fmt::format("Parameter state index {} has been previously defined in physics module {}",
+                                       parameter_index, name_));
+  SLIC_ERROR_ROOT_IF(
+      parameter_state.space().GetTrueVSize() != parameters_[parameter_index].trial_space->GetTrueVSize(),
+      axom::fmt::format("Physics module parameter {} has size {} while given state has size {}. The finite element "
+                        "spaces are inconsistent.",
+                        parameter_index, parameters_[parameter_index].trial_space->GetTrueVSize(),
+                        parameter_state.space().GetTrueVSize()));
+  parameters_[parameter_index].state = &parameter_state;
+  parameters_[parameter_index].sensitivity =
+      StateManager::newDual(parameter_state.space(), parameter_state.name() + "_sensitivity");
+}
+
+void BasePhysics::setShapeDisplacement(FiniteElementState& shape_displacement)
+{
+  SLIC_ERROR_ROOT_IF(&shape_displacement_.mesh() != &mesh_,
+                     axom::fmt::format("Mesh of shape displacement is not the same as the physics mesh"));
+
+  SLIC_ERROR_ROOT_IF(
+      shape_displacement.space().GetTrueVSize() != shape_displacement_.space().GetTrueVSize(),
+      axom::fmt::format(
+          "Physics module shape displacement has size {} while given state has size {}. The finite element "
+          "spaces are inconsistent.",
+          shape_displacement_.space().GetTrueVSize(), shape_displacement.space().GetTrueVSize()));
+  shape_displacement_ = shape_displacement;
 }
 
 void BasePhysics::outputState(std::optional<std::string> paraview_output_dir) const

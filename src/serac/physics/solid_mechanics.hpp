@@ -746,24 +746,13 @@ public:
    * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
    * problem with respect to the parameter field
    *
-   * @tparam parameter_field The index of the parameter to take a derivative with respect to
+   * @param parameter_field The index of the parameter to take a derivative with respect to
    * @return The sensitivity with respect to the parameter
    *
    * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
    */
   FiniteElementDual& computeSensitivity(size_t parameter_field) override
   {
-    if (parameter_field == SHAPE) {
-      auto drdshape = serac::get<DERIVATIVE>((*residual_)(
-          DifferentiateWRT<2>{}, displacement_, zero_, shape_displacement_, *parameters_[parameter_indices].state...));
-
-      auto drdshape_mat = assemble(drdshape);
-
-      drdshape_mat->MultTranspose(adjoint_displacement_, shape_displacement_sensitivity_);
-
-      return shape_displacement_sensitivity_;
-    }
-
     SLIC_ASSERT_MSG(parameter_field < sizeof...(parameter_indices),
                     axom::fmt::format("Invalid parameter index {} reqested for sensitivity."));
 
@@ -774,6 +763,24 @@ public:
     drdparam_mat->MultTranspose(adjoint_displacement_, *parameters_[parameter_field].sensitivity);
 
     return *parameters_[parameter_field].sensitivity;
+  }
+
+  /**
+   * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
+   * problem with respect to the shape displacement field
+   *
+   * @return The sensitivity with respect to the shape displacement
+   */
+  FiniteElementDual& computeShapeSensitivity() override
+  {
+    auto drdshape = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<2>{}, displacement_, zero_,
+                                                        shape_displacement_, *parameters_[parameter_indices].state...));
+
+    auto drdshape_mat = assemble(drdshape);
+
+    drdshape_mat->MultTranspose(adjoint_displacement_, shape_displacement_sensitivity_);
+
+    return shape_displacement_sensitivity_;
   }
 
   /**
