@@ -194,7 +194,7 @@ TEST(SolidMechanics, FiniteDifferenceShape)
   solid_mechanics::NeoHookean mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
 
-  FiniteElementState shape_displacement(solid_solver.getShapeDisplacement());
+  FiniteElementState shape_displacement(solid_solver.shapeDisplacement());
 
   shape_displacement = shape_displacement_value;
   solid_solver.setShapeDisplacement(shape_displacement);

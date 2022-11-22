@@ -149,7 +149,7 @@ public:
    * @param parameter_index The parameter index to retrieve
    * @return The FiniteElementState representing the user-defined parameter
    */
-  FiniteElementState& getParameter(const size_t parameter_index)
+  FiniteElementState& parameter(const size_t parameter_index)
   {
     SLIC_ERROR_ROOT_IF(
         parameter_index >= parameters_.size(),
@@ -161,7 +161,7 @@ public:
   }
 
   /// @overload
-  const FiniteElementState& getParameter(size_t parameter_index) const
+  const FiniteElementState& parameter(size_t parameter_index) const
   {
     SLIC_ERROR_ROOT_IF(
         parameter_index >= parameters_.size(),
@@ -177,10 +177,10 @@ public:
    *
    * @return The associated shape displacement
    */
-  FiniteElementState& getShapeDisplacement() { return shape_displacement_; }
+  FiniteElementState& shapeDisplacement() { return shape_displacement_; }
 
   /// @overload
-  const FiniteElementState& getShapeDisplacement() const { return shape_displacement_; }
+  const FiniteElementState& shapeDisplacement() const { return shape_displacement_; }
 
   /**
    * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
