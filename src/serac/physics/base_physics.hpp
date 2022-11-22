@@ -99,14 +99,14 @@ public:
    * @param state_name The name of the Finite Element State to retrieve
    * @return The named Finite Element State
    */
-  virtual const FiniteElementState& getState(const std::string& state_name) = 0;
+  virtual const FiniteElementState& state(const std::string& state_name) = 0;
 
   /**
    * @brief Get a vector of the finite element state solution variable names
    *
    * @return The solution variable names
    */
-  virtual std::vector<std::string> getStateNames() = 0;
+  virtual std::vector<std::string> stateNames() = 0;
 
   /**
    * @brief Generate a finite element state object for the given parameter index

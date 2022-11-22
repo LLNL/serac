@@ -435,7 +435,7 @@ public:
    * @param state_name The name of the Finite Element State to retrieve
    * @return The named Finite Element State
    */
-  const FiniteElementState& getState(const std::string& state_name) override
+  const FiniteElementState& state(const std::string& state_name) override
   {
     if (state_name == "temperature") {
       return temperature_;
@@ -453,7 +453,7 @@ public:
    *
    * @return The solution variable names
    */
-  virtual std::vector<std::string> getStateNames() override
+  virtual std::vector<std::string> stateNames() override
   {
     return std::vector<std::string>{{"temperature"}, {"adjoint_temperature"}};
   }
