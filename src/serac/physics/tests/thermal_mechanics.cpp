@@ -248,7 +248,7 @@ void parameterized()
   const SolverOptions solid_options = {default_linear_options, default_nonlinear_options};
 
   Thermomechanics<p, dim, H1<p> > thermal_solid_solver(thermal_options, solid_options, GeometricNonlinearities::On,
-                                                       FinalMeshOption::Deformed, "thermal_solid_functional");
+                                                       "thermal_solid_functional");
 
   double                                                    rho       = 1.0;
   double                                                    E         = 1.0;
