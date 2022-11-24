@@ -230,57 +230,37 @@ public:
     }
 
     if (input_options.initial_displacement) {
-      //TODO: change this to create a std::function not a mfem::vectorcoefficient
-      // auto deform = input_options.initial_displacement->constructVector(DIM);
-      // setDisplacement(*deform);
+      displacement_.project(input_options.initial_displacement->constructVector(DIM));
     }
 
     if (input_options.initial_velocity) {
-      //TODO: ???
-      // auto velo = input_options.initial_velocity->constructVector(DIM);
-      // setVelocity(*velo);
+      velocity_.project(input_options.initial_velocity->constructVector(DIM));
     }
-    //TODO: ???
-    //setViscosity(std::make_unique<mfem::ConstantCoefficient>(input_options.viscosity));
 
     for (const auto& [bc_name, bc] : input_options.boundary_conditions) {
       // FIXME: Better naming for boundary conditions?
       if (bc_name.find("displacement") != std::string::npos) {
-        //TODO: ???
-        // if (bc.coef_opts.isVector()) {
-        //   std::shared_ptr<mfem::VectorCoefficient> disp_coef(bc.coef_opts.constructVector(DIM));
-        //   setDisplacementBCs(bc.attrs, disp_coef);
-        // } else {
-        //   SLIC_ERROR_ROOT_IF(!bc.coef_opts.component,
-        //                      "Component not specified with scalar coefficient when setting the displacement condition.");
-        //   std::shared_ptr<mfem::Coefficient> disp_coef(bc.coef_opts.constructScalar());
-        //   setDisplacementBCs(bc.attrs, disp_coef, *bc.coef_opts.component);
-        // }
+        if (bc.coef_opts.isVector()) {
+          std::shared_ptr<mfem::VectorCoefficient> disp_coef(bc.coef_opts.constructVector(DIM));
+          bcs_.addEssential(bc.attrs, disp_coef, displacement_.space());
+        } else {
+          SLIC_ERROR_ROOT_IF(!bc.coef_opts.component,
+                             "Component not specified with scalar coefficient when setting the displacement condition.");
+          std::shared_ptr<mfem::Coefficient> disp_coef(bc.coef_opts.constructScalar());
+          bcs_.addEssential(bc.attrs, disp_coef, displacement_.space(), *bc.coef_opts.component);
+        }
       } else if (bc_name.find("traction") != std::string::npos) {
-        //NOTE: jamie says we don't have a traction_noref so we should only have traction_ref
-        //TODO: use void setPiolaTraction(TractionType traction_function)
-        // std::shared_ptr<mfem::VectorCoefficient> trac_coef(bc.coef_opts.constructVector(DIM));
-        // if (geom_nonlin_ == GeometricNonlinearities::Off) {
-        //   setTractionBCs(bc.attrs, trac_coef, true);
-        // } else {
-        //   setTractionBCs(bc.attrs, trac_coef, false);
-        // }
+        //TODO: Not implemented yet in input files
+        SLIC_ERROR("'traction' is not implemented yet in input files.");
       } else if (bc_name.find("traction_ref") != std::string::npos) {
-        //TODO: ???
-        // std::shared_ptr<mfem::VectorCoefficient> trac_coef(bc.coef_opts.constructVector(DIM));
-        // setTractionBCs(bc.attrs, trac_coef, true);
+        //TODO: Not implemented yet in input files
+        SLIC_ERROR("'traction_ref' is not implemented yet in input files.");
       } else if (bc_name.find("pressure") != std::string::npos) {
-        //TODO: pressure is a special case of traction
-        // std::shared_ptr<mfem::Coefficient> pres_coef(bc.coef_opts.constructScalar());
-        // if (geom_nonlin_ == GeometricNonlinearities::Off) {
-        //   setPressureBCs(bc.attrs, pres_coef, true);
-        // } else {
-        //   setPressureBCs(bc.attrs, pres_coef, false);
-        // }
+        //TODO: Not implemented yet in input files
+        SLIC_ERROR("'pressure' is not implemented yet in input files.");
       } else if (bc_name.find("pressure_ref") != std::string::npos) {
-        //TODO: ???
-        // std::shared_ptr<mfem::Coefficient> pres_coef(bc.coef_opts.constructScalar());
-        // setPressureBCs(bc.attrs, pres_coef, true);
+        //TODO: Not implemented yet in input files
+        SLIC_ERROR("'pressure_ref' is not implemented yet in input files.");
       } else {
         SLIC_WARNING_ROOT("Ignoring boundary condition with unknown name: " << name);
       }
