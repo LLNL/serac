@@ -32,6 +32,8 @@ set(solver_tests
     lce_Brighenti_tensile.cpp
     lce_Brighenti_compression.cpp
     lce_Brighenti.cpp
+    lce_Bertoldi_rectLattice.cpp
+    lce_Bertoldi.cpp
     parameterized_thermomechanics_example.cpp
     solid_legacy.cpp
     solid_legacy_reuse_mesh.cpp
@@ -50,7 +52,7 @@ serac_add_tests( SOURCES ${solver_tests}
 
 set(solver_utility_tests
     physics_dtor.cpp
-    newmark.cpp)
+    newmark_test.cpp)
 
 serac_add_tests( SOURCES ${solver_utility_tests}
                  DEPENDS_ON ${test_dependencies}

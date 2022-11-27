@@ -26,13 +26,13 @@ TEST(TestLiquidCrystalBertoldiMat, ConsistentStressDerivedFromStrainEnergy)
   double young_modulus = 1.0;
   double possion_ratio = 0.49;
   double beta_param = 1.0;
-  double initial_order_param = 0.5;
+  double max_order_param = 0.5;
 
   tuple <double, int> order_param_tuple, gamma_param_tuple;
   order_param_tuple = make_tuple(0.1, 123);
   gamma_param_tuple = make_tuple(0.9, 456);
 
-  LiqCrystElast_Bertoldi LCEMat_Bertoldi(density, young_modulus, possion_ratio, initial_order_param, beta_param);
+  LiqCrystElast_Bertoldi LCEMat_Bertoldi(density, young_modulus, possion_ratio, max_order_param, beta_param);
 
   // test conditions
   tensor<double, 3, 3> H{{{0.423,  0.11, -0.123},
@@ -87,19 +87,19 @@ TEST(TestLiquidCrystalBertoldiMat, ConsistentStressDerivedFromStrainEnergy)
 
 // --------------------------------------------------------
 
-TEST(TestLiquidCrystalBertoldiMat, AgreesWithNeoHookeanInOrderParameterLimit)
+TEST(TestLiquidCrystalBertoldiMat, AgreesWithIsotropicInOrderParameterLimitAndSmallStrain)
 {
   double density = 1.0;
   double young_modulus = 1.0;
   double possion_ratio = 0.49;
   double beta_param = 1.0;
-  double initial_order_param = 0.5;
+  double max_order_param = 0.5;
 
   tuple <double, int> order_param_tuple, gamma_param_tuple;
-  order_param_tuple = make_tuple(initial_order_param, 123); // same as initial to remove its contribution
+  order_param_tuple = make_tuple(max_order_param, 123); // same as initial to remove its contribution
   gamma_param_tuple = make_tuple(0.6, 456);
 
-  LiqCrystElast_Bertoldi LCEMat_Bertoldi(density, young_modulus, possion_ratio, initial_order_param, beta_param);
+  LiqCrystElast_Bertoldi LCEMat_Bertoldi(density, young_modulus, possion_ratio, max_order_param, beta_param);
 
   // test conditions
   tensor<double, 3, 3> H{{{0.000123,  0.00011, -0.000123},
@@ -133,13 +133,13 @@ TEST(TestLiquidCrystalBertoldiMat, IdentityDefGradientNoEnergyNorStress)
   double young_modulus = 1.0;
   double possion_ratio = 0.49;
   double beta_param = 1.0;
-  double initial_order_param = 0.5;
+  double max_order_param = 0.5;
 
   tuple <double, int> order_param_tuple, gamma_param_tuple;
-  order_param_tuple = make_tuple(initial_order_param, 123); // same as initial to remove its contribution
+  order_param_tuple = make_tuple(max_order_param, 123); // same as initial to remove its contribution
   gamma_param_tuple = make_tuple(0.6, 456);
 
-  LiqCrystElast_Bertoldi LCEMat_Bertoldi(density, young_modulus, possion_ratio, initial_order_param, beta_param);
+  LiqCrystElast_Bertoldi LCEMat_Bertoldi(density, young_modulus, possion_ratio, max_order_param, beta_param);
 
   // test conditions
   tensor<double, 3, 3> H{{{0.0,  0.0, 0.0},
@@ -166,9 +166,9 @@ TEST(TestLiquidCrystalBertoldiMat, orderParameterSweep)
   double young_modulus = 1.0;
   double possion_ratio = 0.49;
   double beta_param = 1.0;
-  double initial_order_param = 0.5;                                                                                                                                                                                          
+  double max_order_param = 0.5;                                                                                                                                                                                          
 
-  LiqCrystElast_Bertoldi LCEMat_Bertoldi(density, young_modulus, possion_ratio, initial_order_param, beta_param);
+  LiqCrystElast_Bertoldi LCEMat_Bertoldi(density, young_modulus, possion_ratio, max_order_param, beta_param);
 
   // liquid crystal elastomer model response
   LiqCrystElast_Bertoldi::State state{};
@@ -185,7 +185,7 @@ TEST(TestLiquidCrystalBertoldiMat, orderParameterSweep)
   double strain_rate = 1e-2;
   std::function<double(double)> epsilon_xx = [strain_rate](double time){ return strain_rate + 0.0*strain_rate*time; }; // Kept constant here
 
-  auto sigma_yy_and_zz = [&epsilon_xx, &initial_order_param, &max_time, &t, LCEMat_Bertoldi, state](auto x) 
+  auto sigma_yy_and_zz = [&epsilon_xx, &max_order_param, &max_time, &t, LCEMat_Bertoldi, state](auto x) 
   {
     auto epsilon_yy = x[0];
     auto epsilon_zz = x[1];
@@ -198,7 +198,7 @@ TEST(TestLiquidCrystalBertoldiMat, orderParameterSweep)
 
     auto copy   = state;
     tuple <double, int> copy_order_param_tuple, copy_gamma_param_tuple;
-    copy_order_param_tuple = make_tuple(initial_order_param* t / max_time, 123);
+    copy_order_param_tuple = make_tuple(max_order_param* t / max_time, 123);
     copy_gamma_param_tuple = make_tuple(0.6, 456);
     auto stress = LCEMat_Bertoldi(copy, du_dx, copy_order_param_tuple, copy_gamma_param_tuple);
 
@@ -221,7 +221,7 @@ TEST(TestLiquidCrystalBertoldiMat, orderParameterSweep)
     dudx[2][2]             = epsilon_yy_and_zz[1];
 
     tuple <double, int> order_param_tuple, gamma_param_tuple;
-    order_param_tuple = make_tuple(initial_order_param* t / max_time, 123);
+    order_param_tuple = make_tuple(max_order_param* t / max_time, 123);
     gamma_param_tuple = make_tuple(0.6, 456);
     auto stress = LCEMat_Bertoldi(state, dudx, order_param_tuple, gamma_param_tuple);
 

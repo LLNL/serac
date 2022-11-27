@@ -69,9 +69,6 @@ int main(int argc, char* argv[])
   gamma.project(coef);
 
   // Construct a functional-based solid mechanics solver
-  // SolidMechanics<p, dim, Parameters<H1<p>, L2<p> > > solid_solver(default_static_options, GeometricNonlinearities::Off,
-  //                                                                 FinalMeshOption::Reference, "solid_functional",
-  //                                                                 {temperature, gamma});
   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>>> solid_solver(default_static_options, GeometricNonlinearities::Off,
                                                                   "lce_solid_functional");
 
@@ -82,7 +79,7 @@ int main(int argc, char* argv[])
   solid_solver.setParameter(gamma, GAMMA_INDEX);
 
   double density                = 1.0;
-  double E                      = 1.0;
+  double E                      = 1.0; 
   double nu                     = 0.48;
   double shear_modulus          = 0.5 * E / (1.0 + nu);
   double bulk_modulus           = E / 3.0 / (1.0 - 2.0 * nu);
