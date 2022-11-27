@@ -71,17 +71,18 @@ struct LiqCrystElast_Brighenti {
    *
    * @tparam DisplacementType number-like type for the displacement vector
    * @tparam DispGradType number-like type for the displacement gradient tensor
-   * @tparam AngleType number-like type for the orientation angle gamma
+   * @tparam GammaAngleType number-like type for the orientation angle gamma
    *
    * @param[in,out] state A state variable object for this material. The value is updated in place.
    * @param[in] displacement_grad displacement gradient with respect to the reference configuration
    * @param[in] temperature the temperature
-   * @param[in] gamma the polar angle used to define the liquid crystal orientation vector
+   * @param[in] gamma the first polar angle used to define the liquid crystal orientation vector
+   * @param[in] eta the secpmd polar angle used to define the liquid crystal orientation vector
    * @return The calculated material response (Cauchy stress) for the material
    */
-  template <typename DispGradType, typename orderParamType, typename AngleType>
+  template <typename DispGradType, typename orderParamType, typename GammaAngleType>
   SERAC_HOST_DEVICE auto operator()(State& state, const tensor<DispGradType, dim, dim>& displacement_grad,
-                                    orderParamType temperature_tuple, AngleType gamma_tuple) const
+                                    orderParamType temperature_tuple, GammaAngleType gamma_tuple) const
   {
     using std::cos, std::sin;
 
@@ -91,7 +92,7 @@ struct LiqCrystElast_Brighenti {
 
     auto   I  = Identity<dim>();
     double q0 = initial_order_parameter_;
-    tensor normal{{cos(gamma), sin(gamma), 0.0 * gamma}};
+    tensor normal{{cos(gamma), sin(gamma), 0.0*gamma}};
 
     if (norm(state.deformation_gradient) == 0) {
       state.distribution_tensor  = get_value((N_b_squared_ / 3.0) * ((1 - q0) * I) + (3 * q0 * outer(normal, normal)));
@@ -231,23 +232,25 @@ struct LiqCrystElast_Bertoldi {
    *
    * @tparam DisplacementType number-like type for the displacement vector
    * @tparam DispGradType number-like type for the displacement gradient tensor
-   * @tparam AngleType number-like type for the orientation angle gamma
+   * @tparam GammaAngleType number-like type for the orientation angle gamma
    *
    * @param[in,out] state A state variable object for this material. The value is updated in place.
    * @param[in] displacement_grad displacement gradient with respect to the reference configuration
    * @param[in] inst_order_param_tuple the current order parameter
-   * @param[in] gamma the polar angle used to define the liquid crystal orientation vector
+   * @param[in] gamma the first polar angle used to define the liquid crystal orientation vector
+   * @param[in] eta the secpmd polar angle used to define the liquid crystal orientation vector
    * @return The calculated material response (Cauchy stress) for the material
    */
-  template <typename DispGradType, typename orderParamType, typename AngleType>
+  template <typename DispGradType, typename orderParamType, typename GammaAngleType, typename EtaAngleType>
   SERAC_HOST_DEVICE auto operator()(State& /*state*/, const tensor<DispGradType, dim, dim>& displacement_grad,
-                                    orderParamType inst_order_param_tuple, AngleType gamma_tuple) const
+                                    orderParamType inst_order_param_tuple, GammaAngleType gamma_tuple, EtaAngleType eta_tuple) const
   {
     using std::cos, std::sin;
 
     // Compute the normal 
     auto gamma = get<0>(gamma_tuple);
-    tensor normal{{cos(gamma), sin(gamma), 0.0 * gamma}};
+    auto eta = get<0>(eta_tuple);
+    tensor normal{{cos(gamma)*cos(eta), sin(gamma)*cos(eta), 0.0*gamma+sin(eta)}};
 
     // Get order parameters
     auto St   = get<0>(inst_order_param_tuple);
@@ -276,15 +279,16 @@ struct LiqCrystElast_Bertoldi {
 
   /// -------------------------------------------------------
 
-  template <typename DispGradType, typename orderParamType, typename AngleType>
+  template <typename DispGradType, typename orderParamType, typename GammaAngleType, typename EtaAngleType>
   auto calculateStrainEnergy(const State& /*state*/, const tensor<DispGradType, dim, dim>& displacement_grad,
-                                    orderParamType inst_order_param_tuple, AngleType gamma_tuple) const
+                                    orderParamType inst_order_param_tuple, GammaAngleType gamma_tuple, EtaAngleType eta_tuple) const
   {
     using std::cos, std::sin;
     
     // Compute the normal 
     auto gamma = get<0>(gamma_tuple);
-    tensor normal{{cos(gamma), sin(gamma), 0.0 * gamma}};
+    auto eta = get<0>(eta_tuple);
+    tensor normal{{cos(gamma)*cos(eta), sin(gamma)*cos(eta), 0.0*gamma+sin(eta)}};
 
     // Get order parameters
     auto St   = get<0>(inst_order_param_tuple);

@@ -82,7 +82,7 @@ int main(int argc, char* argv[])
   // ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛--> x
 
   // Construct a functional-based solid mechanics solver
-  SolidMechanics<p, dim, Parameters<H1<p>, L2<p>>> solid_solver(default_static_options, GeometricNonlinearities::Off,
+  SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p>>> solid_solver(default_static_options, GeometricNonlinearities::Off,
                                                                   "lce_solid_functional");
 
   // Material properties
@@ -99,23 +99,31 @@ int main(int argc, char* argv[])
   // Parameter 2
   auto fec = std::unique_ptr<mfem::FiniteElementCollection>(new mfem::L2_FECollection(p, dim));
   FiniteElementState gammaParam(StateManager::newState(FiniteElementState::Options{.order = p, .coll = std::move(fec), .name = "gammaParam"}));
-  auto gamma_func = [](const mfem::Vector& /*x*/, double) -> double { return 0.5*M_PI_2; /* M_PI_2;*/  /* 0.0;*/ };
-  mfem::FunctionCoefficient coef(gamma_func);
-  gammaParam.project(coef);
+  auto gammaFunc = [](const mfem::Vector& x, double) -> double { return (x[1] > 0.5) ? M_PI_2 : 0.0; };
+  mfem::FunctionCoefficient gammaCoef(gammaFunc);
+  gammaParam.project(gammaCoef);
+
+  // Paremetr 3
+  FiniteElementState etaParam(StateManager::newState(FiniteElementState::Options{.order = p, .coll = std::move(fec), .name = "etaParam"}));
+  auto etaFunc = [](const mfem::Vector& /*x*/, double) -> double { return 0.0; };
+  mfem::FunctionCoefficient etaCoef(etaFunc);
+  etaParam.project(etaCoef);
 
   // Set parameters
   constexpr int ORDER_INDEX = 0;
   constexpr int GAMMA_INDEX = 1;
+  constexpr int ETA_INDEX   = 2;
 
   solid_solver.setParameter(orderParam, ORDER_INDEX);
   solid_solver.setParameter(gammaParam, GAMMA_INDEX);
+  solid_solver.setParameter(etaParam, ETA_INDEX);
 
   // Set material
   LiqCrystElast_Bertoldi lceMat(density, young_modulus, possion_ratio, max_order_param, beta_param);
   LiqCrystElast_Bertoldi::State initial_state{};
 
   auto param_data = solid_solver.createQuadratureDataBuffer(initial_state);
-  solid_solver.setMaterial(DependsOn<ORDER_INDEX, GAMMA_INDEX>{}, lceMat, param_data);
+  solid_solver.setMaterial(DependsOn<ORDER_INDEX, GAMMA_INDEX, ETA_INDEX>{}, lceMat, param_data);
 
   // Boundary conditions:
   // Prescribe zero displacement at the supported end of the beam

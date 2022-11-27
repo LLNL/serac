@@ -28,9 +28,10 @@ TEST(TestLiquidCrystalBertoldiMat, ConsistentStressDerivedFromStrainEnergy)
   double beta_param = 1.0;
   double max_order_param = 0.5;
 
-  tuple <double, int> order_param_tuple, gamma_param_tuple;
+  tuple <double, int> order_param_tuple, gamma_param_tuple, eta_param_tuple;
   order_param_tuple = make_tuple(0.1, 123);
   gamma_param_tuple = make_tuple(0.9, 456);
+  eta_param_tuple   = make_tuple(0.0, 789);
 
   LiqCrystElast_Bertoldi LCEMat_Bertoldi(density, young_modulus, possion_ratio, max_order_param, beta_param);
 
@@ -41,7 +42,7 @@ TEST(TestLiquidCrystalBertoldiMat, ConsistentStressDerivedFromStrainEnergy)
 
   // liquid crystal elastomer model response
   LiqCrystElast_Bertoldi::State state{};
-  auto stress = LCEMat_Bertoldi(state, H, order_param_tuple, gamma_param_tuple);
+  auto stress = LCEMat_Bertoldi(state, H, order_param_tuple, gamma_param_tuple, eta_param_tuple);
 
   // Transform Cauchy stress into Piola stress, which is what the AD computation returns
   auto I = Identity<3>();  
@@ -50,7 +51,7 @@ TEST(TestLiquidCrystalBertoldiMat, ConsistentStressDerivedFromStrainEnergy)
   auto P_stress = J*stress*inv(transpose(F));
 
   // Strain energy
-  auto free_energy = LCEMat_Bertoldi.calculateStrainEnergy(state, make_dual(H), order_param_tuple, gamma_param_tuple);
+  auto free_energy = LCEMat_Bertoldi.calculateStrainEnergy(state, make_dual(H), order_param_tuple, gamma_param_tuple, eta_param_tuple);
 
   // Compute stress from strain energy using automatic differentiation
   auto P_stress_AD = get_gradient(free_energy);
@@ -71,13 +72,13 @@ TEST(TestLiquidCrystalBertoldiMat, ConsistentStressDerivedFromStrainEnergy)
                                       {0.3, 0.2, 0.1}}};
 
     auto energy1 = LCEMat_Bertoldi.calculateStrainEnergy(
-      state, H - epsilon * perturbation, order_param_tuple, gamma_param_tuple);
+      state, H - epsilon * perturbation, order_param_tuple, gamma_param_tuple, eta_param_tuple);
 
     auto energy2 = LCEMat_Bertoldi.calculateStrainEnergy(
-      state, H + epsilon * perturbation, order_param_tuple, gamma_param_tuple);
+      state, H + epsilon * perturbation, order_param_tuple, gamma_param_tuple, eta_param_tuple);
 
     auto denergy = get_gradient(LCEMat_Bertoldi.calculateStrainEnergy(
-      state, make_dual(H), order_param_tuple, gamma_param_tuple));
+      state, make_dual(H), order_param_tuple, gamma_param_tuple, eta_param_tuple));
 
     auto error = double_dot(denergy, perturbation) - (energy2 - energy1) / (2 * epsilon);
 
@@ -95,9 +96,10 @@ TEST(TestLiquidCrystalBertoldiMat, AgreesWithIsotropicInOrderParameterLimitAndSm
   double beta_param = 1.0;
   double max_order_param = 0.5;
 
-  tuple <double, int> order_param_tuple, gamma_param_tuple;
+  tuple <double, int> order_param_tuple, gamma_param_tuple, eta_param_tuple;
   order_param_tuple = make_tuple(max_order_param, 123); // same as initial to remove its contribution
   gamma_param_tuple = make_tuple(0.6, 456);
+  eta_param_tuple   = make_tuple(0.0, 789);
 
   LiqCrystElast_Bertoldi LCEMat_Bertoldi(density, young_modulus, possion_ratio, max_order_param, beta_param);
 
@@ -108,7 +110,7 @@ TEST(TestLiquidCrystalBertoldiMat, AgreesWithIsotropicInOrderParameterLimitAndSm
 
   // liquid crystal elastomer model response
   LiqCrystElast_Bertoldi::State state{};
-  auto stress_Bertoldi = LCEMat_Bertoldi(state, H, order_param_tuple, gamma_param_tuple);
+  auto stress_Bertoldi = LCEMat_Bertoldi(state, H, order_param_tuple, gamma_param_tuple, eta_param_tuple);
 
   // neo-hookean for comparison
   double bulk_modulus = young_modulus / 3.0 / (1.0 - 2.0*possion_ratio);
@@ -135,9 +137,10 @@ TEST(TestLiquidCrystalBertoldiMat, IdentityDefGradientNoEnergyNorStress)
   double beta_param = 1.0;
   double max_order_param = 0.5;
 
-  tuple <double, int> order_param_tuple, gamma_param_tuple;
+  tuple <double, int> order_param_tuple, gamma_param_tuple, eta_param_tuple;
   order_param_tuple = make_tuple(max_order_param, 123); // same as initial to remove its contribution
   gamma_param_tuple = make_tuple(0.6, 456);
+  eta_param_tuple   = make_tuple(0.0, 789);
 
   LiqCrystElast_Bertoldi LCEMat_Bertoldi(density, young_modulus, possion_ratio, max_order_param, beta_param);
 
@@ -148,10 +151,10 @@ TEST(TestLiquidCrystalBertoldiMat, IdentityDefGradientNoEnergyNorStress)
 
   // liquid crystal elastomer model response
   LiqCrystElast_Bertoldi::State state{};
-  auto stress_Bertoldi = LCEMat_Bertoldi(state, H, order_param_tuple, gamma_param_tuple);
+  auto stress_Bertoldi = LCEMat_Bertoldi(state, H, order_param_tuple, gamma_param_tuple, eta_param_tuple);
 
   // Strain energy
-  auto free_energy = LCEMat_Bertoldi.calculateStrainEnergy(state, H, order_param_tuple, gamma_param_tuple);
+  auto free_energy = LCEMat_Bertoldi.calculateStrainEnergy(state, H, order_param_tuple, gamma_param_tuple, eta_param_tuple);
 
   // Check that the stress is consistent with the strain energy
   EXPECT_LT(free_energy, 1e-8);
@@ -197,10 +200,11 @@ TEST(TestLiquidCrystalBertoldiMat, orderParameterSweep)
     du_dx[2][2] = epsilon_zz;
 
     auto copy   = state;
-    tuple <double, int> copy_order_param_tuple, copy_gamma_param_tuple;
+    tuple <double, int> copy_order_param_tuple, copy_gamma_param_tuple, copy_eta_param_tuple;
     copy_order_param_tuple = make_tuple(max_order_param* t / max_time, 123);
     copy_gamma_param_tuple = make_tuple(0.6, 456);
-    auto stress = LCEMat_Bertoldi(copy, du_dx, copy_order_param_tuple, copy_gamma_param_tuple);
+    copy_eta_param_tuple = make_tuple(0.0, 789);
+    auto stress = LCEMat_Bertoldi(copy, du_dx, copy_order_param_tuple, copy_gamma_param_tuple, copy_eta_param_tuple);
 
     return tensor{{stress[1][1], stress[2][2]}};
   };
@@ -220,10 +224,11 @@ TEST(TestLiquidCrystalBertoldiMat, orderParameterSweep)
     dudx[1][1]             = epsilon_yy_and_zz[0];
     dudx[2][2]             = epsilon_yy_and_zz[1];
 
-    tuple <double, int> order_param_tuple, gamma_param_tuple;
+    tuple <double, int> order_param_tuple, gamma_param_tuple, eta_param_tuple;
     order_param_tuple = make_tuple(max_order_param* t / max_time, 123);
     gamma_param_tuple = make_tuple(0.6, 456);
-    auto stress = LCEMat_Bertoldi(state, dudx, order_param_tuple, gamma_param_tuple);
+    eta_param_tuple = make_tuple(0.0, 789);
+    auto stress = LCEMat_Bertoldi(state, dudx, order_param_tuple, gamma_param_tuple, eta_param_tuple);
 
     t += dt;
     
