@@ -133,7 +133,7 @@ one might implement this function as:
 
 .. code-block:: cpp
 
-   auto f = [](auto x){ return (x * sin(exp(x) - 2.0) / (1 + x*x); };
+   auto f = [](auto x){ return (x * sin(exp(x) - 2.0)) / (1 + x*x); };
 
 If :math:`f(x)` is used in a larger optimization or root-finding
 problem, we will likely also need to be able to evaluate
@@ -145,7 +145,7 @@ derivative information were
    .. code-block:: cpp
 
       static constexpr double epsilon = 1.0e-9;
-      auto dfdx = [](double x) { return (f(x + epsilon) - f(x + epsilon)) / (2.0 * epsilon); }
+      auto dfdx = [](double x) { return (f(x + epsilon) - f(x - epsilon)) / (2.0 * epsilon); }
 
    This approach is simple, but requires multiple function invocations
    and the accuracy suffers due to catastrophic cancellation in floating point arithmetic.
@@ -161,7 +161,7 @@ derivative information were
    .. code-block:: cpp
 
       auto dfdx = [](double x) {
-        return (exp(x) * (x + x*x*x) * cos(2 - exp(x)) - (x*x - 1) * exp(2 - sin(x)) / ((1 + x*x) * (1 + x*x)); 
+        return (exp(x) * (x + x*x*x) * cos(2 - exp(x)) - (x*x - 1) * exp(2 - sin(x))) / ((1 + x*x) * (1 + x*x)); 
       };
 
    This approach can give very accurate results, and allows the
