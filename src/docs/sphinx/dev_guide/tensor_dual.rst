@@ -320,7 +320,7 @@ Now let's consider a function that has multiple inputs and multiple outputs:
    auto f = [=](auto p, auto v, auto L){ 
       auto strain_rate = 0.5 * (L + transpose(L));
       auto stress = - p * I + 2 * mu * strain_rate;
-      auto kinetic_energy_density = 0.5 * p * dot(v, v);
+      auto kinetic_energy_density = 0.5 * rho * dot(v, v);
       return serac::tuple{stress, kinetic_energy_density};
    };
 
@@ -396,7 +396,7 @@ Finally, if we look at the actual types contained in ``get_gradient(output)`` we
 
    serac::tuple<
      serac::tuple<tensor<double, 3, 3>, zero,              tensor<double, 3, 3, 3, 3> >, 
-     serac::tuple<double,               tensor<double, 3>, zero                       > 
+     serac::tuple<zero,                 tensor<double, 3>, zero                       > 
    > gradients = get_gradient(outputs);
 
 First, the tensor shapes of the individual blocks are are in agreement with what we expect (e.g. 
