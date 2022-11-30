@@ -55,13 +55,23 @@ int main(int argc, char* argv[])
   mfem::Vector y_translation({0.0, ly, 0.0});
   // mfem::Vector z_translation({0.0, 0.0, lz});
  
+  // std::vector<mfem::Vector> translations = {x_translation};
   std::vector<mfem::Vector> translations = {x_translation, y_translation};
   // std::vector<mfem::Vector> translations = {x_translation, y_translation, z_translation};
- 
+
+  double tol = 1e-4;
+  std::vector<int> periodicMap = initial_mesh.CreatePeriodicVertexMapping(translations, tol);
+//  for(int i = 0; i < static_cast<int>(periodicMap.size()); i++) 
+//  {
+//   if(i!=periodicMap[i])
+//   {
+//     std::cout<<"... periodicMap["<<i<<"] = "<<periodicMap[i]<<std::endl;
+//   }
+//  }
+// exit(0);
   // Create the periodic mesh using the vertex mapping defined by the translation vectors
-  // double tol = 1e-3;
-  // auto periodic_mesh = mfem::Mesh::MakePeriodic(initial_mesh, initial_mesh.CreatePeriodicVertexMapping(translations, tol));
-  auto periodic_mesh = mfem::Mesh::MakePeriodic(initial_mesh, initial_mesh.CreatePeriodicVertexMapping(translations));
+  auto periodic_mesh = mfem::Mesh::MakePeriodic(initial_mesh, periodicMap);
+  // auto periodic_mesh = mfem::Mesh::MakePeriodic(initial_mesh, initial_mesh.CreatePeriodicVertexMapping(translations));
 
   auto mesh = mesh::refineAndDistribute(std::move(periodic_mesh), serial_refinement, parallel_refinement);
 #else
@@ -82,13 +92,23 @@ int main(int argc, char* argv[])
   // ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛--> x
 
   // Construct a functional-based solid mechanics solver
-  SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p>>> solid_solver(default_static_options, GeometricNonlinearities::Off,
-                                                                  "lce_solid_functional");
+  IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
+                                                       .abs_tol     = 1.0e-16,
+                                                       .print_level = 0,
+                                                       .max_iter    = 600,
+                                                       .lin_solver  = LinearSolver::GMRES,
+                                                       .prec        = HypreBoomerAMGPrec{}};
+  NonlinearSolverOptions default_nonlinear_options = {
+    .rel_tol = 1.0e-6, .abs_tol = 1.0e-10, .max_iter = 6, .print_level = 1};
+  SolidMechanics<p, dim, Parameters< H1<p>, L2<p>, L2<p> > > solid_solver({default_linear_options, default_nonlinear_options}, GeometricNonlinearities::Off,
+                                       "lce_solid_functional");
+  // SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p>>> solid_solver(default_static_options, GeometricNonlinearities::Off,
+  //                                                                 "lce_solid_functional");
 
   // Material properties
   double density = 1.0;
-  double young_modulus = 1.0;
-  double possion_ratio = 0.49;
+  double young_modulus = 0.035;
+  double possion_ratio = 0.48;
   double beta_param = 0.041;
   double max_order_param = 0.2;
 
@@ -99,7 +119,7 @@ int main(int argc, char* argv[])
   // Parameter 2
   auto fec = std::unique_ptr<mfem::FiniteElementCollection>(new mfem::L2_FECollection(p, dim));
   FiniteElementState gammaParam(StateManager::newState(FiniteElementState::Options{.order = p, .coll = std::move(fec), .name = "gammaParam"}));
-  auto gammaFunc = [](const mfem::Vector& x, double) -> double { return (x[1] > 0.5) ? M_PI_2 : 0.0; };
+  auto gammaFunc = [](const mfem::Vector& x, double) -> double { return (x[1] > 0.5) ? M_PI_2 : 0.5*M_PI_2; };
   mfem::FunctionCoefficient gammaCoef(gammaFunc);
   gammaParam.project(gammaCoef);
 
@@ -131,13 +151,14 @@ int main(int argc, char* argv[])
   auto          zero_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; };
   solid_solver.setDisplacementBCs(support, zero_displacement);
 
-  solid_solver.setDisplacement(zero_displacement);
+  auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.000005; };
+  solid_solver.setDisplacement(ini_displacement);
 
   // Finalize the data structures
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  int num_steps = 10;
+  int num_steps = 30;
 
   std::string outputFilename = "sol_lce_bertoldi_rect_lattice";
   solid_solver.outputState(outputFilename);

@@ -220,7 +220,7 @@ int main(int argc, char* argv[]) {
         return dot(u, n) * ((x[1] > 0.99 * ly) ? 1.0 : 0.0);
       },
       pmesh);
-      
+
   Functional<double(H1<p, dim>)> area({&solid_solver.displacement().space()});
   area.AddSurfaceIntegral(
       DependsOn<>{}, [=](auto x, auto /*n*/) { return (x[1] > 0.99 * ly) ? 1.0 : 0.0; }, pmesh); 
