@@ -83,6 +83,20 @@ struct NeoHookean {
   double G;        ///< shear modulus
 };
 
+struct Hardening {
+  double sigma_y;
+  double n;
+  double eps0;
+
+  template <typename T>
+  auto operator()(T accumulated_plastic_strain)
+  {
+    using std::pow;
+    return sigma_y*pow(1.0 + accumulated_plastic_strain/eps0, 1.0/n);
+  };
+};
+
+
 /// @brief a 3D constitutive model for a J2 material with linear isotropic and kinematic hardening.
 struct J2 {
   /// this material is written for 3D
