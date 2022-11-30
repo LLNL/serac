@@ -83,7 +83,7 @@ struct NeoHookean {
   double G;        ///< shear modulus
 };
 
-struct Hardening {
+struct PowerLawHardening {
   double sigma_y;
   double n;
   double eps0;
@@ -97,13 +97,14 @@ struct Hardening {
 };
 
 /// @brief J2 material with nonlinear isotropic hardening.
+template <typename HardeningType>
 struct J2Nonlinear {
   static constexpr int dim = 3;
   static constexpr double tol = 1e-10;
 
   double E;        ///< Young's modulus
   double nu;       ///< Poisson's ratio
-  Hardening hardening;
+  HardeningType hardening;
   double density;  ///< mass density
 
   /// @brief variables required to characterize the hysteresis response

@@ -21,7 +21,7 @@ namespace serac {
 
 TEST(NonlinearJ2Material, Hardening)
 {
-  solid_mechanics::Hardening hardening_law{.sigma_y = 1.0, .n=2.0, .eps0=0.01};
+  solid_mechanics::PowerLawHardening hardening_law{.sigma_y = 1.0, .n=2.0, .eps0=0.01};
   std::ofstream file;
   file.open("stress.csv", std::ios::in | std::ios::trunc);
 
@@ -39,9 +39,9 @@ TEST(NonlinearJ2Material, Stress)
                               {0.0, -0.05, 0.0},
                               {0.0, 0.0, -0.05}}};
 
-  solid_mechanics::Hardening hardening_law{.sigma_y = 0.1, .n=2.0, .eps0=0.01};
-  solid_mechanics::J2Nonlinear material{.E = 1.0, .nu=0.25, .hardening=hardening_law, .density=1.0};
-  auto internal_state = solid_mechanics::J2Nonlinear::State{};
+  solid_mechanics::PowerLawHardening hardening_law{.sigma_y = 0.1, .n=2.0, .eps0=0.01};
+  solid_mechanics::J2Nonlinear<solid_mechanics::PowerLawHardening> material{.E = 1.0, .nu=0.25, .hardening=hardening_law, .density=1.0};
+  auto internal_state = solid_mechanics::J2Nonlinear<solid_mechanics::PowerLawHardening>::State{};
   auto stress = material(internal_state, make_dual(du_dx));
   std::cout << stress << std::endl;
   std::cout << internal_state.plastic_strain << std::endl;
