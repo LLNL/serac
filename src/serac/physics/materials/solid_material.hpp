@@ -89,13 +89,62 @@ struct Hardening {
   double eps0;
 
   template <typename T>
-  auto operator()(T accumulated_plastic_strain)
+  auto operator()(const T accumulated_plastic_strain) const
   {
     using std::pow;
     return sigma_y*pow(1.0 + accumulated_plastic_strain/eps0, 1.0/n);
   };
 };
 
+/// @brief J2 material with nonlinear isotropic hardening.
+struct J2Nonlinear {
+  static constexpr int dim = 3;
+  static constexpr double tol = 1e-10;
+
+  double E;        ///< Young's modulus
+  double nu;       ///< Poisson's ratio
+  Hardening hardening;
+  double density;  ///< mass density
+
+  /// @brief variables required to characterize the hysteresis response
+  struct State {
+    tensor<double, dim, dim> plastic_strain;              ///< plastic strain
+    double                   accumulated_plastic_strain;  ///< uniaxial equivalent plastic strain
+  };
+
+  /** @brief calculate the Cauchy stress, given the displacement gradient and previous material state */
+  template <typename T>
+  auto operator()(State& state, const T du_dX) const
+  {
+    using std::sqrt;
+    constexpr auto I = Identity<dim>();
+    const double   K = E / (3.0 * (1.0 - 2.0 * nu));
+    const double   G = 0.5 * E / (1.0 + nu);
+
+    // (i) elastic predictor
+    auto el_strain = sym(du_dX) - state.plastic_strain;
+    auto p         = K * tr(el_strain);
+    auto s         = 2.0 * G * dev(el_strain);
+    auto q = sqrt(1.5)*norm(s);
+    
+    // (ii) admissibility
+    const double eqps_old = state.accumulated_plastic_strain;
+    auto residual = [eqps_old, G, *this](auto delta_eqps, auto trial_mises) { return trial_mises - 3.0*G*delta_eqps - this->hardening(eqps_old + delta_eqps);};
+    if (residual(0.0, get_value(q)) > tol) {
+      double upper_bound = (get_value(q) - hardening(eqps_old))/(3.0*G);
+      auto [delta_eqps, status] = solve_scalar_equation(residual, 0.0, tol, 0.0, upper_bound, q);
+
+      auto Np = 1.5*s/q;
+
+      // (iii) return mapping
+      s = s - 3.0 * G * delta_eqps * Np;
+      state.accumulated_plastic_strain += get_value(delta_eqps);
+      state.plastic_strain += get_value(delta_eqps) * get_value(Np);
+    }
+
+    return s + p * I;
+  }
+};
 
 /// @brief a 3D constitutive model for a J2 material with linear isotropic and kinematic hardening.
 struct J2 {
