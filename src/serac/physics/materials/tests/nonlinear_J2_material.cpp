@@ -19,11 +19,25 @@
 
 namespace serac {
 
-TEST(NonlinearJ2Material, Hardening)
+TEST(NonlinearJ2Material, PowerLawHardening)
 {
   solid_mechanics::PowerLawHardening hardening_law{.sigma_y = 1.0, .n=2.0, .eps0=0.01};
   std::ofstream file;
-  file.open("stress.csv", std::ios::in | std::ios::trunc);
+  file.open("power_law_hardening.csv", std::ios::in | std::ios::trunc);
+
+  double eqps = 0.0;
+  for (size_t i = 0; i < 50; i++) {
+      auto stress = hardening_law(make_dual(eqps));
+      file << eqps << " " << stress.value << " " << stress.gradient << std::endl;
+      eqps += 0.01;
+  }
+};
+
+TEST(NonlinearJ2Material, LinearHardening)
+{
+  solid_mechanics::LinearHardening hardening_law{.sigma_y = 1.0, .Hi=0.1};
+  std::ofstream file;
+  file.open("linear_hardening.csv", std::ios::in | std::ios::trunc);
 
   double eqps = 0.0;
   for (size_t i = 0; i < 50; i++) {

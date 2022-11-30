@@ -83,6 +83,17 @@ struct NeoHookean {
   double G;        ///< shear modulus
 };
 
+struct LinearHardening {
+  double sigma_y;
+  double Hi;
+
+  template <typename T>
+  auto operator()(const T accumulated_plastic_strain) const
+  {
+    return sigma_y + Hi*accumulated_plastic_strain;
+  };
+};
+
 struct PowerLawHardening {
   double sigma_y;
   double n;
