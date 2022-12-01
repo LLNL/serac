@@ -29,6 +29,14 @@ template <typename gradient_type>
 struct dual {
   double        value;     ///< the actual numerical value
   gradient_type gradient;  ///< the partial derivatives of value w.r.t. some other quantity
+
+
+  SERAC_HOST_DEVICE constexpr auto& operator=(double b)
+  {
+    value = b;
+    gradient = {};
+    return *this;
+  }
 };
 
 /**

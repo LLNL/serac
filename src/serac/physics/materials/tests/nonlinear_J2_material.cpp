@@ -16,6 +16,7 @@
 #include <gtest/gtest.h>
 
 #include "serac/numerics/functional/tensor.hpp"
+#include "serac/physics/materials/material_verification_tools.hpp"
 
 namespace serac {
 
@@ -60,6 +61,26 @@ TEST(NonlinearJ2Material, Stress)
   std::cout << stress << std::endl;
   std::cout << internal_state.plastic_strain << std::endl;
   EXPECT_GE(norm(stress), 1e-4);
+};
+
+TEST(NonlinearJ2Material, Uniaxial)
+{
+  double E = 1.0;
+  double nu = 0.25;
+  double sigma_y = 0.01;
+  double Hi = E/100.0;
+  solid_mechanics::LinearHardening hardening{.sigma_y=sigma_y, .Hi=Hi};
+  solid_mechanics::J2Nonlinear<solid_mechanics::LinearHardening> material{.E=E, .nu=nu, .hardening=hardening, .density=1.0};
+  auto internal_state = solid_mechanics::J2Nonlinear<decltype(hardening)>::State{};
+  auto strain = [E, sigma_y](double t) { return t*10*sigma_y/E; };
+  auto response_history = uniaxial_stress_test(1.0, 100, material, internal_state, strain);
+
+  std::ofstream file;
+  file.open("uniaxial.csv", std::ios::in | std::ios::trunc);
+
+  for (auto r : response_history) {
+    file << get<1>(r)[0][0] << " " << get<2>(r)[0][0] << std::endl;
+  }
 };
 
 } // namespace serac

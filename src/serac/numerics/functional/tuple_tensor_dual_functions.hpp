@@ -665,4 +665,28 @@ auto solve_scalar_equation(function&& f, double x0, double tolerance, double low
   }
 }
 
+template < typename function, int n >
+auto find_root(function && f, tensor< double, n > x0) {
+
+  static_assert(std::is_same_v< decltype(f(x0)), tensor< double, n > >,
+    "error: f(x) must have the same number of equations as unknowns");
+
+  double epsilon = 1.0e-8;
+  int max_iterations = 10;
+
+  auto x = x0;
+
+  int k = 0;
+  while (k++ < max_iterations) {
+    auto output = f(make_dual(x));
+    auto r = get_value(output);
+    if (norm(r) < epsilon) break;
+    auto J = get_gradient(output);
+    x -= linear_solve(J, r);
+  }
+
+  return x;
+
+};
+
 }  // namespace serac
