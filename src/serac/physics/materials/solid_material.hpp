@@ -107,6 +107,19 @@ struct PowerLawHardening {
   };
 };
 
+struct VoceHardening {
+  double sigma_y;
+  double sigma_sat;
+  double strain_constant;
+
+  template <typename T>
+  auto operator()(const T accumulated_plastic_strain) const
+  {
+    using std::exp;
+    return sigma_sat - (sigma_sat - sigma_y)*exp(-accumulated_plastic_strain/strain_constant);
+  };
+};
+
 /// @brief J2 material with nonlinear isotropic hardening.
 template <typename HardeningType>
 struct J2Nonlinear {
@@ -143,6 +156,7 @@ struct J2Nonlinear {
     const double eqps_old = state.accumulated_plastic_strain;
     auto residual = [eqps_old, G, *this](auto delta_eqps, auto trial_mises) { return trial_mises - 3.0*G*delta_eqps - this->hardening(eqps_old + delta_eqps);};
     if (residual(0.0, get_value(q)) > tol*hardening.sigma_y) {
+      // (iii) return mapping
       SolverOptions opts{.xtol=0, .rtol=tol*hardening.sigma_y, .max_iter=25};
       double lower_bound = 0.0;
       double upper_bound = (get_value(q) - hardening(eqps_old))/(3.0*G);
@@ -150,7 +164,6 @@ struct J2Nonlinear {
 
       auto Np = 1.5*s/q;
 
-      // (iii) return mapping
       s = s - 2.0 * G * delta_eqps * Np;
       state.accumulated_plastic_strain += get_value(delta_eqps);
       state.plastic_strain += get_value(delta_eqps) * get_value(Np);

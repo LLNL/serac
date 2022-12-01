@@ -71,6 +71,7 @@ TEST(NonlinearJ2Material, Uniaxial)
   double Hi = E/100.0;
   solid_mechanics::LinearHardening hardening{.sigma_y=sigma_y, .Hi=Hi};
   //solid_mechanics::PowerLawHardening hardening{.sigma_y=sigma_y, .n=2.0, .eps0=sigma_y/E};
+  //solid_mechanics::VoceHardening hardening{.sigma_y=sigma_y, .sigma_sat=3.0*sigma_y, .strain_constant=3*sigma_y/E};
   solid_mechanics::J2Nonlinear<decltype(hardening)> material{.E=E, .nu=nu, .hardening=hardening, .density=1.0};
   auto internal_state = solid_mechanics::J2Nonlinear<decltype(hardening)>::State{};
   auto strain = [E, sigma_y](double t) { return t*10*sigma_y/E; };
