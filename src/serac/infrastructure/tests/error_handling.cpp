@@ -11,21 +11,18 @@
 
 #include "serac/infrastructure/cli.hpp"
 #include "serac/infrastructure/initialize.hpp"
-#include "serac/infrastructure/input.hpp"
+#include "serac/mesh/mesh_utils.hpp"
+#include "serac/physics/thermal_conduction_legacy.hpp"
+#include "serac/physics/boundary_conditions/boundary_condition.hpp"
+#include "serac/numerics/equation_solver.hpp"
+#include "serac/physics/state/state_manager.hpp"
 #include "serac/serac_config.hpp"
-
-//#include "serac/mesh/mesh_utils.hpp"
-//#include "serac/physics/thermal_conduction_legacy.hpp"
-//#include "serac/physics/boundary_conditions/boundary_condition.hpp"
-//#include "serac/numerics/equation_solver.hpp"
-//#include "serac/physics/state/state_manager.hpp"
 
 class SlicErrorException : public std::exception {
 };
 
 namespace serac {
 
-/*
 using mfem_ext::EquationSolver;
 
 TEST(ErrorHandling, EquationSolverBadLinSolver)
@@ -119,7 +116,6 @@ TEST(ErrorHandling, BcRetrieveVecCoef)
   EXPECT_NO_THROW(const_bc.vectorCoefficient());
   EXPECT_THROW(const_bc.scalarCoefficient(), SlicErrorException);
 }
-*/
 
 TEST(ErrorHandling, InvalidCmdlineArg)
 {

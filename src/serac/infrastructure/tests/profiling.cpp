@@ -14,11 +14,10 @@
 #include "serac/infrastructure/cli.hpp"
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/profiling.hpp"
-//#include "serac/mesh/mesh_utils.hpp"
+#include "serac/mesh/mesh_utils.hpp"
 
 namespace serac {
 
-/*
 TEST(Profiling, MeshRefinement)
 {
   // profile mesh refinement
@@ -75,7 +74,6 @@ TEST(Profiling, MeshRefinement)
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
-*/
 
 TEST(Profiling, Exception)
 {
