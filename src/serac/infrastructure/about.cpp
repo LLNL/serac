@@ -13,7 +13,7 @@
 #include "axom/fmt.hpp"
 
 #ifdef SERAC_USE_CAMP
-#include "camp/config.h"
+#include "camp/config.hpp"
 #endif
 
 #ifdef SERAC_USE_CALIPER

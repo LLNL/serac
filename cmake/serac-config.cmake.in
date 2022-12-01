@@ -96,10 +96,6 @@ if(NOT SERAC_FOUND)
   
   # Camp
   if(SERAC_USE_CAMP)
-    message("\n\n\nCAMP INCLUDED HERE\n\n\n")
-    find_dependency(Camp REQUIRED NO_DEFAULT_PATH PATHS "${CAMP_DIR}/lib/cmake/camp")
-  else()
-    message("\n\n\nCAMP NOT INCLUDED HERE\n\n\n")
     find_dependency(Camp REQUIRED NO_DEFAULT_PATH PATHS "${CAMP_DIR}/lib/cmake/camp")
   endif()
 
