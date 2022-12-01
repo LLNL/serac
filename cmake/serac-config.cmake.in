@@ -96,7 +96,7 @@ if(NOT SERAC_FOUND)
   
   # Camp
   if(SERAC_USE_CAMP)
-    find_dependency(Camp REQUIRED NO_DEFAULT_PATH PATHS "${CAMP_DIR}/lib/cmake/camp")
+    find_dependency(camp REQUIRED NO_DEFAULT_PATH PATHS "${CAMP_DIR}/lib/cmake/camp")
   endif()
 
   # Conduit
