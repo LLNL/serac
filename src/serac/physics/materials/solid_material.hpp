@@ -142,14 +142,16 @@ struct J2Nonlinear {
     // (ii) admissibility
     const double eqps_old = state.accumulated_plastic_strain;
     auto residual = [eqps_old, G, *this](auto delta_eqps, auto trial_mises) { return trial_mises - 3.0*G*delta_eqps - this->hardening(eqps_old + delta_eqps);};
-    if (residual(0.0, get_value(q)) > tol) {
+    if (residual(0.0, get_value(q)) > tol*hardening.sigma_y) {
+      SolverOptions opts{.xtol=0, .rtol=tol*hardening.sigma_y, .max_iter=25};
+      double lower_bound = 0.0;
       double upper_bound = (get_value(q) - hardening(eqps_old))/(3.0*G);
-      auto [delta_eqps, status] = solve_scalar_equation(residual, 0.0, tol, 0.0, upper_bound, q);
+      auto [delta_eqps, status] = solve_scalar_equation(residual, 0.0, lower_bound, upper_bound, opts, q);
 
       auto Np = 1.5*s/q;
 
       // (iii) return mapping
-      s = s - 3.0 * G * delta_eqps * Np;
+      s = s - 2.0 * G * delta_eqps * Np;
       state.accumulated_plastic_strain += get_value(delta_eqps);
       state.plastic_strain += get_value(delta_eqps) * get_value(Np);
     }
