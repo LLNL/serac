@@ -526,6 +526,14 @@ struct SolverStatus {
   double       residual;    ///< Final value of residual.
 };
 
+struct SolverOptions {
+  double xtol;
+  double rtol;
+  unsigned int max_iter;
+};
+
+const SolverOptions default_solver_options {.xtol = 0.0, .rtol = 1e-10, .max_iter=25};
+
 /// @brief Solves a nonlinear scalar-valued equation and gives derivatives of solution to parameters
 ///
 /// @tparam function Function object type for the nonlinear equation to solve
@@ -555,8 +563,8 @@ struct SolverStatus {
 /// search interval are updated automatically to maintain a bracket around the root. If the sign
 /// of the residual is the same at both @p lower_bound and @p upper_bound, the solver aborts.
 template <typename function, typename... ParamTypes>
-auto solve_scalar_equation(function&& f, double x0, double tolerance, double lower_bound, double upper_bound,
-                           ParamTypes... params)
+auto solve_scalar_equation(function&& f, double x0, double lower_bound, double upper_bound,
+                           SolverOptions options = default_solver_options, ParamTypes... params)
 {
   double x, df_dx;
   double fl = f(lower_bound, get_value(params)...);
@@ -594,7 +602,7 @@ auto solve_scalar_equation(function&& f, double x0, double tolerance, double low
     if (x0 < lower_bound || x0 > upper_bound) {
       x0 = 0.5 * (lower_bound + upper_bound);
     }
-    const unsigned int MAX_ITERATIONS = 25;
+
     x                                 = x0;
     double delta_x_old                = std::abs(upper_bound - lower_bound);
     double delta_x                    = delta_x_old;
@@ -603,7 +611,7 @@ auto solve_scalar_equation(function&& f, double x0, double tolerance, double low
     df_dx                             = get_gradient(R);
 
     while (!converged) {
-      if (iterations == MAX_ITERATIONS) {
+      if (iterations == options.max_iter) {
         SLIC_WARNING("solve_scalar_equation failed to converge in allotted iterations.");
         break;
       }
@@ -623,13 +631,13 @@ auto solve_scalar_equation(function&& f, double x0, double tolerance, double low
         converged = (x == temp);
       }
 
-      // convergence check
-      converged = converged || (std::abs(delta_x) < tolerance);
-
       // function and jacobian evaluation
       R     = f(make_dual(x), get_value(params)...);
       fval  = get_value(R);
       df_dx = get_gradient(R);
+
+      // convergence check
+      converged = converged || (std::abs(delta_x) < options.xtol) || (std::abs(fval) < options.rtol);
 
       // maintain bracket on root
       if (fval < 0) {
