@@ -12,6 +12,10 @@
 #include "axom/core.hpp"
 #include "axom/fmt.hpp"
 
+#ifdef SERAC_USE_CAMP
+#include "camp/config.h"
+#endif
+
 #ifdef SERAC_USE_CALIPER
 #include "caliper/caliper-config.h"
 #endif
@@ -89,6 +93,13 @@ std::string about()
 
   // Axom
   about += format("Axom Version:    {0}\n", axom::getVersion());
+
+  // Camp
+#ifdef SERAC_USE_CAMP
+  about += format("Camp Version:    {0}\n", CAMP_VERSION);
+#else
+  disabled_libs.push_back("Camp");
+#endif
 
   // Caliper
 #ifdef SERAC_USE_CALIPER
