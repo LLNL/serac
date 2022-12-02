@@ -30,35 +30,29 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     #------------------------------------------------------------------------------
     # Camp
     #------------------------------------------------------------------------------
-    if ((RAJA_DIR OR UMPIRE_DIR) AND NOT CAMP_DIR)
-        message(FATAL_ERROR "CAMP_DIR is required if RAJA_DIR or UMPIRE_DIR is provided.")
+    if (NOT CAMP_DIR)
+        message(FATAL_ERROR "CAMP_DIR is required.")
     endif()
 
-    if (CAMP_DIR)
-        if (NOT EXISTS "${CAMP_DIR}")
-            message(FATAL_ERROR "Given CAMP_DIR does not exist: ${CAMP_DIR}")
-        endif()
+    if (NOT EXISTS "${CAMP_DIR}")
+        message(FATAL_ERROR "Given CAMP_DIR does not exist: ${CAMP_DIR}")
+    endif()
 
-        if (NOT IS_DIRECTORY "${CAMP_DIR}")
-            message(FATAL_ERROR "Given CAMP_DIR is not a directory: ${CAMP_DIR}")
-        endif()
+    if (NOT IS_DIRECTORY "${CAMP_DIR}")
+        message(FATAL_ERROR "Given CAMP_DIR is not a directory: ${CAMP_DIR}")
+    endif()
 
-        find_package(camp REQUIRED PATHS ${CAMP_DIR})
+    find_package(camp REQUIRED PATHS ${CAMP_DIR})
 
-        message(STATUS "Checking for expected Camp target 'camp'")
-        if (NOT TARGET camp)
-            message(FATAL_ERROR "Camp failed to load: ${CAMP_DIR}")
-        else()
-            message(STATUS "Camp loaded: ${CAMP_DIR}")
-            set(CAMP_FOUND TRUE CACHE BOOL "")
-        endif()
-
-        # Note: camp sets a compile feature that is not available on XL
-        set_target_properties(camp PROPERTIES INTERFACE_COMPILE_FEATURES "")
+    message(STATUS "Checking for expected Camp target 'camp'")
+    if (NOT TARGET camp)
+        message(FATAL_ERROR "Camp failed to load: ${CAMP_DIR}")
     else()
-        message(STATUS "Camp support is OFF")
-        set(CAMP_FOUND FALSE CACHE BOOL "")
+        message(STATUS "Camp loaded: ${CAMP_DIR}")
     endif()
+
+    # Note: camp sets a compile feature that is not available on XL
+    set_target_properties(camp PROPERTIES INTERFACE_COMPILE_FEATURES "")
 
     #------------------------------------------------------------------------------
     # Umpire
