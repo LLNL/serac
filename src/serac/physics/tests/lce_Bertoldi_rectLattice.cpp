@@ -21,6 +21,8 @@ using namespace serac;
 #define PERIODIC_MESH
 // #undef PERIODIC_MESH
 
+const static int problemID = 4;
+
 using serac::solid_mechanics::default_static_options;
 
 int main(int argc, char* argv[])
@@ -47,35 +49,28 @@ int main(int argc, char* argv[])
   auto initial_mesh = buildMeshFromFile(filename);
 
 #ifdef PERIODIC_MESH
+
   // Create translation vectors defining the periodicity
   double lx = 0.18;
   double ly = lx;
   // double lz = 0.1;
   mfem::Vector x_translation({lx, 0.0, 0.0});
   mfem::Vector y_translation({0.0, ly, 0.0});
-  // mfem::Vector z_translation({0.0, 0.0, lz});
  
   // std::vector<mfem::Vector> translations = {x_translation};
   std::vector<mfem::Vector> translations = {x_translation, y_translation};
-  // std::vector<mfem::Vector> translations = {x_translation, y_translation, z_translation};
 
   double tol = 1e-4;
   std::vector<int> periodicMap = initial_mesh.CreatePeriodicVertexMapping(translations, tol);
-//  for(int i = 0; i < static_cast<int>(periodicMap.size()); i++) 
-//  {
-//   if(i!=periodicMap[i])
-//   {
-//     std::cout<<"... periodicMap["<<i<<"] = "<<periodicMap[i]<<std::endl;
-//   }
-//  }
-// exit(0);
+
   // Create the periodic mesh using the vertex mapping defined by the translation vectors
   auto periodic_mesh = mfem::Mesh::MakePeriodic(initial_mesh, periodicMap);
-  // auto periodic_mesh = mfem::Mesh::MakePeriodic(initial_mesh, initial_mesh.CreatePeriodicVertexMapping(translations));
-
   auto mesh = mesh::refineAndDistribute(std::move(periodic_mesh), serial_refinement, parallel_refinement);
+
 #else
+
   auto mesh = mesh::refineAndDistribute(std::move(initial_mesh), serial_refinement, parallel_refinement);
+
 #endif
 
   serac::StateManager::setMesh(std::move(mesh));
@@ -107,10 +102,39 @@ int main(int argc, char* argv[])
 
   // Material properties
   double density = 1.0;
-  double young_modulus = 0.035;
-  double possion_ratio = 0.48;
+  double young_modulus = 0.4;
+  double possion_ratio = 0.49;
   double beta_param = 0.041;
-  double max_order_param = 0.2;
+  double max_order_param = 0.1;
+  double gamma_angle = 0.0;
+  double eta_angle = 0.0;
+
+  switch (problemID)
+  {
+    case 0:
+      gamma_angle = 0.0;
+      eta_angle = 0.0;
+      break;
+    case 1:
+      gamma_angle = M_PI_2;
+      eta_angle = 0.0;
+      break;
+    case 2:
+      gamma_angle = 0.0;
+      eta_angle = M_PI_2;
+      break;
+    case 3:
+      gamma_angle = 0.5 * M_PI_2;
+      eta_angle = 0.0;
+      break;
+    case 4:
+      gamma_angle = 0.5 * M_PI_2;
+      eta_angle = M_PI_2;
+      break;
+    default:
+      std::cout << "...... Wrong problem ID ......" << std::endl;
+      exit(0);
+  }
 
   // Parameter 1
   FiniteElementState orderParam(StateManager::newState(FiniteElementState::Options{.order = p, .name = "orderParam"}));
@@ -119,13 +143,13 @@ int main(int argc, char* argv[])
   // Parameter 2
   auto fec = std::unique_ptr<mfem::FiniteElementCollection>(new mfem::L2_FECollection(p, dim));
   FiniteElementState gammaParam(StateManager::newState(FiniteElementState::Options{.order = p, .coll = std::move(fec), .name = "gammaParam"}));
-  auto gammaFunc = [](const mfem::Vector& x, double) -> double { return (x[1] > 0.5) ? M_PI_2 : 0.5*M_PI_2; };
+  auto gammaFunc = [gamma_angle](const mfem::Vector& /*x*/, double) -> double { return gamma_angle; }; // (x[1] > 0.5) ? M_PI_2 : 0.5*M_PI_2; };
   mfem::FunctionCoefficient gammaCoef(gammaFunc);
   gammaParam.project(gammaCoef);
 
   // Paremetr 3
   FiniteElementState etaParam(StateManager::newState(FiniteElementState::Options{.order = p, .coll = std::move(fec), .name = "etaParam"}));
-  auto etaFunc = [](const mfem::Vector& /*x*/, double) -> double { return 0.0; };
+  auto etaFunc = [eta_angle](const mfem::Vector& /*x*/, double) -> double { return eta_angle; };
   mfem::FunctionCoefficient etaCoef(etaFunc);
   etaParam.project(etaCoef);
 
@@ -151,7 +175,13 @@ int main(int argc, char* argv[])
   auto          zero_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; };
   solid_solver.setDisplacementBCs(support, zero_displacement);
 
-  auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.000005; };
+  double iniDispVal =  0.000005;
+  if (problemID==4)
+  {
+    iniDispVal =  0.00000005;
+  }
+
+  auto ini_displacement = [iniDispVal](const mfem::Vector&, mfem::Vector& u) -> void { u = iniDispVal; };
   solid_solver.setDisplacement(ini_displacement);
 
   // Finalize the data structures
@@ -160,7 +190,28 @@ int main(int argc, char* argv[])
   // Perform the quasi-static solve
   int num_steps = 30;
 
-  std::string outputFilename = "sol_lce_bertoldi_rect_lattice";
+  std::string outputFilename;
+  switch (problemID)
+  {
+    case 0:
+      outputFilename = "sol_lce_bertoldi_rect_lattice_gamma_00_eta_00";
+      break;
+    case 1:
+      outputFilename = "sol_lce_bertoldi_rect_lattice_gamma_90_eta_00";
+      break;
+    case 2:
+      outputFilename = "sol_lce_bertoldi_rect_lattice_gamma_00_eta_90";
+      break;
+    case 3:
+      outputFilename = "sol_lce_bertoldi_rect_lattice_gamma_45_eta_00";
+      break;
+    case 4:
+      outputFilename = "sol_lce_bertoldi_rect_lattice_gamma_45_eta_90";
+      break;
+    default:
+      std::cout << "...... Wrong problem ID ......" << std::endl;
+      exit(0);
+  }
   solid_solver.outputState(outputFilename);
  
   double t    = 0.0;
@@ -168,14 +219,14 @@ int main(int argc, char* argv[])
   double dt   = tmax / num_steps;
   for (int i = 0; i < num_steps; i++) 
   {
-        if(rank==0)
+    if(rank==0)
     {
       std::cout 
       << "\n\n............................"
-      << "\n... Entering time step: "<< i + 1
+      << "\n... Entering time step: "<< i + 1 << " (/" << num_steps << ")"
       << "\n............................\n"
       << "\n... Using order parameter: "<< max_order_param * (tmax - t) / tmax
-      << "\n... Using two gamma angles"
+      << "\n... Using gamma = " << gamma_angle << ", and eta = " << eta_angle
       << std::endl;
     }
 
