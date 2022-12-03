@@ -83,10 +83,20 @@ struct NeoHookean {
   double G;        ///< shear modulus
 };
 
+/**
+ * @brief Linear isotropic hardening law
+ */
 struct LinearHardening {
-  double sigma_y;
-  double Hi;
+  double sigma_y; ///< Yield strength
+  double Hi; ///< Isotropiv
 
+  /**
+   * @brief Computes the flow stress
+   *
+   * @tparam T Number-like type for the argument
+   * @param accumulated_plastic_strain The uniaxial equivalent accumulated plastic strain
+   * @return Flow stress value
+   */
   template <typename T>
   auto operator()(const T accumulated_plastic_strain) const
   {
@@ -94,11 +104,21 @@ struct LinearHardening {
   };
 };
 
+/**
+ * @brief Power-law isotropic hardening law
+ */
 struct PowerLawHardening {
-  double sigma_y;
-  double n;
-  double eps0;
+  double sigma_y; ///< yield strength
+  double n; ///< hardening index in reciprocal form
+  double eps0; ///< reference value of accumulated plastic strain
 
+  /**
+   * @brief Computes the flow stress
+   *
+   * @tparam T Number-like type for the argument
+   * @param accumulated_plastic_strain The uniaxial equivalent accumulated plastic strain
+   * @return Flow stress value
+   */
   template <typename T>
   auto operator()(const T accumulated_plastic_strain) const
   {
@@ -107,11 +127,23 @@ struct PowerLawHardening {
   };
 };
 
+/**
+ * @brief Voce's isotropic hardening law
+ *
+ * This form has an exponential saturation character.
+ */
 struct VoceHardening {
-  double sigma_y;
-  double sigma_sat;
-  double strain_constant;
+  double sigma_y; ///< yield strength
+  double sigma_sat; ///< saturation value of flow strength
+  double strain_constant; ///< The constant dictating how fast the exponential decays
 
+  /**
+   * @brief Computes the flow stress
+   *
+   * @tparam T Number-like type for the argument
+   * @param accumulated_plastic_strain The uniaxial equivalent accumulated plastic strain
+   * @return Flow stress value
+   */
   template <typename T>
   auto operator()(const T accumulated_plastic_strain) const
   {
@@ -128,7 +160,7 @@ struct J2Nonlinear {
 
   double E;        ///< Young's modulus
   double nu;       ///< Poisson's ratio
-  HardeningType hardening;
+  HardeningType hardening; ///< Flow stress hardening model
   double density;  ///< mass density
 
   /// @brief variables required to characterize the hysteresis response

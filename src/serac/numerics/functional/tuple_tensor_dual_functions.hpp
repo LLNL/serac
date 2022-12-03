@@ -673,6 +673,18 @@ auto solve_scalar_equation(function&& f, double x0, double lower_bound, double u
   }
 }
 
+/**
+ * @brief Finds a root of a vector-valued nonlinear function
+ *
+ * Uses Newton-Raphson iteration.
+ *
+ * @tparam function Type for the functor object
+ * @tparam n Vector dimension of the equation
+ * @param f A callable representing the function of which a root is sought. Must take an n-vector
+ * argument and return an n-vector
+ * @param x0 Initial guess for root. Must be an n-vector.
+ * @return A root of @p f.
+ */
 template < typename function, int n >
 auto find_root(function && f, tensor< double, n > x0) {
 
