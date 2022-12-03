@@ -88,7 +88,7 @@ struct NeoHookean {
  */
 struct LinearHardening {
   double sigma_y; ///< Yield strength
-  double Hi; ///< Isotropiv
+  double Hi; ///< Isotropic hardening modulus
 
   /**
    * @brief Computes the flow stress
@@ -189,6 +189,10 @@ struct J2Nonlinear {
     auto residual = [eqps_old, G, *this](auto delta_eqps, auto trial_mises) { return trial_mises - 3.0*G*delta_eqps - this->hardening(eqps_old + delta_eqps);};
     if (residual(0.0, get_value(q)) > tol*hardening.sigma_y) {
       // (iii) return mapping
+
+      // Note the tolerance for convergence is the same as the tolerance for entering the return map.
+      // This ensures that if the constitutive update is called again with the updated internal
+      // variables, the return map won't be repeated.
       SolverOptions opts{.xtol=0, .rtol=tol*hardening.sigma_y, .max_iter=25};
       double lower_bound = 0.0;
       double upper_bound = (get_value(q) - hardening(eqps_old))/(3.0*G);
