@@ -104,7 +104,7 @@ public:
   static void updateState(const FiniteElementState& state)
   {
     SLIC_ERROR_ROOT_IF(named_states_.find(state.name()) == named_states_.end(),
-                       axom::fmt::format("State manager does not contain state named {}", state.name()));
+                       axom::fmt::format("State manager does not contain state named '{}'", state.name()));
 
     state.fillGridFunction(*named_states_[state.name()]);
   }
@@ -120,7 +120,7 @@ public:
   static void updateDual(const FiniteElementDual& dual)
   {
     SLIC_ERROR_ROOT_IF(named_duals_.find(dual.name()) == named_duals_.end(),
-                       axom::fmt::format("State manager does not contain dual named {}", dual.name()));
+                       axom::fmt::format("State manager does not contain dual named '{}'", dual.name()));
 
     dual.space().GetRestrictionMatrix()->MultTranspose(dual, *named_duals_[dual.name()]);
   }

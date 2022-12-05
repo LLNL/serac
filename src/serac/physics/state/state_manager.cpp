@@ -96,7 +96,7 @@ void StateManager::storeState(FiniteElementState& state)
   SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
   auto mesh_tag = collectionID(&state.mesh());
   SLIC_ERROR_ROOT_IF(named_states_.find(state.name()) != named_states_.end(),
-                     axom::fmt::format("StateManager already contains a state named {}", state.name()));
+                     axom::fmt::format("StateManager already contains a state named '{}'", state.name()));
   auto&                  datacoll = datacolls_.at(mesh_tag);
   const std::string      name     = state.name();
   mfem::ParGridFunction* grid_function;
@@ -119,9 +119,9 @@ FiniteElementState StateManager::newState(FiniteElementVector::Options&& options
 {
   SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
   SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
-                     axom::fmt::format("Mesh tag \"{}\" not found in the data store", mesh_tag));
+                     axom::fmt::format("Mesh tag '{}' not found in the data store", mesh_tag));
   SLIC_ERROR_ROOT_IF(named_states_.find(options.name) != named_states_.end(),
-                     axom::fmt::format("StateManager already contains a state named {}", options.name));
+                     axom::fmt::format("StateManager already contains a state named '{}'", options.name));
   const std::string name  = options.name;
   auto              state = FiniteElementState(mesh(mesh_tag), std::move(options));
   storeState(state);
@@ -134,9 +134,9 @@ FiniteElementState StateManager::newState(const mfem::ParFiniteElementSpace& spa
 
   SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
   SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
-                     axom::fmt::format("Mesh tag \"{}\" not found in the data store", mesh_tag));
+                     axom::fmt::format("Mesh tag '{}' not found in the data store", mesh_tag));
   SLIC_ERROR_ROOT_IF(named_states_.find(state_name) != named_states_.end(),
-                     axom::fmt::format("StateManager already contains a state named {}", state_name));
+                     axom::fmt::format("StateManager already contains a state named '{}'", state_name));
   auto state = FiniteElementState(mesh(mesh_tag), space, state_name);
   storeState(state);
   return state;
@@ -147,7 +147,7 @@ void StateManager::storeDual(FiniteElementDual& dual)
   SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
   auto mesh_tag = collectionID(&dual.mesh());
   SLIC_ERROR_ROOT_IF(named_duals_.find(dual.name()) != named_duals_.end(),
-                     axom::fmt::format("StateManager already contains a state named {}", dual.name()));
+                     axom::fmt::format("StateManager already contains a state named '{}'", dual.name()));
   auto&                  datacoll = datacolls_.at(mesh_tag);
   const std::string      name     = dual.name();
   mfem::ParGridFunction* grid_function;
@@ -174,9 +174,9 @@ FiniteElementDual StateManager::newDual(const mfem::ParFiniteElementSpace& space
 
   SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
   SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
-                     axom::fmt::format("Mesh tag \"{}\" not found in the data store", mesh_tag));
+                     axom::fmt::format("Mesh tag '{}' not found in the data store", mesh_tag));
   SLIC_ERROR_ROOT_IF(named_duals_.find(dual_name) != named_duals_.end(),
-                     axom::fmt::format("StateManager already contains a dual named {}", dual_name));
+                     axom::fmt::format("StateManager already contains a dual named '{}'", dual_name));
   auto dual = FiniteElementDual(mesh(mesh_tag), space, dual_name);
   storeDual(dual);
   return dual;
@@ -186,9 +186,9 @@ FiniteElementDual StateManager::newDual(FiniteElementVector::Options&& options, 
 {
   SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
   SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
-                     axom::fmt::format("Mesh tag \"{}\" not found in the data store", mesh_tag));
+                     axom::fmt::format("Mesh tag '{}' not found in the data store", mesh_tag));
   SLIC_ERROR_ROOT_IF(named_duals_.find(options.name) != named_duals_.end(),
-                     axom::fmt::format("StateManager already contains a dual named {}", options.name));
+                     axom::fmt::format("StateManager already contains a dual named '{}'", options.name));
   const std::string name = options.name;
   auto              dual = FiniteElementDual(mesh(mesh_tag), std::move(options));
   storeDual(dual);
@@ -199,10 +199,10 @@ void StateManager::save(const double t, const int cycle, const std::string& mesh
 {
   SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
   SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
-                     axom::fmt::format("Mesh tag \"{}\" not found in the data store", mesh_tag));
+                     axom::fmt::format("Mesh tag '{}' not found in the data store", mesh_tag));
   auto&       datacoll  = datacolls_.at(mesh_tag);
   std::string file_path = axom::utilities::filesystem::joinPath(datacoll.GetPrefixPath(), datacoll.GetCollectionName());
-  SLIC_INFO_ROOT(axom::fmt::format("Saving data collection at time: {} to path: {}", t, file_path));
+  SLIC_INFO_ROOT(axom::fmt::format("Saving data collection at time: '{}' to path: '{}'", t, file_path));
 
   datacoll.SetTime(t);
   datacoll.SetCycle(cycle);
