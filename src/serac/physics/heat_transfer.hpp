@@ -120,8 +120,10 @@ public:
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
 
-    states_.push_back(temperature_);
-    states_.push_back(adjoint_temperature_);
+    states_.push_back(&temperature_);
+    states_.push_back(&adjoint_temperature_);
+
+    parameters_.resize(sizeof...(parameter_space));
 
     // Create a pack of the primal field and parameter finite element spaces
     std::array<const mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + 1> trial_spaces;
@@ -130,17 +132,15 @@ public:
     if constexpr (sizeof...(parameter_space) > 0) {
       tuple<parameter_space...> types{};
       for_constexpr<sizeof...(parameter_space)>([&](auto i) {
-        parameter_trial_spaces_[i] = std::unique_ptr<mfem::ParFiniteElementSpace>(
+        parameters_[i].trial_space = std::unique_ptr<mfem::ParFiniteElementSpace>(
             generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_));
-        trial_spaces[i + 1] = parameter_trial_spaces_[i].get();
+        trial_spaces[i + 1] = parameters_[i].trial_space.get();
       });
     }
 
     M_functional_ = std::make_unique<Functional<test(trial, parameter_space...)>>(&temperature_.space(), trial_spaces);
 
     K_functional_ = std::make_unique<Functional<test(trial, parameter_space...)>>(&temperature_.space(), trial_spaces);
-
-    states_.push_back(temperature_);
 
     nonlin_solver_ = mfem_ext::EquationSolver(mesh_.GetComm(), options.linear, options.nonlinear);
     nonlin_solver_.SetOperator(residual_);
@@ -166,23 +166,6 @@ public:
 
     zero_.SetSize(true_size);
     zero_ = 0.0;
-  }
-
-  /**
-   * @brief register the provided FiniteElementState object as the source of values for parameter `i`
-   *
-   * @param parameter_state the values to use for the specified parameter
-   * @param i the index of the parameter
-   */
-  void setParameter(FiniteElementState& parameter_state, size_t i)
-  {
-    parameter_states_[i] = &parameter_state;
-    parameter_sensitivities_[i] =
-        StateManager::newDual(parameter_state.space(), parameter_state.name() + "_sensitivity");
-
-    // Add the parameter to the BasePhysics containers for output
-    states_.push_back(parameter_state);
-    duals_.push_back(*parameter_sensitivities_[i]);
   }
 
   /**
@@ -369,6 +352,35 @@ public:
   serac::FiniteElementState& adjointTemperature() { return adjoint_temperature_; };
 
   /**
+   * @brief Accessor for getting named finite element state fields from the physics modules
+   *
+   * @param state_name The name of the Finite Element State to retrieve
+   * @return The named Finite Element State
+   */
+  const FiniteElementState& state(const std::string& state_name) override
+  {
+    if (state_name == "temperature") {
+      return temperature_;
+    } else if (state_name == "adjoint_temperature") {
+      return adjoint_temperature_;
+    }
+
+    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requestion from solid mechanics module '{}', but it doesn't exist",
+                                      state_name, name_));
+    return temperature_;
+  }
+
+  /**
+   * @brief Get a vector of the finite element state solution variable names
+   *
+   * @return The solution variable names
+   */
+  virtual std::vector<std::string> stateNames() override
+  {
+    return std::vector<std::string>{{"temperature"}, {"adjoint_temperature"}};
+  }
+
+  /**
    * @brief Complete the initialization and allocation of the data structures.
    *
    * This must be called before AdvanceTimestep().
@@ -383,12 +395,12 @@ public:
           temperature_.space().TrueVSize(),
 
           [this](const mfem::Vector& u, mfem::Vector& r) {
-            r = (*K_functional_)(u, *parameter_states_[parameter_indices]...);
+            r = (*K_functional_)(u, *parameters_[parameter_indices].state...);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
           [this](const mfem::Vector& u) -> mfem::Operator& {
-            auto [r, drdu] = (*K_functional_)(differentiate_wrt(u), *parameter_states_[parameter_indices]...);
+            auto [r, drdu] = (*K_functional_)(differentiate_wrt(u), *parameters_[parameter_indices].state...);
             J_             = assemble(drdu);
             bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             return *J_;
@@ -399,13 +411,13 @@ public:
       residual_ = mfem_ext::StdFunctionOperator(
           temperature_.space().TrueVSize(),
           [this](const mfem::Vector& du_dt, mfem::Vector& r) {
-            auto M_residual = (*M_functional_)(du_dt, *parameter_states_[parameter_indices]...);
+            auto M_residual = (*M_functional_)(du_dt, *parameters_[parameter_indices].state...);
 
             // TODO we should use the new variadic capability to directly pass temperature and d_temp_dt directly to
             // these kernels to avoid ugly hacks like this.
             mfem::Vector K_arg(u_.Size());
             add(1.0, u_, dt_, du_dt, u_predicted_);
-            auto K_residual = (*K_functional_)(u_predicted_, *parameter_states_[parameter_indices]...);
+            auto K_residual = (*K_functional_)(u_predicted_, *parameters_[parameter_indices].state...);
 
             add(M_residual, K_residual, r);
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
@@ -415,14 +427,14 @@ public:
             // Only reassemble the stiffness if it is a new timestep
 
             auto M =
-                serac::get<1>((*M_functional_)(differentiate_wrt(du_dt), *parameter_states_[parameter_indices]...));
+                serac::get<1>((*M_functional_)(differentiate_wrt(du_dt), *parameters_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
             mfem::Vector K_arg(u_.Size());
             add(1.0, u_, dt_, du_dt, u_predicted_);
 
             auto K = serac::get<1>(
-                (*K_functional_)(differentiate_wrt(u_predicted_), *parameter_states_[parameter_indices]...));
+                (*K_functional_)(differentiate_wrt(u_predicted_), *parameters_[parameter_indices].state...));
 
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
@@ -444,8 +456,8 @@ public:
    * boundary condition data for the adjoint problem
    * @return The computed adjoint finite element state
    */
-  virtual const serac::FiniteElementState& solveAdjoint(FiniteElementDual& adjoint_load,
-                                                        FiniteElementDual* dual_with_essential_boundary = nullptr)
+  virtual const serac::FiniteElementState& solveAdjoint(
+      FiniteElementDual& adjoint_load, FiniteElementDual* dual_with_essential_boundary = nullptr) override
   {
     mfem::HypreParVector adjoint_load_vector(adjoint_load);
 
@@ -458,7 +470,7 @@ public:
     mfem::HypreParVector adjoint_essential(adjoint_load);
     adjoint_essential = 0.0;
 
-    auto [r, drdu] = (*K_functional_)(differentiate_wrt(temperature_), *parameter_states_[parameter_indices]...);
+    auto [r, drdu] = (*K_functional_)(differentiate_wrt(temperature_), *parameters_[parameter_indices].state...);
     auto jacobian  = assemble(drdu);
     auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -489,17 +501,18 @@ public:
    *
    * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
    */
-  template <int parameter_field>
-  FiniteElementDual& computeSensitivity()
+  FiniteElementDual& computeSensitivity(size_t parameter_field) override
   {
-    auto [r, drdparam] = (*K_functional_)(DifferentiateWRT<parameter_field + 1>{}, temperature_,
-                                          *parameter_states_[parameter_indices]...);
+    SLIC_ASSERT_MSG(parameter_field < sizeof...(parameter_indices),
+                    axom::fmt::format("Invalid parameter index '{}' reqested for sensitivity."));
+
+    auto drdparam = serac::get<1>(d_residual_d_[parameter_field]());
 
     auto drdparam_mat = assemble(drdparam);
 
-    drdparam_mat->MultTranspose(adjoint_temperature_, *parameter_sensitivities_[parameter_field]);
+    drdparam_mat->MultTranspose(adjoint_temperature_, *parameters_[parameter_field].sensitivity);
 
-    return *parameter_sensitivities_[parameter_field];
+    return *parameters_[parameter_field].sensitivity;
   }
 
   /// Destroy the Thermal Solver object
@@ -524,19 +537,6 @@ protected:
   /// Stiffness functional object \f$\mathbf{K} = \int_\Omega \theta \cdot \nabla \phi_i  + f \phi_i \, dx \f$
   std::unique_ptr<Functional<test(trial, parameter_space...)>> K_functional_;
 
-  /// Trial finite element spaces for the functional object
-  std::array<std::unique_ptr<mfem::ParFiniteElementSpace>, sizeof...(parameter_space)> parameter_trial_spaces_;
-
-  /// The finite element states representing user-defined parameter fields
-  std::array<FiniteElementState*, sizeof...(parameter_space)> parameter_states_;
-
-  /**
-   * @brief The sensitivities (dual vectors) with repect to each of the input parameter fields
-   * @note this is an array of optionals as FiniteElementDual is not default constructable and
-   * we want to set this during the setParameter method.
-   */
-  std::array<std::optional<FiniteElementDual>, sizeof...(parameter_space)> parameter_sensitivities_;
-
   /// Assembled mass matrix
   std::unique_ptr<mfem::HypreParMatrix> M_;
 
@@ -548,6 +548,17 @@ protected:
    * and its gradient with respect to temperature
    */
   mfem_ext::StdFunctionOperator residual_;
+
+  /// @brief Array functions computing the derivative of the residual with respect to each given parameter
+  /// @note This is needed so the user can ask for a specific sensitivity at runtime as opposed to it being a
+  /// template parameter.
+  std::array<std::function<decltype(
+                 (*K_functional_)(DifferentiateWRT<0>{}, temperature_, *parameters_[parameter_indices].state...))()>,
+             sizeof...(parameter_indices)>
+      d_residual_d_ = {[&]() {
+        return (*K_functional_)(DifferentiateWRT<1 + parameter_indices>{}, temperature_,
+                                *parameters_[parameter_indices].state...);
+      }...};
 
   /**
    * @brief the ordinary differential equation that describes

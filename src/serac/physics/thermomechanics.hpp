@@ -44,17 +44,17 @@ public:
                   mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(3, order, name, pmesh),
         thermal_(thermal_options, name + "thermal", pmesh),
-        solid_(solid_options, geom_nonlin, name + "mechanical", ShapeDisplacement::Off, pmesh)
+        solid_(solid_options, geom_nonlin, name + "mechanical", pmesh)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
 
-    states_.push_back(thermal_.temperature());
-    states_.push_back(solid_.velocity());
-    states_.push_back(solid_.displacement());
+    states_.push_back(&thermal_.temperature());
+    states_.push_back(&solid_.velocity());
+    states_.push_back(&solid_.displacement());
 
-    thermal_.setParameter(solid_.displacement(), 0);
-    solid_.setParameter(thermal_.temperature(), 0);
+    thermal_.setParameter(0, solid_.displacement());
+    solid_.setParameter(0, thermal_.temperature());
 
     coupling_ = serac::CouplingScheme::OperatorSplit;
   }
@@ -83,6 +83,37 @@ public:
   {
     thermal_.setParameter(parameter_state, i + 1);  // offset for displacement field
     solid_.setParameter(parameter_state, i + 1);    // offset for temperature field
+  }
+
+  /**
+   * @brief Accessor for getting named finite element state fields from the physics modules
+   *
+   * @param state_name The name of the Finite Element State to retrieve
+   * @return The named Finite Element State
+   */
+  const FiniteElementState& state(const std::string& state_name) override
+  {
+    if (state_name == "displacement") {
+      return solid_.displacement();
+    } else if (state_name == "velocity") {
+      return solid_.velocity();
+    } else if (state_name == "temperature") {
+      return thermal_.temperature();
+    }
+
+    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requestion from solid mechanics module '{}', but it doesn't exist",
+                                      state_name, name_));
+    return solid_.displacement();
+  }
+
+  /**
+   * @brief Get a vector of the finite element state solution variable names
+   *
+   * @return The solution variable names
+   */
+  virtual std::vector<std::string> stateNames() override
+  {
+    return std::vector<std::string>{{"displacement"}, {"velocity"}, {"temperature"}};
   }
 
   /**
