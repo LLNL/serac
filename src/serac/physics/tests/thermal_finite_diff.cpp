@@ -42,15 +42,6 @@ TEST(Thermal, FiniteDifference)
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1, 2};
 
-  // Construct and initialized the user-defined conductivity to be used as a differentiable parameter in
-  // the thermal conduction physics module.
-  FiniteElementState user_defined_conductivity(
-      StateManager::newState(FiniteElementState::Options{.order = 1, .name = "parameterized_conductivity"}));
-
-  double conductivity_value = 1.2;
-
-  user_defined_conductivity = conductivity_value;
-
   // We must know the index of the parameter finite element state in our parameter pack to take sensitivities.
   // As we only have one parameter in this example, the index is zero.
   constexpr int conductivity_parameter_index = 0;
@@ -61,7 +52,14 @@ TEST(Thermal, FiniteDifference)
   // field, in this case the thermal conductivity. We also pass an array of finite element states for each of the
   // requested parameterized fields.
   HeatTransfer<p, dim, Parameters<H1<1> > > thermal_solver(Thermal::defaultQuasistaticOptions(), "thermal_functional");
-  thermal_solver.setParameter(user_defined_conductivity, 0);
+
+  // Construct and initialized the user-defined conductivity to be used as a differentiable parameter in
+  // the thermal conduction physics module.
+  auto user_defined_conductivity =
+      thermal_solver.generateParameter("parameterized_conductivity", conductivity_parameter_index);
+
+  double conductivity_value  = 1.2;
+  *user_defined_conductivity = conductivity_value;
 
   // Construct a potentially user-defined parameterized material and send it to the thermal module
   Thermal::ParameterizedLinearIsotropicConductor mat;
@@ -107,26 +105,26 @@ TEST(Thermal, FiniteDifference)
   thermal_solver.solveAdjoint(adjoint_load);
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
-  [[maybe_unused]] auto& sensitivity = thermal_solver.computeSensitivity<conductivity_parameter_index>();
+  [[maybe_unused]] auto& sensitivity = thermal_solver.computeSensitivity(conductivity_parameter_index);
 
   // Perform finite difference on each conduction value
   // to check if computed qoi sensitivity is consistent
   // with finite difference on the temperature
   double eps = 1.0e-4;
-  for (int i = 0; i < user_defined_conductivity.gridFunction().Size(); ++i) {
+  for (int i = 0; i < user_defined_conductivity->gridFunction().Size(); ++i) {
     // Perturb the conductivity
-    user_defined_conductivity(i) = conductivity_value + eps;
+    (*user_defined_conductivity)(i) = conductivity_value + eps;
 
     thermal_solver.advanceTimestep(dt);
     mfem::ParGridFunction temperature_plus = thermal_solver.temperature().gridFunction();
 
-    user_defined_conductivity(i) = conductivity_value - eps;
+    (*user_defined_conductivity)(i) = conductivity_value - eps;
 
     thermal_solver.advanceTimestep(dt);
     mfem::ParGridFunction temperature_minus = thermal_solver.temperature().gridFunction();
 
     // Reset to the original conductivity value
-    user_defined_conductivity(i) = conductivity_value;
+    (*user_defined_conductivity)(i) = conductivity_value;
 
     // Finite difference to compute sensitivity of temperature with respect to conductivity
     mfem::ParGridFunction dtemp_dconductivity(&thermal_solver.temperature().space());

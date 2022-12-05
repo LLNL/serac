@@ -23,6 +23,8 @@ BasePhysics::BasePhysics(std::string name, mfem::ParMesh* pmesh)
       sidre_datacoll_id_(StateManager::collectionID(pmesh)),
       mesh_(StateManager::mesh(sidre_datacoll_id_)),
       comm_(mesh_.GetComm()),
+      shape_displacement_(StateManager::shapeDisplacement(sidre_datacoll_id_)),
+      shape_displacement_sensitivity_(StateManager::shapeDisplacementSensitivity(sidre_datacoll_id_)),
       time_(0.0),
       cycle_(0),
       ode_time_point_(0.0),
@@ -39,8 +41,6 @@ BasePhysics::BasePhysics(int n, int p, std::string name, mfem::ParMesh* pmesh) :
   gf_initialized_.assign(static_cast<std::size_t>(n), StateManager::isRestart());
 }
 
-const std::vector<std::reference_wrapper<serac::FiniteElementState> >& BasePhysics::getState() const { return states_; }
-
 void BasePhysics::setTime(const double time) { time_ = time; }
 
 double BasePhysics::time() const { return time_; }
@@ -49,16 +49,81 @@ void BasePhysics::setCycle(const int cycle) { cycle_ = cycle; }
 
 int BasePhysics::cycle() const { return cycle_; }
 
+std::unique_ptr<FiniteElementState> BasePhysics::generateParameter(const std::string& parameter_name,
+                                                                   size_t             parameter_index)
+{
+  SLIC_ERROR_ROOT_IF(
+      parameter_index >= parameters_.size(),
+      axom::fmt::format("Parameter index '{}' is not available in physics module '{}'", parameter_index, name_));
+  SLIC_ERROR_ROOT_IF(
+      parameters_[parameter_index].state,
+      axom::fmt::format("Parameter index '{}' is already set in physics module '{}'", parameter_index, name_));
+
+  auto new_state = std::make_unique<FiniteElementState>(mesh_, *parameters_[parameter_index].trial_space,
+                                                        detail::addPrefix(name_, parameter_name));
+  StateManager::storeState(*new_state);
+  parameters_[parameter_index].state = new_state.get();
+  parameters_[parameter_index].sensitivity =
+      StateManager::newDual(new_state->space(), new_state->name() + "_sensitivity");
+  return new_state;
+}
+
+void BasePhysics::setParameter(size_t parameter_index, FiniteElementState& parameter_state)
+{
+  SLIC_ERROR_ROOT_IF(&parameter_state.mesh() != &mesh_,
+                     axom::fmt::format("Mesh of parameter state is not the same as the physics mesh"));
+
+  SLIC_ERROR_ROOT_IF(
+      parameter_index >= parameters_.size(),
+      axom::fmt::format("Parameter index '{}' is not available in physics module '{}'", parameter_index, name_));
+  SLIC_ERROR_ROOT_IF(parameters_[parameter_index].state,
+                     axom::fmt::format("Parameter state index '{}' has been previously defined in physics module '{}'",
+                                       parameter_index, name_));
+  SLIC_ERROR_ROOT_IF(
+      parameter_state.space().GetTrueVSize() != parameters_[parameter_index].trial_space->GetTrueVSize(),
+      axom::fmt::format(
+          "Physics module parameter '{}' has size '{}' while given state has size '{}'. The finite element "
+          "spaces are inconsistent.",
+          parameter_index, parameters_[parameter_index].trial_space->GetTrueVSize(),
+          parameter_state.space().GetTrueVSize()));
+  parameters_[parameter_index].state = &parameter_state;
+  parameters_[parameter_index].sensitivity =
+      StateManager::newDual(parameter_state.space(), parameter_state.name() + "_sensitivity");
+}
+
+void BasePhysics::setShapeDisplacement(FiniteElementState& shape_displacement)
+{
+  SLIC_ERROR_ROOT_IF(&shape_displacement_.mesh() != &mesh_,
+                     axom::fmt::format("Mesh of shape displacement is not the same as the physics mesh"));
+
+  SLIC_ERROR_ROOT_IF(
+      shape_displacement.space().GetTrueVSize() != shape_displacement_.space().GetTrueVSize(),
+      axom::fmt::format(
+          "Physics module shape displacement has size '{}' while given state has size '{}'. The finite element "
+          "spaces are inconsistent.",
+          shape_displacement_.space().GetTrueVSize(), shape_displacement.space().GetTrueVSize()));
+  shape_displacement_ = shape_displacement;
+}
+
 void BasePhysics::outputState(std::optional<std::string> paraview_output_dir) const
 {
   // Update the states and duals in the state manager
   for (auto& state : states_) {
-    StateManager::updateState(state);
+    StateManager::updateState(*state);
   }
 
   for (auto& dual : duals_) {
-    StateManager::updateDual(dual);
+    StateManager::updateDual(*dual);
   }
+
+  for (auto& parameter : parameters_) {
+    SLIC_ERROR_ROOT_IF(!parameter.state, "Parameter state expected but not defined");
+    StateManager::updateState(*parameter.state);
+    StateManager::updateDual(*parameter.sensitivity);
+  }
+
+  StateManager::updateState(shape_displacement_);
+  StateManager::updateDual(shape_displacement_sensitivity_);
 
   // Save the restart/Sidre file
   StateManager::save(time_, cycle_, sidre_datacoll_id_);
@@ -72,14 +137,22 @@ void BasePhysics::outputState(std::optional<std::string> paraview_output_dir) co
         output_name = "default";
       }
 
-      paraview_dc_ = std::make_unique<mfem::ParaViewDataCollection>(output_name, &states_.front().get().mesh());
+      paraview_dc_            = std::make_unique<mfem::ParaViewDataCollection>(output_name, &states_.front()->mesh());
       int max_order_in_fields = 0;
 
       // Find the maximum polynomial order in the physics module's states
-      for (FiniteElementState& state : states_) {
-        paraview_dc_->RegisterField(state.name(), &state.gridFunction());
-        max_order_in_fields = std::max(max_order_in_fields, state.space().GetOrder(0));
+      for (FiniteElementState* state : states_) {
+        paraview_dc_->RegisterField(state->name(), &state->gridFunction());
+        max_order_in_fields = std::max(max_order_in_fields, state->space().GetOrder(0));
       }
+
+      for (auto& parameter : parameters_) {
+        paraview_dc_->RegisterField(parameter.state->name(), &parameter.state->gridFunction());
+        max_order_in_fields = std::max(max_order_in_fields, parameter.state->space().GetOrder(0));
+      }
+
+      paraview_dc_->RegisterField(shape_displacement_.name(), &shape_displacement_.gridFunction());
+      max_order_in_fields = std::max(max_order_in_fields, shape_displacement_.space().GetOrder(0));
 
       // Set the options for the paraview output files
       paraview_dc_->SetLevelsOfDetail(max_order_in_fields);
@@ -87,9 +160,13 @@ void BasePhysics::outputState(std::optional<std::string> paraview_output_dir) co
       paraview_dc_->SetDataFormat(mfem::VTKFormat::BINARY);
       paraview_dc_->SetCompression(true);
     } else {
-      for (FiniteElementState& state : states_) {
-        state.gridFunction();  // update grid function values
+      for (FiniteElementState* state : states_) {
+        state->gridFunction();  // update grid function values
       }
+      for (auto& parameter : parameters_) {
+        parameter.state->gridFunction();
+      }
+      shape_displacement_.gridFunction();
     }
 
     // Set the current time, cycle, and requested paraview directory
@@ -143,9 +220,9 @@ void BasePhysics::initializeSummary(axom::sidre::DataStore& datastore, double t_
   axom::sidre::View*         t_array_view = curves_group->createView("t");
   axom::sidre::Array<double> ts(t_array_view, 0, array_size);
 
-  for (FiniteElementState& state : states_) {
+  for (FiniteElementState* state : states_) {
     // Group for this Finite Element State (Field)
-    axom::sidre::Group* state_group = curves_group->createGroup(state.name());
+    axom::sidre::Group* state_group = curves_group->createGroup(state->name());
 
     // Create an array for each stat type to hold a value at each time step
     for (std::string stat_name : {"l1norms", "l2norms", "linfnorms", "avgs", "mins", "maxs"}) {
@@ -176,20 +253,20 @@ void BasePhysics::saveSummary(axom::sidre::DataStore& datastore, const double t)
 
   // For each Finite Element State (Field)
   double l1norm_value, l2norm_value, linfnorm_value, avg_value, max_value, min_value;
-  for (FiniteElementState& state : states_) {
+  for (FiniteElementState* state : states_) {
     // Calculate current stat value
     // Note: These are collective operations.
-    l1norm_value   = norm(state, 1.0);
-    l2norm_value   = norm(state, 2.0);
-    linfnorm_value = norm(state, mfem::infinity());
-    avg_value      = avg(state);
-    max_value      = max(state);
-    min_value      = min(state);
+    l1norm_value   = norm(*state, 1.0);
+    l2norm_value   = norm(*state, 2.0);
+    linfnorm_value = norm(*state, mfem::infinity());
+    avg_value      = avg(*state);
+    max_value      = max(*state);
+    min_value      = min(*state);
 
     // Only save on root node
     if (rank == 0) {
       // Group for this Finite Element State (Field)
-      axom::sidre::Group* state_group = curves_group->getGroup(state.name());
+      axom::sidre::Group* state_group = curves_group->getGroup(state->name());
 
       // Save all current stat values in their respective sidre arrays
       axom::sidre::View*         l1norms_view = state_group->getView("l1norms");

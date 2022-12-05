@@ -64,13 +64,4 @@ enum class GeometricNonlinearities
   Off /**< Do not include geometric nonlinearities */
 };
 
-/**
- * @brief Flag to enable shape diplacement (and its gradient) in a physics module
- */
-enum class ShapeDisplacement
-{
-  On, /**< Allow shape displacement and its gradient */
-  Off /**< Don't allow shape displacement and its gradient */
-};
-
 }  // namespace serac

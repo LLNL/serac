@@ -198,7 +198,6 @@ void printRunInfo()
   std::string infoMsg = axom::fmt::format("\n{:*^80}\n", "Run Information");
 
   infoMsg += axom::fmt::format("{0}: {1}\n", "Version", version());
-
   infoMsg += axom::fmt::format("{0}: {1}\n", "User Name", axom::utilities::getUserName());
   infoMsg += axom::fmt::format("{0}: {1}\n", "Host Name", axom::utilities::getHostName());
 
