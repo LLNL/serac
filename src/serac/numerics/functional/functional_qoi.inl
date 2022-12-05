@@ -83,7 +83,7 @@ public:
    * @brief Constructs using a @p mfem::ParFiniteElementSpace object corresponding to the trial space
    * @param[in] trial_fes The trial space
    */
-  Functional(std::array<mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes) : trial_space_(trial_fes)
+  Functional(std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes) : trial_space_(trial_fes)
   {
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
       P_trial_[i] = trial_space_[i]->GetProlongationMatrix();
@@ -442,7 +442,9 @@ private:
 
     std::unique_ptr<mfem::HypreParVector> assemble()
     {
-      std::unique_ptr<mfem::HypreParVector> gradient_T(form_.trial_space_[which_argument]->NewTrueDofVector());
+      // The mfem method ParFiniteElementSpace.NewTrueDofVector should really be marked const
+      std::unique_ptr<mfem::HypreParVector> gradient_T(
+          const_cast<mfem::ParFiniteElementSpace*>(form_.trial_space_[which_argument])->NewTrueDofVector());
 
       gradient_L_ = 0.0;
 
@@ -525,7 +527,7 @@ private:
   mutable mfem::Vector output_T_;
 
   /// @brief Manages DOFs for the trial space
-  std::array<mfem::ParFiniteElementSpace*, num_trial_spaces> trial_space_;
+  std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_space_;
 
   /**
    * @brief Operator that converts true (global) DOF values to local (current rank) DOF values

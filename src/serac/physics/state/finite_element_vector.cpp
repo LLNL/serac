@@ -58,8 +58,8 @@ FiniteElementVector::FiniteElementVector(FiniteElementVector&& input_vector)
 FiniteElementVector& FiniteElementVector::operator=(const mfem::HypreParVector& rhs)
 {
   SLIC_ERROR_IF(Size() != rhs.Size(),
-                axom::fmt::format("Finite element vector of size {} assigned to a HypreParVector of size {}", Size(),
-                                  rhs.Size()));
+                axom::fmt::format("Finite element vector of size '{}' assigned to a HypreParVector of size '{}'",
+                                  Size(), rhs.Size()));
 
   HypreParVector::operator=(rhs);
   return *this;
@@ -68,7 +68,7 @@ FiniteElementVector& FiniteElementVector::operator=(const mfem::HypreParVector& 
 FiniteElementVector& FiniteElementVector::operator=(const FiniteElementVector& rhs)
 {
   SLIC_ERROR_IF(Size() != rhs.Size(),
-                axom::fmt::format("Finite element vector of size {} assigned to a FiniteElementVector of size {}",
+                axom::fmt::format("Finite element vector of size '{}' assigned to a HypreParVector of size '{}'",
                                   Size(), rhs.Size()));
 
   HypreParVector::operator=(rhs);

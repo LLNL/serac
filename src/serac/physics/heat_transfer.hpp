@@ -443,7 +443,7 @@ public:
       return adjoint_temperature_;
     }
 
-    SLIC_ERROR_ROOT(axom::fmt::format("State {} requestion from solid mechanics module {}, but it doesn't exist",
+    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requestion from solid mechanics module '{}', but it doesn't exist",
                                       state_name, name_));
     return temperature_;
   }
@@ -577,7 +577,7 @@ public:
   FiniteElementDual& computeSensitivity(size_t parameter_field) override
   {
     SLIC_ASSERT_MSG(parameter_field < sizeof...(parameter_indices),
-                    axom::fmt::format("Invalid parameter index {} reqested for sensitivity."));
+                    axom::fmt::format("Invalid parameter index '{}' reqested for sensitivity."));
 
     auto drdparam     = serac::get<1>(d_residual_d_[parameter_field]());
     auto drdparam_mat = assemble(drdparam);

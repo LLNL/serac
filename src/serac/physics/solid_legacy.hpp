@@ -251,7 +251,7 @@ public:
       return adjoint_displacement_;
     }
 
-    SLIC_ERROR_ROOT(axom::fmt::format("State {} requestion from solid mechanics module {}, but it doesn't exist",
+    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requestion from solid mechanics module '{}', but it doesn't exist",
                                       state_name, name_));
     return displacement_;
   }

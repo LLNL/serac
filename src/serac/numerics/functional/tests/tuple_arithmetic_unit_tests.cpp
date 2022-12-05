@@ -99,7 +99,7 @@ TEST(TupleArithmeticUnitTests, ReadTheDocsExample)
   auto f = [=](auto p, auto v, auto L) {
     auto strain_rate            = 0.5 * (L + transpose(L));
     auto stress                 = -p * I + 2 * mu * strain_rate;
-    auto kinetic_energy_density = 0.5 * p * dot(v, v);
+    auto kinetic_energy_density = 0.5 * rho * dot(v, v);
     return tuple{stress, kinetic_energy_density};
   };
 
@@ -121,7 +121,7 @@ TEST(TupleArithmeticUnitTests, ReadTheDocsExample)
 
   // verify that the derivative types are what we expect
   [[maybe_unused]] tuple<tuple<tensor<double, 3, 3>, zero, tensor<double, 3, 3, 3, 3> >,
-                         tuple<double, tensor<double, 3>, zero> >
+                         tuple<zero, tensor<double, 3>, zero> >
       gradients = get_gradient(outputs);
 }
 

@@ -123,7 +123,7 @@ public:
   std::unique_ptr<FiniteElementState> generateParameter(const std::string& parameter_name, size_t parameter_index);
 
   /**
-   * @brief register the provided FiniteElementState object as the source of values for parameter `i`
+   * @brief Register the provided FiniteElementState object as the source of values for parameter `i`
    *
    * @param parameter_state the values to use for the specified parameter
    * @param parameter_index the index of the parameter
@@ -153,10 +153,11 @@ public:
   {
     SLIC_ERROR_ROOT_IF(
         parameter_index >= parameters_.size(),
-        axom::fmt::format("Parameter index {} is not available in physics module {}", parameter_index, name_));
+        axom::fmt::format("Parameter index '{}' is not available in physics module '{}'", parameter_index, name_));
 
-    SLIC_ERROR_ROOT_IF(!parameters_[parameter_index].state,
-                       axom::fmt::format("Parameter index {} is not set in physics module {}", parameter_index, name_));
+    SLIC_ERROR_ROOT_IF(
+        !parameters_[parameter_index].state,
+        axom::fmt::format("Parameter index '{}' is not set in physics module '{}'", parameter_index, name_));
     return *parameters_[parameter_index].state;
   }
 
@@ -165,10 +166,11 @@ public:
   {
     SLIC_ERROR_ROOT_IF(
         parameter_index >= parameters_.size(),
-        axom::fmt::format("Parameter index {} is not available in physics module {}", parameter_index, name_));
+        axom::fmt::format("Parameter index '{}' is not available in physics module '{}'", parameter_index, name_));
 
-    SLIC_ERROR_ROOT_IF(!parameters_[parameter_index].state,
-                       axom::fmt::format("Parameter index {} is not set in physics module {}", parameter_index, name_));
+    SLIC_ERROR_ROOT_IF(
+        !parameters_[parameter_index].state,
+        axom::fmt::format("Parameter index '{}' is not set in physics module '{}'", parameter_index, name_));
     return *parameters_[parameter_index].state;
   }
 
@@ -304,8 +306,8 @@ protected:
     serac::FiniteElementState* state;
 
     /**
-     * @brief The sensitivities (dual vectors) with repect to each of the input parameter fields
-     * @note this optional as FiniteElementDuals are not default constructable and
+     * @brief The sensitivities (dual vectors) with respect to each of the input parameter fields
+     * @note this is optional as FiniteElementDuals are not default constructable and
      * we want to set this during the setParameter or generateParameter method.
      */
     std::optional<serac::FiniteElementDual> sensitivity;
