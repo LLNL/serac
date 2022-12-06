@@ -91,7 +91,7 @@ TEST(SolidLegacy, FiniteDiff)
   adjointLoad = 1.0;
 
   // Solve adjoint system given this made up adjoint load
-  serac::FiniteElementDual assembledAdjointLoad(*mesh, solid.displacement().space(), "adjointLoad");
+  serac::FiniteElementDual assembledAdjointLoad(solid.displacement().space(), "adjointLoad");
   mfem::HypreParVector*    assembledVector = adjointLoad.ParallelAssemble();
   assembledAdjointLoad                     = *assembledVector;
   delete assembledVector;
@@ -239,7 +239,7 @@ TEST(SolidLegacy, MultipleDesignSpaces)
     solid.advanceTimestep(timestep);
 
     // Create a dummy adjoint load and compute the sensitivities
-    serac::FiniteElementDual adjointLoad(serac::StateManager::mesh(), h1fespace_vector, "adjoint_load");
+    serac::FiniteElementDual adjointLoad(h1fespace_vector, "adjoint_load");
     adjointLoad = 1.1;
     solid.solveAdjoint(adjointLoad);
     solid.shearModulusSensitivity(shearModulus.ParFESpace());

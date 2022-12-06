@@ -532,6 +532,21 @@ SERAC_HOST_DEVICE constexpr auto& operator+=(tensor<T, n, 1>& A, const tensor<T,
  * @param[in] A The lefthand tensor
  * @param[in] B The righthand tensor
  */
+template <typename T, int n>
+SERAC_HOST_DEVICE constexpr auto& operator+=(tensor<T, 1, n>& A, const tensor<T, n>& B)
+{
+  for (int i = 0; i < n; i++) {
+    A.data[0][i] += B[i];
+  }
+  return A;
+}
+
+/**
+ * @brief compound assignment (+) on tensors
+ * @tparam T the underlying type of the tensor argument
+ * @param[in] A The lefthand tensor
+ * @param[in] B The righthand tensor
+ */
 template <typename T>
 SERAC_HOST_DEVICE constexpr auto& operator+=(tensor<T, 1>& A, const T& B)
 {
