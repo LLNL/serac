@@ -159,9 +159,9 @@ public:
   {
     named_states_.clear();
     named_duals_.clear();
-    datacolls_.clear();
     shape_displacements_.clear();
     shape_sensitivities_.clear();
+    datacolls_.clear();
     output_dir_.clear();
     is_restart_ = false;
     ds_         = nullptr;

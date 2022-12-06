@@ -27,11 +27,10 @@ FiniteElementVector::FiniteElementVector(mfem::ParMesh& mesh, FiniteElementVecto
   HypreParVector::operator=(0.0);
 }
 
-FiniteElementVector::FiniteElementVector(mfem::ParMesh& mesh, const mfem::ParFiniteElementSpace& space,
-                                         const std::string& name)
-    : mesh_(mesh),
+FiniteElementVector::FiniteElementVector(const mfem::ParFiniteElementSpace& space, const std::string& name)
+    : mesh_(*space.GetParMesh()),
       coll_(std::unique_ptr<mfem::FiniteElementCollection>(mfem::FiniteElementCollection::New(space.FEColl()->Name()))),
-      space_(std::make_unique<mfem::ParFiniteElementSpace>(space, &mesh, coll_.get())),
+      space_(std::make_unique<mfem::ParFiniteElementSpace>(space, &mesh_.get(), coll_.get())),
       name_(name)
 {
   // Construct a hypre par vector based on the new finite element space
