@@ -68,8 +68,7 @@ const SolverOptions direct_dynamic_options = {
 
 }  // namespace solid_mechanics
 
-
-template <int ORDER, int DIM, typename parameters = Parameters<>,
+template <int order, int dim, typename parameters = Parameters<>,
           typename parameter_indices = std::make_integer_sequence<int, parameters::n>>
 class SolidMechanics;
 
@@ -80,16 +79,16 @@ class SolidMechanics;
  * hyperelastic solver object. This uses Functional to compute the tangent
  * stiffness matrices.
  *
- * @tparam ORDER The order of the discretization of the displacement and velocity fields
- * @tparam DIM The spatial dimension of the mesh
+ * @tparam order The order of the discretization of the displacement and velocity fields
+ * @tparam dim The spatial dimension of the mesh
  */
-template <int ORDER, int DIM, typename... parameter_space, int... parameter_indices>
-class SolidMechanics<ORDER, DIM, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>
+template <int order, int dim, typename... parameter_space, int... parameter_indices>
+class SolidMechanics<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>
     : public BasePhysics {
 public:
   //! @cond Doxygen_Suppress
   static constexpr int  VALUE = 0, DERIVATIVE = 1;
-  static constexpr auto I = Identity<DIM>();
+  static constexpr auto I = Identity<dim>();
   //! @endcond
 
   /// @brief The total number of non-parameter state variables (displacement, velocity, shape) passed to the FEM
@@ -101,7 +100,7 @@ public:
    * @note: this is hardcoded for now, since we currently
    * only support tensor product elements (1 element type per spatial dimension)
    */
-  static constexpr Geometry geom = supported_geometries[DIM];
+  static constexpr Geometry geom = supported_geometries[dim];
 
   /**
    * @brief Construct a new SolidMechanics Functional object
@@ -115,12 +114,11 @@ public:
                  const std::string& name = "", mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(2, order, name, pmesh),
         velocity_(StateManager::newState(
-            FiniteElementState::Options{
-                .order = ORDER, .vector_dim = DIM, .name = detail::addPrefix(name, "velocity")},
+            FiniteElementState::Options{.order = order, .vector_dim = dim, .name = detail::addPrefix(name, "velocity")},
             sidre_datacoll_id_)),
         displacement_(StateManager::newState(
             FiniteElementState::Options{
-                .order = ORDER, .vector_dim = DIM, .name = detail::addPrefix(name, "displacement")},
+                .order = order, .vector_dim = dim, .name = detail::addPrefix(name, "displacement")},
             sidre_datacoll_id_)),
         adjoint_displacement_(
             StateManager::newState(FiniteElementState::Options{.order      = ORDER,
@@ -135,8 +133,9 @@ public:
         c1_(0.0),
         geom_nonlin_(geom_nonlin)
   {
-    SLIC_ERROR_ROOT_IF(mesh_.Dimension() != DIM,
-                       axom::fmt::format("Compile time dimension, {0}, and runtime mesh dimension, {1}, mismatch", DIM, mesh_.Dimension()));
+    SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
+                       axom::fmt::format("Compile time dimension, {0}, and runtime mesh dimension, {1}, mismatch", dim,
+                                         mesh_.Dimension()));
 
     states_.push_back(&velocity_);
     states_.push_back(&displacement_);
@@ -220,7 +219,7 @@ public:
   {
     // This is the only other options stored in the input file that we can use
     // in the initialization stage
-    //TODO: move these material parameters out of the SolidMechanicsInputOptions
+    // TODO: move these material parameters out of the SolidMechanicsInputOptions
     if (input_options.material_nonlin) {
       solid_mechanics::NeoHookean mat{input_options.initial_mass_density, input_options.K, input_options.mu};
       setMaterial(mat);
@@ -230,36 +229,37 @@ public:
     }
 
     if (input_options.initial_displacement) {
-      displacement_.project(input_options.initial_displacement->constructVector(DIM));
+      displacement_.project(input_options.initial_displacement->constructVector(dim));
     }
 
     if (input_options.initial_velocity) {
-      velocity_.project(input_options.initial_velocity->constructVector(DIM));
+      velocity_.project(input_options.initial_velocity->constructVector(dim));
     }
 
     for (const auto& [bc_name, bc] : input_options.boundary_conditions) {
       // FIXME: Better naming for boundary conditions?
       if (bc_name.find("displacement") != std::string::npos) {
         if (bc.coef_opts.isVector()) {
-          std::shared_ptr<mfem::VectorCoefficient> disp_coef(bc.coef_opts.constructVector(DIM));
+          std::shared_ptr<mfem::VectorCoefficient> disp_coef(bc.coef_opts.constructVector(dim));
           bcs_.addEssential(bc.attrs, disp_coef, displacement_.space());
         } else {
-          SLIC_ERROR_ROOT_IF(!bc.coef_opts.component,
-                             "Component not specified with scalar coefficient when setting the displacement condition.");
+          SLIC_ERROR_ROOT_IF(
+              !bc.coef_opts.component,
+              "Component not specified with scalar coefficient when setting the displacement condition.");
           std::shared_ptr<mfem::Coefficient> disp_coef(bc.coef_opts.constructScalar());
           bcs_.addEssential(bc.attrs, disp_coef, displacement_.space(), *bc.coef_opts.component);
         }
       } else if (bc_name.find("traction") != std::string::npos) {
-        //TODO: Not implemented yet in input files
+        // TODO: Not implemented yet in input files
         SLIC_ERROR("'traction' is not implemented yet in input files.");
       } else if (bc_name.find("traction_ref") != std::string::npos) {
-        //TODO: Not implemented yet in input files
+        // TODO: Not implemented yet in input files
         SLIC_ERROR("'traction_ref' is not implemented yet in input files.");
       } else if (bc_name.find("pressure") != std::string::npos) {
-        //TODO: Not implemented yet in input files
+        // TODO: Not implemented yet in input files
         SLIC_ERROR("'pressure' is not implemented yet in input files.");
       } else if (bc_name.find("pressure_ref") != std::string::npos) {
-        //TODO: Not implemented yet in input files
+        // TODO: Not implemented yet in input files
         SLIC_ERROR("'pressure_ref' is not implemented yet in input files.");
       } else {
         SLIC_WARNING_ROOT("Ignoring boundary condition with unknown name: " << name);
@@ -280,7 +280,7 @@ public:
   template <typename T>
   std::shared_ptr<QuadratureData<T>> createQuadratureDataBuffer(T initial_state)
   {
-    constexpr auto Q = ORDER + 1;
+    constexpr auto Q = order + 1;
 
     size_t num_elements        = size_t(mesh_.GetNE());
     size_t qpoints_per_element = GaussQuadratureRule<geom, Q>().size();
@@ -306,7 +306,7 @@ public:
                           std::function<void(const mfem::Vector& x, mfem::Vector& disp)> disp)
   {
     // Project the coefficient onto the grid function
-    disp_bdr_coef_ = std::make_shared<mfem::VectorFunctionCoefficient>(DIM, disp);
+    disp_bdr_coef_ = std::make_shared<mfem::VectorFunctionCoefficient>(dim, disp);
 
     bcs_.addEssential(disp_bdr, disp_bdr_coef_, displacement_.space());
   }
@@ -321,7 +321,7 @@ public:
                           std::function<void(const mfem::Vector&, double, mfem::Vector&)> disp)
   {
     // Project the coefficient onto the grid function
-    disp_bdr_coef_ = std::make_shared<mfem::VectorFunctionCoefficient>(DIM, disp);
+    disp_bdr_coef_ = std::make_shared<mfem::VectorFunctionCoefficient>(dim, disp);
 
     bcs_.addEssential(disp_bdr, disp_bdr_coef_, displacement_.space());
   }
@@ -388,7 +388,7 @@ public:
    *  solid_mechanics.addCustomDomainIntegral(DependsOn<>{}, [=](auto x, auto displacement, auto acceleration, auto
    * shape_displacement){ auto du_dx = serac::get<1>(displacement);
    *
-   *    auto I       = Identity<DIM>();
+   *    auto I       = Identity<dim>();
    *    auto epsilon = 0.5 * (transpose(du_dx) + du_dx);
    *    auto stress = lambda * tr(epsilon) * I + 2.0 * mu * epsilon;
    *
@@ -404,7 +404,7 @@ public:
   void addCustomDomainIntegral(DependsOn<active_parameters...>, callable qfunction,
                                std::shared_ptr<QuadratureData<StateType>> qdata = NoQData)
   {
-    residual_->AddDomainIntegral(Dimension<DIM>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
+    residual_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
                                  qfunction, mesh_, qdata);
   }
 
@@ -416,7 +416,7 @@ public:
    * @param material A material that provides a function to evaluate stress
    * @pre material must be a object that can be called with the following arguments:
    *    1. `MaterialType::State & state` an mutable reference to the internal variables for this quadrature point
-   *    2. `tensor<T,DIM,DIM> du_dx` the displacement gradient at this quadrature point
+   *    2. `tensor<T,dim,dim> du_dx` the displacement gradient at this quadrature point
    *    3. `tuple{value, derivative}`, a tuple of values and derivatives for each parameter field
    *            specified in the `DependsOn<...>` argument.
    *
@@ -435,7 +435,7 @@ public:
                    std::shared_ptr<QuadratureData<StateType>> qdata = EmptyQData)
   {
     residual_->AddDomainIntegral(
-        Dimension<DIM>{},
+        Dimension<dim>{},
         DependsOn<0, 1, 2,
                   active_parameters + NUM_STATE_VARS...>{},  // the magic number "+ NUM_STATE_VARS" accounts for the
                                                              // fact that the displacement, acceleration, and shape
@@ -496,7 +496,7 @@ public:
   void setDisplacement(std::function<void(const mfem::Vector& x, mfem::Vector& disp)> disp)
   {
     // Project the coefficient onto the grid function
-    mfem::VectorFunctionCoefficient disp_coef(DIM, disp);
+    mfem::VectorFunctionCoefficient disp_coef(dim, disp);
     displacement_.project(disp_coef);
     gf_initialized_[1] = true;
   }
@@ -509,7 +509,7 @@ public:
   void setVelocity(std::function<void(const mfem::Vector& x, mfem::Vector& vel)> vel)
   {
     // Project the coefficient onto the grid function
-    mfem::VectorFunctionCoefficient vel_coef(DIM, vel);
+    mfem::VectorFunctionCoefficient vel_coef(dim, vel);
     velocity_.project(vel_coef);
     gf_initialized_[0] = true;
   }
@@ -519,7 +519,7 @@ public:
    *
    * @tparam BodyForceType The type of the body force load
    * @pre body_force must be a object that can be called with the following arguments:
-   *    1. `tensor<T,DIM> x` the spatial coordinates for the quadrature point
+   *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
    *    2. `double t` the time (note: time will be handled differently in the future)
    *    3. `tuple{value, derivative}`, a variadic list of tuples (each with a values and derivative),
    *            one tuple for each of the trial spaces specified in the `DependsOn<...>` argument.
@@ -533,7 +533,7 @@ public:
   void addBodyForce(DependsOn<active_parameters...>, BodyForceType body_force)
   {
     residual_->AddDomainIntegral(
-        Dimension<DIM>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
+        Dimension<dim>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
         [body_force, this](auto x, auto /* displacement */, auto /* acceleration */, auto shape, auto... params) {
           // note: this assumes that the body force function is defined
           // per unit volume in the reference configuration
@@ -558,8 +558,8 @@ public:
    * @param traction_function A function describing the traction applied to a boundary
    *
    * @pre TractionType must be a object that can be called with the following arguments:
-   *    1. `tensor<T,DIM> x` the spatial coordinates for the quadrature point
-   *    2. `tensor<T,DIM> n` the outward-facing unit normal for the quadrature point
+   *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
+   *    2. `tensor<T,dim> n` the outward-facing unit normal for the quadrature point
    *    3. `double t` the time (note: time will be handled differently in the future)
    *    4. `tuple{value, derivative}`, a variadic list of tuples (each with a values and derivative),
    *            one tuple for each of the trial spaces specified in the `DependsOn<...>` argument.
@@ -577,7 +577,7 @@ public:
   void setPiolaTraction(DependsOn<active_parameters...>, TractionType traction_function)
   {
     residual_->AddBoundaryIntegral(
-        Dimension<DIM - 1>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
+        Dimension<dim - 1>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
         [this, traction_function](auto x, auto n, auto, auto, auto shape, auto... params) {
           auto p = get<VALUE>(shape);
           return -1.0 * traction_function(x + p, n, ode_time_point_, params...);
@@ -915,10 +915,10 @@ public:
 
 protected:
   /// The compile-time finite element trial space for displacement and velocity (H1 of order p)
-  using trial = H1<ORDER, DIM>;
+  using trial = H1<order, dim>;
 
   /// The compile-time finite element test space for displacement and velocity (H1 of order p)
-  using test = H1<ORDER, DIM>;
+  using test = H1<order, dim>;
 
   /// The compile-time finite element trial space for shape displacement (H1 of order 1, nodal displacements)
   /// The choice of polynomial order for the shape sensitivity is determined in the StateManager

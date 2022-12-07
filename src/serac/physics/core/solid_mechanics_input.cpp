@@ -48,7 +48,7 @@ void SolidMechanicsInputOptions::defineInputFileSchema(axom::inlet::Container& c
   serac::input::CoefficientInputOptions::defineInputFileSchema(init_velo);
 }
 
-} // namespace serac
+}  // namespace serac
 
 serac::SolidMechanicsInputOptions FromInlet<serac::SolidMechanicsInputOptions>::operator()(
     const axom::inlet::Container& base)
@@ -58,7 +58,7 @@ serac::SolidMechanicsInputOptions FromInlet<serac::SolidMechanicsInputOptions>::
   result.order = base["order"];
 
   // Solver parameters
-  auto equation_solver                   = base["equation_solver"];
+  auto equation_solver            = base["equation_solver"];
   result.solver_options.linear    = equation_solver["linear"].get<serac::LinearSolverOptions>();
   result.solver_options.nonlinear = equation_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
 

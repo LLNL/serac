@@ -7,7 +7,7 @@
 /**
  * @file solid_mechanics_input.hpp
  *
- * @brief An object containing all input file options for the solver for 
+ * @brief An object containing all input file options for the solver for
  * total Lagrangian finite deformation solid mechanics
  */
 
@@ -46,14 +46,14 @@ struct SolidMechanicsInputOptions {
    * @brief The shear modulus
    *
    */
-  //TODO: Move to material options
+  // TODO: Move to material options
   double mu;
 
   /**
    * @brief The bulk modulus
    *
    */
-  //TODO: Move to material options
+  // TODO: Move to material options
   double K;
 
   /**
