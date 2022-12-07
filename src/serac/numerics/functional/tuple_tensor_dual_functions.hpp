@@ -527,12 +527,12 @@ struct SolverStatus {
 };
 
 struct SolverOptions {
-  double xtol;
-  double rtol;
+  double       xtol;
+  double       rtol;
   unsigned int max_iter;
 };
 
-const SolverOptions default_solver_options {.xtol = 0.0, .rtol = 1e-10, .max_iter=25};
+const SolverOptions default_solver_options{.xtol = 0.0, .rtol = 1e-10, .max_iter = 25};
 
 /// @brief Solves a nonlinear scalar-valued equation and gives derivatives of solution to parameters
 ///
@@ -603,12 +603,12 @@ auto solve_scalar_equation(function&& f, double x0, double lower_bound, double u
       x0 = 0.5 * (lower_bound + upper_bound);
     }
 
-    x                                 = x0;
-    double delta_x_old                = std::abs(upper_bound - lower_bound);
-    double delta_x                    = delta_x_old;
-    auto   R                          = f(make_dual(x), get_value(params)...);
-    auto   fval                       = get_value(R);
-    df_dx                             = get_gradient(R);
+    x                  = x0;
+    double delta_x_old = std::abs(upper_bound - lower_bound);
+    double delta_x     = delta_x_old;
+    auto   R           = f(make_dual(x), get_value(params)...);
+    auto   fval        = get_value(R);
+    df_dx              = get_gradient(R);
 
     while (!converged) {
       if (iterations == options.max_iter) {
@@ -685,28 +685,27 @@ auto solve_scalar_equation(function&& f, double x0, double lower_bound, double u
  * @param x0 Initial guess for root. Must be an n-vector.
  * @return A root of @p f.
  */
-template < typename function, int n >
-auto find_root(function && f, tensor< double, n > x0) {
+template <typename function, int n>
+auto find_root(function&& f, tensor<double, n> x0)
+{
+  static_assert(std::is_same_v<decltype(f(x0)), tensor<double, n>>,
+                "error: f(x) must have the same number of equations as unknowns");
 
-  static_assert(std::is_same_v< decltype(f(x0)), tensor< double, n > >,
-    "error: f(x) must have the same number of equations as unknowns");
-
-  double epsilon = 1.0e-8;
-  int max_iterations = 10;
+  double epsilon        = 1.0e-8;
+  int    max_iterations = 10;
 
   auto x = x0;
 
   int k = 0;
   while (k++ < max_iterations) {
     auto output = f(make_dual(x));
-    auto r = get_value(output);
+    auto r      = get_value(output);
     if (norm(r) < epsilon) break;
     auto J = get_gradient(output);
     x -= linear_solve(J, r);
   }
 
   return x;
-
 };
 
 }  // namespace serac

@@ -107,19 +107,19 @@ struct ParameterizedNeoHookeanSolid {
 
 /**
  * @brief Infers type of the components of a tensor.
- * 
+ *
  * Useful to discover if the components are dual numbers or plain reals.
- * 
- * @tparam T 
+ *
+ * @tparam T
  */
-template <typename ...T>
+template <typename... T>
 struct underlying_scalar {
   using type = decltype((T{} + ...));
 };
 
 /// @brief J2 material with Voce hardening, with hardening parameters exposed as differentiable parameters
 struct ParameterizedJ2Nonlinear {
-  static constexpr int dim = 3;
+  static constexpr int    dim = 3;
   static constexpr double tol = 1e-10;
 
   double E;        ///< Young's modulus
@@ -147,23 +147,22 @@ struct ParameterizedJ2Nonlinear {
     one = 1.0;
 
     using std::sqrt;
-    constexpr auto I = Identity<dim>();
-    const double   K = E / (3.0 * (1.0 - 2.0 * nu));
-    const double   G = 0.5 * E / (1.0 + nu);
-    const double rel_tol = tol*get_value(sigma_y);
+    constexpr auto I       = Identity<dim>();
+    const double   K       = E / (3.0 * (1.0 - 2.0 * nu));
+    const double   G       = 0.5 * E / (1.0 + nu);
+    const double   rel_tol = tol * get_value(sigma_y);
 
     // (i) elastic predictor
     auto el_strain = sym(du_dX) - state.plastic_strain;
     auto p         = K * tr(el_strain);
-    auto s         = 2.0 * G * dev(el_strain)*one; // multiply by "one" to get type correct for parameter derivatives
-    auto q = sqrt(1.5)*norm(s);
-    
+    auto s         = 2.0 * G * dev(el_strain) * one;  // multiply by "one" to get type correct for parameter derivatives
+    auto q         = sqrt(1.5) * norm(s);
+
     // (ii) admissibility
     const double eqps_old = state.accumulated_plastic_strain;
-    auto residual = [eqps_old, G, *this](auto delta_eqps, auto trial_mises, auto y0, auto ysat, auto e0) 
-    {
+    auto         residual = [eqps_old, G, *this](auto delta_eqps, auto trial_mises, auto y0, auto ysat, auto e0) {
       auto Y = this->flow_strength(eqps_old + delta_eqps, y0, ysat, e0);
-      return trial_mises - 3.0*G*delta_eqps - Y;
+      return trial_mises - 3.0 * G * delta_eqps - Y;
     };
     if (residual(0.0, get_value(q), get_value(sigma_y), get_value(sigma_sat), get_value(strain_constant)) > rel_tol) {
       // (iii) return mapping
@@ -171,12 +170,15 @@ struct ParameterizedJ2Nonlinear {
       // Note the tolerance for convergence is the same as the tolerance for entering the return map.
       // This ensures that if the constitutive update is called again with the updated internal
       // variables, the return map won't be repeated.
-      SolverOptions opts{.xtol=0, .rtol=rel_tol, .max_iter=25};
-      double lower_bound = 0.0;
-      double upper_bound = (get_value(q) - flow_strength(eqps_old, get_value(sigma_y), get_value(sigma_sat), get_value(strain_constant)))/(3.0*G);
-      auto [delta_eqps, status] = solve_scalar_equation(residual, 0.0, lower_bound, upper_bound, opts, q, sigma_y, sigma_sat, strain_constant);
+      SolverOptions opts{.xtol = 0, .rtol = rel_tol, .max_iter = 25};
+      double        lower_bound = 0.0;
+      double        upper_bound = (get_value(q) - flow_strength(eqps_old, get_value(sigma_y), get_value(sigma_sat),
+                                                         get_value(strain_constant))) /
+                           (3.0 * G);
+      auto [delta_eqps, status] =
+          solve_scalar_equation(residual, 0.0, lower_bound, upper_bound, opts, q, sigma_y, sigma_sat, strain_constant);
 
-      auto Np = 1.5*s/q;
+      auto Np = 1.5 * s / q;
 
       s = s - 2.0 * G * delta_eqps * Np;
       state.accumulated_plastic_strain += get_value(delta_eqps);
@@ -191,7 +193,7 @@ struct ParameterizedJ2Nonlinear {
                      const SaturationStrength sigma_sat, const StrainConstant strain_constant) const
   {
     using std::exp;
-    return sigma_sat - (sigma_sat - sigma_y)*exp(-accumulated_plastic_strain/strain_constant);
+    return sigma_sat - (sigma_sat - sigma_y) * exp(-accumulated_plastic_strain / strain_constant);
   };
 };
 

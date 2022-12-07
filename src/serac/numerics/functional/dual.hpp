@@ -38,7 +38,7 @@ struct dual {
    */
   SERAC_HOST_DEVICE constexpr auto& operator=(double b)
   {
-    value = b;
+    value    = b;
     gradient = {};
     return *this;
   }

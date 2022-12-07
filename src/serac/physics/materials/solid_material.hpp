@@ -87,9 +87,9 @@ struct NeoHookean {
  * @brief Power-law isotropic hardening law
  */
 struct PowerLawHardening {
-  double sigma_y; ///< yield strength
-  double n; ///< hardening index in reciprocal form
-  double eps0; ///< reference value of accumulated plastic strain
+  double sigma_y;  ///< yield strength
+  double n;        ///< hardening index in reciprocal form
+  double eps0;     ///< reference value of accumulated plastic strain
 
   /**
    * @brief Computes the flow stress
@@ -102,7 +102,7 @@ struct PowerLawHardening {
   auto operator()(const T accumulated_plastic_strain) const
   {
     using std::pow;
-    return sigma_y*pow(1.0 + accumulated_plastic_strain/eps0, 1.0/n);
+    return sigma_y * pow(1.0 + accumulated_plastic_strain / eps0, 1.0 / n);
   };
 };
 
@@ -112,9 +112,9 @@ struct PowerLawHardening {
  * This form has an exponential saturation character.
  */
 struct VoceHardening {
-  double sigma_y; ///< yield strength
-  double sigma_sat; ///< saturation value of flow strength
-  double strain_constant; ///< The constant dictating how fast the exponential decays
+  double sigma_y;          ///< yield strength
+  double sigma_sat;        ///< saturation value of flow strength
+  double strain_constant;  ///< The constant dictating how fast the exponential decays
 
   /**
    * @brief Computes the flow stress
@@ -127,20 +127,20 @@ struct VoceHardening {
   auto operator()(const T accumulated_plastic_strain) const
   {
     using std::exp;
-    return sigma_sat - (sigma_sat - sigma_y)*exp(-accumulated_plastic_strain/strain_constant);
+    return sigma_sat - (sigma_sat - sigma_y) * exp(-accumulated_plastic_strain / strain_constant);
   };
 };
 
 /// @brief J2 material with nonlinear isotropic hardening.
 template <typename HardeningType>
 struct J2Nonlinear {
-  static constexpr int dim = 3;
+  static constexpr int    dim = 3;
   static constexpr double tol = 1e-10;
 
-  double E;        ///< Young's modulus
-  double nu;       ///< Poisson's ratio
-  HardeningType hardening; ///< Flow stress hardening model
-  double density;  ///< mass density
+  double        E;          ///< Young's modulus
+  double        nu;         ///< Poisson's ratio
+  HardeningType hardening;  ///< Flow stress hardening model
+  double        density;    ///< mass density
 
   /// @brief variables required to characterize the hysteresis response
   struct State {
@@ -161,23 +161,25 @@ struct J2Nonlinear {
     auto el_strain = sym(du_dX) - state.plastic_strain;
     auto p         = K * tr(el_strain);
     auto s         = 2.0 * G * dev(el_strain);
-    auto q = sqrt(1.5)*norm(s);
-    
+    auto q         = sqrt(1.5) * norm(s);
+
     // (ii) admissibility
     const double eqps_old = state.accumulated_plastic_strain;
-    auto residual = [eqps_old, G, *this](auto delta_eqps, auto trial_mises) { return trial_mises - 3.0*G*delta_eqps - this->hardening(eqps_old + delta_eqps);};
-    if (residual(0.0, get_value(q)) > tol*hardening.sigma_y) {
+    auto         residual = [eqps_old, G, *this](auto delta_eqps, auto trial_mises) {
+      return trial_mises - 3.0 * G * delta_eqps - this->hardening(eqps_old + delta_eqps);
+    };
+    if (residual(0.0, get_value(q)) > tol * hardening.sigma_y) {
       // (iii) return mapping
 
       // Note the tolerance for convergence is the same as the tolerance for entering the return map.
       // This ensures that if the constitutive update is called again with the updated internal
       // variables, the return map won't be repeated.
-      SolverOptions opts{.xtol=0, .rtol=tol*hardening.sigma_y, .max_iter=25};
-      double lower_bound = 0.0;
-      double upper_bound = (get_value(q) - hardening(eqps_old))/(3.0*G);
+      SolverOptions opts{.xtol = 0, .rtol = tol * hardening.sigma_y, .max_iter = 25};
+      double        lower_bound = 0.0;
+      double        upper_bound = (get_value(q) - hardening(eqps_old)) / (3.0 * G);
       auto [delta_eqps, status] = solve_scalar_equation(residual, 0.0, lower_bound, upper_bound, opts, q);
 
-      auto Np = 1.5*s/q;
+      auto Np = 1.5 * s / q;
 
       s = s - 2.0 * G * delta_eqps * Np;
       state.accumulated_plastic_strain += get_value(delta_eqps);
