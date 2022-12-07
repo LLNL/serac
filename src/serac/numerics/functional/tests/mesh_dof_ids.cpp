@@ -183,6 +183,69 @@ struct Array2D {
     uint64_t dim[2];
 };
 
+Array2D< int > face_permutations(mfem::Geometry::Type geom, int p) {
+
+    if (geom == mfem::Geometry::Type::SEGMENT) {
+        Array2D< int > output(2, p+1);
+        for (int i = 0; i <= p; i++) {
+            output(0, i) = i;
+            output(1, i) = p - i;
+        }
+        return output;
+    }
+
+    if (geom == mfem::Geometry::Type::TRIANGLE) {
+        // v = {{0, 0}, {1, 0}, {0, 1}};
+        // f = Transpose[{{0, 1, 2}, {1, 0, 2}, {2, 0, 1}, {2, 1, 0}, {1, 2, 0}, {0, 2, 1}} + 1];
+        // p v[[f[[1]]]] +  (v[[f[[2]]]] - v[[f[[1]]]]) i + (v[[f[[3]]]] - v[[f[[1]]]]) j
+        //
+        // {{i, j}, {p-i-j, j}, {j, p-i-j}, {i, p-i-j}, {p-i-j, i}, {j, i}}
+        Array2D< int > output(3, (p+1)*(p+2)/2);
+        auto tri_id = [p](int x, int y) { return x + ((3 + 2 * p - y) * y) / 2; };
+        for (int j = 0; j <= p; j++) {
+            for (int i = 0; i <= p - j; i++) {
+                int id = tri_id(i,j);
+                output(0, tri_id(    i,    j)) = id;
+                output(1, tri_id(p-i-j,    j)) = id;
+                output(2, tri_id(    j,p-i-j)) = id;
+                output(3, tri_id(    i,p-i-j)) = id;
+                output(4, tri_id(p-i-j,    i)) = id;
+                output(5, tri_id(    j,    i)) = id;
+            }
+        }
+        return output;
+    }
+
+    if (geom == mfem::Geometry::Type::SQUARE) {
+        // v = {{0, 0}, {1, 0}, {1, 1}, {0, 1}}; 
+        // f = Transpose[{{0, 1, 2, 3}, {0, 3, 2, 1}, {1, 2, 3, 0}, {1, 0, 3, 2},
+        //                {2, 3, 0, 1}, {2, 1, 0, 3}, {3, 0, 1, 2}, {3, 2, 1, 0}} + 1];
+        // p v[[f[[1]]]] +  (v[[f[[2]]]] - v[[f[[1]]]]) i + (v[[f[[4]]]] - v[[f[[1]]]]) j
+        //
+        // {{i,j}, {j,i}, {p-j,i}, {p-i,j}, {p-i, p-j}, {p-j, p-i}, {j, p-i}, {i, p-j}}
+        Array2D< int > output(3, (p+1)*(p+1));
+        auto quad_id = [p](int x, int y) { return ((p+1) * y) + x; };
+        for (int j = 0; j <= p; j++) {
+            for (int i = 0; i <= p; i++) {
+                int id = quad_id(i,j);
+                output(0, quad_id(  i,   j)) = id;
+                output(1, quad_id(  j,   i)) = id;
+                output(2, quad_id(p-j,   i)) = id;
+                output(3, quad_id(p-i,   j)) = id;
+                output(4, quad_id(p-i, p-j)) = id;
+                output(5, quad_id(p-j, p-i)) = id;
+                output(6, quad_id(  j, p-i)) = id;
+                output(7, quad_id(  i, p-j)) = id;
+            }
+        }
+        return output;
+    }
+
+    std::cout << "face_permutation(): unsupported geometry type" << std::endl;
+    exit(1);
+
+}
+
 std::vector< Array2D<int> > geom_local_face_dofs(int p) {
 
     // FullSimplify[InterpolatingPolynomial[{
@@ -276,8 +339,11 @@ Array2D< int > GetBoundaryFaceDofs(mfem::FiniteElementSpace * fes, mfem::Geometr
     std::vector < int > face_dofs;
     mfem::Mesh * mesh = fes->GetMesh();
     mfem::Table * face_to_elem = mesh->GetFaceToElementTable(); 
-    std::vector< Array2D<int> > local_face_dofs = geom_local_face_dofs(fes->GetElementOrder(0));
-    // note: this assumes that all the elements are the same polynomial order ^^^
+
+    // note: this assumes that all the elements are the same polynomial order
+    int p = fes->GetElementOrder(0);
+    Array2D<int> permutations = face_permutations(face_geom, p);
+    std::vector< Array2D<int> > local_face_dofs = geom_local_face_dofs(p);
 
     uint64_t n = 0;
 
@@ -383,7 +449,7 @@ int main() {
             for (int i = 0; i < fes->GetNE(); i++) {
                 mfem::Array<int> vdofs;
                 fes->GetElementVDofs(i, vdofs);
-                vdofs.Print(std::cout, 64);
+                //vdofs.Print(std::cout, 64);
             }
 
             std::cout << "face elements: " << fes->GetNF() << std::endl;
