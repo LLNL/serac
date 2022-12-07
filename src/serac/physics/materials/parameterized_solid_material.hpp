@@ -105,12 +105,19 @@ struct ParameterizedNeoHookeanSolid {
   double G0;       ///< base shear modulus
 };
 
+/**
+ * @brief Infers type of the components of a tensor.
+ * 
+ * Useful to discover if the components are dual numbers or plain reals.
+ * 
+ * @tparam T 
+ */
 template <typename ...T>
 struct underlying_scalar {
   using type = decltype((T{} + ...));
 };
 
-/// @brief Parameterized J2 material with Voce hardening
+/// @brief J2 material with Voce hardening, with hardening parameters exposed as differentiable parameters
 struct ParameterizedJ2Nonlinear {
   static constexpr int dim = 3;
   static constexpr double tol = 1e-10;
@@ -130,7 +137,11 @@ struct ParameterizedJ2Nonlinear {
   auto operator()(State& state, const DisplacementGradient du_dX, const YieldStrength sigma_y,
                   const SaturationStrength sigma_sat, const StrainConstant strain_constant) const
   {
-    //
+    // The output stress tensor should use dual numbers if any of the parameters are dual.
+    // This slightly ugly trick to accomplishes that by picking up any dual number types
+    // from the parameters into the dummy variable "one".
+    // Another possiblity would be to cast the results to the correct type at the end, which
+    // would avoid doing any unneccessary arithmetic with dual numbers.
     using T = typename underlying_scalar<YieldStrength, SaturationStrength, StrainConstant>::type;
     T one;
     one = 1.0;
@@ -144,7 +155,7 @@ struct ParameterizedJ2Nonlinear {
     // (i) elastic predictor
     auto el_strain = sym(du_dX) - state.plastic_strain;
     auto p         = K * tr(el_strain);
-    auto s         = 2.0 * G * dev(el_strain)*one;
+    auto s         = 2.0 * G * dev(el_strain)*one; // multiply by "one" to get type correct for parameter derivatives
     auto q = sqrt(1.5)*norm(s);
     
     // (ii) admissibility
