@@ -229,39 +229,40 @@ std::vector< Array2D<int> > geom_local_face_dofs(int p) {
     }
     output[mfem::Geometry::Type::SQUARE] = quads;
 
-    // Vertices for Geometry::TETRAHEDRON
-    // {{0.0 0.0 0.0}, {1.0 0.0 0.0}, {0.0 1.0 0.0}, {0.0 0.0 1.0}}
+    // v = {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+    // f = Transpose[{{1, 2, 3}, {0, 3, 2}, {0, 1, 3}, {0, 2, 1}} + 1];
+    // p v[[f[[1]]]] +  (v[[f[[2]]]] - v[[f[[1]]]]) j + (v[[f[[3]]]] - v[[f[[1]]]]) k
     //
-    // Faces for Geometry::TETRAHEDRON
-    // {{1, 2, 3}, {0, 3, 2}, {0, 1, 3}, {0, 2, 1}};
+    // {{p-j-k, j, k}, {0, k, j}, {j, 0, k}, {k, j, 0}}
     Array2D<int> tets(4, (p+1) * (p+2) / 2);
     for (int k = 0; k <= p; k++) {
         for (int j = 0; j <= p - k; j++) {
-            tets(0, k) = tet_id(0, 0, 0);
-            tets(1, k) = tet_id(0, 0, 0);
-            tets(2, k) = tet_id(0, 0, 0);
-            tets(3, k) = tet_id(0, 0, 0);
+            int id = tri_id(j,k);
+            tets(0, id) = tet_id(p - j - k, j, k);
+            tets(1, id) = tet_id(0, k, j);
+            tets(2, id) = tet_id(j, 0, k);
+            tets(3, id) = tet_id(k, j, 0);
         }
     }
     output[mfem::Geometry::Type::TETRAHEDRON] = tets;
 
-    // Vertices for Geometry::CUBE
-    // {0.0 0.0 0.0}, {1.0 0.0 0.0}, {1.0 1.0 0.0}, {0.0 1.0 0.0},
-    // {0.0 0.0 1.0}, {1.0 0.0 1.0}, {1.0 1.0 1.0}, {0.0 1.0 1.0}
+    // v = {{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0}, 
+    //      {0, 0, 1}, {1, 0, 1}, {1, 1, 1}, {0, 1, 1}};
+    // f = Transpose[{{3, 2, 1, 0}, {0, 1, 5, 4}, {1, 2, 6, 5}, 
+    //               {2, 3, 7, 6}, {3, 0, 4, 7}, {4, 5, 6, 7}} + 1]; 
+    // p v[[f[[1]]]] +  (v[[f[[2]]]] - v[[f[[1]]]]) j + (v[[f[[4]]]] - v[[f[[1]]]]) k
     //
-    // Faces for Geometry::CUBE
-    //    {3, 2, 1, 0}, {0, 1, 5, 4}, {1, 2, 6, 5},
-    //    {2, 3, 7, 6}, {3, 0, 4, 7}, {4, 5, 6, 7}
-    // };
+    // {{j, p-k, 0}, {j, 0, k}, {p, j, k}, {p-j, p, k}, {0, p-j, k}, {j, k, p}}
     Array2D<int> hexes(6, (p+1) * (p+1));
     for (int k = 0; k <= p; k++) {
         for (int j = 0; j <= p; j++) {
-            hexes(0, k*(p+1)+j) = hex_id(p-j, p-k, 0);
-            hexes(1, k*(p+1)+j) = hex_id(0, 0, 0);
-            hexes(2, k*(p+1)+j) = hex_id(0, 0, 0);
-            hexes(3, k*(p+1)+j) = hex_id(0, 0, 0);
-            hexes(4, k*(p+1)+j) = hex_id(0, 0, 0);
-            hexes(5, k*(p+1)+j) = hex_id(0, 0, 0);
+            int id = quad_id(j,k);
+            hexes(0, id) = hex_id(j, p - k, 0);
+            hexes(1, id) = hex_id(j, 0, k);
+            hexes(2, id) = hex_id(p, j, k);
+            hexes(3, id) = hex_id(p - j, p, k);
+            hexes(4, id) = hex_id(0, p - j, k);
+            hexes(5, id) = hex_id(j, k, p);
         }
     }
     output[mfem::Geometry::Type::CUBE] = hexes;
@@ -274,7 +275,7 @@ Array2D< int > GetBoundaryFaceDofs(mfem::FiniteElementSpace * fes, mfem::Geometr
 
     std::vector < int > face_dofs;
     mfem::Mesh * mesh = fes->GetMesh();
-    mfem::Table * face_to_elem = mesh->GetFaceToElementTable();
+    mfem::Table * face_to_elem = mesh->GetFaceToElementTable(); 
     std::vector< Array2D<int> > local_face_dofs = geom_local_face_dofs(fes->GetElementOrder(0));
     // note: this assumes that all the elements are the same polynomial order ^^^
 
