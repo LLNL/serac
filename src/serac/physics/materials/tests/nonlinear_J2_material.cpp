@@ -11,7 +11,6 @@
 #include "serac/physics/materials/solid_material.hpp"
 
 #include <iostream>
-#include <fstream>
 
 #include <gtest/gtest.h>
 
@@ -20,32 +19,32 @@
 
 namespace serac {
 
-TEST(NonlinearJ2Material, PowerLawHardening)
+TEST(NonlinearJ2Material, PowerLawHardeningWorksWithDuals)
 {
-  solid_mechanics::PowerLawHardening hardening_law{.sigma_y = 1.0, .n=2.0, .eps0=0.01};
-  std::ofstream file;
-  file.open("power_law_hardening.csv", std::ios::in | std::ios::trunc);
-
-  double eqps = 0.0;
-  for (size_t i = 0; i < 50; i++) {
-      auto stress = hardening_law(make_dual(eqps));
-      file << eqps << " " << stress.value << " " << stress.gradient << std::endl;
-      eqps += 0.01;
-  }
+  double sigma_y = 1.0;
+  solid_mechanics::PowerLawHardening hardening_law{.sigma_y = sigma_y, .n=2.0, .eps0=0.01};
+  double eqps = 0.1;
+  auto flow_stress = hardening_law(make_dual(eqps));
+  EXPECT_GT(flow_stress.value, sigma_y);
+  EXPECT_GT(flow_stress.gradient, 0.0);
 };
 
-TEST(NonlinearJ2Material, Stress)
+TEST(NonlinearJ2Material, SatisfiesConsistency)
 {
-  tensor<double, 3, 3> du_dx{{{0.2, 0.0, 0.0},
-                              {0.0, -0.05, 0.0},
-                              {0.0, 0.0, -0.05}}};
-
+  tensor<double, 3, 3> du_dx{{{0.7551559 , 0.3129729 , 0.12388372},
+                              {0.548188  , 0.8851279 , 0.30576992},
+                              {0.82008433, 0.95633745, 0.3566252 }}};
   solid_mechanics::PowerLawHardening hardening_law{.sigma_y = 0.1, .n=2.0, .eps0=0.01};
   solid_mechanics::J2Nonlinear<solid_mechanics::PowerLawHardening> material{.E = 1.0, .nu=0.25, .hardening=hardening_law, .density=1.0};
   auto internal_state = solid_mechanics::J2Nonlinear<solid_mechanics::PowerLawHardening>::State{};
-  auto stress = material(internal_state, make_dual(du_dx));
-  EXPECT_GT(internal_state.accumulated_plastic_strain, 0);
-  EXPECT_GE(norm(stress), 1e-4);
+  tensor<double, 3, 3> stress = material(internal_state, du_dx);
+  double mises = std::sqrt(1.5)*norm(dev(stress));
+  double flow_stress = hardening_law(internal_state.accumulated_plastic_strain);
+  EXPECT_NEAR(mises, flow_stress, 1e-9*mises);
+
+  double twoG = material.E/(1 + material.nu);
+  tensor<double, 3, 3> s = twoG*dev(sym(du_dx) - internal_state.plastic_strain);
+  EXPECT_LT(norm(s - dev(stress))/norm(s), 1e-9);
 };
 
 TEST(NonlinearJ2Material, Uniaxial)
@@ -58,7 +57,7 @@ TEST(NonlinearJ2Material, Uniaxial)
   double n = 1;
   solid_mechanics::PowerLawHardening hardening{.sigma_y=sigma_y, .n=n, .eps0=eps0};
   solid_mechanics::J2Nonlinear<decltype(hardening)> material{.E=E, .nu=nu, .hardening=hardening, .density=1.0};
-  
+
   auto internal_state = solid_mechanics::J2Nonlinear<decltype(hardening)>::State{};
   auto strain = [=](double t) { return sigma_y/E*t; };
   auto response_history = uniaxial_stress_test(2.0, 3, material, internal_state, strain);
