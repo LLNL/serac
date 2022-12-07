@@ -526,13 +526,13 @@ struct SolverStatus {
   double       residual;    ///< Final value of residual.
 };
 
-struct SolverOptions {
+struct ScalarSolverOptions {
   double       xtol;
   double       rtol;
   unsigned int max_iter;
 };
 
-const SolverOptions default_solver_options{.xtol = 0.0, .rtol = 1e-10, .max_iter = 25};
+const ScalarSolverOptions default_solver_options{.xtol = 1e-8, .rtol = 0, .max_iter = 25};
 
 /// @brief Solves a nonlinear scalar-valued equation and gives derivatives of solution to parameters
 ///
@@ -564,7 +564,7 @@ const SolverOptions default_solver_options{.xtol = 0.0, .rtol = 1e-10, .max_iter
 /// of the residual is the same at both @p lower_bound and @p upper_bound, the solver aborts.
 template <typename function, typename... ParamTypes>
 auto solve_scalar_equation(function&& f, double x0, double lower_bound, double upper_bound,
-                           SolverOptions options = default_solver_options, ParamTypes... params)
+                           ScalarSolverOptions options = default_solver_options, ParamTypes... params)
 {
   double x, df_dx;
   double fl = f(lower_bound, get_value(params)...);

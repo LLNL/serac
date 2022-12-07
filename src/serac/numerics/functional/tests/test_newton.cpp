@@ -13,24 +13,22 @@ using namespace serac;
 TEST(ScalarEquationSolver, ConvergesOnEasyProblem)
 {
   double x0             = 2.0;
-  double tolerance      = 1e-8;
   double lower          = 1e-3;
   double upper          = 2.5;
-  auto [x_soln, status] = solve_scalar_equation([](auto x) { return exp(x) - 2.0; }, x0, tolerance, lower, upper);
+  auto [x_soln, status] = solve_scalar_equation([](auto x) { return exp(x) - 2.0; }, x0, lower, upper, default_solver_options);
   double exact          = std::log(2.0);
   double error          = std::abs((x_soln - exact) / abs(exact));
-  EXPECT_LT(error, tolerance);
+  EXPECT_LT(error, default_solver_options.xtol);
 }
 
 TEST(ScalarEquationSolver, WorksWithScalarParameter)
 {
   auto my_sqrt = [](dual<double> p) {
     double x0        = get_value(p);
-    double tolerance = 1e-6;
     double lower     = 0;
     double upper     = (get_value(p) > 1.0) ? get_value(p) : 1.0;
     auto [x_soln, status] =
-        solve_scalar_equation([](auto x, auto a) { return x * x - a; }, x0, tolerance, lower, upper, p);
+        solve_scalar_equation([](auto x, auto a) { return x * x - a; }, x0, lower, upper, default_solver_options, p);
     return x_soln;
   };
   double p               = 2.0;
@@ -47,13 +45,12 @@ TEST(ScalarEquationSolver, WorksWithScalarParameter)
 TEST(ScalarEquationSolver, AbortsIfRootNotBracketedByCaller)
 {
   double x0        = 5.0;
-  double tolerance = 1e-8;
   double lower     = 2.0;
   double upper     = 10.0;
   EXPECT_DEATH_IF_SUPPORTED(
       {
         [[maybe_unused]] auto result =
-            solve_scalar_equation([](auto x) { return x * x - 2.0; }, x0, tolerance, lower, upper);
+            solve_scalar_equation([](auto x) { return x * x - 2.0; }, x0, lower, upper, default_solver_options);
       },
       "solve_scalar_equation: root not bracketed by input bounds.");
 }
@@ -64,14 +61,13 @@ TEST(ScalarEquationSolver, ReturnsImmediatelyIfUpperBoundIsARoot)
   double upper = 2.0;
 
   double x0        = 1.0;
-  double tolerance = 1e-8;
   double lower     = 0.0;
 
   auto [x_soln, status] =
-      solve_scalar_equation([](auto x, auto a) { return x * x - a; }, x0, tolerance, lower, upper, p);
+      solve_scalar_equation([](auto x, auto a) { return x * x - a; }, x0, lower, upper, default_solver_options, p);
 
   double error = std::abs((x_soln - 2.0)) / 2.0;
-  EXPECT_LT(error, tolerance);
+  EXPECT_LT(error, default_solver_options.xtol);
 
   EXPECT_EQ(status.iterations, 0);
 }
@@ -82,14 +78,13 @@ TEST(ScalarEquationSolver, ReturnsImmediatelyIfLowerBoundIsARoot)
   double lower = 2.0;
 
   double x0        = 6.0;
-  double tolerance = 1e-8;
   double upper     = 8.0;
 
   auto [x_soln, status] =
-      solve_scalar_equation([](auto x, auto a) { return x * x - a; }, x0, tolerance, lower, upper, p);
+      solve_scalar_equation([](auto x, auto a) { return x * x - a; }, x0, lower, upper, default_solver_options, p);
 
   double error = std::abs((x_soln - 2.0)) / 2.0;
-  EXPECT_LT(error, tolerance);
+  EXPECT_LT(error, default_solver_options.xtol);
 
   EXPECT_EQ(status.iterations, 0);
 }
@@ -97,24 +92,22 @@ TEST(ScalarEquationSolver, ReturnsImmediatelyIfLowerBoundIsARoot)
 TEST(ScalarEquationSolver, ConvergesWithGuessOutsideNewtonBasin)
 {
   double x0             = 9.5;
-  double tolerance      = 1e-8;
   double lower          = -10.0;
   double upper          = 10.0;
   auto   nasty_function = [](auto x) { return sin(x) + x; };
-  auto [x, status]      = solve_scalar_equation(nasty_function, x0, tolerance, lower, upper);
+  auto [x, status]      = solve_scalar_equation(nasty_function, x0, lower, upper, default_solver_options);
   double error          = std::abs(x);
-  EXPECT_LT(error, tolerance);
+  EXPECT_LT(error, default_solver_options.xtol);
 }
 
 TEST(ScalarEquationSolver, WorksWithTensorParameter)
 {
   auto my_norm = [](auto A) {
-    double tolerance = 1e-10;
     double lower     = 1e-3;
     double upper     = 20.0;
     double x0        = 10.0;
     auto [x_soln, status] =
-        solve_scalar_equation([](auto x, auto P) { return x * x - squared_norm(P); }, x0, tolerance, lower, upper, A);
+        solve_scalar_equation([](auto x, auto P) { return x * x - squared_norm(P); }, x0, lower, upper, default_solver_options, A);
     return x_soln;
   };
 
@@ -131,12 +124,11 @@ TEST(ScalarEquationSolver, WorksWithTensorParameter)
 TEST(ScalarEquationSolver, CanTakeDirectionalDerivative)
 {
   auto my_norm = [](auto A) {
-    double tolerance = 1e-10;
     double lower     = 1e-3;
     double upper     = 20.0;
     double x0        = 10.0;
     auto [x_soln, status] =
-        solve_scalar_equation([](auto x, auto P) { return x * x - squared_norm(P); }, x0, tolerance, lower, upper, A);
+        solve_scalar_equation([](auto x, auto P) { return x * x - squared_norm(P); }, x0, lower, upper, default_solver_options, A);
     return x_soln;
   };
 
