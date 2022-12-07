@@ -10,8 +10,6 @@
 
 #include "serac/physics/materials/solid_material.hpp"
 
-#include <iostream>
-
 #include <gtest/gtest.h>
 
 #include "serac/numerics/functional/tensor.hpp"
