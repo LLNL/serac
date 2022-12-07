@@ -34,20 +34,6 @@ TEST(NonlinearJ2Material, PowerLawHardening)
   }
 };
 
-TEST(NonlinearJ2Material, LinearHardening)
-{
-  solid_mechanics::LinearHardening hardening_law{.sigma_y = 1.0, .Hi=0.1};
-  std::ofstream file;
-  file.open("linear_hardening.csv", std::ios::in | std::ios::trunc);
-
-  double eqps = 0.0;
-  for (size_t i = 0; i < 50; i++) {
-      auto stress = hardening_law(make_dual(eqps));
-      file << eqps << " " << stress.value << " " << stress.gradient << std::endl;
-      eqps += 0.01;
-  }
-};
-
 TEST(NonlinearJ2Material, Stress)
 {
   tensor<double, 3, 3> du_dx{{{0.2, 0.0, 0.0},
@@ -58,8 +44,7 @@ TEST(NonlinearJ2Material, Stress)
   solid_mechanics::J2Nonlinear<solid_mechanics::PowerLawHardening> material{.E = 1.0, .nu=0.25, .hardening=hardening_law, .density=1.0};
   auto internal_state = solid_mechanics::J2Nonlinear<solid_mechanics::PowerLawHardening>::State{};
   auto stress = material(internal_state, make_dual(du_dx));
-  std::cout << stress << std::endl;
-  std::cout << internal_state.plastic_strain << std::endl;
+  EXPECT_GT(internal_state.accumulated_plastic_strain, 0);
   EXPECT_GE(norm(stress), 1e-4);
 };
 
@@ -69,19 +54,28 @@ TEST(NonlinearJ2Material, Uniaxial)
   double nu = 0.25;
   double sigma_y = 0.01;
   double Hi = E/100.0;
-  solid_mechanics::LinearHardening hardening{.sigma_y=sigma_y, .Hi=Hi};
-  //solid_mechanics::PowerLawHardening hardening{.sigma_y=sigma_y, .n=2.0, .eps0=sigma_y/E};
-  //solid_mechanics::VoceHardening hardening{.sigma_y=sigma_y, .sigma_sat=3.0*sigma_y, .strain_constant=3*sigma_y/E};
+  double eps0 = sigma_y/Hi;
+  double n = 1;
+  solid_mechanics::PowerLawHardening hardening{.sigma_y=sigma_y, .n=n, .eps0=eps0};
   solid_mechanics::J2Nonlinear<decltype(hardening)> material{.E=E, .nu=nu, .hardening=hardening, .density=1.0};
+  
   auto internal_state = solid_mechanics::J2Nonlinear<decltype(hardening)>::State{};
-  auto strain = [E, sigma_y](double t) { return t*10*sigma_y/E; };
-  auto response_history = uniaxial_stress_test(1.0, 100, material, internal_state, strain);
+  auto strain = [=](double t) { return sigma_y/E*t; };
+  auto response_history = uniaxial_stress_test(2.0, 3, material, internal_state, strain);
 
-  std::ofstream file;
-  file.open("uniaxial.csv", std::ios::in | std::ios::trunc);
+  auto stress_exact = [=](double strain) { 
+    return strain < sigma_y/E ? E*strain : E/(E + Hi)*(sigma_y + Hi*strain);
+  };
+  auto plastic_strain_exact = [=](double strain) {
+    return strain < sigma_y/E ? E*strain : (E*strain - sigma_y)/(E + Hi);
+  };
 
   for (auto r : response_history) {
-    file << get<1>(r)[0][0] << " " << get<2>(r)[0][0] << std::endl;
+    double e = get<1>(r)[0][0]; // strain
+    double s = get<2>(r)[0][0]; // stress
+    double pe = get<3>(r).plastic_strain[0][0]; // plastic strain
+    ASSERT_LE(std::abs(s - stress_exact(e)), 1e-10*std::abs(stress_exact(e)));
+    ASSERT_LE(std::abs(pe - plastic_strain_exact(e)), 1e-10*std::abs(plastic_strain_exact(e)));
   }
 };
 

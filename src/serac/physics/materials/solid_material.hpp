@@ -84,27 +84,6 @@ struct NeoHookean {
 };
 
 /**
- * @brief Linear isotropic hardening law
- */
-struct LinearHardening {
-  double sigma_y; ///< Yield strength
-  double Hi; ///< Isotropic hardening modulus
-
-  /**
-   * @brief Computes the flow stress
-   *
-   * @tparam T Number-like type for the argument
-   * @param accumulated_plastic_strain The uniaxial equivalent accumulated plastic strain
-   * @return Flow stress value
-   */
-  template <typename T>
-  auto operator()(const T accumulated_plastic_strain) const
-  {
-    return sigma_y + Hi*accumulated_plastic_strain;
-  };
-};
-
-/**
  * @brief Power-law isotropic hardening law
  */
 struct PowerLawHardening {
