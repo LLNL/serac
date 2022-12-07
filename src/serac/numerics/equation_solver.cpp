@@ -283,7 +283,7 @@ serac::LinearSolverOptions FromInlet<serac::LinearSolverOptions>::operator()(con
     } else if (solver_type == "cg") {
       iter_options.lin_solver = serac::LinearSolver::CG;
     } else {
-      std::string msg = axom::fmt::format("Unknown Linear solver type given: {0}", solver_type);
+      std::string msg = axom::fmt::format("Unknown Linear solver type given: '{0}'", solver_type);
       SLIC_ERROR_ROOT(msg);
     }
     const std::string prec_type = config["prec_type"];
@@ -300,7 +300,7 @@ serac::LinearSolverOptions FromInlet<serac::LinearSolverOptions>::operator()(con
     } else if (prec_type == "BlockILU") {
       iter_options.prec = serac::BlockILUPrec{};
     } else {
-      std::string msg = axom::fmt::format("Unknown preconditioner type given: {0}", prec_type);
+      std::string msg = axom::fmt::format("Unknown preconditioner type given: '{0}'", prec_type);
       SLIC_ERROR_ROOT(msg);
     }
     options = iter_options;
@@ -327,7 +327,7 @@ serac::NonlinearSolverOptions FromInlet<serac::NonlinearSolverOptions>::operator
   } else if (solver_type == "KINLineSearch") {
     options.nonlin_solver = serac::NonlinearSolver::KINBacktrackingLineSearch;
   } else {
-    SLIC_ERROR_ROOT(axom::fmt::format("Unknown nonlinear solver type given: {0}", solver_type));
+    SLIC_ERROR_ROOT(axom::fmt::format("Unknown nonlinear solver type given: '{0}'", solver_type));
   }
   return options;
 }

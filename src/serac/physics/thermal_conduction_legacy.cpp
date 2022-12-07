@@ -25,10 +25,11 @@ ThermalConductionLegacy::ThermalConductionLegacy(int order, const SolverOptions&
                                                                       .name = detail::addPrefix(name, "temperature")},
                                           sidre_datacoll_id_)),
       residual_(temperature_.space().TrueVSize()),
-      ode_(temperature_.space().TrueVSize(), {.u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
+      ode_(temperature_.space().TrueVSize(),
+           {.time = ode_time_point_, .u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
            nonlin_solver_, bcs_)
 {
-  states_.push_back(temperature_);
+  states_.push_back(&temperature_);
 
   nonlin_solver_ = mfem_ext::EquationSolver(mesh_.GetComm(), options.T_lin_options, options.T_nonlin_options);
   nonlin_solver_.SetOperator(residual_);

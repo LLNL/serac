@@ -12,6 +12,8 @@
 #include "axom/core.hpp"
 #include "axom/fmt.hpp"
 
+#include "camp/config.hpp"
+
 #ifdef SERAC_USE_CALIPER
 #include "caliper/caliper-config.h"
 #endif
@@ -89,6 +91,9 @@ std::string about()
 
   // Axom
   about += format("Axom Version:    {0}\n", axom::getVersion());
+
+  // Camp
+  about += format("Camp Version:    {0}\n", CAMP_VERSION);
 
   // Caliper
 #ifdef SERAC_USE_CALIPER
@@ -193,7 +198,6 @@ void printRunInfo()
   std::string infoMsg = axom::fmt::format("\n{:*^80}\n", "Run Information");
 
   infoMsg += axom::fmt::format("{0}: {1}\n", "Version", version());
-
   infoMsg += axom::fmt::format("{0}: {1}\n", "User Name", axom::utilities::getUserName());
   infoMsg += axom::fmt::format("{0}: {1}\n", "Host Name", axom::utilities::getHostName());
 

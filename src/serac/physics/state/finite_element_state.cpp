@@ -101,4 +101,9 @@ double computeL2Error(const FiniteElementState& state, mfem::VectorCoefficient& 
   return state.gridFunction().ComputeL2Error(exact_solution);
 }
 
+double computeL2Error(const FiniteElementState& state, mfem::Coefficient& exact_solution)
+{
+  return state.gridFunction().ComputeL2Error(exact_solution);
+}
+
 }  // namespace serac

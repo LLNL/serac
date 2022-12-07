@@ -179,12 +179,21 @@ protected:
 double norm(const FiniteElementState& state, const double p = 2);
 
 /**
- * @brief Find the L2 norm of the error of a finite element state with respect to an exact solution
+ * @brief Find the L2 norm of the error of a vector-valued finite element state with respect to an exact solution
  *
  * @param state The numerical solution
  * @param exact_solution The exact solution to measure error against
  * @return The L2 norm of the difference between \p state and \p exact_solution
  */
 double computeL2Error(const FiniteElementState& state, mfem::VectorCoefficient& exact_solution);
+
+/**
+ * @brief Find the L2 norm of the error of a scalar-valued finite element state with respect to an exact solution
+ *
+ * @param state The numerical solution
+ * @param exact_solution The exact solution to measure error against
+ * @return The L2 norm of the difference between \p state and \p exact_solution
+ */
+double computeL2Error(const FiniteElementState& state, mfem::Coefficient& exact_solution);
 
 }  // namespace serac

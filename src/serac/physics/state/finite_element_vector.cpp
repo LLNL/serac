@@ -27,11 +27,10 @@ FiniteElementVector::FiniteElementVector(mfem::ParMesh& mesh, FiniteElementVecto
   HypreParVector::operator=(0.0);
 }
 
-FiniteElementVector::FiniteElementVector(mfem::ParMesh& mesh, const mfem::ParFiniteElementSpace& space,
-                                         const std::string& name)
-    : mesh_(mesh),
+FiniteElementVector::FiniteElementVector(const mfem::ParFiniteElementSpace& space, const std::string& name)
+    : mesh_(*space.GetParMesh()),
       coll_(std::unique_ptr<mfem::FiniteElementCollection>(mfem::FiniteElementCollection::New(space.FEColl()->Name()))),
-      space_(std::make_unique<mfem::ParFiniteElementSpace>(space, &mesh, coll_.get())),
+      space_(std::make_unique<mfem::ParFiniteElementSpace>(space, &mesh_.get(), coll_.get())),
       name_(name)
 {
   // Construct a hypre par vector based on the new finite element space
@@ -59,8 +58,8 @@ FiniteElementVector::FiniteElementVector(FiniteElementVector&& input_vector)
 FiniteElementVector& FiniteElementVector::operator=(const mfem::HypreParVector& rhs)
 {
   SLIC_ERROR_IF(Size() != rhs.Size(),
-                axom::fmt::format("Finite element vector of size {} assigned to a HypreParVector of size {}", Size(),
-                                  rhs.Size()));
+                axom::fmt::format("Finite element vector of size '{}' assigned to a HypreParVector of size '{}'",
+                                  Size(), rhs.Size()));
 
   HypreParVector::operator=(rhs);
   return *this;
@@ -68,20 +67,10 @@ FiniteElementVector& FiniteElementVector::operator=(const mfem::HypreParVector& 
 
 FiniteElementVector& FiniteElementVector::operator=(const FiniteElementVector& rhs)
 {
-  mesh_ = rhs.mesh_;
-  coll_ =
-      std::unique_ptr<mfem::FiniteElementCollection>(mfem::FiniteElementCollection::New(rhs.space_->FEColl()->Name()));
-  space_ = std::make_unique<mfem::ParFiniteElementSpace>(*rhs.space_, &(mesh_.get()), coll_.get());
-  name_  = rhs.name_;
+  SLIC_ERROR_IF(Size() != rhs.Size(),
+                axom::fmt::format("Finite element vector of size '{}' assigned to a HypreParVector of size '{}'",
+                                  Size(), rhs.Size()));
 
-  // Construct a hypre par vector based on the new finite element space
-  HypreParVector new_vector(space_.get());
-
-  // Move the data from this new hypre vector into this object without doubly allocating the data
-  auto* parallel_vec = new_vector.StealParVector();
-  WrapHypreParVector(parallel_vec);
-
-  // Initialize the vector to zero
   HypreParVector::operator=(rhs);
 
   return *this;
