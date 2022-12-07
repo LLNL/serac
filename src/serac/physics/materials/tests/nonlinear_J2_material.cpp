@@ -85,6 +85,7 @@ TEST(NonlinearJ2Material, Uniaxial)
   }
 };
 
+
 } // namespace serac
 
 
