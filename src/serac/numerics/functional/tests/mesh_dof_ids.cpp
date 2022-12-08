@@ -4,29 +4,16 @@
 
 enum class Family { H1, Hcurl, DG };
 
-mfem::FiniteElementSpace * makeFiniteElementSpace(Family family, int order, mfem::Mesh & mesh)
-{
-  const int                      dim = mesh.Dimension();
-  mfem::FiniteElementCollection* fec;
-  const auto                     ordering = mfem::Ordering::byVDIM;
+bool isH1(const mfem::FiniteElementSpace& fes) {
+  return (fes.FEColl()->GetContType() == mfem::FiniteElementCollection::CONTINUOUS);
+}
 
-  switch (family) {
-    case Family::H1:
-      fec = new mfem::H1_FECollection(order, dim);
-      break;
-    case Family::Hcurl:
-      fec = new mfem::ND_FECollection(order, dim);
-      break;
-    case Family::DG:
-      fec = new mfem::L2_FECollection(order, dim);
-      break;
-    default:
-      return NULL;
-      break;
-  }
+bool isHcurl(const mfem::FiniteElementSpace& fes) {
+  return (fes.FEColl()->GetContType() == mfem::FiniteElementCollection::TANGENTIAL);
+}
 
-  // note: this leaks memory: `fec` is never destroyed, but how to fix?
-  return new mfem::FiniteElementSpace(&mesh, fec, 1, ordering);
+bool isDG(const mfem::FiniteElementSpace& fes) {
+  return (fes.FEColl()->GetContType() == mfem::FiniteElementCollection::DISCONTINUOUS);
 }
 
 mfem::Mesh patch_test_mesh(mfem::Geometry::Type geom) {
@@ -147,17 +134,6 @@ mfem::Geometry::Type face_type(mfem::Geometry::Type geom) {
     return mfem::Geometry::Type::INVALID;
 }
 
-bool isH1(const mfem::FiniteElementSpace& fes) {
-  return (fes.FEColl()->GetContType() == mfem::FiniteElementCollection::CONTINUOUS);
-}
-
-bool isHcurl(const mfem::FiniteElementSpace& fes) {
-  return (fes.FEColl()->GetContType() == mfem::FiniteElementCollection::TANGENTIAL);
-}
-
-bool isDG(const mfem::FiniteElementSpace& fes) {
-  return (fes.FEColl()->GetContType() == mfem::FiniteElementCollection::DISCONTINUOUS);
-}
 
 struct DoF {
     uint64_t sign : 1;
@@ -177,11 +153,67 @@ struct Array2D {
     Array2D() : values{}, dim{} {};
     Array2D(uint64_t m, uint64_t n) : values(m * n, 0), dim{m, n} {};
     Array2D(std::vector<T> && data, uint64_t m, uint64_t n) : values(data), dim{m, n} {};
-    Range<T> operator()(int i) { return Range<T>{&values[i * dim[0]], &values[(i + 1) * dim[0]]}; }
-    T & operator()(int i, int j) { return values[i * dim[0] + j]; }
+    Range<T> operator()(int i) { return Range<T>{&values[i * dim[1]], &values[(i + 1) * dim[1]]}; }
+    T & operator()(int i, int j) { return values[i * dim[1] + j]; }
     std::vector < T > values;
     uint64_t dim[2];
 };
+
+
+std::vector< std::vector< int > > lexicographic_permutations(int p) {
+
+    std::vector< std::vector< int > > output(mfem::Geometry::Type::NUM_GEOMETRIES);
+
+    {
+        auto P = mfem::H1_SegmentElement(p).GetLexicographicOrdering();
+        std::vector< int > native_to_lex(P.Size());
+        for (int i = 0; i < P.Size(); i++) {
+            native_to_lex[i] = P[i];
+        }
+        output[mfem::Geometry::Type::SEGMENT] = native_to_lex;
+    }
+
+    {
+        auto P = mfem::H1_TriangleElement(p).GetLexicographicOrdering();
+        std::vector< int > native_to_lex(P.Size());
+        for (int i = 0; i < P.Size(); i++) {
+            native_to_lex[i] = P[i];
+        }
+        output[mfem::Geometry::Type::TRIANGLE] = native_to_lex;
+    }
+
+    {
+        auto P = mfem::H1_QuadrilateralElement(p).GetLexicographicOrdering();
+        std::vector< int > native_to_lex(P.Size());
+        for (int i = 0; i < P.Size(); i++) {
+            native_to_lex[i] = P[i];
+        }
+        output[mfem::Geometry::Type::SQUARE] = native_to_lex;
+    }
+
+    {
+        auto P = mfem::H1_TetrahedronElement(p).GetLexicographicOrdering();
+        std::vector< int > native_to_lex(P.Size());
+        for (int i = 0; i < P.Size(); i++) {
+            native_to_lex[i] = P[i];
+        }
+        output[mfem::Geometry::Type::TETRAHEDRON] = native_to_lex;
+    }
+
+    {
+        auto P = mfem::H1_HexahedronElement(p).GetLexicographicOrdering();
+        std::vector< int > native_to_lex(P.Size());
+        for (int i = 0; i < P.Size(); i++) {
+            native_to_lex[i] = P[i];
+        }
+        output[mfem::Geometry::Type::CUBE] = native_to_lex;
+    }
+
+    // other geometries are not defined, as they are not currently used
+
+    return output;
+
+}
 
 Array2D< int > face_permutations(mfem::Geometry::Type geom, int p) {
 
@@ -200,7 +232,7 @@ Array2D< int > face_permutations(mfem::Geometry::Type geom, int p) {
         // p v[[f[[1]]]] +  (v[[f[[2]]]] - v[[f[[1]]]]) i + (v[[f[[3]]]] - v[[f[[1]]]]) j
         //
         // {{i, j}, {p-i-j, j}, {j, p-i-j}, {i, p-i-j}, {p-i-j, i}, {j, i}}
-        Array2D< int > output(3, (p+1)*(p+2)/2);
+        Array2D< int > output(6, (p+1)*(p+2)/2);
         auto tri_id = [p](int x, int y) { return x + ((3 + 2 * p - y) * y) / 2; };
         for (int j = 0; j <= p; j++) {
             for (int i = 0; i <= p - j; i++) {
@@ -223,7 +255,7 @@ Array2D< int > face_permutations(mfem::Geometry::Type geom, int p) {
         // p v[[f[[1]]]] +  (v[[f[[2]]]] - v[[f[[1]]]]) i + (v[[f[[4]]]] - v[[f[[1]]]]) j
         //
         // {{i,j}, {j,i}, {p-j,i}, {p-i,j}, {p-i, p-j}, {p-j, p-i}, {j, p-i}, {i, p-j}}
-        Array2D< int > output(3, (p+1)*(p+1));
+        Array2D< int > output(8, (p+1)*(p+1));
         auto quad_id = [p](int x, int y) { return ((p+1) * y) + x; };
         for (int j = 0; j <= p; j++) {
             for (int i = 0; i <= p; i++) {
@@ -302,9 +334,9 @@ std::vector< Array2D<int> > geom_local_face_dofs(int p) {
         for (int j = 0; j <= p - k; j++) {
             int id = tri_id(j,k);
             tets(0, id) = tet_id(p - j - k, j, k);
-            tets(1, id) = tet_id(0, k, j);
-            tets(2, id) = tet_id(j, 0, k);
-            tets(3, id) = tet_id(k, j, 0);
+            tets(1, id) = tet_id(        0, k, j);
+            tets(2, id) = tet_id(        j, 0, k);
+            tets(3, id) = tet_id(        k, j, 0);
         }
     }
     output[mfem::Geometry::Type::TETRAHEDRON] = tets;
@@ -320,12 +352,12 @@ std::vector< Array2D<int> > geom_local_face_dofs(int p) {
     for (int k = 0; k <= p; k++) {
         for (int j = 0; j <= p; j++) {
             int id = quad_id(j,k);
-            hexes(0, id) = hex_id(j, p - k, 0);
-            hexes(1, id) = hex_id(j, 0, k);
-            hexes(2, id) = hex_id(p, j, k);
-            hexes(3, id) = hex_id(p - j, p, k);
-            hexes(4, id) = hex_id(0, p - j, k);
-            hexes(5, id) = hex_id(j, k, p);
+            hexes(0, id) = hex_id(    j, p - k, 0);
+            hexes(1, id) = hex_id(    j,     0, k);
+            hexes(2, id) = hex_id(    p,     j, k);
+            hexes(3, id) = hex_id(p - j,     p, k);
+            hexes(4, id) = hex_id(    0, p - j, k);
+            hexes(5, id) = hex_id(    j,     k, p);
         }
     }
     output[mfem::Geometry::Type::CUBE] = hexes;
@@ -342,8 +374,9 @@ Array2D< int > GetBoundaryFaceDofs(mfem::FiniteElementSpace * fes, mfem::Geometr
 
     // note: this assumes that all the elements are the same polynomial order
     int p = fes->GetElementOrder(0);
-    Array2D<int> permutations = face_permutations(face_geom, p);
+    Array2D<int> face_perm = face_permutations(face_geom, p);
     std::vector< Array2D<int> > local_face_dofs = geom_local_face_dofs(p);
+    std::vector< std::vector<int> > elem_perm = lexicographic_permutations(p);
 
     uint64_t n = 0;
 
@@ -365,9 +398,20 @@ Array2D< int > GetBoundaryFaceDofs(mfem::FiniteElementSpace * fes, mfem::Geometr
             // 2. find `i` such that `elem_side_ids[i] == f`
             mfem::Array<int> elem_side_ids, orientations;
             if (mesh->Dimension() == 2) {
+
                 mesh->GetElementEdges(elem_ids[0], elem_side_ids, orientations);
+
+                // mfem returns {-1, 1} for edge orientations,
+                // but {0, 1, ... , n} for face orientations.
+                // Here, we renumber the edge orientations to 
+                // {0 (no permutation), 1 (reversed)} so the values can be
+                // consistently used as indices into a permutation table
+                for (auto & o : orientations) { o = (o == -1) ? 1 : 0; }
+
             } else {
+
                 mesh->GetElementFaces(elem_ids[0], elem_side_ids, orientations);
+
             }
 
             int i;
@@ -375,26 +419,35 @@ Array2D< int > GetBoundaryFaceDofs(mfem::FiniteElementSpace * fes, mfem::Geometr
                 if (elem_side_ids[i] == f) break;
             }
 
-            std::cout << orientations[i] << std::endl;
-
             // 3. get the dofs for the entire element
             mfem::Array<int> elem_dof_ids;
-            fes->GetElementVDofs(elem_ids[0], elem_dof_ids);
+            fes->GetElementDofs(elem_ids[0], elem_dof_ids);
+            
+            mfem::Geometry::Type elem_geom = mesh->GetElementGeometry(elem_ids[0]);
+            std::cout << "face " << f << " belongs to element " << elem_ids[0];
+            std::cout << " with local face id " << i << " and orientation " << orientations[i] << std::endl;
+
+            for (auto dof : elem_dof_ids) {
+                std::cout << dof << " ";
+            }
+            std::cout << std::endl;
 
             // 4. extract only the dofs that correspond to side `i`
-            mfem::Geometry::Type elem_geom = mesh->GetElementGeometry(elem_ids[0]);
             for (auto k : local_face_dofs[elem_geom](i)) {
                 face_dofs.push_back(elem_dof_ids[k]);
+                std::cout << elem_dof_ids[k] << " ";
             }
+            std::cout << std::endl;
 
         // H1 and Hcurl spaces are more straight-forward, since
-        // we can use FiniteElementSpace::GetFaceVDofs() directly
+        // we can use FiniteElementSpace::GetFaceDofs() directly
         } else {
 
-            mfem::Array<int> vdofs;
-            fes->GetFaceVDofs(f, vdofs);
-            for (auto dof : vdofs) {
-                face_dofs.push_back(dof);
+            mfem::Array<int> dofs;
+            fes->GetFaceDofs(f, dofs);
+
+            for (int k = 0; k < dofs.Size(); k++) {
+                face_dofs.push_back(dofs[elem_perm[face_geom][k]]);
             }
 
         }
@@ -413,14 +466,38 @@ Array2D< int > GetBoundaryFaceDofs(mfem::FiniteElementSpace * fes, mfem::Geometr
 
 //#define ENABLE_GLVIS
 
+mfem::FiniteElementCollection * makeFEC(Family family, int order, int dim) {
+    switch (family) {
+      case Family::H1:
+        return new mfem::H1_FECollection(order, dim);
+        break;
+      case Family::Hcurl:
+        return new mfem::ND_FECollection(order, dim);
+        break;
+      case Family::DG:
+        return new mfem::L2_FECollection(order, dim, mfem::BasisType::GaussLobatto);
+        break;
+    }
+    return nullptr;
+}
+
 int main() {
 
-    Family families[] = {Family::H1, Family::Hcurl, Family::DG};
+    int order = 3;
+
     mfem::Geometry::Type geometries[] = {
         mfem::Geometry::Type::TRIANGLE, 
         mfem::Geometry::Type::SQUARE, 
         mfem::Geometry::Type::TETRAHEDRON, 
         mfem::Geometry::Type::CUBE};
+
+    //auto identity_func = [](const mfem::Vector & in, double, mfem::Vector & out) {
+    //    out = in;
+    //};
+
+    auto x_func = [](const mfem::Vector & in, double) { return in[0]; };
+    auto y_func = [](const mfem::Vector & in, double) { return in[1]; };
+    auto z_func = [](const mfem::Vector & in, double) { return in[2]; };
 
     #if defined ENABLE_GLVIS
     char vishost[] = "localhost";
@@ -429,7 +506,10 @@ int main() {
 
     for (auto geom : geometries) {
 
+        std::cout << to_string(geom) << std::endl;
+
         mfem::Mesh mesh = patch_test_mesh(geom);
+        const int  dim = mesh.Dimension();
 
         #if defined ENABLE_GLVIS
         mfem::socketstream sol_sock(vishost, visport);
@@ -437,25 +517,50 @@ int main() {
         sol_sock << "mesh\n" << mesh << std::flush;
         #endif
 
-        for (auto family : families) {
+        auto * H1fec = makeFEC(Family::H1, order, dim);
+        auto * L2fec = makeFEC(Family::DG, order, dim);
+        //auto * Hcurlfec = makeFEC(Family::Hcurl, order, dim);
 
-            std::cout << to_string(geom) << " " << to_string(family);
+        mfem::FiniteElementSpace H1fes(&mesh, H1fec, 1, mfem::Ordering::byVDIM);
+        mfem::FiniteElementSpace L2fes(&mesh, L2fec, 1, mfem::Ordering::byVDIM);
 
-            mfem::FiniteElementSpace * fes = makeFiniteElementSpace(family, 3, mesh);
-            
-            std::cout << ", " << fes->GetNDofs() << " " << fes->GetNVDofs() << std::endl;
+        //std::cout << "volume elements: " << std::endl;
+        //for (int i = 0; i < fes.GetNE(); i++) {
+        //    mfem::Array<int> vdofs;
+        //    fes.GetElementVDofs(i, vdofs);
+        //}
 
-            std::cout << "volume elements: " << std::endl;
-            for (int i = 0; i < fes->GetNE(); i++) {
-                mfem::Array<int> vdofs;
-                fes->GetElementVDofs(i, vdofs);
-                //vdofs.Print(std::cout, 64);
+        mfem::FunctionCoefficient x(x_func);
+        mfem::FunctionCoefficient y(y_func);
+        mfem::FunctionCoefficient z(z_func);
+        mfem::GridFunction H1_x(&H1fes);
+        mfem::GridFunction L2_x(&L2fes);
+        H1_x.ProjectCoefficient(x);
+        L2_x.ProjectCoefficient(x);
+
+        auto H1_face_dof_ids = GetBoundaryFaceDofs(&H1fes, face_type(geom));
+        auto L2_face_dof_ids = GetBoundaryFaceDofs(&L2fes, face_type(geom));
+
+        H1_x.Print(std::cout, 64);
+        L2_x.Print(std::cout, 64);
+
+        //std::cout << H1_face_dof_ids.dim[0] << " " << H1_face_dof_ids.dim[1] << std::endl;
+        //std::cout << L2_face_dof_ids.dim[0] << " " << L2_face_dof_ids.dim[1] << std::endl;
+        //std::cout << std::endl;
+
+        uint64_t n0 = H1_face_dof_ids.dim[0];
+        uint64_t n1 = H1_face_dof_ids.dim[1];
+        for (uint64_t i = 0; i < n0; i++) {
+            std::cout << i << ": " << std::endl;
+            for (uint64_t j = 0; j < n1; j++) {
+                std::cout << H1_x(H1_face_dof_ids(int(i),int(j))) << " ";
             }
+            std::cout << std::endl;
 
-            std::cout << "face elements: " << fes->GetNF() << std::endl;
-            std::cout << "bdr elements: " << fes->GetNBE() << std::endl;
-            GetBoundaryFaceDofs(fes, face_type(geom));
-
+            for (uint64_t j = 0; j < n1; j++) {
+                std::cout << L2_x(L2_face_dof_ids(int(i),int(j))) << " ";
+            }
+            std::cout << std::endl;
         }
 
     }
