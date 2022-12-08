@@ -60,11 +60,11 @@ TEST(NonlinearJ2Material, Uniaxial)
   auto strain           = [=](double t) { return sigma_y / E * t; };
   auto response_history = uniaxial_stress_test(2.0, 3, material, internal_state, strain);
 
-  auto stress_exact = [=](double strain) {
-    return strain < sigma_y / E ? E * strain : E / (E + Hi) * (sigma_y + Hi * strain);
+  auto stress_exact = [=](double epsilon) {
+    return epsilon < sigma_y / E ? E * epsilon : E / (E + Hi) * (sigma_y + Hi * epsilon);
   };
-  auto plastic_strain_exact = [=](double strain) {
-    return strain < sigma_y / E ? E * strain : (E * strain - sigma_y) / (E + Hi);
+  auto plastic_strain_exact = [=](double epsilon) {
+    return epsilon < sigma_y / E ? E * epsilon : (E * epsilon - sigma_y) / (E + Hi);
   };
 
   for (auto r : response_history) {
