@@ -188,6 +188,7 @@ struct ParameterizedJ2Nonlinear {
     return s + p * I;
   }
 
+  /** @brief Computes flow strength from Voce's hardening law */
   template <typename PlasticStrain, typename YieldStrength, typename SaturationStrength, typename StrainConstant>
   auto flow_strength(const PlasticStrain accumulated_plastic_strain, const YieldStrength sigma_y,
                      const SaturationStrength sigma_sat, const StrainConstant strain_constant) const
