@@ -110,7 +110,7 @@ struct ParameterizedNeoHookeanSolid {
  *
  * Useful to discover if the components are dual numbers or plain reals.
  *
- * @tparam T
+ * @tparam T Type of which the underlying scalar type is sought.
  */
 template <typename... T>
 struct underlying_scalar {
@@ -119,8 +119,8 @@ struct underlying_scalar {
 
 /// @brief J2 material with Voce hardening, with hardening parameters exposed as differentiable parameters
 struct ParameterizedJ2Nonlinear {
-  static constexpr int    dim = 3;
-  static constexpr double tol = 1e-10;
+  static constexpr int    dim = 3;      ///< dimension of space
+  static constexpr double tol = 1e-10;  ///< relative tolerance on residual for accepting return map solution
 
   double E;        ///< Young's modulus
   double nu;       ///< Poisson's ratio
@@ -171,8 +171,8 @@ struct ParameterizedJ2Nonlinear {
       // This ensures that if the constitutive update is called again with the updated internal
       // variables, the return map won't be repeated.
       ScalarSolverOptions opts{.xtol = 0, .rtol = rel_tol, .max_iter = 25};
-      double        lower_bound = 0.0;
-      double        upper_bound = (get_value(q) - flow_strength(eqps_old, get_value(sigma_y), get_value(sigma_sat),
+      double              lower_bound = 0.0;
+      double upper_bound = (get_value(q) - flow_strength(eqps_old, get_value(sigma_y), get_value(sigma_sat),
                                                          get_value(strain_constant))) /
                            (3.0 * G);
       auto [delta_eqps, status] =

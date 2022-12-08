@@ -526,12 +526,16 @@ struct SolverStatus {
   double       residual;    ///< Final value of residual.
 };
 
+/**
+ * @brief Settings for @p solve_scalar_equation
+ */
 struct ScalarSolverOptions {
-  double       xtol;
-  double       rtol;
-  unsigned int max_iter;
+  double       xtol;      ///< absolute tolerance on Newton correction
+  double       rtol;      ///< absolute tolerance on absolute value of residual
+  unsigned int max_iter;  ///< maximum allowed number of iterations
 };
 
+/// @brief Default options for @p solve_scalar_equation
 const ScalarSolverOptions default_solver_options{.xtol = 1e-8, .rtol = 0, .max_iter = 25};
 
 /// @brief Solves a nonlinear scalar-valued equation and gives derivatives of solution to parameters
@@ -544,10 +548,9 @@ const ScalarSolverOptions default_solver_options{.xtol = 1e-8, .rtol = 0, .max_i
 /// optional parameters (scalars or tensors of arbitrary order).
 /// @param x0 Initial guess of root. If x0 is outside the search interval, the initial
 /// guess will be changed to the midpoint of the search interval.
-/// @param tolerance Tolerance for convergence test, using absolute value of correction as the
-/// criterion.
 /// @param lower_bound Lower bound of interval to search for root.
 /// @param upper_bound Upper bound of interval to search for root.
+/// @param options Options controlling behavior of solver.
 /// @param ...params Optional parameters to the nonlinear function.
 ///
 /// @return a tuple (@p x, @p status) where @p x is the root, and @p status is a SolverStatus
