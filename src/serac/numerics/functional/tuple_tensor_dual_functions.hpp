@@ -567,7 +567,7 @@ const ScalarSolverOptions default_solver_options{.xtol = 1e-8, .rtol = 0, .max_i
 /// of the residual is the same at both @p lower_bound and @p upper_bound, the solver aborts.
 template <typename function, typename... ParamTypes>
 auto solve_scalar_equation(function&& f, double x0, double lower_bound, double upper_bound,
-                           ScalarSolverOptions options = default_solver_options, ParamTypes... params)
+                           ScalarSolverOptions options, ParamTypes... params)
 {
   double x, df_dx;
   double fl = f(lower_bound, get_value(params)...);
