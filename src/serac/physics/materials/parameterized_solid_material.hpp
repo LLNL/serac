@@ -170,7 +170,7 @@ struct ParameterizedJ2Nonlinear {
       // Note the tolerance for convergence is the same as the tolerance for entering the return map.
       // This ensures that if the constitutive update is called again with the updated internal
       // variables, the return map won't be repeated.
-      SolverOptions opts{.xtol = 0, .rtol = rel_tol, .max_iter = 25};
+      ScalarSolverOptions opts{.xtol = 0, .rtol = rel_tol, .max_iter = 25};
       double        lower_bound = 0.0;
       double        upper_bound = (get_value(q) - flow_strength(eqps_old, get_value(sigma_y), get_value(sigma_sat),
                                                          get_value(strain_constant))) /
