@@ -106,15 +106,13 @@ struct ParameterizedNeoHookeanSolid {
 };
 
 /**
- * @brief Infers type of the components of a tensor.
+ * @brief Infers type resulting from algebraic expressions of a group of variables
  *
- * Useful to discover if the components are dual numbers or plain reals.
- *
- * @tparam T Type of which the underlying scalar type is sought.
+ * Useful if one needs to create a variable that is dual-valued if any operands are dual.
  */
 template <typename... T>
 struct underlying_scalar {
-  using type = decltype((T{} + ...));
+  using type = decltype((T{} + ...));  ///< type of the sum of the parameters
 };
 
 /// @brief J2 material with Voce hardening, with hardening parameters exposed as differentiable parameters
