@@ -134,8 +134,8 @@ struct VoceHardening {
 /// @brief J2 material with nonlinear isotropic hardening.
 template <typename HardeningType>
 struct J2Nonlinear {
-  static constexpr int    dim = 3;     ///< spatial dimension
-  static constexpr double tol = 1e-10; ///< relative tolerance on residual mag to judge convergence of return map
+  static constexpr int    dim = 3;      ///< spatial dimension
+  static constexpr double tol = 1e-10;  ///< relative tolerance on residual mag to judge convergence of return map
 
   double        E;          ///< Young's modulus
   double        nu;         ///< Poisson's ratio
