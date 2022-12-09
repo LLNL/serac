@@ -14,8 +14,8 @@
 
 #include "mfem.hpp"
 
-#include "serac/physics/core/common.hpp"
-#include "serac/physics/core/solid_mechanics_input.hpp"
+#include "serac/physics/common.hpp"
+#include "serac/physics/solid_mechanics_input.hpp"
 #include "serac/physics/base_physics.hpp"
 #include "serac/numerics/odes.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"

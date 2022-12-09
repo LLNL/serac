@@ -14,7 +14,7 @@
 
 #include "mfem.hpp"
 #include "serac/physics/state/finite_element_state.hpp"
-#include "serac/physics/core/common.hpp"
+#include "serac/physics/common.hpp"
 
 namespace serac {
 

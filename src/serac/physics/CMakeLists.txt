@@ -4,7 +4,6 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-add_subdirectory(core)
 add_subdirectory(integrators)
 add_subdirectory(materials)
 add_subdirectory(state)
@@ -21,6 +20,10 @@ endif()
 
 set(physics_sources
     base_physics.cpp
+    heat_transfer_input.cpp
+    solid_mechanics_input.cpp
+    thermomechanics_input.cpp
+
     solid_legacy.cpp
     thermal_conduction_legacy.cpp
     thermal_solid_legacy.cpp
@@ -28,17 +31,21 @@ set(physics_sources
 
 set(physics_headers
     base_physics.hpp
-    solid_legacy.hpp
-    solid_mechanics.hpp
-    thermal_conduction_legacy.hpp
+    common.hpp
     heat_transfer.hpp
+    heat_transfer_input.hpp
+    solid_mechanics.hpp
+    solid_mechanics_input.hpp
     thermomechanics.hpp
+    thermomechanics_input.hpp
+
+    solid_legacy.hpp
+    thermal_conduction_legacy.hpp
     thermal_solid_legacy.hpp
     )
 
 set(physics_dependencies
     serac_coefficients
-    serac_physics_core
     serac_physics_integrators
     serac_state
     serac_boundary_conditions

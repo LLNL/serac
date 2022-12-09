@@ -14,7 +14,7 @@
 #pragma once
 
 #include "serac/infrastructure/input.hpp"
-#include "serac/physics/core/common.hpp"
+#include "serac/physics/common.hpp"
 
 namespace serac {
 
@@ -60,12 +60,14 @@ struct SolidMechanicsInputOptions {
    * @brief The linear viscosity coefficient
    *
    */
+  // TODO: Move to material options
   double viscosity;
 
   /**
    * @brief Initial density
    *
    */
+  // TODO: Move to material options
   double initial_mass_density;
 
   /**

@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/core/solid_mechanics_input.hpp"
+#include "serac/physics/solid_mechanics_input.hpp"
 
 namespace serac {
 

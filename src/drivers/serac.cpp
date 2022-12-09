@@ -29,7 +29,8 @@
 #include "serac/infrastructure/terminator.hpp"
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/solid_mechanics.hpp"
-//#include "serac/physics/thermomechanics.hpp"
+#include "serac/physics/heat_transfer.hpp"
+#include "serac/physics/thermomechanics.hpp"
 #include "serac/numerics/equation_solver.hpp"
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/serac_config.hpp"
@@ -55,14 +56,14 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet)
   auto& solid_solver_table = inlet.addStruct("solid", "Finite deformation solid mechanics module");
   SolidMechanicsInputOptions::defineInputFileSchema(solid_solver_table);
 
-  // TODO: convert these
-  // // The thermal conduction options
-  // auto& thermal_solver_table = inlet.addStruct("thermal_conduction", "Thermal conduction module");
-  // serac::ThermalConductionLegacy::InputOptions::defineInputFileSchema(thermal_solver_table);
+  // The thermal conduction options
+  // TODO: rename to 'heat_transfer'?
+  auto& thermal_solver_table = inlet.addStruct("thermal_conduction", "Thermal conduction module");
+  HeatTransferInputOptions::defineInputFileSchema(thermal_solver_table);
 
-  // // The thermal solid options
-  // auto& thermal_solid_solver_table = inlet.addStruct("thermal_solid", "Thermal solid module");
-  // serac::ThermalSolidLegacy::InputOptions::defineInputFileSchema(thermal_solid_solver_table);
+  // The thermal solid options
+  auto& thermal_solid_solver_table = inlet.addStruct("thermal_solid", "Thermal solid module");
+  ThermomechanicsInputOptions::defineInputFileSchema(thermal_solid_solver_table);
 
   // Verify the input file
   if (!inlet.verify()) {
@@ -182,63 +183,129 @@ int main(int argc, char* argv[])
   std::unique_ptr<serac::BasePhysics> main_physics;
 
   // Create nullable containers for the solid and thermal input file options
-  std::optional<serac::SolidMechanicsInputOptions> solid_solver_options;
-  // TODO: Fix these
-  // std::optional<serac::ThermalConductionLegacy::InputOptions> thermal_solver_options;
-  // std::optional<serac::ThermalSolidLegacy::InputOptions>      thermal_solid_solver_options;
+  std::optional<serac::SolidMechanicsInputOptions>  solid_solver_options;
+  std::optional<serac::HeatTransferInputOptions>    thermal_solver_options;
+  std::optional<serac::ThermomechanicsInputOptions> thermal_solid_solver_options;
 
   // If the blocks exist, read the appropriate input file options
   if (inlet.isUserProvided("solid")) {
     solid_solver_options = inlet["solid"].get<serac::SolidMechanicsInputOptions>();
   }
-  // TODO: Fix these
-  // if (inlet.isUserProvided("thermal_conduction")) {
-  //   thermal_solver_options = inlet["thermal_conduction"].get<serac::ThermalConductionLegacy::InputOptions>();
-  // }
-  // if (inlet.isUserProvided("thermal_solid")) {
-  //   thermal_solid_solver_options = inlet["thermal_solid"].get<serac::ThermalSolidLegacy::InputOptions>();
-  // }
+  if (inlet.isUserProvided("thermal_conduction")) {
+    thermal_solver_options = inlet["thermal_conduction"].get<serac::HeatTransferInputOptions>();
+  }
+  if (inlet.isUserProvided("thermal_solid")) {
+    thermal_solid_solver_options = inlet["thermal_solid"].get<serac::ThermomechanicsInputOptions>();
+  }
 
   // Construct the appropriate physics object using the input file options
   auto dim = serac::StateManager::mesh().Dimension();
   SLIC_ERROR_ROOT_IF(dim < 2 || dim > 3,
                      axom::fmt::format("Invalid mesh dimension '{0}' provided. Valid values are 2 or 3.", dim));
-  // TODO: convert these
-  // if (thermal_solid_solver_options) {
-  //   main_physics = std::make_unique<serac::ThermalSolidLegacy>(*thermal_solid_solver_options);
-  // } else if (solid_solver_options && thermal_solver_options) {
-  //   main_physics = std::make_unique<serac::ThermalSolidLegacy>(*thermal_solver_options, *solid_solver_options);
-  // } else
-  if (solid_solver_options) {
+
+  if (thermal_solid_solver_options) {
+    int order         = thermal_solid_solver_options->solid_options.order;
+    int thermal_order = thermal_solid_solver_options->thermal_options.order;
+    SLIC_ERROR_ROOT_IF(
+        order != thermal_order,
+        axom::fmt::format("Solid order '{0}' and thermal order '{1}'' do not match.", order, thermal_order));
+    SLIC_ERROR_ROOT_IF(order < 1 || order > 3,
+                       axom::fmt::format("Invalid solver order '{0}' given. Valid values are 1, 2, or 3.", order));
+    if (order == 1) {
+      if (dim == 2) {
+        main_physics = std::make_unique<serac::Thermomechanics<1, 2>>(*thermal_solid_solver_options);
+      } else if (dim == 3) {
+        main_physics = std::make_unique<serac::Thermomechanics<1, 3>>(*thermal_solid_solver_options);
+      }
+    } else if (order == 2) {
+      if (dim == 2) {
+        main_physics = std::make_unique<serac::Thermomechanics<2, 2>>(*thermal_solid_solver_options);
+      } else if (dim == 3) {
+        main_physics = std::make_unique<serac::Thermomechanics<2, 3>>(*thermal_solid_solver_options);
+      }
+    } else if (order == 3) {
+      if (dim == 2) {
+        main_physics = std::make_unique<serac::Thermomechanics<3, 2>>(*thermal_solid_solver_options);
+      } else if (dim == 3) {
+        main_physics = std::make_unique<serac::Thermomechanics<3, 3>>(*thermal_solid_solver_options);
+      }
+    }
+  } else if (solid_solver_options && thermal_solver_options) {
+    int order         = solid_solver_options->order;
+    int thermal_order = thermal_solver_options->order;
+    SLIC_ERROR_ROOT_IF(
+        order != thermal_order,
+        axom::fmt::format("Solid order '{0}' and thermal order '{1}'' do not match.", order, thermal_order));
+    SLIC_ERROR_ROOT_IF(order < 1 || order > 3,
+                       axom::fmt::format("Invalid solver order '{0}' given. Valid values are 1, 2, or 3.", order));
+    if (order == 1) {
+      if (dim == 2) {
+        main_physics = std::make_unique<serac::Thermomechanics<1, 2>>(*thermal_solver_options, *solid_solver_options);
+      } else if (dim == 3) {
+        main_physics = std::make_unique<serac::Thermomechanics<1, 3>>(*thermal_solver_options, *solid_solver_options);
+      }
+    } else if (order == 2) {
+      if (dim == 2) {
+        main_physics = std::make_unique<serac::Thermomechanics<2, 2>>(*thermal_solver_options, *solid_solver_options);
+      } else if (dim == 3) {
+        main_physics = std::make_unique<serac::Thermomechanics<2, 3>>(*thermal_solver_options, *solid_solver_options);
+      }
+    } else if (order == 3) {
+      if (dim == 2) {
+        main_physics = std::make_unique<serac::Thermomechanics<3, 2>>(*thermal_solver_options, *solid_solver_options);
+      } else if (dim == 3) {
+        main_physics = std::make_unique<serac::Thermomechanics<3, 3>>(*thermal_solver_options, *solid_solver_options);
+      }
+    }
+  } else if (solid_solver_options) {
     int order = solid_solver_options->order;
     SLIC_ERROR_ROOT_IF(
         order < 1 || order > 3,
         axom::fmt::format("Invalid Solid solver order '{0}' given. Valid values are 1, 2, or 3.", order));
-    if (solid_solver_options->order == 1) {
+    if (order == 1) {
       if (dim == 2) {
         main_physics = std::make_unique<serac::SolidMechanics<1, 2>>(*solid_solver_options);
       } else if (dim == 3) {
         main_physics = std::make_unique<serac::SolidMechanics<1, 3>>(*solid_solver_options);
       }
-    } else if (solid_solver_options->order == 2) {
+    } else if (order == 2) {
       if (dim == 2) {
         main_physics = std::make_unique<serac::SolidMechanics<2, 2>>(*solid_solver_options);
       } else if (dim == 3) {
         main_physics = std::make_unique<serac::SolidMechanics<2, 3>>(*solid_solver_options);
       }
-    } else if (solid_solver_options->order == 3) {
+    } else if (order == 3) {
       if (dim == 2) {
         main_physics = std::make_unique<serac::SolidMechanics<3, 2>>(*solid_solver_options);
       } else if (dim == 3) {
         main_physics = std::make_unique<serac::SolidMechanics<3, 3>>(*solid_solver_options);
       }
     }
-  }
-  // TODO: convert these
-  // else if (thermal_solver_options) {
-  //   main_physics = std::make_unique<serac::ThermalConductionLegacy>(*thermal_solver_options);
-  // }
-  else {
+  } else if (thermal_solver_options) {
+    int order = thermal_solver_options->order;
+    SLIC_ERROR_ROOT_IF(
+        order < 1 || order > 3,
+        axom::fmt::format("Invalid Thermal solver order '{0}' given. Valid values are 1, 2, or 3.", order));
+    if (order == 1) {
+      if (dim == 2) {
+        main_physics = std::make_unique<serac::HeatTransfer<1, 2>>(*thermal_solver_options);
+      } else if (dim == 3) {
+        main_physics = std::make_unique<serac::HeatTransfer<1, 3>>(*thermal_solver_options);
+      }
+    } else if (order == 2) {
+      if (dim == 2) {
+        main_physics = std::make_unique<serac::HeatTransfer<2, 2>>(*thermal_solver_options);
+      } else if (dim == 3) {
+        main_physics = std::make_unique<serac::HeatTransfer<2, 3>>(*thermal_solver_options);
+      }
+    } else if (order == 3) {
+      if (dim == 2) {
+        main_physics = std::make_unique<serac::HeatTransfer<3, 2>>(*thermal_solver_options);
+      } else if (dim == 3) {
+        main_physics = std::make_unique<serac::HeatTransfer<3, 3>>(*thermal_solver_options);
+      }
+    }
+  } else {
     SLIC_ERROR_ROOT("Neither solid, thermal_conduction, nor thermal_solid blocks specified in the input file.");
   }
 

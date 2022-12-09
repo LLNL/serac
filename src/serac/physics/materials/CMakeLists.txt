@@ -29,7 +29,6 @@ set(materials_headers
 
 set(materials_depends
     serac_functional
-    serac_physics_core
     )
 
 blt_add_library(
