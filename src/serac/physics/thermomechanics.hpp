@@ -86,7 +86,7 @@ public:
       std::unique_ptr<mfem::Coefficient> cte(options.coef_thermal_expansion->constructScalar());
       std::unique_ptr<mfem::Coefficient> ref_temp(options.reference_temperature->constructScalar());
 
-      //setThermalExpansion(std::move(cte), std::move(ref_temp));
+      // setThermalExpansion(std::move(cte), std::move(ref_temp));
     }
   }
 
