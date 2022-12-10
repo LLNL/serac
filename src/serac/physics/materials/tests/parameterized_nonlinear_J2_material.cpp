@@ -64,7 +64,7 @@ TEST(ParameterizedNonlinearJ2Material, DerivativeWrtSaturationStrength)
   auto   stress_p            = material(internal_state_copy, H, sigma_y, sigma_sat + h, strain_constant);
   internal_state_copy        = internal_state;
   auto stress_m              = material(internal_state_copy, H, sigma_y, sigma_sat - h, strain_constant);
-  auto finite_difference     = 1. / (2 * h) * (stress_p - stress_m);
+  auto finite_difference     = (1.0 / (2 * h)) * (stress_p - stress_m);
 
   auto error = get_gradient(stress) - finite_difference;
 
