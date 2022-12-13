@@ -699,8 +699,7 @@ auto find_root(function&& f, tensor<double, n> x0)
 
   auto x = x0;
 
-  int k = 0;
-  while (k++ < max_iterations) {
+  for (int k = 0; k < max_iterations; k++) {
     auto output = f(make_dual(x));
     auto r      = get_value(output);
     if (norm(r) < epsilon) break;
