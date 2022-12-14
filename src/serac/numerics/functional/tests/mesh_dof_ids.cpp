@@ -100,8 +100,9 @@ void permute_hexahedron(int ids[8], int k)
   }
 }
 
-template < int n >
-void print(int * ids) {
+template <int n>
+void print(int* ids)
+{
   for (int i = 0; i < n; i++) {
     printf("%d, ", ids[i]);
   }
@@ -409,7 +410,7 @@ std::vector<Array2D<int> > geom_local_face_dofs(int p)
   for (int k = 0; k <= p; k++) {
     quads(0, k) = quad_id(k, 0);
     quads(1, k) = quad_id(p, k);
-    quads(2, k) = quad_id(p - k, k);
+    quads(2, k) = quad_id(p - k, p);
     quads(3, k) = quad_id(0, p - k);
   }
   output[mfem::Geometry::Type::SQUARE] = quads;
@@ -511,20 +512,30 @@ Array2D<int> GetBoundaryFaceDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::
 
       mfem::Geometry::Type elem_geom = mesh->GetElementGeometry(elem_ids[0]);
 
-      std::cout << "face " << f << " belongs to element " << elem_ids[0];
-      std::cout << " with local face id " << i << " and orientation " << orientations[i] << std::endl;
-
-      // for (auto dof : elem_dof_ids) {
-      //   std::cout << dof << " ";
-      // }
-      // std::cout << std::endl;
+      if (debug_print) {
+        std::cout << "face " << f << " belongs to element " << elem_ids[0];
+        std::cout << " with local face id " << i << " and orientation " << orientations[i] << std::endl;
+        int count = 0;
+        for (auto dof : elem_dof_ids) {
+          std::cout << dof << " ";
+          if ((count++ % 4) == 0) std::cout << std::endl;
+        }
+        std::cout << std::endl;
+      }
 
       // 4. extract only the dofs that correspond to side `i`
       for (auto k : local_face_dofs[elem_geom](i)) {
         face_dofs.push_back(elem_dof_ids[k]);
-        // std::cout << elem_dof_ids[k] << " ";
       }
-      // std::cout << std::endl;
+
+      if (debug_print) {
+        int count = 0;
+        for (auto k : local_face_dofs[elem_geom](i)) {
+          std::cout << elem_dof_ids[k] << " ";
+          if ((count++ % 4) == 0) std::cout << std::endl;
+        }
+        std::cout << std::endl;
+      }
 
       // H1 and Hcurl spaces are more straight-forward, since
       // we can use FiniteElementSpace::GetFaceDofs() directly
@@ -572,12 +583,12 @@ int main()
   mfem::Geometry::Type geometries[] = {mfem::Geometry::Type::TRIANGLE, mfem::Geometry::Type::SQUARE,
                                        mfem::Geometry::Type::TETRAHEDRON, mfem::Geometry::Type::CUBE};
 
-  auto func = [](const mfem::Vector& in, double) { 
-    return (in.Size() == 2) ? (in[1] * 10 + in[0]) : (in[2] * 100 + in[1] * 10 + in[0]); 
+  auto func = [](const mfem::Vector& in, double) {
+    return (in.Size() == 2) ? (in[1] * 10 + in[0]) : (in[2] * 100 + in[1] * 10 + in[0]);
   };
-  //auto x_func = [](const mfem::Vector& in, double) { return in[0]; };
-  //auto y_func = [](const mfem::Vector& in, double) { return in[1]; };
-  //auto z_func = [](const mfem::Vector& in, double) { return in[2]; };
+  // auto x_func = [](const mfem::Vector& in, double) { return in[0]; };
+  // auto y_func = [](const mfem::Vector& in, double) { return in[1]; };
+  // auto z_func = [](const mfem::Vector& in, double) { return in[2]; };
 
 #if defined ENABLE_GLVIS
   char vishost[] = "localhost";
@@ -587,7 +598,7 @@ int main()
   for (auto geom : geometries) {
     std::cout << to_string(geom) << std::endl;
 
-    for (int seed = 0; seed < 16; seed++) {
+    for (int seed = 0; seed < 64; seed++) {
       mfem::Mesh mesh = patch_test_mesh(geom, seed);
       const int  dim  = mesh.Dimension();
 
@@ -619,28 +630,50 @@ int main()
       auto H1_face_dof_ids = GetBoundaryFaceDofs(&H1fes, face_type(geom));
       auto L2_face_dof_ids = GetBoundaryFaceDofs(&L2fes, face_type(geom));
 
-      H1_x.Print(std::cout, 8);
-      std::cout << std::endl;
-      L2_x.Print(std::cout, 8);
-      std::cout << std::endl;
-
-      // std::cout << H1_face_dof_ids.dim[0] << " " << H1_face_dof_ids.dim[1] << std::endl;
-      // std::cout << L2_face_dof_ids.dim[0] << " " << L2_face_dof_ids.dim[1] << std::endl;
-      // std::cout << std::endl;
+      debug_print = false;
 
       uint64_t n0 = H1_face_dof_ids.dim[0];
       uint64_t n1 = H1_face_dof_ids.dim[1];
       for (uint64_t i = 0; i < n0; i++) {
-        std::cout << i << ": " << std::endl;
         for (uint64_t j = 0; j < n1; j++) {
-          std::cout << H1_x(H1_face_dof_ids(int(i), int(j))) << " ";
+          double v1 = H1_x(H1_face_dof_ids(int(i), int(j)));
+          double v2 = L2_x(L2_face_dof_ids(int(i), int(j)));
+          if (fabs(v1 - v2) > 1.0e-15) {
+            i           = n0;
+            j           = n1;  // break from both loops
+            debug_print = true;
+          }
         }
+      }
+
+      if (debug_print) {
+        std::cout << "H1 values: " << std::endl;
+        H1_x.Print(std::cout, 4);
         std::cout << std::endl;
 
-        for (uint64_t j = 0; j < n1; j++) {
-          std::cout << L2_x(L2_face_dof_ids(int(i), int(j))) << " ";
-        }
+        std::cout << "L2 values: " << std::endl;
+        L2_x.Print(std::cout, 4);
         std::cout << std::endl;
+
+        patch_test_mesh(geom, seed);
+
+        H1_face_dof_ids = GetBoundaryFaceDofs(&H1fes, face_type(geom));
+        L2_face_dof_ids = GetBoundaryFaceDofs(&L2fes, face_type(geom));
+
+        for (uint64_t i = 0; i < n0; i++) {
+          std::cout << i << ": " << std::endl;
+          for (uint64_t j = 0; j < n1; j++) {
+            std::cout << H1_x(H1_face_dof_ids(int(i), int(j))) << " ";
+          }
+          std::cout << std::endl;
+
+          for (uint64_t j = 0; j < n1; j++) {
+            std::cout << L2_x(L2_face_dof_ids(int(i), int(j))) << " ";
+          }
+          std::cout << std::endl;
+        }
+
+        exit(1);
       }
     }
   }
