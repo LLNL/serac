@@ -144,8 +144,10 @@ public:
     if constexpr (sizeof...(parameter_space) > 0) {
       tuple<parameter_space...> types{};
       for_constexpr<sizeof...(parameter_space)>([&](auto i) {
-        parameters_[i].trial_space = std::unique_ptr<mfem::ParFiniteElementSpace>(
-            generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_));
+        auto [fes, fec] =
+            generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_);
+        parameters_[i].trial_space       = std::move(fes);
+        parameters_[i].trial_collection  = std::move(fec);
         trial_spaces[i + NUM_STATE_VARS] = parameters_[i].trial_space.get();
       });
     }
