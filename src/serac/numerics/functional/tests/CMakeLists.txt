@@ -46,6 +46,9 @@ endforeach()
 add_executable(mesh_dof_ids mesh_dof_ids.cpp)
 target_link_libraries(mesh_dof_ids PUBLIC mfem mpi)
 
+add_executable(boundary_contours boundary_contours.cpp)
+target_link_libraries(boundary_contours PUBLIC mfem)
+
 if(ENABLE_CUDA)
 
     set(functional_tests_cuda 

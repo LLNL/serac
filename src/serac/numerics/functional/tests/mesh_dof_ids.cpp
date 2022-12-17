@@ -329,12 +329,21 @@ Array2D<int> face_permutations(mfem::Geometry::Type geom, int p)
     for (int j = 0; j <= p; j++) {
       for (int i = 0; i <= p - j; i++) {
         int id                          = tri_id(i, j);
+        #if 0
         output(0, tri_id(i, j))         = id;
         output(1, tri_id(p - i - j, j)) = id;
         output(2, tri_id(j, p - i - j)) = id;
         output(3, tri_id(i, p - i - j)) = id;
         output(4, tri_id(p - i - j, i)) = id;
         output(5, tri_id(j, i))         = id;
+        #else
+        output(0, id) = tri_id(i, j);
+        output(1, id) = tri_id(p - i - j, j);
+        output(2, id) = tri_id(j, p - i - j);
+        output(3, id) = tri_id(i, p - i - j);
+        output(4, id) = tri_id(p - i - j, i);
+        output(5, id) = tri_id(j, i);
+        #endif
       }
     }
     return output;
@@ -544,7 +553,15 @@ Array2D<int> GetBoundaryFaceDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::
     // we can use FiniteElementSpace::GetFaceDofs() directly
     } else {
       mfem::Array<int> dofs;
-      fes->GetFaceDofs(f, dofs);
+
+      // note: although GetFaceDofs does work for 2D and 3D meshes, 
+      //       it doesn't return the dofs in the official orientation
+      //       for 2D meshes (?).
+      if (mesh->Dimension() == 2) {
+        fes->GetEdgeDofs(f, dofs);
+      } else {
+        fes->GetFaceDofs(f, dofs);
+      }
 
       for (int k = 0; k < dofs.Size(); k++) {
         face_dofs.push_back(dofs[elem_perm[face_geom][k]]);
@@ -626,8 +643,8 @@ Array2D<int> GetInteriorFaceDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::
         mfem::Geometry::Type elem_geom = mesh->GetElementGeometry(elem);
 
         // 4. extract only the dofs that correspond to side `i`
-        for (auto k : local_face_dofs[elem_geom](i)) {
-          face_dofs.push_back(elem_dof_ids[k]);
+        for (auto k : face_perm(orientations[i])) {
+          face_dofs.push_back(elem_dof_ids[local_face_dofs[elem_geom](i, k)]);
         }
 
         if (debug_print) {
@@ -654,11 +671,44 @@ Array2D<int> GetInteriorFaceDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::
     // we can use FiniteElementSpace::GetFaceDofs() directly
     } else {
       mfem::Array<int> dofs;
-      fes->GetFaceDofs(f, dofs);
+
+      // note: although GetFaceDofs does work for 2D and 3D meshes, 
+      //       it doesn't return the dofs in the official orientation
+      //       for 2D meshes (?).
+      if (mesh->Dimension() == 2) {
+        fes->GetEdgeDofs(f, dofs);
+      } else {
+        fes->GetFaceDofs(f, dofs);
+      }
 
       for (int k = 0; k < dofs.Size(); k++) {
         face_dofs.push_back(dofs[elem_perm[face_geom][k]]);
       }
+
+      if (debug_print) {
+        std::cout << "face " << f << " (" << n <<  ") :" << std::endl;
+        int count = 0;
+        for (auto dof : dofs) {
+          std::cout << dof << " ";
+          if ((++count % 4) == 0) std::cout << std::endl;
+        }
+        std::cout << std::endl;
+
+        for (int k = 0; k < dofs.Size(); k++) {
+          std::cout << dofs[elem_perm[face_geom][k]] << " ";
+          if ((++count % 4) == 0) std::cout << std::endl;
+        }
+        std::cout << std::endl;
+
+        fes->GetEdgeDofs(f, dofs);
+        for (int k = 0; k < dofs.Size(); k++) {
+          std::cout << dofs[k] << " ";
+          if ((++count % 4) == 0) std::cout << std::endl;
+        }
+        std::cout << std::endl;
+
+      }
+
     }
 
     n++;
@@ -699,8 +749,8 @@ int main()
   auto func = [](const mfem::Vector& in, double) {
     return (in.Size() == 2) ? (in[1] * 10 + in[0]) : (in[2] * 100 + in[1] * 10 + in[0]);
   };
-  // auto x_func = [](const mfem::Vector& in, double) { return in[0]; };
-  // auto y_func = [](const mfem::Vector& in, double) { return in[1]; };
+  auto x_func = [](const mfem::Vector& in, double) { return in[0]; };
+  auto y_func = [](const mfem::Vector& in, double) { return in[1]; };
   // auto z_func = [](const mfem::Vector& in, double) { return in[2]; };
 
 #if defined ENABLE_GLVIS
@@ -712,6 +762,9 @@ int main()
     std::cout << to_string(geom) << std::endl;
 
     for (int seed = 0; seed < 64; seed++) {
+
+      debug_print = false;
+
       mfem::Mesh mesh = patch_test_mesh(geom, seed);
       const int  dim  = mesh.Dimension();
 
@@ -728,11 +781,11 @@ int main()
       mfem::FiniteElementSpace H1fes(&mesh, H1fec, 1, mfem::Ordering::byVDIM);
       mfem::FiniteElementSpace L2fes(&mesh, L2fec, 1, mfem::Ordering::byVDIM);
 
-      mfem::FunctionCoefficient x(func);
+      mfem::FunctionCoefficient f(func);
       mfem::GridFunction        H1_x(&H1fes);
       mfem::GridFunction        L2_x(&L2fes);
-      H1_x.ProjectCoefficient(x);
-      L2_x.ProjectCoefficient(x);
+      H1_x.ProjectCoefficient(f);
+      L2_x.ProjectCoefficient(f);
 
       #if 0
       //auto H1_face_dof_ids = GetBoundaryFaceDofs(&H1fes, face_type(geom));
@@ -742,15 +795,13 @@ int main()
       auto L2_face_dof_ids = GetInteriorFaceDofs(&L2fes, face_type(geom));
       #endif
 
-      debug_print = false;
-
       uint64_t n0 = H1_face_dof_ids.dim[0];
       uint64_t n1 = H1_face_dof_ids.dim[1];
       for (uint64_t i = 0; i < n0; i++) {
         for (uint64_t j = 0; j < n1; j++) {
           double v1 = H1_x(H1_face_dof_ids(int(i), int(j)));
           double v2 = L2_x(L2_face_dof_ids(int(i), int(j)));
-          if (fabs(v1 - v2) > 1.0e-15) {
+          if (fabs(v1 - v2) > 1.0e-14) {
             i           = n0;
             j           = n1;  // break from both loops
             debug_print = true;
@@ -759,13 +810,41 @@ int main()
       }
 
       if (debug_print) {
+        std::cout << "H1 node x-coordinates: " << std::endl;
+        auto tmp = mfem::FunctionCoefficient(x_func);
+        H1_x.ProjectCoefficient(tmp);
+        H1_x.Print(std::cout, 4);
+        std::cout << std::endl;
+
+        std::cout << "H1 node y-coordinates: " << std::endl;
+        tmp = mfem::FunctionCoefficient(y_func);
+        H1_x.ProjectCoefficient(tmp);
+        H1_x.Print(std::cout, 4);
+        std::cout << std::endl;
+
+        std::cout << "L2 node x-coordinates: " << std::endl;
+        tmp = mfem::FunctionCoefficient(x_func);
+        L2_x.ProjectCoefficient(tmp);
+        L2_x.Print(std::cout, 4);
+        std::cout << std::endl;
+
+        std::cout << "L2 node y-coordinates: " << std::endl;
+        tmp = mfem::FunctionCoefficient(y_func);
+        L2_x.ProjectCoefficient(tmp);
+        L2_x.Print(std::cout, 4);
+        std::cout << std::endl;
+
         std::cout << "H1 values: " << std::endl;
+        H1_x.ProjectCoefficient(f);
         H1_x.Print(std::cout, 4);
         std::cout << std::endl;
 
         std::cout << "L2 values: " << std::endl;
+        L2_x.ProjectCoefficient(f);
         L2_x.Print(std::cout, 4);
         std::cout << std::endl;
+
+
 
         patch_test_mesh(geom, seed);
 
