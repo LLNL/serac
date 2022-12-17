@@ -122,7 +122,7 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
   // Perform finite difference on each bulk modulus value
   // to check if computed qoi sensitivity is consistent
   // with finite difference on the displacement
-  double eps = 1.0e-6;
+  double eps = 1.0e-5;
   for (int i = 0; i < user_defined_bulk_modulus.gridFunction().Size(); ++i) {
     // Perturb the bulk modulus
     user_defined_bulk_modulus(i) = bulk_modulus_value + eps;

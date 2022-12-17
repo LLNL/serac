@@ -105,7 +105,7 @@ TEST(SolidLegacy, FiniteDiff)
   // Perform finite difference on each bulk modulus value
   // to check if computed qoi sensitivity is consistent
   // with finite difference on the displacement
-  double eps = 1.0E-7;
+  double eps = 1.0E-6;
   for (int ix = 0; ix < bulkModulus.Size(); ++ix) {
     // Perturb bulk sensitivity
     bulkModulus[ix] = bulkModulusValue + eps;
@@ -172,7 +172,7 @@ TEST(SolidLegacy, MultipleDesignSpaces)
 {
   // Initialize the datastore
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "solid_sensitivity");
+  serac::StateManager::initialize(datastore, "solid_sensitivity_design_spaces");
 
   // Create a mesh and pass it to the datastore
   ::mfem::Mesh cuboid = ::mfem::Mesh::MakeCartesian3D(2, 2, 2, ::mfem::Element::Type::HEXAHEDRON, 4.0, 2.0, 10);
@@ -214,11 +214,11 @@ TEST(SolidLegacy, MultipleDesignSpaces)
 
   // Create various FE spaces for the parameter and adjoint fields
   mfem::H1_FECollection       h1fec(1, serac::StateManager::mesh().Dimension());
-  mfem::ParFiniteElementSpace h1fespace_scalar(&serac::StateManager::mesh(), &h1fec, 1, mfem::Ordering::byVDIM);
+  mfem::ParFiniteElementSpace h1fespace_scalar(&serac::StateManager::mesh(), &h1fec, 1, mfem::Ordering::byNODES);
   mfem::ParFiniteElementSpace h1fespace_vector(&serac::StateManager::mesh(), &h1fec,
-                                               serac::StateManager::mesh().SpaceDimension(), mfem::Ordering::byVDIM);
+                                               serac::StateManager::mesh().SpaceDimension(), mfem::Ordering::byNODES);
   mfem::L2_FECollection       l2fec(0, serac::StateManager::mesh().Dimension());
-  mfem::ParFiniteElementSpace l2fespace_scalar(&serac::StateManager::mesh(), &l2fec, 1, mfem::Ordering::byVDIM);
+  mfem::ParFiniteElementSpace l2fespace_scalar(&serac::StateManager::mesh(), &l2fec, 1, mfem::Ordering::byNODES);
   std::vector<std::reference_wrapper<mfem::ParFiniteElementSpace>> materialSpaces{h1fespace_scalar, l2fespace_scalar};
 
   // Compute the sensitivities for both H1 and L2 fields

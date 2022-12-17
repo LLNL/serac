@@ -52,7 +52,7 @@ double StateManager::newDataCollection(const std::string& name, const std::optio
     datacoll.UpdateMeshAndFieldsFromDS();
 
     // Functional needs the nodal grid function and neighbor data in the mesh
-    mesh(name).EnsureNodes();
+    mesh(name).SetCurvature(1, false, -1, mfem::Ordering::byNODES);
     mesh(name).ExchangeFaceNbrData();
 
     // Construct and store the shape displacement fields and sensitivities associated with this mesh
@@ -218,7 +218,7 @@ mfem::ParMesh* StateManager::setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const
 
   // Functional needs the nodal grid function and neighbor data in the mesh
   auto& new_pmesh = mesh(mesh_tag);
-  new_pmesh.EnsureNodes();
+  new_pmesh.SetCurvature(1, false, -1, mfem::Ordering::byNODES);
   new_pmesh.ExchangeFaceNbrData();
 
   // We must construct the shape fields here as the mesh did not exist during the newDataCollection call
