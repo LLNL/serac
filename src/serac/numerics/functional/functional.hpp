@@ -101,34 +101,38 @@ struct Index {
  *
  * @tparam function_space a tag type containing the kind of function space and polynomial order
  * @param mesh the mesh on which the space is defined
+ * @return a pair containing the new finite element space and associated finite element collection
  */
 template <typename function_space>
-mfem::ParFiniteElementSpace* generateParFiniteElementSpace(mfem::ParMesh* mesh)
+std::pair<std::unique_ptr<mfem::ParFiniteElementSpace>, std::unique_ptr<mfem::FiniteElementCollection>>
+generateParFiniteElementSpace(mfem::ParMesh* mesh)
 {
-  const int                      dim = mesh->Dimension();
-  mfem::FiniteElementCollection* fec;
-  const auto                     ordering = mfem::Ordering::byVDIM;
+  const int                                      dim = mesh->Dimension();
+  std::unique_ptr<mfem::FiniteElementCollection> fec;
+  const auto                                     ordering = mfem::Ordering::byVDIM;
 
   switch (function_space::family) {
     case Family::H1:
-      fec = new mfem::H1_FECollection(function_space::order, dim);
+      fec = std::make_unique<mfem::H1_FECollection>(function_space::order, dim);
       break;
     case Family::HCURL:
-      fec = new mfem::ND_FECollection(function_space::order, dim);
+      fec = std::make_unique<mfem::ND_FECollection>(function_space::order, dim);
       break;
     case Family::HDIV:
-      fec = new mfem::RT_FECollection(function_space::order, dim);
+      fec = std::make_unique<mfem::RT_FECollection>(function_space::order, dim);
       break;
     case Family::L2:
-      fec = new mfem::L2_FECollection(function_space::order, dim);
+      fec = std::make_unique<mfem::L2_FECollection>(function_space::order, dim);
       break;
     default:
-      return NULL;
+      return std::pair<std::unique_ptr<mfem::ParFiniteElementSpace>, std::unique_ptr<mfem::FiniteElementCollection>>(
+          nullptr, nullptr);
       break;
   }
 
-  // note: this leaks memory: `fec` is never destroyed, but how to fix?
-  return new mfem::ParFiniteElementSpace(mesh, fec, function_space::components, ordering);
+  auto fes = std::make_unique<mfem::ParFiniteElementSpace>(mesh, fec.get(), function_space::components, ordering);
+
+  return std::pair(std::move(fes), std::move(fec));
 }
 
 /// @cond
