@@ -42,13 +42,13 @@ void weird_mixed_test()
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(meshfile), 1);
 
-  auto trial_fes = generateParFiniteElementSpace<trial_space>(mesh.get());
-  auto test_fes  = generateParFiniteElementSpace<test_space>(mesh.get());
+  auto [trial_fes, trial_col] = generateParFiniteElementSpace<trial_space>(mesh.get());
+  auto [test_fes, test_col]   = generateParFiniteElementSpace<test_space>(mesh.get());
 
   mfem::Vector U(trial_fes->TrueVSize());
   U.Randomize();
 
-  Functional<test_space(trial_space)> residual(test_fes, {trial_fes});
+  Functional<test_space(trial_space)> residual(test_fes.get(), {trial_fes.get()});
 
   auto d11 =
       1.0 * make_tensor<dim + 1, dim, dim + 2, dim>([](int i, int j, int k, int l) { return i - j + 2 * k - 3 * l; });
@@ -77,9 +77,6 @@ void weird_mixed_test()
       *mesh);
 
   check_gradient(residual, U);
-
-  delete test_fes;
-  delete trial_fes;
 }
 
 template <int p, int dim>
@@ -99,13 +96,13 @@ void elasticity_test()
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(meshfile), 1);
 
-  auto trial_fes = generateParFiniteElementSpace<trial_space>(mesh.get());
-  auto test_fes  = generateParFiniteElementSpace<test_space>(mesh.get());
+  auto [trial_fes, trial_col] = generateParFiniteElementSpace<trial_space>(mesh.get());
+  auto [test_fes, test_col]   = generateParFiniteElementSpace<test_space>(mesh.get());
 
   mfem::Vector U(trial_fes->TrueVSize());
   U.Randomize();
 
-  Functional<test_space(trial_space)> residual(test_fes, {trial_fes});
+  Functional<test_space(trial_space)> residual(test_fes.get(), {trial_fes.get()});
 
   [[maybe_unused]] auto d00 = make_tensor<dim, dim>([](int i, int j) { return i + 2 * j + 1; });
   [[maybe_unused]] auto d01 = make_tensor<dim, dim, dim>([](int i, int j, int k) { return i + 2 * j - k + 1; });
@@ -135,9 +132,6 @@ void elasticity_test()
       *mesh);
 
   check_gradient(residual, U);
-
-  delete test_fes;
-  delete trial_fes;
 }
 
 TEST(basic, weird_mixed_test_2D) { weird_mixed_test<1, 2>(); }

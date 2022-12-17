@@ -302,6 +302,9 @@ protected:
     /// The trial spaces used for the Functional object
     std::unique_ptr<mfem::ParFiniteElementSpace> trial_space;
 
+    /// The collections needed for the parameter finite element space
+    std::unique_ptr<mfem::FiniteElementCollection> trial_collection;
+
     /// The finite element states representing user-defined and owned parameter fields
     serac::FiniteElementState* state;
 
