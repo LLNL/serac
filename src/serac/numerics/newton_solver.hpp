@@ -7,14 +7,14 @@
 /**
  * @file newton_solver.hpp
  *
- * @brief This file contains the declaration of an modified version of MFEM's newton solver
+ * @brief This file contains the declaration of an modified version of MFEM's native newton solver
  */
 
 #include "mfem.hpp"
 
 namespace serac::mfem_ext {
 
-/// Newton's method for solving F(x)=b for a given operator F.
+/// Newton's method for solving F(x)=b for a given nonlinear operator F.
 /** This is a slightly modified version of MFEM's native Newton
  * solver. By default, it forces one linear solve as opposed to only performing a
  * residual calculation if the initial residual is low.
