@@ -8,6 +8,7 @@
 
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
+#include "serac/numerics/newton_solver.hpp"
 
 namespace serac::mfem_ext {
 
@@ -156,7 +157,7 @@ std::unique_ptr<mfem::NewtonSolver> EquationSolver::BuildNewtonSolver(MPI_Comm  
   std::unique_ptr<mfem::NewtonSolver> newton_solver;
 
   if (nonlin_options.nonlin_solver == NonlinearSolver::MFEMNewton) {
-    newton_solver = std::make_unique<mfem::NewtonSolver>(comm);
+    newton_solver = std::make_unique<serac::mfem_ext::NewtonSolver>(comm);
   }
   // KINSOL
   else {

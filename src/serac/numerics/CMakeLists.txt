@@ -14,6 +14,7 @@ set(numerics_headers
     equation_solver.hpp
     expr_template_impl.hpp
     expr_template_ops.hpp
+    newton_solver.hpp
     odes.hpp
     quadrature_data.hpp
     solver_config.hpp
@@ -23,6 +24,7 @@ set(numerics_headers
 
 set(numerics_sources
     equation_solver.cpp
+    newton_solver.cpp
     quadrature_data.cpp
     odes.cpp
     )
