@@ -49,7 +49,6 @@ SolidLegacy::SolidLegacy(int order, const SolverOptions& options, GeometricNonli
 
   // Initialize the mesh node pointers
   reference_nodes_ = std::make_unique<mfem::ParGridFunction>(&displacement_.space());
-  mesh_.EnsureNodes();
   mesh_.GetNodes(*reference_nodes_);
 
   reference_nodes_->GetTrueDofs(x_);

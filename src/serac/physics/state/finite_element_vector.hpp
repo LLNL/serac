@@ -56,10 +56,6 @@ public:
      */
     std::unique_ptr<mfem::FiniteElementCollection> coll = {};
     /**
-     * @brief The DOF ordering that should be used interally by MFEM
-     */
-    mfem::Ordering::Type ordering = mfem::Ordering::byVDIM;
-    /**
      * @brief The name of the field encapsulated by the state object
      */
     std::string name = "";
@@ -72,9 +68,7 @@ public:
    * the dimension of the FESpace, the type of FEColl, the DOF ordering that should be used,
    * and the name of the field
    */
-  FiniteElementVector(mfem::ParMesh& mesh,
-                      Options&&      options = {
-                          .order = 1, .vector_dim = 1, .coll = {}, .ordering = mfem::Ordering::byVDIM, .name = ""});
+  FiniteElementVector(mfem::ParMesh& mesh, Options&& options = {.order = 1, .vector_dim = 1, .coll = {}, .name = ""});
 
   /**
    * @brief Minimal constructor for a FiniteElementVector given a finite element space

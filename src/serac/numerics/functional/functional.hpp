@@ -109,7 +109,7 @@ generateParFiniteElementSpace(mfem::ParMesh* mesh)
 {
   const int                                      dim = mesh->Dimension();
   std::unique_ptr<mfem::FiniteElementCollection> fec;
-  const auto                                     ordering = mfem::Ordering::byVDIM;
+  const auto                                     ordering = mfem::Ordering::byNODES;
 
   switch (function_space::family) {
     case Family::H1:
