@@ -35,7 +35,7 @@ double time(callable f)
 int main()
 {
 
-#if 1
+#if 0
   // non-conforming mesh example
   double vertices[5][2] = {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}, {0.7, 0.4}};
   int    elements[4][3] = {{0, 1, 4}, {1, 2, 4}, {2, 3, 4}, {3, 0, 4}};
@@ -54,7 +54,8 @@ int main()
   refinements[0] = mfem::Refinement(0);
   mesh.GeneralRefinement(refinements, 1);
 #else
-  const char* mesh_file = "/home/sam/Downloads/annulus.vtk";
+  //const char* mesh_file = "/home/sam/Downloads/annulus.vtk";
+  const char* mesh_file = "/home/sam/Downloads/annulus_ncmesh.vtk";
   // const char* mesh_file = "/home/sam/code/mfem/data/star.mesh";
   Mesh mesh(mesh_file);
 #endif
@@ -73,13 +74,16 @@ int main()
   stopwatch.start();
   for (int f = 0; f < mesh.GetNumFaces(); f++) {
     if (mesh.GetFaceInformation(f).IsInterior()) continue;  // discard interior faces
-
     mesh.GetFaceVertices(f, vertex_ids);
     edges[vertex_ids[0]] = vertex_ids[1];
     boundary_vertices.insert(vertex_ids[0]);
   }
   stopwatch.stop();
   std::cout << "collecting boundary edge info took " << stopwatch.elapsed() << " seconds" << std::endl;
+
+  for (auto [k, v] : edges) {
+    std::cout << k << " " << v << std::endl;
+  }
 
   stopwatch.start();
   std::vector<std::vector<int> > contours;
@@ -104,12 +108,12 @@ int main()
   stopwatch.stop();
   std::cout << "generated " << contours.size() << " contours in " << stopwatch.elapsed() << " seconds" << std::endl;
 
-  for (auto contour : contours) {
-    for (auto v : contour) {
-      std::cout << v << " ";
-    }
-    std::cout << std::endl;
-  }
+  //for (auto contour : contours) {
+  //  for (auto v : contour) {
+  //    std::cout << v << " ";
+  //  }
+  //  std::cout << std::endl;
+  //}
 
   return 0;
 }

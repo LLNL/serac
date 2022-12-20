@@ -11,6 +11,17 @@ enum class Family
   DG
 };
 
+enum class FaceType {BOUNDARY, INTERIOR};
+
+std::ostream & operator<<(std::ostream & out, FaceType type ) {
+  if (type == FaceType::BOUNDARY) {
+    out << "FaceType::BOUNDARY";
+  } else {
+    out << "FaceType::INTERIOR";
+  }
+  return out;
+}
+
 bool isH1(const mfem::FiniteElementSpace& fes)
 {
   return (fes.FEColl()->GetContType() == mfem::FiniteElementCollection::CONTINUOUS);
@@ -527,8 +538,8 @@ Array2D<int> GetBoundaryFaceDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::
       mfem::Geometry::Type elem_geom = mesh->GetElementGeometry(elem_ids[0]);
 
       // 4. extract only the dofs that correspond to side `i`
-      for (auto k : local_face_dofs[elem_geom](i)) {
-        face_dofs.push_back(elem_dof_ids[k]);
+      for (auto k : face_perm(orientations[i])) {
+        face_dofs.push_back(elem_dof_ids[local_face_dofs[elem_geom](i, k)]);
       }
 
       if (debug_print) {
@@ -739,8 +750,111 @@ mfem::FiniteElementCollection* makeFEC(Family family, int order, int dim)
   return nullptr;
 }
 
-int main()
-{
+void compare(Array2D<int> & H1_face_dof_ids, 
+             Array2D<int> & L2_face_dof_ids, 
+             mfem::GridFunction & H1_gf,
+             mfem::GridFunction & L2_gf, 
+             mfem::Geometry::Type geom,
+             int seed,
+             FaceType type) {
+
+  uint64_t n0 = H1_face_dof_ids.dim[0];
+  uint64_t n1 = H1_face_dof_ids.dim[1];
+  for (uint64_t i = 0; i < n0; i++) {
+    for (uint64_t j = 0; j < n1; j++) {
+      double v1 = H1_gf(H1_face_dof_ids(int(i), int(j)));
+      double v2 = L2_gf(L2_face_dof_ids(int(i), int(j)));
+      if (fabs(v1 - v2) > 1.0e-14) {
+        i           = n0;
+        j           = n1;  // break from both loops
+        debug_print = true;
+      }
+    }
+  }
+
+  if (debug_print) {
+
+    std::cout << type << "inconsistency detected" << std::endl;
+
+    auto x_func = [](const mfem::Vector& in, double) { return in[0]; };
+    auto y_func = [](const mfem::Vector& in, double) { return in[1]; };
+
+    {
+      mfem::GridFunction gf = H1_gf;
+
+      std::cout << "H1 node x-coordinates: " << std::endl;
+      auto tmp = mfem::FunctionCoefficient(x_func);
+      gf.ProjectCoefficient(tmp);
+      gf.Print(std::cout, 4);
+      std::cout << std::endl;
+
+      std::cout << "H1 node y-coordinates: " << std::endl;
+      tmp = mfem::FunctionCoefficient(y_func);
+      gf.ProjectCoefficient(tmp);
+      gf.Print(std::cout, 4);
+      std::cout << std::endl;
+
+      std::cout << "H1 values: " << std::endl;
+      H1_gf.Print(std::cout, 4);
+      std::cout << std::endl;
+    }
+
+    {
+      mfem::GridFunction gf = L2_gf;
+
+      std::cout << "L2 node x-coordinates: " << std::endl;
+      auto tmp = mfem::FunctionCoefficient(x_func);
+      gf.ProjectCoefficient(tmp);
+      gf.Print(std::cout, 4);
+      std::cout << std::endl;
+
+      std::cout << "L2 node y-coordinates: " << std::endl;
+      tmp = mfem::FunctionCoefficient(y_func);
+      gf.ProjectCoefficient(tmp);
+      gf.Print(std::cout, 4);
+      std::cout << std::endl;
+
+      std::cout << "L2 values: " << std::endl;
+      L2_gf.Print(std::cout, 4);
+      std::cout << std::endl;
+    }
+
+    patch_test_mesh(geom, seed);
+
+    if (type == FaceType::INTERIOR) {
+      H1_face_dof_ids = GetInteriorFaceDofs(H1_gf.FESpace(), face_type(geom));
+      L2_face_dof_ids = GetInteriorFaceDofs(L2_gf.FESpace(), face_type(geom));
+    } else {
+      H1_face_dof_ids = GetBoundaryFaceDofs(H1_gf.FESpace(), face_type(geom));
+      L2_face_dof_ids = GetBoundaryFaceDofs(L2_gf.FESpace(), face_type(geom));
+    }
+
+    for (uint64_t i = 0; i < n0; i++) {
+      std::cout << i << ": " << std::endl;
+      for (uint64_t j = 0; j < n1; j++) {
+        std::cout << H1_gf(H1_face_dof_ids(int(i), int(j))) << " ";
+      }
+      std::cout << std::endl;
+
+      for (uint64_t j = 0; j < n1; j++) {
+        std::cout << L2_gf(L2_face_dof_ids(int(i), int(j))) << " ";
+      }
+      std::cout << std::endl;
+
+      if (type == FaceType::INTERIOR) {
+        for (uint64_t j = 0; j < n1; j++) {
+          std::cout << L2_gf(L2_face_dof_ids(int(i), int(n1 + j))) << " ";
+        }
+        std::cout << std::endl;
+      }
+    }
+
+  }
+
+}
+
+int main() {
+
   int order = 3;
 
   mfem::Geometry::Type geometries[] = {mfem::Geometry::Type::TRIANGLE, mfem::Geometry::Type::SQUARE,
@@ -749,9 +863,6 @@ int main()
   auto func = [](const mfem::Vector& in, double) {
     return (in.Size() == 2) ? (in[1] * 10 + in[0]) : (in[2] * 100 + in[1] * 10 + in[0]);
   };
-  auto x_func = [](const mfem::Vector& in, double) { return in[0]; };
-  auto y_func = [](const mfem::Vector& in, double) { return in[1]; };
-  // auto z_func = [](const mfem::Vector& in, double) { return in[2]; };
 
 #if defined ENABLE_GLVIS
   char vishost[] = "localhost";
@@ -782,100 +893,24 @@ int main()
       mfem::FiniteElementSpace L2fes(&mesh, L2fec, 1, mfem::Ordering::byVDIM);
 
       mfem::FunctionCoefficient f(func);
-      mfem::GridFunction        H1_x(&H1fes);
-      mfem::GridFunction        L2_x(&L2fes);
-      H1_x.ProjectCoefficient(f);
-      L2_x.ProjectCoefficient(f);
+      mfem::GridFunction        H1_gf(&H1fes);
+      mfem::GridFunction        L2_gf(&L2fes);
+      H1_gf.ProjectCoefficient(f);
+      L2_gf.ProjectCoefficient(f);
 
-      #if 0
-      //auto H1_face_dof_ids = GetBoundaryFaceDofs(&H1fes, face_type(geom));
-      //auto L2_face_dof_ids = GetBoundaryFaceDofs(&L2fes, face_type(geom));
-      #else
-      auto H1_face_dof_ids = GetInteriorFaceDofs(&H1fes, face_type(geom));
-      auto L2_face_dof_ids = GetInteriorFaceDofs(&L2fes, face_type(geom));
-      #endif
-
-      uint64_t n0 = H1_face_dof_ids.dim[0];
-      uint64_t n1 = H1_face_dof_ids.dim[1];
-      for (uint64_t i = 0; i < n0; i++) {
-        for (uint64_t j = 0; j < n1; j++) {
-          double v1 = H1_x(H1_face_dof_ids(int(i), int(j)));
-          double v2 = L2_x(L2_face_dof_ids(int(i), int(j)));
-          if (fabs(v1 - v2) > 1.0e-14) {
-            i           = n0;
-            j           = n1;  // break from both loops
-            debug_print = true;
-          }
-        }
+      {
+        auto H1_face_dof_ids = GetInteriorFaceDofs(&H1fes, face_type(geom));
+        auto L2_face_dof_ids = GetInteriorFaceDofs(&L2fes, face_type(geom));
+        compare(H1_face_dof_ids, L2_face_dof_ids, H1_gf, L2_gf, geom, seed, FaceType::INTERIOR);
       }
 
-      if (debug_print) {
-        std::cout << "H1 node x-coordinates: " << std::endl;
-        auto tmp = mfem::FunctionCoefficient(x_func);
-        H1_x.ProjectCoefficient(tmp);
-        H1_x.Print(std::cout, 4);
-        std::cout << std::endl;
-
-        std::cout << "H1 node y-coordinates: " << std::endl;
-        tmp = mfem::FunctionCoefficient(y_func);
-        H1_x.ProjectCoefficient(tmp);
-        H1_x.Print(std::cout, 4);
-        std::cout << std::endl;
-
-        std::cout << "L2 node x-coordinates: " << std::endl;
-        tmp = mfem::FunctionCoefficient(x_func);
-        L2_x.ProjectCoefficient(tmp);
-        L2_x.Print(std::cout, 4);
-        std::cout << std::endl;
-
-        std::cout << "L2 node y-coordinates: " << std::endl;
-        tmp = mfem::FunctionCoefficient(y_func);
-        L2_x.ProjectCoefficient(tmp);
-        L2_x.Print(std::cout, 4);
-        std::cout << std::endl;
-
-        std::cout << "H1 values: " << std::endl;
-        H1_x.ProjectCoefficient(f);
-        H1_x.Print(std::cout, 4);
-        std::cout << std::endl;
-
-        std::cout << "L2 values: " << std::endl;
-        L2_x.ProjectCoefficient(f);
-        L2_x.Print(std::cout, 4);
-        std::cout << std::endl;
-
-
-
-        patch_test_mesh(geom, seed);
-
-        #if 0
-        // H1_face_dof_ids = GetBoundaryFaceDofs(&H1fes, face_type(geom));
-        // L2_face_dof_ids = GetBoundaryFaceDofs(&L2fes, face_type(geom));
-        #else
-        H1_face_dof_ids = GetInteriorFaceDofs(&H1fes, face_type(geom));
-        L2_face_dof_ids = GetInteriorFaceDofs(&L2fes, face_type(geom));
-        #endif
-
-        for (uint64_t i = 0; i < n0; i++) {
-          std::cout << i << ": " << std::endl;
-          for (uint64_t j = 0; j < n1; j++) {
-            std::cout << H1_x(H1_face_dof_ids(int(i), int(j))) << " ";
-          }
-          std::cout << std::endl;
-
-          for (uint64_t j = 0; j < n1; j++) {
-            std::cout << L2_x(L2_face_dof_ids(int(i), int(j))) << " ";
-          }
-          std::cout << std::endl;
-
-          for (uint64_t j = 0; j < n1; j++) {
-            std::cout << L2_x(L2_face_dof_ids(int(i), int(n1 + j))) << " ";
-          }
-          std::cout << std::endl;
-        }
-
-        //exit(1);
+      {
+        auto H1_face_dof_ids = GetBoundaryFaceDofs(&H1fes, face_type(geom));
+        auto L2_face_dof_ids = GetBoundaryFaceDofs(&L2fes, face_type(geom));
+        compare(H1_face_dof_ids, L2_face_dof_ids, H1_gf, L2_gf, geom, seed, FaceType::BOUNDARY);
       }
+
     }
   }
+
 }
