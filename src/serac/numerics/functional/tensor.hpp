@@ -14,10 +14,6 @@
 
 #include "serac/infrastructure/accelerator.hpp"
 
-#include "serac/numerics/functional/dual.hpp"
-
-#include "serac/numerics/functional/tuple.hpp"
-
 #include "detail/metaprogramming.hpp"
 
 namespace serac {
@@ -485,82 +481,6 @@ SERAC_HOST_DEVICE constexpr auto elementwise_multiply(const tensor<S, n...>& A, 
 }
 
 /**
- * @brief multiply a tensor by a scalar value
- * @tparam S the scalar value type. Must be arithmetic (e.g. float, double, int) or a dual number
- * @tparam T the underlying type of the tensor (righthand) argument
- * @tparam n integers describing the tensor shape
- * @param[in] scale The scaling factor
- * @param[in] A The tensor to be scaled
- */
-template <typename S, typename T, int m, int... n,
-          typename = std::enable_if_t<std::is_arithmetic_v<S> || is_dual_number<S>::value>>
-SERAC_HOST_DEVICE constexpr auto operator*(S scale, const tensor<T, m, n...>& A)
-{
-  tensor<decltype(S{} * T{}), m, n...> C{};
-  for (int i = 0; i < m; i++) {
-    C[i] = scale * A[i];
-  }
-  return C;
-}
-
-/**
- * @brief multiply a tensor by a scalar value
- * @tparam S the scalar value type. Must be arithmetic (e.g. float, double, int) or a dual number
- * @tparam T the underlying type of the tensor (righthand) argument
- * @tparam n integers describing the tensor shape
- * @param[in] A The tensor to be scaled
- * @param[in] scale The scaling factor
- */
-template <typename S, typename T, int m, int... n,
-          typename = std::enable_if_t<std::is_arithmetic_v<S> || is_dual_number<S>::value>>
-SERAC_HOST_DEVICE constexpr auto operator*(const tensor<T, m, n...>& A, S scale)
-{
-  tensor<decltype(T{} * S{}), m, n...> C{};
-  for (int i = 0; i < m; i++) {
-    C[i] = A[i] * scale;
-  }
-  return C;
-}
-
-/**
- * @brief divide a scalar by each element in a tensor
- * @tparam S the scalar value type. Must be arithmetic (e.g. float, double, int) or a dual number
- * @tparam T the underlying type of the tensor (righthand) argument
- * @tparam n integers describing the tensor shape
- * @param[in] scale The numerator
- * @param[in] A The tensor of denominators
- */
-template <typename S, typename T, int m, int... n,
-          typename = std::enable_if_t<std::is_arithmetic_v<S> || is_dual_number<S>::value>>
-SERAC_HOST_DEVICE constexpr auto operator/(S scale, const tensor<T, m, n...>& A)
-{
-  tensor<decltype(S{} * T{}), n...> C{};
-  for (int i = 0; i < m; i++) {
-    C[i] = scale / A[i];
-  }
-  return C;
-}
-
-/**
- * @brief divide a tensor by a scalar
- * @tparam S the scalar value type. Must be arithmetic (e.g. float, double, int) or a dual number
- * @tparam T the underlying type of the tensor (righthand) argument
- * @tparam n integers describing the tensor shape
- * @param[in] A The tensor of numerators
- * @param[in] scale The denominator
- */
-template <typename S, typename T, int m, int... n,
-          typename = std::enable_if_t<std::is_arithmetic_v<S> || is_dual_number<S>::value>>
-SERAC_HOST_DEVICE constexpr auto operator/(const tensor<T, m, n...>& A, S scale)
-{
-  tensor<decltype(T{} * S{}), m, n...> C{};
-  for (int i = 0; i < m; i++) {
-    C[i] = A[i] / scale;
-  }
-  return C;
-}
-
-/**
  * @brief compound assignment (+) on tensors
  * @tparam S the underlying type of the tensor (lefthand) argument
  * @tparam T the underlying type of the tensor (righthand) argument
@@ -602,6 +522,21 @@ SERAC_HOST_DEVICE constexpr auto& operator+=(tensor<T, n, 1>& A, const tensor<T,
 {
   for (int i = 0; i < n; i++) {
     A.data[i][0] += B[i];
+  }
+  return A;
+}
+
+/**
+ * @brief compound assignment (+) on tensors
+ * @tparam T the underlying type of the tensor argument
+ * @param[in] A The lefthand tensor
+ * @param[in] B The righthand tensor
+ */
+template <typename T, int n>
+SERAC_HOST_DEVICE constexpr auto& operator+=(tensor<T, 1, n>& A, const tensor<T, n>& B)
+{
+  for (int i = 0; i < n; i++) {
+    A.data[0][i] += B[i];
   }
   return A;
 }
@@ -755,6 +690,26 @@ SERAC_HOST_DEVICE constexpr auto inner(const tensor<S, m, n>& A, const tensor<T,
   }
   return sum;
 }
+
+/**
+ * @overload
+ * @note for first order tensors (vectors)
+ */
+template <typename S, typename T, int m>
+SERAC_HOST_DEVICE constexpr auto inner(const tensor<S, m>& A, const tensor<T, m>& B)
+{
+  decltype(S{} * T{}) sum{};
+  for (int i = 0; i < m; i++) {
+    sum += A[i] * B[i];
+  }
+  return sum;
+}
+
+/**
+ * @overload
+ * @note for zeroth-order tensors (scalars)
+ */
+SERAC_HOST_DEVICE constexpr auto inner(double A, double B) { return A * B; }
 
 /**
  * @brief this function contracts over the "middle" index of the two tensor arguments
@@ -1451,70 +1406,6 @@ struct LuFactorization {
 };
 
 /**
- * @brief Compute LU factorization of a matrix with partial pivoting
- *
- * The convention followed is to place ones on the diagonal of the lower
- * triangular factor.
- * @param[in] A The matrix to factorize
- * @return An LuFactorization object
- * @see LuFactorization
- */
-template <typename T, int n>
-SERAC_HOST_DEVICE constexpr LuFactorization<T, n> factorize_lu(const tensor<T, n, n>& A)
-{
-  constexpr auto abs  = [](double x) { return (x < 0) ? -x : x; };
-  constexpr auto swap = [](auto& x, auto& y) {
-    auto tmp = x;
-    x        = y;
-    y        = tmp;
-  };
-
-  auto U = A;
-  // initialize L to Identity
-  auto L = tensor<T, n, n>{};
-  // This handles the case if T is a dual number
-  // TODO - BT: make a dense identity that is templated on type
-  for (int i = 0; i < n; i++) {
-    if constexpr (is_dual_number<T>::value) {
-      L[i][i].value = 1.0;
-    } else {
-      L[i][i] = 1.0;
-    }
-  }
-  tensor<int, n> P(make_tensor<n>([](auto i) { return i; }));
-
-  for (int i = 0; i < n; i++) {
-    // Search for maximum in this column
-    double max_val = abs(get_value(U[i][i]));
-
-    int max_row = i;
-    for (int j = i + 1; j < n; j++) {
-      auto U_ji = get_value(U[j][i]);
-      if (abs(U_ji) > max_val) {
-        max_val = abs(U_ji);
-        max_row = j;
-      }
-    }
-
-    swap(P[max_row], P[i]);
-    swap(U[max_row], U[i]);
-  }
-
-  for (int i = 0; i < n; i++) {
-    // zero entries below in this column in U
-    // and fill in L entries
-    for (int j = i + 1; j < n; j++) {
-      auto c  = U[j][i] / U[i][i];
-      L[j][i] = c;
-      U[j] -= c * U[i];
-      U[j][i] = T{};
-    }
-  }
-
-  return {P, L, U};
-}
-
-/**
  * @brief Solves a lower triangular system Ly = b
  *
  * L must be lower triangular and normalized such that the
@@ -1583,40 +1474,6 @@ SERAC_HOST_DEVICE constexpr auto solve_upper_triangular(const tensor<T, n, n>& U
 }
 
 /**
- * @brief Solves Ax = b for x using Gaussian elimination with partial pivoting
- * @param[in] A The coefficient matrix A
- * @param[in] b The righthand side vector b
- * @return x The solution vector
- */
-template <typename S, typename T, int n, int... m>
-SERAC_HOST_DEVICE constexpr auto linear_solve(const tensor<S, n, n>& A, const tensor<T, n, m...>& b)
-{
-  // We want to avoid accumulating the derivative through the
-  // LU factorization, because it is computationally expensive.
-  // Instead, we perform the LU factorization on the values of
-  // A, and then two backsolves: one to compute the primal (x),
-  // and another to compute its derivative (dx).
-  // If A is not dual, the second solve is a no-op.
-
-  // Strip off derivatives, if any, and compute only x (ie no derivative)
-  auto lu_factors = factorize_lu(get_value(A));
-  auto x          = linear_solve(lu_factors, get_value(b));
-
-  // Compute directional derivative of x.
-  // If both b and A are not dual, the zero type
-  // makes these no-ops.
-  auto                  r  = get_gradient(b) - dot(get_gradient(A), x);
-  [[maybe_unused]] auto dx = linear_solve(lu_factors, r);
-
-  if constexpr (is_zero<decltype(dx)>{}) {
-    return x;
-  }
-  if constexpr (!is_zero<decltype(dx)>{}) {
-    return make_dual(x, dx);
-  }
-}
-
-/**
  * @overload
  * @note For use with a matrix that has already been factorized
  */
@@ -1640,15 +1497,6 @@ template <typename T, int n>
 SERAC_HOST_DEVICE constexpr auto linear_solve(const LuFactorization<T, n>& /* lu_factors */, const zero /* b */)
 {
   return zero{};
-}
-
-/**
- * @brief Create a tensor of dual numbers with specified seed
- */
-template <typename T, int n>
-SERAC_HOST_DEVICE constexpr auto make_dual(const tensor<T, n>& x, const tensor<T, n>& dx)
-{
-  return make_tensor<n>([&](int i) { return dual<T>{x[i], dx[i]}; });
 }
 
 /**
@@ -1702,31 +1550,6 @@ SERAC_HOST_DEVICE constexpr auto inv(const tensor<T, n, n>& A)
 {
   auto I = DenseIdentity<n>();
   return linear_solve(A, I);
-}
-
-/**
- * @overload
- * @note when inverting a tensor of dual numbers,
- * hardcode the analytic derivative of the
- * inverse of a square matrix, rather than
- * apply gauss elimination directly on the dual number types
- *
- * TODO: compare performance of this hardcoded implementation to just using inv() directly
- */
-template <typename gradient_type, int n>
-SERAC_HOST_DEVICE constexpr auto inv(tensor<dual<gradient_type>, n, n> A)
-{
-  auto invA = inv(get_value(A));
-  return make_tensor<n, n>([&](int i, int j) {
-    auto          value = invA[i][j];
-    gradient_type gradient{};
-    for (int k = 0; k < n; k++) {
-      for (int l = 0; l < n; l++) {
-        gradient -= invA[i][k] * A[k][l].gradient * invA[l][j];
-      }
-    }
-    return dual<gradient_type>{value, gradient};
-  });
 }
 
 /**
@@ -1813,22 +1636,6 @@ SERAC_HOST_DEVICE constexpr auto chop(const tensor<double, m, n>& A)
   return copy;
 }
 
-/**
- * @brief Constructs a tensor of dual numbers from a tensor of values
- * @param[in] A The tensor of values
- * @note a d-order tensor's gradient will be initialized to the (2*d)-order identity tensor
- */
-template <int... n>
-SERAC_HOST_DEVICE constexpr auto make_dual(const tensor<double, n...>& A)
-{
-  tensor<dual<tensor<double, n...>>, n...> A_dual{};
-  for_constexpr<n...>([&](auto... i) {
-    A_dual(i...).value          = A(i...);
-    A_dual(i...).gradient(i...) = 1.0;
-  });
-  return A_dual;
-}
-
 /// @cond
 namespace detail {
 
@@ -1877,37 +1684,6 @@ template <typename T1, typename T2>
 using outer_product_t = typename detail::outer_prod<T1, T2>::type;
 
 /**
- * @brief Retrieves a value tensor from a tensor of dual numbers
- * @param[in] arg The tensor of dual numbers
- */
-template <typename T, int... n>
-SERAC_HOST_DEVICE auto get_value(const tensor<dual<T>, n...>& arg)
-{
-  tensor<double, n...> value{};
-  for_constexpr<n...>([&](auto... i) { value(i...) = arg(i...).value; });
-  return value;
-}
-
-/**
- * @brief Extracts all of the values from a tensor of dual numbers
- *
- * @tparam T1 the first type of the tuple stored in the tensor
- * @tparam T2 the second type of the tuple stored in the tensor
- * @tparam n  the number of entries in the input argument
- * @param[in] input The tensor of dual numbers
- * @return the tensor of all of the values
- */
-template <typename T1, typename T2, int n>
-SERAC_HOST_DEVICE auto get_value(const tensor<tuple<T1, T2>, n>& input)
-{
-  tensor<decltype(get_value(tuple<T1, T2>{})), n> output{};
-  for (int i = 0; i < n; i++) {
-    output[i] = get_value(input[i]);
-  }
-  return output;
-}
-
-/**
  * @brief Retrieves the gradient component of a double (which is nothing)
  * @return The sentinel, @see zero
  */
@@ -1922,27 +1698,6 @@ template <int... n>
 SERAC_HOST_DEVICE constexpr auto get_gradient(const tensor<double, n...>& /* arg */)
 {
   return zero{};
-}
-
-/**
- * @brief Retrieves a gradient tensor from a tensor of dual numbers
- * @param[in] arg The tensor of dual numbers
- */
-template <int... n>
-SERAC_HOST_DEVICE constexpr auto get_gradient(const tensor<dual<double>, n...>& arg)
-{
-  tensor<double, n...> g{};
-  for_constexpr<n...>([&](auto... i) { g(i...) = arg(i...).gradient; });
-  return g;
-}
-
-/// @overload
-template <int... n, int... m>
-SERAC_HOST_DEVICE constexpr auto get_gradient(const tensor<dual<tensor<double, m...>>, n...>& arg)
-{
-  tensor<double, n..., m...> g{};
-  for_constexpr<n...>([&](auto... i) { g(i...) = arg(i...).gradient; });
-  return g;
 }
 
 /**
@@ -2322,3 +2077,5 @@ inline mat < 3, 3 > R3_basis(const vec3 & n) {
 #endif
 
 #include "serac/numerics/functional/isotropic_tensor.hpp"
+
+#include "serac/numerics/functional/tuple_tensor_dual_functions.hpp"
