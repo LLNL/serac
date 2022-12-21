@@ -340,21 +340,12 @@ Array2D<int> face_permutations(mfem::Geometry::Type geom, int p)
     for (int j = 0; j <= p; j++) {
       for (int i = 0; i <= p - j; i++) {
         int id                          = tri_id(i, j);
-        #if 0
         output(0, tri_id(i, j))         = id;
         output(1, tri_id(p - i - j, j)) = id;
         output(2, tri_id(j, p - i - j)) = id;
         output(3, tri_id(i, p - i - j)) = id;
         output(4, tri_id(p - i - j, i)) = id;
         output(5, tri_id(j, i))         = id;
-        #else
-        output(0, id) = tri_id(i, j);
-        output(1, id) = tri_id(p - i - j, j);
-        output(2, id) = tri_id(j, p - i - j);
-        output(3, id) = tri_id(i, p - i - j);
-        output(4, id) = tri_id(p - i - j, i);
-        output(5, id) = tri_id(j, i);
-        #endif
       }
     }
     return output;
@@ -476,7 +467,7 @@ std::vector<Array2D<int> > geom_local_face_dofs(int p)
   return output;
 }
 
-Array2D<int> GetBoundaryFaceDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom)
+Array2D<int> GetFaceDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom, FaceType type)
 {
   std::vector<int> face_dofs;
   mfem::Mesh*      mesh         = fes->GetMesh();
@@ -492,129 +483,18 @@ Array2D<int> GetBoundaryFaceDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::
 
   for (int f = 0; f < fes->GetNF(); f++) {
 
-    // don't bother with interior faces, or faces with the wrong geometry
-    if (mesh->FaceIsInterior(f) || mesh->GetFaceGeometryType(f) != face_geom) {
-      continue;
-    }
+    auto faceinfo = mesh->GetFaceInformation(f);
+
+    // discard faces with the wrong geometry or type
+    if (mesh->GetFaceGeometryType(f) != face_geom) continue;
+    if (faceinfo.IsInterior() && type == FaceType::BOUNDARY) continue;
+    if (faceinfo.IsBoundary() && type == FaceType::INTERIOR) continue;
 
     // mfem doesn't provide this connectivity info for DG spaces directly,
     // so we have to get at it indirectly in several steps:
     if (isDG(*fes)) {
 
-      // 1. find the element that this face belongs to
-      mfem::Array<int> elem_ids;
-      face_to_elem->GetRow(f, elem_ids);
-
-      // 2a. get the list of faces (and their orientations) that belong to that element ...
-      mfem::Array<int> elem_side_ids, orientations;
-      if (mesh->Dimension() == 2) {
-        mesh->GetElementEdges(elem_ids[0], elem_side_ids, orientations);
-
-        // mfem returns {-1, 1} for edge orientations,
-        // but {0, 1, ... , n} for face orientations.
-        // Here, we renumber the edge orientations to
-        // {0 (no permutation), 1 (reversed)} so the values can be
-        // consistently used as indices into a permutation table
-        for (auto& o : orientations) {
-          o = (o == -1) ? 1 : 0;
-        }
-
-      } else {
-
-        mesh->GetElementFaces(elem_ids[0], elem_side_ids, orientations);
-
-      }
-
-      // 2b. ... and find `i` such that `elem_side_ids[i] == f`
-      int i;
-      for (i = 0; i < elem_side_ids.Size(); i++) {
-        if (elem_side_ids[i] == f) break;
-      }
-
-      // 3. get the dofs for the entire element
-      mfem::Array<int> elem_dof_ids;
-      fes->GetElementDofs(elem_ids[0], elem_dof_ids);
-
-      mfem::Geometry::Type elem_geom = mesh->GetElementGeometry(elem_ids[0]);
-
-      // 4. extract only the dofs that correspond to side `i`
-      for (auto k : face_perm(orientations[i])) {
-        face_dofs.push_back(elem_dof_ids[local_face_dofs[elem_geom](i, k)]);
-      }
-
-      if (debug_print) {
-        std::cout << "face " << f << " belongs to element " << elem_ids[0];
-        std::cout << " with local face id " << i << " and orientation " << orientations[i] << std::endl;
-        int count = 0;
-        for (auto dof : elem_dof_ids) {
-          std::cout << dof << " ";
-          if ((++count % 4) == 0) std::cout << std::endl;
-        }
-        std::cout << std::endl;
-
-        count = 0;
-        for (auto k : local_face_dofs[elem_geom](i)) {
-          std::cout << elem_dof_ids[k] << " ";
-          if ((++count % 4) == 0) std::cout << std::endl;
-        }
-        std::cout << std::endl;
-      }
-
-    // H1 and Hcurl spaces are more straight-forward, since
-    // we can use FiniteElementSpace::GetFaceDofs() directly
-    } else {
-      mfem::Array<int> dofs;
-
-      // note: although GetFaceDofs does work for 2D and 3D meshes, 
-      //       it doesn't return the dofs in the official orientation
-      //       for 2D meshes (?).
-      if (mesh->Dimension() == 2) {
-        fes->GetEdgeDofs(f, dofs);
-      } else {
-        fes->GetFaceDofs(f, dofs);
-      }
-
-      for (int k = 0; k < dofs.Size(); k++) {
-        face_dofs.push_back(dofs[elem_perm[face_geom][k]]);
-      }
-    }
-
-    n++;
-  }
-
-  delete face_to_elem;
-
-  uint64_t dofs_per_face = face_dofs.size() / n;
-
-  return Array2D<int>(std::move(face_dofs), n, dofs_per_face);
-}
-
-Array2D<int> GetInteriorFaceDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom)
-{
-  std::vector<int> face_dofs;
-  mfem::Mesh*      mesh         = fes->GetMesh();
-  mfem::Table*     face_to_elem = mesh->GetFaceToElementTable();
-
-  // note: this assumes that all the elements are the same polynomial order
-  int                            p               = fes->GetElementOrder(0);
-  Array2D<int>                   face_perm       = face_permutations(face_geom, p);
-  std::vector<Array2D<int> >     local_face_dofs = geom_local_face_dofs(p);
-  std::vector<std::vector<int> > elem_perm       = lexicographic_permutations(p);
-
-  uint64_t n = 0;
-
-  for (int f = 0; f < fes->GetNF(); f++) {
-
-    // don't bother with boundary faces, or faces with the wrong geometry
-    if (!mesh->FaceIsInterior(f) || mesh->GetFaceGeometryType(f) != face_geom) {
-      continue;
-    }
-
-    // mfem doesn't provide this connectivity info for DG spaces directly,
-    // so we have to get at it indirectly in several steps:
-    if (isDG(*fes)) {
-
-      // 1. find the two elements that this interior face belongs to
+      // 1. find the element(s) that this face belongs to
       mfem::Array<int> elem_ids;
       face_to_elem->GetRow(f, elem_ids);
 
@@ -657,30 +537,16 @@ Array2D<int> GetInteriorFaceDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::
         for (auto k : face_perm(orientations[i])) {
           face_dofs.push_back(elem_dof_ids[local_face_dofs[elem_geom](i, k)]);
         }
-
-        if (debug_print) {
-          std::cout << "face " << f << " (" << n <<  ") belongs to element " << elem;
-          std::cout << " with local face id " << i << " and orientation " << orientations[i] << std::endl;
-          int count = 0;
-          for (auto dof : elem_dof_ids) {
-            std::cout << dof << " ";
-            if ((++count % 4) == 0) std::cout << std::endl;
-          }
-          std::cout << std::endl;
-
-          count = 0;
-          for (auto k : local_face_dofs[elem_geom](i)) {
-            std::cout << elem_dof_ids[k] << " ";
-            if ((++count % 4) == 0) std::cout << std::endl;
-          }
-          std::cout << std::endl;
-        }
+      
+        // boundary faces only belong to 1 element, so we exit early
+        if (type == FaceType::BOUNDARY) break;
 
       }
 
     // H1 and Hcurl spaces are more straight-forward, since
     // we can use FiniteElementSpace::GetFaceDofs() directly
     } else {
+
       mfem::Array<int> dofs;
 
       // note: although GetFaceDofs does work for 2D and 3D meshes, 
@@ -694,30 +560,6 @@ Array2D<int> GetInteriorFaceDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::
 
       for (int k = 0; k < dofs.Size(); k++) {
         face_dofs.push_back(dofs[elem_perm[face_geom][k]]);
-      }
-
-      if (debug_print) {
-        std::cout << "face " << f << " (" << n <<  ") :" << std::endl;
-        int count = 0;
-        for (auto dof : dofs) {
-          std::cout << dof << " ";
-          if ((++count % 4) == 0) std::cout << std::endl;
-        }
-        std::cout << std::endl;
-
-        for (int k = 0; k < dofs.Size(); k++) {
-          std::cout << dofs[elem_perm[face_geom][k]] << " ";
-          if ((++count % 4) == 0) std::cout << std::endl;
-        }
-        std::cout << std::endl;
-
-        fes->GetEdgeDofs(f, dofs);
-        for (int k = 0; k < dofs.Size(); k++) {
-          std::cout << dofs[k] << " ";
-          if ((++count % 4) == 0) std::cout << std::endl;
-        }
-        std::cout << std::endl;
-
       }
 
     }
@@ -821,13 +663,8 @@ void compare(Array2D<int> & H1_face_dof_ids,
 
     patch_test_mesh(geom, seed);
 
-    if (type == FaceType::INTERIOR) {
-      H1_face_dof_ids = GetInteriorFaceDofs(H1_gf.FESpace(), face_type(geom));
-      L2_face_dof_ids = GetInteriorFaceDofs(L2_gf.FESpace(), face_type(geom));
-    } else {
-      H1_face_dof_ids = GetBoundaryFaceDofs(H1_gf.FESpace(), face_type(geom));
-      L2_face_dof_ids = GetBoundaryFaceDofs(L2_gf.FESpace(), face_type(geom));
-    }
+    H1_face_dof_ids = GetFaceDofs(H1_gf.FESpace(), face_type(geom), type);
+    L2_face_dof_ids = GetFaceDofs(L2_gf.FESpace(), face_type(geom), type);
 
     for (uint64_t i = 0; i < n0; i++) {
       std::cout << i << ": " << std::endl;
@@ -898,16 +735,11 @@ int main() {
       H1_gf.ProjectCoefficient(f);
       L2_gf.ProjectCoefficient(f);
 
+      for (auto type : {FaceType::INTERIOR, FaceType::BOUNDARY}) 
       {
-        auto H1_face_dof_ids = GetInteriorFaceDofs(&H1fes, face_type(geom));
-        auto L2_face_dof_ids = GetInteriorFaceDofs(&L2fes, face_type(geom));
-        compare(H1_face_dof_ids, L2_face_dof_ids, H1_gf, L2_gf, geom, seed, FaceType::INTERIOR);
-      }
-
-      {
-        auto H1_face_dof_ids = GetBoundaryFaceDofs(&H1fes, face_type(geom));
-        auto L2_face_dof_ids = GetBoundaryFaceDofs(&L2fes, face_type(geom));
-        compare(H1_face_dof_ids, L2_face_dof_ids, H1_gf, L2_gf, geom, seed, FaceType::BOUNDARY);
+        auto H1_face_dof_ids = GetFaceDofs(&H1fes, face_type(geom), type);
+        auto L2_face_dof_ids = GetFaceDofs(&L2fes, face_type(geom), type);
+        compare(H1_face_dof_ids, L2_face_dof_ids, H1_gf, L2_gf, geom, seed, type);
       }
 
     }
