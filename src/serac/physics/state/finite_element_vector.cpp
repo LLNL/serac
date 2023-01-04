@@ -13,7 +13,8 @@ FiniteElementVector::FiniteElementVector(mfem::ParMesh& mesh, FiniteElementVecto
     : mesh_(mesh),
       coll_(options.coll ? std::move(options.coll)
                          : std::make_unique<mfem::H1_FECollection>(options.order, mesh.Dimension())),
-      space_(std::make_unique<mfem::ParFiniteElementSpace>(&mesh, coll_.get(), options.vector_dim, options.ordering)),
+      space_(std::make_unique<mfem::ParFiniteElementSpace>(&mesh, coll_.get(), options.vector_dim,
+                                                           mfem::Ordering::byNODES)),
       name_(options.name)
 {
   // Construct a hypre par vector based on the new finite element space
@@ -33,6 +34,9 @@ FiniteElementVector::FiniteElementVector(const mfem::ParFiniteElementSpace& spac
       space_(std::make_unique<mfem::ParFiniteElementSpace>(space, &mesh_.get(), coll_.get())),
       name_(name)
 {
+  SLIC_ERROR_ROOT_IF(space.GetOrdering() == mfem::Ordering::byVDIM,
+                     "Serac only operates on finite element spaces ordered by nodes");
+
   // Construct a hypre par vector based on the new finite element space
   HypreParVector new_vector(space_.get());
 

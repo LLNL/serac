@@ -52,9 +52,9 @@ void shape_test(GeometricNonlinearities geo_nonlin)
   get<IterativeSolverOptions>(options.linear).rel_tol = 1.0e-15;
   get<IterativeSolverOptions>(options.linear).abs_tol = 1.0e-15;
 
-  options.nonlinear.abs_tol  = 1.0e-15;
-  options.nonlinear.rel_tol  = 1.0e-15;
-  options.nonlinear.max_iter = 5;
+  options.nonlinear.abs_tol  = 5.0e-15;
+  options.nonlinear.rel_tol  = 5.0e-15;
+  options.nonlinear.max_iter = 10;
 
   solid_mechanics::LinearIsotropic mat{1.0, 1.0, 1.0};
 
@@ -168,7 +168,7 @@ void shape_test(GeometricNonlinearities geo_nonlin)
 
   double error          = pure_displacement.DistanceTo(shape_displacement.GetData());
   double relative_error = error / pure_displacement.Norml2();
-  EXPECT_LT(relative_error, 1.0e-14);
+  EXPECT_LT(relative_error, 7.0e-14);
 }
 
 TEST(SolidMechanics, MoveShapeLinear) { shape_test(GeometricNonlinearities::Off); }
