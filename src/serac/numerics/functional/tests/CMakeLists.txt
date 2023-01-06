@@ -44,7 +44,7 @@ foreach(filename ${functional_tests_mpi})
 endforeach()
 
 add_executable(mesh_dof_ids mesh_dof_ids.cpp)
-target_link_libraries(mesh_dof_ids PUBLIC mfem mpi)
+target_link_libraries(mesh_dof_ids PUBLIC mfem mpi serac_functional)
 
 add_executable(boundary_contours boundary_contours.cpp)
 target_link_libraries(boundary_contours PUBLIC mfem)

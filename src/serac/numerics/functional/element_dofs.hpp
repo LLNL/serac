@@ -1,0 +1,90 @@
+#pragma once
+
+#include <vector>
+
+#include "mfem.hpp"
+
+inline bool isH1(const mfem::FiniteElementSpace& fes)
+{
+  return (fes.FEColl()->GetContType() == mfem::FiniteElementCollection::CONTINUOUS);
+}
+
+inline bool isHcurl(const mfem::FiniteElementSpace& fes)
+{
+  return (fes.FEColl()->GetContType() == mfem::FiniteElementCollection::TANGENTIAL);
+}
+
+inline bool isDG(const mfem::FiniteElementSpace& fes)
+{
+  return (fes.FEColl()->GetContType() == mfem::FiniteElementCollection::DISCONTINUOUS);
+}
+
+enum class FaceType {BOUNDARY, INTERIOR};
+
+struct DoF {
+
+  // sam: I wanted to use a bitfield for this type, but a 10+ year-old GCC bug
+  // makes it practically impossible to assign to bitfields without warnings/errors
+  // with -Wconversion enabled, see: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=39170
+  // So, we resort to masks and bitshifting instead.
+  static constexpr uint64_t sign_mask = 0x8000'0000'0000'0000;
+  static constexpr uint64_t orientation_mask = 0x7000'0000'0000'0000;
+  static constexpr uint64_t index_mask = 0x0000'FFFF'FFFF'FFFF'FFFF;
+  static constexpr uint64_t sign_shift = 63;
+  static constexpr uint64_t orientation_shift = 60;
+  static constexpr uint64_t index_shift = 0;
+
+  // data layout is as follows (MSB to LSB): 
+  // - 1 sign bit 
+  // - 3 orientation bits
+  // - 12 currently unused bits that may be used in the future
+  // - 48 index bits
+  //
+  // all values are immutable unsigned integers
+  const uint64_t bits;
+
+  DoF(uint64_t index, uint64_t sign = 0, uint64_t orientation = 0) : 
+    bits((sign & 0x1ULL << sign_shift) + ((orientation & 0x7ULL) << orientation_shift) + index)
+  {}
+
+  uint64_t sign() { return ((bits & sign_mask) >> sign_shift); }
+  uint64_t orientation() { return ((bits & orientation_mask) >> orientation_shift); }
+  uint64_t index() { return (bits & index_mask); }
+
+};
+
+
+
+template <typename T>
+struct Range {
+  T* begin() { return ptr[0]; }
+  T* end() { return ptr[1]; }
+  T* ptr[2];
+};
+
+template <typename T>
+struct Array2D {
+  Array2D() : values{}, dim{} {};
+  Array2D(uint64_t m, uint64_t n) : values(m * n, 0), dim{m, n} {};
+  Array2D(std::vector<T>&& data, uint64_t m, uint64_t n) : values(data), dim{m, n} {};
+  Range<T>       operator()(int i) { return Range<T>{&values[i * dim[1]], &values[(i + 1) * dim[1]]}; }
+  T&             operator()(int i, int j) { return values[i * dim[1] + j]; }
+  std::vector<T> values;
+  uint64_t       dim[2];
+};
+
+struct ElementDofs {
+  ElementDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::Type elem_geom);
+  ElementDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom, FaceType type);
+
+  int ESize();
+  int LSize();
+  void Gather(const double * L_vector, double * E_vector);
+  void ScatterAdd(const double * E_vector, double * L_vector);
+
+  int esize, lsize;
+  Array2D<DoF> dof_info;
+};
+
+Array2D<DoF> GetElementDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::Type geom);
+Array2D<DoF> GetFaceDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom, FaceType type);

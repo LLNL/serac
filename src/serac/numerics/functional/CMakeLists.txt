@@ -13,6 +13,7 @@ set(functional_headers
     boundary_integral.hpp
     boundary_integral_kernels.hpp
     dof_numbering.hpp
+    element_dofs.hpp
     domain_integral.hpp
     domain_integral_kernels.hpp
     dual.hpp
@@ -27,6 +28,8 @@ set(functional_headers
     tensor.hpp
     tuple.hpp
     )
+
+set(functional_sources element_dofs.cpp)
 
 set(functional_detail_headers
     detail/hexahedron_H1.inl
@@ -51,7 +54,7 @@ blt_list_append(TO functional_headers ELEMENTS ${functional_cuda_headers} IF ENA
 
 blt_add_library(
       NAME        serac_functional
-      HEADERS     ${functional_headers} ${functional_detail_headers}
+      HEADERS     ${functional_headers} ${functional_detail_headers} ${functional_sources}
       DEPENDS_ON  ${functional_depends}
       )
 
