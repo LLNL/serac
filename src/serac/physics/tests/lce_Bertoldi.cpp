@@ -121,7 +121,7 @@ int main(int argc, char* argv[])
   double dt   = tmax / num_steps;
   for (int i = 0; i < num_steps; i++) 
   {
-        if(rank==0)
+    if(rank==0)
     {
       std::cout 
       << "\n\n............................"
@@ -130,6 +130,16 @@ int main(int argc, char* argv[])
       << "\n... Using order parameter: "<< max_order_param * (tmax - t) / tmax
       << "\n... Using two gamma angles"
       << std::endl;
+    }
+
+    mfem::ParGridFunction displacement_gf = solid_solver.displacement().gridFunction();
+    if( std::isnan(displacement_gf.Max()) || std::isnan(displacement_gf.Min()) )
+    {
+      if(rank==0)
+      {
+        std::cout << "... Solution blew up... Check boundary and initial conditions. Or maybe bug when running in parallel." << std::endl;
+      }
+      exit(1);
     }
 
     t += dt;

@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
   serac::StateManager::initialize(datastore, "LCE_free_swelling_bertoldi");
 
   // Construct the appropriate dimension mesh and give it to the data store
-  int nElem = 4;
+  int nElem = 3;
   double lx = 2.5e-3, ly = 0.25e-3, lz = 12.5e-3;
   ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(5*nElem, nElem, 25*nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
   auto mesh = mesh::refineAndDistribute(std::move(cuboid), serial_refinement, parallel_refinement);
@@ -83,7 +83,7 @@ int main(int argc, char* argv[])
   double density = 1.0;
   double young_modulus = 2.0e3;
   double possion_ratio = 0.49;
-  double beta_param = 100.0; // 0.041; 
+  double beta_param = 0.041; // 100.0; // 
   double max_order_param = 0.2;
 
   // Set material
@@ -164,7 +164,7 @@ int main(int argc, char* argv[])
 
   // Paremetr 3
   FiniteElementState etaParam(StateManager::newState(FiniteElementState::Options{.order = p, .coll = std::move(fec), .name = "etaParam"}));
-  auto etaFunc = [](const mfem::Vector& /*x*/, double) -> double { return M_PI_2; };
+  auto etaFunc = [](const mfem::Vector& /*x*/, double) -> double { return 0.0; };
   mfem::FunctionCoefficient etaCoef(etaFunc);
   etaParam.project(etaCoef);
 
@@ -194,7 +194,7 @@ int main(int argc, char* argv[])
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  int num_steps = 10;
+  int num_steps = 20;
 
   std::string outputFilename = "sol_lce_bertoldi_free_swelling";
   solid_solver.outputState(outputFilename);
