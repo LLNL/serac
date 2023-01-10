@@ -89,12 +89,12 @@ struct ElementDofs {
   ElementDofs(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type elem_geom);
   ElementDofs(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom, FaceType type);
 
-  int ESize();
-  int LSize();
+  uint64_t ESize();
+  uint64_t LSize();
   void Gather(const mfem::Vector & L_vector, mfem::Vector & E_vector) const;
   void ScatterAdd(const mfem::Vector & E_vector, mfem::Vector & L_vector) const;
 
-  int esize, lsize, components;
+  uint64_t esize, lsize, components;
   Array2D<DoF> dof_info;
 };
 

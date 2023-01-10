@@ -223,7 +223,7 @@ public:
       }
 
       input_L_[i].SetSize(P_trial_[i]->Height(), mfem::Device::GetMemoryType());
-      input_E_[i].SetSize(G_trial_[i].ESize(), mfem::Device::GetMemoryType());
+      input_E_[i].SetSize(int(G_trial_[i].ESize()), mfem::Device::GetMemoryType());
 
       // create the gradient operators for each trial space
       grad_.emplace_back(*this, i);
