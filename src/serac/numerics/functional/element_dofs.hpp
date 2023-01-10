@@ -65,10 +65,19 @@ struct Range {
 template <typename T>
 struct Array2D {
   Array2D() : values{}, dim{} {};
+
   Array2D(uint64_t m, uint64_t n) : values(m * n, 0), dim{m, n} {};
   Array2D(std::vector<T>&& data, uint64_t m, uint64_t n) : values(data), dim{m, n} {};
-  Range<T>       operator()(int i) { return Range<T>{&values[i * dim[1]], &values[(i + 1) * dim[1]]}; }
-  T&             operator()(int i, int j) { return values[i * dim[1] + j]; }
+  Range<T>       operator()(uint64_t i) { return Range<T>{&values[i * dim[1]], &values[(i + 1) * dim[1]]}; }
+  T&             operator()(uint64_t i, uint64_t j) { return values[i * dim[1] + j]; }
+
+  // these overloads exist to mitigate the excessive `static_cast`ing
+  // necessary to coexist with mfem's convention where everything is an `int`
+  Array2D(int m, int n) : values(uint64_t(m) * uint64_t(n), 0), dim{uint64_t(m), uint64_t(n)} {}
+  Array2D(std::vector<T>&& data, int m, int n) : values(data), dim{uint64_t(m), uint64_t(n)} {}
+  Range<T>       operator()(int i) { return Range<T>{&values[uint64_t(i) * dim[1]], &values[uint64_t(i + 1) * dim[1]]}; }
+  T&             operator()(int i, int j) { return values[uint64_t(i) * dim[1] + uint64_t(j)]; }
+
   std::vector<T> values;
   uint64_t       dim[2];
 };

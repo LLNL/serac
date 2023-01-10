@@ -8,45 +8,45 @@ std::vector<std::vector<int> > lexicographic_permutations(int p)
 
   {
     auto             P = mfem::H1_SegmentElement(p).GetLexicographicOrdering();
-    std::vector<int> native_to_lex(P.Size());
+    std::vector<int> native_to_lex(uint32_t(P.Size()));
     for (int i = 0; i < P.Size(); i++) {
-      native_to_lex[i] = P[i];
+      native_to_lex[uint32_t(i)] = P[i];
     }
     output[mfem::Geometry::Type::SEGMENT] = native_to_lex;
   }
 
   {
     auto             P = mfem::H1_TriangleElement(p).GetLexicographicOrdering();
-    std::vector<int> native_to_lex(P.Size());
+    std::vector<int> native_to_lex(uint32_t(P.Size()));
     for (int i = 0; i < P.Size(); i++) {
-      native_to_lex[i] = P[i];
+      native_to_lex[uint32_t(i)] = P[i];
     }
     output[mfem::Geometry::Type::TRIANGLE] = native_to_lex;
   }
 
   {
     auto             P = mfem::H1_QuadrilateralElement(p).GetLexicographicOrdering();
-    std::vector<int> native_to_lex(P.Size());
+    std::vector<int> native_to_lex(uint32_t(P.Size()));
     for (int i = 0; i < P.Size(); i++) {
-      native_to_lex[i] = P[i];
+      native_to_lex[uint32_t(i)] = P[i];
     }
     output[mfem::Geometry::Type::SQUARE] = native_to_lex;
   }
 
   {
     auto             P = mfem::H1_TetrahedronElement(p).GetLexicographicOrdering();
-    std::vector<int> native_to_lex(P.Size());
+    std::vector<int> native_to_lex(uint32_t(P.Size()));
     for (int i = 0; i < P.Size(); i++) {
-      native_to_lex[i] = P[i];
+      native_to_lex[uint32_t(i)] = P[i];
     }
     output[mfem::Geometry::Type::TETRAHEDRON] = native_to_lex;
   }
 
   {
     auto             P = mfem::H1_HexahedronElement(p).GetLexicographicOrdering();
-    std::vector<int> native_to_lex(P.Size());
+    std::vector<int> native_to_lex(uint32_t(P.Size()));
     for (int i = 0; i < P.Size(); i++) {
-      native_to_lex[i] = P[i];
+      native_to_lex[uint32_t(i)] = P[i];
     }
     output[mfem::Geometry::Type::CUBE] = native_to_lex;
   }
@@ -229,7 +229,7 @@ Array2D<DoF> GetElementDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::Type 
     // to apply the native-to-lexicographic permutation 
     if (isH1(*fes)) {
       for (int k = 0; k < dofs.Size(); k++) {
-        elem_dofs.push_back({uint64_t(dofs[lex_perm[geom][k]])});
+        elem_dofs.push_back({uint64_t(dofs[lex_perm[uint32_t(geom)][uint32_t(k)]])});
       }
     }
 
@@ -331,7 +331,7 @@ Array2D<DoF> GetFaceDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::Type fac
 
         // 4. extract only the dofs that correspond to side `i`
         for (auto k : face_perm(orientations[i])) {
-          face_dofs.push_back(elem_dof_ids[local_face_dofs[elem_geom](i, k)]);
+          face_dofs.push_back(uint64_t(elem_dof_ids[local_face_dofs[uint32_t(elem_geom)](i, k)]));
         }
       
         // boundary faces only belong to 1 element, so we exit early
@@ -356,11 +356,11 @@ Array2D<DoF> GetFaceDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::Type fac
 
       if (isHcurl(*fes)) {
         for (int k = 0; k < dofs.Size(); k++) {
-          face_dofs.push_back(dofs[k]);
+          face_dofs.push_back(uint64_t(dofs[k]));
         }
       } else {
         for (int k = 0; k < dofs.Size(); k++) {
-          face_dofs.push_back(dofs[elem_perm[face_geom][k]]);
+          face_dofs.push_back(uint64_t(dofs[elem_perm[uint32_t(face_geom)][uint32_t(k)]]));
         }
       }
 
