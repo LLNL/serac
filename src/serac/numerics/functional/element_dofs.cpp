@@ -378,16 +378,22 @@ Array2D<DoF> GetFaceDofs(const mfem::FiniteElementSpace* fes, mfem::Geometry::Ty
 
 ElementDofs::ElementDofs(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type elem_geom) {
   dof_info = GetElementDofs(fes, elem_geom);
-  esize = uint64_t(fes->GetVDim() * fes->GetNE() * fes->GetNDofs());
+
   lsize = uint64_t(fes->GetVSize());
   components = uint64_t(fes->GetVDim());
+  uint64_t num_elements = dof_info.dim[0];
+  uint64_t dofs_per_elem = dof_info.dim[1];
+  esize = num_elements * dofs_per_elem * components;
 }
 
 ElementDofs::ElementDofs(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom, FaceType type) {
   dof_info = GetFaceDofs(fes, face_geom, type);
-  esize = uint64_t(fes->GetVDim() * fes->GetNE() * fes->GetNDofs());
+
   lsize = uint64_t(fes->GetVSize());
   components = uint64_t(fes->GetVDim());
+  uint64_t num_elements = dof_info.dim[0];
+  uint64_t dofs_per_elem = dof_info.dim[1];
+  esize = num_elements * dofs_per_elem * components;
 }
 
 uint64_t ElementDofs::ESize() {
@@ -399,25 +405,35 @@ uint64_t ElementDofs::LSize() {
 }
 
 void ElementDofs::Gather(const mfem::Vector & L_vector, mfem::Vector & E_vector) const {
+
+  uint64_t lnodes = lsize / components;
   uint64_t num_elements = dof_info.dim[0];
   uint64_t dofs_per_elem = dof_info.dim[1];
   for (uint64_t i = 0; i < num_elements; i++) {
     for (uint64_t c = 0; c < components; c++) {
       for (uint64_t j = 0; j < dofs_per_elem; j++) {
-        uint64_t E_id = (i * dofs_per_elem + c) * components + j;
-        uint64_t L_id = dof_info(int(i),int(j)).index() * components + c;
+        uint64_t E_id = (i * components + c) * dofs_per_elem + j;
+        uint64_t L_id = c * lnodes + dof_info(int(i),int(j)).index();
         E_vector[E_id] = L_vector[L_id];
       }
     }
   }
+
 }
 
 void ElementDofs::ScatterAdd(const mfem::Vector & E_vector, mfem::Vector & L_vector) const {
+
+  uint64_t lnodes = lsize / components;
   uint64_t num_elements = dof_info.dim[0];
   uint64_t dofs_per_elem = dof_info.dim[1];
   for (uint64_t i = 0; i < num_elements; i++) {
-    for (uint64_t j = 0; j < dofs_per_elem; j++) {
-      L_vector[int(dof_info(int(i),int(j)).index())] += E_vector[i * dofs_per_elem + j];
+    for (uint64_t c = 0; c < components; c++) {
+      for (uint64_t j = 0; j < dofs_per_elem; j++) {
+        uint64_t E_id = (i * components + c) * dofs_per_elem + j;
+        uint64_t L_id = c * lnodes + dof_info(int(i),int(j)).index();
+        L_vector[L_id] += E_vector[E_id];
+      }
     }
   }
+
 }
