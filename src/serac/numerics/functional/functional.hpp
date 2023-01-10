@@ -22,6 +22,8 @@
 #include "serac/numerics/functional/boundary_integral.hpp"
 #include "serac/numerics/functional/dof_numbering.hpp"
 
+#include "serac/numerics/functional/element_dofs.hpp"
+
 #include <array>
 #include <vector>
 
@@ -205,10 +207,13 @@ public:
              std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
       : update_qdata(false), test_space_(test_fes), trial_space_(trial_fes)
   {
+
+    int dim = test_fes->GetMesh()->Dimension();
+    mfem::Geometry::Type elem_geom[4] = {mfem::Geometry::INVALID, mfem::Geometry::INVALID, mfem::Geometry::SQUARE, mfem::Geometry::CUBE};
+
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
       P_trial_[i] = trial_space_[i]->GetProlongationMatrix();
-      G_trial_[i] = trial_space_[i]->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC);
-      SLIC_ERROR_IF(!G_trial_[i], "Couldn't retrieve element restriction operator for trial space");
+      G_trial_[i] = ElementDofs(trial_fes[i], elem_geom[dim]);
 
       if (compatibleWithFaceRestriction(*trial_space_[i])) {
         G_trial_boundary_[i] = trial_space_[i]->GetFaceRestriction(
@@ -218,7 +223,7 @@ public:
       }
 
       input_L_[i].SetSize(P_trial_[i]->Height(), mfem::Device::GetMemoryType());
-      input_E_[i].SetSize(G_trial_[i]->Height(), mfem::Device::GetMemoryType());
+      input_E_[i].SetSize(G_trial_[i].ESize(), mfem::Device::GetMemoryType());
 
       // create the gradient operators for each trial space
       grad_.emplace_back(*this, i);
@@ -386,7 +391,7 @@ public:
     output_L_ = 0.0;
     if (domain_integrals_.size() > 0) {
       // get the values for each element on the local processor
-      G_trial_[which]->Mult(input_L_[which], input_E_[which]);
+      G_trial_[which].Gather(input_L_[which], input_E_[which]);
 
       // compute residual contributions at the element level and sum them
 
@@ -444,7 +449,7 @@ public:
     if (domain_integrals_.size() > 0) {
       // get the values for each element on the local processor
       for (uint32_t i = 0; i < num_trial_spaces; i++) {
-        G_trial_[i]->Mult(input_L_[i], input_E_[i]);
+        G_trial_[i].Gather(input_L_[i], input_E_[i]);
       }
 
       // compute residual contributions at the element level and sum them
@@ -731,7 +736,7 @@ private:
    * @brief Operator that converts local (current rank) DOF values to per-element DOF values
    * for the trial space
    */
-  const mfem::Operator* G_trial_[num_trial_spaces];
+  ElementDofs G_trial_[num_trial_spaces];
 
   /**
    * @brief Operator that converts local (current rank) DOF values to per-boundary element DOF values

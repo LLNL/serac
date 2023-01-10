@@ -205,7 +205,7 @@ std::vector<Array2D<int> > geom_local_face_dofs(int p)
   return output;
 }
 
-Array2D<DoF> GetElementDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::Type geom)
+Array2D<DoF> GetElementDofs(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type geom)
 {
   std::vector<DoF> elem_dofs;
   mfem::Mesh*      mesh         = fes->GetMesh();
@@ -263,7 +263,7 @@ Array2D<DoF> GetElementDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::Type 
   return Array2D<DoF>(std::move(elem_dofs), n, dofs_per_elem);
 }
 
-Array2D<DoF> GetFaceDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom, FaceType type)
+Array2D<DoF> GetFaceDofs(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom, FaceType type)
 {
   std::vector<DoF> face_dofs;
   mfem::Mesh*      mesh         = fes->GetMesh();
@@ -376,13 +376,18 @@ Array2D<DoF> GetFaceDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::Type fac
   return Array2D<DoF>(std::move(face_dofs), n, dofs_per_face);
 }
 
-
-ElementDofs::ElementDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::Type elem_geom) {
+ElementDofs::ElementDofs(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type elem_geom) {
   dof_info = GetElementDofs(fes, elem_geom);
+  esize = fes->GetVDim() * fes->GetNE() * fes->GetNDofs();
+  lsize = fes->GetVSize();
+  components = fes->GetVDim();
 }
 
-ElementDofs::ElementDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom, FaceType type) {
+ElementDofs::ElementDofs(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom, FaceType type) {
   dof_info = GetFaceDofs(fes, face_geom, type);
+  esize = fes->GetVDim() * fes->GetNE() * fes->GetNDofs();
+  lsize = fes->GetVSize();
+  components = fes->GetVDim();
 }
 
 int ElementDofs::ESize() {
@@ -393,22 +398,22 @@ int ElementDofs::LSize() {
   return lsize;
 }
 
-void ElementDofs::Gather(const double * L_vector, double * E_vector) {
+void ElementDofs::Gather(const mfem::Vector & L_vector, mfem::Vector & E_vector) const {
   uint64_t num_elements = dof_info.dim[0];
   uint64_t dofs_per_elem = dof_info.dim[1];
   for (uint64_t i = 0; i < num_elements; i++) {
     for (uint64_t j = 0; j < dofs_per_elem; j++) {
-      E_vector[i * dofs_per_elem + j] = L_vector[dof_info(int(i),int(j)).index()];
+      E_vector[i * dofs_per_elem + j] = L_vector[int(dof_info(int(i),int(j)).index())];
     }
   }
 }
 
-void ElementDofs::ScatterAdd(const double * E_vector, double * L_vector) {
+void ElementDofs::ScatterAdd(const mfem::Vector & E_vector, mfem::Vector & L_vector) const {
   uint64_t num_elements = dof_info.dim[0];
   uint64_t dofs_per_elem = dof_info.dim[1];
   for (uint64_t i = 0; i < num_elements; i++) {
     for (uint64_t j = 0; j < dofs_per_elem; j++) {
-      L_vector[dof_info(int(i),int(j)).index()] += E_vector[i * dofs_per_elem + j];
+      L_vector[int(dof_info(int(i),int(j)).index())] += E_vector[i * dofs_per_elem + j];
     }
   }
 }

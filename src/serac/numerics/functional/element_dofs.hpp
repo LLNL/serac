@@ -47,13 +47,11 @@ struct DoF {
     bits((sign & 0x1ULL << sign_shift) + ((orientation & 0x7ULL) << orientation_shift) + index)
   {}
 
-  uint64_t sign() { return ((bits & sign_mask) >> sign_shift); }
-  uint64_t orientation() { return ((bits & orientation_mask) >> orientation_shift); }
-  uint64_t index() { return (bits & index_mask); }
+  uint64_t sign() const { return ((bits & sign_mask) >> sign_shift); }
+  uint64_t orientation() const { return ((bits & orientation_mask) >> orientation_shift); }
+  uint64_t index() const { return (bits & index_mask); }
 
 };
-
-
 
 template <typename T>
 struct Range {
@@ -69,29 +67,34 @@ struct Array2D {
   Array2D(uint64_t m, uint64_t n) : values(m * n, 0), dim{m, n} {};
   Array2D(std::vector<T>&& data, uint64_t m, uint64_t n) : values(data), dim{m, n} {};
   Range<T>       operator()(uint64_t i) { return Range<T>{&values[i * dim[1]], &values[(i + 1) * dim[1]]}; }
+  Range<const T> operator()(uint64_t i) const { return Range<const T>{&values[i * dim[1]], &values[(i + 1) * dim[1]]}; }
   T&             operator()(uint64_t i, uint64_t j) { return values[i * dim[1] + j]; }
+  const T&       operator()(uint64_t i, uint64_t j) const { return values[i * dim[1] + j]; }
 
   // these overloads exist to mitigate the excessive `static_cast`ing
   // necessary to coexist with mfem's convention where everything is an `int`
   Array2D(int m, int n) : values(uint64_t(m) * uint64_t(n), 0), dim{uint64_t(m), uint64_t(n)} {}
   Array2D(std::vector<T>&& data, int m, int n) : values(data), dim{uint64_t(m), uint64_t(n)} {}
   Range<T>       operator()(int i) { return Range<T>{&values[uint64_t(i) * dim[1]], &values[uint64_t(i + 1) * dim[1]]}; }
+  Range<const T> operator()(int i) const { return Range<const T>{&values[uint64_t(i) * dim[1]], &values[uint64_t(i + 1) * dim[1]]}; }
   T&             operator()(int i, int j) { return values[uint64_t(i) * dim[1] + uint64_t(j)]; }
+  const T&       operator()(int i, int j) const { return values[uint64_t(i) * dim[1] + uint64_t(j)]; }
 
   std::vector<T> values;
   uint64_t       dim[2];
 };
 
 struct ElementDofs {
-  ElementDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::Type elem_geom);
-  ElementDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom, FaceType type);
+  ElementDofs() {}
+  ElementDofs(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type elem_geom);
+  ElementDofs(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom, FaceType type);
 
   int ESize();
   int LSize();
-  void Gather(const double * L_vector, double * E_vector);
-  void ScatterAdd(const double * E_vector, double * L_vector);
+  void Gather(const mfem::Vector & L_vector, mfem::Vector & E_vector) const;
+  void ScatterAdd(const mfem::Vector & E_vector, mfem::Vector & L_vector) const;
 
-  int esize, lsize;
+  int esize, lsize, components;
   Array2D<DoF> dof_info;
 };
 
