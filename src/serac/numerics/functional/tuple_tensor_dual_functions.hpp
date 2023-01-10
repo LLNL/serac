@@ -526,6 +526,18 @@ struct SolverStatus {
   double       residual;    ///< Final value of residual.
 };
 
+/**
+ * @brief Settings for @p solve_scalar_equation
+ */
+struct ScalarSolverOptions {
+  double       xtol;      ///< absolute tolerance on Newton correction
+  double       rtol;      ///< absolute tolerance on absolute value of residual
+  unsigned int max_iter;  ///< maximum allowed number of iterations
+};
+
+/// @brief Default options for @p solve_scalar_equation
+const ScalarSolverOptions default_solver_options{.xtol = 1e-8, .rtol = 0, .max_iter = 25};
+
 /// @brief Solves a nonlinear scalar-valued equation and gives derivatives of solution to parameters
 ///
 /// @tparam function Function object type for the nonlinear equation to solve
@@ -536,10 +548,9 @@ struct SolverStatus {
 /// optional parameters (scalars or tensors of arbitrary order).
 /// @param x0 Initial guess of root. If x0 is outside the search interval, the initial
 /// guess will be changed to the midpoint of the search interval.
-/// @param tolerance Tolerance for convergence test, using absolute value of correction as the
-/// criterion.
 /// @param lower_bound Lower bound of interval to search for root.
 /// @param upper_bound Upper bound of interval to search for root.
+/// @param options Options controlling behavior of solver.
 /// @param ...params Optional parameters to the nonlinear function.
 ///
 /// @return a tuple (@p x, @p status) where @p x is the root, and @p status is a SolverStatus
@@ -555,7 +566,7 @@ struct SolverStatus {
 /// search interval are updated automatically to maintain a bracket around the root. If the sign
 /// of the residual is the same at both @p lower_bound and @p upper_bound, the solver aborts.
 template <typename function, typename... ParamTypes>
-auto solve_scalar_equation(function&& f, double x0, double tolerance, double lower_bound, double upper_bound,
+auto solve_scalar_equation(function&& f, double x0, double lower_bound, double upper_bound, ScalarSolverOptions options,
                            ParamTypes... params)
 {
   double x, df_dx;
@@ -594,16 +605,16 @@ auto solve_scalar_equation(function&& f, double x0, double tolerance, double low
     if (x0 < lower_bound || x0 > upper_bound) {
       x0 = 0.5 * (lower_bound + upper_bound);
     }
-    const unsigned int MAX_ITERATIONS = 25;
-    x                                 = x0;
-    double delta_x_old                = std::abs(upper_bound - lower_bound);
-    double delta_x                    = delta_x_old;
-    auto   R                          = f(make_dual(x), get_value(params)...);
-    auto   fval                       = get_value(R);
-    df_dx                             = get_gradient(R);
+
+    x                  = x0;
+    double delta_x_old = std::abs(upper_bound - lower_bound);
+    double delta_x     = delta_x_old;
+    auto   R           = f(make_dual(x), get_value(params)...);
+    auto   fval        = get_value(R);
+    df_dx              = get_gradient(R);
 
     while (!converged) {
-      if (iterations == MAX_ITERATIONS) {
+      if (iterations == options.max_iter) {
         SLIC_WARNING("solve_scalar_equation failed to converge in allotted iterations.");
         break;
       }
@@ -623,13 +634,13 @@ auto solve_scalar_equation(function&& f, double x0, double tolerance, double low
         converged = (x == temp);
       }
 
-      // convergence check
-      converged = converged || (std::abs(delta_x) < tolerance);
-
       // function and jacobian evaluation
       R     = f(make_dual(x), get_value(params)...);
       fval  = get_value(R);
       df_dx = get_gradient(R);
+
+      // convergence check
+      converged = converged || (std::abs(delta_x) < options.xtol) || (std::abs(fval) < options.rtol);
 
       // maintain bracket on root
       if (fval < 0) {
@@ -664,5 +675,39 @@ auto solve_scalar_equation(function&& f, double x0, double tolerance, double low
     return tuple{x, status};
   }
 }
+
+/**
+ * @brief Finds a root of a vector-valued nonlinear function
+ *
+ * Uses Newton-Raphson iteration.
+ *
+ * @tparam function Type for the functor object
+ * @tparam n Vector dimension of the equation
+ * @param f A callable representing the function of which a root is sought. Must take an n-vector
+ * argument and return an n-vector
+ * @param x0 Initial guess for root. Must be an n-vector.
+ * @return A root of @p f.
+ */
+template <typename function, int n>
+auto find_root(function&& f, tensor<double, n> x0)
+{
+  static_assert(std::is_same_v<decltype(f(x0)), tensor<double, n>>,
+                "error: f(x) must have the same number of equations as unknowns");
+
+  double epsilon        = 1.0e-8;
+  int    max_iterations = 10;
+
+  auto x = x0;
+
+  for (int k = 0; k < max_iterations; k++) {
+    auto output = f(make_dual(x));
+    auto r      = get_value(output);
+    if (norm(r) < epsilon) break;
+    auto J = get_gradient(output);
+    x -= linear_solve(J, r);
+  }
+
+  return x;
+};
 
 }  // namespace serac

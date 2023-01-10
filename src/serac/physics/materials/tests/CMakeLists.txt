@@ -9,6 +9,8 @@ set(test_dependencies test_utils)
 set(material_tests
     thermomechanical_material.cpp
     J2_material.cpp
+    nonlinear_J2_material.cpp
+    parameterized_nonlinear_J2_material.cpp
 )
 
 serac_add_tests( SOURCES ${material_tests}

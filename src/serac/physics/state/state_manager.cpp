@@ -52,7 +52,17 @@ double StateManager::newDataCollection(const std::string& name, const std::optio
     datacoll.UpdateMeshAndFieldsFromDS();
 
     // Functional needs the nodal grid function and neighbor data in the mesh
-    mesh(name).EnsureNodes();
+
+    // This mfem call ensures the mesh contains an H1 grid function describing nodal
+    // cordinates. The parameters do the following:
+    // 1. Sets the order of the mesh to  p = 1
+    // 2. Uses a continuous (i.e. H1) finite element space
+    // 3. Uses the spatial dimension as the mesh dimension (i.e. it is not a lower dimension manifold)
+    // 4. Uses nodal instead of VDIM ordering (i.e. xxxyyyzzz instead of xyzxyzxyz)
+    mesh(name).SetCurvature(1, false, -1, mfem::Ordering::byNODES);
+
+    // Generate the face neighbor information in the mesh. This is needed by the face restriction
+    // operators used by Functional
     mesh(name).ExchangeFaceNbrData();
 
     // Construct and store the shape displacement fields and sensitivities associated with this mesh
@@ -137,7 +147,7 @@ FiniteElementState StateManager::newState(const mfem::ParFiniteElementSpace& spa
                      axom::fmt::format("Mesh tag '{}' not found in the data store", mesh_tag));
   SLIC_ERROR_ROOT_IF(named_states_.find(state_name) != named_states_.end(),
                      axom::fmt::format("StateManager already contains a state named '{}'", state_name));
-  auto state = FiniteElementState(mesh(mesh_tag), space, state_name);
+  auto state = FiniteElementState(space, state_name);
   storeState(state);
   return state;
 }
@@ -177,7 +187,7 @@ FiniteElementDual StateManager::newDual(const mfem::ParFiniteElementSpace& space
                      axom::fmt::format("Mesh tag '{}' not found in the data store", mesh_tag));
   SLIC_ERROR_ROOT_IF(named_duals_.find(dual_name) != named_duals_.end(),
                      axom::fmt::format("StateManager already contains a dual named '{}'", dual_name));
-  auto dual = FiniteElementDual(mesh(mesh_tag), space, dual_name);
+  auto dual = FiniteElementDual(space, dual_name);
   storeDual(dual);
   return dual;
 }
@@ -218,7 +228,17 @@ mfem::ParMesh* StateManager::setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const
 
   // Functional needs the nodal grid function and neighbor data in the mesh
   auto& new_pmesh = mesh(mesh_tag);
-  new_pmesh.EnsureNodes();
+
+  // This mfem call ensures the mesh contains an H1 grid function describing nodal
+  // cordinates. The parameters do the following:
+  // 1. Sets the order of the mesh to  p = 1
+  // 2. Uses a continuous (i.e. H1) finite element space
+  // 3. Uses the spatial dimension as the mesh dimension (i.e. it is not a lower dimension manifold)
+  // 4. Uses nodal instead of VDIM ordering (i.e. xxxyyyzzz instead of xyzxyzxyz)
+  new_pmesh.SetCurvature(1, false, -1, mfem::Ordering::byNODES);
+
+  // Generate the face neighbor information in the mesh. This is needed by the face restriction
+  // operators used by Functional
   new_pmesh.ExchangeFaceNbrData();
 
   // We must construct the shape fields here as the mesh did not exist during the newDataCollection call
