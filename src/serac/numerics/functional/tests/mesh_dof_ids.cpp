@@ -109,7 +109,7 @@ void print(int* ids)
 
 bool debug_print = false;
 
-mfem::Mesh patch_test_mesh(mfem::Geometry::Type geom, int seed = 0)
+mfem::Mesh patch_test_mesh(mfem::Geometry::Type geom, uint32_t seed = 0)
 {
   std::default_random_engine rng(seed);
 
@@ -249,7 +249,7 @@ void compare_H1_L2(Array2D<DoF> & H1_face_dof_ids,
                    mfem::GridFunction & H1_gf,
                    mfem::GridFunction & L2_gf, 
                    mfem::Geometry::Type geom,
-                   int seed,
+                   uint32_t seed,
                    FaceType type) {
 
   uint64_t n0 = H1_face_dof_ids.dim[0];
@@ -361,12 +361,17 @@ int main() {
   for (auto geom : geometries) {
     std::cout << to_string(geom) << std::endl;
 
-    for (int seed = 0; seed < 64; seed++) {
+    for (uint32_t seed = 0; seed < 64; seed++) {
 
       debug_print = false;
 
       mfem::Mesh mesh = patch_test_mesh(geom, seed);
       const int  dim  = mesh.Dimension();
+
+      auto * H1fec = makeFEC(Family::H1, order, dim);
+      auto * L2fec = makeFEC(Family::DG, order, dim);
+      auto * Hcurlfec = makeFEC(Family::Hcurl, order, dim);
+
 
 #if defined ENABLE_GLVIS
       mfem::socketstream sol_sock(vishost, visport);
@@ -374,9 +379,7 @@ int main() {
       sol_sock << "mesh\n" << mesh << std::flush;
 #endif
 
-      auto* H1fec = makeFEC(Family::H1, order, dim);
-      auto* L2fec = makeFEC(Family::DG, order, dim);
-      auto * Hcurlfec = makeFEC(Family::Hcurl, order, dim);
+
 
       mfem::FiniteElementSpace H1fes(&mesh, H1fec, 1, mfem::Ordering::byVDIM);
       mfem::FiniteElementSpace L2fes(&mesh, L2fec, 1, mfem::Ordering::byVDIM);
@@ -412,6 +415,10 @@ int main() {
       //  }
       //  std::cout << std::endl;
       //}
+
+      delete H1fec;
+      delete L2fec;
+      delete Hcurlfec;
 
     }
   }
