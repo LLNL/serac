@@ -4,6 +4,11 @@
 
 std::vector<std::vector<int> > lexicographic_permutations(int p)
 {
+
+  // p == 0 is admissible for L2 spaces, but lexicographic permutations
+  // aren't needed in that corner case
+  if (p == 0) { return {}; }
+
   std::vector<std::vector<int> > output(mfem::Geometry::Type::NUM_GEOMETRIES);
 
   {
