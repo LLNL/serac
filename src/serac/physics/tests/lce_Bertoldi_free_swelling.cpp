@@ -40,9 +40,12 @@ int main(int argc, char* argv[])
   serac::StateManager::initialize(datastore, "LCE_free_swelling_bertoldi");
 
   // Construct the appropriate dimension mesh and give it to the data store
-  int nElem = 3;
-  double lx = 2.5e-3, ly = 0.25e-3, lz = 12.5e-3;
-  ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(5*nElem, nElem, 25*nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
+  int nElem = 6;
+  // double lx = 2.5e-3, ly = 0.25e-3, lz = 12.5e-3;
+  // ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(5*nElem, nElem, 25*nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
+  // double ly = 2.5, lz = 0.25, lx = 12.5;
+  double lx = 12.5e-3, ly = 2.5e-3, lz = 0.25e-3;
+  ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(25*nElem, 5*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
   auto mesh = mesh::refineAndDistribute(std::move(cuboid), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
 
@@ -73,18 +76,21 @@ int main(int argc, char* argv[])
                                                        .lin_solver  = LinearSolver::GMRES,
                                                        .prec        = HypreBoomerAMGPrec{}};
   NonlinearSolverOptions default_nonlinear_options = {
-    .rel_tol = 1.0e-6, .abs_tol = 1.0e-12, .max_iter = 6, .print_level = 1};
+    .rel_tol = 1.0e-6, .abs_tol = 1.0e-13, .max_iter = 10, .print_level = 1};
   SolidMechanics<p, dim, Parameters< H1<p>, L2<p>, L2<p> > > solid_solver({default_linear_options, default_nonlinear_options}, GeometricNonlinearities::Off,
                                        "lce_solid_functional");
   // SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p>>> solid_solver(default_static_options, GeometricNonlinearities::Off,
   //                                                                 "lce_solid_functional");
 
+  // -------------------
   // Material properties
-  double density = 1.0;
-  double young_modulus = 2.0e3;
-  double possion_ratio = 0.49;
-  double beta_param = 0.041; // 100.0; // 
+  // -------------------
+  double density = 1.0; // [Kg / mm3]
+  double young_modulus = 4.0e4; // 3.0e2;  // [Kg /s2 / mm]
+  double possion_ratio = 0.48;
+  double beta_param = 2.0e4; // 5.1e-2; // 100.0; // [Kg /s2 / mm] 0.041 //
   double max_order_param = 0.2;
+  // -------------------
 
   // Set material
   LiqCrystElast_Bertoldi lceMat(density, young_modulus, possion_ratio, max_order_param, beta_param);
@@ -103,7 +109,7 @@ int main(int argc, char* argv[])
   {
     if (lceArrangementTag==1)
     {
-      return  M_PI_2;
+      return  0.0; // M_PI_2;
     }
     else if (lceArrangementTag==2)
     {
@@ -163,7 +169,8 @@ int main(int argc, char* argv[])
   gammaParam.project(gammaCoef);
 
   // Paremetr 3
-  FiniteElementState etaParam(StateManager::newState(FiniteElementState::Options{.order = p, .coll = std::move(fec), .name = "etaParam"}));
+  auto fec2 = std::unique_ptr<mfem::FiniteElementCollection>(new mfem::L2_FECollection(p, dim));
+  FiniteElementState etaParam(StateManager::newState(FiniteElementState::Options{.order = p, .coll = std::move(fec2), .name = "etaParam"}));
   auto etaFunc = [](const mfem::Vector& /*x*/, double) -> double { return 0.0; };
   mfem::FunctionCoefficient etaCoef(etaFunc);
   etaParam.project(etaCoef);
@@ -187,14 +194,19 @@ int main(int argc, char* argv[])
   solid_solver.setDisplacementBCs({2}, zero_displacement, 1); // left face x-dir disp = 0
   solid_solver.setDisplacementBCs({5}, zero_displacement, 0); // back face z-dir disp = 0
 
-  auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.00000005; };
+  auto ini_displacement = [](const mfem::Vector& x, mfem::Vector& u) -> void {
+    //  u = 0.0000000001; 
+    u[0] = 0.0001 * x[0]; 
+    u[1] = 0.0001 * x[1]; 
+    u[2] = 0.0001 * x[2]; 
+     };
   solid_solver.setDisplacement(ini_displacement);
 
   // Finalize the data structures
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  int num_steps = 20;
+  int num_steps = 50;
 
   std::string outputFilename = "sol_lce_bertoldi_free_swelling";
   solid_solver.outputState(outputFilename);
@@ -238,13 +250,22 @@ int main(int argc, char* argv[])
       std::cout 
       << "\n... Entering time step: "<< i + 1
       << "\n... At time: "<< t
-      // <<"\n... Min X displacement: " << dispVecX.Min()
+      <<"\n... Min X displacement: " << dispVecX.Min()
       <<"\n... Max X displacement: " << dispVecX.Max()
-      <<"\n... Min Y displacement: " << dispVecY.Min()
-      // <<"\n... Max Y displacement: " << dispVecY.Max()
+      // <<"\n... Min Y displacement: " << dispVecY.Min()
+      <<"\n... Max Y displacement: " << dispVecY.Max()
       // <<"\n... Min Z displacement: " << dispVecZ.Min()
       <<"\n... Max Z displacement: " << dispVecZ.Max()
       << std::endl;
+    }
+
+    if(std::isnan(dispVecX.Max())||std::isnan(-1*dispVecX.Max()))
+    {
+      if(rank==0)
+      {
+        std::cout << "... Solution blew up... Check boundary and initial conditions." << std::endl;
+      }
+      exit(1);
     }
     
     orderParam = max_order_param * (tmax - t) / tmax;

@@ -148,7 +148,8 @@ int main(int argc, char* argv[])
   gammaParam.project(gammaCoef);
 
   // Paremetr 3
-  FiniteElementState etaParam(StateManager::newState(FiniteElementState::Options{.order = p, .coll = std::move(fec), .name = "etaParam"}));
+  auto fec2 = std::unique_ptr<mfem::FiniteElementCollection>(new mfem::L2_FECollection(p, dim));
+  FiniteElementState etaParam(StateManager::newState(FiniteElementState::Options{.order = p, .coll = std::move(fec2), .name = "etaParam"}));
   auto etaFunc = [eta_angle](const mfem::Vector& /*x*/, double) -> double { return eta_angle; };
   mfem::FunctionCoefficient etaCoef(etaFunc);
   etaParam.project(etaCoef);
