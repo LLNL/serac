@@ -22,7 +22,8 @@
 #include "serac/numerics/functional/boundary_integral.hpp"
 #include "serac/numerics/functional/dof_numbering.hpp"
 
-#include "serac/numerics/functional/element_dofs.hpp"
+#include "serac/numerics/functional/element_restriction.hpp"
+#include "serac/numerics/functional/geometric_factors.hpp"
 
 #include <array>
 #include <vector>
@@ -188,6 +189,9 @@ class Functional<test(trials...), exec> {
   static constexpr uint32_t         num_trial_spaces = sizeof...(trials);
   static constexpr auto             Q                = std::max({test::order, trials::order...}) + 1;
 
+
+  static constexpr mfem::Geometry::Type elem_geom[4] = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT, mfem::Geometry::SQUARE, mfem::Geometry::CUBE};
+
   class Gradient;
 
   // clang-format off
@@ -213,17 +217,15 @@ public:
   {
 
     int dim = test_fes->GetMesh()->Dimension();
-    mfem::Geometry::Type elem_geom[4] = {mfem::Geometry::INVALID, mfem::Geometry::INVALID, mfem::Geometry::SQUARE, mfem::Geometry::CUBE};
 
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
       P_trial_[i] = trial_space_[i]->GetProlongationMatrix();
-      G_trial_[i] = ElementDofs(trial_fes[i], elem_geom[dim]);
+      G_trial_[i] = ElementRestriction(trial_fes[i], elem_geom[dim]);
 
       if (compatibleWithFaceRestriction(*trial_space_[i])) {
-        G_trial_boundary_[i] = trial_space_[i]->GetFaceRestriction(
-            mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
+        G_trial_boundary_[i] = ElementRestriction(trial_fes[i], elem_geom[dim-1], FaceType::BOUNDARY);
 
-        input_E_boundary_[i].SetSize(G_trial_boundary_[i]->Height(), mfem::Device::GetMemoryType());
+        input_E_boundary_[i].SetSize(int(G_trial_boundary_[i].ESize()), mfem::Device::GetMemoryType());
       }
 
       input_L_[i].SetSize(P_trial_[i]->Height(), mfem::Device::GetMemoryType());
@@ -287,12 +289,12 @@ public:
 
     const mfem::FiniteElement&   el = *test_space_->GetFE(0);
     const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
-
     constexpr auto flags = mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS;
-
     // NOTE: we are relying on MFEM to keep these geometric factors accurate. We store
     // the necessary data as references in the integral data structure.
     auto geom = domain.GetGeometricFactors(ir, flags);
+
+    auto geom2 = serac::GeometricFactors(&domain, Q, elem_geom[domain.Dimension()]);
 
     auto selected_trial_spaces = serac::make_tuple(serac::get<args>(trial_spaces)...);
 
@@ -331,6 +333,8 @@ public:
 
     // sam: did mfem ever implement support for the JACOBIANS flag here?
     auto geom = domain.GetFaceGeometricFactors(ir, flags, mfem::FaceType::Boundary);
+
+    auto tmp = serac::GeometricFactors(&domain, 2, elem_geom[dim], FaceType::BOUNDARY);
 
     auto selected_trial_spaces = serac::make_tuple(serac::get<args>(trial_spaces)...);
 
@@ -409,7 +413,7 @@ public:
     }
 
     if (bdr_integrals_.size() > 0) {
-      G_trial_boundary_[which]->Mult(input_L_[which], input_E_boundary_[which]);
+      G_trial_boundary_[which].Gather(input_L_[which], input_E_boundary_[which]);
 
       output_E_boundary_ = 0.0;
       for (auto& integral : bdr_integrals_) {
@@ -469,7 +473,7 @@ public:
     if (bdr_integrals_.size() > 0) {
       for (uint32_t i = 0; i < num_trial_spaces; i++) {
         if (compatibleWithFaceRestriction(*trial_space_[i])) {
-          G_trial_boundary_[i]->Mult(input_L_[i], input_E_boundary_[i]);
+          G_trial_boundary_[i].Gather(input_L_[i], input_E_boundary_[i]);
         }
       }
 
@@ -740,7 +744,7 @@ private:
    * @brief Operator that converts local (current rank) DOF values to per-element DOF values
    * for the trial space
    */
-  ElementDofs G_trial_[num_trial_spaces];
+  ElementRestriction G_trial_[num_trial_spaces];
 
   /**
    * @brief Operator that converts local (current rank) DOF values to per-boundary element DOF values
@@ -752,7 +756,7 @@ private:
    * @brief Operator that converts local (current rank) DOF values to per-boundary element DOF values
    * for the trial space
    */
-  const mfem::Operator* G_trial_boundary_[num_trial_spaces];
+  ElementRestriction G_trial_boundary_[num_trial_spaces];
 
   /// @brief The set of domain integrals (spatial_dim == geometric_dim)
   std::vector<DomainIntegral<num_trial_spaces, Q, exec>> domain_integrals_;

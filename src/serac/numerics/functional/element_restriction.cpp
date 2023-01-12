@@ -1,4 +1,4 @@
-#include "serac/numerics/functional/element_dofs.hpp"
+#include "serac/numerics/functional/element_restriction.hpp"
 
 #include "mfem.hpp"
 
@@ -210,7 +210,7 @@ std::vector<Array2D<int> > geom_local_face_dofs(int p)
   return output;
 }
 
-Array2D<DoF> GetElementDofs(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type geom)
+Array2D<DoF> GetElementRestriction(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type geom)
 {
   std::vector<DoF> elem_dofs;
   mfem::Mesh*      mesh         = fes->GetMesh();
@@ -381,8 +381,12 @@ Array2D<DoF> GetFaceDofs(const mfem::FiniteElementSpace* fes, mfem::Geometry::Ty
   return Array2D<DoF>(std::move(face_dofs), n, dofs_per_face);
 }
 
-ElementDofs::ElementDofs(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type elem_geom) {
-  dof_info = GetElementDofs(fes, elem_geom);
+namespace serac {
+
+ElementRestriction::ElementRestriction(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type elem_geom) {
+  dof_info = GetElementRestriction(fes, elem_geom);
+
+  ordering = fes->GetOrdering();
 
   lsize = uint64_t(fes->GetVSize());
   components = uint64_t(fes->GetVDim());
@@ -391,9 +395,11 @@ ElementDofs::ElementDofs(const mfem::FiniteElementSpace* fes, mfem::Geometry::Ty
   esize = num_elements * dofs_per_elem * components;
 }
 
-ElementDofs::ElementDofs(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom, FaceType type) {
+ElementRestriction::ElementRestriction(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom, FaceType type) {
   dof_info = GetFaceDofs(fes, face_geom, type);
 
+  ordering = fes->GetOrdering();
+
   lsize = uint64_t(fes->GetVSize());
   components = uint64_t(fes->GetVDim());
   uint64_t num_elements = dof_info.dim[0];
@@ -401,15 +407,15 @@ ElementDofs::ElementDofs(const mfem::FiniteElementSpace* fes, mfem::Geometry::Ty
   esize = num_elements * dofs_per_elem * components;
 }
 
-uint64_t ElementDofs::ESize() {
+uint64_t ElementRestriction::ESize() {
   return esize;
 }
 
-uint64_t ElementDofs::LSize() {
+uint64_t ElementRestriction::LSize() {
   return lsize;
 }
 
-void ElementDofs::Gather(const mfem::Vector & L_vector, mfem::Vector & E_vector) const {
+void ElementRestriction::Gather(const mfem::Vector & L_vector, mfem::Vector & E_vector) const {
 
   uint64_t lnodes = lsize / components;
   uint64_t num_elements = dof_info.dim[0];
@@ -418,7 +424,12 @@ void ElementDofs::Gather(const mfem::Vector & L_vector, mfem::Vector & E_vector)
     for (uint64_t c = 0; c < components; c++) {
       for (uint64_t j = 0; j < dofs_per_elem; j++) {
         uint64_t E_id = (i * components + c) * dofs_per_elem + j;
-        uint64_t L_id = c * lnodes + dof_info(int(i),int(j)).index();
+        uint64_t L_id;
+        if (ordering == mfem::Ordering::Type::byNODES) {
+          L_id = c * lnodes + dof_info(int(i),int(j)).index();
+        } else {
+          L_id = dof_info(int(i),int(j)).index() * components + c;
+        }
         E_vector[E_id] = L_vector[L_id];
       }
     }
@@ -426,7 +437,7 @@ void ElementDofs::Gather(const mfem::Vector & L_vector, mfem::Vector & E_vector)
 
 }
 
-void ElementDofs::ScatterAdd(const mfem::Vector & E_vector, mfem::Vector & L_vector) const {
+void ElementRestriction::ScatterAdd(const mfem::Vector & E_vector, mfem::Vector & L_vector) const {
 
   uint64_t lnodes = lsize / components;
   uint64_t num_elements = dof_info.dim[0];
@@ -435,10 +446,17 @@ void ElementDofs::ScatterAdd(const mfem::Vector & E_vector, mfem::Vector & L_vec
     for (uint64_t c = 0; c < components; c++) {
       for (uint64_t j = 0; j < dofs_per_elem; j++) {
         uint64_t E_id = (i * components + c) * dofs_per_elem + j;
-        uint64_t L_id = c * lnodes + dof_info(int(i),int(j)).index();
+        uint64_t L_id;
+        if (ordering == mfem::Ordering::Type::byNODES) {
+          L_id = c * lnodes + dof_info(int(i),int(j)).index();
+        } else {
+          L_id = dof_info(int(i),int(j)).index() * components + c;
+        }
         L_vector[L_id] += E_vector[E_id];
       }
     }
   }
+
+}
 
 }

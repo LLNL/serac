@@ -1364,7 +1364,7 @@ SERAC_HOST_DEVICE bool is_symmetric(tensor<double, n, n> A, double tolerance = 1
  * @param A The matrix to test for positive definiteness
  * @return Whether the matrix is positive definite
  */
-SERAC_HOST_DEVICE bool is_symmetric_and_positive_definite(tensor<double, 2, 2> A)
+inline SERAC_HOST_DEVICE bool is_symmetric_and_positive_definite(tensor<double, 2, 2> A)
 {
   if (!is_symmetric(A)) {
     return false;
@@ -1378,7 +1378,7 @@ SERAC_HOST_DEVICE bool is_symmetric_and_positive_definite(tensor<double, 2, 2> A
   return true;
 }
 /// @overload
-SERAC_HOST_DEVICE bool is_symmetric_and_positive_definite(tensor<double, 3, 3> A)
+inline SERAC_HOST_DEVICE bool is_symmetric_and_positive_definite(tensor<double, 3, 3> A)
 {
   if (!is_symmetric(A)) {
     return false;
@@ -1576,7 +1576,7 @@ auto& operator<<(std::ostream& out, const tensor<T, m, n...>& A)
  *
  * @param[in] out the std::ostream to write to (e.g. std::cout or std::ofstream)
  */
-auto& operator<<(std::ostream& out, zero)
+inline auto& operator<<(std::ostream& out, zero)
 {
   out << "zero";
   return out;
@@ -1587,7 +1587,7 @@ auto& operator<<(std::ostream& out, zero)
  * printf(tensor<...>))
  * @param[in] value The value to write out
  */
-SERAC_HOST_DEVICE void print(double value) { printf("%f", value); }
+inline SERAC_HOST_DEVICE void print(double value) { printf("%f", value); }
 
 /**
  * @brief print a tensor using `printf`, so that it is suitable for use inside cuda kernels.
@@ -1687,7 +1687,7 @@ using outer_product_t = typename detail::outer_prod<T1, T2>::type;
  * @brief Retrieves the gradient component of a double (which is nothing)
  * @return The sentinel, @see zero
  */
-SERAC_HOST_DEVICE auto get_gradient(double /* arg */) { return zero{}; }
+inline SERAC_HOST_DEVICE auto get_gradient(double /* arg */) { return zero{}; }
 
 /**
  * @brief get the gradient of type `tensor` (note: since its stored type is not a dual

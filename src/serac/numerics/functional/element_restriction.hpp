@@ -47,7 +47,7 @@ struct DoF {
     bits((sign & 0x1ULL << sign_shift) + ((orientation & 0x7ULL) << orientation_shift) + index)
   {}
 
-  uint64_t sign() const { return ((bits & sign_mask) >> sign_shift); }
+  int sign() const { return (bits & sign_mask) ? -1 : 1; }
   uint64_t orientation() const { return ((bits & orientation_mask) >> orientation_shift); }
   uint64_t index() const { return (bits & index_mask); }
 
@@ -84,19 +84,25 @@ struct Array2D {
   uint64_t       dim[2];
 };
 
-struct ElementDofs {
-  ElementDofs() {}
-  ElementDofs(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type elem_geom);
-  ElementDofs(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom, FaceType type);
+namespace serac {
 
-  uint64_t ESize();
-  uint64_t LSize();
-  void Gather(const mfem::Vector & L_vector, mfem::Vector & E_vector) const;
-  void ScatterAdd(const mfem::Vector & E_vector, mfem::Vector & L_vector) const;
+  struct ElementRestriction {
+    ElementRestriction() {}
+    ElementRestriction(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type elem_geom);
+    ElementRestriction(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom, FaceType type);
 
-  uint64_t esize, lsize, components;
-  Array2D<DoF> dof_info;
-};
+    uint64_t ESize();
+    uint64_t LSize();
+    void Gather(const mfem::Vector & L_vector, mfem::Vector & E_vector) const;
+    void ScatterAdd(const mfem::Vector & E_vector, mfem::Vector & L_vector) const;
+
+    uint64_t esize, lsize, components;
+    Array2D<DoF> dof_info;
+
+    mfem::Ordering::Type ordering;
+  };
+
+}
 
 Array2D<DoF> GetElementDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::Type geom);
 Array2D<DoF> GetFaceDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom, FaceType type);

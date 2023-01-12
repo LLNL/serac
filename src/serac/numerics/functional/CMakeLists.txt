@@ -13,7 +13,8 @@ set(functional_headers
     boundary_integral.hpp
     boundary_integral_kernels.hpp
     dof_numbering.hpp
-    element_dofs.hpp
+    element_restriction.hpp
+    geometric_factors.hpp
     domain_integral.hpp
     domain_integral_kernels.hpp
     dual.hpp
@@ -30,7 +31,7 @@ set(functional_headers
     tuple_tensor_dual_functions.hpp
     )
 
-set(functional_sources element_dofs.cpp)
+set(functional_sources element_restriction.cpp geometric_factors.cpp)
 
 set(functional_detail_headers
     detail/hexahedron_H1.inl

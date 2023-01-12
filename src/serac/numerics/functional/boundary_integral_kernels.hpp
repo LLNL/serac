@@ -191,7 +191,7 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
 
     // mfem provides this information in 1D arrays, so we reshape it
     // into strided multidimensional arrays before using
-    constexpr int nqp = num_quadrature_points<geom, Q>();
+    constexpr int nqp = num_quadrature_points(geom, Q);
     auto          J   = reinterpret_cast<const tensor<double, nqp>*>(J_.Read());
     auto          X   = reinterpret_cast<const tensor<double, sdim, nqp>*>(X_.Read());
     auto          N   = reinterpret_cast<const tensor<double, sdim, nqp>*>(N_.Read());
@@ -283,7 +283,7 @@ struct EvaluationKernel<DerivativeWRT<differentiation_index>, KernelConfig<Q, ge
     // mfem provides this information in 1D arrays, so we reshape it
     // into strided multidimensional arrays before using
     constexpr int sdim = dimension_of(geom) + 1;  // spatial dimension
-    constexpr int nqp  = num_quadrature_points<geom, Q>();
+    constexpr int nqp  = num_quadrature_points(geom, Q);
     auto          J    = reinterpret_cast<const tensor<double, nqp>*>(J_.Read());
     auto          X    = reinterpret_cast<const tensor<double, sdim, nqp>*>(X_.Read());
     auto          N    = reinterpret_cast<const tensor<double, sdim, nqp>*>(N_.Read());

@@ -70,14 +70,19 @@ struct Dimension {
  * @tparam g the element geometry
  * @tparam q the number of quadrature points per dimension
  */
-template <Geometry g, int q>
-SERAC_HOST_DEVICE constexpr int num_quadrature_points()
+SERAC_HOST_DEVICE constexpr int num_quadrature_points(Geometry g, int q)
 {
   if (g == Geometry::Segment) {
     return q;
   }
+  if (g == Geometry::Triangle) {
+    return (q * (q + 1)) / 2;
+  }
   if (g == Geometry::Quadrilateral) {
     return q * q;
+  }
+  if (g == Geometry::Tetrahedron) {
+    return (q * (q + 1) * (q + 2)) / 6;
   }
   if (g == Geometry::Hexahedron) {
     return q * q * q;
