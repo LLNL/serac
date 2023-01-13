@@ -390,8 +390,8 @@ ElementRestriction::ElementRestriction(const mfem::FiniteElementSpace* fes, mfem
 
   lsize = uint64_t(fes->GetVSize());
   components = uint64_t(fes->GetVDim());
-  uint64_t num_elements = dof_info.dim[0];
-  uint64_t dofs_per_elem = dof_info.dim[1];
+  num_elements = dof_info.dim[0];
+  dofs_per_elem = dof_info.dim[1];
   esize = num_elements * dofs_per_elem * components;
 }
 
@@ -402,8 +402,8 @@ ElementRestriction::ElementRestriction(const mfem::FiniteElementSpace* fes, mfem
 
   lsize = uint64_t(fes->GetVSize());
   components = uint64_t(fes->GetVDim());
-  uint64_t num_elements = dof_info.dim[0];
-  uint64_t dofs_per_elem = dof_info.dim[1];
+  num_elements = dof_info.dim[0];
+  dofs_per_elem = dof_info.dim[1];
   esize = num_elements * dofs_per_elem * components;
 }
 
@@ -415,11 +415,27 @@ uint64_t ElementRestriction::LSize() {
   return lsize;
 }
 
+void ElementRestriction::Gather(uint32_t i, const mfem::Vector & L_vector, mfem::Vector & E_vector) const {
+
+  uint64_t lnodes = lsize / components;
+  for (uint64_t c = 0; c < components; c++) {
+    for (uint64_t j = 0; j < dofs_per_elem; j++) {
+      uint64_t E_id = c * dofs_per_elem + j;
+      uint64_t L_id;
+      if (ordering == mfem::Ordering::Type::byNODES) {
+        L_id = c * lnodes + dof_info(int(i),int(j)).index();
+      } else {
+        L_id = dof_info(int(i),int(j)).index() * components + c;
+      }
+      E_vector[E_id] = L_vector[L_id];
+    }
+  }
+
+}
+
 void ElementRestriction::Gather(const mfem::Vector & L_vector, mfem::Vector & E_vector) const {
 
   uint64_t lnodes = lsize / components;
-  uint64_t num_elements = dof_info.dim[0];
-  uint64_t dofs_per_elem = dof_info.dim[1];
   for (uint64_t i = 0; i < num_elements; i++) {
     for (uint64_t c = 0; c < components; c++) {
       for (uint64_t j = 0; j < dofs_per_elem; j++) {
@@ -440,8 +456,6 @@ void ElementRestriction::Gather(const mfem::Vector & L_vector, mfem::Vector & E_
 void ElementRestriction::ScatterAdd(const mfem::Vector & E_vector, mfem::Vector & L_vector) const {
 
   uint64_t lnodes = lsize / components;
-  uint64_t num_elements = dof_info.dim[0];
-  uint64_t dofs_per_elem = dof_info.dim[1];
   for (uint64_t i = 0; i < num_elements; i++) {
     for (uint64_t c = 0; c < components; c++) {
       for (uint64_t j = 0; j < dofs_per_elem; j++) {

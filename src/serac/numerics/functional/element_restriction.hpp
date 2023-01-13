@@ -96,7 +96,12 @@ namespace serac {
     void Gather(const mfem::Vector & L_vector, mfem::Vector & E_vector) const;
     void ScatterAdd(const mfem::Vector & E_vector, mfem::Vector & L_vector) const;
 
-    uint64_t esize, lsize, components;
+    uint64_t esize;
+    uint64_t lsize;
+    uint64_t components;
+    uint64_t num_elements;
+    uint64_t dofs_per_elem;
+
     Array2D<DoF> dof_info;
 
     mfem::Ordering::Type ordering;

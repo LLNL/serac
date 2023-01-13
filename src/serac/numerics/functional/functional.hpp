@@ -292,9 +292,24 @@ public:
     constexpr auto flags = mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS;
     // NOTE: we are relying on MFEM to keep these geometric factors accurate. We store
     // the necessary data as references in the integral data structure.
-    auto geom = domain.GetGeometricFactors(ir, flags);
+    [[maybe_unused]] auto geom2 = domain.GetGeometricFactors(ir, flags);
 
-    auto geom2 = serac::GeometricFactors(&domain, Q, elem_geom[domain.Dimension()]);
+    auto * geom = new serac::GeometricFactors(&domain, Q, elem_geom[domain.Dimension()]);
+
+    for (int i = 0; i < geom->X.Size(); i++) {
+      double v1 = geom->X[i];
+      double v2 = geom2->X[i];
+      if ((fabs(v2 - v1) / fabs(v1)) > 1.0e-12) {
+        std::cout << "X[" << i << "]: " << v1 << " vs. " << v2 << std::endl;
+      }
+    }
+    for (int i = 0; i < geom->J.Size(); i++) {
+      double v1 = geom->J[i];
+      double v2 = geom2->J[i];
+      if ((fabs(v2 - v1) / fabs(v1)) > 1.0e-12) {
+        std::cout << "J[" << i << "]: " << fabs(v2 - v1) / fabs(v1) << std::endl;
+      }
+    }
 
     auto selected_trial_spaces = serac::make_tuple(serac::get<args>(trial_spaces)...);
 

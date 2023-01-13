@@ -90,11 +90,17 @@ GeometricFactors::GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry
   }
 
   DISPATCH_KERNEL(Quadrilateral, 1, 2);
+  DISPATCH_KERNEL(Quadrilateral, 1, 3);
+  DISPATCH_KERNEL(Quadrilateral, 1, 4);
   DISPATCH_KERNEL(Quadrilateral, 2, 3);
+  DISPATCH_KERNEL(Quadrilateral, 2, 4);
   DISPATCH_KERNEL(Quadrilateral, 3, 4);
 
   DISPATCH_KERNEL(Hexahedron, 1, 2);
+  DISPATCH_KERNEL(Hexahedron, 1, 3);
+  DISPATCH_KERNEL(Hexahedron, 1, 4);
   DISPATCH_KERNEL(Hexahedron, 2, 3);
+  DISPATCH_KERNEL(Hexahedron, 2, 4);
   DISPATCH_KERNEL(Hexahedron, 3, 4);
 
 #undef DISPATCH_KERNEL
@@ -135,11 +141,17 @@ GeometricFactors::GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry
   }
 
   DISPATCH_KERNEL(Segment, 1, 2);
+  DISPATCH_KERNEL(Segment, 1, 3);
+  DISPATCH_KERNEL(Segment, 1, 4);
   DISPATCH_KERNEL(Segment, 2, 3);
+  DISPATCH_KERNEL(Segment, 2, 4);
   DISPATCH_KERNEL(Segment, 3, 4);
 
   DISPATCH_KERNEL(Quadrilateral, 1, 2);
+  DISPATCH_KERNEL(Quadrilateral, 1, 3);
+  DISPATCH_KERNEL(Quadrilateral, 1, 4);
   DISPATCH_KERNEL(Quadrilateral, 2, 3);
+  DISPATCH_KERNEL(Quadrilateral, 2, 4);
   DISPATCH_KERNEL(Quadrilateral, 3, 4);
 
 #undef DISPATCH_KERNEL
