@@ -528,7 +528,9 @@ TEST(QoI, ShapeAndParameter)
   std::unique_ptr<mfem::HypreParVector> parameter(parameter_fe_space->NewTrueDofVector());
   *parameter = 0.1;
 
-  serac_qoi->operator()(*shape, *parameter);
+  double val = serac_qoi->operator()(*shape, *parameter);
+
+  EXPECT_NEAR(val, 0.8, 1.0e-14);
 }
 
 // clang-format off
