@@ -18,6 +18,7 @@
 #include "mfem.hpp"
 
 #include "serac/infrastructure/variant.hpp"
+#include "serac/numerics/functional/functional.hpp"
 
 namespace serac {
 
@@ -51,10 +52,14 @@ public:
      * Defaults to scalar valued spaces.
      */
     int vector_dim = 1;
+
     /**
-     * @brief The FECollection to use - defaults to an H1_FECollection
+     * @brief Enum deoniting type of basis functions to use
+     *
+     * Options are H1, HCURL, HDIV, or L2.
      */
-    std::unique_ptr<mfem::FiniteElementCollection> coll = {};
+    Family element_type = Family::H1;
+
     /**
      * @brief The name of the field encapsulated by the state object
      */
@@ -65,10 +70,10 @@ public:
    * @brief Main constructor for building a new finite element vector
    * @param[in] mesh The problem mesh (object does not take ownership)
    * @param[in] options The options specified, namely those relating to the order of the problem,
-   * the dimension of the FESpace, the type of FEColl, the DOF ordering that should be used,
-   * and the name of the field
+   * the dimension of the FESpace, the type of basis functions, and the name of the field
    */
-  FiniteElementVector(mfem::ParMesh& mesh, Options&& options = {.order = 1, .vector_dim = 1, .coll = {}, .name = ""});
+  FiniteElementVector(mfem::ParMesh& mesh,
+                      Options&&      options = {.order = 1, .vector_dim = 1, .element_type = Family::H1, .name = ""});
 
   /**
    * @brief Minimal constructor for a FiniteElementVector given a finite element space
