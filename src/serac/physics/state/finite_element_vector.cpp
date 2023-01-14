@@ -16,20 +16,20 @@ FiniteElementVector::FiniteElementVector(mfem::ParMesh& mesh, FiniteElementVecto
   const auto ordering = mfem::Ordering::byNODES;
 
   switch (options.element_type) {
-    case Family::H1:
+    case ElementType::H1:
       coll_ = std::make_unique<mfem::H1_FECollection>(options.order, dim);
       break;
-    case Family::HCURL:
+    case ElementType::HCURL:
       coll_ = std::make_unique<mfem::ND_FECollection>(options.order, dim);
       SLIC_WARNING_ROOT_IF(options.vector_dim != 1,
                            axom::fmt::format("Vector dim >1 requested for an HCURL basis function."));
       break;
-    case Family::HDIV:
+    case ElementType::HDIV:
       coll_ = std::make_unique<mfem::RT_FECollection>(options.order, dim);
       SLIC_WARNING_ROOT_IF(options.vector_dim != 1,
                            axom::fmt::format("Vector dim >1 requested for an HDIV basis function."));
       break;
-    case Family::L2:
+    case ElementType::L2:
       coll_ = std::make_unique<mfem::L2_FECollection>(options.order, dim);
       break;
     default:

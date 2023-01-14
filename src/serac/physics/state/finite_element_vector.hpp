@@ -18,7 +18,6 @@
 #include "mfem.hpp"
 
 #include "serac/infrastructure/variant.hpp"
-#include "serac/numerics/functional/functional.hpp"
 
 namespace serac {
 
@@ -26,6 +25,17 @@ namespace serac {
  * @brief A sum type for encapsulating either a scalar or vector coeffient
  */
 using GeneralCoefficient = variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
+
+/// @brief The type of a finite element basis function
+/// @note This class is used instead of the Family class from functional do to incompatibilities with Vector expression
+/// templates and the dual number class.
+enum class ElementType
+{
+  H1,     ///< Nodal scalar valued basis functions
+  HCURL,  ///< Nedelec (continuous tangent) vector-valued basis functions
+  HDIV,   ///< Raviart-Thomas (continuous normal) vector-valued basis functions
+  L2      ///< Discontinuous scalar valued basis functions
+};
 
 /**
  * @brief Class for encapsulating the data associated with a vector derived
@@ -58,7 +68,7 @@ public:
      *
      * Options are H1, HCURL, HDIV, or L2.
      */
-    Family element_type = Family::H1;
+    ElementType element_type = ElementType::H1;
 
     /**
      * @brief The name of the field encapsulated by the state object
@@ -73,7 +83,7 @@ public:
    * the dimension of the FESpace, the type of basis functions, and the name of the field
    */
   FiniteElementVector(mfem::ParMesh& mesh,
-                      Options&&      options = {.order = 1, .vector_dim = 1, .element_type = Family::H1, .name = ""});
+                      Options&& options = {.order = 1, .vector_dim = 1, .element_type = ElementType::H1, .name = ""});
 
   /**
    * @brief Minimal constructor for a FiniteElementVector given a finite element space
