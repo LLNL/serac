@@ -64,7 +64,7 @@ public:
     int vector_dim = 1;
 
     /**
-     * @brief Enum deoniting type of basis functions to use
+     * @brief Enum denoting type of basis functions to use
      *
      * Options are H1, HCURL, HDIV, or L2.
      */
