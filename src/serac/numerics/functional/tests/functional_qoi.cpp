@@ -497,6 +497,42 @@ TEST(QoI, UsingL2)
   check_gradient(f, *U0, *U1);
 }
 
+TEST(QoI, ShapeAndParameter)
+{
+  static constexpr int dim{3};
+  using shape_space     = H1<2, dim>;
+  using parameter_space = H1<1>;
+
+  using qoi_type = serac::Functional<double(shape_space, parameter_space)>;
+
+  mfem::ParMesh& mesh = *mesh3D;
+
+  auto [shape_fe_space, shape_fe_coll]         = generateParFiniteElementSpace<shape_space>(&mesh);
+  auto [parameter_fe_space, parameter_fe_coll] = generateParFiniteElementSpace<parameter_space>(&mesh);
+
+  std::array<const mfem::ParFiniteElementSpace*, 2> trial_fes = {shape_fe_space.get(), parameter_fe_space.get()};
+
+  auto serac_qoi = std::make_unique<qoi_type>(trial_fes);
+  serac_qoi->AddDomainIntegral(
+      serac::Dimension<dim>{}, serac::DependsOn<0, 1>{},
+      [](auto, auto X, auto param) {
+        auto dp_dx = serac::get<1>(X);
+        auto I     = serac::Identity<dim>();
+        return serac::get<0>(param) * serac::det(dp_dx + I);
+      },
+      mesh);
+
+  std::unique_ptr<mfem::HypreParVector> shape(shape_fe_space->NewTrueDofVector());
+  *shape = 1.0;
+
+  std::unique_ptr<mfem::HypreParVector> parameter(parameter_fe_space->NewTrueDofVector());
+  *parameter = 0.1;
+
+  double val = serac_qoi->operator()(*shape, *parameter);
+
+  EXPECT_NEAR(val, 0.8, 1.0e-14);
+}
+
 // clang-format off
 TEST(Measure, 2DLinear   ) { qoi_test(*mesh2D, H1<1>{}, Dimension<2>{}, WhichTest::Measure); }
 TEST(Measure, 2DQuadratic) { qoi_test(*mesh2D, H1<2>{}, Dimension<2>{}, WhichTest::Measure); }
