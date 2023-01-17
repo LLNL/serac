@@ -281,7 +281,7 @@ public:
     }
 
     const mfem::FiniteElement&   el = *test_space_->GetFE(0);
-    const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
+    const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), (Q - 1) * 2);
 
     constexpr auto flags = mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS;
 
@@ -316,8 +316,7 @@ public:
       SLIC_ERROR_ROOT_IF(domain.GetBdrElementType(e) != supported_types[dim], "Mesh contains unsupported element type");
     }
 
-    const mfem::FiniteElement&   el = *test_space_->GetFE(0);
-    const mfem::IntegrationRule& ir = mfem::IntRules.Get(supported_types[dim], el.GetOrder() * 2);
+    const mfem::IntegrationRule& ir = mfem::IntRules.Get(supported_types[dim], (Q - 1) * 2);
     constexpr auto flags = mfem::FaceGeometricFactors::COORDINATES | mfem::FaceGeometricFactors::DETERMINANTS |
                            mfem::FaceGeometricFactors::NORMALS;
 
