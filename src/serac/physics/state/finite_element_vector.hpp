@@ -27,14 +27,14 @@ namespace serac {
 using GeneralCoefficient = variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
 
 /// @brief The type of a finite element basis function
-/// @note This class is used instead of the Family class from functional do to incompatibilities with Vector expression
-/// templates and the dual number class.
+/// @note TODO This class is used instead of the Family class from functional due to incompatibilities with Vector
+/// expression templates and the dual number class.
 enum class ElementType
 {
-  H1,     ///< Nodal scalar valued basis functions
+  H1,     ///< Nodal scalar-valued basis functions
   HCURL,  ///< Nedelec (continuous tangent) vector-valued basis functions
   HDIV,   ///< Raviart-Thomas (continuous normal) vector-valued basis functions
-  L2      ///< Discontinuous scalar valued basis functions
+  L2      ///< Discontinuous scalar-valued basis functions
 };
 
 /**
