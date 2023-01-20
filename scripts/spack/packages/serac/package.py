@@ -120,7 +120,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("umpire~openmp", when="+umpire~openmp")
     depends_on("umpire+openmp", when="+umpire+openmp")
 
-    depends_on("axom~fortran~tools~examples+mfem+cpp14+lua")
+    depends_on("axom~fortran~tools~examples+mfem+lua")
     depends_on("axom~raja", when="~raja")
     depends_on("axom~umpire", when="~umpire")
     depends_on("axom~openmp", when="~openmp")
