@@ -254,7 +254,9 @@ class Axom(CachedCMakePackage, CudaPackage, ROCmPackage):
 
         if "+cuda" in spec:
             entries.append(cmake_cache_option("ENABLE_CUDA", True))
-            entries.append(cmake_cache_option("CUDA_SEPARABLE_COMPILATION", True))
+            # SERAC EDIT START - push back to axom
+            entries.append(cmake_cache_option("CMAKE_CUDA_SEPARABLE_COMPILATION", True))
+            # SERAC EDIT END
 
             entries.append(cmake_cache_option("AXOM_ENABLE_ANNOTATIONS", True))
 
