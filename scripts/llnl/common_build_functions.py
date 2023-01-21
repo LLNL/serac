@@ -424,15 +424,10 @@ def set_group_and_perms(directory):
         print("[Skipping update of group and access permissions. Provided directory was not a known shared location: {0}]".format(directory))
     else:
         print("[changing group and access perms of: %s]" % directory)
-        # change group to smithdev
         print("[changing group to smithdev]")
         sexe("chgrp -f -R smithdev %s" % (directory),echo=True,error_prefix="WARNING:")
-        # change group perms to rwX
-        print("[changing perms for smithdev members to rwX]")
-        sexe("chmod -f -R g+rwX %s" % (directory),echo=True,error_prefix="WARNING:")
-        # change perms for all to rX
-        print("[changing perms for all users to rX]")
-        sexe("chmod -f -R a+rX %s" % (directory),echo=True,error_prefix="WARNING:")
+        print("[changing perms for smithdev members to 'rwX' and all to 'rX']")
+        sexe("chmod -f -R g+rwX,a+rX %s" % (directory),echo=True,error_prefix="WARNING:")
         print("[done setting perms for: %s]" % directory)
     return 0
 
