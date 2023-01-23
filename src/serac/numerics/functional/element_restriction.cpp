@@ -245,10 +245,10 @@ Array2D<DoF> GetElementRestriction(const mfem::FiniteElementSpace* fes, mfem::Ge
       // TODO
       // TODO
       // TODO
-      uint64_t sign = 0;
+      uint64_t sign = 1;
       uint64_t orientation = 0;
       for (int k = 0; k < dofs.Size(); k++) {
-        elem_dofs.push_back({sign, orientation, uint64_t(dofs[k])});
+        elem_dofs.push_back({uint64_t(dofs[k]), sign, orientation});
       }
     } 
 
@@ -390,9 +390,10 @@ ElementRestriction::ElementRestriction(const mfem::FiniteElementSpace* fes, mfem
 
   lsize = uint64_t(fes->GetVSize());
   components = uint64_t(fes->GetVDim());
+  num_nodes = lsize / components;
   num_elements = dof_info.dim[0];
-  dofs_per_elem = dof_info.dim[1];
-  esize = num_elements * dofs_per_elem * components;
+  nodes_per_elem = dof_info.dim[1];
+  esize = num_elements * nodes_per_elem * components;
 }
 
 ElementRestriction::ElementRestriction(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom, FaceType type) {
@@ -402,75 +403,50 @@ ElementRestriction::ElementRestriction(const mfem::FiniteElementSpace* fes, mfem
 
   lsize = uint64_t(fes->GetVSize());
   components = uint64_t(fes->GetVDim());
+  num_nodes = lsize / components;
   num_elements = dof_info.dim[0];
-  dofs_per_elem = dof_info.dim[1];
-  esize = num_elements * dofs_per_elem * components;
+  nodes_per_elem = dof_info.dim[1];
+  esize = num_elements * nodes_per_elem * components;
 }
 
-uint64_t ElementRestriction::ESize() {
+uint64_t ElementRestriction::ESize() const {
   return esize;
 }
 
-uint64_t ElementRestriction::LSize() {
+uint64_t ElementRestriction::LSize() const{
   return lsize;
 }
 
-void ElementRestriction::Gather(uint32_t i, const mfem::Vector & L_vector, mfem::Vector & E_vector) const {
-
-  uint64_t lnodes = lsize / components;
-  for (uint64_t c = 0; c < components; c++) {
-    for (uint64_t j = 0; j < dofs_per_elem; j++) {
-      uint64_t E_id = c * dofs_per_elem + j;
-      uint64_t L_id;
-      if (ordering == mfem::Ordering::Type::byNODES) {
-        L_id = c * lnodes + dof_info(int(i),int(j)).index();
-      } else {
-        L_id = dof_info(int(i),int(j)).index() * components + c;
-      }
-      E_vector[E_id] = L_vector[L_id];
-    }
+DoF ElementRestriction::GetVDof(DoF node, uint64_t component) const {
+  if (ordering == mfem::Ordering::Type::byNODES) {
+    return DoF{component * num_nodes + node.index(), (node.sign() == 1) ? 0ull : 1ull, node.orientation()};
+  } else {
+    return DoF{node.index() * components + component, (node.sign() == 1) ? 0ull : 1ull, node.orientation()};
   }
-
 }
 
 void ElementRestriction::Gather(const mfem::Vector & L_vector, mfem::Vector & E_vector) const {
-
-  uint64_t lnodes = lsize / components;
   for (uint64_t i = 0; i < num_elements; i++) {
     for (uint64_t c = 0; c < components; c++) {
-      for (uint64_t j = 0; j < dofs_per_elem; j++) {
-        uint64_t E_id = (i * components + c) * dofs_per_elem + j;
-        uint64_t L_id;
-        if (ordering == mfem::Ordering::Type::byNODES) {
-          L_id = c * lnodes + dof_info(int(i),int(j)).index();
-        } else {
-          L_id = dof_info(int(i),int(j)).index() * components + c;
-        }
+      for (uint64_t j = 0; j < nodes_per_elem; j++) {
+        uint64_t E_id = (i * components + c) * nodes_per_elem + j;
+        uint64_t L_id = GetVDof(dof_info(i, j), c).index();
         E_vector[E_id] = L_vector[L_id];
       }
     }
   }
-
 }
 
 void ElementRestriction::ScatterAdd(const mfem::Vector & E_vector, mfem::Vector & L_vector) const {
-
-  uint64_t lnodes = lsize / components;
   for (uint64_t i = 0; i < num_elements; i++) {
     for (uint64_t c = 0; c < components; c++) {
-      for (uint64_t j = 0; j < dofs_per_elem; j++) {
-        uint64_t E_id = (i * components + c) * dofs_per_elem + j;
-        uint64_t L_id;
-        if (ordering == mfem::Ordering::Type::byNODES) {
-          L_id = c * lnodes + dof_info(int(i),int(j)).index();
-        } else {
-          L_id = dof_info(int(i),int(j)).index() * components + c;
-        }
+      for (uint64_t j = 0; j < nodes_per_elem; j++) {
+        uint64_t E_id = (i * components + c) * nodes_per_elem + j;
+        uint64_t L_id = GetVDof(dof_info(i, j), c).index();
         L_vector[L_id] += E_vector[E_id];
       }
     }
   }
-
 }
 
 }

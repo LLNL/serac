@@ -270,45 +270,97 @@ struct GradientAssemblyLookupTables {
     int dim = test_fespace.GetMesh()->Dimension();
     mfem::Geometry::Type elem_geom[4] = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT, mfem::Geometry::SQUARE, mfem::Geometry::CUBE};
     
-    serac::ElementRestriction test_dofs(&test_fespace, elem_geom[dim]);
-    serac::ElementRestriction test_boundary_dofs(&test_fespace, elem_geom[dim-1], FaceType::BOUNDARY);
-
-    serac::ElementRestriction trial_dofs(&trial_fespace, elem_geom[dim]);
-    serac::ElementRestriction trial_boundary_dofs(&trial_fespace, elem_geom[dim-1], FaceType::BOUNDARY);
-
-    auto num_elements     = static_cast<uint32_t>(trial_fespace.GetNE());
-    auto num_bdr_elements = static_cast<uint32_t>(trial_fespace.GetNFbyType(mfem::FaceType::Boundary));
-
     std::vector<ElemInfo> infos;
 
     // we start by having each element and boundary element emit the (i,j) entry that it
     // touches in the global "stiffness matrix", and also keep track of some metadata about
     // which element and which dof are associated with that particular nonzero entry
-    bool on_boundary = false;
-    for (uint32_t e = 0; e < num_elements; e++) {
-      for (uint64_t i = 0; i < test_dofs.dof_info.dim[1]; i++) {
-        auto test_dof = test_dofs.dof_info(e, i);
-        for (uint64_t j = 0; j < trial_dofs.dof_info.dim[1]; j++) {
-          auto trial_dof = trial_dofs.dof_info(e, j);
-          infos.push_back(ElemInfo{uint32_t(test_dof.index()), uint32_t(trial_dof.index()), static_cast<uint32_t>(i), static_cast<uint32_t>(j), e,
-                                   test_dof.sign() * trial_dof.sign(), on_boundary});
+    {
+      bool on_boundary = false;
+
+      serac::ElementRestriction test_dofs(&test_fespace, elem_geom[dim]);
+      serac::ElementRestriction trial_dofs(&trial_fespace, elem_geom[dim]);
+
+      std::vector< DoF > test_vdofs(test_dofs.nodes_per_elem * test_dofs.components);
+      std::vector< DoF > trial_vdofs(trial_dofs.nodes_per_elem * trial_dofs.components);
+
+      auto num_elements     = static_cast<uint32_t>(trial_fespace.GetNE());
+      for (uint32_t e = 0; e < num_elements; e++) {
+        for (uint64_t i = 0; i < test_dofs.dof_info.dim[1]; i++) {
+          auto test_dof = test_dofs.dof_info(e, i);
+
+          for (uint64_t j = 0; j < trial_dofs.dof_info.dim[1]; j++) {
+            auto trial_dof = trial_dofs.dof_info(e, j);
+
+            for (uint64_t k = 0; k < test_dofs.components; k++) {
+              for (uint64_t l = 0; l < trial_dofs.components; l++) {
+
+                uint32_t test_global_id = uint32_t(test_dofs.GetVDof(test_dof, k).index());
+                uint32_t trial_global_id = uint32_t(trial_dofs.GetVDof(trial_dof, l).index());
+                uint32_t test_local_id = uint32_t(k * test_dofs.nodes_per_elem + i);
+                uint32_t trial_local_id = uint32_t(l * trial_dofs.nodes_per_elem + j);
+
+                ElemInfo info {
+                  test_global_id,
+                  trial_global_id,
+                  test_local_id,
+                  trial_local_id,
+                  e,
+                  test_dof.sign() * trial_dof.sign(),
+                  on_boundary
+                };
+
+                infos.push_back(info);
+              }
+            }
+          }
         }
       }
     }
 
-    // note: mfem doesn't implement FaceRestrictions for some of its function spaces,
-    // so until those are implemented, DofNumbering::bdr_element_dofs will be
-    // an empty 2D array, so these loops will not do anything
-    on_boundary = true;
-    for (uint32_t e = 0; e < num_bdr_elements; e++) {
-      for (uint64_t i = 0; i < test_boundary_dofs.dof_info.dim[1]; i++) {
-        auto test_dof = test_boundary_dofs.dof_info(e, i);
-        for (uint64_t j = 0; j < trial_boundary_dofs.dof_info.dim[1]; j++) {
-          auto trial_dof = trial_boundary_dofs.dof_info(e, j);
-          infos.push_back(ElemInfo{uint32_t(test_dof.index()), uint32_t(trial_dof.index()), static_cast<uint32_t>(i), static_cast<uint32_t>(j), e,
-                                   test_dof.sign() * trial_dof.sign(), on_boundary});
+    {
+      bool on_boundary = true;
+
+      serac::ElementRestriction test_boundary_dofs(&test_fespace, elem_geom[dim-1], FaceType::BOUNDARY);
+      serac::ElementRestriction trial_boundary_dofs(&trial_fespace, elem_geom[dim-1], FaceType::BOUNDARY);
+
+      std::vector< DoF > test_vdofs(test_boundary_dofs.nodes_per_elem * test_boundary_dofs.components);
+      std::vector< DoF > trial_vdofs(trial_boundary_dofs.nodes_per_elem * trial_boundary_dofs.components);
+
+      auto num_bdr_elements = static_cast<uint32_t>(trial_fespace.GetNFbyType(mfem::FaceType::Boundary));
+      for (uint32_t e = 0; e < num_bdr_elements; e++) {
+        for (uint64_t i = 0; i < test_boundary_dofs.dof_info.dim[1]; i++) {
+          auto test_dof = test_boundary_dofs.dof_info(e, i);
+
+          for (uint64_t j = 0; j < trial_boundary_dofs.dof_info.dim[1]; j++) {
+            auto trial_dof = trial_boundary_dofs.dof_info(e, j);
+
+            for (uint64_t k = 0; k < test_boundary_dofs.components; k++) {
+              for (uint64_t l = 0; l < trial_boundary_dofs.components; l++) {
+
+                uint32_t test_global_id = uint32_t(test_boundary_dofs.GetVDof(test_dof, k).index());
+                uint32_t trial_global_id = uint32_t(trial_boundary_dofs.GetVDof(trial_dof, l).index());
+                uint32_t test_local_id = uint32_t(test_boundary_dofs.components * i + k);
+                uint32_t trial_local_id = uint32_t(trial_boundary_dofs.components * j + l);
+
+                ElemInfo info {
+                  test_global_id,
+                  trial_global_id,
+                  test_local_id,
+                  trial_local_id,
+                  e,
+                  test_dof.sign() * trial_dof.sign(),
+                  on_boundary
+                };
+
+                infos.push_back(info);
+
+              }
+            }
+          }
         }
       }
+
     }
 
     // sorting the ElemInfos by row and column groups the different contributions

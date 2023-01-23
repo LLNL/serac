@@ -43,6 +43,8 @@ struct DoF {
   // all values are immutable unsigned integers
   const uint64_t bits;
 
+  DoF() : bits{} {}
+
   DoF(uint64_t index, uint64_t sign = 0, uint64_t orientation = 0) : 
     bits((sign & 0x1ULL << sign_shift) + ((orientation & 0x7ULL) << orientation_shift) + index)
   {}
@@ -91,16 +93,19 @@ namespace serac {
     ElementRestriction(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type elem_geom);
     ElementRestriction(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom, FaceType type);
 
-    uint64_t ESize();
-    uint64_t LSize();
+    uint64_t ESize() const;
+    uint64_t LSize() const;
+
+    DoF GetVDof(DoF node, uint64_t component) const;
     void Gather(const mfem::Vector & L_vector, mfem::Vector & E_vector) const;
     void ScatterAdd(const mfem::Vector & E_vector, mfem::Vector & L_vector) const;
 
     uint64_t esize;
     uint64_t lsize;
     uint64_t components;
+    uint64_t num_nodes;
     uint64_t num_elements;
-    uint64_t dofs_per_elem;
+    uint64_t nodes_per_elem;
 
     Array2D<DoF> dof_info;
 
