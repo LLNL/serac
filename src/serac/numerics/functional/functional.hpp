@@ -304,21 +304,6 @@ public:
     // kernels, must be fixed before merging!
     auto * geom = new serac::GeometricFactors(&domain, Q, elem_geom[domain.Dimension()]);
 
-    //for (int i = 0; i < geom->X.Size(); i++) {
-    //  double v1 = geom->X[i];
-    //  double v2 = geom2->X[i];
-    //  if ((fabs(v2 - v1) / fabs(v1)) > 1.0e-12) {
-    //    std::cout << "X[" << i << "]: " << v1 << " vs. " << v2 << std::endl;
-    //  }
-    //}
-    //for (int i = 0; i < geom->J.Size(); i++) {
-    //  double v1 = geom->J[i];
-    //  double v2 = geom2->J[i];
-    //  if ((fabs(v2 - v1) / fabs(v1)) > 1.0e-12) {
-    //    std::cout << "J[" << i << "]: " << fabs(v2 - v1) / fabs(v1) << std::endl;
-    //  }
-    //}
-
     auto selected_trial_spaces = serac::make_tuple(serac::get<args>(trial_spaces)...);
 
     domain_integrals_.emplace_back(test{}, selected_trial_spaces, num_elements, geom->J, geom->X, Dimension<dim>{},
@@ -348,7 +333,7 @@ public:
 
     // this is a temporary measure to check correctness for the replacement "GeometricFactor"
     // kernels, must be fixed before merging!
-    auto geom = new serac::GeometricFactors(&domain, 2, elem_geom[dim], FaceType::BOUNDARY);
+    auto geom = new serac::GeometricFactors(&domain, Q, elem_geom[dim], FaceType::BOUNDARY);
 
     auto selected_trial_spaces = serac::make_tuple(serac::get<args>(trial_spaces)...);
 
