@@ -603,9 +603,7 @@ private:
       // each element uses the lookup tables to add its contributions
       // to their appropriate locations in the global sparse matrix
 
-      // TODO: reenable if statement
-      //if (form_.domain_integrals_.size() > 0) 
-      {
+      if (form_.domain_integrals_.size() > 0) {
         auto& K_elem = form_.element_gradients_[which_argument];
         auto& LUT    = lookup_tables.element_nonzero_LUT;
 
@@ -613,9 +611,6 @@ private:
         for (auto& domain : form_.domain_integrals_) {
           domain.ComputeElementGradients(view(K_elem), which_argument);
         }
-
-        write_to_file(K_elem, "K_elem.dat");
-        write_to_file(LUT, "element_LUT.dat");
 
         for (axom::IndexType e = 0; e < K_elem.shape()[0]; e++) {
           for (axom::IndexType i = 0; i < K_elem.shape()[1]; i++) {
@@ -637,9 +632,6 @@ private:
         for (auto& boundary : form_.bdr_integrals_) {
           boundary.ComputeElementGradients(view(K_belem), which_argument);
         }
-
-        write_to_file(K_belem, "K_belem.dat");
-        write_to_file(LUT, "boundary_element_LUT.dat");
 
         for (axom::IndexType e = 0; e < K_belem.shape()[0]; e++) {
           for (axom::IndexType i = 0; i < K_belem.shape()[1]; i++) {
