@@ -54,10 +54,8 @@ int main(int argc, char* argv[]) {
 
   temperature = initial_temperature;
 
-  auto fec = std::unique_ptr< mfem::FiniteElementCollection >(new mfem::L2_FECollection(p, dim));
-
   FiniteElementState gamma(
-      StateManager::newState(FiniteElementState::Options{.order = p, .coll = std::move(fec), .name = "gamma"}));
+      StateManager::newState(FiniteElementState::Options{.order = p, .vector_dim = 3, .name = "gamma"}));
 
   // orient fibers vary based on provided function:
   //
@@ -149,8 +147,8 @@ int main(int argc, char* argv[]) {
   constexpr int TEMPERATURE_INDEX = 0;
   constexpr int GAMMA_INDEX       = 1;
 
-  solid_solver.setParameter(temperature, TEMPERATURE_INDEX);
-  solid_solver.setParameter(gamma, GAMMA_INDEX);
+  solid_solver.setParameter(TEMPERATURE_INDEX, temperature);
+  solid_solver.setParameter(GAMMA_INDEX, gamma);
 
   double density = 1.0;
   double E = 1.0e-1; // 1e-2

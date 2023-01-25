@@ -102,8 +102,7 @@ int main(int argc, char* argv[])
   orderParam = max_order_param;
 
   // Parameter 2
-  auto fec = std::unique_ptr<mfem::FiniteElementCollection>(new mfem::L2_FECollection(p, dim));
-  FiniteElementState gammaParam(StateManager::newState(FiniteElementState::Options{.order = p, .coll = std::move(fec), .name = "gammaParam"}));
+  FiniteElementState gammaParam(StateManager::newState(FiniteElementState::Options{.order = p, .vector_dim = 1, .name = "gammaParam"}));
 
   int lceArrangementTag = 1;
   auto gammaFunc = [lceArrangementTag](const mfem::Vector& x, double) -> double 
@@ -170,8 +169,7 @@ int main(int argc, char* argv[])
   gammaParam.project(gammaCoef);
 
   // Paremetr 3
-  auto fec2 = std::unique_ptr<mfem::FiniteElementCollection>(new mfem::L2_FECollection(p, dim));
-  FiniteElementState etaParam(StateManager::newState(FiniteElementState::Options{.order = p, .coll = std::move(fec2), .name = "etaParam"}));
+  FiniteElementState etaParam(StateManager::newState(FiniteElementState::Options{.order = p, .vector_dim = 1, .name = "etaParam"}));
   auto etaFunc = [](const mfem::Vector& /*x*/, double) -> double { return 0.0; };
   mfem::FunctionCoefficient etaCoef(etaFunc);
   etaParam.project(etaCoef);
@@ -181,9 +179,9 @@ int main(int argc, char* argv[])
   constexpr int GAMMA_INDEX = 1;
   constexpr int ETA_INDEX   = 2;
 
-  solid_solver.setParameter(orderParam, ORDER_INDEX);
-  solid_solver.setParameter(gammaParam, GAMMA_INDEX);
-  solid_solver.setParameter(etaParam, ETA_INDEX);
+  solid_solver.setParameter(ORDER_INDEX, orderParam);
+  solid_solver.setParameter(GAMMA_INDEX, gammaParam);
+  solid_solver.setParameter(ETA_INDEX, etaParam);
 
   auto param_data = solid_solver.createQuadratureDataBuffer(initial_state);
   solid_solver.setMaterial(DependsOn<ORDER_INDEX, GAMMA_INDEX, ETA_INDEX>{}, lceMat, param_data);
