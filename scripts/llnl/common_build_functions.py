@@ -355,7 +355,8 @@ def build_and_test_host_config(test_root, host_config, report_to_stdout=False, e
     return 0
 
 
-def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs, report_to_stdout = False, extra_cmake_options = ""):
+def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs, report_to_stdout = False,
+                                extra_cmake_options = "", skip_install=False):
     host_configs = get_host_configs_for_current_machine(prefix, use_generated_host_configs)
     if len(host_configs) == 0:
         log_failure(prefix,"[ERROR: No host configs found at %s]" % prefix)
@@ -374,7 +375,7 @@ def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs, r
         build_dir = get_build_dir(test_root, host_config)
 
         start_time = time.time()
-        if build_and_test_host_config(test_root, host_config, report_to_stdout, extra_cmake_options) == 0:
+        if build_and_test_host_config(test_root, host_config, report_to_stdout, extra_cmake_options, skip_install) == 0:
             ok.append(host_config)
             log_success(build_dir, "[Success: Built host-config: {0}]".format(host_config), timestamp)
         else:
@@ -459,6 +460,8 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = 
         os.mkdir(prefix)
     if not short_path:
         prefix = pjoin(prefix, timestamp)
+    if not os.path.exists(prefix):
+        os.mkdir(prefix)
 
     # create a mirror
     uberenv_create_mirror(prefix, spec, "", mirror_dir)
