@@ -53,8 +53,7 @@ public:
    * @note The @p Dimension parameters are used to assist in the deduction of the dim template parameter
    */
   template <int dim, typename test, typename... trials, typename lambda_type, typename qpt_data_type = void>
-  BoundaryIntegral(test, serac::tuple<trials...>, size_t num_elements, const mfem::Vector& J, const mfem::Vector& X,
-                   const mfem::Vector& N, Dimension<dim>, lambda_type&& qf, std::vector<int> active_arguments)
+  BoundaryIntegral(test, serac::tuple<trials...>, size_t num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<dim>, lambda_type&& qf, std::vector<int> active_arguments)
   {
     static_assert(((trials::family == Family::H1) && ...),
                   "Error: boundary integrals currently only support H1 trial spaces");
@@ -81,9 +80,9 @@ public:
     if constexpr (exec == ExecutionSpace::CPU) {
       KernelConfig<Q, geometry, test, trials...> eval_config;
 
-      evaluation_ = EvaluationKernel{eval_config, J, X, N, num_elements, qf};
+      evaluation_ = EvaluationKernel{eval_config, J, X, num_elements, qf};
 
-      for_constexpr<num_active_trial_spaces>([this, num_elements, quadrature_points_per_element, &J, &X, &N, &qf,
+      for_constexpr<num_active_trial_spaces>([this, num_elements, quadrature_points_per_element, &J, &X, &qf,
                                               eval_config](auto index) {
         // allocate memory for the derivatives of the q-function at each quadrature point
         //
@@ -96,7 +95,7 @@ public:
         ExecArrayView<derivative_type, 2, exec> qf_derivatives(ptr.get(), num_elements, quadrature_points_per_element);
 
         evaluation_with_AD_[index] =
-            EvaluationKernel{DerivativeWRT<index>{}, eval_config, qf_derivatives, J, X, N, num_elements, qf};
+            EvaluationKernel{DerivativeWRT<index>{}, eval_config, qf_derivatives, J, X, num_elements, qf};
 
         // note: this lambda function captures ptr by-value to extend its lifetime
         //                            vvv

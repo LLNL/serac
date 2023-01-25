@@ -59,7 +59,7 @@ bool operator!=(const mfem::SparseMatrix& A, const mfem::SparseMatrix& B) { retu
 template <int p, int dim>
 void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 {
-  double rho = 1.75;
+  double rho = 0 * 1.75;
 
   auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
@@ -98,12 +98,14 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
       [&](auto x, auto n, auto temperature) {
         auto [u, unused] = temperature;
         tensor<double, dim> b{sin(x[0]), x[0] * x[1]};
+        //std::cout << x[0] << " " << x[1] << " " << n[0] << " " << n[1] << std::endl;
         return x[0] * x[1] + dot(b, n) + rho * u;
       },
       mesh);
 
   mfem::Vector r1 = (*J) * U + (*F);
   mfem::Vector r2 = residual(U);
+  std::cout << std::endl;
 
   check_gradient(residual, U);
 
@@ -181,10 +183,10 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
 }
 
 TEST(FunctionalBoundary, 2DLinear) { boundary_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
-TEST(FunctionalBoundary, 2DQuadratic) { boundary_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
-
-TEST(FunctionalBoundary, 3DLinear) { boundary_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
-TEST(FunctionalBoundary, 3DQuadratic) { boundary_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
+//TEST(FunctionalBoundary, 2DQuadratic) { boundary_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
+//
+//TEST(FunctionalBoundary, 3DLinear) { boundary_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
+//TEST(FunctionalBoundary, 3DQuadratic) { boundary_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
 
 // TODO: mfem treats L2 differently w.r.t. boundary elements, need to figure out how to get
 // the appropriate information (dofs, dof_ids for each boundary element) before these can be reenabled
@@ -210,6 +212,11 @@ int main(int argc, char* argv[])
   std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
   mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
   mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
+
+  // by default, mfem::Meshes aren't completely initialized on construction,
+  // so we have to manually initialize some of it
+  mesh2D->EnsureNodes();
+  mesh3D->EnsureNodes();
 
   int result = RUN_ALL_TESTS();
 

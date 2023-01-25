@@ -340,8 +340,8 @@ struct GradientAssemblyLookupTables {
 
                 uint32_t test_global_id = uint32_t(test_boundary_dofs.GetVDof(test_dof, k).index());
                 uint32_t trial_global_id = uint32_t(trial_boundary_dofs.GetVDof(trial_dof, l).index());
-                uint32_t test_local_id = uint32_t(test_boundary_dofs.components * i + k);
-                uint32_t trial_local_id = uint32_t(trial_boundary_dofs.components * j + l);
+                uint32_t test_local_id = uint32_t(k * test_boundary_dofs.nodes_per_elem + i);
+                uint32_t trial_local_id = uint32_t(l * trial_boundary_dofs.nodes_per_elem + j);
 
                 ElemInfo info {
                   test_global_id,

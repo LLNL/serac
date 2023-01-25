@@ -457,28 +457,7 @@ SERAC_HOST_DEVICE constexpr auto operator-(const tensor<S, m, n...>& A, const te
   return C;
 }
 
-/**
- * @brief elementwise multiplication of two tensors
- * @tparam S the underlying type of the (lefthand) argument
- * @tparam T the underlying type of the (righthand) argument
- * @tparam n integers describing the tensor shape
- * @param[in] A one of the tensors to be multiplied
- * @param[in] B one of the tensors to be multiplied
- */
-template <typename S, typename T, int... n>
-SERAC_HOST_DEVICE constexpr auto elementwise_multiply(const tensor<S, n...>& A, const tensor<T, n...>& B)
-{
-  using U = decltype(S{} * T{});
-  tensor<U, n...> AB{};
 
-  const S* A_ptr  = reinterpret_cast<const S*>(&A);
-  const T* B_ptr  = reinterpret_cast<const T*>(&B);
-  U*       AB_ptr = reinterpret_cast<U*>(&AB);
-  for (int i = 0; i < (n * ...); i++) {
-    AB_ptr[i] = A_ptr[i] * B_ptr[i];
-  }
-  return AB;
-}
 
 /**
  * @brief compound assignment (+) on tensors
@@ -914,6 +893,32 @@ SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m, n, p, q>& A, const tenso
     }
   }
   return AB;
+}
+
+template < typename T>
+auto cross(const tensor<T,3,2> & A) { 
+  return tensor<T,3>{
+    A(1,0)*A(2,1)-A(2,0)*A(1,1),
+    A(2,0)*A(0,1)-A(0,0)*A(2,1),
+    A(0,0)*A(1,1)-A(1,0)*A(0,1)
+  };
+}
+
+template < typename T>
+auto cross(const tensor<T,2,1> & v) { 
+  return tensor<T,2>{v(1,0), -v(0,0)};
+}
+
+template < typename T >
+auto cross(const tensor<T,2> & v) { return tensor<T,2>{v[1], -v[0]}; }
+
+template < typename S, typename T >
+auto cross(const tensor<S,3> & u, const tensor<T,3> & v) { 
+  return tensor< decltype(S{} * T{}), 3 >{
+    u(1)*v(2)-u(2)*v(1),
+    u(2)*v(0)-u(0)*v(2),
+    u(0)*v(1)-u(1)*v(0)
+  };
 }
 
 /**

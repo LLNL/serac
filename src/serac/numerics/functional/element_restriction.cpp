@@ -354,7 +354,9 @@ Array2D<DoF> GetFaceDofs(const mfem::FiniteElementSpace* fes, mfem::Geometry::Ty
       //       it doesn't return the dofs in the official orientation
       //       for 2D meshes (?).
       if (mesh->Dimension() == 2) {
-        fes->GetEdgeDofs(f, dofs);
+        fes->GetFaceDofs(f, dofs);
+        //fes->GetEdgeDofs(f, dofs);
+        //std::cout << dofs[0] << " " << dofs[1] << std::endl;
       } else {
         fes->GetFaceDofs(f, dofs);
       }

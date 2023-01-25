@@ -294,22 +294,24 @@ public:
     // the necessary data as references in the integral data structure.
     [[maybe_unused]] auto geom2 = domain.GetGeometricFactors(ir, flags);
 
+    // this is a temporary measure to check correctness for the replacement "GeometricFactor"
+    // kernels, must be fixed before merging!
     auto * geom = new serac::GeometricFactors(&domain, Q, elem_geom[domain.Dimension()]);
 
-    for (int i = 0; i < geom->X.Size(); i++) {
-      double v1 = geom->X[i];
-      double v2 = geom2->X[i];
-      if ((fabs(v2 - v1) / fabs(v1)) > 1.0e-12) {
-        std::cout << "X[" << i << "]: " << v1 << " vs. " << v2 << std::endl;
-      }
-    }
-    for (int i = 0; i < geom->J.Size(); i++) {
-      double v1 = geom->J[i];
-      double v2 = geom2->J[i];
-      if ((fabs(v2 - v1) / fabs(v1)) > 1.0e-12) {
-        std::cout << "J[" << i << "]: " << fabs(v2 - v1) / fabs(v1) << std::endl;
-      }
-    }
+    //for (int i = 0; i < geom->X.Size(); i++) {
+    //  double v1 = geom->X[i];
+    //  double v2 = geom2->X[i];
+    //  if ((fabs(v2 - v1) / fabs(v1)) > 1.0e-12) {
+    //    std::cout << "X[" << i << "]: " << v1 << " vs. " << v2 << std::endl;
+    //  }
+    //}
+    //for (int i = 0; i < geom->J.Size(); i++) {
+    //  double v1 = geom->J[i];
+    //  double v2 = geom2->J[i];
+    //  if ((fabs(v2 - v1) / fabs(v1)) > 1.0e-12) {
+    //    std::cout << "J[" << i << "]: " << fabs(v2 - v1) / fabs(v1) << std::endl;
+    //  }
+    //}
 
     auto selected_trial_spaces = serac::make_tuple(serac::get<args>(trial_spaces)...);
 
@@ -338,22 +340,13 @@ public:
       SLIC_ERROR_ROOT_IF(domain.GetBdrElementType(e) != supported_types[dim], "Mesh contains unsupported element type");
     }
 
-    const mfem::FiniteElement&   el = *test_space_->GetFE(0);
-    const mfem::IntegrationRule& ir = mfem::IntRules.Get(supported_types[dim], el.GetOrder() * 2);
-    constexpr auto flags = mfem::FaceGeometricFactors::COORDINATES | mfem::FaceGeometricFactors::DETERMINANTS |
-                           mfem::FaceGeometricFactors::NORMALS;
-
-    // NOTE: we are relying on MFEM to keep these geometric factors accurate. We store
-    // the necessary data as references in the integral data structure.
-
-    // sam: did mfem ever implement support for the JACOBIANS flag here?
-    auto geom = domain.GetFaceGeometricFactors(ir, flags, mfem::FaceType::Boundary);
-
-    auto tmp = serac::GeometricFactors(&domain, 2, elem_geom[dim], FaceType::BOUNDARY);
+    // this is a temporary measure to check correctness for the replacement "GeometricFactor"
+    // kernels, must be fixed before merging!
+    auto geom = new serac::GeometricFactors(&domain, 2, elem_geom[dim], FaceType::BOUNDARY);
 
     auto selected_trial_spaces = serac::make_tuple(serac::get<args>(trial_spaces)...);
 
-    bdr_integrals_.emplace_back(test{}, selected_trial_spaces, num_bdr_elements, geom->detJ, geom->X, geom->normal,
+    bdr_integrals_.emplace_back(test{}, selected_trial_spaces, num_bdr_elements, geom->J, geom->X,
                                 Dimension<dim>{}, integrand, std::vector<int>{args...});
   }
 
