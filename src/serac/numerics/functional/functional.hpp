@@ -25,6 +25,9 @@
 #include "serac/numerics/functional/element_restriction.hpp"
 #include "serac/numerics/functional/geometric_factors.hpp"
 
+// TODO: REMOVE
+#include "serac/numerics/functional/debug_print.hpp"
+
 #include <array>
 #include <vector>
 
@@ -225,6 +228,8 @@ public:
       if (compatibleWithFaceRestriction(*trial_space_[i])) {
         G_trial_boundary_[i] = ElementRestriction(trial_fes[i], elem_geom[dim-1], FaceType::BOUNDARY);
 
+        write_to_file(G_trial_boundary_[i].dof_info, "G_trial_boundary_" + std::to_string(i) + ".dat");
+
         input_E_boundary_[i].SetSize(int(G_trial_boundary_[i].ESize()), mfem::Device::GetMemoryType());
       }
 
@@ -241,9 +246,10 @@ public:
 
     // for now, limitations in mfem prevent us from implementing surface integrals for Hcurl test/trial space
     if (compatibleWithFaceRestriction(*test_space_)) {
-      G_test_boundary_ = test_space_->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC,
-                                                         mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
-      output_E_boundary_.SetSize(G_test_boundary_->Height(), mfem::Device::GetMemoryType());
+      G_test_boundary_ = ElementRestriction(test_fes, elem_geom[dim-1], FaceType::BOUNDARY);
+      //G_test_boundary_ = test_space_->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC,
+      //                                                   mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
+      output_E_boundary_.SetSize(int(G_test_boundary_.ESize()), mfem::Device::GetMemoryType());
     }
 
     output_E_.SetSize(G_test_->Height(), mfem::Device::GetMemoryType());
@@ -431,7 +437,7 @@ public:
       output_L_boundary_ = 0.0;
 
       // scatter-add to compute residuals on the local processor
-      G_test_boundary_->MultTranspose(output_E_boundary_, output_L_boundary_);
+      G_test_boundary_.ScatterAdd(output_E_boundary_, output_L_boundary_);
 
       output_L_ += output_L_boundary_;
     }
@@ -493,7 +499,7 @@ public:
       output_L_boundary_ = 0.0;
 
       // scatter-add to compute residuals on the local processor
-      G_test_boundary_->MultTranspose(output_E_boundary_, output_L_boundary_);
+      G_test_boundary_.ScatterAdd(output_E_boundary_, output_L_boundary_);
 
       output_L_ += output_L_boundary_;
     }
@@ -596,7 +602,10 @@ private:
 
       // each element uses the lookup tables to add its contributions
       // to their appropriate locations in the global sparse matrix
-      if (form_.domain_integrals_.size() > 0) {
+
+      // TODO: reenable if statement
+      //if (form_.domain_integrals_.size() > 0) 
+      {
         auto& K_elem = form_.element_gradients_[which_argument];
         auto& LUT    = lookup_tables.element_nonzero_LUT;
 
@@ -604,6 +613,9 @@ private:
         for (auto& domain : form_.domain_integrals_) {
           domain.ComputeElementGradients(view(K_elem), which_argument);
         }
+
+        write_to_file(K_elem, "K_elem.dat");
+        write_to_file(LUT, "element_LUT.dat");
 
         for (axom::IndexType e = 0; e < K_elem.shape()[0]; e++) {
           for (axom::IndexType i = 0; i < K_elem.shape()[1]; i++) {
@@ -626,6 +638,9 @@ private:
           boundary.ComputeElementGradients(view(K_belem), which_argument);
         }
 
+        write_to_file(K_belem, "K_belem.dat");
+        write_to_file(LUT, "boundary_element_LUT.dat");
+
         for (axom::IndexType e = 0; e < K_belem.shape()[0]; e++) {
           for (axom::IndexType i = 0; i < K_belem.shape()[1]; i++) {
             for (axom::IndexType j = 0; j < K_belem.shape()[2]; j++) {
@@ -643,6 +658,8 @@ private:
           mfem::SparseMatrix(lookup_tables.row_ptr.data(), col_ind_copy_.data(), values, form_.output_L_.Size(),
                              form_.input_L_[which_argument].Size(), sparse_matrix_frees_graph_ptrs,
                              sparse_matrix_frees_values_ptr, col_ind_is_sorted);
+
+      write_to_file(J_local, "J.mtx");
 
       auto* R = form_.test_space_->Dof_TrueDof_Matrix();
 
@@ -758,7 +775,7 @@ private:
    * @brief Operator that converts local (current rank) DOF values to per-boundary element DOF values
    * for the test space
    */
-  const mfem::Operator* G_test_boundary_;
+  ElementRestriction G_test_boundary_;
 
   /**
    * @brief Operator that converts local (current rank) DOF values to per-boundary element DOF values
