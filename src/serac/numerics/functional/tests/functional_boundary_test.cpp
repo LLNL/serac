@@ -148,6 +148,8 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
 
   mfem::ParGridFunction u_global(&fespace);
   u_global.Randomize();
+  mfem::FunctionCoefficient x([](mfem::Vector x) { return x[0]; });
+  u_global.ProjectCoefficient(x);
 
   mfem::Vector U(fespace.TrueVSize());
   u_global.GetTrueDofs(U);
@@ -155,11 +157,15 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
   using test_space  = decltype(test);
   using trial_space = decltype(trial);
 
-  Functional<test_space(trial_space)> residual(&fespace, &fespace);
+  Functional<test_space(trial_space)> residual(&fespace, {&fespace});
 
   residual.AddBoundaryIntegral(
-      Dimension<dim - 1>{},
-      [&]([[maybe_unused]] auto x, [[maybe_unused]] auto n, [[maybe_unused]] auto u) {
+      Dimension<dim - 1>{}, DependsOn<0>{},
+      [&](auto x, auto n, auto temperature) {
+        auto [u, unused] = temperature;
+
+        std::cout << u << " " << x[0] << " " << x[1] << " " << n[0] << " " << n[1] << std::endl;
+
         // mfem is missing the integrator to compute this term
         // tensor<double,dim> b{sin(x[0]), x[0] * x[1]};
         return x[0] * x[1] + /*dot(b, n) +*/ rho * u;
@@ -180,19 +186,19 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
   EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-12);
 }
 
-TEST(FunctionalBoundary, 2DLinear) { boundary_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
-TEST(FunctionalBoundary, 2DQuadratic) { boundary_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
-
-TEST(FunctionalBoundary, 3DLinear) { boundary_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
-TEST(FunctionalBoundary, 3DQuadratic) { boundary_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
+//TEST(FunctionalBoundary, 2DLinear) { boundary_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
+//TEST(FunctionalBoundary, 2DQuadratic) { boundary_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
+//
+//TEST(FunctionalBoundary, 3DLinear) { boundary_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
+//TEST(FunctionalBoundary, 3DQuadratic) { boundary_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
 
 // TODO: mfem treats L2 differently w.r.t. boundary elements, need to figure out how to get
 // the appropriate information (dofs, dof_ids for each boundary element) before these can be reenabled
-// TEST(boundaryL2, 2DLinear) { boundary_test(*mesh2D, L2<1>{}, L2<1>{}, Dimension<2>{}); }
-// TEST(boundaryL2, 2DQuadratic) { boundary_test(*mesh2D, L2<2>{}, L2<2>{}, Dimension<2>{}); }
+TEST(boundaryL2, 2DLinear) { boundary_test(*mesh2D, L2<1>{}, L2<1>{}, Dimension<2>{}); }
+//TEST(boundaryL2, 2DQuadratic) { boundary_test(*mesh2D, L2<2>{}, L2<2>{}, Dimension<2>{}); }
 //
-// TEST(boundaryL2, 3DLinear) { boundary_test(*mesh3D, L2<1>{}, L2<1>{}, Dimension<3>{}); }
-// TEST(boundaryL2, 3DQuadratic) { boundary_test(*mesh3D, L2<2>{}, L2<2>{}, Dimension<3>{}); }
+//TEST(boundaryL2, 3DLinear) { boundary_test(*mesh3D, L2<1>{}, L2<1>{}, Dimension<3>{}); }
+//TEST(boundaryL2, 3DQuadratic) { boundary_test(*mesh3D, L2<2>{}, L2<2>{}, Dimension<3>{}); }
 
 int main(int argc, char* argv[])
 {

@@ -123,15 +123,11 @@ template <typename T, ExecutionSpace exec>
 ExecArray<T, 3, exec> allocateMemoryForBdrElementGradients(const mfem::ParFiniteElementSpace& trial_fes,
                                                            const mfem::ParFiniteElementSpace& test_fes)
 {
-  if (compatibleWithFaceRestriction(test_fes) && compatibleWithFaceRestriction(trial_fes)) {
-    auto* test_BE  = test_fes.GetBE(0);
-    auto* trial_BE = trial_fes.GetBE(0);
-    return {static_cast<size_t>(trial_fes.GetNFbyType(mfem::FaceType::Boundary)),
-            static_cast<size_t>(test_BE->GetDof() * test_fes.GetVDim()),
-            static_cast<size_t>(trial_BE->GetDof() * trial_fes.GetVDim())};
-  } else {
-    return {0, 0, 0};
-  }
+  auto* test_BE  = test_fes.GetBE(0);
+  auto* trial_BE = trial_fes.GetBE(0);
+  return {static_cast<size_t>(trial_fes.GetNFbyType(mfem::FaceType::Boundary)),
+          static_cast<size_t>(test_BE->GetDof() * test_fes.GetVDim()),
+          static_cast<size_t>(trial_BE->GetDof() * trial_fes.GetVDim())};
 }
 
 /// @overload
@@ -261,11 +257,6 @@ struct GradientAssemblyLookupTables {
    */
   GradientAssemblyLookupTables(const mfem::ParFiniteElementSpace& test_fespace,
                                const mfem::ParFiniteElementSpace& trial_fespace)
-      : element_nonzero_LUT(static_cast<size_t>(trial_fespace.GetNE()),
-                            static_cast<size_t>(test_fespace.GetFE(0)->GetDof() * test_fespace.GetVDim()),
-                            static_cast<size_t>(trial_fespace.GetFE(0)->GetDof() * trial_fespace.GetVDim())),
-        bdr_element_nonzero_LUT(
-            allocateMemoryForBdrElementGradients<SignedIndex, ExecutionSpace::CPU>(trial_fespace, test_fespace))
   {
     int dim = test_fespace.GetMesh()->Dimension();
     mfem::Geometry::Type elem_geom[4] = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT, mfem::Geometry::SQUARE, mfem::Geometry::CUBE};
@@ -316,6 +307,13 @@ struct GradientAssemblyLookupTables {
           }
         }
       }
+
+      element_nonzero_LUT.resize(
+        num_elements, 
+        test_dofs.nodes_per_elem * test_dofs.components,
+        trial_dofs.nodes_per_elem * trial_dofs.components
+      );
+
     }
 
     {
@@ -360,6 +358,12 @@ struct GradientAssemblyLookupTables {
           }
         }
       }
+
+      bdr_element_nonzero_LUT.resize(
+        num_bdr_elements, 
+        test_boundary_dofs.nodes_per_elem * test_boundary_dofs.components,
+        trial_boundary_dofs.nodes_per_elem * trial_boundary_dofs.components
+      );
 
     }
 

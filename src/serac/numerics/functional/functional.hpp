@@ -225,13 +225,8 @@ public:
       P_trial_[i] = trial_space_[i]->GetProlongationMatrix();
       G_trial_[i] = ElementRestriction(trial_fes[i], elem_geom[dim]);
 
-      if (compatibleWithFaceRestriction(*trial_space_[i])) {
-        G_trial_boundary_[i] = ElementRestriction(trial_fes[i], elem_geom[dim-1], FaceType::BOUNDARY);
-
-        write_to_file(G_trial_boundary_[i].dof_info, "G_trial_boundary_" + std::to_string(i) + ".dat");
-
-        input_E_boundary_[i].SetSize(int(G_trial_boundary_[i].ESize()), mfem::Device::GetMemoryType());
-      }
+      G_trial_boundary_[i] = ElementRestriction(trial_fes[i], elem_geom[dim-1], FaceType::BOUNDARY);
+      input_E_boundary_[i].SetSize(int(G_trial_boundary_[i].ESize()), mfem::Device::GetMemoryType());
 
       input_L_[i].SetSize(P_trial_[i]->Height(), mfem::Device::GetMemoryType());
       input_E_[i].SetSize(int(G_trial_[i].ESize()), mfem::Device::GetMemoryType());
@@ -241,18 +236,12 @@ public:
     }
 
     P_test_ = test_space_->GetProlongationMatrix();
-    G_test_ = test_space_->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC);
-    SLIC_ERROR_IF(!G_test_, "Couldn't retrieve element restriction operator for test space");
+    G_test_ = ElementRestriction(test_fes, elem_geom[dim]);
 
-    // for now, limitations in mfem prevent us from implementing surface integrals for Hcurl test/trial space
-    if (compatibleWithFaceRestriction(*test_space_)) {
-      G_test_boundary_ = ElementRestriction(test_fes, elem_geom[dim-1], FaceType::BOUNDARY);
-      //G_test_boundary_ = test_space_->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC,
-      //                                                   mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
-      output_E_boundary_.SetSize(int(G_test_boundary_.ESize()), mfem::Device::GetMemoryType());
-    }
-
-    output_E_.SetSize(G_test_->Height(), mfem::Device::GetMemoryType());
+    G_test_boundary_ = ElementRestriction(test_fes, elem_geom[dim-1], FaceType::BOUNDARY);
+    output_E_boundary_.SetSize(int(G_test_boundary_.ESize()), mfem::Device::GetMemoryType());
+    
+    output_E_.SetSize(int(G_test_.ESize()), mfem::Device::GetMemoryType());
 
     output_L_boundary_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
 
@@ -260,13 +249,19 @@ public:
 
     output_T_.SetSize(test_fes->GetTrueVSize(), mfem::Device::GetMemoryType());
 
-    auto num_elements          = static_cast<size_t>(test_space_->GetNE());
-    auto ndof_per_test_element = static_cast<size_t>(test_space_->GetFE(0)->GetDof() * test_space_->GetVDim());
+    auto num_elements          = static_cast<size_t>(G_test_.num_elements);
+    auto ndof_per_test_element = static_cast<size_t>(G_test_.nodes_per_elem * G_test_.components);
+
+    auto num_bdr_elements          = static_cast<size_t>(G_test_boundary_.num_elements);
+    auto ndof_per_test_bdr_element = static_cast<size_t>(G_test_boundary_.nodes_per_elem * G_test_boundary_.components);
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
       auto ndof_per_trial_element =
-          static_cast<size_t>(trial_space_[i]->GetFE(0)->GetDof() * trial_space_[i]->GetVDim());
+          static_cast<size_t>(G_trial_[i].nodes_per_elem * G_trial_[i].components);
+      auto ndof_per_trial_bdr_element =
+          static_cast<size_t>(G_trial_boundary_[i].nodes_per_elem * G_trial_boundary_[i].components);
+
       element_gradients_[i] = ExecArray<double, 3, exec>(num_elements, ndof_per_trial_element, ndof_per_test_element);
-      bdr_element_gradients_[i] = allocateMemoryForBdrElementGradients<double, exec>(*test_space_, *trial_space_[i]);
+      bdr_element_gradients_[i] = ExecArray<double, 3, exec>(num_bdr_elements, ndof_per_trial_bdr_element, ndof_per_test_bdr_element);
     }
   }
 
@@ -315,7 +310,6 @@ public:
   template <int dim, int... args, typename lambda>
   void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain)
   {
-    // TODO: fix mfem::FaceGeometricFactors
     auto num_bdr_elements = domain.GetNBE();
     if (num_bdr_elements == 0) return;
 
@@ -401,7 +395,7 @@ public:
       }
 
       // scatter-add to compute residuals on the local processor
-      G_test_->MultTranspose(output_E_, output_L_);
+      G_test_.ScatterAdd(output_E_, output_L_);
     }
 
     if (bdr_integrals_.size() > 0) {
@@ -459,14 +453,12 @@ public:
       }
 
       // scatter-add to compute residuals on the local processor
-      G_test_->MultTranspose(output_E_, output_L_);
+      G_test_.ScatterAdd(output_E_, output_L_);
     }
 
     if (bdr_integrals_.size() > 0) {
       for (uint32_t i = 0; i < num_trial_spaces; i++) {
-        if (compatibleWithFaceRestriction(*trial_space_[i])) {
-          G_trial_boundary_[i].Gather(input_L_[i], input_E_boundary_[i]);
-        }
+        G_trial_boundary_[i].Gather(input_L_[i], input_E_boundary_[i]);
       }
 
       output_E_boundary_ = 0.0;
@@ -727,7 +719,7 @@ private:
    * @brief Operator that converts local (current rank) DOF values to per-element DOF values
    * for the test space
    */
-  const mfem::Operator* G_test_;
+  ElementRestriction G_test_;
 
   /**
    * @brief Operator that converts true (global) DOF values to local (current rank) DOF values

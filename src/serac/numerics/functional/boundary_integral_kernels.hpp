@@ -96,6 +96,17 @@ struct QFunctionArgument<H1<p, c>, Dimension<dim>> {
   using type = serac::tuple<tensor<double, c>, tensor<double, c, dim>>;  ///< what will be passed to the q-function
 };
 
+template <int p, int dim>
+struct QFunctionArgument<L2<p, 1>, Dimension<dim>> {
+  using type = serac::tuple<double, tensor<double, dim>>;  ///< what will be passed to the q-function
+};
+
+/// @overload
+template <int p, int c, int dim>
+struct QFunctionArgument<L2<p, c>, Dimension<dim>> {
+  using type = serac::tuple<tensor<double, c>, tensor<double, c, dim>>;  ///< what will be passed to the q-function
+};
+
 template <int i, int dim, typename... trials, typename lambda>
 auto get_derivative_type(lambda qf)
 {
