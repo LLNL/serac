@@ -77,7 +77,7 @@ GeometricFactors::GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry
 
   // NB: we only want the number of elements with the specified
   // geometry, which is not the same as mesh->GetNE() in general
-  int num_elements = int(restriction.dof_info.dim[0]);
+  int num_elements = int(restriction.dof_info.shape()[0]);
 
   X = mfem::Vector(num_elements * qpts_per_elem * spatial_dim);
   J = mfem::Vector(num_elements * qpts_per_elem * spatial_dim * geometry_dim);
@@ -128,7 +128,7 @@ GeometricFactors::GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry
 
   // NB: we only want the number of elements with the specified
   // geometry, which is not the same as mesh->GetNE() in general
-  int num_elements = int(restriction.dof_info.dim[0]);
+  int num_elements = int(restriction.dof_info.shape()[0]);
 
   X = mfem::Vector(num_elements * qpts_per_elem * spatial_dim);
   J = mfem::Vector(num_elements * qpts_per_elem * spatial_dim * geometry_dim);

@@ -210,7 +210,7 @@ std::vector<Array2D<int> > geom_local_face_dofs(int p)
   return output;
 }
 
-Array2D<DoF> GetElementRestriction(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type geom)
+axom::Array<DoF, 2, axom::MemorySpace::Host> GetElementRestriction(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type geom)
 {
   std::vector<DoF> elem_dofs;
   mfem::Mesh*      mesh         = fes->GetMesh();
@@ -265,10 +265,12 @@ Array2D<DoF> GetElementRestriction(const mfem::FiniteElementSpace* fes, mfem::Ge
 
   uint64_t dofs_per_elem = elem_dofs.size() / n;
 
-  return Array2D<DoF>(std::move(elem_dofs), n, dofs_per_elem);
+  axom::Array<DoF, 2, axom::MemorySpace::Host> output({n, dofs_per_elem});
+  std::memcpy(output.data(), elem_dofs.data(), sizeof(DoF) * n * dofs_per_elem);
+  return output;
 }
 
-Array2D<DoF> GetFaceDofs(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom, FaceType type)
+axom::Array<DoF, 2, axom::MemorySpace::Host> GetFaceDofs(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom, FaceType type)
 {
   std::vector<DoF> face_dofs;
   mfem::Mesh*      mesh         = fes->GetMesh();
@@ -380,7 +382,9 @@ Array2D<DoF> GetFaceDofs(const mfem::FiniteElementSpace* fes, mfem::Geometry::Ty
 
   uint64_t dofs_per_face = face_dofs.size() / n;
 
-  return Array2D<DoF>(std::move(face_dofs), n, dofs_per_face);
+  axom::Array<DoF, 2, axom::MemorySpace::Host> output({n, dofs_per_face});
+  std::memcpy(output.data(), face_dofs.data(), sizeof(DoF) * n * dofs_per_face);
+  return output;
 }
 
 namespace serac {
@@ -393,8 +397,8 @@ ElementRestriction::ElementRestriction(const mfem::FiniteElementSpace* fes, mfem
   lsize = uint64_t(fes->GetVSize());
   components = uint64_t(fes->GetVDim());
   num_nodes = lsize / components;
-  num_elements = dof_info.dim[0];
-  nodes_per_elem = dof_info.dim[1];
+  num_elements = uint64_t(dof_info.shape()[0]);
+  nodes_per_elem = uint64_t(dof_info.shape()[1]);
   esize = num_elements * nodes_per_elem * components;
 }
 
@@ -406,8 +410,8 @@ ElementRestriction::ElementRestriction(const mfem::FiniteElementSpace* fes, mfem
   lsize = uint64_t(fes->GetVSize());
   components = uint64_t(fes->GetVDim());
   num_nodes = lsize / components;
-  num_elements = dof_info.dim[0];
-  nodes_per_elem = dof_info.dim[1];
+  num_elements = uint64_t(dof_info.shape()[0]);
+  nodes_per_elem = uint64_t(dof_info.shape()[1]);
   esize = num_elements * nodes_per_elem * components;
 }
 

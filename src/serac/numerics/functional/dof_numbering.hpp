@@ -286,10 +286,10 @@ struct GradientAssemblyLookupTables {
 
       auto num_elements     = static_cast<uint32_t>(trial_fespace.GetNE());
       for (uint32_t e = 0; e < num_elements; e++) {
-        for (uint64_t i = 0; i < test_dofs.dof_info.dim[1]; i++) {
+        for (uint64_t i = 0; i < uint64_t(test_dofs.dof_info.shape()[1]); i++) {
           auto test_dof = test_dofs.dof_info(e, i);
 
-          for (uint64_t j = 0; j < trial_dofs.dof_info.dim[1]; j++) {
+          for (uint64_t j = 0; j < uint64_t(trial_dofs.dof_info.shape()[1]); j++) {
             auto trial_dof = trial_dofs.dof_info(e, j);
 
             for (uint64_t k = 0; k < test_dofs.components; k++) {
@@ -329,10 +329,10 @@ struct GradientAssemblyLookupTables {
 
       auto num_bdr_elements = static_cast<uint32_t>(trial_fespace.GetNFbyType(mfem::FaceType::Boundary));
       for (uint32_t e = 0; e < num_bdr_elements; e++) {
-        for (uint64_t i = 0; i < test_boundary_dofs.dof_info.dim[1]; i++) {
+        for (uint64_t i = 0; i < uint64_t(test_boundary_dofs.dof_info.shape()[1]); i++) {
           auto test_dof = test_boundary_dofs.dof_info(e, i);
 
-          for (uint64_t j = 0; j < trial_boundary_dofs.dof_info.dim[1]; j++) {
+          for (uint64_t j = 0; j < uint64_t(trial_boundary_dofs.dof_info.shape()[1]); j++) {
             auto trial_dof = trial_boundary_dofs.dof_info(e, j);
 
             for (uint64_t k = 0; k < test_boundary_dofs.components; k++) {

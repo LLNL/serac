@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "mfem.hpp"
+#include "axom/core.hpp"
 
 inline bool isH1(const mfem::FiniteElementSpace& fes)
 {
@@ -107,7 +108,7 @@ namespace serac {
     uint64_t num_elements;
     uint64_t nodes_per_elem;
 
-    Array2D<DoF> dof_info;
+    axom::Array<DoF, 2, axom::MemorySpace::Host > dof_info;
 
     mfem::Ordering::Type ordering;
   };
