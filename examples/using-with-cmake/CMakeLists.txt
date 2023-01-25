@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.14)
 
 project(serac_example LANGUAGES C CXX)
 
+if(ENABLE_CUDA)
+   enable_language(CUDA)
+endif()
+
 include(CMakeFindDependencyMacro)
 find_dependency(serac REQUIRED NO_DEFAULT_PATH PATHS "${SERAC_DIR}/lib/cmake")
 
