@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -26,6 +26,17 @@ namespace serac {
  */
 using GeneralCoefficient = variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
 
+/// @brief The type of a finite element basis function
+/// @note TODO This class is used instead of the Family class from functional due to incompatibilities with Vector
+/// expression templates and the dual number class.
+enum class ElementType
+{
+  H1,     ///< Nodal scalar-valued basis functions
+  HCURL,  ///< Nedelec (continuous tangent) vector-valued basis functions
+  HDIV,   ///< Raviart-Thomas (continuous normal) vector-valued basis functions
+  L2      ///< Discontinuous scalar-valued basis functions
+};
+
 /**
  * @brief Class for encapsulating the data associated with a vector derived
  * from a MFEM finite element space. Specifically, it contains the information
@@ -51,14 +62,14 @@ public:
      * Defaults to scalar valued spaces.
      */
     int vector_dim = 1;
+
     /**
-     * @brief The FECollection to use - defaults to an H1_FECollection
+     * @brief Enum denoting type of basis functions to use
+     *
+     * Options are H1, HCURL, HDIV, or L2.
      */
-    std::unique_ptr<mfem::FiniteElementCollection> coll = {};
-    /**
-     * @brief The DOF ordering that should be used interally by MFEM
-     */
-    mfem::Ordering::Type ordering = mfem::Ordering::byVDIM;
+    ElementType element_type = ElementType::H1;
+
     /**
      * @brief The name of the field encapsulated by the state object
      */
@@ -69,27 +80,24 @@ public:
    * @brief Main constructor for building a new finite element vector
    * @param[in] mesh The problem mesh (object does not take ownership)
    * @param[in] options The options specified, namely those relating to the order of the problem,
-   * the dimension of the FESpace, the type of FEColl, the DOF ordering that should be used,
-   * and the name of the field
+   * the dimension of the FESpace, the type of basis functions, and the name of the field
    */
   FiniteElementVector(mfem::ParMesh& mesh,
-                      Options&&      options = {
-                          .order = 1, .vector_dim = 1, .coll = {}, .ordering = mfem::Ordering::byVDIM, .name = ""});
+                      Options&& options = {.order = 1, .vector_dim = 1, .element_type = ElementType::H1, .name = ""});
 
   /**
    * @brief Minimal constructor for a FiniteElementVector given a finite element space
-   * @param[in] mesh The problem mesh (object does not take ownership)
    * @param[in] space The space to use for the finite element state. This space is deep copied into the new FE state
    * @param[in] name The name of the field
    */
-  FiniteElementVector(mfem::ParMesh& mesh, const mfem::ParFiniteElementSpace& space, const std::string& name = "");
+  FiniteElementVector(const mfem::ParFiniteElementSpace& space, const std::string& name = "");
 
   /**
    * @brief Copy constructor
    *
    * @param[in] rhs The input vector used for construction
    */
-  FiniteElementVector(const FiniteElementVector& rhs) : FiniteElementVector(rhs.mesh_.get(), *rhs.space_, rhs.name_) {}
+  FiniteElementVector(const FiniteElementVector& rhs) : FiniteElementVector(*rhs.space_, rhs.name_) {}
 
   /**
    * @brief Move construct a new Finite Element Vector object

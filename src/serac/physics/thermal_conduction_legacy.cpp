@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -19,16 +19,15 @@ constexpr int NUM_FIELDS = 1;
 ThermalConductionLegacy::ThermalConductionLegacy(int order, const SolverOptions& options, const std::string& name,
                                                  mfem::ParMesh* pmesh)
     : BasePhysics(NUM_FIELDS, order, name, pmesh),
-      temperature_(StateManager::newState(FiniteElementState::Options{.order      = order,
-                                                                      .vector_dim = 1,
-                                                                      .ordering   = mfem::Ordering::byNODES,
-                                                                      .name = detail::addPrefix(name, "temperature")},
-                                          sidre_datacoll_id_)),
+      temperature_(StateManager::newState(
+          FiniteElementState::Options{.order = order, .vector_dim = 1, .name = detail::addPrefix(name, "temperature")},
+          sidre_datacoll_id_)),
       residual_(temperature_.space().TrueVSize()),
-      ode_(temperature_.space().TrueVSize(), {.u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
+      ode_(temperature_.space().TrueVSize(),
+           {.time = ode_time_point_, .u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
            nonlin_solver_, bcs_)
 {
-  states_.push_back(temperature_);
+  states_.push_back(&temperature_);
 
   nonlin_solver_ = mfem_ext::EquationSolver(mesh_.GetComm(), options.T_lin_options, options.T_nonlin_options);
   nonlin_solver_.SetOperator(residual_);

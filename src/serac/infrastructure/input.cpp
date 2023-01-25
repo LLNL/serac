@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -60,7 +60,7 @@ std::string findMeshFilePath(const std::string& mesh_path, const std::string& in
   }
 
   // Failed to find mesh file
-  std::string msg = axom::fmt::format("Input file: Given mesh file does not exist: {0}", mesh_path);
+  std::string msg = axom::fmt::format("Input file: Given mesh file does not exist: '{0}'", mesh_path);
   SLIC_ERROR_ROOT(msg);
   return "";
 }

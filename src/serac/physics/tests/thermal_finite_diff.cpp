@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -42,15 +42,6 @@ TEST(Thermal, FiniteDifference)
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1, 2};
 
-  // Construct and initialized the user-defined conductivity to be used as a differentiable parameter in
-  // the thermal conduction physics module.
-  FiniteElementState user_defined_conductivity(
-      StateManager::newState(FiniteElementState::Options{.order = 1, .name = "parameterized_conductivity"}));
-
-  double conductivity_value = 1.2;
-
-  user_defined_conductivity = conductivity_value;
-
   // We must know the index of the parameter finite element state in our parameter pack to take sensitivities.
   // As we only have one parameter in this example, the index is zero.
   constexpr int conductivity_parameter_index = 0;
@@ -60,11 +51,15 @@ TEST(Thermal, FiniteDifference)
   // Note that we now include an extra template parameter indicating the finite element space for the parameterized
   // field, in this case the thermal conductivity. We also pass an array of finite element states for each of the
   // requested parameterized fields.
-  HeatTransfer<p, dim, Parameters<H1<1> > > thermal_solver(Thermal::defaultQuasistaticOptions(), "thermal_functional");
-  thermal_solver.setParameter(user_defined_conductivity, 0);
+  HeatTransfer<p, dim, Parameters<H1<1> > > thermal_solver(heat_transfer::default_static_options, "thermal_functional");
+
+  auto user_defined_conductivity = thermal_solver.generateParameter("user_defined_conductivity", 0);
+
+  double conductivity_value  = 1.2;
+  *user_defined_conductivity = conductivity_value;
 
   // Construct a potentially user-defined parameterized material and send it to the thermal module
-  Thermal::ParameterizedLinearIsotropicConductor mat;
+  heat_transfer::ParameterizedLinearIsotropicConductor mat;
   thermal_solver.setMaterial(DependsOn<0>{}, mat);
 
   // Define the function for the initial temperature and boundary condition
@@ -75,11 +70,11 @@ TEST(Thermal, FiniteDifference)
   thermal_solver.setTemperature(bdr_temp);
 
   // Define a constant source term
-  Thermal::ConstantSource source{1.0};
+  heat_transfer::ConstantSource source{1.0};
   thermal_solver.setSource(source);
 
   // Set the flux term to zero for testing code paths
-  Thermal::ConstantFlux flux_bc{0.0};
+  heat_transfer::ConstantFlux flux_bc{0.0};
   thermal_solver.setFluxBCs(flux_bc);
 
   // Finalize the data structures
@@ -99,7 +94,7 @@ TEST(Thermal, FiniteDifference)
 
   // Construct a dummy adjoint load (this would come from a QOI downstream).
   // This adjoint load is equivalent to a discrete L1 norm on the temperature.
-  serac::FiniteElementDual              adjoint_load(*mesh, thermal_solver.temperature().space(), "adjoint_load");
+  serac::FiniteElementDual              adjoint_load(thermal_solver.temperature().space(), "adjoint_load");
   std::unique_ptr<mfem::HypreParVector> assembled_vector(adjoint_load_form.ParallelAssemble());
   adjoint_load = *assembled_vector;
 
@@ -107,26 +102,26 @@ TEST(Thermal, FiniteDifference)
   thermal_solver.solveAdjoint(adjoint_load);
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
-  [[maybe_unused]] auto& sensitivity = thermal_solver.computeSensitivity<conductivity_parameter_index>();
+  [[maybe_unused]] auto& sensitivity = thermal_solver.computeSensitivity(conductivity_parameter_index);
 
   // Perform finite difference on each conduction value
   // to check if computed qoi sensitivity is consistent
   // with finite difference on the temperature
   double eps = 1.0e-4;
-  for (int i = 0; i < user_defined_conductivity.gridFunction().Size(); ++i) {
+  for (int i = 0; i < user_defined_conductivity->gridFunction().Size(); ++i) {
     // Perturb the conductivity
-    user_defined_conductivity(i) = conductivity_value + eps;
+    (*user_defined_conductivity)(i) = conductivity_value + eps;
 
     thermal_solver.advanceTimestep(dt);
     mfem::ParGridFunction temperature_plus = thermal_solver.temperature().gridFunction();
 
-    user_defined_conductivity(i) = conductivity_value - eps;
+    (*user_defined_conductivity)(i) = conductivity_value - eps;
 
     thermal_solver.advanceTimestep(dt);
     mfem::ParGridFunction temperature_minus = thermal_solver.temperature().gridFunction();
 
     // Reset to the original conductivity value
-    user_defined_conductivity(i) = conductivity_value;
+    (*user_defined_conductivity)(i) = conductivity_value;
 
     // Finite difference to compute sensitivity of temperature with respect to conductivity
     mfem::ParGridFunction dtemp_dconductivity(&thermal_solver.temperature().space());
@@ -142,6 +137,124 @@ TEST(Thermal, FiniteDifference)
     SLIC_INFO(axom::fmt::format("dqoi_dconductivity: {}", dqoi_dconductivity));
     SLIC_INFO(axom::fmt::format("sensitivity: {}", sensitivity(i)));
     EXPECT_NEAR((sensitivity(i) - dqoi_dconductivity) / dqoi_dconductivity, 0.0, 1.0e-3);
+  }
+}
+
+TEST(HeatTransfer, FiniteDifferenceShape)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  int serial_refinement   = 0;
+  int parallel_refinement = 0;
+
+  // Create DataStore
+  axom::sidre::DataStore datastore;
+  serac::StateManager::initialize(datastore, "thermal_parameterized_shape_sensitivities");
+
+  // Construct the appropriate dimension mesh and give it to the data store
+  std::string filename = SERAC_REPO_DIR "/data/meshes/star.mesh";
+
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
+  serac::StateManager::setMesh(std::move(mesh));
+
+  constexpr int p   = 1;
+  constexpr int dim = 2;
+
+  // Define a boundary attribute set
+  std::set<int> ess_bdr = {1};
+
+  double shape_displacement_value = 1.0;
+
+  // The nonlinear solver must have tight tolerances to ensure at least one Newton step occurs
+  SolverOptions options = {
+      DirectSolverOptions{},
+      NonlinearSolverOptions{.rel_tol = 1.0e-8, .abs_tol = 1.0e-14, .max_iter = 10, .print_level = 1}};
+
+  // Construct a functional-based thermal solver
+  HeatTransfer<p, dim> thermal_solver(options, "thermal_functional_shape");
+
+  heat_transfer::LinearIsotropicConductor mat(1.0, 1.0, 1.0);
+
+  thermal_solver.setMaterial(mat);
+
+  FiniteElementState shape_displacement(thermal_solver.shapeDisplacement());
+
+  shape_displacement = shape_displacement_value;
+  thermal_solver.setShapeDisplacement(shape_displacement);
+
+  // Define the function for the initial displacement and boundary condition
+  auto one = [](const mfem::Vector&, double) -> double { return 1.0; };
+
+  // Set the initial displacement and boundary condition
+  thermal_solver.setTemperatureBCs(ess_bdr, one);
+  thermal_solver.setTemperature(one);
+
+  heat_transfer::ConstantSource source{1.0};
+  thermal_solver.setSource(source);
+
+  // Finalize the data structures
+  thermal_solver.completeSetup();
+
+  // Perform the quasi-static solve
+  double dt = 1.0;
+  thermal_solver.advanceTimestep(dt);
+
+  // Output the sidre-based plot files
+  thermal_solver.outputState();
+
+  // Make up an adjoint load which can also be viewed as a
+  // sensitivity of some qoi with respect to temperature
+  mfem::ParLinearForm adjoint_load_form(&thermal_solver.temperature().space());
+  adjoint_load_form = 1.0;
+
+  // Construct a dummy adjoint load (this would come from a QOI downstream).
+  // This adjoint load is equivalent to a discrete L1 norm on the temperature.
+  serac::FiniteElementDual              adjoint_load(thermal_solver.temperature().space(), "adjoint_load");
+  std::unique_ptr<mfem::HypreParVector> assembled_vector(adjoint_load_form.ParallelAssemble());
+  adjoint_load = *assembled_vector;
+
+  // Solve the adjoint problem
+  thermal_solver.solveAdjoint(adjoint_load);
+
+  // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
+  [[maybe_unused]] auto& sensitivity = thermal_solver.computeShapeSensitivity();
+
+  // Perform finite difference on each shape displacement value
+  // to check if computed qoi sensitivity is consistent
+  // with finite difference on the temperature
+  double eps = 1.0e-6;
+  for (int i = 0; i < shape_displacement.Size(); ++i) {
+    // Perturb the shape field
+    shape_displacement(i) = shape_displacement_value + eps;
+    thermal_solver.setShapeDisplacement(shape_displacement);
+
+    thermal_solver.advanceTimestep(dt);
+    mfem::ParGridFunction temperature_plus = thermal_solver.temperature().gridFunction();
+
+    shape_displacement(i) = shape_displacement_value - eps;
+    thermal_solver.setShapeDisplacement(shape_displacement);
+
+    thermal_solver.advanceTimestep(dt);
+    mfem::ParGridFunction temperature_minus = thermal_solver.temperature().gridFunction();
+
+    // Reset to the original bulk modulus value
+    shape_displacement(i) = shape_displacement_value;
+    thermal_solver.setShapeDisplacement(shape_displacement);
+
+    // Finite difference to compute sensitivity of displacement with respect to bulk modulus
+    mfem::ParGridFunction dtemp_dshape(&thermal_solver.temperature().space());
+    for (int i2 = 0; i2 < temperature_plus.Size(); ++i2) {
+      dtemp_dshape(i2) = (temperature_plus(i2) - temperature_minus(i2)) / (2.0 * eps);
+    }
+
+    // Compute numerical value of sensitivity of qoi with respect to bulk modulus
+    // by taking the inner product between adjoint load and displacement sensitivity
+    double dqoi_dshape = adjoint_load_form(dtemp_dshape);
+
+    // See if these are similar
+    SLIC_INFO(axom::fmt::format("dqoi_dshape: {}", dqoi_dshape));
+    SLIC_INFO(axom::fmt::format("sensitivity: {}", sensitivity(i)));
+    EXPECT_NEAR((sensitivity(i) - dqoi_dshape) / std::max(dqoi_dshape, 1.0e-3), 0.0, 1.0e-4);
   }
 }
 

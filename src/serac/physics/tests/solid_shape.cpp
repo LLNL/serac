@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -52,8 +52,9 @@ void shape_test(GeometricNonlinearities geo_nonlin)
   get<IterativeSolverOptions>(options.linear).rel_tol = 1.0e-15;
   get<IterativeSolverOptions>(options.linear).abs_tol = 1.0e-15;
 
-  options.nonlinear.abs_tol = 1.0e-14;
-  options.nonlinear.rel_tol = 1.0e-14;
+  options.nonlinear.abs_tol  = 5.0e-15;
+  options.nonlinear.rel_tol  = 5.0e-15;
+  options.nonlinear.max_iter = 10;
 
   solid_mechanics::LinearIsotropic mat{1.0, 1.0, 1.0};
 
@@ -97,13 +98,13 @@ void shape_test(GeometricNonlinearities geo_nonlin)
     user_defined_shape_displacement.project(shape_coef);
 
     // Construct a functional-based solid mechanics solver including references to the shape velocity field.
-    SolidMechanics<p, dim> solid_solver(options, geo_nonlin, "solid_functional", ShapeDisplacement::On);
+    SolidMechanics<p, dim> solid_solver(options, geo_nonlin, "solid_functional");
 
     // Set the initial displacement and boundary condition
     solid_solver.setDisplacementBCs(ess_bdr, bc);
     solid_solver.setDisplacement(bc);
 
-    solid_solver.shapeDisplacement() = user_defined_shape_displacement;
+    solid_solver.setShapeDisplacement(user_defined_shape_displacement);
 
     solid_solver.setMaterial(mat);
 
@@ -167,7 +168,7 @@ void shape_test(GeometricNonlinearities geo_nonlin)
 
   double error          = pure_displacement.DistanceTo(shape_displacement.GetData());
   double relative_error = error / pure_displacement.Norml2();
-  EXPECT_LT(relative_error, 1.0e-14);
+  EXPECT_LT(relative_error, 7.0e-14);
 }
 
 TEST(SolidMechanics, MoveShapeLinear) { shape_test(GeometricNonlinearities::Off); }

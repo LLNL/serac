@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -43,13 +43,12 @@ SolidLegacy::SolidLegacy(int order, const SolverOptions& options, GeometricNonli
             {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
             nonlin_solver_, bcs_)
 {
-  states_.push_back(velocity_);
-  states_.push_back(displacement_);
-  states_.push_back(adjoint_displacement_);
+  states_.push_back(&velocity_);
+  states_.push_back(&displacement_);
+  states_.push_back(&adjoint_displacement_);
 
   // Initialize the mesh node pointers
   reference_nodes_ = std::make_unique<mfem::ParGridFunction>(&displacement_.space());
-  mesh_.EnsureNodes();
   mesh_.GetNodes(*reference_nodes_);
 
   reference_nodes_->GetTrueDofs(x_);
@@ -450,7 +449,7 @@ FiniteElementDual& SolidLegacy::shearModulusSensitivity(mfem::ParFiniteElementSp
   if (!shear_sensitivity_form_ || shear_space) {
     SLIC_ERROR_IF(!shear_space,
                   axom::fmt::format("Finite element space is required for first shear sensitivity call."));
-    shear_sensitivity_      = std::make_unique<FiniteElementDual>(mesh_, *shear_space);
+    shear_sensitivity_      = std::make_unique<FiniteElementDual>(*shear_space);
     shear_sensitivity_form_ = std::make_unique<mfem::ParLinearForm>(&shear_sensitivity_->space());
 
     shear_sensitivity_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*shear_sensitivity_coef_, 2, 2));
@@ -490,7 +489,7 @@ FiniteElementDual& SolidLegacy::bulkModulusSensitivity(mfem::ParFiniteElementSpa
   // element space
   if (!bulk_sensitivity_form_ || bulk_space) {
     SLIC_ERROR_IF(!bulk_space, axom::fmt::format("Finite element space is required for first bulk sensitivity call."));
-    bulk_sensitivity_      = std::make_unique<FiniteElementDual>(mesh_, *bulk_space);
+    bulk_sensitivity_      = std::make_unique<FiniteElementDual>(*bulk_space);
     bulk_sensitivity_form_ = std::make_unique<mfem::ParLinearForm>(&bulk_sensitivity_->space());
 
     bulk_sensitivity_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*bulk_sensitivity_coef_, 2, 2));

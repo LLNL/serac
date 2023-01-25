@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -79,31 +79,31 @@ public:
     if constexpr (exec == ExecutionSpace::CPU) {
       KernelConfig<Q, geometry, test, trials...> eval_config;
 
-      evaluation_ = EvaluationKernel{eval_config, J, X, num_elements, qf, qdata};
+      evaluation_ = EvaluationKernel{NoDifferentiation{}, eval_config, J, X, num_elements, qf, qdata};
 
       for_constexpr<num_active_trial_spaces>([this, num_elements, quadrature_points_per_element, &J, &X, &qf, qdata,
-                                              eval_config](auto i) {
+                                              eval_config](auto index) {
         // allocate memory for the derivatives of the q-function at each quadrature point
         //
         // Note: ptrs' lifetime is managed in an unusual way! It is captured by-value in the
         // action_of_gradient functor below to augment the reference count, and extend its lifetime to match
         // that of the DomainIntegral that allocated it.
-        using which_trial_space = typename serac::tuple_element<i, serac::tuple<trials...> >::type;
-        using derivative_type   = decltype(get_derivative_type<i, dim, trials...>(qf, (*qdata)(0, 0)));
+        using which_trial_space = typename serac::tuple_element<index, serac::tuple<trials...> >::type;
+        using derivative_type   = decltype(get_derivative_type<index, dim, trials...>(qf, (*qdata)(0, 0)));
         auto ptr = accelerator::make_shared_array<exec, derivative_type>(num_elements * quadrature_points_per_element);
         ExecArrayView<derivative_type, 2, exec> qf_derivatives(ptr.get(), num_elements, quadrature_points_per_element);
 
-        evaluation_with_AD_[i] =
-            EvaluationKernel{DerivativeWRT<i>{}, eval_config, qf_derivatives, J, X, num_elements, qf, qdata};
+        evaluation_with_AD_[index] =
+            EvaluationKernel{DerivativeWRT<index>{}, eval_config, qf_derivatives, J, X, num_elements, qf, qdata};
 
         // note: this lambda function captures ptr by-value to extend its lifetime
         //                        vvv
-        action_of_gradient_[i] = [ptr, qf_derivatives, num_elements, J](const mfem::Vector& dU, mfem::Vector& dR) {
+        action_of_gradient_[index] = [ptr, qf_derivatives, num_elements, J](const mfem::Vector& dU, mfem::Vector& dR) {
           domain_integral::action_of_gradient_kernel<geometry, test, which_trial_space, Q>(dU, dR, qf_derivatives, J,
                                                                                            num_elements);
         };
 
-        element_gradient_[i] = [qf_derivatives, num_elements, J](CPUArrayView<double, 3> K_e) {
+        element_gradient_[index] = [qf_derivatives, num_elements, J](CPUArrayView<double, 3> K_e) {
           domain_integral::element_gradient_kernel<geometry, test, which_trial_space, Q>(K_e, qf_derivatives, J,
                                                                                          num_elements);
         };

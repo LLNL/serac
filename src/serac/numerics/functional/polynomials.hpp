@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -34,8 +34,6 @@ SERAC_HOST_DEVICE constexpr tensor<T, n> GaussLobattoNodes(T a = T(0), T b = T(1
 /**
  * @brief The positions (in 1D space) of Gauss-Legendre points
  * @tparam n The number of points
- * @param[in] a The left endpoint of the interval
- * @param[in] b The right endpoint of the interval
  * 
  * Mathematica/Wolfram Language code to generate more entries in the table:
  * Do[Print["if constexpr (n == " <> ToString[n] <> ") return " <> ToString[GaussianQuadratureWeights[n, 0, 1, 17][[All, 1]]] <> ";"], {n, 1, 8}] 

@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -77,7 +77,7 @@ bool initialize(MPI_Comm comm)
   slic::setAbortOnError(true);
   slic::setAbortOnWarning(false);
 
-  std::string msg = axom::fmt::format("Logger activated: {0}", loggerName);
+  std::string msg = axom::fmt::format("Logger activated: '{0}'", loggerName);
   SLIC_INFO_ROOT(msg);
   serac::logger::flush();
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -124,8 +124,6 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::BuildIterativeLinearSolve
       auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
       auto par_fes  = amg_options->pfes;
       if (par_fes != nullptr) {
-        SLIC_WARNING_ROOT_IF(par_fes->GetOrdering() == mfem::Ordering::byNODES,
-                             "Attempting to use BoomerAMG with nodal ordering on an elasticity problem.");
         prec_amg->SetElasticityOptions(par_fes);
       }
       prec_amg->SetPrintLevel(lin_options.print_level);
@@ -283,7 +281,7 @@ serac::LinearSolverOptions FromInlet<serac::LinearSolverOptions>::operator()(con
     } else if (solver_type == "cg") {
       iter_options.lin_solver = serac::LinearSolver::CG;
     } else {
-      std::string msg = axom::fmt::format("Unknown Linear solver type given: {0}", solver_type);
+      std::string msg = axom::fmt::format("Unknown Linear solver type given: '{0}'", solver_type);
       SLIC_ERROR_ROOT(msg);
     }
     const std::string prec_type = config["prec_type"];
@@ -300,7 +298,7 @@ serac::LinearSolverOptions FromInlet<serac::LinearSolverOptions>::operator()(con
     } else if (prec_type == "BlockILU") {
       iter_options.prec = serac::BlockILUPrec{};
     } else {
-      std::string msg = axom::fmt::format("Unknown preconditioner type given: {0}", prec_type);
+      std::string msg = axom::fmt::format("Unknown preconditioner type given: '{0}'", prec_type);
       SLIC_ERROR_ROOT(msg);
     }
     options = iter_options;
@@ -327,7 +325,7 @@ serac::NonlinearSolverOptions FromInlet<serac::NonlinearSolverOptions>::operator
   } else if (solver_type == "KINLineSearch") {
     options.nonlin_solver = serac::NonlinearSolver::KINBacktrackingLineSearch;
   } else {
-    SLIC_ERROR_ROOT(axom::fmt::format("Unknown nonlinear solver type given: {0}", solver_type));
+    SLIC_ERROR_ROOT(axom::fmt::format("Unknown nonlinear solver type given: '{0}'", solver_type));
   }
   return options;
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -245,6 +245,11 @@ public:
    */
   struct State {
     /**
+     * @brief Time value at which the ODE solver wants to compute a residual
+     */
+    double& time;
+
+    /**
      * @brief Predicted true DOFs
      */
     mfem::Vector& u;
@@ -291,7 +296,7 @@ public:
    * @param[in] u The true DOFs
    * @param[in] du_dt The first time derivative of u
    */
-  void Mult(const mfem::Vector& u, mfem::Vector& du_dt) const { Solve(0.0, u, du_dt); }
+  void Mult(const mfem::Vector& u, mfem::Vector& du_dt) const { Solve(t, 0.0, u, du_dt); }
 
   /**
    * @brief Solves the equation du_dt = f(u + dt * du_dt, t)
@@ -300,7 +305,7 @@ public:
    * @param[in] u The true DOFs
    * @param[in] du_dt The first time derivative of u
    */
-  void ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt) { Solve(dt, u, du_dt); }
+  void ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt) { Solve(t, dt, u, du_dt); }
 
   /**
    * @brief Configures the Dirichlet enforcement method to use
@@ -333,15 +338,16 @@ public:
     }
   }
 
+private:
   /**
-   * @brief Internal implementation used for mfem::TDO::Mult and mfem::TDO::ImplicitSolve
+   * @brief Internal implementation used for mfem::TDO::Mult and mfem::TDO::ImplicitSolve\
+   * @param[in] time The current time
    * @param[in] dt The time step
    * @param[in] u The true DOFs
    * @param[in] du_dt The first time derivative of u
    */
-  virtual void Solve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt) const;
+  virtual void Solve(const double time, const double dt, const mfem::Vector& u, mfem::Vector& du_dt) const;
 
-private:
   /**
    * @brief Set of references to external variables used by residual operator
    */

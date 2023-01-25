@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -10,7 +10,6 @@
 #include <gtest/gtest.h>
 
 #include "serac/numerics/functional/tuple.hpp"
-#include "serac/numerics/functional/tuple_arithmetic.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 
 using namespace serac;
@@ -93,6 +92,37 @@ TEST(TupleArithmeticUnitTests, TensorOutputWithTupleInput)
   auto df1 = dfdp * dp + dfdv * dv + double_dot(dfdL, dL);
 
   EXPECT_NEAR(norm(df1 - df0) / norm(df0), 0.0, 2.0e-8);
+}
+
+TEST(TupleArithmeticUnitTests, ReadTheDocsExample)
+{
+  auto f = [=](auto p, auto v, auto L) {
+    auto strain_rate            = 0.5 * (L + transpose(L));
+    auto stress                 = -p * I + 2 * mu * strain_rate;
+    auto kinetic_energy_density = 0.5 * rho * dot(v, v);
+    return tuple{stress, kinetic_energy_density};
+  };
+
+  [[maybe_unused]] constexpr double p = 3.14;
+  [[maybe_unused]] constexpr tensor v = {{1.0, 2.0, 3.0}};
+  constexpr tensor<double, 3, 3>    L = {{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}}};
+
+  // promote the arguments to dual numbers with make_dual()
+  tuple dual_args = make_dual(tuple{p, v, L});
+
+  // then call the function with the dual arguments
+  //
+  // note: serac::apply is a way to pass an n-tuple to a function that expects n arguments
+  //
+  // i.e. the two following lines have the same effect
+  // f(p, v, L);
+  // serac::apply(f, serac::tuple{p, v, L});
+  auto outputs = apply(f, dual_args);
+
+  // verify that the derivative types are what we expect
+  [[maybe_unused]] tuple<tuple<tensor<double, 3, 3>, zero, tensor<double, 3, 3, 3, 3> >,
+                         tuple<zero, tensor<double, 3>, zero> >
+      gradients = get_gradient(outputs);
 }
 
 int main(int argc, char* argv[])

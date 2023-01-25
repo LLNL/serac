@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -236,6 +236,37 @@ public:
                           int component);
 
   /**
+   * @brief Accessor for getting named finite element state fields from the physics modules
+   *
+   * @param state_name The name of the Finite Element State to retrieve
+   * @return The named Finite Element State
+   */
+  const FiniteElementState& state(const std::string& state_name) override
+  {
+    if (state_name == "displacement") {
+      return displacement_;
+    } else if (state_name == "velocity") {
+      return velocity_;
+    } else if (state_name == "adjoint_displacement") {
+      return adjoint_displacement_;
+    }
+
+    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requestion from solid mechanics module '{}', but it doesn't exist",
+                                      state_name, name_));
+    return displacement_;
+  }
+
+  /**
+   * @brief Get a vector of the finite element state solution variable names
+   *
+   * @return The solution variable names
+   */
+  virtual std::vector<std::string> stateNames() override
+  {
+    return std::vector<std::string>{{"displacement"}, {"velocity"}, {"adjoint_displacement"}};
+  }
+
+  /**
    * @brief Set the traction boundary conditions
    *
    * @param[in] trac_bdr The set of boundary attributes to apply a traction to
@@ -377,8 +408,8 @@ public:
    * boundary condition data for the adjoint problem
    * @return The computed adjoint finite element state
    */
-  virtual const serac::FiniteElementState& solveAdjoint(FiniteElementDual& adjoint_load,
-                                                        FiniteElementDual* dual_with_essential_boundary = nullptr);
+  virtual const serac::FiniteElementState& solveAdjoint(
+      FiniteElementDual& adjoint_load, FiniteElementDual* dual_with_essential_boundary = nullptr) override;
 
   /**
    * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint

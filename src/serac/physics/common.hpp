@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -62,15 +62,6 @@ enum class GeometricNonlinearities
 {
   On, /**< Include geometric nonlinearities */
   Off /**< Do not include geometric nonlinearities */
-};
-
-/**
- * @brief Flag to enable shape diplacement (and its gradient) in a physics module
- */
-enum class ShapeDisplacement
-{
-  On, /**< Allow shape displacement and its gradient */
-  Off /**< Don't allow shape displacement and its gradient */
 };
 
 }  // namespace serac

@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -11,6 +11,8 @@
 #include "axom/config.hpp"
 #include "axom/core.hpp"
 #include "axom/fmt.hpp"
+
+#include "camp/config.hpp"
 
 #ifdef SERAC_USE_CALIPER
 #include "caliper/caliper-config.h"
@@ -89,6 +91,9 @@ std::string about()
 
   // Axom
   about += format("Axom Version:    {0}\n", axom::getVersion());
+
+  // Camp
+  about += format("Camp Version:    {0}\n", CAMP_VERSION);
 
   // Caliper
 #ifdef SERAC_USE_CALIPER
@@ -193,7 +198,6 @@ void printRunInfo()
   std::string infoMsg = axom::fmt::format("\n{:*^80}\n", "Run Information");
 
   infoMsg += axom::fmt::format("{0}: {1}\n", "Version", version());
-
   infoMsg += axom::fmt::format("{0}: {1}\n", "User Name", axom::utilities::getUserName());
   infoMsg += axom::fmt::format("{0}: {1}\n", "Host Name", axom::utilities::getHostName());
 

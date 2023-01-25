@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -82,7 +82,7 @@ TEST(SolidLegacy, Adjoint)
 
   // Make a dummy adjoint load for testing
 
-  FiniteElementDual assembled_adjoint_load(StateManager::mesh(), solid_solver.displacement().space(), "adjoint_load");
+  FiniteElementDual assembled_adjoint_load(solid_solver.displacement().space(), "adjoint_load");
 
   mfem::ParLinearForm adjoint_load(&assembled_adjoint_load.space());
 

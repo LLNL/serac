@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -157,6 +157,37 @@ public:
   {
     therm_solver_.setSpecificHeatCapacity(std::move(cp));
   };
+
+  /**
+   * @brief Accessor for getting named finite element state fields from the physics modules
+   *
+   * @param state_name The name of the Finite Element State to retrieve
+   * @return The named Finite Element State
+   */
+  const FiniteElementState& state(const std::string& state_name) override
+  {
+    if (state_name == "displacement") {
+      return displacement_;
+    } else if (state_name == "velocity") {
+      return velocity_;
+    } else if (state_name == "temperature") {
+      return temperature_;
+    }
+
+    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requestion from solid mechanics module '{}', but it doesn't exist",
+                                      state_name, name_));
+    return displacement_;
+  }
+
+  /**
+   * @brief Get a vector of the finite element state solution variable names
+   *
+   * @return The solution variable names
+   */
+  virtual std::vector<std::string> stateNames() override
+  {
+    return std::vector<std::string>{{"displacement"}, {"velocity"}, {"temperature"}};
+  }
 
   /**
    * @brief Set the temperature state vector from a coefficient

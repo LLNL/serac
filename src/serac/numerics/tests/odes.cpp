@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -238,9 +238,10 @@ int which_kind_of_ode(serac::TimestepMethod m)
 double first_order_ode_test(int nsteps, ode_type type, constraint_type constraint, TimestepMethod timestepper,
                             DirichletEnforcementMethod enforcement)
 {
-  double t           = 0.0;
-  double dt          = 1.0 / nsteps;
-  double previous_dt = -1.0;
+  double t                      = 0.0;
+  double ode_residual_eval_time = 0.0;
+  double dt                     = 1.0 / nsteps;
+  double previous_dt            = -1.0;
   double c0;
 
   mfem::Vector x(3);
@@ -302,7 +303,8 @@ double first_order_ode_test(int nsteps, ode_type type, constraint_type constrain
   EquationSolver solver(MPI_COMM_WORLD, linear_options, nonlinear_options);
   solver.SetOperator(residual);
 
-  FirstOrderODE ode(dummy.space().TrueVSize(), {.u = x, .dt = c0, .du_dt = previous, .previous_dt = previous_dt},
+  FirstOrderODE ode(dummy.space().TrueVSize(),
+                    {.time = ode_residual_eval_time, .u = x, .dt = c0, .du_dt = previous, .previous_dt = previous_dt},
                     solver, bcs);
 
   ode.SetTimestepper(timestepper);

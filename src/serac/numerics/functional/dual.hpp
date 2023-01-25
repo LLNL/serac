@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -30,9 +30,17 @@ struct dual {
   double        value;     ///< the actual numerical value
   gradient_type gradient;  ///< the partial derivatives of value w.r.t. some other quantity
 
-  void operator=(double rhs) {
-    value = rhs;
-    gradient = gradient_type{};
+  /**
+   * @brief Copy assignment operator
+   *
+   * @param b rhs to assign to the dual number value
+   * @return Resulting dual
+   */
+  SERAC_HOST_DEVICE constexpr auto& operator=(double b)
+  {
+    value    = b;
+    gradient = {};
+    return *this;
   }
 };
 
@@ -430,3 +438,5 @@ struct is_dual_number<dual<T> > {
 };
 
 }  // namespace serac
+
+#include "serac/numerics/functional/tuple_tensor_dual_functions.hpp"

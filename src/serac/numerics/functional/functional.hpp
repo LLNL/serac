@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -18,7 +18,6 @@
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/quadrature.hpp"
 #include "serac/numerics/functional/finite_element.hpp"
-#include "serac/numerics/functional/tuple_arithmetic.hpp"
 #include "serac/numerics/functional/domain_integral.hpp"
 #include "serac/numerics/functional/boundary_integral.hpp"
 #include "serac/numerics/functional/dof_numbering.hpp"
@@ -63,9 +62,9 @@ struct differentiate_wrt_this {
 auto differentiate_wrt(const mfem::Vector& v) { return differentiate_wrt_this{v}; }
 
 /**
- * @tparam T a list of types, containing at most 1 `differentiate_wrt_this`
- *
  * @brief given a list of types, this function returns the index that corresponds to the type `dual_vector`.
+ *
+ * @tparam T a list of types, containing at most 1 `differentiate_wrt_this`
  *
  * e.g.
  * @code{.cpp}
@@ -102,33 +101,38 @@ struct Index {
  *
  * @tparam function_space a tag type containing the kind of function space and polynomial order
  * @param mesh the mesh on which the space is defined
+ * @return a pair containing the new finite element space and associated finite element collection
  */
 template <typename function_space>
-mfem::ParFiniteElementSpace* generateParFiniteElementSpace(mfem::ParMesh* mesh)
+std::pair<std::unique_ptr<mfem::ParFiniteElementSpace>, std::unique_ptr<mfem::FiniteElementCollection>>
+generateParFiniteElementSpace(mfem::ParMesh* mesh)
 {
-  const int                      dim = mesh->Dimension();
-  mfem::FiniteElementCollection* fec;
-  const auto                     ordering = mfem::Ordering::byVDIM;
+  const int                                      dim = mesh->Dimension();
+  std::unique_ptr<mfem::FiniteElementCollection> fec;
+  const auto                                     ordering = mfem::Ordering::byNODES;
 
   switch (function_space::family) {
     case Family::H1:
-      fec = new mfem::H1_FECollection(function_space::order, dim);
+      fec = std::make_unique<mfem::H1_FECollection>(function_space::order, dim);
       break;
     case Family::HCURL:
-      fec = new mfem::ND_FECollection(function_space::order, dim);
+      fec = std::make_unique<mfem::ND_FECollection>(function_space::order, dim);
       break;
     case Family::HDIV:
-      fec = new mfem::RT_FECollection(function_space::order, dim);
+      fec = std::make_unique<mfem::RT_FECollection>(function_space::order, dim);
       break;
     case Family::L2:
-      fec = new mfem::L2_FECollection(function_space::order, dim);
+      fec = std::make_unique<mfem::L2_FECollection>(function_space::order, dim);
       break;
     default:
-      return NULL;
+      return std::pair<std::unique_ptr<mfem::ParFiniteElementSpace>, std::unique_ptr<mfem::FiniteElementCollection>>(
+          nullptr, nullptr);
       break;
   }
 
-  return new mfem::ParFiniteElementSpace(mesh, fec, function_space::components, ordering);
+  auto fes = std::make_unique<mfem::ParFiniteElementSpace>(mesh, fec.get(), function_space::components, ordering);
+
+  return std::pair(std::move(fes), std::move(fec));
 }
 
 /// @cond
@@ -139,10 +143,11 @@ class Functional;
 /**
  * @brief Intended to be like @p std::function for finite element kernels
  *
- * That is: you tell it the inputs (trial spaces) for a kernel, and the outputs (test space) like @p std::function
+ * That is: you tell it the inputs (trial spaces) for a kernel, and the outputs (test space) like @p std::function.
+ *
  * For example, this code represents a function that takes an integer argument and returns a double:
  * @code{.cpp}
- * std::function< double(double, int) > my_func;
+ * std::function< double(int) > my_func;
  * @endcode
  * And this represents a function that takes values from an Hcurl field and returns a
  * residual vector associated with an H1 field:
@@ -247,8 +252,8 @@ public:
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
       auto ndof_per_trial_element =
           static_cast<size_t>(trial_space_[i]->GetFE(0)->GetDof() * trial_space_[i]->GetVDim());
-      element_gradients_[i] = ExecArray<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
-      bdr_element_gradients_[i] = allocateMemoryForBdrElementGradients<double, exec>(*trial_space_[i], *test_space_);
+      element_gradients_[i] = ExecArray<double, 3, exec>(num_elements, ndof_per_trial_element, ndof_per_test_element);
+      bdr_element_gradients_[i] = allocateMemoryForBdrElementGradients<double, exec>(*test_space_, *trial_space_[i]);
     }
   }
 
@@ -276,7 +281,7 @@ public:
     }
 
     const mfem::FiniteElement&   el = *test_space_->GetFE(0);
-    const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
+    const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), (Q - 1) * 2);
 
     constexpr auto flags = mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS;
 
@@ -311,8 +316,7 @@ public:
       SLIC_ERROR_ROOT_IF(domain.GetBdrElementType(e) != supported_types[dim], "Mesh contains unsupported element type");
     }
 
-    const mfem::FiniteElement&   el = *test_space_->GetFE(0);
-    const mfem::IntegrationRule& ir = mfem::IntRules.Get(supported_types[dim], el.GetOrder() * 2);
+    const mfem::IntegrationRule& ir = mfem::IntRules.Get(supported_types[dim], (Q - 1) * 2);
     constexpr auto flags = mfem::FaceGeometricFactors::COORDINATES | mfem::FaceGeometricFactors::DETERMINANTS |
                            mfem::FaceGeometricFactors::NORMALS;
 
@@ -586,7 +590,7 @@ private:
         for (axom::IndexType e = 0; e < K_elem.shape()[0]; e++) {
           for (axom::IndexType i = 0; i < K_elem.shape()[1]; i++) {
             for (axom::IndexType j = 0; j < K_elem.shape()[2]; j++) {
-              auto [index, sign] = LUT(e, i, j);
+              auto [index, sign] = LUT(e, j, i);
               values[index] += sign * K_elem(e, i, j);
             }
           }
@@ -607,7 +611,7 @@ private:
         for (axom::IndexType e = 0; e < K_belem.shape()[0]; e++) {
           for (axom::IndexType i = 0; i < K_belem.shape()[1]; i++) {
             for (axom::IndexType j = 0; j < K_belem.shape()[2]; j++) {
-              auto [index, sign] = LUT(e, i, j);
+              auto [index, sign] = LUT(e, j, i);
               values[index] += sign * K_belem(e, i, j);
             }
           }
