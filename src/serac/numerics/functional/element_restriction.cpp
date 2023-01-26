@@ -336,8 +336,16 @@ axom::Array<DoF, 2, axom::MemorySpace::Host> GetFaceDofs(const mfem::FiniteEleme
 
         mfem::Geometry::Type elem_geom = mesh->GetElementGeometry(elem);
 
+        // mfem uses different conventions for boundary element orientations in 2D and 3D.
+        // In 2D, mfem's official edge orientations on the boundary will always be a mix of 
+        // CW and CCW, so we have to discard mfem's orientation information in order
+        // to get a consistent winding.
+        // 
+        // In 3D, mfem does use a consistently CCW winding for boundary faces (I think).
+        int orientation = (mesh->Dimension() == 2 && type == FaceType::BOUNDARY) ? 0 : orientations[i];
+
         // 4. extract only the dofs that correspond to side `i`
-        for (auto k : face_perm(orientations[i])) {
+        for (auto k : face_perm(orientation)) {
           face_dofs.push_back(uint64_t(elem_dof_ids[local_face_dofs[uint32_t(elem_geom)](i, k)]));
         }
       
@@ -352,16 +360,7 @@ axom::Array<DoF, 2, axom::MemorySpace::Host> GetFaceDofs(const mfem::FiniteEleme
 
       mfem::Array<int> dofs;
 
-      // note: although GetFaceDofs does work for 2D and 3D meshes, 
-      //       it doesn't return the dofs in the official orientation
-      //       for 2D meshes (?).
-      if (mesh->Dimension() == 2) {
-        fes->GetFaceDofs(f, dofs);
-        //fes->GetEdgeDofs(f, dofs);
-        //std::cout << dofs[0] << " " << dofs[1] << std::endl;
-      } else {
-        fes->GetFaceDofs(f, dofs);
-      }
+      fes->GetFaceDofs(f, dofs);
 
       if (isHcurl(*fes)) {
         for (int k = 0; k < dofs.Size(); k++) {
