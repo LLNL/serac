@@ -38,13 +38,6 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
       typename std::conditional<components == 1, tensor<double, dim>, tensor<double, components, dim> >::type;
   using qf_input_type = tuple<value_type, derivative_type>;
 
-  /**
-   * @brief this type is used when calling the batched interpolate/integrate
-   *        routines, to provide memory for calculating intermediates
-   */
-  template <int q>
-  using cache_type = tensor<double, 2, n, q>;
-
   /*
 
     interpolation nodes and their associated numbering:
@@ -214,19 +207,17 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
     static constexpr auto B             = calculate_B<apply_weights, q>();
     static constexpr auto G             = calculate_G<apply_weights, q>();
 
-    cache_type<q> A;
-
     tensor<double, c, q, q>      value{};
     tensor<double, c, dim, q, q> gradient{};
 
     // apply the shape functions
     for (int i = 0; i < c; i++) {
-      A[0] = contract<1, 1>(X[i], B);
-      A[1] = contract<1, 1>(X[i], G);
+      auto A0 = contract<1, 1>(X[i], B);
+      auto A1 = contract<1, 1>(X[i], G);
 
-      value(i)       = contract<0, 1>(A[0], B);
-      gradient(i, 0) = contract<0, 1>(A[1], B);
-      gradient(i, 1) = contract<0, 1>(A[0], G);
+      value(i)       = contract<0, 1>(A0, B);
+      gradient(i, 0) = contract<0, 1>(A1, B);
+      gradient(i, 1) = contract<0, 1>(A0, G);
     }
 
     // transpose the quadrature data into a flat tensor of tuples
@@ -269,8 +260,6 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
     static constexpr auto B             = calculate_B<apply_weights, q>();
     static constexpr auto G             = calculate_G<apply_weights, q>();
 
-    cache_type<q> A{};
-
     for (int j = 0; j < ntrial; j++) {
       for (int i = 0; i < c; i++) {
         s_buffer_type source;
@@ -286,10 +275,10 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
           }
         }
 
-        A[0] = contract<1, 0>(source, B) + contract<1, 0>(flux(0), G);
-        A[1] = contract<1, 0>(flux(1), B);
+        auto A0 = contract<1, 0>(source, B) + contract<1, 0>(flux(0), G);
+        auto A1 = contract<1, 0>(flux(1), B);
 
-        element_residual[j * step](i) += contract<0, 0>(A[0], B) + contract<0, 0>(A[1], G);
+        element_residual[j * step](i) += contract<0, 0>(A0, B) + contract<0, 0>(A1, G);
       }
     }
   }

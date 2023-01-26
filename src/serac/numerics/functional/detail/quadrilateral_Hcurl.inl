@@ -44,19 +44,6 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     tensor<double, p, p + 1> y;
   };
 
-  /**
-   * @brief this type is used when calling the batched interpolate/integrate
-   *        routines, to provide memory for calculating intermediates
-   */
-  template <int q>
-  using cache_type = tensor<double, p + 1, q>;
-
-  template <int q>
-  union cache_type_tmp {
-    tensor<double, p + 1, q> x;
-    tensor<double, q, p + 1> y;
-  };
-
   template <int q>
   using cpu_batched_values_type = tensor<tensor<double, 2>, q, q>;
 
@@ -305,21 +292,19 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     constexpr tensor<double, q, p + 1> B2            = calculate_B2<apply_weights, q>();
     constexpr tensor<double, q, p + 1> G2            = calculate_G2<apply_weights, q>();
 
-    cache_type_tmp<q> A;
-
     tensor<double, 2, q, q> value{};
     tensor<double, q, q>    curl{};
 
     // to clarify which contractions correspond to which spatial dimensions
     constexpr int x = 1, y = 0;
 
-    A.x      = contract<x, 1>(element_values.x, B1);
-    value[0] = contract<y, 1>(A.x, B2);
-    curl -= contract<y, 1>(A.x, G2);
+    auto A   = contract<x, 1>(element_values.x, B1);
+    value[0] = contract<y, 1>(A, B2);
+    curl -= contract<y, 1>(A, G2);
 
-    A.y      = contract<y, 1>(element_values.y, B1);
-    value[1] = contract<x, 1>(A.y, B2);
-    curl += contract<x, 1>(A.y, G2);
+    A        = contract<y, 1>(element_values.y, B1);
+    value[1] = contract<x, 1>(A, B2);
+    curl += contract<x, 1>(A, G2);
 
     tensor<tuple<tensor<double, 2>, double>, q * q> qf_inputs;
 
@@ -361,16 +346,14 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
       }
     }
 
-    cache_type_tmp<q> A2;
-
     // to clarify which contractions correspond to which spatial dimensions
     constexpr int x = 1, y = 0;
 
-    A2.x = contract<y, 0>(source[0], B2) - contract<y, 0>(flux, G2);
-    element_residual[0].x += contract<x, 0>(A2.x, B1);
+    auto A = contract<y, 0>(source[0], B2) - contract<y, 0>(flux, G2);
+    element_residual[0].x += contract<x, 0>(A, B1);
 
-    A2.y = contract<x, 0>(source[1], B2) + contract<x, 0>(flux, G2);
-    element_residual[0].y += contract<y, 0>(A2.y, B1);
+    A = contract<x, 0>(source[1], B2) + contract<x, 0>(flux, G2);
+    element_residual[0].y += contract<y, 0>(A, B1);
   }
 
 #if defined(__CUDACC__)

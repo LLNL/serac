@@ -36,16 +36,6 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
       typename std::conditional<components == 1, tensor<double, dim>, tensor<double, components, dim> >::type;
   using qf_input_type = tuple<value_type, derivative_type>;
 
-  /**
-   * @brief this type is used when calling the batched interpolate/integrate
-   *        routines, to provide memory for calculating intermediates
-   */
-  template <int q>
-  struct cache_type {
-    tensor<double, 2, n, n, q> A1;
-    tensor<double, 3, n, q, q> A2;
-  };
-
   SERAC_HOST_DEVICE static constexpr tensor<double, ndof> shape_functions(tensor<double, dim> xi)
   {
     auto N_xi   = GaussLobattoInterpolation<p + 1>(xi[0]);
@@ -198,23 +188,21 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
     static constexpr auto B             = calculate_B<apply_weights, q>();
     static constexpr auto G             = calculate_G<apply_weights, q>();
 
-    cache_type<q> cache;
-
     tensor<double, c, q, q, q>      value{};
     tensor<double, c, dim, q, q, q> gradient{};
 
     for (int i = 0; i < c; i++) {
-      cache.A1[0] = contract<2, 1>(X[i], B);
-      cache.A1[1] = contract<2, 1>(X[i], G);
+      auto A10 = contract<2, 1>(X[i], B);
+      auto A11 = contract<2, 1>(X[i], G);
 
-      cache.A2[0] = contract<1, 1>(cache.A1[0], B);
-      cache.A2[1] = contract<1, 1>(cache.A1[1], B);
-      cache.A2[2] = contract<1, 1>(cache.A1[0], G);
+      auto A20 = contract<1, 1>(A10, B);
+      auto A21 = contract<1, 1>(A11, B);
+      auto A22 = contract<1, 1>(A10, G);
 
-      value(i)       = contract<0, 1>(cache.A2[0], B);
-      gradient(i, 0) = contract<0, 1>(cache.A2[1], B);
-      gradient(i, 1) = contract<0, 1>(cache.A2[2], B);
-      gradient(i, 2) = contract<0, 1>(cache.A2[0], G);
+      value(i)       = contract<0, 1>(A20, B);
+      gradient(i, 0) = contract<0, 1>(A21, B);
+      gradient(i, 1) = contract<0, 1>(A22, B);
+      gradient(i, 2) = contract<0, 1>(A20, G);
     }
 
     // transpose the quadrature data into a flat tensor of tuples
@@ -256,8 +244,6 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
     static constexpr auto B             = calculate_B<apply_weights, q>();
     static constexpr auto G             = calculate_G<apply_weights, q>();
 
-    cache_type<q> cache{};
-
     for (int j = 0; j < ntrial; j++) {
       for (int i = 0; i < c; i++) {
         s_buffer_type source;
@@ -276,14 +262,14 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
           }
         }
 
-        cache.A2[0] = contract<2, 0>(source, B) + contract<2, 0>(flux(0), G);
-        cache.A2[1] = contract<2, 0>(flux(1), B);
-        cache.A2[2] = contract<2, 0>(flux(2), B);
+        auto A20 = contract<2, 0>(source, B) + contract<2, 0>(flux(0), G);
+        auto A21 = contract<2, 0>(flux(1), B);
+        auto A22 = contract<2, 0>(flux(2), B);
 
-        cache.A1[0] = contract<1, 0>(cache.A2[0], B) + contract<1, 0>(cache.A2[1], G);
-        cache.A1[1] = contract<1, 0>(cache.A2[2], B);
+        auto A10 = contract<1, 0>(A20, B) + contract<1, 0>(A21, G);
+        auto A11 = contract<1, 0>(A22, B);
 
-        element_residual[j * step](i) += contract<0, 0>(cache.A1[0], B) + contract<0, 0>(cache.A1[1], G);
+        element_residual[j * step](i) += contract<0, 0>(A10, B) + contract<0, 0>(A11, G);
       }
     }
   }
