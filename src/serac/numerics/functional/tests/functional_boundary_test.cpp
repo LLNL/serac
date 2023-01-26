@@ -164,11 +164,9 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
       [&](auto x, auto /*n*/, auto temperature) {
         auto [u, unused] = temperature;
 
-        //std::cout << u << " " << x[0] << " " << x[1] << " " << n[0] << " " << n[1] << std::endl;
-
         // mfem is missing the integrator to compute this term
         // tensor<double,dim> b{sin(x[0]), x[0] * x[1]};
-        return x[0] * x[1] + /*dot(b, n) +*/ rho * u;
+        return x[0] * x[1] + /* dot(b, n) +*/ rho * u;
       },
       mesh);
 

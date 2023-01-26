@@ -65,6 +65,8 @@ class Functional<double(trials...), exec> {
   static constexpr uint32_t         num_trial_spaces = sizeof...(trials);
   static constexpr auto             Q                = std::max({test::order, trials::order...}) + 1;
 
+  static constexpr mfem::Geometry::Type elem_geom[4] = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT, mfem::Geometry::SQUARE, mfem::Geometry::CUBE};
+
   class Gradient;
 
   // clang-format off
@@ -85,20 +87,18 @@ public:
    */
   Functional(std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes) : trial_space_(trial_fes)
   {
+    int dim = trial_fes[0]->GetMesh()->Dimension();
+
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
       P_trial_[i] = trial_space_[i]->GetProlongationMatrix();
-      G_trial_[i] = trial_space_[i]->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC);
-      SLIC_ERROR_IF(!G_trial_[i], "Couldn't retrieve element restriction operator for trial space");
-
-      if (compatibleWithFaceRestriction(*trial_space_[i])) {
-        G_trial_boundary_[i] = trial_space_[i]->GetFaceRestriction(
-            mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
-
-        input_E_boundary_[i].SetSize(G_trial_boundary_[i]->Height(), mfem::Device::GetMemoryType());
-      }
 
       input_L_[i].SetSize(P_trial_[i]->Height(), mfem::Device::GetMemoryType());
-      input_E_[i].SetSize(G_trial_[i]->Height(), mfem::Device::GetMemoryType());
+
+      G_trial_[i] = ElementRestriction(trial_fes[i], elem_geom[dim]);
+      input_E_[i].SetSize(int(G_trial_[i].ESize()), mfem::Device::GetMemoryType());
+
+      G_trial_boundary_[i] = ElementRestriction(trial_fes[i], elem_geom[dim-1], FaceType::BOUNDARY);
+      input_E_boundary_[i].SetSize(int(G_trial_boundary_[i].ESize()), mfem::Device::GetMemoryType());
 
       // create the gradient operators for each trial space
       grad_.emplace_back(*this, i);
@@ -168,11 +168,9 @@ public:
       SLIC_ERROR_ROOT_IF(domain.GetElementType(e) != supported_types[dim], "Mesh contains unsupported element type");
     }
 
-    const mfem::FiniteElement&   el = *trial_space_[0]->GetFE(0);
-    const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), (Q - 1) * 2);
-
-    constexpr auto flags = mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS;
-    auto           geom  = domain.GetGeometricFactors(ir, flags);
+    // this is a temporary measure to check correctness for the replacement "GeometricFactor"
+    // kernels, must be fixed before merging!
+    auto * geom = new serac::GeometricFactors(&domain, Q, elem_geom[domain.Dimension()]);
 
     auto selected_trial_spaces = serac::make_tuple(serac::get<args>(trial_spaces)...);
 
@@ -203,16 +201,13 @@ public:
       SLIC_ERROR_ROOT_IF(domain.GetBdrElementType(e) != supported_types[dim], "Mesh contains unsupported element type");
     }
 
-    const mfem::IntegrationRule& ir = mfem::IntRules.Get(supported_types[dim], (Q - 1) * 2);
-    constexpr auto flags = mfem::FaceGeometricFactors::COORDINATES | mfem::FaceGeometricFactors::DETERMINANTS |
-                           mfem::FaceGeometricFactors::NORMALS;
-
-    // sam: did mfem ever implement support for the JACOBIANS flag here?
-    auto geom = domain.GetFaceGeometricFactors(ir, flags, mfem::FaceType::Boundary);
+    // this is a temporary measure to check correctness for the replacement "GeometricFactor"
+    // kernels, must be fixed before merging!
+    auto geom = new serac::GeometricFactors(&domain, Q, elem_geom[dim], FaceType::BOUNDARY);
 
     auto selected_trial_spaces = serac::make_tuple(serac::get<args>(trial_spaces)...);
 
-    bdr_integrals_.emplace_back(test{}, selected_trial_spaces, num_bdr_elements, geom->detJ, geom->X, geom->normal,
+    bdr_integrals_.emplace_back(test{}, selected_trial_spaces, num_bdr_elements, geom->J, geom->X,
                                 Dimension<dim>{}, integrand, std::vector<int>{args...});
   }
 
@@ -274,7 +269,7 @@ public:
     output_L_ = 0.0;
     if (domain_integrals_.size() > 0) {
       // get the values for each element on the local processor
-      G_trial_[which]->Mult(input_L_[which], input_E_[which]);
+      G_trial_[which].Gather(input_L_[which], input_E_[which]);
 
       // compute residual contributions at the element level and sum them
 
@@ -289,7 +284,7 @@ public:
 
     if (bdr_integrals_.size() > 0) {
       if (compatibleWithFaceRestriction(*trial_space_[which])) {
-        G_trial_boundary_[which]->Mult(input_L_[which], input_E_boundary_[which]);
+        G_trial_boundary_[which].Gather(input_L_[which], input_E_boundary_[which]);
       }
 
       output_E_boundary_ = 0.0;
@@ -336,7 +331,7 @@ public:
     if (domain_integrals_.size() > 0) {
       // get the values for each element on the local processor
       for (uint32_t i = 0; i < num_trial_spaces; i++) {
-        G_trial_[i]->Mult(input_L_[i], input_E_[i]);
+        G_trial_[i].Gather(input_L_[i], input_E_[i]);
       }
 
       // compute residual contributions at the element level and sum them
@@ -352,9 +347,7 @@ public:
 
     if (bdr_integrals_.size() > 0) {
       for (uint32_t i = 0; i < num_trial_spaces; i++) {
-        if (compatibleWithFaceRestriction(*trial_space_[i])) {
-          G_trial_boundary_[i]->Mult(input_L_[i], input_E_boundary_[i]);
-        }
+        G_trial_boundary_[i].Gather(input_L_[i], input_E_boundary_[i]);
       }
 
       output_E_boundary_ = 0.0;
@@ -458,8 +451,8 @@ private:
 
         for (axom::IndexType e = 0; e < K_elem.shape()[0]; e++) {
           for (axom::IndexType j = 0; j < K_elem.shape()[2]; j++) {
-            auto [index, sign] = LUT(e, j);
-            gradient_L_(static_cast<int>(index)) += sign * K_elem(e, 0, j);
+            auto dof = trial_dofs(e, j);
+            gradient_L_(static_cast<int>(dof.index())) += dof.sign() * K_elem(e, 0, j);
           }
         }
       }
@@ -493,8 +486,6 @@ private:
      * @brief The "parent" @p Functional to calculate gradients with
      */
     Functional<double(trials...), exec>& form_;
-
-    DofNumbering lookup_tables;
 
     uint32_t which_argument;
 
@@ -550,7 +541,7 @@ private:
    * @brief Operator that converts local (current rank) DOF values to per-element DOF values
    * for the trial space
    */
-  const mfem::Operator* G_trial_[num_trial_spaces];
+  ElementRestriction G_trial_[num_trial_spaces];
 
   /**
    * @brief Operator that converts local (current rank) DOF values to per-boundary element DOF values
@@ -562,7 +553,7 @@ private:
    * @brief Operator that converts local (current rank) DOF values to per-boundary element DOF values
    * for the trial space
    */
-  const mfem::Operator* G_trial_boundary_[num_trial_spaces];
+  ElementRestriction G_trial_boundary_[num_trial_spaces];
 
   /**
    * @brief The set of domain integrals (spatial_dim == geometric_dim)
