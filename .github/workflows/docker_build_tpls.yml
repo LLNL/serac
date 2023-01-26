@@ -21,22 +21,22 @@ jobs:
       shell: bash
       run: |
         echo "{name}={branch}" >> $GITHUB_OUTPUT
-        echo "$(echo ${GITHUB_REF#refs/heads/})"
+        $(echo ${GITHUB_REF#refs/heads/})
       id: extract_branch
     - name: Get dockerfile name
       shell: bash
       run: |
         echo "{name}={filename}" >> $GITHUB_OUTPUT
-        $(echo ${DOCKERFILE_PREFIX}${{ matrix.compiler }})"
+        $(echo ${DOCKERFILE_PREFIX}${{ matrix.compiler }})
       id: dockerfile_name
     - name: Get dockerhub repo name
       shell: bash
       run: |
         echo ${REPO}:${{ matrix.compiler }}_`date "+%m-%d-%y_%Hh-%Mm"`
         echo "{name}={repo_plus_tag}" >> $GITHUB_OUTPUT
-        $(echo ${REPO}:${{ matrix.compiler }}_`date "+%m-%d-%y_%Hh-%Mm"`)"
+        $(echo ${REPO}:${{ matrix.compiler }}_`date "+%m-%d-%y_%Hh-%Mm"`)
         echo "{name}={repo_plus_latest}" >> $GITHUB_OUTPUT
-        $(echo ${REPO}:${{ matrix.compiler }}_latest)"
+        $(echo ${REPO}:${{ matrix.compiler }}_latest)
       id: repo_name
 
     - name: Checkout
