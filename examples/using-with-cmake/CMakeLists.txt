@@ -6,15 +6,15 @@ if(ENABLE_CUDA)
    enable_language(CUDA)
 endif()
 
+message(STATUS "CMake Version: ${CMAKE_VERSION}")
+
 include(CMakeFindDependencyMacro)
 find_dependency(serac REQUIRED NO_DEFAULT_PATH PATHS "${SERAC_DIR}/lib/cmake")
 
-# BEGIN FIXME: This is needed to compensate for Conduit using CMake's MPI targets
-#  on CMake 3.15+. This may get solved in a cleaner way down the road in BLT
-if( ${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.15.0" )
-    enable_language(Fortran)
-    find_package(MPI REQUIRED)
-endif()
+# BEGIN FIXME: This is needed to compensate for Conduit using CMake's MPI targets.
+# This may get solved in a cleaner way down the road in BLT
+enable_language(Fortran)
+find_package(MPI REQUIRED)
 # END FIXME
 
 # BEGIN FIXME: Remove this after Umpire releases
