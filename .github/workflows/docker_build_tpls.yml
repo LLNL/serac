@@ -20,7 +20,7 @@ jobs:
     - name: Extract branch name
       shell: bash
       run: |
-        echo "{name}={branch}" >> $GITHUB_OUTPUT
+        echo "{name}=develop" >> $GITHUB_OUTPUT
         $(echo ${GITHUB_REF#refs/heads/})
       id: extract_branch
     - name: Get dockerfile name
