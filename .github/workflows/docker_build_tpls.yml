@@ -20,23 +20,18 @@ jobs:
     - name: Extract branch name
       shell: bash
       run: |
-        echo "{name}=develop" >> $GITHUB_OUTPUT
-        $(echo ${GITHUB_REF#refs/heads/})
+        echo "branch=$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_OUTPUT
       id: extract_branch
     - name: Get dockerfile name
       shell: bash
       run: |
-        echo "{name}={filename}" >> $GITHUB_OUTPUT
-        $(echo ${DOCKERFILE_PREFIX}${{ matrix.compiler }})
+        echo "filename=$(echo ${DOCKERFILE_PREFIX}${{ matrix.compiler }})" >> $GITHUB_OUTPUT
       id: dockerfile_name
     - name: Get dockerhub repo name
       shell: bash
       run: |
-        echo ${REPO}:${{ matrix.compiler }}_`date "+%m-%d-%y_%Hh-%Mm"`
-        echo "{name}={repo_plus_tag}" >> $GITHUB_OUTPUT
-        $(echo ${REPO}:${{ matrix.compiler }}_`date "+%m-%d-%y_%Hh-%Mm"`)
-        echo "{name}={repo_plus_latest}" >> $GITHUB_OUTPUT
-        $(echo ${REPO}:${{ matrix.compiler }}_latest)
+        echo "repo_plus_tag=$(echo ${REPO}:${{ matrix.compiler }}_`date "+%m-%d-%y_%Hh-%Mm"`)" >> $GITHUB_OUTPUT
+        echo "repo_plus_latest=$(echo ${REPO}:${{ matrix.compiler }}_latest)" >> $GITHUB_OUTPUT
       id: repo_name
 
     - name: Checkout
