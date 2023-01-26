@@ -361,6 +361,10 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endif()
         set(AXOM_FOUND TRUE CACHE BOOL "" FORCE)
 
+        # Alias axom builtin thirdparty targets under axom namespace
+        add_library(axom::fmt ALIAS fmt)
+        add_library(axom::cli11 ALIAS cli11)
+
         # Mark the axom includes as "system" and filter unallowed directories
         get_target_property(_dirs axom INTERFACE_INCLUDE_DIRECTORIES)
         list(REMOVE_ITEM _dirs ${PROJECT_SOURCE_DIR})
