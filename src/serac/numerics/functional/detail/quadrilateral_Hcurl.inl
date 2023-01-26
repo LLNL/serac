@@ -356,7 +356,7 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     element_residual[0].y += contract<y, 0>(A, B1);
   }
 
-#if defined(__CUDACC__)
+#if 0
 
   template <int q>
   static SERAC_DEVICE auto interpolate(const dof_type& element_values, const tensor<double, dim, dim>& J,

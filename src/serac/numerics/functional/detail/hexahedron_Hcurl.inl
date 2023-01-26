@@ -459,7 +459,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#if defined(__CUDACC__)
+#if 0
 
   template <int q>
   static SERAC_DEVICE auto interpolate(const dof_type& element_values, const tensor<double, dim, dim>& J,
