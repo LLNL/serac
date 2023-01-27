@@ -116,24 +116,16 @@ public:
 
     output_T_.SetSize(1, mfem::Device::GetMemoryType());
 
+    auto num_elements     = static_cast<size_t>(G_trial_[0].num_elements);
+    auto num_bdr_elements = static_cast<size_t>(G_trial_boundary_[0].num_elements);
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
-      {
-        auto num_elements          = static_cast<size_t>(trial_space_[i]->GetNE());
-        auto ndof_per_test_element = static_cast<size_t>(1);
-        auto ndof_per_trial_element =
-            static_cast<size_t>(trial_space_[i]->GetFE(0)->GetDof() * trial_space_[i]->GetVDim());
-        element_gradients_[i] = ExecArray<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
-      }
+      auto ndof_per_trial_element =
+          static_cast<size_t>(G_trial_[i].nodes_per_elem * G_trial_[i].components);
+      auto ndof_per_trial_bdr_element =
+          static_cast<size_t>(G_trial_boundary_[i].nodes_per_elem * G_trial_boundary_[i].components);
 
-      // note: mfem calls to spaces without boundary elements will segfault, so we guard these setup operations
-      if (compatibleWithFaceRestriction(*trial_space_[i])) {
-        auto num_bdr_elements          = static_cast<size_t>(trial_space_[i]->GetNFbyType(mfem::FaceType::Boundary));
-        auto ndof_per_test_bdr_element = static_cast<size_t>(1);
-        auto ndof_per_trial_bdr_element =
-            static_cast<size_t>(trial_space_[i]->GetBE(0)->GetDof() * trial_space_[i]->GetVDim());
-        bdr_element_gradients_[i] =
-            ExecArray<double, 3, exec>(num_bdr_elements, ndof_per_test_bdr_element, ndof_per_trial_bdr_element);
-      }
+      element_gradients_[i] = ExecArray<double, 3, exec>(num_elements, 1, ndof_per_trial_element);
+      bdr_element_gradients_[i] = ExecArray<double, 3, exec>(num_bdr_elements, 1, ndof_per_trial_bdr_element);
     }
   }
 
@@ -422,7 +414,6 @@ private:
      */
     Gradient(Functional<double(trials...)>& f, uint32_t which = 0)
         : form_(f),
-          lookup_tables(*(f.trial_space_[which])),
           which_argument(which),
           gradient_L_(f.trial_space_[which]->GetVSize())
     {
@@ -442,34 +433,51 @@ private:
 
       if (form_.domain_integrals_.size() > 0) {
         auto& K_elem = form_.element_gradients_[which_argument];
-        auto& LUT    = lookup_tables.element_dofs_;
 
         detail::zero_out(K_elem);
         for (auto& domain : form_.domain_integrals_) {
           domain.ComputeElementGradients(view(K_elem), which_argument);
         }
 
-        for (axom::IndexType e = 0; e < K_elem.shape()[0]; e++) {
-          for (axom::IndexType j = 0; j < K_elem.shape()[2]; j++) {
-            auto dof = trial_dofs(e, j);
-            gradient_L_(static_cast<int>(dof.index())) += dof.sign() * K_elem(e, 0, j);
+        auto & restriction = form_.G_trial_[which_argument];
+        auto num_elements = restriction.num_elements;
+        auto nodes_per_element = restriction.nodes_per_elem;
+        auto components_per_node = restriction.components;
+
+        for (uint32_t e = 0; e < num_elements; e++) {
+          for (uint64_t j = 0; j < nodes_per_element; j++) {
+            auto dof = restriction.dof_info(e, j);
+            for (uint64_t l = 0; l < components_per_node; l++) {
+              int32_t global_id = int(restriction.GetVDof(dof, l).index());
+              uint32_t local_id = uint32_t(l * nodes_per_element + j);
+              gradient_L_(global_id) += dof.sign() * K_elem(e, 0, local_id);
+            }
           }
         }
+
       }
 
       if (form_.bdr_integrals_.size() > 0) {
         auto& K_belem = form_.bdr_element_gradients_[which_argument];
-        auto& LUT     = lookup_tables.bdr_element_dofs_;
 
         detail::zero_out(K_belem);
         for (auto& boundary : form_.bdr_integrals_) {
           boundary.ComputeElementGradients(view(K_belem), which_argument);
         }
 
-        for (axom::IndexType e = 0; e < K_belem.shape()[0]; e++) {
-          for (axom::IndexType j = 0; j < K_belem.shape()[2]; j++) {
-            auto [index, sign] = LUT(e, j);
-            gradient_L_(static_cast<int>(index)) += sign * K_belem(e, 0, j);
+        auto & restriction = form_.G_trial_boundary_[which_argument];
+        auto num_elements = restriction.num_elements;
+        auto nodes_per_element = restriction.nodes_per_elem;
+        auto components_per_node = restriction.components;
+
+        for (uint32_t e = 0; e < num_elements; e++) {
+          for (uint64_t j = 0; j < nodes_per_element; j++) {
+            auto dof = restriction.dof_info(e, j);
+            for (uint64_t l = 0; l < components_per_node; l++) {
+              int32_t global_id = int(restriction.GetVDof(dof, l).index());
+              uint32_t local_id = uint32_t(l * nodes_per_element + j);
+              gradient_L_(global_id) += dof.sign() * K_belem(e, 0, local_id);
+            }
           }
         }
       }
