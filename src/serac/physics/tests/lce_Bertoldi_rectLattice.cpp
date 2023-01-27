@@ -21,7 +21,7 @@ using namespace serac;
 #define PERIODIC_MESH
 // #undef PERIODIC_MESH
 
-const static int problemID = 4;
+const static int problemID = 1;
 
 using serac::solid_mechanics::default_static_options;
 
@@ -141,13 +141,13 @@ int main(int argc, char* argv[])
   orderParam = max_order_param;
 
   // Parameter 2
-  FiniteElementState gammaParam(StateManager::newState(FiniteElementState::Options{.order = p, .vector_dim = 1, .name = "gammaParam"}));
+  FiniteElementState gammaParam(StateManager::newState(FiniteElementState::Options{.order = p, .vector_dim = 1, .element_type = ElementType::L2, .name = "gammaParam"}));
   auto gammaFunc = [gamma_angle](const mfem::Vector& /*x*/, double) -> double { return gamma_angle; }; // (x[1] > 0.5) ? M_PI_2 : 0.5*M_PI_2; };
   mfem::FunctionCoefficient gammaCoef(gammaFunc);
   gammaParam.project(gammaCoef);
 
   // Paremetr 3
-  FiniteElementState etaParam(StateManager::newState(FiniteElementState::Options{.order = p, .vector_dim = 1, .name = "etaParam"}));
+  FiniteElementState etaParam(StateManager::newState(FiniteElementState::Options{.order = p, .vector_dim = 1, .element_type = ElementType::L2, .name = "etaParam"}));
   auto etaFunc = [eta_angle](const mfem::Vector& /*x*/, double) -> double { return eta_angle; };
   mfem::FunctionCoefficient etaCoef(etaFunc);
   etaParam.project(etaCoef);
