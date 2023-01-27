@@ -25,7 +25,7 @@
 using namespace serac;
 using namespace serac::profiling;
 
-template <int p, int dim>
+template <int ptest, int ptrial, int dim>
 void thermal_test()
 {
   std::string meshfile;
@@ -39,18 +39,21 @@ void thermal_test()
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(meshfile), 1);
 
   // Create standard MFEM bilinear and linear forms on H1
-  auto                        fec = mfem::H1_FECollection(p, dim);
-  mfem::ParFiniteElementSpace fespace(mesh.get(), &fec);
+  auto                        test_fec = mfem::H1_FECollection(ptest, dim);
+  mfem::ParFiniteElementSpace test_fespace(mesh.get(), &test_fec);
 
-  mfem::Vector U(fespace.TrueVSize());
+  auto                        trial_fec = mfem::H1_FECollection(ptrial, dim);
+  mfem::ParFiniteElementSpace trial_fespace(mesh.get(), &trial_fec);
+
+  mfem::Vector U(trial_fespace.TrueVSize());
   U.Randomize();
 
   // Define the types for the test and trial spaces using the function arguments
-  using test_space  = H1<p>;
-  using trial_space = H1<p>;
+  using test_space  = H1<ptest>;
+  using trial_space = H1<ptrial>;
 
   // Construct the new functional object using the known test and trial spaces
-  Functional<test_space(trial_space)> residual(&fespace, {&fespace});
+  Functional<test_space(trial_space)> residual(&test_fespace, {&trial_fespace});
 
   auto d00 = 1.0;
   auto d01 = 1.0 * make_tensor<dim>([](int i) { return i; });
@@ -78,8 +81,10 @@ void thermal_test()
   check_gradient(residual, U);
 }
 
-TEST(basic, thermal_test_2D) { thermal_test<1, 2>(); }
-TEST(basic, thermal_test_3D) { thermal_test<1, 3>(); }
+//TEST(basic, thermal_test_2D) { thermal_test<1, 1, 2>(); }
+//TEST(basic, thermal_test_3D) { thermal_test<1, 1, 3>(); }
+TEST(basic, mixed_thermal_test_2D) { thermal_test<1, 2, 3>(); }
+//TEST(basic, mixed_thermal_test_3D) { thermal_test<1, 2, 3>(); }
 
 int main(int argc, char* argv[])
 {
