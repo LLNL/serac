@@ -21,7 +21,7 @@ using namespace serac;
 #define PERIODIC_MESH
 // #undef PERIODIC_MESH
 
-const static int problemID = 4;
+const static int problemID = 1;
 
 using serac::solid_mechanics::default_static_options;
 
