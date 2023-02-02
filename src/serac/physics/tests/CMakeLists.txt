@@ -29,15 +29,8 @@ serac_add_tests( SOURCES ${serial_solver_tests}
     NUM_MPI_TASKS 1)
 
 set(solver_tests
-    lce_Brighenti_logpile.cpp
-    lce_Brighenti_free_swelling.cpp
     lce_Brighenti_tensile.cpp
-    lce_Brighenti_compression.cpp
-    lce_Brighenti.cpp
-    lce_Bertoldi_free_swelling.cpp
-    lce_Bertoldi_tensile.cpp
-    lce_Bertoldi_rectLattice.cpp
-    lce_Bertoldi.cpp
+    lce_Bertoldi_lattice.cpp
     parameterized_thermomechanics_example.cpp
     parameterized_thermal.cpp
     solid_legacy.cpp

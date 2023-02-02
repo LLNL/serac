@@ -15,7 +15,6 @@
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/solid_mechanics.hpp"
 #include "serac/physics/materials/liquid_crystal_elastomer.hpp"
-// #include "serac/physics/materials/liquid_crystal_elastomer_material.hpp"
 
 #define LOAD_DRIVEN
 // #undef LOAD_DRIVEN
@@ -54,19 +53,17 @@ int main(int argc, char* argv[]) {
   int nElem = 4;
 #ifdef FULL_DOMAIN
   double lx = 0.67e-3, ly = 10.0e-3, lz = 0.25e-3;
-  ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(2*nElem, 25*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
-  // ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(12, 40, 5 + 0*nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
-  // ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(10, 50, 4 + 0*nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
+  mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(2*nElem, 25*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
 
 #else
   double lx = 0.67e-3/2, ly = 10.0e-3, lz = 0.25e-3/2;
-  ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(2*nElem, 40*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
+  mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(2*nElem, 40*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
 #endif
   auto mesh = std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, cuboid);
 
   serac::StateManager::setMesh(std::move(mesh));
 
-  double initial_temperature = 25 + 273;// 300.0;
+  double initial_temperature = 25 + 273;
   double final_temperature = 430.0;
   FiniteElementState temperature(
       StateManager::newState(FiniteElementState::Options{.order = p, .name = "temperature"}));
@@ -90,9 +87,7 @@ int main(int argc, char* argv[]) {
   { 
     if (lceArrangementTag==1)
     {
-      // return (x[0] > 1.0) ? M_PI_2 : 0.0; 
       return M_PI_2;
-      // return 0.0;
     }
     else if (lceArrangementTag==2)
     {
@@ -105,7 +100,7 @@ int main(int argc, char* argv[]) {
     else
     {
       double rad = 0.65;
-      return ( 
+      return (
         std::pow(x[0]-3.0, 2) + std::pow(x[1]-3.0, 2) - std::pow(rad, 2) < 0.0 ||  
         std::pow(x[0]-1.0, 2) + std::pow(x[1]-3.0, 2) - std::pow(rad, 2) < 0.0 ||  
         std::pow(x[0]-3.0, 2) + std::pow(x[1]-1.0, 2) - std::pow(rad, 2) < 0.0 ||  
@@ -128,8 +123,6 @@ int main(int argc, char* argv[]) {
     .rel_tol = 1.0e-4, .abs_tol = 1.0e-7, .max_iter = 6, .print_level = 1};
   SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver({default_linear_options, default_nonlinear_options}, GeometricNonlinearities::Off,
                                        "lce_solid_functional");
-  // SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver(solid_mechanics::default_static_options, GeometricNonlinearities::Off,
-  //                                      "lce_solid_functional");
 
   constexpr int TEMPERATURE_INDEX = 0;
   constexpr int GAMMA_INDEX       = 1;
@@ -137,24 +130,14 @@ int main(int argc, char* argv[]) {
   solid_solver.setParameter(TEMPERATURE_INDEX, temperature);
   solid_solver.setParameter(GAMMA_INDEX, gamma);
 
-  // double density = 1.0;
-  // double E = 1e7; // 1.0e-1; // 1.0;
-  // double nu = 0.38; // 0.49;
-  // double shear_modulus = 0.5*E/(1.0 + nu);
-  // double bulk_modulus = E / 3.0 / (1.0 - 2.0*nu);
-  // double order_constant = 10; // 6.0;
-  // double order_parameter = 0.95; // 0.7;
-  // double transition_temperature = 348; // 370.0;
-  // double Nb2 = 1.0;
-
   double density = 1.0;
-  double E = 4.0e7; // 1.0e-1; // 1.0;
+  double E = 4.0e7;
   double nu = 0.49;
   double shear_modulus = 0.5*E/(1.0 + nu);
   double bulk_modulus = E / 3.0 / (1.0 - 2.0*nu);
-  double order_constant = 10; // 6.0;
-  double order_parameter = 0.70; // 0.7;
-  double transition_temperature = 348; // 370.0;
+  double order_constant = 10; 
+  double order_parameter = 0.70;
+  double transition_temperature = 348;
   double Nb2 = 1.0;
 
   LiqCrystElast_Brighenti mat(density, shear_modulus, bulk_modulus, order_constant, order_parameter, transition_temperature, Nb2);
@@ -227,7 +210,6 @@ int main(int argc, char* argv[]) {
   if(rank==0)
   {
     std::cout << "... Initial Area of the top surface: " << initial_area << std::endl;
-    // exit(0);
   }
 
   double t = 0.0;
@@ -311,8 +293,6 @@ int main(int argc, char* argv[]) {
 
     t += dt;
 #ifdef LOAD_DRIVEN
-    // loadVal = iniLoadVal +  t / tmax * (maxLoadVal - iniLoadVal);
-    // loadVal = iniLoadVal * std::exp( std::log(maxLoadVal/iniLoadVal) * t / tmax  );
     loadVal = iniLoadVal  + (maxLoadVal - iniLoadVal) * std::pow( t / tmax, 0.75  );
 #else
     temperature = initial_temperature * (1.0 - (t / tmax)) + final_temperature * (t / tmax);
