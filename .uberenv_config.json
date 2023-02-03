@@ -8,6 +8,5 @@
 "spack_commit": "45bb4ea23cff86dcbbb17c220946897d7c8ab5d2",
 "spack_configs_path": "scripts/spack/configs",
 "spack_packages_path": "scripts/spack/packages",
-"spack_activate" : {},
 "spack_concretizer": "clingo"
 }
