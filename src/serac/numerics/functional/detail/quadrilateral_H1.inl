@@ -120,8 +120,8 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
   template <bool apply_weights, int q>
   static constexpr auto calculate_B()
   {
-    constexpr auto                  points1D  = GaussLegendreNodes<q>();
-    [[maybe_unused]] constexpr auto weights1D = GaussLegendreWeights<q>();
+    constexpr auto                  points1D  = GaussLegendreNodes<q, Geometry::Segment>();
+    [[maybe_unused]] constexpr auto weights1D = GaussLegendreWeights<q, Geometry::Segment>();
     tensor<double, q, n>            B{};
     for (int i = 0; i < q; i++) {
       B[i] = GaussLobattoInterpolation<n>(points1D[i]);
@@ -143,8 +143,8 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
   template <bool apply_weights, int q>
   static constexpr auto calculate_G()
   {
-    constexpr auto                  points1D  = GaussLegendreNodes<q>();
-    [[maybe_unused]] constexpr auto weights1D = GaussLegendreWeights<q>();
+    constexpr auto                  points1D  = GaussLegendreNodes<q, Geometry::Segment>();
+    [[maybe_unused]] constexpr auto weights1D = GaussLegendreWeights<q, Geometry::Segment>();
     tensor<double, q, n>            G{};
     for (int i = 0; i < q; i++) {
       G[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);

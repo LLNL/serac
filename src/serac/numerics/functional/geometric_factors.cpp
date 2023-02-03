@@ -77,10 +77,10 @@ GeometricFactors::GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry
 
   // NB: we only want the number of elements with the specified
   // geometry, which is not the same as mesh->GetNE() in general
-  int num_elements = int(restriction.dof_info.shape()[0]);
+  num_elements = std::size_t(restriction.dof_info.shape()[0]);
 
-  X = mfem::Vector(num_elements * qpts_per_elem * spatial_dim);
-  J = mfem::Vector(num_elements * qpts_per_elem * spatial_dim * geometry_dim);
+  X = mfem::Vector(int(num_elements) * qpts_per_elem * spatial_dim);
+  J = mfem::Vector(int(num_elements) * qpts_per_elem * spatial_dim * geometry_dim);
 
 #define DISPATCH_KERNEL(GEOM, P, Q)                                                                             \
   if (g == Geometry::GEOM && p == P && q == Q) {                                                                \
@@ -144,10 +144,10 @@ GeometricFactors::GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry
 
   // NB: we only want the number of elements with the specified
   // geometry, which is not the same as mesh->GetNE() in general
-  int num_elements = int(restriction.dof_info.shape()[0]);
+  num_elements = std::size_t(restriction.dof_info.shape()[0]);
 
-  X = mfem::Vector(num_elements * qpts_per_elem * spatial_dim);
-  J = mfem::Vector(num_elements * qpts_per_elem * spatial_dim * geometry_dim);
+  X = mfem::Vector(int(num_elements) * qpts_per_elem * spatial_dim);
+  J = mfem::Vector(int(num_elements) * qpts_per_elem * spatial_dim * geometry_dim);
 
 #define DISPATCH_KERNEL(GEOM, P, Q)                                                                                 \
   if (g == Geometry::GEOM && p == P && q == Q) {                                                                    \

@@ -13,6 +13,7 @@
 #pragma once
 
 #include "tensor.hpp"
+#include "geometry.hpp"
 
 namespace serac {
 
@@ -32,26 +33,68 @@ SERAC_HOST_DEVICE constexpr tensor<T, n> GaussLobattoNodes(T a = T(0), T b = T(1
 };
 
 /**
- * @brief The positions (in 1D space) of Gauss-Legendre points
- * @tparam n The number of points
+ * @brief The positions of Gauss-Legendre points for different geometries
+ * @tparam n The number of points per dimension
  * 
- * Mathematica/Wolfram Language code to generate more entries in the table:
+ * Mathematica/Wolfram Language code to generate the 1D entries in the table:
  * Do[Print["if constexpr (n == " <> ToString[n] <> ") return " <> ToString[GaussianQuadratureWeights[n, 0, 1, 17][[All, 1]]] <> ";"], {n, 1, 8}] 
  */
-// clang-format off
-template <int n, typename T = double >
-SERAC_HOST_DEVICE constexpr tensor<T, n> GaussLegendreNodes() {
-  if constexpr (n == 1) return {0.50000000000000000};
-  if constexpr (n == 2) return {0.2113248654051871, 0.7886751345948129};
-  if constexpr (n == 3) return {0.1127016653792583, 0.500000000000000, 0.887298334620742};
-  if constexpr (n == 4) return {0.0694318442029737, 0.330009478207572, 0.669990521792428, 0.930568155797026};
-  if constexpr (n == 5) return {0.0469100770306680, 0.230765344947158, 0.500000000000000, 0.769234655052842, 0.953089922969332};
-  if constexpr (n == 6) return {0.0337652428984240, 0.169395306766868, 0.380690406958402, 0.619309593041598, 0.830604693233132, 0.966234757101576};
-  if constexpr (n == 7) return {0.0254460438286207, 0.129234407200303, 0.297077424311301, 0.500000000000000, 0.702922575688699, 0.87076559279970, 0.97455395617138};
-  if constexpr (n == 8) return {0.0198550717512319, 0.101666761293187, 0.237233795041836, 0.408282678752175, 0.591717321247825, 0.76276620495816, 0.89833323870681, 0.98014492824877};
+template <int n, Geometry geom>
+SERAC_HOST_DEVICE constexpr auto GaussLegendreNodes() {
+
+  if constexpr (geom == Geometry::Segment) {
+    if constexpr (n == 1) return tensor<double,n>{0.50000000000000000};
+    if constexpr (n == 2) return tensor<double,n>{0.2113248654051871, 0.7886751345948129};
+    if constexpr (n == 3) return tensor<double,n>{0.1127016653792583, 0.500000000000000, 0.887298334620742};
+    if constexpr (n == 4) return tensor<double,n>{0.0694318442029737, 0.330009478207572, 0.669990521792428, 0.930568155797026};
+    if constexpr (n == 5) return tensor<double,n>{0.0469100770306680, 0.230765344947158, 0.500000000000000, 0.769234655052842, 0.953089922969332};
+    if constexpr (n == 6) return tensor<double,n>{0.0337652428984240, 0.169395306766868, 0.380690406958402, 0.619309593041598, 0.830604693233132, 0.966234757101576};
+    if constexpr (n == 7) return tensor<double,n>{0.0254460438286207, 0.129234407200303, 0.297077424311301, 0.500000000000000, 0.702922575688699, 0.87076559279970, 0.97455395617138};
+    if constexpr (n == 8) return tensor<double,n>{0.0198550717512319, 0.101666761293187, 0.237233795041836, 0.408282678752175, 0.591717321247825, 0.76276620495816, 0.89833323870681, 0.98014492824877};
+  }
+
+  if constexpr (geom == Geometry::Triangle) {
+    using output_t = tensor< double, n * (n + 1) / 2, 2 >;
+
+    if constexpr (n == 1) {
+      return output_t{{0.333333333333333, 0.333333333333333}};
+    }
+
+    if constexpr (n == 2) {
+      return output_t{{0.166666666666667, 0.166666666666667},
+                      {0.166666666666667, 0.666666666666667},
+                      {0.666666666666667, 0.166666666666667}};
+    }
+
+    if constexpr (n == 3) {
+      return output_t{{0.09157621350978, 0.09157621350978},
+                      {0.09157621350978, 0.81684757298044},
+                      {0.81684757298044, 0.09157621350978},
+                      {0.108103018168071, 0.445948490915964},
+                      {0.445948490915964, 0.108103018168071},
+                      {0.445948490915964, 0.445948490915964}};
+    }
+
+    if constexpr (n == 4) {
+      return output_t{{0.055564052669793, 0.055564052669793},
+                      {0.055564052669793, 0.888871894660413},
+                      {0.888871894660413, 0.055564052669793},
+                      {0.070255540518384, 0.634210747745723},
+                      {0.634210747745723, 0.070255540518384},
+                      {0.634210747745723, 0.295533711735893},
+                      {0.070255540518384, 0.295533711735893},
+                      {0.295533711735893, 0.070255540518384},
+                      {0.295533711735893, 0.634210747745723},
+                      {0.333333333333333, 0.333333333333333}};
+    }
+  }
+
+  if constexpr (geom == Geometry::Tetrahedron) {
+
+  }
+
   return tensor<double, n>{};
 };
-// clang-format on
 
 /**
  * @brief The weights associated with each Gauss-Legendre point
@@ -61,25 +104,39 @@ SERAC_HOST_DEVICE constexpr tensor<T, n> GaussLegendreNodes() {
  * Do[Print["if constexpr (n == " <> ToString[n] <> ") return " <> ToString[GaussianQuadratureWeights[n, 0, 1, 17][[All,
  * 2]]] <> ";"], {n, 1, 8}]
  */
-template <int n, typename T = double>
-SERAC_HOST_DEVICE constexpr tensor<T, n> GaussLegendreWeights()
+template <int n, Geometry geom>
+SERAC_HOST_DEVICE constexpr auto GaussLegendreWeights()
 {
-  if constexpr (n == 1) return {1.000000000000000};
-  if constexpr (n == 2) return {0.500000000000000, 0.500000000000000};
-  if constexpr (n == 3) return {0.277777777777778, 0.444444444444444, 0.277777777777778};
-  if constexpr (n == 4) return {0.173927422568727, 0.326072577431273, 0.326072577431273, 0.173927422568727};
-  if constexpr (n == 5)
-    return {0.118463442528095, 0.239314335249683, 0.284444444444444, 0.239314335249683, 0.118463442528095};
-  if constexpr (n == 6)
-    return {0.085662246189585, 0.180380786524069, 0.233956967286346,
-            0.233956967286346, 0.180380786524069, 0.085662246189585};
-  if constexpr (n == 7)
-    return {0.0647424830844348, 0.139852695744638, 0.190915025252559, 0.208979591836735,
-            0.190915025252559,  0.139852695744638, 0.0647424830844348};
-  if constexpr (n == 8)
-    return {0.0506142681451881, 0.111190517226687, 0.156853322938944, 0.181341891689181,
-            0.181341891689181,  0.156853322938944, 0.111190517226687, 0.0506142681451881};
-  return tensor<double, n>{};
+  if constexpr (geom == Geometry::Segment) {
+    if constexpr (n == 1) return tensor<double, n>{1.000000000000000};
+    if constexpr (n == 2) return tensor<double, n>{0.500000000000000, 0.500000000000000};
+    if constexpr (n == 3) return tensor<double, n>{0.277777777777778, 0.444444444444444, 0.277777777777778};
+    if constexpr (n == 4) return tensor<double, n>{0.173927422568727, 0.326072577431273, 0.326072577431273, 0.173927422568727};
+    if constexpr (n == 5) return tensor<double, n>{0.118463442528095, 0.239314335249683, 0.284444444444444, 0.239314335249683, 0.118463442528095};
+    if constexpr (n == 6) return tensor<double, n>{0.085662246189585, 0.180380786524069, 0.233956967286346, 0.233956967286346, 0.180380786524069, 0.085662246189585};
+    if constexpr (n == 7) return tensor<double, n>{0.0647424830844348, 0.139852695744638, 0.190915025252559, 0.208979591836735, 0.190915025252559,  0.139852695744638, 0.0647424830844348};
+    if constexpr (n == 8) return tensor<double, n>{0.0506142681451881, 0.111190517226687, 0.156853322938944, 0.181341891689181, 0.181341891689181,  0.156853322938944, 0.111190517226687, 0.0506142681451881};
+  }
+
+  if constexpr (geom == Geometry::Triangle) {
+    using output_t = tensor< double, n * (n + 1) / 2 >;
+    if constexpr (n == 1) return output_t{0.5};
+    if constexpr (n == 2) return output_t{0.166666666666667, 0.166666666666667, 0.166666666666667};
+    if constexpr (n == 3) {
+      return output_t{
+        0.0549758718276665, 0.0549758718276665, 0.0549758718276665,
+        0.111690794839, 0.111690794839, 0.111690794839
+      };
+    }
+    if constexpr (n == 4) {
+      return output_t{
+        0.0209777564983245, 0.0209777564983245, 0.0209777564983245,
+        0.0560492060354435, 0.0560492060354435, 0.0560492060354435, 0.0560492060354435, 0.0560492060354435, 0.0560492060354435,
+        0.100771494292365
+      };
+    }
+  }
+
 };
 // clang-format on
 

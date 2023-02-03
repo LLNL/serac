@@ -23,7 +23,6 @@
 #include "serac/numerics/functional/dof_numbering.hpp"
 
 #include "serac/numerics/functional/element_restriction.hpp"
-#include "serac/numerics/functional/geometric_factors.hpp"
 
 // TODO: REMOVE
 #include "serac/numerics/functional/debug_print.hpp"
@@ -100,6 +99,22 @@ struct Index {
    */
   constexpr operator int() { return ind; }
 };
+
+bool contains_unsupported_elements(const mfem::Mesh & mesh) {
+  int num_elements = mesh.GetNE();
+  for (int e = 0; e < num_elements; e++) {
+    auto type = mesh.GetElementType(e);
+    if (type == mfem::Element::POINT || type == mfem::Element::WEDGE || type == mfem::Element::PYRAMID) {
+      return true;
+    }
+  }
+  return false;
+}
+
+//   /// Constants for the classes derived from Element.
+//   enum Type { POINT, SEGMENT, TRIANGLE, QUADRILATERAL,
+//               TETRAHEDRON, HEXAHEDRON, WEDGE, PYRAMID
+//             };
 
 /**
  * @brief create an mfem::ParFiniteElementSpace from one of serac's
@@ -280,21 +295,15 @@ public:
   void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain,
                          std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
   {
-    auto num_elements = domain.GetNE();
-    if (num_elements == 0) return;
+    if (domain.GetNE() == 0) return;
 
     SLIC_ERROR_ROOT_IF(dim != domain.Dimension(), "invalid mesh dimension for domain integral");
-    for (int e = 0; e < num_elements; e++) {
-      SLIC_ERROR_ROOT_IF(domain.GetElementType(e) != supported_types[dim], "Mesh contains unsupported element type");
-    }
 
-    // this is a temporary measure to check correctness for the replacement "GeometricFactor"
-    // kernels, must be fixed before merging!
-    auto * geom = new serac::GeometricFactors(&domain, Q, elem_geom[domain.Dimension()]);
+    SLIC_ERROR_ROOT_IF(contains_unsupported_elements(domain), "Mesh contains unsupported element type");
 
     auto selected_trial_spaces = serac::make_tuple(serac::get<args>(trial_spaces)...);
 
-    domain_integrals_.emplace_back(test{}, selected_trial_spaces, num_elements, geom->J, geom->X, Dimension<dim>{},
+    domain_integrals_.emplace_back(test{}, selected_trial_spaces, domain, Dimension<dim>{},
                                    integrand, qdata, std::vector<int>{args...});
   }
 

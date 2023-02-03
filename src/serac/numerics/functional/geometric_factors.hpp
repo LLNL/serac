@@ -7,6 +7,17 @@
 
 namespace serac {
 
+inline mfem::Geometry::Type to_mfem(Geometry g) {
+  switch (g) {
+    case Geometry::Point: return mfem::Geometry::POINT;
+    case Geometry::Segment: return mfem::Geometry::SEGMENT;
+    case Geometry::Quadrilateral: return mfem::Geometry::SQUARE;
+    case Geometry::Triangle: return mfem::Geometry::TRIANGLE;
+    case Geometry::Hexahedron: return mfem::Geometry::CUBE;
+    case Geometry::Tetrahedron: return mfem::Geometry::TETRAHEDRON;
+  }
+}
+
 struct GeometricFactors {
 
   GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry::Type elem_geom);
@@ -30,6 +41,8 @@ struct GeometricFactors {
       - DIM = dimension of the mesh = mesh.Dimension(), and
       - NE = number of elements in the mesh. */
   mfem::Vector J;
+
+  std::size_t num_elements;
 
 };
 

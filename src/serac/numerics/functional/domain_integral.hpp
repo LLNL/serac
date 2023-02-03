@@ -19,6 +19,7 @@
 #include "mfem.hpp"
 
 #include "serac/infrastructure/accelerator.hpp"
+#include "serac/numerics/functional/geometric_factors.hpp"
 #include "serac/numerics/functional/domain_integral_kernels.hpp"
 #if defined(__CUDACC__)
 #include "serac/numerics/functional/domain_integral_kernels.cuh"
@@ -52,10 +53,24 @@ public:
    * and @a dim template parameters
    */
   template <int dim, typename test, typename... trials, typename lambda_type, typename qpt_data_type = Nothing>
-  DomainIntegral(test, serac::tuple<trials...>, size_t num_elements, const mfem::Vector& J, const mfem::Vector& X,
+  DomainIntegral(test, serac::tuple<trials...>, mfem::Mesh& domain,
                  Dimension<dim>, lambda_type&& qf, std::shared_ptr<QuadratureData<qpt_data_type> > qdata,
                  std::vector<int> active_arguments)
   {
+
+    static constexpr Geometry geom[2] = {
+      (dim == 2) ? Geometry::Quadrilateral : Geometry::Hexahedron,
+      (dim == 2) ? Geometry::Triangle : Geometry::Tetrahedron
+    };
+
+    // this is a temporary measure to check correctness for the replacement "GeometricFactor"
+    // kernels, must be fixed before merging!
+    auto * geom_factors = new serac::GeometricFactors(&domain, Q, to_mfem(geom[0]));
+    auto & X = geom_factors->X;
+    auto & J = geom_factors->J;
+
+    size_t num_elements = geom_factors->num_elements;
+
     constexpr size_t num_active_trial_spaces = sizeof...(trials);
     SLIC_ERROR_ROOT_IF(num_active_trial_spaces != active_arguments.size(),
                        "Error: argument indices inconsistent with provided number of arguments");
@@ -69,8 +84,8 @@ public:
     SERAC_MARK_BEGIN("Domain Integral Set Up");
     using namespace domain_integral;
 
-    [[maybe_unused]] constexpr auto geometry                      = supported_geometries[dim];
-    constexpr auto                  quadrature_points_per_element = (dim == 2) ? Q * Q : Q * Q * Q;
+    constexpr auto geometry = geom[0];
+    constexpr auto quadrature_points_per_element = (dim == 2) ? Q * Q : Q * Q * Q;
 
     // this is where we actually specialize the finite element kernel templates with
     // our specific requirements (element type, test/trial spaces, quadrature rule, q-function, etc).
