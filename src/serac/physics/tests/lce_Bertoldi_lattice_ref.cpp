@@ -216,6 +216,9 @@ double gblDispYmin;
       << std::endl;
     }
 
+    solid_solver.advanceTimestep(dt);
+    solid_solver.outputState(outputFilename);
+    
     // FiniteElementState &displacement = solid_solver.displacement();
     auto &fes = solid_solver.displacement().space();
     mfem::ParGridFunction displacement_gf = solid_solver.displacement().gridFunction();
@@ -237,9 +240,6 @@ double gblDispYmin;
     }
 
     t += dt;
-    solid_solver.advanceTimestep(dt);
-    solid_solver.outputState(outputFilename);
-
     orderParam = max_order_param * (tmax - t) / tmax;
   }
 
