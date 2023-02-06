@@ -31,11 +31,13 @@ set(solver_tests
     lce_Brighenti_free_swelling.cpp
     lce_Brighenti_tensile.cpp
     lce_Brighenti_compression.cpp
+    lce_Brighenti_tensile_ref.cpp
     lce_Brighenti.cpp
     lce_Bertoldi_free_swelling.cpp
     lce_Bertoldi_tensile.cpp
     lce_Bertoldi_rectLattice.cpp
-    lce_Bertoldi_honeycomb_lattice.cpp
+    lce_Bertoldi_lattice_ref.cpp
+    #lce_Bertoldi_honeycomb_lattice.cpp
     lce_Bertoldi.cpp
     parameterized_thermomechanics_example.cpp
     solid_legacy.cpp
