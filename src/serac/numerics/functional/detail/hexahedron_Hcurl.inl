@@ -42,31 +42,6 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
     tensor<double, p, p + 1, p + 1> z;
   };
 
-  /**
-   * @brief this type is used when calling the batched interpolate/integrate
-   *        routines, to provide memory for calculating intermediates
-   */
-  template <int q>
-  struct cache_type {
-    tensor<double, p + 1, p + 1, q> A1;
-    tensor<double, 2, p + 1, q, q>  A2;
-  };
-
-  template <int q>
-  struct cache_type_tmp {
-    union {
-      tensor<double, p + 1, p + 1, q> x;
-      tensor<double, p + 1, q, p + 1> y;
-      tensor<double, q, p + 1, p + 1> z;
-    } A1;
-
-    union {
-      tensor<double, 2, p + 1, q, q> x;
-      tensor<double, 2, q, q, p + 1> y;
-      tensor<double, 2, q, p + 1, q> z;
-    } A2;
-  };
-
   template <int q>
   using cpu_batched_values_type = tensor<tensor<double, 3>, q, q, q>;
 
@@ -366,8 +341,6 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
     constexpr tensor<double, q, p + 1> B2            = calculate_B2<apply_weights, q>();
     constexpr tensor<double, q, p + 1> G2            = calculate_G2<apply_weights, q>();
 
-    cache_type_tmp<q> cache;
-
     tensor<tensor<double, q, q, q>, 3> value{};
     tensor<tensor<double, q, q, q>, 3> curl{};
 
@@ -375,26 +348,32 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
     constexpr int x = 2, y = 1, z = 0;
 
     // clang-format off
-    cache.A1.x    = contract< x, 1 >(element_values.x, B1);
-    cache.A2.x[0] = contract< y, 1 >(cache.A1.x,       B2);
-    cache.A2.x[1] = contract< y, 1 >(cache.A1.x,       G2);
-    value[0]      = contract< z, 1 >(cache.A2.x[0],    B2);
-    curl[1]      += contract< z, 1 >(cache.A2.x[0],    G2);
-    curl[2]      -= contract< z, 1 >(cache.A2.x[1],    B2);
+    {
+      auto A1  = contract< x, 1 >(element_values.x, B1);
+      auto A20 = contract< y, 1 >(A1,  B2);
+      auto A21 = contract< y, 1 >(A1,  G2);
+      value[0] = contract< z, 1 >(A20, B2);
+      curl[1] += contract< z, 1 >(A20, G2);
+      curl[2] -= contract< z, 1 >(A21, B2);
+    }
 
-    cache.A1.y    = contract< y, 1 >(element_values.y, B1);
-    cache.A2.y[0] = contract< z, 1 >(cache.A1.y,       B2);
-    cache.A2.y[1] = contract< z, 1 >(cache.A1.y,       G2);
-    value[1]      = contract< x, 1 >(cache.A2.y[0],    B2);
-    curl[2]      += contract< x, 1 >(cache.A2.y[0],    G2);
-    curl[0]      -= contract< x, 1 >(cache.A2.y[1],    B2);
+    {
+      auto A1  = contract< y, 1 >(element_values.y, B1);
+      auto A20 = contract< z, 1 >(A1,  B2);
+      auto A21 = contract< z, 1 >(A1,  G2);
+      value[1] = contract< x, 1 >(A20, B2);
+      curl[2] += contract< x, 1 >(A20, G2);
+      curl[0] -= contract< x, 1 >(A21, B2);
+    }
 
-    cache.A1.z    = contract< z, 1 >(element_values.z, B1);
-    cache.A2.z[0] = contract< x, 1 >(cache.A1.z,       B2);
-    cache.A2.z[1] = contract< x, 1 >(cache.A1.z,       G2);
-    value[2]      = contract< y, 1 >(cache.A2.z[0],    B2);
-    curl[0]      += contract< y, 1 >(cache.A2.z[0],    G2);
-    curl[1]      -= contract< y, 1 >(cache.A2.z[1],    B2);
+    {
+      auto A1  = contract< z, 1 >(element_values.z, B1);
+      auto A20 = contract< x, 1 >(A1,  B2);
+      auto A21 = contract< x, 1 >(A1,  G2);
+      value[2] = contract< y, 1 >(A20, B2);
+      curl[0] += contract< y, 1 >(A20, G2);
+      curl[1] -= contract< y, 1 >(A21, B2);
+    }
     // clang-format on
 
     tensor<tuple<tensor<double, 3>, tensor<double, 3>>, q * q * q> qf_inputs;
@@ -442,8 +421,6 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
       }
     }
 
-    cache_type_tmp<q> cache{};
-
     // to clarify which contractions correspond to which spatial dimensions
     constexpr int x = 2, y = 1, z = 0;
 
@@ -451,32 +428,38 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
     //  r(0, dz, dy, dx) = s(0, qz, qy, qx) * B2(qz, dz) * B2(qy, dy) * B1(qx, dx)
     //                   + f(1, qz, qy, qx) * G2(qz, dz) * B2(qy, dy) * B1(qx, dx)
     //                   - f(2, qz, qy, qx) * B2(qz, dz) * G2(qy, dy) * B1(qx, dx);
-    cache.A2.x[0] = contract< z, 0 >(source[0], B2) + contract< z, 0 >(flux[1], G2);
-    cache.A2.x[1] = contract< z, 0 >(flux[2], B2);
-    cache.A1.x = contract< y, 0 >(cache.A2.x[0], B2) - contract< y, 0 >(cache.A2.x[1], G2);
-    element_residual[0].x += contract< x, 0 >(cache.A1.x, B1);
+    {
+      auto A20 = contract< z, 0 >(source[0], B2) + contract< z, 0 >(flux[1], G2);
+      auto A21 = contract< z, 0 >(flux[2], B2);
+      auto A1 = contract< y, 0 >(A20, B2) - contract< y, 0 >(A21, G2);
+      element_residual[0].x += contract< x, 0 >(A1, B1);
+    }
 
     //  r(1, dz, dy, dx) = s(1, qz, qy, qx) * B2(qz, dz) * B1(qy, dy) * B2(qx, dx)
     //                   - f(0, qz, qy, qx) * G2(qz, dz) * B1(qy, dy) * B2(qx, dx)
     //                   + f(2, qz, qy, qx) * B2(qz, dz) * B1(qy, dy) * G2(qx, dx);
-    cache.A2.y[0] = contract< x, 0 >(source[1], B2) + contract< x, 0 >(flux[2], G2);
-    cache.A2.y[1] = contract< x, 0 >(flux[0], B2);
-    cache.A1.y = contract< z, 0 >(cache.A2.y[0], B2) - contract< z, 0 >(cache.A2.y[1], G2);
-    element_residual[0].y += contract< y, 0 >(cache.A1.y, B1);
+    {
+      auto A20 = contract< x, 0 >(source[1], B2) + contract< x, 0 >(flux[2], G2);
+      auto A21 = contract< x, 0 >(flux[0], B2);
+      auto A1 = contract< z, 0 >(A20, B2) - contract< z, 0 >(A21, G2);
+      element_residual[0].y += contract< y, 0 >(A1, B1);
+    }
 
     //  r(2, dz, dy, dx) = s(2, qz, qy, qx) * B1(qz, dz) * B2(qy, dy) * B2(qx, dx) 
     //                   + f(0, qz, qy, qx) * B1(qz, dz) * G2(qy, dy) * B2(qx, dx) 
     //                   - f(1, qz, qy, qx) * B1(qz, dz) * B2(qy, dy) * G2(qx, dx);
-    cache.A2.z[0] = contract< y, 0 >(source[2], B2) + contract< y, 0 >(flux[0], G2);
-    cache.A2.z[1] = contract< y, 0 >(flux[1], B2);
-    cache.A1.z = contract< x, 0 >(cache.A2.z[0], B2) - contract< x, 0 >(cache.A2.z[1], G2);
-    element_residual[0].z += contract< z, 0 >(cache.A1.z, B1);
+    {
+      auto A20 = contract< y, 0 >(source[2], B2) + contract< y, 0 >(flux[0], G2);
+      auto A21 = contract< y, 0 >(flux[1], B2);
+      auto A1 = contract< x, 0 >(A20, B2) - contract< x, 0 >(A21, G2);
+      element_residual[0].z += contract< z, 0 >(A1, B1);
+    }
     // clang-format on
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#if defined(__CUDACC__)
+#if 0
 
   template <int q>
   static SERAC_DEVICE auto interpolate(const dof_type& element_values, const tensor<double, dim, dim>& J,
