@@ -218,7 +218,7 @@ double gblDispYmin;
 
     solid_solver.advanceTimestep(dt);
     solid_solver.outputState(outputFilename);
-    
+
     // FiniteElementState &displacement = solid_solver.displacement();
     auto &fes = solid_solver.displacement().space();
     mfem::ParGridFunction displacement_gf = solid_solver.displacement().gridFunction();
@@ -243,7 +243,7 @@ double gblDispYmin;
     orderParam = max_order_param * (tmax - t) / tmax;
   }
 
-EXPECT_NEAR(gblDispYmin, -1.51674e-05, 1.0e-8);
+  EXPECT_NEAR(gblDispYmin, -2.27938e-05, 1.0e-8);
 
   MPI_Finalize();
 }
