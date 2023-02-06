@@ -39,7 +39,7 @@ int main(int argc, char* argv[]) {
   constexpr int p = 2;
   constexpr int dim = 3;
   
-  int num_steps = 5;
+  int num_steps = 4;
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -215,6 +215,7 @@ int main(int argc, char* argv[]) {
   double t = 0.0;
   double tmax = 1.0;
   double dt = tmax / num_steps;
+  double gblDispYmax;
   bool outputDispInfo(true);
 
   for (int i = 0; i < (num_steps+1); i++) 
@@ -246,30 +247,15 @@ int main(int argc, char* argv[]) {
       // FiniteElementState &displacement = solid_solver.displacement();
       auto &fes = solid_solver.displacement().space();
       mfem::ParGridFunction displacement_gf = solid_solver.displacement().gridFunction();
-      mfem::Vector dispVecX(fes.GetNDofs()); dispVecX = 0.0;
       mfem::Vector dispVecY(fes.GetNDofs()); dispVecY = 0.0;
-      mfem::Vector dispVecZ(fes.GetNDofs()); dispVecZ = 0.0;
 
       for (int k = 0; k < fes.GetNDofs(); k++) 
       {
-        dispVecX(k) = displacement_gf(3*k+0);
         dispVecY(k) = displacement_gf(3*k+1);
-        dispVecZ(k) = displacement_gf(3*k+2);
       }
 
-      double gblDispXmin, lclDispXmin = dispVecX.Min();
-      double gblDispXmax, lclDispXmax = dispVecX.Max();
-      double gblDispYmin, lclDispYmin = dispVecY.Min();
-      double gblDispYmax, lclDispYmax = dispVecY.Max();
-      double gblDispZmin, lclDispZmin = dispVecZ.Min();
-      double gblDispZmax, lclDispZmax = dispVecZ.Max();
-
-      MPI_Allreduce(&lclDispXmin, &gblDispXmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-      MPI_Allreduce(&lclDispXmax, &gblDispXmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-      MPI_Allreduce(&lclDispYmin, &gblDispYmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+      double lclDispYmax = dispVecY.Max();
       MPI_Allreduce(&lclDispYmax, &gblDispYmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-      MPI_Allreduce(&lclDispZmin, &gblDispZmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-      MPI_Allreduce(&lclDispZmax, &gblDispZmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
 
       if(rank==0)
       {
@@ -298,6 +284,8 @@ int main(int argc, char* argv[]) {
     temperature = initial_temperature * (1.0 - (t / tmax)) + final_temperature * (t / tmax);
 #endif
   }
+
+  EXPECT_NEAR(gblDispYmax, 0.000202917533, 1.0e-8);
 
   MPI_Finalize();
 

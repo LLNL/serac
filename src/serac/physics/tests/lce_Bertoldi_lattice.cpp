@@ -199,6 +199,8 @@ int main(int argc, char* argv[])
   double t    = 0.0;
   double tmax = 1.0;
   double dt   = tmax / num_steps;
+  double gblDispYmin;
+
   for (int i = 0; i < num_steps; i++) 
   {
     if(rank==0)
@@ -209,6 +211,7 @@ int main(int argc, char* argv[])
       << "\n............................\n"
       << "\n... Using order parameter: "<< max_order_param * (tmax - t) / tmax
       << "\n... Using gamma = " << gamma_angle << ", and eta = " << eta_angle
+      <<"\n... Min Y displacement: " << gblDispYmin
       << std::endl;
     }
 
@@ -218,6 +221,25 @@ int main(int argc, char* argv[])
 
     orderParam = max_order_param * (tmax - t) / tmax;
   }
+
+  // Get minimum displacement for verification purposes
+  auto &fes = solid_solver.displacement().space();
+  mfem::ParGridFunction displacement_gf = solid_solver.displacement().gridFunction();
+  mfem::Vector dispVecY(fes.GetNDofs()); dispVecY = 0.0;
+
+  for (int k = 0; k < fes.GetNDofs(); k++) 
+  {
+    dispVecY(k) = displacement_gf(3*k+1);
+  }
+
+  double lclDispYmin = dispVecY.Min();
+  MPI_Allreduce(&lclDispYmin, &gblDispYmin, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+  if(rank==0)
+  {
+    std::cout <<"... Min Y displacement: " << gblDispYmin << std::endl;
+  }
+
+  EXPECT_NEAR(gblDispYmin, -1.51674e-05, 1.0e-8);
 
   MPI_Finalize();
 }
