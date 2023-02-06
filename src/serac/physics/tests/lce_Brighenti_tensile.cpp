@@ -39,7 +39,7 @@ int main(int argc, char* argv[]) {
   constexpr int p = 2;
   constexpr int dim = 3;
   
-  int num_steps = 30;
+  int num_steps = 5;
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -50,15 +50,15 @@ int main(int argc, char* argv[]) {
 #endif
 
   // Construct the appropriate dimension mesh and give it to the data store
-  int nElem = 4;
+  int nElem = 2;
 #ifdef FULL_DOMAIN
-  double lx = 0.67e-3, ly = 10.0e-3, lz = 0.25e-3;
-  mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(2*nElem, 25*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
-
+  double lx = 0.25e-3, ly = 3.0e-3, lz = 3.0e-3;
+  mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(nElem, 4*nElem, 4*nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
 #else
-  double lx = 0.67e-3/2, ly = 10.0e-3, lz = 0.25e-3/2;
-  mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(2*nElem, 40*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
+  double lx = 0.25e-3/2, ly = 3.0e-3, lz = 3.0e-3/2;
+  mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(nElem, 4*nElem, 2*nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
 #endif
+
   auto mesh = std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, cuboid);
 
   serac::StateManager::setMesh(std::move(mesh));
@@ -71,7 +71,7 @@ int main(int argc, char* argv[]) {
   temperature = initial_temperature + 0.0*final_temperature;
 
   FiniteElementState gamma(
-      StateManager::newState(FiniteElementState::Options{.order = p, .vector_dim = 3, .name = "gamma"}));
+      StateManager::newState(FiniteElementState::Options{.order = p, .vector_dim = 1, .element_type = ElementType::L2, .name = "gamma"}));
 
   // orient fibers in the beam like below (horizontal when y < 0.5, vertical when y > 0.5):
   //
@@ -131,12 +131,12 @@ int main(int argc, char* argv[]) {
   solid_solver.setParameter(GAMMA_INDEX, gamma);
 
   double density = 1.0;
-  double E = 4.0e7;
-  double nu = 0.49;
+  double E = 5.0e7;
+  double nu = 0.45;
   double shear_modulus = 0.5*E/(1.0 + nu);
   double bulk_modulus = E / 3.0 / (1.0 - 2.0*nu);
   double order_constant = 10; 
-  double order_parameter = 0.70;
+  double order_parameter = 0.20;
   double transition_temperature = 348;
   double Nb2 = 1.0;
 

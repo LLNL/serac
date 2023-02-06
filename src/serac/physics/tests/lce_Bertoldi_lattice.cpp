@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
 
   constexpr int p                   = 1;
   constexpr int dim                 = 3;
-  int           serial_refinement   = 1;
+  int           serial_refinement   = 0;
   int           parallel_refinement = 0;
 
   // Create DataStore
@@ -45,18 +45,17 @@ int main(int argc, char* argv[])
   serac::StateManager::initialize(datastore, "solid_lce_functional");
 
   // Construct the appropriate dimension mesh and give it to the data store
-  std::string filename = SERAC_REPO_DIR "/data/meshes/rectangularTruss.g";
-  auto initial_mesh = buildMeshFromFile(filename);
+  int nElem = 2;
+  double lx = 3.0e-3, ly = 3.0e-3, lz = 0.25e-3;
+  auto initial_mesh = mfem::Mesh(mfem::Mesh::MakeCartesian3D(4*nElem, 4*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
 
 #ifdef PERIODIC_MESH
 
   // Create translation vectors defining the periodicity
-  double lx = 0.18;
-  double ly = lx;
   mfem::Vector x_translation({lx, 0.0, 0.0});
   mfem::Vector y_translation({0.0, ly, 0.0});
   std::vector<mfem::Vector> translations = {x_translation, y_translation};
-  double tol = 1e-4;
+  double tol = 1e-6;
 
   std::vector<int> periodicMap = initial_mesh.CreatePeriodicVertexMapping(translations, tol);
 
@@ -71,17 +70,6 @@ int main(int argc, char* argv[])
 #endif
 
   serac::StateManager::setMesh(std::move(mesh));
-
-  // orient fibers in the beam like below (horizontal when y < 0.5, vertical when y > 0.5):
-  //
-  // y
-  //
-  // ^                                             8
-  // |                                             |
-  // ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓-- 1
-  // ┃ | | | | | | | | | | | | | | | | | | | | | | ┃
-  // ┃ - - - - - - - - - - - - - - - - - - - - - - ┃
-  // ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛--> x
 
   // Construct a functional-based solid mechanics solver
   IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
@@ -165,7 +153,7 @@ int main(int argc, char* argv[])
 
   // Boundary conditions:
   // Prescribe zero displacement at the supported end of the beam
-  std::set<int> support           = {1};
+  std::set<int> support           = {2};
   auto          zero_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; };
   solid_solver.setDisplacementBCs(support, zero_displacement);
 
@@ -181,7 +169,7 @@ int main(int argc, char* argv[])
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  int num_steps = 30;
+  int num_steps = 4;
 
   std::string outputFilename;
   switch (problemID)
