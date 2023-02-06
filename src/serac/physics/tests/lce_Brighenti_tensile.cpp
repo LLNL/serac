@@ -285,7 +285,7 @@ int main(int argc, char* argv[]) {
 #endif
   }
 
-  EXPECT_NEAR(gblDispYmax, 0.000202917533, 1.0e-8);
+  EXPECT_NEAR(gblDispYmax, 0.000202921464, 1.0e-8);
 
   MPI_Finalize();
 

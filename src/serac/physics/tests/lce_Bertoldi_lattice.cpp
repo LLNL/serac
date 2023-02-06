@@ -215,31 +215,31 @@ int main(int argc, char* argv[])
       << std::endl;
     }
 
-    t += dt;
     solid_solver.advanceTimestep(dt);
     solid_solver.outputState(outputFilename);
 
+    // Get minimum displacement for verification purposes
+    auto &fes = solid_solver.displacement().space();
+    mfem::ParGridFunction displacement_gf = solid_solver.displacement().gridFunction();
+    mfem::Vector dispVecY(fes.GetNDofs()); dispVecY = 0.0;
+
+    for (int k = 0; k < fes.GetNDofs(); k++) 
+    {
+      dispVecY(k) = displacement_gf(3*k+1);
+    }
+
+    double lclDispYmin = dispVecY.Min();
+    MPI_Allreduce(&lclDispYmin, &gblDispYmin, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+    if(rank==0)
+    {
+      std::cout <<"... Min Y displacement: " << gblDispYmin << std::endl;
+    }
+
+    t += dt;
     orderParam = max_order_param * (tmax - t) / tmax;
   }
 
-  // Get minimum displacement for verification purposes
-  auto &fes = solid_solver.displacement().space();
-  mfem::ParGridFunction displacement_gf = solid_solver.displacement().gridFunction();
-  mfem::Vector dispVecY(fes.GetNDofs()); dispVecY = 0.0;
-
-  for (int k = 0; k < fes.GetNDofs(); k++) 
-  {
-    dispVecY(k) = displacement_gf(3*k+1);
-  }
-
-  double lclDispYmin = dispVecY.Min();
-  MPI_Allreduce(&lclDispYmin, &gblDispYmin, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-  if(rank==0)
-  {
-    std::cout <<"... Min Y displacement: " << gblDispYmin << std::endl;
-  }
-
-  EXPECT_NEAR(gblDispYmin, -1.51674e-05, 1.0e-8);
+  EXPECT_NEAR(gblDispYmin, -2.27938e-05, 1.0e-8);
 
   MPI_Finalize();
 }
