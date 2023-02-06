@@ -53,8 +53,9 @@ int main(int argc, char* argv[])
 
   // Create translation vectors defining the periodicity
   mfem::Vector x_translation({lx, 0.0, 0.0});
-  mfem::Vector y_translation({0.0, ly, 0.0});
-  std::vector<mfem::Vector> translations = {x_translation, y_translation};
+  // mfem::Vector y_translation({0.0, ly, 0.0});
+  // std::vector<mfem::Vector> translations = {x_translation, y_translation};
+  std::vector<mfem::Vector> translations = {x_translation};
   double tol = 1e-6;
 
   std::vector<int> periodicMap = initial_mesh.CreatePeriodicVertexMapping(translations, tol);
