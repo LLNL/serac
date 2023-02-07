@@ -55,7 +55,7 @@ double StateManager::newDataCollection(const std::string& name, const std::optio
 
     // Determine if the existing nodal grid function is discontinuous. This
     // indicates that the mesh is periodic and the new nodal grid function must also
-    // be periodic.
+    // be discontinuous.
     bool is_discontinuous = false;
     auto nodes            = mesh(name).GetNodes();
     if (nodes) {
@@ -235,7 +235,7 @@ mfem::ParMesh* StateManager::setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const
 {
   // Determine if the existing nodal grid function is discontinuous. This
   // indicates that the mesh is periodic and the new nodal grid function must also
-  // be periodic.
+  // be discontinuous.
   bool is_discontinuous = false;
   auto nodes            = pmesh->GetNodes();
   if (nodes) {
