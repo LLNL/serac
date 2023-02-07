@@ -260,11 +260,11 @@ must be specified using either:
 
 **Ubuntu 20.04**
 
-``python3 scripts/uberenv/uberenv.py --spack-env-file=scripts/spack/configs/linux_ubuntu_20 --prefix=../path/to/install``
+``python3 scripts/uberenv/uberenv.py --spack-env-file=scripts/spack/configs/linux_ubuntu_20/spack.yaml --prefix=../path/to/install``
 
 **Ubuntu 18.04**
 
-``python3 scripts/uberenv/uberenv.py --spack-env-file=scripts/spack/configs/linux_ubuntu_18 --prefix=../path/to/install``
+``python3 scripts/uberenv/uberenv.py --spack-env-file=scripts/spack/configs/linux_ubuntu_18/spack.yaml --prefix=../path/to/install``
 
 Building Serac dependencies on MacOS
 ------------------------------------
