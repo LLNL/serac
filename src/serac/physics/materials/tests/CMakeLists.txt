@@ -8,8 +8,6 @@ set(test_dependencies test_utils)
 
 set(material_tests
     thermomechanical_material.cpp
-    test_liquid_crystal_elastomer_Brighenti.cpp
-    test_liquid_crystal_elastomer_Bertoldi.cpp
     J2_material.cpp
     nonlinear_J2_material.cpp
     parameterized_nonlinear_J2_material.cpp

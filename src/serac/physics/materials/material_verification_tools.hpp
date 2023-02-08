@@ -80,8 +80,6 @@ auto uniaxial_stress_test(double t_max, size_t num_steps, const MaterialType mat
   return output_history;
 }
 
-// --------------------------------------------------------
-
 /**
  * @brief This function takes a material model (and associate state variables),
  *        subjects it to a time history of stimuli, described by `functions ... f`,
