@@ -59,9 +59,7 @@ double StateManager::newDataCollection(const std::string& name, const std::optio
     bool is_discontinuous = false;
     auto nodes         = mesh(name).GetNodes();
     if (nodes) {
-      if (nodes->FESpace()->FEColl()->GetContType() == mfem::FiniteElementCollection::DISCONTINUOUS) {
-        is_discontinuous = true;
-      }
+      is_discontinuous = nodes->FESpace()->FEColl()->GetContType() == mfem::FiniteElementCollection::DISCONTINUOUS;
     }
 
     // This mfem call ensures the mesh contains an H1 grid function describing nodal
@@ -71,6 +69,9 @@ double StateManager::newDataCollection(const std::string& name, const std::optio
     // 3. Uses the spatial dimension as the mesh dimension (i.e. it is not a lower dimension manifold)
     // 4. Uses nodal instead of VDIM ordering (i.e. xxxyyyzzz instead of xyzxyzxyz)
     mesh(name).SetCurvature(1, is_discontinuous, -1, mfem::Ordering::byNODES);
+
+    // Sidre will destruct the nodal grid function instead of the mesh
+    mesh(name).SetNodesOwner(false);
 
     // Generate the face neighbor information in the mesh. This is needed by the face restriction
     // operators used by Functional
@@ -232,23 +233,13 @@ void StateManager::save(const double t, const int cycle, const std::string& mesh
 
 mfem::ParMesh* StateManager::setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const std::string& mesh_tag)
 {
-  newDataCollection(mesh_tag);
-  auto& datacoll = datacolls_.at(mesh_tag);
-  datacoll.SetMesh(pmesh.release());
-  datacoll.SetOwnData(true);
-
-  // Functional needs the nodal grid function and neighbor data in the mesh
-  auto& new_pmesh = mesh(mesh_tag);
-
   // Determine if the existing nodal grid function is discontinuous. This 
   // indicates that the mesh is periodic and the new nodal grid function must also
   // be periodic.
   bool is_discontinuous = false;
-  auto nodes         = new_pmesh.GetNodes();
+  auto nodes         = pmesh->GetNodes();
   if (nodes) {
-    if (nodes->FESpace()->FEColl()->GetContType() == mfem::FiniteElementCollection::DISCONTINUOUS) {
-      is_discontinuous = true;
-    }
+    is_discontinuous = nodes->FESpace()->FEColl()->GetContType() == mfem::FiniteElementCollection::DISCONTINUOUS;
   }
 
   // This mfem call ensures the mesh contains an H1 grid function describing nodal
@@ -257,7 +248,18 @@ mfem::ParMesh* StateManager::setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const
   // 2. Uses the existing continuity of the mesh finite element space (periodic meshes are discontinuous)
   // 3. Uses the spatial dimension as the mesh dimension (i.e. it is not a lower dimension manifold)
   // 4. Uses nodal instead of VDIM ordering (i.e. xxxyyyzzz instead of xyzxyzxyz)
-  new_pmesh.SetCurvature(1, is_discontinuous, -1, mfem::Ordering::byNODES);
+  pmesh->SetCurvature(1, is_discontinuous, -1, mfem::Ordering::byNODES);
+  
+  // Sidre will destruct the nodal grid function instead of the mesh
+  pmesh->SetNodesOwner(false);
+
+  newDataCollection(mesh_tag);
+  auto& datacoll = datacolls_.at(mesh_tag);
+  datacoll.SetMesh(pmesh.release());
+  datacoll.SetOwnData(true);
+
+  // Functional needs the nodal grid function and neighbor data in the mesh
+  auto& new_pmesh = mesh(mesh_tag);
 
   // Generate the face neighbor information in the mesh. This is needed by the face restriction
   // operators used by Functional
