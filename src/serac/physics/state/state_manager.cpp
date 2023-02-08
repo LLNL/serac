@@ -60,6 +60,9 @@ double StateManager::newDataCollection(const std::string& name, const std::optio
     auto nodes            = mesh(name).GetNodes();
     if (nodes) {
       is_discontinuous = nodes->FESpace()->FEColl()->GetContType() == mfem::FiniteElementCollection::DISCONTINUOUS;
+      SLIC_WARNING_ROOT(
+          "Periodic mesh detected! This will only work on translational periodic surfaces for vector H1 fields and "
+          "has not been thoroughly tested. Proceed at your own risk.");
     }
 
     // This mfem call ensures the mesh contains an H1 grid function describing nodal
@@ -240,6 +243,9 @@ mfem::ParMesh* StateManager::setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const
   auto nodes            = pmesh->GetNodes();
   if (nodes) {
     is_discontinuous = nodes->FESpace()->FEColl()->GetContType() == mfem::FiniteElementCollection::DISCONTINUOUS;
+    SLIC_WARNING_ROOT(
+        "Periodic mesh detected! This will only work on translational periodic surfaces for vector H1 fields and "
+        "has not been thoroughly tested. Proceed at your own risk.");
   }
 
   // This mfem call ensures the mesh contains an H1 grid function describing nodal
