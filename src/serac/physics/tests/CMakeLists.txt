@@ -37,6 +37,7 @@ set(solver_tests
     solid_legacy_reuse_mesh.cpp
     solid_legacy_adjoint.cpp
     solid.cpp
+    solid_periodic.cpp
     solid_shape.cpp
     thermal_legacy.cpp
     thermal_shape.cpp

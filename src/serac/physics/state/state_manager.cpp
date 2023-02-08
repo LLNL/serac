@@ -53,13 +53,16 @@ double StateManager::newDataCollection(const std::string& name, const std::optio
 
     // Functional needs the nodal grid function and neighbor data in the mesh
 
-    // Determine if the existing nodal grid function is discontinuous. This 
+    // Determine if the existing nodal grid function is discontinuous. This
     // indicates that the mesh is periodic and the new nodal grid function must also
-    // be periodic.
+    // be discontinuous.
     bool is_discontinuous = false;
-    auto nodes         = mesh(name).GetNodes();
+    auto nodes            = mesh(name).GetNodes();
     if (nodes) {
       is_discontinuous = nodes->FESpace()->FEColl()->GetContType() == mfem::FiniteElementCollection::DISCONTINUOUS;
+      SLIC_WARNING_ROOT(
+          "Periodic mesh detected! This will only work on translational periodic surfaces for vector H1 fields and "
+          "has not been thoroughly tested. Proceed at your own risk.");
     }
 
     // This mfem call ensures the mesh contains an H1 grid function describing nodal
@@ -233,13 +236,16 @@ void StateManager::save(const double t, const int cycle, const std::string& mesh
 
 mfem::ParMesh* StateManager::setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const std::string& mesh_tag)
 {
-  // Determine if the existing nodal grid function is discontinuous. This 
+  // Determine if the existing nodal grid function is discontinuous. This
   // indicates that the mesh is periodic and the new nodal grid function must also
-  // be periodic.
+  // be discontinuous.
   bool is_discontinuous = false;
-  auto nodes         = pmesh->GetNodes();
+  auto nodes            = pmesh->GetNodes();
   if (nodes) {
     is_discontinuous = nodes->FESpace()->FEColl()->GetContType() == mfem::FiniteElementCollection::DISCONTINUOUS;
+    SLIC_WARNING_ROOT(
+        "Periodic mesh detected! This will only work on translational periodic surfaces for vector H1 fields and "
+        "has not been thoroughly tested. Proceed at your own risk.");
   }
 
   // This mfem call ensures the mesh contains an H1 grid function describing nodal
@@ -249,7 +255,6 @@ mfem::ParMesh* StateManager::setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const
   // 3. Uses the spatial dimension as the mesh dimension (i.e. it is not a lower dimension manifold)
   // 4. Uses nodal instead of VDIM ordering (i.e. xxxyyyzzz instead of xyzxyzxyz)
   pmesh->SetCurvature(1, is_discontinuous, -1, mfem::Ordering::byNODES);
-  
   // Sidre will destruct the nodal grid function instead of the mesh
   pmesh->SetNodesOwner(false);
 
