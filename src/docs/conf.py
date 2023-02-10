@@ -17,10 +17,6 @@ import sys, os
 read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
 if read_the_docs_build:
 
-    print("DEBUG white238 DEBUG")
-    print("PROJECT_SOURCE_DIR={0}".format(os.path.abspath('../..')))
-    print("DEBUG white238 DEBUG")
-
     # Modify Doxyfile for ReadTheDocs compatibility
     with open('./doxygen/Doxyfile.in', 'r') as f:
         fdata = f.read()
