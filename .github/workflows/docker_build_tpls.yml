@@ -30,9 +30,10 @@ jobs:
     - name: Get dockerhub repo name
       shell: bash
       run: |
-        echo "repo_plus_tag=$(echo ${REPO}:${{ matrix.compiler }}_`date "+%m-%d-%y_%Hh-%Mm"`)" >> $GITHUB_OUTPUT
+        repo_plus_tag=$(echo ${REPO}:${{ matrix.compiler }}_`date "+%m-%d-%y_%Hh-%Mm"`) && export repo_plus_tag
+        echo repo_plus_tag 
+        echo "repo_plus_tag=$repo_plus_tag" >> $GITHUB_OUTPUT
         echo "repo_plus_latest=$(echo ${REPO}:${{ matrix.compiler }}_latest)" >> $GITHUB_OUTPUT
-        echo ${{ steps.repo_name.outputs.repo_plus_tag }}
       id: repo_name
 
     - name: Checkout
