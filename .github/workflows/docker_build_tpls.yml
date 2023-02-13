@@ -31,7 +31,7 @@ jobs:
       shell: bash
       run: |
         repo_plus_tag=$(echo ${REPO}:${{ matrix.compiler }}_`date "+%m-%d-%y_%Hh-%Mm"`) && export repo_plus_tag
-        echo repo_plus_tag 
+        echo $repo_plus_tag 
         echo "repo_plus_tag=$repo_plus_tag" >> $GITHUB_OUTPUT
         echo "repo_plus_latest=$(echo ${REPO}:${{ matrix.compiler }}_latest)" >> $GITHUB_OUTPUT
       id: repo_name
