@@ -23,7 +23,7 @@ struct finite_element<Geometry::Triangle, H1<p, c> > {
   static constexpr int  components = c;
   static constexpr int  dim        = 2;
   static constexpr int  n          = (p + 1);
-  static constexpr int  ndof       = (p + 1) * (p + 1);
+  static constexpr int  ndof       = (p + 1) * (p + 2) / 2;
 
   static constexpr int VALUE = 0, GRADIENT = 1;
   static constexpr int SOURCE = 0, FLUX = 1;
@@ -31,6 +31,7 @@ struct finite_element<Geometry::Triangle, H1<p, c> > {
   using residual_type =
       typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components> >::type;
 
+  using dof_type = tensor<double, c, ndof>;
 
   using value_type = typename std::conditional<components == 1, double, tensor<double, components> >::type;
   using derivative_type =
@@ -214,8 +215,8 @@ struct finite_element<Geometry::Triangle, H1<p, c> > {
   template <bool apply_weights, int q>
   static constexpr auto calculate_B()
   {
-    constexpr auto points1D  = TriangleGaussLegendreNodes<q>();
-    constexpr auto weights1D = TriangleGaussLegendreWeights<q>();
+    constexpr auto points1D  = GaussLegendreNodes<q, Geometry::Triangle>();
+    constexpr auto weights1D = GaussLegendreWeights<q, Geometry::Triangle>();
 
     tensor<double, q * (q + 1) / 2, ndof> B{};
     for (int i = 0; i < q * (q + 1) / 2; i++) {
@@ -236,8 +237,8 @@ struct finite_element<Geometry::Triangle, H1<p, c> > {
   template <bool apply_weights, int q>
   static constexpr auto calculate_G()
   {
-    constexpr auto points1D  = TriangleGaussLegendreNodes<q>();
-    constexpr auto weights1D = TriangleGaussLegendreWeights<q>();
+    constexpr auto points1D  = GaussLegendreNodes<q, Geometry::Triangle>();
+    constexpr auto weights1D = GaussLegendreWeights<q, Geometry::Triangle>();
 
     tensor<double, q * (q + 1) / 2, ndof, dim > G{};
     for (int i = 0; i < q; i++) {
@@ -275,7 +276,7 @@ struct finite_element<Geometry::Triangle, H1<p, c> > {
   template <int q>
   static auto interpolate(const tensor< double, c, ndof > & X, const TensorProductQuadratureRule<q>&)
   {
-    constexpr auto xi = TriangleGaussLegendreNodes<q>();
+    constexpr auto xi = GaussLegendreNodes<q, Geometry::Triangle>();
     static constexpr int num_quadrature_points = q * (q + 1) / 2;
 
     tensor< qf_input_type, num_quadrature_points > output{};
@@ -294,42 +295,36 @@ struct finite_element<Geometry::Triangle, H1<p, c> > {
 
   template <typename source_type, typename flux_type, int q>
   static void integrate(const tensor<tuple<source_type, flux_type>, q * (q + 1) / 2>& qf_output,
-                        const TensorProductQuadratureRule<q>&, const tensor< double, c, ndof > * element_residual, int step = 1)
+                        const TensorProductQuadratureRule<q>&, tensor< double, c, ndof > * element_residual, int step = 1)
   {
     if constexpr (is_zero<source_type>{} && is_zero<flux_type>{}) {
       return;
     }
 
+    constexpr int num_quadrature_points = q * (q + 1) / 2;
     constexpr int ntrial = std::max(size(source_type{}), size(flux_type{}) / dim) / c;
-
-    using s_buffer_type = std::conditional_t<is_zero<source_type>{}, zero, tensor<double, q, q> >;
-    using f_buffer_type = std::conditional_t<is_zero<flux_type>{}, zero, tensor<double, dim, q, q> >;
-
-    static constexpr bool apply_weights = true;
-    static constexpr auto B             = calculate_B<apply_weights, q>();
-    static constexpr auto G             = calculate_G<apply_weights, q>();
+    constexpr auto integration_points = GaussLegendreNodes<q, Geometry::Triangle>();
+    constexpr auto integration_weights = GaussLegendreWeights<q, Geometry::Triangle>();
 
     for (int j = 0; j < ntrial; j++) {
       for (int i = 0; i < c; i++) {
-        s_buffer_type source;
-        f_buffer_type flux;
+        for (int Q = 0; Q < num_quadrature_points; Q++) {
+          tensor<double,2> xi = integration_points[Q];
+          double wt = integration_weights[Q];
 
-        for (int qy = 0; qy < q; qy++) {
-          for (int qx = 0; qx < q; qx++) {
-            int Q          = qy * q + qx;
-            source(qy, qx) = reinterpret_cast<const double*>(&get<SOURCE>(qf_output[Q]))[i * ntrial + j];
-            for (int k = 0; k < dim; k++) {
-              flux(k, qy, qx) = reinterpret_cast<const double*>(&get<FLUX>(qf_output[Q]))[(i * dim + k) * ntrial + j];
-            }
+          double source = reinterpret_cast<const double*>(&get<SOURCE>(qf_output[Q]))[i * ntrial + j];
+          tensor< double, 2 > flux = {
+            reinterpret_cast<const double*>(&get<FLUX>(qf_output[Q]))[(i * dim + 0) * ntrial + j],
+            reinterpret_cast<const double*>(&get<FLUX>(qf_output[Q]))[(i * dim + 1) * ntrial + j]
+          };
+
+          for (int k = 0; k < ndof; k++) {
+            element_residual[j * step](i, k) += source * shape_function(xi, k) + dot(flux, shape_function_gradient(xi, k)) * wt;
           }
         }
-
-        auto A0 = contract<1, 0>(source, B) + contract<1, 0>(flux(0), G);
-        auto A1 = contract<1, 0>(flux(1), B);
-
-        element_residual[j * step](i) += contract<0, 0>(A0, B) + contract<0, 0>(A1, G);
       }
     }
+
   }
 
 };

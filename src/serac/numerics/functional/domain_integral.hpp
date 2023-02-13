@@ -65,7 +65,7 @@ public:
 
     // this is a temporary measure to check correctness for the replacement "GeometricFactor"
     // kernels, must be fixed before merging!
-    auto * geom_factors = new serac::GeometricFactors(&domain, Q, to_mfem(geom[0]));
+    auto * geom_factors = new serac::GeometricFactors(&domain, Q, to_mfem(geom[1]));
     auto & X = geom_factors->X;
     auto & J = geom_factors->J;
 
@@ -84,7 +84,7 @@ public:
     SERAC_MARK_BEGIN("Domain Integral Set Up");
     using namespace domain_integral;
 
-    constexpr auto geometry = geom[0];
+    constexpr auto geometry = geom[1];
     constexpr auto quadrature_points_per_element = (dim == 2) ? Q * Q : Q * Q * Q;
 
     // this is where we actually specialize the finite element kernel templates with

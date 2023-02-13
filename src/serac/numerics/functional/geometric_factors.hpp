@@ -16,6 +16,7 @@ inline mfem::Geometry::Type to_mfem(Geometry g) {
     case Geometry::Hexahedron: return mfem::Geometry::CUBE;
     case Geometry::Tetrahedron: return mfem::Geometry::TETRAHEDRON;
   }
+  return mfem::Geometry::INVALID;
 }
 
 struct GeometricFactors {

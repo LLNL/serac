@@ -65,6 +65,13 @@ struct batched_jacobian<Geometry::Quadrilateral, q> {
   using type = tensor<double, 2, 2, q * q>;
 };
 
+/// @overload
+template <int q>
+struct batched_jacobian<Geometry::Triangle, q> {
+  /// the data layout for this geometry and quadrature rule
+  using type = tensor<double, 2, 2, q * (q + 1) / 2>;
+};
+
 /**
  * @brief this struct is used to look up mfem's memory layout of the
  * quadrature point position vectors
@@ -87,6 +94,14 @@ template <int q>
 struct batched_position<Geometry::Quadrilateral, q> {
   /// the data layout for this geometry and quadrature rule
   using type = tensor<double, 2, q * q>;
+};
+
+
+/// @overload
+template <int q>
+struct batched_position<Geometry::Triangle, q> {
+  /// the data layout for this geometry and quadrature rule
+  using type = tensor<double, 2, q * (q + 1) / 2 >;
 };
 
 /// @overload
