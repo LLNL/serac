@@ -36,6 +36,7 @@ set(solver_tests
     lce_Brighenti.cpp
     lce_Bertoldi_free_swelling.cpp
     lce_Bertoldi_tensile.cpp
+    lce_Bertoldi_tensile_new_data.cpp
     lce_Bertoldi_rectLattice.cpp
     lce_Bertoldi_honeycomb_lattice.cpp
     lce_Bertoldi.cpp
