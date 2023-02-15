@@ -256,6 +256,17 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
  
         set(MFEM_FOUND TRUE CACHE BOOL "" FORCE)
 
+        # Temporary hack to inject the hdf5_hl after netcdf and before hdf5
+        # This should go away when mfem fixes their FindNetCDF.cmake
+        get_target_property(_mfem_libraries mfem INTERFACE_LINK_LIBRARIES)
+        list(FIND _mfem_libraries ${NETCDF_DIR}/lib/libnetcdf.a _index)
+        math(EXPR _index "${_index} + 1")
+        list(INSERT _mfem_libraries ${_index} ${HDF5_C_LIBRARY_hdf5_hl})
+        set_property(TARGET mfem PROPERTY
+                              INTERFACE_LINK_LIBRARIES ${_mfem_libraries})
+        set_property(TARGET mfem PROPERTY
+                              LINK_LIBRARIES ${_mfem_libraries})
+
         # Patch the mfem target with the correct include directories
         get_target_property(_mfem_includes mfem INCLUDE_DIRECTORIES)
         target_include_directories(mfem SYSTEM INTERFACE ${_mfem_includes})
