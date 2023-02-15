@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
 #endif
 
   // Construct the appropriate dimension mesh and give it to the data store
-  int nElem = 4;
+  int nElem = 5;
 
 #ifdef NEMATIC_STATE
   double lx = 2.542e-3, ly = 20.26e-3, lz = 0.149e-3;
@@ -61,13 +61,13 @@ int main(int argc, char* argv[])
 #endif
 
 #ifdef FULL_DOMAIN
-  ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(2*nElem, 25*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
+  ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(12*nElem, 22*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
   // ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(12, 40, 5 + 0*nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
   // ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(10, 50, 4 + 0*nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
 #else
   lx *= 0.5;
   lz *= 0.5;
-  ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(2*nElem, 40*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
+  ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(10*nElem, 20*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
 #endif
   auto mesh = std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, cuboid);
   serac::StateManager::setMesh(std::move(mesh));
@@ -99,10 +99,10 @@ int main(int argc, char* argv[])
 
   // Material properties
   double density = 1.0;
-  double young_modulus = 1.1;
+  double young_modulus = 0.6e6; //0.61e6;
   double possion_ratio = 0.48;
-  double beta_param = 0.041;
-  double max_order_param = 0.2;
+  double beta_param = 2.0e-5; // 0.041;
+  double max_order_param = 0.45; // 0.00001; //  0.2;
 
   // Parameter 1
   FiniteElementState orderParam(StateManager::newState(FiniteElementState::Options{.order = p, .name = "orderParam"}));
@@ -197,10 +197,10 @@ int main(int argc, char* argv[])
 
 #ifdef LOAD_DRIVEN
 
-  auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0000005; };
-  double iniLoadVal = 1.0e-3;
-
-double maxLoadVal = 5.0e-2;
+  auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 1.0e-6; };
+  double iniLoadVal = 1.0e-3/lx/lz;
+  double maxLoadVal = 1.38e-1/lx/lz/4.0;
+  // double maxLoadVal = 5.53e-2/lx/lz/4.0;
 
 #ifdef FULL_DOMAIN
   maxLoadVal *= 4;
@@ -223,7 +223,7 @@ double maxLoadVal = 5.0e-2;
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  int num_steps = 20;
+  int num_steps = 70;
   
 #ifdef LOAD_DRIVEN
   std::string outputFilename = "sol_lce_bertoldi_tensile_load_new_data";
@@ -244,14 +244,14 @@ double maxLoadVal = 5.0e-2;
       std::cout 
       << "\n\n............................"
       << "\n... Entering time step: "<< i + 1 << " (/" << num_steps << ")"
-      << "\n............................\n"
+      << "\n............................"
 #ifdef LOAD_DRIVEN
       << "\n... Using a tension load of: " << loadVal <<" ("<<loadVal/maxLoadVal*100<<"\% of max)"
       << "\n... With max tension load of: " << maxLoadVal
 #else
       << "\n... Using order parameter: "<< max_order_param * (tmax - t) / tmax
 #endif
-      << std::endl;
+      << std::endl << std::endl;
     }
 
     t += dt;
