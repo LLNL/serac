@@ -11,11 +11,11 @@
 #------------------------------------------------------------------------------
 if(DEFINED ENV{SPACK_CC})
 
-  set(CMAKE_C_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2023_01_23_14_56_13/spack/lib/spack/env/clang/clang" CACHE PATH "")
+  set(CMAKE_C_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2023_02_15_23_53_41/spack/lib/spack/env/clang/clang" CACHE PATH "")
 
-  set(CMAKE_CXX_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2023_01_23_14_56_13/spack/lib/spack/env/clang/clang++" CACHE PATH "")
+  set(CMAKE_CXX_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2023_02_15_23_53_41/spack/lib/spack/env/clang/clang++" CACHE PATH "")
 
-  set(CMAKE_Fortran_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2023_01_23_14_56_13/spack/lib/spack/env/clang/gfortran" CACHE PATH "")
+  set(CMAKE_Fortran_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2023_02_15_23_53_41/spack/lib/spack/env/clang/gfortran" CACHE PATH "")
 
 else()
 
@@ -57,9 +57,9 @@ set(ENABLE_OPENMP ON CACHE BOOL "")
 # TPLs
 #------------------------------------------------------------------------------
 
-set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2023_01_23_14_56_13/clang-10.0.0" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2023_02_15_23_53_41/clang-10.0.0" CACHE PATH "")
 
-set(AXOM_DIR "${TPL_ROOT}/axom-0.7.0.3-m6at5vgp6jwyorduzbn674t5xrqbs2dr" CACHE PATH "")
+set(AXOM_DIR "${TPL_ROOT}/axom-0.7.0.4-mxl3cjsscqun6p7gztbh2zjt7r3lonjo" CACHE PATH "")
 
 set(CAMP_DIR "${TPL_ROOT}/camp-2022.03.2-g2qz4dmhjitbr3j2z4enrozx6zoss3f6" CACHE PATH "")
 
@@ -67,7 +67,7 @@ set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.8.4-mu3ou2bie3p3icjrjsvejg4o6ceqfxba" CAC
 
 set(LUA_DIR "${TPL_ROOT}/lua-5.4.4-zukdrycpb5faauorriawmhxu3s4cfenq" CACHE PATH "")
 
-set(MFEM_DIR "${TPL_ROOT}/mfem-4.5.0.1-35mjmc5tk6nldlrjo7gv3mt5czwylxc4" CACHE PATH "")
+set(MFEM_DIR "${TPL_ROOT}/mfem-4.5.2.1-x3mgojs2avzkgl5lm6a747ommebblw57" CACHE PATH "")
 
 set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.21-hjp2wodzkmqerwn66ec7bcztmm7jbgzh" CACHE PATH "")
 
