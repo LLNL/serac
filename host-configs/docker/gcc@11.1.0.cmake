@@ -59,7 +59,7 @@ set(ENABLE_OPENMP ON CACHE BOOL "")
 
 set(TPL_ROOT "/home/serac/serac_tpls/gcc-11.1.0" CACHE PATH "")
 
-set(AXOM_DIR "${TPL_ROOT}/axom-0.7.0.4-gyghkqbcokd2cnc5in4mrkhhww7yzesj" CACHE PATH "")
+set(AXOM_DIR "${TPL_ROOT}/axom-0.7.0.4-onz6z6wumrpunefe3kbyy3l5txrbmeop" CACHE PATH "")
 
 set(CAMP_DIR "${TPL_ROOT}/camp-2022.03.2-ecxxjszodysrw4tiujtia5kma7whjszv" CACHE PATH "")
 
@@ -67,7 +67,7 @@ set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.8.4-pfqoghwltlucmgrplqq364e5o6yhq7jr" CAC
 
 set(LUA_DIR "${TPL_ROOT}/lua-5.4.4-ve6ws2zzw7qkrzupei6mnhtwdcxxz6jf" CACHE PATH "")
 
-set(MFEM_DIR "${TPL_ROOT}/mfem-4.5.0.1-4fvoq6mpydejcfedambofdtbb4pep47z" CACHE PATH "")
+set(MFEM_DIR "${TPL_ROOT}/mfem-4.5.2.1-dcl2shc7i2wwfpuf7kq5as3k3jzc6uk2" CACHE PATH "")
 
 set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.21-h5dpyqnqdcwv6rcpdz6ywjp53yeqst7a" CACHE PATH "")
 
