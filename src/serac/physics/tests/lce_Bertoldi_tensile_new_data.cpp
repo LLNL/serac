@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
 #endif
 
   // Construct the appropriate dimension mesh and give it to the data store
-  int nElem = 5;
+  int nElem = 4;
 
 #ifdef NEMATIC_STATE
   double lx = 2.542e-3, ly = 20.26e-3, lz = 0.149e-3;
@@ -66,8 +66,18 @@ int main(int argc, char* argv[])
   // ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(10, 50, 4 + 0*nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
 #else
   lx *= 0.5;
+  ly *= 0.5;
   lz *= 0.5;
-  ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(10*nElem, 20*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
+
+#ifdef NEMATIC_STATE
+  // ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(8*nElem, 70*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
+  // ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(10*nElem, 70*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
+  // ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(5*nElem, 50*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
+  ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(4*nElem, 20*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
+#else
+
+#endif
+
 #endif
   auto mesh = std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, cuboid);
   serac::StateManager::setMesh(std::move(mesh));
@@ -84,14 +94,14 @@ int main(int argc, char* argv[])
   // ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛--> x
 
   // Construct a functional-based solid mechanics solver
-  IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
+  IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-7,
                                                        .abs_tol     = 1.0e-16,
                                                        .print_level = 0,
                                                        .max_iter    = 600,
                                                        .lin_solver  = LinearSolver::GMRES,
                                                        .prec        = HypreBoomerAMGPrec{}};
   NonlinearSolverOptions default_nonlinear_options = {
-    .rel_tol = 1.0e-6, .abs_tol = 1.0e-12, .max_iter = 6, .print_level = 1};
+    .rel_tol = 1.0e-7, .abs_tol = 1.0e-13, .max_iter = 8, .print_level = 1};
   SolidMechanics<p, dim, Parameters< H1<p>, L2<p>, L2<p> > > solid_solver({default_linear_options, default_nonlinear_options}, GeometricNonlinearities::Off,
                                        "lce_solid_functional");
   // SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p>>> solid_solver(default_static_options, GeometricNonlinearities::Off,
@@ -99,9 +109,9 @@ int main(int argc, char* argv[])
 
   // Material properties
   double density = 1.0;
-  double young_modulus = 0.6e6; //0.61e6;
+  double young_modulus = 7.5e6; //0.61e6;
   double possion_ratio = 0.48;
-  double beta_param = 2.0e-5; // 0.041;
+  double beta_param = 1.0e-8; // 0.041;
   double max_order_param = 0.45; // 0.00001; //  0.2;
 
   // Parameter 1
@@ -197,9 +207,10 @@ int main(int argc, char* argv[])
 
 #ifdef LOAD_DRIVEN
 
-  auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 1.0e-6; };
-  double iniLoadVal = 1.0e-3/lx/lz;
-  double maxLoadVal = 1.38e-1/lx/lz/4.0;
+  auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 1.0e-14; };
+  double iniLoadVal = 5.0e-4/lx/lz;
+  double maxLoadVal = 1.1064e0/lx/lz/4.0;
+  // double maxLoadVal = 1.38e-1/lx/lz/4.0;
   // double maxLoadVal = 5.53e-2/lx/lz/4.0;
 
 #ifdef FULL_DOMAIN
@@ -208,7 +219,7 @@ int main(int argc, char* argv[])
 
   double loadVal = iniLoadVal + 0.0 * maxLoadVal;
   solid_solver.setPiolaTraction([&loadVal, ly](auto x, auto /*n*/, auto /*t*/){
-    return tensor<double, 3>{0, loadVal * (x[1]>0.99*ly), 0};
+    return tensor<double, 3>{0, loadVal * (x[1]>0.975*ly), 0};
   });
 
 #else
@@ -223,7 +234,7 @@ int main(int argc, char* argv[])
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  int num_steps = 70;
+  int num_steps = 50;
   
 #ifdef LOAD_DRIVEN
   std::string outputFilename = "sol_lce_bertoldi_tensile_load_new_data";
@@ -294,7 +305,7 @@ int main(int argc, char* argv[])
         <<"\n... Max Y displacement: " << gblDispYmax << std::endl;
       }
 
-      if(std::isnan(gblDispYmax))
+      if(std::isnan(gblDispYmax) || gblDispYmax>1000*ly)
       {
         if(rank==0)
         {
