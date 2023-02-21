@@ -209,6 +209,7 @@ class Functional<test(trials...), exec> {
 
 
   static constexpr mfem::Geometry::Type elem_geom[4] = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT, mfem::Geometry::SQUARE, mfem::Geometry::CUBE};
+  static constexpr mfem::Geometry::Type simplex_geom[4] = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT, mfem::Geometry::TRIANGLE, mfem::Geometry::TETRAHEDRON};
 
   class Gradient;
 
@@ -233,30 +234,57 @@ public:
              std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
       : update_qdata(false), test_space_(test_fes), trial_space_(trial_fes)
   {
-
     int dim = test_fes->GetMesh()->Dimension();
 
-    for (uint32_t i = 0; i < num_trial_spaces; i++) {
-      P_trial_[i] = trial_space_[i]->GetProlongationMatrix();
-      G_trial_[i] = ElementRestriction(trial_fes[i], elem_geom[dim]);
+    P_test_ = test_space_->GetProlongationMatrix();
 
-      G_trial_boundary_[i] = ElementRestriction(trial_fes[i], elem_geom[dim-1], FaceType::BOUNDARY);
-      input_E_boundary_[i].SetSize(int(G_trial_boundary_[i].ESize()), mfem::Device::GetMemoryType());
+    G_test_ = ElementRestriction(test_fes, elem_geom[dim]);
+    G_test_boundary_ = ElementRestriction(test_fes, elem_geom[dim-1], FaceType::BOUNDARY);
 
-      input_L_[i].SetSize(P_trial_[i]->Height(), mfem::Device::GetMemoryType());
-      input_E_[i].SetSize(int(G_trial_[i].ESize()), mfem::Device::GetMemoryType());
+    G_test_simplex_ = ElementRestriction(test_fes, elem_geom[dim]);
+    G_test_boundary_simplex_ = ElementRestriction(test_fes, elem_geom[dim-1], FaceType::BOUNDARY);
 
-      // create the gradient operators for each trial space
-      grad_.emplace_back(*this, i);
+    auto num_elements = static_cast<size_t>(G_test.num_elements);
+    auto num_bdr_elements = static_cast<size_t>(G_test_boundary_.num_elements);
+
+    auto num_elements = static_cast<size_t>(G_test.num_elements);
+    auto num_bdr_elements = static_cast<size_t>(G_test_boundary_.num_elements);
+    if (num_elements > 0) {
+ 
+      auto ndof_per_test_element = static_cast<size_t>(G_test_.nodes_per_elem * G_test_.components);
+      auto ndof_per_test_bdr_element = static_cast<size_t>(G_test_.nodes_per_elem * G_test_.components);
+
+      for (uint32_t i = 0; i < num_trial_spaces; i++) {
+        P_trial_[i] = trial_space_[i]->GetProlongationMatrix();
+
+        input_L_[i].SetSize(P_trial_[i]->Height(), mfem::Device::GetMemoryType());
+
+        auto ndof_per_trial_element =
+            static_cast<size_t>(G_trial_[i].nodes_per_elem * G_trial_[i].components);
+
+        input_E_[i].SetSize(int(G_trial_[i].ESize()), mfem::Device::GetMemoryType());
+        element_gradients_[i] = ExecArray<double, 3, exec>(num_elements, ndof_per_trial_element, ndof_per_test_element);
+
+        auto ndof_per_trial_bdr_element =
+            static_cast<size_t>(G_trial_boundary_[i].nodes_per_elem * G_trial_boundary_[i].components);
+        G_trial_boundary_[i] = ElementRestriction(trial_fes[i], elem_geom[dim-1], FaceType::BOUNDARY);
+        input_E_boundary_[i].SetSize(int(G_trial_boundary_[i].ESize()), mfem::Device::GetMemoryType());
+        bdr_element_gradients_[i] = ExecArray<double, 3, exec>(num_bdr_elements, ndof_per_trial_bdr_element, ndof_per_test_bdr_element);
+
+        // create the gradient operators for each trial space
+        grad_.emplace_back(*this, i);
+      }
     }
 
-    P_test_ = test_space_->GetProlongationMatrix();
-    G_test_ = ElementRestriction(test_fes, elem_geom[dim]);
+    G_trial_simplex_[i] = ElementRestriction(trial_fes[i], simplex_geom[dim]);
+    input_E_simplex_[i].SetSize(int(G_trial_simplex_[i].ESize()), mfem::Device::GetMemoryType());
 
-    G_test_boundary_ = ElementRestriction(test_fes, elem_geom[dim-1], FaceType::BOUNDARY);
+    G_trial_[i] = ElementRestriction(trial_fes[i], elem_geom[dim]);
+
     output_E_boundary_.SetSize(int(G_test_boundary_.ESize()), mfem::Device::GetMemoryType());
     
     output_E_.SetSize(int(G_test_.ESize()), mfem::Device::GetMemoryType());
+    output_E_simplex_.SetSize(int(G_test_simplex_.ESize()), mfem::Device::GetMemoryType());
 
     output_L_boundary_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
 
@@ -264,12 +292,11 @@ public:
 
     output_T_.SetSize(test_fes->GetTrueVSize(), mfem::Device::GetMemoryType());
 
-    auto num_elements          = static_cast<size_t>(G_test_.num_elements);
-    auto ndof_per_test_element = static_cast<size_t>(G_test_.nodes_per_elem * G_test_.components);
 
     auto num_bdr_elements          = static_cast<size_t>(G_test_boundary_.num_elements);
     auto ndof_per_test_bdr_element = static_cast<size_t>(G_test_boundary_.nodes_per_elem * G_test_boundary_.components);
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
+
       auto ndof_per_trial_element =
           static_cast<size_t>(G_trial_[i].nodes_per_elem * G_trial_[i].components);
       auto ndof_per_trial_bdr_element =
@@ -277,6 +304,10 @@ public:
 
       element_gradients_[i] = ExecArray<double, 3, exec>(num_elements, ndof_per_trial_element, ndof_per_test_element);
       bdr_element_gradients_[i] = ExecArray<double, 3, exec>(num_bdr_elements, ndof_per_trial_bdr_element, ndof_per_test_bdr_element);
+
+
+      element_gradients_simplex_[i] = ExecArray<double, 3, exec>(G_test_simplex.num_elements_, ndof_per_trial_element, ndof_per_test_element);
+
     }
   }
 
@@ -303,8 +334,17 @@ public:
 
     auto selected_trial_spaces = serac::make_tuple(serac::get<args>(trial_spaces)...);
 
-    domain_integrals_.emplace_back(test{}, selected_trial_spaces, domain, Dimension<dim>{},
-                                   integrand, qdata, std::vector<int>{args...});
+    {
+      constexpr Geometry geom = (dim == 2) ? Geometry::Quadrilateral : Geometry::Hexahedron;
+      domain_integrals_.emplace_back(test{}, selected_trial_spaces, domain, CompileTimeValue<geom>{},
+                                     integrand, qdata, std::vector<int>{args...});
+    }
+
+    {
+      constexpr Geometry geom = (dim == 2) ? Geometry::Triangle : Geometry::Tetrahedron;
+      domain_integrals_simplex_.emplace_back(test{}, selected_trial_spaces, domain, CompileTimeValue<geom>{},
+                                     integrand, qdata, std::vector<int>{args...});
+    }
   }
 
   /**
@@ -397,7 +437,6 @@ public:
       G_trial_[which].Gather(input_L_[which], input_E_[which]);
 
       // compute residual contributions at the element level and sum them
-
       output_E_ = 0.0;
       for (auto& integral : domain_integrals_) {
         integral.GradientMult(input_E_[which], output_E_, which);
@@ -405,6 +444,20 @@ public:
 
       // scatter-add to compute residuals on the local processor
       G_test_.ScatterAdd(output_E_, output_L_);
+    }
+
+    if (domain_integrals_simplex_.size() > 0) {
+      // get the values for each element on the local processor
+      G_trial_simplex_[which].Gather(input_L_[which], input_E_simplex_[which]);
+
+      // compute residual contributions at the element level and sum them
+      output_E_simplex_ = 0.0;
+      for (auto& integral : domain_integrals_simplex_) {
+        integral.GradientMult(input_E_simplex_[which], output_E_simplex_, which);
+      }
+
+      // scatter-add to compute residuals on the local processor
+      G_test_simplex_.ScatterAdd(output_E_simplex_, output_L_);
     }
 
     if (bdr_integrals_.size() > 0) {
@@ -449,6 +502,28 @@ public:
     }
 
     output_L_ = 0.0;
+
+#if 0
+    bool already_computed[num_trial_spaces][integral_type]{}; // initialized to `false`
+
+    for (auto& integral : integrals_) {
+      for (auto i : integral.active_trial_spaces) {
+
+        // avoid doing the gather operation more than once per trial space
+        if (already_computed[i][integral.type]) {
+          G_trial_[i].Gather(input_L_[i], input_E_[i][integral.type]);
+          already_computed[i][integral.type] = true;
+        }
+
+      }
+
+      integral.Mult(input_E_[type], output_E_[type], wrt, update_qdata);
+
+      // scatter-add to compute residuals on the local processor
+      G_test_.ScatterAdd(output_E_[type], output_L_);
+    }
+#endif
+
     if (domain_integrals_.size() > 0) {
       // get the values for each element on the local processor
       for (uint32_t i = 0; i < num_trial_spaces; i++) {
@@ -463,6 +538,22 @@ public:
 
       // scatter-add to compute residuals on the local processor
       G_test_.ScatterAdd(output_E_, output_L_);
+    }
+
+    if (domain_integrals_simplex_.size() > 0) {
+      // get the values for each element on the local processor
+      for (uint32_t i = 0; i < num_trial_spaces; i++) {
+        G_trial_simplex_[i].Gather(input_L_[i], input_E_simplex_[i]);
+      }
+
+      // compute residual contributions at the element level and sum them
+      output_E_simplex_ = 0.0;
+      for (auto& integral : domain_integrals_simplex_) {
+        integral.Mult(input_E_simplex_, output_E_simplex_, wrt, update_qdata);
+      }
+
+      // scatter-add to compute residuals on the local processor
+      G_test_simplex_.ScatterAdd(output_E_simplex_, output_L_);
     }
 
     if (bdr_integrals_.size() > 0) {
@@ -630,7 +721,7 @@ private:
                              form_.input_L_[which_argument].Size(), sparse_matrix_frees_graph_ptrs,
                              sparse_matrix_frees_values_ptr, col_ind_is_sorted);
 
-      write_to_file(J_local, "J.mtx");
+      //write_to_file(J_local, "J.mtx");
 
       auto* R = form_.test_space_->Dof_TrueDof_Matrix();
 
@@ -696,9 +787,11 @@ private:
 
   /// @brief The input set of per-element DOF values
   mutable std::array<mfem::Vector, num_trial_spaces> input_E_;
+  mutable std::array<mfem::Vector, num_trial_spaces> input_E_simplex_;
 
   /// @brief The output set of per-element DOF values
   mutable mfem::Vector output_E_;
+  mutable mfem::Vector output_E_simplex_;
 
   /// @brief The input set of per-boundaryelement DOF values
   mutable std::array<mfem::Vector, num_trial_spaces> input_E_boundary_;
@@ -729,6 +822,7 @@ private:
    * for the test space
    */
   ElementRestriction G_test_;
+  ElementRestriction G_test_simplex_;
 
   /**
    * @brief Operator that converts true (global) DOF values to local (current rank) DOF values
@@ -741,6 +835,7 @@ private:
    * for the trial space
    */
   ElementRestriction G_trial_[num_trial_spaces];
+  ElementRestriction G_trial_simplex_[num_trial_spaces];
 
   /**
    * @brief Operator that converts local (current rank) DOF values to per-boundary element DOF values
@@ -757,6 +852,9 @@ private:
   /// @brief The set of domain integrals (spatial_dim == geometric_dim)
   std::vector<DomainIntegral<num_trial_spaces, Q, exec>> domain_integrals_;
 
+  /// @brief The set of domain integrals (spatial_dim == geometric_dim)
+  std::vector<DomainIntegral<num_trial_spaces, Q, exec>> domain_integrals_simplex_;
+
   /// @brief The set of boundary integral (spatial_dim == geometric_dim + 1)
   std::vector<BoundaryIntegral<num_trial_spaces, Q, exec>> bdr_integrals_;
 
@@ -769,6 +867,7 @@ private:
 
   /// @brief 3D array that stores each element's gradient of the residual w.r.t. trial values
   ExecArray<double, 3, exec> element_gradients_[num_trial_spaces];
+  ExecArray<double, 3, exec> element_gradients_simplex_[num_trial_spaces];
 
   /// @brief 3D array that stores each boundary element's gradient of the residual w.r.t. trial values
   ExecArray<double, 3, exec> bdr_element_gradients_[num_trial_spaces];

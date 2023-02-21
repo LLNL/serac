@@ -57,7 +57,7 @@ SERAC_HOST_DEVICE constexpr auto GaussLegendreNodes() {
     using output_t = tensor< double, n * (n + 1) / 2, 2 >;
 
     if constexpr (n == 1) {
-      return output_t{{0.333333333333333, 0.333333333333333}};
+      return output_t{{{0.333333333333333, 0.333333333333333}}};
     }
 
     if constexpr (n == 2) {

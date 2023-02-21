@@ -89,6 +89,11 @@ GeometricFactors::GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry
     return;                                                                                                     \
   }
 
+  DISPATCH_KERNEL(Triangle, 1, 1);
+  DISPATCH_KERNEL(Triangle, 1, 2);
+  DISPATCH_KERNEL(Triangle, 1, 3);
+  DISPATCH_KERNEL(Triangle, 1, 4);
+
   DISPATCH_KERNEL(Quadrilateral, 1, 1);
   DISPATCH_KERNEL(Quadrilateral, 1, 2);
   DISPATCH_KERNEL(Quadrilateral, 1, 3);

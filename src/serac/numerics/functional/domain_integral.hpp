@@ -25,6 +25,8 @@
 #include "serac/numerics/functional/domain_integral_kernels.cuh"
 #endif
 
+#include "serac/numerics/functional/debug_print.hpp"
+
 namespace serac {
 
 /**
@@ -52,22 +54,24 @@ public:
    * @note The @p Dimension parameters are used to assist in the deduction of the @a dim
    * and @a dim template parameters
    */
-  template <int dim, typename test, typename... trials, typename lambda_type, typename qpt_data_type = Nothing>
+  template <typename test, typename... trials, auto geom, typename lambda_type, typename qpt_data_type = Nothing>
   DomainIntegral(test, serac::tuple<trials...>, mfem::Mesh& domain,
-                 Dimension<dim>, lambda_type&& qf, std::shared_ptr<QuadratureData<qpt_data_type> > qdata,
+                 CompileTimeValue<geom>, lambda_type&& qf, std::shared_ptr< QuadratureData<qpt_data_type> > qdata,
                  std::vector<int> active_arguments)
   {
 
-    static constexpr Geometry geom[2] = {
-      (dim == 2) ? Geometry::Quadrilateral : Geometry::Hexahedron,
-      (dim == 2) ? Geometry::Triangle : Geometry::Tetrahedron
-    };
+    // GCC 12.0 is incorrectly emitting an error that `dim` is unused,
+    // so the attribute is there to suppress that warning/error
+    [[maybe_unused]] static constexpr int dim = dimension_of(geom);
 
     // this is a temporary measure to check correctness for the replacement "GeometricFactor"
     // kernels, must be fixed before merging!
-    auto * geom_factors = new serac::GeometricFactors(&domain, Q, to_mfem(geom[1]));
+    auto * geom_factors = new serac::GeometricFactors(&domain, Q, to_mfem(geom));
     auto & X = geom_factors->X;
     auto & J = geom_factors->J;
+
+    write_to_file(X, "X.txt");
+    write_to_file(J, "J.txt");
 
     size_t num_elements = geom_factors->num_elements;
 
@@ -84,8 +88,8 @@ public:
     SERAC_MARK_BEGIN("Domain Integral Set Up");
     using namespace domain_integral;
 
-    constexpr auto geometry = geom[1];
-    constexpr auto quadrature_points_per_element = (dim == 2) ? Q * Q : Q * Q * Q;
+    constexpr auto geometry = geom;
+    constexpr auto quadrature_points_per_element = num_quadrature_points(geom, Q);
 
     // this is where we actually specialize the finite element kernel templates with
     // our specific requirements (element type, test/trial spaces, quadrature rule, q-function, etc).

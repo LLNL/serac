@@ -212,7 +212,7 @@ std::vector<Array2D<int> > geom_local_face_dofs(int p)
 
 axom::Array<DoF, 2, axom::MemorySpace::Host> GetElementRestriction(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type geom)
 {
-  std::vector<DoF> elem_dofs;
+  std::vector<DoF> elem_dofs{};
   mfem::Mesh*      mesh         = fes->GetMesh();
 
   // note: this assumes that all the elements are the same polynomial order
@@ -263,11 +263,14 @@ axom::Array<DoF, 2, axom::MemorySpace::Host> GetElementRestriction(const mfem::F
     n++;
   }
 
-  uint64_t dofs_per_elem = elem_dofs.size() / n;
-
-  axom::Array<DoF, 2, axom::MemorySpace::Host> output({n, dofs_per_elem});
-  std::memcpy(output.data(), elem_dofs.data(), sizeof(DoF) * n * dofs_per_elem);
-  return output;
+  if (n == 0) {
+    return axom::Array<DoF, 2, axom::MemorySpace::Host>{};
+  } else {
+    uint64_t dofs_per_elem = elem_dofs.size() / n;
+    axom::Array<DoF, 2, axom::MemorySpace::Host> output({n, dofs_per_elem});
+    std::memcpy(output.data(), elem_dofs.data(), sizeof(DoF) * n * dofs_per_elem);
+    return output;
+  }
 }
 
 axom::Array<DoF, 2, axom::MemorySpace::Host> GetFaceDofs(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom, FaceType type)

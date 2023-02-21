@@ -8,6 +8,8 @@
 #include <iomanip>
 #include <vector>
 
+#include "serac/numerics/functional/dof_numbering.hpp"
+
 template < typename T > 
 void write_to_file(std::vector<T> v, std::string filename) {
   std::ofstream outfile(filename);

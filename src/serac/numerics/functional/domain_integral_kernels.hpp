@@ -191,11 +191,14 @@ struct EvaluationKernel<DerivativeWRT<differentiation_index>, KernelConfig<Q, ge
 
     auto& qdata = *data_;
 
+    U[0]->Print();
+
     [[maybe_unused]] tuple u_e = {
         reinterpret_cast<const typename decltype(type<indices>(trial_elements))::dof_type*>(U[indices]->Read())...};
 
     // for each element in the domain
     for (uint32_t e = 0; e < num_elements_; e++) {
+
       // load the jacobians and positions for each quadrature point in this element
       auto J_e = J[e];
       auto X_e = X[e];
@@ -378,7 +381,7 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
   using test_element  = finite_element<g, test>;
   using trial_element = finite_element<g, trial>;
 
-  constexpr int nquad = (g == Geometry::Quadrilateral) ? Q * Q : Q * Q * Q;
+  constexpr int nquad = num_quadrature_points(g, Q);
 
   static constexpr TensorProductQuadratureRule<Q> rule{};
 

@@ -253,7 +253,7 @@ struct finite_element<Geometry::Triangle, H1<p, c> > {
     using source_t = decltype(get<0>(get<0>(in_t{})) + dot(get<1>(get<0>(in_t{})), tensor<double, 2>{}));
     using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double, 2>{}));
 
-    constexpr auto xi = TriangleGaussLegendreNodes<q>();
+    constexpr auto xi = GaussLegendreNodes<q, Geometry::Triangle>();
 
     static constexpr int Q = q * (q + 1) / 2;
     tensor<tuple<source_t, flux_t>, Q> output;
@@ -279,18 +279,22 @@ struct finite_element<Geometry::Triangle, H1<p, c> > {
     constexpr auto xi = GaussLegendreNodes<q, Geometry::Triangle>();
     static constexpr int num_quadrature_points = q * (q + 1) / 2;
 
-    tensor< qf_input_type, num_quadrature_points > output{};
+    // transpose the quadrature data into a flat tensor of tuples
+    union {
+      tensor< tuple< tensor<double, c>, tensor<double, c, dim> >, num_quadrature_points > unflattened;
+      tensor<qf_input_type, num_quadrature_points>                                        flattened;
+    } output{};
 
     for (int i = 0; i < c; i++) {
       for (int j = 0; j < num_quadrature_points; j++) {
         for (int k = 0; k < ndof; k++) {
-          get<VALUE>(output[j])[i] += X(i, k) * shape_function(xi[j], k);
-          get<GRADIENT>(output[j])[i] += X(i, k) * shape_function_gradient(xi[j], k);
+          get<VALUE>(output.unflattened[j])[i] += X(i, k) * shape_function(xi[j], k);
+          get<GRADIENT>(output.unflattened[j])[i] += X(i, k) * shape_function_gradient(xi[j], k);
         }
       }
     }
 
-    return output;
+    return output.flattened;
   }
 
   template <typename source_type, typename flux_type, int q>
