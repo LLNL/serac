@@ -24,7 +24,7 @@ struct Integral {
 
   static constexpr std::size_t num_types = Type::_size;
 
-  Integral(std::vector<int> trial_space_indices) : active_trial_spaces(trial_space_indices)
+  Integral(std::vector<uint32_t> trial_space_indices) : active_trial_spaces(trial_space_indices)
   {
     std::size_t num_trial_spaces = trial_space_indices.size();
     evaluation_with_AD_.resize(num_trial_spaces);
@@ -80,7 +80,7 @@ struct Integral {
   using grad_func = std::function<void(ExecArrayView<double, 3, ExecutionSpace::CPU>)>;
   std::vector<std::map<mfem::Geometry::Type, grad_func> > element_gradient_;
 
-  std::vector<int> active_trial_spaces;
+  std::vector<uint32_t> active_trial_spaces;
   std::vector<int> integral_to_functional_;
   std::vector<int> functional_to_integral_;
 };
@@ -109,24 +109,73 @@ inline std::vector<mfem::Geometry::Type> supported_geometries_tmp(int dim)
   }
 }
 
+template < typename T >
+struct FunctionSignature;
+
+template < typename output_type, typename ... input_types >
+struct FunctionSignature< output_type(input_types ... ) > {
+  using return_type = output_type;
+  using parameter_types = std::tuple< input_types ... >;
+
+  static constexpr int num_args = sizeof ... (input_types);
+};
+
+template < typename lambda_type >
+std::function<void(const std::vector<const double*>&, double*, bool)> evaluation_kernel(lambda_type) {
+  return {};
+}
+
+template < typename lambda_type >
+std::function<void(const std::vector<const double*>&, double*, bool)> evaluation_kernel_with_AD(lambda_type) {
+  return {};
+}
+
+template < typename lambda_type >
+std::function<void(const double*, double*)> jvp_kernel(lambda_type) {
+  return {};
+}
+
+template < typename lambda_type >
+std::function<void(ExecArrayView<double, 3, ExecutionSpace::CPU>)> element_gradient_kernel(lambda_type) {
+  return {};
+}
+
+template < mfem::Geometry::Type geom, std::size_t num_args, typename lambda_type >
+void setup_kernels(Integral & integral, lambda_type && qf) {
+  integral.evaluation_[geom] = evaluation_kernel(qf);
+  for_constexpr<num_args>([&](auto arg) {
+    integral.evaluation_with_AD_[arg][geom] = evaluation_kernel_with_AD(qf);
+    integral.jvp_[arg][geom] = jvp_kernel(qf);
+    integral.element_gradient_[arg][geom] = element_gradient_kernel(qf);
+  });
+}
+
 template <typename signature, int Q, int dim, typename lambda_type, typename qpt_data_type>
 Integral MakeDomainIntegral(mfem::Mesh& domain,
                             lambda_type&& qf,  // std::shared_ptr< QuadratureData<qpt_data_type> > qdata,
-                            std::vector<int> active_arguments)
+                            std::vector<uint32_t> argument_indices)
 {
-  Integral integral(active_arguments);
+  constexpr std::size_t num_args = FunctionSignature<signature>::num_args;
 
-  auto        counts           = geometry_counts(domain);
-  std::size_t num_trial_spaces = active_arguments.size();
+  Integral integral(argument_indices);
 
-  for (auto geom : supported_geometries_tmp(dim)) {
-    if (counts[uint32_t(geom)] > 0) {
-      auto* geom_factors = new serac::GeometricFactors(&domain, Q, geom);
-      // auto & X = geom_factors->X;
-      // auto & J = geom_factors->J;
+  auto counts = geometry_counts(domain);
 
-      for (std::size_t i = 0; i < num_trial_spaces; i++) {
-      }
+  if constexpr (dim == 2) {
+    if (counts[uint32_t(mfem::Geometry::TRIANGLE)] > 0) {
+      set_kernels< mfem::Geometry::TRIANGLE, num_args >(integral, qf);
+    }
+    if (counts[uint32_t(mfem::Geometry::SQUARE)] > 0) {
+      set_kernels< mfem::Geometry::SQUARE, num_args >(integral, qf);
+    }
+  }
+
+  if constexpr (dim == 3) {
+    if (counts[uint32_t(mfem::Geometry::TETRAHEDRON)] > 0) {
+      set_kernels< mfem::Geometry::TETRAHEDRON, num_args >(integral, qf);
+    }
+    if (counts[uint32_t(mfem::Geometry::CUBE)] > 0) {
+      set_kernels< mfem::Geometry::CUBE, num_args >(integral, qf);
     }
   }
 

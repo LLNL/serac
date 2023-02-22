@@ -507,13 +507,15 @@ public:
     output_L_ = 0.0;
 
 #if 1
-    bool already_computed[Integral::num_types][num_trial_spaces]{};  // initialized to `false`
+
+    // used to mark when gather operations have been performed,
+    // to avoid doing them more than once per trial space
+    bool already_computed[Integral::num_types][num_trial_spaces]{};
 
     for (auto& integral : integrals_) {
       auto type = integral.type;
 
       for (auto i : integral.active_trial_spaces) {
-        // avoid doing the gather operation more than once per trial space
         if (already_computed[type][i]) {
           G_trial_[i].Gather(input_L_[i], block_input_E_[type][i]);
           already_computed[type][i] = true;
@@ -789,8 +791,8 @@ private:
   /// @brief The output set of local DOF values (i.e., on the current rank)
   mutable mfem::Vector output_L_;
 
-  mutable mfem::BlockVector block_input_E_[Integral::num_types][num_trial_spaces];
-  mutable mfem::BlockVector block_output_E_[Integral::num_types][num_trial_spaces];
+  mutable std::vector < mfem::BlockVector > block_input_E_[Integral::num_types];
+  mutable mfem::BlockVector block_output_E_[Integral::num_types];
 
   /// @brief The input set of per-element DOF values
   mutable std::array<mfem::Vector, num_trial_spaces> input_E_;
