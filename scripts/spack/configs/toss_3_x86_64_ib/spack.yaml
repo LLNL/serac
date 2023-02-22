@@ -200,7 +200,7 @@ spack:
       - spec: python@3.8.2
         prefix: /usr/tce/packages/python/python-3.8.2
 
-  compilers:
+  compilers::
   - compiler:
       environment: {}
       extra_rpaths: []

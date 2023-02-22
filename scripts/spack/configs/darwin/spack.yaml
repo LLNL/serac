@@ -138,7 +138,7 @@ spack:
       - spec: python@2.7.16
         prefix: /usr
 
-  compilers:
+  compilers::
   - compiler:
       environment: {}
       extra_rpaths: []

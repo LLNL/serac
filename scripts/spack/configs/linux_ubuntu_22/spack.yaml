@@ -131,7 +131,7 @@ spack:
       - spec: py-sphinx@3.2.1
         prefix: /usr
 
-  compilers:
+  compilers::
   - compiler:
       spec: gcc@12.1.0
       paths:

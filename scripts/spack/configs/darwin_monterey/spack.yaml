@@ -96,7 +96,7 @@ spack:
       - spec: zlib@1.2.12
         prefix: /opt/local
 
-  compilers:
+  compilers::
   - compiler:
       environment: {}
       extra_rpaths: []

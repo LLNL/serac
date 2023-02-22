@@ -109,7 +109,7 @@ spack:
       - spec: py-sphinx@1.8.5
         prefix: /usr
 
-  compilers:
+  compilers::
     - compiler:
         environment: {}
         extra_rpaths: []

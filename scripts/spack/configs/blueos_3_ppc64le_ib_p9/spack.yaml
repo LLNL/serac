@@ -200,7 +200,8 @@ spack:
         - spec: python@3.8.2
           prefix: /usr/tce/packages/python/python-3.8.2/
       buildable: false
-  compilers:
+
+  compilers::
   - compiler:
       environment:
         # Temporary workaround: Spack issue #18156

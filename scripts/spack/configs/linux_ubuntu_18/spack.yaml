@@ -105,7 +105,7 @@ spack:
       - spec: py-sphinx@1.6.7
         prefix: /usr
 
-  compilers:
+  compilers::
   - compiler:
       spec: gcc@8.4.0
       paths:
