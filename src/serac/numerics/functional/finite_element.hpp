@@ -40,8 +40,9 @@ struct TensorProductQuadratureRule {
   }
 };
 
-template < auto val >
-struct CompileTimeValue{};
+template <auto val>
+struct CompileTimeValue {
+};
 
 /**
  * @brief this struct is used to look up mfem's memory layout of
@@ -71,7 +72,7 @@ struct batched_jacobian<Geometry::Quadrilateral, q> {
 template <int q>
 struct batched_jacobian<Geometry::Triangle, q> {
   /// the data layout for this geometry and quadrature rule
-  using type = tensor<double, 2, 2, q * (q + 1) / 2>;
+  using type = tensor<double, 2, 2, q*(q + 1) / 2>;
 };
 
 /**
@@ -98,12 +99,11 @@ struct batched_position<Geometry::Quadrilateral, q> {
   using type = tensor<double, 2, q * q>;
 };
 
-
 /// @overload
 template <int q>
 struct batched_position<Geometry::Triangle, q> {
   /// the data layout for this geometry and quadrature rule
-  using type = tensor<double, 2, q * (q + 1) / 2 >;
+  using type = tensor<double, 2, q*(q + 1) / 2>;
 };
 
 /// @overload
@@ -154,8 +154,6 @@ SERAC_HOST_DEVICE constexpr int elements_per_block(int q)
     }
   }
 }
-
-
 
 /**
  * @brief Element conformity

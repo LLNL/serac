@@ -164,11 +164,11 @@ struct DofNumbering {
                       static_cast<size_t>(fespace.GetFE(0)->GetDof() * fespace.GetVDim())),
         bdr_element_dofs_(allocateMemoryForBdrElementGradients<SignedIndex, ExecutionSpace::CPU>(fespace))
   {
-
-    int dim = fespace.GetMesh()->Dimension();
-    mfem::Geometry::Type elem_geom[4] = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT, mfem::Geometry::SQUARE, mfem::Geometry::CUBE};
-    ElementRestriction dofs(&fespace, elem_geom[dim]);
-    ElementRestriction boundary_dofs(&fespace, elem_geom[dim-1], FaceType::BOUNDARY);
+    int                  dim          = fespace.GetMesh()->Dimension();
+    mfem::Geometry::Type elem_geom[4] = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT, mfem::Geometry::SQUARE,
+                                         mfem::Geometry::CUBE};
+    ElementRestriction   dofs(&fespace, elem_geom[dim]);
+    ElementRestriction   boundary_dofs(&fespace, elem_geom[dim - 1], FaceType::BOUNDARY);
 
     {
       auto elem_restriction = fespace.GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC);
@@ -258,9 +258,10 @@ struct GradientAssemblyLookupTables {
   GradientAssemblyLookupTables(const mfem::ParFiniteElementSpace& test_fespace,
                                const mfem::ParFiniteElementSpace& trial_fespace)
   {
-    int dim = test_fespace.GetMesh()->Dimension();
-    mfem::Geometry::Type elem_geom[4] = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT, mfem::Geometry::SQUARE, mfem::Geometry::CUBE};
-    
+    int                  dim          = test_fespace.GetMesh()->Dimension();
+    mfem::Geometry::Type elem_geom[4] = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT, mfem::Geometry::SQUARE,
+                                         mfem::Geometry::CUBE};
+
     std::vector<ElemInfo> infos;
 
     // we start by having each element and boundary element emit the (i,j) entry that it
@@ -272,10 +273,10 @@ struct GradientAssemblyLookupTables {
       serac::ElementRestriction test_dofs(&test_fespace, elem_geom[dim]);
       serac::ElementRestriction trial_dofs(&trial_fespace, elem_geom[dim]);
 
-      std::vector< DoF > test_vdofs(test_dofs.nodes_per_elem * test_dofs.components);
-      std::vector< DoF > trial_vdofs(trial_dofs.nodes_per_elem * trial_dofs.components);
+      std::vector<DoF> test_vdofs(test_dofs.nodes_per_elem * test_dofs.components);
+      std::vector<DoF> trial_vdofs(trial_dofs.nodes_per_elem * trial_dofs.components);
 
-      auto num_elements     = static_cast<uint32_t>(trial_fespace.GetNE());
+      auto num_elements = static_cast<uint32_t>(trial_fespace.GetNE());
       for (uint32_t e = 0; e < num_elements; e++) {
         for (uint64_t i = 0; i < uint64_t(test_dofs.dof_info.shape()[1]); i++) {
           auto test_dof = test_dofs.dof_info(e, i);
@@ -285,21 +286,18 @@ struct GradientAssemblyLookupTables {
 
             for (uint64_t k = 0; k < test_dofs.components; k++) {
               for (uint64_t l = 0; l < trial_dofs.components; l++) {
-
-                uint32_t test_global_id = uint32_t(test_dofs.GetVDof(test_dof, k).index());
+                uint32_t test_global_id  = uint32_t(test_dofs.GetVDof(test_dof, k).index());
                 uint32_t trial_global_id = uint32_t(trial_dofs.GetVDof(trial_dof, l).index());
-                uint32_t test_local_id = uint32_t(k * test_dofs.nodes_per_elem + i);
-                uint32_t trial_local_id = uint32_t(l * trial_dofs.nodes_per_elem + j);
+                uint32_t test_local_id   = uint32_t(k * test_dofs.nodes_per_elem + i);
+                uint32_t trial_local_id  = uint32_t(l * trial_dofs.nodes_per_elem + j);
 
-                ElemInfo info {
-                  test_global_id,
-                  trial_global_id,
-                  test_local_id,
-                  trial_local_id,
-                  e,
-                  test_dof.sign() * trial_dof.sign(),
-                  on_boundary
-                };
+                ElemInfo info{test_global_id,
+                              trial_global_id,
+                              test_local_id,
+                              trial_local_id,
+                              e,
+                              test_dof.sign() * trial_dof.sign(),
+                              on_boundary};
 
                 infos.push_back(info);
               }
@@ -308,22 +306,18 @@ struct GradientAssemblyLookupTables {
         }
       }
 
-      element_nonzero_LUT.resize(
-        num_elements, 
-        test_dofs.nodes_per_elem * test_dofs.components,
-        trial_dofs.nodes_per_elem * trial_dofs.components
-      );
-
+      element_nonzero_LUT.resize(num_elements, test_dofs.nodes_per_elem * test_dofs.components,
+                                 trial_dofs.nodes_per_elem * trial_dofs.components);
     }
 
     {
       bool on_boundary = true;
 
-      serac::ElementRestriction test_boundary_dofs(&test_fespace, elem_geom[dim-1], FaceType::BOUNDARY);
-      serac::ElementRestriction trial_boundary_dofs(&trial_fespace, elem_geom[dim-1], FaceType::BOUNDARY);
+      serac::ElementRestriction test_boundary_dofs(&test_fespace, elem_geom[dim - 1], FaceType::BOUNDARY);
+      serac::ElementRestriction trial_boundary_dofs(&trial_fespace, elem_geom[dim - 1], FaceType::BOUNDARY);
 
-      std::vector< DoF > test_vdofs(test_boundary_dofs.nodes_per_elem * test_boundary_dofs.components);
-      std::vector< DoF > trial_vdofs(trial_boundary_dofs.nodes_per_elem * trial_boundary_dofs.components);
+      std::vector<DoF> test_vdofs(test_boundary_dofs.nodes_per_elem * test_boundary_dofs.components);
+      std::vector<DoF> trial_vdofs(trial_boundary_dofs.nodes_per_elem * trial_boundary_dofs.components);
 
       auto num_bdr_elements = static_cast<uint32_t>(trial_fespace.GetNFbyType(mfem::FaceType::Boundary));
       for (uint32_t e = 0; e < num_bdr_elements; e++) {
@@ -335,36 +329,29 @@ struct GradientAssemblyLookupTables {
 
             for (uint64_t k = 0; k < test_boundary_dofs.components; k++) {
               for (uint64_t l = 0; l < trial_boundary_dofs.components; l++) {
-
-                uint32_t test_global_id = uint32_t(test_boundary_dofs.GetVDof(test_dof, k).index());
+                uint32_t test_global_id  = uint32_t(test_boundary_dofs.GetVDof(test_dof, k).index());
                 uint32_t trial_global_id = uint32_t(trial_boundary_dofs.GetVDof(trial_dof, l).index());
-                uint32_t test_local_id = uint32_t(k * test_boundary_dofs.nodes_per_elem + i);
-                uint32_t trial_local_id = uint32_t(l * trial_boundary_dofs.nodes_per_elem + j);
+                uint32_t test_local_id   = uint32_t(k * test_boundary_dofs.nodes_per_elem + i);
+                uint32_t trial_local_id  = uint32_t(l * trial_boundary_dofs.nodes_per_elem + j);
 
-                ElemInfo info {
-                  test_global_id,
-                  trial_global_id,
-                  test_local_id,
-                  trial_local_id,
-                  e,
-                  test_dof.sign() * trial_dof.sign(),
-                  on_boundary
-                };
+                ElemInfo info{test_global_id,
+                              trial_global_id,
+                              test_local_id,
+                              trial_local_id,
+                              e,
+                              test_dof.sign() * trial_dof.sign(),
+                              on_boundary};
 
                 infos.push_back(info);
-
               }
             }
           }
         }
       }
 
-      bdr_element_nonzero_LUT.resize(
-        num_bdr_elements, 
-        test_boundary_dofs.nodes_per_elem * test_boundary_dofs.components,
-        trial_boundary_dofs.nodes_per_elem * trial_boundary_dofs.components
-      );
-
+      bdr_element_nonzero_LUT.resize(num_bdr_elements,
+                                     test_boundary_dofs.nodes_per_elem * test_boundary_dofs.components,
+                                     trial_boundary_dofs.nodes_per_elem * trial_boundary_dofs.components);
     }
 
     // sorting the ElemInfos by row and column groups the different contributions

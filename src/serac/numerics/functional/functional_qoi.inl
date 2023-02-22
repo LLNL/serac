@@ -65,7 +65,8 @@ class Functional<double(trials...), exec> {
   static constexpr uint32_t         num_trial_spaces = sizeof...(trials);
   static constexpr auto             Q                = std::max({test::order, trials::order...}) + 1;
 
-  static constexpr mfem::Geometry::Type elem_geom[4] = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT, mfem::Geometry::SQUARE, mfem::Geometry::CUBE};
+  static constexpr mfem::Geometry::Type elem_geom[4] = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT,
+                                                        mfem::Geometry::SQUARE, mfem::Geometry::CUBE};
 
   class Gradient;
 
@@ -97,7 +98,7 @@ public:
       G_trial_[i] = ElementRestriction(trial_fes[i], elem_geom[dim]);
       input_E_[i].SetSize(int(G_trial_[i].ESize()), mfem::Device::GetMemoryType());
 
-      G_trial_boundary_[i] = ElementRestriction(trial_fes[i], elem_geom[dim-1], FaceType::BOUNDARY);
+      G_trial_boundary_[i] = ElementRestriction(trial_fes[i], elem_geom[dim - 1], FaceType::BOUNDARY);
       input_E_boundary_[i].SetSize(int(G_trial_boundary_[i].ESize()), mfem::Device::GetMemoryType());
 
       // create the gradient operators for each trial space
@@ -119,12 +120,11 @@ public:
     auto num_elements     = static_cast<size_t>(G_trial_[0].num_elements);
     auto num_bdr_elements = static_cast<size_t>(G_trial_boundary_[0].num_elements);
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
-      auto ndof_per_trial_element =
-          static_cast<size_t>(G_trial_[i].nodes_per_elem * G_trial_[i].components);
+      auto ndof_per_trial_element = static_cast<size_t>(G_trial_[i].nodes_per_elem * G_trial_[i].components);
       auto ndof_per_trial_bdr_element =
           static_cast<size_t>(G_trial_boundary_[i].nodes_per_elem * G_trial_boundary_[i].components);
 
-      element_gradients_[i] = ExecArray<double, 3, exec>(num_elements, 1, ndof_per_trial_element);
+      element_gradients_[i]     = ExecArray<double, 3, exec>(num_elements, 1, ndof_per_trial_element);
       bdr_element_gradients_[i] = ExecArray<double, 3, exec>(num_bdr_elements, 1, ndof_per_trial_bdr_element);
     }
   }
@@ -162,7 +162,7 @@ public:
 
     // this is a temporary measure to check correctness for the replacement "GeometricFactor"
     // kernels, must be fixed before merging!
-    auto * geom = new serac::GeometricFactors(&domain, Q, elem_geom[domain.Dimension()]);
+    auto* geom = new serac::GeometricFactors(&domain, Q, elem_geom[domain.Dimension()]);
 
     auto selected_trial_spaces = serac::make_tuple(serac::get<args>(trial_spaces)...);
 
@@ -199,8 +199,8 @@ public:
 
     auto selected_trial_spaces = serac::make_tuple(serac::get<args>(trial_spaces)...);
 
-    bdr_integrals_.emplace_back(test{}, selected_trial_spaces, num_bdr_elements, geom->J, geom->X,
-                                Dimension<dim>{}, integrand, std::vector<int>{args...});
+    bdr_integrals_.emplace_back(test{}, selected_trial_spaces, num_bdr_elements, geom->J, geom->X, Dimension<dim>{},
+                                integrand, std::vector<int>{args...});
   }
 
   /**
@@ -413,9 +413,7 @@ private:
      * @param[in] f The @p Functional to use for gradient calculations
      */
     Gradient(Functional<double(trials...)>& f, uint32_t which = 0)
-        : form_(f),
-          which_argument(which),
-          gradient_L_(f.trial_space_[which]->GetVSize())
+        : form_(f), which_argument(which), gradient_L_(f.trial_space_[which]->GetVSize())
     {
     }
 
@@ -439,22 +437,21 @@ private:
           domain.ComputeElementGradients(view(K_elem), which_argument);
         }
 
-        auto & restriction = form_.G_trial_[which_argument];
-        auto num_elements = restriction.num_elements;
-        auto nodes_per_element = restriction.nodes_per_elem;
-        auto components_per_node = restriction.components;
+        auto& restriction         = form_.G_trial_[which_argument];
+        auto  num_elements        = restriction.num_elements;
+        auto  nodes_per_element   = restriction.nodes_per_elem;
+        auto  components_per_node = restriction.components;
 
         for (uint32_t e = 0; e < num_elements; e++) {
           for (uint64_t j = 0; j < nodes_per_element; j++) {
             auto dof = restriction.dof_info(e, j);
             for (uint64_t l = 0; l < components_per_node; l++) {
-              int32_t global_id = int(restriction.GetVDof(dof, l).index());
-              uint32_t local_id = uint32_t(l * nodes_per_element + j);
+              int32_t  global_id = int(restriction.GetVDof(dof, l).index());
+              uint32_t local_id  = uint32_t(l * nodes_per_element + j);
               gradient_L_(global_id) += dof.sign() * K_elem(e, 0, local_id);
             }
           }
         }
-
       }
 
       if (form_.bdr_integrals_.size() > 0) {
@@ -465,17 +462,17 @@ private:
           boundary.ComputeElementGradients(view(K_belem), which_argument);
         }
 
-        auto & restriction = form_.G_trial_boundary_[which_argument];
-        auto num_elements = restriction.num_elements;
-        auto nodes_per_element = restriction.nodes_per_elem;
-        auto components_per_node = restriction.components;
+        auto& restriction         = form_.G_trial_boundary_[which_argument];
+        auto  num_elements        = restriction.num_elements;
+        auto  nodes_per_element   = restriction.nodes_per_elem;
+        auto  components_per_node = restriction.components;
 
         for (uint32_t e = 0; e < num_elements; e++) {
           for (uint64_t j = 0; j < nodes_per_element; j++) {
             auto dof = restriction.dof_info(e, j);
             for (uint64_t l = 0; l < components_per_node; l++) {
-              int32_t global_id = int(restriction.GetVDof(dof, l).index());
-              uint32_t local_id = uint32_t(l * nodes_per_element + j);
+              int32_t  global_id = int(restriction.GetVDof(dof, l).index());
+              uint32_t local_id  = uint32_t(l * nodes_per_element + j);
               gradient_L_(global_id) += dof.sign() * K_belem(e, 0, local_id);
             }
           }

@@ -4,10 +4,11 @@
 
 std::vector<std::vector<int> > lexicographic_permutations(int p)
 {
-
   // p == 0 is admissible for L2 spaces, but lexicographic permutations
   // aren't needed in that corner case
-  if (p == 0) { return {}; }
+  if (p == 0) {
+    return {};
+  }
 
   std::vector<std::vector<int> > output(mfem::Geometry::Type::NUM_GEOMETRIES);
 
@@ -210,28 +211,28 @@ std::vector<Array2D<int> > geom_local_face_dofs(int p)
   return output;
 }
 
-axom::Array<DoF, 2, axom::MemorySpace::Host> GetElementRestriction(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type geom)
+axom::Array<DoF, 2, axom::MemorySpace::Host> GetElementRestriction(const mfem::FiniteElementSpace* fes,
+                                                                   mfem::Geometry::Type            geom)
 {
   std::vector<DoF> elem_dofs{};
-  mfem::Mesh*      mesh         = fes->GetMesh();
+  mfem::Mesh*      mesh = fes->GetMesh();
 
   // note: this assumes that all the elements are the same polynomial order
-  int                            p         = fes->GetElementOrder(0);
+  int                            p        = fes->GetElementOrder(0);
   std::vector<std::vector<int> > lex_perm = lexicographic_permutations(p);
 
   uint64_t n = 0;
 
   for (int elem = 0; elem < fes->GetNE(); elem++) {
-
     // discard elements with the wrong geometry
     if (mesh->GetElementGeometry(elem) != geom) continue;
 
     mfem::Array<int> dofs;
 
-    [[maybe_unused]] auto * dof_transformation = fes->GetElementDofs(elem, dofs);
+    [[maybe_unused]] auto* dof_transformation = fes->GetElementDofs(elem, dofs);
 
-    // mfem returns the H1 dofs in "native" order, so we need 
-    // to apply the native-to-lexicographic permutation 
+    // mfem returns the H1 dofs in "native" order, so we need
+    // to apply the native-to-lexicographic permutation
     if (isH1(*fes)) {
       for (int k = 0; k < dofs.Size(); k++) {
         elem_dofs.push_back({uint64_t(dofs[lex_perm[uint32_t(geom)][uint32_t(k)]])});
@@ -240,17 +241,17 @@ axom::Array<DoF, 2, axom::MemorySpace::Host> GetElementRestriction(const mfem::F
 
     // the dofs mfem returns for Hcurl include information about
     // dof orientation, but not for triangle faces on 3D elements.
-    // So, we need to manually 
+    // So, we need to manually
     if (isHcurl(*fes)) {
       // TODO
       // TODO
       // TODO
-      uint64_t sign = 1;
+      uint64_t sign        = 1;
       uint64_t orientation = 0;
       for (int k = 0; k < dofs.Size(); k++) {
         elem_dofs.push_back({uint64_t(dofs[k]), sign, orientation});
       }
-    } 
+    }
 
     // mfem returns DG dofs in lexicographic order already
     // so no permutation is required here
@@ -266,14 +267,15 @@ axom::Array<DoF, 2, axom::MemorySpace::Host> GetElementRestriction(const mfem::F
   if (n == 0) {
     return axom::Array<DoF, 2, axom::MemorySpace::Host>{};
   } else {
-    uint64_t dofs_per_elem = elem_dofs.size() / n;
+    uint64_t                                     dofs_per_elem = elem_dofs.size() / n;
     axom::Array<DoF, 2, axom::MemorySpace::Host> output({n, dofs_per_elem});
     std::memcpy(output.data(), elem_dofs.data(), sizeof(DoF) * n * dofs_per_elem);
     return output;
   }
 }
 
-axom::Array<DoF, 2, axom::MemorySpace::Host> GetFaceDofs(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom, FaceType type)
+axom::Array<DoF, 2, axom::MemorySpace::Host> GetFaceDofs(const mfem::FiniteElementSpace* fes,
+                                                         mfem::Geometry::Type face_geom, FaceType type)
 {
   std::vector<DoF> face_dofs;
   mfem::Mesh*      mesh         = fes->GetMesh();
@@ -288,7 +290,6 @@ axom::Array<DoF, 2, axom::MemorySpace::Host> GetFaceDofs(const mfem::FiniteEleme
   uint64_t n = 0;
 
   for (int f = 0; f < fes->GetNF(); f++) {
-
     auto faceinfo = mesh->GetFaceInformation(f);
 
     // discard faces with the wrong geometry or type
@@ -299,17 +300,14 @@ axom::Array<DoF, 2, axom::MemorySpace::Host> GetFaceDofs(const mfem::FiniteEleme
     // mfem doesn't provide this connectivity info for DG spaces directly,
     // so we have to get at it indirectly in several steps:
     if (isDG(*fes)) {
-
       // 1. find the element(s) that this face belongs to
       mfem::Array<int> elem_ids;
       face_to_elem->GetRow(f, elem_ids);
 
       for (auto elem : elem_ids) {
-
         // 2a. get the list of faces (and their orientations) that belong to that element ...
         mfem::Array<int> elem_side_ids, orientations;
         if (mesh->Dimension() == 2) {
-
           mesh->GetElementEdges(elem, elem_side_ids, orientations);
 
           // mfem returns {-1, 1} for edge orientations,
@@ -322,9 +320,7 @@ axom::Array<DoF, 2, axom::MemorySpace::Host> GetFaceDofs(const mfem::FiniteEleme
           }
 
         } else {
-
           mesh->GetElementFaces(elem, elem_side_ids, orientations);
-
         }
 
         // 2b. ... and find `i` such that `elem_side_ids[i] == f`
@@ -340,10 +336,10 @@ axom::Array<DoF, 2, axom::MemorySpace::Host> GetFaceDofs(const mfem::FiniteEleme
         mfem::Geometry::Type elem_geom = mesh->GetElementGeometry(elem);
 
         // mfem uses different conventions for boundary element orientations in 2D and 3D.
-        // In 2D, mfem's official edge orientations on the boundary will always be a mix of 
+        // In 2D, mfem's official edge orientations on the boundary will always be a mix of
         // CW and CCW, so we have to discard mfem's orientation information in order
         // to get a consistent winding.
-        // 
+        //
         // In 3D, mfem does use a consistently CCW winding for boundary faces (I think).
         int orientation = (mesh->Dimension() == 2 && type == FaceType::BOUNDARY) ? 0 : orientations[i];
 
@@ -351,16 +347,14 @@ axom::Array<DoF, 2, axom::MemorySpace::Host> GetFaceDofs(const mfem::FiniteEleme
         for (auto k : face_perm(orientation)) {
           face_dofs.push_back(uint64_t(elem_dof_ids[local_face_dofs[uint32_t(elem_geom)](i, k)]));
         }
-      
+
         // boundary faces only belong to 1 element, so we exit early
         if (type == FaceType::BOUNDARY) break;
-
       }
 
-    // H1 and Hcurl spaces are more straight-forward, since
-    // we can use FiniteElementSpace::GetFaceDofs() directly
+      // H1 and Hcurl spaces are more straight-forward, since
+      // we can use FiniteElementSpace::GetFaceDofs() directly
     } else {
-
       mfem::Array<int> dofs;
 
       fes->GetFaceDofs(f, dofs);
@@ -374,7 +368,6 @@ axom::Array<DoF, 2, axom::MemorySpace::Host> GetFaceDofs(const mfem::FiniteEleme
           face_dofs.push_back(uint64_t(dofs[elem_perm[uint32_t(face_geom)][uint32_t(k)]]));
         }
       }
-
     }
 
     n++;
@@ -391,41 +384,41 @@ axom::Array<DoF, 2, axom::MemorySpace::Host> GetFaceDofs(const mfem::FiniteEleme
 
 namespace serac {
 
-ElementRestriction::ElementRestriction(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type elem_geom) {
+ElementRestriction::ElementRestriction(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type elem_geom)
+{
   dof_info = GetElementRestriction(fes, elem_geom);
 
   ordering = fes->GetOrdering();
 
-  lsize = uint64_t(fes->GetVSize());
-  components = uint64_t(fes->GetVDim());
-  num_nodes = lsize / components;
-  num_elements = uint64_t(dof_info.shape()[0]);
+  lsize          = uint64_t(fes->GetVSize());
+  components     = uint64_t(fes->GetVDim());
+  num_nodes      = lsize / components;
+  num_elements   = uint64_t(dof_info.shape()[0]);
   nodes_per_elem = uint64_t(dof_info.shape()[1]);
-  esize = num_elements * nodes_per_elem * components;
+  esize          = num_elements * nodes_per_elem * components;
 }
 
-ElementRestriction::ElementRestriction(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom, FaceType type) {
+ElementRestriction::ElementRestriction(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom,
+                                       FaceType type)
+{
   dof_info = GetFaceDofs(fes, face_geom, type);
 
   ordering = fes->GetOrdering();
 
-  lsize = uint64_t(fes->GetVSize());
-  components = uint64_t(fes->GetVDim());
-  num_nodes = lsize / components;
-  num_elements = uint64_t(dof_info.shape()[0]);
+  lsize          = uint64_t(fes->GetVSize());
+  components     = uint64_t(fes->GetVDim());
+  num_nodes      = lsize / components;
+  num_elements   = uint64_t(dof_info.shape()[0]);
   nodes_per_elem = uint64_t(dof_info.shape()[1]);
-  esize = num_elements * nodes_per_elem * components;
+  esize          = num_elements * nodes_per_elem * components;
 }
 
-uint64_t ElementRestriction::ESize() const {
-  return esize;
-}
+uint64_t ElementRestriction::ESize() const { return esize; }
 
-uint64_t ElementRestriction::LSize() const{
-  return lsize;
-}
+uint64_t ElementRestriction::LSize() const { return lsize; }
 
-DoF ElementRestriction::GetVDof(DoF node, uint64_t component) const {
+DoF ElementRestriction::GetVDof(DoF node, uint64_t component) const
+{
   if (ordering == mfem::Ordering::Type::byNODES) {
     return DoF{component * num_nodes + node.index(), (node.sign() == 1) ? 0ull : 1ull, node.orientation()};
   } else {
@@ -433,19 +426,21 @@ DoF ElementRestriction::GetVDof(DoF node, uint64_t component) const {
   }
 }
 
-void ElementRestriction::Gather(const mfem::Vector & L_vector, mfem::Vector & E_vector) const {
+void ElementRestriction::Gather(const mfem::Vector& L_vector, mfem::Vector& E_vector) const
+{
   for (uint64_t i = 0; i < num_elements; i++) {
     for (uint64_t c = 0; c < components; c++) {
       for (uint64_t j = 0; j < nodes_per_elem; j++) {
-        uint64_t E_id = (i * components + c) * nodes_per_elem + j;
-        uint64_t L_id = GetVDof(dof_info(i, j), c).index();
+        uint64_t E_id  = (i * components + c) * nodes_per_elem + j;
+        uint64_t L_id  = GetVDof(dof_info(i, j), c).index();
         E_vector[E_id] = L_vector[L_id];
       }
     }
   }
 }
 
-void ElementRestriction::ScatterAdd(const mfem::Vector & E_vector, mfem::Vector & L_vector) const {
+void ElementRestriction::ScatterAdd(const mfem::Vector& E_vector, mfem::Vector& L_vector) const
+{
   for (uint64_t i = 0; i < num_elements; i++) {
     for (uint64_t c = 0; c < components; c++) {
       for (uint64_t j = 0; j < nodes_per_elem; j++) {
@@ -457,4 +452,4 @@ void ElementRestriction::ScatterAdd(const mfem::Vector & E_vector, mfem::Vector 
   }
 }
 
-}
+}  // namespace serac

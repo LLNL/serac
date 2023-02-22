@@ -125,13 +125,14 @@ struct KernelConfig {
 };
 
 template <typename lambda, int dim, int n, typename... T, int... I>
-auto batch_apply_qf(lambda qf, const tensor<double, dim, n>& positions, const tensor<double, dim - 1, dim, n>& jacobians,
-                    const tuple<tensor<T, n>...>& inputs, std::integer_sequence<int, I...>)
+auto batch_apply_qf(lambda qf, const tensor<double, dim, n>& positions,
+                    const tensor<double, dim - 1, dim, n>& jacobians, const tuple<tensor<T, n>...>& inputs,
+                    std::integer_sequence<int, I...>)
 {
   using return_type = decltype(qf(tensor<double, dim>{}, tensor<double, dim>{}, T{}...));
   tensor<tuple<return_type, zero>, n> outputs{};
   for (int i = 0; i < n; i++) {
-    tensor<double, dim> x_q;
+    tensor<double, dim>          x_q;
     tensor<double, dim, dim - 1> J_q;
     for (int j = 0; j < dim; j++) {
       x_q[j] = positions(j, i);
@@ -142,7 +143,7 @@ auto batch_apply_qf(lambda qf, const tensor<double, dim, n>& positions, const te
     tensor<double, dim> n_q = cross(J_q);
 
     double scale = norm(n_q);
-    
+
     get<0>(outputs[i]) = qf(x_q, n_q / scale, get<I>(inputs)[i]...) * scale;
   }
   return outputs;
@@ -189,7 +190,8 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
    * @param num_elements how many elements in the domain
    * @param qf q-function
    */
-  EvaluationKernel(KernelConfig<Q, geom, test, trials...>, const mfem::Vector& J, const mfem::Vector& X, std::size_t num_elements, lambda qf)
+  EvaluationKernel(KernelConfig<Q, geom, test, trials...>, const mfem::Vector& J, const mfem::Vector& X,
+                   std::size_t num_elements, lambda qf)
       : J_(J), X_(X), num_elements_(num_elements), qf_(qf)
   {
   }
@@ -207,7 +209,7 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
     // mfem provides this information in 1D arrays, so we reshape it
     // into strided multidimensional arrays before using
     constexpr int nqp = num_quadrature_points(geom, Q);
-    auto          J    = reinterpret_cast<const tensor<double, sdim-1, sdim, nqp>*>(J_.Read());
+    auto          J   = reinterpret_cast<const tensor<double, sdim - 1, sdim, nqp>*>(J_.Read());
     auto          X   = reinterpret_cast<const tensor<double, sdim, nqp>*>(X_.Read());
     auto          r   = reinterpret_cast<typename test_element::dof_type*>(R.ReadWrite());
     static constexpr TensorProductQuadratureRule<Q> rule{};
@@ -275,7 +277,8 @@ struct EvaluationKernel<DerivativeWRT<differentiation_index>, KernelConfig<Q, ge
    * @param qf q-function
    */
   EvaluationKernel(DerivativeWRT<differentiation_index>, KernelConfig<Q, geom, test, trials...>,
-                   CPUArrayView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J, const mfem::Vector& X, std::size_t num_elements, lambda qf)
+                   CPUArrayView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J, const mfem::Vector& X,
+                   std::size_t num_elements, lambda qf)
       : qf_derivatives_(qf_derivatives), J_(J), X_(X), num_elements_(num_elements), qf_(qf)
   {
   }
@@ -292,7 +295,7 @@ struct EvaluationKernel<DerivativeWRT<differentiation_index>, KernelConfig<Q, ge
     // into strided multidimensional arrays before using
     constexpr int sdim = dimension_of(geom) + 1;  // spatial dimension
     constexpr int nqp  = num_quadrature_points(geom, Q);
-    auto          J    = reinterpret_cast<const tensor<double, sdim-1, sdim, nqp>*>(J_.Read());
+    auto          J    = reinterpret_cast<const tensor<double, sdim - 1, sdim, nqp>*>(J_.Read());
     auto          X    = reinterpret_cast<const tensor<double, sdim, nqp>*>(X_.Read());
     auto          r    = reinterpret_cast<typename test_element::dof_type*>(R.ReadWrite());
     static constexpr TensorProductQuadratureRule<Q> rule{};
@@ -332,15 +335,14 @@ struct EvaluationKernel<DerivativeWRT<differentiation_index>, KernelConfig<Q, ge
 };
 
 template <int Q, Geometry geom, typename test, typename... trials, typename lambda>
-EvaluationKernel(KernelConfig<Q, geom, test, trials...>, const mfem::Vector&, const mfem::Vector&,
-                 int, lambda) -> EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lambda,
-                                                  std::make_integer_sequence<int, static_cast<int>(sizeof...(trials))>>;
+EvaluationKernel(KernelConfig<Q, geom, test, trials...>, const mfem::Vector&, const mfem::Vector&, int, lambda)
+    -> EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lambda,
+                        std::make_integer_sequence<int, static_cast<int>(sizeof...(trials))>>;
 
 template <int differentiation_index, int Q, Geometry geom, typename test, typename... trials, typename derivatives_type,
           typename lambda>
 EvaluationKernel(DerivativeWRT<differentiation_index>, KernelConfig<Q, geom, test, trials...>,
-                 CPUArrayView<derivatives_type, 2>, const mfem::Vector&, const mfem::Vector&, int,
-                 lambda)
+                 CPUArrayView<derivatives_type, 2>, const mfem::Vector&, const mfem::Vector&, int, lambda)
     -> EvaluationKernel<DerivativeWRT<differentiation_index>, KernelConfig<Q, geom, test, trials...>, derivatives_type,
                         lambda, std::make_integer_sequence<int, static_cast<int>(sizeof...(trials))>>;
 

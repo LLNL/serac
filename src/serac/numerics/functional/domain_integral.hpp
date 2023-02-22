@@ -55,20 +55,18 @@ public:
    * and @a dim template parameters
    */
   template <typename test, typename... trials, auto geom, typename lambda_type, typename qpt_data_type = Nothing>
-  DomainIntegral(test, serac::tuple<trials...>, mfem::Mesh& domain,
-                 CompileTimeValue<geom>, lambda_type&& qf, std::shared_ptr< QuadratureData<qpt_data_type> > qdata,
-                 std::vector<int> active_arguments)
+  DomainIntegral(test, serac::tuple<trials...>, mfem::Mesh& domain, CompileTimeValue<geom>, lambda_type&& qf,
+                 std::shared_ptr<QuadratureData<qpt_data_type> > qdata, std::vector<int> active_arguments)
   {
-
     // GCC 12.0 is incorrectly emitting an error that `dim` is unused,
     // so the attribute is there to suppress that warning/error
     [[maybe_unused]] static constexpr int dim = dimension_of(geom);
 
     // this is a temporary measure to check correctness for the replacement "GeometricFactor"
     // kernels, must be fixed before merging!
-    auto * geom_factors = new serac::GeometricFactors(&domain, Q, to_mfem(geom));
-    auto & X = geom_factors->X;
-    auto & J = geom_factors->J;
+    auto* geom_factors = new serac::GeometricFactors(&domain, Q, to_mfem(geom));
+    auto& X            = geom_factors->X;
+    auto& J            = geom_factors->J;
 
     write_to_file(X, "X.txt");
     write_to_file(J, "J.txt");
@@ -88,7 +86,7 @@ public:
     SERAC_MARK_BEGIN("Domain Integral Set Up");
     using namespace domain_integral;
 
-    constexpr auto geometry = geom;
+    constexpr auto geometry                      = geom;
     constexpr auto quadrature_points_per_element = num_quadrature_points(geom, Q);
 
     // this is where we actually specialize the finite element kernel templates with

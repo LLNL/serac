@@ -74,4 +74,4 @@ constexpr int dimension_of(Geometry g)
   return -1;
 }
 
-}
+}  // namespace serac

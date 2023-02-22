@@ -198,7 +198,6 @@ struct EvaluationKernel<DerivativeWRT<differentiation_index>, KernelConfig<Q, ge
 
     // for each element in the domain
     for (uint32_t e = 0; e < num_elements_; e++) {
-
       // load the jacobians and positions for each quadrature point in this element
       auto J_e = J[e];
       auto X_e = X[e];

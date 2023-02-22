@@ -34,7 +34,6 @@ double time(callable f)
 
 int main()
 {
-
 #if 0
   // non-conforming mesh example
   double vertices[5][2] = {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}, {0.7, 0.4}};
@@ -54,7 +53,7 @@ int main()
   refinements[0] = mfem::Refinement(0);
   mesh.GeneralRefinement(refinements, 1);
 #else
-  //const char* mesh_file = "/home/sam/Downloads/annulus.vtk";
+  // const char* mesh_file = "/home/sam/Downloads/annulus.vtk";
   const char* mesh_file = "/home/sam/Downloads/annulus_ncmesh.vtk";
   // const char* mesh_file = "/home/sam/code/mfem/data/star.mesh";
   Mesh mesh(mesh_file);
@@ -108,7 +107,7 @@ int main()
   stopwatch.stop();
   std::cout << "generated " << contours.size() << " contours in " << stopwatch.elapsed() << " seconds" << std::endl;
 
-  //for (auto contour : contours) {
+  // for (auto contour : contours) {
   //  for (auto v : contour) {
   //    std::cout << v << " ";
   //  }

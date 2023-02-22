@@ -191,7 +191,6 @@ GeometricFactors::GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry
   DISPATCH_KERNEL(Quadrilateral, 3, 3);
   DISPATCH_KERNEL(Quadrilateral, 3, 4);
 
-
 #undef DISPATCH_KERNEL
 
   std::cout << "should never be reached" << std::endl;

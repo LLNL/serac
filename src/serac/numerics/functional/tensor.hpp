@@ -457,8 +457,6 @@ SERAC_HOST_DEVICE constexpr auto operator-(const tensor<S, m, n...>& A, const te
   return C;
 }
 
-
-
 /**
  * @brief compound assignment (+) on tensors
  * @tparam S the underlying type of the tensor (lefthand) argument
@@ -895,30 +893,30 @@ SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m, n, p, q>& A, const tenso
   return AB;
 }
 
-template < typename T>
-auto cross(const tensor<T,3,2> & A) { 
-  return tensor<T,3>{
-    A(1,0)*A(2,1)-A(2,0)*A(1,1),
-    A(2,0)*A(0,1)-A(0,0)*A(2,1),
-    A(0,0)*A(1,1)-A(1,0)*A(0,1)
-  };
+template <typename T>
+auto cross(const tensor<T, 3, 2>& A)
+{
+  return tensor<T, 3>{A(1, 0) * A(2, 1) - A(2, 0) * A(1, 1), A(2, 0) * A(0, 1) - A(0, 0) * A(2, 1),
+                      A(0, 0) * A(1, 1) - A(1, 0) * A(0, 1)};
 }
 
-template < typename T>
-auto cross(const tensor<T,2,1> & v) { 
-  return tensor<T,2>{v(1,0), -v(0,0)};
+template <typename T>
+auto cross(const tensor<T, 2, 1>& v)
+{
+  return tensor<T, 2>{v(1, 0), -v(0, 0)};
 }
 
-template < typename T >
-auto cross(const tensor<T,2> & v) { return tensor<T,2>{v[1], -v[0]}; }
+template <typename T>
+auto cross(const tensor<T, 2>& v)
+{
+  return tensor<T, 2>{v[1], -v[0]};
+}
 
-template < typename S, typename T >
-auto cross(const tensor<S,3> & u, const tensor<T,3> & v) { 
-  return tensor< decltype(S{} * T{}), 3 >{
-    u(1)*v(2)-u(2)*v(1),
-    u(2)*v(0)-u(0)*v(2),
-    u(0)*v(1)-u(1)*v(0)
-  };
+template <typename S, typename T>
+auto cross(const tensor<S, 3>& u, const tensor<T, 3>& v)
+{
+  return tensor<decltype(S{} * T{}), 3>{u(1) * v(2) - u(2) * v(1), u(2) * v(0) - u(0) * v(2),
+                                        u(0) * v(1) - u(1) * v(0)};
 }
 
 /**

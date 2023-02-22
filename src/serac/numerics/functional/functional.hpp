@@ -22,6 +22,7 @@
 #include "serac/numerics/functional/boundary_integral.hpp"
 #include "serac/numerics/functional/dof_numbering.hpp"
 
+#include "serac/numerics/functional/integral.hpp"
 #include "serac/numerics/functional/element_restriction.hpp"
 
 // TODO: REMOVE
@@ -100,7 +101,8 @@ struct Index {
   constexpr operator int() { return ind; }
 };
 
-bool contains_unsupported_elements(const mfem::Mesh & mesh) {
+bool contains_unsupported_elements(const mfem::Mesh& mesh)
+{
   int num_elements = mesh.GetNE();
   for (int e = 0; e < num_elements; e++) {
     auto type = mesh.GetElementType(e);
@@ -207,9 +209,10 @@ class Functional<test(trials...), exec> {
   static constexpr uint32_t         num_trial_spaces = sizeof...(trials);
   static constexpr auto             Q                = std::max({test::order, trials::order...}) + 1;
 
-
-  static constexpr mfem::Geometry::Type elem_geom[4] = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT, mfem::Geometry::SQUARE, mfem::Geometry::CUBE};
-  static constexpr mfem::Geometry::Type simplex_geom[4] = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT, mfem::Geometry::TRIANGLE, mfem::Geometry::TETRAHEDRON};
+  static constexpr mfem::Geometry::Type elem_geom[4]    = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT,
+                                                        mfem::Geometry::SQUARE, mfem::Geometry::CUBE};
+  static constexpr mfem::Geometry::Type simplex_geom[4] = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT,
+                                                           mfem::Geometry::TRIANGLE, mfem::Geometry::TETRAHEDRON};
 
   class Gradient;
 
@@ -234,21 +237,19 @@ public:
              std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
       : update_qdata(false), test_space_(test_fes), trial_space_(trial_fes)
   {
-    int dim = test_fes->GetMesh()->Dimension();
-
     P_test_ = test_space_->GetProlongationMatrix();
 
+#if 0
+    int dim = test_fes->GetMesh()->Dimension();
     G_test_ = ElementRestriction(test_fes, elem_geom[dim]);
     G_test_boundary_ = ElementRestriction(test_fes, elem_geom[dim-1], FaceType::BOUNDARY);
 
     G_test_simplex_ = ElementRestriction(test_fes, elem_geom[dim]);
-    G_test_boundary_simplex_ = ElementRestriction(test_fes, elem_geom[dim-1], FaceType::BOUNDARY);
 
-    auto num_elements = static_cast<size_t>(G_test.num_elements);
+    auto num_elements = static_cast<size_t>(G_test_.num_elements);
     auto num_bdr_elements = static_cast<size_t>(G_test_boundary_.num_elements);
 
-    auto num_elements = static_cast<size_t>(G_test.num_elements);
-    auto num_bdr_elements = static_cast<size_t>(G_test_boundary_.num_elements);
+    auto num_elements = static_cast<size_t>(G_test_.num_elements);
     if (num_elements > 0) {
  
       auto ndof_per_test_element = static_cast<size_t>(G_test_.nodes_per_elem * G_test_.components);
@@ -309,6 +310,8 @@ public:
       element_gradients_simplex_[i] = ExecArray<double, 3, exec>(G_test_simplex.num_elements_, ndof_per_trial_element, ndof_per_test_element);
 
     }
+
+#endif
   }
 
   /**
@@ -336,14 +339,14 @@ public:
 
     {
       constexpr Geometry geom = (dim == 2) ? Geometry::Quadrilateral : Geometry::Hexahedron;
-      domain_integrals_.emplace_back(test{}, selected_trial_spaces, domain, CompileTimeValue<geom>{},
-                                     integrand, qdata, std::vector<int>{args...});
+      domain_integrals_.emplace_back(test{}, selected_trial_spaces, domain, CompileTimeValue<geom>{}, integrand, qdata,
+                                     std::vector<int>{args...});
     }
 
     {
       constexpr Geometry geom = (dim == 2) ? Geometry::Triangle : Geometry::Tetrahedron;
-      domain_integrals_simplex_.emplace_back(test{}, selected_trial_spaces, domain, CompileTimeValue<geom>{},
-                                     integrand, qdata, std::vector<int>{args...});
+      domain_integrals_simplex_.emplace_back(test{}, selected_trial_spaces, domain, CompileTimeValue<geom>{}, integrand,
+                                             qdata, std::vector<int>{args...});
     }
   }
 
@@ -373,8 +376,8 @@ public:
 
     auto selected_trial_spaces = serac::make_tuple(serac::get<args>(trial_spaces)...);
 
-    bdr_integrals_.emplace_back(test{}, selected_trial_spaces, num_bdr_elements, geom->J, geom->X,
-                                Dimension<dim>{}, integrand, std::vector<int>{args...});
+    bdr_integrals_.emplace_back(test{}, selected_trial_spaces, num_bdr_elements, geom->J, geom->X, Dimension<dim>{},
+                                integrand, std::vector<int>{args...});
   }
 
   /**
@@ -503,26 +506,26 @@ public:
 
     output_L_ = 0.0;
 
-#if 0
-    bool already_computed[num_trial_spaces][integral_type]{}; // initialized to `false`
+#if 1
+    bool already_computed[Integral::num_types][num_trial_spaces]{};  // initialized to `false`
 
     for (auto& integral : integrals_) {
+      auto type = integral.type;
+
       for (auto i : integral.active_trial_spaces) {
-
         // avoid doing the gather operation more than once per trial space
-        if (already_computed[i][integral.type]) {
-          G_trial_[i].Gather(input_L_[i], input_E_[i][integral.type]);
-          already_computed[i][integral.type] = true;
+        if (already_computed[type][i]) {
+          G_trial_[i].Gather(input_L_[i], block_input_E_[type][i]);
+          already_computed[type][i] = true;
         }
-
       }
 
-      integral.Mult(input_E_[type], output_E_[type], wrt, update_qdata);
+      integral.Mult(block_input_E_[type], block_output_E_[type], wrt, update_qdata);
 
       // scatter-add to compute residuals on the local processor
-      G_test_.ScatterAdd(output_E_[type], output_L_);
+      G_test_.ScatterAdd(block_output_E_[type], output_L_);
     }
-#endif
+#else
 
     if (domain_integrals_.size() > 0) {
       // get the values for each element on the local processor
@@ -573,6 +576,7 @@ public:
 
       output_L_ += output_L_boundary_;
     }
+#endif
 
     // scatter-add to compute global residuals
     P_test_->MultTranspose(output_L_, output_T_);
@@ -721,7 +725,7 @@ private:
                              form_.input_L_[which_argument].Size(), sparse_matrix_frees_graph_ptrs,
                              sparse_matrix_frees_values_ptr, col_ind_is_sorted);
 
-      //write_to_file(J_local, "J.mtx");
+      // write_to_file(J_local, "J.mtx");
 
       auto* R = form_.test_space_->Dof_TrueDof_Matrix();
 
@@ -784,6 +788,9 @@ private:
 
   /// @brief The output set of local DOF values (i.e., on the current rank)
   mutable mfem::Vector output_L_;
+
+  mutable mfem::BlockVector block_input_E_[Integral::num_types][num_trial_spaces];
+  mutable mfem::BlockVector block_output_E_[Integral::num_types][num_trial_spaces];
 
   /// @brief The input set of per-element DOF values
   mutable std::array<mfem::Vector, num_trial_spaces> input_E_;
@@ -848,6 +855,8 @@ private:
    * for the trial space
    */
   ElementRestriction G_trial_boundary_[num_trial_spaces];
+
+  std::vector<Integral> integrals_;
 
   /// @brief The set of domain integrals (spatial_dim == geometric_dim)
   std::vector<DomainIntegral<num_trial_spaces, Q, exec>> domain_integrals_;

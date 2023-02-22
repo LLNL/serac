@@ -53,7 +53,8 @@ public:
    * @note The @p Dimension parameters are used to assist in the deduction of the dim template parameter
    */
   template <int dim, typename test, typename... trials, typename lambda_type, typename qpt_data_type = void>
-  BoundaryIntegral(test, serac::tuple<trials...>, size_t num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<dim>, lambda_type&& qf, std::vector<int> active_arguments)
+  BoundaryIntegral(test, serac::tuple<trials...>, size_t num_elements, const mfem::Vector& J, const mfem::Vector& X,
+                   Dimension<dim>, lambda_type&& qf, std::vector<int> active_arguments)
   {
     constexpr size_t num_active_trial_spaces = sizeof...(trials);
     SLIC_ERROR_ROOT_IF(num_active_trial_spaces != active_arguments.size(),

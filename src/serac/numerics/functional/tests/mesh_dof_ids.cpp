@@ -15,7 +15,8 @@ enum class Family
   DG
 };
 
-std::ostream & operator<<(std::ostream & out, FaceType type ) {
+std::ostream& operator<<(std::ostream& out, FaceType type)
+{
   if (type == FaceType::BOUNDARY) {
     out << "FaceType::BOUNDARY";
   } else {
@@ -148,9 +149,9 @@ mfem::Mesh patch_test_mesh(mfem::Geometry::Type geom, uint32_t seed = 0)
     } break;
     case mfem::Geometry::Type::TETRAHEDRON: {
       double vertices[9][3]  = {{0.0, 0.0, 0.0}, {1.0, 0.0, 0.0}, {1.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0},
-                                {1.0, 0.0, 1.0}, {1.0, 1.0, 1.0}, {0.0, 1.0, 1.0}, {0.4, 0.6, 0.7}};
+                               {1.0, 0.0, 1.0}, {1.0, 1.0, 1.0}, {0.0, 1.0, 1.0}, {0.4, 0.6, 0.7}};
       int    elements[12][4] = {{0, 1, 2, 8}, {0, 2, 3, 8}, {4, 5, 1, 8}, {4, 1, 0, 8}, {5, 6, 2, 8}, {5, 2, 1, 8},
-                                {6, 7, 3, 8}, {6, 3, 2, 8}, {7, 4, 0, 8}, {7, 0, 3, 8}, {7, 6, 5, 8}, {7, 5, 4, 8}};
+                             {6, 7, 3, 8}, {6, 3, 2, 8}, {7, 4, 0, 8}, {7, 0, 3, 8}, {7, 6, 5, 8}, {7, 5, 4, 8}};
 
       output = mfem::Mesh(3 /*dim*/, std::size(vertices), std::size(elements));
       for (auto vert : vertices) {
@@ -227,7 +228,6 @@ mfem::Geometry::Type face_type(mfem::Geometry::Type geom)
   return mfem::Geometry::Type::INVALID;
 }
 
-
 mfem::FiniteElementCollection* makeFEC(Family family, int order, int dim)
 {
   switch (family) {
@@ -244,14 +244,9 @@ mfem::FiniteElementCollection* makeFEC(Family family, int order, int dim)
   return nullptr;
 }
 
-void compare_H1_L2(Array2D<DoF> & H1_face_dof_ids, 
-                   Array2D<DoF> & L2_face_dof_ids, 
-                   mfem::GridFunction & H1_gf,
-                   mfem::GridFunction & L2_gf, 
-                   mfem::Geometry::Type geom,
-                   uint32_t seed,
-                   FaceType type) {
-
+void compare_H1_L2(Array2D<DoF>& H1_face_dof_ids, Array2D<DoF>& L2_face_dof_ids, mfem::GridFunction& H1_gf,
+                   mfem::GridFunction& L2_gf, mfem::Geometry::Type geom, uint32_t seed, FaceType type)
+{
   uint64_t n0 = H1_face_dof_ids.dim[0];
   uint64_t n1 = H1_face_dof_ids.dim[1];
   for (uint64_t i = 0; i < n0; i++) {
@@ -267,7 +262,6 @@ void compare_H1_L2(Array2D<DoF> & H1_face_dof_ids,
   }
 
   if (debug_print) {
-
     std::cout << type << "inconsistency detected" << std::endl;
 
     auto x_func = [](const mfem::Vector& in, double) { return in[0]; };
@@ -337,13 +331,11 @@ void compare_H1_L2(Array2D<DoF> & H1_face_dof_ids,
         std::cout << std::endl;
       }
     }
-
   }
-
 }
 
-int main() {
-
+int main()
+{
   int order = 3;
 
   mfem::Geometry::Type geometries[] = {mfem::Geometry::Type::TRIANGLE, mfem::Geometry::Type::SQUARE,
@@ -362,24 +354,20 @@ int main() {
     std::cout << to_string(geom) << std::endl;
 
     for (uint32_t seed = 0; seed < 64; seed++) {
-
       debug_print = false;
 
       mfem::Mesh mesh = patch_test_mesh(geom, seed);
       const int  dim  = mesh.Dimension();
 
-      auto * H1fec = makeFEC(Family::H1, order, dim);
-      auto * L2fec = makeFEC(Family::DG, order, dim);
-      auto * Hcurlfec = makeFEC(Family::Hcurl, order, dim);
-
+      auto* H1fec    = makeFEC(Family::H1, order, dim);
+      auto* L2fec    = makeFEC(Family::DG, order, dim);
+      auto* Hcurlfec = makeFEC(Family::Hcurl, order, dim);
 
 #if defined ENABLE_GLVIS
       mfem::socketstream sol_sock(vishost, visport);
       sol_sock.precision(8);
       sol_sock << "mesh\n" << mesh << std::flush;
 #endif
-
-
 
       mfem::FiniteElementSpace H1fes(&mesh, H1fec, 1, mfem::Ordering::byVDIM);
       mfem::FiniteElementSpace L2fes(&mesh, L2fec, 1, mfem::Ordering::byVDIM);
@@ -393,23 +381,22 @@ int main() {
       H1_gf.ProjectCoefficient(f);
       L2_gf.ProjectCoefficient(f);
 
-      for (auto type : {FaceType::INTERIOR, FaceType::BOUNDARY}) 
-      {
+      for (auto type : {FaceType::INTERIOR, FaceType::BOUNDARY}) {
         auto H1_face_dof_ids = GetFaceDofs(&H1fes, face_type(geom), type);
         auto L2_face_dof_ids = GetFaceDofs(&L2fes, face_type(geom), type);
         compare_H1_L2(H1_face_dof_ids, L2_face_dof_ids, H1_gf, L2_gf, geom, seed, type);
       }
 
-      //auto Hcurl_face_dof_ids = GetFaceDofs(&Hcurlfes, face_type(geom), FaceType::BOUNDARY);
-      //for (uint64_t i = 0; i < Hcurl_face_dof_ids.dim[0]; i++) {
+      // auto Hcurl_face_dof_ids = GetFaceDofs(&Hcurlfes, face_type(geom), FaceType::BOUNDARY);
+      // for (uint64_t i = 0; i < Hcurl_face_dof_ids.dim[0]; i++) {
       //  for (uint64_t j = 0; j < Hcurl_face_dof_ids.dim[1]; j++) {
       //    std::cout << Hcurl_face_dof_ids(int(i),int(j)) << " ";
       //  }
       //  std::cout << std::endl;
       //}
 
-      //auto Hcurl_elem_dof_ids = GetElementDofs(&Hcurlfes, geom);
-      //for (uint64_t i = 0; i < Hcurl_elem_dof_ids.dim[0]; i++) {
+      // auto Hcurl_elem_dof_ids = GetElementDofs(&Hcurlfes, geom);
+      // for (uint64_t i = 0; i < Hcurl_elem_dof_ids.dim[0]; i++) {
       //  for (uint64_t j = 0; j < Hcurl_elem_dof_ids.dim[1]; j++) {
       //    std::cout << Hcurl_elem_dof_ids(int(i),int(j)).index() << " ";
       //  }
@@ -419,8 +406,6 @@ int main() {
       delete H1fec;
       delete L2fec;
       delete Hcurlfec;
-
     }
   }
-
 }

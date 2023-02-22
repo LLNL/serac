@@ -10,8 +10,9 @@
 
 #include "serac/numerics/functional/dof_numbering.hpp"
 
-template < typename T > 
-void write_to_file(std::vector<T> v, std::string filename) {
+template <typename T>
+void write_to_file(std::vector<T> v, std::string filename)
+{
   std::ofstream outfile(filename);
   for (int i = 0; i < v.size(); i++) {
     outfile << v[i] << std::endl;
@@ -19,7 +20,8 @@ void write_to_file(std::vector<T> v, std::string filename) {
   outfile.close();
 }
 
-void write_to_file(mfem::Vector v, std::string filename) {
+void write_to_file(mfem::Vector v, std::string filename)
+{
   std::ofstream outfile(filename);
   for (int i = 0; i < v.Size(); i++) {
     outfile << v[i] << std::endl;
@@ -27,24 +29,28 @@ void write_to_file(mfem::Vector v, std::string filename) {
   outfile.close();
 }
 
-void write_to_file(mfem::SparseMatrix A, std::string filename) {
+void write_to_file(mfem::SparseMatrix A, std::string filename)
+{
   std::ofstream outfile(filename);
-  A.PrintMM(outfile); 
+  A.PrintMM(outfile);
   outfile.close();
 }
 
-std::ostream & operator<<(std::ostream & out, DoF dof) {
+std::ostream& operator<<(std::ostream& out, DoF dof)
+{
   out << "{" << dof.index() << ", " << dof.sign() << ", " << dof.orientation() << "}";
   return out;
 }
 
-std::ostream & operator<<(std::ostream & out, serac::SignedIndex i) {
+std::ostream& operator<<(std::ostream& out, serac::SignedIndex i)
+{
   out << "{" << i.index_ << ", " << i.sign_ << "}";
   return out;
 }
 
-template < typename T >
-void write_to_file(axom::Array< T, 2, axom::MemorySpace::Host > arr, std::string filename) {
+template <typename T>
+void write_to_file(axom::Array<T, 2, axom::MemorySpace::Host> arr, std::string filename)
+{
   std::ofstream outfile(filename);
 
   for (axom::IndexType i = 0; i < arr.shape()[0]; i++) {
@@ -59,8 +65,9 @@ void write_to_file(axom::Array< T, 2, axom::MemorySpace::Host > arr, std::string
   outfile.close();
 }
 
-template < typename T >
-void write_to_file(axom::Array< T, 3, axom::MemorySpace::Host > arr, std::string filename) {
+template <typename T>
+void write_to_file(axom::Array<T, 3, axom::MemorySpace::Host> arr, std::string filename)
+{
   std::ofstream outfile(filename);
 
   outfile << std::setprecision(16);
