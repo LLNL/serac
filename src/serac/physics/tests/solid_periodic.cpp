@@ -80,6 +80,15 @@ TEST(SolidMechanics, Periodic)
   solid_mechanics::ParameterizedNeoHookeanSolid<dim> mat{1.0, 0.0, 0.0};
   solid_solver.setMaterial(DependsOn<0, 1>{}, mat);
 
+  mfem::VectorFunctionCoefficient shape_coef(3, [](const mfem::Vector&, mfem::Vector& shape) {
+    shape[0] = 0.0;
+    shape[1] = 0.0;
+    shape[2] = 1.0;
+  });
+
+  auto& shape_disp = solid_solver.shapeDisplacement();
+  shape_disp.project(shape_coef);
+
   // Boundary conditions:
   // Prescribe zero displacement at the supported end of the beam
   std::set<int> support           = {2};

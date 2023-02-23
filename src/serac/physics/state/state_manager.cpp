@@ -283,14 +283,29 @@ void StateManager::constructShapeFields(const std::string& mesh_tag)
   // Construct the shape displacement and sensitivity fields associated with this mesh
   auto& new_mesh = mesh(mesh_tag);
 
+  // Determine if the existing nodal grid function is discontinuous. This
+  // indicates that the mesh is periodic and the new nodal shape function must also
+  // be discontinuous.
+  ElementType shape_element_type = ElementType::H1;
+  auto        nodes              = new_mesh.GetNodes();
+  if (nodes) {
+    if (nodes->FESpace()->FEColl()->GetContType() == mfem::FiniteElementCollection::DISCONTINUOUS) {
+      // If the mesh is discontinuous, the shape displacement grid function must also be discontinuous.
+      shape_element_type = ElementType::L2;
+    }
+  }
+
   shape_displacements_[mesh_tag] = std::make_unique<FiniteElementState>(
-      new_mesh,
-      FiniteElementState::Options{
-          .order = SHAPE_ORDER, .vector_dim = new_mesh.Dimension(), .name = mesh_tag + "_shape_displacement"});
+      new_mesh, FiniteElementState::Options{.order        = SHAPE_ORDER,
+                                            .vector_dim   = new_mesh.Dimension(),
+                                            .element_type = shape_element_type,
+                                            .name         = mesh_tag + "_shape_displacement"});
 
   shape_sensitivities_[mesh_tag] = std::make_unique<FiniteElementDual>(
-      new_mesh, FiniteElementState::Options{
-                    .order = SHAPE_ORDER, .vector_dim = new_mesh.Dimension(), .name = mesh_tag + "_shape_sensitivity"});
+      new_mesh, FiniteElementState::Options{.order        = SHAPE_ORDER,
+                                            .vector_dim   = new_mesh.Dimension(),
+                                            .element_type = shape_element_type,
+                                            .name         = mesh_tag + "_shape_sensitivity"});
 
   storeState(*shape_displacements_[mesh_tag]);
   storeDual(*shape_sensitivities_[mesh_tag]);
