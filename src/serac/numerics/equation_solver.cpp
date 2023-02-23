@@ -30,7 +30,7 @@ EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverOptions& lin_opt
   }
 
   if (nonlin_options) {
-    nonlin_solver_ = BuildNewtonSolver(comm, *nonlin_options);
+    nonlin_solver_ = BuildNonlinearSolver(comm, *nonlin_options);
   }
 }
 
@@ -148,30 +148,32 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::BuildIterativeLinearSolve
   return iter_lin_solver;
 }
 
-std::unique_ptr<mfem::NewtonSolver> EquationSolver::BuildNewtonSolver(MPI_Comm                      comm,
-                                                                      const NonlinearSolverOptions& nonlin_options)
+std::unique_ptr<mfem::NewtonSolver> EquationSolver::BuildNonlinearSolver(MPI_Comm                      comm,
+                                                                         const NonlinearSolverOptions& nonlin_options)
 {
-  std::unique_ptr<mfem::NewtonSolver> newton_solver;
+  std::unique_ptr<mfem::NewtonSolver> nonlinear_solver;
 
-  if (nonlin_options.nonlin_solver == NonlinearSolver::MFEMNewton) {
-    newton_solver = std::make_unique<mfem::NewtonSolver>(comm);
+  if (nonlin_options.nonlin_solver == NonlinearSolver::Newton) {
+    nonlinear_solver = std::make_unique<mfem::NewtonSolver>(comm);
+  } else if (nonlin_options.nonlin_solver == NonlinearSolver::LBFGS) {
+    nonlinear_solver = std::make_unique<mfem::LBFGSSolver>(comm);
   }
   // KINSOL
   else {
 #ifdef MFEM_USE_SUNDIALS
     auto kinsol_strat =
         (nonlin_options.nonlin_solver == NonlinearSolver::KINBacktrackingLineSearch) ? KIN_LINESEARCH : KIN_NONE;
-    newton_solver = std::make_unique<mfem::KINSolver>(comm, kinsol_strat, true);
+    nonlinear_solver = std::make_unique<mfem::KINSolver>(comm, kinsol_strat, true);
 #else
     SLIC_ERROR_ROOT("KINSOL was not enabled when MFEM was built");
 #endif
   }
 
-  newton_solver->SetRelTol(nonlin_options.rel_tol);
-  newton_solver->SetAbsTol(nonlin_options.abs_tol);
-  newton_solver->SetMaxIter(nonlin_options.max_iter);
-  newton_solver->SetPrintLevel(nonlin_options.print_level);
-  return newton_solver;
+  nonlinear_solver->SetRelTol(nonlin_options.rel_tol);
+  nonlinear_solver->SetAbsTol(nonlin_options.abs_tol);
+  nonlinear_solver->SetMaxIter(nonlin_options.max_iter);
+  nonlinear_solver->SetPrintLevel(nonlin_options.print_level);
+  return nonlinear_solver;
 }
 
 void EquationSolver::SetOperator(const mfem::Operator& op)
@@ -252,8 +254,7 @@ void EquationSolver::DefineInputFileSchema(axom::inlet::Container& container)
   nonlinear_container.addDouble("abs_tol", "Absolute tolerance for the Newton solve.").defaultValue(1.0e-4);
   nonlinear_container.addInt("max_iter", "Maximum iterations for the Newton solve.").defaultValue(500);
   nonlinear_container.addInt("print_level", "Nonlinear print level.").defaultValue(0);
-  nonlinear_container.addString("solver_type", "Solver type (MFEMNewton|KINFullStep|KINLineSearch)")
-      .defaultValue("MFEMNewton");
+  nonlinear_container.addString("solver_type", "Solver type (Newton|KINFullStep|KINLineSearch)").defaultValue("Newton");
 }
 
 }  // namespace serac::mfem_ext
@@ -318,8 +319,8 @@ serac::NonlinearSolverOptions FromInlet<serac::NonlinearSolverOptions>::operator
   options.max_iter              = base["max_iter"];
   options.print_level           = base["print_level"];
   const std::string solver_type = base["solver_type"];
-  if (solver_type == "MFEMNewton") {
-    options.nonlin_solver = serac::NonlinearSolver::MFEMNewton;
+  if (solver_type == "Newton") {
+    options.nonlin_solver = serac::NonlinearSolver::Newton;
   } else if (solver_type == "KINFullStep") {
     options.nonlin_solver = serac::NonlinearSolver::KINFullStep;
   } else if (solver_type == "KINLineSearch") {

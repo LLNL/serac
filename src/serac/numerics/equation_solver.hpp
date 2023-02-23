@@ -104,8 +104,8 @@ private:
    * @param[in] comm The MPI communicator object
    * @param[in] nonlin_options The parameters for the nonlinear solver
    */
-  static std::unique_ptr<mfem::NewtonSolver> BuildNewtonSolver(MPI_Comm                      comm,
-                                                               const NonlinearSolverOptions& nonlin_options);
+  static std::unique_ptr<mfem::NewtonSolver> BuildNonlinearSolver(MPI_Comm                      comm,
+                                                                  const NonlinearSolverOptions& nonlin_options);
 
   /**
    * @brief A wrapper class for using the MFEM super LU solver with a HypreParMatrix

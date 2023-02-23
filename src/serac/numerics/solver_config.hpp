@@ -103,9 +103,10 @@ enum class LinearSolver
  */
 enum class NonlinearSolver
 {
-  MFEMNewton,               /**< Newton-Raphson */
-  KINFullStep,              /**< KINFullStep */
-  KINBacktrackingLineSearch /**< KINBacktrackingLineSearch */
+  Newton,                    /**< Newton-Raphson */
+  LBFGS,                     /**< Limited memory BFGS */
+  KINFullStep,               /**< KINFullStep */
+  KINBacktrackingLineSearch, /**< KINBacktrackingLineSearch */
 };
 
 /**
@@ -282,7 +283,7 @@ struct NonlinearSolverOptions {
   /**
    * @brief Nonlinear solver selection
    */
-  NonlinearSolver nonlin_solver = NonlinearSolver::MFEMNewton;
+  NonlinearSolver nonlin_solver = NonlinearSolver::Newton;
 };
 
 }  // namespace serac
