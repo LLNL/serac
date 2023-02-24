@@ -135,7 +135,7 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
   auto linear_options             = solid_mechanics::default_linear_options;
   linear_options.abs_tol          = 1.0e-16;  // prevent early-exit in linear solve
   options.linear                  = linear_options;
-  options.nonlinear.nonlin_solver = NonlinearSolver::LBFGS;
+  options.nonlinear.nonlin_solver = NonlinearSolver::KINBacktrackingLineSearch;
   options.nonlinear.max_iter      = 500;
 
   // Construct a functional-based solid mechanics solver
