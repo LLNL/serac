@@ -168,7 +168,7 @@ TEST(HeatTransfer, FiniteDifferenceShape)
   // The nonlinear solver must have tight tolerances to ensure at least one Newton step occurs
   SolverOptions options = {
       DirectSolverOptions{},
-      NonlinearSolverOptions{.rel_tol = 1.0e-8, .abs_tol = 1.0e-14, .max_iter = 10, .print_level = 1}};
+      NewtonSolverOptions{.rel_tol = 1.0e-8, .abs_tol = 1.0e-14, .max_iter = 10, .print_level = 1}};
 
   // Construct a functional-based thermal solver
   HeatTransfer<p, dim> thermal_solver(options, "thermal_functional_shape");

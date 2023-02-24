@@ -186,7 +186,7 @@ TEST(SolidMechanics, FiniteDifferenceShape)
   // The nonlinear solver must have tight tolerances to ensure at least one Newton step occurs
   SolverOptions options = {
       DirectSolverOptions{},
-      NonlinearSolverOptions{.rel_tol = 1.0e-8, .abs_tol = 1.0e-14, .max_iter = 10, .print_level = 1}};
+      NewtonSolverOptions{.rel_tol = 1.0e-8, .abs_tol = 1.0e-14, .max_iter = 10, .print_level = 1}};
 
   // Construct a functional-based solid solver
   SolidMechanics<p, dim> solid_solver(options, GeometricNonlinearities::On, "solid_functional");

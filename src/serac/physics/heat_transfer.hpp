@@ -42,7 +42,7 @@ const DirectSolverOptions direct_linear_options = {.print_level = 0};
 /**
  * @brief Reasonable defaults for most thermal nonlinear solver options
  */
-const NonlinearSolverOptions default_nonlinear_options = {
+const NewtonSolverOptions default_nonlinear_options = {
     .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
 
 /**

@@ -59,7 +59,7 @@ TEST(SolidLegacy, ReuseMesh)
                                                          .lin_solver  = LinearSolver::GMRES,
                                                          .prec        = HypreBoomerAMGPrec{}};
 
-  const NonlinearSolverOptions default_nonlinear_options = {
+  const NewtonSolverOptions default_nonlinear_options = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
 
   const SolidLegacy::SolverOptions default_static = {default_linear_options, default_nonlinear_options};

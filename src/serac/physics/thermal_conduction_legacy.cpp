@@ -303,7 +303,7 @@ serac::ThermalConductionLegacy::InputOptions FromInlet<serac::ThermalConductionL
   // Solver parameters
   auto equation_solver                   = base["equation_solver"];
   result.solver_options.T_lin_options    = equation_solver["linear"].get<serac::LinearSolverOptions>();
-  result.solver_options.T_nonlin_options = equation_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
+  result.solver_options.T_nonlin_options = equation_solver["nonlinear"].get<serac::NewtonSolverOptions>();
 
   if (base.contains("dynamics")) {
     ThermalConductionLegacy::TimesteppingOptions dyn_options;

@@ -19,7 +19,7 @@ EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverOptions& lin_opt
     lin_solver_ = BuildIterativeLinearSolver(comm, *iter_options);
   }
   // If it's a custom solver, check that the mfem::Solver* is not null
-  else if (auto custom = std::get_if<CustomSolverOptions>(&lin_options)) {
+  else if (auto custom = std::get_if<CustomLinearSolverOptions>(&lin_options)) {
     SLIC_ERROR_ROOT_IF(custom->solver == nullptr, "Custom solver pointer must be initialized.");
     lin_solver_ = custom->solver;
   }
@@ -30,7 +30,11 @@ EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverOptions& lin_opt
   }
 
   if (nonlin_options) {
-    nonlin_solver_ = BuildNonlinearSolver(comm, *nonlin_options);
+    if (auto newton_options = std::get_if<NewtonSolverOptions>(&(*nonlin_options))) {
+      nonlin_solver_ = BuildNonlinearSolver(comm, *newton_options);
+    } else if (auto custom = std::get_if<CustomNonlinearSolverOptions>(&(*nonlin_options))) {
+      nonlin_solver_ = custom->solver;
+    }
   }
 }
 
@@ -148,8 +152,8 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::BuildIterativeLinearSolve
   return iter_lin_solver;
 }
 
-std::unique_ptr<mfem::NewtonSolver> EquationSolver::BuildNonlinearSolver(MPI_Comm                      comm,
-                                                                         const NonlinearSolverOptions& nonlin_options)
+std::unique_ptr<mfem::NewtonSolver> EquationSolver::BuildNonlinearSolver(MPI_Comm                   comm,
+                                                                         const NewtonSolverOptions& nonlin_options)
 {
   std::unique_ptr<mfem::NewtonSolver> nonlinear_solver;
 
@@ -178,27 +182,36 @@ std::unique_ptr<mfem::NewtonSolver> EquationSolver::BuildNonlinearSolver(MPI_Com
 
 void EquationSolver::SetOperator(const mfem::Operator& op)
 {
-  if (nonlin_solver_) {
-    nonlin_solver_->SetOperator(op);
-    // Now that the nonlinear solver knows about the operator, we can set its linear solver
-    if (!nonlin_solver_set_solver_called_) {
-      nonlin_solver_->SetSolver(LinearSolver());
-      nonlin_solver_set_solver_called_ = true;
-    }
-  } else {
-    std::visit([&op](auto&& solver) { solver->SetOperator(op); }, lin_solver_);
-  }
+  std::visit(
+      [&op, this](auto&& nonlin_solver) {
+        if (nonlin_solver) {
+          nonlin_solver->SetOperator(op);
+          // Now that the nonlinear solver knows about the operator, we can set its linear solver
+          if (!nonlin_solver_set_solver_called_) {
+            nonlin_solver->SetSolver(LinearSolver());
+            nonlin_solver_set_solver_called_ = true;
+          }
+        } else {
+          std::visit([&op](auto&& solver) { solver->SetOperator(op); }, lin_solver_);
+        }
+      },
+      nonlin_solver_);
+
   height = op.Height();
   width  = op.Width();
 }
 
 void EquationSolver::Mult(const mfem::Vector& b, mfem::Vector& x) const
 {
-  if (nonlin_solver_) {
-    nonlin_solver_->Mult(b, x);
-  } else {
-    std::visit([&b, &x](auto&& solver) { solver->Mult(b, x); }, lin_solver_);
-  }
+  std::visit(
+      [&b, &x, this](auto&& nonlin_solver) {
+        if (nonlin_solver) {
+          nonlin_solver->Mult(b, x);
+        } else {
+          std::visit([&b, &x](auto&& solver) { solver->Mult(b, x); }, lin_solver_);
+        }
+      },
+      nonlin_solver_);
 }
 
 void EquationSolver::SuperLUSolver::Mult(const mfem::Vector& x, mfem::Vector& y) const
@@ -260,7 +273,7 @@ void EquationSolver::DefineInputFileSchema(axom::inlet::Container& container)
 }  // namespace serac::mfem_ext
 
 using serac::LinearSolverOptions;
-using serac::NonlinearSolverOptions;
+using serac::NewtonSolverOptions;
 using serac::mfem_ext::EquationSolver;
 
 serac::LinearSolverOptions FromInlet<serac::LinearSolverOptions>::operator()(const axom::inlet::Container& base)
@@ -311,9 +324,9 @@ serac::LinearSolverOptions FromInlet<serac::LinearSolverOptions>::operator()(con
   return options;
 }
 
-serac::NonlinearSolverOptions FromInlet<serac::NonlinearSolverOptions>::operator()(const axom::inlet::Container& base)
+serac::NewtonSolverOptions FromInlet<serac::NewtonSolverOptions>::operator()(const axom::inlet::Container& base)
 {
-  NonlinearSolverOptions options;
+  NewtonSolverOptions options;
   options.rel_tol               = base["rel_tol"];
   options.abs_tol               = base["abs_tol"];
   options.max_iter              = base["max_iter"];
@@ -336,7 +349,7 @@ serac::mfem_ext::EquationSolver FromInlet<serac::mfem_ext::EquationSolver>::oper
 {
   auto lin = base["linear"].get<LinearSolverOptions>();
   if (base.contains("nonlinear")) {
-    auto nonlin = base["nonlinear"].get<NonlinearSolverOptions>();
+    auto nonlin = base["nonlinear"].get<NewtonSolverOptions>();
     return EquationSolver(MPI_COMM_WORLD, lin, nonlin);
   }
   return EquationSolver(MPI_COMM_WORLD, lin);

@@ -25,8 +25,7 @@ const IterativeSolverOptions linear_options{.rel_tol     = 1.0e-12,
                                             .lin_solver  = LinearSolver::CG,
                                             .prec        = {}};
 
-const NonlinearSolverOptions nonlinear_options{
-    .rel_tol = 1.0e-12, .abs_tol = 1.0e-12, .max_iter = 10, .print_level = -1};
+const NewtonSolverOptions nonlinear_options{.rel_tol = 1.0e-12, .abs_tol = 1.0e-12, .max_iter = 10, .print_level = -1};
 
 const mfem::DenseMatrix M = []() {
   mfem::DenseMatrix M_mat(3, 3);
