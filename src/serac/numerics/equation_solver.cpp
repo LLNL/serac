@@ -185,8 +185,6 @@ std::unique_ptr<mfem::NewtonSolver> EquationSolver::BuildNonlinearSolver(MPI_Com
         kinsol_strat = KIN_NONE;
     }
     auto kinsol_solver = std::make_unique<mfem::KINSolver>(comm, kinsol_strat, true);
-    kinsol_solver->SetJFNK(true);
-    kinsol_solver->SetLSMaxIter(100);
     nonlinear_solver = std::move(kinsol_solver);
 #else
     SLIC_ERROR_ROOT("KINSOL was not enabled when MFEM was built");

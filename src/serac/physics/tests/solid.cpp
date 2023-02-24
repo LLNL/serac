@@ -137,6 +137,7 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
   options.linear                  = linear_options;
   options.nonlinear.nonlin_solver = NonlinearSolver::KINBacktrackingLineSearch;
   options.nonlinear.max_iter      = 500;
+  options.nonlinear.print_level   = 2;
 
   // Construct a functional-based solid mechanics solver
   SolidMechanics<p, dim> solid_solver(options, GeometricNonlinearities::Off, "solid_functional");
@@ -155,7 +156,7 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
   if (test_mode == TestType::Pressure) {
     solid_solver.setPiolaTraction([](const auto& x, const tensor<double, dim>& n, const double) {
       if (x[0] > 7.5) {
-        return 1.0e-2 * n;
+        return 5.0e-3 * n;
       }
       return 0.0 * n;
     });
