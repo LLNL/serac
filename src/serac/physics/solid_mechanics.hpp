@@ -558,6 +558,26 @@ public:
   }
 
   /**
+   * @brief Return the assembled stiffness matrix
+   *
+   * This method returns a pair {K, K_e} representing the last computed linearized stiffness matrix.
+   * The K matrix has the essential dof rows and columns zeroed with a 
+   * 1 on the diagonal and K_e contains the zeroed rows and columns, e.g. K_total = K + K_e.
+   *
+   * This method will re-assemble the stiffness
+   * 
+   * @warning This interface is not stable and may change in the future. 
+   *
+   * @return A pair of the eliminted stiffness matrix and a matrix containing the eliminated rows and cols
+   */
+  std::pair<mfem::HypreParMatrix&, mfem::HypreParMatrix&> stiffnessMatrix()
+  {
+    SLIC_ERROR_IF(!J_ || !J_e_, "Stiffness matrix has not yet been assembled.");
+
+    return {*J_, *J_e_};
+  }
+
+  /**
    * @brief Complete the initialization and allocation of the data structures.
    *
    * @note This must be called before AdvanceTimestep().
