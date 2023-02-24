@@ -570,7 +570,7 @@ public:
    */
   std::pair<mfem::HypreParMatrix&, mfem::HypreParMatrix&> stiffnessMatrix()
   {
-    SLIC_ERROR_IF(!J_ || !J_e_, "Stiffness matrix has not yet been assembled.");
+    SLIC_ERROR_ROOT_IF(!J_ || !J_e_, "Stiffness matrix has not yet been assembled.");
 
     return {*J_, *J_e_};
   }
