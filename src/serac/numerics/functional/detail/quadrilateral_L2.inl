@@ -17,8 +17,8 @@
 // for additional information on the finite_element concept requirements, see finite_element.hpp
 /// @cond
 template <int p, int c>
-struct finite_element<Geometry::Quadrilateral, L2<p, c> > {
-  static constexpr auto geometry   = Geometry::Quadrilateral;
+struct finite_element<mfem::Geometry::SQUARE, L2<p, c> > {
+  static constexpr auto geometry   = mfem::Geometry::SQUARE;
   static constexpr auto family     = Family::L2;
   static constexpr int  components = c;
   static constexpr int  dim        = 2;

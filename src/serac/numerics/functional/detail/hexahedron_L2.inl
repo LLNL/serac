@@ -17,8 +17,8 @@
 // for additional information on the finite_element concept requirements, see finite_element.hpp
 /// @cond
 template <int p, int c>
-struct finite_element<Geometry::Hexahedron, L2<p, c> > {
-  static constexpr auto geometry   = Geometry::Hexahedron;
+struct finite_element<mfem::Geometry::CUBE, L2<p, c> > {
+  static constexpr auto geometry   = mfem::Geometry::CUBE;
   static constexpr auto family     = Family::L2;
   static constexpr int  components = c;
   static constexpr int  dim        = 3;

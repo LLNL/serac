@@ -74,7 +74,7 @@ struct DerivativeWRT {
 
 using NoDifferentiation = DerivativeWRT<-1>;
 
-template <int Q, Geometry g, typename test, typename... trials>
+template <int Q, mfem::Geometry::Type g, typename test, typename... trials>
 struct KernelConfig {
 };
 
@@ -135,7 +135,7 @@ struct EvaluationKernel;
  * @overload
  * @note evaluation kernel that also calculates derivative w.r.t. `I`th trial space
  */
-template <int differentiation_index, int Q, Geometry geom, typename test, typename... trials, typename derivatives_type,
+template <int differentiation_index, int Q, mfem::Geometry::Type geom, typename test, typename... trials, typename derivatives_type,
           typename lambda, typename qpt_data_type, int... indices>
 struct EvaluationKernel<DerivativeWRT<differentiation_index>, KernelConfig<Q, geom, test, trials...>, derivatives_type,
                         lambda, qpt_data_type, std::integer_sequence<int, indices...> > {
@@ -249,14 +249,14 @@ struct EvaluationKernel<DerivativeWRT<differentiation_index>, KernelConfig<Q, ge
   std::shared_ptr<QuadratureData<qpt_data_type> > data_;     ///< (optional) user-provided quadrature data
 };
 
-template <int which, int Q, Geometry geom, typename test, typename... trials, typename derivatives_type,
+template <int which, int Q, mfem::Geometry::Type geom, typename test, typename... trials, typename derivatives_type,
           typename lambda, typename qpt_data_type>
 EvaluationKernel(DerivativeWRT<which>, KernelConfig<Q, geom, test, trials...>, CPUArrayView<derivatives_type, 2>,
                  const mfem::Vector&, const mfem::Vector&, int, lambda, std::shared_ptr<QuadratureData<qpt_data_type> >)
     -> EvaluationKernel<DerivativeWRT<which>, KernelConfig<Q, geom, test, trials...>, derivatives_type, lambda,
                         qpt_data_type, std::make_integer_sequence<int, static_cast<int>(sizeof...(trials))> >;
 
-template <int Q, Geometry geom, typename test, typename... trials, typename lambda, typename qpt_data_type>
+template <int Q, mfem::Geometry::Type geom, typename test, typename... trials, typename lambda, typename qpt_data_type>
 EvaluationKernel(DerivativeWRT<-1>, KernelConfig<Q, geom, test, trials...>, const mfem::Vector&, const mfem::Vector&,
                  int, lambda, std::shared_ptr<QuadratureData<qpt_data_type> >)
     -> EvaluationKernel<DerivativeWRT<-1>, KernelConfig<Q, geom, test, trials...>, char, lambda, qpt_data_type,
@@ -316,7 +316,7 @@ auto batch_apply_chain_rule(derivative_type* qf_derivatives, const tensor<T, n>&
  * @see mfem::GeometricFactors
  * @param[in] num_elements The number of elements in the mesh
  */
-template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
+template <mfem::Geometry::Type g, typename test, typename trial, int Q, typename derivatives_type>
 void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
                                CPUArrayView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J_,
                                std::size_t num_elements)
@@ -367,7 +367,7 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
  * @see mfem::GeometricFactors
  * @param[in] num_elements The number of elements in the mesh
  */
-template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
+template <mfem::Geometry::Type g, typename test, typename trial, int Q, typename derivatives_type>
 void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
                              CPUArrayView<derivatives_type, 2>             qf_derivatives, const mfem::Vector&,
                              std::size_t                                   num_elements)

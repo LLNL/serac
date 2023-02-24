@@ -22,8 +22,8 @@
 // for additional information on the finite_element concept requirements, see finite_element.hpp
 /// @cond
 template <int p>
-struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
-  static constexpr auto geometry   = Geometry::Quadrilateral;
+struct finite_element<mfem::Geometry::SQUARE, Hcurl<p> > {
+  static constexpr auto geometry   = mfem::Geometry::SQUARE;
   static constexpr auto family     = Family::HCURL;
   static constexpr int  dim        = 2;
   static constexpr int  n          = (p + 1);

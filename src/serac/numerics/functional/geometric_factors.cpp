@@ -3,7 +3,7 @@
 
 namespace serac {
 
-template <int Q, Geometry geom, typename function_space>
+template <int Q, mfem::Geometry::Type geom, typename function_space>
 void compute_geometric_factors(mfem::Vector& positions_q, mfem::Vector& jacobians_q, const mfem::Vector& positions_e,
                                uint32_t num_elements)
 {
@@ -47,29 +47,17 @@ void compute_geometric_factors(mfem::Vector& positions_q, mfem::Vector& jacobian
   }
 }
 
-Geometry from_mfem(mfem::Geometry::Type geom)
-{
-  if (geom == mfem::Geometry::Type::SEGMENT) return Geometry::Segment;
-  if (geom == mfem::Geometry::Type::SQUARE) return Geometry::Quadrilateral;
-  if (geom == mfem::Geometry::Type::TRIANGLE) return Geometry::Triangle;
-  if (geom == mfem::Geometry::Type::CUBE) return Geometry::Hexahedron;
-  if (geom == mfem::Geometry::Type::TETRAHEDRON) return Geometry::Tetrahedron;
-  return Geometry::Point;
-}
-
-GeometricFactors::GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry::Type elem_geom)
+GeometricFactors::GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry::Type g)
 {
   auto* nodes = mesh->GetNodes();
   auto* fes   = nodes->FESpace();
 
-  auto         restriction = serac::ElementRestriction(fes, elem_geom);
+  auto         restriction = serac::ElementRestriction(fes, g);
   mfem::Vector X_e(int(restriction.ESize()));
   restriction.Gather(*nodes, X_e);
 
   // assumes all elements are the same order
   int p = fes->GetElementOrder(0);
-
-  Geometry g = from_mfem(elem_geom);
 
   int spatial_dim   = mesh->SpaceDimension();
   int geometry_dim  = dimension_of(g);
@@ -83,65 +71,63 @@ GeometricFactors::GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry
   J = mfem::Vector(int(num_elements) * qpts_per_elem * spatial_dim * geometry_dim);
 
 #define DISPATCH_KERNEL(GEOM, P, Q)                                                                             \
-  if (g == Geometry::GEOM && p == P && q == Q) {                                                                \
-    compute_geometric_factors<Q, Geometry::GEOM, H1<P, dimension_of(Geometry::GEOM)> >(X, J, X_e,               \
+  if (g == mfem::Geometry::GEOM && p == P && q == Q) {                                                          \
+    compute_geometric_factors<Q, mfem::Geometry::GEOM, H1<P, dimension_of(mfem::Geometry::GEOM)> >(X, J, X_e,   \
                                                                                        uint32_t(num_elements)); \
     return;                                                                                                     \
   }
 
-  DISPATCH_KERNEL(Triangle, 1, 1);
-  DISPATCH_KERNEL(Triangle, 1, 2);
-  DISPATCH_KERNEL(Triangle, 1, 3);
-  DISPATCH_KERNEL(Triangle, 1, 4);
+  DISPATCH_KERNEL(TRIANGLE, 1, 1);
+  DISPATCH_KERNEL(TRIANGLE, 1, 2);
+  DISPATCH_KERNEL(TRIANGLE, 1, 3);
+  DISPATCH_KERNEL(TRIANGLE, 1, 4);
 
-  DISPATCH_KERNEL(Quadrilateral, 1, 1);
-  DISPATCH_KERNEL(Quadrilateral, 1, 2);
-  DISPATCH_KERNEL(Quadrilateral, 1, 3);
-  DISPATCH_KERNEL(Quadrilateral, 1, 4);
+  DISPATCH_KERNEL(SQUARE, 1, 1);
+  DISPATCH_KERNEL(SQUARE, 1, 2);
+  DISPATCH_KERNEL(SQUARE, 1, 3);
+  DISPATCH_KERNEL(SQUARE, 1, 4);
 
-  DISPATCH_KERNEL(Quadrilateral, 2, 1);
-  DISPATCH_KERNEL(Quadrilateral, 2, 2);
-  DISPATCH_KERNEL(Quadrilateral, 2, 3);
-  DISPATCH_KERNEL(Quadrilateral, 2, 4);
+  DISPATCH_KERNEL(SQUARE, 2, 1);
+  DISPATCH_KERNEL(SQUARE, 2, 2);
+  DISPATCH_KERNEL(SQUARE, 2, 3);
+  DISPATCH_KERNEL(SQUARE, 2, 4);
 
-  DISPATCH_KERNEL(Quadrilateral, 3, 1);
-  DISPATCH_KERNEL(Quadrilateral, 3, 2);
-  DISPATCH_KERNEL(Quadrilateral, 3, 3);
-  DISPATCH_KERNEL(Quadrilateral, 3, 4);
+  DISPATCH_KERNEL(SQUARE, 3, 1);
+  DISPATCH_KERNEL(SQUARE, 3, 2);
+  DISPATCH_KERNEL(SQUARE, 3, 3);
+  DISPATCH_KERNEL(SQUARE, 3, 4);
 
-  DISPATCH_KERNEL(Hexahedron, 1, 1);
-  DISPATCH_KERNEL(Hexahedron, 1, 2);
-  DISPATCH_KERNEL(Hexahedron, 1, 3);
-  DISPATCH_KERNEL(Hexahedron, 1, 4);
+  DISPATCH_KERNEL(CUBE, 1, 1);
+  DISPATCH_KERNEL(CUBE, 1, 2);
+  DISPATCH_KERNEL(CUBE, 1, 3);
+  DISPATCH_KERNEL(CUBE, 1, 4);
 
-  DISPATCH_KERNEL(Hexahedron, 2, 1);
-  DISPATCH_KERNEL(Hexahedron, 2, 2);
-  DISPATCH_KERNEL(Hexahedron, 2, 3);
-  DISPATCH_KERNEL(Hexahedron, 2, 4);
+  DISPATCH_KERNEL(CUBE, 2, 1);
+  DISPATCH_KERNEL(CUBE, 2, 2);
+  DISPATCH_KERNEL(CUBE, 2, 3);
+  DISPATCH_KERNEL(CUBE, 2, 4);
 
-  DISPATCH_KERNEL(Hexahedron, 3, 1);
-  DISPATCH_KERNEL(Hexahedron, 3, 2);
-  DISPATCH_KERNEL(Hexahedron, 3, 3);
-  DISPATCH_KERNEL(Hexahedron, 3, 4);
+  DISPATCH_KERNEL(CUBE, 3, 1);
+  DISPATCH_KERNEL(CUBE, 3, 2);
+  DISPATCH_KERNEL(CUBE, 3, 3);
+  DISPATCH_KERNEL(CUBE, 3, 4);
 
 #undef DISPATCH_KERNEL
 
   std::cout << "should never be reached" << std::endl;
 }
 
-GeometricFactors::GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry::Type elem_geom, FaceType type)
+GeometricFactors::GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry::Type g, FaceType type)
 {
   auto* nodes = mesh->GetNodes();
   auto* fes   = nodes->FESpace();
 
-  auto         restriction = serac::ElementRestriction(fes, elem_geom, type);
+  auto         restriction = serac::ElementRestriction(fes, g, type);
   mfem::Vector X_e(int(restriction.ESize()));
   restriction.Gather(*nodes, X_e);
 
   // assumes all elements are the same order
   int p = fes->GetElementOrder(0);
-
-  Geometry g = from_mfem(elem_geom);
 
   int spatial_dim   = mesh->SpaceDimension();
   int geometry_dim  = dimension_of(g);
@@ -154,42 +140,42 @@ GeometricFactors::GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry
   X = mfem::Vector(int(num_elements) * qpts_per_elem * spatial_dim);
   J = mfem::Vector(int(num_elements) * qpts_per_elem * spatial_dim * geometry_dim);
 
-#define DISPATCH_KERNEL(GEOM, P, Q)                                                                                 \
-  if (g == Geometry::GEOM && p == P && q == Q) {                                                                    \
-    compute_geometric_factors<Q, Geometry::GEOM, H1<P, dimension_of(Geometry::GEOM) + 1> >(X, J, X_e,               \
-                                                                                           uint32_t(num_elements)); \
-    return;                                                                                                         \
+#define DISPATCH_KERNEL(GEOM, P, Q)                                                                     \
+  if (g == mfem::Geometry::GEOM && p == P && q == Q) {                                                  \
+    compute_geometric_factors<Q, mfem::Geometry::GEOM, H1<P, dimension_of(mfem::Geometry::GEOM) + 1> >( \
+        X, J, X_e, uint32_t(num_elements));                                                             \
+    return;                                                                                             \
   }
 
-  DISPATCH_KERNEL(Segment, 1, 1);
-  DISPATCH_KERNEL(Segment, 1, 2);
-  DISPATCH_KERNEL(Segment, 1, 3);
-  DISPATCH_KERNEL(Segment, 1, 4);
+  DISPATCH_KERNEL(SEGMENT, 1, 1);
+  DISPATCH_KERNEL(SEGMENT, 1, 2);
+  DISPATCH_KERNEL(SEGMENT, 1, 3);
+  DISPATCH_KERNEL(SEGMENT, 1, 4);
 
-  DISPATCH_KERNEL(Segment, 2, 1);
-  DISPATCH_KERNEL(Segment, 2, 2);
-  DISPATCH_KERNEL(Segment, 2, 3);
-  DISPATCH_KERNEL(Segment, 2, 4);
+  DISPATCH_KERNEL(SEGMENT, 2, 1);
+  DISPATCH_KERNEL(SEGMENT, 2, 2);
+  DISPATCH_KERNEL(SEGMENT, 2, 3);
+  DISPATCH_KERNEL(SEGMENT, 2, 4);
 
-  DISPATCH_KERNEL(Segment, 3, 1);
-  DISPATCH_KERNEL(Segment, 3, 2);
-  DISPATCH_KERNEL(Segment, 3, 3);
-  DISPATCH_KERNEL(Segment, 3, 4);
+  DISPATCH_KERNEL(SEGMENT, 3, 1);
+  DISPATCH_KERNEL(SEGMENT, 3, 2);
+  DISPATCH_KERNEL(SEGMENT, 3, 3);
+  DISPATCH_KERNEL(SEGMENT, 3, 4);
 
-  DISPATCH_KERNEL(Quadrilateral, 1, 1);
-  DISPATCH_KERNEL(Quadrilateral, 1, 2);
-  DISPATCH_KERNEL(Quadrilateral, 1, 3);
-  DISPATCH_KERNEL(Quadrilateral, 1, 4);
+  DISPATCH_KERNEL(SQUARE, 1, 1);
+  DISPATCH_KERNEL(SQUARE, 1, 2);
+  DISPATCH_KERNEL(SQUARE, 1, 3);
+  DISPATCH_KERNEL(SQUARE, 1, 4);
 
-  DISPATCH_KERNEL(Quadrilateral, 2, 1);
-  DISPATCH_KERNEL(Quadrilateral, 2, 2);
-  DISPATCH_KERNEL(Quadrilateral, 2, 3);
-  DISPATCH_KERNEL(Quadrilateral, 2, 4);
+  DISPATCH_KERNEL(SQUARE, 2, 1);
+  DISPATCH_KERNEL(SQUARE, 2, 2);
+  DISPATCH_KERNEL(SQUARE, 2, 3);
+  DISPATCH_KERNEL(SQUARE, 2, 4);
 
-  DISPATCH_KERNEL(Quadrilateral, 3, 1);
-  DISPATCH_KERNEL(Quadrilateral, 3, 2);
-  DISPATCH_KERNEL(Quadrilateral, 3, 3);
-  DISPATCH_KERNEL(Quadrilateral, 3, 4);
+  DISPATCH_KERNEL(SQUARE, 3, 1);
+  DISPATCH_KERNEL(SQUARE, 3, 2);
+  DISPATCH_KERNEL(SQUARE, 3, 3);
+  DISPATCH_KERNEL(SQUARE, 3, 4);
 
 #undef DISPATCH_KERNEL
 

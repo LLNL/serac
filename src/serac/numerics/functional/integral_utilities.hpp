@@ -352,8 +352,12 @@ SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, coords_type&& n_
 
 }  // namespace detail
 
-static constexpr Geometry supported_geometries[] = {Geometry::Point, Geometry::Segment, Geometry::Quadrilateral,
-                                                    Geometry::Hexahedron};
+static constexpr mfem::Geometry::Type supported_geometries[] = {
+  mfem::Geometry::POINT, 
+  mfem::Geometry::SEGMENT, 
+  mfem::Geometry::SQUARE,
+  mfem::Geometry::CUBE
+};
 
 /**
  * @brief A container for a linear approximation
@@ -470,7 +474,7 @@ SERAC_HOST_DEVICE auto Preprocess(T u, const tensor<double, dim>& xi, const tens
  * @param[in] xi The position of the quadrature point in reference space
  * @param[in] J The Jacobian of the element transformation at the quadrature point
  */
-template <Geometry geom, typename... trials, typename tuple_type, int dim, int... i>
+template <mfem::Geometry::Type geom, typename... trials, typename tuple_type, int dim, int... i>
 SERAC_HOST_DEVICE auto PreprocessHelper(const tuple_type& u, const tensor<double, dim>& xi,
                                         const tensor<double, dim, dim>& J, std::integer_sequence<int, i...>)
 {
@@ -481,7 +485,7 @@ SERAC_HOST_DEVICE auto PreprocessHelper(const tuple_type& u, const tensor<double
  * @overload
  * @note multi-trial space overload of Preprocess
  */
-template <Geometry geom, typename... trials, typename tuple_type, int dim>
+template <mfem::Geometry::Type geom, typename... trials, typename tuple_type, int dim>
 SERAC_HOST_DEVICE auto Preprocess(const tuple_type& u, const tensor<double, dim>& xi, const tensor<double, dim, dim>& J)
 {
   return PreprocessHelper<geom, trials...>(u, xi, J,

@@ -39,10 +39,10 @@ SERAC_HOST_DEVICE constexpr tensor<T, n> GaussLobattoNodes(T a = T(0), T b = T(1
  * Mathematica/Wolfram Language code to generate the 1D entries in the table:
  * Do[Print["if constexpr (n == " <> ToString[n] <> ") return " <> ToString[GaussianQuadratureWeights[n, 0, 1, 17][[All, 1]]] <> ";"], {n, 1, 8}] 
  */
-template <int n, Geometry geom>
+template <int n, mfem::Geometry::Type geom>
 SERAC_HOST_DEVICE constexpr auto GaussLegendreNodes() {
 
-  if constexpr (geom == Geometry::Segment) {
+  if constexpr (geom == mfem::Geometry::SEGMENT) {
     if constexpr (n == 1) return tensor<double,n>{0.50000000000000000};
     if constexpr (n == 2) return tensor<double,n>{0.2113248654051871, 0.7886751345948129};
     if constexpr (n == 3) return tensor<double,n>{0.1127016653792583, 0.500000000000000, 0.887298334620742};
@@ -53,7 +53,7 @@ SERAC_HOST_DEVICE constexpr auto GaussLegendreNodes() {
     if constexpr (n == 8) return tensor<double,n>{0.0198550717512319, 0.101666761293187, 0.237233795041836, 0.408282678752175, 0.591717321247825, 0.76276620495816, 0.89833323870681, 0.98014492824877};
   }
 
-  if constexpr (geom == Geometry::Triangle) {
+  if constexpr (geom == mfem::Geometry::TRIANGLE) {
     using output_t = tensor< double, n * (n + 1) / 2, 2 >;
 
     if constexpr (n == 1) {
@@ -89,7 +89,7 @@ SERAC_HOST_DEVICE constexpr auto GaussLegendreNodes() {
     }
   }
 
-  if constexpr (geom == Geometry::Tetrahedron) {
+  if constexpr (geom == mfem::Geometry::TETRAHEDRON) {
 
   }
 
@@ -103,10 +103,10 @@ SERAC_HOST_DEVICE constexpr auto GaussLegendreNodes() {
  * Do[Print["if constexpr (n == " <> ToString[n] <> ") return " <> ToString[GaussianQuadratureWeights[n, 0, 1, 17][[All,
  * 2]]] <> ";"], {n, 1, 8}]
  */
-template <int n, Geometry geom>
+template <int n, mfem::Geometry::Type geom>
 SERAC_HOST_DEVICE constexpr auto GaussLegendreWeights()
 {
-  if constexpr (geom == Geometry::Segment) {
+  if constexpr (geom == mfem::Geometry::SEGMENT) {
     if constexpr (n == 1) return tensor<double, n>{1.000000000000000};
     if constexpr (n == 2) return tensor<double, n>{0.500000000000000, 0.500000000000000};
     if constexpr (n == 3) return tensor<double, n>{0.277777777777778, 0.444444444444444, 0.277777777777778};
@@ -117,7 +117,7 @@ SERAC_HOST_DEVICE constexpr auto GaussLegendreWeights()
     if constexpr (n == 8) return tensor<double, n>{0.0506142681451881, 0.111190517226687, 0.156853322938944, 0.181341891689181, 0.181341891689181,  0.156853322938944, 0.111190517226687, 0.0506142681451881};
   }
 
-  if constexpr (geom == Geometry::Triangle) {
+  if constexpr (geom == mfem::Geometry::TRIANGLE) {
     using output_t = tensor< double, n * (n + 1) / 2 >;
     if constexpr (n == 1) return output_t{0.5};
     if constexpr (n == 2) return output_t{0.166666666666667, 0.166666666666667, 0.166666666666667};

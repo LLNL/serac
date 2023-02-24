@@ -10,7 +10,7 @@
  * @brief Specialization of finite_element for expressing quantities of interest on any geometry
  */
 /// @cond
-template <Geometry g>
+template <mfem::Geometry::Type g>
 struct finite_element<g, QOI> {
   static constexpr auto geometry   = g;
   static constexpr auto family     = Family::QOI;
@@ -36,14 +36,14 @@ struct finite_element<g, QOI> {
   {
     static constexpr auto wts = GaussLegendreWeights<q>();
 
-    if constexpr (geometry == Geometry::Segment) {
+    if constexpr (geometry == mfem::Geometry::SEGMENT) {
       static_assert(Q == q);
       for (int k = 0; k < q; k++) {
         element_total[0] += qf_output[k] * wts[k];
       }
     }
 
-    if constexpr (geometry == Geometry::Quadrilateral) {
+    if constexpr (geometry == mfem::Geometry::SQUARE) {
       static_assert(Q == q * q);
       for (int qy = 0; qy < q; qy++) {
         for (int qx = 0; qx < q; qx++) {
@@ -53,7 +53,7 @@ struct finite_element<g, QOI> {
       }
     }
 
-    if constexpr (geometry == Geometry::Hexahedron) {
+    if constexpr (geometry == mfem::Geometry::CUBE) {
       static_assert(Q == q * q * q);
       for (int qz = 0; qz < q; qz++) {
         for (int qy = 0; qy < q; qy++) {
@@ -81,14 +81,14 @@ struct finite_element<g, QOI> {
     static constexpr auto wts = GaussLegendreWeights<q>();
 
     for (int j = 0; j < ntrial; j++) {
-      if constexpr (geometry == Geometry::Segment) {
+      if constexpr (geometry == mfem::Geometry::SEGMENT) {
         static_assert(Q == q);
         for (int k = 0; k < q; k++) {
           element_total[j * step] += reinterpret_cast<const double*>(&get<0>(qf_output[k]))[j] * wts[k];
         }
       }
 
-      if constexpr (geometry == Geometry::Quadrilateral) {
+      if constexpr (geometry == mfem::Geometry::SQUARE) {
         static_assert(Q == q * q);
         for (int qy = 0; qy < q; qy++) {
           for (int qx = 0; qx < q; qx++) {
@@ -98,7 +98,7 @@ struct finite_element<g, QOI> {
         }
       }
 
-      if constexpr (geometry == Geometry::Hexahedron) {
+      if constexpr (geometry == mfem::Geometry::CUBE) {
         static_assert(Q == q * q * q);
         for (int qz = 0; qz < q; qz++) {
           for (int qy = 0; qy < q; qy++) {

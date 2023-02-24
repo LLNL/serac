@@ -7,26 +7,9 @@
 
 namespace serac {
 
-inline mfem::Geometry::Type to_mfem(Geometry g)
-{
-  switch (g) {
-    case Geometry::Point:
-      return mfem::Geometry::POINT;
-    case Geometry::Segment:
-      return mfem::Geometry::SEGMENT;
-    case Geometry::Quadrilateral:
-      return mfem::Geometry::SQUARE;
-    case Geometry::Triangle:
-      return mfem::Geometry::TRIANGLE;
-    case Geometry::Hexahedron:
-      return mfem::Geometry::CUBE;
-    case Geometry::Tetrahedron:
-      return mfem::Geometry::TETRAHEDRON;
-  }
-  return mfem::Geometry::INVALID;
-}
-
 struct GeometricFactors {
+
+  GeometricFactors();
   GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry::Type elem_geom);
   GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry::Type elem_geom, FaceType type);
 

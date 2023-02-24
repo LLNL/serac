@@ -17,8 +17,8 @@
 // for additional information on the finite_element concept requirements, see finite_element.hpp
 /// @cond
 template <int p, int c>
-struct finite_element<Geometry::Triangle, H1<p, c> > {
-  static constexpr auto geometry   = Geometry::Triangle;
+struct finite_element<mfem::Geometry::TRIANGLE, H1<p, c> > {
+  static constexpr auto geometry   = mfem::Geometry::TRIANGLE;
   static constexpr auto family     = Family::H1;
   static constexpr int  components = c;
   static constexpr int  dim        = 2;
@@ -248,8 +248,8 @@ struct finite_element<Geometry::Triangle, H1<p, c> > {
   template <bool apply_weights, int q>
   static constexpr auto calculate_B()
   {
-    constexpr auto points1D  = GaussLegendreNodes<q, Geometry::Triangle>();
-    constexpr auto weights1D = GaussLegendreWeights<q, Geometry::Triangle>();
+    constexpr auto points1D  = GaussLegendreNodes<q, mfem::Geometry::TRIANGLE>();
+    constexpr auto weights1D = GaussLegendreWeights<q, mfem::Geometry::TRIANGLE>();
 
     tensor<double, q*(q + 1) / 2, ndof> B{};
     for (int i = 0; i < q * (q + 1) / 2; i++) {
@@ -270,8 +270,8 @@ struct finite_element<Geometry::Triangle, H1<p, c> > {
   template <bool apply_weights, int q>
   static constexpr auto calculate_G()
   {
-    constexpr auto points1D  = GaussLegendreNodes<q, Geometry::Triangle>();
-    constexpr auto weights1D = GaussLegendreWeights<q, Geometry::Triangle>();
+    constexpr auto points1D  = GaussLegendreNodes<q, mfem::Geometry::TRIANGLE>();
+    constexpr auto weights1D = GaussLegendreWeights<q, mfem::Geometry::TRIANGLE>();
 
     tensor<double, q*(q + 1) / 2, ndof, dim> G{};
     for (int i = 0; i < q; i++) {
@@ -286,7 +286,7 @@ struct finite_element<Geometry::Triangle, H1<p, c> > {
     using source_t = decltype(get<0>(get<0>(in_t{})) + dot(get<1>(get<0>(in_t{})), tensor<double, 2>{}));
     using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double, 2>{}));
 
-    constexpr auto xi = GaussLegendreNodes<q, Geometry::Triangle>();
+    constexpr auto xi = GaussLegendreNodes<q, mfem::Geometry::TRIANGLE>();
 
     static constexpr int               Q = q * (q + 1) / 2;
     tensor<tuple<source_t, flux_t>, Q> output;
@@ -309,7 +309,7 @@ struct finite_element<Geometry::Triangle, H1<p, c> > {
   template <int q>
   static auto interpolate(const tensor<double, c, ndof>& X, const TensorProductQuadratureRule<q>&)
   {
-    constexpr auto       xi                    = GaussLegendreNodes<q, Geometry::Triangle>();
+    constexpr auto       xi                    = GaussLegendreNodes<q, mfem::Geometry::TRIANGLE>();
     static constexpr int num_quadrature_points = q * (q + 1) / 2;
 
     // transpose the quadrature data into a flat tensor of tuples
@@ -340,8 +340,8 @@ struct finite_element<Geometry::Triangle, H1<p, c> > {
 
     constexpr int  num_quadrature_points = q * (q + 1) / 2;
     constexpr int  ntrial                = std::max(size(source_type{}), size(flux_type{}) / dim) / c;
-    constexpr auto integration_points    = GaussLegendreNodes<q, Geometry::Triangle>();
-    constexpr auto integration_weights   = GaussLegendreWeights<q, Geometry::Triangle>();
+    constexpr auto integration_points    = GaussLegendreNodes<q, mfem::Geometry::TRIANGLE>();
+    constexpr auto integration_weights   = GaussLegendreWeights<q, mfem::Geometry::TRIANGLE>();
 
     for (int j = 0; j < ntrial; j++) {
       for (int i = 0; i < c; i++) {

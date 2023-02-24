@@ -36,13 +36,13 @@ auto Preprocess(const T& u, const coord_type& xi)
   //}
 }
 
-template <Geometry geom, typename... trials, typename tuple_type, int dim, int... i>
+template <mfem::Geometry::Type geom, typename... trials, typename tuple_type, int dim, int... i>
 auto PreprocessHelper(const tuple_type& u, const tensor<double, dim>& xi, std::integer_sequence<int, i...>)
 {
   return serac::make_tuple(Preprocess<finite_element<geom, trials>>(get<i>(u), xi)...);
 }
 
-template <Geometry geom, typename... trials, typename tuple_type, int dim>
+template <mfem::Geometry::Type geom, typename... trials, typename tuple_type, int dim>
 auto Preprocess(const tuple_type& u, const tensor<double, dim>& xi)
 {
   return PreprocessHelper<geom, trials...>(u, xi,
@@ -120,7 +120,7 @@ template <int i>
 struct DerivativeWRT {
 };
 
-template <int Q, Geometry g, typename test, typename... trials>
+template <int Q, mfem::Geometry::Type g, typename test, typename... trials>
 struct KernelConfig {
 };
 
@@ -167,7 +167,7 @@ struct EvaluationKernel;
  * @note evaluation kernel with no differentiation
  */
 
-template <int Q, Geometry geom, typename test, typename... trials, typename lambda, int... int_seq>
+template <int Q, mfem::Geometry::Type geom, typename test, typename... trials, typename lambda, int... int_seq>
 struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lambda,
                         std::integer_sequence<int, int_seq...>> {
   static constexpr auto exec             = ExecutionSpace::CPU;     ///< this specialization is CPU-specific
@@ -251,7 +251,7 @@ struct EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lamb
  * @overload
  * @note evaluation kernel that also calculates derivative w.r.t. `I`th trial space
  */
-template <int differentiation_index, int Q, Geometry geom, typename test, typename... trials, typename derivatives_type,
+template <int differentiation_index, int Q, mfem::Geometry::Type geom, typename test, typename... trials, typename derivatives_type,
           typename lambda, int... indices>
 struct EvaluationKernel<DerivativeWRT<differentiation_index>, KernelConfig<Q, geom, test, trials...>, derivatives_type,
                         lambda, std::integer_sequence<int, indices...>> {
@@ -334,12 +334,12 @@ struct EvaluationKernel<DerivativeWRT<differentiation_index>, KernelConfig<Q, ge
   lambda                                   qf_;              ///< q-function
 };
 
-template <int Q, Geometry geom, typename test, typename... trials, typename lambda>
+template <int Q, mfem::Geometry::Type geom, typename test, typename... trials, typename lambda>
 EvaluationKernel(KernelConfig<Q, geom, test, trials...>, const mfem::Vector&, const mfem::Vector&, int, lambda)
     -> EvaluationKernel<void, KernelConfig<Q, geom, test, trials...>, void, lambda,
                         std::make_integer_sequence<int, static_cast<int>(sizeof...(trials))>>;
 
-template <int differentiation_index, int Q, Geometry geom, typename test, typename... trials, typename derivatives_type,
+template <int differentiation_index, int Q, mfem::Geometry::Type geom, typename test, typename... trials, typename derivatives_type,
           typename lambda>
 EvaluationKernel(DerivativeWRT<differentiation_index>, KernelConfig<Q, geom, test, trials...>,
                  CPUArrayView<derivatives_type, 2>, const mfem::Vector&, const mfem::Vector&, int, lambda)
@@ -391,7 +391,7 @@ auto batch_apply_chain_rule(derivative_type* qf_derivatives, const tensor<T, n>&
  * @see mfem::GeometricFactors
  * @param[in] num_elements The number of elements in the mesh
  */
-template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
+template <mfem::Geometry::Type g, typename test, typename trial, int Q, typename derivatives_type>
 void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
                                CPUArrayView<derivatives_type, 2> qf_derivatives, std::size_t num_elements)
 {
@@ -438,14 +438,14 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR,
  * @see mfem::GeometricFactors
  * @param[in] num_elements The number of elements in the mesh
  */
-template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
+template <mfem::Geometry::Type g, typename test, typename trial, int Q, typename derivatives_type>
 void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
                              CPUArrayView<derivatives_type, 2> qf_derivatives, std::size_t num_elements)
 {
   using test_element  = finite_element<g, test>;
   using trial_element = finite_element<g, trial>;
 
-  constexpr int nquad = (g == Geometry::Quadrilateral) ? Q * Q : Q;
+  constexpr int nquad = (g == mfem::Geometry::SQUARE) ? Q * Q : Q;
 
   static constexpr TensorProductQuadratureRule<Q> rule{};
 

@@ -113,11 +113,6 @@ bool contains_unsupported_elements(const mfem::Mesh& mesh)
   return false;
 }
 
-//   /// Constants for the classes derived from Element.
-//   enum Type { POINT, SEGMENT, TRIANGLE, QUADRILATERAL,
-//               TETRAHEDRON, HEXAHEDRON, WEDGE, PYRAMID
-//             };
-
 /**
  * @brief create an mfem::ParFiniteElementSpace from one of serac's
  * tag types: H1, Hcurl, L2
@@ -335,19 +330,8 @@ public:
 
     SLIC_ERROR_ROOT_IF(contains_unsupported_elements(domain), "Mesh contains unsupported element type");
 
-    auto selected_trial_spaces = serac::make_tuple(serac::get<args>(trial_spaces)...);
-
-    {
-      constexpr Geometry geom = (dim == 2) ? Geometry::Quadrilateral : Geometry::Hexahedron;
-      domain_integrals_.emplace_back(test{}, selected_trial_spaces, domain, CompileTimeValue<geom>{}, integrand, qdata,
-                                     std::vector<int>{args...});
-    }
-
-    {
-      constexpr Geometry geom = (dim == 2) ? Geometry::Triangle : Geometry::Tetrahedron;
-      domain_integrals_simplex_.emplace_back(test{}, selected_trial_spaces, domain, CompileTimeValue<geom>{}, integrand,
-                                             qdata, std::vector<int>{args...});
-    }
+    using signature = test(decltype(serac::type<args>(trial_spaces))...);
+    integrals_.push_back(MakeDomainIntegral<signature, Q, dim>(domain, integrand, qdata, std::vector<uint32_t>{args ...}));
   }
 
   /**
@@ -359,26 +343,26 @@ public:
    * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
    * and @a spatial_dim template parameter
    */
-  template <int dim, int... args, typename lambda>
-  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain)
-  {
-    auto num_bdr_elements = domain.GetNBE();
-    if (num_bdr_elements == 0) return;
-
-    SLIC_ERROR_ROOT_IF((dim + 1) != domain.Dimension(), "invalid mesh dimension for boundary integral");
-    for (int e = 0; e < num_bdr_elements; e++) {
-      SLIC_ERROR_ROOT_IF(domain.GetBdrElementType(e) != supported_types[dim], "Mesh contains unsupported element type");
-    }
-
-    // this is a temporary measure to check correctness for the replacement "GeometricFactor"
-    // kernels, must be fixed before merging!
-    auto geom = new serac::GeometricFactors(&domain, Q, elem_geom[dim], FaceType::BOUNDARY);
-
-    auto selected_trial_spaces = serac::make_tuple(serac::get<args>(trial_spaces)...);
-
-    bdr_integrals_.emplace_back(test{}, selected_trial_spaces, num_bdr_elements, geom->J, geom->X, Dimension<dim>{},
-                                integrand, std::vector<int>{args...});
-  }
+//  template <int dim, int... args, typename lambda>
+//  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain)
+//  {
+//    auto num_bdr_elements = domain.GetNBE();
+//    if (num_bdr_elements == 0) return;
+//
+//    SLIC_ERROR_ROOT_IF((dim + 1) != domain.Dimension(), "invalid mesh dimension for boundary integral");
+//    for (int e = 0; e < num_bdr_elements; e++) {
+//      SLIC_ERROR_ROOT_IF(domain.GetBdrElementType(e) != supported_types[dim], "Mesh contains unsupported element type");
+//    }
+//
+//    // this is a temporary measure to check correctness for the replacement "GeometricFactor"
+//    // kernels, must be fixed before merging!
+//    auto geom = new serac::GeometricFactors(&domain, Q, elem_geom[dim], FaceType::BOUNDARY);
+//
+//    auto selected_trial_spaces = serac::make_tuple(serac::get<args>(trial_spaces)...);
+//
+//    bdr_integrals_.emplace_back(test{}, selected_trial_spaces, num_bdr_elements, geom->J, geom->X, Dimension<dim>{},
+//                                integrand, std::vector<int>{args...});
+//  }
 
   /**
    * @brief Adds an area integral, i.e., over 2D elements in R^2 space
@@ -435,48 +419,23 @@ public:
     P_trial_[which]->Mult(input_T, input_L_[which]);
 
     output_L_ = 0.0;
-    if (domain_integrals_.size() > 0) {
-      // get the values for each element on the local processor
-      G_trial_[which].Gather(input_L_[which], input_E_[which]);
 
-      // compute residual contributions at the element level and sum them
-      output_E_ = 0.0;
-      for (auto& integral : domain_integrals_) {
-        integral.GradientMult(input_E_[which], output_E_, which);
+    // this is used to mark when gather operations have been performed,
+    // to avoid doing them more than once per trial space
+    bool already_computed[Integral::num_types]{}; // default initializes to `false`
+
+    for (auto& integral : integrals_) {
+      auto type = integral.type;
+
+      if (!already_computed[type]) {
+        G_trial_[which].Gather(input_L_[which], block_input_E_[type][which]);
+        already_computed[type] = true;
       }
 
-      // scatter-add to compute residuals on the local processor
-      G_test_.ScatterAdd(output_E_, output_L_);
-    }
-
-    if (domain_integrals_simplex_.size() > 0) {
-      // get the values for each element on the local processor
-      G_trial_simplex_[which].Gather(input_L_[which], input_E_simplex_[which]);
-
-      // compute residual contributions at the element level and sum them
-      output_E_simplex_ = 0.0;
-      for (auto& integral : domain_integrals_simplex_) {
-        integral.GradientMult(input_E_simplex_[which], output_E_simplex_, which);
-      }
+      integral.GradientMult(block_input_E_[type][which], block_output_E_[type], which);
 
       // scatter-add to compute residuals on the local processor
-      G_test_simplex_.ScatterAdd(output_E_simplex_, output_L_);
-    }
-
-    if (bdr_integrals_.size() > 0) {
-      G_trial_boundary_[which].Gather(input_L_[which], input_E_boundary_[which]);
-
-      output_E_boundary_ = 0.0;
-      for (auto& integral : bdr_integrals_) {
-        integral.GradientMult(input_E_boundary_[which], output_E_boundary_, which);
-      }
-
-      output_L_boundary_ = 0.0;
-
-      // scatter-add to compute residuals on the local processor
-      G_test_boundary_.ScatterAdd(output_E_boundary_, output_L_boundary_);
-
-      output_L_ += output_L_boundary_;
+      G_test_.ScatterAdd(block_output_E_[type], output_L_);
     }
 
     // scatter-add to compute global residuals
@@ -506,17 +465,15 @@ public:
 
     output_L_ = 0.0;
 
-#if 1
-
-    // used to mark when gather operations have been performed,
+    // this is used to mark when gather operations have been performed,
     // to avoid doing them more than once per trial space
-    bool already_computed[Integral::num_types][num_trial_spaces]{};
-
+    bool already_computed[Integral::num_types][num_trial_spaces]{}; // default initializes to `false`
+ 
     for (auto& integral : integrals_) {
       auto type = integral.type;
 
       for (auto i : integral.active_trial_spaces) {
-        if (already_computed[type][i]) {
+        if (!already_computed[type][i]) {
           G_trial_[i].Gather(input_L_[i], block_input_E_[type][i]);
           already_computed[type][i] = true;
         }
@@ -527,58 +484,6 @@ public:
       // scatter-add to compute residuals on the local processor
       G_test_.ScatterAdd(block_output_E_[type], output_L_);
     }
-#else
-
-    if (domain_integrals_.size() > 0) {
-      // get the values for each element on the local processor
-      for (uint32_t i = 0; i < num_trial_spaces; i++) {
-        G_trial_[i].Gather(input_L_[i], input_E_[i]);
-      }
-
-      // compute residual contributions at the element level and sum them
-      output_E_ = 0.0;
-      for (auto& integral : domain_integrals_) {
-        integral.Mult(input_E_, output_E_, wrt, update_qdata);
-      }
-
-      // scatter-add to compute residuals on the local processor
-      G_test_.ScatterAdd(output_E_, output_L_);
-    }
-
-    if (domain_integrals_simplex_.size() > 0) {
-      // get the values for each element on the local processor
-      for (uint32_t i = 0; i < num_trial_spaces; i++) {
-        G_trial_simplex_[i].Gather(input_L_[i], input_E_simplex_[i]);
-      }
-
-      // compute residual contributions at the element level and sum them
-      output_E_simplex_ = 0.0;
-      for (auto& integral : domain_integrals_simplex_) {
-        integral.Mult(input_E_simplex_, output_E_simplex_, wrt, update_qdata);
-      }
-
-      // scatter-add to compute residuals on the local processor
-      G_test_simplex_.ScatterAdd(output_E_simplex_, output_L_);
-    }
-
-    if (bdr_integrals_.size() > 0) {
-      for (uint32_t i = 0; i < num_trial_spaces; i++) {
-        G_trial_boundary_[i].Gather(input_L_[i], input_E_boundary_[i]);
-      }
-
-      output_E_boundary_ = 0.0;
-      for (auto& integral : bdr_integrals_) {
-        integral.Mult(input_E_boundary_, output_E_boundary_, wrt);
-      }
-
-      output_L_boundary_ = 0.0;
-
-      // scatter-add to compute residuals on the local processor
-      G_test_boundary_.ScatterAdd(output_E_boundary_, output_L_boundary_);
-
-      output_L_ += output_L_boundary_;
-    }
-#endif
 
     // scatter-add to compute global residuals
     P_test_->MultTranspose(output_L_, output_T_);
@@ -679,45 +584,45 @@ private:
       // each element uses the lookup tables to add its contributions
       // to their appropriate locations in the global sparse matrix
 
-      if (form_.domain_integrals_.size() > 0) {
-        auto& K_elem = form_.element_gradients_[which_argument];
-        auto& LUT    = lookup_tables.element_nonzero_LUT;
+      //if (form_.domain_integrals_.size() > 0) {
+      //  auto& K_elem = form_.element_gradients_[which_argument];
+      //  auto& LUT    = lookup_tables.element_nonzero_LUT;
 
-        detail::zero_out(K_elem);
-        for (auto& domain : form_.domain_integrals_) {
-          domain.ComputeElementGradients(view(K_elem), which_argument);
-        }
+      //  detail::zero_out(K_elem);
+      //  for (auto& domain : form_.domain_integrals_) {
+      //    domain.ComputeElementGradients(view(K_elem), which_argument);
+      //  }
 
-        for (axom::IndexType e = 0; e < K_elem.shape()[0]; e++) {
-          for (axom::IndexType i = 0; i < K_elem.shape()[1]; i++) {
-            for (axom::IndexType j = 0; j < K_elem.shape()[2]; j++) {
-              auto [index, sign] = LUT(e, j, i);
-              values[index] += sign * K_elem(e, i, j);
-            }
-          }
-        }
-      }
+      //  for (axom::IndexType e = 0; e < K_elem.shape()[0]; e++) {
+      //    for (axom::IndexType i = 0; i < K_elem.shape()[1]; i++) {
+      //      for (axom::IndexType j = 0; j < K_elem.shape()[2]; j++) {
+      //        auto [index, sign] = LUT(e, j, i);
+      //        values[index] += sign * K_elem(e, i, j);
+      //      }
+      //    }
+      //  }
+      //}
 
       // each boundary element uses the lookup tables to add its contributions
       // to their appropriate locations in the global sparse matrix
-      if (form_.bdr_integrals_.size() > 0) {
-        auto& K_belem = form_.bdr_element_gradients_[which_argument];
-        auto& LUT     = lookup_tables.bdr_element_nonzero_LUT;
+      //if (form_.bdr_integrals_.size() > 0) {
+      //  auto& K_belem = form_.bdr_element_gradients_[which_argument];
+      //  auto& LUT     = lookup_tables.bdr_element_nonzero_LUT;
 
-        detail::zero_out(K_belem);
-        for (auto& boundary : form_.bdr_integrals_) {
-          boundary.ComputeElementGradients(view(K_belem), which_argument);
-        }
+      //  detail::zero_out(K_belem);
+      //  for (auto& boundary : form_.bdr_integrals_) {
+      //    boundary.ComputeElementGradients(view(K_belem), which_argument);
+      //  }
 
-        for (axom::IndexType e = 0; e < K_belem.shape()[0]; e++) {
-          for (axom::IndexType i = 0; i < K_belem.shape()[1]; i++) {
-            for (axom::IndexType j = 0; j < K_belem.shape()[2]; j++) {
-              auto [index, sign] = LUT(e, j, i);
-              values[index] += sign * K_belem(e, i, j);
-            }
-          }
-        }
-      }
+      //  for (axom::IndexType e = 0; e < K_belem.shape()[0]; e++) {
+      //    for (axom::IndexType i = 0; i < K_belem.shape()[1]; i++) {
+      //      for (axom::IndexType j = 0; j < K_belem.shape()[2]; j++) {
+      //        auto [index, sign] = LUT(e, j, i);
+      //        values[index] += sign * K_belem(e, i, j);
+      //      }
+      //    }
+      //  }
+      //}
 
       // Copy the column indices to an auxilliary array as MFEM can mutate these during HypreParMatrix construction
       col_ind_copy_ = lookup_tables.col_ind;
@@ -859,19 +764,6 @@ private:
   ElementRestriction G_trial_boundary_[num_trial_spaces];
 
   std::vector<Integral> integrals_;
-
-  /// @brief The set of domain integrals (spatial_dim == geometric_dim)
-  std::vector<DomainIntegral<num_trial_spaces, Q, exec>> domain_integrals_;
-
-  /// @brief The set of domain integrals (spatial_dim == geometric_dim)
-  std::vector<DomainIntegral<num_trial_spaces, Q, exec>> domain_integrals_simplex_;
-
-  /// @brief The set of boundary integral (spatial_dim == geometric_dim + 1)
-  std::vector<BoundaryIntegral<num_trial_spaces, Q, exec>> bdr_integrals_;
-
-  // simplex elements are currently not supported;
-  static constexpr mfem::Element::Type supported_types[4] = {mfem::Element::POINT, mfem::Element::SEGMENT,
-                                                             mfem::Element::QUADRILATERAL, mfem::Element::HEXAHEDRON};
 
   /// @brief The objects representing the gradients w.r.t. each input argument of the Functional
   mutable std::vector<Gradient> grad_;

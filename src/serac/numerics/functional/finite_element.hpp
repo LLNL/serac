@@ -51,26 +51,26 @@ struct CompileTimeValue {
  * @tparam g the element geometry
  * @tparam q the number of quadrature points per dimension
  */
-template <Geometry g, int q>
+template <mfem::Geometry::Type g, int q>
 struct batched_jacobian;
 
 /// @overload
 template <int q>
-struct batched_jacobian<Geometry::Hexahedron, q> {
+struct batched_jacobian<mfem::Geometry::CUBE, q> {
   /// the data layout for this geometry and quadrature rule
   using type = tensor<double, 3, 3, q * q * q>;
 };
 
 /// @overload
 template <int q>
-struct batched_jacobian<Geometry::Quadrilateral, q> {
+struct batched_jacobian<mfem::Geometry::SQUARE, q> {
   /// the data layout for this geometry and quadrature rule
   using type = tensor<double, 2, 2, q * q>;
 };
 
 /// @overload
 template <int q>
-struct batched_jacobian<Geometry::Triangle, q> {
+struct batched_jacobian<mfem::Geometry::TRIANGLE, q> {
   /// the data layout for this geometry and quadrature rule
   using type = tensor<double, 2, 2, q*(q + 1) / 2>;
 };
@@ -82,33 +82,33 @@ struct batched_jacobian<Geometry::Triangle, q> {
  * @tparam g the element geometry
  * @tparam q the number of quadrature points per dimension
  */
-template <Geometry g, int q>
+template <mfem::Geometry::Type g, int q>
 struct batched_position;
 
 /// @overload
 template <int q>
-struct batched_position<Geometry::Hexahedron, q> {
+struct batched_position<mfem::Geometry::CUBE, q> {
   /// the data layout for this geometry and quadrature rule
   using type = tensor<double, 3, q * q * q>;
 };
 
 /// @overload
 template <int q>
-struct batched_position<Geometry::Quadrilateral, q> {
+struct batched_position<mfem::Geometry::SQUARE, q> {
   /// the data layout for this geometry and quadrature rule
   using type = tensor<double, 2, q * q>;
 };
 
 /// @overload
 template <int q>
-struct batched_position<Geometry::Triangle, q> {
+struct batched_position<mfem::Geometry::TRIANGLE, q> {
   /// the data layout for this geometry and quadrature rule
   using type = tensor<double, 2, q*(q + 1) / 2>;
 };
 
 /// @overload
 template <int q>
-struct batched_position<Geometry::Segment, q> {
+struct batched_position<mfem::Geometry::SEGMENT, q> {
   /// the data layout for this geometry and quadrature rule
   using type = tensor<double, q>;
 };
@@ -123,10 +123,10 @@ struct batched_position<Geometry::Segment, q> {
  * @param q the number of quadrature points per dimension
  * @return how many elements each thread block should process
  */
-template <Geometry g>
+template <mfem::Geometry::Type g>
 SERAC_HOST_DEVICE constexpr int elements_per_block(int q)
 {
-  if (g == Geometry::Hexahedron) {
+  if (g == mfem::Geometry::CUBE) {
     switch (q) {
       case 1:
         return 64;
@@ -139,7 +139,7 @@ SERAC_HOST_DEVICE constexpr int elements_per_block(int q)
     }
   }
 
-  if (g == Geometry::Quadrilateral) {
+  if (g == mfem::Geometry::SQUARE) {
     switch (q) {
       case 1:
         return 128;
@@ -318,7 +318,7 @@ void physical_to_parent(tensor<T, q>& qf_output, const tensor<double, dim, dim, 
  * should implement the following concept:
  *
  * struct finite_element< some_geometry, some_space > > {
- *   static constexpr Geometry geometry = ...; ///< one of Triangle, Quadrilateral, etc
+ *   static constexpr mfem::Geometry::Type geometry = ...; ///< one of Triangle, Quadrilateral, etc
  *   static constexpr Family family     = ...; ///< one of H1, HCURL, HDIV, etc
  *   static constexpr int  components   = ...; ///< how many components per node
  *   static constexpr int  dim          = ...; ///< number of parent element coordinates
@@ -332,7 +332,7 @@ void physical_to_parent(tensor<T, q>& qf_output, const tensor<double, dim, dim, 
  * };
  *
  */
-template <Geometry g, typename family>
+template <mfem::Geometry::Type g, typename family>
 struct finite_element;
 
 #include "detail/segment_H1.inl"

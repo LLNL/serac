@@ -68,7 +68,7 @@ namespace domain_integral {
  * @param[inout] data The data for each quadrature point
  */
 
-template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
+template <mfem::Geometry::Type g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
           typename solution_type, typename residual_type, typename jacobian_type, typename position_type,
           typename qpt_data_type = void>
 __global__ void eval_cuda_element(const solution_type u, residual_type r, derivatives_type* derivatives_ptr,
@@ -162,7 +162,7 @@ __global__ void eval_cuda_element(const solution_type u, residual_type r, deriva
  * @param[in] qf The actual quadrature function, see @p lambda
  * @param[inout] data The data for each quadrature point
  */
-template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
+template <mfem::Geometry::Type g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
           typename solution_type, typename residual_type, typename jacobian_type, typename position_type,
           typename qpt_data_type = void>
 __global__ void eval_cuda_quadrature(const solution_type u, residual_type r,
@@ -248,7 +248,7 @@ __global__ void eval_cuda_quadrature(const solution_type u, residual_type r,
  * @param[inout] data The data for each quadrature point
  */
 
-template <Geometry g, typename test, typename trial, int Q, serac::detail::ThreadParallelizationStrategy policy,
+template <mfem::Geometry::Type g, typename test, typename trial, int Q, serac::detail::ThreadParallelizationStrategy policy,
           typename derivatives_type, typename lambda, typename qpt_data_type = void>
 void evaluation_kernel_cuda(serac::detail::GPULaunchConfiguration config, const mfem::Vector& U, mfem::Vector& R,
                             GPUArrayView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J_,
@@ -318,7 +318,7 @@ void evaluation_kernel_cuda(serac::detail::GPULaunchConfiguration config, const 
  * @param[in] num_elements The number of elements in the mesh
  */
 
-template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename dsolution_type,
+template <mfem::Geometry::Type g, typename test, typename trial, int Q, typename derivatives_type, typename dsolution_type,
           typename dresidual_type>
 __global__ void gradient_cuda_element(const dsolution_type du, dresidual_type dr,
                                       GPUArrayView<derivatives_type, 2>         qf_derivatives,
@@ -395,7 +395,7 @@ __global__ void gradient_cuda_element(const dsolution_type du, dresidual_type dr
  * @param[in] num_elements The number of elements in the mesh
  */
 
-template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename dsolution_type,
+template <mfem::Geometry::Type g, typename test, typename trial, int Q, typename derivatives_type, typename dsolution_type,
           typename dresidual_type>
 __global__ void gradient_cuda_quadrature(const dsolution_type du, dresidual_type dr,
                                          GPUArrayView<derivatives_type, 2>         qf_derivatives,
@@ -471,7 +471,7 @@ __global__ void gradient_cuda_quadrature(const dsolution_type du, dresidual_type
  * @param[in] num_elements The number of elements in the mesh
  */
 
-template <Geometry g, typename test, typename trial, int Q, serac::detail::ThreadParallelizationStrategy policy,
+template <mfem::Geometry::Type g, typename test, typename trial, int Q, serac::detail::ThreadParallelizationStrategy policy,
           typename derivatives_type>
 void action_of_gradient_kernel(serac::detail::GPULaunchConfiguration config, const mfem::Vector& dU, mfem::Vector& dR,
                                GPUArrayView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J_,

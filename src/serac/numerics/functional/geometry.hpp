@@ -3,19 +3,6 @@
 namespace serac {
 
 /**
- * @brief Element geometries
- */
-enum class Geometry
-{
-  Point,
-  Segment,
-  Triangle,
-  Quadrilateral,
-  Tetrahedron,
-  Hexahedron
-};
-
-/**
  * @brief Compile-time alias for a dimension
  */
 template <int d>
@@ -33,21 +20,21 @@ struct Dimension {
  * @tparam g the element geometry
  * @tparam q the number of quadrature points per dimension
  */
-constexpr int num_quadrature_points(Geometry g, int q)
+constexpr int num_quadrature_points(mfem::Geometry::Type g, int q)
 {
-  if (g == Geometry::Segment) {
+  if (g == mfem::Geometry::SEGMENT) {
     return q;
   }
-  if (g == Geometry::Triangle) {
+  if (g == mfem::Geometry::TRIANGLE) {
     return (q * (q + 1)) / 2;
   }
-  if (g == Geometry::Quadrilateral) {
+  if (g == mfem::Geometry::SQUARE) {
     return q * q;
   }
-  if (g == Geometry::Tetrahedron) {
+  if (g == mfem::Geometry::TETRAHEDRON) {
     return (q * (q + 1) * (q + 2)) / 6;
   }
-  if (g == Geometry::Hexahedron) {
+  if (g == mfem::Geometry::CUBE) {
     return q * q * q;
   }
   return -1;
@@ -57,17 +44,17 @@ constexpr int num_quadrature_points(Geometry g, int q)
  * @brief Returns the dimension of an element geometry
  * @param[in] g The @p Geometry to retrieve the dimension of
  */
-constexpr int dimension_of(Geometry g)
+constexpr int dimension_of(mfem::Geometry::Type g)
 {
-  if (g == Geometry::Segment) {
+  if (g == mfem::Geometry::SEGMENT) {
     return 1;
   }
 
-  if (g == Geometry::Triangle || g == Geometry::Quadrilateral) {
+  if (g == mfem::Geometry::TRIANGLE || g == mfem::Geometry::SQUARE) {
     return 2;
   }
 
-  if (g == Geometry::Tetrahedron || g == Geometry::Hexahedron) {
+  if (g == mfem::Geometry::TETRAHEDRON || g == mfem::Geometry::CUBE) {
     return 3;
   }
 
