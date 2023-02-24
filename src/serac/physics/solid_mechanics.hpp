@@ -566,7 +566,7 @@ public:
    *
    * @warning This interface is not stable and may change in the future.
    *
-   * @return A pair of the eliminted stiffness matrix and a matrix containing the eliminated rows and cols
+   * @return A pair of the eliminated stiffness matrix and a matrix containing the eliminated rows and cols
    */
   std::pair<const mfem::HypreParMatrix&, const mfem::HypreParMatrix&> stiffnessMatrix() const
   {
