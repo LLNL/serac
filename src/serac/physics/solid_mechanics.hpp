@@ -568,7 +568,7 @@ public:
    *
    * @return A pair of the eliminted stiffness matrix and a matrix containing the eliminated rows and cols
    */
-  std::pair<mfem::HypreParMatrix&, mfem::HypreParMatrix&> stiffnessMatrix()
+  std::pair<const mfem::HypreParMatrix&, const mfem::HypreParMatrix&> stiffnessMatrix() const
   {
     SLIC_ERROR_ROOT_IF(!J_ || !J_e_, "Stiffness matrix has not yet been assembled.");
 
