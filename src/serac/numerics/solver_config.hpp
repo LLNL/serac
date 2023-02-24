@@ -107,6 +107,8 @@ enum class NonlinearSolver
   LBFGS,                     /**< Limited memory BFGS */
   KINFullStep,               /**< KINFullStep */
   KINBacktrackingLineSearch, /**< KINBacktrackingLineSearch */
+  KINPicard,                 /**< KINPicard*/
+  KINFP                      /**< KINFP */
 };
 
 /**
