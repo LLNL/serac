@@ -22,8 +22,8 @@
 // #define FULL_DOMAIN
 #undef FULL_DOMAIN
 
-#define NEMATIC_STATE
-// #undef NEMATIC_STATE
+// #define NEMATIC_STATE
+#undef NEMATIC_STATE
 
 using namespace serac;
 
@@ -75,7 +75,7 @@ int main(int argc, char* argv[])
   // ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(5*nElem, 50*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
   ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(4*nElem, 20*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
 #else
-
+  ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(4*nElem, 20*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
 #endif
 
 #endif
@@ -109,14 +109,19 @@ int main(int argc, char* argv[])
 
   // Material properties
   double density = 1.0;
-  double young_modulus = 7.5e6; //0.61e6;
+  double young_modulus = 0.4e6; //0.61e6;
   double possion_ratio = 0.48;
-  double beta_param = 1.0e-8; // 0.041;
-  double max_order_param = 0.45; // 0.00001; //  0.2;
+  double beta_param = 5.2e4; // 0.041;
+  double max_order_param = 0.45;
+#ifdef NEMATIC_STATE
+  double initial_order_param = max_order_param;
+#else
+  double initial_order_param =    1.0e-8;
+#endif
 
   // Parameter 1
   FiniteElementState orderParam(StateManager::newState(FiniteElementState::Options{.order = p, .name = "orderParam"}));
-  orderParam = max_order_param;
+  orderParam = initial_order_param;
 
   // Parameter 2
   FiniteElementState gammaParam(StateManager::newState(FiniteElementState::Options{.order = p, .vector_dim = 1, .element_type = ElementType::L2, .name = "gammaParam"}));
@@ -208,10 +213,16 @@ int main(int argc, char* argv[])
 #ifdef LOAD_DRIVEN
 
   auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 1.0e-14; };
-  double iniLoadVal = 5.0e-4/lx/lz;
+  double iniLoadVal = 2.0e-4/lx/lz;
+#ifdef NEMATIC_STATE
   double maxLoadVal = 1.1064e0/lx/lz/4.0;
   // double maxLoadVal = 1.38e-1/lx/lz/4.0;
   // double maxLoadVal = 5.53e-2/lx/lz/4.0;
+#else
+double maxLoadVal = 1.95875e-1/lx/lz/4.0/4.0;
+  // double maxLoadVal = 1.95875e-1/lx/lz/4.0;
+#endif
+
 
 #ifdef FULL_DOMAIN
   maxLoadVal *= 4;
@@ -234,7 +245,7 @@ int main(int argc, char* argv[])
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  int num_steps = 50;
+  int num_steps = 30;
   
 #ifdef LOAD_DRIVEN
   std::string outputFilename = "sol_lce_bertoldi_tensile_load_new_data";
@@ -259,8 +270,8 @@ int main(int argc, char* argv[])
 #ifdef LOAD_DRIVEN
       << "\n... Using a tension load of: " << loadVal <<" ("<<loadVal/maxLoadVal*100<<"\% of max)"
       << "\n... With max tension load of: " << maxLoadVal
-#else
-      << "\n... Using order parameter: "<< max_order_param * (tmax - t) / tmax
+// #else
+      << "\n... Using order parameter: "<< initial_order_param
 #endif
       << std::endl << std::endl;
     }
@@ -320,7 +331,7 @@ int main(int argc, char* argv[])
     // loadVal = iniLoadVal * std::exp( std::log(maxLoadVal/iniLoadVal) * t / tmax  );
     loadVal = iniLoadVal  + (maxLoadVal - iniLoadVal) * std::pow( t / tmax, 0.75  );
 #else
-    orderParam = max_order_param * (tmax - t) / tmax;
+    orderParam = initial_order_param * (tmax - t) / tmax;
 #endif
   }
 

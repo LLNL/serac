@@ -29,6 +29,7 @@ serac_add_tests( SOURCES ${serial_solver_tests}
     NUM_MPI_TASKS 1)
 
 set(solver_tests
+    mmp_functionally_graded_tensile.cpp
     lce_Brighenti_logpile.cpp
     lce_Brighenti_free_swelling.cpp
     lce_Brighenti_tensile.cpp

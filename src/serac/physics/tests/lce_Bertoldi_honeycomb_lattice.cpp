@@ -18,6 +18,9 @@
 
 using namespace serac;
 
+#define ALT_ITER_SOLVER
+// #undef ALT_ITER_SOLVER
+
 // #define PERIODIC_MESH
 #undef PERIODIC_MESH
 
@@ -37,7 +40,7 @@ int main(int argc, char* argv[])
 
   constexpr int p                   = 1;
   constexpr int dim                 = 3;
-  int           serial_refinement   = 1;
+  int           serial_refinement   = 2;
   int           parallel_refinement = 0;
 
   // Create DataStore
@@ -48,7 +51,8 @@ int main(int argc, char* argv[])
   // int nElem = 2;
   // double lx = 3.0e-3, ly = 3.0e-3, lz = 0.25e-3;
   // auto initial_mesh = mfem::Mesh(mfem::Mesh::MakeCartesian3D(4*nElem, 4*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
-  std::string filename = SERAC_REPO_DIR "/data/meshes/reEntrantHoneyComb_coarse.g";
+  // std::string filename = SERAC_REPO_DIR "/data/meshes/reEntrantHoneyComb_coarse_scaled.g";
+  std::string filename = SERAC_REPO_DIR "/data/meshes/reEntrantHoneyComb_coarser_scaled.g";
   auto initial_mesh = buildMeshFromFile(filename);
 
 #ifdef PERIODIC_MESH
@@ -75,22 +79,35 @@ int main(int argc, char* argv[])
   serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a functional-based solid mechanics solver
-  IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
+  NonlinearSolverOptions default_nonlinear_options = {
+    .rel_tol = 1.0e-6, .abs_tol = 1.0e-10, .max_iter = 35, .print_level = 1};
+
+#ifdef ALT_ITER_SOLVER
+  auto custom_solver  = std::make_unique<mfem::GMRESSolver>(MPI_COMM_WORLD);
+  custom_solver->SetRelTol(1.0e-8);
+  custom_solver->SetAbsTol(1.0e-16);
+  custom_solver->SetPrintLevel(0);
+  custom_solver->SetMaxIter(700);
+  custom_solver->SetKDim(500);
+
+  SolidMechanics<p, dim, Parameters< H1<p>, L2<p>, L2<p> > > solid_solver({CustomSolverOptions{custom_solver.get()}, default_nonlinear_options}, GeometricNonlinearities::Off,
+                                       "lce_solid_functional");
+#else
+  IterativeSolverOptions linear_sol_options = {.rel_tol     = 1.0e-7,
                                                        .abs_tol     = 1.0e-16,
                                                        .print_level = 0,
-                                                       .max_iter    = 600,
+                                                       .max_iter    = 500,
                                                        .lin_solver  = LinearSolver::GMRES,
                                                        .prec        = HypreBoomerAMGPrec{}};
-  NonlinearSolverOptions default_nonlinear_options = {
-    .rel_tol = 1.0e-6, .abs_tol = 1.0e-10, .max_iter = 6, .print_level = 1};
-  SolidMechanics<p, dim, Parameters< H1<p>, L2<p>, L2<p> > > solid_solver({default_linear_options, default_nonlinear_options}, GeometricNonlinearities::Off,
+  SolidMechanics<p, dim, Parameters< H1<p>, L2<p>, L2<p> > > solid_solver({linear_sol_options, default_nonlinear_options}, GeometricNonlinearities::Off,
                                        "lce_solid_functional");
+#endif
 
   // Material properties
   double density = 1.0;
-  double young_modulus = 5.0e6; // 0.4;
+  double young_modulus = 0.4e6; // 0.4;
   double possion_ratio = 0.48;
-  double beta_param = 0.041; // 4.0e4; // 0.041;
+  double beta_param = 5.2e4; // 4.0e4; // 0.041;
   double max_order_param = 0.45; // 0.1;
   double gamma_angle = 0.0;
   double eta_angle = 0.0;
@@ -125,45 +142,42 @@ int main(int argc, char* argv[])
   {
       if(heterogeneousGammaField)
       {
-        double Hmax = 15.0;
-        double d = 5.0;
-        double t = 0.5;
-        // double 
+        double Hmax = 15.0e-3;
+        double d = 5.0e-3;
+        double t = 0.5e-3;
+        
+        // top wall
         if(x[1] >= Hmax)
         {
           return 0.0;
         }
-        else if((x[0] >= t/2) && (x[0] <= d-t/2))
-        {
+        // first and third columns (excluding vertical walls)
+        else if(((x[0] >= t/2) && (x[0] <= d-t/2))
+          || ((x[0] >= 2*d + t/2) && (x[0] <= 3*d - t/2)))
+        { 
+          // first and third rows
           if(x[1]<d || x[1]>2*d)
           {
-            return -0.1;
+            return -0.1920;
           }
+          // second row
           else
           {
-            return 0.1;
+            return 0.1920;
           }
         }
+        // second column (excluding vertical walls)
         else if((x[0] >= d + t/2) && (x[0] <= 2*d - t/2))
         {
+          // first and third rows
           if(x[1]<d || x[1]>2*d)
           {
             return 0.1920;
           }
+          // second row
           else
           {
             return -0.1920;
-          }
-        }
-        else if((x[0] >= 2*d + t/2) && (x[0] <= 3*d - t/2))
-        {
-          if(x[1]<d || x[1]>2*d)
-          {
-            return -0.1;
-          }
-          else
-          {
-            return 0.1;
           }
         }
         
@@ -219,7 +233,7 @@ int main(int argc, char* argv[])
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  int num_steps = 20;
+  int num_steps = 10;
 
   std::string outputFilename;
   switch (problemID)
@@ -231,7 +245,7 @@ int main(int argc, char* argv[])
       outputFilename = "sol_lce_bertoldi_honeycomb_gamma_90_eta_00";
       break;
     case 2:
-      outputFilename = "sol_lce_bertoldi_honeycomb_varying_angle";
+      outputFilename = "sol_lce_bertoldi_honeycomb_varying_angle_order_0p45";
       break;
     default:
       std::cout << "...... Wrong problem ID ......" << std::endl;
@@ -242,7 +256,7 @@ int main(int argc, char* argv[])
   double t    = 0.0;
   double tmax = 1.0;
   double dt   = tmax / num_steps;
-double gblDispYmin;
+// double gblDispYmin;
 
   for (int i = 0; i < num_steps; i++) 
   {
@@ -263,20 +277,43 @@ double gblDispYmin;
     // FiniteElementState &displacement = solid_solver.displacement();
     auto &fes = solid_solver.displacement().space();
     mfem::ParGridFunction displacement_gf = solid_solver.displacement().gridFunction();
+    mfem::Vector dispVecX(fes.GetNDofs()); dispVecX = 0.0;
     mfem::Vector dispVecY(fes.GetNDofs()); dispVecY = 0.0;
+    mfem::Vector dispVecZ(fes.GetNDofs()); dispVecZ = 0.0;
 
     for (int k = 0; k < fes.GetNDofs(); k++) 
     {
+      dispVecX(k) = displacement_gf(3*k+0);
       dispVecY(k) = displacement_gf(3*k+1);
+      dispVecZ(k) = displacement_gf(3*k+2);
     }
 
-    double lclDispYmin = dispVecY.Min();
-    MPI_Allreduce(&lclDispYmin, &gblDispYmin, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+    // double lclDispYmin = dispVecY.Min();
+    // MPI_Allreduce(&lclDispYmin, &gblDispYmin, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+
+    double gblDispXmin, lclDispXmin = dispVecX.Min();
+    double gblDispXmax, lclDispXmax = dispVecX.Max();
+    double gblDispYmin, lclDispYmin = dispVecY.Min();
+    double gblDispYmax, lclDispYmax = dispVecY.Max();
+    double gblDispZmin, lclDispZmin = dispVecZ.Min();
+    double gblDispZmax, lclDispZmax = dispVecZ.Max();
+
+    MPI_Allreduce(&lclDispXmin, &gblDispXmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(&lclDispXmax, &gblDispXmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+    MPI_Allreduce(&lclDispYmin, &gblDispYmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(&lclDispYmax, &gblDispYmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+    MPI_Allreduce(&lclDispZmin, &gblDispZmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(&lclDispZmax, &gblDispZmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
 
     if(rank==0)
     {
       std::cout 
-      <<"... Min Y displacement: " << gblDispYmin
+      <<"\n... Min X displacement: " << gblDispXmin
+      <<"\n... Max X displacement: " << gblDispXmax
+      <<"\n... Min Y displacement: " << gblDispYmin
+      <<"\n... Max Y displacement: " << gblDispYmax
+      <<"\n... Min Z displacement: " << gblDispZmin
+      <<"\n... Max Z displacement: " << gblDispZmax
       << std::endl;
     }
 

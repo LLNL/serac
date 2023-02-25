@@ -130,6 +130,8 @@ int main(int argc, char* argv[])
       << "\n... Using two gamma angles"
       << std::endl;
     }
+// [[maybe_unused]] auto [K, K_e] = solid_solver.stiffnessMatrix();
+// auto [K, K_e] = solid_solver.stiffnessMatrix();
 
     mfem::ParGridFunction displacement_gf = solid_solver.displacement().gridFunction();
     if( std::isnan(displacement_gf.Max()) || std::isnan(displacement_gf.Min()) )
