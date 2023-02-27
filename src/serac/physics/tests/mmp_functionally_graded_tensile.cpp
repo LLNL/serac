@@ -76,19 +76,19 @@ int main(int argc, char* argv[])
   IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
                                                        .abs_tol     = 1.0e-16,
                                                        .print_level = 0,
-                                                       .max_iter    = 600,
+                                                       .max_iter    = 500,
                                                        .lin_solver  = LinearSolver::GMRES,
                                                        .prec        = HypreBoomerAMGPrec{}};
   NonlinearSolverOptions default_nonlinear_options = {
-    .rel_tol = 1.0e-6, .abs_tol = 1.0e-12, .max_iter = 6, .print_level = 1};
+    .rel_tol = 1.0e-6, .abs_tol = 1.0e-14, .max_iter = 12, .print_level = 1};
   SolidMechanics<p, dim, Parameters< H1<p>, H1<p> > > solid_solver({default_linear_options, default_nonlinear_options}, GeometricNonlinearities::Off,
                                        "mmp_solid_functional");
 
   // Material properties
   double density = 1.0;
-  double possionRat = 0.48;
-  double minElasticityParam = 500.0;
-  double maxElasticityParam = 1.0;
+  double possionRat = 0.49;
+  double maxElasticityParam = 500.0;
+  double minElasticityParam = 1.0;
 
   // Parameter 1
   FiniteElementState EmodParam(StateManager::newState(FiniteElementState::Options{.order = p, .name = "EmodParam"}));
@@ -100,7 +100,7 @@ int main(int argc, char* argv[])
     {
       if(x[0]>lx/2.0)
       {
-        Emod = minElasticityParam + maxElasticityParam * (x[0]-lx/2.0)/lx/2.0;
+        Emod = minElasticityParam + (maxElasticityParam-minElasticityParam) * 2.0 * (x[0]/lx-0.5);
       }
       else
       {
@@ -165,7 +165,7 @@ int main(int argc, char* argv[])
   auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0000005; };
   double iniLoadVal = 1.0e-2;
 
-double maxLoadVal = 2.e2;
+double maxLoadVal = 1.5e0;
 
 #ifdef FULL_DOMAIN
   maxLoadVal *= 4;
