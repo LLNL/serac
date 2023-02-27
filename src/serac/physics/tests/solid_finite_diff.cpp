@@ -114,7 +114,7 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
   adjoint_load = *assembled_vector;
 
   // Solve the adjoint problem
-  solid_solver.solveAdjoint(adjoint_load);
+  solid_solver.solveAdjoint({{"displacement", adjoint_load}});
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
   [[maybe_unused]] auto& sensitivity = solid_solver.computeSensitivity(bulk_parameter_index);
@@ -240,7 +240,7 @@ TEST(SolidMechanics, FiniteDifferenceShape)
   adjoint_load = *assembled_vector;
 
   // Solve the adjoint problem
-  solid_solver.solveAdjoint(adjoint_load);
+  solid_solver.solveAdjoint({{"displacement", adjoint_load}});
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
   [[maybe_unused]] auto& sensitivity = solid_solver.computeShapeSensitivity();

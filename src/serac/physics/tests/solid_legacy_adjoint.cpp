@@ -94,8 +94,8 @@ TEST(SolidLegacy, Adjoint)
   adjoint_load.Assemble();
   assembled_adjoint_load = *adjoint_load.ParallelAssemble();
 
-  auto&  adjoint_state_1 = solid_solver.solveAdjoint(assembled_adjoint_load);
-  double adjoint_norm_1  = norm(adjoint_state_1);
+  auto&  adjoint_state_1 = solid_solver.solveAdjoint({{"displacement", assembled_adjoint_load}});
+  double adjoint_norm_1  = norm(adjoint_state_1.at("adjoint_displacement"));
 
   SLIC_INFO_ROOT(axom::fmt::format("Adjoint norm (homogeneous BCs): {}", adjoint_norm_1));
 
@@ -138,8 +138,9 @@ TEST(SolidLegacy, Adjoint)
   // Set the essential boundary to a non-zero value
   adjoint_essential = 0.5;
 
-  auto&  adjoint_state_2 = solid_solver.solveAdjoint(assembled_adjoint_load, &adjoint_essential);
-  double adjoint_norm_2  = norm(adjoint_state_2);
+  auto& adjoint_state_2 =
+      solid_solver.solveAdjoint({{"displacement", assembled_adjoint_load}}, {{"displacement", adjoint_essential}});
+  double adjoint_norm_2 = norm(adjoint_state_2.at("adjoint_displacement"));
 
   SLIC_INFO_ROOT(axom::fmt::format("Adjoint norm (non-homogeneous BCs): {}", adjoint_norm_2));
 

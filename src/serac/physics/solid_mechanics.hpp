@@ -708,10 +708,17 @@ public:
    * boundary condition data for the adjoint problem
    * @return The computed adjoint finite element state
    */
-  virtual const serac::FiniteElementState& solveAdjoint(
-      FiniteElementDual& adjoint_load, FiniteElementDual* dual_with_essential_boundary = nullptr) override
+  const std::unordered_map<std::string, const serac::FiniteElementState&> solveAdjoint(
+      std::unordered_map<std::string, const serac::FiniteElementDual&> adjoint_loads,
+      std::unordered_map<std::string, const serac::FiniteElementDual&> duals_with_essential_boundary = {})
   {
-    mfem::HypreParVector adjoint_load_vector(adjoint_load);
+    SLIC_ERROR_ROOT_IF(adjoint_loads.size() != 1,
+                       "Adjoint load container is not the expected size of 1 in the solid mechanics module.");
+
+    auto disp_adjoint_load = adjoint_loads.find("displacement");
+
+    SLIC_ERROR_ROOT_IF(disp_adjoint_load == adjoint_loads.end(), "Adjoint load for \"displacement\" not found.");
+    mfem::HypreParVector adjoint_load_vector(disp_adjoint_load->second);
 
     // Add the sign correction to move the term to the RHS
     adjoint_load_vector *= -1.0;
@@ -719,7 +726,7 @@ public:
     auto& lin_solver = nonlin_solver_.LinearSolver();
 
     // By default, use a homogeneous essential boundary condition
-    mfem::HypreParVector adjoint_essential(adjoint_load);
+    mfem::HypreParVector adjoint_essential(disp_adjoint_load->second);
     adjoint_essential = 0.0;
 
     // sam: is this the right thing to be doing for dynamics simulations,
@@ -730,8 +737,15 @@ public:
     auto J_T      = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
     // If we have a non-homogeneous essential boundary condition, extract it from the given state
-    if (dual_with_essential_boundary) {
-      adjoint_essential = *dual_with_essential_boundary;
+    auto essential_adjoint_disp = duals_with_essential_boundary.find("displacement");
+
+    if (essential_adjoint_disp != duals_with_essential_boundary.end()) {
+      adjoint_essential = essential_adjoint_disp->second;
+    } else {
+      // If the essential adjoint load container does not have a temperature dual but it has a non-zero size, the
+      // user has supplied an incorrectly-named dual vector.
+      SLIC_ERROR_IF(duals_with_essential_boundary.size() != 0,
+                    "Essential adjoint boundary condition given for an unexpected primal field.");
     }
 
     for (const auto& bc : bcs_.essentials()) {
@@ -741,7 +755,7 @@ public:
     lin_solver.SetOperator(*J_T);
     lin_solver.Mult(adjoint_load_vector, adjoint_displacement_);
 
-    return adjoint_displacement_;
+    return {{"adjoint_displacement", adjoint_displacement_}};
   }
 
   /**

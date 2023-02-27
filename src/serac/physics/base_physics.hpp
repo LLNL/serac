@@ -226,13 +226,14 @@ public:
    *
    * @return The computed adjoint finite element state
    */
-  virtual const serac::FiniteElementState& solveAdjoint(FiniteElementDual& /*adjoint_load */,
-                                                        FiniteElementDual* /* dual_with_essential_boundary */ = nullptr)
+  virtual const std::unordered_map<std::string, const serac::FiniteElementState&> solveAdjoint(
+      std::unordered_map<std::string, const serac::FiniteElementDual&> /* adjoint_loads */,
+      std::unordered_map<std::string, const serac::FiniteElementDual&> /* duals_with_essential_boundary */)
   {
     SLIC_ERROR_ROOT(axom::fmt::format("Adjoint analysis not defined for physics module {}", name_));
 
     // Return a dummy state value to quiet the compiler. This will never get used.
-    return *states_[0];
+    return {};
   }
 
   /**
