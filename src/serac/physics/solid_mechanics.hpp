@@ -700,13 +700,16 @@ public:
   /**
    * @brief Solve the adjoint problem
    * @pre It is expected that the forward analysis is complete and the current displacement state is valid
-   * @note If the essential boundary state is not specified, homogeneous essential boundary conditions are applied
+   * @pre The adjoint load maps are expected to contain a single entry named "displacement"
+   * @note If the essential boundary dual is not specified, homogeneous essential boundary conditions are applied to
+   * the adjoint system
    *
-   * @param[in] adjoint_load The dual state that contains the right hand side of the adjoint system (d quantity of
-   * interest/d displacement)
-   * @param[in] dual_with_essential_boundary A optional finite element dual containing the non-homogenous essential
-   * boundary condition data for the adjoint problem
-   * @return The computed adjoint finite element state
+   * @param adjoint_loads An unordered map containing finite element duals representing the RHS of the adjoint equations
+   * indexed by their name
+   * @param duals_with_essential_boundary A unordered map containing finite element duals representing the
+   * non-homogenous essential boundary condition data for the adjoint problem indexed their name
+   * @return An unordered map of the adjoint solutions indexed by their name. It has a single entry named
+   * "adjoint_displacement"
    */
   const std::unordered_map<std::string, const serac::FiniteElementState&> solveAdjoint(
       std::unordered_map<std::string, const serac::FiniteElementDual&> adjoint_loads,
