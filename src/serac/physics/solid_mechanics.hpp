@@ -713,7 +713,7 @@ public:
    */
   const std::unordered_map<std::string, const serac::FiniteElementState&> solveAdjoint(
       std::unordered_map<std::string, const serac::FiniteElementDual&> adjoint_loads,
-      std::unordered_map<std::string, const serac::FiniteElementDual&> duals_with_essential_boundary = {})
+      std::unordered_map<std::string, const serac::FiniteElementDual&> duals_with_essential_boundary = {}) override
   {
     SLIC_ERROR_ROOT_IF(adjoint_loads.size() != 1,
                        "Adjoint load container is not the expected size of 1 in the solid mechanics module.");
