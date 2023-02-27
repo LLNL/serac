@@ -55,6 +55,7 @@ variables:
   artifacts:
     when: always
     paths:
+      - ${FULL_BUILD_ROOT}/${SYS_TYPE}/*/output.log*.txt
       - ${FULL_BUILD_ROOT}/${SYS_TYPE}/*/_serac_build_and_test_*/output.log*.txt
       - ${FULL_BUILD_ROOT}/${SYS_TYPE}/*/_serac_build_and_test_*/build-*/output.log*.txt
     reports:
