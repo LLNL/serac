@@ -2,6 +2,15 @@
 
 namespace serac {
 
+inline std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> geometry_counts(const mfem::Mesh& mesh)
+{
+  std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> counts{};
+  for (int i = 0; i < mesh.GetNE(); i++) {
+    counts[uint64_t(mesh.GetElementGeometry(i))]++;
+  }
+  return counts;
+}
+
 /**
  * @brief Compile-time alias for a dimension
  */

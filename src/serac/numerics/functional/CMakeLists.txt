@@ -15,7 +15,7 @@ set(functional_headers
     dof_numbering.hpp
     element_restriction.hpp
     geometric_factors.hpp
-    domain_integral.hpp
+    #domain_integral.hpp
     domain_integral_kernels.hpp
     dual.hpp
     evector_view.hpp

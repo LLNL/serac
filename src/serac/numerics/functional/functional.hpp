@@ -18,8 +18,7 @@
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/quadrature.hpp"
 #include "serac/numerics/functional/finite_element.hpp"
-#include "serac/numerics/functional/domain_integral.hpp"
-#include "serac/numerics/functional/boundary_integral.hpp"
+#include "serac/numerics/functional/integral.hpp"
 #include "serac/numerics/functional/dof_numbering.hpp"
 
 #include "serac/numerics/functional/integral.hpp"
@@ -232,81 +231,42 @@ public:
              std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
       : update_qdata(false), test_space_(test_fes), trial_space_(trial_fes)
   {
-    P_test_ = test_space_->GetProlongationMatrix();
 
-#if 0
-    int dim = test_fes->GetMesh()->Dimension();
-    G_test_ = ElementRestriction(test_fes, elem_geom[dim]);
-    G_test_boundary_ = ElementRestriction(test_fes, elem_geom[dim-1], FaceType::BOUNDARY);
+    auto mem_type = mfem::Device::GetMemoryType();
 
-    G_test_simplex_ = ElementRestriction(test_fes, elem_geom[dim]);
-
-    auto num_elements = static_cast<size_t>(G_test_.num_elements);
-    auto num_bdr_elements = static_cast<size_t>(G_test_boundary_.num_elements);
-
-    auto num_elements = static_cast<size_t>(G_test_.num_elements);
-    if (num_elements > 0) {
- 
-      auto ndof_per_test_element = static_cast<size_t>(G_test_.nodes_per_elem * G_test_.components);
-      auto ndof_per_test_bdr_element = static_cast<size_t>(G_test_.nodes_per_elem * G_test_.components);
-
-      for (uint32_t i = 0; i < num_trial_spaces; i++) {
-        P_trial_[i] = trial_space_[i]->GetProlongationMatrix();
-
-        input_L_[i].SetSize(P_trial_[i]->Height(), mfem::Device::GetMemoryType());
-
-        auto ndof_per_trial_element =
-            static_cast<size_t>(G_trial_[i].nodes_per_elem * G_trial_[i].components);
-
-        input_E_[i].SetSize(int(G_trial_[i].ESize()), mfem::Device::GetMemoryType());
-        element_gradients_[i] = ExecArray<double, 3, exec>(num_elements, ndof_per_trial_element, ndof_per_test_element);
-
-        auto ndof_per_trial_bdr_element =
-            static_cast<size_t>(G_trial_boundary_[i].nodes_per_elem * G_trial_boundary_[i].components);
-        G_trial_boundary_[i] = ElementRestriction(trial_fes[i], elem_geom[dim-1], FaceType::BOUNDARY);
-        input_E_boundary_[i].SetSize(int(G_trial_boundary_[i].ESize()), mfem::Device::GetMemoryType());
-        bdr_element_gradients_[i] = ExecArray<double, 3, exec>(num_bdr_elements, ndof_per_trial_bdr_element, ndof_per_test_bdr_element);
-
-        // create the gradient operators for each trial space
-        grad_.emplace_back(*this, i);
-      }
+    for (auto type : {Integral::Type::Domain, Integral::Type::Boundary}) {
+      input_E_[type].resize(num_trial_spaces);
     }
 
-    G_trial_simplex_[i] = ElementRestriction(trial_fes[i], simplex_geom[dim]);
-    input_E_simplex_[i].SetSize(int(G_trial_simplex_[i].ESize()), mfem::Device::GetMemoryType());
-
-    G_trial_[i] = ElementRestriction(trial_fes[i], elem_geom[dim]);
-
-    output_E_boundary_.SetSize(int(G_test_boundary_.ESize()), mfem::Device::GetMemoryType());
-    
-    output_E_.SetSize(int(G_test_.ESize()), mfem::Device::GetMemoryType());
-    output_E_simplex_.SetSize(int(G_test_simplex_.ESize()), mfem::Device::GetMemoryType());
-
-    output_L_boundary_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
-
-    output_L_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
-
-    output_T_.SetSize(test_fes->GetTrueVSize(), mfem::Device::GetMemoryType());
-
-
-    auto num_bdr_elements          = static_cast<size_t>(G_test_boundary_.num_elements);
-    auto ndof_per_test_bdr_element = static_cast<size_t>(G_test_boundary_.nodes_per_elem * G_test_boundary_.components);
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
 
-      auto ndof_per_trial_element =
-          static_cast<size_t>(G_trial_[i].nodes_per_elem * G_trial_[i].components);
-      auto ndof_per_trial_bdr_element =
-          static_cast<size_t>(G_trial_boundary_[i].nodes_per_elem * G_trial_boundary_[i].components);
+      P_trial_[i] = trial_space_[i]->GetProlongationMatrix();
 
-      element_gradients_[i] = ExecArray<double, 3, exec>(num_elements, ndof_per_trial_element, ndof_per_test_element);
-      bdr_element_gradients_[i] = ExecArray<double, 3, exec>(num_bdr_elements, ndof_per_trial_bdr_element, ndof_per_test_bdr_element);
+      input_L_[i].SetSize(P_trial_[i]->Height(), mfem::Device::GetMemoryType());
 
+      for (auto type : {Integral::Type::Domain, Integral::Type::Boundary}) {
+        G_trial_[type][i] = BlockElementRestriction(trial_fes[i]);
 
-      element_gradients_simplex_[i] = ExecArray<double, 3, exec>(G_test_simplex.num_elements_, ndof_per_trial_element, ndof_per_test_element);
+        // note: we have to use "Update" here, as mfem::BlockVector's
+        // copy assignment ctor (operator=) doesn't let you make changes
+        // to the block size
+        input_E_[type][i].Update(G_trial_[type][i].bOffsets(), mem_type);
+      }
 
+      grad_.emplace_back(*this, i);
     }
 
-#endif
+    for (auto type : {Integral::Type::Domain, Integral::Type::Boundary}) {
+      G_test_[type] = BlockElementRestriction(test_fes);
+      output_E_[type].Update(G_test_[type].bOffsets(), mem_type);
+    }
+
+    P_test_ = test_space_->GetProlongationMatrix();
+
+    output_L_.SetSize(P_test_->Height(), mem_type);
+
+    output_T_.SetSize(test_fes->GetTrueVSize(), mem_type);
+
   }
 
   /**
@@ -428,14 +388,14 @@ public:
       auto type = integral.type;
 
       if (!already_computed[type]) {
-        G_trial_[which].Gather(input_L_[which], block_input_E_[type][which]);
+        G_trial_[type][which].Gather(input_L_[which], input_E_[type][which]);
         already_computed[type] = true;
       }
 
-      integral.GradientMult(block_input_E_[type][which], block_output_E_[type], which);
+      integral.GradientMult(input_E_[type][which], output_E_[type], which);
 
       // scatter-add to compute residuals on the local processor
-      G_test_.ScatterAdd(block_output_E_[type], output_L_);
+      G_test_[type].ScatterAdd(output_E_[type], output_L_);
     }
 
     // scatter-add to compute global residuals
@@ -465,8 +425,8 @@ public:
 
     output_L_ = 0.0;
 
-    // this is used to mark when gather operations have been performed,
-    // to avoid doing them more than once per trial space
+    // this is used to mark when operations have been performed,
+    // to avoid doing them more than once
     bool already_computed[Integral::num_types][num_trial_spaces]{}; // default initializes to `false`
  
     for (auto& integral : integrals_) {
@@ -474,15 +434,15 @@ public:
 
       for (auto i : integral.active_trial_spaces) {
         if (!already_computed[type][i]) {
-          G_trial_[i].Gather(input_L_[i], block_input_E_[type][i]);
+          G_trial_[type][i].Gather(input_L_[i], input_E_[type][i]);
           already_computed[type][i] = true;
         }
       }
 
-      integral.Mult(block_input_E_[type], block_output_E_[type], wrt, update_qdata);
+      integral.Mult(input_E_[type], output_E_[type], wrt, update_qdata);
 
       // scatter-add to compute residuals on the local processor
-      G_test_.ScatterAdd(block_output_E_[type], output_L_);
+      G_test_[type].ScatterAdd(output_E_[type], output_L_);
     }
 
     // scatter-add to compute global residuals
@@ -690,35 +650,6 @@ private:
     mfem::Vector df_;
   };
 
-  /// @brief The input set of local DOF values (i.e., on the current rank)
-  mutable mfem::Vector input_L_[num_trial_spaces];
-
-  /// @brief The output set of local DOF values (i.e., on the current rank)
-  mutable mfem::Vector output_L_;
-
-  mutable std::vector < mfem::BlockVector > block_input_E_[Integral::num_types];
-  mutable mfem::BlockVector block_output_E_[Integral::num_types];
-
-  /// @brief The input set of per-element DOF values
-  mutable std::array<mfem::Vector, num_trial_spaces> input_E_;
-  mutable std::array<mfem::Vector, num_trial_spaces> input_E_simplex_;
-
-  /// @brief The output set of per-element DOF values
-  mutable mfem::Vector output_E_;
-  mutable mfem::Vector output_E_simplex_;
-
-  /// @brief The input set of per-boundaryelement DOF values
-  mutable std::array<mfem::Vector, num_trial_spaces> input_E_boundary_;
-
-  /// @brief The output set of per-boundary-element DOF values
-  mutable mfem::Vector output_E_boundary_;
-
-  /// @brief The output set of local DOF values (i.e., on the current rank) from boundary elements
-  mutable mfem::Vector output_L_boundary_;
-
-  /// @brief The set of true DOF values, a reference to this member is returned by @p operator()
-  mutable mfem::Vector output_T_;
-
   /// @brief Manages DOFs for the test space
   const mfem::ParFiniteElementSpace* test_space_;
 
@@ -729,53 +660,35 @@ private:
    * @brief Operator that converts true (global) DOF values to local (current rank) DOF values
    * for the test space
    */
-  const mfem::Operator* P_test_;
-
-  /**
-   * @brief Operator that converts local (current rank) DOF values to per-element DOF values
-   * for the test space
-   */
-  ElementRestriction G_test_;
-  ElementRestriction G_test_simplex_;
-
-  /**
-   * @brief Operator that converts true (global) DOF values to local (current rank) DOF values
-   * for the trial space
-   */
   const mfem::Operator* P_trial_[num_trial_spaces];
 
-  /**
-   * @brief Operator that converts local (current rank) DOF values to per-element DOF values
-   * for the trial space
-   */
-  ElementRestriction G_trial_[num_trial_spaces];
-  ElementRestriction G_trial_simplex_[num_trial_spaces];
+  /// @brief The input set of local DOF values (i.e., on the current rank)
+  mutable mfem::Vector input_L_[num_trial_spaces];
 
-  /**
-   * @brief Operator that converts local (current rank) DOF values to per-boundary element DOF values
-   * for the test space
-   */
-  ElementRestriction G_test_boundary_;
+  BlockElementRestriction G_trial_[Integral::num_types][num_trial_spaces];
 
-  /**
-   * @brief Operator that converts local (current rank) DOF values to per-boundary element DOF values
-   * for the trial space
-   */
-  ElementRestriction G_trial_boundary_[num_trial_spaces];
+  mutable std::vector < mfem::BlockVector > input_E_[Integral::num_types];
 
   std::vector<Integral> integrals_;
+
+  mutable mfem::BlockVector output_E_[Integral::num_types];
+
+  BlockElementRestriction G_test_[Integral::num_types];
+
+  /// @brief The output set of local DOF values (i.e., on the current rank)
+  mutable mfem::Vector output_L_;
+
+  const mfem::Operator* P_test_;
+
+  /// @brief The set of true DOF values, a reference to this member is returned by @p operator()
+  mutable mfem::Vector output_T_;
+
 
   /// @brief The objects representing the gradients w.r.t. each input argument of the Functional
   mutable std::vector<Gradient> grad_;
 
-  /// @brief 3D array that stores each element's gradient of the residual w.r.t. trial values
-  ExecArray<double, 3, exec> element_gradients_[num_trial_spaces];
-  ExecArray<double, 3, exec> element_gradients_simplex_[num_trial_spaces];
-
-  /// @brief 3D array that stores each boundary element's gradient of the residual w.r.t. trial values
-  ExecArray<double, 3, exec> bdr_element_gradients_[num_trial_spaces];
 };
 
 }  // namespace serac
 
-#include "functional_qoi.inl"
+//#include "functional_qoi.inl"

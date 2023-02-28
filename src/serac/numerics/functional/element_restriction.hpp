@@ -4,6 +4,7 @@
 
 #include "mfem.hpp"
 #include "axom/core.hpp"
+#include "geometry.hpp"
 
 inline bool isH1(const mfem::FiniteElementSpace& fes)
 {
@@ -117,6 +118,18 @@ struct ElementRestriction {
   axom::Array<DoF, 2, axom::MemorySpace::Host> dof_info;
 
   mfem::Ordering::Type ordering;
+};
+
+struct BlockElementRestriction {
+  BlockElementRestriction() {}
+  BlockElementRestriction(const mfem::FiniteElementSpace* fes);
+  BlockElementRestriction(const mfem::FiniteElementSpace* fes, FaceType type);
+
+  mfem::Array<int> bOffsets() const;
+  void Gather(const mfem::Vector& L_vector, mfem::BlockVector& E_block_vector) const;
+  void ScatterAdd(const mfem::BlockVector& E_block_vector, mfem::Vector& L_vector) const;
+
+  std::map< mfem::Geometry::Type, ElementRestriction > restrictions;
 };
 
 }  // namespace serac

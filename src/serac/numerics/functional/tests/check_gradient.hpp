@@ -35,14 +35,13 @@ void check_gradient(serac::Functional<T>& f, mfem::Vector& U)
   auto [value, dfdU] = f(serac::differentiate_wrt(U));
   mfem::Vector df2   = dfdU(dU);
 
-  std::unique_ptr<mfem::HypreParMatrix> dfdU_matrix = assemble(dfdU);
+  double relative_error1 = df1.DistanceTo(df2.GetData()) / df1.Norml2();
+  EXPECT_NEAR(0., relative_error1, 5.e-6);
 
+  std::unique_ptr<mfem::HypreParMatrix> dfdU_matrix = assemble(dfdU);
   mfem::Vector df3 = (*dfdU_matrix) * dU;
 
-  double relative_error1 = df1.DistanceTo(df2.GetData()) / df1.Norml2();
   double relative_error2 = df1.DistanceTo(df3.GetData()) / df1.Norml2();
-
-  EXPECT_NEAR(0., relative_error1, 5.e-6);
   EXPECT_NEAR(0., relative_error2, 5.e-6);
 
   std::cout << relative_error1 << " " << relative_error2 << std::endl;

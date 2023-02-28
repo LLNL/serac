@@ -2,6 +2,8 @@
 
 #include "mfem.hpp"
 
+#include "serac/numerics/functional/geometry.hpp"
+
 std::vector<std::vector<int> > lexicographic_permutations(int p)
 {
   // p == 0 is admissible for L2 spaces, but lexicographic permutations
@@ -451,5 +453,73 @@ void ElementRestriction::ScatterAdd(const mfem::Vector& E_vector, mfem::Vector& 
     }
   }
 }
+
+////////////////////////////////////////////////////////////////////////
+
+BlockElementRestriction::BlockElementRestriction(const mfem::FiniteElementSpace* fes) {
+
+  int dim = fes->GetMesh()->Dimension();
+
+  if (dim == 2) {
+    for (auto geom : {mfem::Geometry::TRIANGLE, mfem::Geometry::SQUARE}) {
+      restrictions[geom] = ElementRestriction(fes, geom);
+    }
+  }
+
+  if (dim == 3) {
+    for (auto geom : {mfem::Geometry::TETRAHEDRON, mfem::Geometry::CUBE}) {
+      restrictions[geom] = ElementRestriction(fes, geom);
+    }
+  }
+
+}
+
+BlockElementRestriction::BlockElementRestriction(const mfem::FiniteElementSpace* fes, FaceType type)
+{
+
+  int dim = fes->GetMesh()->Dimension();
+
+  if (dim == 2) {
+    restrictions[mfem::Geometry::SEGMENT] = ElementRestriction(fes, mfem::Geometry::SEGMENT, type);
+  }
+
+  if (dim == 3) {
+    for (auto geom : {mfem::Geometry::TRIANGLE, mfem::Geometry::SQUARE}) {
+      restrictions[geom] = ElementRestriction(fes, geom, type);
+    }
+  }
+
+}
+
+mfem::Array<int> BlockElementRestriction::bOffsets() const {
+  mfem::Array<int> offsets(mfem::Geometry::NUM_GEOMETRIES + 1);
+
+  offsets[0] = 0;
+  for (int i = 0; i < mfem::Geometry::NUM_GEOMETRIES; i++) {
+    auto g = mfem::Geometry::Type(i);
+    if (restrictions.count(g) > 0) {
+      offsets[g+1] = offsets[g] + int(restrictions.at(g).ESize());
+    } else {
+      offsets[g+1] = offsets[g];
+    }
+    std::cout << g << " " << offsets[g+1] << std::endl;
+  }
+  return offsets;
+};
+
+void BlockElementRestriction::Gather(const mfem::Vector& L_vector, mfem::BlockVector& E_block_vector) const
+{
+  for (auto [geom, restriction] : restrictions) {
+    restriction.Gather(L_vector, E_block_vector.GetBlock(geom));
+  }
+}
+
+void BlockElementRestriction::ScatterAdd(const mfem::BlockVector& E_block_vector, mfem::Vector& L_vector) const
+{
+  for (auto [geom, restriction] : restrictions) {
+    restriction.ScatterAdd(E_block_vector.GetBlock(geom), L_vector);
+  }
+}
+
 
 }  // namespace serac

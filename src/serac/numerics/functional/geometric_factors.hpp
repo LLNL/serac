@@ -9,7 +9,7 @@ namespace serac {
 
 struct GeometricFactors {
 
-  GeometricFactors();
+  GeometricFactors(){};
   GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry::Type elem_geom);
   GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry::Type elem_geom, FaceType type);
 

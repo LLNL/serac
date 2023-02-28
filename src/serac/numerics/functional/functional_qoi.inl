@@ -560,15 +560,7 @@ private:
    */
   ElementRestriction G_trial_boundary_[num_trial_spaces];
 
-  /**
-   * @brief The set of domain integrals (spatial_dim == geometric_dim)
-   */
-  std::vector<DomainIntegral<num_trial_spaces, Q, exec>> domain_integrals_;
-
-  /**
-   * @brief The set of boundary integral (spatial_dim > geometric_dim)
-   */
-  std::vector<BoundaryIntegral<num_trial_spaces, Q, exec>> bdr_integrals_;
+  std::vector<Integral<num_trial_spaces, Q, exec>> integrals_;
 
   // simplex elements are currently not supported;
   static constexpr mfem::Element::Type supported_types[4] = {mfem::Element::POINT, mfem::Element::SEGMENT,
