@@ -109,6 +109,8 @@ TEST(SolidMechanics, Periodic)
   double dt = 1.0;
   solid_solver.advanceTimestep(dt);
 
+  [[maybe_unused]] auto [K, K_e] = solid_solver.stiffnessMatrix();
+
   // Output the sidre-based plot files
   solid_solver.outputState();
 }
