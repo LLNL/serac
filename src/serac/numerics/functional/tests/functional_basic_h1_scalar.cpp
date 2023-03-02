@@ -70,26 +70,25 @@ void thermal_test()
       Dimension<dim>{}, DependsOn<0>{},
       [=](auto x, auto temperature) {
         auto [u, du_dx] = temperature;
-        std::cout << x << " " << u << std::endl;
         auto source = d00 * u + dot(d01, du_dx) - 0.0 * (100 * x[0] * x[1]);
         auto flux   = d10 * u + dot(d11, du_dx);
         return serac::tuple{source, flux};
       },
       *mesh);
 
-  // residual.AddBoundaryIntegral(
-  //    Dimension<dim - 1>{}, DependsOn<0>{},
-  //    [=](auto x, auto /*n*/, auto temperature) {
-  //      auto [u, du_dxi] = temperature;
-  //      return x[0] + x[1] - cos(u);
-  //    },
-  //    *mesh);
+  residual.AddBoundaryIntegral(
+     Dimension<dim - 1>{}, DependsOn<0>{},
+     [=](auto x, auto /*n*/, auto temperature) {
+       auto [u, du_dxi] = temperature;
+       return x[0] + x[1] - cos(u);
+     },
+     *mesh);
 
   check_gradient(residual, U);
 }
 
 TEST(basic, thermal_test_2D) { thermal_test<1, 1, 2>(); }
-// TEST(basic, thermal_test_3D) { thermal_test<1, 1, 3>(); }
+TEST(basic, thermal_test_3D) { thermal_test<1, 1, 3>(); }
 
 // TEST(mixed, thermal_test_2D_0) { thermal_test<1, 2, 2>(); }
 // TEST(mixed, thermal_test_2D_1) { thermal_test<2, 1, 2>(); }

@@ -114,7 +114,7 @@ GeometricFactors::GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry
 
 #undef DISPATCH_KERNEL
 
-  std::cout << "should never be reached" << std::endl;
+  std::cout << "should never be reached " << std::endl;
 }
 
 GeometricFactors::GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry::Type g, FaceType type)
@@ -161,6 +161,21 @@ GeometricFactors::GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry
   DISPATCH_KERNEL(SEGMENT, 3, 2);
   DISPATCH_KERNEL(SEGMENT, 3, 3);
   DISPATCH_KERNEL(SEGMENT, 3, 4);
+
+  DISPATCH_KERNEL(TRIANGLE, 1, 1);
+  DISPATCH_KERNEL(TRIANGLE, 1, 2);
+  DISPATCH_KERNEL(TRIANGLE, 1, 3);
+  DISPATCH_KERNEL(TRIANGLE, 1, 4);
+
+  DISPATCH_KERNEL(TRIANGLE, 2, 1);
+  DISPATCH_KERNEL(TRIANGLE, 2, 2);
+  DISPATCH_KERNEL(TRIANGLE, 2, 3);
+  DISPATCH_KERNEL(TRIANGLE, 2, 4);
+
+  DISPATCH_KERNEL(TRIANGLE, 3, 1);
+  DISPATCH_KERNEL(TRIANGLE, 3, 2);
+  DISPATCH_KERNEL(TRIANGLE, 3, 3);
+  DISPATCH_KERNEL(TRIANGLE, 3, 4);
 
   DISPATCH_KERNEL(SQUARE, 1, 1);
   DISPATCH_KERNEL(SQUARE, 1, 2);

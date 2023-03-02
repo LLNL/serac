@@ -377,11 +377,16 @@ axom::Array<DoF, 2, axom::MemorySpace::Host> GetFaceDofs(const mfem::FiniteEleme
 
   delete face_to_elem;
 
-  uint64_t dofs_per_face = face_dofs.size() / n;
+  if (n == 0) {
+    return axom::Array<DoF, 2, axom::MemorySpace::Host>{};
+  } else {
+    uint64_t dofs_per_face = face_dofs.size() / n;
+    axom::Array<DoF, 2, axom::MemorySpace::Host> output({n, dofs_per_face});
+    std::memcpy(output.data(), face_dofs.data(), sizeof(DoF) * n * dofs_per_face);
+    return output;
+  }
 
-  axom::Array<DoF, 2, axom::MemorySpace::Host> output({n, dofs_per_face});
-  std::memcpy(output.data(), face_dofs.data(), sizeof(DoF) * n * dofs_per_face);
-  return output;
+
 }
 
 namespace serac {

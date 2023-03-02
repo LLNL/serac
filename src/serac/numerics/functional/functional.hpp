@@ -303,26 +303,15 @@ public:
    * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
    * and @a spatial_dim template parameter
    */
-//  template <int dim, int... args, typename lambda>
-//  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain)
-//  {
-//    auto num_bdr_elements = domain.GetNBE();
-//    if (num_bdr_elements == 0) return;
-//
-//    SLIC_ERROR_ROOT_IF((dim + 1) != domain.Dimension(), "invalid mesh dimension for boundary integral");
-//    for (int e = 0; e < num_bdr_elements; e++) {
-//      SLIC_ERROR_ROOT_IF(domain.GetBdrElementType(e) != supported_types[dim], "Mesh contains unsupported element type");
-//    }
-//
-//    // this is a temporary measure to check correctness for the replacement "GeometricFactor"
-//    // kernels, must be fixed before merging!
-//    auto geom = new serac::GeometricFactors(&domain, Q, elem_geom[dim], FaceType::BOUNDARY);
-//
-//    auto selected_trial_spaces = serac::make_tuple(serac::get<args>(trial_spaces)...);
-//
-//    bdr_integrals_.emplace_back(test{}, selected_trial_spaces, num_bdr_elements, geom->J, geom->X, Dimension<dim>{},
-//                                integrand, std::vector<int>{args...});
-//  }
+  template <int dim, int... args, typename lambda>
+  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain)
+  {
+    auto num_bdr_elements = domain.GetNBE();
+    if (num_bdr_elements == 0) return;
+
+    using signature = test(decltype(serac::type<args>(trial_spaces))...);
+    integrals_.push_back(MakeBoundaryIntegral<signature, Q, dim>(domain, integrand, std::vector<uint32_t>{args ...}));
+  }
 
   /**
    * @brief Adds an area integral, i.e., over 2D elements in R^2 space
