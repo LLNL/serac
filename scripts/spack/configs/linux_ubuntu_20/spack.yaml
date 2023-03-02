@@ -1,4 +1,21 @@
 spack:
+  compilers::
+  - compiler:
+      spec: gcc@9.3.0
+      paths:
+        cc: /usr/bin/gcc
+        cxx: /usr/bin/g++
+        f77: /usr/bin/gfortran
+        fc: /usr/bin/gfortran
+      flags: 
+        cflags: -pthread
+        cxxflags: -pthread
+      operating_system: ubuntu20.04
+      target: x86_64
+      modules: []
+      environment: {}
+      extra_rpaths: []
+
   packages:
     all:
       target: [ivybridge]
@@ -125,20 +142,3 @@ spack:
       externals:
       - spec: py-sphinx@3.2.1
         prefix: /usr
-
-  compilers::
-  - compiler:
-      spec: gcc@9.3.0
-      paths:
-        cc: /usr/bin/gcc
-        cxx: /usr/bin/g++
-        f77: /usr/bin/gfortran
-        fc: /usr/bin/gfortran
-      flags: 
-        cflags: -pthread
-        cxxflags: -pthread
-      operating_system: ubuntu20.04
-      target: x86_64
-      modules: []
-      environment: {}
-      extra_rpaths: []

@@ -1,4 +1,19 @@
 spack:
+  compilers::
+  - compiler:
+      environment: {}
+      extra_rpaths: []
+      flags: {}
+      modules: []
+      operating_system: monterey
+      paths:
+        cc: /opt/local/bin/clang
+        cxx: /opt/local/bin/clang++
+        f77: /opt/local/bin/gfortran
+        fc: /opt/local/bin/gfortran
+      spec: clang@12.0.1
+      target: aarch64
+
   packages:
     all:
       compiler: [clang, gcc]
@@ -95,19 +110,3 @@ spack:
       externals:
       - spec: zlib@1.2.12
         prefix: /opt/local
-
-  compilers::
-  - compiler:
-      environment: {}
-      extra_rpaths: []
-      flags: {}
-      modules: []
-      operating_system: monterey
-      paths:
-        cc: /opt/local/bin/clang
-        cxx: /opt/local/bin/clang++
-        f77: /opt/local/bin/gfortran
-        fc: /opt/local/bin/gfortran
-      spec: clang@12.0.1
-      target: aarch64
-

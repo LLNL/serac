@@ -1,4 +1,19 @@
 spack:
+  compilers::
+  - compiler:
+      environment: {}
+      extra_rpaths: []
+      flags: {}
+      modules: []
+      operating_system: catalina
+      paths:
+        cc: /usr/bin/clang
+        cxx: /usr/bin/clang++
+        f77: /usr/local/bin/gfortran
+        fc: /usr/local/bin/gfortran
+      spec: apple-clang@11.0.1
+      target: x86_64
+
   packages:
     all:
       compiler: [clang, gcc]
@@ -137,18 +152,3 @@ spack:
       externals:
       - spec: python@2.7.16
         prefix: /usr
-
-  compilers::
-  - compiler:
-      environment: {}
-      extra_rpaths: []
-      flags: {}
-      modules: []
-      operating_system: catalina
-      paths:
-        cc: /usr/bin/clang
-        cxx: /usr/bin/clang++
-        f77: /usr/local/bin/gfortran
-        fc: /usr/local/bin/gfortran
-      spec: apple-clang@11.0.1
-      target: x86_64
