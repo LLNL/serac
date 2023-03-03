@@ -195,6 +195,7 @@ std::unique_ptr<mfem::NewtonSolver> EquationSolver::BuildNonlinearSolver(MPI_Com
   nonlinear_solver->SetAbsTol(nonlin_options.abs_tol);
   nonlinear_solver->SetMaxIter(nonlin_options.max_iter);
   nonlinear_solver->SetPrintLevel(nonlin_options.print_level);
+  nonlinear_solver->iterative_mode = false;
   return nonlinear_solver;
 }
 
