@@ -132,6 +132,8 @@ int main(int argc, char* argv[])
     }
 // [[maybe_unused]] auto [K, K_e] = solid_solver.stiffnessMatrix();
 // auto [K, K_e] = solid_solver.stiffnessMatrix();
+// std::cout<<K<<std::endl;
+// std::cout<<K_e<<std::endl;
 
     mfem::ParGridFunction displacement_gf = solid_solver.displacement().gridFunction();
     if( std::isnan(displacement_gf.Max()) || std::isnan(displacement_gf.Min()) )

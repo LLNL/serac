@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
   axom::slic::SimpleLogger logger;
   axom::slic::setIsRoot(rank == 0);
 
-  constexpr int p                   = 2;
+  constexpr int p                   = 1;
   constexpr int dim                 = 3;
 
   // Create DataStore
@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
 #endif
 
   // Construct the appropriate dimension mesh and give it to the data store
-  int nElem = 8;
+  int nElem = 3;
   double lx = 0.5e-3, ly = 0.1e-3, lz = 0.05e-3;
 #ifdef FULL_DOMAIN
   ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(5*nElem, nElem, 1, mfem::Element::HEXAHEDRON, lx, ly, lz));
@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
                                                        .lin_solver  = LinearSolver::GMRES,
                                                        .prec        = HypreBoomerAMGPrec{}};
   NonlinearSolverOptions default_nonlinear_options = {
-    .rel_tol = 1.0e-6, .abs_tol = 1.0e-14, .max_iter = 12, .print_level = 1};
+    .rel_tol = 1.0e-6, .abs_tol = 1.0e-14, .max_iter = 2, .print_level = 1};
   SolidMechanics<p, dim, Parameters< H1<p>, H1<p> > > solid_solver({default_linear_options, default_nonlinear_options}, GeometricNonlinearities::Off,
                                        "mmp_solid_functional");
 
@@ -231,6 +231,11 @@ double maxLoadVal = 1.5e0;
     solid_solver.advanceTimestep(dt);
     solid_solver.outputState(outputFilename);
 
+//     auto [K, K_e] = solid_solver.stiffnessMatrix();
+//     K.Print("Kmat");
+//     K_e.Print("K_e_mat");
+    
+// exit(0);
     if(outputDispInfo)
     {
       // FiniteElementState &displacement = solid_solver.displacement();
