@@ -1,5 +1,5 @@
 spack:
-  compilers:
+  compilers::
   - compiler:
       environment: {}
       extra_rpaths: []
