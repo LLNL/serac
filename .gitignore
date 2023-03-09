@@ -11,4 +11,4 @@
 /*.cmake
 .vscode/
 *.orig
-scripts/spack/packages/*/__pycache__/
+__pycache__/
