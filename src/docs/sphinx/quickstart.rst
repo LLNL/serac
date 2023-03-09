@@ -116,11 +116,11 @@ Serac.
 
 .. code-block:: bash
 
-   $ python3 scripts/llnl/build_tpls.py --directory=../serac_libs
+   $ python3 scripts/uberenv/uberenv.py --prefix=../serac_libs
 
 .. note::
   On LC machines, it is good practice to do the build step in parallel on a compute node.
-  Here is an example command: ``salloc -ppdebug -N1-1 python3 scripts/llnl/build_tpls.py``
+  Here is an example command: ``salloc -ppdebug -N1-1 python3 scripts/uberenv/uberenv.py``
 
 Unless otherwise specified Spack will default to a compiler.  This is generally not a good idea when
 developing large codes. To specify which compiler to use add the compiler specification to the ``--spec`` Uberenv
@@ -139,7 +139,7 @@ To install Serac on a new platform, it is a good idea to start with a known Spac
 (located in the Serac repo at ``scripts/spack/configs/<platform>``). The ``spack.yaml`` file
 describes the compilers and associated flags required for the platform as well as the low-level libraries
 on the system to prevent Spack from building the world. Documentation on these configuration files is located
-in the `Spack docs <https://spack.readthedocs.io/en/latest/environments.html#environment-configuration>`_.
+in the `Spack docs <https://spack.readthedocs.io/en/latest/configuration.html>`_.
 
 Some helpful uberenv options include :
 
