@@ -116,7 +116,7 @@ Serac.
 
 .. code-block:: bash
 
-   $ python3 scripts/llnl/build_tpls.py --prefix=../serac_libs
+   $ python3 scripts/llnl/build_tpls.py --directory=../serac_libs
 
 .. note::
   On LC machines, it is good practice to do the build step in parallel on a compute node.
