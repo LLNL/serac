@@ -110,8 +110,8 @@ private:
    * @param[in] comm The MPI communicator object
    * @param[in] nonlin_options The parameters for the nonlinear solver
    */
-  static std::unique_ptr<mfem::NewtonSolver> BuildNonlinearSolver(MPI_Comm                   comm,
-                                                                  const NewtonSolverOptions& nonlin_options);
+  static std::unique_ptr<mfem::NewtonSolver> BuildNonlinearSolver(
+      MPI_Comm comm, const IterativeNonlinearSolverOptions& nonlin_options);
 
   /**
    * @brief A wrapper class for using the MFEM super LU solver with a HypreParMatrix
@@ -227,9 +227,9 @@ struct FromInlet<serac::LinearSolverOptions> {
  * @tparam The object to be created by inlet
  */
 template <>
-struct FromInlet<serac::NewtonSolverOptions> {
+struct FromInlet<serac::IterativeNonlinearSolverOptions> {
   /// @brief Returns created object from Inlet container
-  serac::NewtonSolverOptions operator()(const axom::inlet::Container& base);
+  serac::IterativeNonlinearSolverOptions operator()(const axom::inlet::Container& base);
 };
 
 /**

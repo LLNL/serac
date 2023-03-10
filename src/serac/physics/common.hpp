@@ -45,7 +45,7 @@ struct SolverOptions {
   LinearSolverOptions linear;
 
   /// the method, iteration limit, and tolerances for the nonlinear system
-  NewtonSolverOptions nonlinear;
+  IterativeNonlinearSolverOptions nonlinear;
 
   /**
    * @brief The optional ODE solver parameters

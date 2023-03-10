@@ -51,7 +51,7 @@ void functional_test_static_3D(double expected_norm)
                                                          .lin_solver  = LinearSolver::GMRES,
                                                          .prec        = HypreBoomerAMGPrec{}};
 
-  const NewtonSolverOptions default_nonlinear_options = {
+  const IterativeNonlinearSolverOptions default_nonlinear_options = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
 
   const SolverOptions solid_options = {default_linear_options, default_nonlinear_options};
@@ -132,7 +132,7 @@ void functional_test_shrinking_3D(double expected_norm)
                                                          .lin_solver  = LinearSolver::GMRES,
                                                          .prec        = HypreBoomerAMGPrec{}};
 
-  const NewtonSolverOptions default_nonlinear_options = {
+  const IterativeNonlinearSolverOptions default_nonlinear_options = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
 
   const SolverOptions solid_options = {default_linear_options, default_nonlinear_options};
@@ -233,7 +233,7 @@ void parameterized()
                                                          .lin_solver  = LinearSolver::GMRES,
                                                          .prec        = HypreBoomerAMGPrec{}};
 
-  const NewtonSolverOptions default_nonlinear_options = {
+  const IterativeNonlinearSolverOptions default_nonlinear_options = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
 
   const SolverOptions solid_options = {default_linear_options, default_nonlinear_options};

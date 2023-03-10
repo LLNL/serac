@@ -30,7 +30,7 @@ EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverOptions& lin_opt
   }
 
   if (nonlin_options) {
-    if (auto newton_options = std::get_if<NewtonSolverOptions>(&(*nonlin_options))) {
+    if (auto newton_options = std::get_if<IterativeNonlinearSolverOptions>(&(*nonlin_options))) {
       nonlin_solver_ = BuildNonlinearSolver(comm, *newton_options);
     } else if (auto custom = std::get_if<CustomNonlinearSolverOptions>(&(*nonlin_options))) {
       nonlin_solver_ = custom->solver;
@@ -152,8 +152,8 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::BuildIterativeLinearSolve
   return iter_lin_solver;
 }
 
-std::unique_ptr<mfem::NewtonSolver> EquationSolver::BuildNonlinearSolver(MPI_Comm                   comm,
-                                                                         const NewtonSolverOptions& nonlin_options)
+std::unique_ptr<mfem::NewtonSolver> EquationSolver::BuildNonlinearSolver(
+    MPI_Comm comm, const IterativeNonlinearSolverOptions& nonlin_options)
 {
   std::unique_ptr<mfem::NewtonSolver> nonlinear_solver;
 
@@ -300,8 +300,8 @@ void EquationSolver::DefineInputFileSchema(axom::inlet::Container& container)
 
 }  // namespace serac::mfem_ext
 
+using serac::IterativeNonlinearSolverOptions;
 using serac::LinearSolverOptions;
-using serac::NewtonSolverOptions;
 using serac::mfem_ext::EquationSolver;
 
 serac::LinearSolverOptions FromInlet<serac::LinearSolverOptions>::operator()(const axom::inlet::Container& base)
@@ -352,9 +352,10 @@ serac::LinearSolverOptions FromInlet<serac::LinearSolverOptions>::operator()(con
   return options;
 }
 
-serac::NewtonSolverOptions FromInlet<serac::NewtonSolverOptions>::operator()(const axom::inlet::Container& base)
+serac::IterativeNonlinearSolverOptions FromInlet<serac::IterativeNonlinearSolverOptions>::operator()(
+    const axom::inlet::Container& base)
 {
-  NewtonSolverOptions options;
+  IterativeNonlinearSolverOptions options;
   options.rel_tol               = base["rel_tol"];
   options.abs_tol               = base["abs_tol"];
   options.max_iter              = base["max_iter"];
@@ -377,7 +378,7 @@ serac::mfem_ext::EquationSolver FromInlet<serac::mfem_ext::EquationSolver>::oper
 {
   auto lin = base["linear"].get<LinearSolverOptions>();
   if (base.contains("nonlinear")) {
-    auto nonlin = base["nonlinear"].get<NewtonSolverOptions>();
+    auto nonlin = base["nonlinear"].get<IterativeNonlinearSolverOptions>();
     return EquationSolver(MPI_COMM_WORLD, lin, nonlin);
   }
   return EquationSolver(MPI_COMM_WORLD, lin);

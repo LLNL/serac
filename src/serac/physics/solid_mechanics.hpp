@@ -46,7 +46,7 @@ const DirectSolverOptions direct_linear_options = {.print_level = 0};
  * systems of nonlinear equations that show up in implicit
  * solid mechanics simulations
  */
-const NewtonSolverOptions default_nonlinear_options = {
+const IterativeNonlinearSolverOptions default_nonlinear_options = {
     .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
 
 /// the default linear and nonlinear solver options for (quasi-)static analyses

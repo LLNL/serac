@@ -35,7 +35,7 @@ TEST(SolidLegacy, FiniteDiff)
                                                                 .lin_solver  = serac::LinearSolver::GMRES,
                                                                 .prec        = serac::HypreBoomerAMGPrec{}};
 
-  serac::NewtonSolverOptions const default_nonlinear_options = {
+  serac::IterativeNonlinearSolverOptions const default_nonlinear_options = {
       .rel_tol = 1.0e-6, .abs_tol = 1.0e-11, .max_iter = 500, .print_level = 1};
 
   serac::SolidLegacy::SolverOptions const solverOptions = {default_linear_options, default_nonlinear_options};
@@ -180,13 +180,13 @@ TEST(SolidLegacy, MultipleDesignSpaces)
   serac::StateManager::setMesh(std::move(mesh));
 
   // Setup setup the solid module
-  serac::IterativeSolverOptions const default_linear_options    = {.rel_tol     = 1.0e-12,
+  serac::IterativeSolverOptions const          default_linear_options    = {.rel_tol     = 1.0e-12,
                                                                 .abs_tol     = 1.0e-12,
                                                                 .print_level = 0,
                                                                 .max_iter    = 500,
                                                                 .lin_solver  = serac::LinearSolver::GMRES,
                                                                 .prec        = serac::HypreBoomerAMGPrec{}};
-  serac::NewtonSolverOptions const    default_nonlinear_options = {
+  serac::IterativeNonlinearSolverOptions const default_nonlinear_options = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-6, .max_iter = 3, .print_level = 1};
   serac::SolidLegacy::SolverOptions const solverOptions = {default_linear_options, default_nonlinear_options};
   int                                     order         = 1;

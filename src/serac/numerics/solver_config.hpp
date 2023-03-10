@@ -103,12 +103,12 @@ enum class LinearSolver
  */
 enum class NonlinearSolver
 {
-  Newton,                    /**< Newton-Raphson */
-  LBFGS,                     /**< Limited memory BFGS */
-  KINFullStep,               /**< KINFullStep */
-  KINBacktrackingLineSearch, /**< KINBacktrackingLineSearch */
-  KINPicard,                 /**< KINPicard*/
-  KINFP                      /**< KINFP */
+  Newton,                    /**< MFEM-native Newton-Raphson */
+  LBFGS,                     /**< MFEM-native Limited memory BFGS */
+  KINFullStep,               /**< KINSOL Full Newton (Sundials must be enabled) */
+  KINBacktrackingLineSearch, /**< KINSOL Newton with Backtracking Line Search (Sundials must be enabled) */
+  KINPicard,                 /**< KINSOL Picard (Sundials must be enabled) */
+  KINFP                      /**< KINSOL Fixed Point (Sundials must be enabled) */
 };
 
 /**
@@ -267,13 +267,16 @@ struct DirectSolverOptions {
 
 /**
  * @brief Parameters for a linear solver
+ *
+ * This can either be a user-constructed and owned solver or an iterative or direct solver that serac constructs and
+ * builds itself.
  */
 using LinearSolverOptions = std::variant<IterativeSolverOptions, CustomLinearSolverOptions, DirectSolverOptions>;
 
 /**
  * @brief Nonlinear solution scheme parameters
  */
-struct NewtonSolverOptions {
+struct IterativeNonlinearSolverOptions {
   /**
    * @brief Relative tolerance
    */
@@ -302,7 +305,10 @@ struct NewtonSolverOptions {
 
 /**
  * @brief Parameters for a nonlinear solver
+ *
+ * This can either be a user-constructed and owned solver or an iterative solver that serac constructs and builds
+ * itself.
  */
-using NonlinearSolverOptions = std::variant<CustomNonlinearSolverOptions, NewtonSolverOptions>;
+using NonlinearSolverOptions = std::variant<CustomNonlinearSolverOptions, IterativeNonlinearSolverOptions>;
 
 }  // namespace serac

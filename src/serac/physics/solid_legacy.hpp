@@ -100,7 +100,7 @@ public:
      * @brief The options for the inlucded nonlinear solve
      *
      */
-    NewtonSolverOptions H_nonlin_options;
+    IterativeNonlinearSolverOptions H_nonlin_options;
 
     /**
      * @brief The optional parameters for dynamic problems

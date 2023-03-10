@@ -64,7 +64,7 @@ public:
      * @brief The nonlinear solver options
      *
      */
-    NewtonSolverOptions T_nonlin_options;
+    IterativeNonlinearSolverOptions T_nonlin_options;
 
     /**
      * @brief The optional ODE solver parameters
@@ -174,7 +174,7 @@ public:
    *
    * @return The default thermal nonlinear options
    */
-  static NewtonSolverOptions defaultNonlinearOptions()
+  static IterativeNonlinearSolverOptions defaultNonlinearOptions()
   {
     return {.rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
   }
