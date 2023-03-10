@@ -133,13 +133,13 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
 
   auto options                    = default_static_options;
   auto linear_options             = solid_mechanics::default_linear_options;
-  linear_options.abs_tol          = 1.0e-8;  // prevent early-exit in linear solve
+  linear_options.abs_tol          = 1.0e-14;  // prevent early-exit in linear solve
   options.linear                  = linear_options;
   options.nonlinear.nonlin_solver = NonlinearSolver::KINFullStep;
   options.nonlinear.max_iter      = 5000;
-  options.nonlinear.rel_tol       = 1.0e-8;
+  options.nonlinear.rel_tol       = 1.0e-12;
   options.nonlinear.abs_tol       = 1.0e-12;
-  options.nonlinear.print_level   = 3;
+  options.nonlinear.print_level   = 1;
 
   // Construct a functional-based solid mechanics solver
   SolidMechanics<p, dim> solid_solver(options, GeometricNonlinearities::Off, "solid_functional");
@@ -291,15 +291,13 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
 }
 
-/*
 TEST(SolidMechanics, 2DQuadParameterizedStatic) { functional_parameterized_solid_test<2, 2>(2.1906312704664623); }
 
 TEST(SolidMechanics, 3DQuadStaticJ2) { functional_solid_test_static_J2(); }
-*/
 
 TEST(SolidMechanics, 2DLinearPressure)
 {
-  functional_solid_test_boundary<1, 2>(0.057051396685822188, TestType::Pressure);
+  functional_solid_test_boundary<1, 2>(0.028525698834671667, TestType::Pressure);
 }
 
 }  // namespace serac

@@ -183,9 +183,10 @@ std::unique_ptr<mfem::NewtonSolver> EquationSolver::BuildNonlinearSolver(MPI_Com
         break;
       default:
         kinsol_strat = KIN_NONE;
+        SLIC_ERROR_ROOT("Unknown KINSOL nonlinear solver type given.");
     }
     auto kinsol_solver = std::make_unique<mfem::KINSolver>(comm, kinsol_strat, true);
-    nonlinear_solver = std::move(kinsol_solver);
+    nonlinear_solver   = std::move(kinsol_solver);
 #else
     SLIC_ERROR_ROOT("KINSOL was not enabled when MFEM was built");
 #endif
@@ -195,7 +196,12 @@ std::unique_ptr<mfem::NewtonSolver> EquationSolver::BuildNonlinearSolver(MPI_Com
   nonlinear_solver->SetAbsTol(nonlin_options.abs_tol);
   nonlinear_solver->SetMaxIter(nonlin_options.max_iter);
   nonlinear_solver->SetPrintLevel(nonlin_options.print_level);
-  nonlinear_solver->iterative_mode = false;
+
+  // Iterative mode indicates we do not zero out the initial guess during the
+  // nonlinear solver call. This is required as we apply the essential boundary
+  // conditions before the nonlinear solver is applied.
+  nonlinear_solver->iterative_mode = true;
+
   return nonlinear_solver;
 }
 

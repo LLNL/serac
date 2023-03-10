@@ -543,7 +543,12 @@ public:
 
         // residual function
         [this](const mfem::Vector& u, mfem::Vector& r) {
-          r = (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
+          const mfem::Vector res =
+              (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
+
+          // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
+          // tracking strategy
+          r = res;
           r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
         },
 
@@ -609,8 +614,12 @@ public:
 
           [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) {
             add(1.0, u_, c0_, d2u_dt2, predicted_displacement_);
-            r = (*residual_)(predicted_displacement_, d2u_dt2, shape_displacement_,
-                             *parameters_[parameter_indices].state...);
+            const mfem::Vector res = (*residual_)(predicted_displacement_, d2u_dt2, shape_displacement_,
+                                                  *parameters_[parameter_indices].state...);
+
+            // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
+            // tracking strategy
+            r = res;
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
