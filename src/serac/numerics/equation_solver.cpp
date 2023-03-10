@@ -217,6 +217,7 @@ void EquationSolver::SetOperator(const mfem::Operator& op)
             nonlin_solver_set_solver_called_ = true;
           }
         } else {
+          // If a nonlinear solver doesn't exist, we just perform a linear solve
           std::visit([&op](auto&& solver) { solver->SetOperator(op); }, lin_solver_);
         }
       },
@@ -231,8 +232,10 @@ void EquationSolver::Mult(const mfem::Vector& b, mfem::Vector& x) const
   std::visit(
       [&b, &x, this](auto&& nonlin_solver) {
         if (nonlin_solver) {
+          // If a nonlinear solver exists, call the full nonlinear solver
           nonlin_solver->Mult(b, x);
         } else {
+          // If not, just call the linear solver directly as that is all we need
           std::visit([&b, &x](auto&& solver) { solver->Mult(b, x); }, lin_solver_);
         }
       },
