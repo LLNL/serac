@@ -569,7 +569,8 @@ public:
       // If the essential adjoint load container does not have a temperature dual but it has a non-zero size, the
       // user has supplied an incorrectly-named dual vector.
       SLIC_ERROR_IF(duals_with_essential_boundary.size() != 0,
-                    "Essential adjoint boundary condition given for an unexpected primal field. Expected adjoint boundary condition named \"temperature\".");
+                    "Essential adjoint boundary condition given for an unexpected primal field. Expected adjoint "
+                    "boundary condition named \"temperature\".");
     }
 
     for (const auto& bc : bcs_.essentials()) {
