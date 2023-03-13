@@ -407,7 +407,7 @@ public:
    *
    * @param adjoint_loads An unordered map containing finite element duals representing the RHS of the adjoint equations
    * indexed by their name
-   * @param adjoint_with_essential_boundary A unordered map containing finite element state representing the
+   * @param adjoint_with_essential_boundary A unordered map containing finite element states representing the
    * non-homogeneous essential boundary condition data for the adjoint problem indexed their name
    * @return An unordered map of the adjoint solutions indexed by their name. It has a single entry named
    * "adjoint_displacement"
