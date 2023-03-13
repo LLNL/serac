@@ -21,7 +21,6 @@
 #include "serac/numerics/functional/integral.hpp"
 #include "serac/numerics/functional/dof_numbering.hpp"
 
-#include "serac/numerics/functional/integral.hpp"
 #include "serac/numerics/functional/element_restriction.hpp"
 
 // TODO: REMOVE
@@ -490,7 +489,7 @@ private:
     Gradient(Functional<test(trials...), exec>& f, uint32_t which = 0)
         : mfem::Operator(f.test_space_->GetTrueVSize(), f.trial_space_[which]->GetTrueVSize()),
           form_(f),
-          lookup_tables(*(f.test_space_), *(f.trial_space_[which])),
+          lookup_tables(f.G_test_[Integral::Domain], f.G_trial_[Integral::Domain][which]),
           which_argument(which),
           test_space_(f.test_space_),
           trial_space_(f.trial_space_[which]),
@@ -530,48 +529,45 @@ private:
 
       double* values = new double[lookup_tables.nnz]{};
 
-      // each element uses the lookup tables to add its contributions
-      // to their appropriate locations in the global sparse matrix
+      std::map < mfem::Geometry::Type, ExecArray<double, 3, exec> > element_gradients[Integral::num_types];
 
-      //if (form_.domain_integrals_.size() > 0) {
-      //  auto& K_elem = form_.element_gradients_[which_argument];
-      //  auto& LUT    = lookup_tables.element_nonzero_LUT;
+      for (auto& integral : form_.integrals_) {
 
-      //  detail::zero_out(K_elem);
-      //  for (auto& domain : form_.domain_integrals_) {
-      //    domain.ComputeElementGradients(view(K_elem), which_argument);
-      //  }
+        auto & K_elem = element_gradients[integral.type];
 
-      //  for (axom::IndexType e = 0; e < K_elem.shape()[0]; e++) {
-      //    for (axom::IndexType i = 0; i < K_elem.shape()[1]; i++) {
-      //      for (axom::IndexType j = 0; j < K_elem.shape()[2]; j++) {
-      //        auto [index, sign] = LUT(e, j, i);
-      //        values[index] += sign * K_elem(e, i, j);
-      //      }
-      //    }
-      //  }
-      //}
+        if (K_elem.empty()) {
+          for (auto & [geom, test_restriction] : form_.G_test_[integral.type].restrictions) {
+            auto & trial_restriction = form_.G_trial_[integral.type][which_argument].restrictions[geom];
 
-      // each boundary element uses the lookup tables to add its contributions
-      // to their appropriate locations in the global sparse matrix
-      //if (form_.bdr_integrals_.size() > 0) {
-      //  auto& K_belem = form_.bdr_element_gradients_[which_argument];
-      //  auto& LUT     = lookup_tables.bdr_element_nonzero_LUT;
+            K_elem[geom] = ExecArray<double, 3, exec>(
+              test_restriction.num_elements, 
+              trial_restriction.nodes_per_elem * trial_restriction.components,
+              test_restriction.nodes_per_elem * test_restriction.components);
 
-      //  detail::zero_out(K_belem);
-      //  for (auto& boundary : form_.bdr_integrals_) {
-      //    boundary.ComputeElementGradients(view(K_belem), which_argument);
-      //  }
+            detail::zero_out(K_elem[geom]);
+          }
+        }
 
-      //  for (axom::IndexType e = 0; e < K_belem.shape()[0]; e++) {
-      //    for (axom::IndexType i = 0; i < K_belem.shape()[1]; i++) {
-      //      for (axom::IndexType j = 0; j < K_belem.shape()[2]; j++) {
-      //        auto [index, sign] = LUT(e, j, i);
-      //        values[index] += sign * K_belem(e, i, j);
-      //      }
-      //    }
-      //  }
-      //}
+        integral.ComputeElementGradients(K_elem, which_argument);
+      }
+
+      #if 0
+      for (auto type : Integral::Types) {
+        auto & K_elem = element_gradients[type];
+        for (auto [geom, elem_matrices] : K_elem) {
+          auto & LUT = lookup_tables.[type][geom];
+
+          for (axom::IndexType e = 0; e < elem_matrices.shape()[0]; e++) {
+            for (axom::IndexType i = 0; i < elem_matrices.shape()[1]; i++) {
+              for (axom::IndexType j = 0; j < elem_matrices.shape()[2]; j++) {
+                auto [index, sign] = LUT(e, j, i);
+                values[index] += sign * elem_matrices(e, i, j);
+              }
+            }
+          }
+        }
+      }
+      #endif
 
       // Copy the column indices to an auxilliary array as MFEM can mutate these during HypreParMatrix construction
       col_ind_copy_ = lookup_tables.col_ind;
@@ -671,7 +667,6 @@ private:
 
   /// @brief The set of true DOF values, a reference to this member is returned by @p operator()
   mutable mfem::Vector output_T_;
-
 
   /// @brief The objects representing the gradients w.r.t. each input argument of the Functional
   mutable std::vector<Gradient> grad_;

@@ -496,6 +496,14 @@ BlockElementRestriction::BlockElementRestriction(const mfem::FiniteElementSpace*
 
 }
 
+uint64_t BlockElementRestriction::ESize() const {
+  return (*restrictions.begin()).second.ESize();
+}
+
+uint64_t BlockElementRestriction::LSize() const {
+  return (*restrictions.begin()).second.LSize();
+}
+
 mfem::Array<int> BlockElementRestriction::bOffsets() const {
   mfem::Array<int> offsets(mfem::Geometry::NUM_GEOMETRIES + 1);
 

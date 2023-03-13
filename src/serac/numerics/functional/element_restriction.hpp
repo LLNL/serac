@@ -125,6 +125,8 @@ struct BlockElementRestriction {
   BlockElementRestriction(const mfem::FiniteElementSpace* fes);
   BlockElementRestriction(const mfem::FiniteElementSpace* fes, FaceType type);
 
+  uint64_t ESize() const;
+  uint64_t LSize() const;
   mfem::Array<int> bOffsets() const;
   void Gather(const mfem::Vector& L_vector, mfem::BlockVector& E_block_vector) const;
   void ScatterAdd(const mfem::BlockVector& E_block_vector, mfem::Vector& L_vector) const;

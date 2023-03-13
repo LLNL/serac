@@ -11,8 +11,6 @@
 #include "serac/numerics/functional/domain_integral_kernels.hpp"
 #include "serac/numerics/functional/boundary_integral_kernels.hpp"
 
-#include "serac/numerics/functional/debug_print.hpp"
-
 namespace serac {
 
 struct Integral {
@@ -23,6 +21,8 @@ struct Integral {
     // DG, unimplemented
     _size
   };
+
+  static constexpr Type Types[2] = {Domain, Boundary};
 
   static constexpr std::size_t num_types = Type::_size;
 
@@ -67,13 +67,13 @@ struct Integral {
     }
   }
 
-  void ComputeElementGradients(std::map<mfem::Geometry::Type, ExecArrayView<double, 3, ExecutionSpace::CPU> >& K_e,
+  void ComputeElementGradients(std::map<mfem::Geometry::Type, ExecArray<double, 3, ExecutionSpace::CPU> >& K_e,
                                std::size_t functional_index) const
   {
     int index = functional_to_integral_[functional_index];
     if (index != -1) {
       for (auto& [geometry, func] : element_gradient_[uint32_t(index)]) {
-        func(K_e[geometry]);
+        func(view(K_e[geometry]));
       }
     }
   }
