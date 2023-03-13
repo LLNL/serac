@@ -677,40 +677,32 @@ public:
     dr_ = 0.0;
     mfem::EliminateBC(*J_, *J_e_, constrained_dofs, du_, dr_);
 
+    // Update the initial guess for changes in the parameters if this is not the first solve
+    for (std::size_t parameter_index = 0; parameter_index < parameters_.size(); ++parameter_index) {
+      // Compute the change in parameters parameter_diff = parameter_new - parameter_old
+      serac::FiniteElementState parameter_difference = *parameters_[parameter_index].state;
+      parameter_difference -= *parameters_[parameter_index].old_state;
+
+      // Compute a linearized estimate of the residual forces due to this change in parameter
+      auto drdparam        = serac::get<DERIVATIVE>(d_residual_d_[parameter_index]());
+      auto residual_update = drdparam(parameter_difference);
+
+      // Flip the sign to get the RHS of the Newton update system
+      // J^-1 du = - residual
+      residual_update *= -1.0;
+
+      dr_ += residual_update;
+
+      // Save the current parameter value for the next timestep
+      *parameters_[parameter_index].old_state = *parameters_[parameter_index].state;
+    }
+
     auto& lin_solver = nonlin_solver_.LinearSolver();
 
     lin_solver.SetOperator(*J_);
 
     lin_solver.Mult(dr_, du_);
-
     displacement_ += du_;
-
-    // Update the initial guess for changes in the parameters if this is not the first solve
-    for (std::size_t parameter_index = 0; parameter_index < parameters_.size(); ++parameter_index) {
-      // We only add a linear update due to parameter changes after the initial solve since the
-      // linearization approximation is only good for existing solutions. Unlike the displacement field,
-      // we cannot assume zero is a good initial guess for the parameters.
-      if (cycle_ > 0) {
-        // Compute the change in parameters parameter_diff = parameter_new - parameter_old
-        serac::FiniteElementState parameter_difference = *parameters_[parameter_index].state;
-        parameter_difference -= *parameters_[parameter_index].old_state;
-
-        // Compute a linearized estimate of the residual forces due to this change in parameter
-        auto drdparam        = serac::get<DERIVATIVE>(d_residual_d_[parameter_index]());
-        auto residual_update = drdparam(parameter_difference);
-
-        // Flip the sign to get the RHS of the Newton update system
-        // J^-1 du = - residual
-        residual_update *= -1.0;
-
-        // Get a displacement update to account for these new residual forces
-        lin_solver.Mult(residual_update, du_);
-        displacement_ += du_;
-      }
-
-      // Save the current parameter value for the next timestep
-      *parameters_[parameter_index].old_state = *parameters_[parameter_index].state;
-    }
 
     nonlin_solver_.Mult(zero_, displacement_);
   }
@@ -727,6 +719,13 @@ public:
     SLIC_ERROR_ROOT_IF(!residual_, "completeSetup() must be called prior to advanceTimestep(dt) in SolidMechanics.");
 
     // bcs_.setTime(time_);
+
+    // If this is the first call, initialize the previous parameter values as the initial values
+    if (cycle_ == 0) {
+      for (auto& parameter : parameters_) {
+        *parameter.old_state = *parameter.state;
+      }
+    }
 
     if (is_quasistatic_) {
       quasiStaticSolve(dt);
