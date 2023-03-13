@@ -43,21 +43,22 @@ int main(int argc, char* argv[])
   serac::StateManager::initialize(datastore, "solid_lce_functional");
 
   // Construct the appropriate dimension mesh and give it to the data store
-  int nElem = 2;
+  int    nElem = 2;
   double lx = 3.0e-3, ly = 3.0e-3, lz = 0.25e-3;
-  auto initial_mesh = mfem::Mesh(mfem::Mesh::MakeCartesian3D(4*nElem, 4*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
+  auto   initial_mesh =
+      mfem::Mesh(mfem::Mesh::MakeCartesian3D(4 * nElem, 4 * nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
 
 #ifdef PERIODIC_MESH
   // Create translation vectors defining the periodicity
-  mfem::Vector x_translation({lx, 0.0, 0.0});
+  mfem::Vector              x_translation({lx, 0.0, 0.0});
   std::vector<mfem::Vector> translations = {x_translation};
-  double tol = 1e-6;
+  double                    tol          = 1e-6;
 
   std::vector<int> periodicMap = initial_mesh.CreatePeriodicVertexMapping(translations, tol);
 
   // Create the periodic mesh using the vertex mapping defined by the translation vectors
   auto periodic_mesh = mfem::Mesh::MakePeriodic(initial_mesh, periodicMap);
-  auto mesh = mesh::refineAndDistribute(std::move(periodic_mesh), serial_refinement, parallel_refinement);
+  auto mesh          = mesh::refineAndDistribute(std::move(periodic_mesh), serial_refinement, parallel_refinement);
 #else
   auto mesh = mesh::refineAndDistribute(std::move(initial_mesh), serial_refinement, parallel_refinement);
 #endif
@@ -65,39 +66,41 @@ int main(int argc, char* argv[])
   serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a functional-based solid mechanics solver
-  IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
-                                                       .abs_tol     = 1.0e-16,
-                                                       .print_level = 0,
-                                                       .max_iter    = 600,
-                                                       .lin_solver  = LinearSolver::GMRES,
-                                                       .prec        = HypreBoomerAMGPrec{}};
+  IterativeSolverOptions default_linear_options    = {.rel_tol     = 1.0e-6,
+                                                   .abs_tol     = 1.0e-16,
+                                                   .print_level = 0,
+                                                   .max_iter    = 600,
+                                                   .lin_solver  = LinearSolver::GMRES,
+                                                   .prec        = HypreBoomerAMGPrec{}};
   NonlinearSolverOptions default_nonlinear_options = {
-    .rel_tol = 1.0e-6, .abs_tol = 1.0e-10, .max_iter = 6, .print_level = 1};
-  SolidMechanics<p, dim, Parameters< H1<p>, L2<p>, L2<p> > > solid_solver({default_linear_options, default_nonlinear_options}, GeometricNonlinearities::Off,
-                                       "lce_solid_functional");
+      .rel_tol = 1.0e-6, .abs_tol = 1.0e-10, .max_iter = 6, .print_level = 1};
+  SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
+      {default_linear_options, default_nonlinear_options}, GeometricNonlinearities::Off, "lce_solid_functional");
 
   // Material properties
-  double density = 1.0;
-  double young_modulus = 0.4;
-  double possion_ratio = 0.49;
-  double beta_param = 0.041;
+  double density         = 1.0;
+  double young_modulus   = 0.4;
+  double possion_ratio   = 0.49;
+  double beta_param      = 0.041;
   double max_order_param = 0.1;
-  double gamma_angle = M_PI_2;
-  double eta_angle = 0.0;
+  double gamma_angle     = M_PI_2;
+  double eta_angle       = 0.0;
 
   // Parameter 1
   FiniteElementState orderParam(StateManager::newState(FiniteElementState::Options{.order = p, .name = "orderParam"}));
   orderParam = max_order_param;
 
   // Parameter 2
-  FiniteElementState gammaParam(StateManager::newState(FiniteElementState::Options{.order = p, .vector_dim = 1, .element_type = ElementType::L2, .name = "gammaParam"}));
-  auto gammaFunc = [gamma_angle](const mfem::Vector& /*x*/, double) -> double { return gamma_angle; };
+  FiniteElementState gammaParam(StateManager::newState(
+      FiniteElementState::Options{.order = p, .vector_dim = 1, .element_type = ElementType::L2, .name = "gammaParam"}));
+  auto               gammaFunc = [gamma_angle](const mfem::Vector& /*x*/, double) -> double { return gamma_angle; };
   mfem::FunctionCoefficient gammaCoef(gammaFunc);
   gammaParam.project(gammaCoef);
 
   // Paremetr 3
-  FiniteElementState etaParam(StateManager::newState(FiniteElementState::Options{.order = p, .vector_dim = 1, .element_type = ElementType::L2, .name = "etaParam"}));
-  auto etaFunc = [eta_angle](const mfem::Vector& /*x*/, double) -> double { return eta_angle; };
+  FiniteElementState        etaParam(StateManager::newState(
+      FiniteElementState::Options{.order = p, .vector_dim = 1, .element_type = ElementType::L2, .name = "etaParam"}));
+  auto                      etaFunc = [eta_angle](const mfem::Vector& /*x*/, double) -> double { return eta_angle; };
   mfem::FunctionCoefficient etaCoef(etaFunc);
   etaParam.project(etaCoef);
 
@@ -111,7 +114,7 @@ int main(int argc, char* argv[])
   solid_solver.setParameter(ETA_INDEX, etaParam);
 
   // Set material
-  LiqCrystElast_Bertoldi lceMat(density, young_modulus, possion_ratio, max_order_param, beta_param);
+  LiqCrystElast_Bertoldi        lceMat(density, young_modulus, possion_ratio, max_order_param, beta_param);
   LiqCrystElast_Bertoldi::State initial_state{};
 
   auto param_data = solid_solver.createQuadratureDataBuffer(initial_state);
@@ -123,8 +126,8 @@ int main(int argc, char* argv[])
   auto          zero_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; };
   solid_solver.setDisplacementBCs(support, zero_displacement);
 
-  double iniDispVal =  5.0e-6;
-  auto ini_displacement = [iniDispVal](const mfem::Vector&, mfem::Vector& u) -> void { u = iniDispVal; };
+  double iniDispVal       = 5.0e-6;
+  auto   ini_displacement = [iniDispVal](const mfem::Vector&, mfem::Vector& u) -> void { u = iniDispVal; };
   solid_solver.setDisplacement(ini_displacement);
 
   // Finalize the data structures
@@ -133,27 +136,23 @@ int main(int argc, char* argv[])
   // Perform first quasi-static solve
   std::string outputFilename = "sol_lce_bertoldi_lattice";
   solid_solver.outputState(outputFilename);
- 
+
   // initializations for quasi-static problem
-  int num_steps = 4;
-  double t    = 0.0;
-  double tmax = 1.0;
-  double dt   = tmax / num_steps;
+  int    num_steps = 4;
+  double t         = 0.0;
+  double tmax      = 1.0;
+  double dt        = tmax / num_steps;
   double gblDispYmin;
 
   // Perform remaining quasi-static solve
-  for (int i = 0; i < num_steps; i++) 
-  {
-    if(rank==0)
-    {
-      std::cout 
-      << "\n\n............................"
-      << "\n... Entering time step: "<< i + 1 << " (/" << num_steps << ")"
-      << "\n............................\n"
-      << "\n... Using order parameter: "<< max_order_param * (tmax - t) / tmax
-      << "\n... Using gamma = " << gamma_angle << ", and eta = " << eta_angle
-      <<"\n... Min Y displacement: " << gblDispYmin
-      << std::endl;
+  for (int i = 0; i < num_steps; i++) {
+    if (rank == 0) {
+      std::cout << "\n\n............................"
+                << "\n... Entering time step: " << i + 1 << " (/" << num_steps << ")"
+                << "\n............................\n"
+                << "\n... Using order parameter: " << max_order_param * (tmax - t) / tmax
+                << "\n... Using gamma = " << gamma_angle << ", and eta = " << eta_angle
+                << "\n... Min Y displacement: " << gblDispYmin << std::endl;
     }
 
     // solve problem with current parameters
@@ -161,20 +160,19 @@ int main(int argc, char* argv[])
     solid_solver.outputState(outputFilename);
 
     // Get minimum displacement for verification purposes
-    auto &fes = solid_solver.displacement().space();
+    auto&                 fes             = solid_solver.displacement().space();
     mfem::ParGridFunction displacement_gf = solid_solver.displacement().gridFunction();
-    mfem::Vector dispVecY(fes.GetNDofs()); dispVecY = 0.0;
+    mfem::Vector          dispVecY(fes.GetNDofs());
+    dispVecY = 0.0;
 
-    for (int k = 0; k < fes.GetNDofs(); k++) 
-    {
-      dispVecY(k) = displacement_gf(3*k+1);
+    for (int k = 0; k < fes.GetNDofs(); k++) {
+      dispVecY(k) = displacement_gf(3 * k + 1);
     }
 
     double lclDispYmin = dispVecY.Min();
     MPI_Allreduce(&lclDispYmin, &gblDispYmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-    if(rank==0)
-    {
-      std::cout <<"... Min Y displacement: " << gblDispYmin << std::endl;
+    if (rank == 0) {
+      std::cout << "... Min Y displacement: " << gblDispYmin << std::endl;
     }
 
     // update pseudotime-dependent information
