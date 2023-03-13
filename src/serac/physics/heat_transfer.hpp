@@ -528,14 +528,14 @@ public:
    *
    * @param adjoint_loads An unordered map containing finite element duals representing the RHS of the adjoint equations
    * indexed by their name
-   * @param duals_with_essential_boundary A unordered map containing finite element duals representing the
-   * non-homogenous essential boundary condition data for the adjoint problem indexed their name
+   * @param adjoint_with_essential_boundary A unordered map containing finite element duals representing the
+   * non-homogeneous essential boundary condition data for the adjoint problem indexed their name
    * @return An unordered map of the adjoint solutions indexed by their name. It has a single entry named
    * "adjoint_temperature"
    */
   const std::unordered_map<std::string, const serac::FiniteElementState&> solveAdjoint(
-      std::unordered_map<std::string, const serac::FiniteElementDual&> adjoint_loads,
-      std::unordered_map<std::string, const serac::FiniteElementDual&> duals_with_essential_boundary = {}) override
+      std::unordered_map<std::string, const serac::FiniteElementDual&>  adjoint_loads,
+      std::unordered_map<std::string, const serac::FiniteElementState&> adjoint_with_essential_boundary = {}) override
   {
     SLIC_ERROR_ROOT_IF(adjoint_loads.size() != 1,
                        "Adjoint load container is not the expected size of 1 in the heat transfer module.");
@@ -561,14 +561,14 @@ public:
     auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
     // If we have a non-homogeneous essential boundary condition, extract it from the given state
-    auto essential_adjoint_temp = duals_with_essential_boundary.find("temperature");
+    auto essential_adjoint_temp = adjoint_with_essential_boundary.find("temperature");
 
-    if (essential_adjoint_temp != duals_with_essential_boundary.end()) {
+    if (essential_adjoint_temp != adjoint_with_essential_boundary.end()) {
       adjoint_essential = essential_adjoint_temp->second;
     } else {
       // If the essential adjoint load container does not have a temperature dual but it has a non-zero size, the
       // user has supplied an incorrectly-named dual vector.
-      SLIC_ERROR_IF(duals_with_essential_boundary.size() != 0,
+      SLIC_ERROR_IF(adjoint_with_essential_boundary.size() != 0,
                     "Essential adjoint boundary condition given for an unexpected primal field. Expected adjoint "
                     "boundary condition named \"temperature\".");
     }

@@ -512,8 +512,8 @@ FiniteElementDual& SolidLegacy::bulkModulusSensitivity(mfem::ParFiniteElementSpa
 }
 
 const std::unordered_map<std::string, const serac::FiniteElementState&> SolidLegacy::solveAdjoint(
-    std::unordered_map<std::string, const serac::FiniteElementDual&> adjoint_loads,
-    std::unordered_map<std::string, const serac::FiniteElementDual&> duals_with_essential_boundary)
+    std::unordered_map<std::string, const serac::FiniteElementDual&>  adjoint_loads,
+    std::unordered_map<std::string, const serac::FiniteElementState&> adjoint_with_essential_boundary)
 {
   SLIC_ERROR_ROOT_IF(!is_quasistatic_, "Adjoint analysis only vaild for quasistatic problems.");
   SLIC_ERROR_ROOT_IF(previous_solve_ == PreviousSolve::None, "Adjoint analysis only valid following a forward solve.");
@@ -545,14 +545,14 @@ const std::unordered_map<std::string, const serac::FiniteElementState&> SolidLeg
   adjoint_essential = 0.0;
 
   // If we have a non-homogeneous essential boundary condition, extract it from the given state
-  auto essential_adjoint_disp = duals_with_essential_boundary.find("displacement");
+  auto essential_adjoint_disp = adjoint_with_essential_boundary.find("displacement");
 
-  if (essential_adjoint_disp != duals_with_essential_boundary.end()) {
+  if (essential_adjoint_disp != adjoint_with_essential_boundary.end()) {
     adjoint_essential = essential_adjoint_disp->second;
   } else {
     // If the essential adjoint load container does not have a displacement dual but it has a non-zero size, the
     // user has supplied an incorrectly-named dual vector.
-    SLIC_ERROR_IF(duals_with_essential_boundary.size() != 0,
+    SLIC_ERROR_IF(adjoint_with_essential_boundary.size() != 0,
                   "Essential adjoint boundary condition given for an unexpected primal field. Expected adjoint "
                   "boundary condition named \"displacement\"");
   }

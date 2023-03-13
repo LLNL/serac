@@ -407,14 +407,14 @@ public:
    *
    * @param adjoint_loads An unordered map containing finite element duals representing the RHS of the adjoint equations
    * indexed by their name
-   * @param duals_with_essential_boundary A unordered map containing finite element duals representing the
-   * non-homogenous essential boundary condition data for the adjoint problem indexed their name
+   * @param adjoint_with_essential_boundary A unordered map containing finite element state representing the
+   * non-homogeneous essential boundary condition data for the adjoint problem indexed their name
    * @return An unordered map of the adjoint solutions indexed by their name. It has a single entry named
    * "adjoint_displacement"
    */
   const std::unordered_map<std::string, const serac::FiniteElementState&> solveAdjoint(
-      std::unordered_map<std::string, const serac::FiniteElementDual&> adjoint_loads,
-      std::unordered_map<std::string, const serac::FiniteElementDual&> duals_with_essential_boundary = {}) override;
+      std::unordered_map<std::string, const serac::FiniteElementDual&>  adjoint_loads,
+      std::unordered_map<std::string, const serac::FiniteElementState&> adjoint_with_essential_boundary = {}) override;
 
   /**
    * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
