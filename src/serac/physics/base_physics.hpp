@@ -308,6 +308,9 @@ protected:
     /// The finite element states representing user-defined and owned parameter fields
     serac::FiniteElementState* state;
 
+    /// The finite element state representing the parameter at the previous evalutaion
+    std::unique_ptr<serac::FiniteElementState> old_state;
+
     /**
      * @brief The sensitivities (dual vectors) with respect to each of the input parameter fields
      * @note this is optional as FiniteElementDuals are not default constructable and

@@ -647,28 +647,43 @@ public:
 
     // the ~20 lines of code below are essentially equivalent to the 1-liner
     // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
-    {
-      du_ = 0.0;
-      for (auto& bc : bcs_.essentials()) {
-        bc.setDofs(du_, time_);
-      }
+    du_ = 0.0;
+    for (auto& bc : bcs_.essentials()) {
+      bc.setDofs(du_, time_);
+    }
 
-      auto& constrained_dofs = bcs_.allEssentialTrueDofs();
-      for (int i = 0; i < constrained_dofs.Size(); i++) {
-        int j = constrained_dofs[i];
-        du_[j] -= displacement_(j);
-      }
+    auto& constrained_dofs = bcs_.allEssentialTrueDofs();
+    for (int i = 0; i < constrained_dofs.Size(); i++) {
+      int j = constrained_dofs[i];
+      du_[j] -= displacement_(j);
+    }
 
-      dr_ = 0.0;
-      mfem::EliminateBC(*J_, *J_e_, constrained_dofs, du_, dr_);
+    dr_ = 0.0;
+    mfem::EliminateBC(*J_, *J_e_, constrained_dofs, du_, dr_);
 
-      auto& lin_solver = nonlin_solver_.LinearSolver();
+    auto& lin_solver = nonlin_solver_.LinearSolver();
 
-      lin_solver.SetOperator(*J_);
+    lin_solver.SetOperator(*J_);
 
-      lin_solver.Mult(dr_, du_);
+    lin_solver.Mult(dr_, du_);
 
+    displacement_ += du_;
+
+    // Update the initial guess for changes in the parameters
+    for (std::size_t parameter_index = 0; parameter_index < parameters_.size(); ++parameter_index) {
+      auto drdparam = serac::get<DERIVATIVE>(d_residual_d_[parameter_index]());
+
+      serac::FiniteElementState current_param(*parameters_[parameter_index].state);
+      serac::FiniteElementState parameter_difference = current_param;
+      parameter_difference -= *parameters_[parameter_index].old_state;
+
+      *parameters_[parameter_index].state = *parameters_[parameter_index].old_state;
+
+      auto residual_update = drdparam(parameter_difference);
+
+      lin_solver.Mult(residual_update, du_);
       displacement_ += du_;
+      *parameters_[parameter_index].state = current_param;
     }
 
     nonlin_solver_.Mult(zero_, displacement_);
