@@ -656,6 +656,13 @@ public:
 
     // the ~20 lines of code below are essentially equivalent to the 1-liner
     // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
+
+    // Update the linearized Jacobian matrix
+    auto [r, drdu] = (*residual_)(differentiate_wrt(displacement_), zero_, shape_displacement_,
+                                  *parameters_[parameter_indices].state...);
+    J_             = assemble(drdu);
+    J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+
     du_ = 0.0;
     for (auto& bc : bcs_.essentials()) {
       bc.setDofs(du_, time_);
@@ -678,21 +685,31 @@ public:
 
     displacement_ += du_;
 
-    // Update the initial guess for changes in the parameters
+    // Update the initial guess for changes in the parameters if this is not the first solve
     for (std::size_t parameter_index = 0; parameter_index < parameters_.size(); ++parameter_index) {
-      auto drdparam = serac::get<DERIVATIVE>(d_residual_d_[parameter_index]());
+      // We only add a linear update due to parameter changes after the initial solve since the
+      // linearization approximation is only good for existing solutions. Unlike the displacement field,
+      // we cannot assume zero is a good initial guess for the parameters.
+      if (cycle_ > 0) {
+        // Compute the change in parameters parameter_diff = parameter_new - parameter_old
+        serac::FiniteElementState parameter_difference = *parameters_[parameter_index].state;
+        parameter_difference -= *parameters_[parameter_index].old_state;
 
-      serac::FiniteElementState current_param(*parameters_[parameter_index].state);
-      serac::FiniteElementState parameter_difference = current_param;
-      parameter_difference -= *parameters_[parameter_index].old_state;
+        // Compute a linearized estimate of the residual forces due to this change in parameter
+        auto drdparam        = serac::get<DERIVATIVE>(d_residual_d_[parameter_index]());
+        auto residual_update = drdparam(parameter_difference);
 
-      *parameters_[parameter_index].state = *parameters_[parameter_index].old_state;
+        // Flip the sign to get the RHS of the Newton update system
+        // J^-1 du = - residual
+        residual_update *= -1.0;
 
-      auto residual_update = drdparam(parameter_difference);
+        // Get a displacement update to account for these new residual forces
+        lin_solver.Mult(residual_update, du_);
+        displacement_ += du_;
+      }
 
-      lin_solver.Mult(residual_update, du_);
-      displacement_ += du_;
-      *parameters_[parameter_index].state = current_param;
+      // Save the current parameter value for the next timestep
+      *parameters_[parameter_index].old_state = *parameters_[parameter_index].state;
     }
 
     nonlin_solver_.Mult(zero_, displacement_);

@@ -66,14 +66,18 @@ int main(int argc, char* argv[])
   serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a functional-based solid mechanics solver
-  IterativeSolverOptions default_linear_options    = {.rel_tol     = 1.0e-6,
+  IterativeSolverOptions          default_linear_options    = {.rel_tol     = 1.0e-6,
                                                    .abs_tol     = 1.0e-16,
                                                    .print_level = 0,
                                                    .max_iter    = 600,
                                                    .lin_solver  = LinearSolver::GMRES,
                                                    .prec        = HypreBoomerAMGPrec{}};
-  NonlinearSolverOptions default_nonlinear_options = {
-      .rel_tol = 1.0e-6, .abs_tol = 1.0e-10, .max_iter = 6, .print_level = 1};
+  IterativeNonlinearSolverOptions default_nonlinear_options = {
+      .rel_tol       = 1.0e-8,
+      .abs_tol       = 1.0e-14,
+      .max_iter      = 6,
+      .print_level   = 1,
+      .nonlin_solver = serac::NonlinearSolver::KINBacktrackingLineSearch};
   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
       {default_linear_options, default_nonlinear_options}, GeometricNonlinearities::Off, "lce_solid_functional");
 
