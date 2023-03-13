@@ -704,6 +704,7 @@ public:
     lin_solver.Mult(dr_, du_);
     displacement_ += du_;
 
+    // Now that the "warm start" is finished, we call the full nonlinear solver
     nonlin_solver_.Mult(zero_, displacement_);
   }
 
