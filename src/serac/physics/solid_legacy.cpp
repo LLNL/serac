@@ -644,7 +644,7 @@ serac::SolidLegacy::InputOptions FromInlet<serac::SolidLegacy::InputOptions>::op
   // Solver parameters
   auto equation_solver                   = base["equation_solver"];
   result.solver_options.H_lin_options    = equation_solver["linear"].get<serac::LinearSolverOptions>();
-  result.solver_options.H_nonlin_options = equation_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
+  result.solver_options.H_nonlin_options = equation_solver["nonlinear"].get<serac::IterativeNonlinearSolverOptions>();
 
   if (base.contains("dynamics")) {
     SolidLegacy::TimesteppingOptions dyn_options;

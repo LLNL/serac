@@ -19,7 +19,7 @@ EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverOptions& lin_opt
     lin_solver_ = BuildIterativeLinearSolver(comm, *iter_options);
   }
   // If it's a custom solver, check that the mfem::Solver* is not null
-  else if (auto custom = std::get_if<CustomSolverOptions>(&lin_options)) {
+  else if (auto custom = std::get_if<CustomLinearSolverOptions>(&lin_options)) {
     SLIC_ERROR_ROOT_IF(custom->solver == nullptr, "Custom solver pointer must be initialized.");
     lin_solver_ = custom->solver;
   }
@@ -30,7 +30,11 @@ EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverOptions& lin_opt
   }
 
   if (nonlin_options) {
-    nonlin_solver_ = BuildNewtonSolver(comm, *nonlin_options);
+    if (auto newton_options = std::get_if<IterativeNonlinearSolverOptions>(&(*nonlin_options))) {
+      nonlin_solver_ = BuildNonlinearSolver(comm, *newton_options);
+    } else if (auto custom = std::get_if<CustomNonlinearSolverOptions>(&(*nonlin_options))) {
+      nonlin_solver_ = custom->solver;
+    }
   }
 }
 
@@ -148,55 +152,94 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::BuildIterativeLinearSolve
   return iter_lin_solver;
 }
 
-std::unique_ptr<mfem::NewtonSolver> EquationSolver::BuildNewtonSolver(MPI_Comm                      comm,
-                                                                      const NonlinearSolverOptions& nonlin_options)
+std::unique_ptr<mfem::NewtonSolver> EquationSolver::BuildNonlinearSolver(
+    MPI_Comm comm, const IterativeNonlinearSolverOptions& nonlin_options)
 {
-  std::unique_ptr<mfem::NewtonSolver> newton_solver;
+  std::unique_ptr<mfem::NewtonSolver> nonlinear_solver;
 
-  if (nonlin_options.nonlin_solver == NonlinearSolver::MFEMNewton) {
-    newton_solver = std::make_unique<mfem::NewtonSolver>(comm);
+  if (nonlin_options.nonlin_solver == NonlinearSolver::Newton) {
+    nonlinear_solver = std::make_unique<mfem::NewtonSolver>(comm);
+  } else if (nonlin_options.nonlin_solver == NonlinearSolver::LBFGS) {
+    nonlinear_solver = std::make_unique<mfem::LBFGSSolver>(comm);
   }
   // KINSOL
   else {
 #ifdef MFEM_USE_SUNDIALS
-    auto kinsol_strat =
-        (nonlin_options.nonlin_solver == NonlinearSolver::KINBacktrackingLineSearch) ? KIN_LINESEARCH : KIN_NONE;
-    newton_solver = std::make_unique<mfem::KINSolver>(comm, kinsol_strat, true);
+
+    int kinsol_strat = KIN_NONE;
+
+    switch (nonlin_options.nonlin_solver) {
+      case NonlinearSolver::KINFullStep:
+        kinsol_strat = KIN_NONE;
+        break;
+      case NonlinearSolver::KINBacktrackingLineSearch:
+        kinsol_strat = KIN_LINESEARCH;
+        break;
+      case NonlinearSolver::KINPicard:
+        kinsol_strat = KIN_PICARD;
+        break;
+      case NonlinearSolver::KINFP:
+        kinsol_strat = KIN_FP;
+        break;
+      default:
+        kinsol_strat = KIN_NONE;
+        SLIC_ERROR_ROOT("Unknown KINSOL nonlinear solver type given.");
+    }
+    auto kinsol_solver = std::make_unique<mfem::KINSolver>(comm, kinsol_strat, true);
+    nonlinear_solver   = std::move(kinsol_solver);
 #else
     SLIC_ERROR_ROOT("KINSOL was not enabled when MFEM was built");
 #endif
   }
 
-  newton_solver->SetRelTol(nonlin_options.rel_tol);
-  newton_solver->SetAbsTol(nonlin_options.abs_tol);
-  newton_solver->SetMaxIter(nonlin_options.max_iter);
-  newton_solver->SetPrintLevel(nonlin_options.print_level);
-  return newton_solver;
+  nonlinear_solver->SetRelTol(nonlin_options.rel_tol);
+  nonlinear_solver->SetAbsTol(nonlin_options.abs_tol);
+  nonlinear_solver->SetMaxIter(nonlin_options.max_iter);
+  nonlinear_solver->SetPrintLevel(nonlin_options.print_level);
+
+  // Iterative mode indicates we do not zero out the initial guess during the
+  // nonlinear solver call. This is required as we apply the essential boundary
+  // conditions before the nonlinear solver is applied.
+  nonlinear_solver->iterative_mode = true;
+
+  return nonlinear_solver;
 }
 
 void EquationSolver::SetOperator(const mfem::Operator& op)
 {
-  if (nonlin_solver_) {
-    nonlin_solver_->SetOperator(op);
-    // Now that the nonlinear solver knows about the operator, we can set its linear solver
-    if (!nonlin_solver_set_solver_called_) {
-      nonlin_solver_->SetSolver(LinearSolver());
-      nonlin_solver_set_solver_called_ = true;
-    }
-  } else {
-    std::visit([&op](auto&& solver) { solver->SetOperator(op); }, lin_solver_);
-  }
+  std::visit(
+      [&op, this](auto&& nonlin_solver) {
+        if (nonlin_solver) {
+          nonlin_solver->SetOperator(op);
+          // Now that the nonlinear solver knows about the operator, we can set its linear solver
+          if (!nonlin_solver_set_solver_called_) {
+            nonlin_solver->SetSolver(LinearSolver());
+            nonlin_solver_set_solver_called_ = true;
+          }
+        } else {
+          // If a nonlinear solver doesn't exist, we just perform a linear solve
+          std::visit([&op](auto&& solver) { solver->SetOperator(op); }, lin_solver_);
+        }
+      },
+      nonlin_solver_);
+
   height = op.Height();
   width  = op.Width();
 }
 
 void EquationSolver::Mult(const mfem::Vector& b, mfem::Vector& x) const
 {
-  if (nonlin_solver_) {
-    nonlin_solver_->Mult(b, x);
-  } else {
-    std::visit([&b, &x](auto&& solver) { solver->Mult(b, x); }, lin_solver_);
-  }
+  std::visit(
+      [&b, &x, this](auto&& nonlin_solver) {
+        if (nonlin_solver) {
+          // If a nonlinear solver exists, call the full nonlinear solver
+          nonlin_solver->Mult(b, x);
+        } else {
+          // If not, just call the linear solver directly as that is all we need
+          std::visit([&b, &x](auto&& solver) { solver->Mult(b, x); }, lin_solver_);
+        }
+      },
+      nonlin_solver_);
 }
 
 void EquationSolver::SuperLUSolver::Mult(const mfem::Vector& x, mfem::Vector& y) const
@@ -252,14 +295,13 @@ void EquationSolver::DefineInputFileSchema(axom::inlet::Container& container)
   nonlinear_container.addDouble("abs_tol", "Absolute tolerance for the Newton solve.").defaultValue(1.0e-4);
   nonlinear_container.addInt("max_iter", "Maximum iterations for the Newton solve.").defaultValue(500);
   nonlinear_container.addInt("print_level", "Nonlinear print level.").defaultValue(0);
-  nonlinear_container.addString("solver_type", "Solver type (MFEMNewton|KINFullStep|KINLineSearch)")
-      .defaultValue("MFEMNewton");
+  nonlinear_container.addString("solver_type", "Solver type (Newton|KINFullStep|KINLineSearch)").defaultValue("Newton");
 }
 
 }  // namespace serac::mfem_ext
 
+using serac::IterativeNonlinearSolverOptions;
 using serac::LinearSolverOptions;
-using serac::NonlinearSolverOptions;
 using serac::mfem_ext::EquationSolver;
 
 serac::LinearSolverOptions FromInlet<serac::LinearSolverOptions>::operator()(const axom::inlet::Container& base)
@@ -310,16 +352,17 @@ serac::LinearSolverOptions FromInlet<serac::LinearSolverOptions>::operator()(con
   return options;
 }
 
-serac::NonlinearSolverOptions FromInlet<serac::NonlinearSolverOptions>::operator()(const axom::inlet::Container& base)
+serac::IterativeNonlinearSolverOptions FromInlet<serac::IterativeNonlinearSolverOptions>::operator()(
+    const axom::inlet::Container& base)
 {
-  NonlinearSolverOptions options;
+  IterativeNonlinearSolverOptions options;
   options.rel_tol               = base["rel_tol"];
   options.abs_tol               = base["abs_tol"];
   options.max_iter              = base["max_iter"];
   options.print_level           = base["print_level"];
   const std::string solver_type = base["solver_type"];
-  if (solver_type == "MFEMNewton") {
-    options.nonlin_solver = serac::NonlinearSolver::MFEMNewton;
+  if (solver_type == "Newton") {
+    options.nonlin_solver = serac::NonlinearSolver::Newton;
   } else if (solver_type == "KINFullStep") {
     options.nonlin_solver = serac::NonlinearSolver::KINFullStep;
   } else if (solver_type == "KINLineSearch") {
@@ -335,7 +378,7 @@ serac::mfem_ext::EquationSolver FromInlet<serac::mfem_ext::EquationSolver>::oper
 {
   auto lin = base["linear"].get<LinearSolverOptions>();
   if (base.contains("nonlinear")) {
-    auto nonlin = base["nonlinear"].get<NonlinearSolverOptions>();
+    auto nonlin = base["nonlinear"].get<IterativeNonlinearSolverOptions>();
     return EquationSolver(MPI_COMM_WORLD, lin, nonlin);
   }
   return EquationSolver(MPI_COMM_WORLD, lin);

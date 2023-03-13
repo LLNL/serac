@@ -11,11 +11,11 @@
 #------------------------------------------------------------------------------
 if(DEFINED ENV{SPACK_CC})
 
-  set(CMAKE_C_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2023_02_15_15_57_09/spack/lib/spack/env/gcc/gcc" CACHE PATH "")
+  set(CMAKE_C_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2023_03_10_11_20_00/spack/lib/spack/env/gcc/gcc" CACHE PATH "")
 
-  set(CMAKE_CXX_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2023_02_15_15_57_09/spack/lib/spack/env/gcc/g++" CACHE PATH "")
+  set(CMAKE_CXX_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2023_03_10_11_20_00/spack/lib/spack/env/gcc/g++" CACHE PATH "")
 
-  set(CMAKE_Fortran_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2023_02_15_15_57_09/spack/lib/spack/env/gcc/gfortran" CACHE PATH "")
+  set(CMAKE_Fortran_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2023_03_10_11_20_00/spack/lib/spack/env/gcc/gfortran" CACHE PATH "")
 
 else()
 
@@ -53,9 +53,9 @@ set(ENABLE_OPENMP ON CACHE BOOL "")
 # TPLs
 #------------------------------------------------------------------------------
 
-set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2023_02_15_15_57_09/gcc-8.3.1" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2023_03_10_11_20_00/gcc-8.3.1" CACHE PATH "")
 
-set(AXOM_DIR "${TPL_ROOT}/axom-0.7.0.4-oqeigujmn5fbb4bb4ttug52l5icfqqqv" CACHE PATH "")
+set(AXOM_DIR "${TPL_ROOT}/axom-0.7.0.4-xq4gh35rax3fcks4srzc5ecvvtx57psb" CACHE PATH "")
 
 set(CAMP_DIR "${TPL_ROOT}/camp-2022.03.2-rjiswezffi2izngkgchg3lnkua2ch6q2" CACHE PATH "")
 
@@ -63,7 +63,7 @@ set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.8.4-5e7evrrxfsg3gd2iuyqlsikzfbwnqojp" CAC
 
 set(LUA_DIR "${TPL_ROOT}/lua-5.4.4-xccstlf7tyruchwcvn3ximuhywi4iqoy" CACHE PATH "")
 
-set(MFEM_DIR "${TPL_ROOT}/mfem-4.5.2.1-h6v4amfko3ixghh4ch3gngh2kuxjm7w2" CACHE PATH "")
+set(MFEM_DIR "${TPL_ROOT}/mfem-4.5.2.1-p65yfuxfasgeqz643pbkh7llj373w7ev" CACHE PATH "")
 
 set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.21-d4sn5d67vd7jrefi445tyvvmm3gmbrbk" CACHE PATH "")
 
@@ -87,7 +87,7 @@ set(CALIPER_DIR "${TPL_ROOT}/caliper-2.7.0-fpfbjauj7op5cprrydvip5hn2peuhtwk" CAC
 
 set(RAJA_DIR "${TPL_ROOT}/raja-2022.03.0-svu4goskih3acv42el6u4k37tvmgparo" CACHE PATH "")
 
-set(SUNDIALS_DIR "${TPL_ROOT}/sundials-5.7.0-z32zmlvcobj3iv4ucasb5a2epeemag7a" CACHE PATH "")
+set(SUNDIALS_DIR "${TPL_ROOT}/sundials-6.4.1-m7vbqkiq4guqwnhxw2gxrh6r7aazcaqo" CACHE PATH "")
 
 set(UMPIRE_DIR "${TPL_ROOT}/umpire-2022.03.1-4axdjcbb2k73om5suml7mzr5mzrjnpcp" CACHE PATH "")
 

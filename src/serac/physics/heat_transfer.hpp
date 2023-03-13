@@ -42,7 +42,7 @@ const DirectSolverOptions direct_linear_options = {.print_level = 0};
 /**
  * @brief Reasonable defaults for most thermal nonlinear solver options
  */
-const NonlinearSolverOptions default_nonlinear_options = {
+const IterativeNonlinearSolverOptions default_nonlinear_options = {
     .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
 
 /**
@@ -475,7 +475,12 @@ public:
           temperature_.space().TrueVSize(),
 
           [this](const mfem::Vector& u, mfem::Vector& r) {
-            r = (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
+            const mfem::Vector res =
+                (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
+
+            // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
+            // tracking strategy
+            r = res;
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
@@ -493,7 +498,12 @@ public:
 
           [this](const mfem::Vector& du_dt, mfem::Vector& r) {
             add(1.0, u_, dt_, du_dt, u_predicted_);
-            r = (*residual_)(u_predicted_, du_dt, shape_displacement_, *parameters_[parameter_indices].state...);
+            const mfem::Vector res =
+                (*residual_)(u_predicted_, du_dt, shape_displacement_, *parameters_[parameter_indices].state...);
+
+            // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
+            // tracking strategy
+            r = res;
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
