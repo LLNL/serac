@@ -97,7 +97,10 @@ public:
    *
    * @param[in] rhs The input vector used for construction
    */
-  FiniteElementVector(const FiniteElementVector& rhs) : FiniteElementVector(*rhs.space_, rhs.name_) {}
+  FiniteElementVector(const FiniteElementVector& rhs) : FiniteElementVector(*rhs.space_, rhs.name_)
+  {
+    HypreParVector::operator=(rhs);
+  }
 
   /**
    * @brief Move construct a new Finite Element Vector object
