@@ -46,14 +46,18 @@ struct DoF {
   // - 48 index bits
   //
   // all values are immutable unsigned integers
-  const uint64_t bits;
+  uint64_t bits;
 
   DoF() : bits{} {}
+
+  DoF(const DoF & other) : bits{other.bits} {}
 
   DoF(uint64_t index, uint64_t sign = 0, uint64_t orientation = 0)
       : bits((sign & 0x1ULL << sign_shift) + ((orientation & 0x7ULL) << orientation_shift) + index)
   {
   }
+
+  void operator=(const DoF & other) { bits = other.bits; }
 
   int      sign() const { return (bits & sign_mask) ? -1 : 1; }
   uint64_t orientation() const { return ((bits & orientation_mask) >> orientation_shift); }
@@ -103,6 +107,10 @@ struct ElementRestriction {
 
   uint64_t ESize() const;
   uint64_t LSize() const;
+
+  // sam: I tried using mfem::Array here to better conform to the mfem style, 
+  // but that container explicitly won't hold nontrivial types (?)
+  void GetElementVDofs(int i, std::vector<DoF> &dofs) const;
 
   DoF  GetVDof(DoF node, uint64_t component) const;
   void Gather(const mfem::Vector& L_vector, mfem::Vector& E_vector) const;

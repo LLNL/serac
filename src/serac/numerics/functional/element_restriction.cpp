@@ -433,6 +433,15 @@ DoF ElementRestriction::GetVDof(DoF node, uint64_t component) const
   }
 }
 
+void ElementRestriction::GetElementVDofs(int i, std::vector<DoF> &vdofs) const
+{
+  for (uint64_t c = 0; c < components; c++) {
+    for (uint64_t j = 0; j < nodes_per_elem; j++) {
+      vdofs[int(c * nodes_per_elem + j)] = GetVDof(dof_info(i, j), c);
+    }
+  }
+}
+
 void ElementRestriction::Gather(const mfem::Vector& L_vector, mfem::Vector& E_vector) const
 {
   for (uint64_t i = 0; i < num_elements; i++) {

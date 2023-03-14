@@ -343,6 +343,10 @@ struct GradientAssemblyLookupTables {
     
   }
 
+  uint32_t operator()(int i, int j) const {
+    return nz_LUT.at({uint32_t(i), uint32_t(j)});
+  }
+
   /// @brief how many nonzero entries appear in the sparse matrix
   uint32_t nnz;
 

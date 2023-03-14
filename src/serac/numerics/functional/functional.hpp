@@ -534,10 +534,12 @@ private:
       for (auto& integral : form_.integrals_) {
 
         auto & K_elem = element_gradients[integral.type];
+        auto & test_restrictions = form_.G_test_[integral.type].restrictions;
+        auto & trial_restrictions = form_.G_trial_[integral.type][which_argument].restrictions;
 
         if (K_elem.empty()) {
-          for (auto & [geom, test_restriction] : form_.G_test_[integral.type].restrictions) {
-            auto & trial_restriction = form_.G_trial_[integral.type][which_argument].restrictions[geom];
+          for (auto & [geom, test_restriction] : test_restrictions) {
+            auto & trial_restriction = trial_restrictions[geom];
 
             K_elem[geom] = ExecArray<double, 3, exec>(
               test_restriction.num_elements, 
@@ -551,23 +553,45 @@ private:
         integral.ComputeElementGradients(K_elem, which_argument);
       }
 
-      #if 0
       for (auto type : Integral::Types) {
-        auto & K_elem = element_gradients[type];
-        for (auto [geom, elem_matrices] : K_elem) {
-          auto & LUT = lookup_tables.[type][geom];
 
-          for (axom::IndexType e = 0; e < elem_matrices.shape()[0]; e++) {
-            for (axom::IndexType i = 0; i < elem_matrices.shape()[1]; i++) {
-              for (axom::IndexType j = 0; j < elem_matrices.shape()[2]; j++) {
-                auto [index, sign] = LUT(e, j, i);
-                values[index] += sign * elem_matrices(e, i, j);
+        auto & K_elem = element_gradients[type];
+        auto & test_restrictions = form_.G_test_[type].restrictions;
+        auto & trial_restrictions = form_.G_trial_[type][which_argument].restrictions;
+
+        if (!K_elem.empty()) {
+
+          for (auto [geom, elem_matrices] : K_elem) {
+
+            std::vector<DoF> test_vdofs(int(test_restrictions[geom].nodes_per_elem * test_restrictions[geom].components));
+            std::vector<DoF> trial_vdofs(int(trial_restrictions[geom].nodes_per_elem * trial_restrictions[geom].components));
+
+            for (axom::IndexType e = 0; e < elem_matrices.shape()[0]; e++) {
+
+              test_restrictions[geom].GetElementVDofs(e, test_vdofs);
+              trial_restrictions[geom].GetElementVDofs(e, trial_vdofs);
+
+              for (axom::IndexType i = 0; i < elem_matrices.shape()[1]; i++) {
+                int row = int(test_vdofs[i].index());
+                for (axom::IndexType j = 0; j < elem_matrices.shape()[2]; j++) {
+                  int col = int(trial_vdofs[j].index());
+
+                  int sign = test_vdofs[i].sign() * trial_vdofs[j].sign();
+
+                  // note: col / row and backwards here, because the element matrix kernel
+                  //       is actually transposed, as a result of being row-major storage.
+                  //       
+                  //       This is kind of confusing, and will be fixed in a future refactor
+                  //       of the element gradient kernel implementation
+                  values[lookup_tables(col, row)] += sign * elem_matrices(e, i, j);
+                }
               }
             }
           }
+
         }
+
       }
-      #endif
 
       // Copy the column indices to an auxilliary array as MFEM can mutate these during HypreParMatrix construction
       col_ind_copy_ = lookup_tables.col_ind;
