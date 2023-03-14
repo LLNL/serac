@@ -171,7 +171,7 @@ int main(int argc, char* argv[])
   auto                     dqoi_du = get<1>(qoi(DifferentiateWRT<0>{}, simulation.displacement()));
   adjoint_load                     = *assemble(dqoi_du);
 
-  simulation.solveAdjoint(adjoint_load);
+  simulation.solveAdjoint({{"displacement", adjoint_load}});
 
   auto& dqoi_dalpha = simulation.computeSensitivity(1);
 
