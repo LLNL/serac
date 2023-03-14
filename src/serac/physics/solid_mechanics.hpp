@@ -718,18 +718,28 @@ public:
   /**
    * @brief Solve the adjoint problem
    * @pre It is expected that the forward analysis is complete and the current displacement state is valid
-   * @note If the essential boundary state is not specified, homogeneous essential boundary conditions are applied
+   * @pre The adjoint load maps are expected to contain a single entry named "displacement"
+   * @note If the essential boundary dual is not specified, homogeneous essential boundary conditions are applied to
+   * the adjoint system
    *
-   * @param[in] adjoint_load The dual state that contains the right hand side of the adjoint system (d quantity of
-   * interest/d displacement)
-   * @param[in] dual_with_essential_boundary A optional finite element dual containing the non-homogenous essential
-   * boundary condition data for the adjoint problem
-   * @return The computed adjoint finite element state
+   * @param adjoint_loads An unordered map containing finite element duals representing the RHS of the adjoint equations
+   * indexed by their name
+   * @param adjoint_with_essential_boundary A unordered map containing finite element states representing the
+   * non-homogeneous essential boundary condition data for the adjoint problem indexed their name
+   * @return An unordered map of the adjoint solutions indexed by their name. It has a single entry named
+   * "adjoint_displacement"
    */
-  virtual const serac::FiniteElementState& solveAdjoint(
-      FiniteElementDual& adjoint_load, FiniteElementDual* dual_with_essential_boundary = nullptr) override
+  const std::unordered_map<std::string, const serac::FiniteElementState&> solveAdjoint(
+      std::unordered_map<std::string, const serac::FiniteElementDual&>  adjoint_loads,
+      std::unordered_map<std::string, const serac::FiniteElementState&> adjoint_with_essential_boundary = {}) override
   {
-    mfem::HypreParVector adjoint_load_vector(adjoint_load);
+    SLIC_ERROR_ROOT_IF(adjoint_loads.size() != 1,
+                       "Adjoint load container is not the expected size of 1 in the solid mechanics module.");
+
+    auto disp_adjoint_load = adjoint_loads.find("displacement");
+
+    SLIC_ERROR_ROOT_IF(disp_adjoint_load == adjoint_loads.end(), "Adjoint load for \"displacement\" not found.");
+    mfem::HypreParVector adjoint_load_vector(disp_adjoint_load->second);
 
     // Add the sign correction to move the term to the RHS
     adjoint_load_vector *= -1.0;
@@ -737,7 +747,7 @@ public:
     auto& lin_solver = nonlin_solver_.LinearSolver();
 
     // By default, use a homogeneous essential boundary condition
-    mfem::HypreParVector adjoint_essential(adjoint_load);
+    mfem::HypreParVector adjoint_essential(disp_adjoint_load->second);
     adjoint_essential = 0.0;
 
     // sam: is this the right thing to be doing for dynamics simulations,
@@ -748,8 +758,16 @@ public:
     auto J_T      = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
     // If we have a non-homogeneous essential boundary condition, extract it from the given state
-    if (dual_with_essential_boundary) {
-      adjoint_essential = *dual_with_essential_boundary;
+    auto essential_adjoint_disp = adjoint_with_essential_boundary.find("displacement");
+
+    if (essential_adjoint_disp != adjoint_with_essential_boundary.end()) {
+      adjoint_essential = essential_adjoint_disp->second;
+    } else {
+      // If the essential adjoint load container does not have a displacement dual but it has a non-zero size, the
+      // user has supplied an incorrectly-named dual vector.
+      SLIC_ERROR_IF(adjoint_with_essential_boundary.size() != 0,
+                    "Essential adjoint boundary condition given for an unexpected primal field. Expected adjoint "
+                    "boundary condition named \"displacement\"");
     }
 
     for (const auto& bc : bcs_.essentials()) {
@@ -759,7 +777,7 @@ public:
     lin_solver.SetOperator(*J_T);
     lin_solver.Mult(adjoint_load_vector, adjoint_displacement_);
 
-    return adjoint_displacement_;
+    return {{"adjoint_displacement", adjoint_displacement_}};
   }
 
   /**
