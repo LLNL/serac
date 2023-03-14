@@ -241,7 +241,7 @@ auto batch_apply_chain_rule(derivative_type* qf_derivatives, const tensor<T, n>&
 
 template <int Q, mfem::Geometry::Type g, typename test, typename trial, typename derivatives_type>
 void action_of_gradient_kernel(const double * dU, double * dR,
-                               derivatives_type * qf_derivatives, const double * jacobians,
+                               derivatives_type * qf_derivatives,
                                std::size_t num_elements)
 {
   using test_element  = finite_element<g, test>;
@@ -252,7 +252,6 @@ void action_of_gradient_kernel(const double * dU, double * dR,
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
-  [[maybe_unused]] auto J  = reinterpret_cast<const typename batched_jacobian<g, Q>::type*>(jacobians);
   auto                  du = reinterpret_cast<const typename trial_element::dof_type*>(dU);
   auto                  dr = reinterpret_cast<typename test_element::dof_type*>(dR);
   static constexpr TensorProductQuadratureRule<Q> rule{};
@@ -293,7 +292,7 @@ void action_of_gradient_kernel(const double * dU, double * dR,
  */
 template <mfem::Geometry::Type g, typename test, typename trial, int Q, typename derivatives_type>
 void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
-                             CPUArrayView<derivatives_type, 2>             qf_derivatives, const mfem::Vector&,
+                             derivatives_type *                            qf_derivatives,
                              std::size_t                                   num_elements)
 {
   // quantities of interest have no flux term, so we pad the derivative
@@ -315,9 +314,9 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
     tensor<padded_derivative_type, nquad> derivatives{};
     for (int q = 0; q < nquad; q++) {
       if constexpr (is_QOI) {
-        get<0>(derivatives(q)) = qf_derivatives(e, q);
+        get<0>(derivatives(q)) = qf_derivatives[e * nquad + q];
       } else {
-        derivatives(q) = qf_derivatives(e, q);
+        derivatives(q) = qf_derivatives[e * nquad + q];
       }
     }
 
@@ -342,18 +341,23 @@ std::function<void(const std::vector<const double*>&, double*, bool)> evaluation
 }
 
 template < int wrt, int Q, mfem::Geometry::Type geom, typename signature, typename derivative_type >
-std::function<void(const double*, double*)> jvp_kernel(signature, const double* jacobians,
+std::function<void(const double*, double*)> jvp_kernel(signature,
     std::shared_ptr<derivative_type> qf_derivatives, uint32_t num_elements) {
   return [=](const double * du, double * dr){
     using test_space = typename signature::return_type;
     using trial_space = typename std::tuple_element<wrt, typename signature::parameter_types >::type;
-    action_of_gradient_kernel< Q, geom, test_space, trial_space >(du, dr, qf_derivatives.get(), jacobians, num_elements);
+    action_of_gradient_kernel< Q, geom, test_space, trial_space >(du, dr, qf_derivatives.get(), num_elements);
   };
 }
 
-template < typename lambda_type >
-std::function<void(ExecArrayView<double, 3, ExecutionSpace::CPU>)> element_gradient_kernel(lambda_type) {
-  return {};
+template < int wrt, int Q, mfem::Geometry::Type geom, typename signature, typename derivative_type >
+std::function<void(ExecArrayView<double, 3, ExecutionSpace::CPU>)> element_gradient_kernel(signature,
+  std::shared_ptr<derivative_type> qf_derivatives, uint32_t num_elements) {
+  return [=](ExecArrayView<double, 3, ExecutionSpace::CPU> K_elem){
+    using test_space = typename signature::return_type;
+    using trial_space = typename std::tuple_element<wrt, typename signature::parameter_types >::type;
+    element_gradient_kernel< geom, test_space, trial_space, Q >(K_elem, qf_derivatives.get(), num_elements);
+  };
 }
 
 }  // namespace domain_integral

@@ -442,12 +442,12 @@ void action_of_gradient_kernel(const double * dU, double * dR,
  */
 template <mfem::Geometry::Type g, typename test, typename trial, int Q, typename derivatives_type>
 void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
-                             CPUArrayView<derivatives_type, 2> qf_derivatives, std::size_t num_elements)
+                             derivatives_type * qf_derivatives, std::size_t num_elements)
 {
   using test_element  = finite_element<g, test>;
   using trial_element = finite_element<g, trial>;
 
-  constexpr int nquad = (g == mfem::Geometry::SQUARE) ? Q * Q : Q;
+  constexpr int nquad = num_quadrature_points(g, Q);
 
   static constexpr TensorProductQuadratureRule<Q> rule{};
 
@@ -457,7 +457,7 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
 
     tensor<derivatives_type, nquad> derivatives{};
     for (int q = 0; q < nquad; q++) {
-      derivatives(q) = qf_derivatives(e, q);
+      derivatives(q) = qf_derivatives[e * nquad + q];
     }
 
     for (int J = 0; J < trial_element::ndof; J++) {
@@ -481,7 +481,7 @@ std::function<void(const std::vector<const double*>&, double*, bool)> evaluation
 }
 
 template < int wrt, int Q, mfem::Geometry::Type geom, typename signature, typename derivative_type >
-std::function<void(const double*, double*)> jvp_kernel(signature, const double* /*jacobians*/,
+std::function<void(const double*, double*)> jvp_kernel(signature, 
     std::shared_ptr<derivative_type> qf_derivatives, uint32_t num_elements) {
   return [=](const double * du, double * dr){
     using test_space = typename signature::return_type;
@@ -490,9 +490,14 @@ std::function<void(const double*, double*)> jvp_kernel(signature, const double* 
   };
 }
 
-template < typename lambda_type >
-std::function<void(ExecArrayView<double, 3, ExecutionSpace::CPU>)> element_gradient_kernel(lambda_type) {
-  return {};
+template < int wrt, int Q, mfem::Geometry::Type geom, typename signature, typename derivative_type >
+std::function<void(ExecArrayView<double, 3, ExecutionSpace::CPU>)> element_gradient_kernel(signature,
+  std::shared_ptr<derivative_type> qf_derivatives, uint32_t num_elements) {
+  return [=](ExecArrayView<double, 3, ExecutionSpace::CPU> K_elem){
+    using test_space = typename signature::return_type;
+    using trial_space = typename std::tuple_element<wrt, typename signature::parameter_types >::type;
+    element_gradient_kernel< geom, test_space, trial_space, Q >(K_elem, qf_derivatives.get(), num_elements);
+  };
 }
 
 }  // namespace boundary_integral

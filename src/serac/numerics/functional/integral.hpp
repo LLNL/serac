@@ -130,8 +130,8 @@ void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, 
     integral.evaluation_with_AD_[index][geom] = domain_integral::evaluation_kernel<index, Q, geom>(
       s, qf, positions, jacobians, qf_state, ptr, num_elements);
     
-    integral.jvp_[index][geom] = domain_integral::jvp_kernel<index, Q, geom>(s, jacobians, ptr, num_elements);
-    integral.element_gradient_[index][geom] = domain_integral::element_gradient_kernel(qf);
+    integral.jvp_[index][geom] = domain_integral::jvp_kernel<index, Q, geom>(s, ptr, num_elements);
+    integral.element_gradient_[index][geom] = domain_integral::element_gradient_kernel< index, Q, geom>(s, ptr, num_elements);
   });
 }
 
@@ -190,8 +190,8 @@ void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral& integr
     integral.evaluation_with_AD_[index][geom] = boundary_integral::evaluation_kernel<index, Q, geom>(
       s, qf, positions, jacobians, ptr, num_elements);
     
-    integral.jvp_[index][geom] = boundary_integral::jvp_kernel<index, Q, geom>(s, jacobians, ptr, num_elements);
-    integral.element_gradient_[index][geom] = boundary_integral::element_gradient_kernel(qf);
+    integral.jvp_[index][geom] = boundary_integral::jvp_kernel<index, Q, geom>(s, ptr, num_elements);
+    integral.element_gradient_[index][geom] = boundary_integral::element_gradient_kernel<index, Q, geom>(s, ptr, num_elements);
   });
 }
 

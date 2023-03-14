@@ -300,7 +300,7 @@ struct finite_element<mfem::Geometry::TRIANGLE, H1<p, c> > {
       auto& d10 = get<0>(get<1>(input(i)));
       auto& d11 = get<1>(get<1>(input(i)));
 
-      output[q] = {d00 * phi_j + dot(d01, dphi_j_dxi), d10 * phi_j + dot(d11, dphi_j_dxi)};
+      output[i] = {d00 * phi_j + dot(d01, dphi_j_dxi), d10 * phi_j + dot(d11, dphi_j_dxi)};
     }
 
     return output;

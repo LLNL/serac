@@ -524,7 +524,7 @@ mfem::Array<int> BlockElementRestriction::bOffsets() const {
     } else {
       offsets[g+1] = offsets[g];
     }
-    std::cout << g << " " << offsets[g+1] << std::endl;
+    //std::cout << g << " " << offsets[g+1] << std::endl;
   }
   return offsets;
 };

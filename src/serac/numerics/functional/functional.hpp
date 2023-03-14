@@ -244,19 +244,26 @@ public:
       input_L_[i].SetSize(P_trial_[i]->Height(), mfem::Device::GetMemoryType());
 
       for (auto type : {Integral::Type::Domain, Integral::Type::Boundary}) {
-        G_trial_[type][i] = BlockElementRestriction(trial_fes[i]);
+        if (type == Integral::Type::Domain) {
+          G_trial_[type][i] = BlockElementRestriction(trial_fes[i]);
+        } else {
+          G_trial_[type][i] = BlockElementRestriction(trial_fes[i], FaceType::BOUNDARY);
+        }
 
         // note: we have to use "Update" here, as mfem::BlockVector's
         // copy assignment ctor (operator=) doesn't let you make changes
         // to the block size
         input_E_[type][i].Update(G_trial_[type][i].bOffsets(), mem_type);
       }
-
-      grad_.emplace_back(*this, i);
     }
 
     for (auto type : {Integral::Type::Domain, Integral::Type::Boundary}) {
-      G_test_[type] = BlockElementRestriction(test_fes);
+      if (type == Integral::Type::Domain) {
+        G_test_[type] = BlockElementRestriction(test_fes);
+      } else {
+        G_test_[type] = BlockElementRestriction(test_fes, FaceType::BOUNDARY);
+      }
+
       output_E_[type].Update(G_test_[type].bOffsets(), mem_type);
     }
 
@@ -265,6 +272,13 @@ public:
     output_L_.SetSize(P_test_->Height(), mem_type);
 
     output_T_.SetSize(test_fes->GetTrueVSize(), mem_type);
+
+    // gradient objects depend on some member variables in
+    // Functional, so we initialize the gradient objects last 
+    // to ensure that those member variables are initialized first
+    for (uint32_t i = 0; i < num_trial_spaces; i++) {
+      grad_.emplace_back(*this, i);
+    }
 
   }
 
@@ -578,11 +592,12 @@ private:
 
                   int sign = test_vdofs[i].sign() * trial_vdofs[j].sign();
 
-                  // note: col / row and backwards here, because the element matrix kernel
+                  // note: col / row appear backwards here, because the element matrix kernel
                   //       is actually transposed, as a result of being row-major storage.
                   //       
                   //       This is kind of confusing, and will be fixed in a future refactor
                   //       of the element gradient kernel implementation
+                  [[maybe_unused]] auto nz = lookup_tables(col, row);
                   values[lookup_tables(col, row)] += sign * elem_matrices(e, i, j);
                 }
               }
