@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
 {
   MPI_Init(&argc, &argv);
 
-  axom::slic::SimpleLogger logger;
+  axom::slic::SimpleLogger logger; 
 
   constexpr int p                   = 1;
   constexpr int dim                 = 3;

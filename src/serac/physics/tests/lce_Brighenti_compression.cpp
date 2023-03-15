@@ -20,7 +20,7 @@
 // #undef LOAD_DRIVEN
 
 using namespace serac;
-
+ 
 using serac::solid_mechanics::default_static_options;
 
 int main(int argc, char* argv[]) {

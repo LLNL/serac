@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
   double density = 1.0;
   double young_modulus = 1.0;
   double possion_ratio = 0.49;
-  double beta_param = 0.041;
+  double beta_param = 0.041; 
   double max_order_param = 0.7;
 
   // Parameter 1

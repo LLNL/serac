@@ -18,7 +18,7 @@
 
 using namespace serac;
 
-#define PERIODIC_MESH
+#define PERIODIC_MESH 
 // #undef PERIODIC_MESH
 
 const static int problemID = 1;

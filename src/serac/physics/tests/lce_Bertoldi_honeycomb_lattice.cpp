@@ -82,7 +82,7 @@ int main(int argc, char* argv[])
   NonlinearSolverOptions default_nonlinear_options = {
     .rel_tol = 1.0e-6, .abs_tol = 1.0e-10, .max_iter = 35, .print_level = 1};
 
-#ifdef ALT_ITER_SOLVER
+#ifdef ALT_ITER_SOLVER 
   auto custom_solver  = std::make_unique<mfem::GMRESSolver>(MPI_COMM_WORLD);
   custom_solver->SetRelTol(1.0e-8);
   custom_solver->SetAbsTol(1.0e-16);

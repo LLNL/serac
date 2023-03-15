@@ -24,7 +24,7 @@
 // #undef FULL_DOMAIN
 
 using namespace serac;
-
+ 
 using serac::solid_mechanics::default_static_options;
 
 int main(int argc, char* argv[]) {

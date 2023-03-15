@@ -21,7 +21,7 @@
 
 // #define FULL_DOMAIN
 #undef FULL_DOMAIN
-
+ 
 using namespace serac;
 
 using serac::solid_mechanics::default_static_options;

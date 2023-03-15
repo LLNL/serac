@@ -16,7 +16,7 @@
 #include "serac/physics/solid_mechanics.hpp"
 #include "serac/physics/materials/liquid_crystal_elastomer.hpp"
 
-using namespace serac;
+using namespace serac; 
 
 using serac::solid_mechanics::default_static_options;
 

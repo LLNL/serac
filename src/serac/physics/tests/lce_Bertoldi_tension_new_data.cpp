@@ -22,7 +22,7 @@
 // #define FULL_DOMAIN
 #undef FULL_DOMAIN
 
-// #define NEMATIC_STATE
+// #define NEMATIC_STATE 
 #undef NEMATIC_STATE
 
 using namespace serac;

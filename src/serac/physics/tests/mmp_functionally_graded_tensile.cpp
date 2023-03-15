@@ -196,7 +196,7 @@ int main(int argc, char* argv[])
 #ifdef FULL_DOMAIN
   maxLoadVal *= 4;
 #endif
-
+ 
   double loadVal = iniLoadVal + 0.0 * maxLoadVal;
   solid_solver.setPiolaTraction([&loadVal, lx](auto x, auto /*n*/, auto /*t*/){
     return tensor<double, 3>{loadVal * (x[0]>0.98*lx), 0, 0};
