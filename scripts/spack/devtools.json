@@ -3,6 +3,7 @@
 "package_version" : "fakeversion",
 "package_source_dir" : "../..",
 "package_final_phase" : "",
+"spack_build_mode" : "install",
 "spack_url": "https://github.com/spack/spack.git",
 "spack_commit": "6ebf9f65c0f5642e597bd190e4d6d48f2f813dea",
 "spack_configs_path": "scripts/spack/devtools_configs",
