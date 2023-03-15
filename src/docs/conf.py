@@ -23,8 +23,15 @@ if read_the_docs_build:
     fdata = fdata.replace('@PROJECT_SOURCE_DIR@', os.path.abspath('../..'))
     with open('./doxygen/Doxyfile.in', 'w') as f:
         f.write(fdata)
+
+    if 'READTHEDOCS_OUTPUT' in os.environ:
+        _output_dir = os.environ.get('READTHEDOCS_OUTPUT')
+    else:
+        print("ERROR: Could not determine READTHEDOCS_OUTPUT from environment")
+        sys.exit(1)
+    _doxygen_output_dir = os.path.join(_output_dir, "html", "doxygen")
     with open('./doxygen/Doxyfile.in', 'a') as f:
-        f.write("\nOUTPUT_DIRECTORY=../../_readthedocs/html/doxygen")
+        f.write("\nOUTPUT_DIRECTORY={0}".format(_doxygen_output_dir))
 
     # Call doxygen
     from subprocess import call
