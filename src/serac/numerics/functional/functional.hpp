@@ -586,19 +586,20 @@ private:
               trial_restrictions[geom].GetElementVDofs(e, trial_vdofs);
 
               for (axom::IndexType i = 0; i < elem_matrices.shape()[1]; i++) {
-                int row = int(test_vdofs[i].index());
-                for (axom::IndexType j = 0; j < elem_matrices.shape()[2]; j++) {
-                  int col = int(trial_vdofs[j].index());
+                int col = int(trial_vdofs[i].index());
 
-                  int sign = test_vdofs[i].sign() * trial_vdofs[j].sign();
+                for (axom::IndexType j = 0; j < elem_matrices.shape()[2]; j++) {
+                  int row = int(test_vdofs[j].index());
+
+                  int sign = test_vdofs[j].sign() * trial_vdofs[i].sign();
 
                   // note: col / row appear backwards here, because the element matrix kernel
                   //       is actually transposed, as a result of being row-major storage.
                   //       
                   //       This is kind of confusing, and will be fixed in a future refactor
                   //       of the element gradient kernel implementation
-                  [[maybe_unused]] auto nz = lookup_tables(col, row);
-                  values[lookup_tables(col, row)] += sign * elem_matrices(e, i, j);
+                  [[maybe_unused]] auto nz = lookup_tables(row, col);
+                  values[lookup_tables(row, col)] += sign * elem_matrices(e, i, j);
                 }
               }
             }

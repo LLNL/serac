@@ -90,11 +90,11 @@ void thermal_test()
 TEST(basic, thermal_test_2D) { thermal_test<1, 1, 2>(); }
 TEST(basic, thermal_test_3D) { thermal_test<1, 1, 3>(); }
 
-// TEST(mixed, thermal_test_2D_0) { thermal_test<1, 2, 2>(); }
-// TEST(mixed, thermal_test_2D_1) { thermal_test<2, 1, 2>(); }
+TEST(mixed, thermal_test_2D_0) { thermal_test<1, 2, 2>(); }
+TEST(mixed, thermal_test_2D_1) { thermal_test<2, 1, 2>(); }
 
-// TEST(mixed, thermal_test_3D_0) { thermal_test<1, 2, 3>(); }
-// TEST(mixed, thermal_test_3D_1) { thermal_test<2, 1, 3>(); }
+TEST(mixed, thermal_test_3D_0) { thermal_test<1, 2, 3>(); }
+TEST(mixed, thermal_test_3D_1) { thermal_test<2, 1, 3>(); }
 
 int main(int argc, char* argv[])
 {
