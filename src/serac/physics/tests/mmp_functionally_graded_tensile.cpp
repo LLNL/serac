@@ -49,12 +49,13 @@ int main(int argc, char* argv[])
 #endif
 
   // Construct the appropriate dimension mesh and give it to the data store
-  int nElem = 3;
-  double lx = 0.5e-3, ly = 0.1e-3, lz = 0.05e-3;
+  int nElem = 4;
+  double lx = 9.53e-3, ly = 3.18e-3, lz = 2.e-3;
+  // double lx = 0.5e-3, ly = 0.1e-3, lz = 0.05e-3;
 #ifdef FULL_DOMAIN
-  ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(5*nElem, nElem, 1, mfem::Element::HEXAHEDRON, lx, ly, lz));
+  ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(10*nElem, 3*nElem, 2*nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
 #else
-  lx *= 0.5;
+  ly *= 0.5;
   lz *= 0.5;
   ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(2*nElem, 2*nElem, 1, mfem::Element::HEXAHEDRON, lx, ly, lz));
 #endif
@@ -80,23 +81,36 @@ int main(int argc, char* argv[])
                                                        .lin_solver  = LinearSolver::GMRES,
                                                        .prec        = HypreBoomerAMGPrec{}};
   NonlinearSolverOptions default_nonlinear_options = {
-    .rel_tol = 1.0e-6, .abs_tol = 1.0e-14, .max_iter = 2, .print_level = 1};
-  SolidMechanics<p, dim, Parameters< H1<p>, H1<p> > > solid_solver({default_linear_options, default_nonlinear_options}, GeometricNonlinearities::Off,
+    .rel_tol = 1.0e-6, .abs_tol = 1.0e-14, .max_iter = 10, .print_level = 1};
+  // SolidMechanics<p, dim, Parameters< H1<p>, H1<p> > > solid_solver({default_linear_options, default_nonlinear_options}, GeometricNonlinearities::Off,
+  //                                      "mmp_solid_functional");
+    SolidMechanics<p, dim, Parameters< L2<p>, L2<p> > > solid_solver({default_linear_options, default_nonlinear_options}, GeometricNonlinearities::Off,
                                        "mmp_solid_functional");
 
   // Material properties
   double density = 1.0;
-  double possionRat = 0.49;
+  double possionRat = 0.3; // 0.49;
   double maxElasticityParam = 500.0;
   double minElasticityParam = 1.0;
 
   // Parameter 1
-  FiniteElementState EmodParam(StateManager::newState(FiniteElementState::Options{.order = p, .name = "EmodParam"}));
+  FiniteElementState EmodParam(StateManager::newState(FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "EmodParam"}));
   int problemTag = 1;
   auto EmodFunc = [problemTag,lx,minElasticityParam,maxElasticityParam](const mfem::Vector& x, double) -> double 
   {
     double Emod = 1.0;
     if (problemTag==1)
+    {
+      if(x[0]>lx/2.0)
+      {
+        Emod = maxElasticityParam;
+      }
+      else
+      {
+        Emod = minElasticityParam;
+      }
+    }
+    else if (problemTag==2)
     {
       if(x[0]>lx/2.0)
       {
@@ -114,11 +128,22 @@ int main(int argc, char* argv[])
   EmodParam.project(EmodCoef);
 
     // Parameter 2
-  FiniteElementState GmodParam(StateManager::newState(FiniteElementState::Options{.order = p, .name = "GmodParam"}));
+  FiniteElementState GmodParam(StateManager::newState(FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "GmodParam"}));
   auto GmodFunc = [problemTag,lx,minElasticityParam,maxElasticityParam,possionRat](const mfem::Vector& x, double) -> double 
   {
     double Emod = 1.0;
     if (problemTag==1)
+    {
+      if(x[0]>lx/2.0)
+      {
+        Emod = maxElasticityParam;
+      }
+      else
+      {
+        Emod = minElasticityParam;
+      }
+    }
+    else if (problemTag==2)
     {
       if(x[0]>lx/2.0)
       {
@@ -163,9 +188,10 @@ int main(int argc, char* argv[])
 #ifdef LOAD_DRIVEN
 
   auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0000005; };
-  double iniLoadVal = 1.0e-2;
+  double iniLoadVal = 1.0e-4;
 
-double maxLoadVal = 1.5e0;
+  // double maxLoadVal = 0.25 * 1.0e1 /ly/lz ; // 2.0e6*ly*lz/4.0; // 1.5e0; // 6.36e-6
+  double maxLoadVal = 0.25 * 1.0e-5 /ly/lz ; // 2.0e6*ly*lz/4.0; // 1.5e0; // 6.36e-6
 
 #ifdef FULL_DOMAIN
   maxLoadVal *= 4;
@@ -173,7 +199,7 @@ double maxLoadVal = 1.5e0;
 
   double loadVal = iniLoadVal + 0.0 * maxLoadVal;
   solid_solver.setPiolaTraction([&loadVal, lx](auto x, auto /*n*/, auto /*t*/){
-    return tensor<double, 3>{loadVal * (x[0]>0.99*lx), 0, 0};
+    return tensor<double, 3>{loadVal * (x[0]>0.98*lx), 0, 0};
   });
 
 #else
@@ -188,7 +214,7 @@ double maxLoadVal = 1.5e0;
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  int num_steps = 20;
+  int num_steps = 50;
   
 #ifdef LOAD_DRIVEN
   std::string outputFilename = "sol_mmp_tensile_load";
@@ -209,7 +235,7 @@ double maxLoadVal = 1.5e0;
 #ifdef LOAD_DRIVEN
     // loadVal = iniLoadVal +  t / tmax * (maxLoadVal - iniLoadVal);
     // loadVal = iniLoadVal * std::exp( std::log(maxLoadVal/iniLoadVal) * t / tmax  );
-    loadVal = iniLoadVal  + (maxLoadVal - iniLoadVal) * std::pow( t / tmax, 0.75  );
+    loadVal = iniLoadVal  + (maxLoadVal - iniLoadVal) * std::pow( t / tmax, 3.0  ); // 0.75
 #else
     // elasticityParam = minElasticityParam * (tmax - t) / tmax;
 #endif
@@ -269,7 +295,14 @@ double maxLoadVal = 1.5e0;
       if(rank==0)
       {
         std::cout 
-        <<"\n... Max Y displacement: " << gblDispYmax << std::endl;
+        <<"\n... Min X displacement: " << gblDispXmin
+        <<"\n... Min Y displacement: " << gblDispYmin
+        <<"\n... Min Z displacement: " << gblDispZmin 
+
+        <<"\n\n... Max X displacement: " << gblDispXmax
+        <<"\n... Max Y displacement: " << gblDispYmax
+        <<"\n... Max Z displacement: " << gblDispZmax 
+        << std::endl;
       }
 
       if(std::isnan(gblDispYmax))
