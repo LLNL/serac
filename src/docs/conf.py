@@ -30,6 +30,7 @@ if read_the_docs_build:
         print("ERROR: Could not determine READTHEDOCS_OUTPUT from environment")
         sys.exit(1)
     _doxygen_output_dir = os.path.join(_output_dir, "html", "doxygen")
+    os.makedirs(_doxygen_output_dir, exist_ok=True)
     with open('./doxygen/Doxyfile.in', 'a') as f:
         f.write("\nOUTPUT_DIRECTORY={0}".format(_doxygen_output_dir))
 
