@@ -345,6 +345,8 @@ struct finite_element;
 #include "detail/quadrilateral_Hcurl.inl"
 #include "detail/quadrilateral_L2.inl"
 
+#include "detail/tetrahedron_H1.inl"
+
 #include "detail/hexahedron_H1.inl"
 #include "detail/hexahedron_Hcurl.inl"
 #include "detail/hexahedron_L2.inl"
