@@ -511,8 +511,9 @@ FiniteElementDual& SolidLegacy::bulkModulusSensitivity(mfem::ParFiniteElementSpa
   return *bulk_sensitivity_;
 }
 
-const FiniteElementState& SolidLegacy::solveAdjoint(FiniteElementDual& adjoint_load,
-                                                    FiniteElementDual* dual_with_essential_boundary)
+const std::unordered_map<std::string, const serac::FiniteElementState&> SolidLegacy::solveAdjoint(
+    std::unordered_map<std::string, const serac::FiniteElementDual&>  adjoint_loads,
+    std::unordered_map<std::string, const serac::FiniteElementState&> adjoint_with_essential_boundary)
 {
   SLIC_ERROR_ROOT_IF(!is_quasistatic_, "Adjoint analysis only vaild for quasistatic problems.");
   SLIC_ERROR_ROOT_IF(previous_solve_ == PreviousSolve::None, "Adjoint analysis only valid following a forward solve.");
@@ -522,10 +523,17 @@ const FiniteElementState& SolidLegacy::solveAdjoint(FiniteElementDual& adjoint_l
     mesh_.NewNodes(*reference_nodes_);
   }
 
+  SLIC_ERROR_ROOT_IF(adjoint_loads.size() != 1,
+                     "Adjoint load container is not the expected size of 1 in the solid mechanics module.");
+
+  auto disp_adjoint_load = adjoint_loads.find("displacement");
+
+  SLIC_ERROR_ROOT_IF(disp_adjoint_load == adjoint_loads.end(), "Adjoint load for \"displacement\" not found.");
+
   // note: The assignment operator must be called after the copy constructor because
   // the copy constructor only sets the partitioning, it does not copy the actual vector
   // values
-  mfem::HypreParVector adjoint_load_vector(adjoint_load);
+  mfem::HypreParVector adjoint_load_vector(disp_adjoint_load->second);
 
   auto& lin_solver = nonlin_solver_.LinearSolver();
 
@@ -533,12 +541,20 @@ const FiniteElementState& SolidLegacy::solveAdjoint(FiniteElementDual& adjoint_l
   auto  J_T = std::unique_ptr<mfem::HypreParMatrix>(J.Transpose());
 
   // By default, use a homogeneous essential boundary condition
-  mfem::HypreParVector adjoint_essential(adjoint_load);
+  mfem::HypreParVector adjoint_essential(disp_adjoint_load->second);
   adjoint_essential = 0.0;
 
   // If we have a non-homogeneous essential boundary condition, extract it from the given state
-  if (dual_with_essential_boundary) {
-    adjoint_essential = *dual_with_essential_boundary;
+  auto essential_adjoint_disp = adjoint_with_essential_boundary.find("displacement");
+
+  if (essential_adjoint_disp != adjoint_with_essential_boundary.end()) {
+    adjoint_essential = essential_adjoint_disp->second;
+  } else {
+    // If the essential adjoint load container does not have a displacement dual but it has a non-zero size, the
+    // user has supplied an incorrectly-named dual vector.
+    SLIC_ERROR_IF(adjoint_with_essential_boundary.size() != 0,
+                  "Essential adjoint boundary condition given for an unexpected primal field. Expected adjoint "
+                  "boundary condition named \"displacement\"");
   }
 
   for (const auto& bc : bcs_.essentials()) {
@@ -557,7 +573,7 @@ const FiniteElementState& SolidLegacy::solveAdjoint(FiniteElementDual& adjoint_l
 
   previous_solve_ = PreviousSolve::Adjoint;
 
-  return adjoint_displacement_;
+  return {{"adjoint_displacement", adjoint_displacement_}};
 }
 
 void SolidLegacy::InputOptions::defineInputFileSchema(axom::inlet::Container& container)

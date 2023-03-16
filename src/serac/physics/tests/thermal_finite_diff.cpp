@@ -99,7 +99,7 @@ TEST(Thermal, FiniteDifference)
   adjoint_load = *assembled_vector;
 
   // Solve the adjoint problem
-  thermal_solver.solveAdjoint(adjoint_load);
+  thermal_solver.solveAdjoint({{"temperature", adjoint_load}});
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
   [[maybe_unused]] auto& sensitivity = thermal_solver.computeSensitivity(conductivity_parameter_index);
@@ -214,7 +214,7 @@ TEST(HeatTransfer, FiniteDifferenceShape)
   adjoint_load = *assembled_vector;
 
   // Solve the adjoint problem
-  thermal_solver.solveAdjoint(adjoint_load);
+  thermal_solver.solveAdjoint({{"temperature", adjoint_load}});
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
   [[maybe_unused]] auto& sensitivity = thermal_solver.computeShapeSensitivity();
