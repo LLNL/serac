@@ -176,7 +176,7 @@ int main(int argc, char* argv[])
       std::cout << "\n\n............................"
                 << "\n... Entering time step: " << i + 1 << "\n............................\n"
                 << "\n... At time: " << t << "\n... And with a tension load of: " << loadVal << " ("
-                << loadVal / maxLoadVal * 100 << "\% of max)"
+                << loadVal / maxLoadVal * 100 << "`%` of max)"
                 << "\n... And with uniform temperature of: " << initial_temperature << std::endl;
     }
 
