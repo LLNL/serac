@@ -221,18 +221,20 @@ public:
 
   /**
    * @brief Solve the adjoint problem
-   * @pre It is expected that the forward analysis is complete and the current state is valid
-   * @note If the essential boundary state is not specified, homogeneous essential boundary conditions are applied
+   * @pre It is expected that the forward analysis is complete and the current states are valid
+   * @note If the essential boundary state for the adjoint is not specified, homogeneous essential boundary conditions
+   * are applied
    *
-   * @return The computed adjoint finite element state
+   * @return The computed adjoint finite element states
    */
-  virtual const serac::FiniteElementState& solveAdjoint(FiniteElementDual& /*adjoint_load */,
-                                                        FiniteElementDual* /* dual_with_essential_boundary */ = nullptr)
+  virtual const std::unordered_map<std::string, const serac::FiniteElementState&> solveAdjoint(
+      std::unordered_map<std::string, const serac::FiniteElementDual&> /* adjoint_loads */,
+      std::unordered_map<std::string, const serac::FiniteElementState&> /* adjoint_with_essential_boundary */)
   {
     SLIC_ERROR_ROOT(axom::fmt::format("Adjoint analysis not defined for physics module {}", name_));
 
     // Return a dummy state value to quiet the compiler. This will never get used.
-    return *states_[0];
+    return {};
   }
 
   /**

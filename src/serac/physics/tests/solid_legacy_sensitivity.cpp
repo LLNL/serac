@@ -96,7 +96,7 @@ TEST(SolidLegacy, FiniteDiff)
   assembledAdjointLoad                     = *assembledVector;
   delete assembledVector;
 
-  solid.solveAdjoint(assembledAdjointLoad);
+  solid.solveAdjoint({{"displacement", assembledAdjointLoad}});
 
   // Ask for bulk modulus sensitivity
   serac::FiniteElementDual const& bulkModulusSensitivity  = solid.bulkModulusSensitivity(&l2fespace_scalar);
@@ -241,7 +241,7 @@ TEST(SolidLegacy, MultipleDesignSpaces)
     // Create a dummy adjoint load and compute the sensitivities
     serac::FiniteElementDual adjointLoad(h1fespace_vector, "adjoint_load");
     adjointLoad = 1.1;
-    solid.solveAdjoint(adjointLoad);
+    solid.solveAdjoint({{"displacement", adjointLoad}});
     solid.shearModulusSensitivity(shearModulus.ParFESpace());
     solid.shearModulusSensitivity(bulkModulus.ParFESpace());
   }
