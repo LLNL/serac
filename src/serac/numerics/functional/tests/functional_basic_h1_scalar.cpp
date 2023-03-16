@@ -26,18 +26,8 @@ using namespace serac;
 using namespace serac::profiling;
 
 template <int ptest, int ptrial, int dim>
-void thermal_test()
+void thermal_test_impl(std::unique_ptr<mfem::ParMesh> & mesh)
 {
-  std::string meshfile;
-  if (dim == 2) {
-    // meshfile = SERAC_REPO_DIR "/data/meshes/patch2D.mesh";
-    meshfile = SERAC_REPO_DIR "/data/meshes/patch2D_tris.mesh";
-  }
-  if (dim == 3) {
-    meshfile = SERAC_REPO_DIR "/data/meshes/patch3D.mesh";
-  }
-
-  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(meshfile), 0);
 
   // Create standard MFEM bilinear and linear forms on H1
   auto                        test_fec = mfem::H1_FECollection(ptest, dim);
@@ -87,14 +77,45 @@ void thermal_test()
   check_gradient(residual, U);
 }
 
-TEST(basic, thermal_test_2D) { thermal_test<1, 1, 2>(); }
-TEST(basic, thermal_test_3D) { thermal_test<1, 1, 3>(); }
 
-TEST(mixed, thermal_test_2D_0) { thermal_test<1, 2, 2>(); }
-TEST(mixed, thermal_test_2D_1) { thermal_test<2, 1, 2>(); }
+template <int ptest, int ptrial>
+void thermal_test(std::string meshfile)
+{
+  //if (dim == 2) {
+  //  // meshfile = SERAC_REPO_DIR "/data/meshes/patch2D.mesh";
+  //  meshfile = SERAC_REPO_DIR "/data/meshes/patch2D_tris.mesh";
+  //}
+  //if (dim == 3) {
+  //  meshfile = SERAC_REPO_DIR "/data/meshes/patch3D.mesh";
+  //}
 
-TEST(mixed, thermal_test_3D_0) { thermal_test<1, 2, 3>(); }
-TEST(mixed, thermal_test_3D_1) { thermal_test<2, 1, 3>(); }
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(SERAC_REPO_DIR + meshfile), 0);
+
+  if (mesh->Dimension() == 2) {
+    thermal_test_impl< ptest, ptrial, 2 >(mesh);
+  }
+
+  if (mesh->Dimension() == 3) {
+    thermal_test_impl< ptest, ptrial, 3 >(mesh);
+  }
+
+}
+
+TEST(basic, thermal_tris)           { thermal_test<1, 1>("/data/meshes/patch2D_tris.mesh"); }
+TEST(basic, thermal_quads)          { thermal_test<1, 1>("/data/meshes/patch2D_quads.mesh"); }
+TEST(basic, thermal_tris_and_quads) { thermal_test<1, 1>("/data/meshes/patch2D_tris_and_quads.mesh"); }
+
+TEST(basic, thermal_tets)           { thermal_test<1, 1>("/data/meshes/patch3D_tets.mesh"); }
+TEST(basic, thermal_hexes)          { thermal_test<1, 1>("/data/meshes/patch3D_hexes.mesh"); }
+TEST(basic, thermal_tets_and_hexes) { thermal_test<1, 1>("/data/meshes/patch3D_tets_and_hexes.mesh"); }
+
+//TEST(basic, thermal_test_3D) { thermal_test<1, 1, 3>(); }
+//
+//TEST(mixed, thermal_test_2D_0) { thermal_test<1, 2, 2>(); }
+//TEST(mixed, thermal_test_2D_1) { thermal_test<2, 1, 2>(); }
+//
+//TEST(mixed, thermal_test_3D_0) { thermal_test<1, 2, 3>(); }
+//TEST(mixed, thermal_test_3D_1) { thermal_test<2, 1, 3>(); }
 
 int main(int argc, char* argv[])
 {
