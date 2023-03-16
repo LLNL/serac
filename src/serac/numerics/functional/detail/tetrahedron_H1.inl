@@ -56,40 +56,15 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
     if constexpr (p == 2) {
       switch(i) {
         case 0: return (-1+xi[0]+xi[1]+xi[2])*(-1+2*xi[0]+2*xi[1]+2*xi[2]);
-        case 1: return -4*xi[0]*(-1+xi[0]+xi[1]+xi[2]);
-        case 2: return xi[0]*(-1+2*xi[0]);
-        case 3: return -4*xi[1]*(-1+xi[0]+xi[1]+xi[2]);
-        case 4: return 4*xi[0]*xi[1];
-        case 5: return xi[1]*(-1+2*xi[1]);
-        case 6: return -4*xi[2]*(-1+xi[0]+xi[1]+xi[2]);
-        case 7: return 4*xi[0]*xi[2];
-        case 8: return 4*xi[1]*xi[2];
-        case 9: return xi[2]*(-1+2*xi[2]);
-      }
-    }
-    if constexpr (p == 3) {
-      double sqrt5 = 2.23606797749978981;
-      switch (i) {
-        case  0: return -((-1+xi[0]+xi[1]+xi[2])*(1+5*xi[0]*xi[0]+5*xi[1]*xi[1]+5*(-1+xi[2])*xi[2]+xi[1]*(-5+11*xi[2])+xi[0]*(-5+11*xi[1]+11*xi[2])));
-        case  1: return (5*xi[0]*(-1+xi[0]+xi[1]+xi[2])*(-1-sqrt5+2*sqrt5*xi[0]+(3+sqrt5)*xi[1]+(3+sqrt5)*xi[2]))/2.;
-        case  2: return (-5*xi[0]*(-1+xi[0]+xi[1]+xi[2])*(1-sqrt5+2*sqrt5*xi[0]+(-3+sqrt5)*xi[1]+(-3+sqrt5)*xi[2]))/2.;
-        case  3: return xi[0]*(1+5*xi[0]*xi[0]+xi[1]-xi[1]*xi[1]+xi[2]-xi[1]*xi[2]-xi[2]*xi[2]-xi[0]*(5+xi[1]+xi[2]));
-        case  4: return (5*xi[1]*(-1+xi[0]+xi[1]+xi[2])*(-1-sqrt5+(3+sqrt5)*xi[0]+2*sqrt5*xi[1]+(3+sqrt5)*xi[2]))/2.;
-        case  5: return -27*xi[0]*xi[1]*(-1+xi[0]+xi[1]+xi[2]);
-        case  6: return (5*xi[0]*xi[1]*(-2+(3+sqrt5)*xi[0]-(-3+sqrt5)*xi[1]))/2.;
-        case  7: return (-5*xi[1]*(-1+xi[0]+xi[1]+xi[2])*(1-sqrt5+(-3+sqrt5)*xi[0]+2*sqrt5*xi[1]+(-3+sqrt5)*xi[2]))/2.;
-        case  8: return (-5*xi[0]*xi[1]*(2+(-3+sqrt5)*xi[0]-(3+sqrt5)*xi[1]))/2.;
-        case  9: return xi[1]*(1-xi[0]*xi[0]+5*xi[1]*xi[1]+xi[2]-xi[2]*xi[2]-xi[1]*(5+xi[2])-xi[0]*(-1+xi[1]+xi[2]));
-        case 10: return (5*xi[2]*(-1+xi[0]+xi[1]+xi[2])*(-439204-196418*sqrt5+(710647+317811*sqrt5)*xi[0]+(710647+317811*sqrt5)*xi[1]+606965*xi[2]+271443*sqrt5*xi[2]))/(271443+121393*sqrt5);
-        case 11: return -27*xi[0]*xi[2]*(-1+xi[0]+xi[1]+xi[2]);
-        case 12: return (5*xi[0]*xi[2]*(-5-3*sqrt5+(15+7*sqrt5)*xi[0]+2*sqrt5*xi[2]))/(5+3*sqrt5);
-        case 13: return -27*xi[1]*xi[2]*(-1+xi[0]+xi[1]+xi[2]);
-        case 14: return 27*xi[0]*xi[1]*xi[2];
-        case 15: return (5*xi[1]*xi[2]*(-5-3*sqrt5+(15+7*sqrt5)*xi[1]+2*sqrt5*xi[2]))/(5+3*sqrt5);
-        case 16: return (5*xi[2]*(-1+xi[0]+xi[1]+xi[2])*(88555+39603*sqrt5+(54730+24476*sqrt5)*xi[0]+(54730+24476*sqrt5)*xi[1]-5*(64079+28657*sqrt5)*xi[2]))/(143285+64079*sqrt5);
-        case 17: return (-5*xi[0]*xi[2]*(2+(-3+sqrt5)*xi[0]-(3+sqrt5)*xi[2]))/2.;
-        case 18: return (-5*xi[1]*xi[2]*(2+(-3+sqrt5)*xi[1]-(3+sqrt5)*xi[2]))/2.;
-        case 19: return -(xi[2]*(-1+xi[0]*xi[0]+xi[1]*xi[1]+xi[1]*(-1+xi[2])-5*(-1+xi[2])*xi[2]+xi[0]*(-1+xi[1]+xi[2])));
+        case 1: return xi[0]*(-1+2*xi[0]);
+        case 2: return xi[1]*(-1+2*xi[1]);
+        case 3: return xi[2]*(-1+2*xi[2]);
+        case 4: return -4*xi[0]*(-1+xi[0]+xi[1]+xi[2]);
+        case 5: return 4*xi[0]*xi[1];
+        case 6: return -4*xi[1]*(-1+xi[0]+xi[1]+xi[2]);
+        case 7: return -4*xi[2]*(-1+xi[0]+xi[1]+xi[2]);
+        case 8: return 4*xi[0]*xi[2];
+        case 9: return 4*xi[1]*xi[2];
       }
     }
 
@@ -115,169 +90,21 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
     }
     if (p == 2) {
       switch (i) {
-        case 0:
-          return {-3 + 4 * xi[0] + 4 * xi[1] + 4 * xi[2], -3 + 4 * xi[0] + 4 * xi[1] + 4 * xi[2],
-                  -3 + 4 * xi[0] + 4 * xi[1] + 4 * xi[2]};
-        case 1:
-          return {-4 * (-1 + 2 * xi[0] + xi[1] + xi[2]), -4 * xi[0], -4 * xi[0]};
-        case 2:
-          return {-1 + 4 * xi[0], 0, 0};
-        case 3:
-          return {-4 * xi[1], -4 * (-1 + xi[0] + 2 * xi[1] + xi[2]), -4 * xi[1]};
-        case 4:
-          return {4 * xi[1], 4 * xi[0], 0};
-        case 5:
-          return {0, -1 + 4 * xi[1], 0};
-        case 6:
-          return {-4 * xi[2], -4 * xi[2], -4 * (-1 + xi[0] + xi[1] + 2 * xi[2])};
-        case 7:
-          return {4 * xi[2], 0, 4 * xi[0]};
-        case 8:
-          return {0, 4 * xi[2], 4 * xi[1]};
-        case 9:
-          return {0, 0, -1 + 4 * xi[2]};
+        case 0: return {-3+4*xi[0]+4*xi[1]+4*xi[2], -3+4*xi[0]+4*xi[1]+4*xi[2], -3+4*xi[0]+4*xi[1]+4*xi[2]};
+        case 1: return {-1+4*xi[0], 0, 0};
+        case 2: return {0, -1+4*xi[1], 0};
+        case 3: return {0, 0, -1+4*xi[2]};
+        case 4: return {-4*(-1+2*xi[0]+xi[1]+xi[2]), -4*xi[0], -4*xi[0]};
+        case 5: return {4*xi[1], 4*xi[0], 0};
+        case 6: return {-4*xi[1], -4*(-1+xi[0]+2*xi[1]+xi[2]), -4*xi[1]};
+        case 7: return {-4*xi[2], -4*xi[2], -4*(-1+xi[0]+xi[1]+2*xi[2])};
+        case 8: return {4*xi[2], 0, 4*xi[0]};
+        case 9: return {0, 4*xi[2], 4*xi[1]};
       }
     }
-    #if 0
-    if (p == 3) {
-      constexpr double sqrt5 = 2.23606797749978981;
-      switch (i) {
-        case 0:
-          return {-6 - 15 * xi[0] * xi[0] - 16 * xi[1] * xi[1] + xi[1] * (21 - 33 * xi[2]) + (21 - 16 * xi[2]) * xi[2] -
-                      4 * xi[0] * (-5 + 8 * xi[1] + 8 * xi[2]),
-                  -6 - 16 * xi[0] * xi[0] + 20 * xi[1] + xi[0] * (21 - 32 * xi[1] - 33 * xi[2]) + 21 * xi[2] -
-                      (3 * xi[1] + 4 * xi[2]) * (5 * xi[1] + 4 * xi[2]),
-                  -6 - 16 * xi[0] * xi[0] + 21 * xi[1] + xi[0] * (21 - 33 * xi[1] - 32 * xi[2]) + 20 * xi[2] -
-                      (4 * xi[1] + 3 * xi[2]) * (4 * xi[1] + 5 * xi[2])};
-        case 1:
-          return {(5 * (6 * sqrt5 * xi[0] * xi[0] +
-                        xi[0] * (-2 - 6 * sqrt5 + 6 * (1 + sqrt5) * xi[1] + 6 * (1 + sqrt5) * xi[2]) +
-                        (-1 + xi[1] + xi[2]) * (-1 - sqrt5 + (3 + sqrt5) * xi[1] + (3 + sqrt5) * xi[2]))) /
-                      2.,
-                  (5 * xi[0] *
-                   (-4 - 2 * sqrt5 + 3 * (1 + sqrt5) * xi[0] + 2 * (3 + sqrt5) * xi[1] + 2 * (3 + sqrt5) * xi[2])) /
-                      2.,
-                  (5 * xi[0] *
-                   (-4 - 2 * sqrt5 + 3 * (1 + sqrt5) * xi[0] + 2 * (3 + sqrt5) * xi[1] + 2 * (3 + sqrt5) * xi[2])) /
-                      2.};
-        case 2:
-          return {-15 * sqrt5 * xi[0] * xi[0] -
-                      (5 * (-1 + xi[1] + xi[2]) * (1 - sqrt5 + (-3 + sqrt5) * xi[1] + (-3 + sqrt5) * xi[2])) / 2. -
-                      5 * xi[0] * (1 - 3 * sqrt5 + 3 * (-1 + sqrt5) * xi[1] + 3 * (-1 + sqrt5) * xi[2]),
-                  (-5 * xi[0] *
-                   (4 - 2 * sqrt5 + 3 * (-1 + sqrt5) * xi[0] + 2 * (-3 + sqrt5) * xi[1] + 2 * (-3 + sqrt5) * xi[2])) /
-                      2.,
-                  (-5 * xi[0] *
-                   (4 - 2 * sqrt5 + 3 * (-1 + sqrt5) * xi[0] + 2 * (-3 + sqrt5) * xi[1] + 2 * (-3 + sqrt5) * xi[2])) /
-                      2.};
-        case 3:
-          return {1 + 15 * xi[0] * xi[0] + xi[1] - xi[1] * xi[1] + xi[2] - xi[1] * xi[2] - xi[2] * xi[2] -
-                      2 * xi[0] * (5 + xi[1] + xi[2]),
-                  -(xi[0] * (-1 + xi[0] + 2 * xi[1] + xi[2])), -(xi[0] * (-1 + xi[0] + xi[1] + 2 * xi[2]))};
-        case 4:
-          return
-          {
-            (5 * xi[1] *
-             (-2 * (2 + sqrt5) + 2 * (3 + sqrt5) * xi[0] + 3 * (1 + sqrt5) * xi[1] + 2 * (3 + sqrt5) * xi[2])) /
-                2.,
-                15 * sqrt5* xi[1] * xi[1] +
-                    5 * xi[1] * (-1 - 3 * sqrt5 + 3 * (1 + sqrt5) * xi[0] + 3 * (1 + sqrt5) * xi[2]) +
-                    (5 * (-, +xi[0] + xi[2]) * (-1 - sqrt5 + (3 + sqrt5) * xi[0] + (3 + sqrt5) * xi[2])) / 2.;
-            (5 * xi[1] *
-             (-2 * (2 + sqrt5) + 2 * (3 + sqrt5) * xi[0] + 3 * (1 + sqrt5) * xi[1] + 2 * (3 + sqrt5) * xi[2])) /
-                2.
-          };
-        case 5:
-          return {-27 * xi[1] * (-1 + 2 * xi[0] + xi[1] + xi[2]), -27 * xi[0] * (-1 + xi[0] + 2 * xi[1] + xi[2]),
-                  -27 * xi[0] * xi[1]};
-        case 6:
-          return {(-5 * xi[1] * (2 - 2 * (3 + sqrt5) * xi[0] + (-3 + sqrt5) * xi[1])) / 2.,
-                  (5 * xi[0] * (-2 + (3 + sqrt5) * xi[0] - 2 * (-3 + sqrt5) * xi[1])) / 2., 0};
-        case 7:
-          return
-          {
-        (-5*xi[1]*(4-2*sqrt5+2*(-3+sqrt5)*xi[0]+3*(-1+sqrt5)*xi[1]+2*(-3+sqrt5)*xi[2]))/2.,
-      -15*sqrt5*xi[1]*xi[1]-(5*(-1+xi[0]+xi[2])*(1-sqrt5+(-3+sqrt5)*xi[0]+(-3+sqrt5)*xi[2],)/2.-5*xi[1]*(1-3*sqrt5+3*(-1+sqrt5)*xi[0]+3*(-1+sqrt5)*xi[2]);
-      (-5*xi[1]*(4-2*sqrt5+2*(-3+sqrt5)*xi[0]+3*(-1+sqrt5)*xi[1]+2*(-3+sqrt5)*xi[2]))/2.
-          };
-        case 8:
-          return {(5 * xi[1] * (-2 - 2 * (-3 + sqrt5) * xi[0] + (3 + sqrt5) * xi[1])) / 2.,
-                  (-5 * xi[0] * (2 + (-3 + sqrt5) * xi[0] - 2 * (3 + sqrt5) * xi[1])) / 2., 0};
-        case 9:
-          return
-          {
-        -(xi[1] * (-1 + 2 * xi[0] + xi[1] + xi[2])), 1 - xi[0] * xi[0] + 15 * xi[1] * xi[1] + xi[2] -,
-           xi[2] * xi[2] - 2 * xi[1] * (5 + xi[2]) - xi[0] * (-1 + 2 * xi[1] + xi[2]);
-        -(xi[1] * (-1 + xi[0] + xi[1] + 2 * xi[2]))
-          };
-        case 10:
-          return
-          {
-        (5 * xi[2] * (-2 * (2 + sqrt5) + 2 * (3 + sqrt5) * xi[0] + 2 * (3 + sqrt5) * xi[1] + 3 * (1 + sqrt5) * xi[2])) /
-            2.,
-            (5 * xi[2] *
-             (-2 * (2 + sqrt5) + 2 * (3 + sqrt5) * xi[0] + 2 * (3 + sqrt5) * xi[1] + 3 * (1 + sqrt5) * xi[2])) /
-                2.,
-            (5 * (1 + sqrt5 + (3 + sqrt5) * xi[0] * xi[0] - 2 * (2 + sqrt5) * xi[1] + (3 + sqrt5) * xi[1] * xi[1] +
-                  6 * (1 + sqt5) * xi[1] * xi[2] + 2 * xi[2] * (-1 - 3 * sqrt5 + 3 * sqrt5 * xi[2]) +
-                  2 * xi[0] * (-2 - sqrt5 + (3 + sqrt5) * xi[1] + 3 * (1 + sqrt5) * xi[2]))) /
-                2.;
-          };
-        case 11:
-          return
-          {
-        -27 * xi[2] * (-1 + 2 * xi[0] + xi[1] + xi[2]), -27 * xi[0] * xi[2],
-            -27 * xi[0] * (-1 + x[0] + xi[1] + 2 * xi[2]);
-          };
-        case 12:
-          return
-          {
-        (-5 * xi[2] * (2 - 2 * (3 + sqrt5) * xi[0] + (-3 + sqrt5) * xi[2])) / 2., 0,
-            (*xi[0] * (-2 + (3 + sqrt5) * xi[0] - 2 * (-3 + sqrt5) * xi[2])) / 2.;
-          };
-        case 13:
-          return
-          {
-        -27 * xi[1] * xi[2], -27 * xi[2] * (-1 + xi[, ] + 2 * xi[1] + xi[2]);
-        -27 * xi[1] * (-1 + xi[] + xi[1] + 2 * xi[2]);
-          };
-        case 14:
-          return {27 * xi[1] * xi[2], 27 * xi[0] * xi[2], 27 * xi[0] * xi[1]};
-        case 15:
-          return
-          {
-        0, (-5, xi[2] * (2 - 2 * (3 + sqrt5) * xi[1] + (-3 + sqrt5) * xi[2])) / 2.;
-        (5 * i[1] * (-2 + (3 + sqrt5) * xi[1] - 2 * (-3 + sqrt5) * xi[2])) / 2.;
-          };
-        case 16:
-          return
-          {
-        (-5*xi[2]*(4-2*sqrt5+2*(-3+sqrt5)*xi[0]+2*(-3+sqrt5)*xi[1]+3*(-1+sqrt5)*xi[2]))/2.,
-      (-5*xi[2]*(4-2*sqrt5+2*(-3+sqrt5)*xi[0]+2*(-3+sqrt5)*xi[1]+3*(-1+sqrt5)*xi[2]))/2.,
-      (-5*(-3+sqrt5)*xi[0]*xi[0])/2.-5*xi[0]*(2-sqrt5+(-3+sqrt5)*xi[1]+3*(-1+sqrt5)*xi[2)-(5*(-1+sqrt5+(-3+sqrt5)*xi[1]*xi[1]+2*xi[2]*(1-3*sqrt5+3*sqrt5*xi[2])+xi[1]*(4-2*sqrt5+6*(-1+sqrt5)*xi[2])))/2.;
-          };
-        case 17:
-          return
-          {
-        (5 * xi[2] * (-2 - 2 * (-3 + sqrt5) * xi[0] + (3 + sqrt5) * xi[2])) / 2., 0,
-            (5 * xi[0] * (2 + (-3 + sqrt5) * xi[0] - 2 * (3 + sqrt5) * xi[2])) / 2.;
-          };
-        case 18:
-          return
-          {
-        0, (5 *, i[2] * (-2 - 2 * (-3 + sqrt5) * xi[1] + (3 + sqrt5) * xi[2])) / 2.;
-        (-5xi [1] * (2 + (-3 + sqrt5) * xi[1] - 2 * (3 + sqrt5) * xi[2])) / 2.;
-          };
-        case 19:
-          return
-          {
-        -(xi[2] * (-1 + 2 * xi[0] + xi[1] + xi[2])), -(xi[2] * (-1 + xi[0] + 2 * xi[1] + xi[2])),
-            1 + xi[0] - xi[0] * xi[0] + xi[1] - xi[0] * x[1] - xi[1] * xi[1] - 2 * (5 + xi[0] + xi[1]) * xi[2] +
-                15 * xi[2] * xi[2];
-          };
-      }
-    }
-    #endif
+
+    // unreachable
+    return {};
   }
 
   SERAC_HOST_DEVICE static constexpr tensor<double, ndof> shape_functions(tensor<double, dim> xi)
@@ -326,17 +153,16 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
   template <int q>
   static auto interpolate(const tensor<double, c, ndof>& X, const TensorProductQuadratureRule<q>&)
   {
-    constexpr auto       xi                    = GaussLegendreNodes<q, mfem::Geometry::TRIANGLE>();
-    static constexpr int num_quadrature_points = q * (q + 1) / 2;
+    constexpr auto       xi                    = GaussLegendreNodes<q, mfem::Geometry::TETRAHEDRON>();
 
     // transpose the quadrature data into a flat tensor of tuples
     union {
-      tensor<tuple<tensor<double, c>, tensor<double, c, dim> >, num_quadrature_points> unflattened;
-      tensor<qf_input_type, num_quadrature_points>                                     flattened;
+      tensor<tuple<tensor<double, c>, tensor<double, c, dim> >, nqpts(q)> unflattened;
+      tensor<qf_input_type, nqpts(q)>                                     flattened;
     } output{};
 
     for (int i = 0; i < c; i++) {
-      for (int j = 0; j < num_quadrature_points; j++) {
+      for (int j = 0; j < nqpts(q); j++) {
         for (int k = 0; k < ndof; k++) {
           get<VALUE>(output.unflattened[j])[i] += X(i, k) * shape_function(xi[j], k);
           get<GRADIENT>(output.unflattened[j])[i] += X(i, k) * shape_function_gradient(xi[j], k);

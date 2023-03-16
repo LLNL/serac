@@ -81,14 +81,6 @@ void thermal_test_impl(std::unique_ptr<mfem::ParMesh> & mesh)
 template <int ptest, int ptrial>
 void thermal_test(std::string meshfile)
 {
-  //if (dim == 2) {
-  //  // meshfile = SERAC_REPO_DIR "/data/meshes/patch2D.mesh";
-  //  meshfile = SERAC_REPO_DIR "/data/meshes/patch2D_tris.mesh";
-  //}
-  //if (dim == 3) {
-  //  meshfile = SERAC_REPO_DIR "/data/meshes/patch3D.mesh";
-  //}
-
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(SERAC_REPO_DIR + meshfile), 0);
 
   if (mesh->Dimension() == 2) {
@@ -98,7 +90,6 @@ void thermal_test(std::string meshfile)
   if (mesh->Dimension() == 3) {
     thermal_test_impl< ptest, ptrial, 3 >(mesh);
   }
-
 }
 
 TEST(basic, thermal_tris)           { thermal_test<1, 1>("/data/meshes/patch2D_tris.mesh"); }

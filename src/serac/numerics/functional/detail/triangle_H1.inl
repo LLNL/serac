@@ -236,50 +236,6 @@ struct finite_element<mfem::Geometry::TRIANGLE, H1<p, c> > {
     return output;
   }
 
-  /**
-   * @brief B(i,j) is the
-   *  jth shape function evaluated at the ith quadrature point
-   *
-   * @tparam apply_weights optionally multiply the rows of B by the associated quadrature weight
-   * @tparam q the number of quadrature points along each dimension
-   *
-   * @return the matrix B of shape function evaluations
-   */
-  template <bool apply_weights, int q>
-  static constexpr auto calculate_B()
-  {
-    constexpr auto points1D  = GaussLegendreNodes<q, mfem::Geometry::TRIANGLE>();
-    constexpr auto weights1D = GaussLegendreWeights<q, mfem::Geometry::TRIANGLE>();
-
-    tensor<double, q*(q + 1) / 2, ndof> B{};
-    for (int i = 0; i < q * (q + 1) / 2; i++) {
-      B[i] = shape_functions(points1D[i]) * ((apply_weights) ? weights1D[i] : 1.0);
-    }
-    return B;
-  }
-
-  /**
-   * @brief B(i,j) is the gradient of the
-   *  jth shape function evaluated at the ith quadrature point
-   *
-   * @tparam apply_weights optionally multiply the rows of G by the associated quadrature weight
-   * @tparam q the number of quadrature points along each dimension
-   *
-   * @return the matrix G of shape function evaluations
-   */
-  template <bool apply_weights, int q>
-  static constexpr auto calculate_G()
-  {
-    constexpr auto points1D  = GaussLegendreNodes<q, mfem::Geometry::TRIANGLE>();
-    constexpr auto weights1D = GaussLegendreWeights<q, mfem::Geometry::TRIANGLE>();
-
-    tensor<double, q*(q + 1) / 2, ndof, dim> G{};
-    for (int i = 0; i < q; i++) {
-      G[i] = shape_function_gradients(points1D[i]) * ((apply_weights) ? weights1D[i] : 1.0);
-    }
-    return G;
-  }
-
   template <typename in_t, int q>
   static auto batch_apply_shape_fn(int j, tensor<in_t, q*(q + 1) / 2> input, const TensorProductQuadratureRule<q>&)
   {
