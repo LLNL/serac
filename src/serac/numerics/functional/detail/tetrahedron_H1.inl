@@ -128,10 +128,10 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
   template <typename in_t, int q>
   static auto batch_apply_shape_fn(int j, tensor<in_t, nqpts(q)> input, const TensorProductQuadratureRule<q>&)
   {
-    using source_t = decltype(get<0>(get<0>(in_t{})) + dot(get<1>(get<0>(in_t{})), tensor<double, 2>{}));
-    using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double, 2>{}));
+    using source_t = decltype(get<0>(get<0>(in_t{})) + dot(get<1>(get<0>(in_t{})), tensor<double, dim>{}));
+    using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double, dim>{}));
 
-    constexpr auto xi = GaussLegendreNodes<q, mfem::Geometry::TRIANGLE>();
+    constexpr auto xi = GaussLegendreNodes<q, mfem::Geometry::TETRAHEDRON>();
 
     tensor<tuple<source_t, flux_t>, nqpts(q)> output;
 
@@ -174,7 +174,7 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
   }
 
   template <typename source_type, typename flux_type, int q>
-  static void integrate(const tensor<tuple<source_type, flux_type>, q*(q + 1) / 2>& qf_output,
+  static void integrate(const tensor<tuple<source_type, flux_type>, nqpts(q)>& qf_output,
                         const TensorProductQuadratureRule<q>&, tensor<double, c, ndof>* element_residual, int step = 1)
   {
     if constexpr (is_zero<source_type>{} && is_zero<flux_type>{}) {
@@ -182,8 +182,8 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
     }
 
     constexpr int  ntrial                = std::max(size(source_type{}), size(flux_type{}) / dim) / c;
-    constexpr auto integration_points    = GaussLegendreNodes<q, mfem::Geometry::TRIANGLE>();
-    constexpr auto integration_weights   = GaussLegendreWeights<q, mfem::Geometry::TRIANGLE>();
+    constexpr auto integration_points    = GaussLegendreNodes<q, mfem::Geometry::TETRAHEDRON>();
+    constexpr auto integration_weights   = GaussLegendreWeights<q, mfem::Geometry::TETRAHEDRON>();
 
     for (int j = 0; j < ntrial; j++) {
       for (int i = 0; i < c; i++) {

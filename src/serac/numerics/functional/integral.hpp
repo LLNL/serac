@@ -151,7 +151,7 @@ Integral MakeDomainIntegral(mfem::Mesh& domain,
   }
 
   if constexpr (dim == 3) {
-    //generate_kernels<mfem::Geometry::TETRAHEDRON, Q>(signature, integral, qf, domain, qdata);
+    generate_kernels<mfem::Geometry::TETRAHEDRON, Q>(signature, integral, qf, domain, qdata);
     generate_kernels<mfem::Geometry::CUBE, Q>(signature, integral, qf, domain, qdata);
   }
 
