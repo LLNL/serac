@@ -305,14 +305,21 @@ struct finite_element<mfem::Geometry::TRIANGLE, H1<p, c> > {
           tensor<double, 2> xi = integration_points[Q];
           double            wt = integration_weights[Q];
 
-          double            source = reinterpret_cast<const double*>(&get<SOURCE>(qf_output[Q]))[i * ntrial + j];
-          tensor<double, 2> flux   = {
-              reinterpret_cast<const double*>(&get<FLUX>(qf_output[Q]))[(i * dim + 0) * ntrial + j],
-              reinterpret_cast<const double*>(&get<FLUX>(qf_output[Q]))[(i * dim + 1) * ntrial + j]};
+          source_type source;
+          if constexpr (!is_zero<source_type>{}) {
+            source = reinterpret_cast<const double*>(&get<SOURCE>(qf_output[Q]))[i * ntrial + j];
+          }
+
+          flux_type flux;
+          if constexpr (!is_zero<flux_type>{}) {
+            for (int k = 0; k < dim; k++) {
+              flux[k] = reinterpret_cast<const double*>(&get<FLUX>(qf_output[Q]))[(i * dim + k) * ntrial + j];
+            }
+          }         
 
           for (int k = 0; k < ndof; k++) {
             element_residual[j * step](i, k) +=
-                source * shape_function(xi, k) + dot(flux, shape_function_gradient(xi, k)) * wt;
+                (source * shape_function(xi, k) + dot(flux, shape_function_gradient(xi, k))) * wt;
           }
         }
       }

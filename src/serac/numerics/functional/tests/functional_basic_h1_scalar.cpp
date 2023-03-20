@@ -42,6 +42,8 @@ void thermal_test_impl(std::unique_ptr<mfem::ParMesh> & mesh)
   mfem::ParGridFunction     U_gf(&trial_fespace);
   mfem::FunctionCoefficient x_squared([](mfem::Vector x) { return x[0] * x[0]; });
   U_gf.ProjectCoefficient(x_squared);
+  //mfem::FunctionCoefficient x_coord([](mfem::Vector x) { return x[0]; });
+  //U_gf.ProjectCoefficient(x_coord);
   U_gf.GetTrueDofs(U);
 
   // Define the types for the test and trial spaces using the function arguments
