@@ -181,6 +181,9 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
       return;
     }
 
+    using source_component_type = std::conditional_t<is_zero<source_type>{}, zero, double >;
+    using flux_component_type = std::conditional_t<is_zero<flux_type>{}, zero, tensor<double, dim> >;
+
     constexpr int  ntrial                = std::max(size(source_type{}), size(flux_type{}) / dim) / c;
     constexpr auto integration_points    = GaussLegendreNodes<q, mfem::Geometry::TETRAHEDRON>();
     constexpr auto integration_weights   = GaussLegendreWeights<q, mfem::Geometry::TETRAHEDRON>();
@@ -191,12 +194,12 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
           tensor<double, dim> xi = integration_points[Q];
           double              wt = integration_weights[Q];
 
-          source_type source;
+          source_component_type source;
           if constexpr (!is_zero<source_type>{}) {
             source = reinterpret_cast<const double*>(&get<SOURCE>(qf_output[Q]))[i * ntrial + j];
           }
 
-          flux_type flux;
+          flux_component_type flux;
           if constexpr (!is_zero<flux_type>{}) {
             for (int k = 0; k < dim; k++) {
               flux[k] = reinterpret_cast<const double*>(&get<FLUX>(qf_output[Q]))[(i * dim + k) * ntrial + j];
