@@ -177,7 +177,7 @@ container. Instructions for this process are located :ref:`here <docker-label>`.
 Building Serac
 --------------
 
-Serac is a CMake project. Configure with at least the ``-C``
+Serac is a CMake project (tested with v3.18). Configure with at least the ``-C``
 flag below, to ensure CMake can locate the dependencies installed by spack:
 
 .. code-block:: bash
@@ -255,7 +255,7 @@ directory and invoke CMake for you. Some example use cases are:
 Note:
   - ``config-build.py`` will delete the contents of build/install directories if they exist already
   - some flags parsed by ``config-build.py`` use different names than their CMake counterparts,
-    try running ``python3 config-build.py --help`` more information.
+    try running ``python3 config-build.py --help`` for more information.
 
 ------
 
