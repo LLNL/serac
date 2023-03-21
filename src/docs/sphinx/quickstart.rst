@@ -184,7 +184,7 @@ flag below, to ensure CMake can locate the dependencies installed by spack:
 
   $ cmake -B build \
           -C path/to/serac/<machine>-<type>-<compiler>.cmake \
-          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_BUILD_TYPE=Release \
           -S path/to/serac
 
 LLNL developers working on one of the LC machines can instead use one of 
@@ -196,7 +196,7 @@ the provided CMake cache files in serac's ``host-configs`` directory:
  
 Some other frequently-useful configure flags
 
-``-B <build-directory>`` (recommended) 
+``-B <build-directory>`` (required) 
   tells CMake what to name the build directory
 
 ``CMAKE_BUILD_TYPE`` (recommended) one of ``Debug`` (default), ``Release``, ``RelWithDebInfo``, ``MinSizeRel``
@@ -204,8 +204,8 @@ Some other frequently-useful configure flags
 
 ``SERAC_ENABLE_CODEVELOP`` (optional) one of ``OFF`` (default), ``ON``
   when ``ON``, indicates that axom and mfem should be built as part of serac's CMake project.
-  This can be useful for debugging those libraries, or making changes to them without having
-  to have spack rebuild all of serac's dependencies.
+  This can be useful for debugging those libraries, or making changes to them without needing
+  to rebuild all of serac's dependencies through ``spack``.
 
 ``ENABLE_ASAN``: (optional) one of ``OFF`` (default), ``ON``
   Enables the Address Sanitizer for memory safety inspections
