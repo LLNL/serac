@@ -97,7 +97,7 @@ public:
     LinearSolverOptions H_lin_options;
 
     /**
-     * @brief The options for the inlucded nonlinear solve
+     * @brief The options for the included nonlinear solve
      *
      */
     IterativeNonlinearSolverOptions H_nonlin_options;
