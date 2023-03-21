@@ -232,7 +232,9 @@ struct IterativeSolverOptions {
 };
 
 /**
- * @brief Parameters for a custom linear solver (currently just a non-owning pointer to the solver)
+ * @brief Parameters for a custom linear solver (currently just a non-owning pointer to the solver) derived
+ * from the mfem::Solver base class
+ *
  * @note This is preferable to unique_ptr or even references because non-trivial copy constructors
  * and destructors are a nightmare in this context
  */
@@ -244,7 +246,9 @@ struct CustomLinearSolverOptions {
 };
 
 /**
- * @brief Parameters for a custom nonlinear solver (currently just a non-owning pointer to the solver)
+ * @brief Parameters for a custom nonlinear solver (currently just a non-owning pointer to the solver) derived
+ * from the mfem::NewtonSolver base class
+ *
  * @note This is preferable to unique_ptr or even references because non-trivial copy constructors
  * and destructors are a nightmare in this context
  */
@@ -268,8 +272,8 @@ struct DirectSolverOptions {
 /**
  * @brief Parameters for a linear solver
  *
- * This can either be a user-constructed and owned solver or an iterative or direct solver that serac constructs and
- * builds itself.
+ * This can either be a custon user-constructed and owned solver or an iterative or direct solver that serac constructs
+ * and builds itself.
  */
 using LinearSolverOptions = std::variant<IterativeSolverOptions, CustomLinearSolverOptions, DirectSolverOptions>;
 
@@ -306,7 +310,7 @@ struct IterativeNonlinearSolverOptions {
 /**
  * @brief Parameters for a nonlinear solver
  *
- * This can either be a user-constructed and owned solver or an iterative solver that serac constructs and builds
+ * This can either be a custom user-constructed and owned solver or an iterative solver that serac constructs and builds
  * itself.
  */
 using NonlinearSolverOptions = std::variant<CustomNonlinearSolverOptions, IterativeNonlinearSolverOptions>;
