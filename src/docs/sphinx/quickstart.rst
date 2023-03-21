@@ -177,40 +177,74 @@ container. Instructions for this process are located :ref:`here <docker-label>`.
 Building Serac
 --------------
 
-Serac uses a CMake build system that wraps its configure step with a script
-called ``config-build.py``.  This script creates a build directory and
-runs the necessary CMake command for you. You just need to point the script
-at the generated or a provided host-config. This can be accomplished with
-one of the following commands:
+Serac is a CMake project. Configure with at least the ``-C``
+flag below, to ensure CMake can locate the dependencies installed by spack:
 
 .. code-block:: bash
 
-   # If you built Serac's dependencies yourself either via Spack or by hand
-   $ python3 ./config-build.py -hc <config_dependent_name>.cmake
+  $ cmake . -B build \
+            -C path/to/serac/<machine>-<type>-<compiler>.cmake \
+            -DCMAKE_BUILD_TYPE=Release
 
-   # If you are on an LC machine and want to use our public pre-built dependencies
-   $ python3 ./config-build.py -hc host-configs/<machine name>-<SYS_TYPE>-<compiler>.cmake
+LLNL developers working on one of the LC machines can instead use one of 
+the provided CMake cache files in serac's ``host-configs`` directory:
 
-   # If you'd like to configure specific build options, e.g., a release build
-   $ python3 ./config-build.py -hc /path/to/host-config.cmake -DCMAKE_BUILD_TYPE=Release <more CMake build options...>
+``-C path/to/serac/host-configs/<machine>-<type>-<compiler>.cmake``
 
-If you built the dependencies using Spack/uberenv, the host-config file is output at the
-project root. To use the pre-built dependencies on LC, you must be in the appropriate
-LC group. Contact `Jamie Bramwell <bramwell1@llnl.gov>`_ for access.
+----------
+ 
+Some other frequently-useful configure flags
 
-Some build options frequently used by Serac include:
+``-B <build-directory>`` (recommended) 
+  tells CMake what to name the build directory
 
-* ``CMAKE_BUILD_TYPE``: Specifies the build type, see the `CMake docs <https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html>`_
-* ``ENABLE_BENCHMARKS``: Enables Google Benchmark performance tests, defaults to ``OFF``
-* ``ENABLE_WARNINGS_AS_ERRORS``: Turns compiler warnings into errors, defaults to ``ON``
-* ``ENABLE_ASAN``: Enables the Address Sanitizer for memory safety inspections, defaults to ``OFF``
-* ``SERAC_ENABLE_CODEVELOP``: Enables local development build of MFEM/Axom, see :ref:`codevelop-label`, defaults to ``OFF``
+``CMAKE_BUILD_TYPE`` (recommended) one of ``Debug`` (default), ``Release``, ``RelWithDebInfo``, ``MinSizeRel``
+  these options describe whether or not to compile with debug info or optimization flags
 
-Once the build has been configured, Serac can be built with the following commands:
+``SERAC_ENABLE_CODEVELOP`` (optional) one of ``OFF`` (default), ``ON``
+  when ``ON``, indicates that axom and mfem should be built as part of serac's CMake project.
+  This can be useful for debugging those libraries, or making changes to them without having
+  to have spack rebuild all of serac's dependencies.
+
+``SERAC_ENABLE_CODEVELOP`` (optional) one of ``OFF`` (default), ``ON``
+
+``ENABLE_ASAN``: (optional) one of ``OFF`` (default), ``ON``
+  Enables the Address Sanitizer for memory safety inspections
+
+``-G <generator>``: (optional) typically one of `Unix Makefiles` (default), or `Ninja`
+  which  the Address Sanitizer for memory safety inspections
+
+-----------
+
+the following configure flags are mainly intended for serac developers:
+
+``ENABLE_DOCS`` (optional) one of ``OFF`` (default), ``ON``
+  specifying that the documentation targets (sphinx, doxygen) should be built
+  (requires `sphinx`, `doxygen` which can be built as part of serac's devtools)
+
+``ENABLE_CLANGFORMAT`` (optional) one of ``OFF`` (default), ``ON``
+  adds a target named "style" that applies `clang-format` to the sources in
+  serac, to ensure that they conform to the style guide
+  (requires `clang-format` v10.0, which can be built as part of serac's devtools)
+
+``CLANGFORMAT_EXECUTABLE`` (optional)
+  used to manually specify which `clang-format` executable to use when configuring with 
+  ``-DENABLE_CLANGFORMAT=ON``
+
+``SPHINX_EXECUTABLE`` (optional)
+  used to manually specify which `sphinx` executable to use when configuring with ``-DENABLE_DOCS=ON``
+
+``DOXYGEN_EXECUTABLE`` (optional)
+  used to manually specify which `doxygen` executable to use when configuring with ``-DENABLE_DOCS=ON``
+
+------
+
+Once the build has been configured, Serac can be built with the following commands (assuming 
+`Unix Makefiles` as CMake generator):
 
 .. code-block:: bash
 
-   $ cd build-<system-and-toolchain>
+   $ cd <build-directory>
    $ make -j16
 
 .. note::
