@@ -87,7 +87,8 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on('py-sphinx', when="+devtools")
     depends_on('py-ats', when="+devtools")
 
-    depends_on("sundials@5.7.0+hypre+monitoring~examples~examples-install",
+    # MFEM is deprecating the monitoring support with sundials v6.0 and later
+    depends_on("sundials@6.4.1+hypre~monitoring~examples~examples-install",
                when="+sundials")
     depends_on("sundials+asan", when="+sundials+asan")
 
@@ -120,7 +121,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("umpire~openmp", when="+umpire~openmp")
     depends_on("umpire+openmp", when="+umpire+openmp")
 
-    depends_on("axom~fortran~tools~examples+mfem+cpp14+lua")
+    depends_on("axom~fortran~tools~examples+mfem+lua")
     depends_on("axom~raja", when="~raja")
     depends_on("axom~umpire", when="~umpire")
     depends_on("axom~openmp", when="~openmp")
@@ -256,22 +257,23 @@ class Serac(CachedCMakePackage, CudaPackage):
 
         if spec.satisfies('^cuda'):
             entries.append(cmake_cache_option("ENABLE_CUDA", True))
+            entries.append(cmake_cache_option("CMAKE_CUDA_SEPARABLE_COMPILATION", True))
 
             if spec.satisfies('cuda_arch=none'):
                 msg = ("# No cuda_arch specified in Spack spec, "
                        "this is likely to fail\n\n")
                 entries.append(msg)
             else:
-                cuda_arch = spec.variants['cuda_arch'].value
-                arch_flag = '-arch sm_{0} '.format(cuda_arch[0])
                 # CXX flags will be propagated to the host compiler
                 cxxflags = ' '.join(spec.compiler_flags['cxxflags'])
-                cuda_flags = arch_flag + cxxflags
+                cuda_flags = cxxflags
                 cuda_flags += ' --expt-extended-lambda --expt-relaxed-constexpr '
                 entries.append(cmake_cache_string("CMAKE_CUDA_FLAGS",
                                                   cuda_flags))
+
+                cuda_arch = spec.variants['cuda_arch'].value[0]
                 entries.append(cmake_cache_string("CMAKE_CUDA_ARCHITECTURES",
-                                                  ' '.join(cuda_arch)))
+                                                  cuda_arch))
 
                 entries.append(
                     "# nvcc does not like gtest's 'pthreads' flag\n")

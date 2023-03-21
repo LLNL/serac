@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -64,7 +64,7 @@ public:
      * @brief The nonlinear solver options
      *
      */
-    NonlinearSolverOptions T_nonlin_options;
+    IterativeNonlinearSolverOptions T_nonlin_options;
 
     /**
      * @brief The optional ODE solver parameters
@@ -174,7 +174,7 @@ public:
    *
    * @return The default thermal nonlinear options
    */
-  static NonlinearSolverOptions defaultNonlinearOptions()
+  static IterativeNonlinearSolverOptions defaultNonlinearOptions()
   {
     return {.rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
   }
@@ -256,6 +256,30 @@ public:
    * @param[in] temp The temperature coefficient
    */
   void setTemperature(mfem::Coefficient& temp);
+
+  /**
+   * @brief Accessor for getting named finite element state fields from the physics modules
+   *
+   * @param state_name The name of the Finite Element State to retrieve
+   * @return The named Finite Element State
+   */
+  const FiniteElementState& state(const std::string& state_name) override
+  {
+    if (state_name == "temperature") {
+      return temperature_;
+    }
+
+    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requestion from solid mechanics module '{}', but it doesn't exist",
+                                      state_name, name_));
+    return temperature_;
+  }
+
+  /**
+   * @brief Get a vector of the finite element state solution variable names
+   *
+   * @return The solution variable names
+   */
+  virtual std::vector<std::string> stateNames() override { return std::vector<std::string>{{"temperature"}}; }
 
   /**
    * @brief Set the thermal body source from a coefficient

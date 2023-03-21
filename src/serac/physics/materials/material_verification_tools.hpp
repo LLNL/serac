@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -51,11 +51,11 @@ auto uniaxial_stress_test(double t_max, size_t num_steps, const MaterialType mat
     auto epsilon_zz = x[1];
     using T         = decltype(epsilon_yy);
     tensor<T, 3, 3> du_dx{};
-    du_dx[0][0] = epsilon_xx(t);
-    du_dx[1][1] = epsilon_yy;
-    du_dx[2][2] = epsilon_zz;
-    auto copy   = state;
-    auto stress = material(copy, du_dx, parameter_functions(t)...);
+    du_dx[0][0]     = epsilon_xx(t);
+    du_dx[1][1]     = epsilon_yy;
+    du_dx[2][2]     = epsilon_zz;
+    auto state_copy = state;
+    auto stress     = material(state_copy, du_dx, parameter_functions(t)...);
     return tensor{{stress[1][1], stress[2][2]}};
   };
 

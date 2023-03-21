@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -102,18 +102,15 @@ int main(int argc, char* argv[])
 
   simulation.setMaterial(DependsOn<0, 1>{}, material);
 
-  auto temperature_fec = std::unique_ptr<mfem::FiniteElementCollection>(new mfem::H1_FECollection(p, dim));
-  FiniteElementState temperature(StateManager::newState(
-      FiniteElementState::Options{.order = p, .coll = std::move(temperature_fec), .name = "theta"}));
+  FiniteElementState temperature(StateManager::newState(FiniteElementState::Options{.order = p, .name = "theta"}));
   temperature = theta_ref;
-  simulation.setParameter(temperature, 0);
+  simulation.setParameter(0, temperature);
 
   double             alpha0    = 1.0e-3;
   auto               alpha_fec = std::unique_ptr<mfem::FiniteElementCollection>(new mfem::H1_FECollection(p, dim));
-  FiniteElementState alpha(
-      StateManager::newState(FiniteElementState::Options{.order = p, .coll = std::move(alpha_fec), .name = "alpha"}));
+  FiniteElementState alpha(StateManager::newState(FiniteElementState::Options{.order = p, .name = "alpha"}));
   alpha = alpha0;
-  simulation.setParameter(alpha, 1);
+  simulation.setParameter(1, alpha);
 
   // set up essential boundary conditions
   std::set<int> x_equals_0 = {4};
@@ -170,13 +167,13 @@ int main(int argc, char* argv[])
   double deltaT = 1.0;
   std::cout << "expected average vertical displacement: " << alpha0 * deltaT * height << std::endl;
 
-  serac::FiniteElementDual adjoint_load(mesh, simulation.displacement().space(), "adjoint_load");
+  serac::FiniteElementDual adjoint_load(simulation.displacement().space(), "adjoint_load");
   auto                     dqoi_du = get<1>(qoi(DifferentiateWRT<0>{}, simulation.displacement()));
   adjoint_load                     = *assemble(dqoi_du);
 
   simulation.solveAdjoint(adjoint_load);
 
-  auto& dqoi_dalpha = simulation.computeSensitivity<1>();
+  auto& dqoi_dalpha = simulation.computeSensitivity(1);
 
   double       epsilon = 1.0e-6;
   mfem::Vector dalpha(alpha.Size());

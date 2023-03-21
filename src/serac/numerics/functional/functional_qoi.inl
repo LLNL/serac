@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -83,7 +83,7 @@ public:
    * @brief Constructs using a @p mfem::ParFiniteElementSpace object corresponding to the trial space
    * @param[in] trial_fes The trial space
    */
-  Functional(std::array<mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes) : trial_space_(trial_fes)
+  Functional(std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes) : trial_space_(trial_fes)
   {
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
       P_trial_[i] = trial_space_[i]->GetProlongationMatrix();
@@ -169,7 +169,7 @@ public:
     }
 
     const mfem::FiniteElement&   el = *trial_space_[0]->GetFE(0);
-    const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
+    const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), (Q - 1) * 2);
 
     constexpr auto flags = mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS;
     auto           geom  = domain.GetGeometricFactors(ir, flags);
@@ -203,8 +203,7 @@ public:
       SLIC_ERROR_ROOT_IF(domain.GetBdrElementType(e) != supported_types[dim], "Mesh contains unsupported element type");
     }
 
-    const mfem::FiniteElement&   el = *trial_space_[0]->GetBE(0);
-    const mfem::IntegrationRule& ir = mfem::IntRules.Get(supported_types[dim], el.GetOrder() * 2);
+    const mfem::IntegrationRule& ir = mfem::IntRules.Get(supported_types[dim], (Q - 1) * 2);
     constexpr auto flags = mfem::FaceGeometricFactors::COORDINATES | mfem::FaceGeometricFactors::DETERMINANTS |
                            mfem::FaceGeometricFactors::NORMALS;
 
@@ -442,7 +441,9 @@ private:
 
     std::unique_ptr<mfem::HypreParVector> assemble()
     {
-      std::unique_ptr<mfem::HypreParVector> gradient_T(form_.trial_space_[which_argument]->NewTrueDofVector());
+      // The mfem method ParFiniteElementSpace.NewTrueDofVector should really be marked const
+      std::unique_ptr<mfem::HypreParVector> gradient_T(
+          const_cast<mfem::ParFiniteElementSpace*>(form_.trial_space_[which_argument])->NewTrueDofVector());
 
       gradient_L_ = 0.0;
 
@@ -525,7 +526,7 @@ private:
   mutable mfem::Vector output_T_;
 
   /// @brief Manages DOFs for the trial space
-  std::array<mfem::ParFiniteElementSpace*, num_trial_spaces> trial_space_;
+  std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_space_;
 
   /**
    * @brief Operator that converts true (global) DOF values to local (current rank) DOF values

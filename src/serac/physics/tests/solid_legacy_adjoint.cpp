@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -58,7 +58,7 @@ TEST(SolidLegacy, Adjoint)
                                                          .lin_solver  = LinearSolver::GMRES,
                                                          .prec        = HypreBoomerAMGPrec{}};
 
-  const NonlinearSolverOptions default_nonlinear_options = {
+  const IterativeNonlinearSolverOptions default_nonlinear_options = {
       .rel_tol = 1.0e-8, .abs_tol = 1.0e-10, .max_iter = 500, .print_level = 1};
 
   const SolidLegacy::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
@@ -82,7 +82,7 @@ TEST(SolidLegacy, Adjoint)
 
   // Make a dummy adjoint load for testing
 
-  FiniteElementDual assembled_adjoint_load(StateManager::mesh(), solid_solver.displacement().space(), "adjoint_load");
+  FiniteElementDual assembled_adjoint_load(solid_solver.displacement().space(), "adjoint_load");
 
   mfem::ParLinearForm adjoint_load(&assembled_adjoint_load.space());
 

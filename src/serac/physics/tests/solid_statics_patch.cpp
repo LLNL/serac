@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -21,7 +21,7 @@
 
 namespace serac {
 
-using solid_mechanics::direct_static_options;
+using solid_mechanics::default_static_options;
 
 /**
  * @brief Exact displacement solution that is an affine function
@@ -104,7 +104,7 @@ public:
 /**
  * @brief Specify the kinds of boundary condition to apply
  */
-enum class PatchBoundaryCondition { Essential, Mixed_essential_and_natural };
+enum class PatchBoundaryCondition { Essential, EssentialAndNatural };
 
 /**
  * @brief Get boundary attributes for patch meshes on which to apply essential boundary conditions
@@ -130,7 +130,7 @@ std::set<int> essentialBoundaryAttributes(PatchBoundaryCondition bc)
       case PatchBoundaryCondition::Essential:
         essential_boundaries = {1, 2, 3, 4};
         break;
-      case PatchBoundaryCondition::Mixed_essential_and_natural:
+      case PatchBoundaryCondition::EssentialAndNatural:
         essential_boundaries = {1, 4};
         break;
     }
@@ -139,7 +139,7 @@ std::set<int> essentialBoundaryAttributes(PatchBoundaryCondition bc)
       case PatchBoundaryCondition::Essential:
         essential_boundaries = {1, 2, 3, 4, 5, 6};
         break;
-      case PatchBoundaryCondition::Mixed_essential_and_natural:
+      case PatchBoundaryCondition::EssentialAndNatural:
         essential_boundaries = {1, 2};
         break;
     }
@@ -183,9 +183,11 @@ double solution_error(const ExactSolution& exact_displacement, PatchBoundaryCond
   serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a solid mechanics solver
-  auto solver_options = direct_static_options;
+  auto solver_options = default_static_options;
+  solver_options.nonlinear.nonlin_solver = NonlinearSolver::KINBacktrackingLineSearch;
   solver_options.nonlinear.abs_tol = 1e-14;
-  solver_options.nonlinear.rel_tol = 1e-14;
+  solver_options.nonlinear.rel_tol = 0.0;
+  solver_options.nonlinear.max_iter = 30;
   SolidMechanics<p, dim> solid(solver_options, GeometricNonlinearities::On, "solid");
 
   solid_mechanics::NeoHookean mat{.density=1.0, .K=1.0, .G=1.0};
@@ -250,7 +252,7 @@ TEST(SolidMechanics, PatchTest2dQ1TractionBcs)
 {
   constexpr int p = 1;
   constexpr int dim   = 2;
-  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::EssentialAndNatural);
   EXPECT_LT(error, tol);
 }
 
@@ -258,7 +260,7 @@ TEST(SolidMechanics, PatchTest3dQ1TractionBcs)
 {
   constexpr int p = 1;
   constexpr int dim   = 3;
-  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::EssentialAndNatural);
   EXPECT_LT(error, tol);
 }
 
@@ -266,7 +268,7 @@ TEST(SolidMechanics, PatchTest2dQ2TractionBcs)
 {
   constexpr int p = 2;
   constexpr int dim   = 2;
-  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::EssentialAndNatural);
   EXPECT_LT(error, tol);
 }
 
@@ -274,7 +276,7 @@ TEST(SolidMechanics, PatchTest3dQ2TractionBcs)
 {
   constexpr int p = 2;
   constexpr int dim   = 3;
-  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Mixed_essential_and_natural);
+  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::EssentialAndNatural);
   EXPECT_LT(error, tol);
 }
 

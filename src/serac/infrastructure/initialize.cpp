@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -18,6 +18,8 @@
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/profiling.hpp"
 #include "serac/infrastructure/terminator.hpp"
+
+#include "mfem.hpp"
 
 namespace serac {
 
@@ -53,6 +55,12 @@ std::pair<int, int> initialize(int argc, char* argv[], MPI_Comm comm)
 
   // Start the profiler (no-op if not enabled)
   profiling::initialize(comm);
+
+  mfem::Hypre::Init();
+
+#ifdef MFEM_USE_SUNDIALS
+  mfem::Sundials::Init();
+#endif
 
   // Initialize GPU (no-op if not enabled/available)
   // TODO for some reason this causes errors on Lassen. We need to look into this ASAP.

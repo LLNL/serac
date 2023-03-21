@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -42,9 +42,6 @@ void functional_test_static_3D(double expected_norm)
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
-  // define the thermal solver configurations
-  auto thermal_options = Thermal::defaultQuasistaticOptions();
-
   // define the solid solver configurations
   // no default solver options for solid yet, so make some here
   const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
@@ -54,13 +51,13 @@ void functional_test_static_3D(double expected_norm)
                                                          .lin_solver  = LinearSolver::GMRES,
                                                          .prec        = HypreBoomerAMGPrec{}};
 
-  const NonlinearSolverOptions default_nonlinear_options = {
+  const IterativeNonlinearSolverOptions default_nonlinear_options = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
 
   const SolverOptions solid_options = {default_linear_options, default_nonlinear_options};
 
-  Thermomechanics<p, dim> thermal_solid_solver(thermal_options, solid_options, GeometricNonlinearities::On,
-                                               "thermal_solid_functional");
+  Thermomechanics<p, dim> thermal_solid_solver(heat_transfer::default_static_options, solid_options,
+                                               GeometricNonlinearities::On, "thermal_solid_functional");
 
   double rho       = 1.0;
   double E         = 1.0;
@@ -126,9 +123,6 @@ void functional_test_shrinking_3D(double expected_norm)
   std::set<int> constraint_bdr = {1};
   std::set<int> temp_bdr       = {1, 2, 3};
 
-  // define the thermal solver configurations
-  auto thermal_options = Thermal::defaultQuasistaticOptions();
-
   // define the solid solver configurations
   // no default solver options for solid yet, so make some here
   const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
@@ -138,13 +132,13 @@ void functional_test_shrinking_3D(double expected_norm)
                                                          .lin_solver  = LinearSolver::GMRES,
                                                          .prec        = HypreBoomerAMGPrec{}};
 
-  const NonlinearSolverOptions default_nonlinear_options = {
+  const IterativeNonlinearSolverOptions default_nonlinear_options = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
 
   const SolverOptions solid_options = {default_linear_options, default_nonlinear_options};
 
-  Thermomechanics<p, dim> thermal_solid_solver(thermal_options, solid_options, GeometricNonlinearities::On,
-                                               "thermal_solid_functional");
+  Thermomechanics<p, dim> thermal_solid_solver(heat_transfer::default_static_options, solid_options,
+                                               GeometricNonlinearities::On, "thermal_solid_functional");
 
   double                                       rho       = 1.0;
   double                                       E         = 1.0;
@@ -230,9 +224,6 @@ void parameterized()
       mesh::refineAndDistribute(buildCuboidMesh(4, 4, 4, 0.25, 0.25, 0.25), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
 
-  // define the thermal solver configurations
-  auto thermal_options = Thermal::defaultQuasistaticOptions();
-
   // define the solid solver configurations
   // no default solver options for solid yet, so make some here
   const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
@@ -242,21 +233,23 @@ void parameterized()
                                                          .lin_solver  = LinearSolver::GMRES,
                                                          .prec        = HypreBoomerAMGPrec{}};
 
-  const NonlinearSolverOptions default_nonlinear_options = {
+  const IterativeNonlinearSolverOptions default_nonlinear_options = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
 
   const SolverOptions solid_options = {default_linear_options, default_nonlinear_options};
 
-  Thermomechanics<p, dim, H1<p> > thermal_solid_solver(thermal_options, solid_options, GeometricNonlinearities::On,
-                                                       FinalMeshOption::Deformed, "thermal_solid_functional");
+  Thermomechanics<p, dim, H1<p> > thermal_solid_solver(heat_transfer::direct_static_options, solid_options,
+                                                       GeometricNonlinearities::On, FinalMeshOption::Deformed,
+                                                       "thermal_solid_functional");
 
-  double                                                    rho       = 1.0;
-  double                                                    E         = 1.0;
-  double                                                    nu        = 0.0;
-  double                                                    c         = 1.0;
-  double                                                    alpha0    = 0.0;  // 1.0e-3;
-  double                                                    theta_ref = 2.0;
-  double                                                    k         = 1.0;
+  double rho       = 1.0;
+  double E         = 1.0;
+  double nu        = 0.0;
+  double c         = 1.0;
+  double alpha0    = 0.0;  // 1.0e-3;
+  double theta_ref = 2.0;
+  double k         = 1.0;
+
   ParameterizedGreenSaintVenantThermoelasticMaterial        material{rho, E, nu, c, alpha0, theta_ref, k};
   ParameterizedGreenSaintVenantThermoelasticMaterial::State initial_state{};
   auto qdata = thermal_solid_solver.createQuadratureDataBuffer(initial_state);

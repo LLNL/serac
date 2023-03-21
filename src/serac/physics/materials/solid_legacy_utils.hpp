@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -36,7 +36,7 @@ void calcLinearizedStrain(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& eps
  * @brief Calculate the Cauchy stress from the PK1 stress
  *
  * @param[in] F the deformation gradient dx_dX
- * @param[in] P the first Piola-Kirchoff stress tensor
+ * @param[in] P the first Piola-Kirchhoff stress tensor
  * @param[out] sigma the Cauchy stress tensor
  */
 void calcCauchyStressFromPK1Stress(const mfem::DenseMatrix& F, const mfem::DenseMatrix& P, mfem::DenseMatrix& sigma);

@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -62,8 +62,8 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
 
   SolidMechanics<p, dim, Parameters<H1<1>, H1<1> > > solid_solver(default_static_options, GeometricNonlinearities::On,
                                                                   "solid_functional");
-  solid_solver.setParameter(user_defined_bulk_modulus, 0);
-  solid_solver.setParameter(user_defined_shear_modulus, 1);
+  solid_solver.setParameter(0, user_defined_bulk_modulus);
+  solid_solver.setParameter(1, user_defined_shear_modulus);
 
   // We must know the index of the parameter finite element state in our parameter pack to take sensitivities.
   // As we only have one parameter in this example, the index is zero.
@@ -109,7 +109,7 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
 
   // Construct a dummy adjoint load (this would come from a QOI downstream).
   // This adjoint load is equivalent to a discrete L1 norm on the displacement.
-  serac::FiniteElementDual              adjoint_load(*mesh, solid_solver.displacement().space(), "adjoint_load");
+  serac::FiniteElementDual              adjoint_load(solid_solver.displacement().space(), "adjoint_load");
   std::unique_ptr<mfem::HypreParVector> assembled_vector(adjoint_load_form.ParallelAssemble());
   adjoint_load = *assembled_vector;
 
@@ -117,12 +117,12 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
   solid_solver.solveAdjoint(adjoint_load);
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
-  [[maybe_unused]] auto& sensitivity = solid_solver.computeSensitivity<bulk_parameter_index>();
+  [[maybe_unused]] auto& sensitivity = solid_solver.computeSensitivity(bulk_parameter_index);
 
   // Perform finite difference on each bulk modulus value
   // to check if computed qoi sensitivity is consistent
   // with finite difference on the displacement
-  double eps = 1.0e-6;
+  double eps = 1.0e-5;
   for (int i = 0; i < user_defined_bulk_modulus.gridFunction().Size(); ++i) {
     // Perturb the bulk modulus
     user_defined_bulk_modulus(i) = bulk_modulus_value + eps;
@@ -186,7 +186,7 @@ TEST(SolidMechanics, FiniteDifferenceShape)
   // The nonlinear solver must have tight tolerances to ensure at least one Newton step occurs
   SolverOptions options = {
       DirectSolverOptions{},
-      NonlinearSolverOptions{.rel_tol = 1.0e-8, .abs_tol = 1.0e-14, .max_iter = 10, .print_level = 1}};
+      IterativeNonlinearSolverOptions{.rel_tol = 1.0e-8, .abs_tol = 1.0e-14, .max_iter = 10, .print_level = 1}};
 
   // Construct a functional-based solid solver
   SolidMechanics<p, dim> solid_solver(options, GeometricNonlinearities::On, "solid_functional");
@@ -235,7 +235,7 @@ TEST(SolidMechanics, FiniteDifferenceShape)
 
   // Construct a dummy adjoint load (this would come from a QOI downstream).
   // This adjoint load is equivalent to a discrete L1 norm on the displacement.
-  serac::FiniteElementDual              adjoint_load(*mesh, solid_solver.displacement().space(), "adjoint_load");
+  serac::FiniteElementDual              adjoint_load(solid_solver.displacement().space(), "adjoint_load");
   std::unique_ptr<mfem::HypreParVector> assembled_vector(adjoint_load_form.ParallelAssemble());
   adjoint_load = *assembled_vector;
 

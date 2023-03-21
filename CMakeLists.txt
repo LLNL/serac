@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -8,10 +8,13 @@
 # Basic CMake Setup
 #------------------------------------------------------------------------------
 
-if(ENABLE_CUDA)
-    cmake_minimum_required(VERSION 3.18)
-else()
-    cmake_minimum_required(VERSION 3.14)
+# Do not bump this over 3.14 due to it changing CMake policies and breaking
+# the CUDA build. We check the required version specifically for this below
+cmake_minimum_required(VERSION 3.14)
+
+# Check for minimum CMake version required w/o changing policies like cmake_minimum_required
+if(ENABLE_CUDA AND ${CMAKE_VERSION} VERSION_LESS 3.18.0)
+    message(FATAL_ERROR "Serac requires CMake version 3.18.0+ when CUDA is enabled.")
 endif()
 
 project(serac LANGUAGES CXX C)

@@ -26,7 +26,7 @@ set(functional_headers
     quadrature.hpp
     tensor.hpp
     tuple.hpp
-    tuple_arithmetic.hpp
+    tuple_tensor_dual_functions.hpp
     )
 
 set(functional_detail_headers

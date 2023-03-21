@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -14,41 +14,10 @@
 
 #include "serac/numerics/functional/functional.hpp"
 
-/// HeatTransfer helper structs
-namespace serac::Thermal {
-
-/**
- * @brief Response data type for thermal conduction simulations
- *
- * @tparam T1 Density type
- * @tparam T2 Specific heat capacity type
- * @tparam T3 Thermal flux type
- */
-template <typename T1, typename T2, typename T3>
-struct MaterialResponse {
-  /// Density of the material (mass/volume)
-  T1 density;
-
-  /// Specific heat capacity of the material (energy / (mass * temp))
-  T2 specific_heat_capacity;
-
-  /// Heat flux of the material (power/area)
-  T3 heat_flux;
-};
-
-/**
- * @brief Template deduction guide for the material response
- *
- * @tparam T1 Density type
- * @tparam T2 Specific heat capacity type
- * @tparam T3 Heat flux type
- */
-template <typename T1, typename T2, typename T3>
-MaterialResponse(T1, T2, T3) -> MaterialResponse<T1, T2, T3>;
+namespace serac::heat_transfer {
 
 /// Linear isotropic thermal conduction material model
-class LinearIsotropicConductor {
-public:
+struct LinearIsotropicConductor {
   /**
    * @brief Construct a new Linear Isotropic Conductor object
    *
@@ -75,18 +44,14 @@ public:
    * @tparam T2 Temperature type
    * @tparam T3 Temperature gradient type
    * @param[in] temperature_gradient Temperature gradient
-   * @return The calculated material response (density, specific heat capacity, thermal flux) for a linear
+   * @return The calculated material response (tuple of volumetric heat capacity and thermal flux) for a linear
    * isotropic material
    */
   template <typename T1, typename T2, typename T3>
   SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* temperature */,
                                     const T3& temperature_gradient) const
   {
-    using FluxType = decltype(conductivity_ * temperature_gradient);
-
-    return MaterialResponse<double, double, FluxType>{.density                = density_,
-                                                      .specific_heat_capacity = specific_heat_capacity_,
-                                                      .heat_flux = -1.0 * conductivity_ * temperature_gradient};
+    return serac::tuple{density_ * specific_heat_capacity_, -1.0 * conductivity_ * temperature_gradient};
   }
 
 private:
@@ -106,8 +71,7 @@ private:
  * @tparam dim Spatial dimension
  */
 template <int dim>
-class LinearConductor {
-public:
+struct LinearConductor {
   /**
    * @brief Construct a new Linear Isotropic Conductor object
    *
@@ -135,18 +99,14 @@ public:
    * @tparam T2 Temperature type
    * @tparam T3 Temperature gradient type
    * @param[in] temperature_gradient Temperature gradient
-   * @return The calculated material response (density, specific heat capacity, thermal flux) for a linear
+   * @return The calculated material response (tuple of volumetric heat capacity and thermal flux) for a linear
    * anisotropic material
    */
   template <typename T1, typename T2, typename T3>
   SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* temperature */,
                                     const T3& temperature_gradient) const
   {
-    using FluxType = decltype(conductivity_ * temperature_gradient);
-
-    return MaterialResponse<double, double, FluxType>{.density                = density_,
-                                                      .specific_heat_capacity = specific_heat_capacity_,
-                                                      .heat_flux = -1.0 * conductivity_ * temperature_gradient};
+    return serac::tuple{density_ * specific_heat_capacity_, -1.0 * conductivity_ * temperature_gradient};
   }
 
 private:
@@ -197,10 +157,11 @@ struct ConstantFlux {
    * @return The flux applied to the boundary
    */
   template <typename T1, typename T2, typename T3>
-  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* normal */, const T3& /* temperature */) const
+  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* normal */, const double /* time */,
+                                    const T3& /* temperature */) const
   {
     return flux_;
   }
 };
 
-}  // namespace serac::Thermal
+}  // namespace serac::heat_transfer

@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -23,7 +23,7 @@ struct GreenSaintVenantThermoelasticMaterial {
   double density;    ///< density
   double E;          ///< Young's modulus
   double nu;         ///< Poisson's ratio
-  double C;          ///< volumetric heat capacity
+  double C_v;        ///< volumetric heat capacity
   double alpha;      ///< thermal expansion coefficient
   double theta_ref;  ///< datum temperature for thermal expansion
   double k;          ///< thermal conductivity
@@ -74,7 +74,7 @@ struct GreenSaintVenantThermoelasticMaterial {
 
     state.strain_trace = get_value(trEg);
 
-    return serac::tuple{sigma, C, s0, q0};
+    return serac::tuple{sigma, C_v, s0, q0};
   }
 
   /**
@@ -92,7 +92,7 @@ struct GreenSaintVenantThermoelasticMaterial {
     auto         psi_1  = G * squared_norm(dev(strain)) + 0.5 * K * trE * trE;
     using std::log;
     auto logT  = log(theta / theta_ref);
-    auto psi_2 = C * (theta - theta_ref - theta * logT);
+    auto psi_2 = C_v * (theta - theta_ref - theta * logT);
     auto psi_3 = -3.0 * K * alpha * (theta - theta_ref) * trE;
     return psi_1 + psi_2 + psi_3;
   }
@@ -103,7 +103,7 @@ struct ParameterizedGreenSaintVenantThermoelasticMaterial {
   double density;    ///< density
   double E;          ///< Young's modulus
   double nu;         ///< Poisson's ratio
-  double C;          ///< volumetric heat capacity
+  double C_v;        ///< volumetric heat capacity
   double alpha0;     ///< reference value of thermal expansion coefficient
   double theta_ref;  ///< datum temperature for thermal expansion
   double k;          ///< thermal conductivity
@@ -159,7 +159,7 @@ struct ParameterizedGreenSaintVenantThermoelasticMaterial {
 
     state.strain_trace = get_value(trEg);
 
-    return serac::tuple{sigma, C, s0, q0};
+    return serac::tuple{sigma, C_v, s0, q0};
   }
 
   /**
@@ -180,7 +180,7 @@ struct ParameterizedGreenSaintVenantThermoelasticMaterial {
     auto         psi_1   = G * squared_norm(dev(strain)) + 0.5 * K * trE * trE;
     using std::log;
     auto logT  = log(theta / theta_ref);
-    auto psi_2 = C * (theta - theta_ref - theta * logT);
+    auto psi_2 = C_v * (theta - theta_ref - theta * logT);
     auto psi_3 = -3.0 * K * alpha * (theta - theta_ref) * trE;
     return psi_1 + psi_2 + psi_3;
   }

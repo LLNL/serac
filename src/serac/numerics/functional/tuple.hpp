@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -232,6 +232,46 @@ SERAC_HOST_DEVICE constexpr auto& get(tuple<T...>& values)
  */
 template <int i, typename... T>
 SERAC_HOST_DEVICE constexpr const auto& get(const tuple<T...>& values)
+{
+  static_assert(i < sizeof...(T), "");
+  if constexpr (i == 0) {
+    return values.v0;
+  }
+  if constexpr (i == 1) {
+    return values.v1;
+  }
+  if constexpr (i == 2) {
+    return values.v2;
+  }
+  if constexpr (i == 3) {
+    return values.v3;
+  }
+  if constexpr (i == 4) {
+    return values.v4;
+  }
+  if constexpr (i == 5) {
+    return values.v5;
+  }
+  if constexpr (i == 6) {
+    return values.v6;
+  }
+  if constexpr (i == 7) {
+    return values.v7;
+  }
+}
+
+/**
+ * @brief a function intended to be used for extracting the ith type from a tuple.
+ *
+ * @note type<i>(my_tuple) returns a value, whereas get<i>(my_tuple) returns a reference
+ *
+ * @tparam i the index of the tuple to query
+ * @tparam T the types stored in the tuple
+ * @param values the tuple of values
+ * @return a copy of the ith entry of the input
+ */
+template <int i, typename... T>
+SERAC_HOST_DEVICE constexpr auto type(const tuple<T...>& values)
 {
   static_assert(i < sizeof...(T), "");
   if constexpr (i == 0) {
@@ -678,4 +718,33 @@ struct tuple_element<0, tuple<Head, Tail...>> {
   using type = Head;  ///< the type at the specified index
 };
 
+/**
+ * @brief Trait for checking if a type is a @p serac::tuple
+ */
+template <typename T>
+struct is_tuple : std::false_type {
+};
+
+/// @overload
+template <typename... T>
+struct is_tuple<serac::tuple<T...>> : std::true_type {
+};
+
+/**
+ * @brief Trait for checking if a type if a @p serac::tuple containing only @p serac::tuple
+ */
+template <typename T>
+struct is_tuple_of_tuples : std::false_type {
+};
+
+/**
+ * @brief Trait for checking if a type if a @p serac::tuple containing only @p serac::tuple
+ */
+template <typename... T>
+struct is_tuple_of_tuples<serac::tuple<T...>> {
+  static constexpr bool value = (is_tuple<T>::value && ...);  ///< true/false result of type check
+};
+
 }  // namespace serac
+
+#include "serac/numerics/functional/tuple_tensor_dual_functions.hpp"

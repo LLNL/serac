@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -27,72 +27,6 @@ using solid_mechanics::default_dynamic_options;
 using solid_mechanics::default_static_options;
 using solid_mechanics::direct_static_options;
 
-template <int p, int dim>
-void functional_solid_test_static(double expected_disp_norm)
-{
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  int serial_refinement   = 0;
-  int parallel_refinement = 0;
-
-  // Create DataStore
-  axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "solid_functional_static_solve");
-
-  static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for solid functional test");
-
-  // Construct the appropriate dimension mesh and give it to the data store
-  std::string filename =
-      (dim == 2) ? SERAC_REPO_DIR "/data/meshes/beam-quad.mesh" : SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
-
-  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
-
-  // Define a boundary attribute set
-  std::set<int> ess_bdr = {1};
-
-  // Use a direct solver (DSuperLU) for the Jacobian solve
-  SolverOptions options = {DirectSolverOptions{}, solid_mechanics::default_nonlinear_options};
-
-  // Construct a functional-based solid mechanics solver
-  SolidMechanics<p, dim> solid_solver(options, GeometricNonlinearities::On, "solid_functional");
-
-  solid_mechanics::NeoHookean mat{1.0, 1.0, 1.0};
-  solid_solver.setMaterial(mat);
-
-  // Define the function for the initial displacement and boundary condition
-  auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
-
-  // Set the initial displacement and boundary condition
-  solid_solver.setDisplacementBCs(ess_bdr, bc);
-  solid_solver.setDisplacement(bc);
-
-  tensor<double, dim> constant_force;
-
-  constant_force[0] = 0.0;
-  constant_force[1] = 5.0e-4;
-
-  if (dim == 3) {
-    constant_force[2] = 0.0;
-  }
-
-  solid_mechanics::ConstantBodyForce<dim> force{constant_force};
-  solid_solver.addBodyForce(force);
-
-  // Finalize the data structures
-  solid_solver.completeSetup();
-
-  // Perform the quasi-static solve
-  double dt = 1.0;
-  solid_solver.advanceTimestep(dt);
-
-  // Output the sidre-based and paraview plot files
-  solid_solver.outputState("paraview_output");
-
-  // Check the final displacement norm
-  EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
-}
-
 void functional_solid_test_static_J2()
 {
   MPI_Barrier(MPI_COMM_WORLD);
@@ -104,7 +38,7 @@ void functional_solid_test_static_J2()
 
   // Create DataStore
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "solid_functional_static_solve_J2");
+  serac::StateManager::initialize(datastore, "solid_mechanics_J2_test");
 
   // Construct the appropriate dimension mesh and give it to the data store
   std::string filename = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
@@ -118,7 +52,7 @@ void functional_solid_test_static_J2()
   options.linear         = linear_options;
 
   // Construct a functional-based solid mechanics solver
-  SolidMechanics<p, dim> solid_solver(options, GeometricNonlinearities::Off, "solid_functional");
+  SolidMechanics<p, dim> solid_solver(options, GeometricNonlinearities::Off, "solid_mechanics");
 
   solid_mechanics::J2 mat{
       10000,  // Young's modulus
@@ -167,171 +101,6 @@ void functional_solid_test_static_J2()
   // this a qualitative test that just verifies
   // that plasticity models can have permanent
   // deformation after unloading
-  EXPECT_GT(norm(solid_solver.displacement()), 0.0);
-}
-
-// --------------------------------------------------------
-
-void functional_solid_test_lce_material(double expected_disp_norm)
-{
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  constexpr int p = 2;
-  constexpr int dim = 3;
-  int serial_refinement   = 0;
-  int parallel_refinement = 0;
-
-  // Create DataStore
-  axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "lce_solid_functional_static_solve_J2");
-
-  // Construct the appropriate dimension mesh and give it to the data store
-  // std::string filename = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
-  // std::string filename = SERAC_REPO_DIR "/data/meshes/LCE_tensileTestSpecimen.g";
-  std::string filename = SERAC_REPO_DIR "/data/meshes/LCE_tensileTestSpecimen_nonDim.g";
-  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
-
-  // auto mesh = serac::mesh::refineAndDistribute(serac::buildCuboidMesh(10, 10, 3, 0.008, 0.008, 0.00016));
-  // serac::StateManager::setMesh(std::move(mesh));
-
-  // define the solver configurations
-  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
-                                                         .abs_tol     = 1.0e-10,
-                                                         .print_level = 0,
-                                                         .max_iter    = 500,
-                                                         .lin_solver  = LinearSolver::GMRES,
-                                                         .prec        = HypreBoomerAMGPrec{}};
-
-  const NonlinearSolverOptions default_nonlinear_options = {
-      .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
-
-  const SolverOptions default_static = {default_linear_options, default_nonlinear_options};
-
-  // Construct a functional-based solid mechanics solver
-  SolidMechanics<p, dim> solid_solver(default_static, GeometricNonlinearities::On, 
-                                       "lce_solid_functional");
-
-  solid_mechanics::J2 mat{
-    100,   // Young's modulus
-    0.25,  // Poisson's ratio
-    1.0,   // isotropic hardening constant
-    2.3,   // kinematic hardening constant
-    300.0, // yield stress
-    1.0    // mass density
-  };
-
-// std::cout<<"... testing"<<std::endl;
-  solid_mechanics::J2::State initial_state{};
-
-  auto state = solid_solver.createQuadratureDataBuffer(initial_state);
-
-  solid_solver.setMaterial(mat, state);
-
-  // Define the function for the initial displacement and boundary condition
-  auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
-
-  // set the boundary conditions to be fixed on the coordinate planes
-  auto zeroFunc = [](const mfem::Vector /*x*/){ return 0.0;};
-
-  solid_solver.setDisplacementBCs({1}, zeroFunc, 1); // bottom face y-dir disp = 0
-  solid_solver.setDisplacementBCs({2}, zeroFunc, 0); // left face x-dir disp = 0
-  solid_solver.setDisplacementBCs({3}, zeroFunc, 2); // back face z-dir disp = 0
-
-  solid_solver.setDisplacement(bc);
-
-  bool includeBodyForce(false);
-
-  if(includeBodyForce)
-  {
-    tensor<double, dim> constant_force;
-
-    constant_force[0] = 0.0;
-    constant_force[1] = -8.0e-2;
-
-    if (dim == 3) {
-      constant_force[2] = 0.0;
-    }
-
-    solid_mechanics::ConstantBodyForce<dim> force{constant_force};
-    solid_solver.addBodyForce(force); 
-  }
-
-  solid_solver.setPiolaTraction([](auto x, auto /*n*/, auto t){
-    return tensor<double, 3>{0, 5.0e-3 * (x[1] > 0.0079), 0*t};
-  });
-
-  // Finalize the data structures
-  solid_solver.completeSetup();
-  
-  // Perform the quasi-static solve
-  double dt = 1.0;
-  solid_solver.advanceTimestep(dt);
-
-  // Output the sidre-based plot files
-  solid_solver.outputState();
-
-  solid_solver.outputState("lce_paraview_output");
-
-  // Check the final displacement norm
-  EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
-}
-
-template <int p, int dim>
-void functional_solid_test_dynamic(double expected_disp_norm)
-{
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  int serial_refinement   = 0;
-  int parallel_refinement = 0;
-
-  // Create DataStore
-  axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "solid_functional_dynamic_solve");
-
-  static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for solid functional test");
-
-  // Construct the appropriate dimension mesh and give it to the data store
-  std::string filename =
-      (dim == 2) ? SERAC_REPO_DIR "/data/meshes/beam-quad.mesh" : SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
-
-  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
-
-
-  // Construct a functional-based solid mechanics solver
-  SolidMechanics<p, dim> solid_solver(default_dynamic_options, GeometricNonlinearities::Off, FinalMeshOption::Reference,
-                                       "solid_functional_dynamic");
-
-  solid_mechanics::LinearIsotropic mat{1.0, 1.0, 1.0};
-  solid_solver.setMaterial(mat);
-
-  // Define the function for the initial displacement and boundary condition
-  auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
-
-  // Define a boundary attribute set and specify initial / boundary conditions
-  std::set<int> ess_bdr = {1};
-  solid_solver.setDisplacementBCs(ess_bdr, bc);
-  solid_solver.setDisplacement(bc);
-
-  tensor<double, dim> constant_force{0.0, 0.5};
-
-  solid_mechanics::ConstantBodyForce<dim> force{constant_force};
-  solid_solver.addBodyForce(force);
-
-  // Finalize the data structures
-  solid_solver.completeSetup();
-
-  // Perform the quasi-static solve
-  double dt = 0.5;
-
-  for (int i = 0; i < 3; ++i) {
-    solid_solver.advanceTimestep(dt);
-    solid_solver.outputState();
-  }
-
-  // Check the final displacement norm
-  EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
   // EXPECT_LT(norm(solid_solver.reactions()), 1.0e-5);
 }
 
@@ -362,8 +131,18 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
 
+  auto options                    = default_static_options;
+  auto linear_options             = solid_mechanics::default_linear_options;
+  linear_options.abs_tol          = 1.0e-14;  // prevent early-exit in linear solve
+  options.linear                  = linear_options;
+  options.nonlinear.nonlin_solver = NonlinearSolver::KINFullStep;
+  options.nonlinear.max_iter      = 5000;
+  options.nonlinear.rel_tol       = 1.0e-12;
+  options.nonlinear.abs_tol       = 1.0e-12;
+  options.nonlinear.print_level   = 1;
+
   // Construct a functional-based solid mechanics solver
-  SolidMechanics<p, dim> solid_solver(default_static_options, GeometricNonlinearities::Off, "solid_functional");
+  SolidMechanics<p, dim> solid_solver(options, GeometricNonlinearities::Off, "solid_functional");
 
   solid_mechanics::LinearIsotropic mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
@@ -379,7 +158,7 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
   if (test_mode == TestType::Pressure) {
     solid_solver.setPiolaTraction([](const auto& x, const tensor<double, dim>& n, const double) {
       if (x[0] > 7.5) {
-        return 1.0e-2 * n;
+        return 5.0e-3 * n;
       }
       return 0.0 * n;
     });
@@ -459,8 +238,8 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   // Construct a functional-based solid mechanics solver
   SolidMechanics<p, dim, Parameters<H1<1>, H1<1>>> solid_solver(default_static_options, GeometricNonlinearities::On,
                                                                 "solid_functional");
-  solid_solver.setParameter(user_defined_bulk_modulus, 0);
-  solid_solver.setParameter(user_defined_shear_modulus, 1);
+  solid_solver.setParameter(0, user_defined_bulk_modulus);
+  solid_solver.setParameter(1, user_defined_shear_modulus);
 
   solid_mechanics::ParameterizedNeoHookeanSolid<dim> mat{1.0, 0.0, 0.0};
   solid_solver.setMaterial(DependsOn<0, 1>{}, mat);
@@ -488,9 +267,7 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   // add some nonexistent body forces / tractions to check that
   // these parameterized versions compile and run without error
   solid_solver.addBodyForce(DependsOn<0>{}, [](const auto& x, double /*t*/, auto /* bulk */) { return x * 0.0; });
-
   solid_solver.addBodyForce(DependsOn<1>{}, ParameterizedBodyForce{[](const auto& x) { return 0.0 * x; }});
-
   solid_solver.setPiolaTraction(DependsOn<1>{}, [](const auto& x, auto...) { return 0 * x; });
 
   // Finalize the data structures
@@ -504,8 +281,8 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   // are not used, but running them as part of this test
   // checks the index-translation part of the derivative
   // kernels is working
-  solid_solver.template computeSensitivity<0>();
-  solid_solver.template computeSensitivity<1>();
+  solid_solver.computeSensitivity(0);
+  solid_solver.computeSensitivity(1);
 
   // Output the sidre-based plot files
   solid_solver.outputState();
@@ -520,7 +297,7 @@ TEST(SolidMechanics, 3DQuadStaticJ2) { functional_solid_test_static_J2(); }
 
 TEST(SolidMechanics, 2DLinearPressure)
 {
-  functional_solid_test_boundary<1, 2>(0.057051396685822188, TestType::Pressure);
+  functional_solid_test_boundary<1, 2>(0.028525698834671667, TestType::Pressure);
 }
 
 }  // namespace serac

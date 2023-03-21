@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
@@ -31,6 +31,7 @@ if(NOT SERAC_FOUND)
 
   set(SERAC_USE_ADIAK          @SERAC_USE_ADIAK@)
   set(SERAC_USE_AXOM           @SERAC_USE_AXOM@)
+  set(SERAC_USE_CAMP           @SERAC_USE_CAMP@)
   set(SERAC_USE_CALIPER        @SERAC_USE_CALIPER@)
   set(SERAC_USE_CHAI           @SERAC_USE_CHAI@)
   set(SERAC_USE_CONDUIT        @SERAC_USE_CONDUIT@)
@@ -44,6 +45,7 @@ if(NOT SERAC_FOUND)
 
   set(SERAC_ADIAK_DIR          "@ADIAK_DIR@")
   set(SERAC_AXOM_DIR           "@AXOM_DIR@")
+  set(SERAC_CAMP_DIR           "@CAMP_DIR@")
   set(SERAC_CALIPER_DIR        "@CALIPER_DIR@")
   set(SERAC_CHAI_DIR           "@CHAI_DIR@")
   set(SERAC_CONDUIT_DIR        "@CONDUIT_DIR@")
@@ -61,7 +63,7 @@ if(NOT SERAC_FOUND)
   endif()
 
   # Set to real variable unless user overrode it
-  foreach(dep AXOM CALIPER CHAI CONDUIT HDF5 MFEM PETSC RAJA TRIBOL UMPIRE)
+  foreach(dep AXOM CAMP CALIPER CHAI CONDUIT HDF5 MFEM PETSC RAJA TRIBOL UMPIRE)
     if (NOT ${dep}_DIR)
       set(${dep}_DIR "${SERAC_${dep}_DIR}")
     endif()
@@ -90,6 +92,11 @@ if(NOT SERAC_FOUND)
   # also covers fmt/cli11
   if(SERAC_USE_AXOM)
     find_dependency(Axom REQUIRED NO_DEFAULT_PATH PATHS "${AXOM_DIR}/lib/cmake")
+  endif()
+  
+  # Camp
+  if(SERAC_USE_CAMP)
+    find_dependency(camp REQUIRED NO_DEFAULT_PATH PATHS "${CAMP_DIR}/lib/cmake/camp")
   endif()
 
   # Conduit

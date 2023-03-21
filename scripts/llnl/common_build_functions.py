@@ -1,6 +1,6 @@
 #!/usr/local/bin/python
 
-# Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for details.
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
@@ -355,7 +355,8 @@ def build_and_test_host_config(test_root, host_config, report_to_stdout=False, e
     return 0
 
 
-def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs, report_to_stdout = False, extra_cmake_options = ""):
+def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs, report_to_stdout = False,
+                                extra_cmake_options = "", skip_install=False):
     host_configs = get_host_configs_for_current_machine(prefix, use_generated_host_configs)
     if len(host_configs) == 0:
         log_failure(prefix,"[ERROR: No host configs found at %s]" % prefix)
@@ -374,7 +375,7 @@ def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs, r
         build_dir = get_build_dir(test_root, host_config)
 
         start_time = time.time()
-        if build_and_test_host_config(test_root, host_config, report_to_stdout, extra_cmake_options) == 0:
+        if build_and_test_host_config(test_root, host_config, report_to_stdout, extra_cmake_options, skip_install) == 0:
             ok.append(host_config)
             log_success(build_dir, "[Success: Built host-config: {0}]".format(host_config), timestamp)
         else:
@@ -424,15 +425,10 @@ def set_group_and_perms(directory):
         print("[Skipping update of group and access permissions. Provided directory was not a known shared location: {0}]".format(directory))
     else:
         print("[changing group and access perms of: %s]" % directory)
-        # change group to smithdev
         print("[changing group to smithdev]")
         sexe("chgrp -f -R smithdev %s" % (directory),echo=True,error_prefix="WARNING:")
-        # change group perms to rwX
-        print("[changing perms for smithdev members to rwX]")
-        sexe("chmod -f -R g+rwX %s" % (directory),echo=True,error_prefix="WARNING:")
-        # change perms for all to rX
-        print("[changing perms for all users to rX]")
-        sexe("chmod -f -R a+rX %s" % (directory),echo=True,error_prefix="WARNING:")
+        print("[changing perms for smithdev members to 'rwX' and all to 'rX']")
+        sexe("chmod -f -R g+rwX,a+rX %s" % (directory),echo=True,error_prefix="WARNING:")
         print("[done setting perms for: %s]" % directory)
     return 0
 
@@ -464,6 +460,8 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = 
         os.mkdir(prefix)
     if not short_path:
         prefix = pjoin(prefix, timestamp)
+    if not os.path.exists(prefix):
+        os.mkdir(prefix)
 
     # create a mirror
     uberenv_create_mirror(prefix, spec, "", mirror_dir)

@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -22,6 +22,7 @@
 #include "serac/numerics/equation_solver.hpp"
 #include "serac/physics/state/finite_element_state.hpp"
 #include "serac/physics/state/finite_element_dual.hpp"
+#include "serac/physics/common.hpp"
 
 namespace serac {
 
@@ -55,13 +56,6 @@ public:
    * @param other The other base physics to copy from
    */
   BasePhysics(BasePhysics&& other) = default;
-
-  /**
-   * @brief Get the list of state variable grid functions
-   *
-   * @return the current vector of finite element states
-   */
-  virtual const std::vector<std::reference_wrapper<serac::FiniteElementState>>& getState() const;
 
   /**
    * @brief Set the current time
@@ -100,11 +94,146 @@ public:
   virtual void completeSetup() = 0;
 
   /**
+   * @brief Accessor for getting named finite element state fields from the physics modules
+   *
+   * @param state_name The name of the Finite Element State to retrieve
+   * @return The named Finite Element State
+   */
+  virtual const FiniteElementState& state(const std::string& state_name) = 0;
+
+  /**
+   * @brief Get a vector of the finite element state solution variable names
+   *
+   * @return The solution variable names
+   */
+  virtual std::vector<std::string> stateNames() = 0;
+
+  /**
+   * @brief Generate a finite element state object for the given parameter index
+   *
+   * @param parameter_index The index of the parameter to generate
+   * @param parameter_name The name of the parameter to generate
+   *
+   * @note The user is responsible for managing the lifetime of this object. It is required
+   * to exist whenever advanceTimestep, solveAdjoint, or computeSensitivity is called.
+   *
+   * @note The finite element space for this object is generated from the parameter
+   * discretization space (e.g. L2, H1) and the computational mesh given in the physics module constructor.
+   */
+  std::unique_ptr<FiniteElementState> generateParameter(const std::string& parameter_name, size_t parameter_index);
+
+  /**
+   * @brief Register the provided FiniteElementState object as the source of values for parameter `i`
+   *
+   * @param parameter_state the values to use for the specified parameter
+   * @param parameter_index the index of the parameter
+   *
+   * @pre The discretization space and mesh for this finite element state must be consistent with the arguments
+   * provided in the physics module constructor.
+   */
+  void setParameter(const size_t parameter_index, FiniteElementState& parameter_state);
+
+  /**
+   * @brief Set the shape displacement field to a known finite element state
+   *
+   * @param shape_displacement the values to use for the shape displacement
+   *
+   * @pre The discretization space and mesh for this finite element state must be consistent with the shape
+   * displacement of the associated mesh
+   */
+  void setShapeDisplacement(FiniteElementState& shape_displacement);
+
+  /**
+   * @brief Get the parameter field of the physics module
+   *
+   * @param parameter_index The parameter index to retrieve
+   * @return The FiniteElementState representing the user-defined parameter
+   */
+  FiniteElementState& parameter(const size_t parameter_index)
+  {
+    SLIC_ERROR_ROOT_IF(
+        parameter_index >= parameters_.size(),
+        axom::fmt::format("Parameter index '{}' is not available in physics module '{}'", parameter_index, name_));
+
+    SLIC_ERROR_ROOT_IF(
+        !parameters_[parameter_index].state,
+        axom::fmt::format("Parameter index '{}' is not set in physics module '{}'", parameter_index, name_));
+    return *parameters_[parameter_index].state;
+  }
+
+  /// @overload
+  const FiniteElementState& parameter(size_t parameter_index) const
+  {
+    SLIC_ERROR_ROOT_IF(
+        parameter_index >= parameters_.size(),
+        axom::fmt::format("Parameter index '{}' is not available in physics module '{}'", parameter_index, name_));
+
+    SLIC_ERROR_ROOT_IF(
+        !parameters_[parameter_index].state,
+        axom::fmt::format("Parameter index '{}' is not set in physics module '{}'", parameter_index, name_));
+    return *parameters_[parameter_index].state;
+  }
+
+  /**
+   * @brief Get the shape displacement of the associated mesh for this physics object
+   *
+   * @return The associated shape displacement
+   */
+  FiniteElementState& shapeDisplacement() { return shape_displacement_; }
+
+  /// @overload
+  const FiniteElementState& shapeDisplacement() const { return shape_displacement_; }
+
+  /**
+   * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
+   * problem with respect to the parameter field
+   *
+   * @return The sensitivity with respect to the parameter
+   *
+   * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
+   */
+  virtual FiniteElementDual& computeSensitivity(size_t /* parameter_index */)
+  {
+    SLIC_ERROR_ROOT(axom::fmt::format("Parameter sensitivities not enabled in physics module {}", name_));
+    return *parameters_[0].sensitivity;
+  }
+
+  /**
+   * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
+   * problem with respect to the shape displacement field
+   *
+   * @return The sensitivity with respect to the shape displacement
+   *
+   * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
+   */
+  virtual FiniteElementDual& computeShapeSensitivity()
+  {
+    SLIC_ERROR_ROOT(axom::fmt::format("Shape sensitivities not enabled in physics module {}", name_));
+    return shape_displacement_sensitivity_;
+  }
+
+  /**
    * @brief Advance the state variables according to the chosen time integrator
    *
    * @param[inout] dt The timestep to advance. For adaptive time integration methods, the actual timestep is returned.
    */
   virtual void advanceTimestep(double& dt) = 0;
+
+  /**
+   * @brief Solve the adjoint problem
+   * @pre It is expected that the forward analysis is complete and the current state is valid
+   * @note If the essential boundary state is not specified, homogeneous essential boundary conditions are applied
+   *
+   * @return The computed adjoint finite element state
+   */
+  virtual const serac::FiniteElementState& solveAdjoint(FiniteElementDual& /*adjoint_load */,
+                                                        FiniteElementDual* /* dual_with_essential_boundary */ = nullptr)
+  {
+    SLIC_ERROR_ROOT(axom::fmt::format("Adjoint analysis not defined for physics module {}", name_));
+
+    // Return a dummy state value to quiet the compiler. This will never get used.
+    return *states_[0];
+  }
 
   /**
    * @brief Output the current state of the PDE fields in Sidre format and optionally in Paraview format
@@ -161,17 +290,45 @@ protected:
   /**
    * @brief List of finite element states associated with this physics module
    */
-  std::vector<std::reference_wrapper<serac::FiniteElementState>> states_;
+  std::vector<serac::FiniteElementState*> states_;
 
   /**
    * @brief List of finite element duals associated with this physics module
    */
-  std::vector<std::reference_wrapper<serac::FiniteElementDual>> duals_;
+  std::vector<serac::FiniteElementDual*> duals_;
 
-  /**
-   * @brief Block vector storage of the true state
-   */
-  std::unique_ptr<mfem::BlockVector> block_;
+  /// @brief The information needed for the physics parameters stored as Finite Element State fields
+  struct ParameterInfo {
+    /// The trial spaces used for the Functional object
+    std::unique_ptr<mfem::ParFiniteElementSpace> trial_space;
+
+    /// The collections needed for the parameter finite element space
+    std::unique_ptr<mfem::FiniteElementCollection> trial_collection;
+
+    /// The finite element states representing user-defined and owned parameter fields
+    serac::FiniteElementState* state;
+
+    /// The finite element state representing the parameter at the previous evalutaion
+    std::unique_ptr<serac::FiniteElementState> old_state;
+
+    /**
+     * @brief The sensitivities (dual vectors) with respect to each of the input parameter fields
+     * @note this is optional as FiniteElementDuals are not default constructable and
+     * we want to set this during the setParameter or generateParameter method.
+     */
+    std::optional<serac::FiniteElementDual> sensitivity;
+  };
+
+  /// @brief A vector of the parameters associated with this physics module
+  std::vector<ParameterInfo> parameters_;
+
+  /// @brief The parameter info associated with the shape displacement field
+  /// @note This is owned by the State Manager since it is associated with the mesh
+  FiniteElementState& shape_displacement_;
+
+  /// @brief Sensitivity with respect to the shape displacement field
+  /// @note This is owned by the State Manager since it is associated with the mesh
+  FiniteElementDual& shape_displacement_sensitivity_;
 
   /**
    *@brief Whether the simulation is time-independent

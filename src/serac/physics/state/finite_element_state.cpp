@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -97,6 +97,11 @@ double norm(const FiniteElementState& state, const double p)
 }
 
 double computeL2Error(const FiniteElementState& state, mfem::VectorCoefficient& exact_solution)
+{
+  return state.gridFunction().ComputeL2Error(exact_solution);
+}
+
+double computeL2Error(const FiniteElementState& state, mfem::Coefficient& exact_solution)
 {
   return state.gridFunction().ComputeL2Error(exact_solution);
 }

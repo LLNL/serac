@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -16,7 +16,6 @@
 
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/tuple.hpp"
-#include "serac/numerics/functional/tuple_arithmetic.hpp"
 
 namespace serac {
 

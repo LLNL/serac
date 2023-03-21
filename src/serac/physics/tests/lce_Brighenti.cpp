@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
 {
   MPI_Init(&argc, &argv);
 
-  axom::slic::SimpleLogger logger;
+  axom::slic::SimpleLogger logger; 
 
   constexpr int p                   = 1;
   constexpr int dim                 = 3;
@@ -48,10 +48,8 @@ int main(int argc, char* argv[])
 
   temperature = initial_temperature;
 
-  auto fec = std::unique_ptr<mfem::FiniteElementCollection>(new mfem::L2_FECollection(p, dim));
-
   FiniteElementState gamma(
-      StateManager::newState(FiniteElementState::Options{.order = p, .coll = std::move(fec), .name = "gamma"}));
+      StateManager::newState(FiniteElementState::Options{.order = p, .vector_dim = 3, .name = "gamma"}));
 
   // orient fibers in the beam like below (horizontal when y < 0.5, vertical when y > 0.5):
   //
@@ -69,20 +67,17 @@ int main(int argc, char* argv[])
   gamma.project(coef);
 
   // Construct a functional-based solid mechanics solver
-  // SolidMechanics<p, dim, Parameters<H1<p>, L2<p> > > solid_solver(default_static_options, GeometricNonlinearities::Off,
-  //                                                                 FinalMeshOption::Reference, "solid_functional",
-  //                                                                 {temperature, gamma});
   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>>> solid_solver(default_static_options, GeometricNonlinearities::Off,
                                                                   "lce_solid_functional");
 
   constexpr int TEMPERATURE_INDEX = 0;
   constexpr int GAMMA_INDEX       = 1;
 
-  solid_solver.setParameter(temperature, TEMPERATURE_INDEX);
-  solid_solver.setParameter(gamma, GAMMA_INDEX);
+  solid_solver.setParameter(TEMPERATURE_INDEX, temperature);
+  solid_solver.setParameter(GAMMA_INDEX, gamma);
 
   double density                = 1.0;
-  double E                      = 1.0;
+  double E                      = 1.0; 
   double nu                     = 0.48;
   double shear_modulus          = 0.5 * E / (1.0 + nu);
   double bulk_modulus           = E / 3.0 / (1.0 - 2.0 * nu);
@@ -91,10 +86,10 @@ int main(int argc, char* argv[])
   double transition_temperature = 370.0;
   double Nb2                    = 1.0;
 
-  LiquidCrystalElastomer mat(density, shear_modulus, bulk_modulus, order_constant, order_parameter,
+  LiqCrystElast_Brighenti mat(density, shear_modulus, bulk_modulus, order_constant, order_parameter,
                              transition_temperature, Nb2);
 
-  LiquidCrystalElastomer::State initial_state{};
+  LiqCrystElast_Brighenti::State initial_state{};
 
   auto qdata = solid_solver.createQuadratureDataBuffer(initial_state);
 

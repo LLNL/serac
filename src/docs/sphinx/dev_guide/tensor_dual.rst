@@ -1,4 +1,4 @@
-.. ## Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+.. ## Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 .. ## other Serac Project Developers. See the top-level COPYRIGHT file for details.
 .. ##
 .. ## SPDX-License-Identifier: (BSD-3-Clause)
@@ -133,7 +133,7 @@ one might implement this function as:
 
 .. code-block:: cpp
 
-   auto f = [](auto x){ return (x * sin(exp(x) - 2.0) / (1 + x*x); };
+   auto f = [](auto x){ return (x * sin(exp(x) - 2.0)) / (1 + x*x); };
 
 If :math:`f(x)` is used in a larger optimization or root-finding
 problem, we will likely also need to be able to evaluate
@@ -145,7 +145,7 @@ derivative information were
    .. code-block:: cpp
 
       static constexpr double epsilon = 1.0e-9;
-      auto dfdx = [](double x) { return (f(x + epsilon) - f(x + epsilon)) / (2.0 * epsilon); }
+      auto dfdx = [](double x) { return (f(x + epsilon) - f(x - epsilon)) / (2.0 * epsilon); }
 
    This approach is simple, but requires multiple function invocations
    and the accuracy suffers due to catastrophic cancellation in floating point arithmetic.
@@ -161,7 +161,7 @@ derivative information were
    .. code-block:: cpp
 
       auto dfdx = [](double x) {
-        return (exp(x) * (x + x*x*x) * cos(2 - exp(x)) - (x*x - 1) * exp(2 - sin(x)) / ((1 + x*x) * (1 + x*x)); 
+        return (exp(x) * (x + x*x*x) * cos(2 - exp(x)) - (x*x - 1) * exp(2 - sin(x))) / ((1 + x*x) * (1 + x*x)); 
       };
 
    This approach can give very accurate results, and allows the
@@ -320,8 +320,8 @@ Now let's consider a function that has multiple inputs and multiple outputs:
    auto f = [=](auto p, auto v, auto L){ 
       auto strain_rate = 0.5 * (L + transpose(L));
       auto stress = - p * I + 2 * mu * strain_rate;
-      auto kinetic_energy_density = 0.5 * p * dot(v, v);
-      return std::tuple{stress, kinetic_energy_density};
+      auto kinetic_energy_density = 0.5 * rho * dot(v, v);
+      return serac::tuple{stress, kinetic_energy_density};
    };
 
 Here, ``f`` calculates the stress, :math:`\sigma`, and local kinetic energy density, :math:`q`, of a fluid in terms of
@@ -343,16 +343,16 @@ pattern as before:
    tensor<double,3,3> L = ...;
 
    // promote the arguments to dual numbers with make_dual()
-   std::tuple dual_args = make_dual(p, v, L);
+   tuple dual_args = make_dual(serac::tuple{p, v, L});
 
    // then call the function with the dual arguments
-   auto outputs = std::apply(f, dual_args);
+   auto outputs = apply(f, dual_args);
 
-   // note: std::apply is a way to pass an n-tuple to a function that expects n arguments 
+   // note: serac::apply is a way to pass an n-tuple to a function that expects n arguments 
    // 
    // i.e. the two following lines have the same effect
    // f(p, v, L);
-   // std::apply(f, std::tuple{p, v, L});
+   // serac::apply(f, serac::tuple{p, v, L});
 
 Like before, ``outputs`` will now contain the actual output values, but also all gradient terms (6, in this case).
 To get the gradient tensors, we call the same ``get_gradient()`` function:
@@ -378,25 +378,25 @@ the derivative of the :math:`i^{th}` output with respect to the :math:`j^{th}` i
    \frac{\partial q}{\partial L}
    \end{bmatrix}
 
-The type returned by ``get_gradient()`` reflects this structure: returning a ``std::tuple`` of ``std::tuple``.
+The type returned by ``get_gradient()`` reflects this structure: returning a ``serac::tuple`` of ``serac::tuple``.
 So for this example, the return type will be of the form:
 
 .. code-block:: cpp
 
-  std::tuple<
-    std::tuple< df1_dx1_type, df1_dx2_type, df1_dx2_type >, 
-    std::tuple< df2_dx1_type, df2_dx2_type, df2_dx2_type >
+  serac::tuple<
+    serac::tuple< df1_dx1_type, df1_dx2_type, df1_dx2_type >, 
+    serac::tuple< df2_dx1_type, df2_dx2_type, df2_dx2_type >
   >;
 
-The individual blocks can be accessed by using ``std::get()``.
+The individual blocks can be accessed by using ``serac::get()``.
 
 Finally, if we look at the actual types contained in ``get_gradient(output)`` we see a few interesting details:
 
 .. code-block:: cpp
 
-   std::tuple<
-     std::tuple<tensor<double, 3, 3>, zero,              tensor<double, 3, 3, 3, 3> >, 
-     std::tuple<zero,                 tensor<double, 3>, zero                       > 
+   serac::tuple<
+     serac::tuple<tensor<double, 3, 3>, zero,              tensor<double, 3, 3, 3, 3> >, 
+     serac::tuple<zero,                 tensor<double, 3>, zero                       > 
    > gradients = get_gradient(outputs);
 
 First, the tensor shapes of the individual blocks are are in agreement with what we expect (e.g. 

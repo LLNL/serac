@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -8,10 +8,10 @@ set(test_dependencies test_utils)
 
 set(material_tests
     thermomechanical_material.cpp
-    #test_material_verification_tools.cpp
-    test_liquid_crystal_elastomer.cpp
     J2_material.cpp
-    )
+    nonlinear_J2_material.cpp
+    parameterized_nonlinear_J2_material.cpp
+)
 
 serac_add_tests( SOURCES ${material_tests}
                  DEPENDS_ON ${test_dependencies})

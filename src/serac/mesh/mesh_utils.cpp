@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -19,13 +19,13 @@ namespace serac {
 mfem::Mesh buildMeshFromFile(const std::string& mesh_file)
 {
   // Open the mesh
-  std::string msg = axom::fmt::format("Opening mesh file: {0}", mesh_file);
+  std::string msg = axom::fmt::format("Opening mesh file: '{0}'", mesh_file);
   SLIC_INFO_ROOT(msg);
 
   // Ensure correctness
   serac::logger::flush();
   if (!axom::utilities::filesystem::pathExists(mesh_file)) {
-    msg = axom::fmt::format("Given mesh file does not exist: {0}", mesh_file);
+    msg = axom::fmt::format("Given mesh file does not exist: '{0}'", mesh_file);
     SLIC_ERROR_ROOT(msg);
   }
 
@@ -35,7 +35,7 @@ mfem::Mesh buildMeshFromFile(const std::string& mesh_file)
 
   if (!imesh) {
     serac::logger::flush();
-    std::string err_msg = axom::fmt::format("Can not open mesh file: {0}", mesh_file);
+    std::string err_msg = axom::fmt::format("Can not open mesh file: '{0}'", mesh_file);
     SLIC_ERROR_ROOT(err_msg);
   }
 
@@ -514,7 +514,7 @@ serac::mesh::InputOptions FromInlet<serac::mesh::InputOptions>::operator()(const
 
   // If it reaches here, we haven't found a supported type
   serac::logger::flush();
-  std::string err_msg = axom::fmt::format("Specified type not supported: {0}", mesh_type);
+  std::string err_msg = axom::fmt::format("Specified type not supported: '{0}'", mesh_type);
   SLIC_ERROR_ROOT(err_msg);
   return {};
 }
