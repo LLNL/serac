@@ -90,13 +90,13 @@ int main(int argc, char* argv[])
   // Construct a functional-based solid mechanics solver
   IterativeNonlinearSolverOptions default_nonlinear_options = {
     .rel_tol = 1.0e-6, 
-    .abs_tol = 1.0e-10, 
+    .abs_tol = 1.0e-8, 
     .max_iter = 100, 
     .print_level = 1,
-    // .nonlin_solver = serac::NonlinearSolver::Newton};
+     .nonlin_solver = serac::NonlinearSolver::Newton};
     // .nonlin_solver = serac::NonlinearSolver::LBFGS};
     // .nonlin_solver = serac::NonlinearSolver::KINFullStep};
-    .nonlin_solver = serac::NonlinearSolver::KINBacktrackingLineSearch};
+    //.nonlin_solver = serac::NonlinearSolver::KINBacktrackingLineSearch};
     // .nonlin_solver = serac::NonlinearSolver::KINPicard};
     // .nonlin_solver = serac::NonlinearSolver::KINFP};
 
@@ -111,12 +111,7 @@ int main(int argc, char* argv[])
   SolidMechanics<p, dim, Parameters< H1<p>, L2<p>, L2<p> > > solid_solver({CustomSolverOptions{custom_solver.get()}, default_nonlinear_options}, GeometricNonlinearities::Off,
                                        "lce_solid_functional");
 #else
-  IterativeSolverOptions linear_sol_options = {.rel_tol     = 1.0e-7,
-                                                       .abs_tol     = 1.0e-16,
-                                                       .print_level = 0,
-                                                       .max_iter    = 500,
-                                                       .lin_solver  = LinearSolver::GMRES,
-                                                       .prec        = HypreBoomerAMGPrec{}};
+  DirectSolverOptions linear_sol_options = {};
   SolidMechanics<p, dim, Parameters< H1<p>, L2<p>, L2<p> > > solid_solver({linear_sol_options, default_nonlinear_options}, GeometricNonlinearities::Off,
                                        "lce_solid_functional");
 #endif
