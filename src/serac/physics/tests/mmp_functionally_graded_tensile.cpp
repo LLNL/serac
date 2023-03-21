@@ -23,6 +23,8 @@
 #define FULL_DOMAIN
 // #undef FULL_DOMAIN
 
+static const int probTag_ = 5;
+
 using namespace serac;
 
 using serac::solid_mechanics::default_static_options;
@@ -49,11 +51,11 @@ int main(int argc, char* argv[])
 #endif
 
   // Construct the appropriate dimension mesh and give it to the data store
-  int nElem = 4;
-  double lx = 9.53e-3, ly = 3.18e-3, lz = 2.e-3;
+  int nElem = 6;//2*3;
+  double lx = 9.53e-3, ly = 3.18e-3/2, lz = 2.e-3/2;
   // double lx = 0.5e-3, ly = 0.1e-3, lz = 0.05e-3;
 #ifdef FULL_DOMAIN
-  ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(10*nElem, 3*nElem, 2*nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
+  ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(19*nElem, 3*nElem, 2*nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
 #else
   ly *= 0.5;
   lz *= 0.5;
@@ -62,17 +64,6 @@ int main(int argc, char* argv[])
   auto mesh = std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, cuboid);
   serac::StateManager::setMesh(std::move(mesh));
 
-  // orient fibers in the beam like below (horizontal when y < 0.5, vertical when y > 0.5):
-  //
-  // y
-  //
-  // ^                                             8
-  // |                                             |
-  // ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓-- 1
-  // ┃ | | | | | | | | | | | | | | | | | | | | | | ┃
-  // ┃ - - - - - - - - - - - - - - - - - - - - - - ┃
-  // ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛--> x
-
   // Construct a functional-based solid mechanics solver
   IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
                                                        .abs_tol     = 1.0e-16,
@@ -80,8 +71,13 @@ int main(int argc, char* argv[])
                                                        .max_iter    = 500,
                                                        .lin_solver  = LinearSolver::GMRES,
                                                        .prec        = HypreBoomerAMGPrec{}};
-  NonlinearSolverOptions default_nonlinear_options = {
-    .rel_tol = 1.0e-6, .abs_tol = 1.0e-14, .max_iter = 10, .print_level = 1};
+  IterativeNonlinearSolverOptions default_nonlinear_options = {
+    .rel_tol = 1.0e-6, 
+    .abs_tol = 1.0e-14, 
+    .max_iter = 50, 
+    .print_level = 1,
+    // .nonlin_solver = serac::NonlinearSolver::Newton};
+    .nonlin_solver = serac::NonlinearSolver::KINBacktrackingLineSearch};
   // SolidMechanics<p, dim, Parameters< H1<p>, H1<p> > > solid_solver({default_linear_options, default_nonlinear_options}, GeometricNonlinearities::Off,
   //                                      "mmp_solid_functional");
     SolidMechanics<p, dim, Parameters< L2<p>, L2<p> > > solid_solver({default_linear_options, default_nonlinear_options}, GeometricNonlinearities::Off,
@@ -89,17 +85,39 @@ int main(int argc, char* argv[])
 
   // Material properties
   double density = 1.0;
-  double possionRat = 0.3; // 0.49;
+  double possionRat = 0.3;
   double maxElasticityParam = 500.0;
-  double minElasticityParam = 1.0;
+  double minElasticityParam = 1.0; // maxElasticityParam;
+
+  switch(probTag_) {
+      case 1:
+      case 5:
+      case 9:
+         maxElasticityParam = 500.0;
+         break;
+      case 2:
+      case 6:
+         maxElasticityParam = 200.0;
+         break;
+      case 3:
+      case 7:
+         maxElasticityParam = 100.0;
+         break;
+      case 4:
+      case 8:
+         maxElasticityParam = 5.0;
+         break;
+      default :
+         std::cout << "... Invalid problem Tag/Id" << std::endl;
+         exit(0);
+   }
 
   // Parameter 1
   FiniteElementState EmodParam(StateManager::newState(FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "EmodParam"}));
-  int problemTag = 1;
-  auto EmodFunc = [problemTag,lx,minElasticityParam,maxElasticityParam](const mfem::Vector& x, double) -> double 
+  auto EmodFunc = [=](const mfem::Vector& x, double) -> double 
   {
     double Emod = 1.0;
-    if (problemTag==1)
+    if (probTag_<5)
     {
       if(x[0]>lx/2.0)
       {
@@ -110,16 +128,28 @@ int main(int argc, char* argv[])
         Emod = minElasticityParam;
       }
     }
-    else if (problemTag==2)
+    else if (probTag_<9)
     {
-      if(x[0]>lx/2.0)
-      {
-        Emod = minElasticityParam + (maxElasticityParam-minElasticityParam) * 2.0 * (x[0]/lx-0.5);
-      }
-      else
+      double transitionLength = 5.0e-3;
+      double iniTransition = (lx-transitionLength)/2.0;
+      double endTransition = iniTransition + transitionLength;
+
+      if(x[0]<iniTransition )
       {
         Emod = minElasticityParam;
       }
+      else if(x[0]>iniTransition && x[0]<endTransition )
+      {
+        Emod = minElasticityParam + (maxElasticityParam-minElasticityParam) * ( (x[0]-iniTransition)/transitionLength);
+      }
+      else
+      {
+        Emod = maxElasticityParam;
+      }
+    }
+    else
+    {
+      Emod = minElasticityParam + (maxElasticityParam-minElasticityParam) * x[0]/lx; // * 2.0 * (x[0]/lx-0.5);
     }
 
     return Emod; 
@@ -129,10 +159,10 @@ int main(int argc, char* argv[])
 
     // Parameter 2
   FiniteElementState GmodParam(StateManager::newState(FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "GmodParam"}));
-  auto GmodFunc = [problemTag,lx,minElasticityParam,maxElasticityParam,possionRat](const mfem::Vector& x, double) -> double 
+  auto GmodFunc = [=](const mfem::Vector& x, double) -> double 
   {
     double Emod = 1.0;
-    if (problemTag==1)
+    if (probTag_<5)
     {
       if(x[0]>lx/2.0)
       {
@@ -143,16 +173,28 @@ int main(int argc, char* argv[])
         Emod = minElasticityParam;
       }
     }
-    else if (problemTag==2)
+    else if (probTag_<9)
     {
-      if(x[0]>lx/2.0)
-      {
-        Emod = minElasticityParam + maxElasticityParam * (x[0]-lx/2.0)/lx/2.0;
-      }
-      else
+      double transitionLength = 5.0e-3;
+      double iniTransition = (lx-transitionLength)/2.0;
+      double endTransition = iniTransition + transitionLength;
+
+      if(x[0]<iniTransition )
       {
         Emod = minElasticityParam;
       }
+      else if(x[0]>iniTransition && x[0]<endTransition )
+      {
+        Emod = minElasticityParam + (maxElasticityParam-minElasticityParam) * ( (x[0]-iniTransition)/transitionLength);
+      }
+      else
+      {
+        Emod = maxElasticityParam;
+      }
+    }
+    else
+    {
+      Emod = minElasticityParam + (maxElasticityParam-minElasticityParam) * x[0]/lx; // * 2.0 * (x[0]/lx-0.5);
     }
 
     double shearModulus = 0.5*Emod/(1.0 + possionRat);
@@ -176,13 +218,16 @@ int main(int argc, char* argv[])
   // Boundary conditions:
 #ifdef FULL_DOMAIN
   // Fixed bottom
+  auto zero_displacement = [](const mfem::Vector& /*x*/){ return 0.0;};
+  solid_solver.setDisplacementBCs({1}, zero_displacement, 2); // bottom face y-dir disp = 0
+  solid_solver.setDisplacementBCs({2}, zero_displacement, 1); // back face z-dir disp = 0
   solid_solver.setDisplacementBCs({5}, [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; });
 #else
   // Prescribe zero displacement at the supported end of the beam
   auto zero_displacement = [](const mfem::Vector& /*x*/){ return 0.0;};
-  solid_solver.setDisplacementBCs({1}, zero_displacement, 1); // bottom face y-dir disp = 0
-  solid_solver.setDisplacementBCs({2}, zero_displacement, 0); // left face x-dir disp = 0
-  solid_solver.setDisplacementBCs({3}, zero_displacement, 2); // back face z-dir disp = 0
+  solid_solver.setDisplacementBCs({1}, zero_displacement, 2); // bottom face y-dir disp = 0
+  solid_solver.setDisplacementBCs({2}, zero_displacement, 1); // left face x-dir disp = 0
+  solid_solver.setDisplacementBCs({3}, zero_displacement, 0); // back face z-dir disp = 0
 #endif
 
 #ifdef LOAD_DRIVEN
@@ -191,15 +236,18 @@ int main(int argc, char* argv[])
   double iniLoadVal = 1.0e-4;
 
   // double maxLoadVal = 0.25 * 1.0e1 /ly/lz ; // 2.0e6*ly*lz/4.0; // 1.5e0; // 6.36e-6
-  double maxLoadVal = 0.25 * 1.0e-5 /ly/lz ; // 2.0e6*ly*lz/4.0; // 1.5e0; // 6.36e-6
+  // double maxLoadVal = 0.25 * 1.0e-5 /ly/lz ; // 2.0e6*ly*lz/4.0; // 1.5e0; // 6.36e-6
+  double maxLoadVal = 0.25 * 1.5e-5 /(ly/2)/(lz/2) ; // 2.0e6*ly*lz/4.0; // 1.5e0; // 6.36e-6
 
 #ifdef FULL_DOMAIN
-  maxLoadVal *= 4;
+  maxLoadVal *= 1.0;
 #endif
  
   double loadVal = iniLoadVal + 0.0 * maxLoadVal;
   solid_solver.setPiolaTraction([&loadVal, lx](auto x, auto /*n*/, auto /*t*/){
-    return tensor<double, 3>{loadVal * (x[0]>0.98*lx), 0, 0};
+    return tensor<double, 3>{
+      loadVal * (x[0]>0.9999*lx), 0, 0
+      };
   });
 
 #else
@@ -214,13 +262,16 @@ int main(int argc, char* argv[])
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  int num_steps = 50;
+  int num_steps = 20;
   
 #ifdef LOAD_DRIVEN
-  std::string outputFilename = "sol_mmp_tensile_load";
+  std::string outputFilename = "sol_mmp_tensile_load_probId_";
 #else
-  std::string outputFilename = "sol_mmp_tensile_disp";
+  std::string outputFilename = "sol_mmp_tensile_disp_probId_";
 #endif
+
+  outputFilename += std::to_string(probTag_);
+
   solid_solver.outputState(outputFilename);
  
   double t    = 0.0;
@@ -235,7 +286,7 @@ int main(int argc, char* argv[])
 #ifdef LOAD_DRIVEN
     // loadVal = iniLoadVal +  t / tmax * (maxLoadVal - iniLoadVal);
     // loadVal = iniLoadVal * std::exp( std::log(maxLoadVal/iniLoadVal) * t / tmax  );
-    loadVal = iniLoadVal  + (maxLoadVal - iniLoadVal) * std::pow( t / tmax, 3.0  ); // 0.75
+    loadVal = iniLoadVal  + (maxLoadVal - iniLoadVal) * std::pow( t / tmax, 2.0  ); // 0.75
 #else
     // elasticityParam = minElasticityParam * (tmax - t) / tmax;
 #endif
@@ -267,45 +318,49 @@ int main(int argc, char* argv[])
       // FiniteElementState &displacement = solid_solver.displacement();
       auto &fes = solid_solver.displacement().space();
       mfem::ParGridFunction displacement_gf = solid_solver.displacement().gridFunction();
-      mfem::Vector dispVecX(fes.GetNDofs()); dispVecX = 0.0;
-      mfem::Vector dispVecY(fes.GetNDofs()); dispVecY = 0.0;
-      mfem::Vector dispVecZ(fes.GetNDofs()); dispVecZ = 0.0;
+      int numDofs = fes.GetNDofs();
+      mfem::Vector dispVecX(numDofs); dispVecX = 0.0;
+      mfem::Vector dispVecY(numDofs); dispVecY = 0.0;
+      mfem::Vector dispVecZ(numDofs); dispVecZ = 0.0;
 
       for (int k = 0; k < fes.GetNDofs(); k++) 
       {
-        dispVecX(k) = displacement_gf(3*k+0);
-        dispVecY(k) = displacement_gf(3*k+1);
-        dispVecZ(k) = displacement_gf(3*k+2);
+        // dispVecX(k) = displacement_gf(3*k+0);
+        // dispVecY(k) = displacement_gf(3*k+1);
+        // dispVecZ(k) = displacement_gf(3*k+2);
+        dispVecX(k) = displacement_gf(0*numDofs + k);
+        dispVecY(k) = displacement_gf(1*numDofs + k);
+        dispVecZ(k) = displacement_gf(2*numDofs + k);
       }
 
-      double gblDispXmin, lclDispXmin = dispVecX.Min();
+      // double gblDispXmin, lclDispXmin = dispVecX.Min();
       double gblDispXmax, lclDispXmax = dispVecX.Max();
       double gblDispYmin, lclDispYmin = dispVecY.Min();
-      double gblDispYmax, lclDispYmax = dispVecY.Max();
+      // double gblDispYmax, lclDispYmax = dispVecY.Max();
       double gblDispZmin, lclDispZmin = dispVecZ.Min();
-      double gblDispZmax, lclDispZmax = dispVecZ.Max();
+      // double gblDispZmax, lclDispZmax = dispVecZ.Max();
 
-      MPI_Allreduce(&lclDispXmin, &gblDispXmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+      // MPI_Allreduce(&lclDispXmin, &gblDispXmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
       MPI_Allreduce(&lclDispXmax, &gblDispXmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
       MPI_Allreduce(&lclDispYmin, &gblDispYmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-      MPI_Allreduce(&lclDispYmax, &gblDispYmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+      // MPI_Allreduce(&lclDispYmax, &gblDispYmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
       MPI_Allreduce(&lclDispZmin, &gblDispZmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-      MPI_Allreduce(&lclDispZmax, &gblDispZmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+      // MPI_Allreduce(&lclDispZmax, &gblDispZmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
 
       if(rank==0)
       {
         std::cout 
-        <<"\n... Min X displacement: " << gblDispXmin
+        << "\n... In time step: "<< i + 1 << " (/" << num_steps << ")" 
+        // <<"\n... Min X displacement: " << gblDispXmin
+        <<"\n... Max X displacement: " << gblDispXmax
         <<"\n... Min Y displacement: " << gblDispYmin
         <<"\n... Min Z displacement: " << gblDispZmin 
-
-        <<"\n\n... Max X displacement: " << gblDispXmax
-        <<"\n... Max Y displacement: " << gblDispYmax
-        <<"\n... Max Z displacement: " << gblDispZmax 
+        // <<"\n... Max Y displacement: " << gblDispYmax
+        // <<"\n... Max Z displacement: " << gblDispZmax 
         << std::endl;
       }
 
-      if(std::isnan(gblDispYmax))
+      if(std::isnan(gblDispXmax))
       {
         if(rank==0)
         {

@@ -84,7 +84,7 @@ TEST(SolidLegacy, QsCustomSolve)
   custom_solver->SetMaxIter(iter_options.max_iter);
   custom_solver->SetPrintLevel(iter_options.print_level);
 
-  solid_solver_options.solver_options.H_lin_options = CustomSolverOptions{custom_solver.get()};
+  solid_solver_options.solver_options.H_lin_options = CustomLinearSolverOptions{custom_solver.get()};
   SolidLegacy solid_solver(solid_solver_options);
 
   // Complete the solver setup

@@ -20,7 +20,7 @@ using namespace serac;
 
 using serac::solid_mechanics::default_static_options;
 
-int main(int argc, char* argv[]) 
+int main(int argc, char* argv[])
 {
   MPI_Init(&argc, &argv);
 

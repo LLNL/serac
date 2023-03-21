@@ -255,7 +255,6 @@ mfem::ParMesh* StateManager::setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const
   // 3. Uses the spatial dimension as the mesh dimension (i.e. it is not a lower dimension manifold)
   // 4. Uses nodal instead of VDIM ordering (i.e. xxxyyyzzz instead of xyzxyzxyz)
   pmesh->SetCurvature(1, is_discontinuous, -1, mfem::Ordering::byNODES);
-
   // Sidre will destruct the nodal grid function instead of the mesh
   pmesh->SetNodesOwner(false);
 

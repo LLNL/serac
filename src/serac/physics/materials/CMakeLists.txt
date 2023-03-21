@@ -15,11 +15,9 @@ set(materials_sources
     )
 
 set(materials_headers
-    # liquid_crystal_elastomer.hpp
-    liquid_crystal_elastomer_material.hpp
-    # material_utils.hpp
     green_saint_venant_thermoelastic.hpp
     hyperelastic_legacy_material.hpp
+    liquid_crystal_elastomer.hpp
     material_verification_tools.hpp
     parameterized_solid_material.hpp
     parameterized_thermal_material.hpp

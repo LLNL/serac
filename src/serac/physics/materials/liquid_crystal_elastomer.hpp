@@ -49,7 +49,7 @@ struct LiqCrystElast_Brighenti {
    * @param N_b_squared Number of Kunh segments/chain, times square of Kuhn segment length
    */
   LiqCrystElast_Brighenti(double rho, double shear_modulus, double bulk_modulus, double order_constant,
-                         double order_parameter, double transition_temperature, double N_b_squared)
+                          double order_parameter, double transition_temperature, double N_b_squared)
       : density(rho),
         shear_modulus_(shear_modulus),
         bulk_modulus_(bulk_modulus),
@@ -88,11 +88,11 @@ struct LiqCrystElast_Brighenti {
 
     // get the values from the packed value/gradient tuples
     auto temperature = get<0>(temperature_tuple);
-    auto gamma = get<0>(gamma_tuple);
+    auto gamma       = get<0>(gamma_tuple);
 
     auto   I  = Identity<dim>();
     double q0 = initial_order_parameter_;
-    tensor normal{{cos(gamma), sin(gamma), 0.0*gamma}};
+    tensor normal{{cos(gamma), sin(gamma), 0.0 * gamma}};
 
     if (norm(state.deformation_gradient) == 0) {
       state.distribution_tensor  = get_value((N_b_squared_ / 3.0) * ((1 - q0) * I) + (3 * q0 * outer(normal, normal)));
@@ -173,7 +173,7 @@ struct LiqCrystElast_Brighenti {
   //
   // suggestions are welcome
 
-  double density;                  ///<  mass density
+  double density;                   ///<  mass density
   double shear_modulus_;            ///< shear modulus in stress-free configuration
   double bulk_modulus_;             ///< bulk modulus in stress-free configuration
   double order_constant_;           ///< Order constant
@@ -190,8 +190,8 @@ struct LiqCrystElast_Brighenti {
 
 /**
  * @brief Bertoldi's liquid crystal elastomer model
- * Paper: Li, S., Librandi, G., Yao, Y., Richard, A. J., Schneider‐Yamamura, A., Aizenberg, J., & Bertoldi, K. (2021). 
- * Controlling Liquid Crystal Orientations for Programmable Anisotropic Transformations in Cellular Microstructures. 
+ * Paper: Li, S., Librandi, G., Yao, Y., Richard, A. J., Schneider‐Yamamura, A., Aizenberg, J., & Bertoldi, K. (2021).
+ * Controlling Liquid Crystal Orientations for Programmable Anisotropic Transformations in Cellular Microstructures.
  * Advanced Materials, 33(42), 2105024.
  */
 struct LiqCrystElast_Bertoldi {
@@ -199,7 +199,8 @@ struct LiqCrystElast_Bertoldi {
   static constexpr int dim = 3;
 
   /// internal variables for the liquid crystal elastomer model
-  struct State {};
+  struct State {
+  };
 
   /**
    * @brief Constructor
@@ -210,8 +211,8 @@ struct LiqCrystElast_Bertoldi {
    * @param initial_order_parameter Initial value of the order parameter
    * @param beta_parameter Parameter for degree of coupling between elastic and nematic energies
    */
-  LiqCrystElast_Bertoldi(double rho, double young_modulus, double poisson_ratio,
-                         double initial_order_parameter, double beta_parameter)
+  LiqCrystElast_Bertoldi(double rho, double young_modulus, double poisson_ratio, double initial_order_parameter,
+                         double beta_parameter)
       : density(rho),
         young_modulus_(young_modulus),
         poisson_ratio_(poisson_ratio),
@@ -221,7 +222,8 @@ struct LiqCrystElast_Bertoldi {
     SLIC_ERROR_ROOT_IF(density <= 0.0, "Density must be positive in the LCE material model.");
     SLIC_ERROR_ROOT_IF(young_modulus_ <= 0.0, "Bulk modulus must be positive in the LCE material model.");
     SLIC_ERROR_ROOT_IF(poisson_ratio_ <= 0.0, "Poisson ratio must be positive in the LCE material model.");
-    SLIC_ERROR_ROOT_IF(initial_order_parameter_ <= 0.0, "Initial order parameter must be positive in the LCE material model.");
+    SLIC_ERROR_ROOT_IF(initial_order_parameter_ <= 0.0,
+                       "Initial order parameter must be positive in the LCE material model.");
     SLIC_ERROR_ROOT_IF(beta_parameter_ <= 0.0, "The beta parameter must be positive in the LCE material model.");
   }
 
@@ -243,26 +245,27 @@ struct LiqCrystElast_Bertoldi {
    */
   template <typename DispGradType, typename orderParamType, typename GammaAngleType, typename EtaAngleType>
   SERAC_HOST_DEVICE auto operator()(State& /*state*/, const tensor<DispGradType, dim, dim>& displacement_grad,
-                                    orderParamType inst_order_param_tuple, GammaAngleType gamma_tuple, EtaAngleType eta_tuple) const
+                                    orderParamType inst_order_param_tuple, GammaAngleType gamma_tuple,
+                                    EtaAngleType eta_tuple) const
   {
     using std::cos, std::sin;
 
-    // Compute the normal 
-    auto gamma = get<0>(gamma_tuple);
-    auto eta = get<0>(eta_tuple);
-    tensor normal{{cos(gamma)*cos(eta), sin(gamma)*cos(eta), 0.0*gamma+sin(eta)}};
+    // Compute the normal
+    auto   gamma = get<0>(gamma_tuple);
+    auto   eta   = get<0>(eta_tuple);
+    tensor normal{{cos(gamma) * cos(eta), sin(gamma) * cos(eta), 0.0 * gamma + sin(eta)}};
 
     // Get order parameters
-    auto St   = get<0>(inst_order_param_tuple);
+    auto   St = get<0>(inst_order_param_tuple);
     double S0 = initial_order_parameter_;
-    
+
     const double lambda = poisson_ratio_ * young_modulus_ / (1.0 + poisson_ratio_) / (1.0 - 2.0 * poisson_ratio_);
     const double mu     = young_modulus_ / 2.0 / (1.0 + poisson_ratio_);
 
     // kinematics
     auto I = Identity<dim>();
     auto F = displacement_grad + I;
-    auto C = dot(transpose(F),F);
+    auto C = dot(transpose(F), F);
     auto E = 0.5 * (C - I);
     auto J = det(F);
 
@@ -281,17 +284,18 @@ struct LiqCrystElast_Bertoldi {
 
   template <typename DispGradType, typename orderParamType, typename GammaAngleType, typename EtaAngleType>
   auto calculateStrainEnergy(const State& /*state*/, const tensor<DispGradType, dim, dim>& displacement_grad,
-                                    orderParamType inst_order_param_tuple, GammaAngleType gamma_tuple, EtaAngleType eta_tuple) const
+                             orderParamType inst_order_param_tuple, GammaAngleType gamma_tuple,
+                             EtaAngleType eta_tuple) const
   {
     using std::cos, std::sin;
-    
-    // Compute the normal 
-    auto gamma = get<0>(gamma_tuple);
-    auto eta = get<0>(eta_tuple);
-    tensor normal{{cos(gamma)*cos(eta), sin(gamma)*cos(eta), 0.0*gamma+sin(eta)}};
+
+    // Compute the normal
+    auto   gamma = get<0>(gamma_tuple);
+    auto   eta   = get<0>(eta_tuple);
+    tensor normal{{cos(gamma) * cos(eta), sin(gamma) * cos(eta), 0.0 * gamma + sin(eta)}};
 
     // Get order parameters
-    auto St   = get<0>(inst_order_param_tuple);
+    auto   St = get<0>(inst_order_param_tuple);
     double S0 = initial_order_parameter_;
 
     const double lambda = poisson_ratio_ * young_modulus_ / (1.0 + poisson_ratio_) / (1.0 - 2.0 * poisson_ratio_);
@@ -300,15 +304,15 @@ struct LiqCrystElast_Bertoldi {
     // kinematics
     auto I = Identity<dim>();
     auto F = displacement_grad + I;
-    auto C = dot(transpose(F),F);
+    auto C = dot(transpose(F), F);
     auto E = 0.5 * (C - I);
 
     // Compute the second Piola-Kirchhoff stress, i.e., \partial strain_energy / \partial E
     auto strain_energy_1 = 0.5 * lambda * tr(E) * tr(E);
     auto strain_energy_2 = mu * inner(E, E);
-    auto strain_energy_3 = -0.5 * beta_parameter_ * (St - S0) * inner( 3 * outer(normal, normal) - I, E);
+    auto strain_energy_3 = -0.5 * beta_parameter_ * (St - S0) * inner(3 * outer(normal, normal) - I, E);
 
-    auto strain_energy   = strain_energy_1 + strain_energy_2 + strain_energy_3;
+    auto strain_energy = strain_energy_1 + strain_energy_2 + strain_energy_3;
 
     return strain_energy;
   }

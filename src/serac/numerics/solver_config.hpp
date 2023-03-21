@@ -103,9 +103,12 @@ enum class LinearSolver
  */
 enum class NonlinearSolver
 {
-  MFEMNewton,               /**< Newton-Raphson */
-  KINFullStep,              /**< KINFullStep */
-  KINBacktrackingLineSearch /**< KINBacktrackingLineSearch */
+  Newton,                    /**< MFEM-native Newton-Raphson */
+  LBFGS,                     /**< MFEM-native Limited memory BFGS */
+  KINFullStep,               /**< KINSOL Full Newton (Sundials must be enabled) */
+  KINBacktrackingLineSearch, /**< KINSOL Newton with Backtracking Line Search (Sundials must be enabled) */
+  KINPicard,                 /**< KINSOL Picard (Sundials must be enabled) */
+  KINFP                      /**< KINSOL Fixed Point (Sundials must be enabled) */
 };
 
 /**
@@ -229,15 +232,27 @@ struct IterativeSolverOptions {
 };
 
 /**
- * @brief Parameters for a custom solver (currently just a non-owning pointer to the solver)
+ * @brief Parameters for a custom linear solver (currently just a non-owning pointer to the solver)
  * @note This is preferable to unique_ptr or even references because non-trivial copy constructors
  * and destructors are a nightmare in this context
  */
-struct CustomSolverOptions {
+struct CustomLinearSolverOptions {
   /**
    * @brief A non-owning pointer to the custom mfem solver to use
    */
   mfem::Solver* solver = nullptr;
+};
+
+/**
+ * @brief Parameters for a custom nonlinear solver (currently just a non-owning pointer to the solver)
+ * @note This is preferable to unique_ptr or even references because non-trivial copy constructors
+ * and destructors are a nightmare in this context
+ */
+struct CustomNonlinearSolverOptions {
+  /**
+   * @brief A non-owning pointer to the custom mfem solver to use
+   */
+  mfem::NewtonSolver* solver = nullptr;
 };
 
 /**
@@ -252,13 +267,16 @@ struct DirectSolverOptions {
 
 /**
  * @brief Parameters for a linear solver
+ *
+ * This can either be a user-constructed and owned solver or an iterative or direct solver that serac constructs and
+ * builds itself.
  */
-using LinearSolverOptions = std::variant<IterativeSolverOptions, CustomSolverOptions, DirectSolverOptions>;
+using LinearSolverOptions = std::variant<IterativeSolverOptions, CustomLinearSolverOptions, DirectSolverOptions>;
 
 /**
  * @brief Nonlinear solution scheme parameters
  */
-struct NonlinearSolverOptions {
+struct IterativeNonlinearSolverOptions {
   /**
    * @brief Relative tolerance
    */
@@ -282,7 +300,15 @@ struct NonlinearSolverOptions {
   /**
    * @brief Nonlinear solver selection
    */
-  NonlinearSolver nonlin_solver = NonlinearSolver::MFEMNewton;
+  NonlinearSolver nonlin_solver = NonlinearSolver::Newton;
 };
+
+/**
+ * @brief Parameters for a nonlinear solver
+ *
+ * This can either be a user-constructed and owned solver or an iterative solver that serac constructs and builds
+ * itself.
+ */
+using NonlinearSolverOptions = std::variant<CustomNonlinearSolverOptions, IterativeNonlinearSolverOptions>;
 
 }  // namespace serac

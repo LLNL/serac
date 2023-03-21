@@ -46,7 +46,7 @@ const DirectSolverOptions direct_linear_options = {.print_level = 0};
  * systems of nonlinear equations that show up in implicit
  * solid mechanics simulations
  */
-const NonlinearSolverOptions default_nonlinear_options = {
+const IterativeNonlinearSolverOptions default_nonlinear_options = {
     .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
 
 /// the default linear and nonlinear solver options for (quasi-)static analyses
@@ -543,7 +543,12 @@ public:
 
         // residual function
         [this](const mfem::Vector& u, mfem::Vector& r) {
-          r = (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
+          const mfem::Vector res =
+              (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
+
+          // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
+          // tracking strategy
+          r = res;
           r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
         },
 
@@ -609,8 +614,12 @@ public:
 
           [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) {
             add(1.0, u_, c0_, d2u_dt2, predicted_displacement_);
-            r = (*residual_)(predicted_displacement_, d2u_dt2, shape_displacement_,
-                             *parameters_[parameter_indices].state...);
+            const mfem::Vector res = (*residual_)(predicted_displacement_, d2u_dt2, shape_displacement_,
+                                                  *parameters_[parameter_indices].state...);
+
+            // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
+            // tracking strategy
+            r = res;
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
@@ -647,30 +656,55 @@ public:
 
     // the ~20 lines of code below are essentially equivalent to the 1-liner
     // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
-    {
-      du_ = 0.0;
-      for (auto& bc : bcs_.essentials()) {
-        bc.setDofs(du_, time_);
-      }
 
-      auto& constrained_dofs = bcs_.allEssentialTrueDofs();
-      for (int i = 0; i < constrained_dofs.Size(); i++) {
-        int j = constrained_dofs[i];
-        du_[j] -= displacement_(j);
-      }
+    // Update the linearized Jacobian matrix
+    auto [r, drdu] = (*residual_)(differentiate_wrt(displacement_), zero_, shape_displacement_,
+                                  *parameters_[parameter_indices].state...);
+    J_             = assemble(drdu);
+    J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
 
-      dr_ = 0.0;
-      mfem::EliminateBC(*J_, *J_e_, constrained_dofs, du_, dr_);
-
-      auto& lin_solver = nonlin_solver_.LinearSolver();
-
-      lin_solver.SetOperator(*J_);
-
-      lin_solver.Mult(dr_, du_);
-
-      displacement_ += du_;
+    du_ = 0.0;
+    for (auto& bc : bcs_.essentials()) {
+      bc.setDofs(du_, time_);
     }
 
+    auto& constrained_dofs = bcs_.allEssentialTrueDofs();
+    for (int i = 0; i < constrained_dofs.Size(); i++) {
+      int j = constrained_dofs[i];
+      du_[j] -= displacement_(j);
+    }
+
+    dr_ = 0.0;
+    mfem::EliminateBC(*J_, *J_e_, constrained_dofs, du_, dr_);
+
+    // Update the initial guess for changes in the parameters if this is not the first solve
+    for (std::size_t parameter_index = 0; parameter_index < parameters_.size(); ++parameter_index) {
+      // Compute the change in parameters parameter_diff = parameter_new - parameter_old
+      serac::FiniteElementState parameter_difference = *parameters_[parameter_index].state;
+      parameter_difference -= *parameters_[parameter_index].old_state;
+
+      // Compute a linearized estimate of the residual forces due to this change in parameter
+      auto drdparam        = serac::get<DERIVATIVE>(d_residual_d_[parameter_index]());
+      auto residual_update = drdparam(parameter_difference);
+
+      // Flip the sign to get the RHS of the Newton update system
+      // J^-1 du = - residual
+      residual_update *= -1.0;
+
+      dr_ += residual_update;
+
+      // Save the current parameter value for the next timestep
+      *parameters_[parameter_index].old_state = *parameters_[parameter_index].state;
+    }
+
+    auto& lin_solver = nonlin_solver_.LinearSolver();
+
+    lin_solver.SetOperator(*J_);
+
+    lin_solver.Mult(dr_, du_);
+    displacement_ += du_;
+
+    // Now that the "warm start" is finished, we call the full nonlinear solver
     nonlin_solver_.Mult(zero_, displacement_);
   }
 
@@ -686,6 +720,13 @@ public:
     SLIC_ERROR_ROOT_IF(!residual_, "completeSetup() must be called prior to advanceTimestep(dt) in SolidMechanics.");
 
     // bcs_.setTime(time_);
+
+    // If this is the first call, initialize the previous parameter values as the initial values
+    if (cycle_ == 0) {
+      for (auto& parameter : parameters_) {
+        *parameter.old_state = *parameter.state;
+      }
+    }
 
     if (is_quasistatic_) {
       quasiStaticSolve(dt);

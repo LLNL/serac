@@ -21,7 +21,7 @@
 
 namespace serac {
 
-using solid_mechanics::direct_static_options;
+using solid_mechanics::default_static_options;
 
 /**
  * @brief Exact displacement solution that is an affine function
@@ -183,9 +183,11 @@ double solution_error(const ExactSolution& exact_displacement, PatchBoundaryCond
   serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a solid mechanics solver
-  auto solver_options = direct_static_options;
+  auto solver_options = default_static_options;
+  solver_options.nonlinear.nonlin_solver = NonlinearSolver::KINBacktrackingLineSearch;
   solver_options.nonlinear.abs_tol = 1e-14;
-  solver_options.nonlinear.rel_tol = 1e-14;
+  solver_options.nonlinear.rel_tol = 0.0;
+  solver_options.nonlinear.max_iter = 30;
   SolidMechanics<p, dim> solid(solver_options, GeometricNonlinearities::On, "solid");
 
   solid_mechanics::NeoHookean mat{.density=1.0, .K=1.0, .G=1.0};

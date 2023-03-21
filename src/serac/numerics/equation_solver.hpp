@@ -61,12 +61,18 @@ public:
    * Returns the underlying solver object
    * @return A non-owning reference to the underlying nonlinear solver
    */
-  mfem::IterativeSolver& NonlinearSolver() { return *nonlin_solver_; }
+  mfem::NewtonSolver& NonlinearSolver()
+  {
+    return std::visit([](auto&& solver) -> mfem::NewtonSolver& { return *solver; }, nonlin_solver_);
+  }
 
   /**
    * @overload
    */
-  const mfem::IterativeSolver& NonlinearSolver() const { return *nonlin_solver_; }
+  const mfem::NewtonSolver& NonlinearSolver() const
+  {
+    return std::visit([](auto&& solver) -> const mfem::NewtonSolver& { return *solver; }, nonlin_solver_);
+  }
 
   /**
    * Returns the underlying linear solver object
@@ -104,8 +110,8 @@ private:
    * @param[in] comm The MPI communicator object
    * @param[in] nonlin_options The parameters for the nonlinear solver
    */
-  static std::unique_ptr<mfem::NewtonSolver> BuildNewtonSolver(MPI_Comm                      comm,
-                                                               const NonlinearSolverOptions& nonlin_options);
+  static std::unique_ptr<mfem::NewtonSolver> BuildNonlinearSolver(
+      MPI_Comm comm, const IterativeNonlinearSolverOptions& nonlin_options);
 
   /**
    * @brief A wrapper class for using the MFEM super LU solver with a HypreParMatrix
@@ -169,7 +175,7 @@ private:
   /**
    * @brief The optional nonlinear Newton-Raphson solver object
    */
-  std::unique_ptr<mfem::NewtonSolver> nonlin_solver_;
+  std::variant<std::unique_ptr<mfem::NewtonSolver>, mfem::NewtonSolver*> nonlin_solver_;
 
   /**
    * @brief Whether the solver (linear solver) has been configured with the nonlinear solver
@@ -221,9 +227,9 @@ struct FromInlet<serac::LinearSolverOptions> {
  * @tparam The object to be created by inlet
  */
 template <>
-struct FromInlet<serac::NonlinearSolverOptions> {
+struct FromInlet<serac::IterativeNonlinearSolverOptions> {
   /// @brief Returns created object from Inlet container
-  serac::NonlinearSolverOptions operator()(const axom::inlet::Container& base);
+  serac::IterativeNonlinearSolverOptions operator()(const axom::inlet::Container& base);
 };
 
 /**
