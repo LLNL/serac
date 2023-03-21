@@ -209,7 +209,7 @@ Some other frequently-useful configure flags
 ``ENABLE_ASAN``: (optional) one of ``OFF`` (default), ``ON``
   Enables the Address Sanitizer for memory safety inspections
 
-``-G <generator>``: (optional) typically one of `Unix Makefiles` (default), or `Ninja`
+``-G <generator>``: (optional) typically one of ``Unix Makefiles`` (default), or ``Ninja``
   which  the Address Sanitizer for memory safety inspections
 
 -----------
