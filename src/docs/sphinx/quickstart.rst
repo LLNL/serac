@@ -182,9 +182,10 @@ flag below, to ensure CMake can locate the dependencies installed by spack:
 
 .. code-block:: bash
 
-  $ cmake . -B build \
-            -C path/to/serac/<machine>-<type>-<compiler>.cmake \
-            -DCMAKE_BUILD_TYPE=Release
+  $ cmake -B build \
+          -C path/to/serac/<machine>-<type>-<compiler>.cmake \
+          -DCMAKE_BUILD_TYPE=Release
+          -S path/to/serac
 
 LLNL developers working on one of the LC machines can instead use one of 
 the provided CMake cache files in serac's ``host-configs`` directory:
@@ -234,6 +235,27 @@ the following configure flags are mainly intended for serac developers:
 
 ``DOXYGEN_EXECUTABLE`` (optional)
   used to manually specify which `doxygen` executable to use when configuring with ``-DENABLE_DOCS=ON``
+
+------
+
+We also provide a python script ``config-build.py`` that will create a build
+directory and invoke CMake for you. Some example use cases are:
+
+.. code-block:: bash
+
+   # If you built Serac's dependencies yourself either via Spack or by hand
+   $ python3 ./config-build.py -hc <config_dependent_name>.cmake
+
+   # If you are on an LC machine and want to use our public pre-built dependencies
+   $ python3 ./config-build.py -hc host-configs/<machine name>-<SYS_TYPE>-<compiler>.cmake
+
+   # If you'd like to configure specific build options, e.g., a release build
+   $ python3 ./config-build.py -hc /path/to/host-config.cmake -bt Release <more CMake build options...>
+
+Note:
+  - ``config-build.py`` will delete the contents of build/install directories if they exist already
+  - some flags parsed by ``config-build.py`` use different names than their CMake counterparts,
+    try running ``python3 config-build.py --help`` more information.
 
 ------
 
