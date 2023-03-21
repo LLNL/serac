@@ -55,15 +55,10 @@ int main(int argc, char* argv[])
   serac::StateManager::initialize(datastore, "solid_lce_functional");
 
   // Construct the appropriate dimension mesh and give it to the data store
-  // int nElem = 2;
-  // double lx = 3.0e-3, ly = 3.0e-3, lz = 0.25e-3;
 
 #ifdef USE_2D_MESH
   std::string filename = SERAC_REPO_DIR "/data/meshes/reEntrantHoneyComb_coarse_scaled_actual2D_quads.g";
 #else
-  // auto initial_mesh = mfem::Mesh(mfem::Mesh::MakeCartesian3D(4*nElem, 4*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
-  // std::string filename = SERAC_REPO_DIR "/data/meshes/reEntrantHoneyComb_coarse_scaled.g";
-  // std::string filename = SERAC_REPO_DIR "/data/meshes/reEntrantHoneyComb_coarser_scaled.g";
   std::string filename = SERAC_REPO_DIR "/data/meshes/reEntrantHoneyComb_coarse_scaled_pseudo2D.g";
 #endif
 
@@ -233,12 +228,6 @@ int main(int argc, char* argv[])
   auto param_data = solid_solver.createQuadratureDataBuffer(initial_state);
   solid_solver.setMaterial(DependsOn<ORDER_INDEX, GAMMA_INDEX, ETA_INDEX>{}, lceMat, param_data);
 
-  // Boundary conditions:
-  // Prescribe zero displacement at the supported end of the beam
-  // std::set<int> support           = {2};
-  // auto          zero_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; };
-  // solid_solver.setDisplacementBCs(support, zero_displacement);
-
   auto zeroFunc = []( const mfem::Vector /*x*/){ return 0.0;};
   solid_solver.setDisplacementBCs({1}, zeroFunc, 0); // bottom face y-dir disp = 0
   solid_solver.setDisplacementBCs({2}, zeroFunc, 1); // left face x-dir disp = 0
@@ -304,7 +293,6 @@ int main(int argc, char* argv[])
     solid_solver.advanceTimestep(dt);
     solid_solver.outputState(outputFilename);
 
-    // FiniteElementState &displacement = solid_solver.displacement();
     auto &fes = solid_solver.displacement().space();
     mfem::ParGridFunction displacement_gf = solid_solver.displacement().gridFunction();
     int numDofs = fes.GetNDofs();
@@ -316,19 +304,12 @@ int main(int argc, char* argv[])
 
     for (int k = 0; k < numDofs; k++) 
     {
-      dispVecX(k) = displacement_gf(3*k+0);
-      dispVecY(k) = displacement_gf(3*k+1);
-      // dispVecX(k) = displacement_gf(0*numDofs + k);
-      // dispVecY(k) = displacement_gf(1*numDofs + k);
+      dispVecX(k) = displacement_gf(0*numDofs + k);
+      dispVecY(k) = displacement_gf(1*numDofs + k);
 #ifndef USE_2D_MESH
-  dispVecZ(k) = displacement_gf(3*k+2);
-  // dispVecZ(k) = displacement_gf(2*numDofs + k);
+  dispVecZ(k) = displacement_gf(2*numDofs + k);
 #endif    
     }
-
-    // double lclDispYmin = dispVecY.Min();
-    // MPI_Allreduce(&lclDispYmin, &gblDispYmin, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-
     double gblDispXmin, lclDispXmin = dispVecX.Min();
     double gblDispXmax, lclDispXmax = dispVecX.Max();
     double gblDispYmin, lclDispYmin = dispVecY.Min();
