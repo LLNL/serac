@@ -117,23 +117,12 @@ int main(int argc, char* argv[]) {
   mfem::FunctionCoefficient coef(gamma_func);
   gamma.project(coef);
 
-<<<<<<< HEAD:src/serac/physics/tests/liquid_crystal_elastomer_compression_test.cpp
-  IterativeSolverOptions linear_options = {.rel_tol     = 1.0e-6,
-=======
   IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
->>>>>>> cd09009d1587437ce5affef1132c152a66725cbe:src/serac/physics/tests/lce_Brighenti_compression.cpp
                                                        .abs_tol     = 1.0e-16,
                                                        .print_level = 0,
                                                        .max_iter    = 500,
                                                        .lin_solver  = LinearSolver::GMRES,
                                                        .prec        = HypreBoomerAMGPrec{}};
-<<<<<<< HEAD:src/serac/physics/tests/liquid_crystal_elastomer_compression_test.cpp
-  NonlinearSolverOptions nonlinear_options = {
-    .rel_tol = 1.0e-4, .abs_tol = 1.0e-7, .max_iter = 50, .print_level = 1};
-
-  // Construct a functional-based solid mechanics solver
-  SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver({linear_options, nonlinear_options}, GeometricNonlinearities::Off,
-=======
   NonlinearSolverOptions default_nonlinear_options = {
     .rel_tol = 1.0e-4, .abs_tol = 1.0e-7, .max_iter = 5, .print_level = 1};
 
@@ -141,7 +130,6 @@ int main(int argc, char* argv[]) {
   // SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver(solid_mechanics::default_static_options, GeometricNonlinearities::Off,
   //                                      "lce_solid_functional");
   SolidMechanics<p, dim, Parameters< H1<p>, L2<p> > > solid_solver({default_linear_options, default_nonlinear_options}, GeometricNonlinearities::Off,
->>>>>>> cd09009d1587437ce5affef1132c152a66725cbe:src/serac/physics/tests/lce_Brighenti_compression.cpp
                                        "lce_solid_functional");
 
   constexpr int TEMPERATURE_INDEX = 0;
@@ -174,21 +162,6 @@ int main(int argc, char* argv[]) {
   solid_solver.setDisplacementBCs({2}, zeroFunc, 1); // left face x-dir disp = 0
   solid_solver.setDisplacementBCs({5}, zeroFunc, 0); // back face z-dir disp = 0
 
-<<<<<<< HEAD:src/serac/physics/tests/liquid_crystal_elastomer_compression_test.cpp
-  // solid_solver.setDisplacementBCs({1}, [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.1; });
-  // solid_solver.setDisplacementBCs({2}, [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.2; });
-  // solid_solver.setDisplacementBCs({3}, [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.3; });
-  // solid_solver.setDisplacementBCs({4}, [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.4; });
-  // solid_solver.setDisplacementBCs({5}, [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.5; });
-  // solid_solver.setDisplacementBCs({6}, [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.6; });
-
-  // Project a non-zero initial guess to help out the nonlinear solver for the first iteration
-  auto initial_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; };
-  solid_solver.setDisplacement(initial_displacement);
-
-  solid_solver.setPiolaTraction([](auto x, auto /*n*/, auto /*t*/){
-    return tensor<double, 3>{0, 0, -5.0e-8 * (x[2]>(2.16/2))};
-=======
 #ifdef LOAD_DRIVEN
   auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.000001; };
 #else
@@ -200,7 +173,6 @@ int main(int argc, char* argv[]) {
   double loadVal = iniLoadVal;
   solid_solver.setPiolaTraction([&loadVal](auto x, auto /*n*/, auto /*t*/){
     return tensor<double, 3>{0, 0, loadVal * (x[2]>(2.16/2))};
->>>>>>> cd09009d1587437ce5affef1132c152a66725cbe:src/serac/physics/tests/lce_Brighenti_compression.cpp
   });
 
   // Finalize the data structures
