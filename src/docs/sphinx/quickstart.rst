@@ -206,8 +206,6 @@ Some other frequently-useful configure flags
   This can be useful for debugging those libraries, or making changes to them without having
   to have spack rebuild all of serac's dependencies.
 
-``SERAC_ENABLE_CODEVELOP`` (optional) one of ``OFF`` (default), ``ON``
-
 ``ENABLE_ASAN``: (optional) one of ``OFF`` (default), ``ON``
   Enables the Address Sanitizer for memory safety inspections
 
