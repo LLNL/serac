@@ -39,8 +39,8 @@ int main(int argc, char* argv[])
   axom::slic::SimpleLogger logger;
   axom::slic::setIsRoot(rank == 0);
 
-  constexpr int p                   = 1;
-  constexpr int dim                 = 3;
+  constexpr int p   = 1;
+  constexpr int dim = 3;
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -51,153 +51,132 @@ int main(int argc, char* argv[])
 #endif
 
   // Construct the appropriate dimension mesh and give it to the data store
-  int nElem = 6;//2*3;
-  double lx = 9.53e-3, ly = 3.18e-3/2, lz = 2.e-3/2;
+  int    nElem = 6;  // 2*3;
+  double lx = 9.53e-3, ly = 3.18e-3 / 2, lz = 2.e-3 / 2;
   // double lx = 0.5e-3, ly = 0.1e-3, lz = 0.05e-3;
 #ifdef FULL_DOMAIN
-  ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(19*nElem, 3*nElem, 2*nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
+  ::mfem::Mesh cuboid =
+      mfem::Mesh(mfem::Mesh::MakeCartesian3D(19 * nElem, 3 * nElem, 2 * nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
 #else
   ly *= 0.5;
   lz *= 0.5;
-  ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(2*nElem, 2*nElem, 1, mfem::Element::HEXAHEDRON, lx, ly, lz));
+  ::mfem::Mesh cuboid =
+      mfem::Mesh(mfem::Mesh::MakeCartesian3D(2 * nElem, 2 * nElem, 1, mfem::Element::HEXAHEDRON, lx, ly, lz));
 #endif
   auto mesh = std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, cuboid);
   serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a functional-based solid mechanics solver
-  IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
-                                                       .abs_tol     = 1.0e-16,
-                                                       .print_level = 0,
-                                                       .max_iter    = 500,
-                                                       .lin_solver  = LinearSolver::GMRES,
-                                                       .prec        = HypreBoomerAMGPrec{}};
+  IterativeSolverOptions          default_linear_options    = {.rel_tol     = 1.0e-6,
+                                                   .abs_tol     = 1.0e-16,
+                                                   .print_level = 0,
+                                                   .max_iter    = 500,
+                                                   .lin_solver  = LinearSolver::GMRES,
+                                                   .prec        = HypreBoomerAMGPrec{}};
   IterativeNonlinearSolverOptions default_nonlinear_options = {
-    .rel_tol = 1.0e-6, 
-    .abs_tol = 1.0e-14, 
-    .max_iter = 50, 
-    .print_level = 1,
-    // .nonlin_solver = serac::NonlinearSolver::Newton};
-    .nonlin_solver = serac::NonlinearSolver::KINBacktrackingLineSearch};
-  // SolidMechanics<p, dim, Parameters< H1<p>, H1<p> > > solid_solver({default_linear_options, default_nonlinear_options}, GeometricNonlinearities::Off,
+      .rel_tol     = 1.0e-6,
+      .abs_tol     = 1.0e-14,
+      .max_iter    = 50,
+      .print_level = 1,
+      // .nonlin_solver = serac::NonlinearSolver::Newton};
+      .nonlin_solver = serac::NonlinearSolver::KINBacktrackingLineSearch};
+  // SolidMechanics<p, dim, Parameters< H1<p>, H1<p> > > solid_solver({default_linear_options,
+  // default_nonlinear_options}, GeometricNonlinearities::Off,
   //                                      "mmp_solid_functional");
-    SolidMechanics<p, dim, Parameters< L2<p>, L2<p> > > solid_solver({default_linear_options, default_nonlinear_options}, GeometricNonlinearities::Off,
-                                       "mmp_solid_functional");
+  SolidMechanics<p, dim, Parameters<L2<p>, L2<p> > > solid_solver({default_linear_options, default_nonlinear_options},
+                                                                  GeometricNonlinearities::Off, "mmp_solid_functional");
 
   // Material properties
-  double density = 1.0;
-  double possionRat = 0.3;
+  double density            = 1.0;
+  double possionRat         = 0.3;
   double maxElasticityParam = 500.0;
-  double minElasticityParam = 1.0; // maxElasticityParam;
+  double minElasticityParam = 1.0;  // maxElasticityParam;
 
-  switch(probTag_) {
-      case 1:
-      case 5:
-      case 9:
-         maxElasticityParam = 500.0;
-         break;
-      case 2:
-      case 6:
-         maxElasticityParam = 200.0;
-         break;
-      case 3:
-      case 7:
-         maxElasticityParam = 100.0;
-         break;
-      case 4:
-      case 8:
-         maxElasticityParam = 5.0;
-         break;
-      default :
-         std::cout << "... Invalid problem Tag/Id" << std::endl;
-         exit(0);
-   }
+  switch (probTag_) {
+    case 1:
+    case 5:
+    case 9:
+      maxElasticityParam = 500.0;
+      break;
+    case 2:
+    case 6:
+      maxElasticityParam = 200.0;
+      break;
+    case 3:
+    case 7:
+      maxElasticityParam = 100.0;
+      break;
+    case 4:
+    case 8:
+      maxElasticityParam = 5.0;
+      break;
+    default:
+      std::cout << "... Invalid problem Tag/Id" << std::endl;
+      exit(0);
+  }
 
   // Parameter 1
-  FiniteElementState EmodParam(StateManager::newState(FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "EmodParam"}));
-  auto EmodFunc = [=](const mfem::Vector& x, double) -> double 
-  {
+  FiniteElementState EmodParam(StateManager::newState(
+      FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "EmodParam"}));
+  auto               EmodFunc = [=](const mfem::Vector& x, double) -> double {
     double Emod = 1.0;
-    if (probTag_<5)
-    {
-      if(x[0]>lx/2.0)
-      {
+    if (probTag_ < 5) {
+      if (x[0] > lx / 2.0) {
         Emod = maxElasticityParam;
-      }
-      else
-      {
+      } else {
         Emod = minElasticityParam;
       }
-    }
-    else if (probTag_<9)
-    {
+    } else if (probTag_ < 9) {
       double transitionLength = 5.0e-3;
-      double iniTransition = (lx-transitionLength)/2.0;
-      double endTransition = iniTransition + transitionLength;
+      double iniTransition    = (lx - transitionLength) / 2.0;
+      double endTransition    = iniTransition + transitionLength;
 
-      if(x[0]<iniTransition )
-      {
+      if (x[0] < iniTransition) {
         Emod = minElasticityParam;
-      }
-      else if(x[0]>iniTransition && x[0]<endTransition )
-      {
-        Emod = minElasticityParam + (maxElasticityParam-minElasticityParam) * ( (x[0]-iniTransition)/transitionLength);
-      }
-      else
-      {
+      } else if (x[0] > iniTransition && x[0] < endTransition) {
+        Emod = minElasticityParam +
+               (maxElasticityParam - minElasticityParam) * ((x[0] - iniTransition) / transitionLength);
+      } else {
         Emod = maxElasticityParam;
       }
-    }
-    else
-    {
-      Emod = minElasticityParam + (maxElasticityParam-minElasticityParam) * x[0]/lx; // * 2.0 * (x[0]/lx-0.5);
+    } else {
+      Emod = minElasticityParam + (maxElasticityParam - minElasticityParam) * x[0] / lx;  // * 2.0 * (x[0]/lx-0.5);
     }
 
-    return Emod; 
+    return Emod;
   };
   mfem::FunctionCoefficient EmodCoef(EmodFunc);
   EmodParam.project(EmodCoef);
 
-    // Parameter 2
-  FiniteElementState GmodParam(StateManager::newState(FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "GmodParam"}));
-  auto GmodFunc = [=](const mfem::Vector& x, double) -> double 
-  {
+  // Parameter 2
+  FiniteElementState GmodParam(StateManager::newState(
+      FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "GmodParam"}));
+  auto               GmodFunc = [=](const mfem::Vector& x, double) -> double {
     double Emod = 1.0;
-    if (probTag_<5)
-    {
-      if(x[0]>lx/2.0)
-      {
+    if (probTag_ < 5) {
+      if (x[0] > lx / 2.0) {
         Emod = maxElasticityParam;
-      }
-      else
-      {
+      } else {
         Emod = minElasticityParam;
       }
-    }
-    else if (probTag_<9)
-    {
+    } else if (probTag_ < 9) {
       double transitionLength = 5.0e-3;
-      double iniTransition = (lx-transitionLength)/2.0;
-      double endTransition = iniTransition + transitionLength;
+      double iniTransition    = (lx - transitionLength) / 2.0;
+      double endTransition    = iniTransition + transitionLength;
 
-      if(x[0]<iniTransition )
-      {
+      if (x[0] < iniTransition) {
         Emod = minElasticityParam;
-      }
-      else if(x[0]>iniTransition && x[0]<endTransition )
-      {
-        Emod = minElasticityParam + (maxElasticityParam-minElasticityParam) * ( (x[0]-iniTransition)/transitionLength);
-      }
-      else
-      {
+      } else if (x[0] > iniTransition && x[0] < endTransition) {
+        Emod = minElasticityParam +
+               (maxElasticityParam - minElasticityParam) * ((x[0] - iniTransition) / transitionLength);
+      } else {
         Emod = maxElasticityParam;
       }
-    }
-    else
-    {
-      Emod = minElasticityParam + (maxElasticityParam-minElasticityParam) * x[0]/lx; // * 2.0 * (x[0]/lx-0.5);
+    } else {
+      Emod = minElasticityParam + (maxElasticityParam - minElasticityParam) * x[0] / lx;  // * 2.0 * (x[0]/lx-0.5);
     }
 
-    double shearModulus = 0.5*Emod/(1.0 + possionRat);
+    double shearModulus = 0.5 * Emod / (1.0 + possionRat);
 
     return shearModulus;
   };
@@ -207,7 +186,7 @@ int main(int argc, char* argv[])
 
   // Set parameters
   constexpr int ELASTICITY_MODULUS_INDEX = 0;
-  constexpr int SHEAR_MODULUS_INDEX = 1;
+  constexpr int SHEAR_MODULUS_INDEX      = 1;
   solid_solver.setParameter(ELASTICITY_MODULUS_INDEX, EmodParam);
   solid_solver.setParameter(SHEAR_MODULUS_INDEX, GmodParam);
 
@@ -218,41 +197,39 @@ int main(int argc, char* argv[])
   // Boundary conditions:
 #ifdef FULL_DOMAIN
   // Fixed bottom
-  auto zero_displacement = [](const mfem::Vector& /*x*/){ return 0.0;};
-  solid_solver.setDisplacementBCs({1}, zero_displacement, 2); // bottom face y-dir disp = 0
-  solid_solver.setDisplacementBCs({2}, zero_displacement, 1); // back face z-dir disp = 0
+  auto zero_displacement = [](const mfem::Vector& /*x*/) { return 0.0; };
+  solid_solver.setDisplacementBCs({1}, zero_displacement, 2);  // bottom face y-dir disp = 0
+  solid_solver.setDisplacementBCs({2}, zero_displacement, 1);  // back face z-dir disp = 0
   solid_solver.setDisplacementBCs({5}, [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; });
 #else
   // Prescribe zero displacement at the supported end of the beam
-  auto zero_displacement = [](const mfem::Vector& /*x*/){ return 0.0;};
-  solid_solver.setDisplacementBCs({1}, zero_displacement, 2); // bottom face y-dir disp = 0
-  solid_solver.setDisplacementBCs({2}, zero_displacement, 1); // left face x-dir disp = 0
-  solid_solver.setDisplacementBCs({3}, zero_displacement, 0); // back face z-dir disp = 0
+  auto zero_displacement = [](const mfem::Vector& /*x*/) { return 0.0; };
+  solid_solver.setDisplacementBCs({1}, zero_displacement, 2);  // bottom face y-dir disp = 0
+  solid_solver.setDisplacementBCs({2}, zero_displacement, 1);  // left face x-dir disp = 0
+  solid_solver.setDisplacementBCs({3}, zero_displacement, 0);  // back face z-dir disp = 0
 #endif
 
 #ifdef LOAD_DRIVEN
 
-  auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0000005; };
-  double iniLoadVal = 1.0e-4;
+  auto   ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0000005; };
+  double iniLoadVal       = 1.0e-4;
 
   // double maxLoadVal = 0.25 * 1.0e1 /ly/lz ; // 2.0e6*ly*lz/4.0; // 1.5e0; // 6.36e-6
   // double maxLoadVal = 0.25 * 1.0e-5 /ly/lz ; // 2.0e6*ly*lz/4.0; // 1.5e0; // 6.36e-6
-  double maxLoadVal = 0.25 * 1.5e-5 /(ly/2)/(lz/2) ; // 2.0e6*ly*lz/4.0; // 1.5e0; // 6.36e-6
+  double maxLoadVal = 0.25 * 1.5e-5 / (ly / 2) / (lz / 2);  // 2.0e6*ly*lz/4.0; // 1.5e0; // 6.36e-6
 
 #ifdef FULL_DOMAIN
   maxLoadVal *= 1.0;
 #endif
- 
+
   double loadVal = iniLoadVal + 0.0 * maxLoadVal;
-  solid_solver.setPiolaTraction([&loadVal, lx](auto x, auto /*n*/, auto /*t*/){
-    return tensor<double, 3>{
-      loadVal * (x[0]>0.9999*lx), 0, 0
-      };
+  solid_solver.setPiolaTraction([&loadVal, lx](auto x, auto /*n*/, auto /*t*/) {
+    return tensor<double, 3>{loadVal * (x[0] > 0.9999 * lx), 0, 0};
   });
 
 #else
 
-  auto ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; };
+  auto        ini_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; };
 
 #endif
 
@@ -263,74 +240,72 @@ int main(int argc, char* argv[])
 
   // Perform the quasi-static solve
   int num_steps = 20;
-  
+
 #ifdef LOAD_DRIVEN
   std::string outputFilename = "sol_mmp_tensile_load_probId_";
 #else
-  std::string outputFilename = "sol_mmp_tensile_disp_probId_";
+  std::string outputFilename   = "sol_mmp_tensile_disp_probId_";
 #endif
 
   outputFilename += std::to_string(probTag_);
 
   solid_solver.outputState(outputFilename);
- 
+
   double t    = 0.0;
   double tmax = 1.0;
   double dt   = tmax / num_steps;
-  bool outputDispInfo(true);
+  bool   outputDispInfo(true);
 
-  for (int i = 0; i < num_steps; i++) 
-  {
-
+  for (int i = 0; i < num_steps; i++) {
     t += dt;
 #ifdef LOAD_DRIVEN
     // loadVal = iniLoadVal +  t / tmax * (maxLoadVal - iniLoadVal);
     // loadVal = iniLoadVal * std::exp( std::log(maxLoadVal/iniLoadVal) * t / tmax  );
-    loadVal = iniLoadVal  + (maxLoadVal - iniLoadVal) * std::pow( t / tmax, 2.0  ); // 0.75
+    loadVal = iniLoadVal + (maxLoadVal - iniLoadVal) * std::pow(t / tmax, 2.0);  // 0.75
 #else
     // elasticityParam = minElasticityParam * (tmax - t) / tmax;
 #endif
-    if(rank==0)
-    {
-      std::cout 
-      << "\n\n............................"
-      << "\n... Entering time step: "<< i + 1 << " (/" << num_steps << ")"
-      << "\n............................\n"
+    if (rank == 0) {
+      std::cout << "\n\n............................"
+                << "\n... Entering time step: " << i + 1 << " (/" << num_steps << ")"
+                << "\n............................\n"
 #ifdef LOAD_DRIVEN
-      << "\n... Using a tension load of: " << loadVal <<" ("<<loadVal/maxLoadVal*100<<"\% of max)"
-      << "\n... With max tension load of: " << maxLoadVal
+                << "\n... Using a tension load of: " << loadVal << " (" << loadVal / maxLoadVal * 100
+                << " percent of max)"
+                << "\n... With max tension load of: " << maxLoadVal
 #else
-      << "\n... Using order parameter: "<< minElasticityParam * (tmax - t) / tmax
+                << "\n... Using order parameter: " << minElasticityParam * (tmax - t) / tmax
 #endif
-      << std::endl;
+                << std::endl;
     }
 
     solid_solver.advanceTimestep(dt);
     solid_solver.outputState(outputFilename);
 
-//     auto [K, K_e] = solid_solver.stiffnessMatrix();
-//     K.Print("Kmat");
-//     K_e.Print("K_e_mat");
-    
-// exit(0);
-    if(outputDispInfo)
-    {
-      // FiniteElementState &displacement = solid_solver.displacement();
-      auto &fes = solid_solver.displacement().space();
-      mfem::ParGridFunction displacement_gf = solid_solver.displacement().gridFunction();
-      int numDofs = fes.GetNDofs();
-      mfem::Vector dispVecX(numDofs); dispVecX = 0.0;
-      mfem::Vector dispVecY(numDofs); dispVecY = 0.0;
-      mfem::Vector dispVecZ(numDofs); dispVecZ = 0.0;
+    //     auto [K, K_e] = solid_solver.stiffnessMatrix();
+    //     K.Print("Kmat");
+    //     K_e.Print("K_e_mat");
 
-      for (int k = 0; k < fes.GetNDofs(); k++) 
-      {
+    // exit(0);
+    if (outputDispInfo) {
+      // FiniteElementState &displacement = solid_solver.displacement();
+      auto&                 fes             = solid_solver.displacement().space();
+      mfem::ParGridFunction displacement_gf = solid_solver.displacement().gridFunction();
+      int                   numDofs         = fes.GetNDofs();
+      mfem::Vector          dispVecX(numDofs);
+      dispVecX = 0.0;
+      mfem::Vector dispVecY(numDofs);
+      dispVecY = 0.0;
+      mfem::Vector dispVecZ(numDofs);
+      dispVecZ = 0.0;
+
+      for (int k = 0; k < fes.GetNDofs(); k++) {
         // dispVecX(k) = displacement_gf(3*k+0);
         // dispVecY(k) = displacement_gf(3*k+1);
         // dispVecZ(k) = displacement_gf(3*k+2);
-        dispVecX(k) = displacement_gf(0*numDofs + k);
-        dispVecY(k) = displacement_gf(1*numDofs + k);
-        dispVecZ(k) = displacement_gf(2*numDofs + k);
+        dispVecX(k) = displacement_gf(0 * numDofs + k);
+        dispVecY(k) = displacement_gf(1 * numDofs + k);
+        dispVecZ(k) = displacement_gf(2 * numDofs + k);
       }
 
       // double gblDispXmin, lclDispXmin = dispVecX.Min();
@@ -347,23 +322,20 @@ int main(int argc, char* argv[])
       MPI_Allreduce(&lclDispZmin, &gblDispZmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
       // MPI_Allreduce(&lclDispZmax, &gblDispZmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
 
-      if(rank==0)
-      {
-        std::cout 
-        << "\n... In time step: "<< i + 1 << " (/" << num_steps << ")" 
-        // <<"\n... Min X displacement: " << gblDispXmin
-        <<"\n... Max X displacement: " << gblDispXmax
-        <<"\n... Min Y displacement: " << gblDispYmin
-        <<"\n... Min Z displacement: " << gblDispZmin 
-        // <<"\n... Max Y displacement: " << gblDispYmax
-        // <<"\n... Max Z displacement: " << gblDispZmax 
-        << std::endl;
+      if (rank == 0) {
+        std::cout << "\n... In time step: " << i + 1 << " (/" << num_steps
+                  << ")"
+                  // <<"\n... Min X displacement: " << gblDispXmin
+                  << "\n... Max X displacement: " << gblDispXmax << "\n... Min Y displacement: " << gblDispYmin
+                  << "\n... Min Z displacement: "
+                  << gblDispZmin
+                  // <<"\n... Max Y displacement: " << gblDispYmax
+                  // <<"\n... Max Z displacement: " << gblDispZmax
+                  << std::endl;
       }
 
-      if(std::isnan(gblDispXmax))
-      {
-        if(rank==0)
-        {
+      if (std::isnan(gblDispXmax)) {
+        if (rank == 0) {
           std::cout << "... Solution blew up... Check boundary and initial conditions." << std::endl;
         }
         exit(1);
