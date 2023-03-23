@@ -4,7 +4,9 @@
 
 #include "serac/numerics/functional/geometry.hpp"
 
-std::vector<std::vector<int> > lexicographic_permutations(int p)
+// note: triangles and tets undergo no dof permutation,
+//       but quads and hexes are permuted to lexicographic order
+std::vector<std::vector<int> > element_permutations(int p)
 {
   // p == 0 is admissible for L2 spaces, but lexicographic permutations
   // aren't needed in that corner case
@@ -24,12 +26,11 @@ std::vector<std::vector<int> > lexicographic_permutations(int p)
   }
 
   {
-    auto             P = mfem::H1_TriangleElement(p).GetLexicographicOrdering();
-    std::vector<int> native_to_lex(uint32_t(P.Size()));
-    for (int i = 0; i < P.Size(); i++) {
-      native_to_lex[uint32_t(i)] = P[i];
+    std::vector<int> P(uint32_t(((p + 1) * (p + 2)) / 2));
+    for (std::size_t i = 0; i < P.size(); i++) {
+      P[i] = int(i);
     }
-    output[mfem::Geometry::Type::TRIANGLE] = native_to_lex;
+    output[mfem::Geometry::Type::TRIANGLE] = P;
   }
 
   {
@@ -42,12 +43,11 @@ std::vector<std::vector<int> > lexicographic_permutations(int p)
   }
 
   {
-    auto             P = mfem::H1_TetrahedronElement(p).GetLexicographicOrdering();
-    std::vector<int> native_to_lex(uint32_t(P.Size()));
-    for (int i = 0; i < P.Size(); i++) {
-      native_to_lex[uint32_t(i)] = P[i];
+    std::vector<int> P(uint32_t(((p + 1) * (p + 2) * (p + 3)) / 6));
+    for (std::size_t i = 0; i < P.size(); i++) {
+      P[i] = int(i);
     }
-    output[mfem::Geometry::Type::TETRAHEDRON] = native_to_lex;
+    output[mfem::Geometry::Type::TETRAHEDRON] = P;
   }
 
   {
@@ -220,8 +220,8 @@ axom::Array<DoF, 2, axom::MemorySpace::Host> GetElementRestriction(const mfem::F
   mfem::Mesh*      mesh = fes->GetMesh();
 
   // note: this assumes that all the elements are the same polynomial order
-  int                            p        = fes->GetElementOrder(0);
-  std::vector<std::vector<int> > lex_perm = lexicographic_permutations(p);
+  int                            p         = fes->GetElementOrder(0);
+  std::vector<std::vector<int> > elem_perm = element_permutations(p);
 
   uint64_t n = 0;
 
@@ -237,7 +237,7 @@ axom::Array<DoF, 2, axom::MemorySpace::Host> GetElementRestriction(const mfem::F
     // to apply the native-to-lexicographic permutation
     if (isH1(*fes)) {
       for (int k = 0; k < dofs.Size(); k++) {
-        elem_dofs.push_back({uint64_t(dofs[lex_perm[uint32_t(geom)][uint32_t(k)]])});
+        elem_dofs.push_back({uint64_t(dofs[elem_perm[uint32_t(geom)][uint32_t(k)]])});
       }
     }
 
@@ -287,7 +287,7 @@ axom::Array<DoF, 2, axom::MemorySpace::Host> GetFaceDofs(const mfem::FiniteEleme
   int                            p               = fes->GetElementOrder(0);
   Array2D<int>                   face_perm       = face_permutations(face_geom, p);
   std::vector<Array2D<int> >     local_face_dofs = geom_local_face_dofs(p);
-  std::vector<std::vector<int> > elem_perm       = lexicographic_permutations(p);
+  std::vector<std::vector<int> > elem_perm       = element_permutations(p);
 
   uint64_t n = 0;
 
