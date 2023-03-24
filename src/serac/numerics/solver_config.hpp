@@ -107,8 +107,7 @@ enum class NonlinearSolver
   LBFGS,                     /**< MFEM-native Limited memory BFGS */
   KINFullStep,               /**< KINSOL Full Newton (Sundials must be enabled) */
   KINBacktrackingLineSearch, /**< KINSOL Newton with Backtracking Line Search (Sundials must be enabled) */
-  KINPicard,                 /**< KINSOL Picard (Sundials must be enabled) */
-  KINFP                      /**< KINSOL Fixed Point (Sundials must be enabled) */
+  KINPicard                  /**< KINSOL Picard (Sundials must be enabled) */
 };
 
 /**

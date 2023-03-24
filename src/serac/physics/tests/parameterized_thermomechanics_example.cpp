@@ -18,8 +18,6 @@
 
 using namespace serac;
 
-using serac::solid_mechanics::default_static_options;
-
 template <typename T>
 auto greenStrain(const tensor<T, 3, 3>& grad_u)
 {
@@ -90,8 +88,13 @@ int main(int argc, char* argv[])
     serac::StateManager::setMesh(std::move(mesh));
   }
 
-  SolidMechanics<p, dim, Parameters<H1<p>, H1<p> > > simulation(default_static_options, GeometricNonlinearities::On,
-                                                                "thermomechanics_simulation");
+  SolidMechanics<p, dim, Parameters<H1<p>, H1<p> > > simulation(
+      {DirectSolverOptions{}, IterativeNonlinearSolverOptions{.rel_tol       = 1.0e-12,
+                                                              .abs_tol       = 1.0e-12,
+                                                              .max_iter      = 30,
+                                                              .print_level   = 1,
+                                                              .nonlin_solver = NonlinearSolver::KINPicard}},
+      GeometricNonlinearities::On, "thermomechanics_simulation");
 
   double density   = 1.0;     ///< density
   double E         = 1000.0;  ///< Young's modulus
@@ -198,8 +201,8 @@ int main(int argc, char* argv[])
 }
 
 // output:
-// vertical displacement integrated over the top surface: 0.000883477
-// total area of the top surface: 0.441959
+// vertical displacement integrated over the top surface: 0.000881714
+// total area of the top surface: 0.441077
 // exact area of the top surface: 0.441786
 // average vertical displacement: 0.001999
 // expected average vertical displacement: 0.002
