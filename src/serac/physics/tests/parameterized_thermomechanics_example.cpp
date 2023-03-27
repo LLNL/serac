@@ -189,14 +189,15 @@ TEST(Thermomechanics, ParameterizedMaterial)
 
   double final_qoi = qoi(simulation.displacement());
 
-  double adjoint_qoi = mfem::InnerProduct(dqoi_dalpha, dalpha);
-  double fd_qoi      = (final_qoi - initial_qoi) / epsilon;
+  double adjoint_qoi_derivative = mfem::InnerProduct(dqoi_dalpha, dalpha);
+  double fd_qoi_derivative      = (final_qoi - initial_qoi) / epsilon;
 
   // compare the expected change in the QoI to the actual change:
-  SLIC_INFO_ROOT(axom::fmt::format("directional derivative of QoI by adjoint-state method: {}", adjoint_qoi));
-  SLIC_INFO_ROOT(axom::fmt::format("directional derivative of QoI by finite-difference:    {}", fd_qoi));
+  SLIC_INFO_ROOT(
+      axom::fmt::format("directional derivative of QoI by adjoint-state method: {}", adjoint_qoi_derivative));
+  SLIC_INFO_ROOT(axom::fmt::format("directional derivative of QoI by finite-difference:    {}", fd_qoi_derivative));
 
-  EXPECT_NEAR(0.0, (fd_qoi - adjoint_qoi) / fd_qoi, 5.0e-6);
+  EXPECT_NEAR(0.0, (fd_qoi_derivative - adjoint_qoi_derivative) / fd_qoi_derivative, 5.0e-6);
 }
 
 // output:
