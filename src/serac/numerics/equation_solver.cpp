@@ -126,7 +126,7 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::BuildIterativeLinearSolve
       if (par_fes != nullptr) {
         prec_amg->SetElasticityOptions(par_fes);
       }
-      prec_amg->SetPrintLevel(lin_options.print_level);
+      prec_amg->SetPrintLevel(amg_options->print_level);
       prec_ = std::move(prec_amg);
     } else if (auto smoother_options = std::get_if<HypreSmootherPrec>(prec_ptr)) {
       auto prec_smoother = std::make_unique<mfem::HypreSmoother>();
@@ -140,8 +140,13 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::BuildIterativeLinearSolve
     } else if (std::get_if<AMGXPrec>(prec_ptr)) {
       SLIC_ERROR_ROOT("AMGX was not enabled when MFEM was built");
 #endif
-    } else if (auto ilu_options = std::get_if<BlockILUPrec>(prec_ptr)) {
-      prec_ = std::make_unique<mfem::BlockILU>(ilu_options->block_size);
+    } else if (auto block_ilu_options = std::get_if<BlockILUPrec>(prec_ptr)) {
+      prec_ = std::make_unique<mfem::BlockILU>(block_ilu_options->block_size);
+    } else if (auto ilu_options = std::get_if<HypreILUPrec>(prec_ptr)) {
+      auto prec_ilu = std::make_unique<mfem::HypreILU>();
+      prec_ilu->SetLevelOfFill(ilu_options->fill_level);
+      prec_ilu->SetPrintLevel(ilu_options->print_level);
+      prec_ = std::move(prec_ilu);
     }
     iter_lin_solver->SetPreconditioner(*prec_);
   }
@@ -240,7 +245,7 @@ void EquationSolver::DefineInputFileSchema(axom::inlet::Container& container)
   iterative_container.addInt("max_iter", "Maximum iterations for the linear solve.").defaultValue(5000);
   iterative_container.addInt("print_level", "Linear print level.").defaultValue(0);
   iterative_container.addString("solver_type", "Solver type (gmres|minres|cg).").defaultValue("gmres");
-  iterative_container.addString("prec_type", "Preconditioner type (JacobiSmoother|L1JacobiSmoother|AMG|BlockILU).")
+  iterative_container.addString("prec_type", "Preconditioner type (JacobiSmoother|L1JacobiSmoother|AMG|BlockILU|ILU).")
       .defaultValue("JacobiSmoother");
 
   auto& direct_container = linear_container.addStruct("direct_options", "Direct solver parameters");
@@ -297,6 +302,8 @@ serac::LinearSolverOptions FromInlet<serac::LinearSolverOptions>::operator()(con
       iter_options.prec = serac::AMGXPrec{.smoother = serac::AMGXSolver::JACOBI_L1};
     } else if (prec_type == "BlockILU") {
       iter_options.prec = serac::BlockILUPrec{};
+    } else if (prec_type == "ILU") {
+      iter_options.prec = serac::HypreILUPrec{};
     } else {
       std::string msg = axom::fmt::format("Unknown preconditioner type given: '{0}'", prec_type);
       SLIC_ERROR_ROOT(msg);

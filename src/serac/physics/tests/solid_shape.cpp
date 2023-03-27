@@ -49,8 +49,10 @@ void shape_test(GeometricNonlinearities geo_nonlin)
   SolverOptions options = {solid_mechanics::default_linear_options, solid_mechanics::default_nonlinear_options};
 
   // Use tight tolerances as this is a machine precision test
-  get<IterativeSolverOptions>(options.linear).rel_tol = 1.0e-15;
-  get<IterativeSolverOptions>(options.linear).abs_tol = 1.0e-15;
+  get<IterativeSolverOptions>(options.linear).rel_tol     = 1.0e-15;
+  get<IterativeSolverOptions>(options.linear).print_level = 0;
+  get<IterativeSolverOptions>(options.linear).prec        = HypreILUPrec{.print_level = 1};
+  get<IterativeSolverOptions>(options.linear).abs_tol     = 1.0e-15;
 
   options.nonlinear.abs_tol  = 5.0e-15;
   options.nonlinear.rel_tol  = 5.0e-15;

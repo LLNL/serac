@@ -127,6 +127,9 @@ struct HypreBoomerAMGPrec {
    * @note This is needed for some of the options specific to solid mechanics solves
    */
   mfem::ParFiniteElementSpace* pfes = nullptr;
+
+  /// @brief The print level for the preconditioner
+  int print_level = 0;
 };
 
 /**
@@ -179,9 +182,20 @@ struct BlockILUPrec {
 };
 
 /**
+ * @brief Store the information required to confiugure a Hypre-based ILU preconditioner
+ */
+struct HypreILUPrec {
+  /// @brief The fill level for the ILU algorithm
+  int fill_level = 1;
+
+  /// @brief The print level for the preconditioner
+  int print_level = 0;
+};
+
+/**
  * @brief Preconditioning method
  */
-using Preconditioner = std::variant<HypreSmootherPrec, HypreBoomerAMGPrec, AMGXPrec, BlockILUPrec>;
+using Preconditioner = std::variant<HypreSmootherPrec, HypreBoomerAMGPrec, AMGXPrec, BlockILUPrec, HypreILUPrec>;
 
 /**
  * @brief Abstract multiphysics coupling scheme
