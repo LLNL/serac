@@ -28,8 +28,8 @@ TEST(SolidLegacy, FiniteDiff)
   mfem::ParMesh* mesh = serac::StateManager::setMesh(std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, cuboid));
 
   // Setup some solver options
-  serac::IterativeSolverOptions const default_linear_options = {.rel_tol     = 1.0e-8,
-                                                                .abs_tol     = 1.0e-12,
+  serac::IterativeSolverOptions const default_linear_options = {.rel_tol     = 1.0e-10,
+                                                                .abs_tol     = 1.0e-14,
                                                                 .print_level = 0,
                                                                 .max_iter    = 500,
                                                                 .lin_solver  = serac::LinearSolver::GMRES,
