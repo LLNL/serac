@@ -56,10 +56,8 @@ struct ParameterizedThermoelasticMaterial {
   }
 };
 
-int main(int argc, char* argv[])
+TEST(Thermomechanics, ParameterizedMaterial)
 {
-  serac::initialize(argc, argv);
-
   constexpr int p                   = 1;
   constexpr int dim                 = 3;
   int           serial_refinement   = 0;
@@ -192,13 +190,13 @@ int main(int argc, char* argv[])
   double final_qoi = qoi(simulation.displacement());
 
   double adjoint_qoi = mfem::InnerProduct(dqoi_dalpha, dalpha);
+  double fd_qoi      = (final_qoi - initial_qoi) / epsilon;
 
   // compare the expected change in the QoI to the actual change:
   SLIC_INFO_ROOT(axom::fmt::format("directional derivative of QoI by adjoint-state method: {}", adjoint_qoi));
-  SLIC_INFO_ROOT(
-      axom::fmt::format("directional derivative of QoI by finite-difference:    {}", (final_qoi - initial_qoi) / epsilon));
+  SLIC_INFO_ROOT(axom::fmt::format("directional derivative of QoI by finite-difference:    {}", fd_qoi));
 
-  serac::exitGracefully();
+  EXPECT_NEAR(0.0, (fd_qoi - adjoint_qoi) / fd_qoi, 5.0e-6);
 }
 
 // output:
@@ -209,3 +207,16 @@ int main(int argc, char* argv[])
 // expected average vertical displacement: 0.002
 // directional derivative of QoI by adjoint-state method: 0.028289
 // directional derivative of QoI by finite-difference: 0.0282891
+
+int main(int argc, char* argv[])
+{
+  ::testing::InitGoogleTest(&argc, argv);
+
+  serac::initialize(argc, argv);
+
+  int result = RUN_ALL_TESTS();
+
+  serac::exitGracefully();
+
+  return result;
+}
