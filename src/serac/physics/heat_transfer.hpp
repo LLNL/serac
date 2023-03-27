@@ -480,6 +480,7 @@ public:
 
             // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
             // tracking strategy
+            // See https://github.com/mfem/mfem/issues/3531
             r = res;
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
@@ -503,6 +504,7 @@ public:
 
             // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
             // tracking strategy
+            // See https://github.com/mfem/mfem/issues/3531
             r = res;
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },

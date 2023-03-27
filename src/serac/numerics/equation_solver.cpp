@@ -178,9 +178,6 @@ std::unique_ptr<mfem::NewtonSolver> EquationSolver::BuildNonlinearSolver(
       case NonlinearSolver::KINPicard:
         kinsol_strat = KIN_PICARD;
         break;
-      case NonlinearSolver::KINFP:
-        kinsol_strat = KIN_FP;
-        break;
       default:
         kinsol_strat = KIN_NONE;
         SLIC_ERROR_ROOT("Unknown KINSOL nonlinear solver type given.");

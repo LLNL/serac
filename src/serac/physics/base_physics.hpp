@@ -229,7 +229,7 @@ public:
    */
   virtual const std::unordered_map<std::string, const serac::FiniteElementState&> solveAdjoint(
       std::unordered_map<std::string, const serac::FiniteElementDual&> /* adjoint_loads */,
-      std::unordered_map<std::string, const serac::FiniteElementState&> /* adjoint_with_essential_boundary */)
+      std::unordered_map<std::string, const serac::FiniteElementState&> /* adjoint_with_essential_boundary */ = {})
   {
     SLIC_ERROR_ROOT(axom::fmt::format("Adjoint analysis not defined for physics module {}", name_));
 
