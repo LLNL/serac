@@ -56,10 +56,8 @@ struct ParameterizedThermoelasticMaterial {
   }
 };
 
-int main(int argc, char* argv[])
+TEST(Thermomechanics, ParameterizedMaterial)
 {
-  serac::initialize(argc, argv);
-
   constexpr int p                   = 1;
   constexpr int dim                 = 3;
   int           serial_refinement   = 0;
@@ -149,23 +147,26 @@ int main(int argc, char* argv[])
       mesh);
 
   double initial_qoi = qoi(simulation.displacement());
-  std::cout << "vertical displacement integrated over the top surface: " << initial_qoi << std::endl;
+  SLIC_INFO_ROOT(axom::fmt::format("vertical displacement integrated over the top surface: {}", initial_qoi));
 
   Functional<double(H1<p, dim>)> area({&simulation.displacement().space()});
   area.AddSurfaceIntegral(
       DependsOn<>{}, [=](auto x, auto /*n*/) { return (x[2] > 0.99 * height) ? 1.0 : 0.0; }, mesh);
 
-  std::cout << "total area of the top surface: " << area(simulation.displacement()) << std::endl;
+  double top_area = area(simulation.displacement());
+
+  SLIC_INFO_ROOT(axom::fmt::format("total area of the top surface: {}", top_area));
 
   double exact_area = M_PI_4 * ((outer_radius * outer_radius) - (inner_radius * inner_radius));
 
-  std::cout << "exact area of the top surface: " << exact_area << std::endl;
+  SLIC_INFO_ROOT(axom::fmt::format("exact area of the top surface: {}", exact_area));
 
-  std::cout << "average vertical displacement: " << qoi(simulation.displacement()) / area(simulation.displacement())
-            << std::endl;
+  double avg_disp = qoi(simulation.displacement()) / area(simulation.displacement());
+
+  SLIC_INFO_ROOT(axom::fmt::format("average vertical displacement: {}", avg_disp));
 
   double deltaT = 1.0;
-  std::cout << "expected average vertical displacement: " << alpha0 * deltaT * height << std::endl;
+  SLIC_INFO_ROOT(axom::fmt::format("expected average vertical displacement: {}", alpha0 * deltaT * height));
 
   serac::FiniteElementDual adjoint_load(simulation.displacement().space(), "adjoint_load");
   auto                     dqoi_du = get<1>(qoi(DifferentiateWRT<0>{}, simulation.displacement()));
@@ -175,9 +176,9 @@ int main(int argc, char* argv[])
 
   auto& dqoi_dalpha = simulation.computeSensitivity(1);
 
-  double       epsilon = 1.0e-6;
-  mfem::Vector dalpha(alpha.Size());
-  dalpha.Randomize();
+  double epsilon = 1.0e-6;
+  auto   dalpha  = alpha.CreateCompatibleVector();
+  dalpha.Randomize(0);
   alpha += epsilon * dalpha;
 
   // rerun the simulation to the beginning,
@@ -188,20 +189,35 @@ int main(int argc, char* argv[])
 
   double final_qoi = qoi(simulation.displacement());
 
-  // compare the expected change in the QoI to the actual change:
-  std::cout << "directional derivative of QoI by adjoint-state method: ";
-  std::cout << mfem::InnerProduct(dqoi_dalpha, dalpha) << std::endl;
-  std::cout << "directional derivative of QoI by finite-difference: ";
-  std::cout << (final_qoi - initial_qoi) / epsilon << std::endl;
+  double adjoint_qoi_derivative = mfem::InnerProduct(dqoi_dalpha, dalpha);
+  double fd_qoi_derivative      = (final_qoi - initial_qoi) / epsilon;
 
-  serac::exitGracefully();
+  // compare the expected change in the QoI to the actual change:
+  SLIC_INFO_ROOT(
+      axom::fmt::format("directional derivative of QoI by adjoint-state method: {}", adjoint_qoi_derivative));
+  SLIC_INFO_ROOT(axom::fmt::format("directional derivative of QoI by finite-difference:    {}", fd_qoi_derivative));
+
+  EXPECT_NEAR(0.0, (fd_qoi_derivative - adjoint_qoi_derivative) / fd_qoi_derivative, 5.0e-6);
 }
 
 // output:
 // vertical displacement integrated over the top surface: 0.000883477
-// total area of the top surface: 0.441959
+// total area of the top surface: 0.441077
 // exact area of the top surface: 0.441786
 // average vertical displacement: 0.001999
 // expected average vertical displacement: 0.002
-// directional derivative of QoI by adjoint-state method: 0.441931
-// directional derivative of QoI by finite-difference: 0.441931
+// directional derivative of QoI by adjoint-state method: 0.028289
+// directional derivative of QoI by finite-difference: 0.0282891
+
+int main(int argc, char* argv[])
+{
+  ::testing::InitGoogleTest(&argc, argv);
+
+  serac::initialize(argc, argv);
+
+  int result = RUN_ALL_TESTS();
+
+  serac::exitGracefully();
+
+  return result;
+}
