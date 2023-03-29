@@ -31,7 +31,7 @@ TEST(FunctionalMultiphysics, NonlinearThermalTest3D)
   constexpr auto p   = 3;
   constexpr auto dim = 3;
 
-  std::string meshfile = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+  std::string meshfile = SERAC_REPO_DIR "/data/meshes/patch3D_tets_and_hexes.mesh";
   auto        mesh3D   = mesh::refineAndDistribute(buildMeshFromFile(meshfile), serial_refinement, parallel_refinement);
 
   // Create standard MFEM bilinear and linear forms on H1

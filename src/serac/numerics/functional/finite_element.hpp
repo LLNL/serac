@@ -354,12 +354,14 @@ struct finite_element;
 #include "detail/segment_L2.inl"
 
 #include "detail/triangle_H1.inl"
+#include "detail/triangle_L2.inl"
 
 #include "detail/quadrilateral_H1.inl"
 #include "detail/quadrilateral_Hcurl.inl"
 #include "detail/quadrilateral_L2.inl"
 
 #include "detail/tetrahedron_H1.inl"
+#include "detail/tetrahedron_L2.inl"
 
 #include "detail/hexahedron_H1.inl"
 #include "detail/hexahedron_Hcurl.inl"

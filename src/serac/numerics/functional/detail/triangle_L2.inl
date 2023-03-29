@@ -5,9 +5,9 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file triangle_H1.inl
+ * @file triangle_L2.inl
  *
- * @brief Specialization of finite_element for H1 on triangle geometry
+ * @brief Specialization of finite_element for L2 on triangle geometry
  */
 
 // this specialization defines shape functions (and their gradients) that
@@ -17,9 +17,9 @@
 // for additional information on the finite_element concept requirements, see finite_element.hpp
 /// @cond
 template <int p, int c>
-struct finite_element<mfem::Geometry::TRIANGLE, H1<p, c> > {
+struct finite_element<mfem::Geometry::TRIANGLE, L2<p, c> > {
   static constexpr auto geometry   = mfem::Geometry::TRIANGLE;
-  static constexpr auto family     = Family::H1;
+  static constexpr auto family     = Family::L2;
   static constexpr int  components = c;
   static constexpr int  dim        = 2;
   static constexpr int  n          = (p + 1);
