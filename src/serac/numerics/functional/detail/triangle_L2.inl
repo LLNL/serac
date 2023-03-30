@@ -52,28 +52,33 @@ struct finite_element<mfem::Geometry::TRIANGLE, L2<p, c> > {
     0-----------1
 
       quadratic
-    2
+    5
     | .
     |   .
-    5     4
+    3     4
     |       .
     |         .
-    0-----3-----1
+    0-----1-----2
 
 
       cubic
-    2
+    9
     | .
-    7   6
+    7   8
     |     .
-    8   9   5
+    4   5   6
     |         .
-    0---3---4---1
+    0---1---2---3
 
   */
 
   SERAC_HOST_DEVICE static constexpr double shape_function(tensor<double, dim> xi, int i)
   {
+    // constant
+    if constexpr (n == 1) {
+      return 1;
+    }
+
     // linear
     if constexpr (n == 2) {
       switch (i) {
@@ -92,15 +97,15 @@ struct finite_element<mfem::Geometry::TRIANGLE, L2<p, c> > {
         case 0:
           return (-1 + xi[0] + xi[1]) * (-1 + 2 * xi[0] + 2 * xi[1]);
         case 1:
-          return xi[0] * (-1 + 2 * xi[0]);
-        case 2:
-          return xi[1] * (-1 + 2 * xi[1]);
-        case 3:
           return -4 * xi[0] * (-1 + xi[0] + xi[1]);
+        case 2:
+          return xi[0] * (-1 + 2 * xi[0]);
+        case 3:
+          return -4 * xi[1] * (-1 + xi[0] + xi[1]);
         case 4:
           return 4 * xi[0] * xi[1];
         case 5:
-          return -4 * xi[1] * (-1 + xi[0] + xi[1]);
+          return xi[1] * (-1 + 2 * xi[1]);
       }
     }
 
@@ -112,35 +117,40 @@ struct finite_element<mfem::Geometry::TRIANGLE, L2<p, c> > {
           return -((-1 + xi[0] + xi[1]) *
                    (1 + 5 * xi[0] * xi[0] + 5 * (-1 + xi[1]) * xi[1] + xi[0] * (-5 + 11 * xi[1])));
         case 1:
-          return xi[0] * (1 + 5 * xi[0] * xi[0] + xi[1] - xi[1] * xi[1] - xi[0] * (5 + xi[1]));
+          return (5 * xi[0] * (-1 + xi[0] + xi[1]) * (-1 - sqrt5 + 2 * sqrt5 * xi[0] + (3 + sqrt5) * xi[1])) / 2.;
         case 2:
-          return xi[1] * (1 + xi[0] - xi[0] * xi[0] - xi[0] * xi[1] + 5 * (-1 + xi[1]) * xi[1]);
+          return (-5 * xi[0] * (-1 + xi[0] + xi[1]) * (1 - sqrt5 + 2 * sqrt5 * xi[0] + (-3 + sqrt5) * xi[1])) / 2.;
         case 3:
-          return (5 * xi[0] * (-1 + xi[0] + xi[1]) *
-                  (-89 - 41 * sqrt5 + 2 * (60 + 29 * sqrt5) * xi[0] + (147 + 65 * sqrt5) * xi[1])) /
-                 (58 + 24 * sqrt5);
+          return xi[0] * (1 + 5 * xi[0] * xi[0] + xi[1] - xi[1] * xi[1] - xi[0] * (5 + xi[1]));
         case 4:
-          return (-5 * xi[0] * (-1 + xi[0] + xi[1]) *
-                  (-6 - 4 * sqrt5 + (25 + 13 * sqrt5) * xi[0] - (7 + sqrt5) * xi[1])) /
-                 (13 + 5 * sqrt5);
-        case 5:
-          return (5 * xi[0] * xi[1] * (-3 - sqrt5 + (7 + 3 * sqrt5) * xi[0] + 2 * xi[1])) / (3 + sqrt5);
-        case 6:
-          return (5 * xi[0] * xi[1] * (-3 - sqrt5 + 2 * xi[0] + (7 + 3 * sqrt5) * xi[1])) / (3 + sqrt5);
-        case 7:
-          return (5 * xi[1] * (-1 + xi[0] + xi[1]) * (1 + sqrt5 + 2 * xi[0] - (5 + 3 * sqrt5) * xi[1])) / (3 + sqrt5);
-        case 8:
           return (5 * xi[1] * (-1 + xi[0] + xi[1]) * (-1 - sqrt5 + (3 + sqrt5) * xi[0] + 2 * sqrt5 * xi[1])) / 2.;
-        case 9:
+        case 5:
           return -27 * xi[0] * xi[1] * (-1 + xi[0] + xi[1]);
+        case 6:
+          return (5 * xi[0] * xi[1] * (-2 + (3 + sqrt5) * xi[0] - (-3 + sqrt5) * xi[1])) / 2.;
+        case 7:
+          return (5 * xi[1] * (-1 + xi[0] + xi[1]) *
+                  (5 - 3 * sqrt5 + 2 * (-5 + 2 * sqrt5) * xi[0] + 5 * (-1 + sqrt5) * xi[1])) /
+                 (-5 + sqrt5);
+        case 8:
+          return (-5 * xi[0] * xi[1] * (2 + (-3 + sqrt5) * xi[0] - (3 + sqrt5) * xi[1])) / 2.;
+        case 9:
+          return xi[1] * (1 + xi[0] - xi[0] * xi[0] - xi[0] * xi[1] + 5 * (-1 + xi[1]) * xi[1]);
       }
     }
 
     return 0.0;
   }
 
+
+
   SERAC_HOST_DEVICE static constexpr tensor<double, dim> shape_function_gradient(tensor<double, dim> xi, int i)
   {
+    // constant
+    if constexpr (n == 1) {
+      return {0.0, 0.0};
+    }
+
     // linear
     if constexpr (n == 2) {
       switch (i) {
@@ -159,15 +169,15 @@ struct finite_element<mfem::Geometry::TRIANGLE, L2<p, c> > {
         case 0:
           return {-3 + 4 * xi[0] + 4 * xi[1], -3 + 4 * xi[0] + 4 * xi[1]};
         case 1:
-          return {-1 + 4 * xi[0], 0.0};
-        case 2:
-          return {0.0, -1 + 4 * xi[1]};
-        case 3:
           return {-4 * (-1 + 2 * xi[0] + xi[1]), -4 * xi[0]};
+        case 2:
+          return {-1 + 4 * xi[0], 0};
+        case 3:
+          return {-4 * xi[1], -4 * (-1 + xi[0] + 2 * xi[1])};
         case 4:
           return {4 * xi[1], 4 * xi[0]};
         case 5:
-          return {-4 * xi[1], -4 * (-1 + xi[0] + 2 * xi[1])};
+          return {0, -1 + 4 * xi[1]};
       }
     }
 
@@ -179,39 +189,39 @@ struct finite_element<mfem::Geometry::TRIANGLE, L2<p, c> > {
           return {-6 - 15 * xi[0] * xi[0] + 4 * xi[0] * (5 - 8 * xi[1]) + (21 - 16 * xi[1]) * xi[1],
                   -6 - 16 * xi[0] * xi[0] + xi[0] * (21 - 32 * xi[1]) + 5 * (4 - 3 * xi[1]) * xi[1]};
         case 1:
+          return {(5 * (6 * sqrt5 * xi[0] * xi[0] + xi[0] * (-2 - 6 * sqrt5 + 6 * (1 + sqrt5) * xi[1]) +
+                        (-1 + xi[1]) * (-1 - sqrt5 + (3 + sqrt5) * xi[1]))) /
+                      2.,
+                  (5 * xi[0] * (-2 * (2 + sqrt5) + 3 * (1 + sqrt5) * xi[0] + 2 * (3 + sqrt5) * xi[1])) / 2.};
+        case 2:
+          return {(-5 * (6 * sqrt5 * xi[0] * xi[0] + (-1 + xi[1]) * (1 - sqrt5 + (-3 + sqrt5) * xi[1]) +
+                         xi[0] * (2 - 6 * sqrt5 + 6 * (-1 + sqrt5) * xi[1]))) /
+                      2.,
+                  (-5 * xi[0] * (4 - 2 * sqrt5 + 3 * (-1 + sqrt5) * xi[0] + 2 * (-3 + sqrt5) * xi[1])) / 2.};
+        case 3:
           return {1 + 15 * xi[0] * xi[0] + xi[1] - xi[1] * xi[1] - 2 * xi[0] * (5 + xi[1]),
                   -(xi[0] * (-1 + xi[0] + 2 * xi[1]))};
-        case 2:
-          return {-(xi[1] * (-1 + 2 * xi[0] + xi[1])),
-                  1 + xi[0] - xi[0] * xi[0] - 2 * (5 + xi[0]) * xi[1] + 15 * xi[1] * xi[1]};
-        case 3:
-          return {15 * sqrt5 * xi[0] * xi[0] + 5 * xi[0] * (-1 - 3 * sqrt5 + 3 * (1 + sqrt5) * xi[1]) +
-                      (5 * (-1 + xi[1]) * (-1 - sqrt5 + (3 + sqrt5) * xi[1])) / 2.,
-                  (5 * xi[0] * (-2 * (2 + sqrt5) + 3 * (1 + sqrt5) * xi[0] + 2 * (3 + sqrt5) * xi[1])) / 2.};
         case 4:
-          return {(5 * (-3 * (25 + 13 * sqrt5) * xi[0] * xi[0] + (-1 + xi[1]) * (6 + 4 * sqrt5 + (7 + sqrt5) * xi[1]) +
-                        xi[0] * (62 + 34 * sqrt5 - 12 * (3 + 2 * sqrt5) * xi[1]))) /
-                      (13 + 5 * sqrt5),
-                  (-5 * xi[0] * (1 - 3 * sqrt5 + 6 * (3 + 2 * sqrt5) * xi[0] - 2 * (7 + sqrt5) * xi[1])) /
-                      (13 + 5 * sqrt5)};
-        case 5:
-          return {(5 * xi[1] * (-3 - sqrt5 + 2 * (7 + 3 * sqrt5) * xi[0] + 2 * xi[1])) / (3 + sqrt5),
-                  (5 * xi[0] * (-3 - sqrt5 + (7 + 3 * sqrt5) * xi[0] + 4 * xi[1])) / (3 + sqrt5)};
-        case 6:
-          return {(5 * xi[1] * (-3 - sqrt5 + 4 * xi[0] + (7 + 3 * sqrt5) * xi[1])) / (3 + sqrt5),
-                  (5 * xi[0] * (-3 - sqrt5 + 2 * xi[0] + 2 * (7 + 3 * sqrt5) * xi[1])) / (3 + sqrt5)};
-        case 7:
-          return {(5 * (-3 + sqrt5) * xi[1] * (1 - sqrt5 - 4 * xi[0] + 3 * (1 + sqrt5) * xi[1])) / 4.0,
-                  (-5 * (-1 + sqrt5 + (-3 + sqrt5) * xi[0] * xi[0] + 2 * xi[1] * (1 - 3 * sqrt5 + 3 * sqrt5 * xi[1]) +
-                         xi[0] * (4 - 2 * sqrt5 + 6 * (-1 + sqrt5) * xi[1]))) /
-                      2.0};
-        case 8:
           return {(5 * xi[1] * (-2 * (2 + sqrt5) + 2 * (3 + sqrt5) * xi[0] + 3 * (1 + sqrt5) * xi[1])) / 2.,
                   (5 * (1 + sqrt5 - 2 * (2 + sqrt5) * xi[0] + (3 + sqrt5) * xi[0] * xi[0] +
                         6 * (1 + sqrt5) * xi[0] * xi[1] + 2 * xi[1] * (-1 - 3 * sqrt5 + 3 * sqrt5 * xi[1]))) /
-                      2.0};
-        case 9:
+                      2.};
+        case 5:
           return {-27 * xi[1] * (-1 + 2 * xi[0] + xi[1]), -27 * xi[0] * (-1 + xi[0] + 2 * xi[1])};
+        case 6:
+          return {(-5 * xi[1] * (2 - 2 * (3 + sqrt5) * xi[0] + (-3 + sqrt5) * xi[1])) / 2.,
+                  (5 * xi[0] * (-2 + (3 + sqrt5) * xi[0] - 2 * (-3 + sqrt5) * xi[1])) / 2.};
+        case 7:
+          return {(-5 * xi[1] * (4 - 2 * sqrt5 + 2 * (-3 + sqrt5) * xi[0] + 3 * (-1 + sqrt5) * xi[1])) / 2.,
+                  (-5 * (-1 + sqrt5 + (-3 + sqrt5) * xi[0] * xi[0] + 2 * xi[1] * (1 - 3 * sqrt5 + 3 * sqrt5 * xi[1]) +
+                         xi[0] * (4 - 2 * sqrt5 + 6 * (-1 + sqrt5) * xi[1]))) /
+                      2.};
+        case 8:
+          return {(5 * xi[1] * (-2 - 2 * (-3 + sqrt5) * xi[0] + (3 + sqrt5) * xi[1])) / 2.,
+                  (-5 * xi[0] * (2 + (-3 + sqrt5) * xi[0] - 2 * (3 + sqrt5) * xi[1])) / 2.};
+        case 9:
+          return {-(xi[1] * (-1 + 2 * xi[0] + xi[1])),
+                  1 + xi[0] - xi[0] * xi[0] - 2 * (5 + xi[0]) * xi[1] + 15 * xi[1] * xi[1]};
       }
     }
 
