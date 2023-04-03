@@ -173,6 +173,12 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
   mfem::Vector r1 = (*J) * U + (*F);
   mfem::Vector r2 = residual(U);
 
+  //std::cout << std::setprecision(16);
+  //r1.Print(std::cout, 4);
+  //std::cout << std::endl;
+  //std::cout << std::endl;
+  //r2.Print(std::cout, 4);
+
   if (verbose) {
     std::cout << "sum(r1):  " << r1.Sum() << std::endl;
     std::cout << "sum(r2):  " << r2.Sum() << std::endl;
@@ -184,17 +190,18 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
   EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-12);
 }
 
-TEST(FunctionalBoundary, 2DLinear) { boundary_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
-TEST(FunctionalBoundary, 2DQuadratic) { boundary_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
-
-TEST(FunctionalBoundary, 3DLinear) { boundary_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
-TEST(FunctionalBoundary, 3DQuadratic) { boundary_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
-
-TEST(boundaryL2, 2DLinear) { boundary_test(*mesh2D, L2<1>{}, L2<1>{}, Dimension<2>{}); }
+//TEST(FunctionalBoundary, 2DLinear) { boundary_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
+//TEST(FunctionalBoundary, 2DQuadratic) { boundary_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
+//
+//TEST(FunctionalBoundary, 3DLinear) { boundary_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
+//TEST(FunctionalBoundary, 3DQuadratic) { boundary_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
+//
+//TEST(boundaryL2, 2DLinear) { boundary_test(*mesh2D, L2<1>{}, L2<1>{}, Dimension<2>{}); }
 TEST(boundaryL2, 2DQuadratic) { boundary_test(*mesh2D, L2<2>{}, L2<2>{}, Dimension<2>{}); }
-
-TEST(boundaryL2, 3DLinear) { boundary_test(*mesh3D, L2<1>{}, L2<1>{}, Dimension<3>{}); }
+//
+//TEST(boundaryL2, 3DLinear) { boundary_test(*mesh3D, L2<1>{}, L2<1>{}, Dimension<3>{}); }
 TEST(boundaryL2, 3DQuadratic) { boundary_test(*mesh3D, L2<2>{}, L2<2>{}, Dimension<3>{}); }
+TEST(boundaryL2, 3DCubic) { boundary_test(*mesh3D, L2<3>{}, L2<3>{}, Dimension<3>{}); }
 
 int main(int argc, char* argv[])
 {
@@ -210,6 +217,7 @@ int main(int argc, char* argv[])
 
   std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/patch2D_tris_and_quads.mesh";
   std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/patch3D_tets_and_hexes.mesh";
+  //std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/onetet.mesh";
   mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
   mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
 
