@@ -1,6 +1,6 @@
 # Building Instructions
 
-Building is a little bit weird, since there's some bootstrapping involved to set up the compiler than Enzyme wants to use.
+Building is a little bit weird, since there's some bootstrapping involved to set up the compiler that Enzyme wants to use.
 
 ## Clone the repo
 
@@ -25,7 +25,7 @@ ninja
 >  - LLVM_VERSION can be one of {10, 11, 12, 13, 14, 15}
 >  - I find that using `make`'s parallel builds launch too many jobs with LLVM and cause my machines to run out of memory and crash. I have not had this problem with Ninja.
 
-Once that completes, we can move to the main project
+Once that completes, we can move to the main project.
 
 ## Building the serac prototype project
 Now, go back to the main repo directory and configure cmake normally:
