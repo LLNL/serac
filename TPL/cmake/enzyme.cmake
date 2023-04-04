@@ -22,5 +22,7 @@ ExternalProject_Add(TPL_enzyme
 
 )
 
+ExternalProject_Add_StepDependencies(TPL_enzyme configure TPL_llvm)
+
 message("LLVM_VERSION_MAJOR ${LLVM_VERSION}")
 
