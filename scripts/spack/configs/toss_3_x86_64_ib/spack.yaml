@@ -9,6 +9,9 @@ spack:
     build_stage::
     - $spack/../build_stage
 
+  # Regular TPLs do not need views
+  view: false
+
   compilers::
   - compiler:
       environment: {}
