@@ -88,7 +88,7 @@ void BasePhysics::setParameter(size_t parameter_index, FiniteElementState& param
           parameter_state.space().GetTrueVSize()));
   parameters_[parameter_index].state = &parameter_state;
   parameters_[parameter_index].sensitivity =
-      StateManager::newDual(parameter_state.space(), parameter_state.name() + "_sensitivity");
+      StateManager::newDual(parameter_state.space(), detail::addPrefix(name_, parameter_state.name() + "_sensitivity"));
 }
 
 void BasePhysics::setShapeDisplacement(FiniteElementState& shape_displacement)
