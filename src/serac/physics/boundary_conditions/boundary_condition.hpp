@@ -85,13 +85,13 @@ public:
    * @brief Returns a non-owning reference to the array of boundary
    * attribute markers
    */
-  const mfem::Array<int>& markers() const { return markers_; }
+  const mfem::Array<int>& markers() const { return attr_markers_; }
 
   /**
    * @brief Returns a non-owning reference to the array of boundary
    * attribute markers
    */
-  mfem::Array<int>& markers() { return markers_; }
+  mfem::Array<int>& markers() { return attr_markers_; }
 
   /**
    * @brief Accessor for the underlying vector coefficient
@@ -185,11 +185,11 @@ public:
 private:
   /**
    * @brief Uses mfem::ParFiniteElementSpace::GetEssentialTrueDofs to
-   * determine the DOFs for the boundary condition from the stored marker list
+   * determine the DOFs for the boundary condition from the stored attribute marker list
    *
    * @note This will set both the true and local dof values.
    */
-  void setDofListsFromMarkers();
+  void setDofListsFromAttributeMarkers();
 
   /**
    * @brief "Manually" set the DOF indices without specifying the field to which they apply
@@ -221,7 +221,7 @@ private:
   /**
    * @brief The attribute marker array where this BC is active
    */
-  mfem::Array<int> markers_;
+  mfem::Array<int> attr_markers_;
   /**
    * @brief The true DOFs affected by this BC
    * @note Only used for essential (Dirichlet) BCs

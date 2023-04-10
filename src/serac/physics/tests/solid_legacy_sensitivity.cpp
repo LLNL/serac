@@ -105,7 +105,7 @@ TEST(SolidLegacy, FiniteDiff)
   // Perform finite difference on each bulk modulus value
   // to check if computed qoi sensitivity is consistent
   // with finite difference on the displacement
-  double eps = 1.0E-6;
+  double eps = 1.0E-5;
   for (int ix = 0; ix < bulkModulus.Size(); ++ix) {
     // Perturb bulk sensitivity
     bulkModulus[ix] = bulkModulusValue + eps;
