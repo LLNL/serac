@@ -42,6 +42,50 @@ TEST(BoundaryCond, SimpleRepeatedDofs)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
+TEST(BoundaryCond, DirectTrueDofs)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+  constexpr int      N    = 15;
+  auto               mesh = mfem::Mesh::MakeCartesian2D(N, N, mfem::Element::TRIANGLE);
+  mfem::ParMesh      par_mesh(MPI_COMM_WORLD, mesh);
+  FiniteElementState state(par_mesh);
+
+  BoundaryConditionManager bcs(par_mesh);
+
+  mfem::Vector vec(2);
+  vec = 1.0;
+
+  auto coef = std::make_shared<mfem::VectorConstantCoefficient>(vec);
+
+  mfem::Array<int> true_dofs;
+
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  if (rank == 0) {
+    true_dofs.SetSize(1);
+    true_dofs[0] = 1;
+  } else if (rank == 1) {
+    true_dofs.SetSize(2);
+    true_dofs[0] = 5;
+    true_dofs[1] = 48;
+  }
+
+  bcs.addEssential(true_dofs, coef, state.space());
+  auto local_dofs = bcs.allEssentialLocalDofs();
+
+  local_dofs.Sort();
+
+  if (rank == 0) {
+    EXPECT_EQ(local_dofs.Size(), 1);
+    EXPECT_EQ(local_dofs[0], 1);
+  } else if (rank == 1) {
+    EXPECT_EQ(local_dofs.Size(), 2);
+    EXPECT_EQ(local_dofs[0], 6);
+    EXPECT_EQ(local_dofs[1], 53);
+  }
+}
+
 enum TestTag
 {
   Tag1 = 0,

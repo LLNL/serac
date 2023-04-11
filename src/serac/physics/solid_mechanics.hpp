@@ -290,7 +290,7 @@ public:
    * @param disp The vector function containing the prescribed displacement values
    *
    * The @a true_dofs list can be determined using functions from the @a mfem::ParFiniteElementSpace class.
-   * 
+   *
    * @note The coefficient is required to be vector-valued. However, only the dofs specified in the @a true_dofs
    * array will be set. This means that if the @a true_dofs array only contains dofs for a specific vector component in
    * a vector-valued finite element space, only that component will be set.
