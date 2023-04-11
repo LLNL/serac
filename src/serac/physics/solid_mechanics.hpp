@@ -298,7 +298,7 @@ public:
   void setDisplacementBCs(const mfem::Array<int>                                          true_dofs,
                           std::function<void(const mfem::Vector&, double, mfem::Vector&)> disp)
   {
-    disp_bdr_coef_ = std::make_shared<mfem::VectorFunctionCoefficient>(disp);
+    disp_bdr_coef_ = std::make_shared<mfem::VectorFunctionCoefficient>(dim, disp);
 
     bcs_.addEssential(true_dofs, disp_bdr_coef_, displacement_.space());
   }
