@@ -304,6 +304,26 @@ public:
   }
 
   /**
+   * @brief Set the displacement essential boundary conditions on a set of true degrees of freedom
+   *
+   * @param true_dofs A set of true degrees of freedom to set the displacement on
+   * @param disp The vector function containing the prescribed displacement values
+   *
+   * The @a true_dofs list can be determined using functions from the @a mfem::ParFiniteElementSpace class.
+   *
+   * @note The coefficient is required to be vector-valued. However, only the dofs specified in the @a true_dofs
+   * array will be set. This means that if the @a true_dofs array only contains dofs for a specific vector component in
+   * a vector-valued finite element space, only that component will be set.
+   */
+  void setDisplacementBCs(const mfem::Array<int>                                  true_dofs,
+                          std::function<void(const mfem::Vector&, mfem::Vector&)> disp)
+  {
+    disp_bdr_coef_ = std::make_shared<mfem::VectorFunctionCoefficient>(dim, disp);
+
+    bcs_.addEssential(true_dofs, disp_bdr_coef_, displacement_.space());
+  }
+
+  /**
    * @brief Accessor for getting named finite element state fields from the physics modules
    *
    * @param state_name The name of the Finite Element State to retrieve
