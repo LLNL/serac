@@ -715,4 +715,4 @@ private:
 
 }  // namespace serac
 
-//#include "functional_qoi.inl"
+#include "functional_qoi.inl"

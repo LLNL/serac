@@ -34,10 +34,10 @@ struct finite_element<g, QOI> {
   static void integrate(const tensor<double, Q>& qf_output, const TensorProductQuadratureRule<q>&,
                         dof_type* element_total, [[maybe_unused]] int step = 1)
   {
-    static constexpr auto wts = GaussLegendreWeights<q>();
 
     if constexpr (geometry == mfem::Geometry::SEGMENT) {
       static_assert(Q == q);
+      static constexpr auto wts = GaussLegendreWeights<q, mfem::Geometry::SEGMENT>();
       for (int k = 0; k < q; k++) {
         element_total[0] += qf_output[k] * wts[k];
       }
@@ -45,6 +45,7 @@ struct finite_element<g, QOI> {
 
     if constexpr (geometry == mfem::Geometry::SQUARE) {
       static_assert(Q == q * q);
+      static constexpr auto wts = GaussLegendreWeights<q, mfem::Geometry::SEGMENT>();
       for (int qy = 0; qy < q; qy++) {
         for (int qx = 0; qx < q; qx++) {
           int k = qy * q + qx;
@@ -55,6 +56,7 @@ struct finite_element<g, QOI> {
 
     if constexpr (geometry == mfem::Geometry::CUBE) {
       static_assert(Q == q * q * q);
+      static constexpr auto wts = GaussLegendreWeights<q, mfem::Geometry::SEGMENT>();
       for (int qz = 0; qz < q; qz++) {
         for (int qy = 0; qy < q; qy++) {
           for (int qx = 0; qx < q; qx++) {
@@ -62,6 +64,13 @@ struct finite_element<g, QOI> {
             element_total[0] += qf_output[k] * wts[qx] * wts[qy] * wts[qz];
           }
         }
+      }
+    }
+
+    if constexpr (geometry == mfem::Geometry::TRIANGLE || geometry == mfem::Geometry::TETRAHEDRON) {
+      static constexpr auto wts = GaussLegendreWeights<q, geometry>();
+      for (int k = 0; k < leading_dimension(wts); k++) {
+        element_total[0] += qf_output[k] * wts[k];
       }
     }
   }
@@ -78,11 +87,11 @@ struct finite_element<g, QOI> {
 
     constexpr int ntrial = size(source_type{});
 
-    static constexpr auto wts = GaussLegendreWeights<q>();
 
     for (int j = 0; j < ntrial; j++) {
       if constexpr (geometry == mfem::Geometry::SEGMENT) {
         static_assert(Q == q);
+        static constexpr auto wts = GaussLegendreWeights<q, mfem::Geometry::SEGMENT>();
         for (int k = 0; k < q; k++) {
           element_total[j * step] += reinterpret_cast<const double*>(&get<0>(qf_output[k]))[j] * wts[k];
         }
@@ -90,6 +99,7 @@ struct finite_element<g, QOI> {
 
       if constexpr (geometry == mfem::Geometry::SQUARE) {
         static_assert(Q == q * q);
+        static constexpr auto wts = GaussLegendreWeights<q, mfem::Geometry::SEGMENT>();
         for (int qy = 0; qy < q; qy++) {
           for (int qx = 0; qx < q; qx++) {
             int k = qy * q + qx;
@@ -100,6 +110,7 @@ struct finite_element<g, QOI> {
 
       if constexpr (geometry == mfem::Geometry::CUBE) {
         static_assert(Q == q * q * q);
+        static constexpr auto wts = GaussLegendreWeights<q, mfem::Geometry::SEGMENT>();
         for (int qz = 0; qz < q; qz++) {
           for (int qy = 0; qy < q; qy++) {
             for (int qx = 0; qx < q; qx++) {
@@ -108,6 +119,14 @@ struct finite_element<g, QOI> {
                   reinterpret_cast<const double*>(&get<0>(qf_output[k]))[j] * wts[qx] * wts[qy] * wts[qz];
             }
           }
+        }
+      }
+
+      if constexpr (geometry == mfem::Geometry::TRIANGLE || geometry == mfem::Geometry::TETRAHEDRON) {
+        static constexpr auto wts = GaussLegendreWeights<q, geometry>();
+        for (int k = 0; k < leading_dimension(wts); k++) {
+          element_total[j * step] +=
+              reinterpret_cast<const double*>(&get<0>(qf_output[k]))[j] * wts[k];
         }
       }
     }

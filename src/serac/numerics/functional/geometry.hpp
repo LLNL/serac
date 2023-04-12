@@ -2,14 +2,7 @@
 
 namespace serac {
 
-inline std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> geometry_counts(const mfem::Mesh& mesh)
-{
-  std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> counts{};
-  for (int i = 0; i < mesh.GetNE(); i++) {
-    counts[uint64_t(mesh.GetElementGeometry(i))]++;
-  }
-  return counts;
-}
+
 
 /**
  * @brief Compile-time alias for a dimension
@@ -68,6 +61,29 @@ constexpr int dimension_of(mfem::Geometry::Type g)
   }
 
   return -1;
+}
+
+inline std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> geometry_counts(const mfem::Mesh& mesh)
+{
+  std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> counts{};
+  for (int i = 0; i < mesh.GetNE(); i++) {
+    counts[uint64_t(mesh.GetElementGeometry(i))]++;
+  }
+  return counts;
+}
+
+inline std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> boundary_geometry_counts(const mfem::Mesh& mesh)
+{
+  std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> counts{};
+  for (int f = 0; f < mesh.GetNumFaces(); f++) {
+    
+    // skip interior faces
+    if (mesh.GetFaceInformation(f).IsInterior()) continue;
+
+    counts[uint64_t(mesh.GetFaceGeometryType(f))]++;
+
+  }
+  return counts;
 }
 
 }  // namespace serac
