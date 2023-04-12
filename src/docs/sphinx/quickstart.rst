@@ -147,7 +147,7 @@ Some helpful uberenv options include :
 * ``--spec=+profiling`` (build the Adiak and Caliper libraries)
 * ``--spec=+devtools`` (also build the devtools with one command)
 * ``--spec=%clang@10.0.0`` (build with a specific compiler as defined in the ``spack.yaml`` file)
-* ``--spack-env-file=<Path to spack environment file>`` (use specific Spack environment configuration file)
+* ``--spack-env-file=<Path to Spack environment file>`` (use specific Spack environment configuration file)
 * ``--prefix=<Path>`` (required, build and install the dependencies in a particular location) - this *must be outside* of your local Serac repository
 
 The modifiers to the Spack specification ``spec`` can be chained together, e.g. ``--spec=%clang@10.0.0+debug+devtools``.
