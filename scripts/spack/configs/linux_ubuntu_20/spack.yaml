@@ -16,6 +16,9 @@ spack:
       environment: {}
       extra_rpaths: []
 
+  # Regular TPLs do not need views
+  view: false
+
   packages:
     all:
       target: [ivybridge]

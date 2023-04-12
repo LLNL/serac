@@ -47,6 +47,9 @@ spack:
       spec: gcc@11.1.0
       target: x86_64
 
+  # Regular TPLs do not need views
+  view: false
+
   packages:
     all:
       target: [x86_64]

@@ -14,6 +14,9 @@ spack:
       spec: apple-clang@11.0.1
       target: x86_64
 
+  # Regular TPLs do not need views
+  view: false
+
   packages:
     all:
       compiler: [clang, gcc]
