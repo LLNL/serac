@@ -34,7 +34,7 @@ const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
                                                        .print_level = 0,
                                                        .max_iter    = 200,
                                                        .lin_solver  = LinearSolver::GMRES,
-                                                       .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
+                                                       .prec = HypreSmootherOptions{mfem::HypreSmoother::Jacobi}};
 
 /// the default direct solver option for solving the linear stiffness equations
 const DirectSolverOptions direct_linear_options = {.print_level = 0};
@@ -110,7 +110,8 @@ public:
    * used by an underlying material model or load
    * @param[in] pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
-  HeatTransfer(const SolverOptions& options, const std::string& name = {}, mfem::ParMesh* pmesh = nullptr)
+
+  HeatTransfer(const serac::EquationSolver& solver, const std::string& name = {}, mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(NUM_STATE_VARS, order, name, pmesh),
         temperature_(StateManager::newState(
             FiniteElementState::Options{

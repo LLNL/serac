@@ -94,7 +94,6 @@ enum class LinearSolver
 {
   CG,     /**< Conjugate Gradient */
   GMRES,  /**< Generalized minimal residual method */
-  MINRES, /**< Minimal residual method */
   SuperLU /**< SuperLU Direct Solver */
 };
 
@@ -113,7 +112,7 @@ enum class NonlinearSolver
 /**
  * @brief Stores the information required to configure a HypreSmoother
  */
-struct HypreSmootherPrec {
+struct HypreSmootherOptions {
   /**
    * @brief The type of Hypre smoother to apply
    */
@@ -123,7 +122,7 @@ struct HypreSmootherPrec {
 /**
  * @brief Stores the information required to configure a HypreBoomerAMG preconditioner
  */
-struct HypreBoomerAMGPrec {
+struct HypreBoomerAMGOptions {
   /**
    * @brief The par finite element space for the AMG object
    * @note This is needed for some of the options specific to solid mechanics solves
@@ -155,7 +154,7 @@ enum class AMGXSolver
 /**
  * @brief Stores the information required to configure a NVIDIA AMGX preconditioner
  */
-struct AMGXPrec {
+struct AMGXOptions {
   /**
    * @brief The solver algorithm
    */
@@ -170,148 +169,81 @@ struct AMGXPrec {
   bool verbose = false;
 };
 
-/**
- * @brief Stores the information required to configure a BlockILU preconditioner
- */
-struct BlockILUPrec {
-  /**
-   * @brief The block size for the ILU preconditioner
-   */
-  int block_size;
-};
-
-/**
- * @brief Preconditioning method
- */
-using Preconditioner = std::variant<HypreSmootherPrec, HypreBoomerAMGPrec, AMGXPrec, BlockILUPrec>;
-
-/**
- * @brief Abstract multiphysics coupling scheme
- */
-enum class CouplingScheme
+enum class Preconditioner
 {
-  OperatorSplit, /**< Operator Split */
-  FixedPoint,    /**< Fixed Point */
-  FullyCoupled   /**< FullyCoupled */
+  HypreJacobi,
+  HypreL1Jacobi,
+  HypreGaussSeidel,
+  HypreAMG,
+  AMGX,
+  None
 };
 
 /**
  * @brief Parameters for an iterative linear solution scheme
  */
-struct IterativeSolverOptions {
+struct LinearSolverOptions {
+  /**
+   * @brief Linear solver selection
+   */
+  LinearSolver linear_solver;
+
+  /**
+   * @brief PreconditionerOptions selection
+   */
+  Preconditioner preconditioner;
+
   /**
    * @brief Relative tolerance
    */
-  double rel_tol;
+  double relative_tol;
 
   /**
    * @brief Absolute tolerance
    */
-  double abs_tol;
-
-  /**
-   * @brief Debugging print level
-   */
-  int print_level;
+  double absolute_tol;
 
   /**
    * @brief Maximum number of iterations
    */
-  int max_iter;
+  int max_iterations;
 
-  /**
-   * @brief Linear solver selection
-   */
-  LinearSolver lin_solver;
-
-  /**
-   * @brief Preconditioner selection
-   */
-  std::optional<Preconditioner> prec;
-};
-
-/**
- * @brief Parameters for a custom linear solver (currently just a non-owning pointer to the solver) derived
- * from the mfem::Solver base class
- *
- * @note This is preferable to unique_ptr or even references because non-trivial copy constructors
- * and destructors are a nightmare in this context
- */
-struct CustomLinearSolverOptions {
-  /**
-   * @brief A non-owning pointer to the custom mfem solver to use
-   */
-  mfem::Solver* solver = nullptr;
-};
-
-/**
- * @brief Parameters for a custom nonlinear solver (currently just a non-owning pointer to the solver) derived
- * from the mfem::NewtonSolver base class
- *
- * @note This is preferable to unique_ptr or even references because non-trivial copy constructors
- * and destructors are a nightmare in this context
- */
-struct CustomNonlinearSolverOptions {
-  /**
-   * @brief A non-owning pointer to the custom mfem solver to use
-   */
-  mfem::NewtonSolver* solver = nullptr;
-};
-
-/**
- * @brief Parameters for a direct solver (PARDISO, MUMPS, SuperLU, etc)
- */
-struct DirectSolverOptions {
   /**
    * @brief Debugging print level
    */
-  int print_level;
-};
+  int print_level = 0;
 
-/**
- * @brief Parameters for a linear solver
- *
- * This can either be a custon user-constructed and owned solver or an iterative or direct solver that serac constructs
- * and builds itself.
- */
-using LinearSolverOptions = std::variant<IterativeSolverOptions, CustomLinearSolverOptions, DirectSolverOptions>;
+  int preconditioner_print_level = 0;
+};
 
 /**
  * @brief Nonlinear solution scheme parameters
  */
-struct IterativeNonlinearSolverOptions {
+struct NonlinearSolverOptions {
+  /**
+   * @brief Nonlinear solver selection
+   */
+  NonlinearSolver nonlin_solver = NonlinearSolver::Newton;
+
   /**
    * @brief Relative tolerance
    */
-  double rel_tol;
+  double relative_tol;
 
   /**
    * @brief Absolute tolerance
    */
-  double abs_tol;
+  double absolute_tol;
 
   /**
    * @brief Maximum number of iterations
    */
-  int max_iter;
+  int max_iterations;
 
   /**
    * @brief Debug print level
    */
   int print_level;
-
-  /**
-   * @brief Nonlinear solver selection
-   */
-  NonlinearSolver nonlin_solver = NonlinearSolver::Newton;
 };
-
-/**
- * @brief Parameters for a nonlinear solver
- *
- * This can either be a custom user-constructed and owned solver or an iterative solver that serac constructs and builds
- * itself.
- */
-using NonlinearSolverOptions = std::variant<CustomNonlinearSolverOptions, IterativeNonlinearSolverOptions>;
 
 }  // namespace serac
