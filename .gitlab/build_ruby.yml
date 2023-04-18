@@ -3,7 +3,7 @@
 .on_ruby:
   variables:
     ALLOC_OPTIONS: "-p pdebug --exclusive --mpibind=off"
-    ALLOC_COMMAND: "salloc ${ALLOC_OPTIONS} -A ${ALLOC_BANK} -N ${ALLOC_NODES} -t ${ALLOC_TIME}"
+    ALLOC_COMMAND: "salloc ${ALLOC_OPTIONS} -N ${ALLOC_NODES} -t ${ALLOC_TIME}"
   tags:
     - shell
     - ruby
