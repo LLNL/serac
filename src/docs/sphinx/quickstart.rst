@@ -130,9 +130,8 @@ can be found in the Spack compiler files in our repository:
 
 We currently regularly test the following Spack configuration files:
 
-* Linux Ubuntu 18.04 (via Windows WSL 1)
 * Linux Ubuntu 20.04 (via Windows WSL 2)
-* TOSS 3 (On Quartz at LC)
+* TOSS 3 (On Ruby at LC)
 * BlueOS (On Lassen at LC)
 
 To install Serac on a new platform, it is a good idea to start with a known Spack configuration directory
