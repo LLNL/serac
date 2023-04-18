@@ -69,13 +69,13 @@ For other machines:
 
 .. code-block:: bash
 
-   $ python3 scripts/uberenv/uberenv.py --project-json=scripts/spack/devtools.json --spack-config-dir=<spack/config/dir> --prefix=<devtool/build/path>
+   $ python3 scripts/uberenv/uberenv.py --project-json=scripts/spack/devtools.json --spack-env-file=<scripts/spack/configs/platform/spack.yaml> --prefix=<devtool/build/path>
 
 For example on **Ubuntu 20.04**:
 
 .. code-block:: bash
 
-   python3 scripts/uberenv/uberenv.py --project-json=scripts/spack/devtools.json --spack-config-dir=scripts/spack/configs/linux_ubuntu_20 --prefix=../path/to/install
+   python3 scripts/uberenv/uberenv.py --project-json=scripts/spack/devtools.json --spack-env-file=scripts/spack/configs/linux_ubuntu_20/spack.yaml --prefix=../path/to/install
 
 Unlike Serac's library dependencies, our developer tools can be built with any compiler because
 they are not linked into the serac executable.  We recommend GCC 8 because we have tested that they all
@@ -126,7 +126,7 @@ Unless otherwise specified Spack will default to a compiler.  This is generally 
 developing large codes. To specify which compiler to use add the compiler specification to the ``--spec`` Uberenv
 command line option. On TOSS3, we recommend and have tested ``--spec=%clang@10.0.0``.  More compiler specs
 can be found in the Spack compiler files in our repository:
-``scripts/spack/configs/<platform>/compilers.yaml``.
+``scripts/spack/configs/<platform>/spack.yaml``.
 
 We currently regularly test the following Spack configuration files:
 
@@ -136,18 +136,18 @@ We currently regularly test the following Spack configuration files:
 * BlueOS (On Lassen at LC)
 
 To install Serac on a new platform, it is a good idea to start with a known Spack configuration directory
-(located in the Serac repo at ``scripts/spack/configs/<platform>``). The ``compilers.yaml`` file
-describes the compilers and associated flags required for the platform and the ``packages.yaml`` file
-describes the low-level libraries on the system to prevent Spack from building the world. Documentation on
-these configuration files is located in the `Spack docs <https://spack.readthedocs.io/en/latest/configuration.html>`_.
+(located in the Serac repo at ``scripts/spack/configs/<platform>``). The ``spack.yaml`` file
+describes the compilers and associated flags required for the platform as well as the low-level libraries
+on the system to prevent Spack from building the world. Documentation on these configuration files is located
+in the `Spack docs <https://spack.readthedocs.io/en/latest/configuration.html>`_.
 
 Some helpful uberenv options include :
 
 * ``--spec=+debug`` (build the MFEM and Hypre libraries with debug symbols)
 * ``--spec=+profiling`` (build the Adiak and Caliper libraries)
 * ``--spec=+devtools`` (also build the devtools with one command)
-* ``--spec=%clang@10.0.0`` (build with a specific compiler as defined in the ``compiler.yaml`` file)
-* ``--spack-config-dir=<Path to spack configuration directory>`` (use specific Spack configuration files)
+* ``--spec=%clang@10.0.0`` (build with a specific compiler as defined in the ``spack.yaml`` file)
+* ``--spack-env-file=<Path to Spack environment file>`` (use specific Spack environment configuration file)
 * ``--prefix=<Path>`` (required, build and install the dependencies in a particular location) - this *must be outside* of your local Serac repository
 
 The modifiers to the Spack specification ``spec`` can be chained together, e.g. ``--spec=%clang@10.0.0+debug+devtools``.
@@ -260,11 +260,11 @@ must be specified using either:
 
 **Ubuntu 20.04**
 
-``python3 scripts/uberenv/uberenv.py --spack-config-dir=scripts/spack/configs/linux_ubuntu_20 --prefix=../path/to/install``
+``python3 scripts/uberenv/uberenv.py --spack-env-file=scripts/spack/configs/linux_ubuntu_20/spack.yaml --prefix=../path/to/install``
 
 **Ubuntu 18.04**
 
-``python3 scripts/uberenv/uberenv.py --spack-config-dir=scripts/spack/configs/linux_ubuntu_18 --prefix=../path/to/install``
+``python3 scripts/uberenv/uberenv.py --spack-env-file=scripts/spack/configs/linux_ubuntu_18/spack.yaml --prefix=../path/to/install``
 
 Building Serac dependencies on MacOS
 ------------------------------------
@@ -294,7 +294,8 @@ Activate the particular compiler packages with MacPorts:
 
 This step tells MacPorts to make symbolic links in your path so that, for example, the command ``clang`` will invoke the compiler installed by the MacPorts package and not the one shipped by Apple. 
 It also sets up a set of symlinks so that Clang, GCC, and the MPI wrappers all work without you having to muck with environment variables to locate header files and libraries. 
-It may be possible to skip this step and give full paths to your compilers in ``compilers.yaml`` (instead of the symlinks ``/opt/local/bin/clang``, etc.), but we haven't tried this.
+It may be possible to skip this step and give full paths to your compilers in ``spack.yaml`` nested under ``compilers:`` (instead of the
+symlinks ``/opt/local/bin/clang``, etc.), but we haven't tried this.
 
 .. note::
    If you want to remove these symlinks, use the ``port select`` command with ``none`` as the desired port; e.g., ``sudo port select clang none``
@@ -317,45 +318,14 @@ If you don't want the install to modify your Python environment, you may wish to
 Configuring Spack
 ^^^^^^^^^^^^^^^^^
 
-Next, you must tailor the Spack configuration files. We will modify the ``compilers.yaml`` and ``packages.yaml`` files in ``scripts/spack/configs/darwin/``.
-Instead of modifying them directly, you may wish to copy these files to another location outside of the Serac repo, use them as templates for the customization, 
-and use the ``--spack-config-dir`` option to use them when invoking uberenv as described above.
+Next, you must tailor the Spack configuration file. We will modify the ``spack.yaml`` file in ``scripts/spack/configs/darwin/``.
+Instead of modifying them directly, you may wish to copy these files to another location outside of the Serac repo, use them as templates for the customization, and use the ``--spack-env-file`` option to use them when invoking uberenv as described above.
 
-Example ``compilers.yaml``:
-
-.. code-block:: yaml
-
-  compilers:
-  - compiler:
-      environment: {}
-      extra_rpaths: []
-      flags: {}
-      modules: []
-      operating_system: bigsur
-      paths:
-        cc: /opt/local/bin/clang
-        cxx: /opt/local/bin/clang++
-        f77: /opt/local/bin/gfortran
-        fc: /opt/local/bin/gfortran
-      spec: clang@12.0.1
-      target: x86_64
-
-NOTES: 
-
-* The ``operating_system`` field should be set according to your macOS version. (For example, ``mojave``, ``catalina``, ``bigsur``, ``monterey``, ``ventura``).
-* By default, MacPorts installs packages in ``/opt/local``; the above ``paths`` need to be adjusted if you choose a different location.
-  This of course applies to the packages in ``packages.yaml`` as well.
-* As noted above, the ``port select ...`` commands will set which version of clang gets invoked by the executables ``/opt/local/bin/clang``, etc.
-  The paths above are thus valid only if you activated the ``clang`` package that matches the compiler spec.
-  Alternatively, you could set the full name and path of the executables of the desired compilers if you don't want the operation of 
-  Spack to be influenced by your MacPorts settings.
-* You should set ``spec`` to the actual version of the compiler you installed.
-* The ``target`` entry should be set to ``x86_64`` or ``m1`` depending on which architecture your machine uses.  
-
-Here is an example of ``packages.yaml``:
+Example ``spack.yaml``:
 
 .. code-block:: yaml
 
+  spack:
     packages:
       all:
         compiler: [clang, gcc]
@@ -453,8 +423,32 @@ Here is an example of ``packages.yaml``:
         - spec: zlib@1.2.12
           prefix: /opt/local
 
-Notes:
+    compilers:
+    - compiler:
+        environment: {}
+        extra_rpaths: []
+        flags: {}
+        modules: []
+        operating_system: bigsur
+        paths:
+          cc: /opt/local/bin/clang
+          cxx: /opt/local/bin/clang++
+          f77: /opt/local/bin/gfortran
+          fc: /opt/local/bin/gfortran
+        spec: clang@12.0.1
+        target: x86_64
 
+NOTES: 
+
+* The ``operating_system`` field should be set according to your macOS version. (For example, ``mojave``, ``catalina``, ``bigsur``, ``monterey``, ``ventura``).
+* By default, MacPorts installs packages in ``/opt/local``; the above ``paths`` need to be adjusted if you choose a different location.
+  This of course applies to the packages in ``spack.yaml`` as well.
+* As noted above, the ``port select ...`` commands will set which version of clang gets invoked by the executables ``/opt/local/bin/clang``, etc.
+  The paths above are thus valid only if you activated the ``clang`` package that matches the compiler spec.
+  Alternatively, you could set the full name and path of the executables of the desired compilers if you don't want the operation of 
+  Spack to be influenced by your MacPorts settings.
+* You should set ``spec`` to the actual version of the compiler you installed.
+* The ``target`` entry should be set to ``x86_64`` or ``m1`` depending on which architecture your machine uses.  
 * The version specs should be set to the actual versions of the packages you have, which will not neccesarily be the same as the above.
   This can be discovered for the packages installed with MacPorts using the following command:
 
@@ -473,7 +467,7 @@ If you want to build the optional devtools, you should install the additional pa
 
    $ sudo port install cppcheck doxygen
 
-Then, append the following to ``packages.yaml``:
+Then, append the following to ``spack.yaml`` nested under ``packages:``:
 
 .. code-block:: yaml
 

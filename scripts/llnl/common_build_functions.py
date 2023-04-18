@@ -557,16 +557,15 @@ def build_devtools(builds_dir, timestamp):
         print("[ERROR: Failed build of devtools for spec %s]\n" % compiler_spec)
     else:
         # Only update the latest symlink if successful
-        link_path = pjoin(builds_dir, sys_type)
-        link_path = pjoin(link_path, "latest")
-        install_dir = pjoin(prefix, compiler_dir)
-        print("[Creating symlink to latest devtools build:\n{0}\n->\n{1}]".format(link_path, install_dir))
+        link_path = pjoin(builds_dir, sys_type, "latest")
+        view_dir = pjoin(prefix, "view")
+        print("[Creating symlink to latest devtools view:\n{0}\n->\n{1}]".format(link_path, view_dir))
         if os.path.exists(link_path) or os.path.islink(link_path):
             if not os.path.islink(link_path):
                 print("[ERROR: Latest devtools link path exists and is not a link: {0}".format(link_path))
                 return 1
             os.unlink(link_path)
-        os.symlink(install_dir, link_path)
+        os.symlink(view_dir, link_path)
 
         print("[SUCCESS: Finished build devtools for spec %s]\n" % compiler_spec)
 
