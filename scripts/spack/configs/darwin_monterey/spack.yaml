@@ -1,0 +1,112 @@
+spack:
+  compilers::
+  - compiler:
+      environment: {}
+      extra_rpaths: []
+      flags: {}
+      modules: []
+      operating_system: monterey
+      paths:
+        cc: /opt/local/bin/clang
+        cxx: /opt/local/bin/clang++
+        f77: /opt/local/bin/gfortran
+        fc: /opt/local/bin/gfortran
+      spec: clang@12.0.1
+      target: aarch64
+
+  packages:
+    all:
+      compiler: [clang, gcc]
+      providers:
+        blas: [netlib-lapack]
+        lapack: [netlib-lapack]
+        mpi: [openmpi]
+
+    mpi:
+      buildable: false
+    openmpi:
+      externals:
+      - spec: openmpi@4.1.4
+        prefix: /opt/local
+    
+    netlib-lapack:
+      buildable: false
+      externals:
+      - spec: netlib-lapack@3.10.1
+        prefix: /opt/local
+    autoconf:
+      buildable: false
+      externals:
+      - spec: autoconf@2.71
+        prefix: /opt/local
+    automake:
+      buildable: false
+      externals:
+      - spec: automake@1.16.5
+        prefix: /opt/local
+    bzip2:
+      buildable: false
+      externals:
+      - spec: bzip2@1.0.8
+        prefix: /opt/local
+    cmake:
+      version: [3.23.3]
+      buildable: false
+      externals:
+      - spec: cmake@3.23.3
+        prefix: /opt/local
+    gettext:
+      buildable: false
+      externals:
+      - spec: gettext@0.21
+        prefix: /opt/local
+    graphviz:
+      buildable: false
+      externals:
+      - spec: graphviz@2.50.0
+        prefix: /opt/local
+    libtool:
+      buildable: false
+      externals:
+      - spec: libtool@2.4.6
+        prefix: /opt/local
+    libx11:
+      buildable: false
+      externals:
+      - spec: libx11@1.8.1
+        prefix: /opt/local
+    m4:
+      buildable: false
+      externals:
+      - spec: m4@1.4.6
+        prefix: /usr
+    perl:
+      buildable: false
+      externals:
+      - spec: perl@v5.30.2
+        prefix: /usr
+    pkg-config:
+      buildable: false
+      externals:
+      - spec: pkg-config@0.29.2
+        prefix: /opt/local
+    tar:
+      buildable: false
+      externals:
+      - spec: tar@3.3.2
+        prefix: /usr
+    readline:
+      buildable: false
+      externals:
+      - spec: readline@8.1.2.000
+        prefix: /opt/local
+    unzip:
+      buildable: false
+      externals:
+      - spec: unzip@6.0
+        prefix: /usr
+    zlib:
+      buildable: false
+      externals:
+      - spec: zlib@1.2.12
+        prefix: /opt/local
