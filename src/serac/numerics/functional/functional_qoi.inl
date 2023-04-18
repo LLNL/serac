@@ -42,7 +42,7 @@ struct QoIProlongation : public mfem::Operator {
  * only thing it is used for) sums the values on this local processor.
  */
 struct QoIElementRestriction {
-  void ScatterAdd(const mfem::Vector& input, mfem::Vector& output) const { output[0] = input.Sum(); }
+  void ScatterAdd(const mfem::Vector& input, mfem::Vector& output) const { output[0] += input.Sum(); }
 };
 
 /**
@@ -122,9 +122,7 @@ public:
       for (int i = 0; i < mfem::Geometry::NUM_GEOMETRIES; i++) {
         auto g = mfem::Geometry::Type(i);
         offsets[g+1] = offsets[g] + counts[g];
-        std::cout << "g: " << offsets[g+1] << std::endl;
       }
-      std::cout << std::endl;
 
       output_E_[type].Update(offsets, mem_type);
     }
@@ -251,47 +249,31 @@ public:
    */
   double ActionOfGradient(const mfem::Vector& input_T, std::size_t which) const
   {
-    #if 0
     P_trial_[which]->Mult(input_T, input_L_[which]);
 
     output_L_ = 0.0;
-    if (domain_integrals_.size() > 0) {
-      // get the values for each element on the local processor
-      G_trial_[which].Gather(input_L_[which], input_E_[which]);
 
-      // compute residual contributions at the element level and sum them
+    // this is used to mark when gather operations have been performed,
+    // to avoid doing them more than once per trial space
+    bool already_computed[Integral::num_types]{}; // default initializes to `false`
 
-      output_E_ = 0.0;
-      for (auto& integral : domain_integrals_) {
-        integral.GradientMult(input_E_[which], output_E_, which);
+    for (auto& integral : integrals_) {
+      auto type = integral.type;
+
+      if (!already_computed[type]) {
+        G_trial_[type][which].Gather(input_L_[which], input_E_[type][which]);
+        already_computed[type] = true;
       }
+
+      integral.GradientMult(input_E_[type][which], output_E_[type], which);
 
       // scatter-add to compute residuals on the local processor
-      G_test_->MultTranspose(output_E_, output_L_);
-    }
-
-    if (bdr_integrals_.size() > 0) {
-      if (compatibleWithFaceRestriction(*trial_space_[which])) {
-        G_trial_boundary_[which].Gather(input_L_[which], input_E_boundary_[which]);
-      }
-
-      output_E_boundary_ = 0.0;
-      for (auto& integral : bdr_integrals_) {
-        integral.GradientMult(input_E_boundary_[which], output_E_boundary_, which);
-      }
-
-      output_L_boundary_ = 0.0;
-
-      // scatter-add to compute residuals on the local processor
-      G_test_boundary_->MultTranspose(output_E_boundary_, output_L_boundary_);
-
-      output_L_ += output_L_boundary_;
+      G_test_.ScatterAdd(output_E_[type], output_L_);
     }
 
     // scatter-add to compute global residuals
     P_test_->MultTranspose(output_L_, output_T_);
 
-    #endif
     return output_T_[0];
   }
 
@@ -409,11 +391,64 @@ private:
       // The mfem method ParFiniteElementSpace.NewTrueDofVector should really be marked const
       std::unique_ptr<mfem::HypreParVector> gradient_T(
           const_cast<mfem::ParFiniteElementSpace*>(form_.trial_space_[which_argument])->NewTrueDofVector());
-      #if 0
 
       gradient_L_ = 0.0;
 
-      if (form_.domain_integrals_.size() > 0) {
+      std::map < mfem::Geometry::Type, ExecArray<double, 3, exec> > element_gradients[Integral::num_types];
+
+      for (auto& integral : form_.integrals_) {
+
+        auto & K_elem = element_gradients[integral.type];
+        auto & trial_restrictions = form_.G_trial_[integral.type][which_argument].restrictions;
+
+        if (K_elem.empty()) {
+          for (auto & [geom, trial_restriction] : trial_restrictions) {
+            K_elem[geom] = ExecArray<double, 3, exec>(
+              trial_restriction.num_elements,
+              1, trial_restriction.nodes_per_elem * trial_restriction.components);
+
+            detail::zero_out(K_elem[geom]);
+          }
+        }
+
+        integral.ComputeElementGradients(K_elem, which_argument);
+      }
+
+
+      for (auto type : Integral::Types) {
+
+        auto & K_elem = element_gradients[type];
+        auto & trial_restrictions = form_.G_trial_[type][which_argument].restrictions;
+
+        if (!K_elem.empty()) {
+
+          for (auto [geom, elem_matrices] : K_elem) {
+
+            std::vector<DoF> trial_vdofs(int(trial_restrictions[geom].nodes_per_elem * trial_restrictions[geom].components));
+
+            for (axom::IndexType e = 0; e < elem_matrices.shape()[0]; e++) {
+
+              trial_restrictions[geom].GetElementVDofs(e, trial_vdofs);
+
+              // note: elem_matrices.shape()[1] is 1 for a QoI
+              for (axom::IndexType i = 0; i < elem_matrices.shape()[1]; i++) {
+
+                for (axom::IndexType j = 0; j < elem_matrices.shape()[2]; j++) {
+                  int sign = trial_vdofs[j].sign();
+                  int col = int(trial_vdofs[j].index());
+                  gradient_L_[col] += sign * elem_matrices(e, i, j);
+                }
+              }
+            }
+          }
+
+        }
+
+      }
+
+
+#if 0
+      if (form_.integrals_.size() > 0) {
         auto& K_elem = form_.element_gradients_[which_argument];
 
         detail::zero_out(K_elem);
@@ -462,9 +497,9 @@ private:
           }
         }
       }
+#endif
 
       form_.P_trial_[which_argument]->MultTranspose(gradient_L_, *gradient_T);
-      #endif
 
       return gradient_T;
     }

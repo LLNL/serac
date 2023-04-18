@@ -217,6 +217,14 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
   mfem::HypreParVector  U   = *tmp;
   U_gf.GetTrueDofs(U);
 
+  mfem::ParGridFunction     V_gf(&fespace);
+  mfem::FunctionCoefficient x_coord([](mfem::Vector x) { return x[0]; });
+  V_gf.ProjectCoefficient(x_coord);
+
+  mfem::HypreParVector* tmp2 = fespace.NewTrueDofVector();
+  mfem::HypreParVector  V   = *tmp2;
+  V_gf.GetTrueDofs(V);
+
   // Define the types for the test and trial spaces using the function arguments
   using trial_space = decltype(trial);
 
@@ -247,6 +255,16 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
       EXPECT_NEAR(0.0, relative_error, 1.0e-10);
 
       relative_error = (x_moment(U) - x_moment_mfem(mesh)) / x_moment(U);
+      EXPECT_NEAR(0.0, relative_error, 1.0e-10);
+
+      Functional<double(trial_space)> x_moment_2({&fespace});
+      x_moment_2.AddDomainIntegral(
+          Dimension<dim>{}, DependsOn<0>{}, [&](auto, auto u) { return get<0>(u); }, mesh);
+
+      relative_error = (x_moment_2(V) - expected[dim - 2]) / expected[dim - 2];
+      EXPECT_NEAR(0.0, relative_error, 1.0e-10);
+
+      relative_error = (x_moment_2(V) - x_moment_mfem(mesh)) / x_moment_2(V);
       EXPECT_NEAR(0.0, relative_error, 1.0e-10);
 
     } break;
@@ -357,7 +375,6 @@ void qoi_test(mfem::ParMesh& mesh, H1<p1> trial1, H1<p2> trial2, Dimension<dim>)
   //
   // see scripts/wolfram/qoi_examples.nb for more info
   constexpr double expected[] = {9.71388562400895, 2.097457548402147e6};
-
   double relative_error = (f(U1, U2) - expected[dim - 2]) / expected[dim - 2];
 
   // the tolerance on this one isn't very tight since
@@ -573,6 +590,7 @@ int main(int argc, char* argv[])
   int parallel_refinement = 0;
 
   std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
+  //std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/square.mesh";
   mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
 
   std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";

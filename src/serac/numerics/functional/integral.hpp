@@ -33,20 +33,18 @@ struct Integral {
     jvp_.resize(num_trial_spaces);
     element_gradient_.resize(num_trial_spaces);
 
-    functional_to_integral_ = std::vector<int>(num_trial_spaces, -1);
     for (size_t i = 0; i < num_trial_spaces; i++) {
       functional_to_integral_[active_trial_spaces[i]] = static_cast<int>(i);
     }
   }
 
-  void Mult(const std::vector<mfem::BlockVector>& input_E, mfem::BlockVector& output_E, int functional_index,
+  void Mult(const std::vector<mfem::BlockVector>& input_E, mfem::BlockVector& output_E, int differentiation_index,
             bool update_state) const
   {
-    int index = (functional_index == -1) ? -1 : functional_to_integral_[static_cast<size_t>(functional_index)];
-
     output_E = 0.0;
 
-    auto& kernels = (index == -1) ? evaluation_ : evaluation_with_AD_[uint32_t(index)];
+    bool with_AD = (functional_to_integral_.count(differentiation_index) > 0 && differentiation_index != -1);
+    auto& kernels = (with_AD) ? evaluation_with_AD_[functional_to_integral_.at(differentiation_index)] : evaluation_;
     for (auto& [geometry, func] : kernels) {
       std::vector<const double*> inputs(active_trial_spaces.size());
       for (std::size_t i = 0; i < active_trial_spaces.size(); i++) {
@@ -56,23 +54,24 @@ struct Integral {
     }
   }
 
-  void GradientMult(const mfem::BlockVector& input_E, mfem::BlockVector& output_E, std::size_t functional_index) const
+  void GradientMult(const mfem::BlockVector& input_E, mfem::BlockVector& output_E, std::size_t differentiation_index) const
   {
-    int index = functional_to_integral_[functional_index];
-    if (index != -1) {
-      output_E = 0.0;
-      for (auto& [geometry, func] : jvp_[uint32_t(index)]) {
+    output_E = 0.0;
+
+    // if this integral actually depends on the specified variable
+    if (functional_to_integral_.count(int(differentiation_index)) > 0) {
+      for (auto& [geometry, func] : jvp_[functional_to_integral_.at(int(differentiation_index))]) {
         func(input_E.GetBlock(geometry).Read(), output_E.GetBlock(geometry).ReadWrite());
       }
     }
   }
 
   void ComputeElementGradients(std::map<mfem::Geometry::Type, ExecArray<double, 3, ExecutionSpace::CPU> >& K_e,
-                               std::size_t functional_index) const
+                               std::size_t differentiation_index) const
   {
-    int index = functional_to_integral_[functional_index];
-    if (index != -1) {
-      for (auto& [geometry, func] : element_gradient_[uint32_t(index)]) {
+    // if this integral actually depends on the specified variable
+    if (functional_to_integral_.count(int(differentiation_index)) > 0) {
+      for (auto& [geometry, func] : element_gradient_[functional_to_integral_.at(int(differentiation_index))]) {
         func(view(K_e[geometry]));
       }
     }
@@ -91,7 +90,8 @@ struct Integral {
   std::vector<std::map<mfem::Geometry::Type, grad_func> > element_gradient_;
 
   std::vector<uint32_t> active_trial_spaces;
-  std::vector<int> functional_to_integral_;
+
+  std::map<int, int> functional_to_integral_;
 
   std::map< mfem::Geometry::Type, GeometricFactors > geometric_factors_; 
 };
