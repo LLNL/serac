@@ -516,5 +516,5 @@ MacPorts-installed MPI:
    $ ./scripts/uberenv/uberenv.py --prefix=../path/for/TPLs --spec="%clang@12.0.1 ^openmpi@4.1.4"
 
 Notice the caret with the MPI spec. 
-Without this, current versions of Spack ignore the ``packages.yaml`` file and try to build a version of MPI from source.
+Without this, current versions of Spack ignore the ``spack.yaml`` file and try to build a version of MPI from source.
 You can add additional specs as noted in the section `Building Serac's Dependencies via Spack/uberenv`.
