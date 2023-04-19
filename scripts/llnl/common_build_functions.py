@@ -1,5 +1,3 @@
-#!/usr/local/bin/python
-
 # Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for details.
 #
@@ -124,6 +122,7 @@ def log_failure(prefix, msg, timestamp=""):
         info["timestamp"] = timestamp
     json.dump(info,open(pjoin(prefix,"failed.json"),"w"),indent=2)
 
+
 def assertUberenvExists():
     if not os.path.exists(get_uberenv_path()):
         print("[ERROR: {0} does not exist".format(get_uberenv_path()))
@@ -164,7 +163,7 @@ def uberenv_build(prefix, spec, project_file, mirror_path):
     cmd += "--mirror=\"{0}\" ".format(mirror_path)
     if project_file:
         cmd += "--project-json=\"{0}\" ".format(project_file)
-        
+
     spack_tpl_build_log = pjoin(prefix,"output.log.spack.tpl.build.%s.txt" % spec.replace(" ", "_"))
     print("[starting tpl install of spec %s]" % spec)
     print("[log file: %s]" % spack_tpl_build_log)
@@ -255,7 +254,7 @@ def build_and_test_host_config(test_root, host_config, report_to_stdout=False, e
     res = sexe("%s config-build.py -DENABLE_DOCS=OFF -bp %s -hc %s -ip %s %s" % (sys.executable, build_dir, host_config, install_dir, extra_cmake_options),
                output_file = cfg_output_file,
                echo=True)
-    
+
     if report_to_stdout:
         with open(cfg_output_file, 'r') as build_out:
             print(build_out.read())
@@ -263,11 +262,11 @@ def build_and_test_host_config(test_root, host_config, report_to_stdout=False, e
     if res != 0:
         print("[ERROR: Configure for host-config: %s failed]\n" % host_config)
         return res
-        
+
     ####
     # build, test, and install
     ####
-    
+
     # build the code
     bld_output_file =  pjoin(build_dir,"output.log.make.txt")
     print("[starting build]")
@@ -346,7 +345,7 @@ def build_and_test_host_config(test_root, host_config, report_to_stdout=False, e
         if res != 0:
             print("[ERROR: Building examples for host-config: %s failed]\n\n" % host_config)
             return res
-    
+
     print("[SUCCESS: Build, test, and install for host-config: {0} complete]\n".format(host_config))
 
     set_group_and_perms(build_dir)
@@ -507,7 +506,7 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = 
             src_build_failed = True
         else:
             print("[SUCCESS: Build and test of src vs tpls test passed.]\n")
- 
+
     # set proper perms for installed tpls
     set_group_and_perms(prefix)
 
