@@ -120,11 +120,10 @@ public:
             FiniteElementState::Options{
                 .order = order, .vector_dim = dim, .name = detail::addPrefix(name, "displacement")},
             sidre_datacoll_id_)),
-        adjoint_displacement_(
-            StateManager::newState(FiniteElementState::Options{.order      = order,
-                                                               .vector_dim = dim,
-                                                               .name = detail::addPrefix(name, "adjoint_displacement")},
-                                   sidre_datacoll_id_)),
+        adjoint_displacement_(StateManager::newState(
+            FiniteElementState::Options{
+                .order = order, .vector_dim = dim, .name = detail::addPrefix(name, "adjoint_displacement")},
+            sidre_datacoll_id_)),
         reactions_(StateManager::newDual(displacement_.space(), detail::addPrefix(name, "reactions"))),
         ode2_(displacement_.space().TrueVSize(),
               {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},

@@ -11,9 +11,9 @@
  * the C++ API to configure the simulation
  */
 
-// _incl_thermal_header_start
-#include "serac/physics/thermal_conduction_legacy.hpp"
-// _incl_thermal_header_end
+// _incl_heat_transfer_header_start
+#include "serac/physics/heat_transfer.hpp"
+// _incl_heat_transfer_header_end
 // _incl_state_manager_start
 #include "serac/physics/state/state_manager.hpp"
 // _incl_state_manager_end
@@ -38,37 +38,37 @@ int main(int argc, char* argv[])
   // _create_mesh_end
 
   // _create_module_start
-  constexpr int order = 2;
-  serac::ThermalConductionLegacy conduction(order, serac::ThermalConductionLegacy::defaultQuasistaticOptions());
+  // Create a Heat Transfer class instance with Order 2 and Dimensions of 3
+  serac::HeatTransfer<2, 3> heat_transfer(serac::heat_transfer::default_static_options);
   // _create_module_end
-
+/*
   // _conductivity_start
   constexpr double kappa = 0.5;
   auto kappa_coef = std::make_unique<mfem::ConstantCoefficient>(kappa);
-  conduction.setConductivity(std::move(kappa_coef));
+  heat_transfer.setConductivity(std::move(kappa_coef));
   // _conductivity_end
   // _bc_start
   const std::set<int> boundary_constant_attributes = {1};
   constexpr double boundary_constant = 1.0;
   auto boundary_constant_coef = std::make_unique<mfem::ConstantCoefficient>(boundary_constant);
-  conduction.setTemperatureBCs(boundary_constant_attributes, std::move(boundary_constant_coef));
+  heat_transfer.setTemperatureBCs(boundary_constant_attributes, std::move(boundary_constant_coef));
 
   const std::set<int> boundary_function_attributes = {2, 3};
   auto boundary_function_coef = std::make_unique<mfem::FunctionCoefficient>([](const mfem::Vector& vec){
     return vec[0] * vec[0] + vec[1] - 1;
   });
-  conduction.setTemperatureBCs(boundary_function_attributes, std::move(boundary_function_coef));
+  heat_transfer.setTemperatureBCs(boundary_function_attributes, std::move(boundary_function_coef));
   // _bc_end
 
   // _run_sim_start
-  conduction.completeSetup();
-  conduction.outputState();
+  heat_transfer.completeSetup();
+  heat_transfer.outputState();
 
   double dt;
-  conduction.advanceTimestep(dt);
-  conduction.outputState();
+  heat_transfer.advanceTimestep(dt);
+  heat_transfer.outputState();
   // _run_sim_end
-
+*/
   // _exit_start
   serac::exitGracefully();
 }
