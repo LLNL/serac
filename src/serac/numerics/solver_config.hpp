@@ -97,17 +97,17 @@ struct TimesteppingOptions {
 };
 
 /**
- * @brief Linear solution method
+ * @brief Linear solution method indicator
  */
 enum class LinearSolver
 {
-  CG,     /**< Conjugate Gradient */
+  CG,     /**< Conjugate gradient */
   GMRES,  /**< Generalized minimal residual method */
-  SuperLU /**< SuperLU Direct Solver */
+  SuperLU /**< SuperLU MPI-enabled direct Solver */
 };
 
 /**
- * @brief Nonlinear solver type/method
+ * @brief Nonlinear solver method indicator
  */
 enum class NonlinearSolver
 {
@@ -116,22 +116,6 @@ enum class NonlinearSolver
   KINFullStep,               /**< KINSOL Full Newton (Sundials must be enabled) */
   KINBacktrackingLineSearch, /**< KINSOL Newton with Backtracking Line Search (Sundials must be enabled) */
   KINPicard                  /**< KINSOL Picard (Sundials must be enabled) */
-};
-
-/**
- * @brief Stores the information required to configure a HypreSmoother
- */
-struct HypreSmootherOptions {
-  /**
-   * @brief The type of Hypre smoother to apply
-   */
-  mfem::HypreSmoother::Type type;
-};
-
-/**
- * @brief Stores the information required to configure a HypreBoomerAMG preconditioner
- */
-struct HypreBoomerAMGOptions {
 };
 
 /**
@@ -175,12 +159,12 @@ struct AMGXOptions {
 
 enum class Preconditioner
 {
-  HypreJacobi,
-  HypreL1Jacobi,
-  HypreGaussSeidel,
-  HypreAMG,
-  AMGX,
-  None
+  HypreJacobi,      /**< Hypre-based Jacobi */
+  HypreL1Jacobi,    /**< Hypre-based L1-scaled Jacobi */
+  HypreGaussSeidel, /**< Hypre-based Gauss-Seidel */
+  HypreAMG,         /**< Hypre's BoomerAMG algebraic multi-grid */
+  AMGX,             /**< NVIDIA's AMGX GPU-enabled algebraic multi-grid */
+  None              /**< No preconditioner used */
 };
 
 /**
@@ -213,10 +197,13 @@ struct LinearSolverOptions {
   int max_iterations = 300;
 
   /**
-   * @brief Debugging print level
+   * @brief Debugging print level for the linear solver
    */
   int print_level = 0;
 
+  /**
+   * @brief Deubbing print level for the preconditioner
+   */
   int preconditioner_print_level = 0;
 };
 

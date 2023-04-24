@@ -214,6 +214,62 @@ std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLin
   return {std::move(iter_lin_solver), std::move(preconditioner)};
 }
 
+#ifdef MFEM_USE_AMGX
+std::unique_ptr<mfem::AmgXSolver> buildAMGX(const MPI_Comm comm, const AMGXPrec& options)
+{
+  auto          amgx = std::make_unique<mfem::AmgXSolver>();
+  conduit::Node options_node;
+  options_node["config_version"] = 2;
+  auto& solver_options           = options_node["solver"];
+  solver_options["solver"]       = "AMG";
+  solver_options["presweeps"]    = 1;
+  solver_options["postsweeps"]   = 2;
+  solver_options["interpolator"] = "D2";
+  solver_options["max_iters"]    = 2;
+  solver_options["convergence"]  = "ABSOLUTE";
+  solver_options["cycle"]        = "V";
+
+  if (options.verbose) {
+    options_node["solver/obtain_timings"]    = 1;
+    options_node["solver/monitor_residual"]  = 1;
+    options_node["solver/print_solve_stats"] = 1;
+  }
+
+  // TODO: Use magic_enum here when we can switch to GCC 9+
+  // This is an immediately-invoked lambda so that the map
+  // can be const without needed to initialize all the values
+  // in the constructor
+  static const auto solver_names = []() {
+    std::unordered_map<AMGXSolver, std::string> names;
+    names[AMGXSolver::AMG]             = "AMG";
+    names[AMGXSolver::PCGF]            = "PCGF";
+    names[AMGXSolver::CG]              = "CG";
+    names[AMGXSolver::PCG]             = "PCG";
+    names[AMGXSolver::PBICGSTAB]       = "PBICGSTAB";
+    names[AMGXSolver::BICGSTAB]        = "BICGSTAB";
+    names[AMGXSolver::FGMRES]          = "FGMRES";
+    names[AMGXSolver::JACOBI_L1]       = "JACOBI_L1";
+    names[AMGXSolver::GS]              = "GS";
+    names[AMGXSolver::POLYNOMIAL]      = "POLYNOMIAL";
+    names[AMGXSolver::KPZ_POLYNOMIAL]  = "KPZ_POLYNOMIAL";
+    names[AMGXSolver::BLOCK_JACOBI]    = "BLOCK_JACOBI";
+    names[AMGXSolver::MULTICOLOR_GS]   = "MULTICOLOR_GS";
+    names[AMGXSolver::MULTICOLOR_DILU] = "MULTICOLOR_DILU";
+    return names;
+  }();
+
+  options_node["solver/solver"]   = solver_names.at(options.solver);
+  options_node["solver/smoother"] = solver_names.at(options.smoother);
+
+  // Treat the string as the config (not a filename)
+  amgx->ReadParameters(options_node.to_json(), mfem::AmgXSolver::INTERNAL);
+  amgx->InitExclusiveGPU(comm);
+
+  return amgx;
+}
+
+#endif
+
 std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner, int print_level)
 {
   std::unique_ptr<mfem::Solver> preconditioner_ptr;
@@ -237,7 +293,7 @@ std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner,
     preconditioner_ptr = std::move(gs_preconditioner);
   } else if (preconditioner == Preconditioner::AMGX) {
 #ifdef MFEM_USE_AMGX
-    preconditioner = detail::buildAMGX(comm);
+    preconditioner = detail::buildAMGX(comm, AMGXOptions{});
 #else
     SLIC_ERROR_ROOT("AMGX requested in non-GPU build");
 #endif
@@ -324,8 +380,10 @@ serac::LinearSolverOptions FromInlet<serac::LinearSolverOptions>::operator()(con
     options.preconditioner = serac::Preconditioner::HypreL1Jacobi;
   } else if (prec_type == "HypreAMG") {
     options.preconditioner = serac::Preconditioner::HypreAMG;
+#ifdef MFEM_USE_AMGX
   } else if (prec_type == "AMGX") {
     options.preconditioner = serac::Preconditioner::AMGX;
+#endif
   } else if (prec_type == "GaussSeidel") {
     options.preconditioner = serac::Preconditioner::HypreGaussSeidel;
   } else {

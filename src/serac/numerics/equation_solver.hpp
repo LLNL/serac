@@ -24,20 +24,29 @@
 namespace serac::mfem_ext {
 
 /**
- * @brief Wraps a (currently iterative) system solver and handles the configuration of linear
- * or nonlinear solvers.  This class solves a generic global system of (possibly) nonlinear algebraic equations.
+ * @brief This class manages the objects typically required to solve a nonlinear set of equations arising from
+ * discretization of a PDE. Specifically, it has
+ *
+ *   1. An @a mfem::NewtonSolver containing the nonlinear solution operator
+ *   2. An optional @a mfem::Solver containing a linear solver that is used by the nonlinear solution operator
+ *   3. An optional @a mfem::Solver containing a preconditioner for the linear solution operator
+ *
+ * This @a EquationSolver manages these objects together to ensure they all exist when called by their associated
+ * physics simulation module.
+ *
+ * An equation solver can either be constructed by supplying pre-built nonlinear and linear solvers with a
+ * preconditioner, or it can be constructed using @a serac::NonlinearSolverOptions and @a serac::LinearSolverOptions
+ * structs with the
+ * @ref serac::mfem_ext::buildEquationSolver factory method.
  */
 class EquationSolver : public mfem::Solver {
 public:
-  // Allow for the creation of an "empty" EquationSolver to be later overwritten with a "real" constructor
-  EquationSolver() = default;
   /**
-   * Constructs a new solver wrapper
-   * @param[in] comm The MPI communicator object
-   * @param[in] lin_options The parameters for the linear solver
-   * @param[in] nonlin_options The optional parameters for the optional nonlinear solver
-   * @see serac::LinearSolverOptions
-   * @see serac::NonlinearSolverOptions
+   * Constructs a new nonlinear equation solver
+   * @param[in] nonlinear_solver A constructed nonlinear solver
+   * @param[in] linear_solver An optional constructed linear solver to be called by the nonlinear algorithm and adjoint
+   * equation solves
+   * @param[in] preconditioner An optional constructed precondition to aid the linear solver
    */
   EquationSolver(std::unique_ptr<mfem::NewtonSolver> nonlinear_solver,
                  std::unique_ptr<mfem::Solver>       linear_solver  = nullptr,
@@ -169,15 +178,47 @@ private:
   mfem::SuperLUSolver superlu_solver_;
 };
 
+/**
+ * @brief Build an equation solver object using nonlinear and linear solver option structs.
+ *
+ * This constructed equation solver can then be passed directly into physics modules to
+ * solve generic nonlinear systems of equations of the form F(x) = 0.
+ *
+ * @param nonlinear_opts The options to configure the nonlinear solution scheme
+ * @param lin_opts The options to configure the underlying linear solution scheme to be used by the nonlinear solver
+ * @param comm The MPI communicator for the supplied nonlinear operators and HypreParVectors
+ * @return The constructed equation solver
+ */
 std::unique_ptr<EquationSolver> buildEquationSolver(NonlinearSolverOptions nonlinear_opts = {},
                                                     LinearSolverOptions lin_opts = {}, MPI_Comm comm = MPI_COMM_WORLD);
 
+/**
+ * @brief Build a nonlinear solver using the nonlinear option struct
+ *
+ * @param nonlinear_opts The options to configure the nonlinear solution scheme
+ * @param comm The MPI communicator for the supplied nonlinear operators and HypreParVectors
+ * @return The constructed nonlinear solver
+ */
 std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(NonlinearSolverOptions nonlinear_opts = {},
                                                          MPI_Comm               comm           = MPI_COMM_WORLD);
 
+/**
+ * @brief Build the linear solver and its associated preconditioner given a linear options struct
+ *
+ * @param linear_opts The options to configure the linear solver and preconditioner
+ * @param comm The MPI communicator for the supplied HypreParMatrix and HypreParVectors
+ * @return A pair containing the constructed linear solver and preconditioner objects
+ */
 std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLinearSolverAndPreconditioner(
     LinearSolverOptions linear_opts = {}, MPI_Comm comm = MPI_COMM_WORLD);
 
+/**
+ * @brief Build a preconditioner from the available options
+ *
+ * @param preconditioner The preconditioner type to be built
+ * @param print_level The print level for the constructed preconditioner
+ * @return A constructed preconditioner based on the input option
+ */
 std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner, int print_level = 0);
 
 }  // namespace serac::mfem_ext

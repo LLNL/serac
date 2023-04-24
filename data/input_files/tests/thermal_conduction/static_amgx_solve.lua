@@ -25,7 +25,7 @@ thermal_conduction = {
                 max_iter    = 200,
                 print_level = 0,
                 solver_type = "cg",
-                prec_type   = "L1JacobiAMGX",
+                prec_type   = "AMGX",
             },
         },
 
