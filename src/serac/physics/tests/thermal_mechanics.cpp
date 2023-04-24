@@ -44,20 +44,21 @@ void functional_test_static_3D(double expected_norm)
 
   // define the solid solver configurations
   // no default solver options for solid yet, so make some here
-  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
-                                                         .abs_tol     = 1.0e-10,
-                                                         .print_level = 0,
-                                                         .max_iter    = 500,
-                                                         .lin_solver  = LinearSolver::GMRES,
-                                                         .prec        = HypreBoomerAMGPrec{}};
+  const LinearSolverOptions default_linear_options = {.linear_solver  = LinearSolver::GMRES,
+                                                      .preconditioner = Preconditioner::HypreAMG,
+                                                      .relative_tol   = 1.0e-6,
+                                                      .absolute_tol   = 1.0e-10,
+                                                      .max_iterations = 500,
+                                                      .print_level    = 0};
 
-  const IterativeNonlinearSolverOptions default_nonlinear_options = {
-      .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
+  const NonlinearSolverOptions default_nonlinear_options = {
+      .relative_tol = 1.0e-4, .absolute_tol = 1.0e-8, .max_iterations = 10, .print_level = 1};
 
-  const SolverOptions solid_options = {default_linear_options, default_nonlinear_options};
-
-  Thermomechanics<p, dim> thermal_solid_solver(heat_transfer::default_static_options, solid_options,
-                                               GeometricNonlinearities::On, "thermal_solid_functional");
+  Thermomechanics<p, dim> thermal_solid_solver(
+      mfem_ext::buildEquationSolver(heat_transfer::default_nonlinear_options, heat_transfer::default_linear_options),
+      heat_transfer::default_static_options,
+      mfem_ext::buildEquationSolver(default_nonlinear_options, default_linear_options),
+      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "thermal_solid_functional");
 
   double rho       = 1.0;
   double E         = 1.0;
@@ -125,20 +126,21 @@ void functional_test_shrinking_3D(double expected_norm)
 
   // define the solid solver configurations
   // no default solver options for solid yet, so make some here
-  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
-                                                         .abs_tol     = 1.0e-10,
-                                                         .print_level = 0,
-                                                         .max_iter    = 500,
-                                                         .lin_solver  = LinearSolver::GMRES,
-                                                         .prec        = HypreBoomerAMGPrec{}};
+  const LinearSolverOptions default_linear_options = {.linear_solver  = LinearSolver::GMRES,
+                                                      .preconditioner = Preconditioner::HypreAMG,
+                                                      .relative_tol   = 1.0e-6,
+                                                      .absolute_tol   = 1.0e-10,
+                                                      .max_iterations = 500,
+                                                      .print_level    = 0};
 
-  const IterativeNonlinearSolverOptions default_nonlinear_options = {
-      .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
+  const NonlinearSolverOptions default_nonlinear_options = {
+      .relative_tol = 1.0e-4, .absolute_tol = 1.0e-8, .max_iterations = 10, .print_level = 1};
 
-  const SolverOptions solid_options = {default_linear_options, default_nonlinear_options};
-
-  Thermomechanics<p, dim> thermal_solid_solver(heat_transfer::default_static_options, solid_options,
-                                               GeometricNonlinearities::On, "thermal_solid_functional");
+  Thermomechanics<p, dim> thermal_solid_solver(
+      mfem_ext::buildEquationSolver(heat_transfer::default_nonlinear_options, heat_transfer::default_linear_options),
+      heat_transfer::default_static_options,
+      mfem_ext::buildEquationSolver(default_nonlinear_options, default_linear_options),
+      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "thermal_solid_functional");
 
   double                                       rho       = 1.0;
   double                                       E         = 1.0;
@@ -226,21 +228,21 @@ void parameterized()
 
   // define the solid solver configurations
   // no default solver options for solid yet, so make some here
-  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
-                                                         .abs_tol     = 1.0e-10,
-                                                         .print_level = 0,
-                                                         .max_iter    = 500,
-                                                         .lin_solver  = LinearSolver::GMRES,
-                                                         .prec        = HypreBoomerAMGPrec{}};
+  const LinearSolverOptions default_linear_options = {.linear_solver  = LinearSolver::GMRES,
+                                                      .preconditioner = Preconditioner::HypreAMG,
+                                                      .relative_tol   = 1.0e-6,
+                                                      .absolute_tol   = 1.0e-10,
+                                                      .max_iterations = 500,
+                                                      .print_level    = 0};
 
-  const IterativeNonlinearSolverOptions default_nonlinear_options = {
-      .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
+  const NonlinearSolverOptions default_nonlinear_options = {
+      .relative_tol = 1.0e-4, .absolute_tol = 1.0e-8, .max_iterations = 10, .print_level = 1};
 
-  const SolverOptions solid_options = {default_linear_options, default_nonlinear_options};
-
-  Thermomechanics<p, dim, H1<p> > thermal_solid_solver(heat_transfer::direct_static_options, solid_options,
-                                                       GeometricNonlinearities::On, FinalMeshOption::Deformed,
-                                                       "thermal_solid_functional");
+  Thermomechanics<p, dim, H1<p>> thermal_solid_solver(
+      mfem_ext::buildEquationSolver(heat_transfer::default_nonlinear_options, heat_transfer::default_linear_options),
+      heat_transfer::default_static_options,
+      mfem_ext::buildEquationSolver(default_nonlinear_options, default_linear_options),
+      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "thermal_solid_functional");
 
   double rho       = 1.0;
   double E         = 1.0;

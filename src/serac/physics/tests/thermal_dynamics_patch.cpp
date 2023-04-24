@@ -21,8 +21,6 @@
 
 namespace serac {
 
-using heat_transfer::direct_dynamic_options;
-
 /**
  * @brief Specify the kinds of boundary condition to apply
  */
@@ -106,12 +104,12 @@ double dynamic_solution_error(const ExactSolution& exact_solution, PatchBoundary
   serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a heat transfer solver
-  auto solver_options                        = direct_dynamic_options;
-  solver_options.nonlinear.abs_tol           = 5e-13;
-  solver_options.nonlinear.rel_tol           = 5e-13;
-  solver_options.dynamic->timestepper        = TimestepMethod::BackwardEuler;
-  solver_options.dynamic->enforcement_method = DirichletEnforcementMethod::DirectControl;
-  HeatTransfer<p, dim> thermal(solver_options, "thermal");
+  NonlinearSolverOptions nonlinear_opts{.relative_tol = 5.0e-13, .absolute_tol = 5.0e-13};
+  TimesteppingOptions    dyn_opts{.timestepper        = TimestepMethod::BackwardEuler,
+                               .enforcement_method = DirichletEnforcementMethod::DirectControl};
+
+  HeatTransfer<p, dim> thermal(mfem_ext::buildEquationSolver(nonlinear_opts, heat_transfer::direct_linear_options),
+                               dyn_opts, "thermal");
 
   heat_transfer::LinearIsotropicConductor mat(1.0, 1.0, 1.0);
   thermal.setMaterial(mat);

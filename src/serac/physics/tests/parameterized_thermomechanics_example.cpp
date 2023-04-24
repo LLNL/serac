@@ -86,13 +86,15 @@ TEST(Thermomechanics, ParameterizedMaterial)
     serac::StateManager::setMesh(std::move(mesh));
   }
 
-  SolidMechanics<p, dim, Parameters<H1<p>, H1<p> > > simulation(
-      {DirectSolverOptions{}, IterativeNonlinearSolverOptions{.rel_tol       = 1.0e-12,
-                                                              .abs_tol       = 1.0e-12,
-                                                              .max_iter      = 30,
-                                                              .print_level   = 1,
-                                                              .nonlin_solver = NonlinearSolver::KINPicard}},
-      GeometricNonlinearities::On, "thermomechanics_simulation");
+  serac::NonlinearSolverOptions nonlin_options{.nonlin_solver  = NonlinearSolver::KINPicard,
+                                               .relative_tol   = 1.0e-12,
+                                               .absolute_tol   = 1.0e-12,
+                                               .max_iterations = 30,
+                                               .print_level    = 1};
+
+  SolidMechanics<p, dim, Parameters<H1<p>, H1<p>>> simulation(
+      mfem_ext::buildEquationSolver(nonlin_options, solid_mechanics::direct_linear_options, MPI_COMM_WORLD),
+      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "thermomechanics_simulation");
 
   double density   = 1.0;     ///< density
   double E         = 1000.0;  ///< Young's modulus

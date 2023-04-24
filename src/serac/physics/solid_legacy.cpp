@@ -39,9 +39,10 @@ SolidLegacy::SolidLegacy(int order, const SolverOptions& options, GeometricNonli
           StateManager::collectionID(pmesh))),
       geom_nonlin_(geom_nonlin),
       keep_deformation_(keep_deformation),
+      nonlin_solver_(mfem_ext::buildEquationSolver(options.H_nonlin_options, options.H_lin_options, mesh_.GetComm())),
       ode2_(displacement_.space().TrueVSize(),
             {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
-            nonlin_solver_, bcs_)
+            *nonlin_solver_, bcs_)
 {
   states_.push_back(&velocity_);
   states_.push_back(&displacement_);
@@ -60,12 +61,13 @@ SolidLegacy::SolidLegacy(int order, const SolverOptions& options, GeometricNonli
     adjoint_displacement_ = 0.0;
   }
 
-  const auto& lin_options = options.H_lin_options;
   // If the user wants the AMG preconditioner with a linear solver, set the pfes
   // to be the displacement
-  const auto& augmented_options = mfem_ext::AugmentAMGForElasticity(lin_options, displacement_.space());
 
-  nonlin_solver_ = mfem_ext::EquationSolver(mesh_.GetComm(), augmented_options, options.H_nonlin_options);
+  auto* amg_prec = dynamic_cast<mfem::HypreBoomerAMG*>(nonlin_solver_->Preconditioner());
+  if (amg_prec) {
+    amg_prec->SetElasticityOptions(&displacement_.space());
+  }
 
   // Check for dynamic mode
   if (options.dyn_options) {
@@ -319,7 +321,7 @@ void SolidLegacy::completeSetup()
   // Setting iterative_mode to true ensures that these
   // prescribed acceleration values are not modified by
   // the nonlinear solve.
-  nonlin_solver_.NonlinearSolver().iterative_mode = true;
+  nonlin_solver_->NonlinearSolver()->iterative_mode = true;
 
   if (is_quasistatic_) {
     residual_ = buildQuasistaticOperator();
@@ -348,11 +350,11 @@ void SolidLegacy::completeSetup()
         });
   }
 
-  nonlin_solver_.SetOperator(*residual_);
+  nonlin_solver_->SetOperator(*residual_);
 }
 
 // Solve the Quasi-static Newton system
-void SolidLegacy::quasiStaticSolve() { nonlin_solver_.Mult(zero_, displacement_); }
+void SolidLegacy::quasiStaticSolve() { nonlin_solver_->Mult(zero_, displacement_); }
 
 std::unique_ptr<mfem::Operator> SolidLegacy::buildQuasistaticOperator()
 {
@@ -535,7 +537,7 @@ const std::unordered_map<std::string, const serac::FiniteElementState&> SolidLeg
   // values
   mfem::HypreParVector adjoint_load_vector(disp_adjoint_load->second);
 
-  auto& lin_solver = nonlin_solver_.LinearSolver();
+  auto* lin_solver = nonlin_solver_->LinearSolver();
 
   auto& J   = dynamic_cast<mfem::HypreParMatrix&>(H_->GetGradient(displacement_));
   auto  J_T = std::unique_ptr<mfem::HypreParMatrix>(J.Transpose());
@@ -561,15 +563,15 @@ const std::unordered_map<std::string, const serac::FiniteElementState&> SolidLeg
     bc.apply(*J_T, adjoint_load_vector, adjoint_essential);
   }
 
-  lin_solver.SetOperator(*J_T);
-  lin_solver.Mult(adjoint_load_vector, adjoint_displacement_);
+  lin_solver->SetOperator(*J_T);
+  lin_solver->Mult(adjoint_load_vector, adjoint_displacement_);
 
   if (geom_nonlin_ == GeometricNonlinearities::On) {
     mesh_.NewNodes(*deformed_nodes_);
   }
 
   // Reset the equation solver to use the full nonlinear residual operator
-  nonlin_solver_.SetOperator(*residual_);
+  nonlin_solver_->SetOperator(*residual_);
 
   previous_solve_ = PreviousSolve::Adjoint;
 
@@ -660,7 +662,7 @@ serac::SolidLegacy::InputOptions FromInlet<serac::SolidLegacy::InputOptions>::op
   // Solver parameters
   auto equation_solver                   = base["equation_solver"];
   result.solver_options.H_lin_options    = equation_solver["linear"].get<serac::LinearSolverOptions>();
-  result.solver_options.H_nonlin_options = equation_solver["nonlinear"].get<serac::IterativeNonlinearSolverOptions>();
+  result.solver_options.H_nonlin_options = equation_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
 
   if (base.contains("dynamics")) {
     SolidLegacy::TimesteppingOptions dyn_options;

@@ -62,64 +62,45 @@ public:
    * Returns the underlying solver object
    * @return A non-owning reference to the underlying nonlinear solver
    */
-  mfem::Solver& NonlinearSolver()
-  {
-    SLIC_ERROR_ROOT_IF(!nonlin_solver_, "Nonlinear solver not defined.");
-    return *nonlin_solver_;
-  }
+  mfem::Solver* NonlinearSolver() { return nonlin_solver_.get(); }
 
   /**
    * @overload
    */
-  const mfem::Solver& NonlinearSolver() const
-  {
-    SLIC_ERROR_ROOT_IF(!nonlin_solver_, "Nonlinear solver not defined.");
-    return *nonlin_solver_;
-  }
+  const mfem::NewtonSolver* NonlinearSolver() const { return nonlin_solver_.get(); }
 
   /**
    * Returns the underlying linear solver object
    * @return A non-owning reference to the underlying linear solver
    */
-  mfem::Solver& LinearSolver()
-  {
-    SLIC_ERROR_ROOT_IF(!lin_solver_, "Linear solver not defined.");
-    return *lin_solver_;
-  }
+  mfem::Solver* LinearSolver() { return lin_solver_.get(); }
 
   /**
    * @overload
    */
-  const mfem::Solver& LinearSolver() const
-  {
-    SLIC_ERROR_ROOT_IF(!lin_solver_, "Linear solver not defined.");
-    return *lin_solver_;
-  }
+  const mfem::Solver* LinearSolver() const { return lin_solver_.get(); }
 
   /**
    * Returns the underlying linear solver object
    * @return A non-owning reference to the underlying linear solver
    */
-  mfem::Solver& Preconditioner()
-  {
-    SLIC_ERROR_ROOT_IF(!prec_, "Preconditioner not defined.");
-    return *prec_;
-  }
+  mfem::Solver* Preconditioner() { return preconditioner_.get(); }
 
   /**
    * @overload
    */
-  const mfem::Solver& Preconditioner() const
-  {
-    SLIC_ERROR_ROOT_IF(!prec_, "Preconditioner not defined.");
-    return *prec_;
-  }
+  const mfem::Solver* Preconditioner() const { return preconditioner_.get(); }
+
+  /**
+   * Input file parameters specific to this class
+   **/
+  static void DefineInputFileSchema(axom::inlet::Container& container);
 
 private:
   /**
    * @brief The preconditioner (used for an iterative solver only)
    */
-  std::unique_ptr<mfem::Solver> prec_;
+  std::unique_ptr<mfem::Solver> preconditioner_;
 
   /**
    * @brief The linear solver object, either custom, direct (SuperLU), or iterative
@@ -138,32 +119,6 @@ private:
    */
   bool nonlin_solver_set_solver_called_ = false;
 };
-
-/**
- * @brief A helper method intended to be called by physics modules to configure the AMG preconditioner for elasticity
- * problems
- * @param[in] init_options The user-provided solver parameters to possibly modify
- * @param[in] pfes The FiniteElementSpace to configure the preconditioner with
- * @note A full copy of the object is made, pending C++20 relaxation of "mutable"
- */
-
-/*
-inline LinearSolverOptions AugmentAMGForElasticity(const LinearSolverOptions&   init_options,
-                                                   mfem::ParFiniteElementSpace& pfes)
-{
-  auto augmented_options = init_options;
-  if (auto iter_options = std::get_if<serac::IterativeSolverOptions>(&init_options)) {
-    if (iter_options->prec) {
-      if (std::holds_alternative<mfem::HypreBoomerAMGPrec>(iter_options->prec.value())) {
-        // It's a copy, but at least it's on the stack
-        std::get<HypreBoomerAMGPrec>(*std::get<IterativeSolverOptions>(augmented_options).prec).pfes = &pfes;
-      }
-    }
-  }
-  // NRVO will kick in here
-  return augmented_options;
-}
-*/
 
 /**
  * @brief A wrapper class for using the MFEM super LU solver with a HypreParMatrix
@@ -214,14 +169,48 @@ private:
   mfem::SuperLUSolver superlu_solver_;
 };
 
-EquationSolver buildEquationSolver(NonlinearSolverOptions nonlinear_opts = {}, LinearSolverOptions lin_opts = {},
-                                   MPI_Comm comm = MPI_COMM_WORLD);
+std::unique_ptr<EquationSolver> buildEquationSolver(NonlinearSolverOptions nonlinear_opts = {},
+                                                    LinearSolverOptions lin_opts = {}, MPI_Comm comm = MPI_COMM_WORLD);
 
 std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(NonlinearSolverOptions nonlinear_opts = {},
                                                          MPI_Comm               comm           = MPI_COMM_WORLD);
 
-std::unique_ptr<mfem::Solver> buildLinearSolver(LinearSolverOptions linear_opts = {}, MPI_Comm comm = MPI_COMM_WORLD);
+std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLinearSolverAndPreconditioner(
+    LinearSolverOptions linear_opts = {}, MPI_Comm comm = MPI_COMM_WORLD);
 
 std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner, int print_level = 0);
 
 }  // namespace serac::mfem_ext
+
+/**
+ * @brief Prototype the specialization for Inlet parsing
+ *
+ * @tparam The object to be created by inlet
+ */
+template <>
+struct FromInlet<serac::LinearSolverOptions> {
+  /// @brief Returns created object from Inlet container
+  serac::LinearSolverOptions operator()(const axom::inlet::Container& base);
+};
+
+/**
+ * @brief Prototype the specialization for Inlet parsing
+ *
+ * @tparam The object to be created by inlet
+ */
+template <>
+struct FromInlet<serac::NonlinearSolverOptions> {
+  /// @brief Returns created object from Inlet container
+  serac::NonlinearSolverOptions operator()(const axom::inlet::Container& base);
+};
+
+/**
+ * @brief Prototype the specialization for Inlet parsing
+ *
+ * @tparam The object to be created by inlet
+ */
+template <>
+struct FromInlet<serac::mfem_ext::EquationSolver> {
+  /// @brief Returns created object from Inlet container
+  serac::mfem_ext::EquationSolver operator()(const axom::inlet::Container& base);
+};

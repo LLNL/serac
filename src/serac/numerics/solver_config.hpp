@@ -87,6 +87,15 @@ enum class DirichletEnforcementMethod
   FullControl
 };
 
+/// A timestep and boundary condition enforcement method for a dynamic solver
+struct TimesteppingOptions {
+  /// The timestepping method to be applied
+  TimestepMethod timestepper = TimestepMethod::QuasiStatic;
+
+  /// The essential boundary enforcement method to use
+  DirichletEnforcementMethod enforcement_method = DirichletEnforcementMethod::RateControl;
+};
+
 /**
  * @brief Linear solution method
  */
@@ -123,11 +132,6 @@ struct HypreSmootherOptions {
  * @brief Stores the information required to configure a HypreBoomerAMG preconditioner
  */
 struct HypreBoomerAMGOptions {
-  /**
-   * @brief The par finite element space for the AMG object
-   * @note This is needed for some of the options specific to solid mechanics solves
-   */
-  mfem::ParFiniteElementSpace* pfes = nullptr;
 };
 
 /**
@@ -186,27 +190,27 @@ struct LinearSolverOptions {
   /**
    * @brief Linear solver selection
    */
-  LinearSolver linear_solver;
+  LinearSolver linear_solver = LinearSolver::GMRES;
 
   /**
    * @brief PreconditionerOptions selection
    */
-  Preconditioner preconditioner;
+  Preconditioner preconditioner = Preconditioner::HypreJacobi;
 
   /**
    * @brief Relative tolerance
    */
-  double relative_tol;
+  double relative_tol = 1.0e-8;
 
   /**
    * @brief Absolute tolerance
    */
-  double absolute_tol;
+  double absolute_tol = 1.0e-12;
 
   /**
    * @brief Maximum number of iterations
    */
-  int max_iterations;
+  int max_iterations = 300;
 
   /**
    * @brief Debugging print level
@@ -228,22 +232,22 @@ struct NonlinearSolverOptions {
   /**
    * @brief Relative tolerance
    */
-  double relative_tol;
+  double relative_tol = 1.0e-8;
 
   /**
    * @brief Absolute tolerance
    */
-  double absolute_tol;
+  double absolute_tol = 1.0e-12;
 
   /**
    * @brief Maximum number of iterations
    */
-  int max_iterations;
+  int max_iterations = 20;
 
   /**
    * @brief Debug print level
    */
-  int print_level;
+  int print_level = 0;
 };
 
 }  // namespace serac

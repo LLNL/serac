@@ -51,15 +51,17 @@ TEST(SolidLegacy, Adjoint)
   auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
 
   // define the solver configurations
-  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
-                                                         .abs_tol     = 1.0e-10,
-                                                         .print_level = 0,
-                                                         .max_iter    = 500,
-                                                         .lin_solver  = LinearSolver::GMRES,
-                                                         .prec        = HypreBoomerAMGPrec{}};
+  const LinearSolverOptions default_linear_options = {
 
-  const IterativeNonlinearSolverOptions default_nonlinear_options = {
-      .rel_tol = 1.0e-8, .abs_tol = 1.0e-10, .max_iter = 500, .print_level = 1};
+      .linear_solver  = LinearSolver::GMRES,
+      .preconditioner = Preconditioner::HypreAMG,
+      .relative_tol   = 1.0e-6,
+      .absolute_tol   = 1.0e-10,
+      .max_iterations = 500,
+      .print_level    = 0};
+
+  const NonlinearSolverOptions default_nonlinear_options = {
+      .relative_tol = 1.0e-8, .absolute_tol = 1.0e-10, .max_iterations = 500, .print_level = 1};
 
   const SolidLegacy::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
 

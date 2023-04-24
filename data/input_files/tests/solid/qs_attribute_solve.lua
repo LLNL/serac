@@ -24,7 +24,7 @@ solid = {
                 abs_tol     = 1.0e-12,
                 max_iter    = 5000,
                 print_level = 0,
-                solver_type = "minres",
+                solver_type = "gmres",
                 prec_type   = "L1JacobiSmoother",
             }
         },

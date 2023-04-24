@@ -31,8 +31,6 @@ ThermalSolidLegacy::ThermalSolidLegacy(int order, const ThermalConductionLegacy:
   states_.push_back(&therm_solver_.temperature());
   states_.push_back(&solid_solver_.velocity());
   states_.push_back(&solid_solver_.displacement());
-
-  coupling_ = serac::CouplingScheme::OperatorSplit;
 }
 
 ThermalSolidLegacy::ThermalSolidLegacy(const ThermalConductionLegacy::InputOptions& thermal_input,
@@ -52,8 +50,6 @@ ThermalSolidLegacy::ThermalSolidLegacy(const ThermalConductionLegacy::InputOptio
   states_.push_back(&therm_solver_.temperature());
   states_.push_back(&solid_solver_.velocity());
   states_.push_back(&solid_solver_.displacement());
-
-  coupling_ = serac::CouplingScheme::OperatorSplit;
 }
 
 ThermalSolidLegacy::ThermalSolidLegacy(const ThermalSolidLegacy::InputOptions& thermal_solid_input,
@@ -70,9 +66,6 @@ ThermalSolidLegacy::ThermalSolidLegacy(const ThermalSolidLegacy::InputOptions& t
 
 void ThermalSolidLegacy::completeSetup()
 {
-  SLIC_ERROR_ROOT_IF(coupling_ != serac::CouplingScheme::OperatorSplit,
-                     "Only operator split is currently implemented in the thermal structural solver.");
-
   solid_solver_.completeSetup();
   therm_solver_.completeSetup();
 }
@@ -80,19 +73,15 @@ void ThermalSolidLegacy::completeSetup()
 // Advance the timestep
 void ThermalSolidLegacy::advanceTimestep(double& dt)
 {
-  if (coupling_ == serac::CouplingScheme::OperatorSplit) {
-    double initial_dt = dt;
+  double initial_dt = dt;
 
-    therm_solver_.advanceTimestep(dt);
-    solid_solver_.advanceTimestep(dt);
+  therm_solver_.advanceTimestep(dt);
+  solid_solver_.advanceTimestep(dt);
 
-    time_ += dt;
+  time_ += dt;
 
-    SLIC_ERROR_ROOT_IF(std::abs(dt - initial_dt) > 1.0e-6,
-                       "Operator split coupled solvers cannot adaptively change the timestep");
-  } else {
-    SLIC_ERROR_ROOT("Only operator split coupling is currently implemented");
-  }
+  SLIC_ERROR_ROOT_IF(std::abs(dt - initial_dt) > 1.0e-6,
+                     "Operator split coupled solvers cannot adaptively change the timestep");
 
   cycle_ += 1;
 }

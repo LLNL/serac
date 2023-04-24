@@ -64,7 +64,7 @@ public:
      * @brief The nonlinear solver options
      *
      */
-    IterativeNonlinearSolverOptions T_nonlin_options;
+    NonlinearSolverOptions T_nonlin_options;
 
     /**
      * @brief The optional ODE solver parameters
@@ -159,14 +159,14 @@ public:
    *
    * @return The default thermal linear options
    */
-  static IterativeSolverOptions defaultLinearOptions()
+  static LinearSolverOptions defaultLinearOptions()
   {
-    return {.rel_tol     = 1.0e-6,
-            .abs_tol     = 1.0e-12,
-            .print_level = 0,
-            .max_iter    = 200,
-            .lin_solver  = LinearSolver::CG,
-            .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
+    return {.linear_solver  = LinearSolver::CG,
+            .preconditioner = Preconditioner::HypreJacobi,
+            .relative_tol   = 1.0e-6,
+            .absolute_tol   = 1.0e-12,
+            .max_iterations = 200,
+            .print_level    = 0};
   }
 
   /**
@@ -174,9 +174,9 @@ public:
    *
    * @return The default thermal nonlinear options
    */
-  static IterativeNonlinearSolverOptions defaultNonlinearOptions()
+  static NonlinearSolverOptions defaultNonlinearOptions()
   {
-    return {.rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
+    return {.relative_tol = 1.0e-4, .absolute_tol = 1.0e-8, .max_iterations = 500, .print_level = 1};
   }
 
   /**
@@ -393,17 +393,17 @@ protected:
   mfem_ext::StdFunctionOperator residual_;
 
   /**
+   * @brief the specific methods and tolerances specified to
+   * solve the nonlinear residual equations
+   */
+  std::unique_ptr<mfem_ext::EquationSolver> nonlin_solver_;
+
+  /**
    * @brief the ordinary differential equation that describes
    * how to solve for the time derivative of temperature, given
    * the current temperature and source terms
    */
   mfem_ext::FirstOrderODE ode_;
-
-  /**
-   * @brief the specific methods and tolerances specified to
-   * solve the nonlinear residual equations
-   */
-  mfem_ext::EquationSolver nonlin_solver_;
 
   /**
    * @brief assembled sparse matrix for the Jacobian

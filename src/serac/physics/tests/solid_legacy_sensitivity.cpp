@@ -25,18 +25,20 @@ TEST(SolidLegacy, FiniteDiff)
   ::mfem::Mesh cuboid = ::mfem::Mesh::MakeCartesian2D(3, 3, ::mfem::Element::Type::QUADRILATERAL, true, 0.1, 0.1);
 
   // Parallelize mesh and give it to serac
-  mfem::ParMesh* mesh = serac::StateManager::setMesh(std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, cuboid));
+  auto* mesh = serac::StateManager::setMesh(std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, cuboid));
 
   // Setup some solver options
-  serac::IterativeSolverOptions const default_linear_options = {.rel_tol     = 1.0e-8,
-                                                                .abs_tol     = 1.0e-12,
-                                                                .print_level = 0,
-                                                                .max_iter    = 500,
-                                                                .lin_solver  = serac::LinearSolver::GMRES,
-                                                                .prec        = serac::HypreBoomerAMGPrec{}};
+  serac::LinearSolverOptions const default_linear_options = {
+      .linear_solver  = serac::LinearSolver::GMRES,
+      .preconditioner = serac::Preconditioner::HypreAMG,
+      .relative_tol   = 1.0e-8,
+      .absolute_tol   = 1.0e-12,
+      .max_iterations = 500,
+      .print_level    = 0,
+  };
 
-  serac::IterativeNonlinearSolverOptions const default_nonlinear_options = {
-      .rel_tol = 1.0e-6, .abs_tol = 1.0e-11, .max_iter = 500, .print_level = 1};
+  serac::NonlinearSolverOptions const default_nonlinear_options = {
+      .relative_tol = 1.0e-6, .absolute_tol = 1.0e-11, .max_iterations = 500, .print_level = 1};
 
   serac::SolidLegacy::SolverOptions const solverOptions = {default_linear_options, default_nonlinear_options};
 
@@ -180,14 +182,16 @@ TEST(SolidLegacy, MultipleDesignSpaces)
   serac::StateManager::setMesh(std::move(mesh));
 
   // Setup setup the solid module
-  serac::IterativeSolverOptions const          default_linear_options    = {.rel_tol     = 1.0e-12,
-                                                                .abs_tol     = 1.0e-12,
-                                                                .print_level = 0,
-                                                                .max_iter    = 500,
-                                                                .lin_solver  = serac::LinearSolver::GMRES,
-                                                                .prec        = serac::HypreBoomerAMGPrec{}};
-  serac::IterativeNonlinearSolverOptions const default_nonlinear_options = {
-      .rel_tol = 1.0e-4, .abs_tol = 1.0e-6, .max_iter = 3, .print_level = 1};
+  serac::LinearSolverOptions const default_linear_options = {.linear_solver  = serac::LinearSolver::GMRES,
+                                                             .preconditioner = serac::Preconditioner::HypreAMG,
+                                                             .relative_tol   = 1.0e-12,
+                                                             .absolute_tol   = 1.0e-12,
+                                                             .max_iterations = 500,
+                                                             .print_level    = 0};
+
+  serac::NonlinearSolverOptions const default_nonlinear_options = {
+      .relative_tol = 1.0e-4, .absolute_tol = 1.0e-6, .max_iterations = 3, .print_level = 1};
+
   serac::SolidLegacy::SolverOptions const solverOptions = {default_linear_options, default_nonlinear_options};
   int                                     order         = 1;
   serac::SolidLegacy                      solid(order, solverOptions, serac::GeometricNonlinearities::Off,

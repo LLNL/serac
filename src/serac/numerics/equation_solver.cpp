@@ -15,9 +15,9 @@ EquationSolver::EquationSolver(std::unique_ptr<mfem::NewtonSolver> nonlinear_sol
                                std::unique_ptr<mfem::Solver>       linear_solver,
                                std::unique_ptr<mfem::Solver>       preconditioner)
 {
-  nonlin_solver_ = std::move(nonlinear_solver);
-  lin_solver_    = std::move(linear_solver);
-  prec_          = std::move(preconditioner);
+  nonlin_solver_  = std::move(nonlinear_solver);
+  lin_solver_     = std::move(linear_solver);
+  preconditioner_ = std::move(preconditioner);
 }
 
 namespace detail {
@@ -87,7 +87,9 @@ void EquationSolver::SetOperator(const mfem::Operator& op)
   if (newton_solver) {
     // Now that the nonlinear solver knows about the operator, we can set its linear solver
     if (!nonlin_solver_set_solver_called_) {
-      newton_solver->SetSolver(LinearSolver());
+      if (LinearSolver()) {
+        newton_solver->SetSolver(*LinearSolver());
+      }
       nonlin_solver_set_solver_called_ = true;
     }
   }
@@ -116,10 +118,13 @@ void SuperLUSolver::SetOperator(const mfem::Operator& op)
   superlu_solver_.SetOperator(*superlu_mat_);
 }
 
-mfem_ext::EquationSolver buildEquationSolver(NonlinearSolverOptions nonlinear_opts, LinearSolverOptions lin_opts,
-                                             MPI_Comm comm)
+std::unique_ptr<mfem_ext::EquationSolver> buildEquationSolver(NonlinearSolverOptions nonlinear_opts,
+                                                              LinearSolverOptions lin_opts, MPI_Comm comm)
 {
-  mfem_ext::EquationSolver eq_solver(buildNonlinearSolver(nonlinear_opts, comm), buildLinearSolver(lin_opts, comm));
+  auto [linear_solver, preconditioner] = buildLinearSolverAndPreconditioner(lin_opts, comm);
+
+  auto eq_solver = std::make_unique<mfem_ext::EquationSolver>(buildNonlinearSolver(nonlinear_opts, comm),
+                                                              std::move(linear_solver), std::move(preconditioner));
 
   return eq_solver;
 }
@@ -173,11 +178,12 @@ std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(NonlinearSolverOptions 
   return nonlinear_solver;
 }
 
-std::unique_ptr<mfem::Solver> buildLinearSolver(LinearSolverOptions linear_opts, MPI_Comm comm)
+std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLinearSolverAndPreconditioner(
+    LinearSolverOptions linear_opts, MPI_Comm comm)
 {
   if (linear_opts.linear_solver == LinearSolver::SuperLU) {
     auto lin_solver = std::make_unique<SuperLUSolver>(linear_opts.print_level, comm);
-    return lin_solver;
+    return {std::move(lin_solver), nullptr};
   }
 
   std::unique_ptr<mfem::IterativeSolver> iter_lin_solver;
@@ -205,7 +211,7 @@ std::unique_ptr<mfem::Solver> buildLinearSolver(LinearSolverOptions linear_opts,
     iter_lin_solver->SetPreconditioner(*preconditioner);
   }
 
-  return iter_lin_solver;
+  return {std::move(iter_lin_solver), std::move(preconditioner)};
 }
 
 std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner, int print_level)
@@ -242,4 +248,126 @@ std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner,
   return preconditioner_ptr;
 }
 
+void EquationSolver::DefineInputFileSchema(axom::inlet::Container& container)
+{
+  auto& linear_container = container.addStruct("linear", "Linear Equation Solver Parameters");
+  linear_container.required().registerVerifier([](const axom::inlet::Container& container_to_verify) {
+    // Make sure that the provided options match the desired linear solver type
+    const bool is_iterative = (container_to_verify["type"].get<std::string>() == "iterative") &&
+                              container_to_verify.contains("iterative_options");
+    const bool is_direct =
+        (container_to_verify["type"].get<std::string>() == "direct") && container_to_verify.contains("direct_options");
+    return is_iterative || is_direct;
+  });
+
+  // Enforce the solver type - must be iterative or direct
+  linear_container.addString("type", "The type of solver parameters to use (iterative|direct)")
+      .required()
+      .validValues({"iterative", "direct"});
+
+  auto& iterative_container = linear_container.addStruct("iterative_options", "Iterative solver parameters");
+  iterative_container.addDouble("rel_tol", "Relative tolerance for the linear solve.").defaultValue(1.0e-6);
+  iterative_container.addDouble("abs_tol", "Absolute tolerance for the linear solve.").defaultValue(1.0e-8);
+  iterative_container.addInt("max_iter", "Maximum iterations for the linear solve.").defaultValue(5000);
+  iterative_container.addInt("print_level", "Linear print level.").defaultValue(0);
+  iterative_container.addString("solver_type", "Solver type (gmres|minres|cg).").defaultValue("gmres");
+  iterative_container.addString("prec_type", "Preconditioner type (JacobiSmoother|L1JacobiSmoother|AMG|BlockILU).")
+      .defaultValue("JacobiSmoother");
+
+  auto& direct_container = linear_container.addStruct("direct_options", "Direct solver parameters");
+  direct_container.addInt("print_level", "Linear print level.").defaultValue(0);
+
+  // Only needed for nonlinear problems
+  auto& nonlinear_container = container.addStruct("nonlinear", "Newton Equation Solver Parameters").required(false);
+  nonlinear_container.addDouble("rel_tol", "Relative tolerance for the Newton solve.").defaultValue(1.0e-2);
+  nonlinear_container.addDouble("abs_tol", "Absolute tolerance for the Newton solve.").defaultValue(1.0e-4);
+  nonlinear_container.addInt("max_iter", "Maximum iterations for the Newton solve.").defaultValue(500);
+  nonlinear_container.addInt("print_level", "Nonlinear print level.").defaultValue(0);
+  nonlinear_container.addString("solver_type", "Solver type (Newton|KINFullStep|KINLineSearch)").defaultValue("Newton");
+}
+
 }  // namespace serac::mfem_ext
+
+using serac::LinearSolverOptions;
+using serac::NonlinearSolverOptions;
+using serac::mfem_ext::EquationSolver;
+
+serac::LinearSolverOptions FromInlet<serac::LinearSolverOptions>::operator()(const axom::inlet::Container& base)
+{
+  LinearSolverOptions options;
+  std::string         type = base["type"];
+
+  if (type == "direct") {
+    options.linear_solver = serac::LinearSolver::SuperLU;
+    options.print_level   = base["direct_options/print_level"];
+    return options;
+  }
+
+  auto config             = base["iterative_options"];
+  options.relative_tol    = config["rel_tol"];
+  options.absolute_tol    = config["abs_tol"];
+  options.max_iterations  = config["max_iter"];
+  options.print_level     = config["print_level"];
+  std::string solver_type = config["solver_type"];
+  if (solver_type == "gmres") {
+    options.linear_solver = serac::LinearSolver::GMRES;
+  } else if (solver_type == "cg") {
+    options.linear_solver = serac::LinearSolver::CG;
+  } else {
+    std::string msg = axom::fmt::format("Unknown Linear solver type given: '{0}'", solver_type);
+    SLIC_ERROR_ROOT(msg);
+  }
+  const std::string prec_type = config["prec_type"];
+  if (prec_type == "JacobiSmoother") {
+    options.preconditioner = serac::Preconditioner::HypreJacobi;
+  } else if (prec_type == "L1JacobiSmoother") {
+    options.preconditioner = serac::Preconditioner::HypreL1Jacobi;
+  } else if (prec_type == "HypreAMG") {
+    options.preconditioner = serac::Preconditioner::HypreAMG;
+  } else if (prec_type == "AMGX") {
+    options.preconditioner = serac::Preconditioner::AMGX;
+  } else if (prec_type == "GaussSeidel") {
+    options.preconditioner = serac::Preconditioner::HypreGaussSeidel;
+  } else {
+    std::string msg = axom::fmt::format("Unknown preconditioner type given: '{0}'", prec_type);
+    SLIC_ERROR_ROOT(msg);
+  }
+
+  return options;
+}
+
+serac::NonlinearSolverOptions FromInlet<serac::NonlinearSolverOptions>::operator()(const axom::inlet::Container& base)
+{
+  NonlinearSolverOptions options;
+  options.relative_tol          = base["rel_tol"];
+  options.absolute_tol          = base["abs_tol"];
+  options.max_iterations        = base["max_iter"];
+  options.print_level           = base["print_level"];
+  const std::string solver_type = base["solver_type"];
+  if (solver_type == "Newton") {
+    options.nonlin_solver = serac::NonlinearSolver::Newton;
+  } else if (solver_type == "KINFullStep") {
+    options.nonlin_solver = serac::NonlinearSolver::KINFullStep;
+  } else if (solver_type == "KINLineSearch") {
+    options.nonlin_solver = serac::NonlinearSolver::KINBacktrackingLineSearch;
+  } else if (solver_type == "KINPicard") {
+    options.nonlin_solver = serac::NonlinearSolver::KINPicard;
+  } else {
+    SLIC_ERROR_ROOT(axom::fmt::format("Unknown nonlinear solver type given: '{0}'", solver_type));
+  }
+  return options;
+}
+
+serac::mfem_ext::EquationSolver FromInlet<serac::mfem_ext::EquationSolver>::operator()(
+    const axom::inlet::Container& base)
+{
+  auto lin    = base["linear"].get<LinearSolverOptions>();
+  auto nonlin = base["nonlinear"].get<NonlinearSolverOptions>();
+
+  auto [linear_solver, preconditioner] = serac::mfem_ext::buildLinearSolverAndPreconditioner(lin, MPI_COMM_WORLD);
+
+  serac::mfem_ext::EquationSolver eq_solver(serac::mfem_ext::buildNonlinearSolver(nonlin, MPI_COMM_WORLD),
+                                            std::move(linear_solver), std::move(preconditioner));
+
+  return eq_solver;
+}

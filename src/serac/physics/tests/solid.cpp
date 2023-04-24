@@ -23,10 +23,6 @@
 
 namespace serac {
 
-using solid_mechanics::default_dynamic_options;
-using solid_mechanics::default_static_options;
-using solid_mechanics::direct_static_options;
-
 void functional_solid_test_static_J2()
 {
   MPI_Barrier(MPI_COMM_WORLD);
@@ -46,13 +42,13 @@ void functional_solid_test_static_J2()
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
 
-  auto options           = default_static_options;
-  auto linear_options    = solid_mechanics::default_linear_options;
-  linear_options.abs_tol = 1.0e-16;  // prevent early-exit in linear solve
-  options.linear         = linear_options;
+  auto linear_options         = solid_mechanics::default_linear_options;
+  linear_options.absolute_tol = 1.0e-16;  // prevent early-exit in linear solve
 
   // Construct a functional-based solid mechanics solver
-  SolidMechanics<p, dim> solid_solver(options, GeometricNonlinearities::Off, "solid_mechanics");
+  SolidMechanics<p, dim> solid_solver(
+      serac::mfem_ext::buildEquationSolver(solid_mechanics::default_nonlinear_options, linear_options, MPI_COMM_WORLD),
+      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::Off, "solid_mechanics");
 
   solid_mechanics::J2 mat{
       10000,  // Young's modulus
@@ -131,18 +127,19 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
 
-  auto options                    = default_static_options;
-  auto linear_options             = solid_mechanics::default_linear_options;
-  linear_options.abs_tol          = 1.0e-14;  // prevent early-exit in linear solve
-  options.linear                  = linear_options;
-  options.nonlinear.nonlin_solver = NonlinearSolver::KINFullStep;
-  options.nonlinear.max_iter      = 5000;
-  options.nonlinear.rel_tol       = 1.0e-12;
-  options.nonlinear.abs_tol       = 1.0e-12;
-  options.nonlinear.print_level   = 1;
+  auto linear_options         = solid_mechanics::default_linear_options;
+  linear_options.absolute_tol = 1.0e-14;  // prevent early-exit in linear solve
+
+  serac::NonlinearSolverOptions nonlin_opts{.nonlin_solver  = NonlinearSolver::KINFullStep,
+                                            .relative_tol   = 1.0e-12,
+                                            .absolute_tol   = 1.0e-12,
+                                            .max_iterations = 5000,
+                                            .print_level    = 1};
 
   // Construct a functional-based solid mechanics solver
-  SolidMechanics<p, dim> solid_solver(options, GeometricNonlinearities::Off, "solid_functional");
+  SolidMechanics<p, dim> solid_solver(serac::mfem_ext::buildEquationSolver(nonlin_opts, linear_options, MPI_COMM_WORLD),
+                                      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::Off,
+                                      "solid_functional");
 
   solid_mechanics::LinearIsotropic mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
@@ -236,8 +233,10 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   user_defined_bulk_modulus = 1.0;
 
   // Construct a functional-based solid mechanics solver
-  SolidMechanics<p, dim, Parameters<H1<1>, H1<1>>> solid_solver(default_static_options, GeometricNonlinearities::On,
-                                                                "solid_functional");
+  SolidMechanics<p, dim, Parameters<H1<1>, H1<1>>> solid_solver(
+      serac::mfem_ext::buildEquationSolver(solid_mechanics::default_nonlinear_options,
+                                           solid_mechanics::default_linear_options, MPI_COMM_WORLD),
+      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "solid_functional");
   solid_solver.setParameter(0, user_defined_bulk_modulus);
   solid_solver.setParameter(1, user_defined_shear_modulus);
 

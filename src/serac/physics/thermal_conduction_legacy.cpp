@@ -23,14 +23,14 @@ ThermalConductionLegacy::ThermalConductionLegacy(int order, const SolverOptions&
           FiniteElementState::Options{.order = order, .vector_dim = 1, .name = detail::addPrefix(name, "temperature")},
           sidre_datacoll_id_)),
       residual_(temperature_.space().TrueVSize()),
+      nonlin_solver_(mfem_ext::buildEquationSolver(options.T_nonlin_options, options.T_lin_options, mesh_.GetComm())),
       ode_(temperature_.space().TrueVSize(),
            {.time = ode_time_point_, .u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
-           nonlin_solver_, bcs_)
+           *nonlin_solver_, bcs_)
 {
   states_.push_back(&temperature_);
 
-  nonlin_solver_ = mfem_ext::EquationSolver(mesh_.GetComm(), options.T_lin_options, options.T_nonlin_options);
-  nonlin_solver_.SetOperator(residual_);
+  nonlin_solver_->SetOperator(residual_);
 
   // Check for dynamic mode
   if (options.dyn_options) {
@@ -238,7 +238,7 @@ void ThermalConductionLegacy::advanceTimestep(double& dt)
     for (auto& bc : bcs_.essentials()) {
       bc.setDofs(temperature_, time_);
     }
-    nonlin_solver_.Mult(zero_, temperature_);
+    nonlin_solver_->Mult(zero_, temperature_);
   } else {
     SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
 
@@ -303,7 +303,7 @@ serac::ThermalConductionLegacy::InputOptions FromInlet<serac::ThermalConductionL
   // Solver parameters
   auto equation_solver                   = base["equation_solver"];
   result.solver_options.T_lin_options    = equation_solver["linear"].get<serac::LinearSolverOptions>();
-  result.solver_options.T_nonlin_options = equation_solver["nonlinear"].get<serac::IterativeNonlinearSolverOptions>();
+  result.solver_options.T_nonlin_options = equation_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
 
   if (base.contains("dynamics")) {
     ThermalConductionLegacy::TimesteppingOptions dyn_options;

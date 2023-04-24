@@ -39,12 +39,13 @@ public:
    * @param name An optional name for the physics module instance
    * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
-  Thermomechanics(const SolverOptions& thermal_options, const SolverOptions& solid_options,
+  Thermomechanics(std::unique_ptr<mfem_ext::EquationSolver> thermal_solver, TimesteppingOptions thermal_timestepping,
+                  std::unique_ptr<mfem_ext::EquationSolver> solid_solver, TimesteppingOptions solid_timestepping,
                   GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
                   mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(3, order, name, pmesh),
-        thermal_(thermal_options, name + "thermal", pmesh),
-        solid_(solid_options, geom_nonlin, name + "mechanical", pmesh)
+        thermal_(std::move(thermal_solver), thermal_timestepping, name + "thermal", pmesh),
+        solid_(std::move(solid_solver), solid_timestepping, geom_nonlin, name + "mechanical", pmesh)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
@@ -55,8 +56,6 @@ public:
 
     thermal_.setParameter(0, solid_.displacement());
     solid_.setParameter(0, thermal_.temperature());
-
-    coupling_ = serac::CouplingScheme::OperatorSplit;
   }
 
   /**
@@ -66,9 +65,6 @@ public:
    */
   void completeSetup() override
   {
-    SLIC_ERROR_ROOT_IF(coupling_ != serac::CouplingScheme::OperatorSplit,
-                       "Only operator split is currently implemented in the thermal structural solver.");
-
     thermal_.completeSetup();
     solid_.completeSetup();
   }
@@ -125,15 +121,11 @@ public:
    */
   void advanceTimestep(double& dt) override
   {
-    if (coupling_ == serac::CouplingScheme::OperatorSplit) {
-      double initial_dt = dt;
-      thermal_.advanceTimestep(dt);
-      solid_.advanceTimestep(dt);
-      SLIC_ERROR_ROOT_IF(std::abs(dt - initial_dt) > 1.0e-6,
-                         "Operator split coupled solvers cannot adaptively change the timestep");
-    } else {
-      SLIC_ERROR_ROOT("Only operator split coupling is currently implemented");
-    }
+    double initial_dt = dt;
+    thermal_.advanceTimestep(dt);
+    solid_.advanceTimestep(dt);
+    SLIC_ERROR_ROOT_IF(std::abs(dt - initial_dt) > 1.0e-6,
+                       "Operator split coupled solvers cannot adaptively change the timestep");
 
     cycle_ += 1;
   }
@@ -415,9 +407,6 @@ public:
   const serac::FiniteElementState& temperature() const { return thermal_.temperature(); };
 
 protected:
-  /// @brief The coupling strategy
-  serac::CouplingScheme coupling_;
-
   using displacement_field = H1<order, dim>;  ///< the function space for the displacement field
   using temperature_field  = H1<order>;       ///< the function space for the temperature field
 

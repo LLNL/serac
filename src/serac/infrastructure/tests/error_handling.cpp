@@ -27,19 +27,21 @@ using mfem_ext::EquationSolver;
 
 TEST(ErrorHandling, EquationSolverBadLinSolver)
 {
-  IterativeSolverOptions options;
+  LinearSolverOptions    options;
+  NonlinearSolverOptions nonlin_options;
   // Try a definitely wrong number to ensure that an invalid linear solver is detected
-  options.lin_solver = static_cast<LinearSolver>(-7);
-  EXPECT_THROW(EquationSolver(MPI_COMM_WORLD, options), SlicErrorException);
+  options.linear_solver = static_cast<LinearSolver>(-7);
+  EXPECT_THROW(serac::mfem_ext::buildEquationSolver(nonlin_options, options, MPI_COMM_WORLD), SlicErrorException);
 }
 
 // Only need to test this when AmgX is **not** available
 #ifndef MFEM_USE_AMGX
 TEST(ErrorHandling, EquationSolverAmgxNotAvailable)
 {
-  IterativeSolverOptions options;
-  options.prec = AMGXPrec{};
-  EXPECT_THROW(EquationSolver(MPI_COMM_WORLD, options), SlicErrorException);
+  LinearSolverOptions    options;
+  NonlinearSolverOptions nonlin;
+  options.preconditioner = Preconditioner::AMGX;
+  EXPECT_THROW(serac::mfem_ext::buildEquationSolver(nonlin, options, MPI_COMM_WORLD), SlicErrorException);
 }
 #endif
 

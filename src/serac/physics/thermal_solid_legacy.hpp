@@ -294,15 +294,6 @@ public:
   void setVelocity(mfem::VectorCoefficient& velo_state) { solid_solver_.setVelocity(velo_state); };
 
   /**
-   * @brief Set the coupling scheme between the thermal and structural solvers
-   *
-   * Note that only operator split coupling is currently implemented.
-   *
-   * @param[in] coupling The coupling scheme
-   */
-  void setCouplingScheme(serac::CouplingScheme coupling) { coupling_ = coupling; };
-
-  /**
    * @brief Complete the initialization and allocation of the data structures.
    *
    * This must be called before StaticSolve() or AdvanceTimestep(). If allow_dynamic
@@ -368,11 +359,6 @@ protected:
    * @brief The displacement finite element state
    */
   const serac::FiniteElementState& displacement_;
-
-  /**
-   * @brief The coupling strategy
-   */
-  serac::CouplingScheme coupling_;
 };
 
 }  // namespace serac

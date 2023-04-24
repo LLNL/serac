@@ -100,7 +100,7 @@ public:
      * @brief The options for the included nonlinear solve
      *
      */
-    IterativeNonlinearSolverOptions H_nonlin_options;
+    NonlinearSolverOptions H_nonlin_options;
 
     /**
      * @brief The optional parameters for dynamic problems
@@ -587,7 +587,7 @@ protected:
   /**
    * @brief Nonlinear system solver instance
    */
-  mfem_ext::EquationSolver nonlin_solver_;
+  std::unique_ptr<mfem_ext::EquationSolver> nonlin_solver_;
 
   /**
    * @brief the system of ordinary differential equations for the physics module

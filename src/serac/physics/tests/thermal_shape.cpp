@@ -45,11 +45,11 @@ TEST(HeatTransfer, MoveShape)
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
-  auto options = heat_transfer::default_static_options;
+  auto options = heat_transfer::default_nonlinear_options;
 
   // Use tight tolerances as this is a machine precision test
-  options.nonlinear.abs_tol = 1.0e-14;
-  options.nonlinear.rel_tol = 1.0e-14;
+  options.absolute_tol = 1.0e-14;
+  options.relative_tol = 1.0e-14;
 
   // Define an anisotropic conductor material model
   tensor<double, 2, 2>                cond{{{5.0, 0.4}, {0.4, 1.0}}};
@@ -70,8 +70,11 @@ TEST(HeatTransfer, MoveShape)
   auto zero = [](const mfem::Vector&, double) -> double { return 0.0; };
 
   {
+    auto solver = serac::mfem_ext::buildEquationSolver(options, heat_transfer::default_linear_options);
+
     // Construct a functional-based thermal solver including references to the shape displacement field.
-    HeatTransfer<p, dim> thermal_solver(options, "thermal_shape");
+    HeatTransfer<p, dim> thermal_solver(std::move(solver), TimesteppingOptions{TimestepMethod::QuasiStatic},
+                                        "thermal_shape");
 
     // Set the initial temperature and boundary condition
     thermal_solver.setTemperatureBCs(ess_bdr, zero);
@@ -114,8 +117,11 @@ TEST(HeatTransfer, MoveShape)
     auto* mesh_nodes = StateManager::mesh().GetNodes();
     *mesh_nodes += user_defined_shape_displacement.gridFunction();
 
+    auto solver = serac::mfem_ext::buildEquationSolver(options, heat_transfer::default_linear_options);
+
     // Construct a functional-based thermal solver including references to the shape displacement field.
-    HeatTransfer<p, dim> thermal_solver_no_shape(options, "thermal_pure");
+    HeatTransfer<p, dim> thermal_solver_no_shape(std::move(solver), TimesteppingOptions{TimestepMethod::QuasiStatic},
+                                                 "thermal_pure");
 
     // Set the initial temperature and boundary condition
     thermal_solver_no_shape.setTemperatureBCs(ess_bdr, zero);
