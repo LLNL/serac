@@ -176,7 +176,8 @@ public:
    */
   static NonlinearSolverOptions defaultNonlinearOptions()
   {
-    return {.relative_tol = 1.0e-4, .absolute_tol = 1.0e-8, .max_iterations = 500, .print_level = 1};
+    return NonlinearSolverOptions{
+        .relative_tol = 1.0e-4, .absolute_tol = 1.0e-8, .max_iterations = 500, .print_level = 1};
   }
 
   /**
