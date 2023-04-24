@@ -121,8 +121,8 @@ public:
                 .order = order, .vector_dim = dim, .name = detail::addPrefix(name, "displacement")},
             sidre_datacoll_id_)),
         adjoint_displacement_(
-            StateManager::newState(FiniteElementState::Options{.order      = ORDER,
-                                                               .vector_dim = DIM,
+            StateManager::newState(FiniteElementState::Options{.order      = order,
+                                                               .vector_dim = dim,
                                                                .name = detail::addPrefix(name, "adjoint_displacement")},
                                    sidre_datacoll_id_)),
         reactions_(StateManager::newDual(displacement_.space(), detail::addPrefix(name, "reactions"))),
