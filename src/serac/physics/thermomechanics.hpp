@@ -33,8 +33,10 @@ public:
   /**
    * @brief Construct a new coupled Thermal-SolidMechanics Functional object
    *
-   * @param thermal_options The options for the linear, nonlinear, and ODE solves of the thermal operator
-   * @param solid_options The options for the linear, nonlinear, and ODE solves of the thermal operator
+   * @param thermal_solver The nonlinear equation solver for the heat conduction equations
+   * @param thermal_timestepping The timestepping options for the thermal solver
+   * @param solid_solver The nonlinear equation solver for the solid mechanics equations
+   * @param solid_timestepping The timestepping options for the solid solver
    * @param geom_nonlin Flag to include geometric nonlinearities
    * @param name An optional name for the physics module instance
    * @param pmesh The mesh to conduct the simulation on, if different than the default mesh

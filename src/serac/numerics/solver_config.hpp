@@ -157,6 +157,9 @@ struct AMGXOptions {
   bool verbose = false;
 };
 
+/**
+ * @brief The type of preconditioner to be used
+ */
 enum class Preconditioner
 {
   HypreJacobi,      /**< Hypre-based Jacobi */

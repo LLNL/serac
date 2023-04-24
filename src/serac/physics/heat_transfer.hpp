@@ -50,6 +50,9 @@ const NonlinearSolverOptions default_nonlinear_options = {
 const TimesteppingOptions default_dynamic_options = {TimestepMethod::BackwardEuler,
                                                      DirichletEnforcementMethod::RateControl};
 
+/**
+ * @brief Reasonable defaults for static thermal conduction simulations
+ */
 const TimesteppingOptions default_static_options = {TimestepMethod::QuasiStatic};
 
 }  // namespace heat_transfer
@@ -88,7 +91,8 @@ public:
   /**
    * @brief Construct a new Thermal Functional Solver object
    *
-   * @param[in] options The system linear and nonlinear solver and timestepping parameters
+   * @param[in] solver The nonlinear equation solver for the heat conduction equations
+   * @param[in] dynamic_opts The timestepping options for the heat conduction ordinary differential equations
    * @param[in] name An optional name for the physics module instance
    * used by an underlying material model or load
    * @param[in] pmesh The mesh to conduct the simulation on, if different than the default mesh

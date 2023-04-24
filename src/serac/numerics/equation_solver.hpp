@@ -137,7 +137,7 @@ public:
   /**
    * @brief Constructs a wrapper over an mfem::SuperLUSolver
    * @param[in] comm The MPI communicator used by the vectors and matrices in the solve
-   * @param[in] options The direct solver configuration parameters struct
+   * @param[in] print_level The verbosity level for the mfem::SuperLUSolver
    */
   SuperLUSolver(int print_level, MPI_Comm comm) : superlu_solver_(comm)
   {

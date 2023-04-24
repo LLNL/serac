@@ -49,8 +49,14 @@ const LinearSolverOptions direct_linear_options = {.linear_solver = LinearSolver
 const NonlinearSolverOptions default_nonlinear_options = {
     .relative_tol = 1.0e-4, .absolute_tol = 1.0e-8, .max_iterations = 10, .print_level = 1};
 
+/**
+ * @brief default quasistatic timestepping options for solid mechanics
+ */
 const TimesteppingOptions default_quasistatic_options = {TimestepMethod::QuasiStatic};
 
+/**
+ * @brief default implicit dynamic timestepping options for solid mechanics
+ */
 const TimesteppingOptions default_dynamic_options = {TimestepMethod::Newmark, DirichletEnforcementMethod::RateControl};
 
 }  // namespace solid_mechanics
@@ -92,7 +98,8 @@ public:
   /**
    * @brief Construct a new SolidMechanics Functional object
    *
-   * @param options The options for the linear, nonlinear, and ODE solves
+   * @param solver The nonlinear equation solver for the implicit solid mechanics equations
+   * @param dynamic_opts The timestepping options for the solid mechanics time evolution operator
    * @param geom_nonlin Flag to include geometric nonlinearities
    * @param name An optional name for the physics module instance
    * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
