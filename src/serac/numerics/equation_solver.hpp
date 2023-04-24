@@ -223,6 +223,7 @@ std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLin
 std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner, int print_level = 0,
                                                   MPI_Comm comm = MPI_COMM_WORLD);
 
+#ifdef MFEM_USE_AMGX
 /**
  * @brief Build an AMGX preconditioner
  *
@@ -231,7 +232,7 @@ std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner,
  * @return The constructed AMGX preconditioner
  */
 std::unique_ptr<mfem::AmgXSolver> buildAMGX(const AMGXOptions& options, const MPI_Comm comm);
-
+#endif
 }  // namespace serac::mfem_ext
 
 /**

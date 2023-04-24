@@ -156,9 +156,9 @@ std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLin
   return {std::move(iter_lin_solver), std::move(preconditioner)};
 }
 
+#ifdef MFEM_USE_AMGX
 std::unique_ptr<mfem::AmgXSolver> buildAMGX(const AMGXOptions& options, const MPI_Comm comm)
 {
-#ifdef MFEM_USE_AMGX
   auto          amgx = std::make_unique<mfem::AmgXSolver>();
   conduit::Node options_node;
   options_node["config_version"] = 2;
@@ -208,13 +208,11 @@ std::unique_ptr<mfem::AmgXSolver> buildAMGX(const AMGXOptions& options, const MP
   amgx->InitExclusiveGPU(comm);
 
   return amgx;
-#else
-  SLIC_ERROR_ROOT("AMGX requested in non-GPU build.");
-  return nullptr;
-#endif
 }
+#endif
 
-std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner, int print_level, MPI_Comm comm)
+std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner, int print_level,
+                                                  [[maybe_unused]] MPI_Comm comm)
 {
   std::unique_ptr<mfem::Solver> preconditioner_ptr;
 
