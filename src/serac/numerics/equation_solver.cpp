@@ -20,64 +20,6 @@ EquationSolver::EquationSolver(std::unique_ptr<mfem::NewtonSolver> nonlinear_sol
   preconditioner_ = std::move(preconditioner);
 }
 
-namespace detail {
-#ifdef MFEM_USE_AMGX
-std::unique_ptr<mfem::AmgXSolver> configureAMGX(const MPI_Comm comm, const AMGXPrec& options)
-{
-  auto          amgx = std::make_unique<mfem::AmgXSolver>();
-  conduit::Node options_node;
-  options_node["config_version"] = 2;
-  auto& solver_options           = options_node["solver"];
-  solver_options["solver"]       = "AMG";
-  solver_options["presweeps"]    = 1;
-  solver_options["postsweeps"]   = 2;
-  solver_options["interpolator"] = "D2";
-  solver_options["max_iters"]    = 2;
-  solver_options["convergence"]  = "ABSOLUTE";
-  solver_options["cycle"]        = "V";
-
-  if (options.verbose) {
-    options_node["solver/obtain_timings"]    = 1;
-    options_node["solver/monitor_residual"]  = 1;
-    options_node["solver/print_solve_stats"] = 1;
-  }
-
-  // TODO: Use magic_enum here when we can switch to GCC 9+
-  // This is an immediately-invoked lambda so that the map
-  // can be const without needed to initialize all the values
-  // in the constructor
-  static const auto solver_names = []() {
-    std::unordered_map<AMGXSolver, std::string> names;
-    names[AMGXSolver::AMG]             = "AMG";
-    names[AMGXSolver::PCGF]            = "PCGF";
-    names[AMGXSolver::CG]              = "CG";
-    names[AMGXSolver::PCG]             = "PCG";
-    names[AMGXSolver::PBICGSTAB]       = "PBICGSTAB";
-    names[AMGXSolver::BICGSTAB]        = "BICGSTAB";
-    names[AMGXSolver::FGMRES]          = "FGMRES";
-    names[AMGXSolver::JACOBI_L1]       = "JACOBI_L1";
-    names[AMGXSolver::GS]              = "GS";
-    names[AMGXSolver::POLYNOMIAL]      = "POLYNOMIAL";
-    names[AMGXSolver::KPZ_POLYNOMIAL]  = "KPZ_POLYNOMIAL";
-    names[AMGXSolver::BLOCK_JACOBI]    = "BLOCK_JACOBI";
-    names[AMGXSolver::MULTICOLOR_GS]   = "MULTICOLOR_GS";
-    names[AMGXSolver::MULTICOLOR_DILU] = "MULTICOLOR_DILU";
-    return names;
-  }();
-
-  options_node["solver/solver"]   = solver_names.at(options.solver);
-  options_node["solver/smoother"] = solver_names.at(options.smoother);
-
-  // Treat the string as the config (not a filename)
-  amgx->ReadParameters(options_node.to_json(), mfem::AmgXSolver::INTERNAL);
-  amgx->InitExclusiveGPU(comm);
-
-  return amgx;
-}
-
-#endif
-}  // namespace detail
-
 void EquationSolver::SetOperator(const mfem::Operator& op)
 {
   nonlin_solver_->SetOperator(op);
@@ -205,7 +147,7 @@ std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLin
   iter_lin_solver->SetMaxIter(linear_opts.max_iterations);
   iter_lin_solver->SetPrintLevel(linear_opts.print_level);
 
-  auto preconditioner = buildPreconditioner(linear_opts.preconditioner, linear_opts.preconditioner_print_level);
+  auto preconditioner = buildPreconditioner(linear_opts.preconditioner, linear_opts.preconditioner_print_level, comm);
 
   if (preconditioner) {
     iter_lin_solver->SetPreconditioner(*preconditioner);
@@ -214,9 +156,9 @@ std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLin
   return {std::move(iter_lin_solver), std::move(preconditioner)};
 }
 
-#ifdef MFEM_USE_AMGX
-std::unique_ptr<mfem::AmgXSolver> buildAMGX(const MPI_Comm comm, const AMGXPrec& options)
+std::unique_ptr<mfem::AmgXSolver> buildAMGX(const AMGXOptions& options, const MPI_Comm comm)
 {
+#ifdef MFEM_USE_AMGX
   auto          amgx = std::make_unique<mfem::AmgXSolver>();
   conduit::Node options_node;
   options_node["config_version"] = 2;
@@ -266,11 +208,13 @@ std::unique_ptr<mfem::AmgXSolver> buildAMGX(const MPI_Comm comm, const AMGXPrec&
   amgx->InitExclusiveGPU(comm);
 
   return amgx;
+#else
+  SLIC_ERROR_ROOT("AMGX requested in non-GPU build.");
+  return nullptr;
+#endif
 }
 
-#endif
-
-std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner, int print_level)
+std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner, int print_level, MPI_Comm comm)
 {
   std::unique_ptr<mfem::Solver> preconditioner_ptr;
 
@@ -293,7 +237,7 @@ std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner,
     preconditioner_ptr = std::move(gs_preconditioner);
   } else if (preconditioner == Preconditioner::AMGX) {
 #ifdef MFEM_USE_AMGX
-    preconditioner = detail::buildAMGX(comm, AMGXOptions{});
+    preconditioner_ptr = buildAMGX(AMGXOptions{}, comm);
 #else
     SLIC_ERROR_ROOT("AMGX requested in non-GPU build");
 #endif

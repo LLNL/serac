@@ -217,9 +217,20 @@ std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLin
  *
  * @param preconditioner The preconditioner type to be built
  * @param print_level The print level for the constructed preconditioner
+ * @param comm The communicator for the underlying operator and HypreParVectors
  * @return A constructed preconditioner based on the input option
  */
-std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner, int print_level = 0);
+std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner, int print_level = 0,
+                                                  MPI_Comm comm = MPI_COMM_WORLD);
+
+/**
+ * @brief Build an AMGX preconditioner
+ *
+ * @param options The options used to construct the AMGX preconditioner
+ * @param comm The communicator for the underlying operator and HypreParVectors
+ * @return The constructed AMGX preconditioner
+ */
+std::unique_ptr<mfem::AmgXSolver> buildAMGX(const AMGXOptions& options, const MPI_Comm comm);
 
 }  // namespace serac::mfem_ext
 
