@@ -231,7 +231,7 @@ int main(int argc, char* argv[])
 This Serac driver does not
 currently work due to missing
 input file functionality.
-******************************)PREFIX"; 
+******************************)PREFIX";
   SLIC_INFO(warning_message);
 
   // Handle Command line
