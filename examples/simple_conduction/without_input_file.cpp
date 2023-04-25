@@ -39,7 +39,10 @@ int main(int argc, char* argv[])
 
   // _create_module_start
   // Create a Heat Transfer class instance with Order 2 and Dimensions of 3
-  serac::HeatTransfer<2, 3> heat_transfer(serac::heat_transfer::default_static_options);
+  constexpr int order = 1;
+  constexpr int dim   = 2;
+
+  serac::HeatTransfer<order, dim> heat_transfer(serac::heat_transfer::default_static_options);
   // _create_module_end
 /*
   // _conductivity_start
