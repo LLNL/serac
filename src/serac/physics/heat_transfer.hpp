@@ -126,8 +126,9 @@ public:
              {.time = ode_time_point_, .u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
              nonlin_solver_, bcs_)
   {
-    SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
-                       axom::fmt::format("Compile time class dimension template parameter and runtime mesh dimension do not match"));
+    SLIC_ERROR_ROOT_IF(
+        mesh_.Dimension() != dim,
+        axom::fmt::format("Compile time class dimension template parameter and runtime mesh dimension do not match"));
 
     states_.push_back(&temperature_);
     states_.push_back(&adjoint_temperature_);
