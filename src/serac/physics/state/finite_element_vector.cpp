@@ -30,7 +30,9 @@ FiniteElementVector::FiniteElementVector(mfem::ParMesh& mesh, FiniteElementVecto
                            axom::fmt::format("Vector dim >1 requested for an HDIV basis function."));
       break;
     case ElementType::L2:
-      coll_ = std::make_unique<mfem::L2_FECollection>(options.order, dim);
+      // Note that we use Gauss-Lobatto basis functions as this is what serac::Functional uses for finite element
+      // integrals
+      coll_ = std::make_unique<mfem::L2_FECollection>(options.order, dim, mfem::BasisType::GaussLobatto);
       break;
     default:
       SLIC_ERROR_ROOT(axom::fmt::format("Finite element vector requested for unavailable basis type."));

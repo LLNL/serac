@@ -42,9 +42,9 @@ set(infrastructure_sources
     terminator.cpp
     )
 
-set(infrastructure_depends axom fmt cli11 mfem)
-blt_list_append( TO infrastructure_depends ELEMENTS caliper adiak IF ${SERAC_ENABLE_PROFILING} )
-# adiak depends on mpi
+set(infrastructure_depends axom axom::fmt axom::cli11 mfem)
+blt_list_append(TO infrastructure_depends ELEMENTS caliper adiak IF SERAC_ENABLE_PROFILING)
+blt_list_append(TO infrastructure_depends ELEMENTS cuda IF ENABLE_CUDA)
 list(APPEND infrastructure_depends mpi)
 
 blt_add_library(
@@ -53,6 +53,9 @@ blt_add_library(
     SOURCES     ${infrastructure_sources}
     DEPENDS_ON  ${infrastructure_depends}
     )
+
+# Set file back to C++ due to nvcc compiler error
+set_source_files_properties(input.cpp PROPERTIES LANGUAGE CXX)
 
 target_include_directories(serac_infrastructure PUBLIC 
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../..>

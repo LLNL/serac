@@ -522,18 +522,29 @@ public:
   /**
    * @brief Solve the adjoint problem
    * @pre It is expected that the forward analysis is complete and the current temperature state is valid
-   * @note If the essential boundary state is not specified, homogeneous essential boundary conditions are applied
+   * @pre The adjoint load maps are expected to contain a single entry named "temperature"
+   * @note If the essential boundary dual is not specified, homogeneous essential boundary conditions are applied to
+   * the adjoint system
    *
-   * @param[in] adjoint_load The dual state that contains the right hand side of the adjoint system (d quantity of
-   * interest/d temperature)
-   * @param[in] dual_with_essential_boundary A optional finite element dual containing the non-homogenous essential
-   * boundary condition data for the adjoint problem
-   * @return The computed adjoint finite element state
+   * @param adjoint_loads An unordered map containing finite element duals representing the RHS of the adjoint equations
+   * indexed by their name
+   * @param adjoint_with_essential_boundary An unordered map containing finite element states representing the
+   * non-homogeneous essential boundary condition data for the adjoint problem indexed by their name
+   * @return An unordered map of the adjoint solutions indexed by their name. It has a single entry named
+   * "adjoint_temperature"
    */
-  virtual const serac::FiniteElementState& solveAdjoint(
-      FiniteElementDual& adjoint_load, FiniteElementDual* dual_with_essential_boundary = nullptr) override
+  const std::unordered_map<std::string, const serac::FiniteElementState&> solveAdjoint(
+      std::unordered_map<std::string, const serac::FiniteElementDual&>  adjoint_loads,
+      std::unordered_map<std::string, const serac::FiniteElementState&> adjoint_with_essential_boundary = {}) override
   {
-    mfem::HypreParVector adjoint_load_vector(adjoint_load);
+    SLIC_ERROR_ROOT_IF(adjoint_loads.size() != 1,
+                       "Adjoint load container is not the expected size of 1 in the heat transfer module.");
+
+    auto temp_adjoint_load = adjoint_loads.find("temperature");
+
+    SLIC_ERROR_ROOT_IF(temp_adjoint_load == adjoint_loads.end(), "Adjoint load for \"temperature\" not found.");
+
+    mfem::HypreParVector adjoint_load_vector(temp_adjoint_load->second);
 
     // Add the sign correction to move the term to the RHS
     adjoint_load_vector *= -1.0;
@@ -541,7 +552,7 @@ public:
     auto& lin_solver = nonlin_solver_.LinearSolver();
 
     // By default, use a homogeneous essential boundary condition
-    mfem::HypreParVector adjoint_essential(adjoint_load);
+    mfem::HypreParVector adjoint_essential(temp_adjoint_load->second);
     adjoint_essential = 0.0;
 
     auto [r, drdu] = (*residual_)(differentiate_wrt(temperature_), zero_, shape_displacement_,
@@ -550,8 +561,16 @@ public:
     auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
     // If we have a non-homogeneous essential boundary condition, extract it from the given state
-    if (dual_with_essential_boundary) {
-      adjoint_essential = *dual_with_essential_boundary;
+    auto essential_adjoint_temp = adjoint_with_essential_boundary.find("temperature");
+
+    if (essential_adjoint_temp != adjoint_with_essential_boundary.end()) {
+      adjoint_essential = essential_adjoint_temp->second;
+    } else {
+      // If the essential adjoint load container does not have a temperature dual but it has a non-zero size, the
+      // user has supplied an incorrectly-named dual vector.
+      SLIC_ERROR_IF(adjoint_with_essential_boundary.size() != 0,
+                    "Essential adjoint boundary condition given for an unexpected primal field. Expected adjoint "
+                    "boundary condition named \"temperature\".");
     }
 
     for (const auto& bc : bcs_.essentials()) {
@@ -564,7 +583,7 @@ public:
     // Reset the equation solver to use the full nonlinear residual operator
     nonlin_solver_.SetOperator(residual_with_bcs_);
 
-    return adjoint_temperature_;
+    return {{"adjoint_temperature", adjoint_temperature_}};
   }
 
   /**

@@ -17,23 +17,22 @@ import sys, os
 read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
 if read_the_docs_build:
 
-    # Makes sure directory exists for doxygen output
-    cwd=os.getcwd()
-    buildpath=os.path.join(cwd,"_build")
-    if (os.path.isdir(buildpath) == 0):
-        os.mkdir(buildpath)
-    htmlpath=os.path.join(buildpath,"html")
-    if (os.path.isdir(htmlpath) == 0):
-        os.mkdir(htmlpath)
-
     # Modify Doxyfile for ReadTheDocs compatibility
     with open('./doxygen/Doxyfile.in', 'r') as f:
         fdata = f.read()
     fdata = fdata.replace('@PROJECT_SOURCE_DIR@', os.path.abspath('../..'))
     with open('./doxygen/Doxyfile.in', 'w') as f:
         f.write(fdata)
+
+    if 'READTHEDOCS_OUTPUT' in os.environ:
+        _output_dir = os.environ.get('READTHEDOCS_OUTPUT')
+    else:
+        print("ERROR: Could not determine READTHEDOCS_OUTPUT from environment")
+        sys.exit(1)
+    _doxygen_output_dir = os.path.join(_output_dir, "html", "doxygen")
+    os.makedirs(_doxygen_output_dir, exist_ok=True)
     with open('./doxygen/Doxyfile.in', 'a') as f:
-        f.write("\nOUTPUT_DIRECTORY=./_build/html/doxygen")
+        f.write("\nOUTPUT_DIRECTORY={0}".format(_doxygen_output_dir))
 
     # Call doxygen
     from subprocess import call

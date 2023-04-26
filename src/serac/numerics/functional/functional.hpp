@@ -138,7 +138,8 @@ generateParFiniteElementSpace(mfem::ParMesh* mesh)
       fec = std::make_unique<mfem::RT_FECollection>(function_space::order, dim);
       break;
     case Family::L2:
-      fec = std::make_unique<mfem::L2_FECollection>(function_space::order, dim);
+      // We use GaussLobatto basis functions as this is what is used for the serac::Functional FE kernels
+      fec = std::make_unique<mfem::L2_FECollection>(function_space::order, dim, mfem::BasisType::GaussLobatto);
       break;
     default:
       return std::pair<std::unique_ptr<mfem::ParFiniteElementSpace>, std::unique_ptr<mfem::FiniteElementCollection>>(
