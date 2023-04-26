@@ -47,16 +47,12 @@ const LinearSolverOptions direct_linear_options = {.linear_solver = LinearSolver
  * solid mechanics simulations
  */
 const NonlinearSolverOptions default_nonlinear_options = {
-    .relative_tol = 1.0e-4, .absolute_tol = 1.0e-8, .max_iterations = 10, .print_level = 1};
+    .nonlin_solver = NonlinearSolver::Newton, .relative_tol = 1.0e-4, .absolute_tol = 1.0e-8, .max_iterations = 10, .print_level = 1};
 
-/**
- * @brief default quasistatic timestepping options for solid mechanics
- */
+/// default quasistatic timestepping options for solid mechanics
 const TimesteppingOptions default_quasistatic_options = {TimestepMethod::QuasiStatic};
 
-/**
- * @brief default implicit dynamic timestepping options for solid mechanics
- */
+/// default implicit dynamic timestepping options for solid mechanics
 const TimesteppingOptions default_dynamic_options = {TimestepMethod::Newmark, DirichletEnforcementMethod::RateControl};
 
 }  // namespace solid_mechanics
@@ -653,14 +649,16 @@ public:
   {
     time_ += dt;
 
+    // Set the essential boundary conditions for the current time
+    for (auto& bc : bcs_.essentials()) {
+      bc.setDofs(du_, time_);
+    }
+
     // the ~20 lines of code below are essentially equivalent to the 1-liner
     // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
     auto* lin_solver = nonlin_solver_->LinearSolver();
     if (lin_solver) {
       du_ = 0.0;
-      for (auto& bc : bcs_.essentials()) {
-        bc.setDofs(du_, time_);
-      }
 
       auto& constrained_dofs = bcs_.allEssentialTrueDofs();
       for (int i = 0; i < constrained_dofs.Size(); i++) {

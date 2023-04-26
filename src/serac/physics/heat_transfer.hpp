@@ -42,7 +42,7 @@ const LinearSolverOptions direct_linear_options = {.linear_solver = LinearSolver
  * @brief Reasonable defaults for most thermal nonlinear solver options
  */
 const NonlinearSolverOptions default_nonlinear_options = {
-    .relative_tol = 1.0e-4, .absolute_tol = 1.0e-8, .max_iterations = 500, .print_level = 1};
+    .nonlin_solver = NonlinearSolver::Newton, .relative_tol = 1.0e-4, .absolute_tol = 1.0e-8, .max_iterations = 500, .print_level = 1};
 
 /**
  * @brief Reasonable defaults for dynamic thermal conduction simulations
