@@ -150,7 +150,7 @@ struct AMGXOptions {
   /**
    * @brief The smoother algorithm
    */
-  AMGXSolver smoother = AMGXSolver::BLOCK_JACOBI;
+  AMGXSolver smoother = AMGXSolver::JACOBI_L1;
   /**
    * @brief Whether to display statistics from AMGX
    */
