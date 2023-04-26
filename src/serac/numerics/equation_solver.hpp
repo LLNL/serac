@@ -221,7 +221,7 @@ std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLin
  * @return A constructed preconditioner based on the input option
  */
 std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner, int print_level = 0,
-                                                  MPI_Comm comm = MPI_COMM_WORLD);
+                                                  [[maybe_unused]] MPI_Comm comm = MPI_COMM_WORLD);
 
 #ifdef MFEM_USE_AMGX
 /**

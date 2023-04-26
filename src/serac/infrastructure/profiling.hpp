@@ -159,7 +159,7 @@ namespace serac::profiling {
  * @param options The Caliper ConfigManager config string, optional
  * @see https://software.llnl.gov/Caliper/ConfigManagerAPI.html#configmanager-configuration-string-syntax
  */
-void initialize(MPI_Comm comm = MPI_COMM_WORLD, std::string options = "");
+void initialize([[maybe_unused]] MPI_Comm comm = MPI_COMM_WORLD, [[maybe_unused]] std::string options = "");
 
 /**
  * @brief Concludes performance monitoring and writes collected data to a file
