@@ -162,7 +162,7 @@ void evaluation_kernel_impl(FunctionSignature<test(trials...)>, const std::vecto
       if constexpr (std::is_same_v<state_type, Nothing>) {
         return batch_apply_qf_no_qdata(qf, x_e, get<indices>(qf_inputs)...);
       } else {
-        return batch_apply_qf(qf, x_e, qf_state + e * qpts_per_elem, update_state, get<indices>(qf_inputs)...);
+        return batch_apply_qf(qf, x_e, qf_state(e, 0), update_state, get<indices>(qf_inputs)...);
       }
     }();
 

@@ -243,6 +243,7 @@ public:
 
       input_L_[i].SetSize(P_trial_[i]->Height(), mfem::Device::GetMemoryType());
 
+      // L->E
       for (auto type : {Integral::Type::Domain, Integral::Type::Boundary}) {
         if (type == Integral::Type::Domain) {
           G_trial_[type][i] = BlockElementRestriction(trial_fes[i]);

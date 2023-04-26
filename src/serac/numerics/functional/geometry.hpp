@@ -1,8 +1,8 @@
 #pragma once
 
+#include "mfem.hpp"
+
 namespace serac {
-
-
 
 /**
  * @brief Compile-time alias for a dimension
