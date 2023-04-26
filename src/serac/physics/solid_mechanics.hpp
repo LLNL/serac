@@ -649,31 +649,44 @@ public:
   {
     time_ += dt;
 
-    // Set the essential boundary conditions for the current time
-    for (auto& bc : bcs_.essentials()) {
-      bc.setDofs(du_, time_);
-    }
-
-    // the ~20 lines of code below are essentially equivalent to the 1-liner
-    // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
     auto* lin_solver = nonlin_solver_->LinearSolver();
-    if (lin_solver) {
-      du_ = 0.0;
 
+    // If we have an associated linear solver, we can improve our initial guess
+    // by applying the reaction forces associated with the change in essential degrees of freedom
+    // as a first pass.
+    if (lin_solver) {
+      // the ~20 lines of code below are essentially equivalent to the 1-liner
+      // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
+
+      // Set the essential boundary conditions for the current time
+      for (auto& bc : bcs_.essentials()) {
+        bc.setDofs(du_, time_);
+      }
+
+      // Compute the change in essential boundary condition dofs and store it in du_
       auto& constrained_dofs = bcs_.allEssentialTrueDofs();
       for (int i = 0; i < constrained_dofs.Size(); i++) {
         int j = constrained_dofs[i];
         du_[j] -= displacement_(j);
       }
 
+      // Compute the reaction forces associated with this change in essential boundary condition
       dr_ = 0.0;
       mfem::EliminateBC(*J_, *J_e_, constrained_dofs, du_, dr_);
 
       lin_solver->SetOperator(*J_);
 
+      // Solve for the updated displacement due to these reaction forces
       lin_solver->Mult(dr_, du_);
 
+      // Modify our initial guess with the displacement due to the reaction forces
       displacement_ += du_;
+    } else {
+      // Otherwise, we just apply the essential boundary conditions
+      // and hope that the nonlinear solver can handle the change
+      for (auto& bc : bcs_.essentials()) {
+        bc.setDofs(displacement_, time_);
+      }      
     }
 
     nonlin_solver_->Mult(zero_, displacement_);
