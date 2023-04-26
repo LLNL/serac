@@ -150,7 +150,7 @@ struct AMGXOptions {
   /**
    * @brief The smoother algorithm
    */
-  AMGXSolver smoother = AMGXSolver::BLOCK_JACOBI;
+  AMGXSolver smoother = AMGXSolver::JACOBI_L1;
   /**
    * @brief Whether to display statistics from AMGX
    */
@@ -205,7 +205,7 @@ struct LinearSolverOptions {
   int print_level = 0;
 
   /**
-   * @brief Deubbing print level for the preconditioner
+   * @brief Debugging print level for the preconditioner
    */
   int preconditioner_print_level = 0;
 };

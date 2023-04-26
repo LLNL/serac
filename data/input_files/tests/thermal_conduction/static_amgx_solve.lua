@@ -24,7 +24,7 @@ thermal_conduction = {
                 abs_tol     = 1.0e-12,
                 max_iter    = 200,
                 print_level = 0,
-                solver_type = "cg",
+                solver_type = "gmres",
                 prec_type   = "AMGX",
             },
         },
