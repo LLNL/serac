@@ -205,7 +205,7 @@ struct LinearSolverOptions {
   int print_level = 0;
 
   /**
-   * @brief Deubbing print level for the preconditioner
+   * @brief Debugging print level for the preconditioner
    */
   int preconditioner_print_level = 0;
 };
