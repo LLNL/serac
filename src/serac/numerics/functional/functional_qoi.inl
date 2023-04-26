@@ -446,59 +446,6 @@ private:
 
       }
 
-
-#if 0
-      if (form_.integrals_.size() > 0) {
-        auto& K_elem = form_.element_gradients_[which_argument];
-
-        detail::zero_out(K_elem);
-        for (auto& domain : form_.domain_integrals_) {
-          domain.ComputeElementGradients(view(K_elem), which_argument);
-        }
-
-        auto& restriction         = form_.G_trial_[which_argument];
-        auto  num_elements        = restriction.num_elements;
-        auto  nodes_per_element   = restriction.nodes_per_elem;
-        auto  components_per_node = restriction.components;
-
-        for (uint32_t e = 0; e < num_elements; e++) {
-          for (uint64_t j = 0; j < nodes_per_element; j++) {
-            auto dof = restriction.dof_info(e, j);
-            for (uint64_t l = 0; l < components_per_node; l++) {
-              int32_t  global_id = int(restriction.GetVDof(dof, l).index());
-              uint32_t local_id  = uint32_t(l * nodes_per_element + j);
-              gradient_L_(global_id) += dof.sign() * K_elem(e, 0, local_id);
-            }
-          }
-        }
-      }
-
-      if (form_.bdr_integrals_.size() > 0) {
-        auto& K_belem = form_.bdr_element_gradients_[which_argument];
-
-        detail::zero_out(K_belem);
-        for (auto& boundary : form_.bdr_integrals_) {
-          boundary.ComputeElementGradients(view(K_belem), which_argument);
-        }
-
-        auto& restriction         = form_.G_trial_boundary_[which_argument];
-        auto  num_elements        = restriction.num_elements;
-        auto  nodes_per_element   = restriction.nodes_per_elem;
-        auto  components_per_node = restriction.components;
-
-        for (uint32_t e = 0; e < num_elements; e++) {
-          for (uint64_t j = 0; j < nodes_per_element; j++) {
-            auto dof = restriction.dof_info(e, j);
-            for (uint64_t l = 0; l < components_per_node; l++) {
-              int32_t  global_id = int(restriction.GetVDof(dof, l).index());
-              uint32_t local_id  = uint32_t(l * nodes_per_element + j);
-              gradient_L_(global_id) += dof.sign() * K_belem(e, 0, local_id);
-            }
-          }
-        }
-      }
-#endif
-
       form_.P_trial_[which_argument]->MultTranspose(gradient_L_, *gradient_T);
 
       return gradient_T;
