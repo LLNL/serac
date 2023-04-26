@@ -61,24 +61,6 @@ struct HeatTransferInputOptions {
   double rho;
 
   /**
-   * @brief Reaction function r(T)
-   *
-   */
-  std::function<double(double)> reaction_func;
-
-  /**
-   * @brief Derivative of the reaction function dR(T)/dT
-   *
-   */
-  std::function<double(double)> d_reaction_func;
-
-  /**
-   * @brief The coefficient options for the scaling factor
-   *
-   */
-  std::optional<input::CoefficientInputOptions> reaction_scale_coef;
-
-  /**
    * @brief Source function coefficient
    *
    */

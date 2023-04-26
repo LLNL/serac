@@ -57,13 +57,6 @@ struct SolidMechanicsInputOptions {
   double K;
 
   /**
-   * @brief The linear viscosity coefficient
-   *
-   */
-  // TODO: Move to material options
-  double viscosity;
-
-  /**
    * @brief Initial density
    *
    */

@@ -21,15 +21,6 @@ void HeatTransferInputOptions::defineInputFileSchema(axom::inlet::Container& con
   auto& source = container.addStruct("source", "Scalar source term (RHS of the thermal conduction PDE)");
   serac::input::CoefficientInputOptions::defineInputFileSchema(source);
 
-  auto& reaction_container = container.addStruct("nonlinear_reaction", "Nonlinear reaction term parameters");
-  reaction_container.addFunction("reaction_function", axom::inlet::FunctionTag::Double,
-                                 {axom::inlet::FunctionTag::Double}, "Nonlinear reaction function q = q(temperature)");
-  reaction_container.addFunction("d_reaction_function", axom::inlet::FunctionTag::Double,
-                                 {axom::inlet::FunctionTag::Double},
-                                 "Derivative of the nonlinear reaction function dq = dq / dTemperature");
-  auto& scale_coef_container = reaction_container.addStruct("scale", "Spatially varying scale factor for the reaction");
-  serac::input::CoefficientInputOptions::defineInputFileSchema(scale_coef_container);
-
   auto& equation_solver_container =
       container.addStruct("equation_solver", "Linear and Nonlinear stiffness Solver Parameters.");
   serac::mfem_ext::EquationSolver::DefineInputFileSchema(equation_solver_container);
@@ -82,15 +73,6 @@ serac::HeatTransferInputOptions FromInlet<serac::HeatTransferInputOptions>::oper
     dyn_options.enforcement_method = enforcement_methods.at(enforcement_method);
 
     result.solver_options.dynamic = std::move(dyn_options);
-  }
-
-  if (base.contains("nonlinear_reaction")) {
-    auto reaction          = base["nonlinear_reaction"];
-    result.reaction_func   = reaction["reaction_function"].get<std::function<double(double)>>();
-    result.d_reaction_func = reaction["d_reaction_function"].get<std::function<double(double)>>();
-    if (reaction.contains("scale")) {
-      result.reaction_scale_coef = reaction["scale"].get<serac::input::CoefficientInputOptions>();
-    }
   }
 
   if (base.contains("source")) {

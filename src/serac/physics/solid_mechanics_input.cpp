@@ -27,8 +27,6 @@ void SolidMechanicsInputOptions::defineInputFileSchema(axom::inlet::Container& c
                "Flag to include material nonlinearities (linear elastic vs. neo-Hookean material model).")
       .defaultValue(true);
 
-  container.addDouble("viscosity", "Viscosity constant").defaultValue(0.0);
-
   container.addDouble("density", "Initial mass density").defaultValue(1.0);
 
   auto& equation_solver_container =
@@ -107,8 +105,6 @@ serac::SolidMechanicsInputOptions FromInlet<serac::SolidMechanicsInputOptions>::
     result.boundary_conditions =
         base["boundary_conds"].get<std::unordered_map<std::string, serac::input::BoundaryConditionInputOptions>>();
   }
-
-  result.viscosity = base["viscosity"];
 
   result.initial_mass_density = base["density"];
 

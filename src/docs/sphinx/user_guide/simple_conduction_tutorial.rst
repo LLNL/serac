@@ -10,8 +10,8 @@ Simple Heat Transfer Tutorial
 This tutorial provides an introduction to running simulations with Serac and demonstrates
 the setup of a simple steady-state thermal conduction problem.
 
-The full source code for this tutorial is available in ``examples/simple_conduction/without_input_file.cpp``, which demonstrate Lua and C++ configuration, respectively.
-
+The full source code for this tutorial is available in ``examples/simple_conduction/without_input_file.cpp``, which demonstrates C++ configuration
+of a heat transfer physics module.
 
 The thermal conduction modeled in this section is based on the formulation discussed in :ref:`conduction-theory-label`.
 
@@ -19,8 +19,9 @@ Setting Up Includes and Initializing
 ------------------------------------
 
 The most important parts of Serac are its physics modules, each of which corresponds to a particular discretization
-of a partial differential equation (e.g., continuous vs. discontinuous Galerkin finite element methods).
-In this example, we are building a thermal conduction simulation, so we include Serac's thermal conduction module:
+of a partial differential equation (e.g., continuous Galerkin finite element method for thermal conduction).
+In this example, we are building a heat transfer simulation, so we include Serac's ``HeatTransfer`` module and
+thermal material models:
 
 .. literalinclude:: ../../../../examples/simple_conduction/without_input_file.cpp
    :start-after: _incl_heat_transfer_header_start
@@ -85,15 +86,17 @@ Constructing the Physics Module
    :end-before: _create_module_end
    :language: C++
 
-When using the C++ API, the ``HeatTransfer`` constructor requires the polynomial order of the elements and the
-solver options to be used when inverting the stiffness matrix, in addition to the mesh.  Since we're setting up
-a steady-state simulation, we can just use the ``defaultQuasistaticOptions``.
+When using the C++ API, the ``HeatTransfer`` constructor requires the polynomial order of the elements and the dimension
+of the mesh at compile time, i.e. they are template parameters. We also need to pass the options for solving the nonlinear 
+system of equations and ordinary differential equations arising from the discretization. In this example, we use the default
+static thermal conduction options.
 
 Configuring Material Conductivity
 ---------------------------------
 
-Instead of using a monolithic material model, the ``HeatTransfer`` module currently allows for material parameters
-like conductivity, specific heat capacity, and density to be configured individually.
+We define a material model that includes information needed for the constitutive response needed by the physics solver.
+In this example, we define a linear isotropic conductor with uniform density, heat capacity, and conductivity (kappa).
+That material model is then passed to the ``HeatTransfer`` object. Note that this material model could be user-defined.
 
 .. literalinclude:: ../../../../examples/simple_conduction/without_input_file.cpp
    :start-after: _conductivity_start
