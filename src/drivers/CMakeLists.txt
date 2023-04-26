@@ -14,7 +14,7 @@ if (ENABLE_TESTS)
     set(input_files_dir ${CMAKE_CURRENT_SOURCE_DIR}/../../data/input_files)
 
     # Make sure running serac driver doesn't completely fail
-#TODO: Turn these back on when input files work again
+#TODO: Turn these back on when input files work with the new physics modules
 #    blt_add_test(NAME          serac_driver_default
 #                 COMMAND       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/serac -o default -i ${input_files_dir}/default.lua
 #                 NUM_MPI_TASKS 1 )
