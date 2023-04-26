@@ -141,28 +141,6 @@ SERAC_HOST_DEVICE void Add(const mfem::DeviceTensor<3, double>& r_global, tensor
   }
 }
 
-#if 0
-template <int p, int dim >
-struct QFunctionArgument< H1< p, 1 >, IntegralType::Boundary, Dimension<dim> >{
-  using type = double; 
-};
-template <int p, int c, int dim >
-struct QFunctionArgument< H1< p, c >, IntegralType::Boundary, Dimension<dim> >{
-  using type = tensor<double, c>; 
-};
-
-
-template <int p >
-struct QFunctionArgument< Hcurl< p >, IntegralType::Boundary, Dimension<2> >{
-  using type = tensor< double, 2 >;
-};
-
-template <int p >
-struct QFunctionArgument< Hcurl< p >, IntegralType::Boundary, Dimension<3> >{
-  using type = tensor< double, 3 >;
-};
-#endif
-
 /**
  * @brief a class that provides the lambda argument types for a given integral
  * @tparam trial_space the trial space associated with the integral

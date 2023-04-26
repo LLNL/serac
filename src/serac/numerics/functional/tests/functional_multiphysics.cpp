@@ -40,8 +40,9 @@ TEST(FunctionalMultiphysics, NonlinearThermalTest3D)
 
   mfem::Vector U(fespace.TrueVSize());
   mfem::Vector dU_dt(fespace.TrueVSize());
-  U.Randomize();
-  dU_dt.Randomize();
+  int seed = 0;
+  U.Randomize(seed);
+  dU_dt.Randomize(seed + 1);
 
   // Define the types for the test and trial spaces using the function arguments
   using test_space  = H1<p>;

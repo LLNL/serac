@@ -61,7 +61,7 @@ struct finite_element<mfem::Geometry::CUBE, Hcurl<p>> {
   }();
 
   static constexpr auto nodes = []() {
-    auto legendre_nodes = GaussLegendreNodes<p>();
+    auto legendre_nodes = GaussLegendreNodes<p, mfem::Geometry::SEGMENT>();
     auto lobatto_nodes  = GaussLobattoNodes<p + 1>();
 
     tensor<double, ndof, dim> nodes{};

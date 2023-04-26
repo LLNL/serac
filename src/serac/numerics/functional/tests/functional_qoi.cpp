@@ -234,7 +234,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
       measure.AddDomainIntegral(
           Dimension<dim>{}, DependsOn<>{}, [&](auto /*x*/) { return 1.0; }, mesh);
 
-      constexpr double expected[] = {4.755279810979, 8.0};
+      constexpr double expected[] = {1.0, 16.0};
 
       double relative_error = (measure(U) - expected[dim - 2]) / expected[dim - 2];
       EXPECT_NEAR(0.0, relative_error, 1.0e-10);
@@ -249,7 +249,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
       x_moment.AddDomainIntegral(
           Dimension<dim>{}, DependsOn<>{}, [&](auto x) { return x[0]; }, mesh);
 
-      constexpr double expected[] = {0.00001117269646130209, 32.0};
+      constexpr double expected[] = {0.5, 40.0};
 
       double relative_error = (x_moment(U) - expected[dim - 2]) / expected[dim - 2];
       EXPECT_NEAR(0.0, relative_error, 1.0e-10);
@@ -276,7 +276,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
       sum_of_measures.AddBoundaryIntegral(
           Dimension<dim - 1>{}, DependsOn<>{}, [&](auto /*x*/, auto /*n*/) { return 1.0; }, mesh);
 
-      constexpr double expected[] = {14.75527630972663, 42.0};
+      constexpr double expected[] = {5.0, 64.0};
 
       double relative_error = (sum_of_measures(U) - expected[dim - 2]) / expected[dim - 2];
       EXPECT_NEAR(0.0, relative_error, 1.0e-10);
@@ -303,7 +303,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
           },
           mesh);
 
-      constexpr double expected[] = {9.71388562400895, 2.097457548402147e6};
+      constexpr double expected[] = {4.6640262484879, 192400.1149761554};
 
       double relative_error = (f(U) - expected[dim - 2]) / expected[dim - 2];
 
@@ -374,7 +374,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p1> trial1, H1<p2> trial2, Dimension<dim>)
   // integrates the qoi for these domains to machine precision
   //
   // see scripts/wolfram/qoi_examples.nb for more info
-  constexpr double expected[] = {9.71388562400895, 2.097457548402147e6};
+  constexpr double expected[] = {4.6640262484879, 192400.1149761554};
   double relative_error = (f(U1, U2) - expected[dim - 2]) / expected[dim - 2];
 
   // the tolerance on this one isn't very tight since
@@ -413,7 +413,7 @@ TEST(QoI, DependsOnVectorValuedInput)
   f.AddVolumeIntegral(
       DependsOn<0>{}, [&](auto /*x*/, auto u) { return norm(serac::get<0>(u)); }, mesh);
 
-  double exact_answer   = 512.0 / 3.0;  // \int_0^8 x^2 dx = 512/3
+  double exact_answer   = 141.3333333333333;
   double relative_error = (f(U) - exact_answer) / exact_answer;
   EXPECT_NEAR(0.0, relative_error, 1.0e-10);
 
@@ -547,7 +547,8 @@ TEST(QoI, ShapeAndParameter)
 
   double val = serac_qoi->operator()(*shape, *parameter);
 
-  EXPECT_NEAR(val, 0.8, 1.0e-14);
+  constexpr double expected = 1.6; // volume of 2 2x2x2 cubes == 16, so expected is 0.1 * 16
+  EXPECT_NEAR(val, expected, 1.0e-14);
 }
 
 // clang-format off
@@ -589,11 +590,10 @@ int main(int argc, char* argv[])
   int serial_refinement   = 1;
   int parallel_refinement = 0;
 
-  std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
-  //std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/square.mesh";
+  std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/patch2D_tris_and_quads.mesh";
   mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
 
-  std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+  std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/patch3D_tets_and_hexes.mesh";
   mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
 
   int result = RUN_ALL_TESTS();

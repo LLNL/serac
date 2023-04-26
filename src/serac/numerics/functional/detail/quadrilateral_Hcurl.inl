@@ -62,7 +62,7 @@ struct finite_element<mfem::Geometry::SQUARE, Hcurl<p> > {
   }();
 
   static constexpr auto nodes = [] {
-    auto legendre_nodes = GaussLegendreNodes<p>();
+    auto legendre_nodes = GaussLegendreNodes<p, mfem::Geometry::SEGMENT>();
     auto lobatto_nodes  = GaussLobattoNodes<p + 1>();
 
     tensor<double, ndof, dim> nodes{};
@@ -96,8 +96,8 @@ struct finite_element<mfem::Geometry::SQUARE, Hcurl<p> > {
   template <bool apply_weights, int q>
   static constexpr auto calculate_B1()
   {
-    constexpr auto                  points1D  = GaussLegendreNodes<q>();
-    [[maybe_unused]] constexpr auto weights1D = GaussLegendreWeights<q>();
+    constexpr auto                  points1D  = GaussLegendreNodes<q, mfem::Geometry::SEGMENT>();
+    [[maybe_unused]] constexpr auto weights1D = GaussLegendreWeights<q, mfem::Geometry::SEGMENT>();
     tensor<double, q, p>            B1{};
     for (int i = 0; i < q; i++) {
       B1[i] = GaussLegendreInterpolation<p>(points1D[i]);
