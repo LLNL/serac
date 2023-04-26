@@ -40,7 +40,7 @@ ruby-clang_10_0_0-src:
   variables:
     COMPILER: "clang@10.0.0"
     HOST_CONFIG: "ruby-toss_3_x86_64_ib-${COMPILER}.cmake"
-    # TODO: Turn this  back on when input files are flushed out
+    # TODO: Turn this  back on when input files are working for the Functional-based physics modules
     #DO_INTEGRATION_TESTS: "yes"
     ALLOC_NODES: "2"
     ALLOC_TIME: "30"
