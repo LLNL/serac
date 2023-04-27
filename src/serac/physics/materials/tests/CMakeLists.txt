@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-set(test_dependencies test_utils)
+set(test_dependencies serac_physics_materials gtest)
 
 set(material_tests
     thermomechanical_material.cpp

@@ -12,10 +12,8 @@
 #include "serac/infrastructure/cli.hpp"
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/mesh/mesh_utils.hpp"
-#include "serac/physics/thermal_conduction_legacy.hpp"
 #include "serac/physics/boundary_conditions/boundary_condition.hpp"
 #include "serac/numerics/equation_solver.hpp"
-#include "serac/physics/state/state_manager.hpp"
 #include "serac/serac_config.hpp"
 
 class SlicErrorException : public std::exception {
@@ -40,17 +38,6 @@ TEST(ErrorHandling, EquationSolverAmgxNotAvailable)
   IterativeSolverOptions options;
   options.prec = AMGXPrec{};
   EXPECT_THROW(EquationSolver(MPI_COMM_WORLD, options), SlicErrorException);
-}
-#endif
-
-// Only need to test this when KINSOL is **not** available
-#ifndef MFEM_USE_SUNDIALS
-TEST(ErrorHandling, EquationSolverKinsolNotAvailable)
-{
-  auto lin_options             = ThermalConductionLegacy::defaultLinearOptions();
-  auto nonlin_options          = ThermalConductionLegacy::defaultNonlinearOptions();
-  nonlin_options.nonlin_solver = NonlinearSolver::KINFullStep;
-  EXPECT_THROW(EquationSolver(MPI_COMM_WORLD, lin_options, nonlin_options), SlicErrorException);
 }
 #endif
 

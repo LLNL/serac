@@ -15,12 +15,13 @@
 #include "mfem.hpp"
 
 #include "serac/physics/common.hpp"
+#include "serac/physics/solid_mechanics_input.hpp"
 #include "serac/physics/base_physics.hpp"
 #include "serac/numerics/odes.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/physics/state/state_manager.hpp"
-#include "serac/physics/solid_legacy.hpp"
+#include "serac/physics/materials/solid_material.hpp"
 
 namespace serac {
 
@@ -109,23 +110,20 @@ public:
    * @param name An optional name for the physics module instance
    * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
-
   SolidMechanics(const SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
                  const std::string& name = "", mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(2, order, name, pmesh),
         velocity_(StateManager::newState(
-            FiniteElementState::Options{
-                .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "velocity")},
+            FiniteElementState::Options{.order = order, .vector_dim = dim, .name = detail::addPrefix(name, "velocity")},
             sidre_datacoll_id_)),
         displacement_(StateManager::newState(
             FiniteElementState::Options{
-                .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "displacement")},
+                .order = order, .vector_dim = dim, .name = detail::addPrefix(name, "displacement")},
             sidre_datacoll_id_)),
-        adjoint_displacement_(
-            StateManager::newState(FiniteElementState::Options{.order      = order,
-                                                               .vector_dim = mesh_.Dimension(),
-                                                               .name = detail::addPrefix(name, "adjoint_displacement")},
-                                   sidre_datacoll_id_)),
+        adjoint_displacement_(StateManager::newState(
+            FiniteElementState::Options{
+                .order = order, .vector_dim = dim, .name = detail::addPrefix(name, "adjoint_displacement")},
+            sidre_datacoll_id_)),
         reactions_(StateManager::newDual(displacement_.space(), detail::addPrefix(name, "reactions"))),
         ode2_(displacement_.space().TrueVSize(),
               {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
@@ -135,7 +133,8 @@ public:
         geom_nonlin_(geom_nonlin)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
-                       axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
+                       axom::fmt::format("Compile time dimension, {0}, and runtime mesh dimension, {1}, mismatch", dim,
+                                         mesh_.Dimension()));
 
     states_.push_back(&velocity_);
     states_.push_back(&displacement_);
@@ -206,6 +205,65 @@ public:
 
     zero_.SetSize(true_size);
     zero_ = 0.0;
+  }
+
+  /**
+   * @brief Construct a new Nonlinear SolidMechanics Solver object
+   *
+   * @param[in] input_options The solver information parsed from the input file
+   * @param[in] name An optional name for the physics module instance. Note that this is NOT the mesh tag.
+   */
+  SolidMechanics(const SolidMechanicsInputOptions& input_options, const std::string& name = "")
+      : SolidMechanics(input_options.solver_options, input_options.geom_nonlin, name)
+  {
+    // This is the only other options stored in the input file that we can use
+    // in the initialization stage
+    // TODO: move these material parameters out of the SolidMechanicsInputOptions
+    if (input_options.material_nonlin) {
+      solid_mechanics::NeoHookean mat{input_options.initial_mass_density, input_options.K, input_options.mu};
+      setMaterial(mat);
+    } else {
+      solid_mechanics::LinearIsotropic mat{input_options.initial_mass_density, input_options.K, input_options.mu};
+      setMaterial(mat);
+    }
+
+    if (input_options.initial_displacement) {
+      displacement_.project(input_options.initial_displacement->constructVector(dim));
+    }
+
+    if (input_options.initial_velocity) {
+      velocity_.project(input_options.initial_velocity->constructVector(dim));
+    }
+
+    for (const auto& [bc_name, bc] : input_options.boundary_conditions) {
+      // FIXME: Better naming for boundary conditions?
+      if (bc_name.find("displacement") != std::string::npos) {
+        if (bc.coef_opts.isVector()) {
+          std::shared_ptr<mfem::VectorCoefficient> disp_coef(bc.coef_opts.constructVector(dim));
+          bcs_.addEssential(bc.attrs, disp_coef, displacement_.space());
+        } else {
+          SLIC_ERROR_ROOT_IF(
+              !bc.coef_opts.component,
+              "Component not specified with scalar coefficient when setting the displacement condition.");
+          std::shared_ptr<mfem::Coefficient> disp_coef(bc.coef_opts.constructScalar());
+          bcs_.addEssential(bc.attrs, disp_coef, displacement_.space(), *bc.coef_opts.component);
+        }
+      } else if (bc_name.find("traction") != std::string::npos) {
+        // TODO: Not implemented yet in input files
+        SLIC_ERROR("'traction' is not implemented yet in input files.");
+      } else if (bc_name.find("traction_ref") != std::string::npos) {
+        // TODO: Not implemented yet in input files
+        SLIC_ERROR("'traction_ref' is not implemented yet in input files.");
+      } else if (bc_name.find("pressure") != std::string::npos) {
+        // TODO: Not implemented yet in input files
+        SLIC_ERROR("'pressure' is not implemented yet in input files.");
+      } else if (bc_name.find("pressure_ref") != std::string::npos) {
+        // TODO: Not implemented yet in input files
+        SLIC_ERROR("'pressure_ref' is not implemented yet in input files.");
+      } else {
+        SLIC_WARNING_ROOT("Ignoring boundary condition with unknown name: " << name);
+      }
+    }
   }
 
   /// @brief Destroy the SolidMechanics Functional object

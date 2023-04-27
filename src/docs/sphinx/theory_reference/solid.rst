@@ -146,14 +146,6 @@ implies that the 2D simulations are using a plane strain assumption. The second 
 and :math:`\epsilon` is the linearized strain tensor. Note that this model is only valid for small strains 
 where the neo-Hookean model is nearly equivalent. It is included mostly for testing purposes.
 
-Optionally, we can add a Kelvin-Voigt linear visoelastic term by adding
-
-.. math::
-
-   \sigma(\dot{\epsilon}) = \eta \dot{\epsilon}
-
-to the stress calculations in dynamic simulations.
-
 Discretization
 ==============
 

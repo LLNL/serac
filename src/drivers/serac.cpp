@@ -28,7 +28,9 @@
 #include "serac/infrastructure/output.hpp"
 #include "serac/infrastructure/terminator.hpp"
 #include "serac/mesh/mesh_utils.hpp"
-#include "serac/physics/thermal_solid_legacy.hpp"
+#include "serac/physics/solid_mechanics.hpp"
+#include "serac/physics/heat_transfer.hpp"
+#include "serac/physics/thermomechanics.hpp"
 #include "serac/numerics/equation_solver.hpp"
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/serac_config.hpp"
@@ -52,15 +54,16 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet)
 
   // The solid mechanics options
   auto& solid_solver_table = inlet.addStruct("solid", "Finite deformation solid mechanics module");
-  serac::SolidLegacy::InputOptions::defineInputFileSchema(solid_solver_table);
+  SolidMechanicsInputOptions::defineInputFileSchema(solid_solver_table);
 
   // The thermal conduction options
+  // TODO: rename to 'heat_transfer'?
   auto& thermal_solver_table = inlet.addStruct("thermal_conduction", "Thermal conduction module");
-  serac::ThermalConductionLegacy::InputOptions::defineInputFileSchema(thermal_solver_table);
+  HeatTransferInputOptions::defineInputFileSchema(thermal_solver_table);
 
   // The thermal solid options
   auto& thermal_solid_solver_table = inlet.addStruct("thermal_solid", "Thermal solid module");
-  serac::ThermalSolidLegacy::InputOptions::defineInputFileSchema(thermal_solid_solver_table);
+  ThermomechanicsInputOptions::defineInputFileSchema(thermal_solid_solver_table);
 
   // Verify the input file
   if (!inlet.verify()) {
@@ -69,6 +72,147 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet)
 }
 
 }  // namespace serac
+
+/**
+ * @brief Constructs the appropriate physics object using the input file options
+ *
+ * @param[in] order The order of the discretization
+ * @param[in] dim The spatial dimension of the mesh
+ * @param[in] solid_mechanics_options Optional container of input options for SolidMechanics physics module
+ * @param[in] heat_transfer_options   Optional container of input options for HeatTransfer physics module
+ * @param[in] thermomechanics_options Optional container of input options for Thermomechanics physics module
+ *
+ * @return Base class instance of the created physics class
+ */
+std::unique_ptr<serac::BasePhysics> createPhysics(
+    int dim, int order, std::optional<serac::SolidMechanicsInputOptions> solid_mechanics_options,
+    std::optional<serac::HeatTransferInputOptions>    heat_transfer_options,
+    std::optional<serac::ThermomechanicsInputOptions> thermomechanics_options)
+{
+  std::unique_ptr<serac::BasePhysics> main_physics;
+  if (thermomechanics_options) {
+    if (order == 1) {
+      if (dim == 2) {
+        main_physics = std::make_unique<serac::Thermomechanics<1, 2>>(*thermomechanics_options);
+      } else if (dim == 3) {
+        main_physics = std::make_unique<serac::Thermomechanics<1, 3>>(*thermomechanics_options);
+      }
+    } else if (order == 2) {
+      if (dim == 2) {
+        main_physics = std::make_unique<serac::Thermomechanics<2, 2>>(*thermomechanics_options);
+      } else if (dim == 3) {
+        main_physics = std::make_unique<serac::Thermomechanics<2, 3>>(*thermomechanics_options);
+      }
+    } else if (order == 3) {
+      if (dim == 2) {
+        main_physics = std::make_unique<serac::Thermomechanics<3, 2>>(*thermomechanics_options);
+      } else if (dim == 3) {
+        main_physics = std::make_unique<serac::Thermomechanics<3, 3>>(*thermomechanics_options);
+      }
+    }
+  } else if (solid_mechanics_options && heat_transfer_options) {
+    if (order == 1) {
+      if (dim == 2) {
+        main_physics = std::make_unique<serac::Thermomechanics<1, 2>>(*heat_transfer_options, *solid_mechanics_options);
+      } else if (dim == 3) {
+        main_physics = std::make_unique<serac::Thermomechanics<1, 3>>(*heat_transfer_options, *solid_mechanics_options);
+      }
+    } else if (order == 2) {
+      if (dim == 2) {
+        main_physics = std::make_unique<serac::Thermomechanics<2, 2>>(*heat_transfer_options, *solid_mechanics_options);
+      } else if (dim == 3) {
+        main_physics = std::make_unique<serac::Thermomechanics<2, 3>>(*heat_transfer_options, *solid_mechanics_options);
+      }
+    } else if (order == 3) {
+      if (dim == 2) {
+        main_physics = std::make_unique<serac::Thermomechanics<3, 2>>(*heat_transfer_options, *solid_mechanics_options);
+      } else if (dim == 3) {
+        main_physics = std::make_unique<serac::Thermomechanics<3, 3>>(*heat_transfer_options, *solid_mechanics_options);
+      }
+    }
+  } else if (solid_mechanics_options) {
+    if (order == 1) {
+      if (dim == 2) {
+        main_physics = std::make_unique<serac::SolidMechanics<1, 2>>(*solid_mechanics_options);
+      } else if (dim == 3) {
+        main_physics = std::make_unique<serac::SolidMechanics<1, 3>>(*solid_mechanics_options);
+      }
+    } else if (order == 2) {
+      if (dim == 2) {
+        main_physics = std::make_unique<serac::SolidMechanics<2, 2>>(*solid_mechanics_options);
+      } else if (dim == 3) {
+        main_physics = std::make_unique<serac::SolidMechanics<2, 3>>(*solid_mechanics_options);
+      }
+    } else if (order == 3) {
+      if (dim == 2) {
+        main_physics = std::make_unique<serac::SolidMechanics<3, 2>>(*solid_mechanics_options);
+      } else if (dim == 3) {
+        main_physics = std::make_unique<serac::SolidMechanics<3, 3>>(*solid_mechanics_options);
+      }
+    }
+  } else if (heat_transfer_options) {
+    if (order == 1) {
+      if (dim == 2) {
+        main_physics = std::make_unique<serac::HeatTransfer<1, 2>>(*heat_transfer_options);
+      } else if (dim == 3) {
+        main_physics = std::make_unique<serac::HeatTransfer<1, 3>>(*heat_transfer_options);
+      }
+    } else if (order == 2) {
+      if (dim == 2) {
+        main_physics = std::make_unique<serac::HeatTransfer<2, 2>>(*heat_transfer_options);
+      } else if (dim == 3) {
+        main_physics = std::make_unique<serac::HeatTransfer<2, 3>>(*heat_transfer_options);
+      }
+    } else if (order == 3) {
+      if (dim == 2) {
+        main_physics = std::make_unique<serac::HeatTransfer<3, 2>>(*heat_transfer_options);
+      } else if (dim == 3) {
+        main_physics = std::make_unique<serac::HeatTransfer<3, 3>>(*heat_transfer_options);
+      }
+    }
+  } else {
+    SLIC_ERROR_ROOT("Neither solid, thermal_conduction, nor thermal_solid blocks specified in the input file.");
+  }
+  return main_physics;
+}
+
+/**
+ * @brief Return and check correctness of the order of discretization
+ *
+ * @param[in] solid_mechanics_options Optional container of input options for SolidMechanics physics module
+ * @param[in] heat_transfer_options   Optional container of input options for HeatTransfer physics module
+ * @param[in] thermomechanics_options Optional container of input options for Thermomechanics physics module
+ *
+ * @return The order of the discretization
+ */
+int getOrder(std::optional<serac::SolidMechanicsInputOptions>  solid_mechanics_options,
+             std::optional<serac::HeatTransferInputOptions>    heat_transfer_options,
+             std::optional<serac::ThermomechanicsInputOptions> thermomechanics_options)
+{
+  int order = 0;
+  if (thermomechanics_options) {
+    order             = thermomechanics_options->solid_options.order;
+    int thermal_order = thermomechanics_options->thermal_options.order;
+    SLIC_ERROR_ROOT_IF(
+        order != thermal_order,
+        axom::fmt::format("Solid order '{0}' and thermal order '{1}'' do not match.", order, thermal_order));
+  } else if (solid_mechanics_options && heat_transfer_options) {
+    order             = solid_mechanics_options->order;
+    int thermal_order = heat_transfer_options->order;
+    SLIC_ERROR_ROOT_IF(
+        order != thermal_order,
+        axom::fmt::format("Solid order '{0}' and thermal order '{1}'' do not match.", order, thermal_order));
+  } else if (solid_mechanics_options) {
+    order = solid_mechanics_options->order;
+  } else if (heat_transfer_options) {
+    order = heat_transfer_options->order;
+  } else {
+    SLIC_ERROR_ROOT("Neither solid, thermal_conduction, nor thermal_solid blocks specified in the input file.");
+  }
+  SLIC_ERROR_ROOT_IF(order < 1 || order > 3,
+                     axom::fmt::format("Invalid solver order '{0}' given. Valid values are 1, 2, or 3.", order));
+  return order;
+}
 
 /**
  * @brief The main serac driver code
@@ -81,6 +225,14 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet)
 int main(int argc, char* argv[])
 {
   serac::initialize(argc, argv);
+
+  // TODO: Remove this after input file functionality is restored.
+  const std::string warning_message = R"PREFIX(******************************
+This Serac driver does not
+currently work due to missing
+input file functionality.
+******************************)PREFIX";
+  SLIC_INFO(warning_message);
 
   // Handle Command line
   std::unordered_map<std::string, std::string> cli_opts =
@@ -176,37 +328,31 @@ int main(int argc, char* argv[])
     cycle = *restart_cycle;
   }
 
-  // Create the physics object
-  std::unique_ptr<serac::BasePhysics> main_physics;
-
-  // Create nullable contains for the solid and thermal input file options
-  std::optional<serac::SolidLegacy::InputOptions>             solid_solver_options;
-  std::optional<serac::ThermalConductionLegacy::InputOptions> thermal_solver_options;
-  std::optional<serac::ThermalSolidLegacy::InputOptions>      thermal_solid_solver_options;
+  // Create nullable containers for the solid and thermal input file options
+  std::optional<serac::SolidMechanicsInputOptions>  solid_mechanics_options;
+  std::optional<serac::HeatTransferInputOptions>    heat_transfer_options;
+  std::optional<serac::ThermomechanicsInputOptions> thermomechanics_options;
 
   // If the blocks exist, read the appropriate input file options
   if (inlet.isUserProvided("solid")) {
-    solid_solver_options = inlet["solid"].get<serac::SolidLegacy::InputOptions>();
+    solid_mechanics_options = inlet["solid"].get<serac::SolidMechanicsInputOptions>();
   }
   if (inlet.isUserProvided("thermal_conduction")) {
-    thermal_solver_options = inlet["thermal_conduction"].get<serac::ThermalConductionLegacy::InputOptions>();
+    heat_transfer_options = inlet["thermal_conduction"].get<serac::HeatTransferInputOptions>();
   }
   if (inlet.isUserProvided("thermal_solid")) {
-    thermal_solid_solver_options = inlet["thermal_solid"].get<serac::ThermalSolidLegacy::InputOptions>();
+    thermomechanics_options = inlet["thermal_solid"].get<serac::ThermomechanicsInputOptions>();
   }
 
-  // Construct the appropriate physics object using the input file options
-  if (thermal_solid_solver_options) {
-    main_physics = std::make_unique<serac::ThermalSolidLegacy>(*thermal_solid_solver_options);
-  } else if (solid_solver_options && thermal_solver_options) {
-    main_physics = std::make_unique<serac::ThermalSolidLegacy>(*thermal_solver_options, *solid_solver_options);
-  } else if (solid_solver_options) {
-    main_physics = std::make_unique<serac::SolidLegacy>(*solid_solver_options);
-  } else if (thermal_solver_options) {
-    main_physics = std::make_unique<serac::ThermalConductionLegacy>(*thermal_solver_options);
-  } else {
-    SLIC_ERROR_ROOT("Neither solid, thermal_conduction, nor thermal_solid blocks specified in the input file.");
-  }
+  // Get dimension and order of problem
+  int dim = serac::StateManager::mesh().Dimension();
+  SLIC_ERROR_ROOT_IF(dim < 2 || dim > 3,
+                     axom::fmt::format("Invalid mesh dimension '{0}' provided. Valid values are 2 or 3.", dim));
+  int order = getOrder(solid_mechanics_options, heat_transfer_options, thermomechanics_options);
+
+  // Create the physics object
+  auto main_physics =
+      createPhysics(dim, order, solid_mechanics_options, heat_transfer_options, thermomechanics_options);
 
   // Complete the solver setup
   main_physics->completeSetup();
