@@ -15,6 +15,9 @@ EquationSolver::EquationSolver(std::unique_ptr<mfem::NewtonSolver> nonlinear_sol
                                std::unique_ptr<mfem::Solver>       linear_solver,
                                std::unique_ptr<mfem::Solver>       preconditioner)
 {
+  SLIC_ERROR_ROOT_IF(!nonlinear_solver, "Nonlinear solvers must be given to construct an EquationSolver");
+  SLIC_ERROR_ROOT_IF(!linear_solver, "Linear solvers must be given to construct an EquationSolver");
+
   nonlin_solver_  = std::move(nonlinear_solver);
   lin_solver_     = std::move(linear_solver);
   preconditioner_ = std::move(preconditioner);
@@ -29,9 +32,7 @@ void EquationSolver::SetOperator(const mfem::Operator& op)
   if (newton_solver) {
     // Now that the nonlinear solver knows about the operator, we can set its linear solver
     if (!nonlin_solver_set_solver_called_) {
-      if (LinearSolver()) {
-        newton_solver->SetSolver(*LinearSolver());
-      }
+      newton_solver->SetSolver(LinearSolver());
       nonlin_solver_set_solver_called_ = true;
     }
   }

@@ -212,7 +212,7 @@ void SecondOrderODE::Solve(const double time, const double c0, const double c1, 
   d2u_dt2 += d2U_dt2_;
 
   solver_.Mult(zero_, d2u_dt2);
-  SLIC_WARNING_ROOT_IF(!solver_.NonlinearSolver()->GetConverged(), "Newton Solver did not converge.");
+  SLIC_WARNING_ROOT_IF(!solver_.NonlinearSolver().GetConverged(), "Newton Solver did not converge.");
 
   state_.d2u_dt2 = d2u_dt2;
 }
@@ -322,7 +322,7 @@ void FirstOrderODE::Solve(const double time, const double dt, const mfem::Vector
   du_dt += dU_dt_;
 
   solver_.Mult(zero_, du_dt);
-  SLIC_WARNING_ROOT_IF(!solver_.NonlinearSolver()->GetConverged(), "Newton Solver did not converge.");
+  SLIC_WARNING_ROOT_IF(!solver_.NonlinearSolver().GetConverged(), "Newton Solver did not converge.");
 
   state_.du_dt       = du_dt;
   state_.previous_dt = dt;

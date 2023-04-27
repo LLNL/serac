@@ -28,7 +28,8 @@ namespace serac::mfem_ext {
  * discretization of a PDE. Specifically, it has
  *
  *   1. An @a mfem::NewtonSolver containing the nonlinear solution operator
- *   2. An optional @a mfem::Solver containing a linear solver that is used by the nonlinear solution operator
+ *   2. An @a mfem::Solver containing a linear solver that is used by the nonlinear solution operator and adjoint
+ * solvers
  *   3. An optional @a mfem::Solver containing a preconditioner for the linear solution operator
  *
  * This @a EquationSolver manages these objects together to ensure they all exist when called by their associated
@@ -44,13 +45,12 @@ public:
   /**
    * Constructs a new nonlinear equation solver
    * @param[in] nonlinear_solver A constructed nonlinear solver
-   * @param[in] linear_solver An optional constructed linear solver to be called by the nonlinear algorithm and adjoint
+   * @param[in] linear_solver A constructed linear solver to be called by the nonlinear algorithm and adjoint
    * equation solves
    * @param[in] preconditioner An optional constructed precondition to aid the linear solver
    */
-  EquationSolver(std::unique_ptr<mfem::NewtonSolver> nonlinear_solver,
-                 std::unique_ptr<mfem::Solver>       linear_solver  = nullptr,
-                 std::unique_ptr<mfem::Solver>       preconditioner = nullptr);
+  EquationSolver(std::unique_ptr<mfem::NewtonSolver> nonlinear_solver, std::unique_ptr<mfem::Solver> linear_solver,
+                 std::unique_ptr<mfem::Solver> preconditioner = nullptr);
 
   /**
    * Updates the solver with the provided operator
@@ -71,27 +71,28 @@ public:
    * Returns the underlying solver object
    * @return A non-owning reference to the underlying nonlinear solver
    */
-  mfem::Solver* NonlinearSolver() { return nonlin_solver_.get(); }
+  mfem::Solver& NonlinearSolver() { return *nonlin_solver_; }
 
   /**
    * @overload
    */
-  const mfem::NewtonSolver* NonlinearSolver() const { return nonlin_solver_.get(); }
+  const mfem::NewtonSolver& NonlinearSolver() const { return *nonlin_solver_; }
 
   /**
    * Returns the underlying linear solver object
    * @return A non-owning reference to the underlying linear solver
    */
-  mfem::Solver* LinearSolver() { return lin_solver_.get(); }
+  mfem::Solver& LinearSolver() { return *lin_solver_; }
 
   /**
    * @overload
    */
-  const mfem::Solver* LinearSolver() const { return lin_solver_.get(); }
+  const mfem::Solver& LinearSolver() const { return *lin_solver_; }
 
   /**
-   * Returns the underlying linear solver object
-   * @return A non-owning reference to the underlying linear solver
+   * Returns the underlying preconditioner
+   * @return A pointer to the underlying preconditioner
+   * @note This may be null if a preconditioner is not given
    */
   mfem::Solver* Preconditioner() { return preconditioner_.get(); }
 
@@ -107,7 +108,7 @@ public:
 
 private:
   /**
-   * @brief The preconditioner (used for an iterative solver only)
+   * @brief The optional preconditioner (used for an iterative solver only)
    */
   std::unique_ptr<mfem::Solver> preconditioner_;
 
@@ -117,7 +118,7 @@ private:
   std::unique_ptr<mfem::Solver> lin_solver_;
 
   /**
-   * @brief The optional nonlinear solver object
+   * @brief The nonlinear solver object
    */
   std::unique_ptr<mfem::NewtonSolver> nonlin_solver_;
 

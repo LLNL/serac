@@ -41,8 +41,11 @@ const LinearSolverOptions direct_linear_options = {.linear_solver = LinearSolver
 /**
  * @brief Reasonable defaults for most thermal nonlinear solver options
  */
-const NonlinearSolverOptions default_nonlinear_options = {
-    .nonlin_solver = NonlinearSolver::Newton, .relative_tol = 1.0e-4, .absolute_tol = 1.0e-8, .max_iterations = 500, .print_level = 1};
+const NonlinearSolverOptions default_nonlinear_options = {.nonlin_solver  = NonlinearSolver::Newton,
+                                                          .relative_tol   = 1.0e-4,
+                                                          .absolute_tol   = 1.0e-8,
+                                                          .max_iterations = 500,
+                                                          .print_level    = 1};
 
 /**
  * @brief Reasonable defaults for dynamic thermal conduction simulations
@@ -550,7 +553,7 @@ public:
     // Add the sign correction to move the term to the RHS
     adjoint_load_vector *= -1.0;
 
-    auto* lin_solver = nonlin_solver_->LinearSolver();
+    auto& lin_solver = nonlin_solver_->LinearSolver();
 
     // By default, use a homogeneous essential boundary condition
     mfem::HypreParVector adjoint_essential(temp_adjoint_load->second);
@@ -578,8 +581,8 @@ public:
       bc.apply(*J_T, adjoint_load_vector, adjoint_essential);
     }
 
-    lin_solver->SetOperator(*J_T);
-    lin_solver->Mult(adjoint_load_vector, adjoint_temperature_);
+    lin_solver.SetOperator(*J_T);
+    lin_solver.Mult(adjoint_load_vector, adjoint_temperature_);
 
     // Reset the equation solver to use the full nonlinear residual operator
     nonlin_solver_->SetOperator(residual_with_bcs_);

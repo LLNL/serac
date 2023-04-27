@@ -321,7 +321,7 @@ void SolidLegacy::completeSetup()
   // Setting iterative_mode to true ensures that these
   // prescribed acceleration values are not modified by
   // the nonlinear solve.
-  nonlin_solver_->NonlinearSolver()->iterative_mode = true;
+  nonlin_solver_->NonlinearSolver().iterative_mode = true;
 
   if (is_quasistatic_) {
     residual_ = buildQuasistaticOperator();
@@ -537,7 +537,7 @@ const std::unordered_map<std::string, const serac::FiniteElementState&> SolidLeg
   // values
   mfem::HypreParVector adjoint_load_vector(disp_adjoint_load->second);
 
-  auto* lin_solver = nonlin_solver_->LinearSolver();
+  auto& lin_solver = nonlin_solver_->LinearSolver();
 
   auto& J   = dynamic_cast<mfem::HypreParMatrix&>(H_->GetGradient(displacement_));
   auto  J_T = std::unique_ptr<mfem::HypreParMatrix>(J.Transpose());
@@ -563,8 +563,8 @@ const std::unordered_map<std::string, const serac::FiniteElementState&> SolidLeg
     bc.apply(*J_T, adjoint_load_vector, adjoint_essential);
   }
 
-  lin_solver->SetOperator(*J_T);
-  lin_solver->Mult(adjoint_load_vector, adjoint_displacement_);
+  lin_solver.SetOperator(*J_T);
+  lin_solver.Mult(adjoint_load_vector, adjoint_displacement_);
 
   if (geom_nonlin_ == GeometricNonlinearities::On) {
     mesh_.NewNodes(*deformed_nodes_);

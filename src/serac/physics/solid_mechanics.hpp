@@ -46,8 +46,11 @@ const LinearSolverOptions direct_linear_options = {.linear_solver = LinearSolver
  * systems of nonlinear equations that show up in implicit
  * solid mechanics simulations
  */
-const NonlinearSolverOptions default_nonlinear_options = {
-    .nonlin_solver = NonlinearSolver::Newton, .relative_tol = 1.0e-4, .absolute_tol = 1.0e-8, .max_iterations = 10, .print_level = 1};
+const NonlinearSolverOptions default_nonlinear_options = {.nonlin_solver  = NonlinearSolver::Newton,
+                                                          .relative_tol   = 1.0e-4,
+                                                          .absolute_tol   = 1.0e-8,
+                                                          .max_iterations = 10,
+                                                          .print_level    = 1};
 
 /// default quasistatic timestepping options for solid mechanics
 const TimesteppingOptions default_quasistatic_options = {TimestepMethod::QuasiStatic};
@@ -649,45 +652,36 @@ public:
   {
     time_ += dt;
 
-    auto* lin_solver = nonlin_solver_->LinearSolver();
+    auto& lin_solver = nonlin_solver_->LinearSolver();
 
-    // If we have an associated linear solver, we can improve our initial guess
-    // by applying the reaction forces associated with the change in essential degrees of freedom
-    // as a first pass.
-    if (lin_solver) {
-      // the ~20 lines of code below are essentially equivalent to the 1-liner
-      // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
+    // the ~20 lines of code below are essentially equivalent to the 1-liner
+    // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
 
-      // Set the essential boundary conditions for the current time
-      for (auto& bc : bcs_.essentials()) {
-        bc.setDofs(du_, time_);
-      }
+    du_ = 0.0;
 
-      // Compute the change in essential boundary condition dofs and store it in du_
-      auto& constrained_dofs = bcs_.allEssentialTrueDofs();
-      for (int i = 0; i < constrained_dofs.Size(); i++) {
-        int j = constrained_dofs[i];
-        du_[j] -= displacement_(j);
-      }
-
-      // Compute the reaction forces associated with this change in essential boundary condition
-      dr_ = 0.0;
-      mfem::EliminateBC(*J_, *J_e_, constrained_dofs, du_, dr_);
-
-      lin_solver->SetOperator(*J_);
-
-      // Solve for the updated displacement due to these reaction forces
-      lin_solver->Mult(dr_, du_);
-
-      // Modify our initial guess with the displacement due to the reaction forces
-      displacement_ += du_;
-    } else {
-      // Otherwise, we just apply the essential boundary conditions
-      // and hope that the nonlinear solver can handle the change
-      for (auto& bc : bcs_.essentials()) {
-        bc.setDofs(displacement_, time_);
-      }      
+    // Set the essential boundary conditions for the current time
+    for (auto& bc : bcs_.essentials()) {
+      bc.setDofs(du_, time_);
     }
+
+    // Compute the change in essential boundary condition dofs and store it in du_
+    auto& constrained_dofs = bcs_.allEssentialTrueDofs();
+    for (int i = 0; i < constrained_dofs.Size(); i++) {
+      int j = constrained_dofs[i];
+      du_[j] -= displacement_(j);
+    }
+
+    // Compute the reaction forces associated with this change in essential boundary condition
+    dr_ = 0.0;
+    mfem::EliminateBC(*J_, *J_e_, constrained_dofs, du_, dr_);
+
+    lin_solver.SetOperator(*J_);
+
+    // Solve for the updated displacement due to these reaction forces
+    lin_solver.Mult(dr_, du_);
+
+    // Modify our initial guess with the displacement due to the reaction forces
+    displacement_ += du_;
 
     nonlin_solver_->Mult(zero_, displacement_);
   }
@@ -762,11 +756,7 @@ public:
     // Add the sign correction to move the term to the RHS
     adjoint_load_vector *= -1.0;
 
-    auto* lin_solver = nonlin_solver_->LinearSolver();
-
-    SLIC_ERROR_ROOT_IF(
-        !lin_solver,
-        "Adjoint solves currently need a linear solver associated with the supplied forward nonlinear solver");
+    auto& lin_solver = nonlin_solver_->LinearSolver();
 
     // By default, use a homogeneous essential boundary condition
     mfem::HypreParVector adjoint_essential(disp_adjoint_load->second);
@@ -796,8 +786,8 @@ public:
       bc.apply(*J_T, adjoint_load_vector, adjoint_essential);
     }
 
-    lin_solver->SetOperator(*J_T);
-    lin_solver->Mult(adjoint_load_vector, adjoint_displacement_);
+    lin_solver.SetOperator(*J_T);
+    lin_solver.Mult(adjoint_load_vector, adjoint_displacement_);
 
     return {{"adjoint_displacement", adjoint_displacement_}};
   }
