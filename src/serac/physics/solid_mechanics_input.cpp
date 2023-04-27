@@ -10,8 +10,8 @@ namespace serac {
 
 void SolidMechanicsInputOptions::defineInputFileSchema(axom::inlet::Container& container)
 {
-  // Polynomial interpolation order - currently up to 8th order is allowed
-  container.addInt("order", "Order degree of the finite elements.").defaultValue(1).range(1, 8);
+  // interpolation order - currently up to 3rd order is allowed
+  container.addInt("order", "polynomial order of the basis functions.").defaultValue(1).range(1, 3);
 
   // neo-Hookean material parameters
   container.addDouble("mu", "Shear modulus in the Neo-Hookean hyperelastic model.").defaultValue(0.25);
