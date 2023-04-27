@@ -51,8 +51,6 @@ solid = {
     mu = 0.25,
     K  = 5.0,
 
-    viscosity = 0.0,
-
     -- initial conditions
     initial_displacement = {
         vector_constant = {
