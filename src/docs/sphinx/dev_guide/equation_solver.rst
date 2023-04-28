@@ -16,14 +16,14 @@ Mathematical description
 
 .. math::
 
-  F(\mathbf{X}) = \mathbf{0}
+  F(\mathbf{X}) = \mathbf{b}
 
-where :math:`\mathbf{X}` and :math:`\mathbf{0}` are parallel distributed vectors, e.g. ``mfem::HypreParVectors``, and
+where :math:`\mathbf{X}` and :math:`\mathbf{b}` are parallel distributed vectors, e.g. ``mfem::HypreParVectors``, and
 :math:`F` is a square nonlinear operator, i.e. the dimension of the input vector equals the dimension of the output vector.  
 These systems commonly arise from finite element discretizations, such as the equations of heat transfer (see the :ref:`heat transfer <conduction-theory-label>`
 documentation)
   
-.. math:: \mathbf{Mu}_{n+1} + \Delta t (\mathbf{Ku}_{n+1} + f(\mathbf{u}_{n+1})) - \Delta t \mathbf{G} - \mathbf{Mu}_n = \mathbf{0}
+.. math:: \mathbf{Mu}_{n+1} + \Delta t (\mathbf{Ku}_{n+1} + f(\mathbf{u}_{n+1})) = \Delta t \mathbf{G} + \mathbf{Mu}_n
 
 where :math:`\mathbf{X} = \mathbf{u}_{n+1}`. These systems are commonly solved by Newton-type methods which have embedded linear solvers for a linearized approximation
 of the full nonlinear operator. A sample Newton algorithm for solving this system is given below:
@@ -46,8 +46,8 @@ Class design
 ============
 
 `EquationSolver <../../doxygen/html/classserac_1_1mfem__ext_1_1EquationSolver.html>`_ provides an interface to the associated nonlinear and linear solver
-algorithms needed by these systems of equations. Note that while some nonlinear solvers do not depend on an embedded linear solver (e.g. L-BFGS), we require a linear 
-solver to be specified as it is used to compute reasonable initial guesses and perform adjoint solves. 
+algorithms needed to solve these systems of equations. Note that while some nonlinear solvers do not depend on an embedded linear solver (e.g. L-BFGS), we require a linear 
+solver to be specified as it is used to compute reasonable initial guesses and perform adjoint solves within Serac. 
 
 Note that ``EquationSolver`` is derived from the ``mfem::Solver`` class. The key methods provided by this class are:
 
@@ -61,8 +61,8 @@ for advanced users.
 Common configurations via option structs
 ----------------------------------------
 
-The easist way to build an equation solver is by providing a structs containing parameters for common configurations of the linear and nonlinear solvers. These structs are then passed
-to the equation solver factory method ``buildEquationSolver``. The returned object can then be used by physics modules to solve nonlinear systems of equations.
+The easist way to build an equation solver is by providing structs containing parameters for common configurations of the linear and nonlinear solvers. These structs are passed
+to the equation solver factory method ``buildEquationSolver`` and the returned object can be used by physics modules to solve nonlinear systems of equations.
 
 .. literalinclude:: ../../../../src/serac/numerics/equation_solver.hpp
    :start-after: _build_equationsolver_start
@@ -108,18 +108,18 @@ As an example, the default solid mechanics ``EquationSolver`` can be built using
 
 .. code-block:: cpp
 
-  const NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = NonlinearSolver::Newton,
-                                                    .relative_tol   = 1.0e-4,
-                                                    .absolute_tol   = 1.0e-8,
-                                                    .max_iterations = 10,
-                                                    .print_level    = 1};
+  const serac::NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = NonlinearSolver::Newton,
+                                                           .relative_tol   = 1.0e-4,
+                                                           .absolute_tol   = 1.0e-8,
+                                                           .max_iterations = 10,
+                                                           .print_level    = 1};
 
-  const LinearSolverOptions linear_options = {.linear_solver  = LinearSolver::GMRES,
-                                              .preconditioner = Preconditioner::HypreAMG,
-                                              .relative_tol   = 1.0e-6,
-                                              .absolute_tol   = 1.0e-16,
-                                              .max_iterations = 500,
-                                              .print_level    = 0};
+  const serac::LinearSolverOptions linear_options = {.linear_solver  = LinearSolver::GMRES,
+                                                     .preconditioner = Preconditioner::HypreAMG,
+                                                     .relative_tol   = 1.0e-6,
+                                                     .absolute_tol   = 1.0e-16,
+                                                     .max_iterations = 500,
+                                                     .print_level    = 0};
 
   auto equation_solver = mfem_ext::buildEquationSolver(nonlinear_options, linear_options);
 
@@ -134,12 +134,11 @@ and linear solver objects. For this approach, the direct constructor for ``Equat
    :end-before: _equationsolver_constructor_end
    :language: C++
 
-Note that the ``EquationSolver`` will take ownership of the supplied objects and manage their lifetimes appropriately. While the preconditioner is optional, the nonlinear
-and linear solvers are required to be non-null. 
+The nonlinear and linear solvers are required while the preconditioner is optional.
 
-While the nonlinear solver is expected to be of type ``mfem::NewtonSolver``, it does not have to be a Newton-type method. This 
+Although the nonlinear solver is expected to be of type ``mfem::NewtonSolver``, it does not have to be a Newton-type method. This 
 is simply the preferred MFEM container for nonlinear solvers. For example, the included L-BFGS solver is derived from this class. This class is preferred over type ``mfem::Solver``
-as it has the appropriate methods for checking convergence of the method as needed by the calling physics modules.
+as it has the appropriate methods for checking convergence as needed.
 
 Use within physics modules
 ==========================
@@ -155,12 +154,12 @@ passing it to the ``SolidMechanics`` physics module is below:
                                                         .max_iterations = 5000,
                                                         .print_level    = 1};
 
-  const LinearSolverOptions linear_options = {.linear_solver  = LinearSolver::CG,
-                                              .preconditioner = Preconditioner::HypreJacobi,
-                                              .relative_tol   = 1.0e-6,
-                                              .absolute_tol   = 1.0e-14,
-                                              .max_iterations = 500,
-                                              .print_level    = 1};
+  const serac::LinearSolverOptions linear_options = {.linear_solver  = LinearSolver::CG,
+                                                     .preconditioner = Preconditioner::HypreJacobi,
+                                                     .relative_tol   = 1.0e-6,
+                                                     .absolute_tol   = 1.0e-14,
+                                                     .max_iterations = 500,
+                                                     .print_level    = 1};
 
-  SolidMechanics<p, dim> solid_solver(serac::mfem_ext::buildEquationSolver(nonlin_opts, linear_options), 
-                                      solid_mechanics::default_quasistatic_options);
+  serac::SolidMechanics<p, dim> solid_solver(serac::mfem_ext::buildEquationSolver(nonlin_opts, linear_options), 
+                                             solid_mechanics::default_quasistatic_options);
