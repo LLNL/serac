@@ -15,6 +15,7 @@
 #include "mfem.hpp"
 
 #include "serac/physics/common.hpp"
+#include "serac/physics/heat_transfer_input.hpp"
 #include "serac/physics/base_physics.hpp"
 #include "serac/numerics/odes.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"
@@ -118,8 +119,9 @@ public:
              {.time = ode_time_point_, .u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
              *nonlin_solver_, bcs_)
   {
-    SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
-                       axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
+    SLIC_ERROR_ROOT_IF(
+        mesh_.Dimension() != dim,
+        axom::fmt::format("Compile time class dimension template parameter and runtime mesh dimension do not match"));
 
     states_.push_back(&temperature_);
     states_.push_back(&adjoint_temperature_);
@@ -175,6 +177,45 @@ public:
     shape_displacement_  = 0.0;
     temperature_         = 0.0;
     adjoint_temperature_ = 0.0;
+  }
+
+  /**
+   * @brief Construct a new Nonlinear HeatTransfer Solver object
+   *
+   * @param[in] options The solver information parsed from the input file
+   * @param[in] name An optional name for the physics module instance. Note that this is NOT the mesh tag.
+   */
+  HeatTransfer(const HeatTransferInputOptions& options, const std::string& name = "")
+      : HeatTransfer(mfem_ext::buildEquationSolver(options.nonlin_solver_options, options.lin_solver_options),
+                     options.timestepping_options, name)
+  {
+    if (options.initial_temperature) {
+      auto temp = options.initial_temperature->constructScalar();
+      temperature_.project(*temp);
+    }
+
+    if (options.source_coef) {
+      // TODO: Not implemented yet in input files
+      // NOTE: cannot use std::functions that use mfem::vector
+      SLIC_ERROR("'source' is not implemented yet in input files.");
+    }
+
+    // Process the BCs in sorted order for correct behavior with repeated attributes
+    std::map<std::string, input::BoundaryConditionInputOptions> sorted_bcs(options.boundary_conditions.begin(),
+                                                                           options.boundary_conditions.end());
+    for (const auto& [bc_name, bc] : sorted_bcs) {
+      // FIXME: Better naming for boundary conditions?
+      if (bc_name.find("temperature") != std::string::npos) {
+        std::shared_ptr<mfem::Coefficient> temp_coef(bc.coef_opts.constructScalar());
+        bcs_.addEssential(bc.attrs, temp_coef, temperature_.space(), *bc.coef_opts.component);
+      } else if (bc_name.find("flux") != std::string::npos) {
+        // TODO: Not implemented yet in input files
+        // NOTE: cannot use std::functions that use mfem::vector
+        SLIC_ERROR("'flux' is not implemented yet in input files.");
+      } else {
+        SLIC_WARNING_ROOT("Ignoring boundary condition with unknown name: " << name);
+      }
+    }
   }
 
   /**

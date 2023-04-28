@@ -15,6 +15,7 @@
 #include "mfem.hpp"
 
 #include "serac/physics/base_physics.hpp"
+#include "serac/physics/thermomechanics_input.hpp"
 #include "serac/physics/solid_mechanics.hpp"
 #include "serac/physics/heat_transfer.hpp"
 #include "serac/physics/materials/thermal_material.hpp"
@@ -58,6 +59,40 @@ public:
 
     thermal_.setParameter(0, solid_.displacement());
     solid_.setParameter(0, thermal_.temperature());
+  }
+
+  /**
+   * @brief Construct a new Thermal-SolidMechanics Functional object from input file options
+   *
+   * @param[in] thermal_options The thermal physics module input file option struct
+   * @param[in] solid_options The solid physics module input file option struct
+   * @param[in] name A name for the physics module
+   */
+  Thermomechanics(const HeatTransferInputOptions& thermal_options, const SolidMechanicsInputOptions& solid_options,
+                  const std::string& name = "")
+      : Thermomechanics(
+            mfem_ext::buildEquationSolver(thermal_options.nonlin_solver_options, thermal_options.lin_solver_options),
+            thermal_options.timestepping_options,
+            mfem_ext::buildEquationSolver(solid_options.nonlin_solver_options, solid_options.lin_solver_options),
+            solid_options.timestepping_options, solid_options.geom_nonlin, name)
+  {
+  }
+
+  /**
+   * @brief Construct a new Thermal-SolidMechanics Functional object from input file options
+   *
+   * @param[in] options The thermal solid physics module input file option struct
+   * @param[in] name A name for the physics module
+   */
+  Thermomechanics(const ThermomechanicsInputOptions& options, const std::string& name = "")
+      : Thermomechanics(options.thermal_options, options.solid_options, name)
+  {
+    if (options.coef_thermal_expansion) {
+      std::unique_ptr<mfem::Coefficient> cte(options.coef_thermal_expansion->constructScalar());
+      std::unique_ptr<mfem::Coefficient> ref_temp(options.reference_temperature->constructScalar());
+
+      // setThermalExpansion(std::move(cte), std::move(ref_temp));
+    }
   }
 
   /**
@@ -180,8 +215,8 @@ public:
     SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& temperature, const T3& temperature_gradient,
                                       const T4& displacement, param_types... parameters) const
     {
-      // BT: this will not update the state correctly. I just want to get the code compiling before plumbing the state
-      // variables.
+      // BT: this will not update the state correctly. I just want to get the code compiling before plumbing the
+      // state variables.
       State state{};
 
       auto [u, du_dX]                 = displacement;
@@ -250,11 +285,11 @@ public:
    *
    * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
    *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
-   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
-   * 3>`)
+   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes
+   * `tensor<dual<...>, 3>`)
    *
-   * @pre MaterialType must return a serac::tuple of Cauchy stress, volumetric heat capacity, internal heat source, and
-   * thermal flux when operator() is called with the arguments listed above.
+   * @pre MaterialType must return a serac::tuple of Cauchy stress, volumetric heat capacity, internal heat source,
+   * and thermal flux when operator() is called with the arguments listed above.
    */
   template <int... active_parameters, typename MaterialType, typename StateType>
   void setMaterial(DependsOn<active_parameters...>, MaterialType material,
@@ -315,8 +350,8 @@ public:
    *
    * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
    *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
-   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
-   * 3>`)
+   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes
+   * `tensor<dual<...>, 3>`)
    *
    * @note: until mfem::GetFaceGeometricFactors implements their JACOBIANS option,
    * (or we implement a replacement kernel ourselves) we are not able to compute
@@ -359,8 +394,8 @@ public:
    *            one tuple for each of the trial spaces specified in the `DependsOn<...>` argument.
    * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
    *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
-   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
-   * 3>`)
+   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes
+   * `tensor<dual<...>, 3>`)
    *
    */
   template <typename BodyForceType>
@@ -385,8 +420,8 @@ public:
    *
    * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
    *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
-   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
-   * 3>`)
+   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes
+   * `tensor<dual<...>, 3>`)
    */
   template <typename HeatSourceType>
   void addHeatSource(HeatSourceType source_function)
