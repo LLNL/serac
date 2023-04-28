@@ -102,7 +102,7 @@ public:
    * @param[in] pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
 
-  HeatTransfer(std::unique_ptr<serac::mfem_ext::EquationSolver> solver, const serac::TimesteppingOptions dynamic_opts,
+  HeatTransfer(const serac::mfem_ext::EquationSolver& solver, const serac::TimesteppingOptions dynamic_opts,
                const std::string& name = "", mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(NUM_STATE_VARS, order, name, pmesh),
         temperature_(StateManager::newState(
@@ -114,10 +114,10 @@ public:
                 .order = order, .vector_dim = 1, .name = detail::addPrefix(name, "adjoint_temperature")},
             sidre_datacoll_id_)),
         residual_with_bcs_(temperature_.space().TrueVSize()),
-        nonlin_solver_(std::move(solver)),
+        nonlin_solver_(solver),
         ode_(temperature_.space().TrueVSize(),
              {.time = ode_time_point_, .u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
-             *nonlin_solver_, bcs_)
+             nonlin_solver_, bcs_)
   {
     SLIC_ERROR_ROOT_IF(
         mesh_.Dimension() != dim,
@@ -150,7 +150,7 @@ public:
     residual_ = std::make_unique<Functional<test(scalar_trial, scalar_trial, shape_trial, parameter_space...)>>(
         test_space, trial_spaces);
 
-    nonlin_solver_->SetOperator(residual_with_bcs_);
+    nonlin_solver_.SetOperator(residual_with_bcs_);
 
     // Check for dynamic mode
     if (dynamic_opts.timestepper != TimestepMethod::QuasiStatic) {
@@ -245,7 +245,7 @@ public:
       for (auto& bc : bcs_.essentials()) {
         bc.setDofs(temperature_, time_);
       }
-      nonlin_solver_->Mult(zero_, temperature_);
+      nonlin_solver_.Mult(zero_, temperature_);
     } else {
       SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
 
@@ -594,7 +594,7 @@ public:
     // Add the sign correction to move the term to the RHS
     adjoint_load_vector *= -1.0;
 
-    auto& lin_solver = nonlin_solver_->LinearSolver();
+    auto& lin_solver = nonlin_solver_.LinearSolver();
 
     // By default, use a homogeneous essential boundary condition
     mfem::HypreParVector adjoint_essential(temp_adjoint_load->second);
@@ -626,7 +626,7 @@ public:
     lin_solver.Mult(adjoint_load_vector, adjoint_temperature_);
 
     // Reset the equation solver to use the full nonlinear residual operator
-    nonlin_solver_->SetOperator(residual_with_bcs_);
+    nonlin_solver_.SetOperator(residual_with_bcs_);
 
     return {{"adjoint_temperature", adjoint_temperature_}};
   }
@@ -708,7 +708,7 @@ protected:
   mfem_ext::StdFunctionOperator residual_with_bcs_;
 
   /// the specific methods and tolerances specified to solve the nonlinear residual equations
-  std::unique_ptr<mfem_ext::EquationSolver> nonlin_solver_;
+  mfem_ext::EquationSolver nonlin_solver_;
 
   /**
    * @brief the ordinary differential equation that describes

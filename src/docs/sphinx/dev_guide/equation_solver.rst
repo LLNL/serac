@@ -25,18 +25,18 @@ documentation)
   
 .. math:: \mathbf{Mu}_{n+1} + \Delta t (\mathbf{Ku}_{n+1} + f(\mathbf{u}_{n+1})) - \Delta t \mathbf{G} - \mathbf{Mu}_n = \mathbf{0}
 
-where :math:`\mathbf{X} = \mathbf{u}_{n+1}`. These systems are commonly solved by Newton-type methods with embedded linear solvers for a linearized approximation
+where :math:`\mathbf{X} = \mathbf{u}_{n+1}`. These systems are commonly solved by Newton-type methods which have embedded linear solvers for a linearized approximation
 of the full nonlinear operator. A sample Newton algorithm for solving this system is given below:
 
 .. code-block:: python
 
-  Pick initial guess X = X_0
-  compute residual r = F(X)
-  while (F(X) is too large) {
+  Pick an initial guess X = X_0
+  Compute the residual r = F(X)
+  while (r is too large) {
     Compute the linearization (Jacobian) of F, J = dF/dX
-    Solve J X_update = -F(X) using a linear solver
+    Solve J X_update = -r using a linear solver
     X = X + X_update
-    Compute the updated residual F(X)
+    Compute the updated residual r = F(X)
   }
 
 To perform this solve, we typically need to configure both the nonlinear solver algorithm and the linear solver algorithm. If we want to use an iterative solver
@@ -45,7 +45,7 @@ for the linear part, we also may need to configure a preconditioner for the syst
 Class design
 ============
 
-`EquationSolver <../../doxygen/html/classserac_1_1mfem__ext_1_1EquationSolver.html>`_ provides an interface to defining the associated nonlinear and linear solver
+`EquationSolver <../../doxygen/html/classserac_1_1mfem__ext_1_1EquationSolver.html>`_ provides an interface to the associated nonlinear and linear solver
 algorithms needed by these systems of equations. Note that while some nonlinear solvers do not depend on an embedded linear solver (e.g. L-BFGS), we require a linear 
 solver to be specified as it is used to compute reasonable initial guesses and perform adjoint solves. 
 
@@ -144,8 +144,7 @@ as it has the appropriate methods for checking convergence of the method as need
 Use within physics modules
 ==========================
 
-After the ``EquationSolver`` has been built, it can be passed to the appropriate physics module via dependency injection. Unfortunately the ``EquationSolver`` class contains pointers to abstract classes,
-so move semantics are currently needed, i.e. ``std::move`` is needed for the ``std::unique_ptr`` s in the physics module's constructors. An example of building an ``EquationSolver`` via option structs and 
+After the ``EquationSolver`` has been built, it can be passed to the appropriate physics module via dependency injection. An example of building an ``EquationSolver`` via option structs and 
 passing it to the ``SolidMechanics`` physics module is below:
 
 .. code-block:: cpp

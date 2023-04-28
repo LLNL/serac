@@ -42,8 +42,8 @@ public:
    * @param name An optional name for the physics module instance
    * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
-  Thermomechanics(std::unique_ptr<mfem_ext::EquationSolver> thermal_solver, TimesteppingOptions thermal_timestepping,
-                  std::unique_ptr<mfem_ext::EquationSolver> solid_solver, TimesteppingOptions solid_timestepping,
+  Thermomechanics(const mfem_ext::EquationSolver& thermal_solver, TimesteppingOptions thermal_timestepping,
+                  const mfem_ext::EquationSolver& solid_solver, TimesteppingOptions solid_timestepping,
                   GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
                   mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(3, order, name, pmesh),

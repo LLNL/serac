@@ -11,16 +11,16 @@
 
 namespace serac::mfem_ext {
 
-EquationSolver::EquationSolver(std::unique_ptr<mfem::NewtonSolver> nonlinear_solver,
-                               std::unique_ptr<mfem::Solver>       linear_solver,
-                               std::unique_ptr<mfem::Solver>       preconditioner)
+EquationSolver::EquationSolver(std::shared_ptr<mfem::NewtonSolver> nonlinear_solver,
+                               std::shared_ptr<mfem::Solver>       linear_solver,
+                               std::shared_ptr<mfem::Solver>       preconditioner)
 {
   SLIC_ERROR_ROOT_IF(!nonlinear_solver, "Nonlinear solvers must be given to construct an EquationSolver");
   SLIC_ERROR_ROOT_IF(!linear_solver, "Linear solvers must be given to construct an EquationSolver");
 
-  nonlin_solver_  = std::move(nonlinear_solver);
-  lin_solver_     = std::move(linear_solver);
-  preconditioner_ = std::move(preconditioner);
+  nonlin_solver_  = nonlinear_solver;
+  lin_solver_     = linear_solver;
+  preconditioner_ = preconditioner;
 }
 
 void EquationSolver::SetOperator(const mfem::Operator& op)
@@ -61,20 +61,17 @@ void SuperLUSolver::SetOperator(const mfem::Operator& op)
   superlu_solver_.SetOperator(*superlu_mat_);
 }
 
-std::unique_ptr<mfem_ext::EquationSolver> buildEquationSolver(NonlinearSolverOptions nonlinear_opts,
-                                                              LinearSolverOptions lin_opts, MPI_Comm comm)
+mfem_ext::EquationSolver buildEquationSolver(NonlinearSolverOptions nonlinear_opts, LinearSolverOptions lin_opts,
+                                             MPI_Comm comm)
 {
   auto [linear_solver, preconditioner] = buildLinearSolverAndPreconditioner(lin_opts, comm);
 
-  auto eq_solver = std::make_unique<mfem_ext::EquationSolver>(buildNonlinearSolver(nonlinear_opts, comm),
-                                                              std::move(linear_solver), std::move(preconditioner));
-
-  return eq_solver;
+  return EquationSolver(buildNonlinearSolver(nonlinear_opts, comm), linear_solver, preconditioner);
 }
 
-std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(NonlinearSolverOptions nonlinear_opts, MPI_Comm comm)
+std::shared_ptr<mfem::NewtonSolver> buildNonlinearSolver(NonlinearSolverOptions nonlinear_opts, MPI_Comm comm)
 {
-  std::unique_ptr<mfem::NewtonSolver> nonlinear_solver;
+  std::shared_ptr<mfem::NewtonSolver> nonlinear_solver;
 
   if (nonlinear_opts.nonlin_solver == NonlinearSolver::Newton) {
     nonlinear_solver = std::make_unique<mfem::NewtonSolver>(comm);
@@ -101,8 +98,8 @@ std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(NonlinearSolverOptions 
         kinsol_strat = KIN_NONE;
         SLIC_ERROR_ROOT("Unknown KINSOL nonlinear solver type given.");
     }
-    auto kinsol_solver = std::make_unique<mfem::KINSolver>(comm, kinsol_strat, true);
-    nonlinear_solver   = std::move(kinsol_solver);
+    auto kinsol_solver = std::make_shared<mfem::KINSolver>(comm, kinsol_strat, true);
+    nonlinear_solver   = kinsol_solver;
 #else
     SLIC_ERROR_ROOT("KINSOL was not enabled when MFEM was built");
 #endif
@@ -121,22 +118,22 @@ std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(NonlinearSolverOptions 
   return nonlinear_solver;
 }
 
-std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLinearSolverAndPreconditioner(
+std::pair<std::shared_ptr<mfem::Solver>, std::shared_ptr<mfem::Solver>> buildLinearSolverAndPreconditioner(
     LinearSolverOptions linear_opts, MPI_Comm comm)
 {
   if (linear_opts.linear_solver == LinearSolver::SuperLU) {
-    auto lin_solver = std::make_unique<SuperLUSolver>(linear_opts.print_level, comm);
-    return {std::move(lin_solver), nullptr};
+    auto lin_solver = std::make_shared<SuperLUSolver>(linear_opts.print_level, comm);
+    return {lin_solver, nullptr};
   }
 
-  std::unique_ptr<mfem::IterativeSolver> iter_lin_solver;
+  std::shared_ptr<mfem::IterativeSolver> iter_lin_solver;
 
   switch (linear_opts.linear_solver) {
     case LinearSolver::CG:
-      iter_lin_solver = std::make_unique<mfem::CGSolver>(comm);
+      iter_lin_solver = std::make_shared<mfem::CGSolver>(comm);
       break;
     case LinearSolver::GMRES:
-      iter_lin_solver = std::make_unique<mfem::GMRESSolver>(comm);
+      iter_lin_solver = std::make_shared<mfem::GMRESSolver>(comm);
       break;
     default:
       SLIC_ERROR_ROOT("Linear solver type not recognized.");
@@ -154,13 +151,13 @@ std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLin
     iter_lin_solver->SetPreconditioner(*preconditioner);
   }
 
-  return {std::move(iter_lin_solver), std::move(preconditioner)};
+  return {iter_lin_solver, preconditioner};
 }
 
 #ifdef MFEM_USE_AMGX
-std::unique_ptr<mfem::AmgXSolver> buildAMGX(const AMGXOptions& options, const MPI_Comm comm)
+std::shared_ptr<mfem::AmgXSolver> buildAMGX(const AMGXOptions& options, const MPI_Comm comm)
 {
-  auto          amgx = std::make_unique<mfem::AmgXSolver>();
+  auto          amgx = std::make_shared<mfem::AmgXSolver>();
   conduit::Node options_node;
   options_node["config_version"] = 2;
   auto& solver_options           = options_node["solver"];
@@ -212,28 +209,28 @@ std::unique_ptr<mfem::AmgXSolver> buildAMGX(const AMGXOptions& options, const MP
 }
 #endif
 
-std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner, int print_level,
+std::shared_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner, int print_level,
                                                   [[maybe_unused]] MPI_Comm comm)
 {
-  std::unique_ptr<mfem::Solver> preconditioner_ptr;
+  std::shared_ptr<mfem::Solver> preconditioner_ptr;
 
   // Handle the preconditioner - currently just BoomerAMG and HypreSmoother are supported
   if (preconditioner == Preconditioner::HypreAMG) {
-    auto amg_preconditioner = std::make_unique<mfem::HypreBoomerAMG>();
+    auto amg_preconditioner = std::make_shared<mfem::HypreBoomerAMG>();
     amg_preconditioner->SetPrintLevel(print_level);
-    preconditioner_ptr = std::move(amg_preconditioner);
+    preconditioner_ptr = amg_preconditioner;
   } else if (preconditioner == Preconditioner::HypreJacobi) {
-    auto jac_preconditioner = std::make_unique<mfem::HypreSmoother>();
+    auto jac_preconditioner = std::make_shared<mfem::HypreSmoother>();
     jac_preconditioner->SetType(mfem::HypreSmoother::Type::Jacobi);
-    preconditioner_ptr = std::move(jac_preconditioner);
+    preconditioner_ptr = jac_preconditioner;
   } else if (preconditioner == Preconditioner::HypreL1Jacobi) {
-    auto jacl1_preconditioner = std::make_unique<mfem::HypreSmoother>();
+    auto jacl1_preconditioner = std::make_shared<mfem::HypreSmoother>();
     jacl1_preconditioner->SetType(mfem::HypreSmoother::Type::l1Jacobi);
-    preconditioner_ptr = std::move(jacl1_preconditioner);
+    preconditioner_ptr = jacl1_preconditioner;
   } else if (preconditioner == Preconditioner::HypreGaussSeidel) {
-    auto gs_preconditioner = std::make_unique<mfem::HypreSmoother>();
+    auto gs_preconditioner = std::make_shared<mfem::HypreSmoother>();
     gs_preconditioner->SetType(mfem::HypreSmoother::Type::GS);
-    preconditioner_ptr = std::move(gs_preconditioner);
+    preconditioner_ptr = gs_preconditioner;
   } else if (preconditioner == Preconditioner::AMGX) {
 #ifdef MFEM_USE_AMGX
     preconditioner_ptr = buildAMGX(AMGXOptions{}, comm);
@@ -368,7 +365,7 @@ serac::mfem_ext::EquationSolver FromInlet<serac::mfem_ext::EquationSolver>::oper
   auto [linear_solver, preconditioner] = serac::mfem_ext::buildLinearSolverAndPreconditioner(lin, MPI_COMM_WORLD);
 
   serac::mfem_ext::EquationSolver eq_solver(serac::mfem_ext::buildNonlinearSolver(nonlin, MPI_COMM_WORLD),
-                                            std::move(linear_solver), std::move(preconditioner));
+                                            linear_solver, preconditioner);
 
   return eq_solver;
 }

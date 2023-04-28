@@ -50,8 +50,8 @@ public:
    * equation solves
    * @param[in] preconditioner An optional constructed precondition to aid the linear solver
    */
-  EquationSolver(std::unique_ptr<mfem::NewtonSolver> nonlinear_solver, std::unique_ptr<mfem::Solver> linear_solver,
-                 std::unique_ptr<mfem::Solver> preconditioner = nullptr);
+  EquationSolver(std::shared_ptr<mfem::NewtonSolver> nonlinear_solver, std::shared_ptr<mfem::Solver> linear_solver,
+                 std::shared_ptr<mfem::Solver> preconditioner = nullptr);
   // _equationsolver_constructor_end
 
   /**
@@ -112,17 +112,17 @@ private:
   /**
    * @brief The optional preconditioner (used for an iterative solver only)
    */
-  std::unique_ptr<mfem::Solver> preconditioner_;
+  std::shared_ptr<mfem::Solver> preconditioner_;
 
   /**
    * @brief The linear solver object, either custom, direct (SuperLU), or iterative
    */
-  std::unique_ptr<mfem::Solver> lin_solver_;
+  std::shared_ptr<mfem::Solver> lin_solver_;
 
   /**
    * @brief The nonlinear solver object
    */
-  std::unique_ptr<mfem::NewtonSolver> nonlin_solver_;
+  std::shared_ptr<mfem::NewtonSolver> nonlin_solver_;
 
   /**
    * @brief Whether the solver (linear solver) has been configured with the nonlinear solver
@@ -193,8 +193,8 @@ private:
  * @param comm The MPI communicator for the supplied nonlinear operators and HypreParVectors
  * @return The constructed equation solver
  */
-std::unique_ptr<EquationSolver> buildEquationSolver(NonlinearSolverOptions nonlinear_opts = {},
-                                                    LinearSolverOptions lin_opts = {}, MPI_Comm comm = MPI_COMM_WORLD);
+EquationSolver buildEquationSolver(NonlinearSolverOptions nonlinear_opts = {}, LinearSolverOptions lin_opts = {},
+                                   MPI_Comm comm = MPI_COMM_WORLD);
 // _build_equationsolver_end
 
 /**
@@ -204,7 +204,7 @@ std::unique_ptr<EquationSolver> buildEquationSolver(NonlinearSolverOptions nonli
  * @param comm The MPI communicator for the supplied nonlinear operators and HypreParVectors
  * @return The constructed nonlinear solver
  */
-std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(NonlinearSolverOptions nonlinear_opts = {},
+std::shared_ptr<mfem::NewtonSolver> buildNonlinearSolver(NonlinearSolverOptions nonlinear_opts = {},
                                                          MPI_Comm               comm           = MPI_COMM_WORLD);
 
 /**
@@ -214,7 +214,7 @@ std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(NonlinearSolverOptions 
  * @param comm The MPI communicator for the supplied HypreParMatrix and HypreParVectors
  * @return A pair containing the constructed linear solver and preconditioner objects
  */
-std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLinearSolverAndPreconditioner(
+std::pair<std::shared_ptr<mfem::Solver>, std::shared_ptr<mfem::Solver>> buildLinearSolverAndPreconditioner(
     LinearSolverOptions linear_opts = {}, MPI_Comm comm = MPI_COMM_WORLD);
 
 /**
@@ -225,7 +225,7 @@ std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLin
  * @param comm The communicator for the underlying operator and HypreParVectors
  * @return A constructed preconditioner based on the input option
  */
-std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner, int print_level = 0,
+std::shared_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner, int print_level = 0,
                                                   [[maybe_unused]] MPI_Comm comm = MPI_COMM_WORLD);
 
 #ifdef MFEM_USE_AMGX

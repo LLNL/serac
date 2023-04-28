@@ -106,6 +106,9 @@ enum class LinearSolver
 };
 // _linear_solvers_end
 
+// Add a custom list of strings? conduit node?
+// Arbitrary string (e.g. json) to define parameters?
+
 // _nonlinear_solvers_start
 /// Nonlinear solver method indicator
 enum class NonlinearSolver

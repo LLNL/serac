@@ -104,7 +104,7 @@ public:
    * @param name An optional name for the physics module instance
    * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
-  SolidMechanics(std::unique_ptr<serac::mfem_ext::EquationSolver> solver, const serac::TimesteppingOptions dynamic_opts,
+  SolidMechanics(const serac::mfem_ext::EquationSolver& solver, const serac::TimesteppingOptions dynamic_opts,
                  const GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
                  mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(2, order, name, pmesh),
@@ -120,10 +120,10 @@ public:
                 .order = order, .vector_dim = dim, .name = detail::addPrefix(name, "adjoint_displacement")},
             sidre_datacoll_id_)),
         reactions_(StateManager::newDual(displacement_.space(), detail::addPrefix(name, "reactions"))),
-        nonlin_solver_(std::move(solver)),
+        nonlin_solver_(solver),
         ode2_(displacement_.space().TrueVSize(),
               {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
-              *nonlin_solver_, bcs_),
+              nonlin_solver_, bcs_),
         c0_(0.0),
         c1_(0.0),
         geom_nonlin_(geom_nonlin)
@@ -169,7 +169,7 @@ public:
 
     // If the user wants the AMG preconditioner with a linear solver, set the pfes
     // to be the displacement
-    auto* amg_prec = dynamic_cast<mfem::HypreBoomerAMG*>(nonlin_solver_->Preconditioner());
+    auto* amg_prec = dynamic_cast<mfem::HypreBoomerAMG*>(nonlin_solver_.Preconditioner());
     if (amg_prec) {
       amg_prec->SetElasticityOptions(&displacement_.space());
     }
@@ -704,7 +704,7 @@ public:
           });
     }
 
-    nonlin_solver_->SetOperator(*residual_with_bcs_);
+    nonlin_solver_.SetOperator(*residual_with_bcs_);
   }
 
   /// @brief Solve the Quasi-static Newton system
@@ -712,7 +712,7 @@ public:
   {
     time_ += dt;
 
-    auto& lin_solver = nonlin_solver_->LinearSolver();
+    auto& lin_solver = nonlin_solver_.LinearSolver();
 
     // the ~20 lines of code below are essentially equivalent to the 1-liner
     // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
@@ -743,7 +743,7 @@ public:
     // Modify our initial guess with the displacement due to the reaction forces
     displacement_ += du_;
 
-    nonlin_solver_->Mult(zero_, displacement_);
+    nonlin_solver_.Mult(zero_, displacement_);
   }
 
   /**
@@ -816,7 +816,7 @@ public:
     // Add the sign correction to move the term to the RHS
     adjoint_load_vector *= -1.0;
 
-    auto& lin_solver = nonlin_solver_->LinearSolver();
+    auto& lin_solver = nonlin_solver_.LinearSolver();
 
     // By default, use a homogeneous essential boundary condition
     mfem::HypreParVector adjoint_essential(disp_adjoint_load->second);
@@ -956,7 +956,7 @@ protected:
   std::unique_ptr<mfem_ext::StdFunctionOperator> residual_with_bcs_;
 
   /// the specific methods and tolerances specified to solve the nonlinear residual equations
-  std::unique_ptr<mfem_ext::EquationSolver> nonlin_solver_;
+  mfem_ext::EquationSolver nonlin_solver_;
 
   /**
    * @brief the ordinary differential equation that describes
