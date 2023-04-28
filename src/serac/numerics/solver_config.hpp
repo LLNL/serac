@@ -96,19 +96,18 @@ struct TimesteppingOptions {
   DirichletEnforcementMethod enforcement_method = DirichletEnforcementMethod::RateControl;
 };
 
-/**
- * @brief Linear solution method indicator
- */
+// _linear_solvers_start
+/// Linear solution method indicator
 enum class LinearSolver
 {
   CG,     /**< Conjugate gradient */
   GMRES,  /**< Generalized minimal residual method */
   SuperLU /**< SuperLU MPI-enabled direct Solver */
 };
+// _linear_solvers_end
 
-/**
- * @brief Nonlinear solver method indicator
- */
+// _nonlinear_solvers_start
+/// Nonlinear solver method indicator
 enum class NonlinearSolver
 {
   Newton,                    /**< MFEM-native Newton-Raphson */
@@ -117,6 +116,7 @@ enum class NonlinearSolver
   KINBacktrackingLineSearch, /**< KINSOL Newton with Backtracking Line Search (Sundials must be enabled) */
   KINPicard                  /**< KINSOL Picard (Sundials must be enabled) */
 };
+// _nonlinear_solvers_end
 
 /**
  * @brief Solver types supported by AMGX
@@ -157,87 +157,63 @@ struct AMGXOptions {
   bool verbose = false;
 };
 
-/**
- * @brief The type of preconditioner to be used
- */
+// _preconditioners_start
+/// The type of preconditioner to be used
 enum class Preconditioner
 {
   HypreJacobi,      /**< Hypre-based Jacobi */
   HypreL1Jacobi,    /**< Hypre-based L1-scaled Jacobi */
   HypreGaussSeidel, /**< Hypre-based Gauss-Seidel */
   HypreAMG,         /**< Hypre's BoomerAMG algebraic multi-grid */
-  AMGX,             /**< NVIDIA's AMGX GPU-enabled algebraic multi-grid */
+  AMGX,             /**< NVIDIA's AMGX GPU-enabled algebraic multi-grid, GPU builds only */
   None              /**< No preconditioner used */
 };
+// _preconditioners_end
 
-/**
- * @brief Parameters for an iterative linear solution scheme
- */
+// _linear_options_start
+/// Parameters for an iterative linear solution scheme
 struct LinearSolverOptions {
-  /**
-   * @brief Linear solver selection
-   */
+  /// Linear solver selection
   LinearSolver linear_solver = LinearSolver::GMRES;
 
-  /**
-   * @brief PreconditionerOptions selection
-   */
+  /// PreconditionerOptions selection
   Preconditioner preconditioner = Preconditioner::HypreJacobi;
 
-  /**
-   * @brief Relative tolerance
-   */
+  /// Relative tolerance
   double relative_tol = 1.0e-8;
 
-  /**
-   * @brief Absolute tolerance
-   */
+  /// Absolute tolerance
   double absolute_tol = 1.0e-12;
 
-  /**
-   * @brief Maximum number of iterations
-   */
+  /// Maximum number of iterations
   int max_iterations = 300;
 
-  /**
-   * @brief Debugging print level for the linear solver
-   */
+  /// Debugging print level for the linear solver
   int print_level = 0;
 
-  /**
-   * @brief Debugging print level for the preconditioner
-   */
+  /// Debugging print level for the preconditioner
   int preconditioner_print_level = 0;
 };
+// _linear_options_end
 
-/**
- * @brief Nonlinear solution scheme parameters
- */
+// _nonlinear_options_start
+/// Nonlinear solution scheme parameters
 struct NonlinearSolverOptions {
-  /**
-   * @brief Nonlinear solver selection
-   */
+  /// Nonlinear solver selection
   NonlinearSolver nonlin_solver = NonlinearSolver::Newton;
 
-  /**
-   * @brief Relative tolerance
-   */
+  /// Relative tolerance
   double relative_tol = 1.0e-8;
 
-  /**
-   * @brief Absolute tolerance
-   */
+  /// Absolute tolerance
   double absolute_tol = 1.0e-12;
 
-  /**
-   * @brief Maximum number of iterations
-   */
+  /// Maximum number of iterations
   int max_iterations = 20;
 
-  /**
-   * @brief Debug print level
-   */
+  /// Debug print level
   int print_level = 0;
 };
+// _nonlinear_options_end
 
 }  // namespace serac

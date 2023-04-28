@@ -42,6 +42,7 @@ namespace serac::mfem_ext {
  */
 class EquationSolver : public mfem::Solver {
 public:
+  // _equationsolver_constructor_start
   /**
    * Constructs a new nonlinear equation solver
    * @param[in] nonlinear_solver A constructed nonlinear solver
@@ -51,6 +52,7 @@ public:
    */
   EquationSolver(std::unique_ptr<mfem::NewtonSolver> nonlinear_solver, std::unique_ptr<mfem::Solver> linear_solver,
                  std::unique_ptr<mfem::Solver> preconditioner = nullptr);
+  // _equationsolver_constructor_end
 
   /**
    * Updates the solver with the provided operator
@@ -179,6 +181,7 @@ private:
   mfem::SuperLUSolver superlu_solver_;
 };
 
+// _build_equationsolver_start
 /**
  * @brief Build an equation solver object using nonlinear and linear solver option structs.
  *
@@ -192,6 +195,7 @@ private:
  */
 std::unique_ptr<EquationSolver> buildEquationSolver(NonlinearSolverOptions nonlinear_opts = {},
                                                     LinearSolverOptions lin_opts = {}, MPI_Comm comm = MPI_COMM_WORLD);
+// _build_equationsolver_end
 
 /**
  * @brief Build a nonlinear solver using the nonlinear option struct
