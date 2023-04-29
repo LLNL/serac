@@ -37,8 +37,7 @@ namespace serac::mfem_ext {
  *
  * An equation solver can either be constructed by supplying pre-built nonlinear and linear solvers with a
  * preconditioner, or it can be constructed using @a serac::NonlinearSolverOptions and @a serac::LinearSolverOptions
- * structs with the
- * @ref serac::mfem_ext::buildEquationSolver factory method.
+ * structs with the @a serac::mfem_ext::buildEquationSolver factory method.
  */
 class EquationSolver : public mfem::Solver {
 public:
@@ -236,7 +235,7 @@ std::shared_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner,
  * @param comm The communicator for the underlying operator and HypreParVectors
  * @return The constructed AMGX preconditioner
  */
-std::unique_ptr<mfem::AmgXSolver> buildAMGX(const AMGXOptions& options, const MPI_Comm comm);
+std::shared_ptr<mfem::AmgXSolver> buildAMGX(const AMGXOptions& options, const MPI_Comm comm);
 #endif
 }  // namespace serac::mfem_ext
 
