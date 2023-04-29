@@ -164,8 +164,8 @@ std::set<int> essentialBoundaryAttributes(PatchBoundaryCondition bc)
  * solid functional that should lead to the exact solution
  * See AffineSolution for an example
  */
-template <int p, int dim, typename ExactSolution>
-double solution_error(const ExactSolution& exact_displacement, PatchBoundaryCondition bc)
+template < typename element_type>
+double solution_error(PatchBoundaryCondition bc)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -173,12 +173,25 @@ double solution_error(const ExactSolution& exact_displacement, PatchBoundaryCond
   axom::sidre::DataStore datastore;
   serac::StateManager::initialize(datastore, "solid_static_solve");
 
+  constexpr int p = element_type::order;
+  constexpr int dim = dimension_of(element_type::geometry);
+
   // BT: shouldn't this assertion be in the physics module?
   // Putting it here prevents tests from having a nonsensical spatial dimension value, 
   // but the physics module should be catching this error to protect users.
   static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for solid test");
 
-  std::string filename = std::string(SERAC_REPO_DIR) +  "/data/meshes/patch" + std::to_string(dim) + "D.mesh";
+  auto exact_displacement = AffineSolution<dim>(); 
+
+  std::string meshdir = std::string(SERAC_REPO_DIR) + "/data/meshes/";
+  std::string filename;
+  switch (element_type::geometry) {
+    case mfem::Geometry::TRIANGLE:    filename = meshdir + "patch2D_tris.mesh"; break;
+    case mfem::Geometry::SQUARE:      filename = meshdir + "patch2D_quads.mesh"; break;
+    case mfem::Geometry::TETRAHEDRON: filename = meshdir + "patch3D_tets.mesh"; break;
+    case mfem::Geometry::CUBE:        filename = meshdir + "patch3D_hexes.mesh"; break;
+    default: SLIC_ERROR_ROOT("unsupported element type for patch test"); break;
+  } 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename));
   serac::StateManager::setMesh(std::move(mesh));
 
@@ -214,68 +227,142 @@ double solution_error(const ExactSolution& exact_displacement, PatchBoundaryCond
 
 const double tol = 1e-13;
 
+constexpr int LINEAR = 1;
+constexpr int QUADRATIC = 2;
+constexpr int CUBIC = 3;
+
 TEST(SolidMechanics, PatchTest2dQ1EssentialBcs)
 {
-  constexpr int p = 1;
-  constexpr int dim = 2;
-  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
-  EXPECT_LT(error, tol);
+  using triangle = finite_element< mfem::Geometry::TRIANGLE, H1< LINEAR > >;
+  double tri_error = solution_error< triangle >(PatchBoundaryCondition::Essential);
+  EXPECT_LT(tri_error, tol);
+
+  using quadrilateral = finite_element< mfem::Geometry::SQUARE, H1< LINEAR > >;
+  double quad_error = solution_error< quadrilateral >(PatchBoundaryCondition::Essential);
+  EXPECT_LT(quad_error, tol);
 }
 
 TEST(SolidMechanics, PatchTest3dQ1EssentialBcs)
 {
-  constexpr int p = 1;
-  constexpr int dim   = 3;
-  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
-  EXPECT_LT(error, tol);
+  using tetrahedron = finite_element< mfem::Geometry::TETRAHEDRON, H1< LINEAR > >;
+  double tet_error = solution_error< tetrahedron >(PatchBoundaryCondition::Essential);
+  EXPECT_LT(tet_error, tol);
+
+  using hexahedron = finite_element< mfem::Geometry::CUBE, H1< LINEAR > >;
+  double hex_error = solution_error< hexahedron >(PatchBoundaryCondition::Essential);
+  EXPECT_LT(hex_error, tol);
 }
 
 TEST(SolidMechanics, PatchTest2dQ2EssentialBcs)
 {
-  constexpr int p = 2;
-  constexpr int dim   = 2;
-  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
-  EXPECT_LT(error, tol);
+  using triangle = finite_element< mfem::Geometry::TRIANGLE, H1< QUADRATIC > >;
+  double tri_error = solution_error< triangle >(PatchBoundaryCondition::Essential);
+  EXPECT_LT(tri_error, tol);
+
+  using quadrilateral = finite_element< mfem::Geometry::SQUARE, H1< QUADRATIC > >;
+  double quad_error = solution_error< quadrilateral >(PatchBoundaryCondition::Essential);
+  EXPECT_LT(quad_error, tol);
 }
 
 TEST(SolidMechanics, PatchTest3dQ2EssentialBcs)
 {
-  constexpr int p = 2;
-  constexpr int dim   = 3;
-  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
-  EXPECT_LT(error, tol);
+  using tetrahedron = finite_element< mfem::Geometry::TETRAHEDRON, H1< QUADRATIC > >;
+  double tet_error = solution_error< tetrahedron >(PatchBoundaryCondition::Essential);
+  EXPECT_LT(tet_error, tol);
+
+  using hexahedron = finite_element< mfem::Geometry::CUBE, H1< QUADRATIC > >;
+  double hex_error = solution_error< hexahedron >(PatchBoundaryCondition::Essential);
+  EXPECT_LT(hex_error, tol);
 }
 
-TEST(SolidMechanics, PatchTest2dQ1TractionBcs)
+TEST(SolidMechanics, PatchTest2dQ3EssentialBcs)
 {
-  constexpr int p = 1;
-  constexpr int dim   = 2;
-  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::EssentialAndNatural);
-  EXPECT_LT(error, tol);
+  using triangle = finite_element< mfem::Geometry::TRIANGLE, H1< CUBIC > >;
+  double tri_error = solution_error< triangle >(PatchBoundaryCondition::Essential);
+  EXPECT_LT(tri_error, tol);
+
+  using quadrilateral = finite_element< mfem::Geometry::SQUARE, H1< CUBIC > >;
+  double quad_error = solution_error< quadrilateral >(PatchBoundaryCondition::Essential);
+  EXPECT_LT(quad_error, tol);
 }
 
-TEST(SolidMechanics, PatchTest3dQ1TractionBcs)
+TEST(SolidMechanics, PatchTest3dQ3EssentialBcs)
 {
-  constexpr int p = 1;
-  constexpr int dim   = 3;
-  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::EssentialAndNatural);
-  EXPECT_LT(error, tol);
+  using tetrahedron = finite_element< mfem::Geometry::TETRAHEDRON, H1< CUBIC > >;
+  double tet_error = solution_error< tetrahedron >(PatchBoundaryCondition::Essential);
+  EXPECT_LT(tet_error, tol);
+
+  using hexahedron = finite_element< mfem::Geometry::CUBE, H1< CUBIC > >;
+  double hex_error = solution_error< hexahedron >(PatchBoundaryCondition::Essential);
+  EXPECT_LT(hex_error, tol);
 }
 
-TEST(SolidMechanics, PatchTest2dQ2TractionBcs)
+///////////////////////////////////////////////////////////////////////////////
+
+TEST(SolidMechanics, PatchTest2dQ1EssentialAndNaturalBcs)
 {
-  constexpr int p = 2;
-  constexpr int dim   = 2;
-  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::EssentialAndNatural);
-  EXPECT_LT(error, tol);
+  using triangle = finite_element< mfem::Geometry::TRIANGLE, H1< LINEAR > >;
+  double tri_error = solution_error< triangle >(PatchBoundaryCondition::EssentialAndNatural);
+  EXPECT_LT(tri_error, tol);
+
+  using quadrilateral = finite_element< mfem::Geometry::SQUARE, H1< LINEAR > >;
+  double quad_error = solution_error< quadrilateral >(PatchBoundaryCondition::EssentialAndNatural);
+  EXPECT_LT(quad_error, tol);
 }
 
-TEST(SolidMechanics, PatchTest3dQ2TractionBcs)
+TEST(SolidMechanics, PatchTest3dQ1EssentialAndNaturalBcs)
 {
-  constexpr int p = 2;
-  constexpr int dim   = 3;
-  double error = solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::EssentialAndNatural);
-  EXPECT_LT(error, tol);
+  using tetrahedron = finite_element< mfem::Geometry::TETRAHEDRON, H1< LINEAR > >;
+  double tet_error = solution_error< tetrahedron >(PatchBoundaryCondition::EssentialAndNatural);
+  EXPECT_LT(tet_error, tol);
+
+  using hexahedron = finite_element< mfem::Geometry::CUBE, H1< LINEAR > >;
+  double hex_error = solution_error< hexahedron >(PatchBoundaryCondition::EssentialAndNatural);
+  EXPECT_LT(hex_error, tol);
+}
+
+TEST(SolidMechanics, PatchTest2dQ2EssentialAndNaturalBcs)
+{
+  using triangle = finite_element< mfem::Geometry::TRIANGLE, H1< QUADRATIC > >;
+  double tri_error = solution_error< triangle >(PatchBoundaryCondition::EssentialAndNatural);
+  EXPECT_LT(tri_error, tol);
+
+  using quadrilateral = finite_element< mfem::Geometry::SQUARE, H1< QUADRATIC > >;
+  double quad_error = solution_error< quadrilateral >(PatchBoundaryCondition::EssentialAndNatural);
+  EXPECT_LT(quad_error, tol);
+}
+
+TEST(SolidMechanics, PatchTest3dQ2EssentialAndNaturalBcs)
+{
+  using tetrahedron = finite_element< mfem::Geometry::TETRAHEDRON, H1< QUADRATIC > >;
+  double tet_error = solution_error< tetrahedron >(PatchBoundaryCondition::EssentialAndNatural);
+  EXPECT_LT(tet_error, tol);
+
+  using hexahedron = finite_element< mfem::Geometry::CUBE, H1< QUADRATIC > >;
+  double hex_error = solution_error< hexahedron >(PatchBoundaryCondition::EssentialAndNatural);
+  EXPECT_LT(hex_error, tol);
+}
+
+TEST(SolidMechanics, PatchTest2dQ3EssentialAndNaturalBcs)
+{
+  using triangle = finite_element< mfem::Geometry::TRIANGLE, H1< CUBIC > >;
+  double tri_error = solution_error< triangle >(PatchBoundaryCondition::EssentialAndNatural);
+  EXPECT_LT(tri_error, tol);
+
+  using quadrilateral = finite_element< mfem::Geometry::SQUARE, H1< CUBIC > >;
+  double quad_error = solution_error< quadrilateral >(PatchBoundaryCondition::EssentialAndNatural);
+  EXPECT_LT(quad_error, tol);
+}
+
+TEST(SolidMechanics, PatchTest3dQ3EssentialAndNaturalBcs)
+{
+  using tetrahedron = finite_element< mfem::Geometry::TETRAHEDRON, H1< CUBIC > >;
+  double tet_error = solution_error< tetrahedron >(PatchBoundaryCondition::EssentialAndNatural);
+  EXPECT_LT(tet_error, tol);
+
+  using hexahedron = finite_element< mfem::Geometry::CUBE, H1< CUBIC > >;
+  double hex_error = solution_error< hexahedron >(PatchBoundaryCondition::EssentialAndNatural);
+  EXPECT_LT(hex_error, tol);
 }
 
 }  // namespace serac

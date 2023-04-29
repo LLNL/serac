@@ -24,6 +24,7 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
   static constexpr int  dim        = 3;
   static constexpr int  n          = (p + 1);
   static constexpr int  ndof       = (p + 1) * (p + 2) * (p + 3) / 6;
+  static constexpr int  order      = p;
   static constexpr int nqpts(int q) { return num_quadrature_points(mfem::Geometry::TETRAHEDRON, q); }
 
   static constexpr int VALUE = 0, GRADIENT = 1;

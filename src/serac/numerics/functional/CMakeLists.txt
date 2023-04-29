@@ -10,12 +10,10 @@ blt_list_append( TO functional_depends ELEMENTS caliper adiak IF SERAC_ENABLE_PR
 
 # Add the library first
 set(functional_headers
-    boundary_integral.hpp
     boundary_integral_kernels.hpp
     dof_numbering.hpp
     element_restriction.hpp
     geometric_factors.hpp
-    #domain_integral.hpp
     domain_integral_kernels.hpp
     dual.hpp
     evector_view.hpp

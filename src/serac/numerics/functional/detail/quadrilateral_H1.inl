@@ -22,6 +22,7 @@ struct finite_element<mfem::Geometry::SQUARE, H1<p, c> > {
   static constexpr auto family     = Family::H1;
   static constexpr int  components = c;
   static constexpr int  dim        = 2;
+  static constexpr int  order      = p;
   static constexpr int  n          = (p + 1);
   static constexpr int  ndof       = (p + 1) * (p + 1);
 
