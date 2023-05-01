@@ -70,11 +70,9 @@ TEST(HeatTransfer, MoveShape)
   auto zero = [](const mfem::Vector&, double) -> double { return 0.0; };
 
   {
-    auto solver = serac::mfem_ext::buildEquationSolver(options, heat_transfer::default_linear_options);
-
     // Construct a functional-based thermal solver including references to the shape displacement field.
-    HeatTransfer<p, dim> thermal_solver(std::move(solver), TimesteppingOptions{TimestepMethod::QuasiStatic},
-                                        "thermal_shape");
+    HeatTransfer<p, dim> thermal_solver(options, heat_transfer::default_linear_options,
+                                        TimesteppingOptions{TimestepMethod::QuasiStatic}, "thermal_shape");
 
     // Set the initial temperature and boundary condition
     thermal_solver.setTemperatureBCs(ess_bdr, zero);
@@ -117,11 +115,9 @@ TEST(HeatTransfer, MoveShape)
     auto* mesh_nodes = StateManager::mesh().GetNodes();
     *mesh_nodes += user_defined_shape_displacement.gridFunction();
 
-    auto solver = serac::mfem_ext::buildEquationSolver(options, heat_transfer::default_linear_options);
-
     // Construct a functional-based thermal solver including references to the shape displacement field.
-    HeatTransfer<p, dim> thermal_solver_no_shape(std::move(solver), TimesteppingOptions{TimestepMethod::QuasiStatic},
-                                                 "thermal_pure");
+    HeatTransfer<p, dim> thermal_solver_no_shape(options, heat_transfer::default_linear_options,
+                                                 TimesteppingOptions{TimestepMethod::QuasiStatic}, "thermal_pure");
 
     // Set the initial temperature and boundary condition
     thermal_solver_no_shape.setTemperatureBCs(ess_bdr, zero);

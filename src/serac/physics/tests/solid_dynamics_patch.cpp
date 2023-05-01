@@ -112,11 +112,9 @@ double dynamic_solution_error(const ExactSolution& exact_solution, PatchBoundary
   // Construct a functional-based solid mechanics solver
   serac::NonlinearSolverOptions nonlin_opts{.relative_tol = 1.0e-13, .absolute_tol = 1.0e-13};
 
-  SolidMechanics<p, dim> solid(
-      serac::mfem_ext::buildEquationSolver(nonlin_opts, serac::solid_mechanics::default_linear_options,
-                                           serac::StateManager::mesh().GetComm()),
-      TimesteppingOptions{TimestepMethod::Newmark, DirichletEnforcementMethod::DirectControl},
-      GeometricNonlinearities::On, "solid_dynamics");
+  SolidMechanics<p, dim> solid(nonlin_opts, serac::solid_mechanics::default_linear_options,
+                               TimesteppingOptions{TimestepMethod::Newmark, DirichletEnforcementMethod::DirectControl},
+                               GeometricNonlinearities::On, "solid_dynamics");
 
   solid_mechanics::NeoHookean mat{.density = 1.0, .K = 1.0, .G = 1.0};
   solid.setMaterial(mat);

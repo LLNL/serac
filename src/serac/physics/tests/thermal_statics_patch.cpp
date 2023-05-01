@@ -170,7 +170,7 @@ double solution_error(const ExactSolution& exact_temperature, PatchBoundaryCondi
   auto nonlinear_opts = heat_transfer::default_nonlinear_options;
   nonlinear_opts.absolute_tol = 1e-14;
   nonlinear_opts.relative_tol = 1e-14;
-  HeatTransfer<p, dim> thermal(serac::mfem_ext::buildEquationSolver(nonlinear_opts, heat_transfer::direct_linear_options, MPI_COMM_WORLD), heat_transfer::default_static_options, "thermal");
+  HeatTransfer<p, dim> thermal(nonlinear_opts, heat_transfer::direct_linear_options, heat_transfer::default_static_options, "thermal");
 
   heat_transfer::LinearIsotropicConductor mat(1.0,1.0,1.0);
   thermal.setMaterial(mat);

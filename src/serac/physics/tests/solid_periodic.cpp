@@ -70,8 +70,7 @@ TEST(SolidMechanics, Periodic)
 
   // Construct a functional-based solid solver
   SolidMechanics<p, dim, Parameters<L2<p>, L2<p>>> solid_solver(
-      mfem_ext::buildEquationSolver(solid_mechanics::default_nonlinear_options,
-                                    solid_mechanics::default_linear_options),
+      solid_mechanics::default_nonlinear_options, solid_mechanics::default_linear_options,
       solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "solid_periodic");
 
   solid_solver.setParameter(0, user_defined_bulk_modulus);

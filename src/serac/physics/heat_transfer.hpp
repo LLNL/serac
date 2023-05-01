@@ -93,15 +93,33 @@ public:
   static constexpr auto NUM_STATE_VARS = 3;
 
   /**
-   * @brief Construct a new Thermal Functional Solver object
+   * @brief Construct a new heat transfer object
    *
-   * @param[in] solver The nonlinear equation solver for the heat conduction equations
-   * @param[in] dynamic_opts The timestepping options for the heat conduction ordinary differential equations
+   * @param[in] nonlinear_opts The nonlinear solver options for solving the nonlinear residual equations
+   * @param[in] lin_opts The linear solver options for solving the linearized Jacobian equations
+   * @param[in] dynamic_opts The timestepping options for the heat transfer ordinary differential equations
    * @param[in] name An optional name for the physics module instance
    * used by an underlying material model or load
    * @param[in] pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
+  HeatTransfer(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
+               const serac::TimesteppingOptions dynamic_opts, const std::string& name = "",
+               mfem::ParMesh* pmesh = nullptr)
+      : HeatTransfer(std::make_unique<mfem_ext::EquationSolver>(
+                         nonlinear_opts, lin_opts, StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
+                     dynamic_opts, name, pmesh)
+  {
+  }
 
+  /**
+   * @brief Construct a new heat transfer object
+   *
+   * @param[in] solver The nonlinear equation solver for the heat transfer equations
+   * @param[in] dynamic_opts The timestepping options for the heat transfer ordinary differential equations
+   * @param[in] name An optional name for the physics module instance
+   * used by an underlying material model or load
+   * @param[in] pmesh The mesh to conduct the simulation on, if different than the default mesh
+   */
   HeatTransfer(std::unique_ptr<serac::mfem_ext::EquationSolver> solver, const serac::TimesteppingOptions dynamic_opts,
                const std::string& name = "", mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(NUM_STATE_VARS, order, name, pmesh),
@@ -190,8 +208,7 @@ public:
    * @param[in] name An optional name for the physics module instance. Note that this is NOT the mesh tag.
    */
   HeatTransfer(const HeatTransferInputOptions& options, const std::string& name = "")
-      : HeatTransfer(mfem_ext::buildEquationSolver(options.nonlin_solver_options, options.lin_solver_options),
-                     options.timestepping_options, name)
+      : HeatTransfer(options.nonlin_solver_options, options.lin_solver_options, options.timestepping_options, name)
   {
     if (options.initial_temperature) {
       auto temp = options.initial_temperature->constructScalar();

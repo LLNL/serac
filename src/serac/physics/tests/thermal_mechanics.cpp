@@ -55,9 +55,8 @@ void functional_test_static_3D(double expected_norm)
       .relative_tol = 1.0e-4, .absolute_tol = 1.0e-8, .max_iterations = 10, .print_level = 1};
 
   Thermomechanics<p, dim> thermal_solid_solver(
-      mfem_ext::buildEquationSolver(heat_transfer::default_nonlinear_options, heat_transfer::default_linear_options),
-      heat_transfer::default_static_options,
-      mfem_ext::buildEquationSolver(default_nonlinear_options, default_linear_options),
+      heat_transfer::default_nonlinear_options, heat_transfer::default_linear_options,
+      heat_transfer::default_static_options, default_nonlinear_options, default_linear_options,
       solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "thermal_solid_functional");
 
   double rho       = 1.0;
@@ -137,9 +136,8 @@ void functional_test_shrinking_3D(double expected_norm)
       .relative_tol = 1.0e-4, .absolute_tol = 1.0e-8, .max_iterations = 10, .print_level = 1};
 
   Thermomechanics<p, dim> thermal_solid_solver(
-      mfem_ext::buildEquationSolver(heat_transfer::default_nonlinear_options, heat_transfer::default_linear_options),
-      heat_transfer::default_static_options,
-      mfem_ext::buildEquationSolver(default_nonlinear_options, default_linear_options),
+      heat_transfer::default_nonlinear_options, heat_transfer::default_linear_options,
+      heat_transfer::default_static_options, default_nonlinear_options, default_linear_options,
       solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "thermal_solid_functional");
 
   double                                       rho       = 1.0;
@@ -239,9 +237,8 @@ void parameterized()
       .relative_tol = 1.0e-4, .absolute_tol = 1.0e-8, .max_iterations = 10, .print_level = 1};
 
   Thermomechanics<p, dim, H1<p>> thermal_solid_solver(
-      mfem_ext::buildEquationSolver(heat_transfer::default_nonlinear_options, heat_transfer::default_linear_options),
-      heat_transfer::default_static_options,
-      mfem_ext::buildEquationSolver(default_nonlinear_options, default_linear_options),
+      heat_transfer::default_nonlinear_options, heat_transfer::default_linear_options,
+      heat_transfer::default_static_options, default_nonlinear_options, default_linear_options,
       solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "thermal_solid_functional");
 
   double rho       = 1.0;

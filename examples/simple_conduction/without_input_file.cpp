@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
   constexpr int order = 1;
   constexpr int dim   = 2;
 
-  serac::HeatTransfer<order, dim> heat_transfer(serac::mfem_ext::buildEquationSolver(serac::heat_transfer::default_nonlinear_options, serac::heat_transfer::default_linear_options), serac::heat_transfer::default_static_options);
+  serac::HeatTransfer<order, dim> heat_transfer(serac::heat_transfer::default_nonlinear_options, serac::heat_transfer::default_linear_options, serac::heat_transfer::default_static_options);
   // _create_module_end
 
   // _conductivity_start

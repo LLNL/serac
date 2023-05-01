@@ -101,8 +101,8 @@ void shape_test(GeometricNonlinearities geo_nonlin)
     user_defined_shape_displacement.project(shape_coef);
 
     // Construct a functional-based solid mechanics solver including references to the shape velocity field.
-    SolidMechanics<p, dim> solid_solver(mfem_ext::buildEquationSolver(nonlinear_options, linear_options),
-                                        solid_mechanics::default_quasistatic_options, geo_nonlin, "solid_functional");
+    SolidMechanics<p, dim> solid_solver(nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options,
+                                        geo_nonlin, "solid_functional");
 
     // Set the initial displacement and boundary condition
     solid_solver.setDisplacementBCs(ess_bdr, bc);
@@ -144,7 +144,7 @@ void shape_test(GeometricNonlinearities geo_nonlin)
     *mesh_nodes += user_defined_shape_displacement.gridFunction();
 
     // Construct a functional-based solid mechanics solver including references to the shape velocity field.
-    SolidMechanics<p, dim> solid_solver_no_shape(mfem_ext::buildEquationSolver(nonlinear_options, linear_options),
+    SolidMechanics<p, dim> solid_solver_no_shape(nonlinear_options, linear_options,
                                                  solid_mechanics::default_quasistatic_options, geo_nonlin,
                                                  "solid_functional");
 

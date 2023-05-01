@@ -11,6 +11,15 @@
 
 namespace serac::mfem_ext {
 
+EquationSolver::EquationSolver(NonlinearSolverOptions nonlinear_opts, LinearSolverOptions lin_opts, MPI_Comm comm)
+{
+  auto [lin_solver, preconditioner] = buildLinearSolverAndPreconditioner(lin_opts, comm);
+
+  lin_solver_     = std::move(lin_solver);
+  preconditioner_ = std::move(preconditioner);
+  nonlin_solver_  = buildNonlinearSolver(nonlinear_opts, comm);
+}
+
 EquationSolver::EquationSolver(std::unique_ptr<mfem::NewtonSolver> nonlinear_solver,
                                std::unique_ptr<mfem::Solver>       linear_solver,
                                std::unique_ptr<mfem::Solver>       preconditioner)
@@ -63,15 +72,6 @@ void SuperLUSolver::SetOperator(const mfem::Operator& op)
   superlu_mat_ = std::make_unique<mfem::SuperLURowLocMatrix>(*matrix);
 
   superlu_solver_.SetOperator(*superlu_mat_);
-}
-
-std::unique_ptr<mfem_ext::EquationSolver> buildEquationSolver(NonlinearSolverOptions nonlinear_opts,
-                                                              LinearSolverOptions lin_opts, MPI_Comm comm)
-{
-  auto [linear_solver, preconditioner] = buildLinearSolverAndPreconditioner(lin_opts, comm);
-
-  return std::make_unique<EquationSolver>(buildNonlinearSolver(nonlinear_opts, comm), std::move(linear_solver),
-                                          std::move(preconditioner));
 }
 
 std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(NonlinearSolverOptions nonlinear_opts, MPI_Comm comm)

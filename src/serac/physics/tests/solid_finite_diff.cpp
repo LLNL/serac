@@ -58,8 +58,7 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
   // Construct a functional-based solid solver
 
   SolidMechanics<p, dim, Parameters<H1<1>, H1<1>>> solid_solver(
-      serac::mfem_ext::buildEquationSolver(solid_mechanics::default_nonlinear_options,
-                                           solid_mechanics::default_linear_options, MPI_COMM_WORLD),
+      solid_mechanics::default_nonlinear_options, solid_mechanics::default_linear_options,
       solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "solid_functional");
 
   solid_solver.setParameter(0, user_defined_bulk_modulus);
@@ -188,9 +187,9 @@ TEST(SolidMechanics, FiniteDifferenceShape)
       .relative_tol = 1.0e-8, .absolute_tol = 1.0e-14, .max_iterations = 10, .print_level = 1};
 
   // Construct a functional-based solid solver
-  SolidMechanics<p, dim> solid_solver(
-      serac::mfem_ext::buildEquationSolver(nonlin_options, solid_mechanics::direct_linear_options, MPI_COMM_WORLD),
-      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "solid_functional");
+  SolidMechanics<p, dim> solid_solver(nonlin_options, solid_mechanics::direct_linear_options,
+                                      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On,
+                                      "solid_functional");
 
   solid_mechanics::NeoHookean mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);

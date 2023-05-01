@@ -46,9 +46,9 @@ void functional_solid_test_static_J2()
   linear_options.absolute_tol = 1.0e-16;  // prevent early-exit in linear solve
 
   // Construct a functional-based solid mechanics solver
-  SolidMechanics<p, dim> solid_solver(
-      serac::mfem_ext::buildEquationSolver(solid_mechanics::default_nonlinear_options, linear_options, MPI_COMM_WORLD),
-      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::Off, "solid_mechanics");
+  SolidMechanics<p, dim> solid_solver(solid_mechanics::default_nonlinear_options, linear_options,
+                                      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::Off,
+                                      "solid_mechanics");
 
   solid_mechanics::J2 mat{
       10000,  // Young's modulus
@@ -137,9 +137,8 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
                                             .print_level    = 1};
 
   // Construct a functional-based solid mechanics solver
-  SolidMechanics<p, dim> solid_solver(serac::mfem_ext::buildEquationSolver(nonlin_opts, linear_options, MPI_COMM_WORLD),
-                                      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::Off,
-                                      "solid_functional");
+  SolidMechanics<p, dim> solid_solver(nonlin_opts, linear_options, solid_mechanics::default_quasistatic_options,
+                                      GeometricNonlinearities::Off, "solid_functional");
 
   solid_mechanics::LinearIsotropic mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
@@ -234,8 +233,7 @@ void functional_parameterized_solid_test(double expected_disp_norm)
 
   // Construct a functional-based solid mechanics solver
   SolidMechanics<p, dim, Parameters<H1<1>, H1<1>>> solid_solver(
-      serac::mfem_ext::buildEquationSolver(solid_mechanics::default_nonlinear_options,
-                                           solid_mechanics::default_linear_options, MPI_COMM_WORLD),
+      solid_mechanics::default_nonlinear_options, solid_mechanics::default_linear_options,
       solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "solid_functional");
   solid_solver.setParameter(0, user_defined_bulk_modulus);
   solid_solver.setParameter(1, user_defined_shear_modulus);

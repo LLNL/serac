@@ -32,7 +32,36 @@ template <int order, int dim, typename... parameter_space>
 class Thermomechanics : public BasePhysics {
 public:
   /**
-   * @brief Construct a new coupled Thermal-SolidMechanics Functional object
+   * @brief Construct a new coupled Thermal-SolidMechanics object
+   *
+   * @param thermal_nonlin_opts The nonlinear solver options for solving the nonlinear heat conduction residual
+   * equations
+   * @param thermal_lin_opts The linear solver options for solving the linearized Jacobian heat transfer equations
+   * @param thermal_timestepping The timestepping options for the heat transfer operator
+   * @param solid_nonlin_opts The nonlinear solver options for solving the nonlinear solid mechanics residual equations
+   * @param solid_lin_opts The linear solver options for solving the linearized Jacobian solid mechanics equations
+   * @param solid_timestepping The timestepping options for the solid solver
+   * @param geom_nonlin Flag to include geometric nonlinearities
+   * @param name An optional name for the physics module instance
+   * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
+   */
+  Thermomechanics(const NonlinearSolverOptions thermal_nonlin_opts, const LinearSolverOptions thermal_lin_opts,
+                  TimesteppingOptions thermal_timestepping, const NonlinearSolverOptions solid_nonlin_opts,
+                  const LinearSolverOptions solid_lin_opts, TimesteppingOptions solid_timestepping,
+                  GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
+                  mfem::ParMesh* pmesh = nullptr)
+      : Thermomechanics(
+            std::make_unique<mfem_ext::EquationSolver>(thermal_nonlin_opts, thermal_lin_opts,
+                                                       StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
+            thermal_timestepping,
+            std::make_unique<mfem_ext::EquationSolver>(solid_nonlin_opts, solid_lin_opts,
+                                                       StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
+            solid_timestepping, geom_nonlin, name, pmesh)
+  {
+  }
+
+  /**
+   * @brief Construct a new coupled Thermal-SolidMechanics object
    *
    * @param thermal_solver The nonlinear equation solver for the heat conduction equations
    * @param thermal_timestepping The timestepping options for the thermal solver
@@ -70,11 +99,10 @@ public:
    */
   Thermomechanics(const HeatTransferInputOptions& thermal_options, const SolidMechanicsInputOptions& solid_options,
                   const std::string& name = "")
-      : Thermomechanics(
-            mfem_ext::buildEquationSolver(thermal_options.nonlin_solver_options, thermal_options.lin_solver_options),
-            thermal_options.timestepping_options,
-            mfem_ext::buildEquationSolver(solid_options.nonlin_solver_options, solid_options.lin_solver_options),
-            solid_options.timestepping_options, solid_options.geom_nonlin, name)
+      : Thermomechanics(thermal_options.nonlin_solver_options, thermal_options.lin_solver_options,
+                        thermal_options.timestepping_options, solid_options.nonlin_solver_options,
+                        solid_options.lin_solver_options, solid_options.timestepping_options, solid_options.geom_nonlin,
+                        name)
   {
   }
 

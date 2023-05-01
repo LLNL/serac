@@ -53,6 +53,18 @@ public:
                  std::unique_ptr<mfem::Solver> preconditioner = nullptr);
   // _equationsolver_constructor_end
 
+  // _build_equationsolver_start
+  /**
+   * @brief Construct an equation solver object using nonlinear and linear solver option structs.
+   *
+   * @param nonlinear_opts The options to configure the nonlinear solution scheme
+   * @param lin_opts The options to configure the underlying linear solution scheme to be used by the nonlinear solver
+   * @param comm The MPI communicator for the supplied nonlinear operators and HypreParVectors
+   */
+  EquationSolver(NonlinearSolverOptions nonlinear_opts = {}, LinearSolverOptions lin_opts = {},
+                 MPI_Comm comm = MPI_COMM_WORLD);
+  // _build_equationsolver_end
+
   /**
    * Updates the solver with the provided operator
    * @param[in] op The operator (nonlinear system of equations) to use, "F" in F(x) = 0
@@ -179,22 +191,6 @@ private:
    */
   mfem::SuperLUSolver superlu_solver_;
 };
-
-// _build_equationsolver_start
-/**
- * @brief Build an equation solver object using nonlinear and linear solver option structs.
- *
- * This constructed equation solver can then be passed directly into physics modules to
- * solve generic nonlinear systems of equations of the form F(x) = 0.
- *
- * @param nonlinear_opts The options to configure the nonlinear solution scheme
- * @param lin_opts The options to configure the underlying linear solution scheme to be used by the nonlinear solver
- * @param comm The MPI communicator for the supplied nonlinear operators and HypreParVectors
- * @return The constructed equation solver
- */
-std::unique_ptr<EquationSolver> buildEquationSolver(NonlinearSolverOptions nonlinear_opts = {},
-                                                    LinearSolverOptions lin_opts = {}, MPI_Comm comm = MPI_COMM_WORLD);
-// _build_equationsolver_end
 
 /**
  * @brief Build a nonlinear solver using the nonlinear option struct

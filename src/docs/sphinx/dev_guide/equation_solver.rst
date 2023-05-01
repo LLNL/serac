@@ -163,3 +163,5 @@ passing it to the ``SolidMechanics`` physics module is below:
 
   serac::SolidMechanics<p, dim> solid_solver(serac::mfem_ext::buildEquationSolver(nonlinear_options, linear_options), 
                                              solid_mechanics::default_quasistatic_options);
+
+Note that each physics module must have its own ``EquationSolver``. They cannot be reused between modules. 

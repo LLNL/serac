@@ -96,7 +96,27 @@ public:
   static constexpr Geometry geom = supported_geometries[dim];
 
   /**
-   * @brief Construct a new SolidMechanics Functional object
+   * @brief Construct a new SolidMechanics object
+   *
+   * @param nonlinear_opts The nonlinear solver options for solving the nonlinear residual equations
+   * @param lin_opts The linear solver options for solving the linearized Jacobian equations
+   * @param dynamic_opts The timestepping options for the solid mechanics time evolution operator
+   * @param geom_nonlin Flag to include geometric nonlinearities
+   * @param name An optional name for the physics module instance
+   * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
+   */
+  SolidMechanics(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
+                 const serac::TimesteppingOptions dynamic_opts,
+                 const GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
+                 mfem::ParMesh* pmesh = nullptr)
+      : SolidMechanics(std::make_unique<mfem_ext::EquationSolver>(
+                           nonlinear_opts, lin_opts, StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
+                       dynamic_opts, geom_nonlin, name, pmesh)
+  {
+  }
+
+  /**
+   * @brief Construct a new SolidMechanics object
    *
    * @param solver The nonlinear equation solver for the implicit solid mechanics equations
    * @param dynamic_opts The timestepping options for the solid mechanics time evolution operator
@@ -214,9 +234,8 @@ public:
    * @param[in] name An optional name for the physics module instance. Note that this is NOT the mesh tag.
    */
   SolidMechanics(const SolidMechanicsInputOptions& input_options, const std::string& name = "")
-      : SolidMechanics(
-            mfem_ext::buildEquationSolver(input_options.nonlin_solver_options, input_options.lin_solver_options),
-            input_options.timestepping_options, input_options.geom_nonlin, name)
+      : SolidMechanics(input_options.nonlin_solver_options, input_options.lin_solver_options,
+                       input_options.timestepping_options, input_options.geom_nonlin, name)
   {
     // This is the only other options stored in the input file that we can use
     // in the initialization stage

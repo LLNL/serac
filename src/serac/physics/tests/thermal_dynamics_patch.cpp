@@ -108,8 +108,7 @@ double dynamic_solution_error(const ExactSolution& exact_solution, PatchBoundary
   TimesteppingOptions    dyn_opts{.timestepper        = TimestepMethod::BackwardEuler,
                                .enforcement_method = DirichletEnforcementMethod::DirectControl};
 
-  HeatTransfer<p, dim> thermal(mfem_ext::buildEquationSolver(nonlinear_opts, heat_transfer::direct_linear_options),
-                               dyn_opts, "thermal");
+  HeatTransfer<p, dim> thermal(nonlinear_opts, heat_transfer::direct_linear_options, dyn_opts, "thermal");
 
   heat_transfer::LinearIsotropicConductor mat(1.0, 1.0, 1.0);
   thermal.setMaterial(mat);

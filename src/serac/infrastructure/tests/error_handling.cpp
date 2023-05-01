@@ -29,7 +29,7 @@ TEST(ErrorHandling, EquationSolverBadLinSolver)
   NonlinearSolverOptions nonlin_options;
   // Try a definitely wrong number to ensure that an invalid linear solver is detected
   options.linear_solver = static_cast<LinearSolver>(-7);
-  EXPECT_THROW(serac::mfem_ext::buildEquationSolver(nonlin_options, options, MPI_COMM_WORLD), SlicErrorException);
+  EXPECT_THROW(EquationSolver(nonlin_options, options, MPI_COMM_WORLD), SlicErrorException);
 }
 
 // Only need to test this when AmgX is **not** available
@@ -39,7 +39,7 @@ TEST(ErrorHandling, EquationSolverAmgxNotAvailable)
   LinearSolverOptions    options;
   NonlinearSolverOptions nonlin;
   options.preconditioner = Preconditioner::AMGX;
-  EXPECT_THROW(serac::mfem_ext::buildEquationSolver(nonlin, options, MPI_COMM_WORLD), SlicErrorException);
+  EXPECT_THROW(EquationSolver(nonlin, options, MPI_COMM_WORLD), SlicErrorException);
 }
 #endif
 
