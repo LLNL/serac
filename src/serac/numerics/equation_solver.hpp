@@ -63,7 +63,8 @@ public:
 
   /**
    * Solves the system F(x) = 0
-   * @param[in/out] x Solution to the system of nonlinear equations
+   * @param[in,out] x Solution to the system of nonlinear equations
+   * @note The input value of @a x will be used as an initial guess for iterative nonlinear solution methods
    */
   void Solve(mfem::Vector& x) const;
 

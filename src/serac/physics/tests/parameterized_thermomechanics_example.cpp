@@ -86,14 +86,8 @@ TEST(Thermomechanics, ParameterizedMaterial)
     serac::StateManager::setMesh(std::move(mesh));
   }
 
-  serac::NonlinearSolverOptions nonlin_options{.nonlin_solver  = NonlinearSolver::KINFullStep,
-                                               .relative_tol   = 1.0e-12,
-                                               .absolute_tol   = 1.0e-12,
-                                               .max_iterations = 30,
-                                               .print_level    = 1};
-
   SolidMechanics<p, dim, Parameters<H1<p>, H1<p>>> simulation(
-      mfem_ext::buildEquationSolver(nonlin_options, solid_mechanics::direct_linear_options, MPI_COMM_WORLD),
+      mfem_ext::buildEquationSolver(solid_mechanics::default_nonlinear_options, solid_mechanics::direct_linear_options),
       solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "thermomechanics_simulation");
 
   double density   = 1.0;     ///< density
