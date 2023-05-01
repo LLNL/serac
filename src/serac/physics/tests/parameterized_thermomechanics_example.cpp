@@ -86,7 +86,7 @@ TEST(Thermomechanics, ParameterizedMaterial)
     serac::StateManager::setMesh(std::move(mesh));
   }
 
-  serac::NonlinearSolverOptions nonlin_options{.nonlin_solver  = NonlinearSolver::KINPicard,
+  serac::NonlinearSolverOptions nonlin_options{.nonlin_solver  = NonlinearSolver::KINFullStep,
                                                .relative_tol   = 1.0e-12,
                                                .absolute_tol   = 1.0e-12,
                                                .max_iterations = 30,

@@ -245,7 +245,7 @@ public:
       for (auto& bc : bcs_.essentials()) {
         bc.setDofs(temperature_, time_);
       }
-      nonlin_solver_.Mult(zero_, temperature_);
+      nonlin_solver_.Solve(temperature_);
     } else {
       SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
 

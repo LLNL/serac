@@ -743,7 +743,7 @@ public:
     // Modify our initial guess with the displacement due to the reaction forces
     displacement_ += du_;
 
-    nonlin_solver_.Mult(zero_, displacement_);
+    nonlin_solver_.Solve(displacement_);
   }
 
   /**

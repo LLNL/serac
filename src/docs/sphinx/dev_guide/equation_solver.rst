@@ -16,17 +16,17 @@ Mathematical description
 
 .. math::
 
-  F(\mathbf{X}) = \mathbf{b}
+  F(\mathbf{X}) = \mathbf{0}
 
-where :math:`\mathbf{X}` and :math:`\mathbf{b}` are parallel distributed vectors, e.g. ``mfem::HypreParVectors``, and
+where :math:`\mathbf{X}` is a parallel distributed vector, e.g. ``mfem::HypreParVector``, and
 :math:`F` is a square nonlinear operator, i.e. the dimension of the input vector equals the dimension of the output vector.  
 These systems commonly arise from finite element discretizations, such as the equations of heat transfer (see the :ref:`heat transfer <conduction-theory-label>`
 documentation)
   
-.. math:: \mathbf{Mu}_{n+1} + \Delta t (\mathbf{Ku}_{n+1} + f(\mathbf{u}_{n+1})) = \Delta t \mathbf{G} + \mathbf{Mu}_n
+.. math:: \mathbf{Mu}_{n+1} + \Delta t (\mathbf{Ku}_{n+1} + f(\mathbf{u}_{n+1})) - \Delta t \mathbf{G} - \mathbf{Mu}_n = \mathbf{0}
 
 where :math:`\mathbf{X} = \mathbf{u}_{n+1}`. These systems are commonly solved by Newton-type methods which have embedded linear solvers for a linearized approximation
-of the full nonlinear operator. A sample Newton algorithm for solving this system is given below:
+of the full nonlinear operator. A simple Newton algorithm for solving this system is given below:
 
 .. code-block:: python
 
@@ -49,10 +49,10 @@ Class design
 algorithms needed to solve these systems of equations. Note that while some nonlinear solvers do not depend on an embedded linear solver (e.g. L-BFGS), we require a linear 
 solver to be specified as it is used to compute reasonable initial guesses and perform adjoint solves within Serac. 
 
-Note that ``EquationSolver`` is derived from the ``mfem::Solver`` class. The key methods provided by this class are:
+The key methods provided by this class are:
 
 1.  ``void SetOperator(const mfem::Operator& op)``: This defines the nonlinear ``mfem::Operator`` representing the vector-valued nonlinear system of equations :math:`F`.
-2.  ``void Mult(const mfem::Vector& b, mfem::Vector& x)``: This solves the nonlinear system :math:`F(\mathbf{X}) = \mathbf{B}` and stores the solution in-place in ``x``.
+2.  ``void Solve(mfem::Vector& x)``: This solves the nonlinear system :math:`F(\mathbf{X}) = \mathbf{0}` and stores the solution in-place in ``x``.
 3.  ``mfem::Solver& LinearSolver()``: This returns the associated linear solver for adjoint solves and initial guess calculations.
 
 Two workflows exist for defining the linear and nonlinear algorithms in a ``EquationSolver``: predefined option structs for common use cases and fully custom ``mfem::Solvers``

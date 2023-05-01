@@ -25,7 +25,7 @@ namespace serac::mfem_ext {
 
 /**
  * @brief This class manages the objects typically required to solve a nonlinear set of equations arising from
- * discretization of a PDE. Specifically, it has
+ * discretization of a PDE of the form F(x) = 0. Specifically, it has
  *
  *   1. An @a mfem::NewtonSolver containing the nonlinear solution operator
  *   2. An @a mfem::Solver containing a linear solver that is used by the nonlinear solution operator and adjoint
@@ -39,7 +39,7 @@ namespace serac::mfem_ext {
  * preconditioner, or it can be constructed using @a serac::NonlinearSolverOptions and @a serac::LinearSolverOptions
  * structs with the @a serac::mfem_ext::buildEquationSolver factory method.
  */
-class EquationSolver : public mfem::Solver {
+class EquationSolver {
 public:
   // _equationsolver_constructor_start
   /**
@@ -55,24 +55,21 @@ public:
 
   /**
    * Updates the solver with the provided operator
-   * @param[in] op The operator (system matrix) to use, "A" in Ax = b
-   * @note Implements mfem::Operator::SetOperator
+   * @param[in] op The operator (nonlinear system of equations) to use, "F" in F(x) = 0
    */
-  void SetOperator(const mfem::Operator& op) override;
+  void SetOperator(const mfem::Operator& op);
 
   /**
-   * Solves the system
-   * @param[in] b RHS of the system of equations
-   * @param[out] x Solution to the system of equations
-   * @note Implements mfem::Operator::Mult
+   * Solves the system F(x) = 0
+   * @param[in/out] x Solution to the system of nonlinear equations
    */
-  void Mult(const mfem::Vector& b, mfem::Vector& x) const override;
+  void Solve(mfem::Vector& x) const;
 
   /**
    * Returns the underlying solver object
    * @return A non-owning reference to the underlying nonlinear solver
    */
-  mfem::Solver& NonlinearSolver() { return *nonlin_solver_; }
+  mfem::NewtonSolver& NonlinearSolver() { return *nonlin_solver_; }
 
   /**
    * @overload
