@@ -161,5 +161,5 @@ passing it to the ``SolidMechanics`` physics module is below:
                                                      .max_iterations = 500,
                                                      .print_level    = 1};
 
-  serac::SolidMechanics<p, dim> solid_solver(serac::mfem_ext::buildEquationSolver(nonlin_opts, linear_options), 
+  serac::SolidMechanics<p, dim> solid_solver(serac::mfem_ext::buildEquationSolver(nonlinear_options, linear_options), 
                                              solid_mechanics::default_quasistatic_options);
