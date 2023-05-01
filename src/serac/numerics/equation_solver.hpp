@@ -56,6 +56,8 @@ public:
   /**
    * Updates the solver with the provided operator
    * @param[in] op The operator (nonlinear system of equations) to use, "F" in F(x) = 0
+   * @note This operator is required to return an @a mfem::HypreParMatrix from its @a GetGradient method. This is
+   * due to the use of Hypre-based linear solvers.
    */
   void SetOperator(const mfem::Operator& op);
 

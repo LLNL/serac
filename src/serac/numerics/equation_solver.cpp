@@ -38,11 +38,11 @@ void EquationSolver::SetOperator(const mfem::Operator& op)
   }
 }
 
-void EquationSolver::Solve(mfem::Vector& x) const 
+void EquationSolver::Solve(mfem::Vector& x) const
 {
   mfem::Vector zero(x);
   zero = 0.0;
-  // KINSOL does not handle non-zero RHS, so we enforce that the RHS 
+  // KINSOL does not handle non-zero RHS, so we enforce that the RHS
   // of the nonlinear system is zero
   nonlin_solver_->Mult(zero, x);
 }
