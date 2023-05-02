@@ -310,7 +310,7 @@ protected:
     /// The finite element states representing user-defined and owned parameter fields
     serac::FiniteElementState* state;
 
-    /// The finite element state representing the parameter at the previous evalutaion
+    /// The finite element state representing the parameter at the previous evaluation
     std::unique_ptr<serac::FiniteElementState> old_state;
 
     /**
