@@ -20,8 +20,7 @@ Mathematical description
 
 where :math:`\mathbf{X}` is a parallel distributed vector, e.g. ``mfem::HypreParVector``, and
 :math:`F` is a square nonlinear operator, i.e. the dimension of the input vector equals the dimension of the output vector.  
-These systems commonly arise from finite element discretizations, such as the equations of heat transfer (see the :ref:`heat transfer <conduction-theory-label>`
-documentation)
+These systems commonly arise from finite element discretizations such as the equations of :ref:`heat transfer <conduction-theory-label>`
   
 .. math:: \mathbf{Mu}_{n+1} + \Delta t (\mathbf{Ku}_{n+1} + f(\mathbf{u}_{n+1})) - \Delta t \mathbf{G} - \mathbf{Mu}_n = \mathbf{0}
 
@@ -61,8 +60,8 @@ for advanced users.
 Common configurations via option structs
 ----------------------------------------
 
-The easist way to build an equation solver is by providing structs containing parameters for common configurations of the linear and nonlinear solvers. These structs are passed
-to the equation solver factory method ``buildEquationSolver`` and the returned object can be used by physics modules to solve nonlinear systems of equations.
+The easist way to build an equation solver is by providing structs containing parameters for common configurations of the linear and nonlinear solvers. They can also
+be passed directly to physics module constructors.
 
 .. literalinclude:: ../../../../src/serac/numerics/equation_solver.hpp
    :start-after: _build_equationsolver_start
@@ -121,7 +120,7 @@ As an example, the default solid mechanics ``EquationSolver`` can be built using
                                                      .max_iterations = 500,
                                                      .print_level    = 0};
 
-  auto equation_solver = mfem_ext::buildEquationSolver(nonlinear_options, linear_options);
+  EquationSolver equation_solver (nonlinear_options, linear_options);
 
 Custom configuration via pointers
 ---------------------------------
@@ -143,8 +142,7 @@ as it has the appropriate methods for checking convergence as needed.
 Use within physics modules
 ==========================
 
-After the ``EquationSolver`` has been built, it can be passed to the appropriate physics module via dependency injection. An example of building an ``EquationSolver`` via option structs and 
-passing it to the ``SolidMechanics`` physics module is below:
+An example of configuring a ``SolidMechanics`` simulation module via options stucts is below:
 
 .. code-block:: cpp
 
@@ -154,14 +152,26 @@ passing it to the ``SolidMechanics`` physics module is below:
                                                         .max_iterations = 5000,
                                                         .print_level    = 1};
 
-  const serac::LinearSolverOptions linear_options = {.linear_solver  = LinearSolver::CG,
-                                                     .preconditioner = Preconditioner::HypreJacobi,
-                                                     .relative_tol   = 1.0e-6,
-                                                     .absolute_tol   = 1.0e-14,
-                                                     .max_iterations = 500,
-                                                     .print_level    = 1};
+  const serac::LinearSolverOptions linear_options{.linear_solver  = LinearSolver::CG,
+                                                  .preconditioner = Preconditioner::HypreJacobi,
+                                                  .relative_tol   = 1.0e-6,
+                                                  .absolute_tol   = 1.0e-14,
+                                                  .max_iterations = 500,
+                                                  .print_level    = 1};
 
-  serac::SolidMechanics<p, dim> solid_solver(serac::mfem_ext::buildEquationSolver(nonlinear_options, linear_options), 
+  serac::SolidMechanics<p, dim> solid_solver(nonlinear_options, linear_options, 
+                                             solid_mechanics::default_quasistatic_options);
+
+Alternatively, you can build an ``EquationSolver`` using custom nonlinear and linear solvers if it is required
+by your application.
+
+.. code-block:: cpp
+
+  auto nonlinear_solver = std::make_unique<mfem::NewtonSolver>(mpi_comm);
+  auto linear_solver    = std::make_unique<mfem::GMRESSolver>(mpi_comm);
+  auto preconditioner   = std::make_unique<mfem::OperatorJacobiSmoother>();
+
+  serac::SolidMechanics<p, dim> solid_solver(EquationSolver(std::move(nonlinear_solver), std::move(linear_solver), std::move(preconditioner)),
                                              solid_mechanics::default_quasistatic_options);
 
 Note that each physics module must have its own ``EquationSolver``. They cannot be reused between modules. 
