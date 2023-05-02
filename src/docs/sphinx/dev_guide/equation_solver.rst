@@ -103,25 +103,6 @@ The current possible preconditioners for iterative linear solvers are:
    :end-before: _preconditioners_end
    :language: C++
 
-As an example, the default solid mechanics ``EquationSolver`` can be built using the following syntax:
-
-.. code-block:: cpp
-
-  const serac::NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = NonlinearSolver::Newton,
-                                                           .relative_tol   = 1.0e-4,
-                                                           .absolute_tol   = 1.0e-8,
-                                                           .max_iterations = 10,
-                                                           .print_level    = 1};
-
-  const serac::LinearSolverOptions linear_options = {.linear_solver  = LinearSolver::GMRES,
-                                                     .preconditioner = Preconditioner::HypreAMG,
-                                                     .relative_tol   = 1.0e-6,
-                                                     .absolute_tol   = 1.0e-16,
-                                                     .max_iterations = 500,
-                                                     .print_level    = 0};
-
-  EquationSolver equation_solver (nonlinear_options, linear_options);
-
 Custom configuration via pointers
 ---------------------------------
 
@@ -144,34 +125,18 @@ Use within physics modules
 
 An example of configuring a ``SolidMechanics`` simulation module via options stucts is below:
 
-.. code-block:: cpp
-
-  const serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::KINFullStep,
-                                                        .relative_tol   = 1.0e-12,
-                                                        .absolute_tol   = 1.0e-12,
-                                                        .max_iterations = 5000,
-                                                        .print_level    = 1};
-
-  const serac::LinearSolverOptions linear_options{.linear_solver  = LinearSolver::CG,
-                                                  .preconditioner = Preconditioner::HypreJacobi,
-                                                  .relative_tol   = 1.0e-6,
-                                                  .absolute_tol   = 1.0e-14,
-                                                  .max_iterations = 500,
-                                                  .print_level    = 1};
-
-  serac::SolidMechanics<p, dim> solid_solver(nonlinear_options, linear_options, 
-                                             solid_mechanics::default_quasistatic_options);
+.. literalinclude:: ../../../../src/serac/physics/tests/solid.cpp
+   :start-after: _solver_params_start
+   :end-before: _solver_params_end
+   :language: C++
 
 Alternatively, you can build an ``EquationSolver`` using custom nonlinear and linear solvers if it is required
-by your application.
+by your application. An example of a parameterized ``SolidMechanics`` module that uses a custom ``EquationSolver`` 
+is below:
 
-.. code-block:: cpp
-
-  auto nonlinear_solver = std::make_unique<mfem::NewtonSolver>(mpi_comm);
-  auto linear_solver    = std::make_unique<mfem::GMRESSolver>(mpi_comm);
-  auto preconditioner   = std::make_unique<mfem::OperatorJacobiSmoother>();
-
-  serac::SolidMechanics<p, dim> solid_solver(EquationSolver(std::move(nonlinear_solver), std::move(linear_solver), std::move(preconditioner)),
-                                             solid_mechanics::default_quasistatic_options);
+.. literalinclude:: ../../../../src/serac/physics/tests/solid.cpp
+   :start-after: _custom_solver_start
+   :end-before: _custom_solver_end
+   :language: C++
 
 .. warning:: Each physics module must have its own ``EquationSolver``. They cannot be reused between modules. 
