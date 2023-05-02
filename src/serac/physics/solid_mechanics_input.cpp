@@ -31,7 +31,7 @@ void SolidMechanicsInputOptions::defineInputFileSchema(axom::inlet::Container& c
 
   auto& equation_solver_container =
       container.addStruct("equation_solver", "Linear and Nonlinear stiffness Solver Parameters.");
-  serac::mfem_ext::EquationSolver::DefineInputFileSchema(equation_solver_container);
+  serac::EquationSolver::DefineInputFileSchema(equation_solver_container);
 
   auto& dynamics_container = container.addStruct("dynamics", "Parameters for mass matrix inversion");
   dynamics_container.addString("timestepper", "Timestepper (ODE) method to use");

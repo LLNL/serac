@@ -105,8 +105,8 @@ public:
   HeatTransfer(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
                const serac::TimesteppingOptions timestepping_opts, const std::string& name = "",
                mfem::ParMesh* pmesh = nullptr)
-      : HeatTransfer(std::make_unique<mfem_ext::EquationSolver>(
-                         nonlinear_opts, lin_opts, StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
+      : HeatTransfer(std::make_unique<EquationSolver>(nonlinear_opts, lin_opts,
+                                                      StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
                      timestepping_opts, name, pmesh)
   {
   }
@@ -120,9 +120,8 @@ public:
    * used by an underlying material model or load
    * @param[in] pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
-  HeatTransfer(std::unique_ptr<serac::mfem_ext::EquationSolver> solver,
-               const serac::TimesteppingOptions timestepping_opts, const std::string& name = "",
-               mfem::ParMesh* pmesh = nullptr)
+  HeatTransfer(std::unique_ptr<serac::EquationSolver> solver, const serac::TimesteppingOptions timestepping_opts,
+               const std::string& name = "", mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(NUM_STATE_VARS, order, name, pmesh),
         temperature_(StateManager::newState(
             FiniteElementState::Options{
@@ -730,7 +729,7 @@ protected:
   mfem_ext::StdFunctionOperator residual_with_bcs_;
 
   /// the specific methods and tolerances specified to solve the nonlinear residual equations
-  std::unique_ptr<mfem_ext::EquationSolver> nonlin_solver_;
+  std::unique_ptr<EquationSolver> nonlin_solver_;
 
   /**
    * @brief the ordinary differential equation that describes

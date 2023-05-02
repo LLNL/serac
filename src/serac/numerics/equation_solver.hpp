@@ -21,7 +21,7 @@
 #include "serac/infrastructure/input.hpp"
 #include "serac/numerics/solver_config.hpp"
 
-namespace serac::mfem_ext {
+namespace serac {
 
 /**
  * @brief This class manages the objects typically required to solve a nonlinear set of equations arising from
@@ -233,7 +233,7 @@ std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner,
  */
 std::unique_ptr<mfem::AmgXSolver> buildAMGX(const AMGXOptions& options, const MPI_Comm comm);
 #endif
-}  // namespace serac::mfem_ext
+}  // namespace serac
 
 /**
  * @brief Prototype the specialization for Inlet parsing
@@ -263,7 +263,7 @@ struct FromInlet<serac::NonlinearSolverOptions> {
  * @tparam The object to be created by inlet
  */
 template <>
-struct FromInlet<serac::mfem_ext::EquationSolver> {
+struct FromInlet<serac::EquationSolver> {
   /// @brief Returns created object from Inlet container
-  serac::mfem_ext::EquationSolver operator()(const axom::inlet::Container& base);
+  serac::EquationSolver operator()(const axom::inlet::Container& base);
 };

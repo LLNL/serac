@@ -9,7 +9,7 @@
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
 
-namespace serac::mfem_ext {
+namespace serac {
 
 EquationSolver::EquationSolver(NonlinearSolverOptions nonlinear_opts, LinearSolverOptions lin_opts, MPI_Comm comm)
 {
@@ -287,11 +287,11 @@ void EquationSolver::DefineInputFileSchema(axom::inlet::Container& container)
   nonlinear_container.addString("solver_type", "Solver type (Newton|KINFullStep|KINLineSearch)").defaultValue("Newton");
 }
 
-}  // namespace serac::mfem_ext
+}  // namespace serac
 
+using serac::EquationSolver;
 using serac::LinearSolverOptions;
 using serac::NonlinearSolverOptions;
-using serac::mfem_ext::EquationSolver;
 
 serac::LinearSolverOptions FromInlet<serac::LinearSolverOptions>::operator()(const axom::inlet::Container& base)
 {
@@ -361,16 +361,15 @@ serac::NonlinearSolverOptions FromInlet<serac::NonlinearSolverOptions>::operator
   return options;
 }
 
-serac::mfem_ext::EquationSolver FromInlet<serac::mfem_ext::EquationSolver>::operator()(
-    const axom::inlet::Container& base)
+serac::EquationSolver FromInlet<serac::EquationSolver>::operator()(const axom::inlet::Container& base)
 {
   auto lin    = base["linear"].get<LinearSolverOptions>();
   auto nonlin = base["nonlinear"].get<NonlinearSolverOptions>();
 
-  auto [linear_solver, preconditioner] = serac::mfem_ext::buildLinearSolverAndPreconditioner(lin, MPI_COMM_WORLD);
+  auto [linear_solver, preconditioner] = serac::buildLinearSolverAndPreconditioner(lin, MPI_COMM_WORLD);
 
-  serac::mfem_ext::EquationSolver eq_solver(serac::mfem_ext::buildNonlinearSolver(nonlin, MPI_COMM_WORLD),
-                                            std::move(linear_solver), std::move(preconditioner));
+  serac::EquationSolver eq_solver(serac::buildNonlinearSolver(nonlin, MPI_COMM_WORLD), std::move(linear_solver),
+                                  std::move(preconditioner));
 
   return eq_solver;
 }

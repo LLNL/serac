@@ -183,7 +183,7 @@ double solution_error(const ExactSolution& exact_displacement, PatchBoundaryCond
   // Construct a solid mechanics solver
   serac::NonlinearSolverOptions nonlin_solver_options{.nonlin_solver = NonlinearSolver::KINBacktrackingLineSearch, .relative_tol = 0.0, .absolute_tol = 1.0e-14, .max_iterations = 30};
 
-  auto equation_solver = std::make_unique<mfem_ext::EquationSolver>(nonlin_solver_options, serac::solid_mechanics::default_linear_options, pmesh->GetComm());
+  auto equation_solver = std::make_unique<EquationSolver>(nonlin_solver_options, serac::solid_mechanics::default_linear_options, pmesh->GetComm());
 
   SolidMechanics<p, dim> solid(std::move(equation_solver), solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "solid");
 

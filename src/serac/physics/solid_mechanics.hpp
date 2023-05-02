@@ -110,7 +110,7 @@ public:
                  const serac::TimesteppingOptions timestepping_opts,
                  const GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
                  mfem::ParMesh* pmesh = nullptr)
-      : SolidMechanics(std::make_unique<mfem_ext::EquationSolver>(
+      : SolidMechanics(std::make_unique<EquationSolver>(
                            nonlinear_opts, lin_opts, StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
                        timestepping_opts, geom_nonlin, name, pmesh)
   {
@@ -125,8 +125,7 @@ public:
    * @param name An optional name for the physics module instance
    * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
-  SolidMechanics(std::unique_ptr<serac::mfem_ext::EquationSolver> solver,
-                 const serac::TimesteppingOptions                 timestepping_opts,
+  SolidMechanics(std::unique_ptr<serac::EquationSolver> solver, const serac::TimesteppingOptions timestepping_opts,
                  const GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
                  mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(2, order, name, pmesh),
@@ -981,7 +980,7 @@ protected:
   std::unique_ptr<mfem_ext::StdFunctionOperator> residual_with_bcs_;
 
   /// the specific methods and tolerances specified to solve the nonlinear residual equations
-  std::unique_ptr<mfem_ext::EquationSolver> nonlin_solver_;
+  std::unique_ptr<EquationSolver> nonlin_solver_;
 
   /**
    * @brief the ordinary differential equation that describes

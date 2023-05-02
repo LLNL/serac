@@ -50,11 +50,11 @@ public:
                   GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
                   mfem::ParMesh* pmesh = nullptr)
       : Thermomechanics(
-            std::make_unique<mfem_ext::EquationSolver>(thermal_nonlin_opts, thermal_lin_opts,
-                                                       StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
+            std::make_unique<EquationSolver>(thermal_nonlin_opts, thermal_lin_opts,
+                                             StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
             thermal_timestepping,
-            std::make_unique<mfem_ext::EquationSolver>(solid_nonlin_opts, solid_lin_opts,
-                                                       StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
+            std::make_unique<EquationSolver>(solid_nonlin_opts, solid_lin_opts,
+                                             StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
             solid_timestepping, geom_nonlin, name, pmesh)
   {
   }
@@ -70,8 +70,8 @@ public:
    * @param name An optional name for the physics module instance
    * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
-  Thermomechanics(std::unique_ptr<mfem_ext::EquationSolver> thermal_solver, TimesteppingOptions thermal_timestepping,
-                  std::unique_ptr<mfem_ext::EquationSolver> solid_solver, TimesteppingOptions solid_timestepping,
+  Thermomechanics(std::unique_ptr<EquationSolver> thermal_solver, TimesteppingOptions thermal_timestepping,
+                  std::unique_ptr<EquationSolver> solid_solver, TimesteppingOptions solid_timestepping,
                   GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
                   mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(3, order, name, pmesh),

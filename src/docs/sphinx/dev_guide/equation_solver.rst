@@ -44,7 +44,7 @@ for the linear part, we also may need to configure a preconditioner for the syst
 Class design
 ============
 
-`EquationSolver <../../doxygen/html/classserac_1_1mfem__ext_1_1EquationSolver.html>`_ provides an interface to the associated nonlinear and linear solver
+`EquationSolver <../../doxygen/html/classserac_1_1EquationSolver.html>`_ provides an interface to the associated nonlinear and linear solver
 algorithms needed to solve these systems of equations. Note that while some nonlinear solvers do not depend on an embedded linear solver (e.g. L-BFGS), we require a linear 
 solver to be specified as it is used to compute reasonable initial guesses and perform adjoint solves within Serac. 
 
