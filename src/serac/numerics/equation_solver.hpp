@@ -186,7 +186,7 @@ private:
 
   /**
    * @brief The underlying MFEM-based SuperLU solver. It requires a special
-   * superLU matrix type which we store in this object. This enables compatibility
+   * SuperLU matrix type which we store in this object. This enables compatibility
    * with HypreParMatrix when used as an input.
    */
   mfem::SuperLUSolver superlu_solver_;
