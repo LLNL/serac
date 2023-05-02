@@ -17,8 +17,6 @@
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/terminator.hpp"
 
-using namespace serac;
-
 int main(int argc, char* argv[])
 {
   auto [num_procs, rank] = serac::initialize(argc, argv);
