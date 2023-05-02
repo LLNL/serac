@@ -15,6 +15,8 @@
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/solid_mechanics.hpp"
 #include "serac/physics/materials/liquid_crystal_elastomer.hpp"
+#include "serac/infrastructure/initialize.hpp"
+#include "serac/infrastructure/terminator.hpp"
 
 using namespace serac;
 
@@ -22,13 +24,7 @@ using namespace serac;
 
 int main(int argc, char* argv[])
 {
-  MPI_Init(&argc, &argv);
-
-  int rank = -1;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-  axom::slic::SimpleLogger logger;
-  axom::slic::setIsRoot(rank == 0);
+  auto [num_procs, rank] = serac::initialize(argc, argv);
 
   constexpr int p                   = 1;
   constexpr int dim                 = 3;
@@ -63,14 +59,7 @@ int main(int argc, char* argv[])
   serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a functional-based solid mechanics solver
-  LinearSolverOptions linear_options = {
-      .linear_solver  = LinearSolver::GMRES,
-      .preconditioner = Preconditioner::HypreAMG,
-      .relative_tol   = 1.0e-6,
-      .absolute_tol   = 1.0e-16,
-      .max_iterations = 600,
-      .print_level    = 0,
-  };
+  LinearSolverOptions linear_options = {.linear_solver  = LinearSolver::SuperLU};
 
   NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = serac::NonlinearSolver::KINBacktrackingLineSearch,
                                               .relative_tol   = 1.0e-8,
@@ -191,5 +180,5 @@ int main(int argc, char* argv[])
 #else
   EXPECT_NEAR(gblDispYmin, -2.92599e-05, 1.0e-6);
 #endif
-  MPI_Finalize();
+  serac::exitGracefully();
 }

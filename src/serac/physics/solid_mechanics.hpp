@@ -779,7 +779,7 @@ public:
       *parameters_[parameter_index].old_state = *parameters_[parameter_index].state;
     }
 
-    auto& lin_solver = nonlin_solver_->LinearSolver();
+    auto& lin_solver = nonlin_solver_->linearSolver();
 
     lin_solver.SetOperator(*J_);
 
