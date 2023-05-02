@@ -144,7 +144,7 @@ private:
 };
 
 /**
- * @brief A wrapper class for using the MFEM super LU solver with a HypreParMatrix
+ * @brief A wrapper class for using the MFEM SuperLU solver with a HypreParMatrix
  */
 class SuperLUSolver : public mfem::Solver {
 public:
