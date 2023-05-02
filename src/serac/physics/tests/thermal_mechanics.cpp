@@ -224,22 +224,13 @@ void parameterized()
       mesh::refineAndDistribute(buildCuboidMesh(4, 4, 4, 0.25, 0.25, 0.25), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
 
-  // define the solid solver configurations
-  // no default solver options for solid yet, so make some here
-  const LinearSolverOptions default_linear_options = {.linear_solver  = LinearSolver::GMRES,
-                                                      .preconditioner = Preconditioner::HypreAMG,
-                                                      .relative_tol   = 1.0e-6,
-                                                      .absolute_tol   = 1.0e-10,
-                                                      .max_iterations = 500,
-                                                      .print_level    = 0};
-
-  const NonlinearSolverOptions default_nonlinear_options = {
-      .relative_tol = 1.0e-4, .absolute_tol = 1.0e-8, .max_iterations = 10, .print_level = 1};
-
+  // Construct the thermomechanics solver module using the default equation solver parameters for both the heat transfer
+  // and solid mechanics solves.
   Thermomechanics<p, dim, H1<p>> thermal_solid_solver(
       heat_transfer::default_nonlinear_options, heat_transfer::default_linear_options,
-      heat_transfer::default_static_options, default_nonlinear_options, default_linear_options,
-      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "thermal_solid_functional");
+      heat_transfer::default_static_options, solid_mechanics::default_nonlinear_options,
+      solid_mechanics::default_linear_options, solid_mechanics::default_quasistatic_options,
+      GeometricNonlinearities::On, "thermal_solid_functional");
 
   double rho       = 1.0;
   double E         = 1.0;

@@ -105,7 +105,8 @@ double dynamic_solution_error(const ExactSolution& exact_solution, PatchBoundary
 
   // Construct a heat transfer solver
   NonlinearSolverOptions nonlinear_opts{.relative_tol = 5.0e-13, .absolute_tol = 5.0e-13};
-  TimesteppingOptions    dyn_opts{.timestepper        = TimestepMethod::BackwardEuler,
+
+  TimesteppingOptions dyn_opts{.timestepper        = TimestepMethod::BackwardEuler,
                                .enforcement_method = DirichletEnforcementMethod::DirectControl};
 
   HeatTransfer<p, dim> thermal(nonlinear_opts, heat_transfer::direct_linear_options, dyn_opts, "thermal");
