@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -6,7 +6,6 @@
 
 #include <fstream>
 
-#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
@@ -17,8 +16,6 @@
 #include "serac/physics/materials/liquid_crystal_elastomer.hpp"
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/terminator.hpp"
-
-using namespace serac;
 
 int main(int argc, char* argv[])
 {
@@ -72,7 +69,7 @@ int main(int argc, char* argv[])
   mfem::FunctionCoefficient coef(gamma_func);
   gamma.project(coef);
 
-  // Construct a functional-based solid mechanics solver
+  // Construct a solid mechanics solver
   LinearSolverOptions linear_options = {
       .linear_solver  = LinearSolver::GMRES,
       .preconditioner = Preconditioner::HypreAMG,
@@ -156,9 +153,7 @@ int main(int argc, char* argv[])
       DependsOn<>{}, [=](auto x, auto /*n*/) { return (x[1] > 0.99 * ly) ? 1.0 : 0.0; }, pmesh);
 
   double initial_area = area(solid_solver.displacement());
-  if (rank == 0) {
-    std::cout << "... Initial Area of the top surface: " << initial_area << std::endl;
-  }
+  SLIC_INFO_ROOT("... Initial Area of the top surface: " << initial_area);
 
   // initializations for quasi-static problem
   int    num_steps = 3;
@@ -170,13 +165,11 @@ int main(int argc, char* argv[])
 
   // Perform remaining quasi-static solve
   for (int i = 0; i < (num_steps + 1); i++) {
-    if (rank == 0) {
-      std::cout << "\n\n............................"
+    SLIC_INFO_ROOT("\n\n............................"
                 << "\n... Entering time step: " << i + 1 << "\n............................\n"
                 << "\n... At time: " << t << "\n... And with a tension load of: " << loadVal << " ("
                 << loadVal / maxLoadVal * 100 << "`%` of max)"
-                << "\n... And with uniform temperature of: " << initial_temperature << std::endl;
-    }
+                << "\n... And with uniform temperature of: " << initial_temperature);
 
     // solve problem with current parameters
     solid_solver.advanceTimestep(dt);
@@ -207,13 +200,7 @@ int main(int argc, char* argv[])
                   << current_qoi / current_area << std::endl;
       }
 
-      if (std::isnan(gblDispYmax)) {
-        if (rank == 0) {
-          std::cout << "... Solution blew up... Check boundary and initial conditions." << std::endl;
-        }
-        exit(1);
-      }
-    }
+      SLIC_ERROR_ROOT_IF(std::isnan(gblDispYmax), "... Solution blew up... Check boundary and initial conditions.");
 
     // update pseudotime-dependent information
     t += dt;
