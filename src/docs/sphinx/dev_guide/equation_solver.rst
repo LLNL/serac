@@ -174,4 +174,4 @@ by your application.
   serac::SolidMechanics<p, dim> solid_solver(EquationSolver(std::move(nonlinear_solver), std::move(linear_solver), std::move(preconditioner)),
                                              solid_mechanics::default_quasistatic_options);
 
-Note that each physics module must have its own ``EquationSolver``. They cannot be reused between modules. 
+.. warning:: Each physics module must have its own ``EquationSolver``. They cannot be reused between modules. 
