@@ -200,13 +200,7 @@ int main(int argc, char* argv[])
                   << current_qoi / current_area << std::endl;
       }
 
-      if (std::isnan(gblDispYmax)) {
-        if (rank == 0) {
-          std::cout << "... Solution blew up... Check boundary and initial conditions." << std::endl;
-        }
-        exit(1);
-      }
-    }
+      SLIC_ERROR_ROOT_IF(std::isnan(gblDispYmax), "... Solution blew up... Check boundary and initial conditions.");
 
     // update pseudotime-dependent information
     t += dt;
