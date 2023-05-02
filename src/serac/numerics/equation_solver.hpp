@@ -24,72 +24,95 @@
 namespace serac::mfem_ext {
 
 /**
- * @brief Wraps a (currently iterative) system solver and handles the configuration of linear
- * or nonlinear solvers.  This class solves a generic global system of (possibly) nonlinear algebraic equations.
+ * @brief This class manages the objects typically required to solve a nonlinear set of equations arising from
+ * discretization of a PDE of the form F(x) = 0. Specifically, it has
+ *
+ *   1. An @a mfem::NewtonSolver containing the nonlinear solution operator
+ *   2. An @a mfem::Solver containing a linear solver that is used by the nonlinear solution operator and adjoint
+ * solvers
+ *   3. An optional @a mfem::Solver containing a preconditioner for the linear solution operator
+ *
+ * This @a EquationSolver manages these objects together to ensure they all exist when called by their associated
+ * physics simulation module.
+ *
+ * An equation solver can either be constructed by supplying pre-built nonlinear and linear solvers with a
+ * preconditioner, or it can be constructed using @a serac::NonlinearSolverOptions and @a serac::LinearSolverOptions
+ * structs with the @a serac::mfem_ext::buildEquationSolver factory method.
  */
-class EquationSolver : public mfem::Solver {
+class EquationSolver {
 public:
-  // Allow for the creation of an "empty" EquationSolver to be later overwritten with a "real" constructor
-  EquationSolver() = default;
+  // _equationsolver_constructor_start
   /**
-   * Constructs a new solver wrapper
-   * @param[in] comm The MPI communicator object
-   * @param[in] lin_options The parameters for the linear solver
-   * @param[in] nonlin_options The optional parameters for the optional nonlinear solver
-   * @see serac::LinearSolverOptions
-   * @see serac::NonlinearSolverOptions
+   * Constructs a new nonlinear equation solver
+   * @param[in] nonlinear_solver A constructed nonlinear solver
+   * @param[in] linear_solver A constructed linear solver to be called by the nonlinear algorithm and adjoint
+   * equation solves
+   * @param[in] preconditioner An optional constructed precondition to aid the linear solver
    */
-  EquationSolver(MPI_Comm comm, const LinearSolverOptions& lin_options,
-                 const std::optional<NonlinearSolverOptions>& nonlin_options = std::nullopt);
+  EquationSolver(std::unique_ptr<mfem::NewtonSolver> nonlinear_solver, std::unique_ptr<mfem::Solver> linear_solver,
+                 std::unique_ptr<mfem::Solver> preconditioner = nullptr);
+  // _equationsolver_constructor_end
+
+  // _build_equationsolver_start
+  /**
+   * @brief Construct an equation solver object using nonlinear and linear solver option structs.
+   *
+   * @param nonlinear_opts The options to configure the nonlinear solution scheme
+   * @param lin_opts The options to configure the underlying linear solution scheme to be used by the nonlinear solver
+   * @param comm The MPI communicator for the supplied nonlinear operators and HypreParVectors
+   */
+  EquationSolver(NonlinearSolverOptions nonlinear_opts = {}, LinearSolverOptions lin_opts = {},
+                 MPI_Comm comm = MPI_COMM_WORLD);
+  // _build_equationsolver_end
 
   /**
    * Updates the solver with the provided operator
-   * @param[in] op The operator (system matrix) to use, "A" in Ax = b
-   * @note Implements mfem::Operator::SetOperator
+   * @param[in] op The operator (nonlinear system of equations) to use, "F" in F(x) = 0
+   * @note This operator is required to return an @a mfem::HypreParMatrix from its @a GetGradient method. This is
+   * due to the use of Hypre-based linear solvers.
    */
-  void SetOperator(const mfem::Operator& op) override;
+  void SetOperator(const mfem::Operator& op);
 
   /**
-   * Solves the system
-   * @param[in] b RHS of the system of equations
-   * @param[out] x Solution to the system of equations
-   * @note Implements mfem::Operator::Mult
+   * Solves the system F(x) = 0
+   * @param[in,out] x Solution to the system of nonlinear equations
+   * @note The input value of @a x will be used as an initial guess for iterative nonlinear solution methods
    */
-  void Mult(const mfem::Vector& b, mfem::Vector& x) const override;
+  void Solve(mfem::Vector& x) const;
 
   /**
    * Returns the underlying solver object
    * @return A non-owning reference to the underlying nonlinear solver
    */
-  mfem::NewtonSolver& NonlinearSolver()
-  {
-    return std::visit([](auto&& solver) -> mfem::NewtonSolver& { return *solver; }, nonlin_solver_);
-  }
+  mfem::NewtonSolver& NonlinearSolver() { return *nonlin_solver_; }
 
   /**
    * @overload
    */
-  const mfem::NewtonSolver& NonlinearSolver() const
-  {
-    return std::visit([](auto&& solver) -> const mfem::NewtonSolver& { return *solver; }, nonlin_solver_);
-  }
+  const mfem::NewtonSolver& NonlinearSolver() const { return *nonlin_solver_; }
 
   /**
    * Returns the underlying linear solver object
    * @return A non-owning reference to the underlying linear solver
    */
-  mfem::Solver& LinearSolver()
-  {
-    return std::visit([](auto&& solver) -> mfem::Solver& { return *solver; }, lin_solver_);
-  }
+  mfem::Solver& LinearSolver() { return *lin_solver_; }
 
   /**
    * @overload
    */
-  const mfem::Solver& LinearSolver() const
-  {
-    return std::visit([](auto&& solver) -> const mfem::Solver& { return *solver; }, lin_solver_);
-  }
+  const mfem::Solver& LinearSolver() const { return *lin_solver_; }
+
+  /**
+   * Returns the underlying preconditioner
+   * @return A pointer to the underlying preconditioner
+   * @note This may be null if a preconditioner is not given
+   */
+  mfem::Solver* Preconditioner() { return preconditioner_.get(); }
+
+  /**
+   * @overload
+   */
+  const mfem::Solver* Preconditioner() const { return preconditioner_.get(); }
 
   /**
    * Input file parameters specific to this class
@@ -98,84 +121,19 @@ public:
 
 private:
   /**
-   * @brief Builds an iterative solver given a set of linear solver parameters
-   * @param[in] comm The MPI communicator object
-   * @param[in] lin_options The parameters for the linear solver
+   * @brief The optional preconditioner (used for an iterative solver only)
    */
-  std::unique_ptr<mfem::IterativeSolver> BuildIterativeLinearSolver(MPI_Comm                      comm,
-                                                                    const IterativeSolverOptions& lin_options);
-
-  /**
-   * @brief Builds an Newton-Raphson solver given a set of nonlinear solver parameters
-   * @param[in] comm The MPI communicator object
-   * @param[in] nonlin_options The parameters for the nonlinear solver
-   */
-  static std::unique_ptr<mfem::NewtonSolver> BuildNonlinearSolver(
-      MPI_Comm comm, const IterativeNonlinearSolverOptions& nonlin_options);
-
-  /**
-   * @brief A wrapper class for using the MFEM super LU solver with a HypreParMatrix
-   */
-  class SuperLUSolver : public mfem::Solver {
-  public:
-    /**
-     * @brief Constructs a wrapper over an mfem::SuperLUSolver
-     * @param[in] comm The MPI communicator used by the vectors and matrices in the solve
-     * @param[in] options The direct solver configuration parameters struct
-     */
-    SuperLUSolver(MPI_Comm comm, DirectSolverOptions options) : superlu_solver_(comm)
-    {
-      superlu_solver_.SetColumnPermutation(mfem::superlu::PARMETIS);
-      if (options.print_level == 0) {
-        superlu_solver_.SetPrintStatistics(false);
-      }
-    }
-
-    /**
-     * @brief Factor and solve the linear system y = Op^{-1} x using DSuperLU
-     *
-     * @param x The input RHS vector
-     * @param y The output solution vector
-     */
-    void Mult(const mfem::Vector& x, mfem::Vector& y) const;
-
-    /**
-     * @brief Set the underlying matrix operator to use in the solution algorithm
-     *
-     * @param op The matrix operator to factorize with SuperLU
-     * @pre This operator must be an assembled HypreParMatrix for compatibility with SuperLU
-     */
-    void SetOperator(const mfem::Operator& op);
-
-  private:
-    /**
-     * @brief The owner of the SuperLU matrix for the gradient, stored
-     * as a member variable for lifetime purposes
-     */
-    mutable std::unique_ptr<mfem::SuperLURowLocMatrix> superlu_mat_;
-
-    /**
-     * @brief The underlying MFEM-based superLU solver. It requires a special
-     * superLU matrix type which we store in this object. This enables compatibility
-     * with HypreParMatrix when used as an input.
-     */
-    mfem::SuperLUSolver superlu_solver_;
-  };
-
-  /**
-   * @brief The preconditioner (used for an iterative solver only)
-   */
-  std::unique_ptr<mfem::Solver> prec_;
+  std::unique_ptr<mfem::Solver> preconditioner_;
 
   /**
    * @brief The linear solver object, either custom, direct (SuperLU), or iterative
    */
-  std::variant<std::unique_ptr<mfem::IterativeSolver>, std::unique_ptr<SuperLUSolver>, mfem::Solver*> lin_solver_;
+  std::unique_ptr<mfem::Solver> lin_solver_;
 
   /**
-   * @brief The optional nonlinear Newton-Raphson solver object
+   * @brief The nonlinear solver object
    */
-  std::variant<std::unique_ptr<mfem::NewtonSolver>, mfem::NewtonSolver*> nonlin_solver_;
+  std::unique_ptr<mfem::NewtonSolver> nonlin_solver_;
 
   /**
    * @brief Whether the solver (linear solver) has been configured with the nonlinear solver
@@ -186,28 +144,95 @@ private:
 };
 
 /**
- * @brief A helper method intended to be called by physics modules to configure the AMG preconditioner for elasticity
- * problems
- * @param[in] init_options The user-provided solver parameters to possibly modify
- * @param[in] pfes The FiniteElementSpace to configure the preconditioner with
- * @note A full copy of the object is made, pending C++20 relaxation of "mutable"
+ * @brief A wrapper class for using the MFEM SuperLU solver with a HypreParMatrix
  */
-inline LinearSolverOptions AugmentAMGForElasticity(const LinearSolverOptions&   init_options,
-                                                   mfem::ParFiniteElementSpace& pfes)
-{
-  auto augmented_options = init_options;
-  if (auto iter_options = std::get_if<IterativeSolverOptions>(&init_options)) {
-    if (iter_options->prec) {
-      if (std::holds_alternative<HypreBoomerAMGPrec>(iter_options->prec.value())) {
-        // It's a copy, but at least it's on the stack
-        std::get<HypreBoomerAMGPrec>(*std::get<IterativeSolverOptions>(augmented_options).prec).pfes = &pfes;
-      }
+class SuperLUSolver : public mfem::Solver {
+public:
+  /**
+   * @brief Constructs a wrapper over an mfem::SuperLUSolver
+   * @param[in] comm The MPI communicator used by the vectors and matrices in the solve
+   * @param[in] print_level The verbosity level for the mfem::SuperLUSolver
+   */
+  SuperLUSolver(int print_level, MPI_Comm comm) : superlu_solver_(comm)
+  {
+    superlu_solver_.SetColumnPermutation(mfem::superlu::PARMETIS);
+    if (print_level == 0) {
+      superlu_solver_.SetPrintStatistics(false);
     }
   }
-  // NRVO will kick in here
-  return augmented_options;
-}
 
+  /**
+   * @brief Factor and solve the linear system y = Op^{-1} x using DSuperLU
+   *
+   * @param x The input RHS vector
+   * @param y The output solution vector
+   */
+  void Mult(const mfem::Vector& x, mfem::Vector& y) const;
+
+  /**
+   * @brief Set the underlying matrix operator to use in the solution algorithm
+   *
+   * @param op The matrix operator to factorize with SuperLU
+   * @pre This operator must be an assembled HypreParMatrix for compatibility with SuperLU
+   */
+  void SetOperator(const mfem::Operator& op);
+
+private:
+  /**
+   * @brief The owner of the SuperLU matrix for the gradient, stored
+   * as a member variable for lifetime purposes
+   */
+  mutable std::unique_ptr<mfem::SuperLURowLocMatrix> superlu_mat_;
+
+  /**
+   * @brief The underlying MFEM-based SuperLU solver. It requires a special
+   * superLU matrix type which we store in this object. This enables compatibility
+   * with HypreParMatrix when used as an input.
+   */
+  mfem::SuperLUSolver superlu_solver_;
+};
+
+/**
+ * @brief Build a nonlinear solver using the nonlinear option struct
+ *
+ * @param nonlinear_opts The options to configure the nonlinear solution scheme
+ * @param comm The MPI communicator for the supplied nonlinear operators and HypreParVectors
+ * @return The constructed nonlinear solver
+ */
+std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(NonlinearSolverOptions nonlinear_opts = {},
+                                                         MPI_Comm               comm           = MPI_COMM_WORLD);
+
+/**
+ * @brief Build the linear solver and its associated preconditioner given a linear options struct
+ *
+ * @param linear_opts The options to configure the linear solver and preconditioner
+ * @param comm The MPI communicator for the supplied HypreParMatrix and HypreParVectors
+ * @return A pair containing the constructed linear solver and preconditioner objects
+ */
+std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLinearSolverAndPreconditioner(
+    LinearSolverOptions linear_opts = {}, MPI_Comm comm = MPI_COMM_WORLD);
+
+/**
+ * @brief Build a preconditioner from the available options
+ *
+ * @param preconditioner The preconditioner type to be built
+ * @param print_level The print level for the constructed preconditioner
+ * @param comm The communicator for the underlying operator and HypreParVectors
+ * @return A constructed preconditioner based on the input option
+ */
+std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner, int print_level = 0,
+                                                  [[maybe_unused]] MPI_Comm comm = MPI_COMM_WORLD);
+
+#ifdef MFEM_USE_AMGX
+/**
+ * @brief Build an AMGX preconditioner
+ *
+ * @param options The options used to construct the AMGX preconditioner
+ * @param comm The communicator for the underlying operator and HypreParVectors
+ * @return The constructed AMGX preconditioner
+ */
+std::unique_ptr<mfem::AmgXSolver> buildAMGX(const AMGXOptions& options, const MPI_Comm comm);
+#endif
 }  // namespace serac::mfem_ext
 
 /**
@@ -227,9 +252,9 @@ struct FromInlet<serac::LinearSolverOptions> {
  * @tparam The object to be created by inlet
  */
 template <>
-struct FromInlet<serac::IterativeNonlinearSolverOptions> {
+struct FromInlet<serac::NonlinearSolverOptions> {
   /// @brief Returns created object from Inlet container
-  serac::IterativeNonlinearSolverOptions operator()(const axom::inlet::Container& base);
+  serac::NonlinearSolverOptions operator()(const axom::inlet::Container& base);
 };
 
 /**

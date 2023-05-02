@@ -15,6 +15,7 @@
 #include "mfem.hpp"
 
 #include "serac/physics/base_physics.hpp"
+#include "serac/physics/thermomechanics_input.hpp"
 #include "serac/physics/solid_mechanics.hpp"
 #include "serac/physics/heat_transfer.hpp"
 #include "serac/physics/materials/thermal_material.hpp"
@@ -31,20 +32,51 @@ template <int order, int dim, typename... parameter_space>
 class Thermomechanics : public BasePhysics {
 public:
   /**
-   * @brief Construct a new coupled Thermal-SolidMechanics Functional object
+   * @brief Construct a new coupled Thermal-SolidMechanics object
    *
-   * @param thermal_options The options for the linear, nonlinear, and ODE solves of the thermal operator
-   * @param solid_options The options for the linear, nonlinear, and ODE solves of the thermal operator
+   * @param thermal_nonlin_opts The options for solving the nonlinear heat conduction residual equations
+   * @param thermal_lin_opts The options for solving the linearized Jacobian heat transfer equations
+   * @param thermal_timestepping The timestepping options for the heat transfer operator
+   * @param solid_nonlin_opts The options for solving the nonlinear solid mechanics residual equations
+   * @param solid_lin_opts The options for solving the linearized Jacobian solid mechanics equations
+   * @param solid_timestepping The timestepping options for the solid solver
    * @param geom_nonlin Flag to include geometric nonlinearities
    * @param name An optional name for the physics module instance
    * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
-  Thermomechanics(const SolverOptions& thermal_options, const SolverOptions& solid_options,
+  Thermomechanics(const NonlinearSolverOptions thermal_nonlin_opts, const LinearSolverOptions thermal_lin_opts,
+                  TimesteppingOptions thermal_timestepping, const NonlinearSolverOptions solid_nonlin_opts,
+                  const LinearSolverOptions solid_lin_opts, TimesteppingOptions solid_timestepping,
+                  GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
+                  mfem::ParMesh* pmesh = nullptr)
+      : Thermomechanics(
+            std::make_unique<mfem_ext::EquationSolver>(thermal_nonlin_opts, thermal_lin_opts,
+                                                       StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
+            thermal_timestepping,
+            std::make_unique<mfem_ext::EquationSolver>(solid_nonlin_opts, solid_lin_opts,
+                                                       StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
+            solid_timestepping, geom_nonlin, name, pmesh)
+  {
+  }
+
+  /**
+   * @brief Construct a new coupled Thermal-SolidMechanics object
+   *
+   * @param thermal_solver The nonlinear equation solver for the heat conduction equations
+   * @param thermal_timestepping The timestepping options for the thermal solver
+   * @param solid_solver The nonlinear equation solver for the solid mechanics equations
+   * @param solid_timestepping The timestepping options for the solid solver
+   * @param geom_nonlin Flag to include geometric nonlinearities
+   * @param name An optional name for the physics module instance
+   * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
+   */
+  Thermomechanics(std::unique_ptr<mfem_ext::EquationSolver> thermal_solver, TimesteppingOptions thermal_timestepping,
+                  std::unique_ptr<mfem_ext::EquationSolver> solid_solver, TimesteppingOptions solid_timestepping,
                   GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
                   mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(3, order, name, pmesh),
-        thermal_(thermal_options, name + "thermal", pmesh),
-        solid_(solid_options, geom_nonlin, name + "mechanical", pmesh)
+        thermal_(std::move(thermal_solver), thermal_timestepping, name + "thermal", pmesh),
+        solid_(std::move(solid_solver), solid_timestepping, geom_nonlin, name + "mechanical", pmesh)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
@@ -55,8 +87,39 @@ public:
 
     thermal_.setParameter(0, solid_.displacement());
     solid_.setParameter(0, thermal_.temperature());
+  }
 
-    coupling_ = serac::CouplingScheme::OperatorSplit;
+  /**
+   * @brief Construct a new Thermal-SolidMechanics Functional object from input file options
+   *
+   * @param[in] thermal_options The thermal physics module input file option struct
+   * @param[in] solid_options The solid physics module input file option struct
+   * @param[in] name A name for the physics module
+   */
+  Thermomechanics(const HeatTransferInputOptions& thermal_options, const SolidMechanicsInputOptions& solid_options,
+                  const std::string& name = "")
+      : Thermomechanics(thermal_options.nonlin_solver_options, thermal_options.lin_solver_options,
+                        thermal_options.timestepping_options, solid_options.nonlin_solver_options,
+                        solid_options.lin_solver_options, solid_options.timestepping_options, solid_options.geom_nonlin,
+                        name)
+  {
+  }
+
+  /**
+   * @brief Construct a new Thermal-SolidMechanics Functional object from input file options
+   *
+   * @param[in] options The thermal solid physics module input file option struct
+   * @param[in] name A name for the physics module
+   */
+  Thermomechanics(const ThermomechanicsInputOptions& options, const std::string& name = "")
+      : Thermomechanics(options.thermal_options, options.solid_options, name)
+  {
+    if (options.coef_thermal_expansion) {
+      std::unique_ptr<mfem::Coefficient> cte(options.coef_thermal_expansion->constructScalar());
+      std::unique_ptr<mfem::Coefficient> ref_temp(options.reference_temperature->constructScalar());
+
+      // setThermalExpansion(std::move(cte), std::move(ref_temp));
+    }
   }
 
   /**
@@ -66,9 +129,6 @@ public:
    */
   void completeSetup() override
   {
-    SLIC_ERROR_ROOT_IF(coupling_ != serac::CouplingScheme::OperatorSplit,
-                       "Only operator split is currently implemented in the thermal structural solver.");
-
     thermal_.completeSetup();
     solid_.completeSetup();
   }
@@ -125,15 +185,11 @@ public:
    */
   void advanceTimestep(double& dt) override
   {
-    if (coupling_ == serac::CouplingScheme::OperatorSplit) {
-      double initial_dt = dt;
-      thermal_.advanceTimestep(dt);
-      solid_.advanceTimestep(dt);
-      SLIC_ERROR_ROOT_IF(std::abs(dt - initial_dt) > 1.0e-6,
-                         "Operator split coupled solvers cannot adaptively change the timestep");
-    } else {
-      SLIC_ERROR_ROOT("Only operator split coupling is currently implemented");
-    }
+    double initial_dt = dt;
+    thermal_.advanceTimestep(dt);
+    solid_.advanceTimestep(dt);
+    SLIC_ERROR_ROOT_IF(std::abs(dt - initial_dt) > 1.0e-6,
+                       "Operator split coupled solvers cannot adaptively change the timestep");
 
     cycle_ += 1;
   }
@@ -186,8 +242,8 @@ public:
     SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& temperature, const T3& temperature_gradient,
                                       const T4& displacement, param_types... parameters) const
     {
-      // BT: this will not update the state correctly. I just want to get the code compiling before plumbing the state
-      // variables.
+      // BT: this will not update the state correctly. I just want to get the code compiling before plumbing the
+      // state variables.
       State state{};
 
       auto [u, du_dX]                 = displacement;
@@ -256,11 +312,11 @@ public:
    *
    * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
    *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
-   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
-   * 3>`)
+   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes
+   * `tensor<dual<...>, 3>`)
    *
-   * @pre MaterialType must return a serac::tuple of Cauchy stress, volumetric heat capacity, internal heat source, and
-   * thermal flux when operator() is called with the arguments listed above.
+   * @pre MaterialType must return a serac::tuple of Cauchy stress, volumetric heat capacity, internal heat source,
+   * and thermal flux when operator() is called with the arguments listed above.
    */
   template <int... active_parameters, typename MaterialType, typename StateType>
   void setMaterial(DependsOn<active_parameters...>, MaterialType material,
@@ -321,8 +377,8 @@ public:
    *
    * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
    *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
-   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
-   * 3>`)
+   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes
+   * `tensor<dual<...>, 3>`)
    *
    * @note: until mfem::GetFaceGeometricFactors implements their JACOBIANS option,
    * (or we implement a replacement kernel ourselves) we are not able to compute
@@ -365,8 +421,8 @@ public:
    *            one tuple for each of the trial spaces specified in the `DependsOn<...>` argument.
    * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
    *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
-   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
-   * 3>`)
+   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes
+   * `tensor<dual<...>, 3>`)
    *
    */
   template <typename BodyForceType>
@@ -391,8 +447,8 @@ public:
    *
    * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
    *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
-   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
-   * 3>`)
+   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes
+   * `tensor<dual<...>, 3>`)
    */
   template <typename HeatSourceType>
   void addHeatSource(HeatSourceType source_function)
@@ -415,9 +471,6 @@ public:
   const serac::FiniteElementState& temperature() const { return thermal_.temperature(); };
 
 protected:
-  /// @brief The coupling strategy
-  serac::CouplingScheme coupling_;
-
   using displacement_field = H1<order, dim>;  ///< the function space for the displacement field
   using temperature_field  = H1<order>;       ///< the function space for the temperature field
 

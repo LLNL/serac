@@ -1,0 +1,157 @@
+spack:
+  compilers::
+  - compiler:
+      environment: {}
+      extra_rpaths: []
+      flags: {}
+      modules: []
+      operating_system: catalina
+      paths:
+        cc: /usr/bin/clang
+        cxx: /usr/bin/clang++
+        f77: /usr/local/bin/gfortran
+        fc: /usr/local/bin/gfortran
+      spec: apple-clang@11.0.1
+      target: x86_64
+
+  # Regular TPLs do not need views
+  view: false
+
+  packages:
+    all:
+      compiler: [clang, gcc]
+      providers:
+        blas: [netlib-lapack]
+        lapack: [netlib-lapack]
+        mpi: [mpich]
+        gl: [opengl]
+        glu: [openglu]
+    opengl:
+      buildable: false
+      externals:
+      - spec: opengl@1.7.0
+        prefix: /usr
+    openglu:
+      buildable: false
+      externals:
+      - spec: openglu@1.3.1
+        prefix: /usr
+
+    # Lock down which MPI we are using
+    mpi:
+      buildable: false
+    mpich:
+      externals:
+      - spec: mpich@3.3.2
+        prefix: /usr/local
+
+    # blas is a bit more complicated because its a virtual package so fake it with
+    # the following per spack docs
+    netlib-lapack:
+      buildable: false
+      externals:
+      - spec: netlib-lapack@3.6.1
+        prefix: /usr
+
+    # System level packages to not build
+    autoconf:
+      buildable: false
+      externals:
+      - spec: autoconf
+        prefix: /opt/local
+    automake:
+      buildable: false
+      externals:
+      - spec: automake
+        prefix: /opt/local
+    bzip2:
+      buildable: false
+      externals:
+      - spec: bzip2
+        prefix: /usr
+    gettext:
+      buildable: false
+      externals:
+      - spec: gettext
+        prefix: /usr
+    graphviz:
+      buildable: false
+      externals:
+      - spec: graphviz
+        prefix: /usr
+    libtool:
+      buildable: false
+      externals:
+      - spec: libtool
+        prefix: /usr
+    libx11:
+      buildable: false
+      externals:
+      - spec: libx11
+        prefix: /usr
+    m4:
+      buildable: false
+      externals:
+      - spec: m4
+        prefix: /usr
+    perl:
+      buildable: false
+      externals:
+      - spec: perl
+        prefix: /usr
+    pkg-config:
+      buildable: false
+      externals:
+      - spec: pkg-config
+        prefix: /usr
+    tar:
+      buildable: false
+      externals:
+      - spec: tar
+        prefix: /usr
+    readline:
+      buildable: false
+      externals:
+      - spec: readline
+        prefix: /usr
+    unzip:
+      buildable: false
+      externals:
+      - spec: unzip
+        prefix: /usr
+    zlib:
+      buildable: false
+      externals:
+      - spec: zlib
+        prefix: /usr
+
+  # Lock in versions of Devtools
+    cmake:
+      version: [3.19.2]
+      buildable: false
+      externals:
+      - spec: cmake
+        prefix: /usr/local
+    cppcheck:
+      version: [2.3]
+      buildable: false
+      externals:
+      - spec: cppcheck
+        prefix: /usr/local
+    doxygen:
+      version: [1.8.13]
+      buildable: false
+      externals:
+      - spec: doxygen
+        prefix: /usr/local
+    llvm:
+      version: [11.0.0]
+      buildable: false
+      externals:
+      - spec: llvm+clang
+        prefix: /usr/local/Cellar/llvm/11.0.0_1
+    python:
+      buildable: false
+      externals:
+      - spec: python@2.7.16
+        prefix: /usr

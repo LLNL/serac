@@ -169,11 +169,10 @@ endif()
 # Export Targets
 #------------------------------------------------------------------------------
 set(exported_targets
-    serac_coefficients
-    serac_physics
     serac_infrastructure
+    serac_mesh
     serac_numerics
-    serac_physics_integrators)
+    serac_physics)
 
 add_library(serac INTERFACE)
 target_link_libraries(serac INTERFACE ${exported_targets})

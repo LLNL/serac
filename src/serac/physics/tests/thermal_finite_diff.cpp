@@ -51,7 +51,9 @@ TEST(Thermal, FiniteDifference)
   // Note that we now include an extra template parameter indicating the finite element space for the parameterized
   // field, in this case the thermal conductivity. We also pass an array of finite element states for each of the
   // requested parameterized fields.
-  HeatTransfer<p, dim, Parameters<H1<1> > > thermal_solver(heat_transfer::default_static_options, "thermal_functional");
+  HeatTransfer<p, dim, Parameters<H1<1>>> thermal_solver(heat_transfer::default_nonlinear_options,
+                                                         heat_transfer::default_linear_options,
+                                                         heat_transfer::default_static_options, "thermal_functional");
 
   auto user_defined_conductivity = thermal_solver.generateParameter("user_defined_conductivity", 0);
 
@@ -166,12 +168,12 @@ TEST(HeatTransfer, FiniteDifferenceShape)
   double shape_displacement_value = 1.0;
 
   // The nonlinear solver must have tight tolerances to ensure at least one Newton step occurs
-  SolverOptions options = {
-      DirectSolverOptions{},
-      IterativeNonlinearSolverOptions{.rel_tol = 1.0e-8, .abs_tol = 1.0e-14, .max_iter = 10, .print_level = 1}};
+  serac::NonlinearSolverOptions nonlin_opts{
+      .relative_tol = 1.0e-8, .absolute_tol = 1.0e-14, .max_iterations = 10, .print_level = 1};
 
   // Construct a functional-based thermal solver
-  HeatTransfer<p, dim> thermal_solver(options, "thermal_functional_shape");
+  HeatTransfer<p, dim> thermal_solver(nonlin_opts, heat_transfer::direct_linear_options,
+                                      heat_transfer::default_static_options, "thermal_functional_shape");
 
   heat_transfer::LinearIsotropicConductor mat(1.0, 1.0, 1.0);
 
