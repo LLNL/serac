@@ -24,7 +24,7 @@ using namespace serac;
 
 int main(int argc, char* argv[])
 {
-  auto [num_procs, rank] = serac::initialize(argc, argv);
+  serac::initialize(argc, argv);
 
   constexpr int p                   = 1;
   constexpr int dim                 = 3;
@@ -108,8 +108,8 @@ int main(int argc, char* argv[])
   solid_solver.setParameter(ETA_INDEX, etaParam);
 
   // Set material
-  LiqCrystElast_Bertoldi        lceMat(density, young_modulus, possion_ratio, max_order_param, beta_param);
-  LiqCrystElast_Bertoldi::State initial_state{};
+  LiquidCrystalElastomerBertoldi        lceMat(density, young_modulus, possion_ratio, max_order_param, beta_param);
+  LiquidCrystalElastomerBertoldi::State initial_state{};
 
   auto param_data = solid_solver.createQuadratureDataBuffer(initial_state);
   solid_solver.setMaterial(DependsOn<ORDER_INDEX, GAMMA_INDEX, ETA_INDEX>{}, lceMat, param_data);
@@ -140,14 +140,14 @@ int main(int argc, char* argv[])
 
   // Perform remaining quasi-static solve
   for (int i = 0; i < num_steps; i++) {
-    if (rank == 0) {
-      std::cout << "\n\n............................"
-                << "\n... Entering time step: " << i + 1 << " (/" << num_steps << ")"
-                << "\n............................\n"
-                << "\n... Using order parameter: " << max_order_param * (tmax - t) / tmax
-                << "\n... Using gamma = " << gamma_angle << ", and eta = " << eta_angle
-                << "\n... Min Y displacement: " << gblDispYmin << std::endl;
-    }
+    SLIC_INFO_ROOT(
+        axom::fmt::format("\n\n............................"
+                          "\n... Entering time step: {} ({})"
+                          "\n............................\n"
+                          "\n... Using order parameter: {}"
+                          "\n... Using gamma = {}, and eta = {}"
+                          "\n... Min Y displacement: {}\n",
+                          i + 1, num_steps, max_order_param * (tmax - t) / tmax, gamma_angle, eta_angle, gblDispYmin));
 
     // solve problem with current parameters
     solid_solver.advanceTimestep(dt);
@@ -165,9 +165,7 @@ int main(int argc, char* argv[])
 
     double lclDispYmin = dispVecY.Min();
     MPI_Allreduce(&lclDispYmin, &gblDispYmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-    if (rank == 0) {
-      std::cout << "... Min Y displacement: " << gblDispYmin << std::endl;
-    }
+    SLIC_INFO_ROOT(axom::fmt::format("... Min Y displacement: {}\n", gblDispYmin));
 
     // update pseudotime-dependent information
     t += dt;

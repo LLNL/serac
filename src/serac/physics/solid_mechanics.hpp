@@ -763,7 +763,7 @@ public:
     for (std::size_t parameter_index = 0; parameter_index < parameters_.size(); ++parameter_index) {
       // Compute the change in parameters parameter_diff = parameter_new - parameter_old
       serac::FiniteElementState parameter_difference = *parameters_[parameter_index].state;
-      parameter_difference -= *parameters_[parameter_index].old_state;
+      parameter_difference -= *parameters_[parameter_index].previous_state;
 
       // Compute a linearized estimate of the residual forces due to this change in parameter
       auto drdparam        = serac::get<DERIVATIVE>(d_residual_d_[parameter_index]());
@@ -776,7 +776,7 @@ public:
       dr_ += residual_update;
 
       // Save the current parameter value for the next timestep
-      *parameters_[parameter_index].old_state = *parameters_[parameter_index].state;
+      *parameters_[parameter_index].previous_state = *parameters_[parameter_index].state;
     }
 
     auto& lin_solver = nonlin_solver_->linearSolver();
@@ -805,7 +805,7 @@ public:
     // If this is the first call, initialize the previous parameter values as the initial values
     if (cycle_ == 0) {
       for (auto& parameter : parameters_) {
-        *parameter.old_state = *parameter.state;
+        *parameter.previous_state = *parameter.state;
       }
     }
 

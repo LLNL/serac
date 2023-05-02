@@ -311,7 +311,7 @@ protected:
     serac::FiniteElementState* state;
 
     /// The finite element state representing the parameter at the previous evaluation
-    std::unique_ptr<serac::FiniteElementState> old_state;
+    std::unique_ptr<serac::FiniteElementState> previous_state;
 
     /**
      * @brief The sensitivities (dual vectors) with respect to each of the input parameter fields

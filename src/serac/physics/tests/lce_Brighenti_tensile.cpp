@@ -17,9 +17,11 @@
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/terminator.hpp"
 
+using namespace serac;
+
 int main(int argc, char* argv[])
 {
-  auto [num_procs, rank] = serac::initialize(argc, argv);
+  serac::initialize(argc, argv);
 
   constexpr int p   = 1;
   constexpr int dim = 3;
@@ -105,11 +107,11 @@ int main(int argc, char* argv[])
   double transition_temperature = 348;
   double Nb2                    = 1.0;
 
-  LiqCrystElast_Brighenti mat(density, shear_modulus, bulk_modulus, order_constant, order_parameter,
-                              transition_temperature, Nb2);
+  LiquidCrystElastomerBrighenti mat(density, shear_modulus, bulk_modulus, order_constant, order_parameter,
+                                    transition_temperature, Nb2);
 
-  LiqCrystElast_Brighenti::State initial_state{};
-  auto                           qdata = solid_solver.createQuadratureDataBuffer(initial_state);
+  LiquidCrystElastomerBrighenti::State initial_state{};
+  auto                                 qdata = solid_solver.createQuadratureDataBuffer(initial_state);
   solid_solver.setMaterial(DependsOn<TEMPERATURE_INDEX, GAMMA_INDEX>{}, mat, qdata);
 
   // prescribe symmetry conditions
@@ -165,11 +167,13 @@ int main(int argc, char* argv[])
 
   // Perform remaining quasi-static solve
   for (int i = 0; i < (num_steps + 1); i++) {
-    SLIC_INFO_ROOT("\n\n............................"
-                << "\n... Entering time step: " << i + 1 << "\n............................\n"
-                << "\n... At time: " << t << "\n... And with a tension load of: " << loadVal << " ("
-                << loadVal / maxLoadVal * 100 << "`%` of max)"
-                << "\n... And with uniform temperature of: " << initial_temperature);
+    SLIC_INFO_ROOT(
+        axom::fmt::format("\n\n............................"
+                          "\n... Entering time step: {}"
+                          "\n............................\n"
+                          "\n... At time: {} \n... And with a tension load of: {} ( {} `%` of max)"
+                          "\n... And with uniform temperature of: {}\n",
+                          i + 1, t, loadVal, loadVal / maxLoadVal * 100, initial_temperature));
 
     // solve problem with current parameters
     solid_solver.advanceTimestep(dt);
@@ -193,14 +197,15 @@ int main(int argc, char* argv[])
       double lclDispYmax = dispVecY.Max();
       MPI_Allreduce(&lclDispYmax, &gblDispYmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
 
-      if (rank == 0) {
-        std::cout << "\n... Max Y displacement: " << gblDispYmax << "\n... The QoIVal is: " << current_qoi
-                  << "\n... The top surface current area is: " << std::setprecision(9) << current_area
-                  << "\n... The vertical displacement integrated over the top surface is: "
-                  << current_qoi / current_area << std::endl;
-      }
+      SLIC_INFO_ROOT(
+          axom::fmt::format("\n... Max Y displacement: {}"
+                            "\n... The QoIVal is: {}"
+                            "\n... The top surface current area is: {}"
+                            "\n... The vertical displacement integrated over the top surface is: {}",
+                            gblDispYmax, current_qoi, current_area, current_qoi / current_area));
+    }
 
-      SLIC_ERROR_ROOT_IF(std::isnan(gblDispYmax), "... Solution blew up... Check boundary and initial conditions.");
+    SLIC_ERROR_ROOT_IF(std::isnan(gblDispYmax), "... Solution blew up... Check boundary and initial conditions.");
 
     // update pseudotime-dependent information
     t += dt;
