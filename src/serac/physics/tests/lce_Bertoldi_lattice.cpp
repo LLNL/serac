@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
   serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a functional-based solid mechanics solver
-  LinearSolverOptions linear_options = {.linear_solver  = LinearSolver::SuperLU};
+  LinearSolverOptions linear_options = {.linear_solver = LinearSolver::SuperLU};
 
   NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = serac::NonlinearSolver::KINBacktrackingLineSearch,
                                               .relative_tol   = 1.0e-8,
