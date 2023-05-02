@@ -144,7 +144,7 @@ private:
 };
 
 /**
- * @brief A wrapper class for using the MFEM super LU solver with a HypreParMatrix
+ * @brief A wrapper class for using the MFEM SuperLU solver with a HypreParMatrix
  */
 class SuperLUSolver : public mfem::Solver {
 public:
@@ -185,7 +185,7 @@ private:
   mutable std::unique_ptr<mfem::SuperLURowLocMatrix> superlu_mat_;
 
   /**
-   * @brief The underlying MFEM-based superLU solver. It requires a special
+   * @brief The underlying MFEM-based SuperLU solver. It requires a special
    * superLU matrix type which we store in this object. This enables compatibility
    * with HypreParMatrix when used as an input.
    */
