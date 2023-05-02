@@ -239,8 +239,8 @@ struct LiqCrystElast_Bertoldi {
    * @param[in,out] state A state variable object for this material. The value is updated in place.
    * @param[in] displacement_grad displacement gradient with respect to the reference configuration
    * @param[in] inst_order_param_tuple the current order parameter
-   * @param[in] gamma the first polar angle used to define the liquid crystal orientation vector
-   * @param[in] eta the secpmd polar angle used to define the liquid crystal orientation vector
+   * @param[in] gamma_tuple the first polar angle used to define the liquid crystal orientation vector
+   * @param[in] eta_tuple the second polar angle used to define the liquid crystal orientation vector
    * @return The calculated material response (Cauchy stress) for the material
    */
   template <typename DispGradType, typename orderParamType, typename GammaAngleType, typename EtaAngleType>
