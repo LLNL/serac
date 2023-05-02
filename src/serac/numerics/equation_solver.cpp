@@ -217,28 +217,28 @@ std::unique_ptr<mfem::AmgXSolver> buildAMGX(const AMGXOptions& options, const MP
 std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner, int print_level,
                                                   [[maybe_unused]] MPI_Comm comm)
 {
-  std::unique_ptr<mfem::Solver> preconditioner_ptr;
+  std::unique_ptr<mfem::Solver> preconditioner_solver;
 
   // Handle the preconditioner - currently just BoomerAMG and HypreSmoother are supported
   if (preconditioner == Preconditioner::HypreAMG) {
     auto amg_preconditioner = std::make_unique<mfem::HypreBoomerAMG>();
     amg_preconditioner->SetPrintLevel(print_level);
-    preconditioner_ptr = std::move(amg_preconditioner);
+    preconditioner_solver = std::move(amg_preconditioner);
   } else if (preconditioner == Preconditioner::HypreJacobi) {
     auto jac_preconditioner = std::make_unique<mfem::HypreSmoother>();
     jac_preconditioner->SetType(mfem::HypreSmoother::Type::Jacobi);
-    preconditioner_ptr = std::move(jac_preconditioner);
+    preconditioner_solver = std::move(jac_preconditioner);
   } else if (preconditioner == Preconditioner::HypreL1Jacobi) {
     auto jacl1_preconditioner = std::make_unique<mfem::HypreSmoother>();
     jacl1_preconditioner->SetType(mfem::HypreSmoother::Type::l1Jacobi);
-    preconditioner_ptr = std::move(jacl1_preconditioner);
+    preconditioner_solver = std::move(jacl1_preconditioner);
   } else if (preconditioner == Preconditioner::HypreGaussSeidel) {
     auto gs_preconditioner = std::make_unique<mfem::HypreSmoother>();
     gs_preconditioner->SetType(mfem::HypreSmoother::Type::GS);
-    preconditioner_ptr = std::move(gs_preconditioner);
+    preconditioner_solver = std::move(gs_preconditioner);
   } else if (preconditioner == Preconditioner::AMGX) {
 #ifdef MFEM_USE_AMGX
-    preconditioner_ptr = buildAMGX(AMGXOptions{}, comm);
+    preconditioner_solver = buildAMGX(AMGXOptions{}, comm);
 #else
     SLIC_ERROR_ROOT("AMGX requested in non-GPU build");
 #endif
@@ -246,7 +246,7 @@ std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner,
     SLIC_ERROR_ROOT_IF(preconditioner != Preconditioner::None, "Unknown preconditioner type requested");
   }
 
-  return preconditioner_ptr;
+  return preconditioner_solver;
 }
 
 void EquationSolver::DefineInputFileSchema(axom::inlet::Container& container)
