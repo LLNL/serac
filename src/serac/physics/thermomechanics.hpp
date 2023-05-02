@@ -34,12 +34,11 @@ public:
   /**
    * @brief Construct a new coupled Thermal-SolidMechanics object
    *
-   * @param thermal_nonlin_opts The nonlinear solver options for solving the nonlinear heat conduction residual
-   * equations
-   * @param thermal_lin_opts The linear solver options for solving the linearized Jacobian heat transfer equations
+   * @param thermal_nonlin_opts The options for solving the nonlinear heat conduction residual equations
+   * @param thermal_lin_opts The options for solving the linearized Jacobian heat transfer equations
    * @param thermal_timestepping The timestepping options for the heat transfer operator
-   * @param solid_nonlin_opts The nonlinear solver options for solving the nonlinear solid mechanics residual equations
-   * @param solid_lin_opts The linear solver options for solving the linearized Jacobian solid mechanics equations
+   * @param solid_nonlin_opts The options for solving the nonlinear solid mechanics residual equations
+   * @param solid_lin_opts The options for solving the linearized Jacobian solid mechanics equations
    * @param solid_timestepping The timestepping options for the solid solver
    * @param geom_nonlin Flag to include geometric nonlinearities
    * @param name An optional name for the physics module instance
