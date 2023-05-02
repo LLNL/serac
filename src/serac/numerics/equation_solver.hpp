@@ -71,53 +71,53 @@ public:
    * @note This operator is required to return an @a mfem::HypreParMatrix from its @a GetGradient method. This is
    * due to the use of Hypre-based linear solvers.
    */
-  void SetOperator(const mfem::Operator& op);
+  void setOperator(const mfem::Operator& op);
 
   /**
    * Solves the system F(x) = 0
    * @param[in,out] x Solution to the system of nonlinear equations
    * @note The input value of @a x will be used as an initial guess for iterative nonlinear solution methods
    */
-  void Solve(mfem::Vector& x) const;
+  void solve(mfem::Vector& x) const;
 
   /**
    * Returns the underlying solver object
    * @return A non-owning reference to the underlying nonlinear solver
    */
-  mfem::NewtonSolver& NonlinearSolver() { return *nonlin_solver_; }
+  mfem::NewtonSolver& nonlinearSolver() { return *nonlin_solver_; }
 
   /**
    * @overload
    */
-  const mfem::NewtonSolver& NonlinearSolver() const { return *nonlin_solver_; }
+  const mfem::NewtonSolver& nonlinearSolver() const { return *nonlin_solver_; }
 
   /**
    * Returns the underlying linear solver object
    * @return A non-owning reference to the underlying linear solver
    */
-  mfem::Solver& LinearSolver() { return *lin_solver_; }
+  mfem::Solver& linearSolver() { return *lin_solver_; }
 
   /**
    * @overload
    */
-  const mfem::Solver& LinearSolver() const { return *lin_solver_; }
+  const mfem::Solver& linearSolver() const { return *lin_solver_; }
 
   /**
    * Returns the underlying preconditioner
    * @return A pointer to the underlying preconditioner
    * @note This may be null if a preconditioner is not given
    */
-  mfem::Solver* Preconditioner() { return preconditioner_.get(); }
+  mfem::Solver* preconditioner() { return preconditioner_.get(); }
 
   /**
    * @overload
    */
-  const mfem::Solver* Preconditioner() const { return preconditioner_.get(); }
+  const mfem::Solver* preconditioner() const { return preconditioner_.get(); }
 
   /**
    * Input file parameters specific to this class
    **/
-  static void DefineInputFileSchema(axom::inlet::Container& container);
+  static void defineInputFileSchema(axom::inlet::Container& container);
 
 private:
   /**

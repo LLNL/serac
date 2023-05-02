@@ -172,7 +172,7 @@ public:
     residual_ = std::make_unique<Functional<test(scalar_trial, scalar_trial, shape_trial, parameter_space...)>>(
         test_space, trial_spaces);
 
-    nonlin_solver_->SetOperator(residual_with_bcs_);
+    nonlin_solver_->setOperator(residual_with_bcs_);
 
     // Check for dynamic mode
     if (timestepping_opts.timestepper != TimestepMethod::QuasiStatic) {
@@ -266,7 +266,7 @@ public:
       for (auto& bc : bcs_.essentials()) {
         bc.setDofs(temperature_, time_);
       }
-      nonlin_solver_->Solve(temperature_);
+      nonlin_solver_->solve(temperature_);
     } else {
       SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
 
@@ -615,7 +615,7 @@ public:
     // Add the sign correction to move the term to the RHS
     adjoint_load_vector *= -1.0;
 
-    auto& lin_solver = nonlin_solver_->LinearSolver();
+    auto& lin_solver = nonlin_solver_->linearSolver();
 
     // By default, use a homogeneous essential boundary condition
     mfem::HypreParVector adjoint_essential(temp_adjoint_load->second);
@@ -647,7 +647,7 @@ public:
     lin_solver.Mult(adjoint_load_vector, adjoint_temperature_);
 
     // Reset the equation solver to use the full nonlinear residual operator
-    nonlin_solver_->SetOperator(residual_with_bcs_);
+    nonlin_solver_->setOperator(residual_with_bcs_);
 
     return {{"adjoint_temperature", adjoint_temperature_}};
   }

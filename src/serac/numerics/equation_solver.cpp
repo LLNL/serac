@@ -32,22 +32,18 @@ EquationSolver::EquationSolver(std::unique_ptr<mfem::NewtonSolver> nonlinear_sol
   preconditioner_ = std::move(preconditioner);
 }
 
-void EquationSolver::SetOperator(const mfem::Operator& op)
+void EquationSolver::setOperator(const mfem::Operator& op)
 {
   nonlin_solver_->SetOperator(op);
 
-  auto* newton_solver = dynamic_cast<mfem::NewtonSolver*>(nonlin_solver_.get());
-
-  if (newton_solver) {
-    // Now that the nonlinear solver knows about the operator, we can set its linear solver
-    if (!nonlin_solver_set_solver_called_) {
-      newton_solver->SetSolver(LinearSolver());
-      nonlin_solver_set_solver_called_ = true;
-    }
+  // Now that the nonlinear solver knows about the operator, we can set its linear solver
+  if (!nonlin_solver_set_solver_called_) {
+    nonlin_solver_->SetSolver(linearSolver());
+    nonlin_solver_set_solver_called_ = true;
   }
 }
 
-void EquationSolver::Solve(mfem::Vector& x) const
+void EquationSolver::solve(mfem::Vector& x) const
 {
   mfem::Vector zero(x);
   zero = 0.0;
@@ -249,7 +245,7 @@ std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner,
   return preconditioner_solver;
 }
 
-void EquationSolver::DefineInputFileSchema(axom::inlet::Container& container)
+void EquationSolver::defineInputFileSchema(axom::inlet::Container& container)
 {
   auto& linear_container = container.addStruct("linear", "Linear Equation Solver Parameters");
   linear_container.required().registerVerifier([](const axom::inlet::Container& container_to_verify) {
