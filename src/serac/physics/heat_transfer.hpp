@@ -97,17 +97,17 @@ public:
    *
    * @param[in] nonlinear_opts The nonlinear solver options for solving the nonlinear residual equations
    * @param[in] lin_opts The linear solver options for solving the linearized Jacobian equations
-   * @param[in] dynamic_opts The timestepping options for the heat transfer ordinary differential equations
+   * @param[in] timestepping_opts The timestepping options for the heat transfer ordinary differential equations
    * @param[in] name An optional name for the physics module instance
    * used by an underlying material model or load
    * @param[in] pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
   HeatTransfer(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
-               const serac::TimesteppingOptions dynamic_opts, const std::string& name = "",
+               const serac::TimesteppingOptions timestepping_opts, const std::string& name = "",
                mfem::ParMesh* pmesh = nullptr)
       : HeatTransfer(std::make_unique<mfem_ext::EquationSolver>(
                          nonlinear_opts, lin_opts, StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
-                     dynamic_opts, name, pmesh)
+                     timestepping_opts, name, pmesh)
   {
   }
 
@@ -115,13 +115,14 @@ public:
    * @brief Construct a new heat transfer object
    *
    * @param[in] solver The nonlinear equation solver for the heat transfer equations
-   * @param[in] dynamic_opts The timestepping options for the heat transfer ordinary differential equations
+   * @param[in] timestepping_opts The timestepping options for the heat transfer ordinary differential equations
    * @param[in] name An optional name for the physics module instance
    * used by an underlying material model or load
    * @param[in] pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
-  HeatTransfer(std::unique_ptr<serac::mfem_ext::EquationSolver> solver, const serac::TimesteppingOptions dynamic_opts,
-               const std::string& name = "", mfem::ParMesh* pmesh = nullptr)
+  HeatTransfer(std::unique_ptr<serac::mfem_ext::EquationSolver> solver,
+               const serac::TimesteppingOptions timestepping_opts, const std::string& name = "",
+               mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(NUM_STATE_VARS, order, name, pmesh),
         temperature_(StateManager::newState(
             FiniteElementState::Options{
@@ -175,9 +176,9 @@ public:
     nonlin_solver_->SetOperator(residual_with_bcs_);
 
     // Check for dynamic mode
-    if (dynamic_opts.timestepper != TimestepMethod::QuasiStatic) {
-      ode_.SetTimestepper(dynamic_opts.timestepper);
-      ode_.SetEnforcementMethod(dynamic_opts.enforcement_method);
+    if (timestepping_opts.timestepper != TimestepMethod::QuasiStatic) {
+      ode_.SetTimestepper(timestepping_opts.timestepper);
+      ode_.SetEnforcementMethod(timestepping_opts.enforcement_method);
       is_quasistatic_ = false;
     } else {
       is_quasistatic_ = true;

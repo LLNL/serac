@@ -101,18 +101,18 @@ public:
    *
    * @param nonlinear_opts The nonlinear solver options for solving the nonlinear residual equations
    * @param lin_opts The linear solver options for solving the linearized Jacobian equations
-   * @param dynamic_opts The timestepping options for the solid mechanics time evolution operator
+   * @param timestepping_opts The timestepping options for the solid mechanics time evolution operator
    * @param geom_nonlin Flag to include geometric nonlinearities
    * @param name An optional name for the physics module instance
    * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
   SolidMechanics(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
-                 const serac::TimesteppingOptions dynamic_opts,
+                 const serac::TimesteppingOptions timestepping_opts,
                  const GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
                  mfem::ParMesh* pmesh = nullptr)
       : SolidMechanics(std::make_unique<mfem_ext::EquationSolver>(
                            nonlinear_opts, lin_opts, StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
-                       dynamic_opts, geom_nonlin, name, pmesh)
+                       timestepping_opts, geom_nonlin, name, pmesh)
   {
   }
 
@@ -120,12 +120,13 @@ public:
    * @brief Construct a new SolidMechanics object
    *
    * @param solver The nonlinear equation solver for the implicit solid mechanics equations
-   * @param dynamic_opts The timestepping options for the solid mechanics time evolution operator
+   * @param timestepping_opts The timestepping options for the solid mechanics time evolution operator
    * @param geom_nonlin Flag to include geometric nonlinearities
    * @param name An optional name for the physics module instance
    * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
-  SolidMechanics(std::unique_ptr<serac::mfem_ext::EquationSolver> solver, const serac::TimesteppingOptions dynamic_opts,
+  SolidMechanics(std::unique_ptr<serac::mfem_ext::EquationSolver> solver,
+                 const serac::TimesteppingOptions                 timestepping_opts,
                  const GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
                  mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(2, order, name, pmesh),
@@ -200,9 +201,9 @@ public:
     }
 
     // Check for dynamic mode
-    if (dynamic_opts.timestepper != TimestepMethod::QuasiStatic) {
-      ode2_.SetTimestepper(dynamic_opts.timestepper);
-      ode2_.SetEnforcementMethod(dynamic_opts.enforcement_method);
+    if (timestepping_opts.timestepper != TimestepMethod::QuasiStatic) {
+      ode2_.SetTimestepper(timestepping_opts.timestepper);
+      ode2_.SetEnforcementMethod(timestepping_opts.enforcement_method);
       is_quasistatic_ = false;
     } else {
       is_quasistatic_ = true;
