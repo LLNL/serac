@@ -21,8 +21,6 @@
 
 namespace serac {
 
-using solid_mechanics::direct_static_options;
-
 /**
  * @brief Exact displacement solution that is an affine function
  *
@@ -180,13 +178,14 @@ double solution_error(const ExactSolution& exact_displacement, PatchBoundaryCond
 
   std::string filename = std::string(SERAC_REPO_DIR) +  "/data/meshes/patch" + std::to_string(dim) + "D.mesh";
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename));
-  serac::StateManager::setMesh(std::move(mesh));
+  auto* pmesh = serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a solid mechanics solver
-  auto solver_options = direct_static_options;
-  solver_options.nonlinear.abs_tol = 1e-14;
-  solver_options.nonlinear.rel_tol = 1e-14;
-  SolidMechanics<p, dim> solid(solver_options, GeometricNonlinearities::On, "solid");
+  serac::NonlinearSolverOptions nonlin_solver_options{.nonlin_solver = NonlinearSolver::KINBacktrackingLineSearch, .relative_tol = 0.0, .absolute_tol = 1.0e-14, .max_iterations = 30};
+
+  auto equation_solver = std::make_unique<EquationSolver>(nonlin_solver_options, serac::solid_mechanics::default_linear_options, pmesh->GetComm());
+
+  SolidMechanics<p, dim> solid(std::move(equation_solver), solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "solid");
 
   solid_mechanics::NeoHookean mat{.density=1.0, .K=1.0, .G=1.0};
   solid.setMaterial(mat);

@@ -87,7 +87,8 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on('py-sphinx', when="+devtools")
     depends_on('py-ats', when="+devtools")
 
-    depends_on("sundials@5.7.0+hypre+monitoring~examples~examples-install",
+    # MFEM is deprecating the monitoring support with sundials v6.0 and later
+    depends_on("sundials@6.4.1+hypre~monitoring~examples~examples-install",
                when="+sundials")
     depends_on("sundials+asan", when="+sundials+asan")
 

@@ -10,6 +10,7 @@
 
 #include "serac/physics/materials/solid_material.hpp"
 
+#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 
 #include "serac/numerics/functional/tensor.hpp"

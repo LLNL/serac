@@ -21,8 +21,6 @@
 
 namespace serac {
 
-using heat_transfer::direct_static_options;
-
 /**
  * @brief Exact temperature solution that is an affine function
  *
@@ -169,10 +167,10 @@ double solution_error(const ExactSolution& exact_temperature, PatchBoundaryCondi
   serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a heat transfer mechanics solver
-  auto solver_options = direct_static_options;
-  solver_options.nonlinear.abs_tol = 1e-14;
-  solver_options.nonlinear.rel_tol = 1e-14;
-  HeatTransfer<p, dim> thermal(solver_options, "thermal");
+  auto nonlinear_opts = heat_transfer::default_nonlinear_options;
+  nonlinear_opts.absolute_tol = 1e-14;
+  nonlinear_opts.relative_tol = 1e-14;
+  HeatTransfer<p, dim> thermal(nonlinear_opts, heat_transfer::direct_linear_options, heat_transfer::default_static_options, "thermal");
 
   heat_transfer::LinearIsotropicConductor mat(1.0,1.0,1.0);
   thermal.setMaterial(mat);
