@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
   mfem::FunctionCoefficient coef(gamma_func);
   gamma.project(coef);
 
-  // Construct a functional-based solid mechanics solver
+  // Construct a solid mechanics solver
   LinearSolverOptions linear_options = {
       .linear_solver  = LinearSolver::GMRES,
       .preconditioner = Preconditioner::HypreAMG,
