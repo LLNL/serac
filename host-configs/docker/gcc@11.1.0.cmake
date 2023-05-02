@@ -59,7 +59,7 @@ set(ENABLE_OPENMP ON CACHE BOOL "")
 
 set(TPL_ROOT "/home/serac/serac_tpls/gcc-11.1.0" CACHE PATH "")
 
-set(AXOM_DIR "${TPL_ROOT}/axom-0.7.0.4-onz6z6wumrpunefe3kbyy3l5txrbmeop" CACHE PATH "")
+set(AXOM_DIR "${TPL_ROOT}/axom-0.7.0.4-ayvyfa3qlinwthocurhwhjsbtr6gzn55" CACHE PATH "")
 
 set(CAMP_DIR "${TPL_ROOT}/camp-2022.03.2-ecxxjszodysrw4tiujtia5kma7whjszv" CACHE PATH "")
 
@@ -67,7 +67,7 @@ set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.8.4-pfqoghwltlucmgrplqq364e5o6yhq7jr" CAC
 
 set(LUA_DIR "${TPL_ROOT}/lua-5.4.4-ve6ws2zzw7qkrzupei6mnhtwdcxxz6jf" CACHE PATH "")
 
-set(MFEM_DIR "${TPL_ROOT}/mfem-4.5.2.1-dcl2shc7i2wwfpuf7kq5as3k3jzc6uk2" CACHE PATH "")
+set(MFEM_DIR "${TPL_ROOT}/mfem-4.5.2.1-25cchjn54wk45jh43hwyufbvb4xd7rxu" CACHE PATH "")
 
 set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.21-h5dpyqnqdcwv6rcpdz6ywjp53yeqst7a" CACHE PATH "")
 
@@ -91,7 +91,7 @@ set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1-jke7rcnlsep6bbtvimfqkl3sgmgr
 
 set(RAJA_DIR "${TPL_ROOT}/raja-2022.03.0-raeo25xb7cumpvjlhqmrx6fncfuwef55" CACHE PATH "")
 
-set(SUNDIALS_DIR "${TPL_ROOT}/sundials-5.7.0-cvduhe2relzdp3nfz6fxew6hul7keqnh" CACHE PATH "")
+set(SUNDIALS_DIR "${TPL_ROOT}/sundials-6.4.1-6qtgnji6ypjvm7jpzfh4xtlohtxetnx6" CACHE PATH "")
 
 set(UMPIRE_DIR "${TPL_ROOT}/umpire-2022.03.1-pieu6hp5juhqvvm6dp645xxlea4igxj3" CACHE PATH "")
 

@@ -58,7 +58,10 @@ TEST(Thermal, ParameterizedMaterial)
   // Note that we now include an extra template parameter indicating the finite element space for the parameterized
   // field, in this case the thermal conductivity. We also pass an array of finite element states for each of the
   // requested parameterized fields.
-  HeatTransfer<p, dim, Parameters<H1<1> > > thermal_solver(heat_transfer::direct_static_options, "thermal_functional");
+  HeatTransfer<p, dim, Parameters<H1<1>>> thermal_solver(heat_transfer::default_nonlinear_options,
+                                                         heat_transfer::direct_linear_options,
+                                                         heat_transfer::default_static_options, "thermal_functional");
+
   thermal_solver.setParameter(0, user_defined_conductivity);
 
   // Construct a potentially user-defined parameterized material and send it to the thermal module

@@ -37,10 +37,22 @@ struct SolidMechanicsInputOptions {
   int order;
 
   /**
-   * @brief The options for the linear, nonlinear, and ODE solvers
+   * @brief The linear solver options
    *
    */
-  SolverOptions solver_options;
+  LinearSolverOptions lin_solver_options;
+
+  /**
+   * @brief The linear solver options
+   *
+   */
+  NonlinearSolverOptions nonlin_solver_options;
+
+  /**
+   * @brief The timestepping options
+   *
+   */
+  TimesteppingOptions timestepping_options;
 
   /**
    * @brief The shear modulus

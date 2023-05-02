@@ -8,6 +8,7 @@ set(test_dependencies gtest serac_numerics serac_boundary_conditions)
 blt_list_append( TO test_dependencies ELEMENTS caliper adiak IF ${SERAC_ENABLE_PROFILING} )
 
 set(numerics_serial_tests
+    equationsolver.cpp
     expr_templates.cpp
     operator.cpp
     odes.cpp

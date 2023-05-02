@@ -87,47 +87,39 @@ enum class DirichletEnforcementMethod
   FullControl
 };
 
-/**
- * @brief Linear solution method
- */
+/// A timestep and boundary condition enforcement method for a dynamic solver
+struct TimesteppingOptions {
+  /// The timestepping method to be applied
+  TimestepMethod timestepper = TimestepMethod::QuasiStatic;
+
+  /// The essential boundary enforcement method to use
+  DirichletEnforcementMethod enforcement_method = DirichletEnforcementMethod::RateControl;
+};
+
+// _linear_solvers_start
+/// Linear solution method indicator
 enum class LinearSolver
 {
-  CG,     /**< Conjugate Gradient */
+  CG,     /**< Conjugate gradient */
   GMRES,  /**< Generalized minimal residual method */
-  MINRES, /**< Minimal residual method */
-  SuperLU /**< SuperLU Direct Solver */
+  SuperLU /**< SuperLU MPI-enabled direct Solver */
 };
+// _linear_solvers_end
 
-/**
- * @brief Nonlinear solver type/method
- */
+// Add a custom list of strings? conduit node?
+// Arbitrary string (e.g. json) to define parameters?
+
+// _nonlinear_solvers_start
+/// Nonlinear solver method indicator
 enum class NonlinearSolver
 {
-  MFEMNewton,               /**< Newton-Raphson */
-  KINFullStep,              /**< KINFullStep */
-  KINBacktrackingLineSearch /**< KINBacktrackingLineSearch */
+  Newton,                    /**< MFEM-native Newton-Raphson */
+  LBFGS,                     /**< MFEM-native Limited memory BFGS */
+  KINFullStep,               /**< KINSOL Full Newton (Sundials must be enabled) */
+  KINBacktrackingLineSearch, /**< KINSOL Newton with Backtracking Line Search (Sundials must be enabled) */
+  KINPicard                  /**< KINSOL Picard (Sundials must be enabled) */
 };
-
-/**
- * @brief Stores the information required to configure a HypreSmoother
- */
-struct HypreSmootherPrec {
-  /**
-   * @brief The type of Hypre smoother to apply
-   */
-  mfem::HypreSmoother::Type type;
-};
-
-/**
- * @brief Stores the information required to configure a HypreBoomerAMG preconditioner
- */
-struct HypreBoomerAMGPrec {
-  /**
-   * @brief The par finite element space for the AMG object
-   * @note This is needed for some of the options specific to solid mechanics solves
-   */
-  mfem::ParFiniteElementSpace* pfes = nullptr;
-};
+// _nonlinear_solvers_end
 
 /**
  * @brief Solver types supported by AMGX
@@ -153,7 +145,7 @@ enum class AMGXSolver
 /**
  * @brief Stores the information required to configure a NVIDIA AMGX preconditioner
  */
-struct AMGXPrec {
+struct AMGXOptions {
   /**
    * @brief The solver algorithm
    */
@@ -161,128 +153,70 @@ struct AMGXPrec {
   /**
    * @brief The smoother algorithm
    */
-  AMGXSolver smoother = AMGXSolver::BLOCK_JACOBI;
+  AMGXSolver smoother = AMGXSolver::JACOBI_L1;
   /**
    * @brief Whether to display statistics from AMGX
    */
   bool verbose = false;
 };
 
-/**
- * @brief Stores the information required to configure a BlockILU preconditioner
- */
-struct BlockILUPrec {
-  /**
-   * @brief The block size for the ILU preconditioner
-   */
-  int block_size;
-};
-
-/**
- * @brief Preconditioning method
- */
-using Preconditioner = std::variant<HypreSmootherPrec, HypreBoomerAMGPrec, AMGXPrec, BlockILUPrec>;
-
-/**
- * @brief Abstract multiphysics coupling scheme
- */
-enum class CouplingScheme
+// _preconditioners_start
+/// The type of preconditioner to be used
+enum class Preconditioner
 {
-  OperatorSplit, /**< Operator Split */
-  FixedPoint,    /**< Fixed Point */
-  FullyCoupled   /**< FullyCoupled */
+  HypreJacobi,      /**< Hypre-based Jacobi */
+  HypreL1Jacobi,    /**< Hypre-based L1-scaled Jacobi */
+  HypreGaussSeidel, /**< Hypre-based Gauss-Seidel */
+  HypreAMG,         /**< Hypre's BoomerAMG algebraic multi-grid */
+  AMGX,             /**< NVIDIA's AMGX GPU-enabled algebraic multi-grid, GPU builds only */
+  None              /**< No preconditioner used */
 };
+// _preconditioners_end
 
-/**
- * @brief Parameters for an iterative linear solution scheme
- */
-struct IterativeSolverOptions {
-  /**
-   * @brief Relative tolerance
-   */
-  double rel_tol;
+// _linear_options_start
+/// Parameters for an iterative linear solution scheme
+struct LinearSolverOptions {
+  /// Linear solver selection
+  LinearSolver linear_solver = LinearSolver::GMRES;
 
-  /**
-   * @brief Absolute tolerance
-   */
-  double abs_tol;
+  /// PreconditionerOptions selection
+  Preconditioner preconditioner = Preconditioner::HypreJacobi;
 
-  /**
-   * @brief Debugging print level
-   */
-  int print_level;
+  /// Relative tolerance
+  double relative_tol = 1.0e-8;
 
-  /**
-   * @brief Maximum number of iterations
-   */
-  int max_iter;
+  /// Absolute tolerance
+  double absolute_tol = 1.0e-12;
 
-  /**
-   * @brief Linear solver selection
-   */
-  LinearSolver lin_solver;
+  /// Maximum number of iterations
+  int max_iterations = 300;
 
-  /**
-   * @brief Preconditioner selection
-   */
-  std::optional<Preconditioner> prec;
+  /// Debugging print level for the linear solver
+  int print_level = 0;
+
+  /// Debugging print level for the preconditioner
+  int preconditioner_print_level = 0;
 };
+// _linear_options_end
 
-/**
- * @brief Parameters for a custom solver (currently just a non-owning pointer to the solver)
- * @note This is preferable to unique_ptr or even references because non-trivial copy constructors
- * and destructors are a nightmare in this context
- */
-struct CustomSolverOptions {
-  /**
-   * @brief A non-owning pointer to the custom mfem solver to use
-   */
-  mfem::Solver* solver = nullptr;
-};
-
-/**
- * @brief Parameters for a direct solver (PARDISO, MUMPS, SuperLU, etc)
- */
-struct DirectSolverOptions {
-  /**
-   * @brief Debugging print level
-   */
-  int print_level;
-};
-
-/**
- * @brief Parameters for a linear solver
- */
-using LinearSolverOptions = std::variant<IterativeSolverOptions, CustomSolverOptions, DirectSolverOptions>;
-
-/**
- * @brief Nonlinear solution scheme parameters
- */
+// _nonlinear_options_start
+/// Nonlinear solution scheme parameters
 struct NonlinearSolverOptions {
-  /**
-   * @brief Relative tolerance
-   */
-  double rel_tol;
+  /// Nonlinear solver selection
+  NonlinearSolver nonlin_solver = NonlinearSolver::Newton;
 
-  /**
-   * @brief Absolute tolerance
-   */
-  double abs_tol;
+  /// Relative tolerance
+  double relative_tol = 1.0e-8;
 
-  /**
-   * @brief Maximum number of iterations
-   */
-  int max_iter;
+  /// Absolute tolerance
+  double absolute_tol = 1.0e-12;
 
-  /**
-   * @brief Debug print level
-   */
-  int print_level;
+  /// Maximum number of iterations
+  int max_iterations = 20;
 
-  /**
-   * @brief Nonlinear solver selection
-   */
-  NonlinearSolver nonlin_solver = NonlinearSolver::MFEMNewton;
+  /// Debug print level
+  int print_level = 0;
 };
+// _nonlinear_options_end
 
 }  // namespace serac

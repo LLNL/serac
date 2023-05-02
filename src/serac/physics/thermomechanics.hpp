@@ -32,20 +32,51 @@ template <int order, int dim, typename... parameter_space>
 class Thermomechanics : public BasePhysics {
 public:
   /**
-   * @brief Construct a new coupled Thermal-SolidMechanics Functional object
+   * @brief Construct a new coupled Thermal-SolidMechanics object
    *
-   * @param thermal_options The options for the linear, nonlinear, and ODE solves of the thermal operator
-   * @param solid_options The options for the linear, nonlinear, and ODE solves of the thermal operator
+   * @param thermal_nonlin_opts The options for solving the nonlinear heat conduction residual equations
+   * @param thermal_lin_opts The options for solving the linearized Jacobian heat transfer equations
+   * @param thermal_timestepping The timestepping options for the heat transfer operator
+   * @param solid_nonlin_opts The options for solving the nonlinear solid mechanics residual equations
+   * @param solid_lin_opts The options for solving the linearized Jacobian solid mechanics equations
+   * @param solid_timestepping The timestepping options for the solid solver
    * @param geom_nonlin Flag to include geometric nonlinearities
    * @param name An optional name for the physics module instance
    * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
-  Thermomechanics(const SolverOptions& thermal_options, const SolverOptions& solid_options,
+  Thermomechanics(const NonlinearSolverOptions thermal_nonlin_opts, const LinearSolverOptions thermal_lin_opts,
+                  TimesteppingOptions thermal_timestepping, const NonlinearSolverOptions solid_nonlin_opts,
+                  const LinearSolverOptions solid_lin_opts, TimesteppingOptions solid_timestepping,
+                  GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
+                  mfem::ParMesh* pmesh = nullptr)
+      : Thermomechanics(
+            std::make_unique<EquationSolver>(thermal_nonlin_opts, thermal_lin_opts,
+                                             StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
+            thermal_timestepping,
+            std::make_unique<EquationSolver>(solid_nonlin_opts, solid_lin_opts,
+                                             StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
+            solid_timestepping, geom_nonlin, name, pmesh)
+  {
+  }
+
+  /**
+   * @brief Construct a new coupled Thermal-SolidMechanics object
+   *
+   * @param thermal_solver The nonlinear equation solver for the heat conduction equations
+   * @param thermal_timestepping The timestepping options for the thermal solver
+   * @param solid_solver The nonlinear equation solver for the solid mechanics equations
+   * @param solid_timestepping The timestepping options for the solid solver
+   * @param geom_nonlin Flag to include geometric nonlinearities
+   * @param name An optional name for the physics module instance
+   * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
+   */
+  Thermomechanics(std::unique_ptr<EquationSolver> thermal_solver, TimesteppingOptions thermal_timestepping,
+                  std::unique_ptr<EquationSolver> solid_solver, TimesteppingOptions solid_timestepping,
                   GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
                   mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(3, order, name, pmesh),
-        thermal_(thermal_options, name + "thermal", pmesh),
-        solid_(solid_options, geom_nonlin, name + "mechanical", pmesh)
+        thermal_(std::move(thermal_solver), thermal_timestepping, name + "thermal", pmesh),
+        solid_(std::move(solid_solver), solid_timestepping, geom_nonlin, name + "mechanical", pmesh)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
@@ -56,8 +87,6 @@ public:
 
     thermal_.setParameter(0, solid_.displacement());
     solid_.setParameter(0, thermal_.temperature());
-
-    coupling_ = serac::CouplingScheme::OperatorSplit;
   }
 
   /**
@@ -69,7 +98,10 @@ public:
    */
   Thermomechanics(const HeatTransferInputOptions& thermal_options, const SolidMechanicsInputOptions& solid_options,
                   const std::string& name = "")
-      : Thermomechanics(thermal_options.solver_options, solid_options.solver_options, solid_options.geom_nonlin, name)
+      : Thermomechanics(thermal_options.nonlin_solver_options, thermal_options.lin_solver_options,
+                        thermal_options.timestepping_options, solid_options.nonlin_solver_options,
+                        solid_options.lin_solver_options, solid_options.timestepping_options, solid_options.geom_nonlin,
+                        name)
   {
   }
 
@@ -97,9 +129,6 @@ public:
    */
   void completeSetup() override
   {
-    SLIC_ERROR_ROOT_IF(coupling_ != serac::CouplingScheme::OperatorSplit,
-                       "Only operator split is currently implemented in the thermal structural solver.");
-
     thermal_.completeSetup();
     solid_.completeSetup();
   }
@@ -156,15 +185,11 @@ public:
    */
   void advanceTimestep(double& dt) override
   {
-    if (coupling_ == serac::CouplingScheme::OperatorSplit) {
-      double initial_dt = dt;
-      thermal_.advanceTimestep(dt);
-      solid_.advanceTimestep(dt);
-      SLIC_ERROR_ROOT_IF(std::abs(dt - initial_dt) > 1.0e-6,
-                         "Operator split coupled solvers cannot adaptively change the timestep");
-    } else {
-      SLIC_ERROR_ROOT("Only operator split coupling is currently implemented");
-    }
+    double initial_dt = dt;
+    thermal_.advanceTimestep(dt);
+    solid_.advanceTimestep(dt);
+    SLIC_ERROR_ROOT_IF(std::abs(dt - initial_dt) > 1.0e-6,
+                       "Operator split coupled solvers cannot adaptively change the timestep");
 
     cycle_ += 1;
   }
@@ -446,9 +471,6 @@ public:
   const serac::FiniteElementState& temperature() const { return thermal_.temperature(); };
 
 protected:
-  /// @brief The coupling strategy
-  serac::CouplingScheme coupling_;
-
   using displacement_field = H1<order, dim>;  ///< the function space for the displacement field
   using temperature_field  = H1<order>;       ///< the function space for the temperature field
 

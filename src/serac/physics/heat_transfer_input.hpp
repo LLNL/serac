@@ -37,10 +37,22 @@ struct HeatTransferInputOptions {
   int order;
 
   /**
-   * @brief The linear, nonlinear, and ODE solver options
+   * @brief The linear solver options
    *
    */
-  SolverOptions solver_options;
+  LinearSolverOptions lin_solver_options;
+
+  /**
+   * @brief The linear solver options
+   *
+   */
+  NonlinearSolverOptions nonlin_solver_options;
+
+  /**
+   * @brief The timestepping options
+   *
+   */
+  TimesteppingOptions timestepping_options;
 
   /**
    * @brief The conductivity parameter

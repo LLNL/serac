@@ -23,7 +23,7 @@ void HeatTransferInputOptions::defineInputFileSchema(axom::inlet::Container& con
 
   auto& equation_solver_container =
       container.addStruct("equation_solver", "Linear and Nonlinear stiffness Solver Parameters.");
-  serac::mfem_ext::EquationSolver::DefineInputFileSchema(equation_solver_container);
+  serac::EquationSolver::defineInputFileSchema(equation_solver_container);
 
   auto& dynamics_container = container.addStruct("dynamics", "Parameters for mass matrix inversion");
   dynamics_container.addString("timestepper", "Timestepper (ODE) method to use");
@@ -46,12 +46,12 @@ serac::HeatTransferInputOptions FromInlet<serac::HeatTransferInputOptions>::oper
   result.order = base["order"];
 
   // Solver parameters
-  auto equation_solver            = base["equation_solver"];
-  result.solver_options.linear    = equation_solver["linear"].get<serac::LinearSolverOptions>();
-  result.solver_options.nonlinear = equation_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
+  auto equation_solver         = base["equation_solver"];
+  result.lin_solver_options    = equation_solver["linear"].get<serac::LinearSolverOptions>();
+  result.nonlin_solver_options = equation_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
 
   if (base.contains("dynamics")) {
-    serac::TimesteppingOptions dyn_options;
+    serac::TimesteppingOptions timestepping_options;
     auto                       dynamics = base["dynamics"];
 
     // FIXME: Implement all supported methods as part of an ODE schema
@@ -62,7 +62,7 @@ serac::HeatTransferInputOptions FromInlet<serac::HeatTransferInputOptions>::oper
     std::string timestep_method = dynamics["timestepper"];
     SLIC_ERROR_ROOT_IF(timestep_methods.count(timestep_method) == 0,
                        "Unrecognized timestep method: " << timestep_method);
-    dyn_options.timestepper = timestep_methods.at(timestep_method);
+    timestepping_options.timestepper = timestep_methods.at(timestep_method);
 
     // FIXME: Implement all supported methods as part of an ODE schema
     const static std::map<std::string, serac::DirichletEnforcementMethod> enforcement_methods = {
@@ -70,9 +70,9 @@ serac::HeatTransferInputOptions FromInlet<serac::HeatTransferInputOptions>::oper
     std::string enforcement_method = dynamics["enforcement_method"];
     SLIC_ERROR_ROOT_IF(enforcement_methods.count(enforcement_method) == 0,
                        "Unrecognized enforcement method: " << enforcement_method);
-    dyn_options.enforcement_method = enforcement_methods.at(enforcement_method);
+    timestepping_options.enforcement_method = enforcement_methods.at(enforcement_method);
 
-    result.solver_options.dynamic = std::move(dyn_options);
+    result.timestepping_options = timestepping_options;
   }
 
   if (base.contains("source")) {
