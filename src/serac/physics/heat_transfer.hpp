@@ -51,8 +51,8 @@ const NonlinearSolverOptions default_nonlinear_options = {.nonlin_solver  = Nonl
 /**
  * @brief Reasonable defaults for dynamic thermal conduction simulations
  */
-const TimesteppingOptions default_dynamic_options = {TimestepMethod::BackwardEuler,
-                                                     DirichletEnforcementMethod::RateControl};
+const TimesteppingOptions default_timestepping_options = {TimestepMethod::BackwardEuler,
+                                                          DirichletEnforcementMethod::RateControl};
 
 /**
  * @brief Reasonable defaults for static thermal conduction simulations

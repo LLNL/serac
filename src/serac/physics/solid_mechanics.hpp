@@ -57,7 +57,8 @@ const NonlinearSolverOptions default_nonlinear_options = {.nonlin_solver  = Nonl
 const TimesteppingOptions default_quasistatic_options = {TimestepMethod::QuasiStatic};
 
 /// default implicit dynamic timestepping options for solid mechanics
-const TimesteppingOptions default_dynamic_options = {TimestepMethod::Newmark, DirichletEnforcementMethod::RateControl};
+const TimesteppingOptions default_timestepping_options = {TimestepMethod::Newmark,
+                                                          DirichletEnforcementMethod::RateControl};
 
 }  // namespace solid_mechanics
 
