@@ -60,7 +60,8 @@ double StateManager::newDataCollection(const std::string& name, const std::optio
     auto nodes            = mesh(name).GetNodes();
     if (nodes) {
       is_discontinuous = nodes->FESpace()->FEColl()->GetContType() == mfem::FiniteElementCollection::DISCONTINUOUS;
-      SLIC_WARNING_ROOT(
+      SLIC_WARNING_ROOT_IF(
+          is_discontinuous,
           "Periodic mesh detected! This will only work on translational periodic surfaces for vector H1 fields and "
           "has not been thoroughly tested. Proceed at your own risk.");
     }
