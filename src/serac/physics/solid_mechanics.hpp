@@ -780,7 +780,7 @@ public:
       *parameters_[parameter_index].old_state = *parameters_[parameter_index].state;
     }
 
-    auto& lin_solver = nonlin_solver_.LinearSolver();
+    auto& lin_solver = nonlin_solver_->LinearSolver();
 
     lin_solver.SetOperator(*J_);
 
@@ -788,7 +788,7 @@ public:
     displacement_ += du_;
 
     // Now that the "warm start" is finished, we call the full nonlinear solver
-    nonlin_solver_.Mult(zero_, displacement_);
+    nonlin_solver_->Solve(displacement_);
   }
 
   /**

@@ -19,9 +19,6 @@
 using namespace serac;
 
 #define PERIODIC_MESH
-// #undef PERIODIC_MESH
-
-using serac::solid_mechanics::default_static_options;
 
 int main(int argc, char* argv[])
 {
@@ -66,20 +63,24 @@ int main(int argc, char* argv[])
   serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a functional-based solid mechanics solver
-  IterativeSolverOptions          default_linear_options    = {.rel_tol     = 1.0e-6,
-                                                   .abs_tol     = 1.0e-16,
-                                                   .print_level = 0,
-                                                   .max_iter    = 600,
-                                                   .lin_solver  = LinearSolver::GMRES,
-                                                   .prec        = HypreBoomerAMGPrec{}};
-  IterativeNonlinearSolverOptions default_nonlinear_options = {
-      .rel_tol       = 1.0e-8,
-      .abs_tol       = 1.0e-14,
-      .max_iter      = 6,
-      .print_level   = 1,
-      .nonlin_solver = serac::NonlinearSolver::KINBacktrackingLineSearch};
+  LinearSolverOptions linear_options = {
+      .linear_solver  = LinearSolver::GMRES,
+      .preconditioner = Preconditioner::HypreAMG,
+      .relative_tol   = 1.0e-6,
+      .absolute_tol   = 1.0e-16,
+      .max_iterations = 600,
+      .print_level    = 0,
+  };
+
+  NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = serac::NonlinearSolver::KINBacktrackingLineSearch,
+                                              .relative_tol   = 1.0e-8,
+                                              .absolute_tol   = 1.0e-14,
+                                              .max_iterations = 6,
+                                              .print_level    = 1};
+
   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
-      {default_linear_options, default_nonlinear_options}, GeometricNonlinearities::Off, "lce_solid_functional");
+      nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::Off,
+      "lce_solid_functional");
 
   // Material properties
   double density         = 1.0;
