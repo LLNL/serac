@@ -12,7 +12,7 @@ EquationSolver
 Mathematical description
 ========================
 
-`EquationSolver <../../doxygen/html/classserac_1_1mfem__ext_1_1EquationSolver.html>`__ is an object used for solving nonlinear systems of equations of the form
+`EquationSolver <../../doxygen/html/classserac_1_1EquationSolver.html>`__ is an object used for solving nonlinear systems of equations of the form
 
 .. math::
 
