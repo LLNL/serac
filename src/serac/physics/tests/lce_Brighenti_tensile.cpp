@@ -153,9 +153,7 @@ int main(int argc, char* argv[])
       DependsOn<>{}, [=](auto x, auto /*n*/) { return (x[1] > 0.99 * ly) ? 1.0 : 0.0; }, pmesh);
 
   double initial_area = area(solid_solver.displacement());
-  if (rank == 0) {
-    std::cout << "... Initial Area of the top surface: " << initial_area << std::endl;
-  }
+  SLIC_INFO_ROOT("... Initial Area of the top surface: " << initial_area);
 
   // initializations for quasi-static problem
   int    num_steps = 3;
