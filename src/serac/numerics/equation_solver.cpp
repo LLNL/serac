@@ -9,7 +9,7 @@
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
 
-namespace serac::mfem_ext {
+namespace serac {
 
 EquationSolver::EquationSolver(NonlinearSolverOptions nonlinear_opts, LinearSolverOptions lin_opts, MPI_Comm comm)
 {
@@ -32,22 +32,18 @@ EquationSolver::EquationSolver(std::unique_ptr<mfem::NewtonSolver> nonlinear_sol
   preconditioner_ = std::move(preconditioner);
 }
 
-void EquationSolver::SetOperator(const mfem::Operator& op)
+void EquationSolver::setOperator(const mfem::Operator& op)
 {
   nonlin_solver_->SetOperator(op);
 
-  auto* newton_solver = dynamic_cast<mfem::NewtonSolver*>(nonlin_solver_.get());
-
-  if (newton_solver) {
-    // Now that the nonlinear solver knows about the operator, we can set its linear solver
-    if (!nonlin_solver_set_solver_called_) {
-      newton_solver->SetSolver(LinearSolver());
-      nonlin_solver_set_solver_called_ = true;
-    }
+  // Now that the nonlinear solver knows about the operator, we can set its linear solver
+  if (!nonlin_solver_set_solver_called_) {
+    nonlin_solver_->SetSolver(linearSolver());
+    nonlin_solver_set_solver_called_ = true;
   }
 }
 
-void EquationSolver::Solve(mfem::Vector& x) const
+void EquationSolver::solve(mfem::Vector& x) const
 {
   mfem::Vector zero(x);
   zero = 0.0;
@@ -249,7 +245,7 @@ std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner,
   return preconditioner_solver;
 }
 
-void EquationSolver::DefineInputFileSchema(axom::inlet::Container& container)
+void EquationSolver::defineInputFileSchema(axom::inlet::Container& container)
 {
   auto& linear_container = container.addStruct("linear", "Linear Equation Solver Parameters");
   linear_container.required().registerVerifier([](const axom::inlet::Container& container_to_verify) {
@@ -287,11 +283,11 @@ void EquationSolver::DefineInputFileSchema(axom::inlet::Container& container)
   nonlinear_container.addString("solver_type", "Solver type (Newton|KINFullStep|KINLineSearch)").defaultValue("Newton");
 }
 
-}  // namespace serac::mfem_ext
+}  // namespace serac
 
+using serac::EquationSolver;
 using serac::LinearSolverOptions;
 using serac::NonlinearSolverOptions;
-using serac::mfem_ext::EquationSolver;
 
 serac::LinearSolverOptions FromInlet<serac::LinearSolverOptions>::operator()(const axom::inlet::Container& base)
 {
@@ -361,16 +357,15 @@ serac::NonlinearSolverOptions FromInlet<serac::NonlinearSolverOptions>::operator
   return options;
 }
 
-serac::mfem_ext::EquationSolver FromInlet<serac::mfem_ext::EquationSolver>::operator()(
-    const axom::inlet::Container& base)
+serac::EquationSolver FromInlet<serac::EquationSolver>::operator()(const axom::inlet::Container& base)
 {
   auto lin    = base["linear"].get<LinearSolverOptions>();
   auto nonlin = base["nonlinear"].get<NonlinearSolverOptions>();
 
-  auto [linear_solver, preconditioner] = serac::mfem_ext::buildLinearSolverAndPreconditioner(lin, MPI_COMM_WORLD);
+  auto [linear_solver, preconditioner] = serac::buildLinearSolverAndPreconditioner(lin, MPI_COMM_WORLD);
 
-  serac::mfem_ext::EquationSolver eq_solver(serac::mfem_ext::buildNonlinearSolver(nonlin, MPI_COMM_WORLD),
-                                            std::move(linear_solver), std::move(preconditioner));
+  serac::EquationSolver eq_solver(serac::buildNonlinearSolver(nonlin, MPI_COMM_WORLD), std::move(linear_solver),
+                                  std::move(preconditioner));
 
   return eq_solver;
 }

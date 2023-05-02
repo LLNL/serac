@@ -96,9 +96,9 @@ TEST_P(EquationSolverSuite, All)
 
   EquationSolver eq_solver(nonlin_opts, lin_opts);
 
-  eq_solver.SetOperator(residual_opr);
+  eq_solver.setOperator(residual_opr);
 
-  eq_solver.Solve(x_computed);
+  eq_solver.solve(x_computed);
 
   for (int i = 0; i < x_computed.Size(); ++i) {
     EXPECT_LT(std::abs((x_computed(i) - x_exact(i))) / x_exact(i), 1.0e-6);

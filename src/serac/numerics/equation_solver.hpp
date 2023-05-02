@@ -21,7 +21,7 @@
 #include "serac/infrastructure/input.hpp"
 #include "serac/numerics/solver_config.hpp"
 
-namespace serac::mfem_ext {
+namespace serac {
 
 /**
  * @brief This class manages the objects typically required to solve a nonlinear set of equations arising from
@@ -71,53 +71,53 @@ public:
    * @note This operator is required to return an @a mfem::HypreParMatrix from its @a GetGradient method. This is
    * due to the use of Hypre-based linear solvers.
    */
-  void SetOperator(const mfem::Operator& op);
+  void setOperator(const mfem::Operator& op);
 
   /**
    * Solves the system F(x) = 0
    * @param[in,out] x Solution to the system of nonlinear equations
    * @note The input value of @a x will be used as an initial guess for iterative nonlinear solution methods
    */
-  void Solve(mfem::Vector& x) const;
+  void solve(mfem::Vector& x) const;
 
   /**
    * Returns the underlying solver object
    * @return A non-owning reference to the underlying nonlinear solver
    */
-  mfem::NewtonSolver& NonlinearSolver() { return *nonlin_solver_; }
+  mfem::NewtonSolver& nonlinearSolver() { return *nonlin_solver_; }
 
   /**
    * @overload
    */
-  const mfem::NewtonSolver& NonlinearSolver() const { return *nonlin_solver_; }
+  const mfem::NewtonSolver& nonlinearSolver() const { return *nonlin_solver_; }
 
   /**
    * Returns the underlying linear solver object
    * @return A non-owning reference to the underlying linear solver
    */
-  mfem::Solver& LinearSolver() { return *lin_solver_; }
+  mfem::Solver& linearSolver() { return *lin_solver_; }
 
   /**
    * @overload
    */
-  const mfem::Solver& LinearSolver() const { return *lin_solver_; }
+  const mfem::Solver& linearSolver() const { return *lin_solver_; }
 
   /**
    * Returns the underlying preconditioner
    * @return A pointer to the underlying preconditioner
    * @note This may be null if a preconditioner is not given
    */
-  mfem::Solver* Preconditioner() { return preconditioner_.get(); }
+  mfem::Solver* preconditioner() { return preconditioner_.get(); }
 
   /**
    * @overload
    */
-  const mfem::Solver* Preconditioner() const { return preconditioner_.get(); }
+  const mfem::Solver* preconditioner() const { return preconditioner_.get(); }
 
   /**
    * Input file parameters specific to this class
    **/
-  static void DefineInputFileSchema(axom::inlet::Container& container);
+  static void defineInputFileSchema(axom::inlet::Container& container);
 
 private:
   /**
@@ -186,7 +186,7 @@ private:
 
   /**
    * @brief The underlying MFEM-based SuperLU solver. It requires a special
-   * superLU matrix type which we store in this object. This enables compatibility
+   * SuperLU matrix type which we store in this object. This enables compatibility
    * with HypreParMatrix when used as an input.
    */
   mfem::SuperLUSolver superlu_solver_;
@@ -233,7 +233,7 @@ std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner,
  */
 std::unique_ptr<mfem::AmgXSolver> buildAMGX(const AMGXOptions& options, const MPI_Comm comm);
 #endif
-}  // namespace serac::mfem_ext
+}  // namespace serac
 
 /**
  * @brief Prototype the specialization for Inlet parsing
@@ -263,7 +263,7 @@ struct FromInlet<serac::NonlinearSolverOptions> {
  * @tparam The object to be created by inlet
  */
 template <>
-struct FromInlet<serac::mfem_ext::EquationSolver> {
+struct FromInlet<serac::EquationSolver> {
   /// @brief Returns created object from Inlet container
-  serac::mfem_ext::EquationSolver operator()(const axom::inlet::Container& base);
+  serac::EquationSolver operator()(const axom::inlet::Container& base);
 };

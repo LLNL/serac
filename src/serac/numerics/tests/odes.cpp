@@ -301,7 +301,7 @@ double first_order_ode_test(int nsteps, ode_type type, constraint_type constrain
       });
 
   EquationSolver solver(nonlinear_options, linear_options);
-  solver.SetOperator(residual);
+  solver.setOperator(residual);
 
   FirstOrderODE ode(dummy.space().TrueVSize(),
                     {.time = ode_residual_eval_time, .u = x, .dt = c0, .du_dt = previous, .previous_dt = previous_dt},
@@ -411,7 +411,7 @@ double second_order_ode_test(int nsteps, ode_type type, constraint_type constrai
       });
 
   EquationSolver solver(nonlinear_options, linear_options);
-  solver.SetOperator(residual);
+  solver.setOperator(residual);
 
   SecondOrderODE ode(dummy.space().TrueVSize(),
                      {.time = ode_residual_eval_time, .c0 = c0, .c1 = c1, .u = x, .du_dt = dx_dt, .d2u_dt2 = previous},

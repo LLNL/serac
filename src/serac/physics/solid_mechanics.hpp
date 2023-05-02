@@ -110,7 +110,7 @@ public:
                  const serac::TimesteppingOptions timestepping_opts,
                  const GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
                  mfem::ParMesh* pmesh = nullptr)
-      : SolidMechanics(std::make_unique<mfem_ext::EquationSolver>(
+      : SolidMechanics(std::make_unique<EquationSolver>(
                            nonlinear_opts, lin_opts, StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
                        timestepping_opts, geom_nonlin, name, pmesh)
   {
@@ -125,8 +125,7 @@ public:
    * @param name An optional name for the physics module instance
    * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
-  SolidMechanics(std::unique_ptr<serac::mfem_ext::EquationSolver> solver,
-                 const serac::TimesteppingOptions                 timestepping_opts,
+  SolidMechanics(std::unique_ptr<serac::EquationSolver> solver, const serac::TimesteppingOptions timestepping_opts,
                  const GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
                  mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(2, order, name, pmesh),
@@ -195,7 +194,7 @@ public:
 
     // If the user wants the AMG preconditioner with a linear solver, set the pfes
     // to be the displacement
-    auto* amg_prec = dynamic_cast<mfem::HypreBoomerAMG*>(nonlin_solver_->Preconditioner());
+    auto* amg_prec = dynamic_cast<mfem::HypreBoomerAMG*>(nonlin_solver_->preconditioner());
     if (amg_prec) {
       amg_prec->SetElasticityOptions(&displacement_.space());
     }
@@ -729,7 +728,7 @@ public:
           });
     }
 
-    nonlin_solver_->SetOperator(*residual_with_bcs_);
+    nonlin_solver_->setOperator(*residual_with_bcs_);
   }
 
   /// @brief Solve the Quasi-static Newton system
@@ -787,8 +786,7 @@ public:
     lin_solver.Mult(dr_, du_);
     displacement_ += du_;
 
-    // Now that the "warm start" is finished, we call the full nonlinear solver
-    nonlin_solver_->Solve(displacement_);
+    nonlin_solver_->solve(displacement_);
   }
 
   /**
@@ -868,7 +866,7 @@ public:
     // Add the sign correction to move the term to the RHS
     adjoint_load_vector *= -1.0;
 
-    auto& lin_solver = nonlin_solver_->LinearSolver();
+    auto& lin_solver = nonlin_solver_->linearSolver();
 
     // By default, use a homogeneous essential boundary condition
     mfem::HypreParVector adjoint_essential(disp_adjoint_load->second);
@@ -1008,7 +1006,7 @@ protected:
   std::unique_ptr<mfem_ext::StdFunctionOperator> residual_with_bcs_;
 
   /// the specific methods and tolerances specified to solve the nonlinear residual equations
-  std::unique_ptr<mfem_ext::EquationSolver> nonlin_solver_;
+  std::unique_ptr<EquationSolver> nonlin_solver_;
 
   /**
    * @brief the ordinary differential equation that describes

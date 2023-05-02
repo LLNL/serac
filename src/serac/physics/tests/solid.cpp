@@ -251,8 +251,8 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   auto preconditioner = std::make_unique<mfem::HypreBoomerAMG>();
   linear_solver->SetPreconditioner(*preconditioner);
 
-  auto equation_solver = std::make_unique<mfem_ext::EquationSolver>(
-      std::move(nonlinear_solver), std::move(linear_solver), std::move(preconditioner));
+  auto equation_solver = std::make_unique<EquationSolver>(std::move(nonlinear_solver), std::move(linear_solver),
+                                                          std::move(preconditioner));
 
   SolidMechanics<p, dim, Parameters<H1<1>, H1<1>>> solid_solver(std::move(equation_solver),
                                                                 solid_mechanics::default_quasistatic_options,
