@@ -232,6 +232,11 @@ std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner,
     auto gs_preconditioner = std::make_unique<mfem::HypreSmoother>();
     gs_preconditioner->SetType(mfem::HypreSmoother::Type::GS);
     preconditioner_solver = std::move(gs_preconditioner);
+  } else if (preconditioner == Preconditioner::HypreILU) {
+    auto ilu_preconditioner = std::make_unique<mfem::HypreILU>();
+    ilu_preconditioner->SetLevelOfFill(1);
+    ilu_preconditioner->SetPrintLevel(print_level);
+    preconditioner_solver = std::move(ilu_preconditioner);
   } else if (preconditioner == Preconditioner::AMGX) {
 #ifdef MFEM_USE_AMGX
     preconditioner_solver = buildAMGX(AMGXOptions{}, comm);
@@ -268,7 +273,7 @@ void EquationSolver::defineInputFileSchema(axom::inlet::Container& container)
   iterative_container.addInt("max_iter", "Maximum iterations for the linear solve.").defaultValue(5000);
   iterative_container.addInt("print_level", "Linear print level.").defaultValue(0);
   iterative_container.addString("solver_type", "Solver type (gmres|minres|cg).").defaultValue("gmres");
-  iterative_container.addString("prec_type", "Preconditioner type (JacobiSmoother|L1JacobiSmoother|AMG|BlockILU|ILU).")
+  iterative_container.addString("prec_type", "Preconditioner type (JacobiSmoother|L1JacobiSmoother|AMG|ILU).")
       .defaultValue("JacobiSmoother");
 
   auto& direct_container = linear_container.addStruct("direct_options", "Direct solver parameters");
@@ -321,6 +326,8 @@ serac::LinearSolverOptions FromInlet<serac::LinearSolverOptions>::operator()(con
     options.preconditioner = serac::Preconditioner::HypreL1Jacobi;
   } else if (prec_type == "HypreAMG") {
     options.preconditioner = serac::Preconditioner::HypreAMG;
+  } else if (prec_type == "ILU") {
+    options.preconditioner = serac::Preconditioner::HypreILU;
 #ifdef MFEM_USE_AMGX
   } else if (prec_type == "AMGX") {
     options.preconditioner = serac::Preconditioner::AMGX;

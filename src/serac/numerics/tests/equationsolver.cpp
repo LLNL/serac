@@ -111,7 +111,8 @@ INSTANTIATE_TEST_SUITE_P(
                                      NonlinearSolver::KINBacktrackingLineSearch, NonlinearSolver::KINPicard),
                      testing::Values(LinearSolver::CG, LinearSolver::GMRES, LinearSolver::SuperLU),
                      testing::Values(Preconditioner::HypreJacobi, Preconditioner::HypreL1Jacobi,
-                                     Preconditioner::HypreGaussSeidel, Preconditioner::HypreAMG)));
+                                     Preconditioner::HypreGaussSeidel, Preconditioner::HypreAMG,
+                                     Preconditioner::HypreILU)));
 
 int main(int argc, char* argv[])
 {

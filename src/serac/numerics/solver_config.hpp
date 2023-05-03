@@ -168,6 +168,7 @@ enum class Preconditioner
   HypreL1Jacobi,    /**< Hypre-based L1-scaled Jacobi */
   HypreGaussSeidel, /**< Hypre-based Gauss-Seidel */
   HypreAMG,         /**< Hypre's BoomerAMG algebraic multi-grid */
+  HypreILU,         /**< Hypre's Incomplete LU */
   AMGX,             /**< NVIDIA's AMGX GPU-enabled algebraic multi-grid, GPU builds only */
   None              /**< No preconditioner used */
 };
