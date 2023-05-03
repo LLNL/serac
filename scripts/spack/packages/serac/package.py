@@ -82,7 +82,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     # Devtool dependencies these need to match serac_devtools/package.py
     depends_on('cppcheck', when="+devtools")
     depends_on('doxygen', when="+devtools")
-    depends_on("llvm+clang", when="+devtools")
+    depends_on("llvm+clang@10.0.0", when="+devtools")
     depends_on('python', when="+devtools")
     depends_on('py-sphinx', when="+devtools")
     depends_on('py-ats', when="+devtools")
