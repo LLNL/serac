@@ -108,11 +108,9 @@ int main(int argc, char* argv[])
   solid_solver.setParameter(ETA_INDEX, etaParam);
 
   // Set material
-  LiquidCrystalElastomerBertoldi        lceMat(density, young_modulus, possion_ratio, max_order_param, beta_param);
-  LiquidCrystalElastomerBertoldi::State initial_state{};
+  LiquidCrystalElastomerBertoldi lceMat(density, young_modulus, possion_ratio, max_order_param, beta_param);
 
-  auto param_data = solid_solver.createQuadratureDataBuffer(initial_state);
-  solid_solver.setMaterial(DependsOn<ORDER_INDEX, GAMMA_INDEX, ETA_INDEX>{}, lceMat, param_data);
+  solid_solver.setMaterial(DependsOn<ORDER_INDEX, GAMMA_INDEX, ETA_INDEX>{}, lceMat);
 
   // Boundary conditions:
   // Prescribe zero displacement at the supported end of the beam

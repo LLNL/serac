@@ -208,12 +208,10 @@ struct LiquidCrystElastomerBrighenti {
  * Advanced Materials, 33(42), 2105024.
  */
 struct LiquidCrystalElastomerBertoldi {
+  using State = Empty;  ///< this material has no internal variables
+
   /// this model is only intended to be used in 3D
   static constexpr int dim = 3;
-
-  /// internal variables for the liquid crystal elastomer model
-  struct State {
-  };
 
   /**
    * @brief Constructor
