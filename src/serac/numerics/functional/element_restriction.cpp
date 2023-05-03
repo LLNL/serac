@@ -449,7 +449,7 @@ void ElementRestriction::Gather(const mfem::Vector& L_vector, mfem::Vector& E_ve
       for (uint64_t j = 0; j < nodes_per_elem; j++) {
         uint64_t E_id  = (i * components + c) * nodes_per_elem + j;
         uint64_t L_id  = GetVDof(dof_info(i, j), c).index();
-        E_vector[E_id] = L_vector[L_id];
+        E_vector[int(E_id)] = L_vector[int(L_id)];
       }
     }
   }
@@ -462,7 +462,7 @@ void ElementRestriction::ScatterAdd(const mfem::Vector& E_vector, mfem::Vector& 
       for (uint64_t j = 0; j < nodes_per_elem; j++) {
         uint64_t E_id = (i * components + c) * nodes_per_elem + j;
         uint64_t L_id = GetVDof(dof_info(i, j), c).index();
-        L_vector[L_id] += E_vector[E_id];
+        L_vector[int(L_id)] += E_vector[int(E_id)];
       }
     }
   }

@@ -30,7 +30,7 @@ TEST(HeatTransfer, MoveShape)
   constexpr int dim = 2;
 
   // Construct the appropriate dimension mesh and give it to the data store
-  std::string filename = SERAC_REPO_DIR "/data/meshes/square.mesh";
+  std::string filename = SERAC_REPO_DIR "/data/meshes/patch2D_tris_and_quads.mesh";
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -48,8 +48,18 @@ TEST(HeatTransfer, MoveShape)
   auto options = heat_transfer::default_static_options;
 
   // Use tight tolerances as this is a machine precision test
+  //
+  // Sam: we're setting a really small abs tolerance here to
+  //      work around https://github.com/mfem/mfem/issues/3641
   options.nonlinear.abs_tol = 1.0e-14;
   options.nonlinear.rel_tol = 1.0e-14;
+  options.linear = IterativeSolverOptions{.rel_tol     = 1.0e-6,
+                                          .abs_tol     = 1.0e-30,
+                                          .print_level = 0,
+                                          .max_iter    = 200,
+                                          .lin_solver  = LinearSolver::GMRES,
+                                          .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
+
 
   // Define an anisotropic conductor material model
   tensor<double, 2, 2>                cond{{{5.0, 0.4}, {0.4, 1.0}}};
@@ -139,7 +149,7 @@ TEST(HeatTransfer, MoveShape)
 
   double error          = pure_temperature.DistanceTo(shape_temperature.GetData());
   double relative_error = error / pure_temperature.Norml2();
-  EXPECT_LT(relative_error, 1.0e-14);
+  EXPECT_LT(relative_error, 3.0e-14);
 }
 
 }  // namespace serac

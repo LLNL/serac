@@ -64,3 +64,7 @@ if(ENABLE_CUDA)
                      DEPENDS_ON gtest serac_functional serac_state ${functional_depends} cuda)
 
 endif()
+
+# TODO: delete once https://github.com/mfem/mfem/issues/3641 is resolved
+add_executable(mfem_issue mfem_issue.cpp)
+target_link_libraries(mfem_issue PUBLIC mfem mpi)
