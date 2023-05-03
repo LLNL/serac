@@ -101,7 +101,7 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     depends_on("netcdf-c@4.7.4", when="+netcdf")
 
-    depends_on("hypre@2.18.2~superlu-dist+mpi")
+    depends_on("hypre@2.26.0~superlu-dist+mpi")
 
     depends_on("petsc", when="+petsc")
 
