@@ -24,6 +24,7 @@ Developer Guide
    functional
    codevelop
    state_manager
+   equation_solver
 
 Developing a New Physics Module
 -------------------------------

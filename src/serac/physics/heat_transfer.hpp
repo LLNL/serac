@@ -15,6 +15,7 @@
 #include "mfem.hpp"
 
 #include "serac/physics/common.hpp"
+#include "serac/physics/heat_transfer_input.hpp"
 #include "serac/physics/base_physics.hpp"
 #include "serac/numerics/odes.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"
@@ -29,45 +30,34 @@ namespace heat_transfer {
 /**
  * @brief Reasonable defaults for most thermal linear solver options
  */
-const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
-                                                       .abs_tol     = 1.0e-12,
-                                                       .print_level = 0,
-                                                       .max_iter    = 200,
-                                                       .lin_solver  = LinearSolver::GMRES,
-                                                       .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
+const LinearSolverOptions default_linear_options = {.linear_solver  = LinearSolver::GMRES,
+                                                    .preconditioner = Preconditioner::HypreL1Jacobi,
+                                                    .relative_tol   = 1.0e-6,
+                                                    .absolute_tol   = 1.0e-12,
+                                                    .max_iterations = 200};
 
 /// the default direct solver option for solving the linear stiffness equations
-const DirectSolverOptions direct_linear_options = {.print_level = 0};
+const LinearSolverOptions direct_linear_options = {.linear_solver = LinearSolver::SuperLU};
 
 /**
  * @brief Reasonable defaults for most thermal nonlinear solver options
  */
-const NonlinearSolverOptions default_nonlinear_options = {
-    .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
-
-/**
- * @brief Reasonable defaults for quasi-static thermal conduction simulations
- */
-const SolverOptions default_static_options = {default_linear_options, default_nonlinear_options};
-
-/**
- * @brief Reasonable defaults for quasi-static thermal conduction simulations with a direct solver
- */
-const SolverOptions direct_static_options = {direct_linear_options, default_nonlinear_options};
+const NonlinearSolverOptions default_nonlinear_options = {.nonlin_solver  = NonlinearSolver::Newton,
+                                                          .relative_tol   = 1.0e-4,
+                                                          .absolute_tol   = 1.0e-8,
+                                                          .max_iterations = 500,
+                                                          .print_level    = 1};
 
 /**
  * @brief Reasonable defaults for dynamic thermal conduction simulations
  */
-const SolverOptions default_dynamic_options = {
-    default_linear_options, default_nonlinear_options,
-    TimesteppingOptions{TimestepMethod::BackwardEuler, DirichletEnforcementMethod::RateControl}};
+const TimesteppingOptions default_timestepping_options = {TimestepMethod::BackwardEuler,
+                                                          DirichletEnforcementMethod::RateControl};
 
 /**
- * @brief Reasonable defaults for dynamic thermal conduction simulations with a direct solver
+ * @brief Reasonable defaults for static thermal conduction simulations
  */
-const SolverOptions direct_dynamic_options = {
-    direct_linear_options, default_nonlinear_options,
-    TimesteppingOptions{TimestepMethod::BackwardEuler, DirichletEnforcementMethod::RateControl}};
+const TimesteppingOptions default_static_options = {TimestepMethod::QuasiStatic};
 
 }  // namespace heat_transfer
 
@@ -103,14 +93,35 @@ public:
   static constexpr auto NUM_STATE_VARS = 3;
 
   /**
-   * @brief Construct a new Thermal Functional Solver object
+   * @brief Construct a new heat transfer object
    *
-   * @param[in] options The system linear and nonlinear solver and timestepping parameters
+   * @param[in] nonlinear_opts The nonlinear solver options for solving the nonlinear residual equations
+   * @param[in] lin_opts The linear solver options for solving the linearized Jacobian equations
+   * @param[in] timestepping_opts The timestepping options for the heat transfer ordinary differential equations
    * @param[in] name An optional name for the physics module instance
    * used by an underlying material model or load
    * @param[in] pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
-  HeatTransfer(const SolverOptions& options, const std::string& name = {}, mfem::ParMesh* pmesh = nullptr)
+  HeatTransfer(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
+               const serac::TimesteppingOptions timestepping_opts, const std::string& name = "",
+               mfem::ParMesh* pmesh = nullptr)
+      : HeatTransfer(std::make_unique<EquationSolver>(nonlinear_opts, lin_opts,
+                                                      StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
+                     timestepping_opts, name, pmesh)
+  {
+  }
+
+  /**
+   * @brief Construct a new heat transfer object
+   *
+   * @param[in] solver The nonlinear equation solver for the heat transfer equations
+   * @param[in] timestepping_opts The timestepping options for the heat transfer ordinary differential equations
+   * @param[in] name An optional name for the physics module instance
+   * used by an underlying material model or load
+   * @param[in] pmesh The mesh to conduct the simulation on, if different than the default mesh
+   */
+  HeatTransfer(std::unique_ptr<serac::EquationSolver> solver, const serac::TimesteppingOptions timestepping_opts,
+               const std::string& name = "", mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(NUM_STATE_VARS, order, name, pmesh),
         temperature_(StateManager::newState(
             FiniteElementState::Options{
@@ -121,12 +132,18 @@ public:
                 .order = order, .vector_dim = 1, .name = detail::addPrefix(name, "adjoint_temperature")},
             sidre_datacoll_id_)),
         residual_with_bcs_(temperature_.space().TrueVSize()),
+        nonlin_solver_(std::move(solver)),
         ode_(temperature_.space().TrueVSize(),
              {.time = ode_time_point_, .u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
-             nonlin_solver_, bcs_)
+             *nonlin_solver_, bcs_)
   {
-    SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
-                       axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
+    SLIC_ERROR_ROOT_IF(
+        mesh_.Dimension() != dim,
+        axom::fmt::format("Compile time class dimension template parameter and runtime mesh dimension do not match"));
+
+    SLIC_ERROR_ROOT_IF(
+        !nonlin_solver_,
+        "EquationSolver argument is nullptr in HeatTransfer constructor. It is possible that it was previously moved.");
 
     states_.push_back(&temperature_);
     states_.push_back(&adjoint_temperature_);
@@ -155,13 +172,12 @@ public:
     residual_ = std::make_unique<Functional<test(scalar_trial, scalar_trial, shape_trial, parameter_space...)>>(
         test_space, trial_spaces);
 
-    nonlin_solver_ = mfem_ext::EquationSolver(mesh_.GetComm(), options.linear, options.nonlinear);
-    nonlin_solver_.SetOperator(residual_with_bcs_);
+    nonlin_solver_->setOperator(residual_with_bcs_);
 
     // Check for dynamic mode
-    if (options.dynamic) {
-      ode_.SetTimestepper(options.dynamic->timestepper);
-      ode_.SetEnforcementMethod(options.dynamic->enforcement_method);
+    if (timestepping_opts.timestepper != TimestepMethod::QuasiStatic) {
+      ode_.SetTimestepper(timestepping_opts.timestepper);
+      ode_.SetEnforcementMethod(timestepping_opts.enforcement_method);
       is_quasistatic_ = false;
     } else {
       is_quasistatic_ = true;
@@ -183,6 +199,44 @@ public:
     shape_displacement_  = 0.0;
     temperature_         = 0.0;
     adjoint_temperature_ = 0.0;
+  }
+
+  /**
+   * @brief Construct a new Nonlinear HeatTransfer Solver object
+   *
+   * @param[in] options The solver information parsed from the input file
+   * @param[in] name An optional name for the physics module instance. Note that this is NOT the mesh tag.
+   */
+  HeatTransfer(const HeatTransferInputOptions& options, const std::string& name = "")
+      : HeatTransfer(options.nonlin_solver_options, options.lin_solver_options, options.timestepping_options, name)
+  {
+    if (options.initial_temperature) {
+      auto temp = options.initial_temperature->constructScalar();
+      temperature_.project(*temp);
+    }
+
+    if (options.source_coef) {
+      // TODO: Not implemented yet in input files
+      // NOTE: cannot use std::functions that use mfem::vector
+      SLIC_ERROR("'source' is not implemented yet in input files.");
+    }
+
+    // Process the BCs in sorted order for correct behavior with repeated attributes
+    std::map<std::string, input::BoundaryConditionInputOptions> sorted_bcs(options.boundary_conditions.begin(),
+                                                                           options.boundary_conditions.end());
+    for (const auto& [bc_name, bc] : sorted_bcs) {
+      // FIXME: Better naming for boundary conditions?
+      if (bc_name.find("temperature") != std::string::npos) {
+        std::shared_ptr<mfem::Coefficient> temp_coef(bc.coef_opts.constructScalar());
+        bcs_.addEssential(bc.attrs, temp_coef, temperature_.space(), *bc.coef_opts.component);
+      } else if (bc_name.find("flux") != std::string::npos) {
+        // TODO: Not implemented yet in input files
+        // NOTE: cannot use std::functions that use mfem::vector
+        SLIC_ERROR("'flux' is not implemented yet in input files.");
+      } else {
+        SLIC_WARNING_ROOT("Ignoring boundary condition with unknown name: " << name);
+      }
+    }
   }
 
   /**
@@ -212,7 +266,7 @@ public:
       for (auto& bc : bcs_.essentials()) {
         bc.setDofs(temperature_, time_);
       }
-      nonlin_solver_.Mult(zero_, temperature_);
+      nonlin_solver_->solve(temperature_);
     } else {
       SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
 
@@ -475,7 +529,13 @@ public:
           temperature_.space().TrueVSize(),
 
           [this](const mfem::Vector& u, mfem::Vector& r) {
-            r = (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
+            const mfem::Vector res =
+                (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
+
+            // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
+            // tracking strategy
+            // See https://github.com/mfem/mfem/issues/3531
+            r = res;
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
@@ -493,7 +553,13 @@ public:
 
           [this](const mfem::Vector& du_dt, mfem::Vector& r) {
             add(1.0, u_, dt_, du_dt, u_predicted_);
-            r = (*residual_)(u_predicted_, du_dt, shape_displacement_, *parameters_[parameter_indices].state...);
+            const mfem::Vector res =
+                (*residual_)(u_predicted_, du_dt, shape_displacement_, *parameters_[parameter_indices].state...);
+
+            // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
+            // tracking strategy
+            // See https://github.com/mfem/mfem/issues/3531
+            r = res;
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
@@ -549,7 +615,7 @@ public:
     // Add the sign correction to move the term to the RHS
     adjoint_load_vector *= -1.0;
 
-    auto& lin_solver = nonlin_solver_.LinearSolver();
+    auto& lin_solver = nonlin_solver_->linearSolver();
 
     // By default, use a homogeneous essential boundary condition
     mfem::HypreParVector adjoint_essential(temp_adjoint_load->second);
@@ -581,7 +647,7 @@ public:
     lin_solver.Mult(adjoint_load_vector, adjoint_temperature_);
 
     // Reset the equation solver to use the full nonlinear residual operator
-    nonlin_solver_.SetOperator(residual_with_bcs_);
+    nonlin_solver_->setOperator(residual_with_bcs_);
 
     return {{"adjoint_temperature", adjoint_temperature_}};
   }
@@ -662,15 +728,15 @@ protected:
    */
   mfem_ext::StdFunctionOperator residual_with_bcs_;
 
+  /// the specific methods and tolerances specified to solve the nonlinear residual equations
+  std::unique_ptr<EquationSolver> nonlin_solver_;
+
   /**
    * @brief the ordinary differential equation that describes
    * how to solve for the time derivative of temperature, given
    * the current temperature and source terms
    */
   mfem_ext::FirstOrderODE ode_;
-
-  /// the specific methods and tolerances specified to solve the nonlinear residual equations
-  mfem_ext::EquationSolver nonlin_solver_;
 
   /// Assembled sparse matrix for the Jacobian
   std::unique_ptr<mfem::HypreParMatrix> J_;

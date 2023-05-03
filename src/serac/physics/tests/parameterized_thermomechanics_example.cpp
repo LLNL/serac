@@ -18,8 +18,6 @@
 
 using namespace serac;
 
-using serac::solid_mechanics::default_static_options;
-
 template <typename T>
 auto greenStrain(const tensor<T, 3, 3>& grad_u)
 {
@@ -88,8 +86,9 @@ TEST(Thermomechanics, ParameterizedMaterial)
     serac::StateManager::setMesh(std::move(mesh));
   }
 
-  SolidMechanics<p, dim, Parameters<H1<p>, H1<p> > > simulation(default_static_options, GeometricNonlinearities::On,
-                                                                "thermomechanics_simulation");
+  SolidMechanics<p, dim, Parameters<H1<p>, H1<p>>> simulation(
+      solid_mechanics::default_nonlinear_options, solid_mechanics::direct_linear_options,
+      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "thermomechanics_simulation");
 
   double density   = 1.0;     ///< density
   double E         = 1000.0;  ///< Young's modulus
