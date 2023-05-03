@@ -128,6 +128,20 @@ struct LiquidCrystElastomerBrighenti {
 
   /// -------------------------------------------------------
 
+  /**
+   * @brief Compute the distribution tensor using Brighenti's model
+   *
+   * @tparam S Type of the deformation gradient
+   * @tparam T Type of angle of the liquid crystals
+   * @tparam U Type of the unit length normal of liquid crystal alignment (first-order tensor)
+   *
+   * @param state State variables for this material
+   * @param F_hat Dot product of the current and previous deformation gradients
+   * @param theta In-plane angle of the liquid crystals in the elastomer matrix
+   * @param normal Unit length normal of angle alignment
+   *
+   * @return distribution tensor
+   */
   template <typename S, typename T, typename U>
   auto calculateDistributionTensor(const State& state, const tensor<S, dim, dim>& F_hat, const T theta,
                                    const tensor<U, dim>& normal) const
@@ -281,6 +295,21 @@ struct LiquidCrystalElastomerBertoldi {
 
   /// -------------------------------------------------------
 
+  /**
+   * @brief Compute the strain energy
+   *
+   * @tparam DispGradType Type of the displacement gradient
+   * @tparam orderParamType Type of order parameter (level of alignment)
+   * @tparam GammaAngleType Type of the in-plane angle
+   * @tparam EtaAngleType Type of the out-of-plane angle
+   *
+   * @param[in] displacement_grad Displacement gradient
+   * @param[in] inst_order_param_tuple Instantaneous order parameter
+   * @param[in] gamma_tuple In-plane angle of alignment of liquid crystal in elastomer matrix
+   * @param[in] eta_tuple Out-of-plane angle of alignment of liquid crystal in elastomer matrix
+   *
+   * @return strain energy
+   */
   template <typename DispGradType, typename orderParamType, typename GammaAngleType, typename EtaAngleType>
   auto calculateStrainEnergy(const State& /*state*/, const tensor<DispGradType, dim, dim>& displacement_grad,
                              orderParamType inst_order_param_tuple, GammaAngleType gamma_tuple,
