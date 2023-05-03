@@ -295,7 +295,7 @@ axom::Array<DoF, 2, axom::MemorySpace::Host> GetFaceDofs(const mfem::FiniteEleme
     auto faceinfo = mesh->GetFaceInformation(f);
 
     // discard faces with the wrong geometry or type
-    if (mesh->GetFaceGeometryType(f) != face_geom) continue;
+    if (mesh->GetFaceGeometry(f) != face_geom) continue;
     if (faceinfo.IsInterior() && type == FaceType::BOUNDARY) continue;
     if (faceinfo.IsBoundary() && type == FaceType::INTERIOR) continue;
 
