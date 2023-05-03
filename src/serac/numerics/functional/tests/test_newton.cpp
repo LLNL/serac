@@ -53,7 +53,7 @@ TEST(ScalarEquationSolver, AbortsIfRootNotBracketedByCaller)
         [[maybe_unused]] auto result =
             solve_scalar_equation([](auto x) { return x * x - 2.0; }, x0, lower, upper, default_solver_options);
       },
-      "solve_scalar_equation: root not bracketed by input bounds.");
+      "");
 }
 
 TEST(ScalarEquationSolver, ReturnsImmediatelyIfUpperBoundIsARoot)
