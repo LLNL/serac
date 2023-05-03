@@ -226,12 +226,13 @@ spack:
       externals:
       - spec: doxygen@1.9.4
         prefix: /usr/WS2/meemee/serac/serac_devtools/toss_4_x86_64_ib/latest/doxygen-1.9.4
+    # TODO: make installed clang 14.0.6 work
     llvm:
-      version: [14.0.6]
+      version: [10.0.0]
       buildable: false
       externals:
-      - spec: llvm@14.0.6+clang
-        prefix: /usr/tce/packages/clang/clang-14.0.6
+      - spec: llvm+clang@10.0.0
+        prefix: /usr/WS2/meemee/serac/serac_devtools/toss_4_x86_64_ib/latest/clang-10.0.0
     py-ats:
       version: [7.0.105]
       buildable: false
