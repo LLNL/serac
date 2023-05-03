@@ -11,11 +11,11 @@
 #------------------------------------------------------------------------------
 if(DEFINED ENV{SPACK_CC})
 
-  set(CMAKE_C_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2023_03_28_15_50_30/spack/lib/spack/env/gcc/gcc" CACHE PATH "")
+  set(CMAKE_C_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2023_05_03_09_59_40/spack/lib/spack/env/gcc/gcc" CACHE PATH "")
 
-  set(CMAKE_CXX_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2023_03_28_15_50_30/spack/lib/spack/env/gcc/g++" CACHE PATH "")
+  set(CMAKE_CXX_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2023_05_03_09_59_40/spack/lib/spack/env/gcc/g++" CACHE PATH "")
 
-  set(CMAKE_Fortran_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2023_03_28_15_50_30/spack/lib/spack/env/gcc/gfortran" CACHE PATH "")
+  set(CMAKE_Fortran_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2023_05_03_09_59_40/spack/lib/spack/env/gcc/gfortran" CACHE PATH "")
 
 else()
 
@@ -53,43 +53,43 @@ set(ENABLE_OPENMP ON CACHE BOOL "")
 # TPLs
 #------------------------------------------------------------------------------
 
-set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2023_03_28_15_50_30/gcc-8.3.1" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2023_05_03_09_59_40/gcc-8.3.1" CACHE PATH "")
 
-set(AXOM_DIR "${TPL_ROOT}/axom-0.7.0.4-dhzcnpwc3ry33x4scxwtusu26n5w5awx" CACHE PATH "")
+set(AXOM_DIR "${TPL_ROOT}/axom-0.7.0.4-ev6mqcixaf4wsxorkqclmyd5bq5wdvt4" CACHE PATH "")
 
-set(CAMP_DIR "${TPL_ROOT}/camp-2022.03.2-rjiswezffi2izngkgchg3lnkua2ch6q2" CACHE PATH "")
+set(CAMP_DIR "${TPL_ROOT}/camp-2022.03.2-cbj3vbumvqikzviy63w33bjexxtnzjrf" CACHE PATH "")
 
-set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.8.4-5e7evrrxfsg3gd2iuyqlsikzfbwnqojp" CACHE PATH "")
+set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.8.4-afi6wopycgrxbma46a37zu364tdrnxgk" CACHE PATH "")
 
-set(LUA_DIR "${TPL_ROOT}/lua-5.4.4-xccstlf7tyruchwcvn3ximuhywi4iqoy" CACHE PATH "")
+set(LUA_DIR "${TPL_ROOT}/lua-5.4.4-fohlqsc25bnexnmtysardxoh3ufob3ek" CACHE PATH "")
 
-set(MFEM_DIR "${TPL_ROOT}/mfem-4.5.3.1-e4r75psxbukbptulltnjp5kl7okdwcmg" CACHE PATH "")
+set(MFEM_DIR "${TPL_ROOT}/mfem-4.5.3.1-bznfculjpxxhdfijdo6wsefg4ep6m4wz" CACHE PATH "")
 
-set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.21-d4sn5d67vd7jrefi445tyvvmm3gmbrbk" CACHE PATH "")
+set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.21-ki5x357hcj4eseu5vw555ydmq53bs4ax" CACHE PATH "")
 
-set(HYPRE_DIR "${TPL_ROOT}/hypre-2.26.0-cljzgqq3cqoc474gijqsq5oqjltlg2bu" CACHE PATH "")
+set(HYPRE_DIR "${TPL_ROOT}/hypre-2.26.0-tbxk3chv67thrumpbfuiyy4kldsfaum3" CACHE PATH "")
 
-set(METIS_DIR "${TPL_ROOT}/metis-5.1.0-ef5q6cfq5dstnax3knolp67fpmbh7xpk" CACHE PATH "")
+set(METIS_DIR "${TPL_ROOT}/metis-5.1.0-o2fnvdjttxclwch7beam5sc76krsj6j7" CACHE PATH "")
 
-set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3-6humlxkmgtfri4v3zasnyrp4cst7vofm" CACHE PATH "")
+set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3-ffhx6w55ix5sdlir67sx5iepuuexpzaz" CACHE PATH "")
 
-set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4-zv7mfk6flisrmxiixsdoy3up5i2klpwf" CACHE PATH "")
+set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4-gbeidbwfe2j3qe4uuc7ztribulc3zfub" CACHE PATH "")
 
-set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1-yiobfwb5gdizhmryfyyrxpy27y43rvwg" CACHE PATH "")
+set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1-tqjvvuo2k2tgxr6z55jn46tzr3s64i6k" CACHE PATH "")
 
-set(ADIAK_DIR "${TPL_ROOT}/adiak-0.2.1-qncugcszudfqor47pppbnwt5sz3oqsd6" CACHE PATH "")
+set(ADIAK_DIR "${TPL_ROOT}/adiak-0.2.1-4ugc5uf2zilxr6vfets6tp5kowb47bsr" CACHE PATH "")
 
 # AMGX not built
 
-set(CALIPER_DIR "${TPL_ROOT}/caliper-2.7.0-fpfbjauj7op5cprrydvip5hn2peuhtwk" CACHE PATH "")
+set(CALIPER_DIR "${TPL_ROOT}/caliper-2.7.0-vy7za3ve25l5ffusrug7blk3fesoxk7q" CACHE PATH "")
 
 # PETSC not built
 
-set(RAJA_DIR "${TPL_ROOT}/raja-2022.03.0-svu4goskih3acv42el6u4k37tvmgparo" CACHE PATH "")
+set(RAJA_DIR "${TPL_ROOT}/raja-2022.03.0-k4ib2lb7pvsejyf77sjgyzhiab6fs5lw" CACHE PATH "")
 
-# SUNDIALS not built
+set(SUNDIALS_DIR "${TPL_ROOT}/sundials-6.4.1-uypidys3mrrkeswh53vf5gn3g6tclfnx" CACHE PATH "")
 
-set(UMPIRE_DIR "${TPL_ROOT}/umpire-2022.03.1-4axdjcbb2k73om5suml7mzr5mzrjnpcp" CACHE PATH "")
+set(UMPIRE_DIR "${TPL_ROOT}/umpire-2022.03.1-htavohivzheoesbax2zme7xxcqh7xnng" CACHE PATH "")
 
 #------------------------------------------------------------------------------
 # Devtools
