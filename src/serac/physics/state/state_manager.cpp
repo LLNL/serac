@@ -243,7 +243,7 @@ mfem::ParMesh* StateManager::setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const
   auto nodes            = pmesh->GetNodes();
   if (nodes) {
     is_discontinuous = nodes->FESpace()->FEColl()->GetContType() == mfem::FiniteElementCollection::DISCONTINUOUS;
-    SLIC_WARNING_ROOT(
+    SLIC_WARNING_ROOT_IF(is_discontinuous,
         "Periodic mesh detected! This will only work on translational periodic surfaces for vector H1 fields and "
         "has not been thoroughly tested. Proceed at your own risk.");
   }

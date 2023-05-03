@@ -80,7 +80,7 @@ inline std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> boundary_geometry_co
     // skip interior faces
     if (mesh.GetFaceInformation(f).IsInterior()) continue;
 
-    counts[uint64_t(mesh.GetFaceGeometryType(f))]++;
+    counts[uint64_t(mesh.GetFaceGeometry(f))]++;
 
   }
   return counts;

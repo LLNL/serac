@@ -102,6 +102,127 @@ public:
 };
 
 /**
+ * @brief Exact displacement solution of the form:
+ * 
+ *   p == 1: u(X) := A.X + b (affine)
+ *   p == 2: u(X) := A.diag(X).X + b 
+ *   p == 3: u(X) := A.diag(X).diag(X).X + b
+ * 
+ * @tparam dim number of spatial dimensions
+ */
+template <int dim>
+class ManufacturedSolution {
+public:
+
+  ManufacturedSolution(int order) : p(order), A(dim), b(dim)
+  {
+    // clang-format off
+    if constexpr (dim == 2) {
+      A(0, 0) = 0.110791568544027; A(0, 1) = 0.230421268325901;
+      A(1, 0) = 0.198344644470483; A(1, 1) = 0.060514559793513;
+
+      b(0) = 0.765645367640828;
+      b(1) = 0.992487355850465;
+    }
+    if constexpr (dim == 3) {
+      A(0, 0) = 0.110791568544027; A(0, 1) = 0.230421268325901; A(0, 2) = 0.15167673653354;
+      A(1, 0) = 0.198344644470483; A(1, 1) = 0.060514559793513; A(1, 2) = 0.084137393813728;
+      A(2, 0) = 0.011544253485023; A(2, 1) = 0.060942846497753; A(2, 2) = 0.186383473579596;
+
+      b(0) = 0.765645367640828;
+      b(1) = 0.992487355850465;
+      b(2) = 0.162199373722092;
+    }
+
+    A *= 0.01;
+
+    //clang-format on
+  };
+
+  /**
+   * @brief MFEM-style coefficient function corresponding to this solution
+   *
+   * @param X Coordinates of point in reference configuration at which solution is sought
+   * @param u Exact solution evaluated at \p X
+   */
+  void operator()(const mfem::Vector& X, mfem::Vector& u) const
+  {
+    A.Mult(X, u);
+    u += b;
+  }
+
+  /// @brief computes du/dX
+  template < typename T >
+  auto gradient(const tensor<T, dim> & X) const
+  {
+    return make_tensor<dim, dim>([&](int i, int j){ 
+      using std::pow;
+      return A(i, j) * p * pow(X[j], p-1);
+    });
+  }
+
+  /**
+   * @brief Apply forcing that should produce this exact displacement
+   *
+   * Given the physics module, apply boundary conditions and a source
+   * term that are consistent with the exact solution. This is
+   * independent of the domain. The solution is imposed as an essential
+   * boundary condition on the parts of the boundary identified by \p
+   * essential_boundaries. On the complement of
+   * \p essential_boundaries, the traction corresponding to the exact
+   * solution is applied.
+   *
+   * @tparam p Polynomial degree of the finite element approximation
+   * @tparam Material Type of the material model used in the problem
+   *
+   * @param material Material model used in the problem
+   * @param sf The SolidMechanics module for the problem
+   * @param essential_boundaries Boundary attributes on which essential boundary conditions are desired
+   */
+  template <int p>
+  void applyLoads(const solid_mechanics::LinearIsotropic& material, SolidMechanics<p, dim>& sf, std::set<int> essential_boundaries) const
+  {
+    // essential BCs
+    auto ebc_func = [*this](const auto& X, auto& u){ this->operator()(X, u); };
+    sf.setDisplacementBCs(essential_boundaries, ebc_func);
+
+    // natural BCs
+    auto traction = [=](auto X, auto n0, auto) {
+      auto H = gradient(get_value(X));
+      solid_mechanics::LinearIsotropic::State state{};
+      auto sigma = material(state, H);
+      auto P = solid_mechanics::CauchyToPiola(sigma, H);
+      return dot(P, n0); 
+    };
+
+    sf.setPiolaTraction(traction);
+
+    auto bf = [=](auto X, auto) {
+      auto X_val = get_value(X);
+      auto H = gradient(make_dual(X_val));
+      solid_mechanics::LinearIsotropic::State state{};
+      auto sigma = material(state, H);
+      auto P = solid_mechanics::CauchyToPiola(sigma, H);
+      auto dPdX = get_gradient(P);
+      tensor<double,dim> divP{};
+      for (int i = 0; i < dim; i++) {
+        divP[i] = tr(dPdX[i]);
+      }
+      return divP;
+    };
+
+    sf.addBodyForce(DependsOn<>{}, bf);
+
+  }
+
+ private:
+  int p;               /// polynomial order
+  mfem::DenseMatrix A; /// Linear part of solution. Equivalently, the displacement gradient
+  mfem::Vector b;      /// Rigid body displacement.
+};
+
+
+/**
  * @brief Specify the kinds of boundary condition to apply
  */
 enum class PatchBoundaryCondition { Essential, EssentialAndNatural };
@@ -181,7 +302,15 @@ double solution_error(PatchBoundaryCondition bc)
   // but the physics module should be catching this error to protect users.
   static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for solid test");
 
-  auto exact_displacement = AffineSolution<dim>(); 
+  // Sam: for now, this polynomial order is set to 1.
+  //      In the future, it would be better to generalize it
+  //      so that solution_polynomial_order = p, but my initial
+  //      attempt had some issues. I'll revisit it at a later date
+  // 
+  //      relevant issue: https://github.com/LLNL/serac/issues/926
+  constexpr int solution_polynomial_order = 1;
+  auto exact_displacement = ManufacturedSolution<dim>(solution_polynomial_order); 
+  //auto exact_displacement = AffineSolution<dim>(); 
 
   std::string meshdir = std::string(SERAC_REPO_DIR) + "/data/meshes/";
   std::string filename;
@@ -201,7 +330,8 @@ double solution_error(PatchBoundaryCondition bc)
   solver_options.nonlinear.rel_tol = 1e-14;
   SolidMechanics<p, dim> solid(solver_options, GeometricNonlinearities::On, "solid");
 
-  solid_mechanics::NeoHookean mat{.density=1.0, .K=1.0, .G=1.0};
+  //solid_mechanics::NeoHookean mat{.density=1.0, .K=1.0, .G=1.0};
+  solid_mechanics::LinearIsotropic mat{.density=1.0, .K=1.0, .G=1.0};
   solid.setMaterial(mat);
 
   exact_displacement.applyLoads(mat, solid, essentialBoundaryAttributes<dim>(bc));
