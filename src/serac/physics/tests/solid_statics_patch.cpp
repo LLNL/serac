@@ -310,7 +310,6 @@ double solution_error(PatchBoundaryCondition bc)
   //      relevant issue: https://github.com/LLNL/serac/issues/926
   constexpr int solution_polynomial_order = 1;
   auto exact_displacement = ManufacturedSolution<dim>(solution_polynomial_order); 
-  //auto exact_displacement = AffineSolution<dim>(); 
 
   std::string meshdir = std::string(SERAC_REPO_DIR) + "/data/meshes/";
   std::string filename;
@@ -328,7 +327,7 @@ double solution_error(PatchBoundaryCondition bc)
   auto solver_options = direct_static_options;
   solver_options.nonlinear.abs_tol = 1e-14;
   solver_options.nonlinear.rel_tol = 1e-14;
-  SolidMechanics<p, dim> solid(solver_options, GeometricNonlinearities::On, "solid");
+  SolidMechanics<p, dim> solid(solver_options, GeometricNonlinearities::Off, "solid");
 
   //solid_mechanics::NeoHookean mat{.density=1.0, .K=1.0, .G=1.0};
   solid_mechanics::LinearIsotropic mat{.density=1.0, .K=1.0, .G=1.0};
