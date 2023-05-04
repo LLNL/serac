@@ -27,7 +27,7 @@ set(numerics_sources
     odes.cpp
     )
 
-set(numerics_depends serac_infrastructure)
+set(numerics_depends serac_infrastructure serac_functional)
 
 blt_add_library(
     NAME        serac_numerics

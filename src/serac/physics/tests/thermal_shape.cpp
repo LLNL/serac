@@ -56,6 +56,8 @@ TEST(HeatTransfer, MoveShape)
   auto linear_options = heat_transfer::default_linear_options;
   linear_options.absolute_tol = 1.0e-30;
 
+  auto time_integration_options = TimesteppingOptions{TimestepMethod::QuasiStatic};
+
   // Define an anisotropic conductor material model
   tensor<double, 2, 2>                cond{{{5.0, 0.4}, {0.4, 1.0}}};
   heat_transfer::LinearConductor<dim> mat(1.0, 1.0, cond);
@@ -76,7 +78,7 @@ TEST(HeatTransfer, MoveShape)
 
   {
     // Construct a functional-based thermal solver including references to the shape displacement field.
-    HeatTransfer<p, dim> thermal_solver(options, "thermal_shape");
+    HeatTransfer<p, dim> thermal_solver(nonlinear_options, linear_options, time_integration_options, "thermal_shape");
 
     // Set the initial temperature and boundary condition
     thermal_solver.setTemperatureBCs(ess_bdr, zero);
@@ -120,7 +122,7 @@ TEST(HeatTransfer, MoveShape)
     *mesh_nodes += user_defined_shape_displacement.gridFunction();
 
     // Construct a functional-based thermal solver including references to the shape displacement field.
-    HeatTransfer<p, dim> thermal_solver_no_shape(options, "thermal_pure");
+    HeatTransfer<p, dim> thermal_solver_no_shape(nonlinear_options, linear_options, time_integration_options, "thermal_pure");
 
     // Set the initial temperature and boundary condition
     thermal_solver_no_shape.setTemperatureBCs(ess_bdr, zero);

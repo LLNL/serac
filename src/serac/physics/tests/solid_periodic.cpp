@@ -19,9 +19,6 @@
 
 namespace serac {
 
-using solid_mechanics::default_static_options;
-using solid_mechanics::direct_static_options;
-
 void periodic_test(mfem::Element::Type element_type) {
   MPI_Barrier(MPI_COMM_WORLD);
 

@@ -293,12 +293,11 @@ double solution_error(solution_type exact_solution, PatchBoundaryCondition bc)
   serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a functional-based solid mechanics solver
-  auto solver_options                        = direct_dynamic_options;
-  solver_options.nonlinear.abs_tol           = 1e-13;
-  solver_options.nonlinear.rel_tol           = 1e-13;
-  solver_options.dynamic->timestepper        = TimestepMethod::Newmark;
-  solver_options.dynamic->enforcement_method = DirichletEnforcementMethod::DirectControl;
-  SolidMechanics<p, dim> solid(solver_options, GeometricNonlinearities::On, "solid_dynamics");
+  serac::NonlinearSolverOptions nonlin_opts{.relative_tol = 1.0e-13, .absolute_tol = 1.0e-13};
+
+  SolidMechanics<p, dim> solid(nonlin_opts, serac::solid_mechanics::default_linear_options,
+                               TimesteppingOptions{TimestepMethod::Newmark, DirichletEnforcementMethod::DirectControl},
+                               GeometricNonlinearities::On, "solid_dynamics");
 
   solid_mechanics::NeoHookean mat{.density = 1.0, .K = 1.0, .G = 1.0};
   solid.setMaterial(mat);

@@ -54,7 +54,8 @@ blt_list_append(TO functional_headers ELEMENTS ${functional_cuda_headers} IF ENA
 
 blt_add_library(
       NAME        serac_functional
-      HEADERS     ${functional_headers} ${functional_detail_headers} ${functional_sources}
+      HEADERS     ${functional_headers} ${functional_detail_headers} 
+      SOURCES     ${functional_sources}
       DEPENDS_ON  ${functional_depends}
       )
 
