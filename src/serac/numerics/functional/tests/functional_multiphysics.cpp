@@ -25,7 +25,7 @@ using namespace serac;
 
 TEST(FunctionalMultiphysics, NonlinearThermalTest3D)
 {
-  int serial_refinement   = 0;
+  int serial_refinement   = 1;
   int parallel_refinement = 0;
 
   constexpr auto p   = 3;

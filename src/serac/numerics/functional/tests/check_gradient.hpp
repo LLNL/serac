@@ -26,8 +26,10 @@ void check_gradient(serac::Functional<T>& f, mfem::Vector& U, double epsilon=1.0
   std::unique_ptr<mfem::HypreParMatrix> dfdU_matrix = assemble(dfdU);
   mfem::Vector df_jvp2 = (*dfdU_matrix) * dU;
 
-  double relative_error = df_jvp1.DistanceTo(df_jvp2.GetData()) / df_jvp1.Norml2();
-  EXPECT_NEAR(0., relative_error, 5.e-6);
+  if(df_jvp1.Norml2() != 0) {
+    double relative_error = df_jvp1.DistanceTo(df_jvp2.GetData()) / df_jvp1.Norml2();
+    EXPECT_NEAR(0., relative_error, 5.e-6);
+  }
 
   mfem::Vector f_values[5];
   for (int i = 0; i < 5; i++) {

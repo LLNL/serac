@@ -190,16 +190,16 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
   EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-12);
 }
 
-//TEST(FunctionalBoundary, 2DLinear) { boundary_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
-//TEST(FunctionalBoundary, 2DQuadratic) { boundary_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
-//
-//TEST(FunctionalBoundary, 3DLinear) { boundary_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
-//TEST(FunctionalBoundary, 3DQuadratic) { boundary_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
-//
-//TEST(boundaryL2, 2DLinear) { boundary_test(*mesh2D, L2<1>{}, L2<1>{}, Dimension<2>{}); }
+TEST(FunctionalBoundary, 2DLinear) { boundary_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
+TEST(FunctionalBoundary, 2DQuadratic) { boundary_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
+
+TEST(FunctionalBoundary, 3DLinear) { boundary_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
+TEST(FunctionalBoundary, 3DQuadratic) { boundary_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
+
+TEST(boundaryL2, 2DLinear) { boundary_test(*mesh2D, L2<1>{}, L2<1>{}, Dimension<2>{}); }
 TEST(boundaryL2, 2DQuadratic) { boundary_test(*mesh2D, L2<2>{}, L2<2>{}, Dimension<2>{}); }
-//
-//TEST(boundaryL2, 3DLinear) { boundary_test(*mesh3D, L2<1>{}, L2<1>{}, Dimension<3>{}); }
+
+TEST(boundaryL2, 3DLinear) { boundary_test(*mesh3D, L2<1>{}, L2<1>{}, Dimension<3>{}); }
 TEST(boundaryL2, 3DQuadratic) { boundary_test(*mesh3D, L2<2>{}, L2<2>{}, Dimension<3>{}); }
 TEST(boundaryL2, 3DCubic) { boundary_test(*mesh3D, L2<3>{}, L2<3>{}, Dimension<3>{}); }
 
@@ -212,7 +212,7 @@ int main(int argc, char* argv[])
 
   axom::slic::SimpleLogger logger;
 
-  int serial_refinement   = 0;
+  int serial_refinement   = 1;
   int parallel_refinement = 0;
 
   std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/patch2D_tris_and_quads.mesh";

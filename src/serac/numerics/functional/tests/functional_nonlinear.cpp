@@ -165,7 +165,7 @@ int main(int argc, char* argv[])
 
   axom::slic::SimpleLogger logger;
 
-  int serial_refinement   = 0;
+  int serial_refinement   = 1;
   int parallel_refinement = 0;
 
   std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/patch2D_tris_and_quads.mesh";

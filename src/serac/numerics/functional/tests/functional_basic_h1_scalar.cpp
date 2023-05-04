@@ -83,7 +83,7 @@ void thermal_test_impl(std::unique_ptr<mfem::ParMesh> & mesh)
 template <int ptest, int ptrial>
 void thermal_test(std::string meshfile)
 {
-  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(SERAC_REPO_DIR + meshfile), 0);
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(SERAC_REPO_DIR + meshfile), 1);
 
   if (mesh->Dimension() == 2) {
     thermal_test_impl< ptest, ptrial, 2 >(mesh);

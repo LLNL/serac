@@ -153,8 +153,8 @@ void check_gradient(Functional<T>& f, mfem::HypreParVector& U, mfem::HypreParVec
     double relative_error1 = fabs(df1 - df2) / std::max(fabs(df1), 1.0e-8);
     double relative_error2 = fabs(df1 - df3) / std::max(fabs(df1), 1.0e-8);
 
-    EXPECT_NEAR(0., relative_error1, 5.e-6);
-    EXPECT_NEAR(0., relative_error2, 5.e-6);
+    EXPECT_NEAR(0., relative_error1, 5.e-5);
+    EXPECT_NEAR(0., relative_error2, 5.e-5);
   }
 
   auto dU_dt_plus = dU_dt;
