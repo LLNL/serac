@@ -23,8 +23,6 @@ add_subdirectory(simple_conduction)
 
 install(
     FILES
-        simple_conduction/conduction.lua
-        simple_conduction/with_input_file.cpp
         simple_conduction/without_input_file.cpp
     DESTINATION
         examples/serac/simple_conduction

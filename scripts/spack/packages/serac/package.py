@@ -87,7 +87,8 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on('py-sphinx', when="+devtools")
     depends_on('py-ats', when="+devtools")
 
-    depends_on("sundials@5.7.0+hypre+monitoring~examples~examples-install",
+    # MFEM is deprecating the monitoring support with sundials v6.0 and later
+    depends_on("sundials@6.4.1+hypre~monitoring~examples~examples-install",
                when="+sundials")
     depends_on("sundials+asan", when="+sundials+asan")
 
@@ -100,7 +101,7 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     depends_on("netcdf-c@4.7.4", when="+netcdf")
 
-    depends_on("hypre@2.18.2~superlu-dist+mpi")
+    depends_on("hypre@2.26.0~superlu-dist+mpi")
 
     depends_on("petsc", when="+petsc")
 

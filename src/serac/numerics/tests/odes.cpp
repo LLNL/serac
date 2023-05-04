@@ -18,15 +18,15 @@
 using namespace serac;
 using namespace serac::mfem_ext;
 
-const IterativeSolverOptions linear_options{.rel_tol     = 1.0e-12,
-                                            .abs_tol     = 1.0e-12,
-                                            .print_level = -1,
-                                            .max_iter    = 10,
-                                            .lin_solver  = LinearSolver::CG,
-                                            .prec        = {}};
+const LinearSolverOptions linear_options{.linear_solver  = LinearSolver::CG,
+                                         .preconditioner = Preconditioner::None,
+                                         .relative_tol   = 1.0e-12,
+                                         .absolute_tol   = 1.0e-12,
+                                         .max_iterations = 10,
+                                         .print_level    = 0};
 
 const NonlinearSolverOptions nonlinear_options{
-    .rel_tol = 1.0e-12, .abs_tol = 1.0e-12, .max_iter = 10, .print_level = -1};
+    .relative_tol = 1.0e-12, .absolute_tol = 1.0e-12, .max_iterations = 10, .print_level = -1};
 
 const mfem::DenseMatrix M = []() {
   mfem::DenseMatrix M_mat(3, 3);
@@ -300,8 +300,8 @@ double first_order_ode_test(int nsteps, ode_type type, constraint_type constrain
         return J;
       });
 
-  EquationSolver solver(MPI_COMM_WORLD, linear_options, nonlinear_options);
-  solver.SetOperator(residual);
+  EquationSolver solver(nonlinear_options, linear_options);
+  solver.setOperator(residual);
 
   FirstOrderODE ode(dummy.space().TrueVSize(),
                     {.time = ode_residual_eval_time, .u = x, .dt = c0, .du_dt = previous, .previous_dt = previous_dt},
@@ -410,8 +410,8 @@ double second_order_ode_test(int nsteps, ode_type type, constraint_type constrai
         return J;
       });
 
-  EquationSolver solver(MPI_COMM_WORLD, linear_options, nonlinear_options);
-  solver.SetOperator(residual);
+  EquationSolver solver(nonlinear_options, linear_options);
+  solver.setOperator(residual);
 
   SecondOrderODE ode(dummy.space().TrueVSize(),
                      {.time = ode_residual_eval_time, .c0 = c0, .c1 = c1, .u = x, .du_dt = dx_dt, .d2u_dt2 = previous},

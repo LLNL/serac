@@ -21,8 +21,6 @@
 
 namespace serac {
 
-using solid_mechanics::direct_dynamic_options;
-
 /**
  * @brief Specify the kinds of boundary condition to apply
  */

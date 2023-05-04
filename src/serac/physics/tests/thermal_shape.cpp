@@ -45,21 +45,16 @@ TEST(HeatTransfer, MoveShape)
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
-  auto options = heat_transfer::default_static_options;
+  auto nonlinear_options = heat_transfer::default_nonlinear_options;
+  nonlinear_options.absolute_tol = 1.0e-14;
+  nonlinear_options.relative_tol = 1.0e-14;
 
   // Use tight tolerances as this is a machine precision test
   //
   // Sam: we're setting a really small abs tolerance here to
   //      work around https://github.com/mfem/mfem/issues/3641
-  options.nonlinear.abs_tol = 1.0e-14;
-  options.nonlinear.rel_tol = 1.0e-14;
-  options.linear = IterativeSolverOptions{.rel_tol     = 1.0e-6,
-                                          .abs_tol     = 1.0e-30,
-                                          .print_level = 0,
-                                          .max_iter    = 200,
-                                          .lin_solver  = LinearSolver::GMRES,
-                                          .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
-
+  auto linear_options = heat_transfer::default_linear_options;
+  linear_options.absolute_tol = 1.0e-30;
 
   // Define an anisotropic conductor material model
   tensor<double, 2, 2>                cond{{{5.0, 0.4}, {0.4, 1.0}}};

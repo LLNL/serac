@@ -46,15 +46,18 @@ void shape_test(GeometricNonlinearities geo_nonlin)
   std::set<int> ess_bdr = {1};
 
   // Use a krylov solver for the Jacobian solve
-  SolverOptions options = {solid_mechanics::default_linear_options, solid_mechanics::default_nonlinear_options};
+
+  auto linear_options = solid_mechanics::default_linear_options;
 
   // Use tight tolerances as this is a machine precision test
-  get<IterativeSolverOptions>(options.linear).rel_tol = 1.0e-15;
-  get<IterativeSolverOptions>(options.linear).abs_tol = 1.0e-15;
+  linear_options.relative_tol = 1.0e-15;
+  linear_options.absolute_tol = 1.0e-15;
 
-  options.nonlinear.abs_tol  = 5.0e-15;
-  options.nonlinear.rel_tol  = 5.0e-15;
-  options.nonlinear.max_iter = 10;
+  auto nonlinear_options = solid_mechanics::default_nonlinear_options;
+
+  nonlinear_options.absolute_tol   = 5.0e-15;
+  nonlinear_options.relative_tol   = 5.0e-15;
+  nonlinear_options.max_iterations = 10;
 
   solid_mechanics::LinearIsotropic mat{1.0, 1.0, 1.0};
 
@@ -98,7 +101,8 @@ void shape_test(GeometricNonlinearities geo_nonlin)
     user_defined_shape_displacement.project(shape_coef);
 
     // Construct a functional-based solid mechanics solver including references to the shape velocity field.
-    SolidMechanics<p, dim> solid_solver(options, geo_nonlin, "solid_functional");
+    SolidMechanics<p, dim> solid_solver(nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options,
+                                        geo_nonlin, "solid_functional");
 
     // Set the initial displacement and boundary condition
     solid_solver.setDisplacementBCs(ess_bdr, bc);
@@ -140,7 +144,9 @@ void shape_test(GeometricNonlinearities geo_nonlin)
     *mesh_nodes += user_defined_shape_displacement.gridFunction();
 
     // Construct a functional-based solid mechanics solver including references to the shape velocity field.
-    SolidMechanics<p, dim> solid_solver_no_shape(options, geo_nonlin, "solid_functional");
+    SolidMechanics<p, dim> solid_solver_no_shape(nonlinear_options, linear_options,
+                                                 solid_mechanics::default_quasistatic_options, geo_nonlin,
+                                                 "solid_functional");
 
     mfem::VisItDataCollection visit_dc("pure_version", const_cast<mfem::ParMesh*>(&solid_solver_no_shape.mesh()));
     visit_dc.RegisterField("displacement", &solid_solver_no_shape.displacement().gridFunction());

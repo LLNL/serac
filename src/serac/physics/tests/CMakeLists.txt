@@ -4,18 +4,10 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause) 
 
-set(test_dependencies test_utils)
+set(test_dependencies serac_physics serac_mesh gtest)
 blt_list_append( TO test_dependencies ELEMENTS caliper adiak IF ${SERAC_ENABLE_PROFILING} )
 
-blt_add_library(
-    NAME        test_utils
-    SOURCES     test_utilities.cpp
-    HEADERS     test_utilities.hpp
-    DEPENDS_ON  serac_physics gtest
-    )
-
 set(serial_solver_tests
-    solid_legacy_sensitivity.cpp
     thermal_finite_diff.cpp
     thermal_statics_patch.cpp
     thermal_dynamics_patch.cpp
@@ -29,29 +21,17 @@ serac_add_tests( SOURCES ${serial_solver_tests}
     NUM_MPI_TASKS 1)
 
 set(solver_tests
-    #liquid_crystal_elastomer_example.cpp
+    lce_Brighenti_tensile.cpp
+    lce_Bertoldi_lattice.cpp
     parameterized_thermomechanics_example.cpp
     parameterized_thermal.cpp
-    solid_legacy.cpp
-    solid_legacy_reuse_mesh.cpp
-    solid_legacy_adjoint.cpp
     solid.cpp
     solid_periodic.cpp
     solid_shape.cpp
-    thermal_legacy.cpp
     thermal_shape.cpp
-    thermal_solid_legacy.cpp
     thermal_mechanics.cpp
     )
 
 serac_add_tests( SOURCES ${solver_tests}
-                 DEPENDS_ON ${test_dependencies}
-                 NUM_MPI_TASKS 2)
-
-set(solver_utility_tests
-    physics_dtor.cpp
-    newmark_test.cpp)
-
-serac_add_tests( SOURCES ${solver_utility_tests}
                  DEPENDS_ON ${test_dependencies}
                  NUM_MPI_TASKS 2)

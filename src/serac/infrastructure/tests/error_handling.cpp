@@ -12,10 +12,8 @@
 #include "serac/infrastructure/cli.hpp"
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/mesh/mesh_utils.hpp"
-#include "serac/physics/thermal_conduction_legacy.hpp"
 #include "serac/physics/boundary_conditions/boundary_condition.hpp"
 #include "serac/numerics/equation_solver.hpp"
-#include "serac/physics/state/state_manager.hpp"
 #include "serac/serac_config.hpp"
 
 class SlicErrorException : public std::exception {
@@ -23,34 +21,23 @@ class SlicErrorException : public std::exception {
 
 namespace serac {
 
-using mfem_ext::EquationSolver;
-
 TEST(ErrorHandling, EquationSolverBadLinSolver)
 {
-  IterativeSolverOptions options;
+  LinearSolverOptions    options;
+  NonlinearSolverOptions nonlin_options;
   // Try a definitely wrong number to ensure that an invalid linear solver is detected
-  options.lin_solver = static_cast<LinearSolver>(-7);
-  EXPECT_THROW(EquationSolver(MPI_COMM_WORLD, options), SlicErrorException);
+  options.linear_solver = static_cast<LinearSolver>(-7);
+  EXPECT_THROW(EquationSolver(nonlin_options, options, MPI_COMM_WORLD), SlicErrorException);
 }
 
 // Only need to test this when AmgX is **not** available
 #ifndef MFEM_USE_AMGX
 TEST(ErrorHandling, EquationSolverAmgxNotAvailable)
 {
-  IterativeSolverOptions options;
-  options.prec = AMGXPrec{};
-  EXPECT_THROW(EquationSolver(MPI_COMM_WORLD, options), SlicErrorException);
-}
-#endif
-
-// Only need to test this when KINSOL is **not** available
-#ifndef MFEM_USE_SUNDIALS
-TEST(ErrorHandling, EquationSolverKinsolNotAvailable)
-{
-  auto lin_options             = ThermalConductionLegacy::defaultLinearOptions();
-  auto nonlin_options          = ThermalConductionLegacy::defaultNonlinearOptions();
-  nonlin_options.nonlin_solver = NonlinearSolver::KINFullStep;
-  EXPECT_THROW(EquationSolver(MPI_COMM_WORLD, lin_options, nonlin_options), SlicErrorException);
+  LinearSolverOptions    options;
+  NonlinearSolverOptions nonlin;
+  options.preconditioner = Preconditioner::AMGX;
+  EXPECT_THROW(EquationSolver(nonlin, options, MPI_COMM_WORLD), SlicErrorException);
 }
 #endif
 

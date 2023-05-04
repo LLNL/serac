@@ -71,8 +71,10 @@ void periodic_test(mfem::Element::Type element_type) {
   user_defined_bulk_modulus = bulk_modulus_value;
 
   // Construct a functional-based solid solver
-  SolidMechanics<p, dim, Parameters<L2<p>, L2<p>>> solid_solver(default_static_options, GeometricNonlinearities::On,
-                                                                "solid_periodic");
+  SolidMechanics<p, dim, Parameters<L2<p>, L2<p>>> solid_solver(
+      solid_mechanics::default_nonlinear_options, solid_mechanics::default_linear_options,
+      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "solid_periodic");
+
   solid_solver.setParameter(0, user_defined_bulk_modulus);
   solid_solver.setParameter(1, user_defined_shear_modulus);
 
