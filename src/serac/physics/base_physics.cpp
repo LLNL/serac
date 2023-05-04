@@ -61,7 +61,9 @@ std::unique_ptr<FiniteElementState> BasePhysics::generateParameter(const std::st
 
   auto new_state = std::make_unique<FiniteElementState>(*parameters_[parameter_index].trial_space, parameter_name);
   StateManager::storeState(*new_state);
-  parameters_[parameter_index].state = new_state.get();
+  parameters_[parameter_index].state           = new_state.get();
+  parameters_[parameter_index].previous_state  = std::make_unique<serac::FiniteElementState>(*new_state);
+  *parameters_[parameter_index].previous_state = 0.0;
   parameters_[parameter_index].sensitivity =
       StateManager::newDual(new_state->space(), new_state->name() + "_sensitivity");
   return new_state;
@@ -85,7 +87,9 @@ void BasePhysics::setParameter(size_t parameter_index, FiniteElementState& param
           "spaces are inconsistent.",
           parameter_index, parameters_[parameter_index].trial_space->GetTrueVSize(),
           parameter_state.space().GetTrueVSize()));
-  parameters_[parameter_index].state = &parameter_state;
+  parameters_[parameter_index].state           = &parameter_state;
+  parameters_[parameter_index].previous_state  = std::make_unique<serac::FiniteElementState>(parameter_state);
+  *parameters_[parameter_index].previous_state = 0.0;
   parameters_[parameter_index].sensitivity =
       StateManager::newDual(parameter_state.space(), detail::addPrefix(name_, parameter_state.name() + "_sensitivity"));
 }
