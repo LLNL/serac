@@ -113,7 +113,7 @@ void evaluation_kernel_impl(FunctionSignature<test(trials...)>, const std::vecto
 
   static constexpr int qpts_per_elem = num_quadrature_points(geom, Q);
 
-  tuple u = {reinterpret_cast<const typename decltype(type<indices>(trial_elements))::dof_type*>(inputs[indices])...};
+  [[maybe_unused]] tuple u = {reinterpret_cast<const typename decltype(type<indices>(trial_elements))::dof_type*>(inputs[indices])...};
 
   // for each element in the domain
   for (uint32_t e = 0; e < num_elements; e++) {

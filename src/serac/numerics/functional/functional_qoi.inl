@@ -80,7 +80,6 @@ public:
   {
 
     auto * mesh = trial_fes[0]->GetMesh();
-    int dim = mesh->Dimension();
 
     auto mem_type = mfem::Device::GetMemoryType();
 

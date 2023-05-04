@@ -44,8 +44,8 @@ struct QuadratureRule {
 template <mfem::Geometry::Type g, int Q>
 SERAC_HOST_DEVICE constexpr auto GaussQuadratureRule()
 {
-  auto x = GaussLegendreNodes<Q>();
-  auto w = GaussLegendreWeights<Q>();
+  auto x = GaussLegendreNodes<Q, mfem::Geometry::SEGMENT>();
+  auto w = GaussLegendreWeights<Q, mfem::Geometry::SEGMENT>();
 
   if constexpr (g == mfem::Geometry::SEGMENT) {
     return QuadratureRule<Q, 1>{w, make_tensor<Q, 1>([&x](int i, int /*j*/) { return x[i]; })};

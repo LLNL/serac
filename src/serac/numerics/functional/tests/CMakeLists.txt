@@ -44,12 +44,6 @@ foreach(filename ${functional_tests_mpi})
     set_source_files_properties(${filename} PROPERTIES LANGUAGE CXX)
 endforeach()
 
-add_executable(mesh_dof_ids mesh_dof_ids.cpp)
-target_link_libraries(mesh_dof_ids PUBLIC mfem mpi serac_functional)
-
-add_executable(boundary_contours boundary_contours.cpp)
-target_link_libraries(boundary_contours PUBLIC mfem)
-
 if(ENABLE_CUDA)
 
     set(functional_tests_cuda 
