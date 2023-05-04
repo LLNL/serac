@@ -222,7 +222,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
   V_gf.ProjectCoefficient(x_coord);
 
   mfem::HypreParVector* tmp2 = fespace.NewTrueDofVector();
-  mfem::HypreParVector  V   = *tmp2;
+  mfem::HypreParVector  V    = *tmp2;
   V_gf.GetTrueDofs(V);
 
   // Define the types for the test and trial spaces using the function arguments
@@ -374,8 +374,8 @@ void qoi_test(mfem::ParMesh& mesh, H1<p1> trial1, H1<p2> trial2, Dimension<dim>)
   // integrates the qoi for these domains to machine precision
   //
   // see scripts/wolfram/qoi_examples.nb for more info
-  constexpr double expected[] = {4.6640262484879, 192400.1149761554};
-  double relative_error = (f(U1, U2) - expected[dim - 2]) / expected[dim - 2];
+  constexpr double expected[]     = {4.6640262484879, 192400.1149761554};
+  double           relative_error = (f(U1, U2) - expected[dim - 2]) / expected[dim - 2];
 
   // the tolerance on this one isn't very tight since
   // we're using a pretty the coarse integration rule
@@ -547,7 +547,7 @@ TEST(QoI, ShapeAndParameter)
 
   double val = serac_qoi->operator()(*shape, *parameter);
 
-  constexpr double expected = 1.6; // volume of 2 2x2x2 cubes == 16, so expected is 0.1 * 16
+  constexpr double expected = 1.6;  // volume of 2 2x2x2 cubes == 16, so expected is 0.1 * 16
   EXPECT_NEAR(val, expected, 1.0e-14);
 }
 

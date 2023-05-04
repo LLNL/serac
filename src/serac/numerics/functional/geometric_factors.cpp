@@ -70,11 +70,11 @@ GeometricFactors::GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry
   X = mfem::Vector(int(num_elements) * qpts_per_elem * spatial_dim);
   J = mfem::Vector(int(num_elements) * qpts_per_elem * spatial_dim * geometry_dim);
 
-#define DISPATCH_KERNEL(GEOM, P, Q)                                                                             \
-  if (g == mfem::Geometry::GEOM && p == P && q == Q) {                                                          \
-    compute_geometric_factors<Q, mfem::Geometry::GEOM, H1<P, dimension_of(mfem::Geometry::GEOM)> >(X, J, X_e,   \
-                                                                                       uint32_t(num_elements)); \
-    return;                                                                                                     \
+#define DISPATCH_KERNEL(GEOM, P, Q)                                                                 \
+  if (g == mfem::Geometry::GEOM && p == P && q == Q) {                                              \
+    compute_geometric_factors<Q, mfem::Geometry::GEOM, H1<P, dimension_of(mfem::Geometry::GEOM)> >( \
+        X, J, X_e, uint32_t(num_elements));                                                         \
+    return;                                                                                         \
   }
 
   DISPATCH_KERNEL(TRIANGLE, 1, 1);

@@ -107,10 +107,7 @@ TEST(VerifyKroneckerdelta, HexahedronCubic)
   verify_kronecker_delta_property<finite_element<::mfem::Geometry::CUBE, Hcurl<3>>>();
 }
 
-TEST(VerifyCurl, QuadrilateralLinear)
-{
-  verify_curl_calculation<finite_element<::mfem::Geometry::SQUARE, Hcurl<1>>>();
-}
+TEST(VerifyCurl, QuadrilateralLinear) { verify_curl_calculation<finite_element<::mfem::Geometry::SQUARE, Hcurl<1>>>(); }
 
 TEST(VerifyCurl, QuadrilateralQuadratic)
 {

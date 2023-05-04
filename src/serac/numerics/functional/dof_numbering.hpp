@@ -18,13 +18,13 @@ namespace serac {
  * lexicographically, to facilitate creating the CSR matrix graph.
  */
 struct ElemInfo {
-  uint32_t global_row_;   ///< The global row number
-  uint32_t global_col_;   ///< The global column number
-  uint32_t local_row_;    ///< The local row number
-  uint32_t local_col_;    ///< The global column number
-  uint32_t element_id_;   ///< The element ID
-  int      sign_;         ///< The orientation of the element
-  Integral::Type type;  
+  uint32_t       global_row_;  ///< The global row number
+  uint32_t       global_col_;  ///< The global column number
+  uint32_t       local_row_;   ///< The local row number
+  uint32_t       local_col_;   ///< The global column number
+  uint32_t       element_id_;  ///< The element ID
+  int            sign_;        ///< The orientation of the element
+  Integral::Type type;
 };
 
 /**
@@ -221,10 +221,10 @@ struct DofNumbering {
           int      dof_sign       = dof_ids[index] > 0 ? +1 : -1;
           bdr_element_dofs_(e, i) = {dof_id - 1, dof_sign};  // subtract 1 to get back to 0-based index
 
-          //std::cout << dof_id - 1 << " " << boundary_dofs.dof_info(e, i).index() << std::endl;
+          // std::cout << dof_id - 1 << " " << boundary_dofs.dof_info(e, i).index() << std::endl;
           index++;
         }
-        //std::cout << std::endl;
+        // std::cout << std::endl;
       }
     }
   }
@@ -249,25 +249,24 @@ struct DofNumbering {
  *    convention for quadrature point numbering.
  */
 struct GradientAssemblyLookupTables {
-
   struct Entry {
     uint32_t row;
     uint32_t column;
 
-    bool operator<(const Entry &other) const { 
+    bool operator<(const Entry& other) const
+    {
       return (row < other.row) || ((row == other.row) && (column < other.column));
     }
 
     // operator== is required for use in `std::unordered_map`
-    bool operator==(const Entry &other) const { 
-      return (row == other.row && column == other.column);
-    }
+    bool operator==(const Entry& other) const { return (row == other.row && column == other.column); }
 
     // a hash function is required for use in `std::unordered_map`
     struct Hasher {
-      std::size_t operator()(const Entry& k) const {
+      std::size_t operator()(const Entry& k) const
+      {
         std::size_t seed = std::hash<uint32_t>()(k.row);
-        seed ^= std::hash<uint32_t>()(k.column) + 0x9e3779b9 + (seed<<6) + (seed>>2);
+        seed ^= std::hash<uint32_t>()(k.column) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
         return seed;
       }
     };
@@ -280,15 +279,14 @@ struct GradientAssemblyLookupTables {
    * @brief create lookup tables of which degrees of freedom correspond to
    * each element and boundary element
    */
-  GradientAssemblyLookupTables(const serac::BlockElementRestriction & block_test_dofs,
-                               const serac::BlockElementRestriction & block_trial_dofs)
+  GradientAssemblyLookupTables(const serac::BlockElementRestriction& block_test_dofs,
+                               const serac::BlockElementRestriction& block_trial_dofs)
   {
-
     // we start by having each element and boundary element emit the (i,j) entry that it
     // touches in the global "stiffness matrix", and also keep track of some metadata about
     // which element and which dof are associated with that particular nonzero entry
-    for (const auto & [geometry, trial_dofs] : block_trial_dofs.restrictions) {
-      const auto & test_dofs = block_test_dofs.restrictions.at(geometry);
+    for (const auto& [geometry, trial_dofs] : block_trial_dofs.restrictions) {
+      const auto& test_dofs = block_test_dofs.restrictions.at(geometry);
 
       std::vector<DoF> test_vdofs(test_dofs.nodes_per_elem * test_dofs.components);
       std::vector<DoF> trial_vdofs(trial_dofs.nodes_per_elem * trial_dofs.components);
@@ -302,22 +300,21 @@ struct GradientAssemblyLookupTables {
             auto trial_dof = trial_dofs.dof_info(e, j);
 
             for (uint64_t k = 0; k < test_dofs.components; k++) {
-              uint32_t test_global_id  = uint32_t(test_dofs.GetVDof(test_dof, k).index());
+              uint32_t test_global_id = uint32_t(test_dofs.GetVDof(test_dof, k).index());
               for (uint64_t l = 0; l < trial_dofs.components; l++) {
-                uint32_t trial_global_id = uint32_t(trial_dofs.GetVDof(trial_dof, l).index());
-                nz_LUT[{test_global_id, trial_global_id}] = 0; // just store the keys initially
+                uint32_t trial_global_id                  = uint32_t(trial_dofs.GetVDof(trial_dof, l).index());
+                nz_LUT[{test_global_id, trial_global_id}] = 0;  // just store the keys initially
               }
             }
           }
         }
-
-      } 
+      }
     }
-    std::vector< Entry > entries(nz_LUT.size());
+    std::vector<Entry> entries(nz_LUT.size());
 
     uint32_t count = 0;
     for (auto [key, value] : nz_LUT) {
-      entries[count++] = key; 
+      entries[count++] = key;
     }
 
     std::sort(entries.begin(), entries.end());
@@ -331,21 +328,18 @@ struct GradientAssemblyLookupTables {
 
     for (uint32_t i = 1; i < nnz; i++) {
       nz_LUT[entries[i]] = i;
-      col_ind[i] = entries[i].column;
+      col_ind[i]         = entries[i].column;
 
       // if the new entry has a different row, then the row_ptr offsets must be set as well
-      for (uint32_t j = entries[i-1].row; j < entries[i].row; j++) {
-        row_ptr[j+1] = i;
+      for (uint32_t j = entries[i - 1].row; j < entries[i].row; j++) {
+        row_ptr[j + 1] = i;
       }
     }
 
     row_ptr.back() = static_cast<int>(nnz);
-    
   }
 
-  uint32_t operator()(int i, int j) const {
-    return nz_LUT.at({uint32_t(i), uint32_t(j)});
-  }
+  uint32_t operator()(int i, int j) const { return nz_LUT.at({uint32_t(i), uint32_t(j)}); }
 
   /// @brief how many nonzero entries appear in the sparse matrix
   uint32_t nnz;
@@ -363,7 +357,7 @@ struct GradientAssemblyLookupTables {
    * @brief `nz_LUT` returns the index of the `col_ind` / `value` CSR arrays
    * corresponding to the (i,j) entry
    */
-  std::unordered_map< Entry, uint32_t, Entry::Hasher > nz_LUT;
+  std::unordered_map<Entry, uint32_t, Entry::Hasher> nz_LUT;
 };
 
 }  // namespace serac

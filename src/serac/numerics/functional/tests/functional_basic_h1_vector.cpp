@@ -26,7 +26,7 @@ using namespace serac;
 using namespace serac::profiling;
 
 template <int p, int dim>
-void weird_mixed_test(std::unique_ptr<mfem::ParMesh> & mesh)
+void weird_mixed_test(std::unique_ptr<mfem::ParMesh>& mesh)
 {
   // Define vector-valued test and trial spaces of different sizes
   using test_space  = H1<p, dim + 1>;
@@ -70,7 +70,7 @@ void weird_mixed_test(std::unique_ptr<mfem::ParMesh> & mesh)
 }
 
 template <int p, int dim>
-void elasticity_test(std::unique_ptr<mfem::ParMesh> & mesh)
+void elasticity_test(std::unique_ptr<mfem::ParMesh>& mesh)
 {
   // Define the test and trial spaces for an elasticity-like problem
   using test_space  = H1<p, dim>;
@@ -114,34 +114,33 @@ void elasticity_test(std::unique_ptr<mfem::ParMesh> & mesh)
   check_gradient(residual, U);
 }
 
-
 void test_suite(std::string meshfile)
 {
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(SERAC_REPO_DIR + meshfile), 1);
 
   if (mesh->Dimension() == 2) {
     constexpr int dim = 2;
-    elasticity_test< 1, dim >(mesh);
-    elasticity_test< 2, dim >(mesh);
-    weird_mixed_test< 1, dim >(mesh);
-    weird_mixed_test< 2, dim >(mesh);
+    elasticity_test<1, dim>(mesh);
+    elasticity_test<2, dim>(mesh);
+    weird_mixed_test<1, dim>(mesh);
+    weird_mixed_test<2, dim>(mesh);
   }
 
   if (mesh->Dimension() == 3) {
     constexpr int dim = 3;
-    elasticity_test< 1, dim >(mesh);
-    elasticity_test< 2, dim >(mesh);
-    weird_mixed_test< 1, dim >(mesh);
-    weird_mixed_test< 2, dim >(mesh);
+    elasticity_test<1, dim>(mesh);
+    elasticity_test<2, dim>(mesh);
+    weird_mixed_test<1, dim>(mesh);
+    weird_mixed_test<2, dim>(mesh);
   }
 }
 
-TEST(VectorValuedH1, test_suite_tris)           { test_suite("/data/meshes/patch2D_tris.mesh"); }
-TEST(VectorValuedH1, test_suite_quads)          { test_suite("/data/meshes/patch2D_quads.mesh"); }
+TEST(VectorValuedH1, test_suite_tris) { test_suite("/data/meshes/patch2D_tris.mesh"); }
+TEST(VectorValuedH1, test_suite_quads) { test_suite("/data/meshes/patch2D_quads.mesh"); }
 TEST(VectorValuedH1, test_suite_tris_and_quads) { test_suite("/data/meshes/patch2D_tris_and_quads.mesh"); }
-                                                            
-TEST(VectorValuedH1, test_suite_tets)           { test_suite("/data/meshes/patch3D_tets.mesh"); }
-TEST(VectorValuedH1, test_suite_hexes)          { test_suite("/data/meshes/patch3D_hexes.mesh"); }
+
+TEST(VectorValuedH1, test_suite_tets) { test_suite("/data/meshes/patch3D_tets.mesh"); }
+TEST(VectorValuedH1, test_suite_hexes) { test_suite("/data/meshes/patch3D_hexes.mesh"); }
 TEST(VectorValuedH1, test_suite_tets_and_hexes) { test_suite("/data/meshes/patch3D_tets_and_hexes.mesh"); }
 
 int main(int argc, char* argv[])

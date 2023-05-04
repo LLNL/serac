@@ -43,7 +43,7 @@ struct Integral {
   {
     output_E = 0.0;
 
-    bool with_AD = (functional_to_integral_.count(differentiation_index) > 0 && differentiation_index != -1);
+    bool  with_AD = (functional_to_integral_.count(differentiation_index) > 0 && differentiation_index != -1);
     auto& kernels = (with_AD) ? evaluation_with_AD_[functional_to_integral_.at(differentiation_index)] : evaluation_;
     for (auto& [geometry, func] : kernels) {
       std::vector<const double*> inputs(active_trial_spaces.size());
@@ -54,7 +54,8 @@ struct Integral {
     }
   }
 
-  void GradientMult(const mfem::BlockVector& input_E, mfem::BlockVector& output_E, std::size_t differentiation_index) const
+  void GradientMult(const mfem::BlockVector& input_E, mfem::BlockVector& output_E,
+                    std::size_t differentiation_index) const
   {
     output_E = 0.0;
 
@@ -93,21 +94,21 @@ struct Integral {
 
   std::map<int, int> functional_to_integral_;
 
-  std::map< mfem::Geometry::Type, GeometricFactors > geometric_factors_; 
+  std::map<mfem::Geometry::Type, GeometricFactors> geometric_factors_;
 };
 
-
-template <mfem::Geometry::Type geom, int Q, typename test, typename ... trials, typename lambda_type, typename state_type>
+template <mfem::Geometry::Type geom, int Q, typename test, typename... trials, typename lambda_type,
+          typename state_type>
 void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, lambda_type&& qf, mfem::Mesh& domain,
                       std::shared_ptr<QuadratureData<state_type> > qf_state)
 {
   integral.geometric_factors_[geom] = GeometricFactors(&domain, Q, geom);
-  GeometricFactors & gf = integral.geometric_factors_[geom];
+  GeometricFactors& gf              = integral.geometric_factors_[geom];
   if (gf.num_elements == 0) return;
 
-  const double * positions = gf.X.Read();
-  const double * jacobians = gf.J.Read();
-  const uint32_t num_elements = uint32_t(gf.num_elements);
+  const double*  positions        = gf.X.Read();
+  const double*  jacobians        = gf.J.Read();
+  const uint32_t num_elements     = uint32_t(gf.num_elements);
   const uint32_t qpts_per_element = num_quadrature_points(geom, Q);
 
   constexpr int         NO_DIFFERENTIATION = -1;
@@ -115,30 +116,28 @@ void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, 
   integral.evaluation_[geom] = domain_integral::evaluation_kernel<NO_DIFFERENTIATION, Q, geom>(
       s, qf, positions, jacobians, qf_state, dummy_derivatives, num_elements);
 
-  constexpr std::size_t num_args = s.num_args;
-  [[maybe_unused]] static constexpr int dim = dimension_of(geom);
+  constexpr std::size_t                 num_args = s.num_args;
+  [[maybe_unused]] static constexpr int dim      = dimension_of(geom);
   for_constexpr<num_args>([&](auto index) {
-
     // allocate memory for the derivatives of the q-function at each quadrature point
     //
     // Note: ptrs' lifetime is managed in an unusual way! It is captured by-value in the
     // action_of_gradient functor below to augment the reference count, and extend its lifetime to match
     // that of the DomainIntegral that allocated it.
-    using derivative_type   = decltype(domain_integral::get_derivative_type<index, dim, trials...>(qf, state_type{}));
+    using derivative_type = decltype(domain_integral::get_derivative_type<index, dim, trials...>(qf, state_type{}));
     auto ptr = accelerator::make_shared_array<ExecutionSpace::CPU, derivative_type>(num_elements * qpts_per_element);
 
-    integral.evaluation_with_AD_[index][geom] = domain_integral::evaluation_kernel<index, Q, geom>(
-      s, qf, positions, jacobians, qf_state, ptr, num_elements);
-    
+    integral.evaluation_with_AD_[index][geom] =
+        domain_integral::evaluation_kernel<index, Q, geom>(s, qf, positions, jacobians, qf_state, ptr, num_elements);
+
     integral.jvp_[index][geom] = domain_integral::jvp_kernel<index, Q, geom>(s, ptr, num_elements);
-    integral.element_gradient_[index][geom] = domain_integral::element_gradient_kernel< index, Q, geom>(s, ptr, num_elements);
+    integral.element_gradient_[index][geom] =
+        domain_integral::element_gradient_kernel<index, Q, geom>(s, ptr, num_elements);
   });
 }
 
 template <typename s, int Q, int dim, typename lambda_type, typename qpt_data_type>
-Integral MakeDomainIntegral(mfem::Mesh& domain,
-                            lambda_type&& qf,  
-                            std::shared_ptr< QuadratureData<qpt_data_type> > qdata,
+Integral MakeDomainIntegral(mfem::Mesh& domain, lambda_type&& qf, std::shared_ptr<QuadratureData<qpt_data_type> > qdata,
                             std::vector<uint32_t> argument_indices)
 {
   FunctionSignature<s> signature;
@@ -158,16 +157,17 @@ Integral MakeDomainIntegral(mfem::Mesh& domain,
   return integral;
 }
 
-template <mfem::Geometry::Type geom, int Q, typename test, typename ... trials, typename lambda_type>
-void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral& integral, lambda_type&& qf, mfem::Mesh& domain)
+template <mfem::Geometry::Type geom, int Q, typename test, typename... trials, typename lambda_type>
+void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral& integral, lambda_type&& qf,
+                          mfem::Mesh& domain)
 {
   integral.geometric_factors_[geom] = GeometricFactors(&domain, Q, geom, FaceType::BOUNDARY);
-  GeometricFactors & gf = integral.geometric_factors_[geom];
+  GeometricFactors& gf              = integral.geometric_factors_[geom];
   if (gf.num_elements == 0) return;
 
-  const double * positions = gf.X.Read();
-  const double * jacobians = gf.J.Read();
-  const uint32_t num_elements = uint32_t(gf.num_elements);
+  const double*  positions        = gf.X.Read();
+  const double*  jacobians        = gf.J.Read();
+  const uint32_t num_elements     = uint32_t(gf.num_elements);
   const uint32_t qpts_per_element = num_quadrature_points(geom, Q);
 
   constexpr int         NO_DIFFERENTIATION = -1;
@@ -175,30 +175,28 @@ void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral& integr
   integral.evaluation_[geom] = boundary_integral::evaluation_kernel<NO_DIFFERENTIATION, Q, geom>(
       s, qf, positions, jacobians, dummy_derivatives, num_elements);
 
-  constexpr std::size_t num_args = s.num_args;
-  [[maybe_unused]] static constexpr int dim = dimension_of(geom);
+  constexpr std::size_t                 num_args = s.num_args;
+  [[maybe_unused]] static constexpr int dim      = dimension_of(geom);
   for_constexpr<num_args>([&](auto index) {
-
     // allocate memory for the derivatives of the q-function at each quadrature point
     //
     // Note: ptrs' lifetime is managed in an unusual way! It is captured by-value in the
     // action_of_gradient functor below to augment the reference count, and extend its lifetime to match
     // that of the boundaryIntegral that allocated it.
-    using derivative_type   = decltype(boundary_integral::get_derivative_type<index, dim, trials...>(qf));
+    using derivative_type = decltype(boundary_integral::get_derivative_type<index, dim, trials...>(qf));
     auto ptr = accelerator::make_shared_array<ExecutionSpace::CPU, derivative_type>(num_elements * qpts_per_element);
 
-    integral.evaluation_with_AD_[index][geom] = boundary_integral::evaluation_kernel<index, Q, geom>(
-      s, qf, positions, jacobians, ptr, num_elements);
-    
+    integral.evaluation_with_AD_[index][geom] =
+        boundary_integral::evaluation_kernel<index, Q, geom>(s, qf, positions, jacobians, ptr, num_elements);
+
     integral.jvp_[index][geom] = boundary_integral::jvp_kernel<index, Q, geom>(s, ptr, num_elements);
-    integral.element_gradient_[index][geom] = boundary_integral::element_gradient_kernel<index, Q, geom>(s, ptr, num_elements);
+    integral.element_gradient_[index][geom] =
+        boundary_integral::element_gradient_kernel<index, Q, geom>(s, ptr, num_elements);
   });
 }
 
 template <typename s, int Q, int dim, typename lambda_type>
-Integral MakeBoundaryIntegral(mfem::Mesh& domain,
-                              lambda_type&& qf,  
-                              std::vector<uint32_t> argument_indices)
+Integral MakeBoundaryIntegral(mfem::Mesh& domain, lambda_type&& qf, std::vector<uint32_t> argument_indices)
 {
   FunctionSignature<s> signature;
 

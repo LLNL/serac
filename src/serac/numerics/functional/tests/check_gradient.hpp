@@ -13,20 +13,20 @@
 #include "serac/numerics/functional/functional.hpp"
 
 template <typename T>
-void check_gradient(serac::Functional<T>& f, mfem::Vector& U, double epsilon=1.0e-4)
+void check_gradient(serac::Functional<T>& f, mfem::Vector& U, double epsilon = 1.0e-4)
 {
   int seed = 42;
 
   mfem::Vector dU(U.Size());
   dU.Randomize(seed);
 
-  auto [value, dfdU] = f(serac::differentiate_wrt(U));
-  mfem::Vector df_jvp1   = dfdU(dU);
+  auto [value, dfdU]   = f(serac::differentiate_wrt(U));
+  mfem::Vector df_jvp1 = dfdU(dU);
 
   std::unique_ptr<mfem::HypreParMatrix> dfdU_matrix = assemble(dfdU);
-  mfem::Vector df_jvp2 = (*dfdU_matrix) * dU;
+  mfem::Vector                          df_jvp2     = (*dfdU_matrix) * dU;
 
-  if(df_jvp1.Norml2() != 0) {
+  if (df_jvp1.Norml2() != 0) {
     double relative_error = df_jvp1.DistanceTo(df_jvp2.GetData()) / df_jvp1.Norml2();
     EXPECT_NEAR(0., relative_error, 5.e-6);
   }
@@ -39,7 +39,7 @@ void check_gradient(serac::Functional<T>& f, mfem::Vector& U, double epsilon=1.0
   }
 
   // forward-difference approximations
-  mfem::Vector df1_fd[2]; 
+  mfem::Vector df1_fd[2];
   df1_fd[0] = f_values[4];
   df1_fd[0] -= f_values[2];
   df1_fd[0] /= (2.0 * epsilon);
@@ -49,7 +49,7 @@ void check_gradient(serac::Functional<T>& f, mfem::Vector& U, double epsilon=1.0
   df1_fd[1] /= epsilon;
 
   // center-difference approximations
-  mfem::Vector df1_cd[2]; 
+  mfem::Vector df1_cd[2];
   df1_cd[0] = f_values[4];
   df1_cd[0] -= f_values[0];
   df1_cd[0] /= (4.0 * epsilon);
@@ -72,9 +72,9 @@ void check_gradient(serac::Functional<T>& f, mfem::Vector& U, double epsilon=1.0
 }
 
 template <typename T>
-void check_gradient(serac::Functional<T>& f, mfem::Vector& U, mfem::Vector& dU_dt, double epsilon=1.0e-4)
+void check_gradient(serac::Functional<T>& f, mfem::Vector& U, mfem::Vector& dU_dt, double epsilon = 1.0e-4)
 {
-  int    seed    = 42;
+  int seed = 42;
 
   mfem::Vector dU(U.Size());
   dU.Randomize(seed);
@@ -83,13 +83,13 @@ void check_gradient(serac::Functional<T>& f, mfem::Vector& U, mfem::Vector& dU_d
   ddU_dt.Randomize(seed + 1);
 
   {
-    auto [value, dfdU] = f(serac::differentiate_wrt(U), dU_dt);
-    mfem::Vector df_jvp1   = dfdU(dU);
+    auto [value, dfdU]   = f(serac::differentiate_wrt(U), dU_dt);
+    mfem::Vector df_jvp1 = dfdU(dU);
 
     std::unique_ptr<mfem::HypreParMatrix> dfdU_matrix = assemble(dfdU);
 
-    mfem::Vector df_jvp2 = (*dfdU_matrix) * dU;
-    double relative_error = df_jvp1.DistanceTo(df_jvp2.GetData()) / df_jvp1.Norml2();
+    mfem::Vector df_jvp2        = (*dfdU_matrix) * dU;
+    double       relative_error = df_jvp1.DistanceTo(df_jvp2.GetData()) / df_jvp1.Norml2();
     EXPECT_NEAR(0., relative_error, 5.e-14);
 
     mfem::Vector f_values[5];
@@ -100,7 +100,7 @@ void check_gradient(serac::Functional<T>& f, mfem::Vector& U, mfem::Vector& dU_d
     }
 
     // forward-difference approximations
-    mfem::Vector df1_fd[2]; 
+    mfem::Vector df1_fd[2];
     df1_fd[0] = f_values[4];
     df1_fd[0] -= f_values[2];
     df1_fd[0] /= (2.0 * epsilon);
@@ -110,7 +110,7 @@ void check_gradient(serac::Functional<T>& f, mfem::Vector& U, mfem::Vector& dU_d
     df1_fd[1] /= epsilon;
 
     // center-difference approximations
-    mfem::Vector df1_cd[2]; 
+    mfem::Vector df1_cd[2];
     df1_cd[0] = f_values[4];
     df1_cd[0] -= f_values[0];
     df1_cd[0] /= (4.0 * epsilon);
@@ -138,8 +138,8 @@ void check_gradient(serac::Functional<T>& f, mfem::Vector& U, mfem::Vector& dU_d
 
     std::unique_ptr<mfem::HypreParMatrix> df_ddU_dt_matrix = assemble(df_ddU_dt);
 
-    mfem::Vector df_jvp2 = (*df_ddU_dt_matrix) * ddU_dt;
-    double relative_error = df_jvp1.DistanceTo(df_jvp2.GetData()) / df_jvp1.Norml2();
+    mfem::Vector df_jvp2        = (*df_ddU_dt_matrix) * ddU_dt;
+    double       relative_error = df_jvp1.DistanceTo(df_jvp2.GetData()) / df_jvp1.Norml2();
     EXPECT_NEAR(0., relative_error, 5.e-14);
 
     mfem::Vector f_values[5];
@@ -150,7 +150,7 @@ void check_gradient(serac::Functional<T>& f, mfem::Vector& U, mfem::Vector& dU_d
     }
 
     // forward-difference approximations
-    mfem::Vector df1_fd[2]; 
+    mfem::Vector df1_fd[2];
     df1_fd[0] = f_values[4];
     df1_fd[0] -= f_values[2];
     df1_fd[0] /= (2.0 * epsilon);
@@ -160,7 +160,7 @@ void check_gradient(serac::Functional<T>& f, mfem::Vector& U, mfem::Vector& dU_d
     df1_fd[1] /= epsilon;
 
     // center-difference approximations
-    mfem::Vector df1_cd[2]; 
+    mfem::Vector df1_cd[2];
     df1_cd[0] = f_values[4];
     df1_cd[0] -= f_values[0];
     df1_cd[0] /= (4.0 * epsilon);

@@ -248,8 +248,9 @@ __global__ void eval_cuda_quadrature(const solution_type u, residual_type r,
  * @param[inout] data The data for each quadrature point
  */
 
-template <mfem::Geometry::Type g, typename test, typename trial, int Q, serac::detail::ThreadParallelizationStrategy policy,
-          typename derivatives_type, typename lambda, typename qpt_data_type = void>
+template <mfem::Geometry::Type g, typename test, typename trial, int Q,
+          serac::detail::ThreadParallelizationStrategy policy, typename derivatives_type, typename lambda,
+          typename qpt_data_type = void>
 void evaluation_kernel_cuda(serac::detail::GPULaunchConfiguration config, const mfem::Vector& U, mfem::Vector& R,
                             GPUArrayView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J_,
                             const mfem::Vector& X_, int num_elements, lambda qf,
@@ -318,8 +319,8 @@ void evaluation_kernel_cuda(serac::detail::GPULaunchConfiguration config, const 
  * @param[in] num_elements The number of elements in the mesh
  */
 
-template <mfem::Geometry::Type g, typename test, typename trial, int Q, typename derivatives_type, typename dsolution_type,
-          typename dresidual_type>
+template <mfem::Geometry::Type g, typename test, typename trial, int Q, typename derivatives_type,
+          typename dsolution_type, typename dresidual_type>
 __global__ void gradient_cuda_element(const dsolution_type du, dresidual_type dr,
                                       GPUArrayView<derivatives_type, 2>         qf_derivatives,
                                       const mfem::DeviceTensor<4, const double> J, int num_elements)
@@ -395,8 +396,8 @@ __global__ void gradient_cuda_element(const dsolution_type du, dresidual_type dr
  * @param[in] num_elements The number of elements in the mesh
  */
 
-template <mfem::Geometry::Type g, typename test, typename trial, int Q, typename derivatives_type, typename dsolution_type,
-          typename dresidual_type>
+template <mfem::Geometry::Type g, typename test, typename trial, int Q, typename derivatives_type,
+          typename dsolution_type, typename dresidual_type>
 __global__ void gradient_cuda_quadrature(const dsolution_type du, dresidual_type dr,
                                          GPUArrayView<derivatives_type, 2>         qf_derivatives,
                                          const mfem::DeviceTensor<4, const double> J, int num_elements)
@@ -471,8 +472,8 @@ __global__ void gradient_cuda_quadrature(const dsolution_type du, dresidual_type
  * @param[in] num_elements The number of elements in the mesh
  */
 
-template <mfem::Geometry::Type g, typename test, typename trial, int Q, serac::detail::ThreadParallelizationStrategy policy,
-          typename derivatives_type>
+template <mfem::Geometry::Type g, typename test, typename trial, int Q,
+          serac::detail::ThreadParallelizationStrategy policy, typename derivatives_type>
 void action_of_gradient_kernel(serac::detail::GPULaunchConfiguration config, const mfem::Vector& dU, mfem::Vector& dR,
                                GPUArrayView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J_,
                                int num_elements)

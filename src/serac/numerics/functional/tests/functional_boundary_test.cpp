@@ -173,11 +173,11 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
   mfem::Vector r1 = (*J) * U + (*F);
   mfem::Vector r2 = residual(U);
 
-  //std::cout << std::setprecision(16);
-  //r1.Print(std::cout, 4);
-  //std::cout << std::endl;
-  //std::cout << std::endl;
-  //r2.Print(std::cout, 4);
+  // std::cout << std::setprecision(16);
+  // r1.Print(std::cout, 4);
+  // std::cout << std::endl;
+  // std::cout << std::endl;
+  // r2.Print(std::cout, 4);
 
   if (verbose) {
     std::cout << "sum(r1):  " << r1.Sum() << std::endl;
@@ -217,7 +217,7 @@ int main(int argc, char* argv[])
 
   std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/patch2D_tris_and_quads.mesh";
   std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/patch3D_tets_and_hexes.mesh";
-  //std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/onetet.mesh";
+  // std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/onetet.mesh";
   mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
   mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
 

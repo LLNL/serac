@@ -268,7 +268,7 @@ struct finite_element<mfem::Geometry::SQUARE, H1<p, c> > {
 
         for (int qy = 0; qy < q; qy++) {
           for (int qx = 0; qx < q; qx++) {
-            int Q          = qy * q + qx;
+            int Q = qy * q + qx;
             if constexpr (!is_zero<source_type>{}) {
               source(qy, qx) = reinterpret_cast<const double*>(&get<SOURCE>(qf_output[Q]))[i * ntrial + j];
             }

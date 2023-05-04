@@ -76,12 +76,10 @@ inline std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> boundary_geometry_co
 {
   std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> counts{};
   for (int f = 0; f < mesh.GetNumFaces(); f++) {
-    
     // skip interior faces
     if (mesh.GetFaceInformation(f).IsInterior()) continue;
 
     counts[uint64_t(mesh.GetFaceGeometry(f))]++;
-
   }
   return counts;
 }

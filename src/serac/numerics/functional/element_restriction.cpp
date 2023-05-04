@@ -220,7 +220,7 @@ axom::Array<DoF, 2, axom::MemorySpace::Host> GetElementRestriction(const mfem::F
   mfem::Mesh*      mesh = fes->GetMesh();
 
   // note: this assumes that all the elements are the same polynomial order
-  int                            p         = fes->GetElementOrder(0);
+  int                            p        = fes->GetElementOrder(0);
   std::vector<std::vector<int> > lex_perm = lexicographic_permutations(p);
 
   uint64_t n = 0;
@@ -354,8 +354,8 @@ axom::Array<DoF, 2, axom::MemorySpace::Host> GetFaceDofs(const mfem::FiniteEleme
         if (type == FaceType::BOUNDARY) break;
       }
 
-    // H1 and Hcurl spaces are more straight-forward, since
-    // we can use FiniteElementSpace::GetFaceDofs() directly
+      // H1 and Hcurl spaces are more straight-forward, since
+      // we can use FiniteElementSpace::GetFaceDofs() directly
     } else {
       mfem::Array<int> dofs;
 
@@ -380,13 +380,11 @@ axom::Array<DoF, 2, axom::MemorySpace::Host> GetFaceDofs(const mfem::FiniteEleme
   if (n == 0) {
     return axom::Array<DoF, 2, axom::MemorySpace::Host>{};
   } else {
-    uint64_t dofs_per_face = face_dofs.size() / n;
+    uint64_t                                     dofs_per_face = face_dofs.size() / n;
     axom::Array<DoF, 2, axom::MemorySpace::Host> output({n, dofs_per_face});
     std::memcpy(output.data(), face_dofs.data(), sizeof(DoF) * n * dofs_per_face);
     return output;
   }
-
-
 }
 
 namespace serac {
@@ -433,7 +431,7 @@ DoF ElementRestriction::GetVDof(DoF node, uint64_t component) const
   }
 }
 
-void ElementRestriction::GetElementVDofs(int i, std::vector<DoF> &vdofs) const
+void ElementRestriction::GetElementVDofs(int i, std::vector<DoF>& vdofs) const
 {
   for (uint64_t c = 0; c < components; c++) {
     for (uint64_t j = 0; j < nodes_per_elem; j++) {
@@ -447,8 +445,8 @@ void ElementRestriction::Gather(const mfem::Vector& L_vector, mfem::Vector& E_ve
   for (uint64_t i = 0; i < num_elements; i++) {
     for (uint64_t c = 0; c < components; c++) {
       for (uint64_t j = 0; j < nodes_per_elem; j++) {
-        uint64_t E_id  = (i * components + c) * nodes_per_elem + j;
-        uint64_t L_id  = GetVDof(dof_info(i, j), c).index();
+        uint64_t E_id       = (i * components + c) * nodes_per_elem + j;
+        uint64_t L_id       = GetVDof(dof_info(i, j), c).index();
         E_vector[int(E_id)] = L_vector[int(L_id)];
       }
     }
@@ -470,8 +468,8 @@ void ElementRestriction::ScatterAdd(const mfem::Vector& E_vector, mfem::Vector& 
 
 ////////////////////////////////////////////////////////////////////////
 
-BlockElementRestriction::BlockElementRestriction(const mfem::FiniteElementSpace* fes) {
-
+BlockElementRestriction::BlockElementRestriction(const mfem::FiniteElementSpace* fes)
+{
   int dim = fes->GetMesh()->Dimension();
 
   if (dim == 2) {
@@ -485,12 +483,10 @@ BlockElementRestriction::BlockElementRestriction(const mfem::FiniteElementSpace*
       restrictions[geom] = ElementRestriction(fes, geom);
     }
   }
-
 }
 
 BlockElementRestriction::BlockElementRestriction(const mfem::FiniteElementSpace* fes, FaceType type)
 {
-
   int dim = fes->GetMesh()->Dimension();
 
   if (dim == 2) {
@@ -502,29 +498,25 @@ BlockElementRestriction::BlockElementRestriction(const mfem::FiniteElementSpace*
       restrictions[geom] = ElementRestriction(fes, geom, type);
     }
   }
-
 }
 
-uint64_t BlockElementRestriction::ESize() const {
-  return (*restrictions.begin()).second.ESize();
-}
+uint64_t BlockElementRestriction::ESize() const { return (*restrictions.begin()).second.ESize(); }
 
-uint64_t BlockElementRestriction::LSize() const {
-  return (*restrictions.begin()).second.LSize();
-}
+uint64_t BlockElementRestriction::LSize() const { return (*restrictions.begin()).second.LSize(); }
 
-mfem::Array<int> BlockElementRestriction::bOffsets() const {
+mfem::Array<int> BlockElementRestriction::bOffsets() const
+{
   mfem::Array<int> offsets(mfem::Geometry::NUM_GEOMETRIES + 1);
 
   offsets[0] = 0;
   for (int i = 0; i < mfem::Geometry::NUM_GEOMETRIES; i++) {
     auto g = mfem::Geometry::Type(i);
     if (restrictions.count(g) > 0) {
-      offsets[g+1] = offsets[g] + int(restrictions.at(g).ESize());
+      offsets[g + 1] = offsets[g] + int(restrictions.at(g).ESize());
     } else {
-      offsets[g+1] = offsets[g];
+      offsets[g + 1] = offsets[g];
     }
-    //std::cout << g << " " << offsets[g+1] << std::endl;
+    // std::cout << g << " " << offsets[g+1] << std::endl;
   }
   return offsets;
 };
@@ -542,6 +534,5 @@ void BlockElementRestriction::ScatterAdd(const mfem::BlockVector& E_block_vector
     restriction.ScatterAdd(E_block_vector.GetBlock(geom), L_vector);
   }
 }
-
 
 }  // namespace serac

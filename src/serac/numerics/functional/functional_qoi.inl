@@ -73,13 +73,12 @@ public:
    * @brief Constructs using a @p mfem::ParFiniteElementSpace object corresponding to the trial space
    * @param[in] trial_fes The trial space
    */
-  Functional(std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes) :
-    test_fec_(0, trial_fes[0]->GetMesh()->Dimension()),
-    test_space_(dynamic_cast<mfem::ParMesh *>(trial_fes[0]->GetMesh()), &test_fec_),
-    trial_space_(trial_fes)
+  Functional(std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
+      : test_fec_(0, trial_fes[0]->GetMesh()->Dimension()),
+        test_space_(dynamic_cast<mfem::ParMesh*>(trial_fes[0]->GetMesh()), &test_fec_),
+        trial_space_(trial_fes)
   {
-
-    auto * mesh = trial_fes[0]->GetMesh();
+    auto* mesh = trial_fes[0]->GetMesh();
 
     auto mem_type = mfem::Device::GetMemoryType();
 
@@ -88,7 +87,6 @@ public:
     }
 
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
-
       P_trial_[i] = trial_space_[i]->GetProlongationMatrix();
 
       input_L_[i].SetSize(P_trial_[i]->Height(), mfem::Device::GetMemoryType());
@@ -108,19 +106,18 @@ public:
     }
 
     for (auto type : {Integral::Type::Domain, Integral::Type::Boundary}) {
-
       std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> counts{};
       if (type == Integral::Type::Domain) {
-        counts = geometry_counts(*mesh); 
+        counts = geometry_counts(*mesh);
       } else {
-        counts = boundary_geometry_counts(*mesh); 
+        counts = boundary_geometry_counts(*mesh);
       }
 
       mfem::Array<int> offsets(mfem::Geometry::NUM_GEOMETRIES + 1);
       offsets[0] = 0;
       for (int i = 0; i < mfem::Geometry::NUM_GEOMETRIES; i++) {
-        auto g = mfem::Geometry::Type(i);
-        offsets[g+1] = offsets[g] + counts[g];
+        auto g         = mfem::Geometry::Type(i);
+        offsets[g + 1] = offsets[g] + counts[g];
       }
 
       output_E_[type].Update(offsets, mem_type);
@@ -134,7 +131,7 @@ public:
     output_T_.SetSize(1, mfem::Device::GetMemoryType());
 
     // gradient objects depend on some member variables in
-    // Functional, so we initialize the gradient objects last 
+    // Functional, so we initialize the gradient objects last
     // to ensure that those member variables are initialized first
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
       grad_.emplace_back(*this, i);
@@ -144,9 +141,9 @@ public:
   /// @brief destructor: deallocate the mfem::Operators that we're responsible for
   ~Functional()
   {
-    //delete P_test_;
-    //delete G_test_;
-    //delete G_test_boundary_;
+    // delete P_test_;
+    // delete G_test_;
+    // delete G_test_boundary_;
   }
 
   /**
@@ -171,7 +168,8 @@ public:
     SLIC_ERROR_ROOT_IF(contains_unsupported_elements(domain), "Mesh contains unsupported element type");
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
-    integrals_.push_back(MakeDomainIntegral<signature, Q, dim>(domain, integrand, qdata, std::vector<uint32_t>{args ...}));
+    integrals_.push_back(
+        MakeDomainIntegral<signature, Q, dim>(domain, integrand, qdata, std::vector<uint32_t>{args...}));
   }
 
   /**
@@ -192,7 +190,7 @@ public:
     if (num_bdr_elements == 0) return;
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
-    integrals_.push_back(MakeBoundaryIntegral<signature, Q, dim>(domain, integrand, std::vector<uint32_t>{args ...}));
+    integrals_.push_back(MakeBoundaryIntegral<signature, Q, dim>(domain, integrand, std::vector<uint32_t>{args...}));
   }
 
   /**
@@ -254,7 +252,7 @@ public:
 
     // this is used to mark when gather operations have been performed,
     // to avoid doing them more than once per trial space
-    bool already_computed[Integral::num_types]{}; // default initializes to `false`
+    bool already_computed[Integral::num_types]{};  // default initializes to `false`
 
     for (auto& integral : integrals_) {
       auto type = integral.type;
@@ -299,8 +297,8 @@ public:
 
     // this is used to mark when operations have been performed,
     // to avoid doing them more than once
-    bool already_computed[Integral::num_types][num_trial_spaces]{}; // default initializes to `false`
- 
+    bool already_computed[Integral::num_types][num_trial_spaces]{};  // default initializes to `false`
+
     for (auto& integral : integrals_) {
       auto type = integral.type;
 
@@ -339,7 +337,6 @@ public:
       // e.g. mfem::Vector value = my_functional(arg0, arg1);
       return output_T_[0];
     }
-
   }
 
   /// @overload
@@ -393,18 +390,16 @@ private:
 
       gradient_L_ = 0.0;
 
-      std::map < mfem::Geometry::Type, ExecArray<double, 3, exec> > element_gradients[Integral::num_types];
+      std::map<mfem::Geometry::Type, ExecArray<double, 3, exec>> element_gradients[Integral::num_types];
 
       for (auto& integral : form_.integrals_) {
-
-        auto & K_elem = element_gradients[integral.type];
-        auto & trial_restrictions = form_.G_trial_[integral.type][which_argument].restrictions;
+        auto& K_elem             = element_gradients[integral.type];
+        auto& trial_restrictions = form_.G_trial_[integral.type][which_argument].restrictions;
 
         if (K_elem.empty()) {
-          for (auto & [geom, trial_restriction] : trial_restrictions) {
-            K_elem[geom] = ExecArray<double, 3, exec>(
-              trial_restriction.num_elements,
-              1, trial_restriction.nodes_per_elem * trial_restriction.components);
+          for (auto& [geom, trial_restriction] : trial_restrictions) {
+            K_elem[geom] = ExecArray<double, 3, exec>(trial_restriction.num_elements, 1,
+                                                      trial_restriction.nodes_per_elem * trial_restriction.components);
 
             detail::zero_out(K_elem[geom]);
           }
@@ -413,36 +408,29 @@ private:
         integral.ComputeElementGradients(K_elem, which_argument);
       }
 
-
       for (auto type : Integral::Types) {
-
-        auto & K_elem = element_gradients[type];
-        auto & trial_restrictions = form_.G_trial_[type][which_argument].restrictions;
+        auto& K_elem             = element_gradients[type];
+        auto& trial_restrictions = form_.G_trial_[type][which_argument].restrictions;
 
         if (!K_elem.empty()) {
-
           for (auto [geom, elem_matrices] : K_elem) {
-
-            std::vector<DoF> trial_vdofs(int(trial_restrictions[geom].nodes_per_elem * trial_restrictions[geom].components));
+            std::vector<DoF> trial_vdofs(
+                int(trial_restrictions[geom].nodes_per_elem * trial_restrictions[geom].components));
 
             for (axom::IndexType e = 0; e < elem_matrices.shape()[0]; e++) {
-
               trial_restrictions[geom].GetElementVDofs(e, trial_vdofs);
 
               // note: elem_matrices.shape()[1] is 1 for a QoI
               for (axom::IndexType i = 0; i < elem_matrices.shape()[1]; i++) {
-
                 for (axom::IndexType j = 0; j < elem_matrices.shape()[2]; j++) {
                   int sign = trial_vdofs[j].sign();
-                  int col = int(trial_vdofs[j].index());
+                  int col  = int(trial_vdofs[j].index());
                   gradient_L_[col] += sign * elem_matrices(e, i, j);
                 }
               }
             }
           }
-
         }
-
       }
 
       form_.P_trial_[which_argument]->MultTranspose(gradient_L_, *gradient_T);
@@ -464,7 +452,7 @@ private:
   };
 
   /// @brief Manages DOFs for the test space
-  const mfem::L2_FECollection test_fec_;
+  const mfem::L2_FECollection       test_fec_;
   const mfem::ParFiniteElementSpace test_space_;
 
   /// @brief Manages DOFs for the trial space
@@ -481,7 +469,7 @@ private:
 
   BlockElementRestriction G_trial_[Integral::num_types][num_trial_spaces];
 
-  mutable std::vector < mfem::BlockVector > input_E_[Integral::num_types];
+  mutable std::vector<mfem::BlockVector> input_E_[Integral::num_types];
 
   std::vector<Integral> integrals_;
 
@@ -499,7 +487,6 @@ private:
 
   /// @brief The objects representing the gradients w.r.t. each input argument of the Functional
   mutable std::vector<Gradient> grad_;
-
 };
 
 }  // namespace serac

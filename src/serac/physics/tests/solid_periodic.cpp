@@ -19,7 +19,8 @@
 
 namespace serac {
 
-void periodic_test(mfem::Element::Type element_type) {
+void periodic_test(mfem::Element::Type element_type)
+{
   MPI_Barrier(MPI_COMM_WORLD);
 
   int serial_refinement   = 0;
@@ -32,8 +33,7 @@ void periodic_test(mfem::Element::Type element_type) {
   // Construct the appropriate dimension mesh and give it to the data store
   int    nElem = 2;
   double lx = 3.0e-1, ly = 3.0e-1, lz = 0.25e-1;
-  auto   initial_mesh =
-      mfem::Mesh(mfem::Mesh::MakeCartesian3D(4 * nElem, 4 * nElem, nElem, element_type, lx, ly, lz));
+  auto   initial_mesh = mfem::Mesh(mfem::Mesh::MakeCartesian3D(4 * nElem, 4 * nElem, nElem, element_type, lx, ly, lz));
 
   // Create translation vectors defining the periodicity
   mfem::Vector              x_translation({lx, 0.0, 0.0});

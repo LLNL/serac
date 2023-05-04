@@ -40,7 +40,7 @@ TEST(FunctionalMultiphysics, NonlinearThermalTest3D)
 
   mfem::Vector U(fespace.TrueVSize());
   mfem::Vector dU_dt(fespace.TrueVSize());
-  int seed = 0;
+  int          seed = 0;
   U.Randomize(seed);
   dU_dt.Randomize(seed + 1);
 

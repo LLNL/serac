@@ -45,7 +45,7 @@ TEST(HeatTransfer, MoveShape)
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
-  auto nonlinear_options = heat_transfer::default_nonlinear_options;
+  auto nonlinear_options         = heat_transfer::default_nonlinear_options;
   nonlinear_options.absolute_tol = 1.0e-14;
   nonlinear_options.relative_tol = 1.0e-14;
 
@@ -53,7 +53,7 @@ TEST(HeatTransfer, MoveShape)
   //
   // Sam: we're setting a really small abs tolerance here to
   //      work around https://github.com/mfem/mfem/issues/3641
-  auto linear_options = heat_transfer::default_linear_options;
+  auto linear_options         = heat_transfer::default_linear_options;
   linear_options.absolute_tol = 1.0e-30;
 
   auto time_integration_options = TimesteppingOptions{TimestepMethod::QuasiStatic};
@@ -122,7 +122,8 @@ TEST(HeatTransfer, MoveShape)
     *mesh_nodes += user_defined_shape_displacement.gridFunction();
 
     // Construct a functional-based thermal solver including references to the shape displacement field.
-    HeatTransfer<p, dim> thermal_solver_no_shape(nonlinear_options, linear_options, time_integration_options, "thermal_pure");
+    HeatTransfer<p, dim> thermal_solver_no_shape(nonlinear_options, linear_options, time_integration_options,
+                                                 "thermal_pure");
 
     // Set the initial temperature and boundary condition
     thermal_solver_no_shape.setTemperatureBCs(ess_bdr, zero);

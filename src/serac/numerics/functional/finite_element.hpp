@@ -79,7 +79,7 @@ struct batched_jacobian<mfem::Geometry::TRIANGLE, q> {
 template <int q>
 struct batched_jacobian<mfem::Geometry::TETRAHEDRON, q> {
   /// the data layout for this geometry and quadrature rule
-  using type = tensor<double, 3, 3, (q*(q+1)*(q+2)) / 6>;
+  using type = tensor<double, 3, 3, (q * (q + 1) * (q + 2)) / 6>;
 };
 
 /**
@@ -117,7 +117,7 @@ struct batched_position<mfem::Geometry::TRIANGLE, q> {
 template <int q>
 struct batched_position<mfem::Geometry::TETRAHEDRON, q> {
   /// the data layout for this geometry and quadrature rule
-  using type = tensor<double, 3, (q*(q+1)*(q+2)) / 6>;
+  using type = tensor<double, 3, (q * (q + 1) * (q + 2)) / 6>;
 };
 
 /// @overload

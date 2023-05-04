@@ -330,12 +330,8 @@ SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, coords_type&& n_
 
 }  // namespace detail
 
-static constexpr mfem::Geometry::Type supported_geometries[] = {
-  mfem::Geometry::POINT, 
-  mfem::Geometry::SEGMENT, 
-  mfem::Geometry::SQUARE,
-  mfem::Geometry::CUBE
-};
+static constexpr mfem::Geometry::Type supported_geometries[] = {mfem::Geometry::POINT, mfem::Geometry::SEGMENT,
+                                                                mfem::Geometry::SQUARE, mfem::Geometry::CUBE};
 
 /**
  * @brief A container for a linear approximation

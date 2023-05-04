@@ -34,7 +34,6 @@ struct finite_element<g, QOI> {
   static void integrate(const tensor<double, Q>& qf_output, const TensorProductQuadratureRule<q>&,
                         dof_type* element_total, [[maybe_unused]] int step = 1)
   {
-
     if constexpr (geometry == mfem::Geometry::SEGMENT) {
       static_assert(Q == q);
       static constexpr auto wts = GaussLegendreWeights<q, mfem::Geometry::SEGMENT>();
@@ -87,7 +86,6 @@ struct finite_element<g, QOI> {
 
     constexpr int ntrial = size(source_type{});
 
-
     for (int j = 0; j < ntrial; j++) {
       if constexpr (geometry == mfem::Geometry::SEGMENT) {
         static_assert(Q == q);
@@ -125,8 +123,7 @@ struct finite_element<g, QOI> {
       if constexpr (geometry == mfem::Geometry::TRIANGLE || geometry == mfem::Geometry::TETRAHEDRON) {
         static constexpr auto wts = GaussLegendreWeights<q, geometry>();
         for (int k = 0; k < leading_dimension(wts); k++) {
-          element_total[j * step] +=
-              reinterpret_cast<const double*>(&get<0>(qf_output[k]))[j] * wts[k];
+          element_total[j * step] += reinterpret_cast<const double*>(&get<0>(qf_output[k]))[j] * wts[k];
         }
       }
     }
