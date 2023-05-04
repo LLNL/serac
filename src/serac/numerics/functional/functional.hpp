@@ -403,20 +403,22 @@ public:
       G_test_->MultTranspose(output_E_, output_L_);
     }
 
-    if (bdr_integrals_.size() > 0) {
-      G_trial_boundary_[which]->Mult(input_L_[which], input_E_boundary_[which]);
+    if (compatibleWithFaceRestriction(*trial_space_[which])) {
+      if (bdr_integrals_.size() > 0) {
+        G_trial_boundary_[which]->Mult(input_L_[which], input_E_boundary_[which]);
 
-      output_E_boundary_ = 0.0;
-      for (auto& integral : bdr_integrals_) {
-        integral.GradientMult(input_E_boundary_[which], output_E_boundary_, which);
+        output_E_boundary_ = 0.0;
+        for (auto& integral : bdr_integrals_) {
+          integral.GradientMult(input_E_boundary_[which], output_E_boundary_, which);
+        }
+
+        output_L_boundary_ = 0.0;
+
+        // scatter-add to compute residuals on the local processor
+        G_test_boundary_->MultTranspose(output_E_boundary_, output_L_boundary_);
+
+        output_L_ += output_L_boundary_;
       }
-
-      output_L_boundary_ = 0.0;
-
-      // scatter-add to compute residuals on the local processor
-      G_test_boundary_->MultTranspose(output_E_boundary_, output_L_boundary_);
-
-      output_L_ += output_L_boundary_;
     }
 
     // scatter-add to compute global residuals

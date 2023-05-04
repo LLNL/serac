@@ -21,7 +21,8 @@ serac_add_tests( SOURCES ${serial_solver_tests}
     NUM_MPI_TASKS 1)
 
 set(solver_tests
-    #liquid_crystal_elastomer_example.cpp
+    lce_Brighenti_tensile.cpp
+    lce_Bertoldi_lattice.cpp
     parameterized_thermomechanics_example.cpp
     parameterized_thermal.cpp
     solid.cpp
