@@ -8,6 +8,8 @@
  * @file liquid_crystal_elastomer.hpp
  *
  * @brief Brighenti's constitutive model for liquid crystal elastomers
+ * Cosma, M. P., & Brighenti, R. (2022). Controlled morphing of architected liquid crystal elastomer elements:
+ *  modeling and simulations. Mechanics Research Communications, 121, 103858.
  *
  * see https://doi.org/10.1016/j.ijsolstr.2021.02.023
  */
@@ -17,14 +19,14 @@
 #include "serac/numerics/functional/tuple.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/dual.hpp"
-#include "serac/physics/materials/solid_functional_material.hpp"
+#include "serac/physics/materials/solid_material.hpp"
 
 namespace serac {
 
 /**
- * @brief Brighenti liquid crystal elastomer model
+ * @brief Brighenti's liquid crystal elastomer model
  */
-struct LiquidCrystalElastomer {
+struct LiquidCrystElastomerBrighenti {
   /// this model is only intended to be used in 3D
   static constexpr int dim = 3;
 
@@ -46,8 +48,8 @@ struct LiquidCrystalElastomer {
    * @param transition_temperature Characteristic temperature of the order-disorder transition
    * @param N_b_squared Number of Kunh segments/chain, times square of Kuhn segment length
    */
-  LiquidCrystalElastomer(double rho, double shear_modulus, double bulk_modulus, double order_constant,
-                         double order_parameter, double transition_temperature, double N_b_squared)
+  LiquidCrystElastomerBrighenti(double rho, double shear_modulus, double bulk_modulus, double order_constant,
+                                double order_parameter, double transition_temperature, double N_b_squared)
       : density(rho),
         shear_modulus_(shear_modulus),
         bulk_modulus_(bulk_modulus),
@@ -67,21 +69,25 @@ struct LiquidCrystalElastomer {
   /**
    * @brief Material response
    *
-   * @tparam DisplacementType number-like type for the displacement vector
    * @tparam DispGradType number-like type for the displacement gradient tensor
-   * @tparam AngleType number-like type for the orientation angle gamma
+   * @tparam OrderParamType number-like type for the order parameter
+   * @tparam GammaAngleType number-like type for the orientation angle gamma
    *
    * @param[in,out] state A state variable object for this material. The value is updated in place.
    * @param[in] displacement_grad displacement gradient with respect to the reference configuration
-   * @param[in] temperature the temperature
-   * @param[in] gamma the polar angle used to define the liquid crystal orientation vector
+   * @param[in] temperature_tuple the temperature
+   * @param[in] gamma_tuple the first polar angle used to define the liquid crystal orientation vector
    * @return The calculated material response (Cauchy stress) for the material
    */
-  template <typename DispGradType, typename TemperatureType, typename AngleType>
+  template <typename DispGradType, typename OrderParamType, typename GammaAngleType>
   SERAC_HOST_DEVICE auto operator()(State& state, const tensor<DispGradType, dim, dim>& displacement_grad,
-                                    TemperatureType temperature, AngleType gamma) const
+                                    OrderParamType temperature_tuple, GammaAngleType gamma_tuple) const
   {
     using std::cos, std::sin;
+
+    // get the values from the packed value/gradient tuples
+    auto temperature = get<0>(temperature_tuple);
+    auto gamma       = get<0>(gamma_tuple);
 
     auto   I  = Identity<dim>();
     double q0 = initial_order_parameter_;
@@ -108,11 +114,9 @@ struct LiquidCrystalElastomer {
     // Cauchy stress equation because they assume J = 1 strictly
     // (the incompressible limit). It needs to be retained for this
     // compressible model.
-    auto         stress = (3 * shear_modulus_ / N_b_squared_) * (mu - mu0);
     const double lambda = bulk_modulus_ - (2.0 / 3.0) * shear_modulus_;
     using std::log;
-    stress += lambda * log(J) * I;
-    stress /= det(J);
+    auto stress = ((3 * shear_modulus_ / N_b_squared_) * (mu - mu0) + lambda * log(J) * I) / J;
 
     // update state variables
     state.deformation_gradient = get_value(F);
@@ -124,6 +128,20 @@ struct LiquidCrystalElastomer {
 
   /// -------------------------------------------------------
 
+  /**
+   * @brief Compute the distribution tensor using Brighenti's model
+   *
+   * @tparam S Type of the deformation gradient
+   * @tparam T Type of angle of the liquid crystals
+   * @tparam U Type of the unit length normal of liquid crystal alignment (first-order tensor)
+   *
+   * @param state State variables for this material
+   * @param F_hat Dot product of the current and previous deformation gradients
+   * @param theta In-plane angle of the liquid crystals in the elastomer matrix
+   * @param normal Unit length normal of angle alignment
+   *
+   * @return distribution tensor
+   */
   template <typename S, typename T, typename U>
   auto calculateDistributionTensor(const State& state, const tensor<S, dim, dim>& F_hat, const T theta,
                                    const tensor<U, dim>& normal) const
@@ -177,6 +195,159 @@ struct LiquidCrystalElastomer {
 
   // BT: I think this can be removed - it looks like it cancels out every place it appears.
   double N_b_squared_;  ///< Kuhn segment parameters.
+};
+
+/// -----------------------------------------------------------------------------
+/// -----------------------------------------------------------------------------
+/// -----------------------------------------------------------------------------
+
+/**
+ * @brief Bertoldi's liquid crystal elastomer model
+ * Paper: Li, S., Librandi, G., Yao, Y., Richard, A. J., Schneider‐Yamamura, A., Aizenberg, J., & Bertoldi, K. (2021).
+ * Controlling Liquid Crystal Orientations for Programmable Anisotropic Transformations in Cellular Microstructures.
+ * Advanced Materials, 33(42), 2105024.
+ */
+struct LiquidCrystalElastomerBertoldi {
+  using State = Empty;  ///< this material has no internal variables
+
+  /// this model is only intended to be used in 3D
+  static constexpr int dim = 3;
+
+  /**
+   * @brief Constructor
+   *
+   * @param rho mass density of the material (in reference configuration)
+   * @param young_modulus Bulk modulus of the material
+   * @param poisson_ratio Poisson ratio of the material
+   * @param initial_order_parameter Initial value of the order parameter
+   * @param beta_parameter Parameter for degree of coupling between elastic and nematic energies
+   */
+  LiquidCrystalElastomerBertoldi(double rho, double young_modulus, double poisson_ratio, double initial_order_parameter,
+                                 double beta_parameter)
+      : density(rho),
+        young_modulus_(young_modulus),
+        poisson_ratio_(poisson_ratio),
+        initial_order_parameter_(initial_order_parameter),
+        beta_parameter_(beta_parameter)
+  {
+    SLIC_ERROR_ROOT_IF(density <= 0.0, "Density must be positive in the LCE material model.");
+    SLIC_ERROR_ROOT_IF(young_modulus_ <= 0.0, "Bulk modulus must be positive in the LCE material model.");
+    SLIC_ERROR_ROOT_IF(poisson_ratio_ <= 0.0, "Poisson ratio must be positive in the LCE material model.");
+    SLIC_ERROR_ROOT_IF(initial_order_parameter_ <= 0.0,
+                       "Initial order parameter must be positive in the LCE material model.");
+    SLIC_ERROR_ROOT_IF(beta_parameter_ <= 0.0, "The beta parameter must be positive in the LCE material model.");
+  }
+
+  /// -------------------------------------------------------
+
+  /**
+   * @brief Material response
+   *
+   * @tparam DispGradType number-like type for the displacement gradient tensor
+   * @tparam OrderParamType number-like type for the order parameter
+   * @tparam GammaAngleType number-like type for the orientation angle gamma
+   * @tparam EtaAngleType number-like type for the orientation angle eta
+   *
+   * @param[in] displacement_grad displacement gradient with respect to the reference configuration
+   * @param[in] inst_order_param_tuple the current order parameter
+   * @param[in] gamma_tuple the first polar angle used to define the liquid crystal orientation vector
+   * @param[in] eta_tuple the second polar angle used to define the liquid crystal orientation vector
+   * @return The calculated material response (Cauchy stress) for the material
+   */
+  template <typename DispGradType, typename OrderParamType, typename GammaAngleType, typename EtaAngleType>
+  SERAC_HOST_DEVICE auto operator()(State& /*state*/, const tensor<DispGradType, dim, dim>& displacement_grad,
+                                    OrderParamType inst_order_param_tuple, GammaAngleType gamma_tuple,
+                                    EtaAngleType eta_tuple) const
+  {
+    using std::cos, std::sin;
+
+    // Compute the normal
+    auto   gamma = get<0>(gamma_tuple);
+    auto   eta   = get<0>(eta_tuple);
+    tensor normal{{cos(gamma) * cos(eta), sin(gamma) * cos(eta), 0.0 * gamma + sin(eta)}};
+
+    // Get order parameters
+    auto   St = get<0>(inst_order_param_tuple);
+    double S0 = initial_order_parameter_;
+
+    const double lambda = poisson_ratio_ * young_modulus_ / (1.0 + poisson_ratio_) / (1.0 - 2.0 * poisson_ratio_);
+    const double mu     = young_modulus_ / 2.0 / (1.0 + poisson_ratio_);
+
+    // kinematics
+    auto I = Identity<dim>();
+    auto F = displacement_grad + I;
+    auto C = dot(transpose(F), F);
+    auto E = 0.5 * (C - I);
+    auto J = det(F);
+
+    // Compute the second Piola-Kirchhoff stress, i.e., \partial strain_energy / \partial E
+    auto S_stress_1 = lambda * tr(E) * I;
+    auto S_stress_2 = 2 * mu * E;
+    auto S_stress_3 = -0.5 * beta_parameter_ * (St - S0) * (3 * outer(normal, normal) - I);
+
+    // transform from second Piola-Lichhoff to Cauchy stress
+    auto stress = 1.0 / J * F * (S_stress_1 + S_stress_2 + S_stress_3) * transpose(F);
+
+    return stress;
+  }
+
+  /// -------------------------------------------------------
+
+  /**
+   * @brief Compute the strain energy
+   *
+   * @tparam DispGradType Type of the displacement gradient
+   * @tparam orderParamType Type of order parameter (level of alignment)
+   * @tparam GammaAngleType Type of the in-plane angle
+   * @tparam EtaAngleType Type of the out-of-plane angle
+   *
+   * @param[in] displacement_grad Displacement gradient
+   * @param[in] inst_order_param_tuple Instantaneous order parameter
+   * @param[in] gamma_tuple In-plane angle of alignment of liquid crystal in elastomer matrix
+   * @param[in] eta_tuple Out-of-plane angle of alignment of liquid crystal in elastomer matrix
+   *
+   * @return strain energy
+   */
+  template <typename DispGradType, typename orderParamType, typename GammaAngleType, typename EtaAngleType>
+  auto calculateStrainEnergy(const State& /*state*/, const tensor<DispGradType, dim, dim>& displacement_grad,
+                             orderParamType inst_order_param_tuple, GammaAngleType gamma_tuple,
+                             EtaAngleType eta_tuple) const
+  {
+    using std::cos, std::sin;
+
+    // Compute the normal
+    auto   gamma = get<0>(gamma_tuple);
+    auto   eta   = get<0>(eta_tuple);
+    tensor normal{{cos(gamma) * cos(eta), sin(gamma) * cos(eta), 0.0 * gamma + sin(eta)}};
+
+    // Get order parameters
+    auto   St = get<0>(inst_order_param_tuple);
+    double S0 = initial_order_parameter_;
+
+    const double lambda = poisson_ratio_ * young_modulus_ / (1.0 + poisson_ratio_) / (1.0 - 2.0 * poisson_ratio_);
+    const double mu     = young_modulus_ / 2.0 / (1.0 + poisson_ratio_);
+
+    // kinematics
+    auto I = Identity<dim>();
+    auto F = displacement_grad + I;
+    auto C = dot(transpose(F), F);
+    auto E = 0.5 * (C - I);
+
+    // Compute the second Piola-Kirchhoff stress, i.e., \partial strain_energy / \partial E
+    auto strain_energy_1 = 0.5 * lambda * tr(E) * tr(E);
+    auto strain_energy_2 = mu * inner(E, E);
+    auto strain_energy_3 = -0.5 * beta_parameter_ * (St - S0) * inner(3 * outer(normal, normal) - I, E);
+
+    auto strain_energy = strain_energy_1 + strain_energy_2 + strain_energy_3;
+
+    return strain_energy;
+  }
+
+  double density;                   ///<  mass density
+  double young_modulus_;            ///< Young's modulus in stress-free configuration
+  double poisson_ratio_;            ///< poisson's ratio
+  double initial_order_parameter_;  ///< initial value of order parameter
+  double beta_parameter_;           ///< Degree of coupling between elastic and nematic energies
 };
 
 }  // namespace serac
