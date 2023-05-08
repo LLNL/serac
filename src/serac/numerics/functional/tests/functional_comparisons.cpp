@@ -185,6 +185,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   auto*                     elasticity = new mfem::ElasticityIntegrator(lambda_coef, mu_coef);
   elasticity->SetIntRule(&ir);
   A.AddDomainIntegrator(elasticity);
+  A.Assemble(0);
   A.Finalize();
 
   std::unique_ptr<mfem::HypreParMatrix> J_mfem(A.ParallelAssemble());
