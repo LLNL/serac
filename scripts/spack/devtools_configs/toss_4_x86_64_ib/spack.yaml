@@ -201,10 +201,11 @@ spack:
       externals:
       - spec: cmake@3.19.2
         prefix: /usr/tce/packages/cmake/cmake-3.19.2
-    # TODO: make installed clang 14.0.6 work
-    llvm:
-      version: [10.0.0]
-      #buildable: false
-      externals:
-      - spec: llvm@10.0.0+clang
-        #prefix: /usr/tce/packages/clang/clang-10.0.0
+
+    # FIXME: make installed clang 14.0.6 work
+    # llvm:
+    #   version: [14.0.6]
+    #   buildable: false
+    #   externals:
+    #   - spec: llvm@14.0.6+clang
+    #     prefix: /usr/tce/packages/clang/clang-14.0.6
