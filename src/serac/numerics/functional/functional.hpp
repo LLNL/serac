@@ -99,16 +99,33 @@ struct Index {
   constexpr operator int() { return ind; }
 };
 
-bool contains_unsupported_elements(const mfem::Mesh& mesh)
+void check_for_missing_nodal_gridfunc(const mfem::Mesh& mesh)
+{
+  if (mesh.GetNodes() == nullptr) {
+    SLIC_ERROR_ROOT(
+      R"errmsg(
+      the provided mesh does not have a nodal gridfunction. 
+      If you created an mfem::Mesh manually, make sure that the 
+      following member functions are invoked before use
+
+      > mfem::Mesh::EnsureNodes();
+      > mfem::Mesh::ExchangeFaceNbrData();
+
+      or else the mfem::Mesh won't be fully initialized
+      )errmsg";
+    );
+  }
+}
+
+void check_for_unsupported_elements(const mfem::Mesh& mesh)
 {
   int num_elements = mesh.GetNE();
   for (int e = 0; e < num_elements; e++) {
     auto type = mesh.GetElementType(e);
     if (type == mfem::Element::POINT || type == mfem::Element::WEDGE || type == mfem::Element::PYRAMID) {
-      return true;
+      SLIC_ERROR_ROOT("Mesh contains unsupported element type");
     }
   }
-  return false;
 }
 
 /**
@@ -300,7 +317,8 @@ public:
 
     SLIC_ERROR_ROOT_IF(dim != domain.Dimension(), "invalid mesh dimension for domain integral");
 
-    SLIC_ERROR_ROOT_IF(contains_unsupported_elements(domain), "Mesh contains unsupported element type");
+    check_for_unsupported_elements(domain);
+    check_for_missing_nodal_gridfunc(domain);
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
     integrals_.push_back(
@@ -321,6 +339,8 @@ public:
   {
     auto num_bdr_elements = domain.GetNBE();
     if (num_bdr_elements == 0) return;
+
+    check_for_missing_nodal_gridfunc(domain);
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
     integrals_.push_back(MakeBoundaryIntegral<signature, Q, dim>(domain, integrand, std::vector<uint32_t>{args...}));
