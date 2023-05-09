@@ -33,15 +33,14 @@ spack:
       environment: {}
       extra_rpaths: []
       flags: {}
-      modules:
-      - gcc/10.3.1
+      modules: []
       operating_system: rhel8
       paths:
-        cc: /usr/tce/packages/gcc/gcc-10.3.1/bin/gcc
-        cxx: /usr/tce/packages/gcc/gcc-10.3.1/bin/g++
-        f77: /usr/tce/packages/gcc/gcc-10.3.1/bin/gfortran
-        fc: /usr/tce/packages/gcc/gcc-10.3.1/bin/gfortran
-      spec: gcc@10.3.1
+        cc: /usr/bin/gcc
+        cxx: /usr/bin/g++
+        f77: /usr/bin/gfortran
+        fc: /usr/bin/gfortran
+      spec: gcc@8.5.0
       target: x86_64
 
   packages:
