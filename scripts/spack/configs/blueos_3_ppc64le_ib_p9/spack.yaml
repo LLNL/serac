@@ -117,10 +117,10 @@ spack:
       externals:
       - spec: elfutils@0.176
         prefix: /usr
-    epoxy:
+    libepoxy:
       buildable: false
       externals:
-      - spec: epoxy@0.0.0
+      - spec: libepoxy@1.5.2
         prefix: /usr
     findutils:
       buildable: false
