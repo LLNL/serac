@@ -517,24 +517,25 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = 
     return res
 
 
-def build_devtools(builds_dir, timestamp):
+def build_devtools(builds_dir, timestamp, short_path):
     sys_type = get_system_type()
     project_file = "scripts/spack/devtools.json"
 
     if "toss_3" in sys_type:
         compiler_spec = "%gcc@8.1.0"
     elif "toss_4" in sys_type:
-        compiler_spec = "%gcc@10.3.1"
+        compiler_spec = "%gcc@8.5.0"
     elif "blueos" in sys_type:
         compiler_spec = "%gcc@8.3.1"
 
     print("[Building devtools using compiler spec: {0}]".format(compiler_spec))
 
-    # unique install location
-    prefix = pjoin(builds_dir, sys_type)
-    if not os.path.exists(prefix):
-        os.mkdir(prefix)
-    prefix = pjoin(prefix, timestamp)
+    if short_path:
+        prefix = builds_dir
+    else:
+        # unique install location
+        prefix = pjoin(builds_dir, sys_type, timestamp)
+
     if not os.path.exists(prefix):
         os.makedirs(prefix)
 
