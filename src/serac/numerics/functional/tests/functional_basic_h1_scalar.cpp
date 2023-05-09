@@ -36,13 +36,10 @@ void thermal_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
   mfem::ParFiniteElementSpace trial_fespace(mesh.get(), &trial_fec);
 
   mfem::Vector U(trial_fespace.TrueVSize());
-  // U.Randomize();
 
   mfem::ParGridFunction     U_gf(&trial_fespace);
   mfem::FunctionCoefficient x_squared([](mfem::Vector x) { return x[0] * x[0]; });
   U_gf.ProjectCoefficient(x_squared);
-  // mfem::FunctionCoefficient x_coord([](mfem::Vector x) { return x[0]; });
-  // U_gf.ProjectCoefficient(x_coord);
   U_gf.GetTrueDofs(U);
 
   // Define the types for the test and trial spaces using the function arguments
@@ -100,13 +97,8 @@ TEST(basic, thermal_tets) { thermal_test<1, 1>("/data/meshes/patch3D_tets.mesh")
 TEST(basic, thermal_hexes) { thermal_test<1, 1>("/data/meshes/patch3D_hexes.mesh"); }
 TEST(basic, thermal_tets_and_hexes) { thermal_test<1, 1>("/data/meshes/patch3D_tets_and_hexes.mesh"); }
 
-// TEST(basic, thermal_test_3D) { thermal_test<1, 1, 3>(); }
-//
-// TEST(mixed, thermal_test_2D_0) { thermal_test<1, 2, 2>(); }
-// TEST(mixed, thermal_test_2D_1) { thermal_test<2, 1, 2>(); }
-//
-// TEST(mixed, thermal_test_3D_0) { thermal_test<1, 2, 3>(); }
-// TEST(mixed, thermal_test_3D_1) { thermal_test<2, 1, 3>(); }
+TEST(mixed, thermal_tris_and_quads) { thermal_test<2, 1>("/data/meshes/patch2D_tris_and_quads.mesh"); }
+TEST(mixed, thermal_tets_and_hexes) { thermal_test<2, 1>("/data/meshes/patch3D_tets_and_hexes.mesh"); }
 
 int main(int argc, char* argv[])
 {

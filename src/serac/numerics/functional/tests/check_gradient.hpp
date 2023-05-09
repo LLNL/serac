@@ -21,16 +21,18 @@ void check_gradient(serac::Functional<T>& f, mfem::Vector& U, double epsilon = 1
   dU.Randomize(seed);
 
   auto [value, dfdU]   = f(serac::differentiate_wrt(U));
-  mfem::Vector df_jvp1 = dfdU(dU);
-
   std::unique_ptr<mfem::HypreParMatrix> dfdU_matrix = assemble(dfdU);
-  mfem::Vector                          df_jvp2     = (*dfdU_matrix) * dU;
+
+  // jacobian vector products 
+  mfem::Vector df_jvp1 = dfdU(dU);            // matrix-free
+  mfem::Vector df_jvp2 = (*dfdU_matrix) * dU; // sparse matvec
 
   if (df_jvp1.Norml2() != 0) {
     double relative_error = df_jvp1.DistanceTo(df_jvp2.GetData()) / df_jvp1.Norml2();
     EXPECT_NEAR(0., relative_error, 5.e-6);
   }
 
+  // {f(x - 2 * h), f(x - h), f(x), f(x + h), f(x + 2 * h)}
   mfem::Vector f_values[5];
   for (int i = 0; i < 5; i++) {
     auto U_plus_small = U;
@@ -84,14 +86,18 @@ void check_gradient(serac::Functional<T>& f, mfem::Vector& U, mfem::Vector& dU_d
 
   {
     auto [value, dfdU]   = f(serac::differentiate_wrt(U), dU_dt);
-    mfem::Vector df_jvp1 = dfdU(dU);
-
     std::unique_ptr<mfem::HypreParMatrix> dfdU_matrix = assemble(dfdU);
 
-    mfem::Vector df_jvp2        = (*dfdU_matrix) * dU;
-    double       relative_error = df_jvp1.DistanceTo(df_jvp2.GetData()) / df_jvp1.Norml2();
-    EXPECT_NEAR(0., relative_error, 5.e-14);
+    // jacobian vector products 
+    mfem::Vector df_jvp1 = dfdU(dU);            // matrix-free
+    mfem::Vector df_jvp2 = (*dfdU_matrix) * dU; // sparse matvec
 
+    if (df_jvp1.Norml2() != 0) {
+      double relative_error = df_jvp1.DistanceTo(df_jvp2.GetData()) / df_jvp1.Norml2();
+      EXPECT_NEAR(0., relative_error, 5.e-6);
+    }
+
+    // {f(x - 2 * h), f(x - h), f(x), f(x + h), f(x + 2 * h)}
     mfem::Vector f_values[5];
     for (int i = 0; i < 5; i++) {
       auto U_plus_small = U;
@@ -134,14 +140,16 @@ void check_gradient(serac::Functional<T>& f, mfem::Vector& U, mfem::Vector& dU_d
 
   {
     auto [value, df_ddU_dt] = f(U, serac::differentiate_wrt(dU_dt));
-    mfem::Vector df_jvp1    = df_ddU_dt(ddU_dt);
-
     std::unique_ptr<mfem::HypreParMatrix> df_ddU_dt_matrix = assemble(df_ddU_dt);
 
-    mfem::Vector df_jvp2        = (*df_ddU_dt_matrix) * ddU_dt;
+    // jacobian vector products 
+    mfem::Vector df_jvp1 = df_ddU_dt(ddU_dt);            // matrix-free
+    mfem::Vector df_jvp2 = (*df_ddU_dt_matrix) * ddU_dt; // sparse matvec
+
     double       relative_error = df_jvp1.DistanceTo(df_jvp2.GetData()) / df_jvp1.Norml2();
     EXPECT_NEAR(0., relative_error, 5.e-14);
 
+    // {f(x - 2 * h), f(x - h), f(x), f(x + h), f(x + 2 * h)}
     mfem::Vector f_values[5];
     for (int i = 0; i < 5; i++) {
       auto dU_dt_plus_small = dU_dt;
