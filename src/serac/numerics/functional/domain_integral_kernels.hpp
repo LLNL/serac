@@ -8,7 +8,6 @@
 #include "serac/infrastructure/accelerator.hpp"
 #include "serac/numerics/quadrature_data.hpp"
 #include "serac/numerics/functional/integral_utilities.hpp"
-#include "serac/numerics/functional/evector_view.hpp"
 #include "serac/numerics/functional/function_signature.hpp"
 
 #include <array>

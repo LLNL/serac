@@ -9,7 +9,6 @@
 
 #include "serac/numerics/quadrature_data.hpp"
 #include "serac/numerics/functional/integral_utilities.hpp"
-#include "serac/numerics/functional/evector_view.hpp"
 
 namespace serac {
 

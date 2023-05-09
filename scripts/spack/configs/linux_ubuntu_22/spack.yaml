@@ -106,7 +106,7 @@ spack:
     cuda:
       buildable: false
       externals:
-      - spec: cuda@11.8.0
+      - spec: cuda@12.1.0
         prefix: /usr/local/cuda
     m4:
       buildable: false

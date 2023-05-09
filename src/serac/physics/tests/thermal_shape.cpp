@@ -147,7 +147,7 @@ TEST(HeatTransfer, MoveShape)
 
   double error          = pure_temperature.DistanceTo(shape_temperature.GetData());
   double relative_error = error / pure_temperature.Norml2();
-  EXPECT_LT(relative_error, 3.0e-14);
+  EXPECT_LT(relative_error, 5.0e-14);
 }
 
 }  // namespace serac

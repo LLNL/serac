@@ -16,7 +16,6 @@ set(functional_headers
     geometric_factors.hpp
     domain_integral_kernels.hpp
     dual.hpp
-    evector_view.hpp
     finite_element.hpp
     functional.hpp
     functional_qoi.inl
