@@ -14,6 +14,12 @@
 
 #include "serac/numerics/functional/dof_numbering.hpp"
 
+/**
+ * @brief write an array of values out to file, in a space-separated format
+ * @tparam T the type of each value in the array 
+ * @param v the values to write to file
+ * @param filename the name of the output file
+ */
 template <typename T>
 void write_to_file(std::vector<T> v, std::string filename)
 {
@@ -24,6 +30,11 @@ void write_to_file(std::vector<T> v, std::string filename)
   outfile.close();
 }
 
+/**
+ * @brief write an array of doubles out to file, in a space-separated format
+ * @param v the values to write to file
+ * @param filename the name of the output file
+ */
 void write_to_file(mfem::Vector v, std::string filename)
 {
   std::ofstream outfile(filename);
@@ -33,6 +44,11 @@ void write_to_file(mfem::Vector v, std::string filename)
   outfile.close();
 }
 
+/**
+ * @brief write a sparse matrix out to file
+ * @param A the matrix to write to file
+ * @param filename the name of the output file
+ */
 void write_to_file(mfem::SparseMatrix A, std::string filename)
 {
   std::ofstream outfile(filename);
@@ -52,6 +68,12 @@ std::ostream& operator<<(std::ostream& out, serac::SignedIndex i)
   return out;
 }
 
+/**
+ * @brief write a 2D array of values out to file, in a space-separated format
+ * @tparam T the type of each value in the array 
+ * @param v the values to write to file
+ * @param filename the name of the output file
+ */
 template <typename T>
 void write_to_file(axom::Array<T, 2, axom::MemorySpace::Host> arr, std::string filename)
 {
@@ -69,6 +91,12 @@ void write_to_file(axom::Array<T, 2, axom::MemorySpace::Host> arr, std::string f
   outfile.close();
 }
 
+/**
+ * @brief write a 3D array of values out to file, in a mathematica-compatible format
+ * @tparam T the type of each value in the array 
+ * @param v the values to write to file
+ * @param filename the name of the output file
+ */
 template <typename T>
 void write_to_file(axom::Array<T, 3, axom::MemorySpace::Host> arr, std::string filename)
 {
