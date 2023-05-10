@@ -105,14 +105,19 @@ TEST_P(EquationSolverSuite, All)
   }
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    AllEquationSolverTests, EquationSolverSuite,
-    testing::Combine(testing::Values(NonlinearSolver::Newton, NonlinearSolver::LBFGS, NonlinearSolver::KINFullStep,
-                                     NonlinearSolver::KINBacktrackingLineSearch, NonlinearSolver::KINPicard),
-                     testing::Values(LinearSolver::CG, LinearSolver::GMRES, LinearSolver::SuperLU),
-                     testing::Values(Preconditioner::HypreJacobi, Preconditioner::HypreL1Jacobi,
-                                     Preconditioner::HypreGaussSeidel, Preconditioner::HypreAMG,
-                                     Preconditioner::HypreILU)));
+INSTANTIATE_TEST_SUITE_P(AllEquationSolverTests, EquationSolverSuite,
+                         testing::Combine(testing::Values(NonlinearSolver::Newton, NonlinearSolver::LBFGS
+#ifdef MFEM_USE_SUNDIALS
+                                                          ,
+                                                          NonlinearSolver::KINFullStep,
+                                                          NonlinearSolver::KINBacktrackingLineSearch,
+                                                          NonlinearSolver::KINPicard
+#endif
+                                                          ),
+                                          testing::Values(LinearSolver::CG, LinearSolver::GMRES, LinearSolver::SuperLU),
+                                          testing::Values(Preconditioner::HypreJacobi, Preconditioner::HypreL1Jacobi,
+                                                          Preconditioner::HypreGaussSeidel, Preconditioner::HypreAMG,
+                                                          Preconditioner::HypreILU)));
 
 int main(int argc, char* argv[])
 {
