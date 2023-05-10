@@ -62,9 +62,36 @@ void SuperLUSolver::Mult(const mfem::Vector& x, mfem::Vector& y) const
 
 void SuperLUSolver::SetOperator(const mfem::Operator& op)
 {
-  const mfem::HypreParMatrix* matrix = dynamic_cast<const mfem::HypreParMatrix*>(&op);
+  const mfem::HypreParMatrix* matrix;
 
-  SLIC_ERROR_ROOT_IF(!matrix, "Matrix must be an assembled HypreParMatrix for use with SuperLU");
+  // Check if this is a block operator
+  auto* block_operator = dynamic_cast<const mfem::BlockOperator*>(&op);
+
+  // If it is, make a monolithic system from the underlying blocks
+  if (block_operator) {
+    int row_blocks = block_operator->NumRowBlocks();
+    int col_blocks = block_operator->NumColBlocks();
+
+    SLIC_ERROR_ROOT_IF(row_blocks != col_blocks, "Attempted to use SuperLU on a non-square block system.");
+
+    mfem::Array2D<mfem::HypreParMatrix*> hypre_blocks(row_blocks, col_blocks);
+
+    for (int i = 0; i < row_blocks; ++i) {
+      for (int j = 0; j < col_blocks; ++j) {
+        auto* hypre_block = const_cast<mfem::HypreParMatrix*>(
+            dynamic_cast<const mfem::HypreParMatrix*>(&block_operator->GetBlock(i, j)));
+        SLIC_ERROR_ROOT_IF(!hypre_block,
+                           "Trying to use SuperLU on a block operator that does not contain HypreParMatrix blocks.");
+
+        hypre_blocks(i, j) = hypre_block;
+      }
+    }
+    matrix = mfem::HypreParMatrixFromBlocks(hypre_blocks);
+  } else {
+    matrix = dynamic_cast<const mfem::HypreParMatrix*>(&op);
+
+    SLIC_ERROR_ROOT_IF(!matrix, "Matrix must be an assembled HypreParMatrix for use with SuperLU");
+  }
   superlu_mat_ = std::make_unique<mfem::SuperLURowLocMatrix>(*matrix);
 
   superlu_solver_.SetOperator(*superlu_mat_);
