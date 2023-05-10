@@ -91,11 +91,6 @@ spack:
       externals:
       - spec: diffutils@3.3
         prefix: /usr
-    epoxy:
-      buildable: false
-      externals:
-      - spec: epoxy@1.5.2
-        prefix: /usr
     findutils:
       buildable: false
       externals:
@@ -120,6 +115,11 @@ spack:
       buildable: false
       externals:
       - spec: graphviz@2.30.1
+        prefix: /usr
+    libepoxy:
+      buildable: false
+      externals:
+      - spec: libepoxy@1.5.2
         prefix: /usr
     libtool:
       buildable: false
