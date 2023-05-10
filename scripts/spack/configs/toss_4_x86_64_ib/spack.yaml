@@ -105,6 +105,11 @@ spack:
       externals:
       - spec: binutils@2.30
         prefix: /usr
+    bison:
+      buildable: false
+      externals:
+      - spec: bison@3.0.4
+        prefix: /usr
     bzip2:
       buildable: false
       externals:
@@ -125,10 +130,20 @@ spack:
       externals:
       - spec: elfutils@0.187
         prefix: /usr
-    epoxy:
+    expat:
       buildable: false
       externals:
-      - spec: epoxy@1.5.8
+      - spec: expat@2.2.5
+        prefix: /usr
+    libepoxy:
+      buildable: false
+      externals:
+      - spec: libepoxy@1.5.8
+        prefix: /usr
+    flex:
+      buildable: false
+      externals:
+      - spec: flex@2.6.1
         prefix: /usr
     findutils:
       buildable: false
@@ -155,6 +170,11 @@ spack:
       externals:
       - spec: groff@1.22.2
         prefix: /usr
+    hwloc:
+      buildable: false
+      externals:
+      - spec: hwloc@2.9.0
+        prefix: /usr
     libtool:
       buildable: false
       externals:
@@ -170,10 +190,25 @@ spack:
       externals:
       - spec: libx11@1.6.8
         prefix: /usr
+    lua:
+      buildable: false
+      externals:
+      - spec: lua@5.3.4
+        prefix: /usr
     m4:
       buildable: false
       externals:
       - spec: m4@1.4.18
+        prefix: /usr
+    ninja:
+      buildable: false
+      externals:
+      - spec: ninja@1.11.0
+        prefix: /usr/tce/packages/ninja/ninja-1.11.0
+    openssl:
+      buildable: false
+      externals:
+      - spec: openssl@1.1.1k
         prefix: /usr
     perl:
       buildable: false
@@ -190,6 +225,11 @@ spack:
       externals:
       - spec: readline@7.0
         prefix: /usr
+    swig:
+      buildable: false
+      externals:
+      - spec: swig@3.0.12
+        prefix: /usr
     tar:
       buildable: false
       externals:
@@ -203,7 +243,7 @@ spack:
     zlib:
       buildable: false
       externals:
-      - spec: zlib@1.2.7
+      - spec: zlib@1.2.11
         prefix: /usr
 
   # Lock in versions of Devtools
