@@ -62,8 +62,6 @@ void SuperLUSolver::Mult(const mfem::Vector& x, mfem::Vector& y) const
 
 void SuperLUSolver::SetOperator(const mfem::Operator& op)
 {
-  const mfem::HypreParMatrix* matrix;
-
   // Check if this is a block operator
   auto* block_operator = dynamic_cast<const mfem::BlockOperator*>(&op);
 
@@ -86,13 +84,19 @@ void SuperLUSolver::SetOperator(const mfem::Operator& op)
         hypre_blocks(i, j) = hypre_block;
       }
     }
-    matrix = mfem::HypreParMatrixFromBlocks(hypre_blocks);
+
+    // Note that MFEM passes ownership of this matrix to the caller
+    monolithic_mat_ = std::unique_ptr<mfem::HypreParMatrix>(mfem::HypreParMatrixFromBlocks(hypre_blocks));
+
+    superlu_mat_ = std::make_unique<mfem::SuperLURowLocMatrix>(*monolithic_mat_);
   } else {
-    matrix = dynamic_cast<const mfem::HypreParMatrix*>(&op);
+    // If this is not a block system, check that the input operator is a HypreParMatrix as expected
+    auto* matrix = dynamic_cast<const mfem::HypreParMatrix*>(&op);
 
     SLIC_ERROR_ROOT_IF(!matrix, "Matrix must be an assembled HypreParMatrix for use with SuperLU");
+
+    superlu_mat_ = std::make_unique<mfem::SuperLURowLocMatrix>(*matrix);
   }
-  superlu_mat_ = std::make_unique<mfem::SuperLURowLocMatrix>(*matrix);
 
   superlu_solver_.SetOperator(*superlu_mat_);
 }

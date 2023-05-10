@@ -185,6 +185,12 @@ private:
   mutable std::unique_ptr<mfem::SuperLURowLocMatrix> superlu_mat_;
 
   /**
+   * @brief A global matrix of the monolithic system of equations
+   * @note This is only used for block systems of equations
+   */
+  mutable std::unique_ptr<mfem::HypreParMatrix> monolithic_mat_;
+
+  /**
    * @brief The underlying MFEM-based SuperLU solver. It requires a special
    * SuperLU matrix type which we store in this object. This enables compatibility
    * with HypreParMatrix when used as an input.
