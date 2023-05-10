@@ -22,10 +22,8 @@ using namespace serac;
 
 #define PERIODIC_MESH
 
-int main(int argc, char* argv[])
+TEST(LiquidCrystalElastomer, Bertoldi)
 {
-  serac::initialize(argc, argv);
-
   constexpr int p                   = 1;
   constexpr int dim                 = 3;
   int           serial_refinement   = 0;
@@ -176,5 +174,17 @@ int main(int argc, char* argv[])
 #else
   EXPECT_NEAR(gblDispYmin, -2.92599e-05, 1.0e-6);
 #endif
-  serac::exitGracefully();
+}
+
+int main(int argc, char* argv[])
+{
+  ::testing::InitGoogleTest(&argc, argv);
+
+  serac::initialize(argc, argv);
+
+  int result = RUN_ALL_TESTS();
+
+  serac::exitGracefully(result);
+
+  return result;
 }
