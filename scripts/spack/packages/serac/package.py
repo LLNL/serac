@@ -88,7 +88,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on('py-ats', when="+devtools")
 
     # MFEM is deprecating the monitoring support with sundials v6.0 and later
-    depends_on("sundials@6.4.1+hypre~monitoring~examples~examples-install",
+    depends_on("sundials+hypre~monitoring~examples~examples-install",
                when="+sundials")
     depends_on("sundials+asan", when="+sundials+asan")
 
@@ -210,7 +210,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     #
     conflicts('cuda_arch=none', when='+cuda',
               msg='CUDA architecture is required')
-    depends_on("amgx@2.1.x", when="+cuda")
+    depends_on("amgx", when="+cuda")
     cuda_deps = ["axom", "mfem", "raja", "sundials", "umpire"]
     for dep in cuda_deps:
         depends_on("{0}+cuda".format(dep), when="+cuda")
