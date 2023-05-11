@@ -63,6 +63,11 @@ class Axom(CachedCMakePackage, CudaPackage, ROCmPackage):
 
     #patch("scr_examples_gtest.patch", when="@0.6.0:0.6.1")
 
+    #SERAC EDIT START
+    # Fixes avx512 header issue on OSX gcc@12 CUDA
+    patch("bitutilities_gpucc.patch")
+    #SERAC EDIT END
+
     root_cmakelists_dir = "src"
 
     # -----------------------------------------------------------------------

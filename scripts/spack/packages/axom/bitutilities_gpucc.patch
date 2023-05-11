@@ -1,0 +1,13 @@
+diff --git a/src/axom/core/utilities/BitUtilities.hpp b/src/axom/core/utilities/BitUtilities.hpp
+index 7f2e81576..74370bf57 100644
+--- a/src/axom/core/utilities/BitUtilities.hpp
++++ b/src/axom/core/utilities/BitUtilities.hpp
+@@ -23,7 +23,7 @@
+ #if defined(_WIN64) && (_MSC_VER >= 1600)
+   #define _AXOM_CORE_USE_INTRINSICS_MSVC
+   #include <intrin.h>
+-#elif defined(__x86_64__) && defined(__GNUC__)
++#elif defined(__x86_64__) && defined(__GNUC__) && !defined(AXOM_GPUCC)
+   #define _AXOM_CORE_USE_INTRINSICS_GCC
+   #include <x86intrin.h>
+ #elif defined(__powerpc64__) && (defined(__GNUC__) || defined(__ibmxl__))
