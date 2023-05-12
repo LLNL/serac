@@ -185,6 +185,4 @@ int main(int argc, char* argv[])
   int result = RUN_ALL_TESTS();
 
   serac::exitGracefully(result);
-
-  return result;
 }
