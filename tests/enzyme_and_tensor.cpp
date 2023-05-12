@@ -49,22 +49,14 @@ void another_linear_solve(tensor<double, 3, 3> A, tensor<double, 3> b, tensor<do
   x = linear_solve(A, b);
 }
 
-void another_linear_solve_fwddiff(tensor<double, 3, 3>* A, tensor<double, 3, 3>* dA, 
-                                  tensor<double, 3>* b, tensor<double, 3>* db,
+void another_linear_solve_fwddiff(const tensor<double, 3, 3>* A, const tensor<double, 3, 3>* dA,
+                                  const tensor<double, 3>* b, const tensor<double, 3>* db,
                                   tensor<double, 3>* x, tensor<double, 3>* dx)
 
 {
-  std::cout << "inside derivative fn" << std::endl;
-  std::cout << "A = " << (*A) << std::endl;
-  std::cout << "dA = " << (*dA) << std::endl;
-  std::cout << "b = " << (*b) << std::endl;
-  std::cout << "db = " << (*db) << std::endl;
-  (*x) = linear_solve(*A, *b);
-  std::cout << "x = \n" << (*x) << std::endl;
-  std::cout << "dx = \n" << (*dx) << std::endl;
-  tensor<double, 3> r = (*db) - dot(*dA, *x);
-  std::cout << "r = " << r << std::endl;
-  (*dx) = linear_solve(*A, r);
+  *x = linear_solve(*A, *b);
+  tensor<double, 3> r = *db - dot(*dA, *x);
+  *dx = linear_solve(*A, r);
 }
 
 void* __enzyme_register_derivative_another_linear_solve[] = {(void*) another_linear_solve, (void*) another_linear_solve_fwddiff};
@@ -135,17 +127,9 @@ TEST(enzyme, another_linear_solve_test) {
   EXPECT_NEAR(x[1], 0.0, TOL);
   EXPECT_NEAR(x[2], 1.5, TOL);
 
-  std::cout << "b = " << b << std::endl;
   tensor<double, 3> dx{};
-  std::cout << "x = \n" << x << std::endl;
-  tensor<double, 3>* px = &x;
-  std::cout << "address of x in test = " << px <<std::endl;
-  std::cout << "x through indirection, " << (*px) << std::endl;
 
   __enzyme_fwddiff<void>((void*) another_linear_solve, &A, &dA, &b, &db, &x, &dx);
-  std::cout << "back in test" << std::endl;
-  std::cout << "x = \n" << x << std::endl;
-  std::cout << "dx = \n" << dx << std::endl;
   EXPECT_NEAR(dx[0], -1.25, TOL);
   EXPECT_NEAR(dx[1],  0.50, TOL);
   EXPECT_NEAR(dx[2], -0.25, TOL);
