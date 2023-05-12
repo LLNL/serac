@@ -25,6 +25,7 @@ Developer Guide
    codevelop
    state_manager
    equation_solver
+   boundary_conditions
 
 Developing a New Physics Module
 -------------------------------

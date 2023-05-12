@@ -239,6 +239,7 @@ public:
     }
   }
 
+// _temp_bc_construct_start
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
    *
@@ -252,6 +253,7 @@ public:
 
     bcs_.addEssential(temp_bdr, temp_bdr_coef_, temperature_.space());
   }
+// _temp_bc_construct_end
 
   /**
    * @brief Advance the timestep
@@ -431,6 +433,7 @@ public:
   template <int... active_parameters, typename FluxType>
   void setFluxBCs(DependsOn<active_parameters...>, FluxType flux_function)
   {
+// _flux_bc_start    
     residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
         [this, flux_function](auto x, auto n, auto u, auto /* dtemp_dt */, auto shape, auto... params) {
@@ -439,6 +442,7 @@ public:
           return flux_function(x + p, n, ode_time_point_, temp, params...);
         },
         mesh_);
+// _flux_bc_end
   }
 
   /// @overload
@@ -539,6 +543,7 @@ public:
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
+// _temp_bc_apply_start
           [this](const mfem::Vector& u) -> mfem::Operator& {
             auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, shape_displacement_,
                                           *parameters_[parameter_indices].state...);
@@ -546,6 +551,7 @@ public:
             J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             return *J_;
           });
+// _temp_bc_apply_end
 
     } else {
       residual_with_bcs_ = mfem_ext::StdFunctionOperator(
