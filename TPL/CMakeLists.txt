@@ -7,6 +7,6 @@ message("building llvm")
 message("llvm...")
 include(cmake/llvm.cmake)
 
-message("enyme...")
+message("enzyme...")
 set(LLVM_DIR ${CMAKE_SOURCE_DIR}/build/lib/cmake/llvm)
 include(cmake/enzyme.cmake)
