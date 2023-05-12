@@ -153,6 +153,6 @@ Adding the heat flux boundary condition to the ``serac::Functional`` object repr
    :end-before: _flux_bc_end
    :language: C++
 
-The ``flux_function`` is supplied by the physics module user. It is a templated lambda function and very different from an ``mfem::Coefficient.   
+The ``flux_function`` is supplied by the physics module user. It is a templated lambda function and very different from an ``mfem::Coefficient``.   
 
 .. note:: This integral is applied to the entire boundary (not good).
