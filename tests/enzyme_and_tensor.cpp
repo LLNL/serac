@@ -93,7 +93,7 @@ TEST(enzyme, jvp_test_2_args) {
   EXPECT_EQ(dy[2], -0.25);
 }
 
-TEST(enzyme, vjp_test_1_args) {
+TEST(enzyme, vjp_test_1_arg) {
 
   double x = 3.5;
   auto f_vjp = vjp<square>(x);
