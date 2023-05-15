@@ -40,6 +40,7 @@ set(solver_tests
     # lce_Bertoldi_tension_new_data.cpp
     # lce_Bertoldi_rectLattice.cpp
     lce_Bertoldi_honeycomb_lattice.cpp
+    lce_Bertoldi_moving_heat_source.cpp
     # lce_Bertoldi.cpp
     lce_Brighenti_tensile.cpp
     lce_Bertoldi_lattice.cpp

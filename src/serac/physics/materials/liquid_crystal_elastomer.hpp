@@ -74,10 +74,10 @@ struct LiqCrystElast_Brighenti {
    * @tparam GammaAngleType number-like type for the orientation angle gamma
    *
    * @param[in,out] state A state variable object for this material. The value is updated in place.
-   * @param[in] displacement_grad displacement gradient with respect to the reference configuration
-   * @param[in] temperature the temperature
-   * @param[in] gamma the first polar angle used to define the liquid crystal orientation vector
-   * @param[in] eta the secpmd polar angle used to define the liquid crystal orientation vector
+   * @param[in] displacement_grad Displacement gradient with respect to the reference configuration
+   * @param[in] temperature The temperature
+   * @param[in] gamma The first polar angle used to define the liquid crystal orientation vector
+   * @param[in] eta The secpmd polar angle used to define the liquid crystal orientation vector
    * @return The calculated material response (Cauchy stress) for the material
    */
   template <typename DispGradType, typename orderParamType, typename GammaAngleType>
@@ -128,6 +128,21 @@ struct LiqCrystElast_Brighenti {
   }
 
   /// -------------------------------------------------------
+
+  /**
+   * @brief Compute the distribution tensor using Brighenti's model
+   *
+   * @tparam S Type of the deformation gradient
+   * @tparam T Type of angle of the liquid crystals
+   * @tparam U Type of the unit length normal of liquid crystal alignment (first-order tensor)
+   * 
+   * @param[in] state State variables for this material
+   * @param[in] F_hat Dot product of the current and previous deformation gradients
+   * @param[in] theta In-plane angle of the liquid crystals in the elastomer matrix
+   * @param[in] normal Unit length normal of angle alignment
+
+   * @return[out] distribution tensor
+   */
 
   template <typename S, typename T, typename U>
   auto calculateDistributionTensor(const State& state, const tensor<S, dim, dim>& F_hat, const T theta,
@@ -237,10 +252,10 @@ struct LiqCrystElast_Bertoldi {
    * @tparam GammaAngleType number-like type for the orientation angle gamma
    *
    * @param[in,out] state A state variable object for this material. The value is updated in place.
-   * @param[in] displacement_grad displacement gradient with respect to the reference configuration
-   * @param[in] inst_order_param_tuple the current order parameter
-   * @param[in] gamma the first polar angle used to define the liquid crystal orientation vector
-   * @param[in] eta the secpmd polar angle used to define the liquid crystal orientation vector
+   * @param[in] displacement_grad Displacement gradient with respect to the reference configuration
+   * @param[in] inst_order_param_tuple The current order parameter
+   * @param[in] gamma The first polar angle used to define the liquid crystal orientation vector
+   * @param[in] eta the second polar angle used to define the liquid crystal orientation vector
    * @return The calculated material response (Cauchy stress) for the material
    */
   template <typename DispGradType, typename orderParamType, typename GammaAngleType, typename EtaAngleType>
@@ -281,6 +296,23 @@ struct LiqCrystElast_Bertoldi {
   }
 
   /// -------------------------------------------------------
+
+  /**
+   * @brief Compute the strain energy
+   *
+   * @tparam DispGradType Type of the displacement gradient
+   * @tparam orderParamType Type of order parameter (level of alignment)
+   * @tparam GammaAngleType Type of the in-plane angle
+   * @tparam EtaAngleType Type of the out-of-plane angle
+   * 
+   * @param[in] state State variables for this material
+   * @param[in] displacement_grad Displacement gradient
+   * @param[in] inst_order_param_tuple Instantaneous order parameter 
+   * @param[in] gamma_tuple In-plane angle of alignment of liquid crystal in elastomer matrix
+   * @param[in] eta_tuple Out-of-plane angle of alignment of liquid crystal in elastomer matrix
+
+   * @return[out] strain energy
+   */
 
   template <typename DispGradType, typename orderParamType, typename GammaAngleType, typename EtaAngleType>
   auto calculateStrainEnergy(const State& /*state*/, const tensor<DispGradType, dim, dim>& displacement_grad,
