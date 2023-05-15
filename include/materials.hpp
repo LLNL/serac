@@ -15,19 +15,15 @@ struct Empty {
 struct NeoHookean {
   using State = Empty;  ///< this material has no internal variables
 
+  static constexpr int dim = 3;
   /**
    * @brief stress calculation for a NeoHookean material model
    *
-   * When applied to 2D displacement gradients, the stress is computed in plane strain,
-   * returning only the in-plane components.
-   *
    * @tparam T Number-like type for the displacement gradient components
-   * @tparam dim Dimensionality of space
    * @param du_dX displacement gradient with respect to the reference configuration (displacement_grad)
    * @return The Cauchy stress
    */
-  template <typename T, int dim>
-  SERAC_HOST_DEVICE auto operator()(State& /* state */, const tensor<T, dim, dim>& du_dX, double K, double G) const
+  SERAC_HOST_DEVICE auto operator()(State& /* state */, const tensor<double, dim, dim>& du_dX, double K, double G) const
   {
     using std::log;
     constexpr auto I         = DenseIdentity<dim>();
