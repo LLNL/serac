@@ -19,9 +19,6 @@
 
 namespace serac {
 
-using solid_mechanics::default_static_options;
-using solid_mechanics::direct_static_options;
-
 TEST(SolidMechanics, FiniteDifferenceParameter)
 {
   MPI_Barrier(MPI_COMM_WORLD);
@@ -60,8 +57,10 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
 
   // Construct a functional-based solid solver
 
-  SolidMechanics<p, dim, Parameters<H1<1>, H1<1> > > solid_solver(default_static_options, GeometricNonlinearities::On,
-                                                                  "solid_functional");
+  SolidMechanics<p, dim, Parameters<H1<1>, H1<1>>> solid_solver(
+      solid_mechanics::default_nonlinear_options, solid_mechanics::default_linear_options,
+      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "solid_functional");
+
   solid_solver.setParameter(0, user_defined_bulk_modulus);
   solid_solver.setParameter(1, user_defined_shear_modulus);
 
@@ -114,7 +113,7 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
   adjoint_load = *assembled_vector;
 
   // Solve the adjoint problem
-  solid_solver.solveAdjoint(adjoint_load);
+  solid_solver.solveAdjoint({{"displacement", adjoint_load}});
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
   [[maybe_unused]] auto& sensitivity = solid_solver.computeSensitivity(bulk_parameter_index);
@@ -184,12 +183,13 @@ TEST(SolidMechanics, FiniteDifferenceShape)
   double shape_displacement_value = 1.0;
 
   // The nonlinear solver must have tight tolerances to ensure at least one Newton step occurs
-  SolverOptions options = {
-      DirectSolverOptions{},
-      IterativeNonlinearSolverOptions{.rel_tol = 1.0e-8, .abs_tol = 1.0e-14, .max_iter = 10, .print_level = 1}};
+  serac::NonlinearSolverOptions nonlin_options{
+      .relative_tol = 1.0e-8, .absolute_tol = 1.0e-14, .max_iterations = 10, .print_level = 1};
 
   // Construct a functional-based solid solver
-  SolidMechanics<p, dim> solid_solver(options, GeometricNonlinearities::On, "solid_functional");
+  SolidMechanics<p, dim> solid_solver(nonlin_options, solid_mechanics::direct_linear_options,
+                                      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On,
+                                      "solid_functional");
 
   solid_mechanics::NeoHookean mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
@@ -240,7 +240,7 @@ TEST(SolidMechanics, FiniteDifferenceShape)
   adjoint_load = *assembled_vector;
 
   // Solve the adjoint problem
-  solid_solver.solveAdjoint(adjoint_load);
+  solid_solver.solveAdjoint({{"displacement", adjoint_load}});
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
   [[maybe_unused]] auto& sensitivity = solid_solver.computeShapeSensitivity();

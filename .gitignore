@@ -11,3 +11,4 @@
 /*.cmake
 .vscode/
 *.orig
+__pycache__/

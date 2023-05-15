@@ -26,7 +26,7 @@ namespace serac {
 /**
  * @brief Brighenti's liquid crystal elastomer model
  */
-struct LiqCrystElast_Brighenti {
+struct LiquidCrystElastomerBrighenti {
   /// this model is only intended to be used in 3D
   static constexpr int dim = 3;
 
@@ -48,8 +48,8 @@ struct LiqCrystElast_Brighenti {
    * @param transition_temperature Characteristic temperature of the order-disorder transition
    * @param N_b_squared Number of Kunh segments/chain, times square of Kuhn segment length
    */
-  LiqCrystElast_Brighenti(double rho, double shear_modulus, double bulk_modulus, double order_constant,
-                          double order_parameter, double transition_temperature, double N_b_squared)
+  LiquidCrystElastomerBrighenti(double rho, double shear_modulus, double bulk_modulus, double order_constant,
+                                double order_parameter, double transition_temperature, double N_b_squared)
       : density(rho),
         shear_modulus_(shear_modulus),
         bulk_modulus_(bulk_modulus),
@@ -69,20 +69,19 @@ struct LiqCrystElast_Brighenti {
   /**
    * @brief Material response
    *
-   * @tparam DisplacementType number-like type for the displacement vector
    * @tparam DispGradType number-like type for the displacement gradient tensor
+   * @tparam OrderParamType number-like type for the order parameter
    * @tparam GammaAngleType number-like type for the orientation angle gamma
    *
    * @param[in,out] state A state variable object for this material. The value is updated in place.
-   * @param[in] displacement_grad Displacement gradient with respect to the reference configuration
-   * @param[in] temperature The temperature
-   * @param[in] gamma The first polar angle used to define the liquid crystal orientation vector
-   * @param[in] eta The secpmd polar angle used to define the liquid crystal orientation vector
+   * @param[in] displacement_grad displacement gradient with respect to the reference configuration
+   * @param[in] temperature_tuple the temperature
+   * @param[in] gamma_tuple the first polar angle used to define the liquid crystal orientation vector
    * @return The calculated material response (Cauchy stress) for the material
    */
-  template <typename DispGradType, typename orderParamType, typename GammaAngleType>
+  template <typename DispGradType, typename OrderParamType, typename GammaAngleType>
   SERAC_HOST_DEVICE auto operator()(State& state, const tensor<DispGradType, dim, dim>& displacement_grad,
-                                    orderParamType temperature_tuple, GammaAngleType gamma_tuple) const
+                                    OrderParamType temperature_tuple, GammaAngleType gamma_tuple) const
   {
     using std::cos, std::sin;
 
@@ -135,15 +134,14 @@ struct LiqCrystElast_Brighenti {
    * @tparam S Type of the deformation gradient
    * @tparam T Type of angle of the liquid crystals
    * @tparam U Type of the unit length normal of liquid crystal alignment (first-order tensor)
-   * 
-   * @param[in] state State variables for this material
-   * @param[in] F_hat Dot product of the current and previous deformation gradients
-   * @param[in] theta In-plane angle of the liquid crystals in the elastomer matrix
-   * @param[in] normal Unit length normal of angle alignment
-
-   * @return[out] distribution tensor
+   *
+   * @param state State variables for this material
+   * @param F_hat Dot product of the current and previous deformation gradients
+   * @param theta In-plane angle of the liquid crystals in the elastomer matrix
+   * @param normal Unit length normal of angle alignment
+   *
+   * @return distribution tensor
    */
-
   template <typename S, typename T, typename U>
   auto calculateDistributionTensor(const State& state, const tensor<S, dim, dim>& F_hat, const T theta,
                                    const tensor<U, dim>& normal) const
@@ -209,13 +207,11 @@ struct LiqCrystElast_Brighenti {
  * Controlling Liquid Crystal Orientations for Programmable Anisotropic Transformations in Cellular Microstructures.
  * Advanced Materials, 33(42), 2105024.
  */
-struct LiqCrystElast_Bertoldi {
+struct LiquidCrystalElastomerBertoldi {
+  using State = Empty;  ///< this material has no internal variables
+
   /// this model is only intended to be used in 3D
   static constexpr int dim = 3;
-
-  /// internal variables for the liquid crystal elastomer model
-  struct State {
-  };
 
   /**
    * @brief Constructor
@@ -226,8 +222,8 @@ struct LiqCrystElast_Bertoldi {
    * @param initial_order_parameter Initial value of the order parameter
    * @param beta_parameter Parameter for degree of coupling between elastic and nematic energies
    */
-  LiqCrystElast_Bertoldi(double rho, double young_modulus, double poisson_ratio, double initial_order_parameter,
-                         double beta_parameter)
+  LiquidCrystalElastomerBertoldi(double rho, double young_modulus, double poisson_ratio, double initial_order_parameter,
+                                 double beta_parameter)
       : density(rho),
         young_modulus_(young_modulus),
         poisson_ratio_(poisson_ratio),
@@ -247,20 +243,20 @@ struct LiqCrystElast_Bertoldi {
   /**
    * @brief Material response
    *
-   * @tparam DisplacementType number-like type for the displacement vector
    * @tparam DispGradType number-like type for the displacement gradient tensor
+   * @tparam OrderParamType number-like type for the order parameter
    * @tparam GammaAngleType number-like type for the orientation angle gamma
+   * @tparam EtaAngleType number-like type for the orientation angle eta
    *
-   * @param[in,out] state A state variable object for this material. The value is updated in place.
-   * @param[in] displacement_grad Displacement gradient with respect to the reference configuration
-   * @param[in] inst_order_param_tuple The current order parameter
-   * @param[in] gamma The first polar angle used to define the liquid crystal orientation vector
-   * @param[in] eta the second polar angle used to define the liquid crystal orientation vector
+   * @param[in] displacement_grad displacement gradient with respect to the reference configuration
+   * @param[in] inst_order_param_tuple the current order parameter
+   * @param[in] gamma_tuple the first polar angle used to define the liquid crystal orientation vector
+   * @param[in] eta_tuple the second polar angle used to define the liquid crystal orientation vector
    * @return The calculated material response (Cauchy stress) for the material
    */
-  template <typename DispGradType, typename orderParamType, typename GammaAngleType, typename EtaAngleType>
+  template <typename DispGradType, typename OrderParamType, typename GammaAngleType, typename EtaAngleType>
   SERAC_HOST_DEVICE auto operator()(State& /*state*/, const tensor<DispGradType, dim, dim>& displacement_grad,
-                                    orderParamType inst_order_param_tuple, GammaAngleType gamma_tuple,
+                                    OrderParamType inst_order_param_tuple, GammaAngleType gamma_tuple,
                                     EtaAngleType eta_tuple) const
   {
     using std::cos, std::sin;
@@ -304,16 +300,14 @@ struct LiqCrystElast_Bertoldi {
    * @tparam orderParamType Type of order parameter (level of alignment)
    * @tparam GammaAngleType Type of the in-plane angle
    * @tparam EtaAngleType Type of the out-of-plane angle
-   * 
-   * @param[in] state State variables for this material
+   *
    * @param[in] displacement_grad Displacement gradient
-   * @param[in] inst_order_param_tuple Instantaneous order parameter 
+   * @param[in] inst_order_param_tuple Instantaneous order parameter
    * @param[in] gamma_tuple In-plane angle of alignment of liquid crystal in elastomer matrix
    * @param[in] eta_tuple Out-of-plane angle of alignment of liquid crystal in elastomer matrix
-
-   * @return[out] strain energy
+   *
+   * @return strain energy
    */
-
   template <typename DispGradType, typename orderParamType, typename GammaAngleType, typename EtaAngleType>
   auto calculateStrainEnergy(const State& /*state*/, const tensor<DispGradType, dim, dim>& displacement_grad,
                              orderParamType inst_order_param_tuple, GammaAngleType gamma_tuple,

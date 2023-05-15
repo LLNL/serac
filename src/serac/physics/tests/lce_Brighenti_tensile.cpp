@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -6,7 +6,6 @@
 
 #include <fstream>
 
-#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
@@ -15,20 +14,14 @@
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/solid_mechanics.hpp"
 #include "serac/physics/materials/liquid_crystal_elastomer.hpp"
+#include "serac/infrastructure/initialize.hpp"
+#include "serac/infrastructure/terminator.hpp"
 
 using namespace serac;
 
-using serac::solid_mechanics::default_static_options;
-
 int main(int argc, char* argv[])
 {
-  MPI_Init(&argc, &argv);
-
-  int rank = -1;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-  axom::slic::SimpleLogger logger;
-  axom::slic::setIsRoot(rank == 0);
+  serac::initialize(argc, argv);
 
   constexpr int p   = 1;
   constexpr int dim = 3;
@@ -78,20 +71,32 @@ int main(int argc, char* argv[])
   mfem::FunctionCoefficient coef(gamma_func);
   gamma.project(coef);
 
-  // Construct a functional-based solid mechanics solver
-  IterativeSolverOptions          default_linear_options    = {.rel_tol     = 1.0e-6,
-                                                   .abs_tol     = 1.0e-16,
-                                                   .print_level = 0,
-                                                   .max_iter    = 600,
-                                                   .lin_solver  = LinearSolver::GMRES,
-                                                   .prec        = HypreBoomerAMGPrec{}};
-  IterativeNonlinearSolverOptions default_nonlinear_options = {
-      .rel_tol       = 1.0e-4,
-      .abs_tol       = 1.0e-7,
-      .max_iter      = 6,
-      .print_level   = 1,
-      .nonlin_solver = serac::NonlinearSolver::KINBacktrackingLineSearch};
-  SolidMechanics<p, dim, Parameters<H1<p>, L2<p> > > solid_solver({default_linear_options, default_nonlinear_options},
+  // Construct a solid mechanics solver
+  LinearSolverOptions linear_options = {
+      .linear_solver  = LinearSolver::GMRES,
+      .preconditioner = Preconditioner::HypreAMG,
+      .relative_tol   = 1.0e-6,
+      .absolute_tol   = 1.0e-14,
+      .max_iterations = 600,
+      .print_level    = 0,
+  };
+
+#ifdef MFEM_USE_SUNDIALS
+  NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = serac::NonlinearSolver::KINBacktrackingLineSearch,
+                                              .relative_tol   = 1.0e-4,
+                                              .absolute_tol   = 1.0e-7,
+                                              .max_iterations = 6,
+                                              .print_level    = 1};
+#else
+  NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = serac::NonlinearSolver::Newton,
+                                              .relative_tol   = 1.0e-4,
+                                              .absolute_tol   = 1.0e-7,
+                                              .max_iterations = 6,
+                                              .print_level    = 1};
+#endif
+
+  SolidMechanics<p, dim, Parameters<H1<p>, L2<p> > > solid_solver(nonlinear_options, linear_options,
+                                                                  solid_mechanics::default_quasistatic_options,
                                                                   GeometricNonlinearities::Off, "lce_solid_functional");
 
   constexpr int TEMPERATURE_INDEX = 0;
@@ -110,11 +115,11 @@ int main(int argc, char* argv[])
   double transition_temperature = 348;
   double Nb2                    = 1.0;
 
-  LiqCrystElast_Brighenti mat(density, shear_modulus, bulk_modulus, order_constant, order_parameter,
-                              transition_temperature, Nb2);
+  LiquidCrystElastomerBrighenti mat(density, shear_modulus, bulk_modulus, order_constant, order_parameter,
+                                    transition_temperature, Nb2);
 
-  LiqCrystElast_Brighenti::State initial_state{};
-  auto                           qdata = solid_solver.createQuadratureDataBuffer(initial_state);
+  LiquidCrystElastomerBrighenti::State initial_state{};
+  auto                                 qdata = solid_solver.createQuadratureDataBuffer(initial_state);
   solid_solver.setMaterial(DependsOn<TEMPERATURE_INDEX, GAMMA_INDEX>{}, mat, qdata);
 
   // prescribe symmetry conditions
@@ -158,9 +163,7 @@ int main(int argc, char* argv[])
       DependsOn<>{}, [=](auto x, auto /*n*/) { return (x[1] > 0.99 * ly) ? 1.0 : 0.0; }, pmesh);
 
   double initial_area = area(solid_solver.displacement());
-  if (rank == 0) {
-    std::cout << "... Initial Area of the top surface: " << initial_area << std::endl;
-  }
+  SLIC_INFO_ROOT("... Initial Area of the top surface: " << initial_area);
 
   // initializations for quasi-static problem
   int    num_steps = 3;
@@ -172,13 +175,13 @@ int main(int argc, char* argv[])
 
   // Perform remaining quasi-static solve
   for (int i = 0; i < (num_steps + 1); i++) {
-    if (rank == 0) {
-      std::cout << "\n\n............................"
-                << "\n... Entering time step: " << i + 1 << "\n............................\n"
-                << "\n... At time: " << t << "\n... And with a tension load of: " << loadVal << " ("
-                << loadVal / maxLoadVal * 100 << " percent of max)"
-                << "\n... And with uniform temperature of: " << initial_temperature << std::endl;
-    }
+    SLIC_INFO_ROOT(
+        axom::fmt::format("\n\n............................"
+                          "\n... Entering time step: {}"
+                          "\n............................\n"
+                          "\n... At time: {} \n... And with a tension load of: {} ( {} `%` of max)"
+                          "\n... And with uniform temperature of: {}\n",
+                          i + 1, t, loadVal, loadVal / maxLoadVal * 100, initial_temperature));
 
     // solve problem with current parameters
     solid_solver.advanceTimestep(dt);
@@ -202,20 +205,15 @@ int main(int argc, char* argv[])
       double lclDispYmax = dispVecY.Max();
       MPI_Allreduce(&lclDispYmax, &gblDispYmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
 
-      if (rank == 0) {
-        std::cout << "\n... Max Y displacement: " << gblDispYmax << "\n... The QoIVal is: " << current_qoi
-                  << "\n... The top surface current area is: " << std::setprecision(9) << current_area
-                  << "\n... The vertical displacement integrated over the top surface is: "
-                  << current_qoi / current_area << std::endl;
-      }
-
-      if (std::isnan(gblDispYmax)) {
-        if (rank == 0) {
-          std::cout << "... Solution blew up... Check boundary and initial conditions." << std::endl;
-        }
-        exit(1);
-      }
+      SLIC_INFO_ROOT(
+          axom::fmt::format("\n... Max Y displacement: {}"
+                            "\n... The QoIVal is: {}"
+                            "\n... The top surface current area is: {}"
+                            "\n... The vertical displacement integrated over the top surface is: {}",
+                            gblDispYmax, current_qoi, current_area, current_qoi / current_area));
     }
+
+    SLIC_ERROR_ROOT_IF(std::isnan(gblDispYmax), "... Solution blew up... Check boundary and initial conditions.");
 
     // update pseudotime-dependent information
     t += dt;
@@ -225,5 +223,5 @@ int main(int argc, char* argv[])
   // check output
   EXPECT_NEAR(gblDispYmax, 1.95036097e-05, 1.0e-8);
 
-  MPI_Finalize();
+  serac::exitGracefully();
 }

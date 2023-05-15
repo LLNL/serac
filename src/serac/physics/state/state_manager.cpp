@@ -60,7 +60,8 @@ double StateManager::newDataCollection(const std::string& name, const std::optio
     auto nodes            = mesh(name).GetNodes();
     if (nodes) {
       is_discontinuous = nodes->FESpace()->FEColl()->GetContType() == mfem::FiniteElementCollection::DISCONTINUOUS;
-      SLIC_WARNING_ROOT(
+      SLIC_WARNING_ROOT_IF(
+          is_discontinuous,
           "Periodic mesh detected! This will only work on translational periodic surfaces for vector H1 fields and "
           "has not been thoroughly tested. Proceed at your own risk.");
     }
@@ -243,7 +244,8 @@ mfem::ParMesh* StateManager::setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const
   auto nodes            = pmesh->GetNodes();
   if (nodes) {
     is_discontinuous = nodes->FESpace()->FEColl()->GetContType() == mfem::FiniteElementCollection::DISCONTINUOUS;
-    SLIC_WARNING_ROOT(
+    SLIC_WARNING_ROOT_IF(
+        is_discontinuous,
         "Periodic mesh detected! This will only work on translational periodic surfaces for vector H1 fields and "
         "has not been thoroughly tested. Proceed at your own risk.");
   }
@@ -255,6 +257,7 @@ mfem::ParMesh* StateManager::setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const
   // 3. Uses the spatial dimension as the mesh dimension (i.e. it is not a lower dimension manifold)
   // 4. Uses nodal instead of VDIM ordering (i.e. xxxyyyzzz instead of xyzxyzxyz)
   pmesh->SetCurvature(1, is_discontinuous, -1, mfem::Ordering::byNODES);
+
   // Sidre will destruct the nodal grid function instead of the mesh
   pmesh->SetNodesOwner(false);
 

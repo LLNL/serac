@@ -58,7 +58,10 @@ TEST(Thermal, ParameterizedMaterial)
   // Note that we now include an extra template parameter indicating the finite element space for the parameterized
   // field, in this case the thermal conductivity. We also pass an array of finite element states for each of the
   // requested parameterized fields.
-  HeatTransfer<p, dim, Parameters<H1<1> > > thermal_solver(heat_transfer::direct_static_options, "thermal_functional");
+  HeatTransfer<p, dim, Parameters<H1<1>>> thermal_solver(heat_transfer::default_nonlinear_options,
+                                                         heat_transfer::direct_linear_options,
+                                                         heat_transfer::default_static_options, "thermal_functional");
+
   thermal_solver.setParameter(0, user_defined_conductivity);
 
   // Construct a potentially user-defined parameterized material and send it to the thermal module
@@ -103,7 +106,7 @@ TEST(Thermal, ParameterizedMaterial)
   adjoint_load = 1.0;
 
   // Solve the adjoint problem
-  thermal_solver.solveAdjoint(adjoint_load);
+  thermal_solver.solveAdjoint({{"temperature", adjoint_load}});
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
   auto& sensitivity = thermal_solver.computeSensitivity(conductivity_parameter_index);

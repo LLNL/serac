@@ -16,7 +16,7 @@
 
 #### Numerics Utilities ####
 
-* [Equation solver](@ref serac::mfem_ext::EquationSolver)
+* [Equation solver](@ref serac::EquationSolver)
 * [Solver configuration](@ref solver_config.hpp)
 * [First order ODE solver](@ref serac::mfem_ext::FirstOrderODE)
 * [Second order ODE solver](@ref serac::mfem_ext::SecondOrderODE)

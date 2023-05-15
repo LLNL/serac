@@ -4,9 +4,15 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+#include <exception>
+
+#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 
 #include "serac/numerics/functional/tuple_tensor_dual_functions.hpp"
+
+class SlicErrorException : public std::exception {
+};
 
 using namespace serac;
 
@@ -48,12 +54,12 @@ TEST(ScalarEquationSolver, AbortsIfRootNotBracketedByCaller)
   double x0    = 5.0;
   double lower = 2.0;
   double upper = 10.0;
-  EXPECT_DEATH_IF_SUPPORTED(
+  EXPECT_THROW(
       {
         [[maybe_unused]] auto result =
             solve_scalar_equation([](auto x) { return x * x - 2.0; }, x0, lower, upper, default_solver_options);
       },
-      "solve_scalar_equation: root not bracketed by input bounds.");
+      SlicErrorException);
 }
 
 TEST(ScalarEquationSolver, ReturnsImmediatelyIfUpperBoundIsARoot)
@@ -150,6 +156,10 @@ int main(int argc, char* argv[])
   MPI_Init(&argc, &argv);
 
   axom::slic::SimpleLogger logger;
+
+  axom::slic::setAbortFunction([]() { throw SlicErrorException{}; });
+  axom::slic::setAbortOnError(true);
+  axom::slic::setAbortOnWarning(false);
 
   int result = RUN_ALL_TESTS();
   MPI_Finalize();

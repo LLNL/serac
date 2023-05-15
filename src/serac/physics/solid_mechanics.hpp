@@ -15,12 +15,13 @@
 #include "mfem.hpp"
 
 #include "serac/physics/common.hpp"
+#include "serac/physics/solid_mechanics_input.hpp"
 #include "serac/physics/base_physics.hpp"
 #include "serac/numerics/odes.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/physics/state/state_manager.hpp"
-#include "serac/physics/solid_legacy.hpp"
+#include "serac/physics/materials/solid_material.hpp"
 
 namespace serac {
 
@@ -31,39 +32,33 @@ namespace solid_mechanics {
  * systems of linear equations that show up in implicit
  * solid mechanics simulations
  */
-const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
-                                                       .abs_tol     = 1.0e-16,
-                                                       .print_level = 0,
-                                                       .max_iter    = 500,
-                                                       .lin_solver  = LinearSolver::GMRES,
-                                                       .prec        = HypreBoomerAMGPrec{}};
+const LinearSolverOptions default_linear_options = {.linear_solver  = LinearSolver::GMRES,
+                                                    .preconditioner = Preconditioner::HypreAMG,
+                                                    .relative_tol   = 1.0e-6,
+                                                    .absolute_tol   = 1.0e-16,
+                                                    .max_iterations = 500,
+                                                    .print_level    = 0};
 
 /// the default direct solver option for solving the linear stiffness equations
-const DirectSolverOptions direct_linear_options = {.print_level = 0};
+const LinearSolverOptions direct_linear_options = {.linear_solver = LinearSolver::SuperLU, .print_level = 0};
 
 /**
  * @brief default iteration limits, tolerances and verbosity for solving the
  * systems of nonlinear equations that show up in implicit
  * solid mechanics simulations
  */
-const IterativeNonlinearSolverOptions default_nonlinear_options = {
-    .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 10, .print_level = 1};
+const NonlinearSolverOptions default_nonlinear_options = {.nonlin_solver  = NonlinearSolver::Newton,
+                                                          .relative_tol   = 1.0e-4,
+                                                          .absolute_tol   = 1.0e-8,
+                                                          .max_iterations = 10,
+                                                          .print_level    = 1};
 
-/// the default linear and nonlinear solver options for (quasi-)static analyses
-const SolverOptions default_static_options = {default_linear_options, default_nonlinear_options};
+/// default quasistatic timestepping options for solid mechanics
+const TimesteppingOptions default_quasistatic_options = {TimestepMethod::QuasiStatic};
 
-/// solver options that use a direct linear solver for (quasi-)static analyses
-const SolverOptions direct_static_options = {direct_linear_options, default_nonlinear_options};
-
-/// the default solver and time integration options for dynamic analyses
-const SolverOptions default_dynamic_options = {
-    default_linear_options, default_nonlinear_options,
-    TimesteppingOptions{TimestepMethod::Newmark, DirichletEnforcementMethod::RateControl}};
-
-/// the direct solver and time integration options for dynamic analyses
-const SolverOptions direct_dynamic_options = {
-    direct_linear_options, default_nonlinear_options,
-    TimesteppingOptions{TimestepMethod::Newmark, DirichletEnforcementMethod::RateControl}};
+/// default implicit dynamic timestepping options for solid mechanics
+const TimesteppingOptions default_timestepping_options = {TimestepMethod::Newmark,
+                                                          DirichletEnforcementMethod::RateControl};
 
 }  // namespace solid_mechanics
 
@@ -102,40 +97,65 @@ public:
   static constexpr Geometry geom = supported_geometries[dim];
 
   /**
-   * @brief Construct a new SolidMechanics Functional object
+   * @brief Construct a new SolidMechanics object
    *
-   * @param options The options for the linear, nonlinear, and ODE solves
+   * @param nonlinear_opts The nonlinear solver options for solving the nonlinear residual equations
+   * @param lin_opts The linear solver options for solving the linearized Jacobian equations
+   * @param timestepping_opts The timestepping options for the solid mechanics time evolution operator
    * @param geom_nonlin Flag to include geometric nonlinearities
    * @param name An optional name for the physics module instance
    * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
+  SolidMechanics(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
+                 const serac::TimesteppingOptions timestepping_opts,
+                 const GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
+                 mfem::ParMesh* pmesh = nullptr)
+      : SolidMechanics(std::make_unique<EquationSolver>(
+                           nonlinear_opts, lin_opts, StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
+                       timestepping_opts, geom_nonlin, name, pmesh)
+  {
+  }
 
-  SolidMechanics(const SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
-                 const std::string& name = "", mfem::ParMesh* pmesh = nullptr)
+  /**
+   * @brief Construct a new SolidMechanics object
+   *
+   * @param solver The nonlinear equation solver for the implicit solid mechanics equations
+   * @param timestepping_opts The timestepping options for the solid mechanics time evolution operator
+   * @param geom_nonlin Flag to include geometric nonlinearities
+   * @param name An optional name for the physics module instance
+   * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
+   */
+  SolidMechanics(std::unique_ptr<serac::EquationSolver> solver, const serac::TimesteppingOptions timestepping_opts,
+                 const GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
+                 mfem::ParMesh* pmesh = nullptr)
       : BasePhysics(2, order, name, pmesh),
         velocity_(StateManager::newState(
-            FiniteElementState::Options{
-                .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "velocity")},
+            FiniteElementState::Options{.order = order, .vector_dim = dim, .name = detail::addPrefix(name, "velocity")},
             sidre_datacoll_id_)),
         displacement_(StateManager::newState(
             FiniteElementState::Options{
-                .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "displacement")},
+                .order = order, .vector_dim = dim, .name = detail::addPrefix(name, "displacement")},
             sidre_datacoll_id_)),
-        adjoint_displacement_(
-            StateManager::newState(FiniteElementState::Options{.order      = order,
-                                                               .vector_dim = mesh_.Dimension(),
-                                                               .name = detail::addPrefix(name, "adjoint_displacement")},
-                                   sidre_datacoll_id_)),
+        adjoint_displacement_(StateManager::newState(
+            FiniteElementState::Options{
+                .order = order, .vector_dim = dim, .name = detail::addPrefix(name, "adjoint_displacement")},
+            sidre_datacoll_id_)),
         reactions_(StateManager::newDual(displacement_.space(), detail::addPrefix(name, "reactions"))),
+        nonlin_solver_(std::move(solver)),
         ode2_(displacement_.space().TrueVSize(),
               {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
-              nonlin_solver_, bcs_),
+              *nonlin_solver_, bcs_),
         c0_(0.0),
         c1_(0.0),
         geom_nonlin_(geom_nonlin)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
-                       axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
+                       axom::fmt::format("Compile time dimension, {0}, and runtime mesh dimension, {1}, mismatch", dim,
+                                         mesh_.Dimension()));
+
+    SLIC_ERROR_ROOT_IF(!nonlin_solver_,
+                       "EquationSolver argument is nullptr in SolidMechanics constructor. It is possible that it was "
+                       "previously moved.");
 
     states_.push_back(&velocity_);
     states_.push_back(&displacement_);
@@ -172,17 +192,17 @@ public:
     shape_displacement_   = 0.0;
     adjoint_displacement_ = 0.0;
 
-    const auto& lin_options = options.linear;
     // If the user wants the AMG preconditioner with a linear solver, set the pfes
     // to be the displacement
-    const auto& augmented_options = mfem_ext::AugmentAMGForElasticity(lin_options, displacement_.space());
-
-    nonlin_solver_ = mfem_ext::EquationSolver(mesh_.GetComm(), augmented_options, options.nonlinear);
+    auto* amg_prec = dynamic_cast<mfem::HypreBoomerAMG*>(nonlin_solver_->preconditioner());
+    if (amg_prec) {
+      amg_prec->SetElasticityOptions(&displacement_.space());
+    }
 
     // Check for dynamic mode
-    if (options.dynamic) {
-      ode2_.SetTimestepper(options.dynamic->timestepper);
-      ode2_.SetEnforcementMethod(options.dynamic->enforcement_method);
+    if (timestepping_opts.timestepper != TimestepMethod::QuasiStatic) {
+      ode2_.SetTimestepper(timestepping_opts.timestepper);
+      ode2_.SetEnforcementMethod(timestepping_opts.enforcement_method);
       is_quasistatic_ = false;
     } else {
       is_quasistatic_ = true;
@@ -206,6 +226,66 @@ public:
 
     zero_.SetSize(true_size);
     zero_ = 0.0;
+  }
+
+  /**
+   * @brief Construct a new Nonlinear SolidMechanics Solver object
+   *
+   * @param[in] input_options The solver information parsed from the input file
+   * @param[in] name An optional name for the physics module instance. Note that this is NOT the mesh tag.
+   */
+  SolidMechanics(const SolidMechanicsInputOptions& input_options, const std::string& name = "")
+      : SolidMechanics(input_options.nonlin_solver_options, input_options.lin_solver_options,
+                       input_options.timestepping_options, input_options.geom_nonlin, name)
+  {
+    // This is the only other options stored in the input file that we can use
+    // in the initialization stage
+    // TODO: move these material parameters out of the SolidMechanicsInputOptions
+    if (input_options.material_nonlin) {
+      solid_mechanics::NeoHookean mat{input_options.initial_mass_density, input_options.K, input_options.mu};
+      setMaterial(mat);
+    } else {
+      solid_mechanics::LinearIsotropic mat{input_options.initial_mass_density, input_options.K, input_options.mu};
+      setMaterial(mat);
+    }
+
+    if (input_options.initial_displacement) {
+      displacement_.project(input_options.initial_displacement->constructVector(dim));
+    }
+
+    if (input_options.initial_velocity) {
+      velocity_.project(input_options.initial_velocity->constructVector(dim));
+    }
+
+    for (const auto& [bc_name, bc] : input_options.boundary_conditions) {
+      // FIXME: Better naming for boundary conditions?
+      if (bc_name.find("displacement") != std::string::npos) {
+        if (bc.coef_opts.isVector()) {
+          std::shared_ptr<mfem::VectorCoefficient> disp_coef(bc.coef_opts.constructVector(dim));
+          bcs_.addEssential(bc.attrs, disp_coef, displacement_.space());
+        } else {
+          SLIC_ERROR_ROOT_IF(
+              !bc.coef_opts.component,
+              "Component not specified with scalar coefficient when setting the displacement condition.");
+          std::shared_ptr<mfem::Coefficient> disp_coef(bc.coef_opts.constructScalar());
+          bcs_.addEssential(bc.attrs, disp_coef, displacement_.space(), *bc.coef_opts.component);
+        }
+      } else if (bc_name.find("traction") != std::string::npos) {
+        // TODO: Not implemented yet in input files
+        SLIC_ERROR("'traction' is not implemented yet in input files.");
+      } else if (bc_name.find("traction_ref") != std::string::npos) {
+        // TODO: Not implemented yet in input files
+        SLIC_ERROR("'traction_ref' is not implemented yet in input files.");
+      } else if (bc_name.find("pressure") != std::string::npos) {
+        // TODO: Not implemented yet in input files
+        SLIC_ERROR("'pressure' is not implemented yet in input files.");
+      } else if (bc_name.find("pressure_ref") != std::string::npos) {
+        // TODO: Not implemented yet in input files
+        SLIC_ERROR("'pressure_ref' is not implemented yet in input files.");
+      } else {
+        SLIC_WARNING_ROOT("Ignoring boundary condition with unknown name: " << name);
+      }
+    }
   }
 
   /// @brief Destroy the SolidMechanics Functional object
@@ -548,6 +628,7 @@ public:
 
           // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
           // tracking strategy
+          // See https://github.com/mfem/mfem/issues/3531
           r = res;
           r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
         },
@@ -619,6 +700,7 @@ public:
 
             // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
             // tracking strategy
+            // See https://github.com/mfem/mfem/issues/3531
             r = res;
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
@@ -646,7 +728,7 @@ public:
           });
     }
 
-    nonlin_solver_.SetOperator(*residual_with_bcs_);
+    nonlin_solver_->setOperator(*residual_with_bcs_);
   }
 
   /// @brief Solve the Quasi-static Newton system
@@ -681,7 +763,7 @@ public:
     for (std::size_t parameter_index = 0; parameter_index < parameters_.size(); ++parameter_index) {
       // Compute the change in parameters parameter_diff = parameter_new - parameter_old
       serac::FiniteElementState parameter_difference = *parameters_[parameter_index].state;
-      parameter_difference -= *parameters_[parameter_index].old_state;
+      parameter_difference -= *parameters_[parameter_index].previous_state;
 
       // Compute a linearized estimate of the residual forces due to this change in parameter
       auto drdparam        = serac::get<DERIVATIVE>(d_residual_d_[parameter_index]());
@@ -694,18 +776,17 @@ public:
       dr_ += residual_update;
 
       // Save the current parameter value for the next timestep
-      *parameters_[parameter_index].old_state = *parameters_[parameter_index].state;
+      *parameters_[parameter_index].previous_state = *parameters_[parameter_index].state;
     }
 
-    auto& lin_solver = nonlin_solver_.LinearSolver();
+    auto& lin_solver = nonlin_solver_->linearSolver();
 
     lin_solver.SetOperator(*J_);
 
     lin_solver.Mult(dr_, du_);
     displacement_ += du_;
 
-    // Now that the "warm start" is finished, we call the full nonlinear solver
-    nonlin_solver_.Mult(zero_, displacement_);
+    nonlin_solver_->solve(displacement_);
   }
 
   /**
@@ -724,7 +805,7 @@ public:
     // If this is the first call, initialize the previous parameter values as the initial values
     if (cycle_ == 0) {
       for (auto& parameter : parameters_) {
-        *parameter.old_state = *parameter.state;
+        *parameter.previous_state = *parameter.state;
       }
     }
 
@@ -759,26 +840,36 @@ public:
   /**
    * @brief Solve the adjoint problem
    * @pre It is expected that the forward analysis is complete and the current displacement state is valid
-   * @note If the essential boundary state is not specified, homogeneous essential boundary conditions are applied
+   * @pre The adjoint load maps are expected to contain a single entry named "displacement"
+   * @note If the essential boundary dual is not specified, homogeneous essential boundary conditions are applied to
+   * the adjoint system
    *
-   * @param[in] adjoint_load The dual state that contains the right hand side of the adjoint system (d quantity of
-   * interest/d displacement)
-   * @param[in] dual_with_essential_boundary A optional finite element dual containing the non-homogenous essential
-   * boundary condition data for the adjoint problem
-   * @return The computed adjoint finite element state
+   * @param adjoint_loads An unordered map containing finite element duals representing the RHS of the adjoint equations
+   * indexed by their name
+   * @param adjoint_with_essential_boundary A unordered map containing finite element states representing the
+   * non-homogeneous essential boundary condition data for the adjoint problem indexed their name
+   * @return An unordered map of the adjoint solutions indexed by their name. It has a single entry named
+   * "adjoint_displacement"
    */
-  virtual const serac::FiniteElementState& solveAdjoint(
-      FiniteElementDual& adjoint_load, FiniteElementDual* dual_with_essential_boundary = nullptr) override
+  const std::unordered_map<std::string, const serac::FiniteElementState&> solveAdjoint(
+      std::unordered_map<std::string, const serac::FiniteElementDual&>  adjoint_loads,
+      std::unordered_map<std::string, const serac::FiniteElementState&> adjoint_with_essential_boundary = {}) override
   {
-    mfem::HypreParVector adjoint_load_vector(adjoint_load);
+    SLIC_ERROR_ROOT_IF(adjoint_loads.size() != 1,
+                       "Adjoint load container is not the expected size of 1 in the solid mechanics module.");
+
+    auto disp_adjoint_load = adjoint_loads.find("displacement");
+
+    SLIC_ERROR_ROOT_IF(disp_adjoint_load == adjoint_loads.end(), "Adjoint load for \"displacement\" not found.");
+    mfem::HypreParVector adjoint_load_vector(disp_adjoint_load->second);
 
     // Add the sign correction to move the term to the RHS
     adjoint_load_vector *= -1.0;
 
-    auto& lin_solver = nonlin_solver_.LinearSolver();
+    auto& lin_solver = nonlin_solver_->linearSolver();
 
     // By default, use a homogeneous essential boundary condition
-    mfem::HypreParVector adjoint_essential(adjoint_load);
+    mfem::HypreParVector adjoint_essential(disp_adjoint_load->second);
     adjoint_essential = 0.0;
 
     // sam: is this the right thing to be doing for dynamics simulations,
@@ -789,8 +880,16 @@ public:
     auto J_T      = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
     // If we have a non-homogeneous essential boundary condition, extract it from the given state
-    if (dual_with_essential_boundary) {
-      adjoint_essential = *dual_with_essential_boundary;
+    auto essential_adjoint_disp = adjoint_with_essential_boundary.find("displacement");
+
+    if (essential_adjoint_disp != adjoint_with_essential_boundary.end()) {
+      adjoint_essential = essential_adjoint_disp->second;
+    } else {
+      // If the essential adjoint load container does not have a displacement dual but it has a non-zero size, the
+      // user has supplied an incorrectly-named dual vector.
+      SLIC_ERROR_IF(adjoint_with_essential_boundary.size() != 0,
+                    "Essential adjoint boundary condition given for an unexpected primal field. Expected adjoint "
+                    "boundary condition named \"displacement\"");
     }
 
     for (const auto& bc : bcs_.essentials()) {
@@ -800,7 +899,7 @@ public:
     lin_solver.SetOperator(*J_T);
     lin_solver.Mult(adjoint_load_vector, adjoint_displacement_);
 
-    return adjoint_displacement_;
+    return {{"adjoint_displacement", adjoint_displacement_}};
   }
 
   /**
@@ -906,15 +1005,15 @@ protected:
   /// mfem::Operator that calculates the residual after applying essential boundary conditions
   std::unique_ptr<mfem_ext::StdFunctionOperator> residual_with_bcs_;
 
+  /// the specific methods and tolerances specified to solve the nonlinear residual equations
+  std::unique_ptr<EquationSolver> nonlin_solver_;
+
   /**
    * @brief the ordinary differential equation that describes
    * how to solve for the second time derivative of displacement, given
    * the current displacement, velocity, and source terms
    */
   mfem_ext::SecondOrderODE ode2_;
-
-  /// the specific methods and tolerances specified to solve the nonlinear residual equations
-  mfem_ext::EquationSolver nonlin_solver_;
 
   /// Assembled sparse matrix for the Jacobian
   std::unique_ptr<mfem::HypreParMatrix> J_;
