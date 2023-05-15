@@ -179,11 +179,12 @@ spack:
       externals:
       - spec: libtool@2.4.6
         prefix: /usr
-    libunwind:
-      buildable: false
-      externals:
-      - spec: libunwind@1.3.1
-        prefix: /usr
+    # NOTE: removed since fails on clang builds
+    # libunwind:
+    #   buildable: false
+    #   externals:
+    #   - spec: libunwind@1.3.1
+    #     prefix: /usr
     libx11:
       buildable: false
       externals:
