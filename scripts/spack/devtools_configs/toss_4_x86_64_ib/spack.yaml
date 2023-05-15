@@ -12,7 +12,8 @@ spack:
   view:
     default:
       root: ../view
-      projections: 
+      select: [llvm, cppcheck, doxygen, py-ats, py-sphinx]
+      projections:
         all: '{name}-{version}'
 
   compilers::
@@ -20,14 +21,15 @@ spack:
       environment: {}
       extra_rpaths: []
       flags: {}
-      modules: []
+      modules:
+      - gcc/10.3.1
       operating_system: rhel8
       paths:
-        cc: /usr/bin/gcc
-        cxx: /usr/bin/g++
-        f77: /usr/bin/gfortran
-        fc: /usr/bin/gfortran
-      spec: gcc@8.5.0
+        cc: /usr/tce/packages/gcc/gcc-10.3.1/bin/gcc
+        cxx: /usr/tce/packages/gcc/gcc-10.3.1/bin/g++
+        f77: /usr/tce/packages/gcc/gcc-10.3.1/bin/gfortran
+        fc: /usr/tce/packages/gcc/gcc-10.3.1/bin/gfortran
+      spec: gcc@10.3.1
       target: x86_64
 
   packages:

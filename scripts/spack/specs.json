@@ -18,7 +18,7 @@
       "gcc@8.3.1+devtools+profiling" ],
 
     "toss_4_x86_64_ib":
-    [ "gcc@8.5.0+devtools+profiling",
+    [ "gcc@10.3.1+devtools+profiling",
       "clang@14.0.6+devtools+profiling" ],
 
     "blueos_3_ppc64le_ib_p9":

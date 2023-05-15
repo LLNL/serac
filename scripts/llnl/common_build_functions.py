@@ -524,7 +524,7 @@ def build_devtools(builds_dir, timestamp, short_path):
     if "toss_3" in sys_type:
         compiler_spec = "%gcc@8.1.0"
     elif "toss_4" in sys_type:
-        compiler_spec = "%gcc@8.5.0"
+        compiler_spec = "%gcc@10.3.1"
     elif "blueos" in sys_type:
         compiler_spec = "%gcc@8.3.1"
 
@@ -565,6 +565,10 @@ def build_devtools(builds_dir, timestamp, short_path):
                 print("[ERROR: Latest devtools link path exists and is not a link: {0}".format(link_path))
                 return 1
             os.unlink(link_path)
+        if os.path.exists(link_path):
+            print("latest")
+        if os.path.exists(view_dir):
+            print("view")
         os.symlink(view_dir, link_path)
 
         print("[SUCCESS: Finished build devtools for spec %s]\n" % compiler_spec)
