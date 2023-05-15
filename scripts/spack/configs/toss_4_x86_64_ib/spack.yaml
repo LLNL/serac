@@ -258,32 +258,32 @@ spack:
       buildable: false
       externals:
       - spec: cppcheck@2.8
-        prefix: /usr/WS2/meemee/serac/serac_devtools/toss_4_x86_64_ib/latest/cppcheck-2.8
+        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/cppcheck-2.8
     doxygen:
       version: [1.9.4]
       buildable: false
       externals:
       - spec: doxygen@1.9.4
-        prefix: /usr/WS2/meemee/serac/serac_devtools/toss_4_x86_64_ib/latest/doxygen-1.9.4
+        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/doxygen-1.9.4
     # TODO: make installed clang 14.0.6 work
     llvm:
       version: [10.0.0]
       buildable: false
       externals:
       - spec: llvm+clang@10.0.0
-        prefix: /usr/WS2/meemee/serac/serac_devtools/toss_4_x86_64_ib/latest/python-3.10.10
+        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/python-3.10.10
     py-ats:
       version: [7.0.105]
       buildable: false
       externals:
       - spec: py-ats@7.0.105
-        prefix: /usr/WS2/meemee/serac/serac_devtools/toss_4_x86_64_ib/latest/python-3.10.10
+        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/python-3.10.10
     py-sphinx:
       version: [4.4.0]
       buildable: false
       externals:
       - spec: py-sphinx@4.4.0
-        prefix: /usr/WS2/meemee/serac/serac_devtools/toss_4_x86_64_ib/latest/python-3.10.10
+        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/python-3.10.10
     python:
       buildable: false
       externals:
