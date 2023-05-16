@@ -108,6 +108,7 @@ TEST_P(EquationSolverSuite, All)
   }
 }
 
+#ifdef MFEM_USE_SUNDIALS
 INSTANTIATE_TEST_SUITE_P(
     AllEquationSolverTests, EquationSolverSuite,
     testing::Combine(testing::Values(NonlinearSolver::Newton, NonlinearSolver::LBFGS, NonlinearSolver::KINFullStep,
@@ -116,6 +117,14 @@ INSTANTIATE_TEST_SUITE_P(
                      testing::Values(Preconditioner::HypreJacobi, Preconditioner::HypreL1Jacobi,
                                      Preconditioner::HypreGaussSeidel, Preconditioner::HypreAMG,
                                      Preconditioner::HypreILU)));
+#else
+INSTANTIATE_TEST_SUITE_P(AllEquationSolverTests, EquationSolverSuite,
+                         testing::Combine(testing::Values(NonlinearSolver::Newton, NonlinearSolver::LBFGS),
+                                          testing::Values(LinearSolver::CG, LinearSolver::GMRES, LinearSolver::SuperLU),
+                                          testing::Values(Preconditioner::HypreJacobi, Preconditioner::HypreL1Jacobi,
+                                                          Preconditioner::HypreGaussSeidel, Preconditioner::HypreAMG,
+                                                          Preconditioner::HypreILU)));
+#endif
 
 int main(int argc, char* argv[])
 {
