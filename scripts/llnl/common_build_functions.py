@@ -553,10 +553,8 @@ def build_devtools(builds_dir, timestamp, short_path):
     end_time = time.time()
 
     print("[Build time: {0}]".format(convertSecondsToReadableTime(end_time - start_time)))
-    if res != 0:
-        print("[ERROR: Failed build of devtools for spec %s]\n" % compiler_spec)
-    else:
-        # Only update the latest symlink if successful
+    # Only update the latest symlink if successful and short_path is not set
+    if res == 0 and not short_path:
         link_path = pjoin(builds_dir, sys_type, "latest")
         view_dir = pjoin(prefix, "view")
         print("[Creating symlink to latest devtools view:\n{0}\n->\n{1}]".format(link_path, view_dir))
@@ -567,7 +565,10 @@ def build_devtools(builds_dir, timestamp, short_path):
             os.unlink(link_path)
         os.symlink(view_dir, link_path)
 
+    if res == 0:
         print("[SUCCESS: Finished build devtools for spec %s]\n" % compiler_spec)
+    else:
+        print("[ERROR: Failed build of devtools for spec %s]\n" % compiler_spec)
 
     # set proper perms for installed devtools
     set_group_and_perms(prefix)
