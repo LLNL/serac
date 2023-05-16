@@ -254,17 +254,17 @@ spack:
       - spec: cmake@3.19.2
         prefix: /usr/tce/packages/cmake/cmake-3.19.2
     cppcheck:
-      version: [2.8]
+      version: [2.9]
       buildable: false
       externals:
-      - spec: cppcheck@2.8
-        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/cppcheck-2.8
+      - spec: cppcheck@2.9
+        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/cppcheck-2.9
     doxygen:
-      version: [1.9.4]
+      version: [1.9.6]
       buildable: false
       externals:
-      - spec: doxygen@1.9.4
-        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/doxygen-1.9.4
+      - spec: doxygen@1.9.6
+        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/doxygen-1.9.6
     # TODO: make installed clang 14.0.6 work
     llvm:
       version: [10.0.0]
