@@ -565,10 +565,6 @@ def build_devtools(builds_dir, timestamp, short_path):
                 print("[ERROR: Latest devtools link path exists and is not a link: {0}".format(link_path))
                 return 1
             os.unlink(link_path)
-        if os.path.exists(link_path):
-            print("latest")
-        if os.path.exists(view_dir):
-            print("view")
         os.symlink(view_dir, link_path)
 
         print("[SUCCESS: Finished build devtools for spec %s]\n" % compiler_spec)
