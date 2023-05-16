@@ -65,3 +65,4 @@ variables:
 include:
   - local: .gitlab/build_ruby.yml
   - local: .gitlab/build_lassen.yml
+  - local: .gitlab/build_quartz.yml
