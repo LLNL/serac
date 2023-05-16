@@ -29,7 +29,11 @@ def parse_args():
                       dest="directory",
                       default="",
                       help="Location to build all TPL's, timestamp directory will be created (Defaults to shared location)")
-
+    parser.add_option("--short-path",
+                      action="store_true",
+                      dest="short_path",
+                      default=False,
+                      help="Does not add sys_type or timestamp to tpl directory (useful for CI and debugging).")
     ###############
     # parse args
     ###############
@@ -58,7 +62,7 @@ def main():
         original_wd = os.getcwd()
         os.chdir(repo_dir)
 
-        res = build_devtools(build_dir, get_timestamp())
+        res = build_devtools(build_dir, get_timestamp(), opts["short_path"])
     finally:
         os.chdir(original_wd)
 
