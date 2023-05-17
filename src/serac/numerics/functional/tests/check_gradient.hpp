@@ -60,16 +60,20 @@ void check_gradient(serac::Functional<T>& f, mfem::Vector& U, double epsilon = 1
   df1_cd[1] -= f_values[1];
   df1_cd[1] /= (2.0 * epsilon);
 
+  // this makes e1-e4 relative errors when |df| > 0
+  //              and absolute errors when |df| ~ 0
+  double denominator = (df_jvp1.Norml2() < 1.0e-10) ? 1.0 : df_jvp1.Norml2();
+
   // halving epsilon should make the error decrease
   // by about a factor of two for the forward-difference stencil
-  double e1 = df1_fd[0].DistanceTo(df_jvp1.GetData()) / df_jvp1.Norml2();
-  double e2 = df1_fd[1].DistanceTo(df_jvp1.GetData()) / df_jvp1.Norml2();
+  double e1 = df1_fd[0].DistanceTo(df_jvp1.GetData()) / denominator;
+  double e2 = df1_fd[1].DistanceTo(df_jvp1.GetData()) / denominator;
   EXPECT_TRUE(fabs(e1 / e2 - 2.0) < 0.1 || fmin(e1, e2) < 1.0e-9);
 
   // halving epsilon should make the error decrease
   // by about a factor of four for the center-difference stencil
-  double e3 = df1_cd[0].DistanceTo(df_jvp1.GetData()) / df_jvp1.Norml2();
-  double e4 = df1_cd[1].DistanceTo(df_jvp1.GetData()) / df_jvp1.Norml2();
+  double e3 = df1_cd[0].DistanceTo(df_jvp1.GetData()) / denominator;
+  double e4 = df1_cd[1].DistanceTo(df_jvp1.GetData()) / denominator;
   EXPECT_TRUE((fabs(e3 / e4 - 4.0) < 0.1) || fmin(e3, e4) < 1.0e-9);
 }
 
@@ -125,16 +129,20 @@ void check_gradient(serac::Functional<T>& f, mfem::Vector& U, mfem::Vector& dU_d
     df1_cd[1] -= f_values[1];
     df1_cd[1] /= (2.0 * epsilon);
 
+    // this makes e1-e4 relative errors when |df| > 0
+    //              and absolute errors when |df| ~ 0
+    double denominator = (df_jvp1.Norml2() < 1.0e-10) ? 1.0 : df_jvp1.Norml2();
+
     // halving epsilon should make the error decrease
     // by about a factor of two for the forward-difference stencil
-    double e1 = df1_fd[0].DistanceTo(df_jvp1.GetData()) / df_jvp1.Norml2();
-    double e2 = df1_fd[1].DistanceTo(df_jvp1.GetData()) / df_jvp1.Norml2();
+    double e1 = df1_fd[0].DistanceTo(df_jvp1.GetData()) / denominator;
+    double e2 = df1_fd[1].DistanceTo(df_jvp1.GetData()) / denominator;
     EXPECT_TRUE(fabs(e1 / e2 - 2.0) < 0.1 || fmin(e1, e2) < 1.0e-9);
 
     // halving epsilon should make the error decrease
     // by about a factor of four for the center-difference stencil
-    double e3 = df1_cd[0].DistanceTo(df_jvp1.GetData()) / df_jvp1.Norml2();
-    double e4 = df1_cd[1].DistanceTo(df_jvp1.GetData()) / df_jvp1.Norml2();
+    double e3 = df1_cd[0].DistanceTo(df_jvp1.GetData()) / denominator;
+    double e4 = df1_cd[1].DistanceTo(df_jvp1.GetData()) / denominator;
     EXPECT_TRUE((fabs(e3 / e4 - 4.0) < 0.1) || fmin(e3, e4) < 1.0e-9);
   }
 
@@ -177,16 +185,20 @@ void check_gradient(serac::Functional<T>& f, mfem::Vector& U, mfem::Vector& dU_d
     df1_cd[1] -= f_values[1];
     df1_cd[1] /= (2.0 * epsilon);
 
+    // this makes e1-e4 relative errors when |df| > 0
+    //              and absolute errors when |df| ~ 0
+    double denominator = (df_jvp1.Norml2() < 1.0e-10) ? 1.0 : df_jvp1.Norml2();
+
     // halving epsilon should make the error decrease
     // by about a factor of two for the forward-difference stencil
-    double e1 = df1_fd[0].DistanceTo(df_jvp1.GetData()) / df_jvp1.Norml2();
-    double e2 = df1_fd[1].DistanceTo(df_jvp1.GetData()) / df_jvp1.Norml2();
+    double e1 = df1_fd[0].DistanceTo(df_jvp1.GetData()) / denominator;
+    double e2 = df1_fd[1].DistanceTo(df_jvp1.GetData()) / denominator;
     EXPECT_TRUE(fabs(e1 / e2 - 2.0) < 0.1 || fmin(e1, e2) < 1.0e-9);
 
     // halving epsilon should make the error decrease
     // by about a factor of four for the center-difference stencil
-    double e3 = df1_cd[0].DistanceTo(df_jvp1.GetData()) / df_jvp1.Norml2();
-    double e4 = df1_cd[1].DistanceTo(df_jvp1.GetData()) / df_jvp1.Norml2();
+    double e3 = df1_cd[0].DistanceTo(df_jvp1.GetData()) / denominator;
+    double e4 = df1_cd[1].DistanceTo(df_jvp1.GetData()) / denominator;
     EXPECT_TRUE((fabs(e3 / e4 - 4.0) < 0.1) || fmin(e3, e4) < 1.0e-9);
   }
 }

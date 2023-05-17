@@ -20,6 +20,8 @@
 
 #include "serac/numerics/functional/tests/check_gradient.hpp"
 
+#include "serac/numerics/functional/mpi_fstream.hpp"
+
 using namespace serac;
 
 int            num_procs, myid;
@@ -108,14 +110,18 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
   check_gradient(residual, U);
 
   if (verbose) {
-    std::cout << "sum(r1):  " << r1.Sum() << std::endl;
-    std::cout << "sum(r2):  " << r2.Sum() << std::endl;
-    std::cout << "||r1||: " << r1.Norml2() << std::endl;
-    std::cout << "||r2||: " << r2.Norml2() << std::endl;
-    std::cout << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
+    mpi::out << "sum(r1):  " << r1.Sum() << std::endl;
+    mpi::out << "sum(r2):  " << r2.Sum() << std::endl;
+    mpi::out << "||r1||: " << r1.Norml2() << std::endl;
+    mpi::out << "||r2||: " << r2.Norml2() << std::endl;
+    mpi::out << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
   }
 
-  EXPECT_NEAR(0.0, mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-12);
+  if (r1.Norml2() < 1.0e-15) {
+    EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2(), 1.e-12);
+  } else {
+    EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-12);
+  }
 }
 
 template <int p, int dim>
@@ -174,14 +180,18 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
   mfem::Vector r2 = residual(U);
 
   if (verbose) {
-    std::cout << "sum(r1):  " << r1.Sum() << std::endl;
-    std::cout << "sum(r2):  " << r2.Sum() << std::endl;
-    std::cout << "||r1||: " << r1.Norml2() << std::endl;
-    std::cout << "||r2||: " << r2.Norml2() << std::endl;
-    std::cout << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
+    mpi::out << "sum(r1):  " << r1.Sum() << std::endl;
+    mpi::out << "sum(r2):  " << r2.Sum() << std::endl;
+    mpi::out << "||r1||: " << r1.Norml2() << std::endl;
+    mpi::out << "||r2||: " << r2.Norml2() << std::endl;
+    mpi::out << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
   }
 
-  EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-12);
+  if (r1.Norml2() < 1.0e-15) {
+    EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2(), 1.e-12);
+  } else {
+    EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-12);
+  }
 }
 
 TEST(FunctionalBoundary, 2DLinear) { boundary_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
