@@ -5,14 +5,9 @@
 #include "tuple.hpp"
 #include "tensor.hpp"
 
+#include "jax_wrapper.hpp"
+
 using namespace serac;
-
-int enzyme_dup;
-int enzyme_out;
-int enzyme_const;
-
-template < typename return_type, typename ... T >
-extern return_type __enzyme_fwddiff(void*, T ... );
 
 double foo(tensor<double, 3> x) {
   return dot(x, x);
@@ -86,8 +81,6 @@ TEST(enzyme, linear_solve_test) {
   EXPECT_EQ(dy[2], -0.25);
 }
 
-
-
 TEST(enzyme, fwddiffOnVoidFn)
 {
   double x = 2.0;
@@ -102,6 +95,55 @@ TEST(enzyme, fwddiffOnVoidFn)
   __enzyme_fwddiff<void>((void*) sqr, enzyme_dup, x, dx, enzyme_dup, &y, &dydx);
   EXPECT_DOUBLE_EQ(y, 4.0);
   EXPECT_DOUBLE_EQ(dydx, 4.0);
+}
+
+double square(double x) { return x * x; }
+
+TEST(enzyme, jvp_test_1_arg) {
+  double x = 3.0;
+  double dx = 1.5;
+
+  auto square_jvp = jvp<square>(x);
+  EXPECT_EQ(square_jvp(dx), 9.0);
+}
+
+// TEST(enzyme, vjp_test_1_arg) {
+
+//   double x = 3.5;
+//   auto f_vjp = vjp<square>(x);
+
+//   double y = 1.7;
+//   double z = f_vjp(1.7);
+
+//   double dfdx = x * 2.0;
+//   EXPECT_NEAR(z, dfdx * y, 1.0e-15);
+
+// }
+
+TEST(enzyme, jvp_test_2_args) {
+  tensor<double,3,3> A = {{
+    {2, 1, 0},
+    {1, 2, 1},
+    {0, 1, 2}
+  }};
+  tensor<double,3,3> dA = {{
+    {1, 0, 1},
+    {1, 0, 0},
+    {0, 1, 0}
+  }};
+
+  tensor<double, 3> x{1.0, 2.0, 3.0};
+
+  tensor<double, 3> y = bar(A, x);
+  EXPECT_EQ(y[0], 0.5);
+  EXPECT_EQ(y[1], 0.0);
+  EXPECT_EQ(y[2], 1.5);
+
+  tensor<double, 3> dx{};
+  tensor<double, 3> dy = (jvp<bar>(A, x))(dA, dx);
+  EXPECT_EQ(dy[0], -1.25);
+  EXPECT_EQ(dy[1],  0.50);
+  EXPECT_EQ(dy[2], -0.25);
 }
 
 TEST(enzyme, another_linear_solve_test) {
