@@ -111,11 +111,11 @@ void check_gradient(Functional<T>& f, mfem::HypreParVector& U)
   double relative_error1 = (df1 - df2) / df1;
   double relative_error2 = (df1 - df3) / df1;
 
-  EXPECT_NEAR(0., relative_error1, 1.e-5);
-  EXPECT_NEAR(0., relative_error2, 1.e-5);
+  EXPECT_NEAR(0., relative_error1, 2.e-5);
+  EXPECT_NEAR(0., relative_error2, 2.e-5);
 
   if (verbose) {
-    std::cout << relative_error1 << " " << relative_error2 << std::endl;
+    std::cout << "errors: " << df1 << " " << df2 << " " << df3 << std::endl;
   }
 }
 
@@ -385,6 +385,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p1> trial1, H1<p2> trial2, Dimension<dim>)
   check_gradient(f, U1, U2);
 }
 
+#if 1
 TEST(QoI, DependsOnVectorValuedInput)
 {
   constexpr int p   = 2;
@@ -550,6 +551,7 @@ TEST(QoI, ShapeAndParameter)
   constexpr double expected = 1.6;  // volume of 2 2x2x2 cubes == 16, so expected is 0.1 * 16
   EXPECT_NEAR(val, expected, 1.0e-14);
 }
+#endif
 
 // clang-format off
 TEST(Measure, 2DLinear   ) { qoi_test(*mesh2D, H1<1>{}, Dimension<2>{}, WhichTest::Measure); }

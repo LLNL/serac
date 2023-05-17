@@ -312,7 +312,7 @@ SERAC_HOST_DEVICE constexpr auto GaussLegendreWeights()
   }
 
   if constexpr (geom == mfem::Geometry::TETRAHEDRON) {
-    using output_t = tensor< double, (n * (n + 1) * (n + 2)) / 2 >;
+    using output_t = tensor< double, (n * (n + 1) * (n + 2)) / 6 >;
 
     if constexpr (n == 1) {
       return output_t{0.166666666666666656};

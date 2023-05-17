@@ -95,7 +95,7 @@ void check_gradient(serac::Functional<T>& f, mfem::Vector& U, mfem::Vector& dU_d
     if (df_jvp1.Norml2() != 0) {
       double relative_error = df_jvp1.DistanceTo(df_jvp2.GetData()) / df_jvp1.Norml2();
       EXPECT_NEAR(0., relative_error, 5.e-6);
-    }
+    } 
 
     // {f(x - 2 * h), f(x - h), f(x), f(x + h), f(x + 2 * h)}
     mfem::Vector f_values[5];

@@ -173,12 +173,6 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
   mfem::Vector r1 = (*J) * U + (*F);
   mfem::Vector r2 = residual(U);
 
-  // std::cout << std::setprecision(16);
-  // r1.Print(std::cout, 4);
-  // std::cout << std::endl;
-  // std::cout << std::endl;
-  // r2.Print(std::cout, 4);
-
   if (verbose) {
     std::cout << "sum(r1):  " << r1.Sum() << std::endl;
     std::cout << "sum(r2):  " << r2.Sum() << std::endl;

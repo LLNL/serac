@@ -16,6 +16,8 @@
 
 #include "detail/metaprogramming.hpp"
 
+#include <cmath>
+
 namespace serac {
 
 /**
@@ -1835,6 +1837,15 @@ template <typename T, int m, int... n>
 SERAC_HOST_DEVICE constexpr int leading_dimension(tensor<T, m, n...>)
 {
   return m;
+}
+
+inline bool isnan(const zero &) { return false; }
+
+template <typename T, int... n>
+bool isnan(const tensor<T, n...> & A) {
+  bool found_nan = false;
+  for_constexpr<n...>([&](auto... i) { found_nan |= std::isnan(A(i...)); });
+  return found_nan;
 }
 
 }  // namespace serac

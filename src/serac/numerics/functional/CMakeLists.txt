@@ -28,7 +28,7 @@ set(functional_headers
     tuple_tensor_dual_functions.hpp
     )
 
-set(functional_sources element_restriction.cpp geometric_factors.cpp)
+set(functional_sources element_restriction.cpp geometric_factors.cpp mpi_fstream.cpp)
 
 set(functional_detail_headers
     detail/hexahedron_H1.inl

@@ -10,10 +10,6 @@
 
 using namespace serac;
 
-static constexpr double kronecker_tolerance = 1.0e-16;
-static constexpr double grad_tolerance      = 1.0e-10;  // coarser, since comparing to a finite difference approximation
-static constexpr int    num_points          = 10;
-
 template <typename element_type>
 auto lagrange_nodes()
 {
