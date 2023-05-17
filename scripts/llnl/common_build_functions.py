@@ -517,24 +517,25 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = 
     return res
 
 
-def build_devtools(builds_dir, timestamp):
+def build_devtools(builds_dir, timestamp, short_path):
     sys_type = get_system_type()
     project_file = "scripts/spack/devtools.json"
 
     if "toss_3" in sys_type:
         compiler_spec = "%gcc@8.1.0"
-        compiler_dir  = "gcc-8.1.0"
+    elif "toss_4" in sys_type:
+        compiler_spec = "%gcc@10.3.1"
     elif "blueos" in sys_type:
         compiler_spec = "%gcc@8.3.1"
-        compiler_dir  = "gcc-8.3.1"
 
     print("[Building devtools using compiler spec: {0}]".format(compiler_spec))
 
-    # unique install location
-    prefix = pjoin(builds_dir, sys_type)
-    if not os.path.exists(prefix):
-        os.mkdir(prefix)
-    prefix = pjoin(prefix, timestamp)
+    if short_path:
+        prefix = builds_dir
+    else:
+        # unique install location
+        prefix = pjoin(builds_dir, sys_type, timestamp)
+
     if not os.path.exists(prefix):
         os.makedirs(prefix)
 
@@ -552,10 +553,8 @@ def build_devtools(builds_dir, timestamp):
     end_time = time.time()
 
     print("[Build time: {0}]".format(convertSecondsToReadableTime(end_time - start_time)))
-    if res != 0:
-        print("[ERROR: Failed build of devtools for spec %s]\n" % compiler_spec)
-    else:
-        # Only update the latest symlink if successful
+    # Only update the latest symlink if successful and short_path is not set
+    if res == 0 and not short_path:
         link_path = pjoin(builds_dir, sys_type, "latest")
         view_dir = pjoin(prefix, "view")
         print("[Creating symlink to latest devtools view:\n{0}\n->\n{1}]".format(link_path, view_dir))
@@ -566,7 +565,10 @@ def build_devtools(builds_dir, timestamp):
             os.unlink(link_path)
         os.symlink(view_dir, link_path)
 
+    if res == 0:
         print("[SUCCESS: Finished build devtools for spec %s]\n" % compiler_spec)
+    else:
+        print("[ERROR: Failed build of devtools for spec %s]\n" % compiler_spec)
 
     # set proper perms for installed devtools
     set_group_and_perms(prefix)

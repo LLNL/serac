@@ -12,3 +12,4 @@
 .vscode/
 *.orig
 __pycache__/
+view

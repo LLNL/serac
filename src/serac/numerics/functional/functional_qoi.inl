@@ -30,7 +30,9 @@ struct QoIProlongation : public mfem::Operator {
   /// @brief set the value of output to the distributed sum over input values from different processors
   void MultTranspose(const mfem::Vector& input, mfem::Vector& output) const override
   {
-    MPI_Allreduce(&input[0], &output[0], 1, MPI_DOUBLE, MPI_SUM, comm);
+    // const_cast to work around clang@14.0.6 compiler error:
+    //   "argument type 'const double *' doesn't match specified 'MPI' type tag that requires 'double *'"
+    MPI_Allreduce(const_cast<double*>(&input[0]), &output[0], 1, MPI_DOUBLE, MPI_SUM, comm);
   }
 
   MPI_Comm comm;  ///< MPI communicator used to carry out the distributed reduction
