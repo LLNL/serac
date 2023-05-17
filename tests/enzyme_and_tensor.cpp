@@ -81,6 +81,37 @@ TEST(enzyme, linear_solve_test) {
   EXPECT_EQ(dy[2], -0.25);
 }
 
+TEST(enzyme, another_linear_solve_test) {
+  tensor<double,3,3> A = {{
+    {2, 1, 0},
+    {1, 2, 1},
+    {0, 1, 2}
+  }};
+  tensor<double,3,3> dA = {{
+    {1, 0, 1},
+    {1, 0, 0},
+    {0, 1, 0}
+  }};
+  tensor<double, 3> b{1.0, 2.0, 3.0};
+  tensor<double, 3> db{};
+
+  tensor<double, 3> x{};
+
+  const double TOL = 1e-15;
+
+  another_linear_solve(A, b, x);
+  EXPECT_NEAR(x[0], 0.5, TOL);
+  EXPECT_NEAR(x[1], 0.0, TOL);
+  EXPECT_NEAR(x[2], 1.5, TOL);
+
+  tensor<double, 3> dx{};
+
+  __enzyme_fwddiff<void>((void*) another_linear_solve, &A, &dA, &b, &db, &x, &dx);
+  EXPECT_NEAR(dx[0], -1.25, TOL);
+  EXPECT_NEAR(dx[1],  0.50, TOL);
+  EXPECT_NEAR(dx[2], -0.25, TOL);
+}
+
 TEST(enzyme, fwddiffOnVoidFn)
 {
   double x = 2.0;
@@ -146,33 +177,3 @@ TEST(enzyme, jvp_test_2_args) {
   EXPECT_EQ(dy[2], -0.25);
 }
 
-TEST(enzyme, another_linear_solve_test) {
-  tensor<double,3,3> A = {{
-    {2, 1, 0},
-    {1, 2, 1},
-    {0, 1, 2}
-  }};
-  tensor<double,3,3> dA = {{
-    {1, 0, 1},
-    {1, 0, 0},
-    {0, 1, 0}
-  }};
-  tensor<double, 3> b{1.0, 2.0, 3.0};
-  tensor<double, 3> db{};
-
-  tensor<double, 3> x{};
-
-  const double TOL = 1e-15;
-
-  another_linear_solve(A, b, x);
-  EXPECT_NEAR(x[0], 0.5, TOL);
-  EXPECT_NEAR(x[1], 0.0, TOL);
-  EXPECT_NEAR(x[2], 1.5, TOL);
-
-  tensor<double, 3> dx{};
-
-  __enzyme_fwddiff<void>((void*) another_linear_solve, &A, &dA, &b, &db, &x, &dx);
-  EXPECT_NEAR(dx[0], -1.25, TOL);
-  EXPECT_NEAR(dx[1],  0.50, TOL);
-  EXPECT_NEAR(dx[2], -0.25, TOL);
-}
