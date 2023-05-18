@@ -160,6 +160,18 @@ SERAC_HOST_DEVICE constexpr auto make_dual_helper(const tensor<T, n...>& arg)
   return arg_dual;
 }
 
+template <int... n, typename lambda>
+SERAC_HOST_DEVICE constexpr void for_constexpr(lambda&& f)
+{
+  for_constexpr(f, std::make_integer_sequence<int, n>{}...);
+}
+
+template <int... n, typename lambda, typename... arg_types>
+SERAC_HOST_DEVICE constexpr void for_constexpr(lambda&& f, std::integer_sequence<int, n...>, arg_types... args)
+{
+  (for_constexpr(f, args..., integral_constant<n>{}), ...);
+}
+
 /**
  * @tparam T0 the first type of the tuple argument
  * @tparam T1 the first type of the tuple argument
