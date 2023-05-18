@@ -128,3 +128,33 @@ TEST(material, ParameterDerivativeWithState) {
     double error = std::abs(exact - dstate.accumulated_plastic_strain);
     EXPECT_LT(error, 1e-10);
 }
+
+TEST(material, UniaxialCase)
+{
+    serac::J2 mat{.density=1.0};
+    serac::J2::State state{};
+
+    double E = 2.0;
+    double nu = 0.25;
+    double sigma_y = 0.01;
+    double Hi = E/50.0;
+    double Hk = 0.0;
+
+    double t_max = 500.0;
+    size_t num_steps = 100.0;
+    double strain_rate = 1e-3;
+
+    auto response_history = serac::uniaxial_stress_test(t_max, num_steps, mat, state,
+        [strain_rate](double t){ return strain_rate*t; },
+        [E](double /* t */){ return E; },
+        [nu](double /* t */){ return nu; },
+        [sigma_y](double /* t */){ return sigma_y; },
+        [Hi](double /* t */){ return Hi; },
+        [Hk](double /* t */){ return Hk; });
+    
+    std::ofstream file;
+    file.open("stress.csv", std::ios::out);
+    for (auto time_dump : response_history) {
+        file << get<1>(time_dump)[0][0] << " " << get<2>(time_dump)[0][0] << std::endl;
+    }
+}
