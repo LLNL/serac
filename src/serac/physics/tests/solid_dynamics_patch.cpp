@@ -244,23 +244,22 @@ private:
 };
 
 /**
- * @brief Solve problem and compare numerical solution to exact answer
+ * @brief compute the error between the approximate and exact solution
  *
- * @tparam p Polynomial degree of finite element approximation
- * @tparam dim Number of spatial dimensions
- * @tparam ExactSolution A class that satisfies the exact solution concept
+ * @tparam element_type the kind of element to use in the mesh
+ * @tparam solution_type A class that satisfies the exact solution concept
  *
  * @param exact_solution Exact solution of problem
  * @param bc Specifier for boundary condition type to test
  * @return double L2 norm (continuous) of error in computed solution
  * *
- * @pre ExactSolution must implement operator() that is an MFEM
+ * @pre exact_solution must implement operator() that is an MFEM
  * coefficient-generating function for the exact solution of the displacement
  * as a function of space and time.
- * @pre ExactSolution must implement velocity() that is an MFEM
+ * @pre exact_solution must implement velocity() that is an MFEM
  * coefficient-generating function for the exact solution of the velocity
  * as a function of space and time.
- * @pre ExactSolution must have a method applyLoads that applies forcing terms to the
+ * @pre exact_solution must have a method applyLoads that applies forcing terms to the
  * solid functional that should lead to the exact solution
  */
 template <typename element_type, typename solution_type>

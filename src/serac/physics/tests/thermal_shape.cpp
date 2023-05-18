@@ -53,6 +53,7 @@ TEST(HeatTransfer, MoveShape)
   //
   // Sam: we're setting a really small abs tolerance here to
   //      work around https://github.com/mfem/mfem/issues/3641
+  // TODO: adopt solution to issue above once implemented
   auto linear_options         = heat_transfer::default_linear_options;
   linear_options.absolute_tol = 1.0e-30;
 

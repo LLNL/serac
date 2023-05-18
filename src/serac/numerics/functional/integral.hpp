@@ -1,3 +1,9 @@
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// other Serac Project Developers. See the top-level LICENSE file for
+// details.
+//
+// SPDX-License-Identifier: (BSD-3-Clause)
+
 #pragma once
 
 #include <array>
@@ -13,7 +19,15 @@
 
 namespace serac {
 
+
+/// @brief a class for representing a Integral calculations and their derivatives 
 struct Integral {
+
+  /**
+   * @brief the different kinds of supported integrals
+   * @note Domain: spatial dimension == geometry dimension
+   * @note Boundary: spatial dimension == geometry dimension + 1
+   */
   enum Type
   {
     Domain,
@@ -22,10 +36,21 @@ struct Integral {
     _size
   };
 
+  /// @brief a list of all possible integral types, used for range-for loops
   static constexpr Type Types[2] = {Domain, Boundary};
 
+  /// @brief the number of different kinds of integrals
   static constexpr std::size_t num_types = Type::_size;
 
+  /**
+   * @brief Construct an "empty" Integral object, whose kernels are to be initialized later
+   * in one of the Make****Integral free functions below.
+   * 
+   * @note It is not intended that users construct these objects manually
+   * 
+   * @param t the type of integral
+   * @param trial_space_indices a list of which trial spaces are used in the integrand
+   */
   Integral(Type t, std::vector<uint32_t> trial_space_indices) : type(t), active_trial_spaces(trial_space_indices)
   {
     std::size_t num_trial_spaces = trial_space_indices.size();
@@ -38,6 +63,17 @@ struct Integral {
     }
   }
 
+  /**
+   * @brief evaluate the integral, optionally storing q-function derivatives with respect to
+   *        a specific trial space.
+   * 
+   * @param input_E a collection (one for each trial space) of block vectors (block index corresponds to the element geometry) containing input values for each element.
+   * @param output_E a block vector (block index corresponds to the element geometry) of the output values for each element.
+   * @param differentiation_index a non-negative value indicates differentiation with respect to the trial space with that index.
+   *                              A value of -1 indicates no differentiation will occur.
+   * @param update_state whether or not to store the updated state values computed in the q-function. For plasticity and other path-dependent
+   *                     materials, this flag should only be set to `true` once a solution to the nonlinear system has been found. 
+   */
   void Mult(const std::vector<mfem::BlockVector>& input_E, mfem::BlockVector& output_E, int differentiation_index,
             bool update_state) const
   {
@@ -54,6 +90,13 @@ struct Integral {
     }
   }
 
+  /**
+   * @brief evaluate the jacobian(with respect to some trial space)-vector product of this integral
+   * 
+   * @param input_E a block vector (block index corresponds to the element geometry) of a specific trial space element values
+   * @param output_E a block vector (block index corresponds to the element geometry) of the output values for each element.
+   * @param differentiation_index a non-negative value indicates directional derivative with respect to the trial space with that index.
+   */
   void GradientMult(const mfem::BlockVector& input_E, mfem::BlockVector& output_E,
                     std::size_t differentiation_index) const
   {
@@ -67,6 +110,12 @@ struct Integral {
     }
   }
 
+  /**
+   * @brief evaluate the jacobian (with respect to some trial space) of this integral
+   * 
+   * @param K_e a collection (one for each element type) of element jacobians (num_elements x trial_dofs_per_elem x test_dofs_per_elem)
+   * @param differentiation_index the index of the trial space being differentiated
+   */
   void ComputeElementGradients(std::map<mfem::Geometry::Type, ExecArray<double, 3, ExecutionSpace::CPU> >& K_e,
                                std::size_t differentiation_index) const
   {
@@ -78,29 +127,73 @@ struct Integral {
     }
   }
 
+  /// @brief which kind of integral is being computed
   Type type;
 
+  /// @brief signature of integral evaluation kernel
   using eval_func = std::function<void(const std::vector<const double*>&, double*, bool)>;
+
+  /// @brief kernels for integral evaluation over each type of element
   std::map<mfem::Geometry::Type, eval_func>               evaluation_;
+
+  /// @brief kernels for integral evaluation + derivative w.r.t. specified argument over each type of element
   std::vector<std::map<mfem::Geometry::Type, eval_func> > evaluation_with_AD_;
 
+  /// @brief signature of element jvp kernel
   using jvp_func = std::function<void(const double*, double*)>;
+
+  /// @brief kernels for jacobian-vector product of integral calculation
   std::vector<std::map<mfem::Geometry::Type, jvp_func> > jvp_;
 
+  /// @brief signature of element gradient kernel
   using grad_func = std::function<void(ExecArrayView<double, 3, ExecutionSpace::CPU>)>;
+
+  /// @brief kernels for calculation of element jacobians
   std::vector<std::map<mfem::Geometry::Type, grad_func> > element_gradient_;
 
+  /// @brief a list of the trial spaces that take part in this integrand
   std::vector<uint32_t> active_trial_spaces;
 
+  /**
+   * @brief a way of translating between the indices used by `Functional` and `Integral` to refer to the same
+   *        trial space. 
+   * 
+   * e.g. A `Functional` may have 4 trial spaces {A, B, C, D}, but an `Integral` may only
+   *        depend on a subset, say {B, C}. From `Functional`'s perspective, trial spaces {B, C} have (zero-based)
+   *        indices of {1, 2}, but from `Integral`'s perspective, those are trial spaces {0, 1}. 
+   * 
+   * So, in this example functional_to_integral_ would have the values:
+   * @code{.cpp}
+   * std::map<int,int> functional_to_integral = {{1, 0}, {2, 1}};
+   * @endcode
+   *        
+   */
   std::map<int, int> functional_to_integral_;
 
+  /// @brief the spatial positions and jacobians (dx_dxi) for each element type and quadrature point
   std::map<mfem::Geometry::Type, GeometricFactors> geometric_factors_;
 };
 
+
+/**
+ * @brief function to generate kernels held by an `Integral` object of type "Domain", with a specific element type
+ * 
+ * @tparam geom the element geometry
+ * @tparam Q a parameter that controls the number of quadrature points
+ * @tparam test the kind of test functions used in the integral
+ * @tparam trials the trial space(s) of the integral's inputs
+ * @tparam lambda_type a callable object that implements the q-function concept
+ * @tparam qpt_data_type any quadrature point data needed by the material model
+ * @param s an object used to pass around test/trial information
+ * @param integral the Integral object to initialize
+ * @param qf the quadrature function
+ * @param domain the domain of integration
+ * @param qdata the values of any quadrature point data for the material
+ */
 template <mfem::Geometry::Type geom, int Q, typename test, typename... trials, typename lambda_type,
-          typename state_type>
+          typename qpt_data_type>
 void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, lambda_type&& qf, mfem::Mesh& domain,
-                      std::shared_ptr<QuadratureData<state_type> > qf_state)
+                      std::shared_ptr<QuadratureData<qpt_data_type> > qdata)
 {
   integral.geometric_factors_[geom] = GeometricFactors(&domain, Q, geom);
   GeometricFactors& gf              = integral.geometric_factors_[geom];
@@ -114,7 +207,7 @@ void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, 
   constexpr int         NO_DIFFERENTIATION = -1;
   std::shared_ptr<zero> dummy_derivatives;
   integral.evaluation_[geom] = domain_integral::evaluation_kernel<NO_DIFFERENTIATION, Q, geom>(
-      s, qf, positions, jacobians, qf_state, dummy_derivatives, num_elements);
+      s, qf, positions, jacobians, qdata, dummy_derivatives, num_elements);
 
   constexpr std::size_t                 num_args = s.num_args;
   [[maybe_unused]] static constexpr int dim      = dimension_of(geom);
@@ -124,11 +217,11 @@ void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, 
     // Note: ptrs' lifetime is managed in an unusual way! It is captured by-value in the
     // action_of_gradient functor below to augment the reference count, and extend its lifetime to match
     // that of the DomainIntegral that allocated it.
-    using derivative_type = decltype(domain_integral::get_derivative_type<index, dim, trials...>(qf, state_type{}));
+    using derivative_type = decltype(domain_integral::get_derivative_type<index, dim, trials...>(qf, qpt_data_type{}));
     auto ptr = accelerator::make_shared_array<ExecutionSpace::CPU, derivative_type>(num_elements * qpts_per_element);
 
     integral.evaluation_with_AD_[index][geom] =
-        domain_integral::evaluation_kernel<index, Q, geom>(s, qf, positions, jacobians, qf_state, ptr, num_elements);
+        domain_integral::evaluation_kernel<index, Q, geom>(s, qf, positions, jacobians, qdata, ptr, num_elements);
 
     integral.jvp_[index][geom] = domain_integral::jvp_kernel<index, Q, geom>(s, ptr, num_elements);
     integral.element_gradient_[index][geom] =
@@ -136,6 +229,20 @@ void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, 
   });
 }
 
+/**
+ * @brief function to generate kernels held by an `Integral` object of type "Domain", for all element types
+ * 
+ * @tparam s a function signature type containing test/trial space informationa type containing a function signature 
+ * @tparam Q a parameter that controls the number of quadrature points
+ * @tparam dim the dimension of the domain
+ * @tparam lambda_type a callable object that implements the q-function concept
+ * @tparam qpt_data_type any quadrature point data needed by the material model
+ * @param domain the domain of integration 
+ * @param qf the quadrature function
+ * @param qdata the values of any quadrature point data for the material
+ * @param argument_indices the indices of trial space arguments used in the Integral
+ * @return Integral the initialized `Integral` object
+ */
 template <typename s, int Q, int dim, typename lambda_type, typename qpt_data_type>
 Integral MakeDomainIntegral(mfem::Mesh& domain, lambda_type&& qf, std::shared_ptr<QuadratureData<qpt_data_type> > qdata,
                             std::vector<uint32_t> argument_indices)
@@ -157,6 +264,21 @@ Integral MakeDomainIntegral(mfem::Mesh& domain, lambda_type&& qf, std::shared_pt
   return integral;
 }
 
+/**
+ * @brief function to generate kernels used by an `Integral` object of type "Boundary", with a specific element type
+ * 
+ * @tparam geom the element geometry
+ * @tparam Q a parameter that controls the number of quadrature points
+ * @tparam test the kind of test functions used in the integral
+ * @tparam trials the trial space(s) of the integral's inputs
+ * @tparam lambda_type a callable object that implements the q-function concept
+ * @param s an object used to pass around test/trial information
+ * @param integral the Integral object to initialize
+ * @param qf the quadrature function
+ * @param domain the domain of integration
+ * 
+ * @note this function is not meant to be called by users
+ */
 template <mfem::Geometry::Type geom, int Q, typename test, typename... trials, typename lambda_type>
 void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral& integral, lambda_type&& qf,
                           mfem::Mesh& domain)
@@ -195,6 +317,20 @@ void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral& integr
   });
 }
 
+/**
+ * @brief function to generate kernels held by an `Integral` object of type "Boundary", for all element types
+ * 
+ * @tparam s a function signature type containing test/trial space informationa type containing a function signature 
+ * @tparam Q a parameter that controls the number of quadrature points
+ * @tparam dim the dimension of the domain
+ * @tparam lambda_type a callable object that implements the q-function concept
+ * @param domain the domain of integration 
+ * @param qf the quadrature function
+ * @param argument_indices the indices of trial space arguments used in the Integral
+ * @return Integral the initialized `Integral` object
+ * 
+ * @note this function is not meant to be called by users
+ */
 template <typename s, int Q, int dim, typename lambda_type>
 Integral MakeBoundaryIntegral(mfem::Mesh& domain, lambda_type&& qf, std::vector<uint32_t> argument_indices)
 {

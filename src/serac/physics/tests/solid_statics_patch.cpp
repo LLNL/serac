@@ -170,15 +170,15 @@ public:
    * \p essential_boundaries, the traction corresponding to the exact
    * solution is applied.
    *
+   * @tparam material_type Type of the material model used in the problem
    * @tparam p Polynomial degree of the finite element approximation
-   * @tparam Material Type of the material model used in the problem
    *
    * @param material Material model used in the problem
    * @param sf The SolidMechanics module for the problem
    * @param essential_boundaries Boundary attributes on which essential boundary conditions are desired
    */
-  template <int p>
-  void applyLoads(const solid_mechanics::LinearIsotropic& material, SolidMechanics<p, dim>& sf, std::set<int> essential_boundaries) const
+  template <typename material_type, int p>
+  void applyLoads(const material_type & material, SolidMechanics<p, dim>& sf, std::set<int> essential_boundaries) const
   {
     // essential BCs
     auto ebc_func = [*this](const auto& X, auto& u){ this->operator()(X, u); };
@@ -187,7 +187,7 @@ public:
     // natural BCs
     auto traction = [=](auto X, auto n0, auto) {
       auto H = gradient(get_value(X));
-      solid_mechanics::LinearIsotropic::State state{};
+      typename material_type::State state{};
       auto sigma = material(state, H);
       auto P = solid_mechanics::CauchyToPiola(sigma, H);
       return dot(P, n0); 
@@ -332,8 +332,7 @@ double solution_error(PatchBoundaryCondition bc)
 
   SolidMechanics<p, dim> solid(std::move(equation_solver), solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "solid");
 
-  //solid_mechanics::NeoHookean mat{.density=1.0, .K=1.0, .G=1.0};
-  solid_mechanics::LinearIsotropic mat{.density=1.0, .K=1.0, .G=1.0};
+  solid_mechanics::NeoHookean mat{.density=1.0, .K=1.0, .G=1.0};
   solid.setMaterial(mat);
 
   exact_displacement.applyLoads(mat, solid, essentialBoundaryAttributes<dim>(bc));
