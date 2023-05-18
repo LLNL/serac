@@ -1,3 +1,5 @@
+#include <fstream>
+
 #include "gtest/gtest.h"
 
 //#include "tuple.hpp"
@@ -155,6 +157,6 @@ TEST(material, UniaxialCase)
     std::ofstream file;
     file.open("stress.csv", std::ios::out);
     for (auto time_dump : response_history) {
-        file << get<1>(time_dump)[0][0] << " " << get<2>(time_dump)[0][0] << std::endl;
+        file << serac::get<1>(time_dump)[0][0] << " " << serac::get<2>(time_dump)[0][0] << std::endl;
     }
 }

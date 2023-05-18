@@ -32,3 +32,9 @@ SERAC_HOST_DEVICE constexpr void for_constexpr(lambda&& f, std::integer_sequence
 {
   (for_constexpr(f, args..., integral_constant<n>{}), ...);
 }
+
+template <int... n, typename lambda>
+SERAC_HOST_DEVICE constexpr void for_constexpr(lambda&& f)
+{
+for_constexpr(f, std::make_integer_sequence<int, n>{}...);
+}
