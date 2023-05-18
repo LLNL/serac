@@ -8,8 +8,29 @@
 namespace serac {
 
 struct GeometricFactors {
+
+  /// @brief default ctor, leaving this object uninitialized
   GeometricFactors(){};
+
+  /**
+   * @brief calculate positions and jacobians for quadrature points belonging to 
+   * elements with the specified geometry, belonging to the provided mesh.
+   * 
+   * @param mesh the mesh 
+   * @param q a parameter controlling the number of quadrature points per element
+   * @param elem_geom which kind of element geometry to select
+   */
   GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry::Type elem_geom);
+
+  /**
+   * @brief calculate positions and jacobians for quadrature points belonging to 
+   * boundary elements with the specified geometry, belonging to the provided mesh.
+   * 
+   * @param mesh the mesh 
+   * @param q a parameter controlling the number of quadrature points per element
+   * @param elem_geom which kind of element geometry to select
+   * @param type whether or not the faces are on the boundary (supported) or interior (unsupported)
+   */
   GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry::Type elem_geom, FaceType type);
 
   // descriptions copied from mfem
@@ -31,6 +52,7 @@ struct GeometricFactors {
       - NE = number of elements in the mesh. */
   mfem::Vector J;
 
+  /// the number of elements in the domain
   std::size_t num_elements;
 };
 

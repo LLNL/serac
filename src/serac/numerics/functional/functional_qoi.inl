@@ -38,10 +38,17 @@ struct QoIProlongation : public mfem::Operator {
 
 /**
  * @brief this class behaves like a Restriction operator, except is specialized for
- * the case of a quantity of interest. The action of its MultTranspose() operator (the
+ * the case of a quantity of interest. The action of its ScatterAdd() operator (the
  * only thing it is used for) sums the values on this local processor.
  */
 struct QoIElementRestriction {
+
+  /**
+   * @brief element-to-global ScatterAdd operation used in FEM assembly, for quantities of interest
+   * 
+   * @param input the values from each element
+   * @param output the total of those elemental values
+   */
   void ScatterAdd(const mfem::Vector& input, mfem::Vector& output) const { output[0] += input.Sum(); }
 };
 
