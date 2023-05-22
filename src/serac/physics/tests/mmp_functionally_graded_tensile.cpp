@@ -27,8 +27,6 @@ static const int probTag_ = 5;
 
 using namespace serac;
 
-using serac::solid_mechanics::default_static_options;
-
 int main(int argc, char* argv[])
 {
   MPI_Init(&argc, &argv);
@@ -67,24 +65,21 @@ int main(int argc, char* argv[])
   serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a functional-based solid mechanics solver
-  IterativeSolverOptions          default_linear_options    = {.rel_tol     = 1.0e-6,
-                                                   .abs_tol     = 1.0e-16,
-                                                   .print_level = 0,
-                                                   .max_iter    = 500,
-                                                   .lin_solver  = LinearSolver::GMRES,
-                                                   .prec        = HypreBoomerAMGPrec{}};
-  IterativeNonlinearSolverOptions default_nonlinear_options = {
-      .rel_tol     = 1.0e-6,
-      .abs_tol     = 1.0e-14,
-      .max_iter    = 50,
-      .print_level = 1,
-      // .nonlin_solver = serac::NonlinearSolver::Newton};
-      .nonlin_solver = serac::NonlinearSolver::KINBacktrackingLineSearch};
-  // SolidMechanics<p, dim, Parameters< H1<p>, H1<p> > > solid_solver({default_linear_options,
-  // default_nonlinear_options}, GeometricNonlinearities::Off,
-  //                                      "mmp_solid_functional");
-  SolidMechanics<p, dim, Parameters<L2<p>, L2<p> > > solid_solver({default_linear_options, default_nonlinear_options},
-                                                                  GeometricNonlinearities::Off, "mmp_solid_functional");
+  // IterativeSolverOptions          default_linear_options    = {.rel_tol     = 1.0e-6,
+  //                                                  .abs_tol     = 1.0e-16,
+  //                                                  .print_level = 0,
+  //                                                  .max_iter    = 500,
+  //                                                  .lin_solver  = LinearSolver::GMRES,
+  //                                                  .prec        = HypreBoomerAMGPrec{}};
+  LinearSolverOptions linear_options = {.linear_solver = LinearSolver::SuperLU};
+  NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = serac::NonlinearSolver::Newton,
+                                              .relative_tol   = 1.0e-8,
+                                              .absolute_tol   = 1.0e-14,
+                                              .max_iterations = 6,
+                                              .print_level    = 1};
+
+  SolidMechanics<p, dim, Parameters<L2<p>, L2<p> > > solid_solver(
+    nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "mmp_solid_functional");
 
   // Material properties
   double density            = 1.0;

@@ -34,8 +34,6 @@ using namespace serac;
 
 const static int problemID = 2;
 
-using serac::solid_mechanics::default_static_options;
-
 int main(int argc, char* argv[])
 {
   auto [num_procs, rank] = serac::initialize(argc, argv);
@@ -46,7 +44,7 @@ int main(int argc, char* argv[])
 #else
   constexpr int dim      = 3;
 #endif
-  int serial_refinement   = 0;
+  int serial_refinement   = 1;
   int parallel_refinement = 0;
 
   // Create DataStore
@@ -84,47 +82,65 @@ int main(int argc, char* argv[])
 
 #else
 
-  auto                mesh = mesh::refineAndDistribute(std::move(initial_mesh), serial_refinement, parallel_refinement);
+  auto mesh = mesh::refineAndDistribute(std::move(initial_mesh), serial_refinement, parallel_refinement);
 
 #endif
 
   serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a functional-based solid mechanics solver
-  IterativeNonlinearSolverOptions default_nonlinear_options = {.rel_tol       = 1.0e-6,
-                                                               .abs_tol       = 1.0e-8,
-                                                               .max_iter      = 100,
-                                                               .print_level   = 1,
-                                                               .nonlin_solver = serac::NonlinearSolver::Newton};
-  // .nonlin_solver = serac::NonlinearSolver::LBFGS};
-  // .nonlin_solver = serac::NonlinearSolver::KINFullStep};
-  //.nonlin_solver = serac::NonlinearSolver::KINBacktrackingLineSearch};
-  // .nonlin_solver = serac::NonlinearSolver::KINPicard};
-  // .nonlin_solver = serac::NonlinearSolver::KINFP};
+  // LinearSolverOptions linear_options = {.linear_solver = LinearSolver::SuperLU};
 
-#ifdef ALT_ITER_SOLVER
-  auto custom_solver = std::make_unique<mfem::GMRESSolver>(MPI_COMM_WORLD);
-  custom_solver->SetRelTol(1.0e-8);
-  custom_solver->SetAbsTol(1.0e-16);
-  custom_solver->SetPrintLevel(0);
-  custom_solver->SetMaxIter(700);
-  custom_solver->SetKDim(500);
+  LinearSolverOptions linear_options = {.linear_solver  = LinearSolver::GMRES,
+                                                      .preconditioner = Preconditioner::HypreAMG,
+                                                      .relative_tol   = 1.0e-6,
+                                                      .absolute_tol   = 1.0e-10,
+                                                      .max_iterations = 500,
+                                                      .print_level    = 0};
 
+  NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = serac::NonlinearSolver::Newton,
+                                              .relative_tol   = 1.0e-8,
+                                              .absolute_tol   = 1.0e-14,
+                                              .max_iterations = 15,
+                                              .print_level    = 1};
   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
-      {CustomSolverOptions{custom_solver.get()}, default_nonlinear_options}, GeometricNonlinearities::Off,
-      "lce_solid_functional");
-#else
-  DirectSolverOptions linear_sol_options = {};
-  SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
-      {linear_sol_options, default_nonlinear_options}, GeometricNonlinearities::Off, "lce_solid_functional");
-#endif
+      nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional");
+      
+//   IterativeNonlinearSolverOptions default_nonlinear_options = {.rel_tol       = 1.0e-6,
+//                                                                .abs_tol       = 1.0e-8,
+//                                                                .max_iter      = 100,
+//                                                                .print_level   = 1,
+//                                                                .nonlin_solver = serac::NonlinearSolver::Newton};
+//   // .nonlin_solver = serac::NonlinearSolver::Newton};
+//   // .nonlin_solver = serac::NonlinearSolver::LBFGS};
+//   // .nonlin_solver = serac::NonlinearSolver::KINFullStep};
+//   //.nonlin_solver = serac::NonlinearSolver::KINBacktrackingLineSearch};
+//   // .nonlin_solver = serac::NonlinearSolver::KINPicard};
+//   // .nonlin_solver = serac::NonlinearSolver::KINFP};
+
+// #ifdef ALT_ITER_SOLVER
+//   auto custom_solver = std::make_unique<mfem::GMRESSolver>(MPI_COMM_WORLD);
+//   custom_solver->SetRelTol(1.0e-8);
+//   custom_solver->SetAbsTol(1.0e-16);
+//   custom_solver->SetPrintLevel(0);
+//   custom_solver->SetMaxIter(700);
+//   custom_solver->SetKDim(500);
+
+//   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
+//       {CustomSolverOptions{custom_solver.get()}, default_nonlinear_options}, GeometricNonlinearities::Off,
+//       "lce_solid_functional");
+// #else
+//   DirectSolverOptions linear_sol_options = {};
+//   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
+//       {linear_sol_options, default_nonlinear_options}, GeometricNonlinearities::Off, "lce_solid_functional");
+// #endif
 
   // Material properties
   double density         = 1.0;
-  double young_modulus   = 0.25e6;  // 0.4;
+  double young_modulus   = 0.25e6; // 0.25e6; (multiply by 10e-3 to go from SI to [Kg/s/mm])
   double possion_ratio   = 0.48;
-  double beta_param      = 5.2e4;  // 4.0e4; // 0.041;
-  double max_order_param = 0.4;    // 0.45; // 0.1;
+  double beta_param      = 5.2e4;  // 5.2e4; (multiply by 10e-3 to go from SI to [Kg/s/mm])
+  double max_order_param = 0.4;
   double gamma_angle     = 0.0;
   double eta_angle       = 0.0;
 
@@ -156,10 +172,40 @@ int main(int argc, char* argv[])
   bool               heterogeneousGammaField = problemID == 2 ? true : false;
   auto               gammaFunc = [heterogeneousGammaField, gamma_angle](const mfem::Vector& x, double) -> double {
     if (heterogeneousGammaField) {
-      double Hmax = 15.0e-3;
       double d    = 5.0e-3;
-      double t    = 0.5e-3;
+      double t    = 0.525e-3;
 
+#ifdef USE_2X1_LATTICE
+      // // All vertical walls
+      // if ((x[0] <= t) || (x[0] >= 4*d - t)) || ((x[0] >= 2*d-t/2) && (x[0] <= 2*d+t/2))) {
+      //   return M_PI_2;
+      // }
+
+      // // forward inclined
+      // if ( ( ( ((x[0] > 0*d+t/2) && (x[0] < 1*d-t/2)) || ((x[0] > 2*d+t/2) && (x[0] < 3*d-t/2)) ) && x[1] >= 2*d ) ||
+      //      ( ( ((x[0] > 1*d+t/2) && (x[0] < 2*d-t/2)) || ((x[0] > 3*d+t/2) && (x[0] < 4*d-t/2)) ) && x[1] < 2*d) ){
+      //     return -0.1920;
+      //   }
+      //   // backwards incline
+      //   else if ( ( ( ((x[0] > 1*d+t/2) && (x[0] < 2*d-t/2)) || ((x[0] > 3*d+t/2) && (x[0] < 4*d-t/2)) ) && x[1] >= 2*d ) ||
+      //             ( ( ((x[0] > 0*d+t/2) && (x[0] < 1*d-t/2)) || ((x[0] > 2*d+t/2) && (x[0] < 3*d-t/2)) ) && x[1] < 2*d) ){
+      //     return +0.1920;
+      //   }
+
+      // forward inclined
+      if ( ( ( ((x[0] > 0*d+t) && (x[0] < 1*d-t/2)) || ((x[0] > 9.75e-3+t/2) && (x[0] < 3*d-3*t/2)) ) && x[1] >= 0.0 ) ||
+           ( ( ((x[0] > 1*d+t/2) && (x[0] < 2*d-t)) || ((x[0] > 14.5e-3+t/2) && (x[0] < 4*d-2*t)) ) && x[1] < 0.0) ){
+          return -0.1920;
+        }
+        // backwards incline
+        else if ( ( ( ((x[0] > 0*d+t) && (x[0] < 1*d-t/2)) || ((x[0] > 9.75e-3+t/2) && (x[0] < 3*d-3*t/2)) ) && x[1] < 0.0 ) ||
+           ( ( ((x[0] > 1*d+t/2) && (x[0] < 2*d-t)) || ((x[0] > 14.5e-3+t/2) && (x[0] < 4*d-2*t)) ) && x[1] >= 0.0) ){
+          return +0.1920;
+        }
+       // All vertical walls
+       return M_PI_2;
+#else
+      double Hmax = 15.0e-3;
       // top wall
       if (x[1] >= Hmax) {
         return 0.0;
@@ -188,6 +234,7 @@ int main(int argc, char* argv[])
       }
 
       return M_PI_2;
+#endif
     }
     return gamma_angle;
   };
@@ -211,15 +258,13 @@ int main(int argc, char* argv[])
   solid_solver.setParameter(ETA_INDEX, etaParam);
 
   // Set material
-  LiqCrystElast_Bertoldi        lceMat(density, young_modulus, possion_ratio, max_order_param, beta_param);
-  LiqCrystElast_Bertoldi::State initial_state{};
+  LiquidCrystalElastomerBertoldi        lceMat(density, young_modulus, possion_ratio, max_order_param, beta_param);
 
-  auto param_data = solid_solver.createQuadratureDataBuffer(initial_state);
-  solid_solver.setMaterial(DependsOn<ORDER_INDEX, GAMMA_INDEX, ETA_INDEX>{}, lceMat, param_data);
+  solid_solver.setMaterial(DependsOn<ORDER_INDEX, GAMMA_INDEX, ETA_INDEX>{}, lceMat);
 
   auto zeroFunc = [](const mfem::Vector /*x*/) { return 0.0; };
-  solid_solver.setDisplacementBCs({1}, zeroFunc, 0);  // bottom face y-dir disp = 0
-  solid_solver.setDisplacementBCs({2}, zeroFunc, 1);  // left face x-dir disp = 0
+  solid_solver.setDisplacementBCs({1}, zeroFunc, 0);  // left face x-dir disp = 0
+  solid_solver.setDisplacementBCs({2}, zeroFunc, 1);  // bottom face y-dir disp = 0
 #ifndef USE_2D_MESH
 #ifdef USE_2X1_LATTICE
   solid_solver.setDisplacementBCs({3}, zeroFunc, 2);  // back face z-dir disp = 0
@@ -240,8 +285,6 @@ int main(int argc, char* argv[])
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  int num_steps = 10;
-
   std::string outputFilename;
   switch (problemID) {
     case 0:
@@ -260,14 +303,25 @@ int main(int argc, char* argv[])
 #ifdef USE_2D_MESH
   outputFilename += "_2D";
 #endif
+
+#ifdef USE_2X1_LATTICE
+  outputFilename = "sol_lce_bertoldi_honeycomb_2x1_inverted_";
+#endif
+
   solid_solver.outputState(outputFilename);
 
+  int num_steps = 20;
   double t    = 0.0;
   double tmax = 1.0;
   double dt   = tmax / num_steps;
   // double gblDispYmin;
 
   for (int i = 0; i < num_steps; i++) {
+
+    t += dt;
+    // orderParam = max_order_param * (tmax - t) / tmax;
+    orderParam = max_order_param * std::pow((tmax - t) / tmax, 1.0);
+
     if (rank == 0) {
       std::cout << "\n\n............................"
                 << "\n... Entering time step: " << i + 1 << " (/" << num_steps << ")"
@@ -328,9 +382,6 @@ int main(int argc, char* argv[])
         exit(1);
       }
     }
-
-    t += dt;
-    orderParam = max_order_param * (tmax - t) / tmax;
   }
 
   serac::exitGracefully();

@@ -22,8 +22,6 @@ using namespace serac;
 
 const static int problemID = 0;
 
-using serac::solid_mechanics::default_static_options;
-
 int main(int argc, char* argv[])
 {
   auto [num_procs, rank] = serac::initialize(argc, argv);
@@ -48,20 +46,21 @@ int main(int argc, char* argv[])
   serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a functional-based solid mechanics solver
-  IterativeNonlinearSolverOptions default_nonlinear_options = {.rel_tol       = 1.0e-6,
-                                                               .abs_tol       = 1.0e-8,
-                                                               .max_iter      = 15,
-                                                               .print_level   = 1,
-                                                               .nonlin_solver = serac::NonlinearSolver::Newton};
+  LinearSolverOptions linear_options = {.linear_solver = LinearSolver::SuperLU};
+  NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = serac::NonlinearSolver::Newton,
+                                              .relative_tol   = 1.0e-8,
+                                              .absolute_tol   = 1.0e-14,
+                                              .max_iterations = 6,
+                                              .print_level    = 1};
+
   // .nonlin_solver = serac::NonlinearSolver::LBFGS};
   // .nonlin_solver = serac::NonlinearSolver::KINFullStep};
   //.nonlin_solver = serac::NonlinearSolver::KINBacktrackingLineSearch};
   // .nonlin_solver = serac::NonlinearSolver::KINPicard};
   // .nonlin_solver = serac::NonlinearSolver::KINFP};
 
-  DirectSolverOptions linear_sol_options = {};
   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
-      {linear_sol_options, default_nonlinear_options}, GeometricNonlinearities::Off, "lce_solid_functional");
+      nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional");
 
   // Material properties
   double density         = 1.0;
@@ -131,11 +130,9 @@ int main(int argc, char* argv[])
   solid_solver.setParameter(ETA_INDEX, etaParam);
 
   // Set material
-  LiqCrystElast_Bertoldi        lceMat(density, young_modulus, possion_ratio, max_order_param, beta_param);
-  LiqCrystElast_Bertoldi::State initial_state{};
+  LiquidCrystalElastomerBertoldi        lceMat(density, young_modulus, possion_ratio, max_order_param, beta_param);
 
-  auto param_data = solid_solver.createQuadratureDataBuffer(initial_state);
-  solid_solver.setMaterial(DependsOn<ORDER_INDEX, GAMMA_INDEX, ETA_INDEX>{}, lceMat, param_data);
+  solid_solver.setMaterial(DependsOn<ORDER_INDEX, GAMMA_INDEX, ETA_INDEX>{}, lceMat);
 
   auto zeroFunc = [](const mfem::Vector /*x*/) { return 0.0; };
   solid_solver.setDisplacementBCs({1}, zeroFunc, 2);  // bottom face y-dir disp = 0

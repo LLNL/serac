@@ -15,6 +15,8 @@
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/solid_mechanics.hpp"
 #include "serac/physics/materials/liquid_crystal_elastomer.hpp"
+#include "serac/infrastructure/initialize.hpp"
+#include "serac/infrastructure/terminator.hpp"
 
 #define LOAD_DRIVEN
 // #undef LOAD_DRIVEN
