@@ -11,11 +11,10 @@
     - if: '$CI_COMMIT_BRANCH =~ /_qnone/ || $ON_QUARTZ == "OFF"' #run except if ...
       when: never
   before_script:
-    # python3.8 is needed on lassen to avoid trampling on the x86 clingo wheel
-    - module load python/3.8
+    - module load python/3.9.12
     # We could also extract the CMake executable location from the hostconfig in common_build_functions
     # like we do in config-build
-    - module load cmake/3.14.5
+    - module load cmake/3.19.2
 
 
 ####
@@ -39,7 +38,7 @@
 quartz-clang_14_0_6-src:
   variables:
     COMPILER: "clang@14.0.6"
-    HOST_CONFIG: "quartz-toss_3_x86_64_ib-${COMPILER}.cmake"
+    HOST_CONFIG: "quartz-toss_4_x86_64_ib-${COMPILER}.cmake"
     # TODO: Turn this  back on when input files are working for the Functional-based physics modules
     #DO_INTEGRATION_TESTS: "yes"
     ALLOC_NODES: "2"
@@ -49,7 +48,7 @@ quartz-clang_14_0_6-src:
 quartz-gcc_10_3_1-src:
   variables:
     COMPILER: "gcc@10.3.1"
-    HOST_CONFIG: "quartz-toss_3_x86_64_ib-${COMPILER}.cmake"
+    HOST_CONFIG: "quartz-toss_4_x86_64_ib-${COMPILER}.cmake"
     ALLOC_NODES: "1"
     ALLOC_TIME: "20"
   extends: .src_build_on_quartz
