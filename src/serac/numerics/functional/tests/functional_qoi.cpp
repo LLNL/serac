@@ -17,6 +17,8 @@
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/infrastructure/profiling.hpp"
 
+#include "serac/numerics/functional/tests/check_gradient.hpp"
+
 using namespace serac;
 using namespace serac::profiling;
 
@@ -80,116 +82,6 @@ double sum_of_measures_mfem(mfem::ParMesh& mesh)
   return lf(one_gf);
 }
 
-template <typename T>
-void check_gradient(Functional<T>& f, mfem::HypreParVector& U)
-{
-  int seed = 42;
-
-  mfem::HypreParVector dU = U;
-  dU                      = U;
-  dU.Randomize(seed);
-
-  double epsilon = 1.0e-8;
-
-  auto [unused, dfdU] = f(differentiate_wrt(U));
-
-  std::unique_ptr<mfem::HypreParVector> dfdU_vec = assemble(dfdU);
-
-  // TODO: fix this weird copy ctor behavior in mfem::HypreParVector
-  auto U_plus = U;
-  U_plus      = U;
-  U_plus.Add(epsilon, dU);
-
-  auto U_minus = U;
-  U_minus      = U;
-  U_minus.Add(-epsilon, dU);
-
-  double df1 = (f(U_plus) - f(U_minus)) / (2 * epsilon);
-  double df2 = InnerProduct(*dfdU_vec, dU);
-  double df3 = dfdU(dU);
-
-  double relative_error1 = (df1 - df2) / df1;
-  double relative_error2 = (df1 - df3) / df1;
-
-  EXPECT_NEAR(0., relative_error1, 2.e-5);
-  EXPECT_NEAR(0., relative_error2, 2.e-5);
-
-  if (verbose) {
-    std::cout << "errors: " << df1 << " " << df2 << " " << df3 << std::endl;
-  }
-}
-
-template <typename T>
-void check_gradient(Functional<T>& f, mfem::HypreParVector& U, mfem::HypreParVector& dU_dt)
-{
-  int    seed    = 42;
-  double epsilon = 1.0e-8;
-
-  mfem::HypreParVector dU(U);
-  dU.Randomize(seed);
-
-  mfem::HypreParVector ddU_dt(dU_dt);
-  ddU_dt.Randomize(seed + 1);
-
-  // TODO: fix this weird copy ctor behavior in mfem::HypreParVector
-  auto U_plus = U;
-  U_plus      = U;
-  U_plus.Add(epsilon, dU);
-
-  auto U_minus = U;
-  U_minus      = U;
-  U_minus.Add(-epsilon, dU);
-
-  {
-    double df1 = (f(U_plus, dU_dt) - f(U_minus, dU_dt)) / (2 * epsilon);
-
-    auto [value, dfdU] = f(differentiate_wrt(U), dU_dt);
-    double df2         = dfdU(dU);
-
-    std::unique_ptr<mfem::HypreParVector> dfdU_vector = assemble(dfdU);
-
-    double df3 = mfem::InnerProduct(*dfdU_vector, dU);
-
-    double relative_error1 = fabs(df1 - df2) / std::max(fabs(df1), 1.0e-8);
-    double relative_error2 = fabs(df1 - df3) / std::max(fabs(df1), 1.0e-8);
-
-    EXPECT_NEAR(0., relative_error1, 5.e-5);
-    EXPECT_NEAR(0., relative_error2, 5.e-5);
-  }
-
-  auto dU_dt_plus = dU_dt;
-  dU_dt_plus      = dU_dt;
-  dU_dt_plus.Add(epsilon, ddU_dt);
-
-  auto dU_dt_minus = dU_dt;
-  dU_dt_minus      = dU_dt;
-  dU_dt_minus.Add(-epsilon, ddU_dt);
-
-  {
-    double df1 = (f(U, dU_dt_plus) - f(U, dU_dt_minus)) / (2 * epsilon);
-
-    auto [value, df_ddU_dt] = f(U, differentiate_wrt(dU_dt));
-    double df2              = df_ddU_dt(ddU_dt);
-
-    std::unique_ptr<mfem::HypreParVector> df_ddU_dt_vector = assemble(df_ddU_dt);
-
-    double df3 = mfem::InnerProduct(*df_ddU_dt_vector, ddU_dt);
-
-    double relative_error1 = fabs(df1 - df2) / std::max(fabs(df1), 1.0e-8);
-    double relative_error2 = fabs(df1 - df3) / std::max(fabs(df1), 1.0e-8);
-    double relative_error3 = fabs(df2 - df3) / std::max(fabs(df2), 1.0e-8);
-
-    // note: these first two relative tolerances are really coarse,
-    // since it seems the finite-difference approximation of the derivative
-    // of this function is not very accurate (?)
-    //
-    // the action-of-gradient and gradient vector versions seem to agree to
-    // machine precision
-    EXPECT_NEAR(0., relative_error1, 1.e-2);
-    EXPECT_NEAR(0., relative_error2, 1.e-2);
-    EXPECT_NEAR(0., relative_error3, 5.e-14);
-  }
-}
 
 enum class WhichTest
 {

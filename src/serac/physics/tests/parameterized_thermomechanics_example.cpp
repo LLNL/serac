@@ -16,6 +16,8 @@
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/thermomechanics.hpp"
 
+#include "serac/numerics/functional/tests/check_gradient.hpp"
+
 using namespace serac;
 
 template <typename T>
@@ -99,6 +101,7 @@ TEST(Thermomechanics, ParameterizedMaterial)
 
   simulation.setMaterial(DependsOn<0, 1>{}, material);
 
+  double deltaT = 1.0;
   FiniteElementState temperature(StateManager::newState(FiniteElementState::Options{.order = p, .name = "theta"}));
   temperature = theta_ref;
   simulation.setParameter(0, temperature);
@@ -130,7 +133,7 @@ TEST(Thermomechanics, ParameterizedMaterial)
 
   // Perform the quasi-static solve
   double dt   = 1.0;
-  temperature = theta_ref + 1.0;
+  temperature = theta_ref + deltaT;
   simulation.advanceTimestep(dt);
 
   // define quantities of interest
@@ -164,12 +167,13 @@ TEST(Thermomechanics, ParameterizedMaterial)
 
   SLIC_INFO_ROOT(axom::fmt::format("average vertical displacement: {}", avg_disp));
 
-  double deltaT = 1.0;
   SLIC_INFO_ROOT(axom::fmt::format("expected average vertical displacement: {}", alpha0 * deltaT * height));
 
   serac::FiniteElementDual adjoint_load(simulation.displacement().space(), "adjoint_load");
   auto                     dqoi_du = get<1>(qoi(DifferentiateWRT<0>{}, simulation.displacement()));
   adjoint_load                     = *assemble(dqoi_du);
+
+  check_gradient(qoi, simulation.displacement());
 
   simulation.solveAdjoint({{"displacement", adjoint_load}});
 
@@ -177,8 +181,9 @@ TEST(Thermomechanics, ParameterizedMaterial)
 
   double epsilon = 1.0e-6;
   auto   dalpha  = alpha.CreateCompatibleVector();
-  dalpha.Randomize(0);
-  alpha += epsilon * dalpha;
+  dalpha = 1.0;
+  //dalpha.Randomize(0);
+  alpha.Add(epsilon, dalpha);
 
   // rerun the simulation to the beginning,
   // but this time use perturbed values of alpha
