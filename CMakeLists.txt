@@ -34,7 +34,7 @@ foreach(filename ${cpp_tests})
   get_filename_component(testname ${filename} NAME_WE)
 
   add_executable(${testname} ${filename})
-  target_link_libraries(${testname} PUBLIC GTest::gtest_main serac ClangEnzyme)
+  target_link_libraries(${testname} PUBLIC GTest::gtest_main serac ClangEnzymeFlags)
 
   add_test(${testname} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${testname})		
 

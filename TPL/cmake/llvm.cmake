@@ -43,7 +43,7 @@ endif()
 
 ExternalProject_Add(TPL_llvm
     URL               ${LLVM_URL}
-    URL_MD5           ${LLVM_MD5}
+    #URL_MD5           ${LLVM_MD5}
 
     SOURCE_SUBDIR     llvm
     LIST_SEPARATOR | # Use an alternate list separator,
@@ -54,8 +54,8 @@ ExternalProject_Add(TPL_llvm
     #INSTALL_COMMAND ""
 
     CMAKE_ARGS -DLLVM_TARGETS_TO_BUILD:STRING=host
-               #-DLLVM_ENABLE_PROJECTS:STRING=clang|clang-tools-extra|lld
-               -DLLVM_ENABLE_PROJECTS:STRING=clang|lld
+               -DLLVM_ENABLE_PROJECTS:STRING=clang|clang-tools-extra|lld
+               #-DLLVM_ENABLE_PROJECTS:STRING=clang|lld
                -DLLVM_ENABLE_PLUGINS=ON
                -DCMAKE_BUILD_TYPE=Release
                -DLLVM_ENABLE_PLUGINS=ON

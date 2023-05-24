@@ -138,18 +138,18 @@ TEST(enzyme, jvp_test_1_arg) {
   EXPECT_EQ(square_jvp(dx), 9.0);
 }
 
-// TEST(enzyme, vjp_test_1_arg) {
+TEST(enzyme, vjp_test_1_arg) {
 
-//   double x = 3.5;
-//   auto f_vjp = vjp<square>(x);
+  double x = 3.5;
+  auto f_vjp = vjp<square>(x);
 
-//   double y = 1.7;
-//   double z = f_vjp(1.7);
+  double y = 1.7;
+  double z = f_vjp(1.7);
 
-//   double dfdx = x * 2.0;
-//   EXPECT_NEAR(z, dfdx * y, 1.0e-15);
+  double dfdx = x * 2.0;
+  EXPECT_NEAR(z, dfdx * y, 1.0e-15);
 
-// }
+}
 
 TEST(enzyme, jvp_test_2_args) {
   tensor<double,3,3> A = {{

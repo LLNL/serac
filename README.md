@@ -16,14 +16,15 @@ To build that project do:
 
 ```
 cd TPL
-cmake . -Bbuild -G Ninja -DLLVM_VERSION=13
+cmake . -Bbuild -G Ninja -DLLVM_VERSION=16
 cd build
 ninja
 ```
 
 > Note:
->  - LLVM_VERSION can be one of {10, 11, 12, 13, 14, 15}
+>  - LLVM_VERSION can be one of {14, 15, 16}
 >  - I find that using `make`'s parallel builds launch too many jobs with LLVM and cause my machines to run out of memory and crash. I have not had this problem with Ninja.
+>  - Enzyme seems to be installing some of its files in build_dir/CMake rather than build_dir/cmake, which is confusing CMake on ubuntu 22.04
 
 Once that completes, we can move to the main project.
 
