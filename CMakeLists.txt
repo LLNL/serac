@@ -25,9 +25,39 @@ include(cmake/gtest.cmake)
 add_library(serac INTERFACE)
 target_include_directories(serac INTERFACE include)
 
+if (ENABLE_JIT) 
+  message("Enabling JIT support")
+
+  set(Clang_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/TPL/build/lib/cmake) 
+  find_package(Clang REQUIRED clangTooling libClang clangASTMatchers)
+
+  add_library(jit SHARED include/JIT.hpp src/JIT.cpp)
+  target_include_directories(jit PUBLIC include)
+  target_precompile_headers(jit PRIVATE include/pch.hpp)
+  target_link_libraries(jit PUBLIC
+    clangAST
+    clangBasic
+    clangInterpreter
+    clangFrontend
+    clangSema
+  )
+
+  set(ENZYME_PLUGIN_FLAG "-fpass-plugin=${TPL_PATH}/build/lib/ClangEnzyme-16.so")
+  target_compile_definitions(jit PUBLIC -DTPL_PATH="${TPL_PATH}")
+  target_compile_definitions(jit PUBLIC -DENZYME_PLUGIN_FLAG="${ENZYME_PLUGIN_FLAG}")
+
+  target_link_libraries(serac INTERFACE jit)
+
+endif()
+
 enable_testing()
 
 file(GLOB cpp_tests ${PROJECT_SOURCE_DIR}/tests/*.cpp)
+
+if (ENABLE_JIT)
+  file(GLOB jit_tests ${PROJECT_SOURCE_DIR}/tests/jit/*.cpp)
+  list(APPEND cpp_tests ${jit_tests})
+endif()
 
 foreach(filename ${cpp_tests})		
 
@@ -39,3 +69,7 @@ foreach(filename ${cpp_tests})
   add_test(${testname} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${testname})		
 
 endforeach(filename ${cpp_tests})
+
+find_package(Clang REQUIRED clangTooling libClang clangASTMatchers)
+
+ 
