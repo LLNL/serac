@@ -42,11 +42,12 @@ if (ENABLE_JIT)
     clangSema
   )
 
-  set(ENZYME_PLUGIN_FLAG "-fpass-plugin=${TPL_PATH}/build/lib/ClangEnzyme-16.so")
   target_compile_definitions(jit PUBLIC -DTPL_PATH="${TPL_PATH}")
-  target_compile_definitions(jit PUBLIC -DENZYME_PLUGIN_FLAG="${ENZYME_PLUGIN_FLAG}")
 
   target_link_libraries(serac INTERFACE jit)
+
+  set(ENZYME_PLUGIN_FLAG "-fpass-plugin=${TPL_PATH}/build/lib/ClangEnzyme-16.so")
+  target_compile_definitions(serac INTERFACE -DENZYME_PLUGIN_FLAG="${ENZYME_PLUGIN_FLAG}")
 
 endif()
 

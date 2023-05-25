@@ -4,7 +4,7 @@
 
 int main() {
 
-  JIT jit({"-O3" /* compilation flags */});
+  JIT jit({"-O3", ENZYME_PLUGIN_FLAG /* compilation flags */});
 
   std::cout << "enzyme boilerplate" << std::endl;
   jit.compile(R"(

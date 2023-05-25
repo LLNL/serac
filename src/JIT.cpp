@@ -42,7 +42,6 @@ JIT::JIT(std::vector< std::string > clang_flags) {
   std::vector<const char *> flags = {
     "-march=native", "-Xclang", "-emit-llvm-only", 
     "-isystem", TPL_PATH"/build/lib/clang/16/include",
-    ENZYME_PLUGIN_FLAG
   };
 
   for (const auto & flag : clang_flags) {
