@@ -23,13 +23,14 @@ ninja
 
 > Note:
 >  - LLVM_VERSION can be one of {14, 15, 16}
+>  - LLVM_VERSION=16 is required for the JIT tests
 >  - I find that using `make`'s parallel builds launch too many jobs with LLVM and cause my machines to run out of memory and crash. I have not had this problem with Ninja.
 >  - Enzyme seems to be installing some of its files in build_dir/CMake rather than build_dir/cmake, which is confusing CMake on ubuntu 22.04
 
 Once that completes, we can move to the main project.
 
 ## Building the serac prototype project
-Now, go back to the main repo directory and configure cmake normally:
+Now, go back to the main repo directory and configure cmake normally (add `-DENABLE_JIT=ON` to turn on JIT tools/examples):
 
 ```
 cd /path/to/serac
