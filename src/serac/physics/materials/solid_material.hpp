@@ -95,10 +95,9 @@ struct StVenantKirchhoff {
     return sigma;
   }
 
-  double density; ///< density
-  double K;       ///< Bulk modulus
-  double G;       ///< Shear modulus
-
+  double density;  ///< density
+  double K;        ///< Bulk modulus
+  double G;        ///< Shear modulus
 };
 
 /**

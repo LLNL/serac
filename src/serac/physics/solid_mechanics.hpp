@@ -780,7 +780,7 @@ public:
     }
 
     for (int i = 0; i < constrained_dofs.Size(); i++) {
-      int j = constrained_dofs[i];
+      int j  = constrained_dofs[i];
       dr_[j] = du_[j];
     }
 

@@ -22,9 +22,9 @@
 
 namespace serac {
 
-TEST(BeamBending, TwoDimensional) {
-
-  constexpr int p = 1;
+TEST(BeamBending, TwoDimensional)
+{
+  constexpr int p   = 1;
   constexpr int dim = 2;
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -65,8 +65,8 @@ TEST(BeamBending, TwoDimensional) {
                                       GeometricNonlinearities::On, "solid_mechanics");
   // _solver_params_end
 
-  double K = 1.91666666666667;
-  double G = 1.0;
+  double                             K = 1.91666666666667;
+  double                             G = 1.0;
   solid_mechanics::StVenantKirchhoff mat{1.0, K, G};
   solid_solver.setMaterial(mat);
 
@@ -78,9 +78,8 @@ TEST(BeamBending, TwoDimensional) {
   solid_solver.setDisplacementBCs(ess_bdr, bc);
   solid_solver.setDisplacement(bc);
 
-  solid_solver.setPiolaTraction([](const auto& x, const tensor<double, dim>& n, const double) {
-    return -0.01 * n * (x[1] > 0.99);
-  });
+  solid_solver.setPiolaTraction(
+      [](const auto& x, const tensor<double, dim>& n, const double) { return -0.01 * n * (x[1] > 0.99); });
 
   // Finalize the data structures
   solid_solver.completeSetup();

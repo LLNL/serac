@@ -179,7 +179,7 @@ TEST(Thermomechanics, ParameterizedMaterial)
 
   double epsilon = 1.0e-5;
   auto   dalpha  = alpha.CreateCompatibleVector();
-  dalpha = 1.0;
+  dalpha         = 1.0;
   alpha += epsilon * dalpha;
 
   // rerun the simulation to the beginning,
