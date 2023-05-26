@@ -63,25 +63,16 @@ struct StVenantKirchhoff {
   using State = Empty;
 
   /**
-   * @brief Evaluate constitutive variables for thermomechanics
+   * @brief stress calculation for a St. Venant Kirchhoff material model
    *
-   * @tparam T1 Type of the displacement gradient components (number-like)
-   * @tparam T2 Type of the temperature (number-like)
-   * @tparam T3 Type of the temperature gradient components (number-like)
+   * @tparam T Type of the displacement gradient components (number-like)
    *
    * @param[in] grad_u Displacement gradient
-   * @param[in] theta Temperature
-   * @param[in] grad_theta Temperature gradient
-   * @param[in,out] state State variables for this material
    *
-   * @return[out] tuple of constitutive outputs. Contains the
-   * Cauchy stress, the volumetric heat capacity in the reference
-   * configuration, the heat generated per unit volume during the time
-   * step (units of energy), and the referential heat flux (units of
-   * energy per unit time and per unit area).
+   * @return The Cauchy stress
    */
-  template <typename T1, int dim>
-  auto operator()(State&, const tensor<T1, dim, dim>& grad_u) const
+  template <typename T, int dim>
+  auto operator()(State&, const tensor<T, dim, dim>& grad_u) const
   {
     static constexpr auto I = Identity<dim>();
     auto                  F = grad_u + I;
