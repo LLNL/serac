@@ -50,6 +50,48 @@ struct LinearIsotropic {
 };
 
 /**
+ * @brief Compute Green's strain from the displacement gradient
+ */
+template <typename T, int dim>
+auto greenStrain(const tensor<T, dim, dim>& grad_u)
+{
+  return 0.5 * (grad_u + transpose(grad_u) + dot(transpose(grad_u), grad_u));
+}
+
+/// @brief St. Venant Kirchhoff hyperelastic model
+struct StVenantKirchhoff {
+  using State = Empty;  ///< this material has no internal variables
+
+  /**
+   * @brief stress calculation for a St. Venant Kirchhoff material model
+   *
+   * @tparam T Type of the displacement gradient components (number-like)
+   *
+   * @param[in] grad_u Displacement gradient
+   *
+   * @return The Cauchy stress
+   */
+  template <typename T, int dim>
+  auto operator()(State&, const tensor<T, dim, dim>& grad_u) const
+  {
+    static constexpr auto I = Identity<dim>();
+    auto                  F = grad_u + I;
+    const auto            E = greenStrain(grad_u);
+
+    // stress
+    const auto S     = K * tr(E) * I + 2.0 * G * dev(E);
+    const auto P     = dot(F, S);
+    const auto sigma = dot(P, transpose(F)) / det(F);
+
+    return sigma;
+  }
+
+  double density;  ///< density
+  double K;        ///< Bulk modulus
+  double G;        ///< Shear modulus
+};
+
+/**
  * @brief Neo-Hookean material model
  *
  */
