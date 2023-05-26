@@ -39,7 +39,6 @@ TEST(BeamBending, TwoDimensional)
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), 0, 0);
   serac::StateManager::setMesh(std::move(mesh));
 
-  // _solver_params_start
   serac::LinearSolverOptions linear_options{.linear_solver  = LinearSolver::GMRES,
                                             .preconditioner = Preconditioner::HypreAMG,
                                             .relative_tol   = 1.0e-6,
@@ -63,7 +62,6 @@ TEST(BeamBending, TwoDimensional)
 
   SolidMechanics<p, dim> solid_solver(nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options,
                                       GeometricNonlinearities::On, "solid_mechanics");
-  // _solver_params_end
 
   double                             K = 1.91666666666667;
   double                             G = 1.0;

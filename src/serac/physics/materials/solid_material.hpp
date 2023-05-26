@@ -60,7 +60,7 @@ auto greenStrain(const tensor<T, dim, dim>& grad_u)
 
 /// @brief St. Venant Kirchhoff hyperelastic model
 struct StVenantKirchhoff {
-  using State = Empty;
+  using State = Empty;  ///< this material has no internal variables
 
   /**
    * @brief stress calculation for a St. Venant Kirchhoff material model
