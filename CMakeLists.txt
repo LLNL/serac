@@ -70,7 +70,3 @@ foreach(filename ${cpp_tests})
   add_test(${testname} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${testname})		
 
 endforeach(filename ${cpp_tests})
-
-find_package(Clang REQUIRED clangTooling libClang clangASTMatchers)
-
- 
