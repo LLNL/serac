@@ -50,6 +50,58 @@ struct LinearIsotropic {
 };
 
 /**
+ * @brief Compute Green's strain from the displacement gradient
+ */
+template <typename T, int dim>
+auto greenStrain(const tensor<T, dim, dim>& grad_u)
+{
+  return 0.5 * (grad_u + transpose(grad_u) + dot(transpose(grad_u), grad_u));
+}
+
+/// @brief St. Venant Kirchhoff hyperelastic model
+struct StVenantKirchhoff {
+  using State = Empty;
+
+  /**
+   * @brief Evaluate constitutive variables for thermomechanics
+   *
+   * @tparam T1 Type of the displacement gradient components (number-like)
+   * @tparam T2 Type of the temperature (number-like)
+   * @tparam T3 Type of the temperature gradient components (number-like)
+   *
+   * @param[in] grad_u Displacement gradient
+   * @param[in] theta Temperature
+   * @param[in] grad_theta Temperature gradient
+   * @param[in,out] state State variables for this material
+   *
+   * @return[out] tuple of constitutive outputs. Contains the
+   * Cauchy stress, the volumetric heat capacity in the reference
+   * configuration, the heat generated per unit volume during the time
+   * step (units of energy), and the referential heat flux (units of
+   * energy per unit time and per unit area).
+   */
+  template <typename T1, int dim>
+  auto operator()(State&, const tensor<T1, dim, dim>& grad_u) const
+  {
+    static constexpr auto I = Identity<dim>();
+    auto                  F = grad_u + I;
+    const auto            E = greenStrain(grad_u);
+
+    // stress
+    const auto S     = K * tr(E) * I + 2.0 * G * dev(E);
+    const auto P     = dot(F, S);
+    const auto sigma = dot(P, transpose(F)) / det(F);
+
+    return sigma;
+  }
+
+  double density; ///< density
+  double K;       ///< Bulk modulus
+  double G;       ///< Shear modulus
+
+};
+
+/**
  * @brief Neo-Hookean material model
  *
  */
