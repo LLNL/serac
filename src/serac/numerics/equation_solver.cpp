@@ -86,9 +86,9 @@ void SuperLUSolver::SetOperator(const mfem::Operator& op)
     }
 
     // Note that MFEM passes ownership of this matrix to the caller
-    monolithic_mat_ = std::unique_ptr<mfem::HypreParMatrix>(mfem::HypreParMatrixFromBlocks(hypre_blocks));
+    auto monolithic_mat = std::unique_ptr<mfem::HypreParMatrix>(mfem::HypreParMatrixFromBlocks(hypre_blocks));
 
-    superlu_mat_ = std::make_unique<mfem::SuperLURowLocMatrix>(*monolithic_mat_);
+    superlu_mat_ = std::make_unique<mfem::SuperLURowLocMatrix>(*monolithic_mat);
   } else {
     // If this is not a block system, check that the input operator is a HypreParMatrix as expected
     auto* matrix = dynamic_cast<const mfem::HypreParMatrix*>(&op);
