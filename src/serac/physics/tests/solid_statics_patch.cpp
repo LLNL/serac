@@ -269,19 +269,10 @@ std::set<int> essentialBoundaryAttributes(PatchBoundaryCondition bc)
 /**
  * @brief Solve problem and compare numerical solution to exact answer
  *
- * @tparam p Polynomial degree of finite element approximation
- * @tparam dim Number of spatial dimensions
- * @tparam ExactSolution A class that satisfies the exact solution concept
+ * @tparam element_type type describing element geometry and polynomial order to use for this test
  *
- * @param exact_displacement Exact solution of problem
  * @param bc Specifier for boundary condition type to test
  * @return double L2 norm (continuous) of error in computed solution
- * *
- * @pre ExactSolution must implement operator() that is an MFEM
- * coefficient-generating function
- * @pre ExactSolution must have a method applyLoads that applies forcing terms to the
- * solid functional that should lead to the exact solution
- * See AffineSolution for an example
  */
 template < typename element_type>
 double solution_error(PatchBoundaryCondition bc)
