@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-set(functional_depends serac_mesh serac_numerics)
+set(functional_depends serac_mesh)
 blt_list_append( TO functional_depends ELEMENTS cuda    IF ENABLE_CUDA )
 blt_list_append( TO functional_depends ELEMENTS caliper adiak IF SERAC_ENABLE_PROFILING )
 
@@ -24,12 +24,17 @@ set(functional_headers
     isotropic_tensor.hpp
     polynomials.hpp
     quadrature.hpp
+    quadrature_data.hpp
     tensor.hpp
     tuple.hpp
     tuple_tensor_dual_functions.hpp
     )
 
-set(functional_sources element_restriction.cpp geometric_factors.cpp mpi_fstream.cpp)
+set(functional_sources 
+    element_restriction.cpp 
+    geometric_factors.cpp 
+    quadrature_data.cpp 
+    mpi_fstream.cpp)
 
 set(functional_detail_headers
     detail/hexahedron_H1.inl

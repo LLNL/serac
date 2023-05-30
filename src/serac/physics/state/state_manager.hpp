@@ -21,7 +21,7 @@
 #include "serac/infrastructure/logger.hpp"
 #include "serac/physics/state/finite_element_state.hpp"
 #include "serac/physics/state/finite_element_dual.hpp"
-#include "serac/numerics/quadrature_data.hpp"
+#include "serac/numerics/functional/quadrature_data.hpp"
 
 namespace serac {
 
