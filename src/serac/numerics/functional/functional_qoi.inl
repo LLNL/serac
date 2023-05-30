@@ -44,10 +44,9 @@ struct QoIProlongation : public mfem::Operator {
  * only thing it is used for) sums the values on this local processor.
  */
 struct QoIElementRestriction {
-
   /**
    * @brief element-to-global ScatterAdd operation used in FEM assembly, for quantities of interest
-   * 
+   *
    * @param input the values from each element
    * @param output the total of those elemental values
    */
@@ -349,8 +348,6 @@ public:
       // e.g. mfem::Vector value = my_functional(arg0, arg1);
       return output_T_[0];
     }
-
-
   }
 
   /// @overload
@@ -428,8 +425,7 @@ private:
 
         if (!K_elem.empty()) {
           for (auto [geom, elem_matrices] : K_elem) {
-            std::vector<DoF> trial_vdofs(
-                trial_restrictions[geom].nodes_per_elem * trial_restrictions[geom].components);
+            std::vector<DoF> trial_vdofs(trial_restrictions[geom].nodes_per_elem * trial_restrictions[geom].components);
 
             for (axom::IndexType e = 0; e < elem_matrices.shape()[0]; e++) {
               trial_restrictions[geom].GetElementVDofs(e, trial_vdofs);

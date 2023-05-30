@@ -149,7 +149,8 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
     return 0.0;
   }
 
-  SERAC_HOST_DEVICE static constexpr tensor<double, dim> shape_function_gradient([[maybe_unused]] tensor<double, dim> xi, int i)
+  SERAC_HOST_DEVICE static constexpr tensor<double, dim> shape_function_gradient(
+      [[maybe_unused]] tensor<double, dim> xi, int i)
   {
     if (p == 1) {
       switch (i) {

@@ -101,7 +101,7 @@ TEST(Thermomechanics, ParameterizedMaterial)
 
   simulation.setMaterial(DependsOn<0, 1>{}, material);
 
-  double deltaT = 1.0;
+  double             deltaT = 1.0;
   FiniteElementState temperature(StateManager::newState(FiniteElementState::Options{.order = p, .name = "theta"}));
   temperature = theta_ref;
   simulation.setParameter(0, temperature);

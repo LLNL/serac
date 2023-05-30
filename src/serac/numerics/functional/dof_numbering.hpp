@@ -254,12 +254,10 @@ struct DofNumbering {
  *    convention for quadrature point numbering.
  */
 struct GradientAssemblyLookupTables {
-
   /// @brief a type for representing a nonzero entry in a sparse matrix
   struct Entry {
-
-    uint32_t row;    ///< row value for this nonzero Entry
-    uint32_t column; ///< column value for this nonzero Entry
+    uint32_t row;     ///< row value for this nonzero Entry
+    uint32_t column;  ///< column value for this nonzero Entry
 
     /// operator< is used when sorting `Entry`. Lexicographical ordering
     bool operator<(const Entry& other) const
@@ -272,15 +270,13 @@ struct GradientAssemblyLookupTables {
 
     /// hash functor required for use in `std::unordered_map`
     struct Hasher {
-
-      /// @brief a hash function implementation for `Entry`  
+      /// @brief a hash function implementation for `Entry`
       std::size_t operator()(const Entry& k) const
       {
         std::size_t seed = std::hash<uint32_t>()(k.row);
         seed ^= std::hash<uint32_t>()(k.column) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
         return seed;
       }
-
     };
   };
 
@@ -288,7 +284,7 @@ struct GradientAssemblyLookupTables {
    * @param block_test_dofs object containing information about dofs for the test space
    * @param block_trial_dofs object containing information about dofs for the trial space
    *
-   * @brief create lookup tables describing which degrees of freedom 
+   * @brief create lookup tables describing which degrees of freedom
    * correspond to each domain/boundary element
    */
   GradientAssemblyLookupTables(const serac::BlockElementRestriction& block_test_dofs,

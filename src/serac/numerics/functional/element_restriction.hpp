@@ -29,19 +29,18 @@ enum class FaceType
 
 /// a struct of metadata (index, sign, orientation) associated with a degree of freedom
 struct DoF {
-
   // sam: I wanted to use a bitfield for this type, but a 10+ year-old GCC bug
   // makes it practically impossible to assign to bitfields without warnings/errors
   // with -Wconversion enabled, see: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=39170
   // So, we resort to masks and bitshifting instead.
 
-  static constexpr uint64_t sign_mask         = 0x8000'0000'0000'0000; ///< bits for sign field
-  static constexpr uint64_t orientation_mask  = 0x7000'0000'0000'0000; ///< bits for orientation field
-  static constexpr uint64_t index_mask        = 0x0000'FFFF'FFFF'FFFF'FFFF; ///< bits for the index field
+  static constexpr uint64_t sign_mask        = 0x8000'0000'0000'0000;       ///< bits for sign field
+  static constexpr uint64_t orientation_mask = 0x7000'0000'0000'0000;       ///< bits for orientation field
+  static constexpr uint64_t index_mask       = 0x0000'FFFF'FFFF'FFFF'FFFF;  ///< bits for the index field
 
-  static constexpr uint64_t sign_shift        = 63; ///< number of trailing zeros in `sign_mask`
-  static constexpr uint64_t orientation_shift = 60; ///< number of trailing zeros in `orientation_mask`
-  static constexpr uint64_t index_shift       = 0; ///< number of trailing zeros in `index_mask`
+  static constexpr uint64_t sign_shift        = 63;  ///< number of trailing zeros in `sign_mask`
+  static constexpr uint64_t orientation_shift = 60;  ///< number of trailing zeros in `orientation_mask`
+  static constexpr uint64_t index_shift       = 0;   ///< number of trailing zeros in `index_mask`
 
   /**
    * @brief a 64-bit word encoding the following metadata (laid out from MSB to LSB);
@@ -53,7 +52,7 @@ struct DoF {
    *
    * all values are immutable unsigned integers
    */
-  uint64_t bits; 
+  uint64_t bits;
 
   /// default ctor
   DoF() : bits{} {}
@@ -71,28 +70,27 @@ struct DoF {
   void operator=(const DoF& other) { bits = other.bits; }
 
   /// get the sign field of this `DoF`
-  int      sign() const { return (bits & sign_mask) ? -1 : 1; }
+  int sign() const { return (bits & sign_mask) ? -1 : 1; }
 
   /// get the orientation field of this `DoF`
   uint64_t orientation() const { return ((bits & orientation_mask) >> orientation_shift); }
 
   /// get the index field of this `DoF`
   uint64_t index() const { return (bits & index_mask); }
-
 };
 
 /// a small struct used to enable range-based for loops in `Array2D`
 template <typename T>
 struct Range {
-  T* begin() { return ptr[0]; } ///< the beginning of the range
-  T* end() { return ptr[1]; } ///< the end of the range
-  T* ptr[2]; ///< the beginning and end of the range
+  T* begin() { return ptr[0]; }  ///< the beginning of the range
+  T* end() { return ptr[1]; }    ///< the end of the range
+  T* ptr[2];                     ///< the beginning and end of the range
 };
 
 /**
- * @brief a 2D array 
- * 
- * @tparam T 
+ * @brief a 2D array
+ *
+ * @tparam T
  */
 template <typename T>
 struct Array2D {
@@ -108,7 +106,7 @@ struct Array2D {
   Range<T> operator()(uint64_t i) { return Range<T>{&values[i * dim[1]], &values[(i + 1) * dim[1]]}; }
 
   /// access an immutable "row" of this Array2D
-  Range<const T>operator()(uint64_t i) const { return Range<const T>{&values[i * dim[1]], &values[(i + 1) * dim[1]]}; }
+  Range<const T> operator()(uint64_t i) const { return Range<const T>{&values[i * dim[1]], &values[(i + 1) * dim[1]]}; }
 
   /// access a mutable element of this Array2D
   T& operator()(uint64_t i, uint64_t j) { return values[i * dim[1] + j]; }
@@ -137,15 +135,15 @@ struct Array2D {
   /// @overload
   const T& operator()(int i, int j) const { return values[uint64_t(i) * dim[1] + uint64_t(j)]; }
 
-  std::vector<T> values; ///< the values of each element in the array
-  uint64_t       dim[2]; ///< the number of rows and columns in the array, respectively
+  std::vector<T> values;  ///< the values of each element in the array
+  uint64_t       dim[2];  ///< the number of rows and columns in the array, respectively
 };
 
 namespace serac {
 
-/// a more complete version of mfem::ElementRestriction that works with {H1, Hcurl, L2} spaces (including on the boundary)
+/// a more complete version of mfem::ElementRestriction that works with {H1, Hcurl, L2} spaces (including on the
+/// boundary)
 struct ElementRestriction {
-
   /// default ctor leaves this object uninitialized
   ElementRestriction() {}
 
@@ -163,14 +161,14 @@ struct ElementRestriction {
 
   /**
    * @brief Get a list of DoFs for element `i`
-   * 
+   *
    * @param i the index of the element
    * @param dofs (output) the DoFs associated with element `i`
    */
   void GetElementVDofs(int i, std::vector<DoF>& dofs) const;
 
   /// get the dof information for a given node / component
-  DoF  GetVDof(DoF node, uint64_t component) const;
+  DoF GetVDof(DoF node, uint64_t component) const;
 
   /// "L->E" in mfem parlance, each element gathers the values that belong to it, and stores them in the "E-vector"
   void Gather(const mfem::Vector& L_vector, mfem::Vector& E_vector) const;
@@ -209,7 +207,6 @@ struct ElementRestriction {
  * class does them with block "E-vectors", where each element geometry is a separate block.
  */
 struct BlockElementRestriction {
-
   /// default ctor leaves this object uninitialized
   BlockElementRestriction() {}
 
@@ -220,10 +217,10 @@ struct BlockElementRestriction {
   BlockElementRestriction(const mfem::FiniteElementSpace* fes, FaceType type);
 
   /// the size of the "E-vector" associated with this restriction operator
-  uint64_t         ESize() const;
+  uint64_t ESize() const;
 
   /// the size of the "L-vector" associated with this restriction operator
-  uint64_t         LSize() const;
+  uint64_t LSize() const;
 
   /// block offsets used when constructing mfem::HypreParVectors
   mfem::Array<int> bOffsets() const;
@@ -242,7 +239,7 @@ struct BlockElementRestriction {
 
 /**
  * @brief Get the list of dofs for each element (of the specified geometry) from the mfem::FiniteElementSpace
- * 
+ *
  * @param fes the finite element space containing the dof information
  * @param geom the kind of element geometry
  */
@@ -250,7 +247,7 @@ Array2D<DoF> GetElementDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::Type 
 
 /**
  * @brief Get the list of dofs for each face element (of the specified geometry) from the mfem::FiniteElementSpace
- * 
+ *
  * @param fes the finite element space containing the dof information
  * @param geom the kind of element geometry
  * @param type whether the face is of interior or boundary type

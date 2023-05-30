@@ -1845,14 +1845,15 @@ SERAC_HOST_DEVICE constexpr int leading_dimension(tensor<T, m, n...>)
 
 /// returns `true` if any entry of a tensor is `nan`
 template <typename T, int... n>
-bool isnan(const tensor<T, n...> & A) {
+bool isnan(const tensor<T, n...>& A)
+{
   bool found_nan = false;
   for_constexpr<n...>([&](auto... i) { found_nan |= std::isnan(A(i...)); });
   return found_nan;
 }
 
 /// @overload
-inline bool isnan(const zero &) { return false; }
+inline bool isnan(const zero&) { return false; }
 
 }  // namespace serac
 

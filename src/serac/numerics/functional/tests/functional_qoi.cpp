@@ -81,7 +81,6 @@ double sum_of_measures_mfem(mfem::ParMesh& mesh)
   return lf(one_gf);
 }
 
-
 enum class WhichTest
 {
   Measure,

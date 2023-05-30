@@ -262,7 +262,8 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK, d
   }
 }
 
-template <uint32_t wrt, int Q, mfem::Geometry::Type geom, typename signature, typename lambda_type, typename derivative_type>
+template <uint32_t wrt, int Q, mfem::Geometry::Type geom, typename signature, typename lambda_type,
+          typename derivative_type>
 std::function<void(const std::vector<const double*>&, double*, bool)> evaluation_kernel(
     signature s, lambda_type qf, const double* positions, const double* jacobians,
     std::shared_ptr<derivative_type> qf_derivatives, uint32_t num_elements)

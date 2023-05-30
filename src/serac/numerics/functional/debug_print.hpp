@@ -17,7 +17,7 @@
 
 /**
  * @brief write an array of values out to file, in a space-separated format
- * @tparam T the type of each value in the array 
+ * @tparam T the type of each value in the array
  * @param v the values to write to file
  * @param filename the name of the output file
  */
@@ -71,7 +71,7 @@ std::ostream& operator<<(std::ostream& out, serac::SignedIndex i)
 
 /**
  * @brief write a 2D array of values out to file, in a space-separated format
- * @tparam T the type of each value in the array 
+ * @tparam T the type of each value in the array
  * @param v the values to write to file
  * @param filename the name of the output file
  */
@@ -94,7 +94,7 @@ void write_to_file(axom::Array<T, 2, axom::MemorySpace::Host> arr, std::string f
 
 /**
  * @brief write a 3D array of values out to file, in a mathematica-compatible format
- * @tparam T the type of each value in the array 
+ * @tparam T the type of each value in the array
  * @param v the values to write to file
  * @param filename the name of the output file
  */

@@ -33,7 +33,6 @@ template <int... i>
 struct DependsOn {
 };
 
-
 /**
  * @brief given a list of types, this function returns the index that corresponds to the type `dual_vector`.
  *
@@ -47,8 +46,8 @@ struct DependsOn {
 template <typename... T>
 constexpr uint32_t index_of_differentiation()
 {
-  constexpr uint32_t n = sizeof...(T);
-  bool          matching[] = {std::is_same_v<T, differentiate_wrt_this>...};
+  constexpr uint32_t n          = sizeof...(T);
+  bool               matching[] = {std::is_same_v<T, differentiate_wrt_this>...};
   for (uint32_t i = 0; i < n; i++) {
     if (matching[i]) {
       return i;
@@ -73,7 +72,7 @@ void check_for_missing_nodal_gridfunc(const mfem::Mesh& mesh)
 {
   if (mesh.GetNodes() == nullptr) {
     SLIC_ERROR_ROOT(
-      R"errmsg(
+        R"errmsg(
       the provided mesh does not have a nodal gridfunction. 
       If you created an mfem::Mesh manually, make sure that the 
       following member functions are invoked before use
@@ -82,8 +81,7 @@ void check_for_missing_nodal_gridfunc(const mfem::Mesh& mesh)
       > mfem::Mesh::ExchangeFaceNbrData();
 
       or else the mfem::Mesh won't be fully initialized
-      )errmsg";
-    );
+      )errmsg";);
   }
 }
 
@@ -563,10 +561,8 @@ private:
 
         if (!K_elem.empty()) {
           for (auto [geom, elem_matrices] : K_elem) {
-            std::vector<DoF> test_vdofs(
-                test_restrictions[geom].nodes_per_elem * test_restrictions[geom].components);
-            std::vector<DoF> trial_vdofs(
-                trial_restrictions[geom].nodes_per_elem * trial_restrictions[geom].components);
+            std::vector<DoF> test_vdofs(test_restrictions[geom].nodes_per_elem * test_restrictions[geom].components);
+            std::vector<DoF> trial_vdofs(trial_restrictions[geom].nodes_per_elem * trial_restrictions[geom].components);
 
             for (axom::IndexType e = 0; e < elem_matrices.shape()[0]; e++) {
               test_restrictions[geom].GetElementVDofs(e, test_vdofs);
