@@ -41,5 +41,4 @@ struct differentiate_wrt_this {
  */
 auto differentiate_wrt(const mfem::Vector& v) { return differentiate_wrt_this{v}; }
 
-
-}
+}  // namespace serac
