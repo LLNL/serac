@@ -2,7 +2,8 @@
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
-// SPDX-License-Identifier: (BSD-3-Clause)#pragma once
+// SPDX-License-Identifier: (BSD-3-Clause)
+#pragma once
 
 #include "mfem.hpp"
 #include "axom/core.hpp"

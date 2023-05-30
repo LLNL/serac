@@ -75,7 +75,7 @@ void verify_kronecker_delta_property(double tolerance)
   auto I     = DenseIdentity<element_type::ndof>();
 
   for (int i = 0; i < element_type::ndof; i++) {
-    double error = norm(I[i] - element_type::shape_functions(nodes[i]));
+    double error = norm(I[i] - element_type::shape_functions(nodes[uint32_t(i)]));
     EXPECT_NEAR(error, 0.0, tolerance);
   }
 }

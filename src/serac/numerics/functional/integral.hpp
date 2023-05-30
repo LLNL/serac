@@ -16,9 +16,9 @@
 #include "serac/numerics/functional/function_signature.hpp"
 #include "serac/numerics/functional/domain_integral_kernels.hpp"
 #include "serac/numerics/functional/boundary_integral_kernels.hpp"
+#include "serac/numerics/functional/differentiate_wrt.hpp"
 
 namespace serac {
-
 
 /// @brief a class for representing a Integral calculations and their derivatives 
 struct Integral {
@@ -58,8 +58,8 @@ struct Integral {
     jvp_.resize(num_trial_spaces);
     element_gradient_.resize(num_trial_spaces);
 
-    for (size_t i = 0; i < num_trial_spaces; i++) {
-      functional_to_integral_[active_trial_spaces[i]] = static_cast<int>(i);
+    for (uint32_t i = 0; i < num_trial_spaces; i++) {
+      functional_to_integral_[active_trial_spaces[i]] = i;
     }
   }
 
@@ -74,12 +74,13 @@ struct Integral {
    * @param update_state whether or not to store the updated state values computed in the q-function. For plasticity and other path-dependent
    *                     materials, this flag should only be set to `true` once a solution to the nonlinear system has been found. 
    */
-  void Mult(const std::vector<mfem::BlockVector>& input_E, mfem::BlockVector& output_E, int differentiation_index,
+  void Mult(const std::vector<mfem::BlockVector>& input_E, mfem::BlockVector& output_E, uint32_t differentiation_index,
             bool update_state) const
   {
     output_E = 0.0;
+    
 
-    bool  with_AD = (functional_to_integral_.count(differentiation_index) > 0 && differentiation_index != -1);
+    bool  with_AD = (functional_to_integral_.count(differentiation_index) > 0 && differentiation_index != NO_DIFFERENTIATION);
     auto& kernels = (with_AD) ? evaluation_with_AD_[functional_to_integral_.at(differentiation_index)] : evaluation_;
     for (auto& [geometry, func] : kernels) {
       std::vector<const double*> inputs(active_trial_spaces.size());
@@ -98,13 +99,13 @@ struct Integral {
    * @param differentiation_index a non-negative value indicates directional derivative with respect to the trial space with that index.
    */
   void GradientMult(const mfem::BlockVector& input_E, mfem::BlockVector& output_E,
-                    std::size_t differentiation_index) const
+                    uint32_t differentiation_index) const
   {
     output_E = 0.0;
 
     // if this integral actually depends on the specified variable
-    if (functional_to_integral_.count(int(differentiation_index)) > 0) {
-      for (auto& [geometry, func] : jvp_[functional_to_integral_.at(int(differentiation_index))]) {
+    if (functional_to_integral_.count(differentiation_index) > 0) {
+      for (auto& [geometry, func] : jvp_[functional_to_integral_.at(differentiation_index)]) {
         func(input_E.GetBlock(geometry).Read(), output_E.GetBlock(geometry).ReadWrite());
       }
     }
@@ -117,11 +118,11 @@ struct Integral {
    * @param differentiation_index the index of the trial space being differentiated
    */
   void ComputeElementGradients(std::map<mfem::Geometry::Type, ExecArray<double, 3, ExecutionSpace::CPU> >& K_e,
-                               std::size_t differentiation_index) const
+                               uint32_t differentiation_index) const
   {
     // if this integral actually depends on the specified variable
-    if (functional_to_integral_.count(int(differentiation_index)) > 0) {
-      for (auto& [geometry, func] : element_gradient_[functional_to_integral_.at(int(differentiation_index))]) {
+    if (functional_to_integral_.count(differentiation_index) > 0) {
+      for (auto& [geometry, func] : element_gradient_[functional_to_integral_.at(differentiation_index)]) {
         func(view(K_e[geometry]));
       }
     }
@@ -168,7 +169,7 @@ struct Integral {
    * @endcode
    *        
    */
-  std::map<int, int> functional_to_integral_;
+  std::map<uint32_t, uint32_t> functional_to_integral_;
 
   /// @brief the spatial positions and jacobians (dx_dxi) for each element type and quadrature point
   std::map<mfem::Geometry::Type, GeometricFactors> geometric_factors_;
@@ -204,7 +205,6 @@ void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, 
   const uint32_t num_elements     = uint32_t(gf.num_elements);
   const uint32_t qpts_per_element = num_quadrature_points(geom, Q);
 
-  constexpr int         NO_DIFFERENTIATION = -1;
   std::shared_ptr<zero> dummy_derivatives;
   integral.evaluation_[geom] = domain_integral::evaluation_kernel<NO_DIFFERENTIATION, Q, geom>(
       s, qf, positions, jacobians, qdata, dummy_derivatives, num_elements);
@@ -292,7 +292,6 @@ void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral& integr
   const uint32_t num_elements     = uint32_t(gf.num_elements);
   const uint32_t qpts_per_element = num_quadrature_points(geom, Q);
 
-  constexpr int         NO_DIFFERENTIATION = -1;
   std::shared_ptr<zero> dummy_derivatives;
   integral.evaluation_[geom] = boundary_integral::evaluation_kernel<NO_DIFFERENTIATION, Q, geom>(
       s, qf, positions, jacobians, dummy_derivatives, num_elements);

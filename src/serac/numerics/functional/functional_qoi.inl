@@ -67,12 +67,12 @@ class Functional<double(trials...), exec> {
   class Gradient;
 
   // clang-format off
-  template <int i> 
+  template <uint32_t i> 
   struct operator_paren_return {
     using type = typename std::conditional<
-        i >= 0,                           // if `i` is greater than or equal to zero,
-        serac::tuple<double&, Gradient&>, // then we return the value and the derivative w.r.t arg `i`
-        double                            // otherwise, we just return the value
+        i == NO_DIFFERENTIATION,          // if `i` is greater than or equal to zero,
+        double,                           // wise, we just return the value
+        serac::tuple<double&, Gradient&>  // otherwise, we return the value and the derivative w.r.t arg `i`
         >::type;
   };
   // clang-format on
@@ -126,7 +126,7 @@ public:
       offsets[0] = 0;
       for (int i = 0; i < mfem::Geometry::NUM_GEOMETRIES; i++) {
         auto g         = mfem::Geometry::Type(i);
-        offsets[g + 1] = offsets[g] + counts[g];
+        offsets[g + 1] = offsets[g] + int(counts[uint32_t(g)]);
       }
 
       output_E_[type].Update(offsets, mem_type);
@@ -256,7 +256,7 @@ public:
    * arguments may be a dual_vector, to indicate that Functional::operator() should not only evaluate the
    * element calculations, but also differentiate them w.r.t. the specified dual_vector argument
    */
-  double ActionOfGradient(const mfem::Vector& input_T, std::size_t which) const
+  double ActionOfGradient(const mfem::Vector& input_T, uint32_t which) const
   {
     P_trial_[which]->Mult(input_T, input_L_[which]);
 
@@ -295,7 +295,7 @@ public:
    * arguments may be a dual_vector, to indicate that Functional::operator() should not only evaluate the
    * element calculations, but also differentiate them w.r.t. the specified dual_vector argument
    */
-  template <int wrt, typename... T>
+  template <uint32_t wrt, typename... T>
   typename operator_paren_return<wrt>::type operator()(DifferentiateWRT<wrt>, const T&... args)
   {
     const mfem::Vector* input_T[] = {&static_cast<const mfem::Vector&>(args)...};
@@ -331,7 +331,7 @@ public:
     // scatter-add to compute global residuals
     P_test_->MultTranspose(output_L_, output_T_);
 
-    if constexpr (wrt >= 0) {
+    if constexpr (wrt != NO_DIFFERENTIATION) {
       // if the user has indicated they'd like to evaluate and differentiate w.r.t.
       // a specific argument, then we return both the value and gradient w.r.t. that argument
       //
@@ -341,7 +341,7 @@ public:
       return {output_T_[0], grad_[wrt]};
     }
 
-    if constexpr (wrt == -1) {
+    if constexpr (wrt == NO_DIFFERENTIATION) {
       // if the user passes only `mfem::Vector`s then we assume they only want the output value
       //
       // mfem::Vector arg0 = ...;
@@ -349,6 +349,8 @@ public:
       // e.g. mfem::Vector value = my_functional(arg0, arg1);
       return output_T_[0];
     }
+
+
   }
 
   /// @overload
@@ -361,7 +363,7 @@ public:
     static_assert(sizeof...(T) == num_trial_spaces,
                   "Error: Functional::operator() must take exactly as many arguments as trial spaces");
 
-    [[maybe_unused]] constexpr int i = index_of_differentiation<T...>();
+    [[maybe_unused]] constexpr uint32_t i = index_of_differentiation<T...>();
 
     return (*this)(DifferentiateWRT<i>{}, args...);
   }
@@ -427,7 +429,7 @@ private:
         if (!K_elem.empty()) {
           for (auto [geom, elem_matrices] : K_elem) {
             std::vector<DoF> trial_vdofs(
-                int(trial_restrictions[geom].nodes_per_elem * trial_restrictions[geom].components));
+                trial_restrictions[geom].nodes_per_elem * trial_restrictions[geom].components);
 
             for (axom::IndexType e = 0; e < elem_matrices.shape()[0]; e++) {
               trial_restrictions[geom].GetElementVDofs(e, trial_vdofs);
@@ -435,8 +437,8 @@ private:
               // note: elem_matrices.shape()[1] is 1 for a QoI
               for (axom::IndexType i = 0; i < elem_matrices.shape()[1]; i++) {
                 for (axom::IndexType j = 0; j < elem_matrices.shape()[2]; j++) {
-                  int sign = trial_vdofs[j].sign();
-                  int col  = int(trial_vdofs[j].index());
+                  int sign = trial_vdofs[uint32_t(j)].sign();
+                  int col  = int(trial_vdofs[uint32_t(j)].index());
                   gradient_L_[col] += sign * elem_matrices(e, i, j);
                 }
               }

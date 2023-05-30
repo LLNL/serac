@@ -9,6 +9,7 @@
 #include "serac/numerics/quadrature_data.hpp"
 #include "serac/numerics/functional/integral_utilities.hpp"
 #include "serac/numerics/functional/function_signature.hpp"
+#include "serac/numerics/functional/differentiate_wrt.hpp"
 
 #include <array>
 
@@ -114,7 +115,7 @@ auto batch_apply_qf(lambda qf, const tensor<double, dim, n> x, qpt_data_type* qp
   return outputs;
 }
 
-template <int differentiation_index, int Q, mfem::Geometry::Type geom, typename test, typename... trials,
+template <uint32_t differentiation_index, int Q, mfem::Geometry::Type geom, typename test, typename... trials,
           typename lambda_type, typename state_type, typename derivative_type, int... indices>
 void evaluation_kernel_impl(FunctionSignature<test(trials...)>, const std::vector<const double*>& inputs,
                             double* outputs, const double* positions, const double* jacobians, lambda_type qf,
@@ -172,7 +173,7 @@ void evaluation_kernel_impl(FunctionSignature<test(trials...)>, const std::vecto
     // write out the q-function derivatives after applying the
     // physical_to_parent transformation, so that those transformations
     // won't need to be applied in the action_of_gradient and element_gradient kernels
-    if constexpr (differentiation_index != -1) {
+    if constexpr (differentiation_index != serac::NO_DIFFERENTIATION) {
       for (int q = 0; q < leading_dimension(qf_outputs); q++) {
         qf_derivatives[e * qpts_per_elem + uint32_t(q)] = get_gradient(qf_outputs[q]);
       }
@@ -310,9 +311,9 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK, d
     tensor<padded_derivative_type, nquad> derivatives{};
     for (int q = 0; q < nquad; q++) {
       if constexpr (is_QOI) {
-        get<0>(derivatives(q)) = qf_derivatives[e * nquad + q];
+        get<0>(derivatives(q)) = qf_derivatives[e * nquad + uint32_t(q)];
       } else {
-        derivatives(q) = qf_derivatives[e * nquad + q];
+        derivatives(q) = qf_derivatives[e * nquad + uint32_t(q)];
       }
     }
 
@@ -323,7 +324,7 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK, d
   }
 }
 
-template <int wrt, int Q, mfem::Geometry::Type geom, typename signature, typename lambda_type, typename state_type,
+template <uint32_t wrt, int Q, mfem::Geometry::Type geom, typename signature, typename lambda_type, typename state_type,
           typename derivative_type>
 std::function<void(const std::vector<const double*>&, double*, bool)> evaluation_kernel(
     signature s, lambda_type qf, const double* positions, const double* jacobians,

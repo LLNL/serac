@@ -25,7 +25,6 @@ using namespace serac::profiling;
 int num_procs, myid;
 int nsamples = 1;  // because mfem doesn't take in unsigned int
 
-constexpr bool                 verbose = false;
 std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
 

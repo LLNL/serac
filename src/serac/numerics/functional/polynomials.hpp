@@ -115,7 +115,7 @@ SERAC_HOST_DEVICE constexpr auto GaussLegendreNodes() {
   if constexpr (geom == mfem::Geometry::TETRAHEDRON) {
     using output_t = tensor<double, (n * (n + 1) * (n + 2)) / 6, 3>;
     if constexpr (n == 1) {
-      return output_t{{0.25, 0.25, 0.25}};
+      return output_t{{{0.25, 0.25, 0.25}}};
     }
 
     if constexpr (n == 2) {

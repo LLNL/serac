@@ -336,15 +336,15 @@ struct GradientAssemblyLookupTables {
     col_ind.resize(nnz);
 
     row_ptr[0] = 0;
-    col_ind[0] = entries[0].column;
+    col_ind[0] = int(entries[0].column);
 
     for (uint32_t i = 1; i < nnz; i++) {
       nz_LUT[entries[i]] = i;
-      col_ind[i]         = entries[i].column;
+      col_ind[i]         = int(entries[i].column);
 
       // if the new entry has a different row, then the row_ptr offsets must be set as well
       for (uint32_t j = entries[i - 1].row; j < entries[i].row; j++) {
-        row_ptr[j + 1] = i;
+        row_ptr[j + 1] = int(i);
       }
     }
 

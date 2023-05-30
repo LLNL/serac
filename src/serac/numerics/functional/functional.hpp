@@ -20,50 +20,19 @@
 #include "serac/numerics/functional/finite_element.hpp"
 #include "serac/numerics/functional/integral.hpp"
 #include "serac/numerics/functional/dof_numbering.hpp"
+#include "serac/numerics/functional/differentiate_wrt.hpp"
 
 #include "serac/numerics/functional/element_restriction.hpp"
-
-// TODO: REMOVE
-#include "serac/numerics/functional/debug_print.hpp"
 
 #include <array>
 #include <vector>
 
 namespace serac {
 
-template <int i>
-struct DifferentiateWRT {
-};
-
 template <int... i>
 struct DependsOn {
 };
 
-/**
- * @brief this type exists solely as a way to signal to `serac::Functional` that the function
- * serac::Functional::operator()` should differentiate w.r.t. a specific argument
- */
-struct differentiate_wrt_this {
-  const mfem::Vector& ref;  ///< the actual data wrapped by this type
-
-  /// @brief implicitly convert back to `mfem::Vector` to extract the actual data
-  operator const mfem::Vector &() const { return ref; }
-};
-
-/**
- * @brief this function is intended to only be used in combination with
- *   `serac::Functional::operator()`, as a way for the user to express that
- *   it should both evaluate and differentiate w.r.t. a specific argument (only 1 argument at a time)
- *
- * For example:
- * @code{.cpp}
- *     mfem::Vector arg0 = ...;
- *     mfem::Vector arg1 = ...;
- *     mfem::Vector just_the_value = my_functional(arg0, arg1);
- *     auto [value, gradient_wrt_arg1] = my_functional(arg0, differentiate_wrt(arg1));
- * @endcode
- */
-auto differentiate_wrt(const mfem::Vector& v) { return differentiate_wrt_this{v}; }
 
 /**
  * @brief given a list of types, this function returns the index that corresponds to the type `dual_vector`.
@@ -76,16 +45,16 @@ auto differentiate_wrt(const mfem::Vector& v) { return differentiate_wrt_this{v}
  * @endcode
  */
 template <typename... T>
-constexpr int index_of_differentiation()
+constexpr uint32_t index_of_differentiation()
 {
-  constexpr int n          = static_cast<int>(sizeof...(T));
+  constexpr uint32_t n = sizeof...(T);
   bool          matching[] = {std::is_same_v<T, differentiate_wrt_this>...};
-  for (int i = 0; i < n; i++) {
+  for (uint32_t i = 0; i < n; i++) {
     if (matching[i]) {
       return i;
     }
   }
-  return -1;
+  return NO_DIFFERENTIATION;
 }
 
 /**
@@ -230,12 +199,12 @@ class Functional<test(trials...), exec> {
   class Gradient;
 
   // clang-format off
-  template <int i> 
+  template <uint32_t i> 
   struct operator_paren_return {
     using type = typename std::conditional<
-        i >= 0,                                 // if `i` is greater than or equal to zero,
-        serac::tuple<mfem::Vector&, Gradient&>, // then we return the value and the derivative w.r.t arg `i`
-        mfem::Vector&                           // otherwise, we just return the value
+        i == NO_DIFFERENTIATION,               // if `i` indicates that we want to skip differentiation
+        mfem::Vector&,                         // we just return the value
+        serac::tuple<mfem::Vector&, Gradient&> // otherwise we return the value and the derivative w.r.t arg `i`
         >::type;
   };
   // clang-format on
@@ -398,7 +367,7 @@ public:
    * arguments may be a dual_vector, to indicate that Functional::operator() should not only evaluate the
    * element calculations, but also differentiate them w.r.t. the specified dual_vector argument
    */
-  void ActionOfGradient(const mfem::Vector& input_T, mfem::Vector& output_T, std::size_t which) const
+  void ActionOfGradient(const mfem::Vector& input_T, mfem::Vector& output_T, uint32_t which) const
   {
     P_trial_[which]->Mult(input_T, input_L_[which]);
 
@@ -437,7 +406,7 @@ public:
    * @param args the trial space dofs used to carry out the calculation,
    *  at most one of which may be of the type `differentiate_wrt_this(mfem::Vector)`
    */
-  template <int wrt, typename... T>
+  template <uint32_t wrt, typename... T>
   typename operator_paren_return<wrt>::type operator()(DifferentiateWRT<wrt>, const T&... args)
   {
     const mfem::Vector* input_T[] = {&static_cast<const mfem::Vector&>(args)...};
@@ -472,7 +441,7 @@ public:
     // scatter-add to compute global residuals
     P_test_->MultTranspose(output_L_, output_T_);
 
-    if constexpr (wrt >= 0) {
+    if constexpr (wrt != NO_DIFFERENTIATION) {
       // if the user has indicated they'd like to evaluate and differentiate w.r.t.
       // a specific argument, then we return both the value and gradient w.r.t. that argument
       //
@@ -481,7 +450,7 @@ public:
       // e.g. auto [value, gradient_wrt_arg1] = my_functional(arg0, differentiate_wrt(arg1));
       return {output_T_, grad_[wrt]};
     }
-    if constexpr (wrt == -1) {
+    if constexpr (wrt == NO_DIFFERENTIATION) {
       // if the user passes only `mfem::Vector`s then we assume they only want the output value
       //
       // mfem::Vector arg0 = ...;
@@ -501,7 +470,7 @@ public:
     static_assert(sizeof...(T) == num_trial_spaces,
                   "Error: Functional::operator() must take exactly as many arguments as trial spaces");
 
-    [[maybe_unused]] constexpr int i = index_of_differentiation<T...>();
+    [[maybe_unused]] constexpr uint32_t i = index_of_differentiation<T...>();
 
     return (*this)(DifferentiateWRT<i>{}, args...);
   }
@@ -595,18 +564,18 @@ private:
         if (!K_elem.empty()) {
           for (auto [geom, elem_matrices] : K_elem) {
             std::vector<DoF> test_vdofs(
-                int(test_restrictions[geom].nodes_per_elem * test_restrictions[geom].components));
+                test_restrictions[geom].nodes_per_elem * test_restrictions[geom].components);
             std::vector<DoF> trial_vdofs(
-                int(trial_restrictions[geom].nodes_per_elem * trial_restrictions[geom].components));
+                trial_restrictions[geom].nodes_per_elem * trial_restrictions[geom].components);
 
             for (axom::IndexType e = 0; e < elem_matrices.shape()[0]; e++) {
               test_restrictions[geom].GetElementVDofs(e, test_vdofs);
               trial_restrictions[geom].GetElementVDofs(e, trial_vdofs);
 
-              for (axom::IndexType i = 0; i < elem_matrices.shape()[1]; i++) {
+              for (uint32_t i = 0; i < uint32_t(elem_matrices.shape()[1]); i++) {
                 int col = int(trial_vdofs[i].index());
 
-                for (axom::IndexType j = 0; j < elem_matrices.shape()[2]; j++) {
+                for (uint32_t j = 0; j < uint32_t(elem_matrices.shape()[2]); j++) {
                   int row = int(test_vdofs[j].index());
 
                   int sign = test_vdofs[j].sign() * trial_vdofs[i].sign();
