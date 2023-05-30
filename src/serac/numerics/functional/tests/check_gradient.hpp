@@ -208,7 +208,6 @@ void check_gradient(serac::Functional<T>& f, mfem::Vector& U, mfem::Vector& dU_d
     EXPECT_TRUE((fabs(e3 / e4 - 4.0) < 0.1) || fmin(e3, e4) < 1.0e-9);
   }
 }
-#endif
 
 ///////////////////
 // qoi overloads //
