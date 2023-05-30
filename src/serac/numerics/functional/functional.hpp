@@ -99,6 +99,7 @@ struct Index {
   constexpr operator int() { return ind; }
 };
 
+/// function for verifying that the mesh has been fully initialized
 void check_for_missing_nodal_gridfunc(const mfem::Mesh& mesh)
 {
   if (mesh.GetNodes() == nullptr) {
@@ -117,6 +118,7 @@ void check_for_missing_nodal_gridfunc(const mfem::Mesh& mesh)
   }
 }
 
+/// function for verifying that there are no unsupported element types in the mesh
 void check_for_unsupported_elements(const mfem::Mesh& mesh)
 {
   int num_elements = mesh.GetNE();

@@ -29,7 +29,7 @@ struct ElemInfo {
   uint32_t       local_col_;   ///< The global column number
   uint32_t       element_id_;  ///< The element ID
   int            sign_;        ///< The orientation of the element
-  Integral::Type type;
+  Integral::Type type;         ///< Which kind of Integral this entry comes from
 };
 
 /**
@@ -254,35 +254,42 @@ struct DofNumbering {
  *    convention for quadrature point numbering.
  */
 struct GradientAssemblyLookupTables {
-  struct Entry {
-    uint32_t row;
-    uint32_t column;
 
+  /// @brief a type for representing a nonzero entry in a sparse matrix
+  struct Entry {
+
+    uint32_t row;    ///< row value for this nonzero Entry
+    uint32_t column; ///< column value for this nonzero Entry
+
+    /// operator< is used when sorting `Entry`. Lexicographical ordering
     bool operator<(const Entry& other) const
     {
       return (row < other.row) || ((row == other.row) && (column < other.column));
     }
 
-    // operator== is required for use in `std::unordered_map`
+    /// operator== is required for use in `std::unordered_map`
     bool operator==(const Entry& other) const { return (row == other.row && column == other.column); }
 
-    // a hash function is required for use in `std::unordered_map`
+    /// hash functor required for use in `std::unordered_map`
     struct Hasher {
+
+      /// @brief a hash function implementation for `Entry`  
       std::size_t operator()(const Entry& k) const
       {
         std::size_t seed = std::hash<uint32_t>()(k.row);
         seed ^= std::hash<uint32_t>()(k.column) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
         return seed;
       }
+
     };
   };
 
   /**
-   * @param test_fespace the test finite element space to extract dof numbers from
-   * @param trial_fespace the trial finite element space to extract dof numbers from
+   * @param block_test_dofs object containing information about dofs for the test space
+   * @param block_trial_dofs object containing information about dofs for the trial space
    *
-   * @brief create lookup tables of which degrees of freedom correspond to
-   * each element and boundary element
+   * @brief create lookup tables describing which degrees of freedom 
+   * correspond to each domain/boundary element
    */
   GradientAssemblyLookupTables(const serac::BlockElementRestriction& block_test_dofs,
                                const serac::BlockElementRestriction& block_trial_dofs)
@@ -344,6 +351,11 @@ struct GradientAssemblyLookupTables {
     row_ptr.back() = static_cast<int>(nnz);
   }
 
+  /**
+   * @brief return the index (into the nonzero entries) corresponding to entry (i,j)
+   * @param i the row
+   * @param j the column
+   */
   uint32_t operator()(int i, int j) const { return nz_LUT.at({uint32_t(i), uint32_t(j)}); }
 
   /// @brief how many nonzero entries appear in the sparse matrix

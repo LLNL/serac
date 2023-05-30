@@ -7,6 +7,11 @@
 
 namespace serac {
 
+/**
+ * @brief a class that computes and stores positions and jacobians at each quadrature point
+ * @note analogous to mfem::GeometricFactors, except that it implements the position/jacobian
+ *       calculations on boundary elements and on simplex elements
+ */
 struct GeometricFactors {
 
   /// @brief default ctor, leaving this object uninitialized

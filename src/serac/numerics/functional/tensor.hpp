@@ -895,6 +895,7 @@ SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m, n, p, q>& A, const tenso
   return AB;
 }
 
+/// compute the cross product of the columns of A: A(:,1) x A(:,2)
 template <typename T>
 auto cross(const tensor<T, 3, 2>& A)
 {
@@ -902,18 +903,21 @@ auto cross(const tensor<T, 3, 2>& A)
                       A(0, 0) * A(1, 1) - A(1, 0) * A(0, 1)};
 }
 
+/// return the in-plane components of the cross product of {v[0], v[1], 0} x {0, 0, 1}
 template <typename T>
 auto cross(const tensor<T, 2, 1>& v)
 {
   return tensor<T, 2>{v(1, 0), -v(0, 0)};
 }
 
+/// return the in-plane components of the cross product of {v[0], v[1], 0} x {0, 0, 1}
 template <typename T>
 auto cross(const tensor<T, 2>& v)
 {
   return tensor<T, 2>{v[1], -v[0]};
 }
 
+/// compute the (right handed) cross product of two 3-vectors
 template <typename S, typename T>
 auto cross(const tensor<S, 3>& u, const tensor<T, 3>& v)
 {
@@ -1839,14 +1843,16 @@ SERAC_HOST_DEVICE constexpr int leading_dimension(tensor<T, m, n...>)
   return m;
 }
 
-inline bool isnan(const zero &) { return false; }
-
+/// returns `true` if any entry of a tensor is `nan`
 template <typename T, int... n>
 bool isnan(const tensor<T, n...> & A) {
   bool found_nan = false;
   for_constexpr<n...>([&](auto... i) { found_nan |= std::isnan(A(i...)); });
   return found_nan;
 }
+
+/// @overload
+inline bool isnan(const zero &) { return false; }
 
 }  // namespace serac
 

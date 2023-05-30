@@ -3,6 +3,16 @@
 
 namespace serac {
 
+/**
+ * @brief a kernel to compute the positions and jacobians at each quadrature point (mfem calls this "geometric factors")
+ * @tparam Q a parameter controlling the number of quadrature points an element
+ * @tparam function_space the polynomial order and kind of function space used to interpolate
+ * @tparam geom the element geometry
+ * @param positions_q (output) the positions for each quadrature point
+ * @param jacobians_q (output) the jacobians for each quadrature point
+ * @param positions_e (input) the "e-vector" of position data
+ * @param num_elements (input) the number of elements of the specified geometry
+ */
 template <int Q, mfem::Geometry::Type geom, typename function_space>
 void compute_geometric_factors(mfem::Vector& positions_q, mfem::Vector& jacobians_q, const mfem::Vector& positions_e,
                                uint32_t num_elements)

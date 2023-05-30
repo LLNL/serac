@@ -36,6 +36,7 @@ struct QFunctionArgument<H1<p, c>, Dimension<dim>> {
   using type = serac::tuple<tensor<double, c>, tensor<double, c, dim>>;  ///< what will be passed to the q-function
 };
 
+/// @overload
 template <int p, int dim>
 struct QFunctionArgument<L2<p, 1>, Dimension<dim>> {
   using type = serac::tuple<double, tensor<double, dim>>;  ///< what will be passed to the q-function

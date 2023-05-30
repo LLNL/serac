@@ -73,7 +73,7 @@ struct finite_element<mfem::Geometry::TRIANGLE, H1<p, c> > {
 
   */
 
-  SERAC_HOST_DEVICE static constexpr double shape_function(tensor<double, dim> xi, int i)
+  SERAC_HOST_DEVICE static constexpr double shape_function([[maybe_unused]] tensor<double, dim> xi, int i)
   {
     // linear
     if constexpr (n == 2) {
@@ -138,7 +138,7 @@ struct finite_element<mfem::Geometry::TRIANGLE, H1<p, c> > {
     return 0.0;
   }
 
-  SERAC_HOST_DEVICE static constexpr tensor<double, dim> shape_function_gradient(tensor<double, dim> xi, int i)
+  SERAC_HOST_DEVICE static constexpr tensor<double, dim> shape_function_gradient([[maybe_unused]] tensor<double, dim> xi, int i)
   {
     // linear
     if constexpr (n == 2) {

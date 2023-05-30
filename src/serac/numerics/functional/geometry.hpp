@@ -63,6 +63,10 @@ constexpr int dimension_of(mfem::Geometry::Type g)
   return -1;
 }
 
+/**
+ * @brief count the number of boundary elements of each geometry in a mesh
+ * @param mesh the mesh to count
+ */
 inline std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> geometry_counts(const mfem::Mesh& mesh)
 {
   std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> counts{};
@@ -72,6 +76,10 @@ inline std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> geometry_counts(cons
   return counts;
 }
 
+/**
+ * @brief count the number of boundary elements of each geometry in a mesh
+ * @param mesh the mesh to count
+ */
 inline std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> boundary_geometry_counts(const mfem::Mesh& mesh)
 {
   std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> counts{};

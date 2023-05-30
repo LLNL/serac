@@ -40,7 +40,7 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
       typename std::conditional<components == 1, tensor<double, dim>, tensor<double, components, dim> >::type;
   using qf_input_type = tuple<value_type, derivative_type>;
 
-  SERAC_HOST_DEVICE static constexpr double shape_function(tensor<double, dim> xi, int i)
+  SERAC_HOST_DEVICE static constexpr double shape_function([[maybe_unused]] tensor<double, dim> xi, int i)
   {
     if constexpr (p == 1) {
       switch (i) {
@@ -149,7 +149,7 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
     return 0.0;
   }
 
-  SERAC_HOST_DEVICE static constexpr tensor<double, dim> shape_function_gradient(tensor<double, dim> xi, int i)
+  SERAC_HOST_DEVICE static constexpr tensor<double, dim> shape_function_gradient([[maybe_unused]] tensor<double, dim> xi, int i)
   {
     if (p == 1) {
       switch (i) {
