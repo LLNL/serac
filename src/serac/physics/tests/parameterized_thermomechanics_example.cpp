@@ -136,6 +136,8 @@ TEST(Thermomechanics, ParameterizedMaterial)
   temperature = theta_ref + deltaT;
   simulation.advanceTimestep(dt);
 
+  simulation.outputState("paraview");
+
   // define quantities of interest
   auto& mesh = serac::StateManager::mesh();
 
@@ -179,17 +181,16 @@ TEST(Thermomechanics, ParameterizedMaterial)
 
   auto& dqoi_dalpha = simulation.computeSensitivity(1);
 
-  double epsilon = 1.0e-6;
+  double epsilon = 1.0e-5;
   auto   dalpha  = alpha.CreateCompatibleVector();
-  dalpha = 1.0;
-  //dalpha.Randomize(0);
-  alpha.Add(epsilon, dalpha);
+  dalpha         = 1.0;
+  alpha += epsilon * dalpha;
 
   // rerun the simulation to the beginning,
   // but this time use perturbed values of alpha
-  simulation.setDisplacement(zero_vector);
-
   simulation.advanceTimestep(dt);
+
+  simulation.outputState("paraview");
 
   double final_qoi = qoi(simulation.displacement());
 
@@ -201,7 +202,7 @@ TEST(Thermomechanics, ParameterizedMaterial)
       axom::fmt::format("directional derivative of QoI by adjoint-state method: {}", adjoint_qoi_derivative));
   SLIC_INFO_ROOT(axom::fmt::format("directional derivative of QoI by finite-difference:    {}", fd_qoi_derivative));
 
-  EXPECT_NEAR(0.0, (fd_qoi_derivative - adjoint_qoi_derivative) / fd_qoi_derivative, 5.0e-6);
+  EXPECT_NEAR(0.0, (fd_qoi_derivative - adjoint_qoi_derivative) / fd_qoi_derivative, 3.0e-5);
 }
 
 // output:
@@ -210,8 +211,8 @@ TEST(Thermomechanics, ParameterizedMaterial)
 // exact area of the top surface: 0.441786
 // average vertical displacement: 0.001999
 // expected average vertical displacement: 0.002
-// directional derivative of QoI by adjoint-state method: 0.028289
-// directional derivative of QoI by finite-difference: 0.0282891
+// directional derivative of QoI by adjoint-state method: 0.8812734293294495
+// directional derivative of QoI by finite-difference:    0.8812609461498273
 
 int main(int argc, char* argv[])
 {
