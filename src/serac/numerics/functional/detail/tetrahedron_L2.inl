@@ -39,7 +39,8 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, L2<p, c> > {
       typename std::conditional<components == 1, tensor<double, dim>, tensor<double, components, dim> >::type;
   using qf_input_type = tuple<value_type, derivative_type>;
 
-  SERAC_HOST_DEVICE static constexpr double shape_function(tensor<double, dim> xi, int i)
+  SERAC_HOST_DEVICE static constexpr double shape_function([[maybe_unused]] tensor<double, dim> xi,
+                                                           [[maybe_unused]] int                 i)
   {
     if constexpr (p == 0) {
       return 1.0;
