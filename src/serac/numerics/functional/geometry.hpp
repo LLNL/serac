@@ -17,27 +17,27 @@ struct Dimension {
 
 /**
  * @brief return the number of quadrature points in a Gauss-Legendre rule
- * with parameter "q"
+ * with parameter "Q"
  *
  * @tparam g the element geometry
- * @tparam q the number of quadrature points per dimension
+ * @tparam Q the number of quadrature points per dimension
  */
-constexpr int num_quadrature_points(mfem::Geometry::Type g, int q)
+constexpr int num_quadrature_points(mfem::Geometry::Type g, int Q)
 {
   if (g == mfem::Geometry::SEGMENT) {
-    return q;
+    return Q;
   }
   if (g == mfem::Geometry::TRIANGLE) {
-    return (q * (q + 1)) / 2;
+    return (Q * (Q + 1)) / 2;
   }
   if (g == mfem::Geometry::SQUARE) {
-    return q * q;
+    return Q * Q;
   }
   if (g == mfem::Geometry::TETRAHEDRON) {
-    return (q * (q + 1) * (q + 2)) / 6;
+    return (Q * (Q + 1) * (Q + 2)) / 6;
   }
   if (g == mfem::Geometry::CUBE) {
-    return q * q * q;
+    return Q * Q * Q;
   }
   return -1;
 }

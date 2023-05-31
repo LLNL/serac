@@ -58,14 +58,6 @@ auto get_derivative_type(lambda qf)
                zero{}};
 };
 
-template <int i>
-struct DerivativeWRT {
-};
-
-template <int Q, mfem::Geometry::Type g, typename test, typename... trials>
-struct KernelConfig {
-};
-
 template <typename lambda, int dim, int n, typename... T>
 auto batch_apply_qf(lambda qf, const tensor<double, dim, n>& positions,
                     const tensor<double, dim - 1, dim, n>& jacobians, const T&... inputs)
@@ -174,7 +166,7 @@ auto batch_apply_chain_rule(derivative_type* qf_derivatives, const tensor<T, n>&
  * Template parameters other than the test and trial spaces are used for customization + optimization
  * and are erased through the @p std::function members of @p BoundaryIntegral
  * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
- * @tparam Q Quadrature parameter describing how many points per dimension
+ * @tparam Q parameter describing number of quadrature points (see num_quadrature_points() function for more details)
  * @tparam derivatives_type Type representing the derivative of the q-function w.r.t. its input arguments
  *
  * @note lambda does not appear as a template argument, as the directional derivative is
@@ -225,7 +217,7 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
  * Template parameters other than the test and trial spaces are used for customization + optimization
  * and are erased through the @p std::function members of @p Integral
  * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
- * @tparam Q Quadrature parameter describing how many points per dimension
+ * @tparam Q parameter describing number of quadrature points (see num_quadrature_points() function for more details)
  * @tparam derivatives_type Type representing the derivative of the q-function w.r.t. its input arguments
  *
  *
@@ -275,7 +267,7 @@ std::function<void(const std::vector<const double*>&, double*, bool)> evaluation
 }
 
 template <int wrt, int Q, mfem::Geometry::Type geom, typename signature, typename derivative_type>
-std::function<void(const double*, double*)> jvp_kernel(signature, std::shared_ptr<derivative_type> qf_derivatives,
+std::function<void(const double*, double*)> jacobian_vector_product_kernel(signature, std::shared_ptr<derivative_type> qf_derivatives,
                                                        uint32_t num_elements)
 {
   return [=](const double* du, double* dr) {
