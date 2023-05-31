@@ -58,7 +58,7 @@ struct Integral {
     element_gradient_.resize(num_trial_spaces);
 
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
-      functional_to_integral_[active_trial_spaces_[i]] = i;
+      functional_to_integral_index_[active_trial_spaces_[i]] = i;
     }
   }
 
@@ -82,8 +82,9 @@ struct Integral {
     output_E = 0.0;
 
     bool with_AD =
-        (functional_to_integral_.count(differentiation_index) > 0 && differentiation_index != NO_DIFFERENTIATION);
-    auto& kernels = (with_AD) ? evaluation_with_AD_[functional_to_integral_.at(differentiation_index)] : evaluation_;
+        (functional_to_integral_index_.count(differentiation_index) > 0 && differentiation_index != NO_DIFFERENTIATION);
+    auto& kernels =
+        (with_AD) ? evaluation_with_AD_[functional_to_integral_index_.at(differentiation_index)] : evaluation_;
     for (auto& [geometry, func] : kernels) {
       std::vector<const double*> inputs(active_trial_spaces_.size());
       for (std::size_t i = 0; i < active_trial_spaces_.size(); i++) {
@@ -108,8 +109,8 @@ struct Integral {
     output_E = 0.0;
 
     // if this integral actually depends on the specified variable
-    if (functional_to_integral_.count(differentiation_index) > 0) {
-      for (auto& [geometry, func] : jvp_[functional_to_integral_.at(differentiation_index)]) {
+    if (functional_to_integral_index_.count(differentiation_index) > 0) {
+      for (auto& [geometry, func] : jvp_[functional_to_integral_index_.at(differentiation_index)]) {
         func(input_E.GetBlock(geometry).Read(), output_E.GetBlock(geometry).ReadWrite());
       }
     }
@@ -126,8 +127,8 @@ struct Integral {
                                uint32_t differentiation_index) const
   {
     // if this integral actually depends on the specified variable
-    if (functional_to_integral_.count(differentiation_index) > 0) {
-      for (auto& [geometry, func] : element_gradient_[functional_to_integral_.at(differentiation_index)]) {
+    if (functional_to_integral_index_.count(differentiation_index) > 0) {
+      for (auto& [geometry, func] : element_gradient_[functional_to_integral_index_.at(differentiation_index)]) {
         func(view(K_e[geometry]));
       }
     }
@@ -168,13 +169,13 @@ struct Integral {
    *        depend on a subset, say {B, C}. From `Functional`'s perspective, trial spaces {B, C} have (zero-based)
    *        indices of {1, 2}, but from `Integral`'s perspective, those are trial spaces {0, 1}.
    *
-   * So, in this example functional_to_integral_ would have the values:
+   * So, in this example functional_to_integral_index_ would have the values:
    * @code{.cpp}
    * std::map<int,int> functional_to_integral = {{1, 0}, {2, 1}};
    * @endcode
    *
    */
-  std::map<uint32_t, uint32_t> functional_to_integral_;
+  std::map<uint32_t, uint32_t> functional_to_integral_index_;
 
   /// @brief the spatial positions and jacobians (dx_dxi) for each element type and quadrature point
   std::map<mfem::Geometry::Type, GeometricFactors> geometric_factors_;
@@ -314,7 +315,8 @@ void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral& integr
     integral.evaluation_with_AD_[index][geom] =
         boundary_integral::evaluation_kernel<index, Q, geom>(s, qf, positions, jacobians, ptr, num_elements);
 
-    integral.jvp_[index][geom] = boundary_integral::jacobian_vector_product_kernel<index, Q, geom>(s, ptr, num_elements);
+    integral.jvp_[index][geom] =
+        boundary_integral::jacobian_vector_product_kernel<index, Q, geom>(s, ptr, num_elements);
     integral.element_gradient_[index][geom] =
         boundary_integral::element_gradient_kernel<index, Q, geom>(s, ptr, num_elements);
   });

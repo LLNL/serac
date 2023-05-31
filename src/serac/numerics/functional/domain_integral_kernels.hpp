@@ -329,8 +329,8 @@ std::function<void(const std::vector<const double*>&, double*, bool)> evaluation
 }
 
 template <int wrt, int Q, mfem::Geometry::Type geom, typename signature, typename derivative_type>
-std::function<void(const double*, double*)> jacobian_vector_product_kernel(signature, std::shared_ptr<derivative_type> qf_derivatives,
-                                                       uint32_t num_elements)
+std::function<void(const double*, double*)> jacobian_vector_product_kernel(
+    signature, std::shared_ptr<derivative_type> qf_derivatives, uint32_t num_elements)
 {
   return [=](const double* du, double* dr) {
     using test_space  = typename signature::return_type;

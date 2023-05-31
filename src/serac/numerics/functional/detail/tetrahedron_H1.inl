@@ -15,8 +15,9 @@
 //
 // note: mfem assumes the parent element domain is the convex hull of {{0,0,0}, {1,0,0}, {0,1,0}, {0,0,1}}
 // for additional information on the finite_element concept requirements, see finite_element.hpp
-// 
-// for detailed information about node locations for different polynomial orders, see simplex_basis_function_unit_tests.cpp
+//
+// for detailed information about node locations for different polynomial orders, see
+// simplex_basis_function_unit_tests.cpp
 /// @cond
 template <int p, int c>
 struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
