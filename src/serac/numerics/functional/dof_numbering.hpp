@@ -225,11 +225,8 @@ struct DofNumbering {
           uint32_t dof_id         = static_cast<uint32_t>(fabs(dof_ids_h[index]));  // note: 1-based index
           int      dof_sign       = dof_ids[index] > 0 ? +1 : -1;
           bdr_element_dofs_(e, i) = {dof_id - 1, dof_sign};  // subtract 1 to get back to 0-based index
-
-          // std::cout << dof_id - 1 << " " << boundary_dofs.dof_info(e, i).index() << std::endl;
           index++;
         }
-        // std::cout << std::endl;
       }
     }
   }

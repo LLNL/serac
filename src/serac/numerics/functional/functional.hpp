@@ -598,8 +598,6 @@ private:
                              form_.input_L_[which_argument].Size(), sparse_matrix_frees_graph_ptrs,
                              sparse_matrix_frees_values_ptr, col_ind_is_sorted);
 
-      // write_to_file(J_local, "J.mtx");
-
       auto* R = form_.test_space_->Dof_TrueDof_Matrix();
 
       auto* A =
