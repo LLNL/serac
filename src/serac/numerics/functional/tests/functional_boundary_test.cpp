@@ -20,7 +20,7 @@
 
 #include "serac/numerics/functional/tests/check_gradient.hpp"
 
-#include "serac/numerics/functional/mpi_fstream.hpp"
+#include "serac/infrastructure/mpi_fstream.hpp"
 
 using namespace serac;
 

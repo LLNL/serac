@@ -13,7 +13,7 @@
 #include <iomanip>
 #include <vector>
 
-#include "serac/numerics/functional/dof_numbering.hpp"
+//#include "serac/numerics/functional/dof_numbering.hpp"
 
 /**
  * @brief write an array of values out to file, in a space-separated format

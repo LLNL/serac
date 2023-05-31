@@ -33,8 +33,7 @@ set(functional_headers
 set(functional_sources 
     element_restriction.cpp 
     geometric_factors.cpp 
-    quadrature_data.cpp 
-    mpi_fstream.cpp)
+    quadrature_data.cpp)
 
 set(functional_detail_headers
     detail/hexahedron_H1.inl
