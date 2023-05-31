@@ -50,7 +50,7 @@ struct Integral {
    * @param t the type of integral
    * @param trial_space_indices a list of which trial spaces are used in the integrand
    */
-  Integral(Type t, std::vector<uint32_t> trial_space_indices) : type(t), active_trial_spaces(trial_space_indices)
+  Integral(Type t, std::vector<uint32_t> trial_space_indices) : type(t), active_trial_spaces_(trial_space_indices)
   {
     std::size_t num_trial_spaces = trial_space_indices.size();
     evaluation_with_AD_.resize(num_trial_spaces);
@@ -58,7 +58,7 @@ struct Integral {
     element_gradient_.resize(num_trial_spaces);
 
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
-      functional_to_integral_[active_trial_spaces[i]] = i;
+      functional_to_integral_[active_trial_spaces_[i]] = i;
     }
   }
 
@@ -85,9 +85,9 @@ struct Integral {
         (functional_to_integral_.count(differentiation_index) > 0 && differentiation_index != NO_DIFFERENTIATION);
     auto& kernels = (with_AD) ? evaluation_with_AD_[functional_to_integral_.at(differentiation_index)] : evaluation_;
     for (auto& [geometry, func] : kernels) {
-      std::vector<const double*> inputs(active_trial_spaces.size());
-      for (std::size_t i = 0; i < active_trial_spaces.size(); i++) {
-        inputs[i] = input_E[uint32_t(active_trial_spaces[i])].GetBlock(geometry).Read();
+      std::vector<const double*> inputs(active_trial_spaces_.size());
+      for (std::size_t i = 0; i < active_trial_spaces_.size(); i++) {
+        inputs[i] = input_E[uint32_t(active_trial_spaces_[i])].GetBlock(geometry).Read();
       }
       func(inputs, output_E.GetBlock(geometry).ReadWrite(), update_state);
     }
@@ -146,10 +146,10 @@ struct Integral {
   std::vector<std::map<mfem::Geometry::Type, eval_func> > evaluation_with_AD_;
 
   /// @brief signature of element jvp kernel
-  using jvp_func = std::function<void(const double*, double*)>;
+  using jacobian_vector_product_func = std::function<void(const double*, double*)>;
 
   /// @brief kernels for jacobian-vector product of integral calculation
-  std::vector<std::map<mfem::Geometry::Type, jvp_func> > jvp_;
+  std::vector<std::map<mfem::Geometry::Type, jacobian_vector_product_func> > jvp_;
 
   /// @brief signature of element gradient kernel
   using grad_func = std::function<void(ExecArrayView<double, 3, ExecutionSpace::CPU>)>;
@@ -158,7 +158,7 @@ struct Integral {
   std::vector<std::map<mfem::Geometry::Type, grad_func> > element_gradient_;
 
   /// @brief a list of the trial spaces that take part in this integrand
-  std::vector<uint32_t> active_trial_spaces;
+  std::vector<uint32_t> active_trial_spaces_;
 
   /**
    * @brief a way of translating between the indices used by `Functional` and `Integral` to refer to the same

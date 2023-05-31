@@ -423,7 +423,7 @@ public:
     for (auto& integral : integrals_) {
       auto type = integral.type;
 
-      for (auto i : integral.active_trial_spaces) {
+      for (auto i : integral.active_trial_spaces_) {
         if (!already_computed[type][i]) {
           G_trial_[type][i].Gather(input_L_[i], input_E_[type][i]);
           already_computed[type][i] = true;
