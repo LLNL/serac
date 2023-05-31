@@ -819,6 +819,11 @@ public:
       *parameters_[parameter_index].previous_state = *parameters_[parameter_index].state;
     }
 
+    for (int i = 0; i < constrained_dofs.Size(); i++) {
+      int j  = constrained_dofs[i];
+      dr_[j] = du_[j];
+    }
+
     auto& lin_solver = nonlin_solver_->linearSolver();
 
     lin_solver.SetOperator(*J_);
