@@ -325,7 +325,7 @@ implementation given below).
 
 .. code-block:: cpp
 
-   template < ::Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q,
+   template < ::mfem::Geometry::Type g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q,
               typename derivatives_type, typename lambda>
    void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type* derivatives_ptr,
                           const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda qf)

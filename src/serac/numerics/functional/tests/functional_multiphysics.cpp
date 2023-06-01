@@ -25,13 +25,13 @@ using namespace serac;
 
 TEST(FunctionalMultiphysics, NonlinearThermalTest3D)
 {
-  int serial_refinement   = 0;
+  int serial_refinement   = 1;
   int parallel_refinement = 0;
 
   constexpr auto p   = 3;
   constexpr auto dim = 3;
 
-  std::string meshfile = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+  std::string meshfile = SERAC_REPO_DIR "/data/meshes/patch3D_tets_and_hexes.mesh";
   auto        mesh3D   = mesh::refineAndDistribute(buildMeshFromFile(meshfile), serial_refinement, parallel_refinement);
 
   // Create standard MFEM bilinear and linear forms on H1
@@ -40,8 +40,9 @@ TEST(FunctionalMultiphysics, NonlinearThermalTest3D)
 
   mfem::Vector U(fespace.TrueVSize());
   mfem::Vector dU_dt(fespace.TrueVSize());
-  U.Randomize();
-  dU_dt.Randomize();
+  int          seed = 0;
+  U.Randomize(seed);
+  dU_dt.Randomize(seed + 1);
 
   // Define the types for the test and trial spaces using the function arguments
   using test_space  = H1<p>;

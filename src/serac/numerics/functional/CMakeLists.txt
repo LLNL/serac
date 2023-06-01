@@ -4,19 +4,19 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-set(functional_depends serac_mesh serac_numerics)
+set(functional_depends serac_mesh)
 blt_list_append( TO functional_depends ELEMENTS cuda    IF ENABLE_CUDA )
 blt_list_append( TO functional_depends ELEMENTS caliper adiak IF SERAC_ENABLE_PROFILING )
 
 # Add the library first
 set(functional_headers
-    boundary_integral.hpp
+    differentiate_wrt.hpp
     boundary_integral_kernels.hpp
     dof_numbering.hpp
-    domain_integral.hpp
+    element_restriction.hpp
+    geometric_factors.hpp
     domain_integral_kernels.hpp
     dual.hpp
-    evector_view.hpp
     finite_element.hpp
     functional.hpp
     functional_qoi.inl
@@ -24,10 +24,16 @@ set(functional_headers
     isotropic_tensor.hpp
     polynomials.hpp
     quadrature.hpp
+    quadrature_data.hpp
     tensor.hpp
     tuple.hpp
     tuple_tensor_dual_functions.hpp
     )
+
+set(functional_sources 
+    element_restriction.cpp 
+    geometric_factors.cpp 
+    quadrature_data.cpp)
 
 set(functional_detail_headers
     detail/hexahedron_H1.inl
@@ -52,7 +58,8 @@ blt_list_append(TO functional_headers ELEMENTS ${functional_cuda_headers} IF ENA
 
 blt_add_library(
       NAME        serac_functional
-      HEADERS     ${functional_headers} ${functional_detail_headers}
+      HEADERS     ${functional_headers} ${functional_detail_headers} 
+      SOURCES     ${functional_sources}
       DEPENDS_ON  ${functional_depends}
       )
 

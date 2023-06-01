@@ -41,17 +41,17 @@ struct QuadratureRule {
  * @tparam The shape of the element to produce a quadrature rule for
  * @tparam Q the number of quadrature points per dimension
  */
-template <Geometry g, int Q>
+template <mfem::Geometry::Type g, int Q>
 SERAC_HOST_DEVICE constexpr auto GaussQuadratureRule()
 {
-  auto x = GaussLegendreNodes<Q>();
-  auto w = GaussLegendreWeights<Q>();
+  auto x = GaussLegendreNodes<Q, mfem::Geometry::SEGMENT>();
+  auto w = GaussLegendreWeights<Q, mfem::Geometry::SEGMENT>();
 
-  if constexpr (g == Geometry::Segment) {
+  if constexpr (g == mfem::Geometry::SEGMENT) {
     return QuadratureRule<Q, 1>{w, make_tensor<Q, 1>([&x](int i, int /*j*/) { return x[i]; })};
   }
 
-  if constexpr (g == Geometry::Quadrilateral) {
+  if constexpr (g == mfem::Geometry::SQUARE) {
     QuadratureRule<Q * Q, 2> rule{};
     int                      count = 0;
     for (int j = 0; j < Q; j++) {
@@ -63,7 +63,7 @@ SERAC_HOST_DEVICE constexpr auto GaussQuadratureRule()
     return rule;
   }
 
-  if constexpr (g == Geometry::Hexahedron) {
+  if constexpr (g == mfem::Geometry::CUBE) {
     QuadratureRule<Q * Q * Q, 3> rule{};
     int                          count = 0;
     for (int k = 0; k < Q; k++) {
