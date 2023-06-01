@@ -17,8 +17,8 @@
 // for additional information on the finite_element concept requirements, see finite_element.hpp
 /// @cond
 template <int p, int c>
-struct finite_element<Geometry::Hexahedron, L2<p, c> > {
-  static constexpr auto geometry   = Geometry::Hexahedron;
+struct finite_element<mfem::Geometry::CUBE, L2<p, c> > {
+  static constexpr auto geometry   = mfem::Geometry::CUBE;
   static constexpr auto family     = Family::L2;
   static constexpr int  components = c;
   static constexpr int  dim        = 3;
@@ -100,8 +100,8 @@ struct finite_element<Geometry::Hexahedron, L2<p, c> > {
   template <bool apply_weights, int q>
   static constexpr auto calculate_B()
   {
-    constexpr auto                  points1D  = GaussLegendreNodes<q>();
-    [[maybe_unused]] constexpr auto weights1D = GaussLegendreWeights<q>();
+    constexpr auto                  points1D  = GaussLegendreNodes<q, mfem::Geometry::SEGMENT>();
+    [[maybe_unused]] constexpr auto weights1D = GaussLegendreWeights<q, mfem::Geometry::SEGMENT>();
     tensor<double, q, n>            B{};
     for (int i = 0; i < q; i++) {
       B[i] = GaussLobattoInterpolation<n>(points1D[i]);
@@ -123,8 +123,8 @@ struct finite_element<Geometry::Hexahedron, L2<p, c> > {
   template <bool apply_weights, int q>
   static constexpr auto calculate_G()
   {
-    constexpr auto                  points1D  = GaussLegendreNodes<q>();
-    [[maybe_unused]] constexpr auto weights1D = GaussLegendreWeights<q>();
+    constexpr auto                  points1D  = GaussLegendreNodes<q, mfem::Geometry::SEGMENT>();
+    [[maybe_unused]] constexpr auto weights1D = GaussLegendreWeights<q, mfem::Geometry::SEGMENT>();
     tensor<double, q, n>            G{};
     for (int i = 0; i < q; i++) {
       G[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);

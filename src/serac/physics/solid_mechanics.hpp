@@ -94,7 +94,7 @@ public:
    * @note: this is hardcoded for now, since we currently
    * only support tensor product elements (1 element type per spatial dimension)
    */
-  static constexpr Geometry geom = supported_geometries[dim];
+  static constexpr mfem::Geometry::Type geom = supported_geometries[dim];
 
   /**
    * @brief Construct a new SolidMechanics object

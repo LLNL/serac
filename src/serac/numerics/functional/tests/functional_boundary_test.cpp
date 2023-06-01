@@ -20,6 +20,8 @@
 
 #include "serac/numerics/functional/tests/check_gradient.hpp"
 
+#include "serac/infrastructure/mpi_fstream.hpp"
+
 using namespace serac;
 
 int            num_procs, myid;
@@ -108,14 +110,18 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
   check_gradient(residual, U);
 
   if (verbose) {
-    std::cout << "sum(r1):  " << r1.Sum() << std::endl;
-    std::cout << "sum(r2):  " << r2.Sum() << std::endl;
-    std::cout << "||r1||: " << r1.Norml2() << std::endl;
-    std::cout << "||r2||: " << r2.Norml2() << std::endl;
-    std::cout << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
+    mpi::out << "sum(r1):  " << r1.Sum() << std::endl;
+    mpi::out << "sum(r2):  " << r2.Sum() << std::endl;
+    mpi::out << "||r1||: " << r1.Norml2() << std::endl;
+    mpi::out << "||r2||: " << r2.Norml2() << std::endl;
+    mpi::out << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
   }
 
-  EXPECT_NEAR(0.0, mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-12);
+  if (r1.Norml2() < 1.0e-15) {
+    EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2(), 1.e-12);
+  } else {
+    EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-12);
+  }
 }
 
 template <int p, int dim>
@@ -148,6 +154,8 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
 
   mfem::ParGridFunction u_global(&fespace);
   u_global.Randomize();
+  mfem::FunctionCoefficient xfunc([](mfem::Vector x) { return x[0]; });
+  u_global.ProjectCoefficient(xfunc);
 
   mfem::Vector U(fespace.TrueVSize());
   u_global.GetTrueDofs(U);
@@ -155,14 +163,16 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
   using test_space  = decltype(test);
   using trial_space = decltype(trial);
 
-  Functional<test_space(trial_space)> residual(&fespace, &fespace);
+  Functional<test_space(trial_space)> residual(&fespace, {&fespace});
 
   residual.AddBoundaryIntegral(
-      Dimension<dim - 1>{},
-      [&]([[maybe_unused]] auto x, [[maybe_unused]] auto n, [[maybe_unused]] auto u) {
+      Dimension<dim - 1>{}, DependsOn<0>{},
+      [&](auto x, auto /*n*/, auto temperature) {
+        auto [u, unused] = temperature;
+
         // mfem is missing the integrator to compute this term
         // tensor<double,dim> b{sin(x[0]), x[0] * x[1]};
-        return x[0] * x[1] + /*dot(b, n) +*/ rho * u;
+        return x[0] * x[1] + /* dot(b, n) +*/ rho * u;
       },
       mesh);
 
@@ -170,14 +180,18 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
   mfem::Vector r2 = residual(U);
 
   if (verbose) {
-    std::cout << "sum(r1):  " << r1.Sum() << std::endl;
-    std::cout << "sum(r2):  " << r2.Sum() << std::endl;
-    std::cout << "||r1||: " << r1.Norml2() << std::endl;
-    std::cout << "||r2||: " << r2.Norml2() << std::endl;
-    std::cout << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
+    mpi::out << "sum(r1):  " << r1.Sum() << std::endl;
+    mpi::out << "sum(r2):  " << r2.Sum() << std::endl;
+    mpi::out << "||r1||: " << r1.Norml2() << std::endl;
+    mpi::out << "||r2||: " << r2.Norml2() << std::endl;
+    mpi::out << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
   }
 
-  EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-12);
+  if (r1.Norml2() < 1.0e-15) {
+    EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2(), 1.e-12);
+  } else {
+    EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-12);
+  }
 }
 
 TEST(FunctionalBoundary, 2DLinear) { boundary_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
@@ -186,13 +200,12 @@ TEST(FunctionalBoundary, 2DQuadratic) { boundary_test(*mesh2D, H1<2>{}, H1<2>{},
 TEST(FunctionalBoundary, 3DLinear) { boundary_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
 TEST(FunctionalBoundary, 3DQuadratic) { boundary_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
 
-// TODO: mfem treats L2 differently w.r.t. boundary elements, need to figure out how to get
-// the appropriate information (dofs, dof_ids for each boundary element) before these can be reenabled
-// TEST(boundaryL2, 2DLinear) { boundary_test(*mesh2D, L2<1>{}, L2<1>{}, Dimension<2>{}); }
-// TEST(boundaryL2, 2DQuadratic) { boundary_test(*mesh2D, L2<2>{}, L2<2>{}, Dimension<2>{}); }
-//
-// TEST(boundaryL2, 3DLinear) { boundary_test(*mesh3D, L2<1>{}, L2<1>{}, Dimension<3>{}); }
-// TEST(boundaryL2, 3DQuadratic) { boundary_test(*mesh3D, L2<2>{}, L2<2>{}, Dimension<3>{}); }
+TEST(boundaryL2, 2DLinear) { boundary_test(*mesh2D, L2<1>{}, L2<1>{}, Dimension<2>{}); }
+TEST(boundaryL2, 2DQuadratic) { boundary_test(*mesh2D, L2<2>{}, L2<2>{}, Dimension<2>{}); }
+
+TEST(boundaryL2, 3DLinear) { boundary_test(*mesh3D, L2<1>{}, L2<1>{}, Dimension<3>{}); }
+TEST(boundaryL2, 3DQuadratic) { boundary_test(*mesh3D, L2<2>{}, L2<2>{}, Dimension<3>{}); }
+TEST(boundaryL2, 3DCubic) { boundary_test(*mesh3D, L2<3>{}, L2<3>{}, Dimension<3>{}); }
 
 int main(int argc, char* argv[])
 {
@@ -203,13 +216,18 @@ int main(int argc, char* argv[])
 
   axom::slic::SimpleLogger logger;
 
-  int serial_refinement   = 0;
+  int serial_refinement   = 1;
   int parallel_refinement = 0;
 
-  std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
-  std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+  std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/patch2D_tris_and_quads.mesh";
+  std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/patch3D_tets_and_hexes.mesh";
   mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
   mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
+
+  // by default, mfem::Meshes aren't completely initialized on construction,
+  // so we have to manually initialize some of it
+  mesh2D->EnsureNodes();
+  mesh3D->EnsureNodes();
 
   int result = RUN_ALL_TESTS();
 

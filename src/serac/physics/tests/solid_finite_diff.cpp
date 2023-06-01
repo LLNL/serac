@@ -31,7 +31,7 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
   serac::StateManager::initialize(datastore, "solid_functional_parameterized_sensitivities");
 
   // Construct the appropriate dimension mesh and give it to the data store
-  std::string filename = SERAC_REPO_DIR "/data/meshes/beam-quad.mesh";
+  std::string filename = SERAC_REPO_DIR "/data/meshes/patch2D_tris_and_quads.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
@@ -169,7 +169,7 @@ TEST(SolidMechanics, FiniteDifferenceShape)
   serac::StateManager::initialize(datastore, "solid_functional_parameterized_shape_sensitivities");
 
   // Construct the appropriate dimension mesh and give it to the data store
-  std::string filename = SERAC_REPO_DIR "/data/meshes/beam-quad.mesh";
+  std::string filename = SERAC_REPO_DIR "/data/meshes/patch2D_tris_and_quads.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));

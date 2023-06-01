@@ -24,8 +24,7 @@
 #### Functional Interface ####
 
 * [**Functional**][3]
-* [Domain integral](@ref serac::DomainIntegral)
-* [Boundary integral](@ref serac::BoundaryIntegral)
+* [integral](@ref serac::Integral)
 
 #### Infrastructure ####
 

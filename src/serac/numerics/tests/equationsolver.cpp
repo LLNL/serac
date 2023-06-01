@@ -33,6 +33,9 @@ TEST_P(EquationSolverSuite, All)
   auto mesh  = mfem::Mesh::MakeCartesian2D(1, 1, mfem::Element::QUADRILATERAL);
   auto pmesh = mfem::ParMesh(MPI_COMM_WORLD, mesh);
 
+  pmesh.EnsureNodes();
+  pmesh.ExchangeFaceNbrData();
+
   constexpr int p   = 1;
   constexpr int dim = 2;
 
