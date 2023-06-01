@@ -16,6 +16,8 @@
 
 #include "detail/metaprogramming.hpp"
 
+#include <cmath>
+
 namespace serac {
 
 /**
@@ -458,29 +460,6 @@ SERAC_HOST_DEVICE constexpr auto operator-(const tensor<S, m, n...>& A, const te
 }
 
 /**
- * @brief elementwise multiplication of two tensors
- * @tparam S the underlying type of the (lefthand) argument
- * @tparam T the underlying type of the (righthand) argument
- * @tparam n integers describing the tensor shape
- * @param[in] A one of the tensors to be multiplied
- * @param[in] B one of the tensors to be multiplied
- */
-template <typename S, typename T, int... n>
-SERAC_HOST_DEVICE constexpr auto elementwise_multiply(const tensor<S, n...>& A, const tensor<T, n...>& B)
-{
-  using U = decltype(S{} * T{});
-  tensor<U, n...> AB{};
-
-  const S* A_ptr  = reinterpret_cast<const S*>(&A);
-  const T* B_ptr  = reinterpret_cast<const T*>(&B);
-  U*       AB_ptr = reinterpret_cast<U*>(&AB);
-  for (int i = 0; i < (n * ...); i++) {
-    AB_ptr[i] = A_ptr[i] * B_ptr[i];
-  }
-  return AB;
-}
-
-/**
  * @brief compound assignment (+) on tensors
  * @tparam S the underlying type of the tensor (lefthand) argument
  * @tparam T the underlying type of the tensor (righthand) argument
@@ -914,6 +893,36 @@ SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m, n, p, q>& A, const tenso
     }
   }
   return AB;
+}
+
+/// compute the cross product of the columns of A: A(:,1) x A(:,2)
+template <typename T>
+auto cross(const tensor<T, 3, 2>& A)
+{
+  return tensor<T, 3>{A(1, 0) * A(2, 1) - A(2, 0) * A(1, 1), A(2, 0) * A(0, 1) - A(0, 0) * A(2, 1),
+                      A(0, 0) * A(1, 1) - A(1, 0) * A(0, 1)};
+}
+
+/// return the in-plane components of the cross product of {v[0], v[1], 0} x {0, 0, 1}
+template <typename T>
+auto cross(const tensor<T, 2, 1>& v)
+{
+  return tensor<T, 2>{v(1, 0), -v(0, 0)};
+}
+
+/// return the in-plane components of the cross product of {v[0], v[1], 0} x {0, 0, 1}
+template <typename T>
+auto cross(const tensor<T, 2>& v)
+{
+  return tensor<T, 2>{v[1], -v[0]};
+}
+
+/// compute the (right handed) cross product of two 3-vectors
+template <typename S, typename T>
+auto cross(const tensor<S, 3>& u, const tensor<T, 3>& v)
+{
+  return tensor<decltype(S{} * T{}), 3>{u(1) * v(2) - u(2) * v(1), u(2) * v(0) - u(0) * v(2),
+                                        u(0) * v(1) - u(1) * v(0)};
 }
 
 /**
@@ -1364,7 +1373,7 @@ SERAC_HOST_DEVICE bool is_symmetric(tensor<double, n, n> A, double tolerance = 1
  * @param A The matrix to test for positive definiteness
  * @return Whether the matrix is positive definite
  */
-SERAC_HOST_DEVICE bool is_symmetric_and_positive_definite(tensor<double, 2, 2> A)
+inline SERAC_HOST_DEVICE bool is_symmetric_and_positive_definite(tensor<double, 2, 2> A)
 {
   if (!is_symmetric(A)) {
     return false;
@@ -1378,7 +1387,7 @@ SERAC_HOST_DEVICE bool is_symmetric_and_positive_definite(tensor<double, 2, 2> A
   return true;
 }
 /// @overload
-SERAC_HOST_DEVICE bool is_symmetric_and_positive_definite(tensor<double, 3, 3> A)
+inline SERAC_HOST_DEVICE bool is_symmetric_and_positive_definite(tensor<double, 3, 3> A)
 {
   if (!is_symmetric(A)) {
     return false;
@@ -1576,7 +1585,7 @@ auto& operator<<(std::ostream& out, const tensor<T, m, n...>& A)
  *
  * @param[in] out the std::ostream to write to (e.g. std::cout or std::ofstream)
  */
-auto& operator<<(std::ostream& out, zero)
+inline auto& operator<<(std::ostream& out, zero)
 {
   out << "zero";
   return out;
@@ -1587,7 +1596,7 @@ auto& operator<<(std::ostream& out, zero)
  * printf(tensor<...>))
  * @param[in] value The value to write out
  */
-SERAC_HOST_DEVICE void print(double value) { printf("%f", value); }
+inline SERAC_HOST_DEVICE void print(double value) { printf("%f", value); }
 
 /**
  * @brief print a tensor using `printf`, so that it is suitable for use inside cuda kernels.
@@ -1687,7 +1696,7 @@ using outer_product_t = typename detail::outer_prod<T1, T2>::type;
  * @brief Retrieves the gradient component of a double (which is nothing)
  * @return The sentinel, @see zero
  */
-SERAC_HOST_DEVICE auto get_gradient(double /* arg */) { return zero{}; }
+inline SERAC_HOST_DEVICE auto get_gradient(double /* arg */) { return zero{}; }
 
 /**
  * @brief get the gradient of type `tensor` (note: since its stored type is not a dual
@@ -1833,6 +1842,18 @@ SERAC_HOST_DEVICE constexpr int leading_dimension(tensor<T, m, n...>)
 {
   return m;
 }
+
+/// returns `true` if any entry of a tensor is `nan`
+template <typename T, int... n>
+bool isnan(const tensor<T, n...>& A)
+{
+  bool found_nan = false;
+  for_constexpr<n...>([&](auto... i) { found_nan |= std::isnan(A(i...)); });
+  return found_nan;
+}
+
+/// @overload
+inline bool isnan(const zero&) { return false; }
 
 }  // namespace serac
 

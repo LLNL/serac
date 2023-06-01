@@ -94,7 +94,7 @@ public:
    * @note: this is hardcoded for now, since we currently
    * only support tensor product elements (1 element type per spatial dimension)
    */
-  static constexpr Geometry geom = supported_geometries[dim];
+  static constexpr mfem::Geometry::Type geom = supported_geometries[dim];
 
   /**
    * @brief Construct a new SolidMechanics object
@@ -777,6 +777,11 @@ public:
 
       // Save the current parameter value for the next timestep
       *parameters_[parameter_index].previous_state = *parameters_[parameter_index].state;
+    }
+
+    for (int i = 0; i < constrained_dofs.Size(); i++) {
+      int j  = constrained_dofs[i];
+      dr_[j] = du_[j];
     }
 
     auto& lin_solver = nonlin_solver_->linearSolver();

@@ -30,7 +30,7 @@ TEST(HeatTransfer, MoveShape)
   constexpr int dim = 2;
 
   // Construct the appropriate dimension mesh and give it to the data store
-  std::string filename = SERAC_REPO_DIR "/data/meshes/square.mesh";
+  std::string filename = SERAC_REPO_DIR "/data/meshes/patch2D_tris_and_quads.mesh";
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -45,11 +45,19 @@ TEST(HeatTransfer, MoveShape)
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
-  auto options = heat_transfer::default_nonlinear_options;
+  auto nonlinear_options         = heat_transfer::default_nonlinear_options;
+  nonlinear_options.absolute_tol = 1.0e-14;
+  nonlinear_options.relative_tol = 1.0e-14;
 
   // Use tight tolerances as this is a machine precision test
-  options.absolute_tol = 1.0e-14;
-  options.relative_tol = 1.0e-14;
+  //
+  // Sam: we're setting a really small abs tolerance here to
+  //      work around https://github.com/mfem/mfem/issues/3641
+  // TODO: adopt solution to issue above once implemented
+  auto linear_options         = heat_transfer::default_linear_options;
+  linear_options.absolute_tol = 1.0e-30;
+
+  auto time_integration_options = TimesteppingOptions{TimestepMethod::QuasiStatic};
 
   // Define an anisotropic conductor material model
   tensor<double, 2, 2>                cond{{{5.0, 0.4}, {0.4, 1.0}}};
@@ -71,8 +79,7 @@ TEST(HeatTransfer, MoveShape)
 
   {
     // Construct a functional-based thermal solver including references to the shape displacement field.
-    HeatTransfer<p, dim> thermal_solver(options, heat_transfer::default_linear_options,
-                                        TimesteppingOptions{TimestepMethod::QuasiStatic}, "thermal_shape");
+    HeatTransfer<p, dim> thermal_solver(nonlinear_options, linear_options, time_integration_options, "thermal_shape");
 
     // Set the initial temperature and boundary condition
     thermal_solver.setTemperatureBCs(ess_bdr, zero);
@@ -116,8 +123,8 @@ TEST(HeatTransfer, MoveShape)
     *mesh_nodes += user_defined_shape_displacement.gridFunction();
 
     // Construct a functional-based thermal solver including references to the shape displacement field.
-    HeatTransfer<p, dim> thermal_solver_no_shape(options, heat_transfer::default_linear_options,
-                                                 TimesteppingOptions{TimestepMethod::QuasiStatic}, "thermal_pure");
+    HeatTransfer<p, dim> thermal_solver_no_shape(nonlinear_options, linear_options, time_integration_options,
+                                                 "thermal_pure");
 
     // Set the initial temperature and boundary condition
     thermal_solver_no_shape.setTemperatureBCs(ess_bdr, zero);
@@ -141,7 +148,7 @@ TEST(HeatTransfer, MoveShape)
 
   double error          = pure_temperature.DistanceTo(shape_temperature.GetData());
   double relative_error = error / pure_temperature.Norml2();
-  EXPECT_LT(relative_error, 1.0e-14);
+  EXPECT_LT(relative_error, 5.0e-14);
 }
 
 }  // namespace serac

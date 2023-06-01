@@ -1,8 +1,16 @@
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// other Serac Project Developers. See the top-level LICENSE file for
+// details.
+//
+// SPDX-License-Identifier: (BSD-3-Clause)#pragma once
 #pragma once
 
 #include "mfem.hpp"
 
 #include "serac/infrastructure/accelerator.hpp"
+
+#include "serac/numerics/functional/integral.hpp"
+#include "serac/numerics/functional/element_restriction.hpp"
 
 namespace serac {
 
@@ -15,13 +23,13 @@ namespace serac {
  * lexicographically, to facilitate creating the CSR matrix graph.
  */
 struct ElemInfo {
-  uint32_t global_row_;   ///< The global row number
-  uint32_t global_col_;   ///< The global column number
-  uint32_t local_row_;    ///< The local row number
-  uint32_t local_col_;    ///< The global column number
-  uint32_t element_id_;   ///< The element ID
-  int      sign_;         ///< The orientation of the element
-  bool     on_boundary_;  ///< True if element is on the boundary
+  uint32_t       global_row_;  ///< The global row number
+  uint32_t       global_col_;  ///< The global column number
+  uint32_t       local_row_;   ///< The local row number
+  uint32_t       local_col_;   ///< The global column number
+  uint32_t       element_id_;  ///< The element ID
+  int            sign_;        ///< The orientation of the element
+  Integral::Type type;         ///< Which kind of Integral this entry comes from
 };
 
 /**
@@ -121,15 +129,11 @@ template <typename T, ExecutionSpace exec>
 ExecArray<T, 3, exec> allocateMemoryForBdrElementGradients(const mfem::ParFiniteElementSpace& trial_fes,
                                                            const mfem::ParFiniteElementSpace& test_fes)
 {
-  if (compatibleWithFaceRestriction(test_fes) && compatibleWithFaceRestriction(trial_fes)) {
-    auto* test_BE  = test_fes.GetBE(0);
-    auto* trial_BE = trial_fes.GetBE(0);
-    return {static_cast<size_t>(trial_fes.GetNFbyType(mfem::FaceType::Boundary)),
-            static_cast<size_t>(test_BE->GetDof() * test_fes.GetVDim()),
-            static_cast<size_t>(trial_BE->GetDof() * trial_fes.GetVDim())};
-  } else {
-    return {0, 0, 0};
-  }
+  auto* test_BE  = test_fes.GetBE(0);
+  auto* trial_BE = trial_fes.GetBE(0);
+  return {static_cast<size_t>(trial_fes.GetNFbyType(mfem::FaceType::Boundary)),
+          static_cast<size_t>(test_BE->GetDof() * test_fes.GetVDim()),
+          static_cast<size_t>(trial_BE->GetDof() * trial_fes.GetVDim())};
 }
 
 /// @overload
@@ -166,6 +170,12 @@ struct DofNumbering {
                       static_cast<size_t>(fespace.GetFE(0)->GetDof() * fespace.GetVDim())),
         bdr_element_dofs_(allocateMemoryForBdrElementGradients<SignedIndex, ExecutionSpace::CPU>(fespace))
   {
+    int                  dim          = fespace.GetMesh()->Dimension();
+    mfem::Geometry::Type elem_geom[4] = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT, mfem::Geometry::SQUARE,
+                                         mfem::Geometry::CUBE};
+    ElementRestriction   dofs(&fespace, elem_geom[dim]);
+    ElementRestriction   boundary_dofs(&fespace, elem_geom[dim - 1], FaceType::BOUNDARY);
+
     {
       auto elem_restriction = fespace.GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC);
 
@@ -241,105 +251,105 @@ struct DofNumbering {
  *    convention for quadrature point numbering.
  */
 struct GradientAssemblyLookupTables {
+  /// @brief a type for representing a nonzero entry in a sparse matrix
+  struct Entry {
+    uint32_t row;     ///< row value for this nonzero Entry
+    uint32_t column;  ///< column value for this nonzero Entry
+
+    /// operator< is used when sorting `Entry`. Lexicographical ordering
+    bool operator<(const Entry& other) const
+    {
+      return (row < other.row) || ((row == other.row) && (column < other.column));
+    }
+
+    /// operator== is required for use in `std::unordered_map`
+    bool operator==(const Entry& other) const { return (row == other.row && column == other.column); }
+
+    /// hash functor required for use in `std::unordered_map`
+    struct Hasher {
+      /// @brief a hash function implementation for `Entry`
+      std::size_t operator()(const Entry& k) const
+      {
+        std::size_t seed = std::hash<uint32_t>()(k.row);
+        seed ^= std::hash<uint32_t>()(k.column) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+        return seed;
+      }
+    };
+  };
+
   /**
-   * @param test_fespace the test finite element space to extract dof numbers from
-   * @param trial_fespace the trial finite element space to extract dof numbers from
+   * @param block_test_dofs object containing information about dofs for the test space
+   * @param block_trial_dofs object containing information about dofs for the trial space
    *
-   * @brief create lookup tables of which degrees of freedom correspond to
-   * each element and boundary element
+   * @brief create lookup tables describing which degrees of freedom
+   * correspond to each domain/boundary element
    */
-  GradientAssemblyLookupTables(const mfem::ParFiniteElementSpace& test_fespace,
-                               const mfem::ParFiniteElementSpace& trial_fespace)
-      : element_nonzero_LUT(static_cast<size_t>(trial_fespace.GetNE()),
-                            static_cast<size_t>(test_fespace.GetFE(0)->GetDof() * test_fespace.GetVDim()),
-                            static_cast<size_t>(trial_fespace.GetFE(0)->GetDof() * trial_fespace.GetVDim())),
-        bdr_element_nonzero_LUT(
-            allocateMemoryForBdrElementGradients<SignedIndex, ExecutionSpace::CPU>(trial_fespace, test_fespace))
+  GradientAssemblyLookupTables(const serac::BlockElementRestriction& block_test_dofs,
+                               const serac::BlockElementRestriction& block_trial_dofs)
   {
-    DofNumbering test_dofs(test_fespace);
-    DofNumbering trial_dofs(trial_fespace);
-
-    auto num_elements     = static_cast<uint32_t>(trial_fespace.GetNE());
-    auto num_bdr_elements = static_cast<uint32_t>(trial_fespace.GetNFbyType(mfem::FaceType::Boundary));
-
-    std::vector<ElemInfo> infos;
-
     // we start by having each element and boundary element emit the (i,j) entry that it
     // touches in the global "stiffness matrix", and also keep track of some metadata about
     // which element and which dof are associated with that particular nonzero entry
-    bool on_boundary = false;
-    for (uint32_t e = 0; e < num_elements; e++) {
-      for (axom::IndexType i = 0; i < test_dofs.element_dofs_.shape()[1]; i++) {
-        auto test_dof = test_dofs.element_dofs_(e, i);
-        for (axom::IndexType j = 0; j < trial_dofs.element_dofs_.shape()[1]; j++) {
-          auto trial_dof = trial_dofs.element_dofs_(e, j);
-          infos.push_back(ElemInfo{test_dof, trial_dof, static_cast<uint32_t>(i), static_cast<uint32_t>(j), e,
-                                   test_dof.sign_ * trial_dof.sign_, on_boundary});
+    for (const auto& [geometry, trial_dofs] : block_trial_dofs.restrictions) {
+      const auto& test_dofs = block_test_dofs.restrictions.at(geometry);
+
+      std::vector<DoF> test_vdofs(test_dofs.nodes_per_elem * test_dofs.components);
+      std::vector<DoF> trial_vdofs(trial_dofs.nodes_per_elem * trial_dofs.components);
+
+      auto num_elements = static_cast<uint32_t>(trial_dofs.num_elements);
+      for (uint32_t e = 0; e < num_elements; e++) {
+        for (uint64_t i = 0; i < uint64_t(test_dofs.dof_info.shape()[1]); i++) {
+          auto test_dof = test_dofs.dof_info(e, i);
+
+          for (uint64_t j = 0; j < uint64_t(trial_dofs.dof_info.shape()[1]); j++) {
+            auto trial_dof = trial_dofs.dof_info(e, j);
+
+            for (uint64_t k = 0; k < test_dofs.components; k++) {
+              uint32_t test_global_id = uint32_t(test_dofs.GetVDof(test_dof, k).index());
+              for (uint64_t l = 0; l < trial_dofs.components; l++) {
+                uint32_t trial_global_id                  = uint32_t(trial_dofs.GetVDof(trial_dof, l).index());
+                nz_LUT[{test_global_id, trial_global_id}] = 0;  // just store the keys initially
+              }
+            }
+          }
         }
       }
     }
+    std::vector<Entry> entries(nz_LUT.size());
 
-    // note: mfem doesn't implement FaceRestrictions for some of its function spaces,
-    // so until those are implemented, DofNumbering::bdr_element_dofs will be
-    // an empty 2D array, so these loops will not do anything
-    on_boundary = true;
-    for (uint32_t e = 0; e < num_bdr_elements; e++) {
-      for (axom::IndexType i = 0; i < test_dofs.bdr_element_dofs_.shape()[1]; i++) {
-        auto test_dof = test_dofs.bdr_element_dofs_(e, i);
-        for (axom::IndexType j = 0; j < trial_dofs.bdr_element_dofs_.shape()[1]; j++) {
-          auto trial_dof = trial_dofs.bdr_element_dofs_(e, j);
-          infos.push_back(ElemInfo{test_dof, trial_dof, static_cast<uint32_t>(i), static_cast<uint32_t>(j), e,
-                                   test_dof.sign_ * trial_dof.sign_, on_boundary});
-        }
-      }
+    uint32_t count = 0;
+    for (auto [key, value] : nz_LUT) {
+      entries[count++] = key;
     }
 
-    // sorting the ElemInfos by row and column groups the different contributions
-    // to the same location of the global stiffness matrix, and makes it easy to identify
-    // the unique entries
-    std::sort(infos.begin(), infos.end());
+    std::sort(entries.begin(), entries.end());
 
-    // the row_ptr array size only depends on the number of rows in the global stiffness matrix,
-    // so we already know its size before processing the ElemInfo array
-    row_ptr.resize(static_cast<size_t>(test_fespace.GetNDofs() * test_fespace.GetVDim() + 1));
+    nnz = static_cast<uint32_t>(nz_LUT.size());
+    row_ptr.resize(static_cast<size_t>(block_test_dofs.LSize() + 1));
+    col_ind.resize(nnz);
 
-    // the other CSR matrix arrays are formed incrementally by going through the sorted ElemInfo values
-    std::vector<SignedIndex> nonzero_ids(infos.size());
-
-    nnz        = 0;
     row_ptr[0] = 0;
-    col_ind.push_back(static_cast<int>(infos[0].global_col_));
-    nonzero_ids[0] = {0, infos[0].sign_};
+    col_ind[0] = int(entries[0].column);
 
-    for (size_t i = 1; i < infos.size(); i++) {
-      // increment the nonzero count every time we find a new (i,j) entry
-      nnz += (infos[i - 1] != infos[i]);
-
-      // record the index, sign, and column of this particular (i,j) entry
-      nonzero_ids[i] = SignedIndex{nnz, infos[i].sign_};
-      if (infos[i - 1] != infos[i]) {
-        col_ind.push_back(static_cast<int>(infos[i].global_col_));
-      }
+    for (uint32_t i = 1; i < nnz; i++) {
+      nz_LUT[entries[i]] = i;
+      col_ind[i]         = int(entries[i].column);
 
       // if the new entry has a different row, then the row_ptr offsets must be set as well
-      for (uint32_t j = infos[i - 1].global_row_; j < infos[i].global_row_; j++) {
-        row_ptr[j + 1] = static_cast<int>(nonzero_ids[i]);
+      for (uint32_t j = entries[i - 1].row; j < entries[i].row; j++) {
+        row_ptr[j + 1] = int(i);
       }
     }
 
-    row_ptr.back() = static_cast<int>(++nnz);
-
-    // once we've finished processing the ElemInfo array, we go back and fill in our lookup tables
-    // so that each element can know precisely where to place its element stiffness matrix contributions
-    for (size_t i = 0; i < infos.size(); i++) {
-      auto [_1, _2, local_row, local_col, element_id, _3, from_bdr_element] = infos[i];
-      if (from_bdr_element) {
-        bdr_element_nonzero_LUT(element_id, local_row, local_col) = nonzero_ids[i];
-      } else {
-        element_nonzero_LUT(element_id, local_row, local_col) = nonzero_ids[i];
-      }
-    }
+    row_ptr.back() = static_cast<int>(nnz);
   }
+
+  /**
+   * @brief return the index (into the nonzero entries) corresponding to entry (i,j)
+   * @param i the row
+   * @param j the column
+   */
+  uint32_t operator()(int i, int j) const { return nz_LUT.at({uint32_t(i), uint32_t(j)}); }
 
   /// @brief how many nonzero entries appear in the sparse matrix
   uint32_t nnz;
@@ -354,16 +364,10 @@ struct GradientAssemblyLookupTables {
   std::vector<int> col_ind;
 
   /**
-   * @brief element_nonzero_LUT(e, i, j) says where (in the global sparse matrix)
-   * to put the (i, j) component of the matrix associated with element element matrix `e`
+   * @brief `nz_LUT` returns the index of the `col_ind` / `value` CSR arrays
+   * corresponding to the (i,j) entry
    */
-  serac::CPUArray<SignedIndex, 3> element_nonzero_LUT;
-
-  /**
-   * @brief bdr_element_nonzero_LUT(b, i, j) says where (in the global sparse matrix)
-   * to put the (i, j) component of the matrix associated with boundary element element matrix `b`
-   */
-  serac::CPUArray<SignedIndex, 3> bdr_element_nonzero_LUT;
+  std::unordered_map<Entry, uint32_t, Entry::Hasher> nz_LUT;
 };
 
 }  // namespace serac

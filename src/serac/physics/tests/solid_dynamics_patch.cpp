@@ -27,7 +27,7 @@ namespace serac {
 enum class PatchBoundaryCondition
 {
   Essential,
-  MixedEssentialAndNatural
+  EssentialAndNatural
 };
 
 /**
@@ -54,7 +54,7 @@ std::set<int> essentialBoundaryAttributes(PatchBoundaryCondition bc)
       case PatchBoundaryCondition::Essential:
         essential_boundaries = {1, 2, 3, 4};
         break;
-      case PatchBoundaryCondition::MixedEssentialAndNatural:
+      case PatchBoundaryCondition::EssentialAndNatural:
         essential_boundaries = {1, 4};
         break;
     }
@@ -63,100 +63,12 @@ std::set<int> essentialBoundaryAttributes(PatchBoundaryCondition bc)
       case PatchBoundaryCondition::Essential:
         essential_boundaries = {1, 2, 3, 4, 5, 6};
         break;
-      case PatchBoundaryCondition::MixedEssentialAndNatural:
+      case PatchBoundaryCondition::EssentialAndNatural:
         essential_boundaries = {1, 2};
         break;
     }
   }
   return essential_boundaries;
-}
-
-/**
- * @brief Solve problem and compare numerical solution to exact answer
- *
- * @tparam p Polynomial degree of finite element approximation
- * @tparam dim Number of spatial dimensions
- * @tparam ExactSolution A class that satisfies the exact solution concept
- *
- * @param exact_solution Exact solution of problem
- * @param bc Specifier for boundary condition type to test
- * @return double L2 norm (continuous) of error in computed solution
- * *
- * @pre ExactSolution must implement operator() that is an MFEM
- * coefficient-generating function for the exact solution of the displacement
- * as a function of space and time.
- * @pre ExactSolution must implement velocity() that is an MFEM
- * coefficient-generating function for the exact solution of the velocity
- * as a function of space and time.
- * @pre ExactSolution must have a method applyLoads that applies forcing terms to the
- * solid functional that should lead to the exact solution
- */
-template <int p, int dim, typename ExactSolution>
-double dynamic_solution_error(const ExactSolution& exact_solution, PatchBoundaryCondition bc)
-{
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  // Create DataStore
-  axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "solid_functional_dynamic_solve");
-
-  // BT: shouldn't this assertion be in the physics module?
-  // Putting it here prevents tests from having a nonsensical spatial dimension value,
-  // but the physics module should be catching this error to protect users.
-  static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for solid functional test");
-
-  std::string filename = std::string(SERAC_REPO_DIR) + "/data/meshes/patch" + std::to_string(dim) + "D.mesh";
-  auto        mesh     = mesh::refineAndDistribute(buildMeshFromFile(filename));
-  serac::StateManager::setMesh(std::move(mesh));
-
-  // Construct a functional-based solid mechanics solver
-  serac::NonlinearSolverOptions nonlin_opts{.relative_tol = 1.0e-13, .absolute_tol = 1.0e-13};
-
-  SolidMechanics<p, dim> solid(nonlin_opts, serac::solid_mechanics::default_linear_options,
-                               TimesteppingOptions{TimestepMethod::Newmark, DirichletEnforcementMethod::DirectControl},
-                               GeometricNonlinearities::On, "solid_dynamics");
-
-  solid_mechanics::NeoHookean mat{.density = 1.0, .K = 1.0, .G = 1.0};
-  solid.setMaterial(mat);
-
-  // initial conditions
-  solid.setVelocity([exact_solution](const mfem::Vector& x, mfem::Vector& v) { exact_solution.velocity(x, 0.0, v); });
-
-  solid.setDisplacement([exact_solution](const mfem::Vector& x, mfem::Vector& u) { exact_solution(x, 0.0, u); });
-
-  // forcing terms
-  exact_solution.applyLoads(mat, solid, essentialBoundaryAttributes<dim>(bc));
-
-  // Finalize the data structures
-  solid.completeSetup();
-
-  // Integrate in time
-  double dt = 1.0;
-  for (int i = 0; i < 3; i++) {
-    solid.advanceTimestep(dt);
-
-    // Output solution for debugging
-    // solid.outputState("paraview_output");
-    // std::cout << "cycle " << i << std::endl;
-    // std::cout << "time = " << solid.time() << std::endl;
-    // std::cout << "displacement =\n";
-    // solid.displacement().Print(std::cout);
-    // std::cout << "forces =\n";
-    // solid.reactions().Print();
-    // tensor<double, dim> resultant = make_tensor<dim>([&](int j) {
-    //   double y = 0;
-    //   for (int n = 0; n < solid.reactions().Size()/dim; n++) {
-    //     y += solid.reactions()(dim*n + j);
-    //   }
-    //   return y;
-    // });
-    // std::cout << "resultant = " << resultant << std::endl;
-  }
-
-  // Compute norm of error
-  mfem::VectorFunctionCoefficient exact_solution_coef(dim, exact_solution);
-  exact_solution_coef.SetTime(solid.time());
-  return computeL2Error(solid.displacement(), exact_solution_coef);
 }
 
 // clang-format off
@@ -260,76 +172,6 @@ private:
   mfem::Vector      initial_displacement;  /// Constant part of solution. Rigid body displacement.
 };
 
-const double tol = 1e-12;
-
-TEST(SolidMechanicsDynamic, PatchTest2dQ1EssentialBcs)
-{
-  constexpr int p     = 1;
-  constexpr int dim   = 2;
-  double        error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
-  EXPECT_LT(error, tol);
-}
-
-TEST(SolidMechanicsDynamic, PatchTest3dQ1EssentialBcs)
-{
-  constexpr int p     = 1;
-  constexpr int dim   = 3;
-  double        error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
-  EXPECT_LT(error, tol);
-}
-
-TEST(SolidMechanicsDynamic, PatchTest2dQ2EssentialBcs)
-{
-  constexpr int p     = 2;
-  constexpr int dim   = 2;
-  double        error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
-  EXPECT_LT(error, tol);
-}
-
-TEST(SolidMechanicsDynamic, PatchTest3dQ2EssentialBcs)
-{
-  constexpr int p     = 2;
-  constexpr int dim   = 3;
-  double        error = dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::Essential);
-  EXPECT_LT(error, tol);
-}
-
-TEST(SolidMechanicsDynamic, PatchTest2dQ1TractionBcs)
-{
-  constexpr int p   = 1;
-  constexpr int dim = 2;
-  double        error =
-      dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::MixedEssentialAndNatural);
-  EXPECT_LT(error, tol);
-}
-
-TEST(SolidMechanicsDynamic, PatchTest3dQ1TractionBcs)
-{
-  constexpr int p   = 1;
-  constexpr int dim = 3;
-  double        error =
-      dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::MixedEssentialAndNatural);
-  EXPECT_LT(error, tol);
-}
-
-TEST(SolidMechanicsDynamic, PatchTest2dQ2TractionBcs)
-{
-  constexpr int p   = 2;
-  constexpr int dim = 2;
-  double        error =
-      dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::MixedEssentialAndNatural);
-  EXPECT_LT(error, tol);
-}
-
-TEST(SolidMechanicsDynamic, PatchTest3dQ2TractionBcs)
-{
-  constexpr int p   = 2;
-  constexpr int dim = 3;
-  double        error =
-      dynamic_solution_error<p, dim>(AffineSolution<dim>(), PatchBoundaryCondition::MixedEssentialAndNatural);
-  EXPECT_LT(error, tol);
-}
-
 /**
  * @brief Constant acceleration exact solution
  *
@@ -401,21 +243,342 @@ private:
   mfem::Vector acceleration;  /// Constant acceleration vector of solution
 };
 
-TEST(SolidMechanicsDynamic, ConstantAcceleration2dQ1TractionBcs)
+/**
+ * @brief compute the error between the approximate and exact solution
+ *
+ * @tparam element_type the kind of element to use in the mesh
+ * @tparam solution_type A class that satisfies the exact solution concept
+ *
+ * @param exact_solution Exact solution of problem
+ * @param bc Specifier for boundary condition type to test
+ * @return double L2 norm (continuous) of error in computed solution
+ * *
+ * @pre exact_solution must implement operator() that is an MFEM
+ * coefficient-generating function for the exact solution of the displacement
+ * as a function of space and time.
+ * @pre exact_solution must implement velocity() that is an MFEM
+ * coefficient-generating function for the exact solution of the velocity
+ * as a function of space and time.
+ * @pre exact_solution must have a method applyLoads that applies forcing terms to the
+ * solid functional that should lead to the exact solution
+ */
+template <typename element_type, typename solution_type>
+double solution_error(solution_type exact_solution, PatchBoundaryCondition bc)
 {
-  constexpr int p     = 1;
-  constexpr int dim   = 2;
-  double        error = dynamic_solution_error<p, dim>(ConstantAccelerationSolution<dim>(),
-                                                PatchBoundaryCondition::MixedEssentialAndNatural);
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  constexpr int p   = element_type::order;
+  constexpr int dim = dimension_of(element_type::geometry);
+
+  // Create DataStore
+  axom::sidre::DataStore datastore;
+  serac::StateManager::initialize(datastore, "solid_functional_dynamic_solve");
+
+  // BT: shouldn't this assertion be in the physics module?
+  // Putting it here prevents tests from having a nonsensical spatial dimension value,
+  // but the physics module should be catching this error to protect users.
+  static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for solid functional test");
+
+  std::string meshdir = std::string(SERAC_REPO_DIR) + "/data/meshes/";
+  std::string filename;
+  switch (element_type::geometry) {
+    case mfem::Geometry::TRIANGLE:
+      filename = meshdir + "patch2D_tris.mesh";
+      break;
+    case mfem::Geometry::SQUARE:
+      filename = meshdir + "patch2D_quads.mesh";
+      break;
+    case mfem::Geometry::TETRAHEDRON:
+      filename = meshdir + "patch3D_tets.mesh";
+      break;
+    case mfem::Geometry::CUBE:
+      filename = meshdir + "patch3D_hexes.mesh";
+      break;
+    default:
+      SLIC_ERROR_ROOT("unsupported element type for patch test");
+      break;
+  }
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename));
+  serac::StateManager::setMesh(std::move(mesh));
+
+  // Construct a functional-based solid mechanics solver
+  serac::NonlinearSolverOptions nonlin_opts{.relative_tol = 1.0e-13, .absolute_tol = 1.0e-13};
+
+  SolidMechanics<p, dim> solid(nonlin_opts, serac::solid_mechanics::default_linear_options,
+                               TimesteppingOptions{TimestepMethod::Newmark, DirichletEnforcementMethod::DirectControl},
+                               GeometricNonlinearities::On, "solid_dynamics");
+
+  solid_mechanics::NeoHookean mat{.density = 1.0, .K = 1.0, .G = 1.0};
+  solid.setMaterial(mat);
+
+  // initial conditions
+  solid.setVelocity([exact_solution](const mfem::Vector& x, mfem::Vector& v) { exact_solution.velocity(x, 0.0, v); });
+
+  solid.setDisplacement([exact_solution](const mfem::Vector& x, mfem::Vector& u) { exact_solution(x, 0.0, u); });
+
+  // forcing terms
+  exact_solution.applyLoads(mat, solid, essentialBoundaryAttributes<dim>(bc));
+
+  // Finalize the data structures
+  solid.completeSetup();
+
+  // Integrate in time
+  double dt = 1.0;
+  for (int i = 0; i < 3; i++) {
+    solid.advanceTimestep(dt);
+
+    // Output solution for debugging
+    // solid.outputState("paraview_output");
+    // std::cout << "cycle " << i << std::endl;
+    // std::cout << "time = " << solid.time() << std::endl;
+    // std::cout << "displacement =\n";
+    // solid.displacement().Print(std::cout);
+    // std::cout << "forces =\n";
+    // solid.reactions().Print();
+    // tensor<double, dim> resultant = make_tensor<dim>([&](int j) {
+    //   double y = 0;
+    //   for (int n = 0; n < solid.reactions().Size()/dim; n++) {
+    //     y += solid.reactions()(dim*n + j);
+    //   }
+    //   return y;
+    // });
+    // std::cout << "resultant = " << resultant << std::endl;
+  }
+
+  // Compute norm of error
+  mfem::VectorFunctionCoefficient exact_solution_coef(dim, exact_solution);
+  exact_solution_coef.SetTime(solid.time());
+  return computeL2Error(solid.displacement(), exact_solution_coef);
+}
+
+template <typename element_type>
+double affine_velocity_test(PatchBoundaryCondition bc)
+{
+  constexpr int dim = dimension_of(element_type::geometry);
+  return solution_error<element_type>(AffineSolution<dim>(), bc);
+}
+
+template <typename element_type>
+double constant_acceleration_test(PatchBoundaryCondition bc)
+{
+  constexpr int dim = dimension_of(element_type::geometry);
+  return solution_error<element_type>(ConstantAccelerationSolution<dim>(), bc);
+}
+
+const double tol = 1e-12;
+
+constexpr int LINEAR    = 1;
+constexpr int QUADRATIC = 2;
+constexpr int CUBIC     = 3;
+
+//
+// 2D, Essential
+//
+TEST(SolidMechanicsDynamic, PatchTestTriQ1EssentialBcs)
+{
+  using element_type = finite_element<mfem::Geometry::TRIANGLE, H1<LINEAR> >;
+  double error       = affine_velocity_test<element_type>(PatchBoundaryCondition::Essential);
   EXPECT_LT(error, tol);
 }
 
-TEST(SolidMechanicsDynamic, ConstantAcceleration3dQ1TractionBcs)
+TEST(SolidMechanicsDynamic, PatchTestQuadQ1EssentialBcs)
 {
-  constexpr int p     = 1;
-  constexpr int dim   = 3;
-  double        error = dynamic_solution_error<p, dim>(ConstantAccelerationSolution<dim>(),
-                                                PatchBoundaryCondition::MixedEssentialAndNatural);
+  using element_type = finite_element<mfem::Geometry::SQUARE, H1<LINEAR> >;
+  double error       = affine_velocity_test<element_type>(PatchBoundaryCondition::Essential);
+  EXPECT_LT(error, tol);
+}
+
+TEST(SolidMechanicsDynamic, PatchTestTriQ2EssentialBcs)
+{
+  using element_type = finite_element<mfem::Geometry::TRIANGLE, H1<QUADRATIC> >;
+  double error       = affine_velocity_test<element_type>(PatchBoundaryCondition::Essential);
+  EXPECT_LT(error, tol);
+}
+
+TEST(SolidMechanicsDynamic, PatchTestQuadQ2EssentialBcs)
+{
+  using element_type = finite_element<mfem::Geometry::SQUARE, H1<QUADRATIC> >;
+  double error       = affine_velocity_test<element_type>(PatchBoundaryCondition::Essential);
+  EXPECT_LT(error, tol);
+}
+
+TEST(SolidMechanicsDynamic, PatchTestTriQ3EssentialBcs)
+{
+  using element_type = finite_element<mfem::Geometry::TRIANGLE, H1<CUBIC> >;
+  double error       = affine_velocity_test<element_type>(PatchBoundaryCondition::Essential);
+  EXPECT_LT(error, tol);
+}
+
+TEST(SolidMechanicsDynamic, PatchTestQuadQ3EssentialBcs)
+{
+  using element_type = finite_element<mfem::Geometry::SQUARE, H1<CUBIC> >;
+  double error       = affine_velocity_test<element_type>(PatchBoundaryCondition::Essential);
+  EXPECT_LT(error, tol);
+}
+
+//
+// 3D, Essential
+//
+TEST(SolidMechanicsDynamic, PatchTestTetQ1EssentialBcs)
+{
+  using element_type = finite_element<mfem::Geometry::TETRAHEDRON, H1<LINEAR> >;
+  double error       = affine_velocity_test<element_type>(PatchBoundaryCondition::Essential);
+  EXPECT_LT(error, tol);
+}
+
+TEST(SolidMechanicsDynamic, PatchTestHexQ1EssentialBcs)
+{
+  using element_type = finite_element<mfem::Geometry::CUBE, H1<LINEAR> >;
+  double error       = affine_velocity_test<element_type>(PatchBoundaryCondition::Essential);
+  EXPECT_LT(error, tol);
+}
+
+TEST(SolidMechanicsDynamic, PatchTestTetQ2EssentialBcs)
+{
+  using element_type = finite_element<mfem::Geometry::TETRAHEDRON, H1<QUADRATIC> >;
+  double error       = affine_velocity_test<element_type>(PatchBoundaryCondition::Essential);
+  EXPECT_LT(error, tol);
+}
+
+TEST(SolidMechanicsDynamic, PatchTestHexQ2EssentialBcs)
+{
+  using element_type = finite_element<mfem::Geometry::CUBE, H1<QUADRATIC> >;
+  double error       = affine_velocity_test<element_type>(PatchBoundaryCondition::Essential);
+  EXPECT_LT(error, tol);
+}
+
+TEST(SolidMechanicsDynamic, PatchTestTetQ3EssentialBcs)
+{
+  using element_type = finite_element<mfem::Geometry::TETRAHEDRON, H1<CUBIC> >;
+  double error       = affine_velocity_test<element_type>(PatchBoundaryCondition::Essential);
+  EXPECT_LT(error, tol);
+}
+
+TEST(SolidMechanicsDynamic, PatchTestHexQ3EssentialBcs)
+{
+  using element_type = finite_element<mfem::Geometry::CUBE, H1<CUBIC> >;
+  double error       = affine_velocity_test<element_type>(PatchBoundaryCondition::Essential);
+  EXPECT_LT(error, tol);
+}
+
+//
+// 2D, EssentialAndNatural
+//
+TEST(SolidMechanicsDynamic, PatchTestTriQ1EssentialAndNaturalBcs)
+{
+  using element_type = finite_element<mfem::Geometry::TRIANGLE, H1<LINEAR> >;
+  double error       = affine_velocity_test<element_type>(PatchBoundaryCondition::EssentialAndNatural);
+  EXPECT_LT(error, tol);
+}
+
+TEST(SolidMechanicsDynamic, PatchTestQuadQ1EssentialAndNaturalBcs)
+{
+  using element_type = finite_element<mfem::Geometry::SQUARE, H1<LINEAR> >;
+  double error       = affine_velocity_test<element_type>(PatchBoundaryCondition::EssentialAndNatural);
+  EXPECT_LT(error, tol);
+}
+
+TEST(SolidMechanicsDynamic, PatchTestTriQ2EssentialAndNaturalBcs)
+{
+  using element_type = finite_element<mfem::Geometry::TRIANGLE, H1<QUADRATIC> >;
+  double error       = affine_velocity_test<element_type>(PatchBoundaryCondition::EssentialAndNatural);
+  EXPECT_LT(error, tol);
+}
+
+TEST(SolidMechanicsDynamic, PatchTestQuadQ2EssentialAndNaturalBcs)
+{
+  using element_type = finite_element<mfem::Geometry::SQUARE, H1<QUADRATIC> >;
+  double error       = affine_velocity_test<element_type>(PatchBoundaryCondition::EssentialAndNatural);
+  EXPECT_LT(error, tol);
+}
+
+TEST(SolidMechanicsDynamic, PatchTestTriQ3EssentialAndNaturalBcs)
+{
+  using element_type = finite_element<mfem::Geometry::TRIANGLE, H1<CUBIC> >;
+  double error       = affine_velocity_test<element_type>(PatchBoundaryCondition::EssentialAndNatural);
+  EXPECT_LT(error, tol);
+}
+
+TEST(SolidMechanicsDynamic, PatchTestQuadQ3EssentialAndNaturalBcs)
+{
+  using element_type = finite_element<mfem::Geometry::SQUARE, H1<CUBIC> >;
+  double error       = affine_velocity_test<element_type>(PatchBoundaryCondition::EssentialAndNatural);
+  EXPECT_LT(error, tol);
+}
+
+//
+// 3D, EssentialAndNatural
+//
+TEST(SolidMechanicsDynamic, PatchTestTetQ1EssentialAndNaturalBcs)
+{
+  using element_type = finite_element<mfem::Geometry::TETRAHEDRON, H1<LINEAR> >;
+  double error       = affine_velocity_test<element_type>(PatchBoundaryCondition::EssentialAndNatural);
+  EXPECT_LT(error, tol);
+}
+
+TEST(SolidMechanicsDynamic, PatchTestHexQ1EssentialAndNaturalBcs)
+{
+  using element_type = finite_element<mfem::Geometry::CUBE, H1<LINEAR> >;
+  double error       = affine_velocity_test<element_type>(PatchBoundaryCondition::EssentialAndNatural);
+  EXPECT_LT(error, tol);
+}
+
+TEST(SolidMechanicsDynamic, PatchTestTetQ2EssentialAndNaturalBcs)
+{
+  using element_type = finite_element<mfem::Geometry::TETRAHEDRON, H1<QUADRATIC> >;
+  double error       = affine_velocity_test<element_type>(PatchBoundaryCondition::EssentialAndNatural);
+  EXPECT_LT(error, tol);
+}
+
+TEST(SolidMechanicsDynamic, PatchTestHexQ2EssentialAndNaturalBcs)
+{
+  using element_type = finite_element<mfem::Geometry::CUBE, H1<QUADRATIC> >;
+  double error       = affine_velocity_test<element_type>(PatchBoundaryCondition::EssentialAndNatural);
+  EXPECT_LT(error, tol);
+}
+
+TEST(SolidMechanicsDynamic, PatchTestTetQ3EssentialAndNaturalBcs)
+{
+  using element_type = finite_element<mfem::Geometry::TETRAHEDRON, H1<CUBIC> >;
+  double error       = affine_velocity_test<element_type>(PatchBoundaryCondition::EssentialAndNatural);
+  EXPECT_LT(error, tol);
+}
+
+TEST(SolidMechanicsDynamic, PatchTestHexQ3EssentialAndNaturalBcs)
+{
+  using element_type = finite_element<mfem::Geometry::CUBE, H1<CUBIC> >;
+  double error       = affine_velocity_test<element_type>(PatchBoundaryCondition::EssentialAndNatural);
+  EXPECT_LT(error, tol);
+}
+
+//
+// Some misc. constant acceleration tests
+//
+TEST(SolidMechanicsDynamic, ConstantAccelerationTriQ2EssentialAndNaturalBcs)
+{
+  using element_type = finite_element<mfem::Geometry::TRIANGLE, H1<QUADRATIC> >;
+  double error       = constant_acceleration_test<element_type>(PatchBoundaryCondition::EssentialAndNatural);
+  EXPECT_LT(error, tol);
+}
+
+TEST(SolidMechanicsDynamic, ConstantAccelerationQuadQ2EssentialAndNaturalBcs)
+{
+  using element_type = finite_element<mfem::Geometry::SQUARE, H1<QUADRATIC> >;
+  double error       = constant_acceleration_test<element_type>(PatchBoundaryCondition::EssentialAndNatural);
+  EXPECT_LT(error, tol);
+}
+
+TEST(SolidMechanicsDynamic, ConstantAccelerationTetQ2EssentialAndNaturalBcs)
+{
+  using element_type = finite_element<mfem::Geometry::TETRAHEDRON, H1<QUADRATIC> >;
+  double error       = constant_acceleration_test<element_type>(PatchBoundaryCondition::EssentialAndNatural);
+  EXPECT_LT(error, tol);
+}
+
+TEST(SolidMechanicsDynamic, ConstantAccelerationHexQ2EssentialAndNaturalBcs)
+{
+  using element_type = finite_element<mfem::Geometry::CUBE, H1<QUADRATIC> >;
+  double error       = constant_acceleration_test<element_type>(PatchBoundaryCondition::EssentialAndNatural);
   EXPECT_LT(error, tol);
 }
 

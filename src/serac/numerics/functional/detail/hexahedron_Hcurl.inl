@@ -20,8 +20,8 @@
 // for additional information on the finite_element concept requirements, see finite_element.hpp
 /// @cond
 template <int p>
-struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
-  static constexpr auto geometry   = Geometry::Hexahedron;
+struct finite_element<mfem::Geometry::CUBE, Hcurl<p>> {
+  static constexpr auto geometry   = mfem::Geometry::CUBE;
   static constexpr auto family     = Family::HCURL;
   static constexpr int  dim        = 3;
   static constexpr int  n          = p + 1;
@@ -61,7 +61,7 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
   }();
 
   static constexpr auto nodes = []() {
-    auto legendre_nodes = GaussLegendreNodes<p>();
+    auto legendre_nodes = GaussLegendreNodes<p, mfem::Geometry::SEGMENT>();
     auto lobatto_nodes  = GaussLobattoNodes<p + 1>();
 
     tensor<double, ndof, dim> nodes{};
