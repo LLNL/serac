@@ -44,8 +44,10 @@ class Serac(CachedCMakePackage, CudaPackage):
     # -----------------------------------------------------------------------
     # Variants
     # -----------------------------------------------------------------------
-    variant('debug', default=False,
-            description='Enable runtime safety and debug checks')
+    variant("build_type",
+        default="Debug",
+        description="CMake build type",
+        values=("Debug", "Release", "RelWithDebInfo", "MinSizeRel"))
     variant('shared',   default=False,
             description='Enable build of shared libraries')
     variant('asan', default=False,
@@ -139,21 +141,20 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     #
     # Forward variants
+    # NOTE: propogating variants to dependencies should be removed when pushing this recipe up to Spack
     #
 
     # CMake packages "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
 
     # Optional (require our variant in "when")
     for dep in ["raja", "sundials", "umpire"]:
-        depends_on("{0} build_type=Debug".format(dep), when="+{0}+debug".format(dep))
-        depends_on("{0} build_type=Release".format(dep), when="+{0}~debug".format(dep))
+        depends_on("{0} build_type=Debug".format(dep), when="+{0} build_type=Debug".format(dep))
         depends_on("{0}+shared".format(dep), when="+{0}+shared".format(dep))
         depends_on("{0}~shared".format(dep), when="+{0}~shared".format(dep))
 
     # Optional (require when="+profile")
     for dep in ["adiak", "caliper"]:
-        depends_on("{0} build_type=Debug".format(dep), when="+profiling+debug")
-        depends_on("{0} build_type=Release".format(dep), when="+profiling~debug")
+        depends_on("{0} build_type=Debug".format(dep), when="+profiling build_type=Debug")
         depends_on("{0}+shared".format(dep), when="+profiling+shared")
         depends_on("{0}~shared".format(dep), when="+profiling~shared")
 
@@ -162,15 +163,14 @@ class Serac(CachedCMakePackage, CudaPackage):
     #  "hdf5+shared" causes Axom to not find HDF5
     #  "hdf5 build_type=Release" causes netcdf-c to not find HDF5 on Ubuntu 20
     for dep in ["axom", "conduit", "metis", "parmetis", "superlu-dist"]:
-        depends_on("{0} build_type=Debug".format(dep), when="+debug")
-        depends_on("{0} build_type=Release".format(dep), when="~debug")
+        depends_on("{0} build_type=Debug".format(dep), when="build_type=Debug")
         depends_on("{0}+shared".format(dep), when="+shared")
         depends_on("{0}~shared".format(dep), when="~shared")
 
-    # Packages that are controlled by variants
+    # Optional packages that are controlled by variants
+    # TODO chapman39: +{0} in the "when" implies its optional. Is it?
     for dep in ["petsc"]:
-        depends_on("{0}+debug".format(dep), when="+{0}+debug".format(dep))
-        depends_on("{0}~debug".format(dep), when="+{0}~debug".format(dep))
+        depends_on("{0}+debug".format(dep), when="+{0} build_type=Debug".format(dep))
         depends_on("{0}+shared".format(dep), when="+{0}+shared".format(dep))
         depends_on("{0}~shared".format(dep), when="+{0}~shared".format(dep))
 
@@ -181,13 +181,19 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     # Required but not CMake
     for dep in ["hypre", "mfem"]:
-        depends_on("{0}+debug".format(dep), when="+debug")
-        depends_on("{0}~debug".format(dep), when="~debug")
+        depends_on("{0}+debug".format(dep), when="build_type=Debug")
         depends_on("{0}+shared".format(dep), when="+shared")
         depends_on("{0}~shared".format(dep), when="~shared")
     # MFEM has a static variant
     depends_on("{0}+static".format(dep), when="~shared")
     depends_on("{0}~static".format(dep), when="+shared")
+
+    #
+    # Conflicts
+    #
+
+    conflicts('sundials@:6.0.0', when='+sundials',
+              msg='Sundials needs to be greater than 6.0.0')
 
     # ASan is only supported by GCC and (some) LLVM-derived
     # compilers.

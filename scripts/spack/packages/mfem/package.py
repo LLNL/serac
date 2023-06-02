@@ -18,7 +18,7 @@ class Mfem(Package, CudaPackage, ROCmPackage):
     homepage = "http://www.mfem.org"
     git = "https://github.com/mfem/mfem.git"
 
-    maintainers = ["v-dobrev", "tzanio", "acfisher", "goxberry", "markcmiller86"]
+    maintainers = ["v-dobrev", "tzanio", "acfisher", "markcmiller86"]
 
     test_requires_compiler = True
 
@@ -405,7 +405,8 @@ class Mfem(Package, CudaPackage, ROCmPackage):
     depends_on("raja@0.7.0:0.9.0", when="@4.0.0+raja")
     depends_on("raja@0.10.0:0.12.1", when="@4.0.1:4.2.0+raja")
     depends_on("raja@0.13.0", when="@4.3.0+raja")
-    depends_on("raja@0.14.0:", when="@4.4.0:+raja")
+    depends_on("raja@0.14.0:2022.03", when="@4.4.0:4.5.0+raja")
+    depends_on("raja@2022.10.3:", when="@4.5.2:+raja")
     for sm_ in CudaPackage.cuda_arch_values:
         depends_on(
             "raja+cuda cuda_arch={0}".format(sm_), when="+raja+cuda cuda_arch={0}".format(sm_)
@@ -574,7 +575,7 @@ class Mfem(Package, CudaPackage, ROCmPackage):
             else:
                 mfem_mpiexec = "jsrun"
                 mfem_mpiexec_np = "-p"
-        elif "FLUX_JOB_ID" in os.environ:
+        elif "FLUX_EXEC_PATH" in os.environ:
             mfem_mpiexec = "flux mini run"
             mfem_mpiexec_np = "-n"
 
@@ -697,7 +698,7 @@ class Mfem(Package, CudaPackage, ROCmPackage):
             all_hypre_libs = hypre.libs + hypre["lapack"].libs + hypre["blas"].libs
             hypre_gpu_libs = ""
             if "+cuda" in hypre:
-                hypre_gpu_libs = " -lcusparse -lcurand"
+                hypre_gpu_libs = " -lcusparse -lcurand -lcublas"
             elif "+rocm" in hypre:
                 hypre_rocm_libs = LibraryList([])
                 if "^rocsparse" in hypre:
@@ -849,9 +850,22 @@ class Mfem(Package, CudaPackage, ROCmPackage):
                 "apf_zoltan",
                 "spr",
             ]
+            pumi_dep_zoltan = ""
+            pumi_dep_parmetis = ""
+            if "+zoltan" in spec["pumi"]:
+                pumi_dep_zoltan = ld_flags_from_dirs([spec["zoltan"].prefix.lib], ["zoltan"])
+                if "+parmetis" in spec["zoltan"]:
+                    pumi_dep_parmetis = ld_flags_from_dirs(
+                        [spec["parmetis"].prefix.lib], ["parmetis"]
+                    )
             options += [
                 "PUMI_OPT=-I%s" % spec["pumi"].prefix.include,
-                "PUMI_LIB=%s" % ld_flags_from_dirs([spec["pumi"].prefix.lib], pumi_libs),
+                "PUMI_LIB=%s %s %s"
+                % (
+                    ld_flags_from_dirs([spec["pumi"].prefix.lib], pumi_libs),
+                    pumi_dep_zoltan,
+                    pumi_dep_parmetis,
+                ),
             ]
 
         if "+gslib" in spec:
