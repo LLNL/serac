@@ -218,7 +218,8 @@ enum class Family
   H1,
   HCURL,
   HDIV,
-  L2
+  L2,
+  UNIFORM
 };
 
 /**
@@ -265,6 +266,35 @@ struct QOI {
   static constexpr int    components = 1;            ///< the number of components at each node
   static constexpr Family family     = Family::QOI;  ///< the family of the basis functions
 };
+
+/**
+ * @brief space representing "uniform" variables (those that are constant over an entire domain)
+ */
+template < typename T >
+struct Uniform {
+  static constexpr int    order      = 0;               ///< polynomial order 0 => constant function
+  static constexpr int    components = 1;               ///< the number of components at each node
+  static constexpr Family family     = Family::UNIFORM; ///< basis function is the constant function: "1"
+};
+
+template < typename T >
+constexpr int polynomial_order(Uniform<T>) { return 0; }
+
+template < typename T, int ... n >
+constexpr int polynomial_order(tensor<T, n ...>) { return 0; }
+
+constexpr int polynomial_order(double) { return 0; }
+
+constexpr int polynomial_order(QOI) { return 0; }
+
+template < int p, int c >
+constexpr int polynomial_order(H1<p, c>) { return p; }
+
+template < int p, int c >
+constexpr int polynomial_order(Hcurl<p>) { return p; }
+
+template < int p, int c >
+constexpr int polynomial_order(L2<p, c>) { return p; }
 
 /**
  * @brief transform information in the parent space  (i.e. values and derivatives w.r.t {xi, eta, zeta})

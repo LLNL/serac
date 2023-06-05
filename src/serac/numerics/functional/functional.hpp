@@ -185,7 +185,7 @@ template <typename test, typename... trials, ExecutionSpace exec>
 class Functional<test(trials...), exec> {
   static constexpr tuple<trials...> trial_spaces{};
   static constexpr uint32_t         num_trial_spaces = sizeof...(trials);
-  static constexpr auto             Q                = std::max({test::order, trials::order...}) + 1;
+  static constexpr auto             Q                = std::max({polynomial_order(test{}), polynomial_order(trials{})...}) + 1;
 
   class Gradient;
 
