@@ -229,8 +229,8 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   std::string filename =
       (dim == 2) ? SERAC_REPO_DIR "/data/meshes/beam-quad.mesh" : SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
 
-  auto mesh  = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  auto pmesh = serac::StateManager::setMesh(std::move(mesh));
+  auto  mesh  = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
+  auto* pmesh = serac::StateManager::setMesh(std::move(mesh));
 
   // Construct and initialized the user-defined moduli to be used as a differentiable parameter in
   // the solid mechanics physics module.
@@ -278,7 +278,15 @@ void functional_parameterized_solid_test(double expected_disp_norm)
 
   // Define a boundary attribute set and specify initial / boundary conditions
   std::set<int> ess_bdr = {1};
-  solid_solver.setDisplacementBCs(ess_bdr, bc);
+
+  // Generate a true dof set from the boundary attribute
+  mfem::Array<int> bdr_attr_marker(pmesh->bdr_attributes.Max());
+  bdr_attr_marker    = 0;
+  bdr_attr_marker[0] = 1;
+  mfem::Array<int> true_dofs;
+  solid_solver.displacement().space().GetEssentialTrueDofs(bdr_attr_marker, true_dofs);
+
+  solid_solver.setDisplacementBCs(true_dofs, bc);
   solid_solver.setDisplacement(bc);
 
   tensor<double, dim> constant_force;
