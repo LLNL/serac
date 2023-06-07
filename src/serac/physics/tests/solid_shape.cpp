@@ -30,7 +30,7 @@ void shape_test(GeometricNonlinearities geo_nonlin)
   constexpr int dim = 2;
 
   // Construct the appropriate dimension mesh and give it to the data store
-  std::string filename = SERAC_REPO_DIR "/data/meshes/beam-quad.mesh";
+  std::string filename = SERAC_REPO_DIR "/data/meshes/patch2D_tris_and_quads.mesh";
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -174,7 +174,7 @@ void shape_test(GeometricNonlinearities geo_nonlin)
 
   double error          = pure_displacement.DistanceTo(shape_displacement.GetData());
   double relative_error = error / pure_displacement.Norml2();
-  EXPECT_LT(relative_error, 7.0e-14);
+  EXPECT_LT(relative_error, 1.0e-12);
 }
 
 TEST(SolidMechanics, MoveShapeLinear) { shape_test(GeometricNonlinearities::Off); }

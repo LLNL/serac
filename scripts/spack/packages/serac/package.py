@@ -132,8 +132,8 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     depends_on("conduit~python~test")
 
-    depends_on("adiak@0.2.1+mpi", when="+profiling")
-    depends_on("caliper@2.7.0+mpi+adiak~papi", when="+profiling")
+    depends_on("adiak+mpi", when="+profiling")
+    depends_on("caliper+mpi+adiak~papi", when="+profiling")
 
     depends_on("superlu-dist@6.1.1")
 

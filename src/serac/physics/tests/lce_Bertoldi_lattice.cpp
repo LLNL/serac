@@ -22,10 +22,8 @@ using namespace serac;
 
 #define PERIODIC_MESH
 
-int main(int argc, char* argv[])
+TEST(LiquidCrystalElastomer, Bertoldi)
 {
-  serac::initialize(argc, argv);
-
   constexpr int p                   = 1;
   constexpr int dim                 = 3;
   int           serial_refinement   = 0;
@@ -61,11 +59,19 @@ int main(int argc, char* argv[])
   // Construct a functional-based solid mechanics solver
   LinearSolverOptions linear_options = {.linear_solver = LinearSolver::SuperLU};
 
+#ifdef MFEM_USE_SUNDIALS
   NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = serac::NonlinearSolver::KINBacktrackingLineSearch,
                                               .relative_tol   = 1.0e-8,
                                               .absolute_tol   = 1.0e-14,
                                               .max_iterations = 6,
                                               .print_level    = 1};
+#else
+  NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = serac::NonlinearSolver::Newton,
+                                              .relative_tol   = 1.0e-8,
+                                              .absolute_tol   = 1.0e-14,
+                                              .max_iterations = 6,
+                                              .print_level    = 1};
+#endif
 
   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
       nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::Off,
@@ -176,5 +182,15 @@ int main(int argc, char* argv[])
 #else
   EXPECT_NEAR(gblDispYmin, -2.92599e-05, 1.0e-6);
 #endif
-  serac::exitGracefully();
+}
+
+int main(int argc, char* argv[])
+{
+  ::testing::InitGoogleTest(&argc, argv);
+
+  serac::initialize(argc, argv);
+
+  int result = RUN_ALL_TESTS();
+
+  serac::exitGracefully(result);
 }

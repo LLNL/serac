@@ -30,7 +30,9 @@ struct QoIProlongation : public mfem::Operator {
   /// @brief set the value of output to the distributed sum over input values from different processors
   void MultTranspose(const mfem::Vector& input, mfem::Vector& output) const override
   {
-    MPI_Allreduce(&input[0], &output[0], 1, MPI_DOUBLE, MPI_SUM, comm);
+    // const_cast to work around clang@14.0.6 compiler error:
+    //   "argument type 'const double *' doesn't match specified 'MPI' type tag that requires 'double *'"
+    MPI_Allreduce(const_cast<double*>(&input[0]), &output[0], 1, MPI_DOUBLE, MPI_SUM, comm);
   }
 
   MPI_Comm comm;  ///< MPI communicator used to carry out the distributed reduction
@@ -38,21 +40,17 @@ struct QoIProlongation : public mfem::Operator {
 
 /**
  * @brief this class behaves like a Restriction operator, except is specialized for
- * the case of a quantity of interest. The action of its MultTranspose() operator (the
+ * the case of a quantity of interest. The action of its ScatterAdd() operator (the
  * only thing it is used for) sums the values on this local processor.
  */
-struct QoIElementRestriction : public mfem::Operator {
-  /// @brief create a QoIElementRestriction for a Quantity of Interest
-  QoIElementRestriction(int num_elements) : mfem::Operator(num_elements, 1) {}
-
-  /// @brief unimplemented: do not use
-  void Mult(const mfem::Vector&, mfem::Vector&) const override
-  {
-    SLIC_ERROR_ROOT("QoIElementRestriction::Mult() is not defined, exiting...");
-  }
-
-  /// @brief set the value of output to the sum of the values of input
-  void MultTranspose(const mfem::Vector& input, mfem::Vector& output) const override { output[0] = input.Sum(); }
+struct QoIElementRestriction {
+  /**
+   * @brief element-to-global ScatterAdd operation used in FEM assembly, for quantities of interest
+   *
+   * @param input the values from each element
+   * @param output the total of those elemental values
+   */
+  void ScatterAdd(const mfem::Vector& input, mfem::Vector& output) const { output[0] += input.Sum(); }
 };
 
 /**
@@ -68,12 +66,12 @@ class Functional<double(trials...), exec> {
   class Gradient;
 
   // clang-format off
-  template <int i> 
+  template <uint32_t i> 
   struct operator_paren_return {
     using type = typename std::conditional<
-        i >= 0,                           // if `i` is greater than or equal to zero,
-        serac::tuple<double&, Gradient&>, // then we return the value and the derivative w.r.t arg `i`
-        double                            // otherwise, we just return the value
+        i == NO_DIFFERENTIATION,          // if `i` is greater than or equal to zero,
+        double,                           // wise, we just return the value
+        serac::tuple<double&, Gradient&>  // otherwise, we return the value and the derivative w.r.t arg `i`
         >::type;
   };
   // clang-format on
@@ -83,66 +81,77 @@ public:
    * @brief Constructs using a @p mfem::ParFiniteElementSpace object corresponding to the trial space
    * @param[in] trial_fes The trial space
    */
-  Functional(std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes) : trial_space_(trial_fes)
+  Functional(std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
+      : test_fec_(0, trial_fes[0]->GetMesh()->Dimension()),
+        test_space_(dynamic_cast<mfem::ParMesh*>(trial_fes[0]->GetMesh()), &test_fec_),
+        trial_space_(trial_fes)
   {
-    for (uint32_t i = 0; i < num_trial_spaces; i++) {
-      P_trial_[i] = trial_space_[i]->GetProlongationMatrix();
-      G_trial_[i] = trial_space_[i]->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC);
-      SLIC_ERROR_IF(!G_trial_[i], "Couldn't retrieve element restriction operator for trial space");
+    auto* mesh = trial_fes[0]->GetMesh();
 
-      if (compatibleWithFaceRestriction(*trial_space_[i])) {
-        G_trial_boundary_[i] = trial_space_[i]->GetFaceRestriction(
-            mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
+    auto mem_type = mfem::Device::GetMemoryType();
 
-        input_E_boundary_[i].SetSize(G_trial_boundary_[i]->Height(), mfem::Device::GetMemoryType());
-      }
-
-      input_L_[i].SetSize(P_trial_[i]->Height(), mfem::Device::GetMemoryType());
-      input_E_[i].SetSize(G_trial_[i]->Height(), mfem::Device::GetMemoryType());
-
-      // create the gradient operators for each trial space
-      grad_.emplace_back(*this, i);
+    for (auto type : {Integral::Type::Domain, Integral::Type::Boundary}) {
+      input_E_[type].resize(num_trial_spaces);
     }
 
-    P_test_          = new QoIProlongation(trial_fes[0]->GetParMesh()->GetComm());
-    G_test_          = new QoIElementRestriction(trial_fes[0]->GetParMesh()->GetNE());
-    G_test_boundary_ = new QoIElementRestriction(trial_fes[0]->GetParMesh()->GetNBE());
+    for (uint32_t i = 0; i < num_trial_spaces; i++) {
+      P_trial_[i] = trial_space_[i]->GetProlongationMatrix();
 
-    output_E_.SetSize(G_test_->Height(), mfem::Device::GetMemoryType());
-    output_E_boundary_.SetSize(G_test_boundary_->Height(), mfem::Device::GetMemoryType());
+      input_L_[i].SetSize(P_trial_[i]->Height(), mfem::Device::GetMemoryType());
 
-    output_L_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
-    output_L_boundary_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
+      for (auto type : {Integral::Type::Domain, Integral::Type::Boundary}) {
+        if (type == Integral::Type::Domain) {
+          G_trial_[type][i] = BlockElementRestriction(trial_fes[i]);
+        } else {
+          G_trial_[type][i] = BlockElementRestriction(trial_fes[i], FaceType::BOUNDARY);
+        }
+
+        // note: we have to use "Update" here, as mfem::BlockVector's
+        // copy assignment ctor (operator=) doesn't let you make changes
+        // to the block size
+        input_E_[type][i].Update(G_trial_[type][i].bOffsets(), mem_type);
+      }
+    }
+
+    for (auto type : {Integral::Type::Domain, Integral::Type::Boundary}) {
+      std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> counts{};
+      if (type == Integral::Type::Domain) {
+        counts = geometry_counts(*mesh);
+      } else {
+        counts = boundary_geometry_counts(*mesh);
+      }
+
+      mfem::Array<int> offsets(mfem::Geometry::NUM_GEOMETRIES + 1);
+      offsets[0] = 0;
+      for (int i = 0; i < mfem::Geometry::NUM_GEOMETRIES; i++) {
+        auto g         = mfem::Geometry::Type(i);
+        offsets[g + 1] = offsets[g] + int(counts[uint32_t(g)]);
+      }
+
+      output_E_[type].Update(offsets, mem_type);
+    }
+
+    G_test_ = QoIElementRestriction();
+    P_test_ = new QoIProlongation(trial_fes[0]->GetParMesh()->GetComm());
+
+    output_L_.SetSize(1, mem_type);
 
     output_T_.SetSize(1, mfem::Device::GetMemoryType());
 
+    // gradient objects depend on some member variables in
+    // Functional, so we initialize the gradient objects last
+    // to ensure that those member variables are initialized first
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
-      {
-        auto num_elements          = static_cast<size_t>(trial_space_[i]->GetNE());
-        auto ndof_per_test_element = static_cast<size_t>(1);
-        auto ndof_per_trial_element =
-            static_cast<size_t>(trial_space_[i]->GetFE(0)->GetDof() * trial_space_[i]->GetVDim());
-        element_gradients_[i] = ExecArray<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
-      }
-
-      // note: mfem calls to spaces without boundary elements will segfault, so we guard these setup operations
-      if (compatibleWithFaceRestriction(*trial_space_[i])) {
-        auto num_bdr_elements          = static_cast<size_t>(trial_space_[i]->GetNFbyType(mfem::FaceType::Boundary));
-        auto ndof_per_test_bdr_element = static_cast<size_t>(1);
-        auto ndof_per_trial_bdr_element =
-            static_cast<size_t>(trial_space_[i]->GetBE(0)->GetDof() * trial_space_[i]->GetVDim());
-        bdr_element_gradients_[i] =
-            ExecArray<double, 3, exec>(num_bdr_elements, ndof_per_test_bdr_element, ndof_per_trial_bdr_element);
-      }
+      grad_.emplace_back(*this, i);
     }
   }
 
   /// @brief destructor: deallocate the mfem::Operators that we're responsible for
   ~Functional()
   {
-    delete P_test_;
-    delete G_test_;
-    delete G_test_boundary_;
+    // delete P_test_;
+    // delete G_test_;
+    // delete G_test_boundary_;
   }
 
   /**
@@ -160,24 +169,16 @@ public:
   void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain,
                          std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
   {
-    auto num_elements = domain.GetNE();
-    if (num_elements == 0) return;
+    if (domain.GetNE() == 0) return;
 
     SLIC_ERROR_ROOT_IF(dim != domain.Dimension(), "invalid mesh dimension for domain integral");
-    for (int e = 0; e < num_elements; e++) {
-      SLIC_ERROR_ROOT_IF(domain.GetElementType(e) != supported_types[dim], "Mesh contains unsupported element type");
-    }
 
-    const mfem::FiniteElement&   el = *trial_space_[0]->GetFE(0);
-    const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), (Q - 1) * 2);
+    check_for_unsupported_elements(domain);
+    check_for_missing_nodal_gridfunc(domain);
 
-    constexpr auto flags = mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS;
-    auto           geom  = domain.GetGeometricFactors(ir, flags);
-
-    auto selected_trial_spaces = serac::make_tuple(serac::get<args>(trial_spaces)...);
-
-    domain_integrals_.emplace_back(test{}, selected_trial_spaces, num_elements, geom->J, geom->X, Dimension<dim>{},
-                                   integrand, qdata, std::vector<int>{args...});
+    using signature = test(decltype(serac::type<args>(trial_spaces))...);
+    integrals_.push_back(
+        MakeDomainIntegral<signature, Q, dim>(domain, integrand, qdata, std::vector<uint32_t>{args...}));
   }
 
   /**
@@ -194,26 +195,13 @@ public:
   template <int dim, int... args, typename lambda, typename qpt_data_type = void>
   void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain)
   {
-    // TODO: fix mfem::FaceGeometricFactors
     auto num_bdr_elements = domain.GetNBE();
     if (num_bdr_elements == 0) return;
 
-    SLIC_ERROR_ROOT_IF((dim + 1) != domain.Dimension(), "invalid mesh dimension for boundary integral");
-    for (int e = 0; e < num_bdr_elements; e++) {
-      SLIC_ERROR_ROOT_IF(domain.GetBdrElementType(e) != supported_types[dim], "Mesh contains unsupported element type");
-    }
+    check_for_missing_nodal_gridfunc(domain);
 
-    const mfem::IntegrationRule& ir = mfem::IntRules.Get(supported_types[dim], (Q - 1) * 2);
-    constexpr auto flags = mfem::FaceGeometricFactors::COORDINATES | mfem::FaceGeometricFactors::DETERMINANTS |
-                           mfem::FaceGeometricFactors::NORMALS;
-
-    // sam: did mfem ever implement support for the JACOBIANS flag here?
-    auto geom = domain.GetFaceGeometricFactors(ir, flags, mfem::FaceType::Boundary);
-
-    auto selected_trial_spaces = serac::make_tuple(serac::get<args>(trial_spaces)...);
-
-    bdr_integrals_.emplace_back(test{}, selected_trial_spaces, num_bdr_elements, geom->detJ, geom->X, geom->normal,
-                                Dimension<dim>{}, integrand, std::vector<int>{args...});
+    using signature = test(decltype(serac::type<args>(trial_spaces))...);
+    integrals_.push_back(MakeBoundaryIntegral<signature, Q, dim>(domain, integrand, std::vector<uint32_t>{args...}));
   }
 
   /**
@@ -267,42 +255,28 @@ public:
    * arguments may be a dual_vector, to indicate that Functional::operator() should not only evaluate the
    * element calculations, but also differentiate them w.r.t. the specified dual_vector argument
    */
-  double ActionOfGradient(const mfem::Vector& input_T, std::size_t which) const
+  double ActionOfGradient(const mfem::Vector& input_T, uint32_t which) const
   {
     P_trial_[which]->Mult(input_T, input_L_[which]);
 
     output_L_ = 0.0;
-    if (domain_integrals_.size() > 0) {
-      // get the values for each element on the local processor
-      G_trial_[which]->Mult(input_L_[which], input_E_[which]);
 
-      // compute residual contributions at the element level and sum them
+    // this is used to mark when gather operations have been performed,
+    // to avoid doing them more than once per trial space
+    bool already_computed[Integral::num_types]{};  // default initializes to `false`
 
-      output_E_ = 0.0;
-      for (auto& integral : domain_integrals_) {
-        integral.GradientMult(input_E_[which], output_E_, which);
+    for (auto& integral : integrals_) {
+      auto type = integral.type;
+
+      if (!already_computed[type]) {
+        G_trial_[type][which].Gather(input_L_[which], input_E_[type][which]);
+        already_computed[type] = true;
       }
+
+      integral.GradientMult(input_E_[type][which], output_E_[type], which);
 
       // scatter-add to compute residuals on the local processor
-      G_test_->MultTranspose(output_E_, output_L_);
-    }
-
-    if (bdr_integrals_.size() > 0) {
-      if (compatibleWithFaceRestriction(*trial_space_[which])) {
-        G_trial_boundary_[which]->Mult(input_L_[which], input_E_boundary_[which]);
-      }
-
-      output_E_boundary_ = 0.0;
-      for (auto& integral : bdr_integrals_) {
-        integral.GradientMult(input_E_boundary_[which], output_E_boundary_, which);
-      }
-
-      output_L_boundary_ = 0.0;
-
-      // scatter-add to compute residuals on the local processor
-      G_test_boundary_->MultTranspose(output_E_boundary_, output_L_boundary_);
-
-      output_L_ += output_L_boundary_;
+      G_test_.ScatterAdd(output_E_[type], output_L_);
     }
 
     // scatter-add to compute global residuals
@@ -320,12 +294,10 @@ public:
    * arguments may be a dual_vector, to indicate that Functional::operator() should not only evaluate the
    * element calculations, but also differentiate them w.r.t. the specified dual_vector argument
    */
-  template <int wrt, typename... T>
+  template <uint32_t wrt, typename... T>
   typename operator_paren_return<wrt>::type operator()(DifferentiateWRT<wrt>, const T&... args)
   {
     const mfem::Vector* input_T[] = {&static_cast<const mfem::Vector&>(args)...};
-    static_assert(sizeof...(T) == num_trial_spaces,
-                  "Error: Functional::operator() must take exactly as many arguments as trial spaces");
 
     // get the values for each local processor
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
@@ -333,47 +305,32 @@ public:
     }
 
     output_L_ = 0.0;
-    if (domain_integrals_.size() > 0) {
-      // get the values for each element on the local processor
-      for (uint32_t i = 0; i < num_trial_spaces; i++) {
-        G_trial_[i]->Mult(input_L_[i], input_E_[i]);
-      }
 
-      // compute residual contributions at the element level and sum them
-      output_E_ = 0.0;
-      for (auto& integral : domain_integrals_) {
-        const bool update_state = false;  // QoIs get read-only access to material state
-        integral.Mult(input_E_, output_E_, wrt, update_state);
-      }
+    // this is used to mark when operations have been performed,
+    // to avoid doing them more than once
+    bool already_computed[Integral::num_types][num_trial_spaces]{};  // default initializes to `false`
 
-      // scatter-add to compute residuals on the local processor
-      G_test_->MultTranspose(output_E_, output_L_);
-    }
+    for (auto& integral : integrals_) {
+      auto type = integral.type;
 
-    if (bdr_integrals_.size() > 0) {
-      for (uint32_t i = 0; i < num_trial_spaces; i++) {
-        if (compatibleWithFaceRestriction(*trial_space_[i])) {
-          G_trial_boundary_[i]->Mult(input_L_[i], input_E_boundary_[i]);
+      for (auto i : integral.active_trial_spaces_) {
+        if (!already_computed[type][i]) {
+          G_trial_[type][i].Gather(input_L_[i], input_E_[type][i]);
+          already_computed[type][i] = true;
         }
       }
 
-      output_E_boundary_ = 0.0;
-      for (auto& integral : bdr_integrals_) {
-        integral.Mult(input_E_boundary_, output_E_boundary_, wrt);
-      }
-
-      output_L_boundary_ = 0.0;
+      const bool update_state = false;
+      integral.Mult(input_E_[type], output_E_[type], wrt, update_state);
 
       // scatter-add to compute residuals on the local processor
-      G_test_boundary_->MultTranspose(output_E_boundary_, output_L_boundary_);
-
-      output_L_ += output_L_boundary_;
+      G_test_.ScatterAdd(output_E_[type], output_L_);
     }
 
     // scatter-add to compute global residuals
     P_test_->MultTranspose(output_L_, output_T_);
 
-    if constexpr (wrt >= 0) {
+    if constexpr (wrt != NO_DIFFERENTIATION) {
       // if the user has indicated they'd like to evaluate and differentiate w.r.t.
       // a specific argument, then we return both the value and gradient w.r.t. that argument
       //
@@ -383,7 +340,7 @@ public:
       return {output_T_[0], grad_[wrt]};
     }
 
-    if constexpr (wrt == -1) {
+    if constexpr (wrt == NO_DIFFERENTIATION) {
       // if the user passes only `mfem::Vector`s then we assume they only want the output value
       //
       // mfem::Vector arg0 = ...;
@@ -403,7 +360,7 @@ public:
     static_assert(sizeof...(T) == num_trial_spaces,
                   "Error: Functional::operator() must take exactly as many arguments as trial spaces");
 
-    [[maybe_unused]] constexpr int i = index_of_differentiation<T...>();
+    [[maybe_unused]] constexpr uint32_t i = index_of_differentiation<T...>();
 
     return (*this)(DifferentiateWRT<i>{}, args...);
   }
@@ -428,10 +385,7 @@ private:
      * @param[in] f The @p Functional to use for gradient calculations
      */
     Gradient(Functional<double(trials...)>& f, uint32_t which = 0)
-        : form_(f),
-          lookup_tables(*(f.trial_space_[which])),
-          which_argument(which),
-          gradient_L_(f.trial_space_[which]->GetVSize())
+        : form_(f), which_argument(which), gradient_L_(f.trial_space_[which]->GetVSize())
     {
     }
 
@@ -447,36 +401,44 @@ private:
 
       gradient_L_ = 0.0;
 
-      if (form_.domain_integrals_.size() > 0) {
-        auto& K_elem = form_.element_gradients_[which_argument];
-        auto& LUT    = lookup_tables.element_dofs_;
+      std::map<mfem::Geometry::Type, ExecArray<double, 3, exec>> element_gradients[Integral::num_types];
 
-        detail::zero_out(K_elem);
-        for (auto& domain : form_.domain_integrals_) {
-          domain.ComputeElementGradients(view(K_elem), which_argument);
-        }
+      for (auto& integral : form_.integrals_) {
+        auto& K_elem             = element_gradients[integral.type];
+        auto& trial_restrictions = form_.G_trial_[integral.type][which_argument].restrictions;
 
-        for (axom::IndexType e = 0; e < K_elem.shape()[0]; e++) {
-          for (axom::IndexType j = 0; j < K_elem.shape()[2]; j++) {
-            auto [index, sign] = LUT(e, j);
-            gradient_L_(static_cast<int>(index)) += sign * K_elem(e, 0, j);
+        if (K_elem.empty()) {
+          for (auto& [geom, trial_restriction] : trial_restrictions) {
+            K_elem[geom] = ExecArray<double, 3, exec>(trial_restriction.num_elements, 1,
+                                                      trial_restriction.nodes_per_elem * trial_restriction.components);
+
+            detail::zero_out(K_elem[geom]);
           }
         }
+
+        integral.ComputeElementGradients(K_elem, which_argument);
       }
 
-      if (form_.bdr_integrals_.size() > 0) {
-        auto& K_belem = form_.bdr_element_gradients_[which_argument];
-        auto& LUT     = lookup_tables.bdr_element_dofs_;
+      for (auto type : Integral::Types) {
+        auto& K_elem             = element_gradients[type];
+        auto& trial_restrictions = form_.G_trial_[type][which_argument].restrictions;
 
-        detail::zero_out(K_belem);
-        for (auto& boundary : form_.bdr_integrals_) {
-          boundary.ComputeElementGradients(view(K_belem), which_argument);
-        }
+        if (!K_elem.empty()) {
+          for (auto [geom, elem_matrices] : K_elem) {
+            std::vector<DoF> trial_vdofs(trial_restrictions[geom].nodes_per_elem * trial_restrictions[geom].components);
 
-        for (axom::IndexType e = 0; e < K_belem.shape()[0]; e++) {
-          for (axom::IndexType j = 0; j < K_belem.shape()[2]; j++) {
-            auto [index, sign] = LUT(e, j);
-            gradient_L_(static_cast<int>(index)) += sign * K_belem(e, 0, j);
+            for (axom::IndexType e = 0; e < elem_matrices.shape()[0]; e++) {
+              trial_restrictions[geom].GetElementVDofs(e, trial_vdofs);
+
+              // note: elem_matrices.shape()[1] is 1 for a QoI
+              for (axom::IndexType i = 0; i < elem_matrices.shape()[1]; i++) {
+                for (axom::IndexType j = 0; j < elem_matrices.shape()[2]; j++) {
+                  int sign = trial_vdofs[uint32_t(j)].sign();
+                  int col  = int(trial_vdofs[uint32_t(j)].index());
+                  gradient_L_[col] += sign * elem_matrices(e, i, j);
+                }
+              }
+            }
           }
         }
       }
@@ -494,36 +456,14 @@ private:
      */
     Functional<double(trials...), exec>& form_;
 
-    DofNumbering lookup_tables;
-
     uint32_t which_argument;
 
     mfem::Vector gradient_L_;
   };
 
-  /// @brief The input set of local DOF values (i.e., on the current rank)
-  mutable mfem::Vector input_L_[num_trial_spaces];
-
-  /// @brief The output set of local DOF values (i.e., on the current rank)
-  mutable mfem::Vector output_L_;
-
-  /// @brief The input set of per-element DOF values
-  mutable std::array<mfem::Vector, num_trial_spaces> input_E_;
-
-  /// @brief The output set of per-element DOF values
-  mutable mfem::Vector output_E_;
-
-  /// @brief The input set of per-boundary-element DOF values
-  mutable std::array<mfem::Vector, num_trial_spaces> input_E_boundary_;
-
-  /// @brief The output set of per-boundary-element DOF values
-  mutable mfem::Vector output_E_boundary_;
-
-  /// @brief The output set of local DOF values (i.e., on the current rank) from boundary elements
-  mutable mfem::Vector output_L_boundary_;
-
-  /// @brief The set of true DOF values, used as a scratchpad for @p operator()
-  mutable mfem::Vector output_T_;
+  /// @brief Manages DOFs for the test space
+  const mfem::L2_FECollection       test_fec_;
+  const mfem::ParFiniteElementSpace test_space_;
 
   /// @brief Manages DOFs for the trial space
   std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_space_;
@@ -532,60 +472,31 @@ private:
    * @brief Operator that converts true (global) DOF values to local (current rank) DOF values
    * for the test space
    */
-  const mfem::Operator* P_test_;
-
-  /**
-   * @brief Operator that converts local (current rank) DOF values to per-element DOF values
-   * for the test space
-   */
-  const mfem::Operator* G_test_;
-
-  /**
-   * @brief Operator that converts true (global) DOF values to local (current rank) DOF values
-   * for the trial space
-   */
   const mfem::Operator* P_trial_[num_trial_spaces];
 
-  /**
-   * @brief Operator that converts local (current rank) DOF values to per-element DOF values
-   * for the trial space
-   */
-  const mfem::Operator* G_trial_[num_trial_spaces];
+  /// @brief The input set of local DOF values (i.e., on the current rank)
+  mutable mfem::Vector input_L_[num_trial_spaces];
 
-  /**
-   * @brief Operator that converts local (current rank) DOF values to per-boundary element DOF values
-   * for the test space
-   */
-  const mfem::Operator* G_test_boundary_;
+  BlockElementRestriction G_trial_[Integral::num_types][num_trial_spaces];
 
-  /**
-   * @brief Operator that converts local (current rank) DOF values to per-boundary element DOF values
-   * for the trial space
-   */
-  const mfem::Operator* G_trial_boundary_[num_trial_spaces];
+  mutable std::vector<mfem::BlockVector> input_E_[Integral::num_types];
 
-  /**
-   * @brief The set of domain integrals (spatial_dim == geometric_dim)
-   */
-  std::vector<DomainIntegral<num_trial_spaces, Q, exec>> domain_integrals_;
+  std::vector<Integral> integrals_;
 
-  /**
-   * @brief The set of boundary integral (spatial_dim > geometric_dim)
-   */
-  std::vector<BoundaryIntegral<num_trial_spaces, Q, exec>> bdr_integrals_;
+  mutable mfem::BlockVector output_E_[Integral::num_types];
 
-  // simplex elements are currently not supported;
-  static constexpr mfem::Element::Type supported_types[4] = {mfem::Element::POINT, mfem::Element::SEGMENT,
-                                                             mfem::Element::QUADRILATERAL, mfem::Element::HEXAHEDRON};
+  QoIElementRestriction G_test_;
+
+  /// @brief The output set of local DOF values (i.e., on the current rank)
+  mutable mfem::Vector output_L_;
+
+  const mfem::Operator* P_test_;
+
+  /// @brief The set of true DOF values, a reference to this member is returned by @p operator()
+  mutable mfem::Vector output_T_;
 
   /// @brief The objects representing the gradients w.r.t. each input argument of the Functional
   mutable std::vector<Gradient> grad_;
-
-  /// @brief array that stores each element's gradient of the residual w.r.t. trial values
-  std::array<ExecArray<double, 3, exec>, num_trial_spaces> element_gradients_;
-
-  /// @brief array that stores each boundary element's gradient of the residual w.r.t. trial values
-  std::array<ExecArray<double, 3, exec>, num_trial_spaces> bdr_element_gradients_;
 };
 
 }  // namespace serac

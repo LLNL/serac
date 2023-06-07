@@ -33,6 +33,9 @@ TEST_P(EquationSolverSuite, All)
   auto mesh  = mfem::Mesh::MakeCartesian2D(1, 1, mfem::Element::QUADRILATERAL);
   auto pmesh = mfem::ParMesh(MPI_COMM_WORLD, mesh);
 
+  pmesh.EnsureNodes();
+  pmesh.ExchangeFaceNbrData();
+
   constexpr int p   = 1;
   constexpr int dim = 2;
 
@@ -105,6 +108,7 @@ TEST_P(EquationSolverSuite, All)
   }
 }
 
+#ifdef MFEM_USE_SUNDIALS
 INSTANTIATE_TEST_SUITE_P(
     AllEquationSolverTests, EquationSolverSuite,
     testing::Combine(testing::Values(NonlinearSolver::Newton, NonlinearSolver::LBFGS, NonlinearSolver::KINFullStep,
@@ -113,6 +117,14 @@ INSTANTIATE_TEST_SUITE_P(
                      testing::Values(Preconditioner::HypreJacobi, Preconditioner::HypreL1Jacobi,
                                      Preconditioner::HypreGaussSeidel, Preconditioner::HypreAMG,
                                      Preconditioner::HypreILU)));
+#else
+INSTANTIATE_TEST_SUITE_P(AllEquationSolverTests, EquationSolverSuite,
+                         testing::Combine(testing::Values(NonlinearSolver::Newton, NonlinearSolver::LBFGS),
+                                          testing::Values(LinearSolver::CG, LinearSolver::GMRES, LinearSolver::SuperLU),
+                                          testing::Values(Preconditioner::HypreJacobi, Preconditioner::HypreL1Jacobi,
+                                                          Preconditioner::HypreGaussSeidel, Preconditioner::HypreAMG,
+                                                          Preconditioner::HypreILU)));
+#endif
 
 int main(int argc, char* argv[])
 {

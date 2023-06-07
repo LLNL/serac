@@ -135,11 +135,19 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
                                             .max_iterations = 500,
                                             .print_level    = 1};
 
+#ifdef MFEM_USE_SUNDIALS
   serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::KINFullStep,
                                                   .relative_tol   = 1.0e-12,
                                                   .absolute_tol   = 1.0e-12,
                                                   .max_iterations = 5000,
                                                   .print_level    = 1};
+#else
+  serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::Newton,
+                                                  .relative_tol   = 1.0e-12,
+                                                  .absolute_tol   = 1.0e-12,
+                                                  .max_iterations = 5000,
+                                                  .print_level    = 1};
+#endif
 
   SolidMechanics<p, dim> solid_solver(nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options,
                                       GeometricNonlinearities::Off, "solid_mechanics");

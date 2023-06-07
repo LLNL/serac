@@ -10,7 +10,7 @@
  * @brief This file exists to instantiate some global QuadratureData objects
  */
 
-#include "serac/numerics/quadrature_data.hpp"
+#include "serac/numerics/functional/quadrature_data.hpp"
 
 namespace serac {
 
