@@ -54,8 +54,6 @@ spack:
         szip: [libszip, libaec]
         tbb: [intel-tbb]
         jpeg: [libjpeg-turbo, libjpeg]
-    python:
-      variants: ~dbm
     py-numpy:
       variants: ~blas~lapack
 
@@ -228,6 +226,6 @@ spack:
     python:
       version: [3.8.2]
       externals:
-        - spec: python@3.8.2
+        - spec: python@3.8.2~dbm
           prefix: /usr/tce/packages/python/python-3.8.2/
       buildable: false
