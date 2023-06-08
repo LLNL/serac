@@ -39,7 +39,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     homepage = "https://www.github.com/LLNL/serac"
     git      = "https://github.com/LLNL/serac.git"
 
-    version('develop', branch='develop', submodules=True, preferred=True)
+    version("develop", branch="develop", submodules=True, preferred=True)
 
     # -----------------------------------------------------------------------
     # Variants
@@ -48,28 +48,28 @@ class Serac(CachedCMakePackage, CudaPackage):
         default="Debug",
         description="CMake build type",
         values=("Debug", "Release", "RelWithDebInfo", "MinSizeRel"))
-    variant('shared',   default=False,
-            description='Enable build of shared libraries')
-    variant('asan', default=False,
-            description='Enable Address Sanitizer flags')
-    variant('openmp', default=True,
-            description='Enable OpenMP support')
+    variant("shared",   default=False,
+            description="Enable build of shared libraries")
+    variant("asan", default=False,
+            description="Enable Address Sanitizer flags")
+    variant("openmp", default=True,
+            description="Enable OpenMP support")
 
     varmsg = "Build development tools (such as Sphinx, CppCheck, ClangFormat, etc...)"
     variant("devtools", default=False, description=varmsg)
 
-    variant('profiling', default=False, 
-            description='Build with hooks for Adiak/Caliper performance analysis')
+    variant("profiling", default=False, 
+            description="Build with hooks for Adiak/Caliper performance analysis")
 
-    variant('petsc', default=False,
-            description='Enable PETSC')
-    variant('netcdf', default=True,
-           description='Enable Cubit/Genesis reader')
-    variant('sundials', default=True,
-            description='Build MFEM TPL with SUNDIALS nonlinear/ODE solver support')
-    variant('umpire',   default=True,
+    variant("petsc", default=False,
+            description="Enable PETSC")
+    variant("netcdf", default=True,
+           description="Enable Cubit/Genesis reader")
+    variant("sundials", default=True,
+            description="Build MFEM TPL with SUNDIALS nonlinear/ODE solver support")
+    variant("umpire",   default=True,
             description="Build with portable memory access support")
-    variant('raja',     default=True,
+    variant("raja",     default=True,
             description="Build with portable kernel execution support")
 
     # -----------------------------------------------------------------------
@@ -82,12 +82,12 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("lua")
 
     # Devtool dependencies these need to match serac_devtools/package.py
-    depends_on('cppcheck', when="+devtools")
-    depends_on('doxygen', when="+devtools")
+    depends_on("cppcheck", when="+devtools")
+    depends_on("doxygen", when="+devtools")
     depends_on("llvm+clang@10.0.0", when="+devtools")
-    depends_on('python', when="+devtools")
-    depends_on('py-sphinx', when="+devtools")
-    depends_on('py-ats', when="+devtools")
+    depends_on("python", when="+devtools")
+    depends_on("py-sphinx", when="+devtools")
+    depends_on("py-ats", when="+devtools")
 
     # MFEM is deprecating the monitoring support with sundials v6.0 and later
     depends_on("sundials+hypre~monitoring~examples~examples-install",
@@ -147,7 +147,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     # CMake packages "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
 
     # Optional (require our variant in "when")
-    for dep in ["raja", "sundials", "umpire"]:
+    for dep in ["raja", "umpire"]:
         depends_on("{0} build_type=Debug".format(dep), when="+{0} build_type=Debug".format(dep))
         depends_on("{0}+shared".format(dep), when="+{0}+shared".format(dep))
         depends_on("{0}~shared".format(dep), when="+{0}~shared".format(dep))
@@ -162,7 +162,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     # NOTE: Don't put HDF5 in this list, for the following reasons:
     #  "hdf5+shared" causes Axom to not find HDF5
     #  "hdf5 build_type=Release" causes netcdf-c to not find HDF5 on Ubuntu 20
-    for dep in ["axom", "conduit", "metis", "parmetis", "superlu-dist"]:
+    for dep in ["axom", "conduit", "metis", "parmetis", "sundials", "superlu-dist"]:
         depends_on("{0} build_type=Debug".format(dep), when="build_type=Debug")
         depends_on("{0}+shared".format(dep), when="+shared")
         depends_on("{0}~shared".format(dep), when="~shared")
@@ -192,14 +192,14 @@ class Serac(CachedCMakePackage, CudaPackage):
     # Conflicts
     #
 
-    conflicts('sundials@:6.0.0', when='+sundials',
-              msg='Sundials needs to be greater than 6.0.0')
+    conflicts("sundials@:6.0.0", when="+sundials",
+              msg="Sundials needs to be greater than 6.0.0")
 
     # ASan is only supported by GCC and (some) LLVM-derived
     # compilers.
-    asan_compiler_denylist = {'aocc', 'arm', 'cce', 'fj', 'intel', 'nag',
-                              'nvhpc', 'oneapi', 'pgi', 'xl', 'xl_r'}
-    asan_compiler_allowlist = {'gcc', 'clang', 'apple-clang'}
+    asan_compiler_denylist = {"aocc", "arm", "cce", "fj", "intel", "nag",
+                              "nvhpc", "oneapi", "pgi", "xl", "xl_r"}
+    asan_compiler_allowlist = {"gcc", "clang", "apple-clang"}
 
     # ASan compiler denylist and allowlist should be disjoint.
     assert len(asan_compiler_denylist & asan_compiler_allowlist) == 0
@@ -214,22 +214,22 @@ class Serac(CachedCMakePackage, CudaPackage):
     #
     # GPU
     #
-    conflicts('cuda_arch=none', when='+cuda',
-              msg='CUDA architecture is required')
+    conflicts("cuda_arch=none", when="+cuda",
+              msg="CUDA architecture is required")
     depends_on("amgx", when="+cuda")
     cuda_deps = ["axom", "mfem", "raja", "sundials", "umpire"]
     for dep in cuda_deps:
         depends_on("{0}+cuda".format(dep), when="+cuda")
         for sm_ in CudaPackage.cuda_arch_values:
-            depends_on('{0} cuda_arch={1}'.format(dep, sm_),
-                    when='cuda_arch={0}'.format(sm_))
+            depends_on("{0} cuda_arch={1}".format(dep, sm_),
+                    when="cuda_arch={0}".format(sm_))
 
     depends_on("caliper+cuda", when="+profiling+cuda")
     for sm_ in CudaPackage.cuda_arch_values:
-        depends_on('caliper cuda_arch={0}'.format(sm_),
-                when='+profiling cuda_arch={0}'.format(sm_))
+        depends_on("caliper cuda_arch={0}".format(sm_),
+                when="+profiling cuda_arch={0}".format(sm_))
 
-    conflicts('%intel', msg="Intel has a bug with C++17 support as of May 2020")
+    conflicts("%intel", msg="Intel has a bug with C++17 support as of May 2020")
 
 
     def _get_sys_type(self, spec):
@@ -245,7 +245,7 @@ class Serac(CachedCMakePackage, CudaPackage):
         hostname = socket.gethostname()
         if "SYS_TYPE" in env:
             # Are we on a LLNL system then strip node number
-            hostname = hostname.rstrip('1234567890')
+            hostname = hostname.rstrip("1234567890")
         return "{0}-{1}-{2}@{3}.cmake".format(
             hostname,
             self._get_sys_type(self.spec),
@@ -259,25 +259,25 @@ class Serac(CachedCMakePackage, CudaPackage):
         entries = super(Serac, self).initconfig_hardware_entries()
 
         entries.append(cmake_cache_option("ENABLE_OPENMP",
-                                          spec.satisfies('+openmp')))
+                                          spec.satisfies("+openmp")))
 
-        if spec.satisfies('^cuda'):
+        if spec.satisfies("^cuda"):
             entries.append(cmake_cache_option("ENABLE_CUDA", True))
             entries.append(cmake_cache_option("CMAKE_CUDA_SEPARABLE_COMPILATION", True))
 
-            if spec.satisfies('cuda_arch=none'):
+            if spec.satisfies("cuda_arch=none"):
                 msg = ("# No cuda_arch specified in Spack spec, "
                        "this is likely to fail\n\n")
                 entries.append(msg)
             else:
                 # CXX flags will be propagated to the host compiler
-                cxxflags = ' '.join(spec.compiler_flags['cxxflags'])
+                cxxflags = " ".join(spec.compiler_flags["cxxflags"])
                 cuda_flags = cxxflags
-                cuda_flags += ' --expt-extended-lambda --expt-relaxed-constexpr '
+                cuda_flags += " --expt-extended-lambda --expt-relaxed-constexpr "
                 entries.append(cmake_cache_string("CMAKE_CUDA_FLAGS",
                                                   cuda_flags))
 
-                cuda_arch = spec.variants['cuda_arch'].value[0]
+                cuda_arch = spec.variants["cuda_arch"].value[0]
                 entries.append(cmake_cache_string("CMAKE_CUDA_ARCHITECTURES",
                                                   cuda_arch))
 
@@ -286,7 +286,7 @@ class Serac(CachedCMakePackage, CudaPackage):
                 entries.append(
                     cmake_cache_option("gtest_disable_pthreads", True))
 
-        if spec.satisfies('target=ppc64le:'):
+        if spec.satisfies("target=ppc64le:"):
             # Fix for working around CMake adding implicit link directories
             # returned by the BlueOS compilers to link executables with
             # non-system default stdlib
@@ -313,7 +313,7 @@ class Serac(CachedCMakePackage, CudaPackage):
         entries = super(Serac, self).initconfig_mpi_entries()
 
         entries.append(cmake_cache_option("ENABLE_MPI", True))
-        if spec['mpi'].name == 'spectrum-mpi':
+        if spec["mpi"].name == "spectrum-mpi":
             entries.append(cmake_cache_string("BLT_MPI_COMMAND_APPEND",
                                               "mpibind"))
 
@@ -332,7 +332,7 @@ class Serac(CachedCMakePackage, CudaPackage):
 
         # Try to find the common prefix of the TPL directory, including the
         # compiler. If found, we will use this in the TPL paths
-        compiler_str = str(spec.compiler).replace('@','-')
+        compiler_str = str(spec.compiler).replace("@","-")
         prefix_paths = prefix.split(compiler_str)
         tpl_root = ""
         if len(prefix_paths) == 2:
@@ -342,28 +342,28 @@ class Serac(CachedCMakePackage, CudaPackage):
 
         # required tpls
         # Note: lua is included in the case that axom is built via submodule
-        for dep in ('axom', 'camp', 'conduit', 'lua', 'mfem', 'hdf5',
-                    'hypre', 'metis', 'parmetis'):
+        for dep in ("axom", "camp", "conduit", "lua", "mfem", "hdf5",
+                    "hypre", "metis", "parmetis"):
             dep_dir = get_spec_path(spec, dep, path_replacements)
-            entries.append(cmake_cache_path('%s_DIR' % dep.upper(),
+            entries.append(cmake_cache_path("%s_DIR" % dep.upper(),
                                             dep_dir))
 
-        #if spec.satisfies('^netcdf'):
+        #if spec.satisfies("^netcdf"):
         # The actual package name is netcdf-c
         dep_dir = get_spec_path(spec, "netcdf-c", path_replacements)
         entries.append(cmake_cache_path("NETCDF_DIR", dep_dir))
 
-        dep_dir = get_spec_path(spec, 'superlu-dist', path_replacements)
-        entries.append(cmake_cache_path('SUPERLUDIST_DIR', dep_dir))
+        dep_dir = get_spec_path(spec, "superlu-dist", path_replacements)
+        entries.append(cmake_cache_path("SUPERLUDIST_DIR", dep_dir))
 
         # optional tpls
-        for dep in ('adiak', 'amgx', 'caliper', 'petsc', 'raja', 'sundials', 'umpire'):
-            if spec.satisfies('^{0}'.format(dep)):
+        for dep in ("adiak", "amgx", "caliper", "petsc", "raja", "sundials", "umpire"):
+            if spec.satisfies("^{0}".format(dep)):
                 dep_dir = get_spec_path(spec, dep, path_replacements)
-                entries.append(cmake_cache_path('%s_DIR' % dep.upper(),
+                entries.append(cmake_cache_path("%s_DIR" % dep.upper(),
                                                 dep_dir))
             else:
-                entries.append('# %s not built\n' % dep.upper())
+                entries.append("# %s not built\n" % dep.upper())
 
         ##################################
         # Devtools
@@ -384,17 +384,17 @@ class Serac(CachedCMakePackage, CudaPackage):
                 "# Root directory for generated developer tools\n")
             entries.append(cmake_cache_path("DEVTOOLS_ROOT", devtools_root))
 
-            ats_bin_dir = get_spec_path(spec, 'py-ats', path_replacements,
+            ats_bin_dir = get_spec_path(spec, "py-ats", path_replacements,
                                         use_bin=True)
             entries.append(cmake_cache_path("ATS_EXECUTABLE",
                                             pjoin(ats_bin_dir, "ats")))
 
             # Only turn on clang tools support if devtools is on
-            clang_fmt_path = spec['llvm'].prefix.bin.join('clang-format')
+            clang_fmt_path = spec["llvm"].prefix.bin.join("clang-format")
             entries.append(cmake_cache_path(
                 "CLANGFORMAT_EXECUTABLE", clang_fmt_path))
 
-            clang_tidy_path = spec['llvm'].prefix.bin.join('clang-tidy')
+            clang_tidy_path = spec["llvm"].prefix.bin.join("clang-tidy")
             entries.append(cmake_cache_path("CLANGTIDY_EXECUTABLE",
                                             clang_tidy_path))
         else:
@@ -403,10 +403,10 @@ class Serac(CachedCMakePackage, CudaPackage):
             entries.append(cmake_cache_option("ENABLE_CLANGFORMAT", False))
             entries.append(cmake_cache_option("ENABLE_CLANGTIDY", False))
 
-        enable_docs = spec.satisfies('^doxygen') or spec.satisfies('^py-sphinx')
+        enable_docs = spec.satisfies("^doxygen") or spec.satisfies("^py-sphinx")
         entries.append(cmake_cache_option("ENABLE_DOCS", enable_docs))
 
-        if spec.satisfies('^py-sphinx'):
+        if spec.satisfies("^py-sphinx"):
             sphinx_bin_dir = get_spec_path(spec, "py-sphinx",
                                            path_replacements,
                                            use_bin=True)
@@ -414,11 +414,11 @@ class Serac(CachedCMakePackage, CudaPackage):
                                             pjoin(sphinx_bin_dir,
                                                   "sphinx-build")))
 
-        for dep in ('cppcheck', 'doxygen'):
-            if spec.satisfies('^{0}'.format(dep)):
+        for dep in ("cppcheck", "doxygen"):
+            if spec.satisfies("^{0}".format(dep)):
                 dep_bin_dir = get_spec_path(spec, dep, path_replacements,
                                             use_bin=True)
-                entries.append(cmake_cache_path('%s_EXECUTABLE' % dep.upper(),
+                entries.append(cmake_cache_path("%s_EXECUTABLE" % dep.upper(),
                                                 pjoin(dep_bin_dir, dep)))
 
         return entries
@@ -426,7 +426,7 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     def cmake_args(self):
         is_asan_compiler = self.compiler.name in self.asan_compiler_allowlist
-        if self.spec.satisfies('+asan') and not is_asan_compiler:
+        if self.spec.satisfies("+asan") and not is_asan_compiler:
             raise UnsupportedCompilerError(
                 "Serac cannot be built with Address Sanitizer flags "
                 "using {0} compilers".format(self.compiler.name)
@@ -435,14 +435,14 @@ class Serac(CachedCMakePackage, CudaPackage):
         options = []
 
         if self.run_tests is False:
-            options.append('-DENABLE_TESTS=OFF')
+            options.append("-DENABLE_TESTS=OFF")
         else:
-            options.append('-DENABLE_TESTS=ON')
+            options.append("-DENABLE_TESTS=ON")
 
         options.append(self.define_from_variant(
-            'BUILD_SHARED_LIBS', 'shared'))
+            "BUILD_SHARED_LIBS", "shared"))
 
         options.append(self.define_from_variant(
-            'ENABLE_ASAN', 'asan'))
+            "ENABLE_ASAN", "asan"))
 
         return options
