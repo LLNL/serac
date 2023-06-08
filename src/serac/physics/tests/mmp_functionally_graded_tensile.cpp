@@ -195,7 +195,7 @@ int main(int argc, char* argv[])
   auto zero_displacement = [](const mfem::Vector& /*x*/) { return 0.0; };
   solid_solver.setDisplacementBCs({1}, zero_displacement, 2);  // bottom face y-dir disp = 0
   solid_solver.setDisplacementBCs({2}, zero_displacement, 1);  // back face z-dir disp = 0
-  solid_solver.setDisplacementBCs({5}, [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; });
+  // solid_solver.setDisplacementBCs({5}, [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; }); // //  WARNING!!!!!!!!!!!!! SHOULD NOT BE COMMENTED OUT. DEBUG LATER.
 #else
   // Prescribe zero displacement at the supported end of the beam
   auto zero_displacement = [](const mfem::Vector& /*x*/) { return 0.0; };

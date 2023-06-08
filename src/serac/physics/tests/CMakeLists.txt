@@ -34,6 +34,7 @@ set(solver_tests
     # lce_Bertoldi_rectLattice.cpp
     lce_Bertoldi_honeycomb_lattice.cpp
     lce_Bertoldi_logpile_simplified_lattice.cpp
+    lce_Bertoldi_actuation_2D.cpp
     lce_Bertoldi_moving_heat_source.cpp
     # lce_Bertoldi.cpp
     lce_Brighenti_tensile.cpp

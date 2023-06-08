@@ -20,15 +20,13 @@
 
 using namespace serac;
 
-const static int problemID = 0;
-
 int main(int argc, char* argv[])
 {
   auto [num_procs, rank] = serac::initialize(argc, argv);
 
   constexpr int p = 1;
-  constexpr int dim = 3;
-  int serial_refinement   = 0;
+  constexpr int dim       = 3;
+  int serial_refinement   = 2;
   int parallel_refinement = 0;
 
   // Create DataStore
@@ -36,77 +34,47 @@ int main(int argc, char* argv[])
   serac::StateManager::initialize(datastore, "solid_lce_functional");
 
   // Construct the appropriate dimension mesh and give it to the data store
-  double lx = 6.0e-3, ly = 0.5e-3, lz = 0.1667e-3;
   int nElem = 4;
-  mfem::Mesh cuboid =
-      mfem::Mesh(mfem::Mesh::MakeCartesian3D(36*nElem, 3*nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
+  int xyratio = 10;
+  double l = 5.0e0;
+  double lx = xyratio*l;
+  double ly = l;
+  double lz = ly/nElem;
 
-  auto mesh = mesh::refineAndDistribute(std::move(cuboid), serial_refinement, parallel_refinement);
+  auto initial_mesh = mfem::Mesh(mfem::Mesh::MakeCartesian3D( xyratio*nElem, nElem, 1, mfem::Element::HEXAHEDRON, lx, ly, lz));
+  auto mesh = mesh::refineAndDistribute(std::move(initial_mesh), serial_refinement, parallel_refinement);
 
-  serac::StateManager::setMesh(std::move(mesh));
+  mfem::ParMesh *pmesh = serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a functional-based solid mechanics solver
   LinearSolverOptions linear_options = {.linear_solver = LinearSolver::SuperLU};
+
   NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = serac::NonlinearSolver::Newton,
                                               .relative_tol   = 1.0e-8,
                                               .absolute_tol   = 1.0e-14,
-                                              .max_iterations = 6,
+                                              .max_iterations = 15,
                                               .print_level    = 1};
-
-  // .nonlin_solver = serac::NonlinearSolver::LBFGS};
-  // .nonlin_solver = serac::NonlinearSolver::KINFullStep};
-  //.nonlin_solver = serac::NonlinearSolver::KINBacktrackingLineSearch};
-  // .nonlin_solver = serac::NonlinearSolver::KINPicard};
-  // .nonlin_solver = serac::NonlinearSolver::KINFP};
-
   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
       nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional");
 
   // Material properties
   double density         = 1.0;
-  double young_modulus   = 0.1e6; 
+  double young_modulus   = 0.25e6; // 0.25e6; (multiply by 10e-3 to go from SI to [Kg/s/mm])
   double possion_ratio   = 0.48;
-  double beta_param      = 4.0e4;
+  double beta_param      = 5.2e4;  // 5.2e4; (multiply by 10e-3 to go from SI to [Kg/s/mm])
   double max_order_param = 0.4;
   double gamma_angle     = 0.0;
   double eta_angle       = 0.0;
 
-  switch (problemID) {
-    case 0:
-      gamma_angle = 0.0;
-      eta_angle   = 0.0;
-      break;
-    case 1:
-      gamma_angle = M_PI_2;
-      eta_angle   = 0.0;
-      break;
-    case 2:
-      gamma_angle = M_PI_2;
-      eta_angle   = 0.0;
-      break;
-    default:
-      std::cout << "...... Wrong problem ID ......" << std::endl;
-      exit(0);
-  }
-
   // Parameter 1
   FiniteElementState orderParam(StateManager::newState(FiniteElementState::Options{.order = p, .name = "orderParam"}));
-  auto orderFunc = [=](const mfem::Vector& x, double t) -> double {
-    // Define the order function of time and space
-    using std::sin;
-    auto scaledX = x[0]/lx;
-    auto scaledT = t;
-    return max_order_param * 0.5 * (1.0 + sin(10.0*(scaledX*scaledX + scaledT*scaledT)) );    
-  };
-  mfem::FunctionCoefficient orderCoef(orderFunc);
-  orderParam.project(orderCoef);
+  orderParam = max_order_param;
 
   // Parameter 2
   FiniteElementState gammaParam(StateManager::newState(
       FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "gammaParam"}));
-  bool               heterogeneousGammaField = problemID == 2 ? true : false;
-  auto               gammaFunc = [heterogeneousGammaField, gamma_angle](const mfem::Vector& /*x*/, double) -> double {
-      return gamma_angle;
+  auto               gammaFunc = [gamma_angle](const mfem::Vector&, double) -> double {
+    return gamma_angle;
   };
   mfem::FunctionCoefficient gammaCoef(gammaFunc);
   gammaParam.project(gammaCoef);
@@ -133,11 +101,58 @@ int main(int argc, char* argv[])
   solid_solver.setMaterial(DependsOn<ORDER_INDEX, GAMMA_INDEX, ETA_INDEX>{}, lceMat);
 
   auto zeroFunc = [](const mfem::Vector /*x*/) { return 0.0; };
-  solid_solver.setDisplacementBCs({1}, zeroFunc, 2);  // bottom face y-dir disp = 0
-  solid_solver.setDisplacementBCs({2}, zeroFunc, 1);  // left face x-dir disp = 0
-  solid_solver.setDisplacementBCs({5}, zeroFunc, 0);  // back face z-dir disp = 0
+  // solid_solver.setDisplacementBCs({1}, zeroFunc, 2);  // back face z-dir disp = 0
+  // solid_solver.setDisplacementBCs({2}, zeroFunc, 1);  // bottom face y-dir disp = 0
+  solid_solver.setDisplacementBCs({5}, zeroFunc, 0);  // left face x-dir disp = 0
+  // solid_solver.setDisplacementBCs({5}, [](const mfem::Vector &, mfem::Vector&u){u=0.0;});
 
-  double iniDispVal = 5.0e-6;
+  // pin selected dofs
+  mfem::Array<int> dofs;
+  mfem::Array<int> pinned_bc_true_dofs;
+  mfem::GridFunction* nodeCoords = pmesh->GetNodes();
+  mfem::ParFiniteElementSpace *fespace = new mfem::ParFiniteElementSpace(pmesh, pmesh->GetNodes()->OwnFEC());
+  const int num_nodes = nodeCoords->Size() / 3;
+
+  auto in_range = [&](double x, double y, double /*z*/) {
+      // if (x <= 0.001*lx && y <= 0.001*ly)
+    if ( (x <= 0.001*lx) && (y >= 0.5*(ly-lz)) && (y <= 0.5*(ly+lz)) )
+      {
+          return 1;
+      }
+      return -1;
+  };
+
+  for (int i = 0; i < num_nodes; i++)
+  {
+std::cout<<"......... 1 ............. "<<std::endl;    
+      int local_x_vdof = mfem::Ordering::Map<mfem::Ordering::byNODES>(nodeCoords->FESpace()->GetNDofs(), nodeCoords->FESpace()->GetVDim(), i, 0);
+      int local_y_vdof = mfem::Ordering::Map<mfem::Ordering::byNODES>(nodeCoords->FESpace()->GetNDofs(), nodeCoords->FESpace()->GetVDim(), i, 1);
+      int local_z_vdof = mfem::Ordering::Map<mfem::Ordering::byNODES>(nodeCoords->FESpace()->GetNDofs(), nodeCoords->FESpace()->GetVDim(), i, 2);
+std::cout<<"......... 2 ............. "<<std::endl;
+      int true_x_dof_bc = fespace->GetLocalTDofNumber(local_x_vdof); // returns negative if dof is not owned
+std::cout<<"......... 3a ............. "<<std::endl;
+      if(true_x_dof_bc > 0)
+      {
+std::cout<<"......... 3b ............. "<<std::endl;
+        int true_y_dof_bc = fespace->GetLocalTDofNumber(local_y_vdof); // returns negative if dof is not owned
+std::cout<<"......... 3c ............. "<<std::endl;
+        int true_z_dof_bc = fespace->GetLocalTDofNumber(local_z_vdof); // returns negative if dof is not owned
+std::cout<<"......... 3d ............. "<<std::endl;
+        if ( in_range((*nodeCoords)(local_x_vdof), (*nodeCoords)(local_y_vdof), (*nodeCoords)(local_z_vdof)) == 1 ) 
+        {
+  std::cout<<"......... 4 ............. "<<std::endl;
+            pinned_bc_true_dofs.Append(true_x_dof_bc);
+            pinned_bc_true_dofs.Append(true_y_dof_bc);
+            pinned_bc_true_dofs.Append(true_z_dof_bc);
+  std::cout<<"......... 5 ............. "<<std::endl;
+        }
+      }
+  }
+
+  auto pinned_bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
+  solid_solver.setDisplacementBCs(pinned_bc_true_dofs, pinned_bc);
+
+  double iniDispVal = 1.0e-6*ly;
   auto ini_displacement = [iniDispVal](const mfem::Vector&, mfem::Vector& u) -> void { u = iniDispVal; };
   solid_solver.setDisplacement(ini_displacement);
 
@@ -145,16 +160,20 @@ int main(int argc, char* argv[])
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  int num_steps = 200;
-
-  std::string outputFilename = "sol_lce_bertoldi_moving_heat_source";
+  std::string outputFilename = "sol_lce_bertoldi_actuation_2D_order_pinned_nodes";
   solid_solver.outputState(outputFilename);
 
+  int num_steps = 10;
   double t    = 0.0;
   double tmax = 1.0;
   double dt   = tmax / num_steps;
 
   for (int i = 0; i < num_steps; i++) {
+
+    t += dt;
+    // orderParam = max_order_param * (tmax - t) / tmax;
+    orderParam = max_order_param * std::pow((tmax - t) / tmax, 1.0);
+
     if (rank == 0) {
       std::cout << "\n\n............................"
                 << "\n... Entering time step: " << i + 1 << " (/" << num_steps << ")"
@@ -169,9 +188,12 @@ int main(int argc, char* argv[])
     auto&                 fes             = solid_solver.displacement().space();
     mfem::ParGridFunction displacement_gf = solid_solver.displacement().gridFunction();
     int                   numDofs         = fes.GetNDofs();
-    mfem::Vector dispVecX(numDofs); dispVecX = 0.0;
-    mfem::Vector dispVecY(numDofs); dispVecY = 0.0;
-    mfem::Vector dispVecZ(numDofs); dispVecZ = 0.0;
+    mfem::Vector dispVecX(numDofs);
+    dispVecX = 0.0;
+    mfem::Vector dispVecY(numDofs);
+    dispVecY = 0.0;
+    mfem::Vector dispVecZ(numDofs);
+    dispVecZ = 0.0;
 
     for (int k = 0; k < numDofs; k++) {
       dispVecX(k) = displacement_gf(0 * numDofs + k);
@@ -184,7 +206,6 @@ int main(int argc, char* argv[])
     double gblDispYmax, lclDispYmax = dispVecY.Max();
     double gblDispZmin, lclDispZmin = dispVecZ.Min();
     double gblDispZmax, lclDispZmax = dispVecZ.Max();
-    
     MPI_Allreduce(&lclDispXmin, &gblDispXmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
     MPI_Allreduce(&lclDispXmax, &gblDispXmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
     MPI_Allreduce(&lclDispYmin, &gblDispYmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
@@ -204,11 +225,6 @@ int main(int argc, char* argv[])
         exit(1);
       }
     }
-
-    t += dt;
-    orderCoef.SetTime(t);
-    orderParam.project(orderCoef);
-    // orderParam = max_order_param * (tmax - t) / tmax;
   }
 
   serac::exitGracefully();
