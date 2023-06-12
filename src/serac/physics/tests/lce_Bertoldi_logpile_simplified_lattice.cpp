@@ -75,7 +75,7 @@ int main(int argc, char* argv[])
                                               .print_level    = 1};
   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
       nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional");
-      
+
 //   IterativeNonlinearSolverOptions default_nonlinear_options = {.rel_tol       = 1.0e-6,
 //                                                                .abs_tol       = 1.0e-8,
 //                                                                .max_iter      = 100,

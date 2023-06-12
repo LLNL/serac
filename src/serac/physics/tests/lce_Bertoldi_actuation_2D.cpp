@@ -20,13 +20,78 @@
 
 using namespace serac;
 
+// void pinNode(mfem::ParMesh parMesh, mfem::Array<int> tdof_list)
+// {
+//   int dim       = 3;
+
+//   SLIC_ERROR_ROOT_IF(
+//       pin_coords.size() != dim,
+//       axom::fmt::format("Input coordinate is of dimension {} while the solid mechanics module is of dimension {}.",
+//                         pin_coords.size(), dim));
+
+//   mfem::ParGridFunction& nodes     = static_cast<mfem::ParGridFunction&>(*parMesh.GetNodes());
+//   const int              num_nodes = nodes.Size() / dim;
+
+//   double min_distance = 1.0e6;
+//   int    min_node     = -1;
+
+//   for (int i = 0; i < num_nodes; i++) 
+//   {
+//     if (nodes.ParFESpace()->GetLocalTDofNumber(i) >= 0) 
+//     {
+//       std::vector<double> node_coords(dim);
+//       for (int d = 0; d < dim; d++) 
+//       {
+//         auto ldof = mfem::Ordering::Map<mfem::Ordering::byNODES>(nodes.FESpace()->GetNDofs(), nodes.FESpace()->GetVDim(), i, d);
+//         node_coords[d] = nodes(ldof)
+//       }
+
+//       if ( (node_coords[0] <= 0.001) && (node_coords[1] >= 0.45) && (node_coords[1] <= 0.55 ))
+//       {
+//         min_distance = 1;
+//         min_node     = i;
+//       }
+//     }
+//   }
+
+//   // See if this MPI rank contains the closest node
+//   auto [num_procs, rank] = getMPIInfo(parMesh.GetComm());
+
+//   // Define an unnamed struct containing the rank and minmum for each MPI process
+//   struct {
+//     double val;
+//     int    rank;
+//   } my_min, global_min;
+
+//   // Determine the minimum distance and rank of the closest node
+//   my_min.val  = min_distance;
+//   my_min.rank = rank;
+
+//   MPI_Reduce(&my_min, &global_min, 1, MPI_DOUBLE_INT, MPI_MINLOC, parMesh.GetComm());
+
+//   // If this rank contains the closest node, add it's tdofs to the constrained list
+//   if (global_min.rank == rank) {
+//     for (int d = 0; d < dim; ++d) {
+//       auto ldof = mfem::Ordering::Map<mfem::Ordering::byNODES>(nodes.FESpace()->GetNDofs(), nodes.FESpace()->GetVDim(),
+//                                                           min_node, d);
+//       auto tdof = nodes.ParFESpace()->GetLocalTDofNumber(ldof);
+//       tdof_list.Append(tdof);
+//     }
+//   }
+
+//   return tdof_list;
+//   // auto zero_disp = [](const mfem::Vector&, mfem::Vector& out) { out = 0.0; };
+//   // disp_bdr_coef_ = std::make_shared<mfem::VectorFunctionCoefficient>(dim, zero_disp);
+//   // bcs_.addEssential(tdof_list, disp_bdr_coef_, displacement_.space());
+// }
+
 int main(int argc, char* argv[])
 {
   auto [num_procs, rank] = serac::initialize(argc, argv);
 
   constexpr int p = 1;
   constexpr int dim       = 3;
-  int serial_refinement   = 2;
+  int serial_refinement   = 0;
   int parallel_refinement = 0;
 
   // Create DataStore
@@ -34,17 +99,22 @@ int main(int argc, char* argv[])
   serac::StateManager::initialize(datastore, "solid_lce_functional");
 
   // Construct the appropriate dimension mesh and give it to the data store
-  int nElem = 4;
+  // int nElem = 4;
   int xyratio = 10;
   double l = 5.0e0;
   double lx = xyratio*l;
-  double ly = l;
-  double lz = ly/nElem;
+  double ly = l + 0.0*lx;
+  // double lz = ly/nElem;
 
-  auto initial_mesh = mfem::Mesh(mfem::Mesh::MakeCartesian3D( xyratio*nElem, nElem, 1, mfem::Element::HEXAHEDRON, lx, ly, lz));
+  // auto initial_mesh = mfem::Mesh(mfem::Mesh::MakeCartesian3D( xyratio*nElem, nElem, 1, mfem::Element::HEXAHEDRON, lx, ly, lz));
+  
+  std::string filename = SERAC_REPO_DIR "/data/meshes/pseudo2DBrick.g";
+  auto initial_mesh = buildMeshFromFile(filename);
+
   auto mesh = mesh::refineAndDistribute(std::move(initial_mesh), serial_refinement, parallel_refinement);
 
-  mfem::ParMesh *pmesh = serac::StateManager::setMesh(std::move(mesh));
+  // mfem::ParMesh *pmesh = serac::StateManager::setMesh(std::move(mesh));
+  serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a functional-based solid mechanics solver
   LinearSolverOptions linear_options = {.linear_solver = LinearSolver::SuperLU};
@@ -103,54 +173,52 @@ int main(int argc, char* argv[])
   auto zeroFunc = [](const mfem::Vector /*x*/) { return 0.0; };
   // solid_solver.setDisplacementBCs({1}, zeroFunc, 2);  // back face z-dir disp = 0
   // solid_solver.setDisplacementBCs({2}, zeroFunc, 1);  // bottom face y-dir disp = 0
-  solid_solver.setDisplacementBCs({5}, zeroFunc, 0);  // left face x-dir disp = 0
+  // solid_solver.setDisplacementBCs({5}, zeroFunc, 0);  // left face x-dir disp = 0
   // solid_solver.setDisplacementBCs({5}, [](const mfem::Vector &, mfem::Vector&u){u=0.0;});
 
+  std::set<int> support           = {1};
+  auto          zero_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; };
+  solid_solver.setDisplacementBCs(support, zero_displacement);
+  solid_solver.setDisplacementBCs({2}, zeroFunc, 0);  // left face x-dir disp = 0
+
   // pin selected dofs
-  mfem::Array<int> dofs;
-  mfem::Array<int> pinned_bc_true_dofs;
-  mfem::GridFunction* nodeCoords = pmesh->GetNodes();
-  mfem::ParFiniteElementSpace *fespace = new mfem::ParFiniteElementSpace(pmesh, pmesh->GetNodes()->OwnFEC());
-  const int num_nodes = nodeCoords->Size() / 3;
+  // mfem::Array<int> dofs;
+  // mfem::Array<int> pinned_bc_true_dofs;
+  // mfem::GridFunction* nodeCoords = pmesh->GetNodes();
+  // mfem::ParFiniteElementSpace *fespace = new mfem::ParFiniteElementSpace(pmesh, pmesh->GetNodes()->OwnFEC());
+  // const int num_nodes = nodeCoords->Size() / 3;
 
-  auto in_range = [&](double x, double y, double /*z*/) {
-      // if (x <= 0.001*lx && y <= 0.001*ly)
-    if ( (x <= 0.001*lx) && (y >= 0.5*(ly-lz)) && (y <= 0.5*(ly+lz)) )
-      {
-          return 1;
-      }
-      return -1;
-  };
+  // auto in_range = [&](double x, double y, double /*z*/) {
+  //     // if (x <= 0.001*lx && y <= 0.001*ly)
+  //   if ( (x <= 0.001*lx) && (y >= 0.5*(ly-lz)) && (y <= 0.5*(ly+lz)) )
+  //     {
+  //         return 1;
+  //     }
+  //     return -1;
+  // };
 
-  for (int i = 0; i < num_nodes; i++)
-  {
-std::cout<<"......... 1 ............. "<<std::endl;    
-      int local_x_vdof = mfem::Ordering::Map<mfem::Ordering::byNODES>(nodeCoords->FESpace()->GetNDofs(), nodeCoords->FESpace()->GetVDim(), i, 0);
-      int local_y_vdof = mfem::Ordering::Map<mfem::Ordering::byNODES>(nodeCoords->FESpace()->GetNDofs(), nodeCoords->FESpace()->GetVDim(), i, 1);
-      int local_z_vdof = mfem::Ordering::Map<mfem::Ordering::byNODES>(nodeCoords->FESpace()->GetNDofs(), nodeCoords->FESpace()->GetVDim(), i, 2);
-std::cout<<"......... 2 ............. "<<std::endl;
-      int true_x_dof_bc = fespace->GetLocalTDofNumber(local_x_vdof); // returns negative if dof is not owned
-std::cout<<"......... 3a ............. "<<std::endl;
-      if(true_x_dof_bc > 0)
-      {
-std::cout<<"......... 3b ............. "<<std::endl;
-        int true_y_dof_bc = fespace->GetLocalTDofNumber(local_y_vdof); // returns negative if dof is not owned
-std::cout<<"......... 3c ............. "<<std::endl;
-        int true_z_dof_bc = fespace->GetLocalTDofNumber(local_z_vdof); // returns negative if dof is not owned
-std::cout<<"......... 3d ............. "<<std::endl;
-        if ( in_range((*nodeCoords)(local_x_vdof), (*nodeCoords)(local_y_vdof), (*nodeCoords)(local_z_vdof)) == 1 ) 
-        {
-  std::cout<<"......... 4 ............. "<<std::endl;
-            pinned_bc_true_dofs.Append(true_x_dof_bc);
-            pinned_bc_true_dofs.Append(true_y_dof_bc);
-            pinned_bc_true_dofs.Append(true_z_dof_bc);
-  std::cout<<"......... 5 ............. "<<std::endl;
-        }
-      }
-  }
+  // for (int i = 0; i < num_nodes; i++)
+  // {
+  //     int local_x_vdof = mfem::Ordering::Map<mfem::Ordering::byNODES>(nodeCoords->FESpace()->GetNDofs(), nodeCoords->FESpace()->GetVDim(), i, 0);
+  //     int local_y_vdof = mfem::Ordering::Map<mfem::Ordering::byNODES>(nodeCoords->FESpace()->GetNDofs(), nodeCoords->FESpace()->GetVDim(), i, 1);
+  //     int local_z_vdof = mfem::Ordering::Map<mfem::Ordering::byNODES>(nodeCoords->FESpace()->GetNDofs(), nodeCoords->FESpace()->GetVDim(), i, 2);
 
-  auto pinned_bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
-  solid_solver.setDisplacementBCs(pinned_bc_true_dofs, pinned_bc);
+  //     int true_x_dof_bc = fespace->GetLocalTDofNumber(local_x_vdof); // returns negative if dof is not owned
+  //     if(true_x_dof_bc > 0)
+  //     {
+  //       int true_y_dof_bc = fespace->GetLocalTDofNumber(local_y_vdof); // returns negative if dof is not owned
+  //       int true_z_dof_bc = fespace->GetLocalTDofNumber(local_z_vdof); // returns negative if dof is not owned
+  //       if ( in_range((*nodeCoords)(local_x_vdof), (*nodeCoords)(local_y_vdof), (*nodeCoords)(local_z_vdof)) == 1 ) 
+  //       {
+  //           pinned_bc_true_dofs.Append(true_x_dof_bc);
+  //           pinned_bc_true_dofs.Append(true_y_dof_bc);
+  //           pinned_bc_true_dofs.Append(true_z_dof_bc);
+  //       }
+  //     }
+  // }
+
+  // auto pinned_bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
+  // solid_solver.setDisplacementBCs(pinned_bc_true_dofs, pinned_bc);
 
   double iniDispVal = 1.0e-6*ly;
   auto ini_displacement = [iniDispVal](const mfem::Vector&, mfem::Vector& u) -> void { u = iniDispVal; };
