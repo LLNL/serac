@@ -318,6 +318,14 @@ class Serac(CachedCMakePackage, CudaPackage):
 
         return entries
 
+    def find_path_replacement(self, path1, path2, path_replacements, name, entries):
+        root = os.path.commonprefix([path1, path2])
+        if root.endswith(os.path.sep):
+            root = root[:-len(os.path.sep)]
+        if root:
+            path_replacements[root] = "${" + name + "}"
+            entries.append(cmake_cache_path(name, root))
+
     def initconfig_package_entries(self):
         spec = self.spec
         entries = []
@@ -329,15 +337,11 @@ class Serac(CachedCMakePackage, CudaPackage):
 
         path_replacements = {}
 
-        # Try to find the common prefix of the TPL directory, including the
-        # compiler. If found, we will use this in the TPL paths
-        compiler_str = str(spec.compiler).replace("@","-")
-        prefix_paths = prefix.split(compiler_str)
-        tpl_root = ""
-        if len(prefix_paths) == 2:
-            tpl_root = os.path.join( prefix_paths[0], compiler_str )
-            path_replacements[tpl_root] = "${TPL_ROOT}"
-            entries.append(cmake_cache_path("TPL_ROOT", tpl_root))
+        # Try to find the common prefix of the TPL directory. 
+        # If found, we will use this in the TPL paths
+        path1 = os.path.realpath(spec["conduit"].prefix)
+        path2 = os.path.realpath(self.prefix)
+        self.find_path_replacement(path1, path2, path_replacements, "TPL_ROOT", entries)
 
         # required tpls
         # Note: lua is included in the case that axom is built via submodule
@@ -383,19 +387,18 @@ class Serac(CachedCMakePackage, CudaPackage):
                 "# Root directory for generated developer tools\n")
             entries.append(cmake_cache_path("DEVTOOLS_ROOT", devtools_root))
 
-            ats_bin_dir = get_spec_path(spec, "py-ats", path_replacements,
-                                        use_bin=True)
-            entries.append(cmake_cache_path("ATS_EXECUTABLE",
-                                            pjoin(ats_bin_dir, "ats")))
+            ats_bin_dir = get_spec_path(spec, "py-ats", path_replacements, use_bin=True)
+            ats_bin_dir = pjoin(ats_bin_dir, "ats")
+            entries.append(cmake_cache_path("ATS_EXECUTABLE", ats_bin_dir))
 
             # Only turn on clang tools support if devtools is on
-            clang_fmt_path = spec["llvm"].prefix.bin.join("clang-format")
-            entries.append(cmake_cache_path(
-                "CLANGFORMAT_EXECUTABLE", clang_fmt_path))
+            llvm_path = get_spec_path(spec, "llvm", path_replacements, use_bin=True)
+            
+            clang_fmt_path = pjoin(llvm_path, "clang-format")
+            entries.append(cmake_cache_path("CLANGFORMAT_EXECUTABLE", clang_fmt_path))
 
-            clang_tidy_path = spec["llvm"].prefix.bin.join("clang-tidy")
-            entries.append(cmake_cache_path("CLANGTIDY_EXECUTABLE",
-                                            clang_tidy_path))
+            clang_tidy_path = pjoin(llvm_path, "clang-tidy")
+            entries.append(cmake_cache_path("CLANGTIDY_EXECUTABLE", clang_tidy_path))
         else:
             entries.append("# Code checks disabled due to disabled devtools\n")
             entries.append(cmake_cache_option("SERAC_ENABLE_CODE_CHECKS", False))
