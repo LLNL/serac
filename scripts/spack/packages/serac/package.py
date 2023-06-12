@@ -147,7 +147,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     # CMake packages "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
 
     # Optional (require our variant in "when")
-    for dep in ["raja", "umpire"]:
+    for dep in ["raja", "umpire", "sundials"]:
         depends_on("{0} build_type=Debug".format(dep), when="+{0} build_type=Debug".format(dep))
         depends_on("{0}+shared".format(dep), when="+{0}+shared".format(dep))
         depends_on("{0}~shared".format(dep), when="+{0}~shared".format(dep))
@@ -162,13 +162,12 @@ class Serac(CachedCMakePackage, CudaPackage):
     # NOTE: Don't put HDF5 in this list, for the following reasons:
     #  "hdf5+shared" causes Axom to not find HDF5
     #  "hdf5 build_type=Release" causes netcdf-c to not find HDF5 on Ubuntu 20
-    for dep in ["axom", "conduit", "metis", "parmetis", "sundials", "superlu-dist"]:
+    for dep in ["axom", "conduit", "metis", "parmetis", "superlu-dist"]:
         depends_on("{0} build_type=Debug".format(dep), when="build_type=Debug")
         depends_on("{0}+shared".format(dep), when="+shared")
         depends_on("{0}~shared".format(dep), when="~shared")
 
     # Optional packages that are controlled by variants
-    # TODO chapman39: +{0} in the "when" implies its optional. Is it?
     for dep in ["petsc"]:
         depends_on("{0}+debug".format(dep), when="+{0} build_type=Debug".format(dep))
         depends_on("{0}+shared".format(dep), when="+{0}+shared".format(dep))
