@@ -36,14 +36,7 @@ class Mfem(BuiltinMfem):
                       compiler_))
 
     def setup_build_environment(self, env):
-        env.unset("MFEM_DIR")
-        env.unset("MFEM_BUILD_DIR")
-        # Workaround for changes made by the 'kokkos-nvcc-wrapper' package
-        # which can be a dependency e.g. through PETSc that uses Kokkos:
-        if "^kokkos-nvcc-wrapper" in self.spec:
-            env.set("MPICH_CXX", spack_cxx)
-            env.set("OMPI_CXX", spack_cxx)
-            env.set("MPICXX_CXX", spack_cxx)
+        BuiltinMfem.setup_build_environment(self, env)
 
         if '+asan' in self.spec:
             for flag in ("CFLAGS", "CXXFLAGS", "LDFLAGS"):
