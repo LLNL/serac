@@ -1,92 +1,98 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
+# Copyright 2013-2023 Lawrence Livermore National Security, LLC and other
 # Spack Project Developers. See the top-level COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 import socket
-import os
 
-from spack import *
+from spack.package import *
+from spack.pkg.builtin.camp import hip_repair_cache
 
 
 class Raja(CachedCMakePackage, CudaPackage, ROCmPackage):
     """RAJA Parallel Framework."""
 
     homepage = "https://software.llnl.gov/RAJA/"
-    git      = "https://github.com/LLNL/RAJA.git"
-    tags     = ['radiuss', 'e4s']
+    git = "https://github.com/LLNL/RAJA.git"
+    tags = ["radiuss", "e4s"]
 
-    maintainers = ['davidbeckingsale']
+    maintainers("davidbeckingsale")
 
-    version('develop', branch='develop', submodules=False)
-    version('main',  branch='main',  submodules=False)
-    version('2022.03.0', tag='v2022.03.0', submodules=False)
-    version('0.14.0', tag='v0.14.0', submodules='True')
-    version('0.13.0', tag='v0.13.0', submodules='True')
-    version('0.12.1', tag='v0.12.1', submodules="True")
-    version('0.12.0', tag='v0.12.0', submodules="True")
-    version('0.11.0', tag='v0.11.0', submodules="True")
-    version('0.10.1', tag='v0.10.1', submodules="True")
-    version('0.10.0', tag='v0.10.0', submodules="True")
-    version('0.9.0', tag='v0.9.0', submodules="True")
-    version('0.8.0', tag='v0.8.0', submodules="True")
-    version('0.7.0', tag='v0.7.0', submodules="True")
-    version('0.6.0', tag='v0.6.0', submodules="True")
-    version('0.5.3', tag='v0.5.3', submodules="True")
-    version('0.5.2', tag='v0.5.2', submodules="True")
-    version('0.5.1', tag='v0.5.1', submodules="True")
-    version('0.5.0', tag='v0.5.0', submodules="True")
-    version('0.4.1', tag='v0.4.1', submodules="True")
-    version('0.4.0', tag='v0.4.0', submodules="True")
+    version("develop", branch="develop", submodules=False)
+    version("main", branch="main", submodules=False)
+    version("2022.10.4", tag="v2022.10.4", submodules=False)
+    version("2022.03.0", tag="v2022.03.0", submodules=False)
+    version("0.14.0", tag="v0.14.0", submodules="True")
+    version("0.13.0", tag="v0.13.0", submodules="True")
+    version("0.12.1", tag="v0.12.1", submodules="True")
+    version("0.12.0", tag="v0.12.0", submodules="True")
+    version("0.11.0", tag="v0.11.0", submodules="True")
+    version("0.10.1", tag="v0.10.1", submodules="True")
+    version("0.10.0", tag="v0.10.0", submodules="True")
+    version("0.9.0", tag="v0.9.0", submodules="True")
+    version("0.8.0", tag="v0.8.0", submodules="True")
+    version("0.7.0", tag="v0.7.0", submodules="True")
+    version("0.6.0", tag="v0.6.0", submodules="True")
+    version("0.5.3", tag="v0.5.3", submodules="True")
+    version("0.5.2", tag="v0.5.2", submodules="True")
+    version("0.5.1", tag="v0.5.1", submodules="True")
+    version("0.5.0", tag="v0.5.0", submodules="True")
+    version("0.4.1", tag="v0.4.1", submodules="True")
+    version("0.4.0", tag="v0.4.0", submodules="True")
 
     # export targets when building pre-2.4.0 release with BLT 0.4.0+
-    patch('https://github.com/LLNL/RAJA/commit/eca1124ee4af380d6613adc6012c307d1fd4176b.patch?full_index=1',
-          sha256='12bb78c00b6683ad3e7fd4e3f87f9776bae074b722431b79696bc862816735ef',
-          when='@:0.13.0 ^blt@0.4:')
+    patch(
+        "https://github.com/LLNL/RAJA/commit/eca1124ee4af380d6613adc6012c307d1fd4176b.patch?full_index=1",
+        sha256="12bb78c00b6683ad3e7fd4e3f87f9776bae074b722431b79696bc862816735ef",
+        when="@:0.13.0 ^blt@0.4:",
+    )
 
     # BEGIN SERAC EDIT
     # Patch for cuda and hip includes when not running on device
     patch('arch_impl.patch', when='@2022.03.0:')
     # END SERAC EDIT
 
-    variant('openmp', default=True, description='Build OpenMP backend')
-    variant('shared', default=True, description='Build Shared Libs')
-    variant('examples', default=True, description='Build examples.')
-    variant('exercises', default=True, description='Build exercises.')
+    variant("openmp", default=True, description="Build OpenMP backend")
+    variant("shared", default=True, description="Build Shared Libs")
+    variant("examples", default=True, description="Build examples.")
+    variant("exercises", default=True, description="Build exercises.")
     # TODO: figure out gtest dependency and then set this default True
     # and remove the +tests conflict below.
-    variant('tests', default=False, description='Build tests')
+    variant("tests", default=False, description="Build tests")
 
-    depends_on('blt')
-    # BEGIN SERAC EDIT
-    depends_on('blt@0.5.1:', type='build', when='@0.14.1:')
-    # END SERAC EDIT
-    depends_on('blt@0.4.1', type='build', when='@0.14.0')
-    depends_on('blt@0.4.0:', type='build', when='@0.13.0')
-    depends_on('blt@0.3.6:', type='build', when='@:0.12.0')
+    depends_on("blt")
+    depends_on("blt@0.5.0:", type="build", when="@0.14.1:")
+    depends_on("blt@0.4.1", type="build", when="@0.14.0")
+    depends_on("blt@0.4.0:", type="build", when="@0.13.0")
+    depends_on("blt@0.3.6:", type="build", when="@:0.12.0")
 
-    depends_on('camp@0.2.2', when='@0.14.0')
-    depends_on('camp@0.1.0', when='@0.12.0:0.13.0')
-    depends_on('camp@2022.03.0:', when='@2022.03.0:')
+    depends_on("camp@0.2.2:0.2.3", when="@0.14.0")
+    depends_on("camp@0.1.0", when="@0.10.0:0.13.0")
+    depends_on("camp@2022.03.2:2022.03", when="@2022.03.0:2022.03")
+    depends_on("camp@2022.10:", when="@2022.10:")
+    depends_on("camp@main", when="@main")
+    depends_on("camp@main", when="@develop")
+    depends_on("camp+openmp", when="+openmp")
 
-    # BEGIN SERAC EDIT
-    # Prevents spack spec with CMake 3.21
-    #depends_on('cmake@:3.20', when='+rocm', type='build')
-    # END SERAC EDIT
-    depends_on('cmake@3.14:', when='@2022.03.0:')
+    depends_on("cmake@:3.20", when="@:2022.03+rocm", type="build")
+    depends_on("cmake@3.23:", when="@2022.10:+rocm", type="build")
+    depends_on("cmake@3.14:", when="@2022.03.0:")
 
-    with when('+rocm @0.12.0:'):
-        depends_on('camp+rocm')
+    depends_on("llvm-openmp", when="+openmp %apple-clang")
+
+    depends_on("rocprim", when="+rocm")
+    with when("+rocm @0.12.0:"):
+        depends_on("camp+rocm")
         for arch in ROCmPackage.amdgpu_targets:
-            depends_on('camp+rocm amdgpu_target={0}'.format(arch),
-                       when='amdgpu_target={0}'.format(arch))
-        conflicts('+openmp')
+            depends_on(
+                "camp+rocm amdgpu_target={0}".format(arch), when="amdgpu_target={0}".format(arch)
+            )
+        conflicts("+openmp")
 
-    with when('+cuda @0.12.0:'):
-        depends_on('camp+cuda')
+    with when("+cuda @0.12.0:"):
+        depends_on("camp+cuda")
         for sm_ in CudaPackage.cuda_arch_values:
-            depends_on('camp +cuda cuda_arch={0}'.format(sm_),
-                       when='cuda_arch={0}'.format(sm_))
+            depends_on("camp +cuda cuda_arch={0}".format(sm_), when="cuda_arch={0}".format(sm_))
 
     def _get_sys_type(self, spec):
         sys_type = spec.architecture
@@ -98,34 +104,40 @@ class Raja(CachedCMakePackage, CudaPackage, ROCmPackage):
     def cache_name(self):
         hostname = socket.gethostname()
         if "SYS_TYPE" in env:
-            hostname = hostname.rstrip('1234567890')
+            hostname = hostname.rstrip("1234567890")
         return "{0}-{1}-{2}@{3}.cmake".format(
             hostname,
             self._get_sys_type(self.spec),
             self.spec.compiler.name,
-            self.spec.compiler.version
+            self.spec.compiler.version,
         )
+
+    def initconfig_compiler_entries(self):
+        spec = self.spec
+        entries = super(Raja, self).initconfig_compiler_entries()
+        if "+rocm" in spec:
+            entries.insert(0, cmake_cache_path("CMAKE_CXX_COMPILER", spec["hip"].hipcc))
+        return entries
 
     def initconfig_hardware_entries(self):
         spec = self.spec
         entries = super(Raja, self).initconfig_hardware_entries()
 
-        entries.append(cmake_cache_option("ENABLE_OPENMP", '+openmp' in spec))
+        entries.append(cmake_cache_option("ENABLE_OPENMP", "+openmp" in spec))
 
-        if '+cuda' in spec:
+        if "+cuda" in spec:
             entries.append(cmake_cache_option("ENABLE_CUDA", True))
 
-            if not spec.satisfies('cuda_arch=none'):
-                cuda_arch = spec.variants['cuda_arch'].value
-                entries.append(cmake_cache_string(
-                    "CUDA_ARCH", 'sm_{0}'.format(cuda_arch[0])))
-                entries.append(cmake_cache_string(
-                    "CMAKE_CUDA_ARCHITECTURES", '{0}'.format(cuda_arch[0])))
-
+            if not spec.satisfies("cuda_arch=none"):
+                cuda_arch = spec.variants["cuda_arch"].value
+                entries.append(cmake_cache_string("CUDA_ARCH", "sm_{0}".format(cuda_arch[0])))
+                entries.append(
+                    cmake_cache_string("CMAKE_CUDA_ARCHITECTURES", "{0}".format(cuda_arch[0]))
+                )
         else:
             entries.append(cmake_cache_option("ENABLE_CUDA", False))
 
-        if '+rocm' in spec:
+        if "+rocm" in spec:
             entries.append(cmake_cache_option("ENABLE_HIP", True))
             entries.append(cmake_cache_path(
                 "HIP_ROOT_DIR", '{0}'.format(spec['hip'].prefix)))
@@ -157,7 +169,7 @@ class Raja(CachedCMakePackage, CudaPackage, ROCmPackage):
         spec = self.spec
         entries = []
 
-        option_prefix = "RAJA_" if spec.satisfies("@2022.03.0:") else ""
+        option_prefix = "RAJA_" if spec.satisfies("@0.14.0:") else ""
 
         entries.append(cmake_cache_path("BLT_SOURCE_DIR", spec['blt'].prefix))
 
