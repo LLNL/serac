@@ -24,6 +24,8 @@
 
 #include "serac/numerics/functional/element_restriction.hpp"
 
+#include "serac/numerics/functional/function_space.hpp"
+
 #include <array>
 #include <vector>
 
@@ -98,7 +100,7 @@ void check_for_unsupported_elements(const mfem::Mesh& mesh)
 }
 
 /**
- * @brief create an mfem::ParFiniteElementSpace from one of serac's
+ * @brief create an FunctionSpace from one of serac's
  * tag types: H1, Hcurl, L2
  *
  * @tparam function_space a tag type containing the kind of function space and polynomial order
@@ -106,7 +108,7 @@ void check_for_unsupported_elements(const mfem::Mesh& mesh)
  * @return a pair containing the new finite element space and associated finite element collection
  */
 template <typename function_space>
-std::pair<std::unique_ptr<mfem::ParFiniteElementSpace>, std::unique_ptr<mfem::FiniteElementCollection>>
+std::pair<std::unique_ptr<FunctionSpace>, std::unique_ptr<mfem::FiniteElementCollection>>
 generateParFiniteElementSpace(mfem::ParMesh* mesh)
 {
   const int                                      dim = mesh->Dimension();
@@ -128,12 +130,12 @@ generateParFiniteElementSpace(mfem::ParMesh* mesh)
       fec = std::make_unique<mfem::L2_FECollection>(function_space::order, dim, mfem::BasisType::GaussLobatto);
       break;
     default:
-      return std::pair<std::unique_ptr<mfem::ParFiniteElementSpace>, std::unique_ptr<mfem::FiniteElementCollection>>(
+      return std::pair<std::unique_ptr<FunctionSpace>, std::unique_ptr<mfem::FiniteElementCollection>>(
           nullptr, nullptr);
       break;
   }
 
-  auto fes = std::make_unique<mfem::ParFiniteElementSpace>(mesh, fec.get(), function_space::components, ordering);
+  auto fes = std::make_unique<FunctionSpace>(mesh, fec.get(), function_space::components, ordering);
 
   return std::pair(std::move(fes), std::move(fec));
 }
@@ -209,12 +211,12 @@ class Functional<test(trials...), exec> {
 
 public:
   /**
-   * @brief Constructs using @p mfem::ParFiniteElementSpace objects corresponding to the test/trial spaces
+   * @brief Constructs using @p FunctionSpace objects corresponding to the test/trial spaces
    * @param[in] test_fes The (non-qoi) test space
    * @param[in] trial_fes The trial space
    */
-  Functional(const mfem::ParFiniteElementSpace*                               test_fes,
-             std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
+  Functional(const FunctionSpace*                               test_fes,
+             std::array<const FunctionSpace*, num_trial_spaces> trial_fes)
       : update_qdata(false), test_space_(test_fes), trial_space_(trial_fes)
   {
     auto mem_type = mfem::Device::GetMemoryType();
@@ -645,20 +647,20 @@ private:
     uint32_t which_argument;
 
     /// @brief shallow copy of the test space from the associated Functional
-    const mfem::ParFiniteElementSpace* test_space_;
+    const FunctionSpace* test_space_;
 
     /// @brief shallow copy of the trial space from the associated Functional
-    const mfem::ParFiniteElementSpace* trial_space_;
+    const FunctionSpace* trial_space_;
 
     /// @brief storage for computing the action-of-gradient output
     mfem::Vector df_;
   };
 
   /// @brief Manages DOFs for the test space
-  const mfem::ParFiniteElementSpace* test_space_;
+  const FunctionSpace* test_space_;
 
   /// @brief Manages DOFs for the trial space
-  std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_space_;
+  std::array<const FunctionSpace*, num_trial_spaces> trial_space_;
 
   /**
    * @brief Operator that converts true (global) DOF values to local (current rank) DOF values

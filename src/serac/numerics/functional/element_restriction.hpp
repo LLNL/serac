@@ -6,6 +6,8 @@
 #include "axom/core.hpp"
 #include "geometry.hpp"
 
+#include "serac/numerics/functional/function_space.hpp"
+
 inline bool isH1(const mfem::FiniteElementSpace& fes)
 {
   return (fes.FEColl()->GetContType() == mfem::FiniteElementCollection::CONTINUOUS);
@@ -211,10 +213,10 @@ struct BlockElementRestriction {
   BlockElementRestriction() {}
 
   /// create a BlockElementRestriction for all domain-elements (geom dim == spatial dim)
-  BlockElementRestriction(const mfem::FiniteElementSpace* fes);
+  BlockElementRestriction(const FunctionSpace* fes);
 
   /// create a BlockElementRestriction for all face-elements (geom dim + 1 == spatial dim)
-  BlockElementRestriction(const mfem::FiniteElementSpace* fes, FaceType type);
+  BlockElementRestriction(const FunctionSpace* fes, FaceType type);
 
   /// the size of the "E-vector" associated with this restriction operator
   uint64_t ESize() const;

@@ -238,6 +238,7 @@ struct QOI {
  */
 template < typename T >
 struct Uniform {
+  using type = T;
   static constexpr int    order      = 0;               ///< polynomial order 0 => constant function
   static constexpr int    components = 1;               ///< the number of components at each node
   static constexpr Family family     = Family::UNIFORM; ///< basis function is the constant function: "1"

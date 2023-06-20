@@ -468,36 +468,58 @@ void ElementRestriction::ScatterAdd(const mfem::Vector& E_vector, mfem::Vector& 
 
 ////////////////////////////////////////////////////////////////////////
 
-BlockElementRestriction::BlockElementRestriction(const mfem::FiniteElementSpace* fes)
+BlockElementRestriction::BlockElementRestriction(const FunctionSpace * space)
 {
-  int dim = fes->GetMesh()->Dimension();
 
-  if (dim == 2) {
-    for (auto geom : {mfem::Geometry::TRIANGLE, mfem::Geometry::SQUARE}) {
-      restrictions[geom] = ElementRestriction(fes, geom);
+  if (space->type == FunctionSpace::Type::Uniform) {
+
+    // TODO
+
+  } else {
+
+    auto fes = space->fes.get();
+    int dim = fes->GetMesh()->Dimension();
+
+    if (dim == 2) {
+      for (auto geom : {mfem::Geometry::TRIANGLE, mfem::Geometry::SQUARE}) {
+        restrictions[geom] = ElementRestriction(fes, geom);
+      }
     }
+
+    if (dim == 3) {
+      for (auto geom : {mfem::Geometry::TETRAHEDRON, mfem::Geometry::CUBE}) {
+        restrictions[geom] = ElementRestriction(fes, geom);
+      }
+    }
+
   }
 
-  if (dim == 3) {
-    for (auto geom : {mfem::Geometry::TETRAHEDRON, mfem::Geometry::CUBE}) {
-      restrictions[geom] = ElementRestriction(fes, geom);
-    }
-  }
 }
 
-BlockElementRestriction::BlockElementRestriction(const mfem::FiniteElementSpace* fes, FaceType type)
+BlockElementRestriction::BlockElementRestriction(const FunctionSpace* space, FaceType type)
 {
-  int dim = fes->GetMesh()->Dimension();
 
-  if (dim == 2) {
-    restrictions[mfem::Geometry::SEGMENT] = ElementRestriction(fes, mfem::Geometry::SEGMENT, type);
-  }
+  if (space->type == FunctionSpace::Type::Uniform) {
 
-  if (dim == 3) {
-    for (auto geom : {mfem::Geometry::TRIANGLE, mfem::Geometry::SQUARE}) {
-      restrictions[geom] = ElementRestriction(fes, geom, type);
+    // TODO
+
+  } else {
+
+    auto fes = space->fes.get();
+    int dim = fes->GetMesh()->Dimension();
+
+    if (dim == 2) {
+      restrictions[mfem::Geometry::SEGMENT] = ElementRestriction(fes, mfem::Geometry::SEGMENT, type);
     }
+
+    if (dim == 3) {
+      for (auto geom : {mfem::Geometry::TRIANGLE, mfem::Geometry::SQUARE}) {
+        restrictions[geom] = ElementRestriction(fes, geom, type);
+      }
+    }
+  
   }
+
 }
 
 uint64_t BlockElementRestriction::ESize() const { return (*restrictions.begin()).second.ESize(); }
