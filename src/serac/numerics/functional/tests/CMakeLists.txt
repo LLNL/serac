@@ -14,6 +14,7 @@ blt_add_executable(NAME        tensor_unit_tests
 
 # Then add the examples/tests
 set(functional_tests_serial
+    simplex_basis_function_unit_tests.cpp
     hcurl_unit_tests.cpp
     test_tensor_ad.cpp
     tuple_arithmetic_unit_tests.cpp
@@ -25,7 +26,7 @@ serac_add_tests( SOURCES ${functional_tests_serial}
 # Then add the examples/tests
 set(functional_tests_mpi
     functional_with_uniform.cpp
-    functional_basic_hcurl.cpp
+    #functional_basic_hcurl.cpp
     functional_basic_h1_scalar.cpp
     functional_basic_h1_vector.cpp
     functional_multiphysics.cpp

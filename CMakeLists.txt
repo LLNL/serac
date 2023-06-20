@@ -160,9 +160,7 @@ list(APPEND BLT_C_FILE_EXTS ".cuh")
 list(APPEND BLT_C_FILE_EXTS ".cpp.in" ".hpp.in")
 
 if (SERAC_ENABLE_CODE_CHECKS)
-    serac_add_code_checks(PREFIX   serac
-                          INCLUDES /src/ /tests/
-                          EXCLUDES /axom/ cmake/blt /mfem/ uberenv_libs)
+    serac_add_code_checks(PREFIX serac)
 endif()
 
 #------------------------------------------------------------------------------

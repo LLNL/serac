@@ -24,44 +24,28 @@
 macro(serac_add_code_checks)
 
     set(options)
-    set(singleValueArgs PREFIX )
-    set(multiValueArgs  INCLUDES EXCLUDES)
+    set(singleValueArgs PREFIX)
+    set(multiValueArgs)
 
     # Parse the arguments to the macro
     cmake_parse_arguments(arg
          "${options}" "${singleValueArgs}" "${multiValueArgs}" ${ARGN})
 
-    set(_all_sources)
+    # Create file globbing expressions that only include directories that contain source
+    set(_base_dirs "tests" "src" "examples")
     # Note: any extensions added here should also be added to BLT's lists in CMakeLists.txt
-    file(GLOB_RECURSE _all_sources "*.cpp" "*.hpp" "*.inl" "*.cuh" "*.cu" "*.cpp.in" "*.hpp.in")
+    set(_ext_expressions "*.cpp" "*.hpp" "*.inl" "*.cuh" "*.cu" "*.cpp.in" "*.hpp.in")
 
-    # Check for includes/excludes
-    if (NOT DEFINED arg_INCLUDES)
-        set(_sources ${_all_sources})
-    else()
-        set(_sources)
-        foreach(_source ${_all_sources})
-            set(_to_be_included FALSE)
-            foreach(_include ${arg_INCLUDES})
-                if (${_source} MATCHES "^${PROJECT_SOURCE_DIR}${_include}")
-                    set(_to_be_included TRUE)
-                    break()
-                endif()
-            endforeach()
-
-            set(_to_be_excluded FALSE)
-            foreach(_exclude ${arg_EXCLUDES})
-                if (${_source} MATCHES ${_exclude})
-                    set(_to_be_excluded TRUE)
-                    break()
-                endif()
-            endforeach()
-
-            if (NOT ${_to_be_excluded} AND ${_to_be_included})
-                list(APPEND _sources ${_source})
-            endif()
+    set(_glob_expressions)
+    foreach(_exp ${_ext_expressions})
+        foreach(_base_dir ${_base_dirs})
+            list(APPEND _glob_expressions "${PROJECT_SOURCE_DIR}/${_base_dir}/${_exp}")
         endforeach()
-    endif()
+    endforeach()
+
+    # Glob for list of files to run code checks on
+    set(_sources)
+    file(GLOB_RECURSE _sources ${_glob_expressions})
 
     blt_add_code_checks(PREFIX          ${arg_PREFIX}
                         SOURCES         ${_sources}

@@ -307,7 +307,7 @@ struct J2 {
 template <typename T1, typename T2, int dim>
 auto KirchhoffToPiola(const tensor<T1, dim, dim>& kirchhoff_stress, const tensor<T2, dim, dim>& displacement_gradient)
 {
-  return transpose(linear_solve(displacement_gradient + Identity<dim>(), kirchhoff_stress));
+  return transpose(dot(inv(displacement_gradient + Identity<dim>()), kirchhoff_stress));
 }
 
 /**

@@ -25,32 +25,29 @@
 using namespace serac;
 using namespace serac::profiling;
 
-template <int p, int dim>
-void thermal_test()
+template <int ptest, int ptrial, int dim>
+void thermal_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
 {
-  std::string meshfile;
-  if (dim == 2) {
-    meshfile = SERAC_REPO_DIR "/data/meshes/patch2D.mesh";
-  }
-  if (dim == 3) {
-    meshfile = SERAC_REPO_DIR "/data/meshes/patch3D.mesh";
-  }
-
-  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(meshfile), 1);
-
   // Create standard MFEM bilinear and linear forms on H1
-  auto                        fec = mfem::H1_FECollection(p, dim);
-  mfem::ParFiniteElementSpace fespace(mesh.get(), &fec);
+  auto                        test_fec = mfem::H1_FECollection(ptest, dim);
+  mfem::ParFiniteElementSpace test_fespace(mesh.get(), &test_fec);
 
-  mfem::Vector U(fespace.TrueVSize());
-  U.Randomize();
+  auto                        trial_fec = mfem::H1_FECollection(ptrial, dim);
+  mfem::ParFiniteElementSpace trial_fespace(mesh.get(), &trial_fec);
+
+  mfem::Vector U(trial_fespace.TrueVSize());
+
+  mfem::ParGridFunction     U_gf(&trial_fespace);
+  mfem::FunctionCoefficient x_squared([](mfem::Vector x) { return x[0] * x[0]; });
+  U_gf.ProjectCoefficient(x_squared);
+  U_gf.GetTrueDofs(U);
 
   // Define the types for the test and trial spaces using the function arguments
-  using test_space  = H1<p>;
-  using trial_space = H1<p>;
+  using test_space  = H1<ptest>;
+  using trial_space = H1<ptrial>;
 
   // Construct the new functional object using the known test and trial spaces
-  Functional<test_space(trial_space)> residual(&fespace, {&fespace});
+  Functional<test_space(trial_space)> residual(&test_fespace, {&trial_fespace});
 
   auto d00 = 1.0;
   auto d01 = 1.0 * make_tensor<dim>([](int i) { return i; });
@@ -78,15 +75,36 @@ void thermal_test()
   check_gradient(residual, U);
 }
 
-TEST(basic, thermal_test_2D) { thermal_test<1, 2>(); }
-TEST(basic, thermal_test_3D) { thermal_test<1, 3>(); }
+template <int ptest, int ptrial>
+void thermal_test(std::string meshfile)
+{
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(SERAC_REPO_DIR + meshfile), 1);
+
+  if (mesh->Dimension() == 2) {
+    thermal_test_impl<ptest, ptrial, 2>(mesh);
+  }
+
+  if (mesh->Dimension() == 3) {
+    thermal_test_impl<ptest, ptrial, 3>(mesh);
+  }
+}
+
+TEST(basic, thermal_tris) { thermal_test<1, 1>("/data/meshes/patch2D_tris.mesh"); }
+TEST(basic, thermal_quads) { thermal_test<1, 1>("/data/meshes/patch2D_quads.mesh"); }
+TEST(basic, thermal_tris_and_quads) { thermal_test<1, 1>("/data/meshes/patch2D_tris_and_quads.mesh"); }
+
+TEST(basic, thermal_tets) { thermal_test<1, 1>("/data/meshes/patch3D_tets.mesh"); }
+TEST(basic, thermal_hexes) { thermal_test<1, 1>("/data/meshes/patch3D_hexes.mesh"); }
+TEST(basic, thermal_tets_and_hexes) { thermal_test<1, 1>("/data/meshes/patch3D_tets_and_hexes.mesh"); }
+
+TEST(mixed, thermal_tris_and_quads) { thermal_test<2, 1>("/data/meshes/patch2D_tris_and_quads.mesh"); }
+TEST(mixed, thermal_tets_and_hexes) { thermal_test<2, 1>("/data/meshes/patch3D_tets_and_hexes.mesh"); }
 
 int main(int argc, char* argv[])
 {
-  int num_procs, myid;
-
   ::testing::InitGoogleTest(&argc, argv);
 
+  int num_procs, myid;
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);

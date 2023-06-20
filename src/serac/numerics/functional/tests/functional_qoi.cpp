@@ -17,13 +17,14 @@
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/infrastructure/profiling.hpp"
 
+#include "serac/numerics/functional/tests/check_gradient.hpp"
+
 using namespace serac;
 using namespace serac::profiling;
 
 int num_procs, myid;
 int nsamples = 1;  // because mfem doesn't take in unsigned int
 
-constexpr bool                 verbose = false;
 std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
 
@@ -80,117 +81,6 @@ double sum_of_measures_mfem(mfem::ParMesh& mesh)
   return lf(one_gf);
 }
 
-template <typename T>
-void check_gradient(Functional<T>& f, mfem::HypreParVector& U)
-{
-  int seed = 42;
-
-  mfem::HypreParVector dU = U;
-  dU                      = U;
-  dU.Randomize(seed);
-
-  double epsilon = 1.0e-8;
-
-  auto [unused, dfdU] = f(differentiate_wrt(U));
-
-  std::unique_ptr<mfem::HypreParVector> dfdU_vec = assemble(dfdU);
-
-  // TODO: fix this weird copy ctor behavior in mfem::HypreParVector
-  auto U_plus = U;
-  U_plus      = U;
-  U_plus.Add(epsilon, dU);
-
-  auto U_minus = U;
-  U_minus      = U;
-  U_minus.Add(-epsilon, dU);
-
-  double df1 = (f(U_plus) - f(U_minus)) / (2 * epsilon);
-  double df2 = InnerProduct(*dfdU_vec, dU);
-  double df3 = dfdU(dU);
-
-  double relative_error1 = (df1 - df2) / df1;
-  double relative_error2 = (df1 - df3) / df1;
-
-  EXPECT_NEAR(0., relative_error1, 1.e-5);
-  EXPECT_NEAR(0., relative_error2, 1.e-5);
-
-  if (verbose) {
-    std::cout << relative_error1 << " " << relative_error2 << std::endl;
-  }
-}
-
-template <typename T>
-void check_gradient(Functional<T>& f, mfem::HypreParVector& U, mfem::HypreParVector& dU_dt)
-{
-  int    seed    = 42;
-  double epsilon = 1.0e-8;
-
-  mfem::HypreParVector dU(U);
-  dU.Randomize(seed);
-
-  mfem::HypreParVector ddU_dt(dU_dt);
-  ddU_dt.Randomize(seed + 1);
-
-  // TODO: fix this weird copy ctor behavior in mfem::HypreParVector
-  auto U_plus = U;
-  U_plus      = U;
-  U_plus.Add(epsilon, dU);
-
-  auto U_minus = U;
-  U_minus      = U;
-  U_minus.Add(-epsilon, dU);
-
-  {
-    double df1 = (f(U_plus, dU_dt) - f(U_minus, dU_dt)) / (2 * epsilon);
-
-    auto [value, dfdU] = f(differentiate_wrt(U), dU_dt);
-    double df2         = dfdU(dU);
-
-    std::unique_ptr<mfem::HypreParVector> dfdU_vector = assemble(dfdU);
-
-    double df3 = mfem::InnerProduct(*dfdU_vector, dU);
-
-    double relative_error1 = fabs(df1 - df2) / std::max(fabs(df1), 1.0e-8);
-    double relative_error2 = fabs(df1 - df3) / std::max(fabs(df1), 1.0e-8);
-
-    EXPECT_NEAR(0., relative_error1, 5.e-6);
-    EXPECT_NEAR(0., relative_error2, 5.e-6);
-  }
-
-  auto dU_dt_plus = dU_dt;
-  dU_dt_plus      = dU_dt;
-  dU_dt_plus.Add(epsilon, ddU_dt);
-
-  auto dU_dt_minus = dU_dt;
-  dU_dt_minus      = dU_dt;
-  dU_dt_minus.Add(-epsilon, ddU_dt);
-
-  {
-    double df1 = (f(U, dU_dt_plus) - f(U, dU_dt_minus)) / (2 * epsilon);
-
-    auto [value, df_ddU_dt] = f(U, differentiate_wrt(dU_dt));
-    double df2              = df_ddU_dt(ddU_dt);
-
-    std::unique_ptr<mfem::HypreParVector> df_ddU_dt_vector = assemble(df_ddU_dt);
-
-    double df3 = mfem::InnerProduct(*df_ddU_dt_vector, ddU_dt);
-
-    double relative_error1 = fabs(df1 - df2) / std::max(fabs(df1), 1.0e-8);
-    double relative_error2 = fabs(df1 - df3) / std::max(fabs(df1), 1.0e-8);
-    double relative_error3 = fabs(df2 - df3) / std::max(fabs(df2), 1.0e-8);
-
-    // note: these first two relative tolerances are really coarse,
-    // since it seems the finite-difference approximation of the derivative
-    // of this function is not very accurate (?)
-    //
-    // the action-of-gradient and gradient vector versions seem to agree to
-    // machine precision
-    EXPECT_NEAR(0., relative_error1, 1.e-2);
-    EXPECT_NEAR(0., relative_error2, 1.e-2);
-    EXPECT_NEAR(0., relative_error3, 5.e-14);
-  }
-}
-
 enum class WhichTest
 {
   Measure,
@@ -217,6 +107,14 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
   mfem::HypreParVector  U   = *tmp;
   U_gf.GetTrueDofs(U);
 
+  mfem::ParGridFunction     V_gf(&fespace);
+  mfem::FunctionCoefficient x_coord([](mfem::Vector x) { return x[0]; });
+  V_gf.ProjectCoefficient(x_coord);
+
+  mfem::HypreParVector* tmp2 = fespace.NewTrueDofVector();
+  mfem::HypreParVector  V    = *tmp2;
+  V_gf.GetTrueDofs(V);
+
   // Define the types for the test and trial spaces using the function arguments
   using trial_space = decltype(trial);
 
@@ -226,7 +124,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
       measure.AddDomainIntegral(
           Dimension<dim>{}, DependsOn<>{}, [&](auto /*x*/) { return 1.0; }, mesh);
 
-      constexpr double expected[] = {4.755279810979, 8.0};
+      constexpr double expected[] = {1.0, 16.0};
 
       double relative_error = (measure(U) - expected[dim - 2]) / expected[dim - 2];
       EXPECT_NEAR(0.0, relative_error, 1.0e-10);
@@ -241,12 +139,22 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
       x_moment.AddDomainIntegral(
           Dimension<dim>{}, DependsOn<>{}, [&](auto x) { return x[0]; }, mesh);
 
-      constexpr double expected[] = {0.00001117269646130209, 32.0};
+      constexpr double expected[] = {0.5, 40.0};
 
       double relative_error = (x_moment(U) - expected[dim - 2]) / expected[dim - 2];
       EXPECT_NEAR(0.0, relative_error, 1.0e-10);
 
       relative_error = (x_moment(U) - x_moment_mfem(mesh)) / x_moment(U);
+      EXPECT_NEAR(0.0, relative_error, 1.0e-10);
+
+      Functional<double(trial_space)> x_moment_2({&fespace});
+      x_moment_2.AddDomainIntegral(
+          Dimension<dim>{}, DependsOn<0>{}, [&](auto, auto u) { return get<0>(u); }, mesh);
+
+      relative_error = (x_moment_2(V) - expected[dim - 2]) / expected[dim - 2];
+      EXPECT_NEAR(0.0, relative_error, 1.0e-10);
+
+      relative_error = (x_moment_2(V) - x_moment_mfem(mesh)) / x_moment_2(V);
       EXPECT_NEAR(0.0, relative_error, 1.0e-10);
 
     } break;
@@ -258,7 +166,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
       sum_of_measures.AddBoundaryIntegral(
           Dimension<dim - 1>{}, DependsOn<>{}, [&](auto /*x*/, auto /*n*/) { return 1.0; }, mesh);
 
-      constexpr double expected[] = {14.75527630972663, 42.0};
+      constexpr double expected[] = {5.0, 64.0};
 
       double relative_error = (sum_of_measures(U) - expected[dim - 2]) / expected[dim - 2];
       EXPECT_NEAR(0.0, relative_error, 1.0e-10);
@@ -285,7 +193,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
           },
           mesh);
 
-      constexpr double expected[] = {9.71388562400895, 2.097457548402147e6};
+      constexpr double expected[] = {4.6640262484879, 192400.1149761554};
 
       double relative_error = (f(U) - expected[dim - 2]) / expected[dim - 2];
 
@@ -356,9 +264,8 @@ void qoi_test(mfem::ParMesh& mesh, H1<p1> trial1, H1<p2> trial2, Dimension<dim>)
   // integrates the qoi for these domains to machine precision
   //
   // see scripts/wolfram/qoi_examples.nb for more info
-  constexpr double expected[] = {9.71388562400895, 2.097457548402147e6};
-
-  double relative_error = (f(U1, U2) - expected[dim - 2]) / expected[dim - 2];
+  constexpr double expected[]     = {4.6640262484879, 192400.1149761554};
+  double           relative_error = (f(U1, U2) - expected[dim - 2]) / expected[dim - 2];
 
   // the tolerance on this one isn't very tight since
   // we're using a pretty the coarse integration rule
@@ -368,6 +275,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p1> trial1, H1<p2> trial2, Dimension<dim>)
   check_gradient(f, U1, U2);
 }
 
+#if 1
 TEST(QoI, DependsOnVectorValuedInput)
 {
   constexpr int p   = 2;
@@ -396,7 +304,7 @@ TEST(QoI, DependsOnVectorValuedInput)
   f.AddVolumeIntegral(
       DependsOn<0>{}, [&](auto /*x*/, auto u) { return norm(serac::get<0>(u)); }, mesh);
 
-  double exact_answer   = 512.0 / 3.0;  // \int_0^8 x^2 dx = 512/3
+  double exact_answer   = 141.3333333333333;
   double relative_error = (f(U) - exact_answer) / exact_answer;
   EXPECT_NEAR(0.0, relative_error, 1.0e-10);
 
@@ -530,8 +438,10 @@ TEST(QoI, ShapeAndParameter)
 
   double val = serac_qoi->operator()(*shape, *parameter);
 
-  EXPECT_NEAR(val, 0.8, 1.0e-14);
+  constexpr double expected = 1.6;  // volume of 2 2x2x2 cubes == 16, so expected is 0.1 * 16
+  EXPECT_NEAR(val, expected, 1.0e-14);
 }
+#endif
 
 // clang-format off
 TEST(Measure, 2DLinear   ) { qoi_test(*mesh2D, H1<1>{}, Dimension<2>{}, WhichTest::Measure); }
@@ -572,10 +482,10 @@ int main(int argc, char* argv[])
   int serial_refinement   = 1;
   int parallel_refinement = 0;
 
-  std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
+  std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/patch2D_tris_and_quads.mesh";
   mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
 
-  std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+  std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/patch3D_tets_and_hexes.mesh";
   mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
 
   int result = RUN_ALL_TESTS();

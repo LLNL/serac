@@ -15,7 +15,6 @@ set(numerics_headers
     expr_template_impl.hpp
     expr_template_ops.hpp
     odes.hpp
-    quadrature_data.hpp
     solver_config.hpp
     stdfunction_operator.hpp
     vector_expression.hpp
@@ -23,11 +22,10 @@ set(numerics_headers
 
 set(numerics_sources
     equation_solver.cpp
-    quadrature_data.cpp
     odes.cpp
     )
 
-set(numerics_depends serac_infrastructure)
+set(numerics_depends serac_infrastructure serac_functional)
 
 blt_add_library(
     NAME        serac_numerics

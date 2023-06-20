@@ -15,7 +15,7 @@
 #include "mfem.hpp"
 #include "mfem/linalg/dtensor.hpp"
 
-#include "serac/numerics/quadrature_data.hpp"
+#include "serac/numerics/functional/quadrature_data.hpp"
 #include "serac/numerics/functional/tuple.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/quadrature.hpp"
@@ -37,131 +37,6 @@ constexpr int pow(int x, int n)
   }
   return x_to_the_n;
 }
-
-/**
- * @brief Wrapper for mfem::Reshape compatible with Serac's finite element space types
- * @tparam space A test or trial space
- * @param[in] u The raw data to reshape into an mfem::DeviceTensor
- * @param[in] n1 The first dimension to reshape into
- * @param[in] n2 The second dimension to reshape into
- * @see mfem::Reshape
- */
-template <typename space>
-auto Reshape(double* u, int n1, int n2)
-{
-  if constexpr (space::components == 1) {
-    return mfem::Reshape(u, n1, n2);
-  }
-  if constexpr (space::components > 1) {
-    return mfem::Reshape(u, n1, space::components, n2);
-  }
-};
-
-/// @overload
-template <typename space>
-auto Reshape(const double* u, int n1, int n2)
-{
-  if constexpr (space::components == 1) {
-    return mfem::Reshape(u, n1, n2);
-  }
-  if constexpr (space::components > 1) {
-    return mfem::Reshape(u, n1, space::components, n2);
-  }
-};
-
-/**
- * @brief Extracts the dof values for a particular element
- * @param[in] u The decomposed per-element DOFs, libCEED's E-vector
- * @param[in] e The index of the element to retrieve DOFs for
- * @note For the case of only 1 dof per node, detail::Load returns a tensor<double, ndof>
- */
-template <int ndof>
-SERAC_HOST_DEVICE inline auto Load(const mfem::DeviceTensor<2, const double>& u, int e)
-{
-  return make_tensor<ndof>([&u, e](int i) { return u(i, e); });
-}
-
-/**
- * @overload
- * @note For the case of multiple dofs per node, detail::Load returns a tensor<double, components, ndof>
- */
-template <int ndof, int components>
-SERAC_HOST_DEVICE inline auto Load(const mfem::DeviceTensor<3, const double>& u, int e)
-{
-  return make_tensor<components, ndof>([&u, e](int j, int i) { return u(i, j, e); });
-}
-
-/**
- * @overload
- * @note Intended to be used with Serac's finite element space types
- */
-template <typename space, typename T>
-SERAC_HOST_DEVICE auto Load(const T& u, int e)
-{
-  if constexpr (space::components == 1) {
-    return detail::Load<space::ndof>(u, e);
-  }
-  if constexpr (space::components > 1) {
-    return detail::Load<space::ndof, space::components>(u, e);
-  }
-};
-
-/**
- * @overload
- * @note Used for quantities of interest
- */
-void Add(const mfem::DeviceTensor<2, double>& r_global, double r_local, int e) { r_global(0, e) += r_local; }
-
-/**
- * @brief Adds the contributions of the local residual to the global residual
- * @param[inout] r_global The full element-decomposed residual
- * @param[in] r_local The contributions to a residual from a single element
- * @param[in] e The index of the element whose residual is @a r_local
- */
-template <int ndof>
-SERAC_HOST_DEVICE void Add(const mfem::DeviceTensor<2, double>& r_global, tensor<double, ndof> r_local, int e)
-{
-  for (int i = 0; i < ndof; i++) {
-    AtomicAdd(r_global(i, e), r_local[i]);
-  }
-}
-
-/**
- * @overload
- * @note Used when each node has multiple DOFs
- */
-template <int ndof, int components>
-SERAC_HOST_DEVICE void Add(const mfem::DeviceTensor<3, double>& r_global, tensor<double, ndof, components> r_local,
-                           int e)
-{
-  for (int i = 0; i < ndof; i++) {
-    for (int j = 0; j < components; j++) {
-      AtomicAdd(r_global(i, j, e), r_local[i][j]);
-    }
-  }
-}
-
-#if 0
-template <int p, int dim >
-struct QFunctionArgument< H1< p, 1 >, IntegralType::Boundary, Dimension<dim> >{
-  using type = double; 
-};
-template <int p, int c, int dim >
-struct QFunctionArgument< H1< p, c >, IntegralType::Boundary, Dimension<dim> >{
-  using type = tensor<double, c>; 
-};
-
-
-template <int p >
-struct QFunctionArgument< Hcurl< p >, IntegralType::Boundary, Dimension<2> >{
-  using type = tensor< double, 2 >;
-};
-
-template <int p >
-struct QFunctionArgument< Hcurl< p >, IntegralType::Boundary, Dimension<3> >{
-  using type = tensor< double, 3 >;
-};
-#endif
 
 /**
  * @brief a class that provides the lambda argument types for a given integral
@@ -352,71 +227,8 @@ SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, coords_type&& n_
 
 }  // namespace detail
 
-static constexpr Geometry supported_geometries[] = {Geometry::Point, Geometry::Segment, Geometry::Quadrilateral,
-                                                    Geometry::Hexahedron};
-
-/**
- * @brief A container for a linear approximation
- *
- * @tparam T1 The type of the value
- * @tparam T2 The type of the derivative
- */
-template <typename T1, typename T2>
-struct linear_approximation {
-  /**
-   * @brief The value of the approximation
-   */
-  T1 value;
-  /**
-   * @brief The derivative of the approximation
-   */
-  T2 derivative;
-};
-
-/**
- * @brief a function that evaluates and packs the shape function information in a way
- * that makes the element gradient evaluation simpler to implement
- *
- * @tparam element_type which type of finite element shape functions to evaluate
- * @tparam dim the geometric dimension of the element
- *
- * @param[in] xi where to evaluate shape functions and their gradients
- * @param[in] J the jacobian, dx_dxi, of the isoparametric map from parent-to-physical coordinates
- */
-template <typename element_type, int dim>
-auto evaluate_shape_functions(const tensor<double, dim>& xi, const tensor<double, dim, dim>& J)
-{
-  if constexpr (element_type::family == Family::HCURL) {
-    auto N      = dot(element_type::shape_functions(xi), inv(J));
-    auto curl_N = element_type::shape_function_curl(xi) / det(J);
-    if constexpr (dim == 3) {
-      curl_N = dot(curl_N, transpose(J));
-    }
-
-    using pair_t =
-        linear_approximation<std::remove_reference_t<decltype(N[0])>, std::remove_reference_t<decltype(curl_N[0])>>;
-    tensor<pair_t, element_type::ndof> output{};
-    for (int i = 0; i < element_type::ndof; i++) {
-      output[i].value      = N[i];
-      output[i].derivative = curl_N[i];
-    }
-    return output;
-  }
-
-  if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
-    auto N      = element_type::shape_functions(xi);
-    auto grad_N = dot(element_type::shape_function_gradients(xi), inv(J));
-
-    using pair_t =
-        linear_approximation<std::remove_reference_t<decltype(N[0])>, std::remove_reference_t<decltype(grad_N[0])>>;
-    tensor<pair_t, element_type::ndof> output{};
-    for (int i = 0; i < element_type::ndof; i++) {
-      output[i].value      = N[i];
-      output[i].derivative = grad_N[i];
-    }
-    return output;
-  }
-}
+static constexpr mfem::Geometry::Type supported_geometries[] = {mfem::Geometry::POINT, mfem::Geometry::SEGMENT,
+                                                                mfem::Geometry::SQUARE, mfem::Geometry::CUBE};
 
 namespace domain_integral {
 
@@ -470,7 +282,7 @@ SERAC_HOST_DEVICE auto Preprocess(T u, const tensor<double, dim>& xi, const tens
  * @param[in] xi The position of the quadrature point in reference space
  * @param[in] J The Jacobian of the element transformation at the quadrature point
  */
-template <Geometry geom, typename... trials, typename tuple_type, int dim, int... i>
+template <mfem::Geometry::Type geom, typename... trials, typename tuple_type, int dim, int... i>
 SERAC_HOST_DEVICE auto PreprocessHelper(const tuple_type& u, const tensor<double, dim>& xi,
                                         const tensor<double, dim, dim>& J, std::integer_sequence<int, i...>)
 {
@@ -481,7 +293,7 @@ SERAC_HOST_DEVICE auto PreprocessHelper(const tuple_type& u, const tensor<double
  * @overload
  * @note multi-trial space overload of Preprocess
  */
-template <Geometry geom, typename... trials, typename tuple_type, int dim>
+template <mfem::Geometry::Type geom, typename... trials, typename tuple_type, int dim>
 SERAC_HOST_DEVICE auto Preprocess(const tuple_type& u, const tensor<double, dim>& xi, const tensor<double, dim, dim>& J)
 {
   return PreprocessHelper<geom, trials...>(u, xi, J,
