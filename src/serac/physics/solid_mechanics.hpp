@@ -412,6 +412,18 @@ public:
     bcs_.addEssential(true_dofs, disp_bdr_coef_, displacement_.space());
   }
 
+  /**
+   * @brief Set the displacement boundary conditions on a set of nodes within a spatially-defined area
+   *
+   * @param is_node_constrained A callback function that returns true if displacement nodes at a certain position should
+   * be constrained by this boundary condition
+   * @param disp The vector function containing the prescribed displacement values
+   *
+   * The displacement function takes a spatial position as the first argument and time as the second argument. It
+   * computes the desired displacement and fills the third argument with these displacement values.
+   *
+   * @note This method searches over the entire mesh, not just the boundary nodes.
+   */
   void setDisplacementBCs(std::function<bool(const mfem::Vector&)>                        is_node_constrained,
                           std::function<void(const mfem::Vector&, double, mfem::Vector&)> disp)
   {
@@ -420,14 +432,18 @@ public:
     setDisplacementBCs(constrained_dofs, disp);
   }
 
-  void setDisplacementBCs(std::function<bool(const mfem::Vector& x)>           is_node_constrained,
-                          std::function<double(const mfem::Vector& x, double)> disp, int component)
-  {
-    auto constrained_dofs = calculateConstrainedDofs(is_node_constrained, component);
-
-    setDisplacementBCs(constrained_dofs, disp, component);
-  }
-
+  /**
+   * @brief Set the displacement boundary conditions on a set of nodes within a spatially-defined area
+   *
+   * @param is_node_constrained A callback function that returns true if displacement nodes at a certain position should
+   * be constrained by this boundary condition
+   * @param disp The vector function containing the prescribed displacement values
+   *
+   * The displacement function takes a spatial position as the first argument. It computes the desired displacement
+   * and fills the second argument with these displacement values.
+   *
+   * @note This method searches over the entire mesh, not just the boundary nodes.
+   */
   void setDisplacementBCs(std::function<bool(const mfem::Vector&)>                is_node_constrained,
                           std::function<void(const mfem::Vector&, mfem::Vector&)> disp)
   {
@@ -436,6 +452,44 @@ public:
     setDisplacementBCs(constrained_dofs, disp);
   }
 
+  /**
+   * @brief Set the displacement boundary conditions on a set of nodes within a spatially-defined area for a single
+   * displacement vector component
+   *
+   * @param is_node_constrained A callback function that returns true if displacement nodes at a certain position should
+   * be constrained by this boundary condition
+   * @param disp The scalar function containing the prescribed component displacement values
+   * @param component The component of the displacement vector that should be set by this boundary condition. The other
+   * components of displacement are unconstrained.
+   *
+   * The displacement function takes a spatial position as the first argument and time as the second argument. It
+   * computes the desired displacement scalar for the given component and returns that value.
+   *
+   * @note This method searches over the entire mesh, not just the boundary nodes.
+   */
+  void setDisplacementBCs(std::function<bool(const mfem::Vector& x)>           is_node_constrained,
+                          std::function<double(const mfem::Vector& x, double)> disp, int component)
+  {
+    auto constrained_dofs = calculateConstrainedDofs(is_node_constrained, component);
+
+    setDisplacementBCs(constrained_dofs, disp, component);
+  }
+
+  /**
+   * @brief Set the displacement boundary conditions on a set of nodes within a spatially-defined area for a single
+   * displacement vector component
+   *
+   * @param is_node_constrained A callback function that returns true if displacement nodes at a certain position should
+   * be constrained by this boundary condition
+   * @param disp The scalar function containing the prescribed component displacement values
+   * @param component The component of the displacement vector that should be set by this boundary condition. The other
+   * components of displacement are unconstrained.
+   *
+   * The displacement function takes a spatial position as an argument. It computes the desired displacement scalar for
+   * the given component and returns that value.
+   *
+   * @note This method searches over the entire mesh, not just the boundary nodes.
+   */
   void setDisplacementBCs(std::function<bool(const mfem::Vector& x)>   is_node_constrained,
                           std::function<double(const mfem::Vector& x)> disp, int component)
   {
