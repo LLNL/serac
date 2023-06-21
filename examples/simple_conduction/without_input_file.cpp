@@ -29,7 +29,7 @@
 // _main_init_start
 int main(int argc, char* argv[])
 {
-  /*auto [num_procs, rank] = */serac::initialize(argc, argv);
+  /*auto [num_procs, rank] = */ serac::initialize(argc, argv);
   axom::sidre::DataStore datastore;
   serac::StateManager::initialize(datastore, "without_input_file_example");
   // _main_init_end
@@ -43,26 +43,26 @@ int main(int argc, char* argv[])
   constexpr int order = 1;
   constexpr int dim   = 2;
 
-  serac::HeatTransfer<order, dim> heat_transfer(serac::heat_transfer::default_nonlinear_options, serac::heat_transfer::default_linear_options, serac::heat_transfer::default_static_options);
+  serac::HeatTransfer<order, dim> heat_transfer(serac::heat_transfer::default_nonlinear_options,
+                                                serac::heat_transfer::default_linear_options,
+                                                serac::heat_transfer::default_static_options);
   // _create_module_end
 
   // _conductivity_start
-  constexpr double kappa = 0.5;
-  serac::heat_transfer::LinearIsotropicConductor mat(1.0,1.0,kappa);
+  constexpr double                               kappa = 0.5;
+  serac::heat_transfer::LinearIsotropicConductor mat(1.0, 1.0, kappa);
   heat_transfer.setMaterial(mat);
 
   // _conductivity_end
   // _bc_start
   const std::set<int> boundary_constant_attributes = {1};
-  constexpr double boundary_constant = 1.0;
-  
-  auto ebc_func = [boundary_constant](const auto&, auto){ return boundary_constant; };
+  constexpr double    boundary_constant            = 1.0;
+
+  auto ebc_func = [boundary_constant](const auto&, auto) { return boundary_constant; };
   heat_transfer.setTemperatureBCs(boundary_constant_attributes, ebc_func);
 
   const std::set<int> boundary_function_attributes = {2, 3};
-  auto boundary_function_coef = [](const auto& vec, auto){
-    return vec[0] * vec[0] + vec[1] - 1;
-  };
+  auto                boundary_function_coef       = [](const auto& vec, auto) { return vec[0] * vec[0] + vec[1] - 1; };
   heat_transfer.setTemperatureBCs(boundary_function_attributes, boundary_function_coef);
   // _bc_end
 
