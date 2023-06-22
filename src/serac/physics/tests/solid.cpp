@@ -173,100 +173,103 @@ void functional_solid_spatial_essential_bc()
 
   auto [size, rank] = serac::getMPIInfo();
 
-  mfem::Vector rank_0_displacement(54);
-  rank_0_displacement(0)  = -1.0617852403956275e-15;
-  rank_0_displacement(1)  = 0.012499999999998809;
-  rank_0_displacement(2)  = 0.004448998788063105;
-  rank_0_displacement(3)  = 0.0169489987880622;
-  rank_0_displacement(4)  = 0.006249999999998365;
-  rank_0_displacement(5)  = 0.014724499394031183;
-  rank_0_displacement(6)  = 0.010698998788062195;
-  rank_0_displacement(7)  = 0.0022244993940308874;
-  rank_0_displacement(8)  = -2.356134076868327e-16;
-  rank_0_displacement(9)  = 0.012499999999998217;
-  rank_0_displacement(10) = 0.016948998788060436;
-  rank_0_displacement(11) = 0.004448998788061862;
-  rank_0_displacement(12) = 0.006249999999998811;
-  rank_0_displacement(13) = 0.014724499394031768;
-  rank_0_displacement(14) = 0.01069899878806241;
-  rank_0_displacement(15) = 0.0022244993940305044;
-  rank_0_displacement(16) = 0.008474499394031424;
-  rank_0_displacement(17) = 0.008474499394029913;
-  rank_0_displacement(18) = -4.855132072430239e-16;
-  rank_0_displacement(19) = -0.004448998788063754;
-  rank_0_displacement(20) = 0.012500000000000087;
-  rank_0_displacement(21) = 0.008051001211936542;
-  rank_0_displacement(22) = -0.0022244993940325067;
-  rank_0_displacement(23) = 0.001801001211935941;
-  rank_0_displacement(24) = 0.01027550060596709;
-  rank_0_displacement(25) = 0.006249999999998063;
-  rank_0_displacement(26) = -1.962413641522072e-16;
-  rank_0_displacement(27) = -0.00444899878806413;
-  rank_0_displacement(28) = 0.00805100121193465;
-  rank_0_displacement(29) = 0.012500000000000712;
-  rank_0_displacement(30) = -0.002224499394031762;
-  rank_0_displacement(31) = 0.0018010012119370586;
-  rank_0_displacement(32) = 0.01027550060596742;
-  rank_0_displacement(33) = 0.0062500000000002675;
-  rank_0_displacement(34) = 0.004025500605967433;
-  rank_0_displacement(35) = 0.004025500605966985;
-  rank_0_displacement(36) = -0.1;
-  rank_0_displacement(37) = -0.1;
-  rank_0_displacement(38) = -0.1;
-  rank_0_displacement(39) = -0.1;
-  rank_0_displacement(40) = -0.1;
-  rank_0_displacement(41) = -0.1;
-  rank_0_displacement(42) = -0.1;
-  rank_0_displacement(43) = -0.1;
-  rank_0_displacement(44) = -0.049999999999999316;
-  rank_0_displacement(45) = -0.04999999999999927;
-  rank_0_displacement(46) = -0.04999999999999971;
-  rank_0_displacement(47) = -0.04999999999999971;
-  rank_0_displacement(48) = -0.05000000000000073;
-  rank_0_displacement(49) = -0.05000000000000077;
-  rank_0_displacement(50) = -0.05000000000000012;
-  rank_0_displacement(51) = -0.04999999999999912;
-  rank_0_displacement(52) = -0.1;
-  rank_0_displacement(53) = -0.04999999999999983;
+  // This exact solution is only correct when two MPI ranks are used
+  if (size == 2) {
+    mfem::Vector rank_0_displacement(54);
+    rank_0_displacement(0)  = 0.0;
+    rank_0_displacement(1)  = 0.012499999999998809;
+    rank_0_displacement(2)  = 0.004448998788063105;
+    rank_0_displacement(3)  = 0.0169489987880622;
+    rank_0_displacement(4)  = 0.006249999999998365;
+    rank_0_displacement(5)  = 0.014724499394031183;
+    rank_0_displacement(6)  = 0.010698998788062195;
+    rank_0_displacement(7)  = 0.0022244993940308874;
+    rank_0_displacement(8)  = 0.0;
+    rank_0_displacement(9)  = 0.012499999999998217;
+    rank_0_displacement(10) = 0.016948998788060436;
+    rank_0_displacement(11) = 0.004448998788061862;
+    rank_0_displacement(12) = 0.006249999999998811;
+    rank_0_displacement(13) = 0.014724499394031768;
+    rank_0_displacement(14) = 0.01069899878806241;
+    rank_0_displacement(15) = 0.0022244993940305044;
+    rank_0_displacement(16) = 0.008474499394031424;
+    rank_0_displacement(17) = 0.008474499394029913;
+    rank_0_displacement(18) = 0.0;
+    rank_0_displacement(19) = -0.004448998788063754;
+    rank_0_displacement(20) = 0.012500000000000087;
+    rank_0_displacement(21) = 0.008051001211936542;
+    rank_0_displacement(22) = -0.0022244993940325067;
+    rank_0_displacement(23) = 0.001801001211935941;
+    rank_0_displacement(24) = 0.01027550060596709;
+    rank_0_displacement(25) = 0.006249999999998063;
+    rank_0_displacement(26) = 0.0;
+    rank_0_displacement(27) = -0.00444899878806413;
+    rank_0_displacement(28) = 0.00805100121193465;
+    rank_0_displacement(29) = 0.012500000000000712;
+    rank_0_displacement(30) = -0.002224499394031762;
+    rank_0_displacement(31) = 0.0018010012119370586;
+    rank_0_displacement(32) = 0.01027550060596742;
+    rank_0_displacement(33) = 0.0062500000000002675;
+    rank_0_displacement(34) = 0.004025500605967433;
+    rank_0_displacement(35) = 0.004025500605966985;
+    rank_0_displacement(36) = -0.1;
+    rank_0_displacement(37) = -0.1;
+    rank_0_displacement(38) = -0.1;
+    rank_0_displacement(39) = -0.1;
+    rank_0_displacement(40) = -0.1;
+    rank_0_displacement(41) = -0.1;
+    rank_0_displacement(42) = -0.1;
+    rank_0_displacement(43) = -0.1;
+    rank_0_displacement(44) = -0.05;
+    rank_0_displacement(45) = -0.05;
+    rank_0_displacement(46) = -0.05;
+    rank_0_displacement(47) = -0.05;
+    rank_0_displacement(48) = -0.05;
+    rank_0_displacement(49) = -0.05;
+    rank_0_displacement(50) = -0.05;
+    rank_0_displacement(51) = -0.05;
+    rank_0_displacement(52) = -0.1;
+    rank_0_displacement(53) = -0.05;
 
-  mfem::Vector rank_1_displacement(27);
-  rank_1_displacement(0)  = 0;
-  rank_1_displacement(1)  = 0.012500000000000039;
-  rank_1_displacement(2)  = 0.0044489987880621225;
-  rank_1_displacement(3)  = 0.016948998788064083;
-  rank_1_displacement(4)  = 0.0062499999999990185;
-  rank_1_displacement(5)  = 0.014724499394028236;
-  rank_1_displacement(6)  = 0.010698998788060278;
-  rank_1_displacement(7)  = 0.0022244993940295295;
-  rank_1_displacement(8)  = 0.008474499394030858;
-  rank_1_displacement(9)  = 0;
-  rank_1_displacement(10) = -0.004448998788061512;
-  rank_1_displacement(11) = 0.012499999999998158;
-  rank_1_displacement(12) = 0.008051001211937409;
-  rank_1_displacement(13) = -0.0022244993940332054;
-  rank_1_displacement(14) = 0.0018010012119359894;
-  rank_1_displacement(15) = 0.010275500605968239;
-  rank_1_displacement(16) = 0.00624999999999916;
-  rank_1_displacement(17) = 0.004025500605969057;
-  rank_1_displacement(18) = 0;
-  rank_1_displacement(19) = 0;
-  rank_1_displacement(20) = 0;
-  rank_1_displacement(21) = 0;
-  rank_1_displacement(22) = 0;
-  rank_1_displacement(23) = 0;
-  rank_1_displacement(24) = 0;
-  rank_1_displacement(25) = 0;
-  rank_1_displacement(26) = 0;
+    mfem::Vector rank_1_displacement(27);
+    rank_1_displacement(0)  = 0.0;
+    rank_1_displacement(1)  = 0.012500000000000039;
+    rank_1_displacement(2)  = 0.0044489987880621225;
+    rank_1_displacement(3)  = 0.016948998788064083;
+    rank_1_displacement(4)  = 0.0062499999999990185;
+    rank_1_displacement(5)  = 0.014724499394028236;
+    rank_1_displacement(6)  = 0.010698998788060278;
+    rank_1_displacement(7)  = 0.0022244993940295295;
+    rank_1_displacement(8)  = 0.008474499394030858;
+    rank_1_displacement(9)  = 0.0;
+    rank_1_displacement(10) = -0.004448998788061512;
+    rank_1_displacement(11) = 0.012499999999998158;
+    rank_1_displacement(12) = 0.008051001211937409;
+    rank_1_displacement(13) = -0.0022244993940332054;
+    rank_1_displacement(14) = 0.0018010012119359894;
+    rank_1_displacement(15) = 0.010275500605968239;
+    rank_1_displacement(16) = 0.00624999999999916;
+    rank_1_displacement(17) = 0.004025500605969057;
+    rank_1_displacement(18) = 0.0;
+    rank_1_displacement(19) = 0.0;
+    rank_1_displacement(20) = 0.0;
+    rank_1_displacement(21) = 0.0;
+    rank_1_displacement(22) = 0.0;
+    rank_1_displacement(23) = 0.0;
+    rank_1_displacement(24) = 0.0;
+    rank_1_displacement(25) = 0.0;
+    rank_1_displacement(26) = 0.0;
 
-  if (rank == 0) {
-    for (int i = 0; i < solid_solver.displacement().Size(); ++i) {
-      EXPECT_NEAR(rank_0_displacement(i), solid_solver.displacement()(i), 1.0e-8);
+    if (rank == 0) {
+      for (int i = 0; i < solid_solver.displacement().Size(); ++i) {
+        EXPECT_NEAR(rank_0_displacement(i), solid_solver.displacement()(i), 1.0e-8);
+      }
     }
-  }
 
-  if (rank == 1) {
-    for (int i = 0; i < solid_solver.displacement().Size(); ++i) {
-      EXPECT_NEAR(rank_1_displacement(i), solid_solver.displacement()(i), 1.0e-8);
+    if (rank == 1) {
+      for (int i = 0; i < solid_solver.displacement().Size(); ++i) {
+        EXPECT_NEAR(rank_1_displacement(i), solid_solver.displacement()(i), 1.0e-8);
+      }
     }
   }
 }
