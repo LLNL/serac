@@ -129,7 +129,7 @@ set(UMPIRE_DIR "${TPL_ROOT}/umpire-2022.03.1-yaneneqrmybe2xxhrktj7fkqrxvkk4u6" C
 
 # Root directory for generated developer tools
 
-set(DEVTOOLS_ROOT "/usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/2022_06_29_20_00_52/gcc-8.3.1" CACHE PATH "")
+set(DEVTOOLS_ROOT "/usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/2023_06_20_17_48_10/view" CACHE PATH "")
 
 set(ATS_EXECUTABLE "${DEVTOOLS_ROOT}/python-3.10.10/bin/ats" CACHE PATH "")
 
