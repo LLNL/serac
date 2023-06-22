@@ -378,11 +378,15 @@ public:
    * @param true_dofs A set of true degrees of freedom to set the displacement on
    * @param disp The vector function containing the prescribed displacement values
    *
-   * The @a true_dofs list can be determined using functions from the @a mfem::ParFiniteElementSpace class.
+   * The @a true_dofs list can be determined using functions from the @a mfem::ParFiniteElementSpace related to the
+   * displacement @a serac::FiniteElementState .
    *
-   * @note The coefficient is required to be vector-valued. However, only the dofs specified in the @a true_dofs
-   * array will be set. This means that if the @a true_dofs array only contains dofs for a specific vector component in
-   * a vector-valued finite element space, only that component will be set.
+   * For the displacement function, the argument is the input position and the output is the value of the component of
+   * the displacement.
+   *
+   * @note The displacement function is required to be vector-valued. However, only the dofs specified in the @a
+   * true_dofs array will be set. This means that if the @a true_dofs array only contains dofs for a specific vector
+   * component in a vector-valued finite element space, only that component will be set.
    */
   void setDisplacementBCsByDofList(const mfem::Array<int>                                          true_dofs,
                                    std::function<void(const mfem::Vector&, double, mfem::Vector&)> disp)

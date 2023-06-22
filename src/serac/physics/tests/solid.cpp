@@ -457,7 +457,7 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   mfem::Array<int> true_dofs;
   solid_solver.displacement().space().GetEssentialTrueDofs(bdr_attr_marker, true_dofs);
 
-  solid_solver.setDisplacementBCs(true_dofs, bc);
+  solid_solver.setDisplacementBCsByDofList(true_dofs, bc);
   solid_solver.setDisplacement(bc);
 
   tensor<double, dim> constant_force;
@@ -499,16 +499,16 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
 }
 
-// TEST(SolidMechanics, 2DQuadParameterizedStatic) { functional_parameterized_solid_test<2, 2>(2.1906312704664623); }
+TEST(SolidMechanics, 2DQuadParameterizedStatic) { functional_parameterized_solid_test<2, 2>(2.1906312704664623); }
 
-// TEST(SolidMechanics, 3DQuadStaticJ2) { functional_solid_test_static_J2(); }
+TEST(SolidMechanics, 3DQuadStaticJ2) { functional_solid_test_static_J2(); }
 
 TEST(SolidMechanics, SpatialBoundaryCondition) { functional_solid_spatial_essential_bc(); }
 
-// TEST(SolidMechanics, 2DLinearPressure)
-//{
-//  functional_solid_test_boundary<1, 2>(0.028525698834671667, TestType::Pressure);
-//}
+TEST(SolidMechanics, 2DLinearPressure)
+{
+  functional_solid_test_boundary<1, 2>(0.028525698834671667, TestType::Pressure);
+}
 
 }  // namespace serac
 
