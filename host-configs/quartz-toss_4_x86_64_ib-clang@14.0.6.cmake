@@ -95,13 +95,13 @@ set(UMPIRE_DIR "/usr/WS2/smithdev/libs/serac/toss_4_x86_64_ib/2023_05_15_16_48_0
 
 # Root directory for generated developer tools
 
-set(DEVTOOLS_ROOT "/usr/WS2/smithdev/devtools/toss_4_x86_64_ib/2023_05_15_14_17_13/._view/cgnz3nqe7bpcm5tl4ph5mrykvso7zsze" CACHE PATH "")
+set(DEVTOOLS_ROOT "/usr/WS2/smithdev/devtools/toss_4_x86_64_ib/2023_06_20_15_40_50/view" CACHE PATH "")
 
 set(ATS_EXECUTABLE "${DEVTOOLS_ROOT}/python-3.10.10/bin/ats" CACHE PATH "")
 
-set(CLANGFORMAT_EXECUTABLE "/usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/python-3.10.10/bin/clang-format" CACHE PATH "")
+set(CLANGFORMAT_EXECUTABLE "${DEVTOOLS_ROOT}/python-3.10.10/bin/clang-format" CACHE PATH "")
 
-set(CLANGTIDY_EXECUTABLE "/usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/python-3.10.10/bin/clang-tidy" CACHE PATH "")
+set(CLANGTIDY_EXECUTABLE "${DEVTOOLS_ROOT}/python-3.10.10/bin/clang-tidy" CACHE PATH "")
 
 set(ENABLE_DOCS ON CACHE BOOL "")
 
