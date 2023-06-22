@@ -14,7 +14,7 @@ class Umpire(BuiltinUmpire):
 
     def initconfig_package_entries(self):
         spec = self.spec
-        entries = BuiltinUmpire.setup_build_environment(self)
+        entries = BuiltinUmpire.initconfig_package_entries(self)
 
         entries.append(cmake_cache_option(
             "{}ENABLE_DEVICE_ALLOCATOR".format(option_prefix), "+device_alloc" in spec))

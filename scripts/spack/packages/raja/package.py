@@ -15,7 +15,7 @@ class Raja(BuiltinRaja):
 
     def initconfig_package_entries(self):
         spec = self.spec
-        entries = BuiltinRaja.setup_build_environment(self)
+        entries = BuiltinRaja.initconfig_package_entries(self)
 
         entries.append(cmake_cache_path("BLT_CXX_STD", "c++14"))
 
