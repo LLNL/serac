@@ -42,7 +42,7 @@ void functional_solid_test_static_J2()
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
 
-  auto linear_options         = solid_mechanics::default_linear_options;
+  auto linear_options         = solid_mechanics::direct_linear_options;
   linear_options.absolute_tol = 1.0e-16;  // prevent early-exit in linear solve
 
   // Construct a functional-based solid mechanics solver
@@ -125,7 +125,7 @@ void functional_solid_spatial_essential_bc()
   // Construct a functional-based solid mechanics solver
   SolidMechanics<p, dim> solid_solver(
       solid_mechanics::default_nonlinear_options, solid_mechanics::default_linear_options,
-      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "solid_mechanics");
+      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::Off, "solid_mechanics");
 
   solid_mechanics::LinearIsotropic mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
@@ -174,44 +174,45 @@ void functional_solid_spatial_essential_bc()
   auto [size, rank] = serac::getMPIInfo();
 
   // This exact solution is only correct when two MPI ranks are used
+  // It is based on a poisson ratio of 0.125 with a prescribed z strain of 10%
   if (size == 2) {
     mfem::Vector rank_0_displacement(54);
     rank_0_displacement(0)  = 0.0;
-    rank_0_displacement(1)  = 0.012499999999998809;
-    rank_0_displacement(2)  = 0.004448998788063105;
-    rank_0_displacement(3)  = 0.0169489987880622;
-    rank_0_displacement(4)  = 0.006249999999998365;
-    rank_0_displacement(5)  = 0.014724499394031183;
-    rank_0_displacement(6)  = 0.010698998788062195;
-    rank_0_displacement(7)  = 0.0022244993940308874;
+    rank_0_displacement(1)  = 0.0125;
+    rank_0_displacement(2)  = 0.00444899764940326;
+    rank_0_displacement(3)  = 0.01694899764940309;
+    rank_0_displacement(4)  = 0.006249999999997622;
+    rank_0_displacement(5)  = 0.014724498824700673;
+    rank_0_displacement(6)  = 0.010698997649401977;
+    rank_0_displacement(7)  = 0.0022244988247011586;
     rank_0_displacement(8)  = 0.0;
-    rank_0_displacement(9)  = 0.012499999999998217;
-    rank_0_displacement(10) = 0.016948998788060436;
-    rank_0_displacement(11) = 0.004448998788061862;
-    rank_0_displacement(12) = 0.006249999999998811;
-    rank_0_displacement(13) = 0.014724499394031768;
-    rank_0_displacement(14) = 0.01069899878806241;
-    rank_0_displacement(15) = 0.0022244993940305044;
-    rank_0_displacement(16) = 0.008474499394031424;
-    rank_0_displacement(17) = 0.008474499394029913;
+    rank_0_displacement(9)  = 0.0125;
+    rank_0_displacement(10) = 0.016948997649402067;
+    rank_0_displacement(11) = 0.004448997649403503;
+    rank_0_displacement(12) = 0.006249999999998786;
+    rank_0_displacement(13) = 0.014724498824701405;
+    rank_0_displacement(14) = 0.010698997649404096;
+    rank_0_displacement(15) = 0.002224498824700543;
+    rank_0_displacement(16) = 0.008474498824701965;
+    rank_0_displacement(17) = 0.008474498824699537;
     rank_0_displacement(18) = 0.0;
-    rank_0_displacement(19) = -0.004448998788063754;
-    rank_0_displacement(20) = 0.012500000000000087;
-    rank_0_displacement(21) = 0.008051001211936542;
-    rank_0_displacement(22) = -0.0022244993940325067;
-    rank_0_displacement(23) = 0.001801001211935941;
-    rank_0_displacement(24) = 0.01027550060596709;
-    rank_0_displacement(25) = 0.006249999999998063;
+    rank_0_displacement(19) = -0.004448997649405797;
+    rank_0_displacement(20) = 0.0125;
+    rank_0_displacement(21) = 0.00805100235059582;
+    rank_0_displacement(22) = -0.0022244988247037854;
+    rank_0_displacement(23) = 0.0018010023505955542;
+    rank_0_displacement(24) = 0.010275501175296586;
+    rank_0_displacement(25) = 0.00624999999999837;
     rank_0_displacement(26) = 0.0;
-    rank_0_displacement(27) = -0.00444899878806413;
-    rank_0_displacement(28) = 0.00805100121193465;
-    rank_0_displacement(29) = 0.012500000000000712;
-    rank_0_displacement(30) = -0.002224499394031762;
-    rank_0_displacement(31) = 0.0018010012119370586;
-    rank_0_displacement(32) = 0.01027550060596742;
-    rank_0_displacement(33) = 0.0062500000000002675;
-    rank_0_displacement(34) = 0.004025500605967433;
-    rank_0_displacement(35) = 0.004025500605966985;
+    rank_0_displacement(27) = -0.0044489976494050025;
+    rank_0_displacement(28) = 0.008051002350592475;
+    rank_0_displacement(29) = 0.0125;
+    rank_0_displacement(30) = -0.002224498824703152;
+    rank_0_displacement(31) = 0.0018010023505938145;
+    rank_0_displacement(32) = 0.010275501175297441;
+    rank_0_displacement(33) = 0.006250000000000508;
+    rank_0_displacement(34) = 0.004025501175297109;
+    rank_0_displacement(35) = 0.004025501175296371;
     rank_0_displacement(36) = -0.1;
     rank_0_displacement(37) = -0.1;
     rank_0_displacement(38) = -0.1;
@@ -233,23 +234,23 @@ void functional_solid_spatial_essential_bc()
 
     mfem::Vector rank_1_displacement(27);
     rank_1_displacement(0)  = 0.0;
-    rank_1_displacement(1)  = 0.012500000000000039;
-    rank_1_displacement(2)  = 0.0044489987880621225;
-    rank_1_displacement(3)  = 0.016948998788064083;
-    rank_1_displacement(4)  = 0.0062499999999990185;
-    rank_1_displacement(5)  = 0.014724499394028236;
-    rank_1_displacement(6)  = 0.010698998788060278;
-    rank_1_displacement(7)  = 0.0022244993940295295;
-    rank_1_displacement(8)  = 0.008474499394030858;
+    rank_1_displacement(1)  = 0.0125;
+    rank_1_displacement(2)  = 0.004448997649402821;
+    rank_1_displacement(3)  = 0.016948997649407428;
+    rank_1_displacement(4)  = 0.006249999999997266;
+    rank_1_displacement(5)  = 0.014724498824698999;
+    rank_1_displacement(6)  = 0.010698997649403928;
+    rank_1_displacement(7)  = 0.0022244988247001056;
+    rank_1_displacement(8)  = 0.008474498824701611;
     rank_1_displacement(9)  = 0.0;
-    rank_1_displacement(10) = -0.004448998788061512;
-    rank_1_displacement(11) = 0.012499999999998158;
-    rank_1_displacement(12) = 0.008051001211937409;
-    rank_1_displacement(13) = -0.0022244993940332054;
-    rank_1_displacement(14) = 0.0018010012119359894;
-    rank_1_displacement(15) = 0.010275500605968239;
-    rank_1_displacement(16) = 0.00624999999999916;
-    rank_1_displacement(17) = 0.004025500605969057;
+    rank_1_displacement(10) = -0.004448997649407356;
+    rank_1_displacement(11) = 0.0125;
+    rank_1_displacement(12) = 0.008051002350593363;
+    rank_1_displacement(13) = -0.0022244988247036765;
+    rank_1_displacement(14) = 0.0018010023505931603;
+    rank_1_displacement(15) = 0.01027550117529734;
+    rank_1_displacement(16) = 0.006249999999998952;
+    rank_1_displacement(17) = 0.004025501175297568;
     rank_1_displacement(18) = 0.0;
     rank_1_displacement(19) = 0.0;
     rank_1_displacement(20) = 0.0;
