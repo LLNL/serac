@@ -384,8 +384,8 @@ public:
    * array will be set. This means that if the @a true_dofs array only contains dofs for a specific vector component in
    * a vector-valued finite element space, only that component will be set.
    */
-  void setDisplacementBCs(const mfem::Array<int>                                          true_dofs,
-                          std::function<void(const mfem::Vector&, double, mfem::Vector&)> disp)
+  void setDisplacementBCsByDofList(const mfem::Array<int>                                          true_dofs,
+                                   std::function<void(const mfem::Vector&, double, mfem::Vector&)> disp)
   {
     disp_bdr_coef_ = std::make_shared<mfem::VectorFunctionCoefficient>(dim, disp);
 
@@ -404,8 +404,8 @@ public:
    * array will be set. This means that if the @a true_dofs array only contains dofs for a specific vector component in
    * a vector-valued finite element space, only that component will be set.
    */
-  void setDisplacementBCs(const mfem::Array<int>                                  true_dofs,
-                          std::function<void(const mfem::Vector&, mfem::Vector&)> disp)
+  void setDisplacementBCsByDofList(const mfem::Array<int>                                  true_dofs,
+                                   std::function<void(const mfem::Vector&, mfem::Vector&)> disp)
   {
     disp_bdr_coef_ = std::make_shared<mfem::VectorFunctionCoefficient>(dim, disp);
 
@@ -429,7 +429,7 @@ public:
   {
     auto constrained_dofs = calculateConstrainedDofs(is_node_constrained);
 
-    setDisplacementBCs(constrained_dofs, disp);
+    setDisplacementBCsByDofList(constrained_dofs, disp);
   }
 
   /**
@@ -449,7 +449,7 @@ public:
   {
     auto constrained_dofs = calculateConstrainedDofs(is_node_constrained);
 
-    setDisplacementBCs(constrained_dofs, disp);
+    setDisplacementBCsByDofList(constrained_dofs, disp);
   }
 
   /**
@@ -472,7 +472,7 @@ public:
   {
     auto constrained_dofs = calculateConstrainedDofs(is_node_constrained, component);
 
-    setDisplacementBCs(constrained_dofs, disp, component);
+    setDisplacementBCsByDofList(constrained_dofs, disp, component);
   }
 
   /**
@@ -500,7 +500,7 @@ public:
       displacement(component) = disp(x);
     };
 
-    setDisplacementBCs(constrained_dofs, vector_function);
+    setDisplacementBCsByDofList(constrained_dofs, vector_function);
   }
 
   /**
@@ -1218,7 +1218,7 @@ protected:
    *
    * @param is_node_constrained A function that takes a point in physical space and returns true if the contained
    * degrees of freedom should be constrained
-   * @param component A marker for whetehr
+   * @param component which component is constrained (uninitialized implies all components are constrained)
    * @return An array of the constrained true dofs
    */
   mfem::Array<int> calculateConstrainedDofs(std::function<bool(const mfem::Vector&)> is_node_constrained,
@@ -1238,6 +1238,13 @@ protected:
         mfem::Vector     node_coords(dim);
         mfem::Array<int> node_dofs;
         for (int d = 0; d < dim; d++) {
+          // Get the local dof number for the prescribed component
+          int local_vector_dof = mfem::Ordering::Map<mfem::Ordering::byNODES>(
+              nodal_positions.FESpace()->GetNDofs(), nodal_positions.FESpace()->GetVDim(), i, d);
+
+          // Save the spatial position for this coordinate dof
+          node_coords(d) = nodal_positions(local_vector_dof);
+
           // Check if this component of the displacement vector is constrained
           bool is_active_component = true;
           if (component) {
@@ -1247,13 +1254,6 @@ protected:
           }
 
           if (is_active_component) {
-            // Get the local dof number for the prescribed component
-            int local_vector_dof = mfem::Ordering::Map<mfem::Ordering::byNODES>(
-                nodal_positions.FESpace()->GetNDofs(), nodal_positions.FESpace()->GetVDim(), i, d);
-
-            // Save the spatial position for this coordinate dof
-            node_coords(d) = nodal_positions(local_vector_dof);
-
             // Add the true dof for this component to the related dof list
             node_dofs.Append(nodal_positions.ParFESpace()->GetLocalTDofNumber(local_vector_dof));
           }
