@@ -24,7 +24,7 @@ Help()
 {
     echo "Test Invocations"
     echo "=========================="
-    echo "TOSS3: salloc -N2 ./ats.sh"
+    echo "TOSS4: salloc -N2 ./ats.sh"
     echo "BlueOS: lalloc 2 ./ats.sh"
     echo "WSL: ./ats.sh"
     echo "Options:"
