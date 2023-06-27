@@ -20,6 +20,9 @@
 
 using namespace serac;
 
+// #define USE_BORDER
+#undef USE_BORDER
+
 #define USE_2X1_LATTICE
 // #undef USE_2X1_LATTICE
 
@@ -57,7 +60,14 @@ int main(int argc, char* argv[])
   std::string filename = SERAC_REPO_DIR "/data/meshes/reEntrantHoneyComb_coarse_scaled_actual2D_quads.g";
 #else
 #ifdef USE_2X1_LATTICE
-  std::string   filename = SERAC_REPO_DIR "/data/meshes/reEntrantHoneycomb_3D_2x1.g";
+#ifdef USE_BORDER
+  std::string   filename = SERAC_REPO_DIR "/data/meshes/reEntrantHoneycomb_3D_2x1_border.g";
+#else
+  std::string   filename = SERAC_REPO_DIR "/data/meshes/reEntrantHoneycomb_3D_2x1_no_border.g";
+#endif
+// #else
+//   std::string   filename = SERAC_REPO_DIR "/data/meshes/reEntrantHoneycomb_3D_2x1.g";
+// #endif
 #else
   std::string   filename = SERAC_REPO_DIR "/data/meshes/reEntrantHoneyComb_coarse_scaled_pseudo2D.g";
 #endif
@@ -89,14 +99,14 @@ int main(int argc, char* argv[])
   serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a functional-based solid mechanics solver
-  // LinearSolverOptions linear_options = {.linear_solver = LinearSolver::SuperLU};
+  LinearSolverOptions linear_options = {.linear_solver = LinearSolver::SuperLU};
 
-  LinearSolverOptions linear_options = {.linear_solver  = LinearSolver::GMRES,
-                                                      .preconditioner = Preconditioner::HypreAMG,
-                                                      .relative_tol   = 1.0e-6,
-                                                      .absolute_tol   = 1.0e-10,
-                                                      .max_iterations = 500,
-                                                      .print_level    = 0};
+  // LinearSolverOptions linear_options = {.linear_solver  = LinearSolver::GMRES,
+  //                                                     .preconditioner = Preconditioner::HypreAMG,
+  //                                                     .relative_tol   = 1.0e-6,
+  //                                                     .absolute_tol   = 1.0e-10,
+  //                                                     .max_iterations = 500,
+  //                                                     .print_level    = 0};
 
   NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = serac::NonlinearSolver::Newton,
                                               .relative_tol   = 1.0e-8,
@@ -136,11 +146,11 @@ int main(int argc, char* argv[])
 // #endif
 
   // Material properties
-  double density         = 1.0;
-  double young_modulus   = 0.25e6; // 0.25e6; (multiply by 10e-3 to go from SI to [Kg/s/mm])
-  double possion_ratio   = 0.48;
-  double beta_param      = 5.2e4;  // 5.2e4; (multiply by 10e-3 to go from SI to [Kg/s/mm])
-  double max_order_param = 0.4;
+  double density         = 1.0;    // [Kg / mm3]
+  double young_modulus   = 4.0e5;  // 0.25e6; // [Kg /s2 / mm]
+  double possion_ratio   = 0.48;   // 0.48
+  double beta_param      = 2.31e5; // 5.2e4; // [Kg /s2 / mm] 
+  double max_order_param = 0.45;   // 0.4;
   double gamma_angle     = 0.0;
   double eta_angle       = 0.0;
 
@@ -176,6 +186,26 @@ int main(int argc, char* argv[])
       double t    = 0.525e-3;
 
 #ifdef USE_2X1_LATTICE
+#ifdef USE_BORDER
+      // horizontal
+      if ( x[1] >= d ){
+          return 0.0;
+        }
+      // vertical
+      else if ( (x[0] < t) || (x[0] > 2*d-t) || ((x[0] > d-t/2)&&(x[0] < d+t/2))  ){
+          return M_PI_2;
+        }
+      // forward incline
+      else if ( x[0] < d ){
+        return -0.1920;
+      }
+      // backward incline
+      else if ( x[0] > d ){
+        return +0.1920;
+      } 
+       // All vertical walls
+       return M_PI_2;
+#else
       // // All vertical walls
       // if ((x[0] <= t) || (x[0] >= 4*d - t)) || ((x[0] >= 2*d-t/2) && (x[0] <= 2*d+t/2))) {
       //   return M_PI_2;
@@ -192,18 +222,34 @@ int main(int argc, char* argv[])
       //     return +0.1920;
       //   }
 
-      // forward inclined
-      if ( ( ( ((x[0] > 0*d+t) && (x[0] < 1*d-t/2)) || ((x[0] > 9.75e-3+t/2) && (x[0] < 3*d-3*t/2)) ) && x[1] >= 0.0 ) ||
-           ( ( ((x[0] > 1*d+t/2) && (x[0] < 2*d-t)) || ((x[0] > 14.5e-3+t/2) && (x[0] < 4*d-2*t)) ) && x[1] < 0.0) ){
-          return -0.1920;
-        }
-        // backwards incline
-        else if ( ( ( ((x[0] > 0*d+t) && (x[0] < 1*d-t/2)) || ((x[0] > 9.75e-3+t/2) && (x[0] < 3*d-3*t/2)) ) && x[1] < 0.0 ) ||
-           ( ( ((x[0] > 1*d+t/2) && (x[0] < 2*d-t)) || ((x[0] > 14.5e-3+t/2) && (x[0] < 4*d-2*t)) ) && x[1] >= 0.0) ){
-          return +0.1920;
-        }
+      // // forward inclined
+      // if ( ( ( ((x[0] > 0*d+t) && (x[0] < 1*d-t/2)) || ((x[0] > 9.75e-3+t/2) && (x[0] < 3*d-3*t/2)) ) && x[1] >= 0.0 ) ||
+      //      ( ( ((x[0] > 1*d+t/2) && (x[0] < 2*d-t)) || ((x[0] > 14.5e-3+t/2) && (x[0] < 4*d-2*t)) ) && x[1] < 0.0) ){
+      //     return -0.1920;
+      //   }
+      //   // backwards incline
+      //   else if ( ( ( ((x[0] > 0*d+t) && (x[0] < 1*d-t/2)) || ((x[0] > 9.75e-3+t/2) && (x[0] < 3*d-3*t/2)) ) && x[1] < 0.0 ) ||
+      //      ( ( ((x[0] > 1*d+t/2) && (x[0] < 2*d-t)) || ((x[0] > 14.5e-3+t/2) && (x[0] < 4*d-2*t)) ) && x[1] >= 0.0) ){
+      //     return +0.1920;
+      //   }
+      //  // All vertical walls
+      //  return M_PI_2;
+
+      // vertical
+      if ( (x[0] < 0.3e-3) || (x[0] > 9.20e-3) || ((x[0] > 4.45e-3)&&(x[0] < 5.05e-3)  ) ){
+        return M_PI_2;
+      }
+      // forward incline
+      else if ( x[0] <= 4.45e-3 ){
+        return -0.1920;
+      }
+      // backward incline
+      else if ( x[0] >= 5.05e-3 + 0.0*d*t ){
+        return +0.1920;
+      } 
        // All vertical walls
        return M_PI_2;
+#endif
 #else
       double Hmax = 15.0e-3;
       // top wall
@@ -306,6 +352,11 @@ int main(int argc, char* argv[])
 
 #ifdef USE_2X1_LATTICE
   outputFilename = "sol_lce_bertoldi_honeycomb_2x1_inverted_";
+#ifdef USE_BORDER
+  outputFilename += "with_border";
+#else
+  outputFilename += "no_border";
+#endif
 #endif
 
   solid_solver.outputState(outputFilename);
