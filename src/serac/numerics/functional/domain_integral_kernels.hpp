@@ -59,7 +59,12 @@ struct QFunctionArgument<Hcurl<p>, Dimension<2> > {
 /// @overload
 template <int p>
 struct QFunctionArgument<Hcurl<p>, Dimension<3> > {
-  using type = tuple<tensor<double, 3>, tensor<double, 3> >;  ///< what will be passed to the q-function
+  using type = tuple<tensor<double, 3>, tensor<double, 3> >; ///< what will be passed to the q-function
+};
+
+template <typename T, int d>
+struct QFunctionArgument< Uniform<T>, Dimension<d> >{
+  using type = T; ///< what will be passed to the q-function
 };
 
 template <int i, int dim, typename... trials, typename lambda, typename qpt_data_type>

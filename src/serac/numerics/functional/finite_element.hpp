@@ -399,5 +399,6 @@ struct finite_element;
 #include "detail/hexahedron_L2.inl"
 
 #include "detail/qoi.inl"
+#include "detail/uniform.inl"
 
 }  // namespace serac

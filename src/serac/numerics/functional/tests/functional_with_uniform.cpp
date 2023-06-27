@@ -29,24 +29,25 @@ TEST(basic, scalar_uniform) {
   
   constexpr int dim = 2;
   constexpr int p = 2;
-  using test_space  = H1<p>;
-  using trial_space = H1<p>;
 
   std::string meshfile = SERAC_REPO_DIR "/data/meshes/patch2D.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(meshfile), 1);
 
-  auto                        fec = mfem::H1_FECollection(p, dim);
-  mfem::ParFiniteElementSpace fespace(mesh.get(), &fec);
+  using test  = H1<p>;
+  using trial = H1<p>;
+  FunctionSpace test_space(mesh.get(), H1<p>{});
+  FunctionSpace trial_space_0(mesh.get(), H1<p>{});
+  FunctionSpace trial_space_1(mesh.get(), Uniform<double>{});
 
-  mfem::Vector U(fespace.TrueVSize());
+  mfem::Vector U(trial_space_0.GetTrueVSize());
   U.Randomize();
 
   // Construct the new functional object using the specified test and trial spaces
-  Functional<test_space(trial_space, double)> residual(&fespace, {&fespace, UniformSpace<double>{}});
+  Functional<test(trial, Uniform<double>)> residual(&test_space, {&trial_space_0, &trial_space_1});
 
   residual.AddDomainIntegral(
-      Dimension<dim>{}, DependsOn<0>{},
+      Dimension<dim>{}, DependsOn<0, 1>{},
       [=](auto /*x*/, auto temperature, auto param) {
         auto [u, dudx] = temperature;
         auto heat_flux = sin(u + param) * dudx;
