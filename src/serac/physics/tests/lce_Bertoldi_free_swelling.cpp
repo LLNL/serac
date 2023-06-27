@@ -15,19 +15,20 @@
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/solid_mechanics.hpp"
 #include "serac/physics/materials/liquid_crystal_elastomer.hpp"
+#include "serac/infrastructure/initialize.hpp"
+#include "serac/infrastructure/terminator.hpp"
 
 using namespace serac;
 
-using serac::solid_mechanics::default_static_options;
-
 int main(int argc, char* argv[])
 {
-  MPI_Init(&argc, &argv);
+  // MPI_Init(&argc, &argv);
+  // int rank = -1;
+  // MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  
+  auto [num_procs, rank] = serac::initialize(argc, argv);
 
-  int rank = -1;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-  axom::slic::SimpleLogger logger;
+  // axom::slic::SimpleLogger logger;
   axom::slic::setIsRoot(rank == 0);
 
   constexpr int p                   = 1;
@@ -40,13 +41,13 @@ int main(int argc, char* argv[])
   serac::StateManager::initialize(datastore, "LCE_free_swelling_bertoldi");
 
   // Construct the appropriate dimension mesh and give it to the data store
-  int nElem = 6;
+  int nElem = 5;
   // double lx = 2.5e-3, ly = 0.25e-3, lz = 12.5e-3;
   // ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(5*nElem, nElem, 25*nElem, mfem::Element::HEXAHEDRON,
   // lx, ly, lz)); double ly = 2.5, lz = 0.25, lx = 12.5;
-  double       lx = 12.5e-3, ly = 2.5e-3, lz = 0.25e-3;
+  double   lx = (10.0e-3)/2, ly = (5.0e-3)/2, lz = (0.425e-3)/2;
   ::mfem::Mesh cuboid =
-      mfem::Mesh(mfem::Mesh::MakeCartesian3D(25 * nElem, 5 * nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
+      mfem::Mesh(mfem::Mesh::MakeCartesian3D(20 * nElem, 10 * nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
   auto mesh = mesh::refineAndDistribute(std::move(cuboid), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
 
@@ -70,19 +71,30 @@ int main(int argc, char* argv[])
   // ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛--> x
 
   // Construct a functional-based solid mechanics solver
-  IterativeSolverOptions default_linear_options    = {.rel_tol     = 1.0e-6,
-                                                   .abs_tol     = 1.0e-16,
-                                                   .print_level = 0,
-                                                   .max_iter    = 600,
-                                                   .lin_solver  = LinearSolver::GMRES,
-                                                   .prec        = HypreBoomerAMGPrec{}};
-  NonlinearSolverOptions default_nonlinear_options = {
-      .rel_tol = 1.0e-6, .abs_tol = 1.0e-13, .max_iter = 10, .print_level = 1};
+  // IterativeSolverOptions default_linear_options    = {.rel_tol     = 1.0e-6,
+  //                                                  .abs_tol     = 1.0e-16,
+  //                                                  .print_level = 0,
+  //                                                  .max_iter    = 600,
+  //                                                  .lin_solver  = LinearSolver::GMRES,
+  //                                                  .prec        = HypreBoomerAMGPrec{}};
+  // NonlinearSolverOptions default_nonlinear_options = {
+  //     .rel_tol = 1.0e-6, .abs_tol = 1.0e-13, .max_iter = 10, .print_level = 1};
+
+  LinearSolverOptions linear_options = {.linear_solver = LinearSolver::SuperLU};
+  // LinearSolverOptions linear_options = {.linear_solver  = LinearSolver::GMRES,
+  //                                                     .preconditioner = Preconditioner::HypreAMG,
+  //                                                     .relative_tol   = 1.0e-6,
+  //                                                     .absolute_tol   = 1.0e-10,
+  //                                                     .max_iterations = 500,
+  //                                                     .print_level    = 0};
+
+  NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = serac::NonlinearSolver::Newton,
+                                              .relative_tol   = 1.0e-8,
+                                              .absolute_tol   = 1.0e-14,
+                                              .max_iterations = 10,
+                                              .print_level    = 1};
   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
-      {default_linear_options, default_nonlinear_options}, GeometricNonlinearities::Off, "lce_solid_functional");
-  // SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p>>> solid_solver(default_static_options,
-  // GeometricNonlinearities::Off,
-  //                                                                 "lce_solid_functional");
+      nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_free_swelling");
 
   // -------------------
   // Material properties
@@ -90,14 +102,13 @@ int main(int argc, char* argv[])
 
   double density         = 1.0;    // [Kg / mm3]
   double young_modulus   = 4.0e5;  // 3.0e2;  // [Kg /s2 / mm]
-  double possion_ratio   = 0.48;
-  double beta_param      = 2.0e5;  // 5.1e-2; // 100.0; // [Kg /s2 / mm] 0.041 //
-  double max_order_param = 0.2;
+  double possion_ratio   = 0.49;
+  double beta_param      = 2.31e5;  // 5.1e-2; // 100.0; // [Kg /s2 / mm] 0.041 //
+  double max_order_param = 0.45;
   // -------------------
 
   // Set material
-  LiqCrystElast_Bertoldi        lceMat(density, young_modulus, possion_ratio, max_order_param, beta_param);
-  LiqCrystElast_Bertoldi::State initial_state{};
+  LiquidCrystalElastomerBertoldi lceMat(density, young_modulus, possion_ratio, max_order_param, beta_param);
 
   // Parameter 1
   FiniteElementState orderParam(StateManager::newState(FiniteElementState::Options{.order = p, .name = "orderParam"}));
@@ -105,7 +116,7 @@ int main(int argc, char* argv[])
 
   // Parameter 2
   FiniteElementState gammaParam(
-      StateManager::newState(FiniteElementState::Options{.order = p, .vector_dim = 1, .name = "gammaParam"}));
+      StateManager::newState(FiniteElementState::Options{.order = p, .element_type = ElementType::L2,  .name = "gammaParam"}));
 
   int  lceArrangementTag = 1;
   auto gammaFunc         = [lceArrangementTag](const mfem::Vector& x, double) -> double {
@@ -166,7 +177,7 @@ int main(int argc, char* argv[])
 
   // Paremetr 3
   FiniteElementState etaParam(
-      StateManager::newState(FiniteElementState::Options{.order = p, .vector_dim = 1, .name = "etaParam"}));
+      StateManager::newState(FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "etaParam"}));
   auto                      etaFunc = [](const mfem::Vector& /*x*/, double) -> double { return 0.0; };
   mfem::FunctionCoefficient etaCoef(etaFunc);
   etaParam.project(etaCoef);
@@ -180,8 +191,7 @@ int main(int argc, char* argv[])
   solid_solver.setParameter(GAMMA_INDEX, gammaParam);
   solid_solver.setParameter(ETA_INDEX, etaParam);
 
-  auto param_data = solid_solver.createQuadratureDataBuffer(initial_state);
-  solid_solver.setMaterial(DependsOn<ORDER_INDEX, GAMMA_INDEX, ETA_INDEX>{}, lceMat, param_data);
+  solid_solver.setMaterial(DependsOn<ORDER_INDEX, GAMMA_INDEX, ETA_INDEX>{}, lceMat);
 
   // Boundary conditions:
   // Prescribe zero displacement at the supported end of the beam
@@ -202,7 +212,7 @@ int main(int argc, char* argv[])
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  int num_steps = 50;
+  int num_steps = 10;
 
   std::string outputFilename = "sol_lce_bertoldi_free_swelling";
   solid_solver.outputState(outputFilename);
@@ -223,31 +233,45 @@ int main(int argc, char* argv[])
     solid_solver.advanceTimestep(dt);
     solid_solver.outputState(outputFilename);
 
-    FiniteElementState& displacement = solid_solver.displacement();
-    auto&               fes          = displacement.space();
-
-    mfem::Vector dispVecX(fes.GetNDofs());
+    // FiniteElementState& displacement = solid_solver.displacement();
+    mfem::ParGridFunction displacement_gf = solid_solver.displacement().gridFunction();
+    auto&               fes          = solid_solver.displacement().space();
+    int                 numDofs      = fes.GetNDofs();
+    mfem::Vector dispVecX(numDofs);
     dispVecX = 0.0;
-    mfem::Vector dispVecY(fes.GetNDofs());
+    mfem::Vector dispVecY(numDofs);
     dispVecY = 0.0;
-    mfem::Vector dispVecZ(fes.GetNDofs());
+    mfem::Vector dispVecZ(numDofs);
     dispVecZ = 0.0;
 
-    for (int k = 0; k < fes.GetNDofs(); k++) {
-      dispVecX(k) = displacement(3 * k + 0);
-      dispVecY(k) = displacement(3 * k + 1);
-      dispVecZ(k) = displacement(3 * k + 2);
+    for (int k = 0; k < numDofs; k++) {
+      dispVecX(k) = displacement_gf(0 * numDofs + k);
+      dispVecY(k) = displacement_gf(1 * numDofs + k);
+      dispVecZ(k) = displacement_gf(2 * numDofs + k);
     }
+
+    double gblDispXmin, lclDispXmin = dispVecX.Min();
+    double gblDispXmax, lclDispXmax = dispVecX.Max();
+    double gblDispYmin, lclDispYmin = dispVecY.Min();
+    double gblDispYmax, lclDispYmax = dispVecY.Max();
+    double gblDispZmin, lclDispZmin = dispVecZ.Min();
+    double gblDispZmax, lclDispZmax = dispVecZ.Max();
+
+    MPI_Allreduce(&lclDispXmin, &gblDispXmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(&lclDispXmax, &gblDispXmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+    MPI_Allreduce(&lclDispYmin, &gblDispYmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(&lclDispYmax, &gblDispYmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+    MPI_Allreduce(&lclDispZmin, &gblDispZmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(&lclDispZmax, &gblDispZmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
 
     if (rank == 0) {
       std::cout << "\n... Entering time step: " << i + 1 << "\n... At time: " << t
-                << "\n... Min X displacement: " << dispVecX.Min() << "\n... Max X displacement: "
-                << dispVecX.Max()
-                // <<"\n... Min Y displacement: " << dispVecY.Min()
-                << "\n... Max Y displacement: "
-                << dispVecY.Max()
-                // <<"\n... Min Z displacement: " << dispVecZ.Min()
-                << "\n... Max Z displacement: " << dispVecZ.Max() << std::endl;
+                << "\n... Min X displacement: " << gblDispXmin
+                << "\n... Max X displacement: " << gblDispXmax
+                << "\n... Min Y displacement: " << gblDispYmin
+                << "\n... Max Y displacement: " << gblDispYmax
+                << "\n... Min Z displacement: " << gblDispZmin
+                << "\n... Max Z displacement: " << gblDispZmax << std::endl;
     }
 
     if (std::isnan(dispVecX.Max()) || std::isnan(-1 * dispVecX.Max())) {
@@ -260,5 +284,5 @@ int main(int argc, char* argv[])
     orderParam = max_order_param * (tmax - t) / tmax;
   }
 
-  MPI_Finalize();
+  serac::exitGracefully();
 }

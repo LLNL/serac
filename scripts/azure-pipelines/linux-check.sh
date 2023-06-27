@@ -73,7 +73,7 @@ if [[ "$DO_DOCS_CHECK" == "yes" ]] ; then
 fi
 
 if [[ "$DO_STYLE_CHECK" == "yes" ]] ; then
-    or_die make VERBOSE=1 check
+    or_die make VERBOSE=1 clangformat_check
 fi
 
 exit 0
