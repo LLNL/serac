@@ -4,6 +4,8 @@
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/dual.hpp"
 
+#include "mfem.hpp"
+
 namespace serac {
 
 /** @brief class for checking if a type is a tensor of dual numbers or not */
@@ -707,5 +709,44 @@ auto find_root(function&& f, tensor<double, n> x0)
 
   return x;
 };
+
+template <typename T, int size>
+auto eigenvalues(const serac::tensor< T, size, size> &A)
+{
+  // put tensor values in an mfem::DenseMatrix
+  mfem::DenseMatrix matA(size, size);
+  for (int i=0; i<size; i++) {
+    for (int j=0; j<size; j++) {
+      if constexpr (is_dual_number<T>::value) {
+        matA(i, j) = A[i][j].value;
+      } else {
+        matA(i, j) = A[i][j];
+      }
+    }
+  }
+
+  // compute eigenvalues
+  mfem::DenseMatrixEigensystem eig_sys(matA);
+  eig_sys.Eval();
+
+  serac::tensor<T, size> output;
+
+  for (int k=0; k < size; k++) {
+
+    // compute eigenvalues 
+    output[k] = eig_sys.Eigenvalue(k);
+
+    // and their derivatives, when appropriate
+    if constexpr (is_dual_number<T>::value) {
+      tensor< double, size > phi = make_tensor<size>([&](int i){ return eig_sys.Eigenvector(k)[i]; });
+      auto dA = make_tensor<size, size>([&](int i, int j) { return A(i,j).gradient; });
+      output[k].gradient = dot(phi, dA, phi);
+    }
+  }
+
+  return output;
+}
+
+
 
 }  // namespace serac
