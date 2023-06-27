@@ -18,6 +18,9 @@
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/terminator.hpp"
 
+#define CUSTOM_SOLVER
+// #undef CUSTOM_SOLVER
+
 using namespace serac;
 
 // void pinNode(mfem::ParMesh parMesh, mfem::Array<int> tdof_list)
@@ -113,7 +116,40 @@ int main(int argc, char* argv[])
 
   auto mesh = mesh::refineAndDistribute(std::move(initial_mesh), serial_refinement, parallel_refinement);
 
-  // mfem::ParMesh *pmesh = serac::StateManager::setMesh(std::move(mesh));
+
+#ifdef CUSTOM_SOLVER
+  mfem::ParMesh *pmesh = serac::StateManager::setMesh(std::move(mesh));
+
+  // ---------------------
+  // Custom solver options
+  // ---------------------
+  // _custom_solver_start
+  auto nonlinear_solver = std::make_unique<mfem::NewtonSolver>(pmesh->GetComm());
+  // auto nonlinear_solver = std::make_unique<mfem::KINSolver>(pmesh->GetComm(), KIN_LINESEARCH, true);
+  nonlinear_solver->SetPrintLevel(1);
+  nonlinear_solver->SetMaxIter(50);
+  nonlinear_solver->SetAbsTol(1.0e-10);
+  nonlinear_solver->SetRelTol(1.0e-6);
+
+  auto linear_solver = std::make_unique<mfem::HypreGMRES>(pmesh->GetComm());
+  linear_solver->SetPrintLevel(0);
+  linear_solver->SetMaxIter(1000);
+  linear_solver->SetKDim(500);
+  linear_solver->SetTol(1.0e-10);
+
+  // preconditioners: HypreILU, HypreBoomerAMG, HypreEuclid (paralle incomplete LU factorization)
+  auto preconditioner = std::make_unique<mfem::HypreBoomerAMG>();
+  preconditioner->SetPrintLevel(0);
+  linear_solver->SetPreconditioner(*preconditioner);
+
+  auto equation_solver = std::make_unique<serac::EquationSolver>(
+      std::move(nonlinear_solver), std::move(linear_solver), std::move(preconditioner));
+
+  SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
+      std::move(equation_solver), solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional");
+  // _custom_solver_end
+
+#else
   serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a functional-based solid mechanics solver
@@ -126,6 +162,7 @@ int main(int argc, char* argv[])
                                               .print_level    = 1};
   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
       nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional");
+#endif
 
   // Material properties
   double density         = 1.0;
@@ -294,6 +331,32 @@ int main(int argc, char* argv[])
       }
     }
   }
+
+  // Compute sensitivities
+  // ---------------------
+
+  // Make up an adjoint load which can also be viewed as a
+  // sensitivity of some qoi with respect to displacement
+  mfem::ParLinearForm adjoint_load_form(&solid_solver.displacement().space());
+  adjoint_load_form = 1.0;
+
+  // Construct a dummy adjoint load (this would come from a QOI downstream).
+  // This adjoint load is equivalent to a discrete L1 norm on the displacement.
+  serac::FiniteElementDual              adjoint_load(solid_solver.displacement().space(), "adjoint_load");
+  std::unique_ptr<mfem::HypreParVector> assembled_vector(adjoint_load_form.ParallelAssemble());
+  adjoint_load = *assembled_vector;
+
+  // Solve the adjoint problem
+  solid_solver.solveAdjoint({{"displacement", adjoint_load}});
+  solid_solver.outputState(outputFilename);
+
+  if (rank == 0) {
+    std::cout << "\n... Solved adjoint problem... " << std::endl;
+  }
+
+  // Second forward solve
+  // --------------------
+  solid_solver.advanceTimestep(dt);
 
   serac::exitGracefully();
 }
