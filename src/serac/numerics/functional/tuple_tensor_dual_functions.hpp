@@ -710,6 +710,14 @@ auto find_root(function&& f, tensor<double, n> x0)
   return x;
 };
 
+/**
+ * @brief compute the eigenvalues of a symmetric matrix A
+ * 
+ * @tparam T either `double` or a `serac::dual` type 
+ * @tparam size the dimensions of the matrix
+ * @param A the matrix 
+ * @return a vector of the eigenvalues of A (and their derivatives, if A contains dual numbers) 
+ */
 template <typename T, int size>
 auto eigenvalues(const serac::tensor< T, size, size> &A)
 {
