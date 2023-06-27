@@ -725,7 +725,7 @@ auto eigenvalues(const serac::tensor< T, size, size> &A)
     }
   }
 
-  // compute eigenvalues
+  // compute eigendecomposition
   mfem::DenseMatrixEigensystem eig_sys(matA);
   eig_sys.Eval();
 
@@ -733,10 +733,10 @@ auto eigenvalues(const serac::tensor< T, size, size> &A)
 
   for (int k=0; k < size; k++) {
 
-    // compute eigenvalues 
+    // extract eigenvalues 
     output[k] = eig_sys.Eigenvalue(k);
 
-    // and their derivatives, when appropriate
+    // and calculate their derivatives, when appropriate
     if constexpr (is_dual_number<T>::value) {
       tensor< double, size > phi = make_tensor<size>([&](int i){ return eig_sys.Eigenvector(k)[i]; });
       auto dA = make_tensor<size, size>([&](int i, int j) { return A(i,j).gradient; });
@@ -746,7 +746,5 @@ auto eigenvalues(const serac::tensor< T, size, size> &A)
 
   return output;
 }
-
-
 
 }  // namespace serac
