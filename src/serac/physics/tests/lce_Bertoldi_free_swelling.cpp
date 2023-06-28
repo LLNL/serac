@@ -103,8 +103,8 @@ int main(int argc, char* argv[])
   double density         = 1.0;    // [Kg / mm3]
   double young_modulus   = 4.0e5;  // 3.0e2;  // [Kg /s2 / mm]
   double possion_ratio   = 0.49;
-  double beta_param      = 2.31e5;  // 5.1e-2; // 100.0; // [Kg /s2 / mm] 0.041 //
-  double max_order_param = 0.45;
+  double beta_param      = 5.2e5;  // 2.31e5; // [Kg /s2 / mm] 0.041 //
+  double max_order_param = 0.2; // 0.45
   // -------------------
 
   // Set material

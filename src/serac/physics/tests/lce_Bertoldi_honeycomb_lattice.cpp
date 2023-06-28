@@ -111,7 +111,7 @@ int main(int argc, char* argv[])
   NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = serac::NonlinearSolver::Newton,
                                               .relative_tol   = 1.0e-8,
                                               .absolute_tol   = 1.0e-14,
-                                              .max_iterations = 15,
+                                              .max_iterations = 25,
                                               .print_level    = 1};
   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
       nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional");
@@ -147,10 +147,10 @@ int main(int argc, char* argv[])
 
   // Material properties
   double density         = 1.0;    // [Kg / mm3]
-  double young_modulus   = 4.0e5;  // 0.25e6; // [Kg /s2 / mm]
-  double possion_ratio   = 0.48;   // 0.48
-  double beta_param      = 2.31e5; // 5.2e4; // [Kg /s2 / mm] 
-  double max_order_param = 0.45;   // 0.4;
+  double young_modulus   = 4.0e5;  // 4.0e5 [Kg /s2 / mm]
+  double possion_ratio   = 0.49;   // 0.49;   // 0.48 // 
+  double beta_param      = 2.0e5; // 5.20e5; // 2.31e5; // [Kg /s2 / mm] 
+  double max_order_param = 0.45;   // 0.20;   // 0.45; //
   double gamma_angle     = 0.0;
   double eta_angle       = 0.0;
 
@@ -189,66 +189,33 @@ int main(int argc, char* argv[])
 #ifdef USE_BORDER
       // horizontal
       if ( x[1] >= d ){
-          return 0.0;
-        }
+        return 0.0;
+      }
       // vertical
-      else if ( (x[0] < t) || (x[0] > 2*d-t) || ((x[0] > d-t/2)&&(x[0] < d+t/2))  ){
-          return M_PI_2;
-        }
+      else if ( (x[0] < 0.3e-3) || (x[0] > 9.20e-3) || ((x[0] > 4.45e-3)&&(x[0] < 5.05e-3)  ) ){
+        return M_PI_2;
+      }
       // forward incline
-      else if ( x[0] < d ){
+      else if ( x[0] <= 4.45e-3 + 0.0*d*t){
         return -0.1920;
       }
       // backward incline
-      else if ( x[0] > d ){
+      else{ // if ( x[0] >= 5.05e-3 + 0.0*d*t ){
         return +0.1920;
-      } 
-       // All vertical walls
-       return M_PI_2;
+      }
 #else
-      // // All vertical walls
-      // if ((x[0] <= t) || (x[0] >= 4*d - t)) || ((x[0] >= 2*d-t/2) && (x[0] <= 2*d+t/2))) {
-      //   return M_PI_2;
-      // }
-
-      // // forward inclined
-      // if ( ( ( ((x[0] > 0*d+t/2) && (x[0] < 1*d-t/2)) || ((x[0] > 2*d+t/2) && (x[0] < 3*d-t/2)) ) && x[1] >= 2*d ) ||
-      //      ( ( ((x[0] > 1*d+t/2) && (x[0] < 2*d-t/2)) || ((x[0] > 3*d+t/2) && (x[0] < 4*d-t/2)) ) && x[1] < 2*d) ){
-      //     return -0.1920;
-      //   }
-      //   // backwards incline
-      //   else if ( ( ( ((x[0] > 1*d+t/2) && (x[0] < 2*d-t/2)) || ((x[0] > 3*d+t/2) && (x[0] < 4*d-t/2)) ) && x[1] >= 2*d ) ||
-      //             ( ( ((x[0] > 0*d+t/2) && (x[0] < 1*d-t/2)) || ((x[0] > 2*d+t/2) && (x[0] < 3*d-t/2)) ) && x[1] < 2*d) ){
-      //     return +0.1920;
-      //   }
-
-      // // forward inclined
-      // if ( ( ( ((x[0] > 0*d+t) && (x[0] < 1*d-t/2)) || ((x[0] > 9.75e-3+t/2) && (x[0] < 3*d-3*t/2)) ) && x[1] >= 0.0 ) ||
-      //      ( ( ((x[0] > 1*d+t/2) && (x[0] < 2*d-t)) || ((x[0] > 14.5e-3+t/2) && (x[0] < 4*d-2*t)) ) && x[1] < 0.0) ){
-      //     return -0.1920;
-      //   }
-      //   // backwards incline
-      //   else if ( ( ( ((x[0] > 0*d+t) && (x[0] < 1*d-t/2)) || ((x[0] > 9.75e-3+t/2) && (x[0] < 3*d-3*t/2)) ) && x[1] < 0.0 ) ||
-      //      ( ( ((x[0] > 1*d+t/2) && (x[0] < 2*d-t)) || ((x[0] > 14.5e-3+t/2) && (x[0] < 4*d-2*t)) ) && x[1] >= 0.0) ){
-      //     return +0.1920;
-      //   }
-      //  // All vertical walls
-      //  return M_PI_2;
-
       // vertical
       if ( (x[0] < 0.3e-3) || (x[0] > 9.20e-3) || ((x[0] > 4.45e-3)&&(x[0] < 5.05e-3)  ) ){
         return M_PI_2;
       }
       // forward incline
-      else if ( x[0] <= 4.45e-3 ){
+      else if ( x[0] <= 4.5e-3 + 0.0*d*t ){
         return -0.1920;
       }
       // backward incline
-      else if ( x[0] >= 5.05e-3 + 0.0*d*t ){
+      else{ // if ( x[0] >= 5.05e-3 + 0.0*d*t ){
         return +0.1920;
-      } 
-       // All vertical walls
-       return M_PI_2;
+      }
 #endif
 #else
       double Hmax = 15.0e-3;
