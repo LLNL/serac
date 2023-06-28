@@ -9,6 +9,7 @@ blt_list_append( TO test_dependencies ELEMENTS caliper adiak IF ${SERAC_ENABLE_P
 
 set(serial_solver_tests
     beam_bending.cpp
+    manufactured.cpp
     thermal_finite_diff.cpp
     thermal_statics_patch.cpp
     thermal_dynamics_patch.cpp
