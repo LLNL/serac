@@ -20,7 +20,6 @@ set(functional_headers
     finite_element.hpp
     functional.hpp
     functional_qoi.inl
-    integral_utilities.hpp
     isotropic_tensor.hpp
     polynomials.hpp
     quadrature.hpp

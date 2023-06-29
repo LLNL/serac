@@ -8,7 +8,6 @@
 #include <array>
 
 #include "serac/numerics/functional/quadrature_data.hpp"
-#include "serac/numerics/functional/integral_utilities.hpp"
 #include "serac/numerics/functional/differentiate_wrt.hpp"
 
 namespace serac {
@@ -49,20 +48,72 @@ struct QFunctionArgument<L2<p, c>, Dimension<dim>> {
   using type = serac::tuple<tensor<double, c>, tensor<double, c, dim>>;  ///< what will be passed to the q-function
 };
 
+/// @overload
+SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
+template <typename lambda, typename T, int... i>
+SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, const tensor<double,2>& x_q, const T& arg_tuple,
+                                       std::integer_sequence<int, i...>)
+{
+  tensor<double,2> J_q{};
+  return qf(serac::tuple{x_q, J_q}, serac::get<i>(arg_tuple)...);
+}
+
+/// @overload
+SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
+template <typename lambda, typename T, int... i>
+SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, const tensor<double,3>& x_q, const T& arg_tuple,
+                                       std::integer_sequence<int, i...>)
+{
+  constexpr int dim = 3;
+  tensor<double,dim,dim-1> J_q{};
+  return qf(serac::tuple{x_q, J_q}, serac::get<i>(arg_tuple)...);
+}
+
+/// @overload
+template <typename lambda, typename coords_type, typename... T>
+SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, const serac::tuple<T...>& arg_tuple)
+{
+  return apply_qf_helper(qf, x_q, arg_tuple, std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>{});
+}
+
 template <int i, int dim, typename... trials, typename lambda>
 auto get_derivative_type(lambda qf)
 {
   using qf_arguments = serac::tuple<typename QFunctionArgument<trials, serac::Dimension<dim>>::type...>;
-  return tuple{get_gradient(detail::apply_qf(qf, tensor<double, dim + 1>{}, tensor<double, dim + 1>{},
+  return tuple{get_gradient(apply_qf(qf, tensor<double, dim + 1>{},
                                              make_dual_wrt<i>(qf_arguments{}))),
                zero{}};
 };
 
-template <typename lambda, int dim, int n, typename... T>
-auto batch_apply_qf(lambda qf, const tensor<double, dim, n>& positions,
-                    const tensor<double, dim - 1, dim, n>& jacobians, const T&... inputs)
+template <typename lambda, int n, typename... T>
+auto batch_apply_qf(lambda qf, const tensor<double, 2, n>& positions,
+                    const tensor<double, 1, 2, n>& jacobians, const T&... inputs)
 {
-  using return_type = decltype(qf(tensor<double, dim>{}, tensor<double, dim>{}, T{}[0]...));
+  constexpr int dim = 2;
+  using first_arg_t = serac::tuple< tensor<double, dim>, tensor<double, dim> >;
+  using return_type = decltype(qf(first_arg_t{}, T{}[0]...));
+  tensor<tuple<return_type, zero>, n> outputs{};
+  for (int i = 0; i < n; i++) {
+    tensor<double, dim> x_q;
+    tensor<double, dim> J_q;
+    for (int j = 0; j < dim; j++) {
+      x_q[j] = positions(j, i);
+      J_q[j] = jacobians(0, j, i);
+    }
+    double scale = norm(cross(J_q));
+
+    get<0>(outputs[i]) = qf(serac::tuple{x_q, J_q}, inputs[i]...) * scale;
+  }
+  return outputs;
+}
+
+template <typename lambda, int n, typename... T>
+auto batch_apply_qf(lambda qf, const tensor<double, 3, n>& positions,
+                    const tensor<double, 2, 3, n>& jacobians, const T&... inputs)
+{
+  constexpr int dim = 3;
+  using first_arg_t = serac::tuple< tensor<double, dim>, tensor<double, dim, dim - 1> >;
+  using return_type = decltype(qf(first_arg_t{}, T{}[0]...));
   tensor<tuple<return_type, zero>, n> outputs{};
   for (int i = 0; i < n; i++) {
     tensor<double, dim>          x_q;
@@ -73,11 +124,9 @@ auto batch_apply_qf(lambda qf, const tensor<double, dim, n>& positions,
         J_q(j, k) = jacobians(k, j, i);
       }
     }
-    tensor<double, dim> n_q = cross(J_q);
+    double scale = norm(cross(J_q));
 
-    double scale = norm(n_q);
-
-    get<0>(outputs[i]) = qf(x_q, n_q / scale, inputs[i]...) * scale;
+    get<0>(outputs[i]) = qf(serac::tuple{x_q, J_q}, inputs[i]...) * scale;
   }
   return outputs;
 }

@@ -9,7 +9,6 @@
 
 #include "serac/infrastructure/accelerator.hpp"
 #include "serac/numerics/functional/quadrature_data.hpp"
-#include "serac/numerics/functional/integral_utilities.hpp"
 
 namespace serac {
 
@@ -34,6 +33,33 @@ struct GPULaunchConfiguration {
 }  // namespace detail
 
 namespace domain_integral {
+
+/**
+ * @brief derivatives_ptr access
+ *
+ * Templating this will allow us to change the stride-access patterns more consistently
+ * By default derivatives_ptr is accessed using row_major ordering derivatives_ptr(element, quadrature).
+ *
+ * @tparam derivatives_type The type of the derivatives
+ * @tparam rule_type The type of the quadrature rule
+ * @tparam row_major A boolean to choose to use row major access patterns or column major
+ * @param[in] derivatives_ptr pointer to derivatives
+ * @param[in] e element number
+ * @param[in] q qaudrature number
+ * @param[in] rule quadrature rule
+ * @param[in] num_elements number of finite elements
+ */
+template <typename derivatives_type, typename rule_type, bool row_major = true>
+SERAC_HOST_DEVICE constexpr derivatives_type& AccessDerivatives(derivatives_type* derivatives_ptr, int e, int q,
+                                                                [[maybe_unused]] rule_type& rule,
+                                                                [[maybe_unused]] int        num_elements)
+{
+  if constexpr (row_major) {
+    return derivatives_ptr[e * static_cast<int>(rule.size()) + q];
+  } else {
+    return derivatives_ptr[q * num_elements + e];
+  }
+}
 
 /**
  * @brief The GPU kernel template used to create different finite element calculation routines.

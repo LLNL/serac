@@ -44,6 +44,59 @@ struct Nothing {
 struct Empty {
 };
 
+template <typename T>
+struct QuadratureData;
+
+} // namespace serac
+
+namespace axom {
+
+template <>
+class Array<serac::Nothing, 2, MemorySpace::Dynamic> {
+ public:
+  Array() {}
+  Array(uint32_t, uint32_t) {}
+};
+
+template <>
+class ArrayView<serac::Nothing, 2, MemorySpace::Dynamic> {
+ public:
+  ArrayView(Array<serac::Nothing, 2, MemorySpace::Dynamic> /* unused */) {}
+
+  /// dummy accessor to satisfy interface requirements
+  SERAC_HOST_DEVICE serac::Nothing& operator()(const size_t, const size_t) { return data; }
+
+  /// dummy accessor to satisfy interface requirements
+  SERAC_HOST_DEVICE const serac::Nothing& operator()(const size_t, const size_t) const { return data; }
+
+  serac::Nothing data;
+};
+
+template <>
+class Array<serac::Empty, 2, MemorySpace::Dynamic> {
+ public:
+  Array() {}
+  Array(uint32_t, uint32_t) {}
+};
+
+template <>
+class ArrayView<serac::Empty, 2, MemorySpace::Dynamic> {
+ public:
+  ArrayView(Array<serac::Empty, 2, MemorySpace::Dynamic> /* unused */) {}
+
+  /// dummy accessor to satisfy interface requirements
+  SERAC_HOST_DEVICE serac::Empty& operator()(const size_t, const size_t) { return data; }
+
+  /// dummy accessor to satisfy interface requirements
+  SERAC_HOST_DEVICE const serac::Empty& operator()(const size_t, const size_t) const { return data; }
+
+  serac::Empty data;
+};
+
+} // namespace axom
+
+namespace serac {
+
 /**
  * @brief A class for storing and access user-defined types at quadrature points
  *
@@ -54,54 +107,64 @@ struct Empty {
  */
 template <typename T>
 struct QuadratureData {
+
+  using geom_array_t = std::array< uint32_t, mfem::Geometry::NUM_GEOMETRIES >;
+
+  using tmp_t = axom::Array<T, 2>;
+
   /// ctor, allocates memory and sets up strides
-  QuadratureData(size_t n1, size_t n2) : stride(n2) { data = new T[n1 * n2]; }
+  QuadratureData(geom_array_t elements, geom_array_t qpts_per_element, T value = T{}) { 
 
-  /// dtor, deallocates memory
-  ~QuadratureData() { delete data; }
+    constexpr std::array geometries = {
+      mfem::Geometry::SEGMENT,
+      mfem::Geometry::TRIANGLE,
+      mfem::Geometry::SQUARE,
+      mfem::Geometry::TETRAHEDRON,
+      mfem::Geometry::CUBE
+    };
 
-  /// access a mutable reference to the quadrature data at element `i`, quadrature point `j`
-  SERAC_HOST_DEVICE T& operator()(size_t i, size_t j) { return data[i * stride + j]; }
+    for (auto geom : geometries) {
+      if (elements[uint32_t(geom)] > 0) {
+        data[geom] = tmp_t(elements[geom], qpts_per_element[geom]);
+        data[geom].fill(value);
+      }
+    }
 
-  /// access a const reference to the quadrature data at element `i`, quadrature point `j`
-  SERAC_HOST_DEVICE const T& operator()(size_t i, size_t j) const { return data[i * stride + j]; }
+  }
 
-  T*     data;    ///< pointer to the buffer of quadrature data
-  size_t stride;  ///< how many quadrature points per element
+  axom::ArrayView<T, 2> operator[](mfem::Geometry::Type geom) {
+    return axom::ArrayView<T, 2>(data.at(geom));
+  }
+
+  std::map< mfem::Geometry::Type, tmp_t > data;
 };
 
-/**
- * @brief a specialization of the QuadratureData container, for the type `Nothing`
- * that implements the appropriate interface requirements, but does not allocate any
- * memory on the heap
- */
 template <>
 struct QuadratureData<Nothing> {
-  /// dummy accessor to satisfy interfacial requirements
-  SERAC_HOST_DEVICE Nothing& operator()(const size_t, const size_t) { return data; }
 
-  /// dummy accessor to satisfy interfacial requirements
-  SERAC_HOST_DEVICE const Nothing& operator()(const size_t, const size_t) const { return data; }
+  using geom_array_t = std::array< uint32_t, mfem::Geometry::NUM_GEOMETRIES >;
 
-  /// dummy data to have an object to make a reference to in operator()
-  Nothing data;
+  QuadratureData() {}
+
+  axom::ArrayView<Nothing, 2> operator[](mfem::Geometry::Type) {
+    return axom::ArrayView<Nothing, 2>(data);
+  }
+
+  axom::Array<Nothing, 2, axom::MemorySpace::Dynamic> data;
 };
 
-/**
- * @brief a specialization of the QuadratureData container, for the type `Empty`
- * that implements the appropriate interface requirements, but does not allocate any
- * memory on the heap
- */
 template <>
 struct QuadratureData<Empty> {
-  /// dummy accessor to satisfy interfacial requirements
-  SERAC_HOST_DEVICE Empty& operator()(const size_t, const size_t) { return data; }
 
-  /// dummy accessor to satisfy interfacial requirements
-  SERAC_HOST_DEVICE const Empty& operator()(const size_t, const size_t) const { return data; }
+  using geom_array_t = std::array< uint32_t, mfem::Geometry::NUM_GEOMETRIES >;
 
-  /// dummy data to have an object to make a reference to in operator()
-  Empty data;
+  QuadratureData() {}
+
+  axom::ArrayView<Empty, 2> operator[](mfem::Geometry::Type) {
+    return axom::ArrayView<Empty, 2>(data);
+  }
+
+  axom::Array<Empty, 2, axom::MemorySpace::Dynamic> data;
 };
 
 extern std::shared_ptr<QuadratureData<Nothing> > NoQData;

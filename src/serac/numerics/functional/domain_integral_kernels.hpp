@@ -7,7 +7,6 @@
 
 #include "serac/infrastructure/accelerator.hpp"
 #include "serac/numerics/functional/quadrature_data.hpp"
-#include "serac/numerics/functional/integral_utilities.hpp"
 #include "serac/numerics/functional/function_signature.hpp"
 #include "serac/numerics/functional/differentiate_wrt.hpp"
 
@@ -62,11 +61,41 @@ struct QFunctionArgument<Hcurl<p>, Dimension<3> > {
   using type = tuple<tensor<double, 3>, tensor<double, 3> >;  ///< what will be passed to the q-function
 };
 
+/// @brief layer of indirection needed to unpack the entries of the argument tuple
+SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
+template <typename lambda, typename coords_type, typename T, typename qpt_data_type, int... i>
+SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, coords_type&& x_q, qpt_data_type&& qpt_data, const T& arg_tuple,
+                                       std::integer_sequence<int, i...>)
+{
+  if constexpr (std::is_same<typename std::decay<qpt_data_type>::type, Nothing>::value) {
+    return qf(x_q, serac::get<i>(arg_tuple)...);
+  } else {
+    return qf(x_q, qpt_data, serac::get<i>(arg_tuple)...);
+  }
+}
+
+/**
+ * @brief Actually calls the q-function
+ * This is an indirection layer to provide a transparent call site usage regardless of whether
+ * quadrature point (state) information is required
+ * @param[in] qf The quadrature function functor object
+ * @param[in] x_q The physical coordinates of the quadrature point
+ * @param[in] arg_tuple The values and derivatives at the quadrature point, as a dual
+ * @param[inout] qpt_data The state information at the quadrature point
+ */
+template <typename lambda, typename coords_type, typename... T, typename qpt_data_type>
+SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, qpt_data_type&& qpt_data,
+                                const serac::tuple<T...>& arg_tuple)
+{
+  return apply_qf_helper(qf, x_q, qpt_data, arg_tuple,
+                         std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>{});
+}
+
 template <int i, int dim, typename... trials, typename lambda, typename qpt_data_type>
 auto get_derivative_type(lambda qf, qpt_data_type&& qpt_data)
 {
   using qf_arguments = serac::tuple<typename QFunctionArgument<trials, serac::Dimension<dim> >::type...>;
-  return get_gradient(detail::apply_qf(qf, tensor<double, dim>{}, qpt_data, make_dual_wrt<i>(qf_arguments{})));
+  return get_gradient(apply_qf(qf, tensor<double, dim>{}, qpt_data, make_dual_wrt<i>(qf_arguments{})));
 };
 
 template <typename lambda, int dim, int n, typename... T>
@@ -109,7 +138,7 @@ template <uint32_t differentiation_index, int Q, mfem::Geometry::Type geom, type
           typename lambda_type, typename state_type, typename derivative_type, int... indices>
 void evaluation_kernel_impl(FunctionSignature<test(trials...)>, const std::vector<const double*>& inputs,
                             double* outputs, const double* positions, const double* jacobians, lambda_type qf,
-                            QuadratureData<state_type>& qf_state, [[maybe_unused]] derivative_type* qf_derivatives,
+                            axom::ArrayView<state_type,2> qf_state, [[maybe_unused]] derivative_type* qf_derivatives,
                             uint32_t num_elements, bool update_state, std::integer_sequence<int, indices...>)
 {
   using test_element = finite_element<geom, test>;
@@ -322,7 +351,7 @@ std::function<void(const std::vector<const double*>&, double*, bool)> evaluation
     uint32_t num_elements)
 {
   return [=](const std::vector<const double*>& inputs, double* outputs, bool update_state) {
-    domain_integral::evaluation_kernel_impl<wrt, Q, geom>(s, inputs, outputs, positions, jacobians, qf, *qf_state.get(),
+    domain_integral::evaluation_kernel_impl<wrt, Q, geom>(s, inputs, outputs, positions, jacobians, qf, (*qf_state)[geom],
                                                           qf_derivatives.get(), num_elements, update_state,
                                                           s.index_seq);
   };

@@ -83,9 +83,10 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
-      [=](auto x, auto /*n*/, auto temperature) {
+      [=](auto position, auto temperature) {
+        auto [X, dX_dxi] = position;
         auto u = get<0>(temperature);
-        return x[0] + x[1] - cos(u);
+        return X[0] + X[1] - cos(u);
       },
       mesh);
 
@@ -129,9 +130,11 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
-      [=](auto x, auto n, auto displacement) {
+      [=](auto position, auto displacement) {
+        auto [X, dX_dxi] = position;
         auto u = get<0>(displacement);
-        return (x[0] + x[1] - cos(u[0])) * n;
+        auto n = normalize(cross(dX_dxi));
+        return (X[0] + X[1] - cos(u[0])) * n;
       },
       mesh);
 
