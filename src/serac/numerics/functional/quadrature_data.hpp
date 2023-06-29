@@ -104,6 +104,7 @@ struct QuadratureData<Empty> {
   Empty data;
 };
 
+
 extern std::shared_ptr<QuadratureData<Nothing> > NoQData;
 extern std::shared_ptr<QuadratureData<Empty> >   EmptyQData;
 
