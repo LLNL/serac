@@ -712,19 +712,19 @@ auto find_root(function&& f, tensor<double, n> x0)
 
 /**
  * @brief compute the eigenvalues of a symmetric matrix A
- * 
- * @tparam T either `double` or a `serac::dual` type 
+ *
+ * @tparam T either `double` or a `serac::dual` type
  * @tparam size the dimensions of the matrix
- * @param A the matrix 
- * @return a vector of the eigenvalues of A (and their derivatives, if A contains dual numbers) 
+ * @param A the matrix
+ * @return a vector of the eigenvalues of A (and their derivatives, if A contains dual numbers)
  */
 template <typename T, int size>
-auto eigenvalues(const serac::tensor< T, size, size> &A)
+auto eigenvalues(const serac::tensor<T, size, size>& A)
 {
   // put tensor values in an mfem::DenseMatrix
   mfem::DenseMatrix matA(size, size);
-  for (int i=0; i<size; i++) {
-    for (int j=0; j<size; j++) {
+  for (int i = 0; i < size; i++) {
+    for (int j = 0; j < size; j++) {
       if constexpr (is_dual_number<T>::value) {
         matA(i, j) = A[i][j].value;
       } else {
@@ -739,16 +739,15 @@ auto eigenvalues(const serac::tensor< T, size, size> &A)
 
   serac::tensor<T, size> output;
 
-  for (int k=0; k < size; k++) {
-
-    // extract eigenvalues 
+  for (int k = 0; k < size; k++) {
+    // extract eigenvalues
     output[k] = eig_sys.Eigenvalue(k);
 
     // and calculate their derivatives, when appropriate
     if constexpr (is_dual_number<T>::value) {
-      tensor< double, size > phi = make_tensor<size>([&](int i){ return eig_sys.Eigenvector(k)[i]; });
-      auto dA = make_tensor<size, size>([&](int i, int j) { return A(i,j).gradient; });
-      output[k].gradient = dot(phi, dA, phi);
+      tensor<double, size> phi = make_tensor<size>([&](int i) { return eig_sys.Eigenvector(k)[i]; });
+      auto                 dA  = make_tensor<size, size>([&](int i, int j) { return A(i, j).gradient; });
+      output[k].gradient       = dot(phi, dA, phi);
     }
   }
 

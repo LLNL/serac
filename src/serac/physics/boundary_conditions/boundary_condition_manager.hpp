@@ -148,7 +148,7 @@ private:
  * @tparam Pred Predicate for the view
  */
 template <class Iter, class Pred>
-FilterView(Iter, Iter, Pred &&) -> FilterView<Iter, Pred>;
+FilterView(Iter, Iter, Pred&&) -> FilterView<Iter, Pred>;
 
 /**
  * @brief A container for the boundary condition information relating to a specific physics module
