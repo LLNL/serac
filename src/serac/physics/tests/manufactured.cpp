@@ -31,12 +31,12 @@ TEST(Manufactured, TwoDimensional)
 
   // Create DataStore
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "beam_bending_data");
+  serac::StateManager::initialize(datastore, "manufactured_data");
 
   // Construct the appropriate dimension mesh and give it to the data store
-  std::string filename = SERAC_REPO_DIR "/data/meshes/beam-quad.mesh";
+  std::string filename = SERAC_REPO_DIR "/data/meshes/square.mesh";
 
-  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), 0, 0);
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), 3, 0);
   serac::StateManager::setMesh(std::move(mesh));
 
   serac::LinearSolverOptions linear_options{.linear_solver  = LinearSolver::GMRES,
@@ -80,7 +80,7 @@ TEST(Manufactured, TwoDimensional)
   solid_solver.advanceTimestep(dt);
 
   // Output the sidre-based plot files
-  solid_solver.outputState("paraview_output");
+  solid_solver.outputState("visit_output");
 }
 
 }  // namespace serac
