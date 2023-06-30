@@ -34,7 +34,7 @@ TEST(Manufactured, TwoDimensional)
   serac::StateManager::initialize(datastore, "manufactured_data");
 
   // Construct the appropriate dimension mesh and give it to the data store
-  std::string filename = SERAC_REPO_DIR "/data/meshes/square.mesh";
+  std::string filename = SERAC_REPO_DIR "/more_meshes/square_indbc.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), 3, 0);
   serac::StateManager::setMesh(std::move(mesh));
@@ -78,11 +78,12 @@ TEST(Manufactured, TwoDimensional)
 //TRIAL BCS FOR 3 INPUT PARAMETERS
 //from parameterized_thermomechanics_example.cpp
   // set up essential boundary conditions
-  std::set<int> x_equals_0 = {4};
+  std::set<int> x_equals_0 = {1};
   std::set<int> y_equals_0 = {2};
 
   auto zero_scalar = [](const mfem::Vector&) -> double { return 0.0; };
-  solid_solver.setDisplacementBCs(x_equals_0, zero_scalar, 0);
+  auto zero_scalar_x = [](const mfem::Vector&) -> double { return 1.0; };
+  solid_solver.setDisplacementBCs(x_equals_0, zero_scalar_x, 0);
   solid_solver.setDisplacementBCs(y_equals_0, zero_scalar, 1);
 //CONT w rest of example code
 
