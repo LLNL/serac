@@ -61,13 +61,30 @@ TEST(Manufactured, TwoDimensional)
   solid_mechanics::StVenantKirchhoff mat{1.0, K, G};
   solid_solver.setMaterial(mat);
 
+// COMMENT OUT BCS FROM EXAMPLE
   // Define the function for the initial displacement and boundary condition
-  auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
+  // auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
 
   // Define a boundary attribute set and specify initial / boundary conditions
-  std::set<int> ess_bdr = {1};
-  solid_solver.setDisplacementBCs(ess_bdr, bc);
-  solid_solver.setDisplacement(bc);
+  // std::set<int> ess_bdr = {1}; 
+  // solid_solver.setDisplacementBCs(ess_bdr, bc);
+  // solid_solver.setDisplacement(bc);
+
+// TEMPLATE OF BCS EQUATION FROM HPP
+  // setDisplacementBCs(const std::set<int>& disp_bdr, 
+  //                    std::function<double(const mfem::Vector& x)> disp,
+  //                    int component)
+
+//TRIAL BCS FOR 3 INPUT PARAMETERS
+//from parameterized_thermomechanics_example.cpp
+  // set up essential boundary conditions
+  std::set<int> x_equals_0 = {4};
+  std::set<int> y_equals_0 = {2};
+
+  auto zero_scalar = [](const mfem::Vector&) -> double { return 0.0; };
+  solid_solver.setDisplacementBCs(x_equals_0, zero_scalar, 0);
+  solid_solver.setDisplacementBCs(y_equals_0, zero_scalar, 1);
+//CONT w rest of example code
 
   solid_solver.setPiolaTraction(
       [](const auto& x, const tensor<double, dim>& n, const double) { return -0.01 * n * (x[1] > 0.99); });
@@ -80,7 +97,7 @@ TEST(Manufactured, TwoDimensional)
   solid_solver.advanceTimestep(dt);
 
   // Output the sidre-based plot files
-  solid_solver.outputState("visit_output");
+  //solid_solver.outputState("visit_output");
 }
 
 }  // namespace serac
