@@ -61,8 +61,8 @@ TEST(LiquidCrystalElastomer, Brighenti)
               std::pow(x[0] - 1.0, 2) + std::pow(x[1] - 3.0, 2) - std::pow(rad, 2) < 0.0 ||
               std::pow(x[0] - 3.0, 2) + std::pow(x[1] - 1.0, 2) - std::pow(rad, 2) < 0.0 ||
               std::pow(x[0] - 1.0, 2) + std::pow(x[1] - 1.0, 2) - std::pow(rad, 2) < 0.0)
-                        ? 0.333 * M_PI_2
-                        : 0.667 * M_PI_2;
+                 ? 0.333 * M_PI_2
+                 : 0.667 * M_PI_2;
     }
   };
 

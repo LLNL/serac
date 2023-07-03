@@ -60,7 +60,7 @@ const mfem::DenseMatrix C = []() {
   return C_mat;
 }();
 
-const std::function stiffness_linear = [](const mfem::Vector& /*x*/) -> mfem::DenseMatrix {
+const std::function stiffness_linear = [](const mfem::Vector & /*x*/) -> mfem::DenseMatrix {
   mfem::DenseMatrix K(3, 3);
   K(0, 0) = 1.0;
   K(0, 1) = -1.0;
