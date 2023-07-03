@@ -165,19 +165,12 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
   solid_solver.setDisplacement(bc);
 
   if (test_mode == TestType::Pressure) {
-    solid_solver.setPiolaTraction([](const auto& x, const tensor<double, dim>& n, const double) {
-      if (x[0] > 7.5) {
-        return 5.0e-3 * n;
-      }
-      return 0.0 * n;
+    solid_solver.setPiolaTraction([](const auto& x, const auto & n, const double) {
+      return (x[0] > 7.5) * (5.0e-3) * n;
     });
   } else if (test_mode == TestType::Traction) {
-    solid_solver.setPiolaTraction([](const auto& x, const tensor<double, dim>& /*n*/, const double) {
-      tensor<double, dim> traction;
-      for (int i = 0; i < dim; ++i) {
-        traction[i] = (x[0] > 7.9) ? 1.0e-4 : 0.0;
-      }
-      return traction;
+    solid_solver.setPiolaTraction([](const auto& x, const auto & /*n*/, const double) {
+      return make_tensor<dim>([&](int){ return (x[0] > 7.9) ? 1.0e-4 : 0.0; });
     });
   } else {
     // Default to fail if non-implemented TestType is not implemented

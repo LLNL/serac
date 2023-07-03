@@ -77,7 +77,7 @@ TEST(BeamBending, TwoDimensional)
   solid_solver.setDisplacement(bc);
 
   solid_solver.setPiolaTraction(
-      [](const auto& x, const tensor<double, dim>& n, const double) { return -0.01 * n * (x[1] > 0.99); });
+      [](const auto& x, const auto & n, const double) { return -0.01 * n * (x[1] > 0.99); });
 
   // Finalize the data structures
   solid_solver.completeSetup();

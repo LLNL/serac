@@ -433,9 +433,12 @@ public:
   {
     residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
-        [this, flux_function](auto x, auto u, auto /* dtemp_dt */, auto p, auto... params) {
+        [this, flux_function](auto X, auto u, auto /* dtemp_dt */, auto shape, auto... params) {
           auto temp = get<VALUE>(u);
-          return flux_function(x + p, ode_time_point_, temp, params...);
+          auto x = X + shape;
+          auto n = cross(get<DERIVATIVE>(x));
+          auto area_correction = norm(n) / norm(cross(get<DERIVATIVE>(X)));
+          return flux_function(x, normalize(n), ode_time_point_, temp, params...) * area_correction;
         },
         mesh_);
   }
