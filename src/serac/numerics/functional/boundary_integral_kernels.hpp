@@ -25,9 +25,21 @@ template <typename space, typename dimension>
 struct QFunctionArgument;
 
 /// @overload
+template <int p>
+struct QFunctionArgument<H1<p, 1>, Dimension<1>> {
+  using type = serac::tuple<double, double>;  ///< what will be passed to the q-function
+};
+
+/// @overload
 template <int p, int dim>
 struct QFunctionArgument<H1<p, 1>, Dimension<dim>> {
   using type = serac::tuple<double, tensor<double, dim>>;  ///< what will be passed to the q-function
+};
+
+/// @overload
+template <int p, int c>
+struct QFunctionArgument<H1<p, c>, Dimension<1>> {
+  using type = serac::tuple<tensor<double, c>, tensor<double, c>>;  ///< what will be passed to the q-function
 };
 
 /// @overload
@@ -37,9 +49,21 @@ struct QFunctionArgument<H1<p, c>, Dimension<dim>> {
 };
 
 /// @overload
+template <int p>
+struct QFunctionArgument<L2<p, 1>, Dimension<1>> {
+  using type = serac::tuple<double, double>;  ///< what will be passed to the q-function
+};
+
+/// @overload
 template <int p, int dim>
 struct QFunctionArgument<L2<p, 1>, Dimension<dim>> {
   using type = serac::tuple<double, tensor<double, dim>>;  ///< what will be passed to the q-function
+};
+
+/// @overload
+template <int p, int c>
+struct QFunctionArgument<L2<p, c>, Dimension<1>> {
+  using type = serac::tuple<tensor<double, c>, tensor<double, c>>;  ///< what will be passed to the q-function
 };
 
 /// @overload
