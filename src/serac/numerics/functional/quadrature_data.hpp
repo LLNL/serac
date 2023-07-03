@@ -125,7 +125,7 @@ struct QuadratureData {
 
     for (auto geom : geometries) {
       if (elements[uint32_t(geom)] > 0) {
-        data[geom] = tmp_t(elements[geom], qpts_per_element[geom]);
+        data[geom] = tmp_t(elements[uint32_t(geom)], qpts_per_element[uint32_t(geom)]);
         data[geom].fill(value);
       }
     }

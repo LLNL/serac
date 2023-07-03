@@ -310,7 +310,7 @@ public:
     }
 
     for (auto geom : geometries) {
-      qpts_per_elem[geom] = size_t(num_quadrature_points(geom, Q));
+      qpts_per_elem[size_t(geom)] = uint32_t(num_quadrature_points(geom, Q));
     }
 
     return std::make_shared<QuadratureData<T>>(elems, qpts_per_elem, initial_state);
