@@ -233,7 +233,8 @@ mfem::Vector FromInlet<mfem::Vector>::operator()(const axom::inlet::Container& b
 serac::input::BoundaryConditionInputOptions FromInlet<serac::input::BoundaryConditionInputOptions>::operator()(
     const axom::inlet::Container& base)
 {
-  serac::input::BoundaryConditionInputOptions result{.attrs={}, .coef_opts = base.get<serac::input::CoefficientInputOptions>()};
+  serac::input::BoundaryConditionInputOptions result{.attrs     = {},
+                                                     .coef_opts = base.get<serac::input::CoefficientInputOptions>()};
   // Build a set with just the values of the map
   auto bdr_attr_map = base["attrs"].get<std::unordered_map<int, int>>();
   for (const auto& [_, val] : bdr_attr_map) {
