@@ -198,8 +198,9 @@ public:
     if (amg_prec) {
       // amg_prec->SetElasticityOptions(&displacement_.space());
 
-      // The above call was seg faulting in Hypre in the HYPRE_BoomerAMGSetInterpRefine(amg_precond, interp_refine)
-      // method as of version v2.26.0. Instead, we just set the system size for Hypre.
+      // TODO: The above call was seg faulting in the HYPRE_BoomerAMGSetInterpRefine(amg_precond, interp_refine)
+      // method as of Hypre version v2.26.0. Instead, we just set the system size for Hypre. This is a temporary work
+      // around as it will decrease the effectiveness of the preconditioner.
       amg_prec->SetSystemsOptions(dim, true);
     }
 
