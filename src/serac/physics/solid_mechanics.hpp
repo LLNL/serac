@@ -196,7 +196,11 @@ public:
     // to be the displacement
     auto* amg_prec = dynamic_cast<mfem::HypreBoomerAMG*>(nonlin_solver_->preconditioner());
     if (amg_prec) {
-      amg_prec->SetElasticityOptions(&displacement_.space());
+      // amg_prec->SetElasticityOptions(&displacement_.space());
+
+      // The above call was seg faulting in Hypre in the HYPRE_BoomerAMGSetInterpRefine(amg_precond, interp_refine)
+      // method as of version v2.26.0. Instead, we just set the system size for Hypre.
+      amg_prec->SetSystemsOptions(dim, true);
     }
 
     // Check for dynamic mode
