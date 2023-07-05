@@ -43,7 +43,7 @@ if(NOT SERAC_FOUND)
   set(SERAC_USE_TRIBOL         @SERAC_USE_TRIBOL@)
   set(SERAC_USE_UMPIRE         @SERAC_USE_UMPIRE@)
 
-  set(SERAC_ADIAK_DIR          "@ADIAK_DIR@")
+  #set(SERAC_ADIAK_DIR          "@ADIAK_DIR@")
   set(SERAC_AXOM_DIR           "@AXOM_DIR@")
   set(SERAC_CAMP_DIR           "@CAMP_DIR@")
   set(SERAC_CALIPER_DIR        "@CALIPER_DIR@")
