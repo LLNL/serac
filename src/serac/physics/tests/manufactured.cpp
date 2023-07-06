@@ -22,6 +22,8 @@
 
 namespace serac {
 
+double compute_patch_test_error(int refinements) {};
+
 TEST(Manufactured, TwoDimensional)
 {
   constexpr int p   = 1;
@@ -85,11 +87,11 @@ TEST(Manufactured, TwoDimensional)
   std::set<int> y_disp = {2};
 
   auto zero_scalar = [](const mfem::Vector&) -> double { return 0.0; };
-  auto disp = [](const mfem::Vector&) -> double { return 5.0; };
+  //auto disp = [](const mfem::Vector&) -> double { return 5.0; };
   solid_solver.setDisplacementBCs(x_equals_0, zero_scalar, 0);
   solid_solver.setDisplacementBCs(y_equals_0, zero_scalar, 1);
-  solid_solver.setDisplacementBCs(x_disp, disp, 0);
-  solid_solver.setDisplacementBCs(y_disp, disp, 1);
+  //solid_solver.setDisplacementBCs(x_disp, disp, 0);
+  //solid_solver.setDisplacementBCs(y_disp, disp, 1);
 
 //CONT w rest of example code
 
@@ -97,8 +99,8 @@ TEST(Manufactured, TwoDimensional)
       //[](const auto& x, const tensor<double, dim>& n, const double) { return -0.01 * n * (x[1] > 0.99); });
 
   //traction tensor
-  const tensor<double, 3> t1{{56204, 0, 0}};
-  const tensor<double, 3> t2{{0, 120410, 0}};
+  const tensor<double, 3> t1{{660206, 0, 0}};
+  const tensor<double, 3> t2{{0, 120412, 0}};
   auto traction = [t1, t2](const auto& x, const tensor<double, dim>&, const double) {
     const double spatial_tolerance = 1e-6;
     if (x[0] > 1.0 - spatial_tolerance) {
@@ -120,9 +122,26 @@ TEST(Manufactured, TwoDimensional)
 
   // Output the sidre-based plot files
   solid_solver.outputState("visit_output");
+
+
+  auto exact_disp = [](const mfem::Vector& X, mfem::Vector& u) {
+    // u = x - X, where x = 2*X + 0*Y + 0*Z
+    u[0] = X[0];
+    u[1] = 0;
+    u[2] = 0;
+  };
+
+  // Compute norm of error
+  //const int dim = 3;
+  mfem::VectorFunctionCoefficient exact_solution_coef(dim, exact_disp);
+  double error = computeL2Error(solid_solver.displacement(), exact_solution_coef);
+  EXPECT_LT(error, 1e-10);
 }
 
-  // Test
+/* // Test
+template < typename element_type>
+double solution_error(BoundaryCondition bc)
+{
    auto exact_disp = [](const mfem::Vector& X, mfem::Vector& u) {
     // u = x - X, where x = 2*X + 0*Y + 0*Z
     u = X[0];
@@ -131,7 +150,8 @@ TEST(Manufactured, TwoDimensional)
   // Compute norm of error
   const int dim = 3;
   mfem::VectorFunctionCoefficient exact_solution_coef(dim, exact_disp);
-  return computeL2Error(solid.displacement(), exact_solution_coef);
+  return computeL2Error(solid_solver.displacement(), exact_solution_coef);
+} */
 
 }  // namespace serac
 
