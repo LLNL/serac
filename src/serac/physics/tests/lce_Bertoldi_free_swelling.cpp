@@ -41,7 +41,7 @@ int main(int argc, char* argv[])
   serac::StateManager::initialize(datastore, "LCE_free_swelling_bertoldi");
 
   // Construct the appropriate dimension mesh and give it to the data store
-  int nElem = 5;
+  int nElem = 8;
   // double lx = 2.5e-3, ly = 0.25e-3, lz = 12.5e-3;
   // ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(5*nElem, nElem, 25*nElem, mfem::Element::HEXAHEDRON,
   // lx, ly, lz)); double ly = 2.5, lz = 0.25, lx = 12.5;
@@ -103,8 +103,8 @@ int main(int argc, char* argv[])
   double density         = 1.0;    // [Kg / mm3]
   double young_modulus   = 4.0e5;  // 3.0e2;  // [Kg /s2 / mm]
   double possion_ratio   = 0.49;
-  double beta_param      = 5.2e5;  // 2.31e5; // [Kg /s2 / mm] 0.041 //
-  double max_order_param = 0.2; // 0.45
+  double beta_param      = 5.0e5; // 5.2e5;  // 2.31e5; // [Kg /s2 / mm] 0.041 //
+  double max_order_param = 0.21; // 0.2; // 0.45
   // -------------------
 
   // Set material
@@ -212,7 +212,7 @@ int main(int argc, char* argv[])
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  int num_steps = 10;
+  int num_steps = 20;
 
   std::string outputFilename = "sol_lce_bertoldi_free_swelling";
   solid_solver.outputState(outputFilename);
