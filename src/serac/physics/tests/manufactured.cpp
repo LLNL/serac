@@ -48,16 +48,17 @@ TEST(Manufactured, TwoDimensional)
 
 
   serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::Newton,
-                                                  .relative_tol   = 1.0e-12,
+                                                  .relative_tol   = 1.0e-9,
                                                   .absolute_tol   = 1.0e-12,
                                                   .max_iterations = 5000,
                                                   .print_level    = 1};
 
   SolidMechanics<p, dim> solid_solver(nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options,
                                       GeometricNonlinearities::On, "solid_mechanics");
-
-  double                             K = 1.91666666666667;
-  double                             G = 1.0;
+  double E = 1e6;
+  double nu = 0.25;
+  double                             K = E/(3*(1-2*nu));
+  double                             G = E/(2*(1+nu));
   solid_mechanics::StVenantKirchhoff mat{1.0, K, G};
   solid_solver.setMaterial(mat);
 
@@ -78,17 +79,37 @@ TEST(Manufactured, TwoDimensional)
 //TRIAL BCS FOR 3 INPUT PARAMETERS
 //from parameterized_thermomechanics_example.cpp
   // set up essential boundary conditions
-  std::set<int> x_equals_0 = {1};
-  std::set<int> y_equals_0 = {2};
+  std::set<int> x_equals_0 = {3};
+  std::set<int> y_equals_0 = {1};
+  std::set<int> x_disp = {4};
+  std::set<int> y_disp = {2};
 
   auto zero_scalar = [](const mfem::Vector&) -> double { return 0.0; };
-  auto zero_scalar_x = [](const mfem::Vector&) -> double { return 1.0; };
-  solid_solver.setDisplacementBCs(x_equals_0, zero_scalar_x, 0);
+  auto disp = [](const mfem::Vector&) -> double { return 5.0; };
+  solid_solver.setDisplacementBCs(x_equals_0, zero_scalar, 0);
   solid_solver.setDisplacementBCs(y_equals_0, zero_scalar, 1);
+  solid_solver.setDisplacementBCs(x_disp, disp, 0);
+  solid_solver.setDisplacementBCs(y_disp, disp, 1);
+
 //CONT w rest of example code
 
-  solid_solver.setPiolaTraction(
-      [](const auto& x, const tensor<double, dim>& n, const double) { return -0.01 * n * (x[1] > 0.99); });
+  //solid_solver.setPiolaTraction(
+      //[](const auto& x, const tensor<double, dim>& n, const double) { return -0.01 * n * (x[1] > 0.99); });
+
+  //traction tensor
+  const tensor<double, 3> t1{{56204, 0, 0}};
+  const tensor<double, 3> t2{{0, 120410, 0}};
+  auto traction = [t1, t2](const auto& x, const tensor<double, dim>&, const double) {
+    const double spatial_tolerance = 1e-6;
+    if (x[0] > 1.0 - spatial_tolerance) {
+      return t1;
+    } else if (x[1]> 1.0 - spatial_tolerance) {
+      return t2;
+    } else {
+      return 0*t1;
+    }
+  };
+  solid_solver.setPiolaTraction(traction);
 
   // Finalize the data structures
   solid_solver.completeSetup();
@@ -98,8 +119,19 @@ TEST(Manufactured, TwoDimensional)
   solid_solver.advanceTimestep(dt);
 
   // Output the sidre-based plot files
-  //solid_solver.outputState("visit_output");
+  solid_solver.outputState("visit_output");
 }
+
+  // Test
+   auto exact_disp = [](const mfem::Vector& X, mfem::Vector& u) {
+    // u = x - X, where x = 2*X + 0*Y + 0*Z
+    u = X[0];
+  };
+
+  // Compute norm of error
+  const int dim = 3;
+  mfem::VectorFunctionCoefficient exact_solution_coef(dim, exact_disp);
+  return computeL2Error(solid.displacement(), exact_solution_coef);
 
 }  // namespace serac
 
