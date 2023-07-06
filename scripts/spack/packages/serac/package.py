@@ -1,4 +1,4 @@
-# Copyright 2013-2021 Lawrence Livermore National Security, LLC and other
+# Copyright 2013-2023 Lawrence Livermore National Security, LLC and other
 # Spack Project Developers. See the top-level LICENSE file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
@@ -111,7 +111,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     # Note: Certain combinations of CMake and Conduit do not like +mpi
     #  and cause FindHDF5.cmake to fail and only return mpi information
     #  (includes, libs, etc) instead of hdf5 info
-    depends_on("hdf5@1.8.21+hl~mpi")
+    depends_on("hdf5@1.8.21:+hl~mpi")
 
     depends_on("camp@2022.03.2:")
 
