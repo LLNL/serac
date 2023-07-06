@@ -381,8 +381,8 @@ public:
    * The @a true_dofs list can be determined using functions from the @a mfem::ParFiniteElementSpace related to the
    * displacement @a serac::FiniteElementState .
    *
-   * For the displacement function, the argument is the input position and the output is the value of the component of
-   * the displacement.
+   * For the displacement function, the first argument is the input position, the second argument is time,
+   * and the third argument is the prescribed output displacement vector.
    *
    * @note The displacement function is required to be vector-valued. However, only the dofs specified in the @a
    * true_dofs array will be set. This means that if the @a true_dofs array only contains dofs for a specific vector
