@@ -22,7 +22,13 @@
 
 namespace serac {
 
-double compute_patch_test_error(int refinements) {};
+/*double compute_patch_test_error(int refinements) {}
+
+TEST(Manufactured, Patch2D) {
+  // call compute_patch_test_error
+  // check error
+  EXPECT_LT(error, 1e-10);
+}*/
 
 TEST(Manufactured, TwoDimensional)
 {
@@ -99,8 +105,8 @@ TEST(Manufactured, TwoDimensional)
       //[](const auto& x, const tensor<double, dim>& n, const double) { return -0.01 * n * (x[1] > 0.99); });
 
   //traction tensor
-  const tensor<double, 3> t1{{660206, 0, 0}};
-  const tensor<double, 3> t2{{0, 120412, 0}};
+  const tensor<double, 3> t1{{660206*4.85, 0, 0}};
+  const tensor<double, 3> t2{{0, 120412*3.3, 0}};
   auto traction = [t1, t2](const auto& x, const tensor<double, dim>&, const double) {
     const double spatial_tolerance = 1e-6;
     if (x[0] > 1.0 - spatial_tolerance) {
