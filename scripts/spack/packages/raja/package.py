@@ -20,6 +20,8 @@ class Raja(CachedCMakePackage, CudaPackage, ROCmPackage):
 
     version('develop', branch='develop', submodules=False)
     version('main',  branch='main',  submodules=False)
+    version("2022.10.5", tag="v2022.10.5", submodules=False)
+    version("2022.10.4", tag="v2022.10.4", submodules=False)
     version('2022.03.0', tag='v2022.03.0', submodules=False)
     version('0.14.0', tag='v0.14.0', submodules='True')
     version('0.13.0', tag='v0.13.0', submodules='True')
@@ -46,7 +48,7 @@ class Raja(CachedCMakePackage, CudaPackage, ROCmPackage):
 
     # BEGIN SERAC EDIT
     # Patch for cuda and hip includes when not running on device
-    patch('arch_impl.patch', when='@2022.03.0:')
+    patch('arch_impl.patch', when='@2022.03.0')
     # END SERAC EDIT
 
     variant('openmp', default=True, description='Build OpenMP backend')
