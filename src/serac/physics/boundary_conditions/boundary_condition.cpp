@@ -12,25 +12,25 @@ namespace serac {
 
 BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component,
                                      const mfem::ParFiniteElementSpace& space, const std::set<int>& attrs)
-    : coef_(coef), component_(component), markers_(space.GetMesh()->bdr_attributes.Max()), space_(space)
+    : coef_(coef), component_(component), attr_markers_(space.GetMesh()->bdr_attributes.Max()), space_(space)
 {
   if (get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_)) {
     SLIC_ERROR_ROOT_IF(component_, "A vector coefficient must be applied to all components");
   }
 
-  markers_ = 0;
+  attr_markers_ = 0;
 
   for (const int attr : attrs) {
-    SLIC_ASSERT_MSG(attr <= markers_.Size(), "Attribute specified larger than what is found in the mesh.");
-    markers_[attr - 1] = 1;
+    SLIC_ASSERT_MSG(attr <= attr_markers_.Size(), "Attribute specified larger than what is found in the mesh.");
+    attr_markers_[attr - 1] = 1;
   }
 
-  setDofListsFromMarkers();
+  setDofListsFromAttributeMarkers();
 }
 
 BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component,
                                      const mfem::ParFiniteElementSpace& space, const mfem::Array<int>& true_dofs)
-    : coef_(coef), component_(component), markers_(0), space_(space)
+    : coef_(coef), component_(component), attr_markers_(0), space_(space)
 {
   if (get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_)) {
     SLIC_ERROR_IF(component_, "A vector coefficient must be applied to all components");
@@ -41,24 +41,42 @@ BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const std::optiona
 void BoundaryCondition::setTrueDofList(const mfem::Array<int>& true_dofs)
 {
   true_dofs_ = true_dofs;
-  space_.GetRestrictionMatrix()->BooleanMultTranspose(true_dofs_, local_dofs_);
+
+  // Create a marker arrays for the true and local dofs
+  mfem::Array<int> true_dof_marker(space_.GetTrueVSize());
+  mfem::Array<int> local_dof_marker(space_.GetVSize());
+
+  mfem::FiniteElementSpace::ListToMarker(true_dofs_, space_.GetTrueVSize(), true_dof_marker);
+
+  space_.GetRestrictionMatrix()->BooleanMultTranspose(true_dof_marker, local_dof_marker);
+
+  mfem::FiniteElementSpace::MarkerToList(local_dof_marker, local_dofs_);
 }
 
 void BoundaryCondition::setLocalDofList(const mfem::Array<int>& local_dofs)
 {
   local_dofs_ = local_dofs;
-  space_.GetRestrictionMatrix()->BooleanMult(local_dofs_, true_dofs_);
+
+  // Create a marker arrays for the true and local dofs
+  mfem::Array<int> true_dof_marker(space_.GetTrueVSize());
+  mfem::Array<int> local_dof_marker(space_.GetVSize());
+
+  mfem::FiniteElementSpace::ListToMarker(local_dofs_, space_.GetVSize(), local_dof_marker);
+
+  space_.GetRestrictionMatrix()->BooleanMult(local_dof_marker, true_dof_marker);
+
+  mfem::FiniteElementSpace::MarkerToList(true_dof_marker, true_dofs_);
 }
 
-void BoundaryCondition::setDofListsFromMarkers()
+void BoundaryCondition::setDofListsFromAttributeMarkers()
 {
   auto& mutable_space = const_cast<mfem::ParFiniteElementSpace&>(space_);
 
   if (component_) {
     mfem::Array<int> dof_markers;
 
-    mutable_space.GetEssentialTrueDofs(markers_, true_dofs_, *component_);
-    space_.GetEssentialVDofs(markers_, dof_markers, *component_);
+    mutable_space.GetEssentialTrueDofs(attr_markers_, true_dofs_, *component_);
+    space_.GetEssentialVDofs(attr_markers_, dof_markers, *component_);
 
     // The VDof call actually returns a marker array, so we need to transform it to a list of indices
     space_.MarkerToList(dof_markers, local_dofs_);
@@ -66,8 +84,8 @@ void BoundaryCondition::setDofListsFromMarkers()
   } else {
     mfem::Array<int> dof_markers;
 
-    mutable_space.GetEssentialTrueDofs(markers_, true_dofs_);
-    space_.GetEssentialVDofs(markers_, dof_markers);
+    mutable_space.GetEssentialTrueDofs(attr_markers_, true_dofs_);
+    space_.GetEssentialVDofs(attr_markers_, dof_markers);
 
     // The VDof call actually returns a marker array, so we need to transform it to a list of indices
     space_.MarkerToList(dof_markers, local_dofs_);
@@ -100,7 +118,7 @@ void BoundaryCondition::setDofs(mfem::Vector& vector, const double time) const
       state.project(*scalar_coef, dof_list, *component_);
 
     } else {
-      state.projectOnBoundary(*scalar_coef, markers_);
+      state.projectOnBoundary(*scalar_coef, attr_markers_);
     }
   }
 

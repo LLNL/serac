@@ -1,4 +1,4 @@
-# Copyright 2013-2021 Lawrence Livermore National Security, LLC and other
+# Copyright 2013-2023 Lawrence Livermore National Security, LLC and other
 # Spack Project Developers. See the top-level LICENSE file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
@@ -111,7 +111,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     # Note: Certain combinations of CMake and Conduit do not like +mpi
     #  and cause FindHDF5.cmake to fail and only return mpi information
     #  (includes, libs, etc) instead of hdf5 info
-    depends_on("hdf5@1.8.21+hl~mpi")
+    depends_on("hdf5@1.8.21:+hl~mpi")
 
     depends_on("camp@2022.03.2:")
 
@@ -381,11 +381,7 @@ class Serac(CachedCMakePackage, CudaPackage):
             # Grab common devtools root and strip the trailing slash
             path1 = os.path.realpath(spec["cppcheck"].prefix)
             path2 = os.path.realpath(spec["doxygen"].prefix)
-            devtools_root = os.path.commonprefix([path1, path2])[:-1]
-            path_replacements[devtools_root] = "${DEVTOOLS_ROOT}"
-            entries.append(
-                "# Root directory for generated developer tools\n")
-            entries.append(cmake_cache_path("DEVTOOLS_ROOT", devtools_root))
+            self.find_path_replacement(path1, path2, path_replacements, "DEVTOOLS_ROOT", entries)
 
             ats_bin_dir = get_spec_path(spec, "py-ats", path_replacements, use_bin=True)
             ats_bin_dir = pjoin(ats_bin_dir, "ats")

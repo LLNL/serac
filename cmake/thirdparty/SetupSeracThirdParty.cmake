@@ -131,11 +131,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         find_package(adiak REQUIRED NO_DEFAULT_PATH PATHS ${ADIAK_DIR})
         message(STATUS "Adiak support is ON")
         set(ADIAK_FOUND TRUE)
-
-        # Set the include directories as Adiak does not completely
-        # configure the "adiak" target
-        set_target_properties(adiak PROPERTIES
-            INTERFACE_INCLUDE_DIRECTORIES ${adiak_INCLUDE_DIRS})
     else()
         message(STATUS "Adiak support is OFF")
         set(ADIAK_FOUND FALSE)
@@ -166,11 +161,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
                      PATHS ${CALIPER_DIR})
         message(STATUS "Caliper support is ON")
         set(CALIPER_FOUND TRUE)
-
-        # Set the include directories as Caliper does not completely
-        # configure the "caliper" target
-        set_target_properties(caliper PROPERTIES
-            INTERFACE_INCLUDE_DIRECTORIES ${caliper_INCLUDE_PATH})
     else()
         message(STATUS "Caliper support is OFF")
         set(CALIPER_FOUND FALSE)

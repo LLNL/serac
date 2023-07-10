@@ -289,3 +289,21 @@ spack:
       externals:
       - spec: python@3.9.12
         prefix: /usr/tce/packages/python/python-3.9.12
+
+    # Globally lock version of third party libraries
+    camp:
+      require: "@2022.10.1"
+    conduit:
+      require: "@0.8.8~shared~test~examples~utilities"
+    hdf5:
+      variants: ~shared~mpi
+    hypre:
+      version: [2.24.0]
+    mfem:
+      require: "@4.5.2"
+    raja:
+      require: "@2022.10.5~shared~examples~exercises"
+    scr:
+      require: "@3.0.1~shared~tests~examples"
+    umpire:
+      require: "@2022.10.0~shared~examples"
