@@ -298,7 +298,7 @@ spack:
     hdf5:
       variants: ~shared~mpi
     hypre:
-      version: [2.24.0]
+      require: "@2.24.0"
     mfem:
       require: "@4.5.2"
     raja:
