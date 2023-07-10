@@ -115,7 +115,7 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     depends_on("camp@2022.03.2:")
 
-    depends_on("raja@2022.03.0:~examples~exercises", when="+raja")
+    depends_on("raja~examples~exercises", when="+raja")
     depends_on("raja~openmp", when="+raja~openmp")
     depends_on("raja+openmp", when="+raja+openmp")
 
