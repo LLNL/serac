@@ -252,8 +252,6 @@ spack:
       require: "@0.8.8~shared~test~examples~utilities"
     hdf5:
       variants: ~shared~mpi
-    hypre:
-      require: "@2.24.0"
     mfem:
       require: "@4.5.2"
     raja:
