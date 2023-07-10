@@ -11,11 +11,11 @@
 #------------------------------------------------------------------------------
 if(DEFINED ENV{SPACK_CC})
 
-  set(CMAKE_C_COMPILER "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_06_23_16_51_25/spack/lib/spack/env/clang/clang" CACHE PATH "")
+  set(CMAKE_C_COMPILER "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_10_11_47_13/spack/lib/spack/env/clang/clang" CACHE PATH "")
 
-  set(CMAKE_CXX_COMPILER "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_06_23_16_51_25/spack/lib/spack/env/clang/clang++" CACHE PATH "")
+  set(CMAKE_CXX_COMPILER "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_10_11_47_13/spack/lib/spack/env/clang/clang++" CACHE PATH "")
 
-  set(CMAKE_Fortran_COMPILER "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_06_23_16_51_25/spack/lib/spack/env/clang/gfortran" CACHE PATH "")
+  set(CMAKE_Fortran_COMPILER "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_10_11_47_13/spack/lib/spack/env/clang/gfortran" CACHE PATH "")
 
 else()
 
@@ -85,19 +85,19 @@ set(BLT_CMAKE_IMPLICIT_LINK_DIRECTORIES_EXCLUDE "/usr/tce/packages/gcc/gcc-4.9.3
 # TPLs
 #------------------------------------------------------------------------------
 
-set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_06_23_16_51_25/clang-10.0.1" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_10_11_47_13/clang-10.0.1" CACHE PATH "")
 
-set(AXOM_DIR "${TPL_ROOT}/axom-0.7.0.4-2tygx6zfdhpxqhd247szvz7vz5ivpt4o" CACHE PATH "")
+set(AXOM_DIR "${TPL_ROOT}/axom-0.7.0.4-orl2ilr73c5fnbp5o3yqgrarld2uzd7i" CACHE PATH "")
 
 set(CAMP_DIR "${TPL_ROOT}/camp-2022.03.2-preys5cwzspz6k44mynsst4bevpbx3ns" CACHE PATH "")
 
-set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.8.8-3d333zivvamspp4ztemuo4y232k25hle" CACHE PATH "")
+set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.8.8-gfeuqrnqtj5ogg7rzdyab44gweosucuh" CACHE PATH "")
 
 set(LUA_DIR "${TPL_ROOT}/lua-5.4.4-uj554fmtk6ayky6vmasbsenr4mpizatc" CACHE PATH "")
 
-set(MFEM_DIR "${TPL_ROOT}/mfem-4.5.3.1-lr6n3uajnpqihrcftqaqj4fv6j5ela42" CACHE PATH "")
+set(MFEM_DIR "${TPL_ROOT}/mfem-4.5.3.1-jj5fgi75kolrza7dlppwr3dekcjl7oqv" CACHE PATH "")
 
-set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.21-rsj66pzlsswpvngt4ccpeql7677fhozk" CACHE PATH "")
+set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.22-hq6aqdj4mopyh7cdnoxpmhx5fcrtae2w" CACHE PATH "")
 
 set(HYPRE_DIR "${TPL_ROOT}/hypre-2.26.0-meak4trkkki3ie26updimbceqvztmyec" CACHE PATH "")
 
@@ -105,7 +105,7 @@ set(METIS_DIR "${TPL_ROOT}/metis-5.1.0-eqmtccvq5pnv536nyct3gfocjertrlyz" CACHE P
 
 set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3-leavglocrsgja2o3jw2zkkdeoov5apfk" CACHE PATH "")
 
-set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4-g2xeohfuhubsfm6wtp3i4lntlg7qllgs" CACHE PATH "")
+set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4-m544je2hyf25lelfxdpzsztqpp44jzqz" CACHE PATH "")
 
 set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1-rigrz4mlijd353hvplunxj4rbfsqwxwf" CACHE PATH "")
 
@@ -126,8 +126,6 @@ set(UMPIRE_DIR "${TPL_ROOT}/umpire-2022.03.1-uvk6duvfamd67j6zlgoyxqo33mg7upn2" C
 #------------------------------------------------------------------------------
 # Devtools
 #------------------------------------------------------------------------------
-
-# Root directory for generated developer tools
 
 set(DEVTOOLS_ROOT "/usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/2023_06_20_17_48_10/._view/44yczycxcmmbkg2ezyrajpy466dshoam" CACHE PATH "")
 
