@@ -11,9 +11,9 @@ class Umpire(BuiltinUmpire):
 
     version("2022.10.0", tag="v2022.10.0", submodules=False)
 
-    depends_on("blt@0.5.1:", type="build", when="@2022.03.0:")
-
     patch("export_includes.patch", when="@2022.10.0")
+
+    depends_on("blt@0.5.1:", type="build", when="@2022.03.0:")
 
     def initconfig_package_entries(self):
         entries = BuiltinUmpire.initconfig_package_entries(self)
