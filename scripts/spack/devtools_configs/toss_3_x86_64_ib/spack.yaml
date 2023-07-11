@@ -173,7 +173,7 @@ spack:
       buildable: false
       externals:
       - spec: cmake@3.23.1
-        prefix: /usr/tce
+        prefix: /usr/tce/packages/cmake/cmake-3.23.1
     llvm:
       version: [10.0.0]
       buildable: false
