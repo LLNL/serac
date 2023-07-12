@@ -169,3 +169,7 @@ spack:
       externals:
       - spec: py-sphinx@1.8.5
         prefix: /usr
+
+    # force raja to use the external cmake
+    raja:
+      require: "^cmake@3.21.7"
