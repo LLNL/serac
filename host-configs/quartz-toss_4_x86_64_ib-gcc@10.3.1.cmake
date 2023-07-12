@@ -1,8 +1,12 @@
 #------------------------------------------------------------------------------
 # !!!! This is a generated file, edit at own risk !!!!
 #------------------------------------------------------------------------------
-# CMake executable path: /usr/tce/packages/cmake/cmake-3.19.2/bin/cmake
+# CMake executable path: /usr/tce/bin/cmake
 #------------------------------------------------------------------------------
+
+set(CMAKE_PREFIX_PATH "/usr/WS2/smithdev/libs/serac/toss_4_x86_64_ib/2023_07_12_12_12_37/gcc-10.3.1/caliper-2.9.0-7ruolxhlcyuwbuzehknkcmwcvfoshzbk;/usr/WS2/smithdev/libs/serac/toss_4_x86_64_ib/2023_07_12_12_12_37/gcc-10.3.1/libunwind-1.6.2-axr2hhbu2btwjnnz45bid6gbwaxhuidl;/usr/WS2/smithdev/libs/serac/toss_4_x86_64_ib/2023_07_12_12_12_37/gcc-10.3.1/axom-0.7.0.4-vlvgywls67dqnle3axh7fomqcs27e5qx;/usr/WS2/smithdev/libs/serac/toss_4_x86_64_ib/2023_07_12_12_12_37/gcc-10.3.1/umpire-2022.10.0-yzxbg3ecgbh6eygv72xcassxuicb76yp;/usr/WS2/smithdev/libs/serac/toss_4_x86_64_ib/2023_07_12_12_12_37/gcc-10.3.1/raja-2022.10.5-mqzxggwj4pnsohhwcl367o4lxs2pq54r;/usr/WS2/smithdev/libs/serac/toss_4_x86_64_ib/2023_07_12_12_12_37/gcc-10.3.1/camp-2022.10.1-lov4tpuq3lef3nqqlrl3goscu4xdq45g;/usr/WS2/smithdev/libs/serac/toss_4_x86_64_ib/2023_07_12_12_12_37/gcc-10.3.1/mfem-4.5.2-o67dcrg2xucpzdasxrvmxsmf7fj24lnu;/usr/WS2/smithdev/libs/serac/toss_4_x86_64_ib/2023_07_12_12_12_37/gcc-10.3.1/superlu-dist-6.1.1-ca2nwquph4xxdeaecaa4gz5ohaohsjua;/usr/WS2/smithdev/libs/serac/toss_4_x86_64_ib/2023_07_12_12_12_37/gcc-10.3.1/sundials-6.5.1-csz2z65r5kqd2ex4ntj3t5667bsaugna;/usr/WS2/smithdev/libs/serac/toss_4_x86_64_ib/2023_07_12_12_12_37/gcc-10.3.1/netcdf-c-4.7.4-ouxfqdh7zjgme2h5yik6daky5ccczsek;/usr/WS2/smithdev/libs/serac/toss_4_x86_64_ib/2023_07_12_12_12_37/gcc-10.3.1/hypre-2.26.0-sjavuyxx7m32rf7mvefv4ultzwhqgifz;/usr/WS2/smithdev/libs/serac/toss_4_x86_64_ib/2023_07_12_12_12_37/gcc-10.3.1/conduit-0.8.8-zyhsvukiyd65dij7l32kuz4yewllgcmb;/usr/WS2/smithdev/libs/serac/toss_4_x86_64_ib/2023_07_12_12_12_37/gcc-10.3.1/parmetis-4.0.3-ctpgo6drsnjfwgec5djhkjtkzvgzojww;/usr/WS2/smithdev/libs/serac/toss_4_x86_64_ib/2023_07_12_12_12_37/gcc-10.3.1/metis-5.1.0-fo6jtapvtmyghiugpi5a4sisamqujooo;/usr/WS2/smithdev/libs/serac/toss_4_x86_64_ib/2023_07_12_12_12_37/gcc-10.3.1/hdf5-1.8.22-skmhws53mv4evmfkqbzgnm64pt54n22x;/usr/WS2/smithdev/libs/serac/toss_4_x86_64_ib/2023_07_12_12_12_37/gcc-10.3.1/blt-0.5.3-hffbyn7slpey3tp4m6ehz4iioo764sgr;/usr/WS2/smithdev/libs/serac/toss_4_x86_64_ib/2023_07_12_12_12_37/gcc-10.3.1/adiak-0.2.2-qe4xzopgfph4j3eughjbmnmpx2rk4c3s;/usr/WS2/smithdev/libs/serac/toss_4_x86_64_ib/2023_07_12_12_12_37/gcc-10.3.1/gmake-4.4.1-y2kaxrqjbg3dcwo7dzfphztusfjqoowq;/usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/python-3.10.10;/usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/python-3.10.10;/usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/python-3.10.10;/usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/doxygen-1.9.6;/usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/cppcheck-2.9;/usr/tce/packages/python/python-3.9.12;/usr/tce/packages/mvapich2/mvapich2-2.3.6-gcc-10.3.1;/usr/tce;/usr/tce/packages/mvapich2/mvapich2-2.3.7-gcc-10.3.1" CACHE PATH "")
+
+set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "")
 
 #------------------------------------------------------------------------------
 # Compilers
@@ -11,11 +15,11 @@
 #------------------------------------------------------------------------------
 if(DEFINED ENV{SPACK_CC})
 
-  set(CMAKE_C_COMPILER "/usr/WS2/smithdev/libs/serac/toss_4_x86_64_ib/2023_07_10_12_04_32/spack/lib/spack/env/gcc/gcc" CACHE PATH "")
+  set(CMAKE_C_COMPILER "/usr/WS2/smithdev/libs/serac/toss_4_x86_64_ib/2023_07_12_12_12_37/spack/lib/spack/env/gcc/gcc" CACHE PATH "")
 
-  set(CMAKE_CXX_COMPILER "/usr/WS2/smithdev/libs/serac/toss_4_x86_64_ib/2023_07_10_12_04_32/spack/lib/spack/env/gcc/g++" CACHE PATH "")
+  set(CMAKE_CXX_COMPILER "/usr/WS2/smithdev/libs/serac/toss_4_x86_64_ib/2023_07_12_12_12_37/spack/lib/spack/env/gcc/g++" CACHE PATH "")
 
-  set(CMAKE_Fortran_COMPILER "/usr/WS2/smithdev/libs/serac/toss_4_x86_64_ib/2023_07_10_12_04_32/spack/lib/spack/env/gcc/gfortran" CACHE PATH "")
+  set(CMAKE_Fortran_COMPILER "/usr/WS2/smithdev/libs/serac/toss_4_x86_64_ib/2023_07_12_12_12_37/spack/lib/spack/env/gcc/gfortran" CACHE PATH "")
 
 else()
 
@@ -26,6 +30,8 @@ else()
   set(CMAKE_Fortran_COMPILER "/usr/tce/packages/gcc/gcc-10.3.1/bin/gfortran" CACHE PATH "")
 
 endif()
+
+set(CMAKE_GENERATOR "Unix Makefiles" CACHE STRING "")
 
 #------------------------------------------------------------------------------
 # MPI
@@ -53,43 +59,43 @@ set(ENABLE_OPENMP ON CACHE BOOL "")
 # TPLs
 #------------------------------------------------------------------------------
 
-set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/toss_4_x86_64_ib/2023_07_10_12_04_32/gcc-10.3.1" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/toss_4_x86_64_ib/2023_07_12_12_12_37/gcc-10.3.1" CACHE PATH "")
 
-set(AXOM_DIR "${TPL_ROOT}/axom-0.7.0.4-zol2mv7kj25njvt2qjrlbqo2k5aek2v3" CACHE PATH "")
+set(AXOM_DIR "${TPL_ROOT}/axom-0.7.0.4-vlvgywls67dqnle3axh7fomqcs27e5qx" CACHE PATH "")
 
-set(CAMP_DIR "${TPL_ROOT}/camp-2022.10.1-4ue327xwmfwnln4zf2tewnspein3xvy6" CACHE PATH "")
+set(CAMP_DIR "${TPL_ROOT}/camp-2022.10.1-lov4tpuq3lef3nqqlrl3goscu4xdq45g" CACHE PATH "")
 
-set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.8.8-jegp4cxhmfgzut3skigohnnuw3zrwr77" CACHE PATH "")
+set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.8.8-zyhsvukiyd65dij7l32kuz4yewllgcmb" CACHE PATH "")
 
 set(LUA_DIR "/usr" CACHE PATH "")
 
-set(MFEM_DIR "${TPL_ROOT}/mfem-4.5.2-jlq577gyeaf55k7ilrgcmnibuod4b55t" CACHE PATH "")
+set(MFEM_DIR "${TPL_ROOT}/mfem-4.5.2-o67dcrg2xucpzdasxrvmxsmf7fj24lnu" CACHE PATH "")
 
-set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.22-wpgrwykzgcqvtsxn6ga35gl7nt63xc2d" CACHE PATH "")
+set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.22-skmhws53mv4evmfkqbzgnm64pt54n22x" CACHE PATH "")
 
-set(HYPRE_DIR "${TPL_ROOT}/hypre-2.26.0-uezptmtjpjrz3wiikkphc54sfkapmyvo" CACHE PATH "")
+set(HYPRE_DIR "${TPL_ROOT}/hypre-2.26.0-sjavuyxx7m32rf7mvefv4ultzwhqgifz" CACHE PATH "")
 
-set(METIS_DIR "${TPL_ROOT}/metis-5.1.0-cum66qsfe2ooxkw5lx33o3ywa5phbv4i" CACHE PATH "")
+set(METIS_DIR "${TPL_ROOT}/metis-5.1.0-fo6jtapvtmyghiugpi5a4sisamqujooo" CACHE PATH "")
 
-set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3-3nuqjku6qoecarsh5usbp3z5isllwk2o" CACHE PATH "")
+set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3-ctpgo6drsnjfwgec5djhkjtkzvgzojww" CACHE PATH "")
 
-set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4-bsmgdwgoiehrn2qmpimnztzspphdqhlo" CACHE PATH "")
+set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4-ouxfqdh7zjgme2h5yik6daky5ccczsek" CACHE PATH "")
 
-set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1-uc75olhhfn3zpv5zlr4zv3wby7nz3slb" CACHE PATH "")
+set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1-ca2nwquph4xxdeaecaa4gz5ohaohsjua" CACHE PATH "")
 
-set(ADIAK_DIR "${TPL_ROOT}/adiak-0.2.2-oa7qotvalqudt3l2gph6rcabkjdj4nsq" CACHE PATH "")
+set(ADIAK_DIR "${TPL_ROOT}/adiak-0.2.2-qe4xzopgfph4j3eughjbmnmpx2rk4c3s" CACHE PATH "")
 
 # AMGX not built
 
-set(CALIPER_DIR "${TPL_ROOT}/caliper-2.9.0-6qxvgersj6xhkkan2al4wlunnq5hpkmi" CACHE PATH "")
+set(CALIPER_DIR "${TPL_ROOT}/caliper-2.9.0-7ruolxhlcyuwbuzehknkcmwcvfoshzbk" CACHE PATH "")
 
 # PETSC not built
 
-# RAJA not built
+set(RAJA_DIR "${TPL_ROOT}/raja-2022.10.5-mqzxggwj4pnsohhwcl367o4lxs2pq54r" CACHE PATH "")
 
-set(SUNDIALS_DIR "${TPL_ROOT}/sundials-6.5.1-pnhe45hntme7fcjmi6yt6ftb2ququyep" CACHE PATH "")
+set(SUNDIALS_DIR "${TPL_ROOT}/sundials-6.5.1-csz2z65r5kqd2ex4ntj3t5667bsaugna" CACHE PATH "")
 
-# UMPIRE not built
+set(UMPIRE_DIR "${TPL_ROOT}/umpire-2022.10.0-yzxbg3ecgbh6eygv72xcassxuicb76yp" CACHE PATH "")
 
 #------------------------------------------------------------------------------
 # Devtools
