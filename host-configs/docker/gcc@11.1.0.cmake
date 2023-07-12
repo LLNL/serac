@@ -4,10 +4,14 @@
 # CMake executable path: /usr/bin/cmake
 #------------------------------------------------------------------------------
 
+set(CMAKE_PREFIX_PATH "/home/serac/serac_tpls/gcc-11.1.0/axom-0.7.0.4-r7l5zxg7vxolsggu3zy6lxsaglzmppft;/home/serac/serac_tpls/gcc-11.1.0/umpire-2022.10.0-gislkm6jc27io3l34ttr3iknepjm3rvw;/home/serac/serac_tpls/gcc-11.1.0/raja-2022.10.5-xxwjcpigckjueculb4lyvrgtvz7jb7bo;/home/serac/serac_tpls/gcc-11.1.0/camp-2022.10.1-tgzuaguyyxahq3ycnl36vkbu3k5vhr44;/home/serac/serac_tpls/gcc-11.1.0/mfem-4.5.3.1-zucsww4fqo24nlgb2yi5rbixfwrrvojv;/home/serac/serac_tpls/gcc-11.1.0/superlu-dist-6.1.1-puhq7wkt4bo2aeqi5ywmamuathrxjpnj;/home/serac/serac_tpls/gcc-11.1.0/sundials-6.5.1-np442to77aplampclrz7sbatflpidqyh;/home/serac/serac_tpls/gcc-11.1.0/netcdf-c-4.7.4-mn2tznlxaxiyi6yii7c5lpbydgygbgig;/home/serac/serac_tpls/gcc-11.1.0/hypre-2.26.0-6uyj4vssebtmjn6s54jokzvt5vyhhan6;/home/serac/serac_tpls/gcc-11.1.0/lua-5.4.4-yskrnacsond32u6qpjgk5yalt2pn3woq;/home/serac/serac_tpls/gcc-11.1.0/readline-8.2-3ghsag74tthrw7kycdjwbstrhxwhiics;/home/serac/serac_tpls/gcc-11.1.0/ncurses-6.4-bqojhx5e5yk7qwezjqzchqtufyegrff7;/home/serac/serac_tpls/gcc-11.1.0/conduit-0.8.8-iroft6nyafk2jbcwh2kqqzponjeh6huq;/home/serac/serac_tpls/gcc-11.1.0/parmetis-4.0.3-aiciltv4obkal6u23h4qewhzi4fr6tch;/home/serac/serac_tpls/gcc-11.1.0/metis-5.1.0-iscnldgs5m46ldu5pcyhx7xziy2slusx;/home/serac/serac_tpls/gcc-11.1.0/hdf5-1.8.22-b4x754lfrvfgyhng6itthkyetmeot4mi;/home/serac/serac_tpls/gcc-11.1.0/zlib-1.2.13-k4fzfbz45b6qs3ysphaxrdowxyvjrg5p;/home/serac/serac_tpls/gcc-11.1.0/gmake-4.4.1-xoqy3bpcm7lirebrxjt4qvp3p72t3dmu;/home/serac/serac_tpls/gcc-11.1.0/blt-0.5.3-e5iru6sc4qpte3ckhptpj57aug5nb25i" CACHE PATH "")
+
+set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "")
+
 #------------------------------------------------------------------------------
 # Compilers
 #------------------------------------------------------------------------------
-# Compiler Spec: gcc@11.1.0
+# Compiler Spec: gcc@=11.1.0
 #------------------------------------------------------------------------------
 if(DEFINED ENV{SPACK_CC})
 
@@ -30,6 +34,8 @@ endif()
 set(CMAKE_C_FLAGS "-pthread" CACHE STRING "")
 
 set(CMAKE_CXX_FLAGS "-pthread" CACHE STRING "")
+
+set(CMAKE_GENERATOR "Unix Makefiles" CACHE STRING "")
 
 #------------------------------------------------------------------------------
 # MPI
@@ -57,29 +63,29 @@ set(ENABLE_OPENMP ON CACHE BOOL "")
 # TPLs
 #------------------------------------------------------------------------------
 
-set(TPL_ROOT "/home/serac/serac_tpls/spack/opt/spack/linux-ubuntu20.04-x86_64/gcc-11.1.0" CACHE PATH "")
+set(TPL_ROOT "/home/serac/serac_tpls/gcc-11.1.0" CACHE PATH "")
 
-set(AXOM_DIR "${TPL_ROOT}/axom-0.7.0.4-33xg6frnn45dotxii4dp4yrf4biwszj6" CACHE PATH "")
+set(AXOM_DIR "${TPL_ROOT}/axom-0.7.0.4-r7l5zxg7vxolsggu3zy6lxsaglzmppft" CACHE PATH "")
 
-set(CAMP_DIR "${TPL_ROOT}/camp-2022.03.2-ohurb75ad54wfzq3l5lmf65ffkhnznl5" CACHE PATH "")
+set(CAMP_DIR "${TPL_ROOT}/camp-2022.10.1-tgzuaguyyxahq3ycnl36vkbu3k5vhr44" CACHE PATH "")
 
-set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.8.4-j3bceitn6x3sog5cc3jk6goqf4hhlgre" CACHE PATH "")
+set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.8.8-iroft6nyafk2jbcwh2kqqzponjeh6huq" CACHE PATH "")
 
-set(LUA_DIR "${TPL_ROOT}/lua-5.4.4-q5dw7ka7j6u2kpfi3x3ozcwzzxqhnaal" CACHE PATH "")
+set(LUA_DIR "${TPL_ROOT}/lua-5.4.4-yskrnacsond32u6qpjgk5yalt2pn3woq" CACHE PATH "")
 
-set(MFEM_DIR "${TPL_ROOT}/mfem-4.5.3.1-skfy5vyem23ypequsahwxcnp4oot6ik7" CACHE PATH "")
+set(MFEM_DIR "${TPL_ROOT}/mfem-4.5.3.1-zucsww4fqo24nlgb2yi5rbixfwrrvojv" CACHE PATH "")
 
-set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.21-d3camibwwxhdwxrtxtpctsg5ca7we2lt" CACHE PATH "")
+set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.22-b4x754lfrvfgyhng6itthkyetmeot4mi" CACHE PATH "")
 
-set(HYPRE_DIR "${TPL_ROOT}/hypre-2.26.0-mxuoe2zcgowngj5zwgc2p357fhv5w2ip" CACHE PATH "")
+set(HYPRE_DIR "${TPL_ROOT}/hypre-2.26.0-6uyj4vssebtmjn6s54jokzvt5vyhhan6" CACHE PATH "")
 
-set(METIS_DIR "${TPL_ROOT}/metis-5.1.0-dbsfmadsyxh2wyuxcjfw2ayl6wkjyqys" CACHE PATH "")
+set(METIS_DIR "${TPL_ROOT}/metis-5.1.0-iscnldgs5m46ldu5pcyhx7xziy2slusx" CACHE PATH "")
 
-set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3-5v6nhjdlcgw77r4b47dihkorudhkvifz" CACHE PATH "")
+set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3-aiciltv4obkal6u23h4qewhzi4fr6tch" CACHE PATH "")
 
-set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4-3cxpbpolyem33vxxaigyyrfib43xeizq" CACHE PATH "")
+set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4-mn2tznlxaxiyi6yii7c5lpbydgygbgig" CACHE PATH "")
 
-set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1-ee7vk6tgqs3bz2vi7ltnt4v23wxl7hxd" CACHE PATH "")
+set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1-puhq7wkt4bo2aeqi5ywmamuathrxjpnj" CACHE PATH "")
 
 # ADIAK not built
 
@@ -89,11 +95,11 @@ set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1-ee7vk6tgqs3bz2vi7ltnt4v23wxl
 
 # PETSC not built
 
-set(RAJA_DIR "${TPL_ROOT}/raja-2022.03.0-2yhqffl4bfzmjxf32fctkufqlypcwp6i" CACHE PATH "")
+set(RAJA_DIR "${TPL_ROOT}/raja-2022.10.5-xxwjcpigckjueculb4lyvrgtvz7jb7bo" CACHE PATH "")
 
-set(SUNDIALS_DIR "${TPL_ROOT}/sundials-6.4.1-o37lx2uvocyaylvkssrxlxougfjj45qd" CACHE PATH "")
+set(SUNDIALS_DIR "${TPL_ROOT}/sundials-6.5.1-np442to77aplampclrz7sbatflpidqyh" CACHE PATH "")
 
-set(UMPIRE_DIR "${TPL_ROOT}/umpire-2022.03.1-ag7belgtp5n3dqka6njiq2xjhydu3h6a" CACHE PATH "")
+set(UMPIRE_DIR "${TPL_ROOT}/umpire-2022.10.0-gislkm6jc27io3l34ttr3iknepjm3rvw" CACHE PATH "")
 
 #------------------------------------------------------------------------------
 # Devtools
