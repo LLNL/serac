@@ -1,4 +1,4 @@
-FROM axom/compilers:ubuntu-20-clang-10_08-24-21_07h-18m
+FROM axom/compilers:ubuntu-20-clang-10_07-10-23_21h-54m
 LABEL maintainer="bramwell1@llnl.gov"
 ARG branch=develop
 
