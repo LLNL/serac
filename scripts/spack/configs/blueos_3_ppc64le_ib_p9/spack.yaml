@@ -239,7 +239,5 @@ spack:
       variants: ~shared~mpi
     raja:
       require: "@2022.10.5~shared~examples~exercises"
-    scr:
-      require: "@3.0.1~shared~tests~examples"
     umpire:
       require: "@2022.10.0~shared~examples"
