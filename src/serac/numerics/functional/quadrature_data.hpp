@@ -7,7 +7,7 @@
 /**
  * @file quadrature_data.hpp
  *
- * @brief This file contains the declaration of the structure that manages quadrature point data
+ * @brief This file contains the declaration of the structures that manage quadrature point data
  */
 
 #pragma once
@@ -49,6 +49,9 @@ struct QuadratureData;
 
 } // namespace serac
 
+// we define these specializations to make it so that materials
+// without state variables can use the same interface, without
+// actually storing/accessing any data
 namespace axom {
 
 template <>
@@ -100,7 +103,7 @@ namespace serac {
 /**
  * @brief A class for storing and access user-defined types at quadrature points
  *
- * @tparam the data type to be stored
+ * @tparam the data type to be stored at each quadrature point
  *
  * @note users are not intended to create these objects directly, instead
  *       they should use the PhysicsModule::createQuadratureDataBuffer()
@@ -110,9 +113,14 @@ struct QuadratureData {
 
   using geom_array_t = std::array< uint32_t, mfem::Geometry::NUM_GEOMETRIES >;
 
-  using tmp_t = axom::Array<T, 2>;
 
-  /// ctor, allocates memory and sets up strides
+  /**
+   * @brief Initialize a new quadrature data buffer, optionally with some initial value
+   * 
+   * @param elements the number of elements of each geometry
+   * @param qpts_per_element how many quadrature points are present in each kind of element
+   * @param value (optional) value used to initialize the buffer
+   */
   QuadratureData(geom_array_t elements, geom_array_t qpts_per_element, T value = T{}) { 
 
     constexpr std::array geometries = {
@@ -125,20 +133,26 @@ struct QuadratureData {
 
     for (auto geom : geometries) {
       if (elements[uint32_t(geom)] > 0) {
-        data[geom] = tmp_t(elements[uint32_t(geom)], qpts_per_element[uint32_t(geom)]);
+        data[geom] = axom::Array<T,2>(elements[uint32_t(geom)], qpts_per_element[uint32_t(geom)]);
         data[geom].fill(value);
       }
     }
 
   }
 
+  /**
+   * @brief return the 2D array of quadrature point values for elements of the specified geometry
+   * @param geom which element geometry's data to return
+   */
   axom::ArrayView<T, 2> operator[](mfem::Geometry::Type geom) {
     return axom::ArrayView<T, 2>(data.at(geom));
   }
 
-  std::map< mfem::Geometry::Type, tmp_t > data;
+  /// @brief a 3D array indexed by (which geometry, which element, which quadrature point)
+  std::map< mfem::Geometry::Type, axom::Array<T,2> > data;
 };
 
+/// @overload
 template <>
 struct QuadratureData<Nothing> {
 
@@ -153,6 +167,7 @@ struct QuadratureData<Nothing> {
   axom::Array<Nothing, 2, axom::MemorySpace::Dynamic> data;
 };
 
+/// @overload
 template <>
 struct QuadratureData<Empty> {
 
@@ -167,6 +182,8 @@ struct QuadratureData<Empty> {
   axom::Array<Empty, 2, axom::MemorySpace::Dynamic> data;
 };
 
+
+/// these values exist to serve as default arguments for materials without material state
 extern std::shared_ptr<QuadratureData<Nothing> > NoQData;
 extern std::shared_ptr<QuadratureData<Empty> >   EmptyQData;
 
