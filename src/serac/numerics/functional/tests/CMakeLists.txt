@@ -34,6 +34,7 @@ set(functional_tests_mpi
     functional_boundary_test.cpp
     functional_comparisons.cpp
     functional_comparison_L2.cpp
+    functional_shape_derivatives.cpp
     )
 
 serac_add_tests( SOURCES ${functional_tests_mpi}
