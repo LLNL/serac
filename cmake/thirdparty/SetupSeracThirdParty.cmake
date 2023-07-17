@@ -247,7 +247,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         if(TARGET hdf5::hdf5_hl-static)
             set(HDF5_C_LIBRARY_hdf5_hl hdf5::hdf5_hl-static CACHE STRING "")
         else()
-            set(HDF5_C_LIBRARY_hdf5_hl hdf5-hdf5_hl-static CACHE STRING "")
+            set(HDF5_C_LIBRARY_hdf5_hl hdf5_hl-static CACHE STRING "")
         endif()
 
         set(HDF5_IMPORT_CONFIG "RELEASE" CACHE STRING "")
