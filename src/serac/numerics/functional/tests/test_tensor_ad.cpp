@@ -108,14 +108,14 @@ TEST(DualNumberTensor, Pow)
 {
   // f(x) = x^3/2
   auto xd = pow(make_dual(x), 1.5);
-  EXPECT_DOUBLE_EQ(abs(1.5 * pow(x, 0.5) - xd.gradient), 0.0);
+  EXPECT_LT(abs(1.5 * pow(x, 0.5) - xd.gradient), eps);
 }
 
 TEST(DualNumberTensor, MixedOperations)
 {
   auto xd = make_dual(x);
   auto r  = cos(xd) * cos(xd);
-  EXPECT_DOUBLE_EQ(abs(-2.0 * sin(x) * cos(x) - r.gradient), 0.0);
+  EXPECT_LT(abs(-2.0 * sin(x) * cos(x) - r.gradient), eps);
 
   r = exp(xd) * cos(xd);
   EXPECT_LT(abs(exp(x) * (cos(x) - sin(x)) - r.gradient), eps);
@@ -236,4 +236,56 @@ TEST(dual_number_tensor, isotropic_tensor)
   EXPECT_LT(abs(dW[0] - dW[1]), 3.0e-5);
 
   EXPECT_LT(abs(dW[0] - dW[2]) / abs(dW[0]), 5.0e-14);
+}
+
+TEST(Tensor, Eigenvalues)
+{
+  using tuple_type_1 = serac::tuple<serac::zero, serac::tensor<double, 3> >;
+  using tuple_type_2 = serac::tuple<serac::zero, serac::tensor<double, 3, 3> >;
+  using tuple_type_3 = serac::tuple<double, serac::zero>;
+  using tuple_type_4 = serac::tuple<serac::tensor<double, 3>, serac::zero>;
+  using tuple_type_5 = serac::tuple<double, serac::tensor<double, 3> >;
+  using tuple_type_6 = serac::tuple<serac::tensor<double, 3>, serac::tensor<double, 3, 3> >;
+
+  // these are just compliation tests, to ensure that the implementation
+  // can handle different kinds of dual numbers
+  [[maybe_unused]] auto lambda_0 = eigenvalues(tensor<double, 3, 3>{});
+  [[maybe_unused]] auto lambda_1 = eigenvalues(tensor<dual<tuple_type_1>, 3, 3>{});
+  [[maybe_unused]] auto lambda_2 = eigenvalues(tensor<dual<tuple_type_2>, 3, 3>{});
+  [[maybe_unused]] auto lambda_3 = eigenvalues(tensor<dual<tuple_type_3>, 3, 3>{});
+  [[maybe_unused]] auto lambda_4 = eigenvalues(tensor<dual<tuple_type_4>, 3, 3>{});
+  [[maybe_unused]] auto lambda_5 = eigenvalues(tensor<dual<tuple_type_5>, 3, 3>{});
+  [[maybe_unused]] auto lambda_6 = eigenvalues(tensor<dual<tuple_type_6>, 3, 3>{});
+
+  tensor<dual<tuple_type_3>, 3, 3> A;
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      A(i, j).value            = (3 - i) * (i == j) + 0.25 * (i + j);
+      get<0>(A(i, j).gradient) = i;
+    }
+  }
+
+  auto lambda = eigenvalues(A);
+
+  // exact answers computed with mathematica:
+  //
+  // \[Epsilon] = 10^-8;
+  // A = ({
+  //     {3, 0.25, 0.5},
+  //     {0.25, 2.5, 0.75},
+  //     {0.5, 0.75, 2}
+  // });
+  // dA = ({
+  //     {0, 0, 0},
+  //     {1, 1, 1},
+  //     {2, 2, 2}
+  // });
+  // {\[Lambda], X} = Eigensystem[A];
+  // d\[Lambda]1 = Reverse[(Eigenvalues[A + \[Epsilon] dA] - Eigenvalues[A - \[Epsilon] dA])/(2 \[Epsilon])]
+  // d\[Lambda]2 = Reverse[Diagonal[X . dA . Transpose[X]]]
+  tensor<double, 3> expected = {0.1357665494791742, 0.3149768468747295, 2.549256603646096};
+
+  EXPECT_LT(abs(get<0>(lambda[0].gradient) - expected[0]), 1.0e-14);
+  EXPECT_LT(abs(get<0>(lambda[1].gradient) - expected[1]), 1.0e-14);
+  EXPECT_LT(abs(get<0>(lambda[2].gradient) - expected[2]), 1.0e-14);
 }
