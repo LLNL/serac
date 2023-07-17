@@ -131,11 +131,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         find_package(adiak REQUIRED NO_DEFAULT_PATH PATHS ${ADIAK_DIR})
         message(STATUS "Adiak support is ON")
         set(ADIAK_FOUND TRUE)
-
-        # Set the include directories as Adiak does not completely
-        # configure the "adiak" target
-        set_target_properties(adiak PROPERTIES
-            INTERFACE_INCLUDE_DIRECTORIES ${adiak_INCLUDE_DIRS})
     else()
         message(STATUS "Adiak support is OFF")
         set(ADIAK_FOUND FALSE)
@@ -166,11 +161,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
                      PATHS ${CALIPER_DIR})
         message(STATUS "Caliper support is ON")
         set(CALIPER_FOUND TRUE)
-
-        # Set the include directories as Caliper does not completely
-        # configure the "caliper" target
-        set_target_properties(caliper PROPERTIES
-            INTERFACE_INCLUDE_DIRECTORIES ${caliper_INCLUDE_PATH})
     else()
         message(STATUS "Caliper support is OFF")
         set(CALIPER_FOUND FALSE)
@@ -240,9 +230,27 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(MFEM_CUSTOM_TARGET_PREFIX "mfem_" CACHE STRING "")
 
         # Tweaks needed after Spack converted to the HDF5 CMake build system
-        set(HDF5_TARGET_NAMES "hdf5::hdf5-static;hdf5::hdf5-shared" CACHE STRING "")
-        set(HDF5_IMPORT_CONFIG "RELWITHDEBINFO" CACHE STRING "")
-        set(HDF5_C_LIBRARY_hdf5_hl "hdf5::hdf5_hl-static" CACHE STRING "")
+        # NOTE: we check if an hdf5 target is namespaced or not, since some versions
+        #       of hdf5 do not namespace their targets and others do
+        set(HDF5_TARGET_NAMES "" CACHE STRING "")
+        if(TARGET hdf5::hdf5-static)
+            list(APPEND HDF5_TARGET_NAMES hdf5::hdf5-static)
+        else()
+            list(APPEND HDF5_TARGET_NAMES hdf5-static)
+        endif()
+        if(TARGET hdf5::hdf5-shared)
+            list(APPEND HDF5_TARGET_NAMES hdf5::hdf5-shared)
+        else()
+            list(APPEND HDF5_TARGET_NAMES hdf5-shared)
+        endif()
+
+        if(TARGET hdf5::hdf5_hl-static)
+            set(HDF5_C_LIBRARY_hdf5_hl hdf5::hdf5_hl-static CACHE STRING "")
+        else()
+            set(HDF5_C_LIBRARY_hdf5_hl hdf5_hl-static CACHE STRING "")
+        endif()
+
+        set(HDF5_IMPORT_CONFIG "RELEASE" CACHE STRING "")
 
         # Disable tests + examples
         set(MFEM_ENABLE_TESTING  OFF CACHE BOOL "")

@@ -204,11 +204,11 @@ spack:
 
   # Lock in versions of Devtools
     cmake:
-      version: [3.18.0]
+      version: [3.23.1]
       buildable: false
       externals:
-      - spec: cmake@3.18.0
-        prefix: /usr/tce/packages/cmake/cmake-3.18.0
+      - spec: cmake@3.23.1
+        prefix: /usr/tce/packages/cmake/cmake-3.23.1
     cppcheck:
       version: [2.9]
       buildable: false
@@ -244,3 +244,15 @@ spack:
       externals:
       - spec: python@3.8.2
         prefix: /usr/tce/packages/python/python-3.8.2
+
+    # Globally lock version of third party libraries
+    camp:
+      require: "@2022.10.1"
+    conduit:
+      require: "@0.8.8~shared~test~examples~utilities"
+    hdf5:
+      variants: ~shared~mpi
+    raja:
+      require: "@2022.10.5~shared~examples~exercises"
+    umpire:
+      require: "@2022.10.0~shared~examples"
