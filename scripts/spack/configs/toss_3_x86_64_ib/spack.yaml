@@ -204,23 +204,23 @@ spack:
 
   # Lock in versions of Devtools
     cmake:
-      version: [3.18.0]
+      version: [3.23.1]
       buildable: false
       externals:
-      - spec: cmake@3.18.0
-        prefix: /usr/tce/packages/cmake/cmake-3.18.0
+      - spec: cmake@3.23.1
+        prefix: /usr/tce/packages/cmake/cmake-3.23.1
     cppcheck:
-      version: [2.8]
+      version: [2.9]
       buildable: false
       externals:
-      - spec: cppcheck@2.8
-        prefix: /usr/workspace/smithdev/devtools/toss_3_x86_64_ib/latest/cppcheck-2.8
+      - spec: cppcheck@2.9
+        prefix: /usr/workspace/smithdev/devtools/toss_3_x86_64_ib/latest/cppcheck-2.9
     doxygen:
-      version: [1.9.4]
+      version: [1.9.6]
       buildable: false
       externals:
-      - spec: doxygen@1.9.4
-        prefix: /usr/workspace/smithdev/devtools/toss_3_x86_64_ib/latest/doxygen-1.9.4
+      - spec: doxygen@1.9.6
+        prefix: /usr/workspace/smithdev/devtools/toss_3_x86_64_ib/latest/doxygen-1.9.6
     llvm:
       version: [10.0.0]
       buildable: false
@@ -232,15 +232,27 @@ spack:
       buildable: false
       externals:
       - spec: py-ats@7.0.105
-        prefix: /usr/workspace/smithdev/devtools/toss_3_x86_64_ib/latest/py-ats-7.0.105
+        prefix: /usr/workspace/smithdev/devtools/toss_3_x86_64_ib/latest/python-3.10.10
     py-sphinx:
-      version: [4.4.0]
+      version: [7.0.0]
       buildable: false
       externals:
-      - spec: py-sphinx@4.4.0
-        prefix: /usr/workspace/smithdev/devtools/toss_3_x86_64_ib/latest/py-sphinx-4.4.0
+      - spec: py-sphinx@7.0.0
+        prefix: /usr/workspace/smithdev/devtools/toss_3_x86_64_ib/latest/python-3.10.10
     python:
       buildable: false
       externals:
       - spec: python@3.8.2
         prefix: /usr/tce/packages/python/python-3.8.2
+
+    # Globally lock version of third party libraries
+    camp:
+      require: "@2022.10.1"
+    conduit:
+      require: "@0.8.8~shared~test~examples~utilities"
+    hdf5:
+      variants: ~shared~mpi
+    raja:
+      require: "@2022.10.5~shared~examples~exercises"
+    umpire:
+      require: "@2022.10.0~shared~examples"

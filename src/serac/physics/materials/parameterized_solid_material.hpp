@@ -24,7 +24,9 @@ namespace serac::solid_mechanics {
  * @tparam dim Spatial dimension of the mesh
  */
 template <int dim>
-struct ParameterizedLinearIsotropic {
+struct ParameterizedLinearIsotropicSolid {
+  using State = Empty;  ///< this material has no internal variables
+
   /**
    * @brief stress calculation for a linear isotropic material model
    *
@@ -36,8 +38,9 @@ struct ParameterizedLinearIsotropic {
    * @param DeltaG The shear modulus offset
    * @return The calculated material response (Cauchy stress) for the material
    */
-  template <typename DisplacementType, typename DispGradType, typename BulkType, typename ShearType>
-  SERAC_HOST_DEVICE auto operator()(const DispGradType& du_dX, const BulkType& DeltaK, const ShearType& DeltaG) const
+  template <typename DispGradType, typename BulkType, typename ShearType>
+  SERAC_HOST_DEVICE auto operator()(State& /*state*/, const DispGradType& du_dX, const BulkType& DeltaK,
+                                    const ShearType& DeltaG) const
   {
     constexpr auto I       = Identity<dim>();
     auto           K       = K0 + get<0>(DeltaK);

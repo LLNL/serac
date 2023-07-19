@@ -54,8 +54,6 @@ spack:
         szip: [libszip, libaec]
         tbb: [intel-tbb]
         jpeg: [libjpeg-turbo, libjpeg]
-    python:
-      variants: ~dbm
     py-numpy:
       variants: ~blas~lapack
 
@@ -190,22 +188,22 @@ spack:
 
     # Lock in versions of Devtools
     cmake:
-      version: [3.18.0]
-      externals:
-      - spec: cmake@3.18.0
-        prefix: /usr/tce/packages/cmake/cmake-3.18.0
+      version: [3.23.1]
       buildable: false
-    cppcheck:
-      version: [2.8]
       externals:
-        - spec: cppcheck@2.8
-          prefix: /usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/cppcheck-2.8
+      - spec: cmake@3.23.1
+        prefix: /usr/tce/packages/cmake/cmake-3.23.1
+    cppcheck:
+      version: [2.9]
+      externals:
+        - spec: cppcheck@2.9
+          prefix: /usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/cppcheck-2.9
       buildable: false
     doxygen:
-      version: [1.9.4]
+      version: [1.9.6]
       externals:
-        - spec: doxygen@1.9.4
-          prefix: /usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/doxygen-1.9.4
+        - spec: doxygen@1.9.6
+          prefix: /usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/doxygen-1.9.6
       buildable: false
     llvm:
       version: [10.0.0]
@@ -217,17 +215,29 @@ spack:
       version: [7.0.105]
       externals:
         - spec: py-ats@7.0.105
-          prefix: /usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/py-ats-7.0.105
+          prefix: /usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/python-3.10.10
       buildable: false
     py-sphinx:
-      version: [4.4.0]
+      version: [7.0.0]
       externals:
-        - spec: py-sphinx@4.4.0
-          prefix: /usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/py-sphinx-4.4.0
+        - spec: py-sphinx@7.0.0
+          prefix: /usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/python-3.10.10
       buildable: false
     python:
       version: [3.8.2]
       externals:
-        - spec: python@3.8.2
+        - spec: python@3.8.2~dbm
           prefix: /usr/tce/packages/python/python-3.8.2/
       buildable: false
+
+    # Globally lock version of third party libraries
+    camp:
+      require: "@2022.10.1"
+    conduit:
+      require: "@0.8.8~shared~test~examples~utilities"
+    hdf5:
+      variants: ~shared~mpi
+    raja:
+      require: "@2022.10.5~shared~examples~exercises"
+    umpire:
+      require: "@2022.10.0~shared~examples"

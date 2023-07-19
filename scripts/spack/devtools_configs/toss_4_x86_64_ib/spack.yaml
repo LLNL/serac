@@ -12,7 +12,7 @@ spack:
   view:
     default:
       root: ../view
-      select: [llvm, cppcheck, doxygen, py-ats, py-sphinx]
+      select: [llvm, cppcheck, doxygen, py-ats, py-sphinx, python, ^python]
       projections:
         all: '{name}-{version}'
 
@@ -236,13 +236,13 @@ spack:
 
     # Packages we may want to build in the future with specific versions
     cmake:
-      version: [3.19.2]
+      version: [3.23.1]
       buildable: false
       externals:
-      - spec: cmake@3.19.2
-        prefix: /usr/tce/packages/cmake/cmake-3.19.2
+      - spec: cmake@3.23.1
+        prefix: /usr/tce
 
-    # FIXME: make installed clang 14.0.6 work
+    # FIXME: make installed clang 14.0.6 work or install 16
     # llvm:
     #   version: [14.0.6]
     #   buildable: false
