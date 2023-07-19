@@ -146,10 +146,10 @@ spack:
 
     # Globally lock in version of CMake
     cmake:
-      version: [3.18.5]
+      version: [3.21.7]
       buildable: false
       externals:
-      - spec: cmake@3.18.5
+      - spec: cmake@3.21.7
         prefix: /usr
     doxygen:
       version: [1.8.17]

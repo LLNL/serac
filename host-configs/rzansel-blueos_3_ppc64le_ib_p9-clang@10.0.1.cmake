@@ -1,21 +1,25 @@
 #------------------------------------------------------------------------------
 # !!!! This is a generated file, edit at own risk !!!!
 #------------------------------------------------------------------------------
-# CMake executable path: /usr/tce/packages/cmake/cmake-3.18.0/bin/cmake
+# CMake executable path: /usr/tce/packages/cmake/cmake-3.23.1/bin/cmake
 #------------------------------------------------------------------------------
+
+set(CMAKE_PREFIX_PATH "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_12_17_26_58/clang-10.0.1/caliper-2.9.0-atbrky4ls3or6mgbvqjg7siy3b2ehnrv;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_12_17_26_58/clang-10.0.1/axom-0.7.0.4-f4x2wxk6a6nlmglmyyabaka2dioblvqf;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_12_17_26_58/clang-10.0.1/umpire-2022.10.0-5wno3opyghusur36kmklszkhko6muhp7;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_12_17_26_58/clang-10.0.1/raja-2022.10.5-wytt6k2dio4ktrqyjn72bk2j2lawg2ba;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_12_17_26_58/clang-10.0.1/camp-2022.10.1-yasq6je2x23zpgem3sirlzlz34yhdvna;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_12_17_26_58/clang-10.0.1/cub-2.1.0-ljq7hzkhuou5p4y5du2pthvzjlyj4rui;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_12_17_26_58/clang-10.0.1/mfem-4.5.3.1-dbs2aezjyxbf3neyjrhjte4j3n6loltg;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_12_17_26_58/clang-10.0.1/superlu-dist-6.1.1-xfjyfhlrv23zepanrxb5j3lrictzdkaf;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_12_17_26_58/clang-10.0.1/sundials-6.5.1-iagil6dm6ys6ixtxnqdkprqrhybbkrht;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_12_17_26_58/clang-10.0.1/netcdf-c-4.7.4-5r6blh32l3imj75gg6ufc627aejktykw;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_12_17_26_58/clang-10.0.1/hypre-2.26.0-usdc3dpvv6eqt727jbxl32yucgf53gfm;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_12_17_26_58/clang-10.0.1/lua-5.4.4-uakd7uhkrzsl4mvmggm5fzuebqpqtvzu;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_12_17_26_58/clang-10.0.1/ncurses-6.4-wwe3ftkngbw5u4exn33o3yzpahvjiodx;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_12_17_26_58/clang-10.0.1/conduit-0.8.8-qn3dlekdzbgpdayh3exjaqog5wvpcsez;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_12_17_26_58/clang-10.0.1/parmetis-4.0.3-gpbwan3lpzd2rdpkdr57tlv6453ujujp;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_12_17_26_58/clang-10.0.1/metis-5.1.0-fi365olgg3jnjc3safhtak6nkvhmggto;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_12_17_26_58/clang-10.0.1/hdf5-1.8.22-mf5wxhjqi3detibdhkho3ajn7qe5xmmh;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_12_17_26_58/clang-10.0.1/blt-0.5.3-vercom5kk2s7u75k3tso2u5h22qzwwqa;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_12_17_26_58/clang-10.0.1/amgx-2.3.0.1-rp52rudqmx7pq6m63dxnazq6jrmkki4w;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_12_17_26_58/clang-10.0.1/adiak-0.2.2-oo7oaywpzihfekuvvarfdn5ye3kpe6k6;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_12_17_26_58/clang-10.0.1/gmake-4.4.1-nuuvnkytqes5ciszwvg2w2xwtsx3yyyx;/usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/python-3.10.10;/usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/python-3.10.10;/usr/tce/packages/clang/clang-10.0.0;/usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/doxygen-1.9.6;/usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/cppcheck-2.9;/usr/tce/packages/python/python-3.8.2;/usr/tcetmp/packages/lapack/lapack-3.9.0-gcc-7.3.1/lib;/usr/tce/packages/cuda/cuda-11.2.0;/usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-10.0.1-gcc-8.3.1;/usr/tce/packages/cmake/cmake-3.23.1" CACHE PATH "")
+
+set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "")
 
 #------------------------------------------------------------------------------
 # Compilers
 #------------------------------------------------------------------------------
-# Compiler Spec: clang@10.0.1
+# Compiler Spec: clang@=10.0.1
 #------------------------------------------------------------------------------
 if(DEFINED ENV{SPACK_CC})
 
-  set(CMAKE_C_COMPILER "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_05_09_13_10_51/spack/lib/spack/env/clang/clang" CACHE PATH "")
+  set(CMAKE_C_COMPILER "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_12_17_26_58/spack/lib/spack/env/clang/clang" CACHE PATH "")
 
-  set(CMAKE_CXX_COMPILER "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_05_09_13_10_51/spack/lib/spack/env/clang/clang++" CACHE PATH "")
+  set(CMAKE_CXX_COMPILER "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_12_17_26_58/spack/lib/spack/env/clang/clang++" CACHE PATH "")
 
-  set(CMAKE_Fortran_COMPILER "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_05_09_13_10_51/spack/lib/spack/env/clang/gfortran" CACHE PATH "")
+  set(CMAKE_Fortran_COMPILER "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_12_17_26_58/spack/lib/spack/env/clang/gfortran" CACHE PATH "")
 
 else()
 
@@ -32,6 +36,8 @@ set(CMAKE_C_STANDARD_LIBRARIES "-lgfortran" CACHE STRING "")
 set(CMAKE_CXX_STANDARD_LIBRARIES "-lgfortran" CACHE STRING "")
 
 set(CMAKE_Fortran_STANDARD_LIBRARIES "-lgfortran" CACHE STRING "")
+
+set(CMAKE_GENERATOR "Unix Makefiles" CACHE STRING "")
 
 #------------------------------------------------------------------------------
 # MPI
@@ -59,11 +65,15 @@ set(BLT_MPI_COMMAND_APPEND "mpibind" CACHE STRING "")
 # Cuda
 #------------------------------------------------
 
-set(CUDA_TOOLKIT_ROOT_DIR "/usr/tce/packages/cuda/cuda-11.2.0" CACHE PATH "")
+set(CUDAToolkit_ROOT "/usr/tce/packages/cuda/cuda-11.2.0" CACHE PATH "")
 
-set(CMAKE_CUDA_COMPILER "${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc" CACHE PATH "")
+set(CMAKE_CUDA_COMPILER "${CUDAToolkit_ROOT}/bin/nvcc" CACHE PATH "")
 
 set(CMAKE_CUDA_HOST_COMPILER "${CMAKE_CXX_COMPILER}" CACHE PATH "")
+
+set(CUDA_TOOLKIT_ROOT_DIR "/usr/tce/packages/cuda/cuda-11.2.0" CACHE PATH "")
+
+set(CMAKE_CUDA_ARCHITECTURES "70" CACHE STRING "")
 
 set(ENABLE_OPENMP ON CACHE BOOL "")
 
@@ -85,51 +95,49 @@ set(BLT_CMAKE_IMPLICIT_LINK_DIRECTORIES_EXCLUDE "/usr/tce/packages/gcc/gcc-4.9.3
 # TPLs
 #------------------------------------------------------------------------------
 
-set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_05_09_13_10_51/clang-10.0.1" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_07_12_17_26_58/clang-10.0.1" CACHE PATH "")
 
-set(AXOM_DIR "${TPL_ROOT}/axom-0.7.0.4-i6fqkv6wfzeunqj7iombno4ovrm7pihf" CACHE PATH "")
+set(AXOM_DIR "${TPL_ROOT}/axom-0.7.0.4-f4x2wxk6a6nlmglmyyabaka2dioblvqf" CACHE PATH "")
 
-set(CAMP_DIR "${TPL_ROOT}/camp-2022.03.2-fxqxu6zxuto6ld4r626ndahdpukhjave" CACHE PATH "")
+set(CAMP_DIR "${TPL_ROOT}/camp-2022.10.1-yasq6je2x23zpgem3sirlzlz34yhdvna" CACHE PATH "")
 
-set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.8.4-3rwh3cymjdl7pbmrslfviinsi6dinlk3" CACHE PATH "")
+set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.8.8-qn3dlekdzbgpdayh3exjaqog5wvpcsez" CACHE PATH "")
 
-set(LUA_DIR "${TPL_ROOT}/lua-5.4.4-izgj5sjm3tx5otibr3fzzj5knx4ljcvw" CACHE PATH "")
+set(LUA_DIR "${TPL_ROOT}/lua-5.4.4-uakd7uhkrzsl4mvmggm5fzuebqpqtvzu" CACHE PATH "")
 
-set(MFEM_DIR "${TPL_ROOT}/mfem-4.5.3.1-gwcywbbebakx3xjjvz3cytvviohd5fji" CACHE PATH "")
+set(MFEM_DIR "${TPL_ROOT}/mfem-4.5.3.1-dbs2aezjyxbf3neyjrhjte4j3n6loltg" CACHE PATH "")
 
-set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.21-2anbh6idnvfadscqc4vftnjnitv7mm7f" CACHE PATH "")
+set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.22-mf5wxhjqi3detibdhkho3ajn7qe5xmmh" CACHE PATH "")
 
-set(HYPRE_DIR "${TPL_ROOT}/hypre-2.26.0-i5vh2wqd6hiqbuki3x6l2owwrnsltmfj" CACHE PATH "")
+set(HYPRE_DIR "${TPL_ROOT}/hypre-2.26.0-usdc3dpvv6eqt727jbxl32yucgf53gfm" CACHE PATH "")
 
-set(METIS_DIR "${TPL_ROOT}/metis-5.1.0-4qwkgow6wr7ibczuxiynqektxx525a53" CACHE PATH "")
+set(METIS_DIR "${TPL_ROOT}/metis-5.1.0-fi365olgg3jnjc3safhtak6nkvhmggto" CACHE PATH "")
 
-set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3-clhibcrftrsovvopqgossikfcom6pvtc" CACHE PATH "")
+set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3-gpbwan3lpzd2rdpkdr57tlv6453ujujp" CACHE PATH "")
 
-set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4-3n3fmt2tzb4rbdp5wnypajwucybna53m" CACHE PATH "")
+set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4-5r6blh32l3imj75gg6ufc627aejktykw" CACHE PATH "")
 
-set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1-rmetsgbcpj73j3jeipsesccashsblvxg" CACHE PATH "")
+set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1-xfjyfhlrv23zepanrxb5j3lrictzdkaf" CACHE PATH "")
 
-set(ADIAK_DIR "${TPL_ROOT}/adiak-0.2.1-sasmwelsnyzgmshrqr2eha6ncsqj6sv5" CACHE PATH "")
+set(ADIAK_DIR "${TPL_ROOT}/adiak-0.2.2-oo7oaywpzihfekuvvarfdn5ye3kpe6k6" CACHE PATH "")
 
-set(AMGX_DIR "${TPL_ROOT}/amgx-2.3.0.1-igdy23rgkevtkd5aibxklvlsyh6crpnn" CACHE PATH "")
+set(AMGX_DIR "${TPL_ROOT}/amgx-2.3.0.1-rp52rudqmx7pq6m63dxnazq6jrmkki4w" CACHE PATH "")
 
-set(CALIPER_DIR "${TPL_ROOT}/caliper-2.7.0-v6whaccxqo6lmgx3mb6lsj47gjuwyink" CACHE PATH "")
+set(CALIPER_DIR "${TPL_ROOT}/caliper-2.9.0-atbrky4ls3or6mgbvqjg7siy3b2ehnrv" CACHE PATH "")
 
 # PETSC not built
 
-set(RAJA_DIR "${TPL_ROOT}/raja-2022.03.0-fczkcogd4ostziyulbiwzxa2frjwzguz" CACHE PATH "")
+set(RAJA_DIR "${TPL_ROOT}/raja-2022.10.5-wytt6k2dio4ktrqyjn72bk2j2lawg2ba" CACHE PATH "")
 
-set(SUNDIALS_DIR "${TPL_ROOT}/sundials-6.5.1-jagjedtrtbbqtjiaxbhtwj572argpqjr" CACHE PATH "")
+set(SUNDIALS_DIR "${TPL_ROOT}/sundials-6.5.1-iagil6dm6ys6ixtxnqdkprqrhybbkrht" CACHE PATH "")
 
-set(UMPIRE_DIR "${TPL_ROOT}/umpire-2022.03.1-yaneneqrmybe2xxhrktj7fkqrxvkk4u6" CACHE PATH "")
+set(UMPIRE_DIR "${TPL_ROOT}/umpire-2022.10.0-5wno3opyghusur36kmklszkhko6muhp7" CACHE PATH "")
 
 #------------------------------------------------------------------------------
 # Devtools
 #------------------------------------------------------------------------------
 
-# Root directory for generated developer tools
-
-set(DEVTOOLS_ROOT "/usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/2023_06_21_09_34_17/view" CACHE PATH "")
+set(DEVTOOLS_ROOT "/usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/2023_06_21_09_34_17/._view/iuliigu5ipj34ftvmykbpuxc3juyhch4" CACHE PATH "")
 
 set(ATS_EXECUTABLE "${DEVTOOLS_ROOT}/python-3.10.10/bin/ats" CACHE PATH "")
 

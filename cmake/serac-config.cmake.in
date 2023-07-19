@@ -63,7 +63,7 @@ if(NOT SERAC_FOUND)
   endif()
 
   # Set to real variable unless user overrode it
-  foreach(dep AXOM CAMP CALIPER CHAI CONDUIT HDF5 MFEM PETSC RAJA TRIBOL UMPIRE)
+  foreach(dep ADIAK AXOM CAMP CALIPER CHAI CONDUIT HDF5 MFEM PETSC RAJA TRIBOL UMPIRE)
     if (NOT ${dep}_DIR)
       set(${dep}_DIR "${SERAC_${dep}_DIR}")
     endif()
