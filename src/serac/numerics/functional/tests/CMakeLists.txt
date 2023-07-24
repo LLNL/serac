@@ -14,6 +14,7 @@ blt_add_executable(NAME        tensor_unit_tests
 
 # Then add the examples/tests
 set(functional_tests_serial
+    functional_shape_derivatives.cpp
     simplex_basis_function_unit_tests.cpp
     hcurl_unit_tests.cpp
     test_tensor_ad.cpp
@@ -34,7 +35,6 @@ set(functional_tests_mpi
     functional_boundary_test.cpp
     functional_comparisons.cpp
     functional_comparison_L2.cpp
-    functional_shape_derivatives.cpp
     )
 
 serac_add_tests( SOURCES ${functional_tests_mpi}
