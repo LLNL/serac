@@ -1,17 +1,6 @@
-#FetchContent_Declare(
-#  enzyme
-#  GIT_REPOSITORY    "https://github.com/EnzymeAD/Enzyme.git"
-#  GIT_TAG           main
-#  SOURCE_SUBDIR     enzyme
-#)
-#
-#FetchContent_MakeAvailable(enzyme)
-
 ExternalProject_Add(TPL_enzyme                                                     
     GIT_REPOSITORY    "https://github.com/EnzymeAD/Enzyme.git"
     GIT_TAG           main
-    #GIT_REPOSITORY    "https://github.com/samuelpmish/Enzyme.git"
-    #GIT_TAG           cmake_targets
     SOURCE_SUBDIR     enzyme
     UPDATE_COMMAND    ""
     CMAKE_ARGS -DLLVM_DIR=${LLVM_DIR}
