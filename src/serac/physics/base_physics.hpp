@@ -71,6 +71,8 @@ public:
    */
   virtual double time() const;
 
+  virtual double adjointTime() const;
+
   /**
    * @brief Set the current cycle
    *
@@ -84,6 +86,8 @@ public:
    * @return The current cycle
    */
   virtual int cycle() const;
+
+  virtual int adjointCycle() const;
 
   /**
    * @brief Complete the setup and allocate the necessary data structures
@@ -115,7 +119,7 @@ public:
    * @param parameter_name The name of the parameter to generate
    *
    * @note The user is responsible for managing the lifetime of this object. It is required
-   * to exist whenever advanceTimestep, solveAdjoint, or computeSensitivity is called.
+   * to exist whenever advanceTimestep, reverseAdjointTimestep, or computeSensitivity is called.
    *
    * @note The finite element space for this object is generated from the parameter
    * discretization space (e.g. L2, H1) and the computational mesh given in the physics module constructor.
@@ -190,7 +194,7 @@ public:
    *
    * @return The sensitivity with respect to the parameter
    *
-   * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
+   * @pre `reverseAdjointTimestep` with an appropriate adjoint load must be called prior to this method.
    */
   virtual FiniteElementDual& computeSensitivity(size_t /* parameter_index */)
   {
@@ -204,7 +208,7 @@ public:
    *
    * @return The sensitivity with respect to the shape displacement
    *
-   * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
+   * @pre `reverseAdjointTimestep` with an appropriate adjoint load must be called prior to this method.
    */
   virtual FiniteElementDual& computeShapeSensitivity()
   {
@@ -227,7 +231,7 @@ public:
    *
    * @return The computed adjoint finite element states
    */
-  virtual const std::unordered_map<std::string, const serac::FiniteElementState&> solveAdjoint(
+  virtual const std::unordered_map<std::string, const serac::FiniteElementState&> reverseAdjointTimestep(
       std::unordered_map<std::string, const serac::FiniteElementDual&> /* adjoint_loads */,
       std::unordered_map<std::string, const serac::FiniteElementState&> /* adjoint_with_essential_boundary */ = {})
   {
@@ -347,10 +351,14 @@ protected:
    */
   double time_;
 
+  double adjoint_time_;
+
   /**
    * @brief Current cycle
    */
   int cycle_;
+
+  int adjoint_cycle_;
 
   /**
    * @brief The value of time at which the ODE solver wants to evaluate the residual

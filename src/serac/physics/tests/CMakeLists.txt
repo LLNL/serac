@@ -14,6 +14,7 @@ set(serial_solver_tests
     solid_finite_diff.cpp
     solid_statics_patch.cpp
     solid_dynamics_patch.cpp
+    #dynamic_thermal_adjoint.cpp
     )
 
 serac_add_tests( SOURCES ${serial_solver_tests}
