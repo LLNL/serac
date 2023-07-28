@@ -654,8 +654,12 @@ public:
       return {{"adjoint_temperature", adjoint_temperature_}};
     }
 
-    SLIC_INFO_ROOT(
-        "Only backward Euler time integration is implemented for transient adjoints. Proceed at your own risk!");
+    SLIC_ERROR_ROOT_IF(ode_.GetTimestepper() != TimestepMethod::BackwardEuler,
+                       "Only backward Euler implemented for transient adjoint heat conduction.");
+
+    SLIC_ERROR_ROOT_IF(adjoint_cycle_ == 0,
+                       "Maximum number of adjoint timesteps exceeded! The number of adjoint timesteps must equal the "
+                       "number of forward timesteps");
 
     bool is_first_adjoint_timestep = (adjoint_cycle_ == -1);
     bool is_last_adjoint_timestep  = (adjoint_cycle_ == 1);
@@ -672,7 +676,6 @@ public:
     // Load the temperature from the previous cycle from disk
     FiniteElementState temperature_n_minus_1(temperature_);
     FiniteElementState d_temperature_dt_n(temperature_);
-
 
     if (cached_temperature_.first != adjoint_cycle_) {
       StateManager::loadPreviousStates(adjoint_cycle_, {*cached_temperature_.second});
@@ -726,7 +729,7 @@ public:
 
     mfem::HypreParVector M_temperature_n(adjoint_load_vector);
     mfem::HypreParVector modified_RHS(adjoint_load_vector);
-    modified_RHS *= adjoint_timestep_;
+    modified_RHS *= -1.0 * adjoint_timestep_;
 
     m_mat->Mult(*cached_temperature_.second, M_temperature_n);
     modified_RHS.Add(1.0, M_temperature_n);
