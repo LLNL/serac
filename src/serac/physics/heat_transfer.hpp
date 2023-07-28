@@ -667,8 +667,11 @@ public:
     SLIC_INFO_ROOT(
         "Only backward Euler time integration is implemented for transient adjoints. Proceed at your own risk!");
 
+    bool is_first_adjoint_timestep = (adjoint_cycle_ == -1);
+    bool is_last_adjoint_timestep  = (adjoint_cycle_ == 1);
+
     // Inititalize the adjoint variables during the first adjoint timestep
-    if (adjoint_cycle_ == -1) {
+    if (is_first_adjoint_timestep) {
       adjoint_cycle_       = cycle_;
       adjoint_time_        = time_;
       adjoint_timestep_    = time_ / cycle_;
@@ -680,6 +683,7 @@ public:
     FiniteElementState temperature_n_minus_1(temperature_);
     FiniteElementState d_temperature_dt_n(temperature_);
 
+
     if (cached_temperature_.first != adjoint_cycle_) {
       StateManager::loadPreviousStates(adjoint_cycle_, {*cached_temperature_.second});
     }
@@ -689,6 +693,33 @@ public:
     d_temperature_dt_n.Add(1.0, *cached_temperature_.second);
     d_temperature_dt_n.Add(-1.0, temperature_n_minus_1);
     d_temperature_dt_n /= adjoint_timestep_;
+
+    if (is_first_adjoint_timestep) {
+      // Check to see if we need to accumulate a non-zero initial adjoint state due to inhomogeneous boundary conditions
+      if (essential_adjoint_temp != adjoint_with_essential_boundary.end()) {
+        adjoint_temperature_ = essential_adjoint_temp->second;
+
+        // if we have an essential non-zero boundary at the first step, it needs to be added to the sensitivity
+        for_constexpr<sizeof...(parameter_indices)>([&](auto param) {
+          auto drdparam = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<NUM_STATE_VARS + param>{}, temperature_,
+                                                              d_temperature_dt_n, shape_displacement_,
+                                                              *parameters_[parameter_indices].state...));
+          auto drdparam_mat = assemble(drdparam);
+
+          drdparam_mat->MultTranspose(0.5 * adjoint_timestep_, adjoint_temperature_, 1.0,
+                                      *parameters_[param].sensitivity);
+        });
+
+        // Accumulate the shape sensitivities using the trapezoid rule
+        auto drdshapeparam =
+            serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<SHAPE>{}, temperature_, d_temperature_dt_n,
+                                                shape_displacement_, *parameters_[parameter_indices].state...));
+        auto drdshapeparam_mat = assemble(drdshapeparam);
+
+        drdshapeparam_mat->MultTranspose(0.5 * adjoint_timestep_, adjoint_temperature_, 1.0,
+                                         shape_displacement_sensitivity_);
+      }
+    }
 
     // K := dR/du
     auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(temperature_n_minus_1), d_temperature_dt_n,
@@ -720,6 +751,11 @@ public:
     // Reset the equation solver to use the full nonlinear residual operator
     nonlin_solver_->setOperator(residual_with_bcs_);
 
+    double scale_factor = 1.0;
+    if (is_last_adjoint_timestep) {
+      scale_factor = 0.5;
+    }
+
     // Accumulate the parameter sensitivities using the trapezoid rule
     for_constexpr<sizeof...(parameter_indices)>([&](auto param) {
       auto drdparam = serac::get<DERIVATIVE>(
@@ -727,7 +763,8 @@ public:
                        shape_displacement_, *parameters_[parameter_indices].state...));
       auto drdparam_mat = assemble(drdparam);
 
-      drdparam_mat->MultTranspose(0.5 * adjoint_timestep_, adjoint_temperature_, 1.0, *parameters_[param].sensitivity);
+      drdparam_mat->MultTranspose(scale_factor * adjoint_timestep_, adjoint_temperature_, 1.0,
+                                  *parameters_[param].sensitivity);
     });
 
     // Accumulate the shape sensitivities using the trapezoid rule
@@ -736,7 +773,7 @@ public:
                                             shape_displacement_, *parameters_[parameter_indices].state...));
     auto drdshapeparam_mat = assemble(drdshapeparam);
 
-    drdshapeparam_mat->MultTranspose(0.5 * adjoint_timestep_, adjoint_temperature_, 1.0,
+    drdshapeparam_mat->MultTranspose(scale_factor * adjoint_timestep_, adjoint_temperature_, 1.0,
                                      shape_displacement_sensitivity_);
 
     adjoint_time_ -= adjoint_timestep_;
