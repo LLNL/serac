@@ -26,16 +26,16 @@ namespace serac {
 
 double compute_patch_test_error(int refinements) {
   constexpr int p   = 1;
-  constexpr int dim = 2;
+  constexpr int dim = 3;
 
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Create DataStore
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "beam_mms_data");
+  serac::StateManager::initialize(datastore, "vortex_mms_data");
 
   // Construct the appropriate dimension mesh and give it to the data store
-  std::string filename = SERAC_REPO_DIR "/more_meshes/beam_tall.mesh";
+  std::string filename = SERAC_REPO_DIR "/data/meshes/toroid-hex.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), refinements, 0);
   serac::StateManager::setMesh(std::move(mesh));
@@ -51,7 +51,7 @@ double compute_patch_test_error(int refinements) {
   serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::Newton,
                                                   .relative_tol   = 1.0e-9,
                                                   .absolute_tol   = 1.0e-12,
-                                                  .max_iterations = 1,
+                                                  .max_iterations = 20,
                                                   .print_level    = 1};
 
 
@@ -71,24 +71,9 @@ double compute_patch_test_error(int refinements) {
   // set up essential boundary conditions
   std::set<int> xy_equals_0 = {1};
 
-  //auto zero_scalar = [](const mfem::Vector&) -> double { return 0.0; };
   auto zero_vector = [](const mfem::Vector&, mfem::Vector& u) { u = 0.0; };
   solid_solver.setDisplacementBCs(xy_equals_0, zero_vector);
-  //solid_solver.setDisplacementBCs(xy_equals_0, zero_scalar, 1);
 ;
-/*
-  //traction tensor
-  const tensor<double, 3> t1{{-660206*4.85, 0, 0}};
-  //const tensor<double, 3> t2{{0, 120412*3.3, 0}};
-  auto traction = [t1](const auto& x, const tensor<double, dim>&, const double) {
-    const double spatial_tolerance = 1e-6;
-    if (x[0] > 1.0 - spatial_tolerance) {
-      return t1*0;
-    } else {
-      return 0*t1;
-    }
-  };
-  solid_solver.setPiolaTraction(traction); */
 
 
   //body force
@@ -97,6 +82,7 @@ double compute_patch_test_error(int refinements) {
     using std::sin;
     using std::log;
     using std::pow;
+    using std::atan;
 
     double t = 0.5;
 
@@ -109,72 +95,31 @@ double compute_patch_test_error(int refinements) {
     auto rho=1000;
     auto B = A*0.5*(1 - cos(2*3.1415*t));
     auto alpha = B*x[1]/H;
-    auto p1 = 128*pow(H,3)-8*pow(A,2)*H*pow(x[1],2)-5*pow(A,3)*x[0]*x[1]+4*(16*pow(H,3)+pow(A,2)*pow(x[1],2)+ 
-	        pow(A,3)*x[0]*pow(x[1],2))*cos(2*3.1415*t);
-    auto p2 = 4*pow(A,2)*(2*H + A*x[0])*x[1]*cos(4*3.1415*t)-4*pow(A,3)*x[0]*pow(x[1],2)*cos(6*3.1415*t)+pow(A,3)*x[0]*pow(x[1],
-	        2)*cos(8*3.1415*t);
-    //std::cout<< "p2="<< p2 <<std::endl;
-    auto p3 = -128*pow(H,3)*cos((A*x[1]*pow(sin(3.1415*t),2))/H)-328*pow(H,3)*cos(2*3.1415*t-((A*x[1]*pow(sin(3.1415*t),2))/H));
-    auto p4 = -32*pow(H,3)*cos(2*3.1415*t + ((A*x[1]*pow(sin(3.1415*t),2))/H));
-    auto p5 = A*(1 + (A*x[0]*(1 - cos(2*3.1415*t))/(2*H)))/(2*H*rho*pow(2*H + A*x[0] - A*x[0]*cos(2*3.1415*t),2));
-    //std::cout<< "p5="<< p5 <<std::endl;
-    auto p6 = -8*pow(H,2)*lambda + 8*A*H*mu*x[0] + 3*pow(A,2)*mu*pow(x[0],2)-4*A*mu*x[0]*(2*H+A*x[0])*cos(2*3.1415*t);
-    auto p7 = pow(A,2)*mu*pow(x[0],2)*cos(4*3.1415*t) + 8*pow(H,2)*lambda*log(1+((A*x[0]*pow(sin(3.1415*t),2))/H));
-    auto p8 = -12*A*H*x[1]-4*pow(A,2)*x[0]*x[1] + A*(8*H + 7*A*x[0])*x[1]*cos(2*3.1415*t) + 4*A*(H - A*x[0])*x[1]*cos(4*3.1415*t);
-    //std::cout<< "p8=" << p8 <<std::endl;
-    auto p9 = pow(A,2)*x[0]*x[1]*cos(6*3.1415*t) + 32*pow(H,2)*sin((A*x[1]*pow(sin(3.1415*t),2))/H);
-    auto p10 = -8*pow(H,2)*sin(2*3.1415*t-(A*x[1]*pow(sin(3.1415*t),2))/H) + 8*pow(H,2)*sin(2*3.1415*t + (A*x[1]*pow(sin(3.1415*t),2))/
-		H);
-    //std::cout<< "p10=" << p10 <<std::endl;
-    auto br = pow(3.1415,2)*pow(1/sin(3.1415*t),4)*(p1+p2+p3+p4)/(32*A*pow(H,2))+p5*(p6+p7);
-    auto b_theta = pow(3.1415,2)*pow(1/sin(3.1415*t),4)*(p8+p9+p10)/(8*A*H);
-    //auto temp1 = pow(1/sin(3.1415*t),4);
-   // auto temp2 = (32*A*pow(H,2));
-    //auto temp3 = p5*(p6+p7);
-    //std::cout<< "pow(3.1415,2)*pow(1/sin(3.1415*t),4)*(p1+p2+p3+p4)" << temp1 <<std::endl;
-    //std::cout<< "(32*A*pow(H,2))" << temp2 <<std::endl;
-    //std::cout<< "p5*(p6+p7)" << temp3 <<std::endl;
-    //std::cout<< "br=" << br <<std::endl;
-    //std::cout<< "b_theta=" << b_theta <<std::endl;
-    auto bx = br*cos(alpha)-b_theta*sin(alpha);
-    auto by = br*sin(alpha)+b_theta*cos(alpha);
-    //std::cout<< "bx=" << bx <<std::endl;
-    //std::cout<< "by=" << by <<std::endl;
+    auto R = sqrt(pow(x[0],2)+pow(x[1],2));
+    auto phi = atan(x,y);
+    double pi = 3.1415;
+    auto p1 = 4096*R*pow(15-47*R+48*pow(R,2)-16*pow(R,3),2)*mu*pow(sin(2*pi*t),4)/rho;
+    auto p2 = pow(pi,2)*R*pow(15-32*R+16*pow(R,2),4)*pow(sin(2*pi*t),2);
+    auto p3 = -16*(-45+188*R-240*pow(R,2)+96*pow(R,3));
+    auto p4 = -45+188*R-240*pow(R,2)+96*pow(R,3);
+    auto p5 = pow(15-32*R+16*pow(R,2),2);
+    auto br = p1-p2;
+    auto b_theta = (2*mu*p3+2*cos(2*pi*t)*(16*mu*p4+pow(pi,2)*R*rho*p5))/rho;
+    auto alpha = 0.5*A*(1-cos(2*pi*t))*(1-32*pow(R-1,2)+256**pow(R-1,4));
+    auto theta = phi + alpha;
+    auto bx = br*cos(theta) - b_theta*sin(theta);
+    auto by = br*sin(theta) + b_theta*cos(theta);
+    auto bz =0;
+      
     
    force(0)=bx;
    force(1)=by;
+   force (2)=bz;
     
-   //std::cout<< force <<std::endl;
+
    return force*t;
   };
-  solid_solver.addBodyForce(body_force); 
-
- //actual traction tensor
-    auto traction = [E,nu,G](const auto& x, const tensor<double, dim>& N, const double) {
-    using std::cos;
-    using std::sin;
-    using std::log;
-    using std::pow;
-
-    auto lambda=E*nu/(1+nu)/(1-2*nu);
-    auto mu=G;
-    //auto A=M_PI_2;
-    auto H=8.0;
-    double t=0.5;
-    double B = 3.1415*0.5*0.5*(1.0 - cos(2.0*3.1415*t));
-    auto alpha = get_value(B*x[1]/H);
-    auto BL=1+(B*x[0])/H;
-    tensor<double, 2, 2> U{{{1, 0},{0, get_value(BL)}}};
-    auto J = det(U);
-    const tensor<double, 2, 2> I=DenseIdentity<2>();
-    auto sigma = (lambda*log(J)/J*I)+mu/J*(dot(U,U)-I);
-    const tensor<double, 2, 2> Q{{{cos(alpha), -sin(alpha)},{sin(alpha), cos(alpha)}}};
-
-    //evaluate tractions on each face of the bar
-    return dot(Q,dot(sigma,N));
-     
-  };
-  solid_solver.setPiolaTraction(traction); 
+  solid_solver.addBodyForce(body_force);  
 
   // Finalize the data structures
   solid_solver.completeSetup();
