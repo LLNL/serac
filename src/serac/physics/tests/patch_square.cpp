@@ -3,7 +3,6 @@
 // details.
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
-//adding comment for change
 
 #include "serac/physics/solid_mechanics.hpp"
 
@@ -23,14 +22,6 @@
 
 namespace serac {
 
-/*double compute_patch_test_error(int refinements) {}
-
-TEST(Manufactured, Patch2D) {
-  // call compute_patch_test_error
-  // check error
-  EXPECT_LT(error, 1e-10);
-}*/
-
 TEST(Manufactured, TwoDimensional)
 {
   constexpr int p   = 1;
@@ -40,7 +31,7 @@ TEST(Manufactured, TwoDimensional)
 
   // Create DataStore
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "manufactured_data");
+  serac::StateManager::initialize(datastore, "patch_square_data");
 
   // Construct the appropriate dimension mesh and give it to the data store
   std::string filename = SERAC_REPO_DIR "/more_meshes/square_indbc.mesh";
@@ -71,21 +62,7 @@ TEST(Manufactured, TwoDimensional)
   solid_mechanics::StVenantKirchhoff mat{1.0, K, G};
   solid_solver.setMaterial(mat);
 
-// COMMENT OUT BCS FROM EXAMPLE
   // Define the function for the initial displacement and boundary condition
-  // auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
-
-  // Define a boundary attribute set and specify initial / boundary conditions
-  // std::set<int> ess_bdr = {1}; 
-  // solid_solver.setDisplacementBCs(ess_bdr, bc);
-  // solid_solver.setDisplacement(bc);
-
-// TEMPLATE OF BCS EQUATION FROM HPP
-  // setDisplacementBCs(const std::set<int>& disp_bdr, 
-  //                    std::function<double(const mfem::Vector& x)> disp,
-  //                    int component)
-
-//TRIAL BCS FOR 3 INPUT PARAMETERS
   // from parameterized_thermomechanics_example.cpp
   // set up essential boundary conditions
   std::set<int> x_equals_0 = {3};
@@ -94,16 +71,8 @@ TEST(Manufactured, TwoDimensional)
   std::set<int> y_disp = {2};
 
   auto zero_scalar = [](const mfem::Vector&) -> double { return 0.0; };
-  //auto disp = [](const mfem::Vector&) -> double { return 5.0; };
   solid_solver.setDisplacementBCs(x_equals_0, zero_scalar, 0);
   solid_solver.setDisplacementBCs(y_equals_0, zero_scalar, 1);
-  //solid_solver.setDisplacementBCs(x_disp, disp, 0);
-  //solid_solver.setDisplacementBCs(y_disp, disp, 1);
-
-//CONT w rest of example code
-
-  //solid_solver.setPiolaTraction(
-      //[](const auto& x, const tensor<double, dim>& n, const double) { return -0.01 * n * (x[1] > 0.99); });
 
   //traction tensor
   const tensor<double, 3> t1{{660206*4.85, 0, 0}};
@@ -139,26 +108,11 @@ TEST(Manufactured, TwoDimensional)
   };
 
   // Compute norm of error
-  //const int dim = 3;
   mfem::VectorFunctionCoefficient exact_solution_coef(dim, exact_disp);
   double error = computeL2Error(solid_solver.displacement(), exact_solution_coef);
   EXPECT_LT(error, 1e-10);
 }
 
-/* // Test
-template < typename element_type>
-double solution_error(BoundaryCondition bc)
-{
-   auto exact_disp = [](const mfem::Vector& X, mfem::Vector& u) {
-    // u = x - X, where x = 2*X + 0*Y + 0*Z
-    u = X[0];
-  };
-
-  // Compute norm of error
-  const int dim = 3;
-  mfem::VectorFunctionCoefficient exact_solution_coef(dim, exact_disp);
-  return computeL2Error(solid_solver.displacement(), exact_solution_coef);
-} */
 
 }  // namespace serac
 

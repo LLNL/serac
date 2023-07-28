@@ -9,6 +9,9 @@ set(test_dependencies serac_physics serac_mesh gtest)
 set(serial_solver_tests
     beam_bending.cpp
     manufactured.cpp
+    patch_square.cpp
+    beam_mms.cpp
+    #vortex_mms.cpp
     thermal_finite_diff.cpp
     thermal_statics_patch.cpp
     thermal_dynamics_patch.cpp
