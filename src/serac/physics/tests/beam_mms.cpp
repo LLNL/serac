@@ -10,7 +10,6 @@
 #include <fstream>
 #include <set>
 #include <string>
-#include <cmath>
 
 #include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
@@ -25,10 +24,11 @@
 namespace serac {
 
 double compute_patch_test_error(int refinements) {
+  
+  MPI_Barrier(MPI_COMM_WORLD);
+
   constexpr int p   = 1;
   constexpr int dim = 2;
-
-  MPI_Barrier(MPI_COMM_WORLD);
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -40,7 +40,7 @@ double compute_patch_test_error(int refinements) {
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), refinements, 0);
   serac::StateManager::setMesh(std::move(mesh));
 
-    serac::LinearSolverOptions linear_options{.linear_solver  = LinearSolver::GMRES,
+    /* serac::LinearSolverOptions linear_options{.linear_solver  = LinearSolver::GMRES,
                                             .preconditioner = Preconditioner::HypreAMG,
                                             .relative_tol   = 1.0e-6,
                                             .absolute_tol   = 1.0e-14,
@@ -51,15 +51,18 @@ double compute_patch_test_error(int refinements) {
   serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::Newton,
                                                   .relative_tol   = 1.0e-9,
                                                   .absolute_tol   = 1.0e-12,
-                                                  .max_iterations = 1,
+                                                  .max_iterations = 20,
                                                   .print_level    = 1};
 
 
     SolidMechanics<p, dim> solid_solver(nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options,
-                                      GeometricNonlinearities::On, "solid_mechanics"); 
-  //changed from direct to default for linear_options
- /* SolidMechanics<p, dim> solid_solver(nonlinear_options, serac::solid_mechanics::default_linear_options, solid_mechanics::default_quasistatic_options,
                                       GeometricNonlinearities::On, "solid_mechanics"); */
+
+  //changed from direct to default for linear_options
+  SolidMechanics<p, dim> solid_solver(solid_mechanics::default_nonlinear_options,
+    solid_mechanics::default_linear_options, solid_mechanics::default_quasistatic_options,
+    GeometricNonlinearities::On, "solid_mechanics"); 
+
   double E = 1e3;
   double nu = 0.3;
   double                             K = E/(3*(1-2*nu));
@@ -76,29 +79,16 @@ double compute_patch_test_error(int refinements) {
   solid_solver.setDisplacementBCs(xy_equals_0, zero_vector);
   //solid_solver.setDisplacementBCs(xy_equals_0, zero_scalar, 1);
 ;
-/*
-  //traction tensor
-  const tensor<double, 3> t1{{-660206*4.85, 0, 0}};
-  //const tensor<double, 3> t2{{0, 120412*3.3, 0}};
-  auto traction = [t1](const auto& x, const tensor<double, dim>&, const double) {
-    const double spatial_tolerance = 1e-6;
-    if (x[0] > 1.0 - spatial_tolerance) {
-      return t1*0;
-    } else {
-      return 0*t1;
-    }
-  };
-  solid_solver.setPiolaTraction(traction); */
 
 
   //body force
-  auto body_force = [E,nu,G](const auto& x, const double) {
-    using std::cos;
+  auto body_force = [E,nu,G](const auto& x, const double /*t*/) {
+    /*using std::cos;
     using std::sin;
     using std::log;
     using std::pow;
 
-    double t = 0.5;
+    //double t = 0.5;
 
     auto force=x*0.0;
 
@@ -145,13 +135,15 @@ double compute_patch_test_error(int refinements) {
    force(1)=by;
     
    //std::cout<< force <<std::endl;
-   return force*t;
+   return force*t; */
+
+   return 0.0*x;
   };
   solid_solver.addBodyForce(body_force); 
 
  //actual traction tensor
     auto traction = [E,nu,G](const auto& x, const tensor<double, dim>& N, const double) {
-    using std::cos;
+   using std::cos;
     using std::sin;
     using std::log;
     using std::pow;
@@ -168,19 +160,21 @@ double compute_patch_test_error(int refinements) {
     auto J = det(U);
     const tensor<double, 2, 2> I=DenseIdentity<2>();
     auto sigma = (lambda*log(J)/J*I)+mu/J*(dot(U,U)-I);
+    std::cout<< sigma << std::endl;
     const tensor<double, 2, 2> Q{{{cos(alpha), -sin(alpha)},{sin(alpha), cos(alpha)}}};
 
     //evaluate tractions on each face of the bar
-    return dot(Q,dot(sigma,N));
+    return dot(Q,dot(sigma,N)); 
+   
      
   };
-  solid_solver.setPiolaTraction(traction); 
+  solid_solver.setPiolaTraction(traction);
 
   // Finalize the data structures
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  double dt = 1;
+  double dt = 0.1;
   solid_solver.advanceTimestep(dt);
 
   // Output the sidre-based plot files
@@ -191,7 +185,6 @@ double compute_patch_test_error(int refinements) {
     // u = x - X, where x = 2*X + 0*Y + 0*Z
     u[0] = X[0];
     u[1] = 0;
-    u[2] = 0;
   };
 
   // Compute norm of error
