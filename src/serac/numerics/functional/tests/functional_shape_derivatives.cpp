@@ -4,57 +4,56 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-
 /**
  * @file functional_shape_derivatives.cpp
- * 
+ *
  * @brief this file has 2D and 3D tests to verify correctness
- *        of integral calculations (both evaluation and derivatives) 
+ *        of integral calculations (both evaluation and derivatives)
  *        involving shape displacement. The test itself is a
  *        numerical evaluation of the divergence theorem
- * 
+ *
  *    \int_\Omega div(f) dV == \int_{\partial\Omega} f . n dA
- *        
+ *
  *        i.e. integrating the divergence of some function
- *        over a domain gives the same result as integrating the 
+ *        over a domain gives the same result as integrating the
  *        the flux through the boundary of that domain
- * 
+ *
  *        In these tests, we make up an arbitrary polynomial function
  *        of appropriate degree (using 3D case as an example)
- * 
- *                  ⎛c0x⎞   ⎛c1x⎞     ⎛c2x⎞     ⎛c3x⎞     ⎛c4x⎞          
+ *
+ *                  ⎛c0x⎞   ⎛c1x⎞     ⎛c2x⎞     ⎛c3x⎞     ⎛c4x⎞
  *     f(x, y, z) = ⎜c0y⎟ + ⎜c1y⎟ x + ⎜c2y⎟ y + ⎜c3y⎟ z + ⎜c4y⎟ x^2 + ...
- *                  ⎝c0z⎠   ⎝c1z⎠     ⎝c2z⎠     ⎝c3z⎠     ⎝c4z⎠ 
- * 
- *        and make a serac::Functional instance that registers 
+ *                  ⎝c0z⎠   ⎝c1z⎠     ⎝c2z⎠     ⎝c3z⎠     ⎝c4z⎠
+ *
+ *        and make a serac::Functional instance that registers
  *        a domain integral of div(f) and a boundary integral with -dot(f,n).
- *       
+ *
  *        However, serac::Functional doesn't integrate directly, it integrates
- *        the qfunction output against test functions, e.g. 
- * 
+ *        the qfunction output against test functions, e.g.
+ *
  *    r_i := \int_\Omega \phi_i div(f) dV - \int_{\partial\Omega} \phi_i * f . n dA
- * 
+ *
  *        so the diverence theorem doesn't directly apply to each component
- *        of the residual. But, since the test functions partition unity, 
- * 
+ *        of the residual. But, since the test functions partition unity,
+ *
  *        \sum_i \phi_i = 1
- * 
+ *
  *        if we add up all the components, then we have
- * 
+ *
  *    \sum_i r_i = \sum_i (\int_\Omega \phi_i div(f) dV - \int_{\partial\Omega} \phi_i * f . n dA)
  *               = \int_\Omega (\sum_i \phi_i) div(f) dV - \int_{\partial\Omega} (\sum_i \phi_i) * f . n dA
  *               = \int_\Omega (1) div(f) dV - \int_{\partial\Omega} (1) * f . n dA
  *               = \int_\Omega div(f) dV - \int_{\partial\Omega} f . n dA
- * 
- *        where we can see that the last expression on the rhs is 
+ *
+ *        where we can see that the last expression on the rhs is
  *        just the difference of terms in the divergence theorem, so
- * 
+ *
  *    \sum_i r_i = 0
- * 
+ *
  *        similarly, if the components of the residual sum to zero identically,
  *        then the sum of the components of any directional derivative of `r` must
- *        also be zero, so we check that as well, using a randomly generated direction. 
- * 
+ *        also be zero, so we check that as well, using a randomly generated direction.
+ *
  *  sam: the tolerance for the 3D quadratic test is relatively loose,
  *       since we currently have a coarse quadrature rule hardcoded.
  *       This means that the integrals are not evaluated exactly,
@@ -89,14 +88,15 @@ int num_procs, myid;
 std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
 
-template < int p, typename T, int dim>
-auto monomials(tensor< T, dim > X) {
+template <int p, typename T, int dim>
+auto monomials(tensor<T, dim> X)
+{
   if constexpr (dim == 2) {
-    tensor<T, ((p + 1) * (p + 2)) / 2 > output;
+    tensor<T, ((p + 1) * (p + 2)) / 2> output;
     output[0] = 1.0;
     output[1] = X[0];
     output[2] = X[1];
-    if constexpr (p == 2) { 
+    if constexpr (p == 2) {
       output[3] = X[0] * X[0];
       output[4] = X[0] * X[1];
       output[5] = X[1] * X[1];
@@ -105,12 +105,12 @@ auto monomials(tensor< T, dim > X) {
   }
 
   if constexpr (dim == 3) {
-    tensor<T, ((p + 1) * (p + 2) * (p + 3)) / 6 > output;
+    tensor<T, ((p + 1) * (p + 2) * (p + 3)) / 6> output;
     output[0] = 1.0;
     output[1] = X[0];
     output[2] = X[1];
     output[3] = X[2];
-    if constexpr (p == 2) { 
+    if constexpr (p == 2) {
       output[4] = X[0] * X[0];
       output[5] = X[0] * X[1];
       output[6] = X[0] * X[2];
@@ -122,10 +122,11 @@ auto monomials(tensor< T, dim > X) {
   }
 }
 
-template < int p, typename T, int dim>
-auto grad_monomials(tensor< T, dim > X) {
+template <int p, typename T, int dim>
+auto grad_monomials(tensor<T, dim> X)
+{
   if constexpr (dim == 2) {
-    tensor<T, ((p + 1) * (p + 2)) / 2, 2 > output;
+    tensor<T, ((p + 1) * (p + 2)) / 2, 2> output;
 
     output[0][0] = 0;
     output[0][1] = 0;
@@ -136,7 +137,7 @@ auto grad_monomials(tensor< T, dim > X) {
     output[2][0] = 0;
     output[2][1] = 1;
 
-    if constexpr (p == 2) { 
+    if constexpr (p == 2) {
       output[3][0] = 2 * X[0];
       output[3][1] = 0;
 
@@ -151,7 +152,7 @@ auto grad_monomials(tensor< T, dim > X) {
   }
 
   if constexpr (dim == 3) {
-    tensor<T, ((p + 1) * (p + 2) * (p + 3)) / 6, 3 > output;
+    tensor<T, ((p + 1) * (p + 2) * (p + 3)) / 6, 3> output;
 
     output[0][0] = 0;
     output[0][1] = 0;
@@ -169,7 +170,7 @@ auto grad_monomials(tensor< T, dim > X) {
     output[3][1] = 0;
     output[3][2] = 1;
 
-    if constexpr (p == 2) { 
+    if constexpr (p == 2) {
       output[4][0] = 2 * X[0];
       output[4][1] = 0;
       output[4][2] = 0;
@@ -206,9 +207,7 @@ void functional_test_2D(mfem::ParMesh& mesh, double tolerance)
 
   constexpr auto I = Identity<dim>();
 
-  tensor c = make_tensor< dim, (p + 1) * (p + 2) / 2 >([](int i, int j) {
-    return double(i+1) / (j+1);
-  });
+  tensor c = make_tensor<dim, (p + 1) * (p + 2) / 2>([](int i, int j) { return double(i + 1) / (j + 1); });
 
   // Create standard MFEM bilinear and linear forms on H1
   auto                        fec1 = mfem::H1_FECollection(p, dim);
@@ -251,9 +250,9 @@ void functional_test_2D(mfem::ParMesh& mesh, double tolerance)
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<1>{},
       [=](auto position, auto shape_displacement) {
-        auto [X, dX_dxi] = position;
-        auto [u, du_dxi] = shape_displacement;
-        auto n = normalize(cross(dX_dxi + du_dxi));
+        auto [X, dX_dxi]     = position;
+        auto [u, du_dxi]     = shape_displacement;
+        auto n               = normalize(cross(dX_dxi + du_dxi));
         auto area_correction = norm(cross(dX_dxi + du_dxi)) / norm(cross(dX_dxi));
         return -dot(f(X + u), n) * area_correction;
       },
@@ -264,7 +263,6 @@ void functional_test_2D(mfem::ParMesh& mesh, double tolerance)
 
   auto dr = drdU2(dU2);
   EXPECT_NEAR(mfem::InnerProduct(ones, dr), 0.0, tolerance);
-
 }
 
 template <int p>
@@ -274,9 +272,7 @@ void functional_test_3D(mfem::ParMesh& mesh, double tolerance)
 
   constexpr auto I = Identity<dim>();
 
-  tensor c = make_tensor< dim, ((p + 1) * (p + 2) * (p + 3)) / 6 >([](int i, int j) {
-    return double(i+1) / (j+1);
-  });
+  tensor c = make_tensor<dim, ((p + 1) * (p + 2) * (p + 3)) / 6>([](int i, int j) { return double(i + 1) / (j + 1); });
 
   // Create standard MFEM bilinear and linear forms on H1
   auto                        fec1 = mfem::H1_FECollection(p, dim);
@@ -319,9 +315,9 @@ void functional_test_3D(mfem::ParMesh& mesh, double tolerance)
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<1>{},
       [=](auto position, auto shape_displacement) {
-        auto [X, dX_dxi] = position;
-        auto [u, du_dxi] = shape_displacement;
-        auto n = normalize(cross(dX_dxi + du_dxi));
+        auto [X, dX_dxi]     = position;
+        auto [u, du_dxi]     = shape_displacement;
+        auto n               = normalize(cross(dX_dxi + du_dxi));
         auto area_correction = norm(cross(dX_dxi + du_dxi)) / norm(cross(dX_dxi));
         return -dot(f(X + u), n) * area_correction;
       },
@@ -332,7 +328,6 @@ void functional_test_3D(mfem::ParMesh& mesh, double tolerance)
 
   auto dr = drdU2(dU2);
   EXPECT_NEAR(mfem::InnerProduct(ones, dr), 0.0, tolerance);
-
 }
 
 TEST(ShapeDerivative, 2DLinear) { functional_test_2D<1>(*mesh2D, 1.0e-14); }

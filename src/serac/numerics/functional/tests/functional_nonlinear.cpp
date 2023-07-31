@@ -85,7 +85,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
       Dimension<dim - 1>{}, DependsOn<0>{},
       [=](auto position, auto temperature) {
         auto [X, dX_dxi] = position;
-        auto u = get<0>(temperature);
+        auto u           = get<0>(temperature);
         return X[0] + X[1] - cos(u);
       },
       mesh);
@@ -132,8 +132,8 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
       Dimension<dim - 1>{}, DependsOn<0>{},
       [=](auto position, auto displacement) {
         auto [X, dX_dxi] = position;
-        auto u = get<0>(displacement);
-        auto n = normalize(cross(dX_dxi));
+        auto u           = get<0>(displacement);
+        auto n           = normalize(cross(dX_dxi));
         return (X[0] + X[1] - cos(u[0])) * n;
       },
       mesh);

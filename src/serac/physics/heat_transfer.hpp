@@ -435,14 +435,14 @@ public:
         Dimension<dim - 1>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
         [this, flux_function](auto X, auto u, auto /* dtemp_dt */, auto shape, auto... params) {
           auto temp = get<VALUE>(u);
-          auto x = X + shape;
-          auto n = cross(get<DERIVATIVE>(x));
+          auto x    = X + shape;
+          auto n    = cross(get<DERIVATIVE>(x));
 
           // serac::Functional's boundary integrals multiply the q-function output by
           // norm(cross(dX_dxi)) at that quadrature point, but if we impose a shape displacement
           // then that weight needs to be corrected. The new weight should be
-          // norm(cross(dX_dxi + dp_dxi)), so we multiply by the ratio w_new / w_old 
-          // to get 
+          // norm(cross(dX_dxi + dp_dxi)), so we multiply by the ratio w_new / w_old
+          // to get
           //   q * area_correction * w_old
           // = q * (w_new / w_old) * w_old
           // = q * w_new

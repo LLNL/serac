@@ -153,17 +153,19 @@ TEST(LiquidCrystalElastomer, Brighenti)
       [=](auto position, auto displacement) {
         auto [X, dX_dxi] = position;
         auto [u, du_dxi] = displacement;
-        auto n = normalize(cross(dX_dxi));
+        auto n           = normalize(cross(dX_dxi));
         return dot(u, n) * ((X[1] > 0.99 * ly) ? 1.0 : 0.0);
       },
       pmesh);
 
   Functional<double(H1<p, dim>)> area({&solid_solver.displacement().space()});
   area.AddSurfaceIntegral(
-      DependsOn<>{}, [=](auto position) { 
+      DependsOn<>{},
+      [=](auto position) {
         auto X = get<0>(position);
-        return (X[1] > 0.99 * ly) ? 1.0 : 0.0; 
-      }, pmesh);
+        return (X[1] > 0.99 * ly) ? 1.0 : 0.0;
+      },
+      pmesh);
 
   double initial_area = area(solid_solver.displacement());
   SLIC_INFO_ROOT("... Initial Area of the top surface: " << initial_area);

@@ -147,7 +147,7 @@ TEST(Thermomechanics, ParameterizedMaterial)
       [=](auto position, auto displacement) {
         auto [X, dX_dxi] = position;
         auto [u, du_dxi] = displacement;
-        auto n = normalize(cross(dX_dxi));
+        auto n           = normalize(cross(dX_dxi));
         return dot(u, n) * ((X[2] > 0.99 * height) ? 1.0 : 0.0);
       },
       mesh);
@@ -157,10 +157,12 @@ TEST(Thermomechanics, ParameterizedMaterial)
 
   Functional<double(H1<p, dim>)> area({&simulation.displacement().space()});
   area.AddSurfaceIntegral(
-      DependsOn<>{}, [=](auto position) {
+      DependsOn<>{},
+      [=](auto position) {
         auto [X, dX_dxi] = position;
-        return (X[2] > 0.99 * height) ? 1.0 : 0.0; 
-      }, mesh);
+        return (X[2] > 0.99 * height) ? 1.0 : 0.0;
+      },
+      mesh);
 
   double top_area = area(simulation.displacement());
 

@@ -92,8 +92,8 @@ public:
 
   /// @brief a container holding quadrature point data of the specified type
   /// @tparam T the type of data to store at each quadrature point
-  template < typename T >
-  using qdata_type = std::shared_ptr< QuadratureData<T> >;
+  template <typename T>
+  using qdata_type = std::shared_ptr<QuadratureData<T>>;
 
   /**
    * @brief Construct a new SolidMechanics object
@@ -307,10 +307,10 @@ public:
   {
     constexpr auto Q = order + 1;
 
-    std::array< uint32_t, mfem::Geometry::NUM_GEOMETRIES > elems = geometry_counts(mesh_);
-    std::array< uint32_t, mfem::Geometry::NUM_GEOMETRIES > qpts_per_elem{};
+    std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> elems = geometry_counts(mesh_);
+    std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> qpts_per_elem{};
 
-    std::vector< mfem::Geometry::Type > geometries;
+    std::vector<mfem::Geometry::Type> geometries;
     if (dim == 2) {
       geometries = {mfem::Geometry::TRIANGLE, mfem::Geometry::SQUARE};
     } else {
@@ -602,8 +602,7 @@ public:
    * @pre MaterialType must define operator() that returns the Cauchy stress
    */
   template <int... active_parameters, typename MaterialType, typename StateType = Empty>
-  void setMaterial(DependsOn<active_parameters...>, MaterialType material,
-                   qdata_type<StateType> qdata = EmptyQData)
+  void setMaterial(DependsOn<active_parameters...>, MaterialType material, qdata_type<StateType> qdata = EmptyQData)
   {
     residual_->AddDomainIntegral(
         Dimension<dim>{},
@@ -749,15 +748,16 @@ public:
   {
     residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
-        [this, traction_function](auto X, auto /* displacement */, auto /* acceleration */, auto shape, auto... params) {
+        [this, traction_function](auto X, auto /* displacement */, auto /* acceleration */, auto shape,
+                                  auto... params) {
           auto x = X + shape;
           auto n = cross(get<DERIVATIVE>(x));
 
           // serac::Functional's boundary integrals multiply the q-function output by
           // norm(cross(dX_dxi)) at that quadrature point, but if we impose a shape displacement
           // then that weight needs to be corrected. The new weight should be
-          // norm(cross(dX_dxi + dp_dxi)), so we multiply by the ratio w_new / w_old 
-          // to get 
+          // norm(cross(dX_dxi + dp_dxi)), so we multiply by the ratio w_new / w_old
+          // to get
           //   q * area_correction * w_old
           // = q * (w_new / w_old) * w_old
           // = q * w_new
