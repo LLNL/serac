@@ -90,6 +90,8 @@ public:
   /// integrators
   static constexpr auto NUM_STATE_VARS = 3;
 
+  /// @brief a container holding quadrature point data of the specified type
+  /// @tparam T the type of data to store at each quadrature point
   template < typename T >
   using qdata_type = std::shared_ptr< QuadratureData<T> >;
 

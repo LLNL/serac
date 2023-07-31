@@ -54,6 +54,7 @@ struct QuadratureData;
 // actually storing/accessing any data
 namespace axom {
 
+/// @cond
 template <>
 class Array<serac::Nothing, 2, MemorySpace::Dynamic> {
  public:
@@ -82,7 +83,6 @@ class Array<serac::Empty, 2, MemorySpace::Dynamic> {
   Array(uint32_t, uint32_t) {}
 };
 
-template <>
 class ArrayView<serac::Empty, 2, MemorySpace::Dynamic> {
  public:
   ArrayView(Array<serac::Empty, 2, MemorySpace::Dynamic> /* unused */) {}
@@ -95,6 +95,7 @@ class ArrayView<serac::Empty, 2, MemorySpace::Dynamic> {
 
   serac::Empty data;
 };
+/// @endcond
 
 } // namespace axom
 
@@ -111,8 +112,8 @@ namespace serac {
 template <typename T>
 struct QuadratureData {
 
+  /// @brief a list of integers, one associated with each type of mfem::Geometry
   using geom_array_t = std::array< uint32_t, mfem::Geometry::NUM_GEOMETRIES >;
-
 
   /**
    * @brief Initialize a new quadrature data buffer, optionally with some initial value
@@ -152,7 +153,7 @@ struct QuadratureData {
   std::map< mfem::Geometry::Type, axom::Array<T,2> > data;
 };
 
-/// @overload
+/// @cond
 template <>
 struct QuadratureData<Nothing> {
 
@@ -167,7 +168,6 @@ struct QuadratureData<Nothing> {
   axom::Array<Nothing, 2, axom::MemorySpace::Dynamic> data;
 };
 
-/// @overload
 template <>
 struct QuadratureData<Empty> {
 
@@ -181,6 +181,7 @@ struct QuadratureData<Empty> {
 
   axom::Array<Empty, 2, axom::MemorySpace::Dynamic> data;
 };
+/// @endcond
 
 
 /// these values exist to serve as default arguments for materials without material state
