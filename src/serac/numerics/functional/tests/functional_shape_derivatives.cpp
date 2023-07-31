@@ -4,6 +4,63 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+
+/**
+ * @file functional_shape_derivatives.cpp
+ * 
+ * @brief this file has 2D and 3D tests to verify correctness
+ *        of integral calculations (both evaluation and derivatives) 
+ *        involving shape displacement. The test itself is a
+ *        numerical evaluation of the divergence theorem
+ * 
+ *    \int_\Omega div(f) dV == \int_{\partial\Omega} f . n dA
+ *        
+ *        i.e. integrating the divergence of some function
+ *        over a domain gives the same result as integrating the 
+ *        the flux through the boundary of that domain
+ * 
+ *        In these tests, we make up an arbitrary polynomial function
+ *        of appropriate degree (using 3D case as an example)
+ * 
+ *                  ⎛c0x⎞   ⎛c1x⎞     ⎛c2x⎞     ⎛c3x⎞     ⎛c4x⎞          
+ *     f(x, y, z) = ⎜c0y⎟ + ⎜c1y⎟ x + ⎜c2y⎟ y + ⎜c3y⎟ z + ⎜c4y⎟ x^2 + ...
+ *                  ⎝c0z⎠   ⎝c1z⎠     ⎝c2z⎠     ⎝c3z⎠     ⎝c4z⎠ 
+ * 
+ *        and make a serac::Functional instance that registers 
+ *        a domain integral of div(f) and a boundary integral with -dot(f,n).
+ *       
+ *        However, serac::Functional doesn't integrate directly, it integrates
+ *        the qfunction output against test functions, e.g. 
+ * 
+ *    r_i := \int_\Omega \phi_i div(f) dV - \int_{\partial\Omega} \phi_i * f . n dA
+ * 
+ *        so the diverence theorem doesn't directly apply to each component
+ *        of the residual. But, since the test functions partition unity, 
+ * 
+ *        \sum_i \phi_i = 1
+ * 
+ *        if we add up all the components, then we have
+ * 
+ *    \sum_i r_i = \sum_i (\int_\Omega \phi_i div(f) dV - \int_{\partial\Omega} \phi_i * f . n dA)
+ *               = \int_\Omega (\sum_i \phi_i) div(f) dV - \int_{\partial\Omega} (\sum_i \phi_i) * f . n dA
+ *               = \int_\Omega (1) div(f) dV - \int_{\partial\Omega} (1) * f . n dA
+ *               = \int_\Omega div(f) dV - \int_{\partial\Omega} f . n dA
+ * 
+ *        where we can see that the last expression on the rhs is 
+ *        just the difference of terms in the divergence theorem, so
+ * 
+ *    \sum_i r_i = 0
+ * 
+ *        similarly, if the components of the residual sum to zero identically,
+ *        then the sum of the components of any directional derivative of `r` must
+ *        also be zero, so we check that as well, using a randomly generated direction. 
+ * 
+ *  sam: the tolerance for the 3D quadratic test is relatively loose,
+ *       since we currently have a coarse quadrature rule hardcoded.
+ *       This means that the integrals are not evaluated exactly,
+ *       so the divergence theorem is only satisfied in approximation
+ */
+
 #include <fstream>
 #include <iostream>
 
@@ -143,7 +200,7 @@ auto grad_monomials(tensor< T, dim > X) {
 }
 
 template <int p>
-void functional_test_2D(mfem::ParMesh& mesh)
+void functional_test_2D(mfem::ParMesh& mesh, double tolerance)
 {
   constexpr int dim = 2;
 
@@ -198,30 +255,20 @@ void functional_test_2D(mfem::ParMesh& mesh)
         auto [u, du_dxi] = shape_displacement;
         auto n = normalize(cross(dX_dxi + du_dxi));
         auto area_correction = norm(cross(dX_dxi + du_dxi)) / norm(cross(dX_dxi));
-        //std::cout << "X " << X << std::endl;
-        //std::cout << "dX_dxi " << dX_dxi << std::endl;
-        //std::cout << "u " << u << std::endl;
-        //std::cout << "du_dxi " << du_dxi << std::endl;
-        //std::cout << "n " << n << std::endl;
-        //std::cout << "area correction " << area_correction << std::endl;
-        //std::cout << "f: " << f(X + u) << std::endl;
-        //std::cout << std::endl;
         return -dot(f(X + u), n) * area_correction;
       },
       mesh);
 
   auto [r, drdU2] = residual(U1, serac::differentiate_wrt(U2));
-
-  EXPECT_NEAR(mfem::InnerProduct(r, ones), 0.0, 1.0e-14);
+  EXPECT_NEAR(mfem::InnerProduct(r, ones), 0.0, tolerance);
 
   auto dr = drdU2(dU2);
-
-  EXPECT_NEAR(mfem::InnerProduct(ones, dr), 0.0, 1.0e-14);
+  EXPECT_NEAR(mfem::InnerProduct(ones, dr), 0.0, tolerance);
 
 }
 
 template <int p>
-void functional_test_3D(mfem::ParMesh& mesh)
+void functional_test_3D(mfem::ParMesh& mesh, double tolerance)
 {
   constexpr int dim = 3;
 
@@ -230,8 +277,6 @@ void functional_test_3D(mfem::ParMesh& mesh)
   tensor c = make_tensor< dim, ((p + 1) * (p + 2) * (p + 3)) / 6 >([](int i, int j) {
     return double(i+1) / (j+1);
   });
-
-  std::cout << "c: " << c << std::endl;
 
   // Create standard MFEM bilinear and linear forms on H1
   auto                        fec1 = mfem::H1_FECollection(p, dim);
@@ -247,9 +292,8 @@ void functional_test_3D(mfem::ParMesh& mesh)
   U1.Randomize();
 
   mfem::Vector U2(fespace2.TrueVSize());
-  //U2.Randomize();
-  //U2 *= 0.1;
-  U2 = 0.0;
+  U2.Randomize();
+  U2 *= 0.1;
 
   mfem::Vector dU2(fespace2.TrueVSize());
   dU2.Randomize();
@@ -267,12 +311,7 @@ void functional_test_3D(mfem::ParMesh& mesh)
       Dimension<dim>{}, DependsOn<1>{},
       [=](auto X, auto shape_displacement) {
         auto [u, du_dx] = shape_displacement;
-        std::cout << "X " << X << std::endl;
-        std::cout << "u " << u << std::endl;
-        std::cout << "du_dx " << du_dx << std::endl;
-        std::cout << "div_f: " << div_f(X + u) << std::endl;
-        std::cout << std::endl;
-        return serac::tuple{div_f(X + u) * det(I + du_dx) * 0, zero{}};
+        return serac::tuple{div_f(X + u) * det(I + du_dx), zero{}};
       },
       mesh);
 
@@ -284,39 +323,25 @@ void functional_test_3D(mfem::ParMesh& mesh)
         auto [u, du_dxi] = shape_displacement;
         auto n = normalize(cross(dX_dxi + du_dxi));
         auto area_correction = norm(cross(dX_dxi + du_dxi)) / norm(cross(dX_dxi));
-        std::cout << "X " << X << std::endl;
-        std::cout << "dX_dxi " << dX_dxi << std::endl;
-        std::cout << "u " << u << std::endl;
-        std::cout << "du_dxi " << du_dxi << std::endl;
-        std::cout << "n " << n << std::endl;
-        std::cout << "area correction " << area_correction << std::endl;
-        std::cout << "f: " << f(X + u) << std::endl;
-        std::cout << std::endl;
         return -dot(f(X + u), n) * area_correction;
       },
       mesh);
 
   auto [r, drdU2] = residual(U1, serac::differentiate_wrt(U2));
-
-  write_to_file(r, "r.txt");
-
-  EXPECT_NEAR(mfem::InnerProduct(r, ones), 0.0, 1.0e-14);
+  EXPECT_NEAR(mfem::InnerProduct(r, ones), 0.0, tolerance);
 
   auto dr = drdU2(dU2);
-
-  EXPECT_NEAR(mfem::InnerProduct(ones, dr), 0.0, 1.0e-14);
+  EXPECT_NEAR(mfem::InnerProduct(ones, dr), 0.0, tolerance);
 
 }
 
-//TEST(ShapeDerivative, 2DLinear) { functional_test_2D<1>(*mesh2D); }
-//TEST(ShapeDerivative, 2DQuadratic) { functional_test_2D<2>(*mesh2D); }
+TEST(ShapeDerivative, 2DLinear) { functional_test_2D<1>(*mesh2D, 1.0e-14); }
+TEST(ShapeDerivative, 2DQuadratic) { functional_test_2D<2>(*mesh2D, 1.0e-14); }
 
-TEST(ShapeDerivative, 3DLinear) { functional_test_3D<1>(*mesh3D); }
-TEST(ShapeDerivative, 3DQuadratic) { functional_test_3D<2>(*mesh3D); }
+TEST(ShapeDerivative, 3DLinear) { functional_test_3D<1>(*mesh3D, 1.0e-13); }
 
-//TEST(Elasticity, 3DLinear) { functional_test(*mesh3D, H1<1, 3>{}, H1<1, 3>{}); }
-//TEST(Elasticity, 3DQuadratic) { functional_test(*mesh3D, H1<2, 3>{}, H1<2, 3>{}); }
-//TEST(Elasticity, 3DCubic) { functional_test(*mesh3D, H1<3, 3>{}, H1<3, 3>{}); }
+// note: see description at top of file
+TEST(ShapeDerivative, 3DQuadratic) { functional_test_3D<2>(*mesh3D, 1.0e-2); }
 
 int main(int argc, char* argv[])
 {
@@ -333,8 +358,7 @@ int main(int argc, char* argv[])
   std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/patch2D_tris_and_quads.mesh";
   mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
 
-  std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/patch3D_tets.mesh";
-  //std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/patch3D_tets_and_hexes.mesh";
+  std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/patch3D_tets_and_hexes.mesh";
   mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
 
   int result = RUN_ALL_TESTS();
