@@ -83,6 +83,7 @@ class Array<serac::Empty, 2, MemorySpace::Dynamic> {
   Array(uint32_t, uint32_t) {}
 };
 
+template <>
 class ArrayView<serac::Empty, 2, MemorySpace::Dynamic> {
  public:
   ArrayView(Array<serac::Empty, 2, MemorySpace::Dynamic> /* unused */) {}
