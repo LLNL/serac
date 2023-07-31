@@ -138,12 +138,13 @@ double compute_patch_test_error(int refinements) {
    return force*t; */
 
    return 0.0*x;
+
   };
   solid_solver.addBodyForce(body_force); 
 
  //actual traction tensor
     auto traction = [E,nu,G](const auto& x, const tensor<double, dim>& N, const double) {
-   using std::cos;
+    using std::cos;
     using std::sin;
     using std::log;
     using std::pow;
