@@ -16,14 +16,20 @@
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/materials/solid_material.hpp"
 #include "serac/physics/materials/parameterized_solid_material.hpp"
+#include "serac/infrastructure/initialize.hpp"
+#include "serac/infrastructure/terminator.hpp"
 
 #define LOAD_DRIVEN
 // #undef LOAD_DRIVEN
 
-#define FULL_DOMAIN
-// #undef FULL_DOMAIN
+// #define FULL_DOMAIN
+#undef FULL_DOMAIN
 
-static const int probTag_ = 5;
+static const int probTag_ = 9;
+// Cases [1/5, 2/6, 3/7, 4/8/9] have a max Young's moudulus of [500, 200, 100, and 5] respectively. 
+// Cases [1, 2, 3, 4] have no transition between material properties, 
+// Cases [5, 6, 7, 8] have a 5 [mm] transition between material properties
+// Case 9 is fully graded from one end to the other
 
 using namespace serac;
 
@@ -49,17 +55,17 @@ int main(int argc, char* argv[])
 #endif
 
   // Construct the appropriate dimension mesh and give it to the data store
-  int    nElem = 6;  // 2*3;
+  int    nElem = 4;  // 2*3;
   double lx = 9.53e-3, ly = 3.18e-3 / 2, lz = 2.e-3 / 2;
   // double lx = 0.5e-3, ly = 0.1e-3, lz = 0.05e-3;
 #ifdef FULL_DOMAIN
   ::mfem::Mesh cuboid =
       mfem::Mesh(mfem::Mesh::MakeCartesian3D(19 * nElem, 3 * nElem, 2 * nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
 #else
-  ly *= 0.5;
-  lz *= 0.5;
+  // ly *= 0.5;
+  // lz *= 0.5;
   ::mfem::Mesh cuboid =
-      mfem::Mesh(mfem::Mesh::MakeCartesian3D(2 * nElem, 2 * nElem, 1, mfem::Element::HEXAHEDRON, lx, ly, lz));
+      mfem::Mesh(mfem::Mesh::MakeCartesian3D( 30 * nElem, 3 * nElem, 2 * nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
 #endif
   auto mesh = std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, cuboid);
   serac::StateManager::setMesh(std::move(mesh));
@@ -75,7 +81,7 @@ int main(int argc, char* argv[])
   NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = serac::NonlinearSolver::Newton,
                                               .relative_tol   = 1.0e-8,
                                               .absolute_tol   = 1.0e-14,
-                                              .max_iterations = 6,
+                                              .max_iterations = 10,
                                               .print_level    = 1};
 
   SolidMechanics<p, dim, Parameters<L2<p>, L2<p> > > solid_solver(
@@ -195,13 +201,24 @@ int main(int argc, char* argv[])
   auto zero_displacement = [](const mfem::Vector& /*x*/) { return 0.0; };
   solid_solver.setDisplacementBCs({1}, zero_displacement, 2);  // bottom face y-dir disp = 0
   solid_solver.setDisplacementBCs({2}, zero_displacement, 1);  // back face z-dir disp = 0
-  // solid_solver.setDisplacementBCs({5}, [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; }); // //  WARNING!!!!!!!!!!!!! SHOULD NOT BE COMMENTED OUT. DEBUG LATER.
+  solid_solver.setDisplacementBCs({5}, [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; });
 #else
   // Prescribe zero displacement at the supported end of the beam
   auto zero_displacement = [](const mfem::Vector& /*x*/) { return 0.0; };
   solid_solver.setDisplacementBCs({1}, zero_displacement, 2);  // bottom face y-dir disp = 0
   solid_solver.setDisplacementBCs({2}, zero_displacement, 1);  // left face x-dir disp = 0
-  solid_solver.setDisplacementBCs({3}, zero_displacement, 0);  // back face z-dir disp = 0
+  // solid_solver.setDisplacementBCs({3}, zero_displacement, 0);  // back face z-dir disp = 0
+
+  auto is_at_center = [=](const mfem::Vector& x) {
+    if (x(0) < 0.005 && x(0) > 0.0048 && x(1) < 0.05*ly && x(2) < 0.05*lz) {
+      return true;
+    }
+    return false;
+  };
+  auto zero_vector   = [](const mfem::Vector&, mfem::Vector& u) { u = 0.0; };
+  solid_solver.setDisplacementBCs(is_at_center, zero_vector);
+  // auto zero_scalar   = [](const mfem::Vector& /*x*/) { return 0.0; };
+  // solid_solver.setDisplacementBCs(is_at_center, zero_scalar, 0);
 #endif
 
 #ifdef LOAD_DRIVEN
@@ -211,15 +228,31 @@ int main(int argc, char* argv[])
 
   // double maxLoadVal = 0.25 * 1.0e1 /ly/lz ; // 2.0e6*ly*lz/4.0; // 1.5e0; // 6.36e-6
   // double maxLoadVal = 0.25 * 1.0e-5 /ly/lz ; // 2.0e6*ly*lz/4.0; // 1.5e0; // 6.36e-6
-  double maxLoadVal = 0.25 * 1.5e-5 / (ly / 2) / (lz / 2);  // 2.0e6*ly*lz/4.0; // 1.5e0; // 6.36e-6
+  // double maxLoadVal = 0.25 * 1.5e-5 / (ly / 2) / (lz / 2);  // 2.0e6*ly*lz/4.0; // 1.5e0; // 6.36e-6
+  double maxLoadVal = 0.25 * 2.5e-5 / (ly*lz); 
 
 #ifdef FULL_DOMAIN
-  maxLoadVal *= 1.0;
+  maxLoadVal *= 4.0;
 #endif
 
   double loadVal = iniLoadVal + 0.0 * maxLoadVal;
   solid_solver.setPiolaTraction([&loadVal, lx](auto x, auto /*n*/, auto /*t*/) {
+#ifdef FULL_DOMAIN
     return tensor<double, 3>{loadVal * (x[0] > 0.9999 * lx), 0, 0};
+#else
+    if(x[0] < 0.0001 * lx)
+    {
+      return tensor<double, 3>{-loadVal, 0, 0};
+    }
+    else if(x[0] > 0.9999 * lx)
+    {
+      return tensor<double, 3>{loadVal, 0, 0};
+    }
+    else
+    {
+      return tensor<double, 3>{0, 0, 0};
+    }
+#endif
   });
 
 #else
@@ -234,7 +267,7 @@ int main(int argc, char* argv[])
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  int num_steps = 20;
+  int num_steps = 30;
 
 #ifdef LOAD_DRIVEN
   std::string outputFilename = "sol_mmp_tensile_load_probId_";
@@ -303,15 +336,15 @@ int main(int argc, char* argv[])
         dispVecZ(k) = displacement_gf(2 * numDofs + k);
       }
 
-      // double gblDispXmin, lclDispXmin = dispVecX.Min();
-      double gblDispXmax, lclDispXmax = dispVecX.Max();
+      double gblDispXmin, lclDispXmin = dispVecX.Min();
+      // double gblDispXmax, lclDispXmax = dispVecX.Max();
       double gblDispYmin, lclDispYmin = dispVecY.Min();
       // double gblDispYmax, lclDispYmax = dispVecY.Max();
       double gblDispZmin, lclDispZmin = dispVecZ.Min();
       // double gblDispZmax, lclDispZmax = dispVecZ.Max();
 
-      // MPI_Allreduce(&lclDispXmin, &gblDispXmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-      MPI_Allreduce(&lclDispXmax, &gblDispXmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+      MPI_Allreduce(&lclDispXmin, &gblDispXmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+      // MPI_Allreduce(&lclDispXmax, &gblDispXmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
       MPI_Allreduce(&lclDispYmin, &gblDispYmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
       // MPI_Allreduce(&lclDispYmax, &gblDispYmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
       MPI_Allreduce(&lclDispZmin, &gblDispZmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
@@ -320,8 +353,9 @@ int main(int argc, char* argv[])
       if (rank == 0) {
         std::cout << "\n... In time step: " << i + 1 << " (/" << num_steps
                   << ")"
-                  // <<"\n... Min X displacement: " << gblDispXmin
-                  << "\n... Max X displacement: " << gblDispXmax << "\n... Min Y displacement: " << gblDispYmin
+                  <<"\n... Min X displacement: " << gblDispXmin
+                  // << "\n... Max X displacement: " << gblDispXmax 
+                  << "\n... Min Y displacement: " << gblDispYmin
                   << "\n... Min Z displacement: "
                   << gblDispZmin
                   // <<"\n... Max Y displacement: " << gblDispYmax
@@ -329,7 +363,8 @@ int main(int argc, char* argv[])
                   << std::endl;
       }
 
-      if (std::isnan(gblDispXmax)) {
+      if (std::isnan(gblDispXmin)) {
+      // if (std::isnan(gblDispXmax)) {
         if (rank == 0) {
           std::cout << "... Solution blew up... Check boundary and initial conditions." << std::endl;
         }
@@ -338,5 +373,6 @@ int main(int argc, char* argv[])
     }
   }
 
-  MPI_Finalize();
+  // MPI_Finalize();
+  serac::exitGracefully();
 }
