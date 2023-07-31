@@ -1,0 +1,13 @@
+diff --git a/src/examples/CMakeLists.txt b/src/examples/CMakeLists.txt
+index c9c21f9..1fbe07b 100644
+--- a/src/examples/CMakeLists.txt
++++ b/src/examples/CMakeLists.txt
+@@ -11,7 +11,7 @@ set( contact_examples
+      )
+ 
+ 
+-set(example_depends axom tribol cli11 fmt)
++set(example_depends axom tribol axom::cli11 axom::fmt)
+ blt_list_append(TO example_depends ELEMENTS cuda IF ENABLE_CUDA )
+ 
+ foreach( example ${contact_examples} )
