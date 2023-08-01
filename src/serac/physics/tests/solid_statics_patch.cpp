@@ -91,7 +91,7 @@ public:
     tensor<double, dim, dim> sigma = material(state, H);
     auto P = solid_mechanics::CauchyToPiola(sigma, H);
     auto traction = [P](auto, auto n0, auto) { return dot(P, n0); };
-    sf.setPiolaTraction(traction);
+    sf.setTraction(traction);
   }
 
  private:
@@ -193,7 +193,7 @@ public:
       return dot(P, n0); 
     };
 
-    sf.setPiolaTraction(traction);
+    sf.setTraction(traction);
 
     auto bf = [=](auto X, auto) {
       auto X_val = get_value(X);
