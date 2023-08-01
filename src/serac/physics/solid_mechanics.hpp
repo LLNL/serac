@@ -798,7 +798,12 @@ public:
         Dimension<dim - 1>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
         [this, pressure_function](auto X, auto displacement, auto /* acceleration */, auto shape, auto... params) {
           // Calculate the position and normal in the shape perturbed deformed configuration
-          auto x = X + shape + displacement;
+          auto x = X + shape + 0.0 * displacement;
+
+          if (geom_nonlin_ == GeometricNonlinearities::On) {
+            x = x + displacement;
+          }
+
           auto n = cross(get<DERIVATIVE>(x));
 
           // serac::Functional's boundary integrals multiply the q-function output by

@@ -308,7 +308,7 @@ void functional_solid_test_boundary(double expected_disp_norm, TestType test_mod
   solid_solver.setDisplacement(bc);
 
   if (test_mode == TestType::Pressure) {
-    solid_solver.setTraction([](const auto& x, const auto& n, const double) { return (x[0] > 7.5) * (5.0e-3) * n; });
+    solid_solver.setPressure([](const auto& x, const double) { return (x[0] > 7.5) * (5.0e-3); });
   } else if (test_mode == TestType::Traction) {
     solid_solver.setTraction([](const auto& x, const auto& /*n*/, const double) {
       return make_tensor<dim>([&](int) { return (x[0] > 7.9) ? 1.0e-4 : 0.0; });
