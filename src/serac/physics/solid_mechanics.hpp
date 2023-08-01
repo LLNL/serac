@@ -810,7 +810,7 @@ public:
           // = q * (w_new / w_old) * w_old
           // = q * w_new
           auto area_correction = norm(n) / norm(cross(get<DERIVATIVE>(X)));
-          return pressure_function(get<VALUE>(x), ode_time_point_, params...) * n * area_correction;
+          return pressure_function(get<VALUE>(x), ode_time_point_, params...) * normalize(n) * area_correction;
         },
         mesh_);
   }
