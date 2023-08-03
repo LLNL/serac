@@ -348,7 +348,7 @@ double solution_error(PatchBoundaryCondition bc)
 }
 
 /**
- * @brief Solve pressure-driven problem and compare numerical solution to exact answer
+ * @brief Solve pressure-driven problem with 10% uniaxial strain and compare numerical solution to exact answer
  *
  * @tparam element_type type describing element geometry and polynomial order to use for this test
  *
@@ -396,10 +396,7 @@ double pressure_error()
 
   SolidMechanics<p, dim> solid(std::move(equation_solver), solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "solid");
 
-  double K = 1.0;
-  double G = 1.0;
-
-  solid_mechanics::NeoHookean mat{.density=1.0, .K=K, .G=G};
+  solid_mechanics::NeoHookean mat{.density=1.0, .K=1.0, .G=1.0};
   solid.setMaterial(mat);
 
   typename solid_mechanics::NeoHookean::State state;
@@ -419,6 +416,8 @@ double pressure_error()
     return pressure;
   });
 
+  // Define the essential boundary conditions corresponding to 10% uniaxial strain everywhere
+  // except the pressure loaded surface
   if (dim == 2) {
     if (element_type::geometry == mfem::Geometry::TRIANGLE) {
       solid.setDisplacementBCs({4}, exact_uniaxial_strain);

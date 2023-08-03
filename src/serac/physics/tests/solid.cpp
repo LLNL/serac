@@ -243,95 +243,6 @@ void functional_solid_spatial_essential_bc()
   }
 }
 
-enum class TestType
-{
-  Pressure,
-  Traction
-};
-
-template <int p, int dim>
-void functional_solid_test_boundary(double expected_disp_norm, TestType test_mode)
-{
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  int serial_refinement   = 1;
-  int parallel_refinement = 0;
-
-  // Create DataStore
-  axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "solid_functional_static_solve");
-
-  static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for solid functional test");
-
-  // Construct the appropriate dimension mesh and give it to the data store
-  std::string filename =
-      (dim == 2) ? SERAC_REPO_DIR "/data/meshes/beam-quad.mesh" : SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
-
-  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
-
-  // _solver_params_start
-  serac::LinearSolverOptions linear_options{.linear_solver  = LinearSolver::GMRES,
-                                            .preconditioner = Preconditioner::HypreAMG,
-                                            .relative_tol   = 1.0e-6,
-                                            .absolute_tol   = 1.0e-14,
-                                            .max_iterations = 500,
-                                            .print_level    = 1};
-
-#ifdef MFEM_USE_SUNDIALS
-  serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::KINFullStep,
-                                                  .relative_tol   = 1.0e-12,
-                                                  .absolute_tol   = 1.0e-12,
-                                                  .max_iterations = 5000,
-                                                  .print_level    = 1};
-#else
-  serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::Newton,
-                                                  .relative_tol   = 1.0e-12,
-                                                  .absolute_tol   = 1.0e-12,
-                                                  .max_iterations = 5000,
-                                                  .print_level    = 1};
-#endif
-
-  SolidMechanics<p, dim> solid_solver(nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options,
-                                      GeometricNonlinearities::Off, "solid_mechanics");
-  // _solver_params_end
-
-  solid_mechanics::LinearIsotropic mat{1.0, 1.0, 1.0};
-  solid_solver.setMaterial(mat);
-
-  // Define the function for the initial displacement and boundary condition
-  auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
-
-  // Define a boundary attribute set and specify initial / boundary conditions
-  std::set<int> ess_bdr = {1};
-  solid_solver.setDisplacementBCs(ess_bdr, bc);
-  solid_solver.setDisplacement(bc);
-
-  if (test_mode == TestType::Pressure) {
-    solid_solver.setPressure([](const auto& x, const double) { return (x[0] > 7.5) * (5.0e-3); });
-  } else if (test_mode == TestType::Traction) {
-    solid_solver.setTraction([](const auto& x, const auto& /*n*/, const double) {
-      return make_tensor<dim>([&](int) { return (x[0] > 7.9) ? 1.0e-4 : 0.0; });
-    });
-  } else {
-    // Default to fail if non-implemented TestType is not implemented
-    EXPECT_TRUE(false);
-  }
-
-  // Finalize the data structures
-  solid_solver.completeSetup();
-
-  // Perform the quasi-static solve
-  double dt = 1.0;
-  solid_solver.advanceTimestep(dt);
-
-  // Output the sidre-based plot files
-  solid_solver.outputState();
-
-  // Check the final displacement norm
-  EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
-}
-
 template <typename lambda>
 struct ParameterizedBodyForce {
   template <int dim, typename T1, typename T2>
@@ -467,11 +378,6 @@ TEST(SolidMechanics, 2DQuadParameterizedStatic) { functional_parameterized_solid
 TEST(SolidMechanics, 3DQuadStaticJ2) { functional_solid_test_static_J2(); }
 
 TEST(SolidMechanics, SpatialBoundaryCondition) { functional_solid_spatial_essential_bc(); }
-
-TEST(SolidMechanics, 2DLinearPressure)
-{
-  functional_solid_test_boundary<1, 2>(0.028525698834671667, TestType::Pressure);
-}
 
 }  // namespace serac
 
