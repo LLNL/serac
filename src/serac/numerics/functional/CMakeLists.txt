@@ -47,6 +47,10 @@ set(functional_detail_headers
     detail/segment_H1.inl
     detail/segment_Hcurl.inl
     detail/segment_L2.inl
+    detail/tetrahedron_H1.inl
+    detail/tetrahedron_L2.inl
+    detail/triangle_H1.inl
+    detail/triangle_L2.inl
     )
 
 set(functional_cuda_headers
