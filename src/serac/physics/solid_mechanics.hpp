@@ -809,15 +809,17 @@ public:
           // serac::Functional's boundary integrals multiply the q-function output by
           // norm(cross(dX_dxi)) at that quadrature point, but if we impose a shape displacement
           // then that weight needs to be corrected. The new weight should be
-          // norm(cross(dX_dxi + dp_dxi)), so we multiply by the ratio w_new / w_old
-          // to get
-          //   q * area_correction * w_old
-          // = q * (w_new / w_old) * w_old
-          // = q * w_new
-          auto area_correction = norm(n) / norm(cross(get<DERIVATIVE>(X)));
+          // norm(cross(dX_dxi + dp_dxi)). This implies:
+          //
+          //   pressure * normalize(normal_new) * w_new
+          // = pressure * normalize(normal_new) * (w_new / w_old) * w_old
+          // = pressure * normalize(normal_new) * (norm(normal_new) / norm(normal_old)) * w_old
+          // = pressure * (normal_new / norm(normal_new)) * (norm(normal_new) / norm(normal_old)) * w_old
+          // = pressure * (normal_new / norm(normal_old)) * w_old
 
-          // We always query the pressure function in the reference configuration
-          return pressure_function(get<VALUE>(X + shape), ode_time_point_, params...) * normalize(n) * area_correction;
+          // We always query the pressure function in the undeformed configuration
+          return pressure_function(get<VALUE>(X + shape), ode_time_point_, params...) *
+                 (n / norm(cross(get<DERIVATIVE>(X))));
         },
         mesh_);
   }
