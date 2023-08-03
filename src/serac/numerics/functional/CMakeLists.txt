@@ -13,6 +13,7 @@ set(functional_headers
     boundary_integral_kernels.hpp
     dof_numbering.hpp
     element_restriction.hpp
+    geometry.hpp
     geometric_factors.hpp
     domain_integral_kernels.hpp
     dual.hpp
