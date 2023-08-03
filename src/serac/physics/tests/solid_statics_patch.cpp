@@ -400,7 +400,7 @@ double pressure_error()
   solid.setMaterial(mat);
 
   typename solid_mechanics::NeoHookean::State state;
-  auto H = make_tensor<dim, dim>([&](int i, int j) { 
+  auto H = make_tensor<dim, dim>([](int i, int j) { 
       if ( i == 0 && j == 0) {
         return -0.1;
       }

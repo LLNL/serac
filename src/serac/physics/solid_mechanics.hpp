@@ -779,7 +779,7 @@ public:
    * @param pressure_function A function describing the pressure applied to a boundary
    *
    * @pre PressureType must be a object that can be called with the following arguments:
-   *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
+   *    1. `tensor<T,dim> x` the reference configuration spatial coordinates for the quadrature point
    *    2. `double t` the time (note: time will be handled differently in the future)
    *    3. `tuple{value, derivative}`, a variadic list of tuples (each with a values and derivative),
    *            one tuple for each of the trial spaces specified in the `DependsOn<...>` argument.
@@ -789,7 +789,7 @@ public:
    *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
    * 3>`)
    *
-   * @note This pressure is applied in the deformed (current) configuration.
+   * @note This pressure is applied in the deformed (current) configuration if GeometricNonlinearities are on
    */
   template <int... active_parameters, typename PressureType>
   void setPressure(DependsOn<active_parameters...>, PressureType pressure_function)
@@ -815,7 +815,9 @@ public:
           // = q * (w_new / w_old) * w_old
           // = q * w_new
           auto area_correction = norm(n) / norm(cross(get<DERIVATIVE>(X)));
-          return pressure_function(get<VALUE>(x), ode_time_point_, params...) * normalize(n) * area_correction;
+
+          // We always query the pressure function in the reference configuration
+          return pressure_function(get<VALUE>(X + shape), ode_time_point_, params...) * normalize(n) * area_correction;
         },
         mesh_);
   }
