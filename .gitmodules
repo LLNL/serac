@@ -15,4 +15,4 @@
 	url = https://github.com/LLNL/serac_tests.git
 [submodule "scripts/spack/radiuss-spack-configs"]
 	path = scripts/spack/radiuss-spack-configs
-	url = git@github.com:LLNL/radiuss-spack-configs.git
+	url = https://github.com/LLNL/radiuss-spack-configs.git
