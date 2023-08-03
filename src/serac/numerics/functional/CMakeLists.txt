@@ -19,7 +19,9 @@ set(functional_headers
     dual.hpp
     finite_element.hpp
     functional.hpp
+    function_signature.hpp
     functional_qoi.inl
+    integral.hpp
     integral_utilities.hpp
     isotropic_tensor.hpp
     polynomials.hpp
