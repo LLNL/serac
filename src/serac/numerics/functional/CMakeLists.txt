@@ -22,7 +22,6 @@ set(functional_headers
     function_signature.hpp
     functional_qoi.inl
     integral.hpp
-    integral_utilities.hpp
     isotropic_tensor.hpp
     polynomials.hpp
     quadrature.hpp
