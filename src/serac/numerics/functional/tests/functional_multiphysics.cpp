@@ -68,10 +68,11 @@ TEST(FunctionalMultiphysics, NonlinearThermalTest3D)
 
   residual.AddSurfaceIntegral(
       DependsOn<0, 1>{},
-      [=](auto x, auto /*n*/, auto temperature, auto dtemperature_dt) {
+      [=](auto position, auto temperature, auto dtemperature_dt) {
+        auto [X, dX_dxi] = position;
         auto [u, _0]     = temperature;
         auto [du_dt, _1] = dtemperature_dt;
-        return x[0] + x[1] - cos(u) * du_dt;
+        return X[0] + X[1] - cos(u) * du_dt;
       },
       *mesh3D);
 
