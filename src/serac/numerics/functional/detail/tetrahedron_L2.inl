@@ -423,7 +423,7 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, L2<p, c> > {
 
           for (int k = 0; k < ndof; k++) {
             element_residual[j * step](i, k) +=
-                source * shape_function(xi, k) + dot(flux, shape_function_gradient(xi, k)) * wt;
+                (source * shape_function(xi, k) + dot(flux, shape_function_gradient(xi, k))) * wt;
           }
         }
       }

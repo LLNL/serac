@@ -14,10 +14,10 @@
 
 namespace serac {
 
-/// an instance of a QuadratureData container of `Nothing`s, since they are all interchangeable
+/// a single instance of a QuadratureData container of `Nothing`s, since they are all interchangeable
 std::shared_ptr<QuadratureData<Nothing> > NoQData;
 
-/// an instance of a QuadratureData container of `Empty`s, since they are all interchangeable
+/// a single instance of a QuadratureData container of `Empty`s, since they are all interchangeable
 std::shared_ptr<QuadratureData<Empty> > EmptyQData;
 
 }  // namespace serac

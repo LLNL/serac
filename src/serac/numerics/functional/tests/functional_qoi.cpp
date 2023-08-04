@@ -164,7 +164,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
       sum_of_measures.AddDomainIntegral(
           Dimension<dim>{}, DependsOn<>{}, [&](auto /*x*/) { return 1.0; }, mesh);
       sum_of_measures.AddBoundaryIntegral(
-          Dimension<dim - 1>{}, DependsOn<>{}, [&](auto /*x*/, auto /*n*/) { return 1.0; }, mesh);
+          Dimension<dim - 1>{}, DependsOn<>{}, [&](auto /*x*/) { return 1.0; }, mesh);
 
       constexpr double expected[] = {5.0, 64.0};
 
@@ -187,9 +187,10 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
           mesh);
       f.AddBoundaryIntegral(
           Dimension<dim - 1>{}, DependsOn<0>{},
-          [&](auto x, auto /*n*/, auto temperature) {
+          [&](auto position, auto temperature) {
+            auto [X, dX_dxi] = position;
             auto [u, unused] = temperature;
-            return x[0] - x[1] + cos(u * x[1]);
+            return X[0] - X[1] + cos(u * X[1]);
           },
           mesh);
 
@@ -253,10 +254,11 @@ void qoi_test(mfem::ParMesh& mesh, H1<p1> trial1, H1<p2> trial2, Dimension<dim>)
       mesh);
   f.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0, 1>{},
-      [&](auto x, auto /*n*/, auto temperature, auto dtemperature_dt) {
+      [&](auto position, auto temperature, auto dtemperature_dt) {
+        auto [X, dX_dxi]     = position;
         auto [u, grad_u]     = temperature;
         auto [du_dt, unused] = dtemperature_dt;
-        return x[0] - x[1] + cos(u * du_dt);
+        return X[0] - X[1] + cos(u * du_dt);
       },
       mesh);
 
