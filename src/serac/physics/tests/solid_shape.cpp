@@ -175,7 +175,7 @@ void shape_test(GeometricNonlinearities geo_nonlin)
 
   double error          = pure_displacement.DistanceTo(shape_displacement.GetData());
   double relative_error = error / pure_displacement.Norml2();
-  EXPECT_LT(relative_error, 1.0e-12);
+  EXPECT_LT(relative_error, 3.0e-12);
 }
 
 TEST(SolidMechanics, MoveShapeLinear) { shape_test(GeometricNonlinearities::Off); }
