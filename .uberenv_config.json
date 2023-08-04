@@ -9,3 +9,4 @@
 "spack_packages_path": ["scripts/spack/radiuss-spack-configs/packages", "scripts/spack/packages"],
 "spack_concretizer": "clingo"
 }
+
