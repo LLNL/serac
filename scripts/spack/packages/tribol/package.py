@@ -33,8 +33,8 @@ def get_spec_path(spec, package_name, path_replacements={}, use_bin=False):
 class Tribol(CachedCMakePackage, CudaPackage):
     """Tribol is an interface physics library."""
 
-    homepage = "https://lc.llnl.gov/gitlab/tribol/tribol"
-    git      = "ssh://git@czgitlab.llnl.gov:7999/tribol/tribol.git"
+    homepage = "https://github.com/LLNL/Tribol"
+    git      = "https://github.com/LLNL/Tribol.git"
 
     version("develop", branch="develop", submodules=True)
 
@@ -42,8 +42,7 @@ class Tribol(CachedCMakePackage, CudaPackage):
     # SERAC EDIT START
     # Note: We add a number to the end of the real version number to indicate that we have
     #  moved forward past the release. Increment the last number when updating the commit sha.
-    version('0.1.0.4', commit='bf5c532d8827e057b1c95b7c8cd1b9bddc72d6d5', submodules=True, preferred=True)
-    patch("axom_namespace.patch", when="@0.1.0.4")
+    version('0.1.0.5', commit='c62690d8c21f94110d1f97d50c89fa87d142bb59', submodules=True, preferred=True)
     # SERAC EDIT END
 
     # -----------------------------------------------------------------------
