@@ -97,10 +97,14 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
-      [&](auto x, auto n, auto temperature) {
+      [&](auto position, auto temperature) {
+        auto [X, dX_dxi] = position;
         auto [u, unused] = temperature;
-        tensor<double, dim> b{sin(x[0]), x[0] * x[1]};
-        return x[0] * x[1] + dot(b, n) + rho * u;
+
+        auto n = normalize(cross(dX_dxi));
+
+        tensor<double, dim> b{sin(X[0]), X[0] * X[1]};
+        return X[0] * X[1] + dot(b, n) + rho * u;
       },
       mesh);
 
@@ -167,12 +171,13 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
-      [&](auto x, auto /*n*/, auto temperature) {
+      [&](auto position, auto temperature) {
+        auto [X, dX_dxi] = position;
         auto [u, unused] = temperature;
 
         // mfem is missing the integrator to compute this term
         // tensor<double,dim> b{sin(x[0]), x[0] * x[1]};
-        return x[0] * x[1] + /* dot(b, n) +*/ rho * u;
+        return X[0] * X[1] + /* dot(b, n) +*/ rho * u;
       },
       mesh);
 
