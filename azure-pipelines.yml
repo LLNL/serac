@@ -6,9 +6,8 @@
 #
 
 variables:
-  Clang_10_ImageName: 'seracllnl/tpls:clang-10_05-03-23_16h-04m'
-  GCC_9_ImageName: 'seracllnl/tpls:gcc-9_05-03-23_16h-04m'
-  GCC_11_ImageName: 'seracllnl/tpls:gcc-11_05-03-23_16h-04m'
+  Clang_10_ImageName: 'seracllnl/tpls:clang-10_07-13-23_00h-41m'
+  GCC_11_ImageName: 'seracllnl/tpls:gcc-11_07-13-23_00h-41m'
 
 jobs:
 - job: Build_and_Test
@@ -25,18 +24,6 @@ jobs:
           Compiler_ImageName: $(GCC_11_ImageName)
           TEST_TARGET: 'linux_gcc11'
           HOST_CONFIG: 'gcc@11.1.0.cmake'
-          BUILD_TYPE: 'Release'
-      linux_gcc9_debug:
-          VM_ImageName: 'ubuntu-20.04'
-          Compiler_ImageName: $(GCC_9_ImageName)
-          TEST_TARGET: 'linux_gcc9'
-          HOST_CONFIG: 'gcc@9.3.0.cmake'
-          BUILD_TYPE: 'Debug'
-      linux_gcc9_release:
-          VM_ImageName: 'ubuntu-20.04'
-          Compiler_ImageName: $(GCC_9_ImageName)
-          TEST_TARGET: 'linux_gcc9'
-          HOST_CONFIG: 'gcc@9.3.0.cmake'
           BUILD_TYPE: 'Release'
       linux_clang10_debug:
           VM_ImageName: 'ubuntu-20.04'

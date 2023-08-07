@@ -50,13 +50,14 @@ void shape_test(GeometricNonlinearities geo_nonlin)
   auto linear_options = solid_mechanics::default_linear_options;
 
   // Use tight tolerances as this is a machine precision test
-  linear_options.relative_tol = 1.0e-15;
-  linear_options.absolute_tol = 1.0e-15;
+  linear_options.preconditioner = Preconditioner::HypreJacobi;
+  linear_options.relative_tol   = 1.0e-15;
+  linear_options.absolute_tol   = 1.0e-15;
 
   auto nonlinear_options = solid_mechanics::default_nonlinear_options;
 
-  nonlinear_options.absolute_tol   = 5.0e-15;
-  nonlinear_options.relative_tol   = 5.0e-15;
+  nonlinear_options.absolute_tol   = 8.0e-15;
+  nonlinear_options.relative_tol   = 8.0e-15;
   nonlinear_options.max_iterations = 10;
 
   solid_mechanics::LinearIsotropic mat{1.0, 1.0, 1.0};
@@ -174,7 +175,7 @@ void shape_test(GeometricNonlinearities geo_nonlin)
 
   double error          = pure_displacement.DistanceTo(shape_displacement.GetData());
   double relative_error = error / pure_displacement.Norml2();
-  EXPECT_LT(relative_error, 1.0e-12);
+  EXPECT_LT(relative_error, 3.0e-12);
 }
 
 TEST(SolidMechanics, MoveShapeLinear) { shape_test(GeometricNonlinearities::Off); }

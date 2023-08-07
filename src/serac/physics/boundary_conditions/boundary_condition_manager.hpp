@@ -174,6 +174,20 @@ public:
                     mfem::ParFiniteElementSpace& space, const std::optional<int> component = {});
 
   /**
+   * @brief Set a list of true degrees of freedom from a vector coefficient
+   *
+   * @param[in] true_dofs The true degrees of freedom to set with a Dirichlet condition
+   * @param[in] ess_bdr_coef The vector coefficient that evaluates to the Dirichlet condition
+   * @param[in] space The finite element space to which the BC should be applied
+   *
+   * @note The coefficient is required to be vector-valued. However, only the dofs specified in the @a true_dofs
+   * array will be set. This means that if the @a true_dofs array only contains dofs for a specific vector component in
+   * a vector-valued finite element space, only that component will be set.
+   */
+  void addEssential(const mfem::Array<int>& true_dofs, std::shared_ptr<mfem::VectorCoefficient> ess_bdr_coef,
+                    mfem::ParFiniteElementSpace& space);
+
+  /**
    * @brief Set the natural boundary conditions from a list of boundary markers and a coefficient
    *
    * @param[in] nat_bdr The set of mesh attributes denoting a natural boundary
@@ -203,17 +217,6 @@ public:
     other_bdr_.back().setTag(tag);
     all_dofs_valid_ = false;
   }
-
-  /**
-   * @brief Set a list of true degrees of freedom from a coefficient
-   *
-   * @param[in] true_dofs The true degrees of freedom to set with a Dirichlet condition
-   * @param[in] ess_bdr_coef The coefficient that evaluates to the Dirichlet condition
-   * @param[in] space The finite element space to which the BC should be applied
-   * @param[in] component The component to set (null implies all components are set)
-   */
-  void addEssentialTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef,
-                            mfem::ParFiniteElementSpace& space, std::optional<int> component = {});
 
   /**
    * @brief Returns all the true degrees of freedom associated with all the essential BCs

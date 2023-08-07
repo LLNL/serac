@@ -37,11 +37,11 @@ void BoundaryConditionManager::addNatural(const std::set<int>& nat_bdr, serac::G
   all_dofs_valid_ = false;
 }
 
-void BoundaryConditionManager::addEssentialTrueDofs(const mfem::Array<int>&      true_dofs,
-                                                    serac::GeneralCoefficient    ess_bdr_coef,
-                                                    mfem::ParFiniteElementSpace& space, std::optional<int> component)
+void BoundaryConditionManager::addEssential(const mfem::Array<int>&                  true_dofs,
+                                            std::shared_ptr<mfem::VectorCoefficient> ess_bdr_coef,
+                                            mfem::ParFiniteElementSpace&             space)
 {
-  ess_bdr_.emplace_back(ess_bdr_coef, component, space, true_dofs);
+  ess_bdr_.emplace_back(ess_bdr_coef, std::nullopt, space, true_dofs);
   all_dofs_valid_ = false;
 }
 
