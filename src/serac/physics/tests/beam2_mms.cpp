@@ -111,7 +111,7 @@ public:
       for (int i = 0; i < dim; i++) {
         divP[i] = tr(dPdX[i]);
       }
-      return -divP;
+      return -divP*0.0;
     };
 
     sf.addBodyForce(DependsOn<>{}, bf);
@@ -139,14 +139,14 @@ double compute_patch_test_error(int refinements) {
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), refinements, 0);
   serac::StateManager::setMesh(std::move(mesh));
 
-    /* serac::LinearSolverOptions linear_options{.linear_solver  = LinearSolver::GMRES,
-                                            .preconditioner = Preconditioner::HypreAMG,
+  serac::LinearSolverOptions linear_options{.linear_solver  = LinearSolver::GMRES,
+                                            .preconditioner = Preconditioner::HypreILU,
                                             .relative_tol   = 1.0e-6,
                                             .absolute_tol   = 1.0e-14,
                                             .max_iterations = 500,
                                             .print_level    = 1}; 
 
-
+/*
   serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::Newton,
                                                   .relative_tol   = 1.0e-9,
                                                   .absolute_tol   = 1.0e-12,
@@ -159,8 +159,8 @@ double compute_patch_test_error(int refinements) {
 
   //changed from direct to default for linear_options
   SolidMechanics<p, dim> solid_solver(solid_mechanics::default_nonlinear_options,
-    solid_mechanics::default_linear_options, solid_mechanics::default_quasistatic_options,
-    GeometricNonlinearities::On, "solid_mechanics"); 
+    linear_options, solid_mechanics::default_quasistatic_options,
+    GeometricNonlinearities::Off, "solid_mechanics"); 
 
   double E = 1e3;
   double nu = 0.3;
@@ -172,7 +172,7 @@ double compute_patch_test_error(int refinements) {
   // from parameterized_thermomechanics_example.cpp
   // set up essential boundary conditions
   ManufacturedSolution M(8.0);
-  std::set<int> essential_boundary = {1};
+  std::set<int> essential_boundary = {1, 2, 3, 4};
   M.applyLoads(mat, solid_solver, essential_boundary);
 
   // Finalize the data structures
@@ -186,10 +186,8 @@ double compute_patch_test_error(int refinements) {
   solid_solver.outputState("visit_output");
 
 
-  auto exact_disp = [](const mfem::Vector& X, mfem::Vector& u) {
-    // u = x - X, where x = 2*X + 0*Y + 0*Z
-    u[0] = X[0];
-    u[1] = 0;
+  auto exact_disp = [&M](const mfem::Vector& X, mfem::Vector& u) {
+    M(X,u);
   };
 
   // Compute norm of error
