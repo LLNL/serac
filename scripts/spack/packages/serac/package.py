@@ -44,10 +44,6 @@ class Serac(CachedCMakePackage, CudaPackage):
     # -----------------------------------------------------------------------
     # Variants
     # -----------------------------------------------------------------------
-    variant("build_type",
-        default="Debug",
-        description="CMake build type",
-        values=("Debug", "Release", "RelWithDebInfo", "MinSizeRel"))
     variant("shared",   default=False,
             description="Enable build of shared libraries")
     variant("asan", default=False,

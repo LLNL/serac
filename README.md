@@ -75,6 +75,10 @@ PackageName: MFEM
 PackageHomePage: https://github.com/mfem/mfem  
 PackageLicenseDeclared: BSD-3-Clause  
 
+PackageName: radiuss-spack-configs  
+PackageHomePage: https://github.com/LLNL/radiuss-spack-configs  
+PackageLicenseDeclared: MIT License
+
 PackageName: uberenv  
 PackageHomePage: https://github.com/LLNL/uberenv  
 PackageLicenseDeclared: BSD-3-Clause  
