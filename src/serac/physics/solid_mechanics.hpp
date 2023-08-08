@@ -789,7 +789,7 @@ public:
    *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
    * 3>`)
    *
-   * @note This pressure is applied in the deformed (current) configuration if GeometricNonlinearities are on
+   * @note This pressure is applied in the deformed (current) configuration if GeometricNonlinearities are on.
    */
   template <int... active_parameters, typename PressureType>
   void setPressure(DependsOn<active_parameters...>, PressureType pressure_function)
