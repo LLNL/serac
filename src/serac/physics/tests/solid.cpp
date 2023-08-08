@@ -42,13 +42,18 @@ void functional_solid_test_static_J2()
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
 
-  auto linear_options         = solid_mechanics::direct_linear_options;
-  linear_options.absolute_tol = 1.0e-16;  // prevent early-exit in linear solve
+  // _solver_params_start
+  serac::LinearSolverOptions linear_options{.linear_solver = LinearSolver::SuperLU};
 
-  // Construct a functional-based solid mechanics solver
-  SolidMechanics<p, dim> solid_solver(solid_mechanics::default_nonlinear_options, linear_options,
-                                      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::Off,
-                                      "solid_mechanics");
+  serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::Newton,
+                                                  .relative_tol   = 1.0e-12,
+                                                  .absolute_tol   = 1.0e-12,
+                                                  .max_iterations = 5000,
+                                                  .print_level    = 1};
+
+  SolidMechanics<p, dim> solid_solver(nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options,
+                                      GeometricNonlinearities::Off, "solid_mechanics");
+  // _solver_params_end
 
   solid_mechanics::J2 mat{
       10000,  // Young's modulus
