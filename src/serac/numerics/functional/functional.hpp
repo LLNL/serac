@@ -58,6 +58,13 @@ constexpr uint32_t index_of_differentiation()
   return NO_DIFFERENTIATION;
 }
 
+const mfem::Vector & as_mfem_vector(const mfem::Vector & v) { return v; }
+const mfem::Vector as_mfem_vector(const double v) { 
+  mfem::Vector output(1);
+  output[0] = v;
+  return output; 
+}
+
 /**
  * @brief Compile-time alias for index of differentiation
  */
@@ -195,6 +202,8 @@ class Functional<test(trials...), exec> {
                                                         mfem::Geometry::SQUARE, mfem::Geometry::CUBE};
   static constexpr mfem::Geometry::Type simplex_geom[4] = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT,
                                                            mfem::Geometry::TRIANGLE, mfem::Geometry::TETRAHEDRON};
+
+  static constexpr auto Iseq = std::make_integer_sequence<int, static_cast<int>(num_trial_spaces)>();
 
   class Gradient;
 
@@ -406,15 +415,10 @@ public:
    * @param args the trial space dofs used to carry out the calculation,
    *  at most one of which may be of the type `differentiate_wrt_this(mfem::Vector)`
    */
-  template <uint32_t wrt, typename... T>
-  typename operator_paren_return<wrt>::type operator()(DifferentiateWRT<wrt>, const T&... args)
+  template <uint32_t wrt, int ... i, typename... T>
+  typename operator_paren_return<wrt>::type operator()(DifferentiateWRT<wrt>, std::integer_sequence<int, i...>, const T&... args)
   {
-    const mfem::Vector* input_T[] = {&static_cast<const mfem::Vector&>(args)...};
-
-    // get the values for each local processor
-    for (uint32_t i = 0; i < num_trial_spaces; i++) {
-      P_trial_[i]->Mult(*input_T[i], input_L_[i]);
-    }
+    (P_trial_[i]->Mult(as_mfem_vector(args), input_L_[i]), ... );
 
     output_L_ = 0.0;
 
@@ -425,10 +429,10 @@ public:
     for (auto& integral : integrals_) {
       auto type = integral.type;
 
-      for (auto i : integral.active_trial_spaces_) {
-        if (!already_computed[type][i]) {
-          G_trial_[type][i].Gather(input_L_[i], input_E_[type][i]);
-          already_computed[type][i] = true;
+      for (auto s : integral.active_trial_spaces_) {
+        if (!already_computed[type][s]) {
+          G_trial_[type][s].Gather(input_L_[s], input_E_[type][s]);
+          already_computed[type][s] = true;
         }
       }
 
@@ -472,7 +476,7 @@ public:
 
     [[maybe_unused]] constexpr uint32_t i = index_of_differentiation<T...>();
 
-    return (*this)(DifferentiateWRT<i>{}, args...);
+    return (*this)(DifferentiateWRT<i>{}, Iseq, args...);
   }
 
   // TODO: expose this feature a better way
