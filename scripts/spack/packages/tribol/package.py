@@ -137,24 +137,24 @@ class Tribol(CachedCMakePackage, CudaPackage):
         spec = self.spec
         entries = super(Tribol, self).initconfig_compiler_entries()
 
-        if "+fortran" in spec or self.compiler.fc is not None:
+        if "+fortran" in spec:
             entries.append(cmake_cache_option("ENABLE_FORTRAN", True))
+
+            if ((self.compiler.fc is not None)
+               and ("gfortran" in self.compiler.fc)
+               and ("clang" in self.compiler.cxx)):
+                libdir = pjoin(os.path.dirname(
+                               os.path.dirname(self.compiler.cxx)), "lib")
+                flags = ""
+                for _libpath in [libdir, libdir + "64"]:
+                    if os.path.exists(_libpath):
+                        flags += " -Wl,-rpath,{0}".format(_libpath)
+                description = ("Adds a missing libstdc++ rpath")
+                if flags:
+                    entries.append(cmake_cache_string("BLT_EXE_LINKER_FLAGS", flags,
+                                                      description))
         else:
             entries.append(cmake_cache_option("ENABLE_FORTRAN", False))
-
-        if ((self.compiler.fc is not None)
-           and ("gfortran" in self.compiler.fc)
-           and ("clang" in self.compiler.cxx)):
-            libdir = pjoin(os.path.dirname(
-                           os.path.dirname(self.compiler.cxx)), "lib")
-            flags = ""
-            for _libpath in [libdir, libdir + "64"]:
-                if os.path.exists(_libpath):
-                    flags += " -Wl,-rpath,{0}".format(_libpath)
-            description = ("Adds a missing libstdc++ rpath")
-            if flags:
-                entries.append(cmake_cache_string("BLT_EXE_LINKER_FLAGS", flags,
-                                                  description))
 
         return entries
 
