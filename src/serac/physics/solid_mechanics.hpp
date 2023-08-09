@@ -809,7 +809,7 @@ public:
           // serac::Functional's boundary integrals multiply the q-function output by
           // norm(cross(dX_dxi)) at that quadrature point, but if we impose a shape displacement
           // then that weight needs to be corrected. The new weight should be
-          // norm(cross(dX_dxi + dp_dxi)). This implies:
+          // norm(cross(dX_dxi + du_dxi + dp_dxi)) where u is displacement and p is shape displacement. This implies:
           //
           //   pressure * normalize(normal_new) * w_new
           // = pressure * normalize(normal_new) * (w_new / w_old) * w_old
