@@ -138,8 +138,9 @@ template <uint32_t differentiation_index, int Q, mfem::Geometry::Type geom, type
           typename lambda_type, typename state_type, typename derivative_type, int... indices>
 void evaluation_kernel_impl(FunctionSignature<test(trials...)>, const std::vector<const double*>& inputs,
                             double* outputs, const double* positions, const double* jacobians, lambda_type qf,
-                            axom::ArrayView<state_type, 2> qf_state, [[maybe_unused]] derivative_type* qf_derivatives,
-                            uint32_t num_elements, bool update_state, std::integer_sequence<int, indices...>)
+                            [[maybe_unused]] axom::ArrayView<state_type, 2> qf_state,
+                            [[maybe_unused]] derivative_type* qf_derivatives, uint32_t num_elements, bool update_state,
+                            std::integer_sequence<int, indices...>)
 {
   using test_element = finite_element<geom, test>;
 

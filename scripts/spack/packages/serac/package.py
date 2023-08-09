@@ -67,6 +67,8 @@ class Serac(CachedCMakePackage, CudaPackage):
             description="Build with portable memory access support")
     variant("raja",     default=True,
             description="Build with portable kernel execution support")
+    variant("tribol", default=True,
+            description="Build Tribol, an interface physics library")
 
     # -----------------------------------------------------------------------
     # Dependencies
@@ -102,6 +104,8 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("hypre@2.26.0~superlu-dist+mpi")
 
     depends_on("petsc", when="+petsc")
+
+    depends_on("tribol", when="+tribol")
 
     # Needs to be first due to a bug with the Spack concretizer
     # Note: Certain combinations of CMake and Conduit do not like +mpi
@@ -173,6 +177,9 @@ class Serac(CachedCMakePackage, CudaPackage):
     # netcdf-c does not have a debug variant
     depends_on("netcdf-c+shared", when="+netcdf+shared")
     depends_on("netcdf-c~shared", when="+netcdf~shared")
+
+    # Tribol does not have shared variant
+    depends_on("tribol+debug".format(dep), when="+tribol build_type=Debug".format(dep))
 
     # Required but not CMake
     for dep in ["hypre", "mfem"]:
@@ -356,7 +363,7 @@ class Serac(CachedCMakePackage, CudaPackage):
         entries.append(cmake_cache_path("SUPERLUDIST_DIR", dep_dir))
 
         # optional tpls
-        for dep in ("adiak", "amgx", "caliper", "petsc", "raja", "sundials", "umpire"):
+        for dep in ("adiak", "amgx", "caliper", "petsc", "raja", "sundials", "umpire", "tribol"):
             if spec.satisfies("^{0}".format(dep)):
                 dep_dir = get_spec_path(spec, dep, path_replacements)
                 entries.append(cmake_cache_path("%s_DIR" % dep.upper(),
