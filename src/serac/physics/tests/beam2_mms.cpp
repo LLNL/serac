@@ -46,8 +46,8 @@ public:
     using std::sin;
     double t = 0.1;
     double B = 0.5*3.1415*(1.0-cos(2.0*3.14158*t))/2.0;
-    u(0) = -H/B + (-H/B + X(0))*cos(B*X(1)/H);
-    u(1) = (H/B + X(0))*sin(B*X(1)/H);
+    u(0) = -H/B + (H/B + X(0))*cos(B*X(1)/H)-X[0];
+    u(1) = (H/B + X(0))*sin(B*X(1)/H)-X[1];
   }
 
   /// @brief computes du/dX
@@ -59,7 +59,7 @@ public:
     double t = 0.1;
     double B = 0.5*3.1415*(1.0-cos(2.0*3.14158*t))/2.0;
     double BH = B/H;
-    tensor<T, 2, 2> disp_grad{{{-1.0 + cos(BH*X(1)), (1.0-BH*X(0))*sin(BH*X(1))},
+    tensor<T, 2, 2> disp_grad{{{-1.0 + cos(BH*X(1)), -(1.0+BH*X(0))*sin(BH*X(1))},
                               {sin(BH*X(1)),        -1.0+(1.0+BH*X(0))*cos(BH*X(1))}}};  
     return disp_grad;
   }
@@ -111,7 +111,7 @@ public:
       for (int i = 0; i < dim; i++) {
         divP[i] = tr(dPdX[i]);
       }
-      return -divP*0.0;
+      return -divP;
     };
 
     sf.addBodyForce(DependsOn<>{}, bf);
@@ -172,7 +172,7 @@ double compute_patch_test_error(int refinements) {
   // from parameterized_thermomechanics_example.cpp
   // set up essential boundary conditions
   ManufacturedSolution M(8.0);
-  std::set<int> essential_boundary = {1, 2, 3, 4};
+  std::set<int> essential_boundary = {1};
   M.applyLoads(mat, solid_solver, essential_boundary);
 
   // Finalize the data structures
