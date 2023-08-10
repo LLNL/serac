@@ -28,6 +28,7 @@ namespace serac {
 class ManufacturedSolution {
 public:
   static constexpr int dim = 2;
+  static constexpr double t = 0.5;
 
   ManufacturedSolution(double height): H(height)
   {
@@ -44,7 +45,7 @@ public:
   {
     using std::cos;
     using std::sin;
-    double t = 0.1;
+    //double t = 0.2;
     double B = 0.5*3.1415*(1.0-cos(2.0*3.14158*t))/2.0;
     u(0) = -H/B + (H/B + X(0))*cos(B*X(1)/H)-X[0];
     u(1) = (H/B + X(0))*sin(B*X(1)/H)-X[1];
@@ -56,7 +57,7 @@ public:
   {
     using std::cos;
     using std::sin;
-    double t = 0.1;
+    //double t = 0.2;
     double B = 0.5*3.1415*(1.0-cos(2.0*3.14158*t))/2.0;
     double BH = B/H;
     tensor<T, 2, 2> disp_grad{{{-1.0 + cos(BH*X(1)), -(1.0+BH*X(0))*sin(BH*X(1))},
@@ -179,7 +180,7 @@ double compute_patch_test_error(int refinements) {
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  double dt = 1.0;
+  double dt = 0.1;
   solid_solver.advanceTimestep(dt);
 
   // Output the sidre-based plot files
@@ -201,7 +202,7 @@ double compute_patch_test_error(int refinements) {
 
 TEST(Manufactured, Patch2D) {
   // call compute_patch_test_error
-  double error = serac::compute_patch_test_error(2);
+  double error = serac::compute_patch_test_error(5);
   // check error
   EXPECT_LT(error, 1e-10);
 }
