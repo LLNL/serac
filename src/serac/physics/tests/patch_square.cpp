@@ -40,18 +40,18 @@ TEST(Manufactured, TwoDimensional)
   serac::StateManager::setMesh(std::move(mesh));
 
   serac::LinearSolverOptions linear_options{.linear_solver  = LinearSolver::GMRES,
-                                            .preconditioner = Preconditioner::HypreAMG,
+                                            .preconditioner = Preconditioner::HypreILU,
                                             .relative_tol   = 1.0e-6,
                                             .absolute_tol   = 1.0e-14,
                                             .max_iterations = 500,
                                             .print_level    = 1};
 
 
-  serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::Newton,
+ serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::Newton,
                                                   .relative_tol   = 1.0e-9,
                                                   .absolute_tol   = 1.0e-12,
                                                   .max_iterations = 5000,
-                                                  .print_level    = 1};
+                                                  .print_level    = 1}; 
 
   SolidMechanics<p, dim> solid_solver(nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options,
                                       GeometricNonlinearities::On, "solid_mechanics");
@@ -104,7 +104,6 @@ TEST(Manufactured, TwoDimensional)
     // u = x - X, where x = 2*X + 0*Y + 0*Z
     u[0] = X[0];
     u[1] = 0;
-    u[2] = 0;
   };
 
   // Compute norm of error
