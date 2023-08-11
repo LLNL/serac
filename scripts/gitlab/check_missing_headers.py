@@ -7,6 +7,8 @@
 # SPDX-License-Identifier: (BSD-3-Clause)
 ##############################################################################
 
+# This script takes a serac install and source directory and checks to see
+# if install includes the same header files.
 
 import os
 import sys
@@ -16,13 +18,11 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i",
                         "--install-dir",
-                        type=str,
                         default="",
                         dest="install_dir",
                         help="specify path of the install directory.")
     parser.add_argument("-s",
                         "--src-dir",
-                        type=str,
                         default="",
                         dest="src_dir",
                         help="specify path of the src directory.")
@@ -45,6 +45,7 @@ def main():
     src_dir = os.path.abspath(src_dir)
 
     print("============================================================")
+    print("check_missing_headers.py args")
     print("install_dir: {0}".format(install_dir))
     print("src_dir:     {0}".format(src_dir))
     print("============================================================")
