@@ -101,10 +101,10 @@ TEST(Thermal, FiniteDifference)
   adjoint_load = *assembled_vector;
 
   // Solve the adjoint problem
-  thermal_solver.reverseAdjointTimestep({{"temperature", adjoint_load}});
+  thermal_solver.reverseAdjointTimestep(dt, {{"temperature", adjoint_load}});
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
-  [[maybe_unused]] auto& sensitivity = thermal_solver.computeSensitivity(conductivity_parameter_index);
+  [[maybe_unused]] auto& sensitivity = thermal_solver.computeTimestepSensitivity(conductivity_parameter_index);
 
   // Perform finite difference on each conduction value
   // to check if computed qoi sensitivity is consistent
@@ -216,10 +216,10 @@ TEST(HeatTransfer, FiniteDifferenceShape)
   adjoint_load = *assembled_vector;
 
   // Solve the adjoint problem
-  thermal_solver.reverseAdjointTimestep({{"temperature", adjoint_load}});
+  thermal_solver.reverseAdjointTimestep(dt, {{"temperature", adjoint_load}});
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
-  [[maybe_unused]] auto& sensitivity = thermal_solver.computeShapeSensitivity();
+  [[maybe_unused]] auto& sensitivity = thermal_solver.computeTimestepShapeSensitivity();
 
   // Perform finite difference on each shape displacement value
   // to check if computed qoi sensitivity is consistent

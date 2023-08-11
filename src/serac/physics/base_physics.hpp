@@ -94,7 +94,7 @@ public:
 
   /**
    * @brief Get the current adjoint cycle during the backward adjoint pass
-   * 
+   *
    * @return The current adjoint (backward pass) timestep iteration number
    */
   virtual int adjointCycle() const;
@@ -129,7 +129,7 @@ public:
    * @param parameter_name The name of the parameter to generate
    *
    * @note The user is responsible for managing the lifetime of this object. It is required
-   * to exist whenever advanceTimestep, reverseAdjointTimestep, or computeSensitivity is called.
+   * to exist whenever advanceTimestep, reverseAdjointTimestep, or computeTimestepSensitivity is called.
    *
    * @note The finite element space for this object is generated from the parameter
    * discretization space (e.g. L2, H1) and the computational mesh given in the physics module constructor.
@@ -206,7 +206,7 @@ public:
    *
    * @pre `reverseAdjointTimestep` with an appropriate adjoint load must be called prior to this method.
    */
-  virtual FiniteElementDual& computeSensitivity(size_t /* parameter_index */)
+  virtual FiniteElementDual& computeTimestepSensitivity(size_t /* parameter_index */)
   {
     SLIC_ERROR_ROOT(axom::fmt::format("Parameter sensitivities not enabled in physics module {}", name_));
     return *parameters_[0].sensitivity;
@@ -220,7 +220,7 @@ public:
    *
    * @pre `reverseAdjointTimestep` with an appropriate adjoint load must be called prior to this method.
    */
-  virtual FiniteElementDual& computeShapeSensitivity()
+  virtual FiniteElementDual& computeTimestepShapeSensitivity()
   {
     SLIC_ERROR_ROOT(axom::fmt::format("Shape sensitivities not enabled in physics module {}", name_));
     return shape_displacement_sensitivity_;
@@ -242,7 +242,7 @@ public:
    * @return The computed adjoint finite element states
    */
   virtual const std::unordered_map<std::string, const serac::FiniteElementState&> reverseAdjointTimestep(
-      std::unordered_map<std::string, const serac::FiniteElementDual&> /* adjoint_loads */,
+      double& /* adjoint_dt */, std::unordered_map<std::string, const serac::FiniteElementDual&> /* adjoint_loads */,
       std::unordered_map<std::string, const serac::FiniteElementState&> /* adjoint_with_essential_boundary */ = {})
   {
     SLIC_ERROR_ROOT(axom::fmt::format("Adjoint analysis not defined for physics module {}", name_));
