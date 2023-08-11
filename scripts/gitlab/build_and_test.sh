@@ -37,7 +37,6 @@ if [[ "$CHECK_MISSING_HEADERS" == "yes" ]] ; then
     INSTALL_DIR=*build_and_test_*/install-*
     SRC_DIR=src
     python3 scripts/gitlab/check_missing_headers.py -i $INSTALL_DIR -s $SRC_DIR
-    echo "check script returned: >$?<"
     if [ $? -ne 0 ]; then
         echo "ERROR: check_missing_headers.py failed."
         exit 1

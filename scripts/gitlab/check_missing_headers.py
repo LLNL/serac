@@ -7,8 +7,14 @@
 # SPDX-License-Identifier: (BSD-3-Clause)
 ##############################################################################
 
-# This script takes a serac install and source directory and checks to see
-# if install includes the same header files.
+"""
+ file: check_missing_headers.py
+
+ description:
+  This script takes a serac install and source directory and checks to see
+  if install includes the same header files.
+
+"""
 
 import os
 import sys
@@ -66,7 +72,7 @@ def main():
                 src_headers.append({"path": dirpath, "headerfile": f})
     
     # check if each header in src is in install as well
-    ret = 0
+    res = 0
     for sh in src_headers:
         found = False
         for ih in install_headers:
@@ -76,9 +82,9 @@ def main():
         if not found:
             cmakelists_path = os.path.join(sh["path"], "CMakeLists.txt")
             print("Header '{0}' missing in {1}".format(sh["headerfile"], cmakelists_path))
-            ret = 1
+            res = 1
 
-    return ret
+    return res
 
 if __name__ == "__main__":
     sys.exit(main())
