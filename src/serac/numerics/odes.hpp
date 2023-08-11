@@ -165,7 +165,7 @@ public:
 
   /**
    * @brief Query the timestep method for the ode solver
-   * 
+   *
    * @return The timestep method used by the underlying ode solver
    */
   TimestepMethod GetTimestepper() { return timestepper_; }
@@ -349,7 +349,7 @@ public:
 
   /**
    * @brief Query the timestep method for the ode solver
-   * 
+   *
    * @return The timestep method used by the underlying ode solver
    */
   TimestepMethod GetTimestepper() { return timestepper_; }

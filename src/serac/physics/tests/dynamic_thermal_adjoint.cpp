@@ -70,7 +70,7 @@ TEST(HeatTransferDynamic, HeatTransferD)
   serac::FiniteElementDual adjoint_load(thermal.temperature().space(), "adjoint_load");
   adjoint_load = 1.0;
   for (int i = 0; i < num_timesteps; ++i) {
-    thermal.reverseAdjointTimestep({{"temperature", adjoint_load}});
+    thermal.reverseAdjointTimestep(dt, {{"temperature", adjoint_load}});
   }
 
   thermal.outputState();
