@@ -57,9 +57,12 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
 
   // Construct a functional-based solid solver
 
-  SolidMechanics<p, dim, Parameters<H1<1>, H1<1>>> solid_solver(
-      solid_mechanics::default_nonlinear_options, solid_mechanics::default_linear_options,
-      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "solid_functional");
+  auto lin_options          = solid_mechanics::default_linear_options;
+  lin_options.linear_solver = LinearSolver::SuperLU;
+
+  SolidMechanics<p, dim, Parameters<H1<1>, H1<1>>> solid_solver(solid_mechanics::default_nonlinear_options, lin_options,
+                                                                solid_mechanics::default_quasistatic_options,
+                                                                GeometricNonlinearities::On, "solid_functional");
 
   solid_solver.setParameter(0, user_defined_bulk_modulus);
   solid_solver.setParameter(1, user_defined_shear_modulus);

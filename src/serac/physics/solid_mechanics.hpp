@@ -90,12 +90,10 @@ public:
   /// integrators
   static constexpr auto NUM_STATE_VARS = 3;
 
-  /**
-   * @brief a list of the currently supported element geometries, by dimension
-   * @note: this is hardcoded for now, since we currently
-   * only support tensor product elements (1 element type per spatial dimension)
-   */
-  static constexpr mfem::Geometry::Type geom = supported_geometries[dim];
+  /// @brief a container holding quadrature point data of the specified type
+  /// @tparam T the type of data to store at each quadrature point
+  template <typename T>
+  using qdata_type = std::shared_ptr<QuadratureData<T>>;
 
   /**
    * @brief Construct a new SolidMechanics object
@@ -305,22 +303,25 @@ public:
    * @return std::shared_ptr< QuadratureData<T> >
    */
   template <typename T>
-  std::shared_ptr<QuadratureData<T>> createQuadratureDataBuffer(T initial_state)
+  qdata_type<T> createQuadratureDataBuffer(T initial_state)
   {
     constexpr auto Q = order + 1;
 
-    size_t num_elements        = size_t(mesh_.GetNE());
-    size_t qpoints_per_element = GaussQuadratureRule<geom, Q>().size();
+    std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> elems = geometry_counts(mesh_);
+    std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> qpts_per_elem{};
 
-    auto  qdata     = std::make_shared<QuadratureData<T>>(num_elements, qpoints_per_element);
-    auto& container = *qdata;
-    for (size_t e = 0; e < num_elements; e++) {
-      for (size_t q = 0; q < qpoints_per_element; q++) {
-        container(e, q) = initial_state;
-      }
+    std::vector<mfem::Geometry::Type> geometries;
+    if (dim == 2) {
+      geometries = {mfem::Geometry::TRIANGLE, mfem::Geometry::SQUARE};
+    } else {
+      geometries = {mfem::Geometry::TETRAHEDRON, mfem::Geometry::CUBE};
     }
 
-    return qdata;
+    for (auto geom : geometries) {
+      qpts_per_elem[size_t(geom)] = uint32_t(num_quadrature_points(geom, Q));
+    }
+
+    return std::make_shared<QuadratureData<T>>(elems, qpts_per_elem, initial_state);
   }
 
   /**
@@ -572,7 +573,7 @@ public:
    */
   template <int... active_parameters, typename callable, typename StateType = Nothing>
   void addCustomDomainIntegral(DependsOn<active_parameters...>, callable qfunction,
-                               std::shared_ptr<QuadratureData<StateType>> qdata = NoQData)
+                               qdata_type<StateType> qdata = NoQData)
   {
     residual_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
                                  qfunction, mesh_, qdata);
@@ -601,8 +602,7 @@ public:
    * @pre MaterialType must define operator() that returns the Cauchy stress
    */
   template <int... active_parameters, typename MaterialType, typename StateType = Empty>
-  void setMaterial(DependsOn<active_parameters...>, MaterialType material,
-                   std::shared_ptr<QuadratureData<StateType>> qdata = EmptyQData)
+  void setMaterial(DependsOn<active_parameters...>, MaterialType material, qdata_type<StateType> qdata = EmptyQData)
   {
     residual_->AddDomainIntegral(
         Dimension<dim>{},
@@ -748,9 +748,21 @@ public:
   {
     residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
-        [this, traction_function](auto x, auto n, auto, auto, auto shape, auto... params) {
-          auto p = get<VALUE>(shape);
-          return -1.0 * traction_function(x + p, n, ode_time_point_, params...);
+        [this, traction_function](auto X, auto /* displacement */, auto /* acceleration */, auto shape,
+                                  auto... params) {
+          auto x = X + shape;
+          auto n = cross(get<DERIVATIVE>(x));
+
+          // serac::Functional's boundary integrals multiply the q-function output by
+          // norm(cross(dX_dxi)) at that quadrature point, but if we impose a shape displacement
+          // then that weight needs to be corrected. The new weight should be
+          // norm(cross(dX_dxi + dp_dxi)), so we multiply by the ratio w_new / w_old
+          // to get
+          //   q * area_correction * w_old
+          // = q * (w_new / w_old) * w_old
+          // = q * w_new
+          auto area_correction = norm(n) / norm(cross(get<DERIVATIVE>(X)));
+          return -1.0 * traction_function(get<VALUE>(x), normalize(n), ode_time_point_, params...) * area_correction;
         },
         mesh_);
   }
