@@ -71,6 +71,11 @@ public:
    */
   virtual double time() const;
 
+  /**
+   * @brief Get the current adjoint time during the backward adjoint pass
+   *
+   * @return The current adjoint (backward pass) time
+   */
   virtual double adjointTime() const;
 
   /**
@@ -87,6 +92,11 @@ public:
    */
   virtual int cycle() const;
 
+  /**
+   * @brief Get the current adjoint cycle during the backward adjoint pass
+   * 
+   * @return The current adjoint (backward pass) timestep iteration number
+   */
   virtual int adjointCycle() const;
 
   /**
