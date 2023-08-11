@@ -739,12 +739,10 @@ public:
    *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
    * 3>`)
    *
-   * @note: until mfem::GetFaceGeometricFactors implements their JACOBIANS option,
-   * (or we implement a replacement kernel ourselves) we are not able to compute
-   * shape sensitivities for boundary integrals.
+   * @note This traction is applied in the reference (undeformed) configuration.
    */
   template <int... active_parameters, typename TractionType>
-  void setPiolaTraction(DependsOn<active_parameters...>, TractionType traction_function)
+  void setTraction(DependsOn<active_parameters...>, TractionType traction_function)
   {
     residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
@@ -769,9 +767,68 @@ public:
 
   /// @overload
   template <typename TractionType>
-  void setPiolaTraction(TractionType traction_function)
+  void setTraction(TractionType traction_function)
   {
-    setPiolaTraction(DependsOn<>{}, traction_function);
+    setTraction(DependsOn<>{}, traction_function);
+  }
+
+  /**
+   * @brief Set the pressure boundary condition
+   *
+   * @tparam PressureType The type of the pressure load
+   * @param pressure_function A function describing the pressure applied to a boundary
+   *
+   * @pre PressureType must be a object that can be called with the following arguments:
+   *    1. `tensor<T,dim> x` the reference configuration spatial coordinates for the quadrature point
+   *    2. `double t` the time (note: time will be handled differently in the future)
+   *    3. `tuple{value, derivative}`, a variadic list of tuples (each with a values and derivative),
+   *            one tuple for each of the trial spaces specified in the `DependsOn<...>` argument.
+   *
+   * @note The actual types of these arguments passed will be `double`, `tensor<double, ... >` or tuples thereof
+   *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
+   *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
+   * 3>`)
+   *
+   * @note This pressure is applied in the deformed (current) configuration if GeometricNonlinearities are on.
+   */
+  template <int... active_parameters, typename PressureType>
+  void setPressure(DependsOn<active_parameters...>, PressureType pressure_function)
+  {
+    residual_->AddBoundaryIntegral(
+        Dimension<dim - 1>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
+        [this, pressure_function](auto X, auto displacement, auto /* acceleration */, auto shape, auto... params) {
+          // Calculate the position and normal in the shape perturbed deformed configuration
+          auto x = X + shape + 0.0 * displacement;
+
+          if (geom_nonlin_ == GeometricNonlinearities::On) {
+            x = x + displacement;
+          }
+
+          auto n = cross(get<DERIVATIVE>(x));
+
+          // serac::Functional's boundary integrals multiply the q-function output by
+          // norm(cross(dX_dxi)) at that quadrature point, but if we impose a shape displacement
+          // then that weight needs to be corrected. The new weight should be
+          // norm(cross(dX_dxi + du_dxi + dp_dxi)) where u is displacement and p is shape displacement. This implies:
+          //
+          //   pressure * normalize(normal_new) * w_new
+          // = pressure * normalize(normal_new) * (w_new / w_old) * w_old
+          // = pressure * normalize(normal_new) * (norm(normal_new) / norm(normal_old)) * w_old
+          // = pressure * (normal_new / norm(normal_new)) * (norm(normal_new) / norm(normal_old)) * w_old
+          // = pressure * (normal_new / norm(normal_old)) * w_old
+
+          // We always query the pressure function in the undeformed configuration
+          return pressure_function(get<VALUE>(X + shape), ode_time_point_, params...) *
+                 (n / norm(cross(get<DERIVATIVE>(X))));
+        },
+        mesh_);
+  }
+
+  /// @overload
+  template <typename PressureType>
+  void setPressure(PressureType pressure_function)
+  {
+    setPressure(DependsOn<>{}, pressure_function);
   }
 
   /// @brief Build the quasi-static operator corresponding to the total Lagrangian formulation

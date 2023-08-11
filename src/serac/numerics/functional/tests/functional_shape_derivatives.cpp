@@ -123,7 +123,7 @@ auto monomials(tensor<T, dim> X)
 }
 
 template <int p, typename T, int dim>
-auto grad_monomials(tensor<T, dim> X)
+auto grad_monomials([[maybe_unused]] tensor<T, dim> X)
 {
   if constexpr (dim == 2) {
     tensor<T, ((p + 1) * (p + 2)) / 2, 2> output;

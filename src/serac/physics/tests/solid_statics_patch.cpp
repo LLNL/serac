@@ -91,7 +91,7 @@ public:
     tensor<double, dim, dim> sigma = material(state, H);
     auto P = solid_mechanics::CauchyToPiola(sigma, H);
     auto traction = [P](auto, auto n0, auto) { return dot(P, n0); };
-    sf.setPiolaTraction(traction);
+    sf.setTraction(traction);
   }
 
  private:
@@ -193,7 +193,7 @@ public:
       return dot(P, n0); 
     };
 
-    sf.setPiolaTraction(traction);
+    sf.setTraction(traction);
 
     auto bf = [=](auto X, auto) {
       auto X_val = get_value(X);
@@ -347,6 +347,113 @@ double solution_error(PatchBoundaryCondition bc)
   return computeL2Error(solid.displacement(), exact_solution_coef);
 }
 
+/**
+ * @brief Solve pressure-driven problem with 10% uniaxial strain and compare numerical solution to exact answer
+ *
+ * @tparam element_type type describing element geometry and polynomial order to use for this test
+ *
+ * @return double L2 norm (continuous) of error in computed solution
+ */
+template < typename element_type>
+double pressure_error()
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  // Create DataStore
+  axom::sidre::DataStore datastore;
+  serac::StateManager::initialize(datastore, "solid_static_solve");
+
+  constexpr int p = element_type::order;
+  constexpr int dim = dimension_of(element_type::geometry);
+
+  static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for solid test");
+
+  auto exact_uniaxial_strain = [](const mfem::Vector& X, mfem::Vector& u) {
+    u = 0.0;
+    u(0) = -0.1 * X(0);
+  };
+
+  std::string meshdir = std::string(SERAC_REPO_DIR) + "/data/meshes/";
+  std::string filename;
+  switch (element_type::geometry) {
+    case mfem::Geometry::TRIANGLE:    filename = meshdir + "patch2D_tris.mesh"; break;
+    case mfem::Geometry::SQUARE:      filename = meshdir + "patch2D_quads.mesh"; break;
+    case mfem::Geometry::TETRAHEDRON: filename = meshdir + "patch3D_tets.mesh"; break;
+    case mfem::Geometry::CUBE:        filename = meshdir + "patch3D_hexes.mesh"; break;
+    default: SLIC_ERROR_ROOT("unsupported element type for patch test"); break;
+  } 
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename));
+  auto* pmesh = serac::StateManager::setMesh(std::move(mesh));
+
+  // Construct a solid mechanics solver
+  #ifdef MFEM_USE_SUNDIALS
+  serac::NonlinearSolverOptions nonlin_solver_options{.nonlin_solver = NonlinearSolver::KINBacktrackingLineSearch, .relative_tol = 0.0, .absolute_tol = 1.0e-14, .max_iterations = 30};
+  #else
+  serac::NonlinearSolverOptions nonlin_solver_options{.nonlin_solver = NonlinearSolver::Newton, .relative_tol = 0.0, .absolute_tol = 1.0e-14, .max_iterations = 30};
+  #endif
+
+  auto equation_solver = std::make_unique<EquationSolver>(nonlin_solver_options, serac::solid_mechanics::default_linear_options, pmesh->GetComm());
+
+  SolidMechanics<p, dim> solid(std::move(equation_solver), solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "solid");
+
+  solid_mechanics::NeoHookean mat{.density=1.0, .K=1.0, .G=1.0};
+  solid.setMaterial(mat);
+
+  typename solid_mechanics::NeoHookean::State state;
+  auto H = make_tensor<dim, dim>([](int i, int j) { 
+      if ( i == 0 && j == 0) {
+        return -0.1;
+      }
+      return 0.0;
+  });
+    
+  tensor<double, dim, dim> sigma = mat(state, H);
+  auto P = solid_mechanics::CauchyToPiola(sigma, H);
+  double pressure = -1.0 * P(0,0);
+
+  // Set the pressure corresponding to 10% uniaxial strain
+  solid.setPressure([pressure](auto&, double) {
+    return pressure;
+  });
+
+  // Define the essential boundary conditions corresponding to 10% uniaxial strain everywhere
+  // except the pressure loaded surface
+  if (dim == 2) {
+    if (element_type::geometry == mfem::Geometry::TRIANGLE) {
+      solid.setDisplacementBCs({4}, exact_uniaxial_strain);
+      solid.setDisplacementBCs({1,3}, [](auto&){return 0.0; }, 1);
+    } else if (element_type::geometry == mfem::Geometry::SQUARE) {
+      solid.setDisplacementBCs({1}, exact_uniaxial_strain);
+      solid.setDisplacementBCs({2,4}, [](auto&){return 0.0; }, 1);    
+    }
+  } else if (dim == 3) {
+    solid.setDisplacementBCs({1}, exact_uniaxial_strain);
+    solid.setDisplacementBCs({2,5}, [](auto&){return 0.0; }, 1);
+    solid.setDisplacementBCs({3,6}, [](auto&){return 0.0; }, 2);
+  }
+
+  // Finalize the data structures
+  solid.completeSetup();
+
+  // Perform the quasi-static solve
+  double dt = 1.0;
+  solid.advanceTimestep(dt);
+
+  solid.outputState();
+
+  // Output solution for debugging
+  // solid.outputState("paraview_output");
+  // std::cout << "displacement =\n";
+  // solid.displacement().Print(std::cout);
+  // std::cout << "forces =\n";
+  // solid_functional.reactions().Print();
+
+  // Compute norm of error
+  mfem::VectorFunctionCoefficient exact_solution_coef(dim, exact_uniaxial_strain);
+  return computeL2Error(solid.displacement(), exact_solution_coef);
+}
+
+
 const double tol = 1e-13;
 
 constexpr int LINEAR = 1;
@@ -484,6 +591,26 @@ TEST(SolidMechanics, PatchTest3dQ3EssentialAndNaturalBcs)
 
   using hexahedron = finite_element< mfem::Geometry::CUBE, H1< CUBIC > >;
   double hex_error = solution_error< hexahedron >(PatchBoundaryCondition::EssentialAndNatural);
+  EXPECT_LT(hex_error, tol);
+}
+
+TEST(SolidMechanics, PatchTest2dQ1Pressure){
+  using triangle = finite_element< mfem::Geometry::TRIANGLE, H1< LINEAR > >;
+  double tri_error = pressure_error< triangle >();
+  EXPECT_LT(tri_error, tol);
+
+  using quadrilateral = finite_element< mfem::Geometry::SQUARE, H1< LINEAR > >;
+  double quad_error = pressure_error< quadrilateral >();
+  EXPECT_LT(quad_error, tol);
+}
+
+TEST(SolidMechanics, PatchTest3dQ1Pressure){
+  using tetrahedron = finite_element< mfem::Geometry::TETRAHEDRON, H1< LINEAR > >;
+  double tet_error = pressure_error< tetrahedron >();
+  EXPECT_LT(tet_error, tol);
+
+  using hexahedron = finite_element< mfem::Geometry::CUBE, H1< LINEAR > >;
+  double hex_error = pressure_error< hexahedron >();
   EXPECT_LT(hex_error, tol);
 }
 

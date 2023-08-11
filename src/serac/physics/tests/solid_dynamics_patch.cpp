@@ -164,7 +164,7 @@ public:
       auto T = dot(P, n0);
       return T;
     };
-    solid.setPiolaTraction(traction);
+    solid.setTraction(traction);
   }
 
 private:
