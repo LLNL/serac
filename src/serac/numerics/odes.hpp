@@ -163,6 +163,11 @@ public:
    */
   const State& GetState() { return state_; }
 
+  /**
+   * @brief Query the timestep method for the ode solver
+   * 
+   * @return The timestep method used by the underlying ode solver
+   */
   TimestepMethod GetTimestepper() { return timestepper_; }
 
 private:
@@ -342,6 +347,11 @@ public:
     }
   }
 
+  /**
+   * @brief Query the timestep method for the ode solver
+   * 
+   * @return The timestep method used by the underlying ode solver
+   */
   TimestepMethod GetTimestepper() { return timestepper_; }
 
 private:
