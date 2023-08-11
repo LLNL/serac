@@ -66,7 +66,7 @@ def main():
                 src_headers.append({"path": dirpath, "headerfile": f})
     
     # check if each header in src is in install as well
-    success = True
+    ret = 0
     for sh in src_headers:
         found = False
         for ih in install_headers:
@@ -76,9 +76,9 @@ def main():
         if not found:
             cmakelists_path = os.path.join(sh["path"], "CMakeLists.txt")
             print("Header '{0}' missing in {1}".format(sh["headerfile"], cmakelists_path))
-            success = False
+            ret = 1
 
-    return success
+    return ret
 
 if __name__ == "__main__":
     sys.exit(main())
