@@ -100,8 +100,8 @@ TEST(LiquidCrystalElastomer, Brighenti)
   constexpr int TEMPERATURE_INDEX = 0;
   constexpr int GAMMA_INDEX       = 1;
 
-  solid_solver.setParameter(TEMPERATURE_INDEX, temperature);
-  solid_solver.setParameter(GAMMA_INDEX, gamma);
+  solid_solver.registerParameter(TEMPERATURE_INDEX, temperature);
+  solid_solver.registerParameter(GAMMA_INDEX, gamma);
 
   double density                = 1.0;
   double E                      = 7.0e7;
@@ -143,7 +143,7 @@ TEST(LiquidCrystalElastomer, Brighenti)
 
   // Perform first quasi-static solve
   std::string output_filename = "sol_lce_brighenti_tensile";
-  solid_solver.outputState(output_filename);
+  solid_solver.outputStateToDisk(output_filename);
 
   // QoI for output:
   auto&                          pmesh = serac::StateManager::mesh();
@@ -189,8 +189,9 @@ TEST(LiquidCrystalElastomer, Brighenti)
                           i + 1, t, loadVal, loadVal / maxLoadVal * 100, initial_temperature));
 
     // solve problem with current parameters
-    solid_solver.advanceTimestep(dt);
-    solid_solver.outputState(output_filename);
+    solid_solver.setTimestep(dt);
+    solid_solver.advanceTimestep();
+    solid_solver.outputStateToDisk(output_filename);
 
     // get QoI
     double current_qoi  = avgYDispQoI(solid_solver.displacement());

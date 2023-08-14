@@ -72,8 +72,8 @@ void periodic_test(mfem::Element::Type element_type)
       solid_mechanics::default_nonlinear_options, solid_mechanics::default_linear_options,
       solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "solid_periodic");
 
-  solid_solver.setParameter(0, user_defined_bulk_modulus);
-  solid_solver.setParameter(1, user_defined_shear_modulus);
+  solid_solver.registerParameter(0, user_defined_bulk_modulus);
+  solid_solver.registerParameter(1, user_defined_shear_modulus);
 
   solid_mechanics::ParameterizedNeoHookeanSolid<dim> mat{1.0, 0.0, 0.0};
   solid_solver.setMaterial(DependsOn<0, 1>{}, mat);
@@ -104,13 +104,13 @@ void periodic_test(mfem::Element::Type element_type)
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  double dt = 1.0;
-  solid_solver.advanceTimestep(dt);
+  solid_solver.setTimestep(1.0);
+  solid_solver.advanceTimestep();
 
   [[maybe_unused]] auto [K, K_e] = solid_solver.stiffnessMatrix();
 
   // Output the sidre-based plot files
-  solid_solver.outputState();
+  solid_solver.outputStateToDisk();
 }
 
 // note: these tests aren't checking correctness, just that periodic meshes

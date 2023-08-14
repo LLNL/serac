@@ -85,8 +85,8 @@ public:
     states_.push_back(&solid_.velocity());
     states_.push_back(&solid_.displacement());
 
-    thermal_.setParameter(0, solid_.displacement());
-    solid_.setParameter(0, thermal_.temperature());
+    thermal_.registerParameter(0, solid_.displacement());
+    solid_.registerParameter(0, thermal_.temperature());
   }
 
   /**
@@ -139,10 +139,10 @@ public:
    * @param parameter_state the values to use for the specified parameter
    * @param i the index of the parameter
    */
-  void setParameter(const FiniteElementState& parameter_state, size_t i)
+  void registerParameter(const FiniteElementState& parameter_state, size_t i)
   {
-    thermal_.setParameter(parameter_state, i + 1);  // offset for displacement field
-    solid_.setParameter(parameter_state, i + 1);    // offset for temperature field
+    thermal_.registerParameter(parameter_state, i + 1);  // offset for displacement field
+    solid_.registerParameter(parameter_state, i + 1);    // offset for temperature field
   }
 
   /**
@@ -183,15 +183,13 @@ public:
    * schemes
    * @pre completeSetup() must be called prior to this call
    */
-  void advanceTimestep(double& dt) override
+  void advanceTimestep() override
   {
-    double initial_dt = dt;
-    thermal_.advanceTimestep(dt);
-    solid_.advanceTimestep(dt);
-    SLIC_ERROR_ROOT_IF(std::abs(dt - initial_dt) > 1.0e-6,
-                       "Operator split coupled solvers cannot adaptively change the timestep");
+    thermal_.advanceTimestep();
+    solid_.advanceTimestep();
 
     cycle_ += 1;
+    time_ += timestep_;
   }
 
   /**

@@ -104,13 +104,13 @@ TEST(Thermomechanics, ParameterizedMaterial)
   double             deltaT = 1.0;
   FiniteElementState temperature(StateManager::newState(FiniteElementState::Options{.order = p, .name = "theta"}));
   temperature = theta_ref;
-  simulation.setParameter(0, temperature);
+  simulation.registerParameter(0, temperature);
 
   double             alpha0    = 1.0e-3;
   auto               alpha_fec = std::unique_ptr<mfem::FiniteElementCollection>(new mfem::H1_FECollection(p, dim));
   FiniteElementState alpha(StateManager::newState(FiniteElementState::Options{.order = p, .name = "alpha"}));
   alpha = alpha0;
-  simulation.setParameter(1, alpha);
+  simulation.registerParameter(1, alpha);
 
   // set up essential boundary conditions
   std::set<int> x_equals_0 = {4};
@@ -129,14 +129,14 @@ TEST(Thermomechanics, ParameterizedMaterial)
   // Finalize the data structures
   simulation.completeSetup();
 
-  simulation.outputState("paraview");
+  simulation.outputStateToDisk("paraview");
 
   // Perform the quasi-static solve
-  double dt   = 1.0;
   temperature = theta_ref + deltaT;
-  simulation.advanceTimestep(dt);
+  simulation.setTimestep(1.0);
+  simulation.advanceTimestep();
 
-  simulation.outputState("paraview");
+  simulation.outputStateToDisk("paraview");
 
   // define quantities of interest
   auto& mesh = serac::StateManager::mesh();
@@ -195,9 +195,10 @@ TEST(Thermomechanics, ParameterizedMaterial)
 
   // rerun the simulation to the beginning,
   // but this time use perturbed values of alpha
-  simulation.advanceTimestep(dt);
+  simulation.setTimestep(1.0);
+  simulation.advanceTimestep();
 
-  simulation.outputState("paraview");
+  simulation.outputStateToDisk("paraview");
 
   double final_qoi = qoi(simulation.displacement());
 

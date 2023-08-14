@@ -88,15 +88,15 @@ void functional_solid_test_static_J2()
   // Finalize the data structures
   solid_solver.completeSetup();
 
-  solid_solver.outputState("paraview");
+  solid_solver.outputStateToDisk("paraview");
 
   // Perform the quasi-static solve
   int    num_steps = 10;
   double tmax      = 1.0;
-  double dt        = tmax / num_steps;
+  solid_solver.setTimestep(tmax / num_steps);
   for (int i = 0; i < num_steps; i++) {
-    solid_solver.advanceTimestep(dt);
-    solid_solver.outputState("paraview");
+    solid_solver.advanceTimestep();
+    solid_solver.outputStateToDisk("paraview");
   }
 
   // this a qualitative test that just verifies
@@ -172,9 +172,9 @@ void functional_solid_spatial_essential_bc()
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  double dt = 1.0;
-  solid_solver.advanceTimestep(dt);
-  solid_solver.outputState();
+  solid_solver.setTimestep(1.0);
+  solid_solver.advanceTimestep();
+  solid_solver.outputStateToDisk();
 
   auto [size, rank] = serac::getMPIInfo();
 
@@ -317,8 +317,8 @@ void functional_parameterized_solid_test(double expected_disp_norm)
                                                                 GeometricNonlinearities::On, "parameterized_solid");
   // _custom_solver_end
 
-  solid_solver.setParameter(0, user_defined_bulk_modulus);
-  solid_solver.setParameter(1, user_defined_shear_modulus);
+  solid_solver.registerParameter(0, user_defined_bulk_modulus);
+  solid_solver.registerParameter(1, user_defined_shear_modulus);
 
   solid_mechanics::ParameterizedLinearIsotropicSolid<dim> mat{1.0, 0.0, 0.0};
   solid_solver.setMaterial(DependsOn<0, 1>{}, mat);
@@ -334,7 +334,8 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   bdr_attr_marker    = 0;
   bdr_attr_marker[0] = 1;
   mfem::Array<int> true_dofs;
-  solid_solver.displacement().space().GetEssentialTrueDofs(bdr_attr_marker, true_dofs);
+  auto             fe_space = const_cast<mfem::ParFiniteElementSpace*>(&solid_solver.displacement().space());
+  fe_space->GetEssentialTrueDofs(bdr_attr_marker, true_dofs);
 
   solid_solver.setDisplacementBCsByDofList(true_dofs, bc);
   solid_solver.setDisplacement(bc);
@@ -361,8 +362,8 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  double dt = 1.0;
-  solid_solver.advanceTimestep(dt);
+  solid_solver.setTimestep(1.0);
+  solid_solver.advanceTimestep();
 
   // the calculations peformed in these lines of code
   // are not used, but running them as part of this test
@@ -372,7 +373,7 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   solid_solver.computeSensitivity(1);
 
   // Output the sidre-based plot files
-  solid_solver.outputState();
+  solid_solver.outputStateToDisk();
 
   // Check the final displacement norm
   EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);

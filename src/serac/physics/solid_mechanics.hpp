@@ -330,6 +330,8 @@ public:
    * @param[in] disp_bdr The boundary attributes from the mesh on which to enforce a displacement
    * @param[in] disp The prescribed boundary displacement function
    *
+   * @note This method must be called prior to completeSetup()
+   *
    * For the displacement function, the first argument is the input position and the second argument is the output
    * prescribed displacement.
    */
@@ -349,6 +351,8 @@ public:
    *
    * For the displacement function, the first argument is the input position, the second argument is the time, and the
    * third argument is the output prescribed displacement.
+   *
+   * @note This method must be called prior to completeSetup()
    */
   void setDisplacementBCs(const std::set<int>&                                            disp_bdr,
                           std::function<void(const mfem::Vector&, double, mfem::Vector&)> disp)
@@ -368,6 +372,8 @@ public:
    *
    * For the displacement function, the argument is the input position and the output is the value of the component of
    * the displacement.
+   *
+   * @note This method must be called prior to completeSetup()
    */
   void setDisplacementBCs(const std::set<int>& disp_bdr, std::function<double(const mfem::Vector& x)> disp,
                           int component)
@@ -393,6 +399,8 @@ public:
    * @note The displacement function is required to be vector-valued. However, only the dofs specified in the @a
    * true_dofs array will be set. This means that if the @a true_dofs array only contains dofs for a specific vector
    * component in a vector-valued finite element space, only that component will be set.
+   *
+   * @note This method must be called prior to completeSetup()
    */
   void setDisplacementBCsByDofList(const mfem::Array<int>                                          true_dofs,
                                    std::function<void(const mfem::Vector&, double, mfem::Vector&)> disp)
@@ -413,6 +421,8 @@ public:
    * @note The coefficient is required to be vector-valued. However, only the dofs specified in the @a true_dofs
    * array will be set. This means that if the @a true_dofs array only contains dofs for a specific vector component in
    * a vector-valued finite element space, only that component will be set.
+   *
+   * @note This method must be called prior to completeSetup()
    */
   void setDisplacementBCsByDofList(const mfem::Array<int>                                  true_dofs,
                                    std::function<void(const mfem::Vector&, mfem::Vector&)> disp)
@@ -433,6 +443,8 @@ public:
    * computes the desired displacement and fills the third argument with these displacement values.
    *
    * @note This method searches over the entire mesh, not just the boundary nodes.
+   *
+   * @note This method must be called prior to completeSetup()
    */
   void setDisplacementBCs(std::function<bool(const mfem::Vector&)>                        is_node_constrained,
                           std::function<void(const mfem::Vector&, double, mfem::Vector&)> disp)
@@ -453,6 +465,8 @@ public:
    * and fills the second argument with these displacement values.
    *
    * @note This method searches over the entire mesh, not just the boundary nodes.
+   *
+   * @note This method must be called prior to completeSetup()
    */
   void setDisplacementBCs(std::function<bool(const mfem::Vector&)>                is_node_constrained,
                           std::function<void(const mfem::Vector&, mfem::Vector&)> disp)
@@ -476,6 +490,8 @@ public:
    * computes the desired displacement scalar for the given component and returns that value.
    *
    * @note This method searches over the entire mesh, not just the boundary nodes.
+   *
+   * @note This method must be called prior to completeSetup()
    */
   void setDisplacementBCs(std::function<bool(const mfem::Vector& x)>           is_node_constrained,
                           std::function<double(const mfem::Vector& x, double)> disp, int component)
@@ -499,6 +515,8 @@ public:
    * the given component and returns that value.
    *
    * @note This method searches over the entire mesh, not just the boundary nodes.
+   *
+   * @note This method must be called prior to completeSetup()
    */
   void setDisplacementBCs(std::function<bool(const mfem::Vector& x)>   is_node_constrained,
                           std::function<double(const mfem::Vector& x)> disp, int component)
@@ -570,6 +588,8 @@ public:
    *  });
    *
    * ~~~
+   *
+   * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename callable, typename StateType = Nothing>
   void addCustomDomainIntegral(DependsOn<active_parameters...>, callable qfunction,
@@ -600,6 +620,8 @@ public:
    *
    * @pre MaterialType must have a public member variable `density`
    * @pre MaterialType must define operator() that returns the Cauchy stress
+   *
+   * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename MaterialType, typename StateType = Empty>
   void setMaterial(DependsOn<active_parameters...>, MaterialType material, qdata_type<StateType> qdata = EmptyQData)
@@ -698,6 +720,7 @@ public:
    *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
    * 3>`)
    *
+   * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename BodyForceType>
   void addBodyForce(DependsOn<active_parameters...>, BodyForceType body_force)
@@ -740,6 +763,8 @@ public:
    * 3>`)
    *
    * @note This traction is applied in the reference (undeformed) configuration.
+   *
+   * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename TractionType>
   void setTraction(DependsOn<active_parameters...>, TractionType traction_function)
@@ -790,6 +815,8 @@ public:
    * 3>`)
    *
    * @note This pressure is applied in the deformed (current) configuration if GeometricNonlinearities are on.
+   *
+   * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename PressureType>
   void setPressure(DependsOn<active_parameters...>, PressureType pressure_function)
@@ -950,9 +977,9 @@ public:
   }
 
   /// @brief Solve the Quasi-static Newton system
-  void quasiStaticSolve(double dt)
+  void quasiStaticSolve()
   {
-    time_ += dt;
+    time_ += timestep_;
 
     // the ~20 lines of code below are essentially equivalent to the 1-liner
     // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
@@ -1013,13 +1040,14 @@ public:
   }
 
   /**
-   * @brief Advance the timestep
    *
-   * @param[inout] dt The timestep to attempt. This will return the actual timestep for adaptive timestepping
-   * schemes
-   * @pre SolidMechanics::completeSetup() must be called prior to this call
+   * @brief Advance the solid mechanics physics module in time
+   *
+   * Advance the underlying ODE with the requested time integration scheme using the previously set timestep.
+   *
+   * @pre setTimestep() and completeSetup() must be called prior to this method.
    */
-  void advanceTimestep(double& dt) override
+  void advanceTimestep() override
   {
     SLIC_ERROR_ROOT_IF(!residual_, "completeSetup() must be called prior to advanceTimestep(dt) in SolidMechanics.");
 
@@ -1031,9 +1059,9 @@ public:
     }
 
     if (is_quasistatic_) {
-      quasiStaticSolve(dt);
+      quasiStaticSolve();
     } else {
-      ode2_.Step(displacement_, velocity_, time_, dt);
+      ode2_.Step(displacement_, velocity_, time_, timestep_);
     }
 
     {
@@ -1171,9 +1199,6 @@ public:
    */
   const serac::FiniteElementState& displacement() const { return displacement_; };
 
-  /// @overload
-  serac::FiniteElementState& displacement() { return displacement_; };
-
   /**
    * @brief Get the adjoint displacement state
    *
@@ -1181,18 +1206,12 @@ public:
    */
   const serac::FiniteElementState& adjointDisplacement() const { return adjoint_displacement_; };
 
-  /// @overload
-  serac::FiniteElementState& adjointDisplacement() { return adjoint_displacement_; };
-
   /**
    * @brief Get the velocity state
    *
    * @return A reference to the current velocity finite element state
    */
   const serac::FiniteElementState& velocity() const { return velocity_; };
-
-  /// @overload
-  serac::FiniteElementState& velocity() { return velocity_; };
 
   /// @brief getter for nodal forces (before zeroing-out essential dofs)
   const serac::FiniteElementDual& reactions() { return reactions_; };

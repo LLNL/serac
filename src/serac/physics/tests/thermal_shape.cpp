@@ -95,10 +95,10 @@ TEST(HeatTransfer, MoveShape)
     thermal_solver.completeSetup();
 
     // Perform the quasi-static solve
-    double dt = 1.0;
-    thermal_solver.advanceTimestep(dt);
+    thermal_solver.setTimestep(1.0);
+    thermal_solver.advanceTimestep();
 
-    thermal_solver.outputState();
+    thermal_solver.outputStateToDisk();
 
     shape_temperature = thermal_solver.temperature().gridFunction();
   }
@@ -138,10 +138,10 @@ TEST(HeatTransfer, MoveShape)
     thermal_solver_no_shape.completeSetup();
 
     // Perform the quasi-static solve
-    double dt = 1.0;
-    thermal_solver_no_shape.advanceTimestep(dt);
+    thermal_solver_no_shape.setTimestep(1.0);
+    thermal_solver_no_shape.advanceTimestep();
 
-    thermal_solver_no_shape.outputState();
+    thermal_solver_no_shape.outputStateToDisk();
 
     pure_temperature = thermal_solver_no_shape.temperature().gridFunction();
   }

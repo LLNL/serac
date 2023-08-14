@@ -82,11 +82,11 @@ TEST(BeamBending, TwoDimensional)
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  double dt = 1.0;
-  solid_solver.advanceTimestep(dt);
+  solid_solver.setTimestep(1.0);
+  solid_solver.advanceTimestep();
 
   // Output the sidre-based plot files
-  solid_solver.outputState("paraview_output");
+  solid_solver.outputStateToDisk("paraview_output");
 }
 
 }  // namespace serac

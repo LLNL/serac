@@ -90,8 +90,8 @@ void functional_test_static_3D(double expected_norm)
   thermal_solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  double dt = 1.0;
-  thermal_solid_solver.advanceTimestep(dt);
+  thermal_solid_solver.setTimestep(1.0);
+  thermal_solid_solver.advanceTimestep();
 
   EXPECT_NEAR(expected_norm, norm(thermal_solid_solver.displacement()), 1.0e-6);
 
@@ -174,8 +174,8 @@ void functional_test_shrinking_3D(double expected_norm)
   thermal_solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  double dt = 1.0;
-  thermal_solid_solver.advanceTimestep(dt);
+  thermal_solid_solver.setTimestep(1.0);
+  thermal_solid_solver.advanceTimestep();
 
   // Check the final displacement norm
   EXPECT_NEAR(expected_norm, norm(thermal_solid_solver.displacement()), 1.0e-4);
@@ -255,7 +255,7 @@ void parameterized()
   };
   mfem::FunctionCoefficient coef(f);
   thermal_expansion_scaling.project(coef);
-  thermal_solid_solver.setParameter(thermal_expansion_scaling, 0);
+  thermal_solid_solver.registerParameter(thermal_expansion_scaling, 0);
 
   // Define a boundary attribute set
   std::set<int> constraint_bdr = {1, 2, 3, 4, 5, 6};
@@ -293,14 +293,14 @@ void parameterized()
   thermal_solid_solver.completeSetup();
 
   // dump initial state to output
-  thermal_solid_solver.outputState("pv_output");
+  thermal_solid_solver.outputStateToDisk("pv_output");
 
   for (int i = 0; i < 4; i++) {
     // Perform the quasi-static solve
     double dt = 1.0;
     thermal_solid_solver.advanceTimestep(dt);
 
-    thermal_solid_solver.outputState();
+    thermal_solid_solver.outputStateToDisk();
 
     // Compute norm of error in numerical solution
     // auto exact_solution_coef = std::make_shared<mfem::VectorFunctionCoefficient>(

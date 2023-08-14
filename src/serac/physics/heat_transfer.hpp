@@ -244,6 +244,8 @@ public:
    *
    * @param[in] temp_bdr The boundary attributes on which to enforce a temperature
    * @param[in] temp The prescribed boundary temperature function
+   *
+   * @note This should be called prior to completeSetup()
    */
   void setTemperatureBCs(const std::set<int>& temp_bdr, std::function<double(const mfem::Vector& x, double t)> temp)
   {
@@ -254,14 +256,16 @@ public:
   }
 
   /**
-   * @brief Advance the timestep
+   * @brief Advance the heat conduction physics module in time
    *
-   * @param[inout] dt The timestep to advance. For adaptive time integration methods, the actual timestep is returned.
+   * Advance the underlying ODE with the requested time integration scheme using the previously set timestep.
+   *
+   * @pre setTimestep() and completeSetup() must be called prior to this method.
    */
-  void advanceTimestep(double& dt) override
+  void advanceTimestep() override
   {
     if (is_quasistatic_) {
-      time_ += dt;
+      time_ += timestep_;
       // Project the essential boundary coefficients
       for (auto& bc : bcs_.essentials()) {
         bc.setDofs(temperature_, time_);
@@ -272,7 +276,7 @@ public:
 
       // Step the time integrator
       // Note that the ODE solver handles the essential boundary condition application itself
-      ode_.Step(temperature_, time_, dt);
+      ode_.Step(temperature_, time_, timestep_);
     }
     cycle_ += 1;
   }
@@ -297,6 +301,8 @@ public:
    *
    * @pre MaterialType must return a serac::tuple of volumetric heat capacity and thermal flux when operator() is called
    * with the arguments listed above.
+   *
+   * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename MaterialType>
   void setMaterial(DependsOn<active_parameters...>, MaterialType material)
@@ -341,6 +347,8 @@ public:
    * @brief Set the underlying finite element state to a prescribed temperature
    *
    * @param temp The function describing the temperature field
+   *
+   * @note This will override any existing solution values in the temperature field
    */
   void setTemperature(std::function<double(const mfem::Vector& x, double t)> temp)
   {
@@ -370,6 +378,8 @@ public:
    *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
    *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
    * 3>`)
+   *
+   * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename SourceType>
   void setSource(DependsOn<active_parameters...>, SourceType source_function)
@@ -424,9 +434,7 @@ public:
    *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
    * 3>`)
    *
-   * @note: until mfem::GetFaceGeometricFactors implements their JACOBIANS option,
-   * (or we implement a replacement kernel ourselves) we are not able to compute
-   * shape sensitivities for boundary integrals.
+   * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename FluxType>
   void setFluxBCs(DependsOn<active_parameters...>, FluxType flux_function)
@@ -483,18 +491,12 @@ public:
    */
   const serac::FiniteElementState& temperature() const { return temperature_; };
 
-  /// @overload
-  serac::FiniteElementState& temperature() { return temperature_; };
-
   /**
    * @brief Get the adjoint temperature state
    *
    * @return A reference to the current adjoint temperature finite element state
    */
   const serac::FiniteElementState& adjointTemperature() const { return adjoint_temperature_; };
-
-  /// @overload
-  serac::FiniteElementState& adjointTemperature() { return adjoint_temperature_; };
 
   /**
    * @brief Accessor for getting named finite element state fields from the physics modules

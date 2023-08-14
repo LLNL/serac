@@ -25,8 +25,8 @@ BasePhysics::BasePhysics(std::string name, mfem::ParMesh* pmesh)
       comm_(mesh_.GetComm()),
       shape_displacement_(StateManager::shapeDisplacement(sidre_datacoll_id_)),
       shape_displacement_sensitivity_(StateManager::shapeDisplacementSensitivity(sidre_datacoll_id_)),
-      time_(0.0),
-      cycle_(0),
+      time_(StateManager::time(sidre_datacoll_id_)),
+      cycle_(StateManager::cycle(sidre_datacoll_id_)),
       ode_time_point_(0.0),
       bcs_(mesh_)
 {
@@ -41,13 +41,11 @@ BasePhysics::BasePhysics(int n, int p, std::string name, mfem::ParMesh* pmesh) :
   gf_initialized_.assign(static_cast<std::size_t>(n), StateManager::isRestart());
 }
 
-void BasePhysics::setTime(const double time) { time_ = time; }
-
 double BasePhysics::time() const { return time_; }
 
-void BasePhysics::setCycle(const int cycle) { cycle_ = cycle; }
-
 int BasePhysics::cycle() const { return cycle_; }
+
+void BasePhysics::setTimestep(double dt) { timestep_ = dt; }
 
 std::unique_ptr<FiniteElementState> BasePhysics::generateParameter(const std::string& parameter_name,
                                                                    size_t             parameter_index)
@@ -69,7 +67,7 @@ std::unique_ptr<FiniteElementState> BasePhysics::generateParameter(const std::st
   return new_state;
 }
 
-void BasePhysics::setParameter(size_t parameter_index, FiniteElementState& parameter_state)
+void BasePhysics::registerParameter(size_t parameter_index, const FiniteElementState& parameter_state)
 {
   SLIC_ERROR_ROOT_IF(&parameter_state.mesh() != &mesh_,
                      axom::fmt::format("Mesh of parameter state is not the same as the physics mesh"));
@@ -108,7 +106,7 @@ void BasePhysics::setShapeDisplacement(FiniteElementState& shape_displacement)
   shape_displacement_ = shape_displacement;
 }
 
-void BasePhysics::outputState(std::optional<std::string> paraview_output_dir) const
+void BasePhysics::outputStateToDisk(std::optional<std::string> paraview_output_dir) const
 {
   // Update the states and duals in the state manager
   for (auto& state : states_) {
@@ -140,11 +138,12 @@ void BasePhysics::outputState(std::optional<std::string> paraview_output_dir) co
         output_name = "default";
       }
 
-      paraview_dc_            = std::make_unique<mfem::ParaViewDataCollection>(output_name, &states_.front()->mesh());
+      paraview_dc_ = std::make_unique<mfem::ParaViewDataCollection>(
+          output_name, const_cast<mfem::ParMesh*>(&states_.front()->mesh()));
       int max_order_in_fields = 0;
 
       // Find the maximum polynomial order in the physics module's states
-      for (FiniteElementState* state : states_) {
+      for (const FiniteElementState* state : states_) {
         paraview_dc_->RegisterField(state->name(), &state->gridFunction());
         max_order_in_fields = std::max(max_order_in_fields, state->space().GetOrder(0));
       }
@@ -163,7 +162,7 @@ void BasePhysics::outputState(std::optional<std::string> paraview_output_dir) co
       paraview_dc_->SetDataFormat(mfem::VTKFormat::BINARY);
       paraview_dc_->SetCompression(true);
     } else {
-      for (FiniteElementState* state : states_) {
+      for (const FiniteElementState* state : states_) {
         state->gridFunction();  // update grid function values
       }
       for (auto& parameter : parameters_) {
@@ -223,7 +222,7 @@ void BasePhysics::initializeSummary(axom::sidre::DataStore& datastore, double t_
   axom::sidre::View*         t_array_view = curves_group->createView("t");
   axom::sidre::Array<double> ts(t_array_view, 0, array_size);
 
-  for (FiniteElementState* state : states_) {
+  for (const FiniteElementState* state : states_) {
     // Group for this Finite Element State (Field)
     axom::sidre::Group* state_group = curves_group->createGroup(state->name());
 
@@ -256,7 +255,7 @@ void BasePhysics::saveSummary(axom::sidre::DataStore& datastore, const double t)
 
   // For each Finite Element State (Field)
   double l1norm_value, l2norm_value, linfnorm_value, avg_value, max_value, min_value;
-  for (FiniteElementState* state : states_) {
+  for (const FiniteElementState* state : states_) {
     // Calculate current stat value
     // Note: These are collective operations.
     l1norm_value   = norm(*state, 1.0);

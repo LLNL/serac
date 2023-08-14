@@ -325,4 +325,18 @@ std::string StateManager::collectionID(const mfem::ParMesh* pmesh)
   }
 }
 
+int StateManager::cycle(std::string mesh_tag)
+{
+  SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
+                     axom::fmt::format("Mesh tag \"{}\" not found in the data store", mesh_tag));
+  return datacolls_.at(mesh_tag).GetCycle();
+}
+
+double StateManager::time(std::string mesh_tag)
+{
+  SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
+                     axom::fmt::format("Mesh tag \"{}\" not found in the data store", mesh_tag));
+  return datacolls_.at(mesh_tag).GetTime();
+}
+
 }  // namespace serac

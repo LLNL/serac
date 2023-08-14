@@ -109,9 +109,9 @@ TEST(LiquidCrystalElastomer, Bertoldi)
   constexpr int GAMMA_INDEX = 1;
   constexpr int ETA_INDEX   = 2;
 
-  solid_solver.setParameter(ORDER_INDEX, orderParam);
-  solid_solver.setParameter(GAMMA_INDEX, gammaParam);
-  solid_solver.setParameter(ETA_INDEX, etaParam);
+  solid_solver.registerParameter(ORDER_INDEX, orderParam);
+  solid_solver.registerParameter(GAMMA_INDEX, gammaParam);
+  solid_solver.registerParameter(ETA_INDEX, etaParam);
 
   // Set material
   LiquidCrystalElastomerBertoldi lceMat(density, young_modulus, possion_ratio, max_order_param, beta_param);
@@ -133,7 +133,7 @@ TEST(LiquidCrystalElastomer, Bertoldi)
 
   // Perform first quasi-static solve
   std::string outputFilename = "sol_lce_bertoldi_lattice";
-  solid_solver.outputState(outputFilename);
+  solid_solver.outputStateToDisk(outputFilename);
 
   // initializations for quasi-static problem
   int    num_steps = 4;
@@ -154,8 +154,9 @@ TEST(LiquidCrystalElastomer, Bertoldi)
                           i + 1, num_steps, max_order_param * (tmax - t) / tmax, gamma_angle, eta_angle, gblDispYmin));
 
     // solve problem with current parameters
-    solid_solver.advanceTimestep(dt);
-    solid_solver.outputState(outputFilename);
+    solid_solver.setTimestep(dt);
+    solid_solver.advanceTimestep();
+    solid_solver.outputStateToDisk(outputFilename);
 
     // Get minimum displacement for verification purposes
     auto&                 fes             = solid_solver.displacement().space();

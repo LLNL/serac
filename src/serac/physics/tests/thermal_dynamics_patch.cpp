@@ -124,11 +124,11 @@ double dynamic_solution_error(const ExactSolution& exact_solution, PatchBoundary
   thermal.completeSetup();
 
   // Integrate in time
-  double dt = 1.0;
-  thermal.outputState();
+  thermal.setTimestep(1.0);
+  thermal.outputStateToDisk();
   for (int i = 0; i < 3; i++) {
-    thermal.advanceTimestep(dt);
-    thermal.outputState();
+    thermal.advanceTimestep();
+    thermal.outputStateToDisk();
   }
 
   // Compute norm of error

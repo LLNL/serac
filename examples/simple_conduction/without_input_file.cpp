@@ -68,11 +68,11 @@ int main(int argc, char* argv[])
 
   // _run_sim_start
   heat_transfer.completeSetup();
-  heat_transfer.outputState();
+  heat_transfer.outputStateToDisk();
 
-  double dt;
-  heat_transfer.advanceTimestep(dt);
-  heat_transfer.outputState();
+  heat_transfer.setTimestep(1.0);
+  heat_transfer.advanceTimestep();
+  heat_transfer.outputStateToDisk();
   // _run_sim_end
 
   // _exit_start

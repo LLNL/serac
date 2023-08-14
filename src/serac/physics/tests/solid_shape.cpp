@@ -119,8 +119,8 @@ void shape_test(GeometricNonlinearities geo_nonlin)
     solid_solver.completeSetup();
 
     // Perform the quasi-static solve
-    double dt = 1.0;
-    solid_solver.advanceTimestep(dt);
+    solid_solver.setTimestep(1.0);
+    solid_solver.advanceTimestep();
 
     shape_displacement = solid_solver.displacement().gridFunction();
   }
@@ -165,8 +165,8 @@ void shape_test(GeometricNonlinearities geo_nonlin)
     solid_solver_no_shape.completeSetup();
 
     // Perform the quasi-static solve
-    double dt = 1.0;
-    solid_solver_no_shape.advanceTimestep(dt);
+    solid_solver_no_shape.setTimestep(1.0);
+    solid_solver_no_shape.advanceTimestep();
 
     pure_displacement = solid_solver_no_shape.displacement().gridFunction();
     visit_dc.SetCycle(1);

@@ -332,11 +332,11 @@ double solution_error(PatchBoundaryCondition bc)
   solid.completeSetup();
 
   // Perform the quasi-static solve
-  double dt = 1.0;
-  solid.advanceTimestep(dt);
+  solid.setTimestep(1.0);
+  solid.advanceTimestep();
 
   // Output solution for debugging
-  // solid.outputState("paraview_output");
+  // solid.outputStateToDisk("paraview_output");
   // std::cout << "displacement =\n";
   // solid.displacement().Print(std::cout);
   // std::cout << "forces =\n";
@@ -436,13 +436,13 @@ double pressure_error()
   solid.completeSetup();
 
   // Perform the quasi-static solve
-  double dt = 1.0;
-  solid.advanceTimestep(dt);
+  solid.setTimestep(1.0);
+  solid.advanceTimestep();
 
-  solid.outputState();
+  solid.outputStateToDisk();
 
   // Output solution for debugging
-  // solid.outputState("paraview_output");
+  // solid.outputStateToDisk("paraview_output");
   // std::cout << "displacement =\n";
   // solid.displacement().Print(std::cout);
   // std::cout << "forces =\n";

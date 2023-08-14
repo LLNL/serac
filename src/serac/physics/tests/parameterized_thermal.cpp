@@ -62,7 +62,7 @@ TEST(Thermal, ParameterizedMaterial)
                                                          heat_transfer::direct_linear_options,
                                                          heat_transfer::default_static_options, "thermal_functional");
 
-  thermal_solver.setParameter(0, user_defined_conductivity);
+  thermal_solver.registerParameter(0, user_defined_conductivity);
 
   // Construct a potentially user-defined parameterized material and send it to the thermal module
   heat_transfer::ParameterizedLinearIsotropicConductor mat;
@@ -92,11 +92,11 @@ TEST(Thermal, ParameterizedMaterial)
   thermal_solver.completeSetup();
 
   // Perform the quasi-static solve
-  double dt = 1.0;
-  thermal_solver.advanceTimestep(dt);
+  thermal_solver.setTimestep(1.0);
+  thermal_solver.advanceTimestep();
 
   // Output the sidre-based plot files
-  thermal_solver.outputState();
+  thermal_solver.outputStateToDisk();
 
   // Construct a dummy adjoint load (this would come from a QOI downstream).
   // This adjoint load is equivalent to a discrete L1 norm on the temperature.

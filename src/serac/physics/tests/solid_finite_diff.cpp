@@ -64,8 +64,8 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
                                                                 solid_mechanics::default_quasistatic_options,
                                                                 GeometricNonlinearities::On, "solid_functional");
 
-  solid_solver.setParameter(0, user_defined_bulk_modulus);
-  solid_solver.setParameter(1, user_defined_shear_modulus);
+  solid_solver.registerParameter(0, user_defined_bulk_modulus);
+  solid_solver.registerParameter(1, user_defined_shear_modulus);
 
   // We must know the index of the parameter finite element state in our parameter pack to take sensitivities.
   // As we only have one parameter in this example, the index is zero.
@@ -98,15 +98,15 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  double dt = 1.0;
-  solid_solver.advanceTimestep(dt);
+  solid_solver.setTimestep(1.0);
+  solid_solver.advanceTimestep();
 
   // Output the sidre-based plot files
-  solid_solver.outputState();
+  solid_solver.outputStateToDisk();
 
   // Make up an adjoint load which can also be viewed as a
   // sensitivity of some qoi with respect to displacement
-  mfem::ParLinearForm adjoint_load_form(&solid_solver.displacement().space());
+  mfem::ParLinearForm adjoint_load_form(const_cast<mfem::ParFiniteElementSpace*>(&solid_solver.displacement().space()));
   adjoint_load_form = 1.0;
 
   // Construct a dummy adjoint load (this would come from a QOI downstream).
@@ -130,20 +130,20 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
     user_defined_bulk_modulus(i) = bulk_modulus_value + eps;
     solid_solver.setDisplacement(bc);
 
-    solid_solver.advanceTimestep(dt);
+    solid_solver.advanceTimestep();
     mfem::ParGridFunction displacement_plus = solid_solver.displacement().gridFunction();
 
     user_defined_bulk_modulus(i) = bulk_modulus_value - eps;
 
     solid_solver.setDisplacement(bc);
-    solid_solver.advanceTimestep(dt);
+    solid_solver.advanceTimestep();
     mfem::ParGridFunction displacement_minus = solid_solver.displacement().gridFunction();
 
     // Reset to the original bulk modulus value
     user_defined_bulk_modulus(i) = bulk_modulus_value;
 
     // Finite difference to compute sensitivity of displacement with respect to bulk modulus
-    mfem::ParGridFunction ddisp_dbulk(&solid_solver.displacement().space());
+    mfem::ParGridFunction ddisp_dbulk(const_cast<mfem::ParFiniteElementSpace*>(&solid_solver.displacement().space()));
     for (int i2 = 0; i2 < displacement_plus.Size(); ++i2) {
       ddisp_dbulk(i2) = (displacement_plus(i2) - displacement_minus(i2)) / (2.0 * eps);
     }
@@ -261,15 +261,15 @@ void finite_difference_shape_test(LoadingType load)
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  double dt = 1.0;
-  solid_solver.advanceTimestep(dt);
+  solid_solver.setTimestep(1.0);
+  solid_solver.advanceTimestep();
 
   // Output the sidre-based plot files
-  solid_solver.outputState();
+  solid_solver.outputStateToDisk();
 
   // Make up an adjoint load which can also be viewed as a
   // sensitivity of some qoi with respect to displacement
-  mfem::ParLinearForm adjoint_load_form(&solid_solver.displacement().space());
+  mfem::ParLinearForm adjoint_load_form(const_cast<mfem::ParFiniteElementSpace*>(&solid_solver.displacement().space()));
   adjoint_load_form = 1.0;
 
   // Construct a dummy adjoint load (this would come from a QOI downstream).
@@ -293,13 +293,13 @@ void finite_difference_shape_test(LoadingType load)
     shape_displacement(i) = shape_displacement_value + eps;
     solid_solver.setShapeDisplacement(shape_displacement);
 
-    solid_solver.advanceTimestep(dt);
+    solid_solver.advanceTimestep();
     mfem::ParGridFunction displacement_plus = solid_solver.displacement().gridFunction();
 
     shape_displacement(i) = shape_displacement_value - eps;
     solid_solver.setShapeDisplacement(shape_displacement);
 
-    solid_solver.advanceTimestep(dt);
+    solid_solver.advanceTimestep();
     mfem::ParGridFunction displacement_minus = solid_solver.displacement().gridFunction();
 
     // Reset to the original bulk modulus value
@@ -307,7 +307,7 @@ void finite_difference_shape_test(LoadingType load)
     solid_solver.setShapeDisplacement(shape_displacement);
 
     // Finite difference to compute sensitivity of displacement with respect to bulk modulus
-    mfem::ParGridFunction ddisp_dshape(&solid_solver.displacement().space());
+    mfem::ParGridFunction ddisp_dshape(const_cast<mfem::ParFiniteElementSpace*>(&solid_solver.displacement().space()));
     for (int i2 = 0; i2 < displacement_plus.Size(); ++i2) {
       ddisp_dshape(i2) = (displacement_plus(i2) - displacement_minus(i2)) / (2.0 * eps);
     }

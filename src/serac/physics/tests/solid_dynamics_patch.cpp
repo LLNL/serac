@@ -323,12 +323,12 @@ double solution_error(solution_type exact_solution, PatchBoundaryCondition bc)
   solid.completeSetup();
 
   // Integrate in time
-  double dt = 1.0;
+  solid.setTimestep(1.0);
   for (int i = 0; i < 3; i++) {
-    solid.advanceTimestep(dt);
+    solid.advanceTimestep();
 
     // Output solution for debugging
-    // solid.outputState("paraview_output");
+    // solid.outputStateToDisk("paraview_output");
     // std::cout << "cycle " << i << std::endl;
     // std::cout << "time = " << solid.time() << std::endl;
     // std::cout << "displacement =\n";

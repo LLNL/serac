@@ -83,15 +83,16 @@ TEST(Thermal, FiniteDifference)
   thermal_solver.completeSetup();
 
   // Perform the quasi-static solve
-  double dt = 1.0;
-  thermal_solver.advanceTimestep(dt);
+  thermal_solver.setTimestep(1.0);
+  thermal_solver.advanceTimestep();
 
   // Output the sidre-based plot files
-  thermal_solver.outputState();
+  thermal_solver.outputStateToDisk();
 
   // Make up an adjoint load which can also be viewed as a
   // sensitivity of some qoi with respect to displacement
-  mfem::ParLinearForm adjoint_load_form(&thermal_solver.temperature().space());
+  mfem::ParLinearForm adjoint_load_form(
+      const_cast<mfem::ParFiniteElementSpace*>(&thermal_solver.temperature().space()));
   adjoint_load_form = 1.0;
 
   // Construct a dummy adjoint load (this would come from a QOI downstream).
@@ -114,19 +115,20 @@ TEST(Thermal, FiniteDifference)
     // Perturb the conductivity
     (*user_defined_conductivity)(i) = conductivity_value + eps;
 
-    thermal_solver.advanceTimestep(dt);
+    thermal_solver.advanceTimestep();
     mfem::ParGridFunction temperature_plus = thermal_solver.temperature().gridFunction();
 
     (*user_defined_conductivity)(i) = conductivity_value - eps;
 
-    thermal_solver.advanceTimestep(dt);
+    thermal_solver.advanceTimestep();
     mfem::ParGridFunction temperature_minus = thermal_solver.temperature().gridFunction();
 
     // Reset to the original conductivity value
     (*user_defined_conductivity)(i) = conductivity_value;
 
     // Finite difference to compute sensitivity of temperature with respect to conductivity
-    mfem::ParGridFunction dtemp_dconductivity(&thermal_solver.temperature().space());
+    mfem::ParGridFunction dtemp_dconductivity(
+        const_cast<mfem::ParFiniteElementSpace*>(&thermal_solver.temperature().space()));
     for (int i2 = 0; i2 < temperature_plus.Size(); ++i2) {
       dtemp_dconductivity(i2) = (temperature_plus(i2) - temperature_minus(i2)) / (2.0 * eps);
     }
@@ -198,15 +200,16 @@ TEST(HeatTransfer, FiniteDifferenceShape)
   thermal_solver.completeSetup();
 
   // Perform the quasi-static solve
-  double dt = 1.0;
-  thermal_solver.advanceTimestep(dt);
+  thermal_solver.setTimestep(1.0);
+  thermal_solver.advanceTimestep();
 
   // Output the sidre-based plot files
-  thermal_solver.outputState();
+  thermal_solver.outputStateToDisk();
 
   // Make up an adjoint load which can also be viewed as a
   // sensitivity of some qoi with respect to temperature
-  mfem::ParLinearForm adjoint_load_form(&thermal_solver.temperature().space());
+  mfem::ParLinearForm adjoint_load_form(
+      const_cast<mfem::ParFiniteElementSpace*>(&thermal_solver.temperature().space()));
   adjoint_load_form = 1.0;
 
   // Construct a dummy adjoint load (this would come from a QOI downstream).
@@ -230,13 +233,13 @@ TEST(HeatTransfer, FiniteDifferenceShape)
     shape_displacement(i) = shape_displacement_value + eps;
     thermal_solver.setShapeDisplacement(shape_displacement);
 
-    thermal_solver.advanceTimestep(dt);
+    thermal_solver.advanceTimestep();
     mfem::ParGridFunction temperature_plus = thermal_solver.temperature().gridFunction();
 
     shape_displacement(i) = shape_displacement_value - eps;
     thermal_solver.setShapeDisplacement(shape_displacement);
 
-    thermal_solver.advanceTimestep(dt);
+    thermal_solver.advanceTimestep();
     mfem::ParGridFunction temperature_minus = thermal_solver.temperature().gridFunction();
 
     // Reset to the original bulk modulus value
@@ -244,7 +247,7 @@ TEST(HeatTransfer, FiniteDifferenceShape)
     thermal_solver.setShapeDisplacement(shape_displacement);
 
     // Finite difference to compute sensitivity of displacement with respect to bulk modulus
-    mfem::ParGridFunction dtemp_dshape(&thermal_solver.temperature().space());
+    mfem::ParGridFunction dtemp_dshape(const_cast<mfem::ParFiniteElementSpace*>(&thermal_solver.temperature().space()));
     for (int i2 = 0; i2 < temperature_plus.Size(); ++i2) {
       dtemp_dshape(i2) = (temperature_plus(i2) - temperature_minus(i2)) / (2.0 * eps);
     }

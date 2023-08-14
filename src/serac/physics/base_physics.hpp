@@ -58,38 +58,31 @@ public:
   BasePhysics(BasePhysics&& other) = default;
 
   /**
-   * @brief Set the current time
+   * @brief Get the current forward-solution time
    *
-   * @param[in] time The time
-   */
-  virtual void setTime(const double time);
-
-  /**
-   * @brief Get the current time
-   *
-   * @return The current time
+   * @return The current forward-solution time
    */
   virtual double time() const;
 
   /**
-   * @brief Set the current cycle
+   * @brief Get the current forward-solution cycle iteration number
    *
-   * @param[in] cycle The cycle
-   */
-  virtual void setCycle(const int cycle);
-
-  /**
-   * @brief Get the current cycle
-   *
-   * @return The current cycle
+   * @return The current forward-solution cycle iteration number
    */
   virtual int cycle() const;
 
   /**
+   * @brief Set the timestep size (delta time) for the underlying differential equation evolution algorithm
+   *
+   * @param dt The timestep size to use when advancing the physics module
+   */
+  virtual void setTimestep(double dt);
+
+  /**
    * @brief Complete the setup and allocate the necessary data structures
    *
-   * This finializes the underlying MFEM data structures in a solver and
-   * enables it to be run through a timestepping loop
+   * This finializes the underlying data structures in a solver and
+   * enables it to be run through a timestepping loop.
    */
   virtual void completeSetup() = 0;
 
@@ -119,19 +112,25 @@ public:
    *
    * @note The finite element space for this object is generated from the parameter
    * discretization space (e.g. L2, H1) and the computational mesh given in the physics module constructor.
+   *
+   * @note The memory address of this parameter is stored in the physics module. If the FiniteElementState
+   * pointed to by the returned pointer is modified, the updated parameter value will be used in the physics module.
    */
   std::unique_ptr<FiniteElementState> generateParameter(const std::string& parameter_name, size_t parameter_index);
 
   /**
-   * @brief Register the provided FiniteElementState object as the source of values for parameter `i`
+   * @brief Register an externally-constructed FiniteElementState object as the source of values for parameter `i`
    *
    * @param parameter_state the values to use for the specified parameter
    * @param parameter_index the index of the parameter
    *
    * @pre The discretization space and mesh for this finite element state must be consistent with the arguments
    * provided in the physics module constructor.
+   *
+   * @note The memory address of this parameter is stored in the physics module. If the FiniteElementState
+   * given in the argument is modified, the updated parameter value will be used in the physics module.
    */
-  void setParameter(const size_t parameter_index, FiniteElementState& parameter_state);
+  void registerParameter(const size_t parameter_index, const FiniteElementState& parameter_state);
 
   /**
    * @brief Set the shape displacement field to a known finite element state
@@ -139,29 +138,22 @@ public:
    * @param shape_displacement the values to use for the shape displacement
    *
    * @pre The discretization space and mesh for this finite element state must be consistent with the shape
-   * displacement of the associated mesh
+   * displacement of the associated mesh.
+   *
+   * @note The input shape displacement is deep-copied into the intnerally owned shape displacement field. It
+   * can be safely destructed after this call.
    */
   void setShapeDisplacement(FiniteElementState& shape_displacement);
 
   /**
-   * @brief Get the parameter field of the physics module
+   * @brief Get a reference to the parameter field of the physics module
    *
    * @param parameter_index The parameter index to retrieve
    * @return The FiniteElementState representing the user-defined parameter
+   *
+   * @note If the FiniteElementState returned by this function is modified, the updated parameter value will be used in
+   * the physics module.
    */
-  FiniteElementState& parameter(const size_t parameter_index)
-  {
-    SLIC_ERROR_ROOT_IF(
-        parameter_index >= parameters_.size(),
-        axom::fmt::format("Parameter index '{}' is not available in physics module '{}'", parameter_index, name_));
-
-    SLIC_ERROR_ROOT_IF(
-        !parameters_[parameter_index].state,
-        axom::fmt::format("Parameter index '{}' is not set in physics module '{}'", parameter_index, name_));
-    return *parameters_[parameter_index].state;
-  }
-
-  /// @overload
   const FiniteElementState& parameter(size_t parameter_index) const
   {
     SLIC_ERROR_ROOT_IF(
@@ -175,9 +167,12 @@ public:
   }
 
   /**
-   * @brief Get the shape displacement of the associated mesh for this physics object
+   * @brief Get a mutable reference the shape displacement of the associated mesh for this physics object
    *
    * @return The associated shape displacement
+   *
+   * @note If the FiniteElementState returned by this function is modified, the updated shape displacement will be used
+   * in the physics module.
    */
   FiniteElementState& shapeDisplacement() { return shape_displacement_; }
 
@@ -185,12 +180,12 @@ public:
   const FiniteElementState& shapeDisplacement() const { return shape_displacement_; }
 
   /**
-   * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
-   * problem with respect to the parameter field
+   * @brief Compute the implicit sensitivity of the quantity of interest used in defining the adjoint load with respect
+   * to the parameter field (d QOI/d state * d state/d parameter).
    *
-   * @return The sensitivity with respect to the parameter
+   * @return The sensitivity of the QOI (given implicitly by the adjoint load) with respect to the parameter
    *
-   * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
+   * @pre completeSetup(), advanceTimestep(), and solveAdjoint() must be called prior to this method.
    */
   virtual FiniteElementDual& computeSensitivity(size_t /* parameter_index */)
   {
@@ -199,12 +194,12 @@ public:
   }
 
   /**
-   * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
-   * problem with respect to the shape displacement field
+   * @brief Compute the implicit sensitivity of the quantity of interest used in defining the adjoint load with respect
+   * to the shape displacement field (d QOI/d state * d state/d shape displacement).
    *
    * @return The sensitivity with respect to the shape displacement
    *
-   * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
+   * @pre completeSetup(), advanceTimestep(), and solveAdjoint() must be called prior to this method.
    */
   virtual FiniteElementDual& computeShapeSensitivity()
   {
@@ -213,11 +208,11 @@ public:
   }
 
   /**
-   * @brief Advance the state variables according to the chosen time integrator
+   * @brief Advance the state variables according to the chosen time integrator and timestep
    *
-   * @param[inout] dt The timestep to advance. For adaptive time integration methods, the actual timestep is returned.
+   * @pre setTimestep() and completeSetup() must be called prior to this method.
    */
-  virtual void advanceTimestep(double& dt) = 0;
+  virtual void advanceTimestep() = 0;
 
   /**
    * @brief Solve the adjoint problem
@@ -243,7 +238,7 @@ public:
    *
    * @param[in] paraview_output_dir Optional output directory for paraview visualization files
    */
-  virtual void outputState(std::optional<std::string> paraview_output_dir = {}) const;
+  virtual void outputStateToDisk(std::optional<std::string> paraview_output_dir = {}) const;
 
   /**
    * @brief Initializes the Sidre structure for simulation summary data
@@ -290,14 +285,14 @@ protected:
   MPI_Comm comm_;
 
   /**
-   * @brief List of finite element states associated with this physics module
+   * @brief List of finite element primal states associated with this physics module
    */
-  std::vector<serac::FiniteElementState*> states_;
+  std::vector<const serac::FiniteElementState*> states_;
 
   /**
    * @brief List of finite element duals associated with this physics module
    */
-  std::vector<serac::FiniteElementDual*> duals_;
+  std::vector<const serac::FiniteElementDual*> duals_;
 
   /// @brief The information needed for the physics parameters stored as Finite Element State fields
   struct ParameterInfo {
@@ -308,15 +303,17 @@ protected:
     std::unique_ptr<mfem::FiniteElementCollection> trial_collection;
 
     /// The finite element states representing user-defined and owned parameter fields
-    serac::FiniteElementState* state;
+    const serac::FiniteElementState* state;
 
     /// The finite element state representing the parameter at the previous evaluation
     std::unique_ptr<serac::FiniteElementState> previous_state;
 
     /**
-     * @brief The sensitivities (dual vectors) with respect to each of the input parameter fields
+     * @brief The sensitivities (dual vectors) of the QOI encoded in the adjoint load with respect to each of the input
+     * parameter fields
      * @note this is optional as FiniteElementDuals are not default constructable and
-     * we want to set this during the setParameter or generateParameter method.
+     * we want to set this during the registerParameter or generateParameter method.
+     * @note This quantity is also called the vector-Jacobian product during back propagation in data science.
      */
     std::optional<serac::FiniteElementDual> sensitivity;
   };
@@ -330,6 +327,7 @@ protected:
 
   /// @brief Sensitivity with respect to the shape displacement field
   /// @note This is owned by the State Manager since it is associated with the mesh
+  /// @note This quantity is also called the vector-Jacobian product during back propagation in data science.
   FiniteElementDual& shape_displacement_sensitivity_;
 
   /**
@@ -343,14 +341,19 @@ protected:
   static constexpr int FLOAT_PRECISION_ = 8;
 
   /**
-   * @brief Current time
+   * @brief Current time for the forward pass
    */
   double time_;
 
   /**
-   * @brief Current cycle
+   * @brief Current cycle (forward pass time iteration count)
    */
   int cycle_;
+
+  /**
+   * @brief Current timestep for the forward pass
+   */
+  double timestep_;
 
   /**
    * @brief The value of time at which the ODE solver wants to evaluate the residual

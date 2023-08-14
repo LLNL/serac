@@ -217,6 +217,26 @@ public:
   /// @brief Returns true if data was loaded into a DataCollection
   static bool isRestart() { return is_restart_; }
 
+  /**
+   * @brief Get the current cycle (iteration number) from the underlying datacollection
+   *
+   * @param mesh_tag The datacollection (mesh name) to query
+   * @return The current forward cycle (iteration/timestep number)
+   *
+   * @note This will return the cycle for the last written or loaded data collection
+   */
+  static int cycle(std::string mesh_tag);
+
+  /**
+   * @brief Get the current simulation time from the underlying datacollection
+   *
+   * @param mesh_tag The datacollection (mesh name) to query
+   * @return The current forward simulation time
+   *
+   * @note This will return the cycle for the last written or loaded data collection
+   */
+  static double time(std::string collection_id);
+
 private:
   /**
    * @brief Creates a new datacollection based on a registered mesh

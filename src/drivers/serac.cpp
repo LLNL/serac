@@ -324,8 +324,7 @@ input file functionality.
     serac::StateManager::setMesh(std::move(mesh));
   } else {
     // If restart_cycle is non-empty, then this is a restart run and the data will be loaded here
-    t     = serac::StateManager::load(*restart_cycle);
-    cycle = *restart_cycle;
+    serac::StateManager::load(*restart_cycle);
   }
 
   // Create nullable containers for the solid and thermal input file options
@@ -357,10 +356,6 @@ input file functionality.
   // Complete the solver setup
   main_physics->completeSetup();
 
-  // Update physics time and cycle
-  main_physics->setTime(t);
-  main_physics->setCycle(cycle);
-
   main_physics->initializeSummary(datastore, t_final, dt);
 
   // Enter the time step loop.
@@ -378,11 +373,13 @@ input file functionality.
     // Print the timestep information
     SLIC_INFO_ROOT("step " << cycle << ", t = " << t);
 
+    main_physics->setTimestep(dt_real);
+
     // Solve the physics module appropriately
-    main_physics->advanceTimestep(dt_real);
+    main_physics->advanceTimestep();
 
     // Output a visualization file
-    main_physics->outputState(paraview_output_dir);
+    main_physics->outputStateToDisk(paraview_output_dir);
 
     // Save curve data to Sidre datastore to be output later
     main_physics->saveSummary(datastore, t);
