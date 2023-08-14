@@ -67,7 +67,7 @@ std::unique_ptr<FiniteElementState> BasePhysics::generateParameter(const std::st
   return new_state;
 }
 
-void BasePhysics::registerParameter(size_t parameter_index, const FiniteElementState& parameter_state)
+void BasePhysics::registerParameter(size_t parameter_index, FiniteElementState& parameter_state)
 {
   SLIC_ERROR_ROOT_IF(&parameter_state.mesh() != &mesh_,
                      axom::fmt::format("Mesh of parameter state is not the same as the physics mesh"));
@@ -90,20 +90,6 @@ void BasePhysics::registerParameter(size_t parameter_index, const FiniteElementS
   *parameters_[parameter_index].previous_state = 0.0;
   parameters_[parameter_index].sensitivity =
       StateManager::newDual(parameter_state.space(), detail::addPrefix(name_, parameter_state.name() + "_sensitivity"));
-}
-
-void BasePhysics::setShapeDisplacement(FiniteElementState& shape_displacement)
-{
-  SLIC_ERROR_ROOT_IF(&shape_displacement_.mesh() != &mesh_,
-                     axom::fmt::format("Mesh of shape displacement is not the same as the physics mesh"));
-
-  SLIC_ERROR_ROOT_IF(
-      shape_displacement.space().GetTrueVSize() != shape_displacement_.space().GetTrueVSize(),
-      axom::fmt::format(
-          "Physics module shape displacement has size '{}' while given state has size '{}'. The finite element "
-          "spaces are inconsistent.",
-          shape_displacement_.space().GetTrueVSize(), shape_displacement.space().GetTrueVSize()));
-  shape_displacement_ = shape_displacement;
 }
 
 void BasePhysics::outputStateToDisk(std::optional<std::string> paraview_output_dir) const

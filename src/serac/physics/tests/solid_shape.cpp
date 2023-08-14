@@ -109,7 +109,7 @@ void shape_test(GeometricNonlinearities geo_nonlin)
     solid_solver.setDisplacementBCs(ess_bdr, bc);
     solid_solver.setDisplacement(bc);
 
-    solid_solver.setShapeDisplacement(user_defined_shape_displacement);
+    solid_solver.shapeDisplacement() = user_defined_shape_displacement;
 
     solid_solver.setMaterial(mat);
 

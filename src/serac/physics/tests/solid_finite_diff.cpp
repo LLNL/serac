@@ -215,10 +215,7 @@ void finite_difference_shape_test(LoadingType load)
   solid_mechanics::NeoHookean mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
 
-  FiniteElementState shape_displacement(solid_solver.shapeDisplacement());
-
-  shape_displacement = shape_displacement_value;
-  solid_solver.setShapeDisplacement(shape_displacement);
+  solid_solver.shapeDisplacement() = shape_displacement_value;
 
   // Define the function for the initial displacement and boundary condition
   auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
@@ -287,24 +284,23 @@ void finite_difference_shape_test(LoadingType load)
   // Perform finite difference on each shape velocity value
   // to check if computed qoi sensitivity is consistent
   // with finite difference on the displacement
+  auto& shape_displacement = solid_solver.shapeDisplacement();
+
   double eps = 1.0e-6;
   for (int i = 0; i < shape_displacement.Size(); ++i) {
     // Perturb the shape field
     shape_displacement(i) = shape_displacement_value + eps;
-    solid_solver.setShapeDisplacement(shape_displacement);
 
     solid_solver.advanceTimestep();
     mfem::ParGridFunction displacement_plus = solid_solver.displacement().gridFunction();
 
     shape_displacement(i) = shape_displacement_value - eps;
-    solid_solver.setShapeDisplacement(shape_displacement);
 
     solid_solver.advanceTimestep();
     mfem::ParGridFunction displacement_minus = solid_solver.displacement().gridFunction();
 
     // Reset to the original bulk modulus value
     shape_displacement(i) = shape_displacement_value;
-    solid_solver.setShapeDisplacement(shape_displacement);
 
     // Finite difference to compute sensitivity of displacement with respect to bulk modulus
     mfem::ParGridFunction ddisp_dshape(const_cast<mfem::ParFiniteElementSpace*>(&solid_solver.displacement().space()));

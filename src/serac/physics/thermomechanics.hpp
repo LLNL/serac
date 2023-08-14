@@ -85,8 +85,8 @@ public:
     states_.push_back(&solid_.velocity());
     states_.push_back(&solid_.displacement());
 
-    thermal_.registerParameter(0, solid_.displacement());
-    solid_.registerParameter(0, thermal_.temperature());
+    thermal_.registerParameter(0, const_cast<FiniteElementState&>(solid_.displacement()));
+    solid_.registerParameter(0, const_cast<FiniteElementState&>(thermal_.temperature()));
   }
 
   /**
@@ -178,13 +178,14 @@ public:
 
   /**
    * @brief Set the timestep size for both of the underlying thermal and solid mechanics solvers
-   * 
-   * @param dt The timestep to use in the thermal and solid ODE solver algorithms 
-   * 
-   * @note These physics modules are implemented in an operator split fashion and will use the same timestep for each cycle
+   *
+   * @param dt The timestep to use in the thermal and solid ODE solver algorithms
+   *
+   * @note These physics modules are implemented in an operator split fashion and will use the same timestep for each
+   * cycle
    */
-  void setTimestep(double dt) override 
-  { 
+  void setTimestep(double dt) override
+  {
     thermal_.setTimestep(dt);
     solid_.setTimestep(dt);
   }

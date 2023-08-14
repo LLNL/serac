@@ -130,23 +130,10 @@ public:
    * @note The memory address of this parameter is stored in the physics module. If the FiniteElementState
    * given in the argument is modified, the updated parameter value will be used in the physics module.
    */
-  void registerParameter(const size_t parameter_index, const FiniteElementState& parameter_state);
+  void registerParameter(const size_t parameter_index, FiniteElementState& parameter_state);
 
   /**
-   * @brief Set the shape displacement field to a known finite element state
-   *
-   * @param shape_displacement the values to use for the shape displacement
-   *
-   * @pre The discretization space and mesh for this finite element state must be consistent with the shape
-   * displacement of the associated mesh.
-   *
-   * @note The input shape displacement is deep-copied into the intnerally owned shape displacement field. It
-   * can be safely destructed after this call.
-   */
-  void setShapeDisplacement(FiniteElementState& shape_displacement);
-
-  /**
-   * @brief Get a reference to the parameter field of the physics module
+   * @brief Get a mutable reference to the parameter field of the physics module
    *
    * @param parameter_index The parameter index to retrieve
    * @return The FiniteElementState representing the user-defined parameter
@@ -154,6 +141,19 @@ public:
    * @note If the FiniteElementState returned by this function is modified, the updated parameter value will be used in
    * the physics module.
    */
+  FiniteElementState& parameter(const size_t parameter_index)
+  {
+    SLIC_ERROR_ROOT_IF(
+        parameter_index >= parameters_.size(),
+        axom::fmt::format("Parameter index '{}' is not available in physics module '{}'", parameter_index, name_));
+
+    SLIC_ERROR_ROOT_IF(
+        !parameters_[parameter_index].state,
+        axom::fmt::format("Parameter index '{}' is not set in physics module '{}'", parameter_index, name_));
+    return *parameters_[parameter_index].state;
+  }
+
+  /// @overload
   const FiniteElementState& parameter(size_t parameter_index) const
   {
     SLIC_ERROR_ROOT_IF(
@@ -303,7 +303,7 @@ protected:
     std::unique_ptr<mfem::FiniteElementCollection> trial_collection;
 
     /// The finite element states representing user-defined and owned parameter fields
-    const serac::FiniteElementState* state;
+    serac::FiniteElementState* state;
 
     /// The finite element state representing the parameter at the previous evaluation
     std::unique_ptr<serac::FiniteElementState> previous_state;
