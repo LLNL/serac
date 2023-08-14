@@ -10,6 +10,8 @@
  * @brief Specialization of finite_element for expressing quantities of interest on any geometry
  */
 /// @cond
+
+
 template <mfem::Geometry::Type g, typename T>
 struct finite_element<g, Uniform<T> > {
   static constexpr auto geometry   = g;
@@ -26,11 +28,11 @@ struct finite_element<g, Uniform<T> > {
   template <int q>
   static auto interpolate(const dof_type& X, const TensorProductQuadratureRule<q>&)
   {
-    return X;
+    return UniformVariable<dof_type>{X};
   }
 
-  template <typename in_t, int q>
-  static auto batch_apply_shape_fn(int, dof_type& input, const TensorProductQuadratureRule<q>&) {
+  template <typename S, int q>
+  static auto batch_apply_shape_fn(int, S& input, const TensorProductQuadratureRule<q>&) {
     return input;
   }
 

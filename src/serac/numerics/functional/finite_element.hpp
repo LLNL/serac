@@ -244,6 +244,7 @@ struct Uniform {
   static constexpr Family family     = Family::UNIFORM; ///< basis function is the constant function: "1"
 };
 
+
 template < typename T >
 constexpr int polynomial_order(Uniform<T>) { return 0; }
 
@@ -275,29 +276,33 @@ constexpr int polynomial_order(L2<p, c>) { return p; }
  * @param jacobians the jacobians of the isoparametric map from parent to physical space of each quadrature point
  */
 template <Family f, typename T, int q, int dim>
-void parent_to_physical(tensor<T, q>& qf_input, const tensor<double, dim, dim, q>& jacobians)
+void parent_to_physical(T& qf_input, const tensor<double, dim, dim, q>& jacobians)
 {
   [[maybe_unused]] constexpr int VALUE      = 0;
   [[maybe_unused]] constexpr int DERIVATIVE = 1;
 
-  for (int k = 0; k < q; k++) {
-    tensor<double, dim, dim> J;
-    for (int row = 0; row < dim; row++) {
-      for (int col = 0; col < dim; col++) {
-        J[row][col] = jacobians(col, row, k);
+  if constexpr (f == Family::UNIFORM) {
+    // Uniform variables aren't transformed
+  } else {
+    for (int k = 0; k < q; k++) {
+      tensor<double, dim, dim> J;
+      for (int row = 0; row < dim; row++) {
+        for (int col = 0; col < dim; col++) {
+          J[row][col] = jacobians(col, row, k);
+        }
       }
-    }
 
-    if constexpr (f == Family::H1 || f == Family::L2) {
-      // note: no transformation necessary for the values of H1-field
-      get<DERIVATIVE>(qf_input[k]) = dot(get<DERIVATIVE>(qf_input[k]), inv(J));
-    }
+      if constexpr (f == Family::H1 || f == Family::L2) {
+        // note: no transformation necessary for the values of H1-field
+        get<DERIVATIVE>(qf_input[k]) = dot(get<DERIVATIVE>(qf_input[k]), inv(J));
+      }
 
-    if constexpr (f == Family::HCURL) {
-      get<VALUE>(qf_input[k])      = dot(get<VALUE>(qf_input[k]), inv(J));
-      get<DERIVATIVE>(qf_input[k]) = get<DERIVATIVE>(qf_input[k]) / det(J);
-      if constexpr (dim == 3) {
-        get<DERIVATIVE>(qf_input[k]) = dot(get<DERIVATIVE>(qf_input[k]), transpose(J));
+      if constexpr (f == Family::HCURL) {
+        get<VALUE>(qf_input[k])      = dot(get<VALUE>(qf_input[k]), inv(J));
+        get<DERIVATIVE>(qf_input[k]) = get<DERIVATIVE>(qf_input[k]) / det(J);
+        if constexpr (dim == 3) {
+          get<DERIVATIVE>(qf_input[k]) = dot(get<DERIVATIVE>(qf_input[k]), transpose(J));
+        }
       }
     }
   }
@@ -346,7 +351,7 @@ void physical_to_parent(tensor<T, q>& qf_output, const tensor<double, dim, dim, 
       }
     }
 
-    if constexpr (f == Family::QOI) {
+    if constexpr (f == Family::QOI || f == Family::UNIFORM) {
       qf_output[k] = qf_output[k] * dv;
     }
   }

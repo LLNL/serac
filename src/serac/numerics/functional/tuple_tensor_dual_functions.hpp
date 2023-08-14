@@ -235,6 +235,17 @@ SERAC_HOST_DEVICE auto promote_each_to_dual_when(const tensor<T, n>& x)
   }
 }
 
+template <bool dualify, typename T >
+SERAC_HOST_DEVICE auto promote_each_to_dual_when(const UniformVariable<T> & x)
+{
+  if constexpr (dualify) {
+    return UniformVariable{make_dual(x.value)};
+  }
+  if constexpr (!dualify) {
+    return x;
+  }
+}
+
 /// @brief layer of indirection required to implement `make_dual_wrt`
 template <int n, typename... T, int... i>
 SERAC_HOST_DEVICE constexpr auto make_dual_helper(const serac::tuple<T...>& args, std::integer_sequence<int, i...>)

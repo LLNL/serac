@@ -139,6 +139,8 @@ auto batch_apply_qf(lambda qf, const tensor<double, dim, n> x, qpt_data_type* qp
   return outputs;
 }
 
+
+
 template <uint32_t differentiation_index, int Q, mfem::Geometry::Type geom, typename test, typename... trials,
           typename lambda_type, typename state_type, typename derivative_type, int... indices>
 void evaluation_kernel_impl(FunctionSignature<test(trials...)>, const std::vector<const double*>& inputs,
@@ -170,8 +172,10 @@ void evaluation_kernel_impl(FunctionSignature<test(trials...)>, const std::vecto
     auto x_e = x[e];
 
     // batch-calculate values / derivatives of each trial space, at each quadrature point
-    [[maybe_unused]] tuple qf_inputs = {promote_each_to_dual_when<indices == differentiation_index>(
-        get<indices>(trial_elements).interpolate(get<indices>(u)[e], rule))...};
+    [[maybe_unused]] tuple qf_inputs = {
+      promote_each_to_dual_when<indices == differentiation_index>(
+        get<indices>(trial_elements).interpolate(get<indices>(u)[e], rule))...
+      };
 
     // use J_e to transform values / derivatives on the parent element
     // to the to the corresponding values / derivatives on the physical element
@@ -209,30 +213,38 @@ void evaluation_kernel_impl(FunctionSignature<test(trials...)>, const std::vecto
 }
 
 //clang-format off
-template <bool is_QOI, typename S, typename T>
+template <bool is_QOI, bool is_uniform, typename S, typename T>
 auto chain_rule(const S& dfdx, const T& dx)
 {
-  if constexpr (is_QOI) {
+  if constexpr (is_QOI && is_uniform) {
+    return dfdx * dx;
+  }
+
+  if constexpr (is_QOI && !is_uniform) {
     return serac::chain_rule(serac::get<0>(dfdx), serac::get<0>(dx)) +
            serac::chain_rule(serac::get<1>(dfdx), serac::get<1>(dx));
   }
 
-  if constexpr (!is_QOI) {
+  if constexpr (!is_QOI && !is_uniform) {
     return serac::tuple{serac::chain_rule(serac::get<0>(serac::get<0>(dfdx)), serac::get<0>(dx)) +
                             serac::chain_rule(serac::get<1>(serac::get<0>(dfdx)), serac::get<1>(dx)),
                         serac::chain_rule(serac::get<0>(serac::get<1>(dfdx)), serac::get<0>(dx)) +
                             serac::chain_rule(serac::get<1>(serac::get<1>(dfdx)), serac::get<1>(dx))};
   }
+
+  if constexpr (!is_QOI && is_uniform) {
+    return dfdx * dx;
+  }
 }
 //clang-format on
 
-template <bool is_QOI, typename derivative_type, int n, typename T>
-auto batch_apply_chain_rule(derivative_type* qf_derivatives, const tensor<T, n>& inputs)
+template <bool is_QOI, bool is_uniform, int n, typename derivative_type, typename T>
+auto batch_apply_chain_rule(derivative_type* qf_derivatives, const T& inputs)
 {
-  using return_type = decltype(chain_rule<is_QOI>(derivative_type{}, T{}));
+  using return_type = decltype(chain_rule<is_QOI, is_uniform>(derivative_type{}, T{}[0]));
   tensor<return_type, n> outputs{};
   for (int i = 0; i < n; i++) {
-    outputs[i] = chain_rule<is_QOI>(qf_derivatives[i], inputs[i]);
+    outputs[i] = chain_rule<is_QOI, is_uniform>(qf_derivatives[i], inputs[i]);
   }
   return outputs;
 }
@@ -269,8 +281,9 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
   using test_element  = finite_element<g, test>;
   using trial_element = finite_element<g, trial>;
 
-  static constexpr bool is_QOI   = (test::family == Family::QOI);
-  static constexpr int  num_qpts = num_quadrature_points(g, Q);
+  static constexpr int  num_qpts   = num_quadrature_points(g, Q);
+  static constexpr bool is_QOI     = (test::family == Family::QOI);
+  static constexpr bool is_uniform = (trial::family == Family::UNIFORM);
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
@@ -284,7 +297,7 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
     auto qf_inputs = trial_element::interpolate(du[e], rule);
 
     // (batch) evalute the q-function at each quadrature point
-    auto qf_outputs = batch_apply_chain_rule<is_QOI>(qf_derivatives + e * num_qpts, qf_inputs);
+    auto qf_outputs = batch_apply_chain_rule<is_QOI, is_uniform, num_qpts>(qf_derivatives + e * num_qpts, qf_inputs);
 
     // (batch) integrate the material response against the test-space basis functions
     test_element::integrate(qf_outputs, rule, &dr[e]);

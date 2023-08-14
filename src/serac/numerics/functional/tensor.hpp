@@ -20,6 +20,16 @@
 
 namespace serac {
 
+template < typename T >
+struct UniformVariable {
+  T value;
+  T& operator[](int /*i*/) { return value; }
+  const T& operator[](int /*i*/) const { return value; }
+};
+
+template < typename T >
+UniformVariable(T)->UniformVariable<T>;
+
 /**
  * @brief Arbitrary-rank tensor class
  * @tparam T The type stored at each index

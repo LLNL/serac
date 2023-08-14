@@ -270,7 +270,7 @@ SERAC_HOST_DEVICE constexpr const auto& get(const tuple<T...>& values)
  * @param values the tuple of values
  * @return a copy of the ith entry of the input
  */
-template <int i, typename... T>
+template <uint32_t i, typename... T>
 SERAC_HOST_DEVICE constexpr auto type(const tuple<T...>& values)
 {
   static_assert(i < sizeof...(T), "");

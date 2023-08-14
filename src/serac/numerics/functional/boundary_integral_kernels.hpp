@@ -163,7 +163,13 @@ void evaluation_kernel_impl(FunctionSignature<test(trials...)>, const std::vecto
   using test_element = finite_element<geom, test>;
 
   /// @brief the element type for each trial space
+  static constexpr tuple<trials...> trial_spaces{};
   static constexpr tuple<finite_element<geom, trials>...> trial_elements{};
+  
+  constexpr bool differentiating = differentiation_index != serac::NO_DIFFERENTIATION;
+  constexpr int wrt = differentiation_index & ~serac::NO_DIFFERENTIATION;
+
+  [[maybe_unused]] constexpr bool wrt_uniform = differentiating && type<wrt>(trial_spaces).family == Family::UNIFORM;
 
   // mfem provides this information as opaque arrays of doubles,
   // so we reinterpret the pointer with
@@ -186,8 +192,11 @@ void evaluation_kernel_impl(FunctionSignature<test(trials...)>, const std::vecto
     auto x_e = x[e];
 
     // batch-calculate values / derivatives of each trial space, at each quadrature point
-    [[maybe_unused]] tuple qf_inputs = {promote_each_to_dual_when<indices == differentiation_index>(
-        get<indices>(trial_elements).interpolate(get<indices>(u)[e], rule))...};
+    [[maybe_unused]] tuple qf_inputs = {
+      promote_each_to_dual_when<indices == differentiation_index>(
+        get<indices>(trial_elements).interpolate(get<indices>(u)[e], rule)
+      )...
+    };
 
     // (batch) evalute the q-function at each quadrature point
     auto qf_outputs = batch_apply_qf(qf, x_e, J_e, get<indices>(qf_inputs)...);
