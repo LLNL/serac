@@ -55,10 +55,14 @@ TEST(Thermal, FiniteDifference)
                                                          heat_transfer::default_linear_options,
                                                          heat_transfer::default_static_options, "thermal_functional");
 
-  auto user_defined_conductivity = thermal_solver.generateParameter("user_defined_conductivity", 0);
+  auto [fes, fec] = generateParFiniteElementSpace<H1<1>>(mesh.get());
+
+  FiniteElementState user_defined_conductivity(*fes, "user_defined_conductivity");
 
   double conductivity_value  = 1.2;
   *user_defined_conductivity = conductivity_value;
+
+  thermal_solver.setParameter(0, user_defined_conductivity);
 
   // Construct a potentially user-defined parameterized material and send it to the thermal module
   heat_transfer::ParameterizedLinearIsotropicConductor mat;

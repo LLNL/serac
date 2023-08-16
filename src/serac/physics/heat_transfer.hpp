@@ -104,10 +104,10 @@ public:
    */
   HeatTransfer(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
                const serac::TimesteppingOptions timestepping_opts, const std::string& name = "",
-               mfem::ParMesh* pmesh = nullptr)
+               mfem::ParMesh* pmesh = nullptr, std::vector<std::string> parameter_names = {})
       : HeatTransfer(std::make_unique<EquationSolver>(nonlinear_opts, lin_opts,
                                                       StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
-                     timestepping_opts, name, pmesh)
+                     timestepping_opts, name, pmesh, parameter_names)
   {
   }
 
@@ -121,7 +121,8 @@ public:
    * @param[in] pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
   HeatTransfer(std::unique_ptr<serac::EquationSolver> solver, const serac::TimesteppingOptions timestepping_opts,
-               const std::string& name = "", mfem::ParMesh* pmesh = nullptr)
+               const std::string& name = "", mfem::ParMesh* pmesh = nullptr,
+               std::vector<std::string> parameter_names = {})
       : BasePhysics(NUM_STATE_VARS, order, name, pmesh),
         temperature_(StateManager::newState(
             FiniteElementState::Options{
@@ -148,8 +149,6 @@ public:
     states_.push_back(&temperature_);
     states_.push_back(&adjoint_temperature_);
 
-    parameters_.resize(sizeof...(parameter_space));
-
     // Create a pack of the primal field and parameter finite element spaces
     mfem::ParFiniteElementSpace* test_space = &temperature_.space();
 
@@ -158,14 +157,22 @@ public:
     trial_spaces[1] = &temperature_.space();
     trial_spaces[2] = &shape_displacement_.space();
 
+    SLIC_ERROR_ROOT_IF(
+        sizeof...(parameter_space) != parameter_names.size(),
+        axom::fmt::format("{} parameter spaces given in the template argument but {} parameter names were supplied.",
+                          sizeof...(parameter_space), parameter_names.size()));
+
     if constexpr (sizeof...(parameter_space) > 0) {
       tuple<parameter_space...> types{};
       for_constexpr<sizeof...(parameter_space)>([&](auto i) {
         auto [fes, fec] =
             generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_);
-        parameters_[i].trial_space       = std::move(fes);
-        parameters_[i].trial_collection  = std::move(fec);
-        trial_spaces[i + NUM_STATE_VARS] = parameters_[i].trial_space.get();
+
+        parameters_.emplace_back(StateManager::newState(*fes, parameter_names[i]),
+                                 FiniteElementState(*fes, "previous_" + parameter_names[i]),
+                                 StateManager::newDual(*fes, parameter_names[i] + "_sensitivity"));
+
+        trial_spaces[i + NUM_STATE_VARS] = &parameters_[i].state.space();
       });
     }
 
@@ -543,7 +550,7 @@ public:
 
           [this](const mfem::Vector& u, mfem::Vector& r) {
             const mfem::Vector res =
-                (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
+                (*residual_)(u, zero_, shape_displacement_, parameters_[parameter_indices].state...);
 
             // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
             // tracking strategy
@@ -553,10 +560,10 @@ public:
           },
 
           [this](const mfem::Vector& u) -> mfem::Operator& {
-            auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, shape_displacement_,
-                                          *parameters_[parameter_indices].state...);
-            J_             = assemble(drdu);
-            J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+            auto [r, drdu] =
+                (*residual_)(differentiate_wrt(u), zero_, shape_displacement_, parameters_[parameter_indices].state...);
+            J_   = assemble(drdu);
+            J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             return *J_;
           });
 
@@ -567,7 +574,7 @@ public:
           [this](const mfem::Vector& du_dt, mfem::Vector& r) {
             add(1.0, u_, dt_, du_dt, u_predicted_);
             const mfem::Vector res =
-                (*residual_)(u_predicted_, du_dt, shape_displacement_, *parameters_[parameter_indices].state...);
+                (*residual_)(u_predicted_, du_dt, shape_displacement_, parameters_[parameter_indices].state...);
 
             // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
             // tracking strategy
@@ -581,12 +588,12 @@ public:
 
             // K := dR/du
             auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(u_predicted_), du_dt, shape_displacement_,
-                                                         *parameters_[parameter_indices].state...));
+                                                         parameters_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             // M := dR/du_dot
             auto M = serac::get<DERIVATIVE>((*residual_)(u_predicted_, differentiate_wrt(du_dt), shape_displacement_,
-                                                         *parameters_[parameter_indices].state...));
+                                                         parameters_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
             // J := M + dt K
@@ -635,7 +642,7 @@ public:
     adjoint_essential = 0.0;
 
     auto [r, drdu] = (*residual_)(differentiate_wrt(temperature_), zero_, shape_displacement_,
-                                  *parameters_[parameter_indices].state...);
+                                  parameters_[parameter_indices].state...);
     auto jacobian  = assemble(drdu);
     auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -682,9 +689,9 @@ public:
     auto drdparam     = serac::get<1>(d_residual_d_[parameter_field]());
     auto drdparam_mat = assemble(drdparam);
 
-    drdparam_mat->MultTranspose(adjoint_temperature_, *parameters_[parameter_field].sensitivity);
+    drdparam_mat->MultTranspose(adjoint_temperature_, parameters_[parameter_field].sensitivity);
 
-    return *parameters_[parameter_field].sensitivity;
+    return parameters_[parameter_field].sensitivity;
   }
 
   /**
@@ -698,7 +705,7 @@ public:
   FiniteElementDual& computeShapeSensitivity() override
   {
     auto drdshape = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<SHAPE>{}, temperature_, zero_,
-                                                        shape_displacement_, *parameters_[parameter_indices].state...));
+                                                        shape_displacement_, parameters_[parameter_indices].state...));
 
     auto drdshape_mat = assemble(drdshape);
 
@@ -780,11 +787,11 @@ protected:
   /// @note This is needed so the user can ask for a specific sensitivity at runtime as opposed to it being a
   /// template parameter.
   std::array<std::function<decltype((*residual_)(DifferentiateWRT<0>{}, temperature_, zero_, shape_displacement_,
-                                                 *parameters_[parameter_indices].state...))()>,
+                                                 parameters_[parameter_indices].state...))()>,
              sizeof...(parameter_indices)>
       d_residual_d_ = {[&]() {
         return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + parameter_indices>{}, temperature_, zero_,
-                            shape_displacement_, *parameters_[parameter_indices].state...);
+                            shape_displacement_, parameters_[parameter_indices].state...);
       }...};
 };
 

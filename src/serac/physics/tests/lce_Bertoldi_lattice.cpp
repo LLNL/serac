@@ -75,7 +75,7 @@ TEST(LiquidCrystalElastomer, Bertoldi)
 
   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
       nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::Off,
-      "lce_solid_functional");
+      "lce_solid_functional", nullptr, {"order", "eta", "gamma"});
 
   // Material properties
   double density         = 1.0;
@@ -109,9 +109,9 @@ TEST(LiquidCrystalElastomer, Bertoldi)
   constexpr int GAMMA_INDEX = 1;
   constexpr int ETA_INDEX   = 2;
 
-  solid_solver.registerParameter(ORDER_INDEX, orderParam);
-  solid_solver.registerParameter(GAMMA_INDEX, gammaParam);
-  solid_solver.registerParameter(ETA_INDEX, etaParam);
+  solid_solver.setParameter(ORDER_INDEX, orderParam);
+  solid_solver.setParameter(GAMMA_INDEX, gammaParam);
+  solid_solver.setParameter(ETA_INDEX, etaParam);
 
   // Set material
   LiquidCrystalElastomerBertoldi lceMat(density, young_modulus, possion_ratio, max_order_param, beta_param);

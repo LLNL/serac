@@ -14,10 +14,9 @@ namespace serac {
 std::unordered_map<std::string, axom::sidre::MFEMSidreDataCollection> StateManager::datacolls_;
 std::unordered_map<std::string, std::unique_ptr<FiniteElementState>>  StateManager::shape_displacements_;
 std::unordered_map<std::string, std::unique_ptr<FiniteElementDual>>   StateManager::shape_sensitivities_;
-bool                                                                  StateManager::is_restart_        = false;
-axom::sidre::DataStore*                                               StateManager::ds_                = nullptr;
-std::string                                                           StateManager::output_dir_        = "";
-const std::string                                                     StateManager::default_mesh_name_ = "default";
+bool                                                                  StateManager::is_restart_ = false;
+axom::sidre::DataStore*                                               StateManager::ds_         = nullptr;
+std::string                                                           StateManager::output_dir_ = "";
 std::unordered_map<std::string, mfem::ParGridFunction*>               StateManager::named_states_;
 std::unordered_map<std::string, mfem::ParGridFunction*>               StateManager::named_duals_;
 

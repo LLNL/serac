@@ -75,24 +75,32 @@ void BasePhysics::registerParameter(size_t parameter_index, FiniteElementState& 
   SLIC_ERROR_ROOT_IF(
       parameter_index >= parameters_.size(),
       axom::fmt::format("Parameter index '{}' is not available in physics module '{}'", parameter_index, name_));
-  SLIC_ERROR_ROOT_IF(parameters_[parameter_index].state,
-                     axom::fmt::format("Parameter state index '{}' has been previously defined in physics module '{}'",
-                                       parameter_index, name_));
+
   SLIC_ERROR_ROOT_IF(
-      parameter_state.space().GetTrueVSize() != parameters_[parameter_index].trial_space->GetTrueVSize(),
+      parameter_state.space().GetTrueVSize() != parameters_[parameter_index].state.space().GetTrueVSize(),
       axom::fmt::format(
           "Physics module parameter '{}' has size '{}' while given state has size '{}'. The finite element "
           "spaces are inconsistent.",
-          parameter_index, parameters_[parameter_index].trial_space->GetTrueVSize(),
+          parameter_index, parameters_[parameter_index].state.space().GetTrueVSize(),
           parameter_state.space().GetTrueVSize()));
-  parameters_[parameter_index].state           = &parameter_state;
-  parameters_[parameter_index].previous_state  = std::make_unique<serac::FiniteElementState>(parameter_state);
-  *parameters_[parameter_index].previous_state = 0.0;
-  parameters_[parameter_index].sensitivity =
       StateManager::newDual(parameter_state.space(), detail::addPrefix(name_, parameter_state.name() + "_sensitivity"));
 }
 
-void BasePhysics::outputStateToDisk(std::optional<std::string> paraview_output_dir) const
+void BasePhysics::setShapeDisplacement(FiniteElementState& shape_displacement)
+{
+  SLIC_ERROR_ROOT_IF(&shape_displacement_.mesh() != &mesh_,
+                     axom::fmt::format("Mesh of shape displacement is not the same as the physics mesh"));
+
+  SLIC_ERROR_ROOT_IF(
+      shape_displacement.space().GetTrueVSize() != shape_displacement_.space().GetTrueVSize(),
+      axom::fmt::format(
+          "Physics module shape displacement has size '{}' while given state has size '{}'. The finite element "
+          "spaces are inconsistent.",
+          shape_displacement_.space().GetTrueVSize(), shape_displacement.space().GetTrueVSize()));
+  shape_displacement_ = shape_displacement;
+}
+
+void BasePhysics::outputState(std::optional<std::string> paraview_output_dir) const
 {
   // Update the states and duals in the state manager
   for (auto& state : states_) {
@@ -104,9 +112,8 @@ void BasePhysics::outputStateToDisk(std::optional<std::string> paraview_output_d
   }
 
   for (auto& parameter : parameters_) {
-    SLIC_ERROR_ROOT_IF(!parameter.state, "Parameter state expected but not defined");
-    StateManager::updateState(*parameter.state);
-    StateManager::updateDual(*parameter.sensitivity);
+    StateManager::updateState(parameter.state);
+    StateManager::updateDual(parameter.sensitivity);
   }
 
   StateManager::updateState(shape_displacement_);
@@ -135,8 +142,8 @@ void BasePhysics::outputStateToDisk(std::optional<std::string> paraview_output_d
       }
 
       for (auto& parameter : parameters_) {
-        paraview_dc_->RegisterField(parameter.state->name(), &parameter.state->gridFunction());
-        max_order_in_fields = std::max(max_order_in_fields, parameter.state->space().GetOrder(0));
+        paraview_dc_->RegisterField(parameter.state.name(), &parameter.state.gridFunction());
+        max_order_in_fields = std::max(max_order_in_fields, parameter.state.space().GetOrder(0));
       }
 
       paraview_dc_->RegisterField(shape_displacement_.name(), &shape_displacement_.gridFunction());
@@ -152,7 +159,7 @@ void BasePhysics::outputStateToDisk(std::optional<std::string> paraview_output_d
         state->gridFunction();  // update grid function values
       }
       for (auto& parameter : parameters_) {
-        parameter.state->gridFunction();
+        parameter.state.gridFunction();
       }
       shape_displacement_.gridFunction();
     }

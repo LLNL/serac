@@ -92,6 +92,38 @@ public:
    */
   FiniteElementVector(const mfem::ParFiniteElementSpace& space, const std::string& name = "");
 
+  template <typename function_space>
+  FiniteElementVector(mfem::ParMesh& mesh)
+  {
+    const int dim = mesh.Dimension();
+
+    std::unique_ptr<mfem::FiniteElementCollection> fec;
+
+    const auto ordering = mfem::Ordering::byNODES;
+
+    switch (function_space::family) {
+      case Family::H1:
+        fec = std::make_unique<mfem::H1_FECollection>(function_space::order, dim);
+        break;
+      case Family::HCURL:
+        fec = std::make_unique<mfem::ND_FECollection>(function_space::order, dim);
+        break;
+      case Family::HDIV:
+        fec = std::make_unique<mfem::RT_FECollection>(function_space::order, dim);
+        break;
+      case Family::L2:
+        // We use GaussLobatto basis functions as this is what is used for the serac::Functional FE kernels
+        fec = std::make_unique<mfem::L2_FECollection>(function_space::order, dim, mfem::BasisType::GaussLobatto);
+        break;
+      default:
+        SLIC_ERROR_ROOT("Unknown finite element space requested.");
+        break;
+    }
+
+    auto fes = std::make_unique<mfem::ParFiniteElementSpace>(mesh, fec.get(), function_space::components, ordering);
+    FiniteElementVector(*fes, mesh);
+  }
+
   /**
    * @brief Copy constructor
    *

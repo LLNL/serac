@@ -102,23 +102,6 @@ public:
   virtual std::vector<std::string> stateNames() = 0;
 
   /**
-   * @brief Generate a finite element state object for the given parameter index
-   *
-   * @param parameter_index The index of the parameter to generate
-   * @param parameter_name The name of the parameter to generate
-   *
-   * @note The user is responsible for managing the lifetime of this object. It is required
-   * to exist whenever advanceTimestep, solveAdjoint, or computeSensitivity is called.
-   *
-   * @note The finite element space for this object is generated from the parameter
-   * discretization space (e.g. L2, H1) and the computational mesh given in the physics module constructor.
-   *
-   * @note The memory address of this parameter is stored in the physics module. If the FiniteElementState
-   * pointed to by the returned pointer is modified, the updated parameter value will be used in the physics module.
-   */
-  std::unique_ptr<FiniteElementState> generateParameter(const std::string& parameter_name, size_t parameter_index);
-
-  /**
    * @brief Register an externally-constructed FiniteElementState object as the source of values for parameter `i`
    *
    * @param parameter_state the values to use for the specified parameter
@@ -130,54 +113,9 @@ public:
    * @note The memory address of this parameter is stored in the physics module. If the FiniteElementState
    * given in the argument is modified, the updated parameter value will be used in the physics module.
    */
-  void registerParameter(const size_t parameter_index, FiniteElementState& parameter_state);
+  void setParameter(const size_t parameter_index, const FiniteElementState& parameter_state);
 
-  /**
-   * @brief Get a mutable reference to the parameter field of the physics module
-   *
-   * @param parameter_index The parameter index to retrieve
-   * @return The FiniteElementState representing the user-defined parameter
-   *
-   * @note If the FiniteElementState returned by this function is modified, the updated parameter value will be used in
-   * the physics module.
-   */
-  FiniteElementState& parameter(const size_t parameter_index)
-  {
-    SLIC_ERROR_ROOT_IF(
-        parameter_index >= parameters_.size(),
-        axom::fmt::format("Parameter index '{}' is not available in physics module '{}'", parameter_index, name_));
-
-    SLIC_ERROR_ROOT_IF(
-        !parameters_[parameter_index].state,
-        axom::fmt::format("Parameter index '{}' is not set in physics module '{}'", parameter_index, name_));
-    return *parameters_[parameter_index].state;
-  }
-
-  /// @overload
-  const FiniteElementState& parameter(size_t parameter_index) const
-  {
-    SLIC_ERROR_ROOT_IF(
-        parameter_index >= parameters_.size(),
-        axom::fmt::format("Parameter index '{}' is not available in physics module '{}'", parameter_index, name_));
-
-    SLIC_ERROR_ROOT_IF(
-        !parameters_[parameter_index].state,
-        axom::fmt::format("Parameter index '{}' is not set in physics module '{}'", parameter_index, name_));
-    return *parameters_[parameter_index].state;
-  }
-
-  /**
-   * @brief Get a mutable reference the shape displacement of the associated mesh for this physics object
-   *
-   * @return The associated shape displacement
-   *
-   * @note If the FiniteElementState returned by this function is modified, the updated shape displacement will be used
-   * in the physics module.
-   */
-  FiniteElementState& shapeDisplacement() { return shape_displacement_; }
-
-  /// @overload
-  const FiniteElementState& shapeDisplacement() const { return shape_displacement_; }
+  void setShapeDisplacement(const FiniteElementState& shape_displacement);
 
   /**
    * @brief Compute the implicit sensitivity of the quantity of interest used in defining the adjoint load with respect
@@ -190,7 +128,7 @@ public:
   virtual FiniteElementDual& computeSensitivity(size_t /* parameter_index */)
   {
     SLIC_ERROR_ROOT(axom::fmt::format("Parameter sensitivities not enabled in physics module {}", name_));
-    return *parameters_[0].sensitivity;
+    return parameters_[0].sensitivity;
   }
 
   /**
@@ -296,26 +234,18 @@ protected:
 
   /// @brief The information needed for the physics parameters stored as Finite Element State fields
   struct ParameterInfo {
-    /// The trial spaces used for the Functional object
-    std::unique_ptr<mfem::ParFiniteElementSpace> trial_space;
-
-    /// The collections needed for the parameter finite element space
-    std::unique_ptr<mfem::FiniteElementCollection> trial_collection;
-
     /// The finite element states representing user-defined and owned parameter fields
-    serac::FiniteElementState* state;
+    serac::FiniteElementState state;
 
     /// The finite element state representing the parameter at the previous evaluation
-    std::unique_ptr<serac::FiniteElementState> previous_state;
+    serac::FiniteElementState previous_state;
 
     /**
      * @brief The sensitivities (dual vectors) of the QOI encoded in the adjoint load with respect to each of the input
      * parameter fields
-     * @note this is optional as FiniteElementDuals are not default constructable and
-     * we want to set this during the registerParameter or generateParameter method.
      * @note This quantity is also called the vector-Jacobian product during back propagation in data science.
      */
-    std::optional<serac::FiniteElementDual> sensitivity;
+    serac::FiniteElementDual sensitivity;
   };
 
   /// @brief A vector of the parameters associated with this physics module
