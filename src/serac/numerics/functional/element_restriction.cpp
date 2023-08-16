@@ -270,7 +270,7 @@ axom::Array<DoF, 2, axom::MemorySpace::Host> GetElementRestriction(const mfem::F
     return axom::Array<DoF, 2, axom::MemorySpace::Host>{};
   } else {
     uint64_t                                     dofs_per_elem = elem_dofs.size() / n;
-    axom::Array<DoF, 2, axom::MemorySpace::Host> output(n, dofs_per_elem);
+    axom::Array<DoF, 2, axom::MemorySpace::Host> output({n, dofs_per_elem});
     std::memcpy(output.data(), elem_dofs.data(), sizeof(DoF) * n * dofs_per_elem);
     return output;
   }
