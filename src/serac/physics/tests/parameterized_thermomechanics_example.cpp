@@ -191,7 +191,7 @@ TEST(Thermomechanics, ParameterizedMaterial)
   double epsilon = 1.0e-5;
   auto   dalpha  = alpha.CreateCompatibleVector();
   dalpha         = 1.0;
-  alpha += epsilon * dalpha;
+  alpha.Add(epsilon, dalpha);
 
   // rerun the simulation to the beginning,
   // but this time use perturbed values of alpha

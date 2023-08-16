@@ -13,7 +13,6 @@
 
 #include "serac/serac_config.hpp"
 #include "serac/mesh/mesh_utils_base.hpp"
-#include "serac/numerics/expr_template_ops.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/numerics/functional/tensor.hpp"
@@ -100,32 +99,43 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   //    mesh);
 
   // Compute the residual using standard MFEM methods
-  mfem::Vector r1 = A * U - (*F);
+  // mfem::Vector r1 = A * U - (*F);
+  mfem::Vector r1(U.Size());
+  A.Mult(U, r1);
+  r1 -= (*F);
 
   // Compute the residual using weak form
   auto [r2, drdU] = residual(differentiate_wrt(U));
 
+  mfem::Vector diff(r1.Size());
+  subtract(r1, r2, diff);
+
   if (verbose) {
     std::cout << "||r1||: " << r1.Norml2() << std::endl;
     std::cout << "||r2||: " << r2.Norml2() << std::endl;
-    std::cout << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
+    std::cout << "||r1-r2||/||r1||: " << diff.Norml2() / r1.Norml2() << std::endl;
   }
 
   // Test that the two residuals are equivalent
-  EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-14);
+  EXPECT_NEAR(0., diff.Norml2() / r1.Norml2(), 1.e-14);
 
   // Compute the gradient action using standard MFEM and Functional
-  mfem::Vector g1 = (*J) * U;
-  mfem::Vector g2 = drdU * U;
+  // mfem::Vector g1 = (*J) * U;
+  mfem::Vector g1(U.Size());
+  J->Mult(U, g1);
+
+  mfem::Vector g2 = drdU(U);
+
+  subtract(g1, g2, diff);
 
   if (verbose) {
     std::cout << "||g1||: " << g1.Norml2() << std::endl;
     std::cout << "||g2||: " << g2.Norml2() << std::endl;
-    std::cout << "||g1-g2||/||g1||: " << mfem::Vector(g1 - g2).Norml2() / g1.Norml2() << std::endl;
+    std::cout << "||g1-g2||/||g1||: " << diff.Norml2() / g1.Norml2() << std::endl;
   }
 
   // Ensure the two methods generate the same result
-  EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
+  EXPECT_NEAR(0., diff.Norml2() / g1.Norml2(), 1.e-14);
 }
 
 TEST(L2, 2DConstant) { functional_test(*mesh2D, L2<0>{}, L2<0>{}, Dimension<2>{}); }
