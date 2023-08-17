@@ -11,7 +11,6 @@
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
-#include "serac/numerics/expr_template_ops.hpp"
 #include "serac/numerics/odes.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"
 
@@ -77,7 +76,9 @@ const std::function stiffness_linear = [](const mfem::Vector & /*x*/) -> mfem::D
 };
 
 const std::function internal_force_linear = [](const mfem::Vector& x) -> mfem::Vector {
-  return stiffness_linear(x) * x;
+  mfem::Vector force(x.Size());
+  stiffness_linear(x).Mult(x, force);
+  return force;
 };
 
 const std::function stiffness_nonlinear = [](const mfem::Vector& x) -> mfem::DenseMatrix {
@@ -282,14 +283,23 @@ double first_order_ode_test(int nsteps, ode_type type, constraint_type constrain
   StdFunctionOperator residual(
       3,
       [&](const mfem::Vector& dx_dt, mfem::Vector& r) {
-        r = M * dx_dt + f_int(x + c0 * dx_dt) - f_ext;
+        // r = M * dx_dt + f_int(x + c0 * dx_dt) - f_ext;
+
+        mfem::Vector x_next(x), M_dx_dt(x);
+        x_next.Add(c0, dx_dt);
+        auto force_internal = f_int(x_next);
+        M.Mult(dx_dt, M_dx_dt);
+        add(M_dx_dt, force_internal, r);
+        r -= f_ext;
         if (constraint != UNCONSTRAINED) {
           r(0) = 0.0;
         }
       },
       [&](const mfem::Vector& dx_dt) -> mfem::Operator& {
         J = M;
-        J.Add(c0, K(x + c0 * dx_dt));
+        mfem::Vector x_next(x);
+        x_next.Add(c0, dx_dt);
+        J.Add(c0, K(x_next));
         if (constraint != UNCONSTRAINED) {
           // clang-format off
         J(0,0) = 1.0; J(0,1) = 0.0; J(0,2) = 0.0;
@@ -339,9 +349,12 @@ double first_order_ode_test(int nsteps, ode_type type, constraint_type constrain
   // clang-format on
 
   mfem::Vector exact_solution(exact_solutions[type][constraint], 3);
-  mfem::Vector error = (exact_solution - soln) / exact_solution.Norml2();
 
-  return error.Norml2();
+  mfem::Vector diff(exact_solution);
+  diff -= soln;
+  diff /= exact_solution.Norml2();
+
+  return diff.Norml2();
 }
 
 double second_order_ode_test(int nsteps, ode_type type, constraint_type constraint, TimestepMethod timestepper,
@@ -391,15 +404,29 @@ double second_order_ode_test(int nsteps, ode_type type, constraint_type constrai
   StdFunctionOperator residual(
       3,
       [&](const mfem::Vector& d2x_dt2, mfem::Vector& r) {
-        r = M * d2x_dt2 + C * (dx_dt + c1 * d2x_dt2) + f_int(x + c0 * d2x_dt2) - f_ext;
+        // r = M * d2x_dt2 + C * (dx_dt + c1 * d2x_dt2) + f_int(x + c0 * d2x_dt2) - f_ext;
+
+        mfem::Vector x_next(x), v_next(dx_dt), visc(x), M_d2x_dt2(x);
+        x_next.Add(c0, d2x_dt2);
+        v_next.Add(c1, d2x_dt2);
+
+        auto force_internal = f_int(x_next);
+        C.Mult(v_next, visc);
+        M.Mult(d2x_dt2, M_d2x_dt2);
+        add(M_d2x_dt2, visc, r);
+        r += force_internal;
+        r -= f_ext;
+
         if (constraint != UNCONSTRAINED) {
           r(0) = 0.0;
         }
       },
       [&](const mfem::Vector& d2x_dt2) -> mfem::Operator& {
+        mfem::Vector x_next(x);
+        x_next.Add(c0, d2x_dt2);
         J = M;
         J.Add(c1, C);
-        J.Add(c0, K(x + c0 * d2x_dt2));
+        J.Add(c0, K(x_next));
         if (constraint != UNCONSTRAINED) {
           // clang-format off
         J(0,0) = 1.0; J(0,1) = 0.0; J(0,2) = 0.0;
@@ -475,10 +502,16 @@ double second_order_ode_test(int nsteps, ode_type type, constraint_type constrai
 
   mfem::Vector exact_displacement(exact_displacements[type][constraint], 3);
   mfem::Vector exact_velocity(exact_velocities[type][constraint], 3);
-  mfem::Vector error_displacement = (exact_displacement - displacement) / exact_displacement.Norml2();
-  mfem::Vector error_velocity     = (exact_velocity - velocity) / exact_velocity.Norml2();
 
-  return std::max(error_displacement.Norml2(), error_velocity.Norml2());
+  mfem::Vector displacement_diff(exact_displacement);
+  displacement_diff -= displacement;
+  displacement_diff /= exact_displacement.Norml2();
+
+  mfem::Vector velocity_diff(exact_velocity);
+  velocity_diff -= velocity;
+  velocity_diff /= exact_velocity.Norml2();
+
+  return std::max(displacement_diff.Norml2(), velocity_diff.Norml2());
 }
 
 using param_t = std::tuple<ode_type, constraint_type, TimestepMethod, DirichletEnforcementMethod>;
