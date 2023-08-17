@@ -21,7 +21,6 @@
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/physics/state/state_manager.hpp"
-#include "serac/numerics/expr_template_ops.hpp"
 
 namespace serac {
 
