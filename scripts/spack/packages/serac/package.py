@@ -221,7 +221,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     conflicts("cuda_arch=none", when="+cuda",
               msg="CUDA architecture is required")
     depends_on("amgx", when="+cuda")
-    cuda_deps = ["axom", "mfem", "raja", "sundials", "tribol" "umpire"]
+    cuda_deps = ["axom", "mfem", "raja", "sundials", "tribol", "umpire"]
     for dep in cuda_deps:
         depends_on("{0}+cuda".format(dep), when="+cuda")
         for sm_ in CudaPackage.cuda_arch_values:
