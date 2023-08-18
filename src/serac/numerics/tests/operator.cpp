@@ -9,7 +9,6 @@
 #include "mfem.hpp"
 
 #include "serac/numerics/stdfunction_operator.hpp"
-#include "serac/numerics/expr_template_ops.hpp"
 
 namespace serac {
 
@@ -50,8 +49,8 @@ TEST(Operators, RectangularOperator)
       [&mat](const mfem::Vector&) -> mfem::Operator& { return mat; });
 
   // Compute the action of the equivalent rectangular operators
-  out_1 = mat * in;
-  out_2 = c * in;
+  mat.Mult(in, out_1);
+  c.Mult(in, out_2);
 
   // Compare the results
   for (int i = 0; i < out_1.Size(); ++i) {
