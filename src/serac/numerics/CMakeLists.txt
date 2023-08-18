@@ -12,12 +12,9 @@ endif()
 
 set(numerics_headers
     equation_solver.hpp
-    expr_template_impl.hpp
-    expr_template_ops.hpp
     odes.hpp
     solver_config.hpp
     stdfunction_operator.hpp
-    vector_expression.hpp
     )
 
 set(numerics_sources

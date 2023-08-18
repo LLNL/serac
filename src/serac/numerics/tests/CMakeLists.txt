@@ -8,7 +8,6 @@ set(test_dependencies gtest serac_numerics serac_boundary_conditions)
 
 set(numerics_serial_tests
     equationsolver.cpp
-    expr_templates.cpp
     operator.cpp
     odes.cpp
     )
@@ -16,13 +15,3 @@ set(numerics_serial_tests
 serac_add_tests( SOURCES ${numerics_serial_tests}
                  DEPENDS_ON ${test_dependencies}
                  NUM_MPI_TASKS 1)
-
-if(ENABLE_BENCHMARKS)
-    blt_add_executable( NAME        benchmark_expr_templates
-                        SOURCES     benchmark_expr_templates.cpp
-                        DEPENDS_ON  gbenchmark ${test_dependencies}
-                        FOLDER      serac/tests)
-    blt_add_benchmark(  NAME        benchmark_expr_templates
-                        COMMAND     benchmark_expr_templates "--benchmark_min_time=0.0 --v=3 --benchmark_format=console"
-                        NUM_MPI_TASKS 4)
-endif()
