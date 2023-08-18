@@ -7,6 +7,7 @@
 add_subdirectory(materials)
 add_subdirectory(state)
 add_subdirectory(boundary_conditions)
+add_subdirectory(contact)
 
 if(ENABLE_TESTS)
     add_subdirectory(tests)
@@ -38,6 +39,7 @@ set(physics_dependencies
     serac_state
     serac_boundary_conditions
     serac_numerics
+    serac_contact
     )
 
 blt_add_library(
