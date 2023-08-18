@@ -51,7 +51,7 @@ def main():
     src_dir = os.path.abspath(src_dir)
 
     print("============================================================")
-    print("check_missing_headers.py args")
+    print("check_for_missing_headers.py args")
     print("install_dir: {0}".format(install_dir))
     print("src_dir:     {0}".format(src_dir))
     print("============================================================")
