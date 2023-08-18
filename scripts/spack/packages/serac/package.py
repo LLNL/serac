@@ -105,7 +105,7 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     depends_on("petsc", when="+petsc")
 
-    depends_on("tribol", when="+tribol")
+    depends_on("tribol+raja+umpire~minbuild", when="+tribol")
 
     # Needs to be first due to a bug with the Spack concretizer
     # Note: Certain combinations of CMake and Conduit do not like +mpi
@@ -219,7 +219,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     conflicts("cuda_arch=none", when="+cuda",
               msg="CUDA architecture is required")
     depends_on("amgx", when="+cuda")
-    cuda_deps = ["axom", "mfem", "raja", "sundials", "umpire"]
+    cuda_deps = ["axom", "mfem", "raja", "sundials", "tribol" "umpire"]
     for dep in cuda_deps:
         depends_on("{0}+cuda".format(dep), when="+cuda")
         for sm_ in CudaPackage.cuda_arch_values:
