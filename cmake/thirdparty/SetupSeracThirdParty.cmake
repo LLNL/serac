@@ -457,11 +457,13 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(tribol_depends axom mfem hdf5 sparsehash sol lua fmt)
         blt_list_append(TO tribol_depends ELEMENTS mpi IF ENABLE_MPI)
         blt_list_append(TO tribol_depends ELEMENTS openmp IF ENABLE_OPENMP)
-        foreach(dep ${tribol_depends})
-            install(TARGETS              ${dep}
-                    EXPORT               tribol-targets
-                    DESTINATION          lib)
-        endforeach()
+        install(TARGETS              ${tribol_depends}
+                EXPORT               tribol-targets
+                DESTINATION          lib
+        )
+        
+        set(tribol_exported_targets tribol)
+        blt_list_append(TO tribol_exported_targets ELEMENTS redecomp IF BUILD_REDECOMP)
         
         set(TRIBOL_FOUND TRUE CACHE BOOL "" FORCE)
     endif()

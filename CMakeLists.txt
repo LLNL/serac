@@ -186,7 +186,7 @@ if (SERAC_ENABLE_CODEVELOP)
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/axom/src>
     )
 
-    install(TARGETS              mfem ${axom_exported_targets} tribol redecomp
+    install(TARGETS              mfem ${axom_exported_targets} ${tribol_exported_targets}
             EXPORT               serac-targets
             DESTINATION          lib
             )
