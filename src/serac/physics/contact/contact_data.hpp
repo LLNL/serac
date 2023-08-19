@@ -12,7 +12,6 @@
 
 #pragma once
 
-#include <mfem/linalg/blockvector.hpp>
 #include "mfem.hpp"
 
 #include "serac/physics/contact/contact_pair.hpp"
