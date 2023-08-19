@@ -427,8 +427,8 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     else()
         # Otherwise we use the submodule
         message(STATUS "Using Tribol submodule")
-        set(BUILD_REDECOMP ON CACHE BOOL "")
-        set(TRIBOL_USE_MPI ON CACHE BOOL "")
+        set(BUILD_REDECOMP ${ENABLE_MPI} CACHE BOOL "")
+        set(TRIBOL_USE_MPI ${ENABLE_MPI} CACHE BOOL "")
         set(TRIBOL_ENABLE_TESTS OFF CACHE BOOL "")
         set(TRIBOL_ENABLE_EXAMPLES OFF CACHE BOOL "")
         set(TRIBOL_ENABLE_DOCS OFF CACHE BOOL "")
@@ -443,6 +443,26 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             tribol_configure_file(${PROJECT_SOURCE_DIR}/tribol/src/tribol/config.hpp.in
                                   ${PROJECT_BINARY_DIR}/tribol/include/tribol/config.hpp)
         endif()
+        
+        target_include_directories(redecomp PUBLIC
+            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/tribol/src>
+        )
+
+        target_include_directories(tribol PUBLIC
+            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/tribol/src>
+            $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/tribol/include>
+            $<INSTALL_INTERFACE:include>
+        ) 
+        
+        set(tribol_depends axom mfem hdf5 sparsehash sol lua fmt)
+        blt_list_append(TO tribol_depends ELEMENTS mpi IF ENABLE_MPI)
+        blt_list_append(TO tribol_depends ELEMENTS openmp IF ENABLE_OPENMP)
+        foreach(dep ${tribol_depends})
+            install(TARGETS              ${dep}
+                    EXPORT               tribol-targets
+                    DESTINATION          lib)
+        endforeach()
+        
         set(TRIBOL_FOUND TRUE CACHE BOOL "" FORCE)
     endif()
 

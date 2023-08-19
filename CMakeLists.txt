@@ -190,22 +190,6 @@ if (SERAC_ENABLE_CODEVELOP)
             EXPORT               serac-targets
             DESTINATION          lib
             )
-
-    target_include_directories(redecomp PUBLIC
-        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/tribol/src>
-    )
-    
-
-    target_include_directories(tribol PUBLIC
-        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/tribol/src>
-        $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/tribol/include>
-        $<INSTALL_INTERFACE:include>
-    ) 
-            
-    install(TARGETS              axom mfem mpi fmt openmp hdf5 sparsehash sol lua
-            EXPORT               tribol-targets
-            DESTINATION          lib
-            ) 
 endif()
 
 install(EXPORT serac-targets 
