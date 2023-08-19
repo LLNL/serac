@@ -400,29 +400,51 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     #------------------------------------------------------------------------------
     # Tribol
     #------------------------------------------------------------------------------
-    if(TRIBOL_DIR)
-        serac_assert_is_directory(VARIABLE_NAME TRIBOL_DIR)
+    if (NOT SERAC_ENABLE_CODEVELOP)
+        if(TRIBOL_DIR)
+            serac_assert_is_directory(VARIABLE_NAME TRIBOL_DIR)
 
-        find_package(tribol REQUIRED
-                            NO_DEFAULT_PATH 
-                            PATHS ${TRIBOL_DIR}/lib/cmake)
+            find_package(tribol REQUIRED
+                                NO_DEFAULT_PATH 
+                                PATHS ${TRIBOL_DIR}/lib/cmake)
 
-        if(TARGET tribol)
-            message(STATUS "Tribol CMake exported library loaded: tribol")
+            if(TARGET tribol)
+                message(STATUS "Tribol CMake exported library loaded: tribol")
+            else()
+                message(FATAL_ERROR "Could not load Tribol CMake exported library: tribol")
+            endif()
+
+            # Set include dir to system
+            set(TRIBOL_INCLUDE_DIR ${TRIBOL_DIR}/include)
+            set_property(TARGET tribol
+                        APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+                        ${TRIBOL_INCLUDE_DIR})
         else()
-            message(FATAL_ERROR "Could not load Tribol CMake exported library: tribol")
+            set(TRIBOL_FOUND OFF)
         endif()
-
-        # Set include dir to system
-        set(TRIBOL_INCLUDE_DIR ${TRIBOL_DIR}/include)
-        set_property(TARGET tribol
-                     APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
-                     ${TRIBOL_INCLUDE_DIR})
+        
+        message(STATUS "Tribol support is " ${TRIBOL_FOUND})
     else()
-        set(TRIBOL_FOUND OFF)
+        # Otherwise we use the submodule
+        message(STATUS "Using Tribol submodule")
+        set(BUILD_REDECOMP ON CACHE BOOL "")
+        set(TRIBOL_ENABLE_TESTS OFF CACHE BOOL "")
+        set(TRIBOL_ENABLE_EXAMPLES OFF CACHE BOOL "")
+        if(${PROJECT_NAME} STREQUAL "smith")
+            include(serac/tribol/cmake/TribolMacros.cmake)
+            include(serac/tribol/cmake/Options.cmake)
+            add_subdirectory(${PROJECT_SOURCE_DIR}/serac/tribol/src  ${CMAKE_BINARY_DIR}/tribol)
+            tribol_configure_file(${PROJECT_SOURCE_DIR}/serac/tribol/src/tribol/config.hpp.in
+                                  ${PROJECT_BINARY_DIR}/serac/tribol/include/tribol/config.hpp)
+        else()
+            include(tribol/cmake/TribolMacros.cmake)
+            include(tribol/cmake/Options.cmake)
+            add_subdirectory(${PROJECT_SOURCE_DIR}/tribol/src ${CMAKE_BINARY_DIR}/tribol)
+            tribol_configure_file(${PROJECT_SOURCE_DIR}/tribol/src/tribol/config.hpp.in
+                                  ${PROJECT_BINARY_DIR}/tribol/include/tribol/config.hpp)
+        endif()
+        set(TRIBOL_FOUND TRUE CACHE BOOL "" FORCE)
     endif()
-    
-    message(STATUS "Tribol support is " ${TRIBOL_FOUND})
 
     #------------------------------------------------------------------------------
     # PETSC
