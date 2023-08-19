@@ -36,7 +36,7 @@ TEST(ContactTest, patch)
   // Construct the appropriate dimension mesh and give it to the data store
   std::string filename = SERAC_REPO_DIR "/data/meshes/twohex_for_contact.mesh";
 
-  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), 0, 0);
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), 1, 0);
   serac::StateManager::setMesh(std::move(mesh));
 
   serac::LinearSolverOptions linear_options{.linear_solver  = LinearSolver::GMRES,
