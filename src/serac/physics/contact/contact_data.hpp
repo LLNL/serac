@@ -131,7 +131,7 @@ private:
   /**
    * @brief The volume mesh for the problem
    */
-  const mfem::ParMesh& mesh_;
+  [[maybe_unused]] const mfem::ParMesh& mesh_;
 
   /**
    * @brief Reference coordinates of the mesh
