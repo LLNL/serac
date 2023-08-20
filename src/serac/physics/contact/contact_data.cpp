@@ -5,8 +5,9 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/physics/contact/contact_data.hpp"
-#include <axom/slic/interface/slic_macros.hpp>
-#include <mfem/linalg/hypre.hpp>
+
+#include "axom/slic.hpp"
+
 #include "serac/physics/contact/contact_config.hpp"
 
 #ifdef SERAC_USE_TRIBOL
@@ -35,10 +36,10 @@ ContactData::~ContactData()
 }
 
 void ContactData::addContactPair(
-  int pair_id,
-  const std::set<int>& bdry_attr_surf1,
-  const std::set<int>& bdry_attr_surf2,
-  ContactOptions contact_opts
+  [[maybe_unused]] int pair_id,
+  [[maybe_unused]] const std::set<int>& bdry_attr_surf1,
+  [[maybe_unused]] const std::set<int>& bdry_attr_surf2,
+  [[maybe_unused]] ContactOptions contact_opts
 )
 {
 #ifdef SERAC_USE_TRIBOL
@@ -61,10 +62,10 @@ void ContactData::addContactPair(
 }
 
 void ContactData::update(
-  int cycle, 
-  double time, 
-  double& dt,
-  bool update_redecomp
+  [[maybe_unused]] int cycle, 
+  [[maybe_unused]] double time, 
+  [[maybe_unused]] double& dt,
+  [[maybe_unused]] bool update_redecomp
 )
 {
 #ifdef SERAC_USE_TRIBOL
@@ -259,7 +260,7 @@ mfem::Array<int> ContactData::pressureTrueDofOffsets() const
   return dof_offsets;
 }
 
-void ContactData::setPressures(const mfem::Vector& true_pressures) const
+void ContactData::setPressures([[maybe_unused]] const mfem::Vector& true_pressures) const
 {
 #ifdef SERAC_USE_TRIBOL
   auto dof_offsets = pressureTrueDofOffsets();
@@ -289,7 +290,7 @@ void ContactData::setPressures(const mfem::Vector& true_pressures) const
 #endif
 }
 
-void ContactData::setDisplacements(const mfem::Vector& true_displacement)
+void ContactData::setDisplacements([[maybe_unused]] const mfem::Vector& true_displacement)
 {
 #ifdef SERAC_USE_TRIBOL
   reference_nodes_->ParFESpace()->GetProlongationMatrix()->Mult(true_displacement, current_coords_);

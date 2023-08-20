@@ -5,6 +5,9 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/physics/contact/contact_pair.hpp"
+
+#include "axom/slic.hpp"
+
 #include "serac/physics/contact/contact_config.hpp"
 
 #ifdef SERAC_USE_TRIBOL
@@ -16,9 +19,9 @@ namespace serac {
 
 ContactPair::ContactPair(
   int pair_id,
-  const mfem::ParMesh& mesh,
-  const std::set<int>& bdry_attr_surf1,
-  const std::set<int>& bdry_attr_surf2,
+  [[maybe_unused]] const mfem::ParMesh& mesh,
+  [[maybe_unused]] const std::set<int>& bdry_attr_surf1,
+  [[maybe_unused]] const std::set<int>& bdry_attr_surf2,
   const mfem::ParGridFunction& current_coords,
   ContactOptions contact_opts
 )
@@ -74,14 +77,19 @@ mfem::ParGridFunction& ContactPair::pressure() const
   return tribol::getMfemPressure(getPairId());
 #else
   SLIC_ERROR_ROOT("Serac built without Tribol.");
+  return {};
 #endif
 }
 
 int ContactPair::numTruePressureDofs() const
 {
+#ifdef SERAC_USE_TRIBOL
   return getContactOptions().enforcement == ContactEnforcement::LagrangeMultiplier ?
     tribol::getMfemPressure(getPairId()).ParFESpace()->GetTrueVSize() :
     0;
+#else
+  return 0;
+#endif
 }
 
 #ifdef SERAC_USE_TRIBOL
