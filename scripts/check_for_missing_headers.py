@@ -8,7 +8,7 @@
 ##############################################################################
 
 """
- file: check_missing_headers.py
+ file: check_for_missing_headers.py
 
  description:
   This script takes a serac install and source directory and checks to see
