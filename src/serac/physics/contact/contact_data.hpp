@@ -24,27 +24,24 @@ namespace contact {
  * @brief Default contact options: frictionless mortar with penalty = 1000
  * enforcement
  */
-const ContactOptions default_contact_options = {.method =      ContactMethod::SingleMortar,
+const ContactOptions default_contact_options = {.method      = ContactMethod::SingleMortar,
                                                 .enforcement = ContactEnforcement::Penalty,
-                                                .type =        ContactType::Frictionless,
-                                                .penalty =     1.0e3};
+                                                .type        = ContactType::Frictionless,
+                                                .penalty     = 1.0e3};
 
-} // namespace contact
+}  // namespace contact
 
 /**
  * @brief This class stores contact pair data and interacts with Tribol
  */
 class ContactData {
 public:
-
   /**
    * @brief The constructor
    *
    * @param mesh The volume mesh for the problem
    */
-  ContactData(
-    const mfem::ParMesh& mesh
-  );
+  ContactData(const mfem::ParMesh& mesh);
 
   /**
    * @brief Destructor to finalize Tribol
@@ -53,18 +50,14 @@ public:
 
   /**
    * @brief Add another contact pair
-   * 
+   *
    * @param pair_id Unique identifier for the ContactPair (used in Tribol)
    * @param bdry_attr_surf1 MFEM boundary attributes for the first surface
    * @param bdry_attr_surf2 MFEM boundary attributes for the second surface
    * @param contact_opts Defines contact method, enforcement, type, and penalty
    */
-  void addContactPair(
-    int pair_id,
-    const std::set<int>& bdry_attr_surf1,
-    const std::set<int>& bdry_attr_surf2,
-    ContactOptions contact_opts
-  );
+  void addContactPair(int pair_id, const std::set<int>& bdry_attr_surf1, const std::set<int>& bdry_attr_surf2,
+                      ContactOptions contact_opts);
 
   /**
    * @brief Updates the positions, forces, and jacobian contributions associated with contact
@@ -74,20 +67,20 @@ public:
    * @param dt The timestep size to attempt
    * @param update_redecomp Re-builds redecomp mesh and updates data if true
    */
-  void update(
-    int cycle, 
-    double time, 
-    double& dt,
-    bool update_redecomp = true
-  );
+  void update(int cycle, double time, double& dt, bool update_redecomp = true);
 
   /**
    * @brief Return the contact data for each contact pair
    *
-   * @return Vector of contact pairs
+   * @return Reference to vector of contact pairs
    */
   std::vector<ContactPair>& contactPairs() { return pairs_; }
 
+  /**
+   * @brief Return the contact data for each contact pair (const overload)
+   *
+   * @return Const reference to vector of contact pairs
+   */
   const std::vector<ContactPair>& contactPairs() const { return pairs_; }
 
   /**
@@ -106,7 +99,7 @@ public:
 
   /**
    * @brief Returns nodal gaps on true degrees of freedom
-   * 
+   *
    * @return Nodal gaps as a Vector
    */
   mfem::Vector trueGaps() const;
@@ -134,7 +127,7 @@ public:
 
   /**
    * @brief Set the displacement field
-   * 
+   *
    * @param true_displacements Current displacement true dof values
    */
   void setDisplacements(const mfem::Vector& true_displacements);
@@ -156,7 +149,6 @@ public:
   mfem::Array<int> pressureTrueDofOffsets() const;
 
 private:
-
   /**
    * @brief The volume mesh for the problem
    */
@@ -190,4 +182,4 @@ private:
   mutable mfem::Array<int> jacobian_offsets_;
 };
 
-}  // namespace smith
+}  // namespace serac

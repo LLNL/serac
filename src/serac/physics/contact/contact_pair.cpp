@@ -17,38 +17,17 @@
 
 namespace serac {
 
-ContactPair::ContactPair(
-  int pair_id,
-  [[maybe_unused]] const mfem::ParMesh& mesh,
-  [[maybe_unused]] const std::set<int>& bdry_attr_surf1,
-  [[maybe_unused]] const std::set<int>& bdry_attr_surf2,
-  const mfem::ParGridFunction& current_coords,
-  ContactOptions contact_opts
-)
-: pair_id_ { pair_id },
-  contact_opts_ { contact_opts },
-  current_coords_ { current_coords }
+ContactPair::ContactPair(int pair_id, [[maybe_unused]] const mfem::ParMesh& mesh,
+                         [[maybe_unused]] const std::set<int>& bdry_attr_surf1,
+                         [[maybe_unused]] const std::set<int>& bdry_attr_surf2,
+                         const mfem::ParGridFunction& current_coords, ContactOptions contact_opts)
+    : pair_id_{pair_id}, contact_opts_{contact_opts}, current_coords_{current_coords}
 {
 #ifdef SERAC_USE_TRIBOL
-  tribol::registerMfemCouplingScheme(
-    pair_id, 
-    2*pair_id,
-    2*pair_id + 1,
-    mesh,
-    current_coords,
-    bdry_attr_surf1,
-    bdry_attr_surf2, 
-    tribol::SURFACE_TO_SURFACE,
-    tribol::NO_SLIDING,
-    getMethod(),
-    tribol::FRICTIONLESS,
-    tribol::LAGRANGE_MULTIPLIER
-  );
-
-  tribol::setLagrangeMultiplierOptions(
-    pair_id, 
-    tribol::ImplicitEvalMode::MORTAR_RESIDUAL_JACOBIAN
-  );
+  tribol::registerMfemCouplingScheme(pair_id, 2 * pair_id, 2 * pair_id + 1, mesh, current_coords, bdry_attr_surf1,
+                                     bdry_attr_surf2, tribol::SURFACE_TO_SURFACE, tribol::NO_SLIDING, getMethod(),
+                                     tribol::FRICTIONLESS, tribol::LAGRANGE_MULTIPLIER);
+  tribol::setLagrangeMultiplierOptions(pair_id, tribol::ImplicitEvalMode::MORTAR_RESIDUAL_JACOBIAN);
 #endif
 }
 
@@ -85,9 +64,9 @@ mfem::ParGridFunction& ContactPair::pressure() const
 int ContactPair::numTruePressureDofs() const
 {
 #ifdef SERAC_USE_TRIBOL
-  return getContactOptions().enforcement == ContactEnforcement::LagrangeMultiplier ?
-    tribol::getMfemPressure(getPairId()).ParFESpace()->GetTrueVSize() :
-    0;
+  return getContactOptions().enforcement == ContactEnforcement::LagrangeMultiplier
+             ? tribol::getMfemPressure(getPairId()).ParFESpace()->GetTrueVSize()
+             : 0;
 #else
   return 0;
 #endif
@@ -96,8 +75,7 @@ int ContactPair::numTruePressureDofs() const
 #ifdef SERAC_USE_TRIBOL
 tribol::ContactMethod ContactPair::getMethod() const
 {
-  switch (contact_opts_.method)
-  {
+  switch (contact_opts_.method) {
     case ContactMethod::SingleMortar:
       return tribol::SINGLE_MORTAR;
       break;

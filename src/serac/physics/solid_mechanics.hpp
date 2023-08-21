@@ -857,74 +857,66 @@ public:
 
           // gradient of residual function
           [this](const mfem::Vector& u) -> mfem::Operator& {
-            auto [r, drdu] =
-                (*residual_)(differentiate_wrt(u), zero_, shape_displacement_, *parameters_[parameter_indices].state...);
-            J_   = assemble(drdu);
-            J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+            auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, shape_displacement_,
+                                          *parameters_[parameter_indices].state...);
+            J_             = assemble(drdu);
+            J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             return *J_;
           });
-    }
-    else
-    {
+    } else {
       return std::make_unique<mfem_ext::StdFunctionOperator>(
-        displacement_.space().GetTrueVSize() + contact_.numPressureTrueDofs(),
+          displacement_.space().GetTrueVSize() + contact_.numPressureTrueDofs(),
 
-        // residual function with contact forces
-        [this](const mfem::Vector& u, mfem::Vector& r) {
+          // residual function with contact forces
+          [this](const mfem::Vector& u, mfem::Vector& r) {
+            const int disp_size = displacement_.space().GetTrueVSize();
 
-          const int disp_size = displacement_.space().GetTrueVSize();
+            mfem::Vector u_blk, p_blk;
+            u_blk.MakeRef(const_cast<mfem::Vector&>(u), 0, disp_size);
+            p_blk.MakeRef(const_cast<mfem::Vector&>(u), disp_size, contact_.numPressureTrueDofs());
 
-          mfem::Vector u_blk, p_blk;
-          u_blk.MakeRef(const_cast<mfem::Vector&>(u), 0, disp_size);
-          p_blk.MakeRef(const_cast<mfem::Vector&>(u), disp_size, contact_.numPressureTrueDofs());
+            mfem::Vector r_blk, g_blk;
+            r_blk.MakeRef(r, 0, disp_size);
+            g_blk.MakeRef(r, disp_size, contact_.numPressureTrueDofs());
 
-          mfem::Vector r_blk, g_blk;
-          r_blk.MakeRef(r, 0, disp_size);
-          g_blk.MakeRef(r, disp_size, contact_.numPressureTrueDofs());
+            double dt = 1.0;
+            contact_.setDisplacements(u_blk);
+            // we need to call update first to update gaps
+            contact_.update(1, 1.0, dt);
+            // with updated gaps, we can update pressure for contact pairs with penalty enforcement
+            contact_.setPressures(p_blk);
+            // call update again with the right pressures
+            contact_.update(1, 1.0, dt);
 
-          double dt = 1.0;
-          contact_.setDisplacements(u_blk);
-          // we need to call update first to update gaps
-          contact_.update(1, 1.0, dt);
-          // with updated gaps, we can update pressure for contact pairs with penalty enforcement
-          contact_.setPressures(p_blk);
-          // call update again with the right pressures
-          contact_.update(1, 1.0, dt);
+            mfem::Vector res = (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
 
-          mfem::Vector res = 
-              (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
+            res.Add(1.0, contact_.trueContactForces());
 
-          res.Add(1.0, contact_.trueContactForces());
+            r_blk = res;
+            r_blk.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
 
-          r_blk = res;
-          r_blk.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
+            g_blk = contact_.trueGaps();
+          },
 
-          g_blk = contact_.trueGaps();
-        },
+          // gradient of residual function with contact Jacobian
+          [this](const mfem::Vector& u) -> mfem::Operator& {
+            auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, shape_displacement_,
+                                          *parameters_[parameter_indices].state...);
+            J_             = assemble(drdu);
 
-        // gradient of residual function with contact Jacobian
-        [this](const mfem::Vector& u) ->mfem::Operator& {
-          auto [r, drdu] =
-              (*residual_)(differentiate_wrt(u), zero_, shape_displacement_, *parameters_[parameter_indices].state...);
-          J_ = assemble(drdu);
+            J_contact_ = contact_.contactJacobian();
+            if (J_contact_->IsZeroBlock(0, 0)) {
+              J_contact_->SetBlock(0, 0, J_.release());
+            } else {
+              J_contact_->SetBlock(
+                  0, 0, mfem::Add(1.0, *J_, 1.0, static_cast<mfem::HypreParMatrix&>(J_contact_->GetBlock(0, 0))));
+            }
 
-          J_contact_ = contact_.contactJacobian();
-          if (J_contact_->IsZeroBlock(0, 0))
-          {
-            J_contact_->SetBlock(0, 0, J_.release());
-          }
-          else
-          {
-            J_contact_->SetBlock(0, 0, mfem::Add(
-              1.0, *J_,
-              1.0, static_cast<mfem::HypreParMatrix&>(J_contact_->GetBlock(0, 0))
-            ));
-          }
+            J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(
+                static_cast<mfem::HypreParMatrix&>(J_contact_->GetBlock(0, 0)));
 
-          J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(static_cast<mfem::HypreParMatrix&>(J_contact_->GetBlock(0, 0)));
-
-          return *J_contact_;
-        });
+            return *J_contact_;
+          });
     }
   }
 
@@ -936,19 +928,10 @@ public:
    * @param bdry_attr_surf2 MFEM boundary attributes for the second surface
    * @param contact_opts Defines contact method, enforcement, type, and penalty
    */
-  void addContactPair(
-    int pair_id,
-    const std::set<int>& bdry_attr_surf1,
-    const std::set<int>& bdry_attr_surf2,
-    ContactOptions contact_opts
-  )
+  void addContactPair(int pair_id, const std::set<int>& bdry_attr_surf1, const std::set<int>& bdry_attr_surf2,
+                      ContactOptions contact_opts)
   {
-    contact_.addContactPair(
-      pair_id,
-      bdry_attr_surf1,
-      bdry_attr_surf2,
-      contact_opts
-    );
+    contact_.addContactPair(pair_id, bdry_attr_surf1, bdry_attr_surf2, contact_opts);
   }
 
   /**
@@ -987,8 +970,7 @@ public:
     displacement_.space().BuildDofToArrays();
 
     // create contact mesh and compute forces, pressures, and Jacobians
-    if (!contact_.contactPairs().empty())
-    {
+    if (!contact_.contactPairs().empty()) {
       double dt = 0.0;
       contact_.update(0, 0.0, dt);
     }
@@ -1000,7 +982,7 @@ public:
       // to help apply essential boundary conditions, so we
       // compute J here to prime the pump for the first solve
       // TODO (EBC): looks like this is done when we call quasiStaticSolve()?
-      //residual_with_bcs_->GetGradient(displacement_);
+      // residual_with_bcs_->GetGradient(displacement_);
 
     } else {
       // the dynamic case is described by a residual function and a second order
@@ -1057,25 +1039,18 @@ public:
 
     // Update the linearized Jacobian matrix
     bool have_lagrange_multipliers = contact_.numPressureTrueDofs() != 0;
-    if (!have_lagrange_multipliers)
-    {
+    if (!have_lagrange_multipliers) {
       residual_with_bcs_->GetGradient(displacement_);
-    }
-    else
-    {
-      int disp_size = displacement_.Size();
-      mfem::BlockVector augmented_solution(mfem::Array<int>({
-        0,
-        disp_size,
-        disp_size + contact_.numPressureTrueDofs()
-      }));
+    } else {
+      int               disp_size = displacement_.Size();
+      mfem::BlockVector augmented_solution(
+          mfem::Array<int>({0, disp_size, disp_size + contact_.numPressureTrueDofs()}));
       augmented_solution.GetBlock(0) = displacement_;
       residual_with_bcs_->GetGradient(augmented_solution);
     }
-    
-    auto jacobian = contact_.contactPairs().empty() ? 
-      J_.get() :
-      static_cast<mfem::HypreParMatrix*>(&J_contact_->GetBlock(0, 0));
+
+    auto jacobian =
+        contact_.contactPairs().empty() ? J_.get() : static_cast<mfem::HypreParMatrix*>(&J_contact_->GetBlock(0, 0));
 
     du_ = 0.0;
     for (auto& bc : bcs_.essentials()) {
@@ -1123,22 +1098,16 @@ public:
     lin_solver.Mult(dr_, du_);
     displacement_ += du_;
 
-    if (!have_lagrange_multipliers)
-    {
+    if (!have_lagrange_multipliers) {
       nonlin_solver_->solve(displacement_);
-    }
-    else
-    {
-      int disp_size = displacement_.Size();
-      mfem::BlockVector augmented_solution(mfem::Array<int>({
-        0,
-        disp_size,
-        disp_size + contact_.numPressureTrueDofs()
-      }));
+    } else {
+      int               disp_size = displacement_.Size();
+      mfem::BlockVector augmented_solution(
+          mfem::Array<int>({0, disp_size, disp_size + contact_.numPressureTrueDofs()}));
       auto& u_block = augmented_solution.GetBlock(0);
-      u_block = displacement_;
+      u_block       = displacement_;
       auto& p_block = augmented_solution.GetBlock(1);
-      p_block = contact_.truePressures();
+      p_block       = contact_.truePressures();
 
       lin_solver.SetOperator(*J_contact_);
 
@@ -1147,7 +1116,6 @@ public:
       displacement_.Set(1.0, u_block);
       contact_.setPressures(p_block);
     }
-
   }
 
   /**
