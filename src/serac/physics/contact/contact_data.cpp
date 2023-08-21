@@ -17,8 +17,11 @@
 
 namespace serac {
 
-ContactData::ContactData(const mfem::ParMesh& mesh)
-: mesh_ { mesh },
+ContactData::ContactData([[maybe_unused]] const mfem::ParMesh& mesh)
+: 
+#ifdef SERAC_USE_TRIBOL
+  mesh_ { mesh },
+#endif
   reference_nodes_ { dynamic_cast<const mfem::ParGridFunction*>(mesh.GetNodes()) },
   current_coords_ { *reference_nodes_ },
   num_pressure_true_dofs_ { 0 }

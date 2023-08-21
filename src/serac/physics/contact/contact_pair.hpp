@@ -95,7 +95,7 @@ private:
    */
   ContactOptions contact_opts_;
 
-  mfem::ParFiniteElementSpace& coord_fe_space_;
+  const mfem::ParGridFunction& current_coords_;
 
 };
 
