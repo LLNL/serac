@@ -43,8 +43,8 @@ def get_headers_from(dir):
             dirnames.remove("tests")
         for f in filenames:
             if ".hpp" in f and ".in" not in f:
-                relative_headerfile = dirpath.replace(dir + "/", "")
-                headers.append({"path": relative_headerfile, "headerfile": f})
+                relative_header_path = dirpath.replace(dir + "/", "")
+                headers.append({"path": relative_header_path, "headerfile": f})
     return headers
 
 def main():
@@ -78,7 +78,9 @@ def main():
     for sh in src_headers:
         found = False
         for ih in install_headers:
-            if sh["headerfile"] == ih["headerfile"]:
+            src_relative_header = "{0}/{1}".format(sh["path"], sh["headerfile"])
+            install_relative_header = "{0}/{1}".format(ih["path"], ih["headerfile"])
+            if src_relative_header == install_relative_header:
                 found = True
                 break
         if not found:
