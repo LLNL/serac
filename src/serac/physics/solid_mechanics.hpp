@@ -1417,6 +1417,7 @@ protected:
   /// @brief Coefficient containing the essential boundary values
   std::shared_ptr<mfem::Coefficient> component_disp_bdr_coef_;
 
+  /// @brief Class holding contact constraint data
   ContactData contact_;
 
   /// @brief An auxilliary zero vector
