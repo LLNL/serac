@@ -34,6 +34,17 @@ def parse_arguments():
                         help="specify path of the src directory.")
     return parser.parse_known_args()
 
+# return list of dictionaries containing the path to and name of header file
+def get_headers_from(dir):
+    headers = []
+    for (dirpath, dirnames, filenames) in os.walk(dir, topdown=True):
+        if "tests" in dirnames:
+            dirnames.remove("tests")
+        for f in filenames:
+            if ".hpp" in f and ".in" not in f:
+                headers.append({"path": dirpath, "headerfile": f})
+    return headers
+
 def main():
     args, unknown_args = parse_arguments()
 
@@ -57,19 +68,8 @@ def main():
     print("============================================================")
 
     # grab headers from install and src
-    install_dir = os.path.join(install_dir, "include", "serac")
-    install_headers = []
-    for (dirpath, dirnames, filenames) in os.walk(install_dir):
-        for f in filenames:
-            if ".hpp" in f and ".in" not in f:
-                install_headers.append({"path": dirpath, "headerfile": f})
-
-    src_dir = os.path.join(src_dir, "serac")
-    src_headers = []
-    for (dirpath, dirnames, filenames) in os.walk(src_dir):
-        for f in filenames:
-            if ".hpp" in f and ".in" not in f:
-                src_headers.append({"path": dirpath, "headerfile": f})
+    install_headers = get_headers_from(os.path.join(install_dir, "include", "serac"))
+    src_headers = get_headers_from(os.path.join(src_dir, "serac"))
     
     # check if each header in src is in install as well
     res = 0
@@ -83,6 +83,9 @@ def main():
             cmakelists_path = os.path.join(sh["path"], "CMakeLists.txt")
             print("Header '{0}' missing in {1}".format(sh["headerfile"], cmakelists_path))
             res = 1
+
+    if res == 0:
+        print("No missing headers found.")
 
     return res
 
