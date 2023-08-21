@@ -27,7 +27,7 @@ ContactPair::ContactPair(
 )
 : pair_id_ { pair_id },
   contact_opts_ { contact_opts },
-  coord_fe_space_ { *current_coords.ParFESpace() }
+  current_coords_ { current_coords }
 {
 #ifdef SERAC_USE_TRIBOL
   tribol::registerMfemCouplingScheme(
@@ -54,7 +54,7 @@ ContactPair::ContactPair(
 
 mfem::Vector ContactPair::contactForces() const
 {
-  mfem::Vector f(coord_fe_space_.GetVSize());
+  mfem::Vector f(current_coords_.ParFESpace()->GetVSize());
   f = 0.0;
 #ifdef SERAC_USE_TRIBOL
   tribol::getMfemResponse(getPairId(), f);
@@ -77,7 +77,8 @@ mfem::ParGridFunction& ContactPair::pressure() const
   return tribol::getMfemPressure(getPairId());
 #else
   SLIC_ERROR_ROOT("Serac built without Tribol.");
-  return {};
+  // just return some grid function lvalue to quiet compiler
+  return const_cast<mfem::ParGridFunction&>(current_coords_);
 #endif
 }
 
