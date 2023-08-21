@@ -52,14 +52,14 @@ def main():
 
     # ensure args are valid
     install_dir = args.install_dir
-    if not os.path.exists(install_dir):
-        print("Error: install directory does not exist {}".format(install_dir))
+    if not os.path.isdir(install_dir):
+        print("Error: install_dir is not a directory or does not exist: {}".format(install_dir))
         return 1
     install_dir = os.path.abspath(install_dir)
 
     src_dir = args.src_dir
-    if not os.path.exists(src_dir):
-        print("Error: src directory does not exist {}".format(src_dir))
+    if not os.path.isdir(src_dir):
+        print("Error: src_dir is not a directory or does not exist: {}".format(src_dir))
         return 1
     src_dir = os.path.abspath(src_dir)
 
