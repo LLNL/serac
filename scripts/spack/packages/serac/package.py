@@ -105,9 +105,7 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     depends_on("petsc", when="+petsc")
 
-    depends_on("tribol", when="+tribol")
-    depends_on("tribol+raja", when="+tribol+raja")
-    depends_on("tribol+umpire", when="+tribol+umpire")
+    depends_on("tribol~minbuild", when="+tribol")
 
     # Needs to be first due to a bug with the Spack concretizer
     # Note: Certain combinations of CMake and Conduit do not like +mpi
