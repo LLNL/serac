@@ -16,15 +16,17 @@
 
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/physics/common.hpp"
-#include "serac/physics/contact/contact_config.hpp"
 #include "serac/physics/solid_mechanics_input.hpp"
 #include "serac/physics/base_physics.hpp"
 #include "serac/numerics/odes.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"
-#include "serac/physics/contact/contact_data.hpp"
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/materials/solid_material.hpp"
+#ifdef SERAC_USE_TRIBOL
+#include "serac/physics/contact/contact_config.hpp"
+#include "serac/physics/contact/contact_data.hpp"
+#endif
 
 namespace serac {
 
@@ -148,8 +150,10 @@ public:
               *nonlin_solver_, bcs_),
         c0_(0.0),
         c1_(0.0),
-        geom_nonlin_(geom_nonlin),
-        contact_(mesh_)
+        geom_nonlin_(geom_nonlin)
+#ifdef SERAC_USE_TRIBOL
+        , contact_(mesh_)
+#endif
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension, {0}, and runtime mesh dimension, {1}, mismatch", dim,
@@ -839,7 +843,9 @@ public:
   {
     // the quasistatic case is entirely described by the residual,
     // there is no ordinary differential equation
+#ifdef SERAC_USE_TRIBOL
     if (contact_.contactPairs().empty()) {
+#endif
       return std::make_unique<mfem_ext::StdFunctionOperator>(
           displacement_.space().TrueVSize(),
 
@@ -863,6 +869,7 @@ public:
             J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             return *J_;
           });
+#ifdef SERAC_USE_TRIBOL
     } else {
       return std::make_unique<mfem_ext::StdFunctionOperator>(
           displacement_.space().GetTrueVSize() + contact_.numPressureTrueDofs(),
@@ -886,7 +893,7 @@ public:
             // with updated gaps, we can update pressure for contact pairs with penalty enforcement
             contact_.setPressures(p_blk);
             // call update again with the right pressures
-            contact_.update(1, 1.0, dt);
+            contact_.update(1, 1.0, dt, false);
 
             mfem::Vector res = (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
 
@@ -918,8 +925,10 @@ public:
             return *J_contact_;
           });
     }
+#endif
   }
 
+#ifdef SERAC_USE_TRIBOL
   /**
    * @brief Add a mortar contact boundary condition
    *
@@ -933,6 +942,7 @@ public:
   {
     contact_.addContactPair(pair_id, bdry_attr_surf1, bdry_attr_surf2, contact_opts);
   }
+#endif
 
   /**
    * @brief Return the assembled stiffness matrix
@@ -969,11 +979,13 @@ public:
     // Build the dof array lookup tables
     displacement_.space().BuildDofToArrays();
 
+#ifdef SERAC_USE_TRIBOL
     // create contact mesh and compute forces, pressures, and Jacobians
     if (!contact_.contactPairs().empty()) {
       double dt = 0.0;
       contact_.update(0, 0.0, dt);
     }
+#endif
 
     if (is_quasistatic_) {
       residual_with_bcs_ = buildQuasistaticOperator();
@@ -1038,9 +1050,12 @@ public:
     // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
 
     // Update the linearized Jacobian matrix
+#ifdef SERAC_USE_TRIBOL
     bool have_lagrange_multipliers = contact_.numPressureTrueDofs() != 0;
     if (!have_lagrange_multipliers) {
+#endif
       residual_with_bcs_->GetGradient(displacement_);
+#ifdef SERAC_USE_TRIBOL
     } else {
       int               disp_size = displacement_.Size();
       mfem::BlockVector augmented_solution(
@@ -1048,9 +1063,13 @@ public:
       augmented_solution.GetBlock(0) = displacement_;
       residual_with_bcs_->GetGradient(augmented_solution);
     }
+#endif
 
     auto jacobian =
-        contact_.contactPairs().empty() ? J_.get() : static_cast<mfem::HypreParMatrix*>(&J_contact_->GetBlock(0, 0));
+#ifdef SERAC_USE_TRIBOL
+        !contact_.contactPairs().empty() ? static_cast<mfem::HypreParMatrix*>(&J_contact_->GetBlock(0, 0)) :
+#endif
+        J_.get();
 
     du_ = 0.0;
     for (auto& bc : bcs_.essentials()) {
@@ -1098,8 +1117,11 @@ public:
     lin_solver.Mult(dr_, du_);
     displacement_ += du_;
 
+#ifdef SERAC_USE_TRIBOL
     if (!have_lagrange_multipliers) {
+#endif
       nonlin_solver_->solve(displacement_);
+#ifdef SERAC_USE_TRIBOL
     } else {
       int               disp_size = displacement_.Size();
       mfem::BlockVector augmented_solution(
@@ -1116,6 +1138,7 @@ public:
       displacement_.Set(1.0, u_block);
       contact_.setPressures(p_block);
     }
+#endif
   }
 
   /**
@@ -1345,8 +1368,10 @@ protected:
   /// Assembled sparse matrix for the Jacobian
   std::unique_ptr<mfem::HypreParMatrix> J_;
 
+#ifdef SERAC_USE_TRIBOL
   /// Assembled sparse matrix for the Jacobian with contact constraint blocks
   std::unique_ptr<mfem::BlockOperator> J_contact_;
+#endif
 
   /// rows and columns of J_ that have been separated out
   /// because are associated with essential boundary conditions
@@ -1385,8 +1410,10 @@ protected:
   /// @brief Coefficient containing the essential boundary values
   std::shared_ptr<mfem::Coefficient> component_disp_bdr_coef_;
 
+#ifdef SERAC_USE_TRIBOL
   /// @brief Class holding contact constraint data
   ContactData contact_;
+#endif
 
   /// @brief An auxilliary zero vector
   mfem::Vector zero_;
