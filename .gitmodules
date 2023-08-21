@@ -18,4 +18,4 @@
 	url = https://github.com/LLNL/radiuss-spack-configs.git
 [submodule "tribol"]
 	path = tribol
-	url = https://github.com/mfem/mfem.git
+	url = https://github.com/LLNL/Tribol.git
