@@ -34,15 +34,17 @@ def parse_arguments():
                         help="specify path of the src directory.")
     return parser.parse_known_args()
 
-# return list of dictionaries containing the path to and name of header file
+# return list of relative paths to header files
 def get_headers_from(dir):
     headers = []
     for (dirpath, dirnames, filenames) in os.walk(dir, topdown=True):
+        # skip tests directories
         if "tests" in dirnames:
             dirnames.remove("tests")
         for f in filenames:
             if ".hpp" in f and ".in" not in f:
-                headers.append({"path": dirpath, "headerfile": f})
+                relative_headerfile = dirpath.replace(dir + "/", "")
+                headers.append({"path": relative_headerfile, "headerfile": f})
     return headers
 
 def main():
@@ -80,7 +82,7 @@ def main():
                 found = True
                 break
         if not found:
-            cmakelists_path = os.path.join(sh["path"], "CMakeLists.txt")
+            cmakelists_path = os.path.join(src_dir, sh["path"], "CMakeLists.txt")
             print("Header '{0}' missing in {1}".format(sh["headerfile"], cmakelists_path))
             res = 1
 
