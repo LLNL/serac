@@ -382,19 +382,49 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(AXOM_FOUND TRUE CACHE BOOL "" FORCE)
 
         # Alias axom builtin thirdparty targets under axom namespace
-        add_library(axom::fmt ALIAS fmt)
-        add_library(axom::cli11 ALIAS cli11)
+        if(NOT TARGET axom::fmt)
+            add_library(axom::fmt ALIAS fmt)
+        endif()
+        if(NOT TARGET axom::cli11)
+            add_library(axom::cli11 ALIAS cli11)
+        endif()
 
-        # Mark the axom includes as "system" and filter unallowed directories
-        get_target_property(_dirs axom INTERFACE_INCLUDE_DIRECTORIES)
-        list(REMOVE_ITEM _dirs ${PROJECT_SOURCE_DIR})
-        set_property(TARGET axom 
-                     PROPERTY INTERFACE_INCLUDE_DIRECTORIES
-                     "${_dirs}")
-        set_property(TARGET axom 
-                     APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
-                     "${_dirs}")
+        if(NOT TARGET axom)
+            # New axom target case where all components have individual libraries
 
+            # Create convenience target that bundles all Axom targets (axom)
+            # This normally happens in axom's installed config file
+            add_library(axom INTERFACE IMPORTED)
+
+            set(AXOM_COMPONENTS_ENABLED
+              core;lumberjack;slic;slam;primal;sidre;mint;spin;inlet;klee;quest;multimat)
+            target_link_libraries(axom INTERFACE ${AXOM_COMPONENTS_ENABLED})
+
+            if(ENABLE_OPENMP)
+                target_link_libraries(axom INTERFACE openmp)
+            endif()
+
+            # Mark the axom includes as "system" and filter unallowed directories
+            get_target_property(_dirs core INTERFACE_INCLUDE_DIRECTORIES)
+            set_property(TARGET core 
+                         PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+                         "${_dirs}")
+            set_property(TARGET core 
+                         APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+                         "${_dirs}")
+        else()
+            # Old axom way where there is a singular combined axom library
+
+            # Mark the axom includes as "system" and filter unallowed directories
+            get_target_property(_dirs axom INTERFACE_INCLUDE_DIRECTORIES)
+            list(REMOVE_ITEM _dirs ${PROJECT_SOURCE_DIR})
+            set_property(TARGET axom 
+                         PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+                         "${_dirs}")
+            set_property(TARGET axom 
+                         APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+                         "${_dirs}")
+        endif()
     endif()
 
     #------------------------------------------------------------------------------

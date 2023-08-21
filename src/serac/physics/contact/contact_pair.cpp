@@ -5,6 +5,9 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/physics/contact/contact_pair.hpp"
+
+#include "axom/slic.hpp"
+
 #include "serac/physics/contact/contact_config.hpp"
 
 #ifdef SERAC_USE_TRIBOL
@@ -14,44 +17,23 @@
 
 namespace serac {
 
-ContactPair::ContactPair(
-  int pair_id,
-  const mfem::ParMesh& mesh,
-  const std::set<int>& bdry_attr_surf1,
-  const std::set<int>& bdry_attr_surf2,
-  const mfem::ParGridFunction& current_coords,
-  ContactOptions contact_opts
-)
-: pair_id_ { pair_id },
-  contact_opts_ { contact_opts },
-  coord_fe_space_ { *current_coords.ParFESpace() }
+ContactPair::ContactPair(int pair_id, [[maybe_unused]] const mfem::ParMesh& mesh,
+                         [[maybe_unused]] const std::set<int>& bdry_attr_surf1,
+                         [[maybe_unused]] const std::set<int>& bdry_attr_surf2,
+                         const mfem::ParGridFunction& current_coords, ContactOptions contact_opts)
+    : pair_id_{pair_id}, contact_opts_{contact_opts}, current_coords_{current_coords}
 {
 #ifdef SERAC_USE_TRIBOL
-  tribol::registerMfemCouplingScheme(
-    pair_id, 
-    2*pair_id,
-    2*pair_id + 1,
-    mesh,
-    current_coords,
-    bdry_attr_surf1,
-    bdry_attr_surf2, 
-    tribol::SURFACE_TO_SURFACE,
-    tribol::NO_SLIDING,
-    getMethod(),
-    tribol::FRICTIONLESS,
-    tribol::LAGRANGE_MULTIPLIER
-  );
-
-  tribol::setLagrangeMultiplierOptions(
-    pair_id, 
-    tribol::ImplicitEvalMode::MORTAR_RESIDUAL_JACOBIAN
-  );
+  tribol::registerMfemCouplingScheme(pair_id, 2 * pair_id, 2 * pair_id + 1, mesh, current_coords, bdry_attr_surf1,
+                                     bdry_attr_surf2, tribol::SURFACE_TO_SURFACE, tribol::NO_SLIDING, getMethod(),
+                                     tribol::FRICTIONLESS, tribol::LAGRANGE_MULTIPLIER);
+  tribol::setLagrangeMultiplierOptions(pair_id, tribol::ImplicitEvalMode::MORTAR_RESIDUAL_JACOBIAN);
 #endif
 }
 
 mfem::Vector ContactPair::contactForces() const
 {
-  mfem::Vector f(coord_fe_space_.GetVSize());
+  mfem::Vector f(current_coords_.ParFESpace()->GetVSize());
   f = 0.0;
 #ifdef SERAC_USE_TRIBOL
   tribol::getMfemResponse(getPairId(), f);
@@ -74,21 +56,26 @@ mfem::ParGridFunction& ContactPair::pressure() const
   return tribol::getMfemPressure(getPairId());
 #else
   SLIC_ERROR_ROOT("Serac built without Tribol.");
+  // just return some grid function lvalue to quiet compiler
+  return const_cast<mfem::ParGridFunction&>(current_coords_);
 #endif
 }
 
 int ContactPair::numTruePressureDofs() const
 {
-  return getContactOptions().enforcement == ContactEnforcement::LagrangeMultiplier ?
-    tribol::getMfemPressure(getPairId()).ParFESpace()->GetTrueVSize() :
-    0;
+#ifdef SERAC_USE_TRIBOL
+  return getContactOptions().enforcement == ContactEnforcement::LagrangeMultiplier
+             ? tribol::getMfemPressure(getPairId()).ParFESpace()->GetTrueVSize()
+             : 0;
+#else
+  return 0;
+#endif
 }
 
 #ifdef SERAC_USE_TRIBOL
 tribol::ContactMethod ContactPair::getMethod() const
 {
-  switch (contact_opts_.method)
-  {
+  switch (contact_opts_.method) {
     case ContactMethod::SingleMortar:
       return tribol::SINGLE_MORTAR;
       break;
