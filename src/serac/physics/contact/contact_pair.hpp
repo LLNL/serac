@@ -55,33 +55,56 @@ public:
     ContactOptions contact_opts
   );
 
+  /**
+   * @brief Get the integer identifier of the contact pair
+   * 
+   * @return Contact pair ID
+   */
   int getPairId() const { return pair_id_; }
 
+  /**
+   * @brief Get the contact options for the contact pair
+   * 
+   * @return Struct of contact options
+   */
   const ContactOptions& getContactOptions() const { return contact_opts_; }
 
+  /**
+   * @brief Get the contact constraint residual for the contact pair
+   * 
+   * @return Contact nodal forces as a Vector
+   */
   mfem::Vector contactForces() const;
 
+  /**
+   * @brief Get the nodal gaps for the contact pair
+   * 
+   * @return Nodal gaps as a Vector
+   */
   mfem::Vector gaps() const;
 
+  /**
+   * @brief Get the pressure degrees of freedom for the contact pair
+   * 
+   * @return Pressure degrees of freedom as a ParGridFunction
+   */
   mfem::ParGridFunction& pressure() const;
 
   /**
-   * @brief Returns the number of pressure true DOFs on this rank.
+   * @brief Returns the number of pressure true DOFs on this rank
    * 
-   * @return int 
+   * @return Number of pressure true DOFs as an integer
    */
   int numTruePressureDofs() const;
-
-  /**
-   * @brief Returns the total number of pressure true DOFs across all ranks.
-   * 
-   * @return int 
-   */
-  int numPressureDofs() const;
 
 private:
 
 #ifdef SERAC_USE_TRIBOL
+  /**
+   * @brief Get the Tribol enforcement method given a serac enforcement method
+   *
+   * @return Tribol enforcement method
+   */
   tribol::ContactMethod getMethod() const;
 #endif
 
@@ -95,6 +118,9 @@ private:
    */
   ContactOptions contact_opts_;
 
+  /**
+   * @brief Reference to the current coords GridFunction
+   */
   const mfem::ParGridFunction& current_coords_;
 
 };

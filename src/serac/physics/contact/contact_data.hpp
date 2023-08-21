@@ -20,6 +20,10 @@ namespace serac {
 
 namespace contact {
 
+/**
+ * @brief Default contact options: frictionless mortar with penalty = 1000
+ * enforcement
+ */
 const ContactOptions default_contact_options = {.method =      ContactMethod::SingleMortar,
                                                 .enforcement = ContactEnforcement::Penalty,
                                                 .type =        ContactType::Frictionless,
@@ -27,6 +31,9 @@ const ContactOptions default_contact_options = {.method =      ContactMethod::Si
 
 } // namespace contact
 
+/**
+ * @brief This class stores contact pair data and interacts with Tribol
+ */
 class ContactData {
 public:
 
@@ -84,21 +91,43 @@ public:
   const std::vector<ContactPair>& contactPairs() const { return pairs_; }
 
   /**
-   * @brief Get the abstract constraint residual
+   * @brief Get the contact constraint residual (i.e. nodal forces)
    *
-   * @return The abstract constraint residual/RHS
+   * @return Nodal contact forces as a Vector
    */
   mfem::Vector trueContactForces() const;
 
+  /**
+   * @brief Returns pressures on Lagrange multiplier true degrees of freedom
+   *
+   * @return Pressure true degrees of freedom as a Vector
+   */
   mfem::Vector truePressures() const;
 
+  /**
+   * @brief Returns nodal gaps on true degrees of freedom
+   * 
+   * @return Nodal gaps as a Vector
+   */
   mfem::Vector trueGaps() const;
 
+  /**
+   * @brief Returns a 2x2 block Jacobian on displacement/pressure degrees of
+   * freedom from contact constraints
+   *
+   * @return Pointer to block Jacobian (2x2 BlockOperator of HypreParMatrix)
+   */
   std::unique_ptr<mfem::BlockOperator> contactJacobian() const;
 
   /**
    * @brief Set the pressure field
-   * 
+   *
+   * This sets Tribol's pressure degrees of freedom based on
+   *  1) the values in true_pressure for Lagrange multiplier enforcement
+   *  2) the nodal gaps and penalty for penalty enforcement
+   *
+   * @note The nodal gaps must be up-to-date for penalty enforcement
+   *
    * @param true_pressures Current pressure true dof values
    */
   void setPressures(const mfem::Vector& true_pressures) const;
@@ -111,20 +140,20 @@ public:
   void setDisplacements(const mfem::Vector& true_displacements);
 
   /**
-   * @brief Get the number of secondary nodes
+   * @brief Get the number of Lagrange multiplier true degrees of freedom
    *
-   * @return The number of secondary nodes
+   * @return Number of Lagrange multiplier true degrees of freedom
    */
   int numPressureTrueDofs() const { return num_pressure_true_dofs_; };
 
-  mfem::Array<int> pressureTrueDofOffsets() const;
-
   /**
-   * @brief Get the reference nodes
+   * @brief True degree of freedom offsets for each contact constraint
    *
-   * @return Pointer to the reference nodes ParGridFunction
+   * @note Only includes constraints with Lagrange multiplier enforcement
+   *
+   * @return True degree of freedom offsets as an Array
    */
-  const mfem::ParGridFunction* referenceNodes() const { return reference_nodes_; };
+  mfem::Array<int> pressureTrueDofOffsets() const;
 
 private:
 
