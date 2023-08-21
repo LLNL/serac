@@ -10,79 +10,57 @@
 
 #include "serac/physics/contact/contact_config.hpp"
 
-#ifdef SERAC_USE_TRIBOL
 #include "tribol/interface/tribol.hpp"
 #include "tribol/interface/mfem_tribol.hpp"
-#endif
 
 namespace serac {
 
 ContactData::ContactData([[maybe_unused]] const mfem::ParMesh& mesh)
-    :
-#ifdef SERAC_USE_TRIBOL
-      mesh_{mesh},
-#endif
+    : mesh_{mesh},
       reference_nodes_{dynamic_cast<const mfem::ParGridFunction*>(mesh.GetNodes())},
       current_coords_{*reference_nodes_},
       num_pressure_true_dofs_{0}
 {
-#ifdef SERAC_USE_TRIBOL
   tribol::initialize(mesh_.SpaceDimension(), mesh_.GetComm());
-#endif
 }
 
 ContactData::~ContactData()
 {
-#ifdef SERAC_USE_TRIBOL
   tribol::finalize();
-#endif
 }
 
-void ContactData::addContactPair([[maybe_unused]] int pair_id, [[maybe_unused]] const std::set<int>& bdry_attr_surf1,
-                                 [[maybe_unused]] const std::set<int>& bdry_attr_surf2,
-                                 [[maybe_unused]] ContactOptions       contact_opts)
+void ContactData::addContactPair(int pair_id, const std::set<int>& bdry_attr_surf1, const std::set<int>& bdry_attr_surf2,
+                                 ContactOptions contact_opts)
 {
-#ifdef SERAC_USE_TRIBOL
   contactPairs().emplace_back(pair_id, mesh_, bdry_attr_surf1, bdry_attr_surf2, current_coords_, contact_opts);
   if (contact_opts.enforcement == ContactEnforcement::LagrangeMultiplier) {
     num_pressure_true_dofs_ += contactPairs().back().numTruePressureDofs();
   }
-#else
-  SLIC_WARNING_ROOT("Serac not built with Tribol. No contact pair added.");
-#endif
 }
 
-void ContactData::update([[maybe_unused]] int cycle, [[maybe_unused]] double time, [[maybe_unused]] double& dt,
-                         [[maybe_unused]] bool update_redecomp)
+void ContactData::update(int cycle, double time, double& dt, bool update_redecomp)
 {
-#ifdef SERAC_USE_TRIBOL
   if (update_redecomp) {
     tribol::updateMfemParallelDecomposition();
   }
   tribol::update(cycle, time, dt);
-#endif
 }
 
 mfem::Vector ContactData::trueContactForces() const
 {
   mfem::Vector f_true(reference_nodes_->ParFESpace()->GetTrueVSize());
-#ifdef SERAC_USE_TRIBOL
   mfem::Vector f(reference_nodes_->ParFESpace()->GetVSize());
   f = 0.0;
   for (const auto& pair : contactPairs()) {
     f += pair.contactForces();
   }
   reference_nodes_->ParFESpace()->GetProlongationMatrix()->MultTranspose(f, f_true);
-#else
-  f_true = 0.0;
-#endif
   return f_true;
 }
 
 mfem::Vector ContactData::truePressures() const
 {
   mfem::Vector p_true(numPressureTrueDofs());
-#ifdef SERAC_USE_TRIBOL
   auto dof_offsets = pressureTrueDofOffsets();
   for (size_t i{0}; i < contactPairs().size(); ++i) {
     if (contactPairs()[i].getContactOptions().enforcement == ContactEnforcement::LagrangeMultiplier) {
@@ -93,14 +71,12 @@ mfem::Vector ContactData::truePressures() const
                                                                                         p_pair_true);
     }
   }
-#endif
   return p_true;
 }
 
 mfem::Vector ContactData::trueGaps() const
 {
   mfem::Vector g_true(numPressureTrueDofs());
-#ifdef SERAC_USE_TRIBOL
   auto dof_offsets = pressureTrueDofOffsets();
   for (size_t i{0}; i < contactPairs().size(); ++i) {
     if (contactPairs()[i].getContactOptions().enforcement == ContactEnforcement::LagrangeMultiplier) {
@@ -111,7 +87,6 @@ mfem::Vector ContactData::trueGaps() const
                                                                                         g_pair_true);
     }
   }
-#endif
   return g_true;
 }
 
@@ -121,7 +96,6 @@ std::unique_ptr<mfem::BlockOperator> ContactData::contactJacobian() const
                                         numPressureTrueDofs() + reference_nodes_->ParFESpace()->GetTrueVSize()});
   auto block_J         = std::make_unique<mfem::BlockOperator>(jacobian_offsets_);
   block_J->owns_blocks = true;
-#ifdef SERAC_USE_TRIBOL
   mfem::Array2D<mfem::HypreParMatrix*> constraint_matrices(static_cast<int>(contactPairs().size()), 1);
   for (size_t i{0}; i < contactPairs().size(); ++i) {
     auto pair_J         = tribol::getMfemBlockJacobian(contactPairs()[i].getPairId());
@@ -179,7 +153,6 @@ std::unique_ptr<mfem::BlockOperator> ContactData::contactJacobian() const
     block_J->SetBlock(1, 0, mfem::HypreParMatrixFromBlocks(constraint_matrices));
     block_J->SetBlock(0, 1, new mfem::TransposeOperator(block_J->GetBlock(1, 0)));
   }
-#endif
   return block_J;
 }
 
@@ -192,9 +165,8 @@ mfem::Array<int> ContactData::pressureTrueDofOffsets() const
   return dof_offsets;
 }
 
-void ContactData::setPressures([[maybe_unused]] const mfem::Vector& true_pressures) const
+void ContactData::setPressures(const mfem::Vector& true_pressures) const
 {
-#ifdef SERAC_USE_TRIBOL
   auto dof_offsets = pressureTrueDofOffsets();
   for (size_t i{0}; i < contactPairs().size(); ++i) {
     if (contactPairs()[i].getContactOptions().enforcement == ContactEnforcement::LagrangeMultiplier) {
@@ -208,15 +180,12 @@ void ContactData::setPressures([[maybe_unused]] const mfem::Vector& true_pressur
       contactPairs()[i].pressure().Set(contactPairs()[i].getContactOptions().penalty, contactPairs()[i].gaps());
     }
   }
-#endif
 }
 
-void ContactData::setDisplacements([[maybe_unused]] const mfem::Vector& true_displacement)
+void ContactData::setDisplacements(const mfem::Vector& true_displacement)
 {
-#ifdef SERAC_USE_TRIBOL
   reference_nodes_->ParFESpace()->GetProlongationMatrix()->Mult(true_displacement, current_coords_);
   current_coords_ += *reference_nodes_;
-#endif
 }
 
 }  // namespace serac

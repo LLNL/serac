@@ -18,9 +18,7 @@
 #include "serac/physics/contact/contact_config.hpp"
 #include "serac/physics/state/finite_element_state.hpp"
 
-#ifdef SERAC_USE_TRIBOL
 #include "tribol/common/Parameters.hpp"
-#endif
 
 namespace serac {
 
@@ -92,14 +90,12 @@ public:
   int numTruePressureDofs() const;
 
 private:
-#ifdef SERAC_USE_TRIBOL
   /**
    * @brief Get the Tribol enforcement method given a serac enforcement method
    *
    * @return Tribol enforcement method
    */
   tribol::ContactMethod getMethod() const;
-#endif
 
   /**
    * @brief Unique identifier for the contact interaction
