@@ -85,7 +85,7 @@ def main():
                 break
         if not found:
             cmakelists_path = os.path.join(src_dir, sh["path"], "CMakeLists.txt")
-            print("Header '{0}' missing in {1}".format(sh["headerfile"], cmakelists_path))
+            print("Header '{0}' is missing; it should probably be listed in {1}".format(sh["headerfile"], cmakelists_path))
             res = 1
 
     if res == 0:
