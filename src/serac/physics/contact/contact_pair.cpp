@@ -47,9 +47,6 @@ mfem::Vector ContactPair::gaps() const
 mfem::ParGridFunction& ContactPair::pressure() const
 {
   return tribol::getMfemPressure(getPairId());
-  SLIC_ERROR_ROOT("Serac built without Tribol.");
-  // just return some grid function lvalue to quiet compiler
-  return const_cast<mfem::ParGridFunction&>(current_coords_);
 }
 
 int ContactPair::numPressureTrueDofs() const

@@ -886,7 +886,7 @@ public:
             // with updated gaps, we can update pressure for contact pairs with penalty enforcement
             contact_.setPressures(p_blk);
             // call update again with the right pressures
-            contact_.update(1, 1.0, dt, false);
+            contact_.update(1, 1.0, dt);
 
             mfem::Vector res = (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
 
@@ -895,7 +895,7 @@ public:
             r_blk = res;
             r_blk.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
 
-            g_blk = contact_.trueGaps();
+            g_blk.Set(1.0, contact_.trueGaps());
           },
 
           // gradient of residual function with contact Jacobian
