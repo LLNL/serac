@@ -7,10 +7,7 @@
 add_subdirectory(materials)
 add_subdirectory(state)
 add_subdirectory(boundary_conditions)
-
-if(SERAC_USE_TRIBOL)
-    add_subdirectory(contact)
-endif()
+add_subdirectory(contact)
 
 if(ENABLE_TESTS)
     add_subdirectory(tests)
@@ -41,9 +38,9 @@ set(physics_headers
 set(physics_dependencies
     serac_state
     serac_boundary_conditions
+    serac_contact
     serac_numerics
     )
-blt_list_append(TO physics_dependencies ELEMENTS serac_contact IF SERAC_USE_TRIBOL)
 
 blt_add_library(
     NAME        serac_physics

@@ -14,7 +14,11 @@
 
 #include "mfem.hpp"
 
+#include "serac/serac_config.hpp"
+#include "serac/physics/contact/contact_config.hpp"
+#ifdef SERAC_USE_TRIBOL
 #include "serac/physics/contact/contact_pair.hpp"
+#endif
 
 namespace serac {
 
@@ -70,18 +74,12 @@ public:
   void update(int cycle, double time, double& dt, bool update_redecomp = true);
 
   /**
-   * @brief Return the contact data for each contact pair
-   *
-   * @return Reference to vector of contact pairs
+   * @brief Have there been contact pairs added?
+   * 
+   * @return true if contact pairs have been added
+   * @return false if there are no contact pairs
    */
-  std::vector<ContactPair>& contactPairs() { return pairs_; }
-
-  /**
-   * @brief Return the contact data for each contact pair (const overload)
-   *
-   * @return Const reference to vector of contact pairs
-   */
-  const std::vector<ContactPair>& contactPairs() const { return pairs_; }
+  bool haveContactPairs() const;
 
   /**
    * @brief Get the contact constraint residual (i.e. nodal forces)
@@ -152,9 +150,7 @@ private:
   /**
    * @brief The volume mesh for the problem
    */
-#ifdef SERAC_USE_TRIBOL
   const mfem::ParMesh& mesh_;
-#endif
 
   /**
    * @brief Reference coordinates of the mesh
@@ -166,10 +162,12 @@ private:
    */
   mfem::ParGridFunction current_coords_;
 
+#ifdef SERAC_USE_TRIBOL
   /**
    * @brief The contact boundary condition information
    */
   std::vector<ContactPair> pairs_;
+#endif
 
   /**
    * @brief Pressure T-dof count

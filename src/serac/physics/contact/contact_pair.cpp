@@ -6,6 +6,8 @@
 
 #include "serac/physics/contact/contact_pair.hpp"
 
+#ifdef SERAC_USE_TRIBOL
+
 #include "axom/slic.hpp"
 
 #include "serac/physics/contact/contact_config.hpp"
@@ -15,9 +17,9 @@
 
 namespace serac {
 
-ContactPair::ContactPair(int pair_id, [[maybe_unused]] const mfem::ParMesh& mesh,
-                         [[maybe_unused]] const std::set<int>& bdry_attr_surf1,
-                         [[maybe_unused]] const std::set<int>& bdry_attr_surf2,
+ContactPair::ContactPair(int pair_id, const mfem::ParMesh& mesh,
+                         const std::set<int>& bdry_attr_surf1,
+                         const std::set<int>& bdry_attr_surf2,
                          const mfem::ParGridFunction& current_coords, ContactOptions contact_opts)
     : pair_id_{pair_id}, contact_opts_{contact_opts}, current_coords_{current_coords}
 {
@@ -50,7 +52,7 @@ mfem::ParGridFunction& ContactPair::pressure() const
   return const_cast<mfem::ParGridFunction&>(current_coords_);
 }
 
-int ContactPair::numTruePressureDofs() const
+int ContactPair::numPressureTrueDofs() const
 {
   return getContactOptions().enforcement == ContactEnforcement::LagrangeMultiplier
              ? tribol::getMfemPressure(getPairId()).ParFESpace()->GetTrueVSize()
@@ -71,3 +73,5 @@ tribol::ContactMethod ContactPair::getMethod() const
 }
 
 }  // namespace serac
+
+#endif
