@@ -12,9 +12,12 @@
 
 #pragma once
 
+#include "serac/serac_config.hpp"
+
+#ifdef SERAC_USE_TRIBOL
+
 #include "mfem.hpp"
 
-#include "serac/serac_config.hpp"
 #include "serac/physics/contact/contact_config.hpp"
 #include "serac/physics/state/finite_element_state.hpp"
 
@@ -87,7 +90,7 @@ public:
    *
    * @return Number of pressure true DOFs as an integer
    */
-  int numTruePressureDofs() const;
+  int numPressureTrueDofs() const;
 
 private:
   /**
@@ -114,3 +117,5 @@ private:
 };
 
 }  // namespace serac
+
+#endif
