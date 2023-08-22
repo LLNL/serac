@@ -42,11 +42,9 @@ bool ContactData::haveContactPairs() const
   return !pairs_.empty();
 }
 
-void ContactData::update(int cycle, double time, double& dt, bool update_redecomp)
+void ContactData::update(int cycle, double time, double& dt)
 {
-  if (update_redecomp) {
-    tribol::updateMfemParallelDecomposition();
-  }
+  tribol::updateMfemParallelDecomposition();
   tribol::update(cycle, time, dt);
 }
 
@@ -72,7 +70,7 @@ mfem::Vector ContactData::truePressures() const
       p_pair_true.MakeRef(p_true, dof_offsets[static_cast<int>(i)],
                           dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
       pairs_[i].pressure().ParFESpace()->GetProlongationMatrix()->MultTranspose(pairs_[i].pressure(),
-                                                                                        p_pair_true);
+                                                                                p_pair_true);
     }
   }
   return p_true;
@@ -88,7 +86,7 @@ mfem::Vector ContactData::trueGaps() const
       g_pair_true.MakeRef(g_true, dof_offsets[static_cast<int>(i)],
                           dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
       pairs_[i].pressure().ParFESpace()->GetProlongationMatrix()->MultTranspose(pairs_[i].gaps(),
-                                                                                        g_pair_true);
+                                                                                g_pair_true);
     }
   }
   return g_true;
@@ -163,6 +161,7 @@ std::unique_ptr<mfem::BlockOperator> ContactData::contactJacobian() const
 mfem::Array<int> ContactData::pressureTrueDofOffsets() const
 {
   mfem::Array<int> dof_offsets(static_cast<int>(pairs_.size()) + 1);
+  dof_offsets = 0;
   for (size_t i{0}; i < pairs_.size(); ++i) {
     dof_offsets[static_cast<int>(i + 1)] = dof_offsets[static_cast<int>(i)] + pairs_[i].numPressureTrueDofs();
   }

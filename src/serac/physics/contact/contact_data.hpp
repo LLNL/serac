@@ -69,9 +69,8 @@ public:
    * @param cycle The current simulation cycle
    * @param time The current time
    * @param dt The timestep size to attempt
-   * @param update_redecomp Re-builds redecomp mesh and updates data if true
    */
-  void update(int cycle, double time, double& dt, bool update_redecomp = true);
+  void update(int cycle, double time, double& dt);
 
   /**
    * @brief Have there been contact pairs added?

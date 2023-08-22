@@ -47,7 +47,7 @@ TEST(ContactTest, patch)
                                             .print_level    = 1};
 
 #ifdef MFEM_USE_SUNDIALS
-  serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::KINFullStep,
+  serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::Newton,//KINFullStep,
                                                   .relative_tol   = 1.0e-12,
                                                   .absolute_tol   = 1.0e-12,
                                                   .max_iterations = 5000,
@@ -61,7 +61,7 @@ TEST(ContactTest, patch)
 #endif
 
   serac::ContactOptions contact_options{.method      = ContactMethod::SingleMortar,
-                                        .enforcement = ContactEnforcement::Penalty,
+                                        .enforcement = ContactEnforcement::LagrangeMultiplier,
                                         .type        = ContactType::Frictionless,
                                         .penalty     = 1.0e4};
 
