@@ -28,7 +28,7 @@ enum class ContactMethod
 enum class ContactEnforcement
 {
   Penalty,           /**< Equal penalty applied to all constrained dofs */
-  LagrangeMultiplier /**< Solve for exact pressures to satisfy constraints */ 
+  LagrangeMultiplier /**< Solve for exact pressures to satisfy constraints */
 };
 
 /**

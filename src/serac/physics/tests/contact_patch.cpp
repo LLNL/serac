@@ -47,7 +47,7 @@ TEST(ContactTest, patch)
                                             .print_level    = 1};
 
 #ifdef MFEM_USE_SUNDIALS
-  serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::Newton,//KINFullStep,
+  serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::KINFullStep,
                                                   .relative_tol   = 1.0e-12,
                                                   .absolute_tol   = 1.0e-12,
                                                   .max_iterations = 5000,
@@ -60,22 +60,22 @@ TEST(ContactTest, patch)
                                                   .print_level    = 1};
 #endif
 
-  serac::ContactOptions contact_options{.method =      ContactMethod::SingleMortar,
+  serac::ContactOptions contact_options{.method      = ContactMethod::SingleMortar,
                                         .enforcement = ContactEnforcement::Penalty,
-                                        .type =        ContactType::Frictionless,
-                                        .penalty =     1.0e4};
+                                        .type        = ContactType::Frictionless,
+                                        .penalty     = 1.0e4};
 
   SolidMechanics<p, dim> solid_solver(nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options,
                                       GeometricNonlinearities::On, "solid_mechanics");
 
-  double                             K = 10.0;
-  double                             G = 0.25;
+  double                      K = 10.0;
+  double                      G = 0.25;
   solid_mechanics::NeoHookean mat{1.0, K, G};
   solid_solver.setMaterial(mat);
 
   // Define the function for the initial displacement and boundary condition
-  auto zero_disp_bc = [](const mfem::Vector&){ return 0.0; };
-  auto nonzero_disp_bc = [](const mfem::Vector&){ return -0.01; };
+  auto zero_disp_bc    = [](const mfem::Vector&) { return 0.0; };
+  auto nonzero_disp_bc = [](const mfem::Vector&) { return -0.01; };
 
   // Define a boundary attribute set and specify initial / boundary conditions
   solid_solver.setDisplacementBCs({1}, zero_disp_bc, 0);

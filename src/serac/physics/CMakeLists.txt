@@ -38,8 +38,8 @@ set(physics_headers
 set(physics_dependencies
     serac_state
     serac_boundary_conditions
-    serac_numerics
     serac_contact
+    serac_numerics
     )
 
 blt_add_library(

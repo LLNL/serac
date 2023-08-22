@@ -12,15 +12,16 @@
 
 #pragma once
 
+#include "serac/serac_config.hpp"
+
+#ifdef SERAC_USE_TRIBOL
+
 #include "mfem.hpp"
 
-#include "serac/serac_config.hpp"
 #include "serac/physics/contact/contact_config.hpp"
 #include "serac/physics/state/finite_element_state.hpp"
 
-#ifdef SERAC_USE_TRIBOL
 #include "tribol/common/Parameters.hpp"
-#endif
 
 namespace serac {
 
@@ -89,17 +90,15 @@ public:
    *
    * @return Number of pressure true DOFs as an integer
    */
-  int numTruePressureDofs() const;
+  int numPressureTrueDofs() const;
 
 private:
-#ifdef SERAC_USE_TRIBOL
   /**
    * @brief Get the Tribol enforcement method given a serac enforcement method
    *
    * @return Tribol enforcement method
    */
   tribol::ContactMethod getMethod() const;
-#endif
 
   /**
    * @brief Unique identifier for the contact interaction
@@ -118,3 +117,5 @@ private:
 };
 
 }  // namespace serac
+
+#endif

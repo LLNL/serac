@@ -16,15 +16,15 @@
 
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/physics/common.hpp"
-#include "serac/physics/contact/contact_config.hpp"
 #include "serac/physics/solid_mechanics_input.hpp"
 #include "serac/physics/base_physics.hpp"
 #include "serac/numerics/odes.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"
-#include "serac/physics/contact/contact_data.hpp"
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/materials/solid_material.hpp"
+#include "serac/physics/contact/contact_config.hpp"
+#include "serac/physics/contact/contact_data.hpp"
 
 namespace serac {
 
@@ -839,7 +839,7 @@ public:
   {
     // the quasistatic case is entirely described by the residual,
     // there is no ordinary differential equation
-    if (contact_.contactPairs().empty()) {
+    if (!contact_.haveContactPairs()) {
       return std::make_unique<mfem_ext::StdFunctionOperator>(
           displacement_.space().TrueVSize(),
 
@@ -886,7 +886,7 @@ public:
             // with updated gaps, we can update pressure for contact pairs with penalty enforcement
             contact_.setPressures(p_blk);
             // call update again with the right pressures
-            contact_.update(1, 1.0, dt);
+            contact_.update(1, 1.0, dt, false);
 
             mfem::Vector res = (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
 
@@ -970,7 +970,7 @@ public:
     displacement_.space().BuildDofToArrays();
 
     // create contact mesh and compute forces, pressures, and Jacobians
-    if (!contact_.contactPairs().empty()) {
+    if (contact_.haveContactPairs()) {
       double dt = 0.0;
       contact_.update(0, 0.0, dt);
     }
@@ -1050,7 +1050,7 @@ public:
     }
 
     auto jacobian =
-        contact_.contactPairs().empty() ? J_.get() : static_cast<mfem::HypreParMatrix*>(&J_contact_->GetBlock(0, 0));
+        contact_.haveContactPairs() ? static_cast<mfem::HypreParMatrix*>(&J_contact_->GetBlock(0, 0)) : J_.get();
 
     du_ = 0.0;
     for (auto& bc : bcs_.essentials()) {
