@@ -178,7 +178,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         #### Store Data that MFEM clears
         set(tpls_to_save AMGX AXOM CALIPER CAMP CONDUIT HDF5
                          HYPRE LUA METIS MFEM NETCDF PARMETIS PETSC RAJA 
-                         SUPERLU_DIST SUNDIALS TRIBOL UMPIRE)
+                         SUPERLU_DIST STRUMPACK SUNDIALS TRIBOL UMPIRE)
         foreach(_tpl ${tpls_to_save})
             set(${_tpl}_DIR_SAVE "${${_tpl}_DIR}")
         endforeach()
@@ -220,6 +220,14 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             # MFEM uses a slightly different naming convention
             set(SuperLUDist_DIR ${SUPERLUDIST_DIR} CACHE PATH "")
             set(MFEM_USE_SUPERLU ${ENABLE_MPI} CACHE BOOL "")
+        endif()
+        if(STRUMPACK_DIR)
+            serac_assert_is_directory(VARIABLE_NAME STRUMPACK_DIR)
+            set(MFEM_USE_STRUMPACK ON CACHE BOOL "")
+            set(STRUMPACK_REQUIRED_PACKAGES "MPI" "MPI_Fortran" "ParMETIS" "METIS"
+                "ScaLAPACK" CACHE STRING
+                "Additional packages required by STRUMPACK.")
+                target_link_libraries(mfem INTERFACE fortran)
         endif()
         set(MFEM_USE_UMPIRE OFF CACHE BOOL "")
         set(MFEM_USE_ZLIB ON CACHE BOOL "")
@@ -516,7 +524,8 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         conduit_relay_mpi
         conduit_relay_mpi_io
         conduit_blueprint
-        conduit_blueprint_mpi)
+        conduit_blueprint_mpi
+        axom::mfem)
 
     foreach(_target ${_imported_targets})
         if(TARGET ${_target})
