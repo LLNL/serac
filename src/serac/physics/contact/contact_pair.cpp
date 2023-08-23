@@ -97,13 +97,16 @@ tribol::ContactMethod ContactPair::getMethod() const
 const mfem::Array<int>& ContactPair::inactiveTrueDofs() const
 {
   if (getContactOptions().type == ContactType::Frictionless) {
-    auto& p = tribol::getMfemPressure(getPairId());
+    auto& p = pressure();
+    auto g = gaps();
     mfem::Vector p_true(p.ParFESpace()->GetTrueVSize());
     p.ParFESpace()->GetRestrictionOperator()->Mult(p, p_true);
+    mfem::Vector g_true(p.ParFESpace()->GetTrueVSize());
+    p.ParFESpace()->GetProlongationMatrix()->MultTranspose(g, g_true);
     std::vector<int> inactive_tdofs_vector;
     inactive_tdofs_vector.reserve(static_cast<size_t>(p_true.Size()));
     for (int d{0}; d < p_true.Size(); ++d) {
-      if (p_true[d] >= 0.0) {
+      if (p_true[d] >= 0.0 && g_true[d] >= 0.0) {
         inactive_tdofs_vector.push_back(d);
       }
     }

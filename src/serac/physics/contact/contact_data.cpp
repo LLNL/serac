@@ -70,8 +70,8 @@ mfem::Vector ContactData::truePressures() const
       mfem::Vector p_pair_true;
       p_pair_true.MakeRef(p_true, dof_offsets[static_cast<int>(i)],
                           dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
-      pairs_[i].pressure().ParFESpace()->GetProlongationMatrix()->MultTranspose(pairs_[i].pressure(),
-                                                                                p_pair_true);
+      pairs_[i].pressure().ParFESpace()->GetRestrictionMatrix()->Mult(pairs_[i].pressure(),
+                                                                         p_pair_true);
     }
   }
   return p_true;
@@ -146,7 +146,7 @@ std::unique_ptr<mfem::BlockOperator> ContactData::contactJacobian() const
         }
       } else  // enforcement == ContactEnforcement::LagrangeMultiplier
       {
-        constraint_matrices(static_cast<int>(i), 0) = static_cast<mfem::HypreParMatrix*>(&pair_J->GetBlock(1, 0));
+        constraint_matrices(static_cast<int>(i), 0) = static_cast<mfem::HypreParMatrix*>(B);
       }
       if (pair_J->IsZeroBlock(0, 1) || !dynamic_cast<mfem::TransposeOperator*>(&pair_J->GetBlock(0, 1))) {
         SLIC_ERROR_ROOT("Only symmetric constraint matrices are currently supported.");
@@ -180,13 +180,13 @@ std::unique_ptr<mfem::BlockOperator> ContactData::contactJacobian() const
         inactive_tdofs_ct += inactive_tdofs_vector[i]->Size();
       }
     }
-    dof_offsets.GetMemory().SetHostPtrOwner(false);
+    inactive_tdofs.GetMemory().SetHostPtrOwner(false);
     mfem::Array<int> rows(numPressureTrueDofs() + 1);
     rows = 0;
     inactive_tdofs_ct = 0;
     for (int i{0}; i < numPressureTrueDofs(); ++i)
     {
-      if (inactive_tdofs[inactive_tdofs_ct] == i)
+      if (inactive_tdofs_ct < inactive_tdofs.Size() && inactive_tdofs[inactive_tdofs_ct] == i)
       {
         ++inactive_tdofs_ct;
       }
@@ -216,8 +216,7 @@ void ContactData::setPressures(const mfem::Vector& true_pressures) const
       mfem::Vector p_pair_true;
       p_pair_true.MakeRef(const_cast<mfem::Vector&>(true_pressures), dof_offsets[static_cast<int>(i)],
                           dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
-      pressure.ParFESpace()->GetRestrictionMatrix()->MultTranspose(p_pair_true,
-                                                                               pairs_[i].pressure());
+      pressure.ParFESpace()->GetProlongationMatrix()->Mult(p_pair_true, pairs_[i].pressure());
     } else  // enforcement == ContactEnforcement::Penalty
     {
       pressure.Set(pairs_[i].getContactOptions().penalty, pairs_[i].gaps());

@@ -1107,7 +1107,7 @@ public:
       auto& u_block = augmented_solution.GetBlock(0);
       u_block       = displacement_;
       auto& p_block = augmented_solution.GetBlock(1);
-      p_block       = contact_.truePressures();
+      p_block.Set(1.0, contact_.truePressures());
 
       lin_solver.SetOperator(*J_contact_);
 
