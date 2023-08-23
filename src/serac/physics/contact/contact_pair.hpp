@@ -92,6 +92,8 @@ public:
    */
   int numPressureTrueDofs() const;
 
+  const mfem::Array<int>& inactiveTrueDofs() const;
+
 private:
   /**
    * @brief Get the Tribol enforcement method given a serac enforcement method
@@ -114,6 +116,11 @@ private:
    * @brief Reference to the current coords GridFunction
    */
   const mfem::ParGridFunction& current_coords_;
+
+  /**
+   * @brief List of true DOFs currently not in the active set
+   */
+  mutable mfem::Array<int> inactive_tdofs_;
 };
 
 }  // namespace serac
