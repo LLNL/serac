@@ -7,6 +7,7 @@
 add_subdirectory(materials)
 add_subdirectory(state)
 add_subdirectory(boundary_conditions)
+add_subdirectory(contact)
 
 if(ENABLE_TESTS)
     add_subdirectory(tests)
