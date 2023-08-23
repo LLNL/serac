@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/physics/contact/contact_data.hpp"
+#include <linalg/hypre.hpp>
 
 #include "axom/slic.hpp"
 
@@ -99,6 +100,7 @@ std::unique_ptr<mfem::BlockOperator> ContactData::contactJacobian() const
   auto block_J         = std::make_unique<mfem::BlockOperator>(jacobian_offsets_);
   block_J->owns_blocks = true;
   mfem::Array2D<mfem::HypreParMatrix*> constraint_matrices(static_cast<int>(pairs_.size()), 1);
+  
   for (size_t i{0}; i < pairs_.size(); ++i) {
     auto pair_J         = tribol::getMfemBlockJacobian(pairs_[i].getPairId());
     pair_J->owns_blocks = false;
@@ -119,14 +121,18 @@ std::unique_ptr<mfem::BlockOperator> ContactData::contactJacobian() const
       }
     }
     if (!pair_J->IsZeroBlock(1, 0)) {
-      SLIC_ERROR_ROOT_IF(!dynamic_cast<mfem::HypreParMatrix*>(&pair_J->GetBlock(1, 0)),
-                         "Only HypreParMatrix constraint matrix blocks are currently supported.");
+      auto B = dynamic_cast<mfem::HypreParMatrix*>(&pair_J->GetBlock(1, 0));
+      SLIC_ERROR_ROOT_IF(!B, "Only HypreParMatrix constraint matrix blocks are currently supported.");
+      mfem::Vector active_rows(B->Height());
+      active_rows = 1.0;
+      for (auto inactive_dof : pairs_[i].inactiveTrueDofs())
+      {
+        active_rows[inactive_dof] = 0.0;
+      }
+      B->ScaleRows(active_rows);
       if (pairs_[i].getContactOptions().enforcement == ContactEnforcement::Penalty) {
         std::unique_ptr<mfem::HypreParMatrix> BTB(
-            mfem::ParMult(std::unique_ptr<mfem::HypreParMatrix>(
-                              static_cast<mfem::HypreParMatrix&>(pair_J->GetBlock(1, 0)).Transpose())
-                              .get(),
-                          &static_cast<mfem::HypreParMatrix&>(pair_J->GetBlock(1, 0)), true));
+            mfem::ParMult(std::unique_ptr<mfem::HypreParMatrix>(B->Transpose()).get(), B, true));
         delete &pair_J->GetBlock(1, 0);
         if (block_J->IsZeroBlock(0, 0)) {
           mfem::Vector penalty(reference_nodes_->ParFESpace()->GetTrueVSize());
@@ -153,9 +159,80 @@ std::unique_ptr<mfem::BlockOperator> ContactData::contactJacobian() const
   }
   if (numPressureTrueDofs() > 0) {
     block_J->SetBlock(1, 0, mfem::HypreParMatrixFromBlocks(constraint_matrices));
-    block_J->SetBlock(0, 1, new mfem::TransposeOperator(block_J->GetBlock(1, 0)));
+    block_J->SetBlock(0, 1, static_cast<mfem::HypreParMatrix&>(block_J->GetBlock(1, 0)).Transpose());
+    // build diagonal matrix with ones on inactive dofs
+    mfem::Array<const mfem::Array<int>*> inactive_tdofs_vector(static_cast<int>(pairs_.size()));
+    int inactive_tdofs_ct = 0;
+    for (int i{0}; i < inactive_tdofs_vector.Size(); ++i) {
+      if (pairs_[static_cast<size_t>(i)].numPressureTrueDofs() > 0) {
+        inactive_tdofs_vector[i] = &pairs_[static_cast<size_t>(i)].inactiveTrueDofs();
+        inactive_tdofs_ct += inactive_tdofs_vector[i]->Size();
+      }
+    }
+    auto dof_offsets = pressureTrueDofOffsets();
+    mfem::Array<int> inactive_tdofs(inactive_tdofs_ct);
+    inactive_tdofs_ct = 0;
+    for (int i{0}; i < inactive_tdofs_vector.Size(); ++i) {
+      if (inactive_tdofs_vector[i]) {
+        for (int d{0}; d < inactive_tdofs_vector[i]->Size(); ++d) {
+          inactive_tdofs[d + inactive_tdofs_ct] = (*inactive_tdofs_vector[i])[d] + dof_offsets[i];
+        }
+        inactive_tdofs_ct += inactive_tdofs_vector[i]->Size();
+      }
+    }
+    dof_offsets.GetMemory().SetHostPtrOwner(false);
+    mfem::Array<int> rows(numPressureTrueDofs() + 1);
+    rows = 0;
+    inactive_tdofs_ct = 0;
+    for (int i{0}; i < numPressureTrueDofs(); ++i)
+    {
+      if (inactive_tdofs[inactive_tdofs_ct] == i)
+      {
+        ++inactive_tdofs_ct;
+      }
+      rows[i + 1] = inactive_tdofs_ct;
+    }
+    rows.GetMemory().SetHostPtrOwner(false);
+    mfem::Vector ones(inactive_tdofs_ct);
+    ones = 1.0;
+    ones.GetMemory().SetHostPtrOwner(false);
+    mfem::SparseMatrix inactive_diag(rows.GetData(), inactive_tdofs.GetData(), ones.GetData(), 
+                                     numPressureTrueDofs(), numPressureTrueDofs(), false, false, true);
+    auto& block_1_0 = static_cast<mfem::HypreParMatrix&>(block_J->GetBlock(1, 0));
+    auto block_1_1 = new mfem::HypreParMatrix(block_1_0.GetComm(), block_1_0.GetGlobalNumRows(), 
+                                              block_1_0.GetRowStarts(), &inactive_diag);
+    block_1_1->SetOwnerFlags(3, 3, 1);
+    block_J->SetBlock(1, 1, block_1_1);
   }
   return block_J;
+}
+
+void ContactData::setPressures(const mfem::Vector& true_pressures) const
+{
+  auto dof_offsets = pressureTrueDofOffsets();
+  for (size_t i{0}; i < pairs_.size(); ++i) {
+    auto& pressure = pairs_[i].pressure();
+    if (pairs_[i].getContactOptions().enforcement == ContactEnforcement::LagrangeMultiplier) {
+      mfem::Vector p_pair_true;
+      p_pair_true.MakeRef(const_cast<mfem::Vector&>(true_pressures), dof_offsets[static_cast<int>(i)],
+                          dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
+      pressure.ParFESpace()->GetRestrictionMatrix()->MultTranspose(p_pair_true,
+                                                                               pairs_[i].pressure());
+    } else  // enforcement == ContactEnforcement::Penalty
+    {
+      pressure.Set(pairs_[i].getContactOptions().penalty, pairs_[i].gaps());
+    }
+    for (auto dof : pairs_[i].inactiveTrueDofs())
+    {
+      pressure[dof] = 0.0;
+    }
+  }
+}
+
+void ContactData::setDisplacements(const mfem::Vector& true_displacement)
+{
+  reference_nodes_->ParFESpace()->GetProlongationMatrix()->Mult(true_displacement, current_coords_);
+  current_coords_ += *reference_nodes_;
 }
 
 mfem::Array<int> ContactData::pressureTrueDofOffsets() const
@@ -166,29 +243,6 @@ mfem::Array<int> ContactData::pressureTrueDofOffsets() const
     dof_offsets[static_cast<int>(i + 1)] = dof_offsets[static_cast<int>(i)] + pairs_[i].numPressureTrueDofs();
   }
   return dof_offsets;
-}
-
-void ContactData::setPressures(const mfem::Vector& true_pressures) const
-{
-  auto dof_offsets = pressureTrueDofOffsets();
-  for (size_t i{0}; i < pairs_.size(); ++i) {
-    if (pairs_[i].getContactOptions().enforcement == ContactEnforcement::LagrangeMultiplier) {
-      mfem::Vector p_pair_true;
-      p_pair_true.MakeRef(const_cast<mfem::Vector&>(true_pressures), dof_offsets[static_cast<int>(i)],
-                          dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
-      pairs_[i].pressure().ParFESpace()->GetRestrictionMatrix()->MultTranspose(p_pair_true,
-                                                                                       pairs_[i].pressure());
-    } else  // enforcement == ContactEnforcement::Penalty
-    {
-      pairs_[i].pressure().Set(pairs_[i].getContactOptions().penalty, pairs_[i].gaps());
-    }
-  }
-}
-
-void ContactData::setDisplacements(const mfem::Vector& true_displacement)
-{
-  reference_nodes_->ParFESpace()->GetProlongationMatrix()->Mult(true_displacement, current_coords_);
-  current_coords_ += *reference_nodes_;
 }
 
 #else
@@ -242,16 +296,16 @@ std::unique_ptr<mfem::BlockOperator> ContactData::contactJacobian() const
   return std::make_unique<mfem::BlockOperator>(jacobian_offsets_);
 }
 
-mfem::Array<int> ContactData::pressureTrueDofOffsets() const
-{
-  return mfem::Array<int>();
-}
-
 void ContactData::setPressures([[maybe_unused]] const mfem::Vector& true_pressures) const
 {}
 
 void ContactData::setDisplacements([[maybe_unused]] const mfem::Vector& true_displacement)
 {}
+
+mfem::Array<int> ContactData::pressureTrueDofOffsets() const
+{
+  return mfem::Array<int>();
+}
 
 #endif
 

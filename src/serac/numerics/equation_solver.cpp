@@ -6,6 +6,7 @@
 
 #include "serac/numerics/equation_solver.hpp"
 
+#include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
 
@@ -76,17 +77,26 @@ void SuperLUSolver::SetOperator(const mfem::Operator& op)
 
     for (int i = 0; i < row_blocks; ++i) {
       for (int j = 0; j < col_blocks; ++j) {
-        auto* hypre_block = const_cast<mfem::HypreParMatrix*>(
-            dynamic_cast<const mfem::HypreParMatrix*>(&block_operator->GetBlock(i, j)));
-        SLIC_ERROR_ROOT_IF(!hypre_block,
-                           "Trying to use SuperLU on a block operator that does not contain HypreParMatrix blocks.");
+        if (!block_operator->IsZeroBlock(i, j)) {
+          auto* hypre_block = const_cast<mfem::HypreParMatrix*>(
+              dynamic_cast<const mfem::HypreParMatrix*>(&block_operator->GetBlock(i, j)));
+          SLIC_ERROR_ROOT_IF(!hypre_block,
+                            "Trying to use SuperLU on a block operator that does not contain HypreParMatrix blocks.");
 
-        hypre_blocks(i, j) = hypre_block;
+          hypre_blocks(i, j) = hypre_block;
+        } else {
+          hypre_blocks(i, j) = NULL;
+        }
       }
     }
 
     // Note that MFEM passes ownership of this matrix to the caller
     auto monolithic_mat = std::unique_ptr<mfem::HypreParMatrix>(mfem::HypreParMatrixFromBlocks(hypre_blocks));
+    std::filebuf fb;
+    fb.open("j.mat" + std::to_string(getMPIInfo().second), std::ios::out);
+    std::ostream os(&fb);
+    monolithic_mat->PrintMatlab(os);
+    fb.close();
 
     superlu_mat_ = std::make_unique<mfem::SuperLURowLocMatrix>(*monolithic_mat);
   } else {
