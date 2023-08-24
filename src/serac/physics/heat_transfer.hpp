@@ -749,12 +749,11 @@ public:
     return {{"adjoint_temperature", adjoint_temperature_}};
   }
 
-  FiniteElementState previousTemperature(int cycle)
+  FiniteElementState previousTemperature(int cycle) const
   {
     FiniteElementState previous_temperature(temperature_);
     StateManager::loadPreviousStates(cycle, {previous_temperature});
-
-    return previousTemperature;
+    return previous_temperature;
   }
 
   /**

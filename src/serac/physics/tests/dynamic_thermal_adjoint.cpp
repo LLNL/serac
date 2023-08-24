@@ -94,8 +94,7 @@ std::pair<double, std::vector<double>> computeThermalQoiAndGradient(axom::sidre:
   auto& temperature_solution = thermal.temperature();
   size_t N = temperature_solution.Size();
 
-  std::cout << "cycle=" << thermal.cycle() << " adj cycle= " << thermal.adjointCycle() << std::endl;
-  std::cout << "step =" << 0 << ", norm = " << serac::norm(temperature_solution) << std::endl;
+  std::cout << "cycle=" << thermal.cycle() << " adj cycle= " << thermal.adjointCycle() << ", norm = " << serac::norm(temperature_solution) << std::endl;
 
   // Compute qoi: \int_t \int_omega 0.5 * (T - T_target(x,t)^2)
   double qoi = 0.0;
@@ -109,8 +108,7 @@ std::pair<double, std::vector<double>> computeThermalQoiAndGradient(axom::sidre:
       nodalTemperatureNormSquared += temperature_solution(n) * temperature_solution(n);
     }
 
-    std::cout << "cycle=" << thermal.cycle() << " adj cycle= " << thermal.adjointCycle() << std::endl;
-    std::cout << "step " << i+1 << ", norm = " << serac::norm(temperature_solution) << std::endl;
+    std::cout << "cycle=" << thermal.cycle() << " adj cycle= " << thermal.adjointCycle() << ", norm = " << serac::norm(temperature_solution) << std::endl;
     
     qoi += nodalTemperatureNormSquared * dt;
   }
@@ -122,8 +120,7 @@ std::pair<double, std::vector<double>> computeThermalQoiAndGradient(axom::sidre:
   FiniteElementState prev_temperature(temperature_solution);
 
   for (int i = ts_info.num_timesteps; i > 0; --i) {
-    std::cout << "cycle=" << thermal.cycle() << " adj cycle= " << thermal.adjointCycle() << std::endl;
-    std::cout << "r step " << i << ", norm = " << serac::norm(prev_temperature) << std::endl;
+    std::cout << "cycle=" << thermal.cycle() << " adj cycle= " << thermal.adjointCycle() << ", norm = " << serac::norm(prev_temperature) << std::endl;
 
     for (size_t n=0; n < N; ++n) {
       gradient[n] += 0.0; // this problem has no direct design sensitivities
@@ -138,12 +135,10 @@ std::pair<double, std::vector<double>> computeThermalQoiAndGradient(axom::sidre:
     //for (size_t n=0; n < N; ++n) {
     //  adjoint_load(n) = adjoint_sol;  // is this multiplied by the residual tanget (+/-) ?
     //}
-
-    StateManager::loadPreviousStates(thermal.adjointCycle(), {prev_temperature});
+    prev_temperature = thermal.previousTemperature(thermal.adjointCycle());
   }
 
-  std::cout << "cycle=" << thermal.cycle() << " adj cycle= " << thermal.adjointCycle() << std::endl;
-  std::cout << "r step " << 0 << ", norm = " << serac::norm(prev_temperature) << std::endl;
+  std::cout << "cycle=" << thermal.cycle() << " adj cycle= " << thermal.adjointCycle() << ", norm = " << serac::norm(prev_temperature) << std::endl;
 
   // now at step 0
   for (size_t n=0; n < N; ++n) {
