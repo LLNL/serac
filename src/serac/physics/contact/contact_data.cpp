@@ -5,7 +5,6 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/physics/contact/contact_data.hpp"
-#include <linalg/hypre.hpp>
 
 #include "axom/slic.hpp"
 
