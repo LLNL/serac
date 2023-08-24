@@ -198,6 +198,9 @@ std::unique_ptr<mfem::BlockOperator> ContactData::contactJacobian() const
     ones.GetMemory().SetHostPtrOwner(false);
     mfem::SparseMatrix inactive_diag(rows.GetData(), inactive_tdofs.GetData(), ones.GetData(), 
                                      numPressureTrueDofs(), numPressureTrueDofs(), false, false, true);
+    // if the size of ones is zero, SparseMatrix creates its own memory which it
+    // owns.  explicitly prevent this...
+    inactive_diag.SetDataOwner(false);
     auto& block_1_0 = static_cast<mfem::HypreParMatrix&>(block_J->GetBlock(1, 0));
     auto block_1_1 = new mfem::HypreParMatrix(block_1_0.GetComm(), block_1_0.GetGlobalNumRows(), 
                                               block_1_0.GetRowStarts(), &inactive_diag);
