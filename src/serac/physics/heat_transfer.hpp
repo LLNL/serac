@@ -705,8 +705,7 @@ public:
     StateManager::loadPreviousStates(adjoint_cycle_, {temperature_});
     StateManager::loadPreviousStates(adjoint_cycle_ - 1, {temperature_n_minus_1});
 
-    d_temperature_dt_n_ = 0.0;
-    d_temperature_dt_n_.Add(1.0, temperature_);
+    d_temperature_dt_n_ = temperature_; // MRT, is this a deep or shallow copy?
     d_temperature_dt_n_.Add(-1.0, temperature_n_minus_1);
     d_temperature_dt_n_ /= adjoint_timestep_;
 
