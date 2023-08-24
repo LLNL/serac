@@ -131,13 +131,12 @@ public:
             FiniteElementState::Options{
                 .order = order, .vector_dim = 1, .name = detail::addPrefix(name, "adjoint_temperature")},
             sidre_datacoll_id_)),
-        cached_temperature_{-1, nullptr},
+        adjoint_d_temperature_dt_(adjoint_temperature_),
         residual_with_bcs_(temperature_.space().TrueVSize()),
         nonlin_solver_(std::move(solver)),
         ode_(temperature_.space().TrueVSize(),
              {.time = ode_time_point_, .u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
              *nonlin_solver_, bcs_),
-        temperature_n_minus_1_(temperature_),
         d_temperature_dt_n_(temperature_)
   {
     SLIC_ERROR_ROOT_IF(
@@ -622,13 +621,20 @@ public:
                        "Adjoint load container is not the expected size of 1 in the heat transfer module.");
 
     auto temp_adjoint_load = adjoint_loads.find("temperature");
+    auto d_temp_dt_adjoint_load = adjoint_loads.find("temperature_rate"); // does not need to be speicified
 
     SLIC_ERROR_ROOT_IF(temp_adjoint_load == adjoint_loads.end(), "Adjoint load for \"temperature\" not found.");
 
-    mfem::HypreParVector adjoint_load_vector(temp_adjoint_load->second);
-
+    mfem::HypreParVector temperature_adjoint_load_vector(temp_adjoint_load->second);
     // Add the sign correction to move the term to the RHS
-    adjoint_load_vector *= -1.0;
+    temperature_adjoint_load_vector *= -1.0;
+
+    mfem::HypreParVector d_temperature_dt_adjoint_load_vector(temperature_adjoint_load_vector);
+    d_temperature_dt_adjoint_load_vector = 0.0;
+    if (d_temp_dt_adjoint_load != adjoint_loads.end()) {
+      d_temperature_dt_adjoint_load_vector = d_temp_dt_adjoint_load->second;
+      d_temperature_dt_adjoint_load_vector *= -1.0;
+    }
 
     auto& lin_solver = nonlin_solver_->linearSolver();
 
@@ -652,8 +658,7 @@ public:
     if (is_quasistatic_) {
       // We store the previous timestep's temperature as the current temperature for use in the lambdas computing the
       // sensitivities.
-      temperature_n_minus_1_ = temperature_;
-      d_temperature_dt_n_    = 0.0;
+      d_temperature_dt_n_ = 0.0;
 
       auto [r, drdu] = (*residual_)(differentiate_wrt(temperature_), zero_, shape_displacement_,
                                     *parameters_[parameter_indices].state...);
@@ -661,11 +666,11 @@ public:
       auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
       for (const auto& bc : bcs_.essentials()) {
-        bc.apply(*J_T, adjoint_load_vector, adjoint_essential);
+        bc.apply(*J_T, temperature_adjoint_load_vector, adjoint_essential);
       }
 
       lin_solver.SetOperator(*J_T);
-      lin_solver.Mult(adjoint_load_vector, adjoint_temperature_);
+      lin_solver.Mult(temperature_adjoint_load_vector, adjoint_temperature_);
 
       // Reset the equation solver to use the full nonlinear residual operator
       nonlin_solver_->setOperator(residual_with_bcs_);
@@ -688,7 +693,7 @@ public:
       adjoint_time_        = time_;
       adjoint_timestep_    = time_ / cycle_;
       adjoint_temperature_ = 0.0;
-      cached_temperature_  = std::make_pair(cycle_, std::make_unique<FiniteElementState>(temperature_));
+      adjoint_d_temperature_dt_ = 0.0;
     }
 
     SLIC_ERROR_ROOT_IF(std::abs(dt - adjoint_timestep_) > 1.0e-14,
@@ -697,39 +702,33 @@ public:
                                          dt, adjoint_timestep_));
 
     // Load the temperature from the previous cycle from disk
-    if (cached_temperature_.first != adjoint_cycle_) {
-      StateManager::loadPreviousStates(adjoint_cycle_, {*cached_temperature_.second});
-    }
-    StateManager::loadPreviousStates(adjoint_cycle_ - 1, {temperature_n_minus_1_});
+    serac::FiniteElementState temperature_n_minus_1(temperature_);
+    StateManager::loadPreviousStates(adjoint_cycle_, {temperature_});
+    StateManager::loadPreviousStates(adjoint_cycle_ - 1, {temperature_n_minus_1});
 
     d_temperature_dt_n_ = 0.0;
-    d_temperature_dt_n_.Add(1.0, *cached_temperature_.second);
-    d_temperature_dt_n_.Add(-1.0, temperature_n_minus_1_);
+    d_temperature_dt_n_.Add(1.0, temperature_);
+    d_temperature_dt_n_.Add(-1.0, temperature_n_minus_1);
     d_temperature_dt_n_ /= adjoint_timestep_;
 
-    //v = (uN-uN-1) / dt
-    //M ( tnp1-tn)  + K tnp1 * dt= 0
-
     // K := dR/du
-    auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(temperature_n_minus_1_), d_temperature_dt_n_,
+    auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(temperature_), d_temperature_dt_n_,
                                                  shape_displacement_, *parameters_[parameter_indices].state...));
     std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
     // M := dR/du_dot
-    auto M = serac::get<DERIVATIVE>((*residual_)(temperature_n_minus_1_, differentiate_wrt(d_temperature_dt_n_),
+    auto M = serac::get<DERIVATIVE>((*residual_)(temperature_, differentiate_wrt(d_temperature_dt_n_),
                                                  shape_displacement_, *parameters_[parameter_indices].state...));
     std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
     J_.reset(mfem::Add(1.0, *m_mat, adjoint_timestep_, *k_mat));
     auto J_T = std::unique_ptr<mfem::HypreParMatrix>(J_->Transpose());
 
-    mfem::HypreParVector M_temperature_n(adjoint_load_vector);
-    mfem::HypreParVector modified_RHS(adjoint_load_vector);
-    modified_RHS *= -1.0 * adjoint_timestep_;
-
-    //m_mat->Mult(adjoint_load_vector, M_temperature_n);
-    m_mat->Mult(*cached_temperature_.second, M_temperature_n);
-    modified_RHS.Add(1.0, M_temperature_n);
+    // recall that temperature_adjoint_load_vector and d_temperature_dt_adjoint_load_vector were already multiplied by -1 above
+    mfem::HypreParVector modified_RHS(temperature_adjoint_load_vector);
+    modified_RHS *= adjoint_timestep_;
+    modified_RHS.Add(1.0, d_temperature_dt_adjoint_load_vector);
+    modified_RHS.Add(-adjoint_timestep_, adjoint_d_temperature_dt_);
 
     for (const auto& bc : bcs_.essentials()) {
       bc.apply(*J_T, modified_RHS, adjoint_essential);
@@ -738,16 +737,17 @@ public:
     lin_solver.SetOperator(*J_T);
     lin_solver.Mult(modified_RHS, adjoint_temperature_);
 
+    m_mat->Mult(adjoint_temperature_, adjoint_d_temperature_dt_);
+    adjoint_d_temperature_dt_ *= -1.0/adjoint_timestep_;
+    adjoint_d_temperature_dt_.Add(1.0/adjoint_timestep_, d_temperature_dt_adjoint_load_vector); // already multiplied by -1
+
     // Reset the equation solver to use the full nonlinear residual operator
     nonlin_solver_->setOperator(residual_with_bcs_);
 
     adjoint_time_ -= adjoint_timestep_;
     adjoint_cycle_--;
 
-    cached_temperature_.first   = adjoint_cycle_;
-    *cached_temperature_.second = temperature_n_minus_1_;
-
-    return {{"adjoint_temperature", adjoint_temperature_}};
+    return {{"adjoint_temperature", adjoint_temperature_}, {"adjoint_d_temperature_dt", adjoint_d_temperature_dt_}};
   }
 
   FiniteElementState previousTemperature(int cycle) const
@@ -787,7 +787,7 @@ public:
   FiniteElementDual& computeTimestepShapeSensitivity() override
   {
     auto drdshape =
-        serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<SHAPE>{}, temperature_n_minus_1_, d_temperature_dt_n_,
+        serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<SHAPE>{}, temperature_, d_temperature_dt_n_,
                                             shape_displacement_, *parameters_[parameter_indices].state...));
 
     auto drdshape_mat = assemble(drdshape);
@@ -815,9 +815,7 @@ protected:
 
   /// The adjoint temperature finite element state
   serac::FiniteElementState adjoint_temperature_;
-
-  /// The cached temperature from the previous adjoint backward timestep
-  std::pair<int, std::unique_ptr<FiniteElementState>> cached_temperature_;
+  serac::FiniteElementState adjoint_d_temperature_dt_;
 
   double adjoint_timestep_;
 
@@ -876,7 +874,6 @@ protected:
    *
    * @note This is used in the adjoint backward time integration
    */
-  FiniteElementState temperature_n_minus_1_;
 
   /**
    * @brief Rate of change in temperature at the current adjoint timestep
@@ -888,13 +885,14 @@ protected:
   /// @brief Array functions computing the derivative of the residual with respect to each given parameter
   /// @note This is needed so the user can ask for a specific sensitivity at runtime as opposed to it being a
   /// template parameter.
-  std::array<std::function<decltype((*residual_)(DifferentiateWRT<0>{}, temperature_n_minus_1_, d_temperature_dt_n_,
+  std::array<std::function<decltype((*residual_)(DifferentiateWRT<0>{}, temperature_, d_temperature_dt_n_,
                                                  shape_displacement_, *parameters_[parameter_indices].state...))()>,
              sizeof...(parameter_indices)>
       d_residual_d_ = {[&]() {
-        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + parameter_indices>{}, temperature_n_minus_1_,
+        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + parameter_indices>{}, temperature_,
                             d_temperature_dt_n_, shape_displacement_, *parameters_[parameter_indices].state...);
       }...};
 };
+
 
 }  // namespace serac

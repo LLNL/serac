@@ -117,7 +117,7 @@ std::pair<double, std::vector<double>> computeThermalQoiAndGradient(axom::sidre:
   std::vector<double> gradient(N, 0.0);
   serac::FiniteElementDual adjoint_load(thermal.temperature().space(), "adjoint_load");
   
-  FiniteElementState prev_temperature(temperature_solution);
+  FiniteElementState prev_temperature(temperature_solution); // cannot get with thermal.previousTemperature(adjointCycle) yet, as adjointCycle is not defined until reverseAdjointTimestep is called.
 
   for (int i = ts_info.num_timesteps; i > 0; --i) {
     std::cout << "cycle=" << thermal.cycle() << " adj cycle= " << thermal.adjointCycle() << ", norm = " << serac::norm(prev_temperature) << std::endl;
@@ -127,23 +127,22 @@ std::pair<double, std::vector<double>> computeThermalQoiAndGradient(axom::sidre:
     }
 
     for (size_t n=0; n < N; ++n) {
-      adjoint_load(n) += prev_temperature(n);
+      adjoint_load(n) = prev_temperature(n) * dt;
     }
 
     std::unordered_map<std::string, const serac::FiniteElementState&> adjoint_sol = thermal.reverseAdjointTimestep(dt, {{"temperature", adjoint_load}});
 
-    //for (size_t n=0; n < N; ++n) {
-    //  adjoint_load(n) = adjoint_sol;  // is this multiplied by the residual tanget (+/-) ?
-    //}
+    if (i==1) {
+      auto mu = adjoint_sol.find("adjoint_d_temperature_dt")->second;
+      for (size_t n=0; n < N; ++n) {
+        gradient[n] += mu(n);
+      }
+    }
+
     prev_temperature = thermal.previousTemperature(thermal.adjointCycle());
   }
 
   std::cout << "cycle=" << thermal.cycle() << " adj cycle= " << thermal.adjointCycle() << ", norm = " << serac::norm(prev_temperature) << std::endl;
-
-  // now at step 0
-  for (size_t n=0; n < N; ++n) {
-    gradient[n] = adjoint_load(n);
-  }
 
   return std::make_pair(qoi, gradient);
 }
@@ -167,29 +166,29 @@ TEST(HeatTransferDynamic, HeatTransferD)
   heat_transfer::LinearIsotropicConductor mat(1.0, 1.0, 1.0);
   TimeSteppingInfo tsInfo{.totalTime=0.5, .num_timesteps=4};
 
-  // auto qoiBase = computeThermalQoi(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo, 0, 0.0);
-  // size_t size = size_t(initialTemperature.Size());
+  auto qoiBase = computeThermalQoi(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo, 0, 0.0);
+  size_t size = size_t(initialTemperature.Size());
 
-  /*   double eps = 1e-7;
+  double eps = 1e-7;
   std::vector<double> numericalGradients(size);
 
   for (size_t i=0; i < size; ++i) {
     auto qoiPlus = computeThermalQoi(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo, i, eps);
     double grad = (qoiPlus-qoiBase)/eps;
     numericalGradients[i] = grad;
-  } */
+  }
 
   //std::cout << "size = " << size << std::endl;
-  /*   for (size_t i=0; i < size; ++i) {
-    std::cout << "gradients = " << numericalGradients[i] << std::endl;
-  } */
+  for (size_t i=0; i < size; ++i) {
+    std::cout << "num gradients = " << numericalGradients[i] << std::endl;
+  }
 
   std::pair<double, std::vector<double>> trueGrad = computeThermalQoiAndGradient(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo);
   const auto& adjGradient = trueGrad.second;
 
-  /*   for (size_t i=0; i < size; ++i) {
-    std::cout << "gradients = " << adjGradient[i] << std::endl;
-  } */
+  for (size_t i=0; i < size; ++i) {
+    std::cout << "adj gradients = " << adjGradient[i] << std::endl;
+  }
 
 }
 
