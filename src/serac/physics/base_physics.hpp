@@ -242,7 +242,7 @@ public:
    * @return The computed adjoint finite element states
    */
   virtual const std::unordered_map<std::string, const serac::FiniteElementState&> reverseAdjointTimestep(
-      double& /* adjoint_dt */, std::unordered_map<std::string, const serac::FiniteElementDual&> /* adjoint_loads */,
+      const double& /* adjoint_dt */, std::unordered_map<std::string, const serac::FiniteElementDual&> /* adjoint_loads */,
       std::unordered_map<std::string, const serac::FiniteElementState&> /* adjoint_with_essential_boundary */ = {})
   {
     SLIC_ERROR_ROOT(axom::fmt::format("Adjoint analysis not defined for physics module {}", name_));
