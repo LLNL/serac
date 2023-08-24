@@ -594,7 +594,7 @@ public:
             J_.reset(mfem::Add(1.0, *m_mat, dt_, *k_mat));
             J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
 
-            return *J_;
+            return *J_; // MRT, why not return J_e_ ?  Is this just going to be the same as J_?
           });
     }
   }
@@ -615,7 +615,7 @@ public:
    * "adjoint_temperature"
    */
   const std::unordered_map<std::string, const serac::FiniteElementState&> reverseAdjointTimestep(
-      double& dt, std::unordered_map<std::string, const serac::FiniteElementDual&> adjoint_loads,
+      const double& dt, std::unordered_map<std::string, const serac::FiniteElementDual&> adjoint_loads,
       std::unordered_map<std::string, const serac::FiniteElementState&> adjoint_with_essential_boundary = {}) override
   {
     SLIC_ERROR_ROOT_IF(adjoint_loads.size() != 1,
@@ -707,6 +707,9 @@ public:
     d_temperature_dt_n_.Add(-1.0, temperature_n_minus_1_);
     d_temperature_dt_n_ /= adjoint_timestep_;
 
+    //v = (uN-uN-1) / dt
+    //M ( tnp1-tn)  + K tnp1 * dt= 0
+
     // K := dR/du
     auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(temperature_n_minus_1_), d_temperature_dt_n_,
                                                  shape_displacement_, *parameters_[parameter_indices].state...));
@@ -724,6 +727,7 @@ public:
     mfem::HypreParVector modified_RHS(adjoint_load_vector);
     modified_RHS *= -1.0 * adjoint_timestep_;
 
+    //m_mat->Mult(adjoint_load_vector, M_temperature_n);
     m_mat->Mult(*cached_temperature_.second, M_temperature_n);
     modified_RHS.Add(1.0, M_temperature_n);
 

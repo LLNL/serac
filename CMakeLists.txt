@@ -102,7 +102,7 @@ set(BLT_REQUIRED_CLANGFORMAT_VERSION  "10" CACHE STRING "")
 set(ENABLE_BENCHMARKS  OFF CACHE BOOL "")
 
 set(ENABLE_ALL_WARNINGS ON CACHE BOOL "")
-set(ENABLE_WARNINGS_AS_ERRORS ON CACHE BOOL "")
+set(ENABLE_WARNINGS_AS_ERRORS OFF CACHE BOOL "")
 
 # Allows MPI/CUDA/etc targets to be exported in the serac namespace
 set(BLT_EXPORT_THIRDPARTY ON CACHE BOOL "")
@@ -182,7 +182,7 @@ install(TARGETS              serac
 if (SERAC_ENABLE_CODEVELOP)
     # This really shouldn't be needed but it keeps getting dropped from axom.
     # It certainly shouldn't go here either.
-    target_include_directories(axom SYSTEM PUBLIC
+    target_include_directories(axom SYSTEM INTERFACE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/axom/src>
     )
 
