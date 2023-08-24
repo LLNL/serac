@@ -888,7 +888,7 @@ public:
             // call update again with the right pressures
             contact_.update(1, 1.0, dt);
 
-            mfem::Vector res = (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
+            mfem::Vector res = (*residual_)(u_blk, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
 
             res.Add(1.0, contact_.trueContactForces());
 
@@ -900,7 +900,9 @@ public:
 
           // gradient of residual function with contact Jacobian
           [this](const mfem::Vector& u) -> mfem::Operator& {
-            auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, shape_displacement_,
+            mfem::Vector u_blk;
+            u_blk.MakeRef(const_cast<mfem::Vector&>(u), 0, displacement_.space().GetTrueVSize());
+            auto [r, drdu] = (*residual_)(differentiate_wrt(u_blk), zero_, shape_displacement_,
                                           *parameters_[parameter_indices].state...);
             J_             = assemble(drdu);
 
