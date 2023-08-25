@@ -372,7 +372,8 @@ SERAC_HOST_DEVICE auto pow(dual<gradient_type> a, dual<gradient_type> b)
 {
   using std::pow, std::log;
   double value = pow(a.value, b.value);
-  return dual<gradient_type>{value, value * (a.gradient * (b.value / a.value) + b.gradient * log(a.value))};
+  gradient_type grad = pow(a.value, b.value - 1) * (a.gradient * b.value + b.gradient * a.value * log(a.value));
+  return dual<gradient_type>{value, grad};
 }
 
 /** @brief implementation of `a` (non-dual) raised to the `b` (dual) power */
@@ -390,7 +391,8 @@ SERAC_HOST_DEVICE auto pow(dual<gradient_type> a, double b)
 {
   using std::pow;
   double value = pow(a.value, b);
-  return dual<gradient_type>{value, value * a.gradient * b / a.value};
+  gradient_type grad = b * pow(a.value, b - 1) * a.gradient;
+  return dual<gradient_type>{value, grad};
 }
 
 /** @brief overload of operator<< for `dual` to work with `std::cout` and other `std::ostream`s */
