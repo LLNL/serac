@@ -1040,13 +1040,12 @@ public:
     // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
 
     // Update the linearized Jacobian matrix
-    bool have_lagrange_multipliers = contact_.numPressureTrueDofs() != 0;
-    if (!have_lagrange_multipliers) {
+    if (!contact_.haveLagrangeMultipliers()) {
       residual_with_bcs_->GetGradient(displacement_);
     } else {
-      int               disp_size = displacement_.Size();
-      mfem::BlockVector augmented_solution(
-          mfem::Array<int>({0, disp_size, disp_size + contact_.numPressureTrueDofs()}));
+      int disp_size = displacement_.Size();
+      mfem::Array<int> block_offsets({0, disp_size, disp_size + contact_.numPressureTrueDofs()});
+      mfem::BlockVector augmented_solution(block_offsets);
       augmented_solution.GetBlock(0) = displacement_;
       residual_with_bcs_->GetGradient(augmented_solution);
     }
@@ -1095,28 +1094,36 @@ public:
 
     auto& lin_solver = nonlin_solver_->linearSolver();
 
-    lin_solver.SetOperator(*jacobian);
+    if (!contact_.haveLagrangeMultipliers()) {
+      lin_solver.SetOperator(*jacobian);
 
-    lin_solver.Mult(dr_, du_);
-    displacement_ += du_;
+      lin_solver.Mult(dr_, du_);
+      displacement_ += du_;
 
-    if (!have_lagrange_multipliers) {
       nonlin_solver_->solve(displacement_);
     } else {
-      int               disp_size = displacement_.Size();
-      mfem::BlockVector augmented_solution(
-          mfem::Array<int>({0, disp_size, disp_size + contact_.numPressureTrueDofs()}));
-      auto& u_block = augmented_solution.GetBlock(0);
-      u_block       = displacement_;
-      auto& p_block = augmented_solution.GetBlock(1);
-      p_block.Set(1.0, contact_.truePressures());
-
       lin_solver.SetOperator(*J_contact_);
+
+      int disp_size = displacement_.Size();
+      mfem::Array<int> block_offsets({0, disp_size, disp_size + contact_.numPressureTrueDofs()});
+      mfem::BlockVector augmented_solution(block_offsets);
+      augmented_solution = 0.0;
+      mfem::BlockVector augmented_residual(augmented_solution);
+      augmented_residual.GetBlock(0) = dr_;
+      augmented_residual.GetBlock(1).Set(1.0, contact_.trueGaps());
+
+      lin_solver.Mult(augmented_residual, augmented_solution);
+
+      du_ = augmented_solution.GetBlock(0);
+      displacement_ += du_;
+
+      augmented_solution.GetBlock(0) = displacement_;
+      augmented_solution.GetBlock(1).Set(1.0, contact_.truePressures());
 
       nonlin_solver_->solve(augmented_solution);
 
-      displacement_.Set(1.0, u_block);
-      contact_.setPressures(p_block);
+      displacement_.Set(1.0, augmented_solution.GetBlock(0));
+      contact_.setPressures(augmented_solution.GetBlock(1));
     }
   }
 
