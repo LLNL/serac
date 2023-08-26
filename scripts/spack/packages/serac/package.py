@@ -137,8 +137,6 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("adiak+mpi", when="+profiling")
     depends_on("caliper+mpi+adiak~papi", when="+profiling")
 
-    depends_on("superlu-dist@6.1.1")
-
     #
     # Forward variants
     # NOTE: propogating variants to dependencies should be removed when pushing this recipe up to Spack
