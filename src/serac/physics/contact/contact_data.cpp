@@ -56,7 +56,11 @@ mfem::Vector ContactData::trueContactForces() const
   for (const auto& pair : pairs_) {
     f += pair.contactForces();
   }
-  reference_nodes_->ParFESpace()->GetProlongationMatrix()->MultTranspose(f, f_true);
+  // NOTE: forces are considered a dual field in MFEM and the correct operator
+  // here for MFEM dual fields is P^T.  However, Tribol stores forces similar to
+  // a ParGridFunction -- all shared dofs are equal; therefore, the operator
+  // that returns the desired values is R
+  reference_nodes_->ParFESpace()->GetRestrictionMatrix()->Mult(f, f_true);
   return f_true;
 }
 
@@ -85,8 +89,12 @@ mfem::Vector ContactData::trueGaps() const
       mfem::Vector g_pair_true;
       g_pair_true.MakeRef(g_true, dof_offsets[static_cast<int>(i)],
                           dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
-      pairs_[i].pressure().ParFESpace()->GetProlongationMatrix()->MultTranspose(pairs_[i].gaps(),
-                                                                                g_pair_true);
+      // NOTE: gaps are considered a dual field in MFEM and the correct operator
+      // here for MFEM dual fields is P^T.  However, Tribol stores gaps similar
+      // to a ParGridFunction -- all shared dofs are equal; therefore, the
+      // operator that returns the desired values is R
+      pairs_[i].pressure().ParFESpace()->GetRestrictionMatrix()->Mult(pairs_[i].gaps(),
+                                                                      g_pair_true);
     }
   }
   return g_true;
