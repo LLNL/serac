@@ -36,14 +36,14 @@ TEST(ContactTest, patch)
   // Construct the appropriate dimension mesh and give it to the data store
   std::string filename = SERAC_REPO_DIR "/data/meshes/twohex_for_contact.mesh";
 
-  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), 2, 0);
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), 1, 0);
   serac::StateManager::setMesh(std::move(mesh));
 
   serac::LinearSolverOptions linear_options{.linear_solver  = LinearSolver::SuperLU,
                                             .print_level    = 1};
 
 #ifdef MFEM_USE_SUNDIALS
-  serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::KINFullStep,
+  serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::Newton, //KINFullStep,
                                                   .relative_tol   = 1.0e-12,
                                                   .absolute_tol   = 1.0e-12,
                                                   .max_iterations = 20,

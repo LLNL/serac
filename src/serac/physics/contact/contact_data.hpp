@@ -130,6 +130,15 @@ public:
   void setDisplacements(const mfem::Vector& true_displacements);
 
   /**
+   * @brief Are any contact pairs enforced using Lagrange multipliers?
+   *
+   * @return true: at least one contact pair is using Lagrange multiplier
+   * enforcement
+   * @return false: no contact pairs are using Lagrange multipliers
+   */
+  bool haveLagrangeMultipliers() const { return have_lagrange_multipliers_; }
+
+  /**
    * @brief Get the number of Lagrange multiplier true degrees of freedom
    *
    * @return Number of Lagrange multiplier true degrees of freedom
@@ -160,6 +169,12 @@ private:
    * @brief Current coordinates of the mesh
    */
   mfem::ParGridFunction current_coords_;
+
+  /**
+   * @brief True if any of the contact pairs are enforced using Lagrange
+   * multipliers
+   */
+  bool have_lagrange_multipliers_;
 
 #ifdef SERAC_USE_TRIBOL
   /**

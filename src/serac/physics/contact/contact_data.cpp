@@ -18,6 +18,7 @@ ContactData::ContactData(const mfem::ParMesh& mesh)
     : mesh_{mesh},
       reference_nodes_{dynamic_cast<const mfem::ParGridFunction*>(mesh.GetNodes())},
       current_coords_{*reference_nodes_},
+      have_lagrange_multipliers_{false},
       num_pressure_true_dofs_{0}
 {
   tribol::initialize(mesh_.SpaceDimension(), mesh_.GetComm());
@@ -33,6 +34,7 @@ void ContactData::addContactPair(int pair_id, const std::set<int>& bdry_attr_sur
 {
   pairs_.emplace_back(pair_id, mesh_, bdry_attr_surf1, bdry_attr_surf2, current_coords_, contact_opts);
   if (contact_opts.enforcement == ContactEnforcement::LagrangeMultiplier) {
+    have_lagrange_multipliers_ = true;
     num_pressure_true_dofs_ += pairs_.back().numPressureTrueDofs();
   }
 }
