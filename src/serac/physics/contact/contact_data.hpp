@@ -74,7 +74,7 @@ public:
 
   /**
    * @brief Have there been contact pairs added?
-   * 
+   *
    * @return true if contact pairs have been added
    * @return false if there are no contact pairs
    */

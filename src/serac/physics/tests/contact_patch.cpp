@@ -39,8 +39,7 @@ TEST(ContactTest, patch)
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), 2, 0);
   serac::StateManager::setMesh(std::move(mesh));
 
-  serac::LinearSolverOptions linear_options{.linear_solver  = LinearSolver::SuperLU,
-                                            .print_level    = 1};
+  serac::LinearSolverOptions linear_options{.linear_solver = LinearSolver::SuperLU, .print_level = 1};
 
 #ifdef MFEM_USE_SUNDIALS
   serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::KINFullStep,

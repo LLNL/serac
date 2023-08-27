@@ -888,7 +888,8 @@ public:
             // call update again with the right pressures
             contact_.update(1, 1.0, dt);
 
-            mfem::Vector res = (*residual_)(u_blk, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
+            mfem::Vector res =
+                (*residual_)(u_blk, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
 
             res.Add(1.0, contact_.trueContactForces());
 
@@ -1043,8 +1044,8 @@ public:
     if (!contact_.haveLagrangeMultipliers()) {
       residual_with_bcs_->GetGradient(displacement_);
     } else {
-      int disp_size = displacement_.Size();
-      mfem::Array<int> block_offsets({0, disp_size, disp_size + contact_.numPressureTrueDofs()});
+      int               disp_size = displacement_.Size();
+      mfem::Array<int>  block_offsets({0, disp_size, disp_size + contact_.numPressureTrueDofs()});
       mfem::BlockVector augmented_solution(block_offsets);
       augmented_solution.GetBlock(0) = displacement_;
       residual_with_bcs_->GetGradient(augmented_solution);
@@ -1104,8 +1105,8 @@ public:
     } else {
       lin_solver.SetOperator(*J_contact_);
 
-      int disp_size = displacement_.Size();
-      mfem::Array<int> block_offsets({0, disp_size, disp_size + contact_.numPressureTrueDofs()});
+      int               disp_size = displacement_.Size();
+      mfem::Array<int>  block_offsets({0, disp_size, disp_size + contact_.numPressureTrueDofs()});
       mfem::BlockVector augmented_solution(block_offsets);
       augmented_solution = 0.0;
       mfem::BlockVector augmented_residual(augmented_solution);

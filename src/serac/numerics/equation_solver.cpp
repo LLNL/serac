@@ -81,7 +81,7 @@ void SuperLUSolver::SetOperator(const mfem::Operator& op)
           auto* hypre_block = const_cast<mfem::HypreParMatrix*>(
               dynamic_cast<const mfem::HypreParMatrix*>(&block_operator->GetBlock(i, j)));
           SLIC_ERROR_ROOT_IF(!hypre_block,
-                            "Trying to use SuperLU on a block operator that does not contain HypreParMatrix blocks.");
+                             "Trying to use SuperLU on a block operator that does not contain HypreParMatrix blocks.");
 
           hypre_blocks(i, j) = hypre_block;
         } else {
