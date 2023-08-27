@@ -76,7 +76,7 @@ mfem::Vector ContactData::truePressures() const
       p_pair_true.MakeRef(p_true, dof_offsets[static_cast<int>(i)],
                           dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
       pairs_[i].pressure().ParFESpace()->GetRestrictionMatrix()->Mult(pairs_[i].pressure(),
-                                                                         p_pair_true);
+                                                                      p_pair_true);
     }
   }
   return p_true;
@@ -110,7 +110,6 @@ std::unique_ptr<mfem::BlockOperator> ContactData::contactJacobian() const
   block_J->owns_blocks = true;
   mfem::Array2D<mfem::HypreParMatrix*> constraint_matrices(static_cast<int>(pairs_.size()), 1);
   
-  bool has_lagrange_multipliers = false;
   for (size_t i{0}; i < pairs_.size(); ++i) {
     auto pair_J         = tribol::getMfemBlockJacobian(pairs_[i].getPairId());
     pair_J->owns_blocks = false;
@@ -157,7 +156,6 @@ std::unique_ptr<mfem::BlockOperator> ContactData::contactJacobian() const
         constraint_matrices(static_cast<int>(i), 0) = nullptr;
       } else  // enforcement == ContactEnforcement::LagrangeMultiplier
       {
-        has_lagrange_multipliers = true;
         constraint_matrices(static_cast<int>(i), 0) = static_cast<mfem::HypreParMatrix*>(B);
       }
       if (pair_J->IsZeroBlock(0, 1) || !dynamic_cast<mfem::TransposeOperator*>(&pair_J->GetBlock(0, 1))) {
@@ -169,7 +167,7 @@ std::unique_ptr<mfem::BlockOperator> ContactData::contactJacobian() const
       }
     }
   }
-  if (has_lagrange_multipliers) {
+  if (haveLagrangeMultipliers()) {
     block_J->SetBlock(1, 0, mfem::HypreParMatrixFromBlocks(constraint_matrices));
     block_J->SetBlock(0, 1, static_cast<mfem::HypreParMatrix&>(block_J->GetBlock(1, 0)).Transpose());
     // build diagonal matrix with ones on inactive dofs
