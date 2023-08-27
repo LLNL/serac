@@ -20,8 +20,8 @@ set(contact_sources
     )
 
 set(contact_depends serac_infrastructure)
-blt_list_append(TO contact_depends ELEMENTS tribol IF SERAC_USE_TRIBOL)
-blt_list_append(TO contact_depends ELEMENTS redecomp IF SERAC_USE_TRIBOL AND ENABLE_MPI)
+blt_list_append(TO contact_depends ELEMENTS tribol IF TRIBOL_FOUND)
+blt_list_append(TO contact_depends ELEMENTS redecomp IF TRIBOL_FOUND AND ENABLE_MPI)
 
 blt_add_library(
     NAME        serac_contact

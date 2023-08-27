@@ -6,7 +6,6 @@
 
 #include "serac/numerics/equation_solver.hpp"
 
-#include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
 

@@ -23,7 +23,6 @@
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/materials/solid_material.hpp"
-#include "serac/physics/contact/contact_config.hpp"
 #include "serac/physics/contact/contact_data.hpp"
 
 namespace serac {
