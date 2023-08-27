@@ -56,7 +56,7 @@ if [[ "$DO_STYLE_CHECK" == "yes" ]] ; then
     cmake_args="$cmake_args -DENABLE_CLANGFORMAT=ON -DCLANGFORMAT_EXECUTABLE=$CLANGFORMAT_EXECUTABLE"
 fi
 
-or_die ./config-build.py -hc host-configs/docker/${HOST_CONFIG} -bp build-check-debug $cmake_args
+or_die ./config-build.py -hc host-configs/docker/${HOST_CONFIG} -bp build-check-debug -ip install-check-debug $cmake_args
 or_die cd build-check-debug
 
 if [[ "$DO_COVERAGE_CHECK" == "yes" ]] ; then
@@ -74,6 +74,12 @@ fi
 
 if [[ "$DO_STYLE_CHECK" == "yes" ]] ; then
     or_die make VERBOSE=1 clangformat_check
+fi
+
+if [[ "$DO_HEADER_CHECK" == "yes" ]] ; then
+    or_die make -j4
+    or_die make install -j4
+    or_die ../scripts/check_for_missing_headers.py -i ../install-check-debug -s ../src
 fi
 
 exit 0

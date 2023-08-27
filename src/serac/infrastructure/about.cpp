@@ -41,8 +41,7 @@
 #endif
 
 #ifdef SERAC_USE_TRIBOL
-// TODO: This can be uncommented when Tribol MR!59 gets merged and we update to it
-//#include "tribol/config.hpp"
+#include "tribol/config.hpp"
 #endif
 
 #include "serac/infrastructure/git_sha.hpp"
@@ -161,9 +160,7 @@ std::string about()
 
   // Tribol
 #ifdef SERAC_USE_TRIBOL
-  // TODO: This can be un-hardcoded when Tribol MR!59 gets merged and we update to it
-  //  about += format("Tribol Version:    {0}\n", TRIBOL_VERSION_FULL);
-  about += "Tribol Version:    0.1.0\n";
+  about += format("Tribol Version:    {0}\n", TRIBOL_VERSION_FULL);
 #else
   disabled_libs.push_back("Tribol");
 #endif
