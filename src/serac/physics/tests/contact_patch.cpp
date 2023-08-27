@@ -8,6 +8,7 @@
 #include "serac/physics/solid_mechanics.hpp"
 
 #include <functional>
+#include <mfem/linalg/hypre.hpp>
 #include <set>
 #include <string>
 
@@ -94,8 +95,7 @@ TEST_P(ContactTest, patch)
   solid_solver.outputState(paraview_name);
 
   // Check the l2 norm of the displacement dofs
-  auto u_l2 = solid_solver.displacement().Norml2();
-  MPI_Allreduce(MPI_IN_PLACE, &u_l2, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+  auto u_l2 = mfem::ParNormlp(solid_solver.displacement(), 2, MPI_COMM_WORLD);
   EXPECT_NEAR(0.098571999256934759, u_l2, 1.0e-4);
 }
 
