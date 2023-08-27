@@ -174,10 +174,8 @@ std::unique_ptr<mfem::BlockOperator> ContactData::contactJacobian() const
     mfem::Array<const mfem::Array<int>*> inactive_tdofs_vector(static_cast<int>(pairs_.size()));
     int inactive_tdofs_ct = 0;
     for (int i{0}; i < inactive_tdofs_vector.Size(); ++i) {
-      if (pairs_[static_cast<size_t>(i)].numPressureTrueDofs() > 0) {
-        inactive_tdofs_vector[i] = &pairs_[static_cast<size_t>(i)].inactiveTrueDofs();
-        inactive_tdofs_ct += inactive_tdofs_vector[i]->Size();
-      }
+      inactive_tdofs_vector[i] = &pairs_[static_cast<size_t>(i)].inactiveTrueDofs();
+      inactive_tdofs_ct += inactive_tdofs_vector[i]->Size();
     }
     auto dof_offsets = pressureTrueDofOffsets();
     mfem::Array<int> inactive_tdofs(inactive_tdofs_ct);
