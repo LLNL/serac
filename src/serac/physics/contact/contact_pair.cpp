@@ -17,20 +17,19 @@
 
 namespace serac {
 
-ContactPair::ContactPair(int pair_id, const mfem::ParMesh& mesh,
-                         const std::set<int>& bdry_attr_surf1,
-                         const std::set<int>& bdry_attr_surf2,
-                         const mfem::ParGridFunction& current_coords, ContactOptions contact_opts)
+ContactPair::ContactPair(int pair_id, const mfem::ParMesh& mesh, const std::set<int>& bdry_attr_surf1,
+                         const std::set<int>& bdry_attr_surf2, const mfem::ParGridFunction& current_coords,
+                         ContactOptions contact_opts)
     : pair_id_{pair_id}, contact_opts_{contact_opts}, current_coords_{current_coords}
 {
   tribol::registerMfemCouplingScheme(pair_id, 2 * pair_id, 2 * pair_id + 1, mesh, current_coords, bdry_attr_surf1,
                                      bdry_attr_surf2, tribol::SURFACE_TO_SURFACE, tribol::NO_SLIDING, getMethod(),
                                      tribol::FRICTIONLESS, tribol::LAGRANGE_MULTIPLIER);
   tribol::setLagrangeMultiplierOptions(pair_id, tribol::ImplicitEvalMode::MORTAR_RESIDUAL_JACOBIAN);
-  
+
   // get true DOFs only associated with surface 1
   if (getContactOptions().type == ContactType::TiedSlide) {
-    auto& pressure_space = *tribol::getMfemPressure(pair_id).ParFESpace();
+    auto&            pressure_space = *tribol::getMfemPressure(pair_id).ParFESpace();
     mfem::Array<int> dof_markers(pressure_space.GetVSize());
     dof_markers = 1;
     mfem::Array<int> surf2_markers(pressure_space.GetMesh()->attributes.Max());
@@ -43,7 +42,9 @@ ContactPair::ContactPair(int pair_id, const mfem::ParMesh& mesh,
         pressure_space.GetElementVDofs(e, vdofs);
         for (int d{0}; d < vdofs.Size(); ++d) {
           int k = vdofs[d];
-          if (k < 0) { k = -1 - k; }
+          if (k < 0) {
+            k = -1 - k;
+          }
           dof_markers[k] = 0;
         }
       }
@@ -69,10 +70,7 @@ mfem::Vector ContactPair::gaps() const
   return g;
 }
 
-mfem::ParGridFunction& ContactPair::pressure() const
-{
-  return tribol::getMfemPressure(getPairId());
-}
+mfem::ParGridFunction& ContactPair::pressure() const { return tribol::getMfemPressure(getPairId()); }
 
 int ContactPair::numPressureTrueDofs() const
 {
@@ -97,8 +95,8 @@ tribol::ContactMethod ContactPair::getMethod() const
 const mfem::Array<int>& ContactPair::inactiveTrueDofs() const
 {
   if (getContactOptions().type == ContactType::Frictionless) {
-    auto& p = pressure();
-    auto g = gaps();
+    auto&        p = pressure();
+    auto         g = gaps();
     mfem::Vector p_true(p.ParFESpace()->GetTrueVSize());
     p.ParFESpace()->GetRestrictionOperator()->Mult(p, p_true);
     mfem::Vector g_true(p.ParFESpace()->GetTrueVSize());
