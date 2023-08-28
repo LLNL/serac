@@ -5,8 +5,8 @@ spack:
       paths:
         cc: /usr/bin/gcc-12
         cxx: /usr/bin/g++-12
-        f77: /usr/bin/gfortran
-        fc: /usr/bin/gfortran
+        f77: /usr/bin/gfortran-12
+        fc: /usr/bin/gfortran-12
       flags: 
         cflags: -pthread
         cxxflags: -pthread

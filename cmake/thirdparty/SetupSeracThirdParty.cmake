@@ -224,10 +224,11 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         if(STRUMPACK_DIR)
             serac_assert_is_directory(VARIABLE_NAME STRUMPACK_DIR)
             set(MFEM_USE_STRUMPACK ON CACHE BOOL "")
+            find_package(strumpack CONFIG PATHS ${STRUMPACK_DIR}/lib/cmake/STRUMPACK)
             set(STRUMPACK_REQUIRED_PACKAGES "MPI" "MPI_Fortran" "ParMETIS" "METIS"
                 "ScaLAPACK" CACHE STRING
                 "Additional packages required by STRUMPACK.")
-                target_link_libraries(mfem INTERFACE fortran)
+            set(STRUMPACK_TARGET_NAMES STRUMPACK::strumpack CACHE STRING "")
         endif()
         set(MFEM_USE_UMPIRE OFF CACHE BOOL "")
         set(MFEM_USE_ZLIB ON CACHE BOOL "")
@@ -279,10 +280,15 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         list(FIND _mfem_libraries ${NETCDF_DIR}/lib/libnetcdf.a _index)
         math(EXPR _index "${_index} + 1")
         list(INSERT _mfem_libraries ${_index} ${HDF5_C_LIBRARY_hdf5_hl})
-        set_property(TARGET mfem PROPERTY
-                              INTERFACE_LINK_LIBRARIES ${_mfem_libraries})
-        set_property(TARGET mfem PROPERTY
-                              LINK_LIBRARIES ${_mfem_libraries})
+        list(APPEND _mfem_libraries STRUMPACK::strumpack)
+        target_link_libraries(mfem PUBLIC ${_mfem_libraries})
+        #set_property(TARGET mfem PROPERTY
+        #                      INTERFACE_LINK_LIBRARIES ${_mfem_libraries})
+        #set_property(TARGET mfem PROPERTY
+        #                      LINK_LIBRARIES ${_mfem_libraries})
+
+        blt_print_target_properties(TARGET STRUMPACK::strumpack)
+        blt_print_target_properties(TARGET mfem)
 
         # Patch the mfem target with the correct include directories
         get_target_property(_mfem_includes mfem INCLUDE_DIRECTORIES)
@@ -362,7 +368,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endif()
 
     else()
-
+        set(ENABLE_FORTRAN OFF CACHE BOOL "" FORCE)
         # Otherwise we use the submodule
         message(STATUS "Using Axom submodule")
         if(NOT LUA_DIR)
@@ -395,6 +401,12 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endif()
         if(NOT TARGET axom::cli11)
             add_library(axom::cli11 ALIAS cli11)
+        endif()
+
+        if(TARGET axom::sidre)
+            target_link_libraries(axom::sidre PUBLIC STRUMPACK::strumpack)
+        else()
+            target_link_libraries(sidre PUBLIC STRUMPACK::strumpack)
         endif()
 
         if(NOT TARGET axom)
@@ -433,6 +445,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
                          APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
                          "${_dirs}")
         endif()
+        set(ENABLE_FORTRAN ON CACHE BOOL "" FORCE)
     endif()
 
     #------------------------------------------------------------------------------
