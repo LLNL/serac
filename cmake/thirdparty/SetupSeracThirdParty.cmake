@@ -469,6 +469,8 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set_property(TARGET tribol
                      APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
                      ${TRIBOL_INCLUDE_DIR})
+
+        set(TRIBOL_FOUND ON)
     else()
         set(TRIBOL_FOUND OFF)
     endif()
