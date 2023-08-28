@@ -134,22 +134,26 @@ We currently regularly test the following Spack configuration files:
 * TOSS 3 (On Ruby at LC)
 * BlueOS (On Lassen at LC)
 
-To install Serac on a new platform, it is a good idea to start with a known Spack configuration directory
+To install Serac on a new platform, it is a good idea to start with a known Spack environments file, or ``spack.yaml`` file,
 (located in the Serac repo at ``scripts/spack/configs/<platform>``). The ``spack.yaml`` file
 describes the compilers and associated flags required for the platform as well as the low-level libraries
 on the system to prevent Spack from building the world. Documentation on these configuration files is located
 in the `Spack docs <https://spack.readthedocs.io/en/latest/configuration.html>`_.
 
+.. note::
+   If you do not have a ``spack.yaml`` already, you can leave off that command line option from ``uberenv`` and
+   Spack will generate a new one for you. Uberenv will copy it where you ran your uberenv command for future use.
+
 Some helpful uberenv options include :
 
-* ``--spec=+debug`` (build the MFEM and Hypre libraries with debug symbols)
+* ``--spec=" build_type=Debug"`` (build the MFEM and Hypre libraries with debug symbols)
 * ``--spec=+profiling`` (build the Adiak and Caliper libraries)
 * ``--spec=+devtools`` (also build the devtools with one command)
 * ``--spec=%clang@10.0.0`` (build with a specific compiler as defined in the ``spack.yaml`` file)
 * ``--spack-env-file=<Path to Spack environment file>`` (use specific Spack environment configuration file)
 * ``--prefix=<Path>`` (required, build and install the dependencies in a particular location) - this *must be outside* of your local Serac repository
 
-The modifiers to the Spack specification ``spec`` can be chained together, e.g. ``--spec=%clang@10.0.0+debug+devtools``.
+The modifiers to the Spack specification ``spec`` can be chained together, e.g. ``--spec='%clang@10.0.0+devtools build_type=Debug'``.
 
 If you already have a Spack instance from another project that you would like to reuse,
 you can do so by changing the uberenv command as follows:

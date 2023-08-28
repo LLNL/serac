@@ -70,7 +70,6 @@
 #include "serac/infrastructure/input.hpp"
 #include "serac/serac_config.hpp"
 #include "serac/mesh/mesh_utils_base.hpp"
-#include "serac/numerics/expr_template_ops.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/numerics/functional/tensor.hpp"
@@ -123,7 +122,7 @@ auto monomials(tensor<T, dim> X)
 }
 
 template <int p, typename T, int dim>
-auto grad_monomials(tensor<T, dim> X)
+auto grad_monomials([[maybe_unused]] tensor<T, dim> X)
 {
   if constexpr (dim == 2) {
     tensor<T, ((p + 1) * (p + 2)) / 2, 2> output;
