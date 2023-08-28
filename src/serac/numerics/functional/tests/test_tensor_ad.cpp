@@ -109,6 +109,15 @@ TEST(DualNumberTensor, Pow)
   // f(x) = x^3/2
   auto xd = pow(make_dual(x), 1.5);
   EXPECT_LT(abs(1.5 * pow(x, 0.5) - xd.gradient), eps);
+
+  EXPECT_EQ(pow(dual<double>{0.0, 2.0}, 1.0).value, 0);
+  EXPECT_EQ(pow(dual<double>{0.0, 2.0}, 1.0).gradient, 2);
+
+  EXPECT_EQ(pow(0.0, dual<double>{1.0, 2.0}).value, 0);
+  EXPECT_TRUE(std::isnan(pow(0.0, dual<double>{1.0, 2.0}).gradient));
+
+  EXPECT_EQ(pow(dual<double>{0.0, 2.0}, dual<double>{1.0, 3.0}).value, 0.0);
+  EXPECT_TRUE(std::isnan(pow(dual<double>{0.0, 2.0}, dual<double>{1.0, 3.0}).gradient));
 }
 
 TEST(DualNumberTensor, MixedOperations)
