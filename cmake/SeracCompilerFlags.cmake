@@ -15,7 +15,7 @@ endif()
 string(APPEND CMAKE_EXE_LINKER_FLAGS " -rdynamic")
 
 # Prevent unused -Xlinker arguments on Lassen Clang-10
-if(DEFINED ENV{SYS_TYPE} AND $ENV{SYS_TYPE} STREQUAL "blueos_3_ppc64le_ib_p9")
+if(DEFINED ENV{SYS_TYPE} AND "$ENV{SYS_TYPE}" STREQUAL "blueos_3_ppc64le_ib_p9")
     string(APPEND CMAKE_EXE_LINKER_FLAGS " -Wno-unused-command-line-argument")
 endif()
 
