@@ -81,7 +81,7 @@ TEST_P(ContactTest, beam)
   });
 
   // Set the contact pair
-  solid_solver.addContactPair(0, {4}, {5}, contact_options);
+  solid_solver.addContactPair(0, {7}, {5}, contact_options);
 
   // Finalize the data structures
   solid_solver.completeSetup();
