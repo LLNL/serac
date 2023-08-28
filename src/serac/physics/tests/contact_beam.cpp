@@ -101,10 +101,12 @@ TEST_P(ContactTest, beam)
   EXPECT_NEAR(3.3257055635785537, u_l2, 1.0e-3);
 }
 
+// NOTE: if Penalty is first and Lagrange Multiplier is second, super LU gives a
+// zero diagonal error
 INSTANTIATE_TEST_SUITE_P(tribol, ContactTest,
-                         testing::Values(std::make_pair(ContactEnforcement::Penalty, "penalty"),
-                                         std::make_pair(ContactEnforcement::LagrangeMultiplier,
-                                                        "lagrange_multiplier")));
+                         testing::Values(std::make_pair(ContactEnforcement::LagrangeMultiplier,
+                                                        "lagrange_multiplier"),
+                                         std::make_pair(ContactEnforcement::Penalty, "penalty")));
 
 }  // namespace serac
 
