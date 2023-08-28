@@ -15,7 +15,9 @@ endif()
 string(APPEND CMAKE_EXE_LINKER_FLAGS " -rdynamic")
 
 # Prevent unused -Xlinker arguments on Lassen Clang-10
-string(APPEND CMAKE_EXE_LINKER_FLAGS " -Qunused-arguments")
+if($ENV{SYS_TYPE} STREQUAL "blueos_3_ppc64le_ib_p9")
+    string(APPEND CMAKE_EXE_LINKER_FLAGS " -Qunused-arguments")
+endif()
 
 # Enable warnings for things not covered by -Wall -Wextra
 set(_extra_flags "-Wshadow -Wdouble-promotion -Wconversion -Wundef -Wnull-dereference -Wold-style-cast")
