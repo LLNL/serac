@@ -247,7 +247,10 @@ mfem::Array<int> ContactData::pressureTrueDofOffsets() const
 
 namespace serac {
 
-ContactData::ContactData(const mfem::ParMesh& mesh) : mesh_{mesh} {}
+ContactData::ContactData([[maybe_unused]] const mfem::ParMesh& mesh)
+    : have_lagrange_multipliers_{false}, num_pressure_true_dofs_{0}
+{
+}
 
 ContactData::~ContactData() {}
 

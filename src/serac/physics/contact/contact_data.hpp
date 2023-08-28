@@ -155,28 +155,24 @@ public:
   mfem::Array<int> pressureTrueDofOffsets() const;
 
 private:
+#ifdef SERAC_USE_TRIBOL
   /**
    * @brief The volume mesh for the problem
    */
   const mfem::ParMesh& mesh_;
+#endif
 
   /**
    * @brief Reference coordinates of the mesh
    */
   const mfem::ParGridFunction* reference_nodes_;
 
+#ifdef SERAC_USE_TRIBOL
   /**
    * @brief Current coordinates of the mesh
    */
   mfem::ParGridFunction current_coords_;
 
-  /**
-   * @brief True if any of the contact pairs are enforced using Lagrange
-   * multipliers
-   */
-  bool have_lagrange_multipliers_;
-
-#ifdef SERAC_USE_TRIBOL
   /**
    * @brief The contact boundary condition information
    */
@@ -184,14 +180,20 @@ private:
 #endif
 
   /**
-   * @brief Pressure T-dof count
-   */
-  int num_pressure_true_dofs_;
-
-  /**
    * @brief Offsets giving size of each Jacobian contribution
    */
   mutable mfem::Array<int> jacobian_offsets_;
+
+  /**
+   * @brief True if any of the contact pairs are enforced using Lagrange
+   * multipliers
+   */
+  bool have_lagrange_multipliers_;
+
+  /**
+   * @brief Pressure T-dof count
+   */
+  int num_pressure_true_dofs_;
 };
 
 }  // namespace serac
