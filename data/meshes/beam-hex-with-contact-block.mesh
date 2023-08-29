@@ -1,5 +1,8 @@
 MFEM mesh v1.0
 
+# a unit cube occupying [6.25,7.25]x[0,1]x[1,2] and an 8 element beam
+# occupying [0,8]x[0,1]x[0,1] where each element is a unit cube
+
 #
 # MFEM Geometry Types (see mesh/geom.hpp):
 #
