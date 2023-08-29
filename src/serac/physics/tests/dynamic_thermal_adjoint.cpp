@@ -3,7 +3,6 @@
 // details.
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
-
 #include "serac/physics/heat_transfer.hpp"
 
 #include <functional>
@@ -33,7 +32,7 @@ struct TimeSteppingInfo
 };
 
 
-double computeProbedThermalQoi(axom::sidre::DataStore& data_store,
+double computeProbedThermalQoi(axom::sidre::DataStore& /*data_store*/,
                                const NonlinearSolverOptions& nonlinear_opts,
                                const TimesteppingOptions& dyn_opts,
                                const heat_transfer::IsotropicConductorWithLinearConductivityVsTemperature& mat,
@@ -103,6 +102,7 @@ std::pair<double, std::vector<double>> computeThermalQoiAndGradient(axom::sidre:
 
   auto& temperature_solution = thermal.temperature();
   int N = temperature_solution.Size();
+  size_t Nsize = static_cast<size_t>(N);
 
   std::cout << "cycle=" << thermal.cycle() << " adj cycle= " << thermal.adjointCycle() << ", norm = " << serac::norm(temperature_solution) << std::endl;
 
@@ -124,7 +124,7 @@ std::pair<double, std::vector<double>> computeThermalQoiAndGradient(axom::sidre:
   }
   qoi *= 0.5;
 
-  std::vector<double> gradient(N, 0.0);
+  std::vector<double> gradient(Nsize, 0.0);
   serac::FiniteElementDual adjoint_load(thermal.temperature().space(), "adjoint_load");
   
   FiniteElementState prev_temperature(temperature_solution); // cannot get with thermal.previousTemperature(adjointCycle) yet, as adjointCycle is not defined until reverseAdjointTimestep is called.
@@ -132,7 +132,7 @@ std::pair<double, std::vector<double>> computeThermalQoiAndGradient(axom::sidre:
   for (int i = ts_info.num_timesteps; i > 0; --i) {
     std::cout << "cycle=" << thermal.cycle() << " adj cycle= " << thermal.adjointCycle() << ", norm = " << serac::norm(prev_temperature) << std::endl;
 
-    for (int n=0; n < N; ++n) {
+    for (size_t n=0; n < Nsize; ++n) {
       gradient[n] += 0.0; // this problem has no direct design sensitivities
     }
 
@@ -145,7 +145,7 @@ std::pair<double, std::vector<double>> computeThermalQoiAndGradient(axom::sidre:
     if (i==1) {
       auto mu = adjoint_sol.find("adjoint_d_temperature_dt")->second;
       for (int n=0; n < N; ++n) {
-        gradient[n] += mu(n);
+        gradient[static_cast<size_t>(n)] += mu(n);
       }
     }
 
@@ -180,10 +180,10 @@ TEST(HeatTransferDynamic, HeatTransferD)
   int N = initialTemperature.Size();
 
   double eps = 1e-7;
-  std::vector<double> numericalGradients(size_t(N));
+  std::vector<double> numericalGradients(static_cast<size_t>(N));
 
   for (int i=0; i < N; ++i) {
-    auto qoiPlus = computeThermalQoi(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo, i, eps);
+    auto qoiPlus = computeProbedThermalQoi(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo, i, eps);
     double grad = (qoiPlus-qoiBase)/eps;
     numericalGradients[size_t(i)] = grad;
   }
