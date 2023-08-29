@@ -173,7 +173,9 @@ public:
    * @brief Set the underlying matrix operator to use in the solution algorithm
    *
    * @param op The matrix operator to factorize with SuperLU
-   * @pre This operator must be an assembled HypreParMatrix for compatibility with SuperLU
+   * @pre This operator must be an assembled HypreParMatrix or a BlockOperator
+   * with all blocks either null or HypreParMatrixs for compatibility with
+   * SuperLU
    */
   void SetOperator(const mfem::Operator& op);
 
