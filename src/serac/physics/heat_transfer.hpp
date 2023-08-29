@@ -539,62 +539,63 @@ public:
 
     if (is_quasistatic_) {
       residual_with_bcs_ = mfem_ext::StdFunctionOperator(
-          temperature_.space().TrueVSize(),
+        temperature_.space().TrueVSize(),
 
-          [this](const mfem::Vector& u, mfem::Vector& r) {
-            const mfem::Vector res =
-                (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
+        [this](const mfem::Vector& u, mfem::Vector& r) {
+          const mfem::Vector res =
+              (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
 
-            // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
-            // tracking strategy
-            // See https://github.com/mfem/mfem/issues/3531
-            r = res;
-            r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
-          },
+          // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
+          // tracking strategy
+          // See https://github.com/mfem/mfem/issues/3531
+          r = res;
+          r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
+        },
 
-          [this](const mfem::Vector& u) -> mfem::Operator& {
-            auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, shape_displacement_,
-                                          *parameters_[parameter_indices].state...);
-            J_             = assemble(drdu);
-            J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
-            return *J_;
-          });
-
+        [this](const mfem::Vector& u) -> mfem::Operator& {
+          auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, shape_displacement_,
+                                        *parameters_[parameter_indices].state...);
+          J_             = assemble(drdu);
+          J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+          return *J_;
+        }
+      );
     } else {
       residual_with_bcs_ = mfem_ext::StdFunctionOperator(
-          temperature_.space().TrueVSize(),
+        temperature_.space().TrueVSize(),
 
-          [this](const mfem::Vector& du_dt, mfem::Vector& r) {
-            add(1.0, u_, dt_, du_dt, u_predicted_);
-            const mfem::Vector res =
-                (*residual_)(u_predicted_, du_dt, shape_displacement_, *parameters_[parameter_indices].state...);
+        [this](const mfem::Vector& du_dt, mfem::Vector& r) {
+          add(1.0, u_, dt_, du_dt, u_predicted_);
+          const mfem::Vector res =
+              (*residual_)(u_predicted_, du_dt, shape_displacement_, *parameters_[parameter_indices].state...);
 
-            // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
-            // tracking strategy
-            // See https://github.com/mfem/mfem/issues/3531
-            r = res;
-            r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
-          },
+          // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
+          // tracking strategy
+          // See https://github.com/mfem/mfem/issues/3531
+          r = res;
+          r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
+        },
 
-          [this](const mfem::Vector& du_dt) -> mfem::Operator& {
-            add(1.0, u_, dt_, du_dt, u_predicted_);
+        [this](const mfem::Vector& du_dt) -> mfem::Operator& {
+          add(1.0, u_, dt_, du_dt, u_predicted_);
 
-            // K := dR/du
-            auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(u_predicted_), du_dt, shape_displacement_,
-                                                         *parameters_[parameter_indices].state...));
-            std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
+          // K := dR/du
+          auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(u_predicted_), du_dt, shape_displacement_,
+                                                        *parameters_[parameter_indices].state...));
+          std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
-            // M := dR/du_dot
-            auto M = serac::get<DERIVATIVE>((*residual_)(u_predicted_, differentiate_wrt(du_dt), shape_displacement_,
-                                                         *parameters_[parameter_indices].state...));
-            std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
+          // M := dR/du_dot
+          auto M = serac::get<DERIVATIVE>((*residual_)(u_predicted_, differentiate_wrt(du_dt), shape_displacement_,
+                                                        *parameters_[parameter_indices].state...));
+          std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
-            // J := M + dt K
-            J_.reset(mfem::Add(1.0, *m_mat, dt_, *k_mat));
-            J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+          // J := M + dt K
+          J_.reset(mfem::Add(1.0, *m_mat, dt_, *k_mat));
+          J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
 
-            return *J_; // MRT, why not return J_e_ ?  Is this just going to be the same as J_?
-          });
+          return *J_; // MRT, why not return J_e_ ?  Is this just going to be the same as J_?
+        }
+      );
     }
   }
 
