@@ -33,7 +33,13 @@ struct TimeSteppingInfo
 };
 
 
-double computeThermalQoi(axom::sidre::DataStore& data_store, const NonlinearSolverOptions& nonlinear_opts, const TimesteppingOptions& dyn_opts, const heat_transfer::LinearIsotropicConductor& mat, const TimeSteppingInfo& ts_info, size_t dofIndex, double pertubation)
+double computeProbedThermalQoi(axom::sidre::DataStore& data_store,
+                               const NonlinearSolverOptions& nonlinear_opts,
+                               const TimesteppingOptions& dyn_opts,
+                               const heat_transfer::IsotropicConductorWithLinearConductivityVsTemperature& mat,
+                               const TimeSteppingInfo& ts_info,
+                               int dofIndex,
+                               double pertubation)
 {
   //auto saveMesh = std::make_unique<mfem::ParMesh>(serac::StateManager::mesh());
   //serac::StateManager::reset();
@@ -53,7 +59,7 @@ double computeThermalQoi(axom::sidre::DataStore& data_store, const NonlinearSolv
   double dt = ts_info.totalTime / ts_info.num_timesteps;
 
   auto& temperatureSol = thermal.temperature();
-  temperatureSol(int(dofIndex)) += pertubation; // finite difference change to initial temperature.  not clean, wish I could read in initial temperature vector.  maybe better if I can vary density
+  temperatureSol(dofIndex) += pertubation; // finite difference change to initial temperature.  not clean, wish I could read in initial temperature vector.  maybe better if I can vary density
 
   // Compute qoi: \int_t \int_omega 0.5 * (T - T_target(x,t)^2)
   double qoi = 0.0;
@@ -73,7 +79,11 @@ double computeThermalQoi(axom::sidre::DataStore& data_store, const NonlinearSolv
   return 0.5 * qoi;
 }
 
-std::pair<double, std::vector<double>> computeThermalQoiAndGradient(axom::sidre::DataStore& data_store, const NonlinearSolverOptions& nonlinear_opts, const TimesteppingOptions& dyn_opts, const heat_transfer::LinearIsotropicConductor& mat, const TimeSteppingInfo& ts_info)
+std::pair<double, std::vector<double>> computeThermalQoiAndGradient(axom::sidre::DataStore& /*data_store*/,
+                                                                    const NonlinearSolverOptions& nonlinear_opts,
+                                                                    const TimesteppingOptions& dyn_opts,
+                                                                    const heat_transfer::IsotropicConductorWithLinearConductivityVsTemperature& mat,
+                                                                    const TimeSteppingInfo& ts_info)
 {
   double dt = ts_info.totalTime / ts_info.num_timesteps;
 
@@ -92,7 +102,7 @@ std::pair<double, std::vector<double>> computeThermalQoiAndGradient(axom::sidre:
   thermal.completeSetup();
 
   auto& temperature_solution = thermal.temperature();
-  size_t N = temperature_solution.Size();
+  int N = temperature_solution.Size();
 
   std::cout << "cycle=" << thermal.cycle() << " adj cycle= " << thermal.adjointCycle() << ", norm = " << serac::norm(temperature_solution) << std::endl;
 
@@ -104,7 +114,7 @@ std::pair<double, std::vector<double>> computeThermalQoiAndGradient(axom::sidre:
     thermal.outputState();
 
     double nodalTemperatureNormSquared = 0.0;
-    for (size_t n=0; n < N; ++n) {
+    for (int n=0; n < N; ++n) {
       nodalTemperatureNormSquared += temperature_solution(n) * temperature_solution(n);
     }
 
@@ -122,11 +132,11 @@ std::pair<double, std::vector<double>> computeThermalQoiAndGradient(axom::sidre:
   for (int i = ts_info.num_timesteps; i > 0; --i) {
     std::cout << "cycle=" << thermal.cycle() << " adj cycle= " << thermal.adjointCycle() << ", norm = " << serac::norm(prev_temperature) << std::endl;
 
-    for (size_t n=0; n < N; ++n) {
+    for (int n=0; n < N; ++n) {
       gradient[n] += 0.0; // this problem has no direct design sensitivities
     }
 
-    for (size_t n=0; n < N; ++n) {
+    for (int n=0; n < N; ++n) {
       adjoint_load(n) = prev_temperature(n) * dt;
     }
 
@@ -134,7 +144,7 @@ std::pair<double, std::vector<double>> computeThermalQoiAndGradient(axom::sidre:
 
     if (i==1) {
       auto mu = adjoint_sol.find("adjoint_d_temperature_dt")->second;
-      for (size_t n=0; n < N; ++n) {
+      for (int n=0; n < N; ++n) {
         gradient[n] += mu(n);
       }
     }
@@ -163,33 +173,27 @@ TEST(HeatTransferDynamic, HeatTransferD)
   NonlinearSolverOptions nonlinear_opts{.relative_tol = 5.0e-13, .absolute_tol = 5.0e-13};
   TimesteppingOptions dyn_opts{.timestepper        = TimestepMethod::BackwardEuler,
                                .enforcement_method = DirichletEnforcementMethod::DirectControl};
-  heat_transfer::LinearIsotropicConductor mat(1.0, 1.0, 1.0);
+  heat_transfer::IsotropicConductorWithLinearConductivityVsTemperature mat(1.0, 1.0, 1.0, 2.0);
   TimeSteppingInfo tsInfo{.totalTime=0.5, .num_timesteps=4};
 
-  auto qoiBase = computeThermalQoi(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo, 0, 0.0);
-  size_t size = size_t(initialTemperature.Size());
+  auto qoiBase = computeProbedThermalQoi(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo, 0, 0.0);
+  int N = initialTemperature.Size();
 
   double eps = 1e-7;
-  std::vector<double> numericalGradients(size);
+  std::vector<double> numericalGradients(size_t(N));
 
-  for (size_t i=0; i < size; ++i) {
+  for (int i=0; i < N; ++i) {
     auto qoiPlus = computeThermalQoi(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo, i, eps);
     double grad = (qoiPlus-qoiBase)/eps;
-    numericalGradients[i] = grad;
-  }
-
-  //std::cout << "size = " << size << std::endl;
-  for (size_t i=0; i < size; ++i) {
-    std::cout << "num gradients = " << numericalGradients[i] << std::endl;
+    numericalGradients[size_t(i)] = grad;
   }
 
   std::pair<double, std::vector<double>> trueGrad = computeThermalQoiAndGradient(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo);
   const auto& adjGradient = trueGrad.second;
 
-  for (size_t i=0; i < size; ++i) {
-    std::cout << "adj gradients = " << adjGradient[i] << std::endl;
+  for (size_t i=0; i < size_t(N); ++i) {
+    EXPECT_NEAR(numericalGradients[i], adjGradient[i], 1e-6);
   }
-
 }
 
 }  // namespace serac
