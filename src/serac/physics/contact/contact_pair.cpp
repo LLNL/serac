@@ -55,28 +55,72 @@ ContactPair::ContactPair(int pair_id, const mfem::ParMesh& mesh, const std::set<
   }
 }
 
-mfem::Vector ContactPair::contactForces() const
+FiniteElementDual ContactPair::forces() const
 {
-  mfem::Vector f(current_coords_.ParFESpace()->GetVSize());
-  f = 0.0;
-  tribol::getMfemResponse(getPairId(), f);
+  FiniteElementDual f(*current_coords_.ParFESpace());
+  mfem::Vector f_tribol(current_coords_.ParFESpace()->GetVSize());
+  f_tribol = 0.0;
+  tribol::getMfemResponse(getPairId(), f_tribol);
+  current_coords_.ParFESpace()->GetRestrictionMatrix()->Mult(f_tribol, f);
   return f;
 }
 
-mfem::Vector ContactPair::gaps() const
+FiniteElementState ContactPair::pressure() const
 {
-  mfem::Vector g;
-  tribol::getMfemGap(getPairId(), g);
+  auto& p_tribol = tribol::getMfemPressure(getPairId());
+  FiniteElementState p(*p_tribol.ParFESpace());
+  p_tribol.ParFESpace()->GetRestrictionMatrix()->Mult(p_tribol, p);
+  return p;
+}
+
+FiniteElementDual ContactPair::gaps() const
+{
+  auto& pressure_fes = *tribol::getMfemPressure(getPairId()).ParFESpace();
+  FiniteElementDual g(pressure_fes);
+  mfem::Vector g_tribol;
+  tribol::getMfemGap(getPairId(), g_tribol);
+  pressure_fes.GetRestrictionMatrix()->Mult(g_tribol, g);
   return g;
 }
 
-mfem::ParGridFunction& ContactPair::pressure() const { return tribol::getMfemPressure(getPairId()); }
+std::unique_ptr<mfem::BlockOperator> ContactPair::jacobian() const
+{
+  return tribol::getMfemBlockJacobian(getPairId());
+}
 
-int ContactPair::numPressureTrueDofs() const
+int ContactPair::numPressureDofs() const
 {
   return getContactOptions().enforcement == ContactEnforcement::LagrangeMultiplier
              ? tribol::getMfemPressure(getPairId()).ParFESpace()->GetTrueVSize()
              : 0;
+}
+
+mfem::ParFiniteElementSpace& ContactPair::pressureSpace() const
+{
+  return *tribol::getMfemPressure(getPairId()).ParFESpace();
+}
+
+void ContactPair::setPressure(const FiniteElementState& pressure) const
+{
+  tribol::getMfemPressure(getPairId()) = pressure.gridFunction();
+}
+
+const mfem::Array<int>& ContactPair::inactiveDofs() const
+{
+  if (getContactOptions().type == ContactType::Frictionless) {
+    auto p = pressure();
+    auto g = gaps();
+    std::vector<int> inactive_tdofs_vector;
+    inactive_tdofs_vector.reserve(static_cast<size_t>(p.Size()));
+    for (int d{0}; d < p.Size(); ++d) {
+      if (p[d] >= 0.0 && g[d] >= -1.0e-14) {
+        inactive_tdofs_vector.push_back(d);
+      }
+    }
+    inactive_tdofs_ = mfem::Array<int>(static_cast<int>(inactive_tdofs_vector.size()));
+    std::copy(inactive_tdofs_vector.begin(), inactive_tdofs_vector.end(), inactive_tdofs_.begin());
+  }
+  return inactive_tdofs_;
 }
 
 tribol::ContactMethod ContactPair::getMethod() const
@@ -90,28 +134,6 @@ tribol::ContactMethod ContactPair::getMethod() const
       // return something so we don't get an error
       return tribol::SINGLE_MORTAR;
   }
-}
-
-const mfem::Array<int>& ContactPair::inactiveTrueDofs() const
-{
-  if (getContactOptions().type == ContactType::Frictionless) {
-    auto&        p = pressure();
-    auto         g = gaps();
-    mfem::Vector p_true(p.ParFESpace()->GetTrueVSize());
-    p.ParFESpace()->GetRestrictionOperator()->Mult(p, p_true);
-    mfem::Vector g_true(p.ParFESpace()->GetTrueVSize());
-    p.ParFESpace()->GetRestrictionOperator()->Mult(g, g_true);
-    std::vector<int> inactive_tdofs_vector;
-    inactive_tdofs_vector.reserve(static_cast<size_t>(p_true.Size()));
-    for (int d{0}; d < p_true.Size(); ++d) {
-      if (p_true[d] >= 0.0 && g_true[d] >= -1.0e-14) {
-        inactive_tdofs_vector.push_back(d);
-      }
-    }
-    inactive_tdofs_ = mfem::Array<int>(static_cast<int>(inactive_tdofs_vector.size()));
-    std::copy(inactive_tdofs_vector.begin(), inactive_tdofs_vector.end(), inactive_tdofs_.begin());
-  }
-  return inactive_tdofs_;
 }
 
 }  // namespace serac

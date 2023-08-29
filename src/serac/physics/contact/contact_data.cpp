@@ -17,10 +17,11 @@ namespace serac {
 ContactData::ContactData(const mfem::ParMesh& mesh)
     : mesh_{mesh},
       reference_nodes_{dynamic_cast<const mfem::ParGridFunction*>(mesh.GetNodes())},
-      current_coords_{*reference_nodes_},
+      current_coords_{*reference_nodes_->ParFESpace()},
       have_lagrange_multipliers_{false},
       num_pressure_true_dofs_{0}
 {
+  current_coords_.setFromGridFunction(*reference_nodes_);
   tribol::initialize(mesh_.SpaceDimension(), mesh_.GetComm());
 }
 
@@ -32,7 +33,7 @@ void ContactData::addContactPair(int pair_id, const std::set<int>& bdry_attr_sur
   pairs_.emplace_back(pair_id, mesh_, bdry_attr_surf1, bdry_attr_surf2, current_coords_, contact_opts);
   if (contact_opts.enforcement == ContactEnforcement::LagrangeMultiplier) {
     have_lagrange_multipliers_ = true;
-    num_pressure_true_dofs_ += pairs_.back().numPressureTrueDofs();
+    num_pressure_true_dofs_ += pairs_.back().numPressureDofs();
   }
 }
 
@@ -44,57 +45,46 @@ void ContactData::update(int cycle, double time, double& dt)
   tribol::update(cycle, time, dt);
 }
 
-mfem::Vector ContactData::trueContactForces() const
+FiniteElementDual ContactData::forces() const
 {
-  mfem::Vector f_true(reference_nodes_->ParFESpace()->GetTrueVSize());
-  mfem::Vector f(reference_nodes_->ParFESpace()->GetVSize());
-  f = 0.0;
+  FiniteElementDual f(*reference_nodes_->ParFESpace(), "contact force");
   for (const auto& pair : pairs_) {
-    f += pair.contactForces();
+    f += pair.forces();
   }
-  // NOTE: forces are considered a dual field in MFEM and the correct operator
-  // here for MFEM dual fields is P^T.  However, Tribol stores forces similar to
-  // a ParGridFunction -- all shared dofs are equal; therefore, the operator
-  // that returns the desired values is R
-  reference_nodes_->ParFESpace()->GetRestrictionMatrix()->Mult(f, f_true);
-  return f_true;
+  return f;
 }
 
-mfem::Vector ContactData::truePressures() const
+mfem::Vector ContactData::mergedPressures() const
 {
-  mfem::Vector p_true(numPressureTrueDofs());
+  mfem::Vector merged_p(numPressureTrueDofs());
   auto         dof_offsets = pressureTrueDofOffsets();
   for (size_t i{0}; i < pairs_.size(); ++i) {
     if (pairs_[i].getContactOptions().enforcement == ContactEnforcement::LagrangeMultiplier) {
-      mfem::Vector p_pair_true;
-      p_pair_true.MakeRef(p_true, dof_offsets[static_cast<int>(i)],
-                          dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
-      pairs_[i].pressure().ParFESpace()->GetRestrictionMatrix()->Mult(pairs_[i].pressure(), p_pair_true);
+      mfem::Vector p_pair;
+      p_pair.MakeRef(merged_p, dof_offsets[static_cast<int>(i)],
+                     dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
+      p_pair.Set(1.0, pairs_[i].pressure());
     }
   }
-  return p_true;
+  return merged_p;
 }
 
-mfem::Vector ContactData::trueGaps() const
+mfem::Vector ContactData::mergedGaps() const
 {
-  mfem::Vector g_true(numPressureTrueDofs());
+  mfem::Vector merged_g(numPressureTrueDofs());
   auto         dof_offsets = pressureTrueDofOffsets();
   for (size_t i{0}; i < pairs_.size(); ++i) {
     if (pairs_[i].getContactOptions().enforcement == ContactEnforcement::LagrangeMultiplier) {
-      mfem::Vector g_pair_true;
-      g_pair_true.MakeRef(g_true, dof_offsets[static_cast<int>(i)],
-                          dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
-      // NOTE: gaps are considered a dual field in MFEM and the correct operator
-      // here for MFEM dual fields is P^T.  However, Tribol stores gaps similar
-      // to a ParGridFunction -- all shared dofs are equal; therefore, the
-      // operator that returns the desired values is R
-      pairs_[i].pressure().ParFESpace()->GetRestrictionMatrix()->Mult(pairs_[i].gaps(), g_pair_true);
+      mfem::Vector g_pair;
+      g_pair.MakeRef(merged_g, dof_offsets[static_cast<int>(i)],
+                     dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
+      g_pair.Set(1.0, pairs_[i].pressure());
     }
   }
-  return g_true;
+  return merged_g;
 }
 
-std::unique_ptr<mfem::BlockOperator> ContactData::contactJacobian() const
+std::unique_ptr<mfem::BlockOperator> ContactData::jacobian() const
 {
   jacobian_offsets_    = mfem::Array<int>({0, reference_nodes_->ParFESpace()->GetTrueVSize(),
                                         numPressureTrueDofs() + reference_nodes_->ParFESpace()->GetTrueVSize()});
@@ -103,7 +93,7 @@ std::unique_ptr<mfem::BlockOperator> ContactData::contactJacobian() const
   mfem::Array2D<mfem::HypreParMatrix*> constraint_matrices(static_cast<int>(pairs_.size()), 1);
 
   for (size_t i{0}; i < pairs_.size(); ++i) {
-    auto pair_J         = tribol::getMfemBlockJacobian(pairs_[i].getPairId());
+    auto pair_J         = pairs_[i].jacobian();
     pair_J->owns_blocks = false;
     if (!pair_J->IsZeroBlock(0, 0)) {
       SLIC_ERROR_ROOT_IF(!dynamic_cast<mfem::HypreParMatrix*>(&pair_J->GetBlock(0, 0)),
@@ -126,7 +116,7 @@ std::unique_ptr<mfem::BlockOperator> ContactData::contactJacobian() const
       SLIC_ERROR_ROOT_IF(!B, "Only HypreParMatrix constraint matrix blocks are currently supported.");
       mfem::Vector active_rows(B->Height());
       active_rows = 1.0;
-      for (auto inactive_dof : pairs_[i].inactiveTrueDofs()) {
+      for (auto inactive_dof : pairs_[i].inactiveDofs()) {
         active_rows[inactive_dof] = 0.0;
       }
       B->ScaleRows(active_rows);
@@ -165,7 +155,7 @@ std::unique_ptr<mfem::BlockOperator> ContactData::contactJacobian() const
     mfem::Array<const mfem::Array<int>*> inactive_tdofs_vector(static_cast<int>(pairs_.size()));
     int                                  inactive_tdofs_ct = 0;
     for (int i{0}; i < inactive_tdofs_vector.Size(); ++i) {
-      inactive_tdofs_vector[i] = &pairs_[static_cast<size_t>(i)].inactiveTrueDofs();
+      inactive_tdofs_vector[i] = &pairs_[static_cast<size_t>(i)].inactiveDofs();
       inactive_tdofs_ct += inactive_tdofs_vector[i]->Size();
     }
     auto             dof_offsets = pressureTrueDofOffsets();
@@ -207,30 +197,31 @@ std::unique_ptr<mfem::BlockOperator> ContactData::contactJacobian() const
   return block_J;
 }
 
-void ContactData::setPressures(const mfem::Vector& true_pressures) const
+void ContactData::setPressures(const mfem::Vector& merged_pressures) const
 {
   auto dof_offsets = pressureTrueDofOffsets();
   for (size_t i{0}; i < pairs_.size(); ++i) {
-    auto& pressure = pairs_[i].pressure();
+    FiniteElementState p_pair(pairs_[i].pressureSpace());
     if (pairs_[i].getContactOptions().enforcement == ContactEnforcement::LagrangeMultiplier) {
-      mfem::Vector p_pair_true;
-      p_pair_true.MakeRef(const_cast<mfem::Vector&>(true_pressures), dof_offsets[static_cast<int>(i)],
-                          dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
-      pressure.ParFESpace()->GetProlongationMatrix()->Mult(p_pair_true, pairs_[i].pressure());
+      mfem::Vector p_pair_ref(const_cast<mfem::Vector&>(merged_pressures), 
+                              dof_offsets[static_cast<int>(i)],
+                              dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
+      p_pair.Set(1.0, p_pair_ref);
     } else  // enforcement == ContactEnforcement::Penalty
     {
-      pressure.Set(pairs_[i].getContactOptions().penalty, pairs_[i].gaps());
+      p_pair.Set(pairs_[i].getContactOptions().penalty, pairs_[i].gaps());
     }
-    for (auto dof : pairs_[i].inactiveTrueDofs()) {
-      pressure[dof] = 0.0;
+    for (auto dof : pairs_[i].inactiveDofs()) {
+      p_pair[dof] = 0.0;
     }
+    pairs_[i].setPressure(p_pair);
   }
 }
 
-void ContactData::setDisplacements(const mfem::Vector& true_displacement)
+void ContactData::setDisplacements(const mfem::Vector& u)
 {
-  reference_nodes_->ParFESpace()->GetProlongationMatrix()->Mult(true_displacement, current_coords_);
-  current_coords_ += *reference_nodes_;
+  current_coords_.setFromGridFunction(*reference_nodes_);
+  current_coords_ += u;
 }
 
 mfem::Array<int> ContactData::pressureTrueDofOffsets() const
@@ -238,7 +229,7 @@ mfem::Array<int> ContactData::pressureTrueDofOffsets() const
   mfem::Array<int> dof_offsets(static_cast<int>(pairs_.size()) + 1);
   dof_offsets = 0;
   for (size_t i{0}; i < pairs_.size(); ++i) {
-    dof_offsets[static_cast<int>(i + 1)] = dof_offsets[static_cast<int>(i)] + pairs_[i].numPressureTrueDofs();
+    dof_offsets[static_cast<int>(i + 1)] = dof_offsets[static_cast<int>(i)] + pairs_[i].numPressureDofs();
   }
   return dof_offsets;
 }
@@ -265,18 +256,18 @@ bool ContactData::haveContactPairs() const { return false; }
 
 void ContactData::update([[maybe_unused]] int cycle, [[maybe_unused]] double time, [[maybe_unused]] double& dt) {}
 
-mfem::Vector ContactData::trueContactForces() const
+FiniteElementDual ContactData::forces() const
 {
-  mfem::Vector f_true(reference_nodes_->ParFESpace()->GetTrueVSize());
-  f_true = 0.0;
-  return f_true;
+  FiniteElementDual f(*reference_nodes_->ParFESpace(), "contact force");
+  f = 0.0;
+  return f;
 }
 
-mfem::Vector ContactData::truePressures() const { return mfem::Vector(); }
+mfem::Vector ContactData::mergedPressures() const { return mfem::Vector(); }
 
-mfem::Vector ContactData::trueGaps() const { return mfem::Vector(); }
+mfem::Vector ContactData::mergedGaps() const { return mfem::Vector(); }
 
-std::unique_ptr<mfem::BlockOperator> ContactData::contactJacobian() const
+std::unique_ptr<mfem::BlockOperator> ContactData::jacobian() const
 {
   jacobian_offsets_ = mfem::Array<int>(
       {0, reference_nodes_->ParFESpace()->GetTrueVSize(), reference_nodes_->ParFESpace()->GetTrueVSize()});

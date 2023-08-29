@@ -19,6 +19,7 @@
 #include "mfem.hpp"
 
 #include "serac/physics/contact/contact_config.hpp"
+#include "serac/physics/state/finite_element_dual.hpp"
 #include "serac/physics/state/finite_element_state.hpp"
 
 #include "tribol/common/Parameters.hpp"
@@ -69,30 +70,59 @@ public:
    *
    * @return Contact nodal forces as a Vector
    */
-  mfem::Vector contactForces() const;
-
-  /**
-   * @brief Get the nodal gaps for the contact pair
-   *
-   * @return Nodal gaps as a Vector
-   */
-  mfem::Vector gaps() const;
+  FiniteElementDual forces() const;
 
   /**
    * @brief Get the pressure degrees of freedom for the contact pair
    *
    * @return Pressure degrees of freedom as a ParGridFunction
    */
-  mfem::ParGridFunction& pressure() const;
+  FiniteElementState pressure() const;
 
   /**
-   * @brief Returns the number of pressure true DOFs on this rank
+   * @brief Get the nodal gaps for the contact pair
    *
-   * @return Number of pressure true DOFs as an integer
+   * @return Nodal gaps as a Vector
    */
-  int numPressureTrueDofs() const;
+  FiniteElementDual gaps() const;
 
-  const mfem::Array<int>& inactiveTrueDofs() const;
+  /**
+   * @brief Get the (2x2) block Jacobian for the contact pair
+   *
+   * Block row/col 0: displacement space
+   * Block row/col 1: pressure space
+   * 
+   * @return Contact Jacobian as a BlockOperator
+   */
+  std::unique_ptr<mfem::BlockOperator> jacobian() const;
+
+  /**
+   * @brief Get the finite element space of the pressure DOFs
+   * 
+   * @return mfem::ParFiniteElementSpace of the pressure DOFs
+   */
+  mfem::ParFiniteElementSpace& pressureSpace() const;
+
+  /**
+   * @brief Updates the pressure DOFs stored in Tribol
+   * 
+   * @param pressure FiniteElementState holding pressure DOF values
+   */
+  void setPressure(const FiniteElementState& pressure) const;
+
+  /**
+   * @brief Returns the number of pressure DOFs on this rank
+   *
+   * @return Number of pressure DOFs as an integer
+   */
+  int numPressureDofs() const;
+
+  /**
+   * @brief List of pressure/gap DOFs that are not active
+   * 
+   * @return Array of inactive DOFs
+   */
+  const mfem::Array<int>& inactiveDofs() const;
 
 private:
   /**

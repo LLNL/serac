@@ -890,12 +890,12 @@ public:
             mfem::Vector res =
                 (*residual_)(u_blk, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
 
-            res.Add(1.0, contact_.trueContactForces());
+            res.Add(1.0, contact_.forces());
 
             r_blk = res;
             r_blk.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
 
-            g_blk.Set(1.0, contact_.trueGaps());
+            g_blk.Set(1.0, contact_.mergedGaps());
           },
 
           // gradient of residual function with contact Jacobian
@@ -906,7 +906,7 @@ public:
                                           *parameters_[parameter_indices].state...);
             J_             = assemble(drdu);
 
-            J_contact_ = contact_.contactJacobian();
+            J_contact_ = contact_.jacobian();
             if (J_contact_->IsZeroBlock(0, 0)) {
               J_contact_->SetBlock(0, 0, J_.release());
             } else {
@@ -1110,7 +1110,7 @@ public:
       augmented_solution = 0.0;
       mfem::BlockVector augmented_residual(augmented_solution);
       augmented_residual.GetBlock(0) = dr_;
-      augmented_residual.GetBlock(1).Set(1.0, contact_.trueGaps());
+      augmented_residual.GetBlock(1).Set(1.0, contact_.mergedGaps());
 
       lin_solver.Mult(augmented_residual, augmented_solution);
 
@@ -1118,7 +1118,7 @@ public:
       displacement_ += du_;
 
       augmented_solution.GetBlock(0) = displacement_;
-      augmented_solution.GetBlock(1).Set(1.0, contact_.truePressures());
+      augmented_solution.GetBlock(1).Set(1.0, contact_.mergedPressures());
 
       nonlin_solver_->solve(augmented_solution);
 

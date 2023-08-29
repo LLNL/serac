@@ -16,6 +16,8 @@
 
 #include "serac/serac_config.hpp"
 #include "serac/physics/contact/contact_config.hpp"
+#include "serac/physics/state/finite_element_dual.hpp"
+#include "serac/physics/state/finite_element_state.hpp"
 #ifdef SERAC_USE_TRIBOL
 #include "serac/physics/contact/contact_pair.hpp"
 #endif
@@ -85,21 +87,21 @@ public:
    *
    * @return Nodal contact forces as a Vector
    */
-  mfem::Vector trueContactForces() const;
+  FiniteElementDual forces() const;
 
   /**
-   * @brief Returns pressures on Lagrange multiplier true degrees of freedom
+   * @brief Returns pressures on the contact surfaces
    *
-   * @return Pressure true degrees of freedom as a Vector
+   * @return Pressure finite element state
    */
-  mfem::Vector truePressures() const;
+  mfem::Vector mergedPressures() const;
 
   /**
    * @brief Returns nodal gaps on true degrees of freedom
    *
    * @return Nodal gaps as a Vector
    */
-  mfem::Vector trueGaps() const;
+  mfem::Vector mergedGaps() const;
 
   /**
    * @brief Returns a 2x2 block Jacobian on displacement/pressure degrees of
@@ -107,7 +109,7 @@ public:
    *
    * @return Pointer to block Jacobian (2x2 BlockOperator of HypreParMatrix)
    */
-  std::unique_ptr<mfem::BlockOperator> contactJacobian() const;
+  std::unique_ptr<mfem::BlockOperator> jacobian() const;
 
   /**
    * @brief Set the pressure field
@@ -118,16 +120,16 @@ public:
    *
    * @note The nodal gaps must be up-to-date for penalty enforcement
    *
-   * @param true_pressures Current pressure true dof values
+   * @param merged_pressures Current pressure true dof values
    */
-  void setPressures(const mfem::Vector& true_pressures) const;
+  void setPressures(const mfem::Vector& merged_pressures) const;
 
   /**
-   * @brief Set the displacement field
+   * @brief Update the current coordinates based on the new displacement field
    *
-   * @param true_displacements Current displacement true dof values
+   * @param u Current displacement dof values
    */
-  void setDisplacements(const mfem::Vector& true_displacements);
+  void setDisplacements(const mfem::Vector& u);
 
   /**
    * @brief Are any contact pairs enforced using Lagrange multipliers?
@@ -171,7 +173,7 @@ private:
   /**
    * @brief Current coordinates of the mesh
    */
-  mfem::ParGridFunction current_coords_;
+  FiniteElementState current_coords_;
 
   /**
    * @brief The contact boundary condition information
