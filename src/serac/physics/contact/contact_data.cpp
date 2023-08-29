@@ -17,11 +17,10 @@ namespace serac {
 ContactData::ContactData(const mfem::ParMesh& mesh)
     : mesh_{mesh},
       reference_nodes_{dynamic_cast<const mfem::ParGridFunction*>(mesh.GetNodes())},
-      current_coords_{*reference_nodes_->ParFESpace()},
+      current_coords_{*reference_nodes_},
       have_lagrange_multipliers_{false},
       num_pressure_true_dofs_{0}
 {
-  current_coords_.setFromGridFunction(*reference_nodes_);
   tribol::initialize(mesh_.SpaceDimension(), mesh_.GetComm());
 }
 
@@ -220,8 +219,8 @@ void ContactData::setPressures(const mfem::Vector& merged_pressures) const
 
 void ContactData::setDisplacements(const mfem::Vector& u)
 {
-  current_coords_.setFromGridFunction(*reference_nodes_);
-  current_coords_ += u;
+  reference_nodes_->ParFESpace()->GetProlongationMatrix()->Mult(u, current_coords_);
+  current_coords_ += *reference_nodes_;
 }
 
 mfem::Array<int> ContactData::pressureTrueDofOffsets() const

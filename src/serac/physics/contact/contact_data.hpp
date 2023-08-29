@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include <mfem/fem/pgridfunc.hpp>
 #include "mfem.hpp"
 
 #include "serac/serac_config.hpp"
@@ -173,7 +174,7 @@ private:
   /**
    * @brief Current coordinates of the mesh
    */
-  FiniteElementState current_coords_;
+  mfem::ParGridFunction current_coords_;
 
   /**
    * @brief The contact boundary condition information
