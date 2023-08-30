@@ -37,12 +37,12 @@ std::unique_ptr<HeatTransfer<p,dim>> create_heat_transfer(const NonlinearSolverO
                                                           const heat_transfer::IsotropicConductorWithLinearConductivityVsTemperature& mat)
 {
   //eventually figure out how to clear out cider state 
-  //auto saveMesh = std::make_unique<mfem::ParMesh>(serac::StateManager::mesh());
-  //serac::StateManager::reset();
+  //auto saveMesh = std::make_unique<mfem::ParMesh>(StateManager::mesh());
+  //StateManager::reset();
   //static int iter = 0;
-  //serac::StateManager::initialize(data_store, "thermal_dynamic_solve"+std::to_string(iter++));
+  //StateManager::initialize(data_store, "thermal_dynamic_solve"+std::to_string(iter++));
   //std::string filename = std::string(SERAC_REPO_DIR) + "/data/meshes/star.mesh";
-  //mfem::ParMesh* mesh = serac::StateManager::setMesh(std::move(saveMesh));
+  //mfem::ParMesh* mesh = StateManager::setMesh(std::move(saveMesh));
   static int iter = 0;
   auto thermal = std::make_unique<HeatTransfer<p, dim>>(nonlinear_opts, heat_transfer::direct_linear_options, dyn_opts, thermal_prefix + std::to_string(iter++));
   thermal->setMaterial(mat);
@@ -56,7 +56,7 @@ std::unique_ptr<HeatTransfer<p,dim>> create_heat_transfer(const NonlinearSolverO
 
 /* QOI */
 
-double computeStepQoi(const serac::FiniteElementState& temperature, double dt)
+double computeStepQoi(const FiniteElementState& temperature, double dt)
 {
   // Compute qoi: \int_t \int_omega 0.5 * (T - T_target(x,t)^2)
   double nodalTemperatureNormSquared = 0.0;
@@ -66,7 +66,7 @@ double computeStepQoi(const serac::FiniteElementState& temperature, double dt)
   return nodalTemperatureNormSquared * dt;
 }
 
-void computeStepAdjointLoad(const serac::FiniteElementState& temperature, serac::FiniteElementDual& d_qoi_d_temperature, double dt)
+void computeStepAdjointLoad(const FiniteElementState& temperature, FiniteElementDual& d_qoi_d_temperature, double dt)
 {
   for (int n=0; n < temperature.Size(); ++n) {
     d_qoi_d_temperature(n) = dt * temperature(n);
@@ -147,13 +147,13 @@ std::pair<double, std::vector<double>> computeThermalQoiAndInitialTemperatureGra
   size_t Nsize = static_cast<size_t>(thermal->temperature().Size());
   std::vector<double> gradient(Nsize, 0.0);
 
-  serac::FiniteElementDual adjoint_load(thermal->temperature().space(), "adjoint_load");
+  FiniteElementDual adjoint_load(thermal->temperature().space(), "adjoint_load");
   FiniteElementState temperature_end_of_step(thermal->temperature()); // cannot get with thermal.previousTemperature(adjointCycle) yet, as adjointCycle is not defined until reverseAdjointTimestep is called.
 
   for (int i = ts_info.num_timesteps; i > 0; --i) {
     double dt = ts_info.totalTime / ts_info.num_timesteps;
     computeStepAdjointLoad(temperature_end_of_step, adjoint_load, dt);
-    std::unordered_map<std::string, const serac::FiniteElementState&> adjoint_sol = thermal->reverseAdjointTimestep({{"temperature", adjoint_load}});
+    std::unordered_map<std::string, const FiniteElementState&> adjoint_sol = thermal->reverseAdjointTimestep({{"temperature", adjoint_load}});
     temperature_end_of_step = thermal->previousTemperature(thermal->cycle());
 
     if (i==1) {
@@ -175,9 +175,9 @@ class HeatTransferSensitivityFixture : public ::testing::Test
 
   void SetUp() override {
     MPI_Barrier(MPI_COMM_WORLD);
-    serac::StateManager::initialize(dataStore, "thermal_dynamic_solve");
+    StateManager::initialize(dataStore, "thermal_dynamic_solve");
     std::string filename = std::string(SERAC_REPO_DIR) + "/data/meshes/star.mesh";
-    mesh = serac::StateManager::setMesh(mesh::refineAndDistribute(buildMeshFromFile(filename), 0));
+    mesh = StateManager::setMesh(mesh::refineAndDistribute(buildMeshFromFile(filename), 0));
 
   }
 
