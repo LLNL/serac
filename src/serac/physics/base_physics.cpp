@@ -26,9 +26,7 @@ BasePhysics::BasePhysics(std::string name, mfem::ParMesh* pmesh)
       shape_displacement_(StateManager::shapeDisplacement(sidre_datacoll_id_)),
       shape_displacement_sensitivity_(StateManager::shapeDisplacementSensitivity(sidre_datacoll_id_)),
       time_(0.0),
-      adjoint_time_(-1.0),
       cycle_(0),
-      adjoint_cycle_(-1),
       ode_time_point_(0.0),
       bcs_(mesh_)
 {
@@ -47,13 +45,9 @@ void BasePhysics::setTime(const double time) { time_ = time; }
 
 double BasePhysics::time() const { return time_; }
 
-double BasePhysics::adjointTime() const { return adjoint_time_; }
-
 void BasePhysics::setCycle(const int cycle) { cycle_ = cycle; }
 
 int BasePhysics::cycle() const { return cycle_; }
-
-int BasePhysics::adjointCycle() const { return adjoint_cycle_; }
 
 std::unique_ptr<FiniteElementState> BasePhysics::generateParameter(const std::string& parameter_name,
                                                                    size_t             parameter_index)
