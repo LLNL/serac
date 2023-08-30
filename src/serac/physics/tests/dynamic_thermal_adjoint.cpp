@@ -27,9 +27,27 @@ const std::string thermal_prefix = "thermal";
 
 struct TimeSteppingInfo
 {
-  double totalTime = 0.5;
+  double totalTime = 0.6;
   int num_timesteps = 4;
 };
+
+
+double computeStepQoi(const FiniteElementState& temperature, double dt)
+{
+  // Compute qoi: \int_t \int_omega 0.5 * (T - T_target(x,t)^2), T_target = 0 here
+  double nodalTemperatureNormSquared = 0.0;
+  for (int n=0; n < temperature.Size(); ++n) {
+    nodalTemperatureNormSquared += temperature(n) * temperature(n);
+  }
+  return 0.5 * nodalTemperatureNormSquared * dt;
+}
+
+void computeStepAdjointLoad(const FiniteElementState& temperature, FiniteElementDual& d_qoi_d_temperature, double dt)
+{
+  for (int n=0; n < temperature.Size(); ++n) {
+    d_qoi_d_temperature(n) = dt * temperature(n);
+  }
+}
 
 
 std::unique_ptr<HeatTransfer<p,dim>> create_heat_transfer(const NonlinearSolverOptions& nonlinear_opts,
@@ -51,26 +69,6 @@ std::unique_ptr<HeatTransfer<p,dim>> create_heat_transfer(const NonlinearSolverO
   thermal->setSource([](auto /* X */, auto /* time */, auto /* u */, auto /* du_dx */) { return 1.0; });
   thermal->completeSetup();
   return thermal;
-}
-
-
-/* QOI */
-
-double computeStepQoi(const FiniteElementState& temperature, double dt)
-{
-  // Compute qoi: \int_t \int_omega 0.5 * (T - T_target(x,t)^2)
-  double nodalTemperatureNormSquared = 0.0;
-  for (int n=0; n < temperature.Size(); ++n) {
-    nodalTemperatureNormSquared += temperature(n) * temperature(n);
-  }
-  return nodalTemperatureNormSquared * dt;
-}
-
-void computeStepAdjointLoad(const FiniteElementState& temperature, FiniteElementDual& d_qoi_d_temperature, double dt)
-{
-  for (int n=0; n < temperature.Size(); ++n) {
-    d_qoi_d_temperature(n) = dt * temperature(n);
-  }
 }
 
 
@@ -96,7 +94,7 @@ double computeThermalQoiAdjustingInitalTemperature(axom::sidre::DataStore& /*dat
     thermal->outputState();
     qoi += computeStepQoi(thermal->temperature(), dt);
   }
-  return 0.5 * qoi;
+  return qoi;
 }
 
 
@@ -122,15 +120,15 @@ double computeThermalQoiAdjustingShape(axom::sidre::DataStore& /*data_store*/,
     thermal->outputState();
     qoi += computeStepQoi(thermal->temperature(), dt);
   }
-  return 0.5 * qoi;
+  return qoi;
 }
 
 
-std::pair<double, std::vector<double>> computeThermalQoiAndInitialTemperatureGradient(axom::sidre::DataStore& /*data_store*/,
-                                                                                      const NonlinearSolverOptions& nonlinear_opts,
-                                                                                      const TimesteppingOptions& dyn_opts,
-                                                                                      const heat_transfer::IsotropicConductorWithLinearConductivityVsTemperature& mat,
-                                                                                      const TimeSteppingInfo& ts_info)
+std::pair<double, FiniteElementDual> computeThermalQoiAndInitialTemperatureGradient(axom::sidre::DataStore& /*data_store*/,
+                                                                                    const NonlinearSolverOptions& nonlinear_opts,
+                                                                                    const TimesteppingOptions& dyn_opts,
+                                                                                    const heat_transfer::IsotropicConductorWithLinearConductivityVsTemperature& mat,
+                                                                                    const TimeSteppingInfo& ts_info)
 {
   auto thermal = create_heat_transfer(nonlinear_opts, dyn_opts, mat);
 
@@ -142,25 +140,56 @@ std::pair<double, std::vector<double>> computeThermalQoiAndInitialTemperatureGra
     thermal->outputState();
     qoi += computeStepQoi(thermal->temperature(), dt);
   }
-  qoi *= 0.5;
 
-  size_t Nsize = static_cast<size_t>(thermal->temperature().Size());
-  std::vector<double> gradient(Nsize, 0.0);
-
+  FiniteElementDual gradient(thermal->temperature().space(), "gradient");
   FiniteElementDual adjoint_load(thermal->temperature().space(), "adjoint_load");
 
   for (int i = ts_info.num_timesteps; i > 0; --i) {
     double dt = ts_info.totalTime / ts_info.num_timesteps;
     FiniteElementState temperature_end_of_step = thermal->previousTemperature(thermal->cycle());
     computeStepAdjointLoad(temperature_end_of_step, adjoint_load, dt);
-    std::unordered_map<std::string, const FiniteElementState&> adjoint_sol = thermal->reverseAdjointTimestep({{"temperature", adjoint_load}});
+    thermal->reverseAdjointTimestep({{"temperature", adjoint_load}});
+  }
 
-    if (i==1) {
-      // initial temperature sensitivity math
-      auto mu = adjoint_sol.find("adjoint_d_temperature_dt")->second;
-      for (size_t n=0; n < Nsize; ++n) {
-        gradient[n] += mu(int(n));
-      }
+  EXPECT_EQ(0, thermal->cycle()); // we are back to the start
+  auto mu = thermal->computeInitialTemperatureSensitivity();
+  for (int n=0; n < mu.Size(); ++n) {
+    gradient(n) += mu(n);
+  }
+
+  return std::make_pair(qoi, gradient);
+}
+
+
+std::pair<double, FiniteElementDual> computeThermalQoiAndShapeGradient(axom::sidre::DataStore& /*data_store*/,
+                                                                       const NonlinearSolverOptions& nonlinear_opts,
+                                                                       const TimesteppingOptions& dyn_opts,
+                                                                       const heat_transfer::IsotropicConductorWithLinearConductivityVsTemperature& mat,
+                                                                       const TimeSteppingInfo& ts_info)
+{
+  auto thermal = create_heat_transfer(nonlinear_opts, dyn_opts, mat);
+
+  double qoi = 0.0;
+  thermal->outputState();
+  for (int i = 0; i < ts_info.num_timesteps; ++i) {
+    double dt = ts_info.totalTime / ts_info.num_timesteps;
+    thermal->advanceTimestep(dt);
+    thermal->outputState();
+    qoi += computeStepQoi(thermal->temperature(), dt);
+  }
+
+  FiniteElementDual gradient(thermal->shapeDisplacement().space(), "shape_gradient");
+  FiniteElementDual adjoint_load(thermal->temperature().space(), "adjoint_load");
+
+  for (int i = ts_info.num_timesteps; i > 0; --i) {
+    double dt = ts_info.totalTime / ts_info.num_timesteps;
+    FiniteElementState temperature_end_of_step = thermal->previousTemperature(thermal->cycle());
+    computeStepAdjointLoad(temperature_end_of_step, adjoint_load, dt);
+    thermal->reverseAdjointTimestep({{"temperature", adjoint_load}});
+
+    const FiniteElementDual& d_residual_d_params_transposed_times_adjoint_temperature = thermal->computeTimestepShapeSensitivity();
+    for (int n=0; n < d_residual_d_params_transposed_times_adjoint_temperature.Size(); ++n) {
+      gradient(n) += d_residual_d_params_transposed_times_adjoint_temperature(n);
     }
   }
 
@@ -168,21 +197,13 @@ std::pair<double, std::vector<double>> computeThermalQoiAndInitialTemperatureGra
 }
 
 
-class HeatTransferSensitivityFixture : public ::testing::Test
+struct HeatTransferSensitivityFixture : public ::testing::Test
 {
-  protected:
-
   void SetUp() override {
     MPI_Barrier(MPI_COMM_WORLD);
     StateManager::initialize(dataStore, "thermal_dynamic_solve");
     std::string filename = std::string(SERAC_REPO_DIR) + "/data/meshes/star.mesh";
     mesh = StateManager::setMesh(mesh::refineAndDistribute(buildMeshFromFile(filename), 0));
-
-  }
-
-  int NumDofs() const {
-    auto initialTemperature = StateManager::newState(FiniteElementState::Options{.order = p, .vector_dim = 1, .name = detail::addPrefix(thermal_prefix, "initial_temperature")}, StateManager::collectionID(mesh)); // really just constructing a field to get a size
-    return initialTemperature.Size();
   }
 
   // Create DataStore
@@ -199,42 +220,41 @@ class HeatTransferSensitivityFixture : public ::testing::Test
 
 TEST_F(HeatTransferSensitivityFixture, InitialTemperatureSensitivities)
 {
-  std::pair<double, std::vector<double>> trueGrad = computeThermalQoiAndInitialTemperatureGradient(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo);
+  std::pair<double, FiniteElementDual> trueGrad = computeThermalQoiAndInitialTemperatureGradient(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo);
   double qoiBase = trueGrad.first;
   const auto& adjGradient = trueGrad.second;
-  int N = NumDofs();
-  //size_t Nsize = static_cast<size_t>(N);
+  int numDesignVars = adjGradient.Size();
 
-  double eps = 1e-7;
-  std::vector<double> numericalGradients(static_cast<size_t>(N));
+  FiniteElementDual numericalGradients(adjGradient.space(), "numerical_gradient");
 
-  for (int i=0; i < N; ++i) {
+  const double eps = 1e-7;
+  for (int i=0; i < numDesignVars; ++i) {
     auto qoiPlus = computeThermalQoiAdjustingInitalTemperature(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo, i, eps);
-    numericalGradients[size_t(i)] = (qoiPlus-qoiBase)/eps;
+    numericalGradients(i) = (qoiPlus-qoiBase)/eps;
   }
 
-  for (size_t i=0; i < size_t(N); ++i) {
-    EXPECT_NEAR(numericalGradients[i], adjGradient[i], 1e-6);
+  for (int i=0; i < numDesignVars; ++i) {
+    EXPECT_NEAR(numericalGradients(i), adjGradient(i), 10*eps);
   }
 }
 
 TEST_F(HeatTransferSensitivityFixture, ShapeSensitivities)
 {
-  std::pair<double, std::vector<double>> trueGrad = computeThermalQoiAndInitialTemperatureGradient(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo);
+  std::pair<double, FiniteElementDual> trueGrad = computeThermalQoiAndShapeGradient(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo);
   double qoiBase = trueGrad.first;
-  const auto& adjGradient = trueGrad.second;
-  int N = NumDofs();
+  const auto& shapeGradient = trueGrad.second;
+  int numDesignVars = shapeGradient.Size();
 
-  double eps = 1e-7;
-  std::vector<double> numericalGradients(static_cast<size_t>(N));
+  FiniteElementDual numericalGradients(shapeGradient.space(), "numerical_shape_gradient");
 
-  for (int i=0; i < N; ++i) {
+  const double eps = 1e-7;
+  for (int i=0; i < numDesignVars; ++i) {
     auto qoiPlus = computeThermalQoiAdjustingShape(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo, i, eps);
-    numericalGradients[size_t(i)] = (qoiPlus-qoiBase)/eps;
+    numericalGradients(i) = (qoiPlus-qoiBase)/eps;
   }
 
-  for (size_t i=0; i < size_t(N); ++i) {
-    EXPECT_NEAR(numericalGradients[i], adjGradient[i], 1e-6);
+  for (int i=0; i < numDesignVars; ++i) {
+    EXPECT_NEAR(numericalGradients(i), shapeGradient(i), 10*eps);
   }
 }
 
