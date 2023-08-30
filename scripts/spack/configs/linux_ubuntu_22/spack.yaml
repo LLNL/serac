@@ -121,10 +121,10 @@ spack:
       - spec: cmake@3.20.4
         prefix: /usr
     cppcheck:
-      version: [2.7]
+      version: [1.90]
       buildable: false
       externals:
-      - spec: cppcheck@2.7
+      - spec: cppcheck@1.90
         prefix: /usr
     doxygen:
       version: [1.8.17]
