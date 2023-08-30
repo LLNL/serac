@@ -8,6 +8,7 @@
 #include "serac/physics/solid_mechanics.hpp"
 
 #include <functional>
+#include <mfem/fem/coefficient.hpp>
 #include <mfem/linalg/hypre.hpp>
 #include <set>
 #include <string>
@@ -44,7 +45,7 @@ TEST_P(ContactTest, patch)
 
   // NOTE: The number of MPI ranks must be <= the min number of elements on a
   // contact face until Tribol PR #23 is included in Serac's Tribol
-  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), 2, 0);
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), 0, 0);
   StateManager::setMesh(std::move(mesh));
 
   LinearSolverOptions linear_options{.linear_solver = LinearSolver::SuperLU, .print_level = 1};
@@ -95,8 +96,19 @@ TEST_P(ContactTest, patch)
   solid_solver.outputState(paraview_name);
 
   // Check the l2 norm of the displacement dofs
-  auto u_l2 = mfem::ParNormlp(solid_solver.displacement(), 2, MPI_COMM_WORLD);
-  EXPECT_NEAR(0.098571999256934759, u_l2, 1.0e-4);
+  mfem::VectorFunctionCoefficient elasticity_sol_coeff(3, 
+    [K, G](const mfem::Vector& x, mfem::Vector& u){
+      auto c = (3.0 * K - 2.0 * G) / (3.0 * K + G);
+      u[0] = 0.25 * 0.01 * c * x[0];
+      u[1] = 0.25 * 0.01 * c * x[1];
+      u[2] = -0.5 * 0.01 * x[2];
+    });
+  mfem::ParGridFunction elasticity_sol(&solid_solver.displacement().space());
+  elasticity_sol.ProjectCoefficient(elasticity_sol_coeff);
+  mfem::ParGridFunction approx_error(elasticity_sol);
+  approx_error -= solid_solver.displacement().gridFunction();
+  auto approx_error_l2 = mfem::ParNormlp(approx_error, 2, MPI_COMM_WORLD);
+  EXPECT_NEAR(0.0, approx_error_l2, 1.0e-3);
 }
 
 INSTANTIATE_TEST_SUITE_P(tribol, ContactTest,
