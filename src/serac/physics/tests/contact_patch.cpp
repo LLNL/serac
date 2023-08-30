@@ -45,7 +45,7 @@ TEST_P(ContactTest, patch)
 
   // NOTE: The number of MPI ranks must be <= the min number of elements on a
   // contact face until Tribol PR #23 is included in Serac's Tribol
-  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), 0, 0);
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), 2, 0);
   StateManager::setMesh(std::move(mesh));
 
   LinearSolverOptions linear_options{.linear_solver = LinearSolver::SuperLU, .print_level = 1};
@@ -96,9 +96,9 @@ TEST_P(ContactTest, patch)
   solid_solver.outputState(paraview_name);
 
   // Check the l2 norm of the displacement dofs
+  auto c = (3.0 * K - 2.0 * G) / (3.0 * K + G);
   mfem::VectorFunctionCoefficient elasticity_sol_coeff(3, 
-    [K, G](const mfem::Vector& x, mfem::Vector& u){
-      auto c = (3.0 * K - 2.0 * G) / (3.0 * K + G);
+    [c](const mfem::Vector& x, mfem::Vector& u){
       u[0] = 0.25 * 0.01 * c * x[0];
       u[1] = 0.25 * 0.01 * c * x[1];
       u[2] = -0.5 * 0.01 * x[2];
