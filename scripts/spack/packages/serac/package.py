@@ -137,7 +137,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("adiak+mpi", when="+profiling")
     depends_on("caliper+mpi+adiak~papi", when="+profiling")
 
-    depends_on("superlu-dist@6.1.1")
+    depends_on("superlu-dist@8.1.2")
 
     #
     # Forward variants
@@ -230,7 +230,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     # Check if these variants are true first
     cuda_deps_with_variants = ["raja", "sundials", "tribol", "umpire"]
     for dep in cuda_deps_with_variants:
-        depends_on("{0}+cuda".format(dep), when="+{0}+cuda")
+        depends_on("{0}+cuda".format(dep), when="+cuda")
         for sm_ in CudaPackage.cuda_arch_values:
             depends_on("{0} cuda_arch={1}".format(dep, sm_),
                     when="+{0}+cuda cuda_arch={1}".format(dep, sm_))
