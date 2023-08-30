@@ -28,6 +28,12 @@ namespace serac {
 /// Polynomial order used to discretize the shape displacement field
 constexpr int SHAPE_ORDER = 1;
 
+/// Function space for shape displacement on dimension 2 meshes
+constexpr H1<SHAPE_ORDER, 2> SHAPE_DIM_2;
+
+/// Function space for shape displacement on dimension 2 meshes
+constexpr H1<SHAPE_ORDER, 3> SHAPE_DIM_3;
+
 /**
  * @brief Manages the lifetimes of FEState objects such that restarts are abstracted
  * from physics modules
@@ -48,8 +54,21 @@ public:
    * @see FiniteElementState::FiniteElementState
    * @note If this is a restart then the options (except for the name) will be ignored
    */
-  static FiniteElementState newState(FiniteElementVector::Options&& options  = {},
-                                     const std::string&             mesh_tag = default_mesh_name_);
+  template <typename FunctionSpace>
+  static FiniteElementState newState(FunctionSpace space, const std::string& state_name,
+                                     const std::string& mesh_tag = default_mesh_name_)
+  {
+    SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
+    SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
+                       axom::fmt::format("Mesh tag '{}' not found in the data store", mesh_tag));
+    SLIC_ERROR_ROOT_IF(named_states_.find(state_name) != named_states_.end(),
+                       axom::fmt::format("StateManager already contains a state named '{}'", state_name));
+
+    auto state = FiniteElementState(mesh(mesh_tag), space, state_name);
+
+    storeState(state);
+    return state;
+  }
 
   /**
    * @brief Factory method for creating a new FEState object
@@ -74,9 +93,21 @@ public:
    * @see FiniteElementDual::FiniteElementDual
    * @note If this is a restart then the options (except for the name) will be ignored
    */
-  static FiniteElementDual newDual(FiniteElementVector::Options&& options  = {},
-                                   const std::string&             mesh_tag = default_mesh_name_);
+  template <typename FunctionSpace>
+  static FiniteElementDual newDual(FunctionSpace space, const std::string& dual_name,
+                                   const std::string& mesh_tag = default_mesh_name_)
+  {
+    SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
+    SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
+                       axom::fmt::format("Mesh tag '{}' not found in the data store", mesh_tag));
+    SLIC_ERROR_ROOT_IF(named_states_.find(dual_name) != named_duals_.end(),
+                       axom::fmt::format("StateManager already contains a dual named '{}'", dual_name));
 
+    auto dual = FiniteElementDual(mesh(mesh_tag), space, dual_name);
+
+    storeDual(dual);
+    return dual;
+  }
   /**
    * @brief Factory method for creating a new FEDual object
    *
@@ -160,7 +191,6 @@ public:
     named_states_.clear();
     named_duals_.clear();
     shape_displacements_.clear();
-    shape_sensitivities_.clear();
     datacolls_.clear();
     output_dir_.clear();
     is_restart_ = false;
@@ -192,17 +222,6 @@ public:
    * @return The linear nodal shape displacement field
    */
   static FiniteElementState& shapeDisplacement(const std::string& mesh_tag = default_mesh_name_);
-
-  /**
-   * @brief Get the shape displacement sensitivity finite element dual
-   *
-   * This is the vector-valued H1 dual of order 1 representing sensitivities of the shape displacement field of the
-   * underlying mesh. This is used for shape optimization problems.
-   *
-   * @param mesh_tag A string that uniquely identifies the mesh
-   * @return The linear shape sensitivity field
-   */
-  static FiniteElementDual& shapeDisplacementSensitivity(const std::string& mesh_tag = default_mesh_name_);
 
   /**
    * @brief Returns the datacollection ID for a given mesh
@@ -247,9 +266,9 @@ private:
   static double newDataCollection(const std::string& name, const std::optional<int> cycle_to_load = {});
 
   /**
-   * @brief Construct the shape displacement and sensitivity fields for the requested mesh
+   * @brief Construct the shape displacement field for the requested mesh
    *
-   * @param mesh_tag The mesh to build shape displacement and sensitivity fields for
+   * @param mesh_tag The mesh to build shape displacement field for
    */
   static void constructShapeFields(const std::string& mesh_tag);
 
@@ -261,9 +280,6 @@ private:
 
   /// @brief A map of the shape displacement fields for each stored mesh ID
   static std::unordered_map<std::string, std::unique_ptr<FiniteElementState>> shape_displacements_;
-
-  /// @brief A map of the shape sensitivity duals for each stored mesh ID
-  static std::unordered_map<std::string, std::unique_ptr<FiniteElementDual>> shape_sensitivities_;
 
   /**
    * @brief Whether this simulation has been restarted from another simulation

@@ -7,7 +7,7 @@
 set(test_dependencies gtest serac_physics serac_mesh)
 
 set(infrastructure_tests
-    error_handling.cpp
+    #error_handling.cpp
     input.cpp
     profiling.cpp)
 

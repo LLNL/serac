@@ -41,15 +41,13 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
 
   // Construct and initialized the user-defined moduli to be used as a differentiable parameter in
   // the solid physics module.
-  FiniteElementState user_defined_shear_modulus(
-      StateManager::newState(FiniteElementState::Options{.order = 1, .name = "parameterized_shear"}));
+  FiniteElementState user_defined_shear_modulus(*mesh, H1<p>{}, "parameterized_shear");
 
   double shear_modulus_value = 1.0;
 
   user_defined_shear_modulus = shear_modulus_value;
 
-  FiniteElementState user_defined_bulk_modulus(
-      StateManager::newState(FiniteElementState::Options{.order = 1, .name = "parameterized_bulk"}));
+  FiniteElementState user_defined_bulk_modulus(*mesh, H1<p>{}, "parameterized_bulk");
 
   double bulk_modulus_value = 1.0;
 
@@ -64,8 +62,8 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
                                                                 solid_mechanics::default_quasistatic_options,
                                                                 GeometricNonlinearities::On, "solid_functional");
 
-  solid_solver.registerParameter(0, user_defined_bulk_modulus);
-  solid_solver.registerParameter(1, user_defined_shear_modulus);
+  solid_solver.setParameter(0, user_defined_bulk_modulus);
+  solid_solver.setParameter(1, user_defined_shear_modulus);
 
   // We must know the index of the parameter finite element state in our parameter pack to take sensitivities.
   // As we only have one parameter in this example, the index is zero.
@@ -130,12 +128,16 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
     user_defined_bulk_modulus(i) = bulk_modulus_value + eps;
     solid_solver.setDisplacement(bc);
 
+    solid_solver.setParameter(0, user_defined_bulk_modulus);
+
     solid_solver.advanceTimestep();
     mfem::ParGridFunction displacement_plus = solid_solver.displacement().gridFunction();
 
     user_defined_bulk_modulus(i) = bulk_modulus_value - eps;
 
     solid_solver.setDisplacement(bc);
+
+    solid_solver.setParameter(0, user_defined_bulk_modulus);
     solid_solver.advanceTimestep();
     mfem::ParGridFunction displacement_minus = solid_solver.displacement().gridFunction();
 
@@ -215,7 +217,10 @@ void finite_difference_shape_test(LoadingType load)
   solid_mechanics::NeoHookean mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
 
-  solid_solver.shapeDisplacement() = shape_displacement_value;
+  FiniteElementState shape_displacement(*mesh, H1<SHAPE_ORDER, dim>{});
+
+  shape_displacement = shape_displacement_value;
+  solid_solver.setShapeDisplacement(shape_displacement);
 
   // Define the function for the initial displacement and boundary condition
   auto bc = [](const mfem::Vector&, mfem::Vector& bc_vec) -> void { bc_vec = 0.0; };
@@ -284,18 +289,18 @@ void finite_difference_shape_test(LoadingType load)
   // Perform finite difference on each shape velocity value
   // to check if computed qoi sensitivity is consistent
   // with finite difference on the displacement
-  auto& shape_displacement = solid_solver.shapeDisplacement();
-
   double eps = 1.0e-6;
   for (int i = 0; i < shape_displacement.Size(); ++i) {
     // Perturb the shape field
     shape_displacement(i) = shape_displacement_value + eps;
 
+    solid_solver.setShapeDisplacement(shape_displacement);
     solid_solver.advanceTimestep();
     mfem::ParGridFunction displacement_plus = solid_solver.displacement().gridFunction();
 
     shape_displacement(i) = shape_displacement_value - eps;
 
+    solid_solver.setShapeDisplacement(shape_displacement);
     solid_solver.advanceTimestep();
     mfem::ParGridFunction displacement_minus = solid_solver.displacement().gridFunction();
 

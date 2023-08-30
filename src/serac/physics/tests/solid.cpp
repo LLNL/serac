@@ -284,13 +284,11 @@ void functional_parameterized_solid_test(double expected_disp_norm)
 
   // Construct and initialized the user-defined moduli to be used as a differentiable parameter in
   // the solid mechanics physics module.
-  FiniteElementState user_defined_shear_modulus(
-      StateManager::newState(FiniteElementState::Options{.order = 1, .name = "parameterized_shear"}));
+  FiniteElementState user_defined_shear_modulus(*pmesh, H1<1>{}, "parameterized_shear");
 
   user_defined_shear_modulus = 1.0;
 
-  FiniteElementState user_defined_bulk_modulus(
-      StateManager::newState(FiniteElementState::Options{.order = 1, .name = "parameterized_bulk"}));
+  FiniteElementState user_defined_bulk_modulus(*pmesh, H1<1>{}, "parameterized_bulk");
 
   user_defined_bulk_modulus = 1.0;
 
@@ -317,8 +315,8 @@ void functional_parameterized_solid_test(double expected_disp_norm)
                                                                 GeometricNonlinearities::On, "parameterized_solid");
   // _custom_solver_end
 
-  solid_solver.registerParameter(0, user_defined_bulk_modulus);
-  solid_solver.registerParameter(1, user_defined_shear_modulus);
+  solid_solver.setParameter(0, user_defined_bulk_modulus);
+  solid_solver.setParameter(1, user_defined_shear_modulus);
 
   solid_mechanics::ParameterizedLinearIsotropicSolid<dim> mat{1.0, 0.0, 0.0};
   solid_solver.setMaterial(DependsOn<0, 1>{}, mat);

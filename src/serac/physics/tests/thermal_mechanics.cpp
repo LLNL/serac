@@ -222,7 +222,7 @@ void parameterized()
   // facets should be non-affine as well.
   auto mesh =
       mesh::refineAndDistribute(buildCuboidMesh(4, 4, 4, 0.25, 0.25, 0.25), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
+  auto pmesh = serac::StateManager::setMesh(std::move(mesh));
 
   // Construct the thermomechanics solver module using the default equation solver parameters for both the heat transfer
   // and solid mechanics solves.
@@ -246,8 +246,7 @@ void parameterized()
   thermal_solid_solver.setMaterial(material, qdata);
 
   // parameterize the coefficient of thermal expansion
-  FiniteElementState thermal_expansion_scaling(
-      StateManager::newState(FiniteElementState::Options{.order = p, .name = "CTE scale"}));
+  FiniteElementState thermal_expansion_scaling(*pmesh, H1<p>{}, "CTE scale");
   thermal_expansion_scaling = 1.5;
 
   std::function<double(const mfem::Vector&, double)> f = [](const mfem::Vector& /*x*/, double /*t*/) {
@@ -255,7 +254,7 @@ void parameterized()
   };
   mfem::FunctionCoefficient coef(f);
   thermal_expansion_scaling.project(coef);
-  thermal_solid_solver.registerParameter(thermal_expansion_scaling, 0);
+  thermal_solid_solver.setParameter(0, thermal_expansion_scaling);
 
   // Define a boundary attribute set
   std::set<int> constraint_bdr = {1, 2, 3, 4, 5, 6};

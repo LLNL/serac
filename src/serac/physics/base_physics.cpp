@@ -24,7 +24,6 @@ BasePhysics::BasePhysics(std::string name, mfem::ParMesh* pmesh)
       mesh_(StateManager::mesh(sidre_datacoll_id_)),
       comm_(mesh_.GetComm()),
       shape_displacement_(StateManager::shapeDisplacement(sidre_datacoll_id_)),
-      shape_displacement_sensitivity_(StateManager::shapeDisplacementSensitivity(sidre_datacoll_id_)),
       time_(StateManager::time(sidre_datacoll_id_)),
       cycle_(StateManager::cycle(sidre_datacoll_id_)),
       ode_time_point_(0.0),
@@ -32,6 +31,18 @@ BasePhysics::BasePhysics(std::string name, mfem::ParMesh* pmesh)
 {
   std::tie(mpi_size_, mpi_rank_) = getMPIInfo(comm_);
   order_                         = 1;
+
+  if (mesh_.Dimension() == 2) {
+    shape_displacement_sensitivity_ =
+        std::make_unique<FiniteElementDual>(mesh_, H1<SHAPE_ORDER, 2>{}, sidre_datacoll_id_ + "_shape_displacement");
+  } else if (mesh_.Dimension() == 3) {
+    shape_displacement_sensitivity_ =
+        std::make_unique<FiniteElementDual>(mesh_, H1<SHAPE_ORDER, 3>{}, sidre_datacoll_id_ + "_shape_displacement");
+  } else {
+    SLIC_ERROR_ROOT(axom::fmt::format("Mesh of dimension {} given, only dimensions 2 or 3 are available in Serac.",
+                                      mesh_.Dimension()));
+  }
+  StateManager::storeDual(*shape_displacement_sensitivity_);
 }
 
 BasePhysics::BasePhysics(int n, int p, std::string name, mfem::ParMesh* pmesh) : BasePhysics(name, pmesh)
@@ -47,34 +58,10 @@ int BasePhysics::cycle() const { return cycle_; }
 
 void BasePhysics::setTimestep(double dt) { timestep_ = dt; }
 
-std::unique_ptr<FiniteElementState> BasePhysics::generateParameter(const std::string& parameter_name,
-                                                                   size_t             parameter_index)
-{
-  SLIC_ERROR_ROOT_IF(
-      parameter_index >= parameters_.size(),
-      axom::fmt::format("Parameter index '{}' is not available in physics module '{}'", parameter_index, name_));
-  SLIC_ERROR_ROOT_IF(
-      parameters_[parameter_index].state,
-      axom::fmt::format("Parameter index '{}' is already set in physics module '{}'", parameter_index, name_));
-
-  auto new_state = std::make_unique<FiniteElementState>(*parameters_[parameter_index].trial_space, parameter_name);
-  StateManager::storeState(*new_state);
-  parameters_[parameter_index].state           = new_state.get();
-  parameters_[parameter_index].previous_state  = std::make_unique<serac::FiniteElementState>(*new_state);
-  *parameters_[parameter_index].previous_state = 0.0;
-  parameters_[parameter_index].sensitivity =
-      StateManager::newDual(new_state->space(), new_state->name() + "_sensitivity");
-  return new_state;
-}
-
-void BasePhysics::registerParameter(size_t parameter_index, FiniteElementState& parameter_state)
+void BasePhysics::setParameter(const size_t parameter_index, const FiniteElementState& parameter_state)
 {
   SLIC_ERROR_ROOT_IF(&parameter_state.mesh() != &mesh_,
-                     axom::fmt::format("Mesh of parameter state is not the same as the physics mesh"));
-
-  SLIC_ERROR_ROOT_IF(
-      parameter_index >= parameters_.size(),
-      axom::fmt::format("Parameter index '{}' is not available in physics module '{}'", parameter_index, name_));
+                     axom::fmt::format("Mesh of parameter {} is not the same as the physics mesh", parameter_index));
 
   SLIC_ERROR_ROOT_IF(
       parameter_state.space().GetTrueVSize() != parameters_[parameter_index].state.space().GetTrueVSize(),
@@ -83,12 +70,12 @@ void BasePhysics::registerParameter(size_t parameter_index, FiniteElementState& 
           "spaces are inconsistent.",
           parameter_index, parameters_[parameter_index].state.space().GetTrueVSize(),
           parameter_state.space().GetTrueVSize()));
-      StateManager::newDual(parameter_state.space(), detail::addPrefix(name_, parameter_state.name() + "_sensitivity"));
+  parameters_[parameter_index].state = parameter_state;
 }
 
-void BasePhysics::setShapeDisplacement(FiniteElementState& shape_displacement)
+void BasePhysics::setShapeDisplacement(const FiniteElementState& shape_displacement)
 {
-  SLIC_ERROR_ROOT_IF(&shape_displacement_.mesh() != &mesh_,
+  SLIC_ERROR_ROOT_IF(&shape_displacement.mesh() != &mesh_,
                      axom::fmt::format("Mesh of shape displacement is not the same as the physics mesh"));
 
   SLIC_ERROR_ROOT_IF(
@@ -100,7 +87,7 @@ void BasePhysics::setShapeDisplacement(FiniteElementState& shape_displacement)
   shape_displacement_ = shape_displacement;
 }
 
-void BasePhysics::outputState(std::optional<std::string> paraview_output_dir) const
+void BasePhysics::outputStateToDisk(std::optional<std::string> paraview_output_dir) const
 {
   // Update the states and duals in the state manager
   for (auto& state : states_) {
@@ -117,7 +104,7 @@ void BasePhysics::outputState(std::optional<std::string> paraview_output_dir) co
   }
 
   StateManager::updateState(shape_displacement_);
-  StateManager::updateDual(shape_displacement_sensitivity_);
+  StateManager::updateDual(*shape_displacement_sensitivity_);
 
   // Save the restart/Sidre file
   StateManager::save(time_, cycle_, sidre_datacoll_id_);

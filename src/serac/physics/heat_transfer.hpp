@@ -123,14 +123,9 @@ public:
                const std::string& name = "", mfem::ParMesh* pmesh = nullptr,
                std::vector<std::string> parameter_names = {})
       : BasePhysics(NUM_STATE_VARS, order, name, pmesh),
-        temperature_(StateManager::newState(
-            FiniteElementState::Options{
-                .order = order, .vector_dim = 1, .name = detail::addPrefix(name, "temperature")},
-            sidre_datacoll_id_)),
-        adjoint_temperature_(StateManager::newState(
-            FiniteElementState::Options{
-                .order = order, .vector_dim = 1, .name = detail::addPrefix(name, "adjoint_temperature")},
-            sidre_datacoll_id_)),
+        temperature_(StateManager::newState(H1<order>{}, detail::addPrefix(name, "temperature"), sidre_datacoll_id_)),
+        adjoint_temperature_(
+            StateManager::newState(H1<order>{}, detail::addPrefix(name, "adjoint_temperature"), sidre_datacoll_id_)),
         residual_with_bcs_(temperature_.space().TrueVSize()),
         nonlin_solver_(std::move(solver)),
         ode_(temperature_.space().TrueVSize(),
@@ -164,12 +159,7 @@ public:
     if constexpr (sizeof...(parameter_space) > 0) {
       tuple<parameter_space...> types{};
       for_constexpr<sizeof...(parameter_space)>([&](auto i) {
-        auto [fes, fec] =
-            generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_);
-
-        parameters_.emplace_back(StateManager::newState(*fes, parameter_names[i]),
-                                 FiniteElementState(*fes, "previous_" + parameter_names[i]),
-                                 StateManager::newDual(*fes, parameter_names[i] + "_sensitivity"));
+        parameters_.emplace_back(mesh_, get<i>(types), detail::addPrefix(name_, parameter_names[i]));
 
         trial_spaces[i + NUM_STATE_VARS] = &parameters_[i].state.space();
       });
@@ -708,9 +698,9 @@ public:
 
     auto drdshape_mat = assemble(drdshape);
 
-    drdshape_mat->MultTranspose(adjoint_temperature_, shape_displacement_sensitivity_);
+    drdshape_mat->MultTranspose(adjoint_temperature_, *shape_displacement_sensitivity_);
 
-    return shape_displacement_sensitivity_;
+    return *shape_displacement_sensitivity_;
   }
 
   /// Destroy the Thermal Solver object
@@ -721,7 +711,7 @@ protected:
   using scalar_trial = H1<order>;
 
   /// The compile-time finite element trial space for shape displacement (vector H1 of order 1)
-  using shape_trial = H1<1, dim>;
+  using shape_trial = H1<SHAPE_ORDER, dim>;
 
   /// The compile-time finite element test space for thermal conduction (H1 of order p)
   using test = H1<order>;

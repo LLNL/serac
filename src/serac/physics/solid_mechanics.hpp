@@ -128,18 +128,12 @@ public:
                  const GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
                  mfem::ParMesh* pmesh = nullptr, std::vector<std::string> parameter_names = {})
       : BasePhysics(2, order, name, pmesh),
-        velocity_(StateManager::newState(
-            FiniteElementState::Options{.order = order, .vector_dim = dim, .name = detail::addPrefix(name, "velocity")},
-            sidre_datacoll_id_)),
-        displacement_(StateManager::newState(
-            FiniteElementState::Options{
-                .order = order, .vector_dim = dim, .name = detail::addPrefix(name, "displacement")},
-            sidre_datacoll_id_)),
-        adjoint_displacement_(StateManager::newState(
-            FiniteElementState::Options{
-                .order = order, .vector_dim = dim, .name = detail::addPrefix(name, "adjoint_displacement")},
-            sidre_datacoll_id_)),
-        reactions_(StateManager::newDual(displacement_.space(), detail::addPrefix(name, "reactions"))),
+        velocity_(StateManager::newState(H1<order, dim>{}, detail::addPrefix(name, "velocity"), sidre_datacoll_id_)),
+        displacement_(
+            StateManager::newState(H1<order, dim>{}, detail::addPrefix(name, "displacement"), sidre_datacoll_id_)),
+        adjoint_displacement_(StateManager::newState(H1<order, dim>{}, detail::addPrefix(name, "adjoint_displacement"),
+                                                     sidre_datacoll_id_)),
+        reactions_(StateManager::newDual(H1<order, dim>{}, detail::addPrefix(name, "reactions"), sidre_datacoll_id_)),
         nonlin_solver_(std::move(solver)),
         ode2_(displacement_.space().TrueVSize(),
               {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
@@ -173,12 +167,7 @@ public:
     if constexpr (sizeof...(parameter_space) > 0) {
       tuple<parameter_space...> types{};
       for_constexpr<sizeof...(parameter_space)>([&](auto i) {
-        auto [fes, fec] =
-            generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_);
-
-        parameters_.emplace_back(StateManager::newState(*fes, parameter_names[i]),
-                                 FiniteElementState(*fes, "previous_" + parameter_names[i]),
-                                 StateManager::newDual(*fes, parameter_names[i] + "_sensitivity"));
+        parameters_.emplace_back(mesh_, get<i>(types), detail::addPrefix(name_, parameter_names[i]));
 
         trial_spaces[i + NUM_STATE_VARS] = &parameters_[i].state.space();
       });
@@ -1178,9 +1167,9 @@ public:
 
     auto drdshape_mat = assemble(drdshape);
 
-    drdshape_mat->MultTranspose(adjoint_displacement_, shape_displacement_sensitivity_);
+    drdshape_mat->MultTranspose(adjoint_displacement_, *shape_displacement_sensitivity_);
 
-    return shape_displacement_sensitivity_;
+    return *shape_displacement_sensitivity_;
   }
 
   /**

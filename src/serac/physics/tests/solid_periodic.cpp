@@ -53,15 +53,13 @@ void periodic_test(mfem::Element::Type element_type)
 
   // Construct and initialized the user-defined moduli to be used as a differentiable parameter in
   // the solid physics module.
-  FiniteElementState user_defined_shear_modulus(StateManager::newState(
-      FiniteElementState::Options{.order = 1, .element_type = ElementType::L2, .name = "parameterized_shear"}));
+  FiniteElementState user_defined_shear_modulus(*mesh, L2<1>{}, "parameterized_shear");
 
   double shear_modulus_value = 1.0;
 
   user_defined_shear_modulus = shear_modulus_value;
 
-  FiniteElementState user_defined_bulk_modulus(StateManager::newState(
-      FiniteElementState::Options{.order = 1, .element_type = ElementType::L2, .name = "parameterized_bulk"}));
+  FiniteElementState user_defined_bulk_modulus(*mesh, L2<1>{}, "parameterized_bulk");
 
   double bulk_modulus_value = 1.0;
 
@@ -72,8 +70,8 @@ void periodic_test(mfem::Element::Type element_type)
       solid_mechanics::default_nonlinear_options, solid_mechanics::default_linear_options,
       solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "solid_periodic");
 
-  solid_solver.registerParameter(0, user_defined_bulk_modulus);
-  solid_solver.registerParameter(1, user_defined_shear_modulus);
+  solid_solver.setParameter(0, user_defined_bulk_modulus);
+  solid_solver.setParameter(1, user_defined_shear_modulus);
 
   solid_mechanics::ParameterizedNeoHookeanSolid<dim> mat{1.0, 0.0, 0.0};
   solid_solver.setMaterial(DependsOn<0, 1>{}, mat);

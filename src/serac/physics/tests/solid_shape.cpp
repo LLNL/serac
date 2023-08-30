@@ -96,8 +96,7 @@ void shape_test(GeometricNonlinearities geo_nonlin)
 
   {
     // Construct and initialized the user-defined shape velocity to offset the computational mesh
-    FiniteElementState user_defined_shape_displacement(StateManager::newState(
-        FiniteElementState::Options{.order = p, .vector_dim = dim, .name = "parameterized_shape"}));
+    FiniteElementState user_defined_shape_displacement(*mesh, H1<SHAPE_ORDER, dim>{});
 
     user_defined_shape_displacement.project(shape_coef);
 
@@ -109,7 +108,7 @@ void shape_test(GeometricNonlinearities geo_nonlin)
     solid_solver.setDisplacementBCs(ess_bdr, bc);
     solid_solver.setDisplacement(bc);
 
-    solid_solver.shapeDisplacement() = user_defined_shape_displacement;
+    solid_solver.setShapeDisplacement(user_defined_shape_displacement);
 
     solid_solver.setMaterial(mat);
 
@@ -130,12 +129,11 @@ void shape_test(GeometricNonlinearities geo_nonlin)
   serac::StateManager::initialize(new_datastore, "solid_functional_pure_solve");
 
   auto new_mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(new_mesh));
+  auto pmesh    = serac::StateManager::setMesh(std::move(new_mesh));
 
   {
     // Construct and initialized the user-defined shape velocity to offset the computational mesh
-    FiniteElementState user_defined_shape_displacement(StateManager::newState(
-        FiniteElementState::Options{.order = p, .vector_dim = dim, .name = "parameterized_shape"}));
+    FiniteElementState user_defined_shape_displacement(*pmesh, H1<SHAPE_ORDER, dim>{});
 
     user_defined_shape_displacement.project(shape_coef);
 

@@ -36,8 +36,8 @@ TEST(HeatTransfer, MoveShape)
   axom::sidre::DataStore datastore;
   serac::StateManager::initialize(datastore, "thermal_shape_solve");
 
-  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
+  auto mesh  = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
+  auto pmesh = serac::StateManager::setMesh(std::move(mesh));
 
   mfem::Vector shape_temperature;
   mfem::Vector pure_temperature;
@@ -85,7 +85,10 @@ TEST(HeatTransfer, MoveShape)
     thermal_solver.setTemperatureBCs(ess_bdr, zero);
     thermal_solver.setTemperature(zero);
 
-    thermal_solver.shapeDisplacement().project(shape_coef);
+    FiniteElementState shape_displacement(*pmesh, H1<SHAPE_ORDER, dim>{});
+
+    shape_displacement.project(shape_coef);
+    thermal_solver.setShapeDisplacement(shape_displacement);
 
     thermal_solver.setMaterial(mat);
 
@@ -112,8 +115,7 @@ TEST(HeatTransfer, MoveShape)
 
   {
     // Construct and initialized the user-defined shape displacement to offset the computational mesh
-    FiniteElementState user_defined_shape_displacement(StateManager::newState(
-        FiniteElementState::Options{.order = p, .vector_dim = dim, .name = "parameterized_shape"}));
+    FiniteElementState user_defined_shape_displacement(*mesh, H1<SHAPE_ORDER, dim>{});
 
     user_defined_shape_displacement.project(shape_coef);
 

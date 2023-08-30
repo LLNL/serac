@@ -39,13 +39,11 @@ TEST(LiquidCrystalElastomer, Brighenti)
 
   double             initial_temperature = 25 + 273;
   double             final_temperature   = 430.0;
-  FiniteElementState temperature(
-      StateManager::newState(FiniteElementState::Options{.order = p, .name = "temperature"}));
+  FiniteElementState temperature(StateManager::newState(H1<p>{}, "temperature"));
 
   temperature = initial_temperature + 0.0 * final_temperature;
 
-  FiniteElementState gamma(StateManager::newState(
-      FiniteElementState::Options{.order = p, .vector_dim = 1, .element_type = ElementType::L2, .name = "gamma"}));
+  FiniteElementState gamma(StateManager::newState(L2<p>{}, "gamma"));
 
   int  lceArrangementTag = 1;
   auto gamma_func        = [lceArrangementTag](const mfem::Vector& x, double) -> double {

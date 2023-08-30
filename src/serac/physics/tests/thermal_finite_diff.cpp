@@ -59,8 +59,8 @@ TEST(Thermal, FiniteDifference)
 
   FiniteElementState user_defined_conductivity(*fes, "user_defined_conductivity");
 
-  double conductivity_value  = 1.2;
-  *user_defined_conductivity = conductivity_value;
+  double conductivity_value = 1.2;
+  user_defined_conductivity = conductivity_value;
 
   thermal_solver.setParameter(0, user_defined_conductivity);
 
@@ -115,20 +115,20 @@ TEST(Thermal, FiniteDifference)
   // to check if computed qoi sensitivity is consistent
   // with finite difference on the temperature
   double eps = 1.0e-4;
-  for (int i = 0; i < user_defined_conductivity->gridFunction().Size(); ++i) {
+  for (int i = 0; i < user_defined_conductivity.gridFunction().Size(); ++i) {
     // Perturb the conductivity
-    (*user_defined_conductivity)(i) = conductivity_value + eps;
+    (user_defined_conductivity)(i) = conductivity_value + eps;
 
     thermal_solver.advanceTimestep();
     mfem::ParGridFunction temperature_plus = thermal_solver.temperature().gridFunction();
 
-    (*user_defined_conductivity)(i) = conductivity_value - eps;
+    (user_defined_conductivity)(i) = conductivity_value - eps;
 
     thermal_solver.advanceTimestep();
     mfem::ParGridFunction temperature_minus = thermal_solver.temperature().gridFunction();
 
     // Reset to the original conductivity value
-    (*user_defined_conductivity)(i) = conductivity_value;
+    (user_defined_conductivity)(i) = conductivity_value;
 
     // Finite difference to compute sensitivity of temperature with respect to conductivity
     mfem::ParGridFunction dtemp_dconductivity(
@@ -185,7 +185,7 @@ TEST(HeatTransfer, FiniteDifferenceShape)
 
   thermal_solver.setMaterial(mat);
 
-  FiniteElementState shape_displacement(thermal_solver.shapeDisplacement());
+  FiniteElementState shape_displacement(*mesh, H1<SHAPE_ORDER, dim>{});
 
   shape_displacement = shape_displacement_value;
   thermal_solver.setShapeDisplacement(shape_displacement);

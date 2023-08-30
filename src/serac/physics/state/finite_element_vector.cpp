@@ -9,49 +9,6 @@
 
 namespace serac {
 
-FiniteElementVector::FiniteElementVector(mfem::ParMesh& mesh, FiniteElementVector::Options&& options)
-    : mesh_(mesh), name_(options.name)
-{
-  const int  dim      = mesh.Dimension();
-  const auto ordering = mfem::Ordering::byNODES;
-
-  switch (options.element_type) {
-    case ElementType::H1:
-      coll_ = std::make_unique<mfem::H1_FECollection>(options.order, dim);
-      break;
-    case ElementType::HCURL:
-      coll_ = std::make_unique<mfem::ND_FECollection>(options.order, dim);
-      SLIC_WARNING_ROOT_IF(options.vector_dim != 1,
-                           axom::fmt::format("Vector dim >1 requested for an HCURL basis function."));
-      break;
-    case ElementType::HDIV:
-      coll_ = std::make_unique<mfem::RT_FECollection>(options.order, dim);
-      SLIC_WARNING_ROOT_IF(options.vector_dim != 1,
-                           axom::fmt::format("Vector dim >1 requested for an HDIV basis function."));
-      break;
-    case ElementType::L2:
-      // Note that we use Gauss-Lobatto basis functions as this is what serac::Functional uses for finite element
-      // integrals
-      coll_ = std::make_unique<mfem::L2_FECollection>(options.order, dim, mfem::BasisType::GaussLobatto);
-      break;
-    default:
-      SLIC_ERROR_ROOT(axom::fmt::format("Finite element vector requested for unavailable basis type."));
-      break;
-  }
-
-  space_ = std::make_unique<mfem::ParFiniteElementSpace>(&mesh, coll_.get(), options.vector_dim, ordering);
-
-  // Construct a hypre par vector based on the new finite element space
-  HypreParVector new_vector(space_.get());
-
-  // Move the data from this new hypre vector into this object without doubly allocating the data
-  auto* parallel_vec = new_vector.StealParVector();
-  WrapHypreParVector(parallel_vec);
-
-  // Initialize the vector to zero
-  HypreParVector::operator=(0.0);
-}
-
 FiniteElementVector::FiniteElementVector(const mfem::ParFiniteElementSpace& space, const std::string& name)
     : mesh_(*space.GetParMesh()),
       coll_(std::unique_ptr<mfem::FiniteElementCollection>(mfem::FiniteElementCollection::New(space.FEColl()->Name()))),

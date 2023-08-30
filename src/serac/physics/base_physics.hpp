@@ -22,9 +22,20 @@
 #include "serac/numerics/equation_solver.hpp"
 #include "serac/physics/state/finite_element_state.hpp"
 #include "serac/physics/state/finite_element_dual.hpp"
+#include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/common.hpp"
 
 namespace serac {
+
+namespace detail {
+/**
+ * @brief Prepends a prefix to a target string if @p name is non-empty with an
+ * underscore delimiter
+ * @param[in] prefix The string to prepend
+ * @param[in] target The string to prepend to
+ */
+std::string addPrefix(const std::string& prefix, const std::string& target);
+}  // namespace detail
 
 /**
  * @brief This is the abstract base class for a generic forward solver
@@ -125,7 +136,7 @@ public:
    *
    * @pre completeSetup(), advanceTimestep(), and solveAdjoint() must be called prior to this method.
    */
-  virtual FiniteElementDual& computeSensitivity(size_t /* parameter_index */)
+  virtual const FiniteElementDual& computeSensitivity(size_t /* parameter_index */)
   {
     SLIC_ERROR_ROOT(axom::fmt::format("Parameter sensitivities not enabled in physics module {}", name_));
     return parameters_[0].sensitivity;
@@ -139,10 +150,10 @@ public:
    *
    * @pre completeSetup(), advanceTimestep(), and solveAdjoint() must be called prior to this method.
    */
-  virtual FiniteElementDual& computeShapeSensitivity()
+  virtual const FiniteElementDual& computeShapeSensitivity()
   {
     SLIC_ERROR_ROOT(axom::fmt::format("Shape sensitivities not enabled in physics module {}", name_));
-    return shape_displacement_sensitivity_;
+    return *shape_displacement_sensitivity_;
   }
 
   /**
@@ -234,6 +245,16 @@ protected:
 
   /// @brief The information needed for the physics parameters stored as Finite Element State fields
   struct ParameterInfo {
+    template <typename FunctionSpace>
+    ParameterInfo(mfem::ParMesh& mesh, FunctionSpace space, const std::string& name = "")
+        : state(mesh, space, name),
+          previous_state(mesh, space, "previous_" + name),
+          sensitivity(mesh, space, name + "_sensitivity")
+    {
+      StateManager::storeState(state);
+      StateManager::storeDual(sensitivity);
+    }
+
     /// The finite element states representing user-defined and owned parameter fields
     serac::FiniteElementState state;
 
@@ -256,9 +277,10 @@ protected:
   FiniteElementState& shape_displacement_;
 
   /// @brief Sensitivity with respect to the shape displacement field
-  /// @note This is owned by the State Manager since it is associated with the mesh
   /// @note This quantity is also called the vector-Jacobian product during back propagation in data science.
-  FiniteElementDual& shape_displacement_sensitivity_;
+  /// @note This is owned by the physics instance as the sensitivity is with respect to a certain PDE residual (i.e.
+  /// physics module)
+  std::unique_ptr<FiniteElementDual> shape_displacement_sensitivity_;
 
   /**
    *@brief Whether the simulation is time-independent
@@ -320,15 +342,5 @@ protected:
    */
   BoundaryConditionManager bcs_;
 };
-
-namespace detail {
-/**
- * @brief Prepends a prefix to a target string if @p name is non-empty with an
- * underscore delimiter
- * @param[in] prefix The string to prepend
- * @param[in] target The string to prepend to
- */
-std::string addPrefix(const std::string& prefix, const std::string& target);
-}  // namespace detail
 
 }  // namespace serac

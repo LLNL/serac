@@ -84,9 +84,6 @@ public:
     states_.push_back(&thermal_.temperature());
     states_.push_back(&solid_.velocity());
     states_.push_back(&solid_.displacement());
-
-    thermal_.registerParameter(0, const_cast<FiniteElementState&>(solid_.displacement()));
-    solid_.registerParameter(0, const_cast<FiniteElementState&>(thermal_.temperature()));
   }
 
   /**
@@ -131,18 +128,6 @@ public:
   {
     thermal_.completeSetup();
     solid_.completeSetup();
-  }
-
-  /**
-   * @brief register the provided FiniteElementState object as the source of values for parameter `i`
-   *
-   * @param parameter_state the values to use for the specified parameter
-   * @param i the index of the parameter
-   */
-  void registerParameter(const FiniteElementState& parameter_state, size_t i)
-  {
-    thermal_.registerParameter(parameter_state, i + 1);  // offset for displacement field
-    solid_.registerParameter(parameter_state, i + 1);    // offset for temperature field
   }
 
   /**
@@ -199,7 +184,10 @@ public:
    */
   void advanceTimestep() override
   {
+    thermal_.setParameter(0, solid_.displacement());
     thermal_.advanceTimestep();
+
+    solid_.setParameter(0, thermal_.temperature());
     solid_.advanceTimestep();
 
     cycle_ += 1;

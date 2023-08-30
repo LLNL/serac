@@ -13,12 +13,12 @@ namespace serac {
 // Initialize StateManager's static members - these will be fully initialized in StateManager::initialize
 std::unordered_map<std::string, axom::sidre::MFEMSidreDataCollection> StateManager::datacolls_;
 std::unordered_map<std::string, std::unique_ptr<FiniteElementState>>  StateManager::shape_displacements_;
-std::unordered_map<std::string, std::unique_ptr<FiniteElementDual>>   StateManager::shape_sensitivities_;
 bool                                                                  StateManager::is_restart_ = false;
 axom::sidre::DataStore*                                               StateManager::ds_         = nullptr;
 std::string                                                           StateManager::output_dir_ = "";
 std::unordered_map<std::string, mfem::ParGridFunction*>               StateManager::named_states_;
 std::unordered_map<std::string, mfem::ParGridFunction*>               StateManager::named_duals_;
+const std::string                                                     StateManager::default_mesh_name_ = "default_mesh";
 
 double StateManager::newDataCollection(const std::string& name, const std::optional<int> cycle_to_load)
 {
@@ -111,11 +111,6 @@ FiniteElementState& StateManager::shapeDisplacement(const std::string& mesh_tag)
   return *shape_displacements_[mesh_tag];
 }
 
-FiniteElementDual& StateManager::shapeDisplacementSensitivity(const std::string& mesh_tag)
-{
-  return *shape_sensitivities_[mesh_tag];
-}
-
 void StateManager::storeState(FiniteElementState& state)
 {
   SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
@@ -138,19 +133,6 @@ void StateManager::storeState(FiniteElementState& state)
     state.setFromGridFunction(*grid_function);
   }
   named_states_[name] = grid_function;
-}
-
-FiniteElementState StateManager::newState(FiniteElementVector::Options&& options, const std::string& mesh_tag)
-{
-  SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
-  SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
-                     axom::fmt::format("Mesh tag '{}' not found in the data store", mesh_tag));
-  SLIC_ERROR_ROOT_IF(named_states_.find(options.name) != named_states_.end(),
-                     axom::fmt::format("StateManager already contains a state named '{}'", options.name));
-  const std::string name  = options.name;
-  auto              state = FiniteElementState(mesh(mesh_tag), std::move(options));
-  storeState(state);
-  return state;
 }
 
 FiniteElementState StateManager::newState(const mfem::ParFiniteElementSpace& space, const std::string& state_name)
@@ -203,19 +185,6 @@ FiniteElementDual StateManager::newDual(const mfem::ParFiniteElementSpace& space
   SLIC_ERROR_ROOT_IF(named_duals_.find(dual_name) != named_duals_.end(),
                      axom::fmt::format("StateManager already contains a dual named '{}'", dual_name));
   auto dual = FiniteElementDual(space, dual_name);
-  storeDual(dual);
-  return dual;
-}
-
-FiniteElementDual StateManager::newDual(FiniteElementVector::Options&& options, const std::string& mesh_tag)
-{
-  SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
-  SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
-                     axom::fmt::format("Mesh tag '{}' not found in the data store", mesh_tag));
-  SLIC_ERROR_ROOT_IF(named_duals_.find(options.name) != named_duals_.end(),
-                     axom::fmt::format("StateManager already contains a dual named '{}'", options.name));
-  const std::string name = options.name;
-  auto              dual = FiniteElementDual(mesh(mesh_tag), std::move(options));
   storeDual(dual);
   return dual;
 }
@@ -281,23 +250,23 @@ mfem::ParMesh* StateManager::setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const
 
 void StateManager::constructShapeFields(const std::string& mesh_tag)
 {
-  // Construct the shape displacement and sensitivity fields associated with this mesh
+  // Construct the shape displacement field associated with this mesh
   auto& new_mesh = mesh(mesh_tag);
 
-  shape_displacements_[mesh_tag] = std::make_unique<FiniteElementState>(
-      new_mesh,
-      FiniteElementState::Options{
-          .order = SHAPE_ORDER, .vector_dim = new_mesh.Dimension(), .name = mesh_tag + "_shape_displacement"});
-
-  shape_sensitivities_[mesh_tag] = std::make_unique<FiniteElementDual>(
-      new_mesh, FiniteElementState::Options{
-                    .order = SHAPE_ORDER, .vector_dim = new_mesh.Dimension(), .name = mesh_tag + "_shape_sensitivity"});
+  if (new_mesh.Dimension() == 2) {
+    shape_displacements_[mesh_tag] =
+        std::make_unique<FiniteElementState>(new_mesh, SHAPE_DIM_2, mesh_tag + "_shape_displacement");
+  } else if (new_mesh.Dimension() == 3) {
+    shape_displacements_[mesh_tag] =
+        std::make_unique<FiniteElementState>(new_mesh, SHAPE_DIM_3, mesh_tag + "_shape_displacement");
+  } else {
+    SLIC_ERROR_ROOT(axom::fmt::format("Mesh of dimension {} given, only dimensions 2 or 3 are available in Serac.",
+                                      new_mesh.Dimension()));
+  }
 
   storeState(*shape_displacements_[mesh_tag]);
-  storeDual(*shape_sensitivities_[mesh_tag]);
 
   *shape_displacements_[mesh_tag] = 0.0;
-  *shape_sensitivities_[mesh_tag] = 0.0;
 }
 
 mfem::ParMesh& StateManager::mesh(const std::string& mesh_tag)

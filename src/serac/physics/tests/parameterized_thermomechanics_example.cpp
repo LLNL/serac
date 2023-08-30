@@ -75,8 +75,7 @@ TEST(Thermomechanics, ParameterizedMaterial)
   double outer_radius = 1.25;
   double height       = 2.0;
 
-  {
-    // clang-format off
+  // clang-format off
     auto mesh = mesh::refineAndDistribute(build_hollow_quarter_cylinder(radial_divisions, 
                                                                         angular_divisions, 
                                                                         vertical_divisions,
@@ -84,9 +83,8 @@ TEST(Thermomechanics, ParameterizedMaterial)
                                                                         outer_radius, 
                                                                         height), serial_refinement, parallel_refinement);
 
-    // clang-format on
-    serac::StateManager::setMesh(std::move(mesh));
-  }
+  // clang-format on
+  auto pmesh = serac::StateManager::setMesh(std::move(mesh));
 
   SolidMechanics<p, dim, Parameters<H1<p>, H1<p>>> simulation(
       solid_mechanics::default_nonlinear_options, solid_mechanics::direct_linear_options,
@@ -102,15 +100,17 @@ TEST(Thermomechanics, ParameterizedMaterial)
   simulation.setMaterial(DependsOn<0, 1>{}, material);
 
   double             deltaT = 1.0;
-  FiniteElementState temperature(StateManager::newState(FiniteElementState::Options{.order = p, .name = "theta"}));
+  FiniteElementState temperature(*pmesh, H1<p>{}, "theta");
+
   temperature = theta_ref;
-  simulation.registerParameter(0, temperature);
+  simulation.setParameter(0, temperature);
 
   double             alpha0    = 1.0e-3;
   auto               alpha_fec = std::unique_ptr<mfem::FiniteElementCollection>(new mfem::H1_FECollection(p, dim));
-  FiniteElementState alpha(StateManager::newState(FiniteElementState::Options{.order = p, .name = "alpha"}));
+  FiniteElementState alpha(*pmesh, H1<p>{}, "alpha");
+
   alpha = alpha0;
-  simulation.registerParameter(1, alpha);
+  simulation.setParameter(1, alpha);
 
   // set up essential boundary conditions
   std::set<int> x_equals_0 = {4};
@@ -139,7 +139,6 @@ TEST(Thermomechanics, ParameterizedMaterial)
   simulation.outputStateToDisk("paraview");
 
   // define quantities of interest
-  auto& mesh = serac::StateManager::mesh();
 
   Functional<double(H1<p, dim>)> qoi({&simulation.displacement().space()});
   qoi.AddSurfaceIntegral(
@@ -150,7 +149,7 @@ TEST(Thermomechanics, ParameterizedMaterial)
         auto n           = normalize(cross(dX_dxi));
         return dot(u, n) * ((X[2] > 0.99 * height) ? 1.0 : 0.0);
       },
-      mesh);
+      *pmesh);
 
   double initial_qoi = qoi(simulation.displacement());
   SLIC_INFO_ROOT(axom::fmt::format("vertical displacement integrated over the top surface: {}", initial_qoi));
@@ -162,7 +161,7 @@ TEST(Thermomechanics, ParameterizedMaterial)
         auto [X, dX_dxi] = position;
         return (X[2] > 0.99 * height) ? 1.0 : 0.0;
       },
-      mesh);
+      *pmesh);
 
   double top_area = area(simulation.displacement());
 
