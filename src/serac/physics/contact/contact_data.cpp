@@ -77,7 +77,7 @@ mfem::Vector ContactData::mergedGaps() const
       mfem::Vector g_pair;
       g_pair.MakeRef(merged_g, dof_offsets[static_cast<int>(i)],
                      dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
-      g_pair.Set(1.0, pairs_[i].pressure());
+      g_pair.Set(1.0, pairs_[i].gaps());
     }
   }
   return merged_g;
