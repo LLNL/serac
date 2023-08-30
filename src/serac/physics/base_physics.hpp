@@ -72,13 +72,6 @@ public:
   virtual double time() const;
 
   /**
-   * @brief Get the current adjoint time during the backward adjoint pass
-   *
-   * @return The current adjoint (backward pass) time
-   */
-  virtual double adjointTime() const;
-
-  /**
    * @brief Set the current cycle
    *
    * @param[in] cycle The cycle
@@ -91,13 +84,6 @@ public:
    * @return The current cycle
    */
   virtual int cycle() const;
-
-  /**
-   * @brief Get the current adjoint cycle during the backward adjoint pass
-   *
-   * @return The current adjoint (backward pass) timestep iteration number
-   */
-  virtual int adjointCycle() const;
 
   /**
    * @brief Complete the setup and allocate the necessary data structures
@@ -242,7 +228,7 @@ public:
    * @return The computed adjoint finite element states
    */
   virtual const std::unordered_map<std::string, const serac::FiniteElementState&> reverseAdjointTimestep(
-      const double& /* adjoint_dt */, std::unordered_map<std::string, const serac::FiniteElementDual&> /* adjoint_loads */,
+      std::unordered_map<std::string, const serac::FiniteElementDual&> /* adjoint_loads */,
       std::unordered_map<std::string, const serac::FiniteElementState&> /* adjoint_with_essential_boundary */ = {})
   {
     SLIC_ERROR_ROOT(axom::fmt::format("Adjoint analysis not defined for physics module {}", name_));
@@ -361,14 +347,10 @@ protected:
    */
   double time_;
 
-  double adjoint_time_;
-
   /**
    * @brief Current cycle
    */
   int cycle_;
-
-  int adjoint_cycle_;
 
   /**
    * @brief The value of time at which the ODE solver wants to evaluate the residual
