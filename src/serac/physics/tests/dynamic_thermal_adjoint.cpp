@@ -77,14 +77,18 @@ double computeThermalQoiAdjustingInitalTemperature(axom::sidre::DataStore& /*dat
                                                    const TimesteppingOptions& dyn_opts,
                                                    const heat_transfer::IsotropicConductorWithLinearConductivityVsTemperature& mat,
                                                    const TimeSteppingInfo& ts_info,
-                                                   int dofIndex,
+                                                   const FiniteElementState& derivativeDirection,
                                                    double pertubation)
 {
   auto thermal = create_heat_transfer(nonlinear_opts, dyn_opts, mat);
 
-  // finite difference change to initial temperature
-  auto& temperatureSol = thermal->temperature();
-  temperatureSol(dofIndex) += pertubation;
+  auto& temperature = thermal->temperature();
+  SLIC_ASSERT_MSG(temperature.Size()==derivativeDirection.Size(), "Shape displacement and intended derivative direction FiniteElementState sizes do not agree.");
+
+  int N = temperature.Size();
+  for (int n=0; n < N; ++n) {
+    temperature(n) += pertubation * derivativeDirection(n);
+  }
 
   double qoi = 0.0;
   thermal->outputState();
@@ -109,7 +113,7 @@ double computeThermalQoiAdjustingShape(axom::sidre::DataStore& /*data_store*/,
   auto thermal = create_heat_transfer(nonlinear_opts, dyn_opts, mat);
 
   auto& shapeDisp = thermal->shapeDisplacement();
-  SLIC_ASSERT_MSG(derivativeDirection.Size() == shapeDisp.Size(), "Shape displacement and intended derivative direction FiniteElementState sizes do not agree.");
+  SLIC_ASSERT_MSG(shapeDisp.Size()==derivativeDirection.Size(), "Shape displacement and intended derivative direction FiniteElementState sizes do not agree.");
 
   int N = shapeDisp.Size();
   for (int n=0; n < N; ++n) {
@@ -203,11 +207,20 @@ std::pair<double, FiniteElementDual> computeThermalQoiAndShapeGradient(axom::sid
 
 struct HeatTransferSensitivityFixture : public ::testing::Test
 {
-  void SetUp() override {
+  void SetUp() override 
+  {
     MPI_Barrier(MPI_COMM_WORLD);
     StateManager::initialize(dataStore, "thermal_dynamic_solve");
     std::string filename = std::string(SERAC_REPO_DIR) + "/data/meshes/star.mesh";
     mesh = StateManager::setMesh(mesh::refineAndDistribute(buildMeshFromFile(filename), 0));
+  }
+
+  void FillDirection(FiniteElementState& direction) const
+  {
+    int N = direction.Size();
+    for (int i=0; i < N; ++i) {
+      direction(i) = -1.0 + (2.0 * i) / N;
+    }
   }
 
   // Create DataStore
@@ -228,19 +241,14 @@ TEST_F(HeatTransferSensitivityFixture, InitialTemperatureSensitivities)
   std::pair<double, FiniteElementDual> trueGrad = computeThermalQoiAndInitialTemperatureGradient(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo);
   double qoiBase = trueGrad.first;
   const auto& adjGradient = trueGrad.second;
-  int numDesignVars = adjGradient.Size();
 
-  FiniteElementDual numericalGradients(adjGradient.space(), "numerical_gradient");
+  FiniteElementState derivativeDirection(adjGradient.space(), "derivative_direction");
+  FillDirection(derivativeDirection);
 
   const double eps = 1e-7;
-  for (int i=0; i < numDesignVars; ++i) {
-    auto qoiPlus = computeThermalQoiAdjustingInitalTemperature(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo, i, eps);
-    numericalGradients(i) = (qoiPlus-qoiBase)/eps;
-  }
-
-  for (int i=0; i < numDesignVars; ++i) {
-    EXPECT_NEAR(numericalGradients(i), adjGradient(i), 10*eps);
-  }
+  double qoiPlus = computeThermalQoiAdjustingInitalTemperature(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo, derivativeDirection, eps);
+  double directionalDeriv = derivativeDirection * adjGradient;
+  EXPECT_NEAR(directionalDeriv, (qoiPlus-qoiBase)/eps, 0.1*eps);
 }
 
 TEST_F(HeatTransferSensitivityFixture, ShapeSensitivities)
@@ -248,19 +256,14 @@ TEST_F(HeatTransferSensitivityFixture, ShapeSensitivities)
   std::pair<double, FiniteElementDual> trueGrad = computeThermalQoiAndShapeGradient(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo);
   double qoiBase = trueGrad.first;
   const auto& shapeGradient = trueGrad.second;
-  int numDesignVars = shapeGradient.Size();
 
   FiniteElementState derivativeDirection(shapeGradient.space(), "derivative_direction");
+  FillDirection(derivativeDirection);
 
   const double eps = 1e-7;
-  for (int i=0; i < numDesignVars; ++i) {
-    derivativeDirection(i) = -1.0 + (2.0 * i) / numDesignVars;
-  }
-
   double qoiPlus = computeThermalQoiAdjustingShape(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo, derivativeDirection, eps);
-
-  double directionDeriv = dot(derivativeDirection, shapeGradient);
-  EXPECT_NEAR(directionDeriv, (qoiPlus-qoiBase)/eps, 10*eps);
+  double directionalDeriv = derivativeDirection * shapeGradient;
+  EXPECT_NEAR(directionalDeriv, (qoiPlus-qoiBase)/eps, 0.1*eps);
 }
 
 }  // namespace serac
