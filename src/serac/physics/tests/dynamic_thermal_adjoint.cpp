@@ -148,13 +148,12 @@ std::pair<double, std::vector<double>> computeThermalQoiAndInitialTemperatureGra
   std::vector<double> gradient(Nsize, 0.0);
 
   FiniteElementDual adjoint_load(thermal->temperature().space(), "adjoint_load");
-  FiniteElementState temperature_end_of_step(thermal->temperature()); // cannot get with thermal.previousTemperature(adjointCycle) yet, as adjointCycle is not defined until reverseAdjointTimestep is called.
 
   for (int i = ts_info.num_timesteps; i > 0; --i) {
     double dt = ts_info.totalTime / ts_info.num_timesteps;
+    FiniteElementState temperature_end_of_step = thermal->previousTemperature(thermal->cycle());
     computeStepAdjointLoad(temperature_end_of_step, adjoint_load, dt);
     std::unordered_map<std::string, const FiniteElementState&> adjoint_sol = thermal->reverseAdjointTimestep({{"temperature", adjoint_load}});
-    temperature_end_of_step = thermal->previousTemperature(thermal->cycle());
 
     if (i==1) {
       // initial temperature sensitivity math
