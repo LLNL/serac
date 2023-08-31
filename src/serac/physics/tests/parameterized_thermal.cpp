@@ -106,7 +106,7 @@ TEST(Thermal, ParameterizedMaterial)
   adjoint_load = 1.0;
 
   // Solve the adjoint problem
-  thermal_solver.reverseAdjointTimestep(dt, {{"temperature", adjoint_load}});
+  thermal_solver.reverseAdjointTimestep({{"temperature", adjoint_load}});
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
   auto& sensitivity = thermal_solver.computeTimestepSensitivity(conductivity_parameter_index);
