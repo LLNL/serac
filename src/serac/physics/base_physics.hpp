@@ -213,6 +213,19 @@ public:
   }
 
   /**
+   * @brief Compute the implicit sensitivity of the quantity of interest with respect to the initial condition fields
+   *
+   * @return Fields states corresponding to the sensitivities with respect to the initial condition fields
+   *
+   * @pre `reverseAdjointTimestep` with an appropriate adjoint load must be called prior to this method as many times as the forward advance is called.
+   */
+  virtual const std::unordered_map<std::string, const serac::FiniteElementDual&> computeInitialConditionSensitivity()
+  {
+    SLIC_ERROR_ROOT(axom::fmt::format("Initial condition sensitivities not enabled in physics module {}", name_));
+    return {};
+  }
+
+  /**
    * @brief Advance the state variables according to the chosen time integrator
    *
    * @param[inout] dt The timestep to advance. For adaptive time integration methods, the actual timestep is returned.
