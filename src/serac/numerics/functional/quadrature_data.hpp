@@ -44,8 +44,38 @@ struct Nothing {
 struct Empty {
 };
 
+
 template <typename T>
-struct QuadratureData;
+struct span2D {
+  T & operator()(uint32_t i, uint32_t j) { return ptr[i * dimensions[1] + j]; }
+  const T & operator()(uint32_t i, uint32_t j) const { return ptr[i * dimensions[1] + j]; }
+
+  T * ptr;
+  std::array< uint32_t, 2 > dimensions;
+};
+
+struct QData {
+  template < typename T >
+  QData(const std::vector<T> & in, std::array<uint32_t,2> dim) {
+    assert(dim[0] * dim[1] == in.size()); 
+    data = std::vector<char>(in.size() * sizeof(T));
+    std::memcpy(&data[0], &in[0], data.size());
+    dimensions = dim; 
+  }
+
+  std::array< uint32_t, 2 > dimensions;
+  std::vector< char > data;
+};
+
+template < typename T >
+span2D<const T> span(const QData & qdata) {
+  return span2D<const T>{reinterpret_cast<const T*>(&qdata.data[0]), qdata.dimensions};
+}
+
+template < typename T >
+span2D<T> span(QData & qdata) {
+  return span2D<T>{reinterpret_cast<T*>(&qdata.data[0]), qdata.dimensions};
+}
 
 }  // namespace serac
 
