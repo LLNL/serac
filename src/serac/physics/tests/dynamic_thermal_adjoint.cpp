@@ -148,7 +148,9 @@ std::tuple<double, FiniteElementDual, FiniteElementDual> computeThermalQoiAndIni
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   FiniteElementDual initial_temperature_gradient(thermal->temperature().space(), "init_temp_gradient");
+  initial_temperature_gradient = 0.0;
   FiniteElementDual shape_gradient(thermal->shapeDisplacement().space(), "shape_gradient");
+  shape_gradient = 0.0;
   FiniteElementDual adjoint_load(thermal->temperature().space(), "adjoint_load");
 
   for (int i = ts_info.num_timesteps; i > 0; --i) {
@@ -160,7 +162,10 @@ std::tuple<double, FiniteElementDual, FiniteElementDual> computeThermalQoiAndIni
   }
 
   EXPECT_EQ(0, thermal->cycle()); // we are back to the start
-  initial_temperature_gradient += thermal->computeInitialTemperatureSensitivity();
+  auto initialConditionSensitivities = thermal->computeInitialConditionSensitivity();
+  auto initialTemperatureSensitivityIter = initialConditionSensitivities.find("temperature");
+  SLIC_ASSERT_MSG(initialTemperatureSensitivityIter!=initialConditionSensitivities.end(), "Could not find temperature in the computed initial condition sensitivities.");
+  initial_temperature_gradient += initialTemperatureSensitivityIter->second;
 
   return std::make_tuple(qoi, initial_temperature_gradient, shape_gradient);
 }

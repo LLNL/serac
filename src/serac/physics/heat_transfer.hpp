@@ -781,16 +781,16 @@ public:
     return shape_displacement_sensitivity_;
   }
 
-    /**
+  /**
    * @brief Compute the implicit sensitivity of the quantity of interest with respect to the initial temperature
    *
    * @return The sensitivity with respect to the initial temperature
    *
    * @pre `reverseAdjointTimestep` must be called as many times as the forward solver was advanced before this is called
    */
-  FiniteElementDual& computeInitialTemperatureSensitivity()
+  const std::unordered_map<std::string, const serac::FiniteElementDual&> computeInitialConditionSensitivity() override
   {
-    return _d_temperature_start_of_step_;
+    return {{"temperature", _d_temperature_start_of_step_}};
   }
 
   /// Destroy the Thermal Solver object
