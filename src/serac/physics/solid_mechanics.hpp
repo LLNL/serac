@@ -1073,7 +1073,7 @@ public:
    * "adjoint_displacement"
    */
   const std::unordered_map<std::string, const serac::FiniteElementState&> reverseAdjointTimestep(
-      const double& /* adjoint_timestep */, std::unordered_map<std::string, const serac::FiniteElementDual&> adjoint_loads,
+      std::unordered_map<std::string, const serac::FiniteElementDual&> adjoint_loads,
       std::unordered_map<std::string, const serac::FiniteElementState&> adjoint_with_essential_boundary = {}) override
   {
     SLIC_ERROR_ROOT_IF(adjoint_loads.size() != 1,

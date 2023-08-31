@@ -116,7 +116,7 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
   adjoint_load = *assembled_vector;
 
   // Solve the adjoint problem
-  solid_solver.reverseAdjointTimestep(dt, {{"displacement", adjoint_load}});
+  solid_solver.reverseAdjointTimestep({{"displacement", adjoint_load}});
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
   [[maybe_unused]] auto& sensitivity = solid_solver.computeTimestepSensitivity(bulk_parameter_index);
@@ -279,7 +279,7 @@ void finite_difference_shape_test(LoadingType load)
   adjoint_load = *assembled_vector;
 
   // Solve the adjoint problem
-  solid_solver.reverseAdjointTimestep(dt, {{"displacement", adjoint_load}});
+  solid_solver.reverseAdjointTimestep({{"displacement", adjoint_load}});
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
   [[maybe_unused]] auto& sensitivity = solid_solver.computeTimestepShapeSensitivity();

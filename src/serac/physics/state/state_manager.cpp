@@ -106,7 +106,7 @@ void StateManager::loadPreviousStates(int                                       
   previous_datacoll.Load(cycle_to_load);
 
   for (auto state : states_to_load) {
-    SLIC_ERROR_ROOT_IF(collectionID(&states_to_load.begin()->get().mesh()) != mesh_name,
+    SLIC_ERROR_ROOT_IF(collectionID(&state.get().mesh()) != mesh_name,
                        "Loading FiniteElementStates from two different meshes at one time is not allowed.");
     mfem::ParGridFunction* datacoll_owned_grid_function = previous_datacoll.GetParField(state.get().name());
 

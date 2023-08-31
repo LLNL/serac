@@ -101,7 +101,7 @@ TEST(Thermal, FiniteDifference)
   adjoint_load = *assembled_vector;
 
   // Solve the adjoint problem
-  thermal_solver.reverseAdjointTimestep(dt, {{"temperature", adjoint_load}});
+  thermal_solver.reverseAdjointTimestep({{"temperature", adjoint_load}});
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
   [[maybe_unused]] auto& sensitivity = thermal_solver.computeTimestepSensitivity(conductivity_parameter_index);
@@ -216,7 +216,7 @@ TEST(HeatTransfer, FiniteDifferenceShape)
   adjoint_load = *assembled_vector;
 
   // Solve the adjoint problem
-  thermal_solver.reverseAdjointTimestep(dt, {{"temperature", adjoint_load}});
+  thermal_solver.reverseAdjointTimestep({{"temperature", adjoint_load}});
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
   [[maybe_unused]] auto& sensitivity = thermal_solver.computeTimestepShapeSensitivity();
