@@ -150,4 +150,17 @@ double min(const FiniteElementVector& fe_vector)
   return global_min;
 }
 
+double innerProduct(const FiniteElementVector& v1, const FiniteElementVector& v2)
+{
+  SLIC_ERROR_IF(v1.Size() != v2.Size(),
+                axom::fmt::format("Finite element vector of size '{}' can not inner product with another vector of size '{}'",
+                                  v1.Size(), v2.Size()));
+  SLIC_ERROR_IF(v1.comm() != v2.comm(), "Can not compute inner products between vectors with different mpi communicators");
+
+  double global_ip;
+  double local_ip = mfem::InnerProduct(v1, v2);
+  MPI_Allreduce(&local_ip, &global_ip, 1, MPI_DOUBLE, MPI_SUM, v1.comm());
+  return global_ip;
+}
+
 }  // namespace serac
