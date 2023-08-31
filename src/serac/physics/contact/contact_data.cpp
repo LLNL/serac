@@ -44,6 +44,36 @@ void ContactData::update(int cycle, double time, double& dt)
   tribol::update(cycle, time, dt);
 }
 
+std::function<void(const mfem::Vector&, mfem::Vector&)> ContactData::residual(
+    std::function<void(const mfem::Vector&, mfem::Vector&)> orig_r)
+{
+  return [this, orig_r](const mfem::Vector& u, mfem::Vector& r) {
+      const int disp_size = reference_nodes_->ParFESpace()->GetTrueVSize();
+
+      mfem::Vector u_blk, p_blk;
+      u_blk.MakeRef(const_cast<mfem::Vector&>(u), 0, disp_size);
+      p_blk.MakeRef(const_cast<mfem::Vector&>(u), disp_size, numPressureTrueDofs());
+
+      mfem::Vector r_blk, g_blk;
+      r_blk.MakeRef(r, 0, disp_size);
+      g_blk.MakeRef(r, disp_size, numPressureTrueDofs());
+
+      double dt = 1.0;
+      setDisplacements(u_blk);
+      // we need to call update first to update gaps
+      update(1, 1.0, dt);
+      // with updated gaps, we can update pressure for contact pairs with penalty enforcement
+      setPressures(p_blk);
+      // call update again with the right pressures
+      update(1, 1.0, dt);
+
+      orig_r(u_blk, r_blk);
+      r_blk += forces();
+
+      g_blk.Set(1.0, mergedGaps());
+  };
+}
+
 FiniteElementDual ContactData::forces() const
 {
   FiniteElementDual f(*reference_nodes_->ParFESpace(), "contact force");
@@ -83,7 +113,29 @@ mfem::Vector ContactData::mergedGaps() const
   return merged_g;
 }
 
-std::unique_ptr<mfem::BlockOperator> ContactData::jacobian() const
+std::function<std::unique_ptr<mfem::BlockOperator>(const mfem::Vector&)> ContactData::jacobian(
+    std::function<std::unique_ptr<mfem::BlockOperator>(const mfem::Vector&)> orig_J) const
+{
+  return [this, orig_J](const mfem::Vector& u) -> std::unique_ptr<mfem::BlockOperator> {
+      mfem::Vector u_blk;
+      u_blk.MakeRef(const_cast<mfem::Vector&>(u), 0, reference_nodes_->ParFESpace()->GetTrueVSize());
+      auto J_block = orig_J(u_blk);
+      auto& J_solid = static_cast<mfem::HypreParMatrix&>(J_block->GetBlock(0, 0));
+
+      auto J_contact = mergedJacobian();
+      if (J_contact->IsZeroBlock(0, 0)) {
+        J_block->owns_blocks = false;
+        J_contact->SetBlock(0, 0, &J_solid);
+      } else {
+        J_contact->SetBlock(
+            0, 0, mfem::Add(1.0, J_solid, 1.0, static_cast<mfem::HypreParMatrix&>(J_contact->GetBlock(0, 0))));
+      }
+
+      return J_contact;
+    };
+}
+
+std::unique_ptr<mfem::BlockOperator> ContactData::mergedJacobian() const
 {
   jacobian_offsets_    = mfem::Array<int>({0, reference_nodes_->ParFESpace()->GetTrueVSize(),
                                         numPressureTrueDofs() + reference_nodes_->ParFESpace()->GetTrueVSize()});

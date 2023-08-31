@@ -4,12 +4,9 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/contact/contact_config.hpp"
 #include "serac/physics/solid_mechanics.hpp"
 
 #include <functional>
-#include <mfem/fem/coefficient.hpp>
-#include <mfem/linalg/hypre.hpp>
 #include <set>
 #include <string>
 

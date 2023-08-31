@@ -83,6 +83,9 @@ public:
    */
   bool haveContactPairs() const;
 
+  std::function<void(const mfem::Vector&, mfem::Vector&)> residual(
+      std::function<void(const mfem::Vector&, mfem::Vector&)> orig_r);
+
   /**
    * @brief Get the contact constraint residual (i.e. nodal forces)
    *
@@ -104,13 +107,16 @@ public:
    */
   mfem::Vector mergedGaps() const;
 
+  std::function<std::unique_ptr<mfem::BlockOperator>(const mfem::Vector&)> jacobian(
+      std::function<std::unique_ptr<mfem::BlockOperator>(const mfem::Vector&)> orig_J) const;
+
   /**
    * @brief Returns a 2x2 block Jacobian on displacement/pressure degrees of
    * freedom from contact constraints
    *
    * @return Pointer to block Jacobian (2x2 BlockOperator of HypreParMatrix)
    */
-  std::unique_ptr<mfem::BlockOperator> jacobian() const;
+  std::unique_ptr<mfem::BlockOperator> mergedJacobian() const;
 
   /**
    * @brief Set the pressure field
