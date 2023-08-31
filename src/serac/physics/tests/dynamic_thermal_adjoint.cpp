@@ -40,9 +40,8 @@ double computeStepQoi(const FiniteElementState& temperature, double dt)
 
 void computeStepAdjointLoad(const FiniteElementState& temperature, FiniteElementDual& d_qoi_d_temperature, double dt)
 {
-  for (int n=0; n < temperature.Size(); ++n) {
-    d_qoi_d_temperature(n) = dt * temperature(n);
-  }
+  d_qoi_d_temperature = temperature;
+  d_qoi_d_temperature *= dt;
 }
 
 
@@ -73,18 +72,15 @@ double computeThermalQoiAdjustingInitalTemperature(axom::sidre::DataStore& /*dat
                                                    const TimesteppingOptions& dyn_opts,
                                                    const heat_transfer::IsotropicConductorWithLinearConductivityVsTemperature& mat,
                                                    const TimeSteppingInfo& ts_info,
-                                                   const FiniteElementState& derivative_direction,
+                                                   const FiniteElementState& init_temp_derivative_direction,
                                                    double pertubation)
 {
   auto thermal = create_heat_transfer(nonlinear_opts, dyn_opts, mat);
 
   auto& temperature = thermal->temperature();
-  SLIC_ASSERT_MSG(temperature.Size()==derivative_direction.Size(), "Shape displacement and intended derivative direction FiniteElementState sizes do not agree.");
+  SLIC_ASSERT_MSG(temperature.Size()==init_temp_derivative_direction.Size(), "Shape displacement and intended derivative direction FiniteElementState sizes do not agree.");
 
-  int N = temperature.Size();
-  for (int n=0; n < N; ++n) {
-    temperature(n) += pertubation * derivative_direction(n);
-  }
+  temperature.Add(pertubation, init_temp_derivative_direction);
 
   double qoi = 0.0;
   thermal->outputState();
@@ -103,18 +99,15 @@ double computeThermalQoiAdjustingShape(axom::sidre::DataStore& /*data_store*/,
                                        const TimesteppingOptions& dyn_opts,
                                        const heat_transfer::IsotropicConductorWithLinearConductivityVsTemperature& mat,
                                        const TimeSteppingInfo& ts_info,
-                                       const FiniteElementState& derivative_direction,
+                                       const FiniteElementState& shape_derivative_direction,
                                        double pertubation)
 {
   auto thermal = create_heat_transfer(nonlinear_opts, dyn_opts, mat);
 
   auto& shapeDisp = thermal->shapeDisplacement();
-  SLIC_ASSERT_MSG(shapeDisp.Size()==derivative_direction.Size(), "Shape displacement and intended derivative direction FiniteElementState sizes do not agree.");
+  SLIC_ASSERT_MSG(shapeDisp.Size()==shape_derivative_direction.Size(), "Shape displacement and intended derivative direction FiniteElementState sizes do not agree.");
 
-  int N = shapeDisp.Size();
-  for (int n=0; n < N; ++n) {
-    shapeDisp(n) += pertubation * derivative_direction(n);
-  }
+  shapeDisp.Add(pertubation, shape_derivative_direction);
 
   double qoi = 0.0;
   thermal->outputState();
