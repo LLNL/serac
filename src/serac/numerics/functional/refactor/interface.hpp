@@ -1,10 +1,23 @@
 #pragma once
 
+#include <tuple>
+
 #include "axom/core.hpp"
 #include "serac/numerics/functional/finite_element.hpp"
 #include "serac/physics/state/finite_element_state.hpp"
+#include "serac/physics/state/finite_element_dual.hpp"
 
 namespace serac {
+
+static constexpr std::array supported_geometries = {mfem::Geometry::SEGMENT,
+                                                    mfem::Geometry::TRIANGLE,
+                                                    mfem::Geometry::SQUARE,
+                                                    mfem::Geometry::TETRAHEDRON,
+                                                    mfem::Geometry::CUBE};
+
+using geom_array = std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES>;
+
+std::tuple<geom_array, uint32_t> quadrature_point_offsets(const mfem::Mesh & mesh, int q);
 
 /**
  * @brief evaluate the solution field `u` at each
@@ -16,7 +29,7 @@ namespace serac {
  * @param u input, the nodal values
  * @param q parameter controlling the number of quadrature points per element
  */
-void interpolate(axom::Array<double, 3>& u_q, const FiniteElementState& u, int q);
+void interpolate(axom::Array<double, 2>& u_q, const FiniteElementState& u, int q);
 
 /**
  * @brief evaluate the gradient of the solution field `u` at each
@@ -28,7 +41,7 @@ void interpolate(axom::Array<double, 3>& u_q, const FiniteElementState& u, int q
  * @param u input, the nodal values
  * @param q parameter controlling the number of quadrature points per element
  */
-void gradient(axom::Array<double, 4>& du_dX_q, const FiniteElementState& u, int q);
+void gradient(axom::Array<double, 3>& du_dX_q, const FiniteElementState& u, int q);
 
 /**
  * @brief integrate the source and flux terms against test functions
@@ -41,6 +54,6 @@ void gradient(axom::Array<double, 4>& du_dX_q, const FiniteElementState& u, int 
  * @param flux input, "flux term" (e.g. PK stress, heat flux) at each quadrature point
  * @param q parameter controlling the number of quadrature points per element
  */
-void integrate(FiniteElementDual& f, const axom::Array<double, 3> source, const axom::Array<double, 4> flux, int q);
+void integrate(FiniteElementDual& f, const axom::Array<double, 2> source, const axom::Array<double, 3> flux, int q);
 
 }  // namespace serac

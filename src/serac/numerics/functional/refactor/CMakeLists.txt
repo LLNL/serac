@@ -3,7 +3,7 @@ file(GLOB refactor_headers ${CMAKE_CURRENT_SOURCE_DIR}/*.hpp)
 file(GLOB refactor_tests ${CMAKE_CURRENT_SOURCE_DIR}/*_test.cpp)
 
 add_library(refactor ${refactor_headers} ${refactor_sources})
-target_link_libraries(refactor PUBLIC serac_functional)
+target_link_libraries(refactor PUBLIC serac_functional serac_state)
 target_include_directories(refactor PUBLIC ${CMAKE_SOURCE_DIR})
 
 foreach(filename ${refactor_tests})

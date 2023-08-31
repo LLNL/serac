@@ -4,8 +4,30 @@
 
 #include "interface.hpp"
 
-int main() {
+#include "serac/serac_config.hpp" // for SERAC_REPO_DIR
+#include "serac/mesh/mesh_utils.hpp"
 
-    
+using namespace serac;
 
+int main(int argc, char* argv[]) {
+  MPI_Init(&argc, &argv);
+  axom::slic::SimpleLogger logger;
+
+  std::string filename = SERAC_REPO_DIR "/data/meshes/patch2D_tris_and_quads.mesh";
+  std::unique_ptr< mfem::ParMesh > mesh = serac::mesh::refineAndDistribute(buildMeshFromFile(filename), 2, 1);
+
+  int polynomial_order = 1;
+  int q = polynomial_order + 1;
+  int components = 1;
+  ElementType type = ElementType::H1;
+  std::string name = "u";
+  FiniteElementState u(*mesh, {polynomial_order, components, type, name});
+
+  axom::Array < double, 2 > u_q;
+  interpolate(u_q, u, q);
+
+  axom::Array < double, 3 > du_dX_q;
+  gradient(du_dX_q, u, q);
+
+  MPI_Finalize();
 }
