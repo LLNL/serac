@@ -73,17 +73,17 @@ double computeThermalQoiAdjustingInitalTemperature(axom::sidre::DataStore& /*dat
                                                    const TimesteppingOptions& dyn_opts,
                                                    const heat_transfer::IsotropicConductorWithLinearConductivityVsTemperature& mat,
                                                    const TimeSteppingInfo& ts_info,
-                                                   const FiniteElementState& derivativeDirection,
+                                                   const FiniteElementState& derivative_direction,
                                                    double pertubation)
 {
   auto thermal = create_heat_transfer(nonlinear_opts, dyn_opts, mat);
 
   auto& temperature = thermal->temperature();
-  SLIC_ASSERT_MSG(temperature.Size()==derivativeDirection.Size(), "Shape displacement and intended derivative direction FiniteElementState sizes do not agree.");
+  SLIC_ASSERT_MSG(temperature.Size()==derivative_direction.Size(), "Shape displacement and intended derivative direction FiniteElementState sizes do not agree.");
 
   int N = temperature.Size();
   for (int n=0; n < N; ++n) {
-    temperature(n) += pertubation * derivativeDirection(n);
+    temperature(n) += pertubation * derivative_direction(n);
   }
 
   double qoi = 0.0;
@@ -103,17 +103,17 @@ double computeThermalQoiAdjustingShape(axom::sidre::DataStore& /*data_store*/,
                                        const TimesteppingOptions& dyn_opts,
                                        const heat_transfer::IsotropicConductorWithLinearConductivityVsTemperature& mat,
                                        const TimeSteppingInfo& ts_info,
-                                       const FiniteElementState& derivativeDirection,
+                                       const FiniteElementState& derivative_direction,
                                        double pertubation)
 {
   auto thermal = create_heat_transfer(nonlinear_opts, dyn_opts, mat);
 
   auto& shapeDisp = thermal->shapeDisplacement();
-  SLIC_ASSERT_MSG(shapeDisp.Size()==derivativeDirection.Size(), "Shape displacement and intended derivative direction FiniteElementState sizes do not agree.");
+  SLIC_ASSERT_MSG(shapeDisp.Size()==derivative_direction.Size(), "Shape displacement and intended derivative direction FiniteElementState sizes do not agree.");
 
   int N = shapeDisp.Size();
   for (int n=0; n < N; ++n) {
-    shapeDisp(n) += pertubation * derivativeDirection(n);
+    shapeDisp(n) += pertubation * derivative_direction(n);
   }
 
   double qoi = 0.0;
@@ -128,48 +128,11 @@ double computeThermalQoiAdjustingShape(axom::sidre::DataStore& /*data_store*/,
 }
 
 
-std::pair<double, FiniteElementDual> computeThermalQoiAndInitialTemperatureGradient(axom::sidre::DataStore& /*data_store*/,
-                                                                                    const NonlinearSolverOptions& nonlinear_opts,
-                                                                                    const TimesteppingOptions& dyn_opts,
-                                                                                    const heat_transfer::IsotropicConductorWithLinearConductivityVsTemperature& mat,
-                                                                                    const TimeSteppingInfo& ts_info)
-{
-  auto thermal = create_heat_transfer(nonlinear_opts, dyn_opts, mat);
-
-  double qoi = 0.0;
-  thermal->outputState();
-  for (int i = 0; i < ts_info.num_timesteps; ++i) {
-    double dt = ts_info.totalTime / ts_info.num_timesteps;
-    thermal->advanceTimestep(dt);
-    thermal->outputState();
-    qoi += computeStepQoi(thermal->temperature(), dt);
-  }
-
-  FiniteElementDual gradient(thermal->temperature().space(), "gradient");
-  FiniteElementDual adjoint_load(thermal->temperature().space(), "adjoint_load");
-
-  for (int i = ts_info.num_timesteps; i > 0; --i) {
-    double dt = ts_info.totalTime / ts_info.num_timesteps;
-    FiniteElementState temperature_end_of_step = thermal->previousTemperature(thermal->cycle());
-    computeStepAdjointLoad(temperature_end_of_step, adjoint_load, dt);
-    thermal->reverseAdjointTimestep({{"temperature", adjoint_load}});
-  }
-
-  EXPECT_EQ(0, thermal->cycle()); // we are back to the start
-  auto mu = thermal->computeInitialTemperatureSensitivity();
-  for (int n=0; n < mu.Size(); ++n) {
-    gradient(n) += mu(n);
-  }
-
-  return std::make_pair(qoi, gradient);
-}
-
-
-std::pair<double, FiniteElementDual> computeThermalQoiAndShapeGradient(axom::sidre::DataStore& /*data_store*/,
-                                                                       const NonlinearSolverOptions& nonlinear_opts,
-                                                                       const TimesteppingOptions& dyn_opts,
-                                                                       const heat_transfer::IsotropicConductorWithLinearConductivityVsTemperature& mat,
-                                                                       const TimeSteppingInfo& ts_info)
+std::tuple<double, FiniteElementDual, FiniteElementDual> computeThermalQoiAndInitialTemperatureAndShapeGradient(axom::sidre::DataStore& /*data_store*/,
+                                                                                                                const NonlinearSolverOptions& nonlinear_opts,
+                                                                                                                const TimesteppingOptions& dyn_opts,
+                                                                                                                const heat_transfer::IsotropicConductorWithLinearConductivityVsTemperature& mat,
+                                                                                                                const TimeSteppingInfo& ts_info)
 {
   auto thermal = create_heat_transfer(nonlinear_opts, dyn_opts, mat);
 
@@ -184,7 +147,8 @@ std::pair<double, FiniteElementDual> computeThermalQoiAndShapeGradient(axom::sid
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  FiniteElementDual gradient(thermal->shapeDisplacement().space(), "shape_gradient");
+  FiniteElementDual initial_temperature_gradient(thermal->temperature().space(), "init_temp_gradient");
+  FiniteElementDual shape_gradient(thermal->shapeDisplacement().space(), "shape_gradient");
   FiniteElementDual adjoint_load(thermal->temperature().space(), "adjoint_load");
 
   for (int i = ts_info.num_timesteps; i > 0; --i) {
@@ -192,15 +156,13 @@ std::pair<double, FiniteElementDual> computeThermalQoiAndShapeGradient(axom::sid
     FiniteElementState temperature_end_of_step = thermal->previousTemperature(thermal->cycle());
     computeStepAdjointLoad(temperature_end_of_step, adjoint_load, dt);
     thermal->reverseAdjointTimestep({{"temperature", adjoint_load}});
-
-    const FiniteElementDual& d_residual_d_params_transposed_times_adjoint_temperature = thermal->computeTimestepShapeSensitivity();
-    gradient += d_residual_d_params_transposed_times_adjoint_temperature;
-    //for (int n=0; n < d_residual_d_params_transposed_times_adjoint_temperature.Size(); ++n) {
-    //  gradient(n) += d_residual_d_params_transposed_times_adjoint_temperature(n);
-    //}
+    shape_gradient += thermal->computeTimestepShapeSensitivity();
   }
 
-  return std::make_pair(qoi, gradient);
+  EXPECT_EQ(0, thermal->cycle()); // we are back to the start
+  initial_temperature_gradient += thermal->computeInitialTemperatureSensitivity();
+
+  return std::make_tuple(qoi, initial_temperature_gradient, shape_gradient);
 }
 
 
@@ -214,13 +176,9 @@ struct HeatTransferSensitivityFixture : public ::testing::Test
     mesh = StateManager::setMesh(mesh::refineAndDistribute(buildMeshFromFile(filename), 0));
   }
 
-  void FillDirection(FiniteElementState& direction) const
+  void fillDirection(FiniteElementState& direction) const
   {
-    direction = 1.2;
-    //int N = direction.Size();
-    //for (int i=0; i < N; ++i) {
-    //  direction(i) = -1.0 + (2.0 * i) / N;
-    //}
+    direction = 1.1;
   }
 
   // Create DataStore
@@ -237,32 +195,28 @@ struct HeatTransferSensitivityFixture : public ::testing::Test
 
 TEST_F(HeatTransferSensitivityFixture, InitialTemperatureSensitivities)
 {
-  std::pair<double, FiniteElementDual> trueGrad = computeThermalQoiAndInitialTemperatureGradient(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo);
-  double qoiBase = trueGrad.first;
-  const auto& adjGradient = trueGrad.second;
+  auto [qoi_base, temperature_gradient, _] = computeThermalQoiAndInitialTemperatureAndShapeGradient(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo);
 
-  FiniteElementState derivativeDirection(adjGradient.space(), "derivative_direction");
-  FillDirection(derivativeDirection);
+  FiniteElementState derivative_direction(temperature_gradient.space(), "derivative_direction");
+  fillDirection(derivative_direction);
 
   const double eps = 1e-7;
-  double qoiPlus = computeThermalQoiAdjustingInitalTemperature(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo, derivativeDirection, eps);
-  double directionalDeriv = innerProduct(derivativeDirection, adjGradient);
-  EXPECT_NEAR(directionalDeriv, (qoiPlus-qoiBase)/eps, eps);
+  double qoi_plus = computeThermalQoiAdjustingInitalTemperature(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo, derivative_direction, eps);
+  double directional_deriv = innerProduct(derivative_direction, temperature_gradient);
+  EXPECT_NEAR(directional_deriv, (qoi_plus-qoi_base)/eps, eps);
 }
 
 TEST_F(HeatTransferSensitivityFixture, ShapeSensitivities)
 {
-  std::pair<double, FiniteElementDual> trueGrad = computeThermalQoiAndShapeGradient(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo);
-  double qoiBase = trueGrad.first;
-  const auto& shapeGradient = trueGrad.second;
+  auto [qoi_base, _, shape_gradient] = computeThermalQoiAndInitialTemperatureAndShapeGradient(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo);
 
-  FiniteElementState derivativeDirection(shapeGradient.space(), "derivative_direction");
-  FillDirection(derivativeDirection);
+  FiniteElementState derivative_direction(shape_gradient.space(), "derivative_direction");
+  fillDirection(derivative_direction);
 
   const double eps = 1e-7;
-  double qoiPlus = computeThermalQoiAdjustingShape(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo, derivativeDirection, eps);
-  double directionalDeriv = innerProduct(derivativeDirection, shapeGradient);
-  EXPECT_NEAR(directionalDeriv, (qoiPlus-qoiBase)/eps, eps);
+  double qoi_plus = computeThermalQoiAdjustingShape(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo, derivative_direction, eps);
+  double directional_deriv = innerProduct(derivative_direction, shape_gradient);
+  EXPECT_NEAR(directional_deriv, (qoi_plus-qoi_base)/eps, eps);
 }
 
 }  // namespace serac
