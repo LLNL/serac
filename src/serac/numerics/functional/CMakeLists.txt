@@ -80,3 +80,5 @@ install(TARGETS              serac_functional
 if(ENABLE_TESTS)
    add_subdirectory(tests)
 endif()
+
+add_subdirectory(refactor)
