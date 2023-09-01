@@ -232,8 +232,8 @@ double min(const FiniteElementVector& fe_vector);
 /**
  * @brief Find the inner prodcut between two finite element vectors across all dofs
  *
- * @param state1 The first vector
- * @param state2 The second vector
+ * @param vec1 The first vector
+ * @param vec2 The second vector
  * @return The inner prodcut between finite element vectors
  */
 double innerProduct(const FiniteElementVector& vec1, const FiniteElementVector& vec2);
