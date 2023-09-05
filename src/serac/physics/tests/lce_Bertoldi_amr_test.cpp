@@ -20,12 +20,6 @@
 
 using namespace serac;
 
-// #define ALT_ITER_SOLVER
-#undef ALT_ITER_SOLVER 
-
-// #define PERIODIC_MESH
-#undef PERIODIC_MESH
-
 const static int problemID = 2;
 
 int main(int argc, char* argv[])
@@ -38,6 +32,12 @@ int main(int argc, char* argv[])
   int serial_refinement   = 0;
   int parallel_refinement = 0;
 
+  // ---------------------------
+  // ---------------------------
+  // Initial run (original mesh)
+  // ---------------------------
+  // ---------------------------
+
   // Create DataStore
   axom::sidre::DataStore datastore;
   serac::StateManager::initialize(datastore, "solid_lce_functional");
@@ -46,30 +46,6 @@ int main(int argc, char* argv[])
 
   std::string   filename = SERAC_REPO_DIR "/data/meshes/reEntrantHoneycomb_3D_2x1_no_border.g";
   auto initial_mesh = buildMeshFromFile(filename);
-// std::cout<<"........... 1 "<<std::endl;
-//   mfem::FiniteElementCollection *fec = new mfem::L2_FECollection(1, 1);
-//   mfem::FiniteElementSpace fespace(&initial_mesh, fec);
-// std::cout<<"........... 2 "<<std::endl;
-        int numElems = initial_mesh.GetNE();
-        mfem::Array<int> elem_to_refine;
-
-        for (int i=0; i<numElems; i++) {
-          if (i < 0.5*numElems) { // boundary "error" set to 1.0
-            elem_to_refine.Append(i);
-          }
-        }
-        // refine ParMeshes
-        // initial_mesh.GeneralRefinement(elem_to_refine);
-
-        mfem::Array<int> elem_to_refine_2;
-
-        for (int i=0; i<numElems; i++) {
-          if (i < 0.25*numElems) { // boundary "error" set to 1.0
-            elem_to_refine_2.Append(i);
-          }
-        }
-        // initial_mesh.GeneralRefinement(elem_to_refine_2);
-
   auto mesh = mesh::refineAndDistribute(std::move(initial_mesh), serial_refinement, parallel_refinement);
 
   serac::StateManager::setMesh(std::move(mesh));
@@ -87,39 +63,10 @@ int main(int argc, char* argv[])
   NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = serac::NonlinearSolver::Newton,
                                               .relative_tol   = 1.0e-8,
                                               .absolute_tol   = 1.0e-14,
-                                              .max_iterations = 10,
+                                              .max_iterations = 2,
                                               .print_level    = 1};
   SolidMechanics<p, dim, Parameters<L2<p>, L2<p>, L2<p> > > solid_solver(
       nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional");
-      
-//   IterativeNonlinearSolverOptions default_nonlinear_options = {.rel_tol       = 1.0e-6,
-//                                                                .abs_tol       = 1.0e-8,
-//                                                                .max_iter      = 100,
-//                                                                .print_level   = 1,
-//                                                                .nonlin_solver = serac::NonlinearSolver::Newton};
-//   // .nonlin_solver = serac::NonlinearSolver::Newton};
-//   // .nonlin_solver = serac::NonlinearSolver::LBFGS};
-//   // .nonlin_solver = serac::NonlinearSolver::KINFullStep};
-//   //.nonlin_solver = serac::NonlinearSolver::KINBacktrackingLineSearch};
-//   // .nonlin_solver = serac::NonlinearSolver::KINPicard};
-//   // .nonlin_solver = serac::NonlinearSolver::KINFP};
-
-// #ifdef ALT_ITER_SOLVER
-//   auto custom_solver = std::make_unique<mfem::GMRESSolver>(MPI_COMM_WORLD);
-//   custom_solver->SetRelTol(1.0e-8);
-//   custom_solver->SetAbsTol(1.0e-16);
-//   custom_solver->SetPrintLevel(0);
-//   custom_solver->SetMaxIter(700);
-//   custom_solver->SetKDim(500);
-
-//   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
-//       {CustomSolverOptions{custom_solver.get()}, default_nonlinear_options}, GeometricNonlinearities::Off,
-//       "lce_solid_functional");
-// #else
-//   DirectSolverOptions linear_sol_options = {};
-//   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
-//       {linear_sol_options, default_nonlinear_options}, GeometricNonlinearities::Off, "lce_solid_functional");
-// #endif
 
   // Material properties
   double density         = 1.0;    // [Kg / mm3]
@@ -127,7 +74,7 @@ int main(int argc, char* argv[])
   double possion_ratio   = 0.45;   // 0.49;   // 0.48 // 
   double beta_param      = 2.0e5; // 5.20e5; // 2.31e5; // [Kg /s2 / mm] 
   double max_order_param = 0.45;   // 0.20;   // 0.45; //
-  double min_order_param = 0.0;   // 0.20;   // 0.45; //
+  double min_order_param = 0.43;   // 0.20;   // 0.45; //
   double gamma_angle     = 0.0;
   double eta_angle       = 0.0;
 
@@ -239,7 +186,7 @@ int main(int argc, char* argv[])
 
   // Time stepping
   // --------------    
-  int num_steps = 10;
+  int num_steps = 2;
   double t    = 0.0;
   double tmax = 1.0;
   double dt   = tmax / num_steps;
@@ -320,12 +267,14 @@ int main(int argc, char* argv[])
   }
 
   // -------------------
+  // -------------------
   // AMR mesh generation
+  // -------------------
   // -------------------
 
   // std::string   filename2 = SERAC_REPO_DIR "/data/meshes/reEntrantHoneycomb_3D_2x1_no_border_amr.g";
   auto new_mesh = buildMeshFromFile(filename);
-  numElems = new_mesh.GetNE();
+  int numElems = new_mesh.GetNE();
 
   auto dQoIdp = solid_solver.computeSensitivity(GAMMA_INDEX);
   mfem::HypreParVector* assembledVector(const_cast<mfem::ParLinearForm &>(dQoIdp.linearForm()).ParallelAssemble());
@@ -378,19 +327,6 @@ int main(int argc, char* argv[])
   vis1.RegisterField("sensitivities_l2_proj", &sensitivities_l2_proj);
   vis1.Save();
 
-  /////
-  // for (int e = 0; e < new_mesh.GetNE(); e++) {
-  //   ::mfem::Vector eval(fespace_l2.GetFE(e)->GetDof()); 
-  //   fespace_l2.GetFE(e)->Project(sensitivities, *(fespace_l2.GetElementTransformation(e)), eval);
-  //   sensitivities_l2_proj(e) = eval.Sum()/eval.Size();
-  //   int attr = 1;
-  //   if (sensitivities_l2_proj(e) > minVal + 0.5/(numRef+1) * deltaVal){attr = 2;}
-  //   if (sensitivities_l2_proj(e) > minVal + 1.0/(numRef+1) * deltaVal){attr = 3;}
-  //   if (sensitivities_l2_proj(e) > minVal + 1.5/(numRef+1) * deltaVal){attr = 4;}
-  //   new_mesh.GetElement(e)->SetAttribute(attr);
-  //   // new_mesh.SetAttribute(e, attr);
-  // }
-
   // Refine mesh as necessary
   for (int iRef=1; iRef<(numRef+1); iRef++){
     mfem::Array<int> new_elem_to_refine;
@@ -412,35 +348,42 @@ int main(int argc, char* argv[])
   std::cout<<"......... Finished refining the mesh ........."<<std::endl;
 
   // --------------
+  // --------------
   // AMR mesh rerun
   // --------------
-
+  // --------------
 
   // Create DataStore
-  axom::sidre::DataStore datastore_amr;
-  serac::StateManager::initialize(datastore, "solid_lce_functional_amr");
+  // axom::sidre::DataStore datastore_amr;
+  auto amr_mesh_name = "solid_lce_functional_amr";
+  serac::StateManager::initialize(datastore, amr_mesh_name);
+  std::cout<<"......... New refined mesh initialized........."<<std::endl;
 
   auto mesh_amr = mesh::refineAndDistribute(std::move(new_mesh), serial_refinement, parallel_refinement);
+  std::cout<<"......... New refined mesh refined and distributed........."<<std::endl;
 
-  serac::StateManager::setMesh(std::move(mesh_amr));
+  serac::StateManager::setMesh(std::move(mesh_amr), amr_mesh_name);
+  auto& pmesh_amr = serac::StateManager::mesh(amr_mesh_name);
+  std::cout<<"......... New refined mesh moved to state manager........."<<std::endl;
 
   SolidMechanics<p, dim, Parameters<L2<p>, L2<p>, L2<p> > > solid_solver_amr(
-      nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional_amr");
-
+      nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional_amr", &pmesh_amr);
+std::cout<<"......... 1 ........."<<std::endl;
   // Parameter 1
-  FiniteElementState orderParam_amr(StateManager::newState(FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "orderParam_amr"}));
+  FiniteElementState orderParam_amr(StateManager::newState(
+    FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "orderParam_amr"}, amr_mesh_name));
   orderParam_amr = max_order_param;
 
   // Parameter 2
   FiniteElementState gammaParam_amr(StateManager::newState(
-      FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "gammaParam_amr"}));
+      FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "gammaParam_amr"}, amr_mesh_name));
   gammaParam_amr.project(gammaCoef);
 
   // Paremetr 3
   FiniteElementState        etaParam_amr(StateManager::newState(
-      FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "etaParam_amr"}));
+      FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "etaParam_amr"}, amr_mesh_name));
   etaParam_amr.project(etaCoef);
-
+std::cout<<"......... 2 ........."<<std::endl;
   // Set parameters
   solid_solver_amr.setParameter(ORDER_INDEX, orderParam_amr);
   solid_solver_amr.setParameter(GAMMA_INDEX, gammaParam_amr);
@@ -448,7 +391,7 @@ int main(int argc, char* argv[])
 
   // Set material
   LiquidCrystalElastomerBertoldi lceMat_amr(density, young_modulus, possion_ratio, max_order_param, beta_param);
-
+std::cout<<"......... 3 ........."<<std::endl;
   solid_solver_amr.setMaterial(DependsOn<ORDER_INDEX, GAMMA_INDEX, ETA_INDEX>{}, lceMat_amr);
 
   solid_solver_amr.setDisplacementBCs({1}, zeroFunc, 0);  // left face x-dir disp = 0
@@ -458,14 +401,13 @@ int main(int argc, char* argv[])
 
   // Finalize the data structures
   solid_solver_amr.completeSetup();
-
+std::cout<<"......... 4 ........."<<std::endl;
   // Perform the quasi-static solve
   std::string outputFilename_amr = "sol_lce_bertoldi_amr_test_no_border_with_qoi_ref_0_refined_mesh";
   solid_solver_amr.outputState(outputFilename_amr);
 
   // QoI for output
   // --------------
-  auto& pmesh_amr = serac::StateManager::mesh();
   Functional<double(H1<p, dim>, serac::L2<p>, serac::L2<p>, serac::L2<p>)> strainEnergyQoI_amr(
       {&solid_solver_amr.displacement().space(), &orderParam_amr.space(), &gammaParam_amr.space(), &etaParam_amr.space()});
   strainEnergyQoI_amr.AddDomainIntegral(
@@ -479,7 +421,7 @@ int main(int argc, char* argv[])
         return 0.5 * serac::double_dot(strain, stress);
       },
       pmesh_amr);
-
+std::cout<<"......... 5 ........."<<std::endl;
   // Time stepping
   // -------------- 
   for (int i = 0; i < num_steps; i++) {
