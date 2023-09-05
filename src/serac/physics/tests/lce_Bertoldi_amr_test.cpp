@@ -69,26 +69,8 @@ int main(int argc, char* argv[])
           }
         }
         // initial_mesh.GeneralRefinement(elem_to_refine_2);
-#ifdef PERIODIC_MESH
-
-  // Create translation vectors defining the periodicity
-  mfem::Vector x_translation({lx, 0.0, 0.0});
-  // mfem::Vector y_translation({0.0, ly, 0.0});
-  // std::vector<mfem::Vector> translations = {x_translation, y_translation};
-  std::vector<mfem::Vector> translations = {x_translation};
-  double                    tol          = 1e-6;
-
-  std::vector<int> periodicMap = initial_mesh.CreatePeriodicVertexMapping(translations, tol);
-
-  // Create the periodic mesh using the vertex mapping defined by the translation vectors
-  auto periodic_mesh = mfem::Mesh::MakePeriodic(initial_mesh, periodicMap);
-  auto mesh          = mesh::refineAndDistribute(std::move(periodic_mesh), serial_refinement, parallel_refinement);
-
-#else
 
   auto mesh = mesh::refineAndDistribute(std::move(initial_mesh), serial_refinement, parallel_refinement);
-
-#endif
 
   serac::StateManager::setMesh(std::move(mesh));
 
@@ -341,46 +323,40 @@ int main(int argc, char* argv[])
   // AMR mesh generation
   // -------------------
 
-// std::string   filename2 = SERAC_REPO_DIR "/data/meshes/reEntrantHoneycomb_3D_2x1_no_border_amr.g";
+  // std::string   filename2 = SERAC_REPO_DIR "/data/meshes/reEntrantHoneycomb_3D_2x1_no_border_amr.g";
   auto new_mesh = buildMeshFromFile(filename);
   numElems = new_mesh.GetNE();
-  mfem::Vector elem_errors;
-  elem_errors.SetSize(numElems);
-  elem_errors = 0.0;
-  // mfem::ParGridFunction adj_gf = solid_solver.adjointDisplacement().gridFunction();
-  // mfem::VectorGridFunctionCoefficient adj_coeff(adj_gf);
-  // solid_solver.adjointDisplacement();
+
   auto dQoIdp = solid_solver.computeSensitivity(GAMMA_INDEX);
-  // mfem::ParLinearForm dQoIdp_plf(&gammaParam.space());
-  // dQoIdp.fillLinearForm(dQoIdp_plf);
-  // mfem::HypreParVector* assembledVector(const_cast<mfem::ParLinearForm &>(dQoIdp_plf.ParallelAssemble()));
   mfem::HypreParVector* assembledVector(const_cast<mfem::ParLinearForm &>(dQoIdp.linearForm()).ParallelAssemble());
 
   // Construct grid function from hypre vector
-  // mfem::ParGridFunction dQoIdp_pgf(dQoIdp_plf.ParFESpace(), assembledVector);
   mfem::ParGridFunction dQoIdp_pgf(dQoIdp.linearForm().ParFESpace(), assembledVector);
-
   mfem::FiniteElementCollection *fec = new mfem::H1_FECollection(1, 3);
   mfem::FiniteElementSpace fespace_h1(&new_mesh, fec);
   mfem::GridFunction temp_dQoIdp_pgf(&fespace_h1);
+
+  // Get data
   for (int j = 0; j < fespace_h1. GetVSize(); j++) { temp_dQoIdp_pgf(j) = dQoIdp_pgf(j)/ 1.0e-10;}
 
-  // auto& dQoIdp = solid_solver.computeSensitivity(1);
+  // Generate coefficient 
   mfem::GridFunctionCoefficient sensitivities(&temp_dQoIdp_pgf);
 
+  // Generate L2 space for evaluations
   mfem::FiniteElementCollection *l2_fec = new mfem::L2_FECollection(0, 3);
   mfem::FiniteElementSpace fespace_l2(&new_mesh, l2_fec);
-
-  int numRef = 3;
-  double minVal = temp_dQoIdp_pgf.Min();
-  double maxVal = temp_dQoIdp_pgf.Max();
-  double deltaVal = maxVal-minVal;
-
   assert(temp_dQoIdp_pgf.Size()==numElems);
 
   mfem::GridFunction sensitivities_l2_proj(&fespace_l2);
   sensitivities_l2_proj = 0.0;
 
+  // Bounds of field for refinement
+  int numRef = 3;
+  double minVal = temp_dQoIdp_pgf.Min();
+  double maxVal = temp_dQoIdp_pgf.Max();
+  double deltaVal = maxVal-minVal;
+
+  // Assign attributes based on sensitivities
   for (int e = 0; e < numElems; e++) {
     ::mfem::Vector eval(fespace_l2.GetFE(e)->GetDof()); 
     fespace_l2.GetFE(e)->Project(sensitivities, *(fespace_l2.GetElementTransformation(e)), eval);
@@ -391,15 +367,8 @@ int main(int argc, char* argv[])
     if (sensitivities_l2_proj(e) > minVal + 1.5/(numRef+1) * deltaVal){attr = 4;}
     new_mesh.GetElement(e)->SetAttribute(attr);
   }
-// std::cout<<"......... minVal + 0/(numRef+1) * deltaVal = "<<minVal + 0.0/(numRef+1) * deltaVal<<std::endl;
-// std::cout<<"......... minVal + 1/(numRef+1) * deltaVal = "<<minVal + 0.5/(numRef+1) * deltaVal<<std::endl;
-// std::cout<<"......... minVal + 2/(numRef+1) * deltaVal = "<<minVal + 1.0/(numRef+1) * deltaVal<<std::endl;
-// std::cout<<"......... minVal + 3/(numRef+1) * deltaVal = "<<minVal + 1.5/(numRef+1) * deltaVal<<std::endl;
-// // std::cout<<"......... minVal + 4/(numRef+1) * deltaVal = "<<minVal + 4.0/(numRef+1) * deltaVal<<std::endl;
-// std::cout<<"......... minVal = "<<minVal<<std::endl;
-// std::cout<<"......... maxVal = "<<maxVal<<std::endl;
-// std::cout<<"......... deltaVal = "<<deltaVal<<std::endl;
 
+  // Output original mesh for verification purposes
   mfem::ParaViewDataCollection vis1("originalMeshAMRTest", &new_mesh);
   vis1.SetCycle(0);
   vis1.SetTime(1.0);
@@ -409,22 +378,21 @@ int main(int argc, char* argv[])
   vis1.RegisterField("sensitivities_l2_proj", &sensitivities_l2_proj);
   vis1.Save();
 
-    for (int e = 0; e < new_mesh.GetNE(); e++) {
-      ::mfem::Vector eval(fespace_l2.GetFE(e)->GetDof()); 
-      fespace_l2.GetFE(e)->Project(sensitivities, *(fespace_l2.GetElementTransformation(e)), eval);
-      sensitivities_l2_proj(e) = eval.Sum()/eval.Size();
-      int attr = 1;
-      if (sensitivities_l2_proj(e) > minVal + 0.5/(numRef+1) * deltaVal){attr = 2;}
-      if (sensitivities_l2_proj(e) > minVal + 1.0/(numRef+1) * deltaVal){attr = 3;}
-      if (sensitivities_l2_proj(e) > minVal + 1.5/(numRef+1) * deltaVal){attr = 4;}
-      new_mesh.GetElement(e)->SetAttribute(attr);
-      // new_mesh.SetAttribute(e, attr);
-    }
+  /////
+  // for (int e = 0; e < new_mesh.GetNE(); e++) {
+  //   ::mfem::Vector eval(fespace_l2.GetFE(e)->GetDof()); 
+  //   fespace_l2.GetFE(e)->Project(sensitivities, *(fespace_l2.GetElementTransformation(e)), eval);
+  //   sensitivities_l2_proj(e) = eval.Sum()/eval.Size();
+  //   int attr = 1;
+  //   if (sensitivities_l2_proj(e) > minVal + 0.5/(numRef+1) * deltaVal){attr = 2;}
+  //   if (sensitivities_l2_proj(e) > minVal + 1.0/(numRef+1) * deltaVal){attr = 3;}
+  //   if (sensitivities_l2_proj(e) > minVal + 1.5/(numRef+1) * deltaVal){attr = 4;}
+  //   new_mesh.GetElement(e)->SetAttribute(attr);
+  //   // new_mesh.SetAttribute(e, attr);
+  // }
 
-  // for (int iRef=1; iRef<(numRef+1); iRef++){
-  for (int iRef=1; iRef<4; iRef++){
-    // new_mesh.SetAttributes();
-    
+  // Refine mesh as necessary
+  for (int iRef=1; iRef<(numRef+1); iRef++){
     mfem::Array<int> new_elem_to_refine;
     for (int iElem=0; iElem<new_mesh.GetNE(); iElem++) {
       if (new_mesh.GetElement(iElem)->GetAttribute() > iRef) { 
@@ -435,45 +403,158 @@ int main(int argc, char* argv[])
     fespace_h1.Update();
     fespace_l2.Update();
   }
-// std::cout<<"......... ref 2222........."<<std::endl;
-  /// Second level of refinement
-    // for (int e = 0; e < new_mesh.GetNE(); e++) {
-    //   ::mfem::Vector eval(fespace_l2.GetFE(e)->GetDof()); 
-    //   fespace_l2.GetFE(e)->Project(sensitivities, *(fespace_l2.GetElementTransformation(e)), eval);
-    //   sensitivities_l2_proj(e) = eval.Sum()/eval.Size();
-    //   int attr = 1;
-    //   if (sensitivities_l2_proj(e) > minVal + 0.5/(numRef+1) * deltaVal){attr = 2;}
-    //   if (sensitivities_l2_proj(e) > minVal + 1.0/(numRef+1) * deltaVal){attr = 3;}
-    //   if (sensitivities_l2_proj(e) > minVal + 1.5/(numRef+1) * deltaVal){attr = 4;}
-    //   new_mesh.GetElement(e)->SetAttribute(attr);
-    //   // new_mesh.SetAttribute(e, attr);
-    // }
-// std::cout<<"......... 2 ........."<<std::endl;
-//     // new_mesh.SetAttributes();
-    
-//     mfem::Array<int> new_elem_to_refine_2;
-//     for (int iElem=0; iElem<new_mesh.GetNE(); iElem++) {
-//       if (new_mesh.GetElement(iElem)->GetAttribute() > 2) { 
-//       // if (iElem < 0.5*numElems) { 
-//         new_elem_to_refine_2.Append(iElem);
-//       }
-//     }
-// std::cout<<"......... 3 ........."<<std::endl;
-//     new_mesh.GeneralRefinement(new_elem_to_refine_2);
-//     fespace_h1.Update();
-//     fespace_l2.Update();
-
-// std::cout<<"......... 4 ........."<<std::endl;
 
   mfem::ParaViewDataCollection vis("refinedMeshAMRTest", &new_mesh);
   vis.SetCycle(0);
   vis.SetTime(1.0);
   vis.Save();
-std::cout<<"......... end ........."<<std::endl;
+
+  std::cout<<"......... Finished refining the mesh ........."<<std::endl;
 
   // --------------
   // AMR mesh rerun
   // --------------
+
+
+  // Create DataStore
+  axom::sidre::DataStore datastore_amr;
+  serac::StateManager::initialize(datastore, "solid_lce_functional_amr");
+
+  auto mesh_amr = mesh::refineAndDistribute(std::move(new_mesh), serial_refinement, parallel_refinement);
+
+  serac::StateManager::setMesh(std::move(mesh_amr));
+
+  SolidMechanics<p, dim, Parameters<L2<p>, L2<p>, L2<p> > > solid_solver_amr(
+      nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional_amr");
+
+  // Parameter 1
+  FiniteElementState orderParam_amr(StateManager::newState(FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "orderParam_amr"}));
+  orderParam_amr = max_order_param;
+
+  // Parameter 2
+  FiniteElementState gammaParam_amr(StateManager::newState(
+      FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "gammaParam_amr"}));
+  gammaParam_amr.project(gammaCoef);
+
+  // Paremetr 3
+  FiniteElementState        etaParam_amr(StateManager::newState(
+      FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "etaParam_amr"}));
+  etaParam_amr.project(etaCoef);
+
+  // Set parameters
+  solid_solver_amr.setParameter(ORDER_INDEX, orderParam_amr);
+  solid_solver_amr.setParameter(GAMMA_INDEX, gammaParam_amr);
+  solid_solver_amr.setParameter(ETA_INDEX, etaParam_amr);
+
+  // Set material
+  LiquidCrystalElastomerBertoldi lceMat_amr(density, young_modulus, possion_ratio, max_order_param, beta_param);
+
+  solid_solver_amr.setMaterial(DependsOn<ORDER_INDEX, GAMMA_INDEX, ETA_INDEX>{}, lceMat_amr);
+
+  solid_solver_amr.setDisplacementBCs({1}, zeroFunc, 0);  // left face x-dir disp = 0
+  solid_solver_amr.setDisplacementBCs({2}, zeroFunc, 1);  // bottom face y-dir disp = 0
+  solid_solver_amr.setDisplacementBCs({3}, zeroFunc, 2);  // back face z-dir disp = 0
+  solid_solver_amr.setDisplacement(ini_displacement);
+
+  // Finalize the data structures
+  solid_solver_amr.completeSetup();
+
+  // Perform the quasi-static solve
+  std::string outputFilename_amr = "sol_lce_bertoldi_amr_test_no_border_with_qoi_ref_0_refined_mesh";
+  solid_solver_amr.outputState(outputFilename_amr);
+
+  // QoI for output
+  // --------------
+  auto& pmesh_amr = serac::StateManager::mesh();
+  Functional<double(H1<p, dim>, serac::L2<p>, serac::L2<p>, serac::L2<p>)> strainEnergyQoI_amr(
+      {&solid_solver_amr.displacement().space(), &orderParam_amr.space(), &gammaParam_amr.space(), &etaParam_amr.space()});
+  strainEnergyQoI_amr.AddDomainIntegral(
+      serac::Dimension<dim>{},
+      DependsOn<0, 1, 2, 3>{},
+      [=](auto /*x*/, auto displacement, auto order_param_tuple, auto gamma_param_tuple, auto eta_param_tuple) {
+        auto du_dx = serac::get<1>(displacement);
+        auto strain = serac::sym(du_dx);
+        serac::LiquidCrystalElastomerBertoldi::State state{};
+        auto stress = lceMat_amr(state, du_dx, order_param_tuple, gamma_param_tuple, eta_param_tuple);
+        return 0.5 * serac::double_dot(strain, stress);
+      },
+      pmesh_amr);
+
+  // Time stepping
+  // -------------- 
+  for (int i = 0; i < num_steps; i++) {
+
+    t += dt;
+    // orderParam_amr = max_order_param * (tmax - t) / tmax;
+    orderParam_amr = min_order_param + (max_order_param-min_order_param) * std::pow((tmax - t) / tmax, 1.0);
+
+    if (rank == 0) {
+      std::cout << "\n\n............................"
+                << "\n... Entering time step: " << i + 1 << " (/" << num_steps << ")"
+                << "\n............................\n"
+                << "\n... Using order parameter: " << max_order_param * (tmax - t) / tmax
+                << "\n... Using gamma = " << gamma_angle << ", and eta = " << eta_angle << std::endl;
+    }
+
+    solid_solver_amr.advanceTimestep(dt);
+    solid_solver_amr.outputState(outputFilename_amr);
+
+    // Compute QoI
+    double current_qoi = strainEnergyQoI_amr(solid_solver_amr.displacement(), orderParam_amr, gammaParam_amr, etaParam_amr);
+
+    // Construct adjoint load
+    serac::FiniteElementDual adjoint_load(solid_solver_amr.displacement().space(), "adjoint_load");
+    auto dqoi_du = get<1>(strainEnergyQoI_amr(DifferentiateWRT<0>{}, solid_solver_amr.displacement(), orderParam_amr, gammaParam_amr, etaParam_amr));
+    adjoint_load = *assemble(dqoi_du);
+
+    // Solve adjoint problem
+    solid_solver_amr.solveAdjoint({{"displacement", adjoint_load}});
+
+    // Output data
+    auto&                 fes             = solid_solver_amr.displacement().space();
+    mfem::ParGridFunction displacement_gf = solid_solver_amr.displacement().gridFunction();
+    int                   numDofs         = fes.GetNDofs();
+    mfem::Vector          dispVecX(numDofs);
+    dispVecX = 0.0;
+    mfem::Vector dispVecY(numDofs);
+    dispVecY = 0.0;
+    mfem::Vector dispVecZ(numDofs);
+    dispVecZ = 0.0;
+
+    for (int k = 0; k < numDofs; k++) {
+      dispVecX(k) = displacement_gf(0 * numDofs + k);
+      dispVecY(k) = displacement_gf(1 * numDofs + k);
+      dispVecZ(k) = displacement_gf(2 * numDofs + k);
+    }
+    double gblDispXmin, lclDispXmin = dispVecX.Min();
+    double gblDispXmax, lclDispXmax = dispVecX.Max();
+    double gblDispYmin, lclDispYmin = dispVecY.Min();
+    double gblDispYmax, lclDispYmax = dispVecY.Max();
+    MPI_Allreduce(&lclDispXmin, &gblDispXmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(&lclDispXmax, &gblDispXmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+    MPI_Allreduce(&lclDispYmin, &gblDispYmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(&lclDispYmax, &gblDispYmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+
+    double gblDispZmin, lclDispZmin = dispVecZ.Min();
+    double gblDispZmax, lclDispZmax = dispVecZ.Max();
+    MPI_Allreduce(&lclDispZmin, &gblDispZmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(&lclDispZmax, &gblDispZmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+
+    if (rank == 0) {
+      std::cout << "\n... In time step: " << i + 1 << " (/" << num_steps << ")"
+                << "\n... Min X displacement: " << gblDispXmin << "\n... Max X displacement: " << gblDispXmax
+                << "\n... Min Y displacement: " << gblDispYmin << "\n... Max Y displacement: " << gblDispYmax
+                << "\n... Min Z displacement: " << gblDispZmin << "\n... Max Z displacement: " << gblDispZmax
+                << std::endl;
+
+    std::cout << "\n... The QoIVal is: " << current_qoi << std::endl;
+    
+      if (std::isnan(gblDispXmax) || gblDispXmax > 1.0e3) {
+        std::cout << "... Solution blew up... Check boundary and initial conditions." << std::endl;
+        exit(1);
+      }
+    }
+  }
 
   serac::exitGracefully();
 }
