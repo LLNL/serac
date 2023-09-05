@@ -63,7 +63,7 @@ const TimesteppingOptions default_static_options = {TimestepMethod::QuasiStatic}
 /**
  * @brief An object containing the solver for a thermal conduction PDE
  *
- * This is a generic linear thermal diffusion oeprator of the form
+ * This is a generic linear thermal diffusion operator of the form
  *
  * \f[
  * \mathbf{M} \frac{\partial \mathbf{u}}{\partial t} = -\kappa \mathbf{K} \mathbf{u} + \mathbf{f}
@@ -276,6 +276,41 @@ public:
     cycle_ += 1;
   }
 
+  template <typename MaterialType>
+  struct ThermalMaterialIntegrand {
+    ThermalMaterialIntegrand(MaterialType material) : material_(material) {}
+
+    template <typename X, typename T, typename dT_dt, typename Shape, typename... Params>
+    auto operator()(X x, T temperature, dT_dt dtemp_dt, Shape shape, Params... params)
+    {
+      // Get the value and the gradient from the input tuple
+      auto [u, du_dX] = temperature;
+      auto [p, dp_dX] = shape;
+      auto du_dt      = get<VALUE>(dtemp_dt);
+
+      auto I_plus_dp_dX     = I + dp_dX;
+      auto inv_I_plus_dp_dX = inv(I_plus_dp_dX);
+      auto det_I_plus_dp_dX = det(I_plus_dp_dX);
+
+      // Note that the current configuration x = X + p, where X is the original reference
+      // configuration and p is the shape displacement. We need the gradient with
+      // respect to the perturbed reference configuration x = X + p for the material model. Therefore, we calculate
+      // du/dx = du/dX * dX/dx = du/dX * (dx/dX)^-1 = du/dX * (I + dp/dX)^-1
+
+      auto du_dx = dot(du_dX, inv_I_plus_dp_dX);
+
+      auto [heat_capacity, heat_flux] = material_(x + p, u, du_dx, params...);
+
+      // Note that the return is integrated in the perturbed reference
+      // configuration, hence the det(I + dp_dx) = det(dx/dX)
+      return serac::tuple{heat_capacity * du_dt * det_I_plus_dp_dX,
+                          -1.0 * dot(inv_I_plus_dp_dX, heat_flux) * det_I_plus_dp_dX};
+    }
+
+  private:
+    MaterialType material_;
+  };
+
   /**
    * @brief Set the thermal material model for the physics solver
    *
@@ -300,33 +335,9 @@ public:
   template <int... active_parameters, typename MaterialType>
   void setMaterial(DependsOn<active_parameters...>, MaterialType material)
   {
-    residual_->AddDomainIntegral(
-        Dimension<dim>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
-        [material](auto x, auto temperature, auto dtemp_dt, auto shape, auto... params) {
-          // Get the value and the gradient from the input tuple
-          auto [u, du_dX] = temperature;
-          auto [p, dp_dX] = shape;
-          auto du_dt      = get<VALUE>(dtemp_dt);
-
-          auto I_plus_dp_dX     = I + dp_dX;
-          auto inv_I_plus_dp_dX = inv(I_plus_dp_dX);
-          auto det_I_plus_dp_dX = det(I_plus_dp_dX);
-
-          // Note that the current configuration x = X + p, where X is the original reference
-          // configuration and p is the shape displacement. We need the gradient with
-          // respect to the perturbed reference configuration x = X + p for the material model. Therefore, we calculate
-          // du/dx = du/dX * dX/dx = du/dX * (dx/dX)^-1 = du/dX * (I + dp/dX)^-1
-
-          auto du_dx = dot(du_dX, inv_I_plus_dp_dX);
-
-          auto [heat_capacity, heat_flux] = material(x + p, u, du_dx, params...);
-
-          // Note that the return is integrated in the perturbed reference
-          // configuration, hence the det(I + dp_dx) = det(dx/dX)
-          return serac::tuple{heat_capacity * du_dt * det_I_plus_dp_dX,
-                              -1.0 * dot(inv_I_plus_dp_dX, heat_flux) * det_I_plus_dp_dX};
-        },
-        mesh_);
+    ThermalMaterialIntegrand<MaterialType> integrand(material);
+    residual_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
+                                 integrand, mesh_);
   }
 
   /// @overload
