@@ -606,6 +606,19 @@ public:
    * @pre The adjoint load maps are expected to contain a single entry named "temperature"
    * @note If the essential boundary dual is not specified, homogeneous essential boundary conditions are applied to
    * the adjoint system
+   * 
+   * @note A quick derivation for the adjoint equations and notations used
+   * There are two equations at each step for backward Euler:
+   * 1). r^n(u^n, v^n; p) = 0,
+   * where u^n is the end-step primal value, p are parameters, and v^n is the central difference velocity, satisfying
+   * 2). dt * v^n = u^n-u^{n-1}
+   * We construct a Lagrangian that enforcing these constraints with multipliers 
+   * \lambda^n: the adjoint temperature
+   * \mu^n: which we will see is the implicity sensitivity of the qoi w.r.t. the start of step primal value u^{n-1}.
+   * \mathcal{L} := \sum_n \lambda^n \cdot r^n + mu^n \cdot (dt * v^n - u^n + u^{n-1}).
+   * 
+   * We are interesting in the total implicit derivative
+   * d\mathcal{L]}  / dp = \sum_n \lambda^n \cdot r^n_{,p} + mu^n \cdot (dt * v^n_{,p} - u^n_{,p} + u^{n-1}_{,p}).
    *
    * @param dt The size of the adjoint timestep to take in the backward time integration calculation
    * @param adjoint_loads An unordered map containing finite element duals representing the RHS of the adjoint equations
@@ -816,7 +829,7 @@ protected:
   /// The adjoint temperature finite element states, the multiplier on the residual for a given timestep
   serac::FiniteElementState adjoint_temperature_;
 
-  // The total sensitivity of the qoi with respect to the start of the previous timestep's temperature
+  // The total/implicit sensitivity of the qoi with respect to the start of the previous timestep's temperature
   serac::FiniteElementDual implicit_sensitivity_temperature_start_of_step_;
 
   /// serac::Functional that is used to calculate the residual and its derivatives
