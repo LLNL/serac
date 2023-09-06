@@ -193,7 +193,7 @@ public:
    */
   static FiniteElementState& shapeDisplacement(const std::string& mesh_tag = default_mesh_name_);
 
-  static void loadPreviousStates(int                                                     cycle_to_load,
+  static void loadCheckpointedStates(int                                                     cycle_to_load,
                                  std::vector<std::reference_wrapper<FiniteElementState>> states_to_load);
 
   /**

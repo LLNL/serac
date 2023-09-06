@@ -131,11 +131,11 @@ public:
             FiniteElementState::Options{
                 .order = order, .vector_dim = 1, .name = detail::addPrefix(name, "adjoint_temperature")},
             sidre_datacoll_id_)),
-        _d_temperature_start_of_step_(adjoint_temperature_.space(), "total_deriv_wrt_temperature"),
+        implicit_sensitivity_temperature_start_of_step_(adjoint_temperature_.space(), "total_deriv_wrt_temperature"),
         residual_with_bcs_(temperature_.space().TrueVSize()),
         nonlin_solver_(std::move(solver)),
         ode_(temperature_.space().TrueVSize(),
-             {.time = ode_time_point_, .u = u_, .dt = dt_, .du_dt = previous_u_dot_, .previous_dt = previous_dt_},
+             {.time = ode_time_point_, .u = u_, .dt = dt_, .du_dt = u_rate_start_of_step_, .previous_dt = previous_dt_},
              *nonlin_solver_, bcs_)
   {
     SLIC_ERROR_ROOT_IF(
@@ -191,8 +191,8 @@ public:
     u_.SetSize(true_size);
     u_predicted_.SetSize(true_size);
 
-    previous_u_dot_.SetSize(true_size);
-    previous_u_dot_ = 0.0;
+    u_rate_start_of_step_.SetSize(true_size);
+    u_rate_start_of_step_ = 0.0;
 
     zero_.SetSize(true_size);
     zero_ = 0.0;
@@ -201,7 +201,7 @@ public:
     temperature_         = 0.0;
     temperature_rate_    = 0.0;
     adjoint_temperature_ = 0.0;
-    _d_temperature_start_of_step_ = 0.0;
+    implicit_sensitivity_temperature_start_of_step_ = 0.0;
   }
 
   /**
@@ -688,8 +688,8 @@ public:
 
     // Load the temperature from the previous cycle from disk
     serac::FiniteElementState temperature_n_minus_1(temperature_);
-    StateManager::loadPreviousStates(cycle_, {temperature_});
-    StateManager::loadPreviousStates(cycle_ - 1, {temperature_n_minus_1});
+    StateManager::loadCheckpointedStates(cycle_, {temperature_});
+    StateManager::loadCheckpointedStates(cycle_ - 1, {temperature_n_minus_1});
 
     temperature_rate_ = temperature_;
     temperature_rate_.Add(-1.0, temperature_n_minus_1);
@@ -712,7 +712,7 @@ public:
     mfem::HypreParVector modified_RHS(temperature_adjoint_load_vector);
     modified_RHS *= dt_;
     modified_RHS.Add(1.0, temperature_rate_adjoint_load_vector);
-    modified_RHS.Add(-dt_, _d_temperature_start_of_step_);
+    modified_RHS.Add(-dt_, implicit_sensitivity_temperature_start_of_step_);
 
     for (const auto& bc : bcs_.essentials()) {
       bc.apply(*J_T, modified_RHS, adjoint_essential);
@@ -721,9 +721,9 @@ public:
     lin_solver.SetOperator(*J_T);
     lin_solver.Mult(modified_RHS, adjoint_temperature_);
 
-    m_mat->Mult(adjoint_temperature_, _d_temperature_start_of_step_);
-    _d_temperature_start_of_step_ *= -1.0/dt_;
-    _d_temperature_start_of_step_.Add(1.0/dt_, temperature_rate_adjoint_load_vector); // already multiplied by -1
+    m_mat->Mult(adjoint_temperature_, implicit_sensitivity_temperature_start_of_step_);
+    implicit_sensitivity_temperature_start_of_step_ *= -1.0/dt_;
+    implicit_sensitivity_temperature_start_of_step_.Add(1.0/dt_, temperature_rate_adjoint_load_vector); // already multiplied by -1
 
     // Reset the equation solver to use the full nonlinear residual operator
     nonlin_solver_->setOperator(residual_with_bcs_);
@@ -737,7 +737,7 @@ public:
   FiniteElementState previousTemperature(int cycle) const
   {
     FiniteElementState previous_temperature(temperature_);
-    StateManager::loadPreviousStates(cycle, {previous_temperature});
+    StateManager::loadCheckpointedStates(cycle, {previous_temperature});
     return previous_temperature;
   }
 
@@ -789,7 +789,7 @@ public:
    */
   const std::unordered_map<std::string, const serac::FiniteElementDual&> computeInitialConditionSensitivity() override
   {
-    return {{"temperature", _d_temperature_start_of_step_}};
+    return {{"temperature", implicit_sensitivity_temperature_start_of_step_}};
   }
 
   /// Destroy the Thermal Solver object
@@ -816,8 +816,8 @@ protected:
   /// The adjoint temperature finite element states, the multiplier on the residual for a given timestep
   serac::FiniteElementState adjoint_temperature_;
 
-  // The total sensitivity of the qoi with respect to the start of the previos timestep's temperature
-  serac::FiniteElementDual _d_temperature_start_of_step_;
+  // The total sensitivity of the qoi with respect to the start of the previous timestep's temperature
+  serac::FiniteElementDual implicit_sensitivity_temperature_start_of_step_;
 
   /// serac::Functional that is used to calculate the residual and its derivatives
   std::unique_ptr<Functional<test(scalar_trial, scalar_trial, shape_trial, parameter_space...)>> residual_;
@@ -867,7 +867,7 @@ protected:
   mfem::Vector u_predicted_;
 
   /// Previous value of du_dt used to prime the pump for the nonlinear solver
-  mfem::Vector previous_u_dot_;
+  mfem::Vector u_rate_start_of_step_;
 
   /// @brief Array functions computing the derivative of the residual with respect to each given parameter
   /// @note This is needed so the user can ask for a specific sensitivity at runtime as opposed to it being a

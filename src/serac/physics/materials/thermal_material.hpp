@@ -73,7 +73,7 @@ struct IsotropicConductorWithLinearConductivityVsTemperature {
    *
    * @param density Density of the material (mass/volume)
    * @param specific_heat_capacity Specific heat capacity of the material (energy / (mass * temp))
-   * @param conductivity Thermal conductivity of the material at temp = 0 (power / (length * temp))
+   * @param conductivity Reference thermal conductivity of the material at temp = 0 (power / (length * temp))
    * @param d_conductivity_d_temp Slope for the thermal conductivity as a function of temperature
    */
   IsotropicConductorWithLinearConductivityVsTemperature(double density = 1.0, 
@@ -85,9 +85,6 @@ struct IsotropicConductorWithLinearConductivityVsTemperature {
         conductivity_(conductivity),
         d_conductivity_d_temperature_(d_conductivity_d_temperature)
   {
-    SLIC_ERROR_ROOT_IF(conductivity_ < 0.0,
-                       "Conductivity must be positive in the linear isotropic conductor material model.");
-
     SLIC_ERROR_ROOT_IF(density_ < 0.0, "Density must be positive in the linear isotropic conductor material model.");
 
     SLIC_ERROR_ROOT_IF(specific_heat_capacity_ < 0.0,
@@ -108,7 +105,9 @@ struct IsotropicConductorWithLinearConductivityVsTemperature {
   SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& temperature,
                                     const T3& temperature_gradient) const
   {
-    auto currentConductivity = conductivity_ + d_conductivity_d_temperature_ * temperature;
+    const auto currentConductivity = conductivity_ + d_conductivity_d_temperature_ * temperature;
+    SLIC_ERROR_ROOT_IF(serac::get_value(currentConductivity) < 0.0,
+                       "Conductivity in the IsotropicConductorWithLinearConductivityVsTemperature model has gone negative.");
     return serac::tuple{density_ * specific_heat_capacity_, -1.0 * currentConductivity * temperature_gradient};
   }
 
