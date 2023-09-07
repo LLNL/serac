@@ -280,6 +280,16 @@ public:
   struct ThermalMaterialIntegrand {
     ThermalMaterialIntegrand(MaterialType material) : material_(material) {}
 
+    // The template parameter MaterialType is meant to be a callable functor.  Due
+    // to nvcc's lack of support for generic lambdas (i.e. functions of the form
+    // auto lambda = [](auto) {}; ), this cannot be allowed.  In order for this code
+    // to be portable to CUDA platforms, the asserts below prevent serac from compiling
+    // if such a lambda is supplied.
+    class DummyArgumentType {};
+    static_assert(!std::is_invocable<MaterialType, DummyArgumentType&>::value);
+    static_assert(!std::is_invocable<MaterialType, DummyArgumentType*>::value);
+    static_assert(!std::is_invocable<MaterialType, DummyArgumentType>::value);
+
     template <typename X, typename T, typename dT_dt, typename Shape, typename... Params>
     auto operator()(X x, T temperature, dT_dt dtemp_dt, Shape shape, Params... params)
     {
