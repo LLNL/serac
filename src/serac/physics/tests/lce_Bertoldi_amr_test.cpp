@@ -63,7 +63,7 @@ int main(int argc, char* argv[])
   NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = serac::NonlinearSolver::Newton,
                                               .relative_tol   = 1.0e-8,
                                               .absolute_tol   = 1.0e-14,
-                                              .max_iterations = 2,
+                                              .max_iterations = 12,
                                               .print_level    = 1};
   SolidMechanics<p, dim, Parameters<L2<p>, L2<p>, L2<p> > > solid_solver(
       nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional");
@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
   double possion_ratio   = 0.45;   // 0.49;   // 0.48 // 
   double beta_param      = 2.0e5; // 5.20e5; // 2.31e5; // [Kg /s2 / mm] 
   double max_order_param = 0.45;   // 0.20;   // 0.45; //
-  double min_order_param = 0.43;   // 0.20;   // 0.45; //
+  double min_order_param = 0.0;   // 0.20;   // 0.45; //
   double gamma_angle     = 0.0;
   double eta_angle       = 0.0;
 
@@ -177,16 +177,18 @@ int main(int argc, char* argv[])
       DependsOn<0, 1, 2, 3>{},
       [=](auto /*x*/, auto displacement, auto order_param_tuple, auto gamma_param_tuple, auto eta_param_tuple) {
         auto du_dx = serac::get<1>(displacement);
-        auto strain = serac::sym(du_dx);
         serac::LiquidCrystalElastomerBertoldi::State state{};
-        auto stress = lceMat(state, du_dx, order_param_tuple, gamma_param_tuple, eta_param_tuple);
-        return 0.5 * serac::double_dot(strain, stress);
+        // auto strain = serac::sym(du_dx);
+        // auto stress = lceMat(state, du_dx, order_param_tuple, gamma_param_tuple, eta_param_tuple);
+        // return 0.5 * serac::double_dot(strain, stress);
+        auto strainEnergy = lceMat.calculateStrainEnergy(state, du_dx, order_param_tuple, gamma_param_tuple, eta_param_tuple);
+        return strainEnergy;
       },
       pmesh);
 
   // Time stepping
   // --------------    
-  int num_steps = 2;
+  int num_steps = 10;
   double t    = 0.0;
   double tmax = 1.0;
   double dt   = tmax / num_steps;
@@ -300,7 +302,7 @@ int main(int argc, char* argv[])
   sensitivities_l2_proj = 0.0;
 
   // Bounds of field for refinement
-  int numRef = 3;
+  int numRef = 2;
   double minVal = temp_dQoIdp_pgf.Min();
   double maxVal = temp_dQoIdp_pgf.Max();
   double deltaVal = maxVal-minVal;
@@ -345,6 +347,12 @@ int main(int argc, char* argv[])
   vis.SetTime(1.0);
   vis.Save();
 
+  std::ostringstream mesh_name;
+  mesh_name << "refinedMeshAMRTest.mesh";
+  std::ofstream mesh_ofs(mesh_name.str().c_str());
+  mesh_ofs.precision(8);
+  new_mesh.Print(mesh_ofs);
+
   std::cout<<"......... Finished refining the mesh ........."<<std::endl;
 
   // --------------
@@ -353,150 +361,150 @@ int main(int argc, char* argv[])
   // --------------
   // --------------
 
-  // Create DataStore
-  // axom::sidre::DataStore datastore_amr;
-  auto amr_mesh_name = "solid_lce_functional_amr";
-  serac::StateManager::initialize(datastore, amr_mesh_name);
-  std::cout<<"......... New refined mesh initialized........."<<std::endl;
+//   // Create DataStore
+//   // axom::sidre::DataStore datastore_amr;
+//   auto amr_mesh_name = "solid_lce_functional_amr";
+//   serac::StateManager::initialize(datastore, amr_mesh_name);
+//   std::cout<<"......... New refined mesh initialized........."<<std::endl;
 
-  auto mesh_amr = mesh::refineAndDistribute(std::move(new_mesh), serial_refinement, parallel_refinement);
-  std::cout<<"......... New refined mesh refined and distributed........."<<std::endl;
+//   auto mesh_amr = mesh::refineAndDistribute(std::move(new_mesh), serial_refinement, parallel_refinement);
+//   std::cout<<"......... New refined mesh refined and distributed........."<<std::endl;
 
-  serac::StateManager::setMesh(std::move(mesh_amr), amr_mesh_name);
-  auto& pmesh_amr = serac::StateManager::mesh(amr_mesh_name);
-  std::cout<<"......... New refined mesh moved to state manager........."<<std::endl;
+//   serac::StateManager::setMesh(std::move(mesh_amr), amr_mesh_name);
+//   auto& pmesh_amr = serac::StateManager::mesh(amr_mesh_name);
+//   std::cout<<"......... New refined mesh moved to state manager........."<<std::endl;
 
-  SolidMechanics<p, dim, Parameters<L2<p>, L2<p>, L2<p> > > solid_solver_amr(
-      nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional_amr", &pmesh_amr);
-std::cout<<"......... 1 ........."<<std::endl;
-  // Parameter 1
-  FiniteElementState orderParam_amr(StateManager::newState(
-    FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "orderParam_amr"}, amr_mesh_name));
-  orderParam_amr = max_order_param;
+//   SolidMechanics<p, dim, Parameters<L2<p>, L2<p>, L2<p> > > solid_solver_amr(
+//       nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional_amr", &pmesh_amr);
+// std::cout<<"......... 1 ........."<<std::endl;
+//   // Parameter 1
+//   FiniteElementState orderParam_amr(StateManager::newState(
+//     FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "orderParam_amr"}, amr_mesh_name));
+//   orderParam_amr = max_order_param;
 
-  // Parameter 2
-  FiniteElementState gammaParam_amr(StateManager::newState(
-      FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "gammaParam_amr"}, amr_mesh_name));
-  gammaParam_amr.project(gammaCoef);
+//   // Parameter 2
+//   FiniteElementState gammaParam_amr(StateManager::newState(
+//       FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "gammaParam_amr"}, amr_mesh_name));
+//   gammaParam_amr.project(gammaCoef);
 
-  // Paremetr 3
-  FiniteElementState        etaParam_amr(StateManager::newState(
-      FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "etaParam_amr"}, amr_mesh_name));
-  etaParam_amr.project(etaCoef);
-std::cout<<"......... 2 ........."<<std::endl;
-  // Set parameters
-  solid_solver_amr.setParameter(ORDER_INDEX, orderParam_amr);
-  solid_solver_amr.setParameter(GAMMA_INDEX, gammaParam_amr);
-  solid_solver_amr.setParameter(ETA_INDEX, etaParam_amr);
+//   // Paremetr 3
+//   FiniteElementState        etaParam_amr(StateManager::newState(
+//       FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "etaParam_amr"}, amr_mesh_name));
+//   etaParam_amr.project(etaCoef);
+// std::cout<<"......... 2 ........."<<std::endl;
+//   // Set parameters
+//   solid_solver_amr.setParameter(ORDER_INDEX, orderParam_amr);
+//   solid_solver_amr.setParameter(GAMMA_INDEX, gammaParam_amr);
+//   solid_solver_amr.setParameter(ETA_INDEX, etaParam_amr);
 
-  // Set material
-  LiquidCrystalElastomerBertoldi lceMat_amr(density, young_modulus, possion_ratio, max_order_param, beta_param);
-std::cout<<"......... 3 ........."<<std::endl;
-  solid_solver_amr.setMaterial(DependsOn<ORDER_INDEX, GAMMA_INDEX, ETA_INDEX>{}, lceMat_amr);
+//   // Set material
+//   LiquidCrystalElastomerBertoldi lceMat_amr(density, young_modulus, possion_ratio, max_order_param, beta_param);
+// std::cout<<"......... 3 ........."<<std::endl;
+//   solid_solver_amr.setMaterial(DependsOn<ORDER_INDEX, GAMMA_INDEX, ETA_INDEX>{}, lceMat_amr);
 
-  solid_solver_amr.setDisplacementBCs({1}, zeroFunc, 0);  // left face x-dir disp = 0
-  solid_solver_amr.setDisplacementBCs({2}, zeroFunc, 1);  // bottom face y-dir disp = 0
-  solid_solver_amr.setDisplacementBCs({3}, zeroFunc, 2);  // back face z-dir disp = 0
-  solid_solver_amr.setDisplacement(ini_displacement);
+//   solid_solver_amr.setDisplacementBCs({1}, zeroFunc, 0);  // left face x-dir disp = 0
+//   solid_solver_amr.setDisplacementBCs({2}, zeroFunc, 1);  // bottom face y-dir disp = 0
+//   solid_solver_amr.setDisplacementBCs({3}, zeroFunc, 2);  // back face z-dir disp = 0
+//   solid_solver_amr.setDisplacement(ini_displacement);
 
-  // Finalize the data structures
-  solid_solver_amr.completeSetup();
-std::cout<<"......... 4 ........."<<std::endl;
-  // Perform the quasi-static solve
-  std::string outputFilename_amr = "sol_lce_bertoldi_amr_test_no_border_with_qoi_ref_0_refined_mesh";
-  solid_solver_amr.outputState(outputFilename_amr);
+//   // Finalize the data structures
+//   solid_solver_amr.completeSetup();
+// std::cout<<"......... 4 ........."<<std::endl;
+//   // Perform the quasi-static solve
+//   std::string outputFilename_amr = "sol_lce_bertoldi_amr_test_no_border_with_qoi_ref_0_refined_mesh";
+//   solid_solver_amr.outputState(outputFilename_amr);
 
-  // QoI for output
-  // --------------
-  Functional<double(H1<p, dim>, serac::L2<p>, serac::L2<p>, serac::L2<p>)> strainEnergyQoI_amr(
-      {&solid_solver_amr.displacement().space(), &orderParam_amr.space(), &gammaParam_amr.space(), &etaParam_amr.space()});
-  strainEnergyQoI_amr.AddDomainIntegral(
-      serac::Dimension<dim>{},
-      DependsOn<0, 1, 2, 3>{},
-      [=](auto /*x*/, auto displacement, auto order_param_tuple, auto gamma_param_tuple, auto eta_param_tuple) {
-        auto du_dx = serac::get<1>(displacement);
-        auto strain = serac::sym(du_dx);
-        serac::LiquidCrystalElastomerBertoldi::State state{};
-        auto stress = lceMat_amr(state, du_dx, order_param_tuple, gamma_param_tuple, eta_param_tuple);
-        return 0.5 * serac::double_dot(strain, stress);
-      },
-      pmesh_amr);
-std::cout<<"......... 5 ........."<<std::endl;
-  // Time stepping
-  // -------------- 
-  for (int i = 0; i < num_steps; i++) {
+//   // QoI for output
+//   // --------------
+//   Functional<double(H1<p, dim>, serac::L2<p>, serac::L2<p>, serac::L2<p>)> strainEnergyQoI_amr(
+//       {&solid_solver_amr.displacement().space(), &orderParam_amr.space(), &gammaParam_amr.space(), &etaParam_amr.space()});
+//   strainEnergyQoI_amr.AddDomainIntegral(
+//       serac::Dimension<dim>{},
+//       DependsOn<0, 1, 2, 3>{},
+//       [=](auto /*x*/, auto displacement, auto order_param_tuple, auto gamma_param_tuple, auto eta_param_tuple) {
+//         auto du_dx = serac::get<1>(displacement);
+//         auto strain = serac::sym(du_dx);
+//         serac::LiquidCrystalElastomerBertoldi::State state{};
+//         auto stress = lceMat_amr(state, du_dx, order_param_tuple, gamma_param_tuple, eta_param_tuple);
+//         return 0.5 * serac::double_dot(strain, stress);
+//       },
+//       pmesh_amr);
+// std::cout<<"......... 5 ........."<<std::endl;
+//   // Time stepping
+//   // -------------- 
+//   for (int i = 0; i < num_steps; i++) {
 
-    t += dt;
-    // orderParam_amr = max_order_param * (tmax - t) / tmax;
-    orderParam_amr = min_order_param + (max_order_param-min_order_param) * std::pow((tmax - t) / tmax, 1.0);
+//     t += dt;
+//     // orderParam_amr = max_order_param * (tmax - t) / tmax;
+//     orderParam_amr = min_order_param + (max_order_param-min_order_param) * std::pow((tmax - t) / tmax, 1.0);
 
-    if (rank == 0) {
-      std::cout << "\n\n............................"
-                << "\n... Entering time step: " << i + 1 << " (/" << num_steps << ")"
-                << "\n............................\n"
-                << "\n... Using order parameter: " << max_order_param * (tmax - t) / tmax
-                << "\n... Using gamma = " << gamma_angle << ", and eta = " << eta_angle << std::endl;
-    }
+//     if (rank == 0) {
+//       std::cout << "\n\n............................"
+//                 << "\n... Entering time step: " << i + 1 << " (/" << num_steps << ")"
+//                 << "\n............................\n"
+//                 << "\n... Using order parameter: " << max_order_param * (tmax - t) / tmax
+//                 << "\n... Using gamma = " << gamma_angle << ", and eta = " << eta_angle << std::endl;
+//     }
 
-    solid_solver_amr.advanceTimestep(dt);
-    solid_solver_amr.outputState(outputFilename_amr);
+//     solid_solver_amr.advanceTimestep(dt);
+//     solid_solver_amr.outputState(outputFilename_amr);
 
-    // Compute QoI
-    double current_qoi = strainEnergyQoI_amr(solid_solver_amr.displacement(), orderParam_amr, gammaParam_amr, etaParam_amr);
+//     // Compute QoI
+//     double current_qoi = strainEnergyQoI_amr(solid_solver_amr.displacement(), orderParam_amr, gammaParam_amr, etaParam_amr);
 
-    // Construct adjoint load
-    serac::FiniteElementDual adjoint_load(solid_solver_amr.displacement().space(), "adjoint_load");
-    auto dqoi_du = get<1>(strainEnergyQoI_amr(DifferentiateWRT<0>{}, solid_solver_amr.displacement(), orderParam_amr, gammaParam_amr, etaParam_amr));
-    adjoint_load = *assemble(dqoi_du);
+//     // Construct adjoint load
+//     serac::FiniteElementDual adjoint_load(solid_solver_amr.displacement().space(), "adjoint_load");
+//     auto dqoi_du = get<1>(strainEnergyQoI_amr(DifferentiateWRT<0>{}, solid_solver_amr.displacement(), orderParam_amr, gammaParam_amr, etaParam_amr));
+//     adjoint_load = *assemble(dqoi_du);
 
-    // Solve adjoint problem
-    solid_solver_amr.solveAdjoint({{"displacement", adjoint_load}});
+//     // Solve adjoint problem
+//     solid_solver_amr.solveAdjoint({{"displacement", adjoint_load}});
 
-    // Output data
-    auto&                 fes             = solid_solver_amr.displacement().space();
-    mfem::ParGridFunction displacement_gf = solid_solver_amr.displacement().gridFunction();
-    int                   numDofs         = fes.GetNDofs();
-    mfem::Vector          dispVecX(numDofs);
-    dispVecX = 0.0;
-    mfem::Vector dispVecY(numDofs);
-    dispVecY = 0.0;
-    mfem::Vector dispVecZ(numDofs);
-    dispVecZ = 0.0;
+//     // Output data
+//     auto&                 fes             = solid_solver_amr.displacement().space();
+//     mfem::ParGridFunction displacement_gf = solid_solver_amr.displacement().gridFunction();
+//     int                   numDofs         = fes.GetNDofs();
+//     mfem::Vector          dispVecX(numDofs);
+//     dispVecX = 0.0;
+//     mfem::Vector dispVecY(numDofs);
+//     dispVecY = 0.0;
+//     mfem::Vector dispVecZ(numDofs);
+//     dispVecZ = 0.0;
 
-    for (int k = 0; k < numDofs; k++) {
-      dispVecX(k) = displacement_gf(0 * numDofs + k);
-      dispVecY(k) = displacement_gf(1 * numDofs + k);
-      dispVecZ(k) = displacement_gf(2 * numDofs + k);
-    }
-    double gblDispXmin, lclDispXmin = dispVecX.Min();
-    double gblDispXmax, lclDispXmax = dispVecX.Max();
-    double gblDispYmin, lclDispYmin = dispVecY.Min();
-    double gblDispYmax, lclDispYmax = dispVecY.Max();
-    MPI_Allreduce(&lclDispXmin, &gblDispXmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-    MPI_Allreduce(&lclDispXmax, &gblDispXmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-    MPI_Allreduce(&lclDispYmin, &gblDispYmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-    MPI_Allreduce(&lclDispYmax, &gblDispYmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+//     for (int k = 0; k < numDofs; k++) {
+//       dispVecX(k) = displacement_gf(0 * numDofs + k);
+//       dispVecY(k) = displacement_gf(1 * numDofs + k);
+//       dispVecZ(k) = displacement_gf(2 * numDofs + k);
+//     }
+//     double gblDispXmin, lclDispXmin = dispVecX.Min();
+//     double gblDispXmax, lclDispXmax = dispVecX.Max();
+//     double gblDispYmin, lclDispYmin = dispVecY.Min();
+//     double gblDispYmax, lclDispYmax = dispVecY.Max();
+//     MPI_Allreduce(&lclDispXmin, &gblDispXmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+//     MPI_Allreduce(&lclDispXmax, &gblDispXmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+//     MPI_Allreduce(&lclDispYmin, &gblDispYmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+//     MPI_Allreduce(&lclDispYmax, &gblDispYmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
 
-    double gblDispZmin, lclDispZmin = dispVecZ.Min();
-    double gblDispZmax, lclDispZmax = dispVecZ.Max();
-    MPI_Allreduce(&lclDispZmin, &gblDispZmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-    MPI_Allreduce(&lclDispZmax, &gblDispZmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+//     double gblDispZmin, lclDispZmin = dispVecZ.Min();
+//     double gblDispZmax, lclDispZmax = dispVecZ.Max();
+//     MPI_Allreduce(&lclDispZmin, &gblDispZmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+//     MPI_Allreduce(&lclDispZmax, &gblDispZmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
 
-    if (rank == 0) {
-      std::cout << "\n... In time step: " << i + 1 << " (/" << num_steps << ")"
-                << "\n... Min X displacement: " << gblDispXmin << "\n... Max X displacement: " << gblDispXmax
-                << "\n... Min Y displacement: " << gblDispYmin << "\n... Max Y displacement: " << gblDispYmax
-                << "\n... Min Z displacement: " << gblDispZmin << "\n... Max Z displacement: " << gblDispZmax
-                << std::endl;
+//     if (rank == 0) {
+//       std::cout << "\n... In time step: " << i + 1 << " (/" << num_steps << ")"
+//                 << "\n... Min X displacement: " << gblDispXmin << "\n... Max X displacement: " << gblDispXmax
+//                 << "\n... Min Y displacement: " << gblDispYmin << "\n... Max Y displacement: " << gblDispYmax
+//                 << "\n... Min Z displacement: " << gblDispZmin << "\n... Max Z displacement: " << gblDispZmax
+//                 << std::endl;
 
-    std::cout << "\n... The QoIVal is: " << current_qoi << std::endl;
+//     std::cout << "\n... The QoIVal is: " << current_qoi << std::endl;
     
-      if (std::isnan(gblDispXmax) || gblDispXmax > 1.0e3) {
-        std::cout << "... Solution blew up... Check boundary and initial conditions." << std::endl;
-        exit(1);
-      }
-    }
-  }
+//       if (std::isnan(gblDispXmax) || gblDispXmax > 1.0e3) {
+//         std::cout << "... Solution blew up... Check boundary and initial conditions." << std::endl;
+//         exit(1);
+//       }
+//     }
+//   }
 
   serac::exitGracefully();
 }
