@@ -607,26 +607,36 @@ public:
    * @note If the essential boundary dual is not specified, homogeneous essential boundary conditions are applied to
    * the adjoint system
    * 
-   * @note A quick derivation for the adjoint equations and notations used
-   * There are two equations at each step for backward Euler:
-   * 1). r^n(u^n, v^n; p) = 0,
-   * where u^n is the end-step primal value, p are parameters, and v^n is the central difference velocity, satisfying
-   * 2). dt * v^n = u^n-u^{n-1}
-   * We construct a Lagrangian that enforcing these constraints with multipliers 
-   * \lambda^n: the adjoint temperature
-   * \mu^n: which we will see is the implicity sensitivity of the qoi w.r.t. the start of step primal value u^{n-1}.
-   * \mathcal{L} := \sum_n \lambda^n \cdot r^n + mu^n \cdot (dt * v^n - u^n + u^{n-1}).
-   * 
-   * We are interesting in the total implicit derivative
-   * d\mathcal{L]}  / dp = \sum_n \lambda^n \cdot r^n_{,p} + mu^n \cdot (dt * v^n_{,p} - u^n_{,p} + u^{n-1}_{,p}).
+   * @note Here we provide a quick derivation for the discrete adjoint equations and notation used here for backward Euler.
+   * There are two equations satisfied at each step of the forward solve using backward Euler \n 
+   * 1). \f$r^n(u^n, v^n; p) = 0,\f$ \n 
+   * where \f$u^n\f$ is the end-step primal value, \f$p\f$ are parameters, and \f$v^n\f$ is the central difference velocity, satisfying \n 
+   * 2). \f$\Delta t \, v^n = u^n-u^{n-1}.\f$ \n
+   * We are interesting in the implicit sensitivity of a qoi (quantity of interest), \f$\sum_{n=1}^N \pi^n(u^n, v^n; p)\f$, while maintaining the above constraints.
+   * We construct a Lagrangian that adds 'zero' to this qoi using the free multipliers 
+   * \f$\lambda^n\f$ (which we call the adjoint temperature) and
+   * \f$\mu^n\f$ (which can eventually be intepreted as the implicit sensitivity of the qoi with respect to the start-of-step primal value \f$u^{n-1}\f$) with
+   * \f[ \mathcal{L} :=  \sum_{n=1}^N \pi(u^n, v^n; p) + \lambda^n \cdot r^n(u^n, v^n; p) + \mu^n \cdot (\Delta t \, v^n - u^n + u^{n-1}).\f]
+   * We are interesting in the total derivative
+   * \f[\frac{d\mathcal{L}}{dp} = \sum_{n=1}^N \pi^n_{,u} u^n_{,p} + \pi^n_{,v} v^n_{,p} + \pi^n_{,p} + \lambda^n \cdot \left( r^n_{,u} u^n_{,p} + r^n_{,v} v^n_{,p} + r^n_{,p} \right) + \mu^n \cdot (\Delta t \, v^n_{,p} - u^n_{,p} + u^{n-1}_{,p}). \f]
+   * We are free to choose \f$\lambda^n\f$ and \f$\mu^n\f$ in any convenient way, and the way we choose is by grouping terms involving \f$u^n_{,p}\f$ and \f$v^n_{,p}\f$,
+   * and setting the multipliers such that those terms cancel out in the final expression of the qoi sensitivity.
+   * In particular, by choosing \f[ \lambda^n = - \left[ r_{,u}^n + \frac{r_{,v}^n}{\Delta t} \right]^{-T} \left( \pi^n_{,u} + \frac{\pi^n_{,v}}{\Delta t} + \mu^{n+1} \right) \f] and
+   * \f[ \mu^n = -\frac{1}{\Delta t}\left( \pi^n_{,v} + \lambda^n \cdot r^n_{,v} \right), \f]
+   * we find
+   * \f[ \frac{d\mathcal{L}}{dp} = \sum_{n=1}^N \left( \pi^n_{,p} + \lambda^n \cdot r^n_{,p} \right) + \mu^1 \cdot u^{0}_{,p}, \f]
+   * where the multiplier/adjoint equations are solved backward in time starting at \f$n=N\f$, \f$\mu^{N+1} = 0\f$, and \f$u^{0}_{,p}\f$ is the sensitivity of the initial primal variable with respect to the parameters.\n 
+   * We call the quantities \f$\pi^n_{,u}\f$ and \f$\pi^n_{,v}\f$ the temperature and temperature-rate adjoint loads, respectively.
    *
    * @param dt The size of the adjoint timestep to take in the backward time integration calculation
    * @param adjoint_loads An unordered map containing finite element duals representing the RHS of the adjoint equations
-   * indexed by their name
+   * indexed by their name.  It must have a load named "temperature", which is the sensitivity of the qoi over that timestep
+   * to the end-of-step temperature.  It may optionally have a load named "temperature_rate", which is the sensitivity of the qoi over that timestep
+   * with respect to the end-of_step temperature rate of change.
    * @param adjoint_with_essential_boundary An unordered map containing finite element states representing the
    * non-homogeneous essential boundary condition data for the adjoint problem indexed by their name
-   * @return An unordered map of the adjoint solutions indexed by their name. It has a single entry named
-   * "adjoint_temperature"
+   * @return An unordered map of the adjoint solutions indexed by their name. It must have an entry named
+   * "adjoint_temperature".
    */
   const std::unordered_map<std::string, const serac::FiniteElementState&> reverseAdjointTimestep(
       std::unordered_map<std::string, const serac::FiniteElementDual&> adjoint_loads,
