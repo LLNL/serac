@@ -276,21 +276,34 @@ public:
     cycle_ += 1;
   }
 
+  /**
+   * @brief Functor representing the integrand of a thermal material.  Material type must be
+   * a functor as well.
+   */
   template <typename MaterialType>
   struct ThermalMaterialIntegrand {
+    /**
+     * @brief Construct a ThermalMaterialIntegrand functor with material model of type `MaterialType`.
+     * @param[in] material A functor representing the material model.  Should be a functor, or a class/struct with
+     * public operator() method.  Must NOT be a generic lambda, or serac will not compile due to static asserts below.
+     */
     ThermalMaterialIntegrand(MaterialType material) : material_(material) {}
 
-    // The template parameter MaterialType is meant to be a callable functor.  Due
-    // to nvcc's lack of support for generic lambdas (i.e. functions of the form
+    // Due to nvcc's lack of support for generic lambdas (i.e. functions of the form
     // auto lambda = [](auto) {}; ), this cannot be allowed.  In order for this code
     // to be portable to CUDA platforms, the asserts below prevent serac from compiling
     // if such a lambda is supplied.
+  private:
     class DummyArgumentType {};
     static_assert(!std::is_invocable<MaterialType, DummyArgumentType&>::value);
     static_assert(!std::is_invocable<MaterialType, DummyArgumentType*>::value);
     static_assert(!std::is_invocable<MaterialType, DummyArgumentType>::value);
 
+  public:
     template <typename X, typename T, typename dT_dt, typename Shape, typename... Params>
+    /**
+     * @brief Evaluate integrand
+     */
     auto operator()(X x, T temperature, dT_dt dtemp_dt, Shape shape, Params... params)
     {
       // Get the value and the gradient from the input tuple
