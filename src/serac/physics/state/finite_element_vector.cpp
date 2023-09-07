@@ -152,10 +152,12 @@ double min(const FiniteElementVector& fe_vector)
 
 double innerProduct(const FiniteElementVector& v1, const FiniteElementVector& v2)
 {
-  SLIC_ERROR_IF(v1.Size() != v2.Size(),
-                axom::fmt::format("Finite element vector of size '{}' can not inner product with another vector of size '{}'",
-                                  v1.Size(), v2.Size()));
-  SLIC_ERROR_IF(v1.comm() != v2.comm(), "Can not compute inner products between vectors with different mpi communicators");
+  SLIC_ERROR_IF(
+      v1.Size() != v2.Size(),
+      axom::fmt::format("Finite element vector of size '{}' can not inner product with another vector of size '{}'",
+                        v1.Size(), v2.Size()));
+  SLIC_ERROR_IF(v1.comm() != v2.comm(),
+                "Can not compute inner products between vectors with different mpi communicators");
 
   double global_ip;
   double local_ip = mfem::InnerProduct(v1, v2);

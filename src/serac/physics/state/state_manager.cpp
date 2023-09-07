@@ -93,7 +93,7 @@ double StateManager::newDataCollection(const std::string& name, const std::optio
 }
 
 void StateManager::loadCheckpointedStates(int                                                     cycle_to_load,
-                                      std::vector<std::reference_wrapper<FiniteElementState>> states_to_load)
+                                          std::vector<std::reference_wrapper<FiniteElementState>> states_to_load)
 {
   std::string mesh_name = collectionID(&states_to_load.begin()->get().mesh());
 

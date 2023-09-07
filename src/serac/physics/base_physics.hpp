@@ -217,7 +217,8 @@ public:
    *
    * @return Fields states corresponding to the sensitivities with respect to the initial condition fields
    *
-   * @pre `reverseAdjointTimestep` with an appropriate adjoint load must be called prior to this method as many times as the forward advance is called.
+   * @pre `reverseAdjointTimestep` with an appropriate adjoint load must be called prior to this method as many times as
+   * the forward advance is called.
    */
   virtual const std::unordered_map<std::string, const serac::FiniteElementDual&> computeInitialConditionSensitivity()
   {

@@ -106,7 +106,7 @@ public:
                mfem::ParMesh* pmesh = nullptr)
       : HeatTransfer(std::make_unique<EquationSolver>(nonlinear_opts, lin_opts,
                                                       StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
-                                                      timestepping_opts, name, pmesh)
+                     timestepping_opts, name, pmesh)
   {
   }
 
@@ -197,10 +197,10 @@ public:
     zero_.SetSize(true_size);
     zero_ = 0.0;
 
-    shape_displacement_  = 0.0;
-    temperature_         = 0.0;
-    temperature_rate_    = 0.0;
-    adjoint_temperature_ = 0.0;
+    shape_displacement_                             = 0.0;
+    temperature_                                    = 0.0;
+    temperature_rate_                               = 0.0;
+    adjoint_temperature_                            = 0.0;
     implicit_sensitivity_temperature_start_of_step_ = 0.0;
   }
 
@@ -540,63 +540,61 @@ public:
 
     if (is_quasistatic_) {
       residual_with_bcs_ = mfem_ext::StdFunctionOperator(
-        temperature_.space().TrueVSize(),
+          temperature_.space().TrueVSize(),
 
-        [this](const mfem::Vector& u, mfem::Vector& r) {
-          const mfem::Vector res =
-              (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
+          [this](const mfem::Vector& u, mfem::Vector& r) {
+            const mfem::Vector res =
+                (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
 
-          // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
-          // tracking strategy
-          // See https://github.com/mfem/mfem/issues/3531
-          r = res;
-          r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
-        },
+            // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
+            // tracking strategy
+            // See https://github.com/mfem/mfem/issues/3531
+            r = res;
+            r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
+          },
 
-        [this](const mfem::Vector& u) -> mfem::Operator& {
-          auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, shape_displacement_,
-                                        *parameters_[parameter_indices].state...);
-          J_             = assemble(drdu);
-          J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
-          return *J_;
-        }
-      );
+          [this](const mfem::Vector& u) -> mfem::Operator& {
+            auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, shape_displacement_,
+                                          *parameters_[parameter_indices].state...);
+            J_             = assemble(drdu);
+            J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+            return *J_;
+          });
     } else {
       residual_with_bcs_ = mfem_ext::StdFunctionOperator(
-        temperature_.space().TrueVSize(),
+          temperature_.space().TrueVSize(),
 
-        [this](const mfem::Vector& du_dt, mfem::Vector& r) {
-          add(1.0, u_, dt_, du_dt, u_predicted_);
-          const mfem::Vector res =
-              (*residual_)(u_predicted_, du_dt, shape_displacement_, *parameters_[parameter_indices].state...);
+          [this](const mfem::Vector& du_dt, mfem::Vector& r) {
+            add(1.0, u_, dt_, du_dt, u_predicted_);
+            const mfem::Vector res =
+                (*residual_)(u_predicted_, du_dt, shape_displacement_, *parameters_[parameter_indices].state...);
 
-          // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
-          // tracking strategy
-          // See https://github.com/mfem/mfem/issues/3531
-          r = res;
-          r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
-        },
+            // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
+            // tracking strategy
+            // See https://github.com/mfem/mfem/issues/3531
+            r = res;
+            r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
+          },
 
-        [this](const mfem::Vector& du_dt) -> mfem::Operator& {
-          add(1.0, u_, dt_, du_dt, u_predicted_);
+          [this](const mfem::Vector& du_dt) -> mfem::Operator& {
+            add(1.0, u_, dt_, du_dt, u_predicted_);
 
-          // K := dR/du
-          auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(u_predicted_), du_dt, shape_displacement_,
-                                                        *parameters_[parameter_indices].state...));
-          std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
+            // K := dR/du
+            auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(u_predicted_), du_dt, shape_displacement_,
+                                                         *parameters_[parameter_indices].state...));
+            std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
-          // M := dR/du_dot
-          auto M = serac::get<DERIVATIVE>((*residual_)(u_predicted_, differentiate_wrt(du_dt), shape_displacement_,
-                                                        *parameters_[parameter_indices].state...));
-          std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
+            // M := dR/du_dot
+            auto M = serac::get<DERIVATIVE>((*residual_)(u_predicted_, differentiate_wrt(du_dt), shape_displacement_,
+                                                         *parameters_[parameter_indices].state...));
+            std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
-          // J := M + dt K
-          J_.reset(mfem::Add(1.0, *m_mat, dt_, *k_mat));
-          J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+            // J := M + dt K
+            J_.reset(mfem::Add(1.0, *m_mat, dt_, *k_mat));
+            J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
 
-          return *J_;
-        }
-      );
+            return *J_;
+          });
     }
   }
 
@@ -606,47 +604,50 @@ public:
    * @pre The adjoint load maps are expected to contain a single entry named "temperature"
    * @note If the essential boundary dual is not specified, homogeneous essential boundary conditions are applied to
    * the adjoint system
-   * 
-   * @note Here we provide a quick derivation for the discrete adjoint equations and notation used here for backward Euler.
-   * There are two equations satisfied at each step of the forward solve using backward Euler \n 
-   * 1). \f$r^n(u^n, v^n; p) = 0,\f$ \n 
-   * where \f$u^n\f$ is the end-step primal value, \f$p\f$ are parameters, and \f$v^n\f$ is the central difference velocity, satisfying \n 
-   * 2). \f$\Delta t \, v^n = u^n-u^{n-1}.\f$ \n
-   * We are interesting in the implicit sensitivity of a qoi (quantity of interest), \f$\sum_{n=1}^N \pi^n(u^n, v^n; p)\f$, while maintaining the above constraints.
-   * We construct a Lagrangian that adds 'zero' to this qoi using the free multipliers 
+   *
+   * @note Here we provide a quick derivation for the discrete adjoint equations and notation used here for backward
+   * Euler. There are two equations satisfied at each step of the forward solve using backward Euler \n 1). \f$r^n(u^n,
+   * v^n; p) = 0,\f$ \n where \f$u^n\f$ is the end-step primal value, \f$p\f$ are parameters, and \f$v^n\f$ is the
+   * central difference velocity, satisfying \n 2). \f$\Delta t \, v^n = u^n-u^{n-1}.\f$ \n We are interesting in the
+   * implicit sensitivity of a qoi (quantity of interest), \f$\sum_{n=1}^N \pi^n(u^n, v^n; p)\f$, while maintaining the
+   * above constraints. We construct a Lagrangian that adds 'zero' to this qoi using the free multipliers
    * \f$\lambda^n\f$ (which we call the adjoint temperature) and
-   * \f$\mu^n\f$ (which can eventually be intepreted as the implicit sensitivity of the qoi with respect to the start-of-step primal value \f$u^{n-1}\f$) with
-   * \f[ \mathcal{L} :=  \sum_{n=1}^N \pi(u^n, v^n; p) + \lambda^n \cdot r^n(u^n, v^n; p) + \mu^n \cdot (\Delta t \, v^n - u^n + u^{n-1}).\f]
-   * We are interesting in the total derivative
-   * \f[\frac{d\mathcal{L}}{dp} = \sum_{n=1}^N \pi^n_{,u} u^n_{,p} + \pi^n_{,v} v^n_{,p} + \pi^n_{,p} + \lambda^n \cdot \left( r^n_{,u} u^n_{,p} + r^n_{,v} v^n_{,p} + r^n_{,p} \right) + \mu^n \cdot (\Delta t \, v^n_{,p} - u^n_{,p} + u^{n-1}_{,p}). \f]
-   * We are free to choose \f$\lambda^n\f$ and \f$\mu^n\f$ in any convenient way, and the way we choose is by grouping terms involving \f$u^n_{,p}\f$ and \f$v^n_{,p}\f$,
-   * and setting the multipliers such that those terms cancel out in the final expression of the qoi sensitivity.
-   * In particular, by choosing \f[ \lambda^n = - \left[ r_{,u}^n + \frac{r_{,v}^n}{\Delta t} \right]^{-T} \left( \pi^n_{,u} + \frac{\pi^n_{,v}}{\Delta t} + \mu^{n+1} \right) \f] and
-   * \f[ \mu^n = -\frac{1}{\Delta t}\left( \pi^n_{,v} + \lambda^n \cdot r^n_{,v} \right), \f]
+   * \f$\mu^n\f$ (which can eventually be intepreted as the implicit sensitivity of the qoi with respect to the
+   * start-of-step primal value \f$u^{n-1}\f$) with \f[ \mathcal{L} :=  \sum_{n=1}^N \pi(u^n, v^n; p) + \lambda^n \cdot
+   * r^n(u^n, v^n; p) + \mu^n \cdot (\Delta t \, v^n - u^n + u^{n-1}).\f] We are interesting in the total derivative
+   * \f[\frac{d\mathcal{L}}{dp} = \sum_{n=1}^N \pi^n_{,u} u^n_{,p} + \pi^n_{,v} v^n_{,p} + \pi^n_{,p} + \lambda^n \cdot
+   * \left( r^n_{,u} u^n_{,p} + r^n_{,v} v^n_{,p} + r^n_{,p} \right) + \mu^n \cdot (\Delta t \, v^n_{,p} - u^n_{,p} +
+   * u^{n-1}_{,p}). \f] We are free to choose \f$\lambda^n\f$ and \f$\mu^n\f$ in any convenient way, and the way we
+   * choose is by grouping terms involving \f$u^n_{,p}\f$ and \f$v^n_{,p}\f$, and setting the multipliers such that
+   * those terms cancel out in the final expression of the qoi sensitivity. In particular, by choosing \f[ \lambda^n = -
+   * \left[ r_{,u}^n + \frac{r_{,v}^n}{\Delta t} \right]^{-T} \left( \pi^n_{,u} + \frac{\pi^n_{,v}}{\Delta t} +
+   * \mu^{n+1} \right) \f] and \f[ \mu^n = -\frac{1}{\Delta t}\left( \pi^n_{,v} + \lambda^n \cdot r^n_{,v} \right), \f]
    * we find
-   * \f[ \frac{d\mathcal{L}}{dp} = \sum_{n=1}^N \left( \pi^n_{,p} + \lambda^n \cdot r^n_{,p} \right) + \mu^1 \cdot u^{0}_{,p}, \f]
-   * where the multiplier/adjoint equations are solved backward in time starting at \f$n=N\f$, \f$\mu^{N+1} = 0\f$, and \f$u^{0}_{,p}\f$ is the sensitivity of the initial primal variable with respect to the parameters.\n 
-   * We call the quantities \f$\pi^n_{,u}\f$ and \f$\pi^n_{,v}\f$ the temperature and temperature-rate adjoint loads, respectively.
+   * \f[ \frac{d\mathcal{L}}{dp} = \sum_{n=1}^N \left( \pi^n_{,p} + \lambda^n \cdot r^n_{,p} \right) + \mu^1 \cdot
+   * u^{0}_{,p}, \f] where the multiplier/adjoint equations are solved backward in time starting at \f$n=N\f$,
+   * \f$\mu^{N+1} = 0\f$, and \f$u^{0}_{,p}\f$ is the sensitivity of the initial primal variable with respect to the
+   * parameters.\n We call the quantities \f$\pi^n_{,u}\f$ and \f$\pi^n_{,v}\f$ the temperature and temperature-rate
+   * adjoint loads, respectively.
    *
    * @param dt The size of the adjoint timestep to take in the backward time integration calculation
    * @param adjoint_loads An unordered map containing finite element duals representing the RHS of the adjoint equations
-   * indexed by their name.  It must have a load named "temperature", which is the sensitivity of the qoi over that timestep
-   * to the end-of-step temperature.  It may optionally have a load named "temperature_rate", which is the sensitivity of the qoi over that timestep
-   * with respect to the end-of_step temperature rate of change.
+   * indexed by their name.  It must have a load named "temperature", which is the sensitivity of the qoi over that
+   * timestep to the end-of-step temperature.  It may optionally have a load named "temperature_rate", which is the
+   * sensitivity of the qoi over that timestep with respect to the end-of_step temperature rate of change.
    * @param adjoint_with_essential_boundary An unordered map containing finite element states representing the
    * non-homogeneous essential boundary condition data for the adjoint problem indexed by their name
    * @return An unordered map of the adjoint solutions indexed by their name. It must have an entry named
    * "adjoint_temperature".
    */
   const std::unordered_map<std::string, const serac::FiniteElementState&> reverseAdjointTimestep(
-      std::unordered_map<std::string, const serac::FiniteElementDual&> adjoint_loads,
+      std::unordered_map<std::string, const serac::FiniteElementDual&>  adjoint_loads,
       std::unordered_map<std::string, const serac::FiniteElementState&> adjoint_with_essential_boundary = {}) override
   {
     SLIC_ERROR_ROOT_IF(adjoint_loads.size() != 1,
                        "Adjoint load container is not the expected size of 1 in the heat transfer module.");
 
-    auto temp_adjoint_load = adjoint_loads.find("temperature");
-    auto temp_rate_adjoint_load = adjoint_loads.find("temperature_rate"); // does not need to be specified
+    auto temp_adjoint_load      = adjoint_loads.find("temperature");
+    auto temp_rate_adjoint_load = adjoint_loads.find("temperature_rate");  // does not need to be specified
 
     SLIC_ERROR_ROOT_IF(temp_adjoint_load == adjoint_loads.end(), "Adjoint load for \"temperature\" not found.");
 
@@ -731,7 +732,8 @@ public:
     J_.reset(mfem::Add(1.0, *m_mat, dt_, *k_mat));
     auto J_T = std::unique_ptr<mfem::HypreParMatrix>(J_->Transpose());
 
-    // recall that temperature_adjoint_load_vector and d_temperature_dt_adjoint_load_vector were already multiplied by -1 above
+    // recall that temperature_adjoint_load_vector and d_temperature_dt_adjoint_load_vector were already multiplied by
+    // -1 above
     mfem::HypreParVector modified_RHS(temperature_adjoint_load_vector);
     modified_RHS *= dt_;
     modified_RHS.Add(1.0, temperature_rate_adjoint_load_vector);
@@ -745,8 +747,9 @@ public:
     lin_solver.Mult(modified_RHS, adjoint_temperature_);
 
     m_mat->Mult(adjoint_temperature_, implicit_sensitivity_temperature_start_of_step_);
-    implicit_sensitivity_temperature_start_of_step_ *= -1.0/dt_;
-    implicit_sensitivity_temperature_start_of_step_.Add(1.0/dt_, temperature_rate_adjoint_load_vector); // already multiplied by -1
+    implicit_sensitivity_temperature_start_of_step_ *= -1.0 / dt_;
+    implicit_sensitivity_temperature_start_of_step_.Add(
+        1.0 / dt_, temperature_rate_adjoint_load_vector);  // already multiplied by -1
 
     // Reset the equation solver to use the full nonlinear residual operator
     nonlin_solver_->setOperator(residual_with_bcs_);
@@ -793,9 +796,8 @@ public:
    */
   FiniteElementDual& computeTimestepShapeSensitivity() override
   {
-    auto drdshape =
-        serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<SHAPE>{}, temperature_, temperature_rate_,
-                                            shape_displacement_, *parameters_[parameter_indices].state...));
+    auto drdshape     = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<SHAPE>{}, temperature_, temperature_rate_,
+                                                        shape_displacement_, *parameters_[parameter_indices].state...));
     auto drdshape_mat = assemble(drdshape);
 
     drdshape_mat->MultTranspose(adjoint_temperature_, shape_displacement_sensitivity_);
@@ -899,10 +901,9 @@ protected:
                                                  shape_displacement_, *parameters_[parameter_indices].state...))()>,
              sizeof...(parameter_indices)>
       d_residual_d_ = {[&]() {
-        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + parameter_indices>{}, temperature_,
-                            temperature_rate_, shape_displacement_, *parameters_[parameter_indices].state...);
+        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + parameter_indices>{}, temperature_, temperature_rate_,
+                            shape_displacement_, *parameters_[parameter_indices].state...);
       }...};
 };
-
 
 }  // namespace serac
