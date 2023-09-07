@@ -643,8 +643,8 @@ public:
       std::unordered_map<std::string, const serac::FiniteElementDual&>  adjoint_loads,
       std::unordered_map<std::string, const serac::FiniteElementState&> adjoint_with_essential_boundary = {}) override
   {
-    SLIC_ERROR_ROOT_IF(adjoint_loads.size() != 1,
-                       "Adjoint load container is not the expected size of 1 in the heat transfer module.");
+    SLIC_ERROR_ROOT_IF(adjoint_loads.size() == 0,
+                       "Adjoint load container size must be greater than 0 in the heat transfer module.");
 
     auto temp_adjoint_load      = adjoint_loads.find("temperature");
     auto temp_rate_adjoint_load = adjoint_loads.find("temperature_rate");  // does not need to be specified
