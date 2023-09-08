@@ -20,28 +20,17 @@ using geom_array = std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES>;
 std::tuple<geom_array, uint32_t> quadrature_point_offsets(const mfem::Mesh & mesh, int q);
 
 /**
- * @brief evaluate the solution field `u` at each
+ * @brief evaluate the solution field `u_T` at each
  *        quadrature point in the mesh,
  *        where each element type is using a
  *        Gauss-Legendre rule of order `q`
  *
- * @param u_q output, the quadrature point values
- * @param u input, the nodal values
+ * @param u_Q output, the quadrature point values
+ * @param du_dxi_Q output, the quadrature point gradients w.r.t. parent coordinates
+ * @param u_T input, the nodal values
  * @param q parameter controlling the number of quadrature points per element
  */
-void interpolate(axom::Array<double, 2>& u_q, const FiniteElementState& u, int q);
-
-/**
- * @brief evaluate the gradient of the solution field `u` at each
- *        quadrature point in the mesh,
- *        where each element type is using a
- *        Gauss-Legendre rule of order `q`
- *
- * @param du_dX_q output, the quadrature point gradients w.r.t. reference coordinates
- * @param u input, the nodal values
- * @param q parameter controlling the number of quadrature points per element
- */
-void gradient(axom::Array<double, 3>& du_dX_q, const FiniteElementState& u, int q);
+void interpolate(axom::Array<double, 2>& u_Q, axom::Array<double, 3>& du_dxi_Q, const FiniteElementState& u_T, int q);
 
 /**
  * @brief integrate the source and flux terms against test functions
@@ -54,6 +43,6 @@ void gradient(axom::Array<double, 3>& du_dX_q, const FiniteElementState& u, int 
  * @param flux input, "flux term" (e.g. PK stress, heat flux) at each quadrature point
  * @param q parameter controlling the number of quadrature points per element
  */
-void integrate(FiniteElementDual& f, const axom::Array<double, 2> source, const axom::Array<double, 3> flux, int q);
+void integrate(FiniteElementDual& f, const axom::Array<double, 2> & source, const axom::Array<double, 3> & flux, int q);
 
 }  // namespace serac

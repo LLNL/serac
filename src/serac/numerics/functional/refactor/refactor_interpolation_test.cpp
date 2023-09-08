@@ -21,13 +21,23 @@ int main(int argc, char* argv[]) {
   int components = 1;
   ElementType type = ElementType::H1;
   std::string name = "u";
-  FiniteElementState u(*mesh, {polynomial_order, components, type, name});
+  FiniteElementState u_T(*mesh, {polynomial_order, components, type, name});
 
-  axom::Array < double, 2 > u_q;
-  interpolate(u_q, u, q);
+  u_T = 1.0;
+  axom::Array < double, 2 > u_Q;
+  axom::Array < double, 3 > du_dxi_Q;
+  interpolate(u_Q, du_dxi_Q, u_T, q);
 
-  axom::Array < double, 3 > du_dX_q;
-  gradient(du_dX_q, u, q);
+
+
+  //for (int i = 0; i < u_Q.Dims[0]; i++) {
+  //  for (int j = 0; j < u_Q.Dims[1]; j++) {
+  //    std::cout << u_Q(i,j) << std::endl;
+  //  }
+  //}
+
+  //axom::Array < double, 3 > du_dX_q;
+  //gradient(du_dX_q, u, q);
 
   MPI_Finalize();
 }
