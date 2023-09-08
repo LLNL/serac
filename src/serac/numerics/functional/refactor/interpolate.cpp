@@ -3,12 +3,13 @@
 #include "serac/numerics/functional/geometry.hpp"
 #include "serac/numerics/functional/element_restriction.hpp"
 
+#include "serac/numerics/functional/quadrature.hpp"
 #include "serac/numerics/functional/refactor/ndview.hpp"
 
 namespace serac {
 
 template <mfem::Geometry::Type geom>
-void interpolate_kernel(ndview< double, 3 > u_Q, ndview< double, 4 > du_dxi_Q, ndview < double, 3 > u_E, int p)
+void interpolate_kernel(ndview< double, 3 > u_Q, ndview< double, 4 > du_dxi_Q, ndview < double, 3 > u_E, int p, QuadratureRule rule)
 {
   int num_elements = u_E.shape[0];
   int components = u_E.shape[1];
@@ -21,7 +22,7 @@ void interpolate_kernel(ndview< double, 3 > u_Q, ndview< double, 4 > du_dxi_Q, n
 
   for (uint32_t e = 0; e < num_elements; e++) {
     for (int i = 0; i < components; i++) {
-      element::interpolate(u_Q(e, i), du_dX_Q(e, i), rule)
+      //element.interpolate(u_Q(e, i), du_dX_Q(e, i), rule)
     }
   }
 }
