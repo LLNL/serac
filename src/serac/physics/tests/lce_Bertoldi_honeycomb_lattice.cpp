@@ -307,7 +307,7 @@ int main(int argc, char* argv[])
       outputFilename = "sol_lce_bertoldi_honeycomb_gamma_90_eta_00";
       break;
     case 2:
-      outputFilename = "sol_lce_bertoldi_honeycomb_varying_angle_order_0p45";
+      outputFilename = "sol_honeycomb_2x1";
       break;
     default:
       std::cout << "...... Wrong problem ID ......" << std::endl;
@@ -318,7 +318,7 @@ int main(int argc, char* argv[])
 #endif
 
 #ifdef USE_2X1_LATTICE
-  outputFilename = "sol_lce_bertoldi_honeycomb_2x1_inverted_";
+  outputFilename = "sol_honeycomb_2x1_inverted_";
 #ifdef USE_BORDER
   outputFilename += "with_border";
 #else
