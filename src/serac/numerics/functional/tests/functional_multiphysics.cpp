@@ -14,7 +14,6 @@
 #include "serac/infrastructure/input.hpp"
 #include "serac/serac_config.hpp"
 #include "serac/mesh/mesh_utils_base.hpp"
-#include "serac/numerics/expr_template_ops.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/numerics/functional/tensor.hpp"
@@ -68,10 +67,11 @@ TEST(FunctionalMultiphysics, NonlinearThermalTest3D)
 
   residual.AddSurfaceIntegral(
       DependsOn<0, 1>{},
-      [=](auto x, auto /*n*/, auto temperature, auto dtemperature_dt) {
+      [=](auto position, auto temperature, auto dtemperature_dt) {
+        auto [X, dX_dxi] = position;
         auto [u, _0]     = temperature;
         auto [du_dt, _1] = dtemperature_dt;
-        return x[0] + x[1] - cos(u) * du_dt;
+        return X[0] + X[1] - cos(u) * du_dt;
       },
       *mesh3D);
 

@@ -13,7 +13,6 @@
 #include "serac/infrastructure/input.hpp"
 #include "serac/serac_config.hpp"
 #include "serac/mesh/mesh_utils_base.hpp"
-#include "serac/numerics/expr_template_ops.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/numerics/functional/tensor.hpp"
@@ -120,19 +119,25 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
       mesh);
 
   // Compute the residual using standard MFEM methods
-  mfem::Vector r1 = (*J_mfem) * U - (*F);
+  // mfem::Vector r1 = (*J_mfem) * U - (*F);
+  mfem::Vector r1(U.Size());
+  J_mfem->Mult(U, r1);
+  r1 -= (*F);
 
   // Compute the residual using functional
   mfem::Vector r2 = residual(U);
 
+  mfem::Vector diff(r1.Size());
+  subtract(r1, r2, diff);
+
   if (verbose) {
     std::cout << "||r1||: " << r1.Norml2() << std::endl;
     std::cout << "||r2||: " << r2.Norml2() << std::endl;
-    std::cout << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
+    std::cout << "||r1-r2||/||r1||: " << diff.Norml2() / r1.Norml2() << std::endl;
   }
 
   // Test that the two residuals are equivalent
-  EXPECT_NEAR(0.0, mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-14);
+  EXPECT_NEAR(0.0, diff.Norml2() / r1.Norml2(), 1.e-14);
 
   // Compute the gradient using functional
   auto [r, drdU] = residual(differentiate_wrt(U));
@@ -140,21 +145,32 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   std::unique_ptr<mfem::HypreParMatrix> J_func = assemble(drdU);
 
   // Compute the gradient action using standard MFEM and functional
-  mfem::Vector g1 = (*J_mfem) * U;
-  mfem::Vector g2 = drdU * U;
-  mfem::Vector g3 = (*J_func) * U;
+  // mfem::Vector g1 = (*J_mfem) * U;
+  mfem::Vector g1(U.Size());
+  J_mfem->Mult(U, g1);
+
+  mfem::Vector g2 = drdU(U);
+  // mfem::Vector g3 = (*J_func) * U;
+  mfem::Vector g3(U.Size());
+  J_func->Mult(U, g3);
+
+  mfem::Vector diff1(g1.Size());
+  subtract(g1, g2, diff1);
+
+  mfem::Vector diff2(g1.Size());
+  subtract(g1, g3, diff2);
 
   if (verbose) {
     std::cout << "||g1||: " << g1.Norml2() << std::endl;
     std::cout << "||g2||: " << g2.Norml2() << std::endl;
     std::cout << "||g3||: " << g3.Norml2() << std::endl;
-    std::cout << "||g1-g2||/||g1||: " << mfem::Vector(g1 - g2).Norml2() / g1.Norml2() << std::endl;
-    std::cout << "||g1-g3||/||g1||: " << mfem::Vector(g1 - g3).Norml2() / g1.Norml2() << std::endl;
+    std::cout << "||g1-g2||/||g1||: " << diff1.Norml2() / g1.Norml2() << std::endl;
+    std::cout << "||g1-g3||/||g1||: " << diff2.Norml2() / g1.Norml2() << std::endl;
   }
 
   // Ensure the two methods generate the same result
-  EXPECT_NEAR(0.0, mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
-  EXPECT_NEAR(0.0, mfem::Vector(g1 - g3).Norml2() / g1.Norml2(), 1.e-14);
+  EXPECT_NEAR(0.0, diff1.Norml2() / g1.Norml2(), 1.e-14);
+  EXPECT_NEAR(0.0, diff2.Norml2() / g1.Norml2(), 1.e-14);
 }
 
 // this test sets up a toy "elasticity" problem where the residual includes contributions
@@ -226,35 +242,53 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
       },
       mesh);
 
-  mfem::Vector r1 = (*J_mfem) * U - (*F);
+  // mfem::Vector r1 = (*J_mfem) * U - (*F);
+  mfem::Vector r1(U.Size());
+  J_mfem->Mult(U, r1);
+  r1 -= (*F);
   mfem::Vector r2 = residual(U);
+
+  mfem::Vector diff(r1.Size());
+  subtract(r1, r2, diff);
 
   if (verbose) {
     std::cout << "||r1||: " << r1.Norml2() << std::endl;
     std::cout << "||r2||: " << r2.Norml2() << std::endl;
-    std::cout << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
+    std::cout << "||r1-r2||/||r1||: " << diff.Norml2() / r1.Norml2() << std::endl;
   }
-  EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-14);
+  EXPECT_NEAR(0., diff.Norml2() / r1.Norml2(), 1.e-14);
 
   auto [r, drdU] = residual(differentiate_wrt(U));
 
   std::unique_ptr<mfem::HypreParMatrix> J_func = assemble(drdU);
 
-  mfem::Vector g1 = (*J_mfem) * U;
-  mfem::Vector g2 = drdU * U;
-  mfem::Vector g3 = (*J_func) * U;
+  // mfem::Vector g1 = (*J_mfem) * U;
+  mfem::Vector g1(U.Size());
+  J_mfem->Mult(U, g1);
+
+  mfem::Vector g2 = drdU(U);
+
+  // mfem::Vector g3 = (*J_func) * U;
+  mfem::Vector g3(U.Size());
+  J_func->Mult(U, g3);
+
+  mfem::Vector diff1(g1.Size());
+  subtract(g1, g2, diff1);
+
+  mfem::Vector diff2(g1.Size());
+  subtract(g1, g3, diff2);
 
   if (verbose) {
     std::cout << "||g1||: " << g1.Norml2() << std::endl;
     std::cout << "||g2||: " << g2.Norml2() << std::endl;
     std::cout << "||g3||: " << g3.Norml2() << std::endl;
 
-    std::cout << "||g1-g2||/||g1||: " << mfem::Vector(g1 - g2).Norml2() / g1.Norml2() << std::endl;
-    std::cout << "||g1-g3||/||g1||: " << mfem::Vector(g1 - g3).Norml2() / g1.Norml2() << std::endl;
+    std::cout << "||g1-g2||/||g1||: " << diff1.Norml2() / g1.Norml2() << std::endl;
+    std::cout << "||g1-g3||/||g1||: " << diff2.Norml2() / g1.Norml2() << std::endl;
   }
 
-  EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
-  EXPECT_NEAR(0., mfem::Vector(g1 - g3).Norml2() / g1.Norml2(), 1.e-14);
+  EXPECT_NEAR(0., diff1.Norml2() / g1.Norml2(), 1.e-14);
+  EXPECT_NEAR(0., diff2.Norml2() / g1.Norml2(), 1.e-14);
 }
 
 // this test sets up part of a toy "magnetic diffusion" problem where the residual includes contributions
@@ -317,33 +351,52 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
 
   residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, hcurl_qfunction<dim>{}, mesh);
 
-  mfem::Vector r1 = (*J_mfem) * U - (*F);
+  // mfem::Vector r1 = (*J_mfem) * U - (*F);
+  mfem::Vector r1(U.Size());
+  J_mfem->Mult(U, r1);
+  r1 -= (*F);
+
   mfem::Vector r2 = residual(U);
+
+  mfem::Vector diff(r1.Size());
+  subtract(r1, r2, diff);
 
   if (verbose) {
     std::cout << "||r1||: " << r1.Norml2() << std::endl;
     std::cout << "||r2||: " << r2.Norml2() << std::endl;
-    std::cout << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
+    std::cout << "||r1-r2||/||r1||: " << diff.Norml2() / r1.Norml2() << std::endl;
   }
-  EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-13);
+  EXPECT_NEAR(0., diff.Norml2() / r1.Norml2(), 1.e-13);
 
   auto [r, drdU] = residual(differentiate_wrt(U));
 
   std::unique_ptr<mfem::HypreParMatrix> J_func = assemble(drdU);
 
-  mfem::Vector g1 = (*J_mfem) * U;
+  // mfem::Vector g1 = (*J_mfem) * U;
+  mfem::Vector g1(U.Size());
+  J_mfem->Mult(U, g1);
+
   mfem::Vector g2 = drdU * U;
-  mfem::Vector g3 = (*J_func) * U;
+
+  // mfem::Vector g3 = (*J_func) * U;
+  mfem::Vector g3(U.Size());
+  J_func->Mult(U, g3);
+
+  mfem::Vector diff1(g1.Size());
+  subtract(g1, g2, diff1);
+
+  mfem::Vector diff2(g1.Size());
+  subtract(g1, g3, diff2);
 
   if (verbose) {
     std::cout << "||g1||: " << g1.Norml2() << std::endl;
     std::cout << "||g2||: " << g2.Norml2() << std::endl;
     std::cout << "||g3||: " << g3.Norml2() << std::endl;
-    std::cout << "||g1-g2||/||g1||: " << mfem::Vector(g1 - g2).Norml2() / g1.Norml2() << std::endl;
-    std::cout << "||g1-g3||/||g1||: " << mfem::Vector(g1 - g3).Norml2() / g1.Norml2() << std::endl;
+    std::cout << "||g1-g2||/||g1||: " << diff1.Norml2() / g1.Norml2() << std::endl;
+    std::cout << "||g1-g3||/||g1||: " << diff2.Norml2() / g1.Norml2() << std::endl;
   }
-  EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-13);
-  EXPECT_NEAR(0., mfem::Vector(g1 - g3).Norml2() / g1.Norml2(), 1.e-13);
+  EXPECT_NEAR(0., diff1.Norml2() / g1.Norml2(), 1.e-13);
+  EXPECT_NEAR(0., diff2.Norml2() / g1.Norml2(), 1.e-13);
 }
 
 TEST(Thermal, 2DLinear) { functional_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }

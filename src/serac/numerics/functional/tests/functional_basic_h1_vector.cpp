@@ -15,7 +15,6 @@
 #include "serac/infrastructure/input.hpp"
 #include "serac/serac_config.hpp"
 #include "serac/mesh/mesh_utils_base.hpp"
-#include "serac/numerics/expr_template_ops.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/numerics/functional/tensor.hpp"
@@ -60,9 +59,10 @@ void weird_mixed_test(std::unique_ptr<mfem::ParMesh>& mesh)
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
-      [=](auto x, auto /*n*/, auto displacement) {
+      [=](auto position, auto displacement) {
+        auto [X, dX_dxi] = position;
         auto [u, du_dxi] = displacement;
-        return dot(s11, u) * x[0];
+        return dot(s11, u) * X[0];
       },
       *mesh);
 
@@ -105,9 +105,10 @@ void elasticity_test(std::unique_ptr<mfem::ParMesh>& mesh)
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
-      [=](auto x, auto /*n*/, auto displacement) {
+      [=](auto position, auto displacement) {
+        auto [X, dX_dxi] = position;
         auto [u, du_dxi] = displacement;
-        return u * x[0];
+        return u * X[0];
       },
       *mesh);
 

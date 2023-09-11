@@ -132,7 +132,7 @@ TEST(LiquidCrystalElastomer, Brighenti)
   double iniLoadVal = 1.0e0;
   double maxLoadVal = 4 * 1.3e0 / lx / lz;
   double loadVal    = iniLoadVal + 0.0 * maxLoadVal;
-  solid_solver.setPiolaTraction([&loadVal, ly](auto x, auto /*n*/, auto /*t*/) {
+  solid_solver.setTraction([&loadVal, ly](auto x, auto /*n*/, auto /*t*/) {
     return tensor<double, 3>{0, loadVal * (x[1] > 0.99 * ly), 0};
   });
 
@@ -150,15 +150,22 @@ TEST(LiquidCrystalElastomer, Brighenti)
   Functional<double(H1<p, dim>)> avgYDispQoI({&solid_solver.displacement().space()});
   avgYDispQoI.AddSurfaceIntegral(
       DependsOn<0>{},
-      [=](auto x, auto n, auto displacement) {
+      [=](auto position, auto displacement) {
+        auto [X, dX_dxi] = position;
         auto [u, du_dxi] = displacement;
-        return dot(u, n) * ((x[1] > 0.99 * ly) ? 1.0 : 0.0);
+        auto n           = normalize(cross(dX_dxi));
+        return dot(u, n) * ((X[1] > 0.99 * ly) ? 1.0 : 0.0);
       },
       pmesh);
 
   Functional<double(H1<p, dim>)> area({&solid_solver.displacement().space()});
   area.AddSurfaceIntegral(
-      DependsOn<>{}, [=](auto x, auto /*n*/) { return (x[1] > 0.99 * ly) ? 1.0 : 0.0; }, pmesh);
+      DependsOn<>{},
+      [=](auto position) {
+        auto X = get<0>(position);
+        return (X[1] > 0.99 * ly) ? 1.0 : 0.0;
+      },
+      pmesh);
 
   double initial_area = area(solid_solver.displacement());
   SLIC_INFO_ROOT("... Initial Area of the top surface: " << initial_area);

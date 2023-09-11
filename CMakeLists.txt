@@ -43,6 +43,10 @@ if(NOT DEFINED SERAC_SOURCE_DIR)
 endif()
 message(STATUS "Serac Source Dir: ${SERAC_SOURCE_DIR}")
 
+if(SERAC_ENABLE_CODEVELOP)
+    set(ENABLE_FORTRAN ON CACHE BOOL "")
+endif()
+
 #------------------------------------------------------------------------------
 # Setup BLT
 #------------------------------------------------------------------------------
@@ -182,7 +186,7 @@ install(TARGETS              serac
 if (SERAC_ENABLE_CODEVELOP)
     # This really shouldn't be needed but it keeps getting dropped from axom.
     # It certainly shouldn't go here either.
-    target_include_directories(axom SYSTEM PUBLIC
+    target_include_directories(axom SYSTEM INTERFACE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/axom/src>
     )
 

@@ -15,7 +15,6 @@
 #include "serac/infrastructure/input.hpp"
 #include "serac/serac_config.hpp"
 #include "serac/mesh/mesh_utils_base.hpp"
-#include "serac/numerics/expr_template_ops.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/numerics/functional/tensor.hpp"
@@ -66,9 +65,10 @@ void thermal_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
-      [=](auto x, auto /*n*/, auto temperature) {
+      [=](auto position, auto temperature) {
+        auto [X, dX_dxi] = position;
         auto [u, du_dxi] = temperature;
-        return x[0] + x[1] - cos(u);
+        return X[0] + X[1] - cos(u);
       },
       *mesh);
 

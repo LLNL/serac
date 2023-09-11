@@ -57,9 +57,12 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
 
   // Construct a functional-based solid solver
 
-  SolidMechanics<p, dim, Parameters<H1<1>, H1<1>>> solid_solver(
-      solid_mechanics::default_nonlinear_options, solid_mechanics::default_linear_options,
-      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "solid_functional");
+  auto lin_options          = solid_mechanics::default_linear_options;
+  lin_options.linear_solver = LinearSolver::SuperLU;
+
+  SolidMechanics<p, dim, Parameters<H1<1>, H1<1>>> solid_solver(solid_mechanics::default_nonlinear_options, lin_options,
+                                                                solid_mechanics::default_quasistatic_options,
+                                                                GeometricNonlinearities::On, "solid_functional");
 
   solid_solver.setParameter(0, user_defined_bulk_modulus);
   solid_solver.setParameter(1, user_defined_shear_modulus);
@@ -157,7 +160,25 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
   }
 }
 
-TEST(SolidMechanics, FiniteDifferenceShape)
+/**
+ * @brief Specify the kind of loading to apply
+ */
+enum class LoadingType
+{
+  BodyForce,
+  Pressure,
+  Traction
+};
+
+/**
+ * @brief A driver for a shape sensitivity test
+ *
+ * This performs a finite difference check for the sensitivities of the shape displacements
+ * for various loading types. It can currently only run in serial.
+ *
+ * @param load The type of loading to apply to the problem
+ */
+void finite_difference_shape_test(LoadingType load)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -169,7 +190,7 @@ TEST(SolidMechanics, FiniteDifferenceShape)
   serac::StateManager::initialize(datastore, "solid_functional_parameterized_shape_sensitivities");
 
   // Construct the appropriate dimension mesh and give it to the data store
-  std::string filename = SERAC_REPO_DIR "/data/meshes/patch2D_tris_and_quads.mesh";
+  std::string filename = SERAC_REPO_DIR "/data/meshes/patch2D_tris.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
@@ -206,17 +227,35 @@ TEST(SolidMechanics, FiniteDifferenceShape)
   solid_solver.setDisplacementBCs(ess_bdr, bc);
   solid_solver.setDisplacement(bc);
 
-  tensor<double, dim> constant_force;
+  if (load == LoadingType::BodyForce) {
+    tensor<double, dim> constant_force;
 
-  constant_force[0] = 0.0;
-  constant_force[1] = 1.0e-3;
+    constant_force[0] = 0.0;
+    constant_force[1] = 1.0e-1;
 
-  if (dim == 3) {
-    constant_force[2] = 0.0;
+    if (dim == 3) {
+      constant_force[2] = 0.0;
+    }
+
+    solid_mechanics::ConstantBodyForce<dim> force{constant_force};
+    solid_solver.addBodyForce(force);
+  } else if (load == LoadingType::Pressure) {
+    solid_solver.setPressure([](auto& X, double) {
+      if (X[1] > 0.99) {
+        return 0.1;
+      }
+      return 0.0;
+    });
+  } else if (load == LoadingType::Traction) {
+    solid_solver.setTraction([](auto& X, auto, double) {
+      auto traction = 0.0 * X;
+      if (X[1] > 0.99) {
+        traction[0] = 1.0e-2;
+        traction[1] = 1.0e-2;
+      }
+      return traction;
+    });
   }
-
-  solid_mechanics::ConstantBodyForce<dim> force{constant_force};
-  solid_solver.addBodyForce(force);
 
   // Finalize the data structures
   solid_solver.completeSetup();
@@ -283,6 +322,10 @@ TEST(SolidMechanics, FiniteDifferenceShape)
     EXPECT_NEAR((sensitivity(i) - dqoi_dshape) / std::max(dqoi_dshape, 1.0e-3), 0.0, 1.0e-4);
   }
 }
+
+TEST(SolidMechanicsShape, BodyForce) { finite_difference_shape_test(LoadingType::BodyForce); }
+TEST(SolidMechanicsShape, Pressure) { finite_difference_shape_test(LoadingType::Pressure); }
+TEST(SolidMechanicsShape, Traction) { finite_difference_shape_test(LoadingType::Traction); }
 
 }  // namespace serac
 

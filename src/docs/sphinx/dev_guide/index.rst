@@ -16,7 +16,6 @@ Developer Guide
    modern_cpp
    testing
    logging
-   expr_templates
    profiling
    memory_checking
    new_docker_image

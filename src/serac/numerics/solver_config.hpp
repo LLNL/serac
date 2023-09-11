@@ -100,9 +100,10 @@ struct TimesteppingOptions {
 /// Linear solution method indicator
 enum class LinearSolver
 {
-  CG,     /**< Conjugate gradient */
-  GMRES,  /**< Generalized minimal residual method */
-  SuperLU /**< SuperLU MPI-enabled direct Solver */
+  CG,       /**< Conjugate gradient */
+  GMRES,    /**< Generalized minimal residual method */
+  SuperLU,  /**< SuperLU MPI-enabled direct nodal solver */
+  Strumpack /**< Strumpack MPI-enabled direct frontal solver*/
 };
 // _linear_solvers_end
 

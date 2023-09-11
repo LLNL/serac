@@ -6,8 +6,6 @@
 
 #include "serac/numerics/odes.hpp"
 
-#include "serac/numerics/expr_template_ops.hpp"
-
 namespace serac::mfem_ext {
 
 SecondOrderODE::SecondOrderODE(int n, State&& state, const EquationSolver& solver, const BoundaryConditionManager& bcs)
@@ -128,7 +126,7 @@ void SecondOrderODE::ImplicitSolve(const double dt, const mfem::Vector& u, mfem:
     u_next = (u_prev + dt * v_prev) + dt*dt*a_next
   */
 
-  // Split u in half and du_dt in half?
+  // Split u in half and du_dt in half
   mfem::Array<int> boffsets(3);
   boffsets[0] = 0;
   boffsets[1] = u.Size() / 2;
@@ -137,12 +135,16 @@ void SecondOrderODE::ImplicitSolve(const double dt, const mfem::Vector& u, mfem:
   const mfem::BlockVector bu(u.GetData(), boffsets);
 
   mfem::BlockVector bdu_dt(du_dt.GetData(), boffsets);
-  Solve(t, dt * dt, dt,
-        bu.GetBlock(0) + bu.GetBlock(1) * dt,  // u_next
-        bu.GetBlock(1),                        // v_next
-        bdu_dt.GetBlock(1));                   // a_next
 
-  bdu_dt.GetBlock(0) = bu.GetBlock(1) + dt * bdu_dt.GetBlock(1);
+  mfem::Vector u_next(bu.GetBlock(0));
+  u_next.Add(dt, bu.GetBlock(1));
+
+  Solve(t, dt * dt, dt, u_next,
+        bu.GetBlock(1),       // v_next
+        bdu_dt.GetBlock(1));  // a_next
+
+  bdu_dt.GetBlock(0) = bu.GetBlock(1);
+  bdu_dt.GetBlock(0).Add(dt, bdu_dt.GetBlock(1));
 }
 
 void SecondOrderODE::Solve(const double time, const double c0, const double c1, const mfem::Vector& u,
@@ -181,19 +183,45 @@ void SecondOrderODE::Solve(const double time, const double c0, const double c1, 
     }
 
     if (enforcement_method_ == DirichletEnforcementMethod::RateControl) {
-      d2U_dt2_ = ((U_plus_ - U_minus_) / (2.0 * epsilon) - du_dt) / c1;
-      dU_dt_   = du_dt;
-      U_       = u;
+      // d2U_dt2_ = ((U_plus_ - U_minus_) / (2.0 * epsilon) - du_dt) / c1;
+      subtract(U_plus_, U_minus_, d2U_dt2_);
+      d2U_dt2_ /= 2.0 * epsilon;
+      d2U_dt2_ -= du_dt;
+      d2U_dt2_ /= c1;
+
+      dU_dt_ = du_dt;
+      U_     = u;
     }
 
     if (enforcement_method_ == DirichletEnforcementMethod::FullControl) {
-      d2U_dt2_ = (U_minus_ - 2.0 * U_ + U_plus_) / (epsilon * epsilon);
-      dU_dt_   = (U_plus_ - U_minus_) / (2.0 * epsilon) - c1 * d2U_dt2_;
-      U_       = U_ - c0 * d2U_dt2_;
+      // d2U_dt2_ = (U_minus_ - 2.0 * U_ + U_plus_) / (epsilon * epsilon);
+      add(1.0, U_minus_, -2.0, U_, d2U_dt2_);
+      d2U_dt2_ += U_plus_;
+      d2U_dt2_ /= epsilon * epsilon;
+
+      // d2U_dt2_ = ((U_plus_ - U_minus_) / (2.0 * epsilon) - du_dt) / c1;
+      subtract(U_plus_, U_minus_, d2U_dt2_);
+      d2U_dt2_ /= 2.0 * epsilon;
+      d2U_dt2_ -= du_dt;
+      d2U_dt2_ /= c1;
+
+      // dU_dt_   = (U_plus_ - U_minus_) / (2.0 * epsilon) - c1 * d2U_dt2_;
+      subtract(U_plus_, U_minus_, dU_dt_);
+      dU_dt_ /= 2.0 * epsilon;
+      dU_dt_.Add(-1.0 * c1, d2U_dt2_);
+
+      // U_ = U_ - c0 * d2U_dt2_;
+      U_.Add(-1.0 * c0, d2U_dt2_);
     }
   } else {
-    d2U_dt2_ = (U_minus_ - 2.0 * U_ + U_plus_) / (epsilon * epsilon);
-    dU_dt_   = (U_plus_ - U_minus_) / (2.0 * epsilon);
+    // d2U_dt2_ = (U_minus_ - 2.0 * U_ + U_plus_) / (epsilon * epsilon);
+    add(1.0, U_minus_, -2.0, U_, d2U_dt2_);
+    d2U_dt2_ += U_plus_;
+    d2U_dt2_ /= epsilon * epsilon;
+
+    // dU_dt_   = (U_plus_ - U_minus_) / (2.0 * epsilon);
+    subtract(U_plus_, U_minus_, dU_dt_);
+    dU_dt_ /= 2.0 * epsilon;
   }
 
   auto constrained_dofs = bcs_.allEssentialTrueDofs();
@@ -299,16 +327,20 @@ void FirstOrderODE::Solve(const double time, const double dt, const mfem::Vector
     }
 
     if (enforcement_method_ == DirichletEnforcementMethod::RateControl) {
-      dU_dt_ = (U_plus_ - U_minus_) / (2.0 * epsilon);
-      U_     = u;
+      // dU_dt_ = (U_plus_ - U_minus_) / (2.0 * epsilon);
+      subtract(1.0 / (2.0 * epsilon), U_plus_, U_minus_, dU_dt_);
+      U_ = u;
     }
 
     if (enforcement_method_ == DirichletEnforcementMethod::FullControl) {
-      dU_dt_ = (U_plus_ - U_minus_) / (2.0 * epsilon);
-      U_     = U_ - dt * dU_dt_;
+      // dU_dt_ = (U_plus_ - U_minus_) / (2.0 * epsilon);
+      subtract(1.0 / (2.0 * epsilon), U_plus_, U_minus_, dU_dt_);
+      // U_     = U_ - dt * dU_dt_;
+      U_.Add(-1.0 * dt, dU_dt_);
     }
   } else {
-    dU_dt_ = (U_plus_ - U_minus_) / (2.0 * epsilon);
+    // dU_dt_ = (U_plus_ - U_minus_) / (2.0 * epsilon);
+    subtract(1.0 / (2.0 * epsilon), U_plus_, U_minus_, dU_dt_);
   }
 
   auto constrained_dofs = bcs_.allEssentialTrueDofs();

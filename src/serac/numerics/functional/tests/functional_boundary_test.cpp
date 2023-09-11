@@ -13,7 +13,6 @@
 
 #include "serac/serac_config.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"
-#include "serac/numerics/expr_template_ops.hpp"
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/mesh/mesh_utils_base.hpp"
@@ -97,30 +96,40 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
-      [&](auto x, auto n, auto temperature) {
+      [&](auto position, auto temperature) {
+        auto [X, dX_dxi] = position;
         auto [u, unused] = temperature;
-        tensor<double, dim> b{sin(x[0]), x[0] * x[1]};
-        return x[0] * x[1] + dot(b, n) + rho * u;
+
+        auto n = normalize(cross(dX_dxi));
+
+        tensor<double, dim> b{sin(X[0]), X[0] * X[1]};
+        return X[0] * X[1] + dot(b, n) + rho * u;
       },
       mesh);
 
-  mfem::Vector r1 = (*J) * U + (*F);
+  // mfem::Vector r1 = (*J) * U + (*F);
+  mfem::Vector r1(U.Size());
+  J->Mult(U, r1);
+  r1 += (*F);
   mfem::Vector r2 = residual(U);
 
   check_gradient(residual, U);
+
+  mfem::Vector diff(r1.Size());
+  subtract(r1, r2, diff);
 
   if (verbose) {
     mpi::out << "sum(r1):  " << r1.Sum() << std::endl;
     mpi::out << "sum(r2):  " << r2.Sum() << std::endl;
     mpi::out << "||r1||: " << r1.Norml2() << std::endl;
     mpi::out << "||r2||: " << r2.Norml2() << std::endl;
-    mpi::out << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
+    mpi::out << "||r1-r2||/||r1||: " << diff.Norml2() / r1.Norml2() << std::endl;
   }
 
   if (r1.Norml2() < 1.0e-15) {
-    EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2(), 1.e-12);
+    EXPECT_NEAR(0., diff.Norml2(), 1.e-12);
   } else {
-    EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-12);
+    EXPECT_NEAR(0., diff.Norml2() / r1.Norml2(), 1.e-12);
   }
 }
 
@@ -167,30 +176,37 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
-      [&](auto x, auto /*n*/, auto temperature) {
+      [&](auto position, auto temperature) {
+        auto [X, dX_dxi] = position;
         auto [u, unused] = temperature;
 
         // mfem is missing the integrator to compute this term
         // tensor<double,dim> b{sin(x[0]), x[0] * x[1]};
-        return x[0] * x[1] + /* dot(b, n) +*/ rho * u;
+        return X[0] * X[1] + /* dot(b, n) +*/ rho * u;
       },
       mesh);
 
-  mfem::Vector r1 = (*J) * U + (*F);
+  // mfem::Vector r1 = (*J) * U + (*F);
+  mfem::Vector r1(U.Size());
+  J->Mult(U, r1);
+  r1 += (*F);
   mfem::Vector r2 = residual(U);
+
+  mfem::Vector diff(r1.Size());
+  subtract(r1, r2, diff);
 
   if (verbose) {
     mpi::out << "sum(r1):  " << r1.Sum() << std::endl;
     mpi::out << "sum(r2):  " << r2.Sum() << std::endl;
     mpi::out << "||r1||: " << r1.Norml2() << std::endl;
     mpi::out << "||r2||: " << r2.Norml2() << std::endl;
-    mpi::out << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
+    mpi::out << "||r1-r2||/||r1||: " << diff.Norml2() / r1.Norml2() << std::endl;
   }
 
   if (r1.Norml2() < 1.0e-15) {
-    EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2(), 1.e-12);
+    EXPECT_NEAR(0., diff.Norml2(), 1.e-12);
   } else {
-    EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-12);
+    EXPECT_NEAR(0., diff.Norml2() / r1.Norml2(), 1.e-12);
   }
 }
 
