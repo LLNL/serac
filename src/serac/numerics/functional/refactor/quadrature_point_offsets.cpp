@@ -2,14 +2,14 @@
 
 namespace serac {
 
-std::tuple<geom_array, uint32_t> quadrature_point_offsets(const mfem::Mesh & mesh, int q) {
+std::tuple<geom_array, geom_array, uint32_t> quadrature_point_offsets(const mfem::Mesh & mesh, uint32_t q) {
 
   geom_array element_counts = geometry_counts(mesh);
   geom_array qpts_per_elem{};
 
   for (auto geom : supported_geometries) {
     if (dimension_of(geom) == mesh.Dimension()) {
-      qpts_per_elem[uint32_t(geom)] = uint32_t(num_quadrature_points(geom, q));
+      qpts_per_elem[uint32_t(geom)] = uint32_t(num_quadrature_points(geom, int(q)));
     } else {
       qpts_per_elem[uint32_t(geom)] = 0;
       element_counts[uint32_t(geom)] = 0;
@@ -24,7 +24,7 @@ std::tuple<geom_array, uint32_t> quadrature_point_offsets(const mfem::Mesh & mes
     num_quadrature_points += element_counts[g] * qpts_per_elem[g];
   }
 
-  return std::tuple{qpt_offsets, num_quadrature_points};
+  return std::tuple{element_counts, qpt_offsets, num_quadrature_points};
 
 }
 

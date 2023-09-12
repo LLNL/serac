@@ -24,13 +24,9 @@ struct PointsPerDimension { uint32_t q; };
 struct QuadratureRule {
   std::vector< double > points;
   std::vector< double > weights;
-
-  friend QuadratureRule GaussLegendre(mfem::Geometry::Type geom, PolynomialOrder order);
-  friend QuadratureRule GaussLegendre(mfem::Geometry::Type geom, PointsPerDimension n);
-
- private:
-  std::vector< int > multiplicity; // for simplex elements
 };
 
+QuadratureRule GaussLegendreRule(mfem::Geometry::Type geom, PolynomialOrder order);
+QuadratureRule GaussLegendreRule(mfem::Geometry::Type geom, PointsPerDimension n);
 
 }  // namespace serac
