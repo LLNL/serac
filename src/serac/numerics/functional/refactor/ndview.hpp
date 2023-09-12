@@ -2,13 +2,17 @@
 
 #include <utility>
 
-template < typename T, int rank = 1 >
+template < typename T, uint32_t rank = 1 >
 struct ndview{
-  static constexpr auto iseq = std::make_integer_sequence<uint32_t, rank>{};
+
+  template < auto i >
+  static auto Iseq() {
+    return std::make_integer_sequence< decltype(i), i >();
+  }
 
   ndview() {}
 
-  ndview(T * input, const uint32_t (& dimensions)[rank]) {
+  ndview(T * input, const std::array<uint32_t, rank> & dimensions) {
     data = input;
     for (uint32_t i = 0; i < rank; i++) {
       uint32_t id = rank - 1 - i;
@@ -26,15 +30,33 @@ struct ndview{
   }
 
   template < typename ... index_types >
-  auto & operator()(index_types ... indices) { 
-    static_assert(sizeof ... (indices) == rank);
-    return data[index(iseq, indices...)];
+  decltype(auto) operator()(index_types ... indices) { 
+    if constexpr (sizeof ... (indices) < rank) {
+      constexpr uint32_t m = sizeof ... (indices);
+      std::array<uint32_t, rank - m> slice_shape;
+      for (uint32_t j = 0; j < rank - m; j++) {
+        slice_shape[j] = shape[j + m];
+      }
+      return ndview< T, rank - m >(data + index(Iseq<m>(), indices...), slice_shape);
+    } else {
+      static_assert(sizeof ... (indices) == rank);
+      return static_cast<T &>(data[index(Iseq<rank>(), indices...)]);
+    }
   }
 
   template < typename ... index_types >
-  auto & operator()(index_types ... indices) const { 
-    static_assert(sizeof ... (indices) == rank);
-    return data[index(iseq, indices...)];
+  decltype(auto) operator()(index_types ... indices) const { 
+    if constexpr (sizeof ... (indices) < rank) {
+      constexpr uint32_t m = sizeof ... (indices);
+      std::array<uint32_t, rank - m> slice_shape;
+      for (int j = 0; j < rank - m; j++) {
+        slice_shape[j] = shape[j + m];
+      }
+      return ndview< T, rank - m >(data + index(Iseq<m>(), indices...), slice_shape);
+    } else {
+      static_assert(sizeof ... (indices) == rank);
+      return static_cast<T &>(data[index(Iseq<rank>(), indices...)]);
+    }
   }
 
   template < uint32_t ... I, typename ... index_types >
@@ -53,6 +75,7 @@ auto contract(const ndview<double, 2>& A, const ndview<double, 2>& B, ndview<dou
   uint32_t d1 = C.shape[0];
   uint32_t d2 = C.shape[1];
   uint32_t d3 = A.shape[i1];
+
 
   assert(A.shape[1-i1] == d1);
   assert(B.shape[1-i2] == d2);

@@ -26,19 +26,14 @@ void interpolate_kernel(ndview< double, 3 > u_Q,
   ndview<double,2> B(&B_storage[0], {qpts_per_elem, (p + 1)});
   ndview<double,2> G(&G_storage[0], {qpts_per_elem, (p + 1)});
 
-  std::vector<double> buffer_storage(element.buffer_size(qpts_per_elem));
   ndview<double,2> qpts(&rule.points[0], {uint32_t(rule.points.size()), 1});
 
   element.evaluate_shape_functions(B, G, qpts);
 
+  std::vector<double> buffer(element.buffer_size(qpts_per_elem));
   for (uint32_t e = 0; e < num_elements; e++) {
     for (uint32_t i = 0; i < components; i++) {
-      element.interpolate(
-        ndview<double,1>(&u_Q(e, i, 0), {u_Q.shape[2]}), 
-        ndview<double,2>(&du_dxi_Q(e, i, 0, 0), {du_dxi_Q.shape[2], du_dxi_Q.shape[3]}),
-        ndview<double,1>(&u_E(e, i, 0), {u_E.shape[2]}), 
-        B, G, &buffer_storage[0]
-      );
+      element.interpolate(u_Q(e, i), du_dxi_Q(e, i), u_E(e, i), B, G, &buffer[0]);
     }
   }
 }
