@@ -73,7 +73,7 @@ struct IsotropicConductorWithLinearConductivityVsTemperature {
    * @param density Density of the material (mass/volume)
    * @param specific_heat_capacity Specific heat capacity of the material (energy / (mass * temp))
    * @param reference_conductivity Reference thermal conductivity of the material at temp = 0 (power / (length * temp))
-   * @param d_conductivity_d_temp Slope for the thermal conductivity as a function of temperature
+   * @param d_conductivity_d_temperature Slope for the thermal conductivity as a function of temperature
    */
   IsotropicConductorWithLinearConductivityVsTemperature(double density = 1.0, double specific_heat_capacity = 1.0,
                                                         double reference_conductivity       = 1.0,
@@ -116,8 +116,10 @@ private:
   /// Specific heat capacity
   double specific_heat_capacity_;
 
-  /// Constant isotropic thermal conductivity
+  /// Reference isotropic thermal conductivity
   double reference_conductivity_;
+
+  /// Slope of nonlinear thermal conductivity dependence on temperature
   double d_conductivity_d_temperature_;
 };
 

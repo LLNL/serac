@@ -42,7 +42,7 @@ TEST(Thermal, ParameterizedMaterial)
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
-  // Construct and initialized the user-defined conductivity to be used as a differentiable parameter in
+  // Construct and initialize the user-defined conductivity to be used as a differentiable parameter in
   // the thermal conduction physics module.
   FiniteElementState user_defined_conductivity(
       StateManager::newState(FiniteElementState::Options{.order = 1, .name = "parameterized_conductivity"}));

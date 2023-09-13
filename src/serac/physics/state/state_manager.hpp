@@ -193,6 +193,12 @@ public:
    */
   static FiniteElementState& shapeDisplacement(const std::string& mesh_tag = default_mesh_name_);
 
+  /**
+   * @brief loads the finite element states from a previously checkpointed cycle
+   *
+   * @param cycle_to_load
+   * @param states_to_load
+   */
   static void loadCheckpointedStates(int                                                     cycle_to_load,
                                      std::vector<std::reference_wrapper<FiniteElementState>> states_to_load);
 

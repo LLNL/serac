@@ -604,32 +604,30 @@ public:
    * @pre The adjoint load maps are expected to contain a single entry named "temperature"
    * @note If the essential boundary dual is not specified, homogeneous essential boundary conditions are applied to
    * the adjoint system
-   *
-   * @note Here we provide a quick derivation for the discrete adjoint equations and notation used here for backward
+   * @note We provide a quick derivation for the discrete adjoint equations and notation used here for backward
    * Euler. There are two equations satisfied at each step of the forward solve using backward Euler \n 1). \f$r^n(u^n,
-   * v^n; p) = 0,\f$ \n where \f$u^n\f$ is the end-step primal value, \f$p\f$ are parameters, and \f$v^n\f$ is the
-   * central difference velocity, satisfying \n 2). \f$\Delta t \, v^n = u^n-u^{n-1}.\f$ \n We are interesting in the
-   * implicit sensitivity of a qoi (quantity of interest), \f$\sum_{n=1}^N \pi^n(u^n, v^n; p)\f$, while maintaining the
-   * above constraints. We construct a Lagrangian that adds 'zero' to this qoi using the free multipliers
+   * v^n; d) = 0,\f$ \n where \f$u^n\f$ is the end-step primal value, \f$d\f$ are design parameters, and \f$v^n\f$ is
+   * the central difference velocity, satisfying \n 2). \f$\Delta t \, v^n = u^n-u^{n-1}.\f$ \n We are interesting in
+   * the implicit sensitivity of a qoi (quantity of interest), \f$\sum_{n=1}^N \pi^n(u^n, v^n; d)\f$, while maintaining
+   * the above constraints. We construct a Lagrangian that adds 'zero' to this qoi using the free multipliers
    * \f$\lambda^n\f$ (which we call the adjoint temperature) and
    * \f$\mu^n\f$ (which can eventually be intepreted as the implicit sensitivity of the qoi with respect to the
-   * start-of-step primal value \f$u^{n-1}\f$) with \f[ \mathcal{L} :=  \sum_{n=1}^N \pi(u^n, v^n; p) + \lambda^n \cdot
-   * r^n(u^n, v^n; p) + \mu^n \cdot (\Delta t \, v^n - u^n + u^{n-1}).\f] We are interesting in the total derivative
-   * \f[\frac{d\mathcal{L}}{dp} = \sum_{n=1}^N \pi^n_{,u} u^n_{,p} + \pi^n_{,v} v^n_{,p} + \pi^n_{,p} + \lambda^n \cdot
-   * \left( r^n_{,u} u^n_{,p} + r^n_{,v} v^n_{,p} + r^n_{,p} \right) + \mu^n \cdot (\Delta t \, v^n_{,p} - u^n_{,p} +
-   * u^{n-1}_{,p}). \f] We are free to choose \f$\lambda^n\f$ and \f$\mu^n\f$ in any convenient way, and the way we
-   * choose is by grouping terms involving \f$u^n_{,p}\f$ and \f$v^n_{,p}\f$, and setting the multipliers such that
+   * start-of-step primal value \f$u^{n-1}\f$) with \f[ \mathcal{L} :=  \sum_{n=1}^N \pi(u^n, v^n; d) + \lambda^n \cdot
+   * r^n(u^n, v^n; d) + \mu^n \cdot (\Delta t \, v^n - u^n + u^{n-1}).\f] We are interesting in the total derivative
+   * \f[\frac{d\mathcal{L}}{dp} = \sum_{n=1}^N \pi^n_{,u} u^n_{,d} + \pi^n_{,v} v^n_{,d} + \pi^n_{,d} + \lambda^n \cdot
+   * \left( r^n_{,u} u^n_{,d} + r^n_{,v} v^n_{,d} + r^n_{,d} \right) + \mu^n \cdot (\Delta t \, v^n_{,d} - u^n_{,d} +
+   * u^{n-1}_{,d}). \f] We are free to choose \f$\lambda^n\f$ and \f$\mu^n\f$ in any convenient way, and the way we
+   * choose is by grouping terms involving \f$u^n_{,d}\f$ and \f$v^n_{,d}\f$, and setting the multipliers such that
    * those terms cancel out in the final expression of the qoi sensitivity. In particular, by choosing \f[ \lambda^n = -
    * \left[ r_{,u}^n + \frac{r_{,v}^n}{\Delta t} \right]^{-T} \left( \pi^n_{,u} + \frac{\pi^n_{,v}}{\Delta t} +
    * \mu^{n+1} \right) \f] and \f[ \mu^n = -\frac{1}{\Delta t}\left( \pi^n_{,v} + \lambda^n \cdot r^n_{,v} \right), \f]
    * we find
-   * \f[ \frac{d\mathcal{L}}{dp} = \sum_{n=1}^N \left( \pi^n_{,p} + \lambda^n \cdot r^n_{,p} \right) + \mu^1 \cdot
-   * u^{0}_{,p}, \f] where the multiplier/adjoint equations are solved backward in time starting at \f$n=N\f$,
-   * \f$\mu^{N+1} = 0\f$, and \f$u^{0}_{,p}\f$ is the sensitivity of the initial primal variable with respect to the
+   * \f[ \frac{d\mathcal{L}}{dp} = \sum_{n=1}^N \left( \pi^n_{,d} + \lambda^n \cdot r^n_{,d} \right) + \mu^1 \cdot
+   * u^{0}_{,d}, \f] where the multiplier/adjoint equations are solved backward in time starting at \f$n=N\f$,
+   * \f$\mu^{N+1} = 0\f$, and \f$u^{0}_{,d}\f$ is the sensitivity of the initial primal variable with respect to the
    * parameters.\n We call the quantities \f$\pi^n_{,u}\f$ and \f$\pi^n_{,v}\f$ the temperature and temperature-rate
    * adjoint loads, respectively.
    *
-   * @param dt The size of the adjoint timestep to take in the backward time integration calculation
    * @param adjoint_loads An unordered map containing finite element duals representing the RHS of the adjoint equations
    * indexed by their name.  It must have a load named "temperature", which is the sensitivity of the qoi over that
    * timestep to the end-of-step temperature.  It may optionally have a load named "temperature_rate", which is the
@@ -760,7 +758,12 @@ public:
     return {{"adjoint_temperature", adjoint_temperature_}};
   }
 
-  FiniteElementState previousTemperature(int cycle) const
+  /**
+   * @brief Get a temperature which has been previously checkpointed at the give cycle
+   * @param cycle The previous timestep where the temperature solution is requested
+   * @return The temperature FiniteElementState at a previous cycle
+   */
+  FiniteElementState loadCheckpointedTemperature(int cycle) const
   {
     FiniteElementState previous_temperature(temperature_);
     StateManager::loadCheckpointedStates(cycle, {previous_temperature});
@@ -833,15 +836,13 @@ protected:
   /// The temperature finite element state
   serac::FiniteElementState temperature_;
 
-  /**
-   * @brief Rate of change in temperature at the current adjoint timestep
-   */
+  /// Rate of change in temperature at the current adjoint timestep
   FiniteElementState temperature_rate_;
 
   /// The adjoint temperature finite element states, the multiplier on the residual for a given timestep
   serac::FiniteElementState adjoint_temperature_;
 
-  // The total/implicit sensitivity of the qoi with respect to the start of the previous timestep's temperature
+  /// The total/implicit sensitivity of the qoi with respect to the start of the previous timestep's temperature
   serac::FiniteElementDual implicit_sensitivity_temperature_start_of_step_;
 
   /// serac::Functional that is used to calculate the residual and its derivatives
