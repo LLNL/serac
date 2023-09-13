@@ -11,19 +11,34 @@ struct finite_element<mfem::Geometry::SQUARE, H1Dynamic> {
   uint32_t n;
   uint32_t ndof() { return n * n; }
 
+  std::array<uint32_t,2> evaluate_shape_functions_buffer_size(const ndview< double,2 > & points){
+    if (points.shape[1] == 1) { 
+      // tensor-product rules
+      return {n * points.shape[0], n * points.shape[0]};
+    } else { 
+      // non tensor-product rules
+      return {ndof() * points.shape[0], ndof() * points.shape[0]};
+    }
+  }
+
   void evaluate_shape_functions(ndview< double, 2 > & B, 
                                 ndview< double, 2 > & G,
                                 const ndview< double, 2 > & points) {
-
-    for (uint32_t i = 0; i < points.shape[0]; i++) {
-      GaussLobattoInterpolation(points(i, 0), n, &B(i, 0));
-      GaussLobattoInterpolationDerivative(points(i, 0), n, &G(i, 0));
+    if (points.shape[1] == 1) {
+      // tensor-product rules
+      uint32_t q = points.shape[0];
+      G.shape = B.shape = {q, n};
+      for (uint32_t i = 0; i < q; i++) {
+        GaussLobattoInterpolation(points(i, 0), n, &B(i, 0));
+        GaussLobattoInterpolationDerivative(points(i, 0), n, &G(i, 0));
+      }
+    } else {
+      // non tensor-product rules
+      // TODO
     }
-
   }
 
-  // how big of a buffer should be passed to interpolate()
-  uint32_t buffer_size(uint32_t q) { return (n * q) * 2; }
+  uint32_t interpolate_buffer_size(uint32_t q) { return (n * q) * 2; }
 
   void interpolate(ndview< double > u_Q, 
                    ndview< double, 2 > du_dxi_Q, 

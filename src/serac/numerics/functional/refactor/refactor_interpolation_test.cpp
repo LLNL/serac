@@ -13,7 +13,8 @@ int main(int argc, char* argv[]) {
   MPI_Init(&argc, &argv);
   axom::slic::SimpleLogger logger;
 
-  std::string filename = SERAC_REPO_DIR "/data/meshes/patch2D_tris_and_quads.mesh";
+  //std::string filename = SERAC_REPO_DIR "/data/meshes/patch2D_tris_and_quads.mesh";
+  std::string filename = SERAC_REPO_DIR "/data/meshes/patch2D_quads.mesh";
   std::unique_ptr< mfem::ParMesh > mesh = serac::mesh::refineAndDistribute(buildMeshFromFile(filename), 2, 1);
 
   int polynomial_order = 1;

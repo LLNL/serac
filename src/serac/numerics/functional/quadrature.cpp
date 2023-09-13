@@ -10,7 +10,9 @@ namespace serac {
 
     QuadratureRule rule;
 
-    if (geom == mfem::Geometry::SEGMENT) {
+    if (geom == mfem::Geometry::SEGMENT ||
+        geom == mfem::Geometry::SQUARE ||
+        geom == mfem::Geometry::CUBE) {
       switch (n) {
         case 1: 
           rule.points = {0.50000000000000000};

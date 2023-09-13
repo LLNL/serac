@@ -65,8 +65,8 @@ struct ndview{
   }
 
   T * data;
-  uint32_t shape[rank];
-  uint32_t strides[rank];
+  std::array<uint32_t, rank> shape;
+  std::array<uint32_t, rank> strides;
 };
 
 template <int i1, int i2>
