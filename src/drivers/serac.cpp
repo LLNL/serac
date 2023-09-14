@@ -336,6 +336,8 @@ input file functionality.
   // If the blocks exist, read the appropriate input file options
   if (inlet.isUserProvided("solid")) {
     solid_mechanics_options = inlet["solid"].get<serac::SolidMechanicsInputOptions>();
+    SLIC_INFO(axom::fmt::format("\n****\n\n\nchapman39 mu, K, initial_mass_density : {0}, {1}, {2}\n\n\n****\n",
+      solid_mechanics_options->mu, solid_mechanics_options->K, solid_mechanics_options->initial_mass_density));
   }
   if (inlet.isUserProvided("thermal_conduction")) {
     heat_transfer_options = inlet["thermal_conduction"].get<serac::HeatTransferInputOptions>();
