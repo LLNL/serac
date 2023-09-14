@@ -13,8 +13,6 @@
 
 #pragma once
 
-#include <optional>
-
 #include "mfem.hpp"
 
 #include "serac/infrastructure/variant.hpp"
@@ -35,6 +33,36 @@ enum class ElementType
   HCURL,  ///< Nedelec (continuous tangent) vector-valued basis functions
   HDIV,   ///< Raviart-Thomas (continuous normal) vector-valued basis functions
   L2      ///< Discontinuous scalar-valued basis functions
+};
+
+class DataRelationship
+{
+public:
+  enum Type {owns_data, data_view};
+  virtual hypre_ParVector* createVector(mfem::ParFiniteElementSpace& space, double* data = nullptr) const = 0;
+  virtual void createCopy(mfem::Vector& to, const mfem::Vector& from) const = 0;
+  virtual std::unique_ptr<DataRelationship> clone() const = 0;
+  const Type type_;
+protected:
+  DataRelationship(Type type) : type_(type) {}
+};
+
+class OwnsData : public DataRelationship
+{
+public:
+  OwnsData() : DataRelationship(owns_data) {}
+  hypre_ParVector* createVector(mfem::ParFiniteElementSpace& space, double* data = nullptr) const override;
+  void createCopy(mfem::Vector& to, const mfem::Vector& from) const override;
+  std::unique_ptr<DataRelationship> clone() const override { return std::make_unique<class OwnsData>(); }
+};
+
+class DataView : public DataRelationship
+{
+public:
+  DataView() : DataRelationship(data_view) {}
+  hypre_ParVector* createVector(mfem::ParFiniteElementSpace& space, double* data) const override;
+  void createCopy(mfem::Vector& to, const mfem::Vector& from) const override;
+  std::unique_ptr<DataRelationship> clone() const override { return std::make_unique<class DataView>(); }
 };
 
 /**
@@ -90,16 +118,18 @@ public:
    * @param[in] space The space to use for the finite element state. This space is deep copied into the new FE state
    * @param[in] name The name of the field
    */
-  FiniteElementVector(const mfem::ParFiniteElementSpace& space, const std::string& name = "");
+  FiniteElementVector(const mfem::ParFiniteElementSpace& space, const std::string& name = "", 
+                      std::unique_ptr<DataRelationship> data_relationship = std::make_unique<class OwnsData>(),
+                      double* view_data = nullptr);
 
   /**
    * @brief Copy constructor
    *
    * @param[in] rhs The input vector used for construction
    */
-  FiniteElementVector(const FiniteElementVector& rhs) : FiniteElementVector(*rhs.space_, rhs.name_)
+  FiniteElementVector(const FiniteElementVector& rhs) : FiniteElementVector(*rhs.space_, rhs.name_, rhs.data_relationship_->clone(), rhs.GetData())
   {
-    HypreParVector::operator=(rhs);
+    data_relationship_->createCopy(*this, rhs);
   }
 
   /**
@@ -197,6 +227,8 @@ protected:
    * @brief The name of the finite element vector
    */
   std::string name_ = "";
+
+  std::unique_ptr<DataRelationship> data_relationship_;
 };
 
 /**

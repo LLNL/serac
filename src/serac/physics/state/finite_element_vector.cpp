@@ -9,8 +9,34 @@
 
 namespace serac {
 
+hypre_ParVector* OwnsData::createVector(mfem::ParFiniteElementSpace& space, [[maybe_unused]] double* data) const
+{
+  mfem::HypreParVector new_vector(&space);
+  // Initialize the vector to zero
+  new_vector = 0.0;
+  return new_vector.StealParVector();
+}
+
+void OwnsData::createCopy(mfem::Vector& to, const mfem::Vector& from) const
+{
+  to = from;
+}
+
+hypre_ParVector* DataView::createVector(mfem::ParFiniteElementSpace& space, double* data) const
+{
+  SLIC_ERROR_ROOT_IF(!data, "data is null. A view-type FiniteElementVector must point to data.");
+  mfem::HypreParVector new_vector(space.GetComm(), space.GlobalTrueVSize(), data, space.GetTrueDofOffsets());
+  return new_vector.StealParVector();
+}
+
+void DataView::createCopy([[maybe_unused]] mfem::Vector& to, [[maybe_unused]] const mfem::Vector& from) const
+{
+  SLIC_ERROR_ROOT("Copy constructor is not supported for view-type FiniteElementVectors.");
+  //to.SetData(from.GetData());
+}
+
 FiniteElementVector::FiniteElementVector(mfem::ParMesh& mesh, FiniteElementVector::Options&& options)
-    : mesh_(mesh), name_(options.name)
+    : mesh_(mesh), name_(options.name), data_relationship_(new class OwnsData)
 {
   const int  dim      = mesh.Dimension();
   const auto ordering = mfem::Ordering::byNODES;
@@ -42,41 +68,32 @@ FiniteElementVector::FiniteElementVector(mfem::ParMesh& mesh, FiniteElementVecto
   space_ = std::make_unique<mfem::ParFiniteElementSpace>(&mesh, coll_.get(), options.vector_dim, ordering);
 
   // Construct a hypre par vector based on the new finite element space
-  HypreParVector new_vector(space_.get());
-
   // Move the data from this new hypre vector into this object without doubly allocating the data
-  auto* parallel_vec = new_vector.StealParVector();
-  WrapHypreParVector(parallel_vec);
-
-  // Initialize the vector to zero
-  HypreParVector::operator=(0.0);
+  WrapHypreParVector(data_relationship_->createVector(*space_));
 }
 
-FiniteElementVector::FiniteElementVector(const mfem::ParFiniteElementSpace& space, const std::string& name)
+FiniteElementVector::FiniteElementVector(const mfem::ParFiniteElementSpace& space, const std::string& name,
+                                         std::unique_ptr<DataRelationship> data_relationship, double* view_data)
     : mesh_(*space.GetParMesh()),
       coll_(std::unique_ptr<mfem::FiniteElementCollection>(mfem::FiniteElementCollection::New(space.FEColl()->Name()))),
       space_(std::make_unique<mfem::ParFiniteElementSpace>(space, &mesh_.get(), coll_.get())),
-      name_(name)
+      name_(name),
+      data_relationship_(std::move(data_relationship))
 {
   SLIC_ERROR_ROOT_IF(space.GetOrdering() == mfem::Ordering::byVDIM,
                      "Serac only operates on finite element spaces ordered by nodes");
 
   // Construct a hypre par vector based on the new finite element space
-  HypreParVector new_vector(space_.get());
-
   // Move the data from this new hypre vector into this object without doubly allocating the data
-  auto* parallel_vec = new_vector.StealParVector();
-  WrapHypreParVector(parallel_vec);
-
-  // Initialize the vector to zero
-  HypreParVector::operator=(0.0);
+  WrapHypreParVector(data_relationship_->createVector(*space_, view_data));
 }
 
 FiniteElementVector::FiniteElementVector(FiniteElementVector&& input_vector)
     : mesh_(input_vector.mesh()),
       coll_(std::move(input_vector.coll_)),
       space_(std::move(input_vector.space_)),
-      name_(std::move(input_vector.name_))
+      name_(std::move(input_vector.name_)),
+      data_relationship_(std::move(input_vector.data_relationship_))
 {
   // Grab the allocated data from the input argument for the underlying Hypre vector
   auto* parallel_vec = input_vector.StealParVector();
@@ -110,6 +127,7 @@ FiniteElementVector& FiniteElementVector::operator=(FiniteElementVector&& rhs)
   coll_  = std::move(rhs.coll_);
   space_ = std::move(rhs.space_);
   name_  = rhs.name_;
+  data_relationship_ = std::move(rhs.data_relationship_);
 
   auto* parallel_vec = rhs.StealParVector();
   WrapHypreParVector(parallel_vec);
