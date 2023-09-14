@@ -27,4 +27,4 @@ class Axom(BuiltinAxom):
     # Note: Make sure this sha coincides with the git submodule
     # Note: We add a number to the end of the real version number to indicate that we have
     #  moved forward past the release. Increment the last number when updating the commit sha.
-    version("0.7.0.4", commit="d69a777fad35751c2abf1e4c4405e9ef7a14a936", submodules=False)
+    version("0.7.0.5", commit="302442eb260adaf234247acce41dd6850b97cc0b", submodules=False)
