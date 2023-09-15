@@ -29,8 +29,8 @@ int main(int argc, char* argv[]) {
   axom::Array < double, 3 > du_dxi_Q;
   interpolate(u_Q, du_dxi_Q, u_T, uint32_t(q));
 
-  for (int i = 0; i < u_Q.Dims[0]; i++) {
-    for (int j = 0; j < u_Q.Dims[1]; j++) {
+  for (int i = 0; i < u_Q.shape()[0]; i++) {
+    for (int j = 0; j < u_Q.shape()[1]; j++) {
       std::cout << u_Q(i,j) << std::endl;
     }
   }
