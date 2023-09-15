@@ -8,6 +8,14 @@
 
 namespace serac {
 
+bool is_tensor_product(mfem::Geometry::Type geom) {
+  return (
+    geom == mfem::Geometry::SEGMENT || 
+    geom == mfem::Geometry::SQUARE || 
+    geom == mfem::Geometry::CUBE 
+  );
+}
+
 template <mfem::Geometry::Type geom>
 void interpolate_kernel(ndview< double, 3 > u_Q, 
                         ndview< double, 4 > du_dxi_Q, 
@@ -15,11 +23,14 @@ void interpolate_kernel(ndview< double, 3 > u_Q,
                         finite_element< geom, H1Dynamic > element,
                         QuadratureRule rule) {
 
+  uint32_t dim = dimension_of(geom);
   uint32_t num_elements = u_E.shape[0];
   uint32_t components = u_E.shape[1];
-  uint32_t qpts_per_elem = u_Q.shape[0] / num_elements;
 
-  ndview<double,2> qpts(&rule.points[0], {uint32_t(rule.points.size()), 1});
+  ndview<double,2> qpts(&rule.points[0], {uint32_t(rule.points.size()), dim});
+  if (rule.is_structured && is_tensor_product(geom)) {
+    qpts = ndview<double,2>(&rule.points[0], {uint32_t(rule.points.size()), 1});
+  }
 
   auto [Bsize, Gsize] = element.evaluate_shape_functions_buffer_size(qpts);
   std::vector< double > B_buffer(Bsize);
@@ -29,7 +40,7 @@ void interpolate_kernel(ndview< double, 3 > u_Q,
   ndview<double,2> G(&G_buffer[0], {});
   element.evaluate_shape_functions(B, G, qpts);
 
-  std::vector<double> buffer(element.interpolate_buffer_size(qpts_per_elem));
+  std::vector<double> buffer(element.interpolate_buffer_size(qpts.shape[0]));
   for (uint32_t e = 0; e < num_elements; e++) {
     for (uint32_t i = 0; i < components; i++) {
       element.interpolate(u_Q(e, i), du_dxi_Q(e, i), u_E(e, i), B, G, &buffer[0]);
@@ -75,7 +86,7 @@ void interpolate(axom::Array<double, 2>& u_Q, axom::Array<double, 3>& du_dxi_Q, 
     interpolate_kernel(
       ndview< double, 3 >(&u_Q(offset, 0), {nelems, num_components, qpts_per_elem}),
       ndview< double, 4 >(&du_dxi_Q(offset, 0, 0), {nelems, num_components, dim, qpts_per_elem}),
-      ndview< double, 3 >(&u_E(geom), {nelems, num_components, element.ndof()}),
+      ndview< double, 3 >(u_E.GetBlock(geom).ReadWrite(), {nelems, num_components, element.ndof()}),
       element,
       GaussLegendreRule(geom, PointsPerDimension{q})
     );

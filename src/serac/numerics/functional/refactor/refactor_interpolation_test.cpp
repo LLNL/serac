@@ -15,7 +15,7 @@ int main(int argc, char* argv[]) {
 
   //std::string filename = SERAC_REPO_DIR "/data/meshes/patch2D_tris_and_quads.mesh";
   std::string filename = SERAC_REPO_DIR "/data/meshes/patch2D_quads.mesh";
-  std::unique_ptr< mfem::ParMesh > mesh = serac::mesh::refineAndDistribute(buildMeshFromFile(filename), 2, 1);
+  std::unique_ptr< mfem::ParMesh > mesh = serac::mesh::refineAndDistribute(buildMeshFromFile(filename), 0, 0);
 
   int polynomial_order = 1;
   int q = polynomial_order + 1;
@@ -29,11 +29,11 @@ int main(int argc, char* argv[]) {
   axom::Array < double, 3 > du_dxi_Q;
   interpolate(u_Q, du_dxi_Q, u_T, uint32_t(q));
 
-  //for (int i = 0; i < u_Q.Dims[0]; i++) {
-  //  for (int j = 0; j < u_Q.Dims[1]; j++) {
-  //    std::cout << u_Q(i,j) << std::endl;
-  //  }
-  //}
+  for (int i = 0; i < u_Q.Dims[0]; i++) {
+    for (int j = 0; j < u_Q.Dims[1]; j++) {
+      std::cout << u_Q(i,j) << std::endl;
+    }
+  }
 
   //axom::Array < double, 3 > du_dX_q;
   //gradient(du_dX_q, u, q);

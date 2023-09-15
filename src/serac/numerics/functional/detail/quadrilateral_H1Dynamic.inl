@@ -28,6 +28,7 @@ struct finite_element<mfem::Geometry::SQUARE, H1Dynamic> {
       // tensor-product rules
       uint32_t q = points.shape[0];
       G.shape = B.shape = {q, n};
+      G.strides = B.strides = {n, 1};
       for (uint32_t i = 0; i < q; i++) {
         GaussLobattoInterpolation(points(i, 0), n, &B(i, 0));
         GaussLobattoInterpolationDerivative(points(i, 0), n, &G(i, 0));

@@ -24,6 +24,7 @@ struct PointsPerDimension { uint32_t q; };
 struct QuadratureRule {
   std::vector< double > points;
   std::vector< double > weights;
+  bool is_structured;
 };
 
 QuadratureRule GaussLegendreRule(mfem::Geometry::Type geom, PolynomialOrder order);

@@ -10,6 +10,10 @@ namespace serac {
 
     QuadratureRule rule;
 
+    // all of these gauss-legendre rules follow the same
+    // symmetries as the element geometries they belong to
+    rule.is_structured = true;
+
     if (geom == mfem::Geometry::SEGMENT ||
         geom == mfem::Geometry::SQUARE ||
         geom == mfem::Geometry::CUBE) {
