@@ -76,17 +76,6 @@ public:
   void update(int cycle, double time, double& dt);
 
   /**
-   * @brief Have there been contact pairs added?
-   *
-   * @return true if contact pairs have been added
-   * @return false if there are no contact pairs
-   */
-  bool haveContactPairs() const;
-
-  std::function<void(const mfem::Vector&, mfem::Vector&)> residual(
-      std::function<void(const mfem::Vector&, mfem::Vector&)> orig_r);
-
-  /**
    * @brief Get the contact constraint residual (i.e. nodal forces)
    *
    * @return Nodal contact forces as a Vector
@@ -107,9 +96,6 @@ public:
    */
   mfem::Vector mergedGaps() const;
 
-  std::function<std::unique_ptr<mfem::BlockOperator>(const mfem::Vector&)> jacobian(
-      std::function<std::unique_ptr<mfem::BlockOperator>(const mfem::Vector&)> orig_J) const;
-
   /**
    * @brief Returns a 2x2 block Jacobian on displacement/pressure degrees of
    * freedom from contact constraints
@@ -117,6 +103,12 @@ public:
    * @return Pointer to block Jacobian (2x2 BlockOperator of HypreParMatrix)
    */
   std::unique_ptr<mfem::BlockOperator> mergedJacobian() const;
+
+  std::function<void(const mfem::Vector&, mfem::Vector&)> residualFunction(
+      std::function<void(const mfem::Vector&, mfem::Vector&)> orig_r);
+
+  std::function<std::unique_ptr<mfem::BlockOperator>(const mfem::Vector&)> jacobianFunction(
+      std::function<std::unique_ptr<mfem::HypreParMatrix>(const mfem::Vector&)> orig_J) const;
 
   /**
    * @brief Set the pressure field
@@ -139,6 +131,14 @@ public:
   void setDisplacements(const mfem::Vector& u);
 
   /**
+   * @brief Have there been contact pairs added?
+   *
+   * @return true if contact pairs have been added
+   * @return false if there are no contact pairs
+   */
+  bool haveContactPairs() const { return !pairs_.empty(); }
+
+  /**
    * @brief Are any contact pairs enforced using Lagrange multipliers?
    *
    * @return true: at least one contact pair is using Lagrange multiplier
@@ -152,7 +152,7 @@ public:
    *
    * @return Number of Lagrange multiplier true degrees of freedom
    */
-  int numPressureTrueDofs() const { return num_pressure_true_dofs_; };
+  int numPressureDofs() const { return num_pressure_dofs_; };
 
   /**
    * @brief True degree of freedom offsets for each contact constraint
@@ -161,7 +161,7 @@ public:
    *
    * @return True degree of freedom offsets as an Array
    */
-  mfem::Array<int> pressureTrueDofOffsets() const;
+  mfem::Array<int> pressureDofOffsets() const;
 
 private:
 #ifdef SERAC_USE_TRIBOL
@@ -202,7 +202,7 @@ private:
   /**
    * @brief Pressure T-dof count
    */
-  int num_pressure_true_dofs_;
+  int num_pressure_dofs_;
 };
 
 }  // namespace serac

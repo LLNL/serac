@@ -838,7 +838,7 @@ public:
   {
     // the quasistatic case is entirely described by the residual,
     // there is no ordinary differential equation
-    std::function<void(const mfem::Vector&, mfem::Vector&)> residual = [this](const mfem::Vector& u, mfem::Vector& r) {
+    std::function<void(const mfem::Vector&, mfem::Vector&)> residual_fn = [this](const mfem::Vector& u, mfem::Vector& r) {
           const mfem::Vector res =
               (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
 
@@ -847,37 +847,88 @@ public:
           // See https://github.com/mfem/mfem/issues/3531
           r = res;
         };
-    std::function<std::unique_ptr<mfem::BlockOperator>(const mfem::Vector&)> jacobian = [this](const mfem::Vector& u) -> std::unique_ptr<mfem::BlockOperator> {
+    std::function<std::unique_ptr<mfem::HypreParMatrix>(const mfem::Vector&)> jacobian_fn = [this](const mfem::Vector& u) -> std::unique_ptr<mfem::HypreParMatrix> {
           auto [r, drdu] =
               (*residual_)(differentiate_wrt(u), zero_, shape_displacement_, *parameters_[parameter_indices].state...);
-          auto J_block = std::make_unique<mfem::BlockOperator>(J_offsets_);
-          J_block->SetBlock(0, 0, assemble(drdu).release());
-          J_block->owns_blocks = true;
-          return J_block;
+          auto J = assemble(drdu);
+          return J;
         };
 
-    // add the contact contribution to the residual and jacobian
+    // add contact contribution to residual
     if (contact_.haveContactPairs()) {
-      residual = contact_.residual(residual);
-      jacobian = contact_.jacobian(std::move(jacobian));
+      residual_fn = contact_.residualFunction(residual_fn);
     }
+    // process dirichlet bcs for residual (same for contact/non-contact)
+    residual_fn = [this, residual_fn](const mfem::Vector& u, mfem::Vector& r) {
+        residual_fn(u, r);
+        r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
+      };
 
-    // apply dirichlet bcs
-    return std::make_unique<mfem_ext::StdFunctionOperator>(
-        displacement_.space().TrueVSize() + contact_.numPressureTrueDofs(),
+    // Lagrange multiplier contact returns a block jacobian and non-contact/penalty contact returns the jacobian as a
+    // hypre par matrix.  also, bcs need to be applied to the contact blocks.
+    if (contact_.haveLagrangeMultipliers()) {
+      J_offsets_ = mfem::Array<int>({0, displacement_.Size(), 
+                                     displacement_.Size() + contact_.numPressureDofs()});
+      // add the contact contribution to the jacobian
+      auto block_jacobian_fn = contact_.jacobianFunction(jacobian_fn);
+      // apply dirichlet bcs
+      return std::make_unique<mfem_ext::StdFunctionOperator>(
+          displacement_.space().TrueVSize() + contact_.numPressureDofs(),
 
-        // residual function
-        [this, residual](const mfem::Vector& u, mfem::Vector& r) {
-          residual(u, r);
-          r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
-        },
+          // residual function
+          residual_fn,
 
-        // gradient of residual function
-        [this, jacobian](const mfem::Vector& u) -> mfem::Operator& {
-          J_constraint_ = jacobian(u);
-          J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(static_cast<mfem::HypreParMatrix&>(J_constraint_->GetBlock(0, 0)));
-          return *J_constraint_;
-        });
+          // gradient of residual function
+          [this, block_jacobian_fn](const mfem::Vector& u) -> mfem::Operator& {
+            // create block operator holding jacobian contributions
+            J_constraint_ = block_jacobian_fn(u);
+            
+            // take ownership of blocks
+            J_constraint_->owns_blocks = false;
+            J_ = std::unique_ptr<mfem::HypreParMatrix>(static_cast<mfem::HypreParMatrix*>(&J_constraint_->GetBlock(0, 0)));
+            J_12_ = std::unique_ptr<mfem::HypreParMatrix>(static_cast<mfem::HypreParMatrix*>(&J_constraint_->GetBlock(0, 1)));
+            J_21_ = std::unique_ptr<mfem::HypreParMatrix>(static_cast<mfem::HypreParMatrix*>(&J_constraint_->GetBlock(1, 0)));
+            J_22_ = std::unique_ptr<mfem::HypreParMatrix>(static_cast<mfem::HypreParMatrix*>(&J_constraint_->GetBlock(1, 1)));
+
+            // eliminate bcs and compute eliminated blocks
+            J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+            J_e_21_ = std::unique_ptr<mfem::HypreParMatrix>(J_21_->EliminateCols(bcs_.allEssentialTrueDofs()));
+            J_12_->EliminateRows(bcs_.allEssentialTrueDofs());
+
+            // create block operator for constraints
+            J_constraint_e_ = std::make_unique<mfem::BlockOperator>(J_offsets_);
+            J_constraint_e_->SetBlock(0, 0, J_e_.get());
+            J_constraint_e_->SetBlock(1, 0, J_e_21_.get());
+
+            J_operator_ = J_constraint_.get();
+            return *J_constraint_;
+          });
+    } else {
+      // add contact contribution to residual and jacobian with penalty contact
+      if (contact_.haveContactPairs())
+      {
+        auto block_jacobian_fn = contact_.jacobianFunction(jacobian_fn);
+        jacobian_fn = [this, block_jacobian_fn](const mfem::Vector& u) -> std::unique_ptr<mfem::HypreParMatrix> {
+          auto block_J = block_jacobian_fn(u);
+          block_J->owns_blocks = false;
+          return std::unique_ptr<mfem::HypreParMatrix>(static_cast<mfem::HypreParMatrix*>(&block_J->GetBlock(0, 0)));
+        };
+      }
+      // apply dirichlet bcs
+      return std::make_unique<mfem_ext::StdFunctionOperator>(
+          displacement_.space().TrueVSize(),
+
+          // residual function
+          residual_fn,
+
+          // gradient of residual function
+          [this, jacobian_fn](const mfem::Vector& u) -> mfem::Operator& {
+            J_ = jacobian_fn(u);
+            J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+            J_operator_ = J_.get();
+            return *J_;
+          });
+    }
   }
 
   /**
@@ -907,6 +958,8 @@ public:
    */
   std::pair<const mfem::HypreParMatrix&, const mfem::HypreParMatrix&> stiffnessMatrix() const
   {
+    SLIC_ERROR_ROOT_IF(contact_.haveContactPairs() , "Stiffness matrix is stored as a BlockOperator for contact problems.");
+
     SLIC_ERROR_ROOT_IF(!J_ || !J_e_, "Stiffness matrix has not yet been assembled.");
 
     return {*J_, *J_e_};
@@ -936,16 +989,7 @@ public:
     }
 
     if (is_quasistatic_) {
-      J_offsets_ = mfem::Array<int>({0, displacement_.Size(), 
-                                     displacement_.Size() + contact_.numPressureTrueDofs()});
       residual_with_bcs_ = buildQuasistaticOperator();
-
-      // the residual calculation uses the old stiffness matrix
-      // to help apply essential boundary conditions, so we
-      // compute J here to prime the pump for the first solve
-      // TODO (EBC): looks like this is done when we call quasiStaticSolve()?
-      // residual_with_bcs_->GetGradient(displacement_);
-
     } else {
       // the dynamic case is described by a residual function and a second order
       // ordinary differential equation. Here, we define the residual function in
@@ -991,21 +1035,24 @@ public:
     nonlin_solver_->setOperator(*residual_with_bcs_);
   }
 
-  /// @brief Solve the Quasi-static Newton system
   void quasiStaticSolve(double dt)
   {
     time_ += dt;
 
-    // the ~20 lines of code below are essentially equivalent to the 1-liner
+    // the ~65 lines of code below are essentially equivalent to the 1-liner
     // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
 
     // Update the linearized Jacobian matrix
-    mfem::BlockVector augmented_solution(J_offsets_);
-    augmented_solution.GetBlock(0) = displacement_;
-    augmented_solution.GetBlock(1) = 0.0;
+    // In general, the solution vector is a stacked (block) vector:
+    //  | displacement     |
+    //  | contact pressure |
+    // Contact pressure is only active when solving a contact problem with Lagrange multipliers.
+    // The gradient is not a function of the Lagrange multipliers, so they do not need to be copied to the solution.
+    // However, the solution vector must be sized to the Operator, which includes the Lagrange multipliers.
+    mfem::Vector augmented_solution(displacement_.Size() + contact_.numPressureDofs());
+    augmented_solution = 0.0;
+    augmented_solution.SetVector(displacement_, 0);
     residual_with_bcs_->GetGradient(augmented_solution);
-
-    auto jacobian = static_cast<mfem::HypreParMatrix*>(&J_constraint_->GetBlock(0, 0));
 
     du_ = 0.0;
     for (auto& bc : bcs_.essentials()) {
@@ -1019,7 +1066,7 @@ public:
     }
 
     dr_ = 0.0;
-    mfem::EliminateBC(*jacobian, *J_e_, constrained_dofs, du_, dr_);
+    mfem::EliminateBC(*J_, *J_e_, constrained_dofs, du_, dr_);
 
     // Update the initial guess for changes in the parameters if this is not the first solve
     for (std::size_t parameter_index = 0; parameter_index < parameters_.size(); ++parameter_index) {
@@ -1048,25 +1095,45 @@ public:
 
     auto& lin_solver = nonlin_solver_->linearSolver();
 
+    // J_operator_ points to a) a HypreParMatrix if no contact Lagrange multipliers are present or
+    //                       b) a BlockOperator if contact Lagrange multipliers are present
+    lin_solver.SetOperator(*J_operator_);
+
+    // solve augmented_solution = (J_operator)^-1 * augmented_residual where
+    // augmented_solution = du_ if no Lagrange multiplier contact, [du_; 0] otherwise
+    // augmented_residual = dr_ if no Lagrange multiplier contact, [dr_; dgap = B*du_] otherwise
     augmented_solution = 0.0;
-    mfem::BlockVector augmented_residual(augmented_solution);
-    augmented_residual.GetBlock(0) = dr_;
-    augmented_residual.GetBlock(1).Set(1.0, contact_.mergedGaps());
+    augmented_solution.SetVector(du_, 0);
 
-    lin_solver.SetOperator(*J_constraint_);
-
+    mfem::Vector augmented_residual(augmented_solution.Size());
+    augmented_residual = 0.0;
+    augmented_residual.SetVector(dr_, 0);
+    if (contact_.haveLagrangeMultipliers()) {
+      // calculate dgap = B*du_
+      mfem::Vector dgap(augmented_residual, displacement_.Size(), contact_.numPressureDofs());
+      J_21_->Mult(du_, dgap);
+    }
     lin_solver.Mult(augmented_residual, augmented_solution);
 
-    du_ = augmented_solution.GetBlock(0);
+    // update du_, displacement_, and pressure based on linearized kinematics
+    du_.Set(1.0, mfem::Vector(augmented_solution, 0, displacement_.Size()));
     displacement_ += du_;
+    if (contact_.haveContactPairs()) {
+      // call update to update gaps for new displacements
+      contact_.update(cycle_, time_, dt);
+      // update pressures based on pressures in augmented_solution (for Lagrange multiplier) and updated gaps (for
+      // penalty)
+      contact_.setPressures(mfem::Vector(augmented_solution, displacement_.Size(), contact_.numPressureDofs()));
+    }
 
-    augmented_solution.GetBlock(0) = displacement_;
-    augmented_solution.GetBlock(1).Set(1.0, contact_.mergedPressures());
-
+    // solve the non-linear system resid = 0 and pressure * gap = 0 for Lagrange multiplier contact
+    augmented_solution.SetVector(displacement_, 0);
+    if (contact_.haveLagrangeMultipliers()) {
+      augmented_solution.SetVector(contact_.mergedPressures(), displacement_.Size());
+    }
     nonlin_solver_->solve(augmented_solution);
-
-    displacement_.Set(1.0, augmented_solution.GetBlock(0));
-    contact_.setPressures(augmented_solution.GetBlock(1));
+    displacement_.Set(1.0, mfem::Vector(augmented_solution, 0, displacement_.Size()));
+    contact_.setPressures(mfem::Vector(augmented_solution, displacement_.Size(), contact_.numPressureDofs()));
   }
 
   /**
@@ -1293,8 +1360,16 @@ protected:
    */
   mfem_ext::SecondOrderODE ode2_;
 
+  mfem::Operator* J_operator_;
+
   /// Assembled sparse matrix for the Jacobian
   std::unique_ptr<mfem::HypreParMatrix> J_;
+
+  std::unique_ptr<mfem::HypreParMatrix> J_21_;
+
+  std::unique_ptr<mfem::HypreParMatrix> J_12_;
+
+  std::unique_ptr<mfem::HypreParMatrix> J_22_;
 
   mfem::Array<int> J_offsets_;
 
@@ -1304,6 +1379,12 @@ protected:
   /// rows and columns of J_ that have been separated out
   /// because are associated with essential boundary conditions
   std::unique_ptr<mfem::HypreParMatrix> J_e_;
+
+  std::unique_ptr<mfem::HypreParMatrix> J_e_21_;
+
+  /// rows and columns of J_constraint_ that have been separated out
+  /// because are associated with essential boundary conditions
+  std::unique_ptr<mfem::BlockOperator> J_constraint_e_;
 
   /// an intermediate variable used to store the predicted end-step displacement
   mfem::Vector predicted_displacement_;
