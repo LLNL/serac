@@ -838,21 +838,22 @@ public:
   {
     // the quasistatic case is entirely described by the residual,
     // there is no ordinary differential equation
-    std::function<void(const mfem::Vector&, mfem::Vector&)> residual_fn = [this](const mfem::Vector& u, mfem::Vector& r) {
-          const mfem::Vector res =
-              (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
+    std::function<void(const mfem::Vector&, mfem::Vector&)> residual_fn = [this](const mfem::Vector& u,
+                                                                                 mfem::Vector&       r) {
+      const mfem::Vector res = (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
 
-          // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
-          // tracking strategy
-          // See https://github.com/mfem/mfem/issues/3531
-          r = res;
-        };
-    std::function<std::unique_ptr<mfem::HypreParMatrix>(const mfem::Vector&)> jacobian_fn = [this](const mfem::Vector& u) -> std::unique_ptr<mfem::HypreParMatrix> {
-          auto [r, drdu] =
-              (*residual_)(differentiate_wrt(u), zero_, shape_displacement_, *parameters_[parameter_indices].state...);
-          auto J = assemble(drdu);
-          return J;
-        };
+      // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
+      // tracking strategy
+      // See https://github.com/mfem/mfem/issues/3531
+      r = res;
+    };
+    std::function<std::unique_ptr<mfem::HypreParMatrix>(const mfem::Vector&)> jacobian_fn =
+        [this](const mfem::Vector& u) -> std::unique_ptr<mfem::HypreParMatrix> {
+      auto [r, drdu] =
+          (*residual_)(differentiate_wrt(u), zero_, shape_displacement_, *parameters_[parameter_indices].state...);
+      auto J = assemble(drdu);
+      return J;
+    };
 
     // add contact contribution to residual
     if (contact_.haveContactPairs()) {
@@ -860,15 +861,14 @@ public:
     }
     // process dirichlet bcs for residual (same for contact/non-contact)
     residual_fn = [this, residual_fn](const mfem::Vector& u, mfem::Vector& r) {
-        residual_fn(u, r);
-        r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
-      };
+      residual_fn(u, r);
+      r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
+    };
 
     // Lagrange multiplier contact returns a block jacobian and non-contact/penalty contact returns the jacobian as a
     // hypre par matrix.  also, bcs need to be applied to the contact blocks.
     if (contact_.haveLagrangeMultipliers()) {
-      J_offsets_ = mfem::Array<int>({0, displacement_.Size(), 
-                                     displacement_.Size() + contact_.numPressureDofs()});
+      J_offsets_ = mfem::Array<int>({0, displacement_.Size(), displacement_.Size() + contact_.numPressureDofs()});
       // add the contact contribution to the jacobian
       auto block_jacobian_fn = contact_.jacobianFunction(jacobian_fn);
       // apply dirichlet bcs
@@ -882,16 +882,20 @@ public:
           [this, block_jacobian_fn](const mfem::Vector& u) -> mfem::Operator& {
             // create block operator holding jacobian contributions
             J_constraint_ = block_jacobian_fn(u);
-            
+
             // take ownership of blocks
             J_constraint_->owns_blocks = false;
-            J_ = std::unique_ptr<mfem::HypreParMatrix>(static_cast<mfem::HypreParMatrix*>(&J_constraint_->GetBlock(0, 0)));
-            J_12_ = std::unique_ptr<mfem::HypreParMatrix>(static_cast<mfem::HypreParMatrix*>(&J_constraint_->GetBlock(0, 1)));
-            J_21_ = std::unique_ptr<mfem::HypreParMatrix>(static_cast<mfem::HypreParMatrix*>(&J_constraint_->GetBlock(1, 0)));
-            J_22_ = std::unique_ptr<mfem::HypreParMatrix>(static_cast<mfem::HypreParMatrix*>(&J_constraint_->GetBlock(1, 1)));
+            J_                         = std::unique_ptr<mfem::HypreParMatrix>(
+                static_cast<mfem::HypreParMatrix*>(&J_constraint_->GetBlock(0, 0)));
+            J_12_ = std::unique_ptr<mfem::HypreParMatrix>(
+                static_cast<mfem::HypreParMatrix*>(&J_constraint_->GetBlock(0, 1)));
+            J_21_ = std::unique_ptr<mfem::HypreParMatrix>(
+                static_cast<mfem::HypreParMatrix*>(&J_constraint_->GetBlock(1, 0)));
+            J_22_ = std::unique_ptr<mfem::HypreParMatrix>(
+                static_cast<mfem::HypreParMatrix*>(&J_constraint_->GetBlock(1, 1)));
 
             // eliminate bcs and compute eliminated blocks
-            J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+            J_e_    = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             J_e_21_ = std::unique_ptr<mfem::HypreParMatrix>(J_21_->EliminateCols(bcs_.allEssentialTrueDofs()));
             J_12_->EliminateRows(bcs_.allEssentialTrueDofs());
 
@@ -905,11 +909,10 @@ public:
           });
     } else {
       // add contact contribution to residual and jacobian with penalty contact
-      if (contact_.haveContactPairs())
-      {
+      if (contact_.haveContactPairs()) {
         auto block_jacobian_fn = contact_.jacobianFunction(jacobian_fn);
         jacobian_fn = [this, block_jacobian_fn](const mfem::Vector& u) -> std::unique_ptr<mfem::HypreParMatrix> {
-          auto block_J = block_jacobian_fn(u);
+          auto block_J         = block_jacobian_fn(u);
           block_J->owns_blocks = false;
           return std::unique_ptr<mfem::HypreParMatrix>(static_cast<mfem::HypreParMatrix*>(&block_J->GetBlock(0, 0)));
         };
@@ -923,8 +926,8 @@ public:
 
           // gradient of residual function
           [this, jacobian_fn](const mfem::Vector& u) -> mfem::Operator& {
-            J_ = jacobian_fn(u);
-            J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+            J_          = jacobian_fn(u);
+            J_e_        = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             J_operator_ = J_.get();
             return *J_;
           });
@@ -958,7 +961,8 @@ public:
    */
   std::pair<const mfem::HypreParMatrix&, const mfem::HypreParMatrix&> stiffnessMatrix() const
   {
-    SLIC_ERROR_ROOT_IF(contact_.haveContactPairs() , "Stiffness matrix is stored as a BlockOperator for contact problems.");
+    SLIC_ERROR_ROOT_IF(contact_.haveContactPairs(),
+                       "Stiffness matrix is stored as a BlockOperator for contact problems.");
 
     SLIC_ERROR_ROOT_IF(!J_ || !J_e_, "Stiffness matrix has not yet been assembled.");
 

@@ -198,29 +198,29 @@ std::function<void(const mfem::Vector&, mfem::Vector&)> ContactData::residualFun
     std::function<void(const mfem::Vector&, mfem::Vector&)> orig_r)
 {
   return [this, orig_r](const mfem::Vector& u, mfem::Vector& r) {
-      const int disp_size = reference_nodes_->ParFESpace()->GetTrueVSize();
+    const int disp_size = reference_nodes_->ParFESpace()->GetTrueVSize();
 
-      mfem::Vector u_blk, p_blk;
-      u_blk.MakeRef(const_cast<mfem::Vector&>(u), 0, disp_size);
-      p_blk.MakeRef(const_cast<mfem::Vector&>(u), disp_size, numPressureDofs());
+    mfem::Vector u_blk, p_blk;
+    u_blk.MakeRef(const_cast<mfem::Vector&>(u), 0, disp_size);
+    p_blk.MakeRef(const_cast<mfem::Vector&>(u), disp_size, numPressureDofs());
 
-      mfem::Vector r_blk, g_blk;
-      r_blk.MakeRef(r, 0, disp_size);
-      g_blk.MakeRef(r, disp_size, numPressureDofs());
+    mfem::Vector r_blk, g_blk;
+    r_blk.MakeRef(r, 0, disp_size);
+    g_blk.MakeRef(r, disp_size, numPressureDofs());
 
-      double dt = 1.0;
-      setDisplacements(u_blk);
-      // we need to call update first to update gaps
-      update(1, 1.0, dt);
-      // with updated gaps, we can update pressure for contact pairs with penalty enforcement
-      setPressures(p_blk);
-      // call update again with the right pressures
-      update(1, 1.0, dt);
+    double dt = 1.0;
+    setDisplacements(u_blk);
+    // we need to call update first to update gaps
+    update(1, 1.0, dt);
+    // with updated gaps, we can update pressure for contact pairs with penalty enforcement
+    setPressures(p_blk);
+    // call update again with the right pressures
+    update(1, 1.0, dt);
 
-      orig_r(u_blk, r_blk);
-      r_blk += forces();
+    orig_r(u_blk, r_blk);
+    r_blk += forces();
 
-      g_blk.Set(1.0, mergedGaps());
+    g_blk.Set(1.0, mergedGaps());
   };
 }
 
@@ -228,20 +228,19 @@ std::function<std::unique_ptr<mfem::BlockOperator>(const mfem::Vector&)> Contact
     std::function<std::unique_ptr<mfem::HypreParMatrix>(const mfem::Vector&)> orig_J) const
 {
   return [this, orig_J](const mfem::Vector& u) -> std::unique_ptr<mfem::BlockOperator> {
-      mfem::Vector u_blk;
-      u_blk.MakeRef(const_cast<mfem::Vector&>(u), 0, reference_nodes_->ParFESpace()->GetTrueVSize());
-      auto J = orig_J(u_blk);
+    mfem::Vector u_blk;
+    u_blk.MakeRef(const_cast<mfem::Vector&>(u), 0, reference_nodes_->ParFESpace()->GetTrueVSize());
+    auto J = orig_J(u_blk);
 
-      auto J_contact = mergedJacobian();
-      if (J_contact->IsZeroBlock(0, 0)) {
-        J_contact->SetBlock(0, 0, J.release());
-      } else {
-        J_contact->SetBlock(
-            0, 0, mfem::Add(1.0, *J, 1.0, static_cast<mfem::HypreParMatrix&>(J_contact->GetBlock(0, 0))));
-      }
+    auto J_contact = mergedJacobian();
+    if (J_contact->IsZeroBlock(0, 0)) {
+      J_contact->SetBlock(0, 0, J.release());
+    } else {
+      J_contact->SetBlock(0, 0, mfem::Add(1.0, *J, 1.0, static_cast<mfem::HypreParMatrix&>(J_contact->GetBlock(0, 0))));
+    }
 
-      return J_contact;
-    };
+    return J_contact;
+  };
 }
 
 void ContactData::setPressures(const mfem::Vector& merged_pressures) const
@@ -250,8 +249,7 @@ void ContactData::setPressures(const mfem::Vector& merged_pressures) const
   for (size_t i{0}; i < pairs_.size(); ++i) {
     FiniteElementState p_pair(pairs_[i].pressureSpace());
     if (pairs_[i].getContactOptions().enforcement == ContactEnforcement::LagrangeMultiplier) {
-      mfem::Vector p_pair_ref(const_cast<mfem::Vector&>(merged_pressures), 
-                              dof_offsets[static_cast<int>(i)],
+      mfem::Vector p_pair_ref(const_cast<mfem::Vector&>(merged_pressures), dof_offsets[static_cast<int>(i)],
                               dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
       p_pair.Set(1.0, p_pair_ref);
     } else  // enforcement == ContactEnforcement::Penalty
