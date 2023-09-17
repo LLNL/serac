@@ -329,18 +329,38 @@ mfem::Vector ContactData::mergedPressures() const { return mfem::Vector(); }
 
 mfem::Vector ContactData::mergedGaps() const { return mfem::Vector(); }
 
-std::unique_ptr<mfem::BlockOperator> ContactData::jacobian() const
+std::unique_ptr<mfem::BlockOperator> ContactData::mergedJacobian() const
 {
   jacobian_offsets_ = mfem::Array<int>(
       {0, reference_nodes_->ParFESpace()->GetTrueVSize(), reference_nodes_->ParFESpace()->GetTrueVSize()});
   return std::make_unique<mfem::BlockOperator>(jacobian_offsets_);
 }
 
+std::function<void(const mfem::Vector&, mfem::Vector&)> ContactData::residualFunction(
+    std::function<void(const mfem::Vector&, mfem::Vector&)> orig_r)
+{
+  return orig_r;
+}
+
+std::function<std::unique_ptr<mfem::BlockOperator>(const mfem::Vector&)> ContactData::jacobianFunction(
+    std::function<std::unique_ptr<mfem::HypreParMatrix>(const mfem::Vector&)> orig_J) const
+{
+  return [orig_J](const mfem::Vector& u) -> std::unique_ptr<mfem::BlockOperator> {
+    auto J = orig_J(u);
+
+    auto J_contact         = std::make_unique<mfem::BlockOperator>(jacobian_offsets_);
+    J_contact->owns_blocks = true;
+    J_contact->SetBlock(0, 0, J.release());
+
+    return J_contact;
+  };
+}
+
 void ContactData::setPressures([[maybe_unused]] const mfem::Vector& true_pressures) const {}
 
 void ContactData::setDisplacements([[maybe_unused]] const mfem::Vector& true_displacement) {}
 
-mfem::Array<int> ContactData::pressureTrueDofOffsets() const { return mfem::Array<int>(); }
+mfem::Array<int> ContactData::pressureDofOffsets() const { return mfem::Array<int>(); }
 
 #endif
 

@@ -12,7 +12,6 @@
 
 #pragma once
 
-#include <mfem/fem/pgridfunc.hpp>
 #include "mfem.hpp"
 
 #include "serac/serac_config.hpp"

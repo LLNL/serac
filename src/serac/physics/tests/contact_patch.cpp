@@ -94,14 +94,13 @@ TEST_P(ContactTest, patch)
   solid_solver.outputState(paraview_name);
 
   // Check the l2 norm of the displacement dofs
-  auto c = (3.0 * K - 2.0 * G) / (3.0 * K + G);
-  mfem::VectorFunctionCoefficient elasticity_sol_coeff(3, 
-    [c](const mfem::Vector& x, mfem::Vector& u){
-      u[0] = 0.25 * 0.01 * c * x[0];
-      u[1] = 0.25 * 0.01 * c * x[1];
-      u[2] = -0.5 * 0.01 * x[2];
-    });
-  mfem::ParGridFunction elasticity_sol(&solid_solver.displacement().space());
+  auto                            c = (3.0 * K - 2.0 * G) / (3.0 * K + G);
+  mfem::VectorFunctionCoefficient elasticity_sol_coeff(3, [c](const mfem::Vector& x, mfem::Vector& u) {
+    u[0] = 0.25 * 0.01 * c * x[0];
+    u[1] = 0.25 * 0.01 * c * x[1];
+    u[2] = -0.5 * 0.01 * x[2];
+  });
+  mfem::ParGridFunction           elasticity_sol(&solid_solver.displacement().space());
   elasticity_sol.ProjectCoefficient(elasticity_sol_coeff);
   mfem::ParGridFunction approx_error(elasticity_sol);
   approx_error -= solid_solver.displacement().gridFunction();

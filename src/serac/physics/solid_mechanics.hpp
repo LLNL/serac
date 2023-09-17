@@ -911,7 +911,7 @@ public:
       // add contact contribution to residual and jacobian with penalty contact
       if (contact_.haveContactInteractions()) {
         auto block_jacobian_fn = contact_.jacobianFunction(jacobian_fn);
-        jacobian_fn = [this, block_jacobian_fn](const mfem::Vector& u) -> std::unique_ptr<mfem::HypreParMatrix> {
+        jacobian_fn            = [block_jacobian_fn](const mfem::Vector& u) -> std::unique_ptr<mfem::HypreParMatrix> {
           auto block_J         = block_jacobian_fn(u);
           block_J->owns_blocks = false;
           return std::unique_ptr<mfem::HypreParMatrix>(static_cast<mfem::HypreParMatrix*>(&block_J->GetBlock(0, 0)));
@@ -1372,17 +1372,22 @@ protected:
    */
   mfem_ext::SecondOrderODE ode2_;
 
+  /// Pointer to the Jacobian operator (J_ if no Lagrange multiplier contact, J_constraint_ otherwise)
   mfem::Operator* J_operator_;
 
-  /// Assembled sparse matrix for the Jacobian
+  /// Assembled sparse matrix for the Jacobian df/du (11 block if using Lagrange multiplier contact)
   std::unique_ptr<mfem::HypreParMatrix> J_;
 
+  /// 21 Jacobian block if using Lagrange multiplier contact (dg/dx)
   std::unique_ptr<mfem::HypreParMatrix> J_21_;
 
+  /// 12 Jacobian block if using Lagrange multiplier contact (df/dp)
   std::unique_ptr<mfem::HypreParMatrix> J_12_;
 
+  /// 22 Jacobian block if using Lagrange multiplier contact (ones on diagonal for inactive t-dofs)
   std::unique_ptr<mfem::HypreParMatrix> J_22_;
 
+  /// Block offsets for the J_constraint_ BlockOperator (must be owned outside J_constraint_)
   mfem::Array<int> J_offsets_;
 
   /// Assembled sparse matrix for the Jacobian with constraint blocks
@@ -1392,6 +1397,7 @@ protected:
   /// because are associated with essential boundary conditions
   std::unique_ptr<mfem::HypreParMatrix> J_e_;
 
+  /// Columns of J_21_ that have been separated out because they are associated with essential boundary conditions
   std::unique_ptr<mfem::HypreParMatrix> J_e_21_;
 
   /// rows and columns of J_constraint_ that have been separated out
