@@ -18,7 +18,6 @@
 #include "serac/serac_config.hpp"
 #include "serac/physics/contact/contact_config.hpp"
 #include "serac/physics/state/finite_element_dual.hpp"
-#include "serac/physics/state/finite_element_state.hpp"
 #ifdef SERAC_USE_TRIBOL
 #include "serac/physics/contact/contact_interaction.hpp"
 #endif
@@ -39,7 +38,8 @@ const ContactOptions default_contact_options = {.method      = ContactMethod::Si
 }  // namespace contact
 
 /**
- * @brief This class stores contact interaction data and interacts with Tribol
+ * @brief This class stores all ContactInteractions for a problem, calls Tribol functions that act on all contact
+ * interactions, and agglomerates fields that exist over different ContactInteractions.
  */
 class ContactData {
 public:
@@ -76,7 +76,7 @@ public:
   void update(int cycle, double time, double& dt);
 
   /**
-   * @brief Get the contact constraint residual (i.e. nodal forces)
+   * @brief Get the contact constraint residual (i.e. nodal forces) from all contact interactions
    *
    * @return Nodal contact forces on the true DOFs
    */

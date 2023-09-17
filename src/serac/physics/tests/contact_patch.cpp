@@ -77,7 +77,8 @@ TEST_P(ContactTest, patch)
   solid_solver.setDisplacementBCs({3}, zero_disp_bc, 2);
   solid_solver.setDisplacementBCs({6}, nonzero_disp_bc, 2);
 
-  solid_solver.addContactPair(0, {4}, {5}, contact_options);
+  // Add the contact interaction
+  solid_solver.addContactInteraction(0, {4}, {5}, contact_options);
 
   // Finalize the data structures
   solid_solver.completeSetup();

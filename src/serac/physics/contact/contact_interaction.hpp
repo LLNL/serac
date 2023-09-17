@@ -27,12 +27,12 @@
 namespace serac {
 
 /**
- * @brief Container for all interactions with the Tribol contact library
+ * @brief A ContactInteraction defines a single contact interaction between two surfaces
  *
- * This class provides a wrapper for all of the information needed by Tribol to
- * generate the mortar weights for the current penalty contact formulation. All
- * of the secondary nodes are currently considered active and therefore we are
- * enforcing an equality constraint.
+ * This class stores the details of a contact interaction between two surfaces.  It also interfaces with the Tribol
+ * interface physics library, defining the Tribol coupling scheme for the interaction.  A problem can have multiple
+ * ContactInteractions defined on it with different contact surfaces and enforcement schemes.  See the ContactData class
+ * for the container holding all contact interactions and for Tribol API calls acting on all contact interactions.
  **/
 class ContactInteraction {
 public:
@@ -66,23 +66,31 @@ public:
   const ContactOptions& getContactOptions() const { return contact_opts_; }
 
   /**
-   * @brief Get the contact constraint residual for the contact interaction
+   * @brief Get the contact constraint residual (i.e. nodal forces) from this contact interaction
    *
-   * @return Contact nodal forces as a Vector
+   * @return Nodal contact forces on the true DOFs
    */
   FiniteElementDual forces() const;
 
   /**
-   * @brief Get the pressure degrees of freedom for the contact interaction
+   * @brief Get the pressure true degrees of freedom on the contact surface for the contact interaction
    *
-   * @return Pressure degrees of freedom as a ParGridFunction
+   * The type of pressure (normal or vector-valued) is set by the ContactType in the ContactOptions struct for the
+   * contact interaction. TiedSlide and Frictionless (the two type supported in Tribol) correspond to scalar normal
+   * pressure. Only linear (order = 1) pressure fields are supported.
+   *
+   * @return Pressure true degrees of freedom as a FiniteElementState
    */
   FiniteElementState pressure() const;
 
   /**
-   * @brief Get the nodal gaps for the contact interaction
+   * @brief Get the nodal gaps on the true degrees of freedom of the contact surface for the contact interaction
    *
-   * @return Nodal gaps as a Vector
+   * The type of gap (normal or vector-valued) is set by the ContactType in the ContactOptions struct for the contact
+   * interaction. TiedSlide and Frictionless (the two type supported in Tribol) correspond to scalar gap normal.  Only
+   * linear (order = 1) gap fields are supported.
+   *
+   * @return Nodal gaps on the true DOFs on the contact surface as a FiniteElementDual
    */
   FiniteElementDual gaps() const;
 
@@ -91,6 +99,9 @@ public:
    *
    * Block row/col 0: displacement space
    * Block row/col 1: pressure space
+   *
+   * The element Jacobian contributions are computed upon calling ContactData::update(). This method does MPI
+   * communication to move Jacobian contributions to the correct rank, then assembles the contributions.
    *
    * @return Contact Jacobian as a BlockOperator
    */
