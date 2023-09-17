@@ -38,7 +38,12 @@ void ContactData::addContactInteraction(int interaction_id, const std::set<int>&
 
 void ContactData::update(int cycle, double time, double& dt)
 {
+  // This updates the redecomposed surface mesh based on the current displacement, then transfers field quantities to
+  // the updated mesh.
   tribol::updateMfemParallelDecomposition();
+  // This function computes forces, gaps, and Jacobian contributions based on the current field quantities. Note the
+  // fields (with the exception of pressure) are stored on the redecomposed surface mesh until transferred by calling
+  // forces(), mergedGaps(), etc.
   tribol::update(cycle, time, dt);
 }
 
