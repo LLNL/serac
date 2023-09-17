@@ -20,7 +20,7 @@
 #include "serac/physics/state/finite_element_dual.hpp"
 #include "serac/physics/state/finite_element_state.hpp"
 #ifdef SERAC_USE_TRIBOL
-#include "serac/physics/contact/contact_pair.hpp"
+#include "serac/physics/contact/contact_interaction.hpp"
 #endif
 
 namespace serac {
@@ -39,7 +39,7 @@ const ContactOptions default_contact_options = {.method      = ContactMethod::Si
 }  // namespace contact
 
 /**
- * @brief This class stores contact pair data and interacts with Tribol
+ * @brief This class stores contact interaction data and interacts with Tribol
  */
 class ContactData {
 public:
@@ -56,18 +56,18 @@ public:
   ~ContactData();
 
   /**
-   * @brief Add another contact pair
+   * @brief Add another contact interaction
    *
-   * @param pair_id Unique identifier for the ContactPair (used in Tribol)
+   * @param interaction_id Unique identifier for the ContactInteraction (used in Tribol)
    * @param bdry_attr_surf1 MFEM boundary attributes for the first surface
    * @param bdry_attr_surf2 MFEM boundary attributes for the second surface
    * @param contact_opts Defines contact method, enforcement, type, and penalty
    */
-  void addContactPair(int pair_id, const std::set<int>& bdry_attr_surf1, const std::set<int>& bdry_attr_surf2,
-                      ContactOptions contact_opts);
+  void addContactInteraction(int interaction_id, const std::set<int>& bdry_attr_surf1,
+                             const std::set<int>& bdry_attr_surf2, ContactOptions contact_opts);
 
   /**
-   * @brief Updates the positions, forces, and jacobian contributions associated with contact
+   * @brief Updates the positions, forces, and Jacobian contributions associated with contact
    *
    * @param cycle The current simulation cycle
    * @param time The current time
@@ -78,35 +78,65 @@ public:
   /**
    * @brief Get the contact constraint residual (i.e. nodal forces)
    *
-   * @return Nodal contact forces as a Vector
+   * @return Nodal contact forces on the true DOFs
    */
   FiniteElementDual forces() const;
 
   /**
-   * @brief Returns pressures on the contact surfaces
+   * @brief Returns pressures from all contact interactions on the contact surface true degrees of freedom
    *
-   * @return Pressure finite element state
+   * The type of pressure (normal or vector-valued) is set by the ContactType in the ContactOptions struct for the
+   * contact interaction. TiedSlide and Frictionless (the two type supported in Tribol) correspond to scalar normal
+   * pressure. Only linear (order = 1) pressure fields are supported.
+   *
+   * @return Pressure true degrees of freedom on each contact interaction (merged into one mfem::Vector)
    */
   mfem::Vector mergedPressures() const;
 
   /**
-   * @brief Returns nodal gaps on true degrees of freedom
+   * @brief Returns nodal gaps from all contact interactions on the contact surface true degrees of freedom
    *
-   * @return Nodal gaps as a Vector
+   * The type of gap (normal or vector-valued) is set by the ContactType in the ContactOptions struct for the contact
+   * interaction. TiedSlide and Frictionless (the two type supported in Tribol) correspond to scalar gap normal.  Only
+   * linear (order = 1) gap fields are supported.
+   *
+   * @return Nodal gap true degrees of freedom on each contact interaction (merged into one mfem::Vector)
    */
   mfem::Vector mergedGaps() const;
 
   /**
-   * @brief Returns a 2x2 block Jacobian on displacement/pressure degrees of
+   * @brief Returns a 2x2 block Jacobian on displacement/pressure true degrees of
    * freedom from contact constraints
+   *
+   * The element Jacobian contributions are computed upon calling update(). This method does MPI communication to move
+   * Jacobian contributions to the correct rank, then assembles the contributions.  The pressure degrees of freedom for
+   * all contact interactions are merged into a single block.
+   *
+   * @note The blocks are owned by the BlockOperator
    *
    * @return Pointer to block Jacobian (2x2 BlockOperator of HypreParMatrix)
    */
   std::unique_ptr<mfem::BlockOperator> mergedJacobian() const;
 
+  /**
+   * @brief Function to compute the residual including contact terms, given a function to compute non-contact residual
+   * terms
+   *
+   * @param orig_r Function to compute the non-contact terms of the residual, not including essential boundary
+   * conditions
+   * @return Function with contact terms in the residual, not including essential boundary conditions
+   */
   std::function<void(const mfem::Vector&, mfem::Vector&)> residualFunction(
       std::function<void(const mfem::Vector&, mfem::Vector&)> orig_r);
 
+  /**
+   * @brief Function to compute the Jacobian including contact terms, given a function to compute the non-contact
+   * Jacobian terms
+   *
+   * @param orig_J Function to compute the non-contact terms of the Jacobian, not including essential boundary
+   * conditions
+   * @return Function with contact terms in the Jacobian, not including essential boundary conditions
+   */
   std::function<std::unique_ptr<mfem::BlockOperator>(const mfem::Vector&)> jacobianFunction(
       std::function<std::unique_ptr<mfem::HypreParMatrix>(const mfem::Vector&)> orig_J) const;
 
@@ -114,12 +144,12 @@ public:
    * @brief Set the pressure field
    *
    * This sets Tribol's pressure degrees of freedom based on
-   *  1) the values in true_pressure for Lagrange multiplier enforcement
+   *  1) the values in merged_pressure for Lagrange multiplier enforcement
    *  2) the nodal gaps and penalty for penalty enforcement
    *
    * @note The nodal gaps must be up-to-date for penalty enforcement
    *
-   * @param merged_pressures Current pressure true dof values
+   * @param merged_pressures Current pressure true dof values in a merged mfem::Vector
    */
   void setPressures(const mfem::Vector& merged_pressures) const;
 
@@ -131,19 +161,18 @@ public:
   void setDisplacements(const mfem::Vector& u);
 
   /**
-   * @brief Have there been contact pairs added?
+   * @brief Have there been contact interactions added?
    *
-   * @return true if contact pairs have been added
-   * @return false if there are no contact pairs
+   * @return true if contact interactions have been added
+   * @return false if there are no contact interactions
    */
-  bool haveContactPairs() const { return !pairs_.empty(); }
+  bool haveContactInteractions() const { return !interactions_.empty(); }
 
   /**
-   * @brief Are any contact pairs enforced using Lagrange multipliers?
+   * @brief Are any contact interactions enforced using Lagrange multipliers?
    *
-   * @return true: at least one contact pair is using Lagrange multiplier
-   * enforcement
-   * @return false: no contact pairs are using Lagrange multipliers
+   * @return true: at least one contact interaction is using Lagrange multiplier enforcement
+   * @return false: no contact interactions are using Lagrange multipliers
    */
   bool haveLagrangeMultipliers() const { return have_lagrange_multipliers_; }
 
@@ -185,7 +214,7 @@ private:
   /**
    * @brief The contact boundary condition information
    */
-  std::vector<ContactPair> pairs_;
+  std::vector<ContactInteraction> interactions_;
 #endif
 
   /**
@@ -194,7 +223,7 @@ private:
   mutable mfem::Array<int> jacobian_offsets_;
 
   /**
-   * @brief True if any of the contact pairs are enforced using Lagrange
+   * @brief True if any of the contact interactions are enforced using Lagrange
    * multipliers
    */
   bool have_lagrange_multipliers_;

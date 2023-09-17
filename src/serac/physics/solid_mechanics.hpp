@@ -856,7 +856,7 @@ public:
     };
 
     // add contact contribution to residual
-    if (contact_.haveContactPairs()) {
+    if (contact_.haveContactInteractions()) {
       residual_fn = contact_.residualFunction(residual_fn);
     }
     // process dirichlet bcs for residual (same for contact/non-contact)
@@ -909,7 +909,7 @@ public:
           });
     } else {
       // add contact contribution to residual and jacobian with penalty contact
-      if (contact_.haveContactPairs()) {
+      if (contact_.haveContactInteractions()) {
         auto block_jacobian_fn = contact_.jacobianFunction(jacobian_fn);
         jacobian_fn = [this, block_jacobian_fn](const mfem::Vector& u) -> std::unique_ptr<mfem::HypreParMatrix> {
           auto block_J         = block_jacobian_fn(u);
@@ -937,15 +937,17 @@ public:
   /**
    * @brief Add a mortar contact boundary condition
    *
-   * @param pair_id Unique identifier for the ContactPair
+   * @param interaction_id Unique identifier for the ContactInteraction
    * @param bdry_attr_surf1 MFEM boundary attributes for the first surface
    * @param bdry_attr_surf2 MFEM boundary attributes for the second surface
    * @param contact_opts Defines contact method, enforcement, type, and penalty
    */
-  void addContactPair(int pair_id, const std::set<int>& bdry_attr_surf1, const std::set<int>& bdry_attr_surf2,
-                      ContactOptions contact_opts)
+  void addContactInteraction(int interaction_id, const std::set<int>& bdry_attr_surf1,
+                             const std::set<int>& bdry_attr_surf2, ContactOptions contact_opts)
   {
-    contact_.addContactPair(pair_id, bdry_attr_surf1, bdry_attr_surf2, contact_opts);
+    SLIC_ERROR_ROOT_IF(!is_quasistatic_, "Contact can only be applied to quasistatic problems.");
+    SLIC_ERROR_ROOT_IF(order_ > 1, "Contact can only be applied to linear (order = 1) meshes.");
+    contact_.addContactInteraction(interaction_id, bdry_attr_surf1, bdry_attr_surf2, contact_opts);
   }
 
   /**
@@ -961,7 +963,7 @@ public:
    */
   std::pair<const mfem::HypreParMatrix&, const mfem::HypreParMatrix&> stiffnessMatrix() const
   {
-    SLIC_ERROR_ROOT_IF(contact_.haveContactPairs(),
+    SLIC_ERROR_ROOT_IF(contact_.haveContactInteractions(),
                        "Stiffness matrix is stored as a BlockOperator for contact problems.");
 
     SLIC_ERROR_ROOT_IF(!J_ || !J_e_, "Stiffness matrix has not yet been assembled.");
@@ -987,9 +989,11 @@ public:
     displacement_.space().BuildDofToArrays();
 
     // create contact mesh and compute forces, pressures, and Jacobians
-    if (contact_.haveContactPairs()) {
-      double dt = 0.0;
-      contact_.update(0, 0.0, dt);
+    if (contact_.haveContactInteractions()) {
+      int    cycle = 0;
+      double time  = 0.0;
+      double dt    = 0.0;
+      contact_.update(cycle, time, dt);
     }
 
     if (is_quasistatic_) {
@@ -1043,8 +1047,12 @@ public:
   {
     time_ += dt;
 
-    // the ~65 lines of code below are essentially equivalent to the 1-liner
+    // the ~85 lines of code below are essentially equivalent to the 1-liner
     // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
+    // or, with Lagrange multiplier contact enforcement
+    // [u; p] += dot(inv(block_J), dot(block_J_elim[:, dofs], (U(t + dt) - u)[dofs]))
+    // where block_J = | J  B^T |
+    //                 | B   0  |
 
     // Update the linearized Jacobian matrix
     // In general, the solution vector is a stacked (block) vector:
@@ -1122,7 +1130,7 @@ public:
     // update du_, displacement_, and pressure based on linearized kinematics
     du_.Set(1.0, mfem::Vector(augmented_solution, 0, displacement_.Size()));
     displacement_ += du_;
-    if (contact_.haveContactPairs()) {
+    if (contact_.haveContactInteractions()) {
       // call update to update gaps for new displacements
       contact_.update(cycle_, time_, dt);
       // update pressures based on pressures in augmented_solution (for Lagrange multiplier) and updated gaps (for
