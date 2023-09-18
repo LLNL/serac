@@ -29,7 +29,7 @@ const std::string thermal_prefix              = "thermal";
 const std::string parametrized_thermal_prefix = "thermal_with_param";
 
 struct TimeSteppingInfo {
-  double totalTime     = 0.0;
+  double total_time     = 0.0;
   int    num_timesteps = 0;
 };
 
@@ -117,7 +117,7 @@ double computeThermalQoiAdjustingInitalTemperature(
   double qoi = 0.0;
   thermal->outputStateToDisk();
   for (int i = 0; i < ts_info.num_timesteps; ++i) {
-    double dt = ts_info.totalTime / ts_info.num_timesteps;
+    double dt = ts_info.total_time / ts_info.num_timesteps;
     thermal->advanceTimestep(dt);
     thermal->outputStateToDisk();
     qoi += computeStepQoi(thermal->temperature(), dt);
@@ -143,7 +143,7 @@ double computeThermalQoiAdjustingShape(axom::sidre::DataStore& data_store, const
   double qoi = 0.0;
   thermal->outputStateToDisk();
   for (int i = 0; i < ts_info.num_timesteps; ++i) {
-    double dt = ts_info.totalTime / ts_info.num_timesteps;
+    double dt = ts_info.total_time / ts_info.num_timesteps;
     thermal->advanceTimestep(dt);
     thermal->outputStateToDisk();
     qoi += computeStepQoi(thermal->temperature(), dt);
@@ -188,7 +188,7 @@ std::tuple<double, FiniteElementDual, FiniteElementDual> computeThermalQoiAndIni
   double qoi = 0.0;
   thermal->outputStateToDisk();
   for (int i = 0; i < ts_info.num_timesteps; ++i) {
-    double dt = ts_info.totalTime / ts_info.num_timesteps;
+    double dt = ts_info.total_time / ts_info.num_timesteps;
     thermal->advanceTimestep(dt);
     thermal->outputStateToDisk();
     qoi += computeStepQoi(thermal->temperature(), dt);
@@ -202,7 +202,7 @@ std::tuple<double, FiniteElementDual, FiniteElementDual> computeThermalQoiAndIni
   FiniteElementDual adjoint_load(thermal->temperature().space(), "adjoint_load");
 
   for (int i = ts_info.num_timesteps; i > 0; --i) {
-    double             dt                      = ts_info.totalTime / ts_info.num_timesteps;
+    double             dt                      = ts_info.total_time / ts_info.num_timesteps;
     FiniteElementState temperature_end_of_step = thermal->loadCheckpointedTemperature(thermal->cycle());
     computeStepAdjointLoad(temperature_end_of_step, adjoint_load, dt);
     thermal->reverseAdjointTimestep({{"temperature", adjoint_load}});
@@ -229,7 +229,7 @@ std::tuple<double, FiniteElementDual> computeThermalConductivitySensitivity(
   double qoi = 0.0;
   thermal->outputStateToDisk();
   for (int i = 0; i < ts_info.num_timesteps; ++i) {
-    double dt = ts_info.totalTime / ts_info.num_timesteps;
+    double dt = ts_info.total_time / ts_info.num_timesteps;
     thermal->advanceTimestep(dt);
     thermal->outputStateToDisk();
     qoi += computeStepQoi(thermal->temperature(), dt);
@@ -241,7 +241,7 @@ std::tuple<double, FiniteElementDual> computeThermalConductivitySensitivity(
   FiniteElementDual adjoint_load(thermal->temperature().space(), "adjoint_load");
 
   for (int i = ts_info.num_timesteps; i > 0; --i) {
-    double             dt                      = ts_info.totalTime / ts_info.num_timesteps;
+    double             dt                      = ts_info.total_time / ts_info.num_timesteps;
     FiniteElementState temperature_end_of_step = thermal->loadCheckpointedTemperature(thermal->cycle());
     computeStepAdjointLoad(temperature_end_of_step, adjoint_load, dt);
     thermal->reverseAdjointTimestep({{"temperature", adjoint_load}});
@@ -277,7 +277,7 @@ struct HeatTransferSensitivityFixture : public ::testing::Test {
   heat_transfer::IsotropicConductorWithLinearConductivityVsTemperature mat{1.0, 1.0, 1.0, 2.0};
   heat_transfer::ParameterizedLinearIsotropicConductor                 parameterizedMat;
 
-  TimeSteppingInfo tsInfo{.totalTime = 0.6, .num_timesteps = 5};
+  TimeSteppingInfo tsInfo{.total_time = 0.6, .num_timesteps = 5};
 };
 
 TEST_F(HeatTransferSensitivityFixture, InitialTemperatureSensitivities)

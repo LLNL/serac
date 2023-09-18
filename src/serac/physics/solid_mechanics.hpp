@@ -145,7 +145,6 @@ public:
               *nonlin_solver_, bcs_),
         c0_(0.0),
         c1_(0.0),
-        dt_history_({0.0}),
         geom_nonlin_(geom_nonlin)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
@@ -1116,7 +1115,7 @@ public:
     std::cout << "velocity at cycle " << cycle_ << " = " << velocity_.Norml2() << std::endl;
     std::cout << "acceleration at cycle " << cycle_ << " = " << acceleration_.Norml2() << std::endl;
 
-    SLIC_ERROR_ROOT_IF(dt_history_.size() != static_cast<size_t>(cycle_+1),
+    SLIC_ERROR_ROOT_IF(dt_history_.size() != static_cast<size_t>(cycle_),
                        "Timestep history count does not match the current cycle count.");
   }
 
@@ -1160,6 +1159,8 @@ public:
       accel_adjoint_load_vector *= -1.0;
     }
 
+    std::cout << "adjoint loads = " << disp_adjoint_load_vector.Norml1() << " " << velo_adjoint_load_vector.Norml1() << " " << accel_adjoint_load_vector.Norml1() << std::endl;
+
     auto& lin_solver = nonlin_solver_->linearSolver();
 
     // By default, use a homogeneous essential boundary condition
@@ -1201,7 +1202,7 @@ public:
     SLIC_ERROR_ROOT_IF(ode2_.GetTimestepper() != TimestepMethod::Newmark,
                        "Only Newmark implemented for transient adjoint solid mechanics.");
 
-    SLIC_ERROR_ROOT_IF(cycle_ < 0,
+    SLIC_ERROR_ROOT_IF(cycle_ <= 0,
                        "Maximum number of adjoint timesteps exceeded! The number of adjoint timesteps must equal the "
                        "number of forward timesteps");
 
@@ -1212,8 +1213,8 @@ public:
     std::cout << "velocity at cycle " << cycle_ << " = " << velocity_.Norml2() << std::endl;
     std::cout << "acceleration at cycle " << cycle_ << " = " << acceleration_.Norml2() << std::endl;
 
-    double dt_np1 = dt_history_[static_cast<size_t>(cycle_+1)];
-    double dt_n = dt_history_[static_cast<size_t>(cycle_)];
+    double dt_np1 = static_cast<size_t>(cycle_) < dt_history_.size() ? dt_history_[static_cast<size_t>(cycle_)] : 0.0;
+    double dt_n = dt_history_[static_cast<size_t>(cycle_-1)];
 
     std::cout << "dts = " << dt_n << ", " << dt_np1 << std::endl;
 
@@ -1231,10 +1232,6 @@ public:
                                             shape_displacement_, *parameters_[parameter_indices].state...));
     std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
-    // J = M + c0 * K
-    J_.reset(mfem::Add(1.0, *m_mat, beta * dt_n * dt_n, *k_mat));
-    auto J_T = std::unique_ptr<mfem::HypreParMatrix>(J_->Transpose());
-
     // reminder, gathering info from the various layers of time integration
     // c0 = fac3 * dt * dt
     // c1 = fac4 * dt
@@ -1243,11 +1240,14 @@ public:
     double fac3 = beta;
     double fac4 = gamma;
 
+    // J = M + c0 * K
+    J_.reset(mfem::Add(1.0, *m_mat, fac3 * dt_n * dt_n, *k_mat));
+    auto J_T = std::unique_ptr<mfem::HypreParMatrix>(J_->Transpose());
+
     // recall that temperature_adjoint_load_vector and d_temperature_dt_adjoint_load_vector were already multiplied by
     // -1 above
     
     mfem::HypreParVector adjoint_rhs(accel_adjoint_load_vector);
-    std::cout << "adjoint rhs info = " << adjoint_rhs.Norm2() << " " << adjoint_rhs.Size() << std::endl;
     adjoint_rhs.Add(fac4 * dt_n, velo_adjoint_load_vector);
     adjoint_rhs.Add(fac3 * dt_n * dt_n, disp_adjoint_load_vector);
 
@@ -1264,14 +1264,14 @@ public:
     // really adjoint acceleration
     lin_solver.Mult(adjoint_rhs, adjoint_displacement_);
 
-    auto k_mat_T = std::unique_ptr<mfem::HypreParMatrix>(k_mat->Transpose());
-    // the 1.0, 1.0 is to += the implicit sensitivity
-    k_mat_T->Mult(adjoint_displacement_, implicit_sensitivity_displacement_start_of_step_, 1.0, 1.0);
-    implicit_sensitivity_displacement_start_of_step_.Add(-1.0, disp_adjoint_load_vector);
-
     // the current residual has no given dependence on velo, otherwise, there would be another term
-    implicit_sensitivity_velocity_start_of_step_.Add(-1.0, velo_adjoint_load_vector);
-    implicit_sensitivity_velocity_start_of_step_.Add(-dt_np1, disp_adjoint_load_vector);
+    //implicit_sensitivity_velocity_start_of_step_.Add(-1.0, velo_adjoint_load_vector);
+    implicit_sensitivity_velocity_start_of_step_.Add(dt_np1, implicit_sensitivity_displacement_start_of_step_);
+
+    //auto k_mat_T = std::unique_ptr<mfem::HypreParMatrix>(k_mat->Transpose());
+    // the 1.0, 1.0 is to += the implicit sensitivity
+    k_mat->Mult(adjoint_displacement_, implicit_sensitivity_displacement_start_of_step_, 1.0, 1.0);
+    implicit_sensitivity_displacement_start_of_step_.Add(-1.0, disp_adjoint_load_vector);
 
     // Reset the equation solver to use the full nonlinear residual operator
     nonlin_solver_->setOperator(*residual_with_bcs_); // MRT, do we need this?
