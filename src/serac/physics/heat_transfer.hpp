@@ -277,6 +277,7 @@ public:
       // Note that the ODE solver handles the essential boundary condition application itself
       ode_.Step(temperature_, time_, dt);
     }
+
     cycle_ += 1;
   }
 
@@ -695,7 +696,7 @@ public:
       // We store the previous timestep's temperature as the current temperature for use in the lambdas computing the
       // sensitivities.
 
-      auto [r, drdu] = (*residual_)(differentiate_wrt(temperature_), zero_, shape_displacement_,
+      auto [_, drdu] = (*residual_)(differentiate_wrt(temperature_), zero_, shape_displacement_,
                                     *parameters_[parameter_indices].state...);
       auto jacobian  = assemble(drdu);
       auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
@@ -707,7 +708,7 @@ public:
       lin_solver.SetOperator(*J_T);
       lin_solver.Mult(temperature_adjoint_load_vector, adjoint_temperature_);
 
-      // Reset the equation solver to use the full nonlinear residual operator
+      // Reset the equation solver to use the full nonlinear residual operator.  MRT, is this needed?
       nonlin_solver_->setOperator(residual_with_bcs_);
 
       return {{"adjoint_temperature", adjoint_temperature_}};
@@ -716,7 +717,7 @@ public:
     SLIC_ERROR_ROOT_IF(ode_.GetTimestepper() != TimestepMethod::BackwardEuler,
                        "Only backward Euler implemented for transient adjoint heat conduction.");
 
-    SLIC_ERROR_ROOT_IF(cycle_ == 0,
+    SLIC_ERROR_ROOT_IF(cycle_ <= 0,
                        "Maximum number of adjoint timesteps exceeded! The number of adjoint timesteps must equal the "
                        "number of forward timesteps");
 
@@ -817,6 +818,7 @@ public:
   {
     auto drdshape     = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<SHAPE>{}, temperature_, temperature_rate_,
                                                         shape_displacement_, *parameters_[parameter_indices].state...));
+    
     auto drdshape_mat = assemble(drdshape);
 
     drdshape_mat->MultTranspose(adjoint_temperature_, *shape_displacement_sensitivity_);

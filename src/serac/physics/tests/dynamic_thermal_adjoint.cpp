@@ -29,8 +29,8 @@ const std::string thermal_prefix              = "thermal";
 const std::string parametrized_thermal_prefix = "thermal_with_param";
 
 struct TimeSteppingInfo {
-  double totalTime     = 0.6;
-  int    num_timesteps = 4;
+  double totalTime     = 0.0;
+  int    num_timesteps = 0;
 };
 
 double computeStepQoi(const FiniteElementState& temperature, double dt)
@@ -44,7 +44,7 @@ void computeStepAdjointLoad(const FiniteElementState& temperature, FiniteElement
   d_qoi_d_temperature *= dt;
 }
 
-std::unique_ptr<HeatTransfer<p, dim>> create_nonlinear_heat_transfer(
+std::unique_ptr<HeatTransfer<p, dim>> createNonlinearHeatTransfer(
     axom::sidre::DataStore& /*data_store*/, const NonlinearSolverOptions& nonlinear_opts,
     const TimesteppingOptions&                                                  dyn_opts,
     const heat_transfer::IsotropicConductorWithLinearConductivityVsTemperature& mat)
@@ -69,7 +69,7 @@ std::unique_ptr<HeatTransfer<p, dim>> create_nonlinear_heat_transfer(
 
 using ParametrizedHeatTransferT = HeatTransfer<p, dim, Parameters<H1<p>>, std::integer_sequence<int, 0>>;
 
-std::unique_ptr<ParametrizedHeatTransferT> create_parameterized_heat_transfer(
+std::unique_ptr<ParametrizedHeatTransferT> createParameterizedHeatTransfer(
     axom::sidre::DataStore& /*data_store*/, const NonlinearSolverOptions& nonlinear_opts,
     const TimesteppingOptions& dyn_opts, const heat_transfer::ParameterizedLinearIsotropicConductor& mat)
 {
@@ -105,7 +105,7 @@ double computeThermalQoiAdjustingInitalTemperature(
     const heat_transfer::IsotropicConductorWithLinearConductivityVsTemperature& mat, const TimeSteppingInfo& ts_info,
     const FiniteElementState& init_temp_derivative_direction, double pertubation)
 {
-  auto thermal = create_nonlinear_heat_transfer(data_store, nonlinear_opts, dyn_opts, mat);
+  auto thermal = createNonlinearHeatTransfer(data_store, nonlinear_opts, dyn_opts, mat);
 
   FiniteElementState initial_temp(thermal->temperature());
   SLIC_ASSERT_MSG(initial_temp.Size() == init_temp_derivative_direction.Size(),
@@ -131,7 +131,7 @@ double computeThermalQoiAdjustingShape(axom::sidre::DataStore& data_store, const
                                        const TimeSteppingInfo&   ts_info,
                                        const FiniteElementState& shape_derivative_direction, double pertubation)
 {
-  auto thermal = create_nonlinear_heat_transfer(data_store, nonlinear_opts, dyn_opts, mat);
+  auto thermal = createNonlinearHeatTransfer(data_store, nonlinear_opts, dyn_opts, mat);
 
   FiniteElementState shapeDisp(StateManager::mesh(mesh_tag), H1<SHAPE_ORDER, dim>{}, "input_shape_displacement");
 
@@ -183,7 +183,7 @@ std::tuple<double, FiniteElementDual, FiniteElementDual> computeThermalQoiAndIni
     const TimesteppingOptions&                                                  dyn_opts,
     const heat_transfer::IsotropicConductorWithLinearConductivityVsTemperature& mat, const TimeSteppingInfo& ts_info)
 {
-  auto thermal = create_nonlinear_heat_transfer(data_store, nonlinear_opts, dyn_opts, mat);
+  auto thermal = createNonlinearHeatTransfer(data_store, nonlinear_opts, dyn_opts, mat);
 
   double qoi = 0.0;
   thermal->outputStateToDisk();
@@ -224,7 +224,7 @@ std::tuple<double, FiniteElementDual> computeThermalConductivitySensitivity(
     const TimesteppingOptions& dyn_opts, const heat_transfer::ParameterizedLinearIsotropicConductor& mat,
     const TimeSteppingInfo& ts_info)
 {
-  auto thermal = create_parameterized_heat_transfer(data_store, nonlinear_opts, dyn_opts, mat);
+  auto thermal = createParameterizedHeatTransfer(data_store, nonlinear_opts, dyn_opts, mat);
 
   double qoi = 0.0;
   thermal->outputStateToDisk();
@@ -277,7 +277,7 @@ struct HeatTransferSensitivityFixture : public ::testing::Test {
   heat_transfer::IsotropicConductorWithLinearConductivityVsTemperature mat{1.0, 1.0, 1.0, 2.0};
   heat_transfer::ParameterizedLinearIsotropicConductor                 parameterizedMat;
 
-  TimeSteppingInfo tsInfo{.totalTime = 0.5, .num_timesteps = 4};
+  TimeSteppingInfo tsInfo{.totalTime = 0.6, .num_timesteps = 5};
 };
 
 TEST_F(HeatTransferSensitivityFixture, InitialTemperatureSensitivities)

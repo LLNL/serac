@@ -111,6 +111,13 @@ public:
   virtual const FiniteElementState& adjoint(const std::string& adjoint_name) = 0;
 
   /**
+   * @brief Get a vector of the finite element state adjoint solution names
+   *
+   * @return The adjoint solution names
+   */
+  virtual std::vector<std::string> adjointNames() { return {}; }
+
+  /**
    * @brief Accessor for getting named finite element state parameter fields from the physics modules
    *
    * @param parameter_name The name of the Finite Element State parameter to retrieve
