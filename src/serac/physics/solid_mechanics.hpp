@@ -1043,6 +1043,7 @@ public:
     nonlin_solver_->setOperator(*residual_with_bcs_);
   }
 
+  /// @brief Solve the Quasi-static Newton system
   void quasiStaticSolve(double dt)
   {
     time_ += dt;
