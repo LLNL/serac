@@ -363,16 +363,14 @@ SERAC_HOST_DEVICE auto log(dual<gradient_type> a)
   return dual<gradient_type>{log(a.value), a.gradient / a.value};
 }
 
-///** @brief implementation of the natural logarithm function for doubles */
-// SERAC_HOST_DEVICE auto log(double a) { return std::log(a); }
-
 /** @brief implementation of `a` (dual) raised to the `b` (dual) power */
 template <typename gradient_type>
 SERAC_HOST_DEVICE auto pow(dual<gradient_type> a, dual<gradient_type> b)
 {
   using std::pow, std::log;
-  double value = pow(a.value, b.value);
-  return dual<gradient_type>{value, value * (a.gradient * (b.value / a.value) + b.gradient * log(a.value))};
+  double        value = pow(a.value, b.value);
+  gradient_type grad  = pow(a.value, b.value - 1) * (a.gradient * b.value + b.gradient * a.value * log(a.value));
+  return dual<gradient_type>{value, grad};
 }
 
 /** @brief implementation of `a` (non-dual) raised to the `b` (dual) power */
@@ -389,8 +387,9 @@ template <typename gradient_type>
 SERAC_HOST_DEVICE auto pow(dual<gradient_type> a, double b)
 {
   using std::pow;
-  double value = pow(a.value, b);
-  return dual<gradient_type>{value, value * a.gradient * b / a.value};
+  double        value = pow(a.value, b);
+  gradient_type grad  = b * pow(a.value, b - 1) * a.gradient;
+  return dual<gradient_type>{value, grad};
 }
 
 /** @brief overload of operator<< for `dual` to work with `std::cout` and other `std::ostream`s */
