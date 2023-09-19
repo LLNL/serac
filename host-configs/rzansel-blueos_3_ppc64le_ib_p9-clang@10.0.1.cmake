@@ -4,7 +4,7 @@
 # CMake executable path: /usr/tce/packages/cmake/cmake-3.23.1/bin/cmake
 #------------------------------------------------------------------------------
 
-set(CMAKE_PREFIX_PATH "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_08_26_12_33_27/clang-10.0.1/caliper-2.9.0-ea4lcaizcnofjnrrqsgebxyv2ruhxpab;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_08_26_12_33_27/clang-10.0.1/axom-0.7.0.4-mqsspqmgsiu4ygjo54fp2eipo52i25fc;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_08_26_12_33_27/clang-10.0.1/umpire-2022.10.0-2jjxifw2fxtirjlcl3yhtwlwvqktwlyv;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_08_26_12_33_27/clang-10.0.1/raja-2022.10.5-df3vgneguo3gro22qwypwaafbv3u5zlu;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_08_26_12_33_27/clang-10.0.1/camp-2022.10.1-dfnhcs7dd7n4k7tduu5arcwf6ptxqqhy;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_08_26_12_33_27/clang-10.0.1/cub-2.1.0-ljq7hzkhuou5p4y5du2pthvzjlyj4rui;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_08_26_12_33_27/clang-10.0.1/mfem-4.5.3.2-om3kzscooingj5bizbqtm3u74hsk7vod;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_08_26_12_33_27/clang-10.0.1/superlu-dist-8.1.2-3qbmzaiirx5473tcrisva2nsholz75xx;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_08_26_12_33_27/clang-10.0.1/sundials-6.5.1-s5tnhg464pp4v7rdt7f6tcs7e2ydqum5;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_08_26_12_33_27/clang-10.0.1/netcdf-c-4.7.4-g2fobiybgaesqzp4yd5av5xoo3a4xass;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_08_26_12_33_27/clang-10.0.1/hypre-2.26.0-gjqvcse6zfdb5k425vgqsvxskoj7ul4h;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_08_26_12_33_27/clang-10.0.1/lua-5.4.4-7prkqyohv3y2cburvc6sjqgzwqlqovim;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_08_26_12_33_27/clang-10.0.1/ncurses-6.4-jh5jby3yal5lyqn4n3u762z67qfrogwg;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_08_26_12_33_27/clang-10.0.1/conduit-0.8.8-qj75pdmu6atrwsuh2ggeijpisnuabyr7;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_08_26_12_33_27/clang-10.0.1/parmetis-4.0.3-aayexyh663y7tgq43dlzpzfo6vfkht3l;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_08_26_12_33_27/clang-10.0.1/metis-5.1.0-db2wtpbnox5h2t7srpausqglztsnii45;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_08_26_12_33_27/clang-10.0.1/hdf5-1.8.22-42mcb3qpmeeik4g4uv7zqcb3arbjqnox;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_08_26_12_33_27/clang-10.0.1/blt-0.5.3-okx6ru4yvxnylvvn7j5nyuv4h4e3ipso;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_08_26_12_33_27/clang-10.0.1/amgx-2.3.0.1-rp52rudqmx7pq6m63dxnazq6jrmkki4w;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_08_26_12_33_27/clang-10.0.1/adiak-0.2.2-i7gptwejpxjiymfatj4vdgfzjblkii6y;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_08_26_12_33_27/clang-10.0.1/gmake-4.4.1-nuuvnkytqes5ciszwvg2w2xwtsx3yyyx;/usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/python-3.10.10;/usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/python-3.10.10;/usr/tce/packages/clang/clang-10.0.0;/usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/doxygen-1.9.6;/usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/cppcheck-2.9;/usr/tce/packages/python/python-3.8.2;/usr/tcetmp/packages/lapack/lapack-3.9.0-gcc-7.3.1/lib;/usr/tce/packages/cuda/cuda-11.2.0;/usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-10.0.1-gcc-8.3.1;/usr/tce/packages/cmake/cmake-3.23.1" CACHE PATH "")
+set(CMAKE_PREFIX_PATH "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_09_14_17_28_08/clang-10.0.1/tribol-0.1.0.6-mehpwutbshqrk5uu3ff7iiimtoyzykwk;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_09_14_17_28_08/clang-10.0.1/caliper-2.9.0-ea4lcaizcnofjnrrqsgebxyv2ruhxpab;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_09_14_17_28_08/clang-10.0.1/axom-0.8.1.0-cnx42njlzxfz3krjxoi3soade3u6z4y5;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_09_14_17_28_08/clang-10.0.1/umpire-2022.10.0-2jjxifw2fxtirjlcl3yhtwlwvqktwlyv;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_09_14_17_28_08/clang-10.0.1/raja-2022.10.5-df3vgneguo3gro22qwypwaafbv3u5zlu;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_09_14_17_28_08/clang-10.0.1/camp-2022.10.1-dfnhcs7dd7n4k7tduu5arcwf6ptxqqhy;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_09_14_17_28_08/clang-10.0.1/cub-2.1.0-ljq7hzkhuou5p4y5du2pthvzjlyj4rui;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_09_14_17_28_08/clang-10.0.1/mfem-4.5.3.2-m3iwdkoepjc3pfmylrakuutngq5e5inl;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_09_14_17_28_08/clang-10.0.1/superlu-dist-8.1.2-3qbmzaiirx5473tcrisva2nsholz75xx;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_09_14_17_28_08/clang-10.0.1/sundials-6.5.1-s5tnhg464pp4v7rdt7f6tcs7e2ydqum5;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_09_14_17_28_08/clang-10.0.1/netcdf-c-4.7.4-5r6blh32l3imj75gg6ufc627aejktykw;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_09_14_17_28_08/clang-10.0.1/hypre-2.26.0-gjqvcse6zfdb5k425vgqsvxskoj7ul4h;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_09_14_17_28_08/clang-10.0.1/lua-5.4.4-uakd7uhkrzsl4mvmggm5fzuebqpqtvzu;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_09_14_17_28_08/clang-10.0.1/ncurses-6.4-wwe3ftkngbw5u4exn33o3yzpahvjiodx;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_09_14_17_28_08/clang-10.0.1/conduit-0.8.8-psx5xqz45ninddifqbrsn47facepzizf;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_09_14_17_28_08/clang-10.0.1/parmetis-4.0.3-aayexyh663y7tgq43dlzpzfo6vfkht3l;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_09_14_17_28_08/clang-10.0.1/metis-5.1.0-db2wtpbnox5h2t7srpausqglztsnii45;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_09_14_17_28_08/clang-10.0.1/hdf5-1.8.22-mf5wxhjqi3detibdhkho3ajn7qe5xmmh;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_09_14_17_28_08/clang-10.0.1/blt-0.5.3-okx6ru4yvxnylvvn7j5nyuv4h4e3ipso;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_09_14_17_28_08/clang-10.0.1/amgx-2.3.0.1-rp52rudqmx7pq6m63dxnazq6jrmkki4w;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_09_14_17_28_08/clang-10.0.1/adiak-0.2.2-i7gptwejpxjiymfatj4vdgfzjblkii6y;/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_09_14_17_28_08/clang-10.0.1/gmake-4.4.1-nuuvnkytqes5ciszwvg2w2xwtsx3yyyx;/usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/python-3.10.10;/usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/python-3.10.10;/usr/tce/packages/clang/clang-10.0.0;/usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/doxygen-1.9.6;/usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/cppcheck-2.9;/usr/tce/packages/python/python-3.8.2;/usr/tcetmp/packages/lapack/lapack-3.9.0-gcc-7.3.1/lib;/usr/tce/packages/cuda/cuda-11.2.0;/usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-10.0.1-gcc-8.3.1;/usr/tce/packages/cmake/cmake-3.23.1" CACHE PATH "")
 
 set(CMAKE_BUILD_TYPE "Release" CACHE STRING "")
 
@@ -15,11 +15,11 @@ set(CMAKE_BUILD_TYPE "Release" CACHE STRING "")
 #------------------------------------------------------------------------------
 if(DEFINED ENV{SPACK_CC})
 
-  set(CMAKE_C_COMPILER "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_08_26_12_33_27/spack/lib/spack/env/clang/clang" CACHE PATH "")
+  set(CMAKE_C_COMPILER "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_09_14_17_28_08/spack/lib/spack/env/clang/clang" CACHE PATH "")
 
-  set(CMAKE_CXX_COMPILER "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_08_26_12_33_27/spack/lib/spack/env/clang/clang++" CACHE PATH "")
+  set(CMAKE_CXX_COMPILER "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_09_14_17_28_08/spack/lib/spack/env/clang/clang++" CACHE PATH "")
 
-  set(CMAKE_Fortran_COMPILER "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_08_26_12_33_27/spack/lib/spack/env/clang/gfortran" CACHE PATH "")
+  set(CMAKE_Fortran_COMPILER "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_09_14_17_28_08/spack/lib/spack/env/clang/gfortran" CACHE PATH "")
 
 else()
 
@@ -95,19 +95,19 @@ set(BLT_CMAKE_IMPLICIT_LINK_DIRECTORIES_EXCLUDE "/usr/tce/packages/gcc/gcc-4.9.3
 # TPLs
 #------------------------------------------------------------------------------
 
-set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_08_26_12_33_27/clang-10.0.1" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2023_09_14_17_28_08/clang-10.0.1" CACHE PATH "")
 
-set(AXOM_DIR "${TPL_ROOT}/axom-0.7.0.4-mqsspqmgsiu4ygjo54fp2eipo52i25fc" CACHE PATH "")
+set(AXOM_DIR "${TPL_ROOT}/axom-0.8.1.0-cnx42njlzxfz3krjxoi3soade3u6z4y5" CACHE PATH "")
 
 set(CAMP_DIR "${TPL_ROOT}/camp-2022.10.1-dfnhcs7dd7n4k7tduu5arcwf6ptxqqhy" CACHE PATH "")
 
-set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.8.8-qj75pdmu6atrwsuh2ggeijpisnuabyr7" CACHE PATH "")
+set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.8.8-psx5xqz45ninddifqbrsn47facepzizf" CACHE PATH "")
 
-set(LUA_DIR "${TPL_ROOT}/lua-5.4.4-7prkqyohv3y2cburvc6sjqgzwqlqovim" CACHE PATH "")
+set(LUA_DIR "${TPL_ROOT}/lua-5.4.4-uakd7uhkrzsl4mvmggm5fzuebqpqtvzu" CACHE PATH "")
 
-set(MFEM_DIR "${TPL_ROOT}/mfem-4.5.3.2-om3kzscooingj5bizbqtm3u74hsk7vod" CACHE PATH "")
+set(MFEM_DIR "${TPL_ROOT}/mfem-4.5.3.2-m3iwdkoepjc3pfmylrakuutngq5e5inl" CACHE PATH "")
 
-set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.22-42mcb3qpmeeik4g4uv7zqcb3arbjqnox" CACHE PATH "")
+set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.22-mf5wxhjqi3detibdhkho3ajn7qe5xmmh" CACHE PATH "")
 
 set(HYPRE_DIR "${TPL_ROOT}/hypre-2.26.0-gjqvcse6zfdb5k425vgqsvxskoj7ul4h" CACHE PATH "")
 
@@ -115,7 +115,7 @@ set(METIS_DIR "${TPL_ROOT}/metis-5.1.0-db2wtpbnox5h2t7srpausqglztsnii45" CACHE P
 
 set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3-aayexyh663y7tgq43dlzpzfo6vfkht3l" CACHE PATH "")
 
-set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4-g2fobiybgaesqzp4yd5av5xoo3a4xass" CACHE PATH "")
+set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4-5r6blh32l3imj75gg6ufc627aejktykw" CACHE PATH "")
 
 set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-8.1.2-3qbmzaiirx5473tcrisva2nsholz75xx" CACHE PATH "")
 
@@ -133,7 +133,7 @@ set(SUNDIALS_DIR "${TPL_ROOT}/sundials-6.5.1-s5tnhg464pp4v7rdt7f6tcs7e2ydqum5" C
 
 set(UMPIRE_DIR "${TPL_ROOT}/umpire-2022.10.0-2jjxifw2fxtirjlcl3yhtwlwvqktwlyv" CACHE PATH "")
 
-# TRIBOL not built
+set(TRIBOL_DIR "${TPL_ROOT}/tribol-0.1.0.6-mehpwutbshqrk5uu3ff7iiimtoyzykwk" CACHE PATH "")
 
 #------------------------------------------------------------------------------
 # Devtools
