@@ -211,6 +211,13 @@ void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Container& cont
   serac::input::defineVectorInputFileSchema(pw_vector_container);
 }
 
+void MaterialInputOptions::defineInputFileSchema(axom::inlet::Container& container)
+{
+  container.addDouble("kappa", "The conductivity parameter");
+  container.addDouble("cp", "The specific heat capacity");
+  container.addDouble("rho", "The mass density");
+}
+
 }  // namespace serac::input
 
 mfem::Vector FromInlet<mfem::Vector>::operator()(const axom::inlet::Container& base)
@@ -303,6 +310,18 @@ serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOp
                      "Coefficient has multiple definitions. Please use only one of (constant, vector_constant, "
                      "piecewise_constant, vector_piecewise_constant, scalar_function, vector_function");
   SLIC_ERROR_ROOT_IF(coefficient_definitions == 0, "Coefficient definition does not contain known type.");
+
+  return result;
+}
+
+serac::input::MaterialInputOptions FromInlet<serac::input::MaterialInputOptions>::operator()(
+    const axom::inlet::Container& base)
+{
+  serac::input::MaterialInputOptions result;
+
+  result.kappa = base["kappa"];
+  result.cp    = base["cp"];
+  result.rho   = base["rho"];
 
   return result;
 }

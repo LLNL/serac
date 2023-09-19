@@ -169,6 +169,36 @@ struct BoundaryConditionInputOptions {
   static void defineInputFileSchema(axom::inlet::Container& container);
 };
 
+/**
+ * @brief The information required from the input file for a material
+ */
+struct MaterialInputOptions {
+  /**
+   * @brief The conductivity parameter
+   *
+   */
+  double kappa;
+
+  /**
+   * @brief The specific heat capacity
+   *
+   */
+  double cp;
+
+  /**
+   * @brief The mass density
+   *
+   */
+  double rho;
+
+  /**
+   * @brief Input file parameters specific to this class
+   *
+   * @param[in] container Inlet's Container to which fields should be added
+   **/
+  static void defineInputFileSchema(axom::inlet::Container& container);
+};
+
 }  // namespace serac::input
 
 /**
@@ -202,4 +232,15 @@ template <>
 struct FromInlet<serac::input::BoundaryConditionInputOptions> {
   /// @brief Returns created object from Inlet container
   serac::input::BoundaryConditionInputOptions operator()(const axom::inlet::Container& base);
+};
+
+/**
+ * @brief Prototype the specialization for Inlet parsing
+ *
+ * @tparam The object to be created by Inlet
+ */
+template <>
+struct FromInlet<serac::input::MaterialInputOptions> {
+  /// @brief Returns created object from Inlet container
+  serac::input::MaterialInputOptions operator()(const axom::inlet::Container& base);
 };

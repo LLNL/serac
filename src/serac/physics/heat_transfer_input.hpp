@@ -55,22 +55,10 @@ struct HeatTransferInputOptions {
   TimesteppingOptions timestepping_options;
 
   /**
-   * @brief The conductivity parameter
+   * @brief The material options
    *
    */
-  double kappa;
-
-  /**
-   * @brief The specific heat capacity
-   *
-   */
-  double cp;
-
-  /**
-   * @brief The mass density
-   *
-   */
-  double rho;
+  input::MaterialInputOptions material_options;
 
   /**
    * @brief Source function coefficient

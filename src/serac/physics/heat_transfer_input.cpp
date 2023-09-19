@@ -13,10 +13,8 @@ void HeatTransferInputOptions::defineInputFileSchema(axom::inlet::Container& con
   // Polynomial interpolation order - currently up to 8th order is allowed
   container.addInt("order", "Order degree of the finite elements.").defaultValue(1).range(1, 8);
 
-  // material parameters
-  container.addDouble("kappa", "Thermal conductivity").defaultValue(0.5);
-  container.addDouble("rho", "Density").defaultValue(1.0);
-  container.addDouble("cp", "Specific heat capacity").defaultValue(1.0);
+  auto& material_container = container.addStruct("material", "Container for material parameters");
+  serac::input::MaterialInputOptions::defineInputFileSchema(material_container);
 
   auto& source = container.addStruct("source", "Scalar source term (RHS of the thermal conduction PDE)");
   serac::input::CoefficientInputOptions::defineInputFileSchema(source);
@@ -79,10 +77,7 @@ serac::HeatTransferInputOptions FromInlet<serac::HeatTransferInputOptions>::oper
     result.source_coef = base["source"].get<serac::input::CoefficientInputOptions>();
   }
 
-  // Set the material parameters
-  result.kappa = base["kappa"];
-  result.rho   = base["rho"];
-  result.cp    = base["cp"];
+  result.material_options = base["material"].get<serac::input::MaterialInputOptions>();
 
   result.boundary_conditions =
       base["boundary_conds"].get<std::unordered_map<std::string, serac::input::BoundaryConditionInputOptions>>();
