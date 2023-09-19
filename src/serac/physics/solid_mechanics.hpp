@@ -1207,6 +1207,7 @@ public:
                        "number of forward timesteps");
 
     // Load the end of step disp, velo, accel from the previous cycle from disk
+    std::cout << "fetching, cycle says = " << cycle_ << std::endl;
     StateManager::loadCheckpointedStates(cycle_, {displacement_, velocity_, acceleration_});
 
     std::cout << "displacement at cycle " << cycle_ << " = " << displacement_.Norml2() << std::endl;

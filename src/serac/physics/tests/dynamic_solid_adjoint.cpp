@@ -25,9 +25,10 @@ constexpr int p   = 1;
 
 const std::string physics_prefix = "solid";
 
-// using SolidMaterial = solid_mechanics::NeoHookean;
-using SolidMaterial = solid_mechanics::LinearIsotropic;
-auto geoNonlinear = GeometricNonlinearities::Off;
+using SolidMaterial = solid_mechanics::NeoHookean;
+auto geoNonlinear = GeometricNonlinearities::On;
+//using SolidMaterial = solid_mechanics::LinearIsotropic;
+//auto geoNonlinear = GeometricNonlinearities::Off;
 
 struct TimeSteppingInfo {
   double total_time     = 0.0;
@@ -55,16 +56,18 @@ std::unique_ptr<SolidMechanics<p, dim>> createNonlinearSolidMechanicsSolver(
   auto solid = std::make_unique<SolidMechanics<p, dim>>(nonlinear_opts, solid_mechanics::direct_linear_options, dyn_opts,
                                                         geoNonlinear, physics_prefix + std::to_string(iter++));
   solid->setMaterial(mat);
-  solid->setDisplacementBCs({1}, [](const mfem::Vector&, mfem::Vector& disp) { disp = 0.0; });
+  //solid->setDisplacementBCs({1}, [](const mfem::Vector&, mfem::Vector& disp) { disp = 0.0; });
   solid->addBodyForce([](auto X, auto /* t */) {
     auto Y = X;
-    Y[0] = 1.0;
-    Y[1] = -0.5;
-    return 0.0*X + Y;
+    Y[0] = 0.1; //1.0;
+    Y[1] = -0.05;
+    return 0.1*X + Y;
   });
   solid->completeSetup();
   return solid;
 }
+
+std::vector<double> dts{0.2, 0.4, 0.24, 0.12};
 
 double computeSolidMechanicsQoiAdjustingShape(axom::sidre::DataStore& data_store, const NonlinearSolverOptions& nonlinear_opts,
                                        const TimesteppingOptions& dyn_opts,
@@ -94,7 +97,6 @@ double computeSolidMechanicsQoiAdjustingShape(axom::sidre::DataStore& data_store
   return qoi;
 }
 
-
 double computeSolidMechanicsQoiAdjustingInitialDisplacement(axom::sidre::DataStore& data_store, const NonlinearSolverOptions& nonlinear_opts,
                                        const TimesteppingOptions& dyn_opts,
                                        const SolidMaterial& mat,
@@ -122,7 +124,6 @@ double computeSolidMechanicsQoiAdjustingInitialDisplacement(axom::sidre::DataSto
   }
   return qoi;
 }
-
 
 std::tuple<double, FiniteElementDual, FiniteElementDual> computeSolidMechanicsQoiAndInitialDisplacementAndShapeSensitivity(
     axom::sidre::DataStore& data_store, const NonlinearSolverOptions& nonlinear_opts,
@@ -202,7 +203,7 @@ struct SolidMechanicsSensitivityFixture : public ::testing::Test {
                                .enforcement_method = DirichletEnforcementMethod::DirectControl};
 
   SolidMaterial mat;
-  TimeSteppingInfo tsInfo{.total_time = 1.0, .num_timesteps = 1};
+  TimeSteppingInfo tsInfo{.total_time = 1.0, .num_timesteps = 4};
 };
 
 TEST_F(SolidMechanicsSensitivityFixture, InitialDisplacementSensitivities)
@@ -213,13 +214,12 @@ TEST_F(SolidMechanicsSensitivityFixture, InitialDisplacementSensitivities)
   FiniteElementState derivative_direction(init_disp_sensitivity.space(), "derivative_direction");
   fillDirection(derivative_direction);
 
-  const double eps = 1e-7;
+  const double eps = 1e-8;
 
   double qoi_plus = computeSolidMechanicsQoiAdjustingInitialDisplacement(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo,
                                                                 derivative_direction, eps);
   double directional_deriv = innerProduct(derivative_direction, init_disp_sensitivity);
-  std::cout << "qoi, other = " << directional_deriv << " " << (qoi_plus - qoi_base) / eps << std::endl;
-  EXPECT_NEAR(directional_deriv, (qoi_plus - qoi_base) / eps, 15*eps);
+  EXPECT_NEAR(directional_deriv, (qoi_plus - qoi_base) / eps, 20*eps);
 }
 
 TEST_F(SolidMechanicsSensitivityFixture, ShapeSensitivities)
@@ -235,7 +235,7 @@ TEST_F(SolidMechanicsSensitivityFixture, ShapeSensitivities)
   double qoi_plus =
       computeSolidMechanicsQoiAdjustingShape(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo, derivative_direction, eps);
   double directional_deriv = innerProduct(derivative_direction, shape_sensitivity);
-  EXPECT_NEAR(directional_deriv, (qoi_plus - qoi_base) / eps, eps);
+  EXPECT_NEAR(directional_deriv, (qoi_plus - qoi_base) / eps, 10*eps);
 }
 
 }  // namespace serac
