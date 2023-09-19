@@ -31,8 +31,11 @@ auto geoNonlinear = GeometricNonlinearities::On;
 //auto geoNonlinear = GeometricNonlinearities::Off;
 
 struct TimeSteppingInfo {
-  double total_time     = 0.0;
-  int    num_timesteps = 0;
+  TimeSteppingInfo() : dts({0.0, 0.2, 0.4, 0.24, 0.12, 0.0}) {}
+
+  int numTimesteps() const { return dts.Size()-2; }
+
+  mfem::Vector dts;
 };
 
 // MRT: add explicit velocity dependence
@@ -67,9 +70,6 @@ std::unique_ptr<SolidMechanics<p, dim>> createNonlinearSolidMechanicsSolver(
   return solid;
 }
 
-
-mfem::Vector dts({0.0, 0.2, 0.4, 0.24, 0.12, 0.0});
-
 double computeSolidMechanicsQoiAdjustingShape(axom::sidre::DataStore& data_store, const NonlinearSolverOptions& nonlinear_opts,
                                        const TimesteppingOptions& dyn_opts,
                                        const SolidMaterial& mat,
@@ -84,10 +84,11 @@ double computeSolidMechanicsQoiAdjustingShape(axom::sidre::DataStore& data_store
 
   shape_disp.Add(pertubation, shape_derivative_direction);
 
+  auto dts = ts_info.dts;
   solid_solver->advanceTimestep(dts(0)); // advance by 0.0 seconds to get initial acceleration
   solid_solver->outputState();
   double qoi = computeStepQoi(solid_solver->displacement(), 0.5 * (dts(0) + dts(1)));
-  for (int i = 1; i <= ts_info.num_timesteps; ++i) {
+  for (int i = 1; i <= ts_info.numTimesteps(); ++i) {
     EXPECT_EQ(i, solid_solver->cycle());
     solid_solver->advanceTimestep(dts(i));
     solid_solver->outputState();
@@ -110,10 +111,11 @@ double computeSolidMechanicsQoiAdjustingInitialDisplacement(axom::sidre::DataSto
 
   disp.Add(pertubation, derivative_direction);
 
+  auto dts = ts_info.dts;
   solid_solver->advanceTimestep(dts(0)); // advance by 0.0 seconds to get initial acceleration
   solid_solver->outputState();
   double qoi = computeStepQoi(solid_solver->displacement(), 0.5 * (dts(0) + dts(1)));
-  for (int i = 1; i <= ts_info.num_timesteps; ++i) {
+  for (int i = 1; i <= ts_info.numTimesteps(); ++i) {
     EXPECT_EQ(i, solid_solver->cycle());
     solid_solver->advanceTimestep(dts(i));
     solid_solver->outputState();
@@ -130,10 +132,11 @@ std::tuple<double, FiniteElementDual, FiniteElementDual> computeSolidMechanicsQo
   auto solid_solver = createNonlinearSolidMechanicsSolver(data_store, nonlinear_opts, dyn_opts, mat);
   EXPECT_EQ(0, solid_solver->cycle());
 
+  auto dts = ts_info.dts;
   solid_solver->advanceTimestep(dts(0)); // advance by 0.0 seconds to get initial acceleration
   solid_solver->outputState();
   double qoi = computeStepQoi(solid_solver->displacement(), 0.5 * (dts(0) + dts(1)));
-  for (int i = 1; i <= ts_info.num_timesteps; ++i) {
+  for (int i = 1; i <= ts_info.numTimesteps(); ++i) {
     EXPECT_EQ(i, solid_solver->cycle());
     solid_solver->advanceTimestep(dts(i));
     solid_solver->outputState();
@@ -149,13 +152,12 @@ std::tuple<double, FiniteElementDual, FiniteElementDual> computeSolidMechanicsQo
 
   // for solids, we go back to time = 0, because there is an extra hidden implicit solve at the start
   // consider unifying the interface between solids and thermal
-  for (int i = ts_info.num_timesteps; i >= 0; --i) {
+  for (int i = solid_solver->cycle(); i > 0; --i) {
     FiniteElementState displacement_end_of_step_i_minus_1 = solid_solver->loadCheckpointedDisplacement(solid_solver->cycle());
     computeStepAdjointLoad(displacement_end_of_step_i_minus_1, adjoint_load, 
-                      0.5*(solid_solver->loadCheckpointedTimestep(i) + solid_solver->loadCheckpointedTimestep(i+1)));
+                      0.5*(solid_solver->loadCheckpointedTimestep(i-1) + solid_solver->loadCheckpointedTimestep(i)));
     solid_solver->reverseAdjointTimestep({{"displacement", adjoint_load}});
     shape_sensitivity += solid_solver->computeTimestepShapeSensitivity();
-    EXPECT_EQ(i, solid_solver->cycle());
   }
 
   EXPECT_EQ(0, solid_solver->cycle());  // we are back to the start
@@ -199,7 +201,7 @@ struct SolidMechanicsSensitivityFixture : public ::testing::Test {
                                .enforcement_method = DirichletEnforcementMethod::DirectControl};
 
   SolidMaterial mat;
-  TimeSteppingInfo tsInfo{.total_time = 1.0, .num_timesteps = 4};
+  TimeSteppingInfo tsInfo;
 };
 
 TEST_F(SolidMechanicsSensitivityFixture, InitialDisplacementSensitivities)
