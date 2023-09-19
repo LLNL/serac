@@ -18,12 +18,15 @@
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/terminator.hpp"
 
+#include "serac/physics/boundary_conditions/boundary_condition_manager.hpp"
+#include "serac/physics/boundary_conditions/boundary_condition_helper.hpp"
+
 using namespace serac;
 
 // #define ALT_ITER_SOLVER
 #undef ALT_ITER_SOLVER 
 
-const static int problemID = 2;
+const static int problemID = 1;
 
 int main(int argc, char* argv[])
 {
@@ -31,29 +34,43 @@ int main(int argc, char* argv[])
 
   constexpr int p         = 1;
   constexpr int dim       = 3;
-  int serial_refinement   = 1;
+  int serial_refinement   = 0;
   int parallel_refinement = 0;
 
   // Create DataStore
   axom::sidre::DataStore datastore;
   serac::StateManager::initialize(datastore, "solid_lce_functional");
 
-  // Construct the appropriate dimension mesh and give it to the data store
-  std::string   filename = SERAC_REPO_DIR "/data/meshes/reEntrantHoneycomb_3D_2x1_no_border.g";
+  // Get mesh
+  std::string inputFilename;
+  switch (problemID) {
+    case 0:
+      inputFilename = SERAC_REPO_DIR "/data/meshes/reEntrantHoneycomb_newGeometry_noBorders_quarterSym.g";
+      break;
+    case 1:
+      inputFilename = SERAC_REPO_DIR "/data/meshes/dbgLogPileQuarterSymm.g";
+      break;
+    case 2:
+      inputFilename = SERAC_REPO_DIR "/data/meshes/dbgLogPileQuarterSymm.g";
+      break;
+    default:
+      std::cout << "...... Wrong problem ID ......" << std::endl;
+      exit(0);
+  }
 
-  auto initial_mesh = buildMeshFromFile(filename);
+  auto initial_mesh = buildMeshFromFile(inputFilename);
   auto mesh = mesh::refineAndDistribute(std::move(initial_mesh), serial_refinement, parallel_refinement);
 
-  serac::StateManager::setMesh(std::move(mesh));
+  auto pmesh = serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a functional-based solid mechanics solver
-  LinearSolverOptions linear_options = {.linear_solver = LinearSolver::SuperLU};
-  // const LinearSolverOptions linear_options = {.linear_solver = LinearSolver::Strumpack, .print_level = 0};
+  // LinearSolverOptions linear_options = {.linear_solver = LinearSolver::SuperLU};
+  const LinearSolverOptions linear_options = {.linear_solver = LinearSolver::Strumpack, .print_level = 0};
 
   NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = serac::NonlinearSolver::Newton,
                                               .relative_tol   = 1.0e-8,
-                                              .absolute_tol   = 1.0e-14,
-                                              .max_iterations = 25,
+                                              .absolute_tol   = 1.0e-12,
+                                              .max_iterations = 1,
                                               .print_level    = 1};
   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
       nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional");
@@ -64,26 +81,8 @@ int main(int argc, char* argv[])
   double possion_ratio   = 0.49;   // 0.49;   // 0.48 // 
   double beta_param      = 1.0e5; // 5.20e5; // 2.31e5; // [Kg /s2 / mm] 
   double max_order_param = 0.40;   // 0.20;   // 0.45; //
-  double gamma_angle     = 0.0;
+  double gamma_angle     = M_PI_2;
   double eta_angle       = 0.0;
-
-  switch (problemID) {
-    case 0:
-      gamma_angle = 0.0;
-      eta_angle   = 0.0;
-      break;
-    case 1:
-      gamma_angle = M_PI_2;
-      eta_angle   = 0.0;
-      break;
-    case 2:
-      gamma_angle = M_PI_2;
-      eta_angle   = 0.0;
-      break;
-    default:
-      std::cout << "...... Wrong problem ID ......" << std::endl;
-      exit(0);
-  }
 
   // Parameter 1
   FiniteElementState orderParam(StateManager::newState(FiniteElementState::Options{.order = p, .name = "orderParam"}));
@@ -92,43 +91,75 @@ int main(int argc, char* argv[])
   // Parameter 2
   FiniteElementState gammaParam(StateManager::newState(
       FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "gammaParam"}));
-  bool               heterogeneousGammaField = problemID == 2 ? true : false;
-  auto               gammaFunc = [heterogeneousGammaField, gamma_angle](const mfem::Vector& x, double) -> double {
-    if (heterogeneousGammaField) {
-      double d    = 5.0e-3;
-      double t    = 0.525e-3;
+  auto gammaFunc = [=](const mfem::Vector& x, double) -> double {
+    double alignmentAngle = 0.0;
+    double t = 0.25e-3;
+    double L = 6.0e-3;
+    double l = 4.0e-3 - t;
 
-      double Hmax = 15.0e-3;
-      // top wall
-      if (x[1] >= Hmax) {
-        return 0.0;
-      }
-      // first and third columns (excluding vertical walls)
-      else if (((x[0] >= t / 2) && (x[0] <= d - t / 2)) || ((x[0] >= 2 * d + t / 2) && (x[0] <= 3 * d - t / 2))) {
-        // first and third rows
-        if (x[1] < d || x[1] > 2 * d) {
-          return -0.1920;
+    switch (problemID) {
+      case 0:
+      {
+        // vertical walls
+        if (x[0]<=t || x[0]>=L-2*t      // first and last colums
+        || (x[0]>=l/2-t && x[0]<=l/2+t) // second column
+        || (x[0]>=l-t && x[0]<=l+t) ) { // third column
+          alignmentAngle = M_PI_2;
         }
-        // second row
+        // upwards inclined (excluding vertical walls)
+        else if ( (x[1]>l             && (x[0]<l/2 || x[0]>l) )
+        || ( (x[1]>0.0 && x[1]<l/2)   && (x[0]<l/2 || x[0]>l) )
+        || ( (x[1]>-l && x[1]<-l/2)   && (x[0]<l/2 || x[0]>l) )
+        || ( x[1]<=-l               && (x[0]>=l/2 && x[0]<=l) ) 
+        || ( x[1]>-l/2 && x[1]<=0.0 && (x[0]>=l/2 && x[0]<=l) )
+        || ( x[1]>l/2 && x[1]<=l    && (x[0]>=l/2 && x[0]<=l) )
+        ) {
+          alignmentAngle = 0.1920; // 11.31 degrees
+        }
+        // downwards incline (excluding vertical walls)
         else {
-          return 0.1920;
+          alignmentAngle = -0.1920; // -11.31 degrees
         }
-      }
-      // second column (excluding vertical walls)
-      else if ((x[0] >= d + t / 2) && (x[0] <= 2 * d - t / 2)) {
-        // first and third rows
-        if (x[1] < d || x[1] > 2 * d) {
-          return 0.1920;
-        }
-        // second row
-        else {
-          return -0.1920;
-        }
+        break;
       }
 
-      return M_PI_2;
+      case 1:
+      {
+        if (((x[0] >= 1.70e-3 && x[0] <= 2.00e-3) || (x[0] >= 5.70e-3)) && (
+          (x[2] <= 0.20e-3) ||
+          (x[2] >= 0.30e-3 && x[2] <= 0.30e-3+0.20e-3) ||
+          (x[2] >= 0.60e-3 && x[2] <= 0.60e-3+0.20e-3) ||
+          (x[2] >= 0.90e-3 && x[2] <= 0.90e-3+0.20e-3)
+        )) { 
+          alignmentAngle = M_PI_2;
+        }
+        else if ( x[0] >= 5.70e-3 && (
+          (x[1] <= 1.7e-3) ||
+          (x[1] >= 2.0e-3 && x[1] <= 5.70e-3)
+        )) { 
+          alignmentAngle = M_PI_2;
+        }
+        else
+        {
+          alignmentAngle = 0.0;
+        }
+        break;
+      }
+
+      case 2:
+      {
+          std::cout << "...... Not implemented yet......" << std::endl;
+          exit(0);
+      }
+      
+      default:
+      {
+          std::cout << "...... Wrong problem ID ......" << std::endl;
+          exit(0);
+      }
     }
-    return gamma_angle;
+
+    return alignmentAngle;
   };
   mfem::FunctionCoefficient gammaCoef(gammaFunc);
   gammaParam.project(gammaCoef);
@@ -150,7 +181,7 @@ int main(int argc, char* argv[])
   solid_solver.setParameter(ETA_INDEX, etaParam);
 
   // Set material
-  LiquidCrystalElastomerBertoldi        lceMat(density, young_modulus, possion_ratio, max_order_param, beta_param);
+  LiquidCrystalElastomerBertoldi lceMat(density, young_modulus, possion_ratio, max_order_param, beta_param);
 
   solid_solver.setMaterial(DependsOn<ORDER_INDEX, GAMMA_INDEX, ETA_INDEX>{}, lceMat);
 
@@ -161,11 +192,39 @@ int main(int argc, char* argv[])
   // solid_solver.setDisplacementBCs({3}, zeroFunc, 2);  // back face z-dir disp = 0
   // solid_solver.setDisplacementBCs({6}, zeroFunc, 2);  // back face z-dir disp = 0
 
+  auto nonZeroFunc = [](const mfem::Vector /*x*/) { return -3.6e-3; };
+  solid_solver.setDisplacementBCs({4}, nonZeroFunc, 1);  // back face z-dir disp = 0
+  // Generate a true dof set from the boundary attribute
+  // auto is_on_top = [](const mfem::Vector& x) {
+  //   if (x(1) > 1.0e-3) {
+  //     return true;
+  //   }
+  //   return false;
+  // };
+  // auto scalar_offset = [](const mfem::Vector&) { return -0.0001; };
+  // solid_solver.setDisplacementBCs(is_on_top, scalar_offset, 2);
+
+  int attribute = 3;
+  mfem::Array<int> elem_attr_is_ess(pmesh->attributes.Max());
+  elem_attr_is_ess                = 0;
+  elem_attr_is_ess[attribute - 1] = 1;
+  mfem::Array<int> ess_tdof_list;
+
+  mfem::H1_FECollection       h1_fec(1, dim);
+  mfem::ParFiniteElementSpace h1_fes(pmesh, &h1_fec, 1);
+  // serac::mfem_ext::GetEssentialTrueDofsFromElementAttribute(h1_fes, elem_attr_is_ess, ess_tdof_list, 1);
+  h1_fes.GetEssentialTrueDofs(elem_attr_is_ess, ess_tdof_list, 1);
+
+
+  double maxYDisp = 1.0e-3;
+  auto is_on_top = [=](const mfem::Vector&, double t, mfem::Vector&) {
+    return maxYDisp*(1.0+t);
+  };
+
+  solid_solver.setDisplacementBCsByDofList(ess_tdof_list, is_on_top);
+
   double iniDispVal = 5.0e-6;
-  if (problemID == 4) {
-    iniDispVal = 5.0e-8;
-  }
-  auto ini_displacement = [iniDispVal](const mfem::Vector&, mfem::Vector& u) -> void { u = iniDispVal; };
+  auto ini_displacement = [=](const mfem::Vector&, mfem::Vector& u) -> void { u = iniDispVal; };
   solid_solver.setDisplacement(ini_displacement);
 
   // Finalize the data structures
@@ -175,13 +234,13 @@ int main(int argc, char* argv[])
   std::string outputFilename;
   switch (problemID) {
     case 0:
-      outputFilename = "sol_lce_bertoldi_honeycomb_gamma_00_eta_00";
+      outputFilename = "sol_honeycomb_3x3_free_swelling_quarter";
       break;
     case 1:
-      outputFilename = "sol_lce_bertoldi_honeycomb_gamma_90_eta_00";
+      outputFilename = "sol_logpile_3x3_free_swelling_dbg";
       break;
     case 2:
-      outputFilename = "sol_honeycomb_2x1";
+      outputFilename = "sol_logpile_3x3_free_swelling";
       break;
     default:
       std::cout << "...... Wrong problem ID ......" << std::endl;
@@ -190,11 +249,10 @@ int main(int argc, char* argv[])
 
   solid_solver.outputState(outputFilename);
 
-  int num_steps = 20;
+  int num_steps = 1;
   double t    = 0.0;
   double tmax = 1.0;
   double dt   = tmax / num_steps;
-  // double gblDispYmin;
 
   for (int i = 0; i < num_steps; i++) {
     // orderParam = max_order_param * (tmax - t) / tmax;
@@ -204,8 +262,8 @@ int main(int argc, char* argv[])
       std::cout << "\n\n............................"
                 << "\n... Entering time step: " << i + 1 << " (/" << num_steps << ")"
                 << "\n............................\n"
-                << "\n... Using order parameter: " << max_order_param * (tmax - t) / tmax
-                << "\n... Using gamma = " << gamma_angle << ", and eta = " << eta_angle << std::endl;
+                << "\n... Using order parameter: " << max_order_param << ", gamma = " << gamma_angle << ", and eta = " << eta_angle
+                << "\n... Using displacement = " << maxYDisp * t / tmax << std::endl;
     }
 
     solid_solver.advanceTimestep(dt);
