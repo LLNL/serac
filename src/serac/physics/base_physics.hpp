@@ -253,6 +253,16 @@ public:
   virtual void outputStateToDisk(std::optional<std::string> paraview_output_dir = {}) const;
 
   /**
+   * @brief Get a timestep increment which has been previously checkpointed at the give cycle
+   * @param cycle The previous 'timestep' number where the timestep increment is requested
+   * @return The timestep increment
+   */
+  virtual double loadCheckpointedTimestep(int /*cycle*/) const
+  {
+    return 0.0;
+  }
+
+  /**
    * @brief Initializes the Sidre structure for simulation summary data
    *
    * @param[in] datastore Sidre DataStore where data are saved

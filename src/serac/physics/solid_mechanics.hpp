@@ -1214,8 +1214,8 @@ public:
     std::cout << "velocity at cycle " << cycle_ << " = " << velocity_.Norml2() << std::endl;
     std::cout << "acceleration at cycle " << cycle_ << " = " << acceleration_.Norml2() << std::endl;
 
-    double dt_np1 = static_cast<size_t>(cycle_) < dt_history_.size() ? dt_history_[static_cast<size_t>(cycle_)] : 0.0;
-    double dt_n = dt_history_[static_cast<size_t>(cycle_-1)];
+    double dt_np1 = loadCheckpointedTimestep(cycle_);
+    double dt_n = loadCheckpointedTimestep(cycle_-1);
 
     std::cout << "dts = " << dt_n << ", " << dt_np1 << std::endl;
 
@@ -1307,6 +1307,16 @@ public:
     FiniteElementState previous_velocity(velocity_);
     StateManager::loadCheckpointedStates(cycle, {previous_velocity});
     return previous_velocity;
+  }
+
+  /**
+   * @brief Get a timestep increment which has been previously checkpointed at the give cycle
+   * @param cycle The previous 'timestep' number where the timestep increment is requested
+   * @return The timestep increment
+   */
+  double loadCheckpointedTimestep(int cycle) const override
+  {
+    return static_cast<size_t>(cycle) < dt_history_.size() ? dt_history_[static_cast<size_t>(cycle)] : 0.0;
   }
 
   /**
