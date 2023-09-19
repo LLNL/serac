@@ -81,6 +81,8 @@ int main(int argc, char* argv[])
   //     .rel_tol = 1.0e-6, .abs_tol = 1.0e-13, .max_iter = 10, .print_level = 1};
 
   LinearSolverOptions linear_options = {.linear_solver = LinearSolver::SuperLU};
+  // const LinearSolverOptions linear_options = {.linear_solver = LinearSolver::Strumpack, .print_level = 0};
+
   // LinearSolverOptions linear_options = {.linear_solver  = LinearSolver::GMRES,
   //                                                     .preconditioner = Preconditioner::HypreAMG,
   //                                                     .relative_tol   = 1.0e-6,
@@ -214,7 +216,7 @@ int main(int argc, char* argv[])
   // Perform the quasi-static solve
   int num_steps = 20;
 
-  std::string outputFilename = "sol_lce_bertoldi_free_swelling";
+  std::string outputFilename = "sol_lce_bertoldi_free_swelling_testing";
   solid_solver.outputState(outputFilename);
 
   double t    = 0.0;
