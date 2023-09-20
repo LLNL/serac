@@ -59,8 +59,9 @@ TEST_P(ContactTest, patch)
                                  .type        = ContactType::Frictionless,
                                  .penalty     = 1.0e4};
 
-  SolidMechanicsContact<p, dim> solid_solver(nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options,
-                                      GeometricNonlinearities::On, name);
+  SolidMechanicsContact<p, dim> solid_solver(nonlinear_options, linear_options,
+                                             solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On,
+                                             name);
 
   double                      K = 10.0;
   double                      G = 0.25;

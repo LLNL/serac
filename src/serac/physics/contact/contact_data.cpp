@@ -216,7 +216,7 @@ void ContactData::residualFunction(const mfem::Vector& u, mfem::Vector& r)
 
   // u_const should not change in this method; const cast is to create vector views which are copied to Tribol
   // displacements and pressures and used to compute the (non-contact) residual
-  auto& u_const = const_cast<mfem::Vector&>(u);
+  auto&              u_const = const_cast<mfem::Vector&>(u);
   const mfem::Vector u_blk(u_const, 0, disp_size);
   const mfem::Vector p_blk(u_const, disp_size, numPressureDofs());
 
@@ -236,22 +236,23 @@ void ContactData::residualFunction(const mfem::Vector& u, mfem::Vector& r)
   g_blk.Set(1.0, mergedGaps());
 }
 
-std::unique_ptr<mfem::BlockOperator> ContactData::jacobianFunction(const mfem::Vector& u,
+std::unique_ptr<mfem::BlockOperator> ContactData::jacobianFunction(const mfem::Vector&   u,
                                                                    mfem::HypreParMatrix* orig_J) const
 {
-    // u_const should not change in this method; const cast is to create vector views which are used to compute the
-    // (non-contact) Jacobian
-    auto& u_const = const_cast<mfem::Vector&>(u);
-    const mfem::Vector u_blk(u_const, 0, reference_nodes_->ParFESpace()->GetTrueVSize());
+  // u_const should not change in this method; const cast is to create vector views which are used to compute the
+  // (non-contact) Jacobian
+  auto&              u_const = const_cast<mfem::Vector&>(u);
+  const mfem::Vector u_blk(u_const, 0, reference_nodes_->ParFESpace()->GetTrueVSize());
 
-    auto J_contact = mergedJacobian();
-    if (J_contact->IsZeroBlock(0, 0)) {
-      J_contact->SetBlock(0, 0, orig_J);
-    } else {
-      J_contact->SetBlock(0, 0, mfem::Add(1.0, *orig_J, 1.0, static_cast<mfem::HypreParMatrix&>(J_contact->GetBlock(0, 0))));
-    }
+  auto J_contact = mergedJacobian();
+  if (J_contact->IsZeroBlock(0, 0)) {
+    J_contact->SetBlock(0, 0, orig_J);
+  } else {
+    J_contact->SetBlock(0, 0,
+                        mfem::Add(1.0, *orig_J, 1.0, static_cast<mfem::HypreParMatrix&>(J_contact->GetBlock(0, 0))));
+  }
 
-    return J_contact;
+  return J_contact;
 }
 
 void ContactData::setPressures(const mfem::Vector& merged_pressures) const
@@ -261,7 +262,7 @@ void ContactData::setPressures(const mfem::Vector& merged_pressures) const
     FiniteElementState p_interaction(interactions_[i].pressureSpace());
     if (interactions_[i].getContactOptions().enforcement == ContactEnforcement::LagrangeMultiplier) {
       // merged_pressures_const should not change; const cast is to create a vector view for copying to tribol pressures
-      auto& merged_pressures_const = const_cast<mfem::Vector&>(merged_pressures);
+      auto&              merged_pressures_const = const_cast<mfem::Vector&>(merged_pressures);
       const mfem::Vector p_interaction_ref(merged_pressures_const, dof_offsets[static_cast<int>(i)],
                                            dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
       p_interaction.Set(1.0, p_interaction_ref);

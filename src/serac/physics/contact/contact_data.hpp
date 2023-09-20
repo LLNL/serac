@@ -135,8 +135,7 @@ public:
    * conditions
    * @return Function with contact terms in the Jacobian, not including essential boundary conditions
    */
-  std::unique_ptr<mfem::BlockOperator> jacobianFunction(const mfem::Vector& u,
-                                                        mfem::HypreParMatrix* orig_J) const;
+  std::unique_ptr<mfem::BlockOperator> jacobianFunction(const mfem::Vector& u, mfem::HypreParMatrix* orig_J) const;
 
   /**
    * @brief Set the pressure field

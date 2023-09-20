@@ -33,10 +33,13 @@ class SolidMechanicsContact;
  * @tparam dim The spatial dimension of the mesh
  */
 template <int order, int dim, typename... parameter_space, int... parameter_indices>
-class SolidMechanicsContact<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>
-    : public SolidMechanics<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>> {
-  using SolidMechanicsBase 
-      = SolidMechanics<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>;
+class SolidMechanicsContact<order, dim, Parameters<parameter_space...>,
+                            std::integer_sequence<int, parameter_indices...>>
+    : public SolidMechanics<order, dim, Parameters<parameter_space...>,
+                            std::integer_sequence<int, parameter_indices...>> {
+  using SolidMechanicsBase =
+      SolidMechanics<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>;
+
 public:
   /**
    * @brief Construct a new SolidMechanicsContact object
@@ -49,12 +52,13 @@ public:
    * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
   SolidMechanicsContact(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
-                 const serac::TimesteppingOptions timestepping_opts,
-                 const GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
-                 mfem::ParMesh* pmesh = nullptr)
-      : SolidMechanicsContact(std::make_unique<EquationSolver>(
-                           nonlinear_opts, lin_opts, StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
-                       timestepping_opts, geom_nonlin, name, pmesh)
+                        const serac::TimesteppingOptions timestepping_opts,
+                        const GeometricNonlinearities    geom_nonlin = GeometricNonlinearities::On,
+                        const std::string& name = "", mfem::ParMesh* pmesh = nullptr)
+      : SolidMechanicsContact(
+            std::make_unique<EquationSolver>(nonlinear_opts, lin_opts,
+                                             StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
+            timestepping_opts, geom_nonlin, name, pmesh)
   {
   }
 
@@ -67,11 +71,11 @@ public:
    * @param name An optional name for the physics module instance
    * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
-  SolidMechanicsContact(std::unique_ptr<serac::EquationSolver> solver, const serac::TimesteppingOptions timestepping_opts,
-                 const GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
-                 mfem::ParMesh* pmesh = nullptr)
-      : SolidMechanicsBase(std::move(solver), timestepping_opts, geom_nonlin, name, pmesh),
-      contact_(mesh_)
+  SolidMechanicsContact(std::unique_ptr<serac::EquationSolver> solver,
+                        const serac::TimesteppingOptions       timestepping_opts,
+                        const GeometricNonlinearities          geom_nonlin = GeometricNonlinearities::On,
+                        const std::string& name = "", mfem::ParMesh* pmesh = nullptr)
+      : SolidMechanicsBase(std::move(solver), timestepping_opts, geom_nonlin, name, pmesh), contact_(mesh_)
   {
   }
 
@@ -82,8 +86,7 @@ public:
    * @param[in] name An optional name for the physics module instance. Note that this is NOT the mesh tag.
    */
   SolidMechanicsContact(const SolidMechanicsInputOptions& input_options, const std::string& name = "")
-      : SolidMechanicsBase(input_options, name),
-      contact_(mesh_)
+      : SolidMechanicsBase(input_options, name), contact_(mesh_)
   {
   }
 
@@ -107,13 +110,13 @@ public:
     if (contact_.haveLagrangeMultipliers()) {
       J_offsets_ = mfem::Array<int>({0, displacement_.Size(), displacement_.Size() + contact_.numPressureDofs()});
       return std::make_unique<mfem_ext::StdFunctionOperator>(
-          displacement_.space().TrueVSize() + contact_.numPressureDofs(),
-          residual_fn,
+          displacement_.space().TrueVSize() + contact_.numPressureDofs(), residual_fn,
           // gradient of residual function
           [this](const mfem::Vector& u) -> mfem::Operator& {
-            auto [r, drdu] =
-                (*residual_)(differentiate_wrt(u), zero_, shape_displacement_, *parameters_[parameter_indices].state...);
-            J_   = assemble(drdu);
+            const mfem::Vector u_blk(const_cast<mfem::Vector&>(u), 0, displacement_.Size());
+            auto [r, drdu] = (*residual_)(differentiate_wrt(u_blk), zero_, shape_displacement_,
+                                          *parameters_[parameter_indices].state...);
+            J_             = assemble(drdu);
 
             // create block operator holding jacobian contributions
             J_constraint_ = contact_.jacobianFunction(u, J_.release());
@@ -144,15 +147,13 @@ public:
           });
     } else {
       return std::make_unique<mfem_ext::StdFunctionOperator>(
-          displacement_.space().TrueVSize(),
-          residual_fn,
-          [this](const mfem::Vector& u) -> mfem::Operator& {
-            auto [r, drdu] =
-                (*residual_)(differentiate_wrt(u), zero_, shape_displacement_, *parameters_[parameter_indices].state...);
-            J_   = assemble(drdu);
+          displacement_.space().TrueVSize(), residual_fn, [this](const mfem::Vector& u) -> mfem::Operator& {
+            auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, shape_displacement_,
+                                          *parameters_[parameter_indices].state...);
+            J_             = assemble(drdu);
 
             // get 11-block holding jacobian contributions
-            auto block_J = contact_.jacobianFunction(u, J_.release());
+            auto block_J         = contact_.jacobianFunction(u, J_.release());
             block_J->owns_blocks = false;
             J_ = std::unique_ptr<mfem::HypreParMatrix>(static_cast<mfem::HypreParMatrix*>(&block_J->GetBlock(0, 0)));
 
@@ -191,7 +192,7 @@ public:
     double time  = 0.0;
     double dt    = 0.0;
     contact_.update(cycle, time, dt);
-    
+
     SolidMechanicsBase::completeSetup();
   }
 
@@ -302,26 +303,25 @@ public:
   }
 
 protected:
-
+  using BasePhysics::bcs_;
+  using BasePhysics::cycle_;
   using BasePhysics::is_quasistatic_;
   using BasePhysics::mesh_;
-  using BasePhysics::shape_displacement_;
-  using BasePhysics::parameters_;
-  using BasePhysics::bcs_;
   using BasePhysics::order_;
+  using BasePhysics::parameters_;
+  using BasePhysics::shape_displacement_;
   using BasePhysics::time_;
-  using BasePhysics::cycle_;
-  using SolidMechanicsBase::DERIVATIVE;
-  using SolidMechanicsBase::residual_;
-  using SolidMechanicsBase::displacement_;
-  using SolidMechanicsBase::residual_with_bcs_;
-  using SolidMechanicsBase::du_;
-  using SolidMechanicsBase::dr_;
-  using SolidMechanicsBase::nonlin_solver_;
   using SolidMechanicsBase::d_residual_d_;
-  using SolidMechanicsBase::zero_;
+  using SolidMechanicsBase::DERIVATIVE;
+  using SolidMechanicsBase::displacement_;
+  using SolidMechanicsBase::dr_;
+  using SolidMechanicsBase::du_;
   using SolidMechanicsBase::J_;
   using SolidMechanicsBase::J_e_;
+  using SolidMechanicsBase::nonlin_solver_;
+  using SolidMechanicsBase::residual_;
+  using SolidMechanicsBase::residual_with_bcs_;
+  using SolidMechanicsBase::zero_;
 
   /// Pointer to the Jacobian operator (J_ if no Lagrange multiplier contact, J_constraint_ otherwise)
   mfem::Operator* J_operator_;
@@ -350,7 +350,6 @@ protected:
 
   /// @brief Class holding contact constraint data
   ContactData contact_;
-
 };
 
 }  // namespace serac
