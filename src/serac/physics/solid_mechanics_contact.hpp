@@ -5,9 +5,9 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file solid_mechanics.hpp
+ * @file solid_mechanics_contact.hpp
  *
- * @brief An object containing the solver for total Lagrangian finite deformation solid mechanics
+ * @brief An object containing the solver for total Lagrangian finite deformation solid mechanics with contact
  */
 
 #pragma once
@@ -24,12 +24,12 @@ template <int order, int dim, typename parameters = Parameters<>,
 class SolidMechanicsContact;
 
 /**
- * @brief The nonlinear solid solver class
+ * @brief The nonlinear solid with contact solver class
  *
- * The nonlinear total Lagrangian quasi-static and dynamic hyperelastic solver object. This uses Functional to compute
+ * The nonlinear total Lagrangian quasi-static with contact solver object. This uses Functional to compute
  * the tangent stiffness matrices.
  *
- * @tparam order The order of the discretization of the displacement and velocity fields
+ * @tparam order The order of the discretization of the displacement field
  * @tparam dim The spatial dimension of the mesh
  */
 template <int order, int dim, typename... parameter_space, int... parameter_indices>
@@ -284,13 +284,11 @@ public:
     // update du_, displacement_, and pressure based on linearized kinematics
     du_.Set(1.0, mfem::Vector(augmented_solution, 0, displacement_.Size()));
     displacement_ += du_;
-    if (contact_.haveContactInteractions()) {
-      // call update to update gaps for new displacements
-      contact_.update(cycle_, time_, dt);
-      // update pressures based on pressures in augmented_solution (for Lagrange multiplier) and updated gaps (for
-      // penalty)
-      contact_.setPressures(mfem::Vector(augmented_solution, displacement_.Size(), contact_.numPressureDofs()));
-    }
+    // call update to update gaps for new displacements
+    contact_.update(cycle_, time_, dt);
+    // update pressures based on pressures in augmented_solution (for Lagrange multiplier) and updated gaps (for
+    // penalty)
+    contact_.setPressures(mfem::Vector(augmented_solution, displacement_.Size(), contact_.numPressureDofs()));
 
     // solve the non-linear system resid = 0 and pressure * gap = 0 for Lagrange multiplier contact
     augmented_solution.SetVector(displacement_, 0);

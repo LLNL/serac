@@ -118,22 +118,20 @@ public:
   std::unique_ptr<mfem::BlockOperator> mergedJacobian() const;
 
   /**
-   * @brief Function to compute the residual including contact terms, given a function to compute non-contact residual
-   * terms
+   * @brief Computes the residual including contact terms
    *
-   * @param orig_r Function to compute the non-contact terms of the residual, not including essential boundary
-   * conditions
-   * @return Function with contact terms in the residual, not including essential boundary conditions
+   * @param [in] u Solution vector ([displacement; pressure] block vector)
+   * @param [in,out] r Residual vector ([force; gap] block vector); takes in initialized residual force vector and adds
+   * contact contributions
    */
   void residualFunction(const mfem::Vector& u, mfem::Vector& r);
 
   /**
-   * @brief Function to compute the Jacobian including contact terms, given a function to compute the non-contact
-   * Jacobian terms
+   * @brief Computes the Jacobian including contact terms, given the non-contact Jacobian terms
    *
-   * @param orig_J Function to compute the non-contact terms of the Jacobian, not including essential boundary
-   * conditions
-   * @return Function with contact terms in the Jacobian, not including essential boundary conditions
+   * @param u Solution vector ([displacement; pressure] block vector)
+   * @param orig_J The non-contact terms of the Jacobian, not including essential boundary conditions
+   * @return Jacobian with contact terms, not including essential boundary conditions
    */
   std::unique_ptr<mfem::BlockOperator> jacobianFunction(const mfem::Vector& u, mfem::HypreParMatrix* orig_J) const;
 
