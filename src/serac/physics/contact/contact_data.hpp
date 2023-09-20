@@ -125,8 +125,7 @@ public:
    * conditions
    * @return Function with contact terms in the residual, not including essential boundary conditions
    */
-  std::function<void(const mfem::Vector&, mfem::Vector&)> residualFunction(
-      std::function<void(const mfem::Vector&, mfem::Vector&)> orig_r);
+  void residualFunction(const mfem::Vector& u, mfem::Vector& r);
 
   /**
    * @brief Function to compute the Jacobian including contact terms, given a function to compute the non-contact
@@ -136,8 +135,8 @@ public:
    * conditions
    * @return Function with contact terms in the Jacobian, not including essential boundary conditions
    */
-  std::function<std::unique_ptr<mfem::BlockOperator>(const mfem::Vector&)> jacobianFunction(
-      std::function<std::unique_ptr<mfem::HypreParMatrix>(const mfem::Vector&)> orig_J) const;
+  std::unique_ptr<mfem::BlockOperator> jacobianFunction(const mfem::Vector& u,
+                                                        mfem::HypreParMatrix* orig_J) const;
 
   /**
    * @brief Set the pressure field

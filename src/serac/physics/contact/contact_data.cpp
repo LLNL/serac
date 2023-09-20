@@ -210,56 +210,48 @@ std::unique_ptr<mfem::BlockOperator> ContactData::mergedJacobian() const
   return block_J;
 }
 
-std::function<void(const mfem::Vector&, mfem::Vector&)> ContactData::residualFunction(
-    std::function<void(const mfem::Vector&, mfem::Vector&)> orig_r)
+void ContactData::residualFunction(const mfem::Vector& u, mfem::Vector& r)
 {
-  return [this, orig_r](const mfem::Vector& u, mfem::Vector& r) {
-    const int disp_size = reference_nodes_->ParFESpace()->GetTrueVSize();
+  const int disp_size = reference_nodes_->ParFESpace()->GetTrueVSize();
 
-    // u_const should not change in this method; const cast is to create vector views which are copied to Tribol
-    // displacements and pressures and used to compute the (non-contact) residual
-    auto& u_const = const_cast<mfem::Vector&>(u);
-    const mfem::Vector u_blk(u_const, 0, disp_size);
-    const mfem::Vector p_blk(u_const, disp_size, numPressureDofs());
+  // u_const should not change in this method; const cast is to create vector views which are copied to Tribol
+  // displacements and pressures and used to compute the (non-contact) residual
+  auto& u_const = const_cast<mfem::Vector&>(u);
+  const mfem::Vector u_blk(u_const, 0, disp_size);
+  const mfem::Vector p_blk(u_const, disp_size, numPressureDofs());
 
-    mfem::Vector r_blk(r, 0, disp_size);
-    mfem::Vector g_blk(r, disp_size, numPressureDofs());
+  mfem::Vector r_blk(r, 0, disp_size);
+  mfem::Vector g_blk(r, disp_size, numPressureDofs());
 
-    double dt = 1.0;
-    setDisplacements(u_blk);
-    // we need to call update first to update gaps
-    update(1, 1.0, dt);
-    // with updated gaps, we can update pressure for contact interactions with penalty enforcement
-    setPressures(p_blk);
-    // call update again with the right pressures
-    update(1, 1.0, dt);
+  double dt = 1.0;
+  setDisplacements(u_blk);
+  // we need to call update first to update gaps
+  update(1, 1.0, dt);
+  // with updated gaps, we can update pressure for contact interactions with penalty enforcement
+  setPressures(p_blk);
+  // call update again with the right pressures
+  update(1, 1.0, dt);
 
-    orig_r(u_blk, r_blk);
-    r_blk += forces();
-
-    g_blk.Set(1.0, mergedGaps());
-  };
+  r_blk += forces();
+  g_blk.Set(1.0, mergedGaps());
 }
 
-std::function<std::unique_ptr<mfem::BlockOperator>(const mfem::Vector&)> ContactData::jacobianFunction(
-    std::function<std::unique_ptr<mfem::HypreParMatrix>(const mfem::Vector&)> orig_J) const
+std::unique_ptr<mfem::BlockOperator> ContactData::jacobianFunction(const mfem::Vector& u,
+                                                                   mfem::HypreParMatrix* orig_J) const
 {
-  return [this, orig_J](const mfem::Vector& u) -> std::unique_ptr<mfem::BlockOperator> {
     // u_const should not change in this method; const cast is to create vector views which are used to compute the
     // (non-contact) Jacobian
     auto& u_const = const_cast<mfem::Vector&>(u);
     const mfem::Vector u_blk(u_const, 0, reference_nodes_->ParFESpace()->GetTrueVSize());
-    auto J = orig_J(u_blk);
 
     auto J_contact = mergedJacobian();
     if (J_contact->IsZeroBlock(0, 0)) {
-      J_contact->SetBlock(0, 0, J.release());
+      J_contact->SetBlock(0, 0, orig_J);
     } else {
-      J_contact->SetBlock(0, 0, mfem::Add(1.0, *J, 1.0, static_cast<mfem::HypreParMatrix&>(J_contact->GetBlock(0, 0))));
+      J_contact->SetBlock(0, 0, mfem::Add(1.0, *orig_J, 1.0, static_cast<mfem::HypreParMatrix&>(J_contact->GetBlock(0, 0))));
     }
 
     return J_contact;
-  };
 }
 
 void ContactData::setPressures(const mfem::Vector& merged_pressures) const

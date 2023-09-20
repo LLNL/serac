@@ -14,7 +14,6 @@
 
 #include "mfem.hpp"
 
-#include "serac/physics/base_physics.hpp"
 #include "serac/physics/solid_mechanics.hpp"
 #include "serac/physics/contact/contact_data.hpp"
 
@@ -36,6 +35,8 @@ class SolidMechanicsContact;
 template <int order, int dim, typename... parameter_space, int... parameter_indices>
 class SolidMechanicsContact<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>
     : public SolidMechanics<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>> {
+  using SolidMechanicsBase 
+      = SolidMechanics<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>;
 public:
   /**
    * @brief Construct a new SolidMechanicsContact object
@@ -69,7 +70,7 @@ public:
   SolidMechanicsContact(std::unique_ptr<serac::EquationSolver> solver, const serac::TimesteppingOptions timestepping_opts,
                  const GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
                  mfem::ParMesh* pmesh = nullptr)
-      : SolidMechanics<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>(std::move(solver), timestepping_opts, geom_nonlin, name, pmesh),
+      : SolidMechanicsBase(std::move(solver), timestepping_opts, geom_nonlin, name, pmesh),
       contact_(mesh_)
   {
   }
@@ -81,7 +82,7 @@ public:
    * @param[in] name An optional name for the physics module instance. Note that this is NOT the mesh tag.
    */
   SolidMechanicsContact(const SolidMechanicsInputOptions& input_options, const std::string& name = "")
-      : SolidMechanics<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>(input_options, name),
+      : SolidMechanicsBase(input_options, name),
       contact_(mesh_)
   {
   }
@@ -89,52 +90,33 @@ public:
   /// @brief Build the quasi-static operator corresponding to the total Lagrangian formulation
   std::unique_ptr<mfem_ext::StdFunctionOperator> buildQuasistaticOperator() override
   {
-    // the quasistatic case is entirely described by the residual,
-    // there is no ordinary differential equation
-    std::function<void(const mfem::Vector&, mfem::Vector&)> residual_fn = [this](const mfem::Vector& u,
-                                                                                 mfem::Vector&       r) {
-      const mfem::Vector res = (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
+    auto residual_fn = [this](const mfem::Vector& u, mfem::Vector& r) {
+      const mfem::Vector u_blk(const_cast<mfem::Vector&>(u), 0, displacement_.Size());
+      const mfem::Vector res =
+          (*residual_)(u_blk, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
 
       // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
       // tracking strategy
       // See https://github.com/mfem/mfem/issues/3531
-      r = res;
+      mfem::Vector r_blk(r, 0, displacement_.Size());
+      r_blk = res;
+      contact_.residualFunction(u, r);
+      // we need to do this again to clear out contact residual on essential dofs
+      r_blk.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
     };
-    std::function<std::unique_ptr<mfem::HypreParMatrix>(const mfem::Vector&)> jacobian_fn =
-        [this](const mfem::Vector& u) -> std::unique_ptr<mfem::HypreParMatrix> {
-      auto [r, drdu] =
-          (*residual_)(differentiate_wrt(u), zero_, shape_displacement_, *parameters_[parameter_indices].state...);
-      auto J = assemble(drdu);
-      return J;
-    };
-
-    // add contact contribution to residual
-    if (contact_.haveContactInteractions()) {
-      residual_fn = contact_.residualFunction(residual_fn);
-    }
-    // process dirichlet bcs for residual (same for contact/non-contact)
-    residual_fn = [this, residual_fn](const mfem::Vector& u, mfem::Vector& r) {
-      residual_fn(u, r);
-      r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
-    };
-
-    // Lagrange multiplier contact returns a block jacobian and non-contact/penalty contact returns the jacobian as a
-    // hypre par matrix.  also, bcs need to be applied to the contact blocks.
     if (contact_.haveLagrangeMultipliers()) {
       J_offsets_ = mfem::Array<int>({0, displacement_.Size(), displacement_.Size() + contact_.numPressureDofs()});
-      // add the contact contribution to the jacobian
-      auto block_jacobian_fn = contact_.jacobianFunction(jacobian_fn);
-      // apply dirichlet bcs
       return std::make_unique<mfem_ext::StdFunctionOperator>(
           displacement_.space().TrueVSize() + contact_.numPressureDofs(),
-
-          // residual function
           residual_fn,
-
           // gradient of residual function
-          [this, block_jacobian_fn](const mfem::Vector& u) -> mfem::Operator& {
+          [this](const mfem::Vector& u) -> mfem::Operator& {
+            auto [r, drdu] =
+                (*residual_)(differentiate_wrt(u), zero_, shape_displacement_, *parameters_[parameter_indices].state...);
+            J_   = assemble(drdu);
+
             // create block operator holding jacobian contributions
-            J_constraint_ = block_jacobian_fn(u);
+            J_constraint_ = contact_.jacobianFunction(u, J_.release());
 
             // take ownership of blocks
             J_constraint_->owns_blocks = false;
@@ -161,26 +143,21 @@ public:
             return *J_constraint_;
           });
     } else {
-      // add contact contribution to residual and jacobian with penalty contact
-      if (contact_.haveContactInteractions()) {
-        auto block_jacobian_fn = contact_.jacobianFunction(jacobian_fn);
-        jacobian_fn            = [block_jacobian_fn](const mfem::Vector& u) -> std::unique_ptr<mfem::HypreParMatrix> {
-          auto block_J         = block_jacobian_fn(u);
-          block_J->owns_blocks = false;
-          return std::unique_ptr<mfem::HypreParMatrix>(static_cast<mfem::HypreParMatrix*>(&block_J->GetBlock(0, 0)));
-        };
-      }
-      // apply dirichlet bcs
       return std::make_unique<mfem_ext::StdFunctionOperator>(
           displacement_.space().TrueVSize(),
-
-          // residual function
           residual_fn,
+          [this](const mfem::Vector& u) -> mfem::Operator& {
+            auto [r, drdu] =
+                (*residual_)(differentiate_wrt(u), zero_, shape_displacement_, *parameters_[parameter_indices].state...);
+            J_   = assemble(drdu);
 
-          // gradient of residual function
-          [this, jacobian_fn](const mfem::Vector& u) -> mfem::Operator& {
-            J_          = jacobian_fn(u);
-            J_e_        = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+            // get 11-block holding jacobian contributions
+            auto block_J = contact_.jacobianFunction(u, J_.release());
+            block_J->owns_blocks = false;
+            J_ = std::unique_ptr<mfem::HypreParMatrix>(static_cast<mfem::HypreParMatrix*>(&block_J->GetBlock(0, 0)));
+
+            J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+
             J_operator_ = J_.get();
             return *J_;
           });
@@ -215,7 +192,7 @@ public:
     double dt    = 0.0;
     contact_.update(cycle, time, dt);
     
-    SolidMechanics<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>::completeSetup();
+    SolidMechanicsBase::completeSetup();
   }
 
   /// @brief Solve the Quasi-static Newton system
@@ -263,7 +240,7 @@ public:
       parameter_difference -= *parameters_[parameter_index].previous_state;
 
       // Compute a linearized estimate of the residual forces due to this change in parameter
-      auto drdparam        = serac::get<SolidMechanics<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>::DERIVATIVE>(d_residual_d_[parameter_index]());
+      auto drdparam        = serac::get<SolidMechanicsBase::DERIVATIVE>(d_residual_d_[parameter_index]());
       auto residual_update = drdparam(parameter_difference);
 
       // Flip the sign to get the RHS of the Newton update system
@@ -334,16 +311,17 @@ protected:
   using BasePhysics::order_;
   using BasePhysics::time_;
   using BasePhysics::cycle_;
-  using SolidMechanics<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>::residual_;
-  using SolidMechanics<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>::displacement_;
-  using SolidMechanics<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>::residual_with_bcs_;
-  using SolidMechanics<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>::du_;
-  using SolidMechanics<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>::dr_;
-  using SolidMechanics<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>::nonlin_solver_;
-  using SolidMechanics<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>::d_residual_d_;
-  using SolidMechanics<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>::zero_;
-  using SolidMechanics<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>::J_;
-  using SolidMechanics<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>::J_e_;
+  using SolidMechanicsBase::DERIVATIVE;
+  using SolidMechanicsBase::residual_;
+  using SolidMechanicsBase::displacement_;
+  using SolidMechanicsBase::residual_with_bcs_;
+  using SolidMechanicsBase::du_;
+  using SolidMechanicsBase::dr_;
+  using SolidMechanicsBase::nonlin_solver_;
+  using SolidMechanicsBase::d_residual_d_;
+  using SolidMechanicsBase::zero_;
+  using SolidMechanicsBase::J_;
+  using SolidMechanicsBase::J_e_;
 
   /// Pointer to the Jacobian operator (J_ if no Lagrange multiplier contact, J_constraint_ otherwise)
   mfem::Operator* J_operator_;
