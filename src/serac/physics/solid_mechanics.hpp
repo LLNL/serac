@@ -295,7 +295,7 @@ public:
   }
 
   /// @brief Destroy the SolidMechanics Functional object
-  ~SolidMechanics() {}
+  virtual ~SolidMechanics() {}
 
   /**
    * @brief Create a shared ptr to a quadrature data buffer for the given material type
@@ -834,7 +834,7 @@ public:
   }
 
   /// @brief Build the quasi-static operator corresponding to the total Lagrangian formulation
-  std::unique_ptr<mfem_ext::StdFunctionOperator> buildQuasistaticOperator()
+  virtual std::unique_ptr<mfem_ext::StdFunctionOperator> buildQuasistaticOperator()
   {
     // the quasistatic case is entirely described by the residual,
     // there is no ordinary differential equation
@@ -1044,7 +1044,7 @@ public:
   }
 
   /// @brief Solve the Quasi-static Newton system
-  void quasiStaticSolve(double dt)
+  virtual void quasiStaticSolve(double dt)
   {
     time_ += dt;
 

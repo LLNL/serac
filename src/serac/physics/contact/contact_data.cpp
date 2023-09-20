@@ -216,13 +216,14 @@ std::function<void(const mfem::Vector&, mfem::Vector&)> ContactData::residualFun
   return [this, orig_r](const mfem::Vector& u, mfem::Vector& r) {
     const int disp_size = reference_nodes_->ParFESpace()->GetTrueVSize();
 
-    mfem::Vector u_blk, p_blk;
-    u_blk.MakeRef(const_cast<mfem::Vector&>(u), 0, disp_size);
-    p_blk.MakeRef(const_cast<mfem::Vector&>(u), disp_size, numPressureDofs());
+    // u_const should not change in this method; const cast is to create vector views which are copied to Tribol
+    // displacements and pressures and used to compute the (non-contact) residual
+    auto& u_const = const_cast<mfem::Vector&>(u);
+    const mfem::Vector u_blk(u_const, 0, disp_size);
+    const mfem::Vector p_blk(u_const, disp_size, numPressureDofs());
 
-    mfem::Vector r_blk, g_blk;
-    r_blk.MakeRef(r, 0, disp_size);
-    g_blk.MakeRef(r, disp_size, numPressureDofs());
+    mfem::Vector r_blk(r, 0, disp_size);
+    mfem::Vector g_blk(r, disp_size, numPressureDofs());
 
     double dt = 1.0;
     setDisplacements(u_blk);
@@ -244,8 +245,10 @@ std::function<std::unique_ptr<mfem::BlockOperator>(const mfem::Vector&)> Contact
     std::function<std::unique_ptr<mfem::HypreParMatrix>(const mfem::Vector&)> orig_J) const
 {
   return [this, orig_J](const mfem::Vector& u) -> std::unique_ptr<mfem::BlockOperator> {
-    mfem::Vector u_blk;
-    u_blk.MakeRef(const_cast<mfem::Vector&>(u), 0, reference_nodes_->ParFESpace()->GetTrueVSize());
+    // u_const should not change in this method; const cast is to create vector views which are used to compute the
+    // (non-contact) Jacobian
+    auto& u_const = const_cast<mfem::Vector&>(u);
+    const mfem::Vector u_blk(u_const, 0, reference_nodes_->ParFESpace()->GetTrueVSize());
     auto J = orig_J(u_blk);
 
     auto J_contact = mergedJacobian();
@@ -265,8 +268,10 @@ void ContactData::setPressures(const mfem::Vector& merged_pressures) const
   for (size_t i{0}; i < interactions_.size(); ++i) {
     FiniteElementState p_interaction(interactions_[i].pressureSpace());
     if (interactions_[i].getContactOptions().enforcement == ContactEnforcement::LagrangeMultiplier) {
-      mfem::Vector p_interaction_ref(const_cast<mfem::Vector&>(merged_pressures), dof_offsets[static_cast<int>(i)],
-                                     dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
+      // merged_pressures_const should not change; const cast is to create a vector view for copying to tribol pressures
+      auto& merged_pressures_const = const_cast<mfem::Vector&>(merged_pressures);
+      const mfem::Vector p_interaction_ref(merged_pressures_const, dof_offsets[static_cast<int>(i)],
+                                           dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
       p_interaction.Set(1.0, p_interaction_ref);
     } else  // enforcement == ContactEnforcement::Penalty
     {

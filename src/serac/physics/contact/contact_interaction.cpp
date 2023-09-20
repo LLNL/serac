@@ -42,8 +42,8 @@ ContactInteraction::ContactInteraction(int interaction_id, const mfem::ParMesh& 
 
   // get true DOFs only associated with surface 1 (i.e. surface 1 \ surface 2)
   if (getContactOptions().type == ContactType::TiedSlide) {
-    // this block essentially returns (surface 1 \cup surface 2) \ GetEssentialTrueDofsFromElementAttribute(surface 2)
-    // (def'd in boundary_condition_helper)
+    // this block essentially returns the complement of GetEssentialTrueDofsFromElementAttribute(surface 2) (def'd in
+    // boundary_condition_helper)
     auto&            pressure_space = *tribol::getMfemPressure(interaction_id).ParFESpace();
     mfem::Array<int> dof_markers(pressure_space.GetVSize());
     dof_markers = -1;

@@ -30,6 +30,7 @@ set(physics_headers
     heat_transfer.hpp
     heat_transfer_input.hpp
     solid_mechanics.hpp
+    solid_mechanics_contact.hpp
     solid_mechanics_input.hpp
     thermomechanics.hpp
     thermomechanics_input.hpp

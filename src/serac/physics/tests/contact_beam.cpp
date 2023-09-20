@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/solid_mechanics.hpp"
+#include "serac/physics/solid_mechanics_contact.hpp"
 
 #include <functional>
 #include <set>
@@ -59,7 +59,7 @@ TEST_P(ContactTest, beam)
                                  .type        = ContactType::TiedSlide,
                                  .penalty     = 1.0e4};
 
-  SolidMechanics<p, dim> solid_solver(nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options,
+  SolidMechanicsContact<p, dim> solid_solver(nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options,
                                       GeometricNonlinearities::On, name);
 
   double                      K = 10.0;
