@@ -241,7 +241,7 @@ public:
       parameter_difference -= *parameters_[parameter_index].previous_state;
 
       // Compute a linearized estimate of the residual forces due to this change in parameter
-      auto drdparam        = serac::get<SolidMechanicsBase::DERIVATIVE>(d_residual_d_[parameter_index]());
+      auto drdparam        = serac::get<DERIVATIVE>(d_residual_d_[parameter_index]());
       auto residual_update = drdparam(parameter_difference);
 
       // Flip the sign to get the RHS of the Newton update system
