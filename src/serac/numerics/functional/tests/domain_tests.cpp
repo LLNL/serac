@@ -239,6 +239,65 @@ TEST(domain, of_faces) {
 
 }
 
+TEST(domain, of_elements) { 
+
+  {
+    auto mesh = import_mesh("patch3D_tets_and_hexes.mesh");
+    Domain d0 = Domain::ofElements(mesh, std::function([](std::vector<vec3> vertices, int /*bdr_attr*/){ 
+        return average(vertices)[0] < 0.7; // x coordinate of face center 
+    }));
+
+    EXPECT_EQ(d0.tets.size(), 0);
+    EXPECT_EQ(d0.hexes.size(), 1);
+    EXPECT_EQ(d0.dim, 3);
+
+    Domain d1 = Domain::ofElements(mesh, std::function([](std::vector<vec3> vertices, int /*bdr_attr*/){ 
+        return average(vertices)[1] < 0.75; // y coordinate of face center 
+    }));
+    EXPECT_EQ(d1.tets.size(), 6);
+    EXPECT_EQ(d1.hexes.size(), 1);
+    EXPECT_EQ(d1.dim, 3);
+
+    Domain d2 = union_of(d0, d1);
+    EXPECT_EQ(d2.tets.size(), 6);
+    EXPECT_EQ(d2.hexes.size(), 2);
+    EXPECT_EQ(d2.dim, 3);
+
+    Domain d3 = intersection_of(d0, d1);
+    EXPECT_EQ(d3.tets.size(), 0);
+    EXPECT_EQ(d3.hexes.size(), 0);
+    EXPECT_EQ(d3.dim, 3);
+  }
+
+  {
+    auto mesh = import_mesh("patch2D_tris_and_quads.mesh");
+    Domain d0 = Domain::ofElements(mesh, std::function([](std::vector<vec2> vertices, int /* attr */){ 
+        return average(vertices)[0] < 0.45;
+    }));
+    EXPECT_EQ(d0.tris.size(), 1);
+    EXPECT_EQ(d0.quads.size(), 1);
+    EXPECT_EQ(d0.dim, 2);
+
+    Domain d1 = Domain::ofElements(mesh, std::function([](std::vector<vec2> vertices, int /* attr */){ 
+        return average(vertices)[1] < 0.45;
+    }));
+    EXPECT_EQ(d1.tris.size(), 1);
+    EXPECT_EQ(d1.quads.size(), 1);
+    EXPECT_EQ(d1.dim, 2);
+
+    Domain d2 = union_of(d0, d1);
+    EXPECT_EQ(d2.tris.size(), 2);
+    EXPECT_EQ(d2.quads.size(), 2);
+    EXPECT_EQ(d2.dim, 2);
+
+    Domain d3 = intersection_of(d0, d1);
+    EXPECT_EQ(d3.tris.size(), 0);
+    EXPECT_EQ(d3.quads.size(), 0);
+    EXPECT_EQ(d3.dim, 2);
+  }
+
+}
+
 
 int main(int argc, char* argv[])
 {

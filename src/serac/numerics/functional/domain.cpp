@@ -235,11 +235,11 @@ static Domain domain_of_elems(const mfem::Mesh & mesh, std::function< bool(std::
     return output;
 };
 
-Domain ofElements(const mfem::Mesh & mesh, std::function< bool(std::vector<vec2>, int) > func) {
+Domain Domain::ofElements(const mfem::Mesh & mesh, std::function< bool(std::vector<vec2>, int) > func) {
   return domain_of_elems<2>(mesh, func);
 }
 
-Domain ofElements(const mfem::Mesh & mesh, std::function< bool(std::vector<vec3>, int) > func) {
+Domain Domain::ofElements(const mfem::Mesh & mesh, std::function< bool(std::vector<vec3>, int) > func) {
   return domain_of_elems<3>(mesh, func);
 }
 
