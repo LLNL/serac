@@ -105,7 +105,7 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     depends_on("petsc", when="+petsc")
 
-    depends_on("tribol", when="+tribol")
+    depends_on("tribol~minbuild", when="+tribol")
 
     # Needs to be first due to a bug with the Spack concretizer
     # Note: Certain combinations of CMake and Conduit do not like +mpi
@@ -137,7 +137,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("adiak+mpi", when="+profiling")
     depends_on("caliper+mpi+adiak~papi", when="+profiling")
 
-    depends_on("superlu-dist@6.1.1")
+    depends_on("superlu-dist@8.1.2")
 
     #
     # Forward variants
@@ -219,12 +219,21 @@ class Serac(CachedCMakePackage, CudaPackage):
     conflicts("cuda_arch=none", when="+cuda",
               msg="CUDA architecture is required")
     depends_on("amgx", when="+cuda")
-    cuda_deps = ["axom", "mfem", "raja", "sundials", "umpire"]
+    # Always add these variants if +cuda
+    cuda_deps = ["axom", "mfem"]
     for dep in cuda_deps:
         depends_on("{0}+cuda".format(dep), when="+cuda")
         for sm_ in CudaPackage.cuda_arch_values:
             depends_on("{0} cuda_arch={1}".format(dep, sm_),
                     when="cuda_arch={0}".format(sm_))
+    
+    # Check if these variants are true first
+    cuda_deps_with_variants = ["raja", "sundials", "tribol", "umpire"]
+    for dep in cuda_deps_with_variants:
+        depends_on("{0}+cuda".format(dep), when="+cuda")
+        for sm_ in CudaPackage.cuda_arch_values:
+            depends_on("{0} cuda_arch={1}".format(dep, sm_),
+                    when="+{0}+cuda cuda_arch={1}".format(dep, sm_))
 
     depends_on("caliper+cuda", when="+profiling+cuda")
     for sm_ in CudaPackage.cuda_arch_values:
