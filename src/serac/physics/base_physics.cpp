@@ -18,14 +18,14 @@
 
 namespace serac {
 
-BasePhysics::BasePhysics(std::string name, mfem::ParMesh* pmesh)
-    : name_(name),
-      sidre_datacoll_id_(StateManager::collectionID(pmesh)),
-      mesh_(StateManager::mesh(sidre_datacoll_id_)),
+BasePhysics::BasePhysics(std::string physics_name, std::string mesh_tag)
+    : name_(physics_name),
+      mesh_tag_(mesh_tag),
+      mesh_(StateManager::mesh(mesh_tag_)),
       comm_(mesh_.GetComm()),
-      shape_displacement_(StateManager::shapeDisplacement(sidre_datacoll_id_)),
-      time_(StateManager::time(sidre_datacoll_id_)),
-      cycle_(StateManager::cycle(sidre_datacoll_id_)),
+      shape_displacement_(StateManager::shapeDisplacement(mesh_tag_)),
+      time_(StateManager::time(mesh_tag_)),
+      cycle_(StateManager::cycle(mesh_tag_)),
       ode_time_point_(0.0),
       bcs_(mesh_)
 {
@@ -34,10 +34,10 @@ BasePhysics::BasePhysics(std::string name, mfem::ParMesh* pmesh)
 
   if (mesh_.Dimension() == 2) {
     shape_displacement_sensitivity_ =
-        std::make_unique<FiniteElementDual>(mesh_, H1<SHAPE_ORDER, 2>{}, sidre_datacoll_id_ + "_shape_displacement");
+        std::make_unique<FiniteElementDual>(mesh_, H1<SHAPE_ORDER, 2>{}, mesh_tag_ + "_shape_displacement_sensitivity");
   } else if (mesh_.Dimension() == 3) {
     shape_displacement_sensitivity_ =
-        std::make_unique<FiniteElementDual>(mesh_, H1<SHAPE_ORDER, 3>{}, sidre_datacoll_id_ + "_shape_displacement");
+        std::make_unique<FiniteElementDual>(mesh_, H1<SHAPE_ORDER, 3>{}, mesh_tag_ + "_shape_displacement_sensitivity");
   } else {
     SLIC_ERROR_ROOT(axom::fmt::format("Mesh of dimension {} given, only dimensions 2 or 3 are available in Serac.",
                                       mesh_.Dimension()));
@@ -45,7 +45,8 @@ BasePhysics::BasePhysics(std::string name, mfem::ParMesh* pmesh)
   StateManager::storeDual(*shape_displacement_sensitivity_);
 }
 
-BasePhysics::BasePhysics(int n, int p, std::string name, mfem::ParMesh* pmesh) : BasePhysics(name, pmesh)
+BasePhysics::BasePhysics(int n, int p, std::string physics_name, std::string mesh_tag)
+    : BasePhysics(physics_name, mesh_tag)
 {
   order_ = p;
   // If this is a restart run, things have already been initialized
@@ -107,7 +108,7 @@ void BasePhysics::outputStateToDisk(std::optional<std::string> paraview_output_d
   StateManager::updateDual(*shape_displacement_sensitivity_);
 
   // Save the restart/Sidre file
-  StateManager::save(time_, cycle_, sidre_datacoll_id_);
+  StateManager::save(time_, cycle_, mesh_tag_);
 
   // Optionally output a paraview datacollection for visualization
   if (paraview_output_dir) {

@@ -102,11 +102,10 @@ public:
    * @param[in] pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
   HeatTransfer(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
-               const serac::TimesteppingOptions timestepping_opts, const std::string& name = "",
-               mfem::ParMesh* pmesh = nullptr, std::vector<std::string> parameter_names = {})
-      : HeatTransfer(std::make_unique<EquationSolver>(nonlinear_opts, lin_opts,
-                                                      StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
-                     timestepping_opts, name, pmesh, parameter_names)
+               const serac::TimesteppingOptions timestepping_opts, const std::string& physics_name,
+               std::string mesh_tag, std::vector<std::string> parameter_names = {})
+      : HeatTransfer(std::make_unique<EquationSolver>(nonlinear_opts, lin_opts, StateManager::mesh(mesh_tag).GetComm()),
+                     timestepping_opts, physics_name, mesh_tag, parameter_names)
   {
   }
 
@@ -120,12 +119,11 @@ public:
    * @param[in] pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
   HeatTransfer(std::unique_ptr<serac::EquationSolver> solver, const serac::TimesteppingOptions timestepping_opts,
-               const std::string& name = "", mfem::ParMesh* pmesh = nullptr,
-               std::vector<std::string> parameter_names = {})
-      : BasePhysics(NUM_STATE_VARS, order, name, pmesh),
-        temperature_(StateManager::newState(H1<order>{}, detail::addPrefix(name, "temperature"), sidre_datacoll_id_)),
+               const std::string& physics_name, std::string mesh_tag, std::vector<std::string> parameter_names = {})
+      : BasePhysics(NUM_STATE_VARS, order, physics_name, mesh_tag),
+        temperature_(StateManager::newState(H1<order>{}, detail::addPrefix(physics_name, "temperature"), mesh_tag_)),
         adjoint_temperature_(
-            StateManager::newState(H1<order>{}, detail::addPrefix(name, "adjoint_temperature"), sidre_datacoll_id_)),
+            StateManager::newState(H1<order>{}, detail::addPrefix(physics_name, "adjoint_temperature"), mesh_tag_)),
         residual_with_bcs_(temperature_.space().TrueVSize()),
         nonlin_solver_(std::move(solver)),
         ode_(temperature_.space().TrueVSize(),
@@ -161,7 +159,7 @@ public:
       for_constexpr<sizeof...(parameter_space)>([&](auto i) {
         parameters_.emplace_back(mesh_, get<i>(types), detail::addPrefix(name_, parameter_names[i]));
 
-        trial_spaces[i + NUM_STATE_VARS] = &parameters_[i].state.space();
+        trial_spaces[i + NUM_STATE_VARS] = &(parameters_[i].state.space());
       });
     }
 
@@ -203,8 +201,9 @@ public:
    * @param[in] options The solver information parsed from the input file
    * @param[in] name An optional name for the physics module instance. Note that this is NOT the mesh tag.
    */
-  HeatTransfer(const HeatTransferInputOptions& options, const std::string& name = "")
-      : HeatTransfer(options.nonlin_solver_options, options.lin_solver_options, options.timestepping_options, name)
+  HeatTransfer(const HeatTransferInputOptions& options, const std::string& physics_name, const std::string& mesh_tag)
+      : HeatTransfer(options.nonlin_solver_options, options.lin_solver_options, options.timestepping_options,
+                     physics_name, mesh_tag)
   {
     if (options.initial_temperature) {
       auto temp = options.initial_temperature->constructScalar();
@@ -230,7 +229,7 @@ public:
         // NOTE: cannot use std::functions that use mfem::vector
         SLIC_ERROR("'flux' is not implemented yet in input files.");
       } else {
-        SLIC_WARNING_ROOT("Ignoring boundary condition with unknown name: " << name);
+        SLIC_WARNING_ROOT("Ignoring boundary condition with unknown name: " << physics_name);
       }
     }
   }

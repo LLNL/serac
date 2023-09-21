@@ -84,11 +84,13 @@ TEST(Thermomechanics, ParameterizedMaterial)
                                                                         height), serial_refinement, parallel_refinement);
 
   // clang-format on
-  auto pmesh = serac::StateManager::setMesh(std::move(mesh));
+  std::string mesh_tag{"mesh"};
+  auto&       pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   SolidMechanics<p, dim, Parameters<H1<p>, H1<p>>> simulation(
       solid_mechanics::default_nonlinear_options, solid_mechanics::direct_linear_options,
-      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "thermomechanics_simulation");
+      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "thermomechanics_simulation",
+      mesh_tag);
 
   double density   = 1.0;     ///< density
   double E         = 1000.0;  ///< Young's modulus
@@ -100,14 +102,14 @@ TEST(Thermomechanics, ParameterizedMaterial)
   simulation.setMaterial(DependsOn<0, 1>{}, material);
 
   double             deltaT = 1.0;
-  FiniteElementState temperature(*pmesh, H1<p>{}, "theta");
+  FiniteElementState temperature(pmesh, H1<p>{}, "theta");
 
   temperature = theta_ref;
   simulation.setParameter(0, temperature);
 
   double             alpha0    = 1.0e-3;
   auto               alpha_fec = std::unique_ptr<mfem::FiniteElementCollection>(new mfem::H1_FECollection(p, dim));
-  FiniteElementState alpha(*pmesh, H1<p>{}, "alpha");
+  FiniteElementState alpha(pmesh, H1<p>{}, "alpha");
 
   alpha = alpha0;
   simulation.setParameter(1, alpha);
@@ -149,7 +151,7 @@ TEST(Thermomechanics, ParameterizedMaterial)
         auto n           = normalize(cross(dX_dxi));
         return dot(u, n) * ((X[2] > 0.99 * height) ? 1.0 : 0.0);
       },
-      *pmesh);
+      pmesh);
 
   double initial_qoi = qoi(simulation.displacement());
   SLIC_INFO_ROOT(axom::fmt::format("vertical displacement integrated over the top surface: {}", initial_qoi));
@@ -161,7 +163,7 @@ TEST(Thermomechanics, ParameterizedMaterial)
         auto [X, dX_dxi] = position;
         return (X[2] > 0.99 * height) ? 1.0 : 0.0;
       },
-      *pmesh);
+      pmesh);
 
   double top_area = area(simulation.displacement());
 

@@ -60,33 +60,31 @@ public:
   {
     const int dim = mesh.Dimension();
 
-    std::unique_ptr<mfem::FiniteElementCollection> fec;
-
     const auto ordering = mfem::Ordering::byNODES;
 
     switch (FunctionSpace::family) {
       case Family::H1:
-        fec = std::make_unique<mfem::H1_FECollection>(FunctionSpace::order, dim);
+        coll_ = std::make_unique<mfem::H1_FECollection>(FunctionSpace::order, dim);
         break;
       case Family::HCURL:
-        fec = std::make_unique<mfem::ND_FECollection>(FunctionSpace::order, dim);
+        coll_ = std::make_unique<mfem::ND_FECollection>(FunctionSpace::order, dim);
         break;
       case Family::HDIV:
-        fec = std::make_unique<mfem::RT_FECollection>(FunctionSpace::order, dim);
+        coll_ = std::make_unique<mfem::RT_FECollection>(FunctionSpace::order, dim);
         break;
       case Family::L2:
         // We use GaussLobatto basis functions as this is what is used for the serac::Functional FE kernels
-        fec = std::make_unique<mfem::L2_FECollection>(FunctionSpace::order, dim, mfem::BasisType::GaussLobatto);
+        coll_ = std::make_unique<mfem::L2_FECollection>(FunctionSpace::order, dim, mfem::BasisType::GaussLobatto);
         break;
       default:
         SLIC_ERROR_ROOT("Unknown finite element space requested.");
         break;
     }
 
-    auto fes = std::make_unique<mfem::ParFiniteElementSpace>(&mesh, fec.get(), FunctionSpace::components, ordering);
+    space_ = std::make_unique<mfem::ParFiniteElementSpace>(&mesh, coll_.get(), FunctionSpace::components, ordering);
 
     // Construct a hypre par vector based on the new finite element space
-    HypreParVector new_vector(fes.get());
+    HypreParVector new_vector(space_.get());
 
     // Move the data from this new hypre vector into this object without doubly allocating the data
     auto* parallel_vec = new_vector.StealParVector();

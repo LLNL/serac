@@ -45,10 +45,10 @@ public:
   /**
    * @brief Empty constructor
    * @param[in] pmesh An optional mesh reference, must be provided to configure the module
-   * @param[in] name Name of the physics module instance
+   * @param[in] physics_name Name of the physics module instance
    * when a mesh other than the primary mesh is used
    */
-  BasePhysics(std::string name, mfem::ParMesh* pmesh = nullptr);
+  BasePhysics(std::string physics_name, std::string mesh_tag);
 
   /**
    * @brief Constructor that creates n entries in states_ of order p
@@ -56,10 +56,10 @@ public:
    * @param[in] n Number of state variables
    * @param[in] p Order of the solver
    * @param[in] pmesh An optional mesh reference, must be provided to configure the module
-   * @param[in] name Name of the physics module instance
+   * @param[in] phsyics_name Name of the physics module instance
    * when a mesh other than the default mesh is used
    */
-  BasePhysics(int n, int p, std::string name, mfem::ParMesh* pmesh = nullptr);
+  BasePhysics(int n, int p, std::string physics_name, std::string mesh_tag);
 
   /**
    * @brief Construct a new Base Physics object (copy constructor)
@@ -221,7 +221,7 @@ protected:
   std::string name_ = {};
 
   /// @brief ID of the corresponding MFEMSidreDataCollection (denoting a mesh)
-  std::string sidre_datacoll_id_ = {};
+  std::string mesh_tag_ = {};
 
   /**
    * @brief The primary mesh

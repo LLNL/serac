@@ -34,7 +34,10 @@ TEST(Thermal, ParameterizedMaterial)
   std::string filename = SERAC_REPO_DIR "/data/meshes/star.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
+
+  std::string mesh_tag{"mesh"};
+
+  auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   constexpr int p   = 1;
   constexpr int dim = 2;
@@ -44,7 +47,7 @@ TEST(Thermal, ParameterizedMaterial)
 
   // Construct and initialized the user-defined conductivity to be used as a differentiable parameter in
   // the thermal conduction physics module.
-  FiniteElementState user_defined_conductivity(*mesh, H1<1>{}, "parameterized_conductivity");
+  FiniteElementState user_defined_conductivity(pmesh, H1<1>{}, "parameterized_conductivity");
 
   user_defined_conductivity = 1.0;
 
@@ -57,9 +60,9 @@ TEST(Thermal, ParameterizedMaterial)
   // Note that we now include an extra template parameter indicating the finite element space for the parameterized
   // field, in this case the thermal conductivity. We also pass an array of finite element states for each of the
   // requested parameterized fields.
-  HeatTransfer<p, dim, Parameters<H1<1>>> thermal_solver(heat_transfer::default_nonlinear_options,
-                                                         heat_transfer::direct_linear_options,
-                                                         heat_transfer::default_static_options, "thermal_functional");
+  HeatTransfer<p, dim, Parameters<H1<1>>> thermal_solver(
+      heat_transfer::default_nonlinear_options, heat_transfer::direct_linear_options,
+      heat_transfer::default_static_options, "thermal_functional", mesh_tag, {"conductivity"});
 
   thermal_solver.setParameter(0, user_defined_conductivity);
 
@@ -99,7 +102,7 @@ TEST(Thermal, ParameterizedMaterial)
 
   // Construct a dummy adjoint load (this would come from a QOI downstream).
   // This adjoint load is equivalent to a discrete L1 norm on the temperature.
-  FiniteElementDual adjoint_load(*mesh, H1<p>{}, "adjoint_load");
+  FiniteElementDual adjoint_load(pmesh, H1<p>{}, "adjoint_load");
 
   adjoint_load = 1.0;
 

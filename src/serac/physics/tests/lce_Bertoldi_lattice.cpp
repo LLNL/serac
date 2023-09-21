@@ -54,7 +54,9 @@ TEST(LiquidCrystalElastomer, Bertoldi)
   auto mesh = mesh::refineAndDistribute(std::move(initial_mesh), serial_refinement, parallel_refinement);
 #endif
 
-  serac::StateManager::setMesh(std::move(mesh));
+  std::string mesh_tag{"mesh"};
+
+  serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   // Construct a functional-based solid mechanics solver
   LinearSolverOptions linear_options = {.linear_solver = LinearSolver::SuperLU};
@@ -75,7 +77,7 @@ TEST(LiquidCrystalElastomer, Bertoldi)
 
   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
       nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::Off,
-      "lce_solid_functional", nullptr, {"order", "eta", "gamma"});
+      "lce_solid_functional", mesh_tag, {"order", "eta", "gamma"});
 
   // Material properties
   double density         = 1.0;
@@ -87,17 +89,17 @@ TEST(LiquidCrystalElastomer, Bertoldi)
   double eta_angle       = 0.0;
 
   // Parameter 1
-  FiniteElementState orderParam(StateManager::newState(H1<p>{}, "orderParam"));
+  FiniteElementState orderParam(StateManager::newState(H1<p>{}, "orderParam", mesh_tag));
   orderParam = max_order_param;
 
   // Parameter 2
-  FiniteElementState gammaParam(StateManager::newState(L2<p>{}, "gammaParam"));
+  FiniteElementState gammaParam(StateManager::newState(L2<p>{}, "gammaParam", mesh_tag));
   auto               gammaFunc = [gamma_angle](const mfem::Vector& /*x*/, double) -> double { return gamma_angle; };
   mfem::FunctionCoefficient gammaCoef(gammaFunc);
   gammaParam.project(gammaCoef);
 
   // Paremetr 3
-  FiniteElementState        etaParam(StateManager::newState(L2<p>{}, "etaParam"));
+  FiniteElementState        etaParam(StateManager::newState(L2<p>{}, "etaParam", mesh_tag));
   auto                      etaFunc = [eta_angle](const mfem::Vector& /*x*/, double) -> double { return eta_angle; };
   mfem::FunctionCoefficient etaCoef(etaFunc);
   etaParam.project(etaCoef);

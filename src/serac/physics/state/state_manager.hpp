@@ -55,8 +55,7 @@ public:
    * @note If this is a restart then the options (except for the name) will be ignored
    */
   template <typename FunctionSpace>
-  static FiniteElementState newState(FunctionSpace space, const std::string& state_name,
-                                     const std::string& mesh_tag = default_mesh_name_)
+  static FiniteElementState newState(FunctionSpace space, const std::string& state_name, const std::string& mesh_tag)
   {
     SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
     SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
@@ -94,8 +93,7 @@ public:
    * @note If this is a restart then the options (except for the name) will be ignored
    */
   template <typename FunctionSpace>
-  static FiniteElementDual newDual(FunctionSpace space, const std::string& dual_name,
-                                   const std::string& mesh_tag = default_mesh_name_)
+  static FiniteElementDual newDual(FunctionSpace space, const std::string& dual_name, const std::string& mesh_tag)
   {
     SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
     SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
@@ -162,7 +160,7 @@ public:
    * @param[in] cycle The current iteration number of the simulation
    * @param[in] mesh_tag A string that uniquely identifies the mesh (and accompanying fields) to save
    */
-  static void save(const double t, const int cycle, const std::string& mesh_tag = default_mesh_name_);
+  static void save(const double t, const int cycle, const std::string& mesh_tag);
 
   /**
    * @brief Loads an existing DataCollection
@@ -170,7 +168,7 @@ public:
    * @param[in] mesh_tag The mesh_tag associated with the DataCollection when it was saved
    * @return The time from specified restart cycle. Otherwise zero.
    */
-  static double load(const int cycle_to_load, const std::string& mesh_tag = default_mesh_name_)
+  static double load(const int cycle_to_load, const std::string& mesh_tag)
   {
     // FIXME: Assumes that if one DataCollection is going to be reloaded all DataCollections will be
     is_restart_ = true;
@@ -203,14 +201,14 @@ public:
    * @param[in] mesh_tag A string that uniquely identifies the mesh
    * @return A pointer to the stored mesh whose ownership was just passed to StateManager
    */
-  static mfem::ParMesh* setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const std::string& mesh_tag = default_mesh_name_);
+  static mfem::ParMesh& setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const std::string& mesh_tag);
 
   /**
    * @brief Returns a non-owning reference to mesh held by StateManager
    * @param[in] mesh_tag A string that uniquely identifies the mesh
    * @pre A mesh identified by @a mesh_tag must be registered - either via @p load() or @p setMesh()
    */
-  static mfem::ParMesh& mesh(const std::string& mesh_tag = default_mesh_name_);
+  static mfem::ParMesh& mesh(const std::string& mesh_tag);
 
   /**
    * @brief Get the shape displacement finite element state
@@ -221,7 +219,7 @@ public:
    * @param mesh_tag A string that uniquely identifies the mesh
    * @return The linear nodal shape displacement field
    */
-  static FiniteElementState& shapeDisplacement(const std::string& mesh_tag = default_mesh_name_);
+  static FiniteElementState& shapeDisplacement(const std::string& mesh_tag);
 
   /**
    * @brief Returns the datacollection ID for a given mesh
@@ -290,8 +288,6 @@ private:
   static axom::sidre::DataStore* ds_;
   /// @brief Output directory to which all datacollections are saved
   static std::string output_dir_;
-  /// @brief Default name for the mesh - mostly for backwards compatibility
-  const static std::string default_mesh_name_;
 
   /// @brief A collection of FiniteElementState names and their corresponding Sidre-owned grid function pointers
   static std::unordered_map<std::string, mfem::ParGridFunction*> named_states_;

@@ -34,20 +34,23 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
   std::string filename = SERAC_REPO_DIR "/data/meshes/patch2D_tris_and_quads.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
+
+  std::string mesh_tag{"mesh"};
+
+  auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   constexpr int p   = 1;
   constexpr int dim = 2;
 
   // Construct and initialized the user-defined moduli to be used as a differentiable parameter in
   // the solid physics module.
-  FiniteElementState user_defined_shear_modulus(*mesh, H1<p>{}, "parameterized_shear");
+  FiniteElementState user_defined_shear_modulus(pmesh, H1<p>{}, "parameterized_shear");
 
   double shear_modulus_value = 1.0;
 
   user_defined_shear_modulus = shear_modulus_value;
 
-  FiniteElementState user_defined_bulk_modulus(*mesh, H1<p>{}, "parameterized_bulk");
+  FiniteElementState user_defined_bulk_modulus(pmesh, H1<p>{}, "parameterized_bulk");
 
   double bulk_modulus_value = 1.0;
 
@@ -58,9 +61,9 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
   auto lin_options          = solid_mechanics::default_linear_options;
   lin_options.linear_solver = LinearSolver::SuperLU;
 
-  SolidMechanics<p, dim, Parameters<H1<1>, H1<1>>> solid_solver(solid_mechanics::default_nonlinear_options, lin_options,
-                                                                solid_mechanics::default_quasistatic_options,
-                                                                GeometricNonlinearities::On, "solid_functional");
+  SolidMechanics<p, dim, Parameters<H1<1>, H1<1>>> solid_solver(
+      solid_mechanics::default_nonlinear_options, lin_options, solid_mechanics::default_quasistatic_options,
+      GeometricNonlinearities::On, "solid_functional", mesh_tag, {"shear modulus", "bulk modulus"});
 
   solid_solver.setParameter(0, user_defined_bulk_modulus);
   solid_solver.setParameter(1, user_defined_shear_modulus);
@@ -195,7 +198,10 @@ void finite_difference_shape_test(LoadingType load)
   std::string filename = SERAC_REPO_DIR "/data/meshes/patch2D_tris.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
+
+  std::string mesh_tag{"mesh"};
+
+  serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   constexpr int p   = 1;
   constexpr int dim = 2;
@@ -212,7 +218,7 @@ void finite_difference_shape_test(LoadingType load)
   // Construct a functional-based solid solver
   SolidMechanics<p, dim> solid_solver(nonlin_options, solid_mechanics::direct_linear_options,
                                       solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On,
-                                      "solid_functional");
+                                      "solid_functional", mesh_tag);
 
   solid_mechanics::NeoHookean mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);

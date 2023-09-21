@@ -37,7 +37,10 @@ TEST(BeamBending, TwoDimensional)
   std::string filename = SERAC_REPO_DIR "/data/meshes/beam-quad.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), 0, 0);
-  serac::StateManager::setMesh(std::move(mesh));
+
+  std::string mesh_tag{"mesh"};
+
+  serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   serac::LinearSolverOptions linear_options{.linear_solver  = LinearSolver::GMRES,
                                             .preconditioner = Preconditioner::HypreAMG,
@@ -61,7 +64,7 @@ TEST(BeamBending, TwoDimensional)
 #endif
 
   SolidMechanics<p, dim> solid_solver(nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options,
-                                      GeometricNonlinearities::On, "solid_mechanics");
+                                      GeometricNonlinearities::On, "solid_mechanics", mesh_tag);
 
   double                             K = 1.91666666666667;
   double                             G = 1.0;

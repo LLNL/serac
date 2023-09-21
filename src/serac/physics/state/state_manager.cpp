@@ -18,7 +18,6 @@ axom::sidre::DataStore*                                               StateManag
 std::string                                                           StateManager::output_dir_ = "";
 std::unordered_map<std::string, mfem::ParGridFunction*>               StateManager::named_states_;
 std::unordered_map<std::string, mfem::ParGridFunction*>               StateManager::named_duals_;
-const std::string                                                     StateManager::default_mesh_name_ = "default_mesh";
 
 double StateManager::newDataCollection(const std::string& name, const std::optional<int> cycle_to_load)
 {
@@ -203,7 +202,7 @@ void StateManager::save(const double t, const int cycle, const std::string& mesh
   datacoll.Save();
 }
 
-mfem::ParMesh* StateManager::setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const std::string& mesh_tag)
+mfem::ParMesh& StateManager::setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const std::string& mesh_tag)
 {
   // Determine if the existing nodal grid function is discontinuous. This
   // indicates that the mesh is periodic and the new nodal grid function must also
@@ -245,7 +244,7 @@ mfem::ParMesh* StateManager::setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const
   // for the non-restart case
   constructShapeFields(mesh_tag);
 
-  return &new_pmesh;
+  return new_pmesh;
 }
 
 void StateManager::constructShapeFields(const std::string& mesh_tag)
@@ -280,17 +279,13 @@ mfem::ParMesh& StateManager::mesh(const std::string& mesh_tag)
 
 std::string StateManager::collectionID(const mfem::ParMesh* pmesh)
 {
-  if (!pmesh) {
-    return default_mesh_name_;
-  } else {
-    for (auto& [name, datacoll] : datacolls_) {
-      if (datacoll.GetMesh() == pmesh) {
-        return name;
-      }
+  for (auto& [name, datacoll] : datacolls_) {
+    if (datacoll.GetMesh() == pmesh) {
+      return name;
     }
-    SLIC_ERROR_ROOT("The mesh has not been registered with StateManager");
-    return {};
   }
+  SLIC_ERROR_ROOT("The mesh has not been registered with StateManager");
+  return {};
 }
 
 int StateManager::cycle(std::string mesh_tag)

@@ -34,7 +34,10 @@ TEST(Thermal, FiniteDifference)
   std::string filename = SERAC_REPO_DIR "/data/meshes/square.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
+
+  std::string mesh_tag{"mesh"};
+
+  auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   constexpr int p   = 1;
   constexpr int dim = 2;
@@ -51,13 +54,11 @@ TEST(Thermal, FiniteDifference)
   // Note that we now include an extra template parameter indicating the finite element space for the parameterized
   // field, in this case the thermal conductivity. We also pass an array of finite element states for each of the
   // requested parameterized fields.
-  HeatTransfer<p, dim, Parameters<H1<1>>> thermal_solver(heat_transfer::default_nonlinear_options,
-                                                         heat_transfer::default_linear_options,
-                                                         heat_transfer::default_static_options, "thermal_functional");
+  HeatTransfer<p, dim, Parameters<H1<1>>> thermal_solver(
+      heat_transfer::default_nonlinear_options, heat_transfer::default_linear_options,
+      heat_transfer::default_static_options, "thermal_functional", mesh_tag, {"conductivity"});
 
-  auto [fes, fec] = generateParFiniteElementSpace<H1<1>>(mesh.get());
-
-  FiniteElementState user_defined_conductivity(*fes, "user_defined_conductivity");
+  FiniteElementState user_defined_conductivity(pmesh, H1<1>{}, "user_defined_conductivity");
 
   double conductivity_value = 1.2;
   user_defined_conductivity = conductivity_value;
@@ -119,11 +120,13 @@ TEST(Thermal, FiniteDifference)
     // Perturb the conductivity
     (user_defined_conductivity)(i) = conductivity_value + eps;
 
+    thermal_solver.setParameter(0, user_defined_conductivity);
     thermal_solver.advanceTimestep();
     mfem::ParGridFunction temperature_plus = thermal_solver.temperature().gridFunction();
 
     (user_defined_conductivity)(i) = conductivity_value - eps;
 
+    thermal_solver.setParameter(0, user_defined_conductivity);
     thermal_solver.advanceTimestep();
     mfem::ParGridFunction temperature_minus = thermal_solver.temperature().gridFunction();
 
@@ -163,7 +166,10 @@ TEST(HeatTransfer, FiniteDifferenceShape)
   std::string filename = SERAC_REPO_DIR "/data/meshes/star.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
+
+  std::string mesh_tag{"mesh"};
+
+  auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   constexpr int p   = 1;
   constexpr int dim = 2;
@@ -179,13 +185,13 @@ TEST(HeatTransfer, FiniteDifferenceShape)
 
   // Construct a functional-based thermal solver
   HeatTransfer<p, dim> thermal_solver(nonlin_opts, heat_transfer::direct_linear_options,
-                                      heat_transfer::default_static_options, "thermal_functional_shape");
+                                      heat_transfer::default_static_options, "thermal_functional_shape", mesh_tag);
 
   heat_transfer::LinearIsotropicConductor mat(1.0, 1.0, 1.0);
 
   thermal_solver.setMaterial(mat);
 
-  FiniteElementState shape_displacement(*mesh, H1<SHAPE_ORDER, dim>{});
+  FiniteElementState shape_displacement(pmesh, H1<SHAPE_ORDER, dim>{});
 
   shape_displacement = shape_displacement_value;
   thermal_solver.setShapeDisplacement(shape_displacement);

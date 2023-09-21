@@ -310,7 +310,10 @@ double solution_error(PatchBoundaryCondition bc)
     default: SLIC_ERROR_ROOT("unsupported element type for patch test"); break;
   } 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename));
-  auto* pmesh = serac::StateManager::setMesh(std::move(mesh));
+  
+  std::string mesh_tag{"mesh_tag"};
+
+  auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   // Construct a solid mechanics solver
   #ifdef MFEM_USE_SUNDIALS
@@ -319,9 +322,9 @@ double solution_error(PatchBoundaryCondition bc)
   serac::NonlinearSolverOptions nonlin_solver_options{.nonlin_solver = NonlinearSolver::Newton, .relative_tol = 0.0, .absolute_tol = 1.0e-14, .max_iterations = 30};
   #endif
 
-  auto equation_solver = std::make_unique<EquationSolver>(nonlin_solver_options, serac::solid_mechanics::default_linear_options, pmesh->GetComm());
+  auto equation_solver = std::make_unique<EquationSolver>(nonlin_solver_options, serac::solid_mechanics::default_linear_options, pmesh.GetComm());
 
-  SolidMechanics<p, dim> solid(std::move(equation_solver), solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "solid");
+  SolidMechanics<p, dim> solid(std::move(equation_solver), solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "solid", mesh_tag);
 
   solid_mechanics::NeoHookean mat{.density=1.0, .K=1.0, .G=1.0};
   solid.setMaterial(mat);
@@ -383,7 +386,10 @@ double pressure_error()
     default: SLIC_ERROR_ROOT("unsupported element type for patch test"); break;
   } 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename));
-  auto* pmesh = serac::StateManager::setMesh(std::move(mesh));
+  
+  std::string mesh_tag{"mesh"};
+  
+  auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   // Construct a solid mechanics solver
   #ifdef MFEM_USE_SUNDIALS
@@ -392,9 +398,9 @@ double pressure_error()
   serac::NonlinearSolverOptions nonlin_solver_options{.nonlin_solver = NonlinearSolver::Newton, .relative_tol = 0.0, .absolute_tol = 1.0e-14, .max_iterations = 30};
   #endif
 
-  auto equation_solver = std::make_unique<EquationSolver>(nonlin_solver_options, serac::solid_mechanics::default_linear_options, pmesh->GetComm());
+  auto equation_solver = std::make_unique<EquationSolver>(nonlin_solver_options, serac::solid_mechanics::default_linear_options, pmesh.GetComm());
 
-  SolidMechanics<p, dim> solid(std::move(equation_solver), solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "solid");
+  SolidMechanics<p, dim> solid(std::move(equation_solver), solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "solid", mesh_tag);
 
   solid_mechanics::NeoHookean mat{.density=1.0, .K=1.0, .G=1.0};
   solid.setMaterial(mat);

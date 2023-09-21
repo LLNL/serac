@@ -106,12 +106,11 @@ public:
    * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
   SolidMechanics(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
-                 const serac::TimesteppingOptions timestepping_opts,
-                 const GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
-                 mfem::ParMesh* pmesh = nullptr, std::vector<std::string> parameter_names = {})
-      : SolidMechanics(std::make_unique<EquationSolver>(
-                           nonlinear_opts, lin_opts, StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
-                       timestepping_opts, geom_nonlin, name, pmesh, parameter_names)
+                 const serac::TimesteppingOptions timestepping_opts, const GeometricNonlinearities geom_nonlin,
+                 const std::string& physics_name, std::string mesh_tag, std::vector<std::string> parameter_names = {})
+      : SolidMechanics(
+            std::make_unique<EquationSolver>(nonlinear_opts, lin_opts, StateManager::mesh(mesh_tag).GetComm()),
+            timestepping_opts, geom_nonlin, physics_name, mesh_tag, parameter_names)
   {
   }
 
@@ -125,15 +124,15 @@ public:
    * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
    */
   SolidMechanics(std::unique_ptr<serac::EquationSolver> solver, const serac::TimesteppingOptions timestepping_opts,
-                 const GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
-                 mfem::ParMesh* pmesh = nullptr, std::vector<std::string> parameter_names = {})
-      : BasePhysics(2, order, name, pmesh),
-        velocity_(StateManager::newState(H1<order, dim>{}, detail::addPrefix(name, "velocity"), sidre_datacoll_id_)),
+                 const GeometricNonlinearities geom_nonlin, const std::string& physics_name, std::string mesh_tag,
+                 std::vector<std::string> parameter_names = {})
+      : BasePhysics(2, order, physics_name, mesh_tag),
+        velocity_(StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "velocity"), mesh_tag_)),
         displacement_(
-            StateManager::newState(H1<order, dim>{}, detail::addPrefix(name, "displacement"), sidre_datacoll_id_)),
-        adjoint_displacement_(StateManager::newState(H1<order, dim>{}, detail::addPrefix(name, "adjoint_displacement"),
-                                                     sidre_datacoll_id_)),
-        reactions_(StateManager::newDual(H1<order, dim>{}, detail::addPrefix(name, "reactions"), sidre_datacoll_id_)),
+            StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "displacement"), mesh_tag_)),
+        adjoint_displacement_(StateManager::newState(
+            H1<order, dim>{}, detail::addPrefix(physics_name, "adjoint_displacement"), mesh_tag_)),
+        reactions_(StateManager::newDual(H1<order, dim>{}, detail::addPrefix(physics_name, "reactions"), mesh_tag_)),
         nonlin_solver_(std::move(solver)),
         ode2_(displacement_.space().TrueVSize(),
               {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
@@ -164,12 +163,17 @@ public:
     trial_spaces[1] = &displacement_.space();
     trial_spaces[2] = &shape_displacement_.space();
 
+    SLIC_ERROR_ROOT_IF(
+        sizeof...(parameter_space) != parameter_names.size(),
+        axom::fmt::format("{} parameter spaces given in the template argument but {} parameter names were supplied.",
+                          sizeof...(parameter_space), parameter_names.size()));
+
     if constexpr (sizeof...(parameter_space) > 0) {
       tuple<parameter_space...> types{};
       for_constexpr<sizeof...(parameter_space)>([&](auto i) {
         parameters_.emplace_back(mesh_, get<i>(types), detail::addPrefix(name_, parameter_names[i]));
 
-        trial_spaces[i + NUM_STATE_VARS] = &parameters_[i].state.space();
+        trial_spaces[i + NUM_STATE_VARS] = &(parameters_[i].state.space());
       });
     }
 
@@ -228,9 +232,9 @@ public:
    * @param[in] input_options The solver information parsed from the input file
    * @param[in] name An optional name for the physics module instance. Note that this is NOT the mesh tag.
    */
-  SolidMechanics(const SolidMechanicsInputOptions& input_options, const std::string& name = "")
+  SolidMechanics(const SolidMechanicsInputOptions& input_options, const std::string& physics_name, std::string mesh_tag)
       : SolidMechanics(input_options.nonlin_solver_options, input_options.lin_solver_options,
-                       input_options.timestepping_options, input_options.geom_nonlin, name)
+                       input_options.timestepping_options, input_options.geom_nonlin, physics_name, mesh_tag)
   {
     // This is the only other options stored in the input file that we can use
     // in the initialization stage
@@ -277,7 +281,7 @@ public:
         // TODO: Not implemented yet in input files
         SLIC_ERROR("'pressure_ref' is not implemented yet in input files.");
       } else {
-        SLIC_WARNING_ROOT("Ignoring boundary condition with unknown name: " << name);
+        SLIC_WARNING_ROOT("Ignoring boundary condition with unknown name: " << bc_name);
       }
     }
   }

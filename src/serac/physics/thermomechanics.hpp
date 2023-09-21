@@ -47,15 +47,13 @@ public:
   Thermomechanics(const NonlinearSolverOptions thermal_nonlin_opts, const LinearSolverOptions thermal_lin_opts,
                   TimesteppingOptions thermal_timestepping, const NonlinearSolverOptions solid_nonlin_opts,
                   const LinearSolverOptions solid_lin_opts, TimesteppingOptions solid_timestepping,
-                  GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
-                  mfem::ParMesh* pmesh = nullptr)
+                  GeometricNonlinearities geom_nonlin, const std::string& physics_name, std::string mesh_tag)
       : Thermomechanics(
             std::make_unique<EquationSolver>(thermal_nonlin_opts, thermal_lin_opts,
-                                             StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
+                                             StateManager::mesh(mesh_tag).GetComm()),
             thermal_timestepping,
-            std::make_unique<EquationSolver>(solid_nonlin_opts, solid_lin_opts,
-                                             StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
-            solid_timestepping, geom_nonlin, name, pmesh)
+            std::make_unique<EquationSolver>(solid_nonlin_opts, solid_lin_opts, StateManager::mesh(mesh_tag).GetComm()),
+            solid_timestepping, geom_nonlin, physics_name, mesh_tag)
   {
   }
 
@@ -72,11 +70,10 @@ public:
    */
   Thermomechanics(std::unique_ptr<EquationSolver> thermal_solver, TimesteppingOptions thermal_timestepping,
                   std::unique_ptr<EquationSolver> solid_solver, TimesteppingOptions solid_timestepping,
-                  GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
-                  mfem::ParMesh* pmesh = nullptr)
-      : BasePhysics(3, order, name, pmesh),
-        thermal_(std::move(thermal_solver), thermal_timestepping, name + "thermal", pmesh),
-        solid_(std::move(solid_solver), solid_timestepping, geom_nonlin, name + "mechanical", pmesh)
+                  GeometricNonlinearities geom_nonlin, const std::string& physics_name, std::string mesh_tag)
+      : BasePhysics(3, order, physics_name, mesh_tag),
+        thermal_(std::move(thermal_solver), thermal_timestepping, physics_name + "thermal", mesh_tag),
+        solid_(std::move(solid_solver), solid_timestepping, geom_nonlin, physics_name + "mechanical", mesh_tag)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
@@ -94,11 +91,11 @@ public:
    * @param[in] name A name for the physics module
    */
   Thermomechanics(const HeatTransferInputOptions& thermal_options, const SolidMechanicsInputOptions& solid_options,
-                  const std::string& name = "")
+                  const std::string& name, std::string mesh_tag)
       : Thermomechanics(thermal_options.nonlin_solver_options, thermal_options.lin_solver_options,
                         thermal_options.timestepping_options, solid_options.nonlin_solver_options,
                         solid_options.lin_solver_options, solid_options.timestepping_options, solid_options.geom_nonlin,
-                        name)
+                        name, mesh_tag)
   {
   }
 
@@ -108,8 +105,8 @@ public:
    * @param[in] options The thermal solid physics module input file option struct
    * @param[in] name A name for the physics module
    */
-  Thermomechanics(const ThermomechanicsInputOptions& options, const std::string& name = "")
-      : Thermomechanics(options.thermal_options, options.solid_options, name)
+  Thermomechanics(const ThermomechanicsInputOptions& options, const std::string& physics_name, std::string mesh_tag)
+      : Thermomechanics(options.thermal_options, options.solid_options, physics_name, mesh_tag)
   {
     if (options.coef_thermal_expansion) {
       std::unique_ptr<mfem::Coefficient> cte(options.coef_thermal_expansion->constructScalar());
