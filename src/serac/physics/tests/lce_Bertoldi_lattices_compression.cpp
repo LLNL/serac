@@ -26,7 +26,7 @@ using namespace serac;
 // #define ALT_ITER_SOLVER
 #undef ALT_ITER_SOLVER 
 
-const static int problemID = 2;
+const static int problemID = 3;
 
 int main(int argc, char* argv[])
 {
@@ -36,6 +36,8 @@ int main(int argc, char* argv[])
   constexpr int dim       = 3;
   int serial_refinement   = 0;
   int parallel_refinement = 0;
+
+  if (problemID<3){parallel_refinement = 1;}
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -54,7 +56,8 @@ int main(int argc, char* argv[])
       inputFilename = SERAC_REPO_DIR "/data/meshes/reEntrantHoneycomb_newGeometry_noBorders_quarterSym.g";
       break;
     case 3:
-      inputFilename = SERAC_REPO_DIR "/data/meshes/dbgLogPileQuarterSymm.g";
+      // inputFilename = SERAC_REPO_DIR "/data/meshes/halfDomainLogPileVertical.g";
+      inputFilename = SERAC_REPO_DIR "/data/meshes/dbgLogPileHalfSymm.g";
       break;
     default:
       std::cout << "...... Wrong problem ID ......" << std::endl;
@@ -73,7 +76,7 @@ int main(int argc, char* argv[])
   NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = serac::NonlinearSolver::Newton,
                                               .relative_tol   = 1.0e-8,
                                               .absolute_tol   = 1.0e-12,
-                                              .max_iterations = 1,
+                                              .max_iterations = 15,
                                               .print_level    = 1};
   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
       nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional");
@@ -178,8 +181,42 @@ int main(int argc, char* argv[])
 
       case 3:
       {
-          std::cout << "...... Not implemented yet......" << std::endl;
-          exit(0);
+        if ((x[0] >= 1.70e-3 && x[0] <= 2.00e-3) && (
+          (x[2] <= 0.20e-3) ||
+          (x[2] >= 0.30e-3 && x[2] <= 0.30e-3+0.20e-3) ||
+          (x[2] >= 0.60e-3 && x[2] <= 0.60e-3+0.20e-3) // ||
+          // (x[2] >= 0.90e-3 && x[2] <= 0.90e-3+0.20e-3) ||
+          // (x[2] >= 1.20e-3 && x[2] <= 1.20e-3+0.20e-3) ||
+          // (x[2] >= 1.50e-3 && x[2] <= 1.50e-3+0.20e-3) ||
+          // (x[2] >= 1.80e-3 && x[2] <= 1.80e-3+0.20e-3) ||
+          // (x[2] >= 2.10e-3 && x[2] <= 2.10e-3+0.20e-3) ||
+          // (x[2] >= 2.40e-3 && x[2] <= 2.40e-3+0.20e-3) ||
+          // (x[2] >= 2.70e-3 && x[2] <= 2.70e-3+0.20e-3) ||
+          // (x[2] >= 3.00e-3 && x[2] <= 3.00e-3+0.20e-3) ||
+          // (x[2] >= 3.30e-3 && x[2] <= 3.30e-3+0.20e-3) ||
+          // (x[2] >= 3.60e-3 && x[2] <= 3.60e-3+0.20e-3) ||
+          // (x[2] >= 3.90e-3 && x[2] <= 3.90e-3+0.20e-3) ||
+          // (x[2] >= 4.20e-3 && x[2] <= 4.20e-3+0.20e-3) ||
+          // (x[2] >= 4.50e-3 && x[2] <= 4.50e-3+0.20e-3) ||
+          // (x[2] >= 4.80e-3 && x[2] <= 4.80e-3+0.20e-3) ||
+          // (x[2] >= 5.10e-3 && x[2] <= 5.10e-3+0.20e-3) ||
+          // (x[2] >= 5.40e-3 && x[2] <= 5.40e-3+0.20e-3) ||
+          // (x[2] >= 5.70e-3 && x[2] <= 5.70e-3+0.20e-3) ||
+          // (x[2] >= 6.00e-3 && x[2] <= 6.00e-3+0.20e-3) ||
+          // (x[2] >= 6.30e-3 && x[2] <= 6.30e-3+0.20e-3) ||
+          // (x[2] >= 6.60e-3 && x[2] <= 6.60e-3+0.20e-3) ||
+          // (x[2] >= 6.90e-3 && x[2] <= 6.90e-3+0.20e-3)
+        )) { 
+          alignmentAngle = M_PI_2;
+        }
+        else if ( x[0] >= 5.70e-3 ) { 
+          alignmentAngle = M_PI_2;
+        }
+        else
+        {
+          alignmentAngle = 0.0;
+        }
+        break;
       }
       
       default:
@@ -217,47 +254,86 @@ int main(int argc, char* argv[])
 
   auto zeroFunc = [](const mfem::Vector /*x*/) { return 0.0; };
   solid_solver.setDisplacementBCs({1}, zeroFunc, 0);  // left face x-dir disp = 0
-  solid_solver.setDisplacementBCs({2}, zeroFunc, 1);  // bottom face y-dir disp = 0
-  solid_solver.setDisplacementBCs({3}, zeroFunc, 2);  // back face z-dir disp = 0
+  if (problemID<3)
+  {
+    solid_solver.setDisplacementBCs({2}, zeroFunc, 1);  // bottom face y-dir disp = 0
+    solid_solver.setDisplacementBCs({3}, zeroFunc, 2);  // back face z-dir disp = 0
+
+    // Generate a true dof set from the boundary attribute
+    auto is_on_top = [](const mfem::Vector& x) {
+      if (x(1) > 1.0e-3) {
+        return true;
+      }
+      return false;
+    };
+    auto scalar_offset = [](const mfem::Vector&) { return -0.00001; };
+    solid_solver.setDisplacementBCs(is_on_top, scalar_offset, 2);
+  }
+  else
+  {
+    auto is_on_bottom = [=](const mfem::Vector& x) {
+      bool tag = false;
+      if (x(1) < -5.8e-3) {
+        tag = true;
+      }
+      return tag;
+    };
+
+    auto is_at_center_bottom = [=](const mfem::Vector& x) {
+      bool tag = false;
+      // if (x(1) < -5.95e-3 && x(2) > 3.6e-5 && x(2) < 3.7e-5) {
+      if (x(1) < -5.8e-3 && x(2) > 6.2e-5 && x(2) < 6.3e-5) {
+      // if (x(1) < -5.8e-3 && x(2) < 1.0e-4) {
+        tag = true;
+      }
+      return tag;
+    };
+  
+    auto zero_scalar = [](const mfem::Vector&) { return 0.0; };
+    solid_solver.setDisplacementBCs(is_on_bottom, zero_scalar, 1);
+    solid_solver.setDisplacementBCs(is_at_center_bottom, zero_scalar, 2);
+
+    auto is_on_top = [=](const mfem::Vector& x) {
+      bool tag = false;
+      if (x(1) > 5.9e-3) {
+        tag = true;
+      }
+      return tag;
+    };
+
+    auto scalar_offset = [](const mfem::Vector&) { return -0.0005; };
+    solid_solver.setDisplacementBCs(is_on_top, scalar_offset, 1);
+
+  }
+
   // solid_solver.setDisplacementBCs({3}, zeroFunc, 2);  // back face z-dir disp = 0
   // solid_solver.setDisplacementBCs({6}, zeroFunc, 2);  // back face z-dir disp = 0
+  
+  // auto nonZeroFunc = [](const mfem::Vector /*x*/) { return -3.6e-3; };
+  // solid_solver.setDisplacementBCs({4}, nonZeroFunc, 1);  // back face z-dir disp = 0
 
-  auto nonZeroFunc = [](const mfem::Vector /*x*/) { return -3.6e-3; };
-  solid_solver.setDisplacementBCs({4}, nonZeroFunc, 1);  // back face z-dir disp = 0
-  // Generate a true dof set from the boundary attribute
-  // auto is_on_top = [](const mfem::Vector& x) {
-  //   if (x(1) > 1.0e-3) {
-  //     return true;
-  //   }
-  //   return false;
-  // };
-  // auto scalar_offset = [](const mfem::Vector&) { return -0.0001; };
-  // solid_solver.setDisplacementBCs(is_on_top, scalar_offset, 2);
+  if (problemID<3)
+  {
+    int attribute = 4;
+    mfem::Array<int> elem_attr_is_ess(pmesh->attributes.Max());
+    elem_attr_is_ess                = 0;
+    elem_attr_is_ess[attribute - 1] = 1;
+    mfem::Array<int> ess_tdof_list;
 
-  int attribute = 4;
-  mfem::Array<int> elem_attr_is_ess(pmesh->attributes.Max());
-  elem_attr_is_ess                = 0;
-  elem_attr_is_ess[attribute - 1] = 1;
-  mfem::Array<int> ess_tdof_list;
+    mfem::H1_FECollection       h1_fec(1, dim);
+    mfem::ParFiniteElementSpace h1_fes(pmesh, &h1_fec, 1);
+    // serac::mfem_ext::GetEssentialTrueDofsFromElementAttribute(h1_fes, elem_attr_is_ess, ess_tdof_list, 1);
+    h1_fes.GetEssentialTrueDofs(elem_attr_is_ess, ess_tdof_list, 1);
 
-  mfem::H1_FECollection       h1_fec(1, dim);
-  mfem::ParFiniteElementSpace h1_fes(pmesh, &h1_fec, 1);
-  // serac::mfem_ext::GetEssentialTrueDofsFromElementAttribute(h1_fes, elem_attr_is_ess, ess_tdof_list, 1);
-  h1_fes.GetEssentialTrueDofs(elem_attr_is_ess, ess_tdof_list, 1);
+    double maxYDisp = 1.0e-3;
+    auto is_on_top = [=](const mfem::Vector&, double t, mfem::Vector&) {
+      return maxYDisp*(1.0+t);
+    };
 
-// std::cout<<"... Checking tdof list with size = "<< ess_tdof_list.Size() << std::endl;
-// for (int i = 0; i < ess_tdof_list.Size(); i++) { 
-// std::cout<<"... ess_tdof_list["<<i<<"] = "<<ess_tdof_list[i]<<std::endl;
-// }
-// exit(0);
-  double maxYDisp = 1.0e-3;
-  auto is_on_top = [=](const mfem::Vector&, double t, mfem::Vector&) {
-    return maxYDisp*(1.0+t);
-  };
+    solid_solver.setDisplacementBCsByDofList(ess_tdof_list, is_on_top);
+  }
 
-  solid_solver.setDisplacementBCsByDofList(ess_tdof_list, is_on_top);
-
-  double iniDispVal = 5.0e-6;
+  double iniDispVal = 1.0e-7;
   auto ini_displacement = [=](const mfem::Vector&, mfem::Vector& u) -> void { u = iniDispVal; };
   solid_solver.setDisplacement(ini_displacement);
 
@@ -300,7 +376,8 @@ int main(int argc, char* argv[])
                 << "\n... Entering time step: " << i + 1 << " (/" << num_steps << ")"
                 << "\n............................\n"
                 << "\n... Using order parameter: " << max_order_param << ", gamma = " << gamma_angle << ", and eta = " << eta_angle
-                << "\n... Using displacement = " << maxYDisp * t / tmax << std::endl;
+                // << "\n... Using displacement = " << maxYDisp * t / tmax 
+                << std::endl;
     }
 
     solid_solver.advanceTimestep(dt);
