@@ -111,6 +111,12 @@ tensor(const T (&data)[n1]) -> tensor<T, n1>;
 template <typename T, int n1, int n2>
 tensor(const T (&data)[n1][n2]) -> tensor<T, n1, n2>;
 
+using vec2 = tensor<double,2>;
+using vec3 = tensor<double,3>;
+
+using mat2 = tensor<double,2,2>;
+using mat3 = tensor<double,3,3>;
+
 /**
  * @brief A sentinel struct for eliding no-op tensor operations
  */
