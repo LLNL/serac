@@ -20,11 +20,11 @@ mfem::Mesh import_mesh(std::string meshfile) {
 
 template < int dim >
 tensor<double,dim> average(std::vector< tensor<double,dim> > & positions) {
-    tensor<double,dim> total{};
-    for (auto x : positions) {
-        total += x;
-    }
-    return total / double(positions.size());
+  tensor<double,dim> total{};
+  for (auto x : positions) {
+    total += x;
+  }
+  return total / double(positions.size());
 }
 
 TEST(domain, of_vertices) { 

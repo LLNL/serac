@@ -27,15 +27,15 @@ static Domain domain_of_vertices(const mfem::Mesh & mesh, std::function< bool(te
     }
 
     return output;
-};
+}
 
 Domain Domain::ofVertices(const mfem::Mesh & mesh, std::function< bool(vec2) > func) {
     return domain_of_vertices(mesh, func);
-};
+}
 
 Domain Domain::ofVertices(const mfem::Mesh & mesh, std::function< bool(vec3) > func) {
     return domain_of_vertices(mesh, func);
-};
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -83,15 +83,15 @@ static Domain domain_of_edges(const mfem::Mesh & mesh, std::function< T > predic
     }
 
     return output;
-};
+}
 
 Domain Domain::ofEdges(const mfem::Mesh & mesh, std::function< bool(std::vector<vec2>, int) > func) {
     return domain_of_edges<2>(mesh, func);
-};
+}
 
 Domain Domain::ofEdges(const mfem::Mesh & mesh, std::function< bool(std::vector<vec3>) > func) {
     return domain_of_edges<3>(mesh, func);
-};
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -162,15 +162,15 @@ static Domain domain_of_faces(const mfem::Mesh & mesh, std::function< bool(std::
     }
 
     return output;
-};
+}
 
 Domain Domain::ofFaces(const mfem::Mesh & mesh, std::function< bool(std::vector<vec2>, int) > func) {
     return domain_of_faces(mesh, func);
-};
+}
 
 Domain Domain::ofFaces(const mfem::Mesh & mesh, std::function< bool(std::vector<vec3>, int) > func) {
     return domain_of_faces(mesh, func);
-};
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -233,7 +233,7 @@ static Domain domain_of_elems(const mfem::Mesh & mesh, std::function< bool(std::
     }
 
     return output;
-};
+}
 
 Domain Domain::ofElements(const mfem::Mesh & mesh, std::function< bool(std::vector<vec2>, int) > func) {
   return domain_of_elems<2>(mesh, func);

@@ -39,6 +39,6 @@ Domain intersection_of(const Domain & a, const Domain & b);
 
 inline auto by_attr(int value) {
     return [value](auto, int attr) { return attr == value; };
-};
+}
 
 }
