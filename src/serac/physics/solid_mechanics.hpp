@@ -468,23 +468,26 @@ public:
    *
    * @param is_node_constrained A callback function that returns true if displacement nodes at a certain position should
    * be constrained by this boundary condition
-   * @param disp The vector function containing the prescribed displacement values.
+   * @param disp The scalar function containing the prescribed component displacement values
    * @param component The component of the displacement vector that should be set by this boundary condition. The other
    * components of displacement are unconstrained.
-   * 
-   * @note Even though a vector-valued function is given, only the dofs of the appropriate component are set.
    *
-   * The displacement function takes a spatial position as the first argument and time as the second argument. It
-   * computes the desired displacement and fills the third argument with these displacement values.
+   * The displacement function takes a spatial position as the first argument and current time as the second argument. 
+   * It computes the desired displacement scalar for the given component and returns that value.
    *
    * @note This method searches over the entire mesh, not just the boundary nodes.
    */
-  void setDisplacementBCs(std::function<bool(const mfem::Vector&)>           is_node_constrained,
-                          std::function<void(const mfem::Vector&, double, mfem::Vector&)> disp, int component)
+  void setDisplacementBCs(std::function<bool(const mfem::Vector&)>   is_node_constrained,
+                          std::function<double(const mfem::Vector&, double)> disp, int component)
   {
     auto constrained_dofs = calculateConstrainedDofs(is_node_constrained, component);
 
-    setDisplacementBCsByDofList(constrained_dofs, disp);
+    auto vector_function = [disp, component](const mfem::Vector& x, double time, mfem::Vector& displacement) {
+      displacement            = 0.0;
+      displacement(component) = disp(x, time);
+    };
+
+    setDisplacementBCsByDofList(constrained_dofs, vector_function);
   }
 
   /**
