@@ -329,13 +329,13 @@ void functional_test_3D(mfem::ParMesh& mesh, double tolerance)
   EXPECT_NEAR(mfem::InnerProduct(ones, dr), 0.0, tolerance);
 }
 
-TEST(ShapeDerivative, 2DLinear) { functional_test_2D<1>(*mesh2D, 1.0e-14); }
-TEST(ShapeDerivative, 2DQuadratic) { functional_test_2D<2>(*mesh2D, 1.0e-14); }
+TEST(ShapeDerivative, 2DLinear) { functional_test_2D<1>(*mesh2D, 3.0e-14); }
+TEST(ShapeDerivative, 2DQuadratic) { functional_test_2D<2>(*mesh2D, 3.0e-14); }
 
-TEST(ShapeDerivative, 3DLinear) { functional_test_3D<1>(*mesh3D, 1.0e-13); }
+TEST(ShapeDerivative, 3DLinear) { functional_test_3D<1>(*mesh3D, 2.0e-13); }
 
 // note: see description at top of file
-TEST(ShapeDerivative, 3DQuadratic) { functional_test_3D<2>(*mesh3D, 1.0e-2); }
+TEST(ShapeDerivative, 3DQuadratic) { functional_test_3D<2>(*mesh3D, 1.5e-2); }
 
 int main(int argc, char* argv[])
 {

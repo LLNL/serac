@@ -42,11 +42,7 @@ class Tribol(CachedCMakePackage, CudaPackage):
     # SERAC EDIT START
     # Note: We add a number to the end of the real version number to indicate that we have
     #  moved forward past the release. Increment the last number when updating the commit sha.
-<<<<<<< HEAD
-    version("0.1.0.6", commit="b08d0000ab84a2700605b4384407d1ddf873c9f3", submodules=True, preferred=True)
-=======
     version("0.1.0.6", commit="bf449e1b7ba6769f2c481bd725d3384442b721f1", submodules=True, preferred=True)
->>>>>>> feature/chin23/contact_mechanics
     # SERAC EDIT END
 
     # -----------------------------------------------------------------------

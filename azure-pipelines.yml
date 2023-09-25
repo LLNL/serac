@@ -6,8 +6,8 @@
 #
 
 variables:
-  Clang_10_ImageName: 'seracllnl/tpls:clang-10_07-13-23_00h-41m'
-  GCC_11_ImageName: 'seracllnl/tpls:gcc-11_07-13-23_00h-41m'
+  Clang_10_ImageName: 'seracllnl/tpls:clang-10_09-15-23_19h-06m'
+  GCC_11_ImageName: 'seracllnl/tpls:gcc-11_09-15-23_19h-06m'
 
 jobs:
 - job: Build_and_Test
@@ -78,14 +78,22 @@ jobs:
         DO_COVERAGE_CHECK: 'yes'
         DO_DOCS_CHECK: 'no'
         DO_STYLE_CHECK: 'no'
+        DO_HEADER_CHECK: 'no'
       docs:
         DO_COVERAGE_CHECK: 'no'
         DO_DOCS_CHECK: 'yes'
         DO_STYLE_CHECK: 'no'
+        DO_HEADER_CHECK: 'no'
       style:
         DO_COVERAGE_CHECK: 'no'
         DO_DOCS_CHECK: 'no'
         DO_STYLE_CHECK: 'yes'
+        DO_HEADER_CHECK: 'no'
+      header:
+        DO_COVERAGE_CHECK: 'no'
+        DO_DOCS_CHECK: 'no'
+        DO_STYLE_CHECK: 'no'
+        DO_HEADER_CHECK: 'yes'
 
   pool:
     vmImage: $(VM_ImageName)
@@ -97,6 +105,6 @@ jobs:
   # https://docs.codecov.io/docs/testing-with-docker
   - script:  |
       ci_env=`bash <(curl -s https://codecov.io/env)`
-      echo "  -e DO_COVERAGE_CHECK  -e DO_DOCS_CHECK -e DO_STYLE_CHECK -e HOST_CONFIG ./serac/scripts/azure-pipelines/linux-check.sh"
-      docker run --rm -v `pwd`:/home/serac/serac $ci_env -e DO_COVERAGE_CHECK  -e DO_DOCS_CHECK -e DO_STYLE_CHECK -e HOST_CONFIG $(Compiler_ImageName) ./serac/scripts/azure-pipelines/linux-check.sh
+      echo "  -e DO_COVERAGE_CHECK  -e DO_DOCS_CHECK -e DO_STYLE_CHECK -e DO_HEADER_CHECK -e HOST_CONFIG ./serac/scripts/azure-pipelines/linux-check.sh"
+      docker run --rm -v `pwd`:/home/serac/serac $ci_env -e DO_COVERAGE_CHECK  -e DO_DOCS_CHECK -e DO_STYLE_CHECK -e DO_HEADER_CHECK -e HOST_CONFIG $(Compiler_ImageName) ./serac/scripts/azure-pipelines/linux-check.sh
     displayName: '$(TEST_TARGET) Check'
