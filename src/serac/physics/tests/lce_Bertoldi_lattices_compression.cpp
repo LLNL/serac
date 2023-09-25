@@ -26,7 +26,7 @@ using namespace serac;
 // #define ALT_ITER_SOLVER
 #undef ALT_ITER_SOLVER 
 
-const static int problemID = 3;
+const static int problemID = 4;
 
 int main(int argc, char* argv[])
 {
@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
   int serial_refinement   = 0;
   int parallel_refinement = 0;
 
-  if (problemID<3){parallel_refinement = 1;}
+  if (problemID<3){parallel_refinement = 0;}
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -56,8 +56,10 @@ int main(int argc, char* argv[])
       inputFilename = SERAC_REPO_DIR "/data/meshes/reEntrantHoneycomb_newGeometry_noBorders_quarterSym.g";
       break;
     case 3:
-      // inputFilename = SERAC_REPO_DIR "/data/meshes/halfDomainLogPileVertical.g";
       inputFilename = SERAC_REPO_DIR "/data/meshes/dbgLogPileHalfSymm.g";
+      break;
+    case 4:
+      inputFilename = SERAC_REPO_DIR "/data/meshes/halfDomainLogPileVertical.g";
       break;
     default:
       std::cout << "...... Wrong problem ID ......" << std::endl;
@@ -70,13 +72,13 @@ int main(int argc, char* argv[])
   auto pmesh = serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a functional-based solid mechanics solver
-  LinearSolverOptions linear_options = {.linear_solver = LinearSolver::SuperLU};
-  // const LinearSolverOptions linear_options = {.linear_solver = LinearSolver::Strumpack, .print_level = 0};
+  // LinearSolverOptions linear_options = {.linear_solver = LinearSolver::SuperLU};
+  const LinearSolverOptions linear_options = {.linear_solver = LinearSolver::Strumpack, .print_level = 0};
 
   NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = serac::NonlinearSolver::Newton,
                                               .relative_tol   = 1.0e-8,
                                               .absolute_tol   = 1.0e-12,
-                                              .max_iterations = 15,
+                                              .max_iterations = 20,
                                               .print_level    = 1};
   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
       nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional");
@@ -184,28 +186,7 @@ int main(int argc, char* argv[])
         if ((x[0] >= 1.70e-3 && x[0] <= 2.00e-3) && (
           (x[2] <= 0.20e-3) ||
           (x[2] >= 0.30e-3 && x[2] <= 0.30e-3+0.20e-3) ||
-          (x[2] >= 0.60e-3 && x[2] <= 0.60e-3+0.20e-3) // ||
-          // (x[2] >= 0.90e-3 && x[2] <= 0.90e-3+0.20e-3) ||
-          // (x[2] >= 1.20e-3 && x[2] <= 1.20e-3+0.20e-3) ||
-          // (x[2] >= 1.50e-3 && x[2] <= 1.50e-3+0.20e-3) ||
-          // (x[2] >= 1.80e-3 && x[2] <= 1.80e-3+0.20e-3) ||
-          // (x[2] >= 2.10e-3 && x[2] <= 2.10e-3+0.20e-3) ||
-          // (x[2] >= 2.40e-3 && x[2] <= 2.40e-3+0.20e-3) ||
-          // (x[2] >= 2.70e-3 && x[2] <= 2.70e-3+0.20e-3) ||
-          // (x[2] >= 3.00e-3 && x[2] <= 3.00e-3+0.20e-3) ||
-          // (x[2] >= 3.30e-3 && x[2] <= 3.30e-3+0.20e-3) ||
-          // (x[2] >= 3.60e-3 && x[2] <= 3.60e-3+0.20e-3) ||
-          // (x[2] >= 3.90e-3 && x[2] <= 3.90e-3+0.20e-3) ||
-          // (x[2] >= 4.20e-3 && x[2] <= 4.20e-3+0.20e-3) ||
-          // (x[2] >= 4.50e-3 && x[2] <= 4.50e-3+0.20e-3) ||
-          // (x[2] >= 4.80e-3 && x[2] <= 4.80e-3+0.20e-3) ||
-          // (x[2] >= 5.10e-3 && x[2] <= 5.10e-3+0.20e-3) ||
-          // (x[2] >= 5.40e-3 && x[2] <= 5.40e-3+0.20e-3) ||
-          // (x[2] >= 5.70e-3 && x[2] <= 5.70e-3+0.20e-3) ||
-          // (x[2] >= 6.00e-3 && x[2] <= 6.00e-3+0.20e-3) ||
-          // (x[2] >= 6.30e-3 && x[2] <= 6.30e-3+0.20e-3) ||
-          // (x[2] >= 6.60e-3 && x[2] <= 6.60e-3+0.20e-3) ||
-          // (x[2] >= 6.90e-3 && x[2] <= 6.90e-3+0.20e-3)
+          (x[2] >= 0.60e-3 && x[2] <= 0.60e-3+0.20e-3)
         )) { 
           alignmentAngle = M_PI_2;
         }
@@ -219,6 +200,46 @@ int main(int argc, char* argv[])
         break;
       }
       
+      case 4:
+      {
+        if ((x[0] >= 1.70e-3 && x[0] <= 2.00e-3) && (
+          (x[2] <= 0.20e-3) ||
+          (x[2] >= 0.30e-3 && x[2] <= 0.30e-3+0.20e-3) ||
+          (x[2] >= 0.60e-3 && x[2] <= 0.60e-3+0.20e-3) ||
+          (x[2] >= 0.90e-3 && x[2] <= 0.90e-3+0.20e-3) ||
+          (x[2] >= 1.20e-3 && x[2] <= 1.20e-3+0.20e-3) ||
+          (x[2] >= 1.50e-3 && x[2] <= 1.50e-3+0.20e-3) ||
+          (x[2] >= 1.80e-3 && x[2] <= 1.80e-3+0.20e-3) ||
+          (x[2] >= 2.10e-3 && x[2] <= 2.10e-3+0.20e-3) ||
+          (x[2] >= 2.40e-3 && x[2] <= 2.40e-3+0.20e-3) ||
+          (x[2] >= 2.70e-3 && x[2] <= 2.70e-3+0.20e-3) ||
+          (x[2] >= 3.00e-3 && x[2] <= 3.00e-3+0.20e-3) ||
+          (x[2] >= 3.30e-3 && x[2] <= 3.30e-3+0.20e-3) ||
+          (x[2] >= 3.60e-3 && x[2] <= 3.60e-3+0.20e-3) ||
+          (x[2] >= 3.90e-3 && x[2] <= 3.90e-3+0.20e-3) ||
+          (x[2] >= 4.20e-3 && x[2] <= 4.20e-3+0.20e-3) ||
+          (x[2] >= 4.50e-3 && x[2] <= 4.50e-3+0.20e-3) ||
+          (x[2] >= 4.80e-3 && x[2] <= 4.80e-3+0.20e-3) ||
+          (x[2] >= 5.10e-3 && x[2] <= 5.10e-3+0.20e-3) ||
+          (x[2] >= 5.40e-3 && x[2] <= 5.40e-3+0.20e-3) ||
+          (x[2] >= 5.70e-3 && x[2] <= 5.70e-3+0.20e-3) ||
+          (x[2] >= 6.00e-3 && x[2] <= 6.00e-3+0.20e-3) ||
+          (x[2] >= 6.30e-3 && x[2] <= 6.30e-3+0.20e-3) ||
+          (x[2] >= 6.60e-3 && x[2] <= 6.60e-3+0.20e-3) ||
+          (x[2] >= 6.90e-3 && x[2] <= 6.90e-3+0.20e-3)
+        )) { 
+          alignmentAngle = M_PI_2;
+        }
+        else if ( x[0] >= 5.70e-3 ) { 
+          alignmentAngle = M_PI_2;
+        }
+        else
+        {
+          alignmentAngle = 0.0;
+        }
+        break;
+      }
+
       default:
       {
           std::cout << "...... Wrong problem ID ......" << std::endl;
@@ -260,60 +281,19 @@ int main(int argc, char* argv[])
     solid_solver.setDisplacementBCs({3}, zeroFunc, 2);  // back face z-dir disp = 0
 
     // Generate a true dof set from the boundary attribute
-    auto is_on_top = [](const mfem::Vector& x) {
-      if (x(1) > 1.0e-3) {
-        return true;
-      }
-      return false;
-    };
-    auto scalar_offset = [](const mfem::Vector&) { return -0.00001; };
-    solid_solver.setDisplacementBCs(is_on_top, scalar_offset, 2);
-  }
-  else
-  {
-    auto is_on_bottom = [=](const mfem::Vector& x) {
-      bool tag = false;
-      if (x(1) < -5.8e-3) {
-        tag = true;
-      }
-      return tag;
-    };
 
-    auto is_at_center_bottom = [=](const mfem::Vector& x) {
-      bool tag = false;
-      // if (x(1) < -5.95e-3 && x(2) > 3.6e-5 && x(2) < 3.7e-5) {
-      if (x(1) < -5.8e-3 && x(2) > 6.2e-5 && x(2) < 6.3e-5) {
-      // if (x(1) < -5.8e-3 && x(2) < 1.0e-4) {
-        tag = true;
-      }
-      return tag;
-    };
-  
-    auto zero_scalar = [](const mfem::Vector&) { return 0.0; };
-    solid_solver.setDisplacementBCs(is_on_bottom, zero_scalar, 1);
-    solid_solver.setDisplacementBCs(is_at_center_bottom, zero_scalar, 2);
+    ////////////////////////////////////////////////////
+    // debug:
+    // auto is_on_top = [](const mfem::Vector& x) {
+    //   if (x(1) > 1.0e-3) {
+    //     return true;
+    //   }
+    //   return false;
+    // };
+    // auto scalar_offset = [](const mfem::Vector&) { return -0.00001; };
+    // solid_solver.setDisplacementBCs(is_on_top, scalar_offset, 2);
+    ////////////////////////////////////////////////////
 
-    auto is_on_top = [=](const mfem::Vector& x) {
-      bool tag = false;
-      if (x(1) > 5.9e-3) {
-        tag = true;
-      }
-      return tag;
-    };
-
-    auto scalar_offset = [](const mfem::Vector&) { return -0.0005; };
-    solid_solver.setDisplacementBCs(is_on_top, scalar_offset, 1);
-
-  }
-
-  // solid_solver.setDisplacementBCs({3}, zeroFunc, 2);  // back face z-dir disp = 0
-  // solid_solver.setDisplacementBCs({6}, zeroFunc, 2);  // back face z-dir disp = 0
-  
-  // auto nonZeroFunc = [](const mfem::Vector /*x*/) { return -3.6e-3; };
-  // solid_solver.setDisplacementBCs({4}, nonZeroFunc, 1);  // back face z-dir disp = 0
-
-  if (problemID<3)
-  {
     int attribute = 4;
     mfem::Array<int> elem_attr_is_ess(pmesh->attributes.Max());
     elem_attr_is_ess                = 0;
@@ -332,8 +312,57 @@ int main(int argc, char* argv[])
 
     solid_solver.setDisplacementBCsByDofList(ess_tdof_list, is_on_top);
   }
+  else
+  {
+    auto is_on_bottom = [=](const mfem::Vector& x) {
+      bool tag = false;
+      if (x(1) < -5.9e-3) {
+        tag = true;
+      }
+      return tag;
+    };
 
-  double iniDispVal = 1.0e-7;
+    auto is_at_center_bottom = [=](const mfem::Vector& x) {
+      bool tag = false;
+      if (problemID==3)
+      {
+        if (x(1) < -5.9e-3 && x(2) > 6.2e-4 && x(2) < 6.3e-4) {
+          tag = true;
+        }
+      }
+      else
+      {
+        if (x(1) < -5.9e-3 && x(2) > 3.6e-5 && x(2) < 3.7e-5) {
+          tag = true;
+        }
+      }
+      return tag;
+    };
+  
+    auto zero_scalar = [](const mfem::Vector&) { return 0.0; };
+    solid_solver.setDisplacementBCs(is_on_bottom, zero_scalar, 1);
+    solid_solver.setDisplacementBCs(is_at_center_bottom, zero_scalar, 2);
+
+    auto is_on_top = [=](const mfem::Vector& x) {
+      bool tag = false;
+      if (x(1) > 5.9e-3) {
+        tag = true;
+      }
+      return tag;
+    };
+
+    auto scalar_offset = [](const mfem::Vector&, double t) { return -0.0015*t; };
+    solid_solver.setDisplacementBCs(is_on_top, scalar_offset, 1);
+
+  }
+
+  // solid_solver.setDisplacementBCs({3}, zeroFunc, 2);  // back face z-dir disp = 0
+  // solid_solver.setDisplacementBCs({6}, zeroFunc, 2);  // back face z-dir disp = 0
+  
+  // auto nonZeroFunc = [](const mfem::Vector /*x*/) { return -3.6e-3; };
+  // solid_solver.setDisplacementBCs({4}, nonZeroFunc, 1);  // back face z-dir disp = 0
+
+  double iniDispVal = 1.0e-8;
   auto ini_displacement = [=](const mfem::Vector&, mfem::Vector& u) -> void { u = iniDispVal; };
   solid_solver.setDisplacement(ini_displacement);
 
@@ -353,6 +382,9 @@ int main(int argc, char* argv[])
       outputFilename = "sol_honeycomb_3x3_compression_quarter";
       break;
     case 3:
+      outputFilename = "sol_logpile_3x3_compression_dbg";
+      break;
+    case 4:
       outputFilename = "sol_logpile_3x3_compression";
       break;
     default:
@@ -362,7 +394,7 @@ int main(int argc, char* argv[])
 
   solid_solver.outputState(outputFilename);
 
-  int num_steps = 1;
+  int num_steps = 50;
   double t    = 0.0;
   double tmax = 1.0;
   double dt   = tmax / num_steps;
