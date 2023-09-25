@@ -8,7 +8,6 @@ set(test_dependencies serac_physics serac_mesh gtest)
 
 set(serial_solver_tests
     beam_bending.cpp
-    contact_patch.cpp
     thermal_finite_diff.cpp
     thermal_statics_patch.cpp
     thermal_dynamics_patch.cpp
@@ -32,6 +31,7 @@ set(solver_tests
     thermal_shape.cpp
     thermal_mechanics.cpp
     )
+blt_list_append(TO solver_tests ELEMENTS contact_patch.cpp contact_beam.cpp IF TRIBOL_FOUND)
 
 serac_add_tests( SOURCES ${solver_tests}
                  DEPENDS_ON ${test_dependencies}

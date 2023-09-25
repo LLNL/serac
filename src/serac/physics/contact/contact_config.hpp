@@ -15,7 +15,7 @@
 namespace serac {
 
 /**
- * @brief Methodology for enforcing contact constraints
+ * @brief Methodology for enforcing contact constraints (i.e. how you form the constraint equations)
  */
 enum class ContactMethod
 {
@@ -23,7 +23,7 @@ enum class ContactMethod
 };
 
 /**
- * @brief Describes how to enforce the contact constraints
+ * @brief Describes how to enforce the contact constraint equations
  */
 enum class ContactEnforcement
 {
@@ -32,12 +32,12 @@ enum class ContactEnforcement
 };
 
 /**
- * @brief Mechanical constraint type to enforce
+ * @brief Mechanical constraint type on contact surfaces
  */
 enum class ContactType
 {
   TiedSlide,   /**< Tied contact in the normal direction, no friction */
-  Frictionless /**< Enforce gap >= 0, pressure >= 0, gap * pressure = 0 in the normal direction */
+  Frictionless /**< Enforce gap >= 0, pressure <= 0, gap * pressure = 0 in the normal direction */
 };
 
 /**

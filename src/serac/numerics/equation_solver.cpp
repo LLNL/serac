@@ -76,12 +76,18 @@ void SuperLUSolver::SetOperator(const mfem::Operator& op)
 
     for (int i = 0; i < row_blocks; ++i) {
       for (int j = 0; j < col_blocks; ++j) {
-        auto* hypre_block = const_cast<mfem::HypreParMatrix*>(
-            dynamic_cast<const mfem::HypreParMatrix*>(&block_operator->GetBlock(i, j)));
-        SLIC_ERROR_ROOT_IF(!hypre_block,
-                           "Trying to use SuperLU on a block operator that does not contain HypreParMatrix blocks.");
+        // checks for presence of empty (null) blocks, which happen fairly
+        // common in multirank contact
+        if (!block_operator->IsZeroBlock(i, j)) {
+          auto* hypre_block = const_cast<mfem::HypreParMatrix*>(
+              dynamic_cast<const mfem::HypreParMatrix*>(&block_operator->GetBlock(i, j)));
+          SLIC_ERROR_ROOT_IF(!hypre_block,
+                             "Trying to use SuperLU on a block operator that does not contain HypreParMatrix blocks.");
 
-        hypre_blocks(i, j) = hypre_block;
+          hypre_blocks(i, j) = hypre_block;
+        } else {
+          hypre_blocks(i, j) = nullptr;
+        }
       }
     }
 

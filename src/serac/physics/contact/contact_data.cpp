@@ -18,241 +18,347 @@ ContactData::ContactData(const mfem::ParMesh& mesh)
     : mesh_{mesh},
       reference_nodes_{dynamic_cast<const mfem::ParGridFunction*>(mesh.GetNodes())},
       current_coords_{*reference_nodes_},
-      num_pressure_true_dofs_{0}
+      have_lagrange_multipliers_{false},
+      num_pressure_dofs_{0}
 {
   tribol::initialize(mesh_.SpaceDimension(), mesh_.GetComm());
 }
 
-ContactData::~ContactData()
-{
-  tribol::finalize();
-}
+ContactData::~ContactData() { tribol::finalize(); }
 
-void ContactData::addContactPair(int pair_id, const std::set<int>& bdry_attr_surf1, const std::set<int>& bdry_attr_surf2,
-                                 ContactOptions contact_opts)
+void ContactData::addContactInteraction(int interaction_id, const std::set<int>& bdry_attr_surf1,
+                                        const std::set<int>& bdry_attr_surf2, ContactOptions contact_opts)
 {
-  pairs_.emplace_back(pair_id, mesh_, bdry_attr_surf1, bdry_attr_surf2, current_coords_, contact_opts);
+  interactions_.emplace_back(interaction_id, mesh_, bdry_attr_surf1, bdry_attr_surf2, current_coords_, contact_opts);
   if (contact_opts.enforcement == ContactEnforcement::LagrangeMultiplier) {
-    num_pressure_true_dofs_ += pairs_.back().numPressureTrueDofs();
+    have_lagrange_multipliers_ = true;
+    num_pressure_dofs_ += interactions_.back().numPressureDofs();
   }
 }
 
-bool ContactData::haveContactPairs() const
+void ContactData::update(int cycle, double time, double& dt)
 {
-  return !pairs_.empty();
-}
-
-void ContactData::update(int cycle, double time, double& dt, bool update_redecomp)
-{
-  if (update_redecomp) {
-    tribol::updateMfemParallelDecomposition();
-  }
+  // This updates the redecomposed surface mesh based on the current displacement, then transfers field quantities to
+  // the updated mesh.
+  tribol::updateMfemParallelDecomposition();
+  // This function computes forces, gaps, and Jacobian contributions based on the current field quantities. Note the
+  // fields (with the exception of pressure) are stored on the redecomposed surface mesh until transferred by calling
+  // forces(), mergedGaps(), etc.
   tribol::update(cycle, time, dt);
 }
 
-mfem::Vector ContactData::trueContactForces() const
+FiniteElementDual ContactData::forces() const
 {
-  mfem::Vector f_true(reference_nodes_->ParFESpace()->GetTrueVSize());
-  mfem::Vector f(reference_nodes_->ParFESpace()->GetVSize());
-  f = 0.0;
-  for (const auto& pair : pairs_) {
-    f += pair.contactForces();
+  FiniteElementDual f(*reference_nodes_->ParFESpace(), "contact force");
+  for (const auto& interaction : interactions_) {
+    f += interaction.forces();
   }
-  reference_nodes_->ParFESpace()->GetProlongationMatrix()->MultTranspose(f, f_true);
-  return f_true;
+  return f;
 }
 
-mfem::Vector ContactData::truePressures() const
+mfem::Vector ContactData::mergedPressures() const
 {
-  mfem::Vector p_true(numPressureTrueDofs());
-  auto dof_offsets = pressureTrueDofOffsets();
-  for (size_t i{0}; i < pairs_.size(); ++i) {
-    if (pairs_[i].getContactOptions().enforcement == ContactEnforcement::LagrangeMultiplier) {
-      mfem::Vector p_pair_true;
-      p_pair_true.MakeRef(p_true, dof_offsets[static_cast<int>(i)],
-                          dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
-      pairs_[i].pressure().ParFESpace()->GetProlongationMatrix()->MultTranspose(pairs_[i].pressure(),
-                                                                                        p_pair_true);
+  mfem::Vector merged_p(numPressureDofs());
+  auto         dof_offsets = pressureDofOffsets();
+  for (size_t i{0}; i < interactions_.size(); ++i) {
+    if (interactions_[i].getContactOptions().enforcement == ContactEnforcement::LagrangeMultiplier) {
+      mfem::Vector p_interaction;
+      p_interaction.MakeRef(merged_p, dof_offsets[static_cast<int>(i)],
+                            dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
+      p_interaction.Set(1.0, interactions_[i].pressure());
     }
   }
-  return p_true;
+  return merged_p;
 }
 
-mfem::Vector ContactData::trueGaps() const
+mfem::Vector ContactData::mergedGaps() const
 {
-  mfem::Vector g_true(numPressureTrueDofs());
-  auto dof_offsets = pressureTrueDofOffsets();
-  for (size_t i{0}; i < pairs_.size(); ++i) {
-    if (pairs_[i].getContactOptions().enforcement == ContactEnforcement::LagrangeMultiplier) {
-      mfem::Vector g_pair_true;
-      g_pair_true.MakeRef(g_true, dof_offsets[static_cast<int>(i)],
-                          dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
-      pairs_[i].pressure().ParFESpace()->GetProlongationMatrix()->MultTranspose(pairs_[i].gaps(),
-                                                                                        g_pair_true);
+  mfem::Vector merged_g(numPressureDofs());
+  auto         dof_offsets = pressureDofOffsets();
+  for (size_t i{0}; i < interactions_.size(); ++i) {
+    if (interactions_[i].getContactOptions().enforcement == ContactEnforcement::LagrangeMultiplier) {
+      mfem::Vector g_interaction;
+      g_interaction.MakeRef(merged_g, dof_offsets[static_cast<int>(i)],
+                            dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
+      g_interaction.Set(1.0, interactions_[i].gaps());
     }
   }
-  return g_true;
+  return merged_g;
 }
 
-std::unique_ptr<mfem::BlockOperator> ContactData::contactJacobian() const
+std::unique_ptr<mfem::BlockOperator> ContactData::mergedJacobian() const
 {
-  jacobian_offsets_    = mfem::Array<int>({0, reference_nodes_->ParFESpace()->GetTrueVSize(),
-                                        numPressureTrueDofs() + reference_nodes_->ParFESpace()->GetTrueVSize()});
+  jacobian_offsets_ = mfem::Array<int>({0, reference_nodes_->ParFESpace()->GetTrueVSize(),
+                                        numPressureDofs() + reference_nodes_->ParFESpace()->GetTrueVSize()});
+  // this is the BlockOperator we are returning with the following blocks:
+  //  | df_(contact)/dx  df_(contact)/dp |
+  //  | dg/dx            I_(inactive)    |
+  // where I_(inactive) is a matrix with ones on the diagonal of inactive pressure true degrees of freedom
   auto block_J         = std::make_unique<mfem::BlockOperator>(jacobian_offsets_);
   block_J->owns_blocks = true;
-  mfem::Array2D<mfem::HypreParMatrix*> constraint_matrices(static_cast<int>(pairs_.size()), 1);
-  for (size_t i{0}; i < pairs_.size(); ++i) {
-    auto pair_J         = tribol::getMfemBlockJacobian(pairs_[i].getPairId());
-    pair_J->owns_blocks = false;
-    if (!pair_J->IsZeroBlock(0, 0)) {
-      SLIC_ERROR_ROOT_IF(!dynamic_cast<mfem::HypreParMatrix*>(&pair_J->GetBlock(0, 0)),
+  // rather than returning different blocks for each contact interaction with Lagrange multipliers, merge them all into
+  // a single block
+  mfem::Array2D<mfem::HypreParMatrix*> constraint_matrices(static_cast<int>(interactions_.size()), 1);
+
+  for (size_t i{0}; i < interactions_.size(); ++i) {
+    // this is the BlockOperator for one of the contact interactions
+    auto interaction_J         = interactions_[i].jacobian();
+    interaction_J->owns_blocks = false;  // we'll manage the ownership of the blocks on our own...
+    // add the contact interaction's contribution to df_(contact)/dx (the 0, 0 block)
+    if (!interaction_J->IsZeroBlock(0, 0)) {
+      SLIC_ERROR_ROOT_IF(!dynamic_cast<mfem::HypreParMatrix*>(&interaction_J->GetBlock(0, 0)),
                          "Only HypreParMatrix constraint matrix blocks are currently supported.");
       if (block_J->IsZeroBlock(0, 0)) {
-        block_J->SetBlock(0, 0, &pair_J->GetBlock(0, 0));
+        block_J->SetBlock(0, 0, &interaction_J->GetBlock(0, 0));
       } else {
         if (block_J->IsZeroBlock(0, 0)) {
-          block_J->SetBlock(0, 0, &pair_J->GetBlock(0, 0));
+          block_J->SetBlock(0, 0, &interaction_J->GetBlock(0, 0));
         } else {
           block_J->SetBlock(0, 0,
                             mfem::Add(1.0, static_cast<mfem::HypreParMatrix&>(block_J->GetBlock(0, 0)), 1.0,
-                                      static_cast<mfem::HypreParMatrix&>(pair_J->GetBlock(0, 0))));
+                                      static_cast<mfem::HypreParMatrix&>(interaction_J->GetBlock(0, 0))));
         }
-        delete &pair_J->GetBlock(0, 0);
+        delete &interaction_J->GetBlock(0, 0);
       }
     }
-    if (!pair_J->IsZeroBlock(1, 0)) {
-      SLIC_ERROR_ROOT_IF(!dynamic_cast<mfem::HypreParMatrix*>(&pair_J->GetBlock(1, 0)),
-                         "Only HypreParMatrix constraint matrix blocks are currently supported.");
-      if (pairs_[i].getContactOptions().enforcement == ContactEnforcement::Penalty) {
+    // add the contact interaction's (other) contribution to df_(contact)/dx (for penalty) or to df_(contact)/dp and
+    // dg/dx (for Lagrange multipliers)
+    if (!interaction_J->IsZeroBlock(1, 0)) {
+      auto B = dynamic_cast<mfem::HypreParMatrix*>(&interaction_J->GetBlock(1, 0));
+      SLIC_ERROR_ROOT_IF(!B, "Only HypreParMatrix constraint matrix blocks are currently supported.");
+      // zero out rows not in the active set
+      B->EliminateRows(interactions_[i].inactiveDofs());
+      if (interactions_[i].getContactOptions().enforcement == ContactEnforcement::Penalty) {
+        // compute contribution to df_(contact)/dx (the 0, 0 block) for penalty
         std::unique_ptr<mfem::HypreParMatrix> BTB(
-            mfem::ParMult(std::unique_ptr<mfem::HypreParMatrix>(
-                              static_cast<mfem::HypreParMatrix&>(pair_J->GetBlock(1, 0)).Transpose())
-                              .get(),
-                          &static_cast<mfem::HypreParMatrix&>(pair_J->GetBlock(1, 0)), true));
-        delete &pair_J->GetBlock(1, 0);
+            mfem::ParMult(std::unique_ptr<mfem::HypreParMatrix>(B->Transpose()).get(), B, true));
+        delete &interaction_J->GetBlock(1, 0);
         if (block_J->IsZeroBlock(0, 0)) {
           mfem::Vector penalty(reference_nodes_->ParFESpace()->GetTrueVSize());
-          penalty = pairs_[i].getContactOptions().penalty;
+          penalty = interactions_[i].getContactOptions().penalty;
           BTB->ScaleRows(penalty);
           block_J->SetBlock(0, 0, BTB.release());
         } else {
           block_J->SetBlock(0, 0,
                             mfem::Add(1.0, static_cast<mfem::HypreParMatrix&>(block_J->GetBlock(0, 0)),
-                                      pairs_[i].getContactOptions().penalty, *BTB));
+                                      interactions_[i].getContactOptions().penalty, *BTB));
         }
+        constraint_matrices(static_cast<int>(i), 0) = nullptr;
       } else  // enforcement == ContactEnforcement::LagrangeMultiplier
       {
-        constraint_matrices(static_cast<int>(i), 0) = static_cast<mfem::HypreParMatrix*>(&pair_J->GetBlock(1, 0));
+        // compute contribution to off-diagonal blocks for Lagrange multiplier
+        constraint_matrices(static_cast<int>(i), 0) = static_cast<mfem::HypreParMatrix*>(B);
       }
-      if (pair_J->IsZeroBlock(0, 1) || !dynamic_cast<mfem::TransposeOperator*>(&pair_J->GetBlock(0, 1))) {
+      if (interaction_J->IsZeroBlock(0, 1) || !dynamic_cast<mfem::TransposeOperator*>(&interaction_J->GetBlock(0, 1))) {
         SLIC_ERROR_ROOT("Only symmetric constraint matrices are currently supported.");
       }
-      delete &pair_J->GetBlock(0, 1);
-      if (!pair_J->IsZeroBlock(1, 1)) {
+      delete &interaction_J->GetBlock(0, 1);
+      if (!interaction_J->IsZeroBlock(1, 1)) {
         SLIC_ERROR_ROOT("Only zero-valued (1, 1) Jacobian blocks are currently supported.");
       }
     }
   }
-  if (numPressureTrueDofs() > 0) {
+  if (haveLagrangeMultipliers()) {
+    // merge all of the contributions from all of the contact interactions
     block_J->SetBlock(1, 0, mfem::HypreParMatrixFromBlocks(constraint_matrices));
-    block_J->SetBlock(0, 1, new mfem::TransposeOperator(block_J->GetBlock(1, 0)));
+    // store the transpose explicitly (rather than as a TransposeOperator) for solvers that need HypreParMatrixs
+    block_J->SetBlock(0, 1, static_cast<mfem::HypreParMatrix&>(block_J->GetBlock(1, 0)).Transpose());
+    // build I_(inactive): a diagonal matrix with ones on inactive dofs and zeros elsewhere
+    mfem::Array<const mfem::Array<int>*> inactive_tdofs_vector(static_cast<int>(interactions_.size()));
+    int                                  inactive_tdofs_ct = 0;
+    for (int i{0}; i < inactive_tdofs_vector.Size(); ++i) {
+      inactive_tdofs_vector[i] = &interactions_[static_cast<size_t>(i)].inactiveDofs();
+      inactive_tdofs_ct += inactive_tdofs_vector[i]->Size();
+    }
+    auto             dof_offsets = pressureDofOffsets();
+    mfem::Array<int> inactive_tdofs(inactive_tdofs_ct);
+    inactive_tdofs_ct = 0;
+    for (int i{0}; i < inactive_tdofs_vector.Size(); ++i) {
+      if (inactive_tdofs_vector[i]) {
+        for (int d{0}; d < inactive_tdofs_vector[i]->Size(); ++d) {
+          inactive_tdofs[d + inactive_tdofs_ct] = (*inactive_tdofs_vector[i])[d] + dof_offsets[i];
+        }
+        inactive_tdofs_ct += inactive_tdofs_vector[i]->Size();
+      }
+    }
+    inactive_tdofs.GetMemory().SetHostPtrOwner(false);
+    mfem::Array<int> rows(numPressureDofs() + 1);
+    rows              = 0;
+    inactive_tdofs_ct = 0;
+    for (int i{0}; i < numPressureDofs(); ++i) {
+      if (inactive_tdofs_ct < inactive_tdofs.Size() && inactive_tdofs[inactive_tdofs_ct] == i) {
+        ++inactive_tdofs_ct;
+      }
+      rows[i + 1] = inactive_tdofs_ct;
+    }
+    rows.GetMemory().SetHostPtrOwner(false);
+    mfem::Vector ones(inactive_tdofs_ct);
+    ones = 1.0;
+    ones.GetMemory().SetHostPtrOwner(false);
+    mfem::SparseMatrix inactive_diag(rows.GetData(), inactive_tdofs.GetData(), ones.GetData(), numPressureDofs(),
+                                     numPressureDofs(), false, false, true);
+    // if the size of ones is zero, SparseMatrix creates its own memory which it
+    // owns.  explicitly prevent this...
+    inactive_diag.SetDataOwner(false);
+    auto& block_1_0 = static_cast<mfem::HypreParMatrix&>(block_J->GetBlock(1, 0));
+    auto  block_1_1 = new mfem::HypreParMatrix(block_1_0.GetComm(), block_1_0.GetGlobalNumRows(),
+                                              block_1_0.GetRowStarts(), &inactive_diag);
+    block_1_1->SetOwnerFlags(3, 3, 1);
+    block_J->SetBlock(1, 1, block_1_1);
+    // end building I_(inactive)
   }
   return block_J;
 }
 
-mfem::Array<int> ContactData::pressureTrueDofOffsets() const
+void ContactData::residualFunction(const mfem::Vector& u, mfem::Vector& r)
 {
-  mfem::Array<int> dof_offsets(static_cast<int>(pairs_.size()) + 1);
-  for (size_t i{0}; i < pairs_.size(); ++i) {
-    dof_offsets[static_cast<int>(i + 1)] = dof_offsets[static_cast<int>(i)] + pairs_[i].numPressureTrueDofs();
-  }
-  return dof_offsets;
+  const int disp_size = reference_nodes_->ParFESpace()->GetTrueVSize();
+
+  // u_const should not change in this method; const cast is to create vector views which are copied to Tribol
+  // displacements and pressures and used to compute the (non-contact) residual
+  auto&              u_const = const_cast<mfem::Vector&>(u);
+  const mfem::Vector u_blk(u_const, 0, disp_size);
+  const mfem::Vector p_blk(u_const, disp_size, numPressureDofs());
+
+  mfem::Vector r_blk(r, 0, disp_size);
+  mfem::Vector g_blk(r, disp_size, numPressureDofs());
+
+  double dt = 1.0;
+  setDisplacements(u_blk);
+  // we need to call update first to update gaps
+  update(1, 1.0, dt);
+  // with updated gaps, we can update pressure for contact interactions with penalty enforcement
+  setPressures(p_blk);
+  // call update again with the right pressures
+  update(1, 1.0, dt);
+
+  r_blk += forces();
+  g_blk.Set(1.0, mergedGaps());
 }
 
-void ContactData::setPressures(const mfem::Vector& true_pressures) const
+std::unique_ptr<mfem::BlockOperator> ContactData::jacobianFunction(const mfem::Vector&   u,
+                                                                   mfem::HypreParMatrix* orig_J) const
 {
-  auto dof_offsets = pressureTrueDofOffsets();
-  for (size_t i{0}; i < pairs_.size(); ++i) {
-    if (pairs_[i].getContactOptions().enforcement == ContactEnforcement::LagrangeMultiplier) {
-      mfem::Vector p_pair_true;
-      p_pair_true.MakeRef(const_cast<mfem::Vector&>(true_pressures), dof_offsets[static_cast<int>(i)],
-                          dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
-      pairs_[i].pressure().ParFESpace()->GetRestrictionMatrix()->MultTranspose(p_pair_true,
-                                                                                       pairs_[i].pressure());
+  // u_const should not change in this method; const cast is to create vector views which are used to compute the
+  // (non-contact) Jacobian
+  auto&              u_const = const_cast<mfem::Vector&>(u);
+  const mfem::Vector u_blk(u_const, 0, reference_nodes_->ParFESpace()->GetTrueVSize());
+
+  auto J_contact = mergedJacobian();
+  if (J_contact->IsZeroBlock(0, 0)) {
+    J_contact->SetBlock(0, 0, orig_J);
+  } else {
+    J_contact->SetBlock(0, 0,
+                        mfem::Add(1.0, *orig_J, 1.0, static_cast<mfem::HypreParMatrix&>(J_contact->GetBlock(0, 0))));
+  }
+
+  return J_contact;
+}
+
+void ContactData::setPressures(const mfem::Vector& merged_pressures) const
+{
+  auto dof_offsets = pressureDofOffsets();
+  for (size_t i{0}; i < interactions_.size(); ++i) {
+    FiniteElementState p_interaction(interactions_[i].pressureSpace());
+    if (interactions_[i].getContactOptions().enforcement == ContactEnforcement::LagrangeMultiplier) {
+      // merged_pressures_const should not change; const cast is to create a vector view for copying to tribol pressures
+      auto&              merged_pressures_const = const_cast<mfem::Vector&>(merged_pressures);
+      const mfem::Vector p_interaction_ref(merged_pressures_const, dof_offsets[static_cast<int>(i)],
+                                           dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
+      p_interaction.Set(1.0, p_interaction_ref);
     } else  // enforcement == ContactEnforcement::Penalty
     {
-      pairs_[i].pressure().Set(pairs_[i].getContactOptions().penalty, pairs_[i].gaps());
+      p_interaction.Set(interactions_[i].getContactOptions().penalty, interactions_[i].gaps());
     }
+    for (auto dof : interactions_[i].inactiveDofs()) {
+      p_interaction[dof] = 0.0;
+    }
+    interactions_[i].setPressure(p_interaction);
   }
 }
 
-void ContactData::setDisplacements(const mfem::Vector& true_displacement)
+void ContactData::setDisplacements(const mfem::Vector& u)
 {
-  reference_nodes_->ParFESpace()->GetProlongationMatrix()->Mult(true_displacement, current_coords_);
+  reference_nodes_->ParFESpace()->GetProlongationMatrix()->Mult(u, current_coords_);
   current_coords_ += *reference_nodes_;
+}
+
+mfem::Array<int> ContactData::pressureDofOffsets() const
+{
+  mfem::Array<int> dof_offsets(static_cast<int>(interactions_.size()) + 1);
+  dof_offsets = 0;
+  for (size_t i{0}; i < interactions_.size(); ++i) {
+    dof_offsets[static_cast<int>(i + 1)] = dof_offsets[static_cast<int>(i)] + interactions_[i].numPressureDofs();
+  }
+  return dof_offsets;
 }
 
 #else
 
 namespace serac {
 
-ContactData::ContactData(const mfem::ParMesh& mesh)
-    : mesh_{mesh}
-{}
-
-ContactData::~ContactData()
-{}
-
-void ContactData::addContactPair([[maybe_unused]] int pair_id, [[maybe_unused]] const std::set<int>& bdry_attr_surf1, 
-                                 [[maybe_unused]] const std::set<int>& bdry_attr_surf2,
-                                 [[maybe_unused]] ContactOptions       contact_opts)
+ContactData::ContactData([[maybe_unused]] const mfem::ParMesh& mesh)
+    : have_lagrange_multipliers_{false}, num_pressure_true_dofs_{0}
 {
-  SLIC_WARNING_ROOT("Serac built without Tribol support. No contact pair will be added.");
 }
 
-bool ContactData::haveContactPairs() const
+ContactData::~ContactData() {}
+
+void ContactData::addContactInteraction([[maybe_unused]] int                  interaction_id,
+                                        [[maybe_unused]] const std::set<int>& bdry_attr_surf1,
+                                        [[maybe_unused]] const std::set<int>& bdry_attr_surf2,
+                                        [[maybe_unused]] ContactOptions       contact_opts)
 {
-  return false;
+  SLIC_WARNING_ROOT("Serac built without Tribol support. No contact interaction will be added.");
 }
 
-void ContactData::update([[maybe_unused]] int cycle, [[maybe_unused]] double time, [[maybe_unused]] double& dt, 
-                         [[maybe_unused]] bool update_redecomp)
-{}
+bool ContactData::haveContactInteractions() const { return false; }
 
-mfem::Vector ContactData::trueContactForces() const
+void ContactData::update([[maybe_unused]] int cycle, [[maybe_unused]] double time, [[maybe_unused]] double& dt) {}
+
+FiniteElementDual ContactData::forces() const
 {
-  mfem::Vector f_true(reference_nodes_->ParFESpace()->GetTrueVSize());
-  f_true = 0.0;
-  return f_true;
+  FiniteElementDual f(*reference_nodes_->ParFESpace(), "contact force");
+  f = 0.0;
+  return f;
 }
 
-mfem::Vector ContactData::truePressures() const
-{
-  return mfem::Vector();
-}
+mfem::Vector ContactData::mergedPressures() const { return mfem::Vector(); }
 
-mfem::Vector ContactData::trueGaps() const
-{
-  return mfem::Vector();
-}
+mfem::Vector ContactData::mergedGaps() const { return mfem::Vector(); }
 
-std::unique_ptr<mfem::BlockOperator> ContactData::contactJacobian() const
+std::unique_ptr<mfem::BlockOperator> ContactData::mergedJacobian() const
 {
-  jacobian_offsets_ = mfem::Array<int>({0, reference_nodes_->ParFESpace()->GetTrueVSize(), 
-                                        reference_nodes_->ParFESpace()->GetTrueVSize()});
+  jacobian_offsets_ = mfem::Array<int>(
+      {0, reference_nodes_->ParFESpace()->GetTrueVSize(), reference_nodes_->ParFESpace()->GetTrueVSize()});
   return std::make_unique<mfem::BlockOperator>(jacobian_offsets_);
 }
 
-mfem::Array<int> ContactData::pressureTrueDofOffsets() const
+std::function<void(const mfem::Vector&, mfem::Vector&)> ContactData::residualFunction(
+    std::function<void(const mfem::Vector&, mfem::Vector&)> orig_r)
 {
-  return mfem::Array<int>();
+  return orig_r;
 }
 
-void ContactData::setPressures([[maybe_unused]] const mfem::Vector& true_pressures) const
-{}
+std::function<std::unique_ptr<mfem::BlockOperator>(const mfem::Vector&)> ContactData::jacobianFunction(
+    std::function<std::unique_ptr<mfem::HypreParMatrix>(const mfem::Vector&)> orig_J) const
+{
+  return [orig_J](const mfem::Vector& u) -> std::unique_ptr<mfem::BlockOperator> {
+    auto J = orig_J(u);
 
-void ContactData::setDisplacements([[maybe_unused]] const mfem::Vector& true_displacement)
-{}
+    auto J_contact         = std::make_unique<mfem::BlockOperator>(jacobian_offsets_);
+    J_contact->owns_blocks = true;
+    J_contact->SetBlock(0, 0, J.release());
+
+    return J_contact;
+  };
+}
+
+void ContactData::setPressures([[maybe_unused]] const mfem::Vector& true_pressures) const {}
+
+void ContactData::setDisplacements([[maybe_unused]] const mfem::Vector& true_displacement) {}
+
+mfem::Array<int> ContactData::pressureDofOffsets() const { return mfem::Array<int>(); }
 
 #endif
 

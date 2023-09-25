@@ -1,5 +1,7 @@
 MFEM mesh v1.0
 
+# two unit cubes occupying [0,1]^3 and [0,1]x[0,1]x[1,2]
+
 #
 # MFEM Geometry Types (see mesh/geom.hpp):
 #

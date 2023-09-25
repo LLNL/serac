@@ -11,17 +11,17 @@
 set(contact_headers
     contact_config.hpp
     contact_data.hpp
-    contact_pair.hpp
+    contact_interaction.hpp
     )
 
 set(contact_sources
     contact_data.cpp
-    contact_pair.cpp
+    contact_interaction.cpp
     )
 
 set(contact_depends serac_infrastructure)
-blt_list_append(TO contact_depends ELEMENTS tribol IF SERAC_USE_TRIBOL)
-blt_list_append(TO contact_depends ELEMENTS redecomp IF SERAC_USE_TRIBOL AND ENABLE_MPI)
+blt_list_append(TO contact_depends ELEMENTS tribol IF TRIBOL_FOUND)
+blt_list_append(TO contact_depends ELEMENTS redecomp IF TRIBOL_FOUND AND ENABLE_MPI)
 
 blt_add_library(
     NAME        serac_contact

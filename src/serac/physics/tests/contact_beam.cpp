@@ -24,7 +24,7 @@ namespace serac {
 class ContactTest : public testing::TestWithParam<std::pair<ContactEnforcement, std::string>> {
 };
 
-TEST_P(ContactTest, patch)
+TEST_P(ContactTest, beam)
 {
   // NOTE: p must be equal to 1 for now
   constexpr int p   = 1;
@@ -33,12 +33,12 @@ TEST_P(ContactTest, patch)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Create DataStore
-  std::string            name = "contact_patch_" + GetParam().second;
+  std::string            name = "contact_beam_" + GetParam().second;
   axom::sidre::DataStore datastore;
   StateManager::initialize(datastore, name + "_data");
 
   // Construct the appropriate dimension mesh and give it to the data store
-  std::string filename = SERAC_REPO_DIR "/data/meshes/twohex_for_contact.mesh";
+  std::string filename = SERAC_REPO_DIR "/data/meshes/beam-hex-with-contact-block.mesh";
 
   // NOTE: The number of MPI ranks must be <= the min number of elements on a
   // contact face until Tribol PR #23 is included in Serac's Tribol
@@ -51,12 +51,12 @@ TEST_P(ContactTest, patch)
   NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::Newton,
                                            .relative_tol   = 1.0e-12,
                                            .absolute_tol   = 1.0e-12,
-                                           .max_iterations = 20,
+                                           .max_iterations = 200,
                                            .print_level    = 1};
 
   ContactOptions contact_options{.method      = ContactMethod::SingleMortar,
                                  .enforcement = GetParam().first,
-                                 .type        = ContactType::Frictionless,
+                                 .type        = ContactType::TiedSlide,
                                  .penalty     = 1.0e4};
 
   SolidMechanicsContact<p, dim> solid_solver(nonlinear_options, linear_options,
@@ -68,18 +68,19 @@ TEST_P(ContactTest, patch)
   solid_mechanics::NeoHookean mat{1.0, K, G};
   solid_solver.setMaterial(mat);
 
-  // Define the function for the initial displacement and boundary condition
-  auto zero_disp_bc    = [](const mfem::Vector&) { return 0.0; };
-  auto nonzero_disp_bc = [](const mfem::Vector&) { return -0.01; };
-
-  // Define a boundary attribute set and specify initial / boundary conditions
-  solid_solver.setDisplacementBCs({1}, zero_disp_bc, 0);
-  solid_solver.setDisplacementBCs({2}, zero_disp_bc, 1);
-  solid_solver.setDisplacementBCs({3}, zero_disp_bc, 2);
-  solid_solver.setDisplacementBCs({6}, nonzero_disp_bc, 2);
+  // Pass the BC information to the solver object
+  solid_solver.setDisplacementBCs({1}, [](const mfem::Vector&, mfem::Vector& u) {
+    u.SetSize(dim);
+    u = 0.0;
+  });
+  solid_solver.setDisplacementBCs({6}, [](const mfem::Vector&, mfem::Vector& u) {
+    u.SetSize(dim);
+    u    = 0.0;
+    u[2] = -0.15;
+  });
 
   // Add the contact interaction
-  solid_solver.addContactInteraction(0, {4}, {5}, contact_options);
+  solid_solver.addContactInteraction(0, {7}, {5}, contact_options);
 
   // Finalize the data structures
   solid_solver.completeSetup();
@@ -95,24 +96,15 @@ TEST_P(ContactTest, patch)
   solid_solver.outputState(paraview_name);
 
   // Check the l2 norm of the displacement dofs
-  auto                            c = (3.0 * K - 2.0 * G) / (3.0 * K + G);
-  mfem::VectorFunctionCoefficient elasticity_sol_coeff(3, [c](const mfem::Vector& x, mfem::Vector& u) {
-    u[0] = 0.25 * 0.01 * c * x[0];
-    u[1] = 0.25 * 0.01 * c * x[1];
-    u[2] = -0.5 * 0.01 * x[2];
-  });
-  mfem::ParGridFunction           elasticity_sol(&solid_solver.displacement().space());
-  elasticity_sol.ProjectCoefficient(elasticity_sol_coeff);
-  mfem::ParGridFunction approx_error(elasticity_sol);
-  approx_error -= solid_solver.displacement().gridFunction();
-  auto approx_error_l2 = mfem::ParNormlp(approx_error, 2, MPI_COMM_WORLD);
-  EXPECT_NEAR(0.0, approx_error_l2, 1.0e-3);
+  auto u_l2 = mfem::ParNormlp(solid_solver.displacement(), 2, MPI_COMM_WORLD);
+  EXPECT_NEAR(3.3257055635785537, u_l2, 1.0e-3);
 }
 
+// NOTE: if Penalty is first and Lagrange Multiplier is second, super LU gives a
+// zero diagonal error
 INSTANTIATE_TEST_SUITE_P(tribol, ContactTest,
-                         testing::Values(std::make_pair(ContactEnforcement::Penalty, "penalty"),
-                                         std::make_pair(ContactEnforcement::LagrangeMultiplier,
-                                                        "lagrange_multiplier")));
+                         testing::Values(std::make_pair(ContactEnforcement::LagrangeMultiplier, "lagrange_multiplier"),
+                                         std::make_pair(ContactEnforcement::Penalty, "penalty")));
 
 }  // namespace serac
 
