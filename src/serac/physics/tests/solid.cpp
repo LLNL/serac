@@ -136,8 +136,11 @@ void functional_solid_spatial_essential_bc()
   solid_solver.setMaterial(mat);
 
   // Set up
-  auto zero_vector   = [](const mfem::Vector&, mfem::Vector& u) { u = 0.0; };
-  auto zero_scalar   = [](const mfem::Vector&) { return 0.0; };
+  auto zero_vector = [](const mfem::Vector&, mfem::Vector& u) { u = 0.0; };
+
+  // We want to test both the scalar displacement functions including the time argument and the scalar displacement
+  // functions without
+  auto zero_scalar   = [](const mfem::Vector&, double) { return 0.0; };
   auto scalar_offset = [](const mfem::Vector&) { return -0.1; };
 
   auto is_on_bottom = [](const mfem::Vector& x) {
