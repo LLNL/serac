@@ -57,8 +57,6 @@ double BasePhysics::time() const { return time_; }
 
 int BasePhysics::cycle() const { return cycle_; }
 
-void BasePhysics::setTimestep(double dt) { timestep_ = dt; }
-
 void BasePhysics::setParameter(const size_t parameter_index, const FiniteElementState& parameter_state)
 {
   SLIC_ERROR_ROOT_IF(&parameter_state.mesh() != &mesh_,

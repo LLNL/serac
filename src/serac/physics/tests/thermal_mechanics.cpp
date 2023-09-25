@@ -93,8 +93,7 @@ void functional_test_static_3D(double expected_norm)
   thermal_solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  thermal_solid_solver.setTimestep(1.0);
-  thermal_solid_solver.advanceTimestep();
+  thermal_solid_solver.advanceTimestep(1.0);
 
   EXPECT_NEAR(expected_norm, norm(thermal_solid_solver.displacement()), 1.0e-6);
 
@@ -180,8 +179,7 @@ void functional_test_shrinking_3D(double expected_norm)
   thermal_solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  thermal_solid_solver.setTimestep(1.0);
-  thermal_solid_solver.advanceTimestep();
+  thermal_solid_solver.advanceTimestep(1.0);
 
   // Check the final displacement norm
   EXPECT_NEAR(expected_norm, norm(thermal_solid_solver.displacement()), 1.0e-4);

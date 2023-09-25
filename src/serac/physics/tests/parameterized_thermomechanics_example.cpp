@@ -136,8 +136,7 @@ TEST(Thermomechanics, ParameterizedMaterial)
   // Perform the quasi-static solve
   temperature = theta_ref + deltaT;
   simulation.setParameter(0, temperature);
-  simulation.setTimestep(1.0);
-  simulation.advanceTimestep();
+  simulation.advanceTimestep(1.0);
 
   simulation.outputStateToDisk("paraview");
 
@@ -198,8 +197,7 @@ TEST(Thermomechanics, ParameterizedMaterial)
 
   // rerun the simulation to the beginning,
   // but this time use perturbed values of alpha
-  simulation.setTimestep(1.0);
-  simulation.advanceTimestep();
+  simulation.advanceTimestep(1.0);
 
   simulation.outputStateToDisk("paraview");
 

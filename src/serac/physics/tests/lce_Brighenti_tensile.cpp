@@ -188,8 +188,7 @@ TEST(LiquidCrystalElastomer, Brighenti)
                           i + 1, t, loadVal, loadVal / maxLoadVal * 100, initial_temperature));
 
     // solve problem with current parameters
-    solid_solver.setTimestep(dt);
-    solid_solver.advanceTimestep();
+    solid_solver.advanceTimestep(dt);
     solid_solver.outputStateToDisk(output_filename);
 
     // get QoI

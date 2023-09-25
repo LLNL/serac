@@ -381,10 +381,8 @@ input file functionality.
     // Print the timestep information
     SLIC_INFO_ROOT("step " << cycle << ", t = " << t);
 
-    main_physics->setTimestep(dt_real);
-
     // Solve the physics module appropriately
-    main_physics->advanceTimestep();
+    main_physics->advanceTimestep(dt_real);
 
     // Output a visualization file
     main_physics->outputStateToDisk(paraview_output_dir);

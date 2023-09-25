@@ -94,8 +94,7 @@ TEST(Thermal, ParameterizedMaterial)
   thermal_solver.completeSetup();
 
   // Perform the quasi-static solve
-  thermal_solver.setTimestep(1.0);
-  thermal_solver.advanceTimestep();
+  thermal_solver.advanceTimestep(1.0);
 
   // Output the sidre-based plot files
   thermal_solver.outputStateToDisk();

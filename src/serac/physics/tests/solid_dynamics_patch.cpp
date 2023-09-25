@@ -326,9 +326,8 @@ double solution_error(solution_type exact_solution, PatchBoundaryCondition bc)
   solid.completeSetup();
 
   // Integrate in time
-  solid.setTimestep(1.0);
   for (int i = 0; i < 3; i++) {
-    solid.advanceTimestep();
+    solid.advanceTimestep(1.0);
 
     // Output solution for debugging
     // solid.outputStateToDisk("paraview_output");

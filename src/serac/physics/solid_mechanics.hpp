@@ -964,9 +964,9 @@ public:
   }
 
   /// @brief Solve the Quasi-static Newton system
-  void quasiStaticSolve()
+  void quasiStaticSolve(double dt)
   {
-    time_ += timestep_;
+    time_ += dt;
 
     // the ~20 lines of code below are essentially equivalent to the 1-liner
     // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
@@ -1032,9 +1032,9 @@ public:
    *
    * Advance the underlying ODE with the requested time integration scheme using the previously set timestep.
    *
-   * @pre setTimestep() and completeSetup() must be called prior to this method.
+   * @param dt The increment of simulation time to advance the underlying solid mechanics problem
    */
-  void advanceTimestep() override
+  void advanceTimestep(double dt) override
   {
     SLIC_ERROR_ROOT_IF(!residual_, "completeSetup() must be called prior to advanceTimestep(dt) in SolidMechanics.");
 
@@ -1046,9 +1046,9 @@ public:
     }
 
     if (is_quasistatic_) {
-      quasiStaticSolve();
+      quasiStaticSolve(dt);
     } else {
-      ode2_.Step(displacement_, velocity_, time_, timestep_);
+      ode2_.Step(displacement_, velocity_, time_, dt);
     }
 
     {

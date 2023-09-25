@@ -88,8 +88,7 @@ TEST(Thermal, FiniteDifference)
   thermal_solver.completeSetup();
 
   // Perform the quasi-static solve
-  thermal_solver.setTimestep(1.0);
-  thermal_solver.advanceTimestep();
+  thermal_solver.advanceTimestep(1.0);
 
   // Output the sidre-based plot files
   thermal_solver.outputStateToDisk();
@@ -121,13 +120,13 @@ TEST(Thermal, FiniteDifference)
     (user_defined_conductivity)(i) = conductivity_value + eps;
 
     thermal_solver.setParameter(0, user_defined_conductivity);
-    thermal_solver.advanceTimestep();
+    thermal_solver.advanceTimestep(1.0);
     mfem::ParGridFunction temperature_plus = thermal_solver.temperature().gridFunction();
 
     (user_defined_conductivity)(i) = conductivity_value - eps;
 
     thermal_solver.setParameter(0, user_defined_conductivity);
-    thermal_solver.advanceTimestep();
+    thermal_solver.advanceTimestep(1.0);
     mfem::ParGridFunction temperature_minus = thermal_solver.temperature().gridFunction();
 
     // Reset to the original conductivity value
@@ -210,8 +209,7 @@ TEST(HeatTransfer, FiniteDifferenceShape)
   thermal_solver.completeSetup();
 
   // Perform the quasi-static solve
-  thermal_solver.setTimestep(1.0);
-  thermal_solver.advanceTimestep();
+  thermal_solver.advanceTimestep(1.0);
 
   // Output the sidre-based plot files
   thermal_solver.outputStateToDisk();
@@ -243,13 +241,13 @@ TEST(HeatTransfer, FiniteDifferenceShape)
     shape_displacement(i) = shape_displacement_value + eps;
     thermal_solver.setShapeDisplacement(shape_displacement);
 
-    thermal_solver.advanceTimestep();
+    thermal_solver.advanceTimestep(1.0);
     mfem::ParGridFunction temperature_plus = thermal_solver.temperature().gridFunction();
 
     shape_displacement(i) = shape_displacement_value - eps;
     thermal_solver.setShapeDisplacement(shape_displacement);
 
-    thermal_solver.advanceTimestep();
+    thermal_solver.advanceTimestep(1.0);
     mfem::ParGridFunction temperature_minus = thermal_solver.temperature().gridFunction();
 
     // Reset to the original bulk modulus value

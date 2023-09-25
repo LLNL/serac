@@ -102,8 +102,7 @@ TEST(HeatTransfer, MoveShape)
     thermal_solver.completeSetup();
 
     // Perform the quasi-static solve
-    thermal_solver.setTimestep(1.0);
-    thermal_solver.advanceTimestep();
+    thermal_solver.advanceTimestep(1.0);
 
     thermal_solver.outputStateToDisk();
 
@@ -147,8 +146,7 @@ TEST(HeatTransfer, MoveShape)
     thermal_solver_no_shape.completeSetup();
 
     // Perform the quasi-static solve
-    thermal_solver_no_shape.setTimestep(1.0);
-    thermal_solver_no_shape.advanceTimestep();
+    thermal_solver_no_shape.advanceTimestep(1.0);
 
     thermal_solver_no_shape.outputStateToDisk();
 

@@ -105,8 +105,7 @@ void periodic_test(mfem::Element::Type element_type)
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  solid_solver.setTimestep(1.0);
-  solid_solver.advanceTimestep();
+  solid_solver.advanceTimestep(1.0);
 
   [[maybe_unused]] auto [K, K_e] = solid_solver.stiffnessMatrix();
 

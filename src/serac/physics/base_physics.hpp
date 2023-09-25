@@ -83,13 +83,6 @@ public:
   virtual int cycle() const;
 
   /**
-   * @brief Set the timestep size (delta time) for the underlying differential equation evolution algorithm
-   *
-   * @param dt The timestep size to use when advancing the physics module
-   */
-  virtual void setTimestep(double dt);
-
-  /**
    * @brief Complete the setup and allocate the necessary data structures
    *
    * This finializes the underlying data structures in a solver and
@@ -159,9 +152,9 @@ public:
   /**
    * @brief Advance the state variables according to the chosen time integrator and timestep
    *
-   * @pre setTimestep() and completeSetup() must be called prior to this method.
+   * @param dt The increment of simulation time to advance the underlying physical system
    */
-  virtual void advanceTimestep() = 0;
+  virtual void advanceTimestep(double dt) = 0;
 
   /**
    * @brief Solve the adjoint problem
@@ -301,11 +294,6 @@ protected:
    * @brief Current cycle (forward pass time iteration count)
    */
   int cycle_;
-
-  /**
-   * @brief Current timestep for the forward pass
-   */
-  double timestep_;
 
   /**
    * @brief The value of time at which the ODE solver wants to evaluate the residual

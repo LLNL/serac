@@ -96,9 +96,8 @@ void functional_solid_test_static_J2()
   // Perform the quasi-static solve
   int    num_steps = 10;
   double tmax      = 1.0;
-  solid_solver.setTimestep(tmax / num_steps);
   for (int i = 0; i < num_steps; i++) {
-    solid_solver.advanceTimestep();
+    solid_solver.advanceTimestep(tmax / num_steps);
     solid_solver.outputStateToDisk("paraview");
   }
 
@@ -178,8 +177,7 @@ void functional_solid_spatial_essential_bc()
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  solid_solver.setTimestep(1.0);
-  solid_solver.advanceTimestep();
+  solid_solver.advanceTimestep(1.0);
   solid_solver.outputStateToDisk();
 
   auto [size, rank] = serac::getMPIInfo();
@@ -369,8 +367,7 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  solid_solver.setTimestep(1.0);
-  solid_solver.advanceTimestep();
+  solid_solver.advanceTimestep(1.0);
 
   // the calculations peformed in these lines of code
   // are not used, but running them as part of this test

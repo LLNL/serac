@@ -335,8 +335,7 @@ double solution_error(PatchBoundaryCondition bc)
   solid.completeSetup();
 
   // Perform the quasi-static solve
-  solid.setTimestep(1.0);
-  solid.advanceTimestep();
+  solid.advanceTimestep(1.0);
 
   // Output solution for debugging
   // solid.outputStateToDisk("paraview_output");
@@ -442,8 +441,7 @@ double pressure_error()
   solid.completeSetup();
 
   // Perform the quasi-static solve
-  solid.setTimestep(1.0);
-  solid.advanceTimestep();
+  solid.advanceTimestep(1.0);
 
   solid.outputStateToDisk();
 

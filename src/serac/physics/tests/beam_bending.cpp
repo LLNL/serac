@@ -85,8 +85,7 @@ TEST(BeamBending, TwoDimensional)
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  solid_solver.setTimestep(1.0);
-  solid_solver.advanceTimestep();
+  solid_solver.advanceTimestep(1.0);
 
   // Output the sidre-based plot files
   solid_solver.outputStateToDisk("paraview_output");

@@ -154,8 +154,7 @@ TEST(LiquidCrystalElastomer, Bertoldi)
                           i + 1, num_steps, max_order_param * (tmax - t) / tmax, gamma_angle, eta_angle, gblDispYmin));
 
     // solve problem with current parameters
-    solid_solver.setTimestep(dt);
-    solid_solver.advanceTimestep();
+    solid_solver.advanceTimestep(dt);
     solid_solver.outputStateToDisk(outputFilename);
 
     // Get minimum displacement for verification purposes

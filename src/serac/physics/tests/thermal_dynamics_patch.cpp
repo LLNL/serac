@@ -127,10 +127,9 @@ double dynamic_solution_error(const ExactSolution& exact_solution, PatchBoundary
   thermal.completeSetup();
 
   // Integrate in time
-  thermal.setTimestep(1.0);
   thermal.outputStateToDisk();
   for (int i = 0; i < 3; i++) {
-    thermal.advanceTimestep();
+    thermal.advanceTimestep(1.0);
     thermal.outputStateToDisk();
   }
 

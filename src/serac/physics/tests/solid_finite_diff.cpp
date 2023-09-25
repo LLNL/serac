@@ -99,8 +99,7 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  solid_solver.setTimestep(1.0);
-  solid_solver.advanceTimestep();
+  solid_solver.advanceTimestep(1.0);
 
   // Output the sidre-based plot files
   solid_solver.outputStateToDisk();
@@ -133,7 +132,7 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
 
     solid_solver.setParameter(0, user_defined_bulk_modulus);
 
-    solid_solver.advanceTimestep();
+    solid_solver.advanceTimestep(1.0);
     mfem::ParGridFunction displacement_plus = solid_solver.displacement().gridFunction();
 
     user_defined_bulk_modulus(i) = bulk_modulus_value - eps;
@@ -141,7 +140,7 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
     solid_solver.setDisplacement(bc);
 
     solid_solver.setParameter(0, user_defined_bulk_modulus);
-    solid_solver.advanceTimestep();
+    solid_solver.advanceTimestep(1.0);
     mfem::ParGridFunction displacement_minus = solid_solver.displacement().gridFunction();
 
     // Reset to the original bulk modulus value
@@ -269,8 +268,7 @@ void finite_difference_shape_test(LoadingType load)
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  solid_solver.setTimestep(1.0);
-  solid_solver.advanceTimestep();
+  solid_solver.advanceTimestep(1.0);
 
   // Output the sidre-based plot files
   solid_solver.outputStateToDisk();
@@ -301,13 +299,13 @@ void finite_difference_shape_test(LoadingType load)
     shape_displacement(i) = shape_displacement_value + eps;
 
     solid_solver.setShapeDisplacement(shape_displacement);
-    solid_solver.advanceTimestep();
+    solid_solver.advanceTimestep(1.0);
     mfem::ParGridFunction displacement_plus = solid_solver.displacement().gridFunction();
 
     shape_displacement(i) = shape_displacement_value - eps;
 
     solid_solver.setShapeDisplacement(shape_displacement);
-    solid_solver.advanceTimestep();
+    solid_solver.advanceTimestep(1.0);
     mfem::ParGridFunction displacement_minus = solid_solver.displacement().gridFunction();
 
     // Reset to the original bulk modulus value

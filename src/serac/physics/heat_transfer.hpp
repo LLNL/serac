@@ -255,12 +255,12 @@ public:
    *
    * Advance the underlying ODE with the requested time integration scheme using the previously set timestep.
    *
-   * @pre setTimestep() and completeSetup() must be called prior to this method.
+   * @param dt The increment of simulation time to advance the underlying heat transfer problem
    */
-  void advanceTimestep() override
+  void advanceTimestep(double dt) override
   {
     if (is_quasistatic_) {
-      time_ += timestep_;
+      time_ += dt;
       // Project the essential boundary coefficients
       for (auto& bc : bcs_.essentials()) {
         bc.setDofs(temperature_, time_);
@@ -271,7 +271,7 @@ public:
 
       // Step the time integrator
       // Note that the ODE solver handles the essential boundary condition application itself
-      ode_.Step(temperature_, time_, timestep_);
+      ode_.Step(temperature_, time_, dt);
     }
     cycle_ += 1;
   }

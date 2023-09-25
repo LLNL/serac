@@ -184,8 +184,7 @@ double solution_error(const ExactSolution& exact_temperature, PatchBoundaryCondi
   thermal.completeSetup();
 
   // Perform the quasi-static solve
-  thermal.setTimestep(1.0);
-  thermal.advanceTimestep();
+  thermal.advanceTimestep(1.0);
 
   // Compute norm of error
   mfem::FunctionCoefficient exact_solution_coef(exact_temperature);

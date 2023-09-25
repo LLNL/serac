@@ -73,8 +73,7 @@ int main(int argc, char* argv[])
   heat_transfer.completeSetup();
   heat_transfer.outputStateToDisk();
 
-  heat_transfer.setTimestep(1.0);
-  heat_transfer.advanceTimestep();
+  heat_transfer.advanceTimestep(1.0);
   heat_transfer.outputStateToDisk();
   // _run_sim_end
 
