@@ -38,7 +38,7 @@ void functional_test_static_3D(double expected_norm)
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
 
-  std::string mesh_tag{"mesh}"};
+  std::string mesh_tag{"mesh"};
 
   serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
@@ -121,7 +121,7 @@ void functional_test_shrinking_3D(double expected_norm)
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
 
-  std::string mesh_tag{"mesh}"};
+  std::string mesh_tag{"mesh"};
 
   serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 

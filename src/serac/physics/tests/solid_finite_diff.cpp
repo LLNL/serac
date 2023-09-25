@@ -201,7 +201,7 @@ void finite_difference_shape_test(LoadingType load)
 
   std::string mesh_tag{"mesh"};
 
-  serac::StateManager::setMesh(std::move(mesh), mesh_tag);
+  auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   constexpr int p   = 1;
   constexpr int dim = 2;
@@ -223,7 +223,7 @@ void finite_difference_shape_test(LoadingType load)
   solid_mechanics::NeoHookean mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
 
-  FiniteElementState shape_displacement(*mesh, H1<SHAPE_ORDER, dim>{});
+  FiniteElementState shape_displacement(pmesh, H1<SHAPE_ORDER, dim>{});
 
   shape_displacement = shape_displacement_value;
   solid_solver.setShapeDisplacement(shape_displacement);

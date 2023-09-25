@@ -175,6 +175,8 @@ TEST(LiquidCrystalElastomer, Bertoldi)
     // update pseudotime-dependent information
     t += dt;
     orderParam = max_order_param * (tmax - t) / tmax;
+
+    solid_solver.setParameter(ORDER_INDEX, orderParam);
   }
 
   // check output

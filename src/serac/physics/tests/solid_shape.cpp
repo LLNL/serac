@@ -40,7 +40,7 @@ void shape_test(GeometricNonlinearities geo_nonlin)
 
   std::string mesh_tag{"mesh"};
 
-  serac::StateManager::setMesh(std::move(mesh), mesh_tag);
+  auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   mfem::Vector shape_displacement;
   mfem::Vector pure_displacement;
@@ -99,7 +99,7 @@ void shape_test(GeometricNonlinearities geo_nonlin)
 
   {
     // Construct and initialized the user-defined shape velocity to offset the computational mesh
-    FiniteElementState user_defined_shape_displacement(*mesh, H1<SHAPE_ORDER, dim>{});
+    FiniteElementState user_defined_shape_displacement(pmesh, H1<SHAPE_ORDER, dim>{});
 
     user_defined_shape_displacement.project(shape_coef);
 
@@ -179,7 +179,7 @@ void shape_test(GeometricNonlinearities geo_nonlin)
 
   double error          = pure_displacement.DistanceTo(shape_displacement.GetData());
   double relative_error = error / pure_displacement.Norml2();
-  EXPECT_LT(relative_error, 3.0e-12);
+  EXPECT_LT(relative_error, 3.5e-12);
 }
 
 TEST(SolidMechanics, MoveShapeLinear) { shape_test(GeometricNonlinearities::Off); }

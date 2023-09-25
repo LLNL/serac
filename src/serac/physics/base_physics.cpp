@@ -34,10 +34,10 @@ BasePhysics::BasePhysics(std::string physics_name, std::string mesh_tag)
 
   if (mesh_.Dimension() == 2) {
     shape_displacement_sensitivity_ =
-        std::make_unique<FiniteElementDual>(mesh_, H1<SHAPE_ORDER, 2>{}, mesh_tag_ + "_shape_displacement_sensitivity");
+        std::make_unique<FiniteElementDual>(mesh_, H1<SHAPE_ORDER, 2>{}, name_ + "_shape_displacement_sensitivity");
   } else if (mesh_.Dimension() == 3) {
     shape_displacement_sensitivity_ =
-        std::make_unique<FiniteElementDual>(mesh_, H1<SHAPE_ORDER, 3>{}, mesh_tag_ + "_shape_displacement_sensitivity");
+        std::make_unique<FiniteElementDual>(mesh_, H1<SHAPE_ORDER, 3>{}, name_ + "_shape_displacement_sensitivity");
   } else {
     SLIC_ERROR_ROOT(axom::fmt::format("Mesh of dimension {} given, only dimensions 2 or 3 are available in Serac.",
                                       mesh_.Dimension()));
@@ -65,13 +65,13 @@ void BasePhysics::setParameter(const size_t parameter_index, const FiniteElement
                      axom::fmt::format("Mesh of parameter {} is not the same as the physics mesh", parameter_index));
 
   SLIC_ERROR_ROOT_IF(
-      parameter_state.space().GetTrueVSize() != parameters_[parameter_index].state.space().GetTrueVSize(),
+      parameter_state.space().GetTrueVSize() != parameters_[parameter_index].state->space().GetTrueVSize(),
       axom::fmt::format(
           "Physics module parameter '{}' has size '{}' while given state has size '{}'. The finite element "
           "spaces are inconsistent.",
-          parameter_index, parameters_[parameter_index].state.space().GetTrueVSize(),
+          parameter_index, parameters_[parameter_index].state->space().GetTrueVSize(),
           parameter_state.space().GetTrueVSize()));
-  parameters_[parameter_index].state = parameter_state;
+  *parameters_[parameter_index].state = parameter_state;
 }
 
 void BasePhysics::setShapeDisplacement(const FiniteElementState& shape_displacement)
@@ -100,8 +100,8 @@ void BasePhysics::outputStateToDisk(std::optional<std::string> paraview_output_d
   }
 
   for (auto& parameter : parameters_) {
-    StateManager::updateState(parameter.state);
-    StateManager::updateDual(parameter.sensitivity);
+    StateManager::updateState(*parameter.state);
+    StateManager::updateDual(*parameter.sensitivity);
   }
 
   StateManager::updateState(shape_displacement_);
@@ -130,8 +130,8 @@ void BasePhysics::outputStateToDisk(std::optional<std::string> paraview_output_d
       }
 
       for (auto& parameter : parameters_) {
-        paraview_dc_->RegisterField(parameter.state.name(), &parameter.state.gridFunction());
-        max_order_in_fields = std::max(max_order_in_fields, parameter.state.space().GetOrder(0));
+        paraview_dc_->RegisterField(parameter.state->name(), &parameter.state->gridFunction());
+        max_order_in_fields = std::max(max_order_in_fields, parameter.state->space().GetOrder(0));
       }
 
       paraview_dc_->RegisterField(shape_displacement_.name(), &shape_displacement_.gridFunction());
@@ -147,7 +147,7 @@ void BasePhysics::outputStateToDisk(std::optional<std::string> paraview_output_d
         state->gridFunction();  // update grid function values
       }
       for (auto& parameter : parameters_) {
-        parameter.state.gridFunction();
+        parameter.state->gridFunction();
       }
       shape_displacement_.gridFunction();
     }

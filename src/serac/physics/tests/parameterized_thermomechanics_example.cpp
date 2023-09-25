@@ -89,8 +89,8 @@ TEST(Thermomechanics, ParameterizedMaterial)
 
   SolidMechanics<p, dim, Parameters<H1<p>, H1<p>>> simulation(
       solid_mechanics::default_nonlinear_options, solid_mechanics::direct_linear_options,
-      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "thermomechanics_simulation",
-      mesh_tag);
+      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "thermomechanics_simulation", mesh_tag,
+      {"theta", "alpha"});
 
   double density   = 1.0;     ///< density
   double E         = 1000.0;  ///< Young's modulus
@@ -135,6 +135,7 @@ TEST(Thermomechanics, ParameterizedMaterial)
 
   // Perform the quasi-static solve
   temperature = theta_ref + deltaT;
+  simulation.setParameter(0, temperature);
   simulation.setTimestep(1.0);
   simulation.advanceTimestep();
 
@@ -193,6 +194,7 @@ TEST(Thermomechanics, ParameterizedMaterial)
   auto   dalpha  = alpha.CreateCompatibleVector();
   dalpha         = 1.0;
   alpha.Add(epsilon, dalpha);
+  simulation.setParameter(1, alpha);
 
   // rerun the simulation to the beginning,
   // but this time use perturbed values of alpha

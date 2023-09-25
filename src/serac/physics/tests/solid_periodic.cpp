@@ -70,7 +70,8 @@ void periodic_test(mfem::Element::Type element_type)
   // Construct a functional-based solid solver
   SolidMechanics<p, dim, Parameters<L2<p>, L2<p>>> solid_solver(
       solid_mechanics::default_nonlinear_options, solid_mechanics::default_linear_options,
-      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "solid_periodic", mesh_tag);
+      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "solid_periodic", mesh_tag,
+      {"bulk", "shear"});
 
   solid_solver.setParameter(0, user_defined_bulk_modulus);
   solid_solver.setParameter(1, user_defined_shear_modulus);

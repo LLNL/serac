@@ -139,7 +139,7 @@ public:
   virtual const FiniteElementDual& computeSensitivity(size_t /* parameter_index */)
   {
     SLIC_ERROR_ROOT(axom::fmt::format("Parameter sensitivities not enabled in physics module {}", name_));
-    return parameters_[0].sensitivity;
+    return *parameters_[0].sensitivity;
   }
 
   /**
@@ -247,26 +247,26 @@ protected:
   struct ParameterInfo {
     template <typename FunctionSpace>
     ParameterInfo(mfem::ParMesh& mesh, FunctionSpace space, const std::string& name = "")
-        : state(mesh, space, name),
-          previous_state(mesh, space, "previous_" + name),
-          sensitivity(mesh, space, name + "_sensitivity")
     {
-      StateManager::storeState(state);
-      StateManager::storeDual(sensitivity);
+      state          = std::make_unique<FiniteElementState>(mesh, space, name);
+      previous_state = std::make_unique<FiniteElementState>(mesh, space, "previous_" + name);
+      sensitivity    = std::make_unique<FiniteElementDual>(mesh, space, name + "_sensitivity");
+      StateManager::storeState(*state);
+      StateManager::storeDual(*sensitivity);
     }
 
     /// The finite element states representing user-defined and owned parameter fields
-    serac::FiniteElementState state;
+    std::unique_ptr<serac::FiniteElementState> state;
 
     /// The finite element state representing the parameter at the previous evaluation
-    serac::FiniteElementState previous_state;
+    std::unique_ptr<serac::FiniteElementState> previous_state;
 
     /**
      * @brief The sensitivities (dual vectors) of the QOI encoded in the adjoint load with respect to each of the input
      * parameter fields
      * @note This quantity is also called the vector-Jacobian product during back propagation in data science.
      */
-    serac::FiniteElementDual sensitivity;
+    std::unique_ptr<serac::FiniteElementDual> sensitivity;
   };
 
   /// @brief A vector of the parameters associated with this physics module

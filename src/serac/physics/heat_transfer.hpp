@@ -159,7 +159,7 @@ public:
       for_constexpr<sizeof...(parameter_space)>([&](auto i) {
         parameters_.emplace_back(mesh_, get<i>(types), detail::addPrefix(name_, parameter_names[i]));
 
-        trial_spaces[i + NUM_STATE_VARS] = &(parameters_[i].state.space());
+        trial_spaces[i + NUM_STATE_VARS] = &(parameters_[i].state->space());
       });
     }
 
@@ -538,7 +538,7 @@ public:
 
           [this](const mfem::Vector& u, mfem::Vector& r) {
             const mfem::Vector res =
-                (*residual_)(u, zero_, shape_displacement_, parameters_[parameter_indices].state...);
+                (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
 
             // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
             // tracking strategy
@@ -548,10 +548,10 @@ public:
           },
 
           [this](const mfem::Vector& u) -> mfem::Operator& {
-            auto [r, drdu] =
-                (*residual_)(differentiate_wrt(u), zero_, shape_displacement_, parameters_[parameter_indices].state...);
-            J_   = assemble(drdu);
-            J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+            auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, shape_displacement_,
+                                          *parameters_[parameter_indices].state...);
+            J_             = assemble(drdu);
+            J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             return *J_;
           });
 
@@ -562,7 +562,7 @@ public:
           [this](const mfem::Vector& du_dt, mfem::Vector& r) {
             add(1.0, u_, dt_, du_dt, u_predicted_);
             const mfem::Vector res =
-                (*residual_)(u_predicted_, du_dt, shape_displacement_, parameters_[parameter_indices].state...);
+                (*residual_)(u_predicted_, du_dt, shape_displacement_, *parameters_[parameter_indices].state...);
 
             // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
             // tracking strategy
@@ -576,12 +576,12 @@ public:
 
             // K := dR/du
             auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(u_predicted_), du_dt, shape_displacement_,
-                                                         parameters_[parameter_indices].state...));
+                                                         *parameters_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             // M := dR/du_dot
             auto M = serac::get<DERIVATIVE>((*residual_)(u_predicted_, differentiate_wrt(du_dt), shape_displacement_,
-                                                         parameters_[parameter_indices].state...));
+                                                         *parameters_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
             // J := M + dt K
@@ -630,7 +630,7 @@ public:
     adjoint_essential = 0.0;
 
     auto [r, drdu] = (*residual_)(differentiate_wrt(temperature_), zero_, shape_displacement_,
-                                  parameters_[parameter_indices].state...);
+                                  *parameters_[parameter_indices].state...);
     auto jacobian  = assemble(drdu);
     auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -677,9 +677,9 @@ public:
     auto drdparam     = serac::get<1>(d_residual_d_[parameter_field]());
     auto drdparam_mat = assemble(drdparam);
 
-    drdparam_mat->MultTranspose(adjoint_temperature_, parameters_[parameter_field].sensitivity);
+    drdparam_mat->MultTranspose(adjoint_temperature_, *parameters_[parameter_field].sensitivity);
 
-    return parameters_[parameter_field].sensitivity;
+    return *parameters_[parameter_field].sensitivity;
   }
 
   /**
@@ -693,7 +693,7 @@ public:
   FiniteElementDual& computeShapeSensitivity() override
   {
     auto drdshape = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<SHAPE>{}, temperature_, zero_,
-                                                        shape_displacement_, parameters_[parameter_indices].state...));
+                                                        shape_displacement_, *parameters_[parameter_indices].state...));
 
     auto drdshape_mat = assemble(drdshape);
 
@@ -775,11 +775,11 @@ protected:
   /// @note This is needed so the user can ask for a specific sensitivity at runtime as opposed to it being a
   /// template parameter.
   std::array<std::function<decltype((*residual_)(DifferentiateWRT<0>{}, temperature_, zero_, shape_displacement_,
-                                                 parameters_[parameter_indices].state...))()>,
+                                                 *parameters_[parameter_indices].state...))()>,
              sizeof...(parameter_indices)>
       d_residual_d_ = {[&]() {
         return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + parameter_indices>{}, temperature_, zero_,
-                            shape_displacement_, parameters_[parameter_indices].state...);
+                            shape_displacement_, *parameters_[parameter_indices].state...);
       }...};
 };
 

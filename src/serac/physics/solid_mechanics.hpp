@@ -173,7 +173,7 @@ public:
       for_constexpr<sizeof...(parameter_space)>([&](auto i) {
         parameters_.emplace_back(mesh_, get<i>(types), detail::addPrefix(name_, parameter_names[i]));
 
-        trial_spaces[i + NUM_STATE_VARS] = &(parameters_[i].state.space());
+        trial_spaces[i + NUM_STATE_VARS] = &(parameters_[i].state->space());
       });
     }
 
@@ -862,7 +862,8 @@ public:
 
         // residual function
         [this](const mfem::Vector& u, mfem::Vector& r) {
-          const mfem::Vector res = (*residual_)(u, zero_, shape_displacement_, parameters_[parameter_indices].state...);
+          const mfem::Vector res =
+              (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
 
           // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
           // tracking strategy
@@ -874,7 +875,7 @@ public:
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
           auto [r, drdu] =
-              (*residual_)(differentiate_wrt(u), zero_, shape_displacement_, parameters_[parameter_indices].state...);
+              (*residual_)(differentiate_wrt(u), zero_, shape_displacement_, *parameters_[parameter_indices].state...);
           J_   = assemble(drdu);
           J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
           return *J_;
@@ -927,7 +928,7 @@ public:
           [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) {
             add(1.0, u_, c0_, d2u_dt2, predicted_displacement_);
             const mfem::Vector res = (*residual_)(predicted_displacement_, d2u_dt2, shape_displacement_,
-                                                  parameters_[parameter_indices].state...);
+                                                  *parameters_[parameter_indices].state...);
 
             // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
             // tracking strategy
@@ -940,13 +941,15 @@ public:
             add(1.0, u_, c0_, d2u_dt2, predicted_displacement_);
 
             // K := dR/du
-            auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(predicted_displacement_), d2u_dt2,
-                                                         shape_displacement_, parameters_[parameter_indices].state...));
+            auto K =
+                serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(predicted_displacement_), d2u_dt2,
+                                                    shape_displacement_, *parameters_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             // M := dR/da
-            auto M = serac::get<DERIVATIVE>((*residual_)(predicted_displacement_, differentiate_wrt(d2u_dt2),
-                                                         shape_displacement_, parameters_[parameter_indices].state...));
+            auto M =
+                serac::get<DERIVATIVE>((*residual_)(predicted_displacement_, differentiate_wrt(d2u_dt2),
+                                                    shape_displacement_, *parameters_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
             // J = M + c0 * K
@@ -970,7 +973,7 @@ public:
 
     // Update the linearized Jacobian matrix
     auto [r, drdu] = (*residual_)(differentiate_wrt(displacement_), zero_, shape_displacement_,
-                                  parameters_[parameter_indices].state...);
+                                  *parameters_[parameter_indices].state...);
     J_             = assemble(drdu);
     J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
 
@@ -991,8 +994,8 @@ public:
     // Update the initial guess for changes in the parameters if this is not the first solve
     for (std::size_t parameter_index = 0; parameter_index < parameters_.size(); ++parameter_index) {
       // Compute the change in parameters parameter_diff = parameter_new - parameter_old
-      serac::FiniteElementState parameter_difference = parameters_[parameter_index].state;
-      parameter_difference -= parameters_[parameter_index].previous_state;
+      serac::FiniteElementState parameter_difference = *parameters_[parameter_index].state;
+      parameter_difference -= *parameters_[parameter_index].previous_state;
 
       // Compute a linearized estimate of the residual forces due to this change in parameter
       auto drdparam        = serac::get<DERIVATIVE>(d_residual_d_[parameter_index]());
@@ -1005,7 +1008,7 @@ public:
       dr_ += residual_update;
 
       // Save the current parameter value for the next timestep
-      parameters_[parameter_index].previous_state = parameters_[parameter_index].state;
+      *parameters_[parameter_index].previous_state = *parameters_[parameter_index].state;
     }
 
     for (int i = 0; i < constrained_dofs.Size(); i++) {
@@ -1038,7 +1041,7 @@ public:
     // If this is the first call, initialize the previous parameter values as the initial values
     if (cycle_ == 0) {
       for (auto& parameter : parameters_) {
-        parameter.previous_state = parameter.state;
+        *parameter.previous_state = *parameter.state;
       }
     }
 
@@ -1058,7 +1061,7 @@ public:
       // reactions_ = residual(displacement, ...);
       // isn't currently supported
       reactions_.Vector::operator=(
-          (*residual_)(displacement_, zero_, shape_displacement_, parameters_[parameter_indices].state...));
+          (*residual_)(displacement_, zero_, shape_displacement_, *parameters_[parameter_indices].state...));
       // TODO (talamini1): Fix above reactions for dynamics. Setting the accelerations to zero
       // works for quasi-statics, but we need to account for the accelerations in
       // dynamics. We need to figure out how to get the updated accelerations out of the
@@ -1108,7 +1111,7 @@ public:
     // sam: is this the right thing to be doing for dynamics simulations,
     // or are we implicitly assuming this should only be used in quasistatic analyses?
     auto drdu     = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(displacement_), zero_, shape_displacement_,
-                                                    parameters_[parameter_indices].state...));
+                                                    *parameters_[parameter_indices].state...));
     auto jacobian = assemble(drdu);
     auto J_T      = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -1153,9 +1156,9 @@ public:
 
     auto drdparam_mat = assemble(drdparam);
 
-    drdparam_mat->MultTranspose(adjoint_displacement_, parameters_[parameter_field].sensitivity);
+    drdparam_mat->MultTranspose(adjoint_displacement_, *parameters_[parameter_field].sensitivity);
 
-    return parameters_[parameter_field].sensitivity;
+    return *parameters_[parameter_field].sensitivity;
   }
 
   /**
@@ -1167,7 +1170,7 @@ public:
   FiniteElementDual& computeShapeSensitivity() override
   {
     auto drdshape = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<2>{}, displacement_, zero_,
-                                                        shape_displacement_, parameters_[parameter_indices].state...));
+                                                        shape_displacement_, *parameters_[parameter_indices].state...));
 
     auto drdshape_mat = assemble(drdshape);
 
@@ -1286,11 +1289,11 @@ protected:
   /// @note This is needed so the user can ask for a specific sensitivity at runtime as opposed to it being a
   /// template parameter.
   std::array<std::function<decltype((*residual_)(DifferentiateWRT<0>{}, displacement_, zero_, shape_displacement_,
-                                                 parameters_[parameter_indices].state...))()>,
+                                                 *parameters_[parameter_indices].state...))()>,
              sizeof...(parameter_indices)>
       d_residual_d_ = {[&]() {
         return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + parameter_indices>{}, displacement_, zero_,
-                            shape_displacement_, parameters_[parameter_indices].state...);
+                            shape_displacement_, *parameters_[parameter_indices].state...);
       }...};
 
   /**
