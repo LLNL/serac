@@ -485,9 +485,8 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             $<INSTALL_INTERFACE:include>
         ) 
         
-        set(tribol_depends axom mfem hdf5 sparsehash sol lua fmt)
+        set(tribol_depends mfem)
         blt_list_append(TO tribol_depends ELEMENTS mpi IF ENABLE_MPI)
-        blt_list_append(TO tribol_depends ELEMENTS openmp IF ENABLE_OPENMP)
         install(TARGETS              ${tribol_depends}
                 EXPORT               tribol-targets
                 DESTINATION          lib
