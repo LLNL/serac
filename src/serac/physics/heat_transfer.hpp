@@ -745,8 +745,8 @@ public:
     lin_solver.Mult(modified_RHS, adjoint_temperature_);
 
     // This multiply is technically on M transposed.  However, this matrix should be symmetric unless
-    // the thermal capacity is a function of the temperature rate of change, which is thermodynamically 
-    // impossible, and fortunately not possible with our material interface. 
+    // the thermal capacity is a function of the temperature rate of change, which is thermodynamically
+    // impossible, and fortunately not possible with our material interface.
     // Not doing the transpose here to avoid doing unnecessary work.
     m_mat->Mult(adjoint_temperature_, implicit_sensitivity_temperature_start_of_step_);
     implicit_sensitivity_temperature_start_of_step_ *= -1.0 / dt_;
