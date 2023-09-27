@@ -48,7 +48,7 @@ std::unique_ptr<HeatTransfer<p, dim>> create_nonlinear_heat_transfer(
     const TimesteppingOptions&                                                  dyn_opts,
     const heat_transfer::IsotropicConductorWithLinearConductivityVsTemperature& mat)
 {
-  // eventually figure out how to clear out cider state
+  // eventually figure out how to clear out sidre state
   // auto saveMesh = std::make_unique<mfem::ParMesh>(StateManager::mesh());
   // StateManager::reset();
   // static int iter = 0;
@@ -72,7 +72,7 @@ std::unique_ptr<ParametrizedHeatTransferT> create_parameterized_heat_transfer(
     axom::sidre::DataStore& /*data_store*/, const NonlinearSolverOptions& nonlinear_opts,
     const TimesteppingOptions& dyn_opts, const heat_transfer::ParameterizedLinearIsotropicConductor& mat)
 {
-  // eventually figure out how to clear out cider state
+  // eventually figure out how to clear out sidre state
   // auto saveMesh = std::make_unique<mfem::ParMesh>(StateManager::mesh());
   // StateManager::reset();
   // static int iter = 0;
