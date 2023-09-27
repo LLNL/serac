@@ -150,6 +150,15 @@ double min(const FiniteElementVector& fe_vector)
   return global_min;
 }
 
+bool sameFiniteElementSpace(mfem::FiniteElementSpace const& left, mfem::FiniteElementSpace const& right)
+{
+  bool sameMesh            = (left.GetMesh() == right.GetMesh());
+  bool equivalentFEColl    = strcmp(left.FEColl()->Name(), right.FEColl()->Name()) == 0;
+  bool sameVectorDimension = (left.GetVDim() == right.GetVDim());
+  bool sameOrdering        = (left.GetOrdering() == right.GetOrdering());
+  return sameMesh && equivalentFEColl && sameVectorDimension && sameOrdering;
+}
+
 double innerProduct(const FiniteElementVector& v1, const FiniteElementVector& v2)
 {
   SLIC_ERROR_IF(
@@ -157,7 +166,9 @@ double innerProduct(const FiniteElementVector& v1, const FiniteElementVector& v2
       axom::fmt::format("Finite element vector of size '{}' can not inner product with another vector of size '{}'",
                         v1.Size(), v2.Size()));
   SLIC_ERROR_IF(v1.comm() != v2.comm(),
-                "Can not compute inner products between vectors with different mpi communicators");
+                "Cannot compute inner products between finite element vectors with different mpi communicators");
+  SLIC_ERROR_IF(!sameFiniteElementSpace(v1.space(), v2.space()),
+                "Currently cannot compute inner products between finite element vectors with different mfem spaces");
 
   double global_ip;
   double local_ip = mfem::InnerProduct(v1, v2);

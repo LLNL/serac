@@ -83,17 +83,13 @@ std::unique_ptr<ParametrizedHeatTransferT> create_parameterized_heat_transfer(
   auto       thermal =
       std::make_unique<ParametrizedHeatTransferT>(nonlinear_opts, heat_transfer::direct_linear_options, dyn_opts,
                                                   parametrized_thermal_prefix + std::to_string(iter++));
-  printf("one\n");
   auto user_defined_conductivity_ptr = thermal->generateParameter("pcond", 0);
   *user_defined_conductivity_ptr     = 1.1;
-  printf("two\n");
   thermal->setMaterial(DependsOn<0>{}, mat);
   thermal->setTemperature([](const mfem::Vector&, double) { return 0.0; });
   thermal->setTemperatureBCs({1}, [](const mfem::Vector&, double) { return 0.0; });
-  printf("three\n");
   thermal->setSource([](auto /* X */, auto /* time */, auto /* u */, auto /* du_dx */) { return 1.0; });
   thermal->completeSetup();
-  printf("four\n");
   return thermal;  // std::make_pair(thermal, user_defined_conductivity);
 }
 
@@ -193,26 +189,16 @@ std::tuple<double, FiniteElementDual, FiniteElementDual> computeThermalConductiv
     const TimesteppingOptions& dyn_opts, const heat_transfer::ParameterizedLinearIsotropicConductor& mat,
     const TimeSteppingInfo& ts_info)
 {
-  printf("a\n");
   auto thermal = create_parameterized_heat_transfer(data_store, nonlinear_opts, dyn_opts, mat);
-
-  printf("c\n");
 
   double qoi = 0.0;
   thermal->outputState();
-  printf("d\n");
   for (int i = 0; i < ts_info.num_timesteps; ++i) {
     double dt = ts_info.totalTime / ts_info.num_timesteps;
-    printf("e\n");
     thermal->advanceTimestep(dt);
-    printf("f\n");
     thermal->outputState();
-    printf("h\n");
     qoi += computeStepQoi(thermal->temperature(), dt);
-    printf("i\n");
   }
-
-  printf("j\n");
 
   FiniteElementDual initial_temperature_sensitivity(thermal->temperature().space(), "init_temp_sensitivity");
   initial_temperature_sensitivity = 0.0;
