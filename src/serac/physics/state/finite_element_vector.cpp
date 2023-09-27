@@ -150,7 +150,7 @@ double min(const FiniteElementVector& fe_vector)
   return global_min;
 }
 
-bool sameFiniteElementSpace(mfem::FiniteElementSpace const& left, mfem::FiniteElementSpace const& right)
+bool sameFiniteElementSpace(const mfem::FiniteElementSpace& left, const mfem::FiniteElementSpace& right)
 {
   bool sameMesh            = (left.GetMesh() == right.GetMesh());
   bool equivalentFEColl    = strcmp(left.FEColl()->Name(), right.FEColl()->Name()) == 0;
