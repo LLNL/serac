@@ -63,6 +63,23 @@ TEST(Tensor, BasicOperations)
   EXPECT_LT(abs(dot(u, B, v) - uBv), tolerance);
 }
 
+TEST(Tensor, DeterminantPrecision)
+{
+  double eps = 1e-8;
+  tensor<double, 3, 3> A = diag(tensor<double, 3>{eps, eps, eps});
+
+  // compute det(A + I) - 1
+  double exact = eps*eps*eps + 3*eps*eps + 3*eps;
+  // naive approach
+  double Jm1_naive = det(A + Identity<3>()) - 1;
+  double error = (Jm1_naive - exact)/exact;
+  EXPECT_GT(abs(error), 1e-9);
+
+  double good = detApIm1(A);
+  error = (good - exact)/exact;
+  EXPECT_LT(abs(error), 1e-14);
+}
+
 TEST(Tensor, Elasticity)
 {
   static auto abs = [](auto x) { return (x < 0) ? -x : x; };

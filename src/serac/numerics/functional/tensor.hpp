@@ -1218,6 +1218,15 @@ SERAC_HOST_DEVICE constexpr auto det(const tensor<T, 3, 3>& A)
          A[0][0] * A[1][2] * A[2][1] - A[0][1] * A[1][0] * A[2][2] - A[0][2] * A[1][1] * A[2][0];
 }
 
+template <typename T>
+SERAC_HOST_DEVICE constexpr auto detApIm1(const tensor<T, 3, 3>& A)
+{
+  double I1 = tr(A);
+  double I2 = 0.5*(I1*I1 - inner(A, transpose(A)));
+  double I3 = det(A);
+  return I1 + I2 + I3;
+}
+
 /**
  * @brief compute the matrix square root of a square, real-valued, symmetric matrix
  *        i.e. given A, find B such that A = dot(B, B)
