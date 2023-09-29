@@ -244,13 +244,37 @@ public:
   {
     // This is the only other options stored in the input file that we can use
     // in the initialization stage
-    // TODO: move these material parameters out of the SolidMechanicsInputOptions
-    if (input_options.material_nonlin) {
-      solid_mechanics::NeoHookean mat{input_options.initial_mass_density, input_options.K, input_options.mu};
+    if (input_options.material_options.type == "neo_hookean") {
+      solid_mechanics::NeoHookean mat{.density = input_options.material_options.density,
+                                      .K = input_options.material_options.K,
+                                      .G = input_options.material_options.mu};
       setMaterial(mat);
+    } else if (input_options.material_options.type == "linear_isotropic") {
+      solid_mechanics::LinearIsotropic mat{.density = input_options.material_options.density,
+                                           .K = input_options.material_options.K,
+                                           .G = input_options.material_options.mu};
+      setMaterial(mat);
+    /*
+    // TODO
+    // serac/physics/solid_mechanics.hpp:652:25:
+    // error: no matching function for call to object of type 'const serac::solid_mechanics::J2'
+    } else if (input_options.material_options.type == "j2") {
+      solid_mechanics::J2 mat{.E = input_options.material_options.E,
+                              .nu = input_options.material_options.nu,
+                              .Hi = input_options.material_options.Hi,
+                              .Hk = input_options.material_options.Hk,
+                              .sigma_y = input_options.material_options.sigma_y,
+                              .density = input_options.material_options.density};
+      setMaterial(mat);
+    } else if (input_options.material_options.type == "j2_nonlinear") {
+      solid_mechanics::J2Nonlinear mat{.E = input_options.material_options.E,
+                                       .nu = input_options.material_options.nu,
+                                       // TODO hardening?
+                                       .density = input_options.material_options.density};
+      setMaterial(mat);
+    */
     } else {
-      solid_mechanics::LinearIsotropic mat{input_options.initial_mass_density, input_options.K, input_options.mu};
-      setMaterial(mat);
+      // TODO: error?
     }
 
     if (input_options.initial_displacement) {

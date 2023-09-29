@@ -209,6 +209,21 @@ public:
   HeatTransfer(const HeatTransferInputOptions& options, const std::string& name = "")
       : HeatTransfer(options.nonlin_solver_options, options.lin_solver_options, options.timestepping_options, name)
   {
+    // TODO FIXME
+    // if (options.material_options.type == "linear_conductor") {
+    //   heat_transfer::LinearConductor mat{.density_ = options.material_options.density,
+    //                                      .conductivity_ = options.material_options.kappa,
+    //                                      .specific_heat_capacity_ = options.material_options.cp};
+    //   setMaterial(mat);
+    // } else if (options.material_options.type == "linear_isotropic_conductor") {
+    //   heat_transfer::LinearIsotropicConductor mat{.kappa = options.material_options.kappa,
+    //                                        .cp = options.material_options.cp,
+    //                                        .rho = options.material_options.density};
+    //   setMaterial(mat);
+    } else {
+      // TODO error?
+    }
+
     if (options.initial_temperature) {
       auto temp = options.initial_temperature->constructScalar();
       temperature_.project(*temp);

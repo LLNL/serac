@@ -52,9 +52,10 @@ thermal_conduction = {
 
     -- material parameters
     material = {
+        type = "linear_isotropic_conductor",
         kappa = 0.7,
         cp = 1.5,
-        rho = 0.5,
+        density = 0.5,
     },
 
     -- initial conditions

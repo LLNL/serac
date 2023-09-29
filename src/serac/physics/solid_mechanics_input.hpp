@@ -55,37 +55,16 @@ struct SolidMechanicsInputOptions {
   TimesteppingOptions timestepping_options;
 
   /**
-   * @brief The shear modulus
-   *
-   */
-  // TODO: Move to material options
-  double mu;
-
-  /**
-   * @brief The bulk modulus
-   *
-   */
-  // TODO: Move to material options
-  double K;
-
-  /**
-   * @brief Initial density
-   *
-   */
-  // TODO: Move to material options
-  double initial_mass_density;
-
-  /**
    * @brief Geometric nonlinearities flag
    *
    */
   GeometricNonlinearities geom_nonlin;
 
   /**
-   * @brief Material nonlinearities flag
+   * @brief The material options
    *
    */
-  bool material_nonlin;
+  input::MaterialInputOptions material_options;
 
   /**
    * @brief Boundary condition information

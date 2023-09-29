@@ -47,11 +47,13 @@ solid = {
     -- polynomial interpolation order
     order = 1,
 
-    -- neo-Hookean material parameters
+    -- material parameters
+    -- TODO make an array of materials
     material = {
-        mu = 0.25,
-        K  = 5.0,
-        density = 1,
+        type = "neo_hookean",
+        mu = 0.26,
+        K  = 5.5,
+        density = 2,
     },
 
     -- initial conditions

@@ -13,21 +13,11 @@ void SolidMechanicsInputOptions::defineInputFileSchema(axom::inlet::Container& c
   // interpolation order - currently up to 3rd order is allowed
   container.addInt("order", "polynomial order of the basis functions.").defaultValue(1).range(1, 3);
 
-  // neo-Hookean material parameters
-  auto& material_container = 
-    container.addStruct("material", "Material parameters in the Neo-Hookean hyperelastic model");
-  material_container.addDouble("mu", "Shear modulus in the Neo-Hookean hyperelastic model.").defaultValue(0.25);
-  material_container.addDouble("K", "Bulk modulus in the Neo-Hookean hyperelastic model.").defaultValue(5.0);
-  material_container.addDouble("density", "Initial mass density").defaultValue(1.0);
+  auto& material_container = container.addStruct("material", "Container for material parameters");
+  serac::input::MaterialInputOptions::defineInputFileSchema(material_container);
 
   // Geometric nonlinearities flag
   container.addBool("geometric_nonlin", "Flag to include geometric nonlinearities in the residual calculation.")
-      .defaultValue(true);
-
-  // Geometric nonlinearities flag
-  container
-      .addBool("material_nonlin",
-               "Flag to include material nonlinearities (linear elastic vs. neo-Hookean material model).")
       .defaultValue(true);
 
   auto& equation_solver_container =
@@ -86,12 +76,8 @@ serac::SolidMechanicsInputOptions FromInlet<serac::SolidMechanicsInputOptions>::
     result.timestepping_options = std::move(timestepping_options);
   }
 
-  // Set the material parameters
-  // neo-Hookean material parameters
-  auto material = base["material"];
-  result.mu = material["mu"].get<double>();
-  result.K  = material["K"].get<double>();
-  result.initial_mass_density = material["density"].get<double>();
+  result.material_options =
+    base["material"].get<serac::input::MaterialInputOptions>();
 
   // Set the geometric nonlinearities flag
   bool input_geom_nonlin = base["geometric_nonlin"];
@@ -100,9 +86,6 @@ serac::SolidMechanicsInputOptions FromInlet<serac::SolidMechanicsInputOptions>::
   } else {
     result.geom_nonlin = serac::GeometricNonlinearities::Off;
   }
-
-  // Set the material nonlinearity flag
-  result.material_nonlin = base["material_nonlin"];
 
   if (base.contains("boundary_conds")) {
     result.boundary_conditions =

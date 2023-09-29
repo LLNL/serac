@@ -213,9 +213,23 @@ void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Container& cont
 
 void MaterialInputOptions::defineInputFileSchema(axom::inlet::Container& container)
 {
-  container.addDouble("kappa", "The conductivity parameter");
-  container.addDouble("cp", "The specific heat capacity");
-  container.addDouble("rho", "The mass density");
+  container.addString("type", "The type of material").required(true);
+  container.addDouble("density", "Initial mass density").defaultValue(1.0);
+
+  // Solid mechanics (neo-hookean, linear isotropic)
+  container.addDouble("mu", "The shear modulus").defaultValue(0.25);
+  container.addDouble("K", "The bulk modulus").defaultValue(5.0);
+
+  // Solid mechanics (j2, j2nonlinear)
+  container.addDouble("E", "Young's modulus").defaultValue(5.0); // TODO default value
+  container.addDouble("nu", "Poisson's ratio").defaultValue(5.0); // TODO default value
+  container.addDouble("Hi", "Isotropic hardening constant").defaultValue(5.0); // TODO default value
+  container.addDouble("Hk", "Kinematic hardening constant").defaultValue(5.0); // TODO default value
+  container.addDouble("sigma_y", "Yield stress").defaultValue(5.0); // TODO default value
+
+  // Heat transfer parameters
+  container.addDouble("kappa", "The conductivity parameter").defaultValue(0.5);
+  container.addDouble("cp", "The specific heat capacity").defaultValue(1.0);
 }
 
 }  // namespace serac::input
@@ -319,9 +333,25 @@ serac::input::MaterialInputOptions FromInlet<serac::input::MaterialInputOptions>
 {
   serac::input::MaterialInputOptions result;
 
+  result.type    = base["type"];
+  result.density = base["density"];
+
+  // Solid mechanics (neo-hookean, linear isotropic)
+  result.mu      = base["mu"];
+  result.K       = base["K"];
+  
+  // Solid mechanics (j2, j2nonlinear)
+  result.mu      = base["mu"];
+  result.K       = base["K"];
+  result.E       = base["E"];
+  result.nu      = base["nu"];
+  result.Hi      = base["Hi"];
+  result.Hk      = base["Hk"];
+  result.sigma_y = base["sigma_y"];
+
+  // Heat transfer
   result.kappa = base["kappa"];
   result.cp    = base["cp"];
-  result.rho   = base["rho"];
 
   return result;
 }

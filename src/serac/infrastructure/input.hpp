@@ -170,9 +170,63 @@ struct BoundaryConditionInputOptions {
 };
 
 /**
- * @brief The information required from the input file for a material
+ * @brief The information required from the input file for a material. Contains material parameters for all materials.
  */
 struct MaterialInputOptions {
+  /**
+   * @brief Type of material
+   * 
+   */
+  std::string type;
+
+  /** 
+   * @brief mass density
+   *
+  */
+  double density;
+
+  /**
+   * @brief The shear modulus
+   *
+   */
+  double mu;
+
+  /**
+   * @brief The bulk modulus
+   *
+   */
+  double K;
+
+  /** 
+   * @brief Young's modulus
+   *
+  */
+  double E;
+
+  /** 
+   * @brief Poisson's ratio
+   *
+  */
+  double nu;
+
+  /** 
+   * @brief Isotropic hardening constant
+   *
+  */
+  double Hi;
+
+  /** 
+   * @brief Kinematic hardening constant
+   *
+  */
+  double Hk;
+
+  /** 
+   * @brief Yield stress
+   *
+  */
+  double sigma_y;
+
   /**
    * @brief The conductivity parameter
    *
@@ -184,12 +238,6 @@ struct MaterialInputOptions {
    *
    */
   double cp;
-
-  /**
-   * @brief The mass density
-   *
-   */
-  double rho;
 
   /**
    * @brief Input file parameters specific to this class
