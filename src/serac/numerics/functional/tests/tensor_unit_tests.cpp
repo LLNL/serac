@@ -65,37 +65,37 @@ TEST(Tensor, BasicOperations)
 
 TEST(Tensor, DeterminantPrecision2x2)
 {
-  double eps = 1e-8;
-  tensor<double, 2, 2> A = diag(tensor<double, 2>{eps, eps});
+  double               eps = 1e-8;
+  tensor<double, 2, 2> A   = diag(tensor<double, 2>{eps, eps});
 
   // compute det(A + I) - 1
-  double exact = eps*eps + 2*eps;
+  double exact = eps * eps + 2 * eps;
   // naive approach
   double Jm1_naive = det(A + Identity<2>()) - 1;
-  double error = (Jm1_naive - exact)/exact;
+  double error     = (Jm1_naive - exact) / exact;
   // the naive approach loses 7 or 8 significant figures in this case
   EXPECT_GT(abs(error), 1e-8);
 
   // the detApIm1 function maintains high precision
   double good = detApIm1(A);
-  error = (good - exact)/exact;
+  error       = (good - exact) / exact;
   EXPECT_LT(abs(error), 1e-15);
 }
 
 TEST(Tensor, DeterminantPrecision3x3)
 {
-  double eps = 1e-8;
-  tensor<double, 3, 3> A = diag(tensor<double, 3>{eps, eps, eps});
+  double               eps = 1e-8;
+  tensor<double, 3, 3> A   = diag(tensor<double, 3>{eps, eps, eps});
 
   // compute det(A + I) - 1
-  double exact = eps*eps*eps + 3*eps*eps + 3*eps;
+  double exact = eps * eps * eps + 3 * eps * eps + 3 * eps;
   // naive approach
   double Jm1_naive = det(A + Identity<3>()) - 1;
-  double error = (Jm1_naive - exact)/exact;
+  double error     = (Jm1_naive - exact) / exact;
   EXPECT_GT(abs(error), 1e-9);
 
   double good = detApIm1(A);
-  error = (good - exact)/exact;
+  error       = (good - exact) / exact;
   EXPECT_LT(abs(error), 1e-14);
 }
 

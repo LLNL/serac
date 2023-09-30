@@ -93,7 +93,7 @@ struct ParameterizedNeoHookeanSolid {
     auto           lambda    = K - (2.0 / dim) * G;
     auto           B_minus_I = du_dX * transpose(du_dX) + transpose(du_dX) + du_dX;
     auto           J_minus_1 = detApIm1(du_dX);
-    auto J = J_minus_1 + 1;
+    auto           J         = J_minus_1 + 1;
     return (lambda * log1p(J_minus_1) * I + G * B_minus_I) / J;
   }
 

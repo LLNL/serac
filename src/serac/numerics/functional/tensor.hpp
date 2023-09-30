@@ -1219,11 +1219,11 @@ SERAC_HOST_DEVICE constexpr auto det(const tensor<T, 3, 3>& A)
 }
 /**
  * @brief Take determinant of a matrix near the identity without losing precision
- * 
+ *
  * detApIm1(A) = det(A + I) - 1
- * When the entries of A are small compared to unity, the straightforward way of 
+ * When the entries of A are small compared to unity, the straightforward way of
  * computing this will suffer from catasrophic cancellation.
- * 
+ *
  * @param A Input matrix
  * @return det(A + I) - 1, where I is the identity matrix
  */
@@ -1240,7 +1240,7 @@ template <typename T>
 SERAC_HOST_DEVICE constexpr auto detApIm1(const tensor<T, 3, 3>& A)
 {
   auto I1 = tr(A);
-  auto I2 = 0.5*(I1*I1 - inner(A, transpose(A)));
+  auto I2 = 0.5 * (I1 * I1 - inner(A, transpose(A)));
   auto I3 = det(A);
   return I1 + I2 + I3;
 }
