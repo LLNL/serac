@@ -21,6 +21,8 @@ SecondOrderODE::SecondOrderODE(int n, State&& state, const EquationSolver& solve
 
 void SecondOrderODE::SetTimestepper(const serac::TimestepMethod timestepper)
 {
+  timestepper_ = timestepper;
+
   switch (timestepper) {
     case serac::TimestepMethod::Newmark:
       second_order_ode_solver_ = std::make_unique<mfem::NewmarkSolver>();
@@ -258,6 +260,8 @@ FirstOrderODE::FirstOrderODE(int n, FirstOrderODE::State&& state, const Equation
 
 void FirstOrderODE::SetTimestepper(const serac::TimestepMethod timestepper)
 {
+  timestepper_ = timestepper;
+
   switch (timestepper) {
     case serac::TimestepMethod::BackwardEuler:
       ode_solver_ = std::make_unique<mfem::BackwardEulerSolver>();

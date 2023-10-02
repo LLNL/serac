@@ -1101,7 +1101,7 @@ public:
    * @return An unordered map of the adjoint solutions indexed by their name. It has a single entry named
    * "adjoint_displacement"
    */
-  const std::unordered_map<std::string, const serac::FiniteElementState&> solveAdjoint(
+  const std::unordered_map<std::string, const serac::FiniteElementState&> reverseAdjointTimestep(
       std::unordered_map<std::string, const serac::FiniteElementDual&>  adjoint_loads,
       std::unordered_map<std::string, const serac::FiniteElementState&> adjoint_with_essential_boundary = {}) override
   {
@@ -1159,9 +1159,9 @@ public:
    * @param parameter_field The index of the parameter to take a derivative with respect to
    * @return The sensitivity with respect to the parameter
    *
-   * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
+   * @pre `reverseAdjointTimestep` with an appropriate adjoint load must be called prior to this method.
    */
-  FiniteElementDual& computeSensitivity(size_t parameter_field) override
+  FiniteElementDual& computeTimestepSensitivity(size_t parameter_field) override
   {
     SLIC_ASSERT_MSG(parameter_field < sizeof...(parameter_indices),
                     axom::fmt::format("Invalid parameter index '{}' requested for sensitivity."));
@@ -1181,7 +1181,7 @@ public:
    *
    * @return The sensitivity with respect to the shape displacement
    */
-  FiniteElementDual& computeShapeSensitivity() override
+  FiniteElementDual& computeTimestepShapeSensitivity() override
   {
     auto drdshape = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<2>{}, displacement_, zero_,
                                                         shape_displacement_, *parameters_[parameter_indices].state...));

@@ -163,6 +163,13 @@ public:
    */
   const State& GetState() { return state_; }
 
+  /**
+   * @brief Query the timestep method for the ode solver
+   *
+   * @return The timestep method used by the underlying ode solver
+   */
+  TimestepMethod GetTimestepper() { return timestepper_; }
+
 private:
   /**
    * @brief Internal implementation used for mfem::SOTDO::Mult and mfem::SOTDO::ImplicitSolve
@@ -214,6 +221,8 @@ private:
   mutable mfem::Vector U_plus_;
   mutable mfem::Vector dU_dt_;
   mutable mfem::Vector d2U_dt2_;
+
+  serac::TimestepMethod timestepper_;
 };
 
 /**
@@ -338,6 +347,13 @@ public:
     }
   }
 
+  /**
+   * @brief Query the timestep method for the ode solver
+   *
+   * @return The timestep method used by the underlying ode solver
+   */
+  TimestepMethod GetTimestepper() { return timestepper_; }
+
 private:
   /**
    * @brief Internal implementation used for mfem::TDO::Mult and mfem::TDO::ImplicitSolve\
@@ -378,6 +394,8 @@ private:
   mutable mfem::Vector U_;
   mutable mfem::Vector U_plus_;
   mutable mfem::Vector dU_dt_;
+
+  TimestepMethod timestepper_;
 };
 
 }  // namespace serac::mfem_ext
