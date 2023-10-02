@@ -1231,19 +1231,28 @@ SERAC_HOST_DEVICE constexpr auto det(const tensor<T, 3, 3>& A)
 template <typename T>
 SERAC_HOST_DEVICE constexpr auto detApIm1(const tensor<T, 2, 2>& A)
 {
-  auto I1 = tr(A);
-  auto I2 = det(A);
-  return I1 + I2;
+  // equivalent to tr(A) + det(A)
+  return A(0, 0) - A(0, 1) * A(1, 0) + A(1, 1) + A(0, 0) * A(1, 1);
 }
 
 /// @overload
 template <typename T>
 SERAC_HOST_DEVICE constexpr auto detApIm1(const tensor<T, 3, 3>& A)
 {
-  auto I1 = tr(A);
-  auto I2 = 0.5 * (I1 * I1 - inner(A, transpose(A)));
-  auto I3 = det(A);
-  return I1 + I2 + I3;
+  // equivalent to tr(A) + I2(A) + det(A)
+  return A(0, 0) 
+       + A(1, 1) 
+       + A(2, 2) 
+
+       - A(0, 1) * A(1, 0) * (1 + A(2, 2))
+       + A(0, 0) * A(1, 1) * (1 + A(2, 2))
+       - A(0, 2) * A(2, 0) * (1 + A(1, 1))
+       - A(1, 2) * A(2, 1) * (1 + A(0, 0))
+       + A(0, 0) * A(2, 2) 
+       + A(1, 1) * A(2, 2) 
+
+       + A(0, 1) * A(1, 2) * A(2, 0) 
+       + A(0, 2) * A(1, 0) * A(2, 1);
 }
 
 /**
