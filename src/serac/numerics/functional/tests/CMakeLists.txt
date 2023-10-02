@@ -17,6 +17,7 @@ set(functional_tests_serial
     functional_shape_derivatives.cpp
     simplex_basis_function_unit_tests.cpp
     domain_tests.cpp
+    geometric_factors_tests.cpp
     hcurl_unit_tests.cpp
     test_tensor_ad.cpp
     tuple_arithmetic_unit_tests.cpp

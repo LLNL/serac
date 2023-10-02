@@ -24,6 +24,8 @@
 
 #include "serac/numerics/functional/element_restriction.hpp"
 
+#include "serac/numerics/functional/domain.hpp"
+
 #include <array>
 #include <vector>
 

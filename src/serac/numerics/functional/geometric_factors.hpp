@@ -2,6 +2,7 @@
 
 #include "serac/numerics/functional/element_restriction.hpp"  // for FaceType
 #include "serac/numerics/functional/finite_element.hpp"       // for Geometry
+#include "serac/numerics/functional/domain.hpp"
 
 #include "mfem.hpp"
 
@@ -13,6 +14,7 @@ namespace serac {
  *       calculations on boundary elements and on simplex elements
  */
 struct GeometricFactors {
+
   /// @brief default ctor, leaving this object uninitialized
   GeometricFactors(){};
 
@@ -25,6 +27,8 @@ struct GeometricFactors {
    * @param elem_geom which kind of element geometry to select
    */
   GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry::Type elem_geom);
+
+  GeometricFactors(const Domain & domain, int q, mfem::Geometry::Type elem_geom);
 
   /**
    * @brief calculate positions and jacobians for quadrature points belonging to

@@ -6,6 +6,7 @@ using namespace serac;
 
 std::string mesh_dir = SERAC_REPO_DIR "/data/meshes/";
 
+
 mfem::Mesh import_mesh(std::string meshfile) {
   mfem::named_ifgzstream imesh(mesh_dir + meshfile);
 
@@ -15,7 +16,9 @@ mfem::Mesh import_mesh(std::string meshfile) {
     SLIC_ERROR_ROOT(err_msg);
   }
 
-  return mfem::Mesh(imesh, 1, 1, true);
+  mfem::Mesh mesh(imesh, 1, 1, true);
+  mesh.EnsureNodes();
+  return mesh;
 }
 
 template < int dim >
@@ -297,7 +300,6 @@ TEST(domain, of_elements) {
   }
 
 }
-
 
 int main(int argc, char* argv[])
 {
