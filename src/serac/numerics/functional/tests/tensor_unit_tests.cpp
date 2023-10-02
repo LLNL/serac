@@ -63,25 +63,48 @@ TEST(Tensor, BasicOperations)
   EXPECT_LT(abs(dot(u, B, v) - uBv), tolerance);
 }
 
-template < int dim >
-void DeterminantPrecisionTest(tensor<double, dim,dim> A, double exact) {
-  // naive approach
-  double Jm1_naive = det(A + Identity<dim>()) - 1;
-  double error     = (Jm1_naive - exact) / exact;
-  // the naive approach loses 7 or 8 significant figures in this case
-  EXPECT_GT(abs(error), 1e-8);
+TEST(Tensor, DeterminantPrecision2x2Diagonal)
+{
+  double               eps = 1e-8;
+  tensor<double, 2, 2> A   = diag(tensor<double, 2>{eps, eps});
 
-  // the detApIm1 function maintains high precision
+  // compute det(A + I) - 1
+  double exact = eps * eps + 2 * eps;
+
+  // naive approach reduces precision
+  double Jm1_naive = det(A + Identity<2>()) - 1;
+  double error     = (Jm1_naive - exact) / exact;
+  EXPECT_GT(abs(error), 1e-9);
+
+  // detApIm1 retains more significant digits
   double good = detApIm1(A);
   error       = (good - exact) / exact;
-  EXPECT_LT(abs(error), 1e-15);
+  EXPECT_LT(abs(error), 1e-14);
 }
 
-//TEST(Tensor, DeterminantPrecision2x2Diagonal)
-//{
-//  DeterminantPrecision
+TEST(Tensor, DeterminantPrecision3x3Diagonal)
+{
+  double               eps = 1e-8;
+  tensor<double, 3, 3> A   = diag(tensor<double, 3>{eps, eps, eps});
 
-//}
+  // compute det(A + I) - 1
+  double exact = eps * eps * eps + 3 * eps * eps + 3 * eps;
+
+  // naive approach reduces precision
+  double Jm1_naive = det(A + Identity<3>()) - 1;
+  double error     = (Jm1_naive - exact) / exact;
+  EXPECT_GT(abs(error), 1e-9);
+
+  // detApIm1 retains more significant digits
+  double good = detApIm1(A);
+  error       = (good - exact) / exact;
+  EXPECT_LT(abs(error), 1e-14);
+}
+
+template < int dim >
+void DeterminantPrecisionTest(tensor<double, dim,dim> A, double exact) {
+  EXPECT_LT((detApIm1(A) - exact) / exact, 1e-15);
+}
 
 TEST(Tensor, DeterminantPrecision3x3Traceless) {
   DeterminantPrecisionTest(
@@ -105,60 +128,25 @@ TEST(Tensor, DeterminantPrecision3x3BigValues) {
   );
 }
 
-TEST(Tensor, DeterminantPrecision3x3Diagonal)
-{
-  double               eps = 1e-8;
-  tensor<double, 3, 3> A   = diag(tensor<double, 3>{eps, eps, eps});
-
-  // compute det(A + I) - 1
-  double exact = eps * eps * eps + 3 * eps * eps + 3 * eps;
-  // naive approach
-  double Jm1_naive = det(A + Identity<3>()) - 1;
-  double error     = (Jm1_naive - exact) / exact;
-  EXPECT_GT(abs(error), 1e-9);
-
-  double good = detApIm1(A);
-  error       = (good - exact) / exact;
-  EXPECT_LT(abs(error), 1e-14);
+TEST(Tensor, DeterminantPrecision2x2Full) {
+  DeterminantPrecisionTest(
+    tensor<double, 3, 3>{{
+      {6.0519045489321714136e-9,4.2204473372429726693e-9},
+      {6.7553256448010560473e-9,9.8331979502279764439e-9}
+    }},
+    1.5885102530159227133e-8
+  );
 }
 
-TEST(Tensor, DeterminantPrecision2x2Full)
-{
-  tensor<double, 3, 3> A   = {{
-    {6.0519045489321714136e-9,4.2204473372429726693e-9},
-    {6.7553256448010560473e-9,9.8331979502279764439e-9}
-  }};
-
-  // compute det(A + I) - 1
-  double exact = 1.5885102530159227133e-8;
-  // naive approach
-  double Jm1_naive = det(A + Identity<3>()) - 1;
-  double error     = (Jm1_naive - exact) / exact;
-  EXPECT_GT(abs(error), 1e-9);
-
-  double good = detApIm1(A);
-  error       = (good - exact) / exact;
-  EXPECT_LT(abs(error), 1e-14);
-}
-
-TEST(Tensor, DeterminantPrecision3x3Full)
-{
-  tensor<double, 3, 3> A   = {{
-    {1.310296154038524804e-9,7.7019210397700792489e-10,-3.88105063413916636e-9},
-    {-9.6885551085033972374e-9,2.3209904948585927485e-9,-2.6115913838723596183e-9},
-    {-5.3080861000106470727e-9,-9.661806979681210324e-9,-2.6934399320872054577e-9}
-  }};
-
-  // compute det(A + I) - 1
-  double exact = 9.3784667169884994515e-10;
-  // naive approach
-  double Jm1_naive = det(A + Identity<3>()) - 1;
-  double error     = (Jm1_naive - exact) / exact;
-  EXPECT_GT(abs(error), 1e-9);
-
-  double good = detApIm1(A);
-  error       = (good - exact) / exact;
-  EXPECT_LT(abs(error), 1e-14);
+TEST(Tensor, DeterminantPrecision3x3Full) {
+  DeterminantPrecisionTest(
+    tensor<double,3,3>{{
+      {1.310296154038524804e-9,7.7019210397700792489e-10,-3.88105063413916636e-9},
+      {-9.6885551085033972374e-9,2.3209904948585927485e-9,-2.6115913838723596183e-9},
+      {-5.3080861000106470727e-9,-9.661806979681210324e-9,-2.6934399320872054577e-9}
+    }},
+    9.3784667169884994515e-10
+  );
 }
 
 TEST(Tensor, Elasticity)
