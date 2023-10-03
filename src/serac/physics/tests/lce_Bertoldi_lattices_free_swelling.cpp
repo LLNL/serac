@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
       inputFilename = SERAC_REPO_DIR "/data/meshes/dbgLogPileQuarterSymm.g";
       break;
     case 2:
-      inputFilename = SERAC_REPO_DIR "/data/meshes/logPileQuarterSymm.g";
+      inputFilename = SERAC_REPO_DIR "/data/meshes/quarterDomainLogPile.g";
       break;
     default:
       std::cout << "...... Wrong problem ID ......" << std::endl;
@@ -72,17 +72,18 @@ int main(int argc, char* argv[])
   NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = serac::NonlinearSolver::Newton,
                                               .relative_tol   = 1.0e-8,
                                               .absolute_tol   = 1.0e-12,
-                                              .max_iterations = 20,
+                                              .max_iterations = 50,
                                               .print_level    = 1};
   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
       nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional");
 
   // Material properties
   double density         = 1.0;    // [Kg / mm3]
-  double young_modulus   = 4.0e5;  // 4.0e5 [Kg /s2 / mm]
-  double possion_ratio   = 0.475;   // 0.49;   // 0.48 // 
-  double beta_param      = 2.31e5; // 5.20e5; // 2.31e5; // [Kg /s2 / mm] 
+  double young_modulus   = 9.34e5;  // 4.0e5 [Kg /s2 / mm]
+  double possion_ratio   = 0.45;   // 0.49;   // 0.48 // 
+  double beta_param      = 5.75e5; // 2.31e5; // 2.31e5; // [Kg /s2 / mm] 
   double max_order_param = 0.40;   // 0.20;   // 0.45; //
+  double min_order_param = 0.05;   // 0.20;   // 0.45; //
   double gamma_angle     = M_PI_2;
   double eta_angle       = 0.0;
 
@@ -222,7 +223,7 @@ int main(int argc, char* argv[])
   // solid_solver.setDisplacementBCs({3}, zeroFunc, 2);  // back face z-dir disp = 0
   // solid_solver.setDisplacementBCs({6}, zeroFunc, 2);  // back face z-dir disp = 0
 
-auto is_on_bottom = [=](const mfem::Vector& x) {
+  auto is_on_bottom = [=](const mfem::Vector& x) {
 
     bool tag = false;
     switch (problemID) {
@@ -235,14 +236,14 @@ auto is_on_bottom = [=](const mfem::Vector& x) {
       }
       case 1:
       {
-        if (x(2) < 5e-5) {
+        if (x(2) < 5.0e-5) {
           tag = true;
         }
         break;
       }
       case 2:
       {
-        if (x(2) < 5e-5) {
+        if (x(2) < 5.0e-5) {
           tag = true;
         }
         break;
@@ -285,30 +286,31 @@ auto is_on_bottom = [=](const mfem::Vector& x) {
       outputFilename = "sol_logpile_3x3_free_swelling_dbg";
       break;
     case 2:
-      outputFilename = "sol_logpile_3x3_free_swelling";
+      outputFilename = "sol_logpile_3x3_free_swelling_quarter";
       break;
     default:
       std::cout << "...... Wrong problem ID ......" << std::endl;
       exit(0);
   }
 
-  solid_solver.outputState(outputFilename);
-
-  int num_steps = 20;
+  int num_steps = 75;
   double t    = 0.0;
   double tmax = 1.0;
   double dt   = tmax / num_steps;
 
+  solid_solver.advanceTimestep(dt);
+  solid_solver.outputState(outputFilename);
+
   for (int i = 0; i < num_steps; i++) {
     // orderParam = max_order_param * (tmax - t) / tmax;
-    orderParam = max_order_param * std::pow((tmax - t) / tmax, 1.0);
+    orderParam = min_order_param + (max_order_param - min_order_param) * std::pow((tmax - t) / tmax, 1.0);
     // orderParam = 0.75*max_order_param + 0.25*std::pow((tmax - t) / tmax, 1.0);
 
     if (rank == 0) {
       std::cout << "\n\n............................"
                 << "\n... Entering time step: " << i + 1 << " (/" << num_steps << ")"
                 << "\n............................\n"
-                << "\n... Using order parameter: " << max_order_param << ", gamma = " << gamma_angle << ", and eta = " << eta_angle << std::endl;
+                << "\n... Using order parameter: " << min_order_param + (max_order_param - min_order_param) * std::pow((tmax - t) / tmax, 1.0) << ", gamma = " << gamma_angle << ", and eta = " << eta_angle << std::endl;
     }
 
     solid_solver.advanceTimestep(dt);

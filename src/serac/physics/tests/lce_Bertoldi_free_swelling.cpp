@@ -45,9 +45,12 @@ int main(int argc, char* argv[])
   // double lx = 2.5e-3, ly = 0.25e-3, lz = 12.5e-3;
   // ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(5*nElem, nElem, 25*nElem, mfem::Element::HEXAHEDRON,
   // lx, ly, lz)); double ly = 2.5, lz = 0.25, lx = 12.5;
-  double   lx = (10.0e-3)/2, ly = (5.0e-3)/2, lz = (0.425e-3)/2;
+  // double   lx = (10.0e-3)/2, ly = (5.0e-3)/2, lz = (0.425e-3)/2;
+  // log pile material strips: 30 mm x 3 mm x 0.45 mm 
+  double   lx = (30.0e-3)/2, ly = (3.0e-3)/2, lz = (0.45e-3)/2;
   ::mfem::Mesh cuboid =
-      mfem::Mesh(mfem::Mesh::MakeCartesian3D(20 * nElem, 10 * nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
+      // mfem::Mesh(mfem::Mesh::MakeCartesian3D(20 * nElem, 10 * nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
+      mfem::Mesh(mfem::Mesh::MakeCartesian3D(70 * nElem, 7 * nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
   auto mesh = mesh::refineAndDistribute(std::move(cuboid), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh));
 
@@ -80,8 +83,8 @@ int main(int argc, char* argv[])
   // NonlinearSolverOptions default_nonlinear_options = {
   //     .rel_tol = 1.0e-6, .abs_tol = 1.0e-13, .max_iter = 10, .print_level = 1};
 
-  LinearSolverOptions linear_options = {.linear_solver = LinearSolver::SuperLU};
-  // const LinearSolverOptions linear_options = {.linear_solver = LinearSolver::Strumpack, .print_level = 0};
+  // LinearSolverOptions linear_options = {.linear_solver = LinearSolver::SuperLU};
+  const LinearSolverOptions linear_options = {.linear_solver = LinearSolver::Strumpack, .print_level = 0};
 
   // LinearSolverOptions linear_options = {.linear_solver  = LinearSolver::GMRES,
   //                                                     .preconditioner = Preconditioner::HypreAMG,
@@ -103,10 +106,11 @@ int main(int argc, char* argv[])
   // -------------------
 
   double density         = 1.0;    // [Kg / mm3]
-  double young_modulus   = 4.0e5;  // 3.0e2;  // [Kg /s2 / mm]
-  double possion_ratio   = 0.49;
-  double beta_param      = 5.0e5; // 5.2e5;  // 2.31e5; // [Kg /s2 / mm] 0.041 //
-  double max_order_param = 0.21; // 0.2; // 0.45
+  double young_modulus   = 9.34e5;  // 3.0e2;  // [Kg /s2 / mm]
+  double possion_ratio   = 0.45;
+  double beta_param      = 5.75e5; // 2.9e5; // 5.0e5; // 5.2e5;  // 2.31e5; // [Kg /s2 / mm] 0.041 //
+  double max_order_param = 0.40; // 0.2; // 0.45
+  double min_order_param = 0.05;
   // -------------------
 
   // Set material
@@ -214,24 +218,27 @@ int main(int argc, char* argv[])
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  int num_steps = 20;
-
-  std::string outputFilename = "sol_lce_bertoldi_free_swelling_testing";
-  solid_solver.outputState(outputFilename);
-
+  int num_steps = 15;
   double t    = 0.0;
   double tmax = 1.0;
   double dt   = tmax / num_steps;
+
+  solid_solver.advanceTimestep(dt);
+  std::string outputFilename = "sol_lce_bertoldi_free_swelling_log_pile_mat";
+  solid_solver.outputState(outputFilename);
+
+
   for (int i = 0; i < num_steps; i++) {
+    
+    t += dt;
+    
     if (rank == 0) {
       std::cout << "\n\n............................"
                 << "\n... Entering time step: " << i + 1 << " (/" << num_steps << ")"
                 << "\n............................\n"
-                << "\n... Using order parameter: " << max_order_param * (tmax - t) / tmax
+                << "\n... Using order parameter: " << min_order_param + (max_order_param - min_order_param) * (tmax - t) / tmax
                 << "\n... Using two gamma angles" << std::endl;
     }
-
-    t += dt;
     solid_solver.advanceTimestep(dt);
     solid_solver.outputState(outputFilename);
 
@@ -283,7 +290,7 @@ int main(int argc, char* argv[])
       exit(1);
     }
 
-    orderParam = max_order_param * (tmax - t) / tmax;
+    orderParam = min_order_param + (max_order_param - min_order_param) * (tmax - t) / tmax;
   }
 
   serac::exitGracefully();
