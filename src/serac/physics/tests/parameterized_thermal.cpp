@@ -42,7 +42,7 @@ TEST(Thermal, ParameterizedMaterial)
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
-  // Construct and initialized the user-defined conductivity to be used as a differentiable parameter in
+  // Construct and initialize the user-defined conductivity to be used as a differentiable parameter in
   // the thermal conduction physics module.
   FiniteElementState user_defined_conductivity(
       StateManager::newState(FiniteElementState::Options{.order = 1, .name = "parameterized_conductivity"}));
@@ -106,10 +106,10 @@ TEST(Thermal, ParameterizedMaterial)
   adjoint_load = 1.0;
 
   // Solve the adjoint problem
-  thermal_solver.solveAdjoint({{"temperature", adjoint_load}});
+  thermal_solver.reverseAdjointTimestep({{"temperature", adjoint_load}});
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
-  auto& sensitivity = thermal_solver.computeSensitivity(conductivity_parameter_index);
+  auto& sensitivity = thermal_solver.computeTimestepSensitivity(conductivity_parameter_index);
 
   EXPECT_NEAR(1.7890782925134845, mfem::ParNormlp(sensitivity, 2, MPI_COMM_WORLD), 1.0e-6);
 }

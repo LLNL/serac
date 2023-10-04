@@ -150,4 +150,37 @@ double min(const FiniteElementVector& fe_vector)
   return global_min;
 }
 
+/**
+ * @brief Check if two finite element spaces are the same
+ *
+ * @param left
+ * @param right
+ * @return Bool which is true if the spaces are the same, otherwise false
+ */
+bool sameFiniteElementSpace(const mfem::FiniteElementSpace& left, const mfem::FiniteElementSpace& right)
+{
+  bool sameMesh            = (left.GetMesh() == right.GetMesh());
+  bool equivalentFEColl    = strcmp(left.FEColl()->Name(), right.FEColl()->Name()) == 0;
+  bool sameVectorDimension = (left.GetVDim() == right.GetVDim());
+  bool sameOrdering        = (left.GetOrdering() == right.GetOrdering());
+  return sameMesh && equivalentFEColl && sameVectorDimension && sameOrdering;
+}
+
+double innerProduct(const FiniteElementVector& v1, const FiniteElementVector& v2)
+{
+  SLIC_ERROR_IF(
+      v1.Size() != v2.Size(),
+      axom::fmt::format("Finite element vector of size '{}' can not inner product with another vector of size '{}'",
+                        v1.Size(), v2.Size()));
+  SLIC_ERROR_IF(v1.comm() != v2.comm(),
+                "Cannot compute inner products between finite element vectors with different mpi communicators");
+  SLIC_ERROR_IF(!sameFiniteElementSpace(v1.space(), v2.space()),
+                "Currently cannot compute inner products between finite element vectors with different mfem spaces");
+
+  double global_ip;
+  double local_ip = mfem::InnerProduct(v1, v2);
+  MPI_Allreduce(&local_ip, &global_ip, 1, MPI_DOUBLE, MPI_SUM, v1.comm());
+  return global_ip;
+}
+
 }  // namespace serac

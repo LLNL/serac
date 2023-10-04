@@ -184,9 +184,9 @@ TEST(Thermomechanics, ParameterizedMaterial)
 
   check_gradient(qoi, simulation.displacement());
 
-  simulation.solveAdjoint({{"displacement", adjoint_load}});
+  simulation.reverseAdjointTimestep({{"displacement", adjoint_load}});
 
-  auto& dqoi_dalpha = simulation.computeSensitivity(1);
+  auto& dqoi_dalpha = simulation.computeTimestepSensitivity(1);
 
   double epsilon = 1.0e-5;
   auto   dalpha  = alpha.CreateCompatibleVector();

@@ -371,8 +371,8 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   // are not used, but running them as part of this test
   // checks the index-translation part of the derivative
   // kernels is working
-  solid_solver.computeSensitivity(0);
-  solid_solver.computeSensitivity(1);
+  solid_solver.computeTimestepSensitivity(0);
+  solid_solver.computeTimestepSensitivity(1);
 
   // Output the sidre-based plot files
   solid_solver.outputState();
