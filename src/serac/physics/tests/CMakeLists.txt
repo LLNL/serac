@@ -30,6 +30,7 @@ set(solver_tests
     solid_shape.cpp
     thermal_shape.cpp
     thermal_mechanics.cpp
+    dynamic_thermal_adjoint.cpp
     )
 
 serac_add_tests( SOURCES ${solver_tests}

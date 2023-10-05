@@ -115,7 +115,7 @@ public:
    * @param parameter_name The name of the parameter to generate
    *
    * @note The user is responsible for managing the lifetime of this object. It is required
-   * to exist whenever advanceTimestep, solveAdjoint, or computeSensitivity is called.
+   * to exist whenever advanceTimestep, reverseAdjointTimestep, or computeTimestepSensitivity is called.
    *
    * @note The finite element space for this object is generated from the parameter
    * discretization space (e.g. L2, H1) and the computational mesh given in the physics module constructor.
@@ -190,9 +190,9 @@ public:
    *
    * @return The sensitivity with respect to the parameter
    *
-   * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
+   * @pre `reverseAdjointTimestep` with an appropriate adjoint load must be called prior to this method.
    */
-  virtual FiniteElementDual& computeSensitivity(size_t /* parameter_index */)
+  virtual FiniteElementDual& computeTimestepSensitivity(size_t /* parameter_index */)
   {
     SLIC_ERROR_ROOT(axom::fmt::format("Parameter sensitivities not enabled in physics module {}", name_));
     return *parameters_[0].sensitivity;
@@ -204,12 +204,26 @@ public:
    *
    * @return The sensitivity with respect to the shape displacement
    *
-   * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
+   * @pre `reverseAdjointTimestep` with an appropriate adjoint load must be called prior to this method.
    */
-  virtual FiniteElementDual& computeShapeSensitivity()
+  virtual FiniteElementDual& computeTimestepShapeSensitivity()
   {
     SLIC_ERROR_ROOT(axom::fmt::format("Shape sensitivities not enabled in physics module {}", name_));
     return shape_displacement_sensitivity_;
+  }
+
+  /**
+   * @brief Compute the implicit sensitivity of the quantity of interest with respect to the initial condition fields
+   *
+   * @return Fields states corresponding to the sensitivities with respect to the initial condition fields
+   *
+   * @pre `reverseAdjointTimestep` with an appropriate adjoint load must be called prior to this method as many times as
+   * the forward advance is called.
+   */
+  virtual const std::unordered_map<std::string, const serac::FiniteElementDual&> computeInitialConditionSensitivity()
+  {
+    SLIC_ERROR_ROOT(axom::fmt::format("Initial condition sensitivities not enabled in physics module {}", name_));
+    return {};
   }
 
   /**
@@ -227,7 +241,7 @@ public:
    *
    * @return The computed adjoint finite element states
    */
-  virtual const std::unordered_map<std::string, const serac::FiniteElementState&> solveAdjoint(
+  virtual const std::unordered_map<std::string, const serac::FiniteElementState&> reverseAdjointTimestep(
       std::unordered_map<std::string, const serac::FiniteElementDual&> /* adjoint_loads */,
       std::unordered_map<std::string, const serac::FiniteElementState&> /* adjoint_with_essential_boundary */ = {})
   {
