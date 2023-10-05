@@ -283,9 +283,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         list(APPEND _mfem_libraries STRUMPACK::strumpack)
         target_link_libraries(mfem PUBLIC ${_mfem_libraries})
 
-        blt_print_target_properties(TARGET STRUMPACK::strumpack)
-        blt_print_target_properties(TARGET mfem)
-
         # Patch the mfem target with the correct include directories
         get_target_property(_mfem_includes mfem INCLUDE_DIRECTORIES)
         target_include_directories(mfem SYSTEM INTERFACE ${_mfem_includes})
