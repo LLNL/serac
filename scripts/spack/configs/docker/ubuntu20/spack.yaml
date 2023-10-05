@@ -15,8 +15,9 @@ spack:
       extra_rpaths: []
       # Axom example sidre_shocktube_F_ex doesn't link otherwise
       flags:
-        cflags: -fPIC -fPIE -pthread
-        cxxflags: -fPIC -fPIE -pthread
+        cflags: -fPIC -pthread
+        cxxflags: -fPIC -pthread
+        fflags: -fPIC
       modules: []
       operating_system: ubuntu20.04
       paths:
