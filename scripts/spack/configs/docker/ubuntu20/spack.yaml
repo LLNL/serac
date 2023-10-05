@@ -18,6 +18,7 @@ spack:
         cflags: -fPIC -pthread
         cxxflags: -fPIC -pthread
         fflags: -fPIC
+        ldflags: -fPIE
       modules: []
       operating_system: ubuntu20.04
       paths:
