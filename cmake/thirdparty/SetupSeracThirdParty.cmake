@@ -282,10 +282,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         list(INSERT _mfem_libraries ${_index} ${HDF5_C_LIBRARY_hdf5_hl})
         list(APPEND _mfem_libraries STRUMPACK::strumpack)
         target_link_libraries(mfem PUBLIC ${_mfem_libraries})
-        #set_property(TARGET mfem PROPERTY
-        #                      INTERFACE_LINK_LIBRARIES ${_mfem_libraries})
-        #set_property(TARGET mfem PROPERTY
-        #                      LINK_LIBRARIES ${_mfem_libraries})
 
         blt_print_target_properties(TARGET STRUMPACK::strumpack)
         blt_print_target_properties(TARGET mfem)
