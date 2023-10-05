@@ -1231,6 +1231,11 @@ SERAC_HOST_DEVICE constexpr auto det(const tensor<T, 3, 3>& A)
 template <typename T>
 SERAC_HOST_DEVICE constexpr auto detApIm1(const tensor<T, 2, 2>& A)
 {
+  // From the Cayley-Hamilton theorem, we get that for any N by N matrix A,
+  // det(A - I) - 1 = I1(A) + I2(A) + ... + IN(A),
+  // where the In are the principal invariants of A.
+  // We inline the definitions of the principal invariants to increase computational speed.
+
   // equivalent to tr(A) + det(A)
   return A(0, 0) - A(0, 1) * A(1, 0) + A(1, 1) + A(0, 0) * A(1, 1);
 }
@@ -1239,6 +1244,8 @@ SERAC_HOST_DEVICE constexpr auto detApIm1(const tensor<T, 2, 2>& A)
 template <typename T>
 SERAC_HOST_DEVICE constexpr auto detApIm1(const tensor<T, 3, 3>& A)
 {
+  // For notes on the implementation, see the 2x2 version.
+
   // clang-format off
   // equivalent to tr(A) + I2(A) + det(A)
   return A(0, 0) + A(1, 1) + A(2, 2) 
@@ -1246,9 +1253,9 @@ SERAC_HOST_DEVICE constexpr auto detApIm1(const tensor<T, 3, 3>& A)
        + A(0, 0) * A(1, 1) * (1 + A(2, 2))
        - A(0, 2) * A(2, 0) * (1 + A(1, 1))
        - A(1, 2) * A(2, 1) * (1 + A(0, 0))
-       + A(0, 0) * A(2, 2) 
-       + A(1, 1) * A(2, 2) 
-       + A(0, 1) * A(1, 2) * A(2, 0) 
+       + A(0, 0) * A(2, 2)
+       + A(1, 1) * A(2, 2)
+       + A(0, 1) * A(1, 2) * A(2, 0)
        + A(0, 2) * A(1, 0) * A(2, 1);
   // clang-format on
 }
