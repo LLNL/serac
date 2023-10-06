@@ -59,8 +59,13 @@ int BasePhysics::cycle() const { return cycle_; }
 
 void BasePhysics::setParameter(const size_t parameter_index, const FiniteElementState& parameter_state)
 {
+  SLIC_ERROR_ROOT_IF(
+      parameter_index >= parameters_.size(),
+      axom::fmt::format("Parameter '{}' requested when only '{}' parameters exist in physics module '{}'",
+                        parameter_index, parameters_.size(), name_));
+
   SLIC_ERROR_ROOT_IF(&parameter_state.mesh() != &mesh_,
-                     axom::fmt::format("Mesh of parameter {} is not the same as the physics mesh", parameter_index));
+                     axom::fmt::format("Mesh of parameter '{}' is not the same as the physics mesh", parameter_index));
 
   SLIC_ERROR_ROOT_IF(
       parameter_state.space().GetTrueVSize() != parameters_[parameter_index].state->space().GetTrueVSize(),
