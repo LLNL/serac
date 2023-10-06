@@ -102,8 +102,9 @@ public:
    * @param lin_opts The linear solver options for solving the linearized Jacobian equations
    * @param timestepping_opts The timestepping options for the solid mechanics time evolution operator
    * @param geom_nonlin Flag to include geometric nonlinearities
-   * @param name An optional name for the physics module instance
-   * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
+   * @param physics_name A name for the physics module instance
+   * @param mesh_tag The tag for the mesh in the StateManager to construct the physics module on
+   * @param parameter_names A vector of the names of the requested parameter fields
    */
   SolidMechanics(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
                  const serac::TimesteppingOptions timestepping_opts, const GeometricNonlinearities geom_nonlin,
@@ -120,8 +121,9 @@ public:
    * @param solver The nonlinear equation solver for the implicit solid mechanics equations
    * @param timestepping_opts The timestepping options for the solid mechanics time evolution operator
    * @param geom_nonlin Flag to include geometric nonlinearities
-   * @param name An optional name for the physics module instance
-   * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
+   * @param physics_name A name for the physics module instance
+   * @param mesh_tag The tag for the mesh in the StateManager to construct the physics module on
+   * @param parameter_names A vector of the names of the requested parameter fields
    */
   SolidMechanics(std::unique_ptr<serac::EquationSolver> solver, const serac::TimesteppingOptions timestepping_opts,
                  const GeometricNonlinearities geom_nonlin, const std::string& physics_name, std::string mesh_tag,
@@ -230,7 +232,8 @@ public:
    * @brief Construct a new Nonlinear SolidMechanics Solver object
    *
    * @param[in] input_options The solver information parsed from the input file
-   * @param[in] name An optional name for the physics module instance. Note that this is NOT the mesh tag.
+   * @param[in] physics_name A name for the physics module instance
+   * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
    */
   SolidMechanics(const SolidMechanicsInputOptions& input_options, const std::string& physics_name, std::string mesh_tag)
       : SolidMechanics(input_options.nonlin_solver_options, input_options.lin_solver_options,

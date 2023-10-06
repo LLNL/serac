@@ -48,9 +48,13 @@ public:
   static void initialize(axom::sidre::DataStore& ds, const std::string& output_directory);
 
   /**
-   * @brief Factory method for creating a new FEState object, signature is identical to FEState constructor
-   * @param[in] options Configuration options for the FEState, if a new state is created
-   * @param[in] mesh_tag A string that uniquely identifies the mesh on which the field is to be defined
+   * @brief Factory method for creating a new FEState object\
+   *
+   * @tparam FunctionSpace The function space (e.g. H1<1>) to build the finite element state on
+   * @param space The function space (e.g. H1<1>) to build the finite element state on
+   * @param state_name The name of the new finite element state field
+   * @param mesh_tag The tag for the stored mesh used to construct the finite element state
+   *
    * @see FiniteElementState::FiniteElementState
    * @note If this is a restart then the options (except for the name) will be ignored
    */
@@ -86,9 +90,13 @@ public:
   static void storeState(FiniteElementState& state);
 
   /**
-   * @brief Factory method for creating a new FEDual object, signature is identical to FEDual constructor
-   * @param[in] options Configuration options for the FEDual, if a new state is created
-   * @param[in] mesh_tag A string that uniquely identifies the mesh on which the dual is to be defined
+   * @brief Factory method for creating a new FEDual object
+   *
+   * @tparam FunctionSpace The function space (e.g. H1<1>) to build the finite element dual on
+   * @param space The function space (e.g. H1<1>) to build the finite element dual on
+   * @param dual_name The name of the new finite element dual field
+   * @param mesh_tag The tag for the stored mesh used to construct the finite element state
+   *
    * @see FiniteElementDual::FiniteElementDual
    * @note If this is a restart then the options (except for the name) will be ignored
    */
@@ -272,7 +280,7 @@ public:
    *
    * @note This will return the cycle for the last written or loaded data collection
    */
-  static double time(std::string collection_id);
+  static double time(std::string mesh_tag);
 
 private:
   /**

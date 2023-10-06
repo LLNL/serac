@@ -97,9 +97,9 @@ public:
    * @param[in] nonlinear_opts The nonlinear solver options for solving the nonlinear residual equations
    * @param[in] lin_opts The linear solver options for solving the linearized Jacobian equations
    * @param[in] timestepping_opts The timestepping options for the heat transfer ordinary differential equations
-   * @param[in] name An optional name for the physics module instance
-   * used by an underlying material model or load
-   * @param[in] pmesh The mesh to conduct the simulation on, if different than the default mesh
+   * @param[in] physics_name A name for the physics module instance
+   * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
+   * @param[in] parameter_names A vector of the names of the requested parameter fields
    */
   HeatTransfer(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
                const serac::TimesteppingOptions timestepping_opts, const std::string& physics_name,
@@ -114,9 +114,9 @@ public:
    *
    * @param[in] solver The nonlinear equation solver for the heat transfer equations
    * @param[in] timestepping_opts The timestepping options for the heat transfer ordinary differential equations
-   * @param[in] name An optional name for the physics module instance
-   * used by an underlying material model or load
-   * @param[in] pmesh The mesh to conduct the simulation on, if different than the default mesh
+   * @param[in] physics_name A name for the physics module instance
+   * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
+   * @param[in] parameter_names A vector of the names of the requested parameter fields
    */
   HeatTransfer(std::unique_ptr<serac::EquationSolver> solver, const serac::TimesteppingOptions timestepping_opts,
                const std::string& physics_name, std::string mesh_tag, std::vector<std::string> parameter_names = {})
@@ -204,7 +204,8 @@ public:
    * @brief Construct a new Nonlinear HeatTransfer Solver object
    *
    * @param[in] options The solver information parsed from the input file
-   * @param[in] name An optional name for the physics module instance. Note that this is NOT the mesh tag.
+   * @param[in] physics_name A name for the physics module instance
+   * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
    */
   HeatTransfer(const HeatTransferInputOptions& options, const std::string& physics_name, const std::string& mesh_tag)
       : HeatTransfer(options.nonlin_solver_options, options.lin_solver_options, options.timestepping_options,

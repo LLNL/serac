@@ -55,8 +55,15 @@ public:
    */
   FiniteElementVector(const mfem::ParFiniteElementSpace& space, const std::string& name = "");
 
+  /**
+   * @brief Construct a new Finite Element Vector object given a templated function space
+   *
+   * @param mesh The mesh used to construct the finite element state
+   * @param space The function space (e.g. H1<1>) to build the finite element state on
+   * @param name The name of the new finite element state field
+   */
   template <typename FunctionSpace>
-  FiniteElementVector(mfem::ParMesh& mesh, FunctionSpace, const std::string& name = "") : mesh_(mesh), name_(name)
+  FiniteElementVector(mfem::ParMesh& mesh, FunctionSpace space, const std::string& name = "") : mesh_(mesh), name_(name)
   {
     const int dim = mesh.Dimension();
 

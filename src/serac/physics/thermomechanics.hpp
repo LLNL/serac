@@ -41,8 +41,8 @@ public:
    * @param solid_lin_opts The options for solving the linearized Jacobian solid mechanics equations
    * @param solid_timestepping The timestepping options for the solid solver
    * @param geom_nonlin Flag to include geometric nonlinearities
-   * @param name An optional name for the physics module instance
-   * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
+   * @param physics_name A name for the physics module instance
+   * @param mesh_tag The tag for the mesh in the StateManager to construct the physics module on
    */
   Thermomechanics(const NonlinearSolverOptions thermal_nonlin_opts, const LinearSolverOptions thermal_lin_opts,
                   TimesteppingOptions thermal_timestepping, const NonlinearSolverOptions solid_nonlin_opts,
@@ -65,8 +65,8 @@ public:
    * @param solid_solver The nonlinear equation solver for the solid mechanics equations
    * @param solid_timestepping The timestepping options for the solid solver
    * @param geom_nonlin Flag to include geometric nonlinearities
-   * @param name An optional name for the physics module instance
-   * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
+   * @param physics_name A name for the physics module instance
+   * @param mesh_tag The tag for the mesh in the StateManager to construct the physics module on
    */
   Thermomechanics(std::unique_ptr<EquationSolver> thermal_solver, TimesteppingOptions thermal_timestepping,
                   std::unique_ptr<EquationSolver> solid_solver, TimesteppingOptions solid_timestepping,
@@ -89,14 +89,15 @@ public:
    *
    * @param[in] thermal_options The thermal physics module input file option struct
    * @param[in] solid_options The solid physics module input file option struct
-   * @param[in] name A name for the physics module
+   * @param[in] physics_name A name for the physics module instance
+   * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
    */
   Thermomechanics(const HeatTransferInputOptions& thermal_options, const SolidMechanicsInputOptions& solid_options,
-                  const std::string& name, std::string mesh_tag)
+                  const std::string& physics_name, std::string mesh_tag)
       : Thermomechanics(thermal_options.nonlin_solver_options, thermal_options.lin_solver_options,
                         thermal_options.timestepping_options, solid_options.nonlin_solver_options,
                         solid_options.lin_solver_options, solid_options.timestepping_options, solid_options.geom_nonlin,
-                        name, mesh_tag)
+                        physics_name, mesh_tag)
   {
   }
 
@@ -104,7 +105,8 @@ public:
    * @brief Construct a new Thermal-SolidMechanics Functional object from input file options
    *
    * @param[in] options The thermal solid physics module input file option struct
-   * @param[in] name A name for the physics module
+   * @param[in] physics_name A name for the physics module instance
+   * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
    */
   Thermomechanics(const ThermomechanicsInputOptions& options, const std::string& physics_name, std::string mesh_tag)
       : Thermomechanics(options.thermal_options, options.solid_options, physics_name, mesh_tag)

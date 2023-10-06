@@ -44,9 +44,8 @@ class BasePhysics {
 public:
   /**
    * @brief Empty constructor
-   * @param[in] pmesh An optional mesh reference, must be provided to configure the module
    * @param[in] physics_name Name of the physics module instance
-   * when a mesh other than the primary mesh is used
+   * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
    */
   BasePhysics(std::string physics_name, std::string mesh_tag);
 
@@ -55,9 +54,8 @@ public:
    *
    * @param[in] n Number of state variables
    * @param[in] p Order of the solver
-   * @param[in] pmesh An optional mesh reference, must be provided to configure the module
-   * @param[in] phsyics_name Name of the physics module instance
-   * when a mesh other than the default mesh is used
+   * @param[in] physics_name Name of the physics module instance
+   * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
    */
   BasePhysics(int n, int p, std::string physics_name, std::string mesh_tag);
 
@@ -163,6 +161,14 @@ public:
    */
   void setParameter(const size_t parameter_index, const FiniteElementState& parameter_state);
 
+  /**
+   * @brief Set the current shape displacement for the underlying mesh
+   *
+   * @param shape_displacement The shape displacement to copy for use in the physics module
+   *
+   * This updates the shape displacement field associated with the underlying mesh. Note that the input
+   * FiniteElementState is deep copied into the shape displacement object owned by the StateManager.
+   */
   void setShapeDisplacement(const FiniteElementState& shape_displacement);
 
   /**
@@ -303,6 +309,14 @@ protected:
 
   /// @brief The information needed for the physics parameters stored as Finite Element State fields
   struct ParameterInfo {
+    /**
+     * @brief Construct a new Parameter Info object
+     *
+     * @tparam FunctionSpace The templated finite element function space used to construct the parameter field
+     * @param mesh The mesh to build the new parameter on
+     * @param space The templated finite element function space used to construct the parameter field
+     * @param name The name of the new parameter field
+     */
     template <typename FunctionSpace>
     ParameterInfo(mfem::ParMesh& mesh, FunctionSpace space, const std::string& name = "")
     {

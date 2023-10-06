@@ -81,6 +81,7 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet)
  * @param[in] solid_mechanics_options Optional container of input options for SolidMechanics physics module
  * @param[in] heat_transfer_options   Optional container of input options for HeatTransfer physics module
  * @param[in] thermomechanics_options Optional container of input options for Thermomechanics physics module
+ * @param[in] mesh_tag The mesh tag to construct the physics class on
  *
  * @return Base class instance of the created physics class
  */
