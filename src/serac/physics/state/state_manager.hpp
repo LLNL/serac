@@ -222,6 +222,26 @@ public:
   static FiniteElementState& shapeDisplacement(const std::string& mesh_tag);
 
   /**
+   * @brief loads the finite element states from a previously checkpointed cycle
+   *
+   * @param cycle_to_load
+   * @param states_to_load
+   */
+  static void loadCheckpointedStates(int                                                     cycle_to_load,
+                                     std::vector<std::reference_wrapper<FiniteElementState>> states_to_load);
+
+  /**
+   * @brief Get the shape displacement sensitivity finite element dual
+   *
+   * This is the vector-valued H1 dual of order 1 representing sensitivities of the shape displacement field of the
+   * underlying mesh. This is used for shape optimization problems.
+   *
+   * @param mesh_tag A string that uniquely identifies the mesh
+   * @return The linear shape sensitivity field
+   */
+  static FiniteElementDual& shapeDisplacementSensitivity(const std::string& mesh_tag);
+
+  /**
    * @brief Returns the datacollection ID for a given mesh
    * @param[in] pmesh Pointer to a mesh (non-owning)
    * @return The collection ID corresponding to the DataCollection that owns the mesh

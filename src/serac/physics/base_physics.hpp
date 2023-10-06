@@ -129,7 +129,7 @@ public:
    *
    * @pre completeSetup(), advanceTimestep(), and solveAdjoint() must be called prior to this method.
    */
-  virtual const FiniteElementDual& computeSensitivity(size_t /* parameter_index */)
+  virtual const FiniteElementDual& computeTimestepSensitivity(size_t /* parameter_index */)
   {
     SLIC_ERROR_ROOT(axom::fmt::format("Parameter sensitivities not enabled in physics module {}", name_));
     return *parameters_[0].sensitivity;
@@ -143,14 +143,28 @@ public:
    *
    * @pre completeSetup(), advanceTimestep(), and solveAdjoint() must be called prior to this method.
    */
-  virtual const FiniteElementDual& computeShapeSensitivity()
+  virtual const FiniteElementDual& computeTimestepShapeSensitivity()
   {
     SLIC_ERROR_ROOT(axom::fmt::format("Shape sensitivities not enabled in physics module {}", name_));
     return *shape_displacement_sensitivity_;
   }
 
   /**
-   * @brief Advance the state variables according to the chosen time integrator and timestep
+   * @brief Compute the implicit sensitivity of the quantity of interest with respect to the initial condition fields
+   *
+   * @return Fields states corresponding to the sensitivities with respect to the initial condition fields
+   *
+   * @pre `reverseAdjointTimestep` with an appropriate adjoint load must be called prior to this method as many times as
+   * the forward advance is called.
+   */
+  virtual const std::unordered_map<std::string, const serac::FiniteElementDual&> computeInitialConditionSensitivity()
+  {
+    SLIC_ERROR_ROOT(axom::fmt::format("Initial condition sensitivities not enabled in physics module {}", name_));
+    return {};
+  }
+
+  /**
+   * @brief Advance the state variables according to the chosen time integrator
    *
    * @param dt The increment of simulation time to advance the underlying physical system
    */
@@ -164,7 +178,7 @@ public:
    *
    * @return The computed adjoint finite element states
    */
-  virtual const std::unordered_map<std::string, const serac::FiniteElementState&> solveAdjoint(
+  virtual const std::unordered_map<std::string, const serac::FiniteElementState&> reverseAdjointTimestep(
       std::unordered_map<std::string, const serac::FiniteElementDual&> /* adjoint_loads */,
       std::unordered_map<std::string, const serac::FiniteElementState&> /* adjoint_with_essential_boundary */ = {})
   {
