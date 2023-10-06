@@ -542,11 +542,9 @@ public:
       return displacement_;
     } else if (state_name == "velocity") {
       return velocity_;
-    } else if (state_name == "adjoint_displacement") {
-      return adjoint_displacement_;
     }
 
-    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requestion from solid mechanics module '{}', but it doesn't exist",
+    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requested from solid mechanics module '{}', but it doesn't exist",
                                       state_name, name_));
     return displacement_;
   }
@@ -558,7 +556,24 @@ public:
    */
   virtual std::vector<std::string> stateNames() override
   {
-    return std::vector<std::string>{{"displacement"}, {"velocity"}, {"adjoint_displacement"}};
+    return std::vector<std::string>{{"displacement"}, {"velocity"}};
+  }
+
+  /**
+   * @brief Accessor for getting named finite element state adjoint solution from the physics modules
+   *
+   * @param state_name The name of the Finite Element State adjoint solution to retrieve
+   * @return The named adjoint Finite Element State
+   */
+  const FiniteElementState& adjoint(const std::string& state_name) override
+  {
+    if (state_name == "displacement") {
+      return adjoint_displacement_;
+    }
+
+    SLIC_ERROR_ROOT(axom::fmt::format("Adjoint '{}' requested from solid mechanics module '{}', but it doesn't exist",
+                                      state_name, name_));
+    return adjoint_displacement_;
   }
 
   /**

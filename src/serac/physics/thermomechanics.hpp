@@ -129,7 +129,7 @@ public:
   }
 
   /**
-   * @brief Accessor for getting named finite element state fields from the physics modules
+   * @brief Accessor for getting named finite element state primal fields from the physics modules
    *
    * @param state_name The name of the Finite Element State to retrieve
    * @return The named Finite Element State
@@ -144,7 +144,7 @@ public:
       return thermal_.temperature();
     }
 
-    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requestion from solid mechanics module '{}', but it doesn't exist",
+    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requested from solid mechanics module '{}', but it doesn't exist",
                                       state_name, name_));
     return solid_.displacement();
   }
@@ -157,6 +157,25 @@ public:
   virtual std::vector<std::string> stateNames() override
   {
     return std::vector<std::string>{{"displacement"}, {"velocity"}, {"temperature"}};
+  }
+
+  /**
+   * @brief Accessor for getting named finite element adjoint fields from the physics modules
+   *
+   * @param state_name The name of the Finite Element State adjoint field to retrieve
+   * @return The named Finite Element State adjoint
+   */
+  const FiniteElementState& adjoint(const std::string& state_name) override
+  {
+    if (state_name == "displacement") {
+      return solid_.adjointDisplacement();
+    } else if (state_name == "temperature") {
+      return thermal_.adjointTemperature();
+    }
+
+    SLIC_ERROR_ROOT(axom::fmt::format("Adjoint '{}' requested from solid mechanics module '{}', but it doesn't exist",
+                                      state_name, name_));
+    return solid_.displacement();
   }
 
   /**

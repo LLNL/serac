@@ -91,19 +91,63 @@ public:
   virtual void completeSetup() = 0;
 
   /**
-   * @brief Accessor for getting named finite element state fields from the physics modules
+   * @brief Accessor for getting named finite element state primal solution from the physics modules
    *
-   * @param state_name The name of the Finite Element State to retrieve
-   * @return The named Finite Element State
+   * @param state_name The name of the Finite Element State primal solution to retrieve
+   * @return The named primal Finite Element State
    */
   virtual const FiniteElementState& state(const std::string& state_name) = 0;
 
   /**
-   * @brief Get a vector of the finite element state solution variable names
+   * @brief Get a vector of the finite element state primal solution names
    *
-   * @return The solution variable names
+   * @return The primal solution names
    */
   virtual std::vector<std::string> stateNames() = 0;
+
+  /**
+   * @brief Accessor for getting named finite element state adjoint solution from the physics modules
+   *
+   * @param adjoint_name The name of the Finite Element State adjoint solution to retrieve
+   * @return The named adjoint Finite Element State
+   */
+  virtual const FiniteElementState& adjoint(const std::string& adjoint_name) = 0;
+
+  /**
+   * @brief Accessor for getting named finite element state parameter fields from the physics modules
+   *
+   * @param parameter_name The name of the Finite Element State parameter to retrieve
+   * @return The named parameter Finite Element State
+   */
+  const FiniteElementState& parameter(const std::string& parameter_name)
+  {
+    for (auto& parameter : parameters_) {
+      if (parameter_name == parameter.state->name()) {
+        return *parameter.state;
+      }
+    }
+
+    SLIC_ERROR_ROOT(axom::fmt::format("Parameter {} requested from physics module {}, but it doesn't exist.",
+                                      parameter_name, name_));
+
+    return *states_[0];
+  }
+
+  /**
+   * @brief Get a vector of the finite element state parameter names
+   *
+   * @return The parameter names
+   */
+  std::vector<std::string> parameterNames()
+  {
+    std::vector<std::string> parameter_names;
+
+    for (auto& parameter : parameters_) {
+      parameter_names.emplace_back(parameter.state->name());
+    }
+
+    return parameter_names;
+  }
 
   /**
    * @brief Register an externally-constructed FiniteElementState object as the source of values for parameter `i`
@@ -246,6 +290,11 @@ protected:
    * @brief List of finite element primal states associated with this physics module
    */
   std::vector<const serac::FiniteElementState*> states_;
+
+  /**
+   * @brief List of finite element adjoint states associated with this physics module
+   */
+  std::vector<const serac::FiniteElementState*> adjoints_;
 
   /**
    * @brief List of finite element duals associated with this physics module

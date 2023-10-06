@@ -506,32 +506,44 @@ public:
   const serac::FiniteElementState& adjointTemperature() const { return adjoint_temperature_; };
 
   /**
-   * @brief Accessor for getting named finite element state fields from the physics modules
+   * @brief Accessor for getting named finite element state primal solution from the physics modules
    *
-   * @param state_name The name of the Finite Element State to retrieve
-   * @return The named Finite Element State
+   * @param state_name The name of the Finite Element State primal solution to retrieve
+   * @return The named primal Finite Element State
    */
   const FiniteElementState& state(const std::string& state_name) override
   {
     if (state_name == "temperature") {
       return temperature_;
-    } else if (state_name == "adjoint_temperature") {
-      return adjoint_temperature_;
     }
 
-    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requestion from solid mechanics module '{}', but it doesn't exist",
+    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requested from solid mechanics module '{}', but it doesn't exist",
                                       state_name, name_));
     return temperature_;
   }
 
   /**
-   * @brief Get a vector of the finite element state solution variable names
+   * @brief Get a vector of the finite element state primal solution names
    *
-   * @return The solution variable names
+   * @return The primal solution names
    */
-  virtual std::vector<std::string> stateNames() override
+  virtual std::vector<std::string> stateNames() override { return std::vector<std::string>{{"temperature"}}; }
+
+  /**
+   * @brief Accessor for getting named finite element state adjoint solution from the physics modules
+   *
+   * @param state_name The name of the Finite Element State adjoint solution to retrieve
+   * @return The named adjoint Finite Element State
+   */
+  const FiniteElementState& adjoint(const std::string& state_name) override
   {
-    return std::vector<std::string>{{"temperature"}, {"adjoint_temperature"}};
+    if (state_name == "temperature") {
+      return adjoint_temperature_;
+    }
+
+    SLIC_ERROR_ROOT(axom::fmt::format("Adjoint '{}' requested from solid mechanics module '{}', but it doesn't exist",
+                                      state_name, name_));
+    return adjoint_temperature_;
   }
 
   /**
