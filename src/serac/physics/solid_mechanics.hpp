@@ -153,7 +153,7 @@ public:
 
     states_.push_back(&velocity_);
     states_.push_back(&displacement_);
-    states_.push_back(&adjoint_displacement_);
+    adjoints_.push_back(&adjoint_displacement_);
 
     duals_.push_back(&reactions_);
 

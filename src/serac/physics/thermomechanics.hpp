@@ -82,6 +82,9 @@ public:
     states_.push_back(&thermal_.temperature());
     states_.push_back(&solid_.velocity());
     states_.push_back(&solid_.displacement());
+
+    adjoints_.push_back(&thermal_.adjointTemperature());
+    adjoints_.push_back(&solid_.adjointDisplacement());
   }
 
   /**

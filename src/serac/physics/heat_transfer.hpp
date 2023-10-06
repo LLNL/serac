@@ -142,7 +142,7 @@ public:
         "EquationSolver argument is nullptr in HeatTransfer constructor. It is possible that it was previously moved.");
 
     states_.push_back(&temperature_);
-    states_.push_back(&adjoint_temperature_);
+    adjoints_.push_back(&adjoint_temperature_);
 
     // Create a pack of the primal field and parameter finite element spaces
     mfem::ParFiniteElementSpace* test_space = &temperature_.space();
