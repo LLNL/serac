@@ -81,6 +81,7 @@ void SecondOrderODE::Step(mfem::Vector& x, mfem::Vector& dxdt, double& time, dou
     second_order_ode_solver_->Step(x, dxdt, time, dt);
 
     if (enforcement_method_ == DirichletEnforcementMethod::FullControl) {
+      printf("full enforment\n");
       U_minus_ = 0.0;
       U_       = 0.0;
       U_plus_  = 0.0;

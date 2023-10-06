@@ -28,6 +28,19 @@ namespace serac {
 
 namespace solid_mechanics {
 
+void adjoint_integrate(double dt_n, double dt_np1, 
+                      mfem::HypreParMatrix* m_mat, 
+                      mfem::HypreParMatrix* k_mat,
+                      mfem::HypreParVector& disp_adjoint_load_vector,
+                      mfem::HypreParVector& velo_adjoint_load_vector,
+                      mfem::HypreParVector& accel_adjoint_load_vector,
+                      mfem::HypreParVector& adjoint_displacement_,
+                      mfem::HypreParVector& implicit_sensitivity_displacement_start_of_step_,
+                      mfem::HypreParVector& implicit_sensitivity_velocity_start_of_step_,
+                      mfem::HypreParVector& adjoint_essential,
+                      BoundaryConditionManager& bcs_,
+                      mfem::Solver& lin_solver);
+
 /**
  * @brief default method and tolerances for solving the
  * systems of linear equations that show up in implicit
@@ -204,7 +217,7 @@ public:
 
       // TODO: The above call was seg faulting in the HYPRE_BoomerAMGSetInterpRefine(amg_precond, interp_refine)
       // method as of Hypre version v2.26.0. Instead, we just set the system size for Hypre. This is a temporary work
-      // around as it will decrease the effectiveness of the preconditioner.
+      // around as it will decrease the effectiveness of the preconditZioner.
       amg_prec->SetSystemsOptions(dim, true);
     }
 
@@ -595,7 +608,7 @@ public:
    *
    * @return The solution variable names
    */
-  virtual std::vector<std::string> adjointNames()
+  std::vector<std::string> adjointNames() override
   {
     return std::vector<std::string>{{"displacement"}};
   }
@@ -730,6 +743,9 @@ public:
     displacement_.project(disp_coef);
   }
 
+  /// @overload
+  void setDisplacement(const FiniteElementState temp) { displacement_ = temp; }
+
   /**
    * @brief Set the underlying finite element state to a prescribed velocity
    *
@@ -741,6 +757,9 @@ public:
     mfem::VectorFunctionCoefficient vel_coef(dim, vel);
     velocity_.project(vel_coef);
   }
+
+  /// @overload
+  void setVelocity(const FiniteElementState temp) { velocity_ = temp; }
 
   /**
    * @brief Set the body forcefunction
@@ -1159,8 +1178,6 @@ public:
       accel_adjoint_load_vector *= -1.0;
     }
 
-    std::cout << "adjoint loads = " << disp_adjoint_load_vector.Norml1() << " " << velo_adjoint_load_vector.Norml1() << " " << accel_adjoint_load_vector.Norml1() << std::endl;
-
     auto& lin_solver = nonlin_solver_->linearSolver();
 
     // By default, use a homogeneous essential boundary condition
@@ -1219,10 +1236,6 @@ public:
 
     std::cout << "dts = " << dt_n << ", " << dt_np1 << std::endl;
 
-    // there are hard-coded here, as they 
-    static constexpr double beta = 0.25;
-    static constexpr double gamma = 0.5;
-
     // K := dR/du
     auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(displacement_), acceleration_,
                                                  shape_displacement_, *parameters_[parameter_indices].state...));
@@ -1233,46 +1246,18 @@ public:
                                             shape_displacement_, *parameters_[parameter_indices].state...));
     std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
-    // reminder, gathering info from the various layers of time integration
-    // c0 = fac3 * dt * dt
-    // c1 = fac4 * dt
-    double fac1 = 0.5 - beta;
-    double fac2 = 1.0 - gamma;
-    double fac3 = beta;
-    double fac4 = gamma;
-
-    // J = M + c0 * K
-    J_.reset(mfem::Add(1.0, *m_mat, fac3 * dt_n * dt_n, *k_mat));
-    auto J_T = std::unique_ptr<mfem::HypreParMatrix>(J_->Transpose());
-
-    // recall that temperature_adjoint_load_vector and d_temperature_dt_adjoint_load_vector were already multiplied by
-    // -1 above
     
-    mfem::HypreParVector adjoint_rhs(accel_adjoint_load_vector);
-    adjoint_rhs.Add(fac4 * dt_n, velo_adjoint_load_vector);
-    adjoint_rhs.Add(fac3 * dt_n * dt_n, disp_adjoint_load_vector);
-
-    adjoint_rhs.Add(-dt_np1*fac2-dt_n*fac4,
-                    implicit_sensitivity_velocity_start_of_step_);
-    adjoint_rhs.Add(-dt_np1*dt_np1*fac1-dt_n*dt_n*fac3-dt_n*dt_np1*fac4, 
-                    implicit_sensitivity_displacement_start_of_step_);
-
-    for (const auto& bc : bcs_.essentials()) {
-      bc.apply(*J_T, adjoint_rhs, adjoint_essential);
-    }
-
-    lin_solver.SetOperator(*J_T);
-    // really adjoint acceleration
-    lin_solver.Mult(adjoint_rhs, adjoint_displacement_);
-
-    // the current residual has no given dependence on velo, otherwise, there would be another term
-    //implicit_sensitivity_velocity_start_of_step_.Add(-1.0, velo_adjoint_load_vector);
-    implicit_sensitivity_velocity_start_of_step_.Add(dt_np1, implicit_sensitivity_displacement_start_of_step_);
-
-    //auto k_mat_T = std::unique_ptr<mfem::HypreParMatrix>(k_mat->Transpose());
-    // the 1.0, 1.0 is to += the implicit sensitivity
-    k_mat->Mult(adjoint_displacement_, implicit_sensitivity_displacement_start_of_step_, 1.0, 1.0);
-    implicit_sensitivity_displacement_start_of_step_.Add(-1.0, disp_adjoint_load_vector);
+    solid_mechanics::adjoint_integrate(dt_n, dt_np1, m_mat.get(), k_mat.get(), 
+                                      disp_adjoint_load_vector,
+                                      velo_adjoint_load_vector,
+                                      accel_adjoint_load_vector,
+                                      adjoint_displacement_,
+                                      implicit_sensitivity_displacement_start_of_step_,
+                                      implicit_sensitivity_velocity_start_of_step_,
+                                      adjoint_essential,
+                                      bcs_,
+                                      lin_solver
+                                      );
 
     // Reset the equation solver to use the full nonlinear residual operator
     nonlin_solver_->setOperator(*residual_with_bcs_); // MRT, do we need this?

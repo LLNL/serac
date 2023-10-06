@@ -156,7 +156,7 @@ double computeThermalQoiAdjustingConductivity(
     const TimesteppingOptions& dyn_opts, const heat_transfer::ParameterizedLinearIsotropicConductor& mat,
     const TimeSteppingInfo& ts_info, const FiniteElementState& conductivity_derivative_direction, double pertubation)
 {
-  auto thermal = create_parameterized_heat_transfer(data_store, nonlinear_opts, dyn_opts, mat);
+  auto thermal = createParameterizedHeatTransfer(data_store, nonlinear_opts, dyn_opts, mat);
 
   FiniteElementState cond(StateManager::mesh(mesh_tag), H1<p>{}, "input_conductivity");
   cond = 1.1;
@@ -170,7 +170,7 @@ double computeThermalQoiAdjustingConductivity(
   double qoi = 0.0;
   thermal->outputStateToDisk();
   for (int i = 0; i < ts_info.num_timesteps; ++i) {
-    double dt = ts_info.totalTime / ts_info.num_timesteps;
+    double dt = ts_info.total_time / ts_info.num_timesteps;
     thermal->advanceTimestep(dt);
     thermal->outputStateToDisk();
     qoi += computeStepQoi(thermal->temperature(), dt);
