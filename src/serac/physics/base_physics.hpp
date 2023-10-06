@@ -222,6 +222,8 @@ public:
    * @brief Returns a reference to the mesh object
    */
   const mfem::ParMesh& mesh() const { return mesh_; }
+  /// @overload
+  mfem::ParMesh& mesh() { return mesh_; }
 
 protected:
   /// @brief Name of the physics module

@@ -24,6 +24,7 @@ namespace serac {
 constexpr int dim = 2;
 constexpr int p   = 1;
 
+const std::string mesh_tag                    = "mesh";
 const std::string thermal_prefix              = "thermal";
 const std::string parametrized_thermal_prefix = "thermal_with_param";
 
@@ -57,7 +58,7 @@ std::unique_ptr<HeatTransfer<p, dim>> create_nonlinear_heat_transfer(
   // mfem::ParMesh* mesh = StateManager::setMesh(std::move(saveMesh));
   static int iter = 0;
   auto thermal = std::make_unique<HeatTransfer<p, dim>>(nonlinear_opts, heat_transfer::direct_linear_options, dyn_opts,
-                                                        thermal_prefix + std::to_string(iter++));
+                                                        thermal_prefix + std::to_string(iter++), mesh_tag);
   thermal->setMaterial(mat);
   thermal->setTemperature([](const mfem::Vector&, double) { return 0.0; });
   thermal->setTemperatureBCs({1}, [](const mfem::Vector&, double) { return 0.0; });
@@ -82,9 +83,11 @@ std::unique_ptr<ParametrizedHeatTransferT> create_parameterized_heat_transfer(
   static int iter = 0;
   auto       thermal =
       std::make_unique<ParametrizedHeatTransferT>(nonlinear_opts, heat_transfer::direct_linear_options, dyn_opts,
-                                                  parametrized_thermal_prefix + std::to_string(iter++));
-  auto user_defined_conductivity_ptr = thermal->generateParameter("pcond", 0);
-  *user_defined_conductivity_ptr     = 1.1;
+                                                  parametrized_thermal_prefix + std::to_string(iter++), mesh_tag);
+
+  FiniteElementState user_defined_conductivity(StateManager::mesh(mesh_tag), H1<p>{}, "user_defined_conductivity");
+  user_defined_conductivity = 1.1;
+  thermal->setParameter(0, user_defined_conductivity);
   thermal->setMaterial(DependsOn<0>{}, mat);
   thermal->setTemperature([](const mfem::Vector&, double) { return 0.0; });
   thermal->setTemperatureBCs({1}, [](const mfem::Vector&, double) { return 0.0; });
@@ -101,18 +104,19 @@ double computeThermalQoiAdjustingInitalTemperature(
 {
   auto thermal = create_nonlinear_heat_transfer(data_store, nonlinear_opts, dyn_opts, mat);
 
-  auto& temperature = thermal->temperature();
-  SLIC_ASSERT_MSG(temperature.Size() == init_temp_derivative_direction.Size(),
+  FiniteElementState initial_temp(thermal->temperature());
+  SLIC_ASSERT_MSG(initial_temp.Size() == init_temp_derivative_direction.Size(),
                   "Shape displacement and intended derivative direction FiniteElementState sizes do not agree.");
 
-  temperature.Add(pertubation, init_temp_derivative_direction);
+  initial_temp.Add(pertubation, init_temp_derivative_direction);
+  thermal->setTemperature(initial_temp);
 
   double qoi = 0.0;
-  thermal->outputState();
+  thermal->outputStateToDisk();
   for (int i = 0; i < ts_info.num_timesteps; ++i) {
     double dt = ts_info.totalTime / ts_info.num_timesteps;
     thermal->advanceTimestep(dt);
-    thermal->outputState();
+    thermal->outputStateToDisk();
     qoi += computeStepQoi(thermal->temperature(), dt);
   }
   return qoi;
@@ -126,18 +130,19 @@ double computeThermalQoiAdjustingShape(axom::sidre::DataStore& data_store, const
 {
   auto thermal = create_nonlinear_heat_transfer(data_store, nonlinear_opts, dyn_opts, mat);
 
-  auto& shapeDisp = thermal->shapeDisplacement();
+  FiniteElementState shapeDisp(StateManager::mesh(mesh_tag), H1<SHAPE_ORDER, dim>{}, "input_shape_displacement");
+
   SLIC_ASSERT_MSG(shapeDisp.Size() == shape_derivative_direction.Size(),
                   "Shape displacement and intended derivative direction FiniteElementState sizes do not agree.");
 
   shapeDisp.Add(pertubation, shape_derivative_direction);
 
   double qoi = 0.0;
-  thermal->outputState();
+  thermal->outputStateToDisk();
   for (int i = 0; i < ts_info.num_timesteps; ++i) {
     double dt = ts_info.totalTime / ts_info.num_timesteps;
     thermal->advanceTimestep(dt);
-    thermal->outputState();
+    thermal->outputStateToDisk();
     qoi += computeStepQoi(thermal->temperature(), dt);
   }
   return qoi;
@@ -151,17 +156,17 @@ std::tuple<double, FiniteElementDual, FiniteElementDual> computeThermalQoiAndIni
   auto thermal = create_nonlinear_heat_transfer(data_store, nonlinear_opts, dyn_opts, mat);
 
   double qoi = 0.0;
-  thermal->outputState();
+  thermal->outputStateToDisk();
   for (int i = 0; i < ts_info.num_timesteps; ++i) {
     double dt = ts_info.totalTime / ts_info.num_timesteps;
     thermal->advanceTimestep(dt);
-    thermal->outputState();
+    thermal->outputStateToDisk();
     qoi += computeStepQoi(thermal->temperature(), dt);
   }
 
   FiniteElementDual initial_temperature_sensitivity(thermal->temperature().space(), "init_temp_sensitivity");
   initial_temperature_sensitivity = 0.0;
-  FiniteElementDual shape_sensitivity(thermal->shapeDisplacement().space(), "shape_sensitivity");
+  FiniteElementDual shape_sensitivity(StateManager::mesh(mesh_tag), H1<SHAPE_ORDER, dim>{}, "shape_sensitivity");
   shape_sensitivity = 0.0;
 
   FiniteElementDual adjoint_load(thermal->temperature().space(), "adjoint_load");
@@ -192,17 +197,17 @@ std::tuple<double, FiniteElementDual, FiniteElementDual> computeThermalConductiv
   auto thermal = create_parameterized_heat_transfer(data_store, nonlinear_opts, dyn_opts, mat);
 
   double qoi = 0.0;
-  thermal->outputState();
+  thermal->outputStateToDisk();
   for (int i = 0; i < ts_info.num_timesteps; ++i) {
     double dt = ts_info.totalTime / ts_info.num_timesteps;
     thermal->advanceTimestep(dt);
-    thermal->outputState();
+    thermal->outputStateToDisk();
     qoi += computeStepQoi(thermal->temperature(), dt);
   }
 
   FiniteElementDual initial_temperature_sensitivity(thermal->temperature().space(), "init_temp_sensitivity");
   initial_temperature_sensitivity = 0.0;
-  FiniteElementDual shape_sensitivity(thermal->shapeDisplacement().space(), "shape_sensitivity");
+  FiniteElementDual shape_sensitivity(StateManager::mesh(mesh_tag), H1<SHAPE_ORDER, dim>{}, "shape_sensitivity");
   shape_sensitivity = 0.0;
 
   FiniteElementDual adjoint_load(thermal->temperature().space(), "adjoint_load");
@@ -231,7 +236,7 @@ struct HeatTransferSensitivityFixture : public ::testing::Test {
     MPI_Barrier(MPI_COMM_WORLD);
     StateManager::initialize(dataStore, "thermal_dynamic_solve");
     std::string filename = std::string(SERAC_REPO_DIR) + "/data/meshes/star.mesh";
-    mesh                 = StateManager::setMesh(mesh::refineAndDistribute(buildMeshFromFile(filename), 0));
+    mesh                 = &StateManager::setMesh(mesh::refineAndDistribute(buildMeshFromFile(filename), 0), mesh_tag);
   }
 
   void fillDirection(FiniteElementState& direction) const { direction = 1.1; }

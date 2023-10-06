@@ -512,13 +512,15 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     #---------------------------------------------------------------------------
     set(_imported_targets
         axom
+        axom::mfem
         conduit
         conduit::conduit_mpi
         conduit::conduit
         conduit_relay_mpi
         conduit_relay_mpi_io
         conduit_blueprint
-        conduit_blueprint_mpi)
+        conduit_blueprint_mpi
+        tribol::mfem)
 
     foreach(_target ${_imported_targets})
         if(TARGET ${_target})

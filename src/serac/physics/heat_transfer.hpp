@@ -122,8 +122,11 @@ public:
                const std::string& physics_name, std::string mesh_tag, std::vector<std::string> parameter_names = {})
       : BasePhysics(NUM_STATE_VARS, order, physics_name, mesh_tag),
         temperature_(StateManager::newState(H1<order>{}, detail::addPrefix(physics_name, "temperature"), mesh_tag_)),
+        temperature_rate_(temperature_),
         adjoint_temperature_(
             StateManager::newState(H1<order>{}, detail::addPrefix(physics_name, "adjoint_temperature"), mesh_tag_)),
+        implicit_sensitivity_temperature_start_of_step_(adjoint_temperature_.space(),
+                                                        detail::addPrefix(physics_name, "total_deriv_wrt_temperature")),
         residual_with_bcs_(temperature_.space().TrueVSize()),
         nonlin_solver_(std::move(solver)),
         ode_(temperature_.space().TrueVSize(),
@@ -354,6 +357,13 @@ public:
 
     temp_coef.SetTime(time_);
     temperature_.project(temp_coef);
+    gf_initialized_[0] = true;
+  }
+
+  /// @overload
+  void setTemperature(const FiniteElementState temp)
+  {
+    temperature_       = temp;
     gf_initialized_[0] = true;
   }
 
