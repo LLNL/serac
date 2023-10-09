@@ -211,27 +211,6 @@ void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Container& cont
   serac::input::defineVectorInputFileSchema(pw_vector_container);
 }
 
-void MaterialInputOptions::defineInputFileSchema(axom::inlet::Container& container)
-{
-  container.addString("type", "The type of material").required(true);
-  container.addDouble("density", "Initial mass density").defaultValue(1.0);
-
-  // Solid mechanics (neo-hookean, linear isotropic)
-  container.addDouble("mu", "The shear modulus").defaultValue(0.25);
-  container.addDouble("K", "The bulk modulus").defaultValue(5.0);
-
-  // Solid mechanics (j2, j2nonlinear)
-  container.addDouble("E", "Young's modulus").defaultValue(5.0); // TODO default value
-  container.addDouble("nu", "Poisson's ratio").defaultValue(5.0); // TODO default value
-  container.addDouble("Hi", "Isotropic hardening constant").defaultValue(5.0); // TODO default value
-  container.addDouble("Hk", "Kinematic hardening constant").defaultValue(5.0); // TODO default value
-  container.addDouble("sigma_y", "Yield stress").defaultValue(5.0); // TODO default value
-
-  // Heat transfer parameters
-  container.addDouble("kappa", "The conductivity parameter").defaultValue(0.5);
-  container.addDouble("cp", "The specific heat capacity").defaultValue(1.0);
-}
-
 }  // namespace serac::input
 
 mfem::Vector FromInlet<mfem::Vector>::operator()(const axom::inlet::Container& base)
@@ -324,34 +303,6 @@ serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOp
                      "Coefficient has multiple definitions. Please use only one of (constant, vector_constant, "
                      "piecewise_constant, vector_piecewise_constant, scalar_function, vector_function");
   SLIC_ERROR_ROOT_IF(coefficient_definitions == 0, "Coefficient definition does not contain known type.");
-
-  return result;
-}
-
-serac::input::MaterialInputOptions FromInlet<serac::input::MaterialInputOptions>::operator()(
-    const axom::inlet::Container& base)
-{
-  serac::input::MaterialInputOptions result;
-
-  result.type    = base["type"];
-  result.density = base["density"];
-
-  // Solid mechanics (neo-hookean, linear isotropic)
-  result.mu      = base["mu"];
-  result.K       = base["K"];
-  
-  // Solid mechanics (j2, j2nonlinear)
-  result.mu      = base["mu"];
-  result.K       = base["K"];
-  result.E       = base["E"];
-  result.nu      = base["nu"];
-  result.Hi      = base["Hi"];
-  result.Hk      = base["Hk"];
-  result.sigma_y = base["sigma_y"];
-
-  // Heat transfer
-  result.kappa = base["kappa"];
-  result.cp    = base["cp"];
 
   return result;
 }
