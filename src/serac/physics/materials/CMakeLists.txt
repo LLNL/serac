@@ -8,9 +8,13 @@ if(ENABLE_TESTS)
     add_subdirectory(tests)
 endif()
 
+set(materials_sources
+    material_input.cpp)
+
 set(materials_headers
     green_saint_venant_thermoelastic.hpp
     liquid_crystal_elastomer.hpp
+    material_input.hpp
     material_verification_tools.hpp
     parameterized_solid_material.hpp
     parameterized_thermal_material.hpp
@@ -19,11 +23,13 @@ set(materials_headers
     )
 
 set(materials_depends
+    serac_infrastructure
     serac_functional
     )
 
 blt_add_library(
    NAME        serac_physics_materials
+   SOURCES     ${materials_sources}
    HEADERS     ${materials_headers}
    DEPENDS_ON  ${materials_depends}
    )

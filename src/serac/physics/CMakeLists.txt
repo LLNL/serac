@@ -38,6 +38,7 @@ set(physics_dependencies
     serac_state
     serac_boundary_conditions
     serac_numerics
+    serac_physics_materials
     )
 
 blt_add_library(
