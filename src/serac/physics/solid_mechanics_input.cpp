@@ -13,8 +13,8 @@ void SolidMechanicsInputOptions::defineInputFileSchema(axom::inlet::Container& c
   // interpolation order - currently up to 3rd order is allowed
   container.addInt("order", "polynomial order of the basis functions.").defaultValue(1).range(1, 3);
 
-  auto& material_container = container.addStruct("material", "Container for material parameters");
-  serac::input::MaterialInputOptions::defineInputFileSchema(material_container);
+  auto& material_container = container.addStructArray("materials", "Container for array of materials");
+  serac::MaterialInputOptions::defineInputFileSchema(material_container);
 
   // Geometric nonlinearities flag
   container.addBool("geometric_nonlin", "Flag to include geometric nonlinearities in the residual calculation.")
@@ -76,8 +76,7 @@ serac::SolidMechanicsInputOptions FromInlet<serac::SolidMechanicsInputOptions>::
     result.timestepping_options = std::move(timestepping_options);
   }
 
-  result.material_options =
-    base["material"].get<serac::input::MaterialInputOptions>();
+  result.materials = base["materials"].get<std::vector<serac::MaterialInputOptions>>();
 
   // Set the geometric nonlinearities flag
   bool input_geom_nonlin = base["geometric_nonlin"];

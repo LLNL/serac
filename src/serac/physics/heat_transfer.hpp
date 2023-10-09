@@ -21,6 +21,7 @@
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/physics/state/state_manager.hpp"
+#include "serac/physics/materials/thermal_material.hpp"
 
 namespace serac {
 
@@ -207,41 +208,46 @@ public:
   /**
    * @brief Construct a new Nonlinear HeatTransfer Solver object
    *
-   * @param[in] options The solver information parsed from the input file
+   * @param[in] input_options The solver information parsed from the input file
    * @param[in] name An optional name for the physics module instance. Note that this is NOT the mesh tag.
    */
-  HeatTransfer(const HeatTransferInputOptions& options, const std::string& name = "")
-      : HeatTransfer(options.nonlin_solver_options, options.lin_solver_options, options.timestepping_options, name)
+  HeatTransfer(const HeatTransferInputOptions& input_options, const std::string& name = "")
+      : HeatTransfer(input_options.nonlin_solver_options, input_options.lin_solver_options,
+                     input_options.timestepping_options, name)
   {
-    // TODO FIXME
-    // if (options.material_options.type == "linear_conductor") {
-    //   heat_transfer::LinearConductor mat{.density_ = options.material_options.density,
-    //                                      .conductivity_ = options.material_options.kappa,
-    //                                      .specific_heat_capacity_ = options.material_options.cp};
-    //   setMaterial(mat);
-    // } else if (options.material_options.type == "linear_isotropic_conductor") {
-    //   heat_transfer::LinearIsotropicConductor mat{.kappa = options.material_options.kappa,
-    //                                        .cp = options.material_options.cp,
-    //                                        .rho = options.material_options.density};
-    //   setMaterial(mat);
-    } else {
-      // TODO error?
+    // This is the only other options stored in the input file that we can use
+    // in the initialization stage
+    for (const auto& mat_input : input_options.materials) {
+      if (mat_input.model == "LinearIsotropicConductor") {
+        heat_transfer::LinearIsotropicConductor mat(mat_input.density,
+                                                    mat_input.cp,
+                                                    mat_input.kappa);
+        setMaterial(mat);
+      } else if (mat_input.model == "LinearConductor") {
+        // TODO not sure how to set the tensor<double, dim, dim> "conductivity"
+        // heat_transfer::LinearConductor mat(mat_input.density,
+        //                                    mat_input.cp,
+        //                                    mat_input.kappa);
+        // setMaterial(mat);
+      } else {
+        // TODO error?
+      }
     }
 
-    if (options.initial_temperature) {
-      auto temp = options.initial_temperature->constructScalar();
+    if (input_options.initial_temperature) {
+      auto temp = input_options.initial_temperature->constructScalar();
       temperature_.project(*temp);
     }
 
-    if (options.source_coef) {
+    if (input_options.source_coef) {
       // TODO: Not implemented yet in input files
       // NOTE: cannot use std::functions that use mfem::vector
       SLIC_ERROR("'source' is not implemented yet in input files.");
     }
 
     // Process the BCs in sorted order for correct behavior with repeated attributes
-    std::map<std::string, input::BoundaryConditionInputOptions> sorted_bcs(options.boundary_conditions.begin(),
-                                                                           options.boundary_conditions.end());
+    std::map<std::string, input::BoundaryConditionInputOptions> sorted_bcs(input_options.boundary_conditions.begin(),
+                                                                           input_options.boundary_conditions.end());
     for (const auto& [bc_name, bc] : sorted_bcs) {
       // FIXME: Better naming for boundary conditions?
       if (bc_name.find("temperature") != std::string::npos) {

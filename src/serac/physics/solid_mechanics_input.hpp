@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include "serac/infrastructure/input.hpp"
+#include "serac/physics/materials/material_input.hpp"
 #include "serac/physics/common.hpp"
 
 namespace serac {
@@ -64,7 +64,7 @@ struct SolidMechanicsInputOptions {
    * @brief The material options
    *
    */
-  input::MaterialInputOptions material_options;
+  std::vector<MaterialInputOptions> materials;
 
   /**
    * @brief Boundary condition information
