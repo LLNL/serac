@@ -51,12 +51,7 @@ thermal_conduction = {
     order = 2,
 
     -- material parameters
-    material = {
-        type = "linear_isotropic_conductor",
-        kappa = 0.7,
-        cp = 1.5,
-        density = 0.5,
-    },
+    kappa = 0.5,
 
     -- initial conditions
     initial_temperature = {

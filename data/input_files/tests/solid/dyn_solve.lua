@@ -47,14 +47,9 @@ solid = {
     -- polynomial interpolation order
     order = 1,
 
-    -- material parameters
-    -- TODO make an array of materials
-    material = {
-        type = "neo_hookean",
-        mu = 0.26,
-        K  = 5.5,
-        density = 2,
-    },
+    -- neo-Hookean material parameters
+    mu = 0.25,
+    K  = 5.0,
 
     -- initial conditions
     initial_displacement = {
