@@ -18,21 +18,20 @@ void MaterialInputOptions::defineInputFileSchema(axom::inlet::Container& contain
   container.addDouble("K", "The bulk modulus").defaultValue(5.0);
 
   // Solid mechanics (j2, j2nonlinear)
-  container.addDouble("E", "Young's modulus").defaultValue(1.0); // TODO default value
-  container.addDouble("nu", "Poisson's ratio").defaultValue(1.0); // TODO default value
-  container.addDouble("Hi", "Isotropic hardening constant").defaultValue(1.0); // TODO default value
-  container.addDouble("Hk", "Kinematic hardening constant").defaultValue(1.0); // TODO default value
-  container.addDouble("sigma_y", "Yield stress").defaultValue(1.0); // TODO default value
+  container.addDouble("E", "Young's modulus").defaultValue(1.0);                // TODO default value
+  container.addDouble("nu", "Poisson's ratio").defaultValue(1.0);               // TODO default value
+  container.addDouble("Hi", "Isotropic hardening constant").defaultValue(1.0);  // TODO default value
+  container.addDouble("Hk", "Kinematic hardening constant").defaultValue(1.0);  // TODO default value
+  container.addDouble("sigma_y", "Yield stress").defaultValue(1.0);             // TODO default value
 
   // Heat transfer parameters
   container.addDouble("kappa", "The conductivity parameter").defaultValue(1.0);
   container.addDouble("cp", "The specific heat capacity").defaultValue(1.0);
 }
 
-} // namespace serac
+}  // namespace serac
 
-serac::MaterialInputOptions FromInlet<serac::MaterialInputOptions>::operator()(
-    const axom::inlet::Container& base)
+serac::MaterialInputOptions FromInlet<serac::MaterialInputOptions>::operator()(const axom::inlet::Container& base)
 {
   serac::MaterialInputOptions result;
 
@@ -40,9 +39,9 @@ serac::MaterialInputOptions FromInlet<serac::MaterialInputOptions>::operator()(
   result.density = base["density"];
 
   // Solid mechanics (neo-hookean, linear isotropic)
-  result.mu      = base["mu"];
-  result.K       = base["K"];
-  
+  result.mu = base["mu"];
+  result.K  = base["K"];
+
   // Solid mechanics (j2, j2nonlinear)
   result.mu      = base["mu"];
   result.K       = base["K"];

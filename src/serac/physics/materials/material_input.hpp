@@ -31,14 +31,14 @@ struct MaterialInputOptions {
 
   /**
    * @brief Model of material
-   * 
+   *
    */
   std::string model;
 
-  /** 
+  /**
    * @brief mass density
    *
-  */
+   */
   double density;
 
   /**
@@ -53,34 +53,34 @@ struct MaterialInputOptions {
    */
   double K;
 
-  /** 
+  /**
    * @brief Young's modulus
    *
-  */
+   */
   double E;
 
-  /** 
+  /**
    * @brief Poisson's ratio
    *
-  */
+   */
   double nu;
 
-  /** 
+  /**
    * @brief Isotropic hardening constant
    *
-  */
+   */
   double Hi;
 
-  /** 
+  /**
    * @brief Kinematic hardening constant
    *
-  */
+   */
   double Hk;
 
-  /** 
+  /**
    * @brief Yield stress
    *
-  */
+   */
   double sigma_y;
 
   /**
@@ -96,7 +96,7 @@ struct MaterialInputOptions {
   double cp;
 };
 
-} // namespace serac
+}  // namespace serac
 
 /**
  * @brief Prototype the specialization for Inlet parsing

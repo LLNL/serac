@@ -246,20 +246,17 @@ public:
     // in the initialization stage
     for (const auto& mat_input : input_options.materials) {
       if (mat_input.model == "NeoHookean") {
-        solid_mechanics::NeoHookean mat{.density = mat_input.density,
-                                        .K = mat_input.K,
-                                        .G = mat_input.mu};
+        solid_mechanics::NeoHookean mat{.density = mat_input.density, .K = mat_input.K, .G = mat_input.mu};
         setMaterial(mat);
       } else if (mat_input.model == "LinearIsotropic") {
-        solid_mechanics::LinearIsotropic mat{.density = mat_input.density, 
-                                             .K = mat_input.K,
-                                             .G = mat_input.mu};
+        solid_mechanics::LinearIsotropic mat{.density = mat_input.density, .K = mat_input.K, .G = mat_input.mu};
         setMaterial(mat);
       } else if (mat_input.model == "J2") {
-        // solid_mechanics::J2 mat{.E = mat_input.E,
-        //                         .nu = mat_input.nu,
-        //                         .Hi = mat_input.Hi,
-        //                         .Hk = mat_input.Hk,
+        // TODO setMaterial for J2
+        // solid_mechanics::J2 mat{.E       = mat_input.E,
+        //                         .nu      = mat_input.nu,
+        //                         .Hi      = mat_input.Hi,
+        //                         .Hk      = mat_input.Hk,
         //                         .sigma_y = mat_input.sigma_y,
         //                         .density = mat_input.density};
         // setMaterial(mat);
