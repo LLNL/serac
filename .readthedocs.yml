@@ -19,10 +19,9 @@ build:
   tools:
     python: "3.11"
   apt_packages:
-    - dvips
     - ghostscript
     - graphviz
-    - texlive-latex-recommended
+    - texlive-full
 
 python:
   install:
