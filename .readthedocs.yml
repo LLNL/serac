@@ -13,9 +13,17 @@ sphinx:
 # TODO this was turned off due to build failures in the pdf generation. See https://github.com/LLNL/serac/issues/901
 # formats: all
 
-# Optionally set the version of Python and requirements required to build your docs
+# Set the OS, Python version and other tools you might need
+build:
+  os: ubuntu-22.04
+  tools:
+    python: "3.11"
+  apt_packages:
+    - ghostscript
+    - graphviz
+    - texlive-full
+
 python:
-  version: 3.7
   install:
     - requirements: src/docs/requirements.txt
 
