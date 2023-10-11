@@ -21,7 +21,7 @@ build:
 
 python:
   install:
-    - requirements: docs/requirements.txt
+    - requirements: src/docs/requirements.txt
 
 submodules:
   exclude:
