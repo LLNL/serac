@@ -29,7 +29,7 @@ const std::string thermal_prefix              = "thermal";
 const std::string parametrized_thermal_prefix = "thermal_with_param";
 
 struct TimeSteppingInfo {
-  double total_time     = 0.0;
+  double total_time    = 0.0;
   int    num_timesteps = 0;
 };
 

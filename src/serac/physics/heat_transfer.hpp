@@ -816,9 +816,9 @@ public:
    */
   FiniteElementDual& computeTimestepShapeSensitivity() override
   {
-    auto drdshape     = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<SHAPE>{}, temperature_, temperature_rate_,
+    auto drdshape = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<SHAPE>{}, temperature_, temperature_rate_,
                                                         shape_displacement_, *parameters_[parameter_indices].state...));
-    
+
     auto drdshape_mat = assemble(drdshape);
 
     drdshape_mat->MultTranspose(adjoint_temperature_, *shape_displacement_sensitivity_);

@@ -257,10 +257,7 @@ public:
    * @param cycle The previous 'timestep' number where the timestep increment is requested
    * @return The timestep increment
    */
-  virtual double loadCheckpointedTimestep(int /*cycle*/) const
-  {
-    return 0.0;
-  }
+  virtual double loadCheckpointedTimestep(int /*cycle*/) const { return 0.0; }
 
   /**
    * @brief Initializes the Sidre structure for simulation summary data

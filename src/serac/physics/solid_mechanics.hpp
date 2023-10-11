@@ -32,19 +32,14 @@ namespace detail {
 /**
  * @brief integrates part of the adjoint equations backward in time
  */
-void adjoint_integrate(double dt_n, double dt_np1, 
-                       mfem::HypreParMatrix* m_mat, 
-                       mfem::HypreParMatrix* k_mat,
-                       mfem::HypreParVector& disp_adjoint_load_vector,
-                       mfem::HypreParVector& velo_adjoint_load_vector,
-                       mfem::HypreParVector& accel_adjoint_load_vector,
-                       mfem::HypreParVector& adjoint_displacement_,
+void adjoint_integrate(double dt_n, double dt_np1, mfem::HypreParMatrix* m_mat, mfem::HypreParMatrix* k_mat,
+                       mfem::HypreParVector& disp_adjoint_load_vector, mfem::HypreParVector& velo_adjoint_load_vector,
+                       mfem::HypreParVector& accel_adjoint_load_vector, mfem::HypreParVector& adjoint_displacement_,
                        mfem::HypreParVector& implicit_sensitivity_displacement_start_of_step_,
                        mfem::HypreParVector& implicit_sensitivity_velocity_start_of_step_,
-                       mfem::HypreParVector& adjoint_essential,
-                       BoundaryConditionManager& bcs_,
+                       mfem::HypreParVector& adjoint_essential, BoundaryConditionManager& bcs_,
                        mfem::Solver& lin_solver);
-}
+}  // namespace detail
 
 /**
  * @brief default method and tolerances for solving the
@@ -101,8 +96,8 @@ class SolidMechanics<order, dim, Parameters<parameter_space...>, std::integer_se
 public:
   //! @cond Doxygen_Suppress
   static constexpr int  VALUE = 0, DERIVATIVE = 1;
-  static constexpr int SHAPE = 2;
-  static constexpr auto I = Identity<dim>();
+  static constexpr int  SHAPE = 2;
+  static constexpr auto I     = Identity<dim>();
   //! @endcond
 
   /// @brief The total number of non-parameter state variables (displacement, acceleration, shape) passed to the FEM
@@ -212,7 +207,7 @@ public:
     adjoint_displacement_ = 0.0;
 
     implicit_sensitivity_displacement_start_of_step_ = 0.0;
-    implicit_sensitivity_velocity_start_of_step_ = 0.0;
+    implicit_sensitivity_velocity_start_of_step_     = 0.0;
 
     // If the user wants the AMG preconditioner with a linear solver, set the pfes
     // to be the displacement
@@ -239,8 +234,8 @@ public:
 
     u_.SetSize(true_size);
     v_.SetSize(true_size);
-    //previous_a_.SetSize(true_size);
-    //previous_a_ = 0.0;
+    // previous_a_.SetSize(true_size);
+    // previous_a_ = 0.0;
 
     du_.SetSize(true_size);
     du_ = 0.0;
@@ -1030,7 +1025,8 @@ public:
   }
 
   /// @brief Set field to zero wherever their are essential boundary conditions applies
-  void zeroEssentials(FiniteElementVector& field) const {
+  void zeroEssentials(FiniteElementVector& field) const
+  {
     for (const auto& essential : bcs_.essentials()) {
       field.SetSubVector(essential.getLocalDofList(), 0.0);
     }
@@ -1142,9 +1138,9 @@ public:
     dt_history_.push_back(dt);
     cycle_ += 1;
 
-    //std::cout << "displacement at cycle " << cycle_ << " = " << displacement_.Norml2() << std::endl;
-    //std::cout << "velocity at cycle " << cycle_ << " = " << velocity_.Norml2() << std::endl;
-    //std::cout << "acceleration at cycle " << cycle_ << " = " << acceleration_.Norml2() << std::endl;
+    // std::cout << "displacement at cycle " << cycle_ << " = " << displacement_.Norml2() << std::endl;
+    // std::cout << "velocity at cycle " << cycle_ << " = " << velocity_.Norml2() << std::endl;
+    // std::cout << "acceleration at cycle " << cycle_ << " = " << acceleration_.Norml2() << std::endl;
 
     SLIC_ERROR_ROOT_IF(dt_history_.size() != static_cast<size_t>(cycle_),
                        "Timestep history count does not match the current cycle count.");
@@ -1168,8 +1164,8 @@ public:
       std::unordered_map<std::string, const serac::FiniteElementDual&>  adjoint_loads,
       std::unordered_map<std::string, const serac::FiniteElementState&> adjoint_with_essential_boundary = {}) override
   {
-    auto disp_adjoint_load = adjoint_loads.find("displacement");
-    auto velo_adjoint_load = adjoint_loads.find("velocity");
+    auto disp_adjoint_load  = adjoint_loads.find("displacement");
+    auto velo_adjoint_load  = adjoint_loads.find("velocity");
     auto accel_adjoint_load = adjoint_loads.find("acceleration");
 
     SLIC_ERROR_ROOT_IF(disp_adjoint_load == adjoint_loads.end(), "Adjoint load for \"displacement\" not found.");
@@ -1210,10 +1206,10 @@ public:
     }
 
     if (is_quasistatic_) {
-      auto [_, drdu]= (*residual_)(differentiate_wrt(displacement_), zero_, shape_displacement_,
-                                                      *parameters_[parameter_indices].state...);
-      auto jacobian = assemble(drdu);
-      auto J_T      = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
+      auto [_, drdu] = (*residual_)(differentiate_wrt(displacement_), zero_, shape_displacement_,
+                                    *parameters_[parameter_indices].state...);
+      auto jacobian  = assemble(drdu);
+      auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
       for (const auto& bc : bcs_.essentials()) {
         bc.apply(*J_T, disp_adjoint_load_vector, adjoint_essential);
@@ -1227,7 +1223,7 @@ public:
 
       return {{"adjoint_displacement", adjoint_displacement_}};
     }
-    
+
     SLIC_ERROR_ROOT_IF(ode2_.GetTimestepper() != TimestepMethod::Newmark,
                        "Only Newmark implemented for transient adjoint solid mechanics.");
 
@@ -1236,41 +1232,35 @@ public:
                        "number of forward timesteps");
 
     // Load the end of step disp, velo, accel from the previous cycle from disk
-    //std::cout << "fetching, cycle says = " << cycle_ << std::endl;
+    // std::cout << "fetching, cycle says = " << cycle_ << std::endl;
     StateManager::loadCheckpointedStates(cycle_, {displacement_, velocity_, acceleration_});
 
-    //std::cout << "displacement at cycle " << cycle_ << " = " << displacement_.Norml2() << std::endl;
-    //std::cout << "velocity at cycle " << cycle_ << " = " << velocity_.Norml2() << std::endl;
-    //std::cout << "acceleration at cycle " << cycle_ << " = " << acceleration_.Norml2() << std::endl;
+    // std::cout << "displacement at cycle " << cycle_ << " = " << displacement_.Norml2() << std::endl;
+    // std::cout << "velocity at cycle " << cycle_ << " = " << velocity_.Norml2() << std::endl;
+    // std::cout << "acceleration at cycle " << cycle_ << " = " << acceleration_.Norml2() << std::endl;
 
     double dt_np1 = loadCheckpointedTimestep(cycle_);
-    double dt_n = loadCheckpointedTimestep(cycle_-1);
+    double dt_n   = loadCheckpointedTimestep(cycle_ - 1);
 
-    //std::cout << "dts = " << dt_n << ", " << dt_np1 << std::endl;
+    // std::cout << "dts = " << dt_n << ", " << dt_np1 << std::endl;
 
     // K := dR/du
-    auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(displacement_), acceleration_,
-                                                 shape_displacement_, *parameters_[parameter_indices].state...));
+    auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(displacement_), acceleration_, shape_displacement_,
+                                                 *parameters_[parameter_indices].state...));
     std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
     // M := dR/da
-    auto M = serac::get<DERIVATIVE>((*residual_)(displacement_, differentiate_wrt(acceleration_),
-                                            shape_displacement_, *parameters_[parameter_indices].state...));
+    auto M = serac::get<DERIVATIVE>((*residual_)(displacement_, differentiate_wrt(acceleration_), shape_displacement_,
+                                                 *parameters_[parameter_indices].state...));
     std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
-    
-    solid_mechanics::detail::adjoint_integrate(dt_n, dt_np1, m_mat.get(), k_mat.get(), 
-                                               disp_adjoint_load_vector,
-                                               velo_adjoint_load_vector,
-                                               accel_adjoint_load_vector,
-                                               adjoint_displacement_,
-                                               implicit_sensitivity_displacement_start_of_step_,
-                                               implicit_sensitivity_velocity_start_of_step_,
-                                               adjoint_essential,
-                                               bcs_,
-                                               lin_solver);
+
+    solid_mechanics::detail::adjoint_integrate(
+        dt_n, dt_np1, m_mat.get(), k_mat.get(), disp_adjoint_load_vector, velo_adjoint_load_vector,
+        accel_adjoint_load_vector, adjoint_displacement_, implicit_sensitivity_displacement_start_of_step_,
+        implicit_sensitivity_velocity_start_of_step_, adjoint_essential, bcs_, lin_solver);
 
     // Reset the equation solver to use the full nonlinear residual operator
-    nonlin_solver_->setOperator(*residual_with_bcs_); // MRT, do we need this?
+    nonlin_solver_->setOperator(*residual_with_bcs_);  // MRT, do we need this?
 
     time_ -= dt_n;
     cycle_--;
@@ -1326,7 +1316,7 @@ public:
     SLIC_ASSERT_MSG(parameter_field < sizeof...(parameter_indices),
                     axom::fmt::format("Invalid parameter index '{}' requested for sensitivity."));
 
-    auto drdparam = serac::get<DERIVATIVE>(d_residual_d_[parameter_field]());
+    auto drdparam     = serac::get<DERIVATIVE>(d_residual_d_[parameter_field]());
     auto drdparam_mat = assemble(drdparam);
 
     drdparam_mat->MultTranspose(adjoint_displacement_, *parameters_[parameter_field].sensitivity);
@@ -1339,7 +1329,7 @@ public:
    * problem with respect to the shape displacement field
    *
    * @return The sensitivity with respect to the shape displacement
-   * 
+   *
    * @pre `reverseAdjointTimestep` with an appropriate adjoint load must be called prior to this method.
    */
   FiniteElementDual& computeTimestepShapeSensitivity() override
