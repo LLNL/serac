@@ -21,6 +21,7 @@ build:
   apt_packages:
     - ghostscript
     - graphviz
+    - texlive-latex-recommended
 
 python:
   install:
