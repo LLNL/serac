@@ -66,7 +66,7 @@ std::unique_ptr<SolidMechanics<p, dim>> createNonlinearSolidMechanicsSolver(
   auto solid = std::make_unique<SolidMechanics<p, dim>>(nonlinear_opts, solid_mechanics::direct_linear_options, dyn_opts,
                                                         geoNonlinear, physics_prefix + std::to_string(iter++), mesh_tag);
   solid->setMaterial(mat);
-  //solid->setDisplacementBCs({1}, [](const mfem::Vector&, mfem::Vector& disp) { disp = 0.012; });
+  solid->setDisplacementBCs({1}, [](const mfem::Vector&, mfem::Vector& disp) { disp = 0.0; });
   solid->addBodyForce([](auto X, auto /* t */) {
     auto Y = X;
     Y[0] = 0.1 + 0.1 * X[0] + 0.3 * X[1];
