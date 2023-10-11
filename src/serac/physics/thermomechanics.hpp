@@ -71,7 +71,7 @@ public:
   Thermomechanics(std::unique_ptr<EquationSolver> thermal_solver, TimesteppingOptions thermal_timestepping,
                   std::unique_ptr<EquationSolver> solid_solver, TimesteppingOptions solid_timestepping,
                   GeometricNonlinearities geom_nonlin, const std::string& physics_name, std::string mesh_tag)
-      : BasePhysics(3, order, physics_name, mesh_tag),
+      : BasePhysics(order, physics_name, mesh_tag),
         thermal_(std::move(thermal_solver), thermal_timestepping, physics_name + "thermal", mesh_tag, {"displacement"}),
         solid_(std::move(solid_solver), solid_timestepping, geom_nonlin, physics_name + "mechanical", mesh_tag,
                {"temperature"})

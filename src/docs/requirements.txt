@@ -1,1 +1,4 @@
 docutils<0.18
+sphinx==6.2.1
+sphinx-rtd-theme==1.2.2
+doxygen==1.9.6

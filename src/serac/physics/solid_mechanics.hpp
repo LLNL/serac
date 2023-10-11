@@ -128,7 +128,7 @@ public:
   SolidMechanics(std::unique_ptr<serac::EquationSolver> solver, const serac::TimesteppingOptions timestepping_opts,
                  const GeometricNonlinearities geom_nonlin, const std::string& physics_name, std::string mesh_tag,
                  std::vector<std::string> parameter_names = {})
-      : BasePhysics(2, order, physics_name, mesh_tag),
+      : BasePhysics(order, physics_name, mesh_tag),
         velocity_(StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "velocity"), mesh_tag_)),
         displacement_(
             StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "displacement"), mesh_tag_)),
@@ -707,7 +707,6 @@ public:
     // Project the coefficient onto the grid function
     mfem::VectorFunctionCoefficient disp_coef(dim, disp);
     displacement_.project(disp_coef);
-    gf_initialized_[1] = true;
   }
 
   /**
@@ -720,7 +719,6 @@ public:
     // Project the coefficient onto the grid function
     mfem::VectorFunctionCoefficient vel_coef(dim, vel);
     velocity_.project(vel_coef);
-    gf_initialized_[0] = true;
   }
 
   /**

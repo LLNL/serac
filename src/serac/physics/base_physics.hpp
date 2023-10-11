@@ -52,12 +52,11 @@ public:
   /**
    * @brief Constructor that creates n entries in states_ of order p
    *
-   * @param[in] n Number of state variables
    * @param[in] p Order of the solver
    * @param[in] physics_name Name of the physics module instance
    * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
    */
-  BasePhysics(int n, int p, std::string physics_name, std::string mesh_tag);
+  BasePhysics(int p, std::string physics_name, std::string mesh_tag);
 
   /**
    * @brief Construct a new Base Physics object (copy constructor)
@@ -398,11 +397,6 @@ protected:
    * @brief DataCollection pointer for optional paraview output
    */
   mutable std::unique_ptr<mfem::ParaViewDataCollection> paraview_dc_;
-
-  /**
-   * @brief State variable initialization indicator
-   */
-  std::vector<bool> gf_initialized_;
 
   /**
    * @brief Boundary condition manager instance

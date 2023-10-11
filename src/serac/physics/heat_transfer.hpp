@@ -120,7 +120,7 @@ public:
    */
   HeatTransfer(std::unique_ptr<serac::EquationSolver> solver, const serac::TimesteppingOptions timestepping_opts,
                const std::string& physics_name, std::string mesh_tag, std::vector<std::string> parameter_names = {})
-      : BasePhysics(NUM_STATE_VARS, order, physics_name, mesh_tag),
+      : BasePhysics(order, physics_name, mesh_tag),
         temperature_(StateManager::newState(H1<order>{}, detail::addPrefix(physics_name, "temperature"), mesh_tag_)),
         temperature_rate_(temperature_),
         adjoint_temperature_(
@@ -273,8 +273,6 @@ public:
       }
       nonlin_solver_->solve(temperature_);
     } else {
-      SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
-
       // Step the time integrator
       // Note that the ODE solver handles the essential boundary condition application itself
       ode_.Step(temperature_, time_, dt);
@@ -358,15 +356,10 @@ public:
 
     temp_coef.SetTime(time_);
     temperature_.project(temp_coef);
-    gf_initialized_[0] = true;
   }
 
   /// @overload
-  void setTemperature(const FiniteElementState temp)
-  {
-    temperature_       = temp;
-    gf_initialized_[0] = true;
-  }
+  void setTemperature(const FiniteElementState temp) { temperature_ = temp; }
 
   /**
    * @brief Set the thermal source function

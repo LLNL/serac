@@ -45,12 +45,10 @@ BasePhysics::BasePhysics(std::string physics_name, std::string mesh_tag)
   StateManager::storeDual(*shape_displacement_sensitivity_);
 }
 
-BasePhysics::BasePhysics(int n, int p, std::string physics_name, std::string mesh_tag)
+BasePhysics::BasePhysics( int p, std::string physics_name, std::string mesh_tag)
     : BasePhysics(physics_name, mesh_tag)
 {
   order_ = p;
-  // If this is a restart run, things have already been initialized
-  gf_initialized_.assign(static_cast<std::size_t>(n), StateManager::isRestart());
 }
 
 double BasePhysics::time() const { return time_; }
