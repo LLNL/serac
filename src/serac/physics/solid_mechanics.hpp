@@ -28,18 +28,23 @@ namespace serac {
 
 namespace solid_mechanics {
 
+namespace detail {
+/**
+ * @brief integrates part of the adjoint equations backward in time
+ */
 void adjoint_integrate(double dt_n, double dt_np1, 
-                      mfem::HypreParMatrix* m_mat, 
-                      mfem::HypreParMatrix* k_mat,
-                      mfem::HypreParVector& disp_adjoint_load_vector,
-                      mfem::HypreParVector& velo_adjoint_load_vector,
-                      mfem::HypreParVector& accel_adjoint_load_vector,
-                      mfem::HypreParVector& adjoint_displacement_,
-                      mfem::HypreParVector& implicit_sensitivity_displacement_start_of_step_,
-                      mfem::HypreParVector& implicit_sensitivity_velocity_start_of_step_,
-                      mfem::HypreParVector& adjoint_essential,
-                      BoundaryConditionManager& bcs_,
-                      mfem::Solver& lin_solver);
+                       mfem::HypreParMatrix* m_mat, 
+                       mfem::HypreParMatrix* k_mat,
+                       mfem::HypreParVector& disp_adjoint_load_vector,
+                       mfem::HypreParVector& velo_adjoint_load_vector,
+                       mfem::HypreParVector& accel_adjoint_load_vector,
+                       mfem::HypreParVector& adjoint_displacement_,
+                       mfem::HypreParVector& implicit_sensitivity_displacement_start_of_step_,
+                       mfem::HypreParVector& implicit_sensitivity_velocity_start_of_step_,
+                       mfem::HypreParVector& adjoint_essential,
+                       BoundaryConditionManager& bcs_,
+                       mfem::Solver& lin_solver);
+}
 
 /**
  * @brief default method and tolerances for solving the
@@ -1024,6 +1029,13 @@ public:
     nonlin_solver_->setOperator(*residual_with_bcs_);
   }
 
+  /// @brief Set field to zero wherever their are essential boundary conditions applies
+  void zeroEssentials(FiniteElementVector& field) const {
+    for (const auto& essential : bcs_.essentials()) {
+      field.SetSubVector(essential.getLocalDofList(), 0.0);
+    }
+  }
+
   /// @brief Solve the Quasi-static Newton system
   void quasiStaticSolve(double dt)
   {
@@ -1130,9 +1142,9 @@ public:
     dt_history_.push_back(dt);
     cycle_ += 1;
 
-    std::cout << "displacement at cycle " << cycle_ << " = " << displacement_.Norml2() << std::endl;
-    std::cout << "velocity at cycle " << cycle_ << " = " << velocity_.Norml2() << std::endl;
-    std::cout << "acceleration at cycle " << cycle_ << " = " << acceleration_.Norml2() << std::endl;
+    //std::cout << "displacement at cycle " << cycle_ << " = " << displacement_.Norml2() << std::endl;
+    //std::cout << "velocity at cycle " << cycle_ << " = " << velocity_.Norml2() << std::endl;
+    //std::cout << "acceleration at cycle " << cycle_ << " = " << acceleration_.Norml2() << std::endl;
 
     SLIC_ERROR_ROOT_IF(dt_history_.size() != static_cast<size_t>(cycle_),
                        "Timestep history count does not match the current cycle count.");
@@ -1224,17 +1236,17 @@ public:
                        "number of forward timesteps");
 
     // Load the end of step disp, velo, accel from the previous cycle from disk
-    std::cout << "fetching, cycle says = " << cycle_ << std::endl;
+    //std::cout << "fetching, cycle says = " << cycle_ << std::endl;
     StateManager::loadCheckpointedStates(cycle_, {displacement_, velocity_, acceleration_});
 
-    std::cout << "displacement at cycle " << cycle_ << " = " << displacement_.Norml2() << std::endl;
-    std::cout << "velocity at cycle " << cycle_ << " = " << velocity_.Norml2() << std::endl;
-    std::cout << "acceleration at cycle " << cycle_ << " = " << acceleration_.Norml2() << std::endl;
+    //std::cout << "displacement at cycle " << cycle_ << " = " << displacement_.Norml2() << std::endl;
+    //std::cout << "velocity at cycle " << cycle_ << " = " << velocity_.Norml2() << std::endl;
+    //std::cout << "acceleration at cycle " << cycle_ << " = " << acceleration_.Norml2() << std::endl;
 
     double dt_np1 = loadCheckpointedTimestep(cycle_);
     double dt_n = loadCheckpointedTimestep(cycle_-1);
 
-    std::cout << "dts = " << dt_n << ", " << dt_np1 << std::endl;
+    //std::cout << "dts = " << dt_n << ", " << dt_np1 << std::endl;
 
     // K := dR/du
     auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(displacement_), acceleration_,
@@ -1245,27 +1257,23 @@ public:
     auto M = serac::get<DERIVATIVE>((*residual_)(displacement_, differentiate_wrt(acceleration_),
                                             shape_displacement_, *parameters_[parameter_indices].state...));
     std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
-
     
-    solid_mechanics::adjoint_integrate(dt_n, dt_np1, m_mat.get(), k_mat.get(), 
-                                      disp_adjoint_load_vector,
-                                      velo_adjoint_load_vector,
-                                      accel_adjoint_load_vector,
-                                      adjoint_displacement_,
-                                      implicit_sensitivity_displacement_start_of_step_,
-                                      implicit_sensitivity_velocity_start_of_step_,
-                                      adjoint_essential,
-                                      bcs_,
-                                      lin_solver
-                                      );
+    solid_mechanics::detail::adjoint_integrate(dt_n, dt_np1, m_mat.get(), k_mat.get(), 
+                                               disp_adjoint_load_vector,
+                                               velo_adjoint_load_vector,
+                                               accel_adjoint_load_vector,
+                                               adjoint_displacement_,
+                                               implicit_sensitivity_displacement_start_of_step_,
+                                               implicit_sensitivity_velocity_start_of_step_,
+                                               adjoint_essential,
+                                               bcs_,
+                                               lin_solver);
 
     // Reset the equation solver to use the full nonlinear residual operator
     nonlin_solver_->setOperator(*residual_with_bcs_); // MRT, do we need this?
 
     time_ -= dt_n;
     cycle_--;
-
-    //printf("adjoint time = %g\n", time_);
 
     return {{"adjoint_displacement", adjoint_displacement_}};
   }
@@ -1379,6 +1387,13 @@ public:
    * @return A reference to the current velocity finite element state
    */
   const serac::FiniteElementState& velocity() const { return velocity_; };
+
+  /**
+   * @brief Get the acceleration state
+   *
+   * @return A reference to the current acceleration finite element state
+   */
+  const serac::FiniteElementState& acceleration() const { return acceleration_; };
 
   /// @brief getter for nodal forces (before zeroing-out essential dofs)
   const serac::FiniteElementDual& reactions() { return reactions_; };

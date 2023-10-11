@@ -27,31 +27,32 @@ const std::string mesh_tag       = "mesh";
 const std::string physics_prefix = "solid";
 
 using SolidMaterial = solid_mechanics::NeoHookean;
-//using SolidMaterial = solid_mechanics::LinearIsotropic;
 auto geoNonlinear = GeometricNonlinearities::On;
-//auto geoNonlinear = GeometricNonlinearities::Off;
 
 struct TimeSteppingInfo {
-  //TimeSteppingInfo() : dts({0.0, 0.2, 0.4, 0.24, 0.12, 0.0}) {}
-  TimeSteppingInfo() : dts({0.0, 0.2, 0.2, 0.2, 0.2, 0.0}) {}
+  TimeSteppingInfo() : dts({0.0, 0.2, 0.4, 0.24, 0.12, 0.0}) {}
 
   int numTimesteps() const { return dts.Size()-2; }
 
   mfem::Vector dts;
 };
 
+constexpr double dispTarget = -0.34;
+constexpr double initialInteriorDisp = 0.03;
+constexpr double initialInteriorVelo = 0.04;
+
 // MRT: add explicit velocity dependence
 double computeStepQoi(const FiniteElementState& displacement, double dt)
 {
-  FiniteElementState cheat(displacement);
-  cheat = -0.0;
-  cheat.Add(1.0, displacement);
-  return 0.5 * dt * innerProduct(cheat, cheat);
+  FiniteElementState displacement_error(displacement);
+  displacement_error = dispTarget;
+  displacement_error.Add(1.0, displacement);
+  return 0.5 * dt * innerProduct(displacement_error, displacement_error);
 }
 
 void computeStepAdjointLoad(const FiniteElementState& displacement, FiniteElementDual& d_qoi_d_displacement, double dt)
 {
-  d_qoi_d_displacement = -0.0;
+  d_qoi_d_displacement = dispTarget;
   d_qoi_d_displacement.Add(1.0, displacement);
   d_qoi_d_displacement *= dt;
 }
@@ -65,7 +66,7 @@ std::unique_ptr<SolidMechanics<p, dim>> createNonlinearSolidMechanicsSolver(
   auto solid = std::make_unique<SolidMechanics<p, dim>>(nonlinear_opts, solid_mechanics::direct_linear_options, dyn_opts,
                                                         geoNonlinear, physics_prefix + std::to_string(iter++), mesh_tag);
   solid->setMaterial(mat);
-  solid->setDisplacementBCs({1}, [](const mfem::Vector&, mfem::Vector& disp) { disp = 0.0; });
+  //solid->setDisplacementBCs({1}, [](const mfem::Vector&, mfem::Vector& disp) { disp = 0.012; });
   solid->addBodyForce([](auto X, auto /* t */) {
     auto Y = X;
     Y[0] = 0.1 + 0.1 * X[0] + 0.3 * X[1];
@@ -76,145 +77,112 @@ std::unique_ptr<SolidMechanics<p, dim>> createNonlinearSolidMechanicsSolver(
   return solid;
 }
 
-double computeSolidMechanicsQoiAdjustingShape(axom::sidre::DataStore& data_store,
-                                              const NonlinearSolverOptions& nonlinear_opts,
-                                              const TimesteppingOptions& dyn_opts,
-                                              const SolidMaterial& mat,
-                                              const TimeSteppingInfo&   ts_info,
-                                              const FiniteElementState& shape_derivative_direction, double pertubation)
+double computeSolidMechanicsQoi(SolidMechanics<p, dim>& solid_solver,
+                                const TimeSteppingInfo&   ts_info)
 {
-  auto solid_solver = createNonlinearSolidMechanicsSolver(data_store, nonlinear_opts, dyn_opts, mat);
-
-  FiniteElementState shape_disp(StateManager::mesh(mesh_tag), H1<SHAPE_ORDER, dim>{}, "input_shape_displacement");
-
-  SLIC_ASSERT_MSG(shape_disp.Size() == shape_derivative_direction.Size(),
-                  "Shape displacement and intended derivative direction FiniteElementState sizes do not agree.");
-
-  shape_disp.Add(pertubation, shape_derivative_direction);
-
   auto dts = ts_info.dts;
-  solid_solver->advanceTimestep(dts(0)); // advance by 0.0 seconds to get initial acceleration
-  solid_solver->outputStateToDisk();
-  double qoi = computeStepQoi(solid_solver->displacement(), 0.5 * (dts(0) + dts(1)));
+  solid_solver.outputStateToDisk();
+  solid_solver.advanceTimestep(dts(0)); // advance by 0.0 seconds to get initial acceleration
+  solid_solver.outputStateToDisk();
+  FiniteElementState dispForObjective = solid_solver.displacement();
+  solid_solver.zeroEssentials(dispForObjective);
+  double qoi = computeStepQoi(dispForObjective, 0.5 * (dts(0) + dts(1)));
   for (int i = 1; i <= ts_info.numTimesteps(); ++i) {
-    EXPECT_EQ(i, solid_solver->cycle());
-    solid_solver->advanceTimestep(dts(i));
-    solid_solver->outputStateToDisk();
-    qoi += computeStepQoi(solid_solver->displacement(), 0.5 * (dts(i) + dts(i+1)));
+    EXPECT_EQ(i, solid_solver.cycle());
+    solid_solver.advanceTimestep(dts(i));
+    solid_solver.outputStateToDisk();
+    dispForObjective = solid_solver.displacement();
+    solid_solver.zeroEssentials(dispForObjective);
+    qoi += computeStepQoi(dispForObjective, 0.5 * (dts(i) + dts(i+1)));
   }
   return qoi;
 }
 
-double computeSolidMechanicsQoiAdjustingInitialDisplacement(axom::sidre::DataStore& data_store,
-                                       const NonlinearSolverOptions& nonlinear_opts,
-                                       const TimesteppingOptions& dyn_opts,
-                                       const SolidMaterial& mat,
-                                       const TimeSteppingInfo&   ts_info,
-                                       const FiniteElementState& derivative_direction, double pertubation)
+std::tuple<double, FiniteElementDual, FiniteElementDual, FiniteElementDual> computeSolidMechanicsQoiSensitivity(
+    SolidMechanics<p, dim>& solid_solver, const TimeSteppingInfo& ts_info)
 {
-  auto solid_solver = createNonlinearSolidMechanicsSolver(data_store, nonlinear_opts, dyn_opts, mat);
+  EXPECT_EQ(0, solid_solver.cycle());
 
-  FiniteElementState disp = solid_solver->displacement();
-  SLIC_ASSERT_MSG(disp.Size() == derivative_direction.Size(),
-                  "Shape displacement and intended derivative direction FiniteElementState sizes do not agree.");
+  double qoi = computeSolidMechanicsQoi(solid_solver, ts_info);
 
-  disp.Add(pertubation, derivative_direction);
-  solid_solver->setDisplacement(disp);
-
-  auto dts = ts_info.dts;
-  solid_solver->advanceTimestep(dts(0)); // advance by 0.0 seconds to get initial acceleration
-  solid_solver->outputStateToDisk();
-  double qoi = computeStepQoi(solid_solver->displacement(), 0.5 * (dts(0) + dts(1)));
-  for (int i = 1; i <= ts_info.numTimesteps(); ++i) {
-    EXPECT_EQ(i, solid_solver->cycle());
-    solid_solver->advanceTimestep(dts(i));
-    solid_solver->outputStateToDisk();
-    qoi += computeStepQoi(solid_solver->displacement(), 0.5 * (dts(i) + dts(i+1)));
-  }
-  return qoi;
-}
-
-double computeSolidMechanicsQoiAdjustingInitialVelocity(axom::sidre::DataStore& data_store,
-                                       const NonlinearSolverOptions& nonlinear_opts,
-                                       const TimesteppingOptions& dyn_opts,
-                                       const SolidMaterial& mat,
-                                       const TimeSteppingInfo&   ts_info,
-                                       const FiniteElementState& derivative_direction, double pertubation)
-{
-  auto solid_solver = createNonlinearSolidMechanicsSolver(data_store, nonlinear_opts, dyn_opts, mat);
-
-  FiniteElementState velo = solid_solver->velocity();
-  SLIC_ASSERT_MSG(velo.Size() == derivative_direction.Size(),
-                  "Shape displacement and intended derivative direction FiniteElementState sizes do not agree.");
-
-  velo.Add(pertubation, derivative_direction);
-  solid_solver->setVelocity(velo);
-
-  auto dts = ts_info.dts;
-  solid_solver->advanceTimestep(dts(0)); // advance by 0.0 seconds to get initial acceleration
-  solid_solver->outputStateToDisk();
-  double qoi = computeStepQoi(solid_solver->displacement(), 0.5 * (dts(0) + dts(1)));
-  for (int i = 1; i <= ts_info.numTimesteps(); ++i) {
-    EXPECT_EQ(i, solid_solver->cycle());
-    solid_solver->advanceTimestep(dts(i));
-    solid_solver->outputStateToDisk();
-    qoi += computeStepQoi(solid_solver->displacement(), 0.5 * (dts(i) + dts(i+1)));
-  }
-  return qoi;
-}
-
-std::tuple<double, FiniteElementDual, FiniteElementDual, FiniteElementDual> computeSolidMechanicsQoiAndInitialDisplacementAndShapeSensitivity(
-    axom::sidre::DataStore& data_store, const NonlinearSolverOptions& nonlinear_opts,
-    const TimesteppingOptions&                                        dyn_opts,
-    const SolidMaterial& mat, const TimeSteppingInfo& ts_info)
-{
-  auto solid_solver = createNonlinearSolidMechanicsSolver(data_store, nonlinear_opts, dyn_opts, mat);
-  EXPECT_EQ(0, solid_solver->cycle());
-
-  auto dts = ts_info.dts;
-  solid_solver->advanceTimestep(dts(0)); // advance by 0.0 seconds to get initial acceleration
-  solid_solver->outputStateToDisk();
-  double qoi = computeStepQoi(solid_solver->displacement(), 0.5 * (dts(0) + dts(1)));
-  for (int i = 1; i <= ts_info.numTimesteps(); ++i) {
-    EXPECT_EQ(i, solid_solver->cycle());
-    solid_solver->advanceTimestep(dts(i));
-    solid_solver->outputStateToDisk();
-    qoi += computeStepQoi(solid_solver->displacement(), 0.5 * (dts(i) + dts(i+1)));
-  }
-
-  FiniteElementDual initial_displacement_sensitivity(solid_solver->displacement().space(), "init_displacement_sensitivity");
+  FiniteElementDual initial_displacement_sensitivity(solid_solver.displacement().space(), "init_displacement_sensitivity");
   initial_displacement_sensitivity = 0.0;
-  FiniteElementDual initial_velocity_sensitivity(solid_solver->velocity().space(), "init_velocity_sensitivity");
+  FiniteElementDual initial_velocity_sensitivity(solid_solver.velocity().space(), "init_velocity_sensitivity");
   initial_velocity_sensitivity = 0.0;
   FiniteElementDual shape_sensitivity(StateManager::mesh(mesh_tag), H1<SHAPE_ORDER, dim>{}, "shape_sensitivity"); // MRT, try to get this size from the physics
   shape_sensitivity = 0.0;
 
-  FiniteElementDual adjoint_load(solid_solver->displacement().space(), "adjoint_displacement_load");
+  FiniteElementDual adjoint_load(solid_solver.displacement().space(), "adjoint_displacement_load");
 
   // for solids, we go back to time = 0, because there is an extra hidden implicit solve at the start
   // consider unifying the interface between solids and thermal
-  for (int i = solid_solver->cycle(); i > 0; --i) {
-    FiniteElementState displacement = solid_solver->loadCheckpointedDisplacement(solid_solver->cycle());
+  for (int i = solid_solver.cycle(); i > 0; --i) {
+    FiniteElementState displacement = solid_solver.loadCheckpointedDisplacement(solid_solver.cycle());
     computeStepAdjointLoad(displacement, adjoint_load, 
-                      0.5*(solid_solver->loadCheckpointedTimestep(i-1) + solid_solver->loadCheckpointedTimestep(i)));
-    solid_solver->reverseAdjointTimestep({{"displacement", adjoint_load}});
-    shape_sensitivity += solid_solver->computeTimestepShapeSensitivity();
+                           0.5*(solid_solver.loadCheckpointedTimestep(i-1) + solid_solver.loadCheckpointedTimestep(i)));
+    solid_solver.zeroEssentials(adjoint_load);
+
+    EXPECT_EQ(i, solid_solver.cycle());
+    solid_solver.reverseAdjointTimestep({{"displacement", adjoint_load}});
+    shape_sensitivity += solid_solver.computeTimestepShapeSensitivity();
+    EXPECT_EQ(i-1, solid_solver.cycle());
   }
 
-  EXPECT_EQ(0, solid_solver->cycle());  // we are back to the start
-  auto initialConditionSensitivities     = solid_solver->computeInitialConditionSensitivity();
+  EXPECT_EQ(0, solid_solver.cycle());  // we are back to the start
+  auto initialConditionSensitivities      = solid_solver.computeInitialConditionSensitivity();
   auto initialDisplacementSensitivityIter = initialConditionSensitivities.find("displacement");
   auto initialVelocitySensitivityIter = initialConditionSensitivities.find("velocity");
   SLIC_ASSERT_MSG(initialDisplacementSensitivityIter != initialConditionSensitivities.end(),
                   "Could not find displacement in the computed initial condition sensitivities.");
   SLIC_ASSERT_MSG(initialVelocitySensitivityIter != initialConditionSensitivities.end(),
-                  "Could not find displacement in the computed initial condition sensitivities.");
+                  "Could not find velocity in the computed initial condition sensitivities.");
   initial_displacement_sensitivity = initialDisplacementSensitivityIter->second;
   initial_velocity_sensitivity = initialVelocitySensitivityIter->second;
 
   return std::make_tuple(qoi, initial_displacement_sensitivity, initial_velocity_sensitivity, shape_sensitivity);
 }
 
+double computeSolidMechanicsQoiAdjustingShape(SolidMechanics<p, dim>& solid_solver,
+                                              const TimeSteppingInfo&   ts_info,
+                                              const FiniteElementState& shape_derivative_direction, double pertubation)
+{
+  FiniteElementState shape_disp(StateManager::mesh(mesh_tag), H1<SHAPE_ORDER, dim>{}, "input_shape_displacement");
+  SLIC_ASSERT_MSG(shape_disp.Size() == shape_derivative_direction.Size(),
+                  "Shape displacement and intended derivative direction FiniteElementState sizes do not agree.");
+
+  shape_disp.Add(pertubation, shape_derivative_direction);
+  solid_solver.setShapeDisplacement(shape_disp);
+
+  return computeSolidMechanicsQoi(solid_solver, ts_info);
+}
+
+double computeSolidMechanicsQoiAdjustingInitialDisplacement(SolidMechanics<p, dim>& solid_solver,
+                                                            const TimeSteppingInfo&   ts_info,
+                                                            const FiniteElementState& derivative_direction, double pertubation)
+{
+  FiniteElementState disp = solid_solver.displacement();
+  SLIC_ASSERT_MSG(disp.Size() == derivative_direction.Size(),
+                  "Shape displacement and intended derivative direction FiniteElementState sizes do not agree.");
+
+  disp.Add(pertubation, derivative_direction);
+  solid_solver.setDisplacement(disp);
+
+  return computeSolidMechanicsQoi(solid_solver, ts_info);
+}
+
+double computeSolidMechanicsQoiAdjustingInitialVelocity(SolidMechanics<p, dim>& solid_solver,
+                                                        const TimeSteppingInfo& ts_info,
+                                                        const FiniteElementState& derivative_direction, double pertubation)
+{
+  FiniteElementState velo = solid_solver.velocity();
+  SLIC_ASSERT_MSG(velo.Size() == derivative_direction.Size(),
+                  "Shape displacement and intended derivative direction FiniteElementState sizes do not agree.");
+
+  velo.Add(pertubation, derivative_direction);
+  solid_solver.setVelocity(velo);
+
+  return computeSolidMechanicsQoi(solid_solver, ts_info);
+}
 
 struct SolidMechanicsSensitivityFixture : public ::testing::Test {
   void SetUp() override
@@ -232,49 +200,54 @@ struct SolidMechanicsSensitivityFixture : public ::testing::Test {
   {
     auto sz = direction.Size();
     for (int i=0; i < sz; ++i) {
-      direction(i) = -1.2 + 2.1 * (double(i)/sz);
+      direction(i) = -1.2 + 2.02 * (double(i)/sz);
     }
   }
 
   axom::sidre::DataStore dataStore;
   mfem::ParMesh*         mesh;
 
-  NonlinearSolverOptions nonlinear_opts{.relative_tol = 5.0e-13, .absolute_tol = 5.0e-13};
+  NonlinearSolverOptions nonlinear_opts{.relative_tol = 1.0e-15, .absolute_tol = 1.0e-15};
 
+  bool dispBc = true;
   TimesteppingOptions dyn_opts{.timestepper        = TimestepMethod::Newmark,
-                               .enforcement_method = DirichletEnforcementMethod::RateControl};
+                               .enforcement_method = dispBc ? DirichletEnforcementMethod::DirectControl : DirichletEnforcementMethod::RateControl};
 
   SolidMaterial mat;
   TimeSteppingInfo tsInfo;
+
+  static constexpr double eps = 2e-7;
 };
 
 TEST_F(SolidMechanicsSensitivityFixture, InitialDisplacementSensitivities)
 {
-  auto [qoi_base, init_disp_sensitivity, _, __] = 
-      computeSolidMechanicsQoiAndInitialDisplacementAndShapeSensitivity(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo);
+  auto solid_solver_base = createNonlinearSolidMechanicsSolver(dataStore, nonlinear_opts, dyn_opts, mat);
+  auto [qoi_base, init_disp_sensitivity, _, __] = computeSolidMechanicsQoiSensitivity(*solid_solver_base, tsInfo);
 
-  FiniteElementState derivative_direction(init_disp_sensitivity.space(), "derivative_direction");
+  auto solid_solver_pert = createNonlinearSolidMechanicsSolver(dataStore, nonlinear_opts, dyn_opts, mat);
+
+  FiniteElementState derivative_direction(solid_solver_pert->displacement().space(), "derivative_direction");
   fillDirection(derivative_direction);
+  solid_solver_pert->zeroEssentials(derivative_direction);
 
-  const double eps = 1e-7;
-
-  double qoi_plus = computeSolidMechanicsQoiAdjustingInitialDisplacement(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo,
-                                                                derivative_direction, eps);
+  double qoi_plus = computeSolidMechanicsQoiAdjustingInitialDisplacement(*solid_solver_pert, tsInfo,
+                                                                         derivative_direction, eps);
   double directional_deriv = innerProduct(derivative_direction, init_disp_sensitivity);
   EXPECT_NEAR(directional_deriv, (qoi_plus - qoi_base) / eps, 16*eps);
 }
 
 TEST_F(SolidMechanicsSensitivityFixture, InitialVelocitySensitivities)
 {
-  auto [qoi_base, _, init_velo_sensitivity, __] = 
-      computeSolidMechanicsQoiAndInitialDisplacementAndShapeSensitivity(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo);
+  auto solid_solver_base = createNonlinearSolidMechanicsSolver(dataStore, nonlinear_opts, dyn_opts, mat);
+  auto [qoi_base, _, init_velo_sensitivity, __] = computeSolidMechanicsQoiSensitivity(*solid_solver_base, tsInfo);
 
-  FiniteElementState derivative_direction(init_velo_sensitivity.space(), "derivative_direction");
+  auto solid_solver_pert = createNonlinearSolidMechanicsSolver(dataStore, nonlinear_opts, dyn_opts, mat);
+
+  FiniteElementState derivative_direction(solid_solver_pert->velocity().space(), "derivative_direction");
   fillDirection(derivative_direction);
+  solid_solver_pert->zeroEssentials(derivative_direction);
 
-  const double eps = 1e-7;
-
-  double qoi_plus = computeSolidMechanicsQoiAdjustingInitialVelocity(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo,
+  double qoi_plus = computeSolidMechanicsQoiAdjustingInitialVelocity(*solid_solver_pert, tsInfo,
                                                                      derivative_direction, eps);
   double directional_deriv = innerProduct(derivative_direction, init_velo_sensitivity);
   EXPECT_NEAR(directional_deriv, (qoi_plus - qoi_base) / eps, 16*eps);
@@ -282,16 +255,16 @@ TEST_F(SolidMechanicsSensitivityFixture, InitialVelocitySensitivities)
 
 TEST_F(SolidMechanicsSensitivityFixture, ShapeSensitivities)
 {
-  auto [qoi_base, _, __, shape_sensitivity] =
-      computeSolidMechanicsQoiAndInitialDisplacementAndShapeSensitivity(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo);
+  auto solid_solver_base = createNonlinearSolidMechanicsSolver(dataStore, nonlinear_opts, dyn_opts, mat);
+  auto [qoi_base, _, __, shape_sensitivity] = computeSolidMechanicsQoiSensitivity(*solid_solver_base, tsInfo);
+
+  auto solid_solver_pert = createNonlinearSolidMechanicsSolver(dataStore, nonlinear_opts, dyn_opts, mat);
 
   FiniteElementState derivative_direction(shape_sensitivity.space(), "derivative_direction");
   fillDirection(derivative_direction);
 
-  const double eps = 1e-7;
+  double qoi_plus = computeSolidMechanicsQoiAdjustingShape(*solid_solver_pert, tsInfo, derivative_direction, eps);
 
-  double qoi_plus =
-      computeSolidMechanicsQoiAdjustingShape(dataStore, nonlinear_opts, dyn_opts, mat, tsInfo, derivative_direction, eps);
   double directional_deriv = innerProduct(derivative_direction, shape_sensitivity);
   EXPECT_NEAR(directional_deriv, (qoi_plus - qoi_base) / eps, eps);
 }
@@ -304,7 +277,7 @@ int main(int argc, char* argv[])
   MPI_Init(&argc, &argv);
 
   axom::slic::SimpleLogger logger;
-
+  std::cout << std::setprecision(16);
   int result = RUN_ALL_TESTS();
   MPI_Finalize();
 

@@ -133,12 +133,13 @@ double computeThermalQoiAdjustingShape(axom::sidre::DataStore& data_store, const
 {
   auto thermal = createNonlinearHeatTransfer(data_store, nonlinear_opts, dyn_opts, mat);
 
-  FiniteElementState shapeDisp(StateManager::mesh(mesh_tag), H1<SHAPE_ORDER, dim>{}, "input_shape_displacement");
+  FiniteElementState shape_disp(StateManager::mesh(mesh_tag), H1<SHAPE_ORDER, dim>{}, "input_shape_displacement");
 
-  SLIC_ASSERT_MSG(shapeDisp.Size() == shape_derivative_direction.Size(),
+  SLIC_ASSERT_MSG(shape_disp.Size() == shape_derivative_direction.Size(),
                   "Shape displacement and intended derivative direction FiniteElementState sizes do not agree.");
 
-  shapeDisp.Add(pertubation, shape_derivative_direction);
+  shape_disp.Add(pertubation, shape_derivative_direction);
+  thermal->setShapeDisplacement(shape_disp);
 
   double qoi = 0.0;
   thermal->outputStateToDisk();
