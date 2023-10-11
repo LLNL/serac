@@ -29,7 +29,7 @@ void adjoint_integrate(double dt_n, double dt_np1,
   // there are hard-coded here for now
   static constexpr double beta = 0.25;
   static constexpr double gamma = 0.5;
-    // reminder, gathering info from the various layers of time integration
+  // reminder, gathering info from the various layers of time integration
   // c0 = fac3 * dt * dt
   // c1 = fac4 * dt
 
@@ -56,21 +56,20 @@ void adjoint_integrate(double dt_n, double dt_np1,
 
   mfem::HypreParVector scratch(adjoint_rhs);
   for (const auto& bc : bcs_.essentials()) {
-    bc.apply(*J_T, scratch, adjoint_essential);
+    bc.apply(*J_T, adjoint_rhs, adjoint_essential);
   }
 
   lin_solver.SetOperator(*J_T);
   // really adjoint acceleration
   lin_solver.Mult(adjoint_rhs, adjoint_displacement_);
 
-  //adjoint_displacement_.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
-
   // the current residual has no given dependence on velo, otherwise, there would be another term
   //implicit_sensitivity_velocity_start_of_step_.Add(-1.0, velo_adjoint_load_vector);
   implicit_sensitivity_velocity_start_of_step_.Add(dt_np1, implicit_sensitivity_displacement_start_of_step_);
 
-  // for (const auto& bc : bcs_.essentials()) {
-  //  bc.apply(*k_mat, scratch, adjoint_essential);
+  // should we do bc.apply on k_mat as well?
+  //for (const auto& bc : bcs_.essentials()) {
+  //  bc.apply(*k_mat, adjoint_rhs, adjoint_essential);
   //}
 
   // the 1.0, 1.0 is to += the implicit sensitivity
@@ -78,7 +77,6 @@ void adjoint_integrate(double dt_n, double dt_np1,
 
   implicit_sensitivity_displacement_start_of_step_.Add(-1.0, disp_adjoint_load_vector);
   // MRT, recent change 
-  implicit_sensitivity_displacement_start_of_step_.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
 }
 
 }

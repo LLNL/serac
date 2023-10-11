@@ -38,6 +38,8 @@ struct TimeSteppingInfo {
 };
 
 constexpr double dispTarget = -0.34;
+constexpr double boundaryDisp = 0.013;
+
 constexpr double initialInteriorDisp = 0.03;
 constexpr double initialInteriorVelo = 0.04;
 
@@ -66,7 +68,7 @@ std::unique_ptr<SolidMechanics<p, dim>> createNonlinearSolidMechanicsSolver(
   auto solid = std::make_unique<SolidMechanics<p, dim>>(nonlinear_opts, solid_mechanics::direct_linear_options, dyn_opts,
                                                         geoNonlinear, physics_prefix + std::to_string(iter++), mesh_tag);
   solid->setMaterial(mat);
-  solid->setDisplacementBCs({1}, [](const mfem::Vector&, mfem::Vector& disp) { disp = 0.0; });
+  solid->setDisplacementBCs({1}, [](const mfem::Vector&, mfem::Vector& disp) { disp = boundaryDisp; });
   solid->addBodyForce([](auto X, auto /* t */) {
     auto Y = X;
     Y[0] = 0.1 + 0.1 * X[0] + 0.3 * X[1];
@@ -74,6 +76,24 @@ std::unique_ptr<SolidMechanics<p, dim>> createNonlinearSolidMechanicsSolver(
     return 0.1*X + Y;
   });
   solid->completeSetup();
+
+  FiniteElementState& disp = solid->displacement();
+  disp = initialInteriorDisp;
+  solid->zeroEssentials(disp);
+
+  FiniteElementState& velo = solid->velocity();
+  velo = initialInteriorVelo;
+  solid->zeroEssentials(velo);
+
+  FiniteElementState bDisp1 = disp;
+  FiniteElementState bDisp2 = disp;
+  bDisp1 = boundaryDisp;
+  bDisp2 = boundaryDisp;
+  solid->zeroEssentials(bDisp2);
+
+  disp += bDisp1;
+  disp -= bDisp2;
+  
   return solid;
 }
 
