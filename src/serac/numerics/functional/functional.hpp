@@ -224,8 +224,7 @@ public:
     }
 
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
-      auto ts     = trial_space_[i];
-      P_trial_[i] = ts->GetProlongationMatrix();
+      P_trial_[i] = trial_space_[i]->GetProlongationMatrix();
 
       input_L_[i].SetSize(P_trial_[i]->Height(), mfem::Device::GetMemoryType());
 
