@@ -45,8 +45,7 @@ BasePhysics::BasePhysics(std::string physics_name, std::string mesh_tag)
   StateManager::storeDual(*shape_displacement_sensitivity_);
 }
 
-BasePhysics::BasePhysics( int p, std::string physics_name, std::string mesh_tag)
-    : BasePhysics(physics_name, mesh_tag)
+BasePhysics::BasePhysics(int p, std::string physics_name, std::string mesh_tag) : BasePhysics(physics_name, mesh_tag)
 {
   order_ = p;
 }
