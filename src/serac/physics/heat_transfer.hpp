@@ -708,9 +708,6 @@ public:
       lin_solver.SetOperator(*J_T);
       lin_solver.Mult(temperature_adjoint_load_vector, adjoint_temperature_);
 
-      // Reset the equation solver to use the full nonlinear residual operator.  MRT, is this needed?
-      nonlin_solver_->setOperator(residual_with_bcs_);
-
       return {{"adjoint_temperature", adjoint_temperature_}};
     }
 

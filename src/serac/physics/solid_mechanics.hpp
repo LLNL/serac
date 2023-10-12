@@ -218,7 +218,7 @@ public:
 
       // TODO: The above call was seg faulting in the HYPRE_BoomerAMGSetInterpRefine(amg_precond, interp_refine)
       // method as of Hypre version v2.26.0. Instead, we just set the system size for Hypre. This is a temporary work
-      // around as it will decrease the effectiveness of the preconditZioner.
+      // around as it will decrease the effectiveness of the preconditioner.
       amg_prec->SetSystemsOptions(dim, true);
     }
 
@@ -235,8 +235,6 @@ public:
 
     u_.SetSize(true_size);
     v_.SetSize(true_size);
-    // previous_a_.SetSize(true_size);
-    // previous_a_ = 0.0;
 
     du_.SetSize(true_size);
     du_ = 0.0;
@@ -742,7 +740,7 @@ public:
   }
 
   /// @overload
-  void setDisplacement(const FiniteElementState temp) { displacement_ = temp; }
+  void setDisplacement(const FiniteElementState& temp) { displacement_ = temp; }
 
   /**
    * @brief Set the underlying finite element state to a prescribed velocity
@@ -757,7 +755,7 @@ public:
   }
 
   /// @overload
-  void setVelocity(const FiniteElementState temp) { velocity_ = temp; }
+  void setVelocity(const FiniteElementState& temp) { velocity_ = temp; }
 
   /**
    * @brief Set the body forcefunction
