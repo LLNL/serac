@@ -47,7 +47,6 @@ void adjoint_integrate(double dt_n, double dt_np1, mfem::HypreParMatrix* m_mat, 
   adjoint_rhs.Add(-dt_np1 * dt_np1 * fac1 - dt_n * dt_n * fac3 - dt_n * dt_np1 * fac4,
                   implicit_sensitivity_displacement_start_of_step_);
 
-  mfem::HypreParVector scratch(adjoint_rhs);
   for (const auto& bc : bcs_.essentials()) {
     bc.apply(*J_T, adjoint_rhs, adjoint_essential);
   }
@@ -60,16 +59,10 @@ void adjoint_integrate(double dt_n, double dt_np1, mfem::HypreParMatrix* m_mat, 
   // implicit_sensitivity_velocity_start_of_step_.Add(-1.0, velo_adjoint_load_vector);
   implicit_sensitivity_velocity_start_of_step_.Add(dt_np1, implicit_sensitivity_displacement_start_of_step_);
 
-  // should we do bc.apply on k_mat as well?
-  // for (const auto& bc : bcs_.essentials()) {
-  //  bc.apply(*k_mat, adjoint_rhs, adjoint_essential);
-  //}
-
-  // the 1.0, 1.0 is to += the implicit sensitivity
+  // the 1.0, 1.0 means += the implicit sensitivity
   k_mat->MultTranspose(adjoint_displacement_, implicit_sensitivity_displacement_start_of_step_, 1.0, 1.0);
 
   implicit_sensitivity_displacement_start_of_step_.Add(-1.0, disp_adjoint_load_vector);
-  // MRT, recent change
 }
 
 }  // namespace detail

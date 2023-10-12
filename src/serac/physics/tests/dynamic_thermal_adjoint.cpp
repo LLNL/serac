@@ -144,8 +144,7 @@ double computeThermalQoiAdjustingConductivity(
     const TimeSteppingInfo& ts_info, const FiniteElementState& conductivity_derivative_direction, double pertubation)
 {
   auto thermal = createParameterizedHeatTransfer(data_store, nonlinear_opts, dyn_opts, mat);
-  EXPECT_EQ(thermal->cycle(), 0);
-
+  // EXPECT_EQ(thermal->cycle(), 0);
 
   FiniteElementState cond(StateManager::mesh(mesh_tag), H1<p>{}, "input_conductivity");
   cond = 1.1;

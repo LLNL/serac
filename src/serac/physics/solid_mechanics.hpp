@@ -1253,9 +1253,6 @@ public:
         accel_adjoint_load_vector, adjoint_displacement_, implicit_sensitivity_displacement_start_of_step_,
         implicit_sensitivity_velocity_start_of_step_, adjoint_essential, bcs_, lin_solver);
 
-    // Reset the equation solver to use the full nonlinear residual operator
-    nonlin_solver_->setOperator(*residual_with_bcs_);  // MRT, do we need this?
-
     time_ -= dt_n;
     cycle_--;
 

@@ -766,9 +766,6 @@ public:
     implicit_sensitivity_temperature_start_of_step_.Add(
         1.0 / dt_, temperature_rate_adjoint_load_vector);  // already multiplied by -1
 
-    // Reset the equation solver to use the full nonlinear residual operator
-    nonlin_solver_->setOperator(residual_with_bcs_);
-
     time_ -= dt_;
     cycle_--;
 
