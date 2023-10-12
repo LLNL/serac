@@ -296,6 +296,25 @@ public:
         MakeDomainIntegral<signature, Q, dim>(domain, integrand, qdata, std::vector<uint32_t>{args...}));
   }
 
+  /// @overload
+  template <int dim, int... args, typename lambda, typename qpt_data_type = Nothing>
+  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, Domain& domain,
+                         std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
+  {
+    if (domain.mesh.GetNE() == 0) return;
+
+    SLIC_ERROR_ROOT_IF(dim != domain.mesh.Dimension(), "invalid mesh dimension for domain integral");
+
+    check_for_unsupported_elements(domain.mesh);
+    check_for_missing_nodal_gridfunc(domain.mesh);
+
+    using signature = test(decltype(serac::type<args>(trial_spaces))...);
+    integrals_.push_back(
+        MakeDomainIntegral<signature, Q, dim>(domain, integrand, qdata, std::vector<uint32_t>{args...}));
+  }
+
+
+
   /**
    * @brief Adds a boundary integral term to the weak formulation of the PDE
    * @tparam dim The dimension of the boundary element (1 for line, 2 for quad, etc)

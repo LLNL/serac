@@ -139,7 +139,7 @@ template <uint32_t differentiation_index, int Q, mfem::Geometry::Type geom, type
 void evaluation_kernel_impl(FunctionSignature<test(trials...)>, const std::vector<const double*>& inputs,
                             double* outputs, const double* positions, const double* jacobians, lambda_type qf,
                             [[maybe_unused]] axom::ArrayView<state_type, 2> qf_state,
-                            [[maybe_unused]] derivative_type* qf_derivatives, uint32_t num_elements, bool update_state,
+                            [[maybe_unused]] derivative_type* qf_derivatives, const int * elements, uint32_t num_elements, bool update_state,
                             std::integer_sequence<int, indices...>)
 {
   using test_element = finite_element<geom, test>;
@@ -161,13 +161,14 @@ void evaluation_kernel_impl(FunctionSignature<test(trials...)>, const std::vecto
 
   // for each element in the domain
   for (uint32_t e = 0; e < num_elements; e++) {
+
     // load the jacobians and positions for each quadrature point in this element
-    auto J_e = J[e];
-    auto x_e = x[e];
+    auto J_e = J[elements[e]];
+    auto x_e = x[elements[e]];
 
     // batch-calculate values / derivatives of each trial space, at each quadrature point
     [[maybe_unused]] tuple qf_inputs = {promote_each_to_dual_when<indices == differentiation_index>(
-        get<indices>(trial_elements).interpolate(get<indices>(u)[e], rule))...};
+        get<indices>(trial_elements).interpolate(get<indices>(u)[elements[e]], rule))...};
 
     // use J_e to transform values / derivatives on the parent element
     // to the to the corresponding values / derivatives on the physical element
@@ -200,7 +201,7 @@ void evaluation_kernel_impl(FunctionSignature<test(trials...)>, const std::vecto
     }
 
     // (batch) integrate the material response against the test-space basis functions
-    test_element::integrate(get_value(qf_outputs), rule, &r[e]);
+    test_element::integrate(get_value(qf_outputs), rule, &r[elements[e]]);
   }
 }
 
@@ -349,11 +350,11 @@ template <uint32_t wrt, int Q, mfem::Geometry::Type geom, typename signature, ty
 std::function<void(const std::vector<const double*>&, double*, bool)> evaluation_kernel(
     signature s, lambda_type qf, const double* positions, const double* jacobians,
     std::shared_ptr<QuadratureData<state_type> > qf_state, std::shared_ptr<derivative_type> qf_derivatives,
-    uint32_t num_elements)
+    const int * elements, uint32_t num_elements)
 {
   return [=](const std::vector<const double*>& inputs, double* outputs, bool update_state) {
     domain_integral::evaluation_kernel_impl<wrt, Q, geom>(s, inputs, outputs, positions, jacobians, qf,
-                                                          (*qf_state)[geom], qf_derivatives.get(), num_elements,
+                                                          (*qf_state)[geom], qf_derivatives.get(), elements, num_elements,
                                                           update_state, s.index_seq);
   };
 }

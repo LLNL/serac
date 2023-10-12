@@ -198,7 +198,7 @@ struct Integral {
  */
 template <mfem::Geometry::Type geom, int Q, typename test, typename... trials, typename lambda_type,
           typename qpt_data_type>
-void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, lambda_type&& qf, mfem::Mesh& domain,
+void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, lambda_type&& qf, const mfem::Mesh& domain,
                       std::shared_ptr<QuadratureData<qpt_data_type> > qdata)
 {
   integral.geometric_factors_[geom] = GeometricFactors(&domain, Q, geom);
@@ -234,6 +234,45 @@ void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, 
   });
 }
 
+/// @overload
+template <mfem::Geometry::Type geom, int Q, typename test, typename... trials, typename lambda_type,
+          typename qpt_data_type>
+void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, lambda_type&& qf, const Domain & domain,
+                      std::shared_ptr<QuadratureData<qpt_data_type> > qdata)
+{
+  integral.geometric_factors_[geom] = GeometricFactors(domain, Q, geom);
+  GeometricFactors& gf              = integral.geometric_factors_[geom];
+  if (gf.num_elements == 0) return;
+
+  const double*  positions        = gf.X.Read();
+  const double*  jacobians        = gf.J.Read();
+  const uint32_t num_elements     = uint32_t(gf.num_elements);
+  const uint32_t qpts_per_element = num_quadrature_points(geom, Q);
+
+  std::shared_ptr<zero> dummy_derivatives;
+  integral.evaluation_[geom] = domain_integral::evaluation_kernel<NO_DIFFERENTIATION, Q, geom>(
+      s, qf, positions, jacobians, qdata, dummy_derivatives, &domain.get(geom)[0], num_elements);
+
+  constexpr std::size_t                 num_args = s.num_args;
+  [[maybe_unused]] static constexpr int dim      = dimension_of(geom);
+  for_constexpr<num_args>([&](auto index) {
+    // allocate memory for the derivatives of the q-function at each quadrature point
+    //
+    // Note: ptrs' lifetime is managed in an unusual way! It is captured by-value in the
+    // action_of_gradient functor below to augment the reference count, and extend its lifetime to match
+    // that of the DomainIntegral that allocated it.
+    using derivative_type = decltype(domain_integral::get_derivative_type<index, dim, trials...>(qf, qpt_data_type{}));
+    auto ptr = accelerator::make_shared_array<ExecutionSpace::CPU, derivative_type>(num_elements * qpts_per_element);
+
+    integral.evaluation_with_AD_[index][geom] =
+        domain_integral::evaluation_kernel<index, Q, geom>(s, qf, positions, jacobians, qdata, ptr, &domain.get(geom)[0], num_elements);
+
+    integral.jvp_[index][geom] = domain_integral::jacobian_vector_product_kernel<index, Q, geom>(s, ptr, num_elements);
+    integral.element_gradient_[index][geom] =
+        domain_integral::element_gradient_kernel<index, Q, geom>(s, ptr, num_elements);
+  });
+}
+
 /**
  * @brief function to generate kernels held by an `Integral` object of type "Domain", for all element types
  *
@@ -250,6 +289,27 @@ void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, 
  */
 template <typename s, int Q, int dim, typename lambda_type, typename qpt_data_type>
 Integral MakeDomainIntegral(mfem::Mesh& domain, lambda_type&& qf, std::shared_ptr<QuadratureData<qpt_data_type> > qdata,
+                            std::vector<uint32_t> argument_indices)
+{
+  FunctionSignature<s> signature;
+
+  Integral integral(Integral::Type::Domain, argument_indices);
+
+  if constexpr (dim == 2) {
+    generate_kernels<mfem::Geometry::TRIANGLE, Q>(signature, integral, qf, domain, qdata);
+    generate_kernels<mfem::Geometry::SQUARE, Q>(signature, integral, qf, domain, qdata);
+  }
+
+  if constexpr (dim == 3) {
+    generate_kernels<mfem::Geometry::TETRAHEDRON, Q>(signature, integral, qf, domain, qdata);
+    generate_kernels<mfem::Geometry::CUBE, Q>(signature, integral, qf, domain, qdata);
+  }
+
+  return integral;
+}
+
+template <typename s, int Q, int dim, typename lambda_type, typename qpt_data_type>
+Integral MakeDomainIntegral(const Domain& domain, lambda_type&& qf, std::shared_ptr<QuadratureData<qpt_data_type> > qdata,
                             std::vector<uint32_t> argument_indices)
 {
   FunctionSignature<s> signature;
