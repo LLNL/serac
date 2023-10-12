@@ -25,23 +25,20 @@ void MaterialInputOptions::defineInputFileSchema(axom::inlet::Container& contain
   container.addDouble("sigma_y", "Yield stress");
 
   // Heat transfer parameters
-  container.addDouble("kappa", "The conductivity parameter")
-  container.addDouble("cp", "The specific heat capacity")
+  container.addDouble("kappa", "The conductivity parameter");
+  container.addDouble("cp", "The specific heat capacity");
 }
 
 void MaterialInputOptions::verifyInputFileSchema(axom::inlet::Container& container)
 {
   container.registerVerifier([](const axom::inlet::Container& container) -> bool {
-    bool model_present = container.contains("model") &&
-      (container["model"].type() == axom::inlet::InletType::String);
-    bool density_present = container.contains("density") &&
-      (container["density"].type() == axom::inlet::InletType::Double);
-    
+    bool model_present = container.contains("model") && (container["model"].type() == axom::inlet::InletType::String);
+    bool density_present =
+        container.contains("density") && (container["density"].type() == axom::inlet::InletType::Double);
+
     // Solid mechanics (neo-hookean, linear isotropic)
-    bool K_present = container.contains("K") &&
-      (container["K"].type() == axom::inlet::InletType::Double);
-    bool mu_present = container.contains("mu") &&
-      (container["mu"].type() == axom::inlet::InletType::Double);
+    bool K_present  = container.contains("K") && (container["K"].type() == axom::inlet::InletType::Double);
+    bool mu_present = container.contains("mu") && (container["mu"].type() == axom::inlet::InletType::Double);
 
     // Solid mechanics (j2, j2nonlinear)
     // bool E_present = container.contains("E") &&
@@ -56,33 +53,22 @@ void MaterialInputOptions::verifyInputFileSchema(axom::inlet::Container& contain
     //   (container["sigma_y"].type() == axom::inlet::InletType::Double);
 
     // Heat transfer
-    bool kappa_present = container.contains("kappa") &&
-      (container["kappa"].type() == axom::inlet::InletType::Double);
-    bool cp_present = container.contains("cp") &&
-      (container["cp"].type() == axom::inlet::InletType::Double);
+    bool kappa_present = container.contains("kappa") && (container["kappa"].type() == axom::inlet::InletType::Double);
+    bool cp_present    = container.contains("cp") && (container["cp"].type() == axom::inlet::InletType::Double);
 
     if (!model_present) return false;
     std::string mat = container["model"];
 
     // TODO, also check if invalid variables are not present?
-    if (mat == "NeoHookean" || mat == "LinearIsotropic")
-    {
+    if (mat == "NeoHookean" || mat == "LinearIsotropic") {
       return density_present && K_present && mu_present;
-    }
-    else if (mat == "J2")
-    {
+    } else if (mat == "J2") {
       // TODO
-    }
-    else if (mat == "J2Nonlinear")
-    {
+    } else if (mat == "J2Nonlinear") {
       // TODO
-    }
-    else if (mat == "LinearIsotropicConductor")
-    {
+    } else if (mat == "LinearIsotropicConductor") {
       return density_present && kappa_present && cp_present;
-    }
-    else if (mat == "LinearConductor")
-    {
+    } else if (mat == "LinearConductor") {
       // TODO
     }
 
