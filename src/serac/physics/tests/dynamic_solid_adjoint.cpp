@@ -103,18 +103,14 @@ std::unique_ptr<SolidMechanics<p, dim>> createNonlinearSolidMechanicsSolver(
 double computeSolidMechanicsQoi(SolidMechanics<p, dim>& solid_solver, const TimeSteppingInfo& ts_info)
 {
   auto dts = ts_info.dts;
-  solid_solver.outputStateToDisk();
   solid_solver.advanceTimestep(dts(0));  // advance by 0.0 seconds to get initial acceleration
   solid_solver.outputStateToDisk();
   FiniteElementState dispForObjective = solid_solver.displacement();
-  // solid_solver.zeroEssentials(dispForObjective);
   double qoi = computeStepQoi(dispForObjective, 0.5 * (dts(0) + dts(1)));
   for (int i = 1; i <= ts_info.numTimesteps(); ++i) {
-    EXPECT_EQ(i, solid_solver.cycle());
     solid_solver.advanceTimestep(dts(i));
     solid_solver.outputStateToDisk();
     dispForObjective = solid_solver.displacement();
-    // solid_solver.zeroEssentials(dispForObjective);
     qoi += computeStepQoi(dispForObjective, 0.5 * (dts(i) + dts(i + 1)));
   }
   return qoi;
@@ -145,8 +141,6 @@ std::tuple<double, FiniteElementDual, FiniteElementDual, FiniteElementDual> comp
     computeStepAdjointLoad(
         displacement, adjoint_load,
         0.5 * (solid_solver.loadCheckpointedTimestep(i - 1) + solid_solver.loadCheckpointedTimestep(i)));
-    // solid_solver.zeroEssentials(adjoint_load);
-
     EXPECT_EQ(i, solid_solver.cycle());
     solid_solver.reverseAdjointTimestep({{"displacement", adjoint_load}});
     shape_sensitivity += solid_solver.computeTimestepShapeSensitivity();

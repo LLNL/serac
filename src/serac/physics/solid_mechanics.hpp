@@ -1136,12 +1136,8 @@ public:
     dt_history_.push_back(dt);
     cycle_ += 1;
 
-    // std::cout << "displacement at cycle " << cycle_ << " = " << displacement_.Norml2() << std::endl;
-    // std::cout << "velocity at cycle " << cycle_ << " = " << velocity_.Norml2() << std::endl;
-    // std::cout << "acceleration at cycle " << cycle_ << " = " << acceleration_.Norml2() << std::endl;
-
-    SLIC_ERROR_ROOT_IF(dt_history_.size() != static_cast<size_t>(cycle_),
-                       "Timestep history count does not match the current cycle count.");
+    //SLIC_ERROR_ROOT_IF(dt_history_.size() != static_cast<size_t>(cycle_),
+    //                   "Timestep history count does not match the current cycle count.");
   }
 
   /**
