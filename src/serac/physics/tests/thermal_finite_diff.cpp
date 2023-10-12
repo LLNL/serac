@@ -34,7 +34,10 @@ TEST(Thermal, FiniteDifference)
   std::string filename = SERAC_REPO_DIR "/data/meshes/square.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
+
+  std::string mesh_tag{"mesh"};
+
+  auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   constexpr int p   = 1;
   constexpr int dim = 2;
@@ -51,14 +54,16 @@ TEST(Thermal, FiniteDifference)
   // Note that we now include an extra template parameter indicating the finite element space for the parameterized
   // field, in this case the thermal conductivity. We also pass an array of finite element states for each of the
   // requested parameterized fields.
-  HeatTransfer<p, dim, Parameters<H1<1>>> thermal_solver(heat_transfer::default_nonlinear_options,
-                                                         heat_transfer::default_linear_options,
-                                                         heat_transfer::default_static_options, "thermal_functional");
+  HeatTransfer<p, dim, Parameters<H1<1>>> thermal_solver(
+      heat_transfer::default_nonlinear_options, heat_transfer::default_linear_options,
+      heat_transfer::default_static_options, "thermal_functional", mesh_tag, {"conductivity"});
 
-  auto user_defined_conductivity = thermal_solver.generateParameter("user_defined_conductivity", 0);
+  FiniteElementState user_defined_conductivity(pmesh, H1<1>{}, "user_defined_conductivity");
 
-  double conductivity_value  = 1.2;
-  *user_defined_conductivity = conductivity_value;
+  double conductivity_value = 1.2;
+  user_defined_conductivity = conductivity_value;
+
+  thermal_solver.setParameter(0, user_defined_conductivity);
 
   // Construct a potentially user-defined parameterized material and send it to the thermal module
   heat_transfer::ParameterizedLinearIsotropicConductor mat;
@@ -83,15 +88,15 @@ TEST(Thermal, FiniteDifference)
   thermal_solver.completeSetup();
 
   // Perform the quasi-static solve
-  double dt = 1.0;
-  thermal_solver.advanceTimestep(dt);
+  thermal_solver.advanceTimestep(1.0);
 
   // Output the sidre-based plot files
-  thermal_solver.outputState();
+  thermal_solver.outputStateToDisk();
 
   // Make up an adjoint load which can also be viewed as a
   // sensitivity of some qoi with respect to displacement
-  mfem::ParLinearForm adjoint_load_form(&thermal_solver.temperature().space());
+  mfem::ParLinearForm adjoint_load_form(
+      const_cast<mfem::ParFiniteElementSpace*>(&thermal_solver.temperature().space()));
   adjoint_load_form = 1.0;
 
   // Construct a dummy adjoint load (this would come from a QOI downstream).
@@ -110,23 +115,26 @@ TEST(Thermal, FiniteDifference)
   // to check if computed qoi sensitivity is consistent
   // with finite difference on the temperature
   double eps = 1.0e-4;
-  for (int i = 0; i < user_defined_conductivity->gridFunction().Size(); ++i) {
+  for (int i = 0; i < user_defined_conductivity.gridFunction().Size(); ++i) {
     // Perturb the conductivity
-    (*user_defined_conductivity)(i) = conductivity_value + eps;
+    (user_defined_conductivity)(i) = conductivity_value + eps;
 
-    thermal_solver.advanceTimestep(dt);
+    thermal_solver.setParameter(0, user_defined_conductivity);
+    thermal_solver.advanceTimestep(1.0);
     mfem::ParGridFunction temperature_plus = thermal_solver.temperature().gridFunction();
 
-    (*user_defined_conductivity)(i) = conductivity_value - eps;
+    (user_defined_conductivity)(i) = conductivity_value - eps;
 
-    thermal_solver.advanceTimestep(dt);
+    thermal_solver.setParameter(0, user_defined_conductivity);
+    thermal_solver.advanceTimestep(1.0);
     mfem::ParGridFunction temperature_minus = thermal_solver.temperature().gridFunction();
 
     // Reset to the original conductivity value
-    (*user_defined_conductivity)(i) = conductivity_value;
+    (user_defined_conductivity)(i) = conductivity_value;
 
     // Finite difference to compute sensitivity of temperature with respect to conductivity
-    mfem::ParGridFunction dtemp_dconductivity(&thermal_solver.temperature().space());
+    mfem::ParGridFunction dtemp_dconductivity(
+        const_cast<mfem::ParFiniteElementSpace*>(&thermal_solver.temperature().space()));
     for (int i2 = 0; i2 < temperature_plus.Size(); ++i2) {
       dtemp_dconductivity(i2) = (temperature_plus(i2) - temperature_minus(i2)) / (2.0 * eps);
     }
@@ -157,7 +165,10 @@ TEST(HeatTransfer, FiniteDifferenceShape)
   std::string filename = SERAC_REPO_DIR "/data/meshes/star.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
+
+  std::string mesh_tag{"mesh"};
+
+  auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   constexpr int p   = 1;
   constexpr int dim = 2;
@@ -173,13 +184,13 @@ TEST(HeatTransfer, FiniteDifferenceShape)
 
   // Construct a functional-based thermal solver
   HeatTransfer<p, dim> thermal_solver(nonlin_opts, heat_transfer::direct_linear_options,
-                                      heat_transfer::default_static_options, "thermal_functional_shape");
+                                      heat_transfer::default_static_options, "thermal_functional_shape", mesh_tag);
 
   heat_transfer::LinearIsotropicConductor mat(1.0, 1.0, 1.0);
 
   thermal_solver.setMaterial(mat);
 
-  FiniteElementState shape_displacement(thermal_solver.shapeDisplacement());
+  FiniteElementState shape_displacement(pmesh, H1<SHAPE_ORDER, dim>{});
 
   shape_displacement = shape_displacement_value;
   thermal_solver.setShapeDisplacement(shape_displacement);
@@ -198,15 +209,15 @@ TEST(HeatTransfer, FiniteDifferenceShape)
   thermal_solver.completeSetup();
 
   // Perform the quasi-static solve
-  double dt = 1.0;
-  thermal_solver.advanceTimestep(dt);
+  thermal_solver.advanceTimestep(1.0);
 
   // Output the sidre-based plot files
-  thermal_solver.outputState();
+  thermal_solver.outputStateToDisk();
 
   // Make up an adjoint load which can also be viewed as a
   // sensitivity of some qoi with respect to temperature
-  mfem::ParLinearForm adjoint_load_form(&thermal_solver.temperature().space());
+  mfem::ParLinearForm adjoint_load_form(
+      const_cast<mfem::ParFiniteElementSpace*>(&thermal_solver.temperature().space()));
   adjoint_load_form = 1.0;
 
   // Construct a dummy adjoint load (this would come from a QOI downstream).
@@ -230,13 +241,13 @@ TEST(HeatTransfer, FiniteDifferenceShape)
     shape_displacement(i) = shape_displacement_value + eps;
     thermal_solver.setShapeDisplacement(shape_displacement);
 
-    thermal_solver.advanceTimestep(dt);
+    thermal_solver.advanceTimestep(1.0);
     mfem::ParGridFunction temperature_plus = thermal_solver.temperature().gridFunction();
 
     shape_displacement(i) = shape_displacement_value - eps;
     thermal_solver.setShapeDisplacement(shape_displacement);
 
-    thermal_solver.advanceTimestep(dt);
+    thermal_solver.advanceTimestep(1.0);
     mfem::ParGridFunction temperature_minus = thermal_solver.temperature().gridFunction();
 
     // Reset to the original bulk modulus value
@@ -244,7 +255,7 @@ TEST(HeatTransfer, FiniteDifferenceShape)
     thermal_solver.setShapeDisplacement(shape_displacement);
 
     // Finite difference to compute sensitivity of displacement with respect to bulk modulus
-    mfem::ParGridFunction dtemp_dshape(&thermal_solver.temperature().space());
+    mfem::ParGridFunction dtemp_dshape(const_cast<mfem::ParFiniteElementSpace*>(&thermal_solver.temperature().space()));
     for (int i2 = 0; i2 < temperature_plus.Size(); ++i2) {
       dtemp_dshape(i2) = (temperature_plus(i2) - temperature_minus(i2)) / (2.0 * eps);
     }
