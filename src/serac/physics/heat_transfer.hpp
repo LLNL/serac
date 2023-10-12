@@ -100,12 +100,14 @@ public:
    * @param[in] physics_name A name for the physics module instance
    * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
    * @param[in] parameter_names A vector of the names of the requested parameter fields
+   * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param[in] time The simulation time to initialize the physics module to
    */
   HeatTransfer(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
                const serac::TimesteppingOptions timestepping_opts, const std::string& physics_name,
-               std::string mesh_tag, std::vector<std::string> parameter_names = {})
+               std::string mesh_tag, std::vector<std::string> parameter_names = {}, int cycle = 0, double time = 0.0)
       : HeatTransfer(std::make_unique<EquationSolver>(nonlinear_opts, lin_opts, StateManager::mesh(mesh_tag).GetComm()),
-                     timestepping_opts, physics_name, mesh_tag, parameter_names)
+                     timestepping_opts, physics_name, mesh_tag, parameter_names, cycle, time)
   {
   }
 
@@ -117,10 +119,13 @@ public:
    * @param[in] physics_name A name for the physics module instance
    * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
    * @param[in] parameter_names A vector of the names of the requested parameter fields
+   * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param[in] time The simulation time to initialize the physics module to
    */
   HeatTransfer(std::unique_ptr<serac::EquationSolver> solver, const serac::TimesteppingOptions timestepping_opts,
-               const std::string& physics_name, std::string mesh_tag, std::vector<std::string> parameter_names = {})
-      : BasePhysics(order, physics_name, mesh_tag),
+               const std::string& physics_name, std::string mesh_tag, std::vector<std::string> parameter_names = {},
+               int cycle = 0, double time = 0.0)
+      : BasePhysics(physics_name, mesh_tag, cycle, time),
         temperature_(StateManager::newState(H1<order>{}, detail::addPrefix(physics_name, "temperature"), mesh_tag_)),
         temperature_rate_(temperature_),
         adjoint_temperature_(
@@ -211,10 +216,13 @@ public:
    * @param[in] options The solver information parsed from the input file
    * @param[in] physics_name A name for the physics module instance
    * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
+   * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param[in] time The simulation time to initialize the physics module to
    */
-  HeatTransfer(const HeatTransferInputOptions& options, const std::string& physics_name, const std::string& mesh_tag)
+  HeatTransfer(const HeatTransferInputOptions& options, const std::string& physics_name, const std::string& mesh_tag,
+               int cycle = 0, double time = 0.0)
       : HeatTransfer(options.nonlin_solver_options, options.lin_solver_options, options.timestepping_options,
-                     physics_name, mesh_tag)
+                     physics_name, mesh_tag, {}, cycle, time)
   {
     if (options.initial_temperature) {
       auto temp = options.initial_temperature->constructScalar();

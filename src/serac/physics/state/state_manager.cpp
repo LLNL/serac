@@ -217,7 +217,7 @@ void StateManager::save(const double t, const int cycle, const std::string& mesh
                      axom::fmt::format("Mesh tag '{}' not found in the data store", mesh_tag));
   auto&       datacoll  = datacolls_.at(mesh_tag);
   std::string file_path = axom::utilities::filesystem::joinPath(datacoll.GetPrefixPath(), datacoll.GetCollectionName());
-  SLIC_INFO_ROOT(axom::fmt::format("Saving data collection at time: '{}' to path: '{}'", t, file_path));
+  SLIC_INFO_ROOT(axom::fmt::format("Saving data collection to path: '{}'", file_path));
 
   datacoll.SetTime(t);
   datacoll.SetCycle(cycle);

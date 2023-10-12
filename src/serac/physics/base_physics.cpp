@@ -18,21 +18,20 @@
 
 namespace serac {
 
-BasePhysics::BasePhysics(std::string physics_name, std::string mesh_tag)
+BasePhysics::BasePhysics(std::string physics_name, std::string mesh_tag, int cycle, double time)
     : name_(physics_name),
       mesh_tag_(mesh_tag),
       mesh_(StateManager::mesh(mesh_tag_)),
       comm_(mesh_.GetComm()),
       shape_displacement_(StateManager::shapeDisplacement(mesh_tag_)),
-      time_(StateManager::time(mesh_tag_)),
+      time_(time),
       max_time_(0.0),
-      cycle_(StateManager::cycle(mesh_tag_)),
+      cycle_(cycle),
       max_cycle_(0),
       ode_time_point_(0.0),
       bcs_(mesh_)
 {
   std::tie(mpi_size_, mpi_rank_) = getMPIInfo(comm_);
-  order_                         = 1;
 
   if (mesh_.Dimension() == 2) {
     shape_displacement_sensitivity_ =
@@ -45,11 +44,6 @@ BasePhysics::BasePhysics(std::string physics_name, std::string mesh_tag)
                                       mesh_.Dimension()));
   }
   StateManager::storeDual(*shape_displacement_sensitivity_);
-}
-
-BasePhysics::BasePhysics(int p, std::string physics_name, std::string mesh_tag) : BasePhysics(physics_name, mesh_tag)
-{
-  order_ = p;
 }
 
 double BasePhysics::time() const { return time_; }

@@ -46,17 +46,10 @@ public:
    * @brief Empty constructor
    * @param[in] physics_name Name of the physics module instance
    * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
+   * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param[in] time The simulation time to initialize the physics module to
    */
-  BasePhysics(std::string physics_name, std::string mesh_tag);
-
-  /**
-   * @brief Constructor that creates n entries in states_ of order p
-   *
-   * @param[in] p Order of the solver
-   * @param[in] physics_name Name of the physics module instance
-   * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
-   */
-  BasePhysics(int p, std::string physics_name, std::string mesh_tag);
+  BasePhysics(std::string physics_name, std::string mesh_tag, int cycle = 0, double time = 0.0);
 
   /**
    * @brief Construct a new Base Physics object (copy constructor)
@@ -422,11 +415,6 @@ protected:
    * @brief MPI size
    */
   int mpi_size_;
-
-  /**
-   * @brief Order of basis functions
-   */
-  int order_;
 
   /**
    * @brief DataCollection pointer for optional paraview output
