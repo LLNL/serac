@@ -54,8 +54,11 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.doctest',
               'sphinx.ext.todo',
               'sphinx.ext.mathjax',
-              'sphinx.ext.ifconfig',
-              'sphinxcontrib.jquery']
+              'sphinx.ext.ifconfig']
+if read_the_docs_build:
+    # Note: The Spack Sphinx does not have this extension and I think its only
+    # used in RTD
+    extensions.append('sphinxcontrib.jquery')
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
