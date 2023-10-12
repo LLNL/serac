@@ -25,7 +25,9 @@ BasePhysics::BasePhysics(std::string physics_name, std::string mesh_tag)
       comm_(mesh_.GetComm()),
       shape_displacement_(StateManager::shapeDisplacement(mesh_tag_)),
       time_(StateManager::time(mesh_tag_)),
+      max_time_(0.0),
       cycle_(StateManager::cycle(mesh_tag_)),
+      max_cycle_(0),
       ode_time_point_(0.0),
       bcs_(mesh_)
 {
@@ -53,6 +55,12 @@ BasePhysics::BasePhysics(int p, std::string physics_name, std::string mesh_tag) 
 double BasePhysics::time() const { return time_; }
 
 int BasePhysics::cycle() const { return cycle_; }
+
+double BasePhysics::maxTime() const { return max_time_; }
+
+int BasePhysics::maxCycle() const { return max_cycle_; }
+
+std::vector<double> BasePhysics::timesteps() const { return timesteps_; }
 
 void BasePhysics::setParameter(const size_t parameter_index, const FiniteElementState& parameter_state)
 {

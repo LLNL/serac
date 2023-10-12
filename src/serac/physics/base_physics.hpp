@@ -80,6 +80,27 @@ public:
   virtual int cycle() const;
 
   /**
+   * @brief Get the maximum time reached by the forward solver
+   *
+   * @return The maximum time reached by the forward solver
+   */
+  virtual double maxTime() const;
+
+  /**
+   * @brief The maximum cycle (timestep iteration number) reached by the forward solver
+   *
+   * @return The maximum cycle reached by the forward solver
+   */
+  virtual int maxCycle() const;
+
+  /**
+   * @brief Get a vector of the timestep sizes (i.e. /f$\Delta t\f$s) taken by the forward solver
+   *
+   * @return The vector of timestep sizes taken by the foward solver
+   */
+  virtual std::vector<double> timesteps() const;
+
+  /**
    * @brief Complete the setup and allocate the necessary data structures
    *
    * This finializes the underlying data structures in a solver and
@@ -220,21 +241,20 @@ public:
   virtual void advanceTimestep(double dt) = 0;
 
   /**
-   * @brief Solve the adjoint problem
-   * @pre It is expected that the forward analysis is complete and the current states are valid
-   * @note If the essential boundary state for the adjoint is not specified, homogeneous essential boundary conditions
-   * are applied
-   *
-   * @return The computed adjoint finite element states
+   * @brief Set the loads for the adjoint reverse timestep solve
    */
-  virtual const std::unordered_map<std::string, const serac::FiniteElementState&> reverseAdjointTimestep(
-      std::unordered_map<std::string, const serac::FiniteElementDual&> /* adjoint_loads */,
-      std::unordered_map<std::string, const serac::FiniteElementState&> /* adjoint_with_essential_boundary */ = {})
+  virtual void setAdjointLoad(std::unordered_map<std::string, const serac::FiniteElementDual&>)
   {
     SLIC_ERROR_ROOT(axom::fmt::format("Adjoint analysis not defined for physics module {}", name_));
+  }
 
-    // Return a dummy state value to quiet the compiler. This will never get used.
-    return {};
+  /**
+   * @brief Solve the adjoint reverse timestep problem
+   * @pre It is expected that the forward analysis is complete and the current states are valid
+   */
+  virtual void reverseAdjointTimestep()
+  {
+    SLIC_ERROR_ROOT(axom::fmt::format("Adjoint analysis not defined for physics module {}", name_));
   }
 
   /**
@@ -369,9 +389,24 @@ protected:
   double time_;
 
   /**
+   * @brief The maximum time reached for the forward solver
+   */
+  double max_time_;
+
+  /**
+   * @brief A vector of the timestep sizes (i.e. \f$\Delta t\f$) taken by the forward solver
+   */
+  std::vector<double> timesteps_;
+
+  /**
    * @brief Current cycle (forward pass time iteration count)
    */
   int cycle_;
+
+  /**
+   * @brief The maximum cycle (forward pass iteration count) reached by the forward solver
+   */
+  int max_cycle_;
 
   /**
    * @brief The value of time at which the ODE solver wants to evaluate the residual

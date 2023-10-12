@@ -205,7 +205,8 @@ std::tuple<double, FiniteElementDual, FiniteElementDual> computeThermalQoiAndIni
     double             dt                      = ts_info.totalTime / ts_info.num_timesteps;
     FiniteElementState temperature_end_of_step = thermal->loadCheckpointedTemperature(thermal->cycle());
     computeStepAdjointLoad(temperature_end_of_step, adjoint_load, dt);
-    thermal->reverseAdjointTimestep({{"temperature", adjoint_load}});
+    thermal->setAdjointLoad({{"temperature", adjoint_load}});
+    thermal->reverseAdjointTimestep();
     shape_sensitivity += thermal->computeTimestepShapeSensitivity();
   }
 
@@ -244,7 +245,8 @@ std::tuple<double, FiniteElementDual> computeThermalConductivitySensitivity(
     double             dt                      = ts_info.totalTime / ts_info.num_timesteps;
     FiniteElementState temperature_end_of_step = thermal->loadCheckpointedTemperature(thermal->cycle());
     computeStepAdjointLoad(temperature_end_of_step, adjoint_load, dt);
-    thermal->reverseAdjointTimestep({{"temperature", adjoint_load}});
+    thermal->setAdjointLoad({{"temperature", adjoint_load}});
+    thermal->reverseAdjointTimestep();
     conductivity_sensitivity += thermal->computeTimestepSensitivity(0);
   }
 

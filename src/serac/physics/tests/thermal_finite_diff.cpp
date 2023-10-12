@@ -105,8 +105,10 @@ TEST(Thermal, FiniteDifference)
   std::unique_ptr<mfem::HypreParVector> assembled_vector(adjoint_load_form.ParallelAssemble());
   adjoint_load = *assembled_vector;
 
+  thermal_solver.setAdjointLoad({{"temperature", adjoint_load}});
+
   // Solve the adjoint problem
-  thermal_solver.reverseAdjointTimestep({{"temperature", adjoint_load}});
+  thermal_solver.reverseAdjointTimestep();
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
   [[maybe_unused]] auto& sensitivity = thermal_solver.computeTimestepSensitivity(conductivity_parameter_index);
@@ -226,8 +228,10 @@ TEST(HeatTransfer, FiniteDifferenceShape)
   std::unique_ptr<mfem::HypreParVector> assembled_vector(adjoint_load_form.ParallelAssemble());
   adjoint_load = *assembled_vector;
 
+  thermal_solver.setAdjointLoad({{"temperature", adjoint_load}});
+
   // Solve the adjoint problem
-  thermal_solver.reverseAdjointTimestep({{"temperature", adjoint_load}});
+  thermal_solver.reverseAdjointTimestep();
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
   [[maybe_unused]] auto& sensitivity = thermal_solver.computeTimestepShapeSensitivity();

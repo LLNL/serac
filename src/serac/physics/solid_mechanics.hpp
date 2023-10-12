@@ -134,6 +134,7 @@ public:
             StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "displacement"), mesh_tag_)),
         adjoint_displacement_(StateManager::newState(
             H1<order, dim>{}, detail::addPrefix(physics_name, "adjoint_displacement"), mesh_tag_)),
+        displacement_adjoint_load_(displacement_.space(), detail::addPrefix(physics_name, "displacement_adjoint_load")),
         reactions_(StateManager::newDual(H1<order, dim>{}, detail::addPrefix(physics_name, "reactions"), mesh_tag_)),
         nonlin_solver_(std::move(solver)),
         ode2_(displacement_.space().TrueVSize(),
@@ -182,10 +183,11 @@ public:
     residual_ =
         std::make_unique<Functional<test(trial, trial, shape_trial, parameter_space...)>>(test_space, trial_spaces);
 
-    displacement_         = 0.0;
-    velocity_             = 0.0;
-    shape_displacement_   = 0.0;
-    adjoint_displacement_ = 0.0;
+    displacement_              = 0.0;
+    velocity_                  = 0.0;
+    shape_displacement_        = 0.0;
+    adjoint_displacement_      = 0.0;
+    displacement_adjoint_load_ = 0.0;
 
     // If the user wants the AMG preconditioner with a linear solver, set the pfes
     // to be the displacement
@@ -1092,71 +1094,66 @@ public:
     }
 
     cycle_ += 1;
+
+    if (cycle_ > max_cycle_) {
+      timesteps_.push_back(dt);
+      max_cycle_ = cycle_;
+      max_time_  = time_;
+    }
+  }
+
+  /**
+   * @brief Set the loads for the adjoint reverse timestep solve
+   *
+   * @param loads The loads (e.g. right hand sides) for the adjoint problem
+   *
+   * @pre The adjoint load map is expected to contain an entry named "displacement"
+   *
+   * These loads are typically defined as derivatives of a downstream quantity of intrest with respect
+   * to a primal solution field (in this case, displacement). For this physics module, the unordered
+   * map is expected to have one entry with the keys "displacement".
+   *
+   */
+  virtual void setAdjointLoad(std::unordered_map<std::string, const serac::FiniteElementDual&> loads)
+  {
+    SLIC_ERROR_ROOT_IF(loads.size() == 0, "Adjoint load container size must be greater than 0 in the solid mechanics.");
+
+    auto disp_adjoint_load = loads.find("displacement");
+
+    SLIC_ERROR_ROOT_IF(disp_adjoint_load == loads.end(), "Adjoint load for \"displacement\" not found.");
+
+    displacement_adjoint_load_ = disp_adjoint_load->second;
+    // Add the sign correction to move the term to the RHS
+    displacement_adjoint_load_ *= -1.0;
   }
 
   /**
    * @brief Solve the adjoint problem
    * @pre It is expected that the forward analysis is complete and the current displacement state is valid
-   * @pre The adjoint load maps are expected to contain a single entry named "displacement"
-   * @note If the essential boundary dual is not specified, homogeneous essential boundary conditions are applied to
-   * the adjoint system
+   * @pre It is expected that the adjoint load has already been set in SolidMechanics::setAdjointLoad
+   * @note This is currently only valid for quasi-static analysis
    *
-   * @param adjoint_loads An unordered map containing finite element duals representing the RHS of the adjoint equations
-   * indexed by their name
-   * @param adjoint_with_essential_boundary A unordered map containing finite element states representing the
-   * non-homogeneous essential boundary condition data for the adjoint problem indexed their name
    * @return An unordered map of the adjoint solutions indexed by their name. It has a single entry named
    * "adjoint_displacement"
    */
-  const std::unordered_map<std::string, const serac::FiniteElementState&> reverseAdjointTimestep(
-      std::unordered_map<std::string, const serac::FiniteElementDual&>  adjoint_loads,
-      std::unordered_map<std::string, const serac::FiniteElementState&> adjoint_with_essential_boundary = {}) override
+  void reverseAdjointTimestep() override
   {
-    SLIC_ERROR_ROOT_IF(adjoint_loads.size() != 1,
-                       "Adjoint load container is not the expected size of 1 in the solid mechanics module.");
-
-    auto disp_adjoint_load = adjoint_loads.find("displacement");
-
-    SLIC_ERROR_ROOT_IF(disp_adjoint_load == adjoint_loads.end(), "Adjoint load for \"displacement\" not found.");
-    mfem::HypreParVector adjoint_load_vector(disp_adjoint_load->second);
-
-    // Add the sign correction to move the term to the RHS
-    adjoint_load_vector *= -1.0;
+    SLIC_ERROR_ROOT_IF(!is_quasistatic_,
+                       "Solid mechanics adjoint solver only implemented for quasi-static simulations");
 
     auto& lin_solver = nonlin_solver_->linearSolver();
 
-    // By default, use a homogeneous essential boundary condition
-    mfem::HypreParVector adjoint_essential(disp_adjoint_load->second);
-    adjoint_essential = 0.0;
-
-    // sam: is this the right thing to be doing for dynamics simulations,
-    // or are we implicitly assuming this should only be used in quasistatic analyses?
     auto drdu     = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(displacement_), zero_, shape_displacement_,
                                                     *parameters_[parameter_indices].state...));
     auto jacobian = assemble(drdu);
     auto J_T      = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
-    // If we have a non-homogeneous essential boundary condition, extract it from the given state
-    auto essential_adjoint_disp = adjoint_with_essential_boundary.find("displacement");
-
-    if (essential_adjoint_disp != adjoint_with_essential_boundary.end()) {
-      adjoint_essential = essential_adjoint_disp->second;
-    } else {
-      // If the essential adjoint load container does not have a displacement dual but it has a non-zero size, the
-      // user has supplied an incorrectly-named dual vector.
-      SLIC_ERROR_IF(adjoint_with_essential_boundary.size() != 0,
-                    "Essential adjoint boundary condition given for an unexpected primal field. Expected adjoint "
-                    "boundary condition named \"displacement\"");
-    }
-
     for (const auto& bc : bcs_.essentials()) {
-      bc.apply(*J_T, adjoint_load_vector, adjoint_essential);
+      bc.apply(*J_T, displacement_adjoint_load_, zero_);
     }
 
     lin_solver.SetOperator(*J_T);
-    lin_solver.Mult(adjoint_load_vector, adjoint_displacement_);
-
-    return {{"adjoint_displacement", adjoint_displacement_}};
+    lin_solver.Mult(displacement_adjoint_load_, adjoint_displacement_);
   }
 
   /**
@@ -1243,6 +1240,9 @@ protected:
 
   /// The displacement finite element state
   FiniteElementState adjoint_displacement_;
+
+  /// The adjoint load (RHS) for the adjoint system solve
+  FiniteElementDual displacement_adjoint_load_;
 
   /// nodal forces
   FiniteElementDual reactions_;
