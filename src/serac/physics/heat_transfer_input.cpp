@@ -15,6 +15,7 @@ void HeatTransferInputOptions::defineInputFileSchema(axom::inlet::Container& con
 
   auto& material_container = container.addStructArray("materials", "Container for array of materials");
   serac::MaterialInputOptions::defineInputFileSchema(material_container);
+  serac::MaterialInputOptions::verifyInputFileSchema(material_container);
 
   auto& source = container.addStruct("source", "Scalar source term (RHS of the thermal conduction PDE)");
   serac::input::CoefficientInputOptions::defineInputFileSchema(source);

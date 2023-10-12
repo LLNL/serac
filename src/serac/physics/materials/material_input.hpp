@@ -30,6 +30,13 @@ struct MaterialInputOptions {
   static void defineInputFileSchema(axom::inlet::Container& container);
 
   /**
+   * @brief Verify input file parameters specific to this class
+   *
+   * @param[in] container Inlet container on which the input schema will be verified
+   **/
+  static void verifyInputFileSchema(axom::inlet::Container& container);
+
+  /**
    * @brief Model of material
    *
    */

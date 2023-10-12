@@ -15,6 +15,7 @@ void SolidMechanicsInputOptions::defineInputFileSchema(axom::inlet::Container& c
 
   auto& material_container = container.addStructArray("materials", "Container for array of materials");
   serac::MaterialInputOptions::defineInputFileSchema(material_container);
+  serac::MaterialInputOptions::verifyInputFileSchema(material_container);
 
   // Geometric nonlinearities flag
   container.addBool("geometric_nonlin", "Flag to include geometric nonlinearities in the residual calculation.")
