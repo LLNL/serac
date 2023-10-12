@@ -145,6 +145,13 @@ public:
   }
 
   /**
+   * @brief Accessor for getting the shape finite element state from this physics modules
+   *
+   * @return The shape displacement Finite Element State associated with this physics module
+   */
+  const FiniteElementState& shapeDisplacement() { return shape_displacement_; }
+
+  /**
    * @brief Get a vector of the finite element state parameter names
    *
    * @return The parameter names
