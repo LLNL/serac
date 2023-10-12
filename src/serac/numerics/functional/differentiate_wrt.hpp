@@ -39,6 +39,6 @@ struct differentiate_wrt_this {
  *     auto [value, gradient_wrt_arg1] = my_functional(arg0, differentiate_wrt(arg1));
  * @endcode
  */
-auto differentiate_wrt(const mfem::Vector& v) { return differentiate_wrt_this{v}; }
+inline auto differentiate_wrt(const mfem::Vector& v) { return differentiate_wrt_this{v}; }
 
 }  // namespace serac

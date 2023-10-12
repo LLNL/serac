@@ -37,7 +37,7 @@ struct ElemInfo {
  * @param x the ElemInfo on the left
  * @param y the ElemInfo on the right
  */
-bool operator<(const ElemInfo& x, const ElemInfo& y)
+inline bool operator<(const ElemInfo& x, const ElemInfo& y)
 {
   return (x.global_row_ < y.global_row_) || (x.global_row_ == y.global_row_ && x.global_col_ < y.global_col_);
 }
@@ -47,7 +47,7 @@ bool operator<(const ElemInfo& x, const ElemInfo& y)
  * @param x the ElemInfo on the left
  * @param y the ElemInfo on the right
  */
-bool operator!=(const ElemInfo& x, const ElemInfo& y)
+inline bool operator!=(const ElemInfo& x, const ElemInfo& y)
 {
   return (x.global_row_ != y.global_row_) || (x.global_col_ != y.global_col_);
 }
@@ -75,7 +75,7 @@ struct SignedIndex {
  *
  * @param i an integer that mfem has encoded to contain two separate pieces of information
  */
-SignedIndex decodeSignedIndex(int i)
+inline SignedIndex decodeSignedIndex(int i)
 {
   return SignedIndex{static_cast<uint32_t>((i >= 0) ? i : -1 - i), (i >= 0) ? 1 : -1};
 }
@@ -85,7 +85,7 @@ SignedIndex decodeSignedIndex(int i)
  *
  * @param fes the finite element space in question
  */
-bool isHcurl(const mfem::ParFiniteElementSpace& fes)
+inline bool isHcurl(const mfem::ParFiniteElementSpace& fes)
 {
   return (fes.FEColl()->GetContType() == mfem::FiniteElementCollection::TANGENTIAL);
 }
@@ -95,7 +95,7 @@ bool isHcurl(const mfem::ParFiniteElementSpace& fes)
  *
  * @param fes the finite element space in question
  */
-bool isL2(const mfem::ParFiniteElementSpace& fes)
+inline bool isL2(const mfem::ParFiniteElementSpace& fes)
 {
   return (fes.FEColl()->GetContType() == mfem::FiniteElementCollection::DISCONTINUOUS);
 }
@@ -106,7 +106,7 @@ bool isL2(const mfem::ParFiniteElementSpace& fes)
  *
  * @param fes the finite element space in question
  */
-bool compatibleWithFaceRestriction(const mfem::ParFiniteElementSpace& fes)
+inline bool compatibleWithFaceRestriction(const mfem::ParFiniteElementSpace& fes)
 {
   return !(isHcurl(fes) && fes.GetMesh()->Dimension() == 2) && !(isHcurl(fes) && fes.GetMesh()->Dimension() == 3) &&
          !(isL2(fes)) && fes.GetMesh()->GetNBE() > 0;

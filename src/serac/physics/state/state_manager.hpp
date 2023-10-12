@@ -28,6 +28,12 @@ namespace serac {
 /// Polynomial order used to discretize the shape displacement field
 constexpr int SHAPE_ORDER = 1;
 
+/// Function space for shape displacement on dimension 2 meshes
+constexpr H1<SHAPE_ORDER, 2> SHAPE_DIM_2;
+
+/// Function space for shape displacement on dimension 2 meshes
+constexpr H1<SHAPE_ORDER, 3> SHAPE_DIM_3;
+
 /**
  * @brief Manages the lifetimes of FEState objects such that restarts are abstracted
  * from physics modules
@@ -42,14 +48,30 @@ public:
   static void initialize(axom::sidre::DataStore& ds, const std::string& output_directory);
 
   /**
-   * @brief Factory method for creating a new FEState object, signature is identical to FEState constructor
-   * @param[in] options Configuration options for the FEState, if a new state is created
-   * @param[in] mesh_tag A string that uniquely identifies the mesh on which the field is to be defined
+   * @brief Factory method for creating a new FEState object\
+   *
+   * @tparam FunctionSpace The function space (e.g. H1<1>) to build the finite element state on
+   * @param space The function space (e.g. H1<1>) to build the finite element state on
+   * @param state_name The name of the new finite element state field
+   * @param mesh_tag The tag for the stored mesh used to construct the finite element state
+   *
    * @see FiniteElementState::FiniteElementState
    * @note If this is a restart then the options (except for the name) will be ignored
    */
-  static FiniteElementState newState(FiniteElementVector::Options&& options  = {},
-                                     const std::string&             mesh_tag = default_mesh_name_);
+  template <typename FunctionSpace>
+  static FiniteElementState newState(FunctionSpace space, const std::string& state_name, const std::string& mesh_tag)
+  {
+    SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
+    SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
+                       axom::fmt::format("Mesh tag '{}' not found in the data store", mesh_tag));
+    SLIC_ERROR_ROOT_IF(named_states_.find(state_name) != named_states_.end(),
+                       axom::fmt::format("StateManager already contains a state named '{}'", state_name));
+
+    auto state = FiniteElementState(mesh(mesh_tag), space, state_name);
+
+    storeState(state);
+    return state;
+  }
 
   /**
    * @brief Factory method for creating a new FEState object
@@ -68,15 +90,30 @@ public:
   static void storeState(FiniteElementState& state);
 
   /**
-   * @brief Factory method for creating a new FEDual object, signature is identical to FEDual constructor
-   * @param[in] options Configuration options for the FEDual, if a new state is created
-   * @param[in] mesh_tag A string that uniquely identifies the mesh on which the dual is to be defined
+   * @brief Factory method for creating a new FEDual object
+   *
+   * @tparam FunctionSpace The function space (e.g. H1<1>) to build the finite element dual on
+   * @param space The function space (e.g. H1<1>) to build the finite element dual on
+   * @param dual_name The name of the new finite element dual field
+   * @param mesh_tag The tag for the stored mesh used to construct the finite element state
+   *
    * @see FiniteElementDual::FiniteElementDual
    * @note If this is a restart then the options (except for the name) will be ignored
    */
-  static FiniteElementDual newDual(FiniteElementVector::Options&& options  = {},
-                                   const std::string&             mesh_tag = default_mesh_name_);
+  template <typename FunctionSpace>
+  static FiniteElementDual newDual(FunctionSpace space, const std::string& dual_name, const std::string& mesh_tag)
+  {
+    SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
+    SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
+                       axom::fmt::format("Mesh tag '{}' not found in the data store", mesh_tag));
+    SLIC_ERROR_ROOT_IF(named_states_.find(dual_name) != named_duals_.end(),
+                       axom::fmt::format("StateManager already contains a dual named '{}'", dual_name));
 
+    auto dual = FiniteElementDual(mesh(mesh_tag), space, dual_name);
+
+    storeDual(dual);
+    return dual;
+  }
   /**
    * @brief Factory method for creating a new FEDual object
    *
@@ -131,7 +168,7 @@ public:
    * @param[in] cycle The current iteration number of the simulation
    * @param[in] mesh_tag A string that uniquely identifies the mesh (and accompanying fields) to save
    */
-  static void save(const double t, const int cycle, const std::string& mesh_tag = default_mesh_name_);
+  static void save(const double t, const int cycle, const std::string& mesh_tag);
 
   /**
    * @brief Loads an existing DataCollection
@@ -139,7 +176,7 @@ public:
    * @param[in] mesh_tag The mesh_tag associated with the DataCollection when it was saved
    * @return The time from specified restart cycle. Otherwise zero.
    */
-  static double load(const int cycle_to_load, const std::string& mesh_tag = default_mesh_name_)
+  static double load(const int cycle_to_load, const std::string& mesh_tag)
   {
     // FIXME: Assumes that if one DataCollection is going to be reloaded all DataCollections will be
     is_restart_ = true;
@@ -160,7 +197,6 @@ public:
     named_states_.clear();
     named_duals_.clear();
     shape_displacements_.clear();
-    shape_sensitivities_.clear();
     datacolls_.clear();
     output_dir_.clear();
     is_restart_ = false;
@@ -173,14 +209,14 @@ public:
    * @param[in] mesh_tag A string that uniquely identifies the mesh
    * @return A pointer to the stored mesh whose ownership was just passed to StateManager
    */
-  static mfem::ParMesh* setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const std::string& mesh_tag = default_mesh_name_);
+  static mfem::ParMesh& setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const std::string& mesh_tag);
 
   /**
    * @brief Returns a non-owning reference to mesh held by StateManager
    * @param[in] mesh_tag A string that uniquely identifies the mesh
    * @pre A mesh identified by @a mesh_tag must be registered - either via @p load() or @p setMesh()
    */
-  static mfem::ParMesh& mesh(const std::string& mesh_tag = default_mesh_name_);
+  static mfem::ParMesh& mesh(const std::string& mesh_tag);
 
   /**
    * @brief Get the shape displacement finite element state
@@ -191,7 +227,7 @@ public:
    * @param mesh_tag A string that uniquely identifies the mesh
    * @return The linear nodal shape displacement field
    */
-  static FiniteElementState& shapeDisplacement(const std::string& mesh_tag = default_mesh_name_);
+  static FiniteElementState& shapeDisplacement(const std::string& mesh_tag);
 
   /**
    * @brief loads the finite element states from a previously checkpointed cycle
@@ -211,7 +247,7 @@ public:
    * @param mesh_tag A string that uniquely identifies the mesh
    * @return The linear shape sensitivity field
    */
-  static FiniteElementDual& shapeDisplacementSensitivity(const std::string& mesh_tag = default_mesh_name_);
+  static FiniteElementDual& shapeDisplacementSensitivity(const std::string& mesh_tag);
 
   /**
    * @brief Returns the datacollection ID for a given mesh
@@ -226,6 +262,26 @@ public:
   /// @brief Returns true if data was loaded into a DataCollection
   static bool isRestart() { return is_restart_; }
 
+  /**
+   * @brief Get the current cycle (iteration number) from the underlying datacollection
+   *
+   * @param mesh_tag The datacollection (mesh name) to query
+   * @return The current forward cycle (iteration/timestep number)
+   *
+   * @note This will return the cycle for the last written or loaded data collection
+   */
+  static int cycle(std::string mesh_tag);
+
+  /**
+   * @brief Get the current simulation time from the underlying datacollection
+   *
+   * @param mesh_tag The datacollection (mesh name) to query
+   * @return The current forward simulation time
+   *
+   * @note This will return the cycle for the last written or loaded data collection
+   */
+  static double time(std::string mesh_tag);
+
 private:
   /**
    * @brief Creates a new datacollection based on a registered mesh
@@ -236,9 +292,9 @@ private:
   static double newDataCollection(const std::string& name, const std::optional<int> cycle_to_load = {});
 
   /**
-   * @brief Construct the shape displacement and sensitivity fields for the requested mesh
+   * @brief Construct the shape displacement field for the requested mesh
    *
-   * @param mesh_tag The mesh to build shape displacement and sensitivity fields for
+   * @param mesh_tag The mesh to build shape displacement field for
    */
   static void constructShapeFields(const std::string& mesh_tag);
 
@@ -251,9 +307,6 @@ private:
   /// @brief A map of the shape displacement fields for each stored mesh ID
   static std::unordered_map<std::string, std::unique_ptr<FiniteElementState>> shape_displacements_;
 
-  /// @brief A map of the shape sensitivity duals for each stored mesh ID
-  static std::unordered_map<std::string, std::unique_ptr<FiniteElementDual>> shape_sensitivities_;
-
   /**
    * @brief Whether this simulation has been restarted from another simulation
    */
@@ -263,8 +316,6 @@ private:
   static axom::sidre::DataStore* ds_;
   /// @brief Output directory to which all datacollections are saved
   static std::string output_dir_;
-  /// @brief Default name for the mesh - mostly for backwards compatibility
-  const static std::string default_mesh_name_;
 
   /// @brief A collection of FiniteElementState names and their corresponding Sidre-owned grid function pointers
   static std::unordered_map<std::string, mfem::ParGridFunction*> named_states_;

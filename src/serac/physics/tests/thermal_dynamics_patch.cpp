@@ -101,7 +101,10 @@ double dynamic_solution_error(const ExactSolution& exact_solution, PatchBoundary
 
   std::string filename = std::string(SERAC_REPO_DIR) + "/data/meshes/patch" + std::to_string(dim) + "D.mesh";
   auto        mesh     = mesh::refineAndDistribute(buildMeshFromFile(filename));
-  serac::StateManager::setMesh(std::move(mesh));
+
+  std::string mesh_tag{"mesh"};
+
+  serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   // Construct a heat transfer solver
   NonlinearSolverOptions nonlinear_opts{.relative_tol = 5.0e-13, .absolute_tol = 5.0e-13};
@@ -109,7 +112,7 @@ double dynamic_solution_error(const ExactSolution& exact_solution, PatchBoundary
   TimesteppingOptions dyn_opts{.timestepper        = TimestepMethod::BackwardEuler,
                                .enforcement_method = DirichletEnforcementMethod::DirectControl};
 
-  HeatTransfer<p, dim> thermal(nonlinear_opts, heat_transfer::direct_linear_options, dyn_opts, "thermal");
+  HeatTransfer<p, dim> thermal(nonlinear_opts, heat_transfer::direct_linear_options, dyn_opts, "thermal", mesh_tag);
 
   heat_transfer::LinearIsotropicConductor mat(1.0, 1.0, 1.0);
   thermal.setMaterial(mat);
@@ -124,11 +127,10 @@ double dynamic_solution_error(const ExactSolution& exact_solution, PatchBoundary
   thermal.completeSetup();
 
   // Integrate in time
-  double dt = 1.0;
-  thermal.outputState();
+  thermal.outputStateToDisk();
   for (int i = 0; i < 3; i++) {
-    thermal.advanceTimestep(dt);
-    thermal.outputState();
+    thermal.advanceTimestep(1.0);
+    thermal.outputStateToDisk();
   }
 
   // Compute norm of error

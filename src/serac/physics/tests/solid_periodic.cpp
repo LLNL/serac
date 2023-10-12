@@ -46,22 +46,22 @@ void periodic_test(mfem::Element::Type element_type)
   auto periodic_mesh = mfem::Mesh::MakePeriodic(initial_mesh, periodicMap);
   auto mesh          = mesh::refineAndDistribute(std::move(periodic_mesh), serial_refinement, parallel_refinement);
 
-  serac::StateManager::setMesh(std::move(mesh));
+  std::string mesh_tag{"mesh"};
+
+  auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   constexpr int p   = 1;
   constexpr int dim = 3;
 
   // Construct and initialized the user-defined moduli to be used as a differentiable parameter in
   // the solid physics module.
-  FiniteElementState user_defined_shear_modulus(StateManager::newState(
-      FiniteElementState::Options{.order = 1, .element_type = ElementType::L2, .name = "parameterized_shear"}));
+  FiniteElementState user_defined_shear_modulus(pmesh, L2<1>{}, "parameterized_shear");
 
   double shear_modulus_value = 1.0;
 
   user_defined_shear_modulus = shear_modulus_value;
 
-  FiniteElementState user_defined_bulk_modulus(StateManager::newState(
-      FiniteElementState::Options{.order = 1, .element_type = ElementType::L2, .name = "parameterized_bulk"}));
+  FiniteElementState user_defined_bulk_modulus(pmesh, L2<1>{}, "parameterized_bulk");
 
   double bulk_modulus_value = 1.0;
 
@@ -70,7 +70,8 @@ void periodic_test(mfem::Element::Type element_type)
   // Construct a functional-based solid solver
   SolidMechanics<p, dim, Parameters<L2<p>, L2<p>>> solid_solver(
       solid_mechanics::default_nonlinear_options, solid_mechanics::default_linear_options,
-      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "solid_periodic");
+      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "solid_periodic", mesh_tag,
+      {"bulk", "shear"});
 
   solid_solver.setParameter(0, user_defined_bulk_modulus);
   solid_solver.setParameter(1, user_defined_shear_modulus);
@@ -104,13 +105,12 @@ void periodic_test(mfem::Element::Type element_type)
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  double dt = 1.0;
-  solid_solver.advanceTimestep(dt);
+  solid_solver.advanceTimestep(1.0);
 
   [[maybe_unused]] auto [K, K_e] = solid_solver.stiffnessMatrix();
 
   // Output the sidre-based plot files
-  solid_solver.outputState();
+  solid_solver.outputStateToDisk();
 }
 
 // note: these tests aren't checking correctness, just that periodic meshes

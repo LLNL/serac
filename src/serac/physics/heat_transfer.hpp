@@ -98,16 +98,15 @@ public:
    * @param[in] nonlinear_opts The nonlinear solver options for solving the nonlinear residual equations
    * @param[in] lin_opts The linear solver options for solving the linearized Jacobian equations
    * @param[in] timestepping_opts The timestepping options for the heat transfer ordinary differential equations
-   * @param[in] name An optional name for the physics module instance
-   * used by an underlying material model or load
-   * @param[in] pmesh The mesh to conduct the simulation on, if different than the default mesh
+   * @param[in] physics_name A name for the physics module instance
+   * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
+   * @param[in] parameter_names A vector of the names of the requested parameter fields
    */
   HeatTransfer(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
-               const TimesteppingOptions timestepping_opts, const std::string& name = "",
-               mfem::ParMesh* pmesh = nullptr)
-      : HeatTransfer(std::make_unique<EquationSolver>(nonlinear_opts, lin_opts,
-                                                      StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
-                     timestepping_opts, name, pmesh)
+               const serac::TimesteppingOptions timestepping_opts, const std::string& physics_name,
+               std::string mesh_tag, std::vector<std::string> parameter_names = {})
+      : HeatTransfer(std::make_unique<EquationSolver>(nonlinear_opts, lin_opts, StateManager::mesh(mesh_tag).GetComm()),
+                     timestepping_opts, physics_name, mesh_tag, parameter_names)
   {
   }
 
@@ -116,23 +115,19 @@ public:
    *
    * @param[in] solver The nonlinear equation solver for the heat transfer equations
    * @param[in] timestepping_opts The timestepping options for the heat transfer ordinary differential equations
-   * @param[in] name An optional name for the physics module instance
-   * used by an underlying material model or load
-   * @param[in] pmesh The mesh to conduct the simulation on, if different than the default mesh
+   * @param[in] physics_name A name for the physics module instance
+   * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
+   * @param[in] parameter_names A vector of the names of the requested parameter fields
    */
   HeatTransfer(std::unique_ptr<serac::EquationSolver> solver, const serac::TimesteppingOptions timestepping_opts,
-               const std::string& name = "", mfem::ParMesh* pmesh = nullptr)
-      : BasePhysics(NUM_STATE_VARS, order, name, pmesh),
-        temperature_(StateManager::newState(
-            FiniteElementState::Options{
-                .order = order, .vector_dim = 1, .name = detail::addPrefix(name, "temperature")},
-            sidre_datacoll_id_)),
+               const std::string& physics_name, std::string mesh_tag, std::vector<std::string> parameter_names = {})
+      : BasePhysics(order, physics_name, mesh_tag),
+        temperature_(StateManager::newState(H1<order>{}, detail::addPrefix(physics_name, "temperature"), mesh_tag_)),
         temperature_rate_(temperature_),
-        adjoint_temperature_(StateManager::newState(
-            FiniteElementState::Options{
-                .order = order, .vector_dim = 1, .name = detail::addPrefix(name, "adjoint_temperature")},
-            sidre_datacoll_id_)),
-        implicit_sensitivity_temperature_start_of_step_(adjoint_temperature_.space(), "total_deriv_wrt_temperature"),
+        adjoint_temperature_(
+            StateManager::newState(H1<order>{}, detail::addPrefix(physics_name, "adjoint_temperature"), mesh_tag_)),
+        implicit_sensitivity_temperature_start_of_step_(adjoint_temperature_.space(),
+                                                        detail::addPrefix(physics_name, "total_deriv_wrt_temperature")),
         residual_with_bcs_(temperature_.space().TrueVSize()),
         nonlin_solver_(std::move(solver)),
         ode_(temperature_.space().TrueVSize(),
@@ -148,9 +143,7 @@ public:
         "EquationSolver argument is nullptr in HeatTransfer constructor. It is possible that it was previously moved.");
 
     states_.push_back(&temperature_);
-    states_.push_back(&adjoint_temperature_);
-
-    parameters_.resize(sizeof...(parameter_space));
+    adjoints_.push_back(&adjoint_temperature_);
 
     // Create a pack of the primal field and parameter finite element spaces
     mfem::ParFiniteElementSpace* test_space = &temperature_.space();
@@ -160,14 +153,17 @@ public:
     trial_spaces[1] = &temperature_.space();
     trial_spaces[2] = &shape_displacement_.space();
 
+    SLIC_ERROR_ROOT_IF(
+        sizeof...(parameter_space) != parameter_names.size(),
+        axom::fmt::format("{} parameter spaces given in the template argument but {} parameter names were supplied.",
+                          sizeof...(parameter_space), parameter_names.size()));
+
     if constexpr (sizeof...(parameter_space) > 0) {
       tuple<parameter_space...> types{};
       for_constexpr<sizeof...(parameter_space)>([&](auto i) {
-        auto [fes, fec] =
-            generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_);
-        parameters_[i].trial_space       = std::move(fes);
-        parameters_[i].trial_collection  = std::move(fec);
-        trial_spaces[i + NUM_STATE_VARS] = parameters_[i].trial_space.get();
+        parameters_.emplace_back(mesh_, get<i>(types), detail::addPrefix(name_, parameter_names[i]));
+
+        trial_spaces[i + NUM_STATE_VARS] = &(parameters_[i].state->space());
       });
     }
 
@@ -209,11 +205,13 @@ public:
    * @brief Construct a new Nonlinear HeatTransfer Solver object
    *
    * @param[in] input_options The solver information parsed from the input file
-   * @param[in] name An optional name for the physics module instance. Note that this is NOT the mesh tag.
+   * @param[in] physics_name A name for the physics module instance
+   * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
    */
-  HeatTransfer(const HeatTransferInputOptions& input_options, const std::string& name = "")
+  HeatTransfer(const HeatTransferInputOptions& input_options, const std::string& physics_name,
+               const std::string& mesh_tag)
       : HeatTransfer(input_options.nonlin_solver_options, input_options.lin_solver_options,
-                     input_options.timestepping_options, name)
+                     input_options.timestepping_options, physics_name, mesh_tag)
   {
     // This is the only other options stored in the input file that we can use
     // in the initialization stage
@@ -256,7 +254,7 @@ public:
         // NOTE: cannot use std::functions that use mfem::vector
         SLIC_ERROR("'flux' is not implemented yet in input files.");
       } else {
-        SLIC_WARNING_ROOT("Ignoring boundary condition with unknown name: " << name);
+        SLIC_WARNING_ROOT("Ignoring boundary condition with unknown name: " << physics_name);
       }
     }
   }
@@ -266,6 +264,8 @@ public:
    *
    * @param[in] temp_bdr The boundary attributes on which to enforce a temperature
    * @param[in] temp The prescribed boundary temperature function
+   *
+   * @note This should be called prior to completeSetup()
    */
   void setTemperatureBCs(const std::set<int>& temp_bdr, std::function<double(const mfem::Vector& x, double t)> temp)
   {
@@ -276,11 +276,13 @@ public:
   }
 
   /**
-   * @brief Advance the timestep
+   * @brief Advance the heat conduction physics module in time
    *
-   * @param[inout] dt The timestep to advance. For adaptive time integration methods, the actual timestep is returned.
+   * Advance the underlying ODE with the requested time integration scheme using the previously set timestep.
+   *
+   * @param dt The increment of simulation time to advance the underlying heat transfer problem
    */
-  void advanceTimestep(double& dt) override
+  void advanceTimestep(double dt) override
   {
     if (is_quasistatic_) {
       time_ += dt;
@@ -290,8 +292,6 @@ public:
       }
       nonlin_solver_->solve(temperature_);
     } else {
-      SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
-
       // Step the time integrator
       // Note that the ODE solver handles the essential boundary condition application itself
       ode_.Step(temperature_, time_, dt);
@@ -319,6 +319,8 @@ public:
    *
    * @pre MaterialType must return a serac::tuple of volumetric heat capacity and thermal flux when operator() is called
    * with the arguments listed above.
+   *
+   * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename MaterialType>
   void setMaterial(DependsOn<active_parameters...>, MaterialType material)
@@ -363,6 +365,8 @@ public:
    * @brief Set the underlying finite element state to a prescribed temperature
    *
    * @param temp The function describing the temperature field
+   *
+   * @note This will override any existing solution values in the temperature field
    */
   void setTemperature(std::function<double(const mfem::Vector& x, double t)> temp)
   {
@@ -371,8 +375,10 @@ public:
 
     temp_coef.SetTime(time_);
     temperature_.project(temp_coef);
-    gf_initialized_[0] = true;
   }
+
+  /// @overload
+  void setTemperature(const FiniteElementState temp) { temperature_ = temp; }
 
   /**
    * @brief Set the thermal source function
@@ -392,6 +398,8 @@ public:
    *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
    *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
    * 3>`)
+   *
+   * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename SourceType>
   void setSource(DependsOn<active_parameters...>, SourceType source_function)
@@ -446,9 +454,7 @@ public:
    *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
    * 3>`)
    *
-   * @note: until mfem::GetFaceGeometricFactors implements their JACOBIANS option,
-   * (or we implement a replacement kernel ourselves) we are not able to compute
-   * shape sensitivities for boundary integrals.
+   * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename FluxType>
   void setFluxBCs(DependsOn<active_parameters...>, FluxType flux_function)
@@ -505,9 +511,6 @@ public:
    */
   const serac::FiniteElementState& temperature() const { return temperature_; };
 
-  /// @overload
-  serac::FiniteElementState& temperature() { return temperature_; };
-
   /**
    * @brief Get the adjoint temperature state
    *
@@ -515,36 +518,45 @@ public:
    */
   const serac::FiniteElementState& adjointTemperature() const { return adjoint_temperature_; };
 
-  /// @overload
-  serac::FiniteElementState& adjointTemperature() { return adjoint_temperature_; };
-
   /**
-   * @brief Accessor for getting named finite element state fields from the physics modules
+   * @brief Accessor for getting named finite element state primal solution from the physics modules
    *
-   * @param state_name The name of the Finite Element State to retrieve
-   * @return The named Finite Element State
+   * @param state_name The name of the Finite Element State primal solution to retrieve
+   * @return The named primal Finite Element State
    */
   const FiniteElementState& state(const std::string& state_name) override
   {
     if (state_name == "temperature") {
       return temperature_;
-    } else if (state_name == "adjoint_temperature") {
-      return adjoint_temperature_;
     }
 
-    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requestion from solid mechanics module '{}', but it doesn't exist",
+    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requested from solid mechanics module '{}', but it doesn't exist",
                                       state_name, name_));
     return temperature_;
   }
 
   /**
-   * @brief Get a vector of the finite element state solution variable names
+   * @brief Get a vector of the finite element state primal solution names
    *
-   * @return The solution variable names
+   * @return The primal solution names
    */
-  virtual std::vector<std::string> stateNames() override
+  virtual std::vector<std::string> stateNames() override { return std::vector<std::string>{{"temperature"}}; }
+
+  /**
+   * @brief Accessor for getting named finite element state adjoint solution from the physics modules
+   *
+   * @param state_name The name of the Finite Element State adjoint solution to retrieve
+   * @return The named adjoint Finite Element State
+   */
+  const FiniteElementState& adjoint(const std::string& state_name) override
   {
-    return std::vector<std::string>{{"temperature"}, {"adjoint_temperature"}};
+    if (state_name == "temperature") {
+      return adjoint_temperature_;
+    }
+
+    SLIC_ERROR_ROOT(axom::fmt::format("Adjoint '{}' requested from solid mechanics module '{}', but it doesn't exist",
+                                      state_name, name_));
+    return adjoint_temperature_;
   }
 
   /**
@@ -826,9 +838,9 @@ public:
                                                         shape_displacement_, *parameters_[parameter_indices].state...));
     auto drdshape_mat = assemble(drdshape);
 
-    drdshape_mat->MultTranspose(adjoint_temperature_, shape_displacement_sensitivity_);
+    drdshape_mat->MultTranspose(adjoint_temperature_, *shape_displacement_sensitivity_);
 
-    return shape_displacement_sensitivity_;
+    return *shape_displacement_sensitivity_;
   }
 
   /**
@@ -851,7 +863,7 @@ protected:
   using scalar_trial = H1<order>;
 
   /// The compile-time finite element trial space for shape displacement (vector H1 of order 1)
-  using shape_trial = H1<1, dim>;
+  using shape_trial = H1<SHAPE_ORDER, dim>;
 
   /// The compile-time finite element test space for thermal conduction (H1 of order p)
   using test = H1<order>;
