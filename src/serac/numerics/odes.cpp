@@ -81,7 +81,6 @@ void SecondOrderODE::Step(mfem::Vector& x, mfem::Vector& dxdt, double& time, dou
     second_order_ode_solver_->Step(x, dxdt, time, dt);
 
     if (enforcement_method_ == DirichletEnforcementMethod::FullControl) {
-      printf("full enforment\n");
       U_minus_ = 0.0;
       U_       = 0.0;
       U_plus_  = 0.0;
@@ -197,6 +196,11 @@ void SecondOrderODE::Solve(const double time, const double c0, const double c1, 
     }
 
     if (enforcement_method_ == DirichletEnforcementMethod::FullControl) {
+      // d2U_dt2_ = (U_minus_ - 2.0 * U_ + U_plus_) / (epsilon * epsilon);
+      add(1.0, U_minus_, -2.0, U_, d2U_dt2_);
+      d2U_dt2_ += U_plus_;
+      d2U_dt2_ /= epsilon * epsilon;
+
       // d2U_dt2_ = ((U_plus_ - U_minus_) / (2.0 * epsilon) - du_dt) / c1;
       subtract(U_plus_, U_minus_, d2U_dt2_);
       d2U_dt2_ /= 2.0 * epsilon;
