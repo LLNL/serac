@@ -274,7 +274,6 @@ struct HeatTransferSensitivityFixture : public ::testing::Test {
   TimeSteppingInfo tsInfo{.total_time = 0.6, .num_timesteps = 5};
 };
 
-
 TEST_F(HeatTransferSensitivityFixture, InitialTemperatureSensitivities)
 {
   auto [qoi_base, temperature_sensitivity, _] =

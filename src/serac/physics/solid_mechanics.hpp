@@ -1134,7 +1134,7 @@ public:
     dt_history_.push_back(dt);
     cycle_ += 1;
 
-    //SLIC_ERROR_ROOT_IF(dt_history_.size() != static_cast<size_t>(cycle_),
+    // SLIC_ERROR_ROOT_IF(dt_history_.size() != static_cast<size_t>(cycle_),
     //                   "Timestep history count does not match the current cycle count.");
   }
 

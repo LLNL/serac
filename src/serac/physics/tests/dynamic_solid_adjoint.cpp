@@ -106,7 +106,7 @@ double computeSolidMechanicsQoi(SolidMechanics<p, dim>& solid_solver, const Time
   solid_solver.advanceTimestep(dts(0));  // advance by 0.0 seconds to get initial acceleration
   solid_solver.outputStateToDisk();
   FiniteElementState dispForObjective = solid_solver.displacement();
-  double qoi = computeStepQoi(dispForObjective, 0.5 * (dts(0) + dts(1)));
+  double             qoi              = computeStepQoi(dispForObjective, 0.5 * (dts(0) + dts(1)));
   for (int i = 1; i <= ts_info.numTimesteps(); ++i) {
     solid_solver.advanceTimestep(dts(i));
     solid_solver.outputStateToDisk();
