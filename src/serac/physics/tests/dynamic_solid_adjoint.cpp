@@ -64,8 +64,9 @@ std::unique_ptr<SolidMechanics<p, dim>> createNonlinearSolidMechanicsSolver(
     const TimesteppingOptions& dyn_opts, const SolidMaterial& mat)
 {
   static int iter = 0;
-  auto solid = std::make_unique<SolidMechanics<p, dim>>(nonlinear_opts, solid_mechanics::direct_linear_options, dyn_opts,
-                                                        geoNonlinear, physics_prefix + std::to_string(iter++), mesh_tag);
+  auto       solid =
+      std::make_unique<SolidMechanics<p, dim>>(nonlinear_opts, solid_mechanics::direct_linear_options, dyn_opts,
+                                               geoNonlinear, physics_prefix + std::to_string(iter++), mesh_tag);
   solid->setMaterial(mat);
   solid->setDisplacementBCs({1}, [](const mfem::Vector&, mfem::Vector& disp) { disp = boundaryDisp; });
   solid->addBodyForce([](auto X, auto /* t */) {
@@ -77,14 +78,14 @@ std::unique_ptr<SolidMechanics<p, dim>> createNonlinearSolidMechanicsSolver(
   solid->completeSetup();
 
   FiniteElementState velo = solid->velocity();
-  velo                     = initialInteriorVelo;
+  velo                    = initialInteriorVelo;
   solid->zeroEssentials(velo);
   solid->setVelocity(velo);
 
   FiniteElementState disp = solid->displacement();
-  disp                     = initialInteriorDisp;
+  disp                    = initialInteriorDisp;
   solid->zeroEssentials(disp);
-  
+
   FiniteElementState bDisp1 = disp;
   FiniteElementState bDisp2 = disp;
   bDisp1                    = boundaryDisp;
@@ -131,7 +132,8 @@ std::tuple<double, FiniteElementDual, FiniteElementDual, FiniteElementDual> comp
   initial_displacement_sensitivity = 0.0;
   FiniteElementDual initial_velocity_sensitivity(solid_solver.velocity().space(), "init_velocity_sensitivity");
   initial_velocity_sensitivity = 0.0;
-  FiniteElementDual shape_sensitivity(StateManager::mesh(mesh_tag), H1<SHAPE_ORDER, dim>{}, "shape_sensitivity"); // MRT, try to get this size from the physics
+  FiniteElementDual shape_sensitivity(StateManager::mesh(mesh_tag), H1<SHAPE_ORDER, dim>{},
+                                      "shape_sensitivity");  // MRT, try to get this size from the physics
   shape_sensitivity = 0.0;
 
   FiniteElementDual adjoint_load(solid_solver.displacement().space(), "adjoint_displacement_load");
@@ -215,9 +217,9 @@ struct SolidMechanicsSensitivityFixture : public ::testing::Test {
     StateManager::initialize(dataStore, "solid_mechanics_solve");
     std::string filename = std::string(SERAC_REPO_DIR) + "/data/meshes/star.mesh";
     mesh                 = &StateManager::setMesh(mesh::refineAndDistribute(buildMeshFromFile(filename), 0), mesh_tag);
-    mat.density = 1.0;
-    mat.K = 1.0;
-    mat.G = 0.1;
+    mat.density          = 1.0;
+    mat.K                = 1.0;
+    mat.G                = 0.1;
   }
 
   void fillDirection(FiniteElementState& direction) const

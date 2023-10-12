@@ -146,7 +146,8 @@ public:
         displacement_(
             StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "displacement"), mesh_tag_)),
         velocity_(StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "velocity"), mesh_tag_)),
-        acceleration_(StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "acceleration"), mesh_tag_)),
+        acceleration_(
+            StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "acceleration"), mesh_tag_)),
         adjoint_displacement_(StateManager::newState(
             H1<order, dim>{}, detail::addPrefix(physics_name, "adjoint_displacement"), mesh_tag_)),
         implicit_sensitivity_displacement_start_of_step_(displacement_.space(), "total_deriv_wrt_displacement."),
@@ -608,10 +609,7 @@ public:
    *
    * @return The solution variable names
    */
-  std::vector<std::string> adjointNames() override
-  {
-    return std::vector<std::string>{{"displacement"}};
-  }
+  std::vector<std::string> adjointNames() override { return std::vector<std::string>{{"displacement"}}; }
 
   /**
    * @brief register a custom domain integral calculation as part of the residual
