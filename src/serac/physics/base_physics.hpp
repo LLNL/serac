@@ -161,19 +161,6 @@ public:
   }
 
   /**
-   * @brief Accessor for getting named finite element state primal solution from the physics modules at a given
-   * checkpointed cycle index
-   *
-   * @param state_name The name of the Finite Element State primal solution to retrieve
-   * @param cycle The cycle to retrieve state from
-   * @return The named primal Finite Element State
-   */
-  virtual FiniteElementState loadCheckpointedState(const std::string& state_name, int /*cycle*/) const
-  {
-    return state(state_name);
-  }
-
-  /**
    * @brief Register an externally-constructed FiniteElementState object as the source of values for parameter `i`
    *
    * @param parameter_state the values to use for the specified parameter
@@ -273,11 +260,21 @@ public:
   virtual void outputStateToDisk(std::optional<std::string> paraview_output_dir = {}) const;
 
   /**
+   * @brief Accessor for getting named finite element state primal solution from the physics modules at a given
+   * checkpointed cycle index
+   *
+   * @param state_name The name of the Finite Element State primal solution to retrieve
+   * @param cycle The cycle to retrieve state from
+   * @return The named primal Finite Element State
+   */
+  virtual FiniteElementState loadCheckpointedState(const std::string& state_name, int cycle) const;
+
+  /**
    * @brief Get a timestep increment which has been previously checkpointed at the give cycle
    * @param cycle The previous 'timestep' number where the timestep increment is requested
    * @return The timestep increment
    */
-  virtual double loadCheckpointedTimestep(int /*cycle*/) const { return 0.0; }
+  virtual double loadCheckpointedTimestep(int cycle) const;
 
   /**
    * @brief Initializes the Sidre structure for simulation summary data
