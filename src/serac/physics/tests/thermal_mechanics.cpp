@@ -37,7 +37,10 @@ void functional_test_static_3D(double expected_norm)
   std::string filename = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
+
+  std::string mesh_tag{"mesh"};
+
+  serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
@@ -57,7 +60,7 @@ void functional_test_static_3D(double expected_norm)
   Thermomechanics<p, dim> thermal_solid_solver(
       heat_transfer::default_nonlinear_options, heat_transfer::default_linear_options,
       heat_transfer::default_static_options, default_nonlinear_options, default_linear_options,
-      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "thermal_solid_functional");
+      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "thermal_solid_functional", mesh_tag);
 
   double rho       = 1.0;
   double E         = 1.0;
@@ -90,8 +93,7 @@ void functional_test_static_3D(double expected_norm)
   thermal_solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  double dt = 1.0;
-  thermal_solid_solver.advanceTimestep(dt);
+  thermal_solid_solver.advanceTimestep(1.0);
 
   EXPECT_NEAR(expected_norm, norm(thermal_solid_solver.displacement()), 1.0e-6);
 
@@ -117,7 +119,10 @@ void functional_test_shrinking_3D(double expected_norm)
   std::string filename = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
+
+  std::string mesh_tag{"mesh"};
+
+  serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   // Define a boundary attribute set
   std::set<int> constraint_bdr = {1};
@@ -138,7 +143,7 @@ void functional_test_shrinking_3D(double expected_norm)
   Thermomechanics<p, dim> thermal_solid_solver(
       heat_transfer::default_nonlinear_options, heat_transfer::default_linear_options,
       heat_transfer::default_static_options, default_nonlinear_options, default_linear_options,
-      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "thermal_solid_functional");
+      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "thermal_solid_functional", mesh_tag);
 
   double                                       rho       = 1.0;
   double                                       E         = 1.0;
@@ -174,8 +179,7 @@ void functional_test_shrinking_3D(double expected_norm)
   thermal_solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  double dt = 1.0;
-  thermal_solid_solver.advanceTimestep(dt);
+  thermal_solid_solver.advanceTimestep(1.0);
 
   // Check the final displacement norm
   EXPECT_NEAR(expected_norm, norm(thermal_solid_solver.displacement()), 1.0e-4);
@@ -222,7 +226,10 @@ void parameterized()
   // facets should be non-affine as well.
   auto mesh =
       mesh::refineAndDistribute(buildCuboidMesh(4, 4, 4, 0.25, 0.25, 0.25), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
+
+  std::string mesh_tag{"mesh}"};
+
+  auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   // Construct the thermomechanics solver module using the default equation solver parameters for both the heat transfer
   // and solid mechanics solves.
@@ -230,7 +237,7 @@ void parameterized()
       heat_transfer::default_nonlinear_options, heat_transfer::default_linear_options,
       heat_transfer::default_static_options, solid_mechanics::default_nonlinear_options,
       solid_mechanics::default_linear_options, solid_mechanics::default_quasistatic_options,
-      GeometricNonlinearities::On, "thermal_solid_functional");
+      GeometricNonlinearities::On, "thermal_solid_functional", mesh_tag);
 
   double rho       = 1.0;
   double E         = 1.0;
@@ -246,8 +253,7 @@ void parameterized()
   thermal_solid_solver.setMaterial(material, qdata);
 
   // parameterize the coefficient of thermal expansion
-  FiniteElementState thermal_expansion_scaling(
-      StateManager::newState(FiniteElementState::Options{.order = p, .name = "CTE scale"}));
+  FiniteElementState thermal_expansion_scaling(pmesh, H1<p>{}, "CTE scale");
   thermal_expansion_scaling = 1.5;
 
   std::function<double(const mfem::Vector&, double)> f = [](const mfem::Vector& /*x*/, double /*t*/) {
@@ -255,7 +261,7 @@ void parameterized()
   };
   mfem::FunctionCoefficient coef(f);
   thermal_expansion_scaling.project(coef);
-  thermal_solid_solver.setParameter(thermal_expansion_scaling, 0);
+  thermal_solid_solver.setParameter(0, thermal_expansion_scaling);
 
   // Define a boundary attribute set
   std::set<int> constraint_bdr = {1, 2, 3, 4, 5, 6};
@@ -293,14 +299,14 @@ void parameterized()
   thermal_solid_solver.completeSetup();
 
   // dump initial state to output
-  thermal_solid_solver.outputState("pv_output");
+  thermal_solid_solver.outputStateToDisk("pv_output");
 
   for (int i = 0; i < 4; i++) {
     // Perform the quasi-static solve
     double dt = 1.0;
     thermal_solid_solver.advanceTimestep(dt);
 
-    thermal_solid_solver.outputState();
+    thermal_solid_solver.outputStateToDisk();
 
     // Compute norm of error in numerical solution
     // auto exact_solution_coef = std::make_shared<mfem::VectorFunctionCoefficient>(

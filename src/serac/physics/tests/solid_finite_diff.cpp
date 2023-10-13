@@ -34,22 +34,23 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
   std::string filename = SERAC_REPO_DIR "/data/meshes/patch2D_tris_and_quads.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
+
+  std::string mesh_tag{"mesh"};
+
+  auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   constexpr int p   = 1;
   constexpr int dim = 2;
 
   // Construct and initialized the user-defined moduli to be used as a differentiable parameter in
   // the solid physics module.
-  FiniteElementState user_defined_shear_modulus(
-      StateManager::newState(FiniteElementState::Options{.order = 1, .name = "parameterized_shear"}));
+  FiniteElementState user_defined_shear_modulus(pmesh, H1<p>{}, "parameterized_shear");
 
   double shear_modulus_value = 1.0;
 
   user_defined_shear_modulus = shear_modulus_value;
 
-  FiniteElementState user_defined_bulk_modulus(
-      StateManager::newState(FiniteElementState::Options{.order = 1, .name = "parameterized_bulk"}));
+  FiniteElementState user_defined_bulk_modulus(pmesh, H1<p>{}, "parameterized_bulk");
 
   double bulk_modulus_value = 1.0;
 
@@ -60,9 +61,9 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
   auto lin_options          = solid_mechanics::default_linear_options;
   lin_options.linear_solver = LinearSolver::SuperLU;
 
-  SolidMechanics<p, dim, Parameters<H1<1>, H1<1>>> solid_solver(solid_mechanics::default_nonlinear_options, lin_options,
-                                                                solid_mechanics::default_quasistatic_options,
-                                                                GeometricNonlinearities::On, "solid_functional");
+  SolidMechanics<p, dim, Parameters<H1<1>, H1<1>>> solid_solver(
+      solid_mechanics::default_nonlinear_options, lin_options, solid_mechanics::default_quasistatic_options,
+      GeometricNonlinearities::On, "solid_functional", mesh_tag, {"shear modulus", "bulk modulus"});
 
   solid_solver.setParameter(0, user_defined_bulk_modulus);
   solid_solver.setParameter(1, user_defined_shear_modulus);
@@ -98,15 +99,14 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  double dt = 1.0;
-  solid_solver.advanceTimestep(dt);
+  solid_solver.advanceTimestep(1.0);
 
   // Output the sidre-based plot files
-  solid_solver.outputState();
+  solid_solver.outputStateToDisk();
 
   // Make up an adjoint load which can also be viewed as a
   // sensitivity of some qoi with respect to displacement
-  mfem::ParLinearForm adjoint_load_form(&solid_solver.displacement().space());
+  mfem::ParLinearForm adjoint_load_form(const_cast<mfem::ParFiniteElementSpace*>(&solid_solver.displacement().space()));
   adjoint_load_form = 1.0;
 
   // Construct a dummy adjoint load (this would come from a QOI downstream).
@@ -130,20 +130,24 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
     user_defined_bulk_modulus(i) = bulk_modulus_value + eps;
     solid_solver.setDisplacement(bc);
 
-    solid_solver.advanceTimestep(dt);
+    solid_solver.setParameter(0, user_defined_bulk_modulus);
+
+    solid_solver.advanceTimestep(1.0);
     mfem::ParGridFunction displacement_plus = solid_solver.displacement().gridFunction();
 
     user_defined_bulk_modulus(i) = bulk_modulus_value - eps;
 
     solid_solver.setDisplacement(bc);
-    solid_solver.advanceTimestep(dt);
+
+    solid_solver.setParameter(0, user_defined_bulk_modulus);
+    solid_solver.advanceTimestep(1.0);
     mfem::ParGridFunction displacement_minus = solid_solver.displacement().gridFunction();
 
     // Reset to the original bulk modulus value
     user_defined_bulk_modulus(i) = bulk_modulus_value;
 
     // Finite difference to compute sensitivity of displacement with respect to bulk modulus
-    mfem::ParGridFunction ddisp_dbulk(&solid_solver.displacement().space());
+    mfem::ParGridFunction ddisp_dbulk(const_cast<mfem::ParFiniteElementSpace*>(&solid_solver.displacement().space()));
     for (int i2 = 0; i2 < displacement_plus.Size(); ++i2) {
       ddisp_dbulk(i2) = (displacement_plus(i2) - displacement_minus(i2)) / (2.0 * eps);
     }
@@ -193,7 +197,10 @@ void finite_difference_shape_test(LoadingType load)
   std::string filename = SERAC_REPO_DIR "/data/meshes/patch2D_tris.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
+
+  std::string mesh_tag{"mesh"};
+
+  auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   constexpr int p   = 1;
   constexpr int dim = 2;
@@ -210,12 +217,12 @@ void finite_difference_shape_test(LoadingType load)
   // Construct a functional-based solid solver
   SolidMechanics<p, dim> solid_solver(nonlin_options, solid_mechanics::direct_linear_options,
                                       solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On,
-                                      "solid_functional");
+                                      "solid_functional", mesh_tag);
 
   solid_mechanics::NeoHookean mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
 
-  FiniteElementState shape_displacement(solid_solver.shapeDisplacement());
+  FiniteElementState shape_displacement(pmesh, H1<SHAPE_ORDER, dim>{});
 
   shape_displacement = shape_displacement_value;
   solid_solver.setShapeDisplacement(shape_displacement);
@@ -261,15 +268,14 @@ void finite_difference_shape_test(LoadingType load)
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  double dt = 1.0;
-  solid_solver.advanceTimestep(dt);
+  solid_solver.advanceTimestep(1.0);
 
   // Output the sidre-based plot files
-  solid_solver.outputState();
+  solid_solver.outputStateToDisk();
 
   // Make up an adjoint load which can also be viewed as a
   // sensitivity of some qoi with respect to displacement
-  mfem::ParLinearForm adjoint_load_form(&solid_solver.displacement().space());
+  mfem::ParLinearForm adjoint_load_form(const_cast<mfem::ParFiniteElementSpace*>(&solid_solver.displacement().space()));
   adjoint_load_form = 1.0;
 
   // Construct a dummy adjoint load (this would come from a QOI downstream).
@@ -291,23 +297,22 @@ void finite_difference_shape_test(LoadingType load)
   for (int i = 0; i < shape_displacement.Size(); ++i) {
     // Perturb the shape field
     shape_displacement(i) = shape_displacement_value + eps;
-    solid_solver.setShapeDisplacement(shape_displacement);
 
-    solid_solver.advanceTimestep(dt);
+    solid_solver.setShapeDisplacement(shape_displacement);
+    solid_solver.advanceTimestep(1.0);
     mfem::ParGridFunction displacement_plus = solid_solver.displacement().gridFunction();
 
     shape_displacement(i) = shape_displacement_value - eps;
-    solid_solver.setShapeDisplacement(shape_displacement);
 
-    solid_solver.advanceTimestep(dt);
+    solid_solver.setShapeDisplacement(shape_displacement);
+    solid_solver.advanceTimestep(1.0);
     mfem::ParGridFunction displacement_minus = solid_solver.displacement().gridFunction();
 
     // Reset to the original bulk modulus value
     shape_displacement(i) = shape_displacement_value;
-    solid_solver.setShapeDisplacement(shape_displacement);
 
     // Finite difference to compute sensitivity of displacement with respect to bulk modulus
-    mfem::ParGridFunction ddisp_dshape(&solid_solver.displacement().space());
+    mfem::ParGridFunction ddisp_dshape(const_cast<mfem::ParFiniteElementSpace*>(&solid_solver.displacement().space()));
     for (int i2 = 0; i2 < displacement_plus.Size(); ++i2) {
       ddisp_dshape(i2) = (displacement_plus(i2) - displacement_minus(i2)) / (2.0 * eps);
     }

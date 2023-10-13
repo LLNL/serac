@@ -40,7 +40,10 @@ void functional_solid_test_static_J2()
   std::string filename = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
+
+  std::string mesh_tag{"mesh"};
+
+  serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   // _solver_params_start
   serac::LinearSolverOptions linear_options{.linear_solver = LinearSolver::SuperLU};
@@ -52,7 +55,7 @@ void functional_solid_test_static_J2()
                                                   .print_level    = 1};
 
   SolidMechanics<p, dim> solid_solver(nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options,
-                                      GeometricNonlinearities::Off, "solid_mechanics");
+                                      GeometricNonlinearities::Off, "solid_mechanics", mesh_tag);
   // _solver_params_end
 
   solid_mechanics::J2 mat{
@@ -88,15 +91,14 @@ void functional_solid_test_static_J2()
   // Finalize the data structures
   solid_solver.completeSetup();
 
-  solid_solver.outputState("paraview");
+  solid_solver.outputStateToDisk("paraview");
 
   // Perform the quasi-static solve
   int    num_steps = 10;
   double tmax      = 1.0;
-  double dt        = tmax / num_steps;
   for (int i = 0; i < num_steps; i++) {
-    solid_solver.advanceTimestep(dt);
-    solid_solver.outputState("paraview");
+    solid_solver.advanceTimestep(tmax / num_steps);
+    solid_solver.outputStateToDisk("paraview");
   }
 
   // this a qualitative test that just verifies
@@ -125,12 +127,15 @@ void functional_solid_spatial_essential_bc()
   std::string filename = SERAC_REPO_DIR "/data/meshes/onehex.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
+
+  std::string mesh_tag{"mesh"};
+
+  serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   // Construct a functional-based solid mechanics solver
   SolidMechanics<p, dim> solid_solver(
       solid_mechanics::default_nonlinear_options, solid_mechanics::direct_linear_options,
-      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::Off, "solid_mechanics");
+      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::Off, "solid_mechanics", mesh_tag);
 
   solid_mechanics::LinearIsotropic mat{1.0, 1.0, 1.0};
   solid_solver.setMaterial(mat);
@@ -175,9 +180,8 @@ void functional_solid_spatial_essential_bc()
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  double dt = 1.0;
-  solid_solver.advanceTimestep(dt);
-  solid_solver.outputState();
+  solid_solver.advanceTimestep(1.0);
+  solid_solver.outputStateToDisk();
 
   auto [size, rank] = serac::getMPIInfo();
 
@@ -282,29 +286,30 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   std::string filename =
       (dim == 2) ? SERAC_REPO_DIR "/data/meshes/beam-quad.mesh" : SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
 
-  auto  mesh  = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  auto* pmesh = serac::StateManager::setMesh(std::move(mesh));
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
+
+  std::string mesh_tag{"mesh"};
+
+  auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   // Construct and initialized the user-defined moduli to be used as a differentiable parameter in
   // the solid mechanics physics module.
-  FiniteElementState user_defined_shear_modulus(
-      StateManager::newState(FiniteElementState::Options{.order = 1, .name = "parameterized_shear"}));
+  FiniteElementState user_defined_shear_modulus(pmesh, H1<1>{}, "parameterized_shear");
 
   user_defined_shear_modulus = 1.0;
 
-  FiniteElementState user_defined_bulk_modulus(
-      StateManager::newState(FiniteElementState::Options{.order = 1, .name = "parameterized_bulk"}));
+  FiniteElementState user_defined_bulk_modulus(pmesh, H1<1>{}, "parameterized_bulk");
 
   user_defined_bulk_modulus = 1.0;
 
   // _custom_solver_start
-  auto nonlinear_solver = std::make_unique<mfem::NewtonSolver>(pmesh->GetComm());
+  auto nonlinear_solver = std::make_unique<mfem::NewtonSolver>(pmesh.GetComm());
   nonlinear_solver->SetPrintLevel(1);
   nonlinear_solver->SetMaxIter(30);
   nonlinear_solver->SetAbsTol(1.0e-12);
   nonlinear_solver->SetRelTol(1.0e-10);
 
-  auto linear_solver = std::make_unique<mfem::HypreGMRES>(pmesh->GetComm());
+  auto linear_solver = std::make_unique<mfem::HypreGMRES>(pmesh.GetComm());
   linear_solver->SetPrintLevel(1);
   linear_solver->SetMaxIter(500);
   linear_solver->SetTol(1.0e-6);
@@ -315,9 +320,9 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   auto equation_solver = std::make_unique<EquationSolver>(std::move(nonlinear_solver), std::move(linear_solver),
                                                           std::move(preconditioner));
 
-  SolidMechanics<p, dim, Parameters<H1<1>, H1<1>>> solid_solver(std::move(equation_solver),
-                                                                solid_mechanics::default_quasistatic_options,
-                                                                GeometricNonlinearities::On, "parameterized_solid");
+  SolidMechanics<p, dim, Parameters<H1<1>, H1<1>>> solid_solver(
+      std::move(equation_solver), solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On,
+      "parameterized_solid", mesh_tag, {"shear", "bulk"});
   // _custom_solver_end
 
   solid_solver.setParameter(0, user_defined_bulk_modulus);
@@ -333,11 +338,12 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   std::set<int> ess_bdr = {1};
 
   // Generate a true dof set from the boundary attribute
-  mfem::Array<int> bdr_attr_marker(pmesh->bdr_attributes.Max());
+  mfem::Array<int> bdr_attr_marker(pmesh.bdr_attributes.Max());
   bdr_attr_marker    = 0;
   bdr_attr_marker[0] = 1;
   mfem::Array<int> true_dofs;
-  solid_solver.displacement().space().GetEssentialTrueDofs(bdr_attr_marker, true_dofs);
+  auto             fe_space = const_cast<mfem::ParFiniteElementSpace*>(&solid_solver.displacement().space());
+  fe_space->GetEssentialTrueDofs(bdr_attr_marker, true_dofs);
 
   solid_solver.setDisplacementBCsByDofList(true_dofs, bc);
   solid_solver.setDisplacement(bc);
@@ -364,8 +370,7 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  double dt = 1.0;
-  solid_solver.advanceTimestep(dt);
+  solid_solver.advanceTimestep(1.0);
 
   // the calculations peformed in these lines of code
   // are not used, but running them as part of this test
@@ -375,7 +380,7 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   solid_solver.computeTimestepSensitivity(1);
 
   // Output the sidre-based plot files
-  solid_solver.outputState();
+  solid_solver.outputStateToDisk();
 
   // Check the final displacement norm
   EXPECT_NEAR(expected_disp_norm, norm(solid_solver.displacement()), 1.0e-6);
