@@ -560,7 +560,7 @@ public:
    * @param state_name The name of the Finite Element State to retrieve
    * @return The named Finite Element State
    */
-  const FiniteElementState& state(const std::string& state_name) override
+  const FiniteElementState& state(const std::string& state_name) const override
   {
     if (state_name == "displacement") {
       return displacement_;
@@ -580,7 +580,7 @@ public:
    *
    * @return The solution variable names
    */
-  virtual std::vector<std::string> stateNames() override
+  virtual std::vector<std::string> stateNames() const override
   {
     return std::vector<std::string>{{"displacement"}, {"velocity"}, {"acceleration"}};
   }
@@ -591,7 +591,7 @@ public:
    * @param state_name The name of the Finite Element State adjoint solution to retrieve
    * @return The named adjoint Finite Element State
    */
-  const FiniteElementState& adjoint(const std::string& state_name) override
+  const FiniteElementState& adjoint(const std::string& state_name) const override
   {
     if (state_name == "displacement") {
       return adjoint_displacement_;
@@ -607,7 +607,7 @@ public:
    *
    * @return The solution variable names
    */
-  std::vector<std::string> adjointNames() override { return std::vector<std::string>{{"displacement"}}; }
+  std::vector<std::string> adjointNames() const override { return std::vector<std::string>{{"displacement"}}; }
 
   /**
    * @brief register a custom domain integral calculation as part of the residual
@@ -1255,6 +1255,37 @@ public:
     cycle_--;
 
     return {{"adjoint_displacement", adjoint_displacement_}};
+  }
+
+
+  /**
+   * @brief Accessor for getting named finite element state primal solution from the physics modules at a given 
+   * checkpointed cycle index
+   *
+   * @param state_name The name of the Finite Element State primal solution to retrieve
+   * @param cycle The previous timestep where the state solution is requested
+   * @return The named primal Finite Element State
+   */
+  FiniteElementState loadCheckpointedState(const std::string& state_name, int cycle) const override 
+  {
+    if (state_name == "displacement") {
+      FiniteElementState previous_state = displacement_;
+      StateManager::loadCheckpointedStates(cycle, {previous_state});
+      return previous_state;
+    } else if (state_name == "velocity") {
+      FiniteElementState previous_state = velocity_;
+      StateManager::loadCheckpointedStates(cycle, {previous_state});
+      return previous_state;
+    } else if (state_name == "acceleration") {
+      FiniteElementState previous_state = acceleration_;
+      StateManager::loadCheckpointedStates(cycle, {previous_state});
+      return previous_state;
+    }
+
+    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requested from solid mechanics module '{}', but it doesn't exist",
+                                      state_name, name_));
+
+    return displacement_;
   }
 
   /**

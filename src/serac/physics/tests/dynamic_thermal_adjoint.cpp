@@ -82,7 +82,7 @@ std::unique_ptr<ParametrizedHeatTransferT> createParameterizedHeatTransfer(
   thermal->setTemperatureBCs({1}, [](const mfem::Vector&, double) { return 0.0; });
   thermal->setSource([](auto /* X */, auto /* time */, auto /* u */, auto /* du_dx */) { return 1.0; });
   thermal->completeSetup();
-  return thermal;  // std::make_pair(thermal, user_defined_conductivity);
+  return thermal;
 }
 
 double computeThermalQoiAdjustingInitalTemperature(

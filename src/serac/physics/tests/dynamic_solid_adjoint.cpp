@@ -100,44 +100,44 @@ std::unique_ptr<SolidMechanics<p, dim>> createNonlinearSolidMechanicsSolver(
   return solid;
 }
 
-double computeSolidMechanicsQoi(SolidMechanics<p, dim>& solid_solver, const TimeSteppingInfo& ts_info)
+double computeSolidMechanicsQoi(BasePhysics& solid_solver, const TimeSteppingInfo& ts_info)
 {
   auto dts = ts_info.dts;
   solid_solver.advanceTimestep(dts(0));  // advance by 0.0 seconds to get initial acceleration
   solid_solver.outputStateToDisk();
-  FiniteElementState dispForObjective = solid_solver.displacement();
-  double             qoi              = computeStepQoi(dispForObjective, 0.5 * (dts(0) + dts(1)));
+  FiniteElementState dispForObjective = solid_solver.state("displacement");
+
+  double qoi = computeStepQoi(dispForObjective, 0.5 * (dts(0) + dts(1)));
   for (int i = 1; i <= ts_info.numTimesteps(); ++i) {
     solid_solver.advanceTimestep(dts(i));
     solid_solver.outputStateToDisk();
-    dispForObjective = solid_solver.displacement();
+    dispForObjective = solid_solver.state("displacement");
     qoi += computeStepQoi(dispForObjective, 0.5 * (dts(i) + dts(i + 1)));
   }
   return qoi;
 }
 
 std::tuple<double, FiniteElementDual, FiniteElementDual, FiniteElementDual> computeSolidMechanicsQoiSensitivity(
-    SolidMechanics<p, dim>& solid_solver, const TimeSteppingInfo& ts_info)
+    BasePhysics& solid_solver, const TimeSteppingInfo& ts_info)
 {
   EXPECT_EQ(0, solid_solver.cycle());
 
   double qoi = computeSolidMechanicsQoi(solid_solver, ts_info);
 
-  FiniteElementDual initial_displacement_sensitivity(solid_solver.displacement().space(),
+  FiniteElementDual initial_displacement_sensitivity(solid_solver.state("displacement").space(),
                                                      "init_displacement_sensitivity");
   initial_displacement_sensitivity = 0.0;
-  FiniteElementDual initial_velocity_sensitivity(solid_solver.velocity().space(), "init_velocity_sensitivity");
+  FiniteElementDual initial_velocity_sensitivity(solid_solver.state("velocity").space(), "init_velocity_sensitivity");
   initial_velocity_sensitivity = 0.0;
-  FiniteElementDual shape_sensitivity(StateManager::mesh(mesh_tag), H1<SHAPE_ORDER, dim>{},
-                                      "shape_sensitivity");  // MRT, try to get this size from the physics
+  FiniteElementDual shape_sensitivity(solid_solver.shapeDisplacement().space(), "shape sensitivity");
   shape_sensitivity = 0.0;
 
-  FiniteElementDual adjoint_load(solid_solver.displacement().space(), "adjoint_displacement_load");
+  FiniteElementDual adjoint_load(solid_solver.state("displacement").space(), "adjoint_displacement_load");
 
   // for solids, we go back to time = 0, because there is an extra hidden implicit solve at the start
   // consider unifying the interface between solids and thermal
   for (int i = solid_solver.cycle(); i > 0; --i) {
-    FiniteElementState displacement = solid_solver.loadCheckpointedDisplacement(solid_solver.cycle());
+    FiniteElementState displacement = solid_solver.loadCheckpointedState("displacement", solid_solver.cycle());
     computeStepAdjointLoad(
         displacement, adjoint_load,
         0.5 * (solid_solver.loadCheckpointedTimestep(i - 1) + solid_solver.loadCheckpointedTimestep(i)));

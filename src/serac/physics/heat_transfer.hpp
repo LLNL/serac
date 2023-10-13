@@ -506,7 +506,7 @@ public:
    * @param state_name The name of the Finite Element State primal solution to retrieve
    * @return The named primal Finite Element State
    */
-  const FiniteElementState& state(const std::string& state_name) override
+  const FiniteElementState& state(const std::string& state_name) const override
   {
     if (state_name == "temperature") {
       return temperature_;
@@ -522,7 +522,7 @@ public:
    *
    * @return The primal solution names
    */
-  virtual std::vector<std::string> stateNames() override { return std::vector<std::string>{{"temperature"}}; }
+  virtual std::vector<std::string> stateNames() const override { return std::vector<std::string>{{"temperature"}}; }
 
   /**
    * @brief Accessor for getting named finite element state adjoint solution from the physics modules
@@ -530,7 +530,7 @@ public:
    * @param state_name The name of the Finite Element State adjoint solution to retrieve
    * @return The named adjoint Finite Element State
    */
-  const FiniteElementState& adjoint(const std::string& state_name) override
+  const FiniteElementState& adjoint(const std::string& state_name) const override
   {
     if (state_name == "temperature") {
       return adjoint_temperature_;

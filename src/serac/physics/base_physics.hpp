@@ -93,14 +93,14 @@ public:
    * @param state_name The name of the Finite Element State primal solution to retrieve
    * @return The named primal Finite Element State
    */
-  virtual const FiniteElementState& state(const std::string& state_name) = 0;
+  virtual const FiniteElementState& state(const std::string& state_name) const = 0;
 
   /**
    * @brief Get a vector of the finite element state primal solution names
    *
    * @return The primal solution names
    */
-  virtual std::vector<std::string> stateNames() = 0;
+  virtual std::vector<std::string> stateNames() const = 0;
 
   /**
    * @brief Accessor for getting named finite element state adjoint solution from the physics modules
@@ -108,14 +108,24 @@ public:
    * @param adjoint_name The name of the Finite Element State adjoint solution to retrieve
    * @return The named adjoint Finite Element State
    */
-  virtual const FiniteElementState& adjoint(const std::string& adjoint_name) = 0;
+  virtual const FiniteElementState& adjoint(const std::string& adjoint_name) const = 0;
 
   /**
    * @brief Get a vector of the finite element state adjoint solution names
    *
    * @return The adjoint solution names
    */
-  virtual std::vector<std::string> adjointNames() { return {}; }
+  virtual std::vector<std::string> adjointNames() const { return {}; }
+
+  /**
+   * @brief Accessor for getting the shape displacement field from the physics modules
+   *
+   * @return The shape displacement finite element state
+   */
+  const FiniteElementState& shapeDisplacement() const
+  {
+    return shape_displacement_;
+  }
 
   /**
    * @brief Accessor for getting named finite element state parameter fields from the physics modules
@@ -123,7 +133,7 @@ public:
    * @param parameter_name The name of the Finite Element State parameter to retrieve
    * @return The named parameter Finite Element State
    */
-  const FiniteElementState& parameter(const std::string& parameter_name)
+  const FiniteElementState& parameter(const std::string& parameter_name) const
   {
     for (auto& parameter : parameters_) {
       if (parameter_name == parameter.state->name()) {
@@ -152,6 +162,16 @@ public:
 
     return parameter_names;
   }
+
+  /**
+   * @brief Accessor for getting named finite element state primal solution from the physics modules at a given 
+   * checkpointed cycle index
+   *
+   * @param state_name The name of the Finite Element State primal solution to retrieve
+   * @param cycle The cycle to retrieve state from
+   * @return The named primal Finite Element State
+   */
+  virtual FiniteElementState loadCheckpointedState(const std::string& state_name, int /*cycle*/) const { return state(state_name); }
 
   /**
    * @brief Register an externally-constructed FiniteElementState object as the source of values for parameter `i`
