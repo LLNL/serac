@@ -117,14 +117,6 @@ public:
   virtual std::vector<std::string> stateNames() = 0;
 
   /**
-   * @brief Accessor for getting named finite element state adjoint solution from the physics modules
-   *
-   * @param adjoint_name The name of the Finite Element State adjoint solution to retrieve
-   * @return The named adjoint Finite Element State
-   */
-  virtual const FiniteElementState& adjoint(const std::string& adjoint_name) = 0;
-
-  /**
    * @brief Accessor for getting named finite element state parameter fields from the physics modules
    *
    * @param parameter_name The name of the Finite Element State parameter to retrieve

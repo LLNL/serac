@@ -574,23 +574,6 @@ public:
   }
 
   /**
-   * @brief Accessor for getting named finite element state adjoint solution from the physics modules
-   *
-   * @param state_name The name of the Finite Element State adjoint solution to retrieve
-   * @return The named adjoint Finite Element State
-   */
-  const FiniteElementState& adjoint(const std::string& state_name) override
-  {
-    if (state_name == "displacement") {
-      return adjoint_displacement_;
-    }
-
-    SLIC_ERROR_ROOT(axom::fmt::format("Adjoint '{}' requested from solid mechanics module '{}', but it doesn't exist",
-                                      state_name, name_));
-    return adjoint_displacement_;
-  }
-
-  /**
    * @brief register a custom domain integral calculation as part of the residual
    *
    * @tparam active_parameters a list of indices, describing which parameters to pass to the q-function
@@ -1212,13 +1195,6 @@ public:
    * @return A reference to the current displacement finite element state
    */
   const serac::FiniteElementState& displacement() const { return displacement_; };
-
-  /**
-   * @brief Get the adjoint displacement state
-   *
-   * @return A reference to the current adjoint displacement finite element state
-   */
-  const serac::FiniteElementState& adjointDisplacement() const { return adjoint_displacement_; };
 
   /**
    * @brief Get the velocity state

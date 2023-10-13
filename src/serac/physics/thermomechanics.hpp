@@ -89,9 +89,6 @@ public:
     states_.push_back(&thermal_.temperature());
     states_.push_back(&solid_.velocity());
     states_.push_back(&solid_.displacement());
-
-    adjoints_.push_back(&thermal_.adjointTemperature());
-    adjoints_.push_back(&solid_.adjointDisplacement());
   }
 
   /**
@@ -174,25 +171,6 @@ public:
   virtual std::vector<std::string> stateNames() override
   {
     return std::vector<std::string>{{"displacement"}, {"velocity"}, {"temperature"}};
-  }
-
-  /**
-   * @brief Accessor for getting named finite element adjoint fields from the physics modules
-   *
-   * @param state_name The name of the Finite Element State adjoint field to retrieve
-   * @return The named Finite Element State adjoint
-   */
-  const FiniteElementState& adjoint(const std::string& state_name) override
-  {
-    if (state_name == "displacement") {
-      return solid_.adjointDisplacement();
-    } else if (state_name == "temperature") {
-      return thermal_.adjointTemperature();
-    }
-
-    SLIC_ERROR_ROOT(axom::fmt::format("Adjoint '{}' requested from solid mechanics module '{}', but it doesn't exist",
-                                      state_name, name_));
-    return solid_.displacement();
   }
 
   /**
