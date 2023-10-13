@@ -1257,16 +1257,15 @@ public:
     return {{"adjoint_displacement", adjoint_displacement_}};
   }
 
-
   /**
-   * @brief Accessor for getting named finite element state primal solution from the physics modules at a given 
+   * @brief Accessor for getting named finite element state primal solution from the physics modules at a given
    * checkpointed cycle index
    *
    * @param state_name The name of the Finite Element State primal solution to retrieve
    * @param cycle The previous timestep where the state solution is requested
    * @return The named primal Finite Element State
    */
-  FiniteElementState loadCheckpointedState(const std::string& state_name, int cycle) const override 
+  FiniteElementState loadCheckpointedState(const std::string& state_name, int cycle) const override
   {
     if (state_name == "displacement") {
       FiniteElementState previous_state = displacement_;

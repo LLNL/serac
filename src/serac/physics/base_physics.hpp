@@ -122,10 +122,7 @@ public:
    *
    * @return The shape displacement finite element state
    */
-  const FiniteElementState& shapeDisplacement() const
-  {
-    return shape_displacement_;
-  }
+  const FiniteElementState& shapeDisplacement() const { return shape_displacement_; }
 
   /**
    * @brief Accessor for getting named finite element state parameter fields from the physics modules
@@ -164,14 +161,17 @@ public:
   }
 
   /**
-   * @brief Accessor for getting named finite element state primal solution from the physics modules at a given 
+   * @brief Accessor for getting named finite element state primal solution from the physics modules at a given
    * checkpointed cycle index
    *
    * @param state_name The name of the Finite Element State primal solution to retrieve
    * @param cycle The cycle to retrieve state from
    * @return The named primal Finite Element State
    */
-  virtual FiniteElementState loadCheckpointedState(const std::string& state_name, int /*cycle*/) const { return state(state_name); }
+  virtual FiniteElementState loadCheckpointedState(const std::string& state_name, int /*cycle*/) const
+  {
+    return state(state_name);
+  }
 
   /**
    * @brief Register an externally-constructed FiniteElementState object as the source of values for parameter `i`

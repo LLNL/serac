@@ -85,7 +85,6 @@ std::unique_ptr<ParametrizedHeatTransferT> createParameterizedHeatTransfer(
   return thermal;
 }
 
-
 double computeThermalQoi(BasePhysics& physics_solver, const TimeSteppingInfo& ts_info)
 {
   double qoi = 0.0;
@@ -98,7 +97,6 @@ double computeThermalQoi(BasePhysics& physics_solver, const TimeSteppingInfo& ts
   }
   return qoi;
 }
-
 
 double computeThermalQoiAdjustingInitalTemperature(
     axom::sidre::DataStore& data_store, const NonlinearSolverOptions& nonlinear_opts,
