@@ -85,6 +85,21 @@ std::unique_ptr<ParametrizedHeatTransferT> createParameterizedHeatTransfer(
   return thermal;
 }
 
+
+double computeThermalQoi(BasePhysics& physics_solver, const TimeSteppingInfo& ts_info)
+{
+  double qoi = 0.0;
+  physics_solver.outputStateToDisk();
+  for (int i = 0; i < ts_info.num_timesteps; ++i) {
+    double dt = ts_info.total_time / ts_info.num_timesteps;
+    physics_solver.advanceTimestep(dt);
+    physics_solver.outputStateToDisk();
+    qoi += computeStepQoi(physics_solver.state("temperature"), dt);
+  }
+  return qoi;
+}
+
+
 double computeThermalQoiAdjustingInitalTemperature(
     axom::sidre::DataStore& data_store, const NonlinearSolverOptions& nonlinear_opts,
     const TimesteppingOptions&                                                  dyn_opts,
@@ -100,15 +115,7 @@ double computeThermalQoiAdjustingInitalTemperature(
   initial_temp.Add(pertubation, init_temp_derivative_direction);
   thermal->setTemperature(initial_temp);
 
-  double qoi = 0.0;
-  thermal->outputStateToDisk();
-  for (int i = 0; i < ts_info.num_timesteps; ++i) {
-    double dt = ts_info.total_time / ts_info.num_timesteps;
-    thermal->advanceTimestep(dt);
-    thermal->outputStateToDisk();
-    qoi += computeStepQoi(thermal->temperature(), dt);
-  }
-  return qoi;
+  return computeThermalQoi(*thermal, ts_info);
 }
 
 double computeThermalQoiAdjustingShape(axom::sidre::DataStore& data_store, const NonlinearSolverOptions& nonlinear_opts,
@@ -127,15 +134,7 @@ double computeThermalQoiAdjustingShape(axom::sidre::DataStore& data_store, const
   shape_disp.Add(pertubation, shape_derivative_direction);
   thermal->setShapeDisplacement(shape_disp);
 
-  double qoi = 0.0;
-  thermal->outputStateToDisk();
-  for (int i = 0; i < ts_info.num_timesteps; ++i) {
-    double dt = ts_info.total_time / ts_info.num_timesteps;
-    thermal->advanceTimestep(dt);
-    thermal->outputStateToDisk();
-    qoi += computeStepQoi(thermal->temperature(), dt);
-  }
-  return qoi;
+  return computeThermalQoi(*thermal, ts_info);
 }
 
 double computeThermalQoiAdjustingConductivity(
@@ -144,7 +143,7 @@ double computeThermalQoiAdjustingConductivity(
     const TimeSteppingInfo& ts_info, const FiniteElementState& conductivity_derivative_direction, double pertubation)
 {
   auto thermal = createParameterizedHeatTransfer(data_store, nonlinear_opts, dyn_opts, mat);
-  // EXPECT_EQ(thermal->cycle(), 0);
+  // EXPECT_EQ(thermal->cycle(), 0); // MRT, this should be fixed now?
 
   FiniteElementState cond(StateManager::mesh(mesh_tag), H1<p>{}, "input_conductivity");
   cond = 1.1;
@@ -155,15 +154,7 @@ double computeThermalQoiAdjustingConductivity(
   cond.Add(pertubation, conductivity_derivative_direction);
   thermal->setParameter(0, cond);
 
-  double qoi = 0.0;
-  thermal->outputStateToDisk();
-  for (int i = 0; i < ts_info.num_timesteps; ++i) {
-    double dt = ts_info.total_time / ts_info.num_timesteps;
-    thermal->advanceTimestep(dt);
-    thermal->outputStateToDisk();
-    qoi += computeStepQoi(thermal->temperature(), dt);
-  }
-  return qoi;
+  return computeThermalQoi(*thermal, ts_info);
 }
 
 std::tuple<double, FiniteElementDual, FiniteElementDual> computeThermalQoiAndInitialTemperatureAndShapeSensitivity(
@@ -173,25 +164,18 @@ std::tuple<double, FiniteElementDual, FiniteElementDual> computeThermalQoiAndIni
 {
   auto thermal = createNonlinearHeatTransfer(data_store, nonlinear_opts, dyn_opts, mat);
 
-  double qoi = 0.0;
-  thermal->outputStateToDisk();
-  for (int i = 0; i < ts_info.num_timesteps; ++i) {
-    double dt = ts_info.total_time / ts_info.num_timesteps;
-    thermal->advanceTimestep(dt);
-    thermal->outputStateToDisk();
-    qoi += computeStepQoi(thermal->temperature(), dt);
-  }
+  double qoi = computeThermalQoi(*thermal, ts_info);
 
-  FiniteElementDual initial_temperature_sensitivity(thermal->temperature().space(), "init_temp_sensitivity");
+  FiniteElementDual initial_temperature_sensitivity(thermal->state("temperature").space(), "init_temp_sensitivity");
   initial_temperature_sensitivity = 0.0;
   FiniteElementDual shape_sensitivity(StateManager::mesh(mesh_tag), H1<SHAPE_ORDER, dim>{}, "shape_sensitivity");
   shape_sensitivity = 0.0;
 
-  FiniteElementDual adjoint_load(thermal->temperature().space(), "adjoint_load");
+  FiniteElementDual adjoint_load(thermal->state("temperature").space(), "adjoint_load");
 
   for (int i = ts_info.num_timesteps; i > 0; --i) {
     double             dt                      = ts_info.total_time / ts_info.num_timesteps;
-    FiniteElementState temperature_end_of_step = thermal->loadCheckpointedTemperature(thermal->cycle());
+    FiniteElementState temperature_end_of_step = thermal->loadCheckpointedState("temperature", thermal->cycle());
     computeStepAdjointLoad(temperature_end_of_step, adjoint_load, dt);
     thermal->reverseAdjointTimestep({{"temperature", adjoint_load}});
     shape_sensitivity += thermal->computeTimestepShapeSensitivity();
@@ -214,23 +198,16 @@ std::tuple<double, FiniteElementDual> computeThermalConductivitySensitivity(
 {
   auto thermal = createParameterizedHeatTransfer(data_store, nonlinear_opts, dyn_opts, mat);
 
-  double qoi = 0.0;
-  thermal->outputStateToDisk();
-  for (int i = 0; i < ts_info.num_timesteps; ++i) {
-    double dt = ts_info.total_time / ts_info.num_timesteps;
-    thermal->advanceTimestep(dt);
-    thermal->outputStateToDisk();
-    qoi += computeStepQoi(thermal->temperature(), dt);
-  }
+  double qoi = computeThermalQoi(*thermal, ts_info);
 
   FiniteElementDual conductivity_sensitivity(StateManager::mesh(mesh_tag), H1<p>{}, "conductivity_sensitivity");
   conductivity_sensitivity = 0.0;
 
-  FiniteElementDual adjoint_load(thermal->temperature().space(), "adjoint_load");
+  FiniteElementDual adjoint_load(thermal->state("temperature").space(), "adjoint_load");
 
   for (int i = ts_info.num_timesteps; i > 0; --i) {
     double             dt                      = ts_info.total_time / ts_info.num_timesteps;
-    FiniteElementState temperature_end_of_step = thermal->loadCheckpointedTemperature(thermal->cycle());
+    FiniteElementState temperature_end_of_step = thermal->loadCheckpointedState("temperature", thermal->cycle());
     computeStepAdjointLoad(temperature_end_of_step, adjoint_load, dt);
     thermal->reverseAdjointTimestep({{"temperature", adjoint_load}});
     conductivity_sensitivity += thermal->computeTimestepSensitivity(0);

@@ -770,15 +770,25 @@ public:
   }
 
   /**
-   * @brief Get a temperature which has been previously checkpointed at the give cycle
-   * @param cycle The previous timestep where the temperature solution is requested
-   * @return The temperature FiniteElementState at a previous cycle
+   * @brief Accessor for getting named finite element state primal solution from the physics modules at a given 
+   * checkpointed cycle index
+   *
+   * @param state_name The name of the Finite Element State primal solution to retrieve
+   * @param cycle The previous timestep where the state solution is requested
+   * @return The named primal Finite Element State
    */
-  FiniteElementState loadCheckpointedTemperature(int cycle) const
+  FiniteElementState loadCheckpointedState(const std::string& state_name, int cycle) const override 
   {
-    FiniteElementState previous_temperature(temperature_);
-    StateManager::loadCheckpointedStates(cycle, {previous_temperature});
-    return previous_temperature;
+    if (state_name == "temperature") {
+      FiniteElementState previous_state = temperature_;
+      StateManager::loadCheckpointedStates(cycle, {previous_state});
+      return previous_state;
+    }
+
+    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requested from solid mechanics module '{}', but it doesn't exist",
+                                      state_name, name_));
+
+    return temperature_;
   }
 
   /**

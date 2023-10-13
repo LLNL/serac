@@ -1289,30 +1289,6 @@ public:
   }
 
   /**
-   * @brief Get a displacement which has been previously checkpointed at the give cycle
-   * @param cycle The previous timestep where the displacement solution is requested
-   * @return The displacement FiniteElementState at a previous cycle
-   */
-  FiniteElementState loadCheckpointedDisplacement(int cycle) const
-  {
-    FiniteElementState previous_displacement(displacement_);
-    StateManager::loadCheckpointedStates(cycle, {previous_displacement});
-    return previous_displacement;
-  }
-
-  /**
-   * @brief Get a velocity which has been previously checkpointed at the give cycle
-   * @param cycle The previous timestep where the velocity solution is requested
-   * @return The velocity FiniteElementState at a previous cycle
-   */
-  FiniteElementState loadCheckpointedVelocity(int cycle) const
-  {
-    FiniteElementState previous_velocity(velocity_);
-    StateManager::loadCheckpointedStates(cycle, {previous_velocity});
-    return previous_velocity;
-  }
-
-  /**
    * @brief Get a timestep increment which has been previously checkpointed at the give cycle
    * @param cycle The previous 'timestep' number where the timestep increment is requested
    * @return The timestep increment
