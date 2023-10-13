@@ -580,7 +580,7 @@ public:
    *
    * @return The solution variable names
    */
-  virtual std::vector<std::string> stateNames() const override
+  std::vector<std::string> stateNames() const override
   {
     return std::vector<std::string>{{"displacement"}, {"velocity"}, {"acceleration"}};
   }
