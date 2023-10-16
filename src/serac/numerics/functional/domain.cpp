@@ -330,6 +330,7 @@ using set_op = std::function< b_iter(c_iter, c_iter, c_iter, c_iter, b_iter) >;
 
 set_op union_op = std::set_union< c_iter, c_iter, b_iter >;
 set_op intersection_op = std::set_intersection< c_iter, c_iter, b_iter >;
+set_op difference_op = std::set_difference< c_iter, c_iter, b_iter >;
 
 std::vector< int > set_operation(set_op op,
                                  const std::vector< int > & a,
@@ -366,7 +367,8 @@ Domain set_operation(set_op op, const Domain & a, const Domain & b) {
     return output;
 }
 
-Domain union_of(const Domain & a, const Domain & b) { return set_operation(union_op, a, b); }
-Domain intersection_of(const Domain & a, const Domain & b) { return set_operation(intersection_op, a, b); }
+Domain operator|(const Domain & a, const Domain & b) { return set_operation(union_op, a, b); }
+Domain operator&(const Domain & a, const Domain & b) { return set_operation(intersection_op, a, b); }
+Domain operator-(const Domain & a, const Domain & b) { return set_operation(difference_op, a, b); }
 
 }

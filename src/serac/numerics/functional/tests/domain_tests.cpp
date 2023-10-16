@@ -42,11 +42,11 @@ TEST(domain, of_vertices) {
     EXPECT_EQ(d1.vertices.size(), 4);
     EXPECT_EQ(d1.dim, 0);
 
-    Domain d2 = union_of(d0, d1);
+    Domain d2 = d0 | d1;
     EXPECT_EQ(d2.vertices.size(), 6);
     EXPECT_EQ(d2.dim, 0);
 
-    Domain d3 = intersection_of(d0, d1);
+    Domain d3 = d0 & d1;
     EXPECT_EQ(d3.vertices.size(), 2);
     EXPECT_EQ(d3.dim, 0);
   }
@@ -61,11 +61,11 @@ TEST(domain, of_vertices) {
     EXPECT_EQ(d1.vertices.size(), 3);
     EXPECT_EQ(d1.dim, 0);
 
-    Domain d2 = union_of(d0, d1);
+    Domain d2 = d0 | d1;
     EXPECT_EQ(d2.vertices.size(), 4);
     EXPECT_EQ(d2.dim, 0);
 
-    Domain d3 = intersection_of(d0, d1);
+    Domain d3 = d0 & d1;
     EXPECT_EQ(d3.vertices.size(), 2);
     EXPECT_EQ(d3.dim, 0);
   }
@@ -80,11 +80,11 @@ TEST(domain, of_vertices) {
     EXPECT_EQ(d1.vertices.size(), 9);
     EXPECT_EQ(d1.dim, 0);
 
-    Domain d2 = union_of(d0, d1);
+    Domain d2 = d0 | d1;
     EXPECT_EQ(d2.vertices.size(), 10);
     EXPECT_EQ(d2.dim, 0);
 
-    Domain d3 = intersection_of(d0, d1);
+    Domain d3 = d0 & d1;
     EXPECT_EQ(d3.vertices.size(), 1);
     EXPECT_EQ(d3.dim, 0);
   }
@@ -107,11 +107,11 @@ TEST(domain, of_edges) {
     EXPECT_EQ(d1.edges.size(), 4);
     EXPECT_EQ(d1.dim, 1);
 
-    Domain d2 = union_of(d0, d1);
+    Domain d2 = d0 | d1;
     EXPECT_EQ(d2.edges.size(), 7);
     EXPECT_EQ(d2.dim, 1);
 
-    Domain d3 = intersection_of(d0, d1);
+    Domain d3 = d0 & d1;
     EXPECT_EQ(d3.edges.size(), 1);
     EXPECT_EQ(d3.dim, 1);
   }
@@ -130,11 +130,11 @@ TEST(domain, of_edges) {
     EXPECT_EQ(d1.edges.size(), 3);
     EXPECT_EQ(d1.dim, 1);
 
-    Domain d2 = union_of(d0, d1);
+    Domain d2 = d0 | d1;
     EXPECT_EQ(d2.edges.size(), 5);
     EXPECT_EQ(d2.dim, 1);
 
-    Domain d3 = intersection_of(d0, d1);
+    Domain d3 = d0 & d1;
     EXPECT_EQ(d3.edges.size(), 1);
     EXPECT_EQ(d3.dim, 1);
   }
@@ -154,11 +154,11 @@ TEST(domain, of_edges) {
     EXPECT_EQ(d1.edges.size(), 8);
     EXPECT_EQ(d1.dim, 1);
 
-    Domain d2 = union_of(d0, d1);
+    Domain d2 = d0 | d1;
     EXPECT_EQ(d2.edges.size(), 9);
     EXPECT_EQ(d2.dim, 1);
 
-    Domain d3 = intersection_of(d0, d1);
+    Domain d3 = d0 & d1;
     EXPECT_EQ(d3.edges.size(), 0);
     EXPECT_EQ(d3.dim, 1);
   }
@@ -181,11 +181,11 @@ TEST(domain, of_faces) {
     EXPECT_EQ(d1.quads.size(), 1);
     EXPECT_EQ(d1.dim, 2);
 
-    Domain d2 = union_of(d0, d1);
+    Domain d2 = d0 | d1;
     EXPECT_EQ(d2.quads.size(), 2);
     EXPECT_EQ(d2.dim, 2);
 
-    Domain d3 = intersection_of(d0, d1);
+    Domain d3 = d0 & d1;
     EXPECT_EQ(d3.quads.size(), 0);
     EXPECT_EQ(d3.dim, 2);
   }
@@ -208,11 +208,11 @@ TEST(domain, of_faces) {
     EXPECT_EQ(d1.tris.size(), 1);
     EXPECT_EQ(d1.dim, 2);
 
-    Domain d2 = union_of(d0, d1);
+    Domain d2 = d0 | d1;
     EXPECT_EQ(d2.tris.size(), 4);
     EXPECT_EQ(d2.dim, 2);
 
-    Domain d3 = intersection_of(d0, d1);
+    Domain d3 = d0 & d1;
     EXPECT_EQ(d3.tris.size(), 1);
     EXPECT_EQ(d3.dim, 2);
   }
@@ -231,11 +231,11 @@ TEST(domain, of_faces) {
     EXPECT_EQ(d1.quads.size(), 8);
     EXPECT_EQ(d1.dim, 2);
 
-    Domain d2 = union_of(d0, d1);
+    Domain d2 = d0 | d1;
     EXPECT_EQ(d2.quads.size(), 8);
     EXPECT_EQ(d2.dim, 2);
 
-    Domain d3 = intersection_of(d0, d1);
+    Domain d3 = d0 & d1;
     EXPECT_EQ(d3.quads.size(), 2);
     EXPECT_EQ(d3.dim, 2);
   }
@@ -261,12 +261,12 @@ TEST(domain, of_elements) {
     EXPECT_EQ(d1.hexes.size(), 1);
     EXPECT_EQ(d1.dim, 3);
 
-    Domain d2 = union_of(d0, d1);
+    Domain d2 = d0 | d1;
     EXPECT_EQ(d2.tets.size(), 6);
     EXPECT_EQ(d2.hexes.size(), 2);
     EXPECT_EQ(d2.dim, 3);
 
-    Domain d3 = intersection_of(d0, d1);
+    Domain d3 = d0 & d1;
     EXPECT_EQ(d3.tets.size(), 0);
     EXPECT_EQ(d3.hexes.size(), 0);
     EXPECT_EQ(d3.dim, 3);
@@ -288,12 +288,12 @@ TEST(domain, of_elements) {
     EXPECT_EQ(d1.quads.size(), 1);
     EXPECT_EQ(d1.dim, 2);
 
-    Domain d2 = union_of(d0, d1);
+    Domain d2 = d0 | d1;
     EXPECT_EQ(d2.tris.size(), 2);
     EXPECT_EQ(d2.quads.size(), 2);
     EXPECT_EQ(d2.dim, 2);
 
-    Domain d3 = intersection_of(d0, d1);
+    Domain d3 = d0 & d1;
     EXPECT_EQ(d3.tris.size(), 0);
     EXPECT_EQ(d3.quads.size(), 0);
     EXPECT_EQ(d3.dim, 2);
