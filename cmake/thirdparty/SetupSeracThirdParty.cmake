@@ -280,9 +280,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         list(FIND _mfem_libraries ${NETCDF_DIR}/lib/libnetcdf.a _index)
         math(EXPR _index "${_index} + 1")
         list(INSERT _mfem_libraries ${_index} ${HDF5_C_LIBRARY_hdf5_hl})
-        if (STRUMPACK_DIR)
-            list(APPEND _mfem_libraries STRUMPACK::strumpack)
-        endif()
         target_link_libraries(mfem PUBLIC ${_mfem_libraries})
 
         # Patch the mfem target with the correct include directories
