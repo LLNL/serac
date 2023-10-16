@@ -41,6 +41,8 @@ struct GeometricFactors {
    */
   GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry::Type elem_geom, FaceType type);
 
+  GeometricFactors(const Domain & domain, int q, mfem::Geometry::Type elem_geom, FaceType type);
+
   // descriptions copied from mfem
 
   /// Mapped (physical) coordinates of all quadrature points.

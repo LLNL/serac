@@ -245,6 +245,82 @@ Domain Domain::ofElements(const mfem::Mesh & mesh, std::function< bool(std::vect
 
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
+
+template < int d >
+static Domain domain_of_boundary_elems(const mfem::Mesh & mesh, std::function< bool(std::vector< tensor<double,d> >, int) > predicate) {
+    assert(mesh.SpaceDimension() == d);
+
+    Domain output{mesh, d-1, Domain::BOUNDARY_ELEMENTS};
+
+    mfem::Array<int> face_id_to_bdr_id = mesh.GetFaceToBdrElMap(); 
+
+    // layout is undocumented, but it seems to be 
+    // [x1, x2, x3, ..., y1, y2, y3 ..., (z1, z2, z3, ...)]
+    mfem::Vector vertices;
+    mesh.GetVertices(vertices); 
+
+    int edge_id = 0;
+    int tri_id = 0;
+    int quad_id = 0;
+
+    // faces that satisfy the predicate are added to the domain
+    int num_vertices = mesh.GetNV();
+
+    for (int f = 0; f < mesh.GetNumFaces(); f++) {
+
+      // discard faces with the wrong type
+      if (mesh.GetFaceInformation(f).IsInterior()) continue;
+
+      auto geom = mesh.GetFaceGeometry(f);
+
+      mfem::Array<int> vertex_ids;
+      mesh.GetFaceVertices(f, vertex_ids);
+
+      std::vector< tensor<double, d> > x(std::size_t(vertex_ids.Size()));
+      for (int v = 0; v < vertex_ids.Size(); v++) {
+        for (int j = 0; j < d; j++) {
+          x[uint32_t(v)][j] = vertices[j * num_vertices + vertex_ids[v]];
+        }
+      }
+
+      int bdr_id = face_id_to_bdr_id[f];
+      int attr = (bdr_id > 0) ? mesh.GetBdrAttribute(bdr_id) : -1;
+
+      bool add = predicate(x, attr);
+
+      switch (geom) {
+        case mfem::Geometry::SEGMENT: 
+          if (add) { output.edges.push_back(edge_id); }
+          edge_id++; 
+          break;
+        case mfem::Geometry::TRIANGLE: 
+          if (add) { output.tris.push_back(tri_id); }
+          tri_id++; 
+          break;
+        case mfem::Geometry::SQUARE: 
+          if (add) { output.quads.push_back(quad_id); }
+          quad_id++; 
+          break;
+        default:
+          SLIC_ERROR("unsupported element type");
+          break;
+      }
+
+    }
+
+    return output;
+}
+
+Domain Domain::ofBoundaryElements(const mfem::Mesh & mesh, std::function< bool(std::vector<vec2>, int) > func) {
+  return domain_of_boundary_elems<2>(mesh, func);
+}
+
+Domain Domain::ofBoundaryElements(const mfem::Mesh & mesh, std::function< bool(std::vector<vec3>, int) > func) {
+  return domain_of_boundary_elems<3>(mesh, func);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
 

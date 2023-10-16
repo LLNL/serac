@@ -336,6 +336,20 @@ public:
     integrals_.push_back(MakeBoundaryIntegral<signature, Q, dim>(domain, integrand, std::vector<uint32_t>{args...}));
   }
 
+  template <int dim, int... args, typename lambda>
+  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, const Domain & domain)
+  {
+    auto num_bdr_elements = domain.mesh.GetNBE();
+    if (num_bdr_elements == 0) return;
+
+    SLIC_ERROR_ROOT_IF(dim != domain.dim, "invalid domain of integration for boundary integral");
+
+    check_for_missing_nodal_gridfunc(domain.mesh);
+
+    using signature = test(decltype(serac::type<args>(trial_spaces))...);
+    integrals_.push_back(MakeBoundaryIntegral<signature, Q, dim>(domain, integrand, std::vector<uint32_t>{args...}));
+  }
+
   /**
    * @brief Adds an area integral, i.e., over 2D elements in R^2 space
    * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature

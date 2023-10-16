@@ -56,16 +56,21 @@ void thermal_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
 
   // Construct the new functional object using the known test and trial spaces
   Functional<test_space(trial_space)> residual(&test_fespace, {&trial_fespace});
+  Functional<test_space(trial_space)> residual_comparison(&test_fespace, {&trial_fespace});
 
   auto everything = [](std::vector<tensor<double,dim>>, int /* attr */){ return true; };
   auto on_left = [](std::vector<tensor<double,dim>> X, int /* attr */){ return average(X)[0] < 0.5; };
   auto on_right = [](std::vector<tensor<double,dim>> X, int /* attr */){ return average(X)[0] >= 0.5; };
   auto on_bottom = [](std::vector<tensor<double,dim>> X, int /* attr */){ return average(X)[1] < 0.5; };
+  auto on_top = [](std::vector<tensor<double,dim>> X, int /* attr */){ return average(X)[1] >= 0.5; };
 
   Domain whole_mesh = Domain::ofElements(*mesh, everything);
   Domain left = Domain::ofElements(*mesh, on_left);
   Domain right = Domain::ofElements(*mesh, on_right);
-  Domain bottom_boundary = Domain::ofFaces(*mesh, on_bottom);
+
+  Domain whole_boundary = Domain::ofBoundaryElements(*mesh, everything);
+  Domain bottom_boundary = Domain::ofBoundaryElements(*mesh, on_bottom);
+  Domain top_boundary = Domain::ofBoundaryElements(*mesh, on_top);
 
   auto d00 = 1.0;
   auto d01 = 1.0 * make_tensor<dim>([](int i) { return i; });
@@ -90,16 +95,49 @@ void thermal_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
         return serac::tuple{source, flux};
       }, right);
 
-  //residual.AddBoundaryIntegral(
-  //    Dimension<dim - 1>{}, DependsOn<0>{},
-  //    [=](auto position, auto temperature) {
-  //      auto [X, dX_dxi] = position;
-  //      auto [u, du_dxi] = temperature;
-  //      return X[0] + X[1] - cos(u);
-  //    },
-  //    *mesh);
+  residual.AddBoundaryIntegral(
+      Dimension<dim - 1>{}, DependsOn<0>{},
+      [=](auto position, auto temperature) {
+        auto [X, dX_dxi] = position;
+        auto [u, du_dxi] = temperature;
+        return X[0] + X[1] - cos(u);
+      }, bottom_boundary);
+
+  residual.AddBoundaryIntegral(
+      Dimension<dim - 1>{}, DependsOn<0>{},
+      [=](auto position, auto temperature) {
+        auto [X, dX_dxi] = position;
+        auto [u, du_dxi] = temperature;
+        return X[0] + X[1] - cos(u);
+      }, top_boundary);
 
   check_gradient(residual, U);
+
+  auto r0 = residual(U);
+
+  //////////////
+
+  residual_comparison.AddDomainIntegral(
+      Dimension<dim>{}, DependsOn<0>{},
+      [=](auto x, auto temperature) {
+        auto [u, du_dx] = temperature;
+        auto source     = d00 * u + dot(d01, du_dx) - 0.0 * (100 * x[0] * x[1]);
+        auto flux       = d10 * u + dot(d11, du_dx);
+        return serac::tuple{source, flux};
+      }, whole_mesh);
+
+  residual_comparison.AddBoundaryIntegral(
+      Dimension<dim - 1>{}, DependsOn<0>{},
+      [=](auto position, auto temperature) {
+        auto [X, dX_dxi] = position;
+        auto [u, du_dxi] = temperature;
+        return X[0] + X[1] - cos(u);
+      }, whole_boundary);
+
+  auto r1 = residual_comparison(U);
+
+  std::cout << r0.DistanceTo(r1.GetData()) << std::endl;
+
 }
 
 template <int ptest, int ptrial>
