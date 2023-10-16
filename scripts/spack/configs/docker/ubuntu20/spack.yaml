@@ -9,7 +9,7 @@ spack:
     build_stage::
     - $spack/../build_stage
 
-  compilers:
+  compilers::
   - compiler:
       environment: {}
       extra_rpaths: []
