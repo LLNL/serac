@@ -192,6 +192,7 @@ private:
   mfem::SuperLUSolver superlu_solver_;
 };
 
+#ifdef MFEM_USE_STRUMPACK
 /**
  * @brief A wrapper class for using the MFEM Strumpack solver with a HypreParMatrix
  */
@@ -244,6 +245,8 @@ private:
    */
   mfem::STRUMPACKSolver strumpack_solver_;
 };
+
+#endif
 
 /**
  * @brief Build a nonlinear solver using the nonlinear option struct

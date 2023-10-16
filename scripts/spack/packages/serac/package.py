@@ -69,6 +69,8 @@ class Serac(CachedCMakePackage, CudaPackage):
             description="Build with portable kernel execution support")
     variant("tribol", default=True,
             description="Build Tribol, an interface physics library")
+    variant("strumpack", default=True,
+            description="Build MFEM TPL with Strumpack, a direct linear solver library")
 
     # -----------------------------------------------------------------------
     # Dependencies
@@ -92,12 +94,13 @@ class Serac(CachedCMakePackage, CudaPackage):
                when="+sundials")
     depends_on("sundials+asan", when="+sundials+asan")
 
-    depends_on("mfem+metis+superlu-dist+strumpack+lapack+mpi")
+    depends_on("mfem+metis+superlu-dist+lapack+mpi")
     depends_on("mfem+netcdf", when="+netcdf")
     depends_on("mfem+petsc", when="+petsc")
     depends_on("mfem+sundials", when="+sundials")
     depends_on("mfem+amgx", when="+cuda")
     depends_on("mfem+asan", when="+asan")
+    depends_on("mfem+strumpack", when="+strumpack")
 
     depends_on("netcdf-c@4.7.4", when="+netcdf")
 
@@ -140,7 +143,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("superlu-dist@8.1.2")
 
     # The optional slate dependency is not handled in the MFEM spack package
-    depends_on("strumpack~slate~butterflypack")
+    depends_on("strumpack~slate~butterflypack", when="+strumpack")
 
     #
     # Forward variants
@@ -165,7 +168,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     # NOTE: Don't put HDF5 in this list, for the following reasons:
     #  "hdf5+shared" causes Axom to not find HDF5
     #  "hdf5 build_type=Release" causes netcdf-c to not find HDF5 on Ubuntu 20
-    for dep in ["axom", "conduit", "metis", "parmetis", "superlu-dist", "strumpack"]:
+    for dep in ["axom", "conduit", "metis", "parmetis", "superlu-dist"]:
         depends_on("{0} build_type=Debug".format(dep), when="build_type=Debug")
         depends_on("{0}+shared".format(dep), when="+shared")
         depends_on("{0}~shared".format(dep), when="~shared")
@@ -374,11 +377,8 @@ class Serac(CachedCMakePackage, CudaPackage):
         dep_dir = get_spec_path(spec, "superlu-dist", path_replacements)
         entries.append(cmake_cache_path("SUPERLUDIST_DIR", dep_dir))
 
-        dep_dir = get_spec_path(spec, "strumpack", path_replacements)
-        entries.append(cmake_cache_path("STRUMPACK_DIR", dep_dir))
-
         # optional tpls
-        for dep in ("adiak", "amgx", "caliper", "petsc", "raja", "sundials", "umpire", "tribol"):
+        for dep in ("adiak", "amgx", "caliper", "petsc", "raja", "strumpack", "sundials", "umpire", "tribol"):
             if spec.satisfies("^{0}".format(dep)):
                 dep_dir = get_spec_path(spec, dep, path_replacements)
                 entries.append(cmake_cache_path("%s_DIR" % dep.upper(),

@@ -115,6 +115,8 @@ void SuperLUSolver::SetOperator(const mfem::Operator& op)
   superlu_solver_.SetOperator(*superlu_mat_);
 }
 
+#ifdef MFEM_USE_STRUMPACK
+
 void StrumpackSolver::Mult(const mfem::Vector& x, mfem::Vector& y) const
 {
   SLIC_ERROR_ROOT_IF(!strumpack_mat_, "Operator must be set prior to solving with Strumpack");
@@ -144,6 +146,8 @@ void StrumpackSolver::SetOperator(const mfem::Operator& op)
 
   strumpack_solver_.SetOperator(*strumpack_mat_);
 }
+
+#endif
 
 std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(NonlinearSolverOptions nonlinear_opts, MPI_Comm comm)
 {
@@ -202,10 +206,14 @@ std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLin
     return {std::move(lin_solver), nullptr};
   }
 
+#ifdef MFEM_USE_STRUMPACK
+
   if (linear_opts.linear_solver == LinearSolver::Strumpack) {
     auto lin_solver = std::make_unique<StrumpackSolver>(linear_opts.print_level, comm);
     return {std::move(lin_solver), nullptr};
   }
+
+#endif
 
   std::unique_ptr<mfem::IterativeSolver> iter_lin_solver;
 
