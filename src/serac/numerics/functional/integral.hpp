@@ -246,12 +246,13 @@ void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, 
 
   const double*  positions        = gf.X.Read();
   const double*  jacobians        = gf.J.Read();
+  const int * elements            = &domain.get(geom)[0];
   const uint32_t num_elements     = uint32_t(gf.num_elements);
   const uint32_t qpts_per_element = num_quadrature_points(geom, Q);
 
   std::shared_ptr<zero> dummy_derivatives;
   integral.evaluation_[geom] = domain_integral::evaluation_kernel<NO_DIFFERENTIATION, Q, geom>(
-      s, qf, positions, jacobians, qdata, dummy_derivatives, &domain.get(geom)[0], num_elements);
+      s, qf, positions, jacobians, qdata, dummy_derivatives, elements, num_elements);
 
   constexpr std::size_t                 num_args = s.num_args;
   [[maybe_unused]] static constexpr int dim      = dimension_of(geom);
@@ -265,11 +266,11 @@ void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, 
     auto ptr = accelerator::make_shared_array<ExecutionSpace::CPU, derivative_type>(num_elements * qpts_per_element);
 
     integral.evaluation_with_AD_[index][geom] =
-        domain_integral::evaluation_kernel<index, Q, geom>(s, qf, positions, jacobians, qdata, ptr, &domain.get(geom)[0], num_elements);
+        domain_integral::evaluation_kernel<index, Q, geom>(s, qf, positions, jacobians, qdata, ptr, elements, num_elements);
 
-    integral.jvp_[index][geom] = domain_integral::jacobian_vector_product_kernel<index, Q, geom>(s, ptr, num_elements);
+    integral.jvp_[index][geom] = domain_integral::jacobian_vector_product_kernel<index, Q, geom>(s, ptr, elements, num_elements);
     integral.element_gradient_[index][geom] =
-        domain_integral::element_gradient_kernel<index, Q, geom>(s, ptr, num_elements);
+        domain_integral::element_gradient_kernel<index, Q, geom>(s, ptr, elements, num_elements);
   });
 }
 

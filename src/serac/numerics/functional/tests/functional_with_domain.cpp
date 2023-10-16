@@ -57,10 +57,12 @@ void thermal_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
   // Construct the new functional object using the known test and trial spaces
   Functional<test_space(trial_space)> residual(&test_fespace, {&trial_fespace});
 
+  auto everything = [](std::vector<tensor<double,dim>>, int /* attr */){ return true; };
   auto on_left = [](std::vector<tensor<double,dim>> X, int /* attr */){ return average(X)[0] < 0.5; };
   auto on_right = [](std::vector<tensor<double,dim>> X, int /* attr */){ return average(X)[0] >= 0.5; };
   auto on_bottom = [](std::vector<tensor<double,dim>> X, int /* attr */){ return average(X)[1] < 0.5; };
 
+  Domain whole_mesh = Domain::ofElements(*mesh, everything);
   Domain left = Domain::ofElements(*mesh, on_left);
   Domain right = Domain::ofElements(*mesh, on_right);
   Domain bottom_boundary = Domain::ofFaces(*mesh, on_bottom);
@@ -78,6 +80,15 @@ void thermal_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
         auto flux       = d10 * u + dot(d11, du_dx);
         return serac::tuple{source, flux};
       }, left);
+
+  residual.AddDomainIntegral(
+      Dimension<dim>{}, DependsOn<0>{},
+      [=](auto x, auto temperature) {
+        auto [u, du_dx] = temperature;
+        auto source     = d00 * u + dot(d01, du_dx) - 0.0 * (100 * x[0] * x[1]);
+        auto flux       = d10 * u + dot(d11, du_dx);
+        return serac::tuple{source, flux};
+      }, right);
 
   //residual.AddBoundaryIntegral(
   //    Dimension<dim - 1>{}, DependsOn<0>{},
