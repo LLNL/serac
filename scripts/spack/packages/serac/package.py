@@ -143,7 +143,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("superlu-dist@8.1.2")
 
     # The optional slate dependency is not handled in the MFEM spack package
-    depends_on("strumpack~slate~butterflypack~shared", when="+strumpack")
+    depends_on("strumpack~slate~butterflypack", when="+strumpack")
 
     #
     # Forward variants
@@ -153,7 +153,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     # CMake packages "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
 
     # Optional (require our variant in "when")
-    for dep in ["raja", "umpire", "sundials"]:
+    for dep in ["raja", "umpire", "sundials", "strumpack"]:
         depends_on("{0} build_type=Debug".format(dep), when="+{0} build_type=Debug".format(dep))
         depends_on("{0}+shared".format(dep), when="+{0}+shared".format(dep))
         depends_on("{0}~shared".format(dep), when="+{0}~shared".format(dep))

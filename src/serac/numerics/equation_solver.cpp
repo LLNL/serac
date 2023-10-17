@@ -52,12 +52,12 @@ void EquationSolver::solve(mfem::Vector& x) const
   nonlin_solver_->Mult(zero, x);
 }
 
-void SuperLUSolver::Mult(const mfem::Vector& x, mfem::Vector& y) const
+void SuperLUSolver::Mult(const mfem::Vector& input, mfem::Vector& output) const
 {
   SLIC_ERROR_ROOT_IF(!superlu_mat_, "Operator must be set prior to solving with SuperLU");
 
   // Use the underlying MFEM-based solver and SuperLU matrix type to solve the system
-  superlu_solver_.Mult(x, y);
+  superlu_solver_.Mult(input, output);
 }
 
 /**
@@ -117,12 +117,12 @@ void SuperLUSolver::SetOperator(const mfem::Operator& op)
 
 #ifdef MFEM_USE_STRUMPACK
 
-void StrumpackSolver::Mult(const mfem::Vector& x, mfem::Vector& y) const
+void StrumpackSolver::Mult(const mfem::Vector& input, mfem::Vector& output) const
 {
   SLIC_ERROR_ROOT_IF(!strumpack_mat_, "Operator must be set prior to solving with Strumpack");
 
   // Use the underlying MFEM-based solver and Strumpack matrix type to solve the system
-  strumpack_solver_.Mult(x, y);
+  strumpack_solver_.Mult(input, output);
 }
 
 void StrumpackSolver::SetOperator(const mfem::Operator& op)

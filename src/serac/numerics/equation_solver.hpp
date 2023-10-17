@@ -164,10 +164,10 @@ public:
   /**
    * @brief Factor and solve the linear system y = Op^{-1} x using DSuperLU
    *
-   * @param x The input RHS vector
-   * @param y The output solution vector
+   * @param input The input RHS vector
+   * @param output The output solution vector
    */
-  void Mult(const mfem::Vector& x, mfem::Vector& y) const;
+  void Mult(const mfem::Vector& input, mfem::Vector& output) const;
 
   /**
    * @brief Set the underlying matrix operator to use in the solution algorithm
@@ -218,10 +218,10 @@ public:
   /**
    * @brief Factor and solve the linear system y = Op^{-1} x using Strumpack
    *
-   * @param x The input RHS vector
-   * @param y The output solution vector
+   * @param input The input RHS vector
+   * @param output The output solution vector
    */
-  void Mult(const mfem::Vector& x, mfem::Vector& y) const;
+  void Mult(const mfem::Vector& input, mfem::Vector& output) const;
 
   /**
    * @brief Set the underlying matrix operator to use in the solution algorithm
