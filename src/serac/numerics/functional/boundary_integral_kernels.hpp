@@ -153,21 +153,21 @@ auto batch_apply_qf(lambda qf, const tensor<double, 3, n>& positions, const tens
   return outputs;
 }
 
-template<mfem::Geometry::Type geom, typename test, typename... trials>
-auto
-get_trial_elements(FunctionSignature<test(trials...)>) {
-  return tuple<finite_element<geom, trials>...> {};
+template <mfem::Geometry::Type geom, typename test, typename... trials>
+auto get_trial_elements(FunctionSignature<test(trials...)>)
+{
+  return tuple<finite_element<geom, trials>...>{};
 }
 
-template<mfem::Geometry::Type geom, typename test, typename... trials>
-auto
-get_test(FunctionSignature<test(trials...)>) {
-  return finite_element<geom, test> {};
+template <mfem::Geometry::Type geom, typename test, typename... trials>
+auto get_test(FunctionSignature<test(trials...)>)
+{
+  return finite_element<geom, test>{};
 }
 
- /// @trial_elements the element type for each trial space
-template <uint32_t differentiation_index, int Q, mfem::Geometry::Type geom, typename test_element, typename trial_element_type,
-          typename lambda_type, typename derivative_type, int... indices>
+/// @trial_elements the element type for each trial space
+template <uint32_t differentiation_index, int Q, mfem::Geometry::Type geom, typename test_element,
+          typename trial_element_type, typename lambda_type, typename derivative_type, int... indices>
 void evaluation_kernel_impl(trial_element_type trial_elements, test_element, const std::vector<const double*>& inputs,
                             double* outputs, const double* positions, const double* jacobians, lambda_type qf,
                             [[maybe_unused]] derivative_type* qf_derivatives, uint32_t num_elements,
@@ -187,13 +187,13 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, con
   [[maybe_unused]] tuple u = {
       reinterpret_cast<const typename decltype(type<indices>(trial_elements))::dof_type*>(inputs[indices])...};
 
-#if defined (USE_CUDA)
-std::cout << "RAJA ENABLE CUDA DEF" << std::endl;
-using policy = RAJA::cuda_exec<512>;
+#if defined(USE_CUDA)
+  std::cout << "RAJA ENABLE CUDA DEF" << std::endl;
+  using policy = RAJA::cuda_exec<512>;
 // #if defined(RAJA_ENABLE_OPENMP)
 //   using policy = RAJA::omp_parallel_for_exec;
 #else
-std::cout << "simd\n";
+  std::cout << "simd\n";
   using policy = RAJA::simd_exec;
 #endif
   // for each element in the domain
@@ -349,10 +349,10 @@ std::function<void(const std::vector<const double*>&, double*, bool)> evaluation
     std::shared_ptr<derivative_type> qf_derivatives, uint32_t num_elements)
 {
   auto trial_elements = get_trial_elements<geom>(s);
-  auto test = get_test<geom>(s);
+  auto test           = get_test<geom>(s);
   return [=](const std::vector<const double*>& inputs, double* outputs, bool /* update state */) {
-    evaluation_kernel_impl<wrt, Q, geom>(trial_elements, test, inputs, outputs, positions, jacobians, qf, qf_derivatives.get(),
-                                         num_elements, s.index_seq);
+    evaluation_kernel_impl<wrt, Q, geom>(trial_elements, test, inputs, outputs, positions, jacobians, qf,
+                                         qf_derivatives.get(), num_elements, s.index_seq);
   };
 }
 
