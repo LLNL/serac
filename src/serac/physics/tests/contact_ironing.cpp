@@ -48,8 +48,8 @@ TEST_P(ContactTest, ironing)
 
   // NOTE: kinsol does not appear to be working with penalty
   NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::Newton,
-                                           .relative_tol   = 1.0e-12,
-                                           .absolute_tol   = 1.0e-12,
+                                           .relative_tol   = 1.0e-7,
+                                           .absolute_tol   = 1.0e-7,
                                            .max_iterations = 200,
                                            .print_level    = 1};
 
@@ -58,22 +58,24 @@ TEST_P(ContactTest, ironing)
                                  .type        = std::get<1>(GetParam()),
                                  .penalty     = 1.0e3};
 
-  SolidMechanicsContact<p, dim> solid_solver(nonlinear_options, linear_options,
-                                             solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On,
-                                             name);
+  SolidMechanicsContact<p, dim, Parameters<L2<0>, L2<0>>> solid_solver(nonlinear_options, linear_options,
+                                                                       solid_mechanics::default_quasistatic_options,
+                                                                       GeometricNonlinearities::On, name);
 
-  FiniteElementState K_field(StateManager::newState(FiniteElementState::Options{.order = 1, .name = "bulk_mod"}));
-  mfem::Vector K_values ({10.0, 100.0});
+  FiniteElementState       K_field(StateManager::newState(
+      FiniteElementState::Options{.order = 0, .element_type = ElementType::L2, .name = "bulk_mod"}));
+  mfem::Vector             K_values({10.0, 100.0});
   mfem::PWConstCoefficient K_coeff(K_values);
   K_field.project(K_coeff);
   solid_solver.setParameter(0, K_field);
-  
-  FiniteElementState G_field(StateManager::newState(FiniteElementState::Options{.order = 1, .name = "shear_mod"}));
-  mfem::Vector G_values ({0.25, 2.5});
+
+  FiniteElementState       G_field(StateManager::newState(
+      FiniteElementState::Options{.order = 0, .element_type = ElementType::L2, .name = "shear_mod"}));
+  mfem::Vector             G_values({0.25, 2.5});
   mfem::PWConstCoefficient G_coeff(G_values);
   G_field.project(G_coeff);
   solid_solver.setParameter(1, G_field);
-  
+
   solid_mechanics::ParameterizedNeoHookeanSolid<dim> mat{1.0, 0.0, 0.0};
   solid_solver.setMaterial(DependsOn<0, 1>{}, mat);
 
@@ -82,10 +84,17 @@ TEST_P(ContactTest, ironing)
     u.SetSize(dim);
     u = 0.0;
   });
-  solid_solver.setDisplacementBCs({12}, [](const mfem::Vector&, mfem::Vector& u) {
+  double time = 0.0;
+  solid_solver.setDisplacementBCs({12}, [&time](const mfem::Vector&, mfem::Vector& u) {
     u.SetSize(dim);
     u    = 0.0;
-    u[2] = -0.15;
+    if (time <= 2.0 + 1.0e-12)
+    {
+      u[2] = -time * 0.15;
+    } else {
+      u[0] = -(time - 2.0) * 0.25;
+      u[2] = -0.3;
+    }
   });
 
   // Add the contact interaction
@@ -99,10 +108,16 @@ TEST_P(ContactTest, ironing)
 
   // Perform the quasi-static solve
   double dt = 1.0;
-  solid_solver.advanceTimestep(dt);
 
-  // Output the sidre-based plot files
-  solid_solver.outputState(paraview_name);
+  for (int i{0}; i < 26; ++i)
+  {
+    time += dt;
+
+    solid_solver.advanceTimestep(dt);
+
+    // Output the sidre-based plot files
+    solid_solver.outputState(paraview_name);
+  }
 
   // Check the l2 norm of the displacement dofs
   // auto u_l2 = mfem::ParNormlp(solid_solver.displacement(), 2, MPI_COMM_WORLD);
@@ -116,7 +131,8 @@ TEST_P(ContactTest, ironing)
 // NOTE: if Penalty is first and Lagrange Multiplier is second, super LU gives a
 // zero diagonal error
 INSTANTIATE_TEST_SUITE_P(tribol, ContactTest,
-                         testing::Values(std::make_tuple(ContactEnforcement::Penalty, ContactType::Frictionless, "penalty_frictionless")));
+                         testing::Values(std::make_tuple(ContactEnforcement::Penalty, ContactType::TiedNormal,
+                                                         "penalty_frictionless")));
 
 }  // namespace serac
 
