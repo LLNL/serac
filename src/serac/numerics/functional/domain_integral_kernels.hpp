@@ -160,10 +160,8 @@ void evaluation_kernel_impl(trial_element_tuple_type          trial_elements, te
       reinterpret_cast<const typename decltype(type<indices>(trial_elements))::dof_type*>(inputs[indices])...};
 
 #if defined(USE_CUDA)
-  std::cout << "USING CUDA :)\n";
   using policy = RAJA::cuda_exec<512>;
 #else
-  std::cout << "USING SIMD :)\n";
   using policy = RAJA::simd_exec;
 #endif
 
@@ -172,19 +170,18 @@ void evaluation_kernel_impl(trial_element_tuple_type          trial_elements, te
       RAJA::TypedRangeSegment<uint32_t>(0, num_elements),
       [J, x, qf, u, qpts_per_elem, rule, r, qf_state, qf_derivatives, update_state] RAJA_HOST_DEVICE(uint32_t e) {
         // load the jacobians and positions for each quadrature point in this element
-        // printf("HERE1\n");
         auto J_e = J[e];
         auto x_e = x[e];
-        // printf("HERE2\n");
+
         static constexpr trial_element_type empty_trial_element{};
         // batch-calculate values / derivatives of each trial space, at each quadrature point
         [[maybe_unused]] tuple qf_inputs = {promote_each_to_dual_when<indices == differentiation_index>(
             get<indices>(empty_trial_element).interpolate(get<indices>(u)[e], rule))...};
-        // printf("HERE3\n");
+
         // use J_e to transform values / derivatives on the parent element
         // to the to the corresponding values / derivatives on the physical element
         (parent_to_physical<get<indices>(empty_trial_element).family>(get<indices>(qf_inputs), J_e), ...);
-        // printf("HERE4\n");
+
         // (batch) evalute the q-function at each quadrature point
         //
         // note: the weird immediately-invoked lambda expression is
@@ -197,11 +194,11 @@ void evaluation_kernel_impl(trial_element_tuple_type          trial_elements, te
             return batch_apply_qf(qf, x_e, &qf_state(e, 0), update_state, get<indices>(qf_inputs)...);
           }
         }();
-        // printf("HERE5\n");
+
         // use J to transform sources / fluxes on the physical element
         // back to the corresponding sources / fluxes on the parent element
         physical_to_parent<test_element::family>(qf_outputs, J_e);
-        // printf("HERE6\n");
+
         // write out the q-function derivatives after applying the
         // physical_to_parent transformation, so that those transformations
         // won't need to be applied in the action_of_gradient and element_gradient kernels
@@ -210,10 +207,9 @@ void evaluation_kernel_impl(trial_element_tuple_type          trial_elements, te
             qf_derivatives[e * uint32_t(qpts_per_elem) + uint32_t(q)] = get_gradient(qf_outputs[q]);
           }
         }
-        // printf("HERE7\n");
+
         // (batch) integrate the material response against the test-space basis functions
         test_element::integrate(get_value(qf_outputs), rule, &r[e]);
-        // printf("HERE8\n");
       });
 
   return;
