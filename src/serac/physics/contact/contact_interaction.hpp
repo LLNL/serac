@@ -41,8 +41,8 @@ public:
    *
    * @param interaction_id Unique identifier for the ContactInteraction (used in Tribol)
    * @param mesh Mesh of the entire domain
-   * @param bdry_attr_surf1 MFEM boundary attributes for the first surface
-   * @param bdry_attr_surf2 MFEM boundary attributes for the second surface
+   * @param bdry_attr_surf1 MFEM boundary attributes for the first (mortar) surface
+   * @param bdry_attr_surf2 MFEM boundary attributes for the second (nonmortar) surface
    * @param current_coords Reference to the grid function holding current mesh
    * @param contact_opts Defines contact method, enforcement, type, and penalty
    * coordinates
@@ -76,7 +76,7 @@ public:
    * @brief Get the pressure true degrees of freedom on the contact surface for the contact interaction
    *
    * The type of pressure (normal or vector-valued) is set by the ContactType in the ContactOptions struct for the
-   * contact interaction. TiedSlide and Frictionless (the two type supported in Tribol) correspond to scalar normal
+   * contact interaction. TiedNormal and Frictionless (the two type supported in Tribol) correspond to scalar normal
    * pressure. Only linear (order = 1) pressure fields are supported.
    *
    * @return Pressure true degrees of freedom as a FiniteElementState
@@ -87,7 +87,7 @@ public:
    * @brief Get the nodal gaps on the true degrees of freedom of the contact surface for the contact interaction
    *
    * The type of gap (normal or vector-valued) is set by the ContactType in the ContactOptions struct for the contact
-   * interaction. TiedSlide and Frictionless (the two type supported in Tribol) correspond to scalar gap normal.  Only
+   * interaction. TiedNormal and Frictionless (the two type supported in Tribol) correspond to scalar gap normal.  Only
    * linear (order = 1) gap fields are supported.
    *
    * @return Nodal gaps on the true DOFs on the contact surface as a FiniteElementDual
