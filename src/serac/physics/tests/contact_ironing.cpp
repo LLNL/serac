@@ -7,6 +7,7 @@
 #include "serac/physics/solid_mechanics_contact.hpp"
 
 #include <functional>
+#include <mfem/fem/coefficient.hpp>
 #include <set>
 #include <string>
 
@@ -16,7 +17,7 @@
 
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/state/state_manager.hpp"
-#include "serac/physics/materials/solid_material.hpp"
+#include "serac/physics/materials/parameterized_solid_material.hpp"
 #include "serac/serac_config.hpp"
 
 namespace serac {
@@ -55,16 +56,26 @@ TEST_P(ContactTest, ironing)
   ContactOptions contact_options{.method      = ContactMethod::SingleMortar,
                                  .enforcement = std::get<0>(GetParam()),
                                  .type        = std::get<1>(GetParam()),
-                                 .penalty     = 1.0e2};
+                                 .penalty     = 1.0e3};
 
   SolidMechanicsContact<p, dim> solid_solver(nonlinear_options, linear_options,
                                              solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On,
                                              name);
 
-  double                      K = 10.0;
-  double                      G = 0.25;
-  solid_mechanics::NeoHookean mat{1.0, K, G};
-  solid_solver.setMaterial(mat);
+  FiniteElementState K_field(StateManager::newState(FiniteElementState::Options{.order = 1, .name = "bulk_mod"}));
+  mfem::Vector K_values ({10.0, 100.0});
+  mfem::PWConstCoefficient K_coeff(K_values);
+  K_field.project(K_coeff);
+  solid_solver.setParameter(0, K_field);
+  
+  FiniteElementState G_field(StateManager::newState(FiniteElementState::Options{.order = 1, .name = "shear_mod"}));
+  mfem::Vector G_values ({0.25, 2.5});
+  mfem::PWConstCoefficient G_coeff(G_values);
+  G_field.project(G_coeff);
+  solid_solver.setParameter(1, G_field);
+  
+  solid_mechanics::ParameterizedNeoHookeanSolid<dim> mat{1.0, 0.0, 0.0};
+  solid_solver.setMaterial(DependsOn<0, 1>{}, mat);
 
   // Pass the BC information to the solver object
   solid_solver.setDisplacementBCs({5}, [](const mfem::Vector&, mfem::Vector& u) {
