@@ -71,16 +71,21 @@ mfem::Vector ContactData::mergedPressures() const
   return merged_p;
 }
 
-mfem::Vector ContactData::mergedGaps() const
+mfem::Vector ContactData::mergedGaps(bool zero_inactive) const
 {
   mfem::Vector merged_g(numPressureDofs());
   auto         dof_offsets = pressureDofOffsets();
   for (size_t i{0}; i < interactions_.size(); ++i) {
     if (interactions_[i].getContactOptions().enforcement == ContactEnforcement::LagrangeMultiplier) {
-      mfem::Vector g_interaction;
-      g_interaction.MakeRef(merged_g, dof_offsets[static_cast<int>(i)],
-                            dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
-      g_interaction.Set(1.0, interactions_[i].gaps());
+      auto g = interactions_[i].gaps();
+      if (zero_inactive) {
+        for (auto dof : interactions_[i].inactiveDofs()) {
+          g[dof] = 0.0;
+        }
+      }
+      mfem::Vector g_interaction(merged_g, dof_offsets[static_cast<int>(i)],
+                                 dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
+      g_interaction.Set(1.0, g);
     }
   }
   return merged_g;
@@ -149,12 +154,13 @@ std::unique_ptr<mfem::BlockOperator> ContactData::mergedJacobian() const
         // compute contribution to off-diagonal blocks for Lagrange multiplier
         constraint_matrices(static_cast<int>(i), 0) = static_cast<mfem::HypreParMatrix*>(B);
       }
-      if (interaction_J->IsZeroBlock(0, 1) || !dynamic_cast<mfem::TransposeOperator*>(&interaction_J->GetBlock(0, 1))) {
+      if (interaction_J->IsZeroBlock(0, 1)) {
         SLIC_ERROR_ROOT("Only symmetric constraint matrices are currently supported.");
       }
       delete &interaction_J->GetBlock(0, 1);
       if (!interaction_J->IsZeroBlock(1, 1)) {
-        SLIC_ERROR_ROOT("Only zero-valued (1, 1) Jacobian blocks are currently supported.");
+        // we track our own active set, so get rid of the tribol inactive dof block
+        delete &interaction_J->GetBlock(1, 1);
       }
     }
   }
@@ -233,7 +239,9 @@ void ContactData::residualFunction(const mfem::Vector& u, mfem::Vector& r)
   update(1, 1.0, dt);
 
   r_blk += forces();
-  g_blk.Set(1.0, mergedGaps());
+  // calling mergedGaps() with true will zero out gap on inactive dofs (so the residual converges and the linearized
+  // system makes sense)
+  g_blk.Set(1.0, mergedGaps(true));
 }
 
 std::unique_ptr<mfem::BlockOperator> ContactData::jacobianFunction(const mfem::Vector&   u,

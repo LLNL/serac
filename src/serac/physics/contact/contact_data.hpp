@@ -58,8 +58,8 @@ public:
    * @brief Add another contact interaction
    *
    * @param interaction_id Unique identifier for the ContactInteraction (used in Tribol)
-   * @param bdry_attr_surf1 MFEM boundary attributes for the first surface
-   * @param bdry_attr_surf2 MFEM boundary attributes for the second surface
+   * @param bdry_attr_surf1 MFEM boundary attributes for the first (mortar) surface
+   * @param bdry_attr_surf2 MFEM boundary attributes for the second (nonmortar) surface
    * @param contact_opts Defines contact method, enforcement, type, and penalty
    */
   void addContactInteraction(int interaction_id, const std::set<int>& bdry_attr_surf1,
@@ -85,7 +85,7 @@ public:
    * @brief Returns pressures from all contact interactions on the contact surface true degrees of freedom
    *
    * The type of pressure (normal or vector-valued) is set by the ContactType in the ContactOptions struct for the
-   * contact interaction. TiedSlide and Frictionless (the two type supported in Tribol) correspond to scalar normal
+   * contact interaction. TiedNormal and Frictionless (the two type supported in Tribol) correspond to scalar normal
    * pressure. Only linear (order = 1) pressure fields are supported.
    *
    * @return Pressure true degrees of freedom on each contact interaction (merged into one mfem::Vector)
@@ -96,12 +96,13 @@ public:
    * @brief Returns nodal gaps from all contact interactions on the contact surface true degrees of freedom
    *
    * The type of gap (normal or vector-valued) is set by the ContactType in the ContactOptions struct for the contact
-   * interaction. TiedSlide and Frictionless (the two type supported in Tribol) correspond to scalar gap normal.  Only
+   * interaction. TiedNormal and Frictionless (the two type supported in Tribol) correspond to scalar gap normal.  Only
    * linear (order = 1) gap fields are supported.
    *
+   * @param [in] zero_inactive Sets inactive t-dofs to zero gap
    * @return Nodal gap true degrees of freedom on each contact interaction (merged into one mfem::Vector)
    */
-  mfem::Vector mergedGaps() const;
+  mfem::Vector mergedGaps(bool zero_inactive = false) const;
 
   /**
    * @brief Returns a 2x2 block Jacobian on displacement/pressure true degrees of

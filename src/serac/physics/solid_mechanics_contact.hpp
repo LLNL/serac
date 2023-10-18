@@ -104,7 +104,6 @@ public:
       mfem::Vector r_blk(r, 0, displacement_.Size());
       r_blk = res;
       contact_.residualFunction(u, r);
-      // we need to do this again to clear out contact residual on essential dofs
       r_blk.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
     };
     if (contact_.haveLagrangeMultipliers()) {
