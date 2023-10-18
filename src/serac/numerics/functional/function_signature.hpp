@@ -1,3 +1,4 @@
+#include <camp/camp.hpp>
 #pragma once
 
 template <typename T>
@@ -17,5 +18,5 @@ struct FunctionSignature<output_type(input_types...)> {
   static constexpr int num_args = sizeof...(input_types);
 
   /// integer sequence used to make iterating over arguments easier
-  static constexpr auto index_seq = std::make_integer_sequence<int, num_args>{};
+  static constexpr auto index_seq = camp::make_int_seq<int, num_args>{};
 };
