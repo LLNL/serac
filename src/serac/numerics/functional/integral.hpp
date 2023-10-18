@@ -123,8 +123,13 @@ struct Integral {
    * test_dofs_per_elem)
    * @param differentiation_index the index of the trial space being differentiated
    */
+  #if defined (USE_CUDA)
+  void ComputeElementGradients(std::map<mfem::Geometry::Type, ExecArray<double, 3, ExecutionSpace::GPU> >& K_e,
+                                                                          uint32_t differentiation_index) const
+  #else
   void ComputeElementGradients(std::map<mfem::Geometry::Type, ExecArray<double, 3, ExecutionSpace::CPU> >& K_e,
-                               uint32_t differentiation_index) const
+                                                                          uint32_t differentiation_index) const
+  #endif
   {
     // if this integral actually depends on the specified variable
     if (functional_to_integral_index_.count(differentiation_index) > 0) {
@@ -153,7 +158,11 @@ struct Integral {
   std::vector<std::map<mfem::Geometry::Type, jacobian_vector_product_func> > jvp_;
 
   /// @brief signature of element gradient kernel
+  #if defined (USE_CUDA)
+  using grad_func = std::function<void(ExecArrayView<double, 3, ExecutionSpace::GPU>)>;
+  #else
   using grad_func = std::function<void(ExecArrayView<double, 3, ExecutionSpace::CPU>)>;
+  #endif
 
   /// @brief kernels for calculation of element jacobians
   std::vector<std::map<mfem::Geometry::Type, grad_func> > element_gradient_;
@@ -223,8 +232,11 @@ void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, 
     // action_of_gradient functor below to augment the reference count, and extend its lifetime to match
     // that of the DomainIntegral that allocated it.
     using derivative_type = decltype(domain_integral::get_derivative_type<index, dim, trials...>(qf, qpt_data_type{}));
+    #if defined (USE_CUDA)
+    auto ptr = accelerator::make_shared_array<ExecutionSpace::GPU, derivative_type>(num_elements * qpts_per_element);
+    #else
     auto ptr = accelerator::make_shared_array<ExecutionSpace::CPU, derivative_type>(num_elements * qpts_per_element);
-
+    #endif
     integral.evaluation_with_AD_[index][geom] =
         domain_integral::evaluation_kernel<index, Q, geom>(s, qf, positions, jacobians, qdata, ptr, num_elements);
 
@@ -310,7 +322,11 @@ void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral& integr
     // action_of_gradient functor below to augment the reference count, and extend its lifetime to match
     // that of the boundaryIntegral that allocated it.
     using derivative_type = decltype(boundary_integral::get_derivative_type<index, dim, trials...>(qf));
+    #if defined (USE_CUDA)
+    auto ptr = accelerator::make_shared_array<ExecutionSpace::GPU, derivative_type>(num_elements * qpts_per_element);
+    #else
     auto ptr = accelerator::make_shared_array<ExecutionSpace::CPU, derivative_type>(num_elements * qpts_per_element);
+    #endif
 
     integral.evaluation_with_AD_[index][geom] =
         boundary_integral::evaluation_kernel<index, Q, geom>(s, qf, positions, jacobians, ptr, num_elements);

@@ -153,18 +153,26 @@ auto batch_apply_qf(lambda qf, const tensor<double, 3, n>& positions, const tens
   return outputs;
 }
 
-template <uint32_t differentiation_index, int Q, mfem::Geometry::Type geom, typename test, typename... trials,
+template<mfem::Geometry::Type geom, typename test, typename... trials>
+auto
+get_trial_elements(FunctionSignature<test(trials...)>) {
+  return tuple<finite_element<geom, trials>...> {};
+}
+
+template<mfem::Geometry::Type geom, typename test, typename... trials>
+auto
+get_test(FunctionSignature<test(trials...)>) {
+  return finite_element<geom, test> {};
+}
+
+ /// @trial_elements the element type for each trial space
+template <uint32_t differentiation_index, int Q, mfem::Geometry::Type geom, typename test_element, typename trial_element_type,
           typename lambda_type, typename derivative_type, int... indices>
-void evaluation_kernel_impl(FunctionSignature<test(trials...)>, const std::vector<const double*>& inputs,
+void evaluation_kernel_impl(trial_element_type trial_elements, test_element, const std::vector<const double*>& inputs,
                             double* outputs, const double* positions, const double* jacobians, lambda_type qf,
                             [[maybe_unused]] derivative_type* qf_derivatives, uint32_t num_elements,
                             std::integer_sequence<int, indices...>)
 {
-  using test_element = finite_element<geom, test>;
-
-  /// @brief the element type for each trial space
-  static constexpr tuple<finite_element<geom, trials>...> trial_elements{};
-
   // mfem provides this information as opaque arrays of doubles,
   // so we reinterpret the pointer with
   constexpr int dim = dimension_of(geom) + 1;
@@ -179,8 +187,17 @@ void evaluation_kernel_impl(FunctionSignature<test(trials...)>, const std::vecto
   [[maybe_unused]] tuple u = {
       reinterpret_cast<const typename decltype(type<indices>(trial_elements))::dof_type*>(inputs[indices])...};
 
+#if defined (USE_CUDA)
+std::cout << "RAJA ENABLE CUDA DEF" << std::endl;
+using policy = RAJA::cuda_exec<512>;
+// #if defined(RAJA_ENABLE_OPENMP)
+//   using policy = RAJA::omp_parallel_for_exec;
+#else
+std::cout << "simd\n";
+  using policy = RAJA::simd_exec;
+#endif
   // for each element in the domain
-  for (uint32_t e = 0; e < num_elements; e++) {
+  RAJA::forall<policy>(RAJA::TypedRangeSegment<uint32_t>(0, num_elements), [&](uint32_t e) {
     // load the jacobians and positions for each quadrature point in this element
     auto J_e = J[e];
     auto x_e = x[e];
@@ -203,7 +220,7 @@ void evaluation_kernel_impl(FunctionSignature<test(trials...)>, const std::vecto
 
     // (batch) integrate the material response against the test-space basis functions
     test_element::integrate(get_value(qf_outputs), rule, &r[e]);
-  }
+  });
 }
 
 //clang-format off
@@ -331,8 +348,10 @@ std::function<void(const std::vector<const double*>&, double*, bool)> evaluation
     signature s, lambda_type qf, const double* positions, const double* jacobians,
     std::shared_ptr<derivative_type> qf_derivatives, uint32_t num_elements)
 {
+  auto trial_elements = get_trial_elements<geom>(s);
+  auto test = get_test<geom>(s);
   return [=](const std::vector<const double*>& inputs, double* outputs, bool /* update state */) {
-    evaluation_kernel_impl<wrt, Q, geom>(s, inputs, outputs, positions, jacobians, qf, qf_derivatives.get(),
+    evaluation_kernel_impl<wrt, Q, geom>(trial_elements, test, inputs, outputs, positions, jacobians, qf, qf_derivatives.get(),
                                          num_elements, s.index_seq);
   };
 }

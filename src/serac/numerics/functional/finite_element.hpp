@@ -244,6 +244,7 @@ struct QOI {
  * @param jacobians the jacobians of the isoparametric map from parent to physical space of each quadrature point
  */
 template <Family f, typename T, int q, int dim>
+RAJA_HOST_DEVICE
 void parent_to_physical(tensor<T, q>& qf_input, const tensor<double, dim, dim, q>& jacobians)
 {
   [[maybe_unused]] constexpr int VALUE      = 0;
@@ -285,6 +286,7 @@ void parent_to_physical(tensor<T, q>& qf_input, const tensor<double, dim, dim, q
  * @param jacobians the jacobians of the isoparametric map from parent to physical space of each quadrature point
  */
 template <Family f, typename T, int q, int dim>
+RAJA_HOST_DEVICE
 void physical_to_parent(tensor<T, q>& qf_output, const tensor<double, dim, dim, q>& jacobians)
 {
   [[maybe_unused]] constexpr int SOURCE = 0;
@@ -347,6 +349,7 @@ void physical_to_parent(tensor<T, q>& qf_output, const tensor<double, dim, dim, 
  *
  */
 template <mfem::Geometry::Type g, typename family>
+RAJA_HOST_DEVICE
 struct finite_element;
 
 #include "detail/segment_H1.inl"

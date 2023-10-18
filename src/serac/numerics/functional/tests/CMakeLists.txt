@@ -58,4 +58,8 @@ if(ENABLE_CUDA)
     serac_add_tests( SOURCES ${functional_tests_cuda}
                      DEPENDS_ON gtest serac_functional serac_state ${functional_depends} cuda)
 
+            
+    blt_add_executable(NAME functional_cuda
+                       SOURCES functional_cuda.cpp
+                       DEPENDS_ON gtest serac_functional serac_state ${functional_depends} cuda)
 endif()

@@ -309,10 +309,10 @@ public:
     static_assert(!std::is_invocable<MaterialType, DummyArgumentType>::value);
 
   public:
-    template <typename X, typename T, typename dT_dt, typename Shape, typename... Params>
     /**
      * @brief Evaluate integrand
      */
+    template <typename X, typename T, typename dT_dt, typename Shape, typename... Params>
     auto operator()(X x, T temperature, dT_dt dtemp_dt, Shape shape, Params... params)
     {
       // Get the value and the gradient from the input tuple
