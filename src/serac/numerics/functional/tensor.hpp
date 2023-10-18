@@ -1266,8 +1266,7 @@ auto matrix_sqrt(const tensor<T, dim, dim>& A)
  * @param B the right operand
  */
 template <int i1, int i2, typename S, int m, int... n, typename T, int p, int q>
-RAJA_HOST_DEVICE
-auto contract(const tensor<S, m, n...>& A, const tensor<T, p, q>& B)
+RAJA_HOST_DEVICE auto contract(const tensor<S, m, n...>& A, const tensor<T, p, q>& B)
 {
   constexpr int Adims[] = {m, n...};
   constexpr int Bdims[] = {p, q};
@@ -1325,8 +1324,7 @@ auto contract(const tensor<S, m, n...>& A, const tensor<T, p, q>& B)
 
 /// @overload
 template <int i1, int i2, typename T>
-RAJA_HOST_DEVICE
-auto contract(const zero&, const T&)
+RAJA_HOST_DEVICE auto contract(const zero&, const T&)
 {
   return zero{};
 }

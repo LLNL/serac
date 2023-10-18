@@ -294,7 +294,8 @@ public:
     // to be portable to CUDA platforms, the asserts below prevent serac from compiling
     // if such a lambda is supplied.
   private:
-    class DummyArgumentType {};
+    class DummyArgumentType {
+    };
     static_assert(!std::is_invocable<MaterialType, DummyArgumentType&>::value);
     static_assert(!std::is_invocable<MaterialType, DummyArgumentType*>::value);
     static_assert(!std::is_invocable<MaterialType, DummyArgumentType>::value);

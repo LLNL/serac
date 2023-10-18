@@ -30,9 +30,9 @@ std::unique_ptr<mfem::ParMesh> mesh3D;
 struct TestThermalModelOne {
   [[maybe_unused]] static constexpr double a = 1.7;
   [[maybe_unused]] static constexpr double b = 0.0;
-  template<typename X, typename Temp>
-  RAJA_HOST_DEVICE
-  auto operator()([[maybe_unused]] X x, [[maybe_unused]] Temp temperature) {
+  template <typename X, typename Temp>
+  RAJA_HOST_DEVICE auto operator()([[maybe_unused]] X x, [[maybe_unused]] Temp temperature)
+  {
     // get the value and the gradient from the input tuple
     auto [u, du_dx] = temperature;
     auto source     = a * u - (100 * x[0] * x[1]);
@@ -41,7 +41,7 @@ struct TestThermalModelOne {
   }
 };
 
-//struct TestThermalModelTwo {
+// struct TestThermalModelTwo {
 //  template<typename A, typename X>
 //  auto operator()(A, [[maybe_unused]] X x) {
 //      auto dp_dX = serac::get<1>(X);
@@ -58,7 +58,6 @@ struct TestThermalModelOne {
 template <int p, int dim>
 void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
 {
-
   [[maybe_unused]] static constexpr double a = 1.7;
   [[maybe_unused]] static constexpr double b = 0.0;
   // Create standard MFEM bilinear and linear forms on H1
@@ -104,10 +103,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
 
   cudaDeviceSynchronize();
   // Add the total domain residual term to the weak form
-  residual.AddDomainIntegral(
-      Dimension<dim>{}, DependsOn<0>{},
-      TestThermalModelOne {},
-      mesh);
+  residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, TestThermalModelOne{}, mesh);
   cudaDeviceSynchronize();
   // uncomment lines below to verify that compile-time error messages
   // explain L2 spaces are not currently supported in boundary integrals.
@@ -167,7 +163,7 @@ TEST(L2, 3DLinear) { functional_test(*mesh3D, L2<1>{}, L2<1>{}, Dimension<3>{});
 TEST(L2, 3DQuadratic) { functional_test(*mesh3D, L2<2>{}, L2<2>{}, Dimension<3>{}); }
 TEST(L2, 3DCubic) { functional_test(*mesh3D, L2<3>{}, L2<3>{}, Dimension<3>{}); }
 
-//TEST(L2, 2DMixed)
+// TEST(L2, 2DMixed)
 //{
 //  constexpr int dim = 2;
 //  using test_space  = L2<0>;
