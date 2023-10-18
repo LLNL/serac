@@ -21,6 +21,7 @@
 // Serac Locations
 #define SERAC_REPO_DIR "@SERAC_REPO_DIR@"
 #define SERAC_BIN_DIR "@SERAC_BIN_DIR@"
+//#define RAJA_ENABLE_CUDA On
 
 // General defines
 #cmakedefine SERAC_DEBUG
