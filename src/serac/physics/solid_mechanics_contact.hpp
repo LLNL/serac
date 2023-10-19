@@ -284,6 +284,7 @@ public:
     du_.Set(1.0, mfem::Vector(augmented_solution, 0, displacement_.Size()));
     displacement_ += du_;
     // call update to update gaps for new displacements
+    contact_.setDisplacements(displacement_);
     contact_.update(cycle_, time_, dt);
     // update pressures based on pressures in augmented_solution (for Lagrange multiplier) and updated gaps (for
     // penalty)
