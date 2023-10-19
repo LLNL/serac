@@ -29,7 +29,7 @@ struct ElemInfo {
   uint32_t       local_col_;   ///< The global column number
   uint32_t       element_id_;  ///< The element ID
   int            sign_;        ///< The orientation of the element
-  Integral::Type type;         ///< Which kind of Integral this entry comes from
+  Domain::Type   type;         ///< Which kind of Integral this entry comes from
 };
 
 /**

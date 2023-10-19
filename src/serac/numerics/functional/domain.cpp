@@ -179,7 +179,7 @@ template < int d >
 static Domain domain_of_elems(const mfem::Mesh & mesh, std::function< bool(std::vector< tensor<double,d> >, int) > predicate) {
     assert(mesh.SpaceDimension() == d);
 
-    Domain output{mesh, d /* elems can be 2 or 3 dimensional */};
+    Domain output{mesh, mesh.SpaceDimension() /* elems can be 2 or 3 dimensional */};
 
     // layout is undocumented, but it seems to be 
     // [x1, x2, x3, ..., y1, y2, y3 ..., (z1, z2, z3, ...)]
@@ -250,7 +250,7 @@ template < int d >
 static Domain domain_of_boundary_elems(const mfem::Mesh & mesh, std::function< bool(std::vector< tensor<double,d> >, int) > predicate) {
     assert(mesh.SpaceDimension() == d);
 
-    Domain output{mesh, d-1, Domain::BOUNDARY_ELEMENTS};
+    Domain output{mesh, d-1, Domain::Type::BoundaryElements};
 
     mfem::Array<int> face_id_to_bdr_id = mesh.GetFaceToBdrElMap(); 
 
@@ -323,6 +323,77 @@ Domain Domain::ofBoundaryElements(const mfem::Mesh & mesh, std::function< bool(s
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
+
+Domain EntireDomain(const mfem::Mesh & mesh) {
+  Domain output{mesh, mesh.SpaceDimension() /* elems can be 2 or 3 dimensional */};
+
+  int tri_id = 0;
+  int quad_id = 0;
+  int tet_id = 0;
+  int hex_id = 0;
+
+  // faces that satisfy the predicate are added to the domain
+  int num_elems = mesh.GetNE();
+  for (int i = 0; i < num_elems; i++) {
+
+    auto geom = mesh.GetElementGeometry(i);
+
+    switch (geom) {
+      case mfem::Geometry::TRIANGLE: 
+        output.tris.push_back(tri_id++);
+        break;
+      case mfem::Geometry::SQUARE: 
+        output.quads.push_back(quad_id++);
+        break;
+      case mfem::Geometry::TETRAHEDRON: 
+        output.tets.push_back(tet_id++);
+        break;
+      case mfem::Geometry::CUBE: 
+        output.hexes.push_back(hex_id++);
+        break;
+      default:
+        SLIC_ERROR("unsupported element type");
+        break;
+    }
+  }
+
+  return output;
+}
+
+Domain EntireBoundary(const mfem::Mesh & mesh) {
+  Domain output{mesh, mesh.SpaceDimension() - 1, Domain::Type::BoundaryElements};
+
+  int edge_id = 0;
+  int tri_id = 0;
+  int quad_id = 0;
+
+  for (int f = 0; f < mesh.GetNumFaces(); f++) {
+
+    // discard faces with the wrong type
+    if (mesh.GetFaceInformation(f).IsInterior()) continue;
+
+    auto geom = mesh.GetFaceGeometry(f);
+
+    switch (geom) {
+      case mfem::Geometry::SEGMENT: 
+        output.edges.push_back(edge_id++);
+        break;
+      case mfem::Geometry::TRIANGLE: 
+        output.tris.push_back(tri_id++);
+        break;
+      case mfem::Geometry::SQUARE: 
+        output.quads.push_back(quad_id++);
+        break;
+      default:
+        SLIC_ERROR("unsupported element type");
+        break;
+
+    }
+
+  }
+
+  return output;
+}
 
 using c_iter = std::vector<int>::const_iterator; 
 using b_iter = std::back_insert_iterator<std::vector<int>>;

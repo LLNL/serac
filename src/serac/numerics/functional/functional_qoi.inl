@@ -90,7 +90,7 @@ public:
 
     auto mem_type = mfem::Device::GetMemoryType();
 
-    for (auto type : {Integral::Type::Domain, Integral::Type::Boundary}) {
+    for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
       input_E_[type].resize(num_trial_spaces);
     }
 
@@ -99,8 +99,8 @@ public:
 
       input_L_[i].SetSize(P_trial_[i]->Height(), mfem::Device::GetMemoryType());
 
-      for (auto type : {Integral::Type::Domain, Integral::Type::Boundary}) {
-        if (type == Integral::Type::Domain) {
+      for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
+        if (type == Domain::Type::Elements) {
           G_trial_[type][i] = BlockElementRestriction(trial_fes[i]);
         } else {
           G_trial_[type][i] = BlockElementRestriction(trial_fes[i], FaceType::BOUNDARY);
@@ -113,9 +113,9 @@ public:
       }
     }
 
-    for (auto type : {Integral::Type::Domain, Integral::Type::Boundary}) {
+    for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
       std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> counts{};
-      if (type == Integral::Type::Domain) {
+      if (type == Domain::Type::Elements) {
         counts = geometry_counts(*mesh);
       } else {
         counts = boundary_geometry_counts(*mesh);
@@ -263,10 +263,10 @@ public:
 
     // this is used to mark when gather operations have been performed,
     // to avoid doing them more than once per trial space
-    bool already_computed[Integral::num_types]{};  // default initializes to `false`
+    bool already_computed[Domain::num_types]{};  // default initializes to `false`
 
     for (auto& integral : integrals_) {
-      auto type = integral.type;
+      auto type = integral.domain_.type;
 
       if (!already_computed[type]) {
         G_trial_[type][which].Gather(input_L_[which], input_E_[type][which]);
@@ -308,10 +308,10 @@ public:
 
     // this is used to mark when operations have been performed,
     // to avoid doing them more than once
-    bool already_computed[Integral::num_types][num_trial_spaces]{};  // default initializes to `false`
+    bool already_computed[Domain::num_types][num_trial_spaces]{};  // default initializes to `false`
 
     for (auto& integral : integrals_) {
-      auto type = integral.type;
+      auto type = integral.domain_.type;
 
       for (auto i : integral.active_trial_spaces_) {
         if (!already_computed[type][i]) {
@@ -401,11 +401,11 @@ private:
 
       gradient_L_ = 0.0;
 
-      std::map<mfem::Geometry::Type, ExecArray<double, 3, exec>> element_gradients[Integral::num_types];
+      std::map<mfem::Geometry::Type, ExecArray<double, 3, exec>> element_gradients[Domain::num_types];
 
       for (auto& integral : form_.integrals_) {
-        auto& K_elem             = element_gradients[integral.type];
-        auto& trial_restrictions = form_.G_trial_[integral.type][which_argument].restrictions;
+        auto& K_elem             = element_gradients[integral.domain_.type];
+        auto& trial_restrictions = form_.G_trial_[integral.domain_.type][which_argument].restrictions;
 
         if (K_elem.empty()) {
           for (auto& [geom, trial_restriction] : trial_restrictions) {
@@ -419,7 +419,7 @@ private:
         integral.ComputeElementGradients(K_elem, which_argument);
       }
 
-      for (auto type : Integral::Types) {
+      for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
         auto& K_elem             = element_gradients[type];
         auto& trial_restrictions = form_.G_trial_[type][which_argument].restrictions;
 
@@ -477,13 +477,13 @@ private:
   /// @brief The input set of local DOF values (i.e., on the current rank)
   mutable mfem::Vector input_L_[num_trial_spaces];
 
-  BlockElementRestriction G_trial_[Integral::num_types][num_trial_spaces];
+  BlockElementRestriction G_trial_[Domain::num_types][num_trial_spaces];
 
-  mutable std::vector<mfem::BlockVector> input_E_[Integral::num_types];
+  mutable std::vector<mfem::BlockVector> input_E_[Domain::num_types];
 
   std::vector<Integral> integrals_;
 
-  mutable mfem::BlockVector output_E_[Integral::num_types];
+  mutable mfem::BlockVector output_E_[Domain::num_types];
 
   QoIElementRestriction G_test_;
 

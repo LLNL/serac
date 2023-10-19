@@ -9,13 +9,13 @@ namespace serac {
 
 struct Domain {
 
-  static constexpr int DOMAIN_ELEMENTS = 0;
-  static constexpr int BOUNDARY_ELEMENTS = 1;
+  enum Type { Elements, BoundaryElements };
+  static constexpr int num_types = 2;
 
   const mfem::Mesh & mesh;
 
   int dim;
-  int type;
+  Type type;
   std::vector< int > vertices;
   std::vector< int > edges;
   std::vector< int > tris;
@@ -23,7 +23,7 @@ struct Domain {
   std::vector< int > tets;
   std::vector< int > hexes;
 
-  Domain(const mfem::Mesh& m, int d, int type = DOMAIN_ELEMENTS) : mesh(m), dim(d), type(type) {}
+  Domain(const mfem::Mesh& m, int d, Type type = Domain::Type::Elements) : mesh(m), dim(d), type(type) {}
 
   static Domain ofVertices(const mfem::Mesh & mesh, std::function< bool(vec2) > func);
   static Domain ofVertices(const mfem::Mesh & mesh, std::function< bool(vec3) > func);
@@ -52,6 +52,9 @@ struct Domain {
   }
 
 };
+
+Domain EntireDomain(const mfem::Mesh & mesh);
+Domain EntireBoundary(const mfem::Mesh & mesh);
 
 Domain operator|(const Domain & a, const Domain & b);
 Domain operator&(const Domain & a, const Domain & b);
