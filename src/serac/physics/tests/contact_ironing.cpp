@@ -20,6 +20,8 @@
 #include "serac/physics/materials/parameterized_solid_material.hpp"
 #include "serac/serac_config.hpp"
 
+#include "tribol/interface/mfem_tribol.hpp"
+
 namespace serac {
 
 class ContactTest : public testing::TestWithParam<std::tuple<ContactEnforcement, ContactType, std::string>> {
@@ -106,6 +108,8 @@ TEST_P(ContactTest, ironing)
   std::string paraview_name = name + "_paraview";
   solid_solver.outputState(paraview_name);
 
+  tribol::saveRedecompMesh(0);
+
   // Perform the quasi-static solve
   double dt = 1.0;
 
@@ -117,6 +121,8 @@ TEST_P(ContactTest, ironing)
 
     // Output the sidre-based plot files
     solid_solver.outputState(paraview_name);
+
+    tribol::saveRedecompMesh(i + 1);
   }
 
   // Check the l2 norm of the displacement dofs
