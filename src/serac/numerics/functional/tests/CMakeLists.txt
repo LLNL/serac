@@ -59,7 +59,7 @@ if(ENABLE_CUDA)
                      DEPENDS_ON gtest serac_functional serac_state ${functional_depends} cuda)
 
             
-    blt_add_executable(NAME functional_cuda
-                       SOURCES functional_cuda.cpp
-                       DEPENDS_ON gtest serac_functional serac_state ${functional_depends} cuda)
+    #blt_add_executable(NAME functional_cuda
+    #                   SOURCES functional_cuda.cpp
+    #                   DEPENDS_ON gtest serac_functional serac_state ${functional_depends} cuda)
 endif()

@@ -171,7 +171,7 @@ template <uint32_t differentiation_index, int Q, mfem::Geometry::Type geom, type
 void evaluation_kernel_impl(trial_element_type trial_elements, test_element, const std::vector<const double*>& inputs,
                             double* outputs, const double* positions, const double* jacobians, lambda_type qf,
                             [[maybe_unused]] derivative_type* qf_derivatives, uint32_t num_elements,
-                            std::integer_sequence<int, indices...>)
+                            camp::int_seq<int, indices...>)
 {
   // mfem provides this information as opaque arrays of doubles,
   // so we reinterpret the pointer with
