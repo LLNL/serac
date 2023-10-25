@@ -336,7 +336,7 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
   }
 
   template <typename in_t, int q>
-  static auto batch_apply_shape_fn(int j, tensor<in_t, nqpts(q)> input, const TensorProductQuadratureRule<q>&)
+  static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, nqpts(q)> input, const TensorProductQuadratureRule<q>&)
   {
     using source_t = decltype(get<0>(get<0>(in_t{})) + dot(get<1>(get<0>(in_t{})), tensor<double, dim>{}));
     using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double, dim>{}));

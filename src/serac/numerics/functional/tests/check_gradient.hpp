@@ -9,11 +9,12 @@
 
 #include "mfem.hpp"
 
+#include "serac/infrastructure/accelerator.hpp"
 #include "serac/serac_config.hpp"
 #include "serac/numerics/functional/functional.hpp"
 
-template <typename T>
-void check_gradient(serac::Functional<T>& f, const mfem::Vector& U, double epsilon = 1.0e-4)
+template <typename T, serac::ExecutionSpace exec>
+void check_gradient(serac::Functional<T, exec>& f, mfem::Vector& U, double epsilon = 1.0e-4)
 {
   int seed = 42;
 
@@ -213,8 +214,13 @@ void check_gradient(serac::Functional<T>& f, const mfem::Vector& U, const mfem::
 // qoi overloads //
 ///////////////////
 
+<<<<<<< HEAD
 template <typename T>
 void check_gradient(serac::Functional<double(T)>& f, const mfem::HypreParVector& U)
+=======
+template <typename T, serac::ExecutionSpace execution_space>
+void check_gradient(serac::Functional<double(T), execution_space>& f, mfem::HypreParVector& U)
+>>>>>>> 14fe592a (Refactor more raja for all loops)
 {
   int seed = 42;
 

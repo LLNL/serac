@@ -122,7 +122,8 @@ endmacro(serac_convert_to_native_escaped_file_path)
 ##------------------------------------------------------------------------------
 ## serac_add_tests( SOURCES       [source1 [source2 ...]]
 ##                  DEPENDS_ON    [dep1 [dep2 ...]]
-##                  NUM_MPI_TASKS [num tasks])
+##                  NUM_MPI_TASKS [num tasks]
+##                  )
 ##
 ## Creates an executable per given source and then adds the test to CTest
 ##------------------------------------------------------------------------------
