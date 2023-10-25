@@ -187,17 +187,8 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, con
   [[maybe_unused]] tuple u = {
       reinterpret_cast<const typename decltype(type<indices>(trial_elements))::dof_type*>(inputs[indices])...};
 
-#if defined(USE_CUDA)
-  std::cout << "RAJA ENABLE CUDA DEF" << std::endl;
-  using policy = RAJA::cuda_exec<512>;
-// #if defined(RAJA_ENABLE_OPENMP)
-//   using policy = RAJA::omp_parallel_for_exec;
-#else
-  std::cout << "simd\n";
-  using policy = RAJA::simd_exec;
-#endif
   // for each element in the domain
-  RAJA::forall<policy>(RAJA::TypedRangeSegment<uint32_t>(0, num_elements), [&](uint32_t e) {
+  for (uint32_t e = 0; e < num_elements; e++) {
     // load the jacobians and positions for each quadrature point in this element
     auto J_e = J[e];
     auto x_e = x[e];
@@ -220,7 +211,7 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, con
 
     // (batch) integrate the material response against the test-space basis functions
     test_element::integrate(get_value(qf_outputs), rule, &r[e]);
-  });
+  }
 }
 
 //clang-format off

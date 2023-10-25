@@ -121,7 +121,7 @@ struct finite_element<mfem::Geometry::SEGMENT, L2<p, c> > {
   }
 
   template <int q>
-  RAJA_HOST_DEVICE
+  SERAC_HOST_DEVICE
 static auto interpolate(const dof_type& X, const TensorProductQuadratureRule<q>&)
   {
     static constexpr bool apply_weights = false;
@@ -156,7 +156,7 @@ static auto interpolate(const dof_type& X, const TensorProductQuadratureRule<q>&
   }
 
   template <typename source_type, typename flux_type, int q>
-  RAJA_HOST_DEVICE static void integrate(const tensor<tuple<source_type, flux_type>, q>& qf_output,
+  SERAC_HOST_DEVICE static void integrate(const tensor<tuple<source_type, flux_type>, q>& qf_output,
                         const TensorProductQuadratureRule<q>&, dof_type* element_residual,
                         [[maybe_unused]] int step = 1)
   {

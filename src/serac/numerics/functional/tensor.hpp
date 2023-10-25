@@ -142,13 +142,11 @@ struct zero {
 
 /** @brief checks if a type is `zero` */
 template <typename T>
-struct is_zero : std::false_type {
-};
+struct is_zero : std::false_type {};
 
 /** @overload */
 template <>
-struct is_zero<zero> : std::true_type {
-};
+struct is_zero<zero> : std::true_type {};
 
 /** @brief the sum of two `zero`s is `zero` */
 SERAC_HOST_DEVICE constexpr auto operator+(zero, zero) { return zero{}; }
@@ -1308,7 +1306,7 @@ auto matrix_sqrt(const tensor<T, dim, dim>& A)
  * @param B the right operand
  */
 template <int i1, int i2, typename S, int m, int... n, typename T, int p, int q>
-RAJA_HOST_DEVICE auto contract(const tensor<S, m, n...>& A, const tensor<T, p, q>& B)
+SERAC_HOST_DEVICE auto contract(const tensor<S, m, n...>& A, const tensor<T, p, q>& B)
 {
   constexpr int Adims[] = {m, n...};
   constexpr int Bdims[] = {p, q};
@@ -1366,7 +1364,7 @@ RAJA_HOST_DEVICE auto contract(const tensor<S, m, n...>& A, const tensor<T, p, q
 
 /// @overload
 template <int i1, int i2, typename T>
-RAJA_HOST_DEVICE auto contract(const zero&, const T&)
+SERAC_HOST_DEVICE auto contract(const zero&, const T&)
 {
   return zero{};
 }
