@@ -154,7 +154,7 @@ struct finite_element<mfem::Geometry::SQUARE, L2<p, c> > {
   }
 
   template <typename in_t, int q>
-  static auto batch_apply_shape_fn(int j, tensor<in_t, q * q> input, const TensorProductQuadratureRule<q>&)
+  static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q * q> input, const TensorProductQuadratureRule<q>&)
   {
     static constexpr bool apply_weights = false;
     static constexpr auto B             = calculate_B<apply_weights, q>();

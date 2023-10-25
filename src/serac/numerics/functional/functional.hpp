@@ -13,7 +13,8 @@
 #pragma once
 
 #include "mfem.hpp"
-
+#include <RAJA/RAJA.hpp>
+#include <RAJA/index/RangeSegment.hpp>
 #include "serac/infrastructure/logger.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/quadrature.hpp"
@@ -25,6 +26,8 @@
 #include "serac/numerics/functional/element_restriction.hpp"
 
 #include <array>
+#include <axom/core/memory_management.hpp>
+#include <mfem/fem/geom.hpp>
 #include <vector>
 
 namespace serac {
@@ -193,7 +196,7 @@ class Functional<test(trials...), exec> {
                                                         mfem::Geometry::SQUARE, mfem::Geometry::CUBE};
   static constexpr mfem::Geometry::Type simplex_geom[4] = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT,
                                                            mfem::Geometry::TRIANGLE, mfem::Geometry::TETRAHEDRON};
-
+public:
   class Gradient;
 
   // clang-format off
@@ -278,11 +281,18 @@ public:
    * and @a spatial_dim template parameter
    * @param[inout] qdata The data for each quadrature point
    */
-  template <int dim, int... args, typename lambda, typename qpt_data_type = Nothing>
-  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain,
+  template <int dim, int... args, typename Integrand, typename qpt_data_type = Nothing>
+  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, Integrand&& integrand, mfem::Mesh& domain,
                          std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
   {
     if (domain.GetNE() == 0) return;
+
+    // Check that Integrand is not a generic lambda.
+    class DummyArgumentType {
+    };
+    static_assert(!std::is_invocable<Integrand, DummyArgumentType&>::value);
+    static_assert(!std::is_invocable<Integrand, DummyArgumentType*>::value);
+    static_assert(!std::is_invocable<Integrand, DummyArgumentType>::value);
 
     SLIC_ERROR_ROOT_IF(dim != domain.Dimension(), "invalid mesh dimension for domain integral");
 
@@ -303,11 +313,18 @@ public:
    * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
    * and @a spatial_dim template parameter
    */
-  template <int dim, int... args, typename lambda>
-  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain)
+  template <int dim, int... args, typename Integrand>
+  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, Integrand&& integrand, mfem::Mesh& domain)
   {
     auto num_bdr_elements = domain.GetNBE();
     if (num_bdr_elements == 0) return;
+
+    // Check that Integrand is not a generic lambda.
+    class DummyArgumentType {
+    };
+    static_assert(!std::is_invocable<Integrand, DummyArgumentType&>::value);
+    static_assert(!std::is_invocable<Integrand, DummyArgumentType*>::value);
+    static_assert(!std::is_invocable<Integrand, DummyArgumentType>::value);
 
     check_for_missing_nodal_gridfunc(domain);
 
@@ -477,7 +494,7 @@ public:
   /// @brief flag for denoting when a residual evaluation should update the material state buffers
   bool update_qdata;
 
-private:
+
   /**
    * @brief mfem::Operator representing the gradient matrix that
    * can compute the action of the gradient (with operator()),
@@ -516,7 +533,7 @@ private:
       form_.ActionOfGradient(dx, df_, which_argument);
       return df_;
     }
-
+    public:
     /// @brief assemble element matrices and form an mfem::HypreParMatrix
     std::unique_ptr<mfem::HypreParMatrix> assemble()
     {
@@ -555,38 +572,52 @@ private:
       }
 
       for (auto type : Integral::Types) {
-        auto& K_elem             = element_gradients[type];
-        auto& test_restrictions  = form_.G_test_[type].restrictions;
-        auto& trial_restrictions = form_.G_trial_[type][which_argument].restrictions;
+        auto K_elem             = element_gradients[type];
+        auto test_restrictions  = form_.G_test_[type].restrictions;
+        auto trial_restrictions = form_.G_trial_[type][which_argument].restrictions;
+        std::cout << "HERE\n";
+        if (K_elem.empty())
+          std::cout << "K ELEM EMPTY\n";
+        for (auto pair : K_elem) {
+          mfem::Geometry::Type geom = pair.first;
+          auto elem_matrices = pair.second;
+          auto test_restiction = test_restrictions[geom];
+          auto trial_restriction = trial_restrictions[geom];
+          axom::Array<DoF, 1, axom::MemorySpace::Device> test_vdofs(test_restrictions[geom].nodes_per_elem * test_restrictions[geom].components);
+          axom::Array<DoF, 1, axom::MemorySpace::Device> trial_vdofs(trial_restrictions[geom].nodes_per_elem * trial_restrictions[geom].components);
 
-        if (!K_elem.empty()) {
-          for (auto [geom, elem_matrices] : K_elem) {
-            std::vector<DoF> test_vdofs(test_restrictions[geom].nodes_per_elem * test_restrictions[geom].components);
-            std::vector<DoF> trial_vdofs(trial_restrictions[geom].nodes_per_elem * trial_restrictions[geom].components);
+          #if defined(USE_CUDA)
+            std::cout << "USING CUDA :)\n";
+            using policy = RAJA::cuda_exec<512>;
+          #else
+            using policy = RAJA::simd_exec;
+          #endif
+              printf("HERE 42\n");
+            // for each element in the domain
+          RAJA::forall<policy>(
+            RAJA::TypedRangeSegment<uint32_t>(0, elem_matrices.shape()[0]),
+            [=] RAJA_HOST_DEVICE(axom::IndexType e) mutable {
+            test_restiction.GetElementVDofs(e, test_vdofs.data());
+            trial_restriction.GetElementVDofs(e, trial_vdofs.data());
 
-            for (axom::IndexType e = 0; e < elem_matrices.shape()[0]; e++) {
-              test_restrictions[geom].GetElementVDofs(e, test_vdofs);
-              trial_restrictions[geom].GetElementVDofs(e, trial_vdofs);
+            for (int i = 0; i < int(elem_matrices.shape()[1]); i++) {
+              int col = int(trial_vdofs.data()[i].index());
 
-              for (uint32_t i = 0; i < uint32_t(elem_matrices.shape()[1]); i++) {
-                int col = int(trial_vdofs[i].index());
+              for (int j = 0; j < int(elem_matrices.shape()[2]); j++) {
+                int row = int(test_vdofs.data()[j].index());
 
-                for (uint32_t j = 0; j < uint32_t(elem_matrices.shape()[2]); j++) {
-                  int row = int(test_vdofs[j].index());
+                int sign = test_vdofs.data()[j].sign() * trial_vdofs.data()[i].sign();
 
-                  int sign = test_vdofs[j].sign() * trial_vdofs[i].sign();
-
-                  // note: col / row appear backwards here, because the element matrix kernel
-                  //       is actually transposed, as a result of being row-major storage.
-                  //
-                  //       This is kind of confusing, and will be fixed in a future refactor
-                  //       of the element gradient kernel implementation
-                  [[maybe_unused]] auto nz = lookup_tables(row, col);
-                  values[lookup_tables(row, col)] += sign * elem_matrices(e, i, j);
-                }
+                // note: col / row appear backwards here, because the element matrix kernel
+                //       is actually transposed, as a result of being row-major storage.
+                //
+                //       This is kind of confusing, and will be fixed in a future refactor
+                //       of the element gradient kernel implementation
+                
+                values[lookup_tables(row, col)] += sign * elem_matrices(e, i, j);
               }
             }
-          }
+          });
         }
       }
 

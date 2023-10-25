@@ -6,9 +6,9 @@
 
 #include <fstream>
 #include <iostream>
-
+#include "serac/infrastructure/accelerator.hpp"
+#define USE_CUDA
 #include "mfem.hpp"
-
 #include <gtest/gtest.h>
 
 #include "axom/slic/core/SimpleLogger.hpp"
@@ -23,6 +23,33 @@
 
 using namespace serac;
 using namespace serac::profiling;
+
+template<int dim>
+RAJA_HOST_DEVICE
+struct TestThermalModelOne {
+  template <typename X, typename Temp>
+  RAJA_HOST_DEVICE auto operator()([[maybe_unused]] X x, [[maybe_unused]] Temp temperature)
+  {
+    double d00 = 1.0;
+    constexpr static auto d01 = 1.0 * make_tensor<dim>([](int i) { return i; });
+    constexpr static auto d10 = 1.0 * make_tensor<dim>([](int i) { return 2 * i * i; });
+    constexpr static auto d11 = 1.0 * make_tensor<dim, dim>([](int i, int j) { return i + j * (j + 1) + 1; });
+    auto [u, du_dx] = temperature;
+    auto source     = d00 * u + dot(d01, du_dx) - 0.0 * (100 * x[0] * x[1]);
+    auto flux       = d10 * u + dot(d11, du_dx);
+    return serac::tuple{source, flux};
+  }
+};
+
+struct TestThermalModelTwo {
+  template <typename PositionType, typename TempType>
+  RAJA_HOST_DEVICE auto operator()(PositionType position, TempType temperature)
+  {
+    auto [X, dX_dxi] = position;
+    auto [u, du_dxi] = temperature;
+    return X[0] + X[1] - cos(u);
+  }
+};
 
 template <int ptest, int ptrial, int dim>
 void thermal_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
@@ -46,33 +73,32 @@ void thermal_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
   using trial_space = H1<ptrial>;
 
   // Construct the new functional object using the known test and trial spaces
-  Functional<test_space(trial_space)> residual(&test_fespace, {&trial_fespace});
-
-  auto d00 = 1.0;
-  auto d01 = 1.0 * make_tensor<dim>([](int i) { return i; });
-  auto d10 = 1.0 * make_tensor<dim>([](int i) { return 2 * i * i; });
-  auto d11 = 1.0 * make_tensor<dim, dim>([](int i, int j) { return i + j * (j + 1) + 1; });
-
+  std::cout << "HERE 1\n";
+  #ifdef USE_CUDA
+  Functional<test_space(trial_space), serac::ExecutionSpace::GPU> residual(&test_fespace, {&trial_fespace});
+  #else
+  Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(&test_fespace, {&trial_fespace});
+  #endif
+  std::cout << "HERE 2\n";
+  cudaDeviceSynchronize();
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
-      [=](auto x, auto temperature) {
-        auto [u, du_dx] = temperature;
-        auto source     = d00 * u + dot(d01, du_dx) - 0.0 * (100 * x[0] * x[1]);
-        auto flux       = d10 * u + dot(d11, du_dx);
-        return serac::tuple{source, flux};
-      },
+      TestThermalModelOne<dim> {},
       *mesh);
+      
+  std::cout << "HERE 3\n";
+  cudaDeviceSynchronize();
+  std::cout << "HERE 4\n";
+  //residual.AddBoundaryIntegral(
+  //    Dimension<dim - 1>{}, DependsOn<0>{},
+  //    TestThermalModelTwo {},
+  //    *mesh);
 
-  residual.AddBoundaryIntegral(
-      Dimension<dim - 1>{}, DependsOn<0>{},
-      [=](auto position, auto temperature) {
-        auto [X, dX_dxi] = position;
-        auto [u, du_dxi] = temperature;
-        return X[0] + X[1] - cos(u);
-      },
-      *mesh);
-
+#ifdef USE_CUDA
   check_gradient(residual, U);
+#else
+  check_gradient(residual, U);
+#endif
 }
 
 template <int ptest, int ptrial>

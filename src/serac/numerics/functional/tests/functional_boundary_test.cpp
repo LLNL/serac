@@ -11,6 +11,8 @@
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
+#define ENABLE_CUDA
+
 #include "serac/serac_config.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"

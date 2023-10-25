@@ -95,7 +95,7 @@ struct finite_element<mfem::Geometry::SEGMENT, H1<p, c> > {
 
   template <typename T, int q>
   RAJA_HOST_DEVICE
-  static auto batch_apply_shape_fn(int jx, tensor<T, q> input, const TensorProductQuadratureRule<q>&)
+  static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int jx, tensor<T, q> input, const TensorProductQuadratureRule<q>&)
   {
     static constexpr bool apply_weights = false;
     static constexpr auto B             = calculate_B<apply_weights, q>();
