@@ -176,7 +176,7 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, con
     auto J_e = J[e];
     auto x_e = x[e];
 
-    static constexpr trial_element_type empty_trial_element{};
+    [[maybe_unused]] static constexpr trial_element_type empty_trial_element{};
     // batch-calculate values / derivatives of each trial space, at each quadrature point
     [[maybe_unused]] tuple qf_inputs = {promote_each_to_dual_when<indices == differentiation_index>(
         get<indices>(empty_trial_element).interpolate(get<indices>(u)[e], rule))...};
