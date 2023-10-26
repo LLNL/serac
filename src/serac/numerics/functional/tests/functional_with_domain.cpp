@@ -270,6 +270,82 @@ TEST(basic, partial_mesh_comparison_tets) { partial_mesh_comparison_test<1, 1>("
 TEST(basic, partial_mesh_comparison_hexes) { partial_mesh_comparison_test<1, 1>("/data/meshes/beam-hex.mesh"); }
 
 
+TEST(qoi, partial_boundary) {
+
+  constexpr auto dim = 3;
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(SERAC_REPO_DIR"/data/meshes/beam-hex.mesh"), 1);
+
+  auto                        trial_fec = mfem::H1_FECollection(1, dim);
+  mfem::ParFiniteElementSpace trial_fespace(mesh.get(), &trial_fec);
+
+  mfem::Vector U(trial_fespace.TrueVSize());
+
+  mfem::ParGridFunction     U_gf(&trial_fespace);
+  mfem::FunctionCoefficient x_squared([](mfem::Vector x) { return x[0] * x[0]; });
+  U_gf.ProjectCoefficient(x_squared);
+  U_gf.GetTrueDofs(U);
+
+  // Define the types for the test and trial spaces using the function arguments
+  using test_space  = double;
+  using trial_space = H1<1>;
+
+  // Construct the new functional object using the known test and trial spaces
+  Functional<test_space(trial_space)> qoi({&trial_fespace});
+
+  auto on_top = [](std::vector<tensor<double,3>> X, int /* attr */){ return average(X)[1] >= 0.99; };
+  Domain top_boundary = Domain::ofBoundaryElements(*mesh, on_top);
+
+  qoi.AddBoundaryIntegral(
+    Dimension<dim - 1>{}, 
+    DependsOn</*nothing*/>{},
+    [=](auto /*position*/) { return 1.0; }, 
+    top_boundary
+  );
+
+  auto area = qoi(U);
+
+  EXPECT_NEAR(area, 8.0, 1.0e-14);
+
+}
+
+TEST(qoi, partial_domain) {
+
+  constexpr auto dim = 3;
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(SERAC_REPO_DIR"/data/meshes/beam-hex.mesh"), 1);
+
+  auto                        trial_fec = mfem::H1_FECollection(1, dim);
+  mfem::ParFiniteElementSpace trial_fespace(mesh.get(), &trial_fec);
+
+  mfem::Vector U(trial_fespace.TrueVSize());
+
+  mfem::ParGridFunction     U_gf(&trial_fespace);
+  mfem::FunctionCoefficient x_squared([](mfem::Vector x) { return x[0] * x[0]; });
+  U_gf.ProjectCoefficient(x_squared);
+  U_gf.GetTrueDofs(U);
+
+  // Define the types for the test and trial spaces using the function arguments
+  using test_space  = double;
+  using trial_space = H1<1>;
+
+  // Construct the new functional object using the known test and trial spaces
+  Functional<test_space(trial_space)> qoi({&trial_fespace});
+
+  auto on_left = [](std::vector<tensor<double,dim>> X, int /* attr */){ return average(X)[0] < 4.0; };
+  Domain left = Domain::ofElements(*mesh, on_left);
+
+  qoi.AddDomainIntegral(
+    Dimension<dim>{}, 
+    DependsOn</*nothing*/>{},
+    [=](auto /*position*/) { return 1.0; }, 
+    left
+  );
+
+  auto volume = qoi(U);
+
+  EXPECT_NEAR(volume, 4.0, 1.0e-14);
+
+}
+
 int main(int argc, char* argv[])
 {
   ::testing::InitGoogleTest(&argc, argv);

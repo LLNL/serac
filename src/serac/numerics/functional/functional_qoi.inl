@@ -181,6 +181,23 @@ public:
         MakeDomainIntegral<signature, Q, dim>(domain, integrand, qdata, std::vector<uint32_t>{args...}));
   }
 
+  /// @overload
+  template <int dim, int... args, typename lambda, typename qpt_data_type = Nothing>
+  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, Domain& domain,
+                         std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
+  {
+    if (domain.mesh.GetNE() == 0) return;
+
+    SLIC_ERROR_ROOT_IF(dim != domain.mesh.Dimension(), "invalid mesh dimension for domain integral");
+
+    check_for_unsupported_elements(domain.mesh);
+    check_for_missing_nodal_gridfunc(domain.mesh);
+
+    using signature = test(decltype(serac::type<args>(trial_spaces))...);
+    integrals_.push_back(
+        MakeDomainIntegral<signature, Q, dim>(domain, integrand, qdata, std::vector<uint32_t>{args...}));
+  }
+
   /**
    * @tparam dim The dimension of the boundary element (1 for line, 2 for quad, etc)
    * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
@@ -199,6 +216,21 @@ public:
     if (num_bdr_elements == 0) return;
 
     check_for_missing_nodal_gridfunc(domain);
+
+    using signature = test(decltype(serac::type<args>(trial_spaces))...);
+    integrals_.push_back(MakeBoundaryIntegral<signature, Q, dim>(domain, integrand, std::vector<uint32_t>{args...}));
+  }
+
+  /// @overload
+  template <int dim, int... args, typename lambda>
+  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, const Domain & domain)
+  {
+    auto num_bdr_elements = domain.mesh.GetNBE();
+    if (num_bdr_elements == 0) return;
+
+    SLIC_ERROR_ROOT_IF(dim != domain.dim, "invalid domain of integration for boundary integral");
+
+    check_for_missing_nodal_gridfunc(domain.mesh);
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
     integrals_.push_back(MakeBoundaryIntegral<signature, Q, dim>(domain, integrand, std::vector<uint32_t>{args...}));
