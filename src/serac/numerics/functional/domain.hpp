@@ -12,18 +12,18 @@ struct Domain {
   enum Type { Elements, BoundaryElements };
   static constexpr int num_types = 2;
 
-  const mfem::Mesh & mesh;
+  const mfem::Mesh & mesh_;
 
-  int dim;
-  Type type;
-  std::vector< int > vertices;
-  std::vector< int > edges;
-  std::vector< int > tris;
-  std::vector< int > quads;
-  std::vector< int > tets;
-  std::vector< int > hexes;
+  int dim_;
+  Type type_;
+  std::vector< int > vertices_;
+  std::vector< int > edges_;
+  std::vector< int > tris_;
+  std::vector< int > quads_;
+  std::vector< int > tets_;
+  std::vector< int > hexes_;
 
-  Domain(const mfem::Mesh& m, int d, Type type = Domain::Type::Elements) : mesh(m), dim(d), type(type) {}
+  Domain(const mfem::Mesh& m, int d, Type type = Domain::Type::Elements) : mesh_(m), dim_(d), type_(type) {}
 
   static Domain ofVertices(const mfem::Mesh & mesh, std::function< bool(vec2) > func);
   static Domain ofVertices(const mfem::Mesh & mesh, std::function< bool(vec3) > func);
@@ -41,12 +41,12 @@ struct Domain {
   static Domain ofBoundaryElements(const mfem::Mesh & mesh, std::function< bool(std::vector<vec3>, int) > func);
 
   const std::vector< int > & get(mfem::Geometry::Type geom) const {
-    if (geom == mfem::Geometry::POINT) return vertices; 
-    if (geom == mfem::Geometry::SEGMENT) return edges; 
-    if (geom == mfem::Geometry::TRIANGLE) return tris; 
-    if (geom == mfem::Geometry::SQUARE) return quads; 
-    if (geom == mfem::Geometry::TETRAHEDRON) return tets; 
-    if (geom == mfem::Geometry::CUBE) return hexes;
+    if (geom == mfem::Geometry::POINT) return vertices_; 
+    if (geom == mfem::Geometry::SEGMENT) return edges_; 
+    if (geom == mfem::Geometry::TRIANGLE) return tris_; 
+    if (geom == mfem::Geometry::SQUARE) return quads_; 
+    if (geom == mfem::Geometry::TETRAHEDRON) return tets_; 
+    if (geom == mfem::Geometry::CUBE) return hexes_;
 
     exit(1);
   }

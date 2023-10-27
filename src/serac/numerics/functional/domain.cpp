@@ -22,7 +22,7 @@ static Domain domain_of_vertices(const mfem::Mesh & mesh, std::function< bool(te
       }
 
       if (predicate(x)) { 
-        output.vertices.push_back(i); 
+        output.vertices_.push_back(i); 
       }
     }
 
@@ -73,11 +73,11 @@ static Domain domain_of_edges(const mfem::Mesh & mesh, std::function< T > predic
         int bdr_id = edge_id_to_bdr_id[i];
         int attr = (bdr_id > 0) ? mesh.GetBdrAttribute(bdr_id) : -1;
         if (predicate(x, attr)) { 
-          output.edges.push_back(i); 
+          output.edges_.push_back(i); 
         }
       } else {
         if (predicate(x)) { 
-          output.edges.push_back(i); 
+          output.edges_.push_back(i); 
         }
       }
     }
@@ -150,10 +150,10 @@ static Domain domain_of_faces(const mfem::Mesh & mesh, std::function< bool(std::
 
       if (predicate(x, attr)) { 
         if (x.size() == 3) {
-          output.tris.push_back(tri_id);
+          output.tris_.push_back(tri_id);
         }
         if (x.size() == 4) {
-          output.quads.push_back(quad_id);
+          output.quads_.push_back(quad_id);
         }
       }
 
@@ -209,21 +209,21 @@ static Domain domain_of_elems(const mfem::Mesh & mesh, std::function< bool(std::
 
       switch (x.size()) {
         case 3: 
-          if (add) { output.tris.push_back(tri_id); }
+          if (add) { output.tris_.push_back(tri_id); }
           tri_id++; 
           break;
         case 4: 
           if constexpr (d == 2) { 
-            if (add) { output.quads.push_back(quad_id); }
+            if (add) { output.quads_.push_back(quad_id); }
             quad_id++; 
           }
           if constexpr (d == 3) { 
-            if (add) { output.tets.push_back(tet_id); }
+            if (add) { output.tets_.push_back(tet_id); }
             tet_id++; 
           }
           break;
         case 8: 
-          if (add) { output.hexes.push_back(hex_id); }
+          if (add) { output.hexes_.push_back(hex_id); }
           hex_id++;
           break;
         default:
@@ -290,15 +290,15 @@ static Domain domain_of_boundary_elems(const mfem::Mesh & mesh, std::function< b
 
       switch (geom) {
         case mfem::Geometry::SEGMENT: 
-          if (add) { output.edges.push_back(edge_id); }
+          if (add) { output.edges_.push_back(edge_id); }
           edge_id++; 
           break;
         case mfem::Geometry::TRIANGLE: 
-          if (add) { output.tris.push_back(tri_id); }
+          if (add) { output.tris_.push_back(tri_id); }
           tri_id++; 
           break;
         case mfem::Geometry::SQUARE: 
-          if (add) { output.quads.push_back(quad_id); }
+          if (add) { output.quads_.push_back(quad_id); }
           quad_id++; 
           break;
         default:
@@ -340,16 +340,16 @@ Domain EntireDomain(const mfem::Mesh & mesh) {
 
     switch (geom) {
       case mfem::Geometry::TRIANGLE: 
-        output.tris.push_back(tri_id++);
+        output.tris_.push_back(tri_id++);
         break;
       case mfem::Geometry::SQUARE: 
-        output.quads.push_back(quad_id++);
+        output.quads_.push_back(quad_id++);
         break;
       case mfem::Geometry::TETRAHEDRON: 
-        output.tets.push_back(tet_id++);
+        output.tets_.push_back(tet_id++);
         break;
       case mfem::Geometry::CUBE: 
-        output.hexes.push_back(hex_id++);
+        output.hexes_.push_back(hex_id++);
         break;
       default:
         SLIC_ERROR("unsupported element type");
@@ -376,13 +376,13 @@ Domain EntireBoundary(const mfem::Mesh & mesh) {
 
     switch (geom) {
       case mfem::Geometry::SEGMENT: 
-        output.edges.push_back(edge_id++);
+        output.edges_.push_back(edge_id++);
         break;
       case mfem::Geometry::TRIANGLE: 
-        output.tris.push_back(tri_id++);
+        output.tris_.push_back(tri_id++);
         break;
       case mfem::Geometry::SQUARE: 
-        output.quads.push_back(quad_id++);
+        output.quads_.push_back(quad_id++);
         break;
       default:
         SLIC_ERROR("unsupported element type");
@@ -412,27 +412,27 @@ std::vector< int > set_operation(set_op op,
 }
 
 Domain set_operation(set_op op, const Domain & a, const Domain & b) {
-    assert(&a.mesh == &b.mesh);
-    assert(a.dim == b.dim);
+    assert(&a.mesh_ == &b.mesh_);
+    assert(a.dim_ == b.dim_);
 
-    Domain output{a.mesh, a.dim};
+    Domain output{a.mesh_, a.dim_};
 
-    if (output.dim == 0) {
-        output.vertices = set_operation(op, a.vertices, b.vertices);
+    if (output.dim_ == 0) {
+        output.vertices_ = set_operation(op, a.vertices_, b.vertices_);
     }
 
-    if (output.dim == 1) {
-        output.edges = set_operation(op, a.edges, b.edges);
+    if (output.dim_ == 1) {
+        output.edges_ = set_operation(op, a.edges_, b.edges_);
     }
 
-    if (output.dim == 2) {
-        output.tris = set_operation(op, a.tris, b.tris);
-        output.quads = set_operation(op, a.quads, b.quads);
+    if (output.dim_ == 2) {
+        output.tris_ = set_operation(op, a.tris_, b.tris_);
+        output.quads_ = set_operation(op, a.quads_, b.quads_);
     }
 
-    if (output.dim == 3) {
-        output.tets = set_operation(op, a.tets, b.tets);
-        output.hexes = set_operation(op, a.hexes, b.hexes);
+    if (output.dim_ == 3) {
+        output.tets_ = set_operation(op, a.tets_, b.tets_);
+        output.hexes_ = set_operation(op, a.hexes_, b.hexes_);
     }
 
     return output;

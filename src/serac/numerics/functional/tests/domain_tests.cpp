@@ -35,58 +35,58 @@ TEST(domain, of_vertices) {
   {
     auto mesh = import_mesh("onehex.mesh");
     Domain d0 = Domain::ofVertices(mesh, std::function([](vec3 x){ return x[0] < 0.5; }));
-    EXPECT_EQ(d0.vertices.size(), 4);
-    EXPECT_EQ(d0.dim, 0);
+    EXPECT_EQ(d0.vertices_.size(), 4);
+    EXPECT_EQ(d0.dim_, 0);
 
     Domain d1 = Domain::ofVertices(mesh, std::function([](vec3 x){ return x[1] < 0.5; }));
-    EXPECT_EQ(d1.vertices.size(), 4);
-    EXPECT_EQ(d1.dim, 0);
+    EXPECT_EQ(d1.vertices_.size(), 4);
+    EXPECT_EQ(d1.dim_, 0);
 
     Domain d2 = d0 | d1;
-    EXPECT_EQ(d2.vertices.size(), 6);
-    EXPECT_EQ(d2.dim, 0);
+    EXPECT_EQ(d2.vertices_.size(), 6);
+    EXPECT_EQ(d2.dim_, 0);
 
     Domain d3 = d0 & d1;
-    EXPECT_EQ(d3.vertices.size(), 2);
-    EXPECT_EQ(d3.dim, 0);
+    EXPECT_EQ(d3.vertices_.size(), 2);
+    EXPECT_EQ(d3.dim_, 0);
   }
 
   {
     auto mesh = import_mesh("onetet.mesh");
     Domain d0 = Domain::ofVertices(mesh, std::function([](vec3 x){ return x[0] < 0.5; }));
-    EXPECT_EQ(d0.vertices.size(), 3);
-    EXPECT_EQ(d0.dim, 0);
+    EXPECT_EQ(d0.vertices_.size(), 3);
+    EXPECT_EQ(d0.dim_, 0);
 
     Domain d1 = Domain::ofVertices(mesh, std::function([](vec3 x){ return x[1] < 0.5; }));
-    EXPECT_EQ(d1.vertices.size(), 3);
-    EXPECT_EQ(d1.dim, 0);
+    EXPECT_EQ(d1.vertices_.size(), 3);
+    EXPECT_EQ(d1.dim_, 0);
 
     Domain d2 = d0 | d1;
-    EXPECT_EQ(d2.vertices.size(), 4);
-    EXPECT_EQ(d2.dim, 0);
+    EXPECT_EQ(d2.vertices_.size(), 4);
+    EXPECT_EQ(d2.dim_, 0);
 
     Domain d3 = d0 & d1;
-    EXPECT_EQ(d3.vertices.size(), 2);
-    EXPECT_EQ(d3.dim, 0);
+    EXPECT_EQ(d3.vertices_.size(), 2);
+    EXPECT_EQ(d3.dim_, 0);
   }
 
   {
     auto mesh = import_mesh("beam-quad.mesh");
     Domain d0 = Domain::ofVertices(mesh, std::function([](vec2 x){ return x[0] < 0.5; }));
-    EXPECT_EQ(d0.vertices.size(), 2);
-    EXPECT_EQ(d0.dim, 0);
+    EXPECT_EQ(d0.vertices_.size(), 2);
+    EXPECT_EQ(d0.dim_, 0);
 
     Domain d1 = Domain::ofVertices(mesh, std::function([](vec2 x){ return x[1] < 0.5; }));
-    EXPECT_EQ(d1.vertices.size(), 9);
-    EXPECT_EQ(d1.dim, 0);
+    EXPECT_EQ(d1.vertices_.size(), 9);
+    EXPECT_EQ(d1.dim_, 0);
 
     Domain d2 = d0 | d1;
-    EXPECT_EQ(d2.vertices.size(), 10);
-    EXPECT_EQ(d2.dim, 0);
+    EXPECT_EQ(d2.vertices_.size(), 10);
+    EXPECT_EQ(d2.dim_, 0);
 
     Domain d3 = d0 & d1;
-    EXPECT_EQ(d3.vertices.size(), 1);
-    EXPECT_EQ(d3.dim, 0);
+    EXPECT_EQ(d3.vertices_.size(), 1);
+    EXPECT_EQ(d3.dim_, 0);
   }
 
 }
@@ -98,22 +98,22 @@ TEST(domain, of_edges) {
     Domain d0 = Domain::ofEdges(mesh, std::function([](std::vector<vec3> x){ 
         return (0.5 * (x[0][0] + x[1][0])) < 0.25; // x coordinate of edge midpoint 
     }));
-    EXPECT_EQ(d0.edges.size(), 4);
-    EXPECT_EQ(d0.dim, 1);
+    EXPECT_EQ(d0.edges_.size(), 4);
+    EXPECT_EQ(d0.dim_, 1);
 
     Domain d1 = Domain::ofEdges(mesh, std::function([](std::vector<vec3> x){ 
         return (0.5 * (x[0][1] + x[1][1])) < 0.25; // y coordinate of edge midpoint 
     }));
-    EXPECT_EQ(d1.edges.size(), 4);
-    EXPECT_EQ(d1.dim, 1);
+    EXPECT_EQ(d1.edges_.size(), 4);
+    EXPECT_EQ(d1.dim_, 1);
 
     Domain d2 = d0 | d1;
-    EXPECT_EQ(d2.edges.size(), 7);
-    EXPECT_EQ(d2.dim, 1);
+    EXPECT_EQ(d2.edges_.size(), 7);
+    EXPECT_EQ(d2.dim_, 1);
 
     Domain d3 = d0 & d1;
-    EXPECT_EQ(d3.edges.size(), 1);
-    EXPECT_EQ(d3.dim, 1);
+    EXPECT_EQ(d3.edges_.size(), 1);
+    EXPECT_EQ(d3.dim_, 1);
   }
 
   {
@@ -121,22 +121,22 @@ TEST(domain, of_edges) {
     Domain d0 = Domain::ofEdges(mesh, std::function([](std::vector<vec3> x){ 
         return (0.5 * (x[0][0] + x[1][0])) < 0.25; // x coordinate of edge midpoint 
     }));
-    EXPECT_EQ(d0.edges.size(), 3);
-    EXPECT_EQ(d0.dim, 1);
+    EXPECT_EQ(d0.edges_.size(), 3);
+    EXPECT_EQ(d0.dim_, 1);
 
     Domain d1 = Domain::ofEdges(mesh, std::function([](std::vector<vec3> x){ 
         return (0.5 * (x[0][1] + x[1][1])) < 0.25; // y coordinate of edge midpoint 
     }));
-    EXPECT_EQ(d1.edges.size(), 3);
-    EXPECT_EQ(d1.dim, 1);
+    EXPECT_EQ(d1.edges_.size(), 3);
+    EXPECT_EQ(d1.dim_, 1);
 
     Domain d2 = d0 | d1;
-    EXPECT_EQ(d2.edges.size(), 5);
-    EXPECT_EQ(d2.dim, 1);
+    EXPECT_EQ(d2.edges_.size(), 5);
+    EXPECT_EQ(d2.dim_, 1);
 
     Domain d3 = d0 & d1;
-    EXPECT_EQ(d3.edges.size(), 1);
-    EXPECT_EQ(d3.dim, 1);
+    EXPECT_EQ(d3.edges_.size(), 1);
+    EXPECT_EQ(d3.dim_, 1);
   }
 
   {
@@ -145,22 +145,22 @@ TEST(domain, of_edges) {
     Domain d0 = Domain::ofEdges(mesh, std::function([](std::vector<vec2> x, int /* bdr_attr */){ 
         return (0.5 * (x[0][0] + x[1][0])) < 0.25; // x coordinate of edge midpoint 
     }));
-    EXPECT_EQ(d0.edges.size(), 1);
-    EXPECT_EQ(d0.dim, 1);
+    EXPECT_EQ(d0.edges_.size(), 1);
+    EXPECT_EQ(d0.dim_, 1);
 
     Domain d1 = Domain::ofEdges(mesh, std::function([](std::vector<vec2> x, int /* bdr_attr */){ 
         return (0.5 * (x[0][1] + x[1][1])) < 0.25; // y coordinate of edge midpoint 
     }));
-    EXPECT_EQ(d1.edges.size(), 8);
-    EXPECT_EQ(d1.dim, 1);
+    EXPECT_EQ(d1.edges_.size(), 8);
+    EXPECT_EQ(d1.dim_, 1);
 
     Domain d2 = d0 | d1;
-    EXPECT_EQ(d2.edges.size(), 9);
-    EXPECT_EQ(d2.dim, 1);
+    EXPECT_EQ(d2.edges_.size(), 9);
+    EXPECT_EQ(d2.dim_, 1);
 
     Domain d3 = d0 & d1;
-    EXPECT_EQ(d3.edges.size(), 0);
-    EXPECT_EQ(d3.dim, 1);
+    EXPECT_EQ(d3.edges_.size(), 0);
+    EXPECT_EQ(d3.dim_, 1);
   }
 
 }
@@ -172,22 +172,22 @@ TEST(domain, of_faces) {
     Domain d0 = Domain::ofFaces(mesh, std::function([](std::vector<vec3> vertices, int /*bdr_attr*/){ 
         return average(vertices)[0] < 0.25; // x coordinate of face center 
     }));
-    EXPECT_EQ(d0.quads.size(), 1);
-    EXPECT_EQ(d0.dim, 2);
+    EXPECT_EQ(d0.quads_.size(), 1);
+    EXPECT_EQ(d0.dim_, 2);
 
     Domain d1 = Domain::ofFaces(mesh, std::function([](std::vector<vec3> vertices, int /*bdr_attr*/){ 
         return average(vertices)[1] < 0.25; // y coordinate of face center 
     }));
-    EXPECT_EQ(d1.quads.size(), 1);
-    EXPECT_EQ(d1.dim, 2);
+    EXPECT_EQ(d1.quads_.size(), 1);
+    EXPECT_EQ(d1.dim_, 2);
 
     Domain d2 = d0 | d1;
-    EXPECT_EQ(d2.quads.size(), 2);
-    EXPECT_EQ(d2.dim, 2);
+    EXPECT_EQ(d2.quads_.size(), 2);
+    EXPECT_EQ(d2.dim_, 2);
 
     Domain d3 = d0 & d1;
-    EXPECT_EQ(d3.quads.size(), 0);
-    EXPECT_EQ(d3.dim, 2);
+    EXPECT_EQ(d3.quads_.size(), 0);
+    EXPECT_EQ(d3.dim_, 2);
   }
 
   {
@@ -199,22 +199,22 @@ TEST(domain, of_faces) {
         }
         return false; 
     }));
-    EXPECT_EQ(d0.tris.size(), 4);
-    EXPECT_EQ(d0.dim, 2);
+    EXPECT_EQ(d0.tris_.size(), 4);
+    EXPECT_EQ(d0.dim_, 2);
 
     Domain d1 = Domain::ofFaces(mesh, std::function([](std::vector<vec3> x, int /* bdr_attr */){ 
         return average(x)[1] < 0.1;
     }));
-    EXPECT_EQ(d1.tris.size(), 1);
-    EXPECT_EQ(d1.dim, 2);
+    EXPECT_EQ(d1.tris_.size(), 1);
+    EXPECT_EQ(d1.dim_, 2);
 
     Domain d2 = d0 | d1;
-    EXPECT_EQ(d2.tris.size(), 4);
-    EXPECT_EQ(d2.dim, 2);
+    EXPECT_EQ(d2.tris_.size(), 4);
+    EXPECT_EQ(d2.dim_, 2);
 
     Domain d3 = d0 & d1;
-    EXPECT_EQ(d3.tris.size(), 1);
-    EXPECT_EQ(d3.dim, 2);
+    EXPECT_EQ(d3.tris_.size(), 1);
+    EXPECT_EQ(d3.dim_, 2);
   }
 
   {
@@ -222,22 +222,22 @@ TEST(domain, of_faces) {
     Domain d0 = Domain::ofFaces(mesh, std::function([](std::vector<vec2> vertices, int /* attr */){ 
         return average(vertices)[0] < 2.25; // x coordinate of face center 
     }));
-    EXPECT_EQ(d0.quads.size(), 2);
-    EXPECT_EQ(d0.dim, 2);
+    EXPECT_EQ(d0.quads_.size(), 2);
+    EXPECT_EQ(d0.dim_, 2);
 
     Domain d1 = Domain::ofFaces(mesh, std::function([](std::vector<vec2> vertices, int /* attr */){ 
         return average(vertices)[1] < 0.55; // y coordinate of face center 
     }));
-    EXPECT_EQ(d1.quads.size(), 8);
-    EXPECT_EQ(d1.dim, 2);
+    EXPECT_EQ(d1.quads_.size(), 8);
+    EXPECT_EQ(d1.dim_, 2);
 
     Domain d2 = d0 | d1;
-    EXPECT_EQ(d2.quads.size(), 8);
-    EXPECT_EQ(d2.dim, 2);
+    EXPECT_EQ(d2.quads_.size(), 8);
+    EXPECT_EQ(d2.dim_, 2);
 
     Domain d3 = d0 & d1;
-    EXPECT_EQ(d3.quads.size(), 2);
-    EXPECT_EQ(d3.dim, 2);
+    EXPECT_EQ(d3.quads_.size(), 2);
+    EXPECT_EQ(d3.dim_, 2);
   }
 
 }
@@ -250,26 +250,26 @@ TEST(domain, of_elements) {
         return average(vertices)[0] < 0.7; // x coordinate of face center 
     }));
 
-    EXPECT_EQ(d0.tets.size(), 0);
-    EXPECT_EQ(d0.hexes.size(), 1);
-    EXPECT_EQ(d0.dim, 3);
+    EXPECT_EQ(d0.tets_.size(), 0);
+    EXPECT_EQ(d0.hexes_.size(), 1);
+    EXPECT_EQ(d0.dim_, 3);
 
     Domain d1 = Domain::ofElements(mesh, std::function([](std::vector<vec3> vertices, int /*bdr_attr*/){ 
         return average(vertices)[1] < 0.75; // y coordinate of face center 
     }));
-    EXPECT_EQ(d1.tets.size(), 6);
-    EXPECT_EQ(d1.hexes.size(), 1);
-    EXPECT_EQ(d1.dim, 3);
+    EXPECT_EQ(d1.tets_.size(), 6);
+    EXPECT_EQ(d1.hexes_.size(), 1);
+    EXPECT_EQ(d1.dim_, 3);
 
     Domain d2 = d0 | d1;
-    EXPECT_EQ(d2.tets.size(), 6);
-    EXPECT_EQ(d2.hexes.size(), 2);
-    EXPECT_EQ(d2.dim, 3);
+    EXPECT_EQ(d2.tets_.size(), 6);
+    EXPECT_EQ(d2.hexes_.size(), 2);
+    EXPECT_EQ(d2.dim_, 3);
 
     Domain d3 = d0 & d1;
-    EXPECT_EQ(d3.tets.size(), 0);
-    EXPECT_EQ(d3.hexes.size(), 0);
-    EXPECT_EQ(d3.dim, 3);
+    EXPECT_EQ(d3.tets_.size(), 0);
+    EXPECT_EQ(d3.hexes_.size(), 0);
+    EXPECT_EQ(d3.dim_, 3);
   }
 
   {
@@ -277,26 +277,26 @@ TEST(domain, of_elements) {
     Domain d0 = Domain::ofElements(mesh, std::function([](std::vector<vec2> vertices, int /* attr */){ 
         return average(vertices)[0] < 0.45;
     }));
-    EXPECT_EQ(d0.tris.size(), 1);
-    EXPECT_EQ(d0.quads.size(), 1);
-    EXPECT_EQ(d0.dim, 2);
+    EXPECT_EQ(d0.tris_.size(), 1);
+    EXPECT_EQ(d0.quads_.size(), 1);
+    EXPECT_EQ(d0.dim_, 2);
 
     Domain d1 = Domain::ofElements(mesh, std::function([](std::vector<vec2> vertices, int /* attr */){ 
         return average(vertices)[1] < 0.45;
     }));
-    EXPECT_EQ(d1.tris.size(), 1);
-    EXPECT_EQ(d1.quads.size(), 1);
-    EXPECT_EQ(d1.dim, 2);
+    EXPECT_EQ(d1.tris_.size(), 1);
+    EXPECT_EQ(d1.quads_.size(), 1);
+    EXPECT_EQ(d1.dim_, 2);
 
     Domain d2 = d0 | d1;
-    EXPECT_EQ(d2.tris.size(), 2);
-    EXPECT_EQ(d2.quads.size(), 2);
-    EXPECT_EQ(d2.dim, 2);
+    EXPECT_EQ(d2.tris_.size(), 2);
+    EXPECT_EQ(d2.quads_.size(), 2);
+    EXPECT_EQ(d2.dim_, 2);
 
     Domain d3 = d0 & d1;
-    EXPECT_EQ(d3.tris.size(), 0);
-    EXPECT_EQ(d3.quads.size(), 0);
-    EXPECT_EQ(d3.dim, 2);
+    EXPECT_EQ(d3.tris_.size(), 0);
+    EXPECT_EQ(d3.quads_.size(), 0);
+    EXPECT_EQ(d3.dim_, 2);
   }
 
 }

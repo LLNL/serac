@@ -64,7 +64,7 @@ void compute_geometric_factors(mfem::Vector& positions_q, mfem::Vector& jacobian
 
 GeometricFactors::GeometricFactors(const Domain & d, int q, mfem::Geometry::Type g) {
 
-  auto* nodes = d.mesh.GetNodes();
+  auto* nodes = d.mesh_.GetNodes();
   auto* fes   = nodes->FESpace();
 
   auto         restriction = serac::ElementRestriction(fes, g);
@@ -74,15 +74,15 @@ GeometricFactors::GeometricFactors(const Domain & d, int q, mfem::Geometry::Type
   // assumes all elements are the same order
   int p = fes->GetElementOrder(0);
 
-  int spatial_dim   = d.mesh.SpaceDimension();
+  int spatial_dim   = d.mesh_.SpaceDimension();
   int geometry_dim  = dimension_of(g);
   int qpts_per_elem = num_quadrature_points(g, q);
 
   std::vector< int > elements;
-  if (g == mfem::Geometry::TRIANGLE) elements = d.tris;
-  if (g == mfem::Geometry::SQUARE) elements = d.quads;
-  if (g == mfem::Geometry::TETRAHEDRON) elements = d.tets;
-  if (g == mfem::Geometry::CUBE) elements = d.hexes;
+  if (g == mfem::Geometry::TRIANGLE) elements = d.tris_;
+  if (g == mfem::Geometry::SQUARE) elements = d.quads_;
+  if (g == mfem::Geometry::TETRAHEDRON) elements = d.tets_;
+  if (g == mfem::Geometry::CUBE) elements = d.hexes_;
 
   num_elements = elements.size();
 
@@ -307,7 +307,7 @@ GeometricFactors::GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry
 
 GeometricFactors::GeometricFactors(const Domain & d, int q, mfem::Geometry::Type g, FaceType type)
 {
-  auto* nodes = d.mesh.GetNodes();
+  auto* nodes = d.mesh_.GetNodes();
   auto* fes   = nodes->FESpace();
 
   auto         restriction = serac::ElementRestriction(fes, g, type);
@@ -317,7 +317,7 @@ GeometricFactors::GeometricFactors(const Domain & d, int q, mfem::Geometry::Type
   // assumes all elements are the same order
   int p = fes->GetElementOrder(0);
 
-  int spatial_dim   = d.mesh.SpaceDimension();
+  int spatial_dim   = d.mesh_.SpaceDimension();
   int geometry_dim  = dimension_of(g);
   int qpts_per_elem = num_quadrature_points(g, q);
 
