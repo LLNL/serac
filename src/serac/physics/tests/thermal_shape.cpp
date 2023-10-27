@@ -37,7 +37,10 @@ TEST(HeatTransfer, MoveShape)
   serac::StateManager::initialize(datastore, "thermal_shape_solve");
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
+
+  std::string mesh_tag{"mesh"};
+
+  auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   mfem::Vector shape_temperature;
   mfem::Vector pure_temperature;
@@ -79,13 +82,17 @@ TEST(HeatTransfer, MoveShape)
 
   {
     // Construct a functional-based thermal solver including references to the shape displacement field.
-    HeatTransfer<p, dim> thermal_solver(nonlinear_options, linear_options, time_integration_options, "thermal_shape");
+    HeatTransfer<p, dim> thermal_solver(nonlinear_options, linear_options, time_integration_options, "thermal_shape",
+                                        mesh_tag);
 
     // Set the initial temperature and boundary condition
     thermal_solver.setTemperatureBCs(ess_bdr, zero);
     thermal_solver.setTemperature(zero);
 
-    thermal_solver.shapeDisplacement().project(shape_coef);
+    FiniteElementState shape_displacement(pmesh, H1<SHAPE_ORDER, dim>{});
+
+    shape_displacement.project(shape_coef);
+    thermal_solver.setShapeDisplacement(shape_displacement);
 
     thermal_solver.setMaterial(mat);
 
@@ -95,10 +102,9 @@ TEST(HeatTransfer, MoveShape)
     thermal_solver.completeSetup();
 
     // Perform the quasi-static solve
-    double dt = 1.0;
-    thermal_solver.advanceTimestep(dt);
+    thermal_solver.advanceTimestep(1.0);
 
-    thermal_solver.outputState();
+    thermal_solver.outputStateToDisk();
 
     shape_temperature = thermal_solver.temperature().gridFunction();
   }
@@ -108,23 +114,25 @@ TEST(HeatTransfer, MoveShape)
   serac::StateManager::initialize(new_datastore, "thermal_pure_solve");
 
   auto new_mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(new_mesh));
+
+  std::string pure_mesh_tag{"pure_mesh"};
+
+  auto& new_pmesh = serac::StateManager::setMesh(std::move(new_mesh), pure_mesh_tag);
 
   {
     // Construct and initialized the user-defined shape displacement to offset the computational mesh
-    FiniteElementState user_defined_shape_displacement(StateManager::newState(
-        FiniteElementState::Options{.order = p, .vector_dim = dim, .name = "parameterized_shape"}));
+    FiniteElementState user_defined_shape_displacement(new_pmesh, H1<SHAPE_ORDER, dim>{});
 
     user_defined_shape_displacement.project(shape_coef);
 
     // Delete the pre-computed geometry factors as we are mutating the mesh
-    StateManager::mesh().DeleteGeometricFactors();
-    auto* mesh_nodes = StateManager::mesh().GetNodes();
+    new_pmesh.DeleteGeometricFactors();
+    auto* mesh_nodes = new_pmesh.GetNodes();
     *mesh_nodes += user_defined_shape_displacement.gridFunction();
 
     // Construct a functional-based thermal solver including references to the shape displacement field.
     HeatTransfer<p, dim> thermal_solver_no_shape(nonlinear_options, linear_options, time_integration_options,
-                                                 "thermal_pure");
+                                                 "thermal_pure", pure_mesh_tag);
 
     // Set the initial temperature and boundary condition
     thermal_solver_no_shape.setTemperatureBCs(ess_bdr, zero);
@@ -138,10 +146,9 @@ TEST(HeatTransfer, MoveShape)
     thermal_solver_no_shape.completeSetup();
 
     // Perform the quasi-static solve
-    double dt = 1.0;
-    thermal_solver_no_shape.advanceTimestep(dt);
+    thermal_solver_no_shape.advanceTimestep(1.0);
 
-    thermal_solver_no_shape.outputState();
+    thermal_solver_no_shape.outputStateToDisk();
 
     pure_temperature = thermal_solver_no_shape.temperature().gridFunction();
   }

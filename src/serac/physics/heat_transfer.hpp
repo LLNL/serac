@@ -36,7 +36,11 @@ const LinearSolverOptions default_linear_options = {.linear_solver  = LinearSolv
                                                     .max_iterations = 200};
 
 /// the default direct solver option for solving the linear stiffness equations
-const LinearSolverOptions direct_linear_options = {.linear_solver = LinearSolver::SuperLU};
+#ifdef MFEM_USE_STRUMPACK
+const LinearSolverOptions direct_linear_options = {.linear_solver = LinearSolver::Strumpack, .print_level = 0};
+#else
+const LinearSolverOptions direct_linear_options = {.linear_solver = LinearSolver::SuperLU, .print_level = 0};
+#endif
 
 /**
  * @brief Reasonable defaults for most thermal nonlinear solver options
@@ -97,16 +101,15 @@ public:
    * @param[in] nonlinear_opts The nonlinear solver options for solving the nonlinear residual equations
    * @param[in] lin_opts The linear solver options for solving the linearized Jacobian equations
    * @param[in] timestepping_opts The timestepping options for the heat transfer ordinary differential equations
-   * @param[in] name An optional name for the physics module instance
-   * used by an underlying material model or load
-   * @param[in] pmesh The mesh to conduct the simulation on, if different than the default mesh
+   * @param[in] physics_name A name for the physics module instance
+   * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
+   * @param[in] parameter_names A vector of the names of the requested parameter fields
    */
   HeatTransfer(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
-               const serac::TimesteppingOptions timestepping_opts, const std::string& name = "",
-               mfem::ParMesh* pmesh = nullptr)
-      : HeatTransfer(std::make_unique<EquationSolver>(nonlinear_opts, lin_opts,
-                                                      StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
-                     timestepping_opts, name, pmesh)
+               const serac::TimesteppingOptions timestepping_opts, const std::string& physics_name,
+               std::string mesh_tag, std::vector<std::string> parameter_names = {})
+      : HeatTransfer(std::make_unique<EquationSolver>(nonlinear_opts, lin_opts, StateManager::mesh(mesh_tag).GetComm()),
+                     timestepping_opts, physics_name, mesh_tag, parameter_names)
   {
   }
 
@@ -115,25 +118,23 @@ public:
    *
    * @param[in] solver The nonlinear equation solver for the heat transfer equations
    * @param[in] timestepping_opts The timestepping options for the heat transfer ordinary differential equations
-   * @param[in] name An optional name for the physics module instance
-   * used by an underlying material model or load
-   * @param[in] pmesh The mesh to conduct the simulation on, if different than the default mesh
+   * @param[in] physics_name A name for the physics module instance
+   * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
+   * @param[in] parameter_names A vector of the names of the requested parameter fields
    */
   HeatTransfer(std::unique_ptr<serac::EquationSolver> solver, const serac::TimesteppingOptions timestepping_opts,
-               const std::string& name = "", mfem::ParMesh* pmesh = nullptr)
-      : BasePhysics(NUM_STATE_VARS, order, name, pmesh),
-        temperature_(StateManager::newState(
-            FiniteElementState::Options{
-                .order = order, .vector_dim = 1, .name = detail::addPrefix(name, "temperature")},
-            sidre_datacoll_id_)),
-        adjoint_temperature_(StateManager::newState(
-            FiniteElementState::Options{
-                .order = order, .vector_dim = 1, .name = detail::addPrefix(name, "adjoint_temperature")},
-            sidre_datacoll_id_)),
+               const std::string& physics_name, std::string mesh_tag, std::vector<std::string> parameter_names = {})
+      : BasePhysics(order, physics_name, mesh_tag),
+        temperature_(StateManager::newState(H1<order>{}, detail::addPrefix(physics_name, "temperature"), mesh_tag_)),
+        temperature_rate_(temperature_),
+        adjoint_temperature_(
+            StateManager::newState(H1<order>{}, detail::addPrefix(physics_name, "adjoint_temperature"), mesh_tag_)),
+        implicit_sensitivity_temperature_start_of_step_(adjoint_temperature_.space(),
+                                                        detail::addPrefix(physics_name, "total_deriv_wrt_temperature")),
         residual_with_bcs_(temperature_.space().TrueVSize()),
         nonlin_solver_(std::move(solver)),
         ode_(temperature_.space().TrueVSize(),
-             {.time = ode_time_point_, .u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
+             {.time = ode_time_point_, .u = u_, .dt = dt_, .du_dt = u_rate_start_of_step_, .previous_dt = previous_dt_},
              *nonlin_solver_, bcs_)
   {
     SLIC_ERROR_ROOT_IF(
@@ -145,9 +146,7 @@ public:
         "EquationSolver argument is nullptr in HeatTransfer constructor. It is possible that it was previously moved.");
 
     states_.push_back(&temperature_);
-    states_.push_back(&adjoint_temperature_);
-
-    parameters_.resize(sizeof...(parameter_space));
+    adjoints_.push_back(&adjoint_temperature_);
 
     // Create a pack of the primal field and parameter finite element spaces
     mfem::ParFiniteElementSpace* test_space = &temperature_.space();
@@ -157,14 +156,17 @@ public:
     trial_spaces[1] = &temperature_.space();
     trial_spaces[2] = &shape_displacement_.space();
 
+    SLIC_ERROR_ROOT_IF(
+        sizeof...(parameter_space) != parameter_names.size(),
+        axom::fmt::format("{} parameter spaces given in the template argument but {} parameter names were supplied.",
+                          sizeof...(parameter_space), parameter_names.size()));
+
     if constexpr (sizeof...(parameter_space) > 0) {
       tuple<parameter_space...> types{};
       for_constexpr<sizeof...(parameter_space)>([&](auto i) {
-        auto [fes, fec] =
-            generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_);
-        parameters_[i].trial_space       = std::move(fes);
-        parameters_[i].trial_collection  = std::move(fec);
-        trial_spaces[i + NUM_STATE_VARS] = parameters_[i].trial_space.get();
+        parameters_.emplace_back(mesh_, get<i>(types), detail::addPrefix(name_, parameter_names[i]));
+
+        trial_spaces[i + NUM_STATE_VARS] = &(parameters_[i].state->space());
       });
     }
 
@@ -189,25 +191,29 @@ public:
     u_.SetSize(true_size);
     u_predicted_.SetSize(true_size);
 
-    previous_.SetSize(true_size);
-    previous_ = 0.0;
+    u_rate_start_of_step_.SetSize(true_size);
+    u_rate_start_of_step_ = 0.0;
 
     zero_.SetSize(true_size);
     zero_ = 0.0;
 
-    shape_displacement_  = 0.0;
-    temperature_         = 0.0;
-    adjoint_temperature_ = 0.0;
+    shape_displacement_                             = 0.0;
+    temperature_                                    = 0.0;
+    temperature_rate_                               = 0.0;
+    adjoint_temperature_                            = 0.0;
+    implicit_sensitivity_temperature_start_of_step_ = 0.0;
   }
 
   /**
    * @brief Construct a new Nonlinear HeatTransfer Solver object
    *
    * @param[in] options The solver information parsed from the input file
-   * @param[in] name An optional name for the physics module instance. Note that this is NOT the mesh tag.
+   * @param[in] physics_name A name for the physics module instance
+   * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
    */
-  HeatTransfer(const HeatTransferInputOptions& options, const std::string& name = "")
-      : HeatTransfer(options.nonlin_solver_options, options.lin_solver_options, options.timestepping_options, name)
+  HeatTransfer(const HeatTransferInputOptions& options, const std::string& physics_name, const std::string& mesh_tag)
+      : HeatTransfer(options.nonlin_solver_options, options.lin_solver_options, options.timestepping_options,
+                     physics_name, mesh_tag)
   {
     if (options.initial_temperature) {
       auto temp = options.initial_temperature->constructScalar();
@@ -233,7 +239,7 @@ public:
         // NOTE: cannot use std::functions that use mfem::vector
         SLIC_ERROR("'flux' is not implemented yet in input files.");
       } else {
-        SLIC_WARNING_ROOT("Ignoring boundary condition with unknown name: " << name);
+        SLIC_WARNING_ROOT("Ignoring boundary condition with unknown name: " << physics_name);
       }
     }
   }
@@ -243,6 +249,8 @@ public:
    *
    * @param[in] temp_bdr The boundary attributes on which to enforce a temperature
    * @param[in] temp The prescribed boundary temperature function
+   *
+   * @note This should be called prior to completeSetup()
    */
   void setTemperatureBCs(const std::set<int>& temp_bdr, std::function<double(const mfem::Vector& x, double t)> temp)
   {
@@ -253,11 +261,13 @@ public:
   }
 
   /**
-   * @brief Advance the timestep
+   * @brief Advance the heat conduction physics module in time
    *
-   * @param[inout] dt The timestep to advance. For adaptive time integration methods, the actual timestep is returned.
+   * Advance the underlying ODE with the requested time integration scheme using the previously set timestep.
+   *
+   * @param dt The increment of simulation time to advance the underlying heat transfer problem
    */
-  void advanceTimestep(double& dt) override
+  void advanceTimestep(double dt) override
   {
     if (is_quasistatic_) {
       time_ += dt;
@@ -267,8 +277,6 @@ public:
       }
       nonlin_solver_->solve(temperature_);
     } else {
-      SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
-
       // Step the time integrator
       // Note that the ODE solver handles the essential boundary condition application itself
       ode_.Step(temperature_, time_, dt);
@@ -296,6 +304,8 @@ public:
    *
    * @pre MaterialType must return a serac::tuple of volumetric heat capacity and thermal flux when operator() is called
    * with the arguments listed above.
+   *
+   * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename MaterialType>
   void setMaterial(DependsOn<active_parameters...>, MaterialType material)
@@ -340,6 +350,8 @@ public:
    * @brief Set the underlying finite element state to a prescribed temperature
    *
    * @param temp The function describing the temperature field
+   *
+   * @note This will override any existing solution values in the temperature field
    */
   void setTemperature(std::function<double(const mfem::Vector& x, double t)> temp)
   {
@@ -348,8 +360,10 @@ public:
 
     temp_coef.SetTime(time_);
     temperature_.project(temp_coef);
-    gf_initialized_[0] = true;
   }
+
+  /// @overload
+  void setTemperature(const FiniteElementState temp) { temperature_ = temp; }
 
   /**
    * @brief Set the thermal source function
@@ -369,6 +383,8 @@ public:
    *    when doing direct evaluation. When differentiating with respect to one of the inputs, its stored
    *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
    * 3>`)
+   *
+   * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename SourceType>
   void setSource(DependsOn<active_parameters...>, SourceType source_function)
@@ -423,9 +439,7 @@ public:
    *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
    * 3>`)
    *
-   * @note: until mfem::GetFaceGeometricFactors implements their JACOBIANS option,
-   * (or we implement a replacement kernel ourselves) we are not able to compute
-   * shape sensitivities for boundary integrals.
+   * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename FluxType>
   void setFluxBCs(DependsOn<active_parameters...>, FluxType flux_function)
@@ -482,9 +496,6 @@ public:
    */
   const serac::FiniteElementState& temperature() const { return temperature_; };
 
-  /// @overload
-  serac::FiniteElementState& temperature() { return temperature_; };
-
   /**
    * @brief Get the adjoint temperature state
    *
@@ -492,36 +503,45 @@ public:
    */
   const serac::FiniteElementState& adjointTemperature() const { return adjoint_temperature_; };
 
-  /// @overload
-  serac::FiniteElementState& adjointTemperature() { return adjoint_temperature_; };
-
   /**
-   * @brief Accessor for getting named finite element state fields from the physics modules
+   * @brief Accessor for getting named finite element state primal solution from the physics modules
    *
-   * @param state_name The name of the Finite Element State to retrieve
-   * @return The named Finite Element State
+   * @param state_name The name of the Finite Element State primal solution to retrieve
+   * @return The named primal Finite Element State
    */
   const FiniteElementState& state(const std::string& state_name) override
   {
     if (state_name == "temperature") {
       return temperature_;
-    } else if (state_name == "adjoint_temperature") {
-      return adjoint_temperature_;
     }
 
-    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requestion from solid mechanics module '{}', but it doesn't exist",
+    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requested from solid mechanics module '{}', but it doesn't exist",
                                       state_name, name_));
     return temperature_;
   }
 
   /**
-   * @brief Get a vector of the finite element state solution variable names
+   * @brief Get a vector of the finite element state primal solution names
    *
-   * @return The solution variable names
+   * @return The primal solution names
    */
-  virtual std::vector<std::string> stateNames() override
+  virtual std::vector<std::string> stateNames() override { return std::vector<std::string>{{"temperature"}}; }
+
+  /**
+   * @brief Accessor for getting named finite element state adjoint solution from the physics modules
+   *
+   * @param state_name The name of the Finite Element State adjoint solution to retrieve
+   * @return The named adjoint Finite Element State
+   */
+  const FiniteElementState& adjoint(const std::string& state_name) override
   {
-    return std::vector<std::string>{{"temperature"}, {"adjoint_temperature"}};
+    if (state_name == "temperature") {
+      return adjoint_temperature_;
+    }
+
+    SLIC_ERROR_ROOT(axom::fmt::format("Adjoint '{}' requested from solid mechanics module '{}', but it doesn't exist",
+                                      state_name, name_));
+    return adjoint_temperature_;
   }
 
   /**
@@ -556,7 +576,6 @@ public:
             J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             return *J_;
           });
-
     } else {
       residual_with_bcs_ = mfem_ext::StdFunctionOperator(
           temperature_.space().TrueVSize(),
@@ -601,40 +620,67 @@ public:
    * @pre The adjoint load maps are expected to contain a single entry named "temperature"
    * @note If the essential boundary dual is not specified, homogeneous essential boundary conditions are applied to
    * the adjoint system
+   * @note We provide a quick derivation for the discrete adjoint equations and notation used here for backward
+   * Euler. There are two equations satisfied at each step of the forward solve using backward Euler \n 1). \f$r^n(u^n,
+   * v^n; d) = 0,\f$ \n where \f$u^n\f$ is the end-step primal value, \f$d\f$ are design parameters, and \f$v^n\f$ is
+   * the central difference velocity, satisfying \n 2). \f$\Delta t \, v^n = u^n-u^{n-1}.\f$ \n We are interesting in
+   * the implicit sensitivity of a qoi (quantity of interest), \f$\sum_{n=1}^N \pi^n(u^n, v^n; d)\f$, while maintaining
+   * the above constraints. We construct a Lagrangian that adds 'zero' to this qoi using the free multipliers
+   * \f$\lambda^n\f$ (which we call the adjoint temperature) and
+   * \f$\mu^n\f$ (which can eventually be intepreted as the implicit sensitivity of the qoi with respect to the
+   * start-of-step primal value \f$u^{n-1}\f$) with \f[ \mathcal{L} :=  \sum_{n=1}^N \pi(u^n, v^n; d) + \lambda^n \cdot
+   * r^n(u^n, v^n; d) + \mu^n \cdot (\Delta t \, v^n - u^n + u^{n-1}).\f] We are interesting in the total derivative
+   * \f[\frac{d\mathcal{L}}{dp} = \sum_{n=1}^N \pi^n_{,u} u^n_{,d} + \pi^n_{,v} v^n_{,d} + \pi^n_{,d} + \lambda^n \cdot
+   * \left( r^n_{,u} u^n_{,d} + r^n_{,v} v^n_{,d} + r^n_{,d} \right) + \mu^n \cdot (\Delta t \, v^n_{,d} - u^n_{,d} +
+   * u^{n-1}_{,d}). \f] We are free to choose \f$\lambda^n\f$ and \f$\mu^n\f$ in any convenient way, and the way we
+   * choose is by grouping terms involving \f$u^n_{,d}\f$ and \f$v^n_{,d}\f$, and setting the multipliers such that
+   * those terms cancel out in the final expression of the qoi sensitivity. In particular, by choosing \f[ \lambda^n = -
+   * \left[ r_{,u}^n + \frac{r_{,v}^n}{\Delta t} \right]^{-T} \left( \pi^n_{,u} + \frac{\pi^n_{,v}}{\Delta t} +
+   * \mu^{n+1} \right) \f] and \f[ \mu^n = -\frac{1}{\Delta t}\left( \pi^n_{,v} + \lambda^n \cdot r^n_{,v} \right), \f]
+   * we find
+   * \f[ \frac{d\mathcal{L}}{dp} = \sum_{n=1}^N \left( \pi^n_{,d} + \lambda^n \cdot r^n_{,d} \right) + \mu^1 \cdot
+   * u^{0}_{,d}, \f] where the multiplier/adjoint equations are solved backward in time starting at \f$n=N\f$,
+   * \f$\mu^{N+1} = 0\f$, and \f$u^{0}_{,d}\f$ is the sensitivity of the initial primal variable with respect to the
+   * parameters.\n We call the quantities \f$\pi^n_{,u}\f$ and \f$\pi^n_{,v}\f$ the temperature and temperature-rate
+   * adjoint loads, respectively.
    *
    * @param adjoint_loads An unordered map containing finite element duals representing the RHS of the adjoint equations
-   * indexed by their name
+   * indexed by their name.  It must have a load named "temperature", which is the sensitivity of the qoi over that
+   * timestep to the end-of-step temperature.  It may optionally have a load named "temperature_rate", which is the
+   * sensitivity of the qoi over that timestep with respect to the end-of_step temperature rate of change.
    * @param adjoint_with_essential_boundary An unordered map containing finite element states representing the
    * non-homogeneous essential boundary condition data for the adjoint problem indexed by their name
    * @return An unordered map of the adjoint solutions indexed by their name. It has a single entry named
-   * "adjoint_temperature"
+   * "adjoint_temperature".
    */
-  const std::unordered_map<std::string, const serac::FiniteElementState&> solveAdjoint(
+  const std::unordered_map<std::string, const serac::FiniteElementState&> reverseAdjointTimestep(
       std::unordered_map<std::string, const serac::FiniteElementDual&>  adjoint_loads,
       std::unordered_map<std::string, const serac::FiniteElementState&> adjoint_with_essential_boundary = {}) override
   {
-    SLIC_ERROR_ROOT_IF(adjoint_loads.size() != 1,
-                       "Adjoint load container is not the expected size of 1 in the heat transfer module.");
+    SLIC_ERROR_ROOT_IF(adjoint_loads.size() == 0,
+                       "Adjoint load container size must be greater than 0 in the heat transfer module.");
 
-    auto temp_adjoint_load = adjoint_loads.find("temperature");
+    auto temp_adjoint_load      = adjoint_loads.find("temperature");
+    auto temp_rate_adjoint_load = adjoint_loads.find("temperature_rate");  // does not need to be specified
 
     SLIC_ERROR_ROOT_IF(temp_adjoint_load == adjoint_loads.end(), "Adjoint load for \"temperature\" not found.");
 
-    mfem::HypreParVector adjoint_load_vector(temp_adjoint_load->second);
-
+    mfem::HypreParVector temperature_adjoint_load_vector(temp_adjoint_load->second);
     // Add the sign correction to move the term to the RHS
-    adjoint_load_vector *= -1.0;
+    temperature_adjoint_load_vector *= -1.0;
+
+    mfem::HypreParVector temperature_rate_adjoint_load_vector(temperature_adjoint_load_vector);
+    temperature_rate_adjoint_load_vector = 0.0;
+    if (temp_rate_adjoint_load != adjoint_loads.end()) {
+      temperature_rate_adjoint_load_vector = temp_rate_adjoint_load->second;
+      temperature_rate_adjoint_load_vector *= -1.0;
+    }
 
     auto& lin_solver = nonlin_solver_->linearSolver();
 
     // By default, use a homogeneous essential boundary condition
     mfem::HypreParVector adjoint_essential(temp_adjoint_load->second);
     adjoint_essential = 0.0;
-
-    auto [r, drdu] = (*residual_)(differentiate_wrt(temperature_), zero_, shape_displacement_,
-                                  *parameters_[parameter_indices].state...);
-    auto jacobian  = assemble(drdu);
-    auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
     // If we have a non-homogeneous essential boundary condition, extract it from the given state
     auto essential_adjoint_temp = adjoint_with_essential_boundary.find("temperature");
@@ -649,34 +695,113 @@ public:
                     "boundary condition named \"temperature\".");
     }
 
+    if (is_quasistatic_) {
+      // We store the previous timestep's temperature as the current temperature for use in the lambdas computing the
+      // sensitivities.
+
+      auto [r, drdu] = (*residual_)(differentiate_wrt(temperature_), zero_, shape_displacement_,
+                                    *parameters_[parameter_indices].state...);
+      auto jacobian  = assemble(drdu);
+      auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
+
+      for (const auto& bc : bcs_.essentials()) {
+        bc.apply(*J_T, temperature_adjoint_load_vector, adjoint_essential);
+      }
+
+      lin_solver.SetOperator(*J_T);
+      lin_solver.Mult(temperature_adjoint_load_vector, adjoint_temperature_);
+
+      // Reset the equation solver to use the full nonlinear residual operator
+      nonlin_solver_->setOperator(residual_with_bcs_);
+
+      return {{"adjoint_temperature", adjoint_temperature_}};
+    }
+
+    SLIC_ERROR_ROOT_IF(ode_.GetTimestepper() != TimestepMethod::BackwardEuler,
+                       "Only backward Euler implemented for transient adjoint heat conduction.");
+
+    SLIC_ERROR_ROOT_IF(cycle_ == 0,
+                       "Maximum number of adjoint timesteps exceeded! The number of adjoint timesteps must equal the "
+                       "number of forward timesteps");
+
+    // Load the temperature from the previous cycle from disk
+    serac::FiniteElementState temperature_n_minus_1(temperature_);
+    StateManager::loadCheckpointedStates(cycle_, {temperature_});
+    StateManager::loadCheckpointedStates(cycle_ - 1, {temperature_n_minus_1});
+
+    temperature_rate_ = temperature_;
+    temperature_rate_.Add(-1.0, temperature_n_minus_1);
+    temperature_rate_ /= dt_;
+
+    // K := dR/du
+    auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(temperature_), temperature_rate_,
+                                                 shape_displacement_, *parameters_[parameter_indices].state...));
+    std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
+
+    // M := dR/du_dot
+    auto M = serac::get<DERIVATIVE>((*residual_)(temperature_, differentiate_wrt(temperature_rate_),
+                                                 shape_displacement_, *parameters_[parameter_indices].state...));
+    std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
+
+    J_.reset(mfem::Add(1.0, *m_mat, dt_, *k_mat));
+    auto J_T = std::unique_ptr<mfem::HypreParMatrix>(J_->Transpose());
+
+    // recall that temperature_adjoint_load_vector and d_temperature_dt_adjoint_load_vector were already multiplied by
+    // -1 above
+    mfem::HypreParVector modified_RHS(temperature_adjoint_load_vector);
+    modified_RHS *= dt_;
+    modified_RHS.Add(1.0, temperature_rate_adjoint_load_vector);
+    modified_RHS.Add(-dt_, implicit_sensitivity_temperature_start_of_step_);
+
     for (const auto& bc : bcs_.essentials()) {
-      bc.apply(*J_T, adjoint_load_vector, adjoint_essential);
+      bc.apply(*J_T, modified_RHS, adjoint_essential);
     }
 
     lin_solver.SetOperator(*J_T);
-    lin_solver.Mult(adjoint_load_vector, adjoint_temperature_);
+    lin_solver.Mult(modified_RHS, adjoint_temperature_);
+
+    // This multiply is technically on M transposed.  However, this matrix should be symmetric unless
+    // the thermal capacity is a function of the temperature rate of change, which is thermodynamically
+    // impossible, and fortunately not possible with our material interface.
+    // Not doing the transpose here to avoid doing unnecessary work.
+    m_mat->Mult(adjoint_temperature_, implicit_sensitivity_temperature_start_of_step_);
+    implicit_sensitivity_temperature_start_of_step_ *= -1.0 / dt_;
+    implicit_sensitivity_temperature_start_of_step_.Add(
+        1.0 / dt_, temperature_rate_adjoint_load_vector);  // already multiplied by -1
 
     // Reset the equation solver to use the full nonlinear residual operator
     nonlin_solver_->setOperator(residual_with_bcs_);
+
+    time_ -= dt_;
+    cycle_--;
 
     return {{"adjoint_temperature", adjoint_temperature_}};
   }
 
   /**
+   * @brief Get a temperature which has been previously checkpointed at the give cycle
+   * @param cycle The previous timestep where the temperature solution is requested
+   * @return The temperature FiniteElementState at a previous cycle
+   */
+  FiniteElementState loadCheckpointedTemperature(int cycle) const
+  {
+    FiniteElementState previous_temperature(temperature_);
+    StateManager::loadCheckpointedStates(cycle, {previous_temperature});
+    return previous_temperature;
+  }
+
+  /**
    * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
-   * problem with respect to the parameter field
+   * problem with respect to the parameter field for the last computed adjoint timestep
    *
    * @tparam parameter_field The index of the parameter to take a derivative with respect to
    * @return The sensitivity with respect to the parameter
    *
-   * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
+   * @pre `reverseAdjointTimestep` with an appropriate adjoint load must be called prior to this method.
    */
-  FiniteElementDual& computeSensitivity(size_t parameter_field) override
+  FiniteElementDual& computeTimestepSensitivity(size_t parameter_field) override
   {
-    SLIC_ASSERT_MSG(parameter_field < sizeof...(parameter_indices),
-                    axom::fmt::format("Invalid parameter index '{}' reqested for sensitivity."));
-
-    auto drdparam     = serac::get<1>(d_residual_d_[parameter_field]());
+    auto drdparam     = serac::get<DERIVATIVE>(d_residual_d_[parameter_field]());
     auto drdparam_mat = assemble(drdparam);
 
     drdparam_mat->MultTranspose(adjoint_temperature_, *parameters_[parameter_field].sensitivity);
@@ -686,22 +811,33 @@ public:
 
   /**
    * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
-   * problem with respect to the shape displacement field
+   * problem with respect to the shape displacement field for the last computed adjoint timestep
    *
    * @return The sensitivity with respect to the shape displacement
    *
-   * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
+   * @pre `reverseAdjointTimestep` with an appropriate adjoint load must be called prior to this method.
    */
-  FiniteElementDual& computeShapeSensitivity() override
+  FiniteElementDual& computeTimestepShapeSensitivity() override
   {
-    auto drdshape = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<SHAPE>{}, temperature_, zero_,
+    auto drdshape     = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<SHAPE>{}, temperature_, temperature_rate_,
                                                         shape_displacement_, *parameters_[parameter_indices].state...));
-
     auto drdshape_mat = assemble(drdshape);
 
-    drdshape_mat->MultTranspose(adjoint_temperature_, shape_displacement_sensitivity_);
+    drdshape_mat->MultTranspose(adjoint_temperature_, *shape_displacement_sensitivity_);
 
-    return shape_displacement_sensitivity_;
+    return *shape_displacement_sensitivity_;
+  }
+
+  /**
+   * @brief Compute the implicit sensitivity of the quantity of interest with respect to the initial temperature
+   *
+   * @return The sensitivity with respect to the initial temperature
+   *
+   * @pre `reverseAdjointTimestep` must be called as many times as the forward solver was advanced before this is called
+   */
+  const std::unordered_map<std::string, const serac::FiniteElementDual&> computeInitialConditionSensitivity() override
+  {
+    return {{"temperature", implicit_sensitivity_temperature_start_of_step_}};
   }
 
   /// Destroy the Thermal Solver object
@@ -712,7 +848,7 @@ protected:
   using scalar_trial = H1<order>;
 
   /// The compile-time finite element trial space for shape displacement (vector H1 of order 1)
-  using shape_trial = H1<1, dim>;
+  using shape_trial = H1<SHAPE_ORDER, dim>;
 
   /// The compile-time finite element test space for thermal conduction (H1 of order p)
   using test = H1<order>;
@@ -720,8 +856,14 @@ protected:
   /// The temperature finite element state
   serac::FiniteElementState temperature_;
 
-  /// The adjoint temperature finite element state
+  /// Rate of change in temperature at the current adjoint timestep
+  FiniteElementState temperature_rate_;
+
+  /// The adjoint temperature finite element states, the multiplier on the residual for a given timestep
   serac::FiniteElementState adjoint_temperature_;
+
+  /// The total/implicit sensitivity of the qoi with respect to the start of the previous timestep's temperature
+  serac::FiniteElementDual implicit_sensitivity_temperature_start_of_step_;
 
   /// serac::Functional that is used to calculate the residual and its derivatives
   std::unique_ptr<Functional<test(scalar_trial, scalar_trial, shape_trial, parameter_space...)>> residual_;
@@ -771,16 +913,16 @@ protected:
   mfem::Vector u_predicted_;
 
   /// Previous value of du_dt used to prime the pump for the nonlinear solver
-  mfem::Vector previous_;
+  mfem::Vector u_rate_start_of_step_;
 
   /// @brief Array functions computing the derivative of the residual with respect to each given parameter
   /// @note This is needed so the user can ask for a specific sensitivity at runtime as opposed to it being a
   /// template parameter.
-  std::array<std::function<decltype((*residual_)(DifferentiateWRT<0>{}, temperature_, zero_, shape_displacement_,
-                                                 *parameters_[parameter_indices].state...))()>,
+  std::array<std::function<decltype((*residual_)(DifferentiateWRT<0>{}, temperature_, temperature_rate_,
+                                                 shape_displacement_, *parameters_[parameter_indices].state...))()>,
              sizeof...(parameter_indices)>
       d_residual_d_ = {[&]() {
-        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + parameter_indices>{}, temperature_, zero_,
+        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + parameter_indices>{}, temperature_, temperature_rate_,
                             shape_displacement_, *parameters_[parameter_indices].state...);
       }...};
 };

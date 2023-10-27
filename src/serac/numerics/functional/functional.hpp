@@ -70,7 +70,7 @@ struct Index {
 };
 
 /// function for verifying that the mesh has been fully initialized
-void check_for_missing_nodal_gridfunc(const mfem::Mesh& mesh)
+inline void check_for_missing_nodal_gridfunc(const mfem::Mesh& mesh)
 {
   if (mesh.GetNodes() == nullptr) {
     SLIC_ERROR_ROOT(
@@ -88,7 +88,7 @@ void check_for_missing_nodal_gridfunc(const mfem::Mesh& mesh)
 }
 
 /// function for verifying that there are no unsupported element types in the mesh
-void check_for_unsupported_elements(const mfem::Mesh& mesh)
+inline void check_for_unsupported_elements(const mfem::Mesh& mesh)
 {
   int num_elements = mesh.GetNE();
   for (int e = 0; e < num_elements; e++) {
@@ -108,7 +108,7 @@ void check_for_unsupported_elements(const mfem::Mesh& mesh)
  * @return a pair containing the new finite element space and associated finite element collection
  */
 template <typename function_space>
-std::pair<std::unique_ptr<mfem::ParFiniteElementSpace>, std::unique_ptr<mfem::FiniteElementCollection>>
+inline std::pair<std::unique_ptr<mfem::ParFiniteElementSpace>, std::unique_ptr<mfem::FiniteElementCollection>>
 generateParFiniteElementSpace(mfem::ParMesh* mesh)
 {
   const int                                      dim = mesh->Dimension();

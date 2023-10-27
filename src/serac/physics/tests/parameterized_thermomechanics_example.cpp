@@ -75,8 +75,7 @@ TEST(Thermomechanics, ParameterizedMaterial)
   double outer_radius = 1.25;
   double height       = 2.0;
 
-  {
-    // clang-format off
+  // clang-format off
     auto mesh = mesh::refineAndDistribute(build_hollow_quarter_cylinder(radial_divisions, 
                                                                         angular_divisions, 
                                                                         vertical_divisions,
@@ -84,13 +83,14 @@ TEST(Thermomechanics, ParameterizedMaterial)
                                                                         outer_radius, 
                                                                         height), serial_refinement, parallel_refinement);
 
-    // clang-format on
-    serac::StateManager::setMesh(std::move(mesh));
-  }
+  // clang-format on
+  std::string mesh_tag{"mesh"};
+  auto&       pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   SolidMechanics<p, dim, Parameters<H1<p>, H1<p>>> simulation(
       solid_mechanics::default_nonlinear_options, solid_mechanics::direct_linear_options,
-      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "thermomechanics_simulation");
+      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "thermomechanics_simulation", mesh_tag,
+      {"theta", "alpha"});
 
   double density   = 1.0;     ///< density
   double E         = 1000.0;  ///< Young's modulus
@@ -102,13 +102,15 @@ TEST(Thermomechanics, ParameterizedMaterial)
   simulation.setMaterial(DependsOn<0, 1>{}, material);
 
   double             deltaT = 1.0;
-  FiniteElementState temperature(StateManager::newState(FiniteElementState::Options{.order = p, .name = "theta"}));
+  FiniteElementState temperature(pmesh, H1<p>{}, "theta");
+
   temperature = theta_ref;
   simulation.setParameter(0, temperature);
 
   double             alpha0    = 1.0e-3;
   auto               alpha_fec = std::unique_ptr<mfem::FiniteElementCollection>(new mfem::H1_FECollection(p, dim));
-  FiniteElementState alpha(StateManager::newState(FiniteElementState::Options{.order = p, .name = "alpha"}));
+  FiniteElementState alpha(pmesh, H1<p>{}, "alpha");
+
   alpha = alpha0;
   simulation.setParameter(1, alpha);
 
@@ -129,17 +131,16 @@ TEST(Thermomechanics, ParameterizedMaterial)
   // Finalize the data structures
   simulation.completeSetup();
 
-  simulation.outputState("paraview");
+  simulation.outputStateToDisk("paraview");
 
   // Perform the quasi-static solve
-  double dt   = 1.0;
   temperature = theta_ref + deltaT;
-  simulation.advanceTimestep(dt);
+  simulation.setParameter(0, temperature);
+  simulation.advanceTimestep(1.0);
 
-  simulation.outputState("paraview");
+  simulation.outputStateToDisk("paraview");
 
   // define quantities of interest
-  auto& mesh = serac::StateManager::mesh();
 
   Functional<double(H1<p, dim>)> qoi({&simulation.displacement().space()});
   qoi.AddSurfaceIntegral(
@@ -150,7 +151,7 @@ TEST(Thermomechanics, ParameterizedMaterial)
         auto n           = normalize(cross(dX_dxi));
         return dot(u, n) * ((X[2] > 0.99 * height) ? 1.0 : 0.0);
       },
-      mesh);
+      pmesh);
 
   double initial_qoi = qoi(simulation.displacement());
   SLIC_INFO_ROOT(axom::fmt::format("vertical displacement integrated over the top surface: {}", initial_qoi));
@@ -162,7 +163,7 @@ TEST(Thermomechanics, ParameterizedMaterial)
         auto [X, dX_dxi] = position;
         return (X[2] > 0.99 * height) ? 1.0 : 0.0;
       },
-      mesh);
+      pmesh);
 
   double top_area = area(simulation.displacement());
 
@@ -184,20 +185,21 @@ TEST(Thermomechanics, ParameterizedMaterial)
 
   check_gradient(qoi, simulation.displacement());
 
-  simulation.solveAdjoint({{"displacement", adjoint_load}});
+  simulation.reverseAdjointTimestep({{"displacement", adjoint_load}});
 
-  auto& dqoi_dalpha = simulation.computeSensitivity(1);
+  auto& dqoi_dalpha = simulation.computeTimestepSensitivity(1);
 
   double epsilon = 1.0e-5;
   auto   dalpha  = alpha.CreateCompatibleVector();
   dalpha         = 1.0;
   alpha.Add(epsilon, dalpha);
+  simulation.setParameter(1, alpha);
 
   // rerun the simulation to the beginning,
   // but this time use perturbed values of alpha
-  simulation.advanceTimestep(dt);
+  simulation.advanceTimestep(1.0);
 
-  simulation.outputState("paraview");
+  simulation.outputStateToDisk("paraview");
 
   double final_qoi = qoi(simulation.displacement());
 

@@ -164,10 +164,10 @@ public:
   /**
    * @brief Factor and solve the linear system y = Op^{-1} x using DSuperLU
    *
-   * @param x The input RHS vector
-   * @param y The output solution vector
+   * @param input The input RHS vector
+   * @param output The output solution vector
    */
-  void Mult(const mfem::Vector& x, mfem::Vector& y) const;
+  void Mult(const mfem::Vector& input, mfem::Vector& output) const;
 
   /**
    * @brief Set the underlying matrix operator to use in the solution algorithm
@@ -191,6 +191,62 @@ private:
    */
   mfem::SuperLUSolver superlu_solver_;
 };
+
+#ifdef MFEM_USE_STRUMPACK
+/**
+ * @brief A wrapper class for using the MFEM Strumpack solver with a HypreParMatrix
+ */
+class StrumpackSolver : public mfem::Solver {
+public:
+  /**
+   * @brief Constructs a wrapper over an mfem::STRUMPACKSolver
+   * @param[in] comm The MPI communicator used by the vectors and matrices in the solve
+   * @param[in] print_level The verbosity level for the mfem::STRUMPACKSolver
+   */
+  StrumpackSolver(int print_level, MPI_Comm comm) : strumpack_solver_(0, nullptr, comm)
+  {
+    strumpack_solver_.SetKrylovSolver(strumpack::KrylovSolver::DIRECT);
+    strumpack_solver_.SetReorderingStrategy(strumpack::ReorderingStrategy::METIS);
+    strumpack_solver_.DisableMatching();
+
+    if (print_level == 1) {
+      strumpack_solver_.SetPrintFactorStatistics(true);
+      strumpack_solver_.SetPrintSolveStatistics(true);
+    }
+  }
+
+  /**
+   * @brief Factor and solve the linear system y = Op^{-1} x using Strumpack
+   *
+   * @param input The input RHS vector
+   * @param output The output solution vector
+   */
+  void Mult(const mfem::Vector& input, mfem::Vector& output) const;
+
+  /**
+   * @brief Set the underlying matrix operator to use in the solution algorithm
+   *
+   * @param op The matrix operator to factorize with Strumpack
+   * @pre This operator must be an assembled HypreParMatrix for compatibility with Strumpack
+   */
+  void SetOperator(const mfem::Operator& op);
+
+private:
+  /**
+   * @brief The owner of the Strumpack matrix for the gradient, stored
+   * as a member variable for lifetime purposes
+   */
+  mutable std::unique_ptr<mfem::STRUMPACKRowLocMatrix> strumpack_mat_;
+
+  /**
+   * @brief The underlying MFEM-based Strumpack solver. It requires a special
+   * Strumpack matrix type which we store in this object. This enables compatibility
+   * with HypreParMatrix when used as an input.
+   */
+  mfem::STRUMPACKSolver strumpack_solver_;
+};
+
+#endif
 
 /**
  * @brief Build a nonlinear solver using the nonlinear option struct
