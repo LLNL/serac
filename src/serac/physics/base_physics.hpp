@@ -110,6 +110,15 @@ public:
    */
   virtual const FiniteElementState& adjoint(const std::string& adjoint_name) = 0;
 
+  const FiniteElementState& shapeDisplacement()
+  {
+    return shape_displacement_;
+  }
+
+  const FiniteElementState& parameter(size_t index)
+  {
+    return *parameters_[index].state;
+  }
   /**
    * @brief Accessor for getting named finite element state parameter fields from the physics modules
    *
@@ -144,6 +153,15 @@ public:
     }
 
     return parameter_names;
+  }
+
+  void setState(const std::string& name, const FiniteElementState& state)
+  {
+    for (auto my_state : states_) {
+      if (name == my_state->name()) {
+        *const_cast<serac::FiniteElementState*>(my_state) = state;
+      }
+    }
   }
 
   /**
