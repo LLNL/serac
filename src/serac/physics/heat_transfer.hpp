@@ -36,7 +36,11 @@ const LinearSolverOptions default_linear_options = {.linear_solver  = LinearSolv
                                                     .max_iterations = 200};
 
 /// the default direct solver option for solving the linear stiffness equations
-const LinearSolverOptions direct_linear_options = {.linear_solver = LinearSolver::SuperLU};
+#ifdef MFEM_USE_STRUMPACK
+const LinearSolverOptions direct_linear_options = {.linear_solver = LinearSolver::Strumpack, .print_level = 0};
+#else
+const LinearSolverOptions direct_linear_options = {.linear_solver = LinearSolver::SuperLU, .print_level = 0};
+#endif
 
 /**
  * @brief Reasonable defaults for most thermal nonlinear solver options
