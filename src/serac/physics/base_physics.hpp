@@ -93,14 +93,14 @@ public:
    * @param state_name The name of the Finite Element State primal solution to retrieve
    * @return The named primal Finite Element State
    */
-  virtual const FiniteElementState& state(const std::string& state_name) = 0;
+  virtual const FiniteElementState& state(const std::string& state_name) const = 0;
 
   /**
    * @brief Get a vector of the finite element state primal solution names
    *
    * @return The primal solution names
    */
-  virtual std::vector<std::string> stateNames() = 0;
+  virtual std::vector<std::string> stateNames() const = 0;
 
   /**
    * @brief Accessor for getting named finite element state adjoint solution from the physics modules
@@ -108,7 +108,21 @@ public:
    * @param adjoint_name The name of the Finite Element State adjoint solution to retrieve
    * @return The named adjoint Finite Element State
    */
-  virtual const FiniteElementState& adjoint(const std::string& adjoint_name) = 0;
+  virtual const FiniteElementState& adjoint(const std::string& adjoint_name) const = 0;
+
+  /**
+   * @brief Get a vector of the finite element state adjoint solution names
+   *
+   * @return The adjoint solution names
+   */
+  virtual std::vector<std::string> adjointNames() const { return {}; }
+
+  /**
+   * @brief Accessor for getting the shape displacement field from the physics modules
+   *
+   * @return The shape displacement finite element state
+   */
+  const FiniteElementState& shapeDisplacement() const { return shape_displacement_; }
 
   /**
    * @brief Accessor for getting named finite element state parameter fields from the physics modules
@@ -116,7 +130,7 @@ public:
    * @param parameter_name The name of the Finite Element State parameter to retrieve
    * @return The named parameter Finite Element State
    */
-  const FiniteElementState& parameter(const std::string& parameter_name)
+  const FiniteElementState& parameter(const std::string& parameter_name) const
   {
     for (auto& parameter : parameters_) {
       if (parameter_name == parameter.state->name()) {
@@ -244,6 +258,23 @@ public:
    * @param[in] paraview_output_dir Optional output directory for paraview visualization files
    */
   virtual void outputStateToDisk(std::optional<std::string> paraview_output_dir = {}) const;
+
+  /**
+   * @brief Accessor for getting named finite element state primal solution from the physics modules at a given
+   * checkpointed cycle index
+   *
+   * @param state_name The name of the Finite Element State primal solution to retrieve
+   * @param cycle The cycle to retrieve state from
+   * @return The named primal Finite Element State
+   */
+  virtual FiniteElementState loadCheckpointedState(const std::string& state_name, int cycle) const;
+
+  /**
+   * @brief Get a timestep increment which has been previously checkpointed at the give cycle
+   * @param cycle The previous 'timestep' number where the timestep increment is requested
+   * @return The timestep increment
+   */
+  virtual double loadCheckpointedTimestep(int cycle) const;
 
   /**
    * @brief Initializes the Sidre structure for simulation summary data

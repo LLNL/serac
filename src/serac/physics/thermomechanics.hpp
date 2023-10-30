@@ -139,7 +139,7 @@ public:
    * @param state_name The name of the Finite Element State to retrieve
    * @return The named Finite Element State
    */
-  const FiniteElementState& state(const std::string& state_name) override
+  const FiniteElementState& state(const std::string& state_name) const override
   {
     if (state_name == "displacement") {
       return solid_.displacement();
@@ -159,7 +159,7 @@ public:
    *
    * @return The solution variable names
    */
-  virtual std::vector<std::string> stateNames() override
+  virtual std::vector<std::string> stateNames() const override
   {
     return std::vector<std::string>{{"displacement"}, {"velocity"}, {"temperature"}};
   }
@@ -170,7 +170,7 @@ public:
    * @param state_name The name of the Finite Element State adjoint field to retrieve
    * @return The named Finite Element State adjoint
    */
-  const FiniteElementState& adjoint(const std::string& state_name) override
+  const FiniteElementState& adjoint(const std::string& state_name) const override
   {
     if (state_name == "displacement") {
       return solid_.adjointDisplacement();
