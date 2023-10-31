@@ -69,6 +69,8 @@ class Serac(CachedCMakePackage, CudaPackage):
             description="Build with portable kernel execution support")
     variant("tribol", default=True,
             description="Build Tribol, an interface physics library")
+    variant("strumpack", default=True,
+            description="Build MFEM TPL with Strumpack, a direct linear solver library")
 
     # -----------------------------------------------------------------------
     # Dependencies
@@ -98,6 +100,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("mfem+sundials", when="+sundials")
     depends_on("mfem+amgx", when="+cuda")
     depends_on("mfem+asan", when="+asan")
+    depends_on("mfem+strumpack", when="+strumpack")
 
     depends_on("netcdf-c@4.7.4", when="+netcdf")
 
@@ -139,6 +142,9 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     depends_on("superlu-dist@8.1.2")
 
+    # The optional slate dependency is not handled in the MFEM spack package
+    depends_on("strumpack~slate~butterflypack", when="+strumpack")
+
     #
     # Forward variants
     # NOTE: propogating variants to dependencies should be removed when pushing this recipe up to Spack
@@ -147,7 +153,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     # CMake packages "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
 
     # Optional (require our variant in "when")
-    for dep in ["raja", "umpire", "sundials"]:
+    for dep in ["raja", "umpire", "sundials", "strumpack"]:
         depends_on("{0} build_type=Debug".format(dep), when="+{0} build_type=Debug".format(dep))
         depends_on("{0}+shared".format(dep), when="+{0}+shared".format(dep))
         depends_on("{0}~shared".format(dep), when="+{0}~shared".format(dep))
@@ -372,7 +378,7 @@ class Serac(CachedCMakePackage, CudaPackage):
         entries.append(cmake_cache_path("SUPERLUDIST_DIR", dep_dir))
 
         # optional tpls
-        for dep in ("adiak", "amgx", "caliper", "petsc", "raja", "sundials", "umpire", "tribol"):
+        for dep in ("adiak", "amgx", "caliper", "petsc", "raja", "strumpack", "sundials", "umpire", "tribol"):
             if spec.satisfies("^{0}".format(dep)):
                 dep_dir = get_spec_path(spec, dep, path_replacements)
                 entries.append(cmake_cache_path("%s_DIR" % dep.upper(),

@@ -36,7 +36,11 @@ const LinearSolverOptions default_linear_options = {.linear_solver  = LinearSolv
                                                     .max_iterations = 200};
 
 /// the default direct solver option for solving the linear stiffness equations
-const LinearSolverOptions direct_linear_options = {.linear_solver = LinearSolver::SuperLU};
+#ifdef MFEM_USE_STRUMPACK
+const LinearSolverOptions direct_linear_options = {.linear_solver = LinearSolver::Strumpack, .print_level = 0};
+#else
+const LinearSolverOptions direct_linear_options = {.linear_solver = LinearSolver::SuperLU, .print_level = 0};
+#endif
 
 /**
  * @brief Reasonable defaults for most thermal nonlinear solver options
@@ -290,6 +294,7 @@ public:
       // Note that the ODE solver handles the essential boundary condition application itself
       ode_.Step(temperature_, time_, dt);
     }
+
     cycle_ += 1;
 
     if (cycle_ > max_cycle_) {
@@ -517,7 +522,7 @@ public:
    * @param state_name The name of the Finite Element State primal solution to retrieve
    * @return The named primal Finite Element State
    */
-  const FiniteElementState& state(const std::string& state_name) override
+  const FiniteElementState& state(const std::string& state_name) const override
   {
     if (state_name == "temperature") {
       return temperature_;
@@ -533,7 +538,24 @@ public:
    *
    * @return The primal solution names
    */
-  virtual std::vector<std::string> stateNames() override { return std::vector<std::string>{{"temperature"}}; }
+  virtual std::vector<std::string> stateNames() const override { return std::vector<std::string>{{"temperature"}}; }
+
+  /**
+   * @brief Accessor for getting named finite element state adjoint solution from the physics modules
+   *
+   * @param state_name The name of the Finite Element State adjoint solution to retrieve
+   * @return The named adjoint Finite Element State
+   */
+  const FiniteElementState& adjoint(const std::string& state_name) const override
+  {
+    if (state_name == "temperature") {
+      return adjoint_temperature_;
+    }
+
+    SLIC_ERROR_ROOT(axom::fmt::format("Adjoint '{}' requested from solid mechanics module '{}', but it doesn't exist",
+                                      state_name, name_));
+    return adjoint_temperature_;
+  }
 
   /**
    * @brief Complete the initialization and allocation of the data structures.
@@ -677,7 +699,7 @@ public:
       // We store the previous timestep's temperature as the current temperature for use in the lambdas computing the
       // sensitivities.
 
-      auto [r, drdu] = (*residual_)(differentiate_wrt(temperature_), zero_, shape_displacement_,
+      auto [_, drdu] = (*residual_)(differentiate_wrt(temperature_), zero_, shape_displacement_,
                                     *parameters_[parameter_indices].state...);
       auto jacobian  = assemble(drdu);
       auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
@@ -692,73 +714,85 @@ public:
       SLIC_ERROR_ROOT_IF(ode_.GetTimestepper() != TimestepMethod::BackwardEuler,
                          "Only backward Euler implemented for transient adjoint heat conduction.");
 
-      SLIC_ERROR_ROOT_IF(cycle_ == 0,
-                         "Maximum number of adjoint timesteps exceeded! The number of adjoint timesteps must equal the "
-                         "number of forward timesteps");
-
-      // Load the temperature from the previous cycle from disk
-      serac::FiniteElementState temperature_n_minus_1(temperature_);
-      StateManager::loadCheckpointedStates(cycle_, {temperature_});
-      StateManager::loadCheckpointedStates(cycle_ - 1, {temperature_n_minus_1});
-
-      temperature_rate_ = temperature_;
-      temperature_rate_.Add(-1.0, temperature_n_minus_1);
-      temperature_rate_ /= dt_;
-
-      // K := dR/du
-      auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(temperature_), temperature_rate_,
-                                                   shape_displacement_, *parameters_[parameter_indices].state...));
-      std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
-
-      // M := dR/du_dot
-      auto M = serac::get<DERIVATIVE>((*residual_)(temperature_, differentiate_wrt(temperature_rate_),
-                                                   shape_displacement_, *parameters_[parameter_indices].state...));
-      std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
-
-      J_.reset(mfem::Add(1.0, *m_mat, dt_, *k_mat));
-      auto J_T = std::unique_ptr<mfem::HypreParMatrix>(J_->Transpose());
-
-      // recall that temperature_adjoint_load_vector and d_temperature_dt_adjoint_load_vector were already multiplied by
-      // -1 above
-      mfem::HypreParVector modified_RHS(temperature_adjoint_load_);
-      modified_RHS *= dt_;
-      modified_RHS.Add(1.0, temperature_rate_adjoint_load_);
-      modified_RHS.Add(-dt_, implicit_sensitivity_temperature_start_of_step_);
-
-      for (const auto& bc : bcs_.essentials()) {
-        bc.apply(*J_T, modified_RHS, zero_);
-      }
-
-      lin_solver.SetOperator(*J_T);
-      lin_solver.Mult(modified_RHS, adjoint_temperature_);
-
-      // This multiply is technically on M transposed.  However, this matrix should be symmetric unless
-      // the thermal capacity is a function of the temperature rate of change, which is thermodynamically
-      // impossible, and fortunately not possible with our material interface.
-      // Not doing the transpose here to avoid doing unnecessary work.
-      m_mat->Mult(adjoint_temperature_, implicit_sensitivity_temperature_start_of_step_);
-      implicit_sensitivity_temperature_start_of_step_ *= -1.0 / dt_;
-      implicit_sensitivity_temperature_start_of_step_.Add(1.0 / dt_,
-                                                          temperature_rate_adjoint_load_);  // already multiplied by -1
+      return {{"adjoint_temperature", adjoint_temperature_}};
     }
 
-    // Reset the equation solver to use the full nonlinear residual operator
-    nonlin_solver_->setOperator(residual_with_bcs_);
+    SLIC_ERROR_ROOT_IF(ode_.GetTimestepper() != TimestepMethod::BackwardEuler,
+                       "Only backward Euler implemented for transient adjoint heat conduction.");
+
+    SLIC_ERROR_ROOT_IF(cycle_ <= 0,
+                       "Maximum number of adjoint timesteps exceeded! The number of adjoint timesteps must equal the "
+                       "number of forward timesteps");
+
+    // Load the temperature from the previous cycle from disk
+    serac::FiniteElementState temperature_n_minus_1(temperature_);
+    StateManager::loadCheckpointedStates(cycle_, {temperature_});
+    StateManager::loadCheckpointedStates(cycle_ - 1, {temperature_n_minus_1});
+
+    temperature_rate_ = temperature_;
+    temperature_rate_.Add(-1.0, temperature_n_minus_1);
+    temperature_rate_ /= dt_;
+
+    // K := dR/du
+    auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(temperature_), temperature_rate_,
+                                                 shape_displacement_, *parameters_[parameter_indices].state...));
+    std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
+
+    // M := dR/du_dot
+    auto M = serac::get<DERIVATIVE>((*residual_)(temperature_, differentiate_wrt(temperature_rate_),
+                                                 shape_displacement_, *parameters_[parameter_indices].state...));
+    std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
+
+    J_.reset(mfem::Add(1.0, *m_mat, dt_, *k_mat));
+    auto J_T = std::unique_ptr<mfem::HypreParMatrix>(J_->Transpose());
+
+    // recall that temperature_adjoint_load_vector and d_temperature_dt_adjoint_load_vector were already multiplied by
+    // -1 above
+    mfem::HypreParVector modified_RHS(temperature_adjoint_load_vector);
+    modified_RHS *= dt_;
+    modified_RHS.Add(1.0, temperature_rate_adjoint_load_vector);
+    modified_RHS.Add(-dt_, implicit_sensitivity_temperature_start_of_step_);
+
+    for (const auto& bc : bcs_.essentials()) {
+      bc.apply(*J_T, modified_RHS, adjoint_essential);
+    }
+
+    lin_solver.SetOperator(*J_T);
+    lin_solver.Mult(modified_RHS, adjoint_temperature_);
+
+    // This multiply is technically on M transposed.  However, this matrix should be symmetric unless
+    // the thermal capacity is a function of the temperature rate of change, which is thermodynamically
+    // impossible, and fortunately not possible with our material interface.
+    // Not doing the transpose here to avoid doing unnecessary work.
+    m_mat->Mult(adjoint_temperature_, implicit_sensitivity_temperature_start_of_step_);
+    implicit_sensitivity_temperature_start_of_step_ *= -1.0 / dt_;
+    implicit_sensitivity_temperature_start_of_step_.Add(
+        1.0 / dt_, temperature_rate_adjoint_load_vector);  // already multiplied by -1
 
     time_ -= dt_;
     cycle_--;
   }
 
   /**
-   * @brief Get a temperature which has been previously checkpointed at the give cycle
-   * @param cycle The previous timestep where the temperature solution is requested
-   * @return The temperature FiniteElementState at a previous cycle
+   * @brief Accessor for getting named finite element state primal solution from the physics modules at a given
+   * checkpointed cycle index
+   *
+   * @param state_name The name of the Finite Element State primal solution to retrieve
+   * @param cycle The previous timestep where the state solution is requested
+   * @return The named primal Finite Element State
    */
-  FiniteElementState loadCheckpointedTemperature(int cycle) const
+  FiniteElementState loadCheckpointedState(const std::string& state_name, int cycle) const override
   {
-    FiniteElementState previous_temperature(temperature_);
-    StateManager::loadCheckpointedStates(cycle, {previous_temperature});
-    return previous_temperature;
+    if (state_name == "temperature") {
+      FiniteElementState previous_state = temperature_;
+      StateManager::loadCheckpointedStates(cycle, {previous_state});
+      return previous_state;
+    }
+
+    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requested from solid mechanics module '{}', but it doesn't exist",
+                                      state_name, name_));
+
+    return temperature_;
   }
 
   /**
@@ -790,8 +824,9 @@ public:
    */
   FiniteElementDual& computeTimestepShapeSensitivity() override
   {
-    auto drdshape     = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<SHAPE>{}, temperature_, temperature_rate_,
+    auto drdshape = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<SHAPE>{}, temperature_, temperature_rate_,
                                                         shape_displacement_, *parameters_[parameter_indices].state...));
+
     auto drdshape_mat = assemble(drdshape);
 
     drdshape_mat->MultTranspose(adjoint_temperature_, *shape_displacement_sensitivity_);

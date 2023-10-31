@@ -95,8 +95,8 @@ struct IsotropicConductorWithLinearConductivityVsTemperature {
    * @tparam T1 Spatial position type
    * @tparam T2 Temperature type
    * @tparam T3 Temperature gradient type
-   * @param[in] temperature Temperature
-   * @param[in] temperature_gradient Temperature gradient
+   * @param[in] temperature
+   * @param[in] temperature_gradient
    * @return The calculated material response (tuple of volumetric heat capacity and thermal flux) for a linear
    * isotropic material
    */

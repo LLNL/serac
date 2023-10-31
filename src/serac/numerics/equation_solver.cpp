@@ -52,12 +52,45 @@ void EquationSolver::solve(mfem::Vector& x) const
   nonlin_solver_->Mult(zero, x);
 }
 
-void SuperLUSolver::Mult(const mfem::Vector& x, mfem::Vector& y) const
+void SuperLUSolver::Mult(const mfem::Vector& input, mfem::Vector& output) const
 {
   SLIC_ERROR_ROOT_IF(!superlu_mat_, "Operator must be set prior to solving with SuperLU");
 
   // Use the underlying MFEM-based solver and SuperLU matrix type to solve the system
-  superlu_solver_.Mult(x, y);
+  superlu_solver_.Mult(input, output);
+}
+
+/**
+ * @brief Function for building a monolithic parallel Hypre matrix from a block system of smaller Hypre matrices
+ *
+ * @param block_operator The block system of HypreParMatrices
+ * @return The assembled monolithic HypreParMatrix
+ *
+ * @pre @a block_operator must have assembled HypreParMatrices for its sub-blocks
+ */
+std::unique_ptr<mfem::HypreParMatrix> buildMonolithicMatrix(const mfem::BlockOperator& block_operator)
+{
+  int row_blocks = block_operator.NumRowBlocks();
+  int col_blocks = block_operator.NumColBlocks();
+
+  SLIC_ERROR_ROOT_IF(row_blocks != col_blocks, "Attempted to use a direct solver on a non-square block system.");
+
+  mfem::Array2D<mfem::HypreParMatrix*> hypre_blocks(row_blocks, col_blocks);
+
+  for (int i = 0; i < row_blocks; ++i) {
+    for (int j = 0; j < col_blocks; ++j) {
+      auto* hypre_block =
+          const_cast<mfem::HypreParMatrix*>(dynamic_cast<const mfem::HypreParMatrix*>(&block_operator.GetBlock(i, j)));
+      SLIC_ERROR_ROOT_IF(
+          !hypre_block,
+          "Trying to use a direct solver on a block operator that does not contain HypreParMatrix blocks.");
+
+      hypre_blocks(i, j) = hypre_block;
+    }
+  }
+
+  // Note that MFEM passes ownership of this matrix to the caller
+  return std::unique_ptr<mfem::HypreParMatrix>(mfem::HypreParMatrixFromBlocks(hypre_blocks));
 }
 
 void SuperLUSolver::SetOperator(const mfem::Operator& op)
@@ -67,26 +100,7 @@ void SuperLUSolver::SetOperator(const mfem::Operator& op)
 
   // If it is, make a monolithic system from the underlying blocks
   if (block_operator) {
-    int row_blocks = block_operator->NumRowBlocks();
-    int col_blocks = block_operator->NumColBlocks();
-
-    SLIC_ERROR_ROOT_IF(row_blocks != col_blocks, "Attempted to use SuperLU on a non-square block system.");
-
-    mfem::Array2D<mfem::HypreParMatrix*> hypre_blocks(row_blocks, col_blocks);
-
-    for (int i = 0; i < row_blocks; ++i) {
-      for (int j = 0; j < col_blocks; ++j) {
-        auto* hypre_block = const_cast<mfem::HypreParMatrix*>(
-            dynamic_cast<const mfem::HypreParMatrix*>(&block_operator->GetBlock(i, j)));
-        SLIC_ERROR_ROOT_IF(!hypre_block,
-                           "Trying to use SuperLU on a block operator that does not contain HypreParMatrix blocks.");
-
-        hypre_blocks(i, j) = hypre_block;
-      }
-    }
-
-    // Note that MFEM passes ownership of this matrix to the caller
-    auto monolithic_mat = std::unique_ptr<mfem::HypreParMatrix>(mfem::HypreParMatrixFromBlocks(hypre_blocks));
+    auto monolithic_mat = buildMonolithicMatrix(*block_operator);
 
     superlu_mat_ = std::make_unique<mfem::SuperLURowLocMatrix>(*monolithic_mat);
   } else {
@@ -100,6 +114,40 @@ void SuperLUSolver::SetOperator(const mfem::Operator& op)
 
   superlu_solver_.SetOperator(*superlu_mat_);
 }
+
+#ifdef MFEM_USE_STRUMPACK
+
+void StrumpackSolver::Mult(const mfem::Vector& input, mfem::Vector& output) const
+{
+  SLIC_ERROR_ROOT_IF(!strumpack_mat_, "Operator must be set prior to solving with Strumpack");
+
+  // Use the underlying MFEM-based solver and Strumpack matrix type to solve the system
+  strumpack_solver_.Mult(input, output);
+}
+
+void StrumpackSolver::SetOperator(const mfem::Operator& op)
+{
+  // Check if this is a block operator
+  auto* block_operator = dynamic_cast<const mfem::BlockOperator*>(&op);
+
+  // If it is, make a monolithic system from the underlying blocks
+  if (block_operator) {
+    auto monolithic_mat = buildMonolithicMatrix(*block_operator);
+
+    strumpack_mat_ = std::make_unique<mfem::STRUMPACKRowLocMatrix>(*monolithic_mat);
+  } else {
+    // If this is not a block system, check that the input operator is a HypreParMatrix as expected
+    auto* matrix = dynamic_cast<const mfem::HypreParMatrix*>(&op);
+
+    SLIC_ERROR_ROOT_IF(!matrix, "Matrix must be an assembled HypreParMatrix for use with Strumpack");
+
+    strumpack_mat_ = std::make_unique<mfem::STRUMPACKRowLocMatrix>(*matrix);
+  }
+
+  strumpack_solver_.SetOperator(*strumpack_mat_);
+}
+
+#endif
 
 std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(NonlinearSolverOptions nonlinear_opts, MPI_Comm comm)
 {
@@ -157,6 +205,15 @@ std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLin
     auto lin_solver = std::make_unique<SuperLUSolver>(linear_opts.print_level, comm);
     return {std::move(lin_solver), nullptr};
   }
+
+#ifdef MFEM_USE_STRUMPACK
+
+  if (linear_opts.linear_solver == LinearSolver::Strumpack) {
+    auto lin_solver = std::make_unique<StrumpackSolver>(linear_opts.print_level, comm);
+    return {std::move(lin_solver), nullptr};
+  }
+
+#endif
 
   std::unique_ptr<mfem::IterativeSolver> iter_lin_solver;
 

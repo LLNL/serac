@@ -5,8 +5,8 @@ spack:
       paths:
         cc: /usr/bin/gcc-12
         cxx: /usr/bin/g++-12
-        f77: /usr/bin/gfortran
-        fc: /usr/bin/gfortran
+        f77: /usr/bin/gfortran-12
+        fc: /usr/bin/gfortran-12
       flags: 
         cflags: -pthread
         cxxflags: -pthread
@@ -24,19 +24,10 @@ spack:
       target: [ivybridge]
       compiler: [gcc]
       providers:
-        mpi: [mpich]
         blas: [openblas]
         lapack: [openblas]
         gl: [opengl]
         glu: [openglu]
-
-    # Lock down which MPI we are using
-    mpi:
-      buildable: false
-    mpich:
-      externals:
-      - spec: mpich@4.0%gcc
-        prefix: /usr
 
     # Lock down versions of packages we depend on
     opengl:
@@ -112,6 +103,21 @@ spack:
       buildable: false
       externals:
       - spec: m4@1.4.16
+        prefix: /usr
+    hwloc:
+      buildable: false
+      externals:
+      - spec: hwloc@2.7.0
+        prefix: /usr
+    numactl:
+      buildable: false
+      externals:
+      - spec: numactl@2.0.14
+        prefix: /usr
+    openssh:
+      buildable: false
+      externals:
+      - spec: openssh@8.9p1
         prefix: /usr
 
     # Lock in versions of Devtools
