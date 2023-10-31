@@ -150,6 +150,17 @@ public:
   }
 
   /**
+   * @brief Accessor for getting indexed finite element state parameter fields from the physics modules
+   *
+   * @param parameter_index The index of the Finite Element State parameter to retrieve
+   * @return The indexed parameter Finite Element State
+   */
+  const FiniteElementState& parameter(std::size_t parameter_index) const
+  {
+    return *parameters_[parameter_index].state;
+  }
+
+  /**
    * @brief Get a vector of the finite element state parameter names
    *
    * @return The parameter names
