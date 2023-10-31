@@ -279,6 +279,13 @@ void BasePhysics::saveSummary(axom::sidre::DataStore& datastore, const double t)
   }
 }
 
+FiniteElementState BasePhysics::loadCheckpointedState(const std::string& state_name, int /*cycle*/) const
+{
+  return state(state_name);
+}
+
+double BasePhysics::loadCheckpointedTimestep(int /*cycle*/) const { return 0.0; }
+
 namespace detail {
 std::string addPrefix(const std::string& prefix, const std::string& target)
 {
