@@ -161,16 +161,16 @@ public:
   }
 
   /**
-   * @brief Register an externally-constructed FiniteElementState object as the source of values for parameter `i`
+   * @brief Deep copy a parameter field into the internally-owned parameter used for simulations
    *
-   * @param parameter_state the values to use for the specified parameter
    * @param parameter_index the index of the parameter
+   * @param parameter_state the values to use for the specified parameter
    *
    * @pre The discretization space and mesh for this finite element state must be consistent with the arguments
    * provided in the physics module constructor.
    *
-   * @note The memory address of this parameter is stored in the physics module. If the FiniteElementState
-   * given in the argument is modified, the updated parameter value will be used in the physics module.
+   * The physics module constructs its own parameter FiniteElementState in the physics module constructor. This
+   * call sets the internally-owned parameter object by value (i.e. deep copies) from the given argument.
    */
   void setParameter(const size_t parameter_index, const FiniteElementState& parameter_state);
 
