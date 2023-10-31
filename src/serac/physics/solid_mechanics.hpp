@@ -579,6 +579,20 @@ public:
     return displacement_;
   }
 
+  void setState(const std::string& state_name, const FiniteElementState& state) override
+  {
+    if (state_name == "displacement") {
+      displacement_ = state;
+      return;
+    } else if (state_name == "velocity") {
+      velocity_ = state;
+      return;
+    }
+
+    SLIC_ERROR_ROOT(axom::fmt::format("setState for state named '{}' requested from solid mechanics module '{}', but it doesn't exist",
+                                      state_name, name_));
+  }
+
   /**
    * @brief Get a vector of the finite element state solution variable names
    *

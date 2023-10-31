@@ -95,6 +95,11 @@ public:
    */
   virtual const FiniteElementState& state(const std::string& state_name) const = 0;
 
+  virtual void setState(const std::string&, const FiniteElementState&)
+  {
+    SLIC_ERROR_ROOT(axom::fmt::format("setState not implemented for physics {}.", name_));
+  }
+
   /**
    * @brief Get a vector of the finite element state primal solution names
    *
