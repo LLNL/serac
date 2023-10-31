@@ -163,8 +163,8 @@ public:
   /**
    * @brief Deep copy a parameter field into the internally-owned parameter used for simulations
    *
-   * @param parameter_state the values to use for the specified parameter
    * @param parameter_index the index of the parameter
+   * @param parameter_state the values to use for the specified parameter
    *
    * @pre The discretization space and mesh for this finite element state must be consistent with the arguments
    * provided in the physics module constructor.
