@@ -137,18 +137,19 @@ SERAC_HOST_DEVICE auto batch_apply_qf(lambda qf, const tensor<double, dim, n> x,
   return outputs;
 }
 
-template <uint32_t differentiation_index, int Q, mfem::Geometry::Type geom, typename test_element,
-          typename trial_element_type, typename lambda_type, typename state_type, typename derivative_type,
+template <uint32_t differentiation_index, int Q, mfem::Geometry::Type geom, typename test_element_type,
+          typename trial_element_tuple_type, typename lambda_type, typename state_type, typename derivative_type,
           int... indices>
-void evaluation_kernel_impl(trial_element_type trial_elements, test_element, const std::vector<const double*>& inputs,
-                            double* outputs, const double* positions, const double* jacobians, lambda_type qf,
+void evaluation_kernel_impl(trial_element_tuple_type          trial_elements, test_element_type,
+                            const std::vector<const double*>& inputs, double* outputs, const double* positions,
+                            const double* jacobians, lambda_type qf,
                             [[maybe_unused]] axom::ArrayView<state_type, 2> qf_state,
                             [[maybe_unused]] derivative_type* qf_derivatives, uint32_t num_elements, bool update_state,
                             camp::int_seq<int, indices...>)
 {
   // mfem provides this information as opaque arrays of doubles,
   // so we reinterpret the pointer with
-  auto                           r = reinterpret_cast<typename test_element::dof_type*>(outputs);
+  auto                           r = reinterpret_cast<typename test_element_type::dof_type*>(outputs);
   auto                           x = reinterpret_cast<const typename batched_position<geom, Q>::type*>(positions);
   auto                           J = reinterpret_cast<const typename batched_jacobian<geom, Q>::type*>(jacobians);
   TensorProductQuadratureRule<Q> rule{};
@@ -164,14 +165,14 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, con
     auto J_e = J[e];
     auto x_e = x[e];
 
-    [[maybe_unused]] static constexpr trial_element_type empty_trial_element{};
+    [[maybe_unused]] static constexpr trial_element_tuple_type trial_element_tuple{};
     // batch-calculate values / derivatives of each trial space, at each quadrature point
     [[maybe_unused]] tuple qf_inputs = {promote_each_to_dual_when<indices == differentiation_index>(
-        get<indices>(empty_trial_element).interpolate(get<indices>(u)[e], rule))...};
+        get<indices>(trial_element_tuple).interpolate(get<indices>(u)[e], rule))...};
 
     // use J_e to transform values / derivatives on the parent element
     // to the to the corresponding values / derivatives on the physical element
-    (parent_to_physical<get<indices>(empty_trial_element).family>(get<indices>(qf_inputs), J_e), ...);
+    (parent_to_physical<get<indices>(trial_element_tuple).family>(get<indices>(qf_inputs), J_e), ...);
 
     // (batch) evalute the q-function at each quadrature point
     //
@@ -188,7 +189,7 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, con
 
     // use J to transform sources / fluxes on the physical element
     // back to the corresponding sources / fluxes on the parent element
-    physical_to_parent<test_element::family>(qf_outputs, J_e);
+    physical_to_parent<test_element_type::family>(qf_outputs, J_e);
 
     // write out the q-function derivatives after applying the
     // physical_to_parent transformation, so that those transformations
@@ -200,7 +201,7 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, con
     }
 
     // (batch) integrate the material response against the test-space basis functions
-    test_element::integrate(get_value(qf_outputs), rule, &r[e]);
+    test_element_type::integrate(get_value(qf_outputs), rule, &r[e]);
   }
 
   return;
