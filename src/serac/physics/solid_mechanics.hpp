@@ -128,7 +128,8 @@ public:
    */
   SolidMechanics(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
                  const serac::TimesteppingOptions timestepping_opts, const GeometricNonlinearities geom_nonlin,
-                 const std::string& physics_name, std::string mesh_tag, std::vector<std::string> parameter_names = {}, int cycle = 0, double time = 0.0)
+                 const std::string& physics_name, std::string mesh_tag, std::vector<std::string> parameter_names = {},
+                 int cycle = 0, double time = 0.0)
       : SolidMechanics(
             std::make_unique<EquationSolver>(nonlinear_opts, lin_opts, StateManager::mesh(mesh_tag).GetComm()),
             timestepping_opts, geom_nonlin, physics_name, mesh_tag, parameter_names, cycle, time)
@@ -212,11 +213,11 @@ public:
     residual_ =
         std::make_unique<Functional<test(trial, trial, shape_trial, parameter_space...)>>(test_space, trial_spaces);
 
-    displacement_         = 0.0;
-    velocity_             = 0.0;
-    acceleration_         = 0.0;
-    shape_displacement_   = 0.0;
-    adjoint_displacement_ = 0.0;
+    displacement_              = 0.0;
+    velocity_                  = 0.0;
+    acceleration_              = 0.0;
+    shape_displacement_        = 0.0;
+    adjoint_displacement_      = 0.0;
     displacement_adjoint_load_ = 0.0;
     velocity_adjoint_load_     = 0.0;
     acceleration_adjoint_load_ = 0.0;
@@ -1195,9 +1196,7 @@ public:
       // Add the sign correction to move the term to the RHS
       acceleration_adjoint_load_ *= -1.0;
     }
-
   }
-
 
   /**
    * @brief Solve the adjoint problem
@@ -1227,6 +1226,8 @@ public:
 
       // Reset the equation solver to use the full nonlinear residual operator.  MRT, is this needed?
       nonlin_solver_->setOperator(*residual_with_bcs_);
+
+      return;
     }
 
     SLIC_ERROR_ROOT_IF(ode2_.GetTimestepper() != TimestepMethod::Newmark,
@@ -1417,7 +1418,7 @@ protected:
   /// The adjoint load (RHS) for the velocity adjoint system solve (downstream -dQOI/d velocity)
   FiniteElementDual velocity_adjoint_load_;
 
-    /// The adjoint load (RHS) for the adjoint system solve (downstream -dQOI/d acceleration)
+  /// The adjoint load (RHS) for the adjoint system solve (downstream -dQOI/d acceleration)
   FiniteElementDual acceleration_adjoint_load_;
 
   /// The total/implicit sensitivity of the qoi with respect to the start of the previous timestep's displacement

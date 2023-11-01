@@ -710,9 +710,8 @@ public:
 
       lin_solver.SetOperator(*J_T);
       lin_solver.Mult(temperature_adjoint_load_, adjoint_temperature_);
-    } else {
-      SLIC_ERROR_ROOT_IF(ode_.GetTimestepper() != TimestepMethod::BackwardEuler,
-                         "Only backward Euler implemented for transient adjoint heat conduction.");
+
+      return;
     }
 
     SLIC_ERROR_ROOT_IF(ode_.GetTimestepper() != TimestepMethod::BackwardEuler,
@@ -764,8 +763,8 @@ public:
     // Not doing the transpose here to avoid doing unnecessary work.
     m_mat->Mult(adjoint_temperature_, implicit_sensitivity_temperature_start_of_step_);
     implicit_sensitivity_temperature_start_of_step_ *= -1.0 / dt_;
-    implicit_sensitivity_temperature_start_of_step_.Add(
-        1.0 / dt_, temperature_rate_adjoint_load_);  // already multiplied by -1
+    implicit_sensitivity_temperature_start_of_step_.Add(1.0 / dt_,
+                                                        temperature_rate_adjoint_load_);  // already multiplied by -1
 
     time_ -= dt_;
     cycle_--;
