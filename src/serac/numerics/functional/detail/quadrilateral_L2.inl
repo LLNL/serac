@@ -201,8 +201,7 @@ struct finite_element<mfem::Geometry::SQUARE, L2<p, c> > {
   // A(dy, qx)  := B(qx, dx) * X_e(dy, dx)
   // X_q(qy, qx) := B(qy, dy) * A(dy, qx)
   template <int q>
-  SERAC_HOST_DEVICE
-static auto interpolate(const dof_type& X, const TensorProductQuadratureRule<q>&)
+  SERAC_HOST_DEVICE static auto interpolate(const dof_type& X, const TensorProductQuadratureRule<q>&)
   {
     static constexpr bool apply_weights = false;
     static constexpr auto B             = calculate_B<apply_weights, q>();
@@ -246,7 +245,8 @@ static auto interpolate(const dof_type& X, const TensorProductQuadratureRule<q>&
   // tensor<double,dim,dim,dim>}
   template <typename source_type, typename flux_type, int q>
   SERAC_HOST_DEVICE static void integrate(const tensor<tuple<source_type, flux_type>, q * q>& qf_output,
-                        const TensorProductQuadratureRule<q>&, dof_type* element_residual, int step = 1)
+                                          const TensorProductQuadratureRule<q>&, dof_type* element_residual,
+                                          int step = 1)
   {
     if constexpr (is_zero<source_type>{} && is_zero<flux_type>{}) {
       return;

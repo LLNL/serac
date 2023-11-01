@@ -30,7 +30,8 @@
 namespace serac {
 
 template <int... i>
-struct DependsOn {};
+struct DependsOn {
+};
 
 /**
  * @brief given a list of types, this function returns the index that corresponds to the type `dual_vector`.
@@ -189,7 +190,7 @@ class Functional<test(trials...), exec> {
   static constexpr auto             Q                = std::max({test::order, trials::order...}) + 1;
 
   static constexpr mfem::Geometry::Type elem_geom[4]    = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT,
-                                                           mfem::Geometry::SQUARE, mfem::Geometry::CUBE};
+                                                        mfem::Geometry::SQUARE, mfem::Geometry::CUBE};
   static constexpr mfem::Geometry::Type simplex_geom[4] = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT,
                                                            mfem::Geometry::TRIANGLE, mfem::Geometry::TETRAHEDRON};
 

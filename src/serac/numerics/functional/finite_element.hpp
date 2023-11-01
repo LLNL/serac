@@ -41,7 +41,8 @@ struct TensorProductQuadratureRule {
 };
 
 template <auto val>
-struct CompileTimeValue {};
+struct CompileTimeValue {
+};
 
 /**
  * @brief this struct is used to look up mfem's memory layout of
@@ -346,7 +347,7 @@ SERAC_HOST_DEVICE void physical_to_parent(tensor<T, q>& qf_output, const tensor<
  *
  */
 template <mfem::Geometry::Type g, typename family>
-SERAC_HOST_DEVICE struct finite_element;
+struct finite_element;
 
 #include "detail/segment_H1.inl"
 #include "detail/segment_Hcurl.inl"

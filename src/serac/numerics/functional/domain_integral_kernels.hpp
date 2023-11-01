@@ -137,18 +137,6 @@ SERAC_HOST_DEVICE auto batch_apply_qf(lambda qf, const tensor<double, dim, n> x,
   return outputs;
 }
 
-template <mfem::Geometry::Type geom, typename test, typename... trials>
-auto get_trial_elements(FunctionSignature<test(trials...)>)
-{
-  return tuple<finite_element<geom, trials>...>{};
-}
-
-template <mfem::Geometry::Type geom, typename test, typename... trials>
-auto get_test(FunctionSignature<test(trials...)>)
-{
-  return finite_element<geom, test>{};
-}
-
 template <uint32_t differentiation_index, int Q, mfem::Geometry::Type geom, typename test_element,
           typename trial_element_type, typename lambda_type, typename state_type, typename derivative_type,
           int... indices>
@@ -365,8 +353,8 @@ std::function<void(const std::vector<const double*>&, double*, bool)> evaluation
     std::shared_ptr<QuadratureData<state_type> > qf_state, std::shared_ptr<derivative_type> qf_derivatives,
     uint32_t num_elements)
 {
-  auto trial_elements = get_trial_elements<geom>(s);
-  auto test           = get_test<geom>(s);
+  auto trial_elements = trial_elements_tuple<geom>(s);
+  auto test           = get_test_element<geom>(s);
   return [=](const std::vector<const double*>& inputs, double* outputs, bool update_state) {
     domain_integral::evaluation_kernel_impl<wrt, Q, geom>(trial_elements, test, inputs, outputs, positions, jacobians,
                                                           qf, (*qf_state)[geom], qf_derivatives.get(), num_elements,

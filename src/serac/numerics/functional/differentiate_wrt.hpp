@@ -12,7 +12,8 @@ namespace serac {
 static constexpr uint32_t NO_DIFFERENTIATION = uint32_t(1) << 31;
 
 template <uint32_t i>
-struct DifferentiateWRT {};
+struct DifferentiateWRT {
+};
 
 /**
  * @brief this type exists solely as a way to signal to `serac::Functional` that the function
@@ -22,7 +23,7 @@ struct differentiate_wrt_this {
   const mfem::Vector& ref;  ///< the actual data wrapped by this type
 
   /// @brief implicitly convert back to `mfem::Vector` to extract the actual data
-  operator const mfem::Vector&() const { return ref; }
+  operator const mfem::Vector &() const { return ref; }
 };
 
 /**

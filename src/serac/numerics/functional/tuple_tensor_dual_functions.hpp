@@ -106,7 +106,8 @@ struct one_hot_helper<i, std::integer_sequence<int, I...>, T> {
 };
 
 template <int i, int n, typename T>
-struct one_hot : public one_hot_helper<i, std::make_integer_sequence<int, n>, T> {};
+struct one_hot : public one_hot_helper<i, std::make_integer_sequence<int, n>, T> {
+};
 /// @endcond
 
 /**

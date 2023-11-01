@@ -167,8 +167,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c> > {
   }
 
   template <int q>
-  SERAC_HOST_DEVICE
-static auto interpolate(const dof_type& X, const TensorProductQuadratureRule<q>&)
+  SERAC_HOST_DEVICE static auto interpolate(const dof_type& X, const TensorProductQuadratureRule<q>&)
   {
     // we want to compute the following:
     //
@@ -230,7 +229,8 @@ static auto interpolate(const dof_type& X, const TensorProductQuadratureRule<q>&
 
   template <typename source_type, typename flux_type, int q>
   SERAC_HOST_DEVICE static void integrate(const tensor<tuple<source_type, flux_type>, q * q * q>& qf_output,
-                        const TensorProductQuadratureRule<q>&, dof_type* element_residual, int step = 1)
+                                          const TensorProductQuadratureRule<q>&, dof_type* element_residual,
+                                          int step = 1)
   {
     if constexpr (is_zero<source_type>{} && is_zero<flux_type>{}) {
       return;
