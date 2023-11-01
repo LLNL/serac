@@ -238,7 +238,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     # Check if these variants are true and +cuda before adding
     cuda_deps_with_variants = ["raja", "sundials", "tribol", "umpire"]
     for dep in cuda_deps_with_variants:
-        depends_on("{0}+cuda".format(dep), when="+{0}+cuda")
+        depends_on("{0}+cuda".format(dep), when="+{0}+cuda".format(dep))
         for sm_ in CudaPackage.cuda_arch_values:
             depends_on("{0} cuda_arch={1}".format(dep, sm_),
                     when="+{0}+cuda cuda_arch={1}".format(dep, sm_))
