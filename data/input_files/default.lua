@@ -11,15 +11,6 @@ main_mesh = {
     par_ref_levels = 0,
 }
 
--- Materials
-material_j2 = { model = "J2", E = 100.0, nu = 0.25, hardening = 100.0 } -- TODO chapman39 create input struct for Hardening?
-material_linear_isotropic_conductor = {
-    model = "LinearIsotropicConductor",
-    kappa = 0.7,
-    cp = 1.5,
-    density = 0.5,
-}
-
 -- Solver parameters
 solid = {
     equation_solver = {
@@ -44,13 +35,11 @@ solid = {
     },
 
     -- polynomial interpolation order
-    order = 2,
+    order = 1,
 
-    -- material parameters
-    materials = {
-        { model = "NeoHookean", mu = 0.26, K = 5.5, density = 2 },
-        material_j2
-    },
+    -- neo-Hookean material parameters
+    mu = 0.25,
+    K  = 5.0,
 
     -- initial conditions
     -- initialize x_cur, boundary condition, deformation, and
@@ -82,6 +71,12 @@ solid = {
                 y = 0.0,
                 z = 0.0
             }
+        },
+        ['traction'] = {
+            attrs = {2},
+            vector_function = function (v, t)
+                return Vector.new(0, 1.0e-3, 0) * t
+            end
         },
     },
 }
@@ -122,9 +117,9 @@ thermal_conduction = {
     order = 2,
 
     -- material parameters
-    materials = {
-        material_linear_isotropic_conductor
-    },
+    kappa = 0.5,
+    rho = 0.5,
+    cp = 0.5,
 
     -- initial conditions
     initial_temperature = {
