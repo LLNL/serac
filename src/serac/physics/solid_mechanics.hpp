@@ -1218,7 +1218,7 @@ public:
       auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
       for (const auto& bc : bcs_.essentials()) {
-        bc.apply(*J_T, displacement_, adjoint_essential);
+        bc.apply(*J_T, displacement_adjoint_load_, adjoint_essential);
       }
 
       lin_solver.SetOperator(*J_T);
