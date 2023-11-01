@@ -145,6 +145,8 @@ class Serac(CachedCMakePackage, CudaPackage):
     # The optional slate dependency is not handled in the MFEM spack package
     depends_on("strumpack~slate~butterflypack", when="+strumpack")
 
+    depends_on("strumpack~openmp", when="+strumpack~openmp")
+
     #
     # Forward variants
     # NOTE: propogating variants to dependencies should be removed when pushing this recipe up to Spack
