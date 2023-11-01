@@ -182,9 +182,9 @@ public:
   const FiniteElementState& adjoint(const std::string& state_name) const override
   {
     if (state_name == "displacement") {
-      return solid_.adjointDisplacement();
+      return solid_.adjoint("displacement");
     } else if (state_name == "temperature") {
-      return thermal_.adjointTemperature();
+      return thermal_.adjoint("temperature");
     }
 
     SLIC_ERROR_ROOT(axom::fmt::format("Adjoint '{}' requested from solid mechanics module '{}', but it doesn't exist",

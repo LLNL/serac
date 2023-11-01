@@ -713,8 +713,6 @@ public:
     } else {
       SLIC_ERROR_ROOT_IF(ode_.GetTimestepper() != TimestepMethod::BackwardEuler,
                          "Only backward Euler implemented for transient adjoint heat conduction.");
-
-      return {{"adjoint_temperature", adjoint_temperature_}};
     }
 
     SLIC_ERROR_ROOT_IF(ode_.GetTimestepper() != TimestepMethod::BackwardEuler,
@@ -748,13 +746,13 @@ public:
 
     // recall that temperature_adjoint_load_vector and d_temperature_dt_adjoint_load_vector were already multiplied by
     // -1 above
-    mfem::HypreParVector modified_RHS(temperature_adjoint_load_vector);
+    mfem::HypreParVector modified_RHS(temperature_adjoint_load_);
     modified_RHS *= dt_;
-    modified_RHS.Add(1.0, temperature_rate_adjoint_load_vector);
+    modified_RHS.Add(1.0, temperature_rate_adjoint_load_);
     modified_RHS.Add(-dt_, implicit_sensitivity_temperature_start_of_step_);
 
     for (const auto& bc : bcs_.essentials()) {
-      bc.apply(*J_T, modified_RHS, adjoint_essential);
+      bc.apply(*J_T, modified_RHS, zero_);
     }
 
     lin_solver.SetOperator(*J_T);
@@ -767,7 +765,7 @@ public:
     m_mat->Mult(adjoint_temperature_, implicit_sensitivity_temperature_start_of_step_);
     implicit_sensitivity_temperature_start_of_step_ *= -1.0 / dt_;
     implicit_sensitivity_temperature_start_of_step_.Add(
-        1.0 / dt_, temperature_rate_adjoint_load_vector);  // already multiplied by -1
+        1.0 / dt_, temperature_rate_adjoint_load_);  // already multiplied by -1
 
     time_ -= dt_;
     cycle_--;

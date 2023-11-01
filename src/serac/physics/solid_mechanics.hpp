@@ -128,8 +128,7 @@ public:
    */
   SolidMechanics(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
                  const serac::TimesteppingOptions timestepping_opts, const GeometricNonlinearities geom_nonlin,
-                 const std::string& physics_name, std::string mesh_tag, std::vector<std::string> parameter_names = {},
-                 int cycle = 0, double time = 0.0)
+                 const std::string& physics_name, std::string mesh_tag, std::vector<std::string> parameter_names = {}, int cycle = 0, double time = 0.0)
       : SolidMechanics(
             std::make_unique<EquationSolver>(nonlinear_opts, lin_opts, StateManager::mesh(mesh_tag).GetComm()),
             timestepping_opts, geom_nonlin, physics_name, mesh_tag, parameter_names, cycle, time)
@@ -150,8 +149,8 @@ public:
    */
   SolidMechanics(std::unique_ptr<serac::EquationSolver> solver, const serac::TimesteppingOptions timestepping_opts,
                  const GeometricNonlinearities geom_nonlin, const std::string& physics_name, std::string mesh_tag,
-                 std::vector<std::string> parameter_names = {})
-      : BasePhysics(order, physics_name, mesh_tag),
+                 std::vector<std::string> parameter_names = {}, int cycle = 0, double time = 0.0)
+      : BasePhysics(physics_name, mesh_tag, cycle, time),
         displacement_(
             StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "displacement"), mesh_tag_)),
         velocity_(StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "velocity"), mesh_tag_)),
@@ -159,6 +158,9 @@ public:
             StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "acceleration"), mesh_tag_)),
         adjoint_displacement_(StateManager::newState(
             H1<order, dim>{}, detail::addPrefix(physics_name, "adjoint_displacement"), mesh_tag_)),
+        displacement_adjoint_load_(displacement_.space(), detail::addPrefix(physics_name, "displacement_adjoint_load")),
+        velocity_adjoint_load_(displacement_.space(), detail::addPrefix(physics_name, "velocity_adjoint_load")),
+        acceleration_adjoint_load_(displacement_.space(), detail::addPrefix(physics_name, "acceleration_adjoint_load")),
         implicit_sensitivity_displacement_start_of_step_(displacement_.space(), "total_deriv_wrt_displacement."),
         implicit_sensitivity_velocity_start_of_step_(displacement_.space(), "total_deriv_wrt_velocity."),
         reactions_(StateManager::newDual(H1<order, dim>{}, detail::addPrefix(physics_name, "reactions"), mesh_tag_)),
@@ -215,6 +217,9 @@ public:
     acceleration_         = 0.0;
     shape_displacement_   = 0.0;
     adjoint_displacement_ = 0.0;
+    displacement_adjoint_load_ = 0.0;
+    velocity_adjoint_load_     = 0.0;
+    acceleration_adjoint_load_ = 0.0;
 
     implicit_sensitivity_displacement_start_of_step_ = 0.0;
     implicit_sensitivity_velocity_start_of_step_     = 0.0;
@@ -1152,56 +1157,60 @@ public:
   }
 
   /**
+   * @brief Set the loads for the adjoint reverse timestep solve
+   *
+   * @param loads The loads (e.g. right hand sides) for the adjoint problem
+   *
+   * @pre The adjoint load map is expected to contain an entry named "displacement"
+   *
+   * These loads are typically defined as derivatives of a downstream quantity of intrest with respect
+   * to a primal solution field (in this case, displacement). For this physics module, the unordered
+   * map is expected to have one entry with the keys "displacement".
+   *
+   */
+  virtual void setAdjointLoad(std::unordered_map<std::string, const serac::FiniteElementDual&> loads)
+  {
+    SLIC_ERROR_ROOT_IF(loads.size() == 0, "Adjoint load container size must be greater than 0 in the solid mechanics.");
+
+    auto disp_adjoint_load = loads.find("displacement");
+
+    SLIC_ERROR_ROOT_IF(disp_adjoint_load == loads.end(), "Adjoint load for \"displacement\" not found.");
+
+    displacement_adjoint_load_ = disp_adjoint_load->second;
+    // Add the sign correction to move the term to the RHS
+    displacement_adjoint_load_ *= -1.0;
+
+    auto velo_adjoint_load = loads.find("velocity");
+
+    if (velo_adjoint_load != loads.end()) {
+      velocity_adjoint_load_ = velo_adjoint_load->second;
+      // Add the sign correction to move the term to the RHS
+      velocity_adjoint_load_ *= -1.0;
+    }
+
+    auto accel_adjoint_load = loads.find("acceleration");
+
+    if (accel_adjoint_load != loads.end()) {
+      acceleration_adjoint_load_ = accel_adjoint_load->second;
+      // Add the sign correction to move the term to the RHS
+      acceleration_adjoint_load_ *= -1.0;
+    }
+
+  }
+
+
+  /**
    * @brief Solve the adjoint problem
    * @pre It is expected that the forward analysis is complete and the current displacement state is valid
    * @pre It is expected that the adjoint load has already been set in SolidMechanics::setAdjointLoad
-   * @note This is currently only valid for quasi-static analysis
-   *
-   * @return An unordered map of the adjoint solutions indexed by their name. It has a single entry named
-   * "adjoint_displacement"
    */
   void reverseAdjointTimestep() override
   {
-    auto disp_adjoint_load  = adjoint_loads.find("displacement");
-    auto velo_adjoint_load  = adjoint_loads.find("velocity");
-    auto accel_adjoint_load = adjoint_loads.find("acceleration");
-
-    SLIC_ERROR_ROOT_IF(disp_adjoint_load == adjoint_loads.end(), "Adjoint load for \"displacement\" not found.");
-    mfem::HypreParVector disp_adjoint_load_vector(disp_adjoint_load->second);
-    disp_adjoint_load_vector *= -1.0;
-
-    mfem::HypreParVector velo_adjoint_load_vector(disp_adjoint_load_vector);
-    velo_adjoint_load_vector = 0.0;
-    if (velo_adjoint_load != adjoint_loads.end()) {
-      velo_adjoint_load_vector = velo_adjoint_load->second;
-      velo_adjoint_load_vector *= -1.0;
-    }
-
-    mfem::HypreParVector accel_adjoint_load_vector(disp_adjoint_load_vector);
-    accel_adjoint_load_vector = 0.0;
-    if (velo_adjoint_load != adjoint_loads.end()) {
-      accel_adjoint_load_vector = accel_adjoint_load->second;
-      accel_adjoint_load_vector *= -1.0;
-    }
-
     auto& lin_solver = nonlin_solver_->linearSolver();
 
     // By default, use a homogeneous essential boundary condition
-    mfem::HypreParVector adjoint_essential(disp_adjoint_load->second);
+    mfem::HypreParVector adjoint_essential(displacement_adjoint_load_);
     adjoint_essential = 0.0;
-
-    // If we have a non-homogeneous essential boundary condition, extract it from the given state
-    auto essential_adjoint_disp = adjoint_with_essential_boundary.find("displacement");
-
-    if (essential_adjoint_disp != adjoint_with_essential_boundary.end()) {
-      adjoint_essential = essential_adjoint_disp->second;
-    } else {
-      // If the essential adjoint load container does not have a displacement dual but it has a non-zero size, the
-      // user has supplied an incorrectly-named dual vector.
-      SLIC_ERROR_IF(adjoint_with_essential_boundary.size() != 0,
-                    "Essential adjoint boundary condition given for an unexpected primal field. Expected adjoint "
-                    "boundary condition named \"displacement\"");
-    }
 
     if (is_quasistatic_) {
       auto [_, drdu] = (*residual_)(differentiate_wrt(displacement_), zero_, shape_displacement_,
@@ -1210,16 +1219,14 @@ public:
       auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
       for (const auto& bc : bcs_.essentials()) {
-        bc.apply(*J_T, disp_adjoint_load_vector, adjoint_essential);
+        bc.apply(*J_T, displacement_, adjoint_essential);
       }
 
       lin_solver.SetOperator(*J_T);
-      lin_solver.Mult(disp_adjoint_load_vector, adjoint_displacement_);
+      lin_solver.Mult(displacement_adjoint_load_, adjoint_displacement_);
 
       // Reset the equation solver to use the full nonlinear residual operator.  MRT, is this needed?
       nonlin_solver_->setOperator(*residual_with_bcs_);
-
-      return {{"adjoint_displacement", adjoint_displacement_}};
     }
 
     SLIC_ERROR_ROOT_IF(ode2_.GetTimestepper() != TimestepMethod::Newmark,
@@ -1253,14 +1260,12 @@ public:
     std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
     solid_mechanics::detail::adjoint_integrate(
-        dt_n, dt_np1, m_mat.get(), k_mat.get(), disp_adjoint_load_vector, velo_adjoint_load_vector,
-        accel_adjoint_load_vector, adjoint_displacement_, implicit_sensitivity_displacement_start_of_step_,
+        dt_n, dt_np1, m_mat.get(), k_mat.get(), displacement_adjoint_load_, velocity_adjoint_load_,
+        acceleration_adjoint_load_, adjoint_displacement_, implicit_sensitivity_displacement_start_of_step_,
         implicit_sensitivity_velocity_start_of_step_, adjoint_essential, bcs_, lin_solver);
 
     time_ -= dt_n;
     cycle_--;
-
-    return {{"adjoint_displacement", adjoint_displacement_}};
   }
 
   /**
@@ -1405,6 +1410,15 @@ protected:
   // In the case of transient dynamics, this is more like an adjoint_acceleration
   /// The displacement finite element adjoint state
   FiniteElementState adjoint_displacement_;
+
+  /// The adjoint load (RHS) for the displacement adjoint system solve (downstream -dQOI/d displacement)
+  FiniteElementDual displacement_adjoint_load_;
+
+  /// The adjoint load (RHS) for the velocity adjoint system solve (downstream -dQOI/d velocity)
+  FiniteElementDual velocity_adjoint_load_;
+
+    /// The adjoint load (RHS) for the adjoint system solve (downstream -dQOI/d acceleration)
+  FiniteElementDual acceleration_adjoint_load_;
 
   /// The total/implicit sensitivity of the qoi with respect to the start of the previous timestep's displacement
   FiniteElementDual implicit_sensitivity_displacement_start_of_step_;
