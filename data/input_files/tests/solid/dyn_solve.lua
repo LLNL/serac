@@ -47,9 +47,13 @@ solid = {
     -- polynomial interpolation order
     order = 1,
 
-    -- neo-Hookean material parameters
-    mu = 0.25,
-    K  = 5.0,
+    -- material parameters
+    materials = 
+    {
+        { model = "NeoHookean", mu = 0.26, K = 5.5, density = 2 },
+        { model = "LinearIsotropic", mu = 0.26, K = 5.5, density = 2 },
+    },
+
 
     -- initial conditions
     initial_displacement = {
