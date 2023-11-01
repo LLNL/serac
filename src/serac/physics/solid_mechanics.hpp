@@ -1169,7 +1169,7 @@ public:
    * map is expected to have one entry with the keys "displacement".
    *
    */
-  virtual void setAdjointLoad(std::unordered_map<std::string, const serac::FiniteElementDual&> loads)
+  virtual void setAdjointLoad(std::unordered_map<std::string, const serac::FiniteElementDual&> loads) override
   {
     SLIC_ERROR_ROOT_IF(loads.size() == 0, "Adjoint load container size must be greater than 0 in the solid mechanics.");
 

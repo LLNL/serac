@@ -641,7 +641,7 @@ public:
    * "temperature_rate" load is only used by transient (i.e. non-quasi-static) adjoint calculations.
    *
    */
-  virtual void setAdjointLoad(std::unordered_map<std::string, const serac::FiniteElementDual&> loads)
+  virtual void setAdjointLoad(std::unordered_map<std::string, const serac::FiniteElementDual&> loads) override
   {
     SLIC_ERROR_ROOT_IF(loads.size() == 0,
                        "Adjoint load container size must be greater than 0 in the heat transfer module.");
