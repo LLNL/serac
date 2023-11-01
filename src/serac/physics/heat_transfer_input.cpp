@@ -14,25 +14,24 @@ void HeatTransferInputOptions::defineInputFileSchema(axom::inlet::Container& con
   container.addInt("order", "Order degree of the finite elements.").defaultValue(1).range(1, 8);
 
   auto& material_container = container.addStructArray("materials", "Container for array of materials");
-  serac::MaterialInputOptions::defineInputFileSchema(material_container);
-  serac::MaterialInputOptions::verifyInputFileSchema(material_container);
+  ThermalMaterialInputOptions::defineInputFileSchema(material_container);
 
   auto& source = container.addStruct("source", "Scalar source term (RHS of the thermal conduction PDE)");
-  serac::input::CoefficientInputOptions::defineInputFileSchema(source);
+  input::CoefficientInputOptions::defineInputFileSchema(source);
 
   auto& equation_solver_container =
       container.addStruct("equation_solver", "Linear and Nonlinear stiffness Solver Parameters.");
-  serac::EquationSolver::defineInputFileSchema(equation_solver_container);
+  EquationSolver::defineInputFileSchema(equation_solver_container);
 
   auto& dynamics_container = container.addStruct("dynamics", "Parameters for mass matrix inversion");
   dynamics_container.addString("timestepper", "Timestepper (ODE) method to use");
   dynamics_container.addString("enforcement_method", "Time-varying constraint enforcement method to use");
 
   auto& bc_container = container.addStructDictionary("boundary_conds", "Container of boundary conditions");
-  serac::input::BoundaryConditionInputOptions::defineInputFileSchema(bc_container);
+  input::BoundaryConditionInputOptions::defineInputFileSchema(bc_container);
 
   auto& init_temp = container.addStruct("initial_temperature", "Coefficient for initial condition");
-  serac::input::CoefficientInputOptions::defineInputFileSchema(init_temp);
+  input::CoefficientInputOptions::defineInputFileSchema(init_temp);
 }
 
 }  // namespace serac
@@ -78,7 +77,7 @@ serac::HeatTransferInputOptions FromInlet<serac::HeatTransferInputOptions>::oper
     result.source_coef = base["source"].get<serac::input::CoefficientInputOptions>();
   }
 
-  result.materials = base["materials"].get<std::vector<serac::MaterialInputOptions>>();
+  result.materials = base["materials"].get<std::vector<serac::var_thermal_material_t>>();
 
   result.boundary_conditions =
       base["boundary_conds"].get<std::unordered_map<std::string, serac::input::BoundaryConditionInputOptions>>();

@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include "serac/physics/materials/material_input.hpp"
+#include "serac/physics/materials/thermal_material_input.hpp"
 #include "serac/physics/common.hpp"
 
 namespace serac {
@@ -58,7 +58,7 @@ struct HeatTransferInputOptions {
    * @brief The material options
    *
    */
-  std::vector<MaterialInputOptions> materials;
+  std::vector<var_thermal_material_t> materials;
 
   /**
    * @brief Source function coefficient

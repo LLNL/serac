@@ -9,16 +9,18 @@ if(ENABLE_TESTS)
 endif()
 
 set(materials_sources
-    material_input.cpp)
+    thermal_material_input.cpp
+    solid_material_input.cpp)
 
 set(materials_headers
     green_saint_venant_thermoelastic.hpp
     liquid_crystal_elastomer.hpp
-    material_input.hpp
     material_verification_tools.hpp
     parameterized_solid_material.hpp
     parameterized_thermal_material.hpp
+    solid_material_input.hpp
     solid_material.hpp
+    thermal_material_input.hpp
     thermal_material.hpp
     )
 

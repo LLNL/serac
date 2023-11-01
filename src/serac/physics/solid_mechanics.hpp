@@ -241,32 +241,21 @@ public:
   {
     // This is the only other options stored in the input file that we can use
     // in the initialization stage
-    for (const auto& mat_input : input_options.materials) {
-      if (mat_input.model == "NeoHookean") {
-        solid_mechanics::NeoHookean mat{.density = mat_input.density, .K = mat_input.K, .G = mat_input.mu};
-        setMaterial(mat);
-      } else if (mat_input.model == "LinearIsotropic") {
-        solid_mechanics::LinearIsotropic mat{.density = mat_input.density, .K = mat_input.K, .G = mat_input.mu};
-        setMaterial(mat);
-      } else if (mat_input.model == "J2") {
-        // TODO setMaterial for J2
-        // solid_mechanics::J2 mat{.E       = mat_input.E,
-        //                         .nu      = mat_input.nu,
-        //                         .Hi      = mat_input.Hi,
-        //                         .Hk      = mat_input.Hk,
-        //                         .sigma_y = mat_input.sigma_y,
-        //                         .density = mat_input.density};
-        // setMaterial(mat);
-      } else if (mat_input.model == "J2Nonlinear") {
-        // TODO setMaterial for J2Nonlinear
-        // solid_mechanics::J2Nonlinear mat{.E = mat_input.E,
-        //                                  .nu = mat_input.nu,
-        //                                  // TODO hardening?
-        //                                  .density = mat_input.density};
-        // setMaterial(mat);
-      } else {
-        // TODO: error?
+    for (auto& mat : input_options.materials)
+    {
+      if (std::holds_alternative<serac::solid_mechanics::NeoHookean>(mat)) {
+        SLIC_INFO("Setting NeoHookean material");
+        setMaterial(std::get<serac::solid_mechanics::NeoHookean>(mat));
       }
+      else if (std::holds_alternative<serac::solid_mechanics::LinearIsotropic>(mat)) {
+        SLIC_INFO("Setting LinearIsotropic material");
+        setMaterial(std::get<serac::solid_mechanics::LinearIsotropic>(mat));
+      }
+      else {
+        SLIC_ERROR("Invalid material type. Only 'NeoHookean' and 'LinearIsotropic' are implemented in input files.");
+      }
+      // TODO J2
+      // TODO J2Nonlinear
     }
 
     if (input_options.initial_displacement) {

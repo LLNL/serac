@@ -14,6 +14,7 @@
 
 #include "mfem.hpp"
 
+#include "serac/infrastructure/initialize.hpp"
 #include "serac/physics/common.hpp"
 #include "serac/physics/heat_transfer_input.hpp"
 #include "serac/physics/base_physics.hpp"
@@ -215,19 +216,12 @@ public:
   {
     // This is the only other options stored in the input file that we can use
     // in the initialization stage
-    for (const auto& mat_input : input_options.materials) {
-      if (mat_input.model == "LinearIsotropicConductor") {
-        heat_transfer::LinearIsotropicConductor mat(mat_input.density, mat_input.cp, mat_input.kappa);
-        setMaterial(mat);
-      } else if (mat_input.model == "LinearConductor") {
-        // TODO not sure how to set the tensor<double, dim, dim> "conductivity"
-        // heat_transfer::LinearConductor mat(mat_input.density,
-        //                                    mat_input.cp,
-        //                                    mat_input.kappa);
-        // setMaterial(mat);
-      } else {
-        // TODO error?
+    for (const auto& mat : input_options.materials) {
+      if (std::holds_alternative<serac::heat_transfer::LinearIsotropicConductor>(mat)) {
+        SLIC_INFO("Setting LinearIsotropicConductor material");
+        setMaterial(std::get<serac::heat_transfer::LinearIsotropicConductor>(mat));
       }
+      // TODO LinearConductor
     }
 
     if (input_options.initial_temperature) {

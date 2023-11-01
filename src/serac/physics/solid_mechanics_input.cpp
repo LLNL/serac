@@ -14,8 +14,7 @@ void SolidMechanicsInputOptions::defineInputFileSchema(axom::inlet::Container& c
   container.addInt("order", "polynomial order of the basis functions.").defaultValue(1).range(1, 3);
 
   auto& material_container = container.addStructArray("materials", "Container for array of materials");
-  serac::MaterialInputOptions::defineInputFileSchema(material_container);
-  serac::MaterialInputOptions::verifyInputFileSchema(material_container);
+  SolidMaterialInputOptions::defineInputFileSchema(material_container);
 
   // Geometric nonlinearities flag
   container.addBool("geometric_nonlin", "Flag to include geometric nonlinearities in the residual calculation.")
@@ -23,19 +22,19 @@ void SolidMechanicsInputOptions::defineInputFileSchema(axom::inlet::Container& c
 
   auto& equation_solver_container =
       container.addStruct("equation_solver", "Linear and Nonlinear stiffness Solver Parameters.");
-  serac::EquationSolver::defineInputFileSchema(equation_solver_container);
+  EquationSolver::defineInputFileSchema(equation_solver_container);
 
   auto& dynamics_container = container.addStruct("dynamics", "Parameters for mass matrix inversion");
   dynamics_container.addString("timestepper", "Timestepper (ODE) method to use");
   dynamics_container.addString("enforcement_method", "Time-varying constraint enforcement method to use");
 
   auto& bc_container = container.addStructDictionary("boundary_conds", "Container of boundary conditions");
-  serac::input::BoundaryConditionInputOptions::defineInputFileSchema(bc_container);
+  input::BoundaryConditionInputOptions::defineInputFileSchema(bc_container);
 
   auto& init_displ = container.addStruct("initial_displacement", "Coefficient for initial condition");
-  serac::input::CoefficientInputOptions::defineInputFileSchema(init_displ);
+  input::CoefficientInputOptions::defineInputFileSchema(init_displ);
   auto& init_velo = container.addStruct("initial_velocity", "Coefficient for initial condition");
-  serac::input::CoefficientInputOptions::defineInputFileSchema(init_velo);
+  input::CoefficientInputOptions::defineInputFileSchema(init_velo);
 }
 
 }  // namespace serac
@@ -77,7 +76,7 @@ serac::SolidMechanicsInputOptions FromInlet<serac::SolidMechanicsInputOptions>::
     result.timestepping_options = std::move(timestepping_options);
   }
 
-  result.materials = base["materials"].get<std::vector<serac::MaterialInputOptions>>();
+  result.materials = base["materials"].get<std::vector<serac::var_solid_material_t>>();
 
   // Set the geometric nonlinearities flag
   bool input_geom_nonlin = base["geometric_nonlin"];
