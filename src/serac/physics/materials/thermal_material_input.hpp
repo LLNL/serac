@@ -23,14 +23,12 @@ namespace serac {
 using var_thermal_material_t = std::variant<heat_transfer::LinearIsotropicConductor>;
 
 struct ThermalMaterialInputOptions {
-
-/**
- * @brief Input file parameters specific to this class
- *
- * @param[in] container Inlet's Container to which fields should be added
- **/
-static void defineInputFileSchema(axom::inlet::Container& container);
-
+  /**
+   * @brief Input file parameters specific to this class
+   *
+   * @param[in] container Inlet's Container to which fields should be added
+   **/
+  static void defineInputFileSchema(axom::inlet::Container& container);
 };
 
 }  // namespace serac

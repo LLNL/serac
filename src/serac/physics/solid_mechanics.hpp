@@ -266,17 +266,14 @@ public:
   {
     // This is the only other options stored in the input file that we can use
     // in the initialization stage
-    for (auto& mat : input_options.materials)
-    {
+    for (auto& mat : input_options.materials) {
       if (std::holds_alternative<serac::solid_mechanics::NeoHookean>(mat)) {
         SLIC_INFO("Setting NeoHookean material");
         setMaterial(std::get<serac::solid_mechanics::NeoHookean>(mat));
-      }
-      else if (std::holds_alternative<serac::solid_mechanics::LinearIsotropic>(mat)) {
+      } else if (std::holds_alternative<serac::solid_mechanics::LinearIsotropic>(mat)) {
         SLIC_INFO("Setting LinearIsotropic material");
         setMaterial(std::get<serac::solid_mechanics::LinearIsotropic>(mat));
-      }
-      else {
+      } else {
         SLIC_ERROR("Invalid material type. Only 'NeoHookean' and 'LinearIsotropic' are implemented in input files.");
       }
       // TODO J2

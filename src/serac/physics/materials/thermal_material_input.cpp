@@ -15,15 +15,14 @@ void ThermalMaterialInputOptions::defineInputFileSchema(axom::inlet::Container& 
   container.addDouble("density", "Initial mass density");
   container.addDouble("kappa", "The conductivity parameter");
   container.addDouble("cp", "The specific heat capacity");
-  
+
   // Verify
   container.registerVerifier([](const axom::inlet::Container& c) -> bool {
     std::string model = c["model"];
     if (model == "LinearIsotropicConductor") {
-      return true; // TODO
-    }
-    else if (model == "LinearConductor") {
-      return true; // TODO
+      return true;  // TODO
+    } else if (model == "LinearConductor") {
+      return true;  // TODO
     }
 
     return false;
@@ -32,16 +31,14 @@ void ThermalMaterialInputOptions::defineInputFileSchema(axom::inlet::Container& 
 
 }  // namespace serac
 
-serac::var_thermal_material_t FromInlet<serac::var_thermal_material_t>::operator()(
-  const axom::inlet::Container& base)
+serac::var_thermal_material_t FromInlet<serac::var_thermal_material_t>::operator()(const axom::inlet::Container& base)
 {
   serac::var_thermal_material_t result;
-  std::string model = base["model"];
+  std::string                   model = base["model"];
 
   if (model == "LinearIsotropicConductor") {
     result = serac::heat_transfer::LinearIsotropicConductor(base["density"], base["cp"], base["kappa"]);
-  }
-  else if (model == "LinearConductor") {
+  } else if (model == "LinearConductor") {
     // TODO
   }
 
