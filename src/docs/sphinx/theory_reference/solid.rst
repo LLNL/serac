@@ -195,7 +195,7 @@ where
 This discrete nonlinear second order ODE system can now be solved using the selected linear algebra methods.
 
 
-Material Parameters:
+Material Parameters
 ======================
 
 Material models in serac may use different parameters for describing elastic properties. Specifying
@@ -389,3 +389,131 @@ isotropic and kinematic hardening
 .. image:: ../figures/J2_both.gif
    :width: 80%
    :align: center
+
+Contact mechanics
+=================
+
+When two surfaces on :math:`\Omega` (the current configuration of the simulation domain) come into contact, an
+additional term in the weak form is needed to prevent their interpenetration. For contact enforcement without friction,
+the mechanical energy from contact is
+
+.. math:: 
+
+   \Pi_C = \int_{\Gamma_C^1} p(\bar{\mathbf{x}}) \bigl( \mathbf{n}(\bar{\mathbf{x}}) \cdot \mathbf{x}_1(\bar{\mathbf{x}}) \bigr) \, dA 
+   - \int_{\Gamma_C^2} p(\bar{\mathbf{x}}) \bigl( \mathbf{n}(\bar{\mathbf{x}}) \cdot \mathbf{x}_2(\bar{\mathbf{x}}) \bigr) \, dA ,
+
+where
+
+.. math::
+
+   \begin{align*}
+   \Gamma_C^1 \subset \partial \Omega &= \text{contact surface 1 (}nonmortar\text{ surface)}, \\
+   \Gamma_C^2 \subset \partial \Omega &= \text{contact surface 2 (}mortar\text{ surface)}, \\
+   \bar{\mathbf{x}} \in \Gamma_C &= \text{a coordinate on }\Gamma_C\text{, a surface with a bijective map to }\Gamma_C^1\text{ and }\Gamma_C^2, \\
+   p(\bar{\mathbf{x}}) &= \text{pressure field}, \\
+   \mathbf{n}(\bar{\mathbf{x}}) & = \text{unit normal vector}, \\
+   \mathbf{x}_1(\bar{\mathbf{x}}) \in \Gamma_C^1 &= \text{a coordinate on }\Gamma_C^1,\text{ and} \\
+   \mathbf{x}_2(\bar{\mathbf{x}}) \in \Gamma_C^2 &= \text{a coordinate on }\Gamma_C^2 .
+   \end{align*}
+
+Using the common surface, :math:`\Gamma_C`, the contact energy can be simplified to a single term:
+
+.. math::
+
+   \Pi_C = \int_{\Gamma_C} p(\bar{\mathbf{x}}) g(\bar{\mathbf{x}}) \, dA ,
+
+where :math:`g(\bar{\mathbf{x}}) := \mathbf{n}(\bar{\mathbf{x}}) \cdot \bigl( \mathbf{x}_1 (\bar{\mathbf{x}}) -
+\mathbf{x}_2 (\bar{\mathbf{x}}) \bigr)` is the gap normal. Taking variations of this with respect to displacement leads
+to the contact term in the weak form.
+
+Mortar contact
+--------------
+
+While notionally straightforward, the complexity (both in mathematical derivation and computation) of accurately
+computing the variation of the contact energy leads to many different simplifications and approximations in actual
+contact algorithms. Serac uses the mortar contact method in the `Tribol <https://github.com/LLNL/Tribol>`_ interface
+physics library for contact enforcement. In Tribol, mortar contact enforcement is implemented following `Puso and
+Laursen (2004) <https://doi.org/10.1016/j.cma.2003.10.010>`_. Therein, contact constraints are only satisfied in the
+normal direction, enabling constraints that enforce either frictionless contact (inequality constraints) or tied contact
+in the normal direction (equality constraints).
+
+Mortar methods are defined by introducing an approximation of the pressure field with :math:`n` basis functions
+:math:`N^a(\bar{\mathbf{x}})` for :math:`a = 1, \dotsc n` and :math:`n` scalar coefficients :math:`p^a` for :math:`a =
+1, \dotsc n`,
+
+.. math::
+
+   p(\bar{\mathbf{x}}) = \sum_{a=1}^n N^a(\bar{\mathbf{x}}) p^a ,
+
+allowing the contact energy expression to be simplified to
+
+.. math::
+
+   \Pi_C = \sum_{a=1}^n p^a \tilde{g}^a(\bar{\mathbf{x}}) ,
+
+where :math:`\tilde{g}_I(\bar{\mathbf{x}}) = \int_{\Gamma_C} N_I(\bar{\mathbf{x}}) g(\bar{\mathbf{x}}) \, dA`. For
+frictionless contact, satisfaction of the Karush-Kuhn-Tucker (KKT) conditions that define the contact inequality
+constraints are then done discretely on the coefficients:
+
+.. math::
+
+   \tilde{g}^a \leq 0 \qquad p^a \geq 0 \qquad \tilde{g}^a p^a = 0 .
+
+Discrete satisfaction of the inequality constraints (or equality constraints for tied contact in the normal direction),
+as opposed to e.g. pointwise satisfaction at the quadrature points, gives LBB stability, enabling exact solution of the
+pressure field by explicitly solving for the Lagrange multipliers in the resulting saddle point system.  Additionally,
+mortar methods give optimal rates of convergence (when not limited by solution regularity) and give exact satisfaction
+of the contact patch test.
+
+In Puso and Laursen (2004), the following choices are made for the quantities defined in the contact energy: 
+
+#. :math:`\mathbf{n}(\bar{\mathbf{x}}) := \mathbf{n}(\mathbf{x}_1)` is a nodally interpolated, continuous field defined
+   in terms of :math:`\Gamma_C^1` where nodal values are determined by averaging normals evaluated at the nodal location
+   in each element that is connected to the node.
+#. :math:`\Gamma_C` is defined for each pair of elements in contact by a multi-step process. First, a plane is defined
+   on the element in the pair on :math:`\Gamma_C^1` by the point at the element center and the nodally interpolated
+   normal vector :math:`\mathbf{n}(\mathbf{x}_1)` evaluated at the element center. Next, the nodes from each element
+   are projected onto the plane and the overlap polygon is computed. The overlap polygon defines :math:`\Gamma_C` for
+   the element pair.
+#. The surface :math:`\Gamma_C` also defines the maps :math:`\mathbf{x}_1(\bar{\mathbf{x}})` and
+   :math:`\mathbf{x}_2(\bar{\mathbf{x}})` via the projection of the nodes to the plane normal to the center of the
+   element on :math:`\Gamma_C^1`.
+#. :math:`p(\bar{\mathbf{x}})` is an :math:`H_1(\Gamma_C^1)` field defined on the nonmortar surface using the same
+   discretization as the position and displacement fields.
+
+Additionally, the definition of :math:`\tilde{g}^a` is modified to
+
+.. math::
+
+   \tilde{g}^a(\bar{\mathbf{x}}) = \mathbf{n}(\mathbf{x}_1) \cdot 
+   \int_{\Gamma_C} N^a_1(\bar{\mathbf{x}}) \bigl( \mathbf{x}_1(\bar{\mathbf{x}}) - \mathbf{x}_2(\bar{\mathbf{x}}) \bigr) \, dA ,
+
+which does not affect the smoothness of the solution since :math:`\mathbf{n}(\mathbf{x}_1) \in
+{C^0}^\text{dim}(\Gamma_C^1)` is nodally interpolated.
+
+The expression for contact force is simplified through the assumption that terms that contain
+:math:`\tilde{g}(\bar{\mathbf{x}})` only contribute minimally and are ignored. Note that neglecting these terms affects
+angular momentum conservation and energy conservation since the formulation is not variationally consistent. After
+introducing finite element approximations for :math:`\mathbf{x}_1` and :math:`\mathbf{x}_2`, the nodal contact forces
+are
+
+.. math::
+
+   \mathbf{f}_I^a = (-1)^{I + 1} \sum_{b=1}^{n^1} p^b \mathbf{n}(\mathbf{x}^b_1) 
+   \int_{\Gamma_C} N_1^b(\bar{\mathbf{x}}) N_I^a(\bar{\mathbf{x}}) \, dA ,
+   
+where :math:`\mathbf{f}_I^a` is the force vector on node :math:`a` of surface :math:`\Gamma_C^I` for :math:`I=1,2` and
+:math:`N_I^a(\bar{\mathbf{x}})` is the basis function associated with node :math:`a` of surface :math:`\Gamma_C^I` for
+:math:`I=1,2`.  In the above equation, :math:`\int_{\Gamma_C} N_1^b(\bar{\mathbf{x}}) N_I^a(\bar{\mathbf{x}}) \, dA` is
+usually referred to as the *mortar matrix*. In Serac, the pressure degrees-of-freedom can be determined by one of two
+ways:
+
+#. by introducing Lagrange multipliers as unknowns and explicitly solving for them or
+#. by using a penalty proportional to the gap: :math:`p^b = \kappa g^b`.
+
+The tangent is computed by taking variations of the force with respect to the displacement (and the pressure when
+solving for Lagrange multipliers). Similar to taking variations of the contact energy, taking variations of the contact
+force is a difficult, time consuming task, both computationally and mathematically. While Puso and Laursen (2004)
+present a consistent tangent, the tangent implemented in Tribol is only an approximation. Terms where
+:math:`\tilde{g}(\bar{\mathbf{x}})` is present are assumed to be :math:`\approx 0`. As a result, quadratic convergence
+in Newton iterations is not expected when contact terms are included in the weak form.
