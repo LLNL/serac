@@ -38,7 +38,11 @@ const LinearSolverOptions default_linear_options = {.linear_solver  = LinearSolv
                                                     .max_iterations = 200};
 
 /// the default direct solver option for solving the linear stiffness equations
-const LinearSolverOptions direct_linear_options = {.linear_solver = LinearSolver::SuperLU};
+#ifdef MFEM_USE_STRUMPACK
+const LinearSolverOptions direct_linear_options = {.linear_solver = LinearSolver::Strumpack, .print_level = 0};
+#else
+const LinearSolverOptions direct_linear_options = {.linear_solver = LinearSolver::SuperLU, .print_level = 0};
+#endif
 
 /**
  * @brief Reasonable defaults for most thermal nonlinear solver options
@@ -290,6 +294,7 @@ public:
       // Note that the ODE solver handles the essential boundary condition application itself
       ode_.Step(temperature_, time_, dt);
     }
+
     cycle_ += 1;
   }
 
@@ -518,7 +523,7 @@ public:
    * @param state_name The name of the Finite Element State primal solution to retrieve
    * @return The named primal Finite Element State
    */
-  const FiniteElementState& state(const std::string& state_name) override
+  const FiniteElementState& state(const std::string& state_name) const override
   {
     if (state_name == "temperature") {
       return temperature_;
@@ -534,7 +539,7 @@ public:
    *
    * @return The primal solution names
    */
-  virtual std::vector<std::string> stateNames() override { return std::vector<std::string>{{"temperature"}}; }
+  virtual std::vector<std::string> stateNames() const override { return std::vector<std::string>{{"temperature"}}; }
 
   /**
    * @brief Accessor for getting named finite element state adjoint solution from the physics modules
@@ -542,7 +547,7 @@ public:
    * @param state_name The name of the Finite Element State adjoint solution to retrieve
    * @return The named adjoint Finite Element State
    */
-  const FiniteElementState& adjoint(const std::string& state_name) override
+  const FiniteElementState& adjoint(const std::string& state_name) const override
   {
     if (state_name == "temperature") {
       return adjoint_temperature_;
@@ -708,7 +713,7 @@ public:
       // We store the previous timestep's temperature as the current temperature for use in the lambdas computing the
       // sensitivities.
 
-      auto [r, drdu] = (*residual_)(differentiate_wrt(temperature_), zero_, shape_displacement_,
+      auto [_, drdu] = (*residual_)(differentiate_wrt(temperature_), zero_, shape_displacement_,
                                     *parameters_[parameter_indices].state...);
       auto jacobian  = assemble(drdu);
       auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
@@ -720,16 +725,13 @@ public:
       lin_solver.SetOperator(*J_T);
       lin_solver.Mult(temperature_adjoint_load_vector, adjoint_temperature_);
 
-      // Reset the equation solver to use the full nonlinear residual operator
-      nonlin_solver_->setOperator(residual_with_bcs_);
-
       return {{"adjoint_temperature", adjoint_temperature_}};
     }
 
     SLIC_ERROR_ROOT_IF(ode_.GetTimestepper() != TimestepMethod::BackwardEuler,
                        "Only backward Euler implemented for transient adjoint heat conduction.");
 
-    SLIC_ERROR_ROOT_IF(cycle_ == 0,
+    SLIC_ERROR_ROOT_IF(cycle_ <= 0,
                        "Maximum number of adjoint timesteps exceeded! The number of adjoint timesteps must equal the "
                        "number of forward timesteps");
 
@@ -778,9 +780,6 @@ public:
     implicit_sensitivity_temperature_start_of_step_.Add(
         1.0 / dt_, temperature_rate_adjoint_load_vector);  // already multiplied by -1
 
-    // Reset the equation solver to use the full nonlinear residual operator
-    nonlin_solver_->setOperator(residual_with_bcs_);
-
     time_ -= dt_;
     cycle_--;
 
@@ -788,15 +787,25 @@ public:
   }
 
   /**
-   * @brief Get a temperature which has been previously checkpointed at the give cycle
-   * @param cycle The previous timestep where the temperature solution is requested
-   * @return The temperature FiniteElementState at a previous cycle
+   * @brief Accessor for getting named finite element state primal solution from the physics modules at a given
+   * checkpointed cycle index
+   *
+   * @param state_name The name of the Finite Element State primal solution to retrieve
+   * @param cycle The previous timestep where the state solution is requested
+   * @return The named primal Finite Element State
    */
-  FiniteElementState loadCheckpointedTemperature(int cycle) const
+  FiniteElementState loadCheckpointedState(const std::string& state_name, int cycle) const override
   {
-    FiniteElementState previous_temperature(temperature_);
-    StateManager::loadCheckpointedStates(cycle, {previous_temperature});
-    return previous_temperature;
+    if (state_name == "temperature") {
+      FiniteElementState previous_state = temperature_;
+      StateManager::loadCheckpointedStates(cycle, {previous_state});
+      return previous_state;
+    }
+
+    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requested from solid mechanics module '{}', but it doesn't exist",
+                                      state_name, name_));
+
+    return temperature_;
   }
 
   /**
@@ -828,8 +837,9 @@ public:
    */
   FiniteElementDual& computeTimestepShapeSensitivity() override
   {
-    auto drdshape     = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<SHAPE>{}, temperature_, temperature_rate_,
+    auto drdshape = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<SHAPE>{}, temperature_, temperature_rate_,
                                                         shape_displacement_, *parameters_[parameter_indices].state...));
+
     auto drdshape_mat = assemble(drdshape);
 
     drdshape_mat->MultTranspose(adjoint_temperature_, *shape_displacement_sensitivity_);
