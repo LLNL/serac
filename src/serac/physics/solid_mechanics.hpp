@@ -1163,6 +1163,8 @@ public:
    * @param loads The loads (e.g. right hand sides) for the adjoint problem
    *
    * @pre The adjoint load map is expected to contain an entry named "displacement"
+   * @pre The adjoint load map may contain an entry named "velocity"
+   * @pre The adjoint load map may contain an entry named "acceleration"
    *
    * These loads are typically defined as derivatives of a downstream quantity of intrest with respect
    * to a primal solution field (in this case, displacement). For this physics module, the unordered
@@ -1238,17 +1240,10 @@ public:
                        "number of forward timesteps");
 
     // Load the end of step disp, velo, accel from the previous cycle from disk
-    // std::cout << "fetching, cycle says = " << cycle_ << std::endl;
     StateManager::loadCheckpointedStates(cycle_, {displacement_, velocity_, acceleration_});
-
-    // std::cout << "displacement at cycle " << cycle_ << " = " << displacement_.Norml2() << std::endl;
-    // std::cout << "velocity at cycle " << cycle_ << " = " << velocity_.Norml2() << std::endl;
-    // std::cout << "acceleration at cycle " << cycle_ << " = " << acceleration_.Norml2() << std::endl;
 
     double dt_np1 = loadCheckpointedTimestep(cycle_);
     double dt_n   = loadCheckpointedTimestep(cycle_ - 1);
-
-    // std::cout << "dts = " << dt_n << ", " << dt_np1 << std::endl;
 
     // K := dR/du
     auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(displacement_), acceleration_, shape_displacement_,
