@@ -273,8 +273,8 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
-  auto                                 du = reinterpret_cast<const typename trial_element::dof_type*>(dU);
-  auto                                 dr = reinterpret_cast<typename test_element::dof_type*>(dR);
+  auto                                     du = reinterpret_cast<const typename trial_element::dof_type*>(dU);
+  auto                                     dr = reinterpret_cast<typename test_element::dof_type*>(dR);
   constexpr TensorProductQuadratureRule<Q> rule{};
 
   // for each element in the domain
