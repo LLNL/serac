@@ -1235,7 +1235,7 @@ public:
     SLIC_ERROR_ROOT_IF(ode2_.GetTimestepper() != TimestepMethod::Newmark,
                        "Only Newmark implemented for transient adjoint solid mechanics.");
 
-    SLIC_ERROR_ROOT_IF(cycle_ <= 0,
+    SLIC_ERROR_ROOT_IF(cycle_ <= min_cycle_,
                        "Maximum number of adjoint timesteps exceeded! The number of adjoint timesteps must equal the "
                        "number of forward timesteps");
 

@@ -25,10 +25,12 @@ BasePhysics::BasePhysics(std::string physics_name, std::string mesh_tag, int cyc
       comm_(mesh_.GetComm()),
       shape_displacement_(StateManager::shapeDisplacement(mesh_tag_)),
       time_(time),
-      max_time_(0.0),
+      max_time_(time),
+      min_time_(time),
       cycle_(cycle),
-      max_cycle_(0),
-      ode_time_point_(0.0),
+      max_cycle_(cycle),
+      min_cycle_(cycle),
+      ode_time_point_(time),
       bcs_(mesh_)
 {
   std::tie(mpi_size_, mpi_rank_) = getMPIInfo(comm_);
@@ -53,6 +55,10 @@ int BasePhysics::cycle() const { return cycle_; }
 double BasePhysics::maxTime() const { return max_time_; }
 
 int BasePhysics::maxCycle() const { return max_cycle_; }
+
+double BasePhysics::minTime() const { return min_time_; }
+
+int BasePhysics::minCycle() const { return min_cycle_; }
 
 std::vector<double> BasePhysics::timesteps() const { return timesteps_; }
 

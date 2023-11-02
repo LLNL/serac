@@ -80,11 +80,25 @@ public:
   virtual double maxTime() const;
 
   /**
+   * @brief Get the initial time used by the forward solver
+   *
+   * @return The initial time used by the forward solver
+   */
+  virtual double minTime() const;
+
+  /**
    * @brief The maximum cycle (timestep iteration number) reached by the forward solver
    *
    * @return The maximum cycle reached by the forward solver
    */
   virtual int maxCycle() const;
+
+  /**
+   * @brief Get the initial cycle (timestep iteration number) used by the forward solver
+   *
+   * @return The initial cycle used by the forward solver
+   */
+  virtual int minCycle() const;
 
   /**
    * @brief Get a vector of the timestep sizes (i.e. \f$\Delta t\f$s) taken by the forward solver
@@ -425,6 +439,11 @@ protected:
   double max_time_;
 
   /**
+   * @brief The time the forward solver was initialized to
+   */
+  double min_time_;
+
+  /**
    * @brief A vector of the timestep sizes (i.e. \f$\Delta t\f$) taken by the forward solver
    */
   std::vector<double> timesteps_;
@@ -438,6 +457,11 @@ protected:
    * @brief The maximum cycle (forward pass iteration count) reached by the forward solver
    */
   int max_cycle_;
+
+  /**
+   * @brief The cycle the forward solver was initialized to
+   */
+  int min_cycle_;
 
   /**
    * @brief The value of time at which the ODE solver wants to evaluate the residual

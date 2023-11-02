@@ -717,7 +717,7 @@ public:
     SLIC_ERROR_ROOT_IF(ode_.GetTimestepper() != TimestepMethod::BackwardEuler,
                        "Only backward Euler implemented for transient adjoint heat conduction.");
 
-    SLIC_ERROR_ROOT_IF(cycle_ <= 0,
+    SLIC_ERROR_ROOT_IF(cycle_ <= min_cycle_,
                        "Maximum number of adjoint timesteps exceeded! The number of adjoint timesteps must equal the "
                        "number of forward timesteps");
 
