@@ -298,10 +298,9 @@ public:
      */
     ThermalMaterialIntegrand(MaterialType material) : material_(material) {}
 
-    // Due to nvcc's lack of support for generic lambdas (i.e. functions of the form
-    // auto lambda = [](auto) {}; ), this cannot be allowed.  In order for this code
-    // to be portable to CUDA platforms, the asserts below prevent serac from compiling
-    // if such a lambda is supplied.
+    // Due to nvcc's lack of support for extended generic lambdas (i.e. functions of the form
+    // auto lambda = [] __host__ __device__ (auto) {}; ), MaterialType cannot be an extended
+    // generic lambda.  The static asserts below check this.
   private:
     class DummyArgumentType {
     };

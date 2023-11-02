@@ -268,14 +268,14 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
   using test_element  = finite_element<g, test>;
   using trial_element = finite_element<g, trial>;
 
-  const bool is_QOI   = (test::family == Family::QOI);
-  const int  num_qpts = num_quadrature_points(g, Q);
+  constexpr bool is_QOI   = (test::family == Family::QOI);
+  constexpr int  num_qpts = num_quadrature_points(g, Q);
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
   auto                                 du = reinterpret_cast<const typename trial_element::dof_type*>(dU);
   auto                                 dr = reinterpret_cast<typename test_element::dof_type*>(dR);
-  const TensorProductQuadratureRule<Q> rule{};
+  constexpr TensorProductQuadratureRule<Q> rule{};
 
   // for each element in the domain
   for (uint32_t e = 0; e < num_elements; e++) {
