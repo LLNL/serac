@@ -95,10 +95,10 @@ public:
    */
   virtual const FiniteElementState& state(const std::string& state_name) const = 0;
 
-  virtual void setState(const std::string&, const FiniteElementState&)
-  {
-    SLIC_ERROR_ROOT(axom::fmt::format("setState not implemented for physics {}.", name_));
-  }
+  /**
+   * @brief Set the primal solution field values of the underlying physics solver
+   */
+  virtual void setState(const std::string&, const FiniteElementState&) = 0;
 
   /**
    * @brief Get a vector of the finite element state primal solution names
@@ -155,10 +155,7 @@ public:
    * @param parameter_index The index of the Finite Element State parameter to retrieve
    * @return The indexed parameter Finite Element State
    */
-  const FiniteElementState& parameter(std::size_t parameter_index) const
-  {
-    return *parameters_[parameter_index].state;
-  }
+  const FiniteElementState& parameter(std::size_t parameter_index) const { return *parameters_[parameter_index].state; }
 
   /**
    * @brief Get a vector of the finite element state parameter names

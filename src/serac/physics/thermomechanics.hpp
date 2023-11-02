@@ -155,6 +155,34 @@ public:
   }
 
   /**
+   * @brief Set the primal solution field (displacement, velocity, temperature) for the underlying thermomechanics
+   * solver
+   *
+   * @param state_name The name of the field to initialize ("displacement", or "velocity")
+   * @param state The finite element state vector containing the values for either the displacement or velocity fields
+   *
+   * It is expected that @a state has the same underlying finite element space and mesh as the selected primal solution
+   * field.
+   */
+  void setState(const std::string& state_name, const FiniteElementState& state) override
+  {
+    if (state_name == "displacement") {
+      const_cast<FiniteElementState&>(solid_.displacement()) = state;
+      return;
+    } else if (state_name == "velocity") {
+      const_cast<FiniteElementState&>(solid_.velocity()) = state;
+      return;
+    } else if (state_name == "temperature") {
+      const_cast<FiniteElementState&>(thermal_.temperature()) = state;
+      return;
+    }
+
+    SLIC_ERROR_ROOT(axom::fmt::format(
+        "setState for state named '{}' requested from thermomechanics module '{}', but it doesn't exist", state_name,
+        name_));
+  }
+
+  /**
    * @brief Get a vector of the finite element state solution variable names
    *
    * @return The solution variable names

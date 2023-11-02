@@ -579,6 +579,15 @@ public:
     return displacement_;
   }
 
+  /**
+   * @brief Set the primal solution field (displacement, velocity) for the underlying solid mechanics solver
+   *
+   * @param state_name The name of the field to initialize ("displacement", or "velocity")
+   * @param state The finite element state vector containing the values for either the displacement or velocity fields
+   *
+   * It is expected that @a state has the same underlying finite element space and mesh as the selected primal solution
+   * field.
+   */
   void setState(const std::string& state_name, const FiniteElementState& state) override
   {
     if (state_name == "displacement") {
@@ -589,8 +598,9 @@ public:
       return;
     }
 
-    SLIC_ERROR_ROOT(axom::fmt::format("setState for state named '{}' requested from solid mechanics module '{}', but it doesn't exist",
-                                      state_name, name_));
+    SLIC_ERROR_ROOT(axom::fmt::format(
+        "setState for state named '{}' requested from solid mechanics module '{}', but it doesn't exist", state_name,
+        name_));
   }
 
   /**
