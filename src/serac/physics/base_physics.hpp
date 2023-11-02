@@ -87,7 +87,7 @@ public:
   virtual int maxCycle() const;
 
   /**
-   * @brief Get a vector of the timestep sizes (i.e. /f$\Delta t\f$s) taken by the forward solver
+   * @brief Get a vector of the timestep sizes (i.e. \f$\Delta t\f$s) taken by the forward solver
    *
    * @return The vector of timestep sizes taken by the foward solver
    */
