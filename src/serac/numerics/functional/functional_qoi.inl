@@ -166,19 +166,19 @@ public:
    * and @a spatial_dim template parameter
    */
   template <int dim, int... args, typename lambda, typename qpt_data_type = Nothing>
-  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain,
+  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& mesh,
                          std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
   {
-    if (domain.GetNE() == 0) return;
+    if (mesh.GetNE() == 0) return;
 
-    SLIC_ERROR_ROOT_IF(dim != domain.Dimension(), "invalid mesh dimension for domain integral");
+    SLIC_ERROR_ROOT_IF(dim != mesh.Dimension(), "invalid mesh dimension for domain integral");
 
-    check_for_unsupported_elements(domain);
-    check_for_missing_nodal_gridfunc(domain);
+    check_for_unsupported_elements(mesh);
+    check_for_missing_nodal_gridfunc(mesh);
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
     integrals_.push_back(
-        MakeDomainIntegral<signature, Q, dim>(domain, integrand, qdata, std::vector<uint32_t>{args...}));
+        MakeDomainIntegral<signature, Q, dim>(EntireDomain(mesh), integrand, qdata, std::vector<uint32_t>{args...}));
   }
 
   /// @overload
@@ -210,15 +210,15 @@ public:
    * and @a spatial_dim template parameter
    */
   template <int dim, int... args, typename lambda, typename qpt_data_type = void>
-  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain)
+  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& mesh)
   {
-    auto num_bdr_elements = domain.GetNBE();
+    auto num_bdr_elements = mesh.GetNBE();
     if (num_bdr_elements == 0) return;
 
-    check_for_missing_nodal_gridfunc(domain);
+    check_for_missing_nodal_gridfunc(mesh);
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
-    integrals_.push_back(MakeBoundaryIntegral<signature, Q, dim>(domain, integrand, std::vector<uint32_t>{args...}));
+    integrals_.push_back(MakeBoundaryIntegral<signature, Q, dim>(EntireBoundary(mesh), integrand, std::vector<uint32_t>{args...}));
   }
 
   /// @overload

@@ -235,27 +235,6 @@ void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, 
  * @return Integral the initialized `Integral` object
  */
 template <typename s, int Q, int dim, typename lambda_type, typename qpt_data_type>
-Integral MakeDomainIntegral(mfem::Mesh& mesh, lambda_type&& qf, std::shared_ptr<QuadratureData<qpt_data_type> > qdata,
-                            std::vector<uint32_t> argument_indices)
-{
-  FunctionSignature<s> signature;
-
-  Integral integral(EntireDomain(mesh), argument_indices);
-
-  if constexpr (dim == 2) {
-    generate_kernels<mfem::Geometry::TRIANGLE, Q>(signature, integral, qf, qdata);
-    generate_kernels<mfem::Geometry::SQUARE, Q>(signature, integral, qf, qdata);
-  }
-
-  if constexpr (dim == 3) {
-    generate_kernels<mfem::Geometry::TETRAHEDRON, Q>(signature, integral, qf, qdata);
-    generate_kernels<mfem::Geometry::CUBE, Q>(signature, integral, qf, qdata);
-  }
-
-  return integral;
-}
-
-template <typename s, int Q, int dim, typename lambda_type, typename qpt_data_type>
 Integral MakeDomainIntegral(const Domain& domain, lambda_type&& qf, std::shared_ptr<QuadratureData<qpt_data_type> > qdata,
                             std::vector<uint32_t> argument_indices)
 {
@@ -290,7 +269,7 @@ void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral& integr
   const double*  jacobians        = gf.J.Read();
   const uint32_t num_elements     = uint32_t(gf.num_elements);
   const uint32_t qpts_per_element = num_quadrature_points(geom, Q);
-  const int * elements = &integral.domain_.get(geom)[0];
+  const int * elements = &gf.elements[0];
 
   std::shared_ptr<zero> dummy_derivatives;
   integral.evaluation_[geom] = boundary_integral::evaluation_kernel<NO_DIFFERENTIATION, Q, geom>(
@@ -331,26 +310,6 @@ void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral& integr
  *
  * @note this function is not meant to be called by users
  */
-template <typename s, int Q, int dim, typename lambda_type>
-Integral MakeBoundaryIntegral(mfem::Mesh& mesh, lambda_type&& qf, std::vector<uint32_t> argument_indices)
-{
-  FunctionSignature<s> signature;
-
-
-  Integral integral(EntireBoundary(mesh), argument_indices);
-
-  if constexpr (dim == 1) {
-    generate_bdr_kernels<mfem::Geometry::SEGMENT, Q>(signature, integral, qf);
-  }
-
-  if constexpr (dim == 2) {
-    generate_bdr_kernels<mfem::Geometry::TRIANGLE, Q>(signature, integral, qf);
-    generate_bdr_kernels<mfem::Geometry::SQUARE, Q>(signature, integral, qf);
-  }
-
-  return integral;
-}
-
 template <typename s, int Q, int dim, typename lambda_type>
 Integral MakeBoundaryIntegral(const Domain& domain, lambda_type&& qf, std::vector<uint32_t> argument_indices)
 {

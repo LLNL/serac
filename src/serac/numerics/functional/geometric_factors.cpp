@@ -78,7 +78,6 @@ GeometricFactors::GeometricFactors(const Domain & d, int q, mfem::Geometry::Type
   int geometry_dim  = dimension_of(g);
   int qpts_per_elem = num_quadrature_points(g, q);
 
-  std::vector< int > elements;
   if (g == mfem::Geometry::TRIANGLE) elements = d.tris_;
   if (g == mfem::Geometry::SQUARE) elements = d.quads_;
   if (g == mfem::Geometry::TETRAHEDRON) elements = d.tets_;
@@ -141,170 +140,6 @@ GeometricFactors::GeometricFactors(const Domain & d, int q, mfem::Geometry::Type
   std::cout << "should never be reached " << std::endl;
 }
 
-GeometricFactors::GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry::Type g)
-{
-  auto* nodes = mesh->GetNodes();
-  auto* fes   = nodes->FESpace();
-
-  auto         restriction = serac::ElementRestriction(fes, g);
-  mfem::Vector X_e(int(restriction.ESize()));
-  restriction.Gather(*nodes, X_e);
-
-  // assumes all elements are the same order
-  int p = fes->GetElementOrder(0);
-
-  int spatial_dim   = mesh->SpaceDimension();
-  int geometry_dim  = dimension_of(g);
-  int qpts_per_elem = num_quadrature_points(g, q);
-
-  // NB: we only want the number of elements with the specified
-  // geometry, which is not the same as mesh->GetNE() in general
-  num_elements = std::size_t(restriction.dof_info.shape()[0]);
-  std::vector< int > elements(num_elements);
-  for (uint32_t i = 0; i < num_elements; i++) {
-    elements[i] = int(i);
-  }
-  num_elements = elements.size();
-
-  X = mfem::Vector(int(num_elements) * qpts_per_elem * spatial_dim);
-  J = mfem::Vector(int(num_elements) * qpts_per_elem * spatial_dim * geometry_dim);
-
-#define DISPATCH_KERNEL(GEOM, P, Q)                                                                 \
-  if (g == mfem::Geometry::GEOM && p == P && q == Q) {                                              \
-    compute_geometric_factors<Q, mfem::Geometry::GEOM, H1<P, dimension_of(mfem::Geometry::GEOM)> >( \
-        X, J, X_e, elements);                                                                       \
-    return;                                                                                         \
-  }
-
-  DISPATCH_KERNEL(TRIANGLE, 1, 1);
-  DISPATCH_KERNEL(TRIANGLE, 1, 2);
-  DISPATCH_KERNEL(TRIANGLE, 1, 3);
-  DISPATCH_KERNEL(TRIANGLE, 1, 4);
-
-  DISPATCH_KERNEL(SQUARE, 1, 1);
-  DISPATCH_KERNEL(SQUARE, 1, 2);
-  DISPATCH_KERNEL(SQUARE, 1, 3);
-  DISPATCH_KERNEL(SQUARE, 1, 4);
-
-  DISPATCH_KERNEL(SQUARE, 2, 1);
-  DISPATCH_KERNEL(SQUARE, 2, 2);
-  DISPATCH_KERNEL(SQUARE, 2, 3);
-  DISPATCH_KERNEL(SQUARE, 2, 4);
-
-  DISPATCH_KERNEL(SQUARE, 3, 1);
-  DISPATCH_KERNEL(SQUARE, 3, 2);
-  DISPATCH_KERNEL(SQUARE, 3, 3);
-  DISPATCH_KERNEL(SQUARE, 3, 4);
-
-  DISPATCH_KERNEL(TETRAHEDRON, 1, 1);
-  DISPATCH_KERNEL(TETRAHEDRON, 1, 2);
-  DISPATCH_KERNEL(TETRAHEDRON, 1, 3);
-  DISPATCH_KERNEL(TETRAHEDRON, 1, 4);
-
-  DISPATCH_KERNEL(CUBE, 1, 1);
-  DISPATCH_KERNEL(CUBE, 1, 2);
-  DISPATCH_KERNEL(CUBE, 1, 3);
-  DISPATCH_KERNEL(CUBE, 1, 4);
-
-  DISPATCH_KERNEL(CUBE, 2, 1);
-  DISPATCH_KERNEL(CUBE, 2, 2);
-  DISPATCH_KERNEL(CUBE, 2, 3);
-  DISPATCH_KERNEL(CUBE, 2, 4);
-
-  DISPATCH_KERNEL(CUBE, 3, 1);
-  DISPATCH_KERNEL(CUBE, 3, 2);
-  DISPATCH_KERNEL(CUBE, 3, 3);
-  DISPATCH_KERNEL(CUBE, 3, 4);
-
-#undef DISPATCH_KERNEL
-
-  std::cout << "should never be reached " << std::endl;
-}
-
-GeometricFactors::GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry::Type g, FaceType type)
-{
-  auto* nodes = mesh->GetNodes();
-  auto* fes   = nodes->FESpace();
-
-  auto         restriction = serac::ElementRestriction(fes, g, type);
-  mfem::Vector X_e(int(restriction.ESize()));
-  restriction.Gather(*nodes, X_e);
-
-  // assumes all elements are the same order
-  int p = fes->GetElementOrder(0);
-
-  int spatial_dim   = mesh->SpaceDimension();
-  int geometry_dim  = dimension_of(g);
-  int qpts_per_elem = num_quadrature_points(g, q);
-
-  // NB: we only want the number of elements with the specified
-  // geometry, which is not the same as mesh->GetNE() in general
-  num_elements = std::size_t(restriction.dof_info.shape()[0]);
-  std::vector< int > elements(num_elements);
-  for (uint32_t i = 0; i < num_elements; i++) {
-    elements[i] = int(i);
-  }
-
-  X = mfem::Vector(int(num_elements) * qpts_per_elem * spatial_dim);
-  J = mfem::Vector(int(num_elements) * qpts_per_elem * spatial_dim * geometry_dim);
-
-#define DISPATCH_KERNEL(GEOM, P, Q)                                                                     \
-  if (g == mfem::Geometry::GEOM && p == P && q == Q) {                                                  \
-    compute_geometric_factors<Q, mfem::Geometry::GEOM, H1<P, dimension_of(mfem::Geometry::GEOM) + 1> >( \
-        X, J, X_e, elements);                                                                           \
-    return;                                                                                             \
-  }
-
-  DISPATCH_KERNEL(SEGMENT, 1, 1);
-  DISPATCH_KERNEL(SEGMENT, 1, 2);
-  DISPATCH_KERNEL(SEGMENT, 1, 3);
-  DISPATCH_KERNEL(SEGMENT, 1, 4);
-
-  DISPATCH_KERNEL(SEGMENT, 2, 1);
-  DISPATCH_KERNEL(SEGMENT, 2, 2);
-  DISPATCH_KERNEL(SEGMENT, 2, 3);
-  DISPATCH_KERNEL(SEGMENT, 2, 4);
-
-  DISPATCH_KERNEL(SEGMENT, 3, 1);
-  DISPATCH_KERNEL(SEGMENT, 3, 2);
-  DISPATCH_KERNEL(SEGMENT, 3, 3);
-  DISPATCH_KERNEL(SEGMENT, 3, 4);
-
-  DISPATCH_KERNEL(TRIANGLE, 1, 1);
-  DISPATCH_KERNEL(TRIANGLE, 1, 2);
-  DISPATCH_KERNEL(TRIANGLE, 1, 3);
-  DISPATCH_KERNEL(TRIANGLE, 1, 4);
-
-  DISPATCH_KERNEL(TRIANGLE, 2, 1);
-  DISPATCH_KERNEL(TRIANGLE, 2, 2);
-  DISPATCH_KERNEL(TRIANGLE, 2, 3);
-  DISPATCH_KERNEL(TRIANGLE, 2, 4);
-
-  DISPATCH_KERNEL(TRIANGLE, 3, 1);
-  DISPATCH_KERNEL(TRIANGLE, 3, 2);
-  DISPATCH_KERNEL(TRIANGLE, 3, 3);
-  DISPATCH_KERNEL(TRIANGLE, 3, 4);
-
-  DISPATCH_KERNEL(SQUARE, 1, 1);
-  DISPATCH_KERNEL(SQUARE, 1, 2);
-  DISPATCH_KERNEL(SQUARE, 1, 3);
-  DISPATCH_KERNEL(SQUARE, 1, 4);
-
-  DISPATCH_KERNEL(SQUARE, 2, 1);
-  DISPATCH_KERNEL(SQUARE, 2, 2);
-  DISPATCH_KERNEL(SQUARE, 2, 3);
-  DISPATCH_KERNEL(SQUARE, 2, 4);
-
-  DISPATCH_KERNEL(SQUARE, 3, 1);
-  DISPATCH_KERNEL(SQUARE, 3, 2);
-  DISPATCH_KERNEL(SQUARE, 3, 3);
-  DISPATCH_KERNEL(SQUARE, 3, 4);
-
-#undef DISPATCH_KERNEL
-
-  std::cout << "should never be reached" << std::endl;
-}
-
 GeometricFactors::GeometricFactors(const Domain & d, int q, mfem::Geometry::Type g, FaceType type)
 {
   auto* nodes = d.mesh_.GetNodes();
@@ -323,9 +158,9 @@ GeometricFactors::GeometricFactors(const Domain & d, int q, mfem::Geometry::Type
 
   // NB: we only want the number of elements with the specified
   // geometry, which is not the same as mesh->GetNE() in general
-  const std::vector< int > * elements = &d.get(g);
+  elements = d.get(g);
 
-  num_elements = std::size_t(elements->size());
+  num_elements = std::size_t(elements.size());
 
   X = mfem::Vector(int(num_elements) * qpts_per_elem * spatial_dim);
   J = mfem::Vector(int(num_elements) * qpts_per_elem * spatial_dim * geometry_dim);
@@ -333,7 +168,7 @@ GeometricFactors::GeometricFactors(const Domain & d, int q, mfem::Geometry::Type
 #define DISPATCH_KERNEL(GEOM, P, Q)                                                                     \
   if (g == mfem::Geometry::GEOM && p == P && q == Q) {                                                  \
     compute_geometric_factors<Q, mfem::Geometry::GEOM, H1<P, dimension_of(mfem::Geometry::GEOM) + 1> >( \
-        X, J, X_e, *elements);                                                                          \
+        X, J, X_e, elements);                                                                          \
     return;                                                                                             \
   }
 
