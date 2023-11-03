@@ -287,12 +287,13 @@ void BasePhysics::saveSummary(axom::sidre::DataStore& datastore, const double t)
   }
 }
 
-FiniteElementState BasePhysics::loadCheckpointedState(const std::string& state_name, int /*cycle*/) const
+FiniteElementState BasePhysics::loadCheckpointedState(const std::string& /*state_name*/, int /*cycle*/) const
 {
-  return state(state_name);
+  SLIC_ERROR_ROOT(axom::fmt::format("loadCheckpointedState not implemented for physics module {}.", name_));
+  return *states_[0];
 }
 
-double BasePhysics::loadCheckpointedTimestep(int /*cycle*/) const { return 0.0; }
+double BasePhysics::loadCheckpointedTimestep(int cycle) const { return timesteps_[cycle]; }
 
 namespace detail {
 std::string addPrefix(const std::string& prefix, const std::string& target)

@@ -807,7 +807,7 @@ public:
       return previous_state;
     }
 
-    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requested from solid mechanics module '{}', but it doesn't exist",
+    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requested from heat transfer module '{}', but it doesn't exist",
                                       state_name, name_));
 
     return temperature_;

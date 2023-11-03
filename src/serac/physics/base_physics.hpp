@@ -183,7 +183,15 @@ public:
    * @param parameter_index The index of the Finite Element State parameter to retrieve
    * @return The indexed parameter Finite Element State
    */
-  const FiniteElementState& parameter(std::size_t parameter_index) const { return *parameters_[parameter_index].state; }
+  const FiniteElementState& parameter(std::size_t parameter_index) const
+  {
+    SLIC_ERROR_ROOT_IF(
+        parameter_index >= parameters_.size(),
+        axom::fmt::format("Parameter index {} requested, but only {} parameters exist in physics module {}.",
+                          parameter_index, parameters_.size(), name_));
+
+    return *parameters_[parameter_index].state;
+  }
 
   /**
    * @brief Get a vector of the finite element state parameter names

@@ -1174,11 +1174,13 @@ public:
       residual_->update_qdata = false;
     }
 
-    dt_history_.push_back(dt);
     cycle_ += 1;
 
-    // SLIC_ERROR_ROOT_IF(dt_history_.size() != static_cast<size_t>(cycle_),
-    //                   "Timestep history count does not match the current cycle count.");
+    if (cycle_ > max_cycle_) {
+      timesteps_.push_back(dt);
+      max_cycle_ = cycle_;
+      max_time_  = time_;
+    }
   }
 
   /**
@@ -1316,16 +1318,6 @@ public:
                                       state_name, name_));
 
     return displacement_;
-  }
-
-  /**
-   * @brief Get a timestep increment which has been previously checkpointed at the give cycle
-   * @param cycle The previous 'timestep' number where the timestep increment is requested
-   * @return The timestep increment
-   */
-  double loadCheckpointedTimestep(int cycle) const override
-  {
-    return static_cast<size_t>(cycle) < dt_history_.size() ? dt_history_[static_cast<size_t>(cycle)] : 0.0;
   }
 
   /**
@@ -1492,9 +1484,6 @@ protected:
 
   /// coefficient used to calculate predicted velocity: dudt_p := dudt + c1 * d2u_dt2
   double c1_;
-
-  /// history of timesteps taken in the forward pass
-  std::vector<double> dt_history_;
 
   /// @brief A flag denoting whether to compute geometric nonlinearities in the residual
   GeometricNonlinearities geom_nonlin_;
