@@ -295,10 +295,11 @@ FiniteElementState BasePhysics::loadCheckpointedState(const std::string& /*state
 
 double BasePhysics::loadCheckpointedTimestep(int cycle) const
 {
+  SLIC_ERROR_ROOT_IF(cycle < 0, axom::fmt::format("Negative cycle number requested for physics module {}.", name_));
   SLIC_ERROR_ROOT_IF(cycle > max_cycle_,
                      axom::fmt::format("Timestep for cycle {} requested, but physics module has only reached cycle {}.",
                                        cycle, max_cycle_));
-  return timesteps_[cycle];
+  return timesteps_[static_cast<size_t>(cycle)];
 }
 
 namespace detail {
