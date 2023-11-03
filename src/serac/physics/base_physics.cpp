@@ -293,7 +293,13 @@ FiniteElementState BasePhysics::loadCheckpointedState(const std::string& /*state
   return *states_[0];
 }
 
-double BasePhysics::loadCheckpointedTimestep(int cycle) const { return timesteps_[cycle]; }
+double BasePhysics::loadCheckpointedTimestep(int cycle) const
+{
+  SLIC_ERROR_ROOT_IF(cycle > max_cycle_,
+                     axom::fmt::format("Timestep for cycle {} requested, but physics module has only reached cycle {}.",
+                                       cycle, max_cycle_));
+  return timesteps_[cycle];
+}
 
 namespace detail {
 std::string addPrefix(const std::string& prefix, const std::string& target)
