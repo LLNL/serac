@@ -46,17 +46,10 @@ public:
    * @brief Empty constructor
    * @param[in] physics_name Name of the physics module instance
    * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
+   * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param[in] time The simulation time to initialize the physics module to
    */
-  BasePhysics(std::string physics_name, std::string mesh_tag);
-
-  /**
-   * @brief Constructor that creates n entries in states_ of order p
-   *
-   * @param[in] p Order of the solver
-   * @param[in] physics_name Name of the physics module instance
-   * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
-   */
-  BasePhysics(int p, std::string physics_name, std::string mesh_tag);
+  BasePhysics(std::string physics_name, std::string mesh_tag, int cycle = 0, double time = 0.0);
 
   /**
    * @brief Construct a new Base Physics object (copy constructor)
@@ -80,6 +73,41 @@ public:
   virtual int cycle() const;
 
   /**
+   * @brief Get the maximum time reached by the forward solver
+   *
+   * @return The maximum time reached by the forward solver
+   */
+  virtual double maxTime() const;
+
+  /**
+   * @brief Get the initial time used by the forward solver
+   *
+   * @return The initial time used by the forward solver
+   */
+  virtual double minTime() const;
+
+  /**
+   * @brief The maximum cycle (timestep iteration number) reached by the forward solver
+   *
+   * @return The maximum cycle reached by the forward solver
+   */
+  virtual int maxCycle() const;
+
+  /**
+   * @brief Get the initial cycle (timestep iteration number) used by the forward solver
+   *
+   * @return The initial cycle used by the forward solver
+   */
+  virtual int minCycle() const;
+
+  /**
+   * @brief Get a vector of the timestep sizes (i.e. \f$\Delta t\f$s) taken by the forward solver
+   *
+   * @return The vector of timestep sizes taken by the foward solver
+   */
+  virtual std::vector<double> timesteps() const;
+
+  /**
    * @brief Complete the setup and allocate the necessary data structures
    *
    * This finializes the underlying data structures in a solver and
@@ -94,6 +122,11 @@ public:
    * @return The named primal Finite Element State
    */
   virtual const FiniteElementState& state(const std::string& state_name) const = 0;
+
+  /**
+   * @brief Set the primal solution field values of the underlying physics solver
+   */
+  virtual void setState(const std::string&, const FiniteElementState&) = 0;
 
   /**
    * @brief Get a vector of the finite element state primal solution names
@@ -142,6 +175,22 @@ public:
                                       parameter_name, name_));
 
     return *states_[0];
+  }
+
+  /**
+   * @brief Accessor for getting indexed finite element state parameter fields from the physics modules
+   *
+   * @param parameter_index The index of the Finite Element State parameter to retrieve
+   * @return The indexed parameter Finite Element State
+   */
+  const FiniteElementState& parameter(std::size_t parameter_index) const
+  {
+    SLIC_ERROR_ROOT_IF(
+        parameter_index >= parameters_.size(),
+        axom::fmt::format("Parameter index {} requested, but only {} parameters exist in physics module {}.",
+                          parameter_index, parameters_.size(), name_));
+
+    return *parameters_[parameter_index].state;
   }
 
   /**
@@ -234,21 +283,20 @@ public:
   virtual void advanceTimestep(double dt) = 0;
 
   /**
-   * @brief Solve the adjoint problem
-   * @pre It is expected that the forward analysis is complete and the current states are valid
-   * @note If the essential boundary state for the adjoint is not specified, homogeneous essential boundary conditions
-   * are applied
-   *
-   * @return The computed adjoint finite element states
+   * @brief Set the loads for the adjoint reverse timestep solve
    */
-  virtual const std::unordered_map<std::string, const serac::FiniteElementState&> reverseAdjointTimestep(
-      std::unordered_map<std::string, const serac::FiniteElementDual&> /* adjoint_loads */,
-      std::unordered_map<std::string, const serac::FiniteElementState&> /* adjoint_with_essential_boundary */ = {})
+  virtual void setAdjointLoad(std::unordered_map<std::string, const serac::FiniteElementDual&>)
   {
     SLIC_ERROR_ROOT(axom::fmt::format("Adjoint analysis not defined for physics module {}", name_));
+  }
 
-    // Return a dummy state value to quiet the compiler. This will never get used.
-    return {};
+  /**
+   * @brief Solve the adjoint reverse timestep problem
+   * @pre It is expected that the forward analysis is complete and the current states are valid
+   */
+  virtual void reverseAdjointTimestep()
+  {
+    SLIC_ERROR_ROOT(axom::fmt::format("Adjoint analysis not defined for physics module {}", name_));
   }
 
   /**
@@ -400,9 +448,34 @@ protected:
   double time_;
 
   /**
+   * @brief The maximum time reached for the forward solver
+   */
+  double max_time_;
+
+  /**
+   * @brief The time the forward solver was initialized to
+   */
+  double min_time_;
+
+  /**
+   * @brief A vector of the timestep sizes (i.e. \f$\Delta t\f$) taken by the forward solver
+   */
+  std::vector<double> timesteps_;
+
+  /**
    * @brief Current cycle (forward pass time iteration count)
    */
   int cycle_;
+
+  /**
+   * @brief The maximum cycle (forward pass iteration count) reached by the forward solver
+   */
+  int max_cycle_;
+
+  /**
+   * @brief The cycle the forward solver was initialized to
+   */
+  int min_cycle_;
 
   /**
    * @brief The value of time at which the ODE solver wants to evaluate the residual
@@ -418,11 +491,6 @@ protected:
    * @brief MPI size
    */
   int mpi_size_;
-
-  /**
-   * @brief Order of basis functions
-   */
-  int order_;
 
   /**
    * @brief DataCollection pointer for optional paraview output

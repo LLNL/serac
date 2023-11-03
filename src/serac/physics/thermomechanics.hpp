@@ -43,17 +43,20 @@ public:
    * @param geom_nonlin Flag to include geometric nonlinearities
    * @param physics_name A name for the physics module instance
    * @param mesh_tag The tag for the mesh in the StateManager to construct the physics module on
+   * @param cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param time The simulation time to initialize the physics module to
    */
   Thermomechanics(const NonlinearSolverOptions thermal_nonlin_opts, const LinearSolverOptions thermal_lin_opts,
                   TimesteppingOptions thermal_timestepping, const NonlinearSolverOptions solid_nonlin_opts,
                   const LinearSolverOptions solid_lin_opts, TimesteppingOptions solid_timestepping,
-                  GeometricNonlinearities geom_nonlin, const std::string& physics_name, std::string mesh_tag)
+                  GeometricNonlinearities geom_nonlin, const std::string& physics_name, std::string mesh_tag,
+                  int cycle = 0, double time = 0.0)
       : Thermomechanics(
             std::make_unique<EquationSolver>(thermal_nonlin_opts, thermal_lin_opts,
                                              StateManager::mesh(mesh_tag).GetComm()),
             thermal_timestepping,
             std::make_unique<EquationSolver>(solid_nonlin_opts, solid_lin_opts, StateManager::mesh(mesh_tag).GetComm()),
-            solid_timestepping, geom_nonlin, physics_name, mesh_tag)
+            solid_timestepping, geom_nonlin, physics_name, mesh_tag, cycle, time)
   {
   }
 
@@ -67,14 +70,18 @@ public:
    * @param geom_nonlin Flag to include geometric nonlinearities
    * @param physics_name A name for the physics module instance
    * @param mesh_tag The tag for the mesh in the StateManager to construct the physics module on
+   * @param cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param time The simulation time to initialize the physics module to
    */
   Thermomechanics(std::unique_ptr<EquationSolver> thermal_solver, TimesteppingOptions thermal_timestepping,
                   std::unique_ptr<EquationSolver> solid_solver, TimesteppingOptions solid_timestepping,
-                  GeometricNonlinearities geom_nonlin, const std::string& physics_name, std::string mesh_tag)
-      : BasePhysics(order, physics_name, mesh_tag),
-        thermal_(std::move(thermal_solver), thermal_timestepping, physics_name + "thermal", mesh_tag, {"displacement"}),
+                  GeometricNonlinearities geom_nonlin, const std::string& physics_name, std::string mesh_tag,
+                  int cycle = 0, double time = 0.0)
+      : BasePhysics(physics_name, mesh_tag),
+        thermal_(std::move(thermal_solver), thermal_timestepping, physics_name + "thermal", mesh_tag, {"displacement"},
+                 cycle, time),
         solid_(std::move(solid_solver), solid_timestepping, geom_nonlin, physics_name + "mechanical", mesh_tag,
-               {"temperature"})
+               {"temperature"}, cycle, time)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
@@ -82,9 +89,6 @@ public:
     states_.push_back(&thermal_.temperature());
     states_.push_back(&solid_.velocity());
     states_.push_back(&solid_.displacement());
-
-    adjoints_.push_back(&thermal_.adjointTemperature());
-    adjoints_.push_back(&solid_.adjointDisplacement());
   }
 
   /**
@@ -94,13 +98,15 @@ public:
    * @param[in] solid_options The solid physics module input file option struct
    * @param[in] physics_name A name for the physics module instance
    * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
+   * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param[in] time The simulation time to initialize the physics module to
    */
   Thermomechanics(const HeatTransferInputOptions& thermal_options, const SolidMechanicsInputOptions& solid_options,
-                  const std::string& physics_name, std::string mesh_tag)
+                  const std::string& physics_name, std::string mesh_tag, int cycle = 0, double time = 0.0)
       : Thermomechanics(thermal_options.nonlin_solver_options, thermal_options.lin_solver_options,
                         thermal_options.timestepping_options, solid_options.nonlin_solver_options,
                         solid_options.lin_solver_options, solid_options.timestepping_options, solid_options.geom_nonlin,
-                        physics_name, mesh_tag)
+                        physics_name, mesh_tag, cycle, time)
   {
   }
 
@@ -110,9 +116,12 @@ public:
    * @param[in] options The thermal solid physics module input file option struct
    * @param[in] physics_name A name for the physics module instance
    * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
+   * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param[in] time The simulation time to initialize the physics module to
    */
-  Thermomechanics(const ThermomechanicsInputOptions& options, const std::string& physics_name, std::string mesh_tag)
-      : Thermomechanics(options.thermal_options, options.solid_options, physics_name, mesh_tag)
+  Thermomechanics(const ThermomechanicsInputOptions& options, const std::string& physics_name, std::string mesh_tag,
+                  int cycle = 0, double time = 0.0)
+      : Thermomechanics(options.thermal_options, options.solid_options, physics_name, mesh_tag, cycle, time)
   {
     if (options.coef_thermal_expansion) {
       std::unique_ptr<mfem::Coefficient> cte(options.coef_thermal_expansion->constructScalar());
@@ -155,6 +164,34 @@ public:
   }
 
   /**
+   * @brief Set the primal solution field (displacement, velocity, temperature) for the underlying thermomechanics
+   * solver
+   *
+   * @param state_name The name of the field to initialize ("displacement", or "velocity")
+   * @param state The finite element state vector containing the values for either the displacement or velocity fields
+   *
+   * It is expected that @a state has the same underlying finite element space and mesh as the selected primal solution
+   * field.
+   */
+  void setState(const std::string& state_name, const FiniteElementState& state) override
+  {
+    if (state_name == "displacement") {
+      const_cast<FiniteElementState&>(solid_.displacement()) = state;
+      return;
+    } else if (state_name == "velocity") {
+      const_cast<FiniteElementState&>(solid_.velocity()) = state;
+      return;
+    } else if (state_name == "temperature") {
+      const_cast<FiniteElementState&>(thermal_.temperature()) = state;
+      return;
+    }
+
+    SLIC_ERROR_ROOT(axom::fmt::format(
+        "setState for state named '{}' requested from thermomechanics module '{}', but it doesn't exist", state_name,
+        name_));
+  }
+
+  /**
    * @brief Get a vector of the finite element state solution variable names
    *
    * @return The solution variable names
@@ -173,9 +210,9 @@ public:
   const FiniteElementState& adjoint(const std::string& state_name) const override
   {
     if (state_name == "displacement") {
-      return solid_.adjointDisplacement();
+      return solid_.adjoint("displacement");
     } else if (state_name == "temperature") {
-      return thermal_.adjointTemperature();
+      return thermal_.adjoint("temperature");
     }
 
     SLIC_ERROR_ROOT(axom::fmt::format("Adjoint '{}' requested from solid mechanics module '{}', but it doesn't exist",
