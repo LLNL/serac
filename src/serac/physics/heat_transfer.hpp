@@ -534,6 +534,27 @@ public:
   }
 
   /**
+   * @brief Set the primal solution field (temperature) for the underlying heat transfer solver
+   *
+   * @param state_name The name of the field to initialize (must be "temperature")
+   * @param state The finite element state vector containing the values for either the temperature field
+   *
+   * It is expected that @a state has the same underlying finite element space and mesh as the selected primal solution
+   * field.
+   */
+  void setState(const std::string& state_name, const FiniteElementState& state) override
+  {
+    if (state_name == "temperature") {
+      temperature_ = state;
+      return;
+    }
+
+    SLIC_ERROR_ROOT(axom::fmt::format(
+        "setState for state named '{}' requested from heat transfer module '{}', but it doesn't exist", state_name,
+        name_));
+  }
+
+  /**
    * @brief Get a vector of the finite element state primal solution names
    *
    * @return The primal solution names
