@@ -271,19 +271,19 @@ spack:
       buildable: false
       externals:
       - spec: llvm+clang@10.0.0
-        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/python-3.10.10
+        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/python-3.10.12
     py-ats:
       version: [7.0.105]
       buildable: false
       externals:
       - spec: py-ats@7.0.105
-        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/python-3.10.10
+        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/python-3.10.12
     py-sphinx:
       version: [7.0.0]
       buildable: false
       externals:
       - spec: py-sphinx@7.0.0
-        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/python-3.10.10
+        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/python-3.10.12
     python:
       buildable: false
       externals:
