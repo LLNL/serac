@@ -15,6 +15,7 @@ set(functional_headers
     element_restriction.hpp
     geometry.hpp
     geometric_factors.hpp
+    domain.hpp
     domain_integral_kernels.hpp
     dual.hpp
     finite_element.hpp
