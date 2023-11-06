@@ -157,8 +157,8 @@ template <uint32_t differentiation_index, int Q, mfem::Geometry::Type geom, type
           typename lambda_type, typename derivative_type, int... indices>
 void evaluation_kernel_impl(FunctionSignature<test(trials...)>, const std::vector<const double*>& inputs,
                             double* outputs, const double* positions, const double* jacobians, lambda_type qf,
-                            [[maybe_unused]] derivative_type* qf_derivatives, const int * elements, uint32_t num_elements,
-                            std::integer_sequence<int, indices...>)
+                            [[maybe_unused]] derivative_type* qf_derivatives, const int* elements,
+                            uint32_t num_elements, std::integer_sequence<int, indices...>)
 {
   using test_element = finite_element<geom, test>;
 
@@ -181,7 +181,6 @@ void evaluation_kernel_impl(FunctionSignature<test(trials...)>, const std::vecto
 
   // for each element in the domain
   for (uint32_t e = 0; e < num_elements; e++) {
-
     // load the jacobians and positions for each quadrature point in this element
     auto J_e = J[e];
     auto x_e = x[e];
@@ -253,7 +252,8 @@ auto batch_apply_chain_rule(derivative_type* qf_derivatives, const tensor<T, n>&
  * @param[in] num_elements The number of elements in the mesh
  */
 template <int Q, mfem::Geometry::Type geom, typename test, typename trial, typename derivatives_type>
-void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* qf_derivatives, const int * elements, std::size_t num_elements)
+void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* qf_derivatives, const int* elements,
+                               std::size_t num_elements)
 {
   using test_element  = finite_element<geom, test>;
   using trial_element = finite_element<geom, trial>;
@@ -301,7 +301,7 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
  */
 template <mfem::Geometry::Type g, typename test, typename trial, int Q, typename derivatives_type>
 void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK, derivatives_type* qf_derivatives,
-                             const int * elements, std::size_t num_elements)
+                             const int* elements, std::size_t num_elements)
 {
   using test_element  = finite_element<g, test>;
   using trial_element = finite_element<g, trial>;
@@ -330,17 +330,17 @@ template <uint32_t wrt, int Q, mfem::Geometry::Type geom, typename signature, ty
           typename derivative_type>
 std::function<void(const std::vector<const double*>&, double*, bool)> evaluation_kernel(
     signature s, lambda_type qf, const double* positions, const double* jacobians,
-    std::shared_ptr<derivative_type> qf_derivatives, const int * elements, uint32_t num_elements)
+    std::shared_ptr<derivative_type> qf_derivatives, const int* elements, uint32_t num_elements)
 {
   return [=](const std::vector<const double*>& inputs, double* outputs, bool /* update state */) {
-    evaluation_kernel_impl<wrt, Q, geom>(s, inputs, outputs, positions, jacobians, qf, qf_derivatives.get(),
-                                         elements, num_elements, s.index_seq);
+    evaluation_kernel_impl<wrt, Q, geom>(s, inputs, outputs, positions, jacobians, qf, qf_derivatives.get(), elements,
+                                         num_elements, s.index_seq);
   };
 }
 
 template <int wrt, int Q, mfem::Geometry::Type geom, typename signature, typename derivative_type>
 std::function<void(const double*, double*)> jacobian_vector_product_kernel(
-    signature, std::shared_ptr<derivative_type> qf_derivatives, const int * elements, uint32_t num_elements)
+    signature, std::shared_ptr<derivative_type> qf_derivatives, const int* elements, uint32_t num_elements)
 {
   return [=](const double* du, double* dr) {
     using test_space  = typename signature::return_type;
@@ -351,7 +351,7 @@ std::function<void(const double*, double*)> jacobian_vector_product_kernel(
 
 template <int wrt, int Q, mfem::Geometry::Type geom, typename signature, typename derivative_type>
 std::function<void(ExecArrayView<double, 3, ExecutionSpace::CPU>)> element_gradient_kernel(
-    signature, std::shared_ptr<derivative_type> qf_derivatives, const int * elements, uint32_t num_elements)
+    signature, std::shared_ptr<derivative_type> qf_derivatives, const int* elements, uint32_t num_elements)
 {
   return [=](ExecArrayView<double, 3, ExecutionSpace::CPU> K_elem) {
     using test_space  = typename signature::return_type;

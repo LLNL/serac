@@ -15,7 +15,7 @@ namespace serac {
  */
 template <int Q, mfem::Geometry::Type geom, typename function_space>
 void compute_geometric_factors(mfem::Vector& positions_q, mfem::Vector& jacobians_q, const mfem::Vector& positions_e,
-                               const std::vector< int > & elements)
+                               const std::vector<int>& elements)
 {
   static constexpr TensorProductQuadratureRule<Q> rule{};
 
@@ -35,7 +35,6 @@ void compute_geometric_factors(mfem::Vector& positions_q, mfem::Vector& jacobian
 
   // for each element in the domain
   for (uint32_t e = 0; e < num_elements; e++) {
-
     // load the positions for the nodes in this element
     auto X_e = X[elements[e]];
 
@@ -57,13 +56,11 @@ void compute_geometric_factors(mfem::Vector& positions_q, mfem::Vector& jacobian
         }
       }
     }
-
   }
-
 }
 
-GeometricFactors::GeometricFactors(const Domain & d, int q, mfem::Geometry::Type g) {
-
+GeometricFactors::GeometricFactors(const Domain& d, int q, mfem::Geometry::Type g)
+{
   auto* nodes = d.mesh_.GetNodes();
   auto* fes   = nodes->FESpace();
 
@@ -88,11 +85,11 @@ GeometricFactors::GeometricFactors(const Domain & d, int q, mfem::Geometry::Type
   X = mfem::Vector(int(num_elements) * qpts_per_elem * spatial_dim);
   J = mfem::Vector(int(num_elements) * qpts_per_elem * spatial_dim * geometry_dim);
 
-#define DISPATCH_KERNEL(GEOM, P, Q)                                                                 \
-  if (g == mfem::Geometry::GEOM && p == P && q == Q) {                                              \
-    compute_geometric_factors<Q, mfem::Geometry::GEOM, H1<P, dimension_of(mfem::Geometry::GEOM)> >( \
-        X, J, X_e, elements);                                                                       \
-    return;                                                                                         \
+#define DISPATCH_KERNEL(GEOM, P, Q)                                                                           \
+  if (g == mfem::Geometry::GEOM && p == P && q == Q) {                                                        \
+    compute_geometric_factors<Q, mfem::Geometry::GEOM, H1<P, dimension_of(mfem::Geometry::GEOM)> >(X, J, X_e, \
+                                                                                                   elements); \
+    return;                                                                                                   \
   }
 
   DISPATCH_KERNEL(TRIANGLE, 1, 1);
@@ -140,7 +137,7 @@ GeometricFactors::GeometricFactors(const Domain & d, int q, mfem::Geometry::Type
   std::cout << "should never be reached " << std::endl;
 }
 
-GeometricFactors::GeometricFactors(const Domain & d, int q, mfem::Geometry::Type g, FaceType type)
+GeometricFactors::GeometricFactors(const Domain& d, int q, mfem::Geometry::Type g, FaceType type)
 {
   auto* nodes = d.mesh_.GetNodes();
   auto* fes   = nodes->FESpace();
@@ -165,11 +162,11 @@ GeometricFactors::GeometricFactors(const Domain & d, int q, mfem::Geometry::Type
   X = mfem::Vector(int(num_elements) * qpts_per_elem * spatial_dim);
   J = mfem::Vector(int(num_elements) * qpts_per_elem * spatial_dim * geometry_dim);
 
-#define DISPATCH_KERNEL(GEOM, P, Q)                                                                     \
-  if (g == mfem::Geometry::GEOM && p == P && q == Q) {                                                  \
-    compute_geometric_factors<Q, mfem::Geometry::GEOM, H1<P, dimension_of(mfem::Geometry::GEOM) + 1> >( \
-        X, J, X_e, elements);                                                                          \
-    return;                                                                                             \
+#define DISPATCH_KERNEL(GEOM, P, Q)                                                                               \
+  if (g == mfem::Geometry::GEOM && p == P && q == Q) {                                                            \
+    compute_geometric_factors<Q, mfem::Geometry::GEOM, H1<P, dimension_of(mfem::Geometry::GEOM) + 1> >(X, J, X_e, \
+                                                                                                       elements); \
+    return;                                                                                                       \
   }
 
   DISPATCH_KERNEL(SEGMENT, 1, 1);

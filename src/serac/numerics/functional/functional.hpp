@@ -313,8 +313,6 @@ public:
         MakeDomainIntegral<signature, Q, dim>(domain, integrand, qdata, std::vector<uint32_t>{args...}));
   }
 
-
-
   /**
    * @brief Adds a boundary integral term to the weak formulation of the PDE
    * @tparam dim The dimension of the boundary element (1 for line, 2 for quad, etc)
@@ -333,11 +331,12 @@ public:
     check_for_missing_nodal_gridfunc(domain);
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
-    integrals_.push_back(MakeBoundaryIntegral<signature, Q, dim>(EntireBoundary(domain), integrand, std::vector<uint32_t>{args...}));
+    integrals_.push_back(
+        MakeBoundaryIntegral<signature, Q, dim>(EntireBoundary(domain), integrand, std::vector<uint32_t>{args...}));
   }
 
   template <int dim, int... args, typename lambda>
-  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, const Domain & domain)
+  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, const Domain& domain)
   {
     auto num_bdr_elements = domain.mesh_.GetNBE();
     if (num_bdr_elements == 0) return;

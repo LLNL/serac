@@ -24,9 +24,10 @@
 using namespace serac;
 using namespace serac::profiling;
 
-template < int dim >
-tensor<double,dim> average(std::vector< tensor<double,dim> > & positions) {
-  tensor<double,dim> total{};
+template <int dim>
+tensor<double, dim> average(std::vector<tensor<double, dim>>& positions)
+{
+  tensor<double, dim> total{};
   for (auto x : positions) {
     total += x;
   }
@@ -58,19 +59,19 @@ void whole_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
   Functional<test_space(trial_space)> residual(&test_fespace, {&trial_fespace});
   Functional<test_space(trial_space)> residual_comparison(&test_fespace, {&trial_fespace});
 
-  auto everything = [](std::vector<tensor<double,dim>>, int /* attr */){ return true; };
-  auto on_left = [](std::vector<tensor<double,dim>> X, int /* attr */){ return average(X)[0] < 0.5; };
-  auto on_right = [](std::vector<tensor<double,dim>> X, int /* attr */){ return average(X)[0] >= 0.5; };
-  auto on_bottom = [](std::vector<tensor<double,dim>> X, int /* attr */){ return average(X)[1] < 0.5; };
-  auto on_top = [](std::vector<tensor<double,dim>> X, int /* attr */){ return average(X)[1] >= 0.5; };
+  auto everything = [](std::vector<tensor<double, dim>>, int /* attr */) { return true; };
+  auto on_left    = [](std::vector<tensor<double, dim>> X, int /* attr */) { return average(X)[0] < 0.5; };
+  auto on_right   = [](std::vector<tensor<double, dim>> X, int /* attr */) { return average(X)[0] >= 0.5; };
+  auto on_bottom  = [](std::vector<tensor<double, dim>> X, int /* attr */) { return average(X)[1] < 0.5; };
+  auto on_top     = [](std::vector<tensor<double, dim>> X, int /* attr */) { return average(X)[1] >= 0.5; };
 
   Domain whole_mesh = Domain::ofElements(*mesh, everything);
-  Domain left = Domain::ofElements(*mesh, on_left);
-  Domain right = Domain::ofElements(*mesh, on_right);
+  Domain left       = Domain::ofElements(*mesh, on_left);
+  Domain right      = Domain::ofElements(*mesh, on_right);
 
-  Domain whole_boundary = Domain::ofBoundaryElements(*mesh, everything);
+  Domain whole_boundary  = Domain::ofBoundaryElements(*mesh, everything);
   Domain bottom_boundary = Domain::ofBoundaryElements(*mesh, on_bottom);
-  Domain top_boundary = Domain::ofBoundaryElements(*mesh, on_top);
+  Domain top_boundary    = Domain::ofBoundaryElements(*mesh, on_top);
 
   auto d00 = 1.0;
   auto d01 = 1.0 * make_tensor<dim>([](int i) { return i; });
@@ -84,7 +85,8 @@ void whole_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
         auto source     = d00 * u + dot(d01, du_dx) - 0.0 * (100 * x[0] * x[1]);
         auto flux       = d10 * u + dot(d11, du_dx);
         return serac::tuple{source, flux};
-      }, left);
+      },
+      left);
 
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
@@ -93,7 +95,8 @@ void whole_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
         auto source     = d00 * u + dot(d01, du_dx) - 0.0 * (100 * x[0] * x[1]);
         auto flux       = d10 * u + dot(d11, du_dx);
         return serac::tuple{source, flux};
-      }, right);
+      },
+      right);
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
@@ -101,7 +104,8 @@ void whole_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
         auto [X, dX_dxi] = position;
         auto [u, du_dxi] = temperature;
         return X[0] + X[1] - cos(u);
-      }, bottom_boundary);
+      },
+      bottom_boundary);
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
@@ -109,7 +113,8 @@ void whole_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
         auto [X, dX_dxi] = position;
         auto [u, du_dxi] = temperature;
         return X[0] + X[1] - cos(u);
-      }, top_boundary);
+      },
+      top_boundary);
 
   check_gradient(residual, U);
 
@@ -124,7 +129,8 @@ void whole_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
         auto source     = d00 * u + dot(d01, du_dx) - 0.0 * (100 * x[0] * x[1]);
         auto flux       = d10 * u + dot(d11, du_dx);
         return serac::tuple{source, flux};
-      }, whole_mesh);
+      },
+      whole_mesh);
 
   residual_comparison.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
@@ -132,12 +138,12 @@ void whole_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
         auto [X, dX_dxi] = position;
         auto [u, du_dxi] = temperature;
         return X[0] + X[1] - cos(u);
-      }, whole_boundary);
+      },
+      whole_boundary);
 
   auto r1 = residual_comparison(U);
 
   EXPECT_LT(r0.DistanceTo(r1.GetData()), 1.0e-14);
-
 }
 
 template <int ptest, int ptrial>
@@ -156,14 +162,26 @@ void whole_mesh_comparison_test(std::string meshfile)
 
 TEST(basic, whole_mesh_comparison_tris) { whole_mesh_comparison_test<1, 1>("/data/meshes/patch2D_tris.mesh"); }
 TEST(basic, whole_mesh_comparison_quads) { whole_mesh_comparison_test<1, 1>("/data/meshes/patch2D_quads.mesh"); }
-TEST(basic, whole_mesh_comparison_tris_and_quads) { whole_mesh_comparison_test<1, 1>("/data/meshes/patch2D_tris_and_quads.mesh"); }
+TEST(basic, whole_mesh_comparison_tris_and_quads)
+{
+  whole_mesh_comparison_test<1, 1>("/data/meshes/patch2D_tris_and_quads.mesh");
+}
 
 TEST(basic, whole_mesh_comparison_tets) { whole_mesh_comparison_test<1, 1>("/data/meshes/patch3D_tets.mesh"); }
 TEST(basic, whole_mesh_comparison_hexes) { whole_mesh_comparison_test<1, 1>("/data/meshes/patch3D_hexes.mesh"); }
-TEST(basic, whole_mesh_comparison_tets_and_hexes) { whole_mesh_comparison_test<1, 1>("/data/meshes/patch3D_tets_and_hexes.mesh"); }
+TEST(basic, whole_mesh_comparison_tets_and_hexes)
+{
+  whole_mesh_comparison_test<1, 1>("/data/meshes/patch3D_tets_and_hexes.mesh");
+}
 
-TEST(mixed, whole_mesh_comparison_tris_and_quads) { whole_mesh_comparison_test<2, 1>("/data/meshes/patch2D_tris_and_quads.mesh"); }
-TEST(mixed, whole_mesh_comparison_tets_and_hexes) { whole_mesh_comparison_test<2, 1>("/data/meshes/patch3D_tets_and_hexes.mesh"); }
+TEST(mixed, whole_mesh_comparison_tris_and_quads)
+{
+  whole_mesh_comparison_test<2, 1>("/data/meshes/patch2D_tris_and_quads.mesh");
+}
+TEST(mixed, whole_mesh_comparison_tets_and_hexes)
+{
+  whole_mesh_comparison_test<2, 1>("/data/meshes/patch3D_tets_and_hexes.mesh");
+}
 
 template <int ptest, int ptrial, int dim>
 void partial_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
@@ -190,10 +208,10 @@ void partial_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
   Functional<test_space(trial_space)> residual(&test_fespace, {&trial_fespace});
   Functional<test_space(trial_space)> residual_comparison(&test_fespace, {&trial_fespace});
 
-  auto on_left = [](std::vector<tensor<double,dim>> X, int /* attr */){ return average(X)[0] < 4.0; };
-  Domain left = Domain::ofElements(*mesh, on_left);
+  auto   on_left = [](std::vector<tensor<double, dim>> X, int /* attr */) { return average(X)[0] < 4.0; };
+  Domain left    = Domain::ofElements(*mesh, on_left);
 
-  auto on_top = [](std::vector<tensor<double,dim>> X, int /* attr */){ return average(X)[1] >= 0.99; };
+  auto   on_top       = [](std::vector<tensor<double, dim>> X, int /* attr */) { return average(X)[1] >= 0.99; };
   Domain top_boundary = Domain::ofBoundaryElements(*mesh, on_top);
 
   auto d00 = 1.0;
@@ -208,7 +226,8 @@ void partial_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
         auto source     = d00 * u + dot(d01, du_dx) - 0.0 * (100 * x[0] * x[1]);
         auto flux       = d10 * u + dot(d11, du_dx);
         return serac::tuple{source, flux};
-      }, left);
+      },
+      left);
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
@@ -216,7 +235,8 @@ void partial_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
         auto [X, dX_dxi] = position;
         auto [u, du_dxi] = temperature;
         return X[0] + X[1] - cos(u);
-      }, top_boundary);
+      },
+      top_boundary);
 
   check_gradient(residual, U);
 
@@ -228,25 +248,26 @@ void partial_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
       Dimension<dim>{}, DependsOn<0>{},
       [=](auto X, auto temperature) {
         auto [u, du_dX] = temperature;
-        bool mask = (X[0] < 4.0);
+        bool mask       = (X[0] < 4.0);
         auto source     = d00 * u + dot(d01, du_dX) - 0.0 * (100 * X[0] * X[1]);
         auto flux       = d10 * u + dot(d11, du_dX);
         return serac::tuple{source, flux} * mask;
-      }, *mesh);
+      },
+      *mesh);
 
   residual_comparison.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
       [=](auto position, auto temperature) {
         auto [X, dX_dxi] = position;
         auto [u, du_dxi] = temperature;
-        bool mask = (X[1] >= 0.99);
+        bool mask        = (X[1] >= 0.99);
         return (X[0] + X[1] - cos(u)) * mask;
-      }, *mesh);
+      },
+      *mesh);
 
   auto r1 = residual_comparison(U);
 
   EXPECT_LT(r0.DistanceTo(r1.GetData()), 1.0e-14);
-
 }
 
 template <int ptest, int ptrial>
@@ -269,11 +290,10 @@ TEST(basic, partial_mesh_comparison_quads) { partial_mesh_comparison_test<1, 1>(
 TEST(basic, partial_mesh_comparison_tets) { partial_mesh_comparison_test<1, 1>("/data/meshes/beam-tet.mesh"); }
 TEST(basic, partial_mesh_comparison_hexes) { partial_mesh_comparison_test<1, 1>("/data/meshes/beam-hex.mesh"); }
 
-
-TEST(qoi, partial_boundary) {
-
-  constexpr auto dim = 3;
-  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(SERAC_REPO_DIR"/data/meshes/beam-hex.mesh"), 1);
+TEST(qoi, partial_boundary)
+{
+  constexpr auto dim  = 3;
+  auto           mesh = mesh::refineAndDistribute(buildMeshFromFile(SERAC_REPO_DIR "/data/meshes/beam-hex.mesh"), 1);
 
   auto                        trial_fec = mfem::H1_FECollection(1, dim);
   mfem::ParFiniteElementSpace trial_fespace(mesh.get(), &trial_fec);
@@ -292,26 +312,21 @@ TEST(qoi, partial_boundary) {
   // Construct the new functional object using the known test and trial spaces
   Functional<test_space(trial_space)> qoi({&trial_fespace});
 
-  auto on_top = [](std::vector<tensor<double,3>> X, int /* attr */){ return average(X)[1] >= 0.99; };
+  auto   on_top       = [](std::vector<tensor<double, 3>> X, int /* attr */) { return average(X)[1] >= 0.99; };
   Domain top_boundary = Domain::ofBoundaryElements(*mesh, on_top);
 
   qoi.AddBoundaryIntegral(
-    Dimension<dim - 1>{}, 
-    DependsOn</*nothing*/>{},
-    [=](auto /*position*/) { return 1.0; }, 
-    top_boundary
-  );
+      Dimension<dim - 1>{}, DependsOn</*nothing*/>{}, [=](auto /*position*/) { return 1.0; }, top_boundary);
 
   auto area = qoi(U);
 
   EXPECT_NEAR(area, 8.0, 1.0e-14);
-
 }
 
-TEST(qoi, partial_domain) {
-
-  constexpr auto dim = 3;
-  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(SERAC_REPO_DIR"/data/meshes/beam-hex.mesh"), 1);
+TEST(qoi, partial_domain)
+{
+  constexpr auto dim  = 3;
+  auto           mesh = mesh::refineAndDistribute(buildMeshFromFile(SERAC_REPO_DIR "/data/meshes/beam-hex.mesh"), 1);
 
   auto                        trial_fec = mfem::H1_FECollection(1, dim);
   mfem::ParFiniteElementSpace trial_fespace(mesh.get(), &trial_fec);
@@ -330,20 +345,15 @@ TEST(qoi, partial_domain) {
   // Construct the new functional object using the known test and trial spaces
   Functional<test_space(trial_space)> qoi({&trial_fespace});
 
-  auto on_left = [](std::vector<tensor<double,dim>> X, int /* attr */){ return average(X)[0] < 4.0; };
-  Domain left = Domain::ofElements(*mesh, on_left);
+  auto   on_left = [](std::vector<tensor<double, dim>> X, int /* attr */) { return average(X)[0] < 4.0; };
+  Domain left    = Domain::ofElements(*mesh, on_left);
 
   qoi.AddDomainIntegral(
-    Dimension<dim>{}, 
-    DependsOn</*nothing*/>{},
-    [=](auto /*position*/) { return 1.0; }, 
-    left
-  );
+      Dimension<dim>{}, DependsOn</*nothing*/>{}, [=](auto /*position*/) { return 1.0; }, left);
 
   auto volume = qoi(U);
 
   EXPECT_NEAR(volume, 4.0, 1.0e-14);
-
 }
 
 int main(int argc, char* argv[])

@@ -218,12 +218,13 @@ public:
     check_for_missing_nodal_gridfunc(mesh);
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
-    integrals_.push_back(MakeBoundaryIntegral<signature, Q, dim>(EntireBoundary(mesh), integrand, std::vector<uint32_t>{args...}));
+    integrals_.push_back(
+        MakeBoundaryIntegral<signature, Q, dim>(EntireBoundary(mesh), integrand, std::vector<uint32_t>{args...}));
   }
 
   /// @overload
   template <int dim, int... args, typename lambda>
-  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, const Domain & domain)
+  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, const Domain& domain)
   {
     auto num_bdr_elements = domain.mesh_.GetNBE();
     if (num_bdr_elements == 0) return;

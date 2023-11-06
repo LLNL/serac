@@ -23,13 +23,13 @@ namespace serac {
  * lexicographically, to facilitate creating the CSR matrix graph.
  */
 struct ElemInfo {
-  uint32_t       global_row_;  ///< The global row number
-  uint32_t       global_col_;  ///< The global column number
-  uint32_t       local_row_;   ///< The local row number
-  uint32_t       local_col_;   ///< The global column number
-  uint32_t       element_id_;  ///< The element ID
-  int            sign_;        ///< The orientation of the element
-  Domain::Type   type;         ///< Which kind of Integral this entry comes from
+  uint32_t     global_row_;  ///< The global row number
+  uint32_t     global_col_;  ///< The global column number
+  uint32_t     local_row_;   ///< The local row number
+  uint32_t     local_col_;   ///< The global column number
+  uint32_t     element_id_;  ///< The element ID
+  int          sign_;        ///< The orientation of the element
+  Domain::Type type;         ///< Which kind of Integral this entry comes from
 };
 
 /**

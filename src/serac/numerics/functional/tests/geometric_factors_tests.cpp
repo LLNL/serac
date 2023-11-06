@@ -6,7 +6,8 @@ using namespace serac;
 
 std::string mesh_dir = SERAC_REPO_DIR "/data/meshes/";
 
-mfem::Mesh import_mesh(std::string meshfile) {
+mfem::Mesh import_mesh(std::string meshfile)
+{
   mfem::named_ifgzstream imesh(mesh_dir + meshfile);
 
   if (!imesh) {
@@ -20,31 +21,31 @@ mfem::Mesh import_mesh(std::string meshfile) {
   return mesh;
 }
 
-template < int dim >
-tensor<double,dim> average(std::vector< tensor<double,dim> > & positions) {
-  tensor<double,dim> total{};
+template <int dim>
+tensor<double, dim> average(std::vector<tensor<double, dim> >& positions)
+{
+  tensor<double, dim> total{};
   for (auto x : positions) {
     total += x;
   }
   return total / double(positions.size());
 }
 
-TEST(geometric_factors, with_2D_domains) { 
-
+TEST(geometric_factors, with_2D_domains)
+{
   auto mesh = import_mesh("patch2D_tris_and_quads.mesh");
 
   // `d` will consist of one tri and one quad
-  Domain d = Domain::ofElements(mesh, std::function([](std::vector<vec2> vertices, int /* attr */){ 
-    return average(vertices)[0] < 0.45;
-  }));
+  Domain d = Domain::ofElements(
+      mesh, std::function([](std::vector<vec2> vertices, int /* attr */) { return average(vertices)[0] < 0.45; }));
 
   int q = 2;
 
   {
     GeometricFactors gf(d, q, mfem::Geometry::TRIANGLE);
-    int components_per_J = 4;
-    int qpts_per_elem = (q * (q + 1)) / 2;
-    int num_elems = 1;
+    int              components_per_J = 4;
+    int              qpts_per_elem    = (q * (q + 1)) / 2;
+    int              num_elems        = 1;
     EXPECT_EQ(gf.J.Size(), components_per_J * qpts_per_elem * num_elems);
 
     gf.X.Print(std::cout, 2);
@@ -54,43 +55,41 @@ TEST(geometric_factors, with_2D_domains) {
 
   {
     GeometricFactors gf(d, q, mfem::Geometry::SQUARE);
-    int components_per_J = 4;
-    int qpts_per_elem = q * q;
-    int num_elems = 1;
+    int              components_per_J = 4;
+    int              qpts_per_elem    = q * q;
+    int              num_elems        = 1;
     EXPECT_EQ(gf.J.Size(), components_per_J * qpts_per_elem * num_elems);
 
     gf.X.Print(std::cout, 2);
   }
-
 }
 
-TEST(geometric_factors, with_3D_domains) { 
-
+TEST(geometric_factors, with_3D_domains)
+{
   auto mesh = import_mesh("patch3D_tets_and_hexes.mesh");
 
   // `d` will consist of 6 tets and 1 hex
-  Domain d = Domain::ofElements(mesh, std::function([](std::vector<vec3> vertices, int /*bdr_attr*/){ 
-      return average(vertices)[1] < 0.75; // y coordinate of face center 
-  }));
+  Domain d = Domain::ofElements(mesh, std::function([](std::vector<vec3> vertices, int /*bdr_attr*/) {
+                                  return average(vertices)[1] < 0.75;  // y coordinate of face center
+                                }));
 
   int q = 2;
 
   {
     GeometricFactors gf(d, q, mfem::Geometry::TETRAHEDRON);
-    int components_per_J = 9;
-    int qpts_per_elem = (q * (q + 1) * (q + 2)) / 6;
-    int num_elems = 6;
+    int              components_per_J = 9;
+    int              qpts_per_elem    = (q * (q + 1) * (q + 2)) / 6;
+    int              num_elems        = 6;
     EXPECT_EQ(gf.J.Size(), components_per_J * qpts_per_elem * num_elems);
   }
 
   {
     GeometricFactors gf(d, q, mfem::Geometry::CUBE);
-    int components_per_J = 9;
-    int qpts_per_elem = q * q * q;
-    int num_elems = 1;
+    int              components_per_J = 9;
+    int              qpts_per_elem    = q * q * q;
+    int              num_elems        = 1;
     EXPECT_EQ(gf.J.Size(), components_per_J * qpts_per_elem * num_elems);
   }
-
 }
 
 int main(int argc, char* argv[])
