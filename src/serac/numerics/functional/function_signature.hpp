@@ -1,4 +1,6 @@
 #pragma once
+#include <camp/camp.hpp>
+#include "serac/numerics/functional/finite_element.hpp"
 
 template <typename T>
 struct FunctionSignature;
@@ -17,5 +19,34 @@ struct FunctionSignature<output_type(input_types...)> {
   static constexpr int num_args = sizeof...(input_types);
 
   /// integer sequence used to make iterating over arguments easier
-  static constexpr auto index_seq = std::make_integer_sequence<int, num_args>{};
+  static constexpr auto index_seq = camp::make_int_seq<int, num_args>{};
 };
+
+/**
+ * @brief This helper function template expands the variadic parameter trials and uses
+ * the pack to construct a tuple of finite elements.
+ *
+ * Expansion of the template parameter trials must occur in a separate template
+ * function from evaluation_kernel_impl.  The __host__ __device__ marker on the
+ * lambda declared in evaluation_kernel_impl prevents use of multiple variadic
+ * template parameters in evaluation_kernel_impl.  See section 14.7.3 of the
+ * CUDA programming guide, item 9.
+ */
+template <mfem::Geometry::Type geom, typename test, typename... trials>
+auto trial_elements_tuple(FunctionSignature<test(trials...)>)
+{
+  return serac::tuple<serac::finite_element<geom, trials>...>{};
+}
+
+/**
+ * @brief This helper function template returns a finite element based on the output
+ * type of FunctionSignature.
+ *
+ * See the comments for trial_elements_tuple to understand why this is needed in
+ * domain_integral_kernels::evaluation_kernel and boundary_integral_kernels::evaluation_kernel.
+ */
+template <mfem::Geometry::Type geom, typename test, typename... trials>
+auto get_test_element(FunctionSignature<test(trials...)>)
+{
+  return serac::finite_element<geom, test>{};
+}

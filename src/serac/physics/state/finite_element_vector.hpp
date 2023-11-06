@@ -58,6 +58,8 @@ public:
   /**
    * @brief Construct a new Finite Element Vector object given a templated function space
    *
+   * @tparam FunctionSpace The finite element space used to construct the underlying basis functions (e.g. H1, Hcurl,
+   * etc)
    * @param mesh The mesh used to construct the finite element state
    * @param name The name of the new finite element state field
    */

@@ -142,7 +142,8 @@ std::tuple<double, FiniteElementDual, FiniteElementDual, FiniteElementDual> comp
         displacement, adjoint_load,
         0.5 * (solid_solver.loadCheckpointedTimestep(i - 1) + solid_solver.loadCheckpointedTimestep(i)));
     EXPECT_EQ(i, solid_solver.cycle());
-    solid_solver.reverseAdjointTimestep({{"displacement", adjoint_load}});
+    solid_solver.setAdjointLoad({{"displacement", adjoint_load}});
+    solid_solver.reverseAdjointTimestep();
     shape_sensitivity += solid_solver.computeTimestepShapeSensitivity();
     EXPECT_EQ(i - 1, solid_solver.cycle());
   }
