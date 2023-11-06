@@ -249,9 +249,9 @@ void partial_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
       [=](auto X, auto temperature) {
         auto [u, du_dX] = temperature;
         double mask     = (X[0] < 4.0);
-        auto source     = d00 * u + dot(d01, du_dX) - 0.0 * (100 * X[0] * X[1]);
-        auto flux       = d10 * u + dot(d11, du_dX);
-        return serac::tuple{source, flux} * mask;
+        auto   source   = mask * (d00 * u + dot(d01, du_dX) - 0.0 * (100 * X[0] * X[1]));
+        auto   flux     = mask * (d10 * u + dot(d11, du_dX));
+        return serac::tuple{source, flux};
       },
       *mesh);
 
