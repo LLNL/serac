@@ -28,6 +28,19 @@ namespace serac {
 
 namespace solid_mechanics {
 
+namespace detail {
+/**
+ * @brief integrates part of the adjoint equations backward in time
+ */
+void adjoint_integrate(double dt_n, double dt_np1, mfem::HypreParMatrix* m_mat, mfem::HypreParMatrix* k_mat,
+                       mfem::HypreParVector& disp_adjoint_load_vector, mfem::HypreParVector& velo_adjoint_load_vector,
+                       mfem::HypreParVector& accel_adjoint_load_vector, mfem::HypreParVector& adjoint_displacement_,
+                       mfem::HypreParVector& implicit_sensitivity_displacement_start_of_step_,
+                       mfem::HypreParVector& implicit_sensitivity_velocity_start_of_step_,
+                       mfem::HypreParVector& adjoint_essential, BoundaryConditionManager& bcs_,
+                       mfem::Solver& lin_solver);
+}  // namespace detail
+
 /**
  * @brief default method and tolerances for solving the
  * systems of linear equations that show up in implicit
@@ -41,7 +54,11 @@ const LinearSolverOptions default_linear_options = {.linear_solver  = LinearSolv
                                                     .print_level    = 0};
 
 /// the default direct solver option for solving the linear stiffness equations
+#ifdef MFEM_USE_STRUMPACK
+const LinearSolverOptions direct_linear_options = {.linear_solver = LinearSolver::Strumpack, .print_level = 0};
+#else
 const LinearSolverOptions direct_linear_options = {.linear_solver = LinearSolver::SuperLU, .print_level = 0};
+#endif
 
 /**
  * @brief default iteration limits, tolerances and verbosity for solving the
@@ -83,10 +100,11 @@ class SolidMechanics<order, dim, Parameters<parameter_space...>, std::integer_se
 public:
   //! @cond Doxygen_Suppress
   static constexpr int  VALUE = 0, DERIVATIVE = 1;
-  static constexpr auto I = Identity<dim>();
+  static constexpr int  SHAPE = 2;
+  static constexpr auto I     = Identity<dim>();
   //! @endcond
 
-  /// @brief The total number of non-parameter state variables (displacement, velocity, shape) passed to the FEM
+  /// @brief The total number of non-parameter state variables (displacement, acceleration, shape) passed to the FEM
   /// integrators
   static constexpr auto NUM_STATE_VARS = 3;
 
@@ -102,16 +120,19 @@ public:
    * @param lin_opts The linear solver options for solving the linearized Jacobian equations
    * @param timestepping_opts The timestepping options for the solid mechanics time evolution operator
    * @param geom_nonlin Flag to include geometric nonlinearities
-   * @param name An optional name for the physics module instance
-   * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
+   * @param physics_name A name for the physics module instance
+   * @param mesh_tag The tag for the mesh in the StateManager to construct the physics module on
+   * @param parameter_names A vector of the names of the requested parameter fields
+   * @param cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param time The simulation time to initialize the physics module to
    */
   SolidMechanics(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
-                 const serac::TimesteppingOptions timestepping_opts,
-                 const GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
-                 mfem::ParMesh* pmesh = nullptr)
-      : SolidMechanics(std::make_unique<EquationSolver>(
-                           nonlinear_opts, lin_opts, StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
-                       timestepping_opts, geom_nonlin, name, pmesh)
+                 const serac::TimesteppingOptions timestepping_opts, const GeometricNonlinearities geom_nonlin,
+                 const std::string& physics_name, std::string mesh_tag, std::vector<std::string> parameter_names = {},
+                 int cycle = 0, double time = 0.0)
+      : SolidMechanics(
+            std::make_unique<EquationSolver>(nonlinear_opts, lin_opts, StateManager::mesh(mesh_tag).GetComm()),
+            timestepping_opts, geom_nonlin, physics_name, mesh_tag, parameter_names, cycle, time)
   {
   }
 
@@ -121,28 +142,32 @@ public:
    * @param solver The nonlinear equation solver for the implicit solid mechanics equations
    * @param timestepping_opts The timestepping options for the solid mechanics time evolution operator
    * @param geom_nonlin Flag to include geometric nonlinearities
-   * @param name An optional name for the physics module instance
-   * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
+   * @param physics_name A name for the physics module instance
+   * @param mesh_tag The tag for the mesh in the StateManager to construct the physics module on
+   * @param parameter_names A vector of the names of the requested parameter fields
+   * @param cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param time The simulation time to initialize the physics module to
    */
   SolidMechanics(std::unique_ptr<serac::EquationSolver> solver, const serac::TimesteppingOptions timestepping_opts,
-                 const GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On, const std::string& name = "",
-                 mfem::ParMesh* pmesh = nullptr)
-      : BasePhysics(2, order, name, pmesh),
-        velocity_(StateManager::newState(
-            FiniteElementState::Options{.order = order, .vector_dim = dim, .name = detail::addPrefix(name, "velocity")},
-            sidre_datacoll_id_)),
-        displacement_(StateManager::newState(
-            FiniteElementState::Options{
-                .order = order, .vector_dim = dim, .name = detail::addPrefix(name, "displacement")},
-            sidre_datacoll_id_)),
+                 const GeometricNonlinearities geom_nonlin, const std::string& physics_name, std::string mesh_tag,
+                 std::vector<std::string> parameter_names = {}, int cycle = 0, double time = 0.0)
+      : BasePhysics(physics_name, mesh_tag, cycle, time),
+        displacement_(
+            StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "displacement"), mesh_tag_)),
+        velocity_(StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "velocity"), mesh_tag_)),
+        acceleration_(
+            StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "acceleration"), mesh_tag_)),
         adjoint_displacement_(StateManager::newState(
-            FiniteElementState::Options{
-                .order = order, .vector_dim = dim, .name = detail::addPrefix(name, "adjoint_displacement")},
-            sidre_datacoll_id_)),
-        reactions_(StateManager::newDual(displacement_.space(), detail::addPrefix(name, "reactions"))),
+            H1<order, dim>{}, detail::addPrefix(physics_name, "adjoint_displacement"), mesh_tag_)),
+        displacement_adjoint_load_(displacement_.space(), detail::addPrefix(physics_name, "displacement_adjoint_load")),
+        velocity_adjoint_load_(displacement_.space(), detail::addPrefix(physics_name, "velocity_adjoint_load")),
+        acceleration_adjoint_load_(displacement_.space(), detail::addPrefix(physics_name, "acceleration_adjoint_load")),
+        implicit_sensitivity_displacement_start_of_step_(displacement_.space(), "total_deriv_wrt_displacement."),
+        implicit_sensitivity_velocity_start_of_step_(displacement_.space(), "total_deriv_wrt_velocity."),
+        reactions_(StateManager::newDual(H1<order, dim>{}, detail::addPrefix(physics_name, "reactions"), mesh_tag_)),
         nonlin_solver_(std::move(solver)),
         ode2_(displacement_.space().TrueVSize(),
-              {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
+              {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = v_, .d2u_dt2 = acceleration_},
               *nonlin_solver_, bcs_),
         c0_(0.0),
         c1_(0.0),
@@ -156,13 +181,12 @@ public:
                        "EquationSolver argument is nullptr in SolidMechanics constructor. It is possible that it was "
                        "previously moved.");
 
-    states_.push_back(&velocity_);
     states_.push_back(&displacement_);
-    states_.push_back(&adjoint_displacement_);
+    states_.push_back(&velocity_);
+    states_.push_back(&acceleration_);
+    adjoints_.push_back(&adjoint_displacement_);
 
     duals_.push_back(&reactions_);
-
-    parameters_.resize(sizeof...(parameter_space));
 
     // Create a pack of the primal field and parameter finite element spaces
     mfem::ParFiniteElementSpace* test_space = &displacement_.space();
@@ -172,24 +196,34 @@ public:
     trial_spaces[1] = &displacement_.space();
     trial_spaces[2] = &shape_displacement_.space();
 
+    SLIC_ERROR_ROOT_IF(
+        sizeof...(parameter_space) != parameter_names.size(),
+        axom::fmt::format("{} parameter spaces given in the template argument but {} parameter names were supplied.",
+                          sizeof...(parameter_space), parameter_names.size()));
+
     if constexpr (sizeof...(parameter_space) > 0) {
       tuple<parameter_space...> types{};
       for_constexpr<sizeof...(parameter_space)>([&](auto i) {
-        auto [fes, fec] =
-            generateParFiniteElementSpace<typename std::remove_reference<decltype(get<i>(types))>::type>(&mesh_);
-        parameters_[i].trial_space       = std::move(fes);
-        parameters_[i].trial_collection  = std::move(fec);
-        trial_spaces[i + NUM_STATE_VARS] = parameters_[i].trial_space.get();
+        parameters_.emplace_back(mesh_, get<i>(types), detail::addPrefix(name_, parameter_names[i]));
+
+        trial_spaces[i + NUM_STATE_VARS] = &(parameters_[i].state->space());
       });
     }
 
     residual_ =
         std::make_unique<Functional<test(trial, trial, shape_trial, parameter_space...)>>(test_space, trial_spaces);
 
-    displacement_         = 0.0;
-    velocity_             = 0.0;
-    shape_displacement_   = 0.0;
-    adjoint_displacement_ = 0.0;
+    displacement_              = 0.0;
+    velocity_                  = 0.0;
+    acceleration_              = 0.0;
+    shape_displacement_        = 0.0;
+    adjoint_displacement_      = 0.0;
+    displacement_adjoint_load_ = 0.0;
+    velocity_adjoint_load_     = 0.0;
+    acceleration_adjoint_load_ = 0.0;
+
+    implicit_sensitivity_displacement_start_of_step_ = 0.0;
+    implicit_sensitivity_velocity_start_of_step_     = 0.0;
 
     // If the user wants the AMG preconditioner with a linear solver, set the pfes
     // to be the displacement
@@ -215,9 +249,7 @@ public:
     int true_size = velocity_.space().TrueVSize();
 
     u_.SetSize(true_size);
-    du_dt_.SetSize(true_size);
-    previous_.SetSize(true_size);
-    previous_ = 0.0;
+    v_.SetSize(true_size);
 
     du_.SetSize(true_size);
     du_ = 0.0;
@@ -236,11 +268,16 @@ public:
    * @brief Construct a new Nonlinear SolidMechanics Solver object
    *
    * @param[in] input_options The solver information parsed from the input file
-   * @param[in] name An optional name for the physics module instance. Note that this is NOT the mesh tag.
+   * @param[in] physics_name A name for the physics module instance
+   * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
+   * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param[in] time The simulation time to initialize the physics module to
    */
-  SolidMechanics(const SolidMechanicsInputOptions& input_options, const std::string& name = "")
+  SolidMechanics(const SolidMechanicsInputOptions& input_options, const std::string& physics_name, std::string mesh_tag,
+                 int cycle = 0, double time = 0.0)
       : SolidMechanics(input_options.nonlin_solver_options, input_options.lin_solver_options,
-                       input_options.timestepping_options, input_options.geom_nonlin, name)
+                       input_options.timestepping_options, input_options.geom_nonlin, physics_name, mesh_tag, {}, cycle,
+                       time)
   {
     // This is the only other options stored in the input file that we can use
     // in the initialization stage
@@ -287,7 +324,7 @@ public:
         // TODO: Not implemented yet in input files
         SLIC_ERROR("'pressure_ref' is not implemented yet in input files.");
       } else {
-        SLIC_WARNING_ROOT("Ignoring boundary condition with unknown name: " << name);
+        SLIC_WARNING_ROOT("Ignoring boundary condition with unknown name: " << bc_name);
       }
     }
   }
@@ -330,6 +367,8 @@ public:
    * @param[in] disp_bdr The boundary attributes from the mesh on which to enforce a displacement
    * @param[in] disp The prescribed boundary displacement function
    *
+   * @note This method must be called prior to completeSetup()
+   *
    * For the displacement function, the first argument is the input position and the second argument is the output
    * prescribed displacement.
    */
@@ -349,6 +388,8 @@ public:
    *
    * For the displacement function, the first argument is the input position, the second argument is the time, and the
    * third argument is the output prescribed displacement.
+   *
+   * @note This method must be called prior to completeSetup()
    */
   void setDisplacementBCs(const std::set<int>&                                            disp_bdr,
                           std::function<void(const mfem::Vector&, double, mfem::Vector&)> disp)
@@ -368,6 +409,8 @@ public:
    *
    * For the displacement function, the argument is the input position and the output is the value of the component of
    * the displacement.
+   *
+   * @note This method must be called prior to completeSetup()
    */
   void setDisplacementBCs(const std::set<int>& disp_bdr, std::function<double(const mfem::Vector& x)> disp,
                           int component)
@@ -393,6 +436,8 @@ public:
    * @note The displacement function is required to be vector-valued. However, only the dofs specified in the @a
    * true_dofs array will be set. This means that if the @a true_dofs array only contains dofs for a specific vector
    * component in a vector-valued finite element space, only that component will be set.
+   *
+   * @note This method must be called prior to completeSetup()
    */
   void setDisplacementBCsByDofList(const mfem::Array<int>                                          true_dofs,
                                    std::function<void(const mfem::Vector&, double, mfem::Vector&)> disp)
@@ -413,6 +458,8 @@ public:
    * @note The coefficient is required to be vector-valued. However, only the dofs specified in the @a true_dofs
    * array will be set. This means that if the @a true_dofs array only contains dofs for a specific vector component in
    * a vector-valued finite element space, only that component will be set.
+   *
+   * @note This method must be called prior to completeSetup()
    */
   void setDisplacementBCsByDofList(const mfem::Array<int>                                  true_dofs,
                                    std::function<void(const mfem::Vector&, mfem::Vector&)> disp)
@@ -433,6 +480,8 @@ public:
    * computes the desired displacement and fills the third argument with these displacement values.
    *
    * @note This method searches over the entire mesh, not just the boundary nodes.
+   *
+   * @note This method must be called prior to completeSetup()
    */
   void setDisplacementBCs(std::function<bool(const mfem::Vector&)>                        is_node_constrained,
                           std::function<void(const mfem::Vector&, double, mfem::Vector&)> disp)
@@ -453,6 +502,8 @@ public:
    * and fills the second argument with these displacement values.
    *
    * @note This method searches over the entire mesh, not just the boundary nodes.
+   *
+   * @note This method must be called prior to completeSetup()
    */
   void setDisplacementBCs(std::function<bool(const mfem::Vector&)>                is_node_constrained,
                           std::function<void(const mfem::Vector&, mfem::Vector&)> disp)
@@ -476,6 +527,8 @@ public:
    * It computes the desired displacement scalar for the given component and returns that value.
    *
    * @note This method searches over the entire mesh, not just the boundary nodes.
+   *
+   * @note This method must be called prior to completeSetup()
    */
   void setDisplacementBCs(std::function<bool(const mfem::Vector&)>           is_node_constrained,
                           std::function<double(const mfem::Vector&, double)> disp, int component)
@@ -504,6 +557,8 @@ public:
    * the given component and returns that value.
    *
    * @note This method searches over the entire mesh, not just the boundary nodes.
+   *
+   * @note This method must be called prior to completeSetup()
    */
   void setDisplacementBCs(std::function<bool(const mfem::Vector& x)>   is_node_constrained,
                           std::function<double(const mfem::Vector& x)> disp, int component)
@@ -524,19 +579,43 @@ public:
    * @param state_name The name of the Finite Element State to retrieve
    * @return The named Finite Element State
    */
-  const FiniteElementState& state(const std::string& state_name) override
+  const FiniteElementState& state(const std::string& state_name) const override
   {
     if (state_name == "displacement") {
       return displacement_;
     } else if (state_name == "velocity") {
       return velocity_;
-    } else if (state_name == "adjoint_displacement") {
-      return adjoint_displacement_;
+    } else if (state_name == "acceleration") {
+      return acceleration_;
     }
 
-    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requestion from solid mechanics module '{}', but it doesn't exist",
+    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requested from solid mechanics module '{}', but it doesn't exist",
                                       state_name, name_));
     return displacement_;
+  }
+
+  /**
+   * @brief Set the primal solution field (displacement, velocity) for the underlying solid mechanics solver
+   *
+   * @param state_name The name of the field to initialize ("displacement", or "velocity")
+   * @param state The finite element state vector containing the values for either the displacement or velocity fields
+   *
+   * It is expected that @a state has the same underlying finite element space and mesh as the selected primal solution
+   * field.
+   */
+  void setState(const std::string& state_name, const FiniteElementState& state) override
+  {
+    if (state_name == "displacement") {
+      displacement_ = state;
+      return;
+    } else if (state_name == "velocity") {
+      velocity_ = state;
+      return;
+    }
+
+    SLIC_ERROR_ROOT(axom::fmt::format(
+        "setState for state named '{}' requested from solid mechanics module '{}', but it doesn't exist", state_name,
+        name_));
   }
 
   /**
@@ -544,10 +623,34 @@ public:
    *
    * @return The solution variable names
    */
-  virtual std::vector<std::string> stateNames() override
+  std::vector<std::string> stateNames() const override
   {
-    return std::vector<std::string>{{"displacement"}, {"velocity"}, {"adjoint_displacement"}};
+    return std::vector<std::string>{{"displacement"}, {"velocity"}, {"acceleration"}};
   }
+
+  /**
+   * @brief Accessor for getting named finite element state adjoint solution from the physics modules
+   *
+   * @param state_name The name of the Finite Element State adjoint solution to retrieve
+   * @return The named adjoint Finite Element State
+   */
+  const FiniteElementState& adjoint(const std::string& state_name) const override
+  {
+    if (state_name == "displacement") {
+      return adjoint_displacement_;
+    }
+
+    SLIC_ERROR_ROOT(axom::fmt::format("Adjoint '{}' requested from solid mechanics module '{}', but it doesn't exist",
+                                      state_name, name_));
+    return adjoint_displacement_;
+  }
+
+  /**
+   * @brief Get a vector of the finite element state solution variable names
+   *
+   * @return The solution variable names
+   */
+  std::vector<std::string> adjointNames() const override { return std::vector<std::string>{{"displacement"}}; }
 
   /**
    * @brief register a custom domain integral calculation as part of the residual
@@ -575,6 +678,8 @@ public:
    *  });
    *
    * ~~~
+   *
+   * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename callable, typename StateType = Nothing>
   void addCustomDomainIntegral(DependsOn<active_parameters...>, callable qfunction,
@@ -605,6 +710,8 @@ public:
    *
    * @pre MaterialType must have a public member variable `density`
    * @pre MaterialType must define operator() that returns the Cauchy stress
+   *
+   * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename MaterialType, typename StateType = Empty>
   void setMaterial(DependsOn<active_parameters...>, MaterialType material, qdata_type<StateType> qdata = EmptyQData)
@@ -673,8 +780,10 @@ public:
     // Project the coefficient onto the grid function
     mfem::VectorFunctionCoefficient disp_coef(dim, disp);
     displacement_.project(disp_coef);
-    gf_initialized_[1] = true;
   }
+
+  /// @overload
+  void setDisplacement(const FiniteElementState& temp) { displacement_ = temp; }
 
   /**
    * @brief Set the underlying finite element state to a prescribed velocity
@@ -686,8 +795,10 @@ public:
     // Project the coefficient onto the grid function
     mfem::VectorFunctionCoefficient vel_coef(dim, vel);
     velocity_.project(vel_coef);
-    gf_initialized_[0] = true;
   }
+
+  /// @overload
+  void setVelocity(const FiniteElementState& temp) { velocity_ = temp; }
 
   /**
    * @brief Set the body forcefunction
@@ -703,6 +814,7 @@ public:
    *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
    * 3>`)
    *
+   * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename BodyForceType>
   void addBodyForce(DependsOn<active_parameters...>, BodyForceType body_force)
@@ -745,6 +857,8 @@ public:
    * 3>`)
    *
    * @note This traction is applied in the reference (undeformed) configuration.
+   *
+   * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename TractionType>
   void setTraction(DependsOn<active_parameters...>, TractionType traction_function)
@@ -795,6 +909,8 @@ public:
    * 3>`)
    *
    * @note This pressure is applied in the deformed (current) configuration if GeometricNonlinearities are on.
+   *
+   * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename PressureType>
   void setPressure(DependsOn<active_parameters...>, PressureType pressure_function)
@@ -891,13 +1007,6 @@ public:
    */
   void completeSetup() override
   {
-    if constexpr (sizeof...(parameter_space) > 0) {
-      for (size_t i = 0; i < sizeof...(parameter_space); i++) {
-        SLIC_ERROR_ROOT_IF(!parameters_[i].state,
-                           "all parameters fields must be initialized before calling completeSetup()");
-      }
-    }
-
     // Build the dof array lookup tables
     displacement_.space().BuildDofToArrays();
 
@@ -946,6 +1055,14 @@ public:
     }
 
     nonlin_solver_->setOperator(*residual_with_bcs_);
+  }
+
+  /// @brief Set field to zero wherever their are essential boundary conditions applies
+  void zeroEssentials(FiniteElementVector& field) const
+  {
+    for (const auto& essential : bcs_.essentials()) {
+      field.SetSubVector(essential.getLocalDofList(), 0.0);
+    }
   }
 
   /// @brief Solve the Quasi-static Newton system
@@ -1012,13 +1129,14 @@ public:
   }
 
   /**
-   * @brief Advance the timestep
    *
-   * @param[inout] dt The timestep to attempt. This will return the actual timestep for adaptive timestepping
-   * schemes
-   * @pre SolidMechanics::completeSetup() must be called prior to this call
+   * @brief Advance the solid mechanics physics module in time
+   *
+   * Advance the underlying ODE with the requested time integration scheme using the previously set timestep.
+   *
+   * @param dt The increment of simulation time to advance the underlying solid mechanics problem
    */
-  void advanceTimestep(double& dt) override
+  void advanceTimestep(double dt) override
   {
     SLIC_ERROR_ROOT_IF(!residual_, "completeSetup() must be called prior to advanceTimestep(dt) in SolidMechanics.");
 
@@ -1045,81 +1163,155 @@ public:
       // reactions_ = residual(displacement, ...);
       // isn't currently supported
       reactions_.Vector::operator=(
-          (*residual_)(displacement_, zero_, shape_displacement_, *parameters_[parameter_indices].state...));
-      // TODO (talamini1): Fix above reactions for dynamics. Setting the accelerations to zero
-      // works for quasi-statics, but we need to account for the accelerations in
-      // dynamics. We need to figure out how to get the updated accelerations out of the
-      // ODE solver.
+          (*residual_)(displacement_, acceleration_, shape_displacement_, *parameters_[parameter_indices].state...));
 
       residual_->update_qdata = false;
     }
 
     cycle_ += 1;
+
+    if (cycle_ > max_cycle_) {
+      timesteps_.push_back(dt);
+      max_cycle_ = cycle_;
+      max_time_  = time_;
+    }
+  }
+
+  /**
+   * @brief Set the loads for the adjoint reverse timestep solve
+   *
+   * @param loads The loads (e.g. right hand sides) for the adjoint problem
+   *
+   * @pre The adjoint load map is expected to contain an entry named "displacement"
+   * @pre The adjoint load map may contain an entry named "velocity"
+   * @pre The adjoint load map may contain an entry named "acceleration"
+   *
+   * These loads are typically defined as derivatives of a downstream quantity of intrest with respect
+   * to a primal solution field (in this case, displacement). For this physics module, the unordered
+   * map is expected to have one entry with the keys "displacement".
+   *
+   */
+  virtual void setAdjointLoad(std::unordered_map<std::string, const serac::FiniteElementDual&> loads) override
+  {
+    SLIC_ERROR_ROOT_IF(loads.size() == 0, "Adjoint load container size must be greater than 0 in the solid mechanics.");
+
+    auto disp_adjoint_load = loads.find("displacement");
+
+    SLIC_ERROR_ROOT_IF(disp_adjoint_load == loads.end(), "Adjoint load for \"displacement\" not found.");
+
+    displacement_adjoint_load_ = disp_adjoint_load->second;
+    // Add the sign correction to move the term to the RHS
+    displacement_adjoint_load_ *= -1.0;
+
+    auto velo_adjoint_load = loads.find("velocity");
+
+    if (velo_adjoint_load != loads.end()) {
+      velocity_adjoint_load_ = velo_adjoint_load->second;
+      // Add the sign correction to move the term to the RHS
+      velocity_adjoint_load_ *= -1.0;
+    }
+
+    auto accel_adjoint_load = loads.find("acceleration");
+
+    if (accel_adjoint_load != loads.end()) {
+      acceleration_adjoint_load_ = accel_adjoint_load->second;
+      // Add the sign correction to move the term to the RHS
+      acceleration_adjoint_load_ *= -1.0;
+    }
   }
 
   /**
    * @brief Solve the adjoint problem
    * @pre It is expected that the forward analysis is complete and the current displacement state is valid
-   * @pre The adjoint load maps are expected to contain a single entry named "displacement"
-   * @note If the essential boundary dual is not specified, homogeneous essential boundary conditions are applied to
-   * the adjoint system
-   *
-   * @param adjoint_loads An unordered map containing finite element duals representing the RHS of the adjoint equations
-   * indexed by their name
-   * @param adjoint_with_essential_boundary A unordered map containing finite element states representing the
-   * non-homogeneous essential boundary condition data for the adjoint problem indexed their name
-   * @return An unordered map of the adjoint solutions indexed by their name. It has a single entry named
-   * "adjoint_displacement"
+   * @pre It is expected that the adjoint load has already been set in SolidMechanics::setAdjointLoad
    */
-  const std::unordered_map<std::string, const serac::FiniteElementState&> solveAdjoint(
-      std::unordered_map<std::string, const serac::FiniteElementDual&>  adjoint_loads,
-      std::unordered_map<std::string, const serac::FiniteElementState&> adjoint_with_essential_boundary = {}) override
+  void reverseAdjointTimestep() override
   {
-    SLIC_ERROR_ROOT_IF(adjoint_loads.size() != 1,
-                       "Adjoint load container is not the expected size of 1 in the solid mechanics module.");
-
-    auto disp_adjoint_load = adjoint_loads.find("displacement");
-
-    SLIC_ERROR_ROOT_IF(disp_adjoint_load == adjoint_loads.end(), "Adjoint load for \"displacement\" not found.");
-    mfem::HypreParVector adjoint_load_vector(disp_adjoint_load->second);
-
-    // Add the sign correction to move the term to the RHS
-    adjoint_load_vector *= -1.0;
-
     auto& lin_solver = nonlin_solver_->linearSolver();
 
     // By default, use a homogeneous essential boundary condition
-    mfem::HypreParVector adjoint_essential(disp_adjoint_load->second);
+    mfem::HypreParVector adjoint_essential(displacement_adjoint_load_);
     adjoint_essential = 0.0;
 
-    // sam: is this the right thing to be doing for dynamics simulations,
-    // or are we implicitly assuming this should only be used in quasistatic analyses?
-    auto drdu     = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(displacement_), zero_, shape_displacement_,
-                                                    *parameters_[parameter_indices].state...));
-    auto jacobian = assemble(drdu);
-    auto J_T      = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
+    if (is_quasistatic_) {
+      auto [_, drdu] = (*residual_)(differentiate_wrt(displacement_), zero_, shape_displacement_,
+                                    *parameters_[parameter_indices].state...);
+      auto jacobian  = assemble(drdu);
+      auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
-    // If we have a non-homogeneous essential boundary condition, extract it from the given state
-    auto essential_adjoint_disp = adjoint_with_essential_boundary.find("displacement");
+      for (const auto& bc : bcs_.essentials()) {
+        bc.apply(*J_T, displacement_adjoint_load_, adjoint_essential);
+      }
 
-    if (essential_adjoint_disp != adjoint_with_essential_boundary.end()) {
-      adjoint_essential = essential_adjoint_disp->second;
-    } else {
-      // If the essential adjoint load container does not have a displacement dual but it has a non-zero size, the
-      // user has supplied an incorrectly-named dual vector.
-      SLIC_ERROR_IF(adjoint_with_essential_boundary.size() != 0,
-                    "Essential adjoint boundary condition given for an unexpected primal field. Expected adjoint "
-                    "boundary condition named \"displacement\"");
+      lin_solver.SetOperator(*J_T);
+      lin_solver.Mult(displacement_adjoint_load_, adjoint_displacement_);
+
+      // Reset the equation solver to use the full nonlinear residual operator.  MRT, is this needed?
+      nonlin_solver_->setOperator(*residual_with_bcs_);
+
+      return;
     }
 
-    for (const auto& bc : bcs_.essentials()) {
-      bc.apply(*J_T, adjoint_load_vector, adjoint_essential);
+    SLIC_ERROR_ROOT_IF(ode2_.GetTimestepper() != TimestepMethod::Newmark,
+                       "Only Newmark implemented for transient adjoint solid mechanics.");
+
+    SLIC_ERROR_ROOT_IF(cycle_ <= min_cycle_,
+                       "Maximum number of adjoint timesteps exceeded! The number of adjoint timesteps must equal the "
+                       "number of forward timesteps");
+
+    // Load the end of step disp, velo, accel from the previous cycle from disk
+    StateManager::loadCheckpointedStates(cycle_, {displacement_, velocity_, acceleration_});
+
+    double dt_np1 = loadCheckpointedTimestep(cycle_);
+    double dt_n   = loadCheckpointedTimestep(cycle_ - 1);
+
+    // K := dR/du
+    auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(displacement_), acceleration_, shape_displacement_,
+                                                 *parameters_[parameter_indices].state...));
+    std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
+
+    // M := dR/da
+    auto M = serac::get<DERIVATIVE>((*residual_)(displacement_, differentiate_wrt(acceleration_), shape_displacement_,
+                                                 *parameters_[parameter_indices].state...));
+    std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
+
+    solid_mechanics::detail::adjoint_integrate(
+        dt_n, dt_np1, m_mat.get(), k_mat.get(), displacement_adjoint_load_, velocity_adjoint_load_,
+        acceleration_adjoint_load_, adjoint_displacement_, implicit_sensitivity_displacement_start_of_step_,
+        implicit_sensitivity_velocity_start_of_step_, adjoint_essential, bcs_, lin_solver);
+
+    time_ -= dt_n;
+    cycle_--;
+  }
+
+  /**
+   * @brief Accessor for getting named finite element state primal solution from the physics modules at a given
+   * checkpointed cycle index
+   *
+   * @param state_name The name of the Finite Element State primal solution to retrieve
+   * @param cycle The previous timestep where the state solution is requested
+   * @return The named primal Finite Element State
+   */
+  FiniteElementState loadCheckpointedState(const std::string& state_name, int cycle) const override
+  {
+    if (state_name == "displacement") {
+      FiniteElementState previous_state = displacement_;
+      StateManager::loadCheckpointedStates(cycle, {previous_state});
+      return previous_state;
+    } else if (state_name == "velocity") {
+      FiniteElementState previous_state = velocity_;
+      StateManager::loadCheckpointedStates(cycle, {previous_state});
+      return previous_state;
+    } else if (state_name == "acceleration") {
+      FiniteElementState previous_state = acceleration_;
+      StateManager::loadCheckpointedStates(cycle, {previous_state});
+      return previous_state;
     }
 
-    lin_solver.SetOperator(*J_T);
-    lin_solver.Mult(adjoint_load_vector, adjoint_displacement_);
+    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requested from solid mechanics module '{}', but it doesn't exist",
+                                      state_name, name_));
 
-    return {{"adjoint_displacement", adjoint_displacement_}};
+    return displacement_;
   }
 
   /**
@@ -1129,15 +1321,14 @@ public:
    * @param parameter_field The index of the parameter to take a derivative with respect to
    * @return The sensitivity with respect to the parameter
    *
-   * @pre `solveAdjoint` with an appropriate adjoint load must be called prior to this method.
+   * @pre `reverseAdjointTimestep` with an appropriate adjoint load must be called prior to this method.
    */
-  FiniteElementDual& computeSensitivity(size_t parameter_field) override
+  FiniteElementDual& computeTimestepSensitivity(size_t parameter_field) override
   {
     SLIC_ASSERT_MSG(parameter_field < sizeof...(parameter_indices),
                     axom::fmt::format("Invalid parameter index '{}' requested for sensitivity."));
 
-    auto drdparam = serac::get<DERIVATIVE>(d_residual_d_[parameter_field]());
-
+    auto drdparam     = serac::get<DERIVATIVE>(d_residual_d_[parameter_field]());
     auto drdparam_mat = assemble(drdparam);
 
     drdparam_mat->MultTranspose(adjoint_displacement_, *parameters_[parameter_field].sensitivity);
@@ -1150,17 +1341,32 @@ public:
    * problem with respect to the shape displacement field
    *
    * @return The sensitivity with respect to the shape displacement
+   *
+   * @pre `reverseAdjointTimestep` with an appropriate adjoint load must be called prior to this method.
    */
-  FiniteElementDual& computeShapeSensitivity() override
+  FiniteElementDual& computeTimestepShapeSensitivity() override
   {
-    auto drdshape = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<2>{}, displacement_, zero_,
+    auto drdshape = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<SHAPE>{}, displacement_, acceleration_,
                                                         shape_displacement_, *parameters_[parameter_indices].state...));
 
     auto drdshape_mat = assemble(drdshape);
 
-    drdshape_mat->MultTranspose(adjoint_displacement_, shape_displacement_sensitivity_);
+    drdshape_mat->MultTranspose(adjoint_displacement_, *shape_displacement_sensitivity_);
 
-    return shape_displacement_sensitivity_;
+    return *shape_displacement_sensitivity_;
+  }
+
+  /**
+   * @brief Compute the implicit sensitivity of the quantity of interest with respect to the initial temperature
+   *
+   * @return The sensitivity with respect to the initial temperature
+   *
+   * @pre `reverseAdjointTimestep` must be called as many times as the forward solver was advanced before this is called
+   */
+  const std::unordered_map<std::string, const serac::FiniteElementDual&> computeInitialConditionSensitivity() override
+  {
+    return {{"displacement", implicit_sensitivity_displacement_start_of_step_},
+            {"velocity", implicit_sensitivity_velocity_start_of_step_}};
   }
 
   /**
@@ -1170,19 +1376,6 @@ public:
    */
   const serac::FiniteElementState& displacement() const { return displacement_; };
 
-  /// @overload
-  serac::FiniteElementState& displacement() { return displacement_; };
-
-  /**
-   * @brief Get the adjoint displacement state
-   *
-   * @return A reference to the current adjoint displacement finite element state
-   */
-  const serac::FiniteElementState& adjointDisplacement() const { return adjoint_displacement_; };
-
-  /// @overload
-  serac::FiniteElementState& adjointDisplacement() { return adjoint_displacement_; };
-
   /**
    * @brief Get the velocity state
    *
@@ -1190,8 +1383,12 @@ public:
    */
   const serac::FiniteElementState& velocity() const { return velocity_; };
 
-  /// @overload
-  serac::FiniteElementState& velocity() { return velocity_; };
+  /**
+   * @brief Get the acceleration state
+   *
+   * @return A reference to the current acceleration finite element state
+   */
+  const serac::FiniteElementState& acceleration() const { return acceleration_; };
 
   /// @brief getter for nodal forces (before zeroing-out essential dofs)
   const serac::FiniteElementDual& reactions() { return reactions_; };
@@ -1207,14 +1404,33 @@ protected:
   /// The choice of polynomial order for the shape sensitivity is determined in the StateManager
   using shape_trial = H1<SHAPE_ORDER, dim>;
 
-  /// The velocity finite element state
-  FiniteElementState velocity_;
-
   /// The displacement finite element state
   FiniteElementState displacement_;
 
-  /// The displacement finite element state
+  /// The velocity finite element state
+  FiniteElementState velocity_;
+
+  /// The acceleration finite element state
+  FiniteElementState acceleration_;
+
+  // In the case of transient dynamics, this is more like an adjoint_acceleration
+  /// The displacement finite element adjoint state
   FiniteElementState adjoint_displacement_;
+
+  /// The adjoint load (RHS) for the displacement adjoint system solve (downstream -dQOI/d displacement)
+  FiniteElementDual displacement_adjoint_load_;
+
+  /// The adjoint load (RHS) for the velocity adjoint system solve (downstream -dQOI/d velocity)
+  FiniteElementDual velocity_adjoint_load_;
+
+  /// The adjoint load (RHS) for the adjoint system solve (downstream -dQOI/d acceleration)
+  FiniteElementDual acceleration_adjoint_load_;
+
+  /// The total/implicit sensitivity of the qoi with respect to the start of the previous timestep's displacement
+  FiniteElementDual implicit_sensitivity_displacement_start_of_step_;
+
+  /// The total/implicit sensitivity of the qoi with respect to the start of the previous timestep's velocity
+  FiniteElementDual implicit_sensitivity_velocity_start_of_step_;
 
   /// nodal forces
   FiniteElementDual reactions_;
@@ -1255,10 +1471,7 @@ protected:
   mfem::Vector u_;
 
   /// @brief used to communicate the ODE solver's predicted velocity to the residual operator
-  mfem::Vector du_dt_;
-
-  /// @brief the previous acceleration, used as a starting guess for newton's method
-  mfem::Vector previous_;
+  mfem::Vector v_;
 
   /// coefficient used to calculate predicted displacement: u_p := u + c0 * d2u_dt2
   double c0_;

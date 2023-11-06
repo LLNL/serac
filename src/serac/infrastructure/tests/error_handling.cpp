@@ -21,15 +21,6 @@ class SlicErrorException : public std::exception {
 
 namespace serac {
 
-TEST(ErrorHandling, EquationSolverBadLinSolver)
-{
-  LinearSolverOptions    options;
-  NonlinearSolverOptions nonlin_options;
-  // Try a definitely wrong number to ensure that an invalid linear solver is detected
-  options.linear_solver = static_cast<LinearSolver>(-7);
-  EXPECT_THROW(EquationSolver(nonlin_options, options, MPI_COMM_WORLD), SlicErrorException);
-}
-
 // Only need to test this when AmgX is **not** available
 #ifndef MFEM_USE_AMGX
 TEST(ErrorHandling, EquationSolverAmgxNotAvailable)

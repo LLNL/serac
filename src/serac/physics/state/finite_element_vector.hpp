@@ -18,6 +18,7 @@
 #include "mfem.hpp"
 
 #include "serac/infrastructure/variant.hpp"
+#include "serac/numerics/functional/functional.hpp"
 
 namespace serac {
 
@@ -48,49 +49,58 @@ enum class ElementType
 class FiniteElementVector : public mfem::HypreParVector {
 public:
   /**
-   * @brief Structure for optionally configuring a FiniteElementVector
-   * @note The options are explicitly default-constructed to allow the user to partially aggregrate-initialized
-   * with only the options they care about
-   */
-  struct Options {
-    /**
-     * @brief The polynomial order that should be used for the problem
-     */
-    int order = 1;
-    /**
-     * @brief The number of copies of the finite element collections (e.g. vector_dim = 2 or 3 for solid mechanics).
-     * Defaults to scalar valued spaces.
-     */
-    int vector_dim = 1;
-
-    /**
-     * @brief Enum denoting type of basis functions to use
-     *
-     * Options are H1, HCURL, HDIV, or L2.
-     */
-    ElementType element_type = ElementType::H1;
-
-    /**
-     * @brief The name of the field encapsulated by the state object
-     */
-    std::string name = "";
-  };
-
-  /**
-   * @brief Main constructor for building a new finite element vector
-   * @param[in] mesh The problem mesh (object does not take ownership)
-   * @param[in] options The options specified, namely those relating to the order of the problem,
-   * the dimension of the FESpace, the type of basis functions, and the name of the field
-   */
-  FiniteElementVector(mfem::ParMesh& mesh,
-                      Options&& options = {.order = 1, .vector_dim = 1, .element_type = ElementType::H1, .name = ""});
-
-  /**
    * @brief Minimal constructor for a FiniteElementVector given a finite element space
    * @param[in] space The space to use for the finite element state. This space is deep copied into the new FE state
    * @param[in] name The name of the field
    */
   FiniteElementVector(const mfem::ParFiniteElementSpace& space, const std::string& name = "");
+
+  /**
+   * @brief Construct a new Finite Element Vector object given a templated function space
+   *
+   * @tparam FunctionSpace The finite element space used to construct the underlying basis functions (e.g. H1, Hcurl,
+   * etc)
+   * @param mesh The mesh used to construct the finite element state
+   * @param name The name of the new finite element state field
+   */
+  template <typename FunctionSpace>
+  FiniteElementVector(mfem::ParMesh& mesh, FunctionSpace, const std::string& name = "") : mesh_(mesh), name_(name)
+  {
+    const int dim = mesh.Dimension();
+
+    const auto ordering = mfem::Ordering::byNODES;
+
+    switch (FunctionSpace::family) {
+      case Family::H1:
+        coll_ = std::make_unique<mfem::H1_FECollection>(FunctionSpace::order, dim);
+        break;
+      case Family::HCURL:
+        coll_ = std::make_unique<mfem::ND_FECollection>(FunctionSpace::order, dim);
+        break;
+      case Family::HDIV:
+        coll_ = std::make_unique<mfem::RT_FECollection>(FunctionSpace::order, dim);
+        break;
+      case Family::L2:
+        // We use GaussLobatto basis functions as this is what is used for the serac::Functional FE kernels
+        coll_ = std::make_unique<mfem::L2_FECollection>(FunctionSpace::order, dim, mfem::BasisType::GaussLobatto);
+        break;
+      default:
+        SLIC_ERROR_ROOT("Unknown finite element space requested.");
+        break;
+    }
+
+    space_ = std::make_unique<mfem::ParFiniteElementSpace>(&mesh, coll_.get(), FunctionSpace::components, ordering);
+
+    // Construct a hypre par vector based on the new finite element space
+    HypreParVector new_vector(space_.get());
+
+    // Move the data from this new hypre vector into this object without doubly allocating the data
+    auto* parallel_vec = new_vector.StealParVector();
+    WrapHypreParVector(parallel_vec);
+
+    // Initialize the vector to zero
+    HypreParVector::operator=(0.0);
+  }
 
   /**
    * @brief Copy constructor
@@ -228,5 +238,14 @@ double max(const FiniteElementVector& fe_vector);
  * implies these may or may not be nodal averages depending on the choice of finite element basis.
  */
 double min(const FiniteElementVector& fe_vector);
+
+/**
+ * @brief Find the inner prodcut between two finite element vectors across all dofs
+ *
+ * @param vec1 The first vector
+ * @param vec2 The second vector
+ * @return The inner prodcut between finite element vectors
+ */
+double innerProduct(const FiniteElementVector& vec1, const FiniteElementVector& vec2);
 
 }  // namespace serac

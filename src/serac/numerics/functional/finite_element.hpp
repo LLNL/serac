@@ -244,7 +244,7 @@ struct QOI {
  * @param jacobians the jacobians of the isoparametric map from parent to physical space of each quadrature point
  */
 template <Family f, typename T, int q, int dim>
-void parent_to_physical(tensor<T, q>& qf_input, const tensor<double, dim, dim, q>& jacobians)
+SERAC_HOST_DEVICE void parent_to_physical(tensor<T, q>& qf_input, const tensor<double, dim, dim, q>& jacobians)
 {
   [[maybe_unused]] constexpr int VALUE      = 0;
   [[maybe_unused]] constexpr int DERIVATIVE = 1;
@@ -285,7 +285,7 @@ void parent_to_physical(tensor<T, q>& qf_input, const tensor<double, dim, dim, q
  * @param jacobians the jacobians of the isoparametric map from parent to physical space of each quadrature point
  */
 template <Family f, typename T, int q, int dim>
-void physical_to_parent(tensor<T, q>& qf_output, const tensor<double, dim, dim, q>& jacobians)
+SERAC_HOST_DEVICE void physical_to_parent(tensor<T, q>& qf_output, const tensor<double, dim, dim, q>& jacobians)
 {
   [[maybe_unused]] constexpr int SOURCE = 0;
   [[maybe_unused]] constexpr int FLUX   = 1;

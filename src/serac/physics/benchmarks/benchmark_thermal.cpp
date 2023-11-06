@@ -80,7 +80,7 @@ void functional_test_static()
   thermal_solver.advanceTimestep(dt);
 
   // Output the sidre-based plot files
-  thermal_solver.outputState();
+  thermal_solver.outputStateToDisk();
 }
 
 template <int p, int dim>
@@ -142,12 +142,12 @@ void functional_test_dynamic()
   double dt = 0.25;
 
   for (int i = 0; i < 4; ++i) {
-    thermal_solver.outputState();
+    thermal_solver.outputStateToDisk();
     thermal_solver.advanceTimestep(dt);
   }
 
   // Output the sidre-based plot files
-  thermal_solver.outputState();
+  thermal_solver.outputStateToDisk();
 }
 
 int main(int argc, char* argv[])
