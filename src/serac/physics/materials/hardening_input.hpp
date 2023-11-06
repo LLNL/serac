@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file thermal_material_input.hpp
+ * @file solid_material_input.hpp
  *
  * @brief This file contains functions for reading a material from input files
  */
@@ -14,16 +14,14 @@
 
 #include <string>
 #include "serac/infrastructure/input.hpp"
-#include "serac/physics/materials/thermal_material.hpp"
+#include "serac/physics/materials/solid_material.hpp"
 
 namespace serac {
 
-// This variant holds all possible heat transfer materials that can be utilized in our Input Deck
-// TODO add heat_transfer::LinearConductor<3>
-using var_thermal_material_t = std::variant<heat_transfer::LinearIsotropicConductor>;
+using var_hardening_t =
+    std::variant<solid_mechanics::PowerLawHardening, solid_mechanics::VoceHardening>;
 
-// FIXME: this should be namespaced but i get an unused function error (depite using it in `heat_transfer_input.cpp`)
-struct ThermalMaterialInputOptions {
+struct HardeningInputOptions {
   /**
    * @brief Input file parameters specific to this class
    *
@@ -40,7 +38,7 @@ struct ThermalMaterialInputOptions {
  * @tparam The object to be created by Inlet
  */
 template <>
-struct FromInlet<serac::var_thermal_material_t> {
+struct FromInlet<serac::var_hardening_t> {
   /// @brief Returns created object from Inlet container
-  serac::var_thermal_material_t operator()(const axom::inlet::Container& base);
+  serac::var_hardening_t operator()(const axom::inlet::Container& base);
 };

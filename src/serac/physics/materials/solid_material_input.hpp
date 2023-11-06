@@ -15,13 +15,15 @@
 #include <string>
 #include "serac/infrastructure/input.hpp"
 #include "serac/physics/materials/solid_material.hpp"
+#include "serac/physics/materials/hardening_input.hpp"
 
 namespace serac {
 
 // This variant holds all possible solid mechanics materials that can be utilized in our Input Deck
-// TODO do J2Nonlinear with all its possible hardening template arguments
 using var_solid_material_t =
-    std::variant<solid_mechanics::NeoHookean, solid_mechanics::LinearIsotropic, solid_mechanics::J2>;
+    std::variant<solid_mechanics::NeoHookean, solid_mechanics::LinearIsotropic, solid_mechanics::J2,
+    solid_mechanics::J2Nonlinear<solid_mechanics::PowerLawHardening>,
+    solid_mechanics::J2Nonlinear<solid_mechanics::VoceHardening>>;
 
 // FIXME: this should be namespaced but i get an unused function error (depite using it in `solid_mechanics_input.cpp`)
 struct SolidMaterialInputOptions {

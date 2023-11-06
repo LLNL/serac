@@ -268,16 +268,18 @@ public:
     // in the initialization stage
     for (auto& mat : input_options.materials) {
       if (std::holds_alternative<serac::solid_mechanics::NeoHookean>(mat)) {
-        SLIC_INFO("Setting NeoHookean material");
         setMaterial(std::get<serac::solid_mechanics::NeoHookean>(mat));
       } else if (std::holds_alternative<serac::solid_mechanics::LinearIsotropic>(mat)) {
-        SLIC_INFO("Setting LinearIsotropic material");
         setMaterial(std::get<serac::solid_mechanics::LinearIsotropic>(mat));
+      } else if (std::holds_alternative<serac::solid_mechanics::J2>(mat)) {
+        // setMaterial(std::get<serac::solid_mechanics::J2>(mat));
+      } else if (std::holds_alternative<serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::PowerLawHardening>>(mat)) {
+        // setMaterial(std::get<serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::PowerLawHardening>>(mat));
+      } else if (std::holds_alternative<serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::VoceHardening>>(mat)) {
+        // setMaterial(std::get<serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::VoceHardening>>(mat));
       } else {
-        SLIC_ERROR("Invalid material type. Only 'NeoHookean' and 'LinearIsotropic' are implemented in input files.");
+        SLIC_ERROR("Invalid material type.");
       }
-      // TODO J2
-      // TODO J2Nonlinear
     }
 
     if (input_options.initial_displacement) {
