@@ -414,6 +414,10 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
               core;lumberjack;slic;slam;primal;sidre;mint;spin;inlet;klee;quest;multimat)
             target_link_libraries(axom INTERFACE ${AXOM_COMPONENTS_ENABLED})
 
+            foreach(_comp ${AXOM_COMPONENTS_ENABLED})
+                add_library(axom::${_comp} ALIAS ${_comp})
+            endforeach()
+
             if(ENABLE_OPENMP)
                 target_link_libraries(axom INTERFACE openmp)
             endif()
