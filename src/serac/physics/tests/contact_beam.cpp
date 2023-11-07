@@ -43,7 +43,7 @@ TEST_P(ContactTest, beam)
   // NOTE: The number of MPI ranks must be <= the min number of elements on a
   // contact face until Tribol PR #23 is included in Serac's Tribol
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), 2, 0);
-  StateManager::setMesh(std::move(mesh));
+  StateManager::setMesh(std::move(mesh), "beam_mesh");
 
   LinearSolverOptions linear_options{.linear_solver = LinearSolver::SuperLU, .print_level = 1};
 
@@ -61,7 +61,7 @@ TEST_P(ContactTest, beam)
 
   SolidMechanicsContact<p, dim> solid_solver(nonlinear_options, linear_options,
                                              solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On,
-                                             name);
+                                             name, "beam_mesh");
 
   double                      K = 10.0;
   double                      G = 0.25;
@@ -86,14 +86,14 @@ TEST_P(ContactTest, beam)
   solid_solver.completeSetup();
 
   std::string paraview_name = name + "_paraview";
-  solid_solver.outputState(paraview_name);
+  solid_solver.outputStateToDisk(paraview_name);
 
   // Perform the quasi-static solve
   double dt = 1.0;
   solid_solver.advanceTimestep(dt);
 
   // Output the sidre-based plot files
-  solid_solver.outputState(paraview_name);
+  solid_solver.outputStateToDisk(paraview_name);
 
   // Check the l2 norm of the displacement dofs
   auto u_l2 = mfem::ParNormlp(solid_solver.displacement(), 2, MPI_COMM_WORLD);
