@@ -106,11 +106,14 @@ TEST_P(ContactTest, beam)
 
 // NOTE: if Penalty is first and Lagrange Multiplier is second, super LU gives a
 // zero diagonal error
-INSTANTIATE_TEST_SUITE_P(tribol, ContactTest,
-                         testing::Values(std::make_tuple(ContactEnforcement::LagrangeMultiplier, ContactType::Frictionless, "lagrange_multiplier_frictionless"),
-                                         std::make_tuple(ContactEnforcement::LagrangeMultiplier, ContactType::TiedNormal, "lagrange_multiplier_tiednormal"),
-                                         std::make_tuple(ContactEnforcement::Penalty, ContactType::Frictionless, "penalty_frictionless"),
-                                         std::make_tuple(ContactEnforcement::Penalty, ContactType::TiedNormal, "penalty_tiednormal")));
+INSTANTIATE_TEST_SUITE_P(
+    tribol, ContactTest,
+    testing::Values(std::make_tuple(ContactEnforcement::LagrangeMultiplier, ContactType::Frictionless,
+                                    "lagrange_multiplier_frictionless"),
+                    std::make_tuple(ContactEnforcement::LagrangeMultiplier, ContactType::TiedNormal,
+                                    "lagrange_multiplier_tiednormal"),
+                    std::make_tuple(ContactEnforcement::Penalty, ContactType::Frictionless, "penalty_frictionless"),
+                    std::make_tuple(ContactEnforcement::Penalty, ContactType::TiedNormal, "penalty_tiednormal")));
 
 }  // namespace serac
 
