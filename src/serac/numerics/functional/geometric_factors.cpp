@@ -11,7 +11,7 @@ namespace serac {
  * @param positions_q (output) the positions for each quadrature point
  * @param jacobians_q (output) the jacobians for each quadrature point
  * @param positions_e (input) the "e-vector" of position data
- * @param num_elements (input) the number of elements of the specified geometry
+ * @param elements (input) the list of element indices that are part of this domain
  */
 template <int Q, mfem::Geometry::Type geom, typename function_space>
 void compute_geometric_factors(mfem::Vector& positions_q, mfem::Vector& jacobians_q, const mfem::Vector& positions_e,

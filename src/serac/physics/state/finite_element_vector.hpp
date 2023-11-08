@@ -58,6 +58,7 @@ public:
   /**
    * @brief Construct a new Finite Element Vector object given a templated function space
    *
+   * @tparam FunctionSpace what kind of interpolating functions to use
    * @param mesh The mesh used to construct the finite element state
    * @param name The name of the new finite element state field
    */

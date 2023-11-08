@@ -31,7 +31,7 @@ struct Integral {
    *
    * @note It is not intended that users construct these objects manually
    *
-   * @param t the type of integral
+   * @param d the domain of integration
    * @param trial_space_indices a list of which trial spaces are used in the integrand
    */
   Integral(const Domain& d, std::vector<uint32_t> trial_space_indices)
@@ -178,7 +178,6 @@ struct Integral {
  * @param s an object used to pass around test/trial information
  * @param integral the Integral object to initialize
  * @param qf the quadrature function
- * @param domain the domain of integration
  * @param qdata the values of any quadrature point data for the material
  */
 template <mfem::Geometry::Type geom, int Q, typename test, typename... trials, typename lambda_type,
@@ -259,6 +258,19 @@ Integral MakeDomainIntegral(const Domain& domain, lambda_type&& qf,
   return integral;
 }
 
+/**
+ * @brief function to generate kernels held by an `Integral` object of type "BoundaryDomain", with a specific element
+ * type
+ *
+ * @tparam geom the element geometry
+ * @tparam Q a parameter that controls the number of quadrature points
+ * @tparam test the kind of test functions used in the integral
+ * @tparam trials the trial space(s) of the integral's inputs
+ * @tparam lambda_type a callable object that implements the q-function concept
+ * @param s an object used to pass around test/trial information
+ * @param integral the Integral object to initialize
+ * @param qf the quadrature function
+ */
 template <mfem::Geometry::Type geom, int Q, typename test, typename... trials, typename lambda_type>
 void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral& integral, lambda_type&& qf)
 {

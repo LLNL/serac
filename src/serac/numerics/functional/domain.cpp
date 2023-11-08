@@ -427,6 +427,7 @@ Domain EntireBoundary(const mfem::Mesh& mesh)
   return output;
 }
 
+/// @cond
 using c_iter = std::vector<int>::const_iterator;
 using b_iter = std::back_insert_iterator<std::vector<int>>;
 using set_op = std::function<b_iter(c_iter, c_iter, c_iter, c_iter, b_iter)>;
@@ -434,7 +435,9 @@ using set_op = std::function<b_iter(c_iter, c_iter, c_iter, c_iter, b_iter)>;
 set_op union_op        = std::set_union<c_iter, c_iter, b_iter>;
 set_op intersection_op = std::set_intersection<c_iter, c_iter, b_iter>;
 set_op difference_op   = std::set_difference<c_iter, c_iter, b_iter>;
+/// @endcond
 
+/// @brief return a std::vector that is the result of applying (a op b)
 std::vector<int> set_operation(set_op op, const std::vector<int>& a, const std::vector<int>& b)
 {
   std::vector<int> output;
@@ -442,6 +445,7 @@ std::vector<int> set_operation(set_op op, const std::vector<int>& a, const std::
   return output;
 }
 
+/// @brief return a Domain that is the result of applying (a op b)
 Domain set_operation(set_op op, const Domain& a, const Domain& b)
 {
   assert(&a.mesh_ == &b.mesh_);

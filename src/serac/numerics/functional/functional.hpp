@@ -335,6 +335,7 @@ public:
         MakeBoundaryIntegral<signature, Q, dim>(EntireBoundary(domain), integrand, std::vector<uint32_t>{args...}));
   }
 
+  /// @overload
   template <int dim, int... args, typename lambda>
   void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, const Domain& domain)
   {

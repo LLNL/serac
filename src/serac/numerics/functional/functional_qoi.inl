@@ -160,7 +160,7 @@ public:
    * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
    * @tparam qpt_data_type The type of the data to store for each quadrature point
    * @param[in] integrand The user-provided quadrature function, see @p Integral
-   * @param[in] domain The domain on which to evaluate the integral
+   * @param[in] mesh The domain on which to evaluate the integral
    * @param[in] qdata The data structure containing per-quadrature-point data
    * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
    * and @a spatial_dim template parameter
@@ -202,7 +202,7 @@ public:
    * @tparam dim The dimension of the boundary element (1 for line, 2 for quad, etc)
    * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
    * @param[in] integrand The user-provided quadrature function, see @p Integral
-   * @param[in] domain The domain on which to evaluate the integral
+   * @param[in] mesh The domain on which to evaluate the integral
    *
    * @brief Adds a boundary integral term to the Functional object
    *

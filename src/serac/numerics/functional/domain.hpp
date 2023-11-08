@@ -9,11 +9,10 @@ namespace serac {
 
 /**
  * @brief a class for representing a geometric region that can be used for integration
- * 
+ *
  * This region can be an entire mesh or some subset of its elements
  */
 struct Domain {
-
   /// @brief enum describing what kind of elements are included in a Domain
   enum Type
   {
@@ -21,16 +20,16 @@ struct Domain {
     BoundaryElements
   };
 
-  static constexpr int num_types = 2;
+  static constexpr int num_types = 2;  ///< the number of entries in the Type enum
 
   /// @brief the underyling mesh for this domain
   const mfem::Mesh& mesh_;
 
   /// @brief the geometric dimension of the domain
-  int              dim_;
+  int dim_;
 
   /// @brief whether the elements in this domain are on the boundary or not
-  Type             type_;
+  Type type_;
 
   /// note: only lists with appropriate dimension (see dim_) will be populated
   ///       for example, a 2D Domain may have `tris_` and `quads_` non-nonempty,
