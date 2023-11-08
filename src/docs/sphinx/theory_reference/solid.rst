@@ -460,7 +460,7 @@ constraints are then done discretely on the coefficients:
    \tilde{g}^a \leq 0 \qquad p^a \geq 0 \qquad \tilde{g}^a p^a = 0 .
 
 Discrete satisfaction of the inequality constraints (or equality constraints for tied contact in the normal direction),
-as opposed to e.g. pointwise satisfaction at the quadrature points, gives LBB stability, enabling exact solution of the
+as opposed to e.g., pointwise satisfaction at the quadrature points, gives LBB stability, enabling exact solution of the
 pressure field by explicitly solving for the Lagrange multipliers in the resulting saddle point system.  Additionally,
 mortar methods give optimal rates of convergence (when not limited by solution regularity) and give exact satisfaction
 of the contact patch test.
