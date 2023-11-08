@@ -451,7 +451,7 @@ allowing the contact energy expression to be simplified to
 
    \Pi_C = \sum_{a=1}^n p^a \tilde{g}^a(\bar{\mathbf{x}}) ,
 
-where :math:`\tilde{g}_I(\bar{\mathbf{x}}) = \int_{\Gamma_C} N_I(\bar{\mathbf{x}}) g(\bar{\mathbf{x}}) \, dA`. For
+where :math:`\tilde{g}^a(\bar{\mathbf{x}}) = \int_{\Gamma_C} N_I(\bar{\mathbf{x}}) g(\bar{\mathbf{x}}) \, dA`. For
 frictionless contact, satisfaction of the Karush-Kuhn-Tucker (KKT) conditions that define the contact inequality
 constraints are then done discretely on the coefficients:
 
