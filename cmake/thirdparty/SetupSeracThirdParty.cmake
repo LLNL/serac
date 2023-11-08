@@ -419,7 +419,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             endforeach()
 
             if(ENABLE_OPENMP)
-                target_link_libraries(axom INTERFACE openmp)
+                target_link_libraries(axom::core INTERFACE openmp)
             endif()
 
             # Mark the axom includes as "system" and filter unallowed directories
