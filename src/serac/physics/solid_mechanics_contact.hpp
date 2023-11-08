@@ -56,8 +56,8 @@ public:
    */
   SolidMechanicsContact(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
                         const serac::TimesteppingOptions timestepping_opts, const GeometricNonlinearities geom_nonlin,
-                        const std::string& physics_name, std::string mesh_tag, std::vector<std::string> parameter_names = {},
-                        int cycle = 0, double time = 0.0)
+                        const std::string& physics_name, std::string mesh_tag,
+                        std::vector<std::string> parameter_names = {}, int cycle = 0, double time = 0.0)
       : SolidMechanicsContact(
             std::make_unique<EquationSolver>(nonlinear_opts, lin_opts, StateManager::mesh(mesh_tag).GetComm()),
             timestepping_opts, geom_nonlin, physics_name, mesh_tag, parameter_names, cycle, time)
@@ -77,10 +77,12 @@ public:
    * @param time The simulation time to initialize the physics module to
    */
   SolidMechanicsContact(std::unique_ptr<serac::EquationSolver> solver,
-                        const serac::TimesteppingOptions       timestepping_opts,
-                        const GeometricNonlinearities geom_nonlin, const std::string& physics_name, std::string mesh_tag,
+                        const serac::TimesteppingOptions timestepping_opts, const GeometricNonlinearities geom_nonlin,
+                        const std::string& physics_name, std::string mesh_tag,
                         std::vector<std::string> parameter_names = {}, int cycle = 0, double time = 0.0)
-      : SolidMechanicsBase(std::move(solver), timestepping_opts, geom_nonlin, physics_name, mesh_tag, parameter_names, cycle, time), contact_(mesh_)
+      : SolidMechanicsBase(std::move(solver), timestepping_opts, geom_nonlin, physics_name, mesh_tag, parameter_names,
+                           cycle, time),
+        contact_(mesh_)
   {
   }
 
@@ -93,8 +95,8 @@ public:
    * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param[in] time The simulation time to initialize the physics module to
    */
-  SolidMechanicsContact(const SolidMechanicsInputOptions& input_options, const std::string& physics_name, std::string mesh_tag,
-                 int cycle = 0, double time = 0.0)
+  SolidMechanicsContact(const SolidMechanicsInputOptions& input_options, const std::string& physics_name,
+                        std::string mesh_tag, int cycle = 0, double time = 0.0)
       : SolidMechanicsBase(input_options, physics_name, mesh_tag, cycle, time), contact_(mesh_)
   {
   }
