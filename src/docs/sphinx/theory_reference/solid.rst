@@ -509,7 +509,7 @@ usually referred to as the *mortar matrix*. In Serac, the pressure degrees-of-fr
 ways:
 
 #. by introducing Lagrange multipliers as unknowns and explicitly solving for them or
-#. by using a penalty proportional to the gap: :math:`p^b = \kappa g^b`.
+#. by using a penalty proportional to the gap: :math:`p^b = \kappa \tilde{g}^b`.
 
 The tangent is computed by taking variations of the force with respect to the displacement (and the pressure when
 solving for Lagrange multipliers). Similar to taking variations of the contact energy, taking variations of the contact
