@@ -117,8 +117,8 @@ public:
       contact_.residualFunction(u, r);
       r_blk.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
     };
-    // This if-block breaks up building the Jacobian operator depending if there is Lagrange multiplier enforcement or
-    // not
+    // This if-block below breaks up building the Jacobian operator depending if there is Lagrange multiplier
+    // enforcement or not
 
     // The quasistatic operator has blocks if any of the contact interactions are enforced using Lagrange multipliers.
     // Jacobian operator is an mfem::BlockOperator
