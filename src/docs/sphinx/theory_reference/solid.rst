@@ -196,7 +196,7 @@ This discrete nonlinear second order ODE system can now be solved using the sele
 
 
 Material Parameters
-======================
+===================
 
 Material models in serac may use different parameters for describing elastic properties. Specifying
 any two of these parameters lets you calculate the rest. The tool below can be used to 
@@ -390,7 +390,7 @@ isotropic and kinematic hardening
    :width: 80%
    :align: center
 
-Contact mechanics
+Contact Mechanics
 =================
 
 When two surfaces on :math:`\Omega` (the current configuration of the simulation domain) come into contact, an
@@ -426,7 +426,7 @@ where :math:`g(\bar{\mathbf{x}}) := \mathbf{n}(\bar{\mathbf{x}}) \cdot \bigl( \m
 \mathbf{x}_2 (\bar{\mathbf{x}}) \bigr)` is the gap normal. Taking variations of this with respect to displacement leads
 to the contact term in the weak form.
 
-Mortar contact
+Mortar Contact
 --------------
 
 While notionally straightforward, the complexity (both in mathematical derivation and computation) of accurately
