@@ -25,20 +25,19 @@ void SolidMaterialInputOptions::defineInputFileSchema(axom::inlet::Container& co
   container.addDouble("Hk", "Kinematic hardening constant");
   container.addDouble("sigma_y", "Yield stress");
   auto& hardening_container = container.addStruct("hardening", "Hardening law");
-  SLIC_INFO("define input schema for hardening");
   HardeningInputOptions::defineInputFileSchema(hardening_container);
 
   // Verify
   container.registerVerifier([](const axom::inlet::Container& c) -> bool {
     axom::inlet::InletType double_type = axom::inlet::InletType::Double;
     axom::inlet::InletType obj_type = axom::inlet::InletType::Object;
-    bool density_present = c.contains("density") && (c["density"].type() == double_type);
-    bool mu_present = c.contains("mu") && (c["mu"].type() == double_type);
-    bool K_present = c.contains("K") && (c["K"].type() == double_type);
-    bool E_present = c.contains("E") && (c["E"].type() == double_type);
-    bool nu_present = c.contains("nu") && (c["nu"].type() == double_type);
-    bool Hi_present = c.contains("Hi") && (c["Hi"].type() == double_type);
-    bool sigma_y_present = c.contains("sigma_y") && (c["sigma_y"].type() == double_type);
+    bool density_present   = c.contains("density") && (c["density"].type() == double_type);
+    bool mu_present        = c.contains("mu") && (c["mu"].type() == double_type);
+    bool K_present         = c.contains("K") && (c["K"].type() == double_type);
+    bool E_present         = c.contains("E") && (c["E"].type() == double_type);
+    bool nu_present        = c.contains("nu") && (c["nu"].type() == double_type);
+    bool Hi_present        = c.contains("Hi") && (c["Hi"].type() == double_type);
+    bool sigma_y_present   = c.contains("sigma_y") && (c["sigma_y"].type() == double_type);
     bool hardening_present = c.contains("hardening") && (c["hardening"].type() == obj_type);
 
     std::string model = c["model"];
@@ -46,14 +45,23 @@ void SolidMaterialInputOptions::defineInputFileSchema(axom::inlet::Container& co
       return density_present && mu_present && K_present && !E_present && !nu_present && !Hi_present &&
         !sigma_y_present && !hardening_present;
     } else if (model == "J2") {
-      return true;  // TODO
+      return density_present && !mu_present && !K_present && E_present && nu_present && Hi_present &&
+        sigma_y_present && !hardening_present;
     } else if (model == "J2Nonlinear") {
-      if (hardening_present) {
+      if (density_present && !mu_present && !K_present && E_present && nu_present && !Hi_present &&
+          !sigma_y_present && hardening_present) {
+        bool hardening_sigma_y_present         = c.contains("hardening/sigma_y") && (c["hardening/sigma_y"].type() == double_type);
+        bool hardening_n_present               = c.contains("hardening/n") && (c["hardening/n"].type() == double_type);
+        bool hardening_eps0_present            = c.contains("hardening/eps0") && (c["hardening/eps0"].type() == double_type);
+        bool hardening_sigma_sat_present       = c.contains("hardening/sigma_sat") && (c["hardening/sigma_sat"].type() == double_type);
+        bool hardening_strain_constant_present = c.contains("hardening/strain_constant") && (c["hardening/strain_constant"].type() == double_type);
         std::string law = c["hardening/law"];
         if (law == "PowerLawHardening") {
-          return true;  // TODO
+          return hardening_sigma_y_present && hardening_n_present && hardening_eps0_present &&
+            !hardening_sigma_sat_present && !hardening_strain_constant_present;
         } else if (law == "VoceHardening") {
-          return true;  // TODO
+          return hardening_sigma_y_present && !hardening_n_present && !hardening_eps0_present &&
+            hardening_sigma_sat_present && hardening_strain_constant_present;
         }
       }
     }
