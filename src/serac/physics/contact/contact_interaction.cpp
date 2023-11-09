@@ -36,12 +36,12 @@ ContactInteraction::ContactInteraction(int interaction_id, const mfem::ParMesh& 
   int mesh1_id = 2 * interaction_id;      // unique id for the first Tribol mesh
   int mesh2_id = 2 * interaction_id + 1;  // unique id for the second Tribol mesh
   tribol::registerMfemCouplingScheme(interaction_id, mesh1_id, mesh2_id, mesh, current_coords, bdry_attr_surf1,
-                                     bdry_attr_surf2, tribol::SURFACE_TO_SURFACE, tribol::NO_SLIDING, getMethod(),
+                                     bdry_attr_surf2, tribol::SURFACE_TO_SURFACE, tribol::NO_CASE, getMethod(),
                                      tribol::FRICTIONLESS, tribol::LAGRANGE_MULTIPLIER);
   tribol::setLagrangeMultiplierOptions(interaction_id, tribol::ImplicitEvalMode::MORTAR_RESIDUAL_JACOBIAN);
 
   // get true DOFs only associated with surface 1 (i.e. surface 1 \ surface 2)
-  if (getContactOptions().type == ContactType::TiedSlide) {
+  if (getContactOptions().type == ContactType::TiedNormal) {
     // this block essentially returns the complement of GetEssentialTrueDofsFromElementAttribute(surface 2) (def'd in
     // boundary_condition_helper)
     auto&            pressure_space = *tribol::getMfemPressure(interaction_id).ParFESpace();

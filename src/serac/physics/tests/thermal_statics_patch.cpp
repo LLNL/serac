@@ -164,13 +164,16 @@ double solution_error(const ExactSolution& exact_temperature, PatchBoundaryCondi
 
   std::string filename = std::string(SERAC_REPO_DIR) +  "/data/meshes/patch" + std::to_string(dim) + "D.mesh";
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename));
-  serac::StateManager::setMesh(std::move(mesh));
+
+  std::string mesh_tag{"mesh"};
+
+  serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   // Construct a heat transfer mechanics solver
   auto nonlinear_opts = heat_transfer::default_nonlinear_options;
   nonlinear_opts.absolute_tol = 1e-14;
   nonlinear_opts.relative_tol = 1e-14;
-  HeatTransfer<p, dim> thermal(nonlinear_opts, heat_transfer::direct_linear_options, heat_transfer::default_static_options, "thermal");
+  HeatTransfer<p, dim> thermal(nonlinear_opts, heat_transfer::direct_linear_options, heat_transfer::default_static_options, "thermal", mesh_tag);
 
   heat_transfer::LinearIsotropicConductor mat(1.0,1.0,1.0);
   thermal.setMaterial(mat);
@@ -181,8 +184,7 @@ double solution_error(const ExactSolution& exact_temperature, PatchBoundaryCondi
   thermal.completeSetup();
 
   // Perform the quasi-static solve
-  double dt = 1.0;
-  thermal.advanceTimestep(dt);
+  thermal.advanceTimestep(1.0);
 
   // Compute norm of error
   mfem::FunctionCoefficient exact_solution_coef(exact_temperature);

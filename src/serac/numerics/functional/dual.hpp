@@ -363,6 +363,14 @@ SERAC_HOST_DEVICE auto log(dual<gradient_type> a)
   return dual<gradient_type>{log(a.value), a.gradient / a.value};
 }
 
+/** @brief implementation of the natural logarithm of one plus the argument function for dual numbers */
+template <typename gradient_type>
+SERAC_HOST_DEVICE auto log1p(dual<gradient_type> a)
+{
+  using std::log1p;
+  return dual<gradient_type>{log1p(a.value), a.gradient / (1.0 + a.value)};
+}
+
 /** @brief implementation of `a` (dual) raised to the `b` (dual) power */
 template <typename gradient_type>
 SERAC_HOST_DEVICE auto pow(dual<gradient_type> a, dual<gradient_type> b)

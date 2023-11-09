@@ -36,7 +36,7 @@ enum class ContactEnforcement
  */
 enum class ContactType
 {
-  TiedSlide,   /**< Tied contact in the normal direction, no friction */
+  TiedNormal,  /**< Tied contact in the normal direction, no friction */
   Frictionless /**< Enforce gap >= 0, pressure <= 0, gap * pressure = 0 in the normal direction */
 };
 

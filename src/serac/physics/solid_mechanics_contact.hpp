@@ -48,17 +48,19 @@ public:
    * @param lin_opts The linear solver options for solving the linearized Jacobian equations
    * @param timestepping_opts The timestepping options for the solid mechanics time evolution operator
    * @param geom_nonlin Flag to include geometric nonlinearities
-   * @param name An optional name for the physics module instance
-   * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
+   * @param physics_name A name for the physics module instance
+   * @param mesh_tag The tag for the mesh in the StateManager to construct the physics module on
+   * @param parameter_names A vector of the names of the requested parameter fields
+   * @param cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param time The simulation time to initialize the physics module to
    */
   SolidMechanicsContact(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
-                        const serac::TimesteppingOptions timestepping_opts,
-                        const GeometricNonlinearities    geom_nonlin = GeometricNonlinearities::On,
-                        const std::string& name = "", mfem::ParMesh* pmesh = nullptr)
+                        const serac::TimesteppingOptions timestepping_opts, const GeometricNonlinearities geom_nonlin,
+                        const std::string& physics_name, std::string mesh_tag,
+                        std::vector<std::string> parameter_names = {}, int cycle = 0, double time = 0.0)
       : SolidMechanicsContact(
-            std::make_unique<EquationSolver>(nonlinear_opts, lin_opts,
-                                             StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
-            timestepping_opts, geom_nonlin, name, pmesh)
+            std::make_unique<EquationSolver>(nonlinear_opts, lin_opts, StateManager::mesh(mesh_tag).GetComm()),
+            timestepping_opts, geom_nonlin, physics_name, mesh_tag, parameter_names, cycle, time)
   {
   }
 
@@ -68,14 +70,19 @@ public:
    * @param solver The nonlinear equation solver for the implicit solid mechanics equations
    * @param timestepping_opts The timestepping options for the solid mechanics time evolution operator
    * @param geom_nonlin Flag to include geometric nonlinearities
-   * @param name An optional name for the physics module instance
-   * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
+   * @param physics_name A name for the physics module instance
+   * @param mesh_tag The tag for the mesh in the StateManager to construct the physics module on
+   * @param parameter_names A vector of the names of the requested parameter fields
+   * @param cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param time The simulation time to initialize the physics module to
    */
   SolidMechanicsContact(std::unique_ptr<serac::EquationSolver> solver,
-                        const serac::TimesteppingOptions       timestepping_opts,
-                        const GeometricNonlinearities          geom_nonlin = GeometricNonlinearities::On,
-                        const std::string& name = "", mfem::ParMesh* pmesh = nullptr)
-      : SolidMechanicsBase(std::move(solver), timestepping_opts, geom_nonlin, name, pmesh), contact_(mesh_)
+                        const serac::TimesteppingOptions timestepping_opts, const GeometricNonlinearities geom_nonlin,
+                        const std::string& physics_name, std::string mesh_tag,
+                        std::vector<std::string> parameter_names = {}, int cycle = 0, double time = 0.0)
+      : SolidMechanicsBase(std::move(solver), timestepping_opts, geom_nonlin, physics_name, mesh_tag, parameter_names,
+                           cycle, time),
+        contact_(mesh_)
   {
   }
 
@@ -83,10 +90,14 @@ public:
    * @brief Construct a new Nonlinear SolidMechanicsContact Solver object
    *
    * @param[in] input_options The solver information parsed from the input file
-   * @param[in] name An optional name for the physics module instance. Note that this is NOT the mesh tag.
+   * @param[in] physics_name A name for the physics module instance
+   * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
+   * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param[in] time The simulation time to initialize the physics module to
    */
-  SolidMechanicsContact(const SolidMechanicsInputOptions& input_options, const std::string& name = "")
-      : SolidMechanicsBase(input_options, name), contact_(mesh_)
+  SolidMechanicsContact(const SolidMechanicsInputOptions& input_options, const std::string& physics_name,
+                        std::string mesh_tag, int cycle = 0, double time = 0.0)
+      : SolidMechanicsBase(input_options, physics_name, mesh_tag, cycle, time), contact_(mesh_)
   {
   }
 
@@ -104,10 +115,13 @@ public:
       mfem::Vector r_blk(r, 0, displacement_.Size());
       r_blk = res;
       contact_.residualFunction(u, r);
-      // we need to do this again to clear out contact residual on essential dofs
       r_blk.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
     };
+    // This if-block below breaks up building the Jacobian operator depending if there is Lagrange multiplier
+    // enforcement or not
     if (contact_.haveLagrangeMultipliers()) {
+      // The quasistatic operator has blocks if any of the contact interactions are enforced using Lagrange multipliers.
+      // Jacobian operator is an mfem::BlockOperator
       J_offsets_ = mfem::Array<int>({0, displacement_.Size(), displacement_.Size() + contact_.numPressureDofs()});
       return std::make_unique<mfem_ext::StdFunctionOperator>(
           displacement_.space().TrueVSize() + contact_.numPressureDofs(), residual_fn,
@@ -146,6 +160,8 @@ public:
             return *J_constraint_;
           });
     } else {
+      // If all of the contact interactions are penalty, then there will be no blocks.  Jacobian operator is a single
+      // mfem::HypreParMatrix
       return std::make_unique<mfem_ext::StdFunctionOperator>(
           displacement_.space().TrueVSize(), residual_fn, [this](const mfem::Vector& u) -> mfem::Operator& {
             auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, shape_displacement_,
@@ -177,7 +193,7 @@ public:
                              const std::set<int>& bdry_attr_surf2, ContactOptions contact_opts)
   {
     SLIC_ERROR_ROOT_IF(!is_quasistatic_, "Contact can only be applied to quasistatic problems.");
-    SLIC_ERROR_ROOT_IF(order_ > 1, "Contact can only be applied to linear (order = 1) meshes.");
+    SLIC_ERROR_ROOT_IF(order > 1, "Contact can only be applied to linear (order = 1) meshes.");
     contact_.addContactInteraction(interaction_id, bdry_attr_surf1, bdry_attr_surf2, contact_opts);
   }
 
@@ -188,10 +204,8 @@ public:
    */
   void completeSetup() override
   {
-    int    cycle = 0;
-    double time  = 0.0;
     double dt    = 0.0;
-    contact_.update(cycle, time, dt);
+    contact_.update(cycle_, time_, dt);
 
     SolidMechanicsBase::completeSetup();
   }
@@ -305,7 +319,6 @@ protected:
   using BasePhysics::cycle_;
   using BasePhysics::is_quasistatic_;
   using BasePhysics::mesh_;
-  using BasePhysics::order_;
   using BasePhysics::parameters_;
   using BasePhysics::shape_displacement_;
   using BasePhysics::time_;

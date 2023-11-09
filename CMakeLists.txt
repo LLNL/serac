@@ -43,6 +43,10 @@ if(NOT DEFINED SERAC_SOURCE_DIR)
 endif()
 message(STATUS "Serac Source Dir: ${SERAC_SOURCE_DIR}")
 
+if(SERAC_ENABLE_CODEVELOP)
+    set(ENABLE_FORTRAN ON CACHE BOOL "")
+endif()
+
 #------------------------------------------------------------------------------
 # Setup BLT
 #------------------------------------------------------------------------------

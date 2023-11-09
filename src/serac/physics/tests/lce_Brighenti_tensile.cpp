@@ -35,17 +35,17 @@ TEST(LiquidCrystalElastomer, Brighenti)
       mfem::Mesh(mfem::Mesh::MakeCartesian3D(nElem, 2 * nElem, 2 * nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
   auto mesh = std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, cuboid);
 
-  serac::StateManager::setMesh(std::move(mesh));
+  std::string mesh_tag{"mesh"};
+
+  auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   double             initial_temperature = 25 + 273;
   double             final_temperature   = 430.0;
-  FiniteElementState temperature(
-      StateManager::newState(FiniteElementState::Options{.order = p, .name = "temperature"}));
+  FiniteElementState temperature(StateManager::newState(H1<p>{}, "temperature", mesh_tag));
 
   temperature = initial_temperature + 0.0 * final_temperature;
 
-  FiniteElementState gamma(StateManager::newState(
-      FiniteElementState::Options{.order = p, .vector_dim = 1, .element_type = ElementType::L2, .name = "gamma"}));
+  FiniteElementState gamma(StateManager::newState(L2<p>{}, "gamma", mesh_tag));
 
   int  lceArrangementTag = 1;
   auto gamma_func        = [lceArrangementTag](const mfem::Vector& x, double) -> double {
@@ -93,9 +93,9 @@ TEST(LiquidCrystalElastomer, Brighenti)
                                               .print_level    = 1};
 #endif
 
-  SolidMechanics<p, dim, Parameters<H1<p>, L2<p> > > solid_solver(nonlinear_options, linear_options,
-                                                                  solid_mechanics::default_quasistatic_options,
-                                                                  GeometricNonlinearities::Off, "lce_solid_functional");
+  SolidMechanics<p, dim, Parameters<H1<p>, L2<p> > > solid_solver(
+      nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::Off,
+      "lce_solid_functional", mesh_tag, {"temperature", "gamma"});
 
   constexpr int TEMPERATURE_INDEX = 0;
   constexpr int GAMMA_INDEX       = 1;
@@ -143,10 +143,9 @@ TEST(LiquidCrystalElastomer, Brighenti)
 
   // Perform first quasi-static solve
   std::string output_filename = "sol_lce_brighenti_tensile";
-  solid_solver.outputState(output_filename);
+  solid_solver.outputStateToDisk(output_filename);
 
   // QoI for output:
-  auto&                          pmesh = serac::StateManager::mesh();
   Functional<double(H1<p, dim>)> avgYDispQoI({&solid_solver.displacement().space()});
   avgYDispQoI.AddSurfaceIntegral(
       DependsOn<0>{},
@@ -190,7 +189,7 @@ TEST(LiquidCrystalElastomer, Brighenti)
 
     // solve problem with current parameters
     solid_solver.advanceTimestep(dt);
-    solid_solver.outputState(output_filename);
+    solid_solver.outputStateToDisk(output_filename);
 
     // get QoI
     double current_qoi  = avgYDispQoI(solid_solver.displacement());

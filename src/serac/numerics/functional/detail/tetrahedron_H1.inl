@@ -361,7 +361,7 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
   }
 
   template <int q>
-  static auto interpolate(const tensor<double, c, ndof>& X, const TensorProductQuadratureRule<q>&)
+  SERAC_HOST_DEVICE static auto interpolate(const tensor<double, c, ndof>& X, const TensorProductQuadratureRule<q>&)
   {
     constexpr auto xi = GaussLegendreNodes<q, mfem::Geometry::TETRAHEDRON>();
 
@@ -384,8 +384,9 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
   }
 
   template <typename source_type, typename flux_type, int q>
-  static void integrate(const tensor<tuple<source_type, flux_type>, nqpts(q)>& qf_output,
-                        const TensorProductQuadratureRule<q>&, tensor<double, c, ndof>* element_residual, int step = 1)
+  SERAC_HOST_DEVICE static void integrate(const tensor<tuple<source_type, flux_type>, nqpts(q)>& qf_output,
+                                          const TensorProductQuadratureRule<q>&,
+                                          tensor<double, c, ndof>* element_residual, int step = 1)
   {
     if constexpr (is_zero<source_type>{} && is_zero<flux_type>{}) {
       return;

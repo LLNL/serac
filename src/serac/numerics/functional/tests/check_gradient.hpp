@@ -13,7 +13,7 @@
 #include "serac/numerics/functional/functional.hpp"
 
 template <typename T>
-void check_gradient(serac::Functional<T>& f, mfem::Vector& U, double epsilon = 1.0e-4)
+void check_gradient(serac::Functional<T>& f, const mfem::Vector& U, double epsilon = 1.0e-4)
 {
   int seed = 42;
 
@@ -80,7 +80,7 @@ void check_gradient(serac::Functional<T>& f, mfem::Vector& U, double epsilon = 1
 }
 
 template <typename T>
-void check_gradient(serac::Functional<T>& f, mfem::Vector& U, mfem::Vector& dU_dt, double epsilon = 1.0e-4)
+void check_gradient(serac::Functional<T>& f, const mfem::Vector& U, const mfem::Vector& dU_dt, double epsilon = 1.0e-4)
 {
   int seed = 42;
 
@@ -214,7 +214,7 @@ void check_gradient(serac::Functional<T>& f, mfem::Vector& U, mfem::Vector& dU_d
 ///////////////////
 
 template <typename T>
-void check_gradient(serac::Functional<double(T)>& f, mfem::HypreParVector& U)
+void check_gradient(serac::Functional<double(T)>& f, const mfem::HypreParVector& U)
 {
   int seed = 42;
 
@@ -253,7 +253,8 @@ void check_gradient(serac::Functional<double(T)>& f, mfem::HypreParVector& U)
 }
 
 template <typename T1, typename T2>
-void check_gradient(serac::Functional<double(T1, T2)>& f, mfem::HypreParVector& U, mfem::HypreParVector& dU_dt)
+void check_gradient(serac::Functional<double(T1, T2)>& f, const mfem::HypreParVector& U,
+                    const mfem::HypreParVector& dU_dt)
 {
   int    seed    = 42;
   double epsilon = 1.0e-8;

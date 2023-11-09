@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/physics/contact/contact_data.hpp"
+#include <HYPRE_utilities.h>
 
 #include "axom/slic.hpp"
 
@@ -19,7 +20,8 @@ ContactData::ContactData(const mfem::ParMesh& mesh)
       reference_nodes_{dynamic_cast<const mfem::ParGridFunction*>(mesh.GetNodes())},
       current_coords_{*reference_nodes_},
       have_lagrange_multipliers_{false},
-      num_pressure_dofs_{0}
+      num_pressure_dofs_{0},
+      offsets_up_to_date_{false}
 {
   tribol::initialize(mesh_.SpaceDimension(), mesh_.GetComm());
 }
@@ -33,6 +35,7 @@ void ContactData::addContactInteraction(int interaction_id, const std::set<int>&
   if (contact_opts.enforcement == ContactEnforcement::LagrangeMultiplier) {
     have_lagrange_multipliers_ = true;
     num_pressure_dofs_ += interactions_.back().numPressureDofs();
+    offsets_up_to_date_ = false;
   }
 }
 
@@ -56,31 +59,40 @@ FiniteElementDual ContactData::forces() const
   return f;
 }
 
-mfem::Vector ContactData::mergedPressures() const
+mfem::HypreParVector ContactData::mergedPressures() const
 {
-  mfem::Vector merged_p(numPressureDofs());
-  auto         dof_offsets = pressureDofOffsets();
+  updateDofOffsets();
+  mfem::HypreParVector merged_p(mesh_.GetComm(), global_pressure_dof_offsets_[global_pressure_dof_offsets_.Size() - 1],
+                                global_pressure_dof_offsets_.GetData());
   for (size_t i{0}; i < interactions_.size(); ++i) {
     if (interactions_[i].getContactOptions().enforcement == ContactEnforcement::LagrangeMultiplier) {
       mfem::Vector p_interaction;
-      p_interaction.MakeRef(merged_p, dof_offsets[static_cast<int>(i)],
-                            dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
+      p_interaction.MakeRef(
+          merged_p, pressure_dof_offsets_[static_cast<int>(i)],
+          pressure_dof_offsets_[static_cast<int>(i) + 1] - pressure_dof_offsets_[static_cast<int>(i)]);
       p_interaction.Set(1.0, interactions_[i].pressure());
     }
   }
   return merged_p;
 }
 
-mfem::Vector ContactData::mergedGaps() const
+mfem::HypreParVector ContactData::mergedGaps(bool zero_inactive) const
 {
-  mfem::Vector merged_g(numPressureDofs());
-  auto         dof_offsets = pressureDofOffsets();
+  updateDofOffsets();
+  mfem::HypreParVector merged_g(mesh_.GetComm(), global_pressure_dof_offsets_[global_pressure_dof_offsets_.Size() - 1],
+                                global_pressure_dof_offsets_.GetData());
   for (size_t i{0}; i < interactions_.size(); ++i) {
     if (interactions_[i].getContactOptions().enforcement == ContactEnforcement::LagrangeMultiplier) {
-      mfem::Vector g_interaction;
-      g_interaction.MakeRef(merged_g, dof_offsets[static_cast<int>(i)],
-                            dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
-      g_interaction.Set(1.0, interactions_[i].gaps());
+      auto g = interactions_[i].gaps();
+      if (zero_inactive) {
+        for (auto dof : interactions_[i].inactiveDofs()) {
+          g[dof] = 0.0;
+        }
+      }
+      mfem::Vector g_interaction(
+          merged_g, pressure_dof_offsets_[static_cast<int>(i)],
+          pressure_dof_offsets_[static_cast<int>(i) + 1] - pressure_dof_offsets_[static_cast<int>(i)]);
+      g_interaction.Set(1.0, g);
     }
   }
   return merged_g;
@@ -88,8 +100,7 @@ mfem::Vector ContactData::mergedGaps() const
 
 std::unique_ptr<mfem::BlockOperator> ContactData::mergedJacobian() const
 {
-  jacobian_offsets_ = mfem::Array<int>({0, reference_nodes_->ParFESpace()->GetTrueVSize(),
-                                        numPressureDofs() + reference_nodes_->ParFESpace()->GetTrueVSize()});
+  updateDofOffsets();
   // this is the BlockOperator we are returning with the following blocks:
   //  | df_(contact)/dx  df_(contact)/dp |
   //  | dg/dx            I_(inactive)    |
@@ -149,12 +160,13 @@ std::unique_ptr<mfem::BlockOperator> ContactData::mergedJacobian() const
         // compute contribution to off-diagonal blocks for Lagrange multiplier
         constraint_matrices(static_cast<int>(i), 0) = static_cast<mfem::HypreParMatrix*>(B);
       }
-      if (interaction_J->IsZeroBlock(0, 1) || !dynamic_cast<mfem::TransposeOperator*>(&interaction_J->GetBlock(0, 1))) {
+      if (interaction_J->IsZeroBlock(0, 1)) {
         SLIC_ERROR_ROOT("Only symmetric constraint matrices are currently supported.");
       }
       delete &interaction_J->GetBlock(0, 1);
       if (!interaction_J->IsZeroBlock(1, 1)) {
-        SLIC_ERROR_ROOT("Only zero-valued (1, 1) Jacobian blocks are currently supported.");
+        // we track our own active set, so get rid of the tribol inactive dof block
+        delete &interaction_J->GetBlock(1, 1);
       }
     }
   }
@@ -170,13 +182,12 @@ std::unique_ptr<mfem::BlockOperator> ContactData::mergedJacobian() const
       inactive_tdofs_vector[i] = &interactions_[static_cast<size_t>(i)].inactiveDofs();
       inactive_tdofs_ct += inactive_tdofs_vector[i]->Size();
     }
-    auto             dof_offsets = pressureDofOffsets();
     mfem::Array<int> inactive_tdofs(inactive_tdofs_ct);
     inactive_tdofs_ct = 0;
     for (int i{0}; i < inactive_tdofs_vector.Size(); ++i) {
       if (inactive_tdofs_vector[i]) {
         for (int d{0}; d < inactive_tdofs_vector[i]->Size(); ++d) {
-          inactive_tdofs[d + inactive_tdofs_ct] = (*inactive_tdofs_vector[i])[d] + dof_offsets[i];
+          inactive_tdofs[d + inactive_tdofs_ct] = (*inactive_tdofs_vector[i])[d] + pressure_dof_offsets_[i];
         }
         inactive_tdofs_ct += inactive_tdofs_vector[i]->Size();
       }
@@ -233,7 +244,9 @@ void ContactData::residualFunction(const mfem::Vector& u, mfem::Vector& r)
   update(1, 1.0, dt);
 
   r_blk += forces();
-  g_blk.Set(1.0, mergedGaps());
+  // calling mergedGaps() with true will zero out gap on inactive dofs (so the residual converges and the linearized
+  // system makes sense)
+  g_blk.Set(1.0, mergedGaps(true));
 }
 
 std::unique_ptr<mfem::BlockOperator> ContactData::jacobianFunction(const mfem::Vector&   u,
@@ -257,14 +270,15 @@ std::unique_ptr<mfem::BlockOperator> ContactData::jacobianFunction(const mfem::V
 
 void ContactData::setPressures(const mfem::Vector& merged_pressures) const
 {
-  auto dof_offsets = pressureDofOffsets();
+  updateDofOffsets();
   for (size_t i{0}; i < interactions_.size(); ++i) {
     FiniteElementState p_interaction(interactions_[i].pressureSpace());
     if (interactions_[i].getContactOptions().enforcement == ContactEnforcement::LagrangeMultiplier) {
       // merged_pressures_const should not change; const cast is to create a vector view for copying to tribol pressures
       auto&              merged_pressures_const = const_cast<mfem::Vector&>(merged_pressures);
-      const mfem::Vector p_interaction_ref(merged_pressures_const, dof_offsets[static_cast<int>(i)],
-                                           dof_offsets[static_cast<int>(i) + 1] - dof_offsets[static_cast<int>(i)]);
+      const mfem::Vector p_interaction_ref(
+          merged_pressures_const, pressure_dof_offsets_[static_cast<int>(i)],
+          pressure_dof_offsets_[static_cast<int>(i) + 1] - pressure_dof_offsets_[static_cast<int>(i)]);
       p_interaction.Set(1.0, p_interaction_ref);
     } else  // enforcement == ContactEnforcement::Penalty
     {
@@ -283,14 +297,35 @@ void ContactData::setDisplacements(const mfem::Vector& u)
   current_coords_ += *reference_nodes_;
 }
 
-mfem::Array<int> ContactData::pressureDofOffsets() const
+void ContactData::updateDofOffsets() const
 {
-  mfem::Array<int> dof_offsets(static_cast<int>(interactions_.size()) + 1);
-  dof_offsets = 0;
-  for (size_t i{0}; i < interactions_.size(); ++i) {
-    dof_offsets[static_cast<int>(i + 1)] = dof_offsets[static_cast<int>(i)] + interactions_[i].numPressureDofs();
+  if (offsets_up_to_date_) {
+    return;
   }
-  return dof_offsets;
+  jacobian_offsets_ = mfem::Array<int>({0, reference_nodes_->ParFESpace()->GetTrueVSize(),
+                                        numPressureDofs() + reference_nodes_->ParFESpace()->GetTrueVSize()});
+  pressure_dof_offsets_.SetSize(static_cast<int>(interactions_.size()) + 1);
+  pressure_dof_offsets_ = 0;
+  for (size_t i{0}; i < interactions_.size(); ++i) {
+    pressure_dof_offsets_[static_cast<int>(i + 1)] =
+        pressure_dof_offsets_[static_cast<int>(i)] + interactions_[i].numPressureDofs();
+  }
+  global_pressure_dof_offsets_.SetSize(mesh_.GetNRanks() + 1);
+  global_pressure_dof_offsets_                        = 0;
+  global_pressure_dof_offsets_[mesh_.GetMyRank() + 1] = numPressureDofs();
+  MPI_Allreduce(MPI_IN_PLACE, global_pressure_dof_offsets_.GetData(), global_pressure_dof_offsets_.Size(), MPI_INT,
+                MPI_SUM, mesh_.GetComm());
+  for (int i{1}; i < mesh_.GetNRanks(); ++i) {
+    global_pressure_dof_offsets_[i + 1] += global_pressure_dof_offsets_[i];
+  }
+  if (HYPRE_AssumedPartitionCheck()) {
+    auto total_dofs = global_pressure_dof_offsets_[global_pressure_dof_offsets_.Size() - 1];
+    global_pressure_dof_offsets_.SetSize(3);
+    global_pressure_dof_offsets_[0] = global_pressure_dof_offsets_[mesh_.GetMyRank()];
+    global_pressure_dof_offsets_[1] = global_pressure_dof_offsets_[mesh_.GetMyRank() + 1];
+    global_pressure_dof_offsets_[2] = total_dofs;
+  }
+  offsets_up_to_date_ = true;
 }
 
 #else
