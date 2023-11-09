@@ -80,6 +80,78 @@ private:
   double conductivity_offset_;
 };
 
+
+/// Nonlinear isotropic thermal conduction material model
+struct ParameterizedIsotropicConductorWithLinearConductivityVsTemperature {
+  /**
+   * @brief Construct a Parameterized Isotropic Conductor with Conductivity linear with Temparture object
+   *
+   * @param density Density of the material (mass/volume)
+   * @param specific_heat_capacity Specific heat capacity of the material (energy / (mass * temp))
+   * @param conductivity_offset Thermal conductivity offset of the material (power / (length * temp)). This is
+   * added to the parameter value to get the total conductivity.
+   * @param d_conductivity_d_temperature Slope for the thermal conductivity as a function of temperature
+   */
+  ParameterizedIsotropicConductorWithLinearConductivityVsTemperature(double density = 1.0, double specific_heat_capacity = 1.0,
+                                                                     double conductivity_offset          = 1.0,
+                                                                     double d_conductivity_d_temperature = 0.0)
+      : density_(density),
+        specific_heat_capacity_(specific_heat_capacity),
+        conductivity_offset_(conductivity_offset),
+        d_conductivity_d_temperature_(d_conductivity_d_temperature)
+  {
+    SLIC_ERROR_ROOT_IF(density_ < 0.0, "Density must be positive in the linear isotropic conductor material model.");
+
+    SLIC_ERROR_ROOT_IF(specific_heat_capacity_ < 0.0,
+                       "Specific heat capacity must be positive in the linear isotropic conductor material model.");
+  }
+
+  /**
+   * @brief Material response call for a linear isotropic material with linear conductivity vs temperature
+   *
+   * @tparam T1 Spatial position type
+   * @tparam T2 Temperature type
+   * @tparam T3 Temperature gradient type
+   * @tparam T4 Parameter type
+   * @param[in] temperature
+   * @param[in] temperature_gradient
+   * @param parameter The user-defined parameter used to compute the conductivity (total conductivity = conductivity
+   * offset + parameter)
+   * @return The calculated material response (tuple of volumetric heat capacity and thermal flux)
+   */
+  template <typename T1, typename T2, typename T3, typename T4>
+  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& temperature, const T3& temperature_gradient,
+                                    const T4& parameter) const
+  {
+    const auto currentConductivity = conductivity_offset_ + get<0>(parameter) + d_conductivity_d_temperature_ * temperature;
+    SLIC_ERROR_ROOT_IF(
+        serac::get_value(currentConductivity) < 0.0,
+        "Conductivity in the IsotropicConductorWithLinearConductivityVsTemperature model has gone negative.");
+    return serac::tuple{density_ * specific_heat_capacity_, -1.0 * currentConductivity * temperature_gradient};
+  }
+
+  /**
+   * @brief The number of parameters in the model
+   *
+   * @return The number of parameters in the model
+   */
+  static constexpr int numParameters() { return 1; }
+
+private:
+  /// Density
+  double density_;
+
+  /// Specific heat capacity
+  double specific_heat_capacity_;
+
+  /// Reference isotropic thermal conductivity
+  double conductivity_offset_;
+
+  /// Slope of nonlinear thermal conductivity dependence on temperature
+  double d_conductivity_d_temperature_;
+};
+
+
 /// Parameterized thermal source model
 struct ParameterizedSource {
   /// The constant source offset
@@ -110,6 +182,7 @@ struct ParameterizedSource {
   static constexpr int numParameters() { return 1; }
 };
 
+
 /// Constant thermal flux boundary model
 struct ParameterizedFlux {
   /// The constant flux applied to the boundary
@@ -139,5 +212,6 @@ struct ParameterizedFlux {
    */
   static constexpr int numParameters() { return 1; }
 };
+
 
 }  // namespace serac::heat_transfer
