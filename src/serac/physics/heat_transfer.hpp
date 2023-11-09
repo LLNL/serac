@@ -142,7 +142,7 @@ public:
         residual_with_bcs_(temperature_.space().TrueVSize()),
         nonlin_solver_(std::move(solver)),
         ode_(temperature_.space().TrueVSize(),
-             {.time = ode_time_point_, .u = u_, .dt = dt_, .du_dt = u_rate_start_of_step_, .previous_dt = previous_dt_},
+             {.time = ode_time_point_, .u = u_, .dt = dt_, .du_dt = temperature_rate_, .previous_dt = previous_dt_},
              *nonlin_solver_, bcs_)
   {
     SLIC_ERROR_ROOT_IF(
@@ -154,6 +154,7 @@ public:
         "EquationSolver argument is nullptr in HeatTransfer constructor. It is possible that it was previously moved.");
 
     states_.push_back(&temperature_);
+    //states_.push_back(&temperature_rate_);
     adjoints_.push_back(&adjoint_temperature_);
 
     // Create a pack of the primal field and parameter finite element spaces
@@ -198,12 +199,6 @@ public:
     int true_size = temperature_.space().TrueVSize();
     u_.SetSize(true_size);
     u_predicted_.SetSize(true_size);
-
-    u_rate_start_of_step_.SetSize(true_size);
-    u_rate_start_of_step_ = 0.0;
-
-    zero_.SetSize(true_size);
-    zero_ = 0.0;
 
     shape_displacement_                             = 0.0;
     temperature_                                    = 0.0;
@@ -551,6 +546,13 @@ public:
   const serac::FiniteElementState& temperature() const { return temperature_; };
 
   /**
+   * @brief Get the temperature rate of change state
+   *
+   * @return A reference to the current temperature rate of change finite element state
+   */
+  const serac::FiniteElementState& temperatureRate() const { return temperature_rate_; };
+
+  /**
    * @brief Accessor for getting named finite element state primal solution from the physics modules
    *
    * @param state_name The name of the Finite Element State primal solution to retrieve
@@ -560,6 +562,8 @@ public:
   {
     if (state_name == "temperature") {
       return temperature_;
+    } else if (state_name == "temperature_rate") {
+      return temperature_rate_;
     }
 
     SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requested from solid mechanics module '{}', but it doesn't exist",
@@ -628,7 +632,7 @@ public:
 
           [this](const mfem::Vector& u, mfem::Vector& r) {
             const mfem::Vector res =
-                (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
+                (*residual_)(u, temperature_rate_, shape_displacement_, *parameters_[parameter_indices].state...);
 
             // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
             // tracking strategy
@@ -638,7 +642,7 @@ public:
           },
 
           [this](const mfem::Vector& u) -> mfem::Operator& {
-            auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, shape_displacement_,
+            auto [r, drdu] = (*residual_)(differentiate_wrt(u), temperature_rate_, shape_displacement_,
                                           *parameters_[parameter_indices].state...);
             J_             = assemble(drdu);
             J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
@@ -750,17 +754,20 @@ public:
   {
     auto& lin_solver = nonlin_solver_->linearSolver();
 
+    mfem::HypreParVector adjoint_essential(temperature_adjoint_load_);
+    adjoint_essential = 0.0;
+
     if (is_quasistatic_) {
       // We store the previous timestep's temperature as the current temperature for use in the lambdas computing the
       // sensitivities.
 
-      auto [_, drdu] = (*residual_)(differentiate_wrt(temperature_), zero_, shape_displacement_,
+      auto [_, drdu] = (*residual_)(differentiate_wrt(temperature_), temperature_rate_, shape_displacement_,
                                     *parameters_[parameter_indices].state...);
       auto jacobian  = assemble(drdu);
       auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
       for (const auto& bc : bcs_.essentials()) {
-        bc.apply(*J_T, temperature_adjoint_load_, zero_);
+        bc.apply(*J_T, temperature_adjoint_load_, adjoint_essential);
       }
 
       lin_solver.SetOperator(*J_T);
@@ -781,9 +788,11 @@ public:
     StateManager::loadCheckpointedStates(cycle_, {temperature_});
     StateManager::loadCheckpointedStates(cycle_ - 1, {temperature_n_minus_1});
 
+    double dt   = loadCheckpointedTimestep(cycle_ - 1);
+
     temperature_rate_ = temperature_;
     temperature_rate_.Add(-1.0, temperature_n_minus_1);
-    temperature_rate_ /= dt_;
+    temperature_rate_ /= dt;
 
     // K := dR/du
     auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(temperature_), temperature_rate_,
@@ -795,18 +804,18 @@ public:
                                                  shape_displacement_, *parameters_[parameter_indices].state...));
     std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
-    J_.reset(mfem::Add(1.0, *m_mat, dt_, *k_mat));
+    J_.reset(mfem::Add(1.0, *m_mat, dt, *k_mat));
     auto J_T = std::unique_ptr<mfem::HypreParMatrix>(J_->Transpose());
 
     // recall that temperature_adjoint_load_vector and d_temperature_dt_adjoint_load_vector were already multiplied by
     // -1 above
     mfem::HypreParVector modified_RHS(temperature_adjoint_load_);
-    modified_RHS *= dt_;
+    modified_RHS *= dt;
     modified_RHS.Add(1.0, temperature_rate_adjoint_load_);
-    modified_RHS.Add(-dt_, implicit_sensitivity_temperature_start_of_step_);
+    modified_RHS.Add(-dt, implicit_sensitivity_temperature_start_of_step_);
 
     for (const auto& bc : bcs_.essentials()) {
-      bc.apply(*J_T, modified_RHS, zero_);
+      bc.apply(*J_T, modified_RHS, adjoint_essential);
     }
 
     lin_solver.SetOperator(*J_T);
@@ -817,11 +826,11 @@ public:
     // impossible, and fortunately not possible with our material interface.
     // Not doing the transpose here to avoid doing unnecessary work.
     m_mat->Mult(adjoint_temperature_, implicit_sensitivity_temperature_start_of_step_);
-    implicit_sensitivity_temperature_start_of_step_ *= -1.0 / dt_;
-    implicit_sensitivity_temperature_start_of_step_.Add(1.0 / dt_,
+    implicit_sensitivity_temperature_start_of_step_ *= -1.0 / dt;
+    implicit_sensitivity_temperature_start_of_step_.Add(1.0 / dt,
                                                         temperature_rate_adjoint_load_);  // already multiplied by -1
 
-    time_ -= dt_;
+    time_ -= dt;
     cycle_--;
   }
 
@@ -967,17 +976,11 @@ protected:
   /// The previous timestep
   double previous_dt_;
 
-  /// An auxilliary zero vector
-  mfem::Vector zero_;
-
   /// Predicted temperature true dofs
   mfem::Vector u_;
 
   /// Predicted temperature true dofs
   mfem::Vector u_predicted_;
-
-  /// Previous value of du_dt used to prime the pump for the nonlinear solver
-  mfem::Vector u_rate_start_of_step_;
 
   /// @brief Array functions computing the derivative of the residual with respect to each given parameter
   /// @note This is needed so the user can ask for a specific sensitivity at runtime as opposed to it being a

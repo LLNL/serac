@@ -29,8 +29,11 @@ const std::string thermal_prefix              = "thermal";
 const std::string parametrized_thermal_prefix = "thermal_with_param";
 
 struct TimeSteppingInfo {
-  double total_time;
-  int    num_timesteps;
+  TimeSteppingInfo() : dts({0.2, 0.4, 0.24, 0.12, 0.31}) {}
+
+  int numTimesteps() const { return dts.Size(); }
+
+  mfem::Vector dts;
 };
 
 double computeStepQoi(const FiniteElementState& temperature, double dt)
@@ -109,8 +112,8 @@ double computeThermalQoi(BasePhysics& physics_solver, const TimeSteppingInfo& ts
 {
   double qoi = 0.0;
   physics_solver.outputStateToDisk();
-  for (int i = 0; i < ts_info.num_timesteps; ++i) {
-    double dt = ts_info.total_time / ts_info.num_timesteps;
+  for (int i = 0; i < ts_info.numTimesteps(); ++i) {
+    double dt = ts_info.dts[i];
     physics_solver.advanceTimestep(dt);
     physics_solver.outputStateToDisk();
     qoi += computeStepQoi(physics_solver.state("temperature"), dt);
@@ -177,28 +180,28 @@ std::tuple<double, FiniteElementDual, FiniteElementDual> computeThermalQoiAndIni
     const heat_transfer::IsotropicConductorWithLinearConductivityVsTemperature& mat, const TimeSteppingInfo& ts_info)
 {
   auto thermal = createNonlinearHeatTransfer(data_store, nonlinear_opts, dyn_opts, mat);
+  BasePhysics& solver = *thermal;
 
-  double qoi = computeThermalQoi(*thermal, ts_info);
+  double qoi = computeThermalQoi(solver, ts_info);
 
-  FiniteElementDual initial_temperature_sensitivity(thermal->state("temperature").space(), "init_temp_sensitivity");
+  FiniteElementDual initial_temperature_sensitivity(solver.state("temperature").space(), "init_temp_sensitivity");
   initial_temperature_sensitivity = 0.0;
   FiniteElementDual shape_sensitivity(StateManager::mesh(mesh_tag), H1<SHAPE_ORDER, dim>{}, "shape_sensitivity");
   shape_sensitivity = 0.0;
 
-  FiniteElementDual adjoint_load(thermal->state("temperature").space(), "adjoint_load");
+  FiniteElementDual adjoint_load(solver.state("temperature").space(), "adjoint_load");
 
-  for (int i = ts_info.num_timesteps; i > 0; --i) {
-    double dt = ts_info.total_time / ts_info.num_timesteps;
-
-    FiniteElementState temperature_end_of_step = thermal->loadCheckpointedState("temperature", thermal->cycle());
+  for (int i = solver.cycle(); i > 0; --i) {
+    double dt = solver.loadCheckpointedTimestep(i-1);
+    FiniteElementState temperature_end_of_step = solver.loadCheckpointedState("temperature", solver.cycle());
     computeStepAdjointLoad(temperature_end_of_step, adjoint_load, dt);
-    thermal->setAdjointLoad({{"temperature", adjoint_load}});
-    thermal->reverseAdjointTimestep();
-    shape_sensitivity += thermal->computeTimestepShapeSensitivity();
+    solver.setAdjointLoad({{"temperature", adjoint_load}});
+    solver.reverseAdjointTimestep();
+    shape_sensitivity += solver.computeTimestepShapeSensitivity();
   }
 
-  EXPECT_EQ(0, thermal->cycle());  // we are back to the start
-  auto initialConditionSensitivities     = thermal->computeInitialConditionSensitivity();
+  EXPECT_EQ(0, solver.cycle());  // we are back to the start
+  auto initialConditionSensitivities     = solver.computeInitialConditionSensitivity();
   auto initialTemperatureSensitivityIter = initialConditionSensitivities.find("temperature");
   SLIC_ASSERT_MSG(initialTemperatureSensitivityIter != initialConditionSensitivities.end(),
                   "Could not find temperature in the computed initial condition sensitivities.");
@@ -217,8 +220,8 @@ std::tuple<double, FiniteElementDual> computeThermalConductivitySensitivity(Base
 
   FiniteElementDual adjoint_load(solver.state("temperature").space(), "adjoint_load");
 
-  for (int i = ts_info.num_timesteps; i > 0; --i) {
-    double             dt                      = ts_info.total_time / ts_info.num_timesteps;
+  for (int i = solver.cycle(); i > 0; --i) {
+    double dt = solver.loadCheckpointedTimestep(i-1);
     FiniteElementState temperature_end_of_step = solver.loadCheckpointedState("temperature", solver.cycle());
     computeStepAdjointLoad(temperature_end_of_step, adjoint_load, dt);
     solver.setAdjointLoad({{"temperature", adjoint_load}});
@@ -262,7 +265,7 @@ struct HeatTransferSensitivityFixture : public ::testing::Test {
   heat_transfer::ParameterizedLinearIsotropicConductor                 parameterizedMat{1.0, 1.2, 0.01};
   heat_transfer::ParameterizedIsotropicConductorWithLinearConductivityVsTemperature parameterizedNonlinearMat{1.1, 1.2, 1.3, 1.9};
 
-  TimeSteppingInfo tsInfo{.total_time = 0.6, .num_timesteps = 6};
+  TimeSteppingInfo tsInfo;
 
   static constexpr double eps = 2e-7;
 };
