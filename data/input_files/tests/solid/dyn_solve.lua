@@ -50,8 +50,35 @@ solid = {
     -- material parameters
     materials = 
     {
-        { model = "NeoHookean", mu = 0.26, K = 5.5, density = 2 },
-        { model = "LinearIsotropic", mu = 0.26, K = 5.5, density = 2 },
+        { model = "NeoHookean", mu = 0.26, K = 5.5, density = 2.1 },
+        { model = "LinearIsotropic", mu = 0.26, K = 5.5, density = 2.2 },
+        { model = "J2", E = 1, nu = 2, Hi = 3, Hk = 4, sigma_y = 5, density = 2.3 },
+        {
+            model = "J2Nonlinear",
+            E = 1,
+            nu = 2,
+            hardening = 
+            {
+                law = "PowerLawHardening",
+                sigma_y = 1.1,
+                n = 1.2,
+                eps0 = 1.3
+            },
+            density = 2.4,
+        },
+        {
+            model = "J2Nonlinear",
+            E = 1,
+            nu = 2,
+            hardening = 
+            {
+                law = "VoceHardening",
+                sigma_y = 2.1,
+                sigma_sat = 2.2,
+                strain_constant = 2.3,
+            },
+            density = 2.4,
+        },
     },
 
 
