@@ -204,7 +204,7 @@ public:
    */
   void completeSetup() override
   {
-    double dt    = 0.0;
+    double dt = 0.0;
     contact_.update(cycle_, time_, dt);
 
     SolidMechanicsBase::completeSetup();
